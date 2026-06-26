@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#141C2A"/>
+      <stop offset="0.5" stop-color="#0B0F17"/>
+      <stop offset="1" stop-color="#06080D"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="42%" r="60%">
+      <stop offset="0" stop-color="#3B82F6" stop-opacity="0.34"/>
+      <stop offset="0.5" stop-color="#2563EB" stop-opacity="0.10"/>
+      <stop offset="1" stop-color="#2563EB" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="shield" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1B2638"/>
+      <stop offset="1" stop-color="#10192A"/>
+    </linearGradient>
+    <linearGradient id="metal" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5B9BFF"/>
+      <stop offset="0.5" stop-color="#3B82F6"/>
+      <stop offset="1" stop-color="#1D4ED8"/>
+    </linearGradient>
+    <linearGradient id="metalSoft" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4A8CF7"/>
+      <stop offset="1" stop-color="#1E5FD0"/>
+    </linearGradient>
+    <filter id="drop" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="9" stdDeviation="13" flood-color="#000000" flood-opacity="0.5"/>
+    </filter>
+    <filter id="ironGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="0" stdDeviation="7" flood-color="#3B82F6" flood-opacity="0.55"/>
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" rx="120" fill="url(#bg)"/>
+  <rect width="512" height="512" rx="120" fill="url(#glow)"/>
+
+  <g filter="url(#drop)">
+    <path d="M256 70 L412 124 V268 C412 358 344 412 256 448 C168 412 100 358 100 268 V124 Z"
+          fill="url(#shield)"
+          stroke="#3B82F6" stroke-opacity="0.55" stroke-width="6" stroke-linejoin="round"/>
+    <path d="M256 96 L388 142 V266 C388 342 330 390 256 421 C182 390 124 342 124 266 V142 Z"
+          fill="none"
+          stroke="#3B82F6" stroke-opacity="0.22" stroke-width="3" stroke-linejoin="round"/>
+  </g>
+
+  <g transform="rotate(-12 256 262)" filter="url(#ironGlow)">
+    <rect x="156" y="244" width="200" height="36" rx="18" fill="url(#metal)"/>
+    <rect x="158" y="194" width="38" height="136" rx="15" fill="url(#metal)"/>
+    <rect x="118" y="216" width="40" height="92" rx="14" fill="url(#metalSoft)"/>
+    <rect x="316" y="194" width="38" height="136" rx="15" fill="url(#metal)"/>
+    <rect x="354" y="216" width="40" height="92" rx="14" fill="url(#metalSoft)"/>
+    <rect x="168" y="250" width="176" height="7" rx="3.5" fill="#FFFFFF" opacity="0.30"/>
+  </g>
+
+  <rect x="2" y="2" width="508" height="508" rx="118" fill="none" stroke="#FFFFFF" stroke-opacity="0.05" stroke-width="2"/>
+</svg>

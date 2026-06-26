@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0A0908" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Pursuit Iron" />
+    <meta name="application-name" content="Pursuit Iron" />
+    <meta name="description" content="Pursuit Iron — Strength Coach. Evidence-based program builder, autoregulation, and logging." />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <link rel="icon" type="image/svg+xml" href="./icons/icon.svg" />
+    <link rel="icon" href="./favicon.ico" sizes="any" />
+    <link rel="stylesheet" href="./app.css" />
+    <title>Pursuit Iron — Strength Coach</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script defer src="./app.js"></script>
+    <script>
+      // Register the service worker (relative scope → works at any sub-path).
+      // Update flow: when a NEW worker is installed while an old one controls the page,
+      // tell the app so it can show an "Update ready — Restart" prompt. The app replies
+      // with SKIP_WAITING; on controllerchange we reload once into the new version.
+      // Skip the service worker when running inside a native (Capacitor) shell — the app is served
+      // from the local filesystem there, so SW caching is unnecessary and can confuse update flow.
+      var __isNative = !!(window.Capacitor && (typeof window.Capacitor.isNativePlatform === "function" ? window.Capacitor.isNativePlatform() : window.Capacitor.isNative));
+      if (!__isNative && "serviceWorker" in navigator) {
+        window.addEventListener("load", function () {
+          navigator.serviceWorker.register("./sw.js", { scope: "./" }).then(function (reg) {
+            function announce(w) { try { window.dispatchEvent(new CustomEvent("wpb:update-ready", { detail: { waiting: w } })); } catch (e) {} }
+            if (reg.waiting && navigator.serviceWorker.controller) announce(reg.waiting);
+            reg.addEventListener("updatefound", function () {
+              var w = reg.installing;
+              if (!w) return;
+              w.addEventListener("statechange", function () {
+                if (w.state === "installed" && navigator.serviceWorker.controller) announce(w);
+              });
+            });
+            // Check for updates when the app returns to the foreground (installed PWAs rarely re-navigate).
+            document.addEventListener("visibilitychange", function () {
+              if (document.visibilityState === "visible") reg.update().catch(function () {});
+            });
+          }).catch(function (err) { console.error("SW registration failed:", err); });
+          var reloaded = false;
+          navigator.serviceWorker.addEventListener("controllerchange", function () {
+            if (reloaded) return; reloaded = true; location.reload();
+          });
+        });
+      }
+    </script>
+  </body>
+</html>

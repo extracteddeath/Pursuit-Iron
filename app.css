@@ -1,0 +1,17 @@
+:root{color-scheme:dark}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+/* Native feel: no text auto-resize, no double-tap-zoom delay */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%;touch-action:manipulation}
+html,body,#root{height:100%;height:100dvh}
+/* Prevent page-level scroll/rubber-band (pull-to-refresh, URL-bar reveal) without locking layout
+   height — overscroll-behavior alone stops the bounce; fixed positioning broke the height model. */
+html,body{margin:0;overflow:hidden;overscroll-behavior:none}
+body{background:#0c0b0e;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+/* Root fills the viewport exactly. Safe-area insets are applied INSIDE the app (header/footer/sheets),
+   not as root padding, so the root height stays equal to the viewport and bottom sheets stay on-screen. */
+#root{overflow:hidden}
+/* Inner scrollers get momentum + contained overscroll so a child scroll never bubbles to the body. */
+.wpb-scroll,[data-scroll]{-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+/* Inputs & editable fields keep selection (you need to edit weights/notes). */
+input,textarea,[contenteditable]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+input,textarea{font-size:16px}/* ≥16px stops iOS auto-zoom on focus */

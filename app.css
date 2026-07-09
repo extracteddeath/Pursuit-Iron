@@ -15,3 +15,9 @@ body{background:#0c0b0e;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Ro
 /* Inputs & editable fields keep selection (you need to edit weights/notes). */
 input,textarea,[contenteditable]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
 input,textarea{font-size:16px}/* ≥16px stops iOS auto-zoom on focus */
+/* Keyboard focus: a visible ring for keyboard/AT users only (:focus-visible never fires on touch or
+   mouse), so pointer users see nothing change while keyboard navigation stays legible on every dark
+   theme. Custom-styled controls otherwise inherit no usable focus indicator. */
+:focus-visible{outline:2.5px solid rgba(255,255,255,.92);outline-offset:2px;border-radius:6px}
+:focus:not(:focus-visible){outline:none}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}}

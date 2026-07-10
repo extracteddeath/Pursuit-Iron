@@ -3,7 +3,7 @@
    serves navigations from the cached shell. A registered SW with a fetch handler
    is what makes the app installable ("Install app") on Android/Chrome. */
 
-const CACHE = "wpb-shell-v295-2559553d";
+const CACHE = "wpb-shell-v299-68a05b50";
 const SHELL = [
   "./",
   "./index.html",

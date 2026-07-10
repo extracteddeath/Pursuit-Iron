@@ -30,7 +30,7 @@
       var __isNative = !!(window.Capacitor && (typeof window.Capacitor.isNativePlatform === "function" ? window.Capacitor.isNativePlatform() : window.Capacitor.isNative));
       if (!__isNative && "serviceWorker" in navigator) {
         window.addEventListener("load", function () {
-          navigator.serviceWorker.register("./sw.js", { scope: "./" }).then(function (reg) {
+          navigator.serviceWorker.register("./sw.js", { scope: "./", updateViaCache: "none" }).then(function (reg) {
             function announce(w) { try { window.dispatchEvent(new CustomEvent("wpb:update-ready", { detail: { waiting: w } })); } catch (e) {} }
             if (reg.waiting && navigator.serviceWorker.controller) announce(reg.waiting);
             reg.addEventListener("updatefound", function () {
@@ -40,10 +40,16 @@
                 if (w.state === "installed" && navigator.serviceWorker.controller) announce(w);
               });
             });
-            // Check for updates when the app returns to the foreground (installed PWAs rarely re-navigate).
+            // Check for a new build immediately on every launch, when the app returns to the
+            // foreground, and periodically for long-lived installed PWAs. updateViaCache:"none" above
+            // forces sw.js to be fetched from the network (never the HTTP cache) on these checks, so a
+            // freshly deployed build is actually detected instead of the app getting stuck on an old
+            // cached worker.
+            reg.update().catch(function () {});
             document.addEventListener("visibilitychange", function () {
               if (document.visibilityState === "visible") reg.update().catch(function () {});
             });
+            setInterval(function () { reg.update().catch(function () {}); }, 30 * 60 * 1000);
           }).catch(function (err) { console.error("SW registration failed:", err); });
           var reloaded = false;
           navigator.serviceWorker.addEventListener("controllerchange", function () {

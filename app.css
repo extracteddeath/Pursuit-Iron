@@ -2,7 +2,7 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 /* Native feel: no text auto-resize, no double-tap-zoom delay */
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%;touch-action:manipulation}
-html,body,#root{height:100%;height:100dvh}
+html,body,#root{height:100%;height:100dvh;height:var(--app-h,100dvh)}
 /* Prevent page-level scroll/rubber-band (pull-to-refresh, URL-bar reveal) without locking layout
    height — overscroll-behavior alone stops the bounce; fixed positioning broke the height model. */
 html,body{margin:0;overflow:hidden;overscroll-behavior:none}

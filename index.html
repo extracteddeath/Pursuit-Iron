@@ -1,6 +1,28 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <script>
+      // Capture beforeinstallprompt as early as physically possible — before any other tag, script,
+      // or stylesheet loads. This event can fire within the first moments of page load and only fires
+      // ONCE per load with no way to re-request it, so attaching the listener from inside the React
+      // bundle (which is deferred until after full HTML parse) is too late and silently misses it —
+      // calling preventDefault() on it also suppresses the browser's OWN native install banner, so a
+      // missed event previously meant the browser's bottom-of-screen install prompt disappeared with
+      // nothing replacing it. Stash the event globally; App() reads it on mount and also listens for
+      // the custom event below, so it works whether the browser fires before or after React mounts.
+      window.__pwaInstallEvent = null;
+      window.__pwaInstalled = false;
+      window.addEventListener("beforeinstallprompt", function (e) {
+        e.preventDefault();
+        window.__pwaInstallEvent = e;
+        window.dispatchEvent(new CustomEvent("pwa-install-ready"));
+      });
+      window.addEventListener("appinstalled", function () {
+        window.__pwaInstalled = true;
+        window.__pwaInstallEvent = null;
+        window.dispatchEvent(new CustomEvent("pwa-install-ready"));
+      });
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#0A0908" />

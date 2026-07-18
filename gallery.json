@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "updated": "2026-07-17",
+  "programs": [
+    {
+      "code": "PI-6RP4-C60F-ZR00-0DNJ-17E0-K8",
+      "title": "Classic PPL — 6 day",
+      "author": "pursuit",
+      "tags": [
+        "hypertrophy",
+        "6-day"
+      ],
+      "note": "Push/Pull/Legs twice a week at full session length. The high-volume default."
+    },
+    {
+      "code": "PI-6RCM-C60F-ZR00-0DNN-BW10-0R",
+      "title": "Upper/Lower — 4 day",
+      "author": "pursuit",
+      "tags": [
+        "balanced",
+        "4-day"
+      ],
+      "note": "The most time-efficient split for most lifters."
+    },
+    {
+      "code": "PI-6SCM-C60F-ZR00-0DNP-K310-80",
+      "title": "PHUL — power & hypertrophy",
+      "author": "pursuit",
+      "tags": [
+        "strength",
+        "hypertrophy"
+      ],
+      "note": "Two heavy days, two pump days."
+    },
+    {
+      "code": "PI-6R3C-C40F-ZR00-0DNS-C0D0-H0",
+      "title": "3-Day Full Body — strength",
+      "author": "pursuit",
+      "tags": [
+        "strength",
+        "beginner-friendly",
+        "3-day"
+      ],
+      "note": "High frequency on the big lifts, shorter sessions."
+    },
+    {
+      "code": "PI-6T64-C60F-ZR00-0DNV-EX10-TW",
+      "title": "Arnold split",
+      "author": "pursuit",
+      "tags": [
+        "hypertrophy",
+        "6-day",
+        "classic"
+      ],
+      "note": "Chest/back, shoulders/arms, legs — twice over."
+    },
+    {
+      "code": "PI-6RPM-C60F-ZR00-0DNW-1Y33-0100-2000-8C06D",
+      "title": "Coach PPL — hamstring focus",
+      "author": "coach_mara",
+      "tags": [
+        "coached",
+        "hypertrophy"
+      ],
+      "note": "My PPL with three accessory swaps for a client with tight hips."
+    }
+  ]
+}

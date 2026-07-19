@@ -1,68 +1,129 @@
 {
   "version": 1,
-  "updated": "2026-07-17",
+  "updated": "2026-07-18",
   "programs": [
     {
-      "code": "PI-6RP4-C60F-ZR00-0DNJ-17E0-K8",
-      "title": "Classic PPL — 6 day",
+      "code": "PI-6RP4-C60F-ZR00-000F-3Q60-RM",
+      "title": "Push / Pull / Legs — 6 day",
       "author": "pursuit",
       "tags": [
         "hypertrophy",
         "6-day"
       ],
-      "note": "Push/Pull/Legs twice a week at full session length. The high-volume default."
+      "note": "Push/pull/legs twice through the week at full session length. The high-volume default."
     },
     {
-      "code": "PI-6RCM-C60F-ZR00-0DNN-BW10-0R",
-      "title": "Upper/Lower — 4 day",
+      "code": "PI-6RCM-C60F-ZR00-000E-JF50-4M",
+      "title": "Upper / Lower — 4 day",
       "author": "pursuit",
       "tags": [
         "balanced",
         "4-day"
       ],
-      "note": "The most time-efficient split for most lifters."
+      "note": "The most time-efficient split for most lifters — each muscle trained twice a week."
     },
     {
-      "code": "PI-6SCM-C60F-ZR00-0DNP-K310-80",
+      "code": "PI-6R32-840F-ZR00-000F-WTB0-10",
+      "title": "Full Body — 3 day",
+      "author": "pursuit",
+      "tags": [
+        "beginner-friendly",
+        "3-day"
+      ],
+      "note": "High frequency on the big lifts across three sessions. The best place to start."
+    },
+    {
+      "code": "PI-6SCM-C60F-ZR00-000E-2970-D0",
       "title": "PHUL — power & hypertrophy",
       "author": "pursuit",
       "tags": [
         "strength",
         "hypertrophy"
       ],
-      "note": "Two heavy days, two pump days."
+      "note": "Two heavy days, two volume days. Strength and size without choosing between them."
     },
     {
-      "code": "PI-6R3C-C40F-ZR00-0DNS-C0D0-H0",
-      "title": "3-Day Full Body — strength",
-      "author": "pursuit",
-      "tags": [
-        "strength",
-        "beginner-friendly",
-        "3-day"
-      ],
-      "note": "High frequency on the big lifts, shorter sessions."
-    },
-    {
-      "code": "PI-6T64-C60F-ZR00-0DNV-EX10-TW",
-      "title": "Arnold split",
+      "code": "PI-6T66-C60F-ZR00-000F-VP70-RW",
+      "title": "Arnold Split — 6 day",
       "author": "pursuit",
       "tags": [
         "hypertrophy",
         "6-day",
         "classic"
       ],
-      "note": "Chest/back, shoulders/arms, legs — twice over."
+      "note": "Chest/back, shoulders/arms, legs — twice over. A lot of volume for advanced lifters."
     },
     {
-      "code": "PI-6RPM-C60F-ZR00-0DNW-1Y33-0100-2000-8C06D",
-      "title": "Coach PPL — hamstring focus",
-      "author": "coach_mara",
+      "code": "PI-6S5M-C60F-ZR00-000F-2GC0-4W",
+      "title": "Hybrid Strength + Size",
+      "author": "pursuit",
+      "tags": [
+        "strength",
+        "hypertrophy",
+        "5-day"
+      ],
+      "note": "Heavy compound work early in the week, hypertrophy volume late."
+    },
+    {
+      "code": "PI-6R32-C408-0000-000F-AJP0-H4",
+      "title": "Bodyweight & Bands",
+      "author": "pursuit",
+      "tags": [
+        "no-gym",
+        "3-day"
+      ],
+      "note": "Full-body training with one set of resistance bands. No gym, no weights."
+    },
+    {
+      "code": "PI-6RCM-G601-1R00-000F-THR0-24",
+      "title": "Garage Gym",
+      "author": "pursuit",
+      "tags": [
+        "home",
+        "4-day",
+        "strength"
+      ],
+      "note": "Barbell, bench, dumbbells and a pull-up bar — the standard home setup, run as a proper upper/lower."
+    },
+    {
+      "code": "PI-6RAJ-C400-1G00-000F-EW90-4M",
+      "title": "Dumbbell Upper / Lower — 2 day",
+      "author": "pursuit",
+      "tags": [
+        "home",
+        "2-day"
+      ],
+      "note": "Whole body across two sessions. The minimum viable week when time is the constraint, not equipment."
+    },
+    {
+      "code": "PI-6R32-C400-0G00-000F-4CG0-S0",
+      "title": "One Pair of Dumbbells",
+      "author": "pursuit",
+      "tags": [
+        "home",
+        "3-day"
+      ],
+      "note": "No bench, no rack. Floor presses, goblet squats and rows covering every muscle group."
+    },
+    {
+      "code": "PI-6RK4-C400-1G00-000F-46K0-JG",
+      "title": "Dumbbell Push / Pull / Legs",
+      "author": "pursuit",
+      "tags": [
+        "home",
+        "3-day"
+      ],
+      "note": "PPL on a home kit — dumbbells and an adjustable bench."
+    },
+    {
+      "code": "PI-6RP4-C60F-ZR00-000E-C1A3-103T-22MR-A9BC4",
+      "title": "PPL — hamstring emphasis",
+      "author": "pursuit",
       "tags": [
         "coached",
         "hypertrophy"
       ],
-      "note": "My PPL with three accessory swaps for a client with tight hips."
+      "note": "PPL with three swaps for a lifter with tight hips: less deep hip flexion, more direct hamstring work."
     }
   ]
 }

@@ -3,7 +3,7 @@
    serves navigations from the cached shell. A registered SW with a fetch handler
    is what makes the app installable ("Install app") on Android/Chrome. */
 
-const CACHE = "wpb-shell-v434-59efb123";
+const CACHE = "wpb-shell-v439-fb6259ac";
 const SHELL = [
   "./",
   "./index.html",
@@ -22,7 +22,19 @@ self.addEventListener("install", (event) => {
   // No automatic skipWaiting: the new worker waits until the page tells it to take over
   // (via the in-app "Update ready — Restart" prompt), so users update deliberately instead
   // of needing to force-close the browser to pick up a new version.
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)));
+  //
+  // cache:"reload" on every shell request is load-bearing. updateViaCache:"none" at registration
+  // only bypasses the HTTP cache for sw.js ITSELF — the resources fetched in here still obey normal
+  // HTTP cache rules. Because ./app.js has a stable URL with no content hash, a plain addAll() could
+  // be served the PREVIOUS build's bytes straight from the browser/CDN cache and store them under
+  // the NEW cache name. The update then "succeeded" while the app still ran the old build, and the
+  // stale copy was pinned until the next deploy. Forcing a network fetch here is what makes the
+  // cache name actually correspond to the build inside it.
+  event.waitUntil(
+    caches.open(CACHE).then((cache) =>
+      cache.addAll(SHELL.map((u) => new Request(u, { cache: "reload" })))
+    )
+  );
 });
 
 self.addEventListener("message", (event) => {
@@ -41,17 +53,28 @@ self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
 
+  /* Every lookup below is scoped to THIS build's cache via caches.open(CACHE).
+     The bare caches.match(req) used before searched every cache in the origin and returns the
+     first hit in CREATION order — i.e. the OLDEST cache wins. Any moment both a previous and the
+     current shell exist (a new worker precaches while the old one still controls, or an activate
+     that failed to finish its cleanup), the stale copy was served in preference to the current
+     one, and it stayed sticky. Scoping makes "what this worker serves" and "what this worker
+     installed" the same set by construction. */
+
   // Navigations → serve the cached app shell (SPA), fall back to network.
   if (req.mode === "navigate") {
     event.respondWith(
-      caches.match("./index.html").then((cached) => cached || fetch(req)).catch(() => caches.match("./index.html"))
+      caches.open(CACHE)
+        .then((c) => c.match("./index.html"))
+        .then((cached) => cached || fetch(req))
+        .catch(() => caches.open(CACHE).then((c) => c.match("./index.html")))
     );
     return;
   }
 
   // Everything else → cache-first, then network (and cache the result).
   event.respondWith(
-    caches.match(req).then((cached) => {
+    caches.open(CACHE).then((c) => c.match(req)).then((cached) => {
       if (cached) return cached;
       return fetch(req).then((res) => {
         if (res && res.status === 200 && res.type === "basic") {

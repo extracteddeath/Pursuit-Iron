@@ -1,8 +1,66 @@
 # Pursuit Iron — Changelog
 
-45 changes across 26 releases. Newest first.
+67 changes across 38 releases. Newest first.
 
 _Generated from the app's own changelog data — do not edit by hand._
+
+## v3.9.0 — build 490
+
+- **Hold the + or − to run the weight up** — Getting from an empty bar to a working weight was around eighteen taps. Press and hold either stepper — weight or reps — and it repeats, starting slow enough to stop on the number you want and speeding up the longer you hold. A single tap still moves exactly one increment.
+
+## v3.8.1 — build 489
+
+- **Your record is your best set, not your worst** — Bench 225×6 and then 225×5, and the record read 225×5. The app keeps a cautious summary of each lift — the reps you held across every set — because that's the right number for deciding your next load. It was also being used as the set you're remembered by, where it reports a set you already beat. Records and PR estimates now both come from your best logged set.
+
+## v3.8.0 — build 488
+
+- **Editing a program waits for you to save it** — Swapping an exercise used to commit straight to your saved program — no button press, no warning on the way out. Changes are now held as a draft: the Save button tells you when something's pending, going back asks whether to keep or discard, and the version in your library doesn't change until you say so. The draft is written to your device as you edit, so it survives closing the app or a crash mid-edit — reopen and it's still there, still asking.
+
+## v3.7.0 — build 487
+
+- **The set you're on reads the way it used to** — The target, the effort it's asked at and the set you're beating are stacked in one column again, and the plate breakdown is back under the weight it describes. Both still appear only on the set you're working. The highlight now runs the full width of the screen instead of floating as an inset card, and the set number has room to breathe.
+- **A lift with one recorded weight uses it for every set** — If the app only had a summary of a lift — one weight and rep count, which is what older saves and carried-over lifts store — only your first set showed it. Set two onward read "new", as if the same lift in the same session had no history. That summary now stands as the reference for every working set.
+
+## v3.6.3 — build 486
+
+- **Day menu fix, without the extra dependency** — The previous fix worked but pulled in a library the single-file build can't load. Same result, no new dependency: the menu is now rendered above the day list instead of inside a day card.
+
+## v3.6.2 — build 485
+
+- **The set you're on reads as one line again** — The last update put the effort target, technique cue, where the weight came from and last session's set on separate lines — but only on the set you're working, which made that row the tallest on screen and shifted every row below it each time you logged a set. Same information, now a single strip under the row. The plate breakdown moved into it too, so it's back and it's with the rest of what that set needs.
+
+## v3.6.1 — build 484
+
+- **The day menu opens where you tapped** — The last fix wasn't enough: the menu could still vanish on a collapsed day, or open far down the screen on an open one. A performance optimisation on the day card was quietly redefining what "anchored to the screen" meant, so the menu was being placed relative to the card instead of the window. It now renders outside the card entirely.
+
+## v3.6.0 — build 483
+
+- **Tapping your next workout shows just that workout** — It used to open your whole program — every day of the split, every week — and leave you to find the session you were already being pointed at. Now it opens the day itself: what's in it, what each lift asks for, your pinned notes, and Start. The full program is one tap away under "View full program", and Back brings you straight back here.
+
+## v3.5.1 — build 482
+
+- **The day menu no longer gets cut off** — On a collapsed day, the 3-dot menu was clipped by the day's own card. It now opens against the screen, and flips above the button when it would run off the bottom.
+- **You can decline an engine update** — The offer to rebuild a program on a newer engine had no "no". It does now — "Keep it as it is" dismisses it for good on that program. A future engine will ask again, since a new correction is a new question, and Plan info keeps a way to change your mind.
+
+## v3.5.0 — build 481
+
+- **The workout screen shows the set you're on** — Every set row looked the same, so finding your place mid-workout meant reading the table. The set you're on now keeps full contrast and an accent rule; the rest dim. The plate breakdown, the effort target, the technique cue and last session's set follow that row instead of appearing under all six at once — same information, arriving as you reach it.
+- **Warm-ups get out of the way once they're done** — A ramp set carried the same full-size row as a top set, four of them above the work. Once they're all logged they collapse to one line. Tap it to bring them back — a mis-logged ramp is still fixable.
+- **The coach note shrinks once you start lifting** — It's the card you want before the first set and a banner you're reading past by the third. After your first logged set it becomes a one-line pill, still a tap from the full note.
+- **Plan info moved off the top of your program** — "How this was built", "Weekly volume" and "Block plan" now live behind a Plan button next to the day selector. All three are unchanged — they're reference you consult, not something you read on the way to training.
+- **A saved program stops looking like a construction site** — While you're building, the day controls stay out as buttons. Once saved, rename and duplicate collapse into a 3-dot menu — which also gives Delete a home it never had here. The exercise rows lost their up/down arrows (the drag handle already did that job), the RIR tooltip, and the pinned-note readout; notes still show during the session, where you act on them.
+- **Leaving an unsaved program asks first** — Back used to discard a freshly built program silently. It now offers to save it.
+
+## v3.4.0 — build 480
+
+- **Update an older program to the newest engine** — A program keeps the version of the training engine it was built on, so its prescriptions never shift underneath you mid-block. That protection had no exit: a program built last month could never receive a correction made since, including corrections the research forced. Any program built on an earlier engine now says so, lists in plain language what updating would change, and rebuilds on request using the same seed — so everything that changes is the update and nothing is a reshuffle. Your logged sets are untouched, and the version you had waits under Earlier shuffles if you want it back.
+- **What the volume ceiling actually means** — Weekly sets above the ceiling were labelled junk volume. The best current evidence — a 2026 analysis of 67 studies — finds size and strength still improving as weekly sets rise, with diminishing returns rather than a point where more starts to hurt. The ceiling is a recovery budget worth watching when progress or readiness slides, not a line past which your sets stopped counting, and it now says so. Same numbers, same colours, honest claim. The same analysis confirmed that counting an indirect set as half a set predicts growth best, which is what this app already does.
+
+## v3.3.4 — build 479
+
+- **Strength and peak blocks lift the barbell** — A strength or peak block was given its heavy sets and reps on whichever lift suited muscle growth best — so a full-gym strength program could be built on a dumbbell bench and a hack squat, with no barbell bench, squat or deadlift anywhere in it. The main lift of a strength-focused day is now the barbell you can add weight to and test. Hypertrophy blocks are unchanged, and every block in a cycle shares the same main lift so your logged weights still carry forward.
+- **Ban an exercise from a saved program** — Banning a lift from the exercise menu was only offered while a program was still unsaved — which meant it never appeared for a training cycle at all, since a cycle saves its blocks the moment it's created. It's now available wherever the menu is.
+- **The clock stops cutting your side delts** — When a session ran long, the exercise it dropped to fit the time was chosen by looking at the whole shoulder total — a number your pressing already fills out. So the last lateral raise in the day looked free to cut, and side or rear delt work could disappear from a program entirely even though it had just been added on purpose. Trimming for time now knows the difference between the three heads. Across a 1,458-program sweep, programs training no side delts at all fell from 33 to 18, and side and rear delt work below the minimum effective dose fell by about a fifth.
 
 ## v3.3.3 — build 478
 

@@ -1,8 +1,24 @@
 # Pursuit Iron — Changelog
 
-67 changes across 38 releases. Newest first.
+74 changes across 41 releases. Newest first.
 
 _Generated from the app's own changelog data — do not edit by hand._
+
+## v3.9.3 — build 493
+
+- **Myo-rep minis stopped counting as full sets** — When the app adds myo-reps to a lift, the three short mini-sets were being treated as three more working sets — so a five-set exercise showed eight numbered sets, the session's set total was inflated, and each mini claimed a last-session set that never existed. They're extensions of the set above and now read that way: indented, marked M, and out of the count.
+- **A 4-rep myo mini no longer rewrote your set of twelve** — The same problem reached your logs. The summary each lift is remembered by takes the lowest reps you held at the top weight — and it was counting the mini-sets, so twelve reps of lateral raises were recorded as four, and the next session's target was cut to match. Drop sets did the same through their stripped load. Extensions are now excluded from that summary, which is also what your next opening weight is built from.
+- **A carried-over weight says it's carried over** — When a lift only has one recorded weight rather than a set-by-set record, that figure stands in for every set — but it looked exactly like a real per-set record, so set five appeared to report a set you may never have done. It's now tagged LIFT.
+
+## v3.9.2 — build 492
+
+- **The set you just finished waits for you** — Ticking a set sent the workout straight on to the next one — and asked how hard the last one was inside the row it had just dimmed and moved past. The set you've finished now stays lit until you've said what it felt like, and says plainly that it's optional. The next set goes live at the same moment, so ignoring the question costs you nothing but reaching for the steppers.
+- **The effort a set was asked for stays on the set** — The target — 2 RIR, 85%, to failure — vanished the instant you logged the set, which is the exact moment you're asked what it actually felt like. It stays put now, so the number you're comparing against is still on screen. Logged efforts on earlier sets collapse to a tag you can tap to change.
+
+## v3.9.1 — build 491
+
+- **One coach on the workout screen, not two** — The session had two coach panels stacked at the top saying different things in the same voice — a strip explaining what the block is asking of you this week, and a card explaining what the app changed about today's numbers for you specifically. They're one card now. The block's note is still there, at the end of the coach note, and it's the first thing you read when there's nothing personal to say yet.
+- **Plan info reads as one screen** — "How this was built", "Weekly volume" and "Block plan" had each been built with their own card style — different corners, different backgrounds, different heading sizes — which made three sections of the same reference look like three unrelated things. They share one card now.
 
 ## v3.9.0 — build 490
 
@@ -184,3 +200,4 @@ _Generated from the app's own changelog data — do not edit by hand._
 - **Plateau warnings that mean it** — A stall is now judged per training day, so the same lift on push day and leg day is never mixed into one misleading line. And working through a rep range set by set counts as progress, because it is.
 - **Share a session** — Any workout in Progress becomes a clean card — your lifts, top sets, volume and time.
 - **History where you need it** — Open any exercise in a program to see every session you've logged for it on that day, with your best marked.
+

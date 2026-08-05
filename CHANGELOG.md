@@ -1,8 +1,43 @@
 # Pursuit Iron — Changelog
 
-74 changes across 41 releases. Newest first.
+91 changes across 47 releases. Newest first.
 
 _Generated from the app's own changelog data — do not edit by hand._
+
+## v3.12.2 — build 500
+
+- **Search for exercises when swapping** — When replacing an exercise in a workout or program, tap the exercise list to filter it by name instead of scrolling through all available options.
+- **Unweighted exercises count in recovery trends** — Pull-ups and dips logged without weight now include set count in exerciseTrends and underRecoveredWeekly, giving an honest recovery cost to bodyweight work.
+- **"Sets you've actually logged" means working sets** — Myo mini-sets and drop sets are extensions of the set above, and every other screen already treats them that way — but the weekly logged-volume counter added them in as full sets. Three minis on an overhead press showed as six sets of shoulders instead of three, and then got compared against volume landmarks that are defined in working sets. There were also two copies of that counter, and the weekly volume advice used one of each.
+- **Editing one block of a cycle keeps the others intact** — Saving an edited block carries the change to its sibling blocks. The rule that does the carrying existed twice — once for real, once in a simplified copy that the tests were checking — and the copy could not remap a day's main lift or its supersets. Reordering a day in one block could quietly point another block's primary at the wrong exercise.
+
+## v3.12.0 — build 498
+
+- **Tap a muscle to see what trains it** — "This day hits" showed numbers like Glutes 7.7 with no way to ask where 7.7 came from — and on a day with no glute exercise on it, that reads like a bug rather than three lifts each paying a share. Tap any muscle now and it opens the exercises behind it, with the arithmetic shown: direct work counts its full sets, secondary work shows the sets and the share it contributes.
+- **The breakdown is the number** — It is built from the same pass that produces the chip rather than a second walk over the day, so what you open always adds up to what you tapped.
+
+## v3.11.2 — build 497
+
+- **One strength curve, not eight** — The formula behind every estimated max in the app was written out by hand in eight different places, in four slightly different variants. That is why the same lift could read 291 in one screen and 300 in another: a fix applied to one copy never reached the rest. There is one now, and everything else asks it.
+- **The rep-target table agreed with nothing** — Its one-rep row divided your 1RM by an extra factor, so a 300 lb max was listed as a 291 lb single — while the strength charts, correctly, said 300. Same cause: a second copy of the maths. Fixed, and the whole table now matches the charts.
+- **Warm-ups and drop sets counted consistently** — The rule for what counts as a working set was re-typed dozens of times and some copies had drifted, so a few older screens still counted a drop set or a myo mini as a full set. They all ask the same question now.
+
+## v3.11.1 — build 496
+
+- **"Last 225×5" when you did 225×6** — Two screens were printing the wrong number for the same reason. The weight and reps stored against a lift are deliberately the fewest reps you held at the top weight — the cautious figure the app uses to pick your next load. Printed as "last 225×5" on the program view, it reported a set you had already beaten. Personal records had a second version of the same problem: among sets at the same weight it kept whichever it saw first, so the first time you ever touched 225 owned the record no matter what you did on it later. Both now read your best actual set.
+- **Drop sets stay drop sets in your history** — Myo mini-sets and drop sets are marked as extensions while you train, but that mark was thrown away when the session was saved — so anything reading your history later counted them as full working sets again, including the new volume-per-set chart. The mark is saved with them now.
+
+## v3.11.0 — build 495
+
+- **The cycles tab tells you where you are** — It listed the plan and nothing else — no progress, no dates, no sense of what you had actually done. Every cycle now carries a progress bar, the week you are on out of the total, how many weeks are left, how many sessions you have logged against it, and the calendar window it runs in. All of that already existed one screen deeper; the list just could not reach it.
+- **Finished blocks can be reviewed** — A completed block used to be a checkmark. Tap Review and you get what actually happened in it: which lifts moved and by how much, each muscle's weekly volume set against whether it progressed, and a concrete change to carry into the next block. It is offered when you complete a block too — the moment it is most worth reading.
+- **One note at a time, not four** — Every block printed its full intent, so a four-block cycle was four paragraphs you read once months ago. Only the block you are in shows its note now. Finished blocks show what you logged, upcoming ones show which weeks they land in, and the detail page still has every word.
+
+## v3.10.0 — build 494
+
+- **Six ways to read a lift, over any range** — The exercise library charted one thing — estimated 1RM, every session you have ever logged. It now charts estimated 1-RM, 3-RM and 10-RM, your heaviest actual weight, total volume, and volume per set, across 1W, 1M, 3M, 6M, 1Y or all time. The rep maxes come from inverting the same formula the rest of the app uses, so the 1-RM you see here is the same number your records tab calls your best.
+- **The exercise page is a full screen now** — It was a sheet sliding up over the list, capped at most of the screen height, with the library still showing behind it. What is in there — the demo, every session you have logged, the charts, your PRs and rep maxes — is a destination, not an aside. It gets the whole screen and its own back button.
+- **The charts are spaced by date, not by session** — The old chart put every session an equal step apart, so a fortnight off looked identical to training twice in a week. Points now sit where they actually happened, which is what makes the range buttons mean anything.
 
 ## v3.9.3 — build 493
 

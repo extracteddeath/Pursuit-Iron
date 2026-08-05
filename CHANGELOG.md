@@ -1,11 +1,13 @@
 # Pursuit Iron — Changelog
 
-93 changes across 47 releases. Newest first.
+95 changes across 47 releases. Newest first.
 
 _Generated from the app's own changelog data — do not edit by hand._
 
-## v3.12.5 — build 503
+## v3.12.7 — build 505
 
+- **Strength standards no longer crashes the Progress tab** — Tapping the edit button on the Strength standards card took the whole Progress tab down with a blank error. The card was doing a piece of its calculation in a place that only ran some of the time, which is something React refuses to allow. It runs every time now. The earlier attempt at this fix in build 501 changed the wrong thing and the crash survived it.
+- **Up Next shows the workout, not the gym notes** — The Up Next screen was listing your pinned notes and machine setup under every lift. That is information you need standing at the machine, not deciding whether to train, and it pushed the actual prescription down the screen. Notes and setup still appear in the session itself, where you use them.
 - **Myo-reps show correctly in history** — When you view a past session, myo-reps and drop sets are now labeled as M/D instead of numbered like working sets, so you can tell at a glance which sets were extensions. Records (PRs, best e1RM, top volume) now exclude extensions correctly.
 - **Strength standards edit fixed** — Clicking the edit button to update your profile on the Strength standards card now works correctly.
 - **Search for exercises when swapping** — When replacing an exercise in a workout or program, tap the exercise list to filter it by name instead of scrolling through all available options.

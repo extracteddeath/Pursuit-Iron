@@ -4,7 +4,7 @@
 
 _Generated from the app's own changelog data — do not edit by hand._
 
-## v3.12.4 — build 502
+## v3.12.5 — build 503
 
 - **Myo-reps show correctly in history** — When you view a past session, myo-reps and drop sets are now labeled as M/D instead of numbered like working sets, so you can tell at a glance which sets were extensions. Records (PRs, best e1RM, top volume) now exclude extensions correctly.
 - **Strength standards edit fixed** — Clicking the edit button to update your profile on the Strength standards card now works correctly.

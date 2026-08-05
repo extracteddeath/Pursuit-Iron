@@ -1,11 +1,13 @@
 # Pursuit Iron — Changelog
 
-91 changes across 47 releases. Newest first.
+93 changes across 47 releases. Newest first.
 
 _Generated from the app's own changelog data — do not edit by hand._
 
-## v3.12.2 — build 500
+## v3.12.4 — build 502
 
+- **Myo-reps show correctly in history** — When you view a past session, myo-reps and drop sets are now labeled as M/D instead of numbered like working sets, so you can tell at a glance which sets were extensions. Records (PRs, best e1RM, top volume) now exclude extensions correctly.
+- **Strength standards edit fixed** — Clicking the edit button to update your profile on the Strength standards card now works correctly.
 - **Search for exercises when swapping** — When replacing an exercise in a workout or program, tap the exercise list to filter it by name instead of scrolling through all available options.
 - **Unweighted exercises count in recovery trends** — Pull-ups and dips logged without weight now include set count in exerciseTrends and underRecoveredWeekly, giving an honest recovery cost to bodyweight work.
 - **"Sets you've actually logged" means working sets** — Myo mini-sets and drop sets are extensions of the set above, and every other screen already treats them that way — but the weekly logged-volume counter added them in as full sets. Three minis on an overhead press showed as six sets of shoulders instead of three, and then got compared against volume landmarks that are defined in working sets. There were also two copies of that counter, and the weekly volume advice used one of each.

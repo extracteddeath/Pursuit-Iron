@@ -1,11 +1,15 @@
 # Pursuit Iron — Changelog
 
-96 changes across 47 releases. Newest first.
+100 changes across 47 releases. Newest first.
 
 _Generated from the app's own changelog data — do not edit by hand._
 
-## v3.12.8 — build 506
+## v3.13.1 — build 509
 
+- **The history grouping switch now always appears** — The By cycle / By month switch added in the last build only showed up if you had built a training cycle, so most people never saw it. It is now always above the session list, and it reads By program when you have not run a cycle, since that is what it groups by.
+- **History can group by training cycle** — Your workout list can now be grouped by the cycle and block you were running instead of by calendar month, so a block that ran across the end of a month reads as one block rather than two. Switch between By cycle and By month above the list. Sessions from standalone programs keep their own group.
+- **Switch the Strength Club between what you lifted and your estimated max** — The club total is now yours to define. Tap Lifted for the heaviest weight you have actually put on the bar across squat, bench and deadlift — the way the 1000 lb club is traditionally counted — or Est. 1RM for what your best sets project to. The card says which one it is showing, and all three lifts always use the same measure.
+- **History no longer blanks out on an incomplete entry** — A workout entry missing its volume figure — which can happen with imported backups or sessions saved by much older versions — took the entire History tab down instead of just showing zero for that one line.
 - **Strength score over time now tracks strength, not bookkeeping** — The score-over-time chart could show a long decline while every one of your lifts was getting stronger. Lifts you train less often were counted less at first and more later, so the line drifted downward as the weighting caught up, and the card would report something like a 16-point drop and a lower level. Every point on the chart is now weighted the same way, so the line moves when your lifts move and stays put when they don't.
 - **Strength standards no longer crashes the Progress tab** — Tapping the edit button on the Strength standards card took the whole Progress tab down with a blank error. The card was doing a piece of its calculation in a place that only ran some of the time, which is something React refuses to allow. It runs every time now. The earlier attempt at this fix in build 501 changed the wrong thing and the crash survived it.
 - **Up Next shows the workout, not the gym notes** — The Up Next screen was listing your pinned notes and machine setup under every lift. That is information you need standing at the machine, not deciding whether to train, and it pushed the actual prescription down the screen. Notes and setup still appear in the session itself, where you use them.

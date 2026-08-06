@@ -1,11 +1,12 @@
 # Pursuit Iron — Changelog
 
-109 changes across 47 releases. Newest first.
+110 changes across 47 releases. Newest first.
 
 _Generated from the app's own changelog data — do not edit by hand._
 
-## v3.14.5 — build 515
+## v3.14.6 — build 516
 
+- **Fixed: six side-scrolling rows could block the page from scrolling** — Rows that scroll sideways — the gym chips on Home, the equipment lists in Gyms, the chart ranges in an exercise, the gallery filters — could swallow an up-and-down swipe that started on them, so the page underneath stayed put. Same fault as the Plan tab last build, in six other places.
 - **Plan phase colours now come from your theme** — The phase colours added in the last build were fixed values that fought most of the themes. Each phase now takes its colour from your accent, shifted just enough to tell them apart, so the Plan belongs to whichever theme you are using. Deloads still sit apart on purpose.
 - **Plan header rows line up** — The phase strip used fixed-width chips while the stat boxes above divided the width evenly, so the two rows did not share a grid. They now line up edge to edge.
 - **Fixed: tapping a day in the Plan sent you to Home** — Opening the Plan tab straight after launching the app and tapping any day bounced you back to the Home tab instead of showing the workout. The Plan works out its own program, but the preview screen was still checking for one you had explicitly opened.

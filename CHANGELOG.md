@@ -1,11 +1,20 @@
 # Pursuit Iron — Changelog
 
-100 changes across 47 releases. Newest first.
+109 changes across 47 releases. Newest first.
 
 _Generated from the app's own changelog data — do not edit by hand._
 
-## v3.13.1 — build 509
+## v3.14.5 — build 515
 
+- **Plan phase colours now come from your theme** — The phase colours added in the last build were fixed values that fought most of the themes. Each phase now takes its colour from your accent, shifted just enough to tell them apart, so the Plan belongs to whichever theme you are using. Deloads still sit apart on purpose.
+- **Plan header rows line up** — The phase strip used fixed-width chips while the stat boxes above divided the width evenly, so the two rows did not share a grid. They now line up edge to edge.
+- **Fixed: tapping a day in the Plan sent you to Home** — Opening the Plan tab straight after launching the app and tapping any day bounced you back to the Home tab instead of showing the workout. The Plan works out its own program, but the preview screen was still checking for one you had explicitly opened.
+- **Training phases now look like what they ask of you** — Each phase carries its own colour and icon — building volume, raising intensity, sharpening, and a cooler quieter one for deloads — in the strip at the top and again on the block it heads, so a phase is one recognisable thing wherever it appears rather than four identical chips.
+- **Plan days now say what the session actually is** — Each day in the Plan listed only its name, set count and length. It now also shows the lift it is built around, how many exercises it holds and the muscles it works, so you can tell two days apart without opening either. The phase box no longer cuts long names off half way through.
+- **The Plan opens on what's next, and days preview before they start** — The plan now leads with the next workout you owe, and the week you are in is already open when you arrive. Days you have logged are ticked off and the next one is marked. Tapping a day opens a preview of it — the lifts, sets and target loads — with Start as a separate step, instead of dropping you straight into a session.
+- **Fixed the phase weeks shown for a cycle** — When a program was one block of a training cycle, the phase strip worked out the later blocks' week ranges from the current block's length, showing impossible spans like "W6-6" and "W10-6". Each block's weeks now add up across the cycle.
+- **The Plan tab is now a scrollable week list** — The first version laid the weeks out as a wide grid that had to scroll sideways, which on a phone stopped the page underneath from scrolling at all. It is a straight list now: one row per week showing what it holds and how many of its sessions you have done, grouped under the phase it belongs to, and each week opens to its training days. The nav bar also no longer disappears when you open the tab.
+- **New Plan tab — your whole program at a glance** — Until now you could only see one week at a time. The Plan tab lays the entire block out: which phase you are in, a grid of every week against every training day with the sets and time each holds, and an expandable table showing how each lift builds week by week. The deload is marked everywhere it appears. Tap any cell to jump straight into that day at that week.
 - **The history grouping switch now always appears** — The By cycle / By month switch added in the last build only showed up if you had built a training cycle, so most people never saw it. It is now always above the session list, and it reads By program when you have not run a cycle, since that is what it groups by.
 - **History can group by training cycle** — Your workout list can now be grouped by the cycle and block you were running instead of by calendar month, so a block that ran across the end of a month reads as one block rather than two. Switch between By cycle and By month above the list. Sessions from standalone programs keep their own group.
 - **Switch the Strength Club between what you lifted and your estimated max** — The club total is now yours to define. Tap Lifted for the heaviest weight you have actually put on the bar across squat, bench and deadlift — the way the 1000 lb club is traditionally counted — or Est. 1RM for what your best sets project to. The card says which one it is showing, and all three lifts always use the same measure.

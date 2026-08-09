@@ -1,8 +1,20 @@
 # Pursuit Iron — Changelog
 
-122 changes across 48 releases. Newest first.
+128 changes across 50 releases. Newest first.
 
 _Generated from the app's own changelog data — do not edit by hand._
+
+## v3.16.0 — build 522
+
+- **Your plan stops losing a set to autoregulation every session** — If you train a muscle again before it's had time to recover — a five- or six-day full body, most often — the app was trimming an accessory set at the start of most sessions. It was only ever removing volume it already considered spare, but it made that decision fresh every workout, so the volume your program said it would train was never the volume you actually trained. That decision now happens once, when the program is built. You get a plan that's honest about what it's asking for, and autoregulation goes back to responding to a bad day rather than to your schedule.
+- **What it will and won't take** — It only removes volume above the point where extra sets stop paying for themselves, never below what a muscle needs to grow, never from your main lift, and never from a muscle you asked for more of. A muscle whose schedule already leaves it time to recover is left completely alone — measured across 864 program configurations, four- and two-day-a-week splits come out identical.
+- **Existing programs are offered the update, not given it** — Programs keep running the engine they were built on, so nothing changes mid-block. The Plan screen offers the update and says what it changes; you can take it or keep the program as it is.
+
+## v3.15.1 — build 521
+
+- **Fixed: an effort reading of "0.050000000000000044 RIR"** — The app measures how far your own effort ratings sit from what your performance implies, and quietly corrects for it — so a logged 1 RIR might be read as 0.05. That correction is right and worth keeping, but the number was being printed exactly as computed, floating-point noise and all. Effort now displays to the nearest half rep everywhere it appears. The correction itself keeps its full precision where the load maths uses it.
+- **Fixed: un-ticking a set left its numbers behind** — Completing a set retunes the next one from what you just lifted. Un-ticking it put the tick back but left the retune in place — so weights and reps written by a set you had un-logged stayed on screen with nothing to explain them, and a few mis-taps while setting up filled an exercise with numbers you never asked for. Un-ticking now puts the affected set back exactly as the program wrote it. Anything you typed yourself is left alone.
+- **The plate breakdown follows the set you're about to do** — The loading strip under an exercise was pinned to the first working set and stayed there. On a ramp it told you to load the bar for set 1 while you were standing at it for set 3. It now reads the next set you haven't logged.
 
 ## v3.15.0 — build 520
 

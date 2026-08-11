@@ -1,8 +1,44 @@
 # Pursuit Iron — Changelog
 
-128 changes across 50 releases. Newest first.
+137 changes across 59 releases. Newest first.
 
 _Generated from the app's own changelog data — do not edit by hand._
+
+## v3.17.6 — build 531
+
+- **Fixed: correcting an old workout didn't update your training insights** — If you went back and fixed a weight or rep count in a session from a while ago, the app kept using its previous read of your training — plateau detection, effort calibration, recovery and every coach note carried on from the numbers you'd just corrected. It only noticed changes to how MANY workouts you had and which was newest, so an edit in the middle was invisible to it. It now notices any change to what's actually in them.
+
+## v3.17.5 — build 530
+
+- **Fixed: a lift stuck at the same numbers wasn't reported as stalled** — Plateau detection could only see a lift that was getting WEAKER. If your estimated max simply stopped moving — which is what a plateau nearly always looks like — every session tied for "best" and the newest one was read as a fresh record, so the count reset to zero every time. The result was the app switching a stuck lift to recalibrated loading and telling you why in the session, while the coach card said nothing at all. Both now measure it the same way, and adding reps or sets at the same weight still correctly counts as progress rather than a stall.
+
+## v3.17.4 — build 529
+
+- **Fixed: the 1RM calculator's percentage table could ask for more than your max** — Training percentages were rounded to the nearest plate increment, which rounds up as often as down — so an estimated max of 263 lb printed "100% = 265", four pounds heavier than the number directly above it. Every row leaned the same way. They now round down, so no percentage ever asks for more load than the estimate it came from, and 100% stops contradicting the max it's derived from.
+
+## v3.17.3 — build 528
+
+- **Fixed: a workout with a missing date could poison a lift's stats** — A backup restored from another device can contain a workout entry with no date on it — the app never drops those, because losing a logged session is worse than carrying an odd one. But the training model measured "days since you last trained this" straight off that date and produced a nonsense value for the whole lift. Nothing displayed it yet, so nobody saw it; it would have surfaced the first time something did.
+
+## v3.17.2 — build 527
+
+- **The bottom navigation is now readable by screen readers** — The five tabs along the bottom were unlabelled buttons — a screen reader announced them without saying which was which, and nothing marked the one you were on beyond its colour. Each tab now carries its name and reports itself as the current page.
+
+## v3.17.1 — build 526
+
+- **What's new on the home screen is a summary again** — Each entry was printing its full write-up — some of them over a hundred words — three deep on the screen you open to start training. They're now trimmed to a line or two each, and the complete text is still there under Full changelog.
+
+## v3.17.0 — build 525
+
+- **Program cards: one button to switch, everything else in a menu** — A saved program carried four icon buttons in a row — switch, next block, duplicate and delete — all the same size and shape, sitting side by side on a screen you scroll past. Delete looked exactly like the one next to it. Switching is the only one you reach for on purpose, so it keeps its tick; the rest moved behind a three-dot menu that names each action in words. The program name gets the space back, and the row stops growing every time a new action is added.
+
+## v3.16.2 — build 524
+
+- **Fixed: unsaved program edits could disappear when opened from the Plan tab** — Editing a saved program holds your changes until you hit Save, so a half-finished edit survives leaving the screen. Opening that program from the Plan tab's "Open full program" loaded the last SAVED version instead of your pending edit — and because the app then saw nothing pending, it discarded the edit entirely. No prompt, no undo. That route now resumes your in-progress changes like every other way into a program.
+
+## v3.16.1 — build 523
+
+- **Fixed: updating a cycle block's engine could scramble other blocks in the cycle** — The block you updated always updated correctly — the damage landed on the OTHER phases of the same cycle. Saving any change to a cycle block was treated as "carry this block's exercises to every phase," with no check for whether anything had actually changed. An engine update regenerates a block from its own settings and usually doesn't touch which exercises it uses at all — but every other phase in the cycle got overwritten with that block's list anyway. The same flaw meant swapping a single exercise on one day could silently overwrite unrelated days on other phases too. Only what actually changed is carried across the cycle now; everything else — including a lift you're mid-block on — is left exactly as it was.
 
 ## v3.16.0 — build 522
 

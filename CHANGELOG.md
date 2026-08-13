@@ -1,19 +1,17 @@
 # Pursuit Iron — Changelog
 
-152 changes across 71 releases. Newest first.
+145 changes across 65 releases. Newest first.
 
 _Generated from the app's own changelog data — do not edit by hand._
 
-## v3.18.8 — build 543
+## v3.19.0 — build 544
 
-- **Focused mode for the workout screen** — A button in the workout header strips the screen back to the set you are on and a larger rest clock, putting distracting controls out of the way. The card shows load and reps as two separate tiles with their own steppers, set pips showing progress at a glance, and the target above. It steps through each set, lets you go back to ones already logged, and remembers your choice across reloads. Your choice is remembered if you reload mid-workout.
-- **Fixed: the load was cut off in focused mode** — A three-digit weight showed only its first digit. The unit now sits under the number instead of beside it, so the value always has the full width of its tile.
+- **New: focused mode for the workout screen** — A button in the workout header strips the screen back to one large card for the set you are on — load and reps as big numbers in their own labelled tiles, each with full-size hold-to-repeat steppers, the target and what you lifted at that set position last time on one quiet line above, and a row of pips showing every set in the exercise. Everything you set up before a lift steps out of the way: the exercise strip, coach note, pinned cues, the suggestion banner, warm-up and superset controls, notes. It starts at your first working set rather than walking you through the warm-up ramp, the arrows move between sets so you can go back and correct one, and the rest clock is much larger. Logging is the one wide button in the bar at the bottom, with the effort question offered beside it rather than demanded. Your choice is remembered if you reload mid-workout.
 - **Fixed: unreadable text on light themes** — A few buttons and labels referred to a colour that does not exist, so they fell back to the page text colour and became near-invisible on Mint, Clay, Stone, Slate, Lilac and Rosewater. All of them now use the correct colour.
 - **Tighter set list** — The effort tag under each logged set was taking a full line of padding, which made a finished exercise read as loose.
 
 ## v3.18.1 — build 536
 
-- **New: focused mode for the workout screen** — A button in the workout header strips the screen back to the set you are on, the one after it, and a much larger rest clock. Everything you set up before a lift — the exercise strip, coach note, warm-up and superset controls, notes — steps out of the way until you turn it off. Your choice is remembered if you reload mid-workout.
 - **Fixed: the rest timer never started on myo-reps in the last exercise** — Once the final working set of a session was logged, the app treated the workout as over and stopped starting rest timers — so any myo-rep or drop set still waiting got no timer at all. Because it triggered on the last working set rather than a position in the list, it hit whichever exercise you happened to finish last. Rest now runs whenever anything is still unlogged.
 
 ## v3.18.0 — build 535

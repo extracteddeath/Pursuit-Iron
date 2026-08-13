@@ -1,8 +1,36 @@
 # Pursuit Iron — Changelog
 
-137 changes across 59 releases. Newest first.
+152 changes across 71 releases. Newest first.
 
 _Generated from the app's own changelog data — do not edit by hand._
+
+## v3.18.8 — build 543
+
+- **Focused mode for the workout screen** — A button in the workout header strips the screen back to the set you are on and a larger rest clock, putting distracting controls out of the way. The card shows load and reps as two separate tiles with their own steppers, set pips showing progress at a glance, and the target above. It steps through each set, lets you go back to ones already logged, and remembers your choice across reloads. Your choice is remembered if you reload mid-workout.
+- **Fixed: the load was cut off in focused mode** — A three-digit weight showed only its first digit. The unit now sits under the number instead of beside it, so the value always has the full width of its tile.
+- **Fixed: unreadable text on light themes** — A few buttons and labels referred to a colour that does not exist, so they fell back to the page text colour and became near-invisible on Mint, Clay, Stone, Slate, Lilac and Rosewater. All of them now use the correct colour.
+- **Tighter set list** — The effort tag under each logged set was taking a full line of padding, which made a finished exercise read as loose.
+
+## v3.18.1 — build 536
+
+- **New: focused mode for the workout screen** — A button in the workout header strips the screen back to the set you are on, the one after it, and a much larger rest clock. Everything you set up before a lift — the exercise strip, coach note, warm-up and superset controls, notes — steps out of the way until you turn it off. Your choice is remembered if you reload mid-workout.
+- **Fixed: the rest timer never started on myo-reps in the last exercise** — Once the final working set of a session was logged, the app treated the workout as over and stopped starting rest timers — so any myo-rep or drop set still waiting got no timer at all. Because it triggered on the last working set rather than a position in the list, it hit whichever exercise you happened to finish last. Rest now runs whenever anything is still unlogged.
+
+## v3.18.0 — build 535
+
+- **Rope exercises now show you holding the ends, not the middle** — Every rope movement drew the rope splitting at your hands, so it looked like you were pinching the middle of it. A rope hangs from a carabiner and each hand takes an end, and the strands pull in a straight line toward the machine — face pulls, rope pushdowns, rope hammer curls and rope rows all show that now.
+
+## v3.17.9 — build 534
+
+- **Front raises and face pulls now show the right movement** — Both were drawn as a lateral raise — arms sweeping out to the sides. A front raise is the arm travelling forward to shoulder height, and a face pull is a high pull toward the head with the elbows above the wrists, so both now animate the movement you are actually doing. Every other shoulder raise is unchanged.
+
+## v3.17.8 — build 533
+
+- **Fixed: dynamic double progression could prescribe less than you just lifted** — A lift on Dynamic double could open with weights BELOW the ones in its own Last Time column, and announce a set advancing when nothing in that column had topped the rep range. The app was progressing it from a different workout than the one you were looking at: it normally anchors on your best of the last three sessions of that day, so one off day can't drag your loads down, and it ranks those sessions by the single best set in each. On per-set progression that's the wrong question — an older session can win on set 1 alone while every other set in it was lighter, and then sets 2, 3 and 4 get prescribed from those lighter numbers. Dynamic double now advances each set from your most recent session, so every set progresses from what you actually did last time and the Last Time column is what the prescription is built on. Every other progression style keeps the best-of-three anchor and its protection against a single bad day.
+
+## v3.17.7 — build 532
+
+- **Saved program cards are readable by screen readers** — The card that opens a program had no label of its own, so a screen reader read out everything printed on it run together — the name, the Active badge, the split, the day count — as one long string. It now announces itself as "Open <program name>".
 
 ## v3.17.6 — build 531
 

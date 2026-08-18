@@ -1,13 +1,115 @@
 # Pursuit Iron — Changelog
 
-145 changes across 65 releases. Newest first.
+181 changes across 87 releases. Newest first.
 
 _Generated from the app's own changelog data — do not edit by hand._
+
+## v3.31.1 — build 566
+
+- **Drag to reorder today's exercises** — The day list now has a handle on each row — press and drag to move a lift up or down the session, past as many positions as you like in one go. The arrows are still there for a quick single step, and remain the way to do it with a keyboard or screen reader. Undo covers the whole drag rather than each step of it.
+- **Fixed: rearranging a later exercise moved you onto it** — Moving a lift from the day list jumped the workout to that lift, so reorganising what was still to come lost your place. You now stay on the exercise you were actually doing.
+
+## v3.31.0 — build 565
+
+- **See the whole day, and rearrange it, from one list** — Tap the exercise counter at the top of a workout to pull up everything you are doing today. Each lift shows how many sets you have left, the one you are on is marked, and tapping any of them jumps straight there. You can move lifts up and down to change the order — useful when a rack or machine is taken — skip one for today, or add another, all without leaving the list. Reordering, skipping and adding were already possible, but only from the card of the lift you happened to be standing on, so changing the order meant walking to each one in turn.
+
+## v3.30.0 — build 564
+
+- **Supersets show the whole group, with everyone's progress** — A linked pair or trio only ever named the exercise either side of the one you were on — so standing on the middle movement of three, you were told about two neighbours without being told they were one round, and nothing said how many sets each still had left. Now every movement in the group sits in a row: its position (A1, A2, A3), its name, how far through it is, and which one you are on. Tap any of them to go straight there instead of swiping back and forth between machines. It shows in focused mode too, which is exactly when you are moving between stations.
+
+## v3.29.1 — build 563
+
+- **Focused mode stops hiding things you need** — The row of actions under a lift — Info, Warm-up, Superset, History, Swap, Pin a note, Plates — was hidden in focused mode, so using it meant dropping out of the mode and back again. The warm-up button was the one that hurt: a ramp is only built when the app already knows your working weight, so the first session of a brand-new program has none, and that button is the only way to add them. In focused mode there was no way to reach it. The last-set technique — partials, myo-reps, a loaded stretch — now also shows on the set it actually applies to, which matters more here than anywhere, because focused mode shows you one set at a time.
+
+## v3.29.0 — build 562
+
+- **Dumbbells and bodyweight lifts now count toward your Strength Score** — Every strength standard in the app was a barbell one, so anyone training with dumbbells got a permanently empty panel telling them to log a squat, bench, deadlift or press — lifts their own program never prescribed and their gym might not contain. Four of the twelve programs the app itself offers could never produce a score. Dumbbell presses, rows and RDLs, and weighted pull-ups, chin-ups and dips, are now measured against their closest barbell equivalent and marked “Est.” so it is clear which numbers came off a bar. Push-ups, goblet squats and split squats are deliberately left out: a rep count is not a load, and a made-up level is worse than none. If you already train with a barbell, your score has not moved by a single point.
+- **Your score now says why it moved, and what to lift next** — Strength standards are relative to bodyweight, so gaining weight lowers the score even when every lift holds — correct arithmetic, and baffling to read. The card now separates the two: how much came from your training and how much from the scale. It also names the next target on your weakest pattern, taken from the same table that set your level, so the goal can never disagree with the rank beside it.
+- **Fixed: one unknown exercise could stop the app from opening** — A saved program can name an exercise a given version does not have — after restoring a backup from a newer build, or on an older install. That single unknown movement stopped the whole app from starting, and because the program is stored on the device, reloading hit the same wall every time. The exercise now shows as unavailable in that one slot and everything else carries on. Your program is left untouched, so the lift returns intact once the app knows it again.
+- **Fixed: the backup reminder could go quiet without a backup existing** — Opening the backup screen was enough to mark you as backed up, so tapping the reminder, glancing at it and going back silenced it for another two weeks with nothing saved anywhere. Only actually sharing, downloading or copying the file counts now. The error screen can also save a backup before you do anything else, since reloading cannot help when the problem is the stored data itself.
+- **Fixed: personal records could show the wrong unit** — A workout entry that arrived without a unit recorded on it — from an imported backup, or a much older version — was labelled in kilograms no matter which unit you train in. It now follows your setting, while entries that do carry their own unit keep it, because a record of what you lifted should not change because a preference did.
+- **Fixed: panels showed two grab handles** — The bar you pull to close a panel was drawn twice on most of them, leaving a doubled line across the top. Toasts and the resume banner were also being treated as draggable panels, which put a stray handle on them and pushed their text sideways.
+
+## v3.28.1 — build 561
+
+- **Fixed: pulling a sheet down did nothing** — Dragging a panel down by its top was released last version and did not actually work on a device. Panels open with a slide-up animation, and a browser gives an animation priority over the position the drag was setting — so the sheet was being told to move and the animation kept overruling it. The drag now takes that animation off before it starts moving anything.
+
+## v3.28.0 — build 560
+
+- **Pull a sheet down to close it** — Every panel that slides up from the bottom — exercise pickers, plan info, settings, the lot — can now be dragged down by its top to dismiss, with a grab bar showing where. Closing one previously meant reaching for a small X or tapping the strip above it, which on a large phone is exactly where a thumb does not reach. A short pull springs back, so a scroll that overshoots will not throw the panel away.
+
+## v3.27.3 — build 559
+
+- **Internal: every program the app can build is now measured** — The release sweep that checks generated programs against volume landmarks was walking a hand-written list of splits, session lengths and training days — and that list had fallen behind. Ten of the twenty-three splits, both two-hour session lengths, and every two-day program were never checked. The sweep now covers all of them, and a new check fails the build if anything the app offers is ever left out again.
+
+## v3.27.2 — build 558
+
+- **Internal: the set shortcuts are now tested by using them** — The buttons that restore a suggested load or fill in last time’s numbers were checked only by inspecting the code that draws them. A release check now builds a training history, walks into a real session and taps them, confirming each fills the row with exactly the numbers it names — and that it withdraws once taken.
+
+## v3.27.1 — build 557
+
+- **The two shortcuts under a set are readable now** — Restoring the suggested load, or filling in what you lifted last time, were the smallest text in the app — a pair of nine-pixel numbers squeezed under the target, distinguishable only by a tiny arrow, with nothing on screen saying what tapping one would do. They are now proper buttons under the row, each labelled: “Suggested 185×8” and “Last time 180×7”.
+
+## v3.27.0 — build 556
+
+- **Programs now say what they cannot fit** — At 20 to 40 minutes a session holds three or four exercises, so a week is about a dozen movements for the whole body — and something has to give, usually side and rear delts. That prioritising is right, but it was happening silently: you could train a program for months without knowing it contained no lateral raise. A short program now states which muscles get no direct work, so you can lengthen the session, add the movement yourself, or accept it knowingly. It only appears when a muscle gets nothing at all, and never on programs of 90 minutes or more.
+
+## v3.26.1 — build 555
+
+- **Fixed: two bench options that read as the same thing** — Your gym’s equipment list offered “Adjustable Bench” and “Adjustable / Incline Bench” side by side, so it was natural to tick one and move on — and whichever you skipped quietly removed a whole class of pressing from your programs. Ticking only the incline one is what made an incline day open on a flat barbell bench, because no incline press was available to choose. The first is now labelled “Flat Bench”, and selecting an adjustable or decline bench now implies you can also bench flat, since those benches do. Worth re-checking your gym: if you only ticked one, you should now see both flat and incline work appear.
+
+## v3.26.0 — build 554
+
+- **Session times now include the gym, not just the lifting** — The estimate counted your sets, your rest and your warm-up ramp — and nothing for walking to the next station, waiting for it, or loading the first working weight. It read about a quarter short of a real session. Changing exercise is now costed, more for a barbell than a cable and almost nothing for a superset, so the time on the card is the time on the clock. Your programs are unchanged: this corrects what is shown, not how sessions are built.
+
+## v3.25.1 — build 553
+
+- **Fixed: exercises that did not match the day they were on** — In Full Body · Pattern Rotation the squat day could open on a leg press and the unilateral day on a bilateral squat — the pattern was in the day’s name and nowhere in how exercises were chosen. Each day now states the movement it wants, so the squat day opens on a squat, the hinge day on a hinge, the unilateral day on a lunge or split squat, and the deadlift day on a deadlift. Later exercises in the day are still free to vary. A floor press could also open an incline day, because the app did not recognize it as a flat press and so never scored it against the day’s angle.
+
+## v3.25.0 — build 552
+
+- **Fixed: Full Body · Pattern Rotation never programmed a deadlift, and pressed with dumbbells** — Every day in that split was led by a leg movement, and only a day’s main lift draws the heavy barbell variant — so pressing stayed an accessory even in strength and peak blocks, and picked a dumbbell version. No day asked for lower back work either, so a conventional deadlift could never be chosen. The rotation now leads with squat, hinge, incline press, deadlift, then the pump day, so each of the big lifts anchors a session and waves down into low reps like the original Full Body does. Existing programs are unchanged.
+- **Session times now learn how long you actually take** — The estimate priced your sets and rest but not the gym around them — walking to the next rack, waiting for one, loading plates. It now compares what past sessions were estimated at against the clock they actually took and adjusts what it shows you. It needs four completed sessions before it changes anything, ignores one left running by accident, and does not alter how programs are built.
+
+## v3.24.0 — build 551
+
+- **The session length picker tells the truth now** — It said “~6 exercises” next to “90 to 120 minutes” — six exercises is about an hour. The count shown is now measured from what the app actually builds, and it accounts for your goal, because rest length decides how much fits: the same time holds more hypertrophy work than strength work. An automated check regenerates programs before each release and fails if any of these numbers drifts from reality.
+- **Known: long sessions still come up short** — Choosing 90-120 minutes or longer currently produces days of around 80 minutes. The picker no longer overstates what you will get, but the underlying shortfall is not fixed yet — it is now measured on every release rather than going unnoticed.
+
+## v3.23.2 — build 550
+
+- **Internal: two blind spots closed in the program checks** — The measurement sweep only ever built 40, 60 and 90 minute sessions, so the two longest lengths the app offers — where it struggles most to fill a day — were never checked. It now covers every length. The check harness that deliberately breaks the app to prove the tests still work also no longer writes to the source it is testing.
+
+## v3.23.1 — build 549
+
+- **Internal: the release checks now prove they can fail** — A suite of automated checks is only evidence if it is capable of going red. Eight known past defects are now deliberately reintroduced before each release and every one must be caught, with a harmless control change that must NOT be flagged — so a check that has quietly stopped testing anything is detected rather than trusted. The program measurement sweep also refuses to compare a run that generated nothing, and now reads volume at the first week of a block as well as the peak.
+
+## v3.23.0 — build 548
+
+- **The Plan tab now has four views** — Schedule, Volume, Progression and Blueprint. Schedule is what it always was, with a week strip across the top carrying each week’s sets and running time. Volume shows the week against the landmarks, and tapping a muscle lists the lifts that fed it — including compounds feeding it indirectly, and at what rate. Progression is every lift week by week with its sets, rep target and effort, searchable and filterable. Blueprint charts the block’s planned sets per week alongside its phases. The header also states the week, your session frequency, the sets that week prescribes and the phase it belongs to, over a bar of workouts completed.
+- **Home is more compact** — Browse templates, build your own and training cycles were three full-width buttons stacked down the page. They are now one block of four tiles alongside a quick unguided session, each showing its own count. A new program can also be started straight from the header of your program list.
+
+## v3.22.0 — build 547
+
+- **See the session before you start it** — The card on Home now lists the first lifts in today's workout with their sets and reps, and says how many more are in the session — so you can tell what you are walking into without starting it first.
+- **New: lift progression** — A table in Plan info showing every lift week by week — sets, rep target and effort — so you can see where the block steps up and what the deload actually removes, instead of paging through one week at a time. Searchable, and filterable to primary lifts, upper or lower.
+- **New: volume load wave** — The block’s planned sets per week as a chart, so an accumulation ramp or a deload trough is visible at a glance.
+- **Weekly volume now shows what fed each muscle** — Tap a muscle to see which lifts contributed to its weekly total, including compounds that feed it indirectly and at what rate — the reason a total can read higher than the direct work you remember doing.
+- **Fixed: muscles at the top of their healthy range read as out of range** — Splitting the volume bands last release left three places still treating only the lower half of the MEV–MRV range as productive, so a well-trained muscle could be counted as outside its range on the progress and volume screens.
+
+## v3.21.0 — build 546
+
+- **Four more splits** — Torso / Limbs (4-5 days) alternates chest-back-shoulder days with leg-and-arm days, so arms are trained in a session where they are not already spent. Push / Pull / Legs / Arms adds a dedicated shoulders-and-arms day to PPL. Upper / Lower / Arms does the same for a 5-day upper-lower. Powerlifting · SBD Wave builds the week around squat, bench and deadlift with hypertrophy accessories behind them. All four are additions — no existing program changes.
+- **Weekly volume now reads in four bands, not three** — A muscle between its minimum and its ceiling used to read simply as “productive”, whether it sat in the middle of the range or right at the top. The band now splits at the point the app itself uses when deciding whether to trim a session, so “high” is distinguishable from “productive”, and each band explains what it means.
+
+## v3.20.0 — build 545
+
+- **New split: Full Body · Pattern Rotation** — A second way to run full body, alongside the existing one — each day pairs a leg pattern with an upper push or pull rather than hanging everything off one anchor lift: squat with horizontal push/pull, hinge with vertical, then unilateral, posterior chain, and a pump day. Spreading the pressing across the week means the front delt takes much less of it. In exchange, side and rear delts get slightly less coverage than the original full body, so it suits you better if you already do your own lateral and rear work. The original Full Body is unchanged and still the default.
 
 ## v3.19.0 — build 544
 
 - **New: focused mode for the workout screen** — A button in the workout header strips the screen back to one large card for the set you are on — load and reps as big numbers in their own labelled tiles, each with full-size hold-to-repeat steppers, the target and what you lifted at that set position last time on one quiet line above, and a row of pips showing every set in the exercise. Everything you set up before a lift steps out of the way: the exercise strip, coach note, pinned cues, the suggestion banner, warm-up and superset controls, notes. It starts at your first working set rather than walking you through the warm-up ramp, the arrows move between sets so you can go back and correct one, and the rest clock is much larger. Logging is the one wide button in the bar at the bottom, with the effort question offered beside it rather than demanded. Your choice is remembered if you reload mid-workout.
-- **Fixed: unreadable text on light themes** — A few buttons and labels referred to a colour that does not exist, so they fell back to the page text colour and became near-invisible on Mint, Clay, Stone, Slate, Lilac and Rosewater. All of them now use the correct colour.
+- **Fixed: unreadable text on light themes** — A few buttons and labels referred to a color that does not exist, so they fell back to the page text color and became near-invisible on Mint, Clay, Stone, Slate, Lilac and Rosewater. All of them now use the correct color.
 - **Tighter set list** — The effort tag under each logged set was taking a full line of padding, which made a finished exercise read as loose.
 
 ## v3.18.1 — build 536
@@ -48,7 +150,7 @@ _Generated from the app's own changelog data — do not edit by hand._
 
 ## v3.17.2 — build 527
 
-- **The bottom navigation is now readable by screen readers** — The five tabs along the bottom were unlabelled buttons — a screen reader announced them without saying which was which, and nothing marked the one you were on beyond its colour. Each tab now carries its name and reports itself as the current page.
+- **The bottom navigation is now readable by screen readers** — The five tabs along the bottom were unlabelled buttons — a screen reader announced them without saying which was which, and nothing marked the one you were on beyond its color. Each tab now carries its name and reports itself as the current page.
 
 ## v3.17.1 — build 526
 
@@ -96,10 +198,10 @@ _Generated from the app's own changelog data — do not edit by hand._
 - **Pick a program from a list instead of hunting for its card** — There is a Switch program button on your Up Next card now. It opens a list of everything you have saved, showing how long each program is, how many days a week it runs, how much of it you have finished and which block of a cycle it belongs to — the things you would actually compare. Your current program is marked and the switch still announces itself with an Undo.
 - **Switching programs now tells you it happened** — Changing your active program used to do it silently — the card jumped to the top of the list and nothing else. It now says which program you have switched to and offers Undo, which also puts a training cycle back to the block it was on. The control is a labelled Switch button rather than a tick sitting next to Delete.
 - **Fixed: six side-scrolling rows could block the page from scrolling** — Rows that scroll sideways — the gym chips on Home, the equipment lists in Gyms, the chart ranges in an exercise, the gallery filters — could swallow an up-and-down swipe that started on them, so the page underneath stayed put. Same fault as the Plan tab last build, in six other places.
-- **Plan phase colours now come from your theme** — The phase colours added in the last build were fixed values that fought most of the themes. Each phase now takes its colour from your accent, shifted just enough to tell them apart, so the Plan belongs to whichever theme you are using. Deloads still sit apart on purpose.
+- **Plan phase colors now come from your theme** — The phase colors added in the last build were fixed values that fought most of the themes. Each phase now takes its color from your accent, shifted just enough to tell them apart, so the Plan belongs to whichever theme you are using. Deloads still sit apart on purpose.
 - **Plan header rows line up** — The phase strip used fixed-width chips while the stat boxes above divided the width evenly, so the two rows did not share a grid. They now line up edge to edge.
 - **Fixed: tapping a day in the Plan sent you to Home** — Opening the Plan tab straight after launching the app and tapping any day bounced you back to the Home tab instead of showing the workout. The Plan works out its own program, but the preview screen was still checking for one you had explicitly opened.
-- **Training phases now look like what they ask of you** — Each phase carries its own colour and icon — building volume, raising intensity, sharpening, and a cooler quieter one for deloads — in the strip at the top and again on the block it heads, so a phase is one recognisable thing wherever it appears rather than four identical chips.
+- **Training phases now look like what they ask of you** — Each phase carries its own color and icon — building volume, raising intensity, sharpening, and a cooler quieter one for deloads — in the strip at the top and again on the block it heads, so a phase is one recognisable thing wherever it appears rather than four identical chips.
 - **Plan days now say what the session actually is** — Each day in the Plan listed only its name, set count and length. It now also shows the lift it is built around, how many exercises it holds and the muscles it works, so you can tell two days apart without opening either. The phase box no longer cuts long names off half way through.
 - **The Plan opens on what's next, and days preview before they start** — The plan now leads with the next workout you owe, and the week you are in is already open when you arrive. Days you have logged are ticked off and the next one is marked. Tapping a day opens a preview of it — the lifts, sets and target loads — with Start as a separate step, instead of dropping you straight into a session.
 - **Fixed the phase weeks shown for a cycle** — When a program was one block of a training cycle, the phase strip worked out the later blocks' week ranges from the current block's length, showing impossible spans like "W6-6" and "W10-6". Each block's weeks now add up across the cycle.
@@ -213,7 +315,7 @@ _Generated from the app's own changelog data — do not edit by hand._
 ## v3.4.0 — build 480
 
 - **Update an older program to the newest engine** — A program keeps the version of the training engine it was built on, so its prescriptions never shift underneath you mid-block. That protection had no exit: a program built last month could never receive a correction made since, including corrections the research forced. Any program built on an earlier engine now says so, lists in plain language what updating would change, and rebuilds on request using the same seed — so everything that changes is the update and nothing is a reshuffle. Your logged sets are untouched, and the version you had waits under Earlier shuffles if you want it back.
-- **What the volume ceiling actually means** — Weekly sets above the ceiling were labelled junk volume. The best current evidence — a 2026 analysis of 67 studies — finds size and strength still improving as weekly sets rise, with diminishing returns rather than a point where more starts to hurt. The ceiling is a recovery budget worth watching when progress or readiness slides, not a line past which your sets stopped counting, and it now says so. Same numbers, same colours, honest claim. The same analysis confirmed that counting an indirect set as half a set predicts growth best, which is what this app already does.
+- **What the volume ceiling actually means** — Weekly sets above the ceiling were labelled junk volume. The best current evidence — a 2026 analysis of 67 studies — finds size and strength still improving as weekly sets rise, with diminishing returns rather than a point where more starts to hurt. The ceiling is a recovery budget worth watching when progress or readiness slides, not a line past which your sets stopped counting, and it now says so. Same numbers, same colors, honest claim. The same analysis confirmed that counting an indirect set as half a set predicts growth best, which is what this app already does.
 
 ## v3.3.4 — build 479
 
@@ -331,9 +433,9 @@ _Generated from the app's own changelog data — do not edit by hand._
 - **A home screen that answers the question** — Today's workout now sits at the top, above the streak and totals — the thing you opened the app for is the first thing you see. The template carousel retires itself once you're a few sessions into a program, so your own library isn't buried under suggestions you've already passed on.
 - **Easier to hit, easier to see** — Small controls — the +/− steppers, reorder arrows, sheet close buttons — now have a full-size touch area even though they still look the same, so you miss them less with a thumb mid-set. Sheets close with Escape, announce themselves properly, and there's a visible focus outline if you're using a keyboard.
 - **Templates named for what they do** — Program templates now carry descriptive names — Main-Lift Waves, Tiered Linear Progression, Ramping 5×5, Straight 5×5 — instead of borrowing coaches' and brands' names. The programming is unchanged: same percentages, same progression, same saved programs and share codes. Only the labels moved.
-- **Text you can actually read** — Every colour the app uses as text was measured against the surface behind it, and the ones that fell short were corrected — in all fourteen themes. Secondary labels, the amber warnings and the accent links are all legible now, including on the light themes where they were faintest. The themes still look like themselves.
+- **Text you can actually read** — Every color the app uses as text was measured against the surface behind it, and the ones that fell short were corrected — in all fourteen themes. Secondary labels, the amber warnings and the accent links are all legible now, including on the light themes where they were faintest. The themes still look like themselves.
 - **Your birthday, not your age** — Strength standards scale by age, and a typed-in age quietly went stale — a lifter who entered 39 kept being scored against 39-year-olds for years. Enter a birthday once and it stays right. If you'd set an age before, it's been carried over as an estimate; set the real date and it'll sharpen.
-- **Bodyweight tracking that keeps up** — Weigh-ins now hold about five and a half years instead of six months, and each one remembers the unit it was taken in — so switching between lb and kg, or merging two devices, no longer shows a phantom gain or loss. Body measurements convert properly between inches and centimetres too.
+- **Bodyweight tracking that keeps up** — Weigh-ins now hold about five and a half years instead of six months, and each one remembers the unit it was taken in — so switching between lb and kg, or merging two devices, no longer shows a phantom gain or loss. Body measurements convert properly between inches and centimeters too.
 
 ## v3.0 — build 441
 

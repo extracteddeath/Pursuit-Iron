@@ -80,5 +80,11 @@
         });
       }
     </script>
+    <!-- Cloudflare Web Analytics — cookieless, stores nothing in the browser, IP discarded at the
+         edge. Deliberately NOT added to the service worker's SHELL: it is cross-origin, the SW's
+         catch-all only caches same-origin ("basic") responses, and a failed beacon must never be able
+         to hold up or break an offline launch. Undercounts by design — ad blockers stop the script and
+         it cannot fire offline — so read it as a floor and a trend, not a headcount. -->
+    <script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "44fa22e7b5ba4052b870f46ca3793543"}'></script>
   </body>
 </html>

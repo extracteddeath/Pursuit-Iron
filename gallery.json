@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-07-18",
+  "updated": "2026-08-18",
   "programs": [
     {
       "code": "PI-6RP4-C60F-ZR00-000F-3Q60-RM",
@@ -116,14 +116,14 @@
       "note": "PPL on a home kit — dumbbells and an adjustable bench."
     },
     {
-      "code": "PI-6RP4-C60F-ZR00-000E-C1A3-103T-22MR-A9BC4",
+      "code": "PI-B8P4-C680-0000-FWJV-04EE-0AP",
       "title": "PPL — hamstring emphasis",
       "author": "pursuit",
       "tags": [
         "coached",
         "hypertrophy"
       ],
-      "note": "PPL with three swaps for a lifter with tight hips: less deep hip flexion, more direct hamstring work."
+      "note": "PPL with the hamstrings emphasised: direct curl and Nordic work replaces hip-thrust and lunge volume, so the hamstrings get more and deep hip flexion less."
     }
   ]
 }

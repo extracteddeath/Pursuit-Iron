@@ -1,8 +1,32 @@
 # Pursuit Iron — Changelog
 
-181 changes across 87 releases. Newest first.
+187 changes across 93 releases. Newest first.
 
 _Generated from the app's own changelog data — do not edit by hand._
+
+## v3.34.1 — build 572
+
+- **Fixed: the hamstring template was the same program as the plain PPL** — “PPL — hamstring emphasis” in the shared programs list promised swaps for more direct hamstring work, and was in fact an identical copy of the standard six-day Push / Pull / Legs — same exercises, same volume, different name. It is now a real hamstring build: leg curls and Nordic curls in place of hip thrusts and walking lunges, with about a quarter more hamstring volume a week. Every shared program is now checked before release, so a template cannot claim something it does not do.
+
+## v3.34.0 — build 571
+
+- **Four new themes** — Emerald and Gold join the dark themes, Sage and Ochre the light ones. They fill gaps rather than repeat what was there — a true green, a warm gold, a muted sage and a deep ochre — so every theme still gives you a different app to look at. All eighteen are now checked for readable text on buttons before they ship.
+
+## v3.33.1 — build 570
+
+- **Your Profile score now says what it rests on, and what is next** — The Strength Score on your Profile is the one people screenshot, and it was the only place still presenting the number flat. If your score comes entirely from dumbbell or bodyweight lifts it is now marked as an estimate here too, exactly as it is on your home screen. Both cards also name the next target on your weakest pattern — in the weight you actually load, so a dumbbell target reads per hand.
+
+## v3.33.0 — build 569
+
+- **The Lifts tab is split into four views** — It had grown into one long scroll of ten sections, and several of them were not about individual lifts at all — volume against targets, next block’s volume, fatigue and recovery had all collected there. It now works like the Plan tab: Exercises for your per-lift charts and search, which is where it opens; Records for personal bests, strength standards and goals; Load for intensity and volume; Recovery for fatigue. Nothing was removed, and tapping the Strength Score card on your home screen still takes you straight to the standards.
+
+## v3.32.1 — build 568
+
+- **Fixed: “+3 more exercises” on Up Next now shows them** — The Up Next card lists the first five exercises of the session and counted the rest underneath. That count looked like something you could tap, and was not. Tap it now and the rest of the session opens in place, with the sets and reps for each; tap again to fold it back to a summary.
+
+## v3.32.0 — build 567
+
+- **Search your lifts on the Progress screen** — The Lifts tab keeps one chart for every exercise you have ever logged, so the longer you train the further you scroll to reach any one of them. There is now a search box above the list. It matches muscles and shorthand as well as names — typing “chest” finds your presses, “rdl” finds Romanian deadlifts — using the same matching as the exercise picker, so the same words find the same lifts wherever you search from.
 
 ## v3.31.1 — build 566
 

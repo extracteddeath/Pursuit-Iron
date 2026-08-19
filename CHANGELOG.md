@@ -1,8 +1,32 @@
 # Pursuit Iron — Changelog
 
-187 changes across 93 releases. Newest first.
+196 changes across 98 releases. Newest first.
 
 _Generated from the app's own changelog data — do not edit by hand._
+
+## v3.37.1 — build 577
+
+- **Two forearm slots go to the front and back of the wrist, not the side** — Radial and ulnar deviation is a small assistance role through a short range, so when a week only has room for two wrist movements they should be the palm-side and back-of-hand ones. That is what happened already, but only by accident of where the new movements sat in the exercise list — nothing was actually enforcing it, and reordering the library would have quietly changed it. The side is now explicitly the third slot's direction: it is picked once flexion and extension are both covered, and not before.
+
+## v3.37.0 — build 576
+
+- **Side-of-wrist work exists now — and programs actually use it** — The last release could spread forearm work between the front and back of the wrist but not the side, because the library had no radial or ulnar deviation movement in it at all. Four are added: hammer radial and ulnar deviation, which need nothing but a hammer, plus cable and band versions. Adding them was not enough on its own — measured across 42 forearm-focused programs, the new movements were picked zero times, losing every slot to the older staples and to carries. A program that buys a third forearm slot now trains all three directions, and grip work keeps its place.
+- **Wrist spread was being applied for the wrong reason** — The rule that spreads forearm work recorded which wrist direction it had trained in only one of the two places it picks exercises — so for almost every program it recorded nothing, and grip holds were being pushed out of every slot unconditionally rather than making way for whatever was actually missing. The spread you saw was right; the reason behind it was not. It now tracks what the week has covered, which is what lets the third direction be found at all.
+
+## v3.36.1 — build 575
+
+- **Myo-reps grow past three on every lift, not just loaded ones** — The 3-to-5 rule shipped yesterday only ran once a weight was on the row. On a bodyweight or assisted movement — and on any lift the first time you do it, before there is a suggestion to fill in — the row opens blank, so logging the third mini added nothing and the set ended early. A blank load means you haven’t typed a weight yet, not that the extension is over.
+
+## v3.36.0 — build 574
+
+- **Myo-reps and drop sets no longer cost you weight** — An extension of a set is short by design and always comes last, and four separate places read “the last set” straight off the list — so a mini counted as the set that decides next session’s load. Taking a 50 lb lateral raise to 20/20/20 and then adding three 4-rep minis had earned an increase to 60; the app prescribed 45 and told you to ease back. Using the technique the block asked for was costing you load every session, and the harder you extended the set the more it took away. Extensions are now invisible to progression — the same session with and without them gives the same answer.
+- **Working up in weight is no longer read as a missed set** — 180×6 and then 210×4 came back as “ease back to 180” — a weight you had already beaten for more reps that day. At a fixed load the last set is the right thing to judge; when the load itself moves, the last set is the TOP set, and being at the bottom of the rep range is what a top set is for. A session with varying loads is now judged on what it averaged, which is the same basis the “Last” reference already used. Straight sets are unchanged.
+- **Myo-reps run 3 to 5 mini-sets, and stop when you do** — It always asked for exactly three. Three are still laid out up front, and a fourth and a fifth are added only when you actually hit the mini rep range — come in under it and the extension is over. Whichever comes first, which is how the technique is meant to run.
+- **Wrist work now covers both directions, not just one** — Every forearm movement — wrist curls, reverse wrist curls, carries, hangs, pinches, a gripper — read as the same movement internally, so the app could not tell a palm-side curl from a back-of-hand one, or wrist work from a static grip hold. Measured across 252 forearm-focused programs: 325 grip slots against 48 wrist, and not one program trained both wrist directions. A program with more than one forearm slot now trains flexion and extension, and grip work keeps its place once both are covered. Side-of-wrist work (radial and ulnar deviation) still has no movement in the library, so that direction is not yet coverable.
+
+## v3.35.0 — build 573
+
+- **Five splits finally have a ready-made program** — Full Body · Pattern Rotation, Torso / Limbs, Push / Pull / Legs / Arms, Upper / Lower / Arms and Powerlifting · SBD Wave were all in the app, and none of them appeared anywhere in Templates — the only way to reach one was to build a custom split, which is the route you take when you already know what you want. There are now nine templates covering them, so the browse list runs to 74. Nothing that already existed has changed: no template’s configuration was touched, and a release check now fails the build if a split is ever left with no way in again.
 
 ## v3.34.1 — build 572
 

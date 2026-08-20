@@ -1,8 +1,16 @@
 # Pursuit Iron — Changelog
 
-202 changes across 103 releases. Newest first.
+204 changes across 105 releases. Newest first.
 
 _Generated from the app's own changelog data — do not edit by hand._
+
+## v3.44.0 — build 584
+
+- **Older workouts are properly attached to your program again** — Workouts logged before day markers became stable were reconnected in some places but not others. The parts that decide whether a lift has stalled or plateaued were among the ones still looking at the old markers, so for anyone with older history they saw nothing at all — a lift stuck at the same weight for four sessions looked brand new, and the app never stepped in to adjust it. Reconnection now happens once, when your data loads, so every part of the app sees the same thing. Nothing is rewritten on your device; if a workout can't be matched with certainty it's left exactly as it is rather than guessed at.
+
+## v3.43.0 — build 583
+
+- **The self-test now actually checks your sets** — It was only ever checking the shape of a program — that days had exercises and exercises had a number of sets — with a fully-stocked gym and no training history at all. That meant it never looked at a single prescribed weight, and none of the progression machinery ever ran, which is why it kept saying “all clear” while real problems went unnoticed. It now simulates a lifter training week after week across four different gym setups — hitting targets, missing them, and stalling — and checks over a hundred thousand individual prescribed sets against rules about whether a set makes sense to a human: a weight you can actually load on that machine, a warm-up that climbs and stays lighter than your work set, a rep target inside the range shown next to it, a drop set no heavier than the set it came from. It then runs the same checks over your own programs and your real logged history.
 
 ## v3.42.0 — build 582
 

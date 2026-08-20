@@ -1,8 +1,29 @@
 # Pursuit Iron — Changelog
 
-196 changes across 98 releases. Newest first.
+202 changes across 103 releases. Newest first.
 
 _Generated from the app's own changelog data — do not edit by hand._
+
+## v3.42.0 — build 582
+
+- **You can delete a logged workout — and redo that day** — Every workout in your history now has a delete button beside Repeat. It takes two taps to confirm, and you get an Undo afterwards if you change your mind. Deleting properly undoes everything that session caused: your rotation goes back so the app asks for that day again, the muscles it trained stop counting as fatigued, and the loads it suggests roll back to the session before it. If a lift has no earlier session to fall back on, the app forgets it rather than quietly keeping numbers from a workout you deleted.
+
+## v3.41.0 — build 581
+
+- **Swap alternatives now come from the gym you're actually in** — If you added a machine to your gym after building a program, that program never offered it — the swap list was still reading the equipment you had when the program was created. It now uses your active gym. Two related fixes came with it: equipment that implies other equipment (an incline bench implies a bench) was being dropped entirely, hiding every alternative behind it, and the same problem existed in three separate places — the plan tab, the swap list during a workout, and the “ban this exercise” replacement, which picks a substitute for you rather than showing a list. Your program still generates against the equipment it was built for, so opening a plan somewhere else won't rewrite your training.
+
+## v3.40.0 — build 580
+
+- **Now you can see why each exercise was chosen, not just why the weight is what it is** — Last update explained the weight on workout day. This one explains the pick itself. Tap the new question mark on any exercise in your plan and you get the actual scoring: every alternative the app weighed for that slot, what each one scored, and the individual reasons that made up the score — the day's preferred angle, patterns already trained, spinal load carried over, lengthened-position coverage, staple bias, and the rest. Lowest score wins, and the margin over the runner-up is shown. It also tells you the truth in the awkward cases: when a lift wasn't chosen by scoring at all but added afterwards to hit a volume target, when a later balancing pass replaced what scoring picked, and when a day has been edited since it was built so the original scoring no longer describes it.
+
+## v3.39.0 — build 579
+
+- **Every exercise can now tell you why it asked for that** — New “Why this?” button on any exercise in a workout. It lays out the whole decision: the weight and the reason behind it, the rep range, sets and target RIR, which progression style is running and what made the app pick it, any plateau or fatigue override and what will clear it, and everything it read about you — last session, estimated 1RM, stalled sessions, recovery. It also shows, set by set, whether the effort it used was one you rated yourself, the one the plan asked for that day, or an assumption because neither was recorded. The panel reads the same engine that built your sets rather than working anything out on its own, so it cannot drift away from what you are actually being told to lift.
+
+## v3.38.0 — build 578
+
+- **Your logged workouts stay attached to the day you did them** — Every workout you log records which day of your program it was. Those day markers were being generated randomly, so any time a program was rebuilt — shuffled, updated, moved to a newer engine, or changed to a different number of days — all of them stopped matching and your history came unstuck from the program in one go. That is why the app served up a day you had just trained, and why finished workouts stopped showing as finished on the plan tab. Day markers are now derived from what the day actually is, so they survive a rebuild, a reshuffle and even reordering your days by hand. Workouts you logged before this update are reattached automatically by their day name — nothing to restore, and no need to log them again.
+- **Swap suggestions were missing equipment you have** — When a program's kit listed something that implies another piece — an incline bench implies a bench — the swap list ignored the implied one, hiding every alternative that needed it. On a dumbbell-and-incline-bench setup that was four missing chest options alone.
 
 ## v3.37.1 — build 577
 

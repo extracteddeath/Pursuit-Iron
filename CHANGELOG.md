@@ -1,8 +1,24 @@
 # Pursuit Iron — Changelog
 
-204 changes across 105 releases. Newest first.
+211 changes across 108 releases. Newest first.
 
 _Generated from the app's own changelog data — do not edit by hand._
+
+## v3.47.0 — build 587
+
+- **Following your plan no longer costs you sets** — If a muscle looked under-recovered, the app could cut a set from that day — unless you were training on the schedule your program set out, in which case the plan was supposed to win. That exemption was measuring against the wrong week. It assumed your training days were spread evenly across seven, so on a five-day week it expected about 34 hours between sessions; your actual schedule puts two of them back to back, 24 hours apart. Turning up on Tuesday exactly as written looked like turning up early, the exemption was refused, and the set was cut. It now measures against the real weekday spacing your program schedules. A genuinely bad recovery reading can still ease a day back — that part is unchanged.
+
+## v3.46.0 — build 586
+
+- **You can unban an exercise again** — Banning was one tap and permanent — the only way back was Settings, which unbans everything at once. Open any exercise in the library and the ban button is now a toggle: tap it once to ban, tap it again to unban. The two places that ban an exercise and immediately swap in a replacement are unchanged, so a second tap there still means what it always did.
+- **The one-click volume fix understands the forearm properly** — When a muscle came up short, the fix was always “add a set”. For forearms that was wrong: carries, hangs and pinches are isometric holds that never take the wrist through a range, so if your program only had grip work, adding sets to it couldn’t fix anything. The app now checks whether wrist flexion and extension are actually trained, and when one is missing it names the movement that closes the gap instead of quietly adding a set that does nothing. Same for side and rear delts, which get nothing from pressing.
+- **The effort shown beside a weight is one that weight can deliver** — On the styles that hold the load and build reps, the weight came from your progression and the target RIR came from the block plan — and the two were never checked against each other. If you did 150×9 with one rep left, the app could still print “3 RIR” next to the same 150, which is not a set you can do. Sets now show the reserve the weight actually leaves, marked with ≈ so you can tell it apart from the plan’s number. The weights themselves are unchanged.
+- **The after-workout feedback tells you what will actually happen** — The “+ set” and “− set” badges printed your rating back at you rather than what the app was going to do. Sometimes there was no room — the muscle was already at the top of what you can recover from, or every exercise for it was at its set ceiling — and nothing changed. And your rating was never the only input: your logged volume adjusts sets on its own, which is why sets were being trimmed on weeks you had marked as feeling fine. The badge now shows the real change, says “no room” when there isn’t any, and tells you when the change came from your logged volume rather than from your rating.
+- **“Why this?” no longer shows undefined for past sets** — The effort breakdown from your last session was reading the wrong field for weight and reps, so every row printed “undefined × undefined” beside an otherwise correct RIR.
+
+## v3.45.0 — build 585
+
+- **The self-test now checks whether the week itself makes sense** — Checking each set individually can't see a week that trains no back at all. A second layer now looks at the whole week: whether any major movement pattern has been left out entirely, whether a muscle you asked the app to emphasise actually gets enough work, and whether anything exceeds the volume ceiling the generator enforces. It found a real problem — some short-session and low-day-count programs contain no pulling work whatsoever, which is now recorded and tracked so it can't spread while it's being fixed. Findings are split into problems and advisories, because a set that asks for an impossible weight is a bug, while a week sitting slightly under a volume guideline is a judgement call — those guidelines are population averages, not facts about you.
 
 ## v3.44.0 — build 584
 

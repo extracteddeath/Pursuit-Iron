@@ -1,8 +1,53 @@
 # Pursuit Iron — Changelog
 
-211 changes across 108 releases. Newest first.
+226 changes across 118 releases. Newest first.
 
 _Generated from the app's own changelog data — do not edit by hand._
+
+## v3.57.0 — build 597
+
+- **Deload weeks no longer cost you your working weight** — A deload is prescribed at a lighter load on purpose — but once you logged it, it became the weight the app progressed you from. Train a block at 95, deload at 55 as instructed, log it, and the next block started you at 55. Every deload quietly reset you to about 60% and you climbed back from there, so following the deload as told meant never really moving up across blocks. It showed up as “the app never progresses me” rather than anything obviously broken. The next load is now worked out from your last real training week, skipping the deload — while the deload week itself still lightens as it should.
+
+## v3.56.0 — build 596
+
+- **The app notices when your sessions don’t fit your day** — Every workout you finish has always recorded how many of the prescribed sets you actually did, and nothing ever looked at it. That mattered more than it sounds: everything else in the app reads what you LOGGED, so leaving the last two exercises undone each session looked like you were simply training less — and the response was to prescribe more, to a session that was already too long. If you consistently finish well under your prescribed sets across at least six real sessions, the up-next card now says so and suggests a shorter session. One abandoned workout won’t trigger it, and finishing your work never will.
+
+## v3.55.0 — build 595
+
+- **Stalled lifts get the reason that actually fits** — When a lift stopped setting PRs the app could tell fatigue from ordinary noise, but everything else came back as “you’ve hit a ceiling — deload and rebuild”. Two common causes were being missed. If the muscle is getting less weekly work than it needs, that’s under-training, not a ceiling, and deloading is the opposite of the fix — you’ll now be told how many sets it’s getting against how many it wants. And if a lift has flattened while your other work for the same muscle keeps climbing, the muscle is fine and the movement has gone stale, so you’ll be told to swap the exercise rather than change the program. Falling reps with rising effort is still read as fatigue first, whatever the volume numbers say.
+
+## v3.54.0 — build 594
+
+- **One place to ask how much work a muscle is getting** — Internal groundwork, no change to your programs. Two separate lookups answered that question — one for muscles, one for the individual heads of a muscle like the side and rear delt — and asking the wrong one returned nothing, which looked exactly like a muscle getting no work at all. That misread caused a real misdiagnosis while building the last release. There’s now a single lookup covering every muscle and every head, where an untrained muscle reads as zero and only a name that isn’t a muscle reads as nothing, so the two can never be confused again.
+
+## v3.53.0 — build 593
+
+- **When a muscle is short, we tell you what would actually fix it** — If your days, session length and equipment don’t leave room for a muscle, the app used to say a longer session would cover it — without checking. Sometimes that’s wrong: at two days a week no session length rescues a muscle that has no day to train on, and booking ninety minutes on that advice wastes your time. The app now rebuilds your program under each single change you could make — a longer session, another training day — and tells you which one actually closes the gap and how much of it. When nothing single-handedly helps, it says so plainly instead of inventing a fix, because your constraints being the limit is a real answer.
+
+## v3.52.0 — build 592
+
+- **Adding a training day now actually adds training** — Going from four days a week to five used to buy you almost nothing — on a full-body plan the whole week went from 106 sets to 107, and eighteen individual muscles came out with LESS work than they had on fewer days. The targets the generator filled to were fixed numbers for four muscles that happened to sit at the bare minimum, so once they were met it stopped, no matter how much room your week had. Targets are now drawn from each muscle’s own range and scale with how often you train it, and they cover every major muscle rather than four.
+- **Side and rear delts are trained on purpose** — The generator treated shoulders as one muscle, so it could answer a rear-delt shortfall by adding a press. Each head is now accounted for separately, and 177 fewer generated programs contain no side-delt work at all.
+- **Muscles are filled in order of need, not order of code** — Targets were satisfied one at a time down a fixed list, so whatever sat at the end of that list got whatever was left — abs came out at zero sets on some plans, and calves were short on others. Each pass now serves whichever muscle is furthest below its target, so position in a list can’t starve anything.
+- **Sessions keep the exercise count they promise** — The wizard tells you roughly how many exercises to expect. The generator only ever checked the time, so it could build 8 or 9 movements into a session advertised as 7 while still landing inside the minutes.
+- **A set trimmed for one muscle no longer lands on another** — When a session was shortened to fit your time, the per-exercise adjustments didn’t move with the exercises. An adjustment meant for one lift could end up applied to a different one — in one case removing a calf set that a decision about back work had asked for. Custom set counts, superset links and round counts were all affected the same way.
+- **The coverage notice tells you what’s actually short** — It only spoke when a muscle had literally zero sets. Now that shortfalls get spread rather than concentrated, that meant a short session could leave six muscles under their minimum and say nothing at all. It now names anything meaningfully short, and still stays quiet on long programs where everything is covered.
+
+## v3.51.0 — build 591
+
+- **Easing back after a missed set no longer overshoots** — If you came up short of the bottom of a rep range, the app eased the weight back — but it sized the new weight for the TOP of the range while still asking you for the bottom. On a wide range like 10–20 reps that meant a weight picked for 20 reps and a set of 10, which is barely any effort at all. It also made the effort note beside the set report things like “≈7.5 RIR”, which was accurate about the weight and useless as a target. The eased weight is now sized for the reps you’re actually asked to do, so a small miss gets a small cut.
+
+## v3.50.0 — build 590
+
+- **The split we suggest is now the one that measures best** — The suggested split came from a short hand-written rule — three days meant full body, four meant upper/lower, five or six meant push/pull/legs. Nothing ever checked whether those were actually the best fit. Scoring every split that supports your day count against how well its week lands each muscle in its productive range, the old suggestion never ranked better than third for any combination of days, goal and experience. Push/pull/legs at five days was a clear example: it only has room for one leg day, so legs came out at the same volume as a three-day program while chest and back climbed past their useful ceiling. Suggestions now come from that scoring. Five days for muscle growth suggests full body; six still suggests push/pull/legs, which genuinely wins there; three days for strength suggests one of the dedicated strength templates that were in the app and never recommended. Beginners are kept away from six-day body-part splits regardless of score. Every split is still yours to choose — this only changes what we suggest first.
+
+## v3.49.0 — build 589
+
+- **The volume load wave shows every week again** — On longer blocks the last weeks of the chart looked missing. The row the bars sit in had a fixed height that was about 22px shorter than a full-height column needs once its set-count and week labels are counted, and because the bars hang from the bottom, anything that didn’t fit was cut off the top. Bar height rises with planned sets and a block ramps up, so the tallest columns are the last ones — which is why the early weeks looked fine and the end of the block appeared to be cut off. The chart was drawing all of it; you just couldn’t see the top. The row now sizes itself to whatever it’s drawing, so it can’t clip at any block length.
+
+## v3.48.0 — build 588
+
+- **Starting a workout no longer looks like editing your program** — Leaving the plan screen after a session would ask whether to keep changes you never made. Right before a workout the app tunes that session’s set volume to how you’ve been recovering, and writes the result onto the copy of the program you have open. The check for unsaved changes compared everything, so it saw those two app-written values and concluded you’d edited your program. They’re rebuilt from scratch before every session and never carried forward, so there was never anything there to save. The check now ignores them, and a real edit — a swapped exercise, a rename, a changed setting — is still caught exactly as before.
 
 ## v3.47.0 — build 587
 

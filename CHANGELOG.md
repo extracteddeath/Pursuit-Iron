@@ -1,8 +1,236 @@
 # Pursuit Iron — Changelog
 
-226 changes across 118 releases. Newest first.
+304 changes across 168 releases. Newest first.
 
 _Generated from the app's own changelog data — do not edit by hand._
+
+## v3.99.0 — build 647
+
+- **Better full-body pattern rotation** — Rotation compares a broader layout while protecting muscle coverage, focus points, reduced muscles and session limits.
+- **Stronger program checks** — Program and cycle selection check session ceilings across every training week. Invalid candidates cannot receive a clean score.
+
+## v3.98.0 — build 646
+
+- **Safer startup and saving** — Slow or unreadable storage no longer starts an empty account over your data. Retry or restore a backup from a dedicated recovery screen. Pending saves keep their order.
+- **Clearer program and cycle setup** — Generation shows a working state, prevents duplicate submissions, and keeps your answers if it fails. Focus limits and selected options are clearer.
+- **Sheets behave consistently** — Keyboard focus stays inside the open sheet and returns to the right control when nested pickers close.
+
+## v3.97.0 — build 645
+
+- **Focus and reduced muscles guide generation** — Focus inputs are consistent across program and cycle generation. Candidate selection respects your priorities and maintenance targets.
+- **Cycles compare complete layouts** — New cycles compare several coherent candidates across all blocks before choosing a layout.
+- **Reduced muscles keep less work** — A final volume pass trims eligible work while protecting other muscles and fixed prescriptions.
+
+## v3.96.0 — build 644
+
+- **Movement previews rebuilt** — Clearer figures and equipment, corrected pull-ups and core movements, machine-specific loading, and supported bench positions. Pause, slow down, or drag through any movement.
+- **More resilient progression** — Cycle templates now keep their own progression when created from a percentage-based split. Malformed imported phase windows no longer produce invalid progression values.
+
+## v3.95.0 — build 643
+
+- **New cycles start in their intended phase** — Starting a cycle from a peak block no longer carries that peak into a fresh hypertrophy wave. Each block uses its template's own progression window.
+- **Next-cycle loads and explanations agree** — Training-max changes use this program's AMRAP results. The preview now explains the same AMRAP set used to calculate the new load, including when summary reps differ.
+- **Exercise motion follows your preferences** — Figures react immediately when reduced motion changes, stop while the app is hidden, and restart cleanly when you return or choose another exercise.
+
+## v3.94.0 — build 642
+
+- **Focusing a small muscle now changes your program** — The focus picker promises that each level adds an exercise for that muscle, and for the smaller ones it usually could not keep that promise — measured, focusing forearms twice left them with no work at all in 58% of programs, because adding an exercise would break the session's stated exercise count and there was no existing movement to add a set to. A focus point that cannot be filled any other way now trades: either a lift is exchanged for a version of the same movement that also works the muscle you asked for, or a slot comes from a muscle that has sets to spare. Your session keeps its length and its number of exercises, and the program is built both ways and compared, so a trade is only kept when nothing else came off worse. Neck is the exception — nothing else in the exercise library trains it, so the picker now says so instead of implying otherwise.
+
+## v3.93.0 — build 641
+
+- **A cycle's blocks show what makes them different** — Every block of a training cycle listed the same split, the same day count and the same emphasis — three identical pairs of lines for a three-block cycle, which is what they have in common by design, since a cycle is one program periodised. Those details now sit once on the cycle's own header and each block shows its name, so the list is about half the height and the block you're actually on is the one that stands out. A block you've edited to differ from its siblings still shows its own details.
+- **The Create and Quick buttons sit at the bottom again** — On phones with a home indicator, the bar reserved space for it and so did the tab bar underneath — the same gap counted twice, which pushed the buttons up the screen and left a dead strip below them covering whatever card was behind. The space is now reserved once, by whichever is actually last on screen.
+
+## v3.92.0 — build 640
+
+- **Minimizing a workout no longer restarts it** — If you swapped an exercise and chose “Update my program”, the workout you were in the middle of could come back empty — most visibly after closing the app and reopening it. Two things were wrong. The session was still describing the day the way it looked before the swap, so when you came back the app compared the two, decided the saved workout belonged to a different day, and threw it away; and it was making that check on every single redraw, so the workout was often already gone before you tapped resume. Both are fixed, and a changed exercise no longer costs you the session: the day is rebuilt from your program and every set you logged against a lift that did not change comes back with it. The lift you swapped out starts fresh, as it does when you swap mid-workout.
+- **Home shows you what changed, not everything it knows** — The strength score, muscle recovery and the weekly recap used to sit on Home every single day once you had trained even once — so the program you opened the app to start was below all three, and most days none of them had anything new to tell you. They now appear when they have something to say: recovery when rest is actually advised, the strength score when you set a PR, the recap when you have trained that week, and at most two at a time. Nothing is gone — all of it is still on Progress whenever you want it, and warnings you should act on, like a deload being due, are never rationed.
+
+## v3.91.0 — build 639
+
+- **Your second curl of the week trains the brachialis** — Every program picked the same incline curl for every biceps slot — one exercise took 53 of 53 biceps slots across the whole config space, because selection ranks by a single priority number and never looks at what the first pick already trained. When a week holds two or more biceps slots, the second now goes to a neutral-grip movement, which loads the brachialis and the forearm rather than repeating the same supinated curl. Programs with more than one curl went from none to all 21 carrying a neutral grip, and every program keeps its best supinated curl as the first pick.
+- **The volume check stopped advising work you never asked for** — Forearms, traps and neck are accessory work the app does not program for you, so it has never offered to add sets to them. That silence turned out to rest on those muscles sitting at exactly zero: the neutral-grip curl above puts a fraction of a set into your forearms, and the volume check immediately started telling 126 programs to add forearm work. It now decides by whether the muscle is one the app programs, or one you have put a movement in yourself — not by whether the number happens to be zero. If you do train a muscle and are missing a direction of it, you still get told which movement closes the gap, which is the advice this rule was always meant to protect.
+
+## v3.90.0 — build 638
+
+- **Deadlifts now progress at the right rate on 5/3/1 and GZCLP** — The deadlift was being treated as an upper-body lift, so it went up in the small jump — 5 lb a cycle instead of 10, half what those programs prescribe. Squats got the full jump, deadlifts did not, on every named program that uses both. It was invisible because the deadlift is filed under lower back rather than legs. Deadlifts now advance like squats, in pounds and kilos. Nothing else about your loads changes.
+
+## v3.89.0 — build 637
+
+- **Long sessions fill up to the length you asked for** — A two-hour session used to stop early — days came in around 80 minutes, because a day was capped at nine exercises no matter how much time was left. Long sessions can now hold eleven, and a day short of its target is filled with the muscles furthest behind rather than more work for the one that already has the most. Days finishing under their target dropped by 41%, and weekly minimums missed dropped too. Nothing is added past a muscle’s ceiling, past the length you chose, or past what a named program prescribes; shorter session lengths are unchanged.
+
+## v3.88.0 — build 636
+
+- **Heavy days are no longer scheduled back to back** — A deadlift day followed by a squat day was only ever judged on which muscles the two shared — and a squat and a deadlift do not share many, so the app saw nothing wrong with putting them on consecutive mornings. Loading your spine hard twice in a row is a cost the muscle comparison could not see. It now counts, including between the last training day of your week and the first day of the next, which has no rest between it either. Across every program the app can build, back-to-back heavy days fell by about half. The cost is a small rise in how often two days share some muscle work, which is the lesser of the two problems.
+- **The suggested week and your actual week are the same week** — The suggested-schedule calendar could show a completely different arrangement from the one your program was built with — same program, two different weeks, depending on which screen you looked at. They now come from one place.
+
+## v3.87.0 — build 635
+
+- **Side and rear delts stop being blocked by your pressing** — Every press gives your front delts work, and that counted toward “shoulders” as a whole. When the total crossed a limit, the app refused to add any more shoulder work — including the side and rear delt work you were actually short of, which pressing does nothing for. Two parts of the app were using different shoulder limits; they now use the same one. Rear delt shortfalls fell across the board, and no existing program changes.
+
+## v3.86.0 — build 634
+
+- **The app no longer asks you to train muscles it never planned for** — Your program is built to cover thirteen muscle groups. Six others — traps, lower back, adductors, abductors, forearms, neck — have always been accessory work you add if you want it, and the builder has never targeted them. The volume check did not know that, so it would tell you to “add three sets to your traps” in a plan that was never going to include direct trap work, and the one-click fix would then pad some other exercise to satisfy it. Across a sweep of generated programs, roughly one in five suggestions was of that kind. Those are gone. Warnings that you are doing too MUCH of something are unchanged and still apply to every muscle, and anything you add yourself still shows up in your volume charts.
+
+## v3.85.5 — build 633
+
+- **The share code is checked by using it** — Sharing a program hands over a short code that rebuilds the plan on someone else’s phone. There is now a check that opens the share sheet, takes the code it shows, decodes it and rebuilds the program — then compares it lift by lift against the original. It also confirms that a program the code format genuinely cannot carry says so instead of handing out a code that would rebuild the wrong plan.
+
+## v3.85.4 — build 632
+
+- **Your weekly schedule is checked end to end** — Which weekday each session lands on is not decoration — the app uses it to work out how much rest a muscle got, and three separate bugs in the past came from a screen and the engine disagreeing about it. The schedule sheet is now its own component with a check that taps through it the way you would, saves, and then confirms the engine reads back exactly the week the sheet wrote. Nothing changed on screen.
+
+## v3.85.3 — build 631
+
+- **Program settings, tested the way you use them** — The program settings sheet is now its own component with a check that drives it exactly as a thumb would: open the program, open settings, pick an assistance style, save, commit — then read back what was stored and confirm it is the program the builder makes for that choice. Nothing changed on screen. This is the first slice out of the app’s largest screen; the rest follow the same way, one piece and one check at a time.
+
+## v3.85.2 — build 630
+
+- **One type scale** — Text across the app was set at fourteen different sizes between 8½ and 18 points, in half-point steps — the fingerprint of hundreds of small decisions made one screen at a time. It is now eight sizes on one scale, and a check refuses a new one. Half-point sizes rounded up, never down, so nothing got smaller; the change is subtle on any one screen and visible as consistency across all of them.
+
+## v3.85.1 — build 629
+
+- **Section labels look the same everywhere** — The small uppercase label above a section — “Assistance work”, “This day hit”, “Add a gym” — was drawn 113 slightly different ways across the app: seven font sizes, five letter-spacings. It is now one definition, used in 79 places, and a check refuses a hand-drawn one. Nothing else moved; this is the first of the visual clean-ups.
+
+## v3.85.0 — build 628
+
+- **A 40-minute plan is now a 40-minute plan** — The program builder priced a session by its sets, warm-ups and rests, and the plan screen priced it the same way plus the minutes every session actually has between exercises — walking to the next station, loading the bar. So the builder would declare a day fitted at 40 minutes and the plan would show you 47. Across every program the app can build, the builder believed 96 of 2,880 days ran over their limit; the number on screen ran over on 858 of them. From engine 15 there is one price for a day, and it is the one the builder holds the session to. The cost is stated plainly: with the minutes between exercises counted, fewer lifts fit, and about 4% fewer sets are programmed at a given session length — the sets you were never going to have time for. If you want them back, pick the next session length up; that is what the setting is for. Existing programs are unchanged.
+- **What a 20-minute strength session actually costs** — Two heavy compounds with proper rest take about 30 minutes, not 20 — and the honest pricing now says so on the plan instead of hiding it. That is the one place the app still cannot fit what was asked, and it now shows it rather than pretending.
+
+## v3.84.0 — build 627
+
+- **Jack Shit, Triumvirate and 5×10 Supplemental now build the program they name** — Those three assistance styles were saved with your program, printed on screen and carried in every share code — and the program builder never read them. The gallery's “Main-Lift Waves · 5×10” preset came out with a full slate of accessories, and “Jack Shit — main lift only, nothing else” produced seven lifts a day; only re-picking the style in settings changed anything, and that path rebuilt each day with an old version of the selector and skipped every repair step. From engine 14 the style shapes the program at creation: Jack Shit is the four main lifts and nothing else, Triumvirate and 5×10 are the main lift plus two accessories, and switching styles in settings now rebuilds the whole program the same way. Programs you already have are unchanged unless you switch.
+- **Triumvirate and Jack Shit programs can be shared by code** — A share code could carry the 5×10 style but not the other two, so those programs silently fell back to the long text share. All three now travel in the code, and a shared Jack Shit arrives as Jack Shit.
+
+## v3.83.3 — build 626
+
+- **Every engine rule now has a name** — A program keeps replaying under the engine version that built it — that is what makes a seed, a share code and a reroll reproduce the layout you saw. The cost was that every rule an engine added lived in the code as a bare version number, thirty-nine of them, and the only way to learn what engine 10 changed was to search for the number. Every one of those rules is now listed once, by name, next to what it does and where it is applied — and a check refuses any future rule written the old way. Programs are unchanged to the byte.
+- **Exercise selection takes its settings by name** — The routine that picks a day's exercises took eighteen unnamed arguments in a fixed order. One of the two places that called it passed only nine and silently accepted defaults for the rest — including which engine version to use. Both now pass every setting by name, so an omission is visible where it happens. Nothing changed in what gets picked; the omission itself is now recorded as a decision rather than an accident.
+
+## v3.83.2 — build 625
+
+- **The volume repair engine is now eight named steps** — After the app picks your exercises, a second engine repairs the week: it fills each session toward the length you asked for, holds every muscle at its minimum, guarantees no movement pattern is left out, trims what is over its ceiling, and last of all trims high-frequency work the plan cannot recover from. That engine was one function of sixteen hundred lines. It is now eight named steps in a declared order, sharing one set of helpers, with the engine-version rules visible in the list rather than buried between passes. Every program the app can build was generated on both versions and is identical to the byte; the sweep that guards every generation change moved by zero. Reordering two steps changed 1,019 of them, which is how you know the order is the engine.
+
+## v3.83.1 — build 624
+
+- **Nothing in your programs changed — the builder underneath them did** — The program builder used to be a long hand-written sequence of steps with the rules for older program versions threaded between them. It is now one readable list of named stages, each with the condition it runs under. Every program the app can build was generated on both versions — 12,420 of them, across every engine version the app has ever shipped — and they are identical to the byte. The point is what comes next: the engine can now be improved one stage at a time with the whole sequence in view, rather than by adding one more patch to a function nobody could read end to end.
+- **Every build of the app is now reproducible** — The app is assembled from a handful of libraries, and one of them was allowed to drift between versions. A fresh build of the same source came out twelve bytes different from what you were running — harmless here, but a build that cannot be reproduced cannot be trusted to prove a fix. Every library is now pinned to the exact version that shipped, and a clean install rebuilds the current app byte for byte.
+
+## v3.83.0 — build 623
+
+- **Programs named after a published routine now run that routine** — If you picked 5/3/1, the deadlift day did not contain a deadlift — it contained a Romanian deadlift 35 times out of 40, because the app chose the lift by which muscles the day was meant to work rather than by name. GZCLP's deadlift day had the same problem. The mechanism to pin a program's main lifts had been in the app all along, but it only ran if you arrived through the gallery; picking the same program from the wizard skipped it, and you got something wearing the name. The main lifts are now fixed whichever way you reach them, and the percentage scheme the program is named for comes with them.
+- **The Texas Method's light day is light again** — Texas prescribes 5×5 squats on the volume day, a deliberately easy 2×5 on the recovery day, and one heavy set on the intensity day. The app was prescribing four working sets on all three, including the one designed for recovery — so you squatted double what the program asked on the day meant to let you recover, and the app then noticed the fatigue and suggested you cut sets. The program's own set counts now win for the lifts it prescribes. Accessory work is still ours to program.
+- **A program is only offered at session lengths it can be run in** — A 5/3/1 main lift is three work sets plus warm-ups — twenty to twenty-five minutes before any assistance. The app was offering 5/3/1 at “up to 20 minutes” and GZCLP too, where the two main lifts filled every slot in the week and left no room for a row, a curl or anything else: some weeks trained no back at all. These programs now appear only in the brackets they actually fit, the same way a four-day program is only offered at four days. The same applies at the top end — two hours of a beginner template is not that template either.
+- **GZCL programs are built from their own tiers** — A GZCLP day is a heavy main lift, a moderate second lift, and one or two high-rep accessories — and the accessories are where the program deliberately puts your back work, because the four barbell lifts contain no pulling at all. The app was sizing these days from your session length instead and filling the spare slots with whatever coverage wanted, which is how a GZCLP week ended up with curls and calf raises and no rows. The tiers now decide how many movements a day has and what the accessories are for; your equipment and your actual weak points still decide which movements.
+- **You are never told to cut a muscle already at its minimum** — If a muscle was trained just enough and you were recovering poorly, the advice was to cut a set — which takes it below the point where training earns anything at all. Below the minimum, fatigue is a spacing problem, not a volume one, and the advice now says so instead.
+
+## v3.82.0 — build 622
+
+- **A new program no longer opens with days already ticked off** — If you built a new program on a split you had trained before, some of its days showed up already completed before you had done anything. The app names a program's days after the split — an upper/lower program always calls them Upper A, Lower A and so on — which is deliberate, because it is what lets a program keep your history when you regenerate it. But the completed markers were matching those names against your whole training history rather than against this program's, so last month's sessions were ticking off this morning's plan. Completion is now scoped to the program that earned it. Regenerating a program still keeps its ticks, and older sessions logged before the app tracked this are still counted rather than thrown away.
+
+## v3.81.0 — build 621
+
+- **Your training days are arranged so back-to-back sessions clash less** — The app decides which day of the week each session lands on, and it was solving the wrong problem — spreading overlap evenly around a ring of days as though every session sat the same distance from the next. Your week has rest days in it. On a five-day plan only three of the five pairs are genuinely back-to-back, and which two sessions landed side by side was left to chance. It now minimises the worst clash specifically: the one morning you would train a muscle that is still sore. Across every program the app can build, the volume shared by consecutive days fell by nearly half at the median, and the worst case on a split routine went from 28 shared sets to 15. No exercise selection changed and no muscle gets more or less work — only the order of your week. Programs you have already saved keep the schedule they were built with.
+
+## v3.80.0 — build 620
+
+- **Every week now tells you what it is for** — The week chips in your plan told you what a week costs — sets and minutes — and nothing about what it is doing. Now each one comes with a line: what it is (introduction, accumulation, intensification, peak, deload), the effort you should be leaving in the tank, the rep bracket on your main lift, how many sets have been added since week 1, and when the last-set techniques start appearing. Every word is read from the same prescription the session screen renders, so it cannot drift into describing a plan you are not actually running.
+
+## v3.79.0 — build 619
+
+- **Your shoulders finally get trained** — About one program in ten trained your side delts not at all — and nothing in the app could see it, because side delts are part of the shoulder rather than a muscle of their own. That is now about one in a thousand. The cause was that the app decided whether an exercise fitted your session using a cost that left out setup, walking to the machine and loading the bar, while the time it SHOWED you included all three. It packed sessions against a budget it was not really keeping, and the first thing squeezed out was the small isolation work at the end.
+- **Three engine improvements, switched on together** — The rule that settles competing needs, the fix for de-emphasising a muscle, and honest session pricing have all been written and measured over the last several releases. They are now live. Across every program the app can build, muscles trained not at all dropped by 7,630 muscle-weeks and no session got longer. Some of those muscles now sit below the ideal amount rather than at zero — that is the trade, and a little of something beats none of it.
+- **No program trains zero back** — A handful of short two-day plans came out with no pulling work at all — no rows, no pulldowns, nothing for your back or biceps in the entire week. The step that guarantees every movement pattern is covered was refusing to act, because the only slot it could trade was a lateral raise and a separate rule protected shoulder work above all else. A week that trains no back is a bigger problem than a week light on side delts, so the pattern check now wins that tie — but only as a last resort, after every trade that costs nothing has been tried. Across every program the app can build this moved 497 muscle-weeks off zero.
+- **Where a 20-minute plan still cannot cover everything** — In a handful of two-day, 20-minute plans there are four exercise slots for the entire week, and no arrangement of four slots trains everything. The app no longer squeezes in a fifth by pretending the session is shorter than it is; instead it tells you plainly that moving to a 20–40 minute session closes most of the gaps, and how many.
+
+## v3.78.0 — build 618
+
+- **Focusing a muscle was making that muscle worse** — Picking a muscle to focus on could take it from 28 sets a week down to 18, and clicking it a second time was more likely to hurt than to help. The cause: focus made a muscle win more of the contests for a slot, and the slots it won were isolation work — so your overhead presses got traded for lateral raises and you ended up with less shoulder work than if you had never focused at all. Focus now asks for what it actually means: one more slot for that muscle, added on top, which can never cost it volume at the point it is granted. It still loses to any muscle that is not yet trained enough, because a preference should not buy away adequate training. Written and measured, switched on in a later release.
+
+## v3.77.0 — build 617
+
+- **The app and its own planner now agree on what “too much” means** — The program builder deliberately stops trimming once a muscle is within half a set of its recovery ceiling — sets come one at a time, so cutting a whole set to shave four tenths off lands further from the mark than leaving it. But the screens that judge your week had no such tolerance, so they called the builder’s own output over the limit. That is what was driving the set-cutting. Both now read one number. Measured across 756 programs: the largest overshoot anywhere is four tenths of a set, and none of them is reported as over the limit any more.
+- **The volume wave shows your deload, and shows the right weeks** — The chart in your plan’s Blueprint was drawn one week behind the week chips beside it — same numbers, shifted along — and it left the deload out entirely, so the one card meant to show you the shape of your block could not show the trough at the end of it. The deload is now a bar of its own, marked, and every column matches the week it is labelled with.
+
+## v3.76.0 — build 616
+
+- **Your program is no longer trimmed for following it** — If you did exactly what your program prescribed, the app will not turn around and cut sets from it. The volume advice reads what you logged, and it had no way to tell “you trained more than we asked” from “you did precisely what we asked.” So a week that came out four tenths of a set above a recovery ceiling — a ceiling the app’s own plan had set — was answered by removing two sets, every session, forever. Now the plan wins for its own volume, and when a plan really is above its ceiling the app says so and points at the program instead of quietly shaving it. Train MORE than the plan asked and the adjustment still applies, exactly as before — that is real extra load and the app should react to it.
+
+## v3.75.0 — build 615
+
+- **The rule that settles competing needs is written** — When two parts of your program both need work and there is only room for one, the app now has a single rule for who wins: a muscle getting no work at all beats a muscle that is merely under-trained, then the bigger shortfall, then the cheaper option. It is written and measured but not yet switched on, so your programs are unchanged in this release. Measured on all 24,840 configurations, it takes programs that train your side delts not at all down by 14%.
+- **A muscle trained not at all was invisible to our own testing** — The measurement that guards every program change counted muscles that were under-trained, but not muscles that got no work whatsoever \u2014 for every muscle except the side delts. So the worst thing the program builder can do was the one thing nothing watched, and a fix that took a muscle from nothing to something registered as making things worse. It is now counted, and the number is large: roughly half of all inadequately-trained muscle-weeks are muscles trained not at all. Nothing about your programs changes here \u2014 this is the instrument, and several improvements already written have been waiting on it.
+
+## v3.74.0 — build 614
+
+- **The program allocator is now a single queue** — The second and last of the two gap-filling steps has been converted. The step that guarantees your side and rear shoulder work no longer decides and acts on its own — it states what it needs alongside every other request, and one decision point grants them. Programs are identical to before, verified across all 24,840 configurations the app can generate. Now that both steps share one queue, the next release can change how competing needs are settled by changing a single rule, so a muscle left at zero stops losing to a top-up that merely ran earlier.
+
+## v3.73.0 — build 613
+
+- **First half of the new program allocator** — The step that fills gaps in your program used to decide and act in one motion, which is why fixing one thing kept breaking another. It now states what it needs and a single decision point grants it. This is the first of two such steps to be converted, and it produces byte-for-byte the same programs as before — verified across every configuration the app can generate. The change is the groundwork that lets the next release resolve conflicts between competing needs properly.
+
+## v3.72.0 — build 612
+
+- **Share codes are ready for the new program engine** — A program share code carries the engine version that built it, so whoever opens it rebuilds exactly the program you saw. That field was one bit too small for the engine versions now in development — a code made by a newer engine would have quietly rebuilt as something else on your friend’s phone, with no error. The field is now wider, every code already in circulation still opens exactly as before, and the check that was supposed to catch this has been fixed too: it only verified that a version was present, not that it was the right one.
+
+## v3.71.0 — build 611
+
+- **Groundwork, and a dead end worth recording** — Work continues on rebuilding how the app decides what goes into your program. This release adds no changes to the programs themselves. A promising fix for the muscle-reduce problem was built and measured, produced the best result so far on that specific issue, and made two other measures noticeably worse — so it was held rather than shipped. That is now the fifth such attempt, and together they confirm the larger rebuild is necessary rather than optional.
+
+## v3.70.0 — build 610
+
+- **The muscle focus and reduce options are now fully measured** — Two of the program creation questions — which muscles to focus on and which to reduce — were never covered by the app’s internal quality measurements, so problems with them could not be detected. They are now part of every measurement run, which tripled its size. That immediately confirmed a real issue being worked on: reducing a muscle can currently remove it from your program entirely instead of just training it less. A corrected version is built and held back until it can ship without side effects.
+
+## v3.69.0 — build 609
+
+- **Every build step now reports what it wanted** — The last of the program-building steps was connected to the new request tracking, completing the groundwork. Programs are unchanged. The full picture shows where the app is genuinely short of room: forty-minute sessions run completely full and still fall short of the number of exercises they promise, while two-hour sessions use only about three quarters of the time you set aside. Both are now measured rather than guessed at.
+
+## v3.68.0 — build 608
+
+- **Measuring what your program wanted but could not fit** — Building a program involves several steps that each try to add work, and most of what they ask for does not fit in the time available — it was simply dropped, unrecorded. The app now tracks every request and whether it was granted. Programs are unchanged. The first measurements were surprising: forty-minute sessions are the most contested of any length, granting only one request in five, and one step is turned down 86% of the time yet still occasionally outbids more important work purely because it runs earlier.
+
+## v3.67.0 — build 607
+
+- **Groundwork for a smarter program builder** — The part of the app that fills gaps in your program is being rebuilt so that every step states what it needs and one place decides what actually fits, instead of several steps each changing the program in turn and undoing one another. This release lays the first piece of that groundwork and changes nothing about the programs it produces — verified against every measurement the app has. It already revealed something useful: the step that tops up under-trained muscles asks for roughly fourteen times more than it ever gets, and nothing was recording those refusals.
+
+## v3.66.0 — build 606
+
+- **Naming the build steps correctly** — The build trace added last release grouped several steps under the wrong name, which made one of them look responsible for far more of your program than it actually is. The steps are now labelled accurately. Nothing about how programs are built has changed — but what the trace reports about it is now true, which matters for everything built on top of it.
+
+## v3.65.0 — build 605
+
+- **The build trace now goes one level deeper** — Filling out your program is not one step but several — topping up neglected muscles, covering missing movements, capping anything excessive — and the trace added last release could only see the group as a whole. It now shows each step separately. That immediately explained a problem that had resisted three earlier attempts: on very short sessions, one step tops up shoulder work using the last available slot, and a smaller muscle ends the week with none.
+
+## v3.64.0 — build 604
+
+- **Seeing exactly how a program gets built** — Your program is assembled by a chain of steps — pick the exercises, fill gaps in muscle coverage, merge duplicates, cap anything excessive, trim to fit your session length. Until now there was no way to see what each step did, only the finished result, which made some problems very hard to track down. There is now a full trace of every step: what it added, removed or swapped, how it changed each day’s length, and which muscles gained or lost volume. It found a real issue on its first use.
+
+## v3.63.0 — build 603
+
+- **Checking the checks** — Under the hood, this app is held together by a large set of automated checks that run on every build. This release adds one that audits the others — because a check that has quietly stopped measuring anything does not go quiet, it goes green. It immediately found that programs for the “brand new to lifting” experience level had never been measured by any of them, so that entire group of programs was going unverified. It is now covered.
+
+## v3.62.0 — build 602
+
+- **A twenty-minute session is now twenty minutes** — It never was. Every short session the app built ran about ten minutes long — a 20-minute plan that actually took thirty — and the app had no way of noticing, because the checks that watch session length skipped short sessions entirely. Two exercises at three hard sets simply does not fit twenty minutes, so short sessions now prescribe two working sets instead of three. Fewer sets, but the session is the length you asked for, and the time saved often makes room for a third movement. Every session length in the app now finishes inside the band you picked.
+- **The exercise count shown when you pick a session length is now true** — Picking a session length showed you roughly how many exercises to expect, and for the shortest option that number was wrong — it advertised about five, more than it promised for a forty-minute session, and delivered two. The programs were always right; only the label was wrong. It now shows what you will actually get.
+
+## v3.61.0 — build 601
+
+- **Every week now trains your back** — About one program in ten contained no pulling work at all — no rows, no pulldowns, nothing for your back — for the whole week. Measured across 6,300 generated programs, 599 of them had it, and it was always the same pattern missing. It happened even with a full gym available: the app allocated slots muscle by muscle, and because back work is split across three muscles that each rank below chest or quads on their own, a short session could fill up before any of them earned a place. Two things now prevent it. When a movement pattern is missing and there is room, the app adds one. When there is no room, trimming a session to fit the clock is no longer allowed to take the last of it — the same protection your side and rear delts already had. Your main lift is never affected. Six configurations remain where four total exercises genuinely cannot cover everything; for those the app tells you what would fix it, as it already did.
+- **Short sessions no longer lose a whole shoulder head** — Fitting a session to the clock had one last resort that ignored every protection above it, so it could drop the only side- or rear-delt movement in a program. Across the full configuration sweep this affected 370 programs; it now affects 243, and none of the remainder are caused by trimming.
+
+## v3.60.0 — build 600
+
+- **New programs are the best of six, not the first one rolled** — Building a program has always involved an element of chance — the app rolls a number and that decides which lifts land in which slots. It was handing over whatever came out of the first roll without ever looking at it, and the roll matters more than it sounds: measured across 126 setups, changing nothing but that number moved weekly volume by about two sets a muscle, and left a muscle with no work at all in roughly one program in six that a different roll would have covered. The app now builds six versions of your program, checks each one against your session length, your muscle coverage and its own volume targets, and gives you the best of them. Nothing else changes — your program still has a shareable code, still rerolls, still rebuilds exactly as before. It is simply no longer the first thing the dice produced.
+
+## v3.59.0 — build 599
+
+- **An easy week no longer costs you weight permanently** — The first week of a block is meant to be a little easier — more reps left in reserve, not a lighter bar. But the load was being sized against that eased target, so a new block started lighter than the last one finished, and the following weeks held that weight and built reps instead of climbing back. The reduction stuck, and the next block started lower again. Measured over six blocks, a lifter following the program exactly went 95 to 85 to 80 and never recovered — one notch down per block, indefinitely. Easy weeks now keep your working weight and simply ask less effort of it. A genuine drop in strength still lowers the load, from your actual performance rather than the calendar.
+
+## v3.58.0 — build 598
+
+- **Recovery is judged against your program’s own spacing** — If you train a muscle every day or two — a five-day full body rotation, say — you were being eased back constantly. The check that protects a day you trained exactly as scheduled required a recovery reading of 70, which quietly assumed every program leaves a muscle about two days. On a schedule built around 24-hour gaps the reading after a hard session is around 66, so chest, back and legs were all judged under-recovered every single day and trimmed, no matter how closely you followed the plan. Recovery is now measured against what your schedule’s own spacing can realistically deliver, so training on plan counts as on plan. A genuinely bad reading still eases the day back.
+- **Effort notes stay inside a range you’d actually train in** — The “≈ RIR” note beside a set could print figures like 7.5, or even a negative number when a weight was heavier than the reps asked for. Those were arithmetically true and useless as targets. The note now stays quiet outside a sensible range and shows your program’s number instead.
 
 ## v3.57.0 — build 597
 

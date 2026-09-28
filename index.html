@@ -62,7 +62,27 @@ window.__pursuitMounted=false;
 })();
 </script>
     <script type="importmap">{"imports":{"react":"./vendor/react.js","react/jsx-runtime":"./vendor/react-jsx-runtime.js","react-dom/client":"./vendor/react-dom-client.js","lucide-react":"./vendor/lucide-react.js"}}</script>
-    <script type="module" src="./modules/main.js"></script>
+    <script type="module">
+      // The modular React runtime is the preferred M158 path. If an incomplete static deploy leaves
+      // any module/vendor dependency unavailable, preserve usability by loading the last bundled
+      // production app instead. Release Integrity CI still fails such a deploy so it cannot look healthy.
+      import("./modules/main.js").catch(function (err) {
+        console.error("M158 modular runtime unavailable; using bundled fallback.", err);
+        try { sessionStorage.setItem("wpb:runtime-fallback", "bundle"); } catch (_) {}
+        var fallback = document.createElement("script");
+        fallback.src = "./app.js";
+        fallback.async = false;
+        fallback.onload = function () {
+          try { window.dispatchEvent(new CustomEvent("wpb:runtime-fallback", { detail: { reason: String(err && err.message || err) } })); } catch (_) {}
+          if (typeof window.__pursuitMarkMounted === "function") window.__pursuitMarkMounted();
+        };
+        fallback.onerror = function () {
+          var el = document.getElementById("pursuit-startup-status");
+          if (el) el.textContent = "Startup failed — reload or use Safe start.";
+        };
+        document.head.appendChild(fallback);
+      });
+    </script>
     <script>
       // Register the service worker (relative scope → works at any sub-path).
       // Stability rule: an update may DOWNLOAD in the background, but it does not take over a

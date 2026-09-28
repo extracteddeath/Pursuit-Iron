@@ -1,8 +1,133 @@
+# 3.208.0 — build 763 (M158 + fixes, React)
+
+- Programs you wrote yourself (Build your own) now come across when you import a backup or update, keep your own sets and reps, and can be trained — they were being discarded.
+- Fixed a crash when opening a workout: Quick workouts, programs with a typed single rep target like "8", and custom programs.
+- Weight suggestions now match this week's reps — heavier as the reps drop — and always land on weights your equipment can make.
+- New "No squat rack" option: a home barbell without a rack skips squats, bench and presses taken from a rack.
+- Self-test runs in seconds; the full engine check is still in Settings.
+- No sideways scrolling on Home or in the program builder, and backups download as pursuit-iron-backup-<date>.json.
+- Runs on React, the same as the original app.
+
+# 3.189.0 — build 744 (M120)
+
+- Merged programmer equipment, progression and upgrade fixes with M117–M119.
+- Review older-plan updates before saving; originals and workout history retained.
+- Responsive builder availability checks and clearer form-video search links.
+
+# 3.188.0 — build 743 (M119)
+
+- Search and filter workout history, with 50 workouts loaded at a time.
+- Read starting prescription targets first, with detailed evidence available on demand.
+- Correct mixed kg/lb grouped volumes and preserve earlier program names.
+
+# 3.187.0 — build 742 (M118)
+
+- Review changed programs and choose cycle edit scope before committing.
+- Keep drafts when leaving; undo the last save with protection against later edits.
+- Preview actual backup additions, updates and removals using the restore calculation.
+- Block restores that conflict with local program drafts; restore settings and drafts when undoing an import.
+- Engine remains 0.62.3.
+
+# 3.186.0 — build 741 (M117)
+
+- Keep workout navigation/rest controls in layout instead of overlaying set rows.
+- Adjust workout height to the visible viewport and reveal the edited field when the keyboard resizes it.
+- Show the current exercise name in the navigator; wrap rest controls on narrow phones.
+- Add a direct next-workout preview from active cycle details, clearer planned-block labels and grouped block-completion actions.
+- Engine 0.62.3 fixes short final blocks being held to an open-ended four-week review window, including existing saved cycles. Minimum-workout and recovery checks remain in force.
+
+# 3.185.0 — build 740 (M116)
+
+- Fix the undefined cycleChoices error when opening cycle creation.
+- Share the engine template catalog between cycle picker, summary and generation.
+- Match split recommendations and setup estimates to the selected cycle goal.
+- Show cycle duration and adaptation mode in the setup summary; preserve answers and show persistent feedback after a rejected build.
+- Reject unknown cycle templates before generating any blocks or allocating IDs.
+
+# 3.184.0 — build 739 (M115)
+
+- Commit typed input on every native input event in the portable runtime.
+- Preserve uncompleted workout edits, selected exercise, focus and paused state across reloads.
+- Improve narrow workout fields and keyboard stepping; stop held steps when the page loses focus.
+- Preview and validate backups before explicit restore, including schema and malformed-entry checks.
+- Explain program edit scope and planned changes between cycle blocks; advise on redundant swaps.
+- Honor equipment increment overrides consistently, retain kg inventory labels and bound loading calculations.
+- Repair service-worker cache misses and include runtime vendor modules in release integrity checks.
+
+# 3.183.0 — build 738
+
+- Restored v661 workout Weight/Reps state behavior exactly; removed the later manual input lock/precedence wrapper that could resurrect an older stepper value.
+- Kept compact hold-repeat steppers with independent 44×44 touch targets.
+
+# 3.112.1 — build 664
+
+- Hotfix: fixed M43 startup black screen caused by an undefined icon reference.
+- Added startup module-evaluation validation and a visible pre-mount error fallback.
+
 # Pursuit Iron — Changelog
 
-304 changes across 168 releases. Newest first.
+324 changes across 181 releases. Newest first.
 
 _Generated from the app's own changelog data — do not edit by hand._
+
+## v3.110.0 — build 661
+
+- **Named programs prescribe their own reps** — Main-Lift Waves, Texas Method and Ramping 5×5 now show the reps the programme actually calls for rather than a generic range — 5's PRO means five reps on every main set. Accessory lifts in those programs were showing one rep range while prescribing another; both now agree. Found by the built-in self-test.
+
+## v3.110.0 — build 661
+
+- **Fixed: named programs showed the wrong reps on their main lifts** — Programs built on a set percentage plan — Main-Lift Waves, GZCLP, Texas Method and the rest — were showing a general rep range on their main lifts instead of the reps the plan actually calls for. Main-Lift Waves runs five reps a set across its waves, for example, and the app was asking for three to six. The plan's own prescription is now what you see.
+- **Fixed: a cable fly could be treated as a main lift** — On one Main-Lift Waves day the second main lift had been swapped out, but the program still treated whatever took its place — a rear delt fly — as a heavy main lift. It is now treated as the accessory it is.
+
+## v3.109.0 — build 660
+
+- **More work in the same hour** — Sixty-minute sessions now pair exercises that use opposing muscles — a push with a pull, say — so you rest less between them. A session fits about fifteen percent more work and still finishes a little sooner, and far fewer muscles end up with no work at all. If your gym is too busy to hold two stations, or you would rather not superset, you can turn it off when you make a program.
+
+## v3.108.0 — build 659
+
+- **Your gym and your experience are remembered** — Equipment you switch on or off while making a program now stays that way for the next one — it belongs to your gym, so it only changes when you change gym. And training experience is asked once instead of every time; you can change it in Settings.
+- **Your barbell limit is respected everywhere** — If you cap how many barbell movements a session can have, that limit now holds all the way through. It used to be applied when the session was first laid out and then ignored by later adjustments, so you could still end up with two barbell lifts — a squat and a row, say — on the same day.
+
+## v3.108.0 — build 657
+
+
+## v3.108.0 — build 656
+
+- **Torso / Limbs trains your delts** — On the Torso/Limbs split, side and rear delt work now lands on the limbs day beside your arms — which is the reason that split exists. It was moving your arms there and leaving the delts behind on an already-full torso day, so rear delts finished a week well under what they need. They now clear it.
+
+## v3.107.0 — build 655
+
+- **Upper work lands on upper days first** — Shoulder or arm work is no longer put on a leg day just because that day had spare time — it goes to an upper day when one has room, and still lands on a leg day when nothing else can take it. Programs that deliberately mix, like full body, are unaffected.
+
+## v3.106.0 — build 654
+
+- **A three-day upper/lower that actually balances** — Upper and lower now alternate without resetting each week — sessions run upper, lower, upper, then lower, upper, lower. Over a fortnight each gets three sessions instead of an uneven two and one, which is how this split is meant to run and why three days never fit it before.
+
+## v3.105.0 — build 653
+
+- **Every training day matches its own name** — A day called “Upper · Horizontal” now opens on a flat press rather than an incline, a hinge day gets a hinge, a pull day gets its pull. Each day states the movement it is built around and the builder honours it — before this, only four of seventy-two days said what they wanted and the rest were left to whichever variation happened to score best.
+- **Exercises you add now survive a shuffle** — An exercise you added yourself used to disappear the next time you shuffled the program, updated the engine or reset it. It is now carried across, kept on the same kind of day, and the time it adds is shown separately so your plan is never marked over target for work you chose to add.
+- **Less filler, same training** — Roughly nine thousand sets of low-value volume removed across the program library, with fewer sessions running past their stated length.
+
+## v3.103.0 — build 651
+
+- **Updating or dismissing the engine notice now sticks** — Choosing to update a program, or dismissing the offer, was only being remembered until you navigated away — and the update button was also warning you that manual changes would be replaced on programs you had never edited, because the weekly schedule every program is born with was being counted as an edit. Both are fixed, and dismissing now stays dismissed until a genuinely newer engine has something new to say.
+- **Start a program again from week 1** — Two ways, both in the shuffle sheet: keep the exercises you have now, or go back to the ones it was first built with. Either way it starts again at week 1 and every workout you have logged stays exactly where it is.
+- **Volume targets now match your training age** — Minimum and maximum useful volumes are no longer the same for a first-year lifter and a ten-year lifter. Beginners grow on less, advanced lifters need more, and the app now scales both ends accordingly.
+- **Focusing forearms or traps gives them real work** — Choosing either as a focus now sets an actual volume floor for it instead of leaving it to whatever your other lifts happen to provide.
+
+## v3.102.0 — build 650
+
+- **Reducing a muscle now actually reduces it** — Setting a muscle to reduce had no effect on how many exercises it got — across eight test programs the count was identical every time, and the volume sometimes went up. A reduced muscle no longer competes for its own exercises; it keeps what it earns from your compound lifts, plus a maintenance slot if it would otherwise drop too low. The freed slots go to the muscles you focused.
+
+## v3.101.0 — build 649
+
+- **Deleting a training cycle no longer leaves its blocks orphaned** — Removing a cycle while keeping its blocks left every block still pointing at the cycle that was gone. The library then drew them as a nameless “Training cycle” card, tapping it dropped you on the all-cycles list, and the second block was hidden inside the group entirely. Blocks you keep are now kept as ordinary programs, and any library already in this state repairs itself the next time the app opens.
+
+## v3.100.0 — build 648
+
+- **Your Strength Score and the level beside it agree** — The level printed next to the score is now the level of that score, and the trend line ends on the same number shown above it. Both count the same lifts, including the ones scored against a barbell equivalent.
+- **What's new is a headline again** — Home shows the full description for the release you just installed and a one-line title for each older change. Nothing is dropped and the full log is still one tap away.
 
 ## v3.99.0 — build 647
 
@@ -811,4 +936,3 @@ _Generated from the app's own changelog data — do not edit by hand._
 - **Plateau warnings that mean it** — A stall is now judged per training day, so the same lift on push day and leg day is never mixed into one misleading line. And working through a rep range set by set counts as progress, because it is.
 - **Share a session** — Any workout in Progress becomes a clean card — your lifts, top sets, volume and time.
 - **History where you need it** — Open any exercise in a program to see every session you've logged for it on that day, with your best marked.
-

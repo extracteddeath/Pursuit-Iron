@@ -2,7 +2,7 @@
   "id": "./",
   "name": "Pursuit Iron",
   "short_name": "Pursuit Iron",
-  "description": "Pursuit Iron \u2014 Strength Coach. Evidence-based program builder, autoregulation, and logging.",
+  "description": "Pursuit Iron — strength coach powered by Pursuit Engine 0.62.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

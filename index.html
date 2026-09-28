@@ -24,7 +24,7 @@
       });
     </script>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#0A0908" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -40,15 +40,33 @@
     <title>Pursuit Iron — Strength Coach</title>
   </head>
   <body>
-    <div id="root"></div>
-    <script defer src="./app.js"></script>
+    <div id="root"><div id="pursuit-startup" class="pursuit-boot"><div class="pursuit-boot-inner"><div class="pursuit-boot-brand">Pursuit Iron</div><div class="pursuit-boot-progress" aria-hidden="true"><span></span></div><div id="pursuit-startup-status" class="pursuit-boot-status">Starting…</div></div></div></div>
+    <script>
+window.__pursuitMounted=false;
+(function(){
+  var softTimer=null,hardTimer=null;
+  // Paint the last chosen theme before the app bundle parses. This cache contains presentation
+  // tokens only; the authoritative theme still comes from wpb:v1 after normal storage recovery.
+  try{var bt=JSON.parse(localStorage.getItem('wpb:boot-theme')||'null');if(bt&&bt.bg){var rs=document.documentElement.style;rs.setProperty('--boot-bg',bt.bg);rs.setProperty('--boot-fg',bt.text||'#F5F0E8');rs.setProperty('--boot-muted',bt.muted||bt.text||'#A29EA8');rs.setProperty('--boot-accent',bt.accent||bt.text||'#F5F0E8');rs.setProperty('--boot-on-accent',bt.onAccent||bt.bg);document.documentElement.style.colorScheme=bt.base==='light'?'light':'dark';}}catch(_){}
+  function record(message,source){try{var k='wpb:release-diag',rows=JSON.parse(localStorage.getItem(k)||'[]');if(!Array.isArray(rows))rows=[];rows.push({at:Date.now(),event:'startup_failure',source:source||'bootstrap',reason:String(message||'Unknown error').slice(0,180),build:'763'});localStorage.setItem(k,JSON.stringify(rows.slice(-40)));}catch(_){}}
+  function bootHealth(ok){try{var k='wpb:boot-health',v=JSON.parse(localStorage.getItem(k)||'{}');if(!v||typeof v!=='object')v={};var attempts=(v.build==='763'?Number(v.attempts||0):0);localStorage.setItem(k,JSON.stringify(ok?{build:'763',attempts:0,lastOk:Date.now()}:{build:'763',attempts:attempts+1,lastAttempt:Date.now()}));}catch(_){}}
+  bootHealth(false);
+  function status(message,color){if(window.__pursuitMounted)return;var el=document.getElementById('pursuit-startup-status');if(!el)return;el.textContent=message;if(color)el.style.color=color;el.style.opacity='1';}
+  function recoveryActions(){var host=document.getElementById('pursuit-startup');if(!host||host.querySelector('[data-boot-recovery]'))return;var wrap=document.createElement('div');wrap.setAttribute('data-boot-recovery','1');wrap.className='pursuit-boot-actions';var reload=document.createElement('button');reload.textContent='Reload';reload.className='pursuit-boot-button pursuit-boot-button--primary';reload.onclick=function(){location.reload();};var safe=document.createElement('button');safe.textContent='Safe start';safe.className='pursuit-boot-button pursuit-boot-button--secondary';safe.onclick=function(){try{sessionStorage.setItem('wpb:safe-start','1');}catch(_){}location.reload();};wrap.appendChild(reload);wrap.appendChild(safe);var inner=host.firstElementChild||host;inner.appendChild(wrap);}
+  function showBootError(message,source){if(window.__pursuitMounted)return;status('Startup failed: '+(message||'Unknown error')+' — reload or use Safe start.','#ffb4ab');recoveryActions();record(message,source);}
+  window.__pursuitMarkMounted=function(){window.__pursuitMounted=true;bootHealth(true);if(softTimer){clearTimeout(softTimer);softTimer=null;}if(hardTimer){clearTimeout(hardTimer);hardTimer=null;}};
+  window.addEventListener('error',function(e){showBootError(e&&e.message,'window.error');});
+  window.addEventListener('unhandledrejection',function(e){var r=e&&e.reason;showBootError(r&&r.message?r.message:String(r||'Promise rejection'),'unhandledrejection');});
+  softTimer=setTimeout(function(){if(!window.__pursuitMounted)status('Still starting — your saved training is safe.');},8000);
+  hardTimer=setTimeout(function(){if(!window.__pursuitMounted)showBootError('App did not finish its first render','watchdog');},20000);
+})();
+</script>
+    <script type="importmap">{"imports":{"react":"./vendor/react.js","react/jsx-runtime":"./vendor/react-jsx-runtime.js","react-dom/client":"./vendor/react-dom-client.js","lucide-react":"./vendor/lucide-react.js"}}</script>
+    <script type="module" src="./modules/main.js"></script>
     <script>
       // Register the service worker (relative scope → works at any sub-path).
-      // Update flow: when a NEW worker is installed while an old one controls the page,
-      // tell the app so it can show an "Update ready — Restart" prompt. The app replies
-      // with SKIP_WAITING; on controllerchange we reload once into the new version.
-      // Skip the service worker when running inside a native (Capacitor) shell — the app is served
-      // from the local filesystem there, so SW caching is unnecessary and can confuse update flow.
+      // Stability rule: an update may DOWNLOAD in the background, but it does not take over a
+      // running/starting app until the user chooses Restart. That keeps first render atomic.
       var __isNative = !!(window.Capacitor && (typeof window.Capacitor.isNativePlatform === "function" ? window.Capacitor.isNativePlatform() : window.Capacitor.isNative));
       if (!__isNative && "serviceWorker" in navigator) {
         window.addEventListener("load", function () {
@@ -62,29 +80,24 @@
                 if (w.state === "installed" && navigator.serviceWorker.controller) announce(w);
               });
             });
-            // Check for a new build immediately on every launch, when the app returns to the
-            // foreground, and periodically for long-lived installed PWAs. updateViaCache:"none" above
-            // forces sw.js to be fetched from the network (never the HTTP cache) on these checks, so a
-            // freshly deployed build is actually detected instead of the app getting stuck on an old
-            // cached worker.
-            reg.update().catch(function () {});
+            // Never compete with first render. The initial update check is delayed, and foreground
+            // checks only run after the app has actually committed its first render.
+            setTimeout(function () { reg.update().catch(function () {}); }, 12000);
             document.addEventListener("visibilitychange", function () {
-              if (document.visibilityState === "visible") reg.update().catch(function () {});
+              if (document.visibilityState === "visible" && window.__pursuitMounted) reg.update().catch(function () {});
             });
-            setInterval(function () { reg.update().catch(function () {}); }, 30 * 60 * 1000);
+            setInterval(function () { if (window.__pursuitMounted) reg.update().catch(function () {}); }, 60 * 60 * 1000);
           }).catch(function (err) { console.error("SW registration failed:", err); });
           var reloaded = false;
           navigator.serviceWorker.addEventListener("controllerchange", function () {
-            if (reloaded) return; reloaded = true; location.reload();
+            // Future releases reload only after the in-app Restart action. M100's old controller
+            // still performs the one-time M101 rescue reload when M101 replaces its broken cache.
+            if (!window.__pursuitUpdateRequested || reloaded) return;
+            reloaded = true;
+            location.reload();
           });
         });
       }
     </script>
-    <!-- Cloudflare Web Analytics — cookieless, stores nothing in the browser, IP discarded at the
-         edge. Deliberately NOT added to the service worker's SHELL: it is cross-origin, the SW's
-         catch-all only caches same-origin ("basic") responses, and a failed beacon must never be able
-         to hold up or break an offline launch. Undercounts by design — ad blockers stop the script and
-         it cannot fire offline — so read it as a floor and a trend, not a headcount. -->
-    <script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "44fa22e7b5ba4052b870f46ca3793543"}'></script>
   </body>
 </html>

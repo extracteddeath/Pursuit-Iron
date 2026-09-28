@@ -1,12 +1,13 @@
-:root{color-scheme:dark}
+:root{color-scheme:dark;--boot-bg:#0A0908;--boot-fg:#F5F0E8;--boot-muted:rgba(245,240,232,.62);--boot-accent:#F5F0E8;--boot-on-accent:#0A0908}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-/* Native feel: no text auto-resize, no double-tap-zoom delay */
+/* Native feel: keep orientation-driven text autosizing stable while preserving user zoom.
+   The viewport no longer caps maximum-scale, so pinch zoom remains available for accessibility. */
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%;touch-action:manipulation}
 html,body,#root{height:100%;height:100dvh;height:var(--app-h,100dvh)}
 /* Prevent page-level scroll/rubber-band (pull-to-refresh, URL-bar reveal) without locking layout
    height — overscroll-behavior alone stops the bounce; fixed positioning broke the height model. */
 html,body{margin:0;overflow:hidden;overscroll-behavior:none}
-body{background:#0c0b0e;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+body{background:var(--boot-bg,#0c0b0e);font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 /* Root fills the viewport exactly. Safe-area insets are applied INSIDE the app (header/footer/sheets),
    not as root padding, so the root height stays equal to the viewport and bottom sheets stay on-screen. */
 #root{overflow:hidden}
@@ -21,3 +22,19 @@ input,textarea{font-size:16px}/* ≥16px stops iOS auto-zoom on focus */
 :focus-visible{outline:2.5px solid rgba(255,255,255,.92);outline-offset:2px;border-radius:6px}
 :focus:not(:focus-visible){outline:none}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}}
+
+/* M123 startup + platform polish. Keep the shell visually quiet before React owns the screen. */
+body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
+.pursuit-boot{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--boot-bg,#0A0908);color:var(--boot-fg,#F5F0E8);font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;text-align:center}
+.pursuit-boot-inner{width:min(280px,82vw)}
+.pursuit-boot-brand{font-size:23px;font-weight:700;letter-spacing:-.035em;line-height:1.1}
+.pursuit-boot-progress{width:64px;height:2px;margin:18px auto 14px;overflow:hidden;border-radius:999px;background:rgba(255,255,255,.10)}
+.pursuit-boot-progress>span{display:block;width:38%;height:100%;border-radius:inherit;background:var(--boot-accent,rgba(255,255,255,.72));animation:pursuitBootSlide 1.05s cubic-bezier(.4,0,.2,1) infinite}
+.pursuit-boot-status{font-size:13px;line-height:1.4;color:var(--boot-muted,rgba(245,240,232,.62));min-height:18px}
+.pursuit-boot-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:18px}
+.pursuit-boot-button{min-height:42px;border-radius:10px;padding:9px 15px;font:inherit;font-size:13px;font-weight:650;cursor:pointer}
+.pursuit-boot-button--primary{border:1px solid color-mix(in srgb,var(--boot-accent) 84%,transparent);background:var(--boot-accent,#F5F0E8);color:var(--boot-on-accent,#0A0908)}
+.pursuit-boot-button--secondary{border:1px solid rgba(255,255,255,.18);background:transparent;color:inherit}
+@keyframes pursuitBootSlide{0%{transform:translate3d(-165%,0,0)}60%,100%{transform:translate3d(265%,0,0)}}
+@media (prefers-reduced-motion:reduce){.pursuit-boot-progress>span{animation:none;transform:none;width:100%;opacity:.45}}
+

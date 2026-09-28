@@ -1,0 +1,1 @@
+import{a as s}from"./react-shared-V673FGIV.js";import{a,b as c}from"./react-shared-JU7Z5GYC.js";var e=a(t=>{"use strict";var o=s();t.createRoot=o.createRoot,t.hydrateRoot=o.hydrateRoot;var R});var r=c(e()),l=r,{createRoot:E,hydrateRoot:_}=r;export{E as createRoot,l as default,_ as hydrateRoot};

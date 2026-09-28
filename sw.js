@@ -1,5 +1,5 @@
 /* M158 UI-shell service worker — Engine 0.62.4 + merged programmer fixes and guided plan updates; resilient startup fallback retained. */
-const CACHE="pursuit-iron-production-m158-merged-r2";
+const CACHE="pursuit-iron-production-m158-merged-r3";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
   "./",

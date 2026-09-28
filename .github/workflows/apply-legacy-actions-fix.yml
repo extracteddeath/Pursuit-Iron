@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - scripts/patch-legacy-actions.mjs
+      - .github/workflows/apply-legacy-actions-fix.yml
 
 permissions:
   contents: write

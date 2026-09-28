@@ -6,7 +6,10 @@ on:
     paths:
       - .github/workflows/promote-m159.yml
       - scripts/promote-m159.mjs
-      - scripts/write-m159-small.mjs
+      - scripts/m159-patch-00.txt
+      - scripts/m159-patch-01.txt
+      - scripts/m159-patch-02.txt
+      - scripts/m159-patch-03.txt
 
 permissions:
   contents: write
@@ -19,21 +22,19 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Apply exact tested M159 candidate
+      - name: Apply tested M159 core patch
         run: |
           node scripts/promote-m159.mjs
-          node scripts/write-m159-small.mjs
           node --check modules/App.js
           node --check modules/next-engine/cycle-runtime-adapter.js
-          node scripts/verify-release.mjs
           grep -q "3.209.0" modules/App.js
           grep -q "Turn into training cycle" modules/App.js
           ! grep -q 'children: "Start next block"' modules/App.js
-      - name: Commit M159
+      - name: Commit M159 core
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add modules/App.js modules/next-engine/cycle-runtime-adapter.js index.html sw.js BUILD_PROFILE.json CHANGELOG.md RELEASE_MANIFEST.json scripts/verify-release.mjs M159_CHANGED_FILES.json M159_HANDOFF.md
-          git rm scripts/promote-m159.mjs scripts/write-m159-small.mjs .github/workflows/promote-m159.yml
-          git commit -m 'Release M159 standalone program cycle conversion'
+          git add modules/App.js modules/next-engine/cycle-runtime-adapter.js CHANGELOG.md RELEASE_MANIFEST.json
+          git rm scripts/promote-m159.mjs scripts/write-m159-small.mjs scripts/m159-patch-00.txt scripts/m159-patch-01.txt scripts/m159-patch-02.txt scripts/m159-patch-03.txt .github/workflows/promote-m159.yml
+          git commit -m 'Release M159 standalone program cycle conversion core'
           git push

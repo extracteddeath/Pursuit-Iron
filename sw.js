@@ -1,5 +1,5 @@
-/* M158 UI-shell service worker — Engine 0.62.4 + merged programmer fixes and guided plan updates; resilient startup fallback retained. */
-const CACHE="pursuit-iron-production-m158-merged-r4";
+/* M158 UI-shell service worker — Engine 0.62.4 + merged programmer fixes and guided plan updates; atomic startup recovery retained. */
+const CACHE="pursuit-iron-production-m159-cycle-conversion-r1";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
   "./",
@@ -8,7 +8,6 @@ const SHELL=[
   "./CONTRIBUTING-gallery.md",
   "./RELEASE_MANIFEST.json",
   "./app.css",
-  "./app.js",
   "./apple-touch-icon.png",
   "./favicon.ico",
   "./gallery.json",
@@ -81,39 +80,8 @@ const SHELL=[
   "./vendor/react-shared-V673FGIV.js",
   "./vendor/react.js"
 ];
-const REQUIRED_BOOT=[
-  "./",
-  "./index.html",
-  "./app.css",
-  "./app.js",
-  "./manifest.webmanifest"
-];
 const RESCUE_CACHE='pursuit-iron-production-m100';
-
-async function fetchFresh(url){
-  const req=new Request(url,{cache:'reload'});
-  const res=await fetch(req);
-  if(!res||!res.ok)throw new Error(`Fetch failed for ${url}: ${res&&res.status}`);
-  return {req,res};
-}
-
-self.addEventListener('install',e=>{e.waitUntil((async()=>{
-  const c=await caches.open(CACHE);
-  // Boot-critical files must succeed. app.js is the last-known-good bundled fallback.
-  for(const url of REQUIRED_BOOT){
-    const {req,res}=await fetchFresh(url);
-    await c.put(req,res.clone());
-  }
-  // Cache the modular runtime opportunistically. A partial deploy must never prevent
-  // the new worker from installing; CI separately enforces that production releases
-  // contain every SHELL entry.
-  await Promise.allSettled(SHELL.filter(u=>!REQUIRED_BOOT.includes(u)).map(async url=>{
-    const {req,res}=await fetchFresh(url);
-    await c.put(req,res.clone());
-  }));
-  const keys=await caches.keys();
-  if(keys.includes(RESCUE_CACHE))await self.skipWaiting();
-})());});
+self.addEventListener('install',e=>{e.waitUntil((async()=>{const c=await caches.open(CACHE);await c.addAll(SHELL.map(u=>new Request(u,{cache:'reload'})));const keys=await caches.keys();if(keys.includes(RESCUE_CACHE))await self.skipWaiting();})());});
 self.addEventListener('message',e=>{if(e.data&&e.data.type==='SKIP_WAITING')self.skipWaiting();});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE&&(PURSUIT_CACHE.test(k)||/^wpb-shell-/.test(k))).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
 self.addEventListener('fetch',e=>{const r=e.request;if(r.method!=='GET')return;if(r.mode==='navigate'){e.respondWith(caches.open(CACHE).then(c=>c.match('./index.html')).then(x=>x||fetch(r)).catch(()=>caches.open(CACHE).then(c=>c.match('./index.html'))));return;}e.respondWith(caches.open(CACHE).then(c=>c.match(r).then(x=>x||fetch(r).then(res=>{if(res&&res.status===200&&res.type==='basic')c.put(r,res.clone()).catch(()=>{});return res;}))));});

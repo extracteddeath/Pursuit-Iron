@@ -1,12 +1,12 @@
 {
   "profile": "portable-browser-esm-v661-workout-input",
-  "milestone": "M120",
-  "source": "M120 merged programmer fixes and guided plan updates + current Engine 0.62.4 + legacy restore controls hotfix",
+  "milestone": "M159",
+  "source": "M159 standalone-to-cycle conversion + M158 restore/update hotfixes + current Engine 0.62.4",
   "engine": "0.62.4 audited quality optimizer + 0.62.5-shadow evaluator",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 42,
   "shadowRuntimeModules": 9,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-m158-merged-r4",
-  "uiMilestone": "M158 Variant Coverage & Setup Fidelity"
+  "cache": "pursuit-iron-production-m159-cycle-conversion-r1",
+  "uiMilestone": "M159 Standalone Program \u2192 Training Cycle"
 }

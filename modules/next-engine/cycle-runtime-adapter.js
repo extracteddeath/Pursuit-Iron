@@ -216,6 +216,154 @@ export function generateNextCycleForShell(options) {
     };
     return { cycle, blocks, baseRequest };
 }
+
+export function convertProgramToNextCycleForShell(options) {
+    const current = options?.program;
+    if (!current || current.engineSource !== 'pursuit-next')
+        throw new NextShellAdapterError('NEXT_CYCLE_CONVERSION_UNSUPPORTED', 'Only a current Pursuit program can be turned into a training cycle.');
+    if (current.cycleId)
+        throw new NextShellAdapterError('NEXT_CYCLE_CONVERSION_ALREADY_LINKED', 'This program already belongs to a training cycle.');
+    if (current.config?.endless)
+        throw new NextShellAdapterError('NEXT_CYCLE_CONVERSION_ENDLESS', 'Endless programs do not have a block boundary. Switch to a fixed-length block before creating a cycle.');
+    const source = current.nextEngine?.program;
+    const sourceRequest = current.nextEngine?.baseRequest ?? current.nextEngine?.request;
+    if (!source || !sourceRequest)
+        throw new NextShellAdapterError('NEXT_CYCLE_CONVERSION_SOURCE_MISSING', 'This program is missing the engine snapshot needed to build future cycle blocks safely.');
+    const templateId = options.templateId;
+    const template = cycleTemplates().find(t => t.id === templateId);
+    if (!template)
+        throw new NextShellAdapterError('NEXT_CYCLE_TEMPLATE_INVALID', 'Choose a supported training cycle before converting this program.');
+    const specs = blocksForCycleTemplate(templateId);
+    const goal = goalForCycleTemplate(templateId);
+    const sourceIndex = specs.findIndex(spec => spec.phase === source.phase);
+    const currentWeeks = Math.max(1, Math.round(Number(current.config?.weeks || current.weeks) || 4));
+    const currentSpec = sourceIndex >= 0
+        ? { ...specs[sourceIndex], weeks: currentWeeks }
+        : { label: current.blockLabel || phaseLabel(source.phase) || 'Current block', weeks: currentWeeks, phase: source.phase };
+    const futureSpecs = sourceIndex >= 0 ? specs.slice(sourceIndex + 1) : specs;
+    if (!futureSpecs.length)
+        throw new NextShellAdapterError('NEXT_CYCLE_CONVERSION_NO_FUTURE_BLOCKS', 'That cycle path has no later phase after the current program. Choose a different cycle path.');
+    const planned = [currentSpec, ...futureSpecs];
+    const seed = (options.seed ?? current.seed ?? Math.max(1, Math.floor(Date.now() % 2147483647))) >>> 0;
+    const makeId = options.makeId ?? (() => `next-cycle-${Math.random().toString(36).slice(2, 10)}`);
+    const cid = makeId();
+    const cycleName = String(options.name || current.name || template.name || 'Training Cycle').trim() || 'Training Cycle';
+    const baseRequest = clone(sourceRequest);
+    baseRequest.goal = { ...(baseRequest.goal ?? {}), type: goal };
+    const normalized = normalizeRequest(baseRequest);
+    const baseConfig = {
+        ...(clone(current.config || {})),
+        name: cycleName,
+        goal: goal === 'mixed' ? 'both' : goal,
+        endless: false,
+        cyclePeriodization: true,
+        cycleTemplate: templateId,
+        cycleAdapt: !!options.adaptBetweenBlocks
+    };
+
+    const currentLegacy = clone(current);
+    currentLegacy.cycleId = cid;
+    currentLegacy.cycleIndex = 0;
+    currentLegacy.blockLabel = currentSpec.label || phaseLabel(source.phase) || 'Current block';
+    currentLegacy.blockNote = `${phaseLabel(source.phase)} · ${currentWeeks} weeks · converted from standalone program`;
+    currentLegacy.config = { ...(currentLegacy.config || {}), endless: false, cyclePeriodization: true };
+    attachBlockContext(
+        currentLegacy,
+        source,
+        current.nextEngine?.request ?? blockRequest(baseRequest, currentSpec.phase),
+        baseRequest,
+        {
+            templateId,
+            plannedIndex: 0,
+            blockIndex: 0,
+            label: currentLegacy.blockLabel,
+            weeks: currentWeeks,
+            phase: source.phase,
+            preview: false,
+            adaptBetweenBlocks: !!options.adaptBetweenBlocks,
+            convertedFromStandalone: true
+        }
+    );
+
+    const blocks = [currentLegacy];
+    let previous = source;
+    for (let i = 1; i < planned.length; i++) {
+        const spec = planned[i];
+        let next;
+        if (options.adaptBetweenBlocks) {
+            const ids = previous.sessions.flatMap(session => session.exercises.map(ex => ex.exerciseId));
+            const protectedIds = previous.sessions.flatMap(session => session.exercises
+                .filter(ex => ex.role === 'primary_strength' || ex.role === 'secondary_strength')
+                .map(ex => ex.exerciseId));
+            next = transitionProgramPhase(previous, normalized, spec.phase, {
+                successfulExerciseIds: ids,
+                protectedExerciseIds: protectedIds
+            }).program;
+        }
+        else {
+            next = retargetStatic(previous, baseRequest, spec.phase);
+        }
+        if (next.audit.result !== 'pass')
+            throw new NextShellAdapterError('NEXT_CYCLE_BLOCK_REJECTED', `Pursuit Engine ${next.engineVersion} rejected ${spec.label}.`, next.audit);
+        const cfg = legacyBlockConfig(baseConfig, spec.phase, spec.weeks, `${cycleName} · ${spec.label}`);
+        const legacy = nextProgramToShellProgram(next, cfg, options.legacyExercises, makeId);
+        legacy.cycleId = cid;
+        attachBlockContext(legacy, next, blockRequest(baseRequest, spec.phase), baseRequest, {
+            templateId,
+            plannedIndex: i,
+            blockIndex: i,
+            label: spec.label,
+            weeks: spec.weeks,
+            phase: spec.phase,
+            preview: true,
+            adaptBetweenBlocks: !!options.adaptBetweenBlocks,
+            convertedFromStandalone: true
+        });
+        blocks.push(legacy);
+        previous = next;
+    }
+
+    const cycle = {
+        id: cid,
+        name: cycleName,
+        templateId,
+        createdAt: Date.now(),
+        seed,
+        engineV: 33,
+        engineSource: 'pursuit-next',
+        engineSourceVersion: currentLegacy.engineSourceVersion || source.engineVersion || '0.62.0',
+        adaptExercises: !!options.adaptBetweenBlocks,
+        blockIds: blocks.map(block => block.id),
+        blockMeta: planned.map((spec, i) => ({
+            label: spec.label,
+            note: i === 0 ? `${phaseLabel(source.phase)} · ${currentWeeks} weeks · existing program` : `${phaseLabel(spec.phase)} · ${spec.weeks} weeks`,
+            goal: phaseGoal(spec.phase),
+            weeks: i === 0 ? currentWeeks : spec.weeks,
+            phase: i === 0 ? source.phase : spec.phase,
+            id: blocks[i].id,
+            plannedIndex: i,
+            preview: i > 0
+        })),
+        activeBlock: 0,
+        advance: 'manual',
+        onComplete: 'end',
+        startedAt: Date.now(),
+        done: false,
+        nextEngineCycle: {
+            schemaVersion: 1,
+            templateId,
+            goal,
+            adaptBetweenBlocks: !!options.adaptBetweenBlocks,
+            baseRequest: clone(baseRequest),
+            baseConfig: clone(baseConfig),
+            plannedBlocks: clone(planned),
+            recoveryInsertions: 0,
+            convertedFromProgramId: current.id
+        }
+    };
+    return { cycle, currentProgram: currentLegacy, blocks: blocks.slice(1), allBlocks: blocks, baseRequest };
+}
+
 function requestForAdvance(cycle, current, target, weeks, analysis) {
     const base = (cycle?.nextEngineCycle?.baseRequest ?? current?.nextEngine?.baseRequest);
     if (!base)

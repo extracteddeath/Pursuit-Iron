@@ -1,3 +1,13 @@
+# 3.209.0 — build 764 (M159, React)
+
+- Remove the misleading **Start next block** action from standalone program cards.
+- Add **Turn into training cycle** for saved fixed-length Pursuit programs.
+- Preserve the current program ID, workout history, edits, and active status as Block 1 when converting.
+- Build only the future phases after the current engine phase; future preview blocks still rebuild from real workout history when advanced.
+- Let the lifter choose the cycle path and whether exercises may adapt between blocks.
+- Keep true cycle block advancement inside the cycle UI instead of exposing it on unrelated standalone programs.
+- Carry forward the M158 restore/removal controls and resilient PWA startup/update behavior.
+
 # 3.208.0 — build 763 (M158 + fixes, React)
 
 - Programs you wrote yourself (Build your own) now come across when you import a backup or update, keep your own sets and reps, and can be trained — they were being discarded.

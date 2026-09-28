@@ -1,12 +1,12 @@
 {
   "schemaVersion": 2,
-  "milestone": "M120",
-  "appVersion": "3.208.0",
-  "build": 763,
+  "milestone": "M159",
+  "appVersion": "3.209.0",
+  "build": 764,
   "engineVersion": "0.62.4",
   "shadowEngineVersion": "0.62.5-shadow",
   "validatedLiveBaseline": "M88-0.61.3-reviewed-baseline",
-  "candidateStatus": "merged_ui_review",
+  "candidateStatus": "local_candidate_ready_for_device_test",
   "sourceNextEngineAggregate": "9ba84ffe3a62d94849617af33a2eafeaa563ab4a3636579101990ed753d05a84",
   "sourceShadowEngineAggregate": "3107199d20c86a5a12b82eccbc61c9a32b001a72c7f30418db696235d0da0c22",
   "runtimeAggregate": "a695210fe385d1cf2b037c23e83ada2c45ea8e5827420c22cab96a8560841780",
@@ -104,7 +104,7 @@
     "modules/next-engine/coach-review.js": "f5adf1805c48c964b1530f273204b936b470e5cde2406af676f77551c456f9a8",
     "modules/next-engine/comparison.js": "799f592429cde6cf9080613d3c51a237f8fed5ef1ac70a4d0b8839259f42bc1a",
     "modules/next-engine/config.js": "fdce7a954caf8d226a84dc576fe9e86a774b71bd34277489611e9e58bf8fc1f1",
-    "modules/next-engine/cycle-runtime-adapter.js": "59e4793f3502cb3ac51630a06584d6862b5f8acf8f0eb6e08deb5cfefacd3b88",
+    "modules/next-engine/cycle-runtime-adapter.js": "d733c4ce1a91027e431e4205e9e9e13f03b1075f77153bcf699a541fd8c3ff82",
     "modules/next-engine/cycles.js": "9df5ac7a8db5100483650827fba06f862b38f3f5d4501ca9dbf26a45d8dab749",
     "modules/next-engine/domain.js": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
     "modules/next-engine/events.js": "224b26bfbef0c398e0b0a3e32b26c96075f5c1dce5ce6aa9f5cad83d7a0b437a",
@@ -154,5 +154,18 @@
     "vendor/react-shared-JU7Z5GYC.js": "b8893896e31178fb4c8c0ce42cae975bec57bb70596c012d5d5c439cd20717d8",
     "vendor/react-shared-V673FGIV.js": "591c4bd8b0aae646cba73ca7ac17a2c2c950bdbaf288529ea14b691f2a4a9f22",
     "vendor/react.js": "24b2d220a5b2637cf3fb78fe0d961f227ea0a4b960485dbfb03c9d276e72147c"
+  },
+  "localCandidate": {
+    "name": "M159 Standalone Program \u2192 Training Cycle",
+    "base": "M158 + restore/removal hotfixes",
+    "changedRuntimeFiles": [
+      "modules/App.js",
+      "modules/next-engine/cycle-runtime-adapter.js",
+      "index.html",
+      "sw.js",
+      "BUILD_PROFILE.json",
+      "CHANGELOG.md"
+    ],
+    "note": "Runtime aggregate/source aggregates are retained from the audited M158 baseline; changed runtime file hashes are recorded separately in M159_HANDOFF.md."
   }
 }

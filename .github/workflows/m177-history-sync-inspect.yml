@@ -20,7 +20,22 @@ jobs:
         with:
           node-version: '22'
       - name: Apply M177 candidate
-        run: python scripts/m177-promote.py
+        shell: bash
+        run: |
+          set +e
+          python scripts/m177-promote.py > /tmp/m177-promote.log 2>&1
+          code=$?
+          if [ "$code" -ne 0 ]; then
+            git reset --hard HEAD
+            cp /tmp/m177-promote.log M177_RUN.txt
+            git config user.name "Pursuit Release Bot"
+            git config user.email "actions@users.noreply.github.com"
+            git add M177_RUN.txt
+            git commit -m "chore: capture M177 promotion failure"
+            git push origin HEAD:main
+            exit "$code"
+          fi
+          cat /tmp/m177-promote.log
       - name: Verify M177 focused and full gates
         run: |
           node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m177-history-merge-integrity-test.mjs
@@ -29,7 +44,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          rm -f .github/workflows/m177-history-sync-inspect.yml M177_INSPECT.txt scripts/m177-promote.py
+          rm -f .github/workflows/m177-history-sync-inspect.yml M177_INSPECT.txt M177_RUN.txt scripts/m177-promote.py
           git config user.name "Pursuit Release Bot"
           git config user.email "actions@users.noreply.github.com"
           git add -A

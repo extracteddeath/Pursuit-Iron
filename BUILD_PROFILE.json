@@ -1,12 +1,12 @@
 {
   "profile": "portable-browser-esm-v661-workout-input",
-  "milestone": "M168",
-  "source": "M167 + cycle overview hierarchy cleanup + phase/goal semantic separation",
+  "milestone": "M169",
+  "source": "M168 + swap-sheet single native vertical scroller",
   "engine": "0.62.5 progression safety + 0.62.5-shadow evaluator",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 42,
   "shadowRuntimeModules": 9,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-m168-cycle-overview",
-  "uiMilestone": "M168 Cycle Overview + Phase Semantics"
+  "cache": "pursuit-iron-production-m169-swap-scroll",
+  "uiMilestone": "M169 Swap Sheet Scrolling"
 }

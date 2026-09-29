@@ -1,8 +1,8 @@
 {
   "schemaVersion": 3,
-  "milestone": "M168",
-  "appVersion": "3.218.0",
-  "build": 774,
+  "milestone": "M169",
+  "appVersion": "3.219.0",
+  "build": 775,
   "engineVersion": "0.62.5",
   "shadowEngineVersion": "0.62.5-shadow",
   "validatedLiveBaseline": "M88-0.61.3-reviewed-baseline",
@@ -84,16 +84,16 @@
     "vendor/react.js": "24b2d220a5b2637cf3fb78fe0d961f227ea0a4b960485dbfb03c9d276e72147c"
   },
   "localCandidate": {
-    "name": "M168 Cycle Overview + Phase Semantics",
-    "base": "M167 legacy dose + standalone cycle recovery (3.217.0 / 773)",
-    "validation": "Cycle phase/goal semantic regression, simplified Cycle Detail hierarchy, existing progression/history/engine-authority/program interaction suites, and full import verification required green. Real phone/device validation pending."
+    "name": "M169 Swap Sheet Scrolling",
+    "base": "M168 cycle overview + phase semantics (3.218.0 / 774)",
+    "validation": "Single-scroll-owner swap-sheet regression plus existing progression/history/engine-authority/program interaction and cycle-overview suites. Physical phone validation pending."
   },
   "uiFiles": {
-    "modules/App.js": "5820c118f3c097d780e88ef1f46b83ab02a8356ce3464103171e2ab8c6bf74f4",
-    "index.html": "2c6af30ee0df639c43d42d7f940cc30cd9a2248f476b3ff2b6fbe446d2df3364",
-    "sw.js": "f23a31f4f68918e6987c9c185fbf33b1e3d6254641aa6441c2d92d56f1bd90e4",
-    "BUILD_PROFILE.json": "0307e92848796aeb430235213590c5808539bc98f51aaeadb5efb8d66d033297",
-    "CHANGELOG.md": "2258589ac4194ef9b2ee1d7a6c3aff822842a3641f512cb1cf92527195a51b35"
+    "modules/App.js": "3e91f3cd9dbbd7da415f7cc547578d1c4cb2d52470cf2d61ffb2684701700157",
+    "index.html": "e873f672707e238fd8b3ff655394cd77f5c8b802a31a2a94834c52b055c4739a",
+    "sw.js": "2bd8015f15d609e8826f26f596fa8b561991f3df5c01f36f3ac0f1429799b957",
+    "BUILD_PROFILE.json": "771732f63b8408363033d67b3dc80c68d4a49386af12eb1eafd141d63c16f99c",
+    "CHANGELOG.md": "8419be7eba4a7ab72eaef28080e5ec74791c1917a4e900ca6943d9eae6cec288"
   },
   "baselineSourceNextEngineAggregate": "9ba84ffe3a62d94849617af33a2eafeaa563ab4a3636579101990ed753d05a84",
   "baselineSourceFiles": {

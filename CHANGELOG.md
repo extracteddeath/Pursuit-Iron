@@ -1,3 +1,10 @@
+## M169 — Swap Sheet Scrolling (3.219.0 / build 775)
+
+- Fixes the exercise replacement list on touch devices by making the swap-results region the single vertical scroll owner.
+- Removes the nested `wpb-scroll` from the ranked replacement list; that child had its own contained overscroll behavior and could consume a vertical swipe before the parent sheet moved.
+- Explicitly allows native vertical panning and momentum scrolling on the results region while keeping sheet drag-to-dismiss isolated to the sheet's top grab band.
+- Adds a regression gate for the single-scroller structure. Pursuit Engine 0.62.5 programming behavior is unchanged.
+
 ## M168 — Cycle Overview + Phase Semantics (3.218.0 / build 774)
 
 - Simplifies Cycle Detail by removing the second unlabeled segmented progress bar; the overview now has one overall progress bar plus a separately labeled cycle path.

@@ -41,21 +41,39 @@ function summarize(req) {
   const { program, diagnostics } = generateProgram(req);
   assert.equal(program.audit.result, 'pass');
   const totalSets = program.sessions.reduce((sum, session) => sum + session.exercises.reduce((s, ex) => s + ex.sets, 0), 0);
+  const totalExercises = program.sessions.reduce((sum, session) => sum + session.exercises.length, 0);
   const minutes = program.sessions.reduce((sum, session) => sum + session.estimatedMinutes, 0);
   const maxMinutes = program.sessions.reduce((sum, session) => sum + session.maxMinutes, 0);
+  const minMinutes = normalized.schedule.days.reduce((sum, day) => sum + (day.minMinutes ?? 0), 0);
   const core = prescriptions.filter(p => p.priority !== 'maintenance' && p.minimum > 0);
   const floorMisses = core.filter(p => (program.muscleLedger[p.muscle]?.fractionalSets ?? 0) + .001 < p.minimum);
   const preferredAttainment = core.reduce((sum, p) => sum + Math.min(1, (program.muscleLedger[p.muscle]?.fractionalSets ?? 0) / Math.max(1, p.preferred)), 0) / Math.max(1, core.length);
+  const upperAttainment = core.reduce((sum, p) => sum + Math.min(1, (program.muscleLedger[p.muscle]?.fractionalSets ?? 0) / Math.max(1, p.upper)), 0) / Math.max(1, core.length);
   const directAttainmentRows = core.filter(p => p.directPreferred > 0);
   const directPreferredAttainment = directAttainmentRows.reduce((sum, p) => sum + Math.min(1, (program.muscleLedger[p.muscle]?.directSets ?? 0) / Math.max(1, p.directPreferred)), 0) / Math.max(1, directAttainmentRows.length);
   const totalFractionalDose = core.reduce((sum, p) => sum + (program.muscleLedger[p.muscle]?.fractionalSets ?? 0), 0);
+  const preferredDose = core.reduce((sum, p) => sum + p.preferred, 0);
+  const upperDose = core.reduce((sum, p) => sum + p.upper, 0);
+  const sessionsBelowBand = program.sessions.filter(session => {
+    const day = normalized.schedule.days.find(row => row.day === session.day);
+    return (day?.minMinutes ?? 0) > 0 && session.estimatedMinutes + .001 < day.minMinutes;
+  });
   return {
     split: program.split.displayName,
     totalSets,
+    avgSets: Math.round(totalSets / program.sessions.length * 10) / 10,
+    totalExercises,
+    avgExercises: Math.round(totalExercises / program.sessions.length * 10) / 10,
     totalFractionalDose: Math.round(totalFractionalDose * 10) / 10,
+    preferredDose: Math.round(preferredDose * 10) / 10,
+    upperDose: Math.round(upperDose * 10) / 10,
     minutes: Math.round(minutes),
-    utilization: Math.round((minutes / maxMinutes) * 1000) / 10,
+    avgMinutes: Math.round(minutes / program.sessions.length * 10) / 10,
+    maxUtilization: Math.round((minutes / maxMinutes) * 1000) / 10,
+    minimumBandFulfillment: minMinutes > 0 ? Math.round((minutes / minMinutes) * 1000) / 10 : null,
+    sessionsBelowBand: sessionsBelowBand.map(session => ({ day:session.day, estimatedMinutes:session.estimatedMinutes })),
     preferredAttainment: Math.round(preferredAttainment * 1000) / 10,
+    upperAttainment: Math.round(upperAttainment * 1000) / 10,
     directPreferredAttainment: Math.round(directPreferredAttainment * 1000) / 10,
     floorMisses: floorMisses.map(p => p.muscle),
     allocatorBudget: diagnostics.allocationMetrics.weeklyMinuteBudget,
@@ -65,13 +83,14 @@ function summarize(req) {
 }
 
 const rows = [];
-let seed = 18100;
+let profileSeed = 18100;
 for (const experience of ['intermediate','advanced']) {
   for (const goal of ['hypertrophy','mixed']) {
+    const seed = ++profileSeed; // identical athlete/program seed across all duration bands for a fair capacity comparison
     for (const band of bands) {
-      const result = summarize(request({ experience, goal, band, seed:++seed }));
+      const result = summarize(request({ experience, goal, band, seed }));
       rows.push({ experience, goal, band:band.id, ...result });
-      console.log(`${experience} ${goal} ${band.id}: ${result.totalSets} sets, ${result.totalFractionalDose} dose, ${result.minutes}m/${band.max*5}m, preferred=${result.preferredAttainment}%, direct=${result.directPreferredAttainment}%, budget=${result.allocatorEstimatedUsed}/${result.allocatorBudget}`);
+      console.log(`${experience} ${goal} ${band.id}: ${result.totalSets} sets (${result.avgSets}/session), ${result.totalFractionalDose}/${result.upperDose} dose, ${result.avgMinutes}m avg, preferred=${result.preferredAttainment}%, upper=${result.upperAttainment}%, belowBand=${result.sessionsBelowBand.length}/5, allocator=${result.allocatorEstimatedUsed}/${result.allocatorBudget}`);
       assert.deepEqual(result.floorMisses, [], `${experience} ${goal} ${band.id} missed modeled floors: ${result.floorMisses.join(', ')}`);
     }
   }

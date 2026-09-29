@@ -209,14 +209,8 @@ export function createMusclePrescriptions(request, phase = initialPhaseForGoal(r
         const minimum = equipmentImpossibleNormal ? 0 : normalFrontDelt ? 0 : optionalMaintenance ? 0 : compactStrengthSmallOptional ? 0 : Math.max(minimumFloor, Math.round(base.minimum * Math.min(1, mult) * scale.minimum * resourceScale));
         const preferred = equipmentImpossibleNormal ? 0 : normalFrontDelt ? 0 : optionalMaintenance ? 0 : Math.max(minimum, Math.round(base.preferred * mult * scale.preferred * resourceScale));
         const upper = equipmentImpossibleNormal ? 0 : normalFrontDelt ? Math.max(isPeak ? 2 : 4, Math.round(base.upper * .45)) : optionalMaintenance ? Math.max(2, Math.round(base.upper * .25)) : Math.max(preferred, Math.round(base.upper * mult * scale.upper));
-        const directPreferred = equipmentImpossibleNormal || normalWithoutDirect || scale.direct === 0 ? 0 : Math.max(isPeak && priority === 'normal' ? 0 : 1, Math.round(preferred * scale.direct));
-        const compactNormalDirectOptional = compactWeek && priority === 'normal' && ['side_delts', 'rear_delts', 'biceps', 'triceps', 'calves', 'core', 'traps', 'forearms', 'adductors', 'abductors', 'neck'].includes(muscle);
-        const directFloor = optionalMaintenance ? 0 : (isPeak && priority === 'normal') || compactNormalDirectOptional ? 0 : 1;
-        // On compact normal-priority weeks, zero really means zero: do not recreate a mandatory one-set
-        // isolation from the fractional minimum after deliberately relaxing the direct-work floor. The
-        // fractional minimum still protects the muscle, and high/specialized/primary priorities retain
-        // explicit direct-dose requirements.
-        const directMinimum = equipmentImpossibleNormal || normalWithoutDirect || scale.direct === 0 ? 0 : compactNormalDirectOptional ? 0 : Math.min(directPreferred, Math.max(directFloor, Math.round(minimum * Math.min(.8, scale.direct))));
+        const directPreferred = normalWithoutDirect ? 0 : optionalMaintenance || equipmentImpossibleNormal ? 0 : Math.round(preferred * scale.direct);
+        const directMinimum = normalWithoutDirect ? 0 : optionalMaintenance || equipmentImpossibleNormal ? 0 : priority === 'high' || priority === 'specialization' || priority === 'primary' ? Math.max(2, Math.round(minimum * scale.direct)) : 0;
         return {
             muscle,
             priority,
@@ -449,11 +443,13 @@ export function selectStrengthClaimsForCapacity(request, claims) {
         // inviolable; only optional work is declined when no clean destination exists.
         const split = request.preferences.lockedSplit ?? request.preferences.preferredSplit;
         const namedStrengthSystem = ['five_three_one', 'five31_beginner', 'gzclp', 'rippler', 'jt', 'sbd_power', 'texas'].includes(split ?? '');
-        // Generic strength templates should not spend optional volume by stacking a second squat/deadlift
-        // strength exposure onto a session that already has another lower-body strength anchor when the
-        // canonical split has enough lower slots to keep the required anchors separate. Named strength
-        // systems retain their own structure-specific exposure rules.
-        const avoidOptionalLowerStacking = request.goal.type === 'strength' && !namedStrengthSystem && region === 'lower' && claim.role === 'volume';
+        // Generic strength and mixed/powerbuilding templates should not spend optional volume by stacking
+        // a second squat/deadlift strength exposure onto a session that already has another lower-body
+        // strength anchor when the canonical split has enough lower slots to keep the required anchors
+        // separate. High-priority volume is strongly preferred, not required; preserve the lower-back
+        // fatigue budget before adding a fourth lower-region strength exposure. Named strength systems
+        // retain their own structure-specific exposure rules.
+        const avoidOptionalLowerStacking = (request.goal.type === 'strength' || request.goal.type === 'mixed') && !namedStrengthSystem && region === 'lower' && claim.role === 'volume';
         if (!claimsFitCanonicalSessions(request, [...selected, claim], avoidOptionalLowerStacking))
             continue;
         selected.push(claim);

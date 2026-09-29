@@ -1,6 +1,5 @@
 export const SUPPORTED_PROGRESSION_STYLES = ['auto', 'double', 'dynamic', 'ladder', 'linear', 'wave', 'e1rm'];
 
-const SIMPLE_STYLES = new Set(['double', 'dynamic', 'ladder', 'linear']);
 const ADVANCED_STYLES = new Set(['wave', 'e1rm']);
 
 function finite(value, fallback = 0) {
@@ -21,8 +20,10 @@ function repRangeFor(ex, role, context = {}) {
     }
     const strength = role === 'primary_strength' || role === 'secondary_strength';
     const source = strength ? ex?.preferredReps?.strength : ex?.preferredReps?.hypertrophy;
-    if (Array.isArray(source) && source.length >= 2)
-        return [Math.min(finite(source[0], 1), finite(source[1], 1)), Math.max(finite(source[0], 1), finite(source[1], 1))];
+    if (Array.isArray(source) && source.length >= 2) {
+        const a = finite(source[0], 1), b = finite(source[1], a);
+        return [Math.min(a, b), Math.max(a, b)];
+    }
     return strength ? [3, 6] : ex?.flags?.compound ? [6, 12] : [10, 15];
 }
 
@@ -44,10 +45,11 @@ function phaseRepRange(ex, role, context = {}) {
 }
 
 function equipmentTraits(ex = {}) {
-    const equipment = new Set([...(ex.equipment ?? []), ...(ex.equipmentAlternatives ?? []).flat?.() ?? []]);
+    const alternatives = (ex.equipmentAlternatives ?? []).flat();
+    const equipment = new Set([...(ex.equipment ?? []), ...alternatives]);
     const barbell = !!ex.flags?.barbell || equipment.has('barbell');
     const bodyweight = !!ex.flags?.bodyweight || equipment.has('bodyweight');
-    const quickChange = !barbell && ['dumbbell', 'dumbbells', 'machine', 'cable', 'smith', 'selectorized'].some(x => equipment.has(x));
+    const quickChange = !barbell && ['dumbbell', 'dumbbells', 'machine', 'cable', 'smith', 'selectorized', 'leg_press'].some(x => equipment.has(x));
     return { barbell, bodyweight, quickChange };
 }
 
@@ -61,7 +63,15 @@ function exerciseTraits(ex = {}, role, context = {}) {
     const stable = stability >= 6;
     const highlyLoadable = loadability >= 7 || barbell;
     const strength = role === 'primary_strength' || role === 'secondary_strength';
-    return { barbell, bodyweight, quickChange, compound, stability, loadability, reps, repWidth, stable, highlyLoadable, strength };
+    // Technical stability and measurement reliability are not the same thing. A competition squat or
+    // bench is technically demanding (low stability metadata) but is still highly standardized,
+    // incrementable and measurable enough for e1RM/wave decisions when used as strength work.
+    const measurementReliable = highlyLoadable && (stable || (barbell && strength));
+    const noviceLinearEligible = compound && !bodyweight && loadability >= 5 && (stable || barbell);
+    return {
+        barbell, bodyweight, quickChange, compound, stability, loadability, reps, repWidth,
+        stable, highlyLoadable, strength, measurementReliable, noviceLinearEligible
+    };
 }
 
 function accumulateStyle(traits) {
@@ -77,13 +87,8 @@ function selection(style, confidence, reason, source = 'auto') {
 }
 
 /**
- * M189 progression selector.
- *
- * The old Auto behavior was intentionally parity-oriented: phase + experience + compound/barbell flags.
- * That was useful for matching v661, but it made progression a static property of the generated exercise.
- * This selector treats progression as a policy choice. It uses the exercise's loading characteristics,
- * rep structure, phase, role and experience level, while keeping advanced methods away from movements
- * whose measurement quality cannot support them.
+ * Select Auto at program/cycle creation from the actual exercise, phase and athlete rather than one
+ * program-wide default. Advanced methods are reserved for prescriptions with a trustworthy signal.
  */
 export function selectProgressionStyle(ex, role, context = {}) {
     const manual = explicitStyle(context);
@@ -96,16 +101,12 @@ export function selectProgressionStyle(ex, role, context = {}) {
     const t = exerciseTraits(ex, role, context);
     const accumulate = accumulateStyle(t);
 
-    // Recovery and maintenance should reduce decision complexity as well as training stress.
-    if (phase === 'recovery' || phase === 'maintenance') {
+    if (phase === 'recovery' || phase === 'maintenance')
         return selection(accumulate, 'high', `${phase === 'recovery' ? 'Recovery' : 'Maintenance'} uses a simple rep/load progression so the method does not add fatigue or noise.`);
-    }
 
-    // Beginners benefit from frequent, obvious load steps only when the movement is stable and loadable.
-    // Bodyweight/coarse-loading movements instead earn reps first; isolations stay on double progression.
     if (experience === 'novice') {
-        if (t.compound && !t.bodyweight && t.stable && t.loadability >= 5)
-            return selection('linear', 'high', 'A novice on a stable, loadable compound can use simple load steps while the adaptation rate is high.');
+        if (t.noviceLinearEligible)
+            return selection('linear', 'high', 'A novice on a loadable compound can use simple load steps while adaptation is rapid; technical barbell lifts remain eligible because their loading is standardized.');
         if (t.bodyweight && t.repWidth >= 3)
             return selection('ladder', 'high', 'This novice bodyweight movement is better progressed through the rep range before external loading.');
         if (t.compound && t.quickChange)
@@ -114,23 +115,20 @@ export function selectProgressionStyle(ex, role, context = {}) {
     }
 
     if (t.strength && t.compound) {
-        // e1RM is reserved for low-rep, stable, loadable strength work. Using it on unstable or high-rep
-        // work creates false precision from noisy estimates.
-        const e1rmEligible = t.stable && t.highlyLoadable && t.reps[1] <= 5;
-        const waveEligible = role === 'primary_strength' && experience !== 'novice' && t.stable && t.highlyLoadable
-            && t.reps[1] <= 6 && blockWeeks >= 5;
+        const e1rmEligible = t.measurementReliable && t.reps[1] <= 5;
+        const waveEligible = role === 'primary_strength' && t.measurementReliable && t.reps[1] <= 6 && blockWeeks >= 5;
 
         if (phase === 'peak') {
             if (e1rmEligible)
-                return selection('e1rm', 'high', 'Peak-phase primary loading is low-rep, stable and loadable enough for effort-adjusted e1RM autoregulation.');
-            return selection(accumulate, 'moderate', 'This peak exercise is not stable/loadable enough for reliable e1RM decisions, so Auto keeps a simpler progression.');
+                return selection('e1rm', 'high', 'Peak strength work is low-rep and measurable enough for effort-adjusted e1RM autoregulation.');
+            return selection(accumulate, 'moderate', 'This peak exercise does not provide a reliable enough low-rep loading signal for e1RM, so Auto keeps a simpler progression.');
         }
         if (phase === 'intensification') {
             if (waveEligible)
-                return selection('wave', 'high', 'An experienced primary strength lift in a long enough intensification block can use a short loading wave without changing plates every set.');
+                return selection('wave', 'high', 'An experienced primary strength lift in a long enough intensification block can use a short loading wave.');
             if (e1rmEligible)
-                return selection('e1rm', 'moderate', 'The lift is suitable for e1RM autoregulation, but the block/movement is not a good wave candidate.');
-            return selection(accumulate, 'moderate', 'Auto avoids advanced strength progression because the movement or rep target does not support a reliable signal.');
+                return selection('e1rm', 'moderate', 'The lift supports e1RM autoregulation, but the block is too short or the role is not appropriate for a wave.');
+            return selection(accumulate, 'moderate', 'Auto avoids advanced strength progression because the movement or rep target does not provide a reliable enough signal.');
         }
         if (phase === 'strength_accumulation' || phase === 'mixed_accumulation' || phase === 'hypertrophy_accumulation' || phase === 'foundation')
             return selection(accumulate, 'high', t.barbell
@@ -148,9 +146,7 @@ export function selectProgressionStyle(ex, role, context = {}) {
         return selection('double', 'moderate', 'A single shared load with rep-first progression is the most robust default for this compound.');
     }
 
-    // Isolation work deliberately stays simple. The smaller signal and smaller absolute loads make
-    // e1RM/waves unnecessary; double progression also avoids chasing noisy set-to-set fluctuations.
-    return selection('double', 'high', 'Isolation work uses rep-first double progression because it is simple, stable, and does not overreact to small performance noise.');
+    return selection('double', 'high', 'Isolation work uses rep-first double progression because it is simple and does not overreact to small performance noise.');
 }
 
 export function resolveProgressionStyle(ex, role, context = {}) {
@@ -162,14 +158,8 @@ function validCurrent(style) {
 }
 
 /**
- * Re-select Auto after training evidence exists. This is intentionally conservative: Auto may change
- * method when the phase changes or when repeated evidence shows the current method is a poor fit, but
- * it does not bounce between methods after one good/bad day.
- *
- * Supported evidence fields are optional so block review, simulation and the live history bridge can
- * all use the same policy as they gain richer data:
- *   comparableExposures, styleExposures, successful, stalled, stallCount, failureCount,
- *   fatigueLimited, techniqueLimited, loadingBlockedCount, rirCoverage, e1rmSamples.
+ * Re-select Auto once training evidence exists. Phase changes can legitimately change the method;
+ * within a phase, repeated comparable evidence is required so Auto cannot thrash after one workout.
  */
 export function reselectProgressionStyle(ex, role, context = {}) {
     const manual = explicitStyle(context);
@@ -187,8 +177,6 @@ export function reselectProgressionStyle(ex, role, context = {}) {
     const phaseChanged = context.previousPhase && context.phase && context.previousPhase !== context.phase;
     const t = exerciseTraits(ex, role, context);
 
-    // A new phase is a legitimate reason to change method immediately because the prescription itself
-    // changed. This is not method thrashing; it is periodization.
     if (phaseChanged && baseline.style !== current) {
         if ((evidence.fatigueLimited || evidence.techniqueLimited) && ADVANCED_STYLES.has(baseline.style)) {
             const simple = accumulateStyle(t);
@@ -197,7 +185,6 @@ export function reselectProgressionStyle(ex, role, context = {}) {
         return selection(baseline.style, baseline.confidence, `The phase changed, so Auto re-selected the progression to match the new rep/effort structure. ${baseline.reason}`, 'adaptive');
     }
 
-    // Before changing a method inside a phase, require repeated comparable evidence.
     if (comparable < 3 || styleExposures < 2)
         return selection(current, 'moderate', 'Auto is keeping the current progression until at least three comparable exposures establish a reliable trend.', 'adaptive_hold');
 
@@ -208,15 +195,11 @@ export function reselectProgressionStyle(ex, role, context = {}) {
         return selection(current, 'high', 'The issue is fatigue/technique rather than the progression model itself, so Auto is not changing a simple method.', 'adaptive_hold');
     }
 
-    // Linear progression is a starting strategy, not a permanent identity. Graduate a novice only after
-    // repeated stalls/failures, then use the same exercise-specific accumulation rule as an experienced lifter.
     if (current === 'linear' && (stalls >= 2 || failures >= 2)) {
         const next = accumulateStyle(t);
         return selection(next, 'high', 'Repeated comparable stalls show that simple linear load jumps are no longer the best fit; Auto is graduating this exercise to rep-based progression.', 'adaptive');
     }
 
-    // e1RM and waves need observed effort/strength data. If the athlete is not supplying enough usable
-    // effort data, fall back instead of pretending the estimates are precise.
     if (ADVANCED_STYLES.has(current)) {
         const rirCoverage = Math.max(0, Math.min(1, finite(evidence.rirCoverage, 1)));
         const e1rmSamples = Math.max(0, finite(evidence.e1rmSamples, comparable));
@@ -226,19 +209,12 @@ export function reselectProgressionStyle(ex, role, context = {}) {
         }
     }
 
-    // Coarse/bodyweight loading that repeatedly hits an inventory wall should shift toward reps before
-    // asking the athlete to review the same impossible load jump over and over.
     if (loadingBlocked >= 2 && t.bodyweight && current !== 'ladder')
         return selection('ladder', 'high', 'Repeated loading-inventory limits make rep-ladder progression a better fit than asking for unavailable load jumps.', 'adaptive');
 
-    // If the current method is working, keep it. Successful progression is evidence against unnecessary
-    // novelty even when another method would also be defensible.
     if (evidence.successful)
         return selection(current, 'high', 'Recent comparable exposures are progressing, so Auto is preserving the current method.', 'adaptive_hold');
 
-    // When repeated stalls exist on a non-linear simple method, re-run the exercise/phase selector. Only
-    // switch if the recommended method is meaningfully different; otherwise the problem is probably load,
-    // fatigue or exercise fit rather than the progression family.
     if ((stalls >= 2 || failures >= 2) && baseline.style !== current)
         return selection(baseline.style, 'moderate', `Repeated stalls justify reconsidering the method. ${baseline.reason}`, 'adaptive');
 

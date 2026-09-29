@@ -43,3 +43,9 @@ assert.equal(top.weight,105);
 assert.equal(top.target,10);
 assert.match(top.reason,/reached 15 reps/);
 console.log('PASS custom 10-15 array range: 10s hold/build; only 15s across all sets earn a load increase.');
+
+
+// M166 regression: array-shaped custom sets can intentionally encode one set count per week.
+const setScheduleProgram={id:'custom-set-schedule',custom:true,config:{unit:'lb',weeks:4},overrides:{'d3:0':{sets:[5,3,3,4],reps:'8-12',rir:'2'}},days:[{id:'d3',primaryIndex:0,exercises:['back-squat']}]};
+assert.deepEqual([1,2,3,4].map(week=>computeCell(setScheduleProgram,setScheduleProgram.days[0],'back-squat',0,week).sets),[5,3,3,4]);
+console.log('PASS custom set schedule: computeCell preserves 5/3/3/4 across weeks 1–4.');

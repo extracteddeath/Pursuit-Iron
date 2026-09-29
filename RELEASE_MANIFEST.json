@@ -1,8 +1,8 @@
 {
   "schemaVersion": 3,
-  "milestone": "M165",
-  "appVersion": "3.215.0",
-  "build": 771,
+  "milestone": "M166",
+  "appVersion": "3.216.0",
+  "build": 772,
   "engineVersion": "0.62.5",
   "shadowEngineVersion": "0.62.5-shadow",
   "validatedLiveBaseline": "M88-0.61.3-reviewed-baseline",
@@ -84,16 +84,16 @@
     "vendor/react.js": "24b2d220a5b2637cf3fb78fe0d961f227ea0a4b960485dbfb03c9d276e72147c"
   },
   "localCandidate": {
-    "name": "M165 Set Display Integrity",
-    "base": "M164 history/progression-integrity release (3.214.0 / 770)",
-    "validation": "Shared set-count canonicalization, immutable-engine fallback, SET/TARGET-LAST layout contract, cycle week-1 dose summary, M164 history/progression safety, engine authority, full import and Programs interaction suites are required green. Real phone/device validation pending."
+    "name": "M166 Set Schedule + History Volume Integrity",
+    "base": "M165 set-display-integrity release (3.215.0 / 771)",
+    "validation": "Custom schedule preservation, generated set canonicalization, ledger-first history tonnage, unit-normalized weekly recap, progression/history/engine authority and full import suites required green. Real phone/device validation pending."
   },
   "uiFiles": {
-    "modules/App.js": "959f12d35f075972780fbe972a792822a2cb8c9635ea17219a9411033ab230b0",
-    "index.html": "190490cb86b4f5af270fca3e0ceb94817515fbe83e8ba07b0fe3c48d180e5062",
-    "sw.js": "d2e09f86ffec07d2c631856dda922443e834989d68d9969baacde1b8b0d17e1a",
-    "BUILD_PROFILE.json": "b2fd3210245a82d3b0239739bea17facde5c54b6450e2da153572b05303982db",
-    "CHANGELOG.md": "67a09d296c7f4e94db3c17afdeba9caf416d175d2b4440ab54a8f7441f871cad"
+    "modules/App.js": "33a481312a6b2b4e5f39069d0a1a318e59d146fd649fa187e54c15ecc2c0cd34",
+    "index.html": "b5a9b027d104d4a84c2ad8c326271ea3456737ab1cb5a7f68511556154177007",
+    "sw.js": "59f5a035355d00f88e3c70be71169aa9aa0615b6a333ce9197d80357f4e6f33c",
+    "BUILD_PROFILE.json": "707bf762e4e9c293452976b40a395385c36884f4f2c74bcdc3b015eaf4d196be",
+    "CHANGELOG.md": "64df7f844af4d96921ea36c04616825a10b5af2a4d0304993d95b992ccc7613a"
   },
   "baselineSourceNextEngineAggregate": "9ba84ffe3a62d94849617af33a2eafeaa563ab4a3636579101990ed753d05a84",
   "baselineSourceFiles": {

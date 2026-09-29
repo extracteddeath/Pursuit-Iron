@@ -1,12 +1,12 @@
 {
   "profile": "portable-browser-esm-v661-workout-input",
-  "milestone": "M165",
-  "source": "M164 history/progression-integrity release + shared set-count and workout reference-column integrity hotfix",
+  "milestone": "M166",
+  "source": "M165 set-display-integrity release + custom set-schedule preservation and ledger-first history tonnage",
   "engine": "0.62.5 progression safety + 0.62.5-shadow evaluator",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 42,
   "shadowRuntimeModules": 9,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-m165-set-display-integrity",
-  "uiMilestone": "M165 Set Display Integrity"
+  "cache": "pursuit-iron-production-m166-set-schedule-history-volume",
+  "uiMilestone": "M166 Set Schedule + History Volume Integrity"
 }

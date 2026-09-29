@@ -1,3 +1,11 @@
+## M166 — Set Schedule + History Volume Integrity (3.216.0 / build 772)
+
+- Preserves intentional custom-program week-by-week set schedules (for example 5/3/3/4) instead of flattening array-shaped authored values to the neutral fallback.
+- Keeps generated Pursuit Next set counts canonicalized at the shared engine→shell boundary, so Home, Program, Plan, Preview and Workout cannot multiply a malformed persisted set shape.
+- Recomputes session tonnage from actual logged working sets whenever a set ledger exists; stale cached `h.volume` can no longer override real history.
+- Excludes intensifier/sub-set rows from working-set tonnage and normalizes weekly recap volume into the displayed unit before comparing weeks.
+- Retains M162–M165 progression safety, 10–15 baseline behavior, editable-history integrity, distinct-day week advancement, Target/LAST layout and engine-authority gates.
+
 # M165 · 3.215.0 · Build 771
 
 - Fixed the generated-plan set-count boundary. Persisted/imported array-shaped counts such as `[3,3]` now normalize to one scalar `3`; ambiguous malformed values recover from the immutable Pursuit Engine snapshot when available. Because Home, Program, Plan, Preview, and Workout all read the same shell cell, the fix applies consistently instead of patching individual screens.

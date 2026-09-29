@@ -23,11 +23,11 @@ cell=getNextShellCell(program,program.days[0],0,1);
 check('manual shell override is normalized at the same boundary',()=>assert.equal(cell.sets,4));
 program.overrides['d1:0']={sets:[4,5]};
 cell=getNextShellCell(program,program.days[0],0,1);
-check('ambiguous override stays one scalar, never 45 or 9',()=>assert.equal(cell.sets,3));
+check('ambiguous generated override stays one scalar, never 45 or 9',()=>assert.equal(cell.sets,3));
 
 const app=fs.readFileSync(new URL('../modules/App.js',import.meta.url),'utf8');
 check('all generated program surfaces still enter through getNextShellCell',()=>assert.ok(app.includes('const nextCell = getNextShellCell(program, day, slotIndex, weekIndex);')));
-check('custom programs normalize set count too',()=>assert.ok(app.includes('sets: canonicalShellSetCount(o.sets, base.sets) ?? base.sets')));
+check('custom programs resolve authored set schedules before display',()=>assert.ok(app.includes('sets: customAuthoredSetCount(o.sets, base.sets, weekIndex)')));
 check('phone set row keeps protected 520px breakpoint',()=>assert.ok(app.includes('const narrowSet = useNarrow(520);')));
 check('SET/LAST header has breathing room',()=>{
   assert.ok(app.includes('gap: narrowSet ? 5 : 8'));

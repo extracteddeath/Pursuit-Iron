@@ -1,4 +1,4 @@
-const __APP_VERSION__='3.215.0'; const __BUILD__='771';
+const __APP_VERSION__='3.216.0'; const __BUILD__='772';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { setShellEquipmentExpander, splitContractGaps, splitBuildability, refusalFixes, generateNextProgramForShell, nextProgramToShellProgram, recommendNextSplitForShell, getNextShellCell, canonicalShellSetCount, cloneNextDayPrescriptions, swapNextSlotPrescriptions, removeNextSlotPrescription, nextExerciseIdForShellExercise, NextShellAdapterError } from "./next-engine/app-shell-adapter.js";
@@ -12420,6 +12420,20 @@ function lastSetTech(ex, strength, isFocus, p, weeks) {
         return "Last set: myo-reps — to failure, then mini-sets of a few reps with brief rests";
     return null;
 }
+/* M166 — custom/user-authored set schedules must be resolved, not flattened.
+   Generated Pursuit Next cells are still canonicalized by getNextShellCell; this helper is only for
+   the legacy/custom editor shape where an array can intentionally mean one set count per week. */
+export function customAuthoredSetCount(raw, fallback, weekIndex = 1) {
+    const base = canonicalShellSetCount(fallback) ?? 3;
+    if (!Array.isArray(raw))
+        return canonicalShellSetCount(raw, base) ?? base;
+    const values = raw.map(v => canonicalShellSetCount(v)).filter(v => v != null);
+    if (!values.length)
+        return base;
+    const w = Number(weekIndex);
+    const idx = Number.isFinite(w) ? Math.max(0, Math.floor(w) - 1) : 0;
+    return values[Math.min(idx, values.length - 1)] ?? base;
+}
 /* compute a cell {sets,reps,note,range,rir} for a given week.
    Auto mode prescribes each lift's own rep RANGE; the week selector drives
    load & RIR (and a small overreach set in the last hypertrophy week). */
@@ -12444,7 +12458,7 @@ function computeCell(program, day, id, slotIndex, weekIndex) {
         const reps = repPair[0] === repPair[1] ? String(repPair[0]) : `${repPair[0]}-${repPair[1]}`;
         const effort = effortBounds(o.rir ?? base.rir);
         const rir = effort ? (effort[0] === effort[1] ? String(effort[0]) : `${effort[0]}-${effort[1]}`) : (o.rir ?? base.rir);
-        return { sets: canonicalShellSetCount(o.sets, base.sets) ?? base.sets, reps, range: reps, rir, rest: o.rest ?? base.rest, tech: o.techOverride ?? base.tech ?? null,
+        return { sets: customAuthoredSetCount(o.sets, base.sets, weekIndex), reps, range: reps, rir, rest: o.rest ?? base.rest, tech: o.techOverride ?? base.tech ?? null,
             role: base.role, progressionStyle: o.progressionStyle ?? "auto", note: "Your program", custom: true };
     }
     const nextCell = getNextShellCell(program, day, slotIndex, weekIndex);
@@ -14466,13 +14480,13 @@ function muscleRecoveryUncached(history) {
     });
 }
 // 7-day training recap vs the prior 7 days
-function weeklyRecap(history) {
+function weeklyRecap(history, unit) {
     const now = Date.now(), wk = 7 * 86400000;
     const inWin = (h, a, b) => h.date > now - a && h.date <= now - b;
     const thisW = (history || []).filter(h => h && h.date > now - wk);
     const prevW = (history || []).filter(h => inWin(h, 2 * wk, wk));
     const sets = arr => arr.reduce((s, h) => s + (h.setsDone || 0), 0);
-    const vol = arr => arr.reduce((s, h) => s + (h.volume || 0), 0);
+    const vol = arr => arr.reduce((s, h) => s + historyVolumeIn(h, unit || h?.unit), 0);
     const muscle = {};
     // Working sets, not logged rows: the weekly recap names a "top muscle", and a session with myo
     // minis on one lift used to hand that title to whatever muscle happened to run extensions.
@@ -30079,11 +30093,27 @@ function planOverview(program, weekIndex = 1, cycle = null, history = []) {
         /* the phase you are in right now, for the header tile */
         currentPhase: (phases.find(p => p.current) || phases[0] || null) };
 }
-function historyVolumeIn(h, unit) {
-    const volume = Number(h.volume);
-    if (!Number.isFinite(volume) || volume <= 0)
-        return 0;
-    const from = h.unit || "kg";
+export function historyVolumeIn(h, unit) {
+    let volume = 0, hasLedger = false;
+    for (const p of Object.values(h?.perf || {})) {
+        const work = setsOf(p).filter(isWorkSet);
+        if (!work.length)
+            continue;
+        hasLedger = true;
+        for (const st of work) {
+            const w = Number(st?.w ?? st?.weight), r = Number(st?.r ?? st?.reps);
+            if (Number.isFinite(w) && w > 0 && Number.isFinite(r) && r > 0)
+                volume += w * r;
+        }
+    }
+    /* Old imports may predate per-set ledgers. Preserve their cached total only when there is no
+       working-set evidence to recompute; a stale cached aggregate can never overrule real sets. */
+    if (!hasLedger) {
+        volume = Number(h?.volume);
+        if (!Number.isFinite(volume) || volume <= 0)
+            return 0;
+    }
+    const from = h?.unit || "kg";
     return !unit || from === unit ? volume : from === "lb" && unit === "kg" ? volume / 2.2046226218 : from === "kg" && unit === "lb" ? volume * 2.2046226218 : volume;
 }
 function filterWorkoutHistory(history, saved, query, programId, period, now = Date.now()) {
@@ -30325,9 +30355,10 @@ function normalizeEditedHistoryEntry(original, draft) {
     let volume = 0, setsDone = 0;
     for (const p of Object.values(perf)) {
         for (const st of (p.sets || [])) {
-            volume += (Number(st.w) || 0) * (Number(st.r) || 0);
-            if (!st.sub)
+            if (!st.sub) {
+                volume += (Number(st.w) || 0) * (Number(st.r) || 0);
                 setsDone++;
+            }
         }
     }
     out.volume = Math.round(volume);
@@ -30850,7 +30881,7 @@ function DeloadAdviceCard({ history, onDeload, canDeload }) {
 // of just updating props (the same anti-pattern documented above for SettingsRow).
 const RecapArrow = ({ d }) => d == null ? null : _jsxs("span", { style: { fontSize: 11, fontWeight: 600, color: d > 0 ? C.accent : d < 0 ? C.warn : C.muted, marginLeft: 4 }, children: [d > 0 ? "▲" : d < 0 ? "▼" : "", d !== 0 ? `${Math.abs(d)}%` : "—"] });
 function WeeklyRecapCard({ history, unit }) {
-    const r = useMemo(() => weeklyRecap(history), [history]);
+    const r = useMemo(() => weeklyRecap(history, unit), [history, unit]);
     if (!r.count)
         return null;
     const delta = (cur, prev) => { if (!prev)

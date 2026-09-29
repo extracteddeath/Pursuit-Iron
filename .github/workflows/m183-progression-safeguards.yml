@@ -1,0 +1,49 @@
+name: M183 progression safeguards
+
+on:
+  push:
+    branches: [m183-progression-safeguards]
+    paths:
+      - '.github/workflows/m183-progression-safeguards.yml'
+      - 'modules/next-engine/performance.js'
+      - 'verification/m183-progression-safeguards-test.mjs'
+      - 'verification/progression-safety-test.mjs'
+      - 'verification/custom-progression-safety-test.mjs'
+
+permissions:
+  contents: read
+
+jobs:
+  progression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run M183 focused progression safeguards
+        run: node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m183-progression-safeguards-test.mjs
+      - name: Preserve reported progression regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/progression-safety-test.mjs
+          node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/custom-progression-safety-test.mjs
+      - name: Preserve upstream engine contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          for test in \
+            verification/m170-engine-correctness-test.mjs \
+            verification/m173-integration-torture-test.mjs \
+            verification/m175-longitudinal-adaptation-memory-test.mjs \
+            verification/m181-dose-reconciliation-test.mjs \
+            verification/m182-exercise-selection-intelligence-test.mjs \
+            verification/m182-selection-matrix.mjs \
+            verification/prescription-integrity-test.mjs \
+            verification/programs-test.mjs \
+            verification/full-engine-import-test.mjs
+          do
+            echo "==> $test"
+            node --no-warnings --experimental-loader ./verification/import-loader.mjs "$test"
+          done

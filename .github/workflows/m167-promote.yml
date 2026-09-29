@@ -1,0 +1,143 @@
+name: M167 Legacy Dose and Standalone Cycle Recovery
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/m167-promote.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply M167 fixes and regression gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import json, hashlib
+
+          def read(p): return Path(p).read_text()
+          def write(p,s): Path(p).write_text(s)
+          def once(s, old, new, label):
+              n=s.count(old)
+              if n != 1:
+                  raise SystemExit(f'{label}: expected exactly 1 occurrence, found {n}')
+              return s.replace(old,new,1)
+
+          app=read('modules/App.js')
+
+          # M167: M166 preserved authored set arrays, but old custom programs such as SekuFit stored
+          # their real dose as role-based baseline + slotBias + autoBias. Reconstruct that saved dose
+          # only when those legacy bias maps are actually present; new custom plans keep neutral defaults.
+          custom_helper_end='''export function customAuthoredSetCount(raw, fallback, weekIndex = 1) {\n    const base = canonicalShellSetCount(fallback) ?? 3;\n    if (!Array.isArray(raw))\n        return canonicalShellSetCount(raw, base) ?? base;\n    const values = raw.map(v => canonicalShellSetCount(v)).filter(v => v != null);\n    if (!values.length)\n        return base;\n    const w = Number(weekIndex);\n    const idx = Number.isFinite(w) ? Math.max(0, Math.floor(w) - 1) : 0;\n    return values[Math.min(idx, values.length - 1)] ?? base;\n}\n'''
+          compat_helpers=custom_helper_end+'''/* M167 — compatibility for saved legacy custom programs whose designed volume lives in\n   slotBias/autoBias. These maps are DELTAS over the role baseline, not replacement set counts.\n   The old allocator's contract caps an auto-tuned exercise at five working sets. */\nexport function legacyCustomSetCount(program, day, ex, slotIndex, weekIndex, rawSets, neutralFallback = 3) {\n    const slotMap = program?.slotBias || {};\n    const autoMap = program?.autoBias || {};\n    const hasLegacyDose = Object.keys(slotMap).length > 0 || Object.keys(autoMap).length > 0;\n    if (!hasLegacyDose)\n        return customAuthoredSetCount(rawSets, neutralFallback, weekIndex);\n    const key = `${day?.id}:${slotIndex}`;\n    const roleBase = baseSetsFor(program?.config || {}, ex, slotIndex === day?.primaryIndex);\n    const authoredBase = rawSets == null ? roleBase : customAuthoredSetCount(rawSets, roleBase, weekIndex);\n    const finiteDelta = v => Number.isFinite(Number(v)) ? Number(v) : 0;\n    return clamp(Math.round(authoredBase + finiteDelta(slotMap[key]) + finiteDelta(autoMap[key])), 1, 5);\n}\n\n/* A fixed standalone legacy/custom plan can remain EXACTLY itself as cycle block 1 while the\n   current engine owns future blocks. Infer only the generation topology needed for those future\n   blocks; this never rewrites the current plan. */\nexport function cycleConfigForStandaloneProgram(program, name) {\n    const cfg = { ...(program?.config || {}) };\n    const days = Array.isArray(program?.days) ? program.days : [];\n    const n = Math.max(1, days.length || Math.round(Number(cfg.days)) || 1);\n    cfg.days = n;\n    cfg.name = String(name || program?.name || cfg.name || 'Training Cycle').trim() || 'Training Cycle';\n    cfg.endless = false;\n    const currentSplit = String(cfg.split || '').toLowerCase();\n    if (!currentSplit || currentSplit === 'custom') {\n        const tags = days.map(d => `${d?.type || ''} ${d?.label || ''}`.toLowerCase());\n        const has = word => tags.some(t => t.includes(word));\n        const ulppl = n === 5 && ['upper','lower','push','pull','legs'].every(has);\n        const upperLower = n >= 2 && tags.every(t => t.includes('upper') || t.includes('lower'));\n        const ppl = n >= 3 && tags.every(t => t.includes('push') || t.includes('pull') || t.includes('legs')) && ['push','pull','legs'].every(has);\n        cfg.split = ulppl ? 'ulppl' : upperLower ? 'upper_lower' : ppl ? 'ppl' : 'full_body';\n    }\n    return cfg;\n}\n\nexport function mergeStandaloneIntoGeneratedCycle(program, generated) {\n    if (!program?.id || !generated?.cycle || !Array.isArray(generated.blocks) || generated.blocks.length < 2)\n        throw new Error('A standalone conversion needs the current program plus at least one future engine block.');\n    const generatedFuture = generated.blocks.slice(1);\n    const cycle = { ...generated.cycle };\n    const sourceMeta = Array.isArray(cycle.blockMeta) ? cycle.blockMeta : [];\n    const current = JSON.parse(JSON.stringify(program));\n    current.cycleId = cycle.id;\n    current.cycleIndex = 0;\n    current.blockLabel = sourceMeta[0]?.label || current.blockLabel || 'Current program';\n    current.blockNote = 'Existing standalone program kept exactly as cycle Block 1';\n    current.config = { ...(current.config || {}), endless: false, cyclePeriodization: true };\n    generatedFuture.forEach((block, i) => { block.cycleId = cycle.id; block.cycleIndex = i + 1; });\n    cycle.blockIds = [current.id, ...generatedFuture.map(b => b.id)];\n    cycle.blockMeta = cycle.blockIds.map((id, i) => i === 0\n        ? { ...(sourceMeta[0] || {}), id, label: current.blockLabel, note: current.blockNote, preview: false, legacyCurrent: true }\n        : { ...(sourceMeta[i] || {}), id, preview: true });\n    cycle.activeBlock = 0;\n    cycle.startedAt = cycle.startedAt || Date.now();\n    cycle.nextEngineCycle = { ...(cycle.nextEngineCycle || {}), legacyFirstBlockId: current.id, legacyFirstBlock: true };\n    return { cycle, currentProgram: current, blocks: generatedFuture, allBlocks: [current, ...generatedFuture], baseRequest: generated.baseRequest };\n}\n\nexport function advanceLegacyFirstCycleBlock(cycle, programs) {\n    const legacyId = cycle?.nextEngineCycle?.legacyFirstBlockId;\n    if (!legacyId || Number(cycle?.activeBlock || 0) !== 0 || cycle?.blockIds?.[0] !== legacyId)\n        return null;\n    const nextId = cycle?.blockIds?.[1];\n    const nextProgram = (programs || []).find(p => p?.id === nextId);\n    if (!nextId || !nextProgram?.config)\n        throw new Error('The first future cycle block is missing; the cycle was left unchanged.');\n    const blockMeta = (cycle.blockMeta || []).map((m, i) => i === 1 ? { ...m, preview: false, activatedFromLegacy: legacyId } : m);\n    return { cycle: { ...cycle, activeBlock: 1, blockMeta }, nextProgram };\n}\n'''
+          app=once(app,custom_helper_end,compat_helpers,'insert M167 compatibility helpers')
+          app=once(app,'sets: customAuthoredSetCount(o.sets, base.sets, weekIndex), reps, range: reps, rir, rest: o.rest ?? base.rest, tech: o.techOverride ?? base.tech ?? null,',
+                   'sets: legacyCustomSetCount(program, day, ex, slotIndex, weekIndex, o.sets, base.sets), reps, range: reps, rir, rest: o.rest ?? base.rest, tech: o.techOverride ?? base.tech ?? null,',
+                   'restore legacy custom volume deltas')
+
+          # Restore the menu entry for every fixed standalone plan, not only already-Next plans.
+          app=once(app,'!p.config?.endless && !p.cycleId && p.engineSource === "pursuit-next" && onConvertCycle',
+                   '!p.config?.endless && !p.cycleId && onConvertCycle','standalone cycle menu visibility')
+
+          old_begin='''        if (p.engineSource !== "pursuit-next" || !p.nextEngine?.program) {\n            setAppToast({ msg: "Restore this program with the current engine before turning it into a training cycle." });\n            return;\n        }\n        setCycleConvertId(p.id);'''
+          app=once(app,old_begin,'        setCycleConvertId(p.id);','allow legacy standalone conversion sheet')
+
+          old_convert='''            const built = convertProgramToNextCycleForShell({\n                program: p,\n                templateId,\n                name,\n                adaptBetweenBlocks,\n                legacyExercises: EXERCISES,\n                makeId: uid\n            });'''
+          new_convert='''            const built = (p.engineSource === "pursuit-next" && p.nextEngine?.program)\n                ? convertProgramToNextCycleForShell({\n                    program: p, templateId, name, adaptBetweenBlocks, legacyExercises: EXERCISES, makeId: uid\n                })\n                : mergeStandaloneIntoGeneratedCycle(p, attachShadowToCycleBuild(generateNextCycleForShell({\n                    templateId,\n                    config: cycleConfigForStandaloneProgram(p, name),\n                    banned,\n                    legacyExercises: EXERCISES,\n                    adaptBetweenBlocks,\n                    makeId: uid\n                }), banned));'''
+          app=once(app,old_convert,new_convert,'legacy standalone cycle bridge')
+          app=once(app,'            built.currentProgram.generationRoute = GENERATION_ROUTE;',
+                   '            if (built.currentProgram.engineSource === "pursuit-next")\n                built.currentProgram.generationRoute = GENERATION_ROUTE;','do not relabel legacy block as generated')
+
+          advance_anchor='''    const doCompleteCycleBlock = (cycle) => {\n        if (cycle?.engineSource === "pursuit-next") {'''
+          advance_replacement='''    const doCompleteCycleBlock = (cycle) => {\n        /* A cycle converted from a legacy/custom standalone plan deliberately keeps that exact plan as\n           Block 1. Its first transition activates the already-audited Next preview; only subsequent\n           transitions use history-driven Next adaptation, because there is no honest engine snapshot\n           that can reinterpret the old block without changing what the user trained. */\n        if (cycle?.engineSource === "pursuit-next" && cycle?.nextEngineCycle?.legacyFirstBlockId && Number(cycle.activeBlock || 0) === 0) {\n            try {\n                const bridged = advanceLegacyFirstCycleBlock(cycle, saved);\n                if (!bridged)\n                    throw new Error("The legacy first-block bridge could not resolve the next block.");\n                requireCompleteCycleShell(bridged.cycle, saved, { expectedCycleId: cycle.id });\n                setCycles(prev => prev.map(c => c.id === cycle.id ? bridged.cycle : c));\n                setPinnedId(bridged.nextProgram.id);\n                setProgram(bridged.nextProgram);\n                rootView("program");\n                setAppToast({ msg: `Advanced to ${bridged.cycle.blockMeta[1]?.label || "next block"} — your original standalone plan stayed intact as Block 1` });\n            }\n            catch (err) {\n                recordReleaseDiag("legacy_cycle_first_advance_failed", { action: "cycle_advance", engine: ENGINE_VERSION, reason: String(err?.message || err) });\n                setAppToast({ msg: "The next cycle block was incomplete, so nothing changed." });\n            }\n            return;\n        }\n        if (cycle?.engineSource === "pursuit-next") {'''
+          app=once(app,advance_anchor,advance_replacement,'legacy first-block cycle advance')
+
+          app=once(app,"const __APP_VERSION__='3.216.0'; const __BUILD__='772';",
+                   "const __APP_VERSION__='3.217.0'; const __BUILD__='773';",'app version')
+          write('modules/App.js',app)
+
+          # Executable regression fixture shaped like the real SekuFit backup.
+          Path('verification/m167-legacy-dose-cycle-test.mjs').write_text('''import assert from 'node:assert/strict';\nimport fs from 'node:fs';\nimport { computeCell, cycleConfigForStandaloneProgram, mergeStandaloneIntoGeneratedCycle, advanceLegacyFirstCycleBlock } from '../modules/App.js';\n\nconst seku={\n id:'abzg9ot',name:'SekuFit',engineV:4,custom:true,weeks:10,\n config:{name:'SekuFit',experience:'intermediate',goal:'both',split:'custom',days:1,session:'s90',weeks:10,progression:'auto',deload:true,autoVolume:true},\n days:[\n  {id:'w3yrssi',label:'Upper',type:'custom',exercises:['low-inc-bb-bench','wide-pulldown','cable-lat-raise','inc-curl','chest-row','oh-cable-ext','lat-raise'],primaryIndex:0},\n  {id:'8r809t4',label:'Lower',type:'custom',exercises:['deadlift','hack-squat','seated-curl','seated-calf','hip-abduction','cable-woodchop','wrist-curl'],primaryIndex:0},\n  {id:'wsf4rib',label:'Push',type:'custom',exercises:['bb-bench','machine-shoulder','lat-raise','machine-press','cable-fly','oh-cable-ext','neck-extension'],primaryIndex:0},\n  {id:'5b0y2v6',label:'Pull',type:'custom',exercises:['bb-row','lat-pulldown','face-pull','ez-cable-curl','hammer','rear-fly','machine-crunch','bb-shrug'],primaryIndex:0},\n  {id:'smzmv8u',label:'Legs',type:'custom',exercises:['back-squat','seated-curl','walking-lunge','leg-ext','seated-calf','lying-db-ext','machine-hip-thrust'],primaryIndex:0}\n ],\n overrides:{},\n slotBias:{'8r809t4:4':1,'8r809t4:3':2,'smzmv8u:4':2,'wsf4rib:6':1},\n autoBias:{'8r809t4:2':1,'8r809t4:0':1,'8r809t4:4':1,'8r809t4:3':1,'8r809t4:5':1,'8r809t4:6':2}\n};\nconst lower=seku.days[1];\nconst lowerSets=lower.exercises.map((id,slot)=>computeCell(seku,lower,id,slot,2).sets);\nassert.deepEqual(lowerSets,[5,3,4,5,5,4,5],'SekuFit Lower must restore its saved role baseline + slotBias + autoBias dose');\nassert.equal(lowerSets.reduce((a,b)=>a+b,0),31,'SekuFit Lower week must return to 31 working sets, not 21 all-3 sets');\n\nconst neutral={id:'new-custom',custom:true,config:{goal:'both',experience:'intermediate'},overrides:{},days:[{id:'d',label:'Custom',type:'custom',exercises:['deadlift'],primaryIndex:0}]};\nassert.equal(computeCell(neutral,neutral.days[0],'deadlift',0,1).sets,3,'new custom plans without legacy bias maps keep neutral defaults');\n\nconst cfg=cycleConfigForStandaloneProgram(seku,'SekuFit Cycle');\nassert.equal(cfg.days,5,'future cycle generation must use the actual five-day roster, not stale config.days=1');\nassert.equal(cfg.split,'ulppl','Upper/Lower/Push/Pull/Legs custom roster must bridge to ULPPL for future engine blocks');\n\nconst fake={\n cycle:{id:'c1',engineSource:'pursuit-next',activeBlock:0,blockIds:['g0','g1','g2'],blockMeta:[{id:'g0',label:'Build',preview:false},{id:'g1',label:'Strength',preview:true},{id:'g2',label:'Peak',preview:true}],nextEngineCycle:{baseConfig:cfg}},\n blocks:[{id:'g0',config:{}},{id:'g1',config:{},cycleId:'c1'},{id:'g2',config:{},cycleId:'c1'}],baseRequest:{}\n};\nconst merged=mergeStandaloneIntoGeneratedCycle(seku,fake);\nassert.deepEqual(merged.cycle.blockIds,['abzg9ot','g1','g2']);\nassert.equal(merged.currentProgram.engineSource,undefined,'legacy current block must not be relabelled as Next-owned');\nassert.equal(computeCell(merged.currentProgram,merged.currentProgram.days[1],'deadlift',0,2).sets,5,'cycle conversion must not change current SekuFit prescription');\nconst step=advanceLegacyFirstCycleBlock(merged.cycle,merged.allBlocks);\nassert.equal(step.cycle.activeBlock,1);\nassert.equal(step.nextProgram.id,'g1');\nassert.equal(step.cycle.blockMeta[1].preview,false);\n\nconst app=fs.readFileSync(new URL('../modules/App.js',import.meta.url),'utf8');\nassert.ok(app.includes('!p.config?.endless && !p.cycleId && onConvertCycle'),'fixed standalone plans must expose Turn into training cycle');\nassert.ok(!app.includes('!p.config?.endless && !p.cycleId && p.engineSource === "pursuit-next" && onConvertCycle'),'cycle action must not be hidden solely because a plan predates Next');\nconsole.log('PASS M167 legacy-dose/cycle regression: SekuFit 31-set Lower restored; standalone cycle action restored; exact legacy Block 1 preserved; first transition activates audited Next future block.');\n''')
+
+          # Verifier protects the real M167 behavior, not merely source-code existence.
+          v=read('scripts/verify-release.mjs')
+          v=once(v,"if (profile.uiMilestone !== 'M166 Set Schedule + History Volume Integrity') fail('unexpected UI milestone');",
+                 "if (profile.uiMilestone !== 'M167 Legacy Dose + Standalone Cycle Recovery') fail('unexpected UI milestone');",'verifier milestone')
+          v=once(v,"'customAuthoredSetCount(o.sets, base.sets, weekIndex)','historyVolumeIn(h, unit)','weeklyRecap(history, unit)'",
+                 "'legacyCustomSetCount(program, day, ex, slotIndex, weekIndex, o.sets, base.sets)','cycleConfigForStandaloneProgram','mergeStandaloneIntoGeneratedCycle','advanceLegacyFirstCycleBlock','historyVolumeIn(h, unit)','weeklyRecap(history, unit)'",'verifier M167 markers')
+          gate="execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/custom-progression-safety-test.mjs'],{stdio:'inherit',cwd:root});\n"
+          v=once(v,gate,gate+"execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/m167-legacy-dose-cycle-test.mjs'],{stdio:'inherit',cwd:root});\n",'M167 executable gate')
+          write('scripts/verify-release.mjs',v)
+
+          index=read('index.html').replace("build:'772'","build:'773'")
+          write('index.html',index)
+
+          bp=json.loads(read('BUILD_PROFILE.json'))
+          bp.update({
+            'milestone':'M167',
+            'source':'M166 + legacy custom role/bias dose restoration + standalone-to-cycle bridge',
+            'cache':'pursuit-iron-production-m167-legacy-dose-cycle',
+            'uiMilestone':'M167 Legacy Dose + Standalone Cycle Recovery'
+          })
+          write('BUILD_PROFILE.json',json.dumps(bp,indent=2)+'\n')
+
+          sw=read('sw.js')
+          sw=once(sw,'/* M166 set-schedule + history-volume-integrity release — Engine 0.62.5; atomic startup recovery retained. */',
+                  '/* M167 legacy-dose + standalone-cycle recovery — Engine 0.62.5; atomic startup recovery retained. */','sw banner')
+          sw=once(sw,'const CACHE="pursuit-iron-production-m166-set-schedule-history-volume";',
+                  'const CACHE="pursuit-iron-production-m167-legacy-dose-cycle";','sw cache')
+          write('sw.js',sw)
+
+          changelog=read('CHANGELOG.md')
+          entry='''## M167 — Legacy Dose + Standalone Cycle Recovery (3.217.0 / build 773)\n\n- Restores legacy/custom role-based working-set baselines plus saved `slotBias` and `autoBias`, fixing SekuFit being flattened to three sets across every exercise.\n- Real SekuFit regression fixture now requires Lower to resolve to 5/3/4/5/5/4/5 = 31 working sets instead of 21.\n- Restores “Turn into training cycle” for fixed standalone plans regardless of which engine originally created them.\n- Legacy/custom conversion keeps the existing program exactly as Block 1 and uses Pursuit Next only for future blocks; the first transition activates the audited future preview, then normal Next adaptation resumes.\n- Preserves M162–M166 progression, history editing, ledger-first volume, Target/LAST, generated-set canonicalization and engine-authority gates.\n\n'''
+          if not changelog.startswith('## M167'):
+              changelog=entry+changelog
+          write('CHANGELOG.md',changelog)
+
+          write('M167_REPORT.md','''# M167 legacy dose & standalone cycle recovery\n\nApp **3.217.0**, build **773**, Pursuit Engine **0.62.5**.\n\n## Fixed\n\n- SekuFit-style legacy custom programs once again read their designed role baseline and their persisted `slotBias` / `autoBias` deltas. The real Lower fixture resolves to **5 / 3 / 4 / 5 / 5 / 4 / 5 = 31 sets**, matching the saved plan/history instead of seven uniform 3-set rows.\n- New custom programs without legacy bias maps still use neutral custom defaults, and M166 authored week schedules remain intact.\n- Fixed standalone plans once again expose **Turn into training cycle**. A legacy/custom plan remains byte-for-byte prescription-owned as current Block 1; the current engine generates only the future blocks.\n- For a bridged legacy first block, completion activates the already-audited first future Pursuit Next block. From that point forward the normal history-driven Next cycle transition path owns adaptation.\n\n## Safety\n\nNo legacy current plan is silently regenerated merely to satisfy cycle conversion. If future Next blocks cannot be generated safely, conversion fails closed and the standalone plan remains unchanged.\n''')
+
+          # Release metadata and exact hashes.
+          m=json.loads(read('RELEASE_MANIFEST.json'))
+          m['milestone']='M167'; m['appVersion']='3.217.0'; m['build']=773
+          m['candidateStatus']='local_verified_device_test_pending'
+          m['localCandidate']={
+            'name':'M167 Legacy Dose + Standalone Cycle Recovery',
+            'base':'M166 set-schedule/history-volume release (3.216.0 / 772)',
+            'validation':'Real SekuFit-shaped 31-set dose regression, standalone cycle bridge, generated set canonicalization, progression/history/engine authority, Programs interactions and full import suites required green. Real phone/device validation pending.'
+          }
+          def sha_file(path): return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+          for path in list(m.get('runtimeFiles',{})):
+              m['runtimeFiles'][path]=sha_file(path)
+          agg=''.join(f'{path}:{m["runtimeFiles"][path]}\n' for path in sorted(m.get('runtimeFiles',{})))
+          m['runtimeAggregate']=hashlib.sha256(agg.encode()).hexdigest()
+          for path in list(m.get('uiFiles',{})):
+              if Path(path).exists(): m['uiFiles'][path]=sha_file(path)
+          write('RELEASE_MANIFEST.json',json.dumps(m,indent=2)+'\n')
+          PY
+
+      - name: Verify M167 release
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/verify-release.mjs
+
+      - name: Promote verified M167 and clean diagnostics
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/m167-inspect.yml .github/workflows/m167-promote.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Release M167 legacy dose and standalone cycle recovery"
+          git push origin HEAD:main

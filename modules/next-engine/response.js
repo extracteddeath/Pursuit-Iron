@@ -7,7 +7,7 @@ function lowRepOrEffortFailure(exercise, sets) {
         return false;
     const below = sets.filter(s => s.reps < exercise.prescription.reps[0]).length;
     const rir = sets.filter(s => s.rir !== null);
-    const overshot = rir.filter(s => s.rir < Math.max(0, exercise.prescription.rir[0] - 1)).length;
+    const overshot = rir.filter(s => s.rir < Math.max(0, Number(exercise.prescription.rir[0]) || 0)).length;
     return below >= Math.ceil(sets.length / 2) || (rir.length > 0 && overshot >= Math.ceil(rir.length / 2));
 }
 function clearlyUnderloaded(exercise, sets) {
@@ -103,9 +103,9 @@ export function diagnoseExerciseResponse(exercise, exposuresInput, recovery) {
         const first = scores[0];
         const last = scores.at(-1);
         const relative = first > 0 ? (last - first) / first : 0;
-        const positiveActions = exposures.filter(x => x.progression?.action === 'increase_load').length;
-        if (relative >= .015 || positiveActions >= 2) {
-            return makeDiagnosis(exercise, 'progressing', relative >= .03 || positiveActions >= 3 ? 'high' : 'moderate', exposures.length, 'Comparable performance is improving while the exercise remains executable, so changing the exercise or adding sets would create unnecessary churn.', 'maintain', false, 'Maintain the exercise and let load/rep progression continue.', 1, 0, 0);
+        const positiveSignals = exposures.filter(x => x.progression?.reasonCode === 'progression_success').length;
+        if (relative >= .015 || positiveSignals >= 2) {
+            return makeDiagnosis(exercise, 'progressing', relative >= .03 || positiveSignals >= 3 ? 'high' : 'moderate', exposures.length, 'Comparable performance is improving while the exercise remains executable, so changing the exercise or adding sets would create unnecessary churn.', 'maintain', false, 'Maintain the exercise and let load/rep progression continue.', 1, 0, 0);
         }
     }
     if (exposures.length >= 3 && complete >= 3 && discomfort === 0 && questionableTechnique === 0 && negative === 0) {

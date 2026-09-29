@@ -1,6 +1,6 @@
 import { advanceCycleState, createInitialCycleState, startPhase } from './cycles.js';
 import { evaluateWorkoutProgression } from './performance.js';
-import { assessRecovery } from './recovery.js';
+import { assessRecovery, recoverySignalForDecision } from './recovery.js';
 import { diagnoseExerciseResponse } from './response.js';
 import { EXERCISE_MAP } from './exercise-db.js';
 import { estimate1RM } from './history.js';
@@ -230,6 +230,31 @@ function representativeShellLoad(perf) {
     const loads = (perf.sets ?? []).filter(s => !s?.sub).map(s => numberOf(s?.w)).filter((n) => n !== null && n > 0);
     return loads.length ? Math.max(...loads) : null;
 }
+export function deriveLongitudinalExerciseEvidence(diagnoses, latestDecisions = [], sourceExercises = []) {
+    const successful = new Set();
+    const protectedIds = new Set(sourceExercises.filter(ex => ex.role === 'primary_strength').map(ex => ex.exerciseId));
+    const replaceExerciseIds = new Set();
+    const techniqueLimitedExerciseIds = new Set();
+    const fatigueLimitedExerciseIds = new Set();
+    const diagnosisById = new Map((diagnoses ?? []).map(d => [d.exerciseId, d]));
+    for (const diagnosis of diagnoses ?? []) {
+        if (diagnosis.state === 'poor_fit') replaceExerciseIds.add(diagnosis.exerciseId);
+        else if (diagnosis.state === 'technique_limited') { techniqueLimitedExerciseIds.add(diagnosis.exerciseId); protectedIds.add(diagnosis.exerciseId); }
+        else if (diagnosis.state === 'fatigue_limited') { fatigueLimitedExerciseIds.add(diagnosis.exerciseId); protectedIds.add(diagnosis.exerciseId); }
+        else if (['progressing', 'underloaded', 'possibly_understimulated'].includes(diagnosis.state) && diagnosis.confidence !== 'low') successful.add(diagnosis.exerciseId);
+    }
+    for (const decision of latestDecisions ?? []) {
+        const diagnosis = diagnosisById.get(decision.exerciseId);
+        if (recoverySignalForDecision(decision) > 0 && (!diagnosis || diagnosis.state === 'uncertain') && !replaceExerciseIds.has(decision.exerciseId))
+            successful.add(decision.exerciseId);
+    }
+    for (const id of replaceExerciseIds) { successful.delete(id); protectedIds.delete(id); }
+    return {
+        successfulExerciseIds: [...successful], protectedExerciseIds: [...protectedIds], replaceExerciseIds: [...replaceExerciseIds],
+        techniqueLimitedExerciseIds: [...techniqueLimitedExerciseIds], fatigueLimitedExerciseIds: [...fatigueLimitedExerciseIds]
+    };
+}
+
 /** Runtime bridge only: asks Pursuit Engine's own performance evaluator what the next exposure should do. */
 export function nextWorkoutSuggestionForShell(program, history, legacyExercises, day, slot, weekIndex) {
     if (program?.engineSource !== 'pursuit-next')
@@ -410,13 +435,13 @@ export function analyzeShellHistoryForNextEngine(program, history, legacyExercis
     for (const workout of workouts)
         for (const decision of workout.progression) {
             latest.set(decision.exerciseId, decision);
-            if (decision.action === 'increase_load' || decision.action === 'add_reps')
-                positive++;
-            else if (decision.action === 'hold' || decision.action === 'review' || decision.action === 'decrease_load')
-                negative++;
+            const signal = recoverySignalForDecision(decision);
+            if (signal > 0) positive++;
+            else if (signal < 0) negative++;
         }
-    const successful = [...latest.entries()].filter(([, d]) => d.action === 'increase_load' || d.action === 'add_reps').map(([id]) => id);
-    const protectedIds = sourceExercises.filter(ex => ex.role === 'primary_strength').map(ex => ex.exerciseId);
+    const evidence = deriveLongitudinalExerciseEvidence(diagnoses, [...latest.values()], sourceExercises);
+    const successful = evidence.successfulExerciseIds;
+    const protectedIds = evidence.protectedExerciseIds;
     const subjective = subjectiveUnderRecovery(entries);
     if (subjective >= 3 && recovery.status === 'normal')
         recovery = { ...recovery, status: 'watch', confidence: 'moderate', rationale: `${recovery.rationale} Subjective soreness also remained unresolved in ${subjective} of the last five logged sessions.` };
@@ -426,17 +451,23 @@ export function analyzeShellHistoryForNextEngine(program, history, legacyExercis
         workouts, workoutCount: workouts.length, performedSetCount: workouts.reduce((n, w) => n + w.performedSets.length, 0),
         ignoredSetCount: entries.reduce((n, e) => n + Object.entries(e.perf ?? {}).filter(([id]) => ignoredIds.includes(id)).reduce((m, [, p]) => m + (p.sets?.filter(s => !s.sub).length ?? 0), 0), 0),
         ignoredLegacyExerciseIds: ignoredIds, recovery, cycleState, classification,
-        successfulExerciseIds: successful, protectedExerciseIds: [...new Set(protectedIds)], diagnoses,
+        successfulExerciseIds: successful, protectedExerciseIds: [...new Set(protectedIds)], replaceExerciseIds: evidence.replaceExerciseIds,
+        techniqueLimitedExerciseIds: evidence.techniqueLimitedExerciseIds, fatigueLimitedExerciseIds: evidence.fatigueLimitedExerciseIds, diagnoses,
         positiveDecisionCount: positive, negativeDecisionCount: negative, subjectiveUnderRecoverySignals: subjective,
         readyForNextBlock: !!cycleState.recommendedNextPhase, recommendedNextPhase: cycleState.recommendedNextPhase
     };
 }
 function requestAdaptedFromHistory(request, analysis) {
-    if (analysis.classification !== 'fatigue_limited' && analysis.recovery.status !== 'deload_recommended')
-        return request;
-    return {
+    const replace = new Set(analysis.replaceExerciseIds ?? []);
+    let adapted = replace.size ? {
         ...request,
-        schedule: { days: request.schedule.days.map(day => ({
+        preferences: { ...request.preferences, avoidedExercises: [...new Set([...(request.preferences?.avoidedExercises ?? []), ...replace])] }
+    } : request;
+    if (analysis.classification !== 'fatigue_limited' && analysis.recovery.status !== 'deload_recommended')
+        return adapted;
+    return {
+        ...adapted,
+        schedule: { days: adapted.schedule.days.map(day => ({
                 ...day,
                 targetExercises: day.targetExercises === undefined ? undefined : Math.max(2, day.targetExercises - Math.max(1, Math.ceil(day.targetExercises * .2)))
             })) }
@@ -460,7 +491,8 @@ export function generateNextBlockFromShellHistory(options) {
     const normalized = normalizeRequest(adaptedRequest);
     const transitioned = transitionProgramPhase(snap.program, normalized, phase, {
         successfulExerciseIds: analysis.successfulExerciseIds,
-        protectedExerciseIds: analysis.protectedExerciseIds
+        protectedExerciseIds: analysis.protectedExerciseIds,
+        replaceExerciseIds: analysis.replaceExerciseIds
     });
     if (transitioned.program.audit.result !== 'pass')
         throw new NextShellAdapterError('NEXT_BLOCK_REJECTED', `Pursuit Engine ${transitioned.program.engineVersion} could not produce a safe adapted ${phase} block.`);

@@ -4,6 +4,10 @@ import { normalizeLoadingInventory } from './loading.js';
 import { EXERCISE_MAP } from './exercise-db.js';
 const DEFAULT_PRIORITY = 'normal';
 function exerciseEligibleForRequest(ex, request) {
+    // Feasibility uses the same candidate universe as realization. An exercise the athlete
+    // explicitly avoided cannot rescue a lift/muscle feasibility check and then disappear later.
+    if (request.preferences?.avoidedExercises?.includes(ex.id))
+        return false;
     if ((ex.flags.bodyweight || ex.equipment.includes('bodyweight')) && request.equipment.bodyweight === 'exclude')
         return false;
     const setups = [ex.equipment, ...(ex.equipmentAlternatives ?? [])];

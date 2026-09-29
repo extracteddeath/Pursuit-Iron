@@ -1,12 +1,12 @@
 {
   "profile": "portable-browser-esm-v661-workout-input",
-  "milestone": "M169",
-  "source": "M168 + swap-sheet single native vertical scroller",
-  "engine": "0.62.5 progression safety + 0.62.5-shadow evaluator",
+  "milestone": "M170",
+  "source": "M169 + engine correctness items 1-5",
+  "engine": "0.62.6 causal progression/recovery + longitudinal continuity",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 42,
   "shadowRuntimeModules": 9,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-m169-swap-scroll",
+  "cache": "pursuit-iron-production-m170-engine-correctness",
   "uiMilestone": "M169 Swap Sheet Scrolling"
 }

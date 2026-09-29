@@ -1,3 +1,11 @@
+## M170 — Engine Correctness 1–5 (3.220.0 / build 776 / Engine 0.62.6)
+
+- Excludes avoided exercises from feasibility.
+- Corrects RIR-floor handling and adds causal progression reason codes.
+- Recovery ignores neutral holds/loading constraints and reacts to actual hard-effort/load evidence.
+- Block adaptation uses longitudinal diagnosis.
+- Phase continuity matches sessions by training identity rather than weekday.
+
 ## M169 — Swap Sheet Scrolling (3.219.0 / build 775)
 
 - Fixes the exercise replacement list on touch devices by making the swap-results region the single vertical scroll owner.

@@ -1,5 +1,5 @@
-/* M169 swap-sheet native scrolling — Engine 0.62.5; atomic startup recovery retained. */
-const CACHE="pursuit-iron-production-m169-swap-scroll";
+/* M170 causal progression/recovery + longitudinal transition continuity — Engine 0.62.6. */
+const CACHE="pursuit-iron-production-m170-engine-correctness";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
   "./",

@@ -227,7 +227,10 @@ function applyAdaptiveProgressionStyles(program, previous, request, target, evid
                     source: selection.source,
                     confidence: selection.confidence,
                     reason: selection.reason,
-                    previousStyle: currentStyle
+                    previousStyle: currentStyle,
+                    // M192: preserve the actual before/after answer as engine-owned metadata. The UI
+                    // should never infer a method change from labels or regenerate progression policy.
+                    changed: selection.style !== currentStyle
                 }
             };
         })

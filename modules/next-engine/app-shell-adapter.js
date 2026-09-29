@@ -472,6 +472,21 @@ function schemeStyle(config, role, style) {
         return 'e1rm';
     return style;
 }
+function progressionPlanItem(config, exercise) {
+    const style = schemeStyle(config, exercise.role, exercise.progressionStyle ?? 'auto');
+    const rawPrevious = exercise.progressionSelection?.previousStyle ?? null;
+    const previousStyle = rawPrevious ? schemeStyle(config, exercise.role, rawPrevious) : null;
+    return {
+        exerciseId: exercise.exerciseId, exerciseName: exercise.name, role: exercise.role, style,
+        source: exercise.progressionSelection?.source ?? 'auto',
+        confidence: exercise.progressionSelection?.confidence ?? 'moderate',
+        reason: exercise.progressionSelection?.reason ?? 'Auto selected a progression that matches this exercise and block.',
+        // Carry the comparison result through the shell snapshot. Recompute only the display-level
+        // percent-scheme normalization; the actual transition decision remains engine-owned.
+        previousStyle,
+        changed: previousStyle !== null ? previousStyle !== style : false
+    };
+}
 /* ⚠ THE EXERCISE THE LIFTER IS SHOWN DECIDES HOW ITS LOAD IS COUNTED. Several engine exercises have more than one setup —
    Chest-Supported Row is dumbbells + bench OR a machine; Preacher Curl a machine OR dumbbells + bench — and the engine loads the
    FIRST setup the gym can do. The app shows the v661 exercise the engine exercise maps to, which can be the other setup: a full gym
@@ -566,13 +581,7 @@ export function nextProgramToShellProgram(nextProgram, config, legacyExercises, 
         config: { ...config }, weeks: totalWeeks, days, overrides, progStyle, ss, nextWeekPrescriptions, weekPlan, schedule, scheduleBase: { ...schedule },
         nextEngine: {
             displayLoadingModes, version: nextProgram.engineVersion, phase: nextProgram.phase, split: nextProgram.split, audit: nextProgram.audit, rationale: nextProgram.rationale, explainability: nextProgram.explainability, sourceProgramId: nextProgram.id,
-            progressionPlan: nextProgram.sessions.flatMap(session => session.exercises.map(exercise => ({
-                exerciseId: exercise.exerciseId, exerciseName: exercise.name, role: exercise.role,
-                style: schemeStyle(config, exercise.role, exercise.progressionStyle ?? 'auto'),
-                source: exercise.progressionSelection?.source ?? 'auto',
-                confidence: exercise.progressionSelection?.confidence ?? 'moderate',
-                reason: exercise.progressionSelection?.reason ?? 'Auto selected a progression that matches this exercise and block.'
-            })))
+            progressionPlan: nextProgram.sessions.flatMap(session => session.exercises.map(exercise => progressionPlanItem(config, exercise)))
         }
     };
 }

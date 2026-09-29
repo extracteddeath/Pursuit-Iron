@@ -1,12 +1,12 @@
 {
   "profile": "portable-browser-esm-v661-workout-input",
-  "milestone": "M180",
-  "source": "M178 + domain-gated coach-quality oracle and mixed-plan lower-strength recovery protection",
-  "engine": "0.63.3 coach-quality oracle and mixed/powerbuilding lower-strength capacity protection",
+  "milestone": "M187",
+  "source": "M186 explainable block review + M187 premium cross-screen UX contract",
+  "engine": "0.63.3 coach-quality oracle plus M181-M186 dose, evidence, phase specialization, and explainable block review contracts",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 44,
   "shadowRuntimeModules": 9,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-m180-coach-quality-oracle",
-  "uiMilestone": "M169 Swap Sheet Scrolling"
+  "cache": "pursuit-iron-production-m187-premium-ux",
+  "uiMilestone": "M187 Premium UX Audit + Cross-Screen Refactor"
 }

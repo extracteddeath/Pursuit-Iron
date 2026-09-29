@@ -39,12 +39,27 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Puppeteer is test harness only. Never let npm's temporary dependency resolution alter the release.
-          git checkout -- package.json package-lock.json
+          # Puppeteer is test harness only. This repository intentionally has no tracked npm package files,
+          # so remove npm's temporary install artifacts instead of assuming package.json/package-lock.json exist.
+          rm -rf node_modules
+          if git ls-files --error-unmatch package.json >/dev/null 2>&1; then
+            git checkout -- package.json
+          else
+            rm -f package.json
+          fi
+          if git ls-files --error-unmatch package-lock.json >/dev/null 2>&1; then
+            git checkout -- package-lock.json
+          else
+            rm -f package-lock.json
+          fi
           rm -f .github/workflows/m178-pwa-audit.yml scripts/m178-promote.py
           git config user.name "Pursuit Release Bot"
           git config user.email "actions@users.noreply.github.com"
           git add -A
+          if git diff --cached --quiet; then
+            echo "M178 promotion produced no tracked release changes" >&2
+            exit 1
+          fi
           git diff --cached -- package.json package-lock.json --exit-code
           git commit -m "M178: real-browser PWA update lifecycle certification"
           git push origin HEAD:m178-pwa-update-hardening

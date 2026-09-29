@@ -6,29 +6,45 @@ on:
     paths:
       - '.github/workflows/swap-scroll-debug.yml'
 
+permissions:
+  contents: write
+
 jobs:
   inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect swap scrolling
+        with:
+          fetch-depth: 0
+      - name: Capture swap scrolling source
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
           s=Path('modules/App.js').read_text()
           lines=s.splitlines()
-          needles=['sheetDragRef','wpb-swap-results','wpb-scroll{','.wpb-scroll','touchAction','touch-action','function Swap','const Swap','SwapSheet']
-          seen=set()
+          needles=['sheetDragRef','wpb-swap-results','.wpb-scroll','touchAction','touch-action','Swap Exercise']
+          ranges=[]
           for needle in needles:
-              hits=[i for i,l in enumerate(lines) if needle in l]
-              if hits:
-                  print(f'\n=== {needle!r}: {len(hits)} hit(s) ===')
-              for i in hits[:40]:
-                  a=max(0,i-24); b=min(len(lines),i+50)
-                  key=(a,b)
-                  if key in seen: continue
-                  seen.add(key)
-                  print(f'--- lines {a+1}-{b} ---')
-                  for j in range(a,b): print(f'{j+1}: {lines[j]}')
+              for i,l in enumerate(lines):
+                  if needle in l:
+                      ranges.append((max(0,i-16), min(len(lines),i+28), needle))
+          ranges.sort()
+          merged=[]
+          for a,b,n in ranges:
+              if merged and a <= merged[-1][1] + 3:
+                  merged[-1]=(merged[-1][0], max(merged[-1][1],b), merged[-1][2]+' | '+n)
+              else:
+                  merged.append((a,b,n))
+          out=[]
+          for a,b,n in merged:
+              out.append(f'=== {n} :: lines {a+1}-{b} ===')
+              out.extend(f'{j+1}: {lines[j]}' for j in range(a,b))
+              out.append('')
+          Path('SWAP_DEBUG.txt').write_text('\n'.join(out))
           PY
+          git config user.name "Pursuit Debug Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add SWAP_DEBUG.txt
+          git commit -m "chore: capture swap scroll source" || true
+          git push

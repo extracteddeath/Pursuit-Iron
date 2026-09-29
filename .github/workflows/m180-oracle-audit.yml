@@ -7,6 +7,7 @@ on:
       - '.github/workflows/m180-oracle-audit.yml'
       - 'modules/next-engine/coach-quality-oracle.js'
       - 'verification/m180-coach-quality-oracle-test.mjs'
+      - 'verification/m180-coach-quality-matrix.mjs'
 
 permissions:
   contents: read
@@ -23,3 +24,5 @@ jobs:
         run: node --check modules/next-engine/coach-quality-oracle.js
       - name: Run M180 oracle regression tests
         run: node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m180-coach-quality-oracle-test.mjs
+      - name: Audit representative generated programs
+        run: node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m180-coach-quality-matrix.mjs

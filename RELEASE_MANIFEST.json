@@ -1,8 +1,8 @@
 {
   "schemaVersion": 3,
-  "milestone": "M172",
-  "appVersion": "3.222.0",
-  "build": 778,
+  "milestone": "M173",
+  "appVersion": "3.223.0",
+  "build": 779,
   "engineVersion": "0.63.0",
   "shadowEngineVersion": "0.62.5-shadow",
   "validatedLiveBaseline": "M88-0.61.3-reviewed-baseline",
@@ -85,16 +85,16 @@
     "modules/next-engine/engine-context.js": "40c63ad790d4ab3a83975acd557e58f0f85d4fdc1ceab9ba422468fc6ae1430f"
   },
   "localCandidate": {
-    "name": "M172 Actual Strength Baseline Allocation",
-    "base": "M171 / Engine 0.62.7",
-    "validation": "M172 two-pass anchor integration test plus full release regression/torture suite."
+    "name": "M173 Integration + Bootstrap Resilience",
+    "base": "M172 / app 3.222.0 build 778 / Engine 0.63.0",
+    "validation": "Cross-feature history-to-transition torture test, PWA/mobile source resilience test, plus the full existing release regression suite."
   },
   "uiFiles": {
-    "modules/App.js": "26a404134700e21c5ac2e71e42ed9b8e6515dcc627744900c636dfcdc39c60fd",
-    "index.html": "a0f13cf708d08ec9ebe8f075280f192f9b9e9324a89721954cef6f5e3b7663a0",
-    "sw.js": "e50718426f22882091c61b7fd314cc5cfdb3575f46884c73e35c05a7a0a90816",
-    "BUILD_PROFILE.json": "0695136be2abaecd5cb97ac6eb9206b63816aaa41485ef79657696a728bee056",
-    "CHANGELOG.md": "fb0693745369d14aa0ef00fd77f64985f5c35d7d78f2cfb962f99177561a8f48"
+    "modules/App.js": "31605b0aee6e7632dfc64ccc6810c5e44c7ad86aa2fb9bfe575e7468c33431da",
+    "index.html": "1bec2073d723d3c783a440e5a6b2f33d26b94ff750aebc62389308a0d1c503a6",
+    "sw.js": "9685ed9c9761988434ae9b5415cacebd926ef145703418eb243c088b8de1f492",
+    "BUILD_PROFILE.json": "0cb7be94ba49df09058dd0b1d5cde9a15b1d6e96248c8d69e632d90f3b510fba",
+    "CHANGELOG.md": "c6e842be78bab7e264ba3cb7745aa6b59829de34c7f59ab5fbf2924358808f7e"
   },
   "baselineSourceNextEngineAggregate": "9ba84ffe3a62d94849617af33a2eafeaa563ab4a3636579101990ed753d05a84",
   "baselineSourceFiles": {

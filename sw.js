@@ -1,5 +1,5 @@
-/* M172 actual realized strength baseline allocator — Engine 0.63.0. */
-const CACHE="pursuit-iron-production-m172-actual-strength-baseline";
+/* M173 integration + bootstrap resilience hardening — Engine 0.63.0. */
+const CACHE="pursuit-iron-production-m173-integration-resilience";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
   "./",

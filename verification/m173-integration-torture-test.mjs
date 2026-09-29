@@ -1,0 +1,63 @@
+import assert from 'node:assert/strict';
+import { normalizeEditedHistoryEntry } from '../modules/App.js';
+import { generateNextProgramForShell } from '../modules/next-engine/app-shell-adapter.js';
+import { EXERCISE_MAP } from '../modules/next-engine/exercise-db.js';
+import { analyzeShellHistoryForNextEngine, generateNextBlockFromShellHistory } from '../modules/next-engine/workout-history-adapter.js';
+
+const legacy=[...EXERCISE_MAP.values()].map(d=>({id:d.id,name:d.name,part:d.legacyPart||'chest',type:d.flags?.compound?'compound':'isolation',equip:[]}));
+const equipment=['barbell','rack','bench','dumbbell','cable','machine','smith','ezbar','pullup','pullup_bar','dip','kettlebell','bands','legpress','leg_press','hacksquat','legext','legcurl','calfmachine','bodyweight'];
+const config={name:'M173 integration',unit:'lb',goal:'both',experience:'intermediate',split:'full_body',days:3,session:'s60',weeks:4,equipment,focus:{},reduce:[],barbellCap:3,noBodyweight:false,noSupersets:false,deload:false,progression:'auto'};
+let id=0;
+const built=generateNextProgramForShell({config,legacyExercises:legacy,seed:173,makeId:()=>`m173-${++id}`});
+assert.equal(built.nextProgram.audit.result,'pass');
+const current=structuredClone(built.program);
+const phase=current.nextEngine?.cycleState?.phase;
+assert.ok(phase,'generated shell program must carry a cycle phase');
+current.nextEngine.cycleState={...current.nextEngine.cycleState,workoutsInPhase:0,minimumWorkouts:2,reviewAfterWorkouts:4,status:'building',recommendedNextPhase:undefined};
+const day=current.days[0];
+assert.ok(day?.exercises?.length>0);
+const parseRange=v=>{const p=String(v??'').split(/[-–]/).map(Number).filter(Number.isFinite);return [p[0]??1,p[1]??p[0]??1];};
+const makePerf=(bad=false)=>Object.fromEntries(day.exercises.map((legacyId,slot)=>{
+  const cell=current.nextWeekPrescriptions?.[`${day.id}:${slot}`]?.[1];
+  assert.ok(cell,`missing week-1 cell for slot ${slot}`);
+  const [lo,hi]=parseRange(cell.reps??cell.range);
+  const [rirLo]=parseRange(cell.rir??2);
+  const reps=bad&&slot===0?Math.max(1,lo-2):hi;
+  const effort=bad&&slot===0?0:rirLo;
+  const sets=Math.max(1,Number(cell.sets)||1);
+  const rows=Array.from({length:sets},()=>({w:100,r:reps,rir:effort,tr:rirLo,done:true}));
+  return [legacyId,{weight:100,reps,sets:rows}];
+}));
+const makeEntry=(n,bad=false)=>({id:`hist-${n}`,date:1000+n*1000,programId:current.id,programName:current.name,dayId:day.id,dayLabel:day.label,weekIndex:1,unit:'lb',durationMin:55,perf:makePerf(bad)});
+const badHistory=[makeEntry(1,true),makeEntry(2),makeEntry(3),makeEntry(4)];
+const badAnalysis=analyzeShellHistoryForNextEngine(current,badHistory,legacy);
+assert.ok(badAnalysis.negativeDecisionCount>0,'deliberately off-target history must produce causal negative evidence');
+
+const original=badHistory[0];
+const draft=structuredClone(original);
+const firstLegacy=day.exercises[0];
+const firstCell=current.nextWeekPrescriptions[`${day.id}:0`][1];
+const [,hi]=parseRange(firstCell.reps??firstCell.range);
+const [targetRir]=parseRange(firstCell.rir??2);
+for(const row of draft.perf[firstLegacy].sets){row.r=hi;row.rir=targetRir;}
+draft.perf[firstLegacy].reps=hi;
+const correctedFirst=normalizeEditedHistoryEntry(original,draft);
+const corrected=[correctedFirst,...badHistory.slice(1)];
+const correctedAnalysis=analyzeShellHistoryForNextEngine(current,corrected,legacy);
+assert.ok(correctedAnalysis.negativeDecisionCount<badAnalysis.negativeDecisionCount,'history correction must remove stale negative evidence from adaptation');
+assert.equal(correctedAnalysis.readyForNextBlock,true,'corrected evidence must be eligible for the accelerated evidence-based review');
+assert.ok(correctedAnalysis.recommendedNextPhase && correctedAnalysis.recommendedNextPhase!==phase,'review must recommend a real phase transition');
+
+const oldExercises=current.nextEngine.program.sessions.flatMap(s=>s.exercises);
+const avoid=oldExercises.find(ex=>ex.role!=='primary_strength')?.exerciseId ?? oldExercises[0]?.exerciseId;
+assert.ok(avoid);
+const req=current.nextEngine.baseRequest;
+req.preferences={...req.preferences,avoidedExercises:[...new Set([...(req.preferences?.avoidedExercises??[]),avoid])]};
+let nextId=0;
+const next=generateNextBlockFromShellHistory({program:current,history:corrected,legacyExercises:legacy,makeId:()=>`m173-next-${++nextId}`});
+assert.equal(next.nextProgram.audit.result,'pass');
+assert.equal(next.nextProgram.phase,correctedAnalysis.recommendedNextPhase);
+assert.equal(next.nextProgram.sessions.flatMap(s=>s.exercises).some(ex=>ex.exerciseId===avoid),false,'next block must not resurrect a newly avoided exercise through continuity');
+assert.ok(next.continuity && Number.isFinite(next.continuity.capacityAdjustedRetentionRate));
+assert.equal(next.analysis.negativeDecisionCount,correctedAnalysis.negativeDecisionCount,'block generation must consume the same corrected history analysis');
+console.log(`M173 integration torture OK: correction replayed, stale fatigue evidence cleared, ${phase} -> ${next.nextProgram.phase} transitioned, avoidance held, audit passed.`);

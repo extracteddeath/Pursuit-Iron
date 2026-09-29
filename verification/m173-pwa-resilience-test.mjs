@@ -1,0 +1,23 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const index=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
+const css=fs.readFileSync(new URL('../app.css',import.meta.url),'utf8');
+const sw=fs.readFileSync(new URL('../sw.js',import.meta.url),'utf8');
+const manifest=JSON.parse(fs.readFileSync(new URL('../RELEASE_MANIFEST.json',import.meta.url),'utf8'));
+const build=String(manifest.build);
+assert.ok(index.includes(`build='${build}'`),'boot-health must use the current release build as its single comparison token');
+assert.ok(index.includes('v.build===build'),'boot-health attempts must accumulate only within the current build');
+assert.equal(index.includes("v.build==='774'"),false,'stale M168 build comparison must not survive');
+assert.ok(index.includes(`build:'${build}'`),'startup diagnostics must record the current build');
+assert.ok(index.includes('viewport-fit=cover'));
+assert.equal(/user-scalable\s*=\s*no/i.test(index),false,'pinch zoom must stay available');
+assert.ok(css.includes('input,textarea{font-size:16px}'),'mobile input focus must retain anti-auto-zoom sizing');
+assert.ok(css.includes('overscroll-behavior:contain'),'inner scrollers must contain overscroll');
+assert.ok(css.includes('height:var(--app-h,100dvh)'),'root height must support dynamic viewport recovery');
+assert.ok(index.includes('updateViaCache: "none"'),'service-worker checks must bypass stale script cache');
+assert.ok(index.includes('if (!window.__pursuitUpdateRequested || reloaded) return;'),'controller takeover must remain user-gated');
+assert.ok(sw.includes("e.data.type==='SKIP_WAITING'"),'waiting worker must support explicit restart');
+assert.ok(sw.includes("if(r.mode==='navigate')"),'offline navigation fallback must remain present');
+const shell=[...sw.matchAll(/"(\.\/[^\"]+)"/g)].map(m=>m[1]);
+for(const rel of shell){if(rel==='./')continue;assert.ok(fs.existsSync(new URL('../'+rel.slice(2),import.meta.url)),`precache path missing: ${rel}`);}
+console.log(`M173 PWA/mobile source resilience OK for build ${build}; ${shell.length} shell entries verified.`);

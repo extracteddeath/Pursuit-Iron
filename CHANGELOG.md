@@ -1,3 +1,11 @@
+## M173 — Integration + Bootstrap Resilience (3.223.0 / build 779)
+
+- Audited the M172 baseline before changing anything: history correction and cross-surface engine authority were already implemented and regression-gated, so they were preserved rather than rebuilt.
+- Adds a cross-feature torture gate that runs a real generated program through bad logged evidence, History correction, re-analysis, an evidence-triggered phase transition, continuity, a newly avoided exercise, and the full target-phase audit.
+- Fixes the startup health counter still comparing against build 774. The counter now uses one current-build token, so repeated failed starts accumulate correctly on build 779 instead of resetting each launch.
+- Adds a PWA/mobile source-resilience gate for current-build diagnostics, dynamic viewport sizing, 16px editable inputs, contained overscroll, zoom accessibility, explicit service-worker restart, stale-script bypass, and precache path integrity.
+- Pursuit Engine remains **0.63.0**; no already-verified set display, cycle overview, history editor, swap sheet, or engine-allocation behavior was redesigned.
+
 ## M172 — Actual Strength-Baseline Allocation (3.222.0 / build 778 / Engine 0.63.0)
 
 - Realizes protected strength anchors before final hypertrophy allocation.

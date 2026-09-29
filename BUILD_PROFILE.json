@@ -1,12 +1,12 @@
 {
   "profile": "portable-browser-esm-v661-workout-input",
-  "milestone": "M172",
-  "source": "M171 + actual realized strength baseline allocation",
+  "milestone": "M173",
+  "source": "M172 + cross-feature integration torture coverage + bootstrap/PWA resilience hardening",
   "engine": "0.63.0 two-pass actual strength-anchor residual allocator",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 43,
   "shadowRuntimeModules": 9,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-m172-actual-strength-baseline",
+  "cache": "pursuit-iron-production-m173-integration-resilience",
   "uiMilestone": "M169 Swap Sheet Scrolling"
 }

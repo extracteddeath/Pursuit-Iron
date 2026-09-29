@@ -1,3 +1,55 @@
+# M165 · 3.215.0 · Build 771
+
+- Fixed the generated-plan set-count boundary. Persisted/imported array-shaped counts such as `[3,3]` now normalize to one scalar `3`; ambiguous malformed values recover from the immutable Pursuit Engine snapshot when available. Because Home, Program, Plan, Preview, and Workout all read the same shell cell, the fix applies consistently instead of patching individual screens.
+- Cleaned up the workout **SET / TARGET-LAST** row on phone widths. The two reference columns have more spacing, and **LAST** now shows only load × reps; RIR is no longer repeated inside the cramped reference cell when the same effort is already shown in the session suggestion/effort UI.
+- Fixed cycle next-block opening-dose previews using week `0` against a 1-based prescription store. They now read week 1, so the set summary is populated from the actual opening prescription.
+- Added set-shape, shared-surface, layout, and 1-based-week regression gates. Pursuit Engine **0.62.5** programming math remains unchanged; this is a shell/display-integrity release.
+
+# M164 · 3.214.0 · Build 770
+
+- Workout History now has a correction editor from each expanded session. You can fix date/time, duration, per-set load, reps and RIR, add/remove sets, or remove a lift. Program/day/week ownership remains locked so a typo cannot move the workout to another prescription.
+- Saving a correction rebuilds the session summary and the latest-performance mirror, and history fingerprints now include performed-set/RIR evidence so readiness, progression, PR and coaching caches cannot keep using the pre-edit record.
+- Fixed a real custom-program double-progression bug when rep ranges were persisted as arrays. `[10,15]` was becoming `"10,15"`, and the progression parser treated that as a single 10-rep target. A 10–15 range now holds/builds at 10 and only increases load after every prescribed set reaches 15 at the planned effort.
+- Re-audited the production authority path: new generated plans are created/audited by Pursuit Engine 0.62.5; the shell reads engine-owned week cells; workout runtime realizes those exact set counts; completed-set history is sent back through the Pursuit Engine evaluator for the next-session decision. Custom plans remain user-authored and use a separate safety-compatible progression bridge.
+- Engine 0.62.5 itself is unchanged in this release; M164 hardens history integrity and the shell/custom-plan bridge around it.
+
+# M163 · 3.213.0 · Build 769
+
+- Normalizes engine/persisted RIR arrays such as `[2,2]` to `2 RIR` instead of leaking JavaScript array formatting into Program View.
+- Normalizes array-shaped rep ranges at the Pursuit Next → shell boundary (`[5,8]` → `5-8`).
+- Finite blocks now advance weeks from distinct completed day/week records when modern history is available; duplicate/repeated same-day workout rows cannot falsely move the program into a later lower-volume week.
+- M162 double-progression rep-floor correction remains unchanged. This release does not regenerate saved programs or intentionally reduce their set prescriptions.
+
+# M162 · 3.212.0 · Build 768
+
+- Fixed a progression-safety bug where a workout performed below the prescribed rep floor could make the heaviest logged set become the next session's straight-set load.
+- For hard or unknown-effort misses below the rep floor, Pursuit now recalibrates from the logged performance and recommends a lower equipment-valid load that can realistically enter the programmed rep/RIR range.
+- Explicitly easy short sets do not trigger an automatic load reduction; the app keeps the load and asks the lifter to execute the prescribed reps.
+- The same rep-floor guard is applied to custom-program double progression.
+- Fixed missing RIR values being coerced to `0 RIR` in the shell-history adapter; unreported effort now stays unreported instead of masquerading as failure.
+
+# M161.1 · 3.211.1 · Build 767
+
+- Fixed the nested gray input surface in All Programs search. The outer field now owns the background, border and focus ring.
+- Search icon keeps its width; native search decoration is normalized.
+
+# M161 · 3.211.0 · Build 766
+
+- Current plan pinned above saved programs.
+- Distinct phase icons and labeled phase sequence on each cycle.
+- Compact bordered cards with a consistent 10px gap; block details expand on demand.
+- Search by name, phase or folder; All, Cycles, Standalone, and Completed filters.
+- Four saved entries initially, with Show more / Show fewer controls.
+- Correct plan count: a cycle counts once, rather than once per block.
+
+# 3.210.0 — build 765 (M160, React)
+
+- Turn a program into a training cycle: it becomes Block 1 (history and edits kept) and the later blocks are planned for you.
+- Saved plans from earlier versions can be restored to your library or removed from the list, without touching workout history.
+- Programs list: a cycle shows its split, days and focus once, and each block says where it stands (Training now, Up next, Later).
+- Cycles you aren't training fold away; every block of a cycle has the cycle's icon.
+- The program switch button now says "Switch", and upcoming cycle blocks no longer show a button that couldn't work.
+
 # 3.209.0 — build 764 (M159, React)
 
 - Remove the misleading **Start next block** action from standalone program cards.

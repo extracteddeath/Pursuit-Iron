@@ -1,0 +1,34 @@
+Pursuit Iron M162 — progression safety verification
+App 3.212.0 / Build 768 / Pursuit Engine 0.62.5
+Base: user-delivered M161.1 release
+
+REPORTED BUG REPRODUCTION (M161.1)
+Prescription: Back Squat, 3 sets, 5–8 reps @ 2 RIR, double progression
+Logged: 200×3, 205×3, 210×2, 215×2; final 215×2 at 0 RIR
+Old result: action=hold, suggestedLoad=215 lb
+This could prefill the next exposure as three straight sets of 215 despite every logged set missing the 5-rep floor.
+
+M162 EXPECTED RESULT
+Action: decrease_load
+Direction: down
+Suggested load: 185 lb
+Target: 5 reps, then rebuild through the programmed 5–8 range at planned effort
+
+AUTOMATED CHECKS
+PASS progression safety: reported rep-floor bug -> 185 lb; normal double progression preserved.
+PASS shell progression safety: null RIR stays missing; exact user case -> 185 lb/down.
+PASS custom double progression safety: rep-floor miss -> 185 lb/down.
+PASS full ESM import: 51 engine/shadow modules.
+PASS All Programs regression suite: 29/29 interaction checks.
+PASS authored JavaScript syntax: 53 files.
+PASS release integrity: 76 service-worker precache entries present; runtime/UI hashes match.
+PASS cache boundary: pursuit-iron-production-m162-progression-safety
+
+IMPORTANT SECONDARY FIX
+The shell history adapter previously used Number(null), which equals 0 in JavaScript. An unreported RIR could therefore become a false 0-RIR/failure observation. M162 preserves null/blank RIR as missing evidence instead.
+
+SCOPE
+No generator topology, exercise selection, volume allocation, cycle structure, or M161.1 Programs UI behavior was intentionally changed.
+
+NOT CLAIMED
+Real Android/PWA device validation has not been run for M162 yet.

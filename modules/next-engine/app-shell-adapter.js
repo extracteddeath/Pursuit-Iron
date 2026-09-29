@@ -318,6 +318,73 @@ export function nextExerciseIdForShellExercise(exercise) {
     return match?.id ?? null;
 }
 function range(pair) { return pair[0] === pair[1] ? String(pair[0]) : `${pair[0]}-${pair[1]}`; }
+function shellRange(value) {
+    if (!Array.isArray(value))
+        return value;
+    if (!value.length)
+        return null;
+    const pair = value.length > 1 ? [value[0], value[1]] : [value[0], value[0]];
+    const nums = pair.map(Number);
+    return nums.every(Number.isFinite) ? range(nums) : String(value[0]);
+}
+/** Canonicalize every shell-facing working-set count to one scalar.
+ * Persisted/imported programs can contain array-shaped values (for example [3,3]); React
+ * renders those as repeated digits and numeric consumers turn them into NaN. That made the
+ * same corrupted prescription look multiplied on Home, Program, Plan and Workout.
+ *
+ * Equal arrays collapse to their shared value. A disagreeing/malformed array uses the
+ * engine-authored fallback when available; otherwise the first valid value is safer than
+ * concatenating or summing it. Set counts are deliberately bounded to the shell's editable
+ * 1–20 working-set range so corrupt state cannot create a dose explosion. */
+export function canonicalShellSetCount(value, fallback = null) {
+    const scalar = (raw) => {
+        const n = Number(raw);
+        if (!Number.isFinite(n) || n <= 0)
+            return null;
+        return Math.max(1, Math.min(20, Math.round(n)));
+    };
+    const fallbackScalar = (() => {
+        if (Array.isArray(fallback)) {
+            const vals = fallback.map(scalar).filter(v => v != null);
+            return vals.length ? vals[0] : null;
+        }
+        if (fallback && typeof fallback === 'object' && 'sets' in fallback)
+            return scalar(fallback.sets);
+        return scalar(fallback);
+    })();
+    if (Array.isArray(value)) {
+        const vals = value.map(scalar).filter(v => v != null);
+        if (!vals.length)
+            return fallbackScalar;
+        if (vals.every(v => v === vals[0]))
+            return vals[0];
+        return fallbackScalar ?? vals[0];
+    }
+    if (value && typeof value === 'object' && 'sets' in value)
+        return canonicalShellSetCount(value.sets, fallbackScalar);
+    return scalar(value) ?? fallbackScalar;
+}
+function immutableEngineSetCount(program, day, slotIndex, weekIndex) {
+    try {
+        const engineProgram = program?.nextEngine?.program;
+        if (!engineProgram || !Array.isArray(engineProgram.sessions))
+            return null;
+        const dayIndex = (program?.days ?? []).findIndex(d => d?.id === day?.id);
+        const session = engineProgram.sessions[dayIndex];
+        if (!session)
+            return null;
+        const workWeeks = Math.max(1, Math.round(Number(program?.weeks ?? program?.config?.weeks) || 4));
+        const deload = !!program?.config?.deload && Number(weekIndex) === workWeeks + 1;
+        const phase = deload ? 'recovery' : (engineProgram.phase ?? program?.nextEngine?.phase ?? 'hypertrophy');
+        const week = deload ? 1 : Math.max(1, Math.min(workWeeks, Math.round(Number(weekIndex) || 1)));
+        const totalWeeks = deload ? 1 : workWeeks;
+        const exercise = prescriptionForSimulationWeek(session, phase, week, totalWeeks)?.exercises?.[slotIndex];
+        return canonicalShellSetCount(exercise?.sets);
+    }
+    catch {
+        return null;
+    }
+}
 function legacyTypeForIntent(intent) { return intent || 'generated'; }
 export function getNextShellCell(program, day, slotIndex, weekIndex) {
     if (program?.engineSource !== 'pursuit-next')
@@ -330,9 +397,13 @@ export function getNextShellCell(program, day, slotIndex, weekIndex) {
     // still win. Bridge-created overrides intentionally contain metadata only in auto mode, so this
     // overlay cannot accidentally freeze week-1 sets/reps across the entire block.
     const o = program?.overrides?.[key] ?? {};
-    const sets = o.sets ?? cell.sets;
-    const reps = o.reps ?? cell.reps;
-    const rir = o.rir ?? cell.rir;
+    /* One canonical scalar is returned to every consumer. If persisted shell state has an
+       impossible/ambiguous set shape, replay the immutable engine snapshot rather than let
+       Home/Program/Plan/Workout each interpret it differently. */
+    const engineSets = immutableEngineSetCount(program, day, slotIndex, weekIndex);
+    const sets = canonicalShellSetCount(o.sets ?? cell.sets, engineSets ?? cell.sets);
+    const reps = shellRange(o.reps ?? cell.reps);
+    const rir = shellRange(o.rir ?? cell.rir);
     const rest = o.rest ?? cell.rest;
     const tech = o.techOverride ?? cell.tech ?? null;
     const role = o.role ?? cell.role;
@@ -446,12 +517,12 @@ export function nextProgramToShellProgram(nextProgram, config, legacyExercises, 
             // values from week 1; auto mode stores metadata only so later weeks continue to come from 0.41.
             if (config.progression === 'manual')
                 Object.assign(overrides[key], {
-                    sets: exercise.sets, reps: range(exercise.prescription.reps), rir: range(exercise.prescription.rir), rest: exercise.prescription.restSeconds
+                    sets: canonicalShellSetCount(exercise.sets), reps: range(exercise.prescription.reps), rir: range(exercise.prescription.rir), rest: exercise.prescription.restSeconds
                 });
             nextWeekPrescriptions[key] = {};
             for (let week = 1; week <= totalWeeks; week++) {
                 const weekly = prescriptionForSimulationWeek(session, nextProgram.phase, week, totalWeeks).exercises[slot];
-                nextWeekPrescriptions[key][week] = { sets: weekly.sets, reps: range(weekly.prescription.reps), rir: range(weekly.prescription.rir), rest: weekly.prescription.restSeconds,
+                nextWeekPrescriptions[key][week] = { sets: canonicalShellSetCount(weekly.sets), reps: range(weekly.prescription.reps), rir: range(weekly.prescription.rir), rest: weekly.prescription.restSeconds,
                     role: weekly.role, progressionStyle: schemeStyle(config, weekly.role, weekly.progressionStyle ?? 'auto'), tech: techniqueCue(weekly.advancedTechnique?.type, weekly.advancedTechnique?.note) };
             }
             // The shell treats a requested deload as a real executable week after the configured work weeks.
@@ -459,7 +530,7 @@ export function nextProgramToShellProgram(nextProgram, config, legacyExercises, 
             // failure. Materialize an engine-owned recovery prescription and suppress intensity techniques.
             if (config.deload) {
                 const deload = prescriptionForSimulationWeek(session, 'recovery', 1, 1).exercises[slot];
-                nextWeekPrescriptions[key][totalWeeks + 1] = { sets: deload.sets, reps: range(deload.prescription.reps), rir: range(deload.prescription.rir), rest: deload.prescription.restSeconds,
+                nextWeekPrescriptions[key][totalWeeks + 1] = { sets: canonicalShellSetCount(deload.sets), reps: range(deload.prescription.reps), rir: range(deload.prescription.rir), rest: deload.prescription.restSeconds,
                     role: deload.role, progressionStyle: schemeStyle(config, deload.role, deload.progressionStyle ?? 'auto'), tech: null };
             }
             /* Engine styles are NOT written into progStyle: that map is the lifter's explicit choices, and an entry there makes the

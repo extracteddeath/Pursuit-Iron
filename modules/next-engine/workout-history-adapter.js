@@ -11,6 +11,10 @@ import { nextProgramToShellProgram, NextShellAdapterError } from './app-shell-ad
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 function numberOf(value) {
+    // Missing numeric fields must stay missing. Number(null) and Number('') are 0, which previously
+    // turned an unreported RIR into a reported 0 RIR (failure) and distorted load calibration.
+    if (value === null || value === undefined || (typeof value === 'string' && value.trim() === ''))
+        return null;
     const n = typeof value === 'number' ? value : Number(value);
     return Number.isFinite(n) ? n : null;
 }
@@ -283,7 +287,7 @@ export function nextWorkoutSuggestionForShell(program, history, legacyExercises,
     const weight = decision.suggestedLoad ?? current ?? null;
     return {
         weight,
-        dir: decision.action === 'increase_load' ? 'up' : 'hold',
+        dir: decision.action === 'increase_load' ? 'up' : decision.action === 'decrease_load' ? 'down' : (decision.suggestedLoad != null && current != null && decision.suggestedLoad < current ? 'down' : 'hold'),
         reason: decision.reason,
         reps,
         target: decision.suggestedReps,
@@ -355,7 +359,7 @@ export function nextWorkoutSuggestionFromPerformedShell(program, legacyExercises
     const cell = program?.nextWeekPrescriptions?.[`${day.id}:${slot}`]?.[weekIndex];
     return {
         weight: decision.suggestedLoad ?? decision.currentLoad ?? representativeShellLoad(last),
-        dir: decision.action === 'increase_load' ? 'up' : 'hold',
+        dir: decision.action === 'increase_load' ? 'up' : decision.action === 'decrease_load' ? 'down' : (decision.suggestedLoad != null && decision.currentLoad != null && decision.suggestedLoad < decision.currentLoad ? 'down' : 'hold'),
         reason: decision.reason,
         reps: String(cell?.reps ?? cell?.range ?? ''),
         target: decision.suggestedReps,
@@ -408,7 +412,7 @@ export function analyzeShellHistoryForNextEngine(program, history, legacyExercis
             latest.set(decision.exerciseId, decision);
             if (decision.action === 'increase_load' || decision.action === 'add_reps')
                 positive++;
-            else if (decision.action === 'hold' || decision.action === 'review')
+            else if (decision.action === 'hold' || decision.action === 'review' || decision.action === 'decrease_load')
                 negative++;
         }
     const successful = [...latest.entries()].filter(([, d]) => d.action === 'increase_load' || d.action === 'add_reps').map(([id]) => id);

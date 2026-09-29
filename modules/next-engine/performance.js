@@ -1,5 +1,5 @@
-import { bestEstimated1RM } from './history.js';
-import { loadingRecommendation } from './loading.js';
+import { bestEstimated1RM, estimate1RM } from './history.js';
+import { availableLoadAtOrBelow, formatExerciseLoad, loadingRecommendation } from './loading.js';
 function byExercise(sets) {
     const map = new Map();
     for (const set of sets) {
@@ -12,6 +12,78 @@ function byExercise(sets) {
 function representativeLoad(sets) {
     const loads = sets.map(s => s.load).filter((x) => x !== null && Number.isFinite(x));
     return loads.length ? Math.max(...loads) : null;
+}
+function meanTargetRir(exercise) {
+    const low = Number(exercise?.prescription?.rir?.[0]);
+    const high = Number(exercise?.prescription?.rir?.[1]);
+    if (Number.isFinite(low) && Number.isFinite(high))
+        return Math.max(0, (low + high) / 2);
+    if (Number.isFinite(low))
+        return Math.max(0, low);
+    return 2;
+}
+/**
+ * A missed rep floor is not a normal double-progression "hold" when the load itself made the
+ * prescribed range impossible. The previous evaluator anchored `currentLoad` to the heaviest logged
+ * set, so an accidental ramp such as 200x3, 205x3, 210x2, 215x2 against a 5-8 target became three
+ * straight sets at 215 on the next exposure. Recalibrate from the hard/unknown miss evidence instead.
+ *
+ * Explicit high-RIR short sets are different: the athlete stopped early despite having reps available,
+ * so the load is held and they are asked to execute the prescription rather than being auto-deloaded.
+ */
+function belowRangeLoadCorrection(exercise, actual, currentLoad, context) {
+    const repFloor = Number(exercise?.prescription?.reps?.[0]);
+    if (!(repFloor > 0) || !(currentLoad > 0))
+        return null;
+    const misses = actual.filter(set => Number(set.reps) < repFloor);
+    if (!misses.length)
+        return null;
+    const targetRirLow = Math.max(0, Number(exercise?.prescription?.rir?.[0]) || 0);
+    const hardOrUnknown = misses.filter(set => set.rir === null || Number(set.rir) < targetRirLow);
+    const explicitHard = misses.filter(set => set.rir !== null && Number(set.rir) <= Math.max(1, targetRirLow - 1));
+    const maxDeficit = Math.max(...misses.map(set => repFloor - Number(set.reps)));
+    const widespreadHardMiss = hardOrUnknown.length >= Math.ceil(misses.length / 2)
+        && misses.length >= Math.ceil(actual.length / 2);
+    if (!explicitHard.length && !widespreadHardMiss && maxDeficit < 2)
+        return null;
+    // If every miss was explicitly easy enough to have completed the rep floor, this is execution
+    // evidence rather than an excessive-load signal. Keep the load and ask for the prescribed reps.
+    if (hardOrUnknown.length === 0)
+        return null;
+    // Prefer explicitly hard misses as the calibration basis. When effort was not logged, treat the
+    // set as failure (estimate1RM's conservative default) and use the strongest such observation.
+    const basis = explicitHard.length ? explicitHard : hardOrUnknown;
+    const estimates = basis
+        .map(set => estimate1RM(set.load, set.reps, set.rir))
+        .filter(value => value !== null && Number.isFinite(value));
+    if (!estimates.length)
+        return null;
+    const calibrationE1RM = explicitHard.length ? Math.min(...estimates) : Math.max(...estimates);
+    const targetRir = meanTargetRir(exercise);
+    const desired = calibrationE1RM / (1 + (repFloor + targetRir) / 30);
+    // A correction must actually move down. Snapping to the equipment inventory prevents a theoretical
+    // 187.8 lb recommendation when the lifter can only load 185/190, and never rounds the miss upward.
+    const ceiling = Math.min(desired, currentLoad - 1e-6);
+    const suggestedLoad = availableLoadAtOrBelow(exercise.exerciseId, ceiling, context.loadingInventory, context.equipmentAvailable);
+    if (!(suggestedLoad > 0) || suggestedLoad >= currentLoad - 1e-6)
+        return null;
+    const targetLabel = formatExerciseLoad(exercise.exerciseId, suggestedLoad, context.equipmentAvailable, context.loadingInventory);
+    const hardest = explicitHard.length
+        ? [...explicitHard].sort((a, b) => (Number(a.rir) - Number(b.rir)) || (Number(b.load) - Number(a.load)))[0]
+        : null;
+    const effortDetail = hardest
+        ? `, including ${hardest.load}×${hardest.reps}${hardest.rir !== null ? ` at ${hardest.rir} RIR` : ''}`
+        : '';
+    const range = exercise.prescription.reps[0] === exercise.prescription.reps[1]
+        ? `${exercise.prescription.reps[0]}`
+        : `${exercise.prescription.reps[0]}–${exercise.prescription.reps[1]}`;
+    return {
+        suggestedLoad,
+        suggestedReps: repFloor,
+        calibrationE1RM,
+        confidence: explicitHard.length ? 'high' : 'moderate',
+        reason: `${misses.length}/${actual.length} logged set${actual.length === 1 ? '' : 's'} fell below the ${repFloor}-rep floor${effortDetail}. Holding the heaviest logged weight would repeat an off-target load. Reduce to ${targetLabel} and rebuild from ${repFloor} reps inside the ${range} range at the planned effort.`
+    };
 }
 export function evaluateWorkoutProgression(session, performedSets, context = {}) {
     const grouped = byExercise(performedSets);
@@ -63,6 +135,16 @@ export function evaluateWorkoutProgression(session, performedSets, context = {})
                     : 'All prescribed sets reached the top of the rep range without exceeding the target effort. Increase load by the smallest available increment next exposure.',
                 currentLoad, suggestedLoad, loadMode: loading.mode, suggestedLoadLabel: loading.suggestedLabel ?? undefined, estimated1RM
             };
+        }
+        if (!allAtLeastBottom) {
+            const correction = belowRangeLoadCorrection(ex, actual, currentLoad, context);
+            if (correction) {
+                return {
+                    exerciseId: ex.exerciseId, exerciseName: ex.name, action: 'decrease_load', confidence: correction.confidence,
+                    reason: correction.reason, currentLoad, suggestedLoad: correction.suggestedLoad, suggestedReps: correction.suggestedReps,
+                    estimated1RM, calibrationEstimated1RM: correction.calibrationE1RM
+                };
+            }
         }
         if (clearOvershoot || !allAtLeastBottom) {
             return { exerciseId: ex.exerciseId, exerciseName: ex.name, action: 'hold', confidence: 'moderate', reason: 'Performance or effort fell outside the target range; hold load and collect another comparable exposure before changing the program.', currentLoad, suggestedLoad: currentLoad, estimated1RM };

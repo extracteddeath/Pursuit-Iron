@@ -11,7 +11,7 @@ export function assessRecovery(recentWorkouts) {
     let positiveWorkouts = 0;
     let evidenceCount = 0;
     for (const decisions of usable) {
-        const negative = decisions.filter(d => d.action === 'review' || d.action === 'hold').length;
+        const negative = decisions.filter(d => d.action === 'review' || d.action === 'hold' || d.action === 'decrease_load').length;
         const positive = decisions.filter(d => d.action === 'increase_load' || d.action === 'add_reps').length;
         const ratio = negative / Math.max(1, decisions.length);
         if (negative > 0)

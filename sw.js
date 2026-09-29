@@ -1,5 +1,5 @@
-/* M158 UI-shell service worker — Engine 0.62.4 + merged programmer fixes and guided plan updates; atomic startup recovery retained. */
-const CACHE="pursuit-iron-production-m159-cycle-conversion-r1";
+/* M165 set-display-integrity release — Engine 0.62.5; atomic startup recovery retained. */
+const CACHE="pursuit-iron-production-m165-set-display-integrity";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
   "./",

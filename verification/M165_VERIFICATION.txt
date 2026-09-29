@@ -1,0 +1,69 @@
+Pursuit Iron M165 verification
+==============================
+Release: app 3.215.0 / build 771
+Engine: Pursuit Engine 0.62.5
+
+PASS progression safety: reported rep-floor bug -> 185 lb; normal double progression preserved.
+PASS shell progression safety: null RIR stays missing; exact user case -> 185 lb/down.
+PASS array RIR [2,2] renders as 2 RIR
+PASS array RIR [1,2] renders as a clean range
+PASS array RIR [1,2] converts to RPE 8–9
+PASS shell boundary normalizes persisted rep arrays
+PASS shell boundary normalizes persisted RIR arrays
+PASS shell boundary does not change saved set count
+PASS four distinct days remain in week 1
+PASS five duplicate logs cannot advance to week 2
+PASS five distinct completed days advance to week 2
+9 prescription-integrity checks passed.
+PASS custom double progression safety: rep-floor miss -> 185 lb/down.
+PASS custom 10-15 array range: 10s hold/build; only 15s across all sets earn a load increase.
+PASS history edit integrity: raw sets are editable, ownership is locked, mirrors/cache refresh, and Pursuit Engine re-reads corrected evidence.
+PASS engine authority: generated/audited by Pursuit Engine 0.62.5, shell snapshot preserved, runtime realizes the engine cell, bottom-range work builds reps, top-range work earns load, and creation/cycle/progression routes remain Next-owned.
+PASS full ESM import: 51 engine/shadow modules.
+PASS App imports and component renders with real React elements
+PASS Cycles counted once, standalone kept
+PASS Current cycle is first despite newer standalone
+PASS Initial list capped at current plus four
+PASS Hypertrophy, strength and peak use distinct icons
+PASS Recovery and mixed goals have their own icons
+PASS Current block follows actual second block
+PASS Standalone entry retained alongside cycles
+PASS Current cycle expands on demand
+PASS Future phase is marked planned and disabled
+PASS Past and planned cycle blocks cannot switch
+PASS Open block targets correct stored program
+PASS Current cycle can collapse again
+PASS Cycle title opens existing cycle screen
+PASS Standalone switch retains existing callback
+PASS Standalone menu retains conversion/duplicate/delete entry point
+PASS Compare callback preserved
+PASS Show more reveals all remaining groups
+PASS Show fewer restores compact list
+PASS Standalone filter hides cycles
+PASS Completed filter shows only completed cycle
+PASS Folder search finds cycle once
+PASS Folder search keeps all phases together
+PASS No results has a clear recovery action
+PASS Clear filters restores initial list
+PASS Browsing never mutates programs or cycle data
+PASS Missing generated block remains visible as planned metadata
+PASS Orphaned cycle links render safely
+PASS Empty collection renders safely
+29 checks passed. Component interaction checks; no browser layout or device certification claimed.
+PASS scalar set counts stay scalar
+PASS repeated persisted set arrays collapse instead of concatenating
+PASS ambiguous set arrays prefer engine fallback
+PASS malformed set counts cannot create a dose explosion
+PASS shared Next shell cell repairs repeated-array set count
+PASS manual shell override is normalized at the same boundary
+PASS ambiguous override stays one scalar, never 45 or 9
+PASS all generated program surfaces still enter through getNextShellCell
+PASS custom programs normalize set count too
+PASS phone set row keeps protected 520px breakpoint
+PASS SET/LAST header has breathing room
+PASS LAST reference does not duplicate RIR
+PASS cycle opening-dose preview reads 1-based week one
+13 set-display-integrity checks passed.
+Release integrity OK: 76 precache entries present; 53 authored JS files parse.
+Cache: pursuit-iron-production-m165-set-display-integrity
+Milestone: M165 / app 3.215.0 build 771 / engine 0.62.5

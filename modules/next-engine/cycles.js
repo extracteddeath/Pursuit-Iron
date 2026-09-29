@@ -41,7 +41,7 @@ export function recommendNextPhase(goal, state, recovery) {
     return nextDevelopmentPhase(goal, state.phase);
 }
 function advanceRecoveryPhase(state, decisions, recovery, goal, workoutsInPhase) {
-    const concerning = decisions.filter(d => d.action === 'review' || d.action === 'hold').length;
+    const concerning = decisions.filter(d => d.action === 'review' || d.action === 'hold' || d.action === 'decrease_load').length;
     const positive = decisions.filter(d => d.action === 'increase_load' || d.action === 'add_reps').length;
     let exitEvidence = state.recoveryExitEvidence ?? 0;
     let status = 'building';

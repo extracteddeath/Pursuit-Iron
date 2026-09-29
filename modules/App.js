@@ -1,7 +1,7 @@
-const __APP_VERSION__='3.209.0'; const __BUILD__='764';
+const __APP_VERSION__='3.215.0'; const __BUILD__='771';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
-import { useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
-import { setShellEquipmentExpander, splitContractGaps, splitBuildability, refusalFixes, generateNextProgramForShell, nextProgramToShellProgram, recommendNextSplitForShell, getNextShellCell, cloneNextDayPrescriptions, swapNextSlotPrescriptions, removeNextSlotPrescription, nextExerciseIdForShellExercise, NextShellAdapterError } from "./next-engine/app-shell-adapter.js";
+import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
+import { setShellEquipmentExpander, splitContractGaps, splitBuildability, refusalFixes, generateNextProgramForShell, nextProgramToShellProgram, recommendNextSplitForShell, getNextShellCell, canonicalShellSetCount, cloneNextDayPrescriptions, swapNextSlotPrescriptions, removeNextSlotPrescription, nextExerciseIdForShellExercise, NextShellAdapterError } from "./next-engine/app-shell-adapter.js";
 import { generateNextBlockFromShellHistory, nextWorkoutSuggestionForShell, nextWorkoutSuggestionFromPerformedShell } from "./next-engine/workout-history-adapter.js";
 import { generateNextCycleForShell, convertProgramToNextCycleForShell, advanceNextCycleForShell, nextCycleTemplatesForShell } from "./next-engine/cycle-runtime-adapter.js";
 import { buildRuntimeSetTargets, techniqueProtocolFromCell, freestyleCellForRepRange, buildUserAddedSlotPrescriptions } from "./next-engine/workout-runtime.js";
@@ -6599,6 +6599,46 @@ function nextSessionCursor(program, history) {
         return { dayIndex, weekIndex, done, scheduled, lastIdx, endless: true, accumWk: deloadDue ? 0 : accumWk, deload: deloadDue, stalled };
     }
     const maxWeek = Math.max(1, weeksOf(program) + (program.config?.deload ? 1 : 0));
+    /* A FINITE PROGRAM ADVANCES WHEN ITS DISTINCT SCHEDULED DAYS ARE DONE — not merely after N history
+       rows exist. `done / daysPerWeek` was subtly wrong because repeating a day, restoring a duplicated
+       history entry, or logging the same planned day twice counted as two steps through the block. That
+       can jump Program View into week 2/3/a deload even though a day in the current week was never
+       completed; since later weeks can intentionally carry fewer sets, it looks exactly like the program
+       "dropped a lot of sets". New history rows already carry both weekIndex and dayId, so during the
+       first pass through a block we can use those facts instead of an inferred row count. Legacy/mixed
+       history (missing either field), and post-block looping behavior, keep the old count fallback rather
+       than guessing at data that cannot be reconstructed safely. */
+    const firstPass = done < maxWeek * dpw;
+    const explicit = firstPass && entries.length > 0 && entries.every(h => Number.isInteger(Number(h.weekIndex))
+        && Number(h.weekIndex) >= 1 && Number(h.weekIndex) <= maxWeek && historyDayIndex(days, h) >= 0);
+    if (explicit) {
+        let weekIndex = 1;
+        let completed = new Set();
+        for (let w = 1; w <= maxWeek; w++) {
+            completed = new Set(entries.filter(h => Number(h.weekIndex) === w).map(h => historyDayIndex(days, h)).filter(i => i >= 0));
+            if (completed.size < dpw) {
+                weekIndex = w;
+                break;
+            }
+            if (w === maxWeek) {
+                // Full first pass complete: preserve the historical wrap-to-week-1 behavior.
+                weekIndex = 1;
+                completed = new Set();
+            }
+        }
+        if (completed.size < dpw) {
+            // Keep rotation/schedule order, but never serve a day already completed in this explicit week.
+            let probe = dayIndex;
+            for (let n = 0; n < dpw; n++) {
+                if (!completed.has(probe)) {
+                    dayIndex = probe;
+                    break;
+                }
+                probe = (probe + 1) % dpw;
+            }
+        }
+        return { dayIndex, weekIndex, done, scheduled, lastIdx, explicitWeekProgress: true };
+    }
     const weekIndex = (Math.floor(done / dpw) % maxWeek) + 1;
     return { dayIndex, weekIndex, done, scheduled, lastIdx };
 }
@@ -12396,8 +12436,15 @@ function computeCell(program, day, id, slotIndex, weekIndex) {
        v661 rules. Without this it fell through to "This older plan is archived — rebuild it" with 0 sets. */
     if (program?.custom === true && program?.engineSource !== "pursuit-next") {
         const base = freestyleCellForRepRange(ex.rep), o = program.overrides?.[`${day?.id}:${slotIndex}`] || {};
-        const reps = o.reps ?? base.reps;
-        return { sets: o.sets ?? base.sets, reps, range: reps, rir: o.rir ?? base.rir, rest: o.rest ?? base.rest, tech: o.techOverride ?? base.tech ?? null,
+        /* Custom-plan overrides can come from backups / old editors as arrays ([10,15], [2,2]).
+           Keep the shell shape canonical just like Pursuit Next cells do. Otherwise String([10,15])
+           becomes "10,15"; the old progression parser then saw only the first number and treated
+           the *bottom* of a 10-15 range as the top, which could award a load increase at 10 reps. */
+        const repPair = cellRepRange({ range: o.reps ?? base.reps }, program, ex, slotIndex === day?.primaryIndex);
+        const reps = repPair[0] === repPair[1] ? String(repPair[0]) : `${repPair[0]}-${repPair[1]}`;
+        const effort = effortBounds(o.rir ?? base.rir);
+        const rir = effort ? (effort[0] === effort[1] ? String(effort[0]) : `${effort[0]}-${effort[1]}`) : (o.rir ?? base.rir);
+        return { sets: canonicalShellSetCount(o.sets, base.sets) ?? base.sets, reps, range: reps, rir, rest: o.rest ?? base.rest, tech: o.techOverride ?? base.tech ?? null,
             role: base.role, progressionStyle: o.progressionStyle ?? "auto", note: "Your program", custom: true };
     }
     const nextCell = getNextShellCell(program, day, slotIndex, weekIndex);
@@ -12422,8 +12469,8 @@ function lastSetEffort(cell, ex, isPrimary, weekIndex, weeks) {
     void isPrimary;
     void weekIndex;
     void weeks;
-    const raw = String(cell?.rir ?? "").trim();
-    const failure = raw === "0";
+    const bounds = effortBounds(cell?.rir);
+    const failure = !!bounds && bounds[0] === 0 && bounds[1] === 0;
     return { rir: cell?.rir ?? null, failure };
 }
 /* Sources behind the programming defaults — surfaced so "evidence-based" isn't just a claim. */
@@ -15061,44 +15108,50 @@ function feedbackDelta(pump, sore) {
     return undefined; // "good" pump alone, or nothing selected
 }
 // effort display: reps-in-reserve or RPE (RPE = 10 − RIR)
-function effortLabel(rir, mode) {
-    const conv = n => 10 - n;
-    /* An absent effort must not be INTERPOLATED. The old null check fell into the same template that
-       prints the value, so a missing or corrupt rir rendered literally as "undefined RIR", "null RIR"
-       or "NaN RIR" in the session grid and the week table. Most call sites guard with `rir != null`
-       first, but several do not (the week overview and the cell subtitle among them), and a row that
-       survived an import with the field dropped hits exactly that path. "—" is the honest rendering of
-       "not prescribed": it occupies the same space and says nothing false. */
-    if (rir == null || rir === "" || (typeof rir === "number" && !Number.isFinite(rir)))
+function effortBounds(rir) {
+    if (rir == null || rir === "")
+        return null;
+    let vals = null;
+    if (Array.isArray(rir)) {
+        vals = rir.slice(0, 2).map(Number).filter(Number.isFinite);
+    }
+    else if (typeof rir === "number") {
+        if (!Number.isFinite(rir))
+            return null;
+        vals = [rir];
+    }
+    else {
+        const raw = String(rir).trim();
+        if (!raw)
+            return null;
+        // Accept the canonical 1-2 form plus legacy array stringification ("2,2") and en dashes.
+        vals = raw.split(/\s*[-,–]\s*/).slice(0, 2).map(Number).filter(Number.isFinite);
+    }
+    if (!vals || !vals.length)
+        return null;
+    const a = vals[0], b = vals.length > 1 ? vals[1] : vals[0];
+    return a <= b ? [a, b] : [b, a];
+}
+function effortValueLabel(rir) {
+    const bounds = effortBounds(rir);
+    if (!bounds)
         return "—";
-    if (typeof rir === "string" && !rir.trim())
-        return "—";
-    /* AN EFFORT VALUE REACHING THIS FUNCTION IS NOT NECESSARILY AN INTEGER, and printing it raw is how
-       a set rendered as "@0.050000000000000044 RIR" on Haiden's screen.
-       RIR is LOGGED as a whole number, but it does not stay one: effortCalibration measures how far a
-       lifter's self-report sits from what their performance implies and calibrateDayPerf rewrites every
-       stored reserve through it — `clamp(s.rir - effort.bias, 0, 6)`. With a bias of 0.95, a logged
-       1 RIR becomes 1 - 0.95, and in binary floating point that is 0.050000000000000044 exactly. The
-       fraction is REAL and load maths should keep every digit of it; what was wrong was showing it.
-       So rounding belongs HERE, at the one function every surface uses to render effort, rather than at
-       the ~20 call sites — the same reasoning as the null guard above it, and for the same reason: a
-       value that survives one guarded path will find an unguarded one.
-       Half-rep resolution, because that is the finest distinction a lifter can act on, and it keeps a
-       genuine 1.5 rather than flattening it to 2. RPE mode now ROUNDS as well: parseInt TRUNCATES, so a
-       calibrated 1.9 RIR read as RPE 9 when it should read RPE 8. */
     const half = (n) => { const r = Math.round(n * 2) / 2; return Number.isInteger(r) ? String(r) : r.toFixed(1); };
-    if (typeof rir === "number")
-        return mode === "rpe" ? `RPE ${conv(Math.round(rir))}` : `${half(rir)} RIR`;
-    if (mode !== "rpe") {
-        const n = Number(rir);
-        return Number.isFinite(n) ? `${half(n)} RIR` : `${rir} RIR`;
-    }
-    if (typeof rir === "string" && rir.includes("-")) {
-        const [a, b] = rir.split("-").map(Number);
-        return `RPE ${conv(b)}-${conv(a)}`;
-    }
-    const n = Math.round(Number(rir));
-    return isNaN(n) ? `${rir}` : `RPE ${conv(n)}`;
+    return bounds[0] === bounds[1] ? half(bounds[0]) : `${half(bounds[0])}–${half(bounds[1])}`;
+}
+// effort display: reps-in-reserve or RPE (RPE = 10 − RIR)
+function effortLabel(rir, mode) {
+    const bounds = effortBounds(rir);
+    if (!bounds)
+        return "—";
+    const conv = n => 10 - n;
+    const half = (n) => { const r = Math.round(n * 2) / 2; return Number.isInteger(r) ? String(r) : r.toFixed(1); };
+    const [lo, hi] = bounds;
+    if (mode !== "rpe")
+        return lo === hi ? `${half(lo)} RIR` : `${half(lo)}–${half(hi)} RIR`;
+    // Higher RIR means lower RPE, so reverse the converted bounds for an ascending RPE range.
+    const rpeLo = conv(Math.round(hi)), rpeHi = conv(Math.round(lo));
+    return rpeLo === rpeHi ? `RPE ${rpeLo}` : `RPE ${rpeLo}–${rpeHi}`;
 }
 /* Weekly volume landmarks (sets/muscle/week), adapted from Renaissance Periodization
    (Israetel et al.): MEV = minimum effective volume, MRV = maximum recoverable volume.
@@ -16852,7 +16905,7 @@ function explainPrescription(o) {
             stallSessions: 0, plateauSessions: 0, readiness: null
         },
         decided: {
-            repRange: range, targetRIR: cell.rir ?? "—", styleSource: "Pursuit Iron",
+            repRange: range, targetRIR: effortValueLabel(cell.rir), styleSource: "Pursuit Iron",
             style: cell.progressionStyle || "auto", styleWhy: sug?.reason || "The saved week plan owns this prescription.",
             styleAt: null, override: null, sets: Number(cell.sets) || 0
         },
@@ -17539,15 +17592,8 @@ function fatPerSet(ex) {
     return 0.02; // general isolation
 }
 function parseRIRNum(r) {
-    if (r == null)
-        return 2;
-    const s = String(r);
-    if (s.includes("-")) {
-        const [a, b] = s.split("-").map(Number);
-        return (a + b) / 2;
-    }
-    const n = Number(s);
-    return isNaN(n) ? 2 : n;
+    const bounds = effortBounds(r);
+    return bounds ? (bounds[0] + bounds[1]) / 2 : 2;
 }
 // The RIR the program PRESCRIBED for a set (distinct from the RIR the lifter actually logged).
 // A to-failure set's prescription is RIR 0. Returns null when unknown so callers can fall back.
@@ -23175,8 +23221,39 @@ function customProgramSuggestion(program, day, slot, unit, weekIndex, history) {
     if (!work.length)
         return null;
     const cell = computeCell(program, day, ex.id, slot, weekIndex);
-    const r = String(cell?.range ?? cell?.reps ?? "").match(/^(\d+)(?:\s*-\s*(\d+))?/), lo = r ? Number(r[1]) : 8, hi = r ? Number(r[2] ?? r[1]) : 12;
+    // Reuse the same range parser as the workout rows. Array-shaped persisted ranges such as [10,15]
+    // must mean 10-15 here too — never "10,15" -> 10. This is the progression decision, not just text.
+    const [lo, hi] = cellRepRange(cell, program, ex, slot === day?.primaryIndex);
     const top = loadableAtOrBelow(ex, conv(Math.max(...work.map(x => Number(x.w)))), unit);
+    /* A custom plan uses the same safety rule as Pursuit Engine: missing the BOTTOM of a double-progression
+       range must not promote the heaviest accidental/ramped set into next session's straight-set load.
+       If the miss was actually hard (or effort was not logged), infer a range-appropriate load from the
+       conservative e1RM and snap DOWN to equipment the lifter can make. Easy intentional short sets stay put. */
+    const misses = work.filter(x => Number(x.r) < lo);
+    if (misses.length) {
+        const rirPair = effortBounds(cell?.rir);
+        const rirLo = rirPair ? rirPair[0] : 2, rirHi = rirPair ? rirPair[1] : rirLo;
+        const hardOrUnknown = misses.filter(x => x.rir == null || Number(x.rir) < rirLo);
+        const explicitHard = misses.filter(x => x.rir != null && Number(x.rir) <= Math.max(1, rirLo - 1));
+        const widespread = hardOrUnknown.length >= Math.ceil(misses.length / 2) && misses.length >= Math.ceil(work.length / 2);
+        const deep = Math.max(...misses.map(x => lo - Number(x.r))) >= 2;
+        if (hardOrUnknown.length && (explicitHard.length || widespread || deep)) {
+            const basis = explicitHard.length ? explicitHard : hardOrUnknown;
+            const estimates = basis.map(x => e1rmRIR(conv(Number(x.w)), Number(x.r), x.rir == null ? 0 : Number(x.rir))).filter(Number.isFinite);
+            if (estimates.length) {
+                const e1 = explicitHard.length ? Math.min(...estimates) : Math.max(...estimates);
+                const targetRir = Math.max(0, (rirLo + rirHi) / 2);
+                const raw = Math.min(top - 1e-6, e1 / (1 + (lo + targetRir) / EPLEY_SLOPE));
+                const down = loadableAtOrBelow(ex, raw, unit);
+                if (down > 0 && down < top) {
+                    const hardest = explicitHard.length ? [...explicitHard].sort((a, b) => (Number(a.rir) - Number(b.rir)) || (Number(b.w) - Number(a.w)))[0] : null;
+                    const detail = hardest ? `, including ${conv(Number(hardest.w))}×${hardest.r}${hardest.rir != null ? ` at ${hardest.rir} RIR` : ""}` : "";
+                    return { weight: down, dir: "down", action: "decrease_load", reps: cell?.range, target: lo, last: last.perf[ex.id], confidence: explicitHard.length ? "high" : "moderate",
+                        reason: `${misses.length}/${work.length} logged sets fell below the ${lo}-rep floor${detail}. Reduce to ${down} ${unit} and rebuild from ${lo} reps instead of carrying the heaviest logged set forward.` };
+                }
+            }
+        }
+    }
     const atTop = work.filter(x => Math.abs(conv(Number(x.w)) - top) < 1e-6 || conv(Number(x.w)) >= top);
     const earned = atTop.length >= Math.max(1, Number(cell?.sets) || 1) && atTop.every(x => Number(x.r) >= hi);
     const up = earned ? loadableAbove(ex, top, unit) : null;
@@ -23717,9 +23794,20 @@ function lifterModelKey(hs) {
         const e = hs[i];
         if (!e)
             continue;
-        const s = `${e.id}|${e.date}|${e.volume}|${e.setsDone}`;
-        for (let j = 0; j < s.length; j++)
-            h = ((h * 33) ^ s.charCodeAt(j)) >>> 0;
+        /* Editing history must invalidate every model that consumes it. Volume/setsDone alone miss
+           RIR-only corrections, set-order corrections and a changed load/reps pair whose tonnage happens
+           to stay equal. Fingerprint the performed-set evidence itself, including target-vs-observed RIR
+           provenance, so the coach/readiness/progression views cannot keep serving the pre-edit model. */
+        let sig = `${e.id}|${e.date}|${e.volume}|${e.setsDone}`;
+        const perf = e.perf || {};
+        for (const exId of Object.keys(perf).sort()) {
+            const p = perf[exId] || {};
+            sig += `|${exId}:${p.weight ?? ""}:${p.reps ?? ""}`;
+            for (const st of (Array.isArray(p.sets) ? p.sets : []))
+                sig += `;${st?.w ?? ""},${st?.r ?? ""},${st?.rir ?? ""},${st?.tr ?? ""},${st?.sub ? 1 : 0}`;
+        }
+        for (let j = 0; j < sig.length; j++)
+            h = ((h * 33) ^ sig.charCodeAt(j)) >>> 0;
     }
     return `${n}:${h}`;
 }
@@ -24882,11 +24970,9 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
     // Resilient to a removed/unknown exercise id lingering in a saved program: drop it cleanly.
     const day = useMemo(() => (rawDay.exercises.every(id => EX_BY_ID[id]) ? rawDay : { ...rawDay, exercises: rawDay.exercises.filter(id => EX_BY_ID[id]) }), [rawDay]);
     const [histEdit, setHistEdit] = useState(null); // { histId, exId, w, r }
-    // At/below this width the set-input row can't hold label + target + two stepper groups + check on
-    // one line without the weight/reps fields collapsing below a tappable size (measured: it needs
-    // ~360px). Below the breakpoint the target/last reference reflows under the set number, freeing the
-    // full row for the steppers. 384px covers folded-closed phones and compact devices; the Fold's wide
-    // inner screen (673) stays on the single-line layout.
+    // Phone-width set rows stay single-line, but the fixed reference columns and controls compact
+    // through 520 CSS px so Load/Reps keep usable width on common Android viewports. Keep this
+    // breakpoint in sync with the release regression gate; lowering it reintroduces the clipped row.
     const narrowSet = useNarrow(520);
     const [goalEdit, setGoalEdit] = useState(null); // { exId, w }
     const trendById = useMemo(() => Object.fromEntries(exerciseTrends(history).map(t => [t.id, t])), [history]);
@@ -26382,7 +26468,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
                                                                 : (Array.isArray(ls) && ls.length ? (ls[ls.length - 1].rir ?? ls.find(x => x.rir != null)?.rir) : undefined);
                                                         return _jsxs("span", { style: { color: C.faint, fontWeight: 400 }, children: [" \u00B7 last ", w, "\u00D7", r, rir != null ? " @" + effortLabel(rir, loadMode) : ""] });
                                                     })()] }), _jsxs("div", { style: { fontSize: 11, color: C.muted, marginTop: 1 }, children: [sug.autoNote ? _jsxs("span", { style: { color: C.accentInk }, children: [sug.autoNote, " \u00B7 "] }) : null, sug.reason] })] }), sug.swapTo && EX_BY_ID[sug.swapTo] && (_jsxs("button", { onClick: () => doSwap(sug.swapTo, "session"), className: "pressable", title: `Switch to ${EX_BY_ID[sug.swapTo].name}`, style: { flexShrink: 0, display: "flex", alignItems: "center", gap: 4, padding: "6px 9px", borderRadius: 8, border: `1px solid ${C.accent}`, background: C.accentDim, color: C.accentInk, fontSize: 11, fontWeight: 700, cursor: "pointer" }, children: [_jsx(ArrowUpRight, { size: 13 }), " Level up"] }))] }));
-                        })(), !focus && (_jsxs("div", { className: "wpb-set-head", style: { display: "flex", color: C.faint, fontSize: 11, fontWeight: 700, letterSpacing: .4, padding: "2px 2px 6px", gap: narrowSet ? 3 : 8 }, children: [_jsx("span", { style: { width: narrowSet ? 20 : 26 }, children: "SET" }), _jsxs("button", { onClick: () => setTargetMode(m => m === "target" ? "last" : "target"), className: "pressable", style: { width: narrowSet ? 54 : 82, textAlign: "left", background: "none", border: "none", padding: 0, margin: 0, cursor: "pointer", color: C.accentInk, fontSize: narrowSet ? 10 : 11, fontWeight: 700, letterSpacing: .4, display: "flex", alignItems: "center", gap: 2, whiteSpace: "nowrap", overflow: "hidden" }, children: [targetMode === "target" ? "TARGET" : "LAST", _jsx(RefreshCw, { size: 9, strokeWidth: 3 })] }), _jsx("span", { style: { flex: narrowSet ? 1.15 : 1, textAlign: "center" }, children: unit.toUpperCase() }), _jsx("span", { style: { flex: narrowSet ? .85 : 1, textAlign: "center" }, children: "REPS" }), _jsx("span", { style: { width: narrowSet ? 32 : 36 } })] })), (() => {
+                        })(), !focus && (_jsxs("div", { className: "wpb-set-head", style: { display: "flex", color: C.faint, fontSize: 11, fontWeight: 700, letterSpacing: .4, padding: "2px 2px 6px", gap: narrowSet ? 5 : 8 }, children: [_jsx("span", { style: { width: narrowSet ? 24 : 26 }, children: "SET" }), _jsxs("button", { onClick: () => setTargetMode(m => m === "target" ? "last" : "target"), className: "pressable", style: { width: narrowSet ? 60 : 82, textAlign: "left", background: "none", border: "none", padding: 0, margin: 0, cursor: "pointer", color: C.accentInk, fontSize: 11, fontWeight: 700, letterSpacing: .4, display: "flex", alignItems: "center", gap: 2, whiteSpace: "nowrap", overflow: "hidden" }, children: [targetMode === "target" ? "TARGET" : "LAST", _jsx(RefreshCw, { size: 9, strokeWidth: 3 })] }), _jsx("span", { style: { flex: narrowSet ? 1.15 : 1, textAlign: "center" }, children: unit.toUpperCase() }), _jsx("span", { style: { flex: narrowSet ? .85 : 1, textAlign: "center" }, children: "REPS" }), _jsx("span", { style: { width: narrowSet ? 32 : 36 } })] })), (() => {
                             const warms = e.sets.filter(x => x.warm);
                             if (!warms.length || !warms.every(x => x.done))
                                 return null;
@@ -26550,7 +26636,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
                                     borderLeft: `4px solid ${isActive ? C.accent : isEffort ? `${C.accent}55` : "transparent"}`,
                                     background: isActive ? C.accentDim : "transparent",
                                     transition: "opacity .18s, background .18s"
-                                }, children: [_jsxs("div", { className: "wpb-set-controls", style: { display: "flex", alignItems: "flex-start", flexWrap: "nowrap", gap: narrowSet ? 3 : 6, paddingTop: 2, paddingBottom: 2, paddingRight: 2, paddingLeft: s.sub ? 8 : 2, opacity: (s.warm || s.sub) && !s.done ? 0.85 : 1, borderLeft: s.sub ? `2px solid ${C.accentDim}` : "none" }, children: [_jsx("span", { className: "mono", style: { width: narrowSet ? 20 : (s.sub ? 20 : 24), flexShrink: 0, paddingTop: 8, fontSize: s.warm || s.sub ? 11 : 14, fontWeight: 600, color: s.warm || s.sub ? C.faint : (s.done ? C.accent : C.muted) }, children: label }), _jsx("div", { style: { width: narrowSet ? 54 : (s.sub ? 70 : 80), flex: "0 0 auto", paddingTop: 6, lineHeight: 1.2, overflow: "hidden" }, children: (() => {
+                                }, children: [_jsxs("div", { className: "wpb-set-controls", style: { display: "flex", alignItems: "flex-start", flexWrap: "nowrap", gap: narrowSet ? 5 : 6, paddingTop: 2, paddingBottom: 2, paddingRight: 2, paddingLeft: s.sub ? 8 : 2, opacity: (s.warm || s.sub) && !s.done ? 0.85 : 1, borderLeft: s.sub ? `2px solid ${C.accentDim}` : "none" }, children: [_jsx("span", { className: "mono", style: { width: narrowSet ? 24 : (s.sub ? 20 : 24), flexShrink: 0, paddingTop: 8, fontSize: s.warm || s.sub ? 11 : 14, fontWeight: 600, color: s.warm || s.sub ? C.faint : (s.done ? C.accent : C.muted) }, children: label }), _jsx("div", { style: { width: narrowSet ? 60 : (s.sub ? 70 : 80), flex: "0 0 auto", paddingTop: 6, lineHeight: 1.2, overflow: "hidden" }, children: (() => {
                                                     // ── Shared TARGET / LAST column ──────────────────────────────
                                                     // LAST mode: show previous session's matching set as a tap-to-fill button.
                                                     if (targetMode === "last" && !s.warm && !s.sub) {
@@ -26580,15 +26666,10 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
                                                         if (pv && pv.w > 0 && (pv.r > 0 || pv.r == null)) {
                                                             const pvR = pv.r > 0 ? pv.r : "";
                                                             const matches = String(s.weight) === String(pv.w) && String(s.reps) === String(pv.r);
-                                                            const inner = (_jsxs(_Fragment, { children: [_jsxs("span", { className: "mono", style: { fontSize: 13, fontWeight: 600, color: matches ? C.accent : C.text }, children: [pv.w, pvR !== "" ? _jsxs(_Fragment, { children: [_jsx("span", { style: { color: C.faint }, children: "\u00D7" }), pvR] }) : ""] }), (() => {
-                                                                        // Show the logged reps-in-reserve if it was recorded; otherwise fall
-                                                                        // back to what that set was SCHEDULED for (the target RIR), so the
-                                                                        // column never goes blank just because the user didn't tap an RIR.
-                                                                        const shownRir = pv.rir != null ? pv.rir : (typeof s.target?.rir === "number" ? s.target.rir : parseRIRNum(s.target?.rir));
-                                                                        return Number.isFinite(shownRir)
-                                                                            ? _jsxs("span", { style: { fontSize: 11, color: C.faint }, children: [" @", effortLabel(shownRir, loadMode), pv.rir == null ? "*" : ""] })
-                                                                            : null;
-                                                                    })(), pv.summary && _jsx("span", { style: { fontSize: 11, fontWeight: 700, letterSpacing: .3, color: C.faint }, children: " LIFT" })] }));
+                                                            /* Keep the compact LAST reference to load × reps only. Effort is already shown in the
+                                                               suggestion above and has its own post-set effort surface; repeating RIR here both
+                                                               duplicated information and forced SET/LAST into an unreadably narrow column. */
+                                                            const inner = (_jsxs(_Fragment, { children: [_jsxs("span", { className: "mono", style: { fontSize: 13, fontWeight: 600, color: matches ? C.accent : C.text }, children: [pv.w, pvR !== "" ? _jsxs(_Fragment, { children: [_jsx("span", { style: { color: C.faint }, children: "\u00D7" }), pvR] }) : ""] }), pv.summary && _jsx("span", { style: { fontSize: 11, fontWeight: 700, letterSpacing: .3, color: C.faint }, children: " LIFT" })] }));
                                                             // A completed set is history — its logged numbers are locked, so the
                                                             // reference column must not stay a live tap-to-fill button (one stray tap
                                                             // silently rewrote a done set's weight to last week's). Plain text once done.
@@ -30177,7 +30258,171 @@ function MeasurementDetail({ label, log, unit }) {
                                     setActivePoint(i);
                                 } } }, `hit-${e.date}-${i}`))] }), activePoint != null && log[activePoint] && _jsxs("div", { className: "wpb-chart-popover", role: "status", children: [fmtShort(log[activePoint].date), " \u00B7 ", _jsxs("b", { children: [log[activePoint].v, " ", unit] })] }), _jsxs("div", { className: "wpb-chart-axis", "aria-hidden": "true", children: [_jsx("span", { children: fmtShort(log[0].date) }), log.length > 1 && _jsx("span", { children: fmtShort(latest.date) })] }), log.length === 1 && _jsx("div", { style: { padding: "2px 12px 10px", textAlign: "center", fontSize: 12, color: C.muted }, children: "Add another measurement to see a trend." })] }), _jsx("div", { style: { marginTop: 12, fontSize: 11, fontWeight: 800, letterSpacing: .65, textTransform: "uppercase", color: C.faint }, children: "Logging history" }), _jsx("div", { style: { marginTop: 5, borderTop: `1px solid ${C.borderSoft}` }, children: [...log].reverse().map((e, i) => (_jsxs("div", { style: { minHeight: 40, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, borderBottom: `1px solid ${C.borderSoft}`, fontSize: 13 }, children: [_jsx("span", { style: { color: C.muted }, children: fmtDate(e.date) }), _jsxs("span", { className: "mono", style: { color: C.text, fontWeight: 700 }, children: [e.v, " ", unit] })] }, `${e.date}-${i}`))) })] }));
 }
-function HistoryView({ history, onBack, onClear, onDeleteEntry, embedded, focusSection, onFocusHandled, onGoTrain, nextLabel = null, bodyweight, sex, age, birth, unit, bwLog, onLogBodyweight, onSetProfile, goals = {}, onRepeat, measurements = {}, onLogMeasurement, activeProgram = null, activeWeek = 1, cycles = [], saved = [] }) {
+
+/* HISTORY CORRECTION IS A FIRST-CLASS DATA OPERATION, NOT A DISPLAY-ONLY PATCH.
+ * A bad log can affect load progression, readiness, PRs, weekly volume and the finite-program cursor.
+ * Keep structural provenance (program/day/week) locked while allowing the performed evidence itself
+ * to be corrected. Every save rebuilds the summary mirror from the edited raw sets. */
+function summarizeHistoryLoggedSets(sets, ex, unit) {
+    const work = (sets || []).filter(st => st && !st.sub && Number(st.r) > 0);
+    if (!work.length)
+        return null;
+    const numW = st => Number.isFinite(Number(st.w)) ? Number(st.w) : 0;
+    const hasPos = work.some(st => numW(st) > 0);
+    const pool = hasPos ? work.filter(st => numW(st) > 0) : work;
+    if (!pool.length)
+        return null;
+    const weights = pool.map(numW);
+    const maxW = Math.max(...weights);
+    if (weights.every(w => w === weights[0])) {
+        const atTop = pool.filter(st => numW(st) === maxW);
+        return { weight: maxW, reps: Math.min(...atTop.map(st => Math.max(1, Math.round(Number(st.r) || 1)))) };
+    }
+    const step = ex ? loadStep(ex, unit) : .5;
+    const avgW = roundTo(weights.reduce((a, b) => a + b, 0) / weights.length, step || .5);
+    const reps = Math.round(pool.reduce((a, st) => a + Math.max(1, Math.round(Number(st.r) || 1)), 0) / pool.length);
+    return { weight: avgW, reps };
+}
+function normalizeEditedHistoryEntry(original, draft) {
+    if (!original || !draft)
+        return original;
+    const out = { ...original };
+    const date = Number(draft.date);
+    if (Number.isFinite(date) && date > 0)
+        out.date = date;
+    const duration = Number(draft.durationMin);
+    if (Number.isFinite(duration) && duration >= 0)
+        out.durationMin = Math.round(duration);
+    const perf = {};
+    for (const [exId, rawPerf] of Object.entries(draft.perf || {})) {
+        const prior = original.perf?.[exId] || {};
+        const sourceSets = Array.isArray(rawPerf?.sets) && rawPerf.sets.length
+            ? rawPerf.sets
+            : (rawPerf?.reps != null ? [{ w: rawPerf.weight ?? 0, r: rawPerf.reps }] : []);
+        const sets = [];
+        for (const raw of sourceSets) {
+            if (!raw)
+                continue;
+            const reps = Math.round(Number(raw.r));
+            if (!Number.isFinite(reps) || reps <= 0)
+                continue;
+            const w0 = raw.w === "" || raw.w == null ? 0 : Number(raw.w);
+            if (!Number.isFinite(w0))
+                continue;
+            const st = { ...raw, w: w0, r: reps };
+            if (raw.rir === "" || raw.rir == null || !Number.isFinite(Number(raw.rir)))
+                delete st.rir;
+            else
+                st.rir = Math.max(0, Math.min(10, Number(raw.rir)));
+            sets.push(st);
+        }
+        const summary = summarizeHistoryLoggedSets(sets, EX_BY_ID[exId], original.unit || "lb");
+        if (!summary)
+            continue;
+        perf[exId] = { ...prior, ...rawPerf, weight: summary.weight, reps: summary.reps, sets, date: out.date };
+    }
+    out.perf = perf;
+    let volume = 0, setsDone = 0;
+    for (const p of Object.values(perf)) {
+        for (const st of (p.sets || [])) {
+            volume += (Number(st.w) || 0) * (Number(st.r) || 0);
+            if (!st.sub)
+                setsDone++;
+        }
+    }
+    out.volume = Math.round(volume);
+    out.setsDone = setsDone;
+    return out;
+}
+function perfAfterHistoryReplace(history, perf, histId, replacement) {
+    const old = (history || []).find(h => h && h.id === histId);
+    if (!old || !replacement)
+        return perf || {};
+    const nextHistory = (history || []).map(h => h && h.id === histId ? replacement : h)
+        .slice().sort((a, b) => (Number(b?.date) || 0) - (Number(a?.date) || 0));
+    const affected = new Set([...Object.keys(old.perf || {}), ...Object.keys(replacement.perf || {})]);
+    const next = { ...(perf || {}) };
+    for (const exId of affected) {
+        const latest = nextHistory.find(h => h?.perf?.[exId]);
+        if (latest)
+            next[exId] = latest.perf[exId];
+        else
+            delete next[exId];
+    }
+    return next;
+}
+function localHistoryDateValue(ms) {
+    const d = new Date(Number(ms) || Date.now());
+    const shifted = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+    return shifted.toISOString().slice(0, 16);
+}
+function HistoryEditSheet({ entry, unit, onClose, onSave }) {
+    const makeDraft = (src) => ({ ...src, perf: Object.fromEntries(Object.entries(src?.perf || {}).map(([id, p]) => [id, {
+        ...p,
+        sets: (Array.isArray(p?.sets) && p.sets.length ? p.sets : (p?.reps != null ? [{ w: p.weight ?? 0, r: p.reps }] : [])).map(st => ({ ...st }))
+    }])) });
+    const [draft, setDraft] = useState(() => makeDraft(entry));
+    useEffect(() => setDraft(makeDraft(entry)), [entry?.id]);
+    const setSet = (exId, index, key, value) => setDraft(prev => {
+        const perf = { ...(prev.perf || {}) }, p = { ...(perf[exId] || {}) };
+        const sets = (p.sets || []).map((st, i) => i === index ? { ...st, [key]: value } : st);
+        perf[exId] = { ...p, sets };
+        return { ...prev, perf };
+    });
+    const removeSet = (exId, index) => setDraft(prev => {
+        const perf = { ...(prev.perf || {}) }, p = { ...(perf[exId] || {}) };
+        const sets = (p.sets || []).filter((_, i) => i !== index);
+        if (sets.length)
+            perf[exId] = { ...p, sets };
+        else
+            delete perf[exId];
+        return { ...prev, perf };
+    });
+    const addSet = (exId) => setDraft(prev => {
+        const perf = { ...(prev.perf || {}) }, p = { ...(perf[exId] || {}) }, sets = [...(p.sets || [])];
+        const last = sets[sets.length - 1];
+        sets.push({ w: last?.w ?? 0, r: last?.r ?? "", rir: "" });
+        perf[exId] = { ...p, sets };
+        return { ...prev, perf };
+    });
+    const removeExercise = (exId) => setDraft(prev => { const perf = { ...(prev.perf || {}) }; delete perf[exId]; return { ...prev, perf }; });
+    const exEntries = Object.entries(draft.perf || {});
+    const inputStyle = { width: "100%", boxSizing: "border-box", padding: "10px 8px", borderRadius: 10, border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: 14, fontWeight: 650, textAlign: "center" };
+    return createElement("div", { className: "wpb-backdrop", onClick: onClose, style: { position: "fixed", inset: 0, zIndex: 90, background: "rgba(0,0,0,.68)", display: "flex", alignItems: "flex-end" } },
+        createElement("div", { onClick: e => e.stopPropagation(), className: "wpb-scroll", style: { width: "100%", maxHeight: "90%", overflowY: "auto", background: C.bg2, borderRadius: "20px 20px 0 0", border: `1px solid ${C.border}`, padding: "18px 16px calc(env(safe-area-inset-bottom) + 18px)" } },
+            createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, marginBottom: 4 } },
+                createElement(Pencil, { size: 18, color: C.accentInk }),
+                createElement("div", { style: { flex: 1, minWidth: 0 } },
+                    createElement("div", { style: { fontSize: 17, fontWeight: 800 } }, "Correct workout log"),
+                    createElement("div", { style: { fontSize: 12, color: C.muted, marginTop: 2 } }, entry.dayLabel || "Workout")),
+                createElement("button", { "aria-label": "Close history editor", onClick: onClose, className: "pressable hit", style: { ...iconBtn(), width: 40, height: 40 } }, createElement(X, { size: 18 }))),
+            createElement("div", { style: { fontSize: 12, color: C.muted, lineHeight: 1.45, margin: "8px 0 14px" } }, "Fix what you actually performed. Program, day and week ownership stay locked so correcting a number cannot move the workout to a different place in the plan."),
+            createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 92px", gap: 8, marginBottom: 14 } },
+                createElement("label", { style: { fontSize: 11, color: C.muted, fontWeight: 700 } }, "DATE / TIME",
+                    createElement("input", { type: "datetime-local", value: localHistoryDateValue(draft.date), onChange: e => { const t = new Date(e.target.value).getTime(); if (Number.isFinite(t)) setDraft(d => ({ ...d, date: t })); }, style: { ...inputStyle, textAlign: "left", marginTop: 5 } })),
+                createElement("label", { style: { fontSize: 11, color: C.muted, fontWeight: 700 } }, "MINUTES",
+                    createElement("input", { inputMode: "numeric", value: draft.durationMin ?? "", onChange: e => setDraft(d => ({ ...d, durationMin: e.target.value.replace(/[^0-9]/g, "") })), style: { ...inputStyle, marginTop: 5 } }))),
+            ...exEntries.map(([exId, p]) => createElement("section", { key: exId, style: { borderTop: `1px solid ${C.borderSoft}`, padding: "12px 0 4px" } },
+                createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 8 } },
+                    createElement("div", { style: { flex: 1, fontSize: 15, fontWeight: 750 } }, EX_BY_ID[exId]?.name || exId),
+                    createElement("button", { type: "button", onClick: () => removeExercise(exId), className: "pressable", style: { border: 0, background: "none", color: C.danger, fontSize: 12, fontWeight: 700, padding: 6, cursor: "pointer" } }, "Remove lift")),
+                ...(p.sets || []).map((st, i) => createElement("div", { key: i, style: { display: "grid", gridTemplateColumns: "28px minmax(0,1fr) minmax(0,.8fr) minmax(0,.75fr) 34px", gap: 6, alignItems: "end", marginBottom: 7 } },
+                    createElement("div", { className: "mono", style: { fontSize: 12, color: st.sub ? C.faint : C.muted, textAlign: "center", paddingBottom: 11 } }, st.sub ? "↳" : String(i + 1)),
+                    createElement("label", { style: { fontSize: 10, color: C.faint, fontWeight: 700 } }, `LOAD ${unit || entry.unit || ""}`,
+                        createElement("input", { inputMode: "decimal", value: st.w ?? "", onChange: e => setSet(exId, i, "w", e.target.value.replace(/[^0-9.-]/g, "")), style: { ...inputStyle, marginTop: 3 } })),
+                    createElement("label", { style: { fontSize: 10, color: C.faint, fontWeight: 700 } }, "REPS",
+                        createElement("input", { inputMode: "numeric", value: st.r ?? "", onChange: e => setSet(exId, i, "r", e.target.value.replace(/[^0-9]/g, "")), style: { ...inputStyle, marginTop: 3 } })),
+                    createElement("label", { style: { fontSize: 10, color: C.faint, fontWeight: 700 } }, "RIR",
+                        createElement("input", { inputMode: "decimal", placeholder: "—", value: st.rir ?? "", onChange: e => setSet(exId, i, "rir", e.target.value.replace(/[^0-9.]/g, "")), style: { ...inputStyle, marginTop: 3 } })),
+                    createElement("button", { type: "button", "aria-label": `Remove set ${i + 1}`, onClick: () => removeSet(exId, i), className: "pressable", style: { ...tinyBtn(), color: C.danger, marginBottom: 1 } }, createElement(X, { size: 14 })))),
+                createElement("button", { type: "button", onClick: () => addSet(exId), className: "pressable", style: { width: "100%", padding: "9px", borderRadius: 10, border: `1px dashed ${C.border}`, background: "none", color: C.muted, fontSize: 12, fontWeight: 700, cursor: "pointer" } }, "+ Add set"))),
+            exEntries.length === 0 ? createElement("div", { style: { padding: "18px 4px", color: C.muted, fontSize: 13, textAlign: "center" } }, "No sets remain. Delete the whole workout instead if this session should not exist.") : null,
+            createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1.6fr", gap: 8, marginTop: 14 } },
+                createElement("button", { type: "button", onClick: onClose, className: "pressable", style: { padding: 13, borderRadius: 12, border: `1px solid ${C.border}`, background: "none", color: C.muted, fontSize: 14, fontWeight: 700, cursor: "pointer" } }, "Cancel"),
+                createElement("button", { type: "button", disabled: exEntries.length === 0, onClick: () => exEntries.length && onSave(normalizeEditedHistoryEntry(entry, draft)), className: "pressable", style: { padding: 13, borderRadius: 12, border: 0, background: exEntries.length ? C.accent : C.card, color: exEntries.length ? C.accentText : C.faint, fontSize: 14, fontWeight: 800, cursor: exEntries.length ? "pointer" : "default" } }, "Save correction"))));
+}
+
+function HistoryView({ history, onBack, onClear, onDeleteEntry, onEditEntry, embedded, focusSection, onFocusHandled, onGoTrain, nextLabel = null, bodyweight, sex, age, birth, unit, bwLog, onLogBodyweight, onSetProfile, goals = {}, onRepeat, measurements = {}, onLogMeasurement, activeProgram = null, activeWeek = 1, cycles = [], saved = [] }) {
     const [tab, setTab] = useState("sessions");
     // When the user taps the Strength level card on Home, we open this tab focused on the strength
     // breakdown rather than dumping them at the top of the Sessions list. Switch to the Lifts tab and
@@ -30202,6 +30447,7 @@ function HistoryView({ history, onBack, onClear, onDeleteEntry, embedded, focusS
     }, [focusSection]);
     const [detail, setDetail] = useState(null);
     const [openSession, setOpenSession] = useState(null); // history id of the expanded session row
+    const [editSession, setEditSession] = useState(null); // session being corrected in the full history editor
     const [groupBy, setGroupBy] = useState("cycle"); // "cycle" | "month" — see the section list below
     const [sessionQuery, setSessionQuery] = useState("");
     const [sessionProgram, setSessionProgram] = useState("all");
@@ -30334,7 +30580,7 @@ function HistoryView({ history, onBack, onClear, onDeleteEntry, embedded, focusS
                                                 // The logged lifts for this session, in the order they were performed.
                                                 const loggedExercises = Object.entries(h.perf || {})
                                                     .map(([id, p]) => ({ id, ex: EX_BY_ID[id] || { name: p?.name || id, part: null }, p: p || {} }));
-                                                return (_jsxs("div", { "data-history-id": h.id, "data-open": isOpen ? "1" : "0", className: "wpb-render-auto wpb-history-session", style: { background: C.card, borderRadius: 16, marginBottom: 8, overflow: "hidden" }, children: [_jsx("div", { style: { display: "flex", alignItems: "center", gap: 12, padding: 12 }, children: _jsxs("button", { "aria-expanded": isOpen, "aria-label": `${h.dayLabel || "Workout"} · ${new Date(h.date).toLocaleDateString()}`, onClick: () => setOpenSession(isOpen ? null : h.id), className: "pressable", style: { flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 12, background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }, children: [_jsxs("div", { className: "wpb-history-date", style: { width: 44, height: 44, borderRadius: 12, background: C.accentDim, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: [_jsx("span", { className: "mono", style: { fontSize: 15, fontWeight: 600, color: C.accentInk, lineHeight: 1 }, children: new Date(h.date).getDate() }), _jsx("span", { style: { fontSize: 11, color: C.accentInk, textTransform: "uppercase" }, children: new Date(h.date).toLocaleDateString(undefined, { month: "short" }) })] }), _jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { style: { fontSize: 15, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: h.dayLabel }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginTop: 2 }, children: h.programName }), _jsxs("div", { className: "mono", style: { fontSize: 11, color: C.faint, marginTop: 2 }, children: [h.setsDone || 0, " sets \u00B7 ", (h.volume || 0).toLocaleString(), " ", hUnit, " \u00B7 ", h.durationMin || 0, "m"] })] }), _jsx(ChevronDown, { size: 18, color: C.muted, style: { flexShrink: 0, transition: "transform .18s", transform: isOpen ? "rotate(180deg)" : "none" } })] }) }), isOpen && (_jsxs("div", { className: "wpb-history-session-detail", style: { borderTop: `1px solid ${C.borderSoft}`, padding: "4px 14px 12px" }, children: [_jsxs("div", { className: "wpb-history-detail-head", style: { display: "flex", alignItems: "center", gap: 12, padding: "10px 0 8px" }, children: [_jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { style: { fontSize: 15, fontWeight: 700, overflowWrap: "anywhere" }, children: h.dayLabel || "Workout" }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginTop: 1 }, children: new Date(h.date).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }) })] }), _jsxs("div", { role: "group", "aria-label": "Workout actions", className: "wpb-history-actions", style: { display: "flex", gap: 8, flexShrink: 0 }, children: [_jsx("button", { onClick: () => shareSession(h, C, history), title: "Share this workout", "aria-label": `Share ${h.dayLabel}`, className: "pressable hit", style: { flexShrink: 0, width: 40, height: 40, borderRadius: 11, border: `1px solid ${C.border}`, background: C.card, color: C.muted, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }, children: _jsx(Share2, { size: 17 }) }), onRepeat && (_jsx("button", { "aria-label": "Repeat this workout", onClick: () => onRepeat(h), title: "Repeat this workout", className: "pressable hit", style: { flexShrink: 0, width: 40, height: 40, borderRadius: 11, border: `1px solid ${C.border}`, background: C.bg2, color: C.accentInk, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }, children: _jsx(RefreshCw, { size: 17 }) })), onDeleteEntry && (_jsx("button", { type: "button", "aria-label": `Delete ${h.dayLabel || "workout"}`, title: "Delete workout", "data-haptic": "medium", onClick: () => onDeleteEntry(h.id), className: "pressable hit wpb-danger-icon", style: { flexShrink: 0, width: 40, height: 40, borderRadius: 11, border: `1px solid ${C.danger}28`, background: C.bg2, color: C.danger, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }, children: _jsx(Trash2, { size: 17 }) }))] })] }), loggedExercises.length === 0 ? (_jsx("div", { style: { fontSize: 13, color: C.faint, padding: "10px 0" }, children: "No per-set detail was saved for this session." })) : loggedExercises.map(({ id, ex, p }) => {
+                                                return (_jsxs("div", { "data-history-id": h.id, "data-open": isOpen ? "1" : "0", className: "wpb-render-auto wpb-history-session", style: { background: C.card, borderRadius: 16, marginBottom: 8, overflow: "hidden" }, children: [_jsx("div", { style: { display: "flex", alignItems: "center", gap: 12, padding: 12 }, children: _jsxs("button", { "aria-expanded": isOpen, "aria-label": `${h.dayLabel || "Workout"} · ${new Date(h.date).toLocaleDateString()}`, onClick: () => setOpenSession(isOpen ? null : h.id), className: "pressable", style: { flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 12, background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }, children: [_jsxs("div", { className: "wpb-history-date", style: { width: 44, height: 44, borderRadius: 12, background: C.accentDim, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: [_jsx("span", { className: "mono", style: { fontSize: 15, fontWeight: 600, color: C.accentInk, lineHeight: 1 }, children: new Date(h.date).getDate() }), _jsx("span", { style: { fontSize: 11, color: C.accentInk, textTransform: "uppercase" }, children: new Date(h.date).toLocaleDateString(undefined, { month: "short" }) })] }), _jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { style: { fontSize: 15, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: h.dayLabel }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginTop: 2 }, children: h.programName }), _jsxs("div", { className: "mono", style: { fontSize: 11, color: C.faint, marginTop: 2 }, children: [h.setsDone || 0, " sets \u00B7 ", (h.volume || 0).toLocaleString(), " ", hUnit, " \u00B7 ", h.durationMin || 0, "m"] })] }), _jsx(ChevronDown, { size: 18, color: C.muted, style: { flexShrink: 0, transition: "transform .18s", transform: isOpen ? "rotate(180deg)" : "none" } })] }) }), isOpen && (_jsxs("div", { className: "wpb-history-session-detail", style: { borderTop: `1px solid ${C.borderSoft}`, padding: "4px 14px 12px" }, children: [_jsxs("div", { className: "wpb-history-detail-head", style: { display: "flex", alignItems: "center", gap: 12, padding: "10px 0 8px" }, children: [_jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { style: { fontSize: 15, fontWeight: 700, overflowWrap: "anywhere" }, children: h.dayLabel || "Workout" }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginTop: 1 }, children: new Date(h.date).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }) })] }), _jsxs("div", { role: "group", "aria-label": "Workout actions", className: "wpb-history-actions", style: { display: "flex", gap: 8, flexShrink: 0 }, children: [_jsx("button", { onClick: () => shareSession(h, C, history), title: "Share this workout", "aria-label": `Share ${h.dayLabel}`, className: "pressable hit", style: { flexShrink: 0, width: 40, height: 40, borderRadius: 11, border: `1px solid ${C.border}`, background: C.card, color: C.muted, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }, children: _jsx(Share2, { size: 17 }) }), onRepeat && (_jsx("button", { "aria-label": "Repeat this workout", onClick: () => onRepeat(h), title: "Repeat this workout", className: "pressable hit", style: { flexShrink: 0, width: 40, height: 40, borderRadius: 11, border: `1px solid ${C.border}`, background: C.bg2, color: C.accentInk, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }, children: _jsx(RefreshCw, { size: 17 }) })), onEditEntry && (_jsx("button", { type: "button", "aria-label": `Edit ${h.dayLabel || "workout"}`, title: "Correct workout log", onClick: () => setEditSession(h.id), className: "pressable hit", style: { flexShrink: 0, width: 40, height: 40, borderRadius: 11, border: `1px solid ${C.border}`, background: C.bg2, color: C.muted, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }, children: _jsx(Pencil, { size: 17 }) })), onDeleteEntry && (_jsx("button", { type: "button", "aria-label": `Delete ${h.dayLabel || "workout"}`, title: "Delete workout", "data-haptic": "medium", onClick: () => onDeleteEntry(h.id), className: "pressable hit wpb-danger-icon", style: { flexShrink: 0, width: 40, height: 40, borderRadius: 11, border: `1px solid ${C.danger}28`, background: C.bg2, color: C.danger, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }, children: _jsx(Trash2, { size: 17 }) }))] })] }), editSession === h.id && onEditEntry ? _jsx(HistoryEditSheet, { entry: h, unit: h.unit || unit, onClose: () => setEditSession(null), onSave: corrected => { onEditEntry(h.id, corrected); setEditSession(null); } }) : null, loggedExercises.length === 0 ? (_jsx("div", { style: { fontSize: 13, color: C.faint, padding: "10px 0" }, children: "No per-set detail was saved for this session." })) : loggedExercises.map(({ id, ex, p }) => {
                                                                     // Prefer the full per-set array; fall back to the summary weight×reps for
                                                                     // older logs that predate per-set storage.
                                                                     const sets = (p.sets && p.sets.length) ? p.sets : (p.weight != null ? [{ w: p.weight, r: p.reps }] : []);
@@ -30672,6 +30918,17 @@ function StrengthSnapshotCard({ history, bodyweight, sex, age, unit, bwLog = [],
  * Newest release first, newest entry first within a release. */
 const WHATS_NEW_MAX = 10;
 const CHANGELOG = [
+    { version: "3.215.0", build: "771", items: ["Fixed generated-plan set counts at the shared engine-to-shell boundary: persisted array-shaped counts now resolve to one scalar, and ambiguous corrupt values recover from the immutable engine prescription instead of repeating/multiplying across Home, Program, Plan, Preview, or Workout.", "Cleaned up the workout SET / TARGET-LAST row: the phone columns have more breathing room and LAST shows load × reps only, without repeating RIR that is already shown in the suggestion/effort surfaces.", "Fixed cycle next-block dose previews reading nonexistent week 0; opening-set summaries now use the engine's 1-based week 1 prescription. Pursuit Engine 0.62.5 programming math is unchanged."] },
+    { version: "3.214.0", build: "770", items: ["Workout History is now editable: correct date/time, duration, per-set load, reps and RIR, add/remove sets, or remove a lift; program/day/week ownership stays locked and derived progression/readiness data refreshes from the correction.", "Fixed custom-program double progression when a 10-15 rep range was stored as an array: 10 reps is the baseline, not the load-increase trigger; every prescribed set must reach 15 at the planned effort before weight goes up.", "Re-audited the live authority path: generated programs are created and audited by Pursuit Engine 0.62.5, workout set counts come from its week cells, and completed history is evaluated by its progression engine; legacy generated-plan progression remains bypassed."] },
+    { version: "3.213.0", build: "769", items: ["Program and workout effort ranges now normalize engine array values such as [2,2] to a single clean 2 RIR label instead of showing 2,2.", "Finite-program week progress now advances from distinct completed days when modern history has explicit week/day data, so a repeated or duplicated workout cannot silently jump the plan into a later lower-volume week.", "The M162 double-progression rep-floor safety fix is retained unchanged; this update does not regenerate or reduce saved program volume."] },
+    { version: "3.212.0", build: "768", items: ["Double progression now lowers an off-target load when completed reps fall below the bottom of the prescribed range, instead of carrying the heaviest logged set forward.", "A hard or unknown-effort rep-floor miss is recalibrated from the logged performance and snapped down to a load your equipment can actually make; intentionally easy short sets stay at the same load.", "Missing effort values now stay missing instead of being read as 0 RIR, so load calibration no longer treats unreported effort as failure."] },
+    { version: "3.211.1", build: "767", items: ["All Programs search now uses one clean field, without a second background, border or focus ring around its text input."] },
+    { version: "3.211.0", build: "766", items: [
+        "All Programs now separates the plan you are training from saved programs, with compact cycle cards and consistent spacing.",
+        "Distinct icons identify Hypertrophy, Strength, Peak, Strength & Size, and Recovery. Every cycle shows its phases in order; expand it for block details.",
+        "Search by program, phase or folder, filter cycles and standalone plans, and show more programs when you need them. Each cycle counts as one plan."
+    ] },
+    { version: "3.210.0", build: "765", items: ["Turn a program into a training cycle: it becomes Block 1 (history and edits kept) and the later blocks are planned for you.", "Saved plans from earlier versions can be restored to your library or removed from the list, without touching workout history.", "Programs list: a cycle shows its split, days and focus once, and each block says where it stands (Training now, Up next, Later).", "Cycles you aren't training fold away; every block of a cycle has the cycle's icon.", "The program switch button now says \"Switch\", and upcoming cycle blocks no longer show a button that couldn't work."] },
     { version: "3.208.0", build: "763", items: ["Programs you wrote yourself (Build your own) now come across when you import a backup or update, keep your own sets and reps, and can be trained — they were being discarded.", "Fixed a crash when opening a workout: Quick workouts, programs with a typed single rep target like \"8\", and custom programs.", "Weight suggestions now match this week's reps — heavier as the reps drop — and always land on weights your equipment can make.", "New \"No squat rack\" option: a home barbell without a rack skips squats, bench and presses taken from a rack.", "Self-test runs in seconds; the full engine check is still in Settings.", "No sideways scrolling on Home or in the program builder, and backups download as pursuit-iron-backup-<date>.json.", "Runs on React, the same as the original app."] },
     { version: "3.207.0", build: "762", items: [
             "Every curated setup family now has explicit presentation metadata, so no variant silently falls back to a generic or misleading picture.",
@@ -31703,6 +31960,161 @@ function ConvertProgramToCycleSheet({ program, onClose, onConfirm }) {
                             return (_jsxs("button", { type: "button", disabled: disabled, onClick: () => setTemplateId(choice.id), className: "pressable", "aria-pressed": selectedChoice, style: { width: "100%", textAlign: "left", padding: "12px 13px", marginBottom: 8, borderRadius: 13, border: `1px solid ${selectedChoice ? C.accent : C.border}`, background: selectedChoice ? C.accentDim : C.card, color: C.text, opacity: disabled ? .46 : 1, cursor: disabled ? "default" : "pointer" }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8 }, children: [_jsx("div", { style: { flex: 1, fontSize: 15, fontWeight: 750 }, children: choice.name }), selectedChoice && _jsx(Check, { size: 17, color: C.accentInk })] }), _jsx("div", { style: { fontSize: 12, color: C.muted, lineHeight: 1.45, marginTop: 3 }, children: disabled ? "No later phase remains after your current program." : choice.blurb }), !disabled && _jsx("div", { style: { display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap", marginTop: 8 }, children: later.map((block, i) => _jsxs("span", { style: { display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 700, color: C.accentInk }, children: [i > 0 && _jsx(ChevronRight, { size: 11, color: C.faint }), block.label, ` · ${block.weeks}w`] }, `${choice.id}:${block.phase}:${i}`)) })] }, choice.id));
                         }), _jsxs("button", { type: "button", onClick: () => setAdapt(v => !v), className: "pressable", "aria-pressed": adapt, style: { width: "100%", display: "flex", alignItems: "center", gap: 12, textAlign: "left", padding: "12px 13px", marginTop: 8, borderRadius: 13, border: `1px solid ${adapt ? C.accent : C.border}`, background: adapt ? C.accentDim : C.card, color: C.text, cursor: "pointer" }, children: [_jsx("div", { style: { width: 34, height: 34, borderRadius: 10, background: adapt ? C.accent : C.bg2, color: adapt ? C.accentText : C.muted, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: _jsx(RefreshCw, { size: 16 }) }), _jsxs("div", { style: { flex: 1 }, children: [_jsx("div", { style: { fontSize: 14, fontWeight: 750 }, children: "Adapt exercises between blocks" }), _jsx("div", { style: { fontSize: 12, color: C.muted, lineHeight: 1.4, marginTop: 2 }, children: adapt ? "Future phases can change exercises using completed workout history." : "Keep the exercise skeleton and change sets, reps, effort, and progression for each phase." })] }), _jsx(CheckBox, { on: adapt })] }), error && _jsx("div", { role: "status", style: { marginTop: 12, padding: "10px 12px", borderRadius: 11, background: C.dangerDim, color: C.text, fontSize: 12, lineHeight: 1.45 }, children: error })] }), _jsxs("div", { style: { flexShrink: 0, display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1.35fr)", gap: 8, padding: "10px 18px calc(10px + env(safe-area-inset-bottom))", borderTop: `1px solid ${C.borderSoft}`, background: C.bg }, children: [_jsx("button", { type: "button", onClick: onClose, disabled: busy, className: "pressable", style: { minHeight: 48, borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: 14, fontWeight: 700 }, children: "Cancel" }), _jsx("button", { type: "button", onClick: create, disabled: busy || !selected || !future.length, className: "pressable wpb-primary-action", style: { minHeight: 48, borderRadius: 12, border: 0, background: C.accent, color: C.accentText, fontSize: 14, fontWeight: 800 }, children: busy ? "Building cycle…" : "Create training cycle" })] })] }) }));
 }
+// M161: one visible entry per cycle; phase identity is separate from cycle identity.
+function homeProgramGroups(saved, cycles, activeId) {
+    const byCycle = new Map(cycles.map(c => [c.id, c]));
+    const groups = new Map();
+    for (const p of saved) {
+        const key = p.cycleId ? `cycle:${p.cycleId}` : `program:${p.id}`;
+        if (!groups.has(key)) groups.set(key, { key, cycle: byCycle.get(p.cycleId), cycleId: p.cycleId, programs: [] });
+        groups.get(key).programs.push(p);
+    }
+    return [...groups.values()].map(g => {
+        g.programs.sort((a, b) => (a.cycleIndex ?? 0) - (b.cycleIndex ?? 0));
+        g.current = g.programs.some(p => p.id === activeId);
+        g.done = !!g.cycle?.done;
+        g.name = g.cycle?.name || (g.cycleId ? 'Training cycle' : g.programs[0].name);
+        g.createdAt = Math.max(...g.programs.map(p => Number(p.createdAt) || 0));
+        return g;
+    }).sort((a, b) => Number(b.current) - Number(a.current) || Number(a.done) - Number(b.done) || b.createdAt - a.createdAt);
+}
+function homePhaseIdentity(meta = {}, program = {}) {
+    const label = String(meta.label || program.blockLabel || '').toLowerCase();
+    const phase = String(meta.phase || program.config?.phase || '').toLowerCase();
+    const goal = meta.goal || program.config?.goal;
+    if (/recover|deload|rest|taper/.test(phase + ' ' + label)) return { icon: Battery, label: 'Recovery' };
+    if (/peak|test|realiz|realis|compet|max/.test(phase + ' ' + label)) return { icon: Trophy, label: 'Peak' };
+    if (/powerbuild/.test(label)) return { icon: Zap, label: 'Strength & Size' };
+    if (/strength|intens/.test(label)) return { icon: Flame, label: 'Strength' };
+    if (/hypertroph|volume|accum|build/.test(label)) return { icon: Layers, label: 'Hypertrophy' };
+    if (goal === 'both') return { icon: Zap, label: 'Strength & Size' };
+    if (goal === 'strength') return { icon: Flame, label: 'Strength' };
+    if (goal === 'hypertrophy') return { icon: Layers, label: 'Hypertrophy' };
+    return { icon: Dumbbell, label: 'Training' };
+}
+function HomePrograms({ saved, cycles, activeId, onOpen, onOpenCycles, onSetActive, onCompare, onOptions }) {
+    const h = createElement;
+    const [query, setQuery] = useState('');
+    const [filter, setFilter] = useState('all');
+    const [limit, setLimit] = useState(4);
+    const [expanded, setExpanded] = useState({});
+    const groups = useMemo(() => homeProgramGroups(saved, cycles, activeId), [saved, cycles, activeId]);
+    const matches = g => {
+        const text = [g.name, ...g.programs.flatMap(p => [p.name, p.folder, SPLITS[p.config?.split]?.name, GOALS[p.config?.goal]?.label]), ...(g.cycle?.blockMeta || []).map(b => b.label)].join(' ').toLowerCase();
+        return (!query.trim() || text.includes(query.trim().toLowerCase())) && (filter === 'all' || (filter === 'cycles' && g.cycleId) || (filter === 'single' && !g.cycleId) || (filter === 'done' && g.done));
+    };
+    const found = groups.filter(matches), current = found.filter(g => g.current), rest = found.filter(g => !g.current);
+    const label = (text, count) => h('div', { className: 'hp-group-label' }, text, count != null && h('span', null, count));
+    const iconTile = (Ic, current = false, color) => h('span', { className: 'hp-icon', 'data-current': current, 'aria-hidden': true, style: color ? { color: current ? C.accentText : color, background: current ? color : `${color}1f` } : undefined }, h(Ic, { size: 21 }));
+    const renderCard = g => {
+        const c = g.cycle, first = g.programs[0];
+        const activeIndex = Math.max(0, Number(c?.activeBlock) || 0);
+        const blockRows = g.cycleId ? (c?.blockMeta?.length ? c.blockMeta : g.programs.map(p => ({ label: p.blockLabel || p.name, goal: p.config?.goal, weeks: p.weeks }))).map((meta, i) => {
+            const p = g.programs.find(p => p.id === c?.blockIds?.[i]) || g.programs.find(p => (p.cycleIndex ?? -1) === i) || (!c ? g.programs[i] : null);
+            const identity = homePhaseIdentity(meta, p || {});
+            const prefix = c?.name ? c.name + ' · ' : '';
+            let name = meta.label || p?.blockLabel || p?.name || identity.label;
+            if (prefix && name.startsWith(prefix)) name = name.slice(prefix.length);
+            return { meta, p, i, identity, name, weeks: Number(meta.weeks || p?.weeks) || 0 };
+        }) : [];
+        const active = blockRows.find(b => b.i === activeIndex);
+        const selected = g.programs.find(p => p.id === activeId) || active?.p || first;
+        const split = SPLITS[selected.config?.split]?.name || 'Custom';
+        const days = selected.days?.length || 0;
+        const isOpen = !!expanded[g.key];
+        const currentPhase = active || blockRows[0];
+        const Ic = g.cycleId ? iconForCycle(c) : iconForProgram(first);
+        const folderNames = [...new Set(g.programs.map(p => p.folder?.trim()).filter(Boolean))];
+        const open = () => g.cycleId && c && onOpenCycles ? onOpenCycles(g.cycleId) : onOpen(selected);
+        const button = (text, onClick, props = {}) => h('button', { type: 'button', className: 'pressable hp-action', onClick, ...props }, text);
+        return h('article', { className: 'hp-card', key: g.key, 'data-current': g.current, 'data-program-group': g.key },
+            h('div', { className: 'hp-card-head' },
+                h('button', { type: 'button', className: 'pressable hp-open', onClick: open, 'aria-label': `Open ${g.cycleId ? 'cycle ' : ''}${g.name}` },
+                    iconTile(Ic, g.current, iconColorOf(g.cycleId ? c : first)),
+                    h('span', { className: 'hp-heading-copy' }, h('span', { className: 'hp-name' }, g.name), h('span', { className: 'hp-meta' }, `${split} · ${days} days/week`)),
+                    h(ChevronRight, { size: 17, 'aria-hidden': true })),
+                !g.cycleId && button(h(MoreHorizontal, { size: 19 }), ev => onOptions(first, ev), { 'aria-label': `More options for ${first.name}`, 'aria-haspopup': 'menu' })),
+            folderNames.length > 0 && h('div', { className: 'hp-folder' }, h(FolderIcon, { size: 12, 'aria-hidden': true }), folderNames.join(' · ')),
+            g.cycleId ? h('div', { className: 'hp-phases', 'aria-label': 'Phases in order' }, blockRows.map(b => h('span', { className: 'hp-phase', key: b.i, 'data-phase': b.identity.label, 'data-state': g.done || b.i < activeIndex ? 'done' : b.i === activeIndex ? 'current' : 'next', title: `${b.name} · ${b.identity.label}`, 'aria-label': `${b.i + 1}. ${b.name}, ${b.identity.label}${!g.done && b.i === activeIndex ? ', current block' : ''}` }, h(b.identity.icon, { size: 16, 'aria-hidden': true }), h('span', null, b.name)))) : h('div', { className: 'hp-single-goal' }, h(homePhaseIdentity({}, first).icon, { size: 15, 'aria-hidden': true }), homePhaseIdentity({}, first).label, first.weeks ? ` · ${first.weeks} weeks` : ''),
+            !g.cycleId && programSetupChips(first).filter(ch => ch.key === 'focus' || ch.key === 'reduce').map(ch => h('div', { key: ch.key, className: 'hp-meta', style: { marginTop: 6 } }, `${ch.label} ${ch.value}`)),
+            h('div', { className: 'hp-card-foot' },
+                h('span', { className: 'hp-position' }, g.done ? 'Cycle complete' : g.cycleId ? `Block ${Math.min(activeIndex + 1, blockRows.length)} of ${blockRows.length}${currentPhase?.weeks ? ` · ${currentPhase.weeks} weeks` : ''}` : g.current ? 'Training now' : 'Standalone program'),
+                g.cycleId ? button([isOpen ? 'Hide blocks' : 'View blocks', h(ChevronDown, { size: 14, key: 'chevron', style: { transform: isOpen ? 'rotate(180deg)' : undefined } })], () => setExpanded(e => ({ ...e, [g.key]: !e[g.key] })), { 'aria-expanded': isOpen, 'aria-controls': `hp-blocks-${g.key}` }) : !g.current && onSetActive && button('Switch', () => onSetActive(first.id), { 'aria-label': `Switch to ${first.name}` })),
+            isOpen && h('div', { className: 'hp-blocks', id: `hp-blocks-${g.key}` }, blockRows.map(b => {
+                const locked = !b.p || (c?.engineSource === 'pursuit-next' && !g.done && b.i > activeIndex);
+                const canSwitch = b.p && b.p.id !== activeId && onSetActive && !(c?.engineSource === 'pursuit-next' && b.i !== activeIndex);
+                const status = g.done || b.i < activeIndex ? 'Completed' : b.i === activeIndex ? (g.current ? 'Training now' : 'Current block') : b.i === activeIndex + 1 ? 'Up next' : 'Later';
+                const chips = b.p ? programSetupChips(b.p).filter(x => x.key === 'focus' || x.key === 'reduce') : [];
+                return h('div', { className: 'hp-block', key: b.i },
+                    h('button', { type: 'button', className: 'pressable hp-block-open', disabled: locked, onClick: () => onOpen(b.p), 'aria-label': `${locked ? 'Planned' : 'Open'} ${b.name}` },
+                        iconTile(b.identity.icon, b.p?.id === activeId),
+                        h('span', { className: 'hp-heading-copy' }, h('span', { className: 'hp-block-name' }, b.name), h('span', { className: 'hp-meta' }, `${status}${b.weeks ? ` · ${b.weeks} weeks` : ''}${locked ? ' · Planned' : ''}`),
+                            b.p && (b.p.config?.split !== selected.config?.split || b.p.days?.length !== days) && h('span', { className: 'hp-meta' }, `${SPLITS[b.p.config?.split]?.name || 'Custom'} · ${b.p.days?.length || 0} days/week`),
+                            ...chips.map(ch => h('span', { key: ch.key, className: 'hp-meta' }, `${ch.label} ${ch.value}`)))),
+                    canSwitch && button('Switch', () => onSetActive(b.p.id), { 'aria-label': `Switch to ${b.name}` }));
+            })))
+    };
+    return h('section', { className: 'hp-section', 'aria-label': 'All programs' },
+        h('style', null, `
+.hp-section{flex-shrink:0;margin:4px 0 12px;min-width:0;color:${C.text};}
+.hp-section *{box-sizing:border-box;}
+.hp-topline{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 2px 12px;}
+.hp-topline h2{font-size:18px;letter-spacing:-.3px;margin:0;font-weight:750;}
+.hp-count{color:${C.muted};font-size:12px;margin-top:3px;}
+.hp-section .hp-action{border:0;background:transparent;color:${C.accentInk};font:inherit;font-size:12px;font-weight:700;min-height:44px;padding:8px 4px;display:inline-flex;align-items:center;justify-content:center;gap:5px;cursor:pointer;flex-shrink:0;border-radius:8px;}
+.hp-search{display:flex;align-items:center;gap:8px;background:${C.card};border:1px solid ${C.border};border-radius:12px;padding:0 10px;margin-bottom:8px;color:${C.muted};}
+/* The outer label owns the field surface and focus ring. Override the global
+   non-workout input skin, including its !important focused surface. */
+.wpb .wpb-home .hp-section .hp-search input[type="search"]{flex:1;width:100%;min-width:0;min-height:44px;margin:0;padding:0;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;outline:0!important;appearance:none;-webkit-appearance:none;color:${C.text};font:inherit;font-size:16px;line-height:1.4;}
+.hp-search>svg{flex-shrink:0;}
+.wpb .wpb-home .hp-section .hp-search input[type="search"]::-webkit-search-decoration{-webkit-appearance:none;}
+.hp-search:focus-within{outline:2px solid ${C.accent};outline-offset:2px;}
+.hp-filters{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;}
+.hp-section .hp-filter{border:1px solid ${C.borderSoft};background:${C.card};color:${C.muted};padding:8px 12px;min-height:40px;border-radius:10px;font:inherit;font-size:12px;font-weight:650;cursor:pointer;}
+.hp-section .hp-filter[aria-pressed=true]{background:${C.accentDim};border-color:${C.accent};color:${C.accentInk};}
+.hp-group-label{display:flex;align-items:center;gap:7px;font-size:11px;text-transform:uppercase;font-weight:750;letter-spacing:1px;color:${C.muted};margin:14px 2px 8px;}
+.hp-group-label span{font-size:11px;font-weight:500;letter-spacing:0;}
+.hp-list{display:grid;gap:10px;}
+.hp-section .hp-card{background:${C.card};border:1px solid ${C.border};border-radius:16px;padding:12px 12px 0;margin:0;min-height:0;overflow:hidden;}
+.hp-section .hp-card[data-current=true]{border-color:${C.accent};box-shadow:inset 3px 0 0 ${C.accent};}
+.hp-card-head{display:flex;align-items:center;gap:4px;}
+.hp-section .hp-open,.hp-section .hp-block-open{display:flex;align-items:center;gap:10px;flex:1;min-width:0;padding:0;min-height:44px;text-align:left;color:${C.text};border:0;background:none;font:inherit;cursor:pointer;}
+.hp-heading-copy{display:flex;flex-direction:column;flex:1;min-width:0;gap:3px;}
+.hp-name{font-weight:750;font-size:16px;line-height:1.25;overflow-wrap:anywhere;}
+.hp-meta{font-size:12px;color:${C.muted};line-height:1.4;overflow-wrap:anywhere;}
+.hp-icon{display:flex;align-items:center;justify-content:center;flex-shrink:0;width:38px;height:38px;border-radius:11px;color:${C.accentInk};background:${C.accentDim};}
+.hp-icon[data-current=true]{background:${C.accent};color:${C.accentText};}
+.hp-open>svg{flex-shrink:0;color:${C.muted};}
+.hp-folder{display:flex;gap:5px;align-items:center;font-size:11px;color:${C.muted};margin:8px 0;overflow-wrap:anywhere;}
+.hp-phases{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 2px;}
+.hp-phase{display:inline-flex;align-items:center;gap:5px;max-width:100%;border-radius:8px;background:${C.bg2};border:1px solid ${C.borderSoft};color:${C.muted};font-size:11px;line-height:1.3;padding:7px 8px;}
+.hp-phase>svg{flex-shrink:0;}
+.hp-phase>span{overflow-wrap:anywhere;}
+.hp-phase[data-state=current]{color:${C.accentInk};background:${C.accentDim};border-color:color-mix(in srgb,${C.accent} 40%,${C.border});font-weight:700;}
+.hp-phase[data-state=done]{border-style:dashed;}
+.hp-single-goal{display:flex;align-items:center;gap:6px;font-size:12px;color:${C.accentInk};margin:10px 0 0;}
+.hp-card-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;}
+.hp-position{font-size:11px;color:${C.muted};line-height:1.4;}
+.hp-blocks{border-top:1px solid ${C.borderSoft};padding:0 0 4px;}
+.hp-block{display:flex;align-items:center;gap:8px;padding:10px 0;}
+.hp-block+.hp-block{border-top:1px solid ${C.borderSoft};}
+.hp-block-name{font-size:14px;font-weight:700;line-height:1.3;overflow-wrap:anywhere;}
+.hp-block-open:disabled{cursor:default;}
+.hp-block .hp-icon{width:32px;height:32px;border-radius:9px;}
+.hp-block .hp-icon svg{width:17px;height:17px;}
+.hp-section .hp-more{width:100%;border:1px solid ${C.border};border-radius:12px;margin-top:10px;background:${C.card};}
+.hp-empty{padding:20px 12px;text-align:center;color:${C.muted};font-size:13px;}
+`),
+        h('div', { className: 'hp-topline' }, h('div', null, h('h2', null, 'All programs'), h('div', { className: 'hp-count' }, `${groups.length} saved ${groups.length === 1 ? 'plan' : 'plans'}`)), saved.length >= 2 && h('button', { type: 'button', className: 'pressable hp-action', onClick: onCompare }, h(BarChart3, { size: 15 }), 'Compare')),
+        groups.length > 4 && h('label', { className: 'hp-search' }, h(Search, { size: 17, 'aria-hidden': true }), h('input', { type: 'search', 'aria-label': 'Search programs', placeholder: 'Search name, phase or folder', value: query, onChange: e => { setQuery(e.target.value); setLimit(4); } })),
+        groups.length > 1 && h('div', { className: 'hp-filters', 'aria-label': 'Filter programs' }, [['all', 'All'], ['cycles', 'Cycles'], ['single', 'Standalone'], ...(groups.some(g => g.done) ? [['done', 'Completed']] : [])].map(([key, text]) => h('button', { key, type: 'button', className: 'pressable hp-filter', 'aria-pressed': filter === key, onClick: () => { setFilter(key); setLimit(4); } }, text))),
+        current.length > 0 && h(_Fragment, null, label('Training now'), h('div', { className: 'hp-list' }, current.map(renderCard))),
+        rest.length > 0 && h(_Fragment, null, label(query.trim() ? 'Search results' : filter === 'done' ? 'Completed cycles' : 'Saved programs', rest.length), h('div', { className: 'hp-list' }, rest.slice(0, limit).map(renderCard))),
+        found.length === 0 && h('div', { className: 'hp-empty', role: 'status' }, 'No programs match.', h('button', { type: 'button', className: 'pressable hp-action hp-more', onClick: () => { setQuery(''); setFilter('all'); setLimit(4); } }, 'Clear filters')),
+        rest.length > limit && h('button', { type: 'button', className: 'pressable hp-action hp-more', onClick: () => setLimit(n => n + 6) }, `Show more programs (${rest.length - limit} remaining)`, h(ChevronDown, { size: 15 })),
+        limit > 4 && rest.length > 4 && h('button', { type: 'button', className: 'pressable hp-action hp-more', onClick: ev => { setLimit(4); ev.currentTarget.closest('section').scrollIntoView({ block: 'start' }); } }, 'Show fewer programs'));
+}
+
 function Home({ legacySaved = [], onRebuildLegacy, onRemoveLegacy, gyms = [], activeGymId = null, onSetGym, saved, history = [], bwLog = [], onCreate, onBuildOwn, onCycles, cycleCount = 0, cycleInfo = null, onOpenCycles, onQuick, onOpen, onDelete, onDuplicate, onNextBlock, onConvertCycle, activeId = null, onSwitchProgram, onSetActive, cycles = [], onHistory, onStrength, historyCount, upNext, onStartNext, onStartAlt, onOpenActive, onTemplate, onDeload, canDeload, onLight, canLight, onLibrary, onCalc, onCompare, bodyweight, sex, age, unit, needsBackup, onBackup, whatsNew, onDismissWhatsNew, onOpenChangelog, sessionActive = false, hasTabBar = false, showInstall = false, installEvent = null, isIosSafari = false, onDismissInstall, browseRequested = false, onBrowseHandled }) {
     const [bkHide, setBkHide] = useState(false);
     const [upNextAll, setUpNextAll] = useState(false); // Up Next hero: show every exercise, not the first five
@@ -31738,6 +32150,7 @@ function Home({ legacySaved = [], onRebuildLegacy, onRemoveLegacy, gyms = [], ac
             : (upNext.weekIndex > weeksOf(upNext.program) ? "Deload week" : `Week ${upNext.weekIndex}`))
         : "";
     const [browseOpen, setBrowseOpen] = useState(false);
+ // cycles you are not training: collapsed until you ask to see their blocks
     useEffect(() => { if (browseRequested) {
         setBrowseOpen(true);
         onBrowseHandled?.();
@@ -31828,94 +32241,7 @@ function Home({ legacySaved = [], onRebuildLegacy, onRemoveLegacy, gyms = [], ac
                                         background: "none", border: `1px solid ${C.border}`, color: C.muted, fontSize: 13, fontWeight: 600, cursor: "pointer" }, children: [_jsx(Layers, { size: 12 }), " Switch program"] })), _jsxs("button", { onClick: onStartNext, className: "pressable wpb-primary-action", style: { position: "relative", width: "100%", marginTop: 16, padding: "15px", borderRadius: 16, border: "none", background: C.accent, color: C.accentText, fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }, children: [_jsx(Play, { size: 18, fill: C.accentText }), " Start workout"] }), upNext.alt && (_jsxs("button", { onClick: onStartAlt, className: "pressable wpb-secondary-action", style: { position: "relative", width: "100%", marginTop: 8, padding: "12px", fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }, children: [_jsx(Activity, { size: 14 }), " Fresher today: ", upNext.alt.day.label, " (", upNext.alt.score, "%)"] }))] })), showInstall && _jsx(InstallPromptCard, { installEvent: installEvent, isIosSafari: isIosSafari, onDismiss: onDismissInstall }), legacySaved.length > 0 && _jsx(ErrorBoundary, { label: "Previous-version programs", children: _jsx(LegacyProgramsCard, { programs: legacySaved, history: history, onRebuild: onRebuildLegacy, onRemove: onRemoveLegacy }) }), whatsNew && _jsx(ErrorBoundary, { label: "What's new", children: _jsx(WhatsNewCard, { onDismiss: onDismissWhatsNew, onFullLog: onOpenChangelog }) }), history.length > 0 && _jsx(DeloadAdviceCard, { history: history, onDeload: onDeload, canDeload: canDeload }), insightPlan.includes("strength") && _jsx(ErrorBoundary, { label: "Strength score", children: _jsx(StrengthSnapshotCard, { history: history, bodyweight: bodyweight, sex: sex, age: age, unit: unit, bwLog: bwLog, onHistory: onStrength || onHistory }) }), insightPlan.includes("recovery") && _jsx(MuscleRecoveryCard, { history: history, onLight: onLight, canLight: canLight }), insightPlan.includes("recap") && _jsx(WeeklyRecapCard, { history: history, unit: unit }), cycleInfo && (_jsxs("button", { onClick: () => onOpenCycles(cycleInfo.cycle.id), className: "pressable", style: { display: "block", width: "100%", textAlign: "left", background: C.card, border: `1px solid ${C.accent}44`, borderRadius: 16, padding: "15px 16px", marginBottom: 12, cursor: "pointer" }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 6, marginBottom: 12 }, children: [_jsx(Layers, { size: 14, color: C.accentInk }), _jsx("div", { style: { fontSize: 15, fontWeight: 700, color: C.text, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: cycleInfo.cycle.name }), _jsx(ChevronRight, { size: 16, color: C.muted })] }), _jsx("div", { style: { display: "flex", gap: 4, marginBottom: 8 }, children: cycleInfo.cycle.blockMeta.map((b, i) => {
                                         const done = i < cycleInfo.blockIdx, active = i === cycleInfo.blockIdx;
                                         return (_jsxs("div", { style: { flex: b.weeks, minWidth: 0 }, children: [_jsx("div", { style: { height: 6, borderRadius: 999, background: done ? C.accent : active ? C.accent : C.bg2, opacity: done ? 0.5 : 1 } }), _jsx("div", { style: { fontSize: 11, fontWeight: active ? 800 : 600, color: active ? C.accent : C.faint, marginTop: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: b.label })] }, i));
-                                    }) }), _jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", fontSize: 13 }, children: [_jsxs("span", { style: { fontWeight: 700, color: C.accentInk }, children: ["Block ", cycleInfo.blockIdx + 1, "/", cycleInfo.cycle.blockMeta.length] }), _jsx("span", { style: { color: C.faint }, children: "\u00B7" }), _jsx("span", { style: { fontWeight: 600, color: C.text }, children: cycleInfo.isDeload ? "Deload week" : `Week ${cycleInfo.weekIndex}/${cycleInfo.weeksTotal}` }), _jsx("span", { style: { color: C.faint }, children: "\u00B7" }), _jsxs("span", { style: { fontWeight: 600, color: C.text }, children: ["Day ", cycleInfo.dayIndex + 1, "/", cycleInfo.daysPerWeek] }), cycleInfo.dayLabel && _jsxs("span", { style: { color: C.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: ["\u00B7 ", cycleInfo.dayLabel] })] })] })), stats.total > 0 && (_jsx("div", { className: "wpb-metric-strip", style: { marginBottom: 20 }, children: [["Streak", stats.weekStreak, stats.weekStreak === 1 ? "week" : "weeks"], ["Total", stats.total, "logged"]].map(([k, v, sub]) => (_jsxs("div", { className: "wpb-metric", style: { padding: "12px 6px", textAlign: "center" }, children: [_jsx("div", { className: "mono", style: { fontSize: 22, fontWeight: 700, color: C.accentInk, lineHeight: 1 }, children: v }), _jsx("div", { style: { fontSize: 11, color: C.muted, marginTop: 4, fontWeight: 600 }, children: k }), _jsx("div", { style: { fontSize: 11, color: C.faint }, children: sub })] }, k))) })), needsBackup && !bkHide && (_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 10, background: C.card, border: `1px solid ${C.borderSoft}`, borderRadius: 13, padding: "9px 10px", marginBottom: 12 }, children: [_jsx(Save, { size: 16, color: C.accentInk, style: { flexShrink: 0 } }), _jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { style: { fontSize: 13, fontWeight: 700 }, children: "Backup recommended" }), _jsx("div", { style: { fontSize: 11.5, color: C.muted, lineHeight: 1.3, marginTop: 1 }, children: "Keep a copy of your programs and history." })] }), _jsx("button", { onClick: onBackup, className: "pressable", style: { flexShrink: 0, padding: "7px 10px", borderRadius: 9, border: `1px solid ${C.accent}55`, background: C.accentDim, color: C.accentInk, fontSize: 12, fontWeight: 700, cursor: "pointer" }, children: "Back up" }), _jsx("button", { "aria-label": "Dismiss", onClick: () => setBkHide(true), className: "pressable", title: "Not now", style: { flexShrink: 0, background: "none", border: "none", color: C.faint, cursor: "pointer", padding: 3 }, children: _jsx(X, { size: 15 }) })] })), !upNext && !historyCount && !saved.length && (_jsx("button", { onClick: onCreate, className: "pressable", style: { width: "100%", marginBottom: 20, padding: 16, borderRadius: 16, border: `1px solid ${C.accent}`, background: C.card, textAlign: "left", position: "relative", overflow: "hidden" }, children: _jsxs("div", { style: { position: "relative" }, children: [_jsx("div", { style: { fontSize: 13, fontWeight: 700, letterSpacing: 1.2, color: C.accentInk, textTransform: "uppercase" }, children: "Start here" }), _jsx("div", { style: { fontSize: 22, fontWeight: 700, marginTop: 6, letterSpacing: -0.4 }, children: "Build my program" }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginTop: 6, lineHeight: 1.45 }, children: "Choose your days, time, and equipment. Pursuit builds the sets, reps, and progression." }), _jsxs("div", { style: { display: "inline-flex", alignItems: "center", gap: 6, marginTop: 12, padding: "10px 15px", borderRadius: 12, background: C.accent, color: C.accentText, fontSize: 15, fontWeight: 700 }, children: [_jsx(Plus, { size: 16, strokeWidth: 3 }), " Get started"] })] }) })), quickActions, settledIn ? null : (_jsxs(_Fragment, { children: [_jsxs("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", margin: "0 2px 12px" }, children: [_jsx("div", { style: { ...eyebrow() }, children: "Start from a template" }), _jsxs("button", { onClick: () => { setTplQuery(""); setBrowseOpen(true); }, className: "pressable", style: { background: "none", border: "none", color: C.accentInk, cursor: "pointer", fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", gap: 2, padding: 2 }, children: ["Browse all ", TEMPLATES.length, " ", _jsx(ChevronRight, { size: 14 })] })] }), _jsxs("div", { className: "wpb-hscroll", style: { display: "flex", gap: 12, overflowX: "auto", overflowY: "hidden", touchAction: "pan-x pan-y", paddingBottom: 6, marginBottom: 20 }, children: [TEMPLATES.filter(t => t.featured).sort((a, b) => (a.featuredRank ?? 50) - (b.featuredRank ?? 50)).map(t => (_jsxs("button", { onClick: () => onTemplate(t), className: "pressable wpb-carousel-card", style: { flexShrink: 0, width: 210, textAlign: "left", background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: "15px", cursor: "pointer", color: C.text }, children: [_jsx("div", { style: { ...eyebrowAccent() }, children: t.tag }), _jsx("div", { style: { fontSize: 18, fontWeight: 700, marginTop: 6, letterSpacing: -0.3 }, children: t.name }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginTop: 4, lineHeight: 1.4, minHeight: 34, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }, children: t.desc }), _jsxs("div", { style: { display: "flex", alignItems: "center", gap: 4, marginTop: 8, color: C.accentInk, fontSize: 13, fontWeight: 600 }, children: [_jsx(Zap, { size: 13 }), " Use template"] })] }, t.id))), _jsxs("button", { onClick: () => { setTplQuery(""); setBrowseOpen(true); }, className: "pressable", style: { flexShrink: 0, width: 130, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, background: C.accentDim, border: `1px dashed ${C.accent}55`, borderRadius: 16, padding: "15px", cursor: "pointer", color: C.accentInk }, children: [_jsx(Library, { size: 22 }), _jsxs("div", { style: { fontSize: 13, fontWeight: 700, textAlign: "center", lineHeight: 1.3 }, children: ["Browse all ", TEMPLATES.length] })] })] })] })), saved.length > 0 && _jsxs("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", margin: "0 2px 12px" }, children: [_jsx("div", { style: { ...eyebrow() }, children: upNext ? "All programs" : "Your programs" }), _jsxs("div", { style: { display: "flex", alignItems: "center", gap: 12 }, children: [saved.length >= 2 && _jsx("button", { onClick: onCompare, className: "pressable", style: { background: "none", border: "none", color: C.accentInk, fontSize: 13, fontWeight: 700, cursor: "pointer", padding: 0 }, children: "Compare" }), _jsxs("button", { onClick: onCreate, className: "pressable", "aria-label": "New program", style: { background: "none", border: "none", color: C.accentInk, fontSize: 13, fontWeight: 700, cursor: "pointer", padding: 0, display: "flex", alignItems: "center", gap: 2 }, children: [_jsx(Plus, { size: 13, strokeWidth: 3 }), " New"] }), _jsx("span", { style: { fontSize: 13, color: C.faint, fontWeight: 600 }, children: saved.length })] })] }), saved.length === 0 ? (_jsxs("div", { className: "wpb-empty-state", style: { marginTop: 24, textAlign: "center", color: C.faint }, children: [_jsx(Library, { size: 48, color: C.border, style: { margin: "0 auto" } }), _jsx("div", { style: { marginTop: 12, fontSize: 15, color: C.muted }, children: legacySaved.length ? "Your earlier plans are saved above." : "No programs yet." }), _jsx("div", { style: { fontSize: 13, marginTop: 4 }, children: legacySaved.length ? "Preview an update, or build something new." : "Build your first program around your goals and schedule." }), _jsxs("button", { onClick: onCreate, className: "pressable wpb-primary-action wpb-empty-action", style: { marginTop: 16, border: "none", background: C.accent, color: C.accentText, cursor: "pointer" }, children: [_jsx(Plus, { size: 15 }), " ", legacySaved.length ? "New program" : "Build a program"] })] })) : (() => {
-                            // the program you're currently training (or its whole cycle block group) is pinned to the
-                            // very top of the list, ahead of folders and everything else.
-                            const activeProg = activeId ? saved.find(p => p.id === activeId) : null;
-                            const pinnedCycleId = activeProg && activeProg.cycleId ? activeProg.cycleId : null;
-                            const pinnedIds = new Set();
-                            if (activeProg) {
-                                if (pinnedCycleId)
-                                    saved.forEach(p => { if (p.cycleId === pinnedCycleId)
-                                        pinnedIds.add(p.id); });
-                                else
-                                    pinnedIds.add(activeProg.id);
-                            }
-                            const sorted = saved.filter(p => !pinnedIds.has(p.id)).sort((a, b) => b.createdAt - a.createdAt);
-                            const folders = [...new Set(sorted.map(p => (p.folder || "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
-                            const ungrouped = sorted.filter(p => !(p.folder || "").trim());
-                            const cycleById = Object.fromEntries(cycles.map(c => [c.id, c]));
-                            const isActive = (p) => p.id === activeId;
-                            // a single program card (also used for each block inside a cycle group)
-                            /* ⚠ `hideMeta` EXISTS BECAUSE THREE BLOCKS OF ONE CYCLE PRINTED THE SAME TWO LINES THREE TIMES.
-                               His screenshot: a 3-block cycle where every row read "Full Body · Pattern Rotation · 5 days ·
-                               Hypertr…" over "More Chest, Biceps, Triceps, Tr…", identical on all three. That is by construction
-                               — blocks of a cycle are the SAME program periodised, so split, days and emphasis are exactly what
-                               they share; the phase name is the only thing that differs. The card was answering "what is this
-                               program" for each row when the question inside a cycle is "which block is this, and which one am I
-                               on". Repeating the shared answer cost two lines per block and buried the one word that differed.
-                               So the group hoists what is common to its header and the rows carry the name — see cycleGroup.
-                               Nothing is hidden that is not shown once, higher up, and a block that genuinely differs from its
-                               siblings keeps its own lines (the check is on the group, not on a flag someone sets by hand). */
-                            const card = (p, inCycle = false, opts = {}) => (_jsxs("div", { className: "opt", style: { display: "flex", alignItems: "center", gap: 12, background: isActive(p) ? C.accentDim : C.card, border: `1px solid ${isActive(p) ? C.accent : C.border}`, borderRadius: 14, padding: inCycle ? "11px 13px" : 14, marginBottom: inCycle ? 8 : 12 }, children: [_jsxs("button", { onClick: () => onOpen(p), "aria-label": `Open ${p.name}`, className: "pressable", style: { flex: 1, display: "flex", alignItems: "center", gap: 12, background: "none", border: "none", color: C.text, cursor: "pointer", textAlign: "left", minWidth: 0 }, children: [(() => {
-                                                // Chosen glyph and colour, else the goal's default glyph in the theme accent — so a
-                                                // program saved before colours existed looks exactly as it always did. The ACTIVE
-                                                // program keeps its solid filled tile; the colour rides on top of that, not instead.
-                                                const Ic = iconForProgram(p), col = iconColorOf(p), active = isActive(p);
-                                                return (_jsx("div", { style: { width: inCycle ? 38 : 46, height: inCycle ? 38 : 46, borderRadius: inCycle ? 11 : 13, background: active ? col : `${col}1f`, border: active ? "none" : `1px solid ${col}44`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxSizing: "border-box" }, children: _jsx(Ic, { size: inCycle ? 18 : 22, color: active ? C.accentText : col }) }));
-                                            })(), _jsxs("div", { style: { minWidth: 0 }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 6 }, children: [_jsx("span", { style: { fontSize: inCycle ? 15 : 18, fontWeight: 700, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflowWrap: "anywhere", lineHeight: 1.2 }, children: inCycle ? (p.blockLabel || p.name) : p.name }), isActive(p) && _jsx("span", { style: { fontSize: 11, fontWeight: 700, letterSpacing: .4, color: C.accentText, background: C.accent, padding: "2px 6px", borderRadius: 8, textTransform: "uppercase", flexShrink: 0 }, children: "Active" })] }), !opts.hideMeta && _jsxs("div", { style: { fontSize: 13, color: C.muted, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: [SPLITS[p.config.split]?.name || "Custom", " \u00B7 ", p.days.length, " days \u00B7 ", GOALS[p.config.goal]?.label || ""] }), (() => {
-                                                        if (opts.hideMeta)
-                                                            return null;
-                                                        const chips = programSetupChips(p).filter(c => c.key === "focus" || c.key === "reduce");
-                                                        if (!chips.length)
-                                                            return null;
-                                                        return (_jsx("div", { style: { display: "flex", gap: 4, marginTop: 4, flexWrap: "wrap" }, children: chips.map(c => (_jsxs("span", { style: { fontSize: 11, fontWeight: 700, letterSpacing: .2, padding: "2px 7px", borderRadius: 8, maxWidth: 190, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                                                                    background: c.key === "focus" ? C.accentDim : C.bg2,
-                                                                    color: c.key === "focus" ? C.accentInk : C.muted }, children: [c.label, " ", c.value] }, c.key))) }));
-                                                    })()] })] }), !isActive(p) && onSetActive && (_jsx(HoldTip, { label: "Switch to this program", children: _jsx("button", { "aria-label": `Switch to ${p.name}`, onClick: () => onSetActive(p.id), className: "pressable hit", title: "Switch to this program", style: { ...tinyBtn(), width: 34, height: 34, color: C.accentInk, borderColor: `${C.accent}55`, background: C.accentDim }, children: _jsx(Check, { size: 15 }) }) })), !inCycle && (_jsx("button", { className: "pressable hit", "aria-label": `More options for ${p.name}`, title: "Program options", "aria-expanded": progOpts?.id === p.id, "aria-haspopup": "menu", onClick: ev => {
-                                            if (progOpts?.id === p.id)
-                                                return setProgOpts(null);
-                                            const r = ev.currentTarget.getBoundingClientRect();
-                                            setProgOpts({ id: p.id, top: r.bottom, bottom: r.top, right: r.right });
-                                        }, style: { ...tinyBtn(), width: 34, height: 34, color: C.muted }, children: _jsx(MoreHorizontal, { size: 16 }) }))] }, p.id));
-                            // a connected cycle group: header + its blocks in order, joined by a rail
-                            const cycleGroup = (cid, blocks) => {
-                                const c = cycleById[cid];
-                                const ordered = blocks.slice().sort((a, b) => (a.cycleIndex ?? 0) - (b.cycleIndex ?? 0));
-                                const activeBlockIdx = c ? (c.activeBlock || 0) : -1;
-                                /* What every block in this cycle says identically — hoisted to the header and dropped
-                                   from the rows. DERIVED, never assumed: blocks usually share split/days/emphasis, but a
-                                   lifter can edit one, and when they do the signatures differ and every row keeps its own
-                                   lines. The signature covers exactly what the rows print, so the two can never disagree
-                                   about what "shared" means. */
-                                const metaOf = (p) => [SPLITS[p.config.split]?.name || "Custom", `${p.days.length} days`, GOALS[p.config.goal]?.label || ""].join(" · ");
-                                const chipsOf = (p) => programSetupChips(p).filter(x => x.key === "focus" || x.key === "reduce");
-                                const sigOf = (p) => metaOf(p) + "|" + chipsOf(p).map(x => `${x.key}:${x.label} ${x.value}`).join(",");
-                                const shared = ordered.length > 1 && ordered.every(b => sigOf(b) === sigOf(ordered[0]));
-                                const sharedMeta = shared ? metaOf(ordered[0]) : null;
-                                const sharedChips = shared ? chipsOf(ordered[0]) : [];
-                                return (_jsxs("div", { "data-cycgroup": "cyc-" + cid, style: { marginBottom: 12, borderRadius: 16, overflow: "hidden", background: C.accentDim + "55" }, children: [_jsxs("button", { onClick: () => onOpenCycles && onOpenCycles(cid), className: "pressable", style: { width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "12px 14px", background: "none", border: "none", borderBottom: `1px solid ${C.accent}33`, color: C.text, cursor: "pointer", textAlign: "left" }, children: [(() => { const Ic = iconForCycle(c), col = iconColorOf(c); return _jsx("div", { style: { width: 30, height: 30, borderRadius: 8, background: col, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: _jsx(Ic, { size: 15, color: C.accentText }) }); })(), _jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { style: { fontSize: 15, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: (c && c.name) || "Training cycle" }), _jsxs("div", { style: { fontSize: 13, color: C.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: [sharedMeta || `Cycle · ${ordered.length} blocks`, activeBlockIdx >= 0 ? ` · block ${activeBlockIdx + 1}/${ordered.length}` : ""] }), sharedChips.length > 0 && (_jsx("div", { style: { display: "flex", gap: 4, marginTop: 4, flexWrap: "wrap" }, children: sharedChips.map(ch => (_jsxs("span", { style: { fontSize: 11, fontWeight: 700, letterSpacing: .2, padding: "2px 7px", borderRadius: 8, maxWidth: 210, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                                                                    background: ch.key === "focus" ? C.accentDim : C.bg2, color: ch.key === "focus" ? C.accentInk : C.muted }, children: [ch.label, " ", ch.value] }, ch.key))) }))] }), _jsx(ChevronRight, { size: 17, color: C.muted })] }), _jsxs("div", { style: { padding: "10px 12px 4px", position: "relative" }, children: [_jsx("div", { style: { position: "absolute", left: 19, top: 16, bottom: 14, width: 2, background: `${C.accent}33` } }), ordered.map((p, i) => (_jsxs("div", { style: { display: "flex", alignItems: "stretch", gap: 6 }, children: [_jsx("div", { style: { width: 14, display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 16, flexShrink: 0 }, children: _jsx("div", { style: { width: 11, height: 11, borderRadius: 999, background: i === activeBlockIdx ? C.accent : C.card, border: `2px solid ${i === activeBlockIdx ? C.accent : C.accent + "55"}`, zIndex: 1 } }) }), _jsx("div", { style: { flex: 1, minWidth: 0 }, children: card(p, true, { hideMeta: shared }) })] }, p.id)))] })] }, "cyc-" + cid));
-                            };
-                            // render a flat list of programs, but collapse same-cycle blocks into one group
-                            const renderList = (list) => {
-                                const out = [];
-                                const seenCycles = new Set();
-                                list.forEach(p => {
-                                    if (p.cycleId) {
-                                        if (seenCycles.has(p.cycleId))
-                                            return;
-                                        seenCycles.add(p.cycleId);
-                                        const blocks = list.filter(x => x.cycleId === p.cycleId);
-                                        out.push(cycleGroup(p.cycleId, blocks));
-                                    }
-                                    else
-                                        out.push(card(p));
-                                });
-                                return out;
-                            };
-                            return (_jsxs(_Fragment, { children: [activeProg && (_jsx("div", { style: { marginBottom: 4 }, children: renderList(pinnedCycleId ? saved.filter(p => p.cycleId === pinnedCycleId) : [activeProg]) })), folders.map(f => (_jsxs("div", { style: { marginBottom: 4 }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 6, margin: "4px 2px 10px" }, children: [_jsx(FolderIcon, { size: 14, color: C.accentInk }), _jsx("span", { style: { fontSize: 13, fontWeight: 700, color: C.text }, children: f }), _jsxs("span", { style: { fontSize: 13, color: C.faint }, children: ["\u00B7 ", sorted.filter(p => (p.folder || "").trim() === f).length] })] }), renderList(sorted.filter(p => (p.folder || "").trim() === f))] }, f))), folders.length > 0 && ungrouped.length > 0 && (_jsx("div", { style: { fontSize: 13, fontWeight: 700, color: C.faint, margin: "4px 2px 10px" }, children: "Unfiled" })), renderList(ungrouped)] }));
-                        })(), !sessionActive && _jsx("div", { "aria-hidden": "true", style: { height: hasTabBar ? 72 : 86, flexShrink: 0 } })] }) }), !sessionActive && (_jsxs("div", { className: "wpb-home-compose-bar", style: { position: "absolute", left: 0, right: 0, bottom: 0, zIndex: 6, padding: hasTabBar ? "8px 16px 8px" : "8px 16px calc(env(safe-area-inset-bottom) + 10px)", background: `linear-gradient(to top, ${C.bg} 78%, color-mix(in srgb, ${C.bg} 88%, transparent) 88%, transparent)`, display: "flex", gap: 8 }, children: [_jsxs("button", { onClick: onCreate, className: "pressable wpb-primary-action wpb-home-create", style: { flex: 1, minHeight: 50, padding: "0 16px", borderRadius: 14, border: "none", background: C.accent, color: C.accentText, fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }, children: [_jsx(Plus, { size: 19, strokeWidth: 2.6 }), " Create Program"] }), onQuick && (_jsxs("button", { onClick: onQuick, title: "Log a freestyle workout", className: "pressable wpb-home-quick", style: { flexShrink: 0, minHeight: 50, padding: "0 16px", borderRadius: 14, border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }, children: [_jsx(Zap, { size: 18 }), " Quick"] }))] })), _jsx(Exit, { when: browseOpen, children: browseOpen && (() => {
+                                    }) }), _jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", fontSize: 13 }, children: [_jsxs("span", { style: { fontWeight: 700, color: C.accentInk }, children: ["Block ", cycleInfo.blockIdx + 1, "/", cycleInfo.cycle.blockMeta.length] }), _jsx("span", { style: { color: C.faint }, children: "\u00B7" }), _jsx("span", { style: { fontWeight: 600, color: C.text }, children: cycleInfo.isDeload ? "Deload week" : `Week ${cycleInfo.weekIndex}/${cycleInfo.weeksTotal}` }), _jsx("span", { style: { color: C.faint }, children: "\u00B7" }), _jsxs("span", { style: { fontWeight: 600, color: C.text }, children: ["Day ", cycleInfo.dayIndex + 1, "/", cycleInfo.daysPerWeek] }), cycleInfo.dayLabel && _jsxs("span", { style: { color: C.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: ["\u00B7 ", cycleInfo.dayLabel] })] })] })), stats.total > 0 && (_jsx("div", { className: "wpb-metric-strip", style: { marginBottom: 20 }, children: [["Streak", stats.weekStreak, stats.weekStreak === 1 ? "week" : "weeks"], ["Total", stats.total, "logged"]].map(([k, v, sub]) => (_jsxs("div", { className: "wpb-metric", style: { padding: "12px 6px", textAlign: "center" }, children: [_jsx("div", { className: "mono", style: { fontSize: 22, fontWeight: 700, color: C.accentInk, lineHeight: 1 }, children: v }), _jsx("div", { style: { fontSize: 11, color: C.muted, marginTop: 4, fontWeight: 600 }, children: k }), _jsx("div", { style: { fontSize: 11, color: C.faint }, children: sub })] }, k))) })), needsBackup && !bkHide && (_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 10, background: C.card, border: `1px solid ${C.borderSoft}`, borderRadius: 13, padding: "9px 10px", marginBottom: 12 }, children: [_jsx(Save, { size: 16, color: C.accentInk, style: { flexShrink: 0 } }), _jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { style: { fontSize: 13, fontWeight: 700 }, children: "Backup recommended" }), _jsx("div", { style: { fontSize: 11.5, color: C.muted, lineHeight: 1.3, marginTop: 1 }, children: "Keep a copy of your programs and history." })] }), _jsx("button", { onClick: onBackup, className: "pressable", style: { flexShrink: 0, padding: "7px 10px", borderRadius: 9, border: `1px solid ${C.accent}55`, background: C.accentDim, color: C.accentInk, fontSize: 12, fontWeight: 700, cursor: "pointer" }, children: "Back up" }), _jsx("button", { "aria-label": "Dismiss", onClick: () => setBkHide(true), className: "pressable", title: "Not now", style: { flexShrink: 0, background: "none", border: "none", color: C.faint, cursor: "pointer", padding: 3 }, children: _jsx(X, { size: 15 }) })] })), !upNext && !historyCount && !saved.length && (_jsx("button", { onClick: onCreate, className: "pressable", style: { width: "100%", marginBottom: 20, padding: 16, borderRadius: 16, border: `1px solid ${C.accent}`, background: C.card, textAlign: "left", position: "relative", overflow: "hidden" }, children: _jsxs("div", { style: { position: "relative" }, children: [_jsx("div", { style: { fontSize: 13, fontWeight: 700, letterSpacing: 1.2, color: C.accentInk, textTransform: "uppercase" }, children: "Start here" }), _jsx("div", { style: { fontSize: 22, fontWeight: 700, marginTop: 6, letterSpacing: -0.4 }, children: "Build my program" }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginTop: 6, lineHeight: 1.45 }, children: "Choose your days, time, and equipment. Pursuit builds the sets, reps, and progression." }), _jsxs("div", { style: { display: "inline-flex", alignItems: "center", gap: 6, marginTop: 12, padding: "10px 15px", borderRadius: 12, background: C.accent, color: C.accentText, fontSize: 15, fontWeight: 700 }, children: [_jsx(Plus, { size: 16, strokeWidth: 3 }), " Get started"] })] }) })), quickActions, settledIn ? null : (_jsxs(_Fragment, { children: [_jsxs("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", margin: "0 2px 12px" }, children: [_jsx("div", { style: { ...eyebrow() }, children: "Start from a template" }), _jsxs("button", { onClick: () => { setTplQuery(""); setBrowseOpen(true); }, className: "pressable", style: { background: "none", border: "none", color: C.accentInk, cursor: "pointer", fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", gap: 2, padding: 2 }, children: ["Browse all ", TEMPLATES.length, " ", _jsx(ChevronRight, { size: 14 })] })] }), _jsxs("div", { className: "wpb-hscroll", style: { display: "flex", gap: 12, overflowX: "auto", overflowY: "hidden", touchAction: "pan-x pan-y", paddingBottom: 6, marginBottom: 20 }, children: [TEMPLATES.filter(t => t.featured).sort((a, b) => (a.featuredRank ?? 50) - (b.featuredRank ?? 50)).map(t => (_jsxs("button", { onClick: () => onTemplate(t), className: "pressable wpb-carousel-card", style: { flexShrink: 0, width: 210, textAlign: "left", background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: "15px", cursor: "pointer", color: C.text }, children: [_jsx("div", { style: { ...eyebrowAccent() }, children: t.tag }), _jsx("div", { style: { fontSize: 18, fontWeight: 700, marginTop: 6, letterSpacing: -0.3 }, children: t.name }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginTop: 4, lineHeight: 1.4, minHeight: 34, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }, children: t.desc }), _jsxs("div", { style: { display: "flex", alignItems: "center", gap: 4, marginTop: 8, color: C.accentInk, fontSize: 13, fontWeight: 600 }, children: [_jsx(Zap, { size: 13 }), " Use template"] })] }, t.id))), _jsxs("button", { onClick: () => { setTplQuery(""); setBrowseOpen(true); }, className: "pressable", style: { flexShrink: 0, width: 130, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, background: C.accentDim, border: `1px dashed ${C.accent}55`, borderRadius: 16, padding: "15px", cursor: "pointer", color: C.accentInk }, children: [_jsx(Library, { size: 22 }), _jsxs("div", { style: { fontSize: 13, fontWeight: 700, textAlign: "center", lineHeight: 1.3 }, children: ["Browse all ", TEMPLATES.length] })] })] })] })), saved.length === 0 ? (_jsxs("div", { className: "wpb-empty-state", style: { marginTop: 24, textAlign: "center", color: C.faint }, children: [_jsx(Library, { size: 48, color: C.border, style: { margin: "0 auto" } }), _jsx("div", { style: { marginTop: 12, fontSize: 15, color: C.muted }, children: legacySaved.length ? "Your earlier plans are saved above." : "No programs yet." }), _jsx("div", { style: { fontSize: 13, marginTop: 4 }, children: legacySaved.length ? "Preview an update, or build something new." : "Build your first program around your goals and schedule." }), _jsxs("button", { onClick: onCreate, className: "pressable wpb-primary-action wpb-empty-action", style: { marginTop: 16, border: "none", background: C.accent, color: C.accentText, cursor: "pointer" }, children: [_jsx(Plus, { size: 15 }), " ", legacySaved.length ? "New program" : "Build a program"] })] })) : _jsx(HomePrograms, { saved, cycles, activeId, onOpen, onOpenCycles, onSetActive, onCompare, onOptions: (p, ev) => { if (progOpts?.id === p.id) return setProgOpts(null); const r = ev.currentTarget.getBoundingClientRect(); setProgOpts({ id: p.id, top: r.bottom, bottom: r.top, right: r.right }); } }), !sessionActive && _jsx("div", { "aria-hidden": "true", style: { height: hasTabBar ? 72 : 86, flexShrink: 0 } })] }) }), !sessionActive && (_jsxs("div", { className: "wpb-home-compose-bar", style: { position: "absolute", left: 0, right: 0, bottom: 0, zIndex: 6, padding: hasTabBar ? "8px 16px 8px" : "8px 16px calc(env(safe-area-inset-bottom) + 10px)", background: `linear-gradient(to top, ${C.bg} 78%, color-mix(in srgb, ${C.bg} 88%, transparent) 88%, transparent)`, display: "flex", gap: 8 }, children: [_jsxs("button", { onClick: onCreate, className: "pressable wpb-primary-action wpb-home-create", style: { flex: 1, minHeight: 50, padding: "0 16px", borderRadius: 14, border: "none", background: C.accent, color: C.accentText, fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }, children: [_jsx(Plus, { size: 19, strokeWidth: 2.6 }), " Create Program"] }), onQuick && (_jsxs("button", { onClick: onQuick, title: "Log a freestyle workout", className: "pressable wpb-home-quick", style: { flexShrink: 0, minHeight: 50, padding: "0 16px", borderRadius: 14, border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }, children: [_jsx(Zap, { size: 18 }), " Quick"] }))] })), _jsx(Exit, { when: browseOpen, children: browseOpen && (() => {
                     const q = tplQuery.trim().toLowerCase();
                     const matchFacets = (t) => {
                         const f = templateFacets(t);
@@ -33083,7 +33409,7 @@ function blockChangeSummary(before, after) {
     const added = [...newIds].filter(id => !oldIds.has(id)).map(id => EX_BY_ID[id]?.name || id);
     const removed = [...oldIds].filter(id => !newIds.has(id)).map(id => EX_BY_ID[id]?.name || id);
     const opening = p => {
-        const rows = Object.values(p.nextWeekPrescriptions || {}).map(weeks => weeks?.[0]).filter(Boolean);
+        const rows = Object.values(p.nextWeekPrescriptions || {}).map(weeks => weeks?.[1] ?? weeks?.["1"]).filter(Boolean);
         if (!rows.length)
             return null;
         const reps = rows.flatMap(row => row.reps || []).filter(Number.isFinite);
@@ -33293,7 +33619,7 @@ function LibraryView({ onBack, banned = [], onBan, onSetBan, goals = {}, onSetGo
                                         setDetailId(null); }, className: "pressable", "aria-label": "Ban from all programs", "aria-pressed": banned.includes(detail.id), style: { width: "100%", padding: "13px", borderRadius: 12, border: `1px solid ${banned.includes(detail.id) ? C.border : C.dangerDim}`, background: "none", color: banned.includes(detail.id) ? C.muted : C.danger, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 8 }, children: [_jsx(Ban, { size: 15 }), " ", banned.includes(detail.id) ? "Banned \u2014 tap to unban" : "Ban from all programs"] })] })] })) })] }));
 }
 const INTRO_VERSION = 5; // bump when onboarding content changes → returning users see it once more
-const WHATS_NEW_VERSION = 210; // bump when there's an update worth showing existing users on Home
+const WHATS_NEW_VERSION = 214; // bump when there's an update worth showing existing users on Home
 /* How much training history to keep.
 
    Measured, not guessed: a typical logged session (7 exercises, 3–5 sets each) serialises to ~1,095
@@ -35496,7 +35822,7 @@ function App() {
         const target = saved.find(p => p.id === id);
         const targetCycle = target?.cycleId ? cycles.find(c => c.id === target.cycleId) : null;
         if (targetCycle?.engineSource === "pursuit-next" && targetCycle.blockIds[targetCycle.activeBlock || 0] !== id) {
-            setAppToast({ msg: "Future/completed Pursuit Next cycle blocks cannot become active manually. Advance the cycle through Complete Block so history and phase state stay aligned." });
+            setAppToast({ msg: "This block starts when you finish the current one — open the cycle and tap Complete Block." }); // plain words; was engine jargon
             return;
         }
         const prevPin = pinnedId, prevCycles = cycles;
@@ -36159,22 +36485,42 @@ function App() {
         g[exId] = w;
     else
         delete g[exId]; return g; });
-    const editHistoryEntry = (histId, exId, change) => {
-        setHistory(prev => prev.map(h => {
-            if (h.id !== histId)
-                return h;
-            const perf = { ...(h.perf || {}) };
-            if (change == null)
-                delete perf[exId];
-            else {
-                const ex0 = perf[exId] || {};
-                perf[exId] = { ...ex0, weight: change.weight, reps: change.reps, sets: [{ w: change.weight, r: change.reps }], date: ex0.date || h.date };
-            }
-            let vol = 0, sets = 0;
-            Object.values(perf).forEach(p => (p.sets || []).forEach(s => { vol += (s.w || 0) * (s.r || 0); sets++; }));
-            return { ...h, perf, volume: Math.round(vol), setsDone: sets };
-        }));
+    const commitHistoryCorrection = (histId, corrected) => {
+        const original = history.find(h => h && h.id === histId);
+        if (!original || !corrected)
+            return;
+        const clean = normalizeEditedHistoryEntry(original, corrected);
+        const prevHistory = history, prevPerf = perf;
+        const nextHistory = history.map(h => h?.id === histId ? clean : h);
+        const nextPerf = perfAfterHistoryReplace(history, perf, histId, clean);
+        setHistory(nextHistory);
+        setPerf(nextPerf);
+        setAppToast({
+            msg: `Corrected ${clean.dayLabel || "workout"} history`,
+            undo: () => { setHistory(prevHistory); setPerf(prevPerf); setAppToast(null); }
+        });
     };
+    const editHistoryEntry = (histId, exId, change) => {
+        const original = history.find(h => h && h.id === histId);
+        if (!original)
+            return;
+        const draft = { ...original, perf: { ...(original.perf || {}) } };
+        if (change == null) {
+            delete draft.perf[exId];
+        }
+        else {
+            const p = original.perf?.[exId];
+            if (!p)
+                return;
+            const sets = (Array.isArray(p.sets) && p.sets.length ? p.sets : [{ w: p.weight ?? 0, r: p.reps }]).map(st => ({ ...st }));
+            const workIdx = sets.map((st, i) => ({ st, i })).filter(x => !x.st?.sub && Number(x.st?.r) > 0)
+                .sort((a, b) => (Number(b.st.w) || 0) - (Number(a.st.w) || 0) || (Number(b.st.r) || 0) - (Number(a.st.r) || 0))[0]?.i ?? 0;
+            sets[workIdx] = { ...sets[workIdx], w: change.weight, r: change.reps };
+            draft.perf[exId] = { ...p, sets };
+        }
+        commitHistoryCorrection(histId, draft);
+    };
+    const editHistoryWorkout = (histId, corrected) => commitHistoryCorrection(histId, corrected);
     /* DELETE A WHOLE LOGGED SESSION. Haiden asked for this twice and remembered the app once having
        it; it never did — I checked all 68 deployed builds, and what exists is "Delete entry" (ONE
        exercise inside a log) and "Clear all". His two follow-on asks — that the rotation goes back a
@@ -36437,7 +36783,7 @@ function App() {
                                     else {
                                         setFocusCycle(null);
                                         pushView("cycles", "home");
-                                    } }, onQuick: startQuickWorkout, onOpen: (p) => { openWithDraft(p); pushView("program", "home"); }, onDelete: handleDelete, onDuplicate: handleDuplicate, onNextBlock: startNextBlock, onConvertCycle: beginCycleConversion, activeId: upNext?.program?.id || null, onSwitchProgram: () => setSwitchOpen(true), onSetActive: setActiveProgram, cycles: cycles, onHistory: () => navToTab("progress"), onStrength: () => { setProgressFocus("strength"); navToTab("progress"); }, historyCount: history.length, upNext: upNext, onStartNext: startUpNext, onStartAlt: startUpNextAlt, onOpenActive: openActive, onTemplate: startTemplate, onDeload: startDeload, canDeload: !!upNext, onLight: startLight, canLight: !!upNext, onLibrary: () => pushView("library", "home"), onCalc: () => setCalcOpen(true), onCompare: () => { setCompareMode("programs"); pushView("compare", "home"); }, bodyweight: bodyweight, sex: sex, age: age, unit: unit, needsBackup: loaded && !liveDockVisible && (saved.length > 0 || history.length >= 3) && (Date.now() - (lastBackup || 0) > 14 * 86400000), onBackup: () => { setSettingsFocus("export"); navToTab("settings"); }, whatsNew: loaded && !liveDockVisible && seenWhatsNew < WHATS_NEW_VERSION && (history.length > 0 || saved.length > 0), onDismissWhatsNew: () => setSeenWhatsNew(WHATS_NEW_VERSION), onOpenChangelog: () => setChangelogOpen(true), sessionActive: !!liveSession, hasTabBar: tabView, showInstall: loaded && !liveDockVisible && !installed && (!!installEvent || isIosSafari) && (Date.now() - (installDismissedAt || 0) > 14 * 86400000), installEvent: installEvent, isIosSafari: isIosSafari, onDismissInstall: () => { setInstallDismissedAt(Date.now()); setInstallEvent(null); } })) : view === "progress" ? (_jsx(HistoryView, { history: history, onDeleteEntry: deleteHistoryEntry, birth: birth, embedded: true, activeProgram: upNext?.program || null, activeWeek: upNext?.weekIndex || 1, onGoTrain: startUpNext, nextLabel: upNext?.day?.label || null, focusSection: progressFocus, onFocusHandled: () => setProgressFocus(null), onClear: () => { const prev = history; setHistory([]); if (prev.length)
+                                    } }, onQuick: startQuickWorkout, onOpen: (p) => { openWithDraft(p); pushView("program", "home"); }, onDelete: handleDelete, onDuplicate: handleDuplicate, onNextBlock: startNextBlock, onConvertCycle: beginCycleConversion, activeId: upNext?.program?.id || null, onSwitchProgram: () => setSwitchOpen(true), onSetActive: setActiveProgram, cycles: cycles, onHistory: () => navToTab("progress"), onStrength: () => { setProgressFocus("strength"); navToTab("progress"); }, historyCount: history.length, upNext: upNext, onStartNext: startUpNext, onStartAlt: startUpNextAlt, onOpenActive: openActive, onTemplate: startTemplate, onDeload: startDeload, canDeload: !!upNext, onLight: startLight, canLight: !!upNext, onLibrary: () => pushView("library", "home"), onCalc: () => setCalcOpen(true), onCompare: () => { setCompareMode("programs"); pushView("compare", "home"); }, bodyweight: bodyweight, sex: sex, age: age, unit: unit, needsBackup: loaded && !liveDockVisible && (saved.length > 0 || history.length >= 3) && (Date.now() - (lastBackup || 0) > 14 * 86400000), onBackup: () => { setSettingsFocus("export"); navToTab("settings"); }, whatsNew: loaded && !liveDockVisible && seenWhatsNew < WHATS_NEW_VERSION && (history.length > 0 || saved.length > 0), onDismissWhatsNew: () => setSeenWhatsNew(WHATS_NEW_VERSION), onOpenChangelog: () => setChangelogOpen(true), sessionActive: !!liveSession, hasTabBar: tabView, showInstall: loaded && !liveDockVisible && !installed && (!!installEvent || isIosSafari) && (Date.now() - (installDismissedAt || 0) > 14 * 86400000), installEvent: installEvent, isIosSafari: isIosSafari, onDismissInstall: () => { setInstallDismissedAt(Date.now()); setInstallEvent(null); } })) : view === "progress" ? (_jsx(HistoryView, { history: history, onDeleteEntry: deleteHistoryEntry, onEditEntry: editHistoryWorkout, birth: birth, embedded: true, activeProgram: upNext?.program || null, activeWeek: upNext?.weekIndex || 1, onGoTrain: startUpNext, nextLabel: upNext?.day?.label || null, focusSection: progressFocus, onFocusHandled: () => setProgressFocus(null), onClear: () => { const prev = history; setHistory([]); if (prev.length)
                                         setAppToast({ msg: `Cleared ${prev.length} workout${prev.length === 1 ? "" : "s"}`, undo: () => { setHistory(prev); setAppToast(null); } }); }, bodyweight: bodyweight, sex: sex, age: age, unit: unit, onSetProfile: (patch) => { if (patch.bodyweight !== undefined)
                                         setBodyweight(patch.bodyweight); if (patch.sex !== undefined)
                                         setSex(patch.sex); if (patch.birth !== undefined) {
@@ -36661,7 +37007,7 @@ export default function RootApp() {
     return _jsx(ErrorBoundary, { full: true, children: _jsx(App, {}) });
 }
 export { exerciseSlotSec, candidateMinutes, extraSetMinutes, WARMUP_SET_SEC, baseSetsFor, loggedVolume, loggedSubVolume, pressAngle, movePattern, availableFor, warmupSets, warmupCount, rankSwapAlts, starvedRegions, programSetupChips, weeklySubVolume, directSubVolume, SUB_LANDMARKS, subRegionOf, weeklyVolume, landmarkFor, coverageGaps, expandEquipment, EQUIP_IMPLIES, paceFactor, estimateMinutesFor, sessionExercisePlan, volumeZone, partZone, mavFor, PLANNED_ROOM_RIR, EX_BY_ID, CHANGELOG, CHANGELOG_ITEMS, WHATS_NEW_MAX, groupSessionsByMonth, groupSessionsByCycle, planOverview, phaseTone, PCT_SCHEMES, MACHINE_SETUP, SETUP_LABELS, plateauSessions, pickTopSet, setupFieldsFor, setupFieldsWithStored, navPush, navPop, propagateCycleEditsPure, ALL_EQUIP_IDS, EQUIPMENT, ageFactor, strengthLevel, strengthSnapshot, STANDARDS, STD_LEVELS, ageFrom, birthParts, birthFromAge, todayISO, normalizeBwLog, normalizeMeasureLog, weeklyBodyweightTrend, lengthUnitFor, asLengthUnit, BW_LOG_CAP, STORE_MIGRATIONS, calibratedDayPerf, onPlanExempt, plannedGapHours, prescribedRIRof, isBarLike, isMachineLike, barFor, BARS, shareSession, shareStrengthScore, setGymLimits, gymCapFor, normalizeGyms, templateFacets, templateEmphasis, ExerciseFigure, figurePose, EXERCISES, assertFigureCoverage, FIGURE_GENERIC_OK, Exit, mergeStores, sessionSnapshotStatus, mergeSessionData, mergedSetCount, nextPrefillTargetIndex, encodeProgramCode, decodeProgramCode, decodeGallery, gallerySubmission, galleryIssueBody, programFingerprint, personalRepSlope, coachFacts, volumeResponse, volumeVerdicts, STRETCH_FOCUS, STRETCH_FOCUS_E2, STRETCH_FOCUS_E3, lastSetTech, techSetTag, techExplain, capHistory, HISTORY_CAP, HISTORY_BYTES, rirTrend, sessionCoach, coverageRelief, volumeLedger, landmarkOf, completionRate, recommendedSplit, SPLIT_RECOMMENDATIONS, NOVICE_INELIGIBLE_SPLITS, parseRIRNum, sameProgramContent, rirAtLoad, e1rmAnchorOf, regionGapsFor, regionGapFix, REGION_REQUIRED, previewVolumeNudge, coachNote, coachIntent, exerciseSeries, rmAt, EX_METRICS, EX_WINDOWS, exRecords, cycleProgress, blockReview, lastTopSet, betterTopSet, e1rmRIR, loadAtRIR, EPLEY_SLOPE, E1RM_REP_CAP, ASSUMED_RIR, isWorkSet, workSetsOf, dayMuscleBreakdown, weekMuscleBreakdown, plannedWeek, dayMuscleVolume, capWords, WHATS_NEW_WORDS, homeCardPlan, HOME_INSIGHT_BUDGET, WhatsNewCard, PATTERNS, patternOf, sameMovement, lengthOf, parseStoredData, recordReleaseDiag, readReleaseDiagnostics, clearReleaseDiagnostics, releaseDiagnosticsText };
-export { ENGINE_V, ENGINES, ENGINE_RULES, engHas, engLacks, engineInfo, STORE_VERSION, migrateStore, GOALS, SESSIONS, EXP, THEMES, normalizeMusclePreferences, preferenceFloor, GEN_PIPELINE, runPipeline, openGeneration, schemeTierCount, COVERAGE_PASSES, coverageContext, prescribedDaySize, ASSISTANCE_SIZE, candidateSlotMin, daySeconds, advanceCycle, templateConfig, TEMPLATES, CYCLE_TEMPLATES, SPLITS, DAY_TEMPLATES, templateIntent, TEMPLATE_CATS, TEMPLATE_FILTER_GROUPS, sfrOf, axialCost, fitSessionTime, MRV_GRAIN, weekIntent, historyForProgram, IDEAL_SLOTS, dayMuscleLoad, dayOverlap, distributeVolBias, capWeeklyVolume, buildWeekPlan, programQuality, compareQuality, COVERED_MUSCLES, BEST_OF_N, traceGeneration, setPipeTrace, setClaimTrace, emitClaim, compositeMrv, PATTERN_GROUPS, PATTERN_MIN_SETS, patternTrainable, patternGapsOf, weeksOf, phaseFor, estimateMinutes, addedMinutes, addedSeconds, fitChip, daysInWeek, exerciseAt, rotationOf, fitSessionToTime, blockRetro, volumeAudit, LANDMARKS, secondaryOf, PART_ORDER, FOCUS_CAVEAT, WEEK_ORDER_TERMS, computeCell, pctSetsFor, gzPlanFor, gzAdvance, projectNextTM, nextTMEvidence, ddpNextForSet, lastSetEffort, styleFor, autoStyleFor, plateauOf, plateauOfLift, plateauSplitByDay, dayScopedTrends, fitText, fitFont, wrapList, drawRecapCard, exerciseTrends, summarizeSets, muscleRecovery, volumeAdvice, weeklyRecap, deloadAdvice, overreachSignal, constantLoadDecay, sessionE1RM, computeMilestones, ICON_CHOICES, ICON_GROUPS, ICON_COLORS, iconForProgram, iconForCycle, iconColorOf, nextSessionCursor, nextDueDayId, historyDayIndex, autoStyleDetail, explainPrescription, explainGeneration, perfAfterDelete, normalizeHistoryDayIds, normalizeCycleLinks, auditProgramWeek, auditSets, simulateAndAudit, repRange, goalForDay, blockPhase, rirFor, gymRackFor, pickActiveProgram, strengthScore, scoreAttribution, e1rm, loadStep, linearInc, lowerBodyLift, LOWER_PARTS, roundTo, setLoadInc, effortLabel, platesPerSide, setAvailPlates, strengthScoreHistory, restSec, effectiveRest, setRestScaleGlobal, dayPerfFor, lastDayPerf, anchorPerfFor, calibratedAnchorPerf, sessionSuggestion, prescribeSets, PROG_POLICIES, policyIdFor, resolveStyle, loggedRIRof, syncSubSets, growMyoSets, styleOverride, stallCountFor, SHED_TOL, STALL_ENGAGE, E1RM_HOLD, STALL_WINDOW, buildLifterModel, effortCalibration, calibrateDayPerf, readinessBand, bandForExercise, classifyPlateau, runSelfTest };
+export { ENGINE_V, ENGINES, ENGINE_RULES, engHas, engLacks, engineInfo, STORE_VERSION, migrateStore, GOALS, SESSIONS, EXP, THEMES, normalizeMusclePreferences, preferenceFloor, GEN_PIPELINE, runPipeline, openGeneration, schemeTierCount, COVERAGE_PASSES, coverageContext, prescribedDaySize, ASSISTANCE_SIZE, candidateSlotMin, daySeconds, advanceCycle, templateConfig, TEMPLATES, CYCLE_TEMPLATES, SPLITS, DAY_TEMPLATES, templateIntent, TEMPLATE_CATS, TEMPLATE_FILTER_GROUPS, sfrOf, axialCost, fitSessionTime, MRV_GRAIN, weekIntent, historyForProgram, IDEAL_SLOTS, dayMuscleLoad, dayOverlap, distributeVolBias, capWeeklyVolume, buildWeekPlan, programQuality, compareQuality, COVERED_MUSCLES, BEST_OF_N, traceGeneration, setPipeTrace, setClaimTrace, emitClaim, compositeMrv, PATTERN_GROUPS, PATTERN_MIN_SETS, patternTrainable, patternGapsOf, weeksOf, phaseFor, estimateMinutes, addedMinutes, addedSeconds, fitChip, daysInWeek, exerciseAt, rotationOf, fitSessionToTime, blockRetro, volumeAudit, LANDMARKS, secondaryOf, PART_ORDER, FOCUS_CAVEAT, WEEK_ORDER_TERMS, computeCell, pctSetsFor, gzPlanFor, gzAdvance, projectNextTM, nextTMEvidence, ddpNextForSet, lastSetEffort, styleFor, autoStyleFor, plateauOf, plateauOfLift, plateauSplitByDay, dayScopedTrends, fitText, fitFont, wrapList, drawRecapCard, exerciseTrends, summarizeSets, muscleRecovery, volumeAdvice, weeklyRecap, deloadAdvice, overreachSignal, constantLoadDecay, sessionE1RM, computeMilestones, ICON_CHOICES, ICON_GROUPS, ICON_COLORS, iconForProgram, iconForCycle, iconColorOf, nextSessionCursor, nextDueDayId, historyDayIndex, autoStyleDetail, explainPrescription, explainGeneration, perfAfterDelete, perfAfterHistoryReplace, normalizeEditedHistoryEntry, lifterModelKey, normalizeHistoryDayIds, normalizeCycleLinks, auditProgramWeek, auditSets, simulateAndAudit, repRange, goalForDay, blockPhase, rirFor, gymRackFor, pickActiveProgram, strengthScore, scoreAttribution, e1rm, loadStep, linearInc, lowerBodyLift, LOWER_PARTS, roundTo, setLoadInc, effortLabel, platesPerSide, setAvailPlates, strengthScoreHistory, restSec, effectiveRest, setRestScaleGlobal, dayPerfFor, lastDayPerf, anchorPerfFor, calibratedAnchorPerf, sessionSuggestion, prescribeSets, PROG_POLICIES, policyIdFor, resolveStyle, loggedRIRof, syncSubSets, growMyoSets, styleOverride, stallCountFor, SHED_TOL, STALL_ENGAGE, E1RM_HOLD, STALL_WINDOW, buildLifterModel, effortCalibration, calibrateDayPerf, readinessBand, bandForExercise, classifyPlateau, runSelfTest };
 // Integration seams for storage and setup fault-injection gates; removed from the browser bundle.
 export { loadStore, saveStore, Wizard };
 /* Test-only: integration/m115-workout-browser-check.mjs imports these by name. They were missing from the shipped M116
@@ -36669,3 +37015,5 @@ export { loadStore, saveStore, Wizard };
    The running app mounts only the default export; these change nothing in production. */
 export { WorkoutSession, StepButton, StyleTag };
 export { ExerciseAnimation, FormVideoLink, formVideoUrl, refusalMessage };
+
+export { HomePrograms, homeProgramGroups, homePhaseIdentity };

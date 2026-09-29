@@ -1,0 +1,35 @@
+Pursuit Iron M163 — prescription integrity verification
+App 3.213.0 / Build 769 / Pursuit Engine 0.62.5
+Base: M162 progression-safety release
+
+REPORTED FOLLOW-UP
+- Program View exposed an effort pair as "2,2".
+- Program appeared to have dropped a large number of sets.
+
+CONFIRMED DEFECTS
+1. Array-shaped RIR values could leak through to shell rendering and stringify as "2,2 RIR".
+2. Finite-program week advancement used raw workout-history row count. Repeated/duplicate rows for one planned day could falsely advance the current week. Later weeks/deloads may intentionally prescribe fewer sets, creating the appearance that program volume was lost.
+
+M163 EXPECTED BEHAVIOR
+- [2,2] -> "2 RIR"; [1,2] -> "1–2 RIR"; [5,8] reps -> "5-8".
+- A 5-day week with five duplicate logs of Day 1 remains Week 1.
+- A 5-day week with five distinct completed days advances to Week 2.
+- Normal stored cell set count is unchanged by shape normalization.
+- M162 rep-floor safety remains: reported Back Squat case -> decrease to 185 lb, not hold 215.
+
+AUTOMATED CHECKS
+PASS 9/9 prescription-integrity checks.
+PASS M162 progression-safety regression.
+PASS shell progression-safety regression.
+PASS custom-program progression-safety regression.
+PASS full ESM import: 51 engine/shadow modules.
+PASS All Programs regression suite: 29/29 interaction checks.
+PASS authored JavaScript syntax: 53 files.
+PASS release integrity: 76 service-worker precache entries present; runtime/UI hashes match.
+PASS cache boundary: pursuit-iron-production-m163-prescription-integrity
+
+IMPORTANT LIMITATION
+The build cannot inspect the phone's IndexedDB. M163 fixes a proven false-week-advance path but does not claim that this was the only reason the user's local set total changed. If lower set counts persist after updating, export the app backup and compare the saved nextWeekPrescriptions for that exact program.
+
+NOT CLAIMED
+Real Android/PWA device validation has not been run for M163 yet.

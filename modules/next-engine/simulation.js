@@ -174,6 +174,12 @@ function simulateSession(session, request, states, profile, forcedStalls) {
             state.positive++;
             state.repTarget = Math.min(exercise.prescription.reps[1], Math.max(state.repTarget + 1, decision.suggestedReps ?? state.repTarget + 1));
         }
+        else if (decision.action === 'decrease_load') {
+            state.holds++;
+            if (decision.suggestedLoad !== undefined && decision.suggestedLoad !== null)
+                state.load = decision.suggestedLoad;
+            state.repTarget = exercise.prescription.reps[0];
+        }
         else if (decision.action === 'hold')
             state.holds++;
         else {
@@ -190,7 +196,7 @@ function simulateSession(session, request, states, profile, forcedStalls) {
     return decisions;
 }
 function actionCounter() {
-    return { increase_load: 0, add_reps: 0, hold: 0, review: 0 };
+    return { increase_load: 0, add_reps: 0, decrease_load: 0, hold: 0, review: 0 };
 }
 function metrics(program) {
     const exercises = program.sessions.flatMap(s => s.exercises);
@@ -276,7 +282,7 @@ function blockResponse(program, states, actionCounts, before) {
     const actionTotal = Object.values(actionCounts).reduce((sum, value) => sum + value, 0);
     const progressionTotal = actionCounts.increase_load + actionCounts.add_reps;
     const progressionRate = actionTotal ? progressionTotal / actionTotal : 0;
-    const holdRate = actionTotal ? actionCounts.hold / actionTotal : 0;
+    const holdRate = actionTotal ? (actionCounts.hold + actionCounts.decrease_load) / actionTotal : 0;
     const reviewRate = actionTotal ? actionCounts.review / actionTotal : 0;
     // A fatigue-limited block should be detectable even when the progression layer correctly
     // chooses conservative holds rather than escalating every poor exposure to a review.

@@ -1,0 +1,117 @@
+# Committed-candidate certification pass for Pursuit Iron 4.0.
+name: Pursuit Iron 4.0 Production Release
+
+on:
+  push:
+    branches:
+      - m194-simulation-progression-parity
+    paths:
+      - '.github/workflows/v4-production-release.yml'
+      - 'scripts/finalize-v4-release.mjs'
+      - 'verification/v4-release-integrity-test.mjs'
+      - 'verification/**'
+      - 'modules/**'
+      - 'vendor/**'
+      - 'app.css'
+      - 'index.html'
+      - 'sw.js'
+      - 'BUILD_PROFILE.json'
+      - 'RELEASE_MANIFEST.json'
+      - 'CHANGELOG.md'
+      - 'scripts/verify-release.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  production-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Finalize Pursuit Iron 4.0 identity and hashes
+        run: node scripts/finalize-v4-release.mjs
+
+      - name: Certify Pursuit Iron 4.0 release identity
+        run: node verification/v4-release-integrity-test.mjs
+
+      - name: Full release verifier
+        run: node scripts/verify-release.mjs
+
+      - name: Adaptive progression M189-M194
+        shell: bash
+        run: |
+          set -euo pipefail
+          for test in \
+            verification/m189-adaptive-progression-selection-test.mjs \
+            verification/m189-integration-wiring-test.mjs \
+            verification/m190-progression-lifecycle-test.mjs \
+            verification/m191-progression-explainability-ui-test.mjs \
+            verification/m192-progression-transition-deltas-test.mjs \
+            verification/m193-cycle-progression-context-test.mjs \
+            verification/m194-simulation-progression-parity-test.mjs
+          do
+            echo "==> $test"
+            node --no-warnings --experimental-loader ./verification/import-loader.mjs "$test"
+          done
+
+      - name: Preserve M181-M188 production contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          for test in \
+            verification/m181-dose-reconciliation-test.mjs \
+            verification/m182-exercise-selection-intelligence-test.mjs \
+            verification/m182-selection-matrix.mjs \
+            verification/m183-progression-safeguards-test.mjs \
+            verification/m184-longitudinal-evidence-test.mjs \
+            verification/m185-phase-specialization-test.mjs \
+            verification/m186-explainable-block-review-test.mjs \
+            verification/m188-novice-strength-fragmentation-test.mjs \
+            verification/m188-production-torture-test.mjs
+          do
+            echo "==> $test"
+            node --no-warnings --experimental-loader ./verification/import-loader.mjs "$test"
+          done
+
+      - name: Install browser PWA harness
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v google-chrome
+          npm install --no-save --ignore-scripts puppeteer-core@24
+
+      - name: Real-browser PWA update lifecycle
+        env:
+          CHROME_BIN: /usr/bin/google-chrome
+        run: node verification/m178-pwa-update-browser-test.mjs
+
+      - name: Persist certified Pursuit Iron 4.0 candidate
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add \
+            modules/next-engine/config.js \
+            modules/App.js \
+            index.html \
+            sw.js \
+            BUILD_PROFILE.json \
+            RELEASE_MANIFEST.json \
+            CHANGELOG.md
+          if git diff --cached --quiet; then
+            echo "Pursuit Iron 4.0 candidate is already committed."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "M195: finalize Pursuit Iron 4.0.0 production candidate"
+          git push origin HEAD:m194-simulation-progression-parity

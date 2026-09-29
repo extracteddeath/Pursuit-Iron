@@ -181,7 +181,10 @@ export function shellConfigToNextRequest(config, banned = [], legacyExercises = 
         },
         preferences: {
             preferredSplit: split, lockedSplit: split, avoidedExercises: mapBanned(banned, legacyExercises),
-            volumeApproach: config.volumeApproach === 'minimalist' ? 'minimalist' : 'standard'
+            volumeApproach: config.volumeApproach === 'minimalist' ? 'minimalist' : 'standard',
+            // Persist the user's global method choice in the immutable request snapshot so later
+            // blocks cannot silently fall back to Auto after honoring the choice at creation.
+            progressionStyle: config.progressionStyle ?? 'auto'
         },
         seed: seed ?? Math.max(1, Math.floor(Date.now() % 2147483647))
     };
@@ -469,6 +472,21 @@ function schemeStyle(config, role, style) {
         return 'e1rm';
     return style;
 }
+function progressionPlanItem(config, exercise) {
+    const style = schemeStyle(config, exercise.role, exercise.progressionStyle ?? 'auto');
+    const rawPrevious = exercise.progressionSelection?.previousStyle ?? null;
+    const previousStyle = rawPrevious ? schemeStyle(config, exercise.role, rawPrevious) : null;
+    return {
+        exerciseId: exercise.exerciseId, exerciseName: exercise.name, role: exercise.role, style,
+        source: exercise.progressionSelection?.source ?? 'auto',
+        confidence: exercise.progressionSelection?.confidence ?? 'moderate',
+        reason: exercise.progressionSelection?.reason ?? 'Auto selected a progression that matches this exercise and block.',
+        // Carry the comparison result through the shell snapshot. Recompute only the display-level
+        // percent-scheme normalization; the actual transition decision remains engine-owned.
+        previousStyle,
+        changed: previousStyle !== null ? previousStyle !== style : false
+    };
+}
 /* ⚠ THE EXERCISE THE LIFTER IS SHOWN DECIDES HOW ITS LOAD IS COUNTED. Several engine exercises have more than one setup —
    Chest-Supported Row is dumbbells + bench OR a machine; Preacher Curl a machine OR dumbbells + bench — and the engine loads the
    FIRST setup the gym can do. The app shows the v661 exercise the engine exercise maps to, which can be the other setup: a full gym
@@ -511,7 +529,9 @@ export function nextProgramToShellProgram(nextProgram, config, legacyExercises, 
                 displayLoadingModes[exercise.exerciseId] = shownMode;
             const key = `${id}:${slot}`;
             overrides[key] = {
-                nextEngine: true, nextExerciseId: exercise.exerciseId, legacyExerciseId: legacy.id, role: exercise.role, progressionStyle: schemeStyle(config, exercise.role, exercise.progressionStyle ?? 'auto')
+                nextEngine: true, nextExerciseId: exercise.exerciseId, legacyExerciseId: legacy.id, role: exercise.role,
+                progressionStyle: schemeStyle(config, exercise.role, exercise.progressionStyle ?? 'auto'),
+                progressionSelection: exercise.progressionSelection ? { ...exercise.progressionSelection } : undefined
             };
             // Manual mode is an explicit request to own the prescription in the shell. Seed the editable
             // values from week 1; auto mode stores metadata only so later weeks continue to come from 0.41.
@@ -559,12 +579,20 @@ export function nextProgramToShellProgram(nextProgram, config, legacyExercises, 
         // Keep v661 engineV for legacy shell feature gates. Provenance has its own explicit version fields.
         engineV: 33, engineSource: 'pursuit-next', engineSourceVersion: nextProgram.engineVersion,
         config: { ...config }, weeks: totalWeeks, days, overrides, progStyle, ss, nextWeekPrescriptions, weekPlan, schedule, scheduleBase: { ...schedule },
-        nextEngine: { displayLoadingModes, version: nextProgram.engineVersion, phase: nextProgram.phase, split: nextProgram.split, audit: nextProgram.audit, rationale: nextProgram.rationale, explainability: nextProgram.explainability, sourceProgramId: nextProgram.id }
+        nextEngine: {
+            displayLoadingModes, version: nextProgram.engineVersion, phase: nextProgram.phase, split: nextProgram.split, audit: nextProgram.audit, rationale: nextProgram.rationale, explainability: nextProgram.explainability, sourceProgramId: nextProgram.id,
+            progressionPlan: nextProgram.sessions.flatMap(session => session.exercises.map(exercise => progressionPlanItem(config, exercise)))
+        }
     };
 }
 export function generateNextProgramForShell(options) {
     const request = shellConfigToNextRequest(options.config, options.banned ?? [], options.legacyExercises, options.seed);
-    const result = generateProgram(request);
+    const result = generateProgram(request, {
+        // The shell's configured work weeks are the block length the athlete will actually run.
+        // Feed that into Auto instead of letting progression selection assume a generic six-week block.
+        blockWeeks: Math.max(1, Math.round(Number(options.config?.weeks) || 4)),
+        progressionStyle: options.config?.progressionStyle
+    });
     if (result.program.audit.result !== 'pass') {
         let recovery;
         try {

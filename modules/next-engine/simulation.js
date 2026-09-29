@@ -2,11 +2,11 @@ import { generateProgram } from './generate.js';
 import { normalizeRequest } from './prescription.js';
 import { phasePolicyFor } from './phase-policy.js';
 import { createExerciseMap, EXERCISE_MAP } from './exercise-db.js';
-import { progressionInstruction } from './progression-style.js';
+import { progressionInstruction, selectProgressionStyle } from './progression-style.js';
 import { createTrainingSetEvents } from './events.js';
 import { deriveMuscleLedger } from './ledgers.js';
 import { auditProgram } from './arbiter.js';
-import { estimateSessionMinutes, repsForPhase, rirForPhase, restForExercise, progressionForExercise } from './realizer.js';
+import { estimateSessionMinutes, repsForPhase, rirForPhase, restForExercise } from './realizer.js';
 import { transitionProgramPhase } from './phase-transition.js';
 import { evaluateWorkoutProgression } from './performance.js';
 import { resolveLoadingMode } from './loading.js';
@@ -71,6 +71,8 @@ function stateFor(exercise, request, states) {
             successfulExposures: 0,
             failedExposures: 0,
             constrainedReviews: 0,
+            loadingBlockedExposures: 0,
+            e1rmSamples: 0,
             firstE1rm: null,
             lastE1rm: null,
             name: exercise.name,
@@ -187,7 +189,10 @@ function simulateSession(session, request, states, profile, forcedStalls) {
             if (successfulExposure)
                 state.constrainedReviews++;
         }
+        if (decision.outcome === 'success_blocked')
+            state.loadingBlockedExposures++;
         if (decision.estimated1RM !== undefined && decision.estimated1RM !== null) {
+            state.e1rmSamples++;
             if (state.firstE1rm === null)
                 state.firstE1rm = decision.estimated1RM;
             state.lastE1rm = decision.estimated1RM;
@@ -249,17 +254,22 @@ function programDiff(previous, next) {
     };
 }
 function counterSnapshot(states) {
-    return new Map([...states.entries()].map(([id, state]) => [id, { exposures: state.exposures, positive: state.positive, holds: state.holds, reviews: state.reviews, successfulExposures: state.successfulExposures, failedExposures: state.failedExposures, constrainedReviews: state.constrainedReviews }]));
+    return new Map([...states.entries()].map(([id, state]) => [id, {
+        exposures: state.exposures, positive: state.positive, holds: state.holds, reviews: state.reviews,
+        successfulExposures: state.successfulExposures, failedExposures: state.failedExposures, constrainedReviews: state.constrainedReviews,
+        loadingBlockedExposures: state.loadingBlockedExposures ?? 0, e1rmSamples: state.e1rmSamples ?? 0
+    }]));
 }
 function blockResponse(program, states, actionCounts, before) {
     const names = exerciseNames(program);
     const successful = [];
     const stalled = [];
+    const progressionEvidenceByExercise = {};
     let totalPerformanceFailures = 0, totalPerformanceExposures = 0;
     for (const [id, state] of states) {
         if (!names.has(id))
             continue;
-        const start = before.get(id) ?? { exposures: 0, positive: 0, holds: 0, reviews: 0, successfulExposures: 0, failedExposures: 0, constrainedReviews: 0 };
+        const start = before.get(id) ?? { exposures: 0, positive: 0, holds: 0, reviews: 0, successfulExposures: 0, failedExposures: 0, constrainedReviews: 0, loadingBlockedExposures: 0, e1rmSamples: 0 };
         const exposures = state.exposures - start.exposures;
         if (exposures <= 0)
             continue;
@@ -269,9 +279,23 @@ function blockResponse(program, states, actionCounts, before) {
         const failureRate = failedExposures / exposures;
         totalPerformanceFailures += failedExposures;
         totalPerformanceExposures += exposures;
-        if (successRate >= .65 && failureRate < .25)
+        const successfulTrend = successRate >= .65 && failureRate < .25;
+        const stalledTrend = failureRate >= .35;
+        progressionEvidenceByExercise[id] = {
+            comparableExposures: exposures,
+            styleExposures: exposures,
+            failureCount: failedExposures,
+            stallCount: stalledTrend ? failedExposures : 0,
+            loadingBlockedCount: Math.max(0, (state.loadingBlockedExposures ?? 0) - (start.loadingBlockedExposures ?? 0)),
+            // Synthetic performed sets always contain an observed RIR, so the simulator can make the
+            // same evidence-quality decision as production instead of relying on selector defaults.
+            rirCoverage: 1,
+            e1rmSamples: Math.max(0, (state.e1rmSamples ?? 0) - (start.e1rmSamples ?? 0)),
+            successful: successfulTrend
+        };
+        if (successfulTrend)
             successful.push(id);
-        if (isStallCandidate({ role: state.role }) && failureRate >= .35)
+        if (isStallCandidate({ role: state.role }) && stalledTrend)
             stalled.push(id);
     }
     // Primary strength exercises remain protected across blocks even if a noisy synthetic exposure occurred.
@@ -298,9 +322,17 @@ function blockResponse(program, states, actionCounts, before) {
             : performanceFailureRate <= .08 && progressionRate >= .45
                 ? 'productive'
                 : 'mixed';
+    const fatigueLimitedExerciseIds = classification === 'fatigue_limited'
+        ? Object.entries(progressionEvidenceByExercise).filter(([, row]) => Number(row.failureCount) > 0).map(([id]) => id).sort()
+        : [];
+    for (const id of fatigueLimitedExerciseIds)
+        progressionEvidenceByExercise[id] = { ...progressionEvidenceByExercise[id], fatigueLimited: true };
     return {
         successfulExerciseIds: [...new Set(successful)].sort(),
         stalledExerciseIds: [...new Set(stalled)].sort(),
+        fatigueLimitedExerciseIds,
+        techniqueLimitedExerciseIds: [],
+        progressionEvidenceByExercise,
         successfulExerciseNames: [...new Set(successful)].map(id => names.get(id) ?? id).sort(),
         stalledExerciseNames: [...new Set(stalled)].map(id => names.get(id) ?? id).sort(),
         progressionActions: actionCounts,
@@ -393,7 +425,7 @@ function designForPhase(phase, adaptBetweenBlocks) {
         };
     }
 }
-function retargetProgramWithoutStructuralAdaptation(previous, request, target) {
+function retargetProgramWithoutStructuralAdaptation(previous, request, target, blockWeeks = 6) {
     const sourcePolicy = phasePolicyFor(previous.phase);
     const targetPolicy = phasePolicyFor(target);
     const exerciseMap = createExerciseMap(request.customExercises);
@@ -408,15 +440,32 @@ function retargetProgramWithoutStructuralAdaptation(previous, request, target) {
             const ratio = sourceScale > 0 ? targetScale / sourceScale : 1;
             const minimumSets = strength ? 1 : 1;
             const sets = Math.max(minimumSets, Math.round(ex.sets * ratio));
+            const prescription = {
+                reps: repsForPhase(def, ex.role, targetPolicy),
+                rir: rirForPhase(ex.role, targetPolicy),
+                restSeconds: restForExercise(ex.role, def)
+            };
+            const progressionSelection = selectProgressionStyle(def, ex.role, {
+                phase: target,
+                experience: request.athlete.experience,
+                blockWeeks: Math.max(1, Number(blockWeeks) || 6),
+                requestedStyle: request.preferences?.progressionStyle,
+                prescription
+            });
+            const previousStyle = ex.progressionStyle ?? null;
             return {
                 ...ex,
                 sets,
-                prescription: {
-                    reps: repsForPhase(def, ex.role, targetPolicy),
-                    rir: rirForPhase(ex.role, targetPolicy),
-                    restSeconds: restForExercise(ex.role, def)
+                prescription,
+                progressionStyle: progressionSelection.style,
+                progression: progressionInstruction(progressionSelection.style),
+                progressionSelection: {
+                    source: progressionSelection.source,
+                    confidence: progressionSelection.confidence,
+                    reason: progressionSelection.reason,
+                    previousStyle,
+                    changed: previousStyle !== null ? previousStyle !== progressionSelection.style : false
                 },
-                progression: progressionForExercise(def, ex.role, targetPolicy, request.athlete.experience),
                 advancedTechnique: targetPolicy.advancedTechniqueBudget > 0 ? ex.advancedTechnique : undefined
             };
         });
@@ -483,6 +532,10 @@ function weekModifier(phase, week, totalWeeks, role) {
 const ACCUMULATION_PHASES = new Set(['foundation', 'hypertrophy_accumulation', 'mixed_accumulation', 'strength_accumulation', 'maintenance']);
 export function weeklyProgressionStyle(ex, phase, week, totalWeeks) {
     const base = ex.progressionStyle;
+    // Manual means manual for the actual weekly shell prescription too. The legacy within-block
+    // schedule may evolve Auto strength work, but it must never silently replace an explicit method.
+    if (ex.progressionSelection?.source === 'manual')
+        return base;
     if (!base || base === 'linear' || !ACCUMULATION_PHASES.has(phase))
         return base;
     if (ex.role !== 'primary_strength' && ex.role !== 'secondary_strength')
@@ -592,14 +645,22 @@ export function runPowerbuildingSimulation(options) {
         const notes = [];
         const design = designForPhase(spec.phase, options.adaptBetweenBlocks);
         if (!priorProgram) {
-            program = generateProgram(baseRequest, { phase: spec.phase }).program;
+            program = generateProgram(baseRequest, {
+                phase: spec.phase,
+                blockWeeks: spec.weeks,
+                progressionStyle: baseRequest.preferences?.progressionStyle
+            }).program;
             notes.push(`Started ${spec.label} from the athlete's cycle contract.`);
             notes.push(design.focus);
         }
         else if (options.adaptBetweenBlocks) {
             const result = transitionProgramPhase(priorProgram, normalized, spec.phase, {
                 successfulExerciseIds: priorResponse?.successfulExerciseIds ?? [],
-                protectedExerciseIds: priorProgram.sessions.flatMap(s => s.exercises).filter(ex => ex.role === 'primary_strength').map(ex => ex.exerciseId)
+                protectedExerciseIds: priorProgram.sessions.flatMap(s => s.exercises).filter(ex => ex.role === 'primary_strength').map(ex => ex.exerciseId),
+                fatigueLimitedExerciseIds: priorResponse?.fatigueLimitedExerciseIds ?? [],
+                techniqueLimitedExerciseIds: priorResponse?.techniqueLimitedExerciseIds ?? [],
+                progressionEvidenceByExercise: priorResponse?.progressionEvidenceByExercise ?? {},
+                nextBlockWeeks: spec.weeks
             });
             program = result.program;
             continuity = result.continuity;
@@ -613,7 +674,7 @@ export function runPowerbuildingSimulation(options) {
             notes.push(result.continuity.rationale);
         }
         else {
-            program = retargetProgramWithoutStructuralAdaptation(priorProgram, normalized, spec.phase);
+            program = retargetProgramWithoutStructuralAdaptation(priorProgram, normalized, spec.phase, spec.weeks);
             notes.push(`Adapt Between Blocks is off: ${spec.label} keeps the prior block's exercise skeleton.`);
             notes.push('Only phase-appropriate set dose, reps, RIR, rest, and technique eligibility are retargeted; exercise identity is intentionally held stable.');
         }

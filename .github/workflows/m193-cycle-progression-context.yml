@@ -1,0 +1,55 @@
+name: M193 Cycle Progression Context
+
+on:
+  push:
+    branches:
+      - m193-cycle-progression-context
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cycle-progression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: M193 cycle progression context
+        run: node --no-warnings --experimental-loader ./verification/import-loader.mjs verification/m193-cycle-progression-context-test.mjs
+
+      - name: M192 progression transition regression
+        run: node --no-warnings --experimental-loader ./verification/import-loader.mjs verification/m192-progression-transition-deltas-test.mjs
+
+      - name: M191 progression UI regression
+        run: node verification/m191-progression-explainability-ui-test.mjs
+
+      - name: M190 progression lifecycle regression
+        run: node --no-warnings --experimental-loader ./verification/import-loader.mjs verification/m190-progression-lifecycle-test.mjs
+
+      - name: Existing cycle and progression regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          for test in \
+            verification/m167-legacy-dose-cycle-test.mjs \
+            verification/m174-causal-cycle-state-test.mjs \
+            verification/m175-longitudinal-adaptation-memory-test.mjs \
+            verification/m183-progression-safeguards-test.mjs \
+            verification/m184-longitudinal-evidence-test.mjs \
+            verification/m185-phase-specialization-test.mjs \
+            verification/m186-explainable-block-review-test.mjs
+          do
+            echo "==> $test"
+            node --no-warnings --experimental-loader ./verification/import-loader.mjs "$test"
+          done
+
+      - name: Production torture regression
+        run: node --no-warnings --experimental-loader ./verification/import-loader.mjs verification/m188-production-torture-test.mjs

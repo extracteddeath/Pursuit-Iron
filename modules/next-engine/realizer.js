@@ -1,7 +1,7 @@
 import { createExerciseCatalog, createExerciseMap } from './exercise-db.js';
 import { ALL_MUSCLES } from './config.js';
 import { phasePolicyFor } from './phase-policy.js';
-import { progressionInstruction, resolveProgressionStyle } from './progression-style.js';
+import { progressionInstruction, selectProgressionStyle } from './progression-style.js';
 import { createMusclePrescriptions, productiveTimeBandDoseTarget } from './prescription.js';
 import { chooseAdvancedTechnique, techniqueExtraSeconds } from './techniques.js';
 import { INTENT_MUSCLES } from './topology.js';
@@ -200,7 +200,12 @@ export function rirForPhase(role, policy) {
 }
 export function restForExercise(role, ex) { return role === 'primary_strength' ? 240 : role === 'secondary_strength' ? 180 : ex.flags.compound ? 150 : 90; }
 export function progressionStyleForExercise(ex, role, policy, experience = 'intermediate') {
-    return resolveProgressionStyle(ex, role, { phase: policy.phase, experience });
+    return selectProgressionStyle(ex, role, {
+        phase: policy.phase,
+        experience,
+        blockWeeks: policy.blockWeeks,
+        requestedStyle: policy.requestedProgressionStyle
+    }).style;
 }
 export function progressionForExercise(ex, role, policy = phasePolicyFor('mixed_accumulation'), experience = 'intermediate') {
     return progressionInstruction(progressionStyleForExercise(ex, role, policy, experience));
@@ -265,8 +270,24 @@ function makePlanned(ex, role, sets, policy, experience = 'intermediate') {
     const realizedRole = (role === 'hypertrophy_compound' || role === 'hypertrophy_isolation')
         ? (ex.flags.compound ? 'hypertrophy_compound' : 'hypertrophy_isolation')
         : role;
-    const progressionStyle = progressionStyleForExercise(ex, realizedRole, policy, experience);
-    return { exerciseId: ex.id, name: ex.name, role: realizedRole, sets, prescription: { reps: repsForPhase(ex, realizedRole, policy), rir: rirForPhase(realizedRole, policy), restSeconds: restForExercise(realizedRole, ex) }, progression: progressionInstruction(progressionStyle), progressionStyle };
+    const prescription = { reps: repsForPhase(ex, realizedRole, policy), rir: rirForPhase(realizedRole, policy), restSeconds: restForExercise(realizedRole, ex) };
+    const progressionSelection = selectProgressionStyle(ex, realizedRole, {
+        phase: policy.phase,
+        experience,
+        blockWeeks: policy.blockWeeks,
+        requestedStyle: policy.requestedProgressionStyle,
+        prescription
+    });
+    const progressionStyle = progressionSelection.style;
+    return {
+        exerciseId: ex.id, name: ex.name, role: realizedRole, sets, prescription,
+        progression: progressionInstruction(progressionStyle), progressionStyle,
+        progressionSelection: {
+            source: progressionSelection.source,
+            confidence: progressionSelection.confidence,
+            reason: progressionSelection.reason
+        }
+    };
 }
 function integerSetPlan(entries, desiredTotal) {
     const result = new Map();
@@ -682,8 +703,12 @@ function strengthSetsForAllocation(allocation, session, request, policy) {
  * fractional ledger and time are the actual baseline used by the second allocator pass; the anchor map
  * is later pinned so the final program cannot silently switch to a different variant after budgeting.
  */
-export function realizeStrengthAnchors(plans, request, phase) {
-    const policy = phasePolicyFor(phase);
+export function realizeStrengthAnchors(plans, request, phase, options = {}) {
+    const policy = {
+        ...phasePolicyFor(phase),
+        blockWeeks: options.blockWeeks,
+        requestedProgressionStyle: options.requestedProgressionStyle
+    };
     const exerciseCatalog = createExerciseCatalog(request.customExercises);
     const ledger = { fractional: {}, direct: {} };
     const anchors = {};
@@ -724,7 +749,11 @@ export function realizeStrengthAnchors(plans, request, phase) {
     };
 }
 export function realizeSessions(plans, request, targetDose = {}, directTargetDose = {}, phase, options = {}) {
-    const policy = phasePolicyFor(phase);
+    const policy = {
+        ...phasePolicyFor(phase),
+        blockWeeks: options.blockWeeks,
+        requestedProgressionStyle: options.requestedProgressionStyle
+    };
     const exerciseCatalog = createExerciseCatalog(request.customExercises);
     const exerciseMap = createExerciseMap(request.customExercises);
     const sessions = plans.map(plan => ({ plan, defs: [], exercises: [], importance: [] }));

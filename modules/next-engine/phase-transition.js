@@ -4,6 +4,7 @@ import { createEngineContext, createTransactionalEvaluator } from './engine-cont
 import { generateProgram } from './generate.js';
 import { deriveMuscleLedger } from './ledgers.js';
 import { historyDecision, withBlockReviewExplainability, withProgramExplainability } from './explainability.js';
+import { progressionInstruction, reselectProgressionStyle } from './progression-style.js';
 
 function equipmentEligible(def, day, request) {
     const scheduleDay = request.schedule.days.find(d => d.day === day);
@@ -156,13 +157,102 @@ export function matchPriorSessionsForTransition(previousSessions, targetSessions
     return new Map(solve(0, 0).pairs);
 }
 
+function progressionEvidenceFor(id, evidence, successful, fatigueLimited, techniqueLimited) {
+    const detailed = evidence?.progressionEvidenceByExercise?.[id] ?? {};
+    const hasSignal = successful.has(id) || fatigueLimited.has(id) || techniqueLimited.has(id)
+        || Number(detailed.comparableExposures) > 0;
+    return {
+        ...detailed,
+        successful: detailed.successful ?? successful.has(id),
+        fatigueLimited: detailed.fatigueLimited ?? fatigueLimited.has(id),
+        techniqueLimited: detailed.techniqueLimited ?? techniqueLimited.has(id),
+        comparableExposures: Number.isFinite(Number(detailed.comparableExposures))
+            ? Number(detailed.comparableExposures)
+            : hasSignal ? 3 : 0,
+        styleExposures: Number.isFinite(Number(detailed.styleExposures))
+            ? Number(detailed.styleExposures)
+            : hasSignal ? 3 : 0
+    };
+}
+
+/**
+ * Re-select progression after a block using the target phase plus longitudinal evidence. The target
+ * phase still owns sets/reps/RIR/rest; this pass only changes progression policy. It applies to exact
+ * retained IDs and audit-gated retained replacements, while brand-new exercises keep the selector used
+ * during generation.
+ */
+function applyAdaptiveProgressionStyles(program, previous, request, target, evidence, context) {
+    const previousById = new Map(previous.sessions.flatMap(session => session.exercises).map(ex => [ex.exerciseId, ex]));
+    const successful = new Set(evidence?.successfulExerciseIds ?? []);
+    const fatigueLimited = new Set(evidence?.fatigueLimitedExerciseIds ?? []);
+    const techniqueLimited = new Set(evidence?.techniqueLimitedExerciseIds ?? []);
+    const blockWeeks = Math.max(1, Number(evidence?.nextBlockWeeks ?? evidence?.blockWeeks ?? 6) || 6);
+    const changes = [];
+    const sessions = program.sessions.map(session => ({
+        ...session,
+        exercises: session.exercises.map(exercise => {
+            const prior = previousById.get(exercise.exerciseId);
+            const def = context.exerciseById(exercise.exerciseId);
+            if (!prior || !def)
+                return exercise;
+            const currentStyle = prior.progressionStyle ?? exercise.progressionStyle ?? 'double';
+            const selection = reselectProgressionStyle(def, exercise.role, {
+                phase: target,
+                previousPhase: previous.phase,
+                experience: request.athlete?.experience ?? 'intermediate',
+                currentStyle,
+                prescription: exercise.prescription,
+                blockWeeks,
+                // A global manual method remains manual across block review. Auto still re-selects
+                // exercise by exercise because explicitStyle ignores the literal 'auto' value.
+                requestedStyle: request.preferences?.progressionStyle,
+                evidence: progressionEvidenceFor(exercise.exerciseId, evidence, successful, fatigueLimited, techniqueLimited)
+            });
+            if (selection.style !== exercise.progressionStyle || selection.style !== currentStyle) {
+                changes.push({
+                    exerciseId: exercise.exerciseId,
+                    exerciseName: exercise.name,
+                    previousStyle: currentStyle,
+                    generatedStyle: exercise.progressionStyle,
+                    selectedStyle: selection.style,
+                    confidence: selection.confidence,
+                    reason: selection.reason
+                });
+            }
+            return {
+                ...exercise,
+                progressionStyle: selection.style,
+                progression: progressionInstruction(selection.style),
+                progressionSelection: {
+                    source: selection.source,
+                    confidence: selection.confidence,
+                    reason: selection.reason,
+                    previousStyle: currentStyle,
+                    // M192: preserve the actual before/after answer as engine-owned metadata. The UI
+                    // should never infer a method change from labels or regenerate progression policy.
+                    changed: selection.style !== currentStyle
+                }
+            };
+        })
+    }));
+    return { program: { ...program, sessions }, changes };
+}
+
 /**
  * Generate the target phase, then make conservative audit-gated attempts to
  * retain successful exercises from the previous phase. The target phase owns
  * sets/reps/RIR/rest; continuity owns exercise identity/progression history.
  */
 export function transitionProgramPhase(previous, request, target, evidence) {
-    const generated = generateProgram(request, { phase: target }).program;
+    const nextBlockWeeks = Math.max(1, Number(evidence?.nextBlockWeeks ?? evidence?.blockWeeks ?? 6) || 6);
+    const generated = generateProgram(request, {
+        phase: target,
+        // New exercises introduced by the target phase must use the actual next-block duration too.
+        // Otherwise a four-week block can accidentally start a five-plus-week wave simply because
+        // the exercise has no prior history for the adaptive pass to correct.
+        blockWeeks: nextBlockWeeks,
+        progressionStyle: request.preferences?.progressionStyle
+    }).program;
     const successful = new Set(evidence.successfulExerciseIds);
     const protectedIds = new Set(evidence.protectedExerciseIds ?? []);
     const replaceIds = new Set(evidence.replaceExerciseIds ?? []);
@@ -205,6 +295,12 @@ export function transitionProgramPhase(previous, request, target, evidence) {
             }
         }
     }
+
+    // M189: exercise identity continuity no longer means progression-method continuity. Re-select the
+    // method after the target prescription is known, using history only where the exercise actually has it.
+    const adaptive = applyAdaptiveProgressionStyles(program, previous, request, target, evidence, context);
+    program = adaptive.program;
+
     const priorExerciseIds = new Set(previous.sessions.flatMap(s => s.exercises.map(e => e.exerciseId)));
     const finalExerciseIds = new Set(program.sessions.flatMap(s => s.exercises.map(e => e.exerciseId)));
     const eligible = [...successful].filter(id => priorExerciseIds.has(id));
@@ -230,15 +326,22 @@ export function transitionProgramPhase(previous, request, target, evidence) {
         structuralNewStrengthSlots,
         preservedExerciseIds: preserved,
         replacedDespiteSuccess: replaced,
+        progressionMethodChanges: adaptive.changes,
         rationale: eligible.length
             ? `${preserved.length}/${eligible.length} recently successful exercises were retained (${preserved.length}/${continuityCapacity} of structurally available continuity slots) while applying the target phase prescription.`
             : 'No recent successful-exercise evidence was available, so the target phase was generated without continuity preferences.'
     };
-    program = withProgramExplainability(program, request, [historyDecision('Phase transition continuity', eligible.length ? `${preserved.length}/${continuityCapacity} structurally retainable successful exercises preserved` : 'Target phase generated without prior success evidence', continuity.rationale, { eligibleSuccessfulExercises: eligible.length, retainedSuccessfulExercises: preserved.length, continuityCapacity, capacityAdjustedRetentionRate: Math.round(capacityAdjustedRetentionRate * 1000) / 1000, structuralNewStrengthSlots }, replaced.length ? [`${replaced.length} successful exercise identities changed where the target phase or compatibility constraints required it.`] : ['No successful exercise identity was changed unnecessarily.'])]);
+    const progressionSummary = adaptive.changes.length
+        ? `${adaptive.changes.length} retained exercise progression method${adaptive.changes.length === 1 ? ' was' : 's were'} re-selected for the new phase/history evidence.`
+        : 'Retained exercise progression methods remained appropriate after the block review.';
+    program = withProgramExplainability(program, request, [
+        historyDecision('Phase transition continuity', eligible.length ? `${preserved.length}/${continuityCapacity} structurally retainable successful exercises preserved` : 'Target phase generated without prior success evidence', continuity.rationale, { eligibleSuccessfulExercises: eligible.length, retainedSuccessfulExercises: preserved.length, continuityCapacity, capacityAdjustedRetentionRate: Math.round(capacityAdjustedRetentionRate * 1000) / 1000, structuralNewStrengthSlots }, replaced.length ? [`${replaced.length} successful exercise identities changed where the target phase or compatibility constraints required it.`] : ['No successful exercise identity was changed unnecessarily.']),
+        historyDecision('Progression method review', adaptive.changes.length ? `${adaptive.changes.length} methods re-selected` : 'No method change required', progressionSummary, { progressionMethodChanges: adaptive.changes.length }, adaptive.changes.slice(0, 4).map(change => `${change.exerciseName}: ${change.previousStyle} → ${change.selectedStyle}. ${change.reason}`))
+    ]);
     program = withBlockReviewExplainability(previous, program, request, {
         continuity,
         transitionReason: `The training cycle advanced from ${String(previous.phase || 'the prior focus').replace(/_/g, ' ')} to ${String(target || program.phase || 'the next focus').replace(/_/g, ' ')}.`,
-        reasonCodes: ['block:transition:reviewed']
+        reasonCodes: ['block:transition:reviewed', 'progression:auto:reviewed']
     });
     return { program, continuity };
 }

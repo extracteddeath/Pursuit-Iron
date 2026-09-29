@@ -19,7 +19,13 @@ import { reconcileRecoverableDose } from './dose-reconciliation.js';
 export function generateProgram(requestInput, options) {
     const normalized = normalizeRequest(requestInput);
     const phase = options?.phase ?? initialPhaseForGoal(normalized.goal.type);
-    const policy = phasePolicyFor(phase);
+    const policy = {
+        ...phasePolicyFor(phase),
+        // M189: block duration is part of progression-method selection. A four-week
+        // intensification block should not start a wave that needs five+ weeks to justify itself.
+        blockWeeks: Number(options?.blockWeeks) > 0 ? Math.max(1, Math.round(Number(options.blockWeeks))) : undefined,
+        requestedProgressionStyle: options?.progressionStyle ?? requestInput?.preferences?.progressionStyle
+    };
     // Session-time cards describe available capacity, not a quota that must be filled. Experience and
     // phase determine how much of that capacity is likely productive. Advanced accumulation can use the
     // full target; novice/intermediate and lower-fatigue phases deliberately cap exercise count lower.
@@ -45,7 +51,9 @@ export function generateProgram(requestInput, options) {
     const provisionalAllocation = allocateTraining(request, muscles, strength, phase);
     const provisionalTopology = solveTopology(request, provisionalAllocation.allocations);
     const hasStrengthAnchors = provisionalAllocation.allocations.some(a => a.kind === 'lift');
-    const strengthBaseline = hasStrengthAnchors ? realizeStrengthAnchors(provisionalTopology.sessions, request, phase) : undefined;
+    const strengthBaseline = hasStrengthAnchors ? realizeStrengthAnchors(provisionalTopology.sessions, request, phase, {
+        blockWeeks: policy.blockWeeks, requestedProgressionStyle: policy.requestedProgressionStyle
+    }) : undefined;
     const allocation = strengthBaseline
         ? allocateTraining(request, muscles, strength, phase, { strengthBaseline })
         : provisionalAllocation;
@@ -55,8 +63,11 @@ export function generateProgram(requestInput, options) {
     const topology = strengthBaseline
         ? solveTopology(request, allocation.allocations, { seed: provisionalTopology.seed })
         : provisionalTopology;
-    const realized = realizeSessions(topology.sessions, request, allocation.targetDose, allocation.directTargetDose, phase,
-        strengthBaseline ? { strengthAnchors: strengthBaseline.anchors } : undefined);
+    const realized = realizeSessions(topology.sessions, request, allocation.targetDose, allocation.directTargetDose, phase, {
+        ...(strengthBaseline ? { strengthAnchors: strengthBaseline.anchors } : {}),
+        blockWeeks: policy.blockWeeks,
+        requestedProgressionStyle: policy.requestedProgressionStyle
+    });
     const assembleRaw = (sessions) => {
         const recovery = optimizeWeeklyRecovery(sessions, request);
         const scheduled = recovery.sessions;

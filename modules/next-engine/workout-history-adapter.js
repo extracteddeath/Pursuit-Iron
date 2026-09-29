@@ -393,6 +393,51 @@ export function nextWorkoutSuggestionFromPerformedShell(program, legacyExercises
         confidence: decision.confidence
     };
 }
+export function deriveProgressionSelectionEvidence(workouts = []) {
+    const rows = new Map();
+    const excluded = new Set(['unobserved', 'non_comparable', 'context_limited', 'interrupted', 'incomplete']);
+    const ensure = (id) => {
+        const existing = rows.get(id);
+        if (existing) return existing;
+        const row = { comparableExposures: 0, styleExposures: 0, failureCount: 0, stallCount: 0, loadingBlockedCount: 0, rirReportedSets: 0, rirEligibleSets: 0, e1rmSamples: 0 };
+        rows.set(id, row);
+        return row;
+    };
+    for (const workout of workouts ?? []) {
+        for (const decision of workout?.progression ?? []) {
+            const id = decision?.exerciseId;
+            if (!id) continue;
+            const row = ensure(id);
+            const sets = (workout?.performedSets ?? []).filter(set => set.exerciseId === id);
+            const comparable = !excluded.has(decision.outcome);
+            if (!comparable) continue;
+            row.comparableExposures += 1;
+            // Saved shell history does not record a separate style-version stamp. Within a block the style
+            // is stable, so comparable exposures are also the conservative evidence count for that style.
+            row.styleExposures += 1;
+            if (decision.outcome === 'failure') {
+                row.failureCount += 1;
+                row.stallCount += 1;
+            }
+            if (decision.outcome === 'success_blocked') row.loadingBlockedCount += 1;
+            if (Number.isFinite(Number(decision.estimated1RM))) row.e1rmSamples += 1;
+            for (const set of sets) {
+                row.rirEligibleSets += 1;
+                if (set.rir !== null && Number.isFinite(Number(set.rir))) row.rirReportedSets += 1;
+            }
+        }
+    }
+    return Object.fromEntries([...rows.entries()].map(([id, row]) => [id, {
+        comparableExposures: row.comparableExposures,
+        styleExposures: row.styleExposures,
+        failureCount: row.failureCount,
+        stallCount: row.stallCount,
+        loadingBlockedCount: row.loadingBlockedCount,
+        rirCoverage: row.rirEligibleSets ? row.rirReportedSets / row.rirEligibleSets : 0,
+        e1rmSamples: row.e1rmSamples
+    }]));
+}
+
 export function analyzeShellHistoryForNextEngine(program, history, legacyExercises) {
     const snap = sourceSnapshot(program);
     if (!snap)
@@ -440,6 +485,9 @@ export function analyzeShellHistoryForNextEngine(program, history, legacyExercis
             else if (signal < 0) negative++;
         }
     const evidence = deriveLongitudinalExerciseEvidence(diagnoses, [...latest.values()], sourceExercises);
+    // M189 keeps progression-method evidence separate from volume/response diagnosis. Method changes
+    // need repeated comparable exposures, actual failure counts, effort coverage and loading constraints.
+    const progressionEvidenceByExercise = deriveProgressionSelectionEvidence(workouts);
     const successful = evidence.successfulExerciseIds;
     const protectedIds = evidence.protectedExerciseIds;
     const subjective = subjectiveUnderRecovery(entries);
@@ -452,7 +500,8 @@ export function analyzeShellHistoryForNextEngine(program, history, legacyExercis
         ignoredSetCount: entries.reduce((n, e) => n + Object.entries(e.perf ?? {}).filter(([id]) => ignoredIds.includes(id)).reduce((m, [, p]) => m + (p.sets?.filter(s => !s.sub).length ?? 0), 0), 0),
         ignoredLegacyExerciseIds: ignoredIds, recovery, cycleState, classification,
         successfulExerciseIds: successful, protectedExerciseIds: [...new Set(protectedIds)], replaceExerciseIds: evidence.replaceExerciseIds,
-        techniqueLimitedExerciseIds: evidence.techniqueLimitedExerciseIds, fatigueLimitedExerciseIds: evidence.fatigueLimitedExerciseIds, diagnoses,
+        techniqueLimitedExerciseIds: evidence.techniqueLimitedExerciseIds, fatigueLimitedExerciseIds: evidence.fatigueLimitedExerciseIds,
+        progressionEvidenceByExercise, diagnoses,
         positiveDecisionCount: positive, negativeDecisionCount: negative, subjectiveUnderRecoverySignals: subjective,
         readyForNextBlock: !!cycleState.recommendedNextPhase, recommendedNextPhase: cycleState.recommendedNextPhase
     };
@@ -498,14 +547,26 @@ export function generateNextBlockFromShellHistory(options) {
     const baseRequest = current?.nextEngine?.baseRequest ?? snap.request;
     const adaptedRequest = requestAdaptedFromHistory(baseRequest, snap.request, analysis);
     const normalized = normalizeRequest(adaptedRequest);
+    const nextBlockWeeks = Math.max(1, Math.round(Number(
+        options.nextBlockWeeks
+        ?? current?.nextEngine?.nextBlock?.weeks
+        ?? current?.config?.weeks
+        ?? current?.nextEngine?.cycleTemplate?.weeks
+        ?? 4
+    ) || 4));
     const transitioned = transitionProgramPhase(snap.program, normalized, phase, {
         successfulExerciseIds: analysis.successfulExerciseIds,
         protectedExerciseIds: analysis.protectedExerciseIds,
-        replaceExerciseIds: analysis.replaceExerciseIds
+        replaceExerciseIds: analysis.replaceExerciseIds,
+        techniqueLimitedExerciseIds: analysis.techniqueLimitedExerciseIds,
+        fatigueLimitedExerciseIds: analysis.fatigueLimitedExerciseIds,
+        progressionEvidenceByExercise: analysis.progressionEvidenceByExercise,
+        nextBlockWeeks
     });
     if (transitioned.program.audit.result !== 'pass')
         throw new NextShellAdapterError('NEXT_BLOCK_REJECTED', `Pursuit Engine ${transitioned.program.engineVersion} could not produce a safe adapted ${phase} block.`);
-    const legacy = nextProgramToShellProgram(transitioned.program, current.config, options.legacyExercises, options.makeId);
+    const nextConfig = { ...current.config, weeks: nextBlockWeeks };
+    const legacy = nextProgramToShellProgram(transitioned.program, nextConfig, options.legacyExercises, options.makeId);
     const nextCycle = startPhase(analysis.cycleState, phase, snap.request.goal.type, snap.request.schedule.days.length);
     legacy.nextEngine = {
         ...legacy.nextEngine, request: JSON.parse(JSON.stringify(adaptedRequest)), baseRequest: JSON.parse(JSON.stringify(baseRequest)), program: JSON.parse(JSON.stringify(transitioned.program)), cycleState: JSON.parse(JSON.stringify(nextCycle)), historySchemaVersion: 1,

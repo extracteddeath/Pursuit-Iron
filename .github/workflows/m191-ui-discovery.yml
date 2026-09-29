@@ -14,13 +14,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Locate exact progression UI contexts
+      - name: Locate progression card render seam
         shell: bash
         run: |
           set -euo pipefail
-          echo '=== wizard step list / progression choice ==='
-          grep -n -E -C 18 'function StepBody|const STEPS|case "progression"|stepKey === "progression"|progression === "auto"|progression === "manual"' modules/App.js | head -n 520 || true
-          echo '=== program view progression metadata ==='
-          grep -n -E -C 12 'programSetupChips|Setup summary|Program setup|progressionPlan' modules/App.js | head -n 360 || true
-          echo '=== block transition / review ==='
-          grep -n -E -C 14 'generateNextBlockFromShellHistory|BlockReviewView|Take into the next block|priorBlock|historySummary' modules/App.js | head -n 480 || true
+          echo '=== progression components ==='
+          grep -n -E -C 18 'showProg|setShowProg|SetupCard|showSetup|ProgressionMatrix|Progression.*Card|THE PROGRESSION MATRIX' modules/App.js | head -n 680 || true
+          echo '=== program controls render ==='
+          grep -n -E -C 24 'How this was built|showVol|showWave|planInfo|showBlock' modules/App.js | head -n 760 || true

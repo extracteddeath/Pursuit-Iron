@@ -27,7 +27,7 @@ replaceRequired('modules/next-engine/config.js',/export const ENGINE_VERSION = '
 replaceRequired('modules/App.js',/const __APP_VERSION__='[^']+'; const __BUILD__='[^']+';/,`const __APP_VERSION__='${APP_VERSION}'; const __BUILD__='${BUILD}';`,'app version/build');
 replaceRequired('index.html',/build:'\d+'/g,`build:'${BUILD}'`,'startup diagnostic build');
 replaceRequired('index.html',/build='\d+'/g,`build='${BUILD}'`,'boot-health build');
-replaceRequired('sw.js',/\/\* M188[^\n]*\*\//,'/* Pursuit Iron 4.0 production release — Engine 0.64.0 with adaptive progression lifecycle and simulation parity. */','service-worker milestone comment');
+replaceRequired('sw.js',/\/\* (?:M188|Pursuit Iron 4\.0)[^\n]*\*\//,'/* Pursuit Iron 4.0 production release — Engine 0.64.0 with adaptive progression lifecycle and simulation parity. */','service-worker milestone comment');
 replaceRequired('sw.js',/const CACHE="pursuit-iron-production-[^"]+";/,`const CACHE="${CACHE}";`,'service-worker cache');
 
 const changelogMarker='## Pursuit Iron 4.0.0 — M195';

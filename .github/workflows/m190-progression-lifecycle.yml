@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   progression-lifecycle:
@@ -21,9 +21,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-
-      - name: Apply M190 progression lifecycle
-        run: node scripts/apply-m190-progression-lifecycle.mjs
 
       - name: M190 progression lifecycle
         run: node --no-warnings --experimental-loader ./verification/import-loader.mjs verification/m190-progression-lifecycle-test.mjs
@@ -50,18 +47,3 @@ jobs:
 
       - name: Broad production torture regression
         run: node --no-warnings --experimental-loader ./verification/import-loader.mjs verification/m188-production-torture-test.mjs
-
-      - name: Persist certified M190 lifecycle integration
-        if: success()
-        shell: bash
-        run: |
-          set -euo pipefail
-          git add modules/next-engine/realizer.js modules/next-engine/app-shell-adapter.js modules/next-engine/phase-transition.js
-          if git diff --cached --quiet; then
-            echo "M190 lifecycle integration already committed."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "M190: complete progression lifecycle integration"
-          git push origin HEAD:m190-progression-lifecycle

@@ -1,0 +1,59 @@
+name: M167 Promotion Corrected
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/m167-promote-v2.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply corrected M167 payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import textwrap
+
+          wf=Path('.github/workflows/m167-promote.yml').read_text()
+          marker="          python - <<'PY'\n"
+          start=wf.index(marker)+len(marker)
+          end=wf.index("\n          PY",start)
+          script=textwrap.dedent(wf[start:end])
+          exec(compile(script,'m167-promote-corrected','exec'),{'__name__':'__main__'})
+
+          p=Path('verification/set-display-integrity-test.mjs')
+          t=p.read_text()
+          old="check('custom programs resolve authored set schedules before display',()=>assert.ok(app.includes('sets: customAuthoredSetCount(o.sets, base.sets, weekIndex)')));"
+          new="check('legacy custom programs restore authored schedules and saved dose deltas before display',()=>assert.ok(app.includes('sets: legacyCustomSetCount(program, day, ex, slotIndex, weekIndex, o.sets, base.sets)')));"
+          if t.count(old)!=1:
+              raise SystemExit(f'M167 set-display correction expected 1 old assertion, found {t.count(old)}')
+          p.write_text(t.replace(old,new,1))
+          PY
+
+      - name: Verify corrected M167 release
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/verify-release.mjs
+
+      - name: Promote verified M167 and clean diagnostics
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/m167-inspect.yml .github/workflows/m167-promote.yml .github/workflows/m167-promote-v2.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Release M167 legacy dose and standalone cycle recovery"
+          git push origin HEAD:main

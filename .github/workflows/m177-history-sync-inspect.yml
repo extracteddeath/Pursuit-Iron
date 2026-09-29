@@ -16,22 +16,21 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Capture current store schema and migrations
+      - name: Capture M177 export and persistence boundaries
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
           lines=Path('modules/App.js').read_text().splitlines()
-          hits=[]
-          for i,line in enumerate(lines):
-            if 'STORE_VERSION' in line or 'const MIGRATIONS' in line or 'MIGRATIONS =' in line:
-              hits.append(i)
+          needles=['STORE_VERSION','const STORE_MIGRATIONS','function migrateStore','function mergeStores','const [history, setHistory]','stampedSetter','setHistory(normalizeHistoryDayIds','export {']
           out=[]
-          for i in hits:
-            lo=max(0,i-25); hi=min(len(lines),i+180)
-            out.append(f'===== around line {i+1} =====')
-            out.extend(f'{j+1:06d}: {lines[j]}' for j in range(lo,hi))
-            out.append('')
+          for needle in needles:
+            hits=[i for i,line in enumerate(lines) if needle in line]
+            out.append(f'===== {needle} ({len(hits)} hits) =====')
+            for i in hits[:30]:
+              lo=max(0,i-8); hi=min(len(lines),i+18)
+              out.extend(f'{j+1:06d}: {lines[j]}' for j in range(lo,hi))
+              out.append('---')
           Path('M177_SCHEMA.txt').write_text('\n'.join(out)+'\n')
           PY
       - name: Publish schema capture
@@ -40,5 +39,5 @@ jobs:
           git config user.name "Pursuit Release Bot"
           git config user.email "actions@users.noreply.github.com"
           git add M177_SCHEMA.txt
-          git commit -m "chore: capture current M177 store schema"
+          git commit -m "chore: capture M177 export and persistence boundaries"
           git push origin HEAD:main

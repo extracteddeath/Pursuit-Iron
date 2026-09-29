@@ -1,0 +1,43 @@
+name: M189 Adaptive Progression Selection
+
+on:
+  push:
+    branches:
+      - m189-adaptive-progression-selection
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  adaptive-progression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: M189 adaptive progression selection
+        run: node verification/m189-adaptive-progression-selection-test.mjs
+
+      - name: Progression safety regression suite
+        run: |
+          node verification/progression-safety-test.mjs
+          node verification/custom-progression-safety-test.mjs
+          node verification/shell-progression-safety-test.mjs
+          node verification/m183-progression-safeguards-test.mjs
+
+      - name: Longitudinal and phase transition regression suite
+        run: |
+          node verification/m175-longitudinal-adaptation-memory-test.mjs
+          node verification/m184-longitudinal-evidence-test.mjs
+          node verification/m185-phase-specialization-test.mjs
+          node verification/m186-explainable-block-review-test.mjs
+
+      - name: Broad production torture regression
+        run: node verification/m188-production-torture-test.mjs

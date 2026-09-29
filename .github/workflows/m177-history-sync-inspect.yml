@@ -1,4 +1,4 @@
-name: M177 Editable History Merge Promotion
+name: M177 Store Schema Inspection
 
 on:
   push:
@@ -10,43 +10,35 @@ permissions:
   contents: write
 
 jobs:
-  promote:
+  inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-      - name: Apply M177 candidate
+      - name: Capture current store schema and migrations
         shell: bash
         run: |
-          set +e
-          python scripts/m177-promote.py > /tmp/m177-promote.log 2>&1
-          code=$?
-          if [ "$code" -ne 0 ]; then
-            git reset --hard HEAD
-            cp /tmp/m177-promote.log M177_RUN.txt
-            git config user.name "Pursuit Release Bot"
-            git config user.email "actions@users.noreply.github.com"
-            git add M177_RUN.txt
-            git commit -m "chore: capture M177 promotion failure"
-            git push origin HEAD:main
-            exit "$code"
-          fi
-          cat /tmp/m177-promote.log
-      - name: Verify M177 focused and full gates
-        run: |
-          node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m177-history-merge-integrity-test.mjs
-          node scripts/verify-release.mjs
-      - name: Publish verified M177
+          python - <<'PY'
+          from pathlib import Path
+          lines=Path('modules/App.js').read_text().splitlines()
+          hits=[]
+          for i,line in enumerate(lines):
+            if 'STORE_VERSION' in line or 'const MIGRATIONS' in line or 'MIGRATIONS =' in line:
+              hits.append(i)
+          out=[]
+          for i in hits:
+            lo=max(0,i-25); hi=min(len(lines),i+180)
+            out.append(f'===== around line {i+1} =====')
+            out.extend(f'{j+1:06d}: {lines[j]}' for j in range(lo,hi))
+            out.append('')
+          Path('M177_SCHEMA.txt').write_text('\n'.join(out)+'\n')
+          PY
+      - name: Publish schema capture
         shell: bash
         run: |
-          set -euo pipefail
-          rm -f .github/workflows/m177-history-sync-inspect.yml M177_INSPECT.txt M177_RUN.txt scripts/m177-promote.py
           git config user.name "Pursuit Release Bot"
           git config user.email "actions@users.noreply.github.com"
-          git add -A
-          git commit -m "M177: editable history merge integrity"
+          git add M177_SCHEMA.txt
+          git commit -m "chore: capture current M177 store schema"
           git push origin HEAD:main

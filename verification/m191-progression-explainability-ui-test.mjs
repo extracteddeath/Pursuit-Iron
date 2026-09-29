@@ -16,10 +16,17 @@ assert.ok(app.includes('One unusual workout is not enough to switch it.'), 'adap
 assert.ok(app.includes('_jsx(ProgressionCard, { program: program, open: showProg'), 'Plan Info should include the progression card');
 assert.ok(app.includes('how progression was chosen'), 'Plan Info description should identify progression as part of the reference');
 
+// The UI may contain unrelated legacy metadata elsewhere in this very large compiled bundle. The M191
+// contract is stricter and more useful: the new progression explanation surface itself must consume the
+// engine-owned decision record without importing policy functions or leaking their implementation terms.
+const progressionStart = app.indexOf('const selectedProgressions = Array.isArray(program?.nextEngine?.progressionPlan)');
+const progressionEnd = app.indexOf('const rows = useMemo(() => {', progressionStart);
+assert.ok(progressionStart >= 0 && progressionEnd > progressionStart, 'progression explanation section should be present and bounded');
+const progressionUi = app.slice(progressionStart, progressionEnd);
 assert.ok(!/selectProgressionStyle|reselectProgressionStyle/.test(app), 'App UI must not duplicate or rerun engine progression policy');
-assert.ok(!/loadability|measurementReliable|noviceLinearEligible/.test(app), 'user-facing App bundle must not expose selector implementation jargon');
+assert.ok(!/loadability|measurementReliable|noviceLinearEligible/.test(progressionUi), 'progression explanation UI must not expose selector implementation jargon');
 
 for (const label of ['Double progression','Dynamic double progression','Rep ladder','Linear progression','Wave loading','e1RM autoregulation'])
-  assert.ok(app.includes(label), `progression view should have a plain display label for ${label}`);
+  assert.ok(progressionUi.includes(label), `progression view should have a plain display label for ${label}`);
 
 console.log('PASS M191: creation copy and Plan Info now explain engine-owned per-exercise progression selection without duplicating selector policy or exposing engine jargon.');

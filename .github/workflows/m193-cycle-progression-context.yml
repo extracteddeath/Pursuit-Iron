@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   cycle-progression:
@@ -21,9 +21,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-
-      - name: Apply M193 cycle progression context
-        run: node scripts/apply-m193-cycle-progression-context.mjs
 
       - name: M193 cycle progression context
         run: node --no-warnings --experimental-loader ./verification/import-loader.mjs verification/m193-cycle-progression-context-test.mjs
@@ -56,18 +53,3 @@ jobs:
 
       - name: Production torture regression
         run: node --no-warnings --experimental-loader ./verification/import-loader.mjs verification/m188-production-torture-test.mjs
-
-      - name: Persist certified M193 cycle runtime
-        if: success()
-        shell: bash
-        run: |
-          set -euo pipefail
-          git add modules/next-engine/cycle-runtime-adapter.js
-          if git diff --cached --quiet; then
-            echo "M193 runtime already committed."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "M193: preserve progression context across cycle lifecycle"
-          git push origin HEAD:m193-cycle-progression-context

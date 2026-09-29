@@ -1,0 +1,39 @@
+name: M184 longitudinal evidence
+
+on:
+  push:
+    branches: [m184-longitudinal-evidence]
+    paths:
+      - '.github/workflows/m184-longitudinal-evidence.yml'
+      - 'modules/next-engine/response.js'
+      - 'verification/m184-longitudinal-evidence-test.mjs'
+
+permissions:
+  contents: read
+
+jobs:
+  evidence:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run M184 focused longitudinal evidence matrix
+        run: node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m184-longitudinal-evidence-test.mjs
+      - name: Preserve longitudinal and progression contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          for test in \
+            verification/m175-longitudinal-adaptation-memory-test.mjs \
+            verification/m174-causal-cycle-state-test.mjs \
+            verification/m183-progression-safeguards-test.mjs \
+            verification/progression-safety-test.mjs \
+            verification/custom-progression-safety-test.mjs \
+            verification/m173-integration-torture-test.mjs \
+            verification/full-engine-import-test.mjs
+          do
+            echo "==> $test"
+            node --no-warnings --experimental-loader ./verification/import-loader.mjs "$test"
+          done

@@ -1,4 +1,4 @@
-:root{color-scheme:dark;--boot-bg:#0A0908;--boot-fg:#F5F0E8;--boot-muted:rgba(245,240,232,.62);--boot-accent:#F5F0E8;--boot-on-accent:#0A0908}
+:root{color-scheme:dark;--boot-bg:#0A0908;--boot-fg:#F5F0E8;--boot-muted:rgba(245,240,232,.62);--boot-accent:#F5F0E8;--boot-on-accent:#0A0908;--pi-radius-sm:10px;--pi-radius-md:14px;--pi-radius-lg:20px;--pi-motion-fast:140ms;--pi-motion-standard:220ms;--pi-ease:cubic-bezier(.2,.8,.2,1)}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 /* Native feel: keep orientation-driven text autosizing stable while preserving user zoom.
    The viewport no longer caps maximum-scale, so pinch zoom remains available for accessibility. */
@@ -38,3 +38,36 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 @keyframes pursuitBootSlide{0%{transform:translate3d(-165%,0,0)}60%,100%{transform:translate3d(265%,0,0)}}
 @media (prefers-reduced-motion:reduce){.pursuit-boot-progress>span{animation:none;transform:none;width:100%;opacity:.45}}
 
+/* M187 premium interaction contract.
+   This is intentionally semantic instead of screen-specific: Home, Program, Workout, Progress,
+   Settings and Onboarding inherit the same typography, control feedback, sheets, scrolling and
+   numeric-display rules without duplicating presentation logic inside each React screen. */
+#root{font-variant-ligatures:common-ligatures contextual;-webkit-font-smoothing:antialiased}
+#root h1,#root h2,#root h3,#root h4{margin-block-start:0;text-wrap:balance;letter-spacing:-.025em}
+#root p,#root li{overflow-wrap:anywhere;text-wrap:pretty}
+#root button,#root [role="button"],#root input,#root textarea,#root select{font:inherit}
+#root button,#root [role="button"]{touch-action:manipulation;transform:translateZ(0);transition:transform var(--pi-motion-fast) var(--pi-ease),opacity var(--pi-motion-fast) ease,filter var(--pi-motion-fast) ease}
+#root button:active:not(:disabled),#root [role="button"]:active:not([aria-disabled="true"]){transform:scale(.985)}
+#root button:disabled,#root [role="button"][aria-disabled="true"]{cursor:default;opacity:.45}
+#root input,#root textarea,#root select{caret-color:currentColor;transition:border-color var(--pi-motion-fast) ease,box-shadow var(--pi-motion-fast) ease,background-color var(--pi-motion-fast) ease}
+#root input[type="number"],#root [data-value],#root [data-metric],#root table,#root [role="grid"]{font-variant-numeric:tabular-nums lining-nums}
+#root input[type="number"]{-moz-appearance:textfield}
+#root input[type="number"]::-webkit-inner-spin-button,#root input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+#root [role="dialog"],#root dialog{overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+#root [role="dialog"]:focus-visible,#root dialog:focus-visible{outline:none}
+#root [role="tablist"]{isolation:isolate}
+#root [role="tab"]{transition:background-color var(--pi-motion-fast) ease,color var(--pi-motion-fast) ease,opacity var(--pi-motion-fast) ease,transform var(--pi-motion-fast) var(--pi-ease)}
+#root [role="tab"][aria-selected="true"]{font-weight:700}
+#root [aria-current="page"]{font-weight:700}
+#root details>summary{cursor:pointer;touch-action:manipulation}
+#root details>summary::marker{font-size:.8em}
+#root progress,#root [role="progressbar"]{overflow:hidden;border-radius:999px}
+#root fieldset{min-inline-size:0}
+#root legend{max-inline-size:100%;text-wrap:balance}
+#root hr{border:0;border-top:1px solid color-mix(in srgb,currentColor 12%,transparent)}
+.wpb-scroll,[data-scroll]{scrollbar-width:none}
+.wpb-scroll::-webkit-scrollbar,[data-scroll]::-webkit-scrollbar{display:none}
+#root [data-sticky],#root [aria-label*="navigation" i]{backface-visibility:hidden;transform:translateZ(0)}
+@media (hover:hover) and (pointer:fine){#root button:hover:not(:disabled),#root [role="button"]:hover:not([aria-disabled="true"]){filter:brightness(1.035)}}
+@media (prefers-contrast:more){:focus-visible{outline-width:3px;outline-color:currentColor}#root button:disabled,#root [role="button"][aria-disabled="true"]{opacity:.58}}
+@media (prefers-reduced-motion:reduce){#root button,#root [role="button"],#root input,#root textarea,#root select,#root [role="tab"]{transform:none!important;transition:none!important}}

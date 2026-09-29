@@ -17,10 +17,34 @@ mark('modules/next-engine/generate.js', replaceOnce(
   `    const policy = {\n        ...phasePolicyFor(phase),\n        // M189: block duration is part of progression-method selection. A four-week\n        // intensification block should not start a wave that needs five+ weeks to justify itself.\n        blockWeeks: Number(options?.blockWeeks) > 0 ? Math.max(1, Math.round(Number(options.blockWeeks))) : undefined,\n        requestedProgressionStyle: options?.progressionStyle ?? requestInput?.preferences?.progressionStyle\n    };`
 ));
 
+mark('modules/next-engine/generate.js', replaceOnce(
+  'modules/next-engine/generate.js',
+  `    const strengthBaseline = hasStrengthAnchors ? realizeStrengthAnchors(provisionalTopology.sessions, request, phase) : undefined;`,
+  `    const strengthBaseline = hasStrengthAnchors ? realizeStrengthAnchors(provisionalTopology.sessions, request, phase, {\n        blockWeeks: policy.blockWeeks, requestedProgressionStyle: policy.requestedProgressionStyle\n    }) : undefined;`
+));
+
+mark('modules/next-engine/generate.js', replaceOnce(
+  'modules/next-engine/generate.js',
+  `    const realized = realizeSessions(topology.sessions, request, allocation.targetDose, allocation.directTargetDose, phase,\n        strengthBaseline ? { strengthAnchors: strengthBaseline.anchors } : undefined);`,
+  `    const realized = realizeSessions(topology.sessions, request, allocation.targetDose, allocation.directTargetDose, phase, {\n        ...(strengthBaseline ? { strengthAnchors: strengthBaseline.anchors } : {}),\n        blockWeeks: policy.blockWeeks,\n        requestedProgressionStyle: policy.requestedProgressionStyle\n    });`
+));
+
 mark('modules/next-engine/realizer.js', replaceOnce(
   'modules/next-engine/realizer.js',
   `export function progressionStyleForExercise(ex, role, policy, experience = 'intermediate') {\n    return resolveProgressionStyle(ex, role, { phase: policy.phase, experience });\n}`,
   `export function progressionStyleForExercise(ex, role, policy, experience = 'intermediate') {\n    return resolveProgressionStyle(ex, role, {\n        phase: policy.phase,\n        experience,\n        blockWeeks: policy.blockWeeks,\n        requestedStyle: policy.requestedProgressionStyle\n    });\n}`
+));
+
+mark('modules/next-engine/realizer.js', replaceOnce(
+  'modules/next-engine/realizer.js',
+  `export function realizeStrengthAnchors(plans, request, phase) {\n    const policy = phasePolicyFor(phase);`,
+  `export function realizeStrengthAnchors(plans, request, phase, options = {}) {\n    const policy = {\n        ...phasePolicyFor(phase),\n        blockWeeks: options.blockWeeks,\n        requestedProgressionStyle: options.requestedProgressionStyle\n    };`
+));
+
+mark('modules/next-engine/realizer.js', replaceOnce(
+  'modules/next-engine/realizer.js',
+  `export function realizeSessions(plans, request, targetDose = {}, directTargetDose = {}, phase, options = {}) {\n    const policy = phasePolicyFor(phase);`,
+  `export function realizeSessions(plans, request, targetDose = {}, directTargetDose = {}, phase, options = {}) {\n    const policy = {\n        ...phasePolicyFor(phase),\n        blockWeeks: options.blockWeeks,\n        requestedProgressionStyle: options.requestedProgressionStyle\n    };`
 ));
 
 mark('modules/next-engine/app-shell-adapter.js', replaceOnce(

@@ -1,4 +1,4 @@
-name: M177 History Sync Inspection
+name: M177 Editable History Merge Promotion
 
 on:
   push:
@@ -10,36 +10,28 @@ permissions:
   contents: write
 
 jobs:
-  inspect:
+  promote:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Capture exact M177 ranges
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply M177 candidate
+        run: python scripts/m177-promote.py
+      - name: Verify M177 focused and full gates
+        run: |
+          node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m177-history-merge-integrity-test.mjs
+          node scripts/verify-release.mjs
+      - name: Publish verified M177
         shell: bash
         run: |
-          python - <<'PY'
-          from pathlib import Path
-          lines=Path('modules/App.js').read_text().splitlines()
-          out=[]
-          for label,lo,hi in [
-            ('MIGRATION_AND_MERGE',17945,18130),
-            ('APP_STATE_AND_STAMPERS',34135,34235),
-            ('LOAD_AND_AUTOSAVE',34970,35180),
-            ('HISTORY_COMPLETE_AND_EDIT',36555,36670),
-          ]:
-            out.append('===== '+label+' =====')
-            out.extend(f'{j+1:06d}: {lines[j]}' for j in range(lo-1,min(len(lines),hi)))
-            out.append('')
-          Path('M177_INSPECT.txt').write_text('\n'.join(out)+'\n')
-          PY
-      - name: Publish inspection capture
-        shell: bash
-        run: |
+          set -euo pipefail
+          rm -f .github/workflows/m177-history-sync-inspect.yml M177_INSPECT.txt scripts/m177-promote.py
           git config user.name "Pursuit Release Bot"
           git config user.email "actions@users.noreply.github.com"
-          git add M177_INSPECT.txt
-          if git diff --cached --quiet; then exit 0; fi
-          git commit -m "chore: capture exact M177 persistence ranges"
+          git add -A
+          git commit -m "M177: editable history merge integrity"
           git push origin HEAD:main

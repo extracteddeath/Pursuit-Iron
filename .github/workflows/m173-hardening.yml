@@ -1,3 +1,4 @@
+# trigger: M173
 name: M173 Integration + Resilience Hardening
 
 on:
@@ -36,7 +37,6 @@ jobs:
                   raise SystemExit(f'{label}: expected exactly 1 occurrence, found {n}')
               return s.replace(old,new,1)
 
-          # Version only because this is a new verified release. Engine behavior remains 0.63.0.
           app=read('modules/App.js')
           app=once(app, "const __APP_VERSION__='3.222.0'; const __BUILD__='778';", "const __APP_VERSION__='3.223.0'; const __BUILD__='779';", 'app version/build')
           write('modules/App.js',app)
@@ -57,7 +57,6 @@ jobs:
           profile['milestone']='M173'
           profile['source']='M172 + cross-feature integration torture coverage + bootstrap/PWA resilience hardening'
           profile['cache']='pursuit-iron-production-m173-integration-resilience'
-          # No broad UI redesign: the latest UI milestone remains the already-verified M169 pass.
           write('BUILD_PROFILE.json',json.dumps(profile,indent=2)+'\n')
 
           integration=r'''import assert from 'node:assert/strict';
@@ -75,7 +74,6 @@ assert.equal(built.nextProgram.audit.result,'pass');
 const current=structuredClone(built.program);
 const phase=current.nextEngine?.cycleState?.phase;
 assert.ok(phase,'generated shell program must carry a cycle phase');
-// Accelerate only the review window so the test crosses an actual phase boundary with real history.
 current.nextEngine.cycleState={...current.nextEngine.cycleState,workoutsInPhase:0,minimumWorkouts:2,reviewAfterWorkouts:4,status:'building',recommendedNextPhase:undefined};
 const day=current.days[0];
 assert.ok(day?.exercises?.length>0);
@@ -95,8 +93,6 @@ const makeEntry=(n,bad=false)=>({id:`hist-${n}`,date:1000+n*1000,programId:curre
 const badHistory=[makeEntry(1,true),makeEntry(2),makeEntry(3),makeEntry(4)];
 const badAnalysis=analyzeShellHistoryForNextEngine(current,badHistory,legacy);
 assert.ok(badAnalysis.negativeDecisionCount>0,'deliberately off-target history must produce causal negative evidence');
-
-// Correct the historical mistake through the same normalization boundary used by the History editor.
 const original=badHistory[0];
 const draft=structuredClone(original);
 const firstLegacy=day.exercises[0];
@@ -111,16 +107,11 @@ const correctedAnalysis=analyzeShellHistoryForNextEngine(current,corrected,legac
 assert.ok(correctedAnalysis.negativeDecisionCount<badAnalysis.negativeDecisionCount,'history correction must remove stale negative evidence from adaptation');
 assert.equal(correctedAnalysis.readyForNextBlock,true,'corrected evidence must be eligible for the accelerated evidence-based review');
 assert.ok(correctedAnalysis.recommendedNextPhase && correctedAnalysis.recommendedNextPhase!==phase,'review must recommend a real phase transition');
-
-// Add a user avoidance after the current block was generated. The next block must honor it even if
-// continuity would otherwise prefer the successful old exercise.
 const oldExercises=current.nextEngine.program.sessions.flatMap(s=>s.exercises);
 const avoid=oldExercises.find(ex=>ex.role!=='primary_strength')?.exerciseId ?? oldExercises[0]?.exerciseId;
 assert.ok(avoid);
-for(const key of ['baseRequest']){
-  const req=current.nextEngine[key];
-  req.preferences={...req.preferences,avoidedExercises:[...new Set([...(req.preferences?.avoidedExercises??[]),avoid])]};
-}
+const req=current.nextEngine.baseRequest;
+req.preferences={...req.preferences,avoidedExercises:[...new Set([...(req.preferences?.avoidedExercises??[]),avoid])]};
 let nextId=0;
 const next=generateNextBlockFromShellHistory({program:current,history:corrected,legacyExercises:legacy,makeId:()=>`m173-next-${++nextId}`});
 assert.equal(next.nextProgram.audit.result,'pass');
@@ -177,12 +168,7 @@ console.log(`M173 PWA/mobile source resilience OK for build ${build}; ${shell.le
           manifest['milestone']='M173'
           manifest['appVersion']='3.223.0'
           manifest['build']=779
-          manifest['localCandidate']={
-              'name':'M173 Integration + Bootstrap Resilience',
-              'base':'M172 / app 3.222.0 build 778 / Engine 0.63.0',
-              'validation':'Cross-feature history-to-transition torture test, PWA/mobile source resilience test, plus the full existing release regression suite.'
-          }
-          # Engine files are unchanged, but recompute every tracked hash to prove that instead of assuming it.
+          manifest['localCandidate']={'name':'M173 Integration + Bootstrap Resilience','base':'M172 / app 3.222.0 build 778 / Engine 0.63.0','validation':'Cross-feature history-to-transition torture test, PWA/mobile source resilience test, plus the full existing release regression suite.'}
           def sha_file(p): return hashlib.sha256(Path(p).read_bytes()).hexdigest()
           for f in list(manifest.get('runtimeFiles',{})):
               manifest['runtimeFiles'][f]=sha_file(f)

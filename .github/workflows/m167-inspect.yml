@@ -20,29 +20,38 @@ jobs:
           set -euo pipefail
           python - <<'PY'
           from pathlib import Path
-          p=Path('modules/App.js')
-          s=p.read_text()
-          needles=[
-            'Turn into training cycle',
-            'convertProgramToNextCycleForShell',
-            'onConvertCycle',
-            'customAuthoredSetCount',
-            'function computeCell',
-            'nextWeekPrescriptions',
-            'map(weeks => weeks?.[1] ?? weeks?.["1"])',
-            'sets: 3',
-            'sets || 3',
-            'sets ?? 3'
-          ]
-          for needle in needles:
+
+          def show_between(path, start_marker, end_marker, title):
+            s=Path(path).read_text()
+            a=s.find(start_marker)
+            b=s.find(end_marker,a+len(start_marker)) if a>=0 else -1
+            print('\n===== '+title+' =====')
+            if a<0: print('START NOT FOUND'); return
+            if b<0: b=min(len(s),a+12000)
+            print(s[a:b])
+
+          show_between('modules/next-engine/app-shell-adapter.js','export function canonicalShellSetCount','export function cloneNextDayPrescriptions','adapter set boundary')
+          show_between('modules/next-engine/app-shell-adapter.js','export function nextProgramToShellProgram','export async function generateNextProgramForShell','shell conversion / nextWeekPrescriptions')
+
+          s=Path('modules/App.js').read_text()
+          for needle in [
+            '...(!p.config?.endless && !p.cycleId && p.engineSource === "pursuit-next"',
+            'const beginCycleConversion = (p) =>',
+            'slotBias',
+            'canonicalShellSetCount(',
+            'nextWeekPrescriptions:',
+            'row.sets',
+            '.sets)',
+            'Number(cell.sets)',
+            'Number(row.sets)'
+          ]:
             print('\n===== '+needle+' =====')
             start=0; seen=0
             while True:
               i=s.find(needle,start)
-              if i<0 or seen>=10: break
-              a=max(0,i-1800); b=min(len(s),i+2600)
+              if i<0 or seen>=16: break
               print(f'--- hit {seen+1} @ {i} ---')
-              print(s[a:b])
+              print(s[max(0,i-1200):min(len(s),i+2200)])
               start=i+len(needle); seen+=1
             if not seen: print('NO MATCH')
           PY

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 3,
-  "milestone": "M176",
-  "appVersion": "3.226.0",
-  "build": 782,
+  "milestone": "M177",
+  "appVersion": "3.227.0",
+  "build": 783,
   "engineVersion": "0.63.2",
   "shadowEngineVersion": "0.62.5-shadow",
   "validatedLiveBaseline": "M88-0.61.3-reviewed-baseline",
@@ -85,16 +85,16 @@
     "modules/next-engine/engine-context.js": "40c63ad790d4ab3a83975acd557e58f0f85d4fdc1ceab9ba422468fc6ae1430f"
   },
   "localCandidate": {
-    "name": "M176 Interrupted Workout Restore Hardening",
-    "base": "M175 / app 3.225.0 build 781 / Engine 0.63.2",
-    "validation": "Focused live-session restore/lifecycle regression plus the complete M175 production suite."
+    "name": "M177 Editable History Merge Integrity",
+    "base": "M176 / app 3.226.0 build 782 / Engine 0.63.2",
+    "validation": "Focused editable-history persistence/merge regression plus the complete M176 production suite."
   },
   "uiFiles": {
-    "modules/App.js": "23f79ae7d91b6efe9535ba11812bf58f781b37b22eebdf293c78d1790efaa35a",
-    "index.html": "7316e1e127c85ad41c7fa98de48c489cd906ad545e9f79468e9c016940d230d2",
-    "sw.js": "61be535fecda50847f3d00076ba7449d3fd583319dce48dc64347fdf04a0fb0c",
-    "BUILD_PROFILE.json": "2c5966e652c83467ad5c99f3970056d8cdb4546f7472c903b72a77788c686726",
-    "CHANGELOG.md": "2f483df72e87ce804da737789b70554af05209d17c6d16b85ef7db43fcc5f6c5"
+    "modules/App.js": "129121e33f2320647d614f589007cc20bcd55424f5f7cbfaea29b6d37a9b227e",
+    "index.html": "8be062eb21443c9f0542c7e0e6ac53086e8f3d093f4ce2da0fdbfefb4893bfe0",
+    "sw.js": "42d1c60e87cc596e99f87f05276cecd4300008630d8f0c377d7c8e401a01479a",
+    "BUILD_PROFILE.json": "bcebe3ba5ccd341916bdd403dab95f82221c3af5fd6adf8c257961a89e345f4c",
+    "CHANGELOG.md": "5253a0583eacdf45bfe2d996541552d301a99cf5fa97694fd985fa9598194f34"
   },
   "baselineSourceNextEngineAggregate": "9ba84ffe3a62d94849617af33a2eafeaa563ab4a3636579101990ed753d05a84",
   "baselineSourceFiles": {

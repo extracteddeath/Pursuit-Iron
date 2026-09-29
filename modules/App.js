@@ -1,4 +1,4 @@
-const __APP_VERSION__='3.226.0'; const __BUILD__='782';
+const __APP_VERSION__='3.227.0'; const __BUILD__='783';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { setShellEquipmentExpander, splitContractGaps, splitBuildability, refusalFixes, generateNextProgramForShell, nextProgramToShellProgram, recommendNextSplitForShell, getNextShellCell, canonicalShellSetCount, cloneNextDayPrescriptions, swapNextSlotPrescriptions, removeNextSlotPrescription, nextExerciseIdForShellExercise, NextShellAdapterError } from "./next-engine/app-shell-adapter.js";
@@ -17783,7 +17783,7 @@ const LIVE_KEY = "wpb:live";
 // being silently misread (changed shape) or orphaned (key bump). Keeping the migration logic in one
 // versioned place is what makes future schema edits safe; the alternative is the scatter of inline
 // "older saves" special-cases at each point of use.
-const STORE_VERSION = 12;
+const STORE_VERSION = 13;
 const BW_LOG_CAP = 2000; // weigh-ins kept; ~5.5 years of daily entries at ~45 chars each
 /* Body measurements are lengths, but they were being stamped with the WEIGHT unit — an entry read
    `{v: 34, unit: "lb"}` for a 34-inch waist. The display then derived inches-or-centimetres from
@@ -17803,6 +17803,15 @@ function normalizeMeasureLog(arr, to, weightUnit) {
 // Each entry upgrades the store FROM the previous version TO its own key number. Functions must be
 // pure (no React/DOM) and a no-op when their change is already applied, so re-running can't corrupt.
 const STORE_MIGRATIONS = {
+    // 12 -> 13: completed workout history became editable in M164, so a same-id session can now have
+    // two legitimate versions. Give history the same per-record conflict clock used by other mutable
+    // syncable lists. Legacy records deliberately start at zero so any real M177+ edit wins.
+    13: (d) => {
+        if (!Array.isArray(d.history))
+            return d;
+        const history = d.history.map(x => (x && typeof x === "object" && x.updatedAt == null) ? { ...x, updatedAt: 0 } : x);
+        return { ...d, history };
+    },
     // 11 -> 12: selective-promotion safety state is release-scoped and starts fail-safe. M76 ships
     // with a zero-percent manifest, so upgrading cannot change a prescription.
     12: (d) => d.selectivePromotionRuntime ? d : { ...d, selectivePromotionRuntime: defaultSelectivePromotionRuntimeState(M76_SELECTIVE_PROMOTION_MANIFEST) },
@@ -17988,9 +17997,9 @@ const STORE_MIGRATIONS = {
  *
  * Per-record rules, chosen by what the record actually is:
  *
- *   history      union by id. A session is an immutable record of something that happened; two devices
- *                can only ever hold different subsets of the truth, never conflicting versions of it.
- *                Union is not a compromise here — it is the correct answer.
+ *   history      union by id, newest `updatedAt` wins. Completed sessions were once immutable, but the
+ *                correction editor makes load/reps/RIR/date/duration mutable evidence. Pre-M177 records
+ *                have clock 0; equal-clock conflicts fall back to the newer store snapshot.
  *   saved/cycles/custom
  *                union by id, newest `updatedAt` wins. These are mutable documents, so a genuine
  *                conflict is possible; last-write-wins is the honest, predictable resolution, and the
@@ -18025,25 +18034,33 @@ function mergeStores(local, incoming) {
         tombs[id] = t; });
     const stats = { history: 0, programs: 0, cycles: 0, custom: 0, bw: 0, conflicts: 0 };
     const byId = (a = [], b = [], count) => {
-        const m = new Map();
-        [...(Array.isArray(a) ? a : []), ...(Array.isArray(b) ? b : [])].forEach(r => {
+        const m = new Map(), sourceClock = new Map();
+        const add = (rows, storeClock) => (Array.isArray(rows) ? rows : []).forEach(r => {
             if (!r || r.id == null)
                 return;
             const prev = m.get(r.id);
             if (!prev) {
                 m.set(r.id, r);
+                sourceClock.set(r.id, storeClock);
                 return;
             }
             if (prev === r)
                 return;
+            const prevSig = JSON.stringify(prev), nextSig = JSON.stringify(r);
+            if (prevSig === nextSig)
+                return;
             const pu = prev.updatedAt || 0, ru = r.updatedAt || 0;
-            if (ru > pu) {
+            const pc = sourceClock.get(r.id) || 0;
+            // Per-record clocks are authoritative. Store recency only breaks legacy/equal-clock ties;
+            // the serialised signature is the final stable tie-breaker when both clocks are identical.
+            if (ru > pu || (ru === pu && (storeClock > pc || (storeClock === pc && nextSig > prevSig)))) {
                 m.set(r.id, r);
-                stats.conflicts++;
+                sourceClock.set(r.id, storeClock);
             }
-            else if (ru < pu)
-                stats.conflicts++;
+            stats.conflicts++;
         });
+        add(a, A.savedAt || 0);
+        add(b, B.savedAt || 0);
         // a tombstone removes a record only if the deletion happened AFTER the record's last edit
         const out = [...m.values()].filter(r => !(tombs[r.id] != null && tombs[r.id] >= (r.updatedAt || 0)));
         if (count)
@@ -18066,6 +18083,17 @@ function mergeStores(local, incoming) {
         const oa = older[key] || {}, nb = newer[key] || {};
         return { ...oa, ...nb }; // keys only the older side has survive; shared keys take the newer blob
     };
+    // `perf` is a derived latest-performance mirror. A per-session correction may beat a globally newer
+    // store snapshot, so rebuild exercises represented in retained history from their newest session.
+    const mergedPerf = mapMerge("perf"), perfSeen = new Set();
+    hist.slice().sort((x, y) => (Number(y?.date) || 0) - (Number(x?.date) || 0)).forEach(h => {
+        Object.entries(h?.perf || {}).forEach(([exId, p]) => {
+            if (!perfSeen.has(exId)) {
+                mergedPerf[exId] = p;
+                perfSeen.add(exId);
+            }
+        });
+    });
     /* A weigh-in serialises to ~45 chars, so 200 of them was never a storage decision — it was a
      placeholder that quietly deleted the oldest data of anyone who steps on a scale daily, after
      about six months. History now retains ~6.8 years; a body-weight trend that expires first makes
@@ -18106,7 +18134,7 @@ function mergeStores(local, incoming) {
         banned: [...new Set([...(A.banned || []), ...(B.banned || [])])],
         bwLog,
         measurements: meas,
-        perf: mapMerge("perf"),
+        perf: mergedPerf,
         exNotes: mapMerge("exNotes"),
         exSetup: mapMerge("exSetup"),
         goals: mapMerge("goals"),
@@ -34173,7 +34201,7 @@ function App() {
     const [exNotes, setExNotes] = useState({}); // pinned per-exercise notes (id → text), persist across all sessions
     const [exSetup, setExSetup] = useState({}); // pinned per-exercise physical setup (id → {seat, back, hooks, ...}), shown integrated with the note
     const [perf, setPerf] = useState({});
-    const [history, setHistory] = useState([]);
+    const [history, setHistoryRaw] = useState([]);
     const [custom, setCustomRaw] = useState([]);
     /* Every write to a syncable list goes through here, so `updatedAt` and tombstones are recorded in ONE
      * place rather than at each of the ~40 call sites that mutate these lists — where the next one added
@@ -34202,6 +34230,7 @@ function App() {
     const setSaved = useMemo(() => stampedSetter(setSavedRaw), []);
     const setCycles = useMemo(() => stampedSetter(setCyclesRaw), []);
     const setCustom = useMemo(() => stampedSetter(setCustomRaw), []);
+    const setHistory = useMemo(() => stampedSetter(setHistoryRaw), []);
     const [theme, setThemeState] = useState("lime");
     /* applyTheme was only ever called from the store loader and the theme picker, so a fresh install —
        or any launch that never reaches a stored theme — left the theme-colour meta tag and the
@@ -35024,7 +35053,7 @@ function App() {
         syncCustomRegistry(d.custom || []);
         setCustomRaw(d.custom || []);
         setTombs(d.tombs || {});
-        setHistory(normalizeHistoryDayIds(d.history || [], runtimeSaved));
+        setHistoryRaw(normalizeHistoryDayIds(d.history || [], runtimeSaved));
         setPerf(d.perf || {});
         setBanned(d.banned || []);
         setBwLog(normalizeBwLog(d.bwLog, d.unit || unit).slice(-BW_LOG_CAP));

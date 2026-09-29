@@ -1,3 +1,12 @@
+## M177 — Editable History Merge Integrity (3.227.0 / build 783 / Engine 0.63.2)
+
+- Treats corrected workout history as mutable evidence during backup/device reconciliation instead of the old immutable-session assumption.
+- Adds per-session `updatedAt` clocks and deletion tombstones to every history mutation while keeping hydration raw so opening the app does not manufacture edits.
+- Extends the existing persistence chain to schema 13 (preserving migrations 8–12) and gives legacy history an intentionally-old conflict clock.
+- Makes equal-clock legacy conflicts deterministic with store recency plus a stable final tie-breaker.
+- Rebases the derived `perf` mirror from the newest retained chronological history so progression/readiness cannot keep stale corrected evidence or let an older edited workout replace a newer session.
+- Adds release-gated regression coverage for both merge orders, legacy ties, delete/edit resurrection, migration preservation, and perf consistency.
+
 ## M176 — Interrupted Workout Restore Hardening (3.226.0 / build 782 / Engine 0.63.2)
 
 - Audited the live-workout persistence path rather than rewriting it: current code already autosaves the complete session, flushes on mobile/PWA lifecycle events, restores workout/rest timers, and partially merges logged work after a program edit.

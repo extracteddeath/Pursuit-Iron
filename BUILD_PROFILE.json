@@ -1,12 +1,12 @@
 {
   "profile": "portable-browser-esm-v661-workout-input",
-  "milestone": "M176",
-  "source": "M175 + interrupted-workout resume/lifecycle persistence regression hardening",
+  "milestone": "M177",
+  "source": "M176 + editable workout-history conflict clocks, tombstones, deterministic merge, and perf rebase",
   "engine": "0.63.2 longitudinal avoidance memory parity for standalone and adaptive cycles",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 43,
   "shadowRuntimeModules": 9,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-m176-workout-restore-hardening",
+  "cache": "pursuit-iron-production-m177-history-merge-integrity",
   "uiMilestone": "M169 Swap Sheet Scrolling"
 }

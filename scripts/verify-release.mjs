@@ -24,7 +24,7 @@ if (profile.uiMilestone !== 'M169 Swap Sheet Scrolling') fail('unexpected UI mil
 const app = read('modules/App.js');
 for (const marker of ['Turn into training cycle','convertProgramToNextCycleForShell','onConvertCycle: beginCycleConversion','Remove saved plan','Restore to library',
   'homeProgramGroups','homePhaseIdentity','data-program-group','This block starts when you finish the current one','action: "decrease_load"',
-  'Correct workout log','normalizeEditedHistoryEntry','perfAfterHistoryReplace','const [lo, hi] = cellRepRange(cell, program, ex, slot === day?.primaryIndex)',
+  'Correct workout log','normalizeEditedHistoryEntry','perfAfterHistoryReplace','const setHistory = useMemo(() => stampedSetter(setHistoryRaw), [])','const [lo, hi] = cellRepRange(cell, program, ex, slot === day?.primaryIndex)',
   'legacyCustomSetCount(program, day, ex, slotIndex, weekIndex, o.sets, base.sets)','cyclePhaseLabel','cycleConfigForStandaloneProgram','mergeStandaloneIntoGeneratedCycle','advanceLegacyFirstCycleBlock','historyVolumeIn(h, unit)','weeklyRecap(history, unit)','Keep the compact LAST reference to load × reps only','map(weeks => weeks?.[1] ?? weeks?.["1"])']) {
   if (!app.includes(marker)) fail(`missing App marker: ${marker}`);
 }
@@ -67,6 +67,7 @@ execFileSync(process.execPath,['verification/m173-pwa-resilience-test.mjs'],{std
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/m174-causal-cycle-state-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/m175-longitudinal-adaptation-memory-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/m176-workout-restore-hardening-test.mjs'],{stdio:'inherit',cwd:root});
+execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/m177-history-merge-integrity-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/programs-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/set-display-integrity-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['verification/cycle-overview-ui-test.mjs'],{stdio:'inherit',cwd:root});

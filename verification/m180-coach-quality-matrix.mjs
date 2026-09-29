@@ -96,7 +96,10 @@ console.log('\nM180 expanded quality matrix:');
 console.log(JSON.stringify(summary, null, 2));
 
 const generationErrors = summary.filter(item => item.result === 'generation_error');
-if (generationErrors.length) {
-  console.error(`${generationErrors.length} matrix cases could not be generated.`);
+const qualityMisses = summary.filter(item => item.result !== 'pass' && item.result !== 'generation_error');
+if (generationErrors.length || qualityMisses.length) {
+  if (generationErrors.length) console.error(`${generationErrors.length} matrix cases could not be generated.`);
+  if (qualityMisses.length) console.error(`${qualityMisses.length} generated programs failed the pass-only M180 coach-quality gate.`);
   process.exit(1);
 }
+console.log(`M180 pass-only matrix gate OK: ${summary.length}/${summary.length} representative programs clean.`);

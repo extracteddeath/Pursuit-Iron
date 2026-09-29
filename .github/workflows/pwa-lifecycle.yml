@@ -1,0 +1,30 @@
+name: PWA lifecycle integrity
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser-pwa-lifecycle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser test harness
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v google-chrome
+          npm install --no-save --ignore-scripts puppeteer-core@24
+      - name: Exercise service-worker update lifecycle in Chrome
+        env:
+          CHROME_BIN: /usr/bin/google-chrome
+        run: node verification/m178-pwa-update-browser-test.mjs

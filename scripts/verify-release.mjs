@@ -21,6 +21,8 @@ if (!sw.includes(`const CACHE="${profile.cache}"`)) fail('BUILD_PROFILE cache do
 if (profile.milestone !== manifest.milestone) fail('BUILD_PROFILE milestone does not match manifest');
 if (profile.uiMilestone !== 'M169 Swap Sheet Scrolling') fail('unexpected UI milestone');
 
+if (!fs.existsSync(path.join(root,'verification/m178-pwa-update-browser-test.mjs'))) fail('missing M178 PWA browser lifecycle gate');
+
 const app = read('modules/App.js');
 for (const marker of ['Turn into training cycle','convertProgramToNextCycleForShell','onConvertCycle: beginCycleConversion','Remove saved plan','Restore to library',
   'homeProgramGroups','homePhaseIdentity','data-program-group','This block starts when you finish the current one','action: "decrease_load"',

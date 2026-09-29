@@ -1,3 +1,11 @@
+## M178 — Real-Browser PWA Update Lifecycle Certification (3.228.0 / build 784 / Engine 0.63.2)
+
+- Adds a real headless-Chrome service-worker lifecycle gate instead of relying only on source-marker tests for PWA updates.
+- The gate starts the actual app under its current worker, deploys a changed worker while the app is open, verifies the new worker waits, confirms the in-app **Update ready — Restart** action is the takeover trigger, and verifies the controller-driven reload completes under the new cache.
+- Verifies local training storage survives the update/reload and the old production cache is removed only after activation.
+- Re-audited interrupted-workout protection: the restart control remains suppressed while a workout is active or minimized, while `wpb:live` is flushed through the existing lifecycle persistence hooks. No runtime behavior change was needed.
+- Adds a permanent PWA lifecycle CI workflow so future releases run this browser-level gate in addition to the fast production integrity suite.
+
 ## M177 — Editable History Merge Integrity (3.227.0 / build 783 / Engine 0.63.2)
 
 - Treats corrected workout history as mutable evidence during backup/device reconciliation instead of the old immutable-session assumption.

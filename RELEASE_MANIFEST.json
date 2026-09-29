@@ -1,8 +1,8 @@
 {
   "schemaVersion": 3,
-  "milestone": "M177",
-  "appVersion": "3.227.0",
-  "build": 783,
+  "milestone": "M178",
+  "appVersion": "3.228.0",
+  "build": 784,
   "engineVersion": "0.63.2",
   "shadowEngineVersion": "0.62.5-shadow",
   "validatedLiveBaseline": "M88-0.61.3-reviewed-baseline",
@@ -85,16 +85,16 @@
     "modules/next-engine/engine-context.js": "40c63ad790d4ab3a83975acd557e58f0f85d4fdc1ceab9ba422468fc6ae1430f"
   },
   "localCandidate": {
-    "name": "M177 Editable History Merge Integrity",
-    "base": "M176 / app 3.226.0 build 782 / Engine 0.63.2",
-    "validation": "Focused editable-history persistence/merge regression plus the complete M176 production suite."
+    "name": "M178 Real-Browser PWA Update Lifecycle Certification",
+    "base": "M177 / app 3.227.0 build 783 / Engine 0.63.2",
+    "validation": "Real Chrome service-worker takeover/reload/storage lifecycle plus the complete M177 production suite."
   },
   "uiFiles": {
-    "modules/App.js": "129121e33f2320647d614f589007cc20bcd55424f5f7cbfaea29b6d37a9b227e",
-    "index.html": "8be062eb21443c9f0542c7e0e6ac53086e8f3d093f4ce2da0fdbfefb4893bfe0",
-    "sw.js": "42d1c60e87cc596e99f87f05276cecd4300008630d8f0c377d7c8e401a01479a",
-    "BUILD_PROFILE.json": "bcebe3ba5ccd341916bdd403dab95f82221c3af5fd6adf8c257961a89e345f4c",
-    "CHANGELOG.md": "5253a0583eacdf45bfe2d996541552d301a99cf5fa97694fd985fa9598194f34"
+    "modules/App.js": "d071cf62a1a00abaf97eba4b5b72657fa8a46c67877d09b3b5177d1e1aa73f16",
+    "index.html": "bd397a3f737f4fa2821929e655d89c4c683ef44f0050a59ce5d84aea71699527",
+    "sw.js": "c244548563a10436942ce4fe6226b079f8476ee3099646e6e950d1258fd58265",
+    "BUILD_PROFILE.json": "c6a628a370ed8db03e6bd2e4556f2f17e564d0ea05a8aa86bdb7d065ee0e30f6",
+    "CHANGELOG.md": "8f10dd3f7da9760f6acb29d82dec3126d9e9eec4168715eda34a380cc5513fab"
   },
   "baselineSourceNextEngineAggregate": "9ba84ffe3a62d94849617af33a2eafeaa563ab4a3636579101990ed753d05a84",
   "baselineSourceFiles": {

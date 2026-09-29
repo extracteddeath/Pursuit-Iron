@@ -1,3 +1,14 @@
+## Pursuit Iron 4.0.0 — M195 (build 787 / Engine 0.64.0)
+
+- Promotes the completed M189–M194 adaptive progression architecture to the production release line.
+- Selects progression per exercise from phase, experience, rep structure, loading characteristics, equipment, and real block duration instead of a static program-wide default.
+- Re-evaluates Auto progression from comparable per-lift history while preserving manual choices and preventing method thrashing.
+- Carries progression context correctly through standalone programs, cycle creation, block previews, real block advancement, and Adapt Between Blocks transitions.
+- Adds plain-language progression explainability, including whether Auto kept or changed a method across a block transition.
+- Aligns the longitudinal simulator and weekly progression schedule with the production runtime so torture certification exercises the same rules the shipped app uses.
+- Preserves all M188 production-torture, PWA lifecycle, premium UI, history, progression-safety, and coach-quality contracts.
+- Physical Android installed-PWA certification remains a separate manual device check and is not claimed by CI.
+
 ## M180 — Coach Quality Oracle 2.0 (3.229.0 / build 785 / Engine 0.63.3)
 
 - Adds a domain-gated coach-quality oracle above the existing structural audit, objective coach guardrails, and sampled blind-review framework. No blended score can hide a major defect in another quality domain.

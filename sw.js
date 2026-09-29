@@ -1,5 +1,5 @@
-/* M188 production torture + certification — Engine 0.63.4, carrying forward M187 premium UX. */
-const CACHE="pursuit-iron-production-m188-torture-certification";
+/* Pursuit Iron 4.0 production release — Engine 0.64.0 with adaptive progression lifecycle and simulation parity. */
+const CACHE="pursuit-iron-production-v4-0-0";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
   "./",

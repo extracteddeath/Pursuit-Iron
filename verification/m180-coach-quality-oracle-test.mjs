@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { evaluateCoachQualityEvidence } from '../modules/next-engine/coach-quality-oracle.js';
+import { createStrengthClaims, normalizeRequest, selectStrengthClaimsForCapacity } from '../modules/next-engine/prescription.js';
 
 function cleanHumanAggregate(overrides = {}) {
   return {
@@ -98,6 +99,38 @@ function cleanHumanAggregate(overrides = {}) {
   assert.equal(oracle.result, 'review');
   assert.ok(oracle.warnings.some(f => f.code === 'HUMAN_REVIEW_SAMPLE_TOO_SMALL'));
   console.log('PASS insufficient human evidence remains review-only rather than false certification');
+}
+
+{
+  const available = ['barbell','rack','bench','dumbbell','cable','machine','smith','leg_press','pullup_bar','bodyweight'];
+  const request = normalizeRequest({
+    athlete: { experience: 'intermediate' },
+    goal: { type: 'mixed', musclePriorities: {}, liftPriorities: { back_squat: 'high', bench_press: 'high', deadlift: 'high' } },
+    schedule: { days: ['monday','tuesday','wednesday','thursday'].map(day => ({ day, maxMinutes: 75 })) },
+    equipment: {
+      available,
+      bodyweight: 'allow',
+      loading: {
+        unit: 'lb',
+        barbell: { barWeight: 45, platePairs: [{weight:45,pairs:8},{weight:25,pairs:4},{weight:10,pairs:4},{weight:5,pairs:4},{weight:2.5,pairs:4}] },
+        dumbbells: { availablePerHand: [5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100] },
+        machine: { minimum: 5, increment: 5, maximum: 500 },
+        cable: { minimum: 5, increment: 5, maximum: 300 },
+        smith: { minimum: 5, increment: 5, maximum: 500 },
+        exerciseOverrides: {}
+      }
+    },
+    restrictions: { maxBarbellMovementsPerDay: 3, allowSupersets: true },
+    preferences: { preferredSplit: 'upper_lower', lockedSplit: 'upper_lower', avoidedExercises: [] },
+    customExercises: [],
+    seed: 18002
+  });
+  const selected = selectStrengthClaimsForCapacity(request, createStrengthClaims(request));
+  const lower = selected.filter(claim => claim.lift === 'back_squat' || claim.lift === 'deadlift');
+  assert.deepEqual(new Set(lower.map(claim => claim.id)), new Set(['back_squat-heavy', 'deadlift-heavy']));
+  assert.equal(lower.every(claim => claim.required), true);
+  assert.ok(selected.some(claim => claim.id === 'bench_press-volume'), 'upper-region optional volume should remain available when it fits cleanly');
+  console.log('PASS mixed Upper/Lower protects required squat/deadlift anchors without optional lower-strength stacking');
 }
 
 console.log('M180 coach quality oracle foundation OK.');

@@ -19,7 +19,8 @@ const missing = shell.filter(p => p !== './' && !fs.existsSync(path.join(root,p.
 if (missing.length) fail(`missing precache files: ${missing.join(', ')}`);
 if (!sw.includes(`const CACHE="${profile.cache}"`)) fail('BUILD_PROFILE cache does not match sw.js');
 if (profile.milestone !== manifest.milestone) fail('BUILD_PROFILE milestone does not match manifest');
-if (profile.uiMilestone !== 'M169 Swap Sheet Scrolling') fail('unexpected UI milestone');
+if (profile.uiMilestone !== manifest.uiMilestone) fail('BUILD_PROFILE UI milestone does not match manifest');
+if (profile.cache !== manifest.cache) fail('BUILD_PROFILE cache does not match manifest');
 
 if (!fs.existsSync(path.join(root,'verification/m178-pwa-update-browser-test.mjs'))) fail('missing M178 PWA browser lifecycle gate');
 if (!fs.existsSync(path.join(root,'modules/next-engine/coach-quality-oracle.js'))) fail('missing M180 coach quality oracle');

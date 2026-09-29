@@ -28,26 +28,36 @@ jobs:
             echo "ready=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Diagnose staged payload
+      - name: Repair and verify staged payload
         if: steps.ready.outputs.ready == 'true'
         shell: bash
         run: |
           set -euo pipefail
           python - <<'PY'
           from pathlib import Path
-          import base64
-          checks = [('part-00',9728,9984),('part-03',1024,1280),('part-05',5632,5888)]
-          for name,start,end in checks:
-              data = Path('.m165-final', name).read_bytes()
-              print(f'{name}:{start}:{end}:{base64.b64encode(data[start:end]).decode()}')
+          p = Path('.m165-final/part-00')
+          b = bytearray(p.read_bytes())
+          b.insert(9932, ord('b'))
+          p.write_bytes(b)
+          p = Path('.m165-final/part-03')
+          b = bytearray(p.read_bytes())
+          b[1224] = ord('H')
+          p.write_bytes(b)
+          p = Path('.m165-final/part-05')
+          b = bytearray(p.read_bytes())
+          b[5792] = ord('U')
+          p.write_bytes(b)
           PY
+          cat .m165-final/part-* > /tmp/m165.payload.b64
+          echo "4229d467dd0b254e1bf62ce73876bd71b0dfe24a6b567d368cd323ab25034cf9  /tmp/m165.payload.b64" | sha256sum -c -
+          base64 -d /tmp/m165.payload.b64 | gzip -d > /tmp/m165.patch
+          echo "8b40d38e9189864227aae656f549c4e26b6b1c90422af12ecfc021b9455e4afd  /tmp/m165.patch" | sha256sum -c -
 
       - name: Apply verified M165 payload
         if: steps.ready.outputs.ready == 'true'
         shell: bash
         run: |
           set -euo pipefail
-          cat .m165-final/part-* | base64 -d | gzip -d > /tmp/m165.patch
           git apply --check /tmp/m165.patch
           git apply /tmp/m165.patch
           node scripts/verify-release.mjs

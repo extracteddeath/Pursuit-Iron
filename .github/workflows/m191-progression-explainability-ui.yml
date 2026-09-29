@@ -1,0 +1,59 @@
+name: M191 Progression Explainability UI
+
+on:
+  push:
+    branches:
+      - m191-progression-explainability-ui
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  progression-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Apply M191 progression UI
+        run: node scripts/apply-m191-progression-ui.mjs
+
+      - name: Parse App bundle
+        run: node --check modules/App.js
+
+      - name: M191 progression explainability UI
+        run: node verification/m191-progression-explainability-ui-test.mjs
+
+      - name: Premium UI carry-forward
+        run: node verification/m188-premium-ux-carryforward-test.mjs
+
+      - name: Cycle and program UI regression
+        run: node verification/cycle-overview-ui-test.mjs
+
+      - name: M190 progression lifecycle regression
+        run: node --no-warnings --experimental-loader ./verification/import-loader.mjs verification/m190-progression-lifecycle-test.mjs
+
+      - name: Production torture regression
+        run: node --no-warnings --experimental-loader ./verification/import-loader.mjs verification/m188-production-torture-test.mjs
+
+      - name: Persist certified M191 UI
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add modules/App.js
+          if git diff --cached --quiet; then
+            echo "M191 UI already committed."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "M191: explain adaptive progression in creation and Plan Info"
+          git push origin HEAD:m191-progression-explainability-ui

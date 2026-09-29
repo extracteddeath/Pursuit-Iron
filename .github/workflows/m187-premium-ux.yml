@@ -1,0 +1,49 @@
+name: M187 premium UX
+
+on:
+  push:
+    branches: [m187-premium-ux]
+    paths:
+      - '.github/workflows/m187-premium-ux.yml'
+      - 'app.css'
+      - 'BUILD_PROFILE.json'
+      - 'sw.js'
+      - 'verification/m187-premium-ux-test.mjs'
+      - 'modules/next-engine/explainability.js'
+      - 'modules/next-engine/phase-transition.js'
+      - 'verification/m186-explainable-block-review-test.mjs'
+
+permissions:
+  contents: read
+
+jobs:
+  premium-ux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run M187 premium UX contract
+        run: node ./verification/m187-premium-ux-test.mjs
+      - name: Preserve M186 explainable Block Review
+        run: node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m186-explainable-block-review-test.mjs
+      - name: Preserve engine and program contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          for test in \
+            verification/m185-phase-specialization-test.mjs \
+            verification/m184-longitudinal-evidence-test.mjs \
+            verification/m181-dose-reconciliation-test.mjs \
+            verification/m180-coach-quality-oracle-test.mjs \
+            verification/m180-coach-quality-matrix.mjs \
+            verification/m174-causal-cycle-state-test.mjs \
+            verification/m175-longitudinal-adaptation-memory-test.mjs \
+            verification/prescription-integrity-test.mjs \
+            verification/programs-test.mjs \
+            verification/full-engine-import-test.mjs
+          do
+            echo "==> $test"
+            node --no-warnings --experimental-loader ./verification/import-loader.mjs "$test"
+          done

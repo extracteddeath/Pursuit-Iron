@@ -14,49 +14,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect exact M166 targets
+      - name: Inspect volume helper
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
           s = Path('modules/App.js').read_text(errors='replace')
-          print(f'===== modules/App.js bytes={len(s)} =====')
-          for needle, before, after in [
-              ('canonicalShellSetCount(o.sets, base.sets)', 1800, 2200),
-              ('your response, not averages', 24000, 5000),
-              ('Avg volume', 5000, 5000),
-              ('volume/session', 5000, 5000),
-              ('across ${', 5000, 5000),
-          ]:
-              start = 0
-              hit = 0
-              while True:
-                  i = s.lower().find(needle.lower(), start)
+          low = s.lower()
+          for needle in ['function volumeVerdicts', 'recent sessions', 'history.length', 'setsDone', 'entry.volume', 'h.volume', 'average', 'avg']:
+              pos = 0
+              shown = 0
+              while shown < 20:
+                  i = low.find(needle.lower(), pos)
                   if i < 0:
                       break
-                  hit += 1
-                  print(f'--- {needle!r} hit={hit} offset={i} ---')
-                  print(s[max(0,i-before):min(len(s),i+len(needle)+after)].replace('\n','\\n'))
-                  start = i + len(needle)
-                  if hit >= 8:
-                      break
-              print(f'COUNT {needle!r} = {hit}')
-          # Cheap adjacency scan: list occurrences where volume and session appear within 350 chars.
-          low = s.lower()
-          pos = 0
-          found = 0
-          while True:
-              i = low.find('volume', pos)
-              if i < 0:
-                  break
-              lo = max(0, i-350); hi = min(len(s), i+700)
-              chunk = low[lo:hi]
-              if 'session' in chunk or 'average' in chunk or 'avg' in chunk:
-                  found += 1
-                  print(f'--- volume adjacency hit={found} offset={i} ---')
-                  print(s[lo:hi].replace('\n','\\n'))
-                  if found >= 40:
-                      break
-              pos = i + 6
-          print(f'VOLUME_ADJACENCY={found}')
+                  chunk = s[max(0, i-1800):min(len(s), i+3200)]
+                  if needle in ['function volumeVerdicts', 'recent sessions'] or ('volume' in chunk.lower() and ('session' in chunk.lower() or 'history' in chunk.lower())):
+                      shown += 1
+                      print(f'--- {needle} #{shown} @ {i} ---')
+                      print(chunk.replace('\n','\\n'))
+                  pos = i + len(needle)
+              print(f'SHOWN {needle}={shown}')
           PY

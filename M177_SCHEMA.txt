@@ -1,21 +1,4 @@
-===== around line 17786 =====
-017761:                 const sl = (b.w * (b.r + qb) - a.w * (a.r + qa)) / (a.w - b.w);
-017762:                 if (isFinite(sl) && sl >= 12 && sl <= 60)
-017763:                     pairs.push(sl);
-017764:             }
-017765:     }
-017766:     let out = 30;
-017767:     if (pairs.length >= 6) {
-017768:         pairs.sort((x, y) => x - y);
-017769:         const m = Math.floor(pairs.length / 2);
-017770:         const med = pairs.length % 2 ? pairs[m] : (pairs[m - 1] + pairs[m]) / 2;
-017771:         const conf = Math.min(1, (pairs.length - 6) / 24);
-017772:         out = Math.max(22, Math.min(42, 30 + (med - 30) * conf));
-017773:     }
-017774:     byEx.set(ex.id, out);
-017775:     return out;
-017776: }
-017777: /* ============================== PERSISTENCE ============================== */
+===== STORE_VERSION (10 hits) =====
 017778: const MEM = { data: null };
 017779: const KEY = "wpb:v1";
 017780: const LIVE_KEY = "wpb:live";
@@ -42,394 +25,7 @@
 017801:         .sort((a, b) => a.date - b.date);
 017802: }
 017803: // Each entry upgrades the store FROM the previous version TO its own key number. Functions must be
-017804: // pure (no React/DOM) and a no-op when their change is already applied, so re-running can't corrupt.
-017805: const STORE_MIGRATIONS = {
-017806:     // 11 -> 12: selective-promotion safety state is release-scoped and starts fail-safe. M76 ships
-017807:     // with a zero-percent manifest, so upgrading cannot change a prescription.
-017808:     12: (d) => d.selectivePromotionRuntime ? d : { ...d, selectivePromotionRuntime: defaultSelectivePromotionRuntimeState(M76_SELECTIVE_PROMOTION_MANIFEST) },
-017809:     // 10 -> 11: controlled canary research is opt-in and local. Existing users must remain
-017810:     // unenrolled after upgrade; a missing field therefore migrates to an explicit disabled state.
-017811:     11: (d) => d.canaryResearch ? d : { ...d, canaryResearch: defaultCanaryResearchState() },
-017812:     // 9 -> 10: the typed `age` integer becomes a `birth` date. An age is only true for a year and the
-017813:     // app had no way to know it had gone stale, so a lifter's strength standards quietly drifted onto
-017814:     // the wrong age band and stayed there. The exact date can't be recovered from a number, so estimate
-017815:     // mid-year of the implied birth year (±6 months, inside ageFactor's 5–6 year bands) and mark it
-017816:     // `birthEst` so the UI can ask for the real one. `age` is left in place and kept in sync on save,
-017817:     // so an older build reading this store after a downgrade still finds the field it expects.
-017818:     10: (d) => {
-017819:         if (d.birth)
-017820:             return d;
-017821:         const b = birthFromAge(d.age, d.savedAt);
-017822:         return b ? { ...d, birth: b, birthEst: true } : d;
-017823:     },
-017824:     // 7 → 8: the single `equipDefault` list becomes a list of GYMS. Equipment belongs to a place, not
-017825:     // to a person, and a lifter with a garage rack and a gym membership had no way to say so.
-017826:     // The existing list is preserved as the ACTIVE gym so nobody's programs change on upgrade, and it
-017827:     // is named from its own contents rather than assumed — calling a full commercial kit "Home gym"
-017828:     // would be a silent lie. A second preset is added so the pair the app promises always exists.
-017829:     // `equipDefault` is deliberately left in place and kept in sync: an older build reading this store
-017830:     // after a downgrade still finds the field it expects.
-017831:     // 8 -> 9: "Selectorized Machines" split into specific apparatus. Grant every gym the fine ids its
-017832:     // coarse category already implied, so no user's available exercises change on upgrade. Granting is
-017833:     // conditional on the parent: a bands-only gym must not acquire a leg press.
-017834:     9: (d) => {
-017835:         const grow = (g) => {
-017836:             const eq = new Set(Array.isArray(g.equipment) ? g.equipment : []);
-017837:             Object.entries(LEGACY_EQUIP_IMPLIES).forEach(([parent, fine]) => { if (eq.has(parent))
-017838:                 fine.forEach(f => eq.add(f)); });
-017839:             return { ...g, equipment: [...eq] };
-017840:         };
-017841:         /* Defensive: a store can arrive at v8 without gyms — a partial import, a merge from a device that
-017842:            never wrote them, a hand-edited backup. Rebuilding them here rather than assuming means the
-017843:            migration can never hand the app a gym-less store. normalizeGyms would paper over it on load,
-017844:            but a migration that silently drops the user's equipment is not something to leave to a later
-017845:            safety net. */
-017846:         const base = (Array.isArray(d.gyms) && d.gyms.length) ? d : STORE_MIGRATIONS[8]({ ...d, gyms: null });
-017847:         return { ...base, gyms: (Array.isArray(base.gyms) ? base.gyms : []).map(grow),
-017848:             equipDefault: Array.isArray(base.equipDefault) ? grow({ equipment: base.equipDefault }).equipment : base.equipDefault };
-017849:     },
-017850:     8: (d) => {
-017851:         if (Array.isArray(d.gyms) && d.gyms.length)
-017852:             return d;
-017853:         const eq = Array.isArray(d.equipDefault) && d.equipDefault.length ? d.equipDefault : [...ALL_EQUIP_IDS];
-017854:         const isFull = ALL_EQUIP_IDS.every(x => eq.includes(x));
-017855:         const mine = { id: "gym_1", name: isFull ? "Commercial gym" : "My gym", equipment: eq };
-017856:         const other = isFull
-017857:             ? { id: "gym_2", name: "Home gym", equipment: [...GYM_PRESETS[2].equipment] }
-017858:             : { id: "gym_2", name: "Commercial gym", equipment: [...ALL_EQUIP_IDS] };
-017859:         return { ...d, gyms: [mine, other], activeGymId: mine.id };
-017860:     },
-017861:     // 1 → 2: the legacy `lastWeights` map (weight only) becomes the per-exercise `perf` store
-017862:     // (weight + reps). Previously handled inline at hydration; centralized here so load AND import
-017863:     // both get it. No-op when `perf` already exists (everyone past the original change).
-017864:     2: (d) => {
-017865:         if (!d.perf && d.lastWeights) {
-017866:             const perf = {};
-017867:             Object.entries(d.lastWeights).forEach(([k, v]) => { perf[k] = { weight: v, reps: null }; });
-017868:             return { ...d, perf };
-017869:         }
-017870:         return d;
-017871:     },
-017872:     // 2 → 3: repair runaway auto-volume. Per-session autoregulation used to be merged into `slotBias`
-017873:     // and persisted, so set counts compounded every session (programs grew longer week over week).
-017874:     // Autoregulation now lives in a separate `autoBias` field rebuilt fresh each session. Reset each
-017875:     // auto-progression program's designed volume to its clean structural baseline (base sets, then the
-017876:     // MRV cap) — exactly what a freshly generated block uses — and drop any stored autoBias. Manual
-017877:     // per-set edits (overrides / circuit rounds) and all progression state are left untouched.
-017878:     3: (d) => {
-017879:         if (!Array.isArray(d.saved))
-017880:             return d;
-017881:         const saved = d.saved.map(p => {
-017882:             if (!p || !p.config)
-017883:                 return p;
-017884:             if (p.config.progression === "manual" || p.config.percentScheme)
-017885:                 return p; // never auto-volumed
-017886:             if (!p.slotBias && !p.autoBias)
-017887:                 return p; // nothing accumulated
-017888:             const np = { ...p, slotBias: {}, autoBias: undefined };
-017889:             if (np.config.autoVolume)
-017890:                 np.config = { ...np.config, autoVolume: false };
-017891:             try {
-017892:                 capWeeklyVolume(np);
-017893:             }
-017894:             catch { } // re-enforce the MRV ceiling on the clean baseline
-017895:             return np;
-017896:         });
-017897:         return { ...d, saved };
-017898:     },
-017899:     // 3 → 4: barbell compounds no longer default to the rep ladder (auto now picks double progression,
-017900:     // which fits lifts whose reps fall across sets). Drop any progStyle override that PINS a barbell
-017901:     // compound to "ladder" so it falls back to auto → double. Machine/isolation ladders — where reps
-017902:     // hold across sets and the ladder is a fine choice — are left exactly as the lifter set them, as
-017903:     // are all other explicit styles. A no-op for the common case (styles were never saved, just
-017904:     // auto-resolved), which the auto change already corrects.
-017905:     4: (d) => {
-017906:         if (!Array.isArray(d.saved))
-017907:             return d;
-017908:         // Frozen deliberately: this is a v4-era migration, a historical artifact. It should keep
-017909:         // classifying the way it did when it was written, not drift with today's taxonomy.
-017910:         const isBarbellCompound = (id) => { const ex = EX_BY_ID[id]; return !!ex && ex.type === "compound" && (ex.equip || []).includes("barbell"); };
-017911:         const saved = d.saved.map(p => {
-017912:             if (!p || !p.progStyle)
-017913:                 return p;
-017914:             const ps = { ...p.progStyle };
-017915:             let changed = false;
-017916:             Object.keys(ps).forEach(id => { if (ps[id] === "ladder" && isBarbellCompound(id)) {
-017917:                 delete ps[id];
-017918:                 changed = true;
-017919:             } });
-017920:             if (!changed)
-017921:                 return p;
-017922:             return { ...p, progStyle: Object.keys(ps).length ? ps : undefined };
-017923:         });
-017924:         return { ...d, saved };
-017925:     },
-017926:     // 4 → 5: additive only. Everything that existed before this migration was produced by engine 1, so
-017927:     // stamp it as such; that's what lets legacy programs keep engine-1 behaviour while new ones are
-017928:     // generated on engine 2. Logged sets also start carrying pw/pt (the weight and rep target that were
-017929:     // prescribed) from here on — older sets simply lack the snapshot.
-017930:     // 5 -> 6: everything moves to engine 2. Engine 1 was kept alive so that programs generated by it
-017931:     // would not have their prescriptions change mid-block underneath the lifter. With no engine-1
-017932:     // programs left in the wild, that promise has nothing to protect, and carrying two engines forever
-017933:     // to honour it would be paying rent on an empty room. Restamped here rather than defaulted at read
-017934:     // time so the store is self-describing: a program says which engine made it, and now they all say 2.
-017935:     6: (d) => {
-017936:         const stamp = (x) => (x && typeof x === "object") ? { ...x, engineV: 2 } : x;
-017937:         const out = { ...d };
-017938:         if (Array.isArray(d.saved))
-017939:             out.saved = d.saved.map(stamp);
-017940:         if (Array.isArray(d.cycles))
-017941:             out.cycles = d.cycles.map(stamp);
-017942:         // History is a RECORD of what happened. A session prescribed by engine 1 was prescribed by engine
-017943:         // 1, and rewriting that would be falsifying the log — the replay/eval tooling reads this field to
-017944:         // know which policy issued each set. Left exactly as it was.
-017945:         return out;
-017946:     },
-017947:     5: (d) => {
-017948:         const stamp = (x) => (x && typeof x === "object" && x.engineV == null) ? { ...x, engineV: 1 } : x;
-017949:         const out = { ...d };
-017950:         if (Array.isArray(d.saved))
-017951:             out.saved = d.saved.map(stamp);
-017952:         if (Array.isArray(d.cycles))
-017953:             out.cycles = d.cycles.map(stamp);
-017954:         if (Array.isArray(d.history))
-017955:             out.history = d.history.map(stamp);
-017956:         return out;
-017957:     },
-017958:     // 6 → 7: groundwork for merging two devices' data. Two things were missing and neither can be
-017959:     // reconstructed after the fact, which is why they go in now rather than when a sync backend lands:
-017960:     //
-017961:     //   `tombs`  — deletions. A merge that only unions records can never delete anything: remove a
-017962:     //              program on your phone, merge with the tablet that still has it, and it comes back
-017963:     //              from the dead. A deletion has to be a FACT that travels, not an absence.
-017964:     //   updatedAt — which of two versions of the same program is the newer one. Without it, a merge
-017965:     //              has to guess, and guessing about someone's training data is not acceptable.
-
-===== around line 17805 =====
-017780: const LIVE_KEY = "wpb:live";
-017781: // Current store schema version. Bump this and add a STORE_MIGRATIONS entry for EVERY change to the
-017782: // persisted shape, so old local data — and imported backups — are carried forward on load instead of
-017783: // being silently misread (changed shape) or orphaned (key bump). Keeping the migration logic in one
-017784: // versioned place is what makes future schema edits safe; the alternative is the scatter of inline
-017785: // "older saves" special-cases at each point of use.
-017786: const STORE_VERSION = 12;
-017787: const BW_LOG_CAP = 2000; // weigh-ins kept; ~5.5 years of daily entries at ~45 chars each
-017788: /* Body measurements are lengths, but they were being stamped with the WEIGHT unit — an entry read
-017789:    `{v: 34, unit: "lb"}` for a 34-inch waist. The display then derived inches-or-centimetres from
-017790:    the current weight unit, so switching lb→kg relabelled every past measurement as centimetres
-017791:    without converting it: a 34" waist silently became "34 cm". Lengths get their own unit, tagged at
-017792:    write time and honoured on read, and switchUnit converts them like every other stored number.
-017793:    Legacy rows carry the old weight tag, so lb reads as in and kg as cm. */
-017794: const lengthUnitFor = (weightUnit) => (weightUnit === "kg" ? "cm" : "in");
-017795: const asLengthUnit = (u, weightUnit) => (u === "in" || u === "cm" ? u : u === "kg" ? "cm" : u === "lb" ? "in" : lengthUnitFor(weightUnit));
-017796: const toLength = (v, from, to) => (from === to ? v : to === "cm" ? v * 2.54 : v / 2.54);
-017797: function normalizeMeasureLog(arr, to, weightUnit) {
-017798:     return (arr || [])
-017799:         .filter(e => e && e.date != null && Number(e.v) > 0)
-017800:         .map(e => { const from = asLengthUnit(e.unit, weightUnit); return { ...e, v: Math.round(toLength(Number(e.v), from, to) * 10) / 10, unit: to }; })
-017801:         .sort((a, b) => a.date - b.date);
-017802: }
-017803: // Each entry upgrades the store FROM the previous version TO its own key number. Functions must be
-017804: // pure (no React/DOM) and a no-op when their change is already applied, so re-running can't corrupt.
-017805: const STORE_MIGRATIONS = {
-017806:     // 11 -> 12: selective-promotion safety state is release-scoped and starts fail-safe. M76 ships
-017807:     // with a zero-percent manifest, so upgrading cannot change a prescription.
-017808:     12: (d) => d.selectivePromotionRuntime ? d : { ...d, selectivePromotionRuntime: defaultSelectivePromotionRuntimeState(M76_SELECTIVE_PROMOTION_MANIFEST) },
-017809:     // 10 -> 11: controlled canary research is opt-in and local. Existing users must remain
-017810:     // unenrolled after upgrade; a missing field therefore migrates to an explicit disabled state.
-017811:     11: (d) => d.canaryResearch ? d : { ...d, canaryResearch: defaultCanaryResearchState() },
-017812:     // 9 -> 10: the typed `age` integer becomes a `birth` date. An age is only true for a year and the
-017813:     // app had no way to know it had gone stale, so a lifter's strength standards quietly drifted onto
-017814:     // the wrong age band and stayed there. The exact date can't be recovered from a number, so estimate
-017815:     // mid-year of the implied birth year (±6 months, inside ageFactor's 5–6 year bands) and mark it
-017816:     // `birthEst` so the UI can ask for the real one. `age` is left in place and kept in sync on save,
-017817:     // so an older build reading this store after a downgrade still finds the field it expects.
-017818:     10: (d) => {
-017819:         if (d.birth)
-017820:             return d;
-017821:         const b = birthFromAge(d.age, d.savedAt);
-017822:         return b ? { ...d, birth: b, birthEst: true } : d;
-017823:     },
-017824:     // 7 → 8: the single `equipDefault` list becomes a list of GYMS. Equipment belongs to a place, not
-017825:     // to a person, and a lifter with a garage rack and a gym membership had no way to say so.
-017826:     // The existing list is preserved as the ACTIVE gym so nobody's programs change on upgrade, and it
-017827:     // is named from its own contents rather than assumed — calling a full commercial kit "Home gym"
-017828:     // would be a silent lie. A second preset is added so the pair the app promises always exists.
-017829:     // `equipDefault` is deliberately left in place and kept in sync: an older build reading this store
-017830:     // after a downgrade still finds the field it expects.
-017831:     // 8 -> 9: "Selectorized Machines" split into specific apparatus. Grant every gym the fine ids its
-017832:     // coarse category already implied, so no user's available exercises change on upgrade. Granting is
-017833:     // conditional on the parent: a bands-only gym must not acquire a leg press.
-017834:     9: (d) => {
-017835:         const grow = (g) => {
-017836:             const eq = new Set(Array.isArray(g.equipment) ? g.equipment : []);
-017837:             Object.entries(LEGACY_EQUIP_IMPLIES).forEach(([parent, fine]) => { if (eq.has(parent))
-017838:                 fine.forEach(f => eq.add(f)); });
-017839:             return { ...g, equipment: [...eq] };
-017840:         };
-017841:         /* Defensive: a store can arrive at v8 without gyms — a partial import, a merge from a device that
-017842:            never wrote them, a hand-edited backup. Rebuilding them here rather than assuming means the
-017843:            migration can never hand the app a gym-less store. normalizeGyms would paper over it on load,
-017844:            but a migration that silently drops the user's equipment is not something to leave to a later
-017845:            safety net. */
-017846:         const base = (Array.isArray(d.gyms) && d.gyms.length) ? d : STORE_MIGRATIONS[8]({ ...d, gyms: null });
-017847:         return { ...base, gyms: (Array.isArray(base.gyms) ? base.gyms : []).map(grow),
-017848:             equipDefault: Array.isArray(base.equipDefault) ? grow({ equipment: base.equipDefault }).equipment : base.equipDefault };
-017849:     },
-017850:     8: (d) => {
-017851:         if (Array.isArray(d.gyms) && d.gyms.length)
-017852:             return d;
-017853:         const eq = Array.isArray(d.equipDefault) && d.equipDefault.length ? d.equipDefault : [...ALL_EQUIP_IDS];
-017854:         const isFull = ALL_EQUIP_IDS.every(x => eq.includes(x));
-017855:         const mine = { id: "gym_1", name: isFull ? "Commercial gym" : "My gym", equipment: eq };
-017856:         const other = isFull
-017857:             ? { id: "gym_2", name: "Home gym", equipment: [...GYM_PRESETS[2].equipment] }
-017858:             : { id: "gym_2", name: "Commercial gym", equipment: [...ALL_EQUIP_IDS] };
-017859:         return { ...d, gyms: [mine, other], activeGymId: mine.id };
-017860:     },
-017861:     // 1 → 2: the legacy `lastWeights` map (weight only) becomes the per-exercise `perf` store
-017862:     // (weight + reps). Previously handled inline at hydration; centralized here so load AND import
-017863:     // both get it. No-op when `perf` already exists (everyone past the original change).
-017864:     2: (d) => {
-017865:         if (!d.perf && d.lastWeights) {
-017866:             const perf = {};
-017867:             Object.entries(d.lastWeights).forEach(([k, v]) => { perf[k] = { weight: v, reps: null }; });
-017868:             return { ...d, perf };
-017869:         }
-017870:         return d;
-017871:     },
-017872:     // 2 → 3: repair runaway auto-volume. Per-session autoregulation used to be merged into `slotBias`
-017873:     // and persisted, so set counts compounded every session (programs grew longer week over week).
-017874:     // Autoregulation now lives in a separate `autoBias` field rebuilt fresh each session. Reset each
-017875:     // auto-progression program's designed volume to its clean structural baseline (base sets, then the
-017876:     // MRV cap) — exactly what a freshly generated block uses — and drop any stored autoBias. Manual
-017877:     // per-set edits (overrides / circuit rounds) and all progression state are left untouched.
-017878:     3: (d) => {
-017879:         if (!Array.isArray(d.saved))
-017880:             return d;
-017881:         const saved = d.saved.map(p => {
-017882:             if (!p || !p.config)
-017883:                 return p;
-017884:             if (p.config.progression === "manual" || p.config.percentScheme)
-017885:                 return p; // never auto-volumed
-017886:             if (!p.slotBias && !p.autoBias)
-017887:                 return p; // nothing accumulated
-017888:             const np = { ...p, slotBias: {}, autoBias: undefined };
-017889:             if (np.config.autoVolume)
-017890:                 np.config = { ...np.config, autoVolume: false };
-017891:             try {
-017892:                 capWeeklyVolume(np);
-017893:             }
-017894:             catch { } // re-enforce the MRV ceiling on the clean baseline
-017895:             return np;
-017896:         });
-017897:         return { ...d, saved };
-017898:     },
-017899:     // 3 → 4: barbell compounds no longer default to the rep ladder (auto now picks double progression,
-017900:     // which fits lifts whose reps fall across sets). Drop any progStyle override that PINS a barbell
-017901:     // compound to "ladder" so it falls back to auto → double. Machine/isolation ladders — where reps
-017902:     // hold across sets and the ladder is a fine choice — are left exactly as the lifter set them, as
-017903:     // are all other explicit styles. A no-op for the common case (styles were never saved, just
-017904:     // auto-resolved), which the auto change already corrects.
-017905:     4: (d) => {
-017906:         if (!Array.isArray(d.saved))
-017907:             return d;
-017908:         // Frozen deliberately: this is a v4-era migration, a historical artifact. It should keep
-017909:         // classifying the way it did when it was written, not drift with today's taxonomy.
-017910:         const isBarbellCompound = (id) => { const ex = EX_BY_ID[id]; return !!ex && ex.type === "compound" && (ex.equip || []).includes("barbell"); };
-017911:         const saved = d.saved.map(p => {
-017912:             if (!p || !p.progStyle)
-017913:                 return p;
-017914:             const ps = { ...p.progStyle };
-017915:             let changed = false;
-017916:             Object.keys(ps).forEach(id => { if (ps[id] === "ladder" && isBarbellCompound(id)) {
-017917:                 delete ps[id];
-017918:                 changed = true;
-017919:             } });
-017920:             if (!changed)
-017921:                 return p;
-017922:             return { ...p, progStyle: Object.keys(ps).length ? ps : undefined };
-017923:         });
-017924:         return { ...d, saved };
-017925:     },
-017926:     // 4 → 5: additive only. Everything that existed before this migration was produced by engine 1, so
-017927:     // stamp it as such; that's what lets legacy programs keep engine-1 behaviour while new ones are
-017928:     // generated on engine 2. Logged sets also start carrying pw/pt (the weight and rep target that were
-017929:     // prescribed) from here on — older sets simply lack the snapshot.
-017930:     // 5 -> 6: everything moves to engine 2. Engine 1 was kept alive so that programs generated by it
-017931:     // would not have their prescriptions change mid-block underneath the lifter. With no engine-1
-017932:     // programs left in the wild, that promise has nothing to protect, and carrying two engines forever
-017933:     // to honour it would be paying rent on an empty room. Restamped here rather than defaulted at read
-017934:     // time so the store is self-describing: a program says which engine made it, and now they all say 2.
-017935:     6: (d) => {
-017936:         const stamp = (x) => (x && typeof x === "object") ? { ...x, engineV: 2 } : x;
-017937:         const out = { ...d };
-017938:         if (Array.isArray(d.saved))
-017939:             out.saved = d.saved.map(stamp);
-017940:         if (Array.isArray(d.cycles))
-017941:             out.cycles = d.cycles.map(stamp);
-017942:         // History is a RECORD of what happened. A session prescribed by engine 1 was prescribed by engine
-017943:         // 1, and rewriting that would be falsifying the log — the replay/eval tooling reads this field to
-017944:         // know which policy issued each set. Left exactly as it was.
-017945:         return out;
-017946:     },
-017947:     5: (d) => {
-017948:         const stamp = (x) => (x && typeof x === "object" && x.engineV == null) ? { ...x, engineV: 1 } : x;
-017949:         const out = { ...d };
-017950:         if (Array.isArray(d.saved))
-017951:             out.saved = d.saved.map(stamp);
-017952:         if (Array.isArray(d.cycles))
-017953:             out.cycles = d.cycles.map(stamp);
-017954:         if (Array.isArray(d.history))
-017955:             out.history = d.history.map(stamp);
-017956:         return out;
-017957:     },
-017958:     // 6 → 7: groundwork for merging two devices' data. Two things were missing and neither can be
-017959:     // reconstructed after the fact, which is why they go in now rather than when a sync backend lands:
-017960:     //
-017961:     //   `tombs`  — deletions. A merge that only unions records can never delete anything: remove a
-017962:     //              program on your phone, merge with the tablet that still has it, and it comes back
-017963:     //              from the dead. A deletion has to be a FACT that travels, not an absence.
-017964:     //   updatedAt — which of two versions of the same program is the newer one. Without it, a merge
-017965:     //              has to guess, and guessing about someone's training data is not acceptable.
-017966:     //
-017967:     // Existing records get updatedAt = 0: any edit on any device beats a record that predates the
-017968:     // concept, which is the only safe default (it can never cause a newer edit to lose).
-017969:     7: (d) => {
-017970:         const stamp = (x) => (x && typeof x === "object" && x.updatedAt == null) ? { ...x, updatedAt: 0 } : x;
-017971:         const out = { ...d, tombs: d.tombs && typeof d.tombs === "object" ? d.tombs : {} };
-017972:         if (Array.isArray(d.saved))
-017973:             out.saved = d.saved.map(stamp);
-017974:         if (Array.isArray(d.cycles))
-017975:             out.cycles = d.cycles.map(stamp);
-017976:         if (Array.isArray(d.custom))
-017977:             out.custom = d.custom.map(stamp);
-017978:         return out;
-017979:     }
-017980: };
-017981: /* ============================== MERGE ==============================
-017982:  * Combining two copies of the store — from a backup file, or (later) from another device.
-017983:  *
-017984:  * The rule that matters: THIS FUNCTION NEVER LOSES A WORKOUT. Everything else is negotiable; a logged
-
-===== around line 18085 =====
-018060:     const histUnion = byId(A.history, B.history, "history");
-018061:     const hist = capHistory(histUnion); // count ceiling + byte budget, oldest-first
-018062:     const aLen = Array.isArray(A.history) ? A.history.length : 0;
-018063:     stats.history = Math.max(0, hist.length - aLen); // net sessions actually gained
-018064:     stats.historyDropped = Math.max(0, histUnion.length - hist.length); // lost to the cap
-018065:     const mapMerge = (key) => {
-018066:         const oa = older[key] || {}, nb = newer[key] || {};
-018067:         return { ...oa, ...nb }; // keys only the older side has survive; shared keys take the newer blob
-018068:     };
-018069:     /* A weigh-in serialises to ~45 chars, so 200 of them was never a storage decision — it was a
-018070:      placeholder that quietly deleted the oldest data of anyone who steps on a scale daily, after
-018071:      about six months. History now retains ~6.8 years; a body-weight trend that expires first makes
-018072:      the long-range comparison it exists for impossible. 2000 daily weigh-ins is ~5.5 years for ~90KB. */
-018073:     const bwKey = (e) => String(e && e.date);
-018074:     const bw = [...(Array.isArray(A.bwLog) ? A.bwLog : []), ...(Array.isArray(B.bwLog) ? B.bwLog : [])]
-018075:         .filter(e => e && e.date != null && e.w != null)
-018076:         .reduce((m, e) => (m.has(bwKey(e)) ? m : m.set(bwKey(e), e)), new Map());
+---
 018077:     const bwLog = [...bw.values()].sort((x, y) => x.date - y.date).slice(-BW_LOG_CAP);
 018078:     stats.bw = Math.max(0, bwLog.length - (Array.isArray(A.bwLog) ? A.bwLog.length : 0));
 018079:     const meas = { ...(older.measurements || {}) };
@@ -456,22 +52,7 @@
 018100:         activeGymId: (() => {
 018101:             const surviving = byId(A.gyms, B.gyms);
 018102:             const want = newer.activeGymId || older.activeGymId;
-018103:             return surviving.some(g => g.id === want) ? want : (surviving[0] && surviving[0].id) || want;
-018104:         })(),
-018105:         custom: byId(A.custom, B.custom, "custom"),
-018106:         banned: [...new Set([...(A.banned || []), ...(B.banned || [])])],
-018107:         bwLog,
-018108:         measurements: meas,
-018109:         perf: mapMerge("perf"),
-018110:         exNotes: mapMerge("exNotes"),
-018111:         exSetup: mapMerge("exSetup"),
-018112:         goals: mapMerge("goals"),
-018113:         // Research evidence is append-only. Merge trials by trial id so restoring a backup can never
-018114:         // erase a completed control/treatment observation from the other device. The newer blob owns
-018115:         // the consent toggle, but both sides' evidence survives.
-018116:         canaryResearch: (() => {
-018117:             const ca = normalizeCanaryResearchState(A.canaryResearch), cb = normalizeCanaryResearchState(B.canaryResearch);
-018118:             const pref = aNewer ? ca : cb;
+---
 018119:             const trials = new Map();
 018120:             [...ca.trials, ...cb.trials].forEach(t => { const prev = trials.get(t.trialId); if (!prev || (t.completedAt || t.startedAt || 0) >= (prev.completedAt || prev.startedAt || 0))
 018121:                 trials.set(t.trialId, t); });
@@ -498,153 +79,7 @@
 018142: }
 018143: // Reject malformed containers before any React state is hydrated. Missing fields remain valid for
 018144: // older saves. A newer schema must never be silently stamped with this build's older version.
-018145: function parseStoredData(raw) {
-018146:     try {
-018147:         const d = JSON.parse(raw);
-018148:         const object = v => !!v && typeof v === "object" && !Array.isArray(v);
-018149:         if (!object(d))
-018150:             throw new Error("The saved data isn't a training backup.");
-018151:         if (typeof d.v === "number" && d.v > STORE_VERSION)
-018152:             throw new Error("This data needs a newer version of Pursuit Iron. Update the app, then try again.");
-018153:         for (const k of ["saved", "history", "cycles", "custom", "gyms", "bwLog", "banned", "equipDefault"]) {
-018154:             if (d[k] != null && !Array.isArray(d[k]))
-018155:                 throw new Error(`The saved ${k} list couldn't be read.`);
-018156:         }
-018157:         for (const k of ["perf", "drafts", "tombs", "measurements", "goals", "exNotes", "exSetup", "minInc", "plates", "reminders", "canaryResearch", "selectivePromotionRuntime"]) {
-018158:             if (d[k] != null && !object(d[k]))
-018159:                 throw new Error(`The saved ${k} settings couldn't be read.`);
-018160:         }
-018161:         for (const k of ["saved", "history", "cycles", "custom", "gyms", "bwLog"]) {
-018162:             if ((d[k] || []).some(v => !object(v)))
-018163:                 throw new Error(`A saved ${k} entry couldn't be read.`);
-018164:         }
-018165:         const programs = [...(d.saved || []), ...Object.values(d.drafts || {})];
-018166:         if (programs.some(p => !object(p) || !object(p.config) || !Array.isArray(p.days) || p.days.some(day => !object(day) || !Array.isArray(day.exercises))))
-018167:             throw new Error("A saved program couldn't be read.");
-018168:         if ((d.cycles || []).some(c => !Array.isArray(c.blockIds)))
-018169:             throw new Error("A saved cycle couldn't be read.");
-018170:         if (d.reminders?.days != null && !Array.isArray(d.reminders.days))
-018171:             throw new Error("The saved reminder days couldn't be read.");
-018172:         return migrateStore(d);
-018173:     }
-018174:     catch (cause) {
-018175:         const error = new Error(cause instanceof SyntaxError ? "The saved file is incomplete or unreadable." : cause.message);
-018176:         error.raw = raw; // recovery exports the exact bytes, including malformed JSON
-018177:         throw error;
-018178:     }
-018179: }
-018180: async function loadStore() {
-018181:     let raw, readError;
-018182:     // Only an unavailable backend may fall back. A successful read of corrupt data is NOT an empty
-018183:     // install, and must not cause a different backend (or defaults) to overwrite the original.
-018184:     try {
-018185:         if (typeof localStorage !== "undefined")
-018186:             raw = localStorage.getItem(KEY);
-018187:     }
-018188:     catch (e) {
-018189:         readError = e;
-018190:     }
-018191:     if (raw !== undefined)
-018192:         return raw === null ? null : parseStoredData(raw);
-018193:     try {
-018194:         if (typeof window !== "undefined" && window.storage) {
-018195:             const r = await window.storage.get(KEY);
-018196:             raw = r == null ? null : r.value;
-018197:             if (raw === undefined)
-018198:                 throw new Error("Storage returned no readable value.");
-018199:         }
-018200:     }
-018201:     catch (e) {
-018202:         readError = e;
-018203:     }
-018204:     if (raw !== undefined)
-018205:         return raw === null ? null : parseStoredData(raw);
-018206:     if (readError)
-018207:         throw new Error("Device storage isn't responding. Try again when it becomes available.");
-018208:     return MEM.data == null ? null : parseStoredData(JSON.stringify(MEM.data));
-018209: }
-018210: async function writeStoreText(key, text) {
-018211:     try {
-018212:         if (typeof localStorage !== "undefined") {
-018213:             localStorage.setItem(key, text);
-018214:             return true;
-018215:         }
-018216:     }
-018217:     catch { }
-018218:     try {
-018219:         if (typeof window !== "undefined" && window.storage) {
-018220:             await window.storage.set(key, text);
-018221:             return true;
-018222:         }
-018223:     }
-018224:     catch { }
-018225:     return false;
-018226: }
-018227: // Async fallback writes must commit in order: a slow earlier write used to replace a newer workout.
-018228: // Capture each snapshot at the call boundary, so queued writes cannot observe later mutations.
-018229: let storeSaveQueue = Promise.resolve();
-018230: function saveStore(data) {
-018231:     let text;
-018232:     try {
-018233:         text = JSON.stringify(data);
-018234:         MEM.data = JSON.parse(text);
-018235:     }
-018236:     catch {
-018237:         return Promise.resolve(false);
-018238:     }
-018239:     const pending = storeSaveQueue.then(() => writeStoreText(KEY, text));
-018240:     storeSaveQueue = pending.catch(() => false);
-018241:     return pending;
-018242: }
-018243: /* ============================== SMALL UI PIECES ============================== */
-018244: function Radio({ on }) {
-018245:     return (_jsx("div", { style: {
-018246:             width: 26, height: 26, borderRadius: 999, flexShrink: 0,
-018247:             border: `2px solid ${on ? C.accent : C.border}`,
-018248:             display: "flex", alignItems: "center", justifyContent: "center",
-018249:             background: on ? C.accent : "transparent", transition: "background .15s, border-color .15s"
-018250:         }, children: on && _jsx(Check, { size: 15, color: C.accentText, strokeWidth: 3.5 }) }));
-018251: }
-018252: function CheckBox({ on }) {
-018253:     return (_jsx("div", { style: {
-018254:             width: 26, height: 26, borderRadius: 8, flexShrink: 0,
-018255:             border: `2px solid ${on ? C.accent : C.border}`,
-018256:             display: "flex", alignItems: "center", justifyContent: "center",
-018257:             background: on ? C.accent : "transparent", transition: "background .15s, border-color .15s"
-018258:         }, children: on && _jsx(Check, { size: 15, color: C.accentText, strokeWidth: 3.5 }) }));
-018259: }
-018260: /* ── DRAG A SHEET DOWN TO DISMISS IT ─────────────────────────────────────────────────────────
-018261:    Every sheet in the app slides up from the bottom and, until now, could only be closed by finding
-018262:    a small X or tapping the backdrop above it — on a large phone the top of the screen is exactly
-018263:    where a thumb cannot reach, which is why the gesture exists on every other app that does this.
-018264: 
-
-===== around line 18127 =====
-018102:             const want = newer.activeGymId || older.activeGymId;
-018103:             return surviving.some(g => g.id === want) ? want : (surviving[0] && surviving[0].id) || want;
-018104:         })(),
-018105:         custom: byId(A.custom, B.custom, "custom"),
-018106:         banned: [...new Set([...(A.banned || []), ...(B.banned || [])])],
-018107:         bwLog,
-018108:         measurements: meas,
-018109:         perf: mapMerge("perf"),
-018110:         exNotes: mapMerge("exNotes"),
-018111:         exSetup: mapMerge("exSetup"),
-018112:         goals: mapMerge("goals"),
-018113:         // Research evidence is append-only. Merge trials by trial id so restoring a backup can never
-018114:         // erase a completed control/treatment observation from the other device. The newer blob owns
-018115:         // the consent toggle, but both sides' evidence survives.
-018116:         canaryResearch: (() => {
-018117:             const ca = normalizeCanaryResearchState(A.canaryResearch), cb = normalizeCanaryResearchState(B.canaryResearch);
-018118:             const pref = aNewer ? ca : cb;
-018119:             const trials = new Map();
-018120:             [...ca.trials, ...cb.trials].forEach(t => { const prev = trials.get(t.trialId); if (!prev || (t.completedAt || t.startedAt || 0) >= (prev.completedAt || prev.startedAt || 0))
-018121:                 trials.set(t.trialId, t); });
-018122:             return { ...pref, trials: [...trials.values()].slice(-200) };
-018123:         })()
-018124:     };
-018125:     return { data, stats };
-018126: }
+---
 018127: // Carry a loaded/imported blob forward to STORE_VERSION. Un-versioned blobs predate versioning and are
 018128: // treated as v1. Returns the input untouched for a fresh install (null) or non-object junk so the
 018129: // caller's existing validity checks still apply.
@@ -671,185 +106,7 @@
 018150:             throw new Error("The saved data isn't a training backup.");
 018151:         if (typeof d.v === "number" && d.v > STORE_VERSION)
 018152:             throw new Error("This data needs a newer version of Pursuit Iron. Update the app, then try again.");
-018153:         for (const k of ["saved", "history", "cycles", "custom", "gyms", "bwLog", "banned", "equipDefault"]) {
-018154:             if (d[k] != null && !Array.isArray(d[k]))
-018155:                 throw new Error(`The saved ${k} list couldn't be read.`);
-018156:         }
-018157:         for (const k of ["perf", "drafts", "tombs", "measurements", "goals", "exNotes", "exSetup", "minInc", "plates", "reminders", "canaryResearch", "selectivePromotionRuntime"]) {
-018158:             if (d[k] != null && !object(d[k]))
-018159:                 throw new Error(`The saved ${k} settings couldn't be read.`);
-018160:         }
-018161:         for (const k of ["saved", "history", "cycles", "custom", "gyms", "bwLog"]) {
-018162:             if ((d[k] || []).some(v => !object(v)))
-018163:                 throw new Error(`A saved ${k} entry couldn't be read.`);
-018164:         }
-018165:         const programs = [...(d.saved || []), ...Object.values(d.drafts || {})];
-018166:         if (programs.some(p => !object(p) || !object(p.config) || !Array.isArray(p.days) || p.days.some(day => !object(day) || !Array.isArray(day.exercises))))
-018167:             throw new Error("A saved program couldn't be read.");
-018168:         if ((d.cycles || []).some(c => !Array.isArray(c.blockIds)))
-018169:             throw new Error("A saved cycle couldn't be read.");
-018170:         if (d.reminders?.days != null && !Array.isArray(d.reminders.days))
-018171:             throw new Error("The saved reminder days couldn't be read.");
-018172:         return migrateStore(d);
-018173:     }
-018174:     catch (cause) {
-018175:         const error = new Error(cause instanceof SyntaxError ? "The saved file is incomplete or unreadable." : cause.message);
-018176:         error.raw = raw; // recovery exports the exact bytes, including malformed JSON
-018177:         throw error;
-018178:     }
-018179: }
-018180: async function loadStore() {
-018181:     let raw, readError;
-018182:     // Only an unavailable backend may fall back. A successful read of corrupt data is NOT an empty
-018183:     // install, and must not cause a different backend (or defaults) to overwrite the original.
-018184:     try {
-018185:         if (typeof localStorage !== "undefined")
-018186:             raw = localStorage.getItem(KEY);
-018187:     }
-018188:     catch (e) {
-018189:         readError = e;
-018190:     }
-018191:     if (raw !== undefined)
-018192:         return raw === null ? null : parseStoredData(raw);
-018193:     try {
-018194:         if (typeof window !== "undefined" && window.storage) {
-018195:             const r = await window.storage.get(KEY);
-018196:             raw = r == null ? null : r.value;
-018197:             if (raw === undefined)
-018198:                 throw new Error("Storage returned no readable value.");
-018199:         }
-018200:     }
-018201:     catch (e) {
-018202:         readError = e;
-018203:     }
-018204:     if (raw !== undefined)
-018205:         return raw === null ? null : parseStoredData(raw);
-018206:     if (readError)
-018207:         throw new Error("Device storage isn't responding. Try again when it becomes available.");
-018208:     return MEM.data == null ? null : parseStoredData(JSON.stringify(MEM.data));
-018209: }
-018210: async function writeStoreText(key, text) {
-018211:     try {
-018212:         if (typeof localStorage !== "undefined") {
-018213:             localStorage.setItem(key, text);
-018214:             return true;
-018215:         }
-018216:     }
-018217:     catch { }
-018218:     try {
-018219:         if (typeof window !== "undefined" && window.storage) {
-018220:             await window.storage.set(key, text);
-018221:             return true;
-018222:         }
-018223:     }
-018224:     catch { }
-018225:     return false;
-018226: }
-018227: // Async fallback writes must commit in order: a slow earlier write used to replace a newer workout.
-018228: // Capture each snapshot at the call boundary, so queued writes cannot observe later mutations.
-018229: let storeSaveQueue = Promise.resolve();
-018230: function saveStore(data) {
-018231:     let text;
-018232:     try {
-018233:         text = JSON.stringify(data);
-018234:         MEM.data = JSON.parse(text);
-018235:     }
-018236:     catch {
-018237:         return Promise.resolve(false);
-018238:     }
-018239:     const pending = storeSaveQueue.then(() => writeStoreText(KEY, text));
-018240:     storeSaveQueue = pending.catch(() => false);
-018241:     return pending;
-018242: }
-018243: /* ============================== SMALL UI PIECES ============================== */
-018244: function Radio({ on }) {
-018245:     return (_jsx("div", { style: {
-018246:             width: 26, height: 26, borderRadius: 999, flexShrink: 0,
-018247:             border: `2px solid ${on ? C.accent : C.border}`,
-018248:             display: "flex", alignItems: "center", justifyContent: "center",
-018249:             background: on ? C.accent : "transparent", transition: "background .15s, border-color .15s"
-018250:         }, children: on && _jsx(Check, { size: 15, color: C.accentText, strokeWidth: 3.5 }) }));
-018251: }
-018252: function CheckBox({ on }) {
-018253:     return (_jsx("div", { style: {
-018254:             width: 26, height: 26, borderRadius: 8, flexShrink: 0,
-018255:             border: `2px solid ${on ? C.accent : C.border}`,
-018256:             display: "flex", alignItems: "center", justifyContent: "center",
-018257:             background: on ? C.accent : "transparent", transition: "background .15s, border-color .15s"
-018258:         }, children: on && _jsx(Check, { size: 15, color: C.accentText, strokeWidth: 3.5 }) }));
-018259: }
-018260: /* ── DRAG A SHEET DOWN TO DISMISS IT ─────────────────────────────────────────────────────────
-018261:    Every sheet in the app slides up from the bottom and, until now, could only be closed by finding
-018262:    a small X or tapping the backdrop above it — on a large phone the top of the screen is exactly
-018263:    where a thumb cannot reach, which is why the gesture exists on every other app that does this.
-018264: 
-018265:    Deliberately NOT a hook. There are twenty-six of these sheets, written inline at twenty-six call
-018266:    sites over the app's life; a hook would have to be added to twenty-six components and would put
-018267:    the rules-of-hooks in the way of the ones rendered inside conditionals and callbacks. A ref
-018268:    callback attaches to the element itself and can be dropped in anywhere.
-018269: 
-018270:    HOW IT CLOSES. It does not take an onClose. Every one of these sheets is a child of a backdrop
-018271:    that already closes it on click, and the sheet stops that click propagating — so the dismissal
-018272:    the app already has is one synthetic click on the parent away. That means this works on all of
-018273:    them without twenty-six different closers being threaded through, and a sheet whose backdrop is
-018274:    deliberately inert simply springs back, which is the correct behaviour there anyway.
-018275: 
-018276:    Only from the TOP of the sheet, and only when its content is scrolled to the top: a drag starting
-018277:    over a scrollable list belongs to that list. Both are what makes the gesture feel like part of
-018278:    the sheet rather than a trap laid over its contents. */
-018279: const SHEET_GRAB_PX = 72; // the band at the top of a sheet where a downward drag means "dismiss"
-018280: const SHEET_DISMISS_PX = 110; // far enough that a scroll overshoot or a stray thumb cannot fire it
-018281: function sheetDragRef(el) {
-018282:     if (!el || el.dataset.sheetDrag)
-018283:         return;
-018284:     el.dataset.sheetDrag = "1";
-018285:     // Natural-content sheets stay compact; long sheets use the large detent. The choice is structural,
-018286:     // not per-feature styling, so every sheet participates in the same hierarchy automatically.
-018287:     requestAnimationFrame(() => {
-018288:         try {
-018289:             const vh = window.visualViewport?.height || window.innerHeight || 800;
-018290:             el.dataset.detent = el.scrollHeight <= vh * .58 ? "content" : "large";
-018291:         }
-018292:         catch {
-018293:             el.dataset.detent = "large";
-018294:         }
-018295:     });
-018296:     let y0 = null, dy = 0, dragging = false, raf = 0, shownY = 0;
-018297:     let lastY = 0, lastAt = 0, velocityY = 0;
-018298:     const paint = () => {
-018299:         raf = 0;
-018300:         el.style.transform = shownY > 0 ? `translate3d(0, ${shownY}px, 0)` : "";
-018301:     };
-018302:     const queuePaint = (nextY) => {
-018303:         shownY = nextY;
-018304:         if (!raf)
-018305:             raf = requestAnimationFrame(paint);
-018306:     };
-
-===== around line 18135 =====
-018110:         exNotes: mapMerge("exNotes"),
-018111:         exSetup: mapMerge("exSetup"),
-018112:         goals: mapMerge("goals"),
-018113:         // Research evidence is append-only. Merge trials by trial id so restoring a backup can never
-018114:         // erase a completed control/treatment observation from the other device. The newer blob owns
-018115:         // the consent toggle, but both sides' evidence survives.
-018116:         canaryResearch: (() => {
-018117:             const ca = normalizeCanaryResearchState(A.canaryResearch), cb = normalizeCanaryResearchState(B.canaryResearch);
-018118:             const pref = aNewer ? ca : cb;
-018119:             const trials = new Map();
-018120:             [...ca.trials, ...cb.trials].forEach(t => { const prev = trials.get(t.trialId); if (!prev || (t.completedAt || t.startedAt || 0) >= (prev.completedAt || prev.startedAt || 0))
-018121:                 trials.set(t.trialId, t); });
-018122:             return { ...pref, trials: [...trials.values()].slice(-200) };
-018123:         })()
-018124:     };
-018125:     return { data, stats };
-018126: }
-018127: // Carry a loaded/imported blob forward to STORE_VERSION. Un-versioned blobs predate versioning and are
-018128: // treated as v1. Returns the input untouched for a fresh install (null) or non-object junk so the
-018129: // caller's existing validity checks still apply.
-018130: function migrateStore(raw) {
-018131:     if (!raw || typeof raw !== "object")
-018132:         return raw;
+---
 018133:     let d = raw;
 018134:     let v = typeof d.v === "number" ? d.v : 1;
 018135:     while (v < STORE_VERSION) {
@@ -876,191 +133,7 @@
 018156:         }
 018157:         for (const k of ["perf", "drafts", "tombs", "measurements", "goals", "exNotes", "exSetup", "minInc", "plates", "reminders", "canaryResearch", "selectivePromotionRuntime"]) {
 018158:             if (d[k] != null && !object(d[k]))
-018159:                 throw new Error(`The saved ${k} settings couldn't be read.`);
-018160:         }
-018161:         for (const k of ["saved", "history", "cycles", "custom", "gyms", "bwLog"]) {
-018162:             if ((d[k] || []).some(v => !object(v)))
-018163:                 throw new Error(`A saved ${k} entry couldn't be read.`);
-018164:         }
-018165:         const programs = [...(d.saved || []), ...Object.values(d.drafts || {})];
-018166:         if (programs.some(p => !object(p) || !object(p.config) || !Array.isArray(p.days) || p.days.some(day => !object(day) || !Array.isArray(day.exercises))))
-018167:             throw new Error("A saved program couldn't be read.");
-018168:         if ((d.cycles || []).some(c => !Array.isArray(c.blockIds)))
-018169:             throw new Error("A saved cycle couldn't be read.");
-018170:         if (d.reminders?.days != null && !Array.isArray(d.reminders.days))
-018171:             throw new Error("The saved reminder days couldn't be read.");
-018172:         return migrateStore(d);
-018173:     }
-018174:     catch (cause) {
-018175:         const error = new Error(cause instanceof SyntaxError ? "The saved file is incomplete or unreadable." : cause.message);
-018176:         error.raw = raw; // recovery exports the exact bytes, including malformed JSON
-018177:         throw error;
-018178:     }
-018179: }
-018180: async function loadStore() {
-018181:     let raw, readError;
-018182:     // Only an unavailable backend may fall back. A successful read of corrupt data is NOT an empty
-018183:     // install, and must not cause a different backend (or defaults) to overwrite the original.
-018184:     try {
-018185:         if (typeof localStorage !== "undefined")
-018186:             raw = localStorage.getItem(KEY);
-018187:     }
-018188:     catch (e) {
-018189:         readError = e;
-018190:     }
-018191:     if (raw !== undefined)
-018192:         return raw === null ? null : parseStoredData(raw);
-018193:     try {
-018194:         if (typeof window !== "undefined" && window.storage) {
-018195:             const r = await window.storage.get(KEY);
-018196:             raw = r == null ? null : r.value;
-018197:             if (raw === undefined)
-018198:                 throw new Error("Storage returned no readable value.");
-018199:         }
-018200:     }
-018201:     catch (e) {
-018202:         readError = e;
-018203:     }
-018204:     if (raw !== undefined)
-018205:         return raw === null ? null : parseStoredData(raw);
-018206:     if (readError)
-018207:         throw new Error("Device storage isn't responding. Try again when it becomes available.");
-018208:     return MEM.data == null ? null : parseStoredData(JSON.stringify(MEM.data));
-018209: }
-018210: async function writeStoreText(key, text) {
-018211:     try {
-018212:         if (typeof localStorage !== "undefined") {
-018213:             localStorage.setItem(key, text);
-018214:             return true;
-018215:         }
-018216:     }
-018217:     catch { }
-018218:     try {
-018219:         if (typeof window !== "undefined" && window.storage) {
-018220:             await window.storage.set(key, text);
-018221:             return true;
-018222:         }
-018223:     }
-018224:     catch { }
-018225:     return false;
-018226: }
-018227: // Async fallback writes must commit in order: a slow earlier write used to replace a newer workout.
-018228: // Capture each snapshot at the call boundary, so queued writes cannot observe later mutations.
-018229: let storeSaveQueue = Promise.resolve();
-018230: function saveStore(data) {
-018231:     let text;
-018232:     try {
-018233:         text = JSON.stringify(data);
-018234:         MEM.data = JSON.parse(text);
-018235:     }
-018236:     catch {
-018237:         return Promise.resolve(false);
-018238:     }
-018239:     const pending = storeSaveQueue.then(() => writeStoreText(KEY, text));
-018240:     storeSaveQueue = pending.catch(() => false);
-018241:     return pending;
-018242: }
-018243: /* ============================== SMALL UI PIECES ============================== */
-018244: function Radio({ on }) {
-018245:     return (_jsx("div", { style: {
-018246:             width: 26, height: 26, borderRadius: 999, flexShrink: 0,
-018247:             border: `2px solid ${on ? C.accent : C.border}`,
-018248:             display: "flex", alignItems: "center", justifyContent: "center",
-018249:             background: on ? C.accent : "transparent", transition: "background .15s, border-color .15s"
-018250:         }, children: on && _jsx(Check, { size: 15, color: C.accentText, strokeWidth: 3.5 }) }));
-018251: }
-018252: function CheckBox({ on }) {
-018253:     return (_jsx("div", { style: {
-018254:             width: 26, height: 26, borderRadius: 8, flexShrink: 0,
-018255:             border: `2px solid ${on ? C.accent : C.border}`,
-018256:             display: "flex", alignItems: "center", justifyContent: "center",
-018257:             background: on ? C.accent : "transparent", transition: "background .15s, border-color .15s"
-018258:         }, children: on && _jsx(Check, { size: 15, color: C.accentText, strokeWidth: 3.5 }) }));
-018259: }
-018260: /* ── DRAG A SHEET DOWN TO DISMISS IT ─────────────────────────────────────────────────────────
-018261:    Every sheet in the app slides up from the bottom and, until now, could only be closed by finding
-018262:    a small X or tapping the backdrop above it — on a large phone the top of the screen is exactly
-018263:    where a thumb cannot reach, which is why the gesture exists on every other app that does this.
-018264: 
-018265:    Deliberately NOT a hook. There are twenty-six of these sheets, written inline at twenty-six call
-018266:    sites over the app's life; a hook would have to be added to twenty-six components and would put
-018267:    the rules-of-hooks in the way of the ones rendered inside conditionals and callbacks. A ref
-018268:    callback attaches to the element itself and can be dropped in anywhere.
-018269: 
-018270:    HOW IT CLOSES. It does not take an onClose. Every one of these sheets is a child of a backdrop
-018271:    that already closes it on click, and the sheet stops that click propagating — so the dismissal
-018272:    the app already has is one synthetic click on the parent away. That means this works on all of
-018273:    them without twenty-six different closers being threaded through, and a sheet whose backdrop is
-018274:    deliberately inert simply springs back, which is the correct behaviour there anyway.
-018275: 
-018276:    Only from the TOP of the sheet, and only when its content is scrolled to the top: a drag starting
-018277:    over a scrollable list belongs to that list. Both are what makes the gesture feel like part of
-018278:    the sheet rather than a trap laid over its contents. */
-018279: const SHEET_GRAB_PX = 72; // the band at the top of a sheet where a downward drag means "dismiss"
-018280: const SHEET_DISMISS_PX = 110; // far enough that a scroll overshoot or a stray thumb cannot fire it
-018281: function sheetDragRef(el) {
-018282:     if (!el || el.dataset.sheetDrag)
-018283:         return;
-018284:     el.dataset.sheetDrag = "1";
-018285:     // Natural-content sheets stay compact; long sheets use the large detent. The choice is structural,
-018286:     // not per-feature styling, so every sheet participates in the same hierarchy automatically.
-018287:     requestAnimationFrame(() => {
-018288:         try {
-018289:             const vh = window.visualViewport?.height || window.innerHeight || 800;
-018290:             el.dataset.detent = el.scrollHeight <= vh * .58 ? "content" : "large";
-018291:         }
-018292:         catch {
-018293:             el.dataset.detent = "large";
-018294:         }
-018295:     });
-018296:     let y0 = null, dy = 0, dragging = false, raf = 0, shownY = 0;
-018297:     let lastY = 0, lastAt = 0, velocityY = 0;
-018298:     const paint = () => {
-018299:         raf = 0;
-018300:         el.style.transform = shownY > 0 ? `translate3d(0, ${shownY}px, 0)` : "";
-018301:     };
-018302:     const queuePaint = (nextY) => {
-018303:         shownY = nextY;
-018304:         if (!raf)
-018305:             raf = requestAnimationFrame(paint);
-018306:     };
-018307:     const reset = (animate) => {
-018308:         if (raf) {
-018309:             cancelAnimationFrame(raf);
-018310:             raf = 0;
-018311:         }
-018312:         shownY = 0;
-018313:         delete el.dataset.dragging;
-018314:         el.style.transition = animate ? "transform .26s cubic-bezier(.16,1,.3,1)" : "";
-
-===== around line 18141 =====
-018116:         canaryResearch: (() => {
-018117:             const ca = normalizeCanaryResearchState(A.canaryResearch), cb = normalizeCanaryResearchState(B.canaryResearch);
-018118:             const pref = aNewer ? ca : cb;
-018119:             const trials = new Map();
-018120:             [...ca.trials, ...cb.trials].forEach(t => { const prev = trials.get(t.trialId); if (!prev || (t.completedAt || t.startedAt || 0) >= (prev.completedAt || prev.startedAt || 0))
-018121:                 trials.set(t.trialId, t); });
-018122:             return { ...pref, trials: [...trials.values()].slice(-200) };
-018123:         })()
-018124:     };
-018125:     return { data, stats };
-018126: }
-018127: // Carry a loaded/imported blob forward to STORE_VERSION. Un-versioned blobs predate versioning and are
-018128: // treated as v1. Returns the input untouched for a fresh install (null) or non-object junk so the
-018129: // caller's existing validity checks still apply.
-018130: function migrateStore(raw) {
-018131:     if (!raw || typeof raw !== "object")
-018132:         return raw;
-018133:     let d = raw;
-018134:     let v = typeof d.v === "number" ? d.v : 1;
-018135:     while (v < STORE_VERSION) {
-018136:         v += 1;
-018137:         const fn = STORE_MIGRATIONS[v];
-018138:         if (fn)
-018139:             d = fn(d);
-018140:     }
-018141:     return d.v === STORE_VERSION ? d : { ...d, v: STORE_VERSION };
-018142: }
+---
 018143: // Reject malformed containers before any React state is hydrated. Missing fields remain valid for
 018144: // older saves. A newer schema must never be silently stamped with this build's older version.
 018145: function parseStoredData(raw) {
@@ -1087,384 +160,7 @@
 018166:         if (programs.some(p => !object(p) || !object(p.config) || !Array.isArray(p.days) || p.days.some(day => !object(day) || !Array.isArray(day.exercises))))
 018167:             throw new Error("A saved program couldn't be read.");
 018168:         if ((d.cycles || []).some(c => !Array.isArray(c.blockIds)))
-018169:             throw new Error("A saved cycle couldn't be read.");
-018170:         if (d.reminders?.days != null && !Array.isArray(d.reminders.days))
-018171:             throw new Error("The saved reminder days couldn't be read.");
-018172:         return migrateStore(d);
-018173:     }
-018174:     catch (cause) {
-018175:         const error = new Error(cause instanceof SyntaxError ? "The saved file is incomplete or unreadable." : cause.message);
-018176:         error.raw = raw; // recovery exports the exact bytes, including malformed JSON
-018177:         throw error;
-018178:     }
-018179: }
-018180: async function loadStore() {
-018181:     let raw, readError;
-018182:     // Only an unavailable backend may fall back. A successful read of corrupt data is NOT an empty
-018183:     // install, and must not cause a different backend (or defaults) to overwrite the original.
-018184:     try {
-018185:         if (typeof localStorage !== "undefined")
-018186:             raw = localStorage.getItem(KEY);
-018187:     }
-018188:     catch (e) {
-018189:         readError = e;
-018190:     }
-018191:     if (raw !== undefined)
-018192:         return raw === null ? null : parseStoredData(raw);
-018193:     try {
-018194:         if (typeof window !== "undefined" && window.storage) {
-018195:             const r = await window.storage.get(KEY);
-018196:             raw = r == null ? null : r.value;
-018197:             if (raw === undefined)
-018198:                 throw new Error("Storage returned no readable value.");
-018199:         }
-018200:     }
-018201:     catch (e) {
-018202:         readError = e;
-018203:     }
-018204:     if (raw !== undefined)
-018205:         return raw === null ? null : parseStoredData(raw);
-018206:     if (readError)
-018207:         throw new Error("Device storage isn't responding. Try again when it becomes available.");
-018208:     return MEM.data == null ? null : parseStoredData(JSON.stringify(MEM.data));
-018209: }
-018210: async function writeStoreText(key, text) {
-018211:     try {
-018212:         if (typeof localStorage !== "undefined") {
-018213:             localStorage.setItem(key, text);
-018214:             return true;
-018215:         }
-018216:     }
-018217:     catch { }
-018218:     try {
-018219:         if (typeof window !== "undefined" && window.storage) {
-018220:             await window.storage.set(key, text);
-018221:             return true;
-018222:         }
-018223:     }
-018224:     catch { }
-018225:     return false;
-018226: }
-018227: // Async fallback writes must commit in order: a slow earlier write used to replace a newer workout.
-018228: // Capture each snapshot at the call boundary, so queued writes cannot observe later mutations.
-018229: let storeSaveQueue = Promise.resolve();
-018230: function saveStore(data) {
-018231:     let text;
-018232:     try {
-018233:         text = JSON.stringify(data);
-018234:         MEM.data = JSON.parse(text);
-018235:     }
-018236:     catch {
-018237:         return Promise.resolve(false);
-018238:     }
-018239:     const pending = storeSaveQueue.then(() => writeStoreText(KEY, text));
-018240:     storeSaveQueue = pending.catch(() => false);
-018241:     return pending;
-018242: }
-018243: /* ============================== SMALL UI PIECES ============================== */
-018244: function Radio({ on }) {
-018245:     return (_jsx("div", { style: {
-018246:             width: 26, height: 26, borderRadius: 999, flexShrink: 0,
-018247:             border: `2px solid ${on ? C.accent : C.border}`,
-018248:             display: "flex", alignItems: "center", justifyContent: "center",
-018249:             background: on ? C.accent : "transparent", transition: "background .15s, border-color .15s"
-018250:         }, children: on && _jsx(Check, { size: 15, color: C.accentText, strokeWidth: 3.5 }) }));
-018251: }
-018252: function CheckBox({ on }) {
-018253:     return (_jsx("div", { style: {
-018254:             width: 26, height: 26, borderRadius: 8, flexShrink: 0,
-018255:             border: `2px solid ${on ? C.accent : C.border}`,
-018256:             display: "flex", alignItems: "center", justifyContent: "center",
-018257:             background: on ? C.accent : "transparent", transition: "background .15s, border-color .15s"
-018258:         }, children: on && _jsx(Check, { size: 15, color: C.accentText, strokeWidth: 3.5 }) }));
-018259: }
-018260: /* ── DRAG A SHEET DOWN TO DISMISS IT ─────────────────────────────────────────────────────────
-018261:    Every sheet in the app slides up from the bottom and, until now, could only be closed by finding
-018262:    a small X or tapping the backdrop above it — on a large phone the top of the screen is exactly
-018263:    where a thumb cannot reach, which is why the gesture exists on every other app that does this.
-018264: 
-018265:    Deliberately NOT a hook. There are twenty-six of these sheets, written inline at twenty-six call
-018266:    sites over the app's life; a hook would have to be added to twenty-six components and would put
-018267:    the rules-of-hooks in the way of the ones rendered inside conditionals and callbacks. A ref
-018268:    callback attaches to the element itself and can be dropped in anywhere.
-018269: 
-018270:    HOW IT CLOSES. It does not take an onClose. Every one of these sheets is a child of a backdrop
-018271:    that already closes it on click, and the sheet stops that click propagating — so the dismissal
-018272:    the app already has is one synthetic click on the parent away. That means this works on all of
-018273:    them without twenty-six different closers being threaded through, and a sheet whose backdrop is
-018274:    deliberately inert simply springs back, which is the correct behaviour there anyway.
-018275: 
-018276:    Only from the TOP of the sheet, and only when its content is scrolled to the top: a drag starting
-018277:    over a scrollable list belongs to that list. Both are what makes the gesture feel like part of
-018278:    the sheet rather than a trap laid over its contents. */
-018279: const SHEET_GRAB_PX = 72; // the band at the top of a sheet where a downward drag means "dismiss"
-018280: const SHEET_DISMISS_PX = 110; // far enough that a scroll overshoot or a stray thumb cannot fire it
-018281: function sheetDragRef(el) {
-018282:     if (!el || el.dataset.sheetDrag)
-018283:         return;
-018284:     el.dataset.sheetDrag = "1";
-018285:     // Natural-content sheets stay compact; long sheets use the large detent. The choice is structural,
-018286:     // not per-feature styling, so every sheet participates in the same hierarchy automatically.
-018287:     requestAnimationFrame(() => {
-018288:         try {
-018289:             const vh = window.visualViewport?.height || window.innerHeight || 800;
-018290:             el.dataset.detent = el.scrollHeight <= vh * .58 ? "content" : "large";
-018291:         }
-018292:         catch {
-018293:             el.dataset.detent = "large";
-018294:         }
-018295:     });
-018296:     let y0 = null, dy = 0, dragging = false, raf = 0, shownY = 0;
-018297:     let lastY = 0, lastAt = 0, velocityY = 0;
-018298:     const paint = () => {
-018299:         raf = 0;
-018300:         el.style.transform = shownY > 0 ? `translate3d(0, ${shownY}px, 0)` : "";
-018301:     };
-018302:     const queuePaint = (nextY) => {
-018303:         shownY = nextY;
-018304:         if (!raf)
-018305:             raf = requestAnimationFrame(paint);
-018306:     };
-018307:     const reset = (animate) => {
-018308:         if (raf) {
-018309:             cancelAnimationFrame(raf);
-018310:             raf = 0;
-018311:         }
-018312:         shownY = 0;
-018313:         delete el.dataset.dragging;
-018314:         el.style.transition = animate ? "transform .26s cubic-bezier(.16,1,.3,1)" : "";
-018315:         el.style.transform = "";
-018316:         if (animate)
-018317:             setTimeout(() => { el.style.transition = ""; el.style.willChange = ""; }, 280);
-018318:         else
-018319:             el.style.willChange = "";
-018320:     };
-
-===== around line 18151 =====
-018126: }
-018127: // Carry a loaded/imported blob forward to STORE_VERSION. Un-versioned blobs predate versioning and are
-018128: // treated as v1. Returns the input untouched for a fresh install (null) or non-object junk so the
-018129: // caller's existing validity checks still apply.
-018130: function migrateStore(raw) {
-018131:     if (!raw || typeof raw !== "object")
-018132:         return raw;
-018133:     let d = raw;
-018134:     let v = typeof d.v === "number" ? d.v : 1;
-018135:     while (v < STORE_VERSION) {
-018136:         v += 1;
-018137:         const fn = STORE_MIGRATIONS[v];
-018138:         if (fn)
-018139:             d = fn(d);
-018140:     }
-018141:     return d.v === STORE_VERSION ? d : { ...d, v: STORE_VERSION };
-018142: }
-018143: // Reject malformed containers before any React state is hydrated. Missing fields remain valid for
-018144: // older saves. A newer schema must never be silently stamped with this build's older version.
-018145: function parseStoredData(raw) {
-018146:     try {
-018147:         const d = JSON.parse(raw);
-018148:         const object = v => !!v && typeof v === "object" && !Array.isArray(v);
-018149:         if (!object(d))
-018150:             throw new Error("The saved data isn't a training backup.");
-018151:         if (typeof d.v === "number" && d.v > STORE_VERSION)
-018152:             throw new Error("This data needs a newer version of Pursuit Iron. Update the app, then try again.");
-018153:         for (const k of ["saved", "history", "cycles", "custom", "gyms", "bwLog", "banned", "equipDefault"]) {
-018154:             if (d[k] != null && !Array.isArray(d[k]))
-018155:                 throw new Error(`The saved ${k} list couldn't be read.`);
-018156:         }
-018157:         for (const k of ["perf", "drafts", "tombs", "measurements", "goals", "exNotes", "exSetup", "minInc", "plates", "reminders", "canaryResearch", "selectivePromotionRuntime"]) {
-018158:             if (d[k] != null && !object(d[k]))
-018159:                 throw new Error(`The saved ${k} settings couldn't be read.`);
-018160:         }
-018161:         for (const k of ["saved", "history", "cycles", "custom", "gyms", "bwLog"]) {
-018162:             if ((d[k] || []).some(v => !object(v)))
-018163:                 throw new Error(`A saved ${k} entry couldn't be read.`);
-018164:         }
-018165:         const programs = [...(d.saved || []), ...Object.values(d.drafts || {})];
-018166:         if (programs.some(p => !object(p) || !object(p.config) || !Array.isArray(p.days) || p.days.some(day => !object(day) || !Array.isArray(day.exercises))))
-018167:             throw new Error("A saved program couldn't be read.");
-018168:         if ((d.cycles || []).some(c => !Array.isArray(c.blockIds)))
-018169:             throw new Error("A saved cycle couldn't be read.");
-018170:         if (d.reminders?.days != null && !Array.isArray(d.reminders.days))
-018171:             throw new Error("The saved reminder days couldn't be read.");
-018172:         return migrateStore(d);
-018173:     }
-018174:     catch (cause) {
-018175:         const error = new Error(cause instanceof SyntaxError ? "The saved file is incomplete or unreadable." : cause.message);
-018176:         error.raw = raw; // recovery exports the exact bytes, including malformed JSON
-018177:         throw error;
-018178:     }
-018179: }
-018180: async function loadStore() {
-018181:     let raw, readError;
-018182:     // Only an unavailable backend may fall back. A successful read of corrupt data is NOT an empty
-018183:     // install, and must not cause a different backend (or defaults) to overwrite the original.
-018184:     try {
-018185:         if (typeof localStorage !== "undefined")
-018186:             raw = localStorage.getItem(KEY);
-018187:     }
-018188:     catch (e) {
-018189:         readError = e;
-018190:     }
-018191:     if (raw !== undefined)
-018192:         return raw === null ? null : parseStoredData(raw);
-018193:     try {
-018194:         if (typeof window !== "undefined" && window.storage) {
-018195:             const r = await window.storage.get(KEY);
-018196:             raw = r == null ? null : r.value;
-018197:             if (raw === undefined)
-018198:                 throw new Error("Storage returned no readable value.");
-018199:         }
-018200:     }
-018201:     catch (e) {
-018202:         readError = e;
-018203:     }
-018204:     if (raw !== undefined)
-018205:         return raw === null ? null : parseStoredData(raw);
-018206:     if (readError)
-018207:         throw new Error("Device storage isn't responding. Try again when it becomes available.");
-018208:     return MEM.data == null ? null : parseStoredData(JSON.stringify(MEM.data));
-018209: }
-018210: async function writeStoreText(key, text) {
-018211:     try {
-018212:         if (typeof localStorage !== "undefined") {
-018213:             localStorage.setItem(key, text);
-018214:             return true;
-018215:         }
-018216:     }
-018217:     catch { }
-018218:     try {
-018219:         if (typeof window !== "undefined" && window.storage) {
-018220:             await window.storage.set(key, text);
-018221:             return true;
-018222:         }
-018223:     }
-018224:     catch { }
-018225:     return false;
-018226: }
-018227: // Async fallback writes must commit in order: a slow earlier write used to replace a newer workout.
-018228: // Capture each snapshot at the call boundary, so queued writes cannot observe later mutations.
-018229: let storeSaveQueue = Promise.resolve();
-018230: function saveStore(data) {
-018231:     let text;
-018232:     try {
-018233:         text = JSON.stringify(data);
-018234:         MEM.data = JSON.parse(text);
-018235:     }
-018236:     catch {
-018237:         return Promise.resolve(false);
-018238:     }
-018239:     const pending = storeSaveQueue.then(() => writeStoreText(KEY, text));
-018240:     storeSaveQueue = pending.catch(() => false);
-018241:     return pending;
-018242: }
-018243: /* ============================== SMALL UI PIECES ============================== */
-018244: function Radio({ on }) {
-018245:     return (_jsx("div", { style: {
-018246:             width: 26, height: 26, borderRadius: 999, flexShrink: 0,
-018247:             border: `2px solid ${on ? C.accent : C.border}`,
-018248:             display: "flex", alignItems: "center", justifyContent: "center",
-018249:             background: on ? C.accent : "transparent", transition: "background .15s, border-color .15s"
-018250:         }, children: on && _jsx(Check, { size: 15, color: C.accentText, strokeWidth: 3.5 }) }));
-018251: }
-018252: function CheckBox({ on }) {
-018253:     return (_jsx("div", { style: {
-018254:             width: 26, height: 26, borderRadius: 8, flexShrink: 0,
-018255:             border: `2px solid ${on ? C.accent : C.border}`,
-018256:             display: "flex", alignItems: "center", justifyContent: "center",
-018257:             background: on ? C.accent : "transparent", transition: "background .15s, border-color .15s"
-018258:         }, children: on && _jsx(Check, { size: 15, color: C.accentText, strokeWidth: 3.5 }) }));
-018259: }
-018260: /* ── DRAG A SHEET DOWN TO DISMISS IT ─────────────────────────────────────────────────────────
-018261:    Every sheet in the app slides up from the bottom and, until now, could only be closed by finding
-018262:    a small X or tapping the backdrop above it — on a large phone the top of the screen is exactly
-018263:    where a thumb cannot reach, which is why the gesture exists on every other app that does this.
-018264: 
-018265:    Deliberately NOT a hook. There are twenty-six of these sheets, written inline at twenty-six call
-018266:    sites over the app's life; a hook would have to be added to twenty-six components and would put
-018267:    the rules-of-hooks in the way of the ones rendered inside conditionals and callbacks. A ref
-018268:    callback attaches to the element itself and can be dropped in anywhere.
-018269: 
-018270:    HOW IT CLOSES. It does not take an onClose. Every one of these sheets is a child of a backdrop
-018271:    that already closes it on click, and the sheet stops that click propagating — so the dismissal
-018272:    the app already has is one synthetic click on the parent away. That means this works on all of
-018273:    them without twenty-six different closers being threaded through, and a sheet whose backdrop is
-018274:    deliberately inert simply springs back, which is the correct behaviour there anyway.
-018275: 
-018276:    Only from the TOP of the sheet, and only when its content is scrolled to the top: a drag starting
-018277:    over a scrollable list belongs to that list. Both are what makes the gesture feel like part of
-018278:    the sheet rather than a trap laid over its contents. */
-018279: const SHEET_GRAB_PX = 72; // the band at the top of a sheet where a downward drag means "dismiss"
-018280: const SHEET_DISMISS_PX = 110; // far enough that a scroll overshoot or a stray thumb cannot fire it
-018281: function sheetDragRef(el) {
-018282:     if (!el || el.dataset.sheetDrag)
-018283:         return;
-018284:     el.dataset.sheetDrag = "1";
-018285:     // Natural-content sheets stay compact; long sheets use the large detent. The choice is structural,
-018286:     // not per-feature styling, so every sheet participates in the same hierarchy automatically.
-018287:     requestAnimationFrame(() => {
-018288:         try {
-018289:             const vh = window.visualViewport?.height || window.innerHeight || 800;
-018290:             el.dataset.detent = el.scrollHeight <= vh * .58 ? "content" : "large";
-018291:         }
-018292:         catch {
-018293:             el.dataset.detent = "large";
-018294:         }
-018295:     });
-018296:     let y0 = null, dy = 0, dragging = false, raf = 0, shownY = 0;
-018297:     let lastY = 0, lastAt = 0, velocityY = 0;
-018298:     const paint = () => {
-018299:         raf = 0;
-018300:         el.style.transform = shownY > 0 ? `translate3d(0, ${shownY}px, 0)` : "";
-018301:     };
-018302:     const queuePaint = (nextY) => {
-018303:         shownY = nextY;
-018304:         if (!raf)
-018305:             raf = requestAnimationFrame(paint);
-018306:     };
-018307:     const reset = (animate) => {
-018308:         if (raf) {
-018309:             cancelAnimationFrame(raf);
-018310:             raf = 0;
-018311:         }
-018312:         shownY = 0;
-018313:         delete el.dataset.dragging;
-018314:         el.style.transition = animate ? "transform .26s cubic-bezier(.16,1,.3,1)" : "";
-018315:         el.style.transform = "";
-018316:         if (animate)
-018317:             setTimeout(() => { el.style.transition = ""; el.style.willChange = ""; }, 280);
-018318:         else
-018319:             el.style.willChange = "";
-018320:     };
-018321:     el.addEventListener("touchstart", (ev) => {
-018322:         if (ev.touches.length !== 1)
-018323:             return;
-018324:         const t = ev.touches[0];
-018325:         const box = el.getBoundingClientRect();
-018326:         // top band only, and only when whatever is inside is already scrolled to its top
-018327:         if (t.clientY - box.top > SHEET_GRAB_PX)
-018328:             return;
-018329:         if (el.scrollTop > 0)
-018330:             return;
-
-===== around line 34762 =====
-034737:     // discard whatever this tab hasn't saved yet — just surface it once so the user can act (finish up
-034738:     // in one tab, then reload the other before using it).
-034739:     useEffect(() => {
-034740:         const onStorage = (e) => {
-034741:             if (e.key !== KEY || crossTabWarned.current)
-034742:                 return;
-034743:             crossTabWarned.current = true;
-034744:             setAppToast({ msg: "Pursuit Iron is open in another tab or window — use just one at a time, or a save could be lost. Reload the other one when you're done here." });
-034745:         };
-034746:         window.addEventListener("storage", onStorage);
-034747:         return () => window.removeEventListener("storage", onStorage);
-034748:     }, []);
-034749:     useEffect(() => {
-034750:         if (!loaded || safeStart)
-034751:             return;
-034752:         (async () => {
-034753:             // savedAt is what tells a merge which of two copies is the more recent — without it, settings
+---
 034754:             // conflicts have nothing to resolve against. Tombstones are pruned to six months: long enough that
 034755:             // a device left in a drawer over a training block still learns about the deletions it missed, short
 034756:             // enough that a decade of them doesn't ride along in every backup.
@@ -1491,187 +187,7 @@
 034777:      * why swapping an exercise "saved without hitting the button": for anything already in the library —
 034778:      * which is every cycle block and every program saved once — the swap was committed the instant it
 034779:      * happened, and Back then had nothing to warn about because nothing was unsaved. The Save/Update
-034780:      * button was, in that state, decorative.
-034781:      *
-034782:      * The reason the write-through existed is real and has to be preserved: `program` is React state
-034783:      * that does NOT survive navigating away, so without persistence an edit was lost the moment you
-034784:      * left the screen. So the working copy is persisted — into `drafts`, keyed by program id, alongside
-034785:      * the library rather than on top of it. Editing is now: change → draft (survives navigation, and a
-034786:      * reload) → Update commits it → Discard drops it. The library copy changes only when you say so,
-034787:      * which is what makes Save mean something and gives Back something to ask about.
-034788:      *
-034789:      * A draft is only ever kept for a program that IS in the library. An unsaved program has nothing to
-034790:      * be a draft OF; it is already its own working copy, and the existing unsaved-Back prompt covers it. */
-034791:     useEffect(() => {
-034792:         if (!loaded || !program)
-034793:             return;
-034794:         const stored = saved.find(p => p.id === program.id);
-034795:         if (!stored)
-034796:             return;
-034797:         /* Compare CONTENT, not identity. Identity alone left a stale draft behind after Update: the
-034798:            handler clears the draft and calls setSaved, then this effect re-runs with `saved` not yet
-034799:            updated, sees a mismatch, and writes the draft straight back. Content comparison also makes the
-034800:            draft self-healing — undo your own edit by hand and it disappears rather than lingering as a
-034801:            phantom "unsaved changes" that differs from the library in nothing. */
-034802:         if (sameProgramContent(stored, program)) {
-034803:             setDrafts(prev => { if (!(program.id in prev))
-034804:                 return prev; const { [program.id]: _drop, ...rest } = prev; return rest; });
-034805:             return;
-034806:         }
-034807:         setDrafts(prev => (prev[program.id] === program ? prev : { ...prev, [program.id]: program }));
-034808:     }, [program, loaded, saved]);
-034809:     // Native shells get REAL OS notifications that fire with the app closed. This is a no-op on the web.
-034810:     useEffect(() => { if (loaded)
-034811:         scheduleNativeReminders(reminders); }, [reminders, loaded]);
-034812:     const remindFired = useRef(null);
-034813:     useEffect(() => {
-034814:         // Web fallback only: an in-app nudge for the case where the app happens to be open at the time.
-034815:         // It cannot fire when the app is closed — see scheduleNativeReminders. The Settings copy says so.
-034816:         if (!reminders.enabled || remindersAreReliable())
-034817:             return;
-034818:         try {
-034819:             ensureNotifyPermission();
-034820:         }
-034821:         catch { }
-034822:         const check = () => {
-034823:             const now = new Date();
-034824:             const hhmm = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-034825:             const today = now.toDateString();
-034826:             if (reminders.days.includes(now.getDay()) && hhmm === reminders.time && remindFired.current !== today) {
-034827:                 remindFired.current = today;
-034828:                 const trained = (history || []).some(h => new Date(h.date).toDateString() === today);
-034829:                 const msg = trained ? "Already trained today — nice work" : "Time to train";
-034830:                 try {
-034831:                     if (!isNativeApp() && "Notification" in window && Notification.permission === "granted")
-034832:                         new Notification("Workout reminder", { body: trained ? "You've already logged a session today." : "Your session is waiting." });
-034833:                 }
-034834:                 catch { }
-034835:                 setAppToast({ msg });
-034836:             }
-034837:         };
-034838:         check();
-034839:         const t = setInterval(check, 30000);
-034840:         return () => clearInterval(t);
-034841:     }, [reminders, history]);
-034842:     const logMeasurement = (key, v) => {
-034843:         const val = parseFloat(v);
-034844:         if (!(val > 0))
-034845:             return;
-034846:         setMeasurements(prev => {
-034847:             const today = new Date().toDateString();
-034848:             const arr = (prev[key] || []).filter(e => new Date(e.date).toDateString() !== today);
-034849:             return { ...prev, [key]: [...arr, { date: Date.now(), v: val, unit: lengthUnitFor(unit) }].sort((a, b) => a.date - b.date).slice(-BW_LOG_CAP) };
-034850:         });
-034851:     };
-034852:     const logBodyweight = (w) => {
-034853:         const val = parseFloat(w);
-034854:         if (!(val > 0))
-034855:             return;
-034856:         setBwLog(prev => [...prev.filter(e => new Date(e.date).toDateString() !== new Date().toDateString()), { date: Date.now(), w: val, unit }].sort((a, b) => a.date - b.date).slice(-BW_LOG_CAP));
-034857:         setBodyweight(String(val));
-034858:     };
-034859:     const chooseTheme = (id) => { applyTheme(id); setThemeState(id); };
-034860:     const chooseUnit = (u) => { setUnit(u); setUnitChosen(true); };
-034861:     // Switching the weight unit must CONVERT the stored loads, not just relabel them. Programs, training
-034862:     // maxes, per-machine increments and the cross-session perf store all hold bare numbers interpreted
-034863:     // in the current unit — without conversion, a 200 lb training max would suddenly be read as 200 kg
-034864:     // (≈441 lb), wrecking every suggestion and the plate math. History entries are NOT touched: each
-034865:     // already records the unit it was logged in, so past sessions stay accurate as-is.
-034866:     const switchUnit = (to, announce = true) => {
-034867:         if (to === unit)
-034868:             return;
-034869:         /* Setting the unit here IS choosing it. Without this, `unitChosen` stayed false for anyone who
-034870:            picked their unit in Settings rather than through onboarding — so the program wizard kept its
-034871:            "Which units do you train in?" step and asked again, on a decision the user had already made
-034872:            and could see the answer to two screens away. */
-034873:         setUnitChosen(true);
-034874:         const k = to === "lb" ? 2.2046226 : 1 / 2.2046226; // multiply existing values by this
-034875:         const conv = (v) => { const n = parseFloat(v); return n > 0 ? Math.round(n * k * 2) / 2 : v; }; // ½-unit rounding
-034876:         const convMap = (m) => { if (!m)
-034877:             return m; const o = {}; for (const key in m)
-034878:             o[key] = conv(m[key]); return o; };
-034879:         const convPerf = (pf) => {
-034880:             if (!pf)
-034881:                 return pf;
-034882:             const o = {};
-034883:             for (const id in pf) {
-034884:                 const p = pf[id];
-034885:                 if (!p)
-034886:                     continue;
-034887:                 o[id] = { ...p, weight: conv(p.weight), sets: Array.isArray(p.sets) ? p.sets.map(s => ({ ...s, w: conv(s.w) })) : p.sets };
-034888:             }
-034889:             return o;
-034890:         };
-034891:         const convProgram = (p) => {
-034892:             if (!p)
-034893:                 return p;
-034894:             const np = { ...p };
-034895:             if (np.trainingMax)
-034896:                 np.trainingMax = convMap(np.trainingMax);
-034897:             if (np.gz) {
-034898:                 const g = {};
-034899:                 for (const id in np.gz)
-034900:                     g[id] = { ...np.gz[id], ...(np.gz[id]?.t2w != null ? { t2w: conv(np.gz[id].t2w) } : {}) };
-034901:                 np.gz = g;
-034902:             }
-034903:             if (np.exLoadInc) {
-034904:                 const e = {};
-034905:                 for (const id in np.exLoadInc) {
-034906:                     const v = np.exLoadInc[id];
-034907:                     e[id] = (v && v.v != null) ? { ...v, v: conv(v.v), unit: to } : v;
-034908:                 }
-034909:                 np.exLoadInc = e;
-034910:             }
-034911:             return np;
-034912:         };
-034913:         setPerf(pf => convPerf(pf));
-034914:         setSaved(list => list.map(convProgram));
-034915:         setProgram(pr => pr ? convProgram(pr) : pr);
-034916:         // Per-exercise goal weights are real loads compared against what you lift, so they convert too —
-034917:         // otherwise a 225 lb bench goal would be read as 225 kg after switching and become unreachable.
-034918:         setGoals(g => { if (!g)
-034919:             return g; const o = {}; for (const id in g) {
-034920:             const n = parseFloat(g[id]);
-034921:             o[id] = n > 0 ? Math.round(n * k * 2) / 2 : g[id];
-034922:         } return o; });
-034923:         setBodyweight(bw => { const n = parseFloat(bw); return n > 0 ? String(Math.round(n * k * 2) / 2) : bw; });
-034924:         setBwLog(log => Array.isArray(log) ? log.map(e => ({ ...e, w: conv(e.w), unit: to })) : log);
-034925:         // Circumferences follow the same rule as loads: convert, never relabel.
-034926:         setMeasurements(m => { if (!m || typeof m !== "object")
-034927:             return m; const lu = lengthUnitFor(to); const o = {}; for (const k in m)
-034928:             o[k] = normalizeMeasureLog(m[k], lu, unit); return o; });
-034929:         setUnit(to);
-034930:         setUnitChosen(true);
-034931:         if (announce)
-034932:             setAppToast({ msg: `Switched to ${to} — your weights were converted` });
-034933:     };
-034934:     const resetAll = () => {
-034935:         try {
-034936:             localStorage.removeItem(LIVE_KEY);
-034937:         }
-034938:         catch { }
-034939:         setLegacyStore({ saved: [], cycles: [] });
-034940:         setLegacyReview(null);
-034941:         setDrafts({});
-
-===== around line 34968 =====
-034943:         setCycles([]);
-034944:         setBanned([]);
-034945:         setHistory([]);
-034946:         setPerf({});
-034947:         setCustom([]);
-034948:         setBwLog([]);
-034949:         setMeasurements({});
-034950:         setGoals({});
-034951:         // "Erase all data" has to mean it: pinned exercise notes/setups, the body profile, and the
-034952:         // active-program pointer are all user data too — leaving them behind made a "reset" device
-034953:         // still recognizably yours. Device preferences (theme, unit, plates, haptics) stay.
-034954:         setExNotes({});
-034955:         setExSetup({});
-034956:         setPinnedId(null);
-034957:         setBodyweight("");
-034958:         setBirth("");
-034959:         setBirthEst(false);
+---
 034960:         setSex("male");
 034961:         setMinInc({ v: 0, unit: null });
 034962:         setReminders({ enabled: false, time: "18:00", days: [1, 2, 3, 4, 5] });
@@ -1698,39 +214,329 @@
 034983:                 rows.push([d, h.programName, h.dayLabel, ex ? ex.name : id, ex ? PART_LABEL[ex.part] : "", p.weight ?? "", p.reps ?? "", (p.sets || []).length, vol, h.unit || unit, h.durationMin || ""]);
 034984:             });
 034985:         });
-034986:         return rows.map(r => r.map(esc).join(",")).join("\n");
-034987:     };
-034988:     const exportBodyCSV = () => {
-034989:         const esc = c => { const s = String(c ?? ""); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
-034990:         const rows = [["Date", "Metric", "Value", "Unit"]];
-034991:         // Export in ONE unit each, converted — a CSV mixing lb and kg rows under a column that names the
-034992:         // current setting is worse than useless: nothing downstream can tell which rows were converted.
-034993:         const lu = lengthUnitFor(unit);
-034994:         normalizeBwLog(bwLog, unit).forEach(e => rows.push([isoLocal(e.date), "Bodyweight", e.w, e.unit]));
-034995:         Object.entries(measurements || {}).forEach(([k, arr]) => normalizeMeasureLog(arr, lu, unit).forEach(e => rows.push([isoLocal(e.date), k.charAt(0).toUpperCase() + k.slice(1), e.v, e.unit])));
-034996:         return rows.map(r => r.map(esc).join(",")).join("\n");
-034997:     };
-034998:     const importProgramText = (text) => {
-034999:         // A code and a plain-text plan arrive through the same box, because asking a user which KIND of
-035000:         // shared thing they are holding is a question the app can answer for itself.
-035001:         if (/^\s*PI-/i.test(String(text || "")))
-035002:             return importProgramCode(text);
-035003:         return { ok: false, msg: "This older text format can’t be imported directly. Use a current share code or rebuild the program." };
-035004:     };
-035005:     /* Put the store back exactly as it was, bypassing the stamped setters on purpose.
-035006:      *
-035007:      * Undoing an import is not an edit — it is a rewind. Going through setSaved/setCycles/setCustom would
-035008:      * stamp every restored record with `updatedAt: now` and write a tombstone for every record the import
-035009:      * had added, which would then propagate: the next merge would see "this program was deleted, recently
-035010:      * and deliberately" and delete it on the other device too. An undo has to leave no trace on any device
-035011:      * but this one, so it writes the raw state and restores the tombstones it started with.
-035012:      */
-035013:     const applySnapshot = (d) => {
-035014:         if (!d)
-035015:             return;
-035016:         const runtimeCycles = (d.cycles || []).filter(c => c?.engineSource === "pursuit-next");
-035017:         const runtimeSaved = normalizeCycleLinks((d.saved || []).filter(isRuntimeProgram), runtimeCycles);
-035018:         setLegacyStore({
+---
+035117:         if (replace && !preview) {
+035118:             applySnapshot(d);
+035119:             return { ok: true, msg: "Reverted to the state before this restore." };
+035120:         }
+035121:         // MERGE, don't replace. Importing used to overwrite: restore a three-month-old backup onto the phone
+035122:         // you had kept training on, and everything logged since was gone — the backup, the thing that exists
+035123:         // to prevent loss, was the thing that caused it. mergeStores unions the two copies and never drops a
+035124:         // logged session; see its contract. The live state is folded in as the "local" side.
+035125:         const live = { v: STORE_VERSION, savedAt: Date.now(), tombs, saved: withLegacy(saved, "saved"), drafts, cycles: withLegacy(cycles, "cycles"), banned, equipDefault, gyms, activeGymId, unit, unitChosen, experience, loadMode, perf, history, custom, theme, bodyweight, sex, birth, birthEst, age, bwLog, measurements, restAutoStart, warmupCard, restScale, haptics, reminders, minInc, plates, goals, exNotes, exSetup, seenIntroV, seenWhatsNew, lastBackup, installDismissedAt, pinnedId, canaryResearch, selectivePromotionRuntime };
+035126:         const undoSnapshot = JSON.stringify(live);
+035127:         let mstats = null;
+035128:         if (!replace) {
+035129:             const merged = mergeStores(live, { ...d, savedAt: d.savedAt || d.exportedAt || 0 });
+035130:             mstats = merged.stats;
+035131:             d = merged.data;
+035132:         }
+035133:         try {
+035134:             const incomingCustom = new Map((d.custom || []).map(ex => [ex.id, ex]));
+035135:             const known = (id) => !!EX_BY_ID[id] || incomingCustom.has(id);
+035136:             let dropped = 0;
+035137:             const sanitizeProgram = (p) => {
+035138:                 if (!p || !Array.isArray(p.days))
+035139:                     return p;
+035140:                 const days = p.days.map(day => {
+035141:                     const keep = [], idxMap = {};
+035142:                     (day.exercises || []).forEach((id, oldIdx) => { if (known(id)) {
+---
+037144: }
+037145: // Wrap the whole app so a render crash ANYWHERE (not just inside the two sections that already have
+037146: // their own closer ErrorBoundary) shows a recoverable full-screen message instead of silently
+037147: // white-screening with no way back in. Data is autosaved to localStorage independent of render state.
+037148: export default function RootApp() {
+037149:     return _jsx(ErrorBoundary, { full: true, children: _jsx(App, {}) });
+037150: }
+037151: export { exerciseSlotSec, candidateMinutes, extraSetMinutes, WARMUP_SET_SEC, baseSetsFor, loggedVolume, loggedSubVolume, pressAngle, movePattern, availableFor, warmupSets, warmupCount, rankSwapAlts, starvedRegions, programSetupChips, weeklySubVolume, directSubVolume, SUB_LANDMARKS, subRegionOf, weeklyVolume, landmarkFor, coverageGaps, expandEquipment, EQUIP_IMPLIES, paceFactor, estimateMinutesFor, sessionExercisePlan, volumeZone, partZone, mavFor, PLANNED_ROOM_RIR, EX_BY_ID, CHANGELOG, CHANGELOG_ITEMS, WHATS_NEW_MAX, groupSessionsByMonth, groupSessionsByCycle, planOverview, phaseTone, PCT_SCHEMES, MACHINE_SETUP, SETUP_LABELS, plateauSessions, pickTopSet, setupFieldsFor, setupFieldsWithStored, navPush, navPop, propagateCycleEditsPure, ALL_EQUIP_IDS, EQUIPMENT, ageFactor, strengthLevel, strengthSnapshot, STANDARDS, STD_LEVELS, ageFrom, birthParts, birthFromAge, todayISO, normalizeBwLog, normalizeMeasureLog, weeklyBodyweightTrend, lengthUnitFor, asLengthUnit, BW_LOG_CAP, STORE_MIGRATIONS, calibratedDayPerf, onPlanExempt, plannedGapHours, prescribedRIRof, isBarLike, isMachineLike, barFor, BARS, shareSession, shareStrengthScore, setGymLimits, gymCapFor, normalizeGyms, templateFacets, templateEmphasis, ExerciseFigure, figurePose, EXERCISES, assertFigureCoverage, FIGURE_GENERIC_OK, Exit, mergeStores, sessionSnapshotStatus, mergeSessionData, mergedSetCount, nextPrefillTargetIndex, encodeProgramCode, decodeProgramCode, decodeGallery, gallerySubmission, galleryIssueBody, programFingerprint, personalRepSlope, coachFacts, volumeResponse, volumeVerdicts, STRETCH_FOCUS, STRETCH_FOCUS_E2, STRETCH_FOCUS_E3, lastSetTech, techSetTag, techExplain, capHistory, HISTORY_CAP, HISTORY_BYTES, rirTrend, sessionCoach, coverageRelief, volumeLedger, landmarkOf, completionRate, recommendedSplit, SPLIT_RECOMMENDATIONS, NOVICE_INELIGIBLE_SPLITS, parseRIRNum, sameProgramContent, rirAtLoad, e1rmAnchorOf, regionGapsFor, regionGapFix, REGION_REQUIRED, previewVolumeNudge, coachNote, coachIntent, exerciseSeries, rmAt, EX_METRICS, EX_WINDOWS, exRecords, cycleProgress, blockReview, lastTopSet, betterTopSet, e1rmRIR, loadAtRIR, EPLEY_SLOPE, E1RM_REP_CAP, ASSUMED_RIR, isWorkSet, workSetsOf, dayMuscleBreakdown, weekMuscleBreakdown, plannedWeek, dayMuscleVolume, capWords, WHATS_NEW_WORDS, homeCardPlan, HOME_INSIGHT_BUDGET, WhatsNewCard, PATTERNS, patternOf, sameMovement, lengthOf, parseStoredData, recordReleaseDiag, readReleaseDiagnostics, clearReleaseDiagnostics, releaseDiagnosticsText };
+037152: export { ENGINE_V, ENGINES, ENGINE_RULES, engHas, engLacks, engineInfo, STORE_VERSION, migrateStore, GOALS, SESSIONS, EXP, THEMES, normalizeMusclePreferences, preferenceFloor, GEN_PIPELINE, runPipeline, openGeneration, schemeTierCount, COVERAGE_PASSES, coverageContext, prescribedDaySize, ASSISTANCE_SIZE, candidateSlotMin, daySeconds, advanceCycle, templateConfig, TEMPLATES, CYCLE_TEMPLATES, SPLITS, DAY_TEMPLATES, templateIntent, TEMPLATE_CATS, TEMPLATE_FILTER_GROUPS, sfrOf, axialCost, fitSessionTime, MRV_GRAIN, weekIntent, historyForProgram, IDEAL_SLOTS, dayMuscleLoad, dayOverlap, distributeVolBias, capWeeklyVolume, buildWeekPlan, programQuality, compareQuality, COVERED_MUSCLES, BEST_OF_N, traceGeneration, setPipeTrace, setClaimTrace, emitClaim, compositeMrv, PATTERN_GROUPS, PATTERN_MIN_SETS, patternTrainable, patternGapsOf, weeksOf, phaseFor, estimateMinutes, addedMinutes, addedSeconds, fitChip, daysInWeek, exerciseAt, rotationOf, fitSessionToTime, blockRetro, volumeAudit, LANDMARKS, secondaryOf, PART_ORDER, FOCUS_CAVEAT, WEEK_ORDER_TERMS, computeCell, pctSetsFor, gzPlanFor, gzAdvance, projectNextTM, nextTMEvidence, ddpNextForSet, lastSetEffort, styleFor, autoStyleFor, plateauOf, plateauOfLift, plateauSplitByDay, dayScopedTrends, fitText, fitFont, wrapList, drawRecapCard, exerciseTrends, summarizeSets, muscleRecovery, volumeAdvice, weeklyRecap, deloadAdvice, overreachSignal, constantLoadDecay, sessionE1RM, computeMilestones, ICON_CHOICES, ICON_GROUPS, ICON_COLORS, iconForProgram, iconForCycle, iconColorOf, nextSessionCursor, nextDueDayId, historyDayIndex, autoStyleDetail, explainPrescription, explainGeneration, perfAfterDelete, perfAfterHistoryReplace, normalizeEditedHistoryEntry, lifterModelKey, normalizeHistoryDayIds, normalizeCycleLinks, auditProgramWeek, auditSets, simulateAndAudit, repRange, goalForDay, blockPhase, rirFor, gymRackFor, pickActiveProgram, strengthScore, scoreAttribution, e1rm, loadStep, linearInc, lowerBodyLift, LOWER_PARTS, roundTo, setLoadInc, effortLabel, platesPerSide, setAvailPlates, strengthScoreHistory, restSec, effectiveRest, setRestScaleGlobal, dayPerfFor, lastDayPerf, anchorPerfFor, calibratedAnchorPerf, sessionSuggestion, prescribeSets, PROG_POLICIES, policyIdFor, resolveStyle, loggedRIRof, syncSubSets, growMyoSets, styleOverride, stallCountFor, SHED_TOL, STALL_ENGAGE, E1RM_HOLD, STALL_WINDOW, buildLifterModel, effortCalibration, calibrateDayPerf, readinessBand, bandForExercise, classifyPlateau, runSelfTest };
+037153: // Integration seams for storage and setup fault-injection gates; removed from the browser bundle.
+037154: export { loadStore, saveStore, Wizard };
+037155: /* Test-only: integration/m115-workout-browser-check.mjs imports these by name. They were missing from the shipped M116
+037156:    build, so that browser check could not load against it (its recorded PASS cannot have come from this App.js).
+037157:    The running app mounts only the default export; these change nothing in production. */
+037158: export { WorkoutSession, StepButton, StyleTag };
+037159: export { ExerciseAnimation, FormVideoLink, formVideoUrl, refusalMessage };
+037160: 
+037161: export { HomePrograms, homeProgramGroups, homePhaseIdentity };
+---
+===== const STORE_MIGRATIONS (1 hits) =====
+017797: function normalizeMeasureLog(arr, to, weightUnit) {
+017798:     return (arr || [])
+017799:         .filter(e => e && e.date != null && Number(e.v) > 0)
+017800:         .map(e => { const from = asLengthUnit(e.unit, weightUnit); return { ...e, v: Math.round(toLength(Number(e.v), from, to) * 10) / 10, unit: to }; })
+017801:         .sort((a, b) => a.date - b.date);
+017802: }
+017803: // Each entry upgrades the store FROM the previous version TO its own key number. Functions must be
+017804: // pure (no React/DOM) and a no-op when their change is already applied, so re-running can't corrupt.
+017805: const STORE_MIGRATIONS = {
+017806:     // 11 -> 12: selective-promotion safety state is release-scoped and starts fail-safe. M76 ships
+017807:     // with a zero-percent manifest, so upgrading cannot change a prescription.
+017808:     12: (d) => d.selectivePromotionRuntime ? d : { ...d, selectivePromotionRuntime: defaultSelectivePromotionRuntimeState(M76_SELECTIVE_PROMOTION_MANIFEST) },
+017809:     // 10 -> 11: controlled canary research is opt-in and local. Existing users must remain
+017810:     // unenrolled after upgrade; a missing field therefore migrates to an explicit disabled state.
+017811:     11: (d) => d.canaryResearch ? d : { ...d, canaryResearch: defaultCanaryResearchState() },
+017812:     // 9 -> 10: the typed `age` integer becomes a `birth` date. An age is only true for a year and the
+017813:     // app had no way to know it had gone stale, so a lifter's strength standards quietly drifted onto
+017814:     // the wrong age band and stayed there. The exact date can't be recovered from a number, so estimate
+017815:     // mid-year of the implied birth year (±6 months, inside ageFactor's 5–6 year bands) and mark it
+017816:     // `birthEst` so the UI can ask for the real one. `age` is left in place and kept in sync on save,
+017817:     // so an older build reading this store after a downgrade still finds the field it expects.
+017818:     10: (d) => {
+017819:         if (d.birth)
+017820:             return d;
+017821:         const b = birthFromAge(d.age, d.savedAt);
+017822:         return b ? { ...d, birth: b, birthEst: true } : d;
+---
+===== function migrateStore (1 hits) =====
+018122:             return { ...pref, trials: [...trials.values()].slice(-200) };
+018123:         })()
+018124:     };
+018125:     return { data, stats };
+018126: }
+018127: // Carry a loaded/imported blob forward to STORE_VERSION. Un-versioned blobs predate versioning and are
+018128: // treated as v1. Returns the input untouched for a fresh install (null) or non-object junk so the
+018129: // caller's existing validity checks still apply.
+018130: function migrateStore(raw) {
+018131:     if (!raw || typeof raw !== "object")
+018132:         return raw;
+018133:     let d = raw;
+018134:     let v = typeof d.v === "number" ? d.v : 1;
+018135:     while (v < STORE_VERSION) {
+018136:         v += 1;
+018137:         const fn = STORE_MIGRATIONS[v];
+018138:         if (fn)
+018139:             d = fn(d);
+018140:     }
+018141:     return d.v === STORE_VERSION ? d : { ...d, v: STORE_VERSION };
+018142: }
+018143: // Reject malformed containers before any React state is hydrated. Missing fields remain valid for
+018144: // older saves. A newer schema must never be silently stamped with this build's older version.
+018145: function parseStoredData(raw) {
+018146:     try {
+018147:         const d = JSON.parse(raw);
+---
+===== function mergeStores (1 hits) =====
+018007:  *   settings     scalars come from whichever blob was saved more recently, as a group.
+018008:  *   tombs        union, newest timestamp wins. A tombstone kills a record only when it is NEWER than
+018009:  *                that record's updatedAt — so deleting on one device and then editing on another
+018010:  *                resurrects it deliberately, which is what the edit meant.
+018011:  *
+018012:  * Pure, total, and order-independent: merge(a,b) and merge(b,a) agree, merging twice changes nothing.
+018013:  * Property-tested to that effect, because a merge bug is not a visual glitch — it is someone's year.
+018014:  */
+018015: function mergeStores(local, incoming) {
+018016:     if (!incoming || typeof incoming !== "object")
+018017:         return { data: local, stats: null };
+018018:     if (!local || typeof local !== "object")
+018019:         return { data: incoming, stats: null };
+018020:     const A = migrateStore(local), B = migrateStore(incoming);
+018021:     const aNewer = (A.savedAt || 0) >= (B.savedAt || 0);
+018022:     const older = aNewer ? B : A, newer = aNewer ? A : B;
+018023:     const tombs = { ...(A.tombs || {}) };
+018024:     Object.entries(B.tombs || {}).forEach(([id, t]) => { if (!(tombs[id] >= t))
+018025:         tombs[id] = t; });
+018026:     const stats = { history: 0, programs: 0, cycles: 0, custom: 0, bw: 0, conflicts: 0 };
+018027:     const byId = (a = [], b = [], count) => {
+018028:         const m = new Map();
+018029:         [...(Array.isArray(a) ? a : []), ...(Array.isArray(b) ? b : [])].forEach(r => {
+018030:             if (!r || r.id == null)
+018031:                 return;
+018032:             const prev = m.get(r.id);
+---
+===== const [history, setHistory] (1 hits) =====
+034168:     // still be selected or reached as a silent fallback.
+034169:     const nextEngineOnly = true;
+034170:     const [unitChosen, setUnitChosen] = useState(false); // true once the user has explicitly picked a unit → onboarding stops asking
+034171:     const [loadMode, setLoadMode] = useState("rir");
+034172:     const [goals, setGoals] = useState({});
+034173:     const [exNotes, setExNotes] = useState({}); // pinned per-exercise notes (id → text), persist across all sessions
+034174:     const [exSetup, setExSetup] = useState({}); // pinned per-exercise physical setup (id → {seat, back, hooks, ...}), shown integrated with the note
+034175:     const [perf, setPerf] = useState({});
+034176:     const [history, setHistory] = useState([]);
+034177:     const [custom, setCustomRaw] = useState([]);
+034178:     /* Every write to a syncable list goes through here, so `updatedAt` and tombstones are recorded in ONE
+034179:      * place rather than at each of the ~40 call sites that mutate these lists — where the next one added
+034180:      * would silently forget to, and a forgotten stamp is a record that loses every merge it ever enters.
+034181:      *
+034182:      * Detecting what changed is free because the app already updates immutably: a record that came out of
+034183:      * the updater with the same object identity it went in with was not touched, and anything else is new
+034184:      * or edited and gets stamped. Ids present before and gone after are deletions, and get a tombstone.
+034185:      * Undo works without special handling — it re-adds the record, which stamps it with a time later than
+034186:      * its own tombstone, and a tombstone only bites when it is newer than the record it points at.
+034187:      */
+034188:     const stampedSetter = (setRaw) => (updater) => setRaw(prev => {
+034189:         const next = typeof updater === "function" ? updater(prev) : updater;
+034190:         if (!Array.isArray(next) || !Array.isArray(prev))
+034191:             return next;
+034192:         const now = Date.now();
+034193:         const before = new Map(prev.map(r => [r && r.id, r]));
+---
+===== stampedSetter (5 hits) =====
+004664:    anchorLoad, so a hypertrophy day is forgiven none of it). Swept 0.6 / 0.8 / 1.0 over 5,598 days:
+004665:    the axial numbers are IDENTICAL at all three (zero days over 3.0 of spinal spend, zero days with
+004666:    two bilateral barbell squats) and barbell anchors move by ~3pp at goal "both" and not at all at
+004667:    goal "strength". Nothing is bought by forgiving more, so take the smallest value that works — the
+004668:    recovery model keeps 40% of its say over the main lift instead of none. */
+004669: /* How far the set rows are pulled out past the exercise card's own padding so the active-set band
+004670:    reaches the screen edges. Must match that padding, or the band stops short on one side. */
+004671: /* Are these the same program as far as the LIFTER is concerned? Deliberately ignores `updatedAt`:
+004672:    that is sync bookkeeping, stamped onto every record by stampedSetter so cross-device merges can tell
+004673:    which copy is newer. It is not content, and comparing it made a committed program differ from itself
+004674:    forever — the saved copy came back stamped, the open copy was not, so "unsaved changes" never
+004675:    cleared and Back would have prompted on every exit. Any future sync-only field belongs in this list
+004676:    too.
+004677: 
+004678:    ⚠ AND SO DOES ANYTHING THE APP WRITES TO THE PROGRAM ON THE LIFTER'S BEHALF. HAIDEN: "It keeps
+004679:    telling me I updated my program after starting a workout and exiting." He had edited nothing.
+004680:    `startUpNext` calls `autoregulate`, which returns a NEW program object carrying `autoBias` (the
+004681:    volume tweak recomputed from recent performance and recovery feedback) and `autoTuned` (the up/down
+004682:    summary the session briefly shows), then `setProgram` writes it into the OPEN copy while `saved[]`
+004683:    is left alone. This deep-compare then found two fields differing and reported unsaved changes.
+004684:    MEASURED, and it is these two and nothing else: driving a real session and leaving it, the diff
+004685:    between the stored program and the draft is exactly ['autoBias','autoTuned'].
+004686: 
+004687:    THEY ARE NOT EDITS AND CANNOT BE SAVED MEANINGFULLY. autoBias is ephemeral by design — the comment
+004688:    at its call site says so, it is cleared and rebuilt from scratch before every session precisely so
+004689:    it can never compound, so "Update" would only bake in a number the next session immediately
+---
+034180:      * would silently forget to, and a forgotten stamp is a record that loses every merge it ever enters.
+034181:      *
+034182:      * Detecting what changed is free because the app already updates immutably: a record that came out of
+034183:      * the updater with the same object identity it went in with was not touched, and anything else is new
+034184:      * or edited and gets stamped. Ids present before and gone after are deletions, and get a tombstone.
+034185:      * Undo works without special handling — it re-adds the record, which stamps it with a time later than
+034186:      * its own tombstone, and a tombstone only bites when it is newer than the record it points at.
+034187:      */
+034188:     const stampedSetter = (setRaw) => (updater) => setRaw(prev => {
+034189:         const next = typeof updater === "function" ? updater(prev) : updater;
+034190:         if (!Array.isArray(next) || !Array.isArray(prev))
+034191:             return next;
+034192:         const now = Date.now();
+034193:         const before = new Map(prev.map(r => [r && r.id, r]));
+034194:         const gone = new Set(prev.map(r => r && r.id));
+034195:         next.forEach(r => { if (r)
+034196:             gone.delete(r.id); });
+034197:         if (gone.size)
+034198:             setTombs(t => { const out = { ...t }; gone.forEach(id => { if (id != null)
+034199:                 out[id] = now; }); return out; });
+034200:         return next.map(r => (r && r.id != null && before.get(r.id) !== r) ? { ...r, updatedAt: now } : r);
+034201:     });
+034202:     const setSaved = useMemo(() => stampedSetter(setSavedRaw), []);
+034203:     const setCycles = useMemo(() => stampedSetter(setCyclesRaw), []);
+034204:     const setCustom = useMemo(() => stampedSetter(setCustomRaw), []);
+034205:     const [theme, setThemeState] = useState("lime");
+---
+034194:         const gone = new Set(prev.map(r => r && r.id));
+034195:         next.forEach(r => { if (r)
+034196:             gone.delete(r.id); });
+034197:         if (gone.size)
+034198:             setTombs(t => { const out = { ...t }; gone.forEach(id => { if (id != null)
+034199:                 out[id] = now; }); return out; });
+034200:         return next.map(r => (r && r.id != null && before.get(r.id) !== r) ? { ...r, updatedAt: now } : r);
+034201:     });
+034202:     const setSaved = useMemo(() => stampedSetter(setSavedRaw), []);
+034203:     const setCycles = useMemo(() => stampedSetter(setCyclesRaw), []);
+034204:     const setCustom = useMemo(() => stampedSetter(setCustomRaw), []);
+034205:     const [theme, setThemeState] = useState("lime");
+034206:     /* applyTheme was only ever called from the store loader and the theme picker, so a fresh install —
+034207:        or any launch that never reaches a stored theme — left the theme-colour meta tag and the
+034208:        --wpb-focus custom property unpublished, and the focus ring fell back to a hardcoded hex that
+034209:        only happens to match the default theme. Re-applying on every theme value covers boot and every
+034210:        change from one place; it is idempotent, so the picker calling it too costs nothing. */
+034211:     useEffect(() => { applyTheme(theme); }, [theme]);
+034212:     const [bodyweight, setBodyweight] = useState("");
+034213:     const [bwLog, setBwLog] = useState([]);
+034214:     const [measurements, setMeasurements] = useState({}); // { key: [{date, v, unit}] }
+034215:     const [restAutoStart, setRestAutoStart] = useState(true);
+034216:     /* The warm-up checklist was component-local `useState(true)` inside WorkoutSession — so it
+034217:        reappeared at the top of EVERY session, forever, and had to be dismissed again each time. A
+034218:        lifter with their own warm-up paid a tap per workout indefinitely for a card they had already
+034219:        read a hundred times, with no way to say so. Now a stored preference, defaulting ON so nothing
+---
+034195:         next.forEach(r => { if (r)
+034196:             gone.delete(r.id); });
+034197:         if (gone.size)
+034198:             setTombs(t => { const out = { ...t }; gone.forEach(id => { if (id != null)
+034199:                 out[id] = now; }); return out; });
+034200:         return next.map(r => (r && r.id != null && before.get(r.id) !== r) ? { ...r, updatedAt: now } : r);
+034201:     });
+034202:     const setSaved = useMemo(() => stampedSetter(setSavedRaw), []);
+034203:     const setCycles = useMemo(() => stampedSetter(setCyclesRaw), []);
+034204:     const setCustom = useMemo(() => stampedSetter(setCustomRaw), []);
+034205:     const [theme, setThemeState] = useState("lime");
+034206:     /* applyTheme was only ever called from the store loader and the theme picker, so a fresh install —
+034207:        or any launch that never reaches a stored theme — left the theme-colour meta tag and the
+034208:        --wpb-focus custom property unpublished, and the focus ring fell back to a hardcoded hex that
+034209:        only happens to match the default theme. Re-applying on every theme value covers boot and every
+034210:        change from one place; it is idempotent, so the picker calling it too costs nothing. */
+034211:     useEffect(() => { applyTheme(theme); }, [theme]);
+034212:     const [bodyweight, setBodyweight] = useState("");
+034213:     const [bwLog, setBwLog] = useState([]);
+034214:     const [measurements, setMeasurements] = useState({}); // { key: [{date, v, unit}] }
+034215:     const [restAutoStart, setRestAutoStart] = useState(true);
+034216:     /* The warm-up checklist was component-local `useState(true)` inside WorkoutSession — so it
+034217:        reappeared at the top of EVERY session, forever, and had to be dismissed again each time. A
+034218:        lifter with their own warm-up paid a tap per workout indefinitely for a card they had already
+034219:        read a hundred times, with no way to say so. Now a stored preference, defaulting ON so nothing
+034220:        changes for anyone who wants it, reversible from Settings and from the undo on the hide action. */
+---
+034196:             gone.delete(r.id); });
+034197:         if (gone.size)
+034198:             setTombs(t => { const out = { ...t }; gone.forEach(id => { if (id != null)
+034199:                 out[id] = now; }); return out; });
+034200:         return next.map(r => (r && r.id != null && before.get(r.id) !== r) ? { ...r, updatedAt: now } : r);
+034201:     });
+034202:     const setSaved = useMemo(() => stampedSetter(setSavedRaw), []);
+034203:     const setCycles = useMemo(() => stampedSetter(setCyclesRaw), []);
+034204:     const setCustom = useMemo(() => stampedSetter(setCustomRaw), []);
+034205:     const [theme, setThemeState] = useState("lime");
+034206:     /* applyTheme was only ever called from the store loader and the theme picker, so a fresh install —
+034207:        or any launch that never reaches a stored theme — left the theme-colour meta tag and the
+034208:        --wpb-focus custom property unpublished, and the focus ring fell back to a hardcoded hex that
+034209:        only happens to match the default theme. Re-applying on every theme value covers boot and every
+034210:        change from one place; it is idempotent, so the picker calling it too costs nothing. */
+034211:     useEffect(() => { applyTheme(theme); }, [theme]);
+034212:     const [bodyweight, setBodyweight] = useState("");
+034213:     const [bwLog, setBwLog] = useState([]);
+034214:     const [measurements, setMeasurements] = useState({}); // { key: [{date, v, unit}] }
+034215:     const [restAutoStart, setRestAutoStart] = useState(true);
+034216:     /* The warm-up checklist was component-local `useState(true)` inside WorkoutSession — so it
+034217:        reappeared at the top of EVERY session, forever, and had to be dismissed again each time. A
+034218:        lifter with their own warm-up paid a tap per workout indefinitely for a card they had already
+034219:        read a hundred times, with no way to say so. Now a stored preference, defaulting ON so nothing
+034220:        changes for anyone who wants it, reversible from Settings and from the undo on the hide action. */
+034221:     const [warmupCard, setWarmupCard] = useState(true);
+---
+===== setHistory(normalizeHistoryDayIds (2 hits) =====
+034693:                 setLoadMode(d.loadMode);
+034694:             if (["novice", "intermediate", "advanced"].includes(d.experience))
+034695:                 setExperience(d.experience);
+034696:             if (d.perf)
+034697:                 setPerf(d.perf); // legacy lastWeights→perf is now handled by migrateStore() on load
+034698:             // Resolved once, at the boundary — see normalizeHistoryDayIds. Needs the saved programs to
+034699:             // resolve against, so it runs on the store object rather than on state.
+034700:             if (d.history)
+034701:                 setHistory(normalizeHistoryDayIds(d.history, runtimeSaved));
+034702:             if (d.seenIntro)
+034703:                 setSeenIntroV(typeof d.seenIntro === "number" ? d.seenIntro : 1);
+034704:             if (typeof d.seenWhatsNew === "number")
+034705:                 setSeenWhatsNew(d.seenWhatsNew);
+034706:             if (typeof d.lastBackup === "number")
+034707:                 setLastBackup(d.lastBackup);
+034708:             if (typeof d.installDismissedAt === "number")
+034709:                 setInstallDismissedAt(d.installDismissedAt);
+034710:             if (d.goals)
+034711:                 setGoals(d.goals);
+034712:             if (d.exNotes && typeof d.exNotes === "object")
+034713:                 setExNotes(d.exNotes);
+034714:             if (d.exSetup && typeof d.exSetup === "object")
+034715:                 setExSetup(d.exSetup);
+034716:             if (d.drafts && typeof d.drafts === "object")
+034717:                 setDrafts(d.drafts);
+034718:             if (d.pinnedId)
+---
 035019:             saved: (Array.isArray(d.saved) ? d.saved : []).filter(p => p && !isRuntimeProgram(p)),
 035020:             cycles: (Array.isArray(d.cycles) ? d.cycles : []).filter(c => c && c.engineSource !== "pursuit-next"),
 035021:         });
@@ -1757,334 +563,8 @@
 035042:         setExperience(d.experience ?? null);
 035043:         if (d.sex != null)
 035044:             setSex(d.sex);
-035045:         setBirth(d.birth || "");
-035046:         setBirthEst(!!d.birthEst);
-035047:         if (typeof d.restAutoStart === "boolean")
-035048:             setRestAutoStart(d.restAutoStart);
-035049:         if (typeof d.warmupCard === "boolean")
-035050:             setWarmupCard(d.warmupCard);
-035051:         if (typeof d.haptics === "boolean")
-035052:             setHaptics(d.haptics);
-035053:         if (d.restScale != null)
-035054:             setRestScale(d.restScale);
-035055:         if (d.reminders)
-035056:             setReminders(d.reminders);
-035057:         if (d.minInc)
-035058:             setMinInc(d.minInc);
-035059:         if (d.plates)
-035060:             setPlates(d.plates);
-035061:         if (d.canaryResearch)
-035062:             setCanaryResearch(d.canaryResearch);
-035063:         if (d.selectivePromotionRuntime)
-035064:             setSelectivePromotionRuntime(d.selectivePromotionRuntime);
-035065:         if (d.seenIntroV != null)
-035066:             setSeenIntroV(d.seenIntroV);
-035067:         if (d.seenWhatsNew != null)
-035068:             setSeenWhatsNew(d.seenWhatsNew);
-035069:         if (d.lastBackup != null)
-035070:             setLastBackup(d.lastBackup);
-035071:         if (d.installDismissedAt != null)
-035072:             setInstallDismissedAt(d.installDismissedAt);
-035073:         setProgramSaveUndo(null);
-035074:         setSaveReview(null);
-035075:         if (d.unit)
-035076:             setUnit(d.unit);
-035077:         if (d.loadMode)
-035078:             setLoadMode(d.loadMode);
-035079:         // chooseTheme, not setTheme: no such binding exists in this scope (the state setter is
-035080:         // setThemeState, and the theme also has to be pushed to the CSS variables via applyTheme).
-035081:         // As written this threw a ReferenceError partway through the rewind — after the programs,
-035082:         // cycles, notes and settings above had been restored but BEFORE bodyweight, pinnedId and
-035083:         // setProgram(null) below — leaving the store half-undone with no error surfaced, because the
-035084:         // only caller is the undo toast's onClick and nothing there catches. Guarded like every other
-035085:         // theme restore in the file, so an unknown theme id is ignored rather than blanking the UI.
-035086:         if (d.theme && THEMES[d.theme])
-035087:             chooseTheme(d.theme);
-035088:         if (d.bodyweight != null)
-035089:             setBodyweight(String(d.bodyweight));
-035090:         setPinnedId(d.pinnedId || null);
-035091:         setProgram(null);
-035092:     };
-035093:     /* Import. Two modes, and the default is the safe one.
-035094:      *
-035095:      * merge (default) — fold the file into what is already here. This is what makes a backup file work as
-035096:      *   a transport between two devices: export on the phone, import on the tablet, and both ends end up
-035097:      *   holding the union. Import used to REPLACE, which meant restoring a stale backup onto a phone you
-035098:      *   had kept training on silently destroyed everything logged since. See mergeStores.
-035099:      *
-035100:      * replace — the escape hatch, and the reason Undo can exist: it applies a blob verbatim. The only
-035101:      *   caller is the undo path, which hands back the snapshot of the store taken immediately before the
-035102:      *   merge. A merge is not a destructive operation, but it IS an irreversible one without this — you
-035103:      *   cannot un-union two sets — and a user restoring the wrong file deserves a way back.
-035104:      */
-035105:     const importData = (json, { replace = false, preview = false } = {}) => {
-035106:         let d;
-035107:         try {
-035108:             if (json.length > 20 * 1024 * 1024)
-035109:                 throw new Error("Backup exceeds the 20 MB restore limit.");
-035110:             d = parseStoredData(json);
-035111:         }
-035112:         catch (e) {
-035113:             return { ok: false, msg: e.message || "That doesn't look like valid backup data." };
-035114:         }
-035115:         if (!d || typeof d !== "object" || (!Array.isArray(d.saved) && !Array.isArray(d.history)))
-035116:             return { ok: false, msg: "No recognizable backup found in that text." };
-035117:         if (replace && !preview) {
-035118:             applySnapshot(d);
-035119:             return { ok: true, msg: "Reverted to the state before this restore." };
-035120:         }
-035121:         // MERGE, don't replace. Importing used to overwrite: restore a three-month-old backup onto the phone
-035122:         // you had kept training on, and everything logged since was gone — the backup, the thing that exists
-035123:         // to prevent loss, was the thing that caused it. mergeStores unions the two copies and never drops a
-035124:         // logged session; see its contract. The live state is folded in as the "local" side.
-035125:         const live = { v: STORE_VERSION, savedAt: Date.now(), tombs, saved: withLegacy(saved, "saved"), drafts, cycles: withLegacy(cycles, "cycles"), banned, equipDefault, gyms, activeGymId, unit, unitChosen, experience, loadMode, perf, history, custom, theme, bodyweight, sex, birth, birthEst, age, bwLog, measurements, restAutoStart, warmupCard, restScale, haptics, reminders, minInc, plates, goals, exNotes, exSetup, seenIntroV, seenWhatsNew, lastBackup, installDismissedAt, pinnedId, canaryResearch, selectivePromotionRuntime };
-035126:         const undoSnapshot = JSON.stringify(live);
-035127:         let mstats = null;
-035128:         if (!replace) {
-035129:             const merged = mergeStores(live, { ...d, savedAt: d.savedAt || d.exportedAt || 0 });
-035130:             mstats = merged.stats;
-035131:             d = merged.data;
-035132:         }
-035133:         try {
-035134:             const incomingCustom = new Map((d.custom || []).map(ex => [ex.id, ex]));
-035135:             const known = (id) => !!EX_BY_ID[id] || incomingCustom.has(id);
-035136:             let dropped = 0;
-035137:             const sanitizeProgram = (p) => {
-035138:                 if (!p || !Array.isArray(p.days))
-035139:                     return p;
-035140:                 const days = p.days.map(day => {
-035141:                     const keep = [], idxMap = {};
-035142:                     (day.exercises || []).forEach((id, oldIdx) => { if (known(id)) {
-035143:                         idxMap[oldIdx] = keep.length;
-035144:                         keep.push(id);
-035145:                     }
-035146:                     else
-035147:                         dropped++; });
-
-===== around line 35125 =====
-035100:      * replace — the escape hatch, and the reason Undo can exist: it applies a blob verbatim. The only
-035101:      *   caller is the undo path, which hands back the snapshot of the store taken immediately before the
-035102:      *   merge. A merge is not a destructive operation, but it IS an irreversible one without this — you
-035103:      *   cannot un-union two sets — and a user restoring the wrong file deserves a way back.
-035104:      */
-035105:     const importData = (json, { replace = false, preview = false } = {}) => {
-035106:         let d;
-035107:         try {
-035108:             if (json.length > 20 * 1024 * 1024)
-035109:                 throw new Error("Backup exceeds the 20 MB restore limit.");
-035110:             d = parseStoredData(json);
-035111:         }
-035112:         catch (e) {
-035113:             return { ok: false, msg: e.message || "That doesn't look like valid backup data." };
-035114:         }
-035115:         if (!d || typeof d !== "object" || (!Array.isArray(d.saved) && !Array.isArray(d.history)))
-035116:             return { ok: false, msg: "No recognizable backup found in that text." };
-035117:         if (replace && !preview) {
-035118:             applySnapshot(d);
-035119:             return { ok: true, msg: "Reverted to the state before this restore." };
-035120:         }
-035121:         // MERGE, don't replace. Importing used to overwrite: restore a three-month-old backup onto the phone
-035122:         // you had kept training on, and everything logged since was gone — the backup, the thing that exists
-035123:         // to prevent loss, was the thing that caused it. mergeStores unions the two copies and never drops a
-035124:         // logged session; see its contract. The live state is folded in as the "local" side.
-035125:         const live = { v: STORE_VERSION, savedAt: Date.now(), tombs, saved: withLegacy(saved, "saved"), drafts, cycles: withLegacy(cycles, "cycles"), banned, equipDefault, gyms, activeGymId, unit, unitChosen, experience, loadMode, perf, history, custom, theme, bodyweight, sex, birth, birthEst, age, bwLog, measurements, restAutoStart, warmupCard, restScale, haptics, reminders, minInc, plates, goals, exNotes, exSetup, seenIntroV, seenWhatsNew, lastBackup, installDismissedAt, pinnedId, canaryResearch, selectivePromotionRuntime };
-035126:         const undoSnapshot = JSON.stringify(live);
-035127:         let mstats = null;
-035128:         if (!replace) {
-035129:             const merged = mergeStores(live, { ...d, savedAt: d.savedAt || d.exportedAt || 0 });
-035130:             mstats = merged.stats;
-035131:             d = merged.data;
-035132:         }
-035133:         try {
-035134:             const incomingCustom = new Map((d.custom || []).map(ex => [ex.id, ex]));
-035135:             const known = (id) => !!EX_BY_ID[id] || incomingCustom.has(id);
-035136:             let dropped = 0;
-035137:             const sanitizeProgram = (p) => {
-035138:                 if (!p || !Array.isArray(p.days))
-035139:                     return p;
-035140:                 const days = p.days.map(day => {
-035141:                     const keep = [], idxMap = {};
-035142:                     (day.exercises || []).forEach((id, oldIdx) => { if (known(id)) {
-035143:                         idxMap[oldIdx] = keep.length;
-035144:                         keep.push(id);
-035145:                     }
-035146:                     else
-035147:                         dropped++; });
-035148:                     return { ...day, exercises: keep, _idxMap: idxMap };
-035149:                 }).filter(day => day.exercises.length > 0);
-035150:                 const remap = (obj) => {
-035151:                     if (!obj || typeof obj !== "object")
-035152:                         return undefined;
-035153:                     const out = {};
-035154:                     Object.entries(obj).forEach(([k, v]) => {
-035155:                         const [dId, slotStr] = k.split(":");
-035156:                         const slot = parseInt(slotStr);
-035157:                         const day = days.find(dd => dd.id === dId);
-035158:                         const ni = day && day._idxMap[slot];
-035159:                         if (ni != null)
-035160:                             out[`${dId}:${ni}`] = v;
-035161:                     });
-035162:                     return out;
-035163:                 };
-035164:                 const overrides = remap(p.overrides), ss = remap(p.ss), rounds = remap(p.rounds), slotBias = remap(p.slotBias), nextWeekPrescriptions = remap(p.nextWeekPrescriptions);
-035165:                 const cleanDays = days.map(day => {
-035166:                     const { _idxMap, ...rest } = day;
-035167:                     let pi = _idxMap[day.primaryIndex];
-035168:                     if (pi == null)
-035169:                         pi = rest.exercises.findIndex(id => (incomingCustom.get(id) || EX_BY_ID[id])?.type === "compound");
-035170:                     return { ...rest, primaryIndex: pi == null || pi < 0 ? 0 : pi };
-035171:                 });
-035172:                 return { ...p, days: cleanDays, overrides, ss, rounds, slotBias, nextWeekPrescriptions, config: { ...p.config, days: cleanDays.length } };
-035173:             };
-035174:             const cleanObj = (o) => { if (!o || typeof o !== "object")
-035175:                 return o; const out = {}; Object.entries(o).forEach(([k, v]) => { if (known(k))
-035176:                 out[k] = v; }); return out; };
-035177:             let importedSavedIds = null;
-035178:             const legacyIncoming = {
-035179:                 saved: (d.saved || []).filter(p => p && !isRuntimeProgram(p)), /* custom programs are runtime programs, never legacy */
-035180:                 cycles: (d.cycles || []).filter(c => c && c.engineSource !== "pursuit-next"),
-035181:             };
-035182:             /* ⚠ NORMALISE AGAINST THE CYCLES THAT SURVIVE THIS FILTER, NOT THE ONES IN THE FILE. The line
-035183:                below drops any cycle whose blocks did not survive the import while keeping the programs, so
-035184:                importing is itself a way to manufacture the orphan this repairs. Order matters: the
-035185:                surviving list has to be computed before the programs are normalised against it. */
-035186:             const importedCycles = Array.isArray(d.cycles)
-035187:                 ? d.cycles.filter(c => c && Array.isArray(c.blockIds) && c.engineSource === "pursuit-next")
-035188:                 : [];
-035189:             let nextImportedSaved = [];
-035190:             if (Array.isArray(d.saved)) {
-035191:                 nextImportedSaved = d.saved.filter(p => p && isRuntimeProgram(p)).map(sanitizeProgram).filter(p => p.days && p.days.length); /* custom programs included — see isRuntimeProgram */
-035192:                 importedSavedIds = new Set(nextImportedSaved.map(p => p.id));
-035193:             }
-035194:             const survivingCycles = importedCycles
-035195:                 .map(c => importedSavedIds ? { ...c, blockIds: c.blockIds.filter(id => importedSavedIds.has(id)) } : c)
-035196:                 .filter(c => c.blockIds.length);
-035197:             const restoredPrograms = normalizeCycleLinks(nextImportedSaved, survivingCycles);
-035198:             const restoredHistory = normalizeHistoryDayIds((d.history || []).map(h => h.perf ? { ...h, perf: cleanObj(h.perf) } : h), nextImportedSaved);
-035199:             const restoredGyms = normalizeGyms(d.gyms, d.activeGymId);
-035200:             const impact = backupRecordImpact(live, { ...d, saved: [...restoredPrograms, ...legacyIncoming.saved], history: restoredHistory, cycles: [...survivingCycles, ...legacyIncoming.cycles], gyms: restoredGyms.gyms });
-035201:             const skippedPrograms = (d.saved || []).length - restoredPrograms.length - legacyIncoming.saved.length;
-035202:             const draftConflicts = saved.filter(p => drafts[p.id] && !sameProgramContent(drafts[p.id], p) && !sameProgramContent(p, restoredPrograms.find(r => r.id === p.id))).map(p => p.name);
-035203:             if (preview)
-035204:                 return { ok: true, impact, dropped, skippedPrograms, draftConflicts, historyDropped: mstats?.historyDropped || 0, incomingPreferences: (d.savedAt || 0) > live.savedAt };
-035205:             if (draftConflicts.length)
-035206:                 return { ok: false, msg: `Save or discard draft changes before restoring: ${draftConflicts.join(", ")}. Nothing was restored.` };
-035207:             setLegacyStore(legacyIncoming);
-035208:             setLegacyReview(null);
-035209:             setProgramSaveUndo(null);
-035210:             setSaveReview(null);
-035211:             if (Array.isArray(d.custom)) {
-035212:                 syncCustomRegistry(d.custom);
-035213:                 setCustom(d.custom);
-035214:             }
-035215:             if (Array.isArray(d.saved)) {
-035216:                 setSaved(restoredPrograms);
-035217:             }
-035218:             if (Array.isArray(d.cycles))
-035219:                 setCycles(survivingCycles);
-035220:             if (Array.isArray(d.banned))
-035221:                 setBanned(d.banned.filter(known));
-035222:             if (Array.isArray(d.equipDefault))
-035223:                 setEquipDefault(d.equipDefault);
-035224:             setGyms(restoredGyms.gyms);
-035225:             setActiveGymId(restoredGyms.activeGymId);
-035226:             if (d.unit)
-035227:                 setUnit(d.unit);
-035228:             if (d.unitChosen)
-035229:                 setUnitChosen(true);
-035230:             if (d.loadMode)
-035231:                 setLoadMode(d.loadMode);
-035232:             if (["novice", "intermediate", "advanced"].includes(d.experience))
-035233:                 setExperience(d.experience);
-035234:             if (d.goals && typeof d.goals === "object")
-035235:                 setGoals(cleanObj(d.goals));
-035236:             if (d.perf && typeof d.perf === "object")
-035237:                 setPerf(cleanObj(d.perf));
-035238:             if (Array.isArray(d.history))
-035239:                 setHistory(restoredHistory);
-035240:             if (d.theme && THEMES[d.theme]) {
-035241:                 applyTheme(d.theme);
-035242:                 setThemeState(d.theme);
-035243:             }
-035244:             if (d.bodyweight)
-035245:                 setBodyweight(String(d.bodyweight));
-035246:             if (d.sex)
-035247:                 setSex(d.sex);
-035248:             if (d.birth) {
-035249:                 setBirth(String(d.birth));
-035250:                 setBirthEst(!!d.birthEst);
-035251:             }
-035252:             else if (d.age != null) {
-035253:                 const b = birthFromAge(d.age, d.savedAt);
-035254:                 if (b) {
-035255:                     setBirth(b);
-035256:                     setBirthEst(true);
-035257:                 }
-035258:             }
-035259:             if (Array.isArray(d.bwLog))
-035260:                 setBwLog([...d.bwLog].filter(e => e && e.date != null && e.w != null).sort((a, b) => a.date - b.date).slice(-BW_LOG_CAP));
-035261:             if (d.measurements && typeof d.measurements === "object")
-035262:                 setMeasurements(d.measurements);
-035263:             if (d.reminders && typeof d.reminders === "object")
-035264:                 setReminders(r => ({ ...r, ...d.reminders }));
-035265:             if (d.minInc && typeof d.minInc === "object")
-035266:                 setMinInc(d.minInc);
-035267:             if (d.plates && d.plates.kg && d.plates.lb)
-035268:                 setPlates(d.plates);
-035269:             if (typeof d.restAutoStart === "boolean")
-035270:                 setRestAutoStart(d.restAutoStart);
-035271:             if (typeof d.warmupCard === "boolean")
-035272:                 setWarmupCard(d.warmupCard);
-035273:             if (typeof d.haptics === "boolean")
-035274:                 setHaptics(d.haptics);
-035275:             if (d.canaryResearch)
-035276:                 setCanaryResearch(normalizeCanaryResearchState(d.canaryResearch));
-035277:             if (d.selectivePromotionRuntime)
-035278:                 setSelectivePromotionRuntime(normalizeSelectivePromotionRuntimeState(d.selectivePromotionRuntime, M76_SELECTIVE_PROMOTION_MANIFEST));
-035279:             if (d.restScale)
-035280:                 setRestScale(d.restScale);
-035281:             // pinned per-exercise notes (drop notes for exercises this build doesn't know)
-035282:             /* NOT cleanObj'd. exNotes/exSetup are user-AUTHORED text keyed by exercise id — unlike perf and
-035283:                goals, which are derived state that is meaningless for a lift the library no longer has. Running
-035284:                them through known() silently deleted every note whose exercise id wasn't in the current
-035285:                EX_BY_ID (a renamed or retired library id, a custom exercise whose record failed to import),
-035286:                and the next autosave wrote that loss back over the store permanently. The restore summary
-035287:                never mentioned it. These are a few bytes per key: keep them. An id that comes back — via a
-035288:                library restore or a re-imported custom — finds its note waiting. */
-035289:             if (d.exNotes && typeof d.exNotes === "object")
-035290:                 setExNotes(d.exNotes);
-035291:             if (d.exSetup && typeof d.exSetup === "object")
-035292:                 setExSetup(d.exSetup);
-035293:             // onboarding / what's-new flags — restoring these lands a reinstall exactly where you were,
-035294:             // with no replayed intro or changelog, as if the app had never been deleted.
-035295:             if (Number.isFinite(d.seenIntroV))
-035296:                 setSeenIntroV(d.seenIntroV);
-035297:             if (Number.isFinite(d.seenWhatsNew))
-035298:                 setSeenWhatsNew(d.seenWhatsNew);
-035299:             if (Number.isFinite(d.lastBackup))
-035300:                 setLastBackup(d.lastBackup);
-035301:             if (Number.isFinite(d.installDismissedAt))
-035302:                 setInstallDismissedAt(d.installDismissedAt);
-035303:             // Restore the active/"up next" pointer — exported but previously dropped here, so an imported
-035304:             // backup landed with no program pinned (the localStorage hydration path already restored it, so
-
-===== around line 37152 =====
-037127:                             const title = willLoop ? "Finish & roll a new cycle?" : isLast ? "Finish this cycle?" : `Complete ${c.blockMeta[active]?.label || "this block"}?`;
-037128:                             const body = willLoop
-037129:                                 ? `"${c.name}" will restart from the top: every block is regenerated fresh at your current strength, replacing the existing ones. This can't be undone.`
-037130:                                 : isLast
-037131:                                     ? `"${c.name}" will be marked complete. Your blocks stay in the library.`
-037132:                                     : `You'll move on to ${c.blockMeta[active + 1]?.label || "the next block"}. Any un-trained days left in ${c.blockMeta[active]?.label || "this block"} are skipped — this can't be undone.`;
-037133:                             return (_jsx("div", { onClick: () => setConfirmAdvance(null), className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 95, padding: 24, animation: "fadeIn .2s both" }, children: _jsxs("div", { onClick: e => e.stopPropagation(), className: "wpb-pop", style: { width: "100%", maxWidth: 340, background: C.bg2, borderRadius: 16, padding: 20, border: `1px solid ${C.border}` }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }, children: [_jsx("div", { style: { width: 38, height: 38, borderRadius: 12, background: C.accentDim, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: _jsx(Layers, { size: 18, color: C.accentInk }) }), _jsx("div", { style: { fontSize: 18, fontWeight: 700 }, children: title })] }), _jsx("div", { style: { fontSize: 15, color: C.muted, lineHeight: 1.5, marginBottom: 12 }, children: body }), (() => {
-037134:                                             const R = blockReview(history, c, active);
-037135:                                             if (!R.ok)
-037136:                                                 return null;
-037137:                                             return (_jsxs("button", { "data-review-cta": true, onClick: () => { setConfirmAdvance(null); setReviewOf({ cycleId: c.id, blockIdx: active }); pushView("blockReview", view); }, className: "pressable", style: { width: "100%", textAlign: "left", padding: "11px 12px", borderRadius: 12, border: `1px solid ${C.accent}33`, background: C.accentDim, color: C.text, cursor: "pointer", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }, children: [_jsx(Milestone, { size: 15, color: C.accentInk, style: { flexShrink: 0 } }), _jsxs("span", { style: { flex: 1, minWidth: 0 }, children: [_jsx("span", { style: { display: "block", fontSize: 13, fontWeight: 700 }, children: "See how this block went" }), _jsx("span", { style: { display: "block", fontSize: 11, color: C.muted }, children: R.headline })] }), _jsx(ChevronRight, { size: 15, color: C.muted, style: { flexShrink: 0 } })] }));
-037138:                                         })(), _jsxs("button", { onClick: () => { setConfirmAdvance(null); doCompleteCycleBlock(c); }, className: "pressable", style: { width: "100%", padding: "13px", borderRadius: 12, border: "none", background: C.accent, color: C.accentText, fontWeight: 700, cursor: "pointer", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }, children: [_jsx(Check, { size: 16 }), " ", willLoop ? "Roll new cycle" : isLast ? "Finish cycle" : "Complete block"] }), _jsx("button", { onClick: () => setConfirmAdvance(null), className: "pressable", style: { width: "100%", padding: "13px", borderRadius: 12, border: `1px solid ${C.border}`, background: "none", color: C.text, fontWeight: 600, cursor: "pointer" }, children: "Cancel" })] }) }));
-037139:                         })() }), loaded && seenIntroV < INTRO_VERSION && (_jsxs("div", { className: "wpb-onboarding", style: { position: "absolute", inset: 0, zIndex: 90, background: C.bg, display: "flex", flexDirection: "column", animation: "fadeIn .25s both" }, children: [_jsx("div", { className: "wpb-scroll wpb-onboarding-scroll", style: { flex: 1, minHeight: 0, overflowY: "auto", padding: "calc(env(safe-area-inset-top) + 34px) 26px 24px" }, children: _jsxs("div", { className: "wpb-onboarding-content", children: [_jsx("div", { className: "wpb-onboarding-mark", style: { width: 56, height: 56, borderRadius: 16, background: C.accent, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }, children: _jsx("svg", { width: "28", height: "28", viewBox: "0 0 28 28", "aria-hidden": "true", children: _jsxs("g", { fill: C.accentText, children: [_jsx("rect", { x: "1", y: "10", width: "3.4", height: "8", rx: "1.4" }), _jsx("rect", { x: "5.6", y: "6.5", width: "4.6", height: "15", rx: "2" }), _jsx("rect", { x: "10.8", y: "12.4", width: "6.4", height: "3.2", rx: "1.6" }), _jsx("rect", { x: "17.8", y: "6.5", width: "4.6", height: "15", rx: "2" }), _jsx("rect", { x: "23.6", y: "10", width: "3.4", height: "8", rx: "1.4" })] }) }) }), _jsx("div", { className: "wpb-onboarding-kicker", style: { fontSize: 13, fontWeight: 700, letterSpacing: 1.4, textTransform: "uppercase", color: C.accentInk, marginBottom: 8 }, children: "Pursuit Iron \u00B7 Strength Coach" }), _jsxs("div", { className: "wpb-onboarding-title", style: { fontSize: 28, fontWeight: 700, letterSpacing: -0.6, lineHeight: 1.15 }, children: ["Your training,", _jsx("br", {}), "built around you."] }), _jsx("div", { className: "wpb-onboarding-copy", style: { fontSize: 15, color: C.muted, marginTop: 12, lineHeight: 1.5 }, children: "Build around your goal, schedule, and equipment. Log what you actually did; the next prescription stays grounded in that history. Your data remains on this device unless you export it." }), _jsx("div", { className: "wpb-onboarding-features", style: { marginTop: 22 }, children: [
-037140:                                                 [Wand2, "Built for your setup", "Goals, days, equipment, and session length shape the program instead of forcing one template."],
-037141:                                                 [Activity, "Log without friction", "Weight, reps, effort, rest, and the next target stay within reach while you train."],
-037142:                                                 [TrendingUp, "Progress you can inspect", "Lift trends, records, volume, measurements, and cycle history stay connected to the work that created them."],
+---
+===== export { (6 hits) =====
 037143:                                             ].map(([Icon, title, sub], i) => (_jsxs("div", { className: "wpb-onboarding-feature", style: { display: "flex", gap: 12, marginBottom: 16 }, children: [_jsx("div", { className: "wpb-onboarding-feature-icon", style: { width: 40, height: 40, borderRadius: 12, background: C.accentDim, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: _jsx(Icon, { size: 19, color: C.accentInk }) }), _jsxs("div", { style: { flex: 1 }, children: [_jsx("div", { className: "wpb-onboarding-feature-title", style: { fontSize: 15, fontWeight: 700 }, children: title }), _jsx("div", { className: "wpb-onboarding-feature-copy", style: { fontSize: 13, color: C.muted, lineHeight: 1.45, marginTop: 2 }, children: sub })] })] }, i))) })] }) }), _jsxs("div", { className: "wpb-onboarding-footer", style: { flexShrink: 0, padding: "11px 22px calc(env(safe-area-inset-bottom) + 18px)", background: C.bg, borderTop: `1px solid ${C.borderSoft}`, boxShadow: "0 -12px 26px rgba(0,0,0,.10)" }, children: [_jsxs("button", { onClick: () => { setSeenIntroV(INTRO_VERSION); setSeenWhatsNew(WHATS_NEW_VERSION); setView("wizard"); }, className: "pressable wpb-primary-action wpb-onboarding-primary", style: { width: "100%", minHeight: 50, padding: "12px 16px", borderRadius: 13, border: "none", background: C.accent, color: C.accentText, fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }, children: [_jsx(Wand2, { size: 18 }), " Build my program"] }), _jsx("button", { onClick: () => { setSeenIntroV(INTRO_VERSION); setSeenWhatsNew(WHATS_NEW_VERSION); setHomeBrowse(true); setView("home"); }, className: "pressable wpb-secondary-action wpb-onboarding-secondary", style: { width: "100%", minHeight: 44, padding: "10px 13px", marginTop: 7, borderRadius: 12, border: `1px solid ${C.border}`, background: "none", color: C.text, fontSize: 14, fontWeight: 650, cursor: "pointer" }, children: "Browse templates instead" })] })] }))] })] }));
 037144: }
 037145: // Wrap the whole app so a render crash ANYWHERE (not just inside the two sections that already have
@@ -2104,4 +584,75 @@
 037159: export { ExerciseAnimation, FormVideoLink, formVideoUrl, refusalMessage };
 037160: 
 037161: export { HomePrograms, homeProgramGroups, homePhaseIdentity };
-
+---
+037144: }
+037145: // Wrap the whole app so a render crash ANYWHERE (not just inside the two sections that already have
+037146: // their own closer ErrorBoundary) shows a recoverable full-screen message instead of silently
+037147: // white-screening with no way back in. Data is autosaved to localStorage independent of render state.
+037148: export default function RootApp() {
+037149:     return _jsx(ErrorBoundary, { full: true, children: _jsx(App, {}) });
+037150: }
+037151: export { exerciseSlotSec, candidateMinutes, extraSetMinutes, WARMUP_SET_SEC, baseSetsFor, loggedVolume, loggedSubVolume, pressAngle, movePattern, availableFor, warmupSets, warmupCount, rankSwapAlts, starvedRegions, programSetupChips, weeklySubVolume, directSubVolume, SUB_LANDMARKS, subRegionOf, weeklyVolume, landmarkFor, coverageGaps, expandEquipment, EQUIP_IMPLIES, paceFactor, estimateMinutesFor, sessionExercisePlan, volumeZone, partZone, mavFor, PLANNED_ROOM_RIR, EX_BY_ID, CHANGELOG, CHANGELOG_ITEMS, WHATS_NEW_MAX, groupSessionsByMonth, groupSessionsByCycle, planOverview, phaseTone, PCT_SCHEMES, MACHINE_SETUP, SETUP_LABELS, plateauSessions, pickTopSet, setupFieldsFor, setupFieldsWithStored, navPush, navPop, propagateCycleEditsPure, ALL_EQUIP_IDS, EQUIPMENT, ageFactor, strengthLevel, strengthSnapshot, STANDARDS, STD_LEVELS, ageFrom, birthParts, birthFromAge, todayISO, normalizeBwLog, normalizeMeasureLog, weeklyBodyweightTrend, lengthUnitFor, asLengthUnit, BW_LOG_CAP, STORE_MIGRATIONS, calibratedDayPerf, onPlanExempt, plannedGapHours, prescribedRIRof, isBarLike, isMachineLike, barFor, BARS, shareSession, shareStrengthScore, setGymLimits, gymCapFor, normalizeGyms, templateFacets, templateEmphasis, ExerciseFigure, figurePose, EXERCISES, assertFigureCoverage, FIGURE_GENERIC_OK, Exit, mergeStores, sessionSnapshotStatus, mergeSessionData, mergedSetCount, nextPrefillTargetIndex, encodeProgramCode, decodeProgramCode, decodeGallery, gallerySubmission, galleryIssueBody, programFingerprint, personalRepSlope, coachFacts, volumeResponse, volumeVerdicts, STRETCH_FOCUS, STRETCH_FOCUS_E2, STRETCH_FOCUS_E3, lastSetTech, techSetTag, techExplain, capHistory, HISTORY_CAP, HISTORY_BYTES, rirTrend, sessionCoach, coverageRelief, volumeLedger, landmarkOf, completionRate, recommendedSplit, SPLIT_RECOMMENDATIONS, NOVICE_INELIGIBLE_SPLITS, parseRIRNum, sameProgramContent, rirAtLoad, e1rmAnchorOf, regionGapsFor, regionGapFix, REGION_REQUIRED, previewVolumeNudge, coachNote, coachIntent, exerciseSeries, rmAt, EX_METRICS, EX_WINDOWS, exRecords, cycleProgress, blockReview, lastTopSet, betterTopSet, e1rmRIR, loadAtRIR, EPLEY_SLOPE, E1RM_REP_CAP, ASSUMED_RIR, isWorkSet, workSetsOf, dayMuscleBreakdown, weekMuscleBreakdown, plannedWeek, dayMuscleVolume, capWords, WHATS_NEW_WORDS, homeCardPlan, HOME_INSIGHT_BUDGET, WhatsNewCard, PATTERNS, patternOf, sameMovement, lengthOf, parseStoredData, recordReleaseDiag, readReleaseDiagnostics, clearReleaseDiagnostics, releaseDiagnosticsText };
+037152: export { ENGINE_V, ENGINES, ENGINE_RULES, engHas, engLacks, engineInfo, STORE_VERSION, migrateStore, GOALS, SESSIONS, EXP, THEMES, normalizeMusclePreferences, preferenceFloor, GEN_PIPELINE, runPipeline, openGeneration, schemeTierCount, COVERAGE_PASSES, coverageContext, prescribedDaySize, ASSISTANCE_SIZE, candidateSlotMin, daySeconds, advanceCycle, templateConfig, TEMPLATES, CYCLE_TEMPLATES, SPLITS, DAY_TEMPLATES, templateIntent, TEMPLATE_CATS, TEMPLATE_FILTER_GROUPS, sfrOf, axialCost, fitSessionTime, MRV_GRAIN, weekIntent, historyForProgram, IDEAL_SLOTS, dayMuscleLoad, dayOverlap, distributeVolBias, capWeeklyVolume, buildWeekPlan, programQuality, compareQuality, COVERED_MUSCLES, BEST_OF_N, traceGeneration, setPipeTrace, setClaimTrace, emitClaim, compositeMrv, PATTERN_GROUPS, PATTERN_MIN_SETS, patternTrainable, patternGapsOf, weeksOf, phaseFor, estimateMinutes, addedMinutes, addedSeconds, fitChip, daysInWeek, exerciseAt, rotationOf, fitSessionToTime, blockRetro, volumeAudit, LANDMARKS, secondaryOf, PART_ORDER, FOCUS_CAVEAT, WEEK_ORDER_TERMS, computeCell, pctSetsFor, gzPlanFor, gzAdvance, projectNextTM, nextTMEvidence, ddpNextForSet, lastSetEffort, styleFor, autoStyleFor, plateauOf, plateauOfLift, plateauSplitByDay, dayScopedTrends, fitText, fitFont, wrapList, drawRecapCard, exerciseTrends, summarizeSets, muscleRecovery, volumeAdvice, weeklyRecap, deloadAdvice, overreachSignal, constantLoadDecay, sessionE1RM, computeMilestones, ICON_CHOICES, ICON_GROUPS, ICON_COLORS, iconForProgram, iconForCycle, iconColorOf, nextSessionCursor, nextDueDayId, historyDayIndex, autoStyleDetail, explainPrescription, explainGeneration, perfAfterDelete, perfAfterHistoryReplace, normalizeEditedHistoryEntry, lifterModelKey, normalizeHistoryDayIds, normalizeCycleLinks, auditProgramWeek, auditSets, simulateAndAudit, repRange, goalForDay, blockPhase, rirFor, gymRackFor, pickActiveProgram, strengthScore, scoreAttribution, e1rm, loadStep, linearInc, lowerBodyLift, LOWER_PARTS, roundTo, setLoadInc, effortLabel, platesPerSide, setAvailPlates, strengthScoreHistory, restSec, effectiveRest, setRestScaleGlobal, dayPerfFor, lastDayPerf, anchorPerfFor, calibratedAnchorPerf, sessionSuggestion, prescribeSets, PROG_POLICIES, policyIdFor, resolveStyle, loggedRIRof, syncSubSets, growMyoSets, styleOverride, stallCountFor, SHED_TOL, STALL_ENGAGE, E1RM_HOLD, STALL_WINDOW, buildLifterModel, effortCalibration, calibrateDayPerf, readinessBand, bandForExercise, classifyPlateau, runSelfTest };
+037153: // Integration seams for storage and setup fault-injection gates; removed from the browser bundle.
+037154: export { loadStore, saveStore, Wizard };
+037155: /* Test-only: integration/m115-workout-browser-check.mjs imports these by name. They were missing from the shipped M116
+037156:    build, so that browser check could not load against it (its recorded PASS cannot have come from this App.js).
+037157:    The running app mounts only the default export; these change nothing in production. */
+037158: export { WorkoutSession, StepButton, StyleTag };
+037159: export { ExerciseAnimation, FormVideoLink, formVideoUrl, refusalMessage };
+037160: 
+037161: export { HomePrograms, homeProgramGroups, homePhaseIdentity };
+---
+037146: // their own closer ErrorBoundary) shows a recoverable full-screen message instead of silently
+037147: // white-screening with no way back in. Data is autosaved to localStorage independent of render state.
+037148: export default function RootApp() {
+037149:     return _jsx(ErrorBoundary, { full: true, children: _jsx(App, {}) });
+037150: }
+037151: export { exerciseSlotSec, candidateMinutes, extraSetMinutes, WARMUP_SET_SEC, baseSetsFor, loggedVolume, loggedSubVolume, pressAngle, movePattern, availableFor, warmupSets, warmupCount, rankSwapAlts, starvedRegions, programSetupChips, weeklySubVolume, directSubVolume, SUB_LANDMARKS, subRegionOf, weeklyVolume, landmarkFor, coverageGaps, expandEquipment, EQUIP_IMPLIES, paceFactor, estimateMinutesFor, sessionExercisePlan, volumeZone, partZone, mavFor, PLANNED_ROOM_RIR, EX_BY_ID, CHANGELOG, CHANGELOG_ITEMS, WHATS_NEW_MAX, groupSessionsByMonth, groupSessionsByCycle, planOverview, phaseTone, PCT_SCHEMES, MACHINE_SETUP, SETUP_LABELS, plateauSessions, pickTopSet, setupFieldsFor, setupFieldsWithStored, navPush, navPop, propagateCycleEditsPure, ALL_EQUIP_IDS, EQUIPMENT, ageFactor, strengthLevel, strengthSnapshot, STANDARDS, STD_LEVELS, ageFrom, birthParts, birthFromAge, todayISO, normalizeBwLog, normalizeMeasureLog, weeklyBodyweightTrend, lengthUnitFor, asLengthUnit, BW_LOG_CAP, STORE_MIGRATIONS, calibratedDayPerf, onPlanExempt, plannedGapHours, prescribedRIRof, isBarLike, isMachineLike, barFor, BARS, shareSession, shareStrengthScore, setGymLimits, gymCapFor, normalizeGyms, templateFacets, templateEmphasis, ExerciseFigure, figurePose, EXERCISES, assertFigureCoverage, FIGURE_GENERIC_OK, Exit, mergeStores, sessionSnapshotStatus, mergeSessionData, mergedSetCount, nextPrefillTargetIndex, encodeProgramCode, decodeProgramCode, decodeGallery, gallerySubmission, galleryIssueBody, programFingerprint, personalRepSlope, coachFacts, volumeResponse, volumeVerdicts, STRETCH_FOCUS, STRETCH_FOCUS_E2, STRETCH_FOCUS_E3, lastSetTech, techSetTag, techExplain, capHistory, HISTORY_CAP, HISTORY_BYTES, rirTrend, sessionCoach, coverageRelief, volumeLedger, landmarkOf, completionRate, recommendedSplit, SPLIT_RECOMMENDATIONS, NOVICE_INELIGIBLE_SPLITS, parseRIRNum, sameProgramContent, rirAtLoad, e1rmAnchorOf, regionGapsFor, regionGapFix, REGION_REQUIRED, previewVolumeNudge, coachNote, coachIntent, exerciseSeries, rmAt, EX_METRICS, EX_WINDOWS, exRecords, cycleProgress, blockReview, lastTopSet, betterTopSet, e1rmRIR, loadAtRIR, EPLEY_SLOPE, E1RM_REP_CAP, ASSUMED_RIR, isWorkSet, workSetsOf, dayMuscleBreakdown, weekMuscleBreakdown, plannedWeek, dayMuscleVolume, capWords, WHATS_NEW_WORDS, homeCardPlan, HOME_INSIGHT_BUDGET, WhatsNewCard, PATTERNS, patternOf, sameMovement, lengthOf, parseStoredData, recordReleaseDiag, readReleaseDiagnostics, clearReleaseDiagnostics, releaseDiagnosticsText };
+037152: export { ENGINE_V, ENGINES, ENGINE_RULES, engHas, engLacks, engineInfo, STORE_VERSION, migrateStore, GOALS, SESSIONS, EXP, THEMES, normalizeMusclePreferences, preferenceFloor, GEN_PIPELINE, runPipeline, openGeneration, schemeTierCount, COVERAGE_PASSES, coverageContext, prescribedDaySize, ASSISTANCE_SIZE, candidateSlotMin, daySeconds, advanceCycle, templateConfig, TEMPLATES, CYCLE_TEMPLATES, SPLITS, DAY_TEMPLATES, templateIntent, TEMPLATE_CATS, TEMPLATE_FILTER_GROUPS, sfrOf, axialCost, fitSessionTime, MRV_GRAIN, weekIntent, historyForProgram, IDEAL_SLOTS, dayMuscleLoad, dayOverlap, distributeVolBias, capWeeklyVolume, buildWeekPlan, programQuality, compareQuality, COVERED_MUSCLES, BEST_OF_N, traceGeneration, setPipeTrace, setClaimTrace, emitClaim, compositeMrv, PATTERN_GROUPS, PATTERN_MIN_SETS, patternTrainable, patternGapsOf, weeksOf, phaseFor, estimateMinutes, addedMinutes, addedSeconds, fitChip, daysInWeek, exerciseAt, rotationOf, fitSessionToTime, blockRetro, volumeAudit, LANDMARKS, secondaryOf, PART_ORDER, FOCUS_CAVEAT, WEEK_ORDER_TERMS, computeCell, pctSetsFor, gzPlanFor, gzAdvance, projectNextTM, nextTMEvidence, ddpNextForSet, lastSetEffort, styleFor, autoStyleFor, plateauOf, plateauOfLift, plateauSplitByDay, dayScopedTrends, fitText, fitFont, wrapList, drawRecapCard, exerciseTrends, summarizeSets, muscleRecovery, volumeAdvice, weeklyRecap, deloadAdvice, overreachSignal, constantLoadDecay, sessionE1RM, computeMilestones, ICON_CHOICES, ICON_GROUPS, ICON_COLORS, iconForProgram, iconForCycle, iconColorOf, nextSessionCursor, nextDueDayId, historyDayIndex, autoStyleDetail, explainPrescription, explainGeneration, perfAfterDelete, perfAfterHistoryReplace, normalizeEditedHistoryEntry, lifterModelKey, normalizeHistoryDayIds, normalizeCycleLinks, auditProgramWeek, auditSets, simulateAndAudit, repRange, goalForDay, blockPhase, rirFor, gymRackFor, pickActiveProgram, strengthScore, scoreAttribution, e1rm, loadStep, linearInc, lowerBodyLift, LOWER_PARTS, roundTo, setLoadInc, effortLabel, platesPerSide, setAvailPlates, strengthScoreHistory, restSec, effectiveRest, setRestScaleGlobal, dayPerfFor, lastDayPerf, anchorPerfFor, calibratedAnchorPerf, sessionSuggestion, prescribeSets, PROG_POLICIES, policyIdFor, resolveStyle, loggedRIRof, syncSubSets, growMyoSets, styleOverride, stallCountFor, SHED_TOL, STALL_ENGAGE, E1RM_HOLD, STALL_WINDOW, buildLifterModel, effortCalibration, calibrateDayPerf, readinessBand, bandForExercise, classifyPlateau, runSelfTest };
+037153: // Integration seams for storage and setup fault-injection gates; removed from the browser bundle.
+037154: export { loadStore, saveStore, Wizard };
+037155: /* Test-only: integration/m115-workout-browser-check.mjs imports these by name. They were missing from the shipped M116
+037156:    build, so that browser check could not load against it (its recorded PASS cannot have come from this App.js).
+037157:    The running app mounts only the default export; these change nothing in production. */
+037158: export { WorkoutSession, StepButton, StyleTag };
+037159: export { ExerciseAnimation, FormVideoLink, formVideoUrl, refusalMessage };
+037160: 
+037161: export { HomePrograms, homeProgramGroups, homePhaseIdentity };
+---
+037150: }
+037151: export { exerciseSlotSec, candidateMinutes, extraSetMinutes, WARMUP_SET_SEC, baseSetsFor, loggedVolume, loggedSubVolume, pressAngle, movePattern, availableFor, warmupSets, warmupCount, rankSwapAlts, starvedRegions, programSetupChips, weeklySubVolume, directSubVolume, SUB_LANDMARKS, subRegionOf, weeklyVolume, landmarkFor, coverageGaps, expandEquipment, EQUIP_IMPLIES, paceFactor, estimateMinutesFor, sessionExercisePlan, volumeZone, partZone, mavFor, PLANNED_ROOM_RIR, EX_BY_ID, CHANGELOG, CHANGELOG_ITEMS, WHATS_NEW_MAX, groupSessionsByMonth, groupSessionsByCycle, planOverview, phaseTone, PCT_SCHEMES, MACHINE_SETUP, SETUP_LABELS, plateauSessions, pickTopSet, setupFieldsFor, setupFieldsWithStored, navPush, navPop, propagateCycleEditsPure, ALL_EQUIP_IDS, EQUIPMENT, ageFactor, strengthLevel, strengthSnapshot, STANDARDS, STD_LEVELS, ageFrom, birthParts, birthFromAge, todayISO, normalizeBwLog, normalizeMeasureLog, weeklyBodyweightTrend, lengthUnitFor, asLengthUnit, BW_LOG_CAP, STORE_MIGRATIONS, calibratedDayPerf, onPlanExempt, plannedGapHours, prescribedRIRof, isBarLike, isMachineLike, barFor, BARS, shareSession, shareStrengthScore, setGymLimits, gymCapFor, normalizeGyms, templateFacets, templateEmphasis, ExerciseFigure, figurePose, EXERCISES, assertFigureCoverage, FIGURE_GENERIC_OK, Exit, mergeStores, sessionSnapshotStatus, mergeSessionData, mergedSetCount, nextPrefillTargetIndex, encodeProgramCode, decodeProgramCode, decodeGallery, gallerySubmission, galleryIssueBody, programFingerprint, personalRepSlope, coachFacts, volumeResponse, volumeVerdicts, STRETCH_FOCUS, STRETCH_FOCUS_E2, STRETCH_FOCUS_E3, lastSetTech, techSetTag, techExplain, capHistory, HISTORY_CAP, HISTORY_BYTES, rirTrend, sessionCoach, coverageRelief, volumeLedger, landmarkOf, completionRate, recommendedSplit, SPLIT_RECOMMENDATIONS, NOVICE_INELIGIBLE_SPLITS, parseRIRNum, sameProgramContent, rirAtLoad, e1rmAnchorOf, regionGapsFor, regionGapFix, REGION_REQUIRED, previewVolumeNudge, coachNote, coachIntent, exerciseSeries, rmAt, EX_METRICS, EX_WINDOWS, exRecords, cycleProgress, blockReview, lastTopSet, betterTopSet, e1rmRIR, loadAtRIR, EPLEY_SLOPE, E1RM_REP_CAP, ASSUMED_RIR, isWorkSet, workSetsOf, dayMuscleBreakdown, weekMuscleBreakdown, plannedWeek, dayMuscleVolume, capWords, WHATS_NEW_WORDS, homeCardPlan, HOME_INSIGHT_BUDGET, WhatsNewCard, PATTERNS, patternOf, sameMovement, lengthOf, parseStoredData, recordReleaseDiag, readReleaseDiagnostics, clearReleaseDiagnostics, releaseDiagnosticsText };
+037152: export { ENGINE_V, ENGINES, ENGINE_RULES, engHas, engLacks, engineInfo, STORE_VERSION, migrateStore, GOALS, SESSIONS, EXP, THEMES, normalizeMusclePreferences, preferenceFloor, GEN_PIPELINE, runPipeline, openGeneration, schemeTierCount, COVERAGE_PASSES, coverageContext, prescribedDaySize, ASSISTANCE_SIZE, candidateSlotMin, daySeconds, advanceCycle, templateConfig, TEMPLATES, CYCLE_TEMPLATES, SPLITS, DAY_TEMPLATES, templateIntent, TEMPLATE_CATS, TEMPLATE_FILTER_GROUPS, sfrOf, axialCost, fitSessionTime, MRV_GRAIN, weekIntent, historyForProgram, IDEAL_SLOTS, dayMuscleLoad, dayOverlap, distributeVolBias, capWeeklyVolume, buildWeekPlan, programQuality, compareQuality, COVERED_MUSCLES, BEST_OF_N, traceGeneration, setPipeTrace, setClaimTrace, emitClaim, compositeMrv, PATTERN_GROUPS, PATTERN_MIN_SETS, patternTrainable, patternGapsOf, weeksOf, phaseFor, estimateMinutes, addedMinutes, addedSeconds, fitChip, daysInWeek, exerciseAt, rotationOf, fitSessionToTime, blockRetro, volumeAudit, LANDMARKS, secondaryOf, PART_ORDER, FOCUS_CAVEAT, WEEK_ORDER_TERMS, computeCell, pctSetsFor, gzPlanFor, gzAdvance, projectNextTM, nextTMEvidence, ddpNextForSet, lastSetEffort, styleFor, autoStyleFor, plateauOf, plateauOfLift, plateauSplitByDay, dayScopedTrends, fitText, fitFont, wrapList, drawRecapCard, exerciseTrends, summarizeSets, muscleRecovery, volumeAdvice, weeklyRecap, deloadAdvice, overreachSignal, constantLoadDecay, sessionE1RM, computeMilestones, ICON_CHOICES, ICON_GROUPS, ICON_COLORS, iconForProgram, iconForCycle, iconColorOf, nextSessionCursor, nextDueDayId, historyDayIndex, autoStyleDetail, explainPrescription, explainGeneration, perfAfterDelete, perfAfterHistoryReplace, normalizeEditedHistoryEntry, lifterModelKey, normalizeHistoryDayIds, normalizeCycleLinks, auditProgramWeek, auditSets, simulateAndAudit, repRange, goalForDay, blockPhase, rirFor, gymRackFor, pickActiveProgram, strengthScore, scoreAttribution, e1rm, loadStep, linearInc, lowerBodyLift, LOWER_PARTS, roundTo, setLoadInc, effortLabel, platesPerSide, setAvailPlates, strengthScoreHistory, restSec, effectiveRest, setRestScaleGlobal, dayPerfFor, lastDayPerf, anchorPerfFor, calibratedAnchorPerf, sessionSuggestion, prescribeSets, PROG_POLICIES, policyIdFor, resolveStyle, loggedRIRof, syncSubSets, growMyoSets, styleOverride, stallCountFor, SHED_TOL, STALL_ENGAGE, E1RM_HOLD, STALL_WINDOW, buildLifterModel, effortCalibration, calibrateDayPerf, readinessBand, bandForExercise, classifyPlateau, runSelfTest };
+037153: // Integration seams for storage and setup fault-injection gates; removed from the browser bundle.
+037154: export { loadStore, saveStore, Wizard };
+037155: /* Test-only: integration/m115-workout-browser-check.mjs imports these by name. They were missing from the shipped M116
+037156:    build, so that browser check could not load against it (its recorded PASS cannot have come from this App.js).
+037157:    The running app mounts only the default export; these change nothing in production. */
+037158: export { WorkoutSession, StepButton, StyleTag };
+037159: export { ExerciseAnimation, FormVideoLink, formVideoUrl, refusalMessage };
+037160: 
+037161: export { HomePrograms, homeProgramGroups, homePhaseIdentity };
+---
+037151: export { exerciseSlotSec, candidateMinutes, extraSetMinutes, WARMUP_SET_SEC, baseSetsFor, loggedVolume, loggedSubVolume, pressAngle, movePattern, availableFor, warmupSets, warmupCount, rankSwapAlts, starvedRegions, programSetupChips, weeklySubVolume, directSubVolume, SUB_LANDMARKS, subRegionOf, weeklyVolume, landmarkFor, coverageGaps, expandEquipment, EQUIP_IMPLIES, paceFactor, estimateMinutesFor, sessionExercisePlan, volumeZone, partZone, mavFor, PLANNED_ROOM_RIR, EX_BY_ID, CHANGELOG, CHANGELOG_ITEMS, WHATS_NEW_MAX, groupSessionsByMonth, groupSessionsByCycle, planOverview, phaseTone, PCT_SCHEMES, MACHINE_SETUP, SETUP_LABELS, plateauSessions, pickTopSet, setupFieldsFor, setupFieldsWithStored, navPush, navPop, propagateCycleEditsPure, ALL_EQUIP_IDS, EQUIPMENT, ageFactor, strengthLevel, strengthSnapshot, STANDARDS, STD_LEVELS, ageFrom, birthParts, birthFromAge, todayISO, normalizeBwLog, normalizeMeasureLog, weeklyBodyweightTrend, lengthUnitFor, asLengthUnit, BW_LOG_CAP, STORE_MIGRATIONS, calibratedDayPerf, onPlanExempt, plannedGapHours, prescribedRIRof, isBarLike, isMachineLike, barFor, BARS, shareSession, shareStrengthScore, setGymLimits, gymCapFor, normalizeGyms, templateFacets, templateEmphasis, ExerciseFigure, figurePose, EXERCISES, assertFigureCoverage, FIGURE_GENERIC_OK, Exit, mergeStores, sessionSnapshotStatus, mergeSessionData, mergedSetCount, nextPrefillTargetIndex, encodeProgramCode, decodeProgramCode, decodeGallery, gallerySubmission, galleryIssueBody, programFingerprint, personalRepSlope, coachFacts, volumeResponse, volumeVerdicts, STRETCH_FOCUS, STRETCH_FOCUS_E2, STRETCH_FOCUS_E3, lastSetTech, techSetTag, techExplain, capHistory, HISTORY_CAP, HISTORY_BYTES, rirTrend, sessionCoach, coverageRelief, volumeLedger, landmarkOf, completionRate, recommendedSplit, SPLIT_RECOMMENDATIONS, NOVICE_INELIGIBLE_SPLITS, parseRIRNum, sameProgramContent, rirAtLoad, e1rmAnchorOf, regionGapsFor, regionGapFix, REGION_REQUIRED, previewVolumeNudge, coachNote, coachIntent, exerciseSeries, rmAt, EX_METRICS, EX_WINDOWS, exRecords, cycleProgress, blockReview, lastTopSet, betterTopSet, e1rmRIR, loadAtRIR, EPLEY_SLOPE, E1RM_REP_CAP, ASSUMED_RIR, isWorkSet, workSetsOf, dayMuscleBreakdown, weekMuscleBreakdown, plannedWeek, dayMuscleVolume, capWords, WHATS_NEW_WORDS, homeCardPlan, HOME_INSIGHT_BUDGET, WhatsNewCard, PATTERNS, patternOf, sameMovement, lengthOf, parseStoredData, recordReleaseDiag, readReleaseDiagnostics, clearReleaseDiagnostics, releaseDiagnosticsText };
+037152: export { ENGINE_V, ENGINES, ENGINE_RULES, engHas, engLacks, engineInfo, STORE_VERSION, migrateStore, GOALS, SESSIONS, EXP, THEMES, normalizeMusclePreferences, preferenceFloor, GEN_PIPELINE, runPipeline, openGeneration, schemeTierCount, COVERAGE_PASSES, coverageContext, prescribedDaySize, ASSISTANCE_SIZE, candidateSlotMin, daySeconds, advanceCycle, templateConfig, TEMPLATES, CYCLE_TEMPLATES, SPLITS, DAY_TEMPLATES, templateIntent, TEMPLATE_CATS, TEMPLATE_FILTER_GROUPS, sfrOf, axialCost, fitSessionTime, MRV_GRAIN, weekIntent, historyForProgram, IDEAL_SLOTS, dayMuscleLoad, dayOverlap, distributeVolBias, capWeeklyVolume, buildWeekPlan, programQuality, compareQuality, COVERED_MUSCLES, BEST_OF_N, traceGeneration, setPipeTrace, setClaimTrace, emitClaim, compositeMrv, PATTERN_GROUPS, PATTERN_MIN_SETS, patternTrainable, patternGapsOf, weeksOf, phaseFor, estimateMinutes, addedMinutes, addedSeconds, fitChip, daysInWeek, exerciseAt, rotationOf, fitSessionToTime, blockRetro, volumeAudit, LANDMARKS, secondaryOf, PART_ORDER, FOCUS_CAVEAT, WEEK_ORDER_TERMS, computeCell, pctSetsFor, gzPlanFor, gzAdvance, projectNextTM, nextTMEvidence, ddpNextForSet, lastSetEffort, styleFor, autoStyleFor, plateauOf, plateauOfLift, plateauSplitByDay, dayScopedTrends, fitText, fitFont, wrapList, drawRecapCard, exerciseTrends, summarizeSets, muscleRecovery, volumeAdvice, weeklyRecap, deloadAdvice, overreachSignal, constantLoadDecay, sessionE1RM, computeMilestones, ICON_CHOICES, ICON_GROUPS, ICON_COLORS, iconForProgram, iconForCycle, iconColorOf, nextSessionCursor, nextDueDayId, historyDayIndex, autoStyleDetail, explainPrescription, explainGeneration, perfAfterDelete, perfAfterHistoryReplace, normalizeEditedHistoryEntry, lifterModelKey, normalizeHistoryDayIds, normalizeCycleLinks, auditProgramWeek, auditSets, simulateAndAudit, repRange, goalForDay, blockPhase, rirFor, gymRackFor, pickActiveProgram, strengthScore, scoreAttribution, e1rm, loadStep, linearInc, lowerBodyLift, LOWER_PARTS, roundTo, setLoadInc, effortLabel, platesPerSide, setAvailPlates, strengthScoreHistory, restSec, effectiveRest, setRestScaleGlobal, dayPerfFor, lastDayPerf, anchorPerfFor, calibratedAnchorPerf, sessionSuggestion, prescribeSets, PROG_POLICIES, policyIdFor, resolveStyle, loggedRIRof, syncSubSets, growMyoSets, styleOverride, stallCountFor, SHED_TOL, STALL_ENGAGE, E1RM_HOLD, STALL_WINDOW, buildLifterModel, effortCalibration, calibrateDayPerf, readinessBand, bandForExercise, classifyPlateau, runSelfTest };
+037153: // Integration seams for storage and setup fault-injection gates; removed from the browser bundle.
+037154: export { loadStore, saveStore, Wizard };
+037155: /* Test-only: integration/m115-workout-browser-check.mjs imports these by name. They were missing from the shipped M116
+037156:    build, so that browser check could not load against it (its recorded PASS cannot have come from this App.js).
+037157:    The running app mounts only the default export; these change nothing in production. */
+037158: export { WorkoutSession, StepButton, StyleTag };
+037159: export { ExerciseAnimation, FormVideoLink, formVideoUrl, refusalMessage };
+037160: 
+037161: export { HomePrograms, homeProgramGroups, homePhaseIdentity };
+---
+037153: // Integration seams for storage and setup fault-injection gates; removed from the browser bundle.
+037154: export { loadStore, saveStore, Wizard };
+037155: /* Test-only: integration/m115-workout-browser-check.mjs imports these by name. They were missing from the shipped M116
+037156:    build, so that browser check could not load against it (its recorded PASS cannot have come from this App.js).
+037157:    The running app mounts only the default export; these change nothing in production. */
+037158: export { WorkoutSession, StepButton, StyleTag };
+037159: export { ExerciseAnimation, FormVideoLink, formVideoUrl, refusalMessage };
+037160: 
+037161: export { HomePrograms, homeProgramGroups, homePhaseIdentity };
+---

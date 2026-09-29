@@ -28,6 +28,22 @@ jobs:
             echo "ready=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Diagnose staged payload
+        if: steps.ready.outputs.ready == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib
+          for name in ('part-00','part-03','part-05'):
+              data = Path('.m165-final', name).read_bytes()
+              print(f'{name} len={len(data)} sha={hashlib.sha256(data).hexdigest()}')
+              for i in range(0, len(data), 256):
+                  block = data[i:i+256]
+                  print(f'{name}:{i//256:02d}:{hashlib.sha256(block).hexdigest()}')
+          PY
+
       - name: Apply verified M165 payload
         if: steps.ready.outputs.ready == 'true'
         shell: bash

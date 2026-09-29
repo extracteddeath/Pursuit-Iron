@@ -16,36 +16,36 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Capture targeted history/storage source
+      - name: Capture exact history persistence boundaries
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
-
           lines=Path('modules/App.js').read_text().splitlines()
           needles=[
-            'normalizeEditedHistoryEntry',
-            'perfAfterHistoryReplace',
-            'commitHistoryCorrection',
-            'const [history, setHistory]',
-            'setHistory(',
-            'mergeStores',
-            'parseStoredData',
-            'STORE_KEY',
-            "wpb:v1",
-            'localStorage.setItem',
-            'localStorage.getItem',
-            'JSON.stringify({',
-            'history,',
+            'function mergeStores(',
+            'const byId =',
             'history:',
-            'loaded',
+            'function saveStore(',
+            'saveStore(',
+            'const [history',
+            'setHistory(',
+            'savedAt: Date.now()',
+            'const store =',
+            'STORE_VERSION',
+            'tombs:',
+            'deleteHistoryEntry',
           ]
           out=[]
+          seen=set()
           for needle in needles:
             hits=[i for i,line in enumerate(lines) if needle in line]
             out.append(f'===== {needle} ({len(hits)} hits) =====')
-            for n,i in enumerate(hits[:24],1):
-              lo=max(0,i-22); hi=min(len(lines),i+32)
+            for n,i in enumerate(hits[:40],1):
+              key=(max(0,i-16),min(len(lines),i+25))
+              if key in seen: continue
+              seen.add(key)
+              lo,hi=key
               out.append(f'--- hit {n} lines {lo+1}-{hi} ---')
               out.extend(f'{j+1:06d}: {lines[j]}' for j in range(lo,hi))
             out.append('')
@@ -58,5 +58,5 @@ jobs:
           git config user.email "actions@users.noreply.github.com"
           git add M177_INSPECT.txt
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m "chore: deepen M177 history persistence inspection"
+          git commit -m "chore: isolate M177 history save and merge semantics"
           git push origin HEAD:main

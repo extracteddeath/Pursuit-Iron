@@ -11,26 +11,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Find swap exercise UI
+      - name: Inspect swap scrolling
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
-          p=Path('modules/App.js')
-          s=p.read_text()
-          needles=['Swap Exercise','Swap exercise','swap exercise','swapExercise','swapOpen','swapSheet','swapModal','Exercise Library','Search exercises','alternatives']
+          s=Path('modules/App.js').read_text()
           lines=s.splitlines()
+          needles=['sheetDragRef','wpb-swap-results','wpb-scroll{','.wpb-scroll','touchAction','touch-action','function Swap','const Swap','SwapSheet']
           seen=set()
           for needle in needles:
               hits=[i for i,l in enumerate(lines) if needle in l]
               if hits:
                   print(f'\n=== {needle!r}: {len(hits)} hit(s) ===')
-              for i in hits[:20]:
-                  key=(max(0,i-18),min(len(lines),i+45))
+              for i in hits[:40]:
+                  a=max(0,i-24); b=min(len(lines),i+50)
+                  key=(a,b)
                   if key in seen: continue
                   seen.add(key)
-                  a,b=key
                   print(f'--- lines {a+1}-{b} ---')
-                  for j in range(a,b):
-                      print(f'{j+1}: {lines[j]}')
+                  for j in range(a,b): print(f'{j+1}: {lines[j]}')
           PY

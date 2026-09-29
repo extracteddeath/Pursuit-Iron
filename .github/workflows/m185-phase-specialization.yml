@@ -1,0 +1,43 @@
+name: M185 phase specialization
+
+on:
+  push:
+    branches: [m185-phase-specialization]
+    paths:
+      - '.github/workflows/m185-phase-specialization.yml'
+      - 'modules/next-engine/phase-policy.js'
+      - 'modules/next-engine/prescription.js'
+      - 'modules/next-engine/realizer.js'
+      - 'verification/m185-phase-specialization-test.mjs'
+
+permissions:
+  contents: read
+
+jobs:
+  phases:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run M185 phase specialization matrix
+        run: node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m185-phase-specialization-test.mjs
+      - name: Preserve dose, coach-quality, and cycle contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          for test in \
+            verification/m181-dose-reconciliation-test.mjs \
+            verification/m180-coach-quality-oracle-test.mjs \
+            verification/m180-coach-quality-matrix.mjs \
+            verification/m174-causal-cycle-state-test.mjs \
+            verification/m175-longitudinal-adaptation-memory-test.mjs \
+            verification/m184-longitudinal-evidence-test.mjs \
+            verification/prescription-integrity-test.mjs \
+            verification/programs-test.mjs \
+            verification/full-engine-import-test.mjs
+          do
+            echo "==> $test"
+            node --no-warnings --experimental-loader ./verification/import-loader.mjs "$test"
+          done

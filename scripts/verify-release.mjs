@@ -19,13 +19,13 @@ const missing = shell.filter(p => p !== './' && !fs.existsSync(path.join(root,p.
 if (missing.length) fail(`missing precache files: ${missing.join(', ')}`);
 if (!sw.includes(`const CACHE="${profile.cache}"`)) fail('BUILD_PROFILE cache does not match sw.js');
 if (profile.milestone !== manifest.milestone) fail('BUILD_PROFILE milestone does not match manifest');
-if (profile.uiMilestone !== 'M166 Set Schedule + History Volume Integrity') fail('unexpected UI milestone');
+if (profile.uiMilestone !== 'M167 Legacy Dose + Standalone Cycle Recovery') fail('unexpected UI milestone');
 
 const app = read('modules/App.js');
 for (const marker of ['Turn into training cycle','convertProgramToNextCycleForShell','onConvertCycle: beginCycleConversion','Remove saved plan','Restore to library',
   'homeProgramGroups','homePhaseIdentity','data-program-group','This block starts when you finish the current one','action: "decrease_load"',
   'Correct workout log','normalizeEditedHistoryEntry','perfAfterHistoryReplace','const [lo, hi] = cellRepRange(cell, program, ex, slot === day?.primaryIndex)',
-  'customAuthoredSetCount(o.sets, base.sets, weekIndex)','historyVolumeIn(h, unit)','weeklyRecap(history, unit)','Keep the compact LAST reference to load × reps only','map(weeks => weeks?.[1] ?? weeks?.["1"])']) {
+  'legacyCustomSetCount(program, day, ex, slotIndex, weekIndex, o.sets, base.sets)','cycleConfigForStandaloneProgram','mergeStandaloneIntoGeneratedCycle','advanceLegacyFirstCycleBlock','historyVolumeIn(h, unit)','weeklyRecap(history, unit)','Keep the compact LAST reference to load × reps only','map(weeks => weeks?.[1] ?? weeks?.["1"])']) {
   if (!app.includes(marker)) fail(`missing App marker: ${marker}`);
 }
 if (!app.includes(`const __APP_VERSION__='${manifest.appVersion}'; const __BUILD__='${manifest.build}';`)) fail('App version/build mismatch');
@@ -54,6 +54,7 @@ execFileSync(process.execPath,['verification/progression-safety-test.mjs'],{stdi
 execFileSync(process.execPath,['verification/shell-progression-safety-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/prescription-integrity-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/custom-progression-safety-test.mjs'],{stdio:'inherit',cwd:root});
+execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/m167-legacy-dose-cycle-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/history-edit-integrity-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/history-volume-integrity-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/engine-authority-test.mjs'],{stdio:'inherit',cwd:root});

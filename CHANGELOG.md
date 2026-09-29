@@ -1,3 +1,11 @@
+## M167 — Legacy Dose + Standalone Cycle Recovery (3.217.0 / build 773)
+
+- Restores legacy/custom role-based working-set baselines plus saved `slotBias` and `autoBias`, fixing SekuFit being flattened to three sets across every exercise.
+- Real SekuFit regression fixture now requires Lower to resolve to 5/3/4/5/5/4/5 = 31 working sets instead of 21.
+- Restores “Turn into training cycle” for fixed standalone plans regardless of which engine originally created them.
+- Legacy/custom conversion keeps the existing program exactly as Block 1 and uses Pursuit Next only for future blocks; the first transition activates the audited future preview, then normal Next adaptation resumes.
+- Preserves M162–M166 progression, history editing, ledger-first volume, Target/LAST, generated-set canonicalization and engine-authority gates.
+
 ## M166 — Set Schedule + History Volume Integrity (3.216.0 / build 772)
 
 - Preserves intentional custom-program week-by-week set schedules (for example 5/3/3/4) instead of flattening array-shaped authored values to the neutral fallback.

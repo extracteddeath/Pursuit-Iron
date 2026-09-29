@@ -27,7 +27,7 @@ check('ambiguous generated override stays one scalar, never 45 or 9',()=>assert.
 
 const app=fs.readFileSync(new URL('../modules/App.js',import.meta.url),'utf8');
 check('all generated program surfaces still enter through getNextShellCell',()=>assert.ok(app.includes('const nextCell = getNextShellCell(program, day, slotIndex, weekIndex);')));
-check('custom programs resolve authored set schedules before display',()=>assert.ok(app.includes('sets: customAuthoredSetCount(o.sets, base.sets, weekIndex)')));
+check('legacy custom programs restore authored schedules and saved dose deltas before display',()=>assert.ok(app.includes('sets: legacyCustomSetCount(program, day, ex, slotIndex, weekIndex, o.sets, base.sets)')));
 check('phone set row keeps protected 520px breakpoint',()=>assert.ok(app.includes('const narrowSet = useNarrow(520);')));
 check('SET/LAST header has breathing room',()=>{
   assert.ok(app.includes('gap: narrowSet ? 5 : 8'));

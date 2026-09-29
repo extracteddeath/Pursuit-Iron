@@ -1,5 +1,5 @@
-/* M166 set-schedule + history-volume-integrity release — Engine 0.62.5; atomic startup recovery retained. */
-const CACHE="pursuit-iron-production-m166-set-schedule-history-volume";
+/* M167 legacy-dose + standalone-cycle recovery — Engine 0.62.5; atomic startup recovery retained. */
+const CACHE="pursuit-iron-production-m167-legacy-dose-cycle";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
   "./",

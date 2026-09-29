@@ -1,4 +1,4 @@
-const __APP_VERSION__='3.216.0'; const __BUILD__='772';
+const __APP_VERSION__='3.217.0'; const __BUILD__='773';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { setShellEquipmentExpander, splitContractGaps, splitBuildability, refusalFixes, generateNextProgramForShell, nextProgramToShellProgram, recommendNextSplitForShell, getNextShellCell, canonicalShellSetCount, cloneNextDayPrescriptions, swapNextSlotPrescriptions, removeNextSlotPrescription, nextExerciseIdForShellExercise, NextShellAdapterError } from "./next-engine/app-shell-adapter.js";
@@ -12434,6 +12434,78 @@ export function customAuthoredSetCount(raw, fallback, weekIndex = 1) {
     const idx = Number.isFinite(w) ? Math.max(0, Math.floor(w) - 1) : 0;
     return values[Math.min(idx, values.length - 1)] ?? base;
 }
+/* M167 — compatibility for saved legacy custom programs whose designed volume lives in
+   slotBias/autoBias. These maps are DELTAS over the role baseline, not replacement set counts.
+   The old allocator's contract caps an auto-tuned exercise at five working sets. */
+export function legacyCustomSetCount(program, day, ex, slotIndex, weekIndex, rawSets, neutralFallback = 3) {
+    const slotMap = program?.slotBias || {};
+    const autoMap = program?.autoBias || {};
+    const hasLegacyDose = Object.keys(slotMap).length > 0 || Object.keys(autoMap).length > 0;
+    if (!hasLegacyDose)
+        return customAuthoredSetCount(rawSets, neutralFallback, weekIndex);
+    const key = `${day?.id}:${slotIndex}`;
+    const roleBase = baseSetsFor(program?.config || {}, ex, slotIndex === day?.primaryIndex);
+    const authoredBase = rawSets == null ? roleBase : customAuthoredSetCount(rawSets, roleBase, weekIndex);
+    const finiteDelta = v => Number.isFinite(Number(v)) ? Number(v) : 0;
+    return clamp(Math.round(authoredBase + finiteDelta(slotMap[key]) + finiteDelta(autoMap[key])), 1, 5);
+}
+
+/* A fixed standalone legacy/custom plan can remain EXACTLY itself as cycle block 1 while the
+   current engine owns future blocks. Infer only the generation topology needed for those future
+   blocks; this never rewrites the current plan. */
+export function cycleConfigForStandaloneProgram(program, name) {
+    const cfg = { ...(program?.config || {}) };
+    const days = Array.isArray(program?.days) ? program.days : [];
+    const n = Math.max(1, days.length || Math.round(Number(cfg.days)) || 1);
+    cfg.days = n;
+    cfg.name = String(name || program?.name || cfg.name || 'Training Cycle').trim() || 'Training Cycle';
+    cfg.endless = false;
+    const currentSplit = String(cfg.split || '').toLowerCase();
+    if (!currentSplit || currentSplit === 'custom') {
+        const tags = days.map(d => `${d?.type || ''} ${d?.label || ''}`.toLowerCase());
+        const has = word => tags.some(t => t.includes(word));
+        const ulppl = n === 5 && ['upper','lower','push','pull','legs'].every(has);
+        const upperLower = n >= 2 && tags.every(t => t.includes('upper') || t.includes('lower'));
+        const ppl = n >= 3 && tags.every(t => t.includes('push') || t.includes('pull') || t.includes('legs')) && ['push','pull','legs'].every(has);
+        cfg.split = ulppl ? 'ulppl' : upperLower ? 'upper_lower' : ppl ? 'ppl' : 'full_body';
+    }
+    return cfg;
+}
+
+export function mergeStandaloneIntoGeneratedCycle(program, generated) {
+    if (!program?.id || !generated?.cycle || !Array.isArray(generated.blocks) || generated.blocks.length < 2)
+        throw new Error('A standalone conversion needs the current program plus at least one future engine block.');
+    const generatedFuture = generated.blocks.slice(1);
+    const cycle = { ...generated.cycle };
+    const sourceMeta = Array.isArray(cycle.blockMeta) ? cycle.blockMeta : [];
+    const current = JSON.parse(JSON.stringify(program));
+    current.cycleId = cycle.id;
+    current.cycleIndex = 0;
+    current.blockLabel = sourceMeta[0]?.label || current.blockLabel || 'Current program';
+    current.blockNote = 'Existing standalone program kept exactly as cycle Block 1';
+    current.config = { ...(current.config || {}), endless: false, cyclePeriodization: true };
+    generatedFuture.forEach((block, i) => { block.cycleId = cycle.id; block.cycleIndex = i + 1; });
+    cycle.blockIds = [current.id, ...generatedFuture.map(b => b.id)];
+    cycle.blockMeta = cycle.blockIds.map((id, i) => i === 0
+        ? { ...(sourceMeta[0] || {}), id, label: current.blockLabel, note: current.blockNote, preview: false, legacyCurrent: true }
+        : { ...(sourceMeta[i] || {}), id, preview: true });
+    cycle.activeBlock = 0;
+    cycle.startedAt = cycle.startedAt || Date.now();
+    cycle.nextEngineCycle = { ...(cycle.nextEngineCycle || {}), legacyFirstBlockId: current.id, legacyFirstBlock: true };
+    return { cycle, currentProgram: current, blocks: generatedFuture, allBlocks: [current, ...generatedFuture], baseRequest: generated.baseRequest };
+}
+
+export function advanceLegacyFirstCycleBlock(cycle, programs) {
+    const legacyId = cycle?.nextEngineCycle?.legacyFirstBlockId;
+    if (!legacyId || Number(cycle?.activeBlock || 0) !== 0 || cycle?.blockIds?.[0] !== legacyId)
+        return null;
+    const nextId = cycle?.blockIds?.[1];
+    const nextProgram = (programs || []).find(p => p?.id === nextId);
+    if (!nextId || !nextProgram?.config)
+        throw new Error('The first future cycle block is missing; the cycle was left unchanged.');
+    const blockMeta = (cycle.blockMeta || []).map((m, i) => i === 1 ? { ...m, preview: false, activatedFromLegacy: legacyId } : m);
+    return { cycle: { ...cycle, activeBlock: 1, blockMeta }, nextProgram };
+}
 /* compute a cell {sets,reps,note,range,rir} for a given week.
    Auto mode prescribes each lift's own rep RANGE; the week selector drives
    load & RIR (and a small overreach set in the last hypertrophy week). */
@@ -12458,7 +12530,7 @@ function computeCell(program, day, id, slotIndex, weekIndex) {
         const reps = repPair[0] === repPair[1] ? String(repPair[0]) : `${repPair[0]}-${repPair[1]}`;
         const effort = effortBounds(o.rir ?? base.rir);
         const rir = effort ? (effort[0] === effort[1] ? String(effort[0]) : `${effort[0]}-${effort[1]}`) : (o.rir ?? base.rir);
-        return { sets: customAuthoredSetCount(o.sets, base.sets, weekIndex), reps, range: reps, rir, rest: o.rest ?? base.rest, tech: o.techOverride ?? base.tech ?? null,
+        return { sets: legacyCustomSetCount(program, day, ex, slotIndex, weekIndex, o.sets, base.sets), reps, range: reps, rir, rest: o.rest ?? base.rest, tech: o.techOverride ?? base.tech ?? null,
             role: base.role, progressionStyle: o.progressionStyle ?? "auto", note: "Your program", custom: true };
     }
     const nextCell = getNextShellCell(program, day, slotIndex, weekIndex);
@@ -32318,7 +32390,7 @@ function Home({ legacySaved = [], onRebuildLegacy, onRemoveLegacy, gyms = [], ac
                 if (!p)
                     return null;
                 const items = [
-                    ...(!p.config?.endless && !p.cycleId && p.engineSource === "pursuit-next" && onConvertCycle ? [{ k: "cycle", icon: _jsx(Layers, { size: 16, color: C.accentInk }), label: "Turn into training cycle", on: () => onConvertCycle(p) }] : []),
+                    ...(!p.config?.endless && !p.cycleId && onConvertCycle ? [{ k: "cycle", icon: _jsx(Layers, { size: 16, color: C.accentInk }), label: "Turn into training cycle", on: () => onConvertCycle(p) }] : []),
                     { k: "dupe", icon: _jsx(Copy, { size: 16, color: C.muted }), label: "Duplicate program", on: () => onDuplicate(p) },
                     { k: "del", icon: _jsx(Trash2, { size: 16, color: C.danger }), label: "Delete program", danger: true, on: () => onDelete(p.id) },
                 ];
@@ -35977,10 +36049,6 @@ function App() {
             setAppToast({ msg: "Endless programs do not have a block boundary. Use a fixed-length program before turning it into a cycle." });
             return;
         }
-        if (p.engineSource !== "pursuit-next" || !p.nextEngine?.program) {
-            setAppToast({ msg: "Restore this program with the current engine before turning it into a training cycle." });
-            return;
-        }
         setCycleConvertId(p.id);
     };
     const confirmCycleConversion = ({ templateId, name, adaptBetweenBlocks }) => {
@@ -35988,17 +36056,22 @@ function App() {
         if (!p)
             return { ok: false, msg: "That program is no longer in your library." };
         try {
-            const built = convertProgramToNextCycleForShell({
-                program: p,
-                templateId,
-                name,
-                adaptBetweenBlocks,
-                legacyExercises: EXERCISES,
-                makeId: uid
-            });
+            const built = (p.engineSource === "pursuit-next" && p.nextEngine?.program)
+                ? convertProgramToNextCycleForShell({
+                    program: p, templateId, name, adaptBetweenBlocks, legacyExercises: EXERCISES, makeId: uid
+                })
+                : mergeStandaloneIntoGeneratedCycle(p, attachShadowToCycleBuild(generateNextCycleForShell({
+                    templateId,
+                    config: cycleConfigForStandaloneProgram(p, name),
+                    banned,
+                    legacyExercises: EXERCISES,
+                    adaptBetweenBlocks,
+                    makeId: uid
+                }), banned));
             requireCompleteCycleShell(built.cycle, built.allBlocks);
             built.cycle.generationRoute = GENERATION_ROUTE;
-            built.currentProgram.generationRoute = GENERATION_ROUTE;
+            if (built.currentProgram.engineSource === "pursuit-next")
+                built.currentProgram.generationRoute = GENERATION_ROUTE;
             built.blocks.forEach(block => { block.generationRoute = GENERATION_ROUTE; });
             setSaved(prev => {
                 const futureIds = new Set(built.blocks.map(block => block.id));
@@ -36043,6 +36116,28 @@ function App() {
     useEffect(() => { setReviewOf(null); }, [program?.id]);
     const completeCycleBlock = (cycle) => setConfirmAdvance(cycle);
     const doCompleteCycleBlock = (cycle) => {
+        /* A cycle converted from a legacy/custom standalone plan deliberately keeps that exact plan as
+           Block 1. Its first transition activates the already-audited Next preview; only subsequent
+           transitions use history-driven Next adaptation, because there is no honest engine snapshot
+           that can reinterpret the old block without changing what the user trained. */
+        if (cycle?.engineSource === "pursuit-next" && cycle?.nextEngineCycle?.legacyFirstBlockId && Number(cycle.activeBlock || 0) === 0) {
+            try {
+                const bridged = advanceLegacyFirstCycleBlock(cycle, saved);
+                if (!bridged)
+                    throw new Error("The legacy first-block bridge could not resolve the next block.");
+                requireCompleteCycleShell(bridged.cycle, saved, { expectedCycleId: cycle.id });
+                setCycles(prev => prev.map(c => c.id === cycle.id ? bridged.cycle : c));
+                setPinnedId(bridged.nextProgram.id);
+                setProgram(bridged.nextProgram);
+                rootView("program");
+                setAppToast({ msg: `Advanced to ${bridged.cycle.blockMeta[1]?.label || "next block"} — your original standalone plan stayed intact as Block 1` });
+            }
+            catch (err) {
+                recordReleaseDiag("legacy_cycle_first_advance_failed", { action: "cycle_advance", engine: ENGINE_VERSION, reason: String(err?.message || err) });
+                setAppToast({ msg: "The next cycle block was incomplete, so nothing changed." });
+            }
+            return;
+        }
         if (cycle?.engineSource === "pursuit-next") {
             const activeProgram = saved.find(p => p.id === cycle.blockIds[cycle.activeBlock]);
             if (!activeProgram) {

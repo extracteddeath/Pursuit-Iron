@@ -6,7 +6,8 @@ import { generateProgram } from './generate.js';
 import { deriveMuscleLedger } from './ledgers.js';
 import { phasePolicyFor, phaseLabel } from './phase-policy.js';
 import { normalizeRequest } from './prescription.js';
-import { estimateSessionMinutes, progressionForExercise, repsForPhase, restForExercise, rirForPhase } from './realizer.js';
+import { estimateSessionMinutes, repsForPhase, restForExercise, rirForPhase } from './realizer.js';
+import { progressionInstruction, selectProgressionStyle } from './progression-style.js';
 import { blocksForCycleTemplate, cycleTemplates, goalForCycleTemplate } from './simulation.js';
 import { transitionProgramPhase } from './phase-transition.js';
 import { historyDecision, withProgramExplainability } from './explainability.js';
@@ -15,7 +16,7 @@ import { shellConfigToNextRequest, nextProgramToShellProgram, NextShellAdapterEr
 const phaseGoal = (phase) => phase === 'hypertrophy_accumulation' ? 'hypertrophy' :
     (phase === 'strength_accumulation' || phase === 'intensification' || phase === 'peak') ? 'strength' : 'both';
 const clone = (value) => JSON.parse(JSON.stringify(value));
-function retargetStatic(previous, request, target) {
+function retargetStatic(previous, request, target, blockWeeks = 6) {
     const normalized = normalizeRequest(request);
     const sourcePolicy = phasePolicyFor(previous.phase);
     const targetPolicy = phasePolicyFor(target);
@@ -30,15 +31,32 @@ function retargetStatic(previous, request, target) {
             const sourceScale = strength ? sourcePolicy.strengthVolumeMultiplier : sourcePolicy.volumeMultiplier;
             const targetScale = strength ? targetPolicy.strengthVolumeMultiplier : targetPolicy.volumeMultiplier;
             const ratio = sourceScale > 0 ? targetScale / sourceScale : 1;
+            const prescription = {
+                reps: repsForPhase(def, ex.role, targetPolicy),
+                rir: rirForPhase(ex.role, targetPolicy),
+                restSeconds: restForExercise(ex.role, def)
+            };
+            const progressionSelection = selectProgressionStyle(def, ex.role, {
+                phase: target,
+                experience: normalized.athlete.experience,
+                blockWeeks: Math.max(1, Number(blockWeeks) || 6),
+                requestedStyle: normalized.preferences?.progressionStyle,
+                prescription
+            });
+            const previousStyle = ex.progressionStyle ?? null;
             return {
                 ...ex,
                 sets: Math.max(1, Math.round(ex.sets * ratio)),
-                prescription: {
-                    reps: repsForPhase(def, ex.role, targetPolicy),
-                    rir: rirForPhase(ex.role, targetPolicy),
-                    restSeconds: restForExercise(ex.role, def)
+                prescription,
+                progressionStyle: progressionSelection.style,
+                progression: progressionInstruction(progressionSelection.style),
+                progressionSelection: {
+                    source: progressionSelection.source,
+                    confidence: progressionSelection.confidence,
+                    reason: progressionSelection.reason,
+                    previousStyle,
+                    changed: previousStyle !== null ? previousStyle !== progressionSelection.style : false
                 },
-                progression: progressionForExercise(def, ex.role, targetPolicy, normalized.athlete.experience),
                 advancedTechnique: targetPolicy.advancedTechniqueBudget > 0 ? ex.advancedTechnique : undefined
             };
         });
@@ -192,15 +210,23 @@ export function generateNextCycleForShell(options) {
         const spec = specs[i];
         let next;
         if (!previous) {
-            next = generateProgram(baseRequest, { phase: spec.phase }).program;
+            next = generateProgram(baseRequest, {
+                phase: spec.phase,
+                blockWeeks: spec.weeks,
+                progressionStyle: baseRequest.preferences?.progressionStyle
+            }).program;
         }
         else if (options.adaptBetweenBlocks) {
             const ids = previous.sessions.flatMap(s => s.exercises.map(e => e.exerciseId));
             const protectedIds = previous.sessions.flatMap(s => s.exercises.filter(e => e.role === 'primary_strength' || e.role === 'secondary_strength').map(e => e.exerciseId));
-            next = transitionProgramPhase(previous, normalized, spec.phase, { successfulExerciseIds: ids, protectedExerciseIds: protectedIds }).program;
+            next = transitionProgramPhase(previous, normalized, spec.phase, {
+                successfulExerciseIds: ids,
+                protectedExerciseIds: protectedIds,
+                nextBlockWeeks: spec.weeks
+            }).program;
         }
         else {
-            next = retargetStatic(previous, baseRequest, spec.phase);
+            next = retargetStatic(previous, baseRequest, spec.phase, spec.weeks);
         }
         if (next.audit.result !== 'pass')
             throw new NextShellAdapterError('NEXT_CYCLE_BLOCK_REJECTED', `Pursuit Engine ${next.engineVersion} rejected ${spec.label}.`, next.audit);
@@ -299,13 +325,16 @@ export function convertProgramToNextCycleForShell(options) {
             const protectedIds = previous.sessions.flatMap(session => session.exercises
                 .filter(ex => ex.role === 'primary_strength' || ex.role === 'secondary_strength')
                 .map(ex => ex.exerciseId));
+            // M193 converted-cycle preview uses the duration of THIS upcoming block.
             next = transitionProgramPhase(previous, normalized, spec.phase, {
                 successfulExerciseIds: ids,
-                protectedExerciseIds: protectedIds
+                protectedExerciseIds: protectedIds,
+                nextBlockWeeks: spec.weeks
             }).program;
         }
         else {
-            next = retargetStatic(previous, baseRequest, spec.phase);
+            // M193 converted-cycle locked preview also reselects against this block's duration.
+            next = retargetStatic(previous, baseRequest, spec.phase, spec.weeks);
         }
         if (next.audit.result !== 'pass')
             throw new NextShellAdapterError('NEXT_CYCLE_BLOCK_REJECTED', `Pursuit Engine ${next.engineVersion} rejected ${spec.label}.`, next.audit);
@@ -388,10 +417,18 @@ function buildAdaptedBlock(current, cycle, target, weeks, label, analysis, legac
     const normalized = normalizeRequest(request);
     let next;
     if (cycle?.nextEngineCycle?.adaptBetweenBlocks) {
-        next = transitionProgramPhase(source, normalized, target, { successfulExerciseIds: analysis.successfulExerciseIds, protectedExerciseIds: analysis.protectedExerciseIds, replaceExerciseIds: analysis.replaceExerciseIds }).program;
+        next = transitionProgramPhase(source, normalized, target, {
+            successfulExerciseIds: analysis.successfulExerciseIds,
+            protectedExerciseIds: analysis.protectedExerciseIds,
+            replaceExerciseIds: analysis.replaceExerciseIds,
+            techniqueLimitedExerciseIds: analysis.techniqueLimitedExerciseIds,
+            fatigueLimitedExerciseIds: analysis.fatigueLimitedExerciseIds,
+            progressionEvidenceByExercise: analysis.progressionEvidenceByExercise,
+            nextBlockWeeks: weeks
+        }).program;
     }
     else {
-        next = retargetStatic(source, request, target);
+        next = retargetStatic(source, request, target, weeks);
     }
     if (next.audit.result !== 'pass')
         throw new NextShellAdapterError('NEXT_CYCLE_ADAPT_REJECTED', `Pursuit Engine ${next.engineVersion} could not safely prepare ${label}.`, next.audit);

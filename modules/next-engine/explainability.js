@@ -2,6 +2,7 @@ import { createExerciseMap } from './exercise-db.js';
 import { deriveFunctionalCoverage } from './functional-coverage.js';
 import { createMusclePrescriptions } from './prescription.js';
 import { methodPolicyForSplit } from './method-policy.js';
+
 function round(value) { return Math.round(value * 10) / 10; }
 function priorityRank(p) { return p === 'primary' ? 4 : p === 'specialization' ? 3 : p === 'high' ? 2 : p === 'normal' ? 1 : 0; }
 function phraseDose(actual, minimum, preferred, upper) {
@@ -16,6 +17,7 @@ function phraseDose(actual, minimum, preferred, upper) {
     return 'above the configured recoverable ceiling';
 }
 function humanMuscle(m) { return m.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()); }
+
 export function buildProgramExplainability(program, request, extra = []) {
     const methodPolicy = methodPolicyForSplit(program.split.family, program.split.displayName);
     const decisions = [];
@@ -83,11 +85,230 @@ export function buildProgramExplainability(program, request, extra = []) {
     ];
     return { schemaVersion: 1, methodPolicy, summary, decisions };
 }
+
 export function historyDecision(subject, outcome, why, metrics, evidence) {
     return { category: 'history', subject, outcome, why, metrics, evidence };
 }
+
 export function withProgramExplainability(program, request, extra = []) {
     const priorHistory = (program.explainability?.decisions ?? []).filter(d => d.category === 'history');
     const merged = [...priorHistory, ...extra];
     return { ...program, explainability: buildProgramExplainability(program, request, merged) };
+}
+
+function safeNumber(value, fallback = null) {
+    const number = Number(value);
+    return Number.isFinite(number) ? number : fallback;
+}
+
+function phaseLabel(value) {
+    const normalized = String(value || 'training').replace(/_/g, ' ').trim();
+    return normalized ? normalized.replace(/\b\w/g, character => character.toUpperCase()) : 'Training';
+}
+
+function programExercises(program) {
+    return (program?.sessions ?? []).flatMap(session => session?.exercises ?? []);
+}
+
+function totalWorkSets(program) {
+    return programExercises(program).reduce((sum, exercise) => sum + Math.max(0, safeNumber(exercise?.sets, 0)), 0);
+}
+
+function averageTarget(program, key, fallbackKey) {
+    const values = [];
+    for (const exercise of programExercises(program)) {
+        const range = exercise?.[key];
+        const min = safeNumber(range?.min, null);
+        const max = safeNumber(range?.max, null);
+        if (min !== null && max !== null) {
+            values.push((min + max) / 2);
+            continue;
+        }
+        const fallback = safeNumber(exercise?.[fallbackKey], null);
+        if (fallback !== null)
+            values.push(fallback);
+    }
+    return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
+}
+
+function strengthExposureCount(program) {
+    return programExercises(program).filter(exercise => exercise?.role === 'primary_strength' || exercise?.role === 'secondary_strength').length;
+}
+
+function exerciseIdSet(program) {
+    return new Set(programExercises(program).map(exercise => exercise?.exerciseId || exercise?.id || exercise?.name).filter(Boolean));
+}
+
+function signedChange(value, unit = '') {
+    const rounded = Math.round(Math.abs(value) * 10) / 10;
+    return `${value >= 0 ? '+' : '−'}${rounded}${unit}`;
+}
+
+function changeRow(key, title, before, after, detail, direction = 'changed', reasonCodes = []) {
+    return {
+        key,
+        title,
+        before,
+        after,
+        detail,
+        direction,
+        reasonCodes: [...new Set(reasonCodes.filter(Boolean))]
+    };
+}
+
+/**
+ * Human-facing comparison for the Block Review. It deliberately reports only
+ * observable prescription changes; it never invents a reason from hidden
+ * implementation details. The UI can render this object without duplicating
+ * training logic or trying to infer why two blocks differ.
+ */
+export function buildBlockReviewSummary(previousProgram = {}, currentProgram = {}, context = {}) {
+    const changes = [];
+    const reasons = [];
+    const previousPhase = String(previousProgram?.phase || 'training');
+    const currentPhase = String(currentProgram?.phase || 'training');
+    const transitionReasonCodes = Array.isArray(context?.reasonCodes) ? context.reasonCodes : [];
+
+    if (previousPhase !== currentPhase) {
+        changes.push(changeRow(
+            'phase',
+            'Training focus',
+            phaseLabel(previousPhase),
+            phaseLabel(currentPhase),
+            `The new block shifts from ${phaseLabel(previousPhase).toLowerCase()} work toward ${phaseLabel(currentPhase).toLowerCase()} work.`,
+            'changed',
+            ['block:phase:changed', ...transitionReasonCodes]
+        ));
+    }
+
+    const previousSets = totalWorkSets(previousProgram);
+    const currentSets = totalWorkSets(currentProgram);
+    const setDelta = currentSets - previousSets;
+    if (Math.abs(setDelta) >= 1) {
+        changes.push(changeRow(
+            'weekly-work',
+            'Weekly work',
+            `${Math.round(previousSets)} sets`,
+            `${Math.round(currentSets)} sets`,
+            `${signedChange(setDelta, ' sets')} across the week so the amount of work fits the new block's goal and available recovery.`,
+            setDelta > 0 ? 'up' : 'down',
+            ['block:volume:changed', ...transitionReasonCodes]
+        ));
+    }
+
+    const previousReps = averageTarget(previousProgram, 'repRange', 'reps');
+    const currentReps = averageTarget(currentProgram, 'repRange', 'reps');
+    if (previousReps !== null && currentReps !== null && Math.abs(currentReps - previousReps) >= .5) {
+        const delta = currentReps - previousReps;
+        changes.push(changeRow(
+            'rep-target',
+            'Rep targets',
+            `~${round(previousReps)} reps`,
+            `~${round(currentReps)} reps`,
+            delta < 0 ? 'Average rep targets moved lower to support heavier, more specific work.' : 'Average rep targets moved higher to support more productive hypertrophy work.',
+            delta > 0 ? 'up' : 'down',
+            ['block:reps:changed', ...transitionReasonCodes]
+        ));
+    }
+
+    const previousRir = averageTarget(previousProgram, 'rirRange', 'rir');
+    const currentRir = averageTarget(currentProgram, 'rirRange', 'rir');
+    if (previousRir !== null && currentRir !== null && Math.abs(currentRir - previousRir) >= .25) {
+        const delta = currentRir - previousRir;
+        changes.push(changeRow(
+            'effort',
+            'Effort target',
+            `~${round(previousRir)} RIR`,
+            `~${round(currentRir)} RIR`,
+            delta < 0 ? 'Sets are planned closer to failure on average.' : 'Sets keep a little more distance from failure on average to protect recovery and performance.',
+            delta > 0 ? 'up' : 'down',
+            ['block:effort:changed', ...transitionReasonCodes]
+        ));
+    }
+
+    const previousStrength = strengthExposureCount(previousProgram);
+    const currentStrength = strengthExposureCount(currentProgram);
+    if (previousStrength !== currentStrength) {
+        const delta = currentStrength - previousStrength;
+        changes.push(changeRow(
+            'strength-exposure',
+            'Heavy lift exposure',
+            `${previousStrength} slot${previousStrength === 1 ? '' : 's'}`,
+            `${currentStrength} slot${currentStrength === 1 ? '' : 's'}`,
+            delta > 0 ? 'More weekly slots now emphasize heavier strength practice.' : 'Fewer slots are reserved for heavy strength practice so more capacity can go to the current block focus.',
+            delta > 0 ? 'up' : 'down',
+            ['block:strength-exposure:changed', ...transitionReasonCodes]
+        ));
+    }
+
+    const previousIds = exerciseIdSet(previousProgram);
+    const currentIds = exerciseIdSet(currentProgram);
+    const retained = [...previousIds].filter(id => currentIds.has(id)).length;
+    const added = [...currentIds].filter(id => !previousIds.has(id)).length;
+    const removed = [...previousIds].filter(id => !currentIds.has(id)).length;
+    if (previousIds.size || currentIds.size) {
+        const retainedPercent = previousIds.size ? Math.round((retained / previousIds.size) * 100) : 100;
+        changes.push(changeRow(
+            'exercise-continuity',
+            'Exercise continuity',
+            `${previousIds.size} exercises`,
+            `${currentIds.size} exercises`,
+            `${retained} carried over (${retainedPercent}% of the prior menu); ${added} added and ${removed} removed. Successful lifts are kept when they still fit the new phase.`,
+            added || removed ? 'changed' : 'steady',
+            ['block:continuity:measured', ...transitionReasonCodes]
+        ));
+    }
+
+    if (context?.continuity?.rationale) {
+        reasons.push({
+            title: 'Why exercises changed',
+            detail: context.continuity.rationale,
+            reasonCodes: ['block:continuity:reason']
+        });
+    }
+    if (context?.transitionReason) {
+        reasons.push({
+            title: 'Why the block changed',
+            detail: String(context.transitionReason),
+            reasonCodes: transitionReasonCodes
+        });
+    } else if (previousPhase !== currentPhase) {
+        reasons.push({
+            title: 'Why the block changed',
+            detail: `The training cycle advanced from ${phaseLabel(previousPhase)} to ${phaseLabel(currentPhase)}, so set, rep, effort and exercise choices were rebalanced for the new focus.`,
+            reasonCodes: ['block:phase:progression', ...transitionReasonCodes]
+        });
+    }
+
+    const materialChanges = changes.filter(change => change.direction !== 'steady');
+    const headline = materialChanges.length
+        ? `${materialChanges.length} meaningful change${materialChanges.length === 1 ? '' : 's'} from the previous block`
+        : 'The prescription is staying on course';
+    const summary = materialChanges.length
+        ? `This block keeps what is working while changing the parts that need to match ${phaseLabel(currentPhase).toLowerCase()} training.`
+        : 'No material prescription change was needed; the next block preserves the current structure and targets.';
+
+    return {
+        schemaVersion: 1,
+        status: materialChanges.length ? 'changed' : 'steady',
+        fromPhase: previousPhase,
+        toPhase: currentPhase,
+        headline,
+        summary,
+        changes,
+        reasons
+    };
+}
+
+export function withBlockReviewExplainability(previousProgram, program, request, context = {}) {
+    const explained = withProgramExplainability(program, request);
+    const blockReview = buildBlockReviewSummary(previousProgram, explained, context);
+    return {
+        ...explained,
+        blockReview,
+        explainability: {
+            ...explained.explainability,
+            blockReview
+        }
+    };
 }

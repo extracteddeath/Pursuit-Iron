@@ -1,0 +1,159 @@
+from pathlib import Path
+import json, hashlib
+
+
+def read(p): return Path(p).read_text()
+def write(p,s): Path(p).write_text(s)
+def once(s, old, new, label):
+    n=s.count(old)
+    if n != 1:
+        raise SystemExit(f'{label}: expected exactly 1 occurrence, found {n}')
+    return s.replace(old,new,1)
+
+# Version only because this is a new verified release. Engine behavior remains 0.63.0.
+app=read('modules/App.js')
+app=once(app, "const __APP_VERSION__='3.222.0'; const __BUILD__='778';", "const __APP_VERSION__='3.223.0'; const __BUILD__='779';", 'app version/build')
+write('modules/App.js',app)
+
+index=read('index.html')
+old_boot="function bootHealth(ok){try{var k='wpb:boot-health',v=JSON.parse(localStorage.getItem(k)||'{}');if(!v||typeof v!=='object')v={};var attempts=(v.build==='774'?Number(v.attempts||0):0);localStorage.setItem(k,JSON.stringify(ok?{build:'778',attempts:0,lastOk:Date.now()}:{build:'778',attempts:attempts+1,lastAttempt:Date.now()}));}catch(_){}}"
+new_boot="function bootHealth(ok){try{var k='wpb:boot-health',build='779',v=JSON.parse(localStorage.getItem(k)||'{}');if(!v||typeof v!=='object')v={};var attempts=(v.build===build?Number(v.attempts||0):0);localStorage.setItem(k,JSON.stringify(ok?{build:build,attempts:0,lastOk:Date.now()}:{build:build,attempts:attempts+1,lastAttempt:Date.now()}));}catch(_){}}"
+index=once(index,old_boot,new_boot,'bootstrap health counter')
+index=index.replace("build:'778'", "build:'779'")
+write('index.html',index)
+
+sw=read('sw.js')
+sw=once(sw,'/* M172 actual realized strength baseline allocator — Engine 0.63.0. */','/* M173 integration + bootstrap resilience hardening — Engine 0.63.0. */','sw release comment')
+sw=once(sw,'const CACHE="pursuit-iron-production-m172-actual-strength-baseline";','const CACHE="pursuit-iron-production-m173-integration-resilience";','sw cache')
+write('sw.js',sw)
+
+profile=json.loads(read('BUILD_PROFILE.json'))
+profile['milestone']='M173'
+profile['source']='M172 + cross-feature integration torture coverage + bootstrap/PWA resilience hardening'
+profile['cache']='pursuit-iron-production-m173-integration-resilience'
+write('BUILD_PROFILE.json',json.dumps(profile,indent=2)+'\n')
+
+integration=r'''import assert from 'node:assert/strict';
+import { normalizeEditedHistoryEntry } from '../modules/App.js';
+import { generateNextProgramForShell } from '../modules/next-engine/app-shell-adapter.js';
+import { EXERCISE_MAP } from '../modules/next-engine/exercise-db.js';
+import { analyzeShellHistoryForNextEngine, generateNextBlockFromShellHistory } from '../modules/next-engine/workout-history-adapter.js';
+
+const legacy=[...EXERCISE_MAP.values()].map(d=>({id:d.id,name:d.name,part:d.legacyPart||'chest',type:d.flags?.compound?'compound':'isolation',equip:[]}));
+const equipment=['barbell','rack','bench','dumbbell','cable','machine','smith','ezbar','pullup','pullup_bar','dip','kettlebell','bands','legpress','leg_press','hacksquat','legext','legcurl','calfmachine','bodyweight'];
+const config={name:'M173 integration',unit:'lb',goal:'both',experience:'intermediate',split:'full_body',days:3,session:'s60',weeks:4,equipment,focus:{},reduce:[],barbellCap:3,noBodyweight:false,noSupersets:false,deload:false,progression:'auto'};
+let id=0;
+const built=generateNextProgramForShell({config,legacyExercises:legacy,seed:173,makeId:()=>`m173-${++id}`});
+assert.equal(built.nextProgram.audit.result,'pass');
+const current=structuredClone(built.program);
+const phase=current.nextEngine?.cycleState?.phase;
+assert.ok(phase,'generated shell program must carry a cycle phase');
+current.nextEngine.cycleState={...current.nextEngine.cycleState,workoutsInPhase:0,minimumWorkouts:2,reviewAfterWorkouts:4,status:'building',recommendedNextPhase:undefined};
+const day=current.days[0];
+assert.ok(day?.exercises?.length>0);
+const parseRange=v=>{const p=String(v??'').split(/[-–]/).map(Number).filter(Number.isFinite);return [p[0]??1,p[1]??p[0]??1];};
+const makePerf=(bad=false)=>Object.fromEntries(day.exercises.map((legacyId,slot)=>{
+  const cell=current.nextWeekPrescriptions?.[`${day.id}:${slot}`]?.[1];
+  assert.ok(cell,`missing week-1 cell for slot ${slot}`);
+  const [lo,hi]=parseRange(cell.reps??cell.range);
+  const [rirLo]=parseRange(cell.rir??2);
+  const reps=bad&&slot===0?Math.max(1,lo-2):hi;
+  const effort=bad&&slot===0?0:rirLo;
+  const sets=Math.max(1,Number(cell.sets)||1);
+  const rows=Array.from({length:sets},()=>({w:100,r:reps,rir:effort,tr:rirLo,done:true}));
+  return [legacyId,{weight:100,reps,sets:rows}];
+}));
+const makeEntry=(n,bad=false)=>({id:`hist-${n}`,date:1000+n*1000,programId:current.id,programName:current.name,dayId:day.id,dayLabel:day.label,weekIndex:1,unit:'lb',durationMin:55,perf:makePerf(bad)});
+const badHistory=[makeEntry(1,true),makeEntry(2),makeEntry(3),makeEntry(4)];
+const badAnalysis=analyzeShellHistoryForNextEngine(current,badHistory,legacy);
+assert.ok(badAnalysis.negativeDecisionCount>0,'deliberately off-target history must produce causal negative evidence');
+
+const original=badHistory[0];
+const draft=structuredClone(original);
+const firstLegacy=day.exercises[0];
+const firstCell=current.nextWeekPrescriptions[`${day.id}:0`][1];
+const [,hi]=parseRange(firstCell.reps??firstCell.range);
+const [targetRir]=parseRange(firstCell.rir??2);
+for(const row of draft.perf[firstLegacy].sets){row.r=hi;row.rir=targetRir;}
+draft.perf[firstLegacy].reps=hi;
+const correctedFirst=normalizeEditedHistoryEntry(original,draft);
+const corrected=[correctedFirst,...badHistory.slice(1)];
+const correctedAnalysis=analyzeShellHistoryForNextEngine(current,corrected,legacy);
+assert.ok(correctedAnalysis.negativeDecisionCount<badAnalysis.negativeDecisionCount,'history correction must remove stale negative evidence from adaptation');
+assert.equal(correctedAnalysis.readyForNextBlock,true,'corrected evidence must be eligible for the accelerated evidence-based review');
+assert.ok(correctedAnalysis.recommendedNextPhase && correctedAnalysis.recommendedNextPhase!==phase,'review must recommend a real phase transition');
+
+const oldExercises=current.nextEngine.program.sessions.flatMap(s=>s.exercises);
+const avoid=oldExercises.find(ex=>ex.role!=='primary_strength')?.exerciseId ?? oldExercises[0]?.exerciseId;
+assert.ok(avoid);
+const req=current.nextEngine.baseRequest;
+req.preferences={...req.preferences,avoidedExercises:[...new Set([...(req.preferences?.avoidedExercises??[]),avoid])]};
+let nextId=0;
+const next=generateNextBlockFromShellHistory({program:current,history:corrected,legacyExercises:legacy,makeId:()=>`m173-next-${++nextId}`});
+assert.equal(next.nextProgram.audit.result,'pass');
+assert.equal(next.nextProgram.phase,correctedAnalysis.recommendedNextPhase);
+assert.equal(next.nextProgram.sessions.flatMap(s=>s.exercises).some(ex=>ex.exerciseId===avoid),false,'next block must not resurrect a newly avoided exercise through continuity');
+assert.ok(next.continuity && Number.isFinite(next.continuity.capacityAdjustedRetentionRate));
+assert.equal(next.analysis.negativeDecisionCount,correctedAnalysis.negativeDecisionCount,'block generation must consume the same corrected history analysis');
+console.log(`M173 integration torture OK: correction replayed, stale fatigue evidence cleared, ${phase} -> ${next.nextProgram.phase} transitioned, avoidance held, audit passed.`);
+'''
+write('verification/m173-integration-torture-test.mjs',integration)
+
+resilience=r'''import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const index=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
+const css=fs.readFileSync(new URL('../app.css',import.meta.url),'utf8');
+const sw=fs.readFileSync(new URL('../sw.js',import.meta.url),'utf8');
+const manifest=JSON.parse(fs.readFileSync(new URL('../RELEASE_MANIFEST.json',import.meta.url),'utf8'));
+const build=String(manifest.build);
+assert.ok(index.includes(`build='${build}'`),'boot-health must use the current release build as its single comparison token');
+assert.ok(index.includes('v.build===build'),'boot-health attempts must accumulate only within the current build');
+assert.equal(index.includes("v.build==='774'"),false,'stale M168 build comparison must not survive');
+assert.ok(index.includes(`build:'${build}'`),'startup diagnostics must record the current build');
+assert.ok(index.includes('viewport-fit=cover'));
+assert.equal(/user-scalable\s*=\s*no/i.test(index),false,'pinch zoom must stay available');
+assert.ok(css.includes('input,textarea{font-size:16px}'),'mobile input focus must retain anti-auto-zoom sizing');
+assert.ok(css.includes('overscroll-behavior:contain'),'inner scrollers must contain overscroll');
+assert.ok(css.includes('height:var(--app-h,100dvh)'),'root height must support dynamic viewport recovery');
+assert.ok(index.includes('updateViaCache: "none"'),'service-worker checks must bypass stale script cache');
+assert.ok(index.includes('if (!window.__pursuitUpdateRequested || reloaded) return;'),'controller takeover must remain user-gated');
+assert.ok(sw.includes("e.data.type==='SKIP_WAITING'"),'waiting worker must support explicit restart');
+assert.ok(sw.includes("if(r.mode==='navigate')"),'offline navigation fallback must remain present');
+const shell=[...sw.matchAll(/"(\.\/[^\"]+)"/g)].map(m=>m[1]);
+for(const rel of shell){if(rel==='./')continue;assert.ok(fs.existsSync(new URL('../'+rel.slice(2),import.meta.url)),`precache path missing: ${rel}`);}
+console.log(`M173 PWA/mobile source resilience OK for build ${build}; ${shell.length} shell entries verified.`);
+'''
+write('verification/m173-pwa-resilience-test.mjs',resilience)
+
+verify=read('scripts/verify-release.mjs')
+anchor="execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/m172-actual-strength-baseline-test.mjs'],{stdio:'inherit',cwd:root});"
+insert=anchor+"\nexecFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/m173-integration-torture-test.mjs'],{stdio:'inherit',cwd:root});\nexecFileSync(process.execPath,['verification/m173-pwa-resilience-test.mjs'],{stdio:'inherit',cwd:root});"
+verify=once(verify,anchor,insert,'M173 verification hook')
+write('scripts/verify-release.mjs',verify)
+
+changelog=read('CHANGELOG.md')
+entry='''## M173 — Integration + Bootstrap Resilience (3.223.0 / build 779)\n\n- Audited the M172 baseline before changing anything: history correction and cross-surface engine authority were already implemented and regression-gated, so they were preserved rather than rebuilt.\n- Adds a cross-feature torture gate that runs a real generated program through bad logged evidence, History correction, re-analysis, an evidence-triggered phase transition, continuity, a newly avoided exercise, and the full target-phase audit.\n- Fixes the startup health counter still comparing against build 774. The counter now uses one current-build token, so repeated failed starts accumulate correctly on build 779 instead of resetting each launch.\n- Adds a PWA/mobile source-resilience gate for current-build diagnostics, dynamic viewport sizing, 16px editable inputs, contained overscroll, zoom accessibility, explicit service-worker restart, stale-script bypass, and precache path integrity.\n- Pursuit Engine remains **0.63.0**; no already-verified set display, cycle overview, history editor, swap sheet, or engine-allocation behavior was redesigned.\n\n'''
+if not changelog.startswith('## M173 — Integration + Bootstrap Resilience'):
+    changelog=entry+changelog
+write('CHANGELOG.md',changelog)
+
+report='''# M173 integration + bootstrap resilience\n\nApp **3.223.0**, build **779**, Pursuit Engine **0.63.0**.\n\n## Baseline audit\n\n- History correction already normalizes editable set/load/rep/RIR data, locks structural provenance, refreshes mirrored performance/cache state, and makes Pursuit Engine re-read corrected evidence. It was left intact.\n- Engine authority already covers generated prescription → shell cell → workout runtime → history → progression. It was left intact.\n\n## New hardening\n\n- Added one end-to-end torture gate across history correction, causal recovery evidence, next-block readiness, M170/M171/M172 phase transition generation, continuity, user avoidance, and final audit.\n- Fixed stale startup boot-health accounting that still compared against build 774.\n- Added PWA/mobile source resilience checks without another UI redesign.\n\n## Validation\n\nThe focused M173 gates and the complete release-integrity suite must pass before this workflow publishes the milestone. Physical Android validation remains a separate device check.\n'''
+write('M173_REPORT.md',report)
+
+manifest=json.loads(read('RELEASE_MANIFEST.json'))
+manifest['milestone']='M173'
+manifest['appVersion']='3.223.0'
+manifest['build']=779
+manifest['localCandidate']={
+    'name':'M173 Integration + Bootstrap Resilience',
+    'base':'M172 / app 3.222.0 build 778 / Engine 0.63.0',
+    'validation':'Cross-feature history-to-transition torture test, PWA/mobile source resilience test, plus the full existing release regression suite.'
+}
+def sha_file(p): return hashlib.sha256(Path(p).read_bytes()).hexdigest()
+for f in list(manifest.get('runtimeFiles',{})):
+    manifest['runtimeFiles'][f]=sha_file(f)
+agg=''.join(f"{f}:{manifest['runtimeFiles'][f]}\n" for f in sorted(manifest.get('runtimeFiles',{})))
+manifest['runtimeAggregate']=hashlib.sha256(agg.encode()).hexdigest()
+for f in list(manifest.get('uiFiles',{})):
+    manifest['uiFiles'][f]=sha_file(f)
+write('RELEASE_MANIFEST.json',json.dumps(manifest,indent=2)+'\n')

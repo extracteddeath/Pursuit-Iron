@@ -3,7 +3,8 @@ import { createTrainingSetEvents } from './events.js';
 import { createEngineContext, createTransactionalEvaluator } from './engine-context.js';
 import { generateProgram } from './generate.js';
 import { deriveMuscleLedger } from './ledgers.js';
-import { historyDecision, withProgramExplainability } from './explainability.js';
+import { historyDecision, withBlockReviewExplainability, withProgramExplainability } from './explainability.js';
+
 function equipmentEligible(def, day, request) {
     const scheduleDay = request.schedule.days.find(d => d.day === day);
     if (!scheduleDay)
@@ -14,6 +15,7 @@ function equipmentEligible(def, day, request) {
     return [def.equipment, ...(def.equipmentAlternatives ?? [])]
         .some(setup => setup.every(item => item === 'bodyweight' ? request.equipment.bodyweight !== 'exclude' : available.includes(item)));
 }
+
 function muscleSimilarity(a, b) {
     const muscles = new Set([
         ...Object.keys(a.muscles),
@@ -29,6 +31,7 @@ function muscleSimilarity(a, b) {
     }
     return union > 0 ? overlap / union : 0;
 }
+
 function strengthCompatible(previous, candidate) {
     const lifts = ['bench_press', 'back_squat', 'deadlift', 'overhead_press'];
     return lifts.some(lift => {
@@ -37,12 +40,14 @@ function strengthCompatible(previous, candidate) {
         return next > .45 && prior > .45 && prior >= next - .15;
     });
 }
+
 function roleCompatible(previous, candidate) {
     if (previous.role === candidate.role)
         return true;
     const hypertrophy = new Set(['hypertrophy_compound', 'hypertrophy_isolation']);
     return hypertrophy.has(previous.role) && hypertrophy.has(candidate.role);
 }
+
 function isCompatibleReplacement(previous, candidate, day, request, context) {
     const priorDef = context.exerciseById(previous.exerciseId);
     const candidateDef = context.exerciseById(candidate.exerciseId);
@@ -64,6 +69,7 @@ function isCompatibleReplacement(previous, candidate, day, request, context) {
         return false;
     return similarity >= .5 && (sameMovement || similarity >= .72);
 }
+
 function sessionsWithExercise(program, sessionId, candidateId, previous) {
     return program.sessions.map(session => session.id !== sessionId ? session : {
         ...session,
@@ -74,6 +80,7 @@ function sessionsWithExercise(program, sessionId, candidateId, previous) {
         })
     });
 }
+
 function vectorSimilarity(a, b) {
     const keys = new Set([...a.keys(), ...b.keys()]);
     let overlap = 0, union = 0;
@@ -83,6 +90,7 @@ function vectorSimilarity(a, b) {
     }
     return union > 0 ? overlap / union : 0;
 }
+
 function sessionMuscleVector(session, exerciseMap) {
     const out = new Map();
     for (const exercise of session.exercises ?? []) {
@@ -93,9 +101,11 @@ function sessionMuscleVector(session, exerciseMap) {
     }
     return out;
 }
+
 function sessionMovementSet(session, exerciseMap) {
     return new Set((session.exercises ?? []).map(ex => exerciseMap.get(ex.exerciseId)?.movementFamily).filter(Boolean));
 }
+
 function jaccard(a, b) {
     const union = new Set([...a, ...b]);
     if (!union.size) return 0;
@@ -103,6 +113,7 @@ function jaccard(a, b) {
     for (const value of a) if (b.has(value)) overlap++;
     return overlap / union.size;
 }
+
 function transitionSessionScore(previous, target, request, exerciseMap, context) {
     let score = previous.intent === target.intent ? 5 : 0;
     score += vectorSimilarity(sessionMuscleVector(previous, exerciseMap), sessionMuscleVector(target, exerciseMap)) * 4;
@@ -118,6 +129,7 @@ function transitionSessionScore(previous, target, request, exerciseMap, context)
     if (previous.day === target.day) score += .2;
     return score;
 }
+
 /** Deterministic maximum-score bipartite session matching for phase continuity. */
 export function matchPriorSessionsForTransition(previousSessions, targetSessions, request, suppliedContext) {
     const context = suppliedContext ?? createEngineContext(request);
@@ -223,5 +235,10 @@ export function transitionProgramPhase(previous, request, target, evidence) {
             : 'No recent successful-exercise evidence was available, so the target phase was generated without continuity preferences.'
     };
     program = withProgramExplainability(program, request, [historyDecision('Phase transition continuity', eligible.length ? `${preserved.length}/${continuityCapacity} structurally retainable successful exercises preserved` : 'Target phase generated without prior success evidence', continuity.rationale, { eligibleSuccessfulExercises: eligible.length, retainedSuccessfulExercises: preserved.length, continuityCapacity, capacityAdjustedRetentionRate: Math.round(capacityAdjustedRetentionRate * 1000) / 1000, structuralNewStrengthSlots }, replaced.length ? [`${replaced.length} successful exercise identities changed where the target phase or compatibility constraints required it.`] : ['No successful exercise identity was changed unnecessarily.'])]);
+    program = withBlockReviewExplainability(previous, program, request, {
+        continuity,
+        transitionReason: `The training cycle advanced from ${String(previous.phase || 'the prior focus').replace(/_/g, ' ')} to ${String(target || program.phase || 'the next focus').replace(/_/g, ' ')}.`,
+        reasonCodes: ['block:transition:reviewed']
+    });
     return { program, continuity };
 }

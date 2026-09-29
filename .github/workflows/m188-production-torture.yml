@@ -7,6 +7,7 @@ on:
       - '.github/workflows/m188-production-torture.yml'
       - 'M188_REPORT.md'
       - 'M188_DEVICE_CERTIFICATION.md'
+      - 'scripts/finalize-m188-release.mjs'
       - 'verification/m188-production-torture-test.mjs'
       - 'verification/m188-novice-strength-fragmentation-test.mjs'
       - 'verification/m188-release-integrity-test.mjs'
@@ -22,7 +23,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   production-torture:
@@ -32,6 +33,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Finalize M188 release identity and hashes
+        run: node ./scripts/finalize-m188-release.mjs
       - name: Focused M188 novice-strength fragmentation regression
         run: node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m188-novice-strength-fragmentation-test.mjs
       - name: M188 broad + longitudinal production torture
@@ -83,6 +86,19 @@ jobs:
             echo "==> $test"
             node --no-warnings --experimental-loader ./verification/import-loader.mjs "$test"
           done
+      - name: Persist finalized M188 candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo "M188 release files already finalized."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add modules/App.js modules/next-engine/config.js index.html sw.js BUILD_PROFILE.json RELEASE_MANIFEST.json
+          git commit -m "M188: finalize production candidate identity"
+          git push origin HEAD:m188-production-torture-certification
 
   browser-pwa-certification:
     runs-on: ubuntu-latest

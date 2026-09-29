@@ -1,15 +1,15 @@
 {
   "schemaVersion": 3,
-  "milestone": "M187",
-  "appVersion": "3.229.0",
-  "build": 785,
-  "engineVersion": "0.63.3",
+  "milestone": "M188",
+  "appVersion": "3.230.0",
+  "build": 786,
+  "engineVersion": "0.63.4",
   "shadowEngineVersion": "0.62.5-shadow",
   "validatedLiveBaseline": "M88-0.61.3-reviewed-baseline",
   "candidateStatus": "ci_verified_device_test_pending",
   "sourceNextEngineAggregate": null,
   "sourceShadowEngineAggregate": "3107199d20c86a5a12b82eccbc61c9a32b001a72c7f30418db696235d0da0c22",
-  "runtimeAggregate": "e007944c546f333ddf184a6887ab1291d6e8ad335dcae54724794fbfa22da0ba",
+  "runtimeAggregate": "546ee981269c6904f758e273680a51059c5c98fd6720ddbb513945a8e340c7eb",
   "sourceFiles": {},
   "shadowSourceFiles": {
     "src/shadow-engine/canary.ts": "854246970f93111ee873f0eb5f222195a02af688ef1a3285d0624f44d422c58a",
@@ -32,11 +32,11 @@
     "modules/next-engine/coach-regression.js": "a990fe47ffa77ca0a641f09d2c507150c37b6d03f17ac310f65f66e1347ff380",
     "modules/next-engine/coach-review.js": "f5adf1805c48c964b1530f273204b936b470e5cde2406af676f77551c456f9a8",
     "modules/next-engine/comparison.js": "799f592429cde6cf9080613d3c51a237f8fed5ef1ac70a4d0b8839259f42bc1a",
-    "modules/next-engine/config.js": "138fca9be07e9f1162e22ac0618166fb2b3462134c733cc7e4a0a3a93e3db29a",
+    "modules/next-engine/config.js": "743d2df03884d1f81bc65e0a399267402ff420d0e97a041e56732b7755003271",
     "modules/next-engine/cycle-runtime-adapter.js": "bb9fd9e4ad46fbe856afed73e6e1a4fa70e4d0c2407fcb57d1d3ed6b58557447",
     "modules/next-engine/cycles.js": "3b949f73ecef2543e4aa3aa6910fe43a3d3526805fcbcd111424e5df2d6efc79",
     "modules/next-engine/domain.js": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
-    "modules/next-engine/dose-reconciliation.js": "47be7b0eb0020a926689013a828b4016de70d6e7b788ebccc00f1959f53c4921",
+    "modules/next-engine/dose-reconciliation.js": "4a16bcda65830faefd96da8122df6d478d194faaa5234d4bc0f51724152b6f36",
     "modules/next-engine/engine-context.js": "40c63ad790d4ab3a83975acd557e58f0f85d4fdc1ceab9ba422468fc6ae1430f",
     "modules/next-engine/events.js": "224b26bfbef0c398e0b0a3e32b26c96075f5c1dce5ce6aa9f5cad83d7a0b437a",
     "modules/next-engine/exercise-db.js": "5118cb7ee0c5c383be0e1ec68e0c0eeb8feb984c80ac5ba22f0b508b267d6e2f",
@@ -88,15 +88,15 @@
     "vendor/react.js": "24b2d220a5b2637cf3fb78fe0d961f227ea0a4b960485dbfb03c9d276e72147c"
   },
   "localCandidate": {
-    "name": "M187 Premium UX + Explainable Block Review",
-    "base": "M180 / app 3.229.0 build 785 / Engine 0.63.3",
-    "validation": "M181-M187 engine, explainability, premium UX, exhaustive runtime hashing, offline-shell completeness, and production release verification."
+    "name": "M188 Production Torture + Certification",
+    "base": "M188 / app 3.230.0 build 786 / Engine 0.63.4",
+    "validation": "M181-M188 engine, longitudinal, phase, explainability, premium UX, production-torture, exhaustive runtime hashing, offline-shell completeness, and release verification."
   },
   "uiFiles": {
-    "modules/App.js": "500262f1954d25b9df80b494b100938df93d8fee808459935e6a909e8397e30e",
-    "index.html": "1fbe96b7f9863c27c6b1a3c1f9882b219a83436f5289a98abe6bb9936a68a085",
-    "sw.js": "492493e51ab749b48f5bbf4fedbff8e58ecf3da70f40361755dc5cd62f12628d",
-    "BUILD_PROFILE.json": "41c354b4152a446eec078b84b5047d46817b5077c3fd25bc3ec112082d266c20",
+    "modules/App.js": "93282311775c345a266e691ab0b1b5d460e980516ee73465874a99b4dcce40c8",
+    "index.html": "27be1470aa3c2ca7845d1de413ad1a0a705091d5a1243a1b85efab0d046a6963",
+    "sw.js": "0a0fab3b05880069ca9fafa9b374283fa7cd4fb819b0a4a94a16d007e967af6b",
+    "BUILD_PROFILE.json": "29c4d35695238bfb9394ef41f624d96b38fdd1d55273cd084aa14473088ae71c",
     "CHANGELOG.md": "c9b94bd50ec2ffbaca090161a32565cf581e05b5abb4462a25ea22887084fd41",
     "app.css": "5432859c3eb9624b9a27dc1c9de2e8cb85672b02bcd72c114ac963378184b85b"
   },
@@ -188,6 +188,6 @@
       "Pursuit Engine 0.62.5 programming math is unchanged; M165 hardens the shell/display boundary."
     ]
   },
-  "cache": "pursuit-iron-production-m187-premium-ux",
-  "uiMilestone": "M187 Premium UX Audit + Cross-Screen Refactor"
+  "cache": "pursuit-iron-production-m188-torture-certification",
+  "uiMilestone": "M188 Production Torture + Certification"
 }

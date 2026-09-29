@@ -1,5 +1,5 @@
-/* M177 editable-history merge integrity — Engine 0.63.2. */
-const CACHE="pursuit-iron-production-m177-history-merge-integrity";
+/* M178 real-browser PWA update lifecycle certification — Engine 0.63.2. */
+const CACHE="pursuit-iron-production-m178-pwa-update-lifecycle";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
   "./",

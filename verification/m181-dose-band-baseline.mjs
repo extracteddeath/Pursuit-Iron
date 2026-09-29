@@ -106,12 +106,9 @@ for (const experience of ['intermediate','advanced']) {
       const result = summarize(request({ experience, goal, band, seed }));
       rows.push({ experience, goal, band:band.id, ...result });
       console.log(`${experience} ${goal} ${band.id}: ${result.totalSets} sets (${result.avgSets}/session), ${result.totalFractionalDose}/${result.upperDose} dose, ${result.avgMinutes}m avg, preferred=${result.preferredAttainment}%, upper=${result.upperAttainment}%, belowBand=${result.sessionsBelowBand.length}/5, overUpper=${result.overUpper.map(x=>`${x.muscle}:${x.actual}/${x.upper}`).join('|') || 'none'}, trims=${result.doseReconciliationAdjustments.length}, allocator=${result.allocatorEstimatedUsed}/${result.allocatorBudget}`);
-      for (const overflow of result.overUpper)
-        if (overflow.ratio >= 1.2)
-          console.log(`  overflow ${overflow.muscle} ${overflow.actual}/${overflow.upper}: ${overflow.contributors.map(c=>`${c.day}:${c.exercise} ${c.sets}x${c.credit}=${c.dose}`).join(' | ')}`);
       assert.deepEqual(result.floorMisses, [], `${experience} ${goal} ${band.id} missed modeled floors: ${result.floorMisses.join(', ')}`);
-      const materialOverflow = result.overUpper.filter(row => row.ratio > 1.2 + .001);
-      assert.deepEqual(materialOverflow.map(row => row.muscle), [], `${experience} ${goal} ${band.id} exceeded the 1.2x recoverable-dose guard: ${materialOverflow.map(row => `${row.muscle} ${row.actual}/${row.upper}`).join(', ')}`);
+      const materialOverflow = result.overUpper.filter(row => row.actual > row.upper + Math.max(1, row.upper * .08) + .001);
+      assert.deepEqual(materialOverflow.map(row => row.muscle), [], `${experience} ${goal} ${band.id} exceeded the reconciler recoverable-dose ceiling: ${materialOverflow.map(row => `${row.muscle} ${row.actual}/${row.upper}`).join(', ')}`);
       // A lower-edge miss is acceptable only when the program has already consumed nearly all modeled
       // recoverable dose. This prevents the engine from manufacturing junk sets simply to fill a long
       // duration card while still detecting genuine under-use of the athlete's available time.

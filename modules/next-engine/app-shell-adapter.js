@@ -564,7 +564,12 @@ export function nextProgramToShellProgram(nextProgram, config, legacyExercises, 
 }
 export function generateNextProgramForShell(options) {
     const request = shellConfigToNextRequest(options.config, options.banned ?? [], options.legacyExercises, options.seed);
-    const result = generateProgram(request);
+    const result = generateProgram(request, {
+        // The shell's configured work weeks are the block length the athlete will actually run.
+        // Feed that into Auto instead of letting progression selection assume a generic six-week block.
+        blockWeeks: Math.max(1, Math.round(Number(options.config?.weeks) || 4)),
+        progressionStyle: options.config?.progressionStyle
+    });
     if (result.program.audit.result !== 'pass') {
         let recovery;
         try {

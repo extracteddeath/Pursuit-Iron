@@ -200,7 +200,12 @@ export function rirForPhase(role, policy) {
 }
 export function restForExercise(role, ex) { return role === 'primary_strength' ? 240 : role === 'secondary_strength' ? 180 : ex.flags.compound ? 150 : 90; }
 export function progressionStyleForExercise(ex, role, policy, experience = 'intermediate') {
-    return resolveProgressionStyle(ex, role, { phase: policy.phase, experience });
+    return resolveProgressionStyle(ex, role, {
+        phase: policy.phase,
+        experience,
+        blockWeeks: policy.blockWeeks,
+        requestedStyle: policy.requestedProgressionStyle
+    });
 }
 export function progressionForExercise(ex, role, policy = phasePolicyFor('mixed_accumulation'), experience = 'intermediate') {
     return progressionInstruction(progressionStyleForExercise(ex, role, policy, experience));
@@ -682,8 +687,12 @@ function strengthSetsForAllocation(allocation, session, request, policy) {
  * fractional ledger and time are the actual baseline used by the second allocator pass; the anchor map
  * is later pinned so the final program cannot silently switch to a different variant after budgeting.
  */
-export function realizeStrengthAnchors(plans, request, phase) {
-    const policy = phasePolicyFor(phase);
+export function realizeStrengthAnchors(plans, request, phase, options = {}) {
+    const policy = {
+        ...phasePolicyFor(phase),
+        blockWeeks: options.blockWeeks,
+        requestedProgressionStyle: options.requestedProgressionStyle
+    };
     const exerciseCatalog = createExerciseCatalog(request.customExercises);
     const ledger = { fractional: {}, direct: {} };
     const anchors = {};
@@ -724,7 +733,11 @@ export function realizeStrengthAnchors(plans, request, phase) {
     };
 }
 export function realizeSessions(plans, request, targetDose = {}, directTargetDose = {}, phase, options = {}) {
-    const policy = phasePolicyFor(phase);
+    const policy = {
+        ...phasePolicyFor(phase),
+        blockWeeks: options.blockWeeks,
+        requestedProgressionStyle: options.requestedProgressionStyle
+    };
     const exerciseCatalog = createExerciseCatalog(request.customExercises);
     const exerciseMap = createExerciseMap(request.customExercises);
     const sessions = plans.map(plan => ({ plan, defs: [], exercises: [], importance: [] }));

@@ -1,0 +1,77 @@
+name: M182 integration bootstrap
+
+on:
+  push:
+    branches: [m182-exercise-selection-intelligence]
+    paths:
+      - '.github/workflows/m182-bootstrap-integration.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: m182-exercise-selection-intelligence
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Patch M182 integration points
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_exact(path, old, new):
+              p = Path(path)
+              text = p.read_text()
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{path}: expected exactly one patch target, found {count}')
+              p.write_text(text.replace(old, new))
+
+          replace_exact(
+              'modules/next-engine/exercise-economy.js',
+              "import { functionalCoverageBiases } from './functional-coverage.js';\n",
+              "import { functionalCoverageBiases } from './functional-coverage.js';\nimport { exerciseSelectionRelationship } from './exercise-selection-intelligence.js';\n"
+          )
+          replace_exact(
+              'modules/next-engine/exercise-economy.js',
+              "function sameSemanticSlot(a, b) {\n    const clusterA = exerciseEconomyCluster(a), clusterB = exerciseEconomyCluster(b);\n    if (!clusterA || clusterA !== clusterB)\n        return false;\n    // Exact family/slot alone is not enough for broad compounds. Require meaningfully similar direct\n    // muscle profiles so a movement with a genuinely different regional job is preserved.\n    return weightedMuscleSimilarity(a, b) >= .67;\n}\n",
+              "function sameSemanticSlot(a, b) {\n    const clusterA = exerciseEconomyCluster(a), clusterB = exerciseEconomyCluster(b);\n    if (clusterA && clusterA === clusterB && weightedMuscleSimilarity(a, b) >= .67)\n        return true;\n    // M182 knowledge-graph fallback catches near-equivalent variants whose legacy family/subregion\n    // metadata differs even though their stimulus and functional slot are effectively the same. The\n    // relationship model keeps complementary functions (row/pulldown, triceps positions, calf knee\n    // angles, biceps/brachialis) in separate subslots, so broader intelligence does not erase variety.\n    const relationship = exerciseSelectionRelationship(a, b);\n    return relationship.nearDuplicate && relationship.stimulusSimilarity >= .72;\n}\n"
+          )
+          replace_exact(
+              'modules/next-engine/realizer.js',
+              "import { setupTransitionCost } from './setup-economy.js';\n",
+              "import { setupTransitionCost } from './setup-economy.js';\nimport { exerciseSetupInefficiencyPenalty } from './exercise-selection-intelligence.js';\n"
+          )
+          replace_exact(
+              'modules/next-engine/realizer.js',
+              "    return credit * 4 + ex.suitability.hypertrophy * .35 + ex.stability * .15 + compoundFit + intent + preferredBonus + armCoverageBonus + functionalCoverageBonus\n        - fatigue * .22 - sameSession * 1.65 - weeklyRepeat * .42 - exactRepeat * 1.6 - ex.setupCost * .08 - confidencePenalty;\n",
+              "    // M182 uses station affinity only as a modest candidate tiebreaker. Redundancy itself is\n    // enforced by the semantic/knowledge-graph overlap gate below; setup economy must never overpower\n    // distinct stimulus, functional coverage, user priority, or strength specificity.\n    const setupInefficiency = exerciseSetupInefficiencyPenalty(ex, chosen);\n    return credit * 4 + ex.suitability.hypertrophy * .35 + ex.stability * .15 + compoundFit + intent + preferredBonus + armCoverageBonus + functionalCoverageBonus\n        - fatigue * .22 - sameSession * 1.65 - weeklyRepeat * .42 - exactRepeat * 1.6 - ex.setupCost * .08 - confidencePenalty - setupInefficiency;\n"
+          )
+          replace_exact(
+              'modules/next-engine/generate.js',
+              "    const reconciledSessions = doseReconciliation.sessions.map(session => finalizePlannedSession({ ...session, estimatedMinutes: 0 }, request));\n",
+              "    const reconciledSessions = doseReconciliation.sessions.map(session => {\n        const finalized = finalizePlannedSession({ ...session, estimatedMinutes: 0 }, request);\n        // M182: M181 reconciliation can remove movements after the first setup-aware ordering pass.\n        // Re-optimize the reduced final session so generic re-finalization cannot reintroduce avoidable\n        // station changes. This transform is prescription-neutral and remains subject to the final audit.\n        return optimizeSetupAwareSessionSequence(finalized, exerciseMap, request);\n    });\n"
+          )
+          PY
+      - name: Run focused M182 tests before commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m182-exercise-selection-intelligence-test.mjs
+          node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m182-selection-matrix.mjs
+          node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m181-dose-reconciliation-test.mjs
+      - name: Commit integration
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add modules/next-engine/exercise-economy.js modules/next-engine/realizer.js modules/next-engine/generate.js
+          git diff --cached --quiet && exit 0
+          git commit -m "M182: integrate selection intelligence and preserve final setup economy"
+          git push origin HEAD:m182-exercise-selection-intelligence

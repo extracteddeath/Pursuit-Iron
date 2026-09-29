@@ -5,6 +5,7 @@ on:
     branches: [m187-premium-ux]
     paths:
       - '.github/workflows/m187-premium-ux.yml'
+      - 'M187_REPORT.md'
       - 'app.css'
       - 'BUILD_PROFILE.json'
       - 'RELEASE_MANIFEST.json'
@@ -12,6 +13,10 @@ on:
       - 'scripts/verify-release.mjs'
       - 'verification/m187-premium-ux-test.mjs'
       - 'verification/m187-release-integrity-test.mjs'
+      - 'verification/set-display-integrity-test.mjs'
+      - 'verification/swap-scroll-integrity-test.mjs'
+      - 'verification/cycle-overview-ui-test.mjs'
+      - 'verification/history-edit-integrity-test.mjs'
       - 'modules/next-engine/**'
       - 'modules/shadow-engine/**'
       - 'vendor/**'
@@ -88,6 +93,14 @@ jobs:
         run: node ./verification/m187-release-integrity-test.mjs
       - name: Run production release verifier
         run: node ./scripts/verify-release.mjs
+      - name: Product audit — shared Home Program Workout display
+        run: node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/set-display-integrity-test.mjs
+      - name: Product audit — workout swap-sheet scrolling
+        run: node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/swap-scroll-integrity-test.mjs
+      - name: Product audit — cycle overview hierarchy
+        run: node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/cycle-overview-ui-test.mjs
+      - name: Product audit — Progress history correction integrity
+        run: node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/history-edit-integrity-test.mjs
       - name: Preserve M186 explainable Block Review
         run: node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m186-explainable-block-review-test.mjs
       - name: Preserve engine and program contracts

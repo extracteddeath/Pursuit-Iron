@@ -22,6 +22,23 @@ function meanTargetRir(exercise) {
         return Math.max(0, low);
     return 2;
 }
+function truthySignal(source, keys) {
+    return !!source && keys.some(key => source[key] === true);
+}
+function progressionContext(actual, context) {
+    const readinessRaw = context?.readinessStatus ?? context?.readiness?.status ?? (typeof context?.readiness === 'string' ? context.readiness : null);
+    const readiness = String(readinessRaw ?? '').toLowerCase().replace(/\s+/g, '_');
+    const badReadiness = ['low', 'very_low', 'poor', 'bad', 'watch', 'recover', 'recovery', 'deload_recommended'].includes(readiness);
+    const nonComparable = truthySignal(context, ['prescriptionEdited', 'exerciseEdited', 'substitutionOccurred', 'exerciseSubstituted', 'manualPrescriptionOverride'])
+        || actual.some(set => truthySignal(set, ['prescriptionEdited', 'exerciseEdited', 'substituted', 'wasEdited', 'manualOverride']));
+    const interrupted = truthySignal(context, ['interrupted', 'sessionInterrupted', 'workoutInterrupted'])
+        || actual.some(set => truthySignal(set, ['interrupted', 'sessionInterrupted']));
+    const badDay = truthySignal(context, ['badDay', 'readinessDisrupted', 'recoveryLimited']) || badReadiness;
+    return { nonComparable, interrupted, badDay, readiness };
+}
+function decision(exercise, fields) {
+    return { exerciseId: exercise.exerciseId, exerciseName: exercise.name, role: exercise.role, ...fields };
+}
 /**
  * A missed rep floor is not a normal double-progression "hold" when the load itself made the
  * prescribed range impossible. The previous evaluator anchored `currentLoad` to the heaviest logged
@@ -90,12 +107,13 @@ export function evaluateWorkoutProgression(session, performedSets, context = {})
     return session.exercises.map(ex => {
         const actual = (grouped.get(ex.exerciseId) ?? []).sort((a, b) => a.setIndex - b.setIndex);
         if (!actual.length) {
-            return { exerciseId: ex.exerciseId, exerciseName: ex.name, role: ex.role, reasonCode: 'no_completed_sets', action: 'review', confidence: 'low', reason: 'No completed sets were logged for this prescribed exercise.', currentLoad: null, suggestedLoad: null, estimated1RM: null };
+            return decision(ex, { outcome: 'unobserved', reasonCode: 'no_completed_sets', action: 'review', confidence: 'low', reason: 'No completed sets were logged for this prescribed exercise.', currentLoad: null, suggestedLoad: null, estimated1RM: null });
         }
         const currentLoad = representativeLoad(actual);
         const estimated1RM = bestEstimated1RM(actual);
-        const completion = actual.length / ex.sets;
-        const allAtTop = actual.length >= ex.sets && actual.every(s => s.reps >= ex.prescription.reps[1]);
+        const completion = actual.length / Math.max(1, ex.sets);
+        const completedPrescription = actual.length >= ex.sets;
+        const allAtTop = completedPrescription && actual.every(s => s.reps >= ex.prescription.reps[1]);
         const allAtLeastBottom = actual.every(s => s.reps >= ex.prescription.reps[0]);
         const rirReported = actual.filter(s => s.rir !== null);
         const targetRirFloor = Math.max(0, Number(ex.prescription.rir[0]) || 0);
@@ -105,49 +123,64 @@ export function evaluateWorkoutProgression(session, performedSets, context = {})
         const repeatedEffortOvershoot = rirReported.length > 0 && belowTargetRir.length >= Math.ceil(rirReported.length / 2);
         const severeEffortOvershoot = rirReported.length > 0 && rirReported.filter(s => Number(s.rir) < Math.max(0, targetRirFloor - 1)).length >= Math.ceil(rirReported.length / 2);
         const style = ex.progressionStyle ?? 'double';
-        if (completion < .75) {
-            return { exerciseId: ex.exerciseId, exerciseName: ex.name, role: ex.role, reasonCode: 'incomplete_session', action: 'review', confidence: 'moderate', reason: 'Less than 75% of prescribed sets were completed; diagnose time, fatigue, exercise fit, or interruption before progressing.', currentLoad, suggestedLoad: currentLoad, estimated1RM };
+        const exposure = progressionContext(actual, context);
+
+        // A user edit/substitution changes the question being measured. Never translate that exposure into
+        // an automatic load prescription for the original exercise; collect one comparable exposure first.
+        if (exposure.nonComparable) {
+            return decision(ex, { outcome: 'non_comparable', reasonCode: 'non_comparable_exposure', action: 'review', confidence: 'high', reason: 'This exposure included an exercise or prescription edit/substitution, so it is not comparable enough to drive automatic progression. Keep the current reference load until a comparable exposure is logged.', currentLoad, suggestedLoad: currentLoad, estimated1RM });
         }
-        if ((style === 'linear' || style === 'e1rm') && completion >= 1 && allAtLeastBottom && effortInRange && !clearOvershoot) {
-            const canAdvance = style === 'linear' || allAtTop || (estimated1RM !== null && actual.every(s => s.reps >= Math.max(ex.prescription.reps[0], ex.prescription.reps[1] - 1)));
-            if (canAdvance) {
-                const loading = loadingRecommendation(ex.exerciseId, currentLoad, context.loadingInventory, context.equipmentAvailable);
-                if (loading.suggestedLoad !== null)
-                    return {
-                        exerciseId: ex.exerciseId, exerciseName: ex.name, role: ex.role, reasonCode: 'progression_success', action: 'increase_load', confidence: rirReported.length === actual.length ? 'high' : 'moderate',
-                        reason: style === 'linear'
-                            ? `Linear progression exposure completed at target effort. Advance from ${loading.label} to ${loading.suggestedLabel}.`
-                            : `e1RM autoregulation supports another practical load step while the ${ex.prescription.reps[0]}–${ex.prescription.reps[1]} rep target remains controlled.`,
-                        currentLoad, suggestedLoad: loading.suggestedLoad, loadMode: loading.mode, suggestedLoadLabel: loading.suggestedLabel ?? undefined, estimated1RM
-                    };
-            }
+        // Explicit bad-day/readiness context should prevent one anomalous session from becoming a permanent
+        // progression decision. This is intentionally checked before load-failure correction.
+        if (exposure.badDay) {
+            const detail = exposure.readiness ? ` (${exposure.readiness.replace(/_/g, ' ')})` : '';
+            return decision(ex, { outcome: 'context_limited', reasonCode: 'readiness_limited_exposure', action: 'hold', confidence: 'moderate', reason: `This exposure was flagged as readiness/recovery limited${detail}. Hold the prior prescription and use the next comparable exposure before increasing or automatically reducing load.`, currentLoad, suggestedLoad: currentLoad, estimated1RM });
         }
+        if (exposure.interrupted && !completedPrescription) {
+            return decision(ex, { outcome: 'interrupted', reasonCode: 'interrupted_exposure', action: 'review', confidence: 'high', reason: 'The workout was interrupted before the prescribed sets were completed. Do not interpret missing work as either progression success or a load failure.', currentLoad, suggestedLoad: currentLoad, estimated1RM });
+        }
+        // Missing sets are a hard block on load progression even if every logged set hit the top of the range.
+        // Previously 3/4 top-end sets (75% completion) could fall through to the allAtTop branch and advance.
+        if (!completedPrescription) {
+            const topLogged = actual.every(s => s.reps >= ex.prescription.reps[1]);
+            const reason = topLogged
+                ? `Every logged set reached ${ex.prescription.reps[1]} reps, but only ${actual.length} of ${ex.sets} prescribed sets were completed. Complete all prescribed sets at the top of the range before increasing load.`
+                : `${actual.length} of ${ex.sets} prescribed sets were completed. Finish a comparable full exposure before using it to increase load.`;
+            return decision(ex, { outcome: 'incomplete', reasonCode: completion < .75 ? 'incomplete_session' : 'incomplete_prescription', action: completion < .75 ? 'review' : 'hold', confidence: 'moderate', reason, currentLoad, suggestedLoad: currentLoad, estimated1RM });
+        }
+
+        // M183 progression invariant: automatic load increases require a complete top-of-range exposure at
+        // acceptable effort. Progression styles may change how work is accumulated, but no style can use a
+        // merely in-range or partial exposure as proof that a heavier prescription was earned.
         if (allAtTop && effortInRange) {
             const loading = loadingRecommendation(ex.exerciseId, currentLoad, context.loadingInventory, context.equipmentAvailable);
             const suggestedLoad = loading.suggestedLoad;
             if (suggestedLoad === null) {
-                return {
-                    exerciseId: ex.exerciseId, exerciseName: ex.name, action: 'review', confidence: rirReported.length === actual.length ? 'high' : 'moderate',
+                return decision(ex, {
+                    outcome: 'success_blocked', reasonCode: 'loading_inventory_blocked', action: 'review', confidence: rirReported.length === actual.length ? 'high' : 'moderate',
                     reason: `All prescribed sets reached the top of the rep range, but ${loading.rationale.toLowerCase()} Review the loading inventory, rep range, or exercise choice instead of recommending an impossible increase.`,
-                    currentLoad, suggestedLoad: null, loadMode: loading.mode, suggestedLoadLabel: undefined, estimated1RM, role: ex.role, reasonCode: 'loading_inventory_blocked'
-                };
+                    currentLoad, suggestedLoad: null, loadMode: loading.mode, suggestedLoadLabel: undefined, estimated1RM
+                });
             }
-            return {
-                exerciseId: ex.exerciseId, exerciseName: ex.name, role: ex.role, reasonCode: 'progression_success', action: 'increase_load', confidence: rirReported.length === actual.length ? 'high' : 'moderate',
+            const styleDetail = style === 'e1rm' ? ' The e1RM progression remains bounded by the phase rep/RIR target.'
+                : style === 'linear' ? ' The complete top-range exposure satisfies the linear load-step safety gate.'
+                    : style === 'wave' ? ' The heavier wave is earned only after this complete controlled exposure.' : '';
+            return decision(ex, {
+                outcome: 'success', reasonCode: 'progression_success', action: 'increase_load', confidence: rirReported.length === actual.length ? 'high' : 'moderate',
                 reason: suggestedLoad !== null && currentLoad !== null
-                    ? `All prescribed sets reached the top of the rep range within target effort. Increase from ${loading.label} to ${loading.suggestedLabel} next exposure.`
-                    : 'All prescribed sets reached the top of the rep range without exceeding the target effort. Increase load by the smallest available increment next exposure.',
+                    ? `All prescribed sets reached the top of the rep range within target effort. Increase from ${loading.label} to ${loading.suggestedLabel} next exposure.${styleDetail}`
+                    : `All prescribed sets reached the top of the rep range without exceeding target effort. Increase load by the smallest available increment next exposure.${styleDetail}`,
                 currentLoad, suggestedLoad, loadMode: loading.mode, suggestedLoadLabel: loading.suggestedLabel ?? undefined, estimated1RM
-            };
+            });
         }
         if (!allAtLeastBottom) {
             const correction = belowRangeLoadCorrection(ex, actual, currentLoad, context);
             if (correction) {
-                return {
-                    exerciseId: ex.exerciseId, exerciseName: ex.name, role: ex.role, reasonCode: 'load_too_heavy', action: 'decrease_load', confidence: correction.confidence,
+                return decision(ex, {
+                    outcome: 'failure', reasonCode: 'load_too_heavy', action: 'decrease_load', confidence: correction.confidence,
                     reason: correction.reason, currentLoad, suggestedLoad: correction.suggestedLoad, suggestedReps: correction.suggestedReps,
                     estimated1RM, calibrationEstimated1RM: correction.calibrationE1RM
-                };
+                });
             }
         }
         if (effortBelowTarget) {
@@ -155,31 +188,24 @@ export function evaluateWorkoutProgression(session, performedSets, context = {})
             const detail = severeEffortOvershoot
                 ? 'Repeated effort was materially harder than prescribed.'
                 : 'Reported effort fell below the prescribed RIR floor.';
-            return { exerciseId: ex.exerciseId, exerciseName: ex.name, role: ex.role, reasonCode: code, action: 'hold', confidence: repeatedEffortOvershoot ? 'high' : 'moderate', reason: `${detail} Hold the load and re-enter the prescribed effort range before progressing.`, currentLoad, suggestedLoad: currentLoad, estimated1RM };
+            return decision(ex, { outcome: 'failure', reasonCode: code, action: 'hold', confidence: repeatedEffortOvershoot ? 'high' : 'moderate', reason: `${detail} Hold the load and re-enter the prescribed effort range before progressing.`, currentLoad, suggestedLoad: currentLoad, estimated1RM });
         }
         if (!allAtLeastBottom) {
-            return { exerciseId: ex.exerciseId, exerciseName: ex.name, role: ex.role, reasonCode: 'rep_floor_miss', action: 'hold', confidence: 'moderate', reason: 'Repetitions fell below the prescribed floor without enough evidence for an automatic load correction; hold and collect another comparable exposure.', currentLoad, suggestedLoad: currentLoad, estimated1RM };
+            return decision(ex, { outcome: 'failure', reasonCode: 'rep_floor_miss', action: 'hold', confidence: 'moderate', reason: 'Repetitions fell below the prescribed floor without enough evidence for an automatic load correction; hold and collect another comparable exposure.', currentLoad, suggestedLoad: currentLoad, estimated1RM });
         }
         const bestReps = Math.max(...actual.map(s => s.reps));
         const suggestedReps = Math.min(ex.prescription.reps[1], bestReps + 1);
-        /* Every logged set reached the top, but fewer sets than prescribed: the missing SET is what blocks the load increase.
-           The generic message ("work toward 5 reps") was wrong for a lifter who had already done 5. */
-        const shortOnSets = actual.length < ex.sets && actual.every(s => s.reps >= ex.prescription.reps[1]);
-        const reason = shortOnSets
-            ? `Every logged set reached ${ex.prescription.reps[1]} reps, but ${actual.length} of ${ex.sets} prescribed sets were done. Complete all ${ex.sets} at the top of the range to earn the load increase.`
-            : style === 'wave'
-                ? `Wave-loading exposure is controlled but has not earned a heavier wave yet; add a rep where practical while preserving the planned effort.`
-                : style === 'dynamic'
-                    ? `Dynamic double progression: advance the lowest-performing sets inside the range toward ${suggestedReps} reps before changing load.`
-                    : style === 'ladder'
-                        ? `Rep ladder: continue climbing toward ${suggestedReps} reps inside the current rung before adding load.`
-                        /* e1RM and linear used to fall through to double progression's wording, so an e1RM week's advice described a
-                           different progression from the one named on the lift (measured: 24 of 542 same-prescription suggestions). */
-                        : style === 'e1rm'
-                            ? `e1RM autoregulation: hold the load and work toward ${suggestedReps} rep${suggestedReps === 1 ? '' : 's'} at the planned effort; the load moves once your estimated max does.`
-                            : style === 'linear'
-                                ? `Linear progression: complete every prescribed set in the ${ex.prescription.reps[0]}–${ex.prescription.reps[1]} range at the planned effort to add load next session.`
-                                : `The exercise is within the prescribed range; keep the load and work toward ${suggestedReps} rep${suggestedReps === 1 ? '' : 's'} where practical before increasing load.`;
-        return { exerciseId: ex.exerciseId, exerciseName: ex.name, role: ex.role, reasonCode: 'normal_progression', action: 'add_reps', confidence: 'moderate', reason, currentLoad, suggestedLoad: currentLoad, suggestedReps, estimated1RM };
+        const reason = style === 'wave'
+            ? `Wave-loading exposure is controlled but has not earned a heavier wave yet; add a rep where practical while preserving the planned effort.`
+            : style === 'dynamic'
+                ? `Dynamic double progression: advance the lowest-performing sets inside the range toward ${suggestedReps} reps before changing load.`
+                : style === 'ladder'
+                    ? `Rep ladder: continue climbing toward ${suggestedReps} reps inside the current rung before adding load.`
+                    : style === 'e1rm'
+                        ? `e1RM autoregulation: hold the load and work toward ${suggestedReps} rep${suggestedReps === 1 ? '' : 's'} at the planned effort; a heavier load requires a complete top-range exposure.`
+                        : style === 'linear'
+                            ? `Linear progression: build the complete prescription to the top of the ${ex.prescription.reps[0]}–${ex.prescription.reps[1]} range at planned effort before adding load.`
+                            : `The exercise is within the prescribed range; keep the load and work toward ${suggestedReps} rep${suggestedReps === 1 ? '' : 's'} where practical before increasing load.`;
+        return decision(ex, { outcome: 'productive', reasonCode: 'normal_progression', action: 'add_reps', confidence: 'moderate', reason, currentLoad, suggestedLoad: currentLoad, suggestedReps, estimated1RM });
     });
 }

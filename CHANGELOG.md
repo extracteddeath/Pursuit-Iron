@@ -1,3 +1,10 @@
+## M172 — Actual Strength-Baseline Allocation (3.222.0 / build 778 / Engine 0.63.0)
+
+- Realizes protected strength anchors before final hypertrophy allocation.
+- Replaces generic lift-name muscle credits and 20/15-minute estimates with the selected exercise variants, actual strength sets, prescribed rest and shared session overhead.
+- Locks the provisional topology for the residual pass and pins those exact strength anchors in final realization, eliminating the circular variant/projection mismatch.
+- Adds integration coverage proving preview and final strength ledgers are identical.
+
 ## M171 — Shared Transactional Generation Context (3.221.0 / build 777 / Engine 0.62.7)
 
 - Adds a per-generation catalog/schedule/eligibility context and candidate indexes.

@@ -1,12 +1,12 @@
 {
   "profile": "portable-browser-esm-v661-workout-input",
-  "milestone": "M171",
-  "source": "M170 + shared generation context and transactional repair evaluator",
-  "engine": "0.62.7 shared context + memoized repair transactions",
+  "milestone": "M172",
+  "source": "M171 + actual realized strength baseline allocation",
+  "engine": "0.63.0 two-pass actual strength-anchor residual allocator",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 43,
   "shadowRuntimeModules": 9,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-m171-transactional-context",
+  "cache": "pursuit-iron-production-m172-actual-strength-baseline",
   "uiMilestone": "M169 Swap Sheet Scrolling"
 }

@@ -664,12 +664,67 @@ export function finalizePlannedSession(session, request) {
     const exerciseMap = createExerciseMap(request.customExercises);
     return sequenceSessionExercises(assignAccessorySupersets({ ...session, exercises: session.exercises.map(ex => ({ ...ex })), estimatedMinutes: 0 }, exerciseMap, request.restrictions.allowSupersets), exerciseMap);
 }
-export function realizeSessions(plans, request, targetDose = {}, directTargetDose = {}, phase) {
+function strengthSetsForAllocation(allocation, session, request, policy) {
+    const shortSession = session.maxMinutes <= 35;
+    const denseThreeDayStrength = request.goal.type === 'strength' && request.schedule.days.length <= 3;
+    const baseSets = allocation.role === 'primary_strength'
+        ? (request.athlete.experience === 'novice' ? 3 : (shortSession ? 3 : 4))
+        : (shortSession || denseThreeDayStrength || request.athlete.experience === 'novice' ? 2 : 3);
+    return Math.max(2, Math.round(baseSets * policy.strengthVolumeMultiplier));
+}
+/**
+ * Deterministically selects only protected strength anchors for a provisional topology. The returned
+ * fractional ledger and time are the actual baseline used by the second allocator pass; the anchor map
+ * is later pinned so the final program cannot silently switch to a different variant after budgeting.
+ */
+export function realizeStrengthAnchors(plans, request, phase) {
+    const policy = phasePolicyFor(phase);
+    const exerciseCatalog = createExerciseCatalog(request.customExercises);
+    const ledger = { fractional: {}, direct: {} };
+    const anchors = {};
+    const sessionMinutes = {};
+    const missingAllocationIds = [];
+    let realizedCount = 0;
+    for (const plan of plans) {
+        const chosen = [];
+        const planned = [];
+        for (const allocation of plan.allocations.filter(x => x.kind === 'lift')) {
+            const def = strengthCandidate(allocation, plan, request, chosen, exerciseCatalog);
+            if (!def) {
+                missingAllocationIds.push(allocation.id);
+                continue;
+            }
+            const sets = strengthSetsForAllocation(allocation, plan, request, policy);
+            const exercise = makePlanned(def, allocation.role, sets, policy, request.athlete.experience);
+            chosen.push(def);
+            planned.push(exercise);
+            addToLedger(ledger, def, sets);
+            anchors[allocation.id] = {
+                allocationId: allocation.id, exerciseId: def.id, exerciseName: def.name,
+                sets, sessionId: plan.id, day: plan.day, role: allocation.role, lift: allocation.lift
+            };
+            realizedCount++;
+        }
+        if (planned.length)
+            sessionMinutes[plan.id] = estimateSessionMinutes(planned);
+    }
+    return {
+        anchors,
+        fractional: ledger.fractional,
+        estimatedMinutes: Object.values(sessionMinutes).reduce((sum, value) => sum + value, 0),
+        sessionMinutes,
+        realizedCount,
+        expectedCount: plans.reduce((sum, plan) => sum + plan.allocations.filter(x => x.kind === 'lift').length, 0),
+        missingAllocationIds
+    };
+}
+export function realizeSessions(plans, request, targetDose = {}, directTargetDose = {}, phase, options = {}) {
     const policy = phasePolicyFor(phase);
     const exerciseCatalog = createExerciseCatalog(request.customExercises);
     const exerciseMap = createExerciseMap(request.customExercises);
     const sessions = plans.map(plan => ({ plan, defs: [], exercises: [], importance: [] }));
     const ledger = { fractional: {}, direct: {} };
+    const pinnedStrengthAnchors = options.strengthAnchors ?? {};
     const weeklyMovementUse = new Map();
     const trackExerciseUse = (def) => {
         weeklyMovementUse.set(def.movementFamily, (weeklyMovementUse.get(def.movementFamily) ?? 0) + 1);
@@ -691,20 +746,19 @@ export function realizeSessions(plans, request, targetDose = {}, directTargetDos
     // 1) Required/specific lift work first.
     for (const s of sessions)
         for (const a of s.plan.allocations.filter(x => x.kind === 'lift')) {
-            const def = strengthCandidate(a, s.plan, request, s.defs, exerciseCatalog);
+            const pinned = pinnedStrengthAnchors[a.id];
+            const def = pinned ? exerciseMap.get(pinned.exerciseId) : strengthCandidate(a, s.plan, request, s.defs, exerciseCatalog);
             if (!def)
                 continue;
-            // Very short sessions need coach-like strength dosage rather than four-set anchors that leave no room
-            // for the rest of the session. Preserve the exposure and progression rule, but trim one base set
-            // at <=35 minutes before phase multipliers are applied.
-            const shortSession = s.plan.maxMinutes <= 35;
-            const denseThreeDayStrength = request.goal.type === 'strength' && request.schedule.days.length <= 3;
-            // Three-day strength weeks already stack several high-specificity anchors across limited recovery
-            // windows. Keep secondary exposures at two productive sets instead of automatically turning them
-            // into a third fatigue-heavy set; the exposure/progression signal is preserved while overlap from
-            // squat/hinge and press compounds stays recoverable.
-            const baseSets = a.role === 'primary_strength' ? (request.athlete.experience === 'novice' ? 3 : (shortSession ? 3 : 4)) : (shortSession || denseThreeDayStrength || request.athlete.experience === 'novice' ? 2 : 3);
-            const phaseSets = Math.max(2, Math.round(baseSets * policy.strengthVolumeMultiplier));
+            if (pinned) {
+                const eligible = equipmentEligible(def, s.plan, request)
+                    && !request.preferences.avoidedExercises?.includes(def.id)
+                    && (!pinned.sessionId || pinned.sessionId === s.plan.id)
+                    && (def.liftSpecificity?.[a.lift] ?? 0) > .45;
+                if (!eligible)
+                    throw new Error('Pinned strength anchor ' + pinned.exerciseId + ' is no longer eligible for ' + a.id + ' on ' + s.plan.day + '.');
+            }
+            const phaseSets = pinned?.sets ?? strengthSetsForAllocation(a, s.plan, request, policy);
             add(s, a, def, phaseSets);
         }
     // 2) Major-muscle work. Convert fractional topology allocations into an integer weekly set plan

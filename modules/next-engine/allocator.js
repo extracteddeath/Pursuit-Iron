@@ -159,9 +159,10 @@ function shouldCountAllocatedSetAsDirect(p, state) {
         return true;
     return state.direct[p.muscle] < directTarget(p) || state.dose[p.muscle] < p.minimum;
 }
-export function allocateTraining(request, muscles, strengthClaims, phase) {
+export function allocateTraining(request, muscles, strengthClaims, phase, options = {}) {
     const allocations = [];
     const projectedFromStrength = {};
+    const actualStrengthBaseline = options.strengthBaseline;
     const decisions = [];
     const decisionLog = [];
     let iteration = 0;
@@ -197,19 +198,32 @@ export function allocateTraining(request, muscles, strengthClaims, phase) {
             dose: 1,
             importance: claim.importance
         });
-        const projected = projectedStrengthContribution[claim.lift] ?? {};
-        const setEquivalent = claim.role === 'heavy' ? 4 : 3;
-        const scale = setEquivalent / 7;
-        for (const [muscle, amount] of Object.entries(projected)) {
-            projectedFromStrength[muscle] = (projectedFromStrength[muscle] ?? 0) + amount * scale;
+        if (!actualStrengthBaseline) {
+            const projected = projectedStrengthContribution[claim.lift] ?? {};
+            const setEquivalent = claim.role === 'heavy' ? 4 : 3;
+            const scale = setEquivalent / 7;
+            for (const [muscle, amount] of Object.entries(projected)) {
+                projectedFromStrength[muscle] = (projectedFromStrength[muscle] ?? 0) + amount * scale;
+            }
+            strengthMinutes += claim.role === 'heavy' ? 20 : 15;
         }
-        strengthMinutes += claim.role === 'heavy' ? 20 : 15;
         decisions.push(`${claim.role} ${claim.lift} reserved before optional muscle work.`);
         decisionLog.push({
             iteration: iteration++,
             target: claim.lift,
             action: 'required',
             reason: `${claim.role} ${claim.lift} is a ${claim.required ? 'required' : 'capacity-approved'} ${claim.importance}-priority strength claim and reserves resources before hypertrophy bidding.`
+        });
+    }
+    if (actualStrengthBaseline) {
+        for (const [muscle, amount] of Object.entries(actualStrengthBaseline.fractional ?? {}))
+            if (Number.isFinite(amount) && amount > 0)
+                projectedFromStrength[muscle] = amount;
+        strengthMinutes = Math.max(0, Number(actualStrengthBaseline.estimatedMinutes) || 0);
+        decisions.push('Residual muscle work was allocated from ' + (actualStrengthBaseline.realizedCount ?? 0) + ' realized strength anchor' + ((actualStrengthBaseline.realizedCount ?? 0) === 1 ? '' : 's') + ' using their actual exercise stimulus and session time.');
+        decisionLog.push({
+            iteration: iteration++, target: 'strength_baseline', action: 'baseline',
+            reason: 'Strength anchors were selected first; their actual exercise-level muscle credits, sets, rest and shared session overhead replaced generic lift-name projections before hypertrophy allocation.'
         });
     }
     const byMuscle = new Map(muscles.map(p => [p.muscle, p]));
@@ -385,7 +399,9 @@ export function allocateTraining(request, muscles, strengthClaims, phase) {
             weeklyMinuteBudget: Math.round(weeklyMinuteBudget),
             estimatedMinutesUsed: Math.round(state.estimatedMinutesUsed),
             marginalIterations,
-            stopUtility: stopUtility === null ? null : Math.round(stopUtility * 1000) / 1000
+            stopUtility: stopUtility === null ? null : Math.round(stopUtility * 1000) / 1000,
+            strengthBaselineSource: actualStrengthBaseline ? 'realized_anchors' : 'projected_lifts',
+            strengthMinutes: Math.round(strengthMinutes * 10) / 10
         }
     };
 }

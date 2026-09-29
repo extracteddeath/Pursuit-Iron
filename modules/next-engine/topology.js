@@ -618,9 +618,9 @@ function buildCandidate(seed, request, allocations) {
     });
     return { seed, sessions, summary: scoreStructure(seed, sessions, request) };
 }
-export function solveTopology(request, allocations) {
+export function solveTopology(request, allocations, options = {}) {
     const days = request.schedule.days.length;
-    const seeds = candidateStructures(days, request.preferences.lockedSplit, request.preferences.preferredSplit);
+    const seeds = options.seed ? [options.seed] : candidateStructures(days, request.preferences.lockedSplit, request.preferences.preferredSplit);
     if (!seeds.length)
         throw new Error(`No topology seed supports ${days} training days.`);
     const candidates = seeds.map(seed => buildCandidate(seed, request, allocations)).sort((a, b) => b.summary.score - a.summary.score || a.seed.display.localeCompare(b.seed.display));
@@ -635,6 +635,7 @@ export function solveTopology(request, allocations) {
         rationale.push(`${publicSplitName(runner.seed.family, runner.seed.display)} was the next structural candidate (${runner.summary.score.toFixed(1)} vs ${chosen.summary.score.toFixed(1)}).`);
     }
     return {
+        seed: chosen.seed,
         family: chosen.seed.family,
         displayName: publicSplitName(chosen.seed.family, chosen.seed.display),
         sessions: chosen.sessions,

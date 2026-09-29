@@ -4,7 +4,7 @@ import { createTrainingSetEvents } from './events.js';
 import { deriveMuscleLedger } from './ledgers.js';
 import { allocateTraining } from './allocator.js';
 import { createMusclePrescriptions, createStrengthClaims, normalizeRequest } from './prescription.js';
-import { finalizePlannedSession, optimizeSetupAwareSessionSequence, progressionForExercise, repsForPhase, restForExercise, rirForPhase, realizeSessions } from './realizer.js';
+import { finalizePlannedSession, optimizeSetupAwareSessionSequence, progressionForExercise, repsForPhase, restForExercise, rirForPhase, realizeSessions, realizeStrengthAnchors } from './realizer.js';
 import { proposeExplicitFocusRepair } from './focus-intent.js';
 import { evaluateFunctionalCoverage } from './functional-coverage.js';
 import { proposeFunctionalCoverageRepairs } from './functional-coverage-repair.js';
@@ -41,9 +41,21 @@ export function generateProgram(requestInput, options) {
     const context = createEngineContext(request);
     const muscles = createMusclePrescriptions(request, phase);
     const strength = createStrengthClaims(request, phase);
-    const allocation = allocateTraining(request, muscles, strength, phase);
-    const topology = solveTopology(request, allocation.allocations);
-    const realized = realizeSessions(topology.sessions, request, allocation.targetDose, allocation.directTargetDose, phase);
+    const provisionalAllocation = allocateTraining(request, muscles, strength, phase);
+    const provisionalTopology = solveTopology(request, provisionalAllocation.allocations);
+    const hasStrengthAnchors = provisionalAllocation.allocations.some(a => a.kind === 'lift');
+    const strengthBaseline = hasStrengthAnchors ? realizeStrengthAnchors(provisionalTopology.sessions, request, phase) : undefined;
+    const allocation = strengthBaseline
+        ? allocateTraining(request, muscles, strength, phase, { strengthBaseline })
+        : provisionalAllocation;
+    // Muscle dose can change after actual anchor accounting, but split identity/day contracts cannot:
+    // otherwise a different topology could select different strength variants and reintroduce the same
+    // circular projection error. Rebuild the chosen seed with residual muscle allocations only.
+    const topology = strengthBaseline
+        ? solveTopology(request, allocation.allocations, { seed: provisionalTopology.seed })
+        : provisionalTopology;
+    const realized = realizeSessions(topology.sessions, request, allocation.targetDose, allocation.directTargetDose, phase,
+        strengthBaseline ? { strengthAnchors: strengthBaseline.anchors } : undefined);
     const assembleRaw = (sessions) => {
         const recovery = optimizeWeeklyRecovery(sessions, request);
         const scheduled = recovery.sessions;

@@ -1,5 +1,5 @@
-/* M171 shared generation context + transactional repair engine — Engine 0.62.7. */
-const CACHE="pursuit-iron-production-m171-transactional-context";
+/* M172 actual realized strength baseline allocator — Engine 0.63.0. */
+const CACHE="pursuit-iron-production-m172-actual-strength-baseline";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
   "./",

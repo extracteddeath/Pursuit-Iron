@@ -1,0 +1,67 @@
+name: M166 Promotion Corrected
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/m166-promote-v2.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply corrected M166 payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import textwrap
+
+          wf=Path('.github/workflows/m166-promote.yml').read_text()
+          marker="          python - <<'PY'\n"
+          start=wf.index(marker)+len(marker)
+          end=wf.index("\n          PY",start)
+          script=textwrap.dedent(wf[start:end])
+
+          old="app=once(app,'function weeklyRecap(history) {','export function weeklyRecap(history, unit) {','weekly recap signature')"
+          new="app=once(app,'function weeklyRecap(history) {','function weeklyRecap(history, unit) {','weekly recap signature')"
+          if script.count(old)!=1:
+              raise SystemExit('weeklyRecap correction target missing')
+          script=script.replace(old,new,1)
+
+          # Add a real runtime regression: computeCell itself must resolve the authored 5/3/3/4 schedule.
+          anchor="p.write_text(t)\n\n# Runtime history-volume test executes the exported helpers against stale cached volume and mixed units."
+          stronger="""p.write_text(t)\n\n# Runtime custom-schedule coverage belongs in the loader-backed test that already imports computeCell.\ncp=Path('verification/custom-progression-safety-test.mjs')\nct=cp.read_text()\nct += '''\n\n// M166 regression: array-shaped custom sets can intentionally encode one set count per week.\nconst setScheduleProgram={id:'custom-set-schedule',custom:true,config:{unit:'lb',weeks:4},overrides:{'d3:0':{sets:[5,3,3,4],reps:'8-12',rir:'2'}},days:[{id:'d3',primaryIndex:0,exercises:['back-squat']}]};\nassert.deepEqual([1,2,3,4].map(week=>computeCell(setScheduleProgram,setScheduleProgram.days[0],'back-squat',0,week).sets),[5,3,3,4]);\nconsole.log('PASS custom set schedule: computeCell preserves 5/3/3/4 across weeks 1–4.');\n'''\ncp.write_text(ct)\n\n# Runtime history-volume test executes the exported helpers against stale cached volume and mixed units."""
+          if script.count(anchor)!=1:
+              raise SystemExit('custom schedule test insertion target missing')
+          script=script.replace(anchor,stronger,1)
+
+          exec(compile(script,'m166-promote-corrected','exec'),{'__name__':'__main__'})
+          PY
+
+      - name: Verify corrected M166 release
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/verify-release.mjs
+
+      - name: Promote verified M166 and clean diagnostics
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f M166_INSPECT.md M166_VOLUME_INSPECT.md M166_HISTORY_TRACE.md
+          rm -f .github/workflows/m166-inspect.yml
+          rm -f .github/workflows/m166-promote.yml .github/workflows/m166-promote-v2.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Release M166 set schedule and history volume integrity'
+          git push origin HEAD:main

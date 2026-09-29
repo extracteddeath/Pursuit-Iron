@@ -1,36 +1,47 @@
-name: M178 PWA update hardening
+name: M178 PWA lifecycle promotion
 
 on:
   push:
     branches: [m178-pwa-update-hardening]
+    paths:
+      - '.github/workflows/m178-pwa-audit.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  audit:
+  promote:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Inspect update handshake and live-session persistence
-        shell: bash
-        run: |
-          set -euo pipefail
-          grep -n -C 12 -E 'wpb:update-ready|pursuitUpdateRequested|SKIP_WAITING|updateReady' modules/App.js || true
-          grep -n -C 8 -E 'persistLive|pagehide|visibilitychange|freeze|LIVE_KEY' modules/App.js | head -n 360 || true
-          grep -n -C 8 -E 'serviceWorker|updatefound|controllerchange|pursuitUpdateRequested|reg\.update' index.html || true
+      - name: Apply M178 candidate
+        run: python scripts/m178-promote.py
       - name: Install browser test harness
         shell: bash
         run: |
           set -euo pipefail
           command -v google-chrome
           npm install --no-save --ignore-scripts puppeteer-core@24
-      - name: Run real-browser service-worker lifecycle test
+      - name: Verify M178 browser and full release gates
         env:
           CHROME_BIN: /usr/bin/google-chrome
-        run: node verification/m178-pwa-update-browser-test.mjs
-      - name: Run current release integrity suite
-        run: node scripts/verify-release.mjs
+        shell: bash
+        run: |
+          set -euo pipefail
+          node verification/m178-pwa-update-browser-test.mjs
+          node scripts/verify-release.mjs
+      - name: Publish verified M178 to certification branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/m178-pwa-audit.yml scripts/m178-promote.py
+          git config user.name "Pursuit Release Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "M178: real-browser PWA update lifecycle certification"
+          git push origin HEAD:m178-pwa-update-hardening

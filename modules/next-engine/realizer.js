@@ -10,6 +10,7 @@ import { armCoverageBias, armCoverageUseKeys, evaluateArmCoverage } from './arm-
 import { functionalCoverageBiases, functionalCoverageUseKeys } from './functional-coverage.js';
 import { avoidableExerciseOverlap, exerciseEconomyCluster } from './exercise-economy.js';
 import { setupTransitionCost } from './setup-economy.js';
+import { exerciseSetupInefficiencyPenalty } from './exercise-selection-intelligence.js';
 const MUSCLE_MOVEMENTS = {
     chest: ['horizontal_press', 'chest_adduction'],
     back: ['horizontal_pull', 'vertical_pull', 'shoulder_extension'],
@@ -135,8 +136,12 @@ function muscleScore(ex, muscle, role, session, chosen, weeklyMovementUse, reque
         if (functionalBiases.includes('back_horizontal_row') && missing('back_horizontal_row'))
             functionalCoverageBonus += 2.25;
     }
+    // M182 uses station affinity only as a modest candidate tiebreaker. Redundancy itself is
+    // enforced by the semantic/knowledge-graph overlap gate below; setup economy must never overpower
+    // distinct stimulus, functional coverage, user priority, or strength specificity.
+    const setupInefficiency = exerciseSetupInefficiencyPenalty(ex, chosen);
     return credit * 4 + ex.suitability.hypertrophy * .35 + ex.stability * .15 + compoundFit + intent + preferredBonus + armCoverageBonus + functionalCoverageBonus
-        - fatigue * .22 - sameSession * 1.65 - weeklyRepeat * .42 - exactRepeat * 1.6 - ex.setupCost * .08 - confidencePenalty;
+        - fatigue * .22 - sameSession * 1.65 - weeklyRepeat * .42 - exactRepeat * 1.6 - ex.setupCost * .08 - confidencePenalty - setupInefficiency;
 }
 function muscleCandidate(a, session, request, chosen, weeklyMovementUse, catalog, minCredit = 0, maxSameMovementFamily) {
     const muscle = a.muscle;

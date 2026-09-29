@@ -1,5 +1,6 @@
 import { armCoverageBias } from './arm-coverage.js';
 import { functionalCoverageBiases } from './functional-coverage.js';
+import { exerciseSelectionRelationship } from './exercise-selection-intelligence.js';
 const STRENGTH_ROLES = new Set(['primary_strength', 'secondary_strength', 'strength_support']);
 const SPECIALIZATION_PRIORITIES = new Set(['high', 'specialization', 'primary']);
 function economyText(def) {
@@ -165,11 +166,14 @@ export function compoundEconomyCluster(def) {
 }
 function sameSemanticSlot(a, b) {
     const clusterA = exerciseEconomyCluster(a), clusterB = exerciseEconomyCluster(b);
-    if (!clusterA || clusterA !== clusterB)
-        return false;
-    // Exact family/slot alone is not enough for broad compounds. Require meaningfully similar direct
-    // muscle profiles so a movement with a genuinely different regional job is preserved.
-    return weightedMuscleSimilarity(a, b) >= .67;
+    if (clusterA && clusterA === clusterB && weightedMuscleSimilarity(a, b) >= .67)
+        return true;
+    // M182 knowledge-graph fallback catches near-equivalent variants whose legacy family/subregion
+    // metadata differs even though their stimulus and functional slot are effectively the same. The
+    // relationship model keeps complementary functions (row/pulldown, triceps positions, calf knee
+    // angles, biceps/brachialis) in separate subslots, so broader intelligence does not erase variety.
+    const relationship = exerciseSelectionRelationship(a, b);
+    return relationship.nearDuplicate && relationship.stimulusSimilarity >= .72;
 }
 function specializationAllowsSecond(priority, role) {
     return role === 'specialization' || (priority !== undefined && SPECIALIZATION_PRIORITIES.has(priority));

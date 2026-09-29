@@ -302,7 +302,13 @@ export function generateProgram(requestInput, options) {
     // This keeps the allocator's upper regions authoritative without teaching earlier repair passes to
     // game a second ledger. Reduced sessions are re-finalized and then audited normally below.
     const doseReconciliation = reconcileRecoverableDose(orderedSessions, request, phase);
-    const reconciledSessions = doseReconciliation.sessions.map(session => finalizePlannedSession({ ...session, estimatedMinutes: 0 }, request));
+    const reconciledSessions = doseReconciliation.sessions.map(session => {
+        const finalized = finalizePlannedSession({ ...session, estimatedMinutes: 0 }, request);
+        // M182: M181 reconciliation can remove movements after the first setup-aware ordering pass.
+        // Re-optimize the reduced final session so generic re-finalization cannot reintroduce avoidable
+        // station changes. This transform is prescription-neutral and remains subject to the final audit.
+        return optimizeSetupAwareSessionSequence(finalized, exerciseMap, request);
+    });
     const orderedEvents = createTrainingSetEvents(reconciledSessions, request.customExercises);
     const finalBase = { ...assembled.base, sessions: reconciledSessions, events: orderedEvents, muscleLedger: deriveMuscleLedger(orderedEvents) };
     const finalAudit = auditProgram(finalBase, request);

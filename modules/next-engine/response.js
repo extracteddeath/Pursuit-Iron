@@ -1,4 +1,9 @@
 import { estimate1RM } from './history.js';
+const NON_COMPARABLE_OUTCOMES = new Set(['unobserved', 'non_comparable', 'context_limited', 'interrupted', 'incomplete']);
+const NON_COMPARABLE_REASON_CODES = new Set([
+    'no_completed_sets', 'non_comparable_exposure', 'readiness_limited_exposure',
+    'interrupted_exposure', 'incomplete_session', 'incomplete_prescription'
+]);
 function completionRate(exercise, sets) {
     return sets.length / Math.max(1, exercise.sets);
 }
@@ -52,11 +57,56 @@ function averageRir(sets) {
     const values = sets.map(s => s.rir).filter((x) => x !== null);
     return values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
 }
-function makeDiagnosis(exercise, state, confidence, evidenceCount, rationale, action, structural, reason, expectedBenefit, changeCost, blastRadius) {
+function evidenceExclusionReason(exposure) {
+    const decision = exposure?.progression;
+    if (!decision)
+        return null; // Legacy history without M183 outcome metadata remains usable.
+    if (NON_COMPARABLE_OUTCOMES.has(decision.outcome))
+        return decision.outcome;
+    if (NON_COMPARABLE_REASON_CODES.has(decision.reasonCode))
+        return decision.reasonCode;
+    return null;
+}
+/**
+ * Build the longitudinal evidence window used for durable response decisions.
+ *
+ * The recency cap applies AFTER non-comparable/context-limited exposures are removed. That detail matters:
+ * one bad-readiness day should neither count as failure nor push a useful older comparable exposure out of
+ * the four-exposure diagnostic window. `excludedReasonCounts` is retained for audit/explainability instead
+ * of silently discarding why evidence was ignored.
+ */
+export function longitudinalEvidenceWindow(exposuresInput, maxComparable = 4) {
+    const candidates = [...(exposuresInput ?? [])]
+        .filter(x => Array.isArray(x?.sets) && x.sets.length > 0)
+        .sort((a, b) => String(a.completedAt ?? '').localeCompare(String(b.completedAt ?? '')));
+    const excludedReasonCounts = {};
+    const comparable = [];
+    for (const exposure of candidates) {
+        const reason = evidenceExclusionReason(exposure);
+        if (reason) {
+            excludedReasonCounts[reason] = (excludedReasonCounts[reason] ?? 0) + 1;
+            continue;
+        }
+        comparable.push(exposure);
+    }
+    const limit = Math.max(1, Math.round(Number(maxComparable) || 4));
+    const exposures = comparable.slice(-limit);
+    return {
+        exposures,
+        loggedExposureCount: candidates.length,
+        comparableExposureCount: comparable.length,
+        includedExposureCount: exposures.length,
+        excludedExposureCount: candidates.length - comparable.length,
+        olderComparableExposureCount: Math.max(0, comparable.length - exposures.length),
+        excludedReasonCounts
+    };
+}
+function makeDiagnosis(exercise, state, confidence, evidenceCount, rationale, action, structural, reason, expectedBenefit, changeCost, blastRadius, evidence) {
     return {
         exerciseId: exercise.exerciseId,
         exerciseName: exercise.name,
         state, confidence, evidenceCount, rationale,
+        evidence,
         intervention: { action, structural, reason, expectedBenefit, changeCost, blastRadius }
     };
 }
@@ -66,12 +116,21 @@ function makeDiagnosis(exercise, state, confidence, evidenceCount, rationale, ac
  * evidence, while one-off signals default to collecting more data.
  */
 export function diagnoseExerciseResponse(exercise, exposuresInput, recovery) {
-    const exposures = [...exposuresInput]
-        .filter(x => x.sets.length > 0)
-        .sort((a, b) => a.completedAt.localeCompare(b.completedAt))
-        .slice(-4);
+    const evidence = longitudinalEvidenceWindow(exposuresInput, 4);
+    const exposures = evidence.exposures;
+    const evidenceMeta = {
+        logged: evidence.loggedExposureCount,
+        comparable: evidence.comparableExposureCount,
+        included: evidence.includedExposureCount,
+        excluded: evidence.excludedExposureCount,
+        olderComparable: evidence.olderComparableExposureCount,
+        excludedReasons: evidence.excludedReasonCounts
+    };
     if (!exposures.length) {
-        return makeDiagnosis(exercise, 'uncertain', 'low', 0, 'No completed comparable exposures are available yet.', 'collect_more_data', false, 'Collect at least one complete exposure before changing the exercise or its dose.', .1, 0, 0);
+        const excluded = evidence.excludedExposureCount
+            ? ` ${evidence.excludedExposureCount} logged exposure${evidence.excludedExposureCount === 1 ? ' was' : 's were'} excluded because the work was interrupted, edited/substituted, incomplete, or explicitly context-limited.`
+            : '';
+        return makeDiagnosis(exercise, 'uncertain', 'low', 0, `No completed comparable exposures are available yet.${excluded}`, 'collect_more_data', false, 'Collect at least one complete comparable exposure before changing the exercise or its dose.', .1, 0, 0, evidenceMeta);
     }
     const discomfort = exposures.filter(x => discomfortExposure(x.sets)).length;
     const poorTechnique = exposures.filter(x => poorTechniqueExposure(x.sets)).length;
@@ -82,10 +141,10 @@ export function diagnoseExerciseResponse(exercise, exposuresInput, recovery) {
     const scores = exposures.map(x => exposurePerformanceScore(x.sets)).filter((x) => x !== null && Number.isFinite(x));
     const latest = exposures.at(-1);
     if (discomfort >= 2) {
-        return makeDiagnosis(exercise, 'poor_fit', discomfort >= 3 ? 'high' : 'moderate', discomfort, `Discomfort was reported in ${discomfort} recent comparable exposures, which is stronger evidence of poor exercise fit than a normal performance fluctuation.`, 'replace_exercise', true, 'Review an intent-preserving replacement instead of adding volume or pushing load through repeated discomfort.', .9, .55, .35);
+        return makeDiagnosis(exercise, 'poor_fit', discomfort >= 3 ? 'high' : 'moderate', discomfort, `Discomfort was reported in ${discomfort} recent comparable exposures, which is stronger evidence of poor exercise fit than a normal performance fluctuation.`, 'replace_exercise', true, 'Review an intent-preserving replacement instead of adding volume or pushing load through repeated discomfort.', .9, .55, .35, evidenceMeta);
     }
     if (poorTechnique >= 2 || questionableTechnique >= 3) {
-        return makeDiagnosis(exercise, 'technique_limited', poorTechnique >= 3 ? 'high' : 'moderate', Math.max(poorTechnique, questionableTechnique), 'Technique quality has repeatedly degraded, so performance data should not be interpreted as a simple volume or loading problem.', 'review_technique', false, 'Keep program structure stable and address execution, load selection, or exercise setup before changing dose.', .75, .15, .05);
+        return makeDiagnosis(exercise, 'technique_limited', poorTechnique >= 3 ? 'high' : 'moderate', Math.max(poorTechnique, questionableTechnique), 'Technique quality has repeatedly degraded across comparable exposures, so performance data should not be interpreted as a simple volume or loading problem.', 'review_technique', false, 'Keep program structure stable and address execution, load selection, or exercise setup before changing dose.', .75, .15, .05, evidenceMeta);
     }
     if (negative >= 2) {
         const systemic = recovery?.status === 'watch' || recovery?.status === 'deload_recommended';
@@ -94,10 +153,10 @@ export function diagnoseExerciseResponse(exercise, exposuresInput, recovery) {
             ? 'Repeated local underperformance is occurring alongside broader recovery concerns, increasing confidence that fatigue is limiting the exercise.'
             : 'The exercise has missed its prescribed rep/effort target in at least two comparable exposures, which is enough to reduce stress before adding work.', reducible ? 'reduce_set' : 'increase_rest', reducible, reducible
             ? 'Remove one set from this exercise first and preserve the rest of the program.'
-            : 'Preserve the strength exposure and increase recovery/rest before considering a structural reduction.', .82, reducible ? .25 : .12, reducible ? .18 : .05);
+            : 'Preserve the strength exposure and increase recovery/rest before considering a structural reduction.', .82, reducible ? .25 : .12, reducible ? .18 : .05, evidenceMeta);
     }
     if (underloaded >= 1 && clearlyUnderloaded(exercise, latest.sets)) {
-        return makeDiagnosis(exercise, 'underloaded', underloaded >= 2 ? 'high' : 'moderate', underloaded, 'The prescribed top-end reps were completed with more repetitions in reserve than the target, indicating that load—not extra volume—is the first variable to change.', 'increase_load', false, 'Increase load by the smallest practical increment and keep the program structure unchanged.', .9, .08, .02);
+        return makeDiagnosis(exercise, 'underloaded', underloaded >= 2 ? 'high' : 'moderate', underloaded, 'The latest comparable exposure completed the prescribed top-end reps with more repetitions in reserve than the target, indicating that load—not extra volume—is the first variable to change.', 'increase_load', false, 'Increase load by the smallest practical increment and keep the program structure unchanged.', .9, .08, .02, evidenceMeta);
     }
     if (scores.length >= 2) {
         const first = scores[0];
@@ -105,7 +164,7 @@ export function diagnoseExerciseResponse(exercise, exposuresInput, recovery) {
         const relative = first > 0 ? (last - first) / first : 0;
         const positiveSignals = exposures.filter(x => x.progression?.reasonCode === 'progression_success').length;
         if (relative >= .015 || positiveSignals >= 2) {
-            return makeDiagnosis(exercise, 'progressing', relative >= .03 || positiveSignals >= 3 ? 'high' : 'moderate', exposures.length, 'Comparable performance is improving while the exercise remains executable, so changing the exercise or adding sets would create unnecessary churn.', 'maintain', false, 'Maintain the exercise and let load/rep progression continue.', 1, 0, 0);
+            return makeDiagnosis(exercise, 'progressing', relative >= .03 || positiveSignals >= 3 ? 'high' : 'moderate', exposures.length, 'Comparable performance is improving while the exercise remains executable, so changing the exercise or adding sets would create unnecessary churn.', 'maintain', false, 'Maintain the exercise and let load/rep progression continue.', 1, 0, 0, evidenceMeta);
         }
     }
     if (exposures.length >= 3 && complete >= 3 && discomfort === 0 && questionableTechnique === 0 && negative === 0) {
@@ -116,12 +175,12 @@ export function diagnoseExerciseResponse(exercise, exposuresInput, recovery) {
         const targetRir = rirs.length ? rirs.every(v => v >= exercise.prescription.rir[0] && v <= exercise.prescription.rir[1] + 1) : true;
         if ((relative === null || relative < .01) && targetRir) {
             const eligible = exercise.role !== 'primary_strength' && exercise.role !== 'secondary_strength' && exercise.sets < 4 && recovery?.status !== 'watch' && recovery?.status !== 'deload_recommended';
-            return makeDiagnosis(exercise, 'possibly_understimulated', 'moderate', exposures.length, 'At least three complete exposures are stable, well tolerated, and close to the intended effort without a meaningful performance trend. This is only suggestive—not proof—of insufficient dose.', eligible ? 'add_set' : 'collect_more_data', eligible, eligible
+            return makeDiagnosis(exercise, 'possibly_understimulated', 'moderate', exposures.length, 'At least three complete comparable exposures are stable, well tolerated, and close to the intended effort without a meaningful performance trend. This is only suggestive—not proof—of insufficient dose.', eligible ? 'add_set' : 'collect_more_data', eligible, eligible
                 ? 'If the program audit remains clean, add only one set to this exercise and evaluate the response before making another change.'
-                : 'Keep collecting evidence; do not add volume while recovery is questionable or the exercise already has substantial per-session dose.', eligible ? .55 : .2, eligible ? .35 : 0, eligible ? .18 : 0);
+                : 'Keep collecting evidence; do not add volume while recovery is questionable or the exercise already has substantial per-session dose.', eligible ? .55 : .2, eligible ? .35 : 0, eligible ? .18 : 0, evidenceMeta);
         }
     }
-    return makeDiagnosis(exercise, 'uncertain', exposures.length >= 3 ? 'moderate' : 'low', exposures.length, 'The recent exposures do not support a confident explanation that would justify a structural change.', 'collect_more_data', false, 'Keep the current structure and collect another comparable exposure.', .15, 0, 0);
+    return makeDiagnosis(exercise, 'uncertain', exposures.length >= 3 ? 'moderate' : 'low', exposures.length, 'The recent comparable exposures do not support a confident explanation that would justify a structural change.', 'collect_more_data', false, 'Keep the current structure and collect another comparable exposure.', .15, 0, 0, evidenceMeta);
 }
 export function diagnoseSessionResponses(exercises, exposures, recovery) {
     return exercises.map(ex => diagnoseExerciseResponse(ex, exposures.get(ex.exerciseId) ?? [], recovery));

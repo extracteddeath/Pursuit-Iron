@@ -1,0 +1,143 @@
+name: M168 cycle overview hotfix
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/m168-cycle-overview-hotfix.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-cycle-overview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Patch cycle overview and phase semantics
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const crypto = require('node:crypto');
+
+          const read = p => fs.readFileSync(p, 'utf8');
+          const write = (p, s) => fs.writeFileSync(p, s);
+          const countOf = (s, needle) => s.split(needle).length - 1;
+          const replaceOnce = (s, oldText, newText, label) => {
+            const n = countOf(s, oldText);
+            if (n !== 1) throw new Error(`${label}: expected exactly 1 match, found ${n}`);
+            return s.replace(oldText, newText);
+          };
+
+          let app = read('modules/App.js');
+          app = replaceOnce(
+            app,
+            "const __APP_VERSION__='3.217.0'; const __BUILD__='773';",
+            "const __APP_VERSION__='3.218.0'; const __BUILD__='774';",
+            'App version/build'
+          );
+
+          const goalLine = '    const goalLabel = (g, phase = null) => phase === "recovery" ? "Recovery" : g === "both" ? "Powerbuilding" : g === "strength" ? "Strength" : "Hypertrophy";';
+          const phaseHelper = `${goalLine}\n    // A block goal answers what adaptation is emphasized; its phase answers where the cycle is.\n    // Keep those concepts separate so a peak block can remain strength-goal programming without\n    // being mislabeled as another Strength block in the cycle path.\n    const cyclePhaseLabel = (b) => {\n        const phase = String(b?.phase || "").toLowerCase();\n        if (phase === "recovery") return "Recovery";\n        if (phase === "peak") return "Peak";\n        if (phase === "strength_accumulation" || phase === "intensification") return "Strength";\n        if (phase === "hypertrophy_accumulation") return "Hypertrophy";\n        const label = String(b?.label || "").trim();\n        if (/peak/i.test(label)) return "Peak";\n        if (/strength/i.test(label) && !/hypertrophy/i.test(label)) return "Strength";\n        if (/hypertrophy/i.test(label)) return "Hypertrophy";\n        return goalLabel(b?.goal, b?.phase);\n    };`;
+          app = replaceOnce(app, goalLine, phaseHelper, 'cycle phase display helper');
+          app = replaceOnce(app, 'children: goalLabel(b.goal, b.phase)', 'children: cyclePhaseLabel(b)', 'cycle path phase label');
+          app = replaceOnce(
+            app,
+            '_jsx(CycleTimeline, { progress: P }), _jsxs("div", { className: "wpb-cycle-stats"',
+            '_jsxs("div", { className: "wpb-cycle-stats"',
+            'duplicate overview timeline'
+          );
+          app = replaceOnce(
+            app,
+            'children: [stat("blocks", blocks.length), stat("weeks", totalWeeks), days ? stat("days/wk", days) : null, stat("sessions", totalSessions)]',
+            'children: [days ? stat("days/wk", days) : null, stat("sessions logged", totalSessions)]',
+            'overview stats'
+          );
+          app = replaceOnce(
+            app,
+            '.wpb-cycle-goal-arc{gap:4px!important;margin-bottom:14px!important;}',
+            '.wpb-cycle-goal-arc{gap:4px!important;margin-bottom:14px!important;}\n      .wpb-cycle-goal-arc::before{content:"Cycle path";flex-basis:100%;font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:${C.faint};margin:0 0 3px 3px;}',
+            'cycle path label styling'
+          );
+          write('modules/App.js', app);
+
+          let index = read('index.html');
+          index = index.replaceAll("build:'773'", "build:'774'");
+          index = replaceOnce(index, "v.build==='770'", "v.build==='774'", 'boot-health build');
+          write('index.html', index);
+
+          let sw = read('sw.js');
+          sw = replaceOnce(sw,
+            '/* M167 legacy-dose + standalone-cycle recovery — Engine 0.62.5; atomic startup recovery retained. */',
+            '/* M168 cycle-overview clarity + phase semantics — Engine 0.62.5; atomic startup recovery retained. */',
+            'service-worker release comment');
+          sw = replaceOnce(sw,
+            'const CACHE="pursuit-iron-production-m167-legacy-dose-cycle";',
+            'const CACHE="pursuit-iron-production-m168-cycle-overview";',
+            'service-worker cache');
+          write('sw.js', sw);
+
+          const profile = JSON.parse(read('BUILD_PROFILE.json'));
+          profile.milestone = 'M168';
+          profile.source = 'M167 + cycle overview hierarchy cleanup + phase/goal semantic separation';
+          profile.cache = 'pursuit-iron-production-m168-cycle-overview';
+          profile.uiMilestone = 'M168 Cycle Overview + Phase Semantics';
+          write('BUILD_PROFILE.json', JSON.stringify(profile, null, 2) + '\n');
+
+          let verify = read('scripts/verify-release.mjs');
+          verify = replaceOnce(verify,
+            "if (profile.uiMilestone !== 'M167 Legacy Dose + Standalone Cycle Recovery') fail('unexpected UI milestone');",
+            "if (profile.uiMilestone !== 'M168 Cycle Overview + Phase Semantics') fail('unexpected UI milestone');",
+            'verify UI milestone');
+          verify = replaceOnce(verify,
+            "'legacyCustomSetCount(program, day, ex, slotIndex, weekIndex, o.sets, base.sets)','cycleConfigForStandaloneProgram'",
+            "'legacyCustomSetCount(program, day, ex, slotIndex, weekIndex, o.sets, base.sets)','cyclePhaseLabel','cycleConfigForStandaloneProgram'",
+            'verify App markers');
+          verify = replaceOnce(verify,
+            "execFileSync(process.execPath,['verification/set-display-integrity-test.mjs'],{stdio:'inherit',cwd:root});",
+            "execFileSync(process.execPath,['verification/set-display-integrity-test.mjs'],{stdio:'inherit',cwd:root});\nexecFileSync(process.execPath,['verification/cycle-overview-ui-test.mjs'],{stdio:'inherit',cwd:root});",
+            'verify cycle UI test hook');
+          write('scripts/verify-release.mjs', verify);
+
+          const uiTest = `import fs from 'node:fs';\n\nconst app = fs.readFileSync(new URL('../modules/App.js', import.meta.url), 'utf8');\nconst fail = msg => { console.error('CYCLE OVERVIEW UI TEST FAILED: ' + msg); process.exit(1); };\n\nif (!app.includes('if (phase === "peak") return "Peak";')) fail('peak phase is not explicitly labeled Peak');\nif (!app.includes('children: cyclePhaseLabel(b)')) fail('cycle path still derives display text from block goal');\nif (app.includes('_jsx(CycleTimeline, { progress: P }), _jsxs("div", { className: "wpb-cycle-stats"')) fail('detail overview still renders a second unlabeled progress timeline');\nif (!app.includes('children: [days ? stat("days/wk", days) : null, stat("sessions logged", totalSessions)]')) fail('overview stats are still redundant or sessions are ambiguously labeled');\nif (!app.includes('content:"Cycle path"')) fail('phase sequence is missing its label');\nconsole.log('Cycle overview UI integrity OK.');\n`;
+          write('verification/cycle-overview-ui-test.mjs', uiTest);
+
+          let changelog = read('CHANGELOG.md');
+          const entry = `## M168 — Cycle Overview + Phase Semantics (3.218.0 / build 774)\n\n- Simplifies Cycle Detail by removing the second unlabeled segmented progress bar; the overview now has one overall progress bar plus a separately labeled cycle path.\n- Removes duplicate block/week counters from the stat row, leaving actionable context: training days per week and sessions logged.\n- Separates block phase from training goal in the cycle path. A powerbuilding peak remains strength-goal programming internally but now displays as **Peak**, so the path reads Hypertrophy → Strength → Peak instead of Hypertrophy → Strength → Strength.\n- Adds a cycle-overview regression gate so phase labeling and the simplified hierarchy cannot silently revert. Pursuit Engine 0.62.5 programming math is unchanged.\n\n`;
+          if (!changelog.startsWith('## M168 — Cycle Overview + Phase Semantics')) changelog = entry + changelog;
+          write('CHANGELOG.md', changelog);
+
+          const report = `# M168 cycle overview + phase semantics\n\nApp **3.218.0**, build **774**, Pursuit Engine **0.62.5**.\n\n## Fixed\n\n- Cycle Detail no longer stacks an overall progress bar and an unlabeled segmented progress bar.\n- The overview stat row no longer repeats block/week counts already stated in the header; it shows days/week and clearly labels completed history as sessions logged.\n- Cycle phase display is now derived from the block phase, not the block training goal. Powerbuilding therefore displays **Hypertrophy → Strength → Peak** while the Peak block can still use the strength-goal prescription internally.\n- The phase sequence is explicitly labeled **Cycle path**.\n\n## Regression protection\n\n- Added \`verification/cycle-overview-ui-test.mjs\` and wired it into release verification.\n- Engine generation, progression, set prescriptions, and saved cycle data are unchanged.\n`;
+          write('M168_REPORT.md', report);
+
+          const manifest = JSON.parse(read('RELEASE_MANIFEST.json'));
+          manifest.milestone = 'M168';
+          manifest.appVersion = '3.218.0';
+          manifest.build = 774;
+          manifest.localCandidate = {
+            name: 'M168 Cycle Overview + Phase Semantics',
+            base: 'M167 legacy dose + standalone cycle recovery (3.217.0 / 773)',
+            validation: 'Cycle phase/goal semantic regression, simplified Cycle Detail hierarchy, existing progression/history/engine-authority/program interaction suites, and full import verification required green. Real phone/device validation pending.'
+          };
+          const hash = p => crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex');
+          for (const file of Object.keys(manifest.runtimeFiles || {})) manifest.runtimeFiles[file] = hash(file);
+          const aggregateBlob = Object.keys(manifest.runtimeFiles || {}).sort().map(file => `${file}:${manifest.runtimeFiles[file]}\n`).join('');
+          manifest.runtimeAggregate = crypto.createHash('sha256').update(Buffer.from(aggregateBlob)).digest('hex');
+          for (const file of Object.keys(manifest.uiFiles || {})) manifest.uiFiles[file] = hash(file);
+          write('RELEASE_MANIFEST.json', JSON.stringify(manifest, null, 2) + '\n');
+          NODE
+
+          node scripts/verify-release.mjs
+
+          rm .github/workflows/m168-cycle-overview-hotfix.yml
+          git config user.name "Pursuit Release Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add modules/App.js index.html sw.js BUILD_PROFILE.json RELEASE_MANIFEST.json CHANGELOG.md M168_REPORT.md scripts/verify-release.mjs verification/cycle-overview-ui-test.mjs .github/workflows/m168-cycle-overview-hotfix.yml
+          git commit -m "M168: clarify cycle overview and phase labels"
+          git push

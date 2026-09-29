@@ -16,38 +16,21 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Capture exact history persistence boundaries
+      - name: Capture exact M177 ranges
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
           lines=Path('modules/App.js').read_text().splitlines()
-          needles=[
-            'function mergeStores(',
-            'const byId =',
-            'history:',
-            'function saveStore(',
-            'saveStore(',
-            'const [history',
-            'setHistory(',
-            'savedAt: Date.now()',
-            'const store =',
-            'STORE_VERSION',
-            'tombs:',
-            'deleteHistoryEntry',
-          ]
           out=[]
-          seen=set()
-          for needle in needles:
-            hits=[i for i,line in enumerate(lines) if needle in line]
-            out.append(f'===== {needle} ({len(hits)} hits) =====')
-            for n,i in enumerate(hits[:40],1):
-              key=(max(0,i-16),min(len(lines),i+25))
-              if key in seen: continue
-              seen.add(key)
-              lo,hi=key
-              out.append(f'--- hit {n} lines {lo+1}-{hi} ---')
-              out.extend(f'{j+1:06d}: {lines[j]}' for j in range(lo,hi))
+          for label,lo,hi in [
+            ('MIGRATION_AND_MERGE',17945,18130),
+            ('APP_STATE_AND_STAMPERS',34135,34235),
+            ('LOAD_AND_AUTOSAVE',34970,35180),
+            ('HISTORY_COMPLETE_AND_EDIT',36555,36670),
+          ]:
+            out.append('===== '+label+' =====')
+            out.extend(f'{j+1:06d}: {lines[j]}' for j in range(lo-1,min(len(lines),hi)))
             out.append('')
           Path('M177_INSPECT.txt').write_text('\n'.join(out)+'\n')
           PY
@@ -58,5 +41,5 @@ jobs:
           git config user.email "actions@users.noreply.github.com"
           git add M177_INSPECT.txt
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m "chore: isolate M177 history save and merge semantics"
+          git commit -m "chore: capture exact M177 persistence ranges"
           git push origin HEAD:main

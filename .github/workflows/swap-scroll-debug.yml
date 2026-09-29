@@ -1,0 +1,36 @@
+name: Swap scroll debug
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/swap-scroll-debug.yml'
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Find swap exercise UI
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('modules/App.js')
+          s=p.read_text()
+          needles=['Swap Exercise','Swap exercise','swap exercise','swapExercise','swapOpen','swapSheet','swapModal','Exercise Library','Search exercises','alternatives']
+          lines=s.splitlines()
+          seen=set()
+          for needle in needles:
+              hits=[i for i,l in enumerate(lines) if needle in l]
+              if hits:
+                  print(f'\n=== {needle!r}: {len(hits)} hit(s) ===')
+              for i in hits[:20]:
+                  key=(max(0,i-18),min(len(lines),i+45))
+                  if key in seen: continue
+                  seen.add(key)
+                  a,b=key
+                  print(f'--- lines {a+1}-{b} ---')
+                  for j in range(a,b):
+                      print(f'{j+1}: {lines[j]}')
+          PY

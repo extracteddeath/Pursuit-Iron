@@ -1,0 +1,99 @@
+name: M188 production torture certification
+
+on:
+  push:
+    branches: [m188-production-torture-certification]
+    paths:
+      - '.github/workflows/m188-production-torture.yml'
+      - 'M188_REPORT.md'
+      - 'M188_DEVICE_CERTIFICATION.md'
+      - 'verification/m188-production-torture-test.mjs'
+      - 'verification/**'
+      - 'modules/next-engine/**'
+      - 'modules/App.js'
+      - 'app.css'
+      - 'index.html'
+      - 'sw.js'
+      - 'BUILD_PROFILE.json'
+      - 'RELEASE_MANIFEST.json'
+      - 'scripts/verify-release.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  production-torture:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: M188 broad + longitudinal production torture
+        run: node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m188-production-torture-test.mjs
+      - name: Preserve M187 premium UX and release integrity
+        shell: bash
+        run: |
+          set -euo pipefail
+          node ./verification/m187-premium-ux-test.mjs
+          node ./verification/m187-release-integrity-test.mjs
+          node ./scripts/verify-release.mjs
+      - name: Exercise state corruption, history edits, and longitudinal adaptation
+        shell: bash
+        run: |
+          set -euo pipefail
+          for test in \
+            verification/m173-integration-torture-test.mjs \
+            verification/m174-causal-cycle-state-test.mjs \
+            verification/m175-longitudinal-adaptation-memory-test.mjs \
+            verification/m176-workout-restore-hardening-test.mjs \
+            verification/m177-history-merge-integrity-test.mjs \
+            verification/history-edit-integrity-test.mjs \
+            verification/history-volume-integrity-test.mjs \
+            verification/set-display-integrity-test.mjs \
+            verification/swap-scroll-integrity-test.mjs \
+            verification/cycle-overview-ui-test.mjs
+          do
+            echo "==> $test"
+            node --no-warnings --experimental-loader ./verification/import-loader.mjs "$test"
+          done
+      - name: Preserve M180-M186 engine quality contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          for test in \
+            verification/m180-coach-quality-oracle-test.mjs \
+            verification/m180-coach-quality-matrix.mjs \
+            verification/m181-dose-reconciliation-test.mjs \
+            verification/m182-exercise-selection-intelligence-test.mjs \
+            verification/m182-selection-matrix.mjs \
+            verification/m183-progression-safeguards-test.mjs \
+            verification/m184-longitudinal-evidence-test.mjs \
+            verification/m185-phase-specialization-test.mjs \
+            verification/m186-explainable-block-review-test.mjs \
+            verification/prescription-integrity-test.mjs \
+            verification/programs-test.mjs \
+            verification/full-engine-import-test.mjs
+          do
+            echo "==> $test"
+            node --no-warnings --experimental-loader ./verification/import-loader.mjs "$test"
+          done
+
+  browser-pwa-certification:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser test harness
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v google-chrome
+          npm install --no-save --ignore-scripts puppeteer-core@24
+      - name: Exercise real service-worker update lifecycle
+        env:
+          CHROME_BIN: /usr/bin/google-chrome
+        run: node verification/m178-pwa-update-browser-test.mjs

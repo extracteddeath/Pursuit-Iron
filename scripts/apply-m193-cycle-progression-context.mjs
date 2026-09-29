@@ -51,13 +51,13 @@ mark('cycle preview static context', replaceOnce(path,
 
 mark('converted preview transition context', replaceOnce(path,
   `            next = transitionProgramPhase(previous, normalized, spec.phase, {\n                successfulExerciseIds: ids,\n                protectedExerciseIds: protectedIds\n            }).program;`,
-  `            next = transitionProgramPhase(previous, normalized, spec.phase, {\n                successfulExerciseIds: ids,\n                protectedExerciseIds: protectedIds,\n                nextBlockWeeks: spec.weeks\n            }).program;`,
+  `            // M193 converted-cycle preview uses the duration of THIS upcoming block.\n            next = transitionProgramPhase(previous, normalized, spec.phase, {\n                successfulExerciseIds: ids,\n                protectedExerciseIds: protectedIds,\n                nextBlockWeeks: spec.weeks\n            }).program;`,
   'converted preview transition context'
 ));
 
 mark('converted preview static context', replaceOnce(path,
   `            next = retargetStatic(previous, baseRequest, spec.phase);`,
-  `            next = retargetStatic(previous, baseRequest, spec.phase, spec.weeks);`,
+  `            // M193 converted-cycle locked preview also reselects against this block's duration.\n            next = retargetStatic(previous, baseRequest, spec.phase, spec.weeks);`,
   'converted preview static context'
 ));
 

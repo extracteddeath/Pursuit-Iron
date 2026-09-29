@@ -51,7 +51,7 @@ function preservationFloor(before, modeledMinimum, modeledPreferred) {
 }
 
 function candidateKey(candidate) {
-    return `${candidate.sessionIndex}:${candidate.exerciseIndex}`;
+    return `${candidate.sessionIndex}:${candidate.exerciseIndex}:${candidate.removeExercise ? 1 : 0}`;
 }
 
 /**
@@ -63,7 +63,9 @@ function candidateKey(candidate) {
  *
  * This pass is deliberately subtractive and conservative:
  * - strength-specific work is never reduced;
- * - no movement is reduced below two working sets, avoiding one-set fragmentation;
+ * - ordinary reductions never leave a one-set fragment;
+ * - an optional two-set movement may be removed entirely when all dose floors remain protected and the
+ *   session still has at least three other movements, avoiding redundant setup just to preserve two sets;
  * - a muscle that reached its preferred dose keeps at least preferred dose;
  * - direct preferred dose is preserved when it was already achieved;
  * - pre-existing minimum/direct-minimum shortfalls are never worsened;
@@ -78,7 +80,6 @@ export function reconcileRecoverableDose(inputSessions, request, phase) {
     const exerciseMap = createExerciseMap(request.customExercises);
     const prescriptions = createMusclePrescriptions(request, phase)
         .filter(p => p.muscle !== 'front_delts' && p.priority !== 'maintenance' && p.upper > 0);
-    const prescriptionMap = new Map(prescriptions.map(p => [p.muscle, p]));
     const adjustments = [];
 
     for (let guard = 0; guard < 160; guard++) {
@@ -92,7 +93,10 @@ export function reconcileRecoverableDose(inputSessions, request, phase) {
 
         sessions.forEach((session, sessionIndex) => {
             session.exercises.forEach((exercise, exerciseIndex) => {
-                if (STRENGTH_ROLES.has(exercise.role) || exercise.sets <= 2)
+                if (STRENGTH_ROLES.has(exercise.role) || exercise.sets < 2)
+                    return;
+                const removeExercise = exercise.sets === 2;
+                if (removeExercise && session.exercises.length <= 3)
                     return;
                 const def = exerciseMap.get(exercise.exerciseId);
                 if (!def)
@@ -102,7 +106,10 @@ export function reconcileRecoverableDose(inputSessions, request, phase) {
                     return;
 
                 const proposed = cloneSessions(sessions);
-                proposed[sessionIndex].exercises[exerciseIndex].sets -= 1;
+                if (removeExercise)
+                    proposed[sessionIndex].exercises.splice(exerciseIndex, 1);
+                else
+                    proposed[sessionIndex].exercises[exerciseIndex].sets -= 1;
                 const after = doseSnapshot(proposed, exerciseMap, prescriptions);
 
                 for (const p of prescriptions) {
@@ -120,8 +127,9 @@ export function reconcileRecoverableDose(inputSessions, request, phase) {
 
                 const rolePreference = exercise.role === 'hypertrophy_isolation' ? .20 : exercise.role === 'hypertrophy_compound' ? .08 : 0;
                 const broadCollateralBenefit = overflowing.reduce((sum, p) => sum + Math.min(1, def.muscles?.[p.muscle]?.credit ?? 0), 0) * .03;
-                const score = benefit + rolePreference + broadCollateralBenefit;
-                const candidate = { sessionIndex, exerciseIndex, score, benefit, before, after, proposed, def };
+                const setupRemovalBonus = removeExercise ? .05 : 0;
+                const score = benefit + rolePreference + broadCollateralBenefit + setupRemovalBonus;
+                const candidate = { sessionIndex, exerciseIndex, removeExercise, score, benefit, before, after, proposed, def };
                 if (!best || candidate.score > best.score + EPS || (Math.abs(candidate.score - best.score) <= EPS && candidateKey(candidate) < candidateKey(best)))
                     best = candidate;
             });
@@ -140,10 +148,14 @@ export function reconcileRecoverableDose(inputSessions, request, phase) {
             exerciseId: exercise.exerciseId,
             exercise: exercise.name,
             fromSets: exercise.sets,
-            toSets: exercise.sets - 1,
+            toSets: best.removeExercise ? 0 : exercise.sets - 1,
+            removedExercise: best.removeExercise || undefined,
             affected
         });
-        sessions[best.sessionIndex].exercises[best.exerciseIndex].sets -= 1;
+        if (best.removeExercise)
+            sessions[best.sessionIndex].exercises.splice(best.exerciseIndex, 1);
+        else
+            sessions[best.sessionIndex].exercises[best.exerciseIndex].sets -= 1;
     }
 
     const finalSnapshot = doseSnapshot(sessions, exerciseMap, prescriptions);

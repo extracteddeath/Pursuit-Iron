@@ -1,5 +1,6 @@
 import { generateProgram } from '../modules/next-engine/generate.js';
 import { evaluateProgramCoachQuality } from '../modules/next-engine/coach-quality-oracle.js';
+import { EXERCISE_MAP } from '../modules/next-engine/exercise-db.js';
 
 const equipment = ['barbell','rack','bench','dumbbell','cable','machine','smith','leg_press','pullup_bar','bodyweight'];
 const loading = {
@@ -34,6 +35,26 @@ const cases = [
   ['6d advanced hypertrophy PPL', request({ seed:18005, experience:'advanced', goal:'hypertrophy', days:6, minutes:90, split:'ppl' })]
 ];
 
+function printQualityDetails(program, quality) {
+  const affectedIds = new Set(
+    [...quality.hardFailures, ...quality.warnings]
+      .map(finding => finding.original?.sessionId)
+      .filter(Boolean)
+  );
+  for (const session of program.sessions) {
+    const lowerBackLoad = session.exercises.reduce((sum, exercise) => sum + (EXERCISE_MAP.get(exercise.exerciseId)?.fatigue?.lowerBack ?? 0), 0);
+    const shouldPrint = affectedIds.size === 0 || affectedIds.has(session.id) || lowerBackLoad >= 8;
+    if (!shouldPrint) continue;
+    console.log(`  Session ${session.day} · ${session.name} · ${session.estimatedMinutes}/${session.maxMinutes}m · lowerBack=${lowerBackLoad.toFixed(1)}`);
+    for (const exercise of session.exercises) {
+      const def = EXERCISE_MAP.get(exercise.exerciseId);
+      console.log(`    - ${exercise.name} | ${exercise.role} | ${exercise.sets} sets | family=${def?.movementFamily ?? '?'} | lowerBack=${(def?.fatigue?.lowerBack ?? 0).toFixed(1)}`);
+    }
+  }
+  for (const finding of [...quality.hardFailures, ...quality.warnings])
+    console.log(`    finding ${finding.code}: ${finding.detail || finding.original?.message || ''}`);
+}
+
 const summary = [];
 for (const [name, req] of cases) {
   try {
@@ -42,7 +63,10 @@ for (const [name, req] of cases) {
     const codes = [...quality.hardFailures, ...quality.warnings].map(item => item.code);
     summary.push({ name, split: generated.program.split.displayName, result: quality.result, hard: quality.hardFailures.length, warnings: quality.warnings.length, codes });
     console.log(`${quality.result.toUpperCase()} ${name} :: ${generated.program.split.displayName}`);
-    if (codes.length) console.log(`  ${codes.join(', ')}`);
+    if (codes.length) {
+      console.log(`  ${codes.join(', ')}`);
+      printQualityDetails(generated.program, quality);
+    }
   } catch (error) {
     summary.push({ name, result:'generation_error', error:String(error?.message ?? error) });
     console.log(`GENERATION_ERROR ${name}`);

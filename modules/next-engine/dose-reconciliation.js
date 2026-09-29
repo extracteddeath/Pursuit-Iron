@@ -1,5 +1,6 @@
 import { createExerciseMap } from './exercise-db.js';
 import { createMusclePrescriptions } from './prescription.js';
+import { INTENT_MUSCLES } from './topology.js';
 
 const STRENGTH_ROLES = new Set(['primary_strength', 'secondary_strength', 'strength_support']);
 const EPS = .001;
@@ -52,6 +53,124 @@ function preservationFloor(before, modeledMinimum, modeledPreferred) {
 
 function candidateKey(candidate) {
     return `${candidate.sessionIndex}:${candidate.exerciseIndex}:${candidate.removeExercise ? 1 : 0}`;
+}
+
+function primaryMuscle(def) {
+    const primary = Object.entries(def?.muscles ?? {}).find(([, contribution]) => contribution?.role === 'primary')?.[0];
+    if (primary)
+        return primary;
+    return Object.entries(def?.muscles ?? {})
+        .filter(([, contribution]) => (contribution?.credit ?? 0) > 0)
+        .sort((a, b) => (b[1]?.credit ?? 0) - (a[1]?.credit ?? 0))[0]?.[0];
+}
+
+function fragmentedSession(session, phase) {
+    const oneSet = session.exercises.filter(ex => ex.sets === 1).length;
+    const peakMaintenanceTopOff = phase === 'peak' && session.exercises.length <= 5;
+    return oneSet > 2 && !peakMaintenanceTopOff && (session.maxMinutes <= 45 || oneSet * 2 >= session.exercises.length);
+}
+
+function sessionAcceptsMuscle(session, muscle) {
+    return (INTENT_MUSCLES[session.intent] ?? INTENT_MUSCLES.full ?? []).includes(muscle);
+}
+
+function addedSetMinutes(exercise) {
+    return .75 + Math.max(0, Number(exercise.prescription?.restSeconds) || 0) / 60;
+}
+
+/**
+ * M188 session-economy repair.
+ *
+ * A weekly program can be dose-correct yet still look coach-poor if one session contains several isolated
+ * one-set fragments while another compatible training day has substantial unused capacity. This repair is
+ * deliberately redistribution-only: it moves a one-set non-strength movement to a compatible session, or
+ * merges it into the same movement there, so weekly muscle dose is exactly unchanged.
+ *
+ * It runs after recoverable-dose trimming because that is the final point at which weekly set shape is known.
+ * It never moves strength work, never breaks an existing superset pair, never lets the destination become
+ * fragmented, respects the destination exercise-count budget, and uses conservative clock headroom. The
+ * ordinary final program audit still remains authoritative after this pass.
+ */
+function repairOneSetFragmentation(sessions, exerciseMap, phase) {
+    const repairs = [];
+    for (let guard = 0; guard < 24; guard++) {
+        const sourceIndex = sessions.findIndex(session => fragmentedSession(session, phase));
+        if (sourceIndex < 0)
+            break;
+        const source = sessions[sourceIndex];
+        if (source.exercises.length <= 3)
+            break;
+
+        const candidates = source.exercises
+            .map((exercise, exerciseIndex) => ({ exercise, exerciseIndex, def: exerciseMap.get(exercise.exerciseId) }))
+            .filter(item => item.def && item.exercise.sets === 1 && !STRENGTH_ROLES.has(item.exercise.role) && !item.exercise.supersetGroup)
+            .map(item => ({ ...item, muscle: primaryMuscle(item.def) }))
+            .filter(item => !!item.muscle)
+            .sort((a, b) => {
+                const roleA = a.exercise.role === 'hypertrophy_compound' ? 0 : 1;
+                const roleB = b.exercise.role === 'hypertrophy_compound' ? 0 : 1;
+                return roleA - roleB || (b.def.setupCost ?? 0) - (a.def.setupCost ?? 0) || a.exercise.exerciseId.localeCompare(b.exercise.exerciseId);
+            });
+
+        let best = null;
+        for (const candidate of candidates) {
+            const sourceProposal = source.exercises.filter((_, index) => index !== candidate.exerciseIndex);
+            if (sourceProposal.length < 3)
+                continue;
+            for (let destinationIndex = 0; destinationIndex < sessions.length; destinationIndex++) {
+                if (destinationIndex === sourceIndex)
+                    continue;
+                const destination = sessions[destinationIndex];
+                if (!sessionAcceptsMuscle(destination, candidate.muscle))
+                    continue;
+
+                const existingIndex = destination.exercises.findIndex(ex => ex.exerciseId === candidate.exercise.exerciseId && ex.role === candidate.exercise.role);
+                const merge = existingIndex >= 0;
+                if (!merge && destination.targetExercises !== undefined && destination.exercises.length >= destination.targetExercises + 1)
+                    continue;
+                if (merge && destination.exercises[existingIndex].sets >= 5)
+                    continue;
+
+                let destinationProposal;
+                if (merge) {
+                    destinationProposal = destination.exercises.map((ex, index) => index === existingIndex ? { ...ex, sets: ex.sets + 1 } : ex);
+                }
+                else {
+                    destinationProposal = [...destination.exercises, { ...candidate.exercise, supersetGroup: undefined }];
+                }
+                const projected = { ...destination, exercises: destinationProposal };
+                if (fragmentedSession(projected, phase))
+                    continue;
+
+                const extraMinutes = addedSetMinutes(candidate.exercise);
+                const slackAfter = destination.maxMinutes - ((destination.estimatedMinutes ?? 0) + extraMinutes);
+                if (slackAfter < -EPS)
+                    continue;
+
+                const score = (merge ? 100 : 0) + slackAfter + (candidate.exercise.role === 'hypertrophy_compound' ? 2 : 0);
+                if (!best || score > best.score + EPS) {
+                    best = { candidate, sourceIndex, destinationIndex, sourceProposal, destinationProposal, merge, score };
+                }
+            }
+        }
+
+        if (!best)
+            break;
+
+        const sourceSession = sessions[best.sourceIndex];
+        const destinationSession = sessions[best.destinationIndex];
+        sourceSession.exercises = best.sourceProposal;
+        destinationSession.exercises = best.destinationProposal;
+        repairs.push({
+            exerciseId: best.candidate.exercise.exerciseId,
+            exercise: best.candidate.exercise.name,
+            fromDay: sourceSession.day,
+            toDay: destinationSession.day,
+            merged: best.merge || undefined,
+            weeklyDoseChanged: false
+        });
+    }
+    return repairs;
 }
 
 /**
@@ -158,11 +277,12 @@ export function reconcileRecoverableDose(inputSessions, request, phase) {
             sessions[best.sessionIndex].exercises[best.exerciseIndex].sets -= 1;
     }
 
+    const fragmentationRepairs = repairOneSetFragmentation(sessions, exerciseMap, phase);
     const finalSnapshot = doseSnapshot(sessions, exerciseMap, prescriptions);
     const remainingOverflow = prescriptions
         .map(p => ({ muscle: p.muscle, actual: finalSnapshot.fractional[p.muscle], upper: p.upper, materialCeiling: materialCeiling(p) }))
         .filter(row => row.actual > row.materialCeiling + EPS)
         .map(row => ({ ...row, actual: Math.round(row.actual * 10) / 10, materialCeiling: Math.round(row.materialCeiling * 10) / 10 }));
 
-    return { sessions, adjustments, remainingOverflow };
+    return { sessions, adjustments, remainingOverflow, fragmentationRepairs };
 }

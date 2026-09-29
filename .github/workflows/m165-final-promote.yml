@@ -35,13 +35,11 @@ jobs:
           set -euo pipefail
           python - <<'PY'
           from pathlib import Path
-          import hashlib
-          for name in ('part-00','part-03','part-05'):
+          import base64
+          checks = [('part-00',9728,9984),('part-03',1024,1280),('part-05',5632,5888)]
+          for name,start,end in checks:
               data = Path('.m165-final', name).read_bytes()
-              print(f'{name} len={len(data)} sha={hashlib.sha256(data).hexdigest()}')
-              for i in range(0, len(data), 256):
-                  block = data[i:i+256]
-                  print(f'{name}:{i//256:02d}:{hashlib.sha256(block).hexdigest()}')
+              print(f'{name}:{start}:{end}:{base64.b64encode(data[start:end]).decode()}')
           PY
 
       - name: Apply verified M165 payload

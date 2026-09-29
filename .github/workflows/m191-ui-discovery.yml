@@ -14,13 +14,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Locate progression and block-review surfaces
+      - name: Locate exact progression UI contexts
         shell: bash
         run: |
           set -euo pipefail
-          echo '=== block review ==='
-          grep -n -E -C 5 'blockReview|Block Review|block review|generateNextBlockFromShellHistory' modules/App.js | head -n 320 || true
-          echo '=== progression ==='
-          grep -n -E -C 4 'progressionStyle|progressionPlan|Progression|progression' modules/App.js | head -n 420 || true
-          echo '=== builders ==='
-          grep -n -E -C 4 'Create Program|Create Cycle|Program Builder|Cycle Builder|progression mode|progression method' modules/App.js | head -n 320 || true
+          echo '=== wizard step list / progression choice ==='
+          grep -n -E -C 18 'function StepBody|const STEPS|case "progression"|stepKey === "progression"|progression === "auto"|progression === "manual"' modules/App.js | head -n 520 || true
+          echo '=== program view progression metadata ==='
+          grep -n -E -C 12 'programSetupChips|Setup summary|Program setup|progressionPlan' modules/App.js | head -n 360 || true
+          echo '=== block transition / review ==='
+          grep -n -E -C 14 'generateNextBlockFromShellHistory|BlockReviewView|Take into the next block|priorBlock|historySummary' modules/App.js | head -n 480 || true

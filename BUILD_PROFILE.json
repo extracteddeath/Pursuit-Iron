@@ -1,12 +1,12 @@
 {
   "profile": "portable-browser-esm-v661-workout-input",
-  "milestone": "M175",
-  "source": "M174 + persistent poor-fit/user avoidance memory across adapted blocks",
+  "milestone": "M176",
+  "source": "M175 + interrupted-workout resume/lifecycle persistence regression hardening",
   "engine": "0.63.2 longitudinal avoidance memory parity for standalone and adaptive cycles",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 43,
   "shadowRuntimeModules": 9,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-m175-longitudinal-adaptation-memory",
+  "cache": "pursuit-iron-production-m176-workout-restore-hardening",
   "uiMilestone": "M169 Swap Sheet Scrolling"
 }

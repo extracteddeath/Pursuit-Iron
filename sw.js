@@ -1,5 +1,5 @@
-/* M175 longitudinal adaptation memory — Engine 0.63.2. */
-const CACHE="pursuit-iron-production-m175-longitudinal-adaptation-memory";
+/* M176 interrupted-workout restore regression hardening — Engine 0.63.2. */
+const CACHE="pursuit-iron-production-m176-workout-restore-hardening";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
   "./",

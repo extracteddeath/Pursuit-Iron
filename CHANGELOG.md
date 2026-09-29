@@ -1,3 +1,10 @@
+## M176 — Interrupted Workout Restore Hardening (3.226.0 / build 782 / Engine 0.63.2)
+
+- Audited the live-workout persistence path rather than rewriting it: current code already autosaves the complete session, flushes on mobile/PWA lifecycle events, restores workout/rest timers, and partially merges logged work after a program edit.
+- Adds release-gated tests for exact resume, partial resume, malformed snapshot rejection, exercise-reorder merging, newly added/replaced exercises, and preservation of logged notes/sets.
+- Adds source-level release guards for `visibilitychange`, `pagehide`, Page Lifecycle `freeze`, minimize-before-exit persistence, actual-training-time restoration, and paused/running rest-timer restoration.
+- No workout UI or engine behavior was changed; this milestone prevents the already-correct recovery path from silently regressing.
+
 ## M175 — Longitudinal Adaptation Memory (3.225.0 / build 781 / Engine 0.63.2)
 
 - Fixes a multi-block memory gap: an exercise diagnosed as poor fit could be avoided for the immediately following block and then become eligible again because later adaptation rebuilt from the original immutable request.

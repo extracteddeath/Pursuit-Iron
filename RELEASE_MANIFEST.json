@@ -1,8 +1,8 @@
 {
   "schemaVersion": 3,
-  "milestone": "M175",
-  "appVersion": "3.225.0",
-  "build": 781,
+  "milestone": "M176",
+  "appVersion": "3.226.0",
+  "build": 782,
   "engineVersion": "0.63.2",
   "shadowEngineVersion": "0.62.5-shadow",
   "validatedLiveBaseline": "M88-0.61.3-reviewed-baseline",
@@ -85,16 +85,16 @@
     "modules/next-engine/engine-context.js": "40c63ad790d4ab3a83975acd557e58f0f85d4fdc1ceab9ba422468fc6ae1430f"
   },
   "localCandidate": {
-    "name": "M175 Longitudinal Adaptation Memory",
-    "base": "M174 / app 3.224.0 build 780 / Engine 0.63.1",
-    "validation": "Focused multi-block avoidance-memory/parity regression plus the complete M174 production suite."
+    "name": "M176 Interrupted Workout Restore Hardening",
+    "base": "M175 / app 3.225.0 build 781 / Engine 0.63.2",
+    "validation": "Focused live-session restore/lifecycle regression plus the complete M175 production suite."
   },
   "uiFiles": {
-    "modules/App.js": "ebc16a76ac938a9e43a521347da492966219bc1ce2651ae27891538460d43db5",
-    "index.html": "b5ee5f9014c3b8cb7feb142d582bef6abc9b40d6ce1becadff546d484257d996",
-    "sw.js": "82fa5b4928c78653fbc76628657c1acf52831644a0264e8f7286e6890016840d",
-    "BUILD_PROFILE.json": "8f2afcaec6a5a312e1ea1e215c9f92d03d218e11cf44e355425a352c3de148b2",
-    "CHANGELOG.md": "1737440f48980b183995d02604ff6043eaf8f3136b78564d9139ad0a68e42c92"
+    "modules/App.js": "23f79ae7d91b6efe9535ba11812bf58f781b37b22eebdf293c78d1790efaa35a",
+    "index.html": "7316e1e127c85ad41c7fa98de48c489cd906ad545e9f79468e9c016940d230d2",
+    "sw.js": "61be535fecda50847f3d00076ba7449d3fd583319dce48dc64347fdf04a0fb0c",
+    "BUILD_PROFILE.json": "2c5966e652c83467ad5c99f3970056d8cdb4546f7472c903b72a77788c686726",
+    "CHANGELOG.md": "2f483df72e87ce804da737789b70554af05209d17c6d16b85ef7db43fcc5f6c5"
   },
   "baselineSourceNextEngineAggregate": "9ba84ffe3a62d94849617af33a2eafeaa563ab4a3636579101990ed753d05a84",
   "baselineSourceFiles": {

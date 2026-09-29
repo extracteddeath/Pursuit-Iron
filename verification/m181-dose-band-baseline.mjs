@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { generateProgram } from '../modules/next-engine/generate.js';
+import { createExerciseMap } from '../modules/next-engine/exercise-db.js';
 import { createMusclePrescriptions, normalizeRequest } from '../modules/next-engine/prescription.js';
 import { initialPhaseForGoal } from '../modules/next-engine/phase-policy.js';
 
@@ -40,6 +41,7 @@ function summarize(req) {
   const prescriptions = createMusclePrescriptions(normalized, phase);
   const { program, diagnostics } = generateProgram(req);
   assert.equal(program.audit.result, 'pass');
+  const exerciseMap = createExerciseMap(normalized.customExercises);
   const totalSets = program.sessions.reduce((sum, session) => sum + session.exercises.reduce((s, ex) => s + ex.sets, 0), 0);
   const totalExercises = program.sessions.reduce((sum, session) => sum + session.exercises.length, 0);
   const minutes = program.sessions.reduce((sum, session) => sum + session.estimatedMinutes, 0);
@@ -50,7 +52,13 @@ function summarize(req) {
   const overUpper = core
     .map(p => ({ muscle:p.muscle, actual:program.muscleLedger[p.muscle]?.fractionalSets ?? 0, upper:p.upper }))
     .filter(row => row.actual > row.upper + .001)
-    .map(row => ({ ...row, ratio:Math.round(row.actual / Math.max(1,row.upper) * 1000) / 1000 }));
+    .map(row => {
+      const contributors = program.sessions.flatMap(session => session.exercises.map(ex => {
+        const credit = exerciseMap.get(ex.exerciseId)?.muscles?.[row.muscle]?.credit ?? 0;
+        return credit > 0 ? { day:session.day, exercise:ex.name, sets:ex.sets, credit, dose:Math.round(ex.sets * credit * 10) / 10, role:ex.role } : null;
+      })).filter(Boolean).sort((a,b) => b.dose - a.dose || a.exercise.localeCompare(b.exercise));
+      return { ...row, ratio:Math.round(row.actual / Math.max(1,row.upper) * 1000) / 1000, contributors };
+    });
   const preferredAttainment = core.reduce((sum, p) => sum + Math.min(1, (program.muscleLedger[p.muscle]?.fractionalSets ?? 0) / Math.max(1, p.preferred)), 0) / Math.max(1, core.length);
   const upperAttainment = core.reduce((sum, p) => sum + Math.min(1, (program.muscleLedger[p.muscle]?.fractionalSets ?? 0) / Math.max(1, p.upper)), 0) / Math.max(1, core.length);
   const directAttainmentRows = core.filter(p => p.directPreferred > 0);
@@ -96,6 +104,9 @@ for (const experience of ['intermediate','advanced']) {
       const result = summarize(request({ experience, goal, band, seed }));
       rows.push({ experience, goal, band:band.id, ...result });
       console.log(`${experience} ${goal} ${band.id}: ${result.totalSets} sets (${result.avgSets}/session), ${result.totalFractionalDose}/${result.upperDose} dose, ${result.avgMinutes}m avg, preferred=${result.preferredAttainment}%, upper=${result.upperAttainment}%, belowBand=${result.sessionsBelowBand.length}/5, overUpper=${result.overUpper.map(x=>`${x.muscle}:${x.actual}/${x.upper}`).join('|') || 'none'}, allocator=${result.allocatorEstimatedUsed}/${result.allocatorBudget}`);
+      for (const overflow of result.overUpper)
+        if (overflow.ratio >= 1.2)
+          console.log(`  overflow ${overflow.muscle} ${overflow.actual}/${overflow.upper}: ${overflow.contributors.map(c=>`${c.day}:${c.exercise} ${c.sets}x${c.credit}=${c.dose}`).join(' | ')}`);
       assert.deepEqual(result.floorMisses, [], `${experience} ${goal} ${band.id} missed modeled floors: ${result.floorMisses.join(', ')}`);
       // A lower-edge miss is acceptable only when the program has already consumed nearly all modeled
       // recoverable dose. This prevents the engine from manufacturing junk sets simply to fill a long

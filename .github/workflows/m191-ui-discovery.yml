@@ -1,0 +1,26 @@
+name: M191 UI Discovery
+
+on:
+  push:
+    branches:
+      - m191-progression-explainability-ui
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  locate-ui:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Locate progression and block-review surfaces
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '=== block review ==='
+          grep -n -E -C 5 'blockReview|Block Review|block review|generateNextBlockFromShellHistory' modules/App.js | head -n 320 || true
+          echo '=== progression ==='
+          grep -n -E -C 4 'progressionStyle|progressionPlan|Progression|progression' modules/App.js | head -n 420 || true
+          echo '=== builders ==='
+          grep -n -E -C 4 'Create Program|Create Cycle|Program Builder|Cycle Builder|progression mode|progression method' modules/App.js | head -n 320 || true

@@ -1,0 +1,49 @@
+name: M181 apply dose reconciliation
+
+on:
+  push:
+    branches: [m181-volume-dose-intelligence]
+    paths:
+      - '.github/workflows/m181-apply-dose-reconciliation.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: m181-volume-dose-intelligence
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Patch generation integration
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = 'modules/next-engine/generate.js';
+          let source = fs.readFileSync(path, 'utf8');
+          const importAnchor = "import { buildProgramExplainability } from './explainability.js';";
+          if (!source.includes(importAnchor)) throw new Error('generate.js import anchor not found');
+          if (!source.includes("./dose-reconciliation.js")) {
+            source = source.replace(importAnchor, `${importAnchor}\nimport { reconcileRecoverableDose } from './dose-reconciliation.js';`);
+          }
+          const oldBlock = `    const orderedSessions = assembled.base.sessions.map(session => optimizeSetupAwareSessionSequence(session, exerciseMap, request));\n    const orderedEvents = createTrainingSetEvents(orderedSessions, request.customExercises);\n    const finalBase = { ...assembled.base, sessions: orderedSessions, events: orderedEvents, muscleLedger: deriveMuscleLedger(orderedEvents) };\n    const finalAudit = auditProgram(finalBase, request);\n    const auditableProgram = { ...finalBase, audit: finalAudit };\n    const program = { ...auditableProgram, explainability: buildProgramExplainability(auditableProgram, request) };\n    return { program, diagnostics: { allocationDecisions: allocation.decisions, allocationDecisionLog: allocation.decisionLog, allocationMetrics: allocation.metrics, topologyRationale: topology.rationale, topologyCandidates: topology.candidates } };`;
+          const newBlock = `    const orderedSessions = assembled.base.sessions.map(session => optimizeSetupAwareSessionSequence(session, exerciseMap, request));\n    // M181 reconciles secondary/collateral muscle credits only after every additive repair has finished.\n    // This keeps the allocator's upper regions authoritative without teaching earlier repair passes to\n    // game a second ledger. Reduced sessions are re-finalized and then audited normally below.\n    const doseReconciliation = reconcileRecoverableDose(orderedSessions, request, phase);\n    const reconciledSessions = doseReconciliation.sessions.map(session => finalizePlannedSession({ ...session, estimatedMinutes: 0 }, request));\n    const orderedEvents = createTrainingSetEvents(reconciledSessions, request.customExercises);\n    const finalBase = { ...assembled.base, sessions: reconciledSessions, events: orderedEvents, muscleLedger: deriveMuscleLedger(orderedEvents) };\n    const finalAudit = auditProgram(finalBase, request);\n    const auditableProgram = { ...finalBase, audit: finalAudit };\n    const program = { ...auditableProgram, explainability: buildProgramExplainability(auditableProgram, request) };\n    return { program, diagnostics: { allocationDecisions: allocation.decisions, allocationDecisionLog: allocation.decisionLog, allocationMetrics: allocation.metrics, topologyRationale: topology.rationale, topologyCandidates: topology.candidates, doseReconciliationAdjustments: doseReconciliation.adjustments, remainingDoseOverflow: doseReconciliation.remainingOverflow } };`;
+          if (!source.includes(oldBlock)) throw new Error('generate.js finalization block not found');
+          source = source.replace(oldBlock, newBlock);
+          fs.writeFileSync(path, source);
+          NODE
+          git diff --check
+          git diff -- modules/next-engine/generate.js
+      - name: Commit integration
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add modules/next-engine/generate.js
+          git commit -m 'M181: reconcile collateral dose before final audit'
+          git push origin HEAD:m181-volume-dose-intelligence

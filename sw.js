@@ -1,5 +1,5 @@
-/* M180 coach-quality oracle + mixed strength recovery protection — Engine 0.63.3. */
-const CACHE="pursuit-iron-production-m180-coach-quality-oracle";
+/* M187 premium UX audit + cross-screen interaction contract — Engine 0.63.3 + M186 explainability. */
+const CACHE="pursuit-iron-production-m187-premium-ux";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
   "./",

@@ -14,47 +14,46 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Isolate session volume metric
+      - name: Trace history volume writes and reads
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
           import re
+          s=Path('modules/App.js').read_text(errors='replace')
+          low=s.lower()
+          out=['# M166 history volume trace','']
 
-          s = Path('modules/App.js').read_text(errors='replace')
-          low = s.lower()
-          scored=[]
-          pos=0
-          while True:
-              i=low.find('volume',pos)
-              if i<0: break
-              lo=max(0,i-1200); hi=min(len(s),i+1800)
-              c=s[lo:hi]; cl=c.lower()
-              score=0
-              for word,pts in [('session',5),('history',5),('perf',5),('average',4),('avg',4),('setsdone',4),('weight',3),('reps',3),(' lb',3),('tonnage',4),('recent',2)]:
-                  if word in cl: score+=pts
-              if score>=8:
-                  scored.append((score,i,c))
-              pos=i+6
-          # Deduplicate nearby hits and keep strongest candidates.
-          scored.sort(key=lambda x:(-x[0],x[1]))
+          patterns=[
+            r'\bvolume\s*:', r'\.volume\s*=', r'\bh\.volume\b', r'\bentry\.volume\b',
+            r'\bsetsDone\s*:', r'\btotalSets\s*:', r'setHistory\s*\(', r'perf\s*:'
+          ]
+          hits=[]
+          for pat in patterns:
+            for m in re.finditer(pat,s,re.I):
+              i=m.start(); lo=max(0,i-1400); hi=min(len(s),i+2400); c=s[lo:hi]; cl=c.lower()
+              score=sum(w in cl for w in ['history','perf','setsdone','totalsets','finish','complete','session','volume'])
+              if score>=3:
+                hits.append((i,pat,c))
+          hits.sort(key=lambda x:x[0])
           chosen=[]
-          for item in scored:
-              if all(abs(item[1]-x[1])>1800 for x in chosen):
-                  chosen.append(item)
-              if len(chosen)>=24: break
-          chosen.sort(key=lambda x:x[1])
+          for h in hits:
+            if all(abs(h[0]-x[0])>1000 for x in chosen): chosen.append(h)
+          for n,(i,pat,c) in enumerate(chosen[:40],1):
+            out += [f'## {n}. {pat} @ {i}','','```js',c,'```','']
 
-          out=['# M166 session-volume candidates','']
-          for n,(score,i,c) in enumerate(chosen,1):
-              out += [f'## Candidate {n} — score {score} — offset {i}','', '```js', c, '```','']
-
-          # Also include the exact custom-set expression context in compact form.
-          needle='canonicalShellSetCount(o.sets, base.sets)'
-          i=low.find(needle.lower())
-          if i>=0:
-              out += ['## Custom-set expression','',f'offset {i}','', '```js', s[max(0,i-900):i+1400], '```','']
-          Path('M166_VOLUME_INSPECT.md').write_text('\n'.join(out))
+          # Pull likely UI readers that show lb/volume alongside history-derived values.
+          for needle in ['lb', 'lbs', 'volume', 'weeklyRecap(', 'historyStats', 'avgVol']:
+            pos=0; emitted=0
+            while emitted<12:
+              i=low.find(needle.lower(),pos)
+              if i<0: break
+              c=s[max(0,i-1200):min(len(s),i+1800)]; cl=c.lower()
+              if 'volume' in cl and ('history' in cl or 'recap' in cl or 'session' in cl):
+                out += [f'## UI {needle} {emitted+1} @ {i}','','```js',c,'```','']
+                emitted+=1
+              pos=i+len(needle)
+          Path('M166_HISTORY_TRACE.md').write_text('\n'.join(out))
           PY
 
       - name: Commit report
@@ -62,7 +61,7 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add M166_VOLUME_INSPECT.md
+          git add M166_HISTORY_TRACE.md
           git diff --cached --quiet && exit 0
-          git commit -m 'chore: isolate M166 session volume metric'
+          git commit -m 'chore: trace M166 history volume writes'
           git push

@@ -1,0 +1,503 @@
+===== normalizeEditedHistoryEntry (4 hits) =====
+--- hit 1 lines 30375-30410 ---
+030375:     const pool = hasPos ? work.filter(st => numW(st) > 0) : work;
+030376:     if (!pool.length)
+030377:         return null;
+030378:     const weights = pool.map(numW);
+030379:     const maxW = Math.max(...weights);
+030380:     if (weights.every(w => w === weights[0])) {
+030381:         const atTop = pool.filter(st => numW(st) === maxW);
+030382:         return { weight: maxW, reps: Math.min(...atTop.map(st => Math.max(1, Math.round(Number(st.r) || 1)))) };
+030383:     }
+030384:     const step = ex ? loadStep(ex, unit) : .5;
+030385:     const avgW = roundTo(weights.reduce((a, b) => a + b, 0) / weights.length, step || .5);
+030386:     const reps = Math.round(pool.reduce((a, st) => a + Math.max(1, Math.round(Number(st.r) || 1)), 0) / pool.length);
+030387:     return { weight: avgW, reps };
+030388: }
+030389: function normalizeEditedHistoryEntry(original, draft) {
+030390:     if (!original || !draft)
+030391:         return original;
+030392:     const out = { ...original };
+030393:     const date = Number(draft.date);
+030394:     if (Number.isFinite(date) && date > 0)
+030395:         out.date = date;
+030396:     const duration = Number(draft.durationMin);
+030397:     if (Number.isFinite(duration) && duration >= 0)
+030398:         out.durationMin = Math.round(duration);
+030399:     const perf = {};
+030400:     for (const [exId, rawPerf] of Object.entries(draft.perf || {})) {
+030401:         const prior = original.perf?.[exId] || {};
+030402:         const sourceSets = Array.isArray(rawPerf?.sets) && rawPerf.sets.length
+030403:             ? rawPerf.sets
+030404:             : (rawPerf?.reps != null ? [{ w: rawPerf.weight ?? 0, r: rawPerf.reps }] : []);
+030405:         const sets = [];
+030406:         for (const raw of sourceSets) {
+030407:             if (!raw)
+030408:                 continue;
+030409:             const reps = Math.round(Number(raw.r));
+030410:             if (!Number.isFinite(reps) || reps <= 0)
+--- hit 2 lines 30512-30547 ---
+030512:                     createElement("button", { type: "button", onClick: () => removeExercise(exId), className: "pressable", style: { border: 0, background: "none", color: C.danger, fontSize: 12, fontWeight: 700, padding: 6, cursor: "pointer" } }, "Remove lift")),
+030513:                 ...(p.sets || []).map((st, i) => createElement("div", { key: i, style: { display: "grid", gridTemplateColumns: "28px minmax(0,1fr) minmax(0,.8fr) minmax(0,.75fr) 34px", gap: 6, alignItems: "end", marginBottom: 7 } },
+030514:                     createElement("div", { className: "mono", style: { fontSize: 12, color: st.sub ? C.faint : C.muted, textAlign: "center", paddingBottom: 11 } }, st.sub ? "↳" : String(i + 1)),
+030515:                     createElement("label", { style: { fontSize: 10, color: C.faint, fontWeight: 700 } }, `LOAD ${unit || entry.unit || ""}`,
+030516:                         createElement("input", { inputMode: "decimal", value: st.w ?? "", onChange: e => setSet(exId, i, "w", e.target.value.replace(/[^0-9.-]/g, "")), style: { ...inputStyle, marginTop: 3 } })),
+030517:                     createElement("label", { style: { fontSize: 10, color: C.faint, fontWeight: 700 } }, "REPS",
+030518:                         createElement("input", { inputMode: "numeric", value: st.r ?? "", onChange: e => setSet(exId, i, "r", e.target.value.replace(/[^0-9]/g, "")), style: { ...inputStyle, marginTop: 3 } })),
+030519:                     createElement("label", { style: { fontSize: 10, color: C.faint, fontWeight: 700 } }, "RIR",
+030520:                         createElement("input", { inputMode: "decimal", placeholder: "—", value: st.rir ?? "", onChange: e => setSet(exId, i, "rir", e.target.value.replace(/[^0-9.]/g, "")), style: { ...inputStyle, marginTop: 3 } })),
+030521:                     createElement("button", { type: "button", "aria-label": `Remove set ${i + 1}`, onClick: () => removeSet(exId, i), className: "pressable", style: { ...tinyBtn(), color: C.danger, marginBottom: 1 } }, createElement(X, { size: 14 })))),
+030522:                 createElement("button", { type: "button", onClick: () => addSet(exId), className: "pressable", style: { width: "100%", padding: "9px", borderRadius: 10, border: `1px dashed ${C.border}`, background: "none", color: C.muted, fontSize: 12, fontWeight: 700, cursor: "pointer" } }, "+ Add set"))),
+030523:             exEntries.length === 0 ? createElement("div", { style: { padding: "18px 4px", color: C.muted, fontSize: 13, textAlign: "center" } }, "No sets remain. Delete the whole workout instead if this session should not exist.") : null,
+030524:             createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1.6fr", gap: 8, marginTop: 14 } },
+030525:                 createElement("button", { type: "button", onClick: onClose, className: "pressable", style: { padding: 13, borderRadius: 12, border: `1px solid ${C.border}`, background: "none", color: C.muted, fontSize: 14, fontWeight: 700, cursor: "pointer" } }, "Cancel"),
+030526:                 createElement("button", { type: "button", disabled: exEntries.length === 0, onClick: () => exEntries.length && onSave(normalizeEditedHistoryEntry(entry, draft)), className: "pressable", style: { padding: 13, borderRadius: 12, border: 0, background: exEntries.length ? C.accent : C.card, color: exEntries.length ? C.accentText : C.faint, fontSize: 14, fontWeight: 800, cursor: exEntries.length ? "pointer" : "default" } }, "Save correction"))));
+030527: }
+030528: 
+030529: function HistoryView({ history, onBack, onClear, onDeleteEntry, onEditEntry, embedded, focusSection, onFocusHandled, onGoTrain, nextLabel = null, bodyweight, sex, age, birth, unit, bwLog, onLogBodyweight, onSetProfile, goals = {}, onRepeat, measurements = {}, onLogMeasurement, activeProgram = null, activeWeek = 1, cycles = [], saved = [] }) {
+030530:     const [tab, setTab] = useState("sessions");
+030531:     // When the user taps the Strength level card on Home, we open this tab focused on the strength
+030532:     // breakdown rather than dumping them at the top of the Sessions list. Switch to the Lifts tab and
+030533:     // scroll the strength card into view, then clear the request so it only fires once.
+030534:     const strengthRef = useRef(null);
+030535:     useEffect(() => {
+030536:         if (focusSection !== "strength")
+030537:             return;
+030538:         setTab("progress");
+030539:         /* The strength card lives in the Records pane now, and a ref inside an unrendered pane is null —
+030540:            scrollIntoView on it throws nothing and does nothing, so the deep link would land at the top of
+030541:            the Lifts tab and look like it had simply been ignored. Open the pane that holds the target. */
+030542:         setLiftPane("records");
+030543:         const t = setTimeout(() => {
+030544:             try {
+030545:                 strengthRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+030546:             }
+030547:             catch { }
+--- hit 3 lines 36620-36655 ---
+036620:             setView("program");
+036621:         if (fresh.length)
+036622:             setTimeout(() => setAppToast({ msg: `${fresh[0].icon} Achievement unlocked — ${fresh[0].label}${fresh.length > 1 ? ` +${fresh.length - 1} more` : ""}` }), 400);
+036623:         else
+036624:             setTimeout(() => setAppToast({ msg: "Workout logged ✓" }), 400);
+036625:     };
+036626:     const setGoalWeight = (exId, w) => setGoals(prev => { const g = { ...prev }; if (w > 0)
+036627:         g[exId] = w;
+036628:     else
+036629:         delete g[exId]; return g; });
+036630:     const commitHistoryCorrection = (histId, corrected) => {
+036631:         const original = history.find(h => h && h.id === histId);
+036632:         if (!original || !corrected)
+036633:             return;
+036634:         const clean = normalizeEditedHistoryEntry(original, corrected);
+036635:         const prevHistory = history, prevPerf = perf;
+036636:         const nextHistory = history.map(h => h?.id === histId ? clean : h);
+036637:         const nextPerf = perfAfterHistoryReplace(history, perf, histId, clean);
+036638:         setHistory(nextHistory);
+036639:         setPerf(nextPerf);
+036640:         setAppToast({
+036641:             msg: `Corrected ${clean.dayLabel || "workout"} history`,
+036642:             undo: () => { setHistory(prevHistory); setPerf(prevPerf); setAppToast(null); }
+036643:         });
+036644:     };
+036645:     const editHistoryEntry = (histId, exId, change) => {
+036646:         const original = history.find(h => h && h.id === histId);
+036647:         if (!original)
+036648:             return;
+036649:         const draft = { ...original, perf: { ...(original.perf || {}) } };
+036650:         if (change == null) {
+036651:             delete draft.perf[exId];
+036652:         }
+036653:         else {
+036654:             const p = original.perf?.[exId];
+036655:             if (!p)
+--- hit 4 lines 37138-37161 ---
+037138:                                         })(), _jsxs("button", { onClick: () => { setConfirmAdvance(null); doCompleteCycleBlock(c); }, className: "pressable", style: { width: "100%", padding: "13px", borderRadius: 12, border: "none", background: C.accent, color: C.accentText, fontWeight: 700, cursor: "pointer", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }, children: [_jsx(Check, { size: 16 }), " ", willLoop ? "Roll new cycle" : isLast ? "Finish cycle" : "Complete block"] }), _jsx("button", { onClick: () => setConfirmAdvance(null), className: "pressable", style: { width: "100%", padding: "13px", borderRadius: 12, border: `1px solid ${C.border}`, background: "none", color: C.text, fontWeight: 600, cursor: "pointer" }, children: "Cancel" })] }) }));
+037139:                         })() }), loaded && seenIntroV < INTRO_VERSION && (_jsxs("div", { className: "wpb-onboarding", style: { position: "absolute", inset: 0, zIndex: 90, background: C.bg, display: "flex", flexDirection: "column", animation: "fadeIn .25s both" }, children: [_jsx("div", { className: "wpb-scroll wpb-onboarding-scroll", style: { flex: 1, minHeight: 0, overflowY: "auto", padding: "calc(env(safe-area-inset-top) + 34px) 26px 24px" }, children: _jsxs("div", { className: "wpb-onboarding-content", children: [_jsx("div", { className: "wpb-onboarding-mark", style: { width: 56, height: 56, borderRadius: 16, background: C.accent, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }, children: _jsx("svg", { width: "28", height: "28", viewBox: "0 0 28 28", "aria-hidden": "true", children: _jsxs("g", { fill: C.accentText, children: [_jsx("rect", { x: "1", y: "10", width: "3.4", height: "8", rx: "1.4" }), _jsx("rect", { x: "5.6", y: "6.5", width: "4.6", height: "15", rx: "2" }), _jsx("rect", { x: "10.8", y: "12.4", width: "6.4", height: "3.2", rx: "1.6" }), _jsx("rect", { x: "17.8", y: "6.5", width: "4.6", height: "15", rx: "2" }), _jsx("rect", { x: "23.6", y: "10", width: "3.4", height: "8", rx: "1.4" })] }) }) }), _jsx("div", { className: "wpb-onboarding-kicker", style: { fontSize: 13, fontWeight: 700, letterSpacing: 1.4, textTransform: "uppercase", color: C.accentInk, marginBottom: 8 }, children: "Pursuit Iron \u00B7 Strength Coach" }), _jsxs("div", { className: "wpb-onboarding-title", style: { fontSize: 28, fontWeight: 700, letterSpacing: -0.6, lineHeight: 1.15 }, children: ["Your training,", _jsx("br", {}), "built around you."] }), _jsx("div", { className: "wpb-onboarding-copy", style: { fontSize: 15, color: C.muted, marginTop: 12, lineHeight: 1.5 }, children: "Build around your goal, schedule, and equipment. Log what you actually did; the next prescription stays grounded in that history. Your data remains on this device unless you export it." }), _jsx("div", { className: "wpb-onboarding-features", style: { marginTop: 22 }, children: [
+037140:                                                 [Wand2, "Built for your setup", "Goals, days, equipment, and session length shape the program instead of forcing one template."],
+037141:                                                 [Activity, "Log without friction", "Weight, reps, effort, rest, and the next target stay within reach while you train."],
+037142:                                                 [TrendingUp, "Progress you can inspect", "Lift trends, records, volume, measurements, and cycle history stay connected to the work that created them."],
+037143:                                             ].map(([Icon, title, sub], i) => (_jsxs("div", { className: "wpb-onboarding-feature", style: { display: "flex", gap: 12, marginBottom: 16 }, children: [_jsx("div", { className: "wpb-onboarding-feature-icon", style: { width: 40, height: 40, borderRadius: 12, background: C.accentDim, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: _jsx(Icon, { size: 19, color: C.accentInk }) }), _jsxs("div", { style: { flex: 1 }, children: [_jsx("div", { className: "wpb-onboarding-feature-title", style: { fontSize: 15, fontWeight: 700 }, children: title }), _jsx("div", { className: "wpb-onboarding-feature-copy", style: { fontSize: 13, color: C.muted, lineHeight: 1.45, marginTop: 2 }, children: sub })] })] }, i))) })] }) }), _jsxs("div", { className: "wpb-onboarding-footer", style: { flexShrink: 0, padding: "11px 22px calc(env(safe-area-inset-bottom) + 18px)", background: C.bg, borderTop: `1px solid ${C.borderSoft}`, boxShadow: "0 -12px 26px rgba(0,0,0,.10)" }, children: [_jsxs("button", { onClick: () => { setSeenIntroV(INTRO_VERSION); setSeenWhatsNew(WHATS_NEW_VERSION); setView("wizard"); }, className: "pressable wpb-primary-action wpb-onboarding-primary", style: { width: "100%", minHeight: 50, padding: "12px 16px", borderRadius: 13, border: "none", background: C.accent, color: C.accentText, fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }, children: [_jsx(Wand2, { size: 18 }), " Build my program"] }), _jsx("button", { onClick: () => { setSeenIntroV(INTRO_VERSION); setSeenWhatsNew(WHATS_NEW_VERSION); setHomeBrowse(true); setView("home"); }, className: "pressable wpb-secondary-action wpb-onboarding-secondary", style: { width: "100%", minHeight: 44, padding: "10px 13px", marginTop: 7, borderRadius: 12, border: `1px solid ${C.border}`, background: "none", color: C.text, fontSize: 14, fontWeight: 650, cursor: "pointer" }, children: "Browse templates instead" })] })] }))] })] }));
+037144: }
+037145: // Wrap the whole app so a render crash ANYWHERE (not just inside the two sections that already have
+037146: // their own closer ErrorBoundary) shows a recoverable full-screen message instead of silently
+037147: // white-screening with no way back in. Data is autosaved to localStorage independent of render state.
+037148: export default function RootApp() {
+037149:     return _jsx(ErrorBoundary, { full: true, children: _jsx(App, {}) });
+037150: }
+037151: export { exerciseSlotSec, candidateMinutes, extraSetMinutes, WARMUP_SET_SEC, baseSetsFor, loggedVolume, loggedSubVolume, pressAngle, movePattern, availableFor, warmupSets, warmupCount, rankSwapAlts, starvedRegions, programSetupChips, weeklySubVolume, directSubVolume, SUB_LANDMARKS, subRegionOf, weeklyVolume, landmarkFor, coverageGaps, expandEquipment, EQUIP_IMPLIES, paceFactor, estimateMinutesFor, sessionExercisePlan, volumeZone, partZone, mavFor, PLANNED_ROOM_RIR, EX_BY_ID, CHANGELOG, CHANGELOG_ITEMS, WHATS_NEW_MAX, groupSessionsByMonth, groupSessionsByCycle, planOverview, phaseTone, PCT_SCHEMES, MACHINE_SETUP, SETUP_LABELS, plateauSessions, pickTopSet, setupFieldsFor, setupFieldsWithStored, navPush, navPop, propagateCycleEditsPure, ALL_EQUIP_IDS, EQUIPMENT, ageFactor, strengthLevel, strengthSnapshot, STANDARDS, STD_LEVELS, ageFrom, birthParts, birthFromAge, todayISO, normalizeBwLog, normalizeMeasureLog, weeklyBodyweightTrend, lengthUnitFor, asLengthUnit, BW_LOG_CAP, STORE_MIGRATIONS, calibratedDayPerf, onPlanExempt, plannedGapHours, prescribedRIRof, isBarLike, isMachineLike, barFor, BARS, shareSession, shareStrengthScore, setGymLimits, gymCapFor, normalizeGyms, templateFacets, templateEmphasis, ExerciseFigure, figurePose, EXERCISES, assertFigureCoverage, FIGURE_GENERIC_OK, Exit, mergeStores, sessionSnapshotStatus, mergeSessionData, mergedSetCount, nextPrefillTargetIndex, encodeProgramCode, decodeProgramCode, decodeGallery, gallerySubmission, galleryIssueBody, programFingerprint, personalRepSlope, coachFacts, volumeResponse, volumeVerdicts, STRETCH_FOCUS, STRETCH_FOCUS_E2, STRETCH_FOCUS_E3, lastSetTech, techSetTag, techExplain, capHistory, HISTORY_CAP, HISTORY_BYTES, rirTrend, sessionCoach, coverageRelief, volumeLedger, landmarkOf, completionRate, recommendedSplit, SPLIT_RECOMMENDATIONS, NOVICE_INELIGIBLE_SPLITS, parseRIRNum, sameProgramContent, rirAtLoad, e1rmAnchorOf, regionGapsFor, regionGapFix, REGION_REQUIRED, previewVolumeNudge, coachNote, coachIntent, exerciseSeries, rmAt, EX_METRICS, EX_WINDOWS, exRecords, cycleProgress, blockReview, lastTopSet, betterTopSet, e1rmRIR, loadAtRIR, EPLEY_SLOPE, E1RM_REP_CAP, ASSUMED_RIR, isWorkSet, workSetsOf, dayMuscleBreakdown, weekMuscleBreakdown, plannedWeek, dayMuscleVolume, capWords, WHATS_NEW_WORDS, homeCardPlan, HOME_INSIGHT_BUDGET, WhatsNewCard, PATTERNS, patternOf, sameMovement, lengthOf, parseStoredData, recordReleaseDiag, readReleaseDiagnostics, clearReleaseDiagnostics, releaseDiagnosticsText };
+037152: export { ENGINE_V, ENGINES, ENGINE_RULES, engHas, engLacks, engineInfo, STORE_VERSION, migrateStore, GOALS, SESSIONS, EXP, THEMES, normalizeMusclePreferences, preferenceFloor, GEN_PIPELINE, runPipeline, openGeneration, schemeTierCount, COVERAGE_PASSES, coverageContext, prescribedDaySize, ASSISTANCE_SIZE, candidateSlotMin, daySeconds, advanceCycle, templateConfig, TEMPLATES, CYCLE_TEMPLATES, SPLITS, DAY_TEMPLATES, templateIntent, TEMPLATE_CATS, TEMPLATE_FILTER_GROUPS, sfrOf, axialCost, fitSessionTime, MRV_GRAIN, weekIntent, historyForProgram, IDEAL_SLOTS, dayMuscleLoad, dayOverlap, distributeVolBias, capWeeklyVolume, buildWeekPlan, programQuality, compareQuality, COVERED_MUSCLES, BEST_OF_N, traceGeneration, setPipeTrace, setClaimTrace, emitClaim, compositeMrv, PATTERN_GROUPS, PATTERN_MIN_SETS, patternTrainable, patternGapsOf, weeksOf, phaseFor, estimateMinutes, addedMinutes, addedSeconds, fitChip, daysInWeek, exerciseAt, rotationOf, fitSessionToTime, blockRetro, volumeAudit, LANDMARKS, secondaryOf, PART_ORDER, FOCUS_CAVEAT, WEEK_ORDER_TERMS, computeCell, pctSetsFor, gzPlanFor, gzAdvance, projectNextTM, nextTMEvidence, ddpNextForSet, lastSetEffort, styleFor, autoStyleFor, plateauOf, plateauOfLift, plateauSplitByDay, dayScopedTrends, fitText, fitFont, wrapList, drawRecapCard, exerciseTrends, summarizeSets, muscleRecovery, volumeAdvice, weeklyRecap, deloadAdvice, overreachSignal, constantLoadDecay, sessionE1RM, computeMilestones, ICON_CHOICES, ICON_GROUPS, ICON_COLORS, iconForProgram, iconForCycle, iconColorOf, nextSessionCursor, nextDueDayId, historyDayIndex, autoStyleDetail, explainPrescription, explainGeneration, perfAfterDelete, perfAfterHistoryReplace, normalizeEditedHistoryEntry, lifterModelKey, normalizeHistoryDayIds, normalizeCycleLinks, auditProgramWeek, auditSets, simulateAndAudit, repRange, goalForDay, blockPhase, rirFor, gymRackFor, pickActiveProgram, strengthScore, scoreAttribution, e1rm, loadStep, linearInc, lowerBodyLift, LOWER_PARTS, roundTo, setLoadInc, effortLabel, platesPerSide, setAvailPlates, strengthScoreHistory, restSec, effectiveRest, setRestScaleGlobal, dayPerfFor, lastDayPerf, anchorPerfFor, calibratedAnchorPerf, sessionSuggestion, prescribeSets, PROG_POLICIES, policyIdFor, resolveStyle, loggedRIRof, syncSubSets, growMyoSets, styleOverride, stallCountFor, SHED_TOL, STALL_ENGAGE, E1RM_HOLD, STALL_WINDOW, buildLifterModel, effortCalibration, calibrateDayPerf, readinessBand, bandForExercise, classifyPlateau, runSelfTest };
+037153: // Integration seams for storage and setup fault-injection gates; removed from the browser bundle.
+037154: export { loadStore, saveStore, Wizard };
+037155: /* Test-only: integration/m115-workout-browser-check.mjs imports these by name. They were missing from the shipped M116
+037156:    build, so that browser check could not load against it (its recorded PASS cannot have come from this App.js).
+037157:    The running app mounts only the default export; these change nothing in production. */
+037158: export { WorkoutSession, StepButton, StyleTag };
+037159: export { ExerciseAnimation, FormVideoLink, formVideoUrl, refusalMessage };
+037160: 
+037161: export { HomePrograms, homeProgramGroups, homePhaseIdentity };
+
+===== perfAfterHistoryReplace (3 hits) =====
+--- hit 1 lines 30427-30462 ---
+030427:     out.perf = perf;
+030428:     let volume = 0, setsDone = 0;
+030429:     for (const p of Object.values(perf)) {
+030430:         for (const st of (p.sets || [])) {
+030431:             if (!st.sub) {
+030432:                 volume += (Number(st.w) || 0) * (Number(st.r) || 0);
+030433:                 setsDone++;
+030434:             }
+030435:         }
+030436:     }
+030437:     out.volume = Math.round(volume);
+030438:     out.setsDone = setsDone;
+030439:     return out;
+030440: }
+030441: function perfAfterHistoryReplace(history, perf, histId, replacement) {
+030442:     const old = (history || []).find(h => h && h.id === histId);
+030443:     if (!old || !replacement)
+030444:         return perf || {};
+030445:     const nextHistory = (history || []).map(h => h && h.id === histId ? replacement : h)
+030446:         .slice().sort((a, b) => (Number(b?.date) || 0) - (Number(a?.date) || 0));
+030447:     const affected = new Set([...Object.keys(old.perf || {}), ...Object.keys(replacement.perf || {})]);
+030448:     const next = { ...(perf || {}) };
+030449:     for (const exId of affected) {
+030450:         const latest = nextHistory.find(h => h?.perf?.[exId]);
+030451:         if (latest)
+030452:             next[exId] = latest.perf[exId];
+030453:         else
+030454:             delete next[exId];
+030455:     }
+030456:     return next;
+030457: }
+030458: function localHistoryDateValue(ms) {
+030459:     const d = new Date(Number(ms) || Date.now());
+030460:     const shifted = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+030461:     return shifted.toISOString().slice(0, 16);
+030462: }
+--- hit 2 lines 36623-36658 ---
+036623:         else
+036624:             setTimeout(() => setAppToast({ msg: "Workout logged ✓" }), 400);
+036625:     };
+036626:     const setGoalWeight = (exId, w) => setGoals(prev => { const g = { ...prev }; if (w > 0)
+036627:         g[exId] = w;
+036628:     else
+036629:         delete g[exId]; return g; });
+036630:     const commitHistoryCorrection = (histId, corrected) => {
+036631:         const original = history.find(h => h && h.id === histId);
+036632:         if (!original || !corrected)
+036633:             return;
+036634:         const clean = normalizeEditedHistoryEntry(original, corrected);
+036635:         const prevHistory = history, prevPerf = perf;
+036636:         const nextHistory = history.map(h => h?.id === histId ? clean : h);
+036637:         const nextPerf = perfAfterHistoryReplace(history, perf, histId, clean);
+036638:         setHistory(nextHistory);
+036639:         setPerf(nextPerf);
+036640:         setAppToast({
+036641:             msg: `Corrected ${clean.dayLabel || "workout"} history`,
+036642:             undo: () => { setHistory(prevHistory); setPerf(prevPerf); setAppToast(null); }
+036643:         });
+036644:     };
+036645:     const editHistoryEntry = (histId, exId, change) => {
+036646:         const original = history.find(h => h && h.id === histId);
+036647:         if (!original)
+036648:             return;
+036649:         const draft = { ...original, perf: { ...(original.perf || {}) } };
+036650:         if (change == null) {
+036651:             delete draft.perf[exId];
+036652:         }
+036653:         else {
+036654:             const p = original.perf?.[exId];
+036655:             if (!p)
+036656:                 return;
+036657:             const sets = (Array.isArray(p.sets) && p.sets.length ? p.sets : [{ w: p.weight ?? 0, r: p.reps }]).map(st => ({ ...st }));
+036658:             const workIdx = sets.map((st, i) => ({ st, i })).filter(x => !x.st?.sub && Number(x.st?.r) > 0)
+--- hit 3 lines 37138-37161 ---
+037138:                                         })(), _jsxs("button", { onClick: () => { setConfirmAdvance(null); doCompleteCycleBlock(c); }, className: "pressable", style: { width: "100%", padding: "13px", borderRadius: 12, border: "none", background: C.accent, color: C.accentText, fontWeight: 700, cursor: "pointer", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }, children: [_jsx(Check, { size: 16 }), " ", willLoop ? "Roll new cycle" : isLast ? "Finish cycle" : "Complete block"] }), _jsx("button", { onClick: () => setConfirmAdvance(null), className: "pressable", style: { width: "100%", padding: "13px", borderRadius: 12, border: `1px solid ${C.border}`, background: "none", color: C.text, fontWeight: 600, cursor: "pointer" }, children: "Cancel" })] }) }));
+037139:                         })() }), loaded && seenIntroV < INTRO_VERSION && (_jsxs("div", { className: "wpb-onboarding", style: { position: "absolute", inset: 0, zIndex: 90, background: C.bg, display: "flex", flexDirection: "column", animation: "fadeIn .25s both" }, children: [_jsx("div", { className: "wpb-scroll wpb-onboarding-scroll", style: { flex: 1, minHeight: 0, overflowY: "auto", padding: "calc(env(safe-area-inset-top) + 34px) 26px 24px" }, children: _jsxs("div", { className: "wpb-onboarding-content", children: [_jsx("div", { className: "wpb-onboarding-mark", style: { width: 56, height: 56, borderRadius: 16, background: C.accent, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }, children: _jsx("svg", { width: "28", height: "28", viewBox: "0 0 28 28", "aria-hidden": "true", children: _jsxs("g", { fill: C.accentText, children: [_jsx("rect", { x: "1", y: "10", width: "3.4", height: "8", rx: "1.4" }), _jsx("rect", { x: "5.6", y: "6.5", width: "4.6", height: "15", rx: "2" }), _jsx("rect", { x: "10.8", y: "12.4", width: "6.4", height: "3.2", rx: "1.6" }), _jsx("rect", { x: "17.8", y: "6.5", width: "4.6", height: "15", rx: "2" }), _jsx("rect", { x: "23.6", y: "10", width: "3.4", height: "8", rx: "1.4" })] }) }) }), _jsx("div", { className: "wpb-onboarding-kicker", style: { fontSize: 13, fontWeight: 700, letterSpacing: 1.4, textTransform: "uppercase", color: C.accentInk, marginBottom: 8 }, children: "Pursuit Iron \u00B7 Strength Coach" }), _jsxs("div", { className: "wpb-onboarding-title", style: { fontSize: 28, fontWeight: 700, letterSpacing: -0.6, lineHeight: 1.15 }, children: ["Your training,", _jsx("br", {}), "built around you."] }), _jsx("div", { className: "wpb-onboarding-copy", style: { fontSize: 15, color: C.muted, marginTop: 12, lineHeight: 1.5 }, children: "Build around your goal, schedule, and equipment. Log what you actually did; the next prescription stays grounded in that history. Your data remains on this device unless you export it." }), _jsx("div", { className: "wpb-onboarding-features", style: { marginTop: 22 }, children: [
+037140:                                                 [Wand2, "Built for your setup", "Goals, days, equipment, and session length shape the program instead of forcing one template."],
+037141:                                                 [Activity, "Log without friction", "Weight, reps, effort, rest, and the next target stay within reach while you train."],
+037142:                                                 [TrendingUp, "Progress you can inspect", "Lift trends, records, volume, measurements, and cycle history stay connected to the work that created them."],
+037143:                                             ].map(([Icon, title, sub], i) => (_jsxs("div", { className: "wpb-onboarding-feature", style: { display: "flex", gap: 12, marginBottom: 16 }, children: [_jsx("div", { className: "wpb-onboarding-feature-icon", style: { width: 40, height: 40, borderRadius: 12, background: C.accentDim, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: _jsx(Icon, { size: 19, color: C.accentInk }) }), _jsxs("div", { style: { flex: 1 }, children: [_jsx("div", { className: "wpb-onboarding-feature-title", style: { fontSize: 15, fontWeight: 700 }, children: title }), _jsx("div", { className: "wpb-onboarding-feature-copy", style: { fontSize: 13, color: C.muted, lineHeight: 1.45, marginTop: 2 }, children: sub })] })] }, i))) })] }) }), _jsxs("div", { className: "wpb-onboarding-footer", style: { flexShrink: 0, padding: "11px 22px calc(env(safe-area-inset-bottom) + 18px)", background: C.bg, borderTop: `1px solid ${C.borderSoft}`, boxShadow: "0 -12px 26px rgba(0,0,0,.10)" }, children: [_jsxs("button", { onClick: () => { setSeenIntroV(INTRO_VERSION); setSeenWhatsNew(WHATS_NEW_VERSION); setView("wizard"); }, className: "pressable wpb-primary-action wpb-onboarding-primary", style: { width: "100%", minHeight: 50, padding: "12px 16px", borderRadius: 13, border: "none", background: C.accent, color: C.accentText, fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }, children: [_jsx(Wand2, { size: 18 }), " Build my program"] }), _jsx("button", { onClick: () => { setSeenIntroV(INTRO_VERSION); setSeenWhatsNew(WHATS_NEW_VERSION); setHomeBrowse(true); setView("home"); }, className: "pressable wpb-secondary-action wpb-onboarding-secondary", style: { width: "100%", minHeight: 44, padding: "10px 13px", marginTop: 7, borderRadius: 12, border: `1px solid ${C.border}`, background: "none", color: C.text, fontSize: 14, fontWeight: 650, cursor: "pointer" }, children: "Browse templates instead" })] })] }))] })] }));
+037144: }
+037145: // Wrap the whole app so a render crash ANYWHERE (not just inside the two sections that already have
+037146: // their own closer ErrorBoundary) shows a recoverable full-screen message instead of silently
+037147: // white-screening with no way back in. Data is autosaved to localStorage independent of render state.
+037148: export default function RootApp() {
+037149:     return _jsx(ErrorBoundary, { full: true, children: _jsx(App, {}) });
+037150: }
+037151: export { exerciseSlotSec, candidateMinutes, extraSetMinutes, WARMUP_SET_SEC, baseSetsFor, loggedVolume, loggedSubVolume, pressAngle, movePattern, availableFor, warmupSets, warmupCount, rankSwapAlts, starvedRegions, programSetupChips, weeklySubVolume, directSubVolume, SUB_LANDMARKS, subRegionOf, weeklyVolume, landmarkFor, coverageGaps, expandEquipment, EQUIP_IMPLIES, paceFactor, estimateMinutesFor, sessionExercisePlan, volumeZone, partZone, mavFor, PLANNED_ROOM_RIR, EX_BY_ID, CHANGELOG, CHANGELOG_ITEMS, WHATS_NEW_MAX, groupSessionsByMonth, groupSessionsByCycle, planOverview, phaseTone, PCT_SCHEMES, MACHINE_SETUP, SETUP_LABELS, plateauSessions, pickTopSet, setupFieldsFor, setupFieldsWithStored, navPush, navPop, propagateCycleEditsPure, ALL_EQUIP_IDS, EQUIPMENT, ageFactor, strengthLevel, strengthSnapshot, STANDARDS, STD_LEVELS, ageFrom, birthParts, birthFromAge, todayISO, normalizeBwLog, normalizeMeasureLog, weeklyBodyweightTrend, lengthUnitFor, asLengthUnit, BW_LOG_CAP, STORE_MIGRATIONS, calibratedDayPerf, onPlanExempt, plannedGapHours, prescribedRIRof, isBarLike, isMachineLike, barFor, BARS, shareSession, shareStrengthScore, setGymLimits, gymCapFor, normalizeGyms, templateFacets, templateEmphasis, ExerciseFigure, figurePose, EXERCISES, assertFigureCoverage, FIGURE_GENERIC_OK, Exit, mergeStores, sessionSnapshotStatus, mergeSessionData, mergedSetCount, nextPrefillTargetIndex, encodeProgramCode, decodeProgramCode, decodeGallery, gallerySubmission, galleryIssueBody, programFingerprint, personalRepSlope, coachFacts, volumeResponse, volumeVerdicts, STRETCH_FOCUS, STRETCH_FOCUS_E2, STRETCH_FOCUS_E3, lastSetTech, techSetTag, techExplain, capHistory, HISTORY_CAP, HISTORY_BYTES, rirTrend, sessionCoach, coverageRelief, volumeLedger, landmarkOf, completionRate, recommendedSplit, SPLIT_RECOMMENDATIONS, NOVICE_INELIGIBLE_SPLITS, parseRIRNum, sameProgramContent, rirAtLoad, e1rmAnchorOf, regionGapsFor, regionGapFix, REGION_REQUIRED, previewVolumeNudge, coachNote, coachIntent, exerciseSeries, rmAt, EX_METRICS, EX_WINDOWS, exRecords, cycleProgress, blockReview, lastTopSet, betterTopSet, e1rmRIR, loadAtRIR, EPLEY_SLOPE, E1RM_REP_CAP, ASSUMED_RIR, isWorkSet, workSetsOf, dayMuscleBreakdown, weekMuscleBreakdown, plannedWeek, dayMuscleVolume, capWords, WHATS_NEW_WORDS, homeCardPlan, HOME_INSIGHT_BUDGET, WhatsNewCard, PATTERNS, patternOf, sameMovement, lengthOf, parseStoredData, recordReleaseDiag, readReleaseDiagnostics, clearReleaseDiagnostics, releaseDiagnosticsText };
+037152: export { ENGINE_V, ENGINES, ENGINE_RULES, engHas, engLacks, engineInfo, STORE_VERSION, migrateStore, GOALS, SESSIONS, EXP, THEMES, normalizeMusclePreferences, preferenceFloor, GEN_PIPELINE, runPipeline, openGeneration, schemeTierCount, COVERAGE_PASSES, coverageContext, prescribedDaySize, ASSISTANCE_SIZE, candidateSlotMin, daySeconds, advanceCycle, templateConfig, TEMPLATES, CYCLE_TEMPLATES, SPLITS, DAY_TEMPLATES, templateIntent, TEMPLATE_CATS, TEMPLATE_FILTER_GROUPS, sfrOf, axialCost, fitSessionTime, MRV_GRAIN, weekIntent, historyForProgram, IDEAL_SLOTS, dayMuscleLoad, dayOverlap, distributeVolBias, capWeeklyVolume, buildWeekPlan, programQuality, compareQuality, COVERED_MUSCLES, BEST_OF_N, traceGeneration, setPipeTrace, setClaimTrace, emitClaim, compositeMrv, PATTERN_GROUPS, PATTERN_MIN_SETS, patternTrainable, patternGapsOf, weeksOf, phaseFor, estimateMinutes, addedMinutes, addedSeconds, fitChip, daysInWeek, exerciseAt, rotationOf, fitSessionToTime, blockRetro, volumeAudit, LANDMARKS, secondaryOf, PART_ORDER, FOCUS_CAVEAT, WEEK_ORDER_TERMS, computeCell, pctSetsFor, gzPlanFor, gzAdvance, projectNextTM, nextTMEvidence, ddpNextForSet, lastSetEffort, styleFor, autoStyleFor, plateauOf, plateauOfLift, plateauSplitByDay, dayScopedTrends, fitText, fitFont, wrapList, drawRecapCard, exerciseTrends, summarizeSets, muscleRecovery, volumeAdvice, weeklyRecap, deloadAdvice, overreachSignal, constantLoadDecay, sessionE1RM, computeMilestones, ICON_CHOICES, ICON_GROUPS, ICON_COLORS, iconForProgram, iconForCycle, iconColorOf, nextSessionCursor, nextDueDayId, historyDayIndex, autoStyleDetail, explainPrescription, explainGeneration, perfAfterDelete, perfAfterHistoryReplace, normalizeEditedHistoryEntry, lifterModelKey, normalizeHistoryDayIds, normalizeCycleLinks, auditProgramWeek, auditSets, simulateAndAudit, repRange, goalForDay, blockPhase, rirFor, gymRackFor, pickActiveProgram, strengthScore, scoreAttribution, e1rm, loadStep, linearInc, lowerBodyLift, LOWER_PARTS, roundTo, setLoadInc, effortLabel, platesPerSide, setAvailPlates, strengthScoreHistory, restSec, effectiveRest, setRestScaleGlobal, dayPerfFor, lastDayPerf, anchorPerfFor, calibratedAnchorPerf, sessionSuggestion, prescribeSets, PROG_POLICIES, policyIdFor, resolveStyle, loggedRIRof, syncSubSets, growMyoSets, styleOverride, stallCountFor, SHED_TOL, STALL_ENGAGE, E1RM_HOLD, STALL_WINDOW, buildLifterModel, effortCalibration, calibrateDayPerf, readinessBand, bandForExercise, classifyPlateau, runSelfTest };
+037153: // Integration seams for storage and setup fault-injection gates; removed from the browser bundle.
+037154: export { loadStore, saveStore, Wizard };
+037155: /* Test-only: integration/m115-workout-browser-check.mjs imports these by name. They were missing from the shipped M116
+037156:    build, so that browser check could not load against it (its recorded PASS cannot have come from this App.js).
+037157:    The running app mounts only the default export; these change nothing in production. */
+037158: export { WorkoutSession, StepButton, StyleTag };
+037159: export { ExerciseAnimation, FormVideoLink, formVideoUrl, refusalMessage };
+037160: 
+037161: export { HomePrograms, homeProgramGroups, homePhaseIdentity };
+
+===== setWorkoutHistory (0 hits) =====
+
+===== workoutHistory (0 hits) =====
+
+===== syncData (0 hits) =====
+
+===== lastWorkoutBackup (0 hits) =====
+
+===== wpb:v1 (2 hits) =====
+--- hit 1 lines 17765-17800 ---
+017765:     }
+017766:     let out = 30;
+017767:     if (pairs.length >= 6) {
+017768:         pairs.sort((x, y) => x - y);
+017769:         const m = Math.floor(pairs.length / 2);
+017770:         const med = pairs.length % 2 ? pairs[m] : (pairs[m - 1] + pairs[m]) / 2;
+017771:         const conf = Math.min(1, (pairs.length - 6) / 24);
+017772:         out = Math.max(22, Math.min(42, 30 + (med - 30) * conf));
+017773:     }
+017774:     byEx.set(ex.id, out);
+017775:     return out;
+017776: }
+017777: /* ============================== PERSISTENCE ============================== */
+017778: const MEM = { data: null };
+017779: const KEY = "wpb:v1";
+017780: const LIVE_KEY = "wpb:live";
+017781: // Current store schema version. Bump this and add a STORE_MIGRATIONS entry for EVERY change to the
+017782: // persisted shape, so old local data — and imported backups — are carried forward on load instead of
+017783: // being silently misread (changed shape) or orphaned (key bump). Keeping the migration logic in one
+017784: // versioned place is what makes future schema edits safe; the alternative is the scatter of inline
+017785: // "older saves" special-cases at each point of use.
+017786: const STORE_VERSION = 12;
+017787: const BW_LOG_CAP = 2000; // weigh-ins kept; ~5.5 years of daily entries at ~45 chars each
+017788: /* Body measurements are lengths, but they were being stamped with the WEIGHT unit — an entry read
+017789:    `{v: 34, unit: "lb"}` for a 34-inch waist. The display then derived inches-or-centimetres from
+017790:    the current weight unit, so switching lb→kg relabelled every past measurement as centimetres
+017791:    without converting it: a 34" waist silently became "34 cm". Lengths get their own unit, tagged at
+017792:    write time and honoured on read, and switchUnit converts them like every other stored number.
+017793:    Legacy rows carry the old weight tag, so lb reads as in and kg as cm. */
+017794: const lengthUnitFor = (weightUnit) => (weightUnit === "kg" ? "cm" : "in");
+017795: const asLengthUnit = (u, weightUnit) => (u === "in" || u === "cm" ? u : u === "kg" ? "cm" : u === "lb" ? "in" : lengthUnitFor(weightUnit));
+017796: const toLength = (v, from, to) => (from === to ? v : to === "cm" ? v * 2.54 : v / 2.54);
+017797: function normalizeMeasureLog(arr, to, weightUnit) {
+017798:     return (arr || [])
+017799:         .filter(e => e && e.date != null && Number(e.v) > 0)
+017800:         .map(e => { const from = asLengthUnit(e.unit, weightUnit); return { ...e, v: Math.round(toLength(Number(e.v), from, to) * 10) / 10, unit: to }; })
+--- hit 2 lines 34095-34130 ---
+034095:         return; setBackStack([]); setView(next); };
+034096:     const goBack = () => setBackStack(prev => { const r = navPop(prev); setView(r.view); return r.stack; });
+034097:     const [compareMode, setCompareMode] = useState("programs"); // which tab the compare screen opens on
+034098:     const [saved, setSavedRaw] = useState([]);
+034099:     // Deletions, as facts rather than absences. A merge that only unions records can never delete: drop a
+034100:     // program here, merge with a device that still has it, and it walks back in. Keyed by record id →
+034101:     // when it died. Pruned on save so this can't grow forever.
+034102:     const [tombs, setTombs] = useState({});
+034103:     const [pinnedId, setPinnedId] = useState(null);
+034104:     const [drafts, setDrafts] = useState({}); // program id → in-progress edit of a SAVED program (see the sync effect)   // user-chosen active program (overrides history-based auto-pick)
+034105:     const [saveReview, setSaveReview] = useState(null);
+034106:     const [programSaveUndo, setProgramSaveUndo] = useState(null);
+034107:     const [cycles, setCyclesRaw] = useState([]); // sequential block-periodization containers (reference programs in saved[] by id)
+034108:     /* ⚠ NEVER ERASE WHAT THIS APP CANNOT RUN. M46 lab isolation keeps only Pursuit Next artifacts in runtime
+034109:        state, assuming the lab has its own storage. It does not: it shares `wpb:v1` with production, and its
+034110:        own README says to host at the existing origin to keep device data. Filtered-out programs and cycles
+034111:        were therefore missing from the next autosave — measured on a store written by build 647's own app:
+034112:        `saved` went from the lifter's program to [] on first load. History survived; the program did not.
+034113:        They are now held here untouched and written back on every save and every exported backup. Runtime
+034114:        still never executes them; how they are shown or rebuilt is a separate, product-level decision.
+034115:        De-duplicated by id so a program rebuilt under the same id is never stored twice. */
+034116:     const [legacyStore, setLegacyStore] = useState({ saved: [], cycles: [] }); /* state, not a ref: Home lists these for rebuild */
+034117:     const withLegacy = (list, k) => {
+034118:         const keep = legacyStore[k] || [];
+034119:         if (!keep.length)
+034120:             return list;
+034121:         const ids = new Set((list || []).map(x => x && x.id));
+034122:         return [...(list || []), ...keep.filter(x => !ids.has(x && x.id))];
+034123:     };
+034124:     const [banned, setBanned] = useState([]);
+034125:     const [equipDefault, setEquipDefault] = useState(EQUIPMENT.map(e => e.id));
+034126:     // Gyms. equipDefault is kept as a mirror of the ACTIVE gym rather than retired, so a store written
+034127:     // here stays readable by an older build and by the export/merge paths unchanged.
+034128:     const [gyms, setGyms] = useState(() => normalizeGyms(null, null).gyms);
+034129:     const [activeGymId, setActiveGymId] = useState(() => normalizeGyms(null, null).activeGymId);
+034130:     const activeGym = gymById(gyms, activeGymId);
+
+===== onSnapshot (5 hits) =====
+--- hit 1 lines 23127-23162 ---
+023127: //   "none"    — no snapshot, wrong session, or malformed
+023128: // The caller owns localStorage; this owns only the rule.
+023129: /* ⚠ "partial" REPLACED "stale", AND "stale" MEANT THROWING AWAY WORK THE LIFTER HAD DONE. A changed
+023130:    exercise list is one lift being different, not the session being unrecognisable: swap the third
+023131:    movement with "Update my program" and the other lifts, and every set logged against them, are
+023132:    exactly as they were. Discarding all of it — which is what stale did, and it DELETED the snapshot
+023133:    on the way past — restarted a workout mid-training for a reason the lifter would never connect to
+023134:    the swap they made twenty minutes earlier. Haiden's call, on his own report: "if an exercise is
+023135:    swapped out from the program and the session is restored, it should restore logged sets if they're
+023136:    the same."
+023137:    So the day is rebuilt from the PROGRAM (the prescription must follow the current program — that is
+023138:    what the swap changed) and the logged sets are carried across per exercise by `mergeSessionData`.
+023139:    A lift that is gone from the day takes its sets with it; that is the same thing swapping in a live
+023140:    session already does to the lift it replaces. */
+023141: function sessionSnapshotStatus(snapshot, ctx) {
+023142:     const s = snapshot;
+023143:     if (!s || s.programId !== ctx.programId || s.dayId !== ctx.dayId || s.weekIndex !== ctx.weekIndex
+023144:         || !Array.isArray(s.data) || !s.data.length)
+023145:         return "none";
+023146:     // Storage is untrusted: a null set used to pass this check and crash resume.
+023147:     if (!s.data.every(e => e && typeof e.id === "string" && EX_BY_ID[e.id] && Array.isArray(e.sets)
+023148:         && e.sets.every(row => row && typeof row === "object" && !Array.isArray(row))))
+023149:         return "none";
+023150:     if (s.dayExSig != null && s.dayExSig !== ctx.dayExSig)
+023151:         return "partial";
+023152:     return "resume";
+023153: }
+023154: /* Carry a snapshot's logged work onto a freshly-built session, matched BY EXERCISE ID rather than by
+023155:    slot: a swap changes which id sits at a slot, and every OTHER slot keeps its id even when its
+023156:    position moves. `fresh` owns the structure (which lifts, in which order, with which superset and
+023157:    rest settings — all of that comes from the current program); the snapshot owns only what the
+023158:    lifter did (`sets`) and wrote (`note`). Pure, total, and order-independent; returns `fresh`
+023159:    untouched when there is nothing to carry. */
+023160: function mergeSessionData(snapData, fresh) {
+023161:     if (!Array.isArray(fresh))
+023162:         return fresh;
+--- hit 2 lines 25109-25144 ---
+025109:        to resume is decided ONCE, from the snapshot as it stood when this session opened, which is the
+025110:        only moment the question is even meaningful — `data` and `startRef` below are both mount-time
+025111:        initializers and were always the only consumers.
+025112:        A stale snapshot is now simply not resumed FROM. It is not deleted here: the session's own
+025113:        autosave overwrites it within the first logged set, and the paths that legitimately end a workout
+025114:        — finishing, discarding from the resume bar, deleting the program — still clear it explicitly. */
+025115:     const liveMatchRef = useRef(undefined);
+025116:     if (liveMatchRef.current === undefined) {
+025117:         liveMatchRef.current = (() => {
+025118:             try {
+025119:                 const raw = localStorage.getItem(liveKey);
+025120:                 if (!raw)
+025121:                     return null;
+025122:                 const s = JSON.parse(raw);
+025123:                 const status = sessionSnapshotStatus(s, { programId: program.id, dayId: day.id, weekIndex, dayExSig });
+025124:                 return status === "none" ? null : { snap: s, status };
+025125:             }
+025126:             catch { }
+025127:             return null;
+025128:         })();
+025129:     }
+025130:     const liveMatch = liveMatchRef.current ? liveMatchRef.current.snap : null;
+025131:     const liveStatus = liveMatchRef.current ? liveMatchRef.current.status : "none";
+025132:     /* A "partial" resume rebuilds the day from the PROGRAM and carries the logged sets across per
+025133:        exercise — the lifts that did not change keep everything logged against them. See
+025134:        sessionSnapshotStatus and mergeSessionData for the rule and why it replaced discarding. */
+025135:     const [data, setDataRaw] = useState(() => {
+025136:         /* ⚠ RESOLVE ONCE, THEN BUILD. A paired slot trains a different exercise on alternate weeks, so the
+025137:            session must be built from what the slot holds THIS week, not from `day.exercises[slot]`. */
+025138:         const ids = day.exercises.map((_id, slot) => exerciseAt(program, day, slot, weekIndex));
+025139:         const fresh = day.exercises.map((_id, slot) => {
+025140:             const id = ids[slot];
+025141:             return ({ id, slot, sets: buildSets(EX_BY_ID[id], slot, suggestions[slot], true), note: "", superset: !!program.ss?.[`${day.id}:${slot}`],
+025142:                 restCustom: program.overrides?.[`${day.id}:${slot}`]?.rest || 0 });
+025143:         });
+025144:         if (liveStatus === "resume")
+--- hit 3 lines 25120-25155 ---
+025120:                 if (!raw)
+025121:                     return null;
+025122:                 const s = JSON.parse(raw);
+025123:                 const status = sessionSnapshotStatus(s, { programId: program.id, dayId: day.id, weekIndex, dayExSig });
+025124:                 return status === "none" ? null : { snap: s, status };
+025125:             }
+025126:             catch { }
+025127:             return null;
+025128:         })();
+025129:     }
+025130:     const liveMatch = liveMatchRef.current ? liveMatchRef.current.snap : null;
+025131:     const liveStatus = liveMatchRef.current ? liveMatchRef.current.status : "none";
+025132:     /* A "partial" resume rebuilds the day from the PROGRAM and carries the logged sets across per
+025133:        exercise — the lifts that did not change keep everything logged against them. See
+025134:        sessionSnapshotStatus and mergeSessionData for the rule and why it replaced discarding. */
+025135:     const [data, setDataRaw] = useState(() => {
+025136:         /* ⚠ RESOLVE ONCE, THEN BUILD. A paired slot trains a different exercise on alternate weeks, so the
+025137:            session must be built from what the slot holds THIS week, not from `day.exercises[slot]`. */
+025138:         const ids = day.exercises.map((_id, slot) => exerciseAt(program, day, slot, weekIndex));
+025139:         const fresh = day.exercises.map((_id, slot) => {
+025140:             const id = ids[slot];
+025141:             return ({ id, slot, sets: buildSets(EX_BY_ID[id], slot, suggestions[slot], true), note: "", superset: !!program.ss?.[`${day.id}:${slot}`],
+025142:                 restCustom: program.overrides?.[`${day.id}:${slot}`]?.rest || 0 });
+025143:         });
+025144:         if (liveStatus === "resume")
+025145:             return liveMatch.data;
+025146:         if (liveStatus === "partial")
+025147:             return mergeSessionData(liveMatch.data, fresh);
+025148:         return fresh;
+025149:     });
+025150:     /* EVERY write to `data` goes through here, so that "a myo mini carries its activation set's load"
+025151:        is an INVARIANT of the session state rather than a line somebody has to remember inside each of
+025152:        the ~15 handlers that can move a weight. Returns the original array untouched when nothing
+025153:        needed syncing, so this adds no re-renders. See syncSubSets. */
+025154:     const setData = (upd) => setDataRaw(prev => {
+025155:         const next = typeof upd === "function" ? upd(prev) : upd;
+--- hit 4 lines 37010-37045 ---
+037010:                                            ones the room actually has. */
+037011:                                         , { 
+037012:                                             /* Same reasoning as ProgramView: mid-workout, the alternatives offered must be the
+037013:                                                ones the room actually has. */
+037014:                                             gymEquipment: gymEquipment, 
+037015:                                             /* ⚠ THE DAY IS LOOKED UP FROM THE PROGRAM, NOT HELD AS A SECOND COPY. `sessionDay` is
+037016:                                                captured when the workout starts and is NOT updated by the things that legitimately
+037017:                                                change the day mid-workout — `updateProgramExercise` (the "Update my program" scope
+037018:                                                on a swap) rewrites `program` and `saved` and never touches it. That left two owners
+037019:                                                of "what is in today's day", which is the v584 divergence defect inside the session.
+037020:                                                WHAT IT COST, reproduced: swap an exercise with program scope, minimize, reopen the
+037021:                                                app, tap resume. The live session keeps writing the resume snapshot with the OLD
+037022:                                                exercise list (`db-bench|db-shoulder|dips-tri|cable-fly`) because that is what its
+037023:                                                stale `day` says, while the saved program now reads `db-incline-fly|...`. On resume
+037024:                                                the day comes from `saved`, `sessionSnapshotStatus` compares the two signatures,
+037025:                                                returns "stale" — and stale DELETES the snapshot and rebuilds the session from
+037026:                                                scratch. Every logged set of that workout is gone, which is Haiden's report: "the
+037027:                                                minimize and restore keeps restarting my workouts, especially if I close out the app
+037028:                                                and come back."
+037029:                                                Resolving by id at render makes the signature incapable of drifting: there is one
+037030:                                                day, the program's. `sessionDay` stays the pointer (it carries quick/freestyle days
+037031:                                                that are not in `saved` yet, hence the fallback). */
+037032:                                             program: program, day: liveDay, weekIndex: sessionWeek, unit: unit, setUnit: chooseUnit, perf: perf, onExit: () => { const q = program?.quick; setSessionDay(null); if (q) {
+037033:                                                 setProgram(null);
+037034:                                                 setView("home");
+037035:                                             }
+037036:                                             else
+037037:                                                 setView("program"); }, onFinish: finishSession, onSaveRoutine: saveRoutine, restAutoStart: restAutoStart, warmupCard: warmupCard, onSetWarmupCard: setWarmupCard, restScale: restScale, onBan: addBan, banned: banned, history: history, loadMode: loadMode, onEditHistory: editHistoryEntry, goals: goals, onSetGoal: setGoalWeight, onUpdateProgramExercise: updateProgramExercise, onSetRest: setProgramRest, exNotes: exNotes, onSetExNote: (id, text) => setExNotes(prev => { const n = { ...prev }; const t = (text || "").trim(); if (t)
+037038:                                                 n[id] = t;
+037039:                                             else
+037040:                                                 delete n[id]; return n; }), exSetup: exSetup, onSetExSetup: (id, key, value) => setExSetup(prev => { const cur = { ...(prev[id] || {}) }; const v = (value || "").trim(); if (v)
+037041:                                                 cur[key] = v;
+037042:                                             else
+037043:                                                 delete cur[key]; const n = { ...prev }; if (Object.keys(cur).length)
+037044:                                                 n[id] = cur;
+037045:                                             else
+--- hit 5 lines 37137-37161 ---
+037137:                                             return (_jsxs("button", { "data-review-cta": true, onClick: () => { setConfirmAdvance(null); setReviewOf({ cycleId: c.id, blockIdx: active }); pushView("blockReview", view); }, className: "pressable", style: { width: "100%", textAlign: "left", padding: "11px 12px", borderRadius: 12, border: `1px solid ${C.accent}33`, background: C.accentDim, color: C.text, cursor: "pointer", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }, children: [_jsx(Milestone, { size: 15, color: C.accentInk, style: { flexShrink: 0 } }), _jsxs("span", { style: { flex: 1, minWidth: 0 }, children: [_jsx("span", { style: { display: "block", fontSize: 13, fontWeight: 700 }, children: "See how this block went" }), _jsx("span", { style: { display: "block", fontSize: 11, color: C.muted }, children: R.headline })] }), _jsx(ChevronRight, { size: 15, color: C.muted, style: { flexShrink: 0 } })] }));
+037138:                                         })(), _jsxs("button", { onClick: () => { setConfirmAdvance(null); doCompleteCycleBlock(c); }, className: "pressable", style: { width: "100%", padding: "13px", borderRadius: 12, border: "none", background: C.accent, color: C.accentText, fontWeight: 700, cursor: "pointer", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }, children: [_jsx(Check, { size: 16 }), " ", willLoop ? "Roll new cycle" : isLast ? "Finish cycle" : "Complete block"] }), _jsx("button", { onClick: () => setConfirmAdvance(null), className: "pressable", style: { width: "100%", padding: "13px", borderRadius: 12, border: `1px solid ${C.border}`, background: "none", color: C.text, fontWeight: 600, cursor: "pointer" }, children: "Cancel" })] }) }));
+037139:                         })() }), loaded && seenIntroV < INTRO_VERSION && (_jsxs("div", { className: "wpb-onboarding", style: { position: "absolute", inset: 0, zIndex: 90, background: C.bg, display: "flex", flexDirection: "column", animation: "fadeIn .25s both" }, children: [_jsx("div", { className: "wpb-scroll wpb-onboarding-scroll", style: { flex: 1, minHeight: 0, overflowY: "auto", padding: "calc(env(safe-area-inset-top) + 34px) 26px 24px" }, children: _jsxs("div", { className: "wpb-onboarding-content", children: [_jsx("div", { className: "wpb-onboarding-mark", style: { width: 56, height: 56, borderRadius: 16, background: C.accent, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }, children: _jsx("svg", { width: "28", height: "28", viewBox: "0 0 28 28", "aria-hidden": "true", children: _jsxs("g", { fill: C.accentText, children: [_jsx("rect", { x: "1", y: "10", width: "3.4", height: "8", rx: "1.4" }), _jsx("rect", { x: "5.6", y: "6.5", width: "4.6", height: "15", rx: "2" }), _jsx("rect", { x: "10.8", y: "12.4", width: "6.4", height: "3.2", rx: "1.6" }), _jsx("rect", { x: "17.8", y: "6.5", width: "4.6", height: "15", rx: "2" }), _jsx("rect", { x: "23.6", y: "10", width: "3.4", height: "8", rx: "1.4" })] }) }) }), _jsx("div", { className: "wpb-onboarding-kicker", style: { fontSize: 13, fontWeight: 700, letterSpacing: 1.4, textTransform: "uppercase", color: C.accentInk, marginBottom: 8 }, children: "Pursuit Iron \u00B7 Strength Coach" }), _jsxs("div", { className: "wpb-onboarding-title", style: { fontSize: 28, fontWeight: 700, letterSpacing: -0.6, lineHeight: 1.15 }, children: ["Your training,", _jsx("br", {}), "built around you."] }), _jsx("div", { className: "wpb-onboarding-copy", style: { fontSize: 15, color: C.muted, marginTop: 12, lineHeight: 1.5 }, children: "Build around your goal, schedule, and equipment. Log what you actually did; the next prescription stays grounded in that history. Your data remains on this device unless you export it." }), _jsx("div", { className: "wpb-onboarding-features", style: { marginTop: 22 }, children: [
+037140:                                                 [Wand2, "Built for your setup", "Goals, days, equipment, and session length shape the program instead of forcing one template."],
+037141:                                                 [Activity, "Log without friction", "Weight, reps, effort, rest, and the next target stay within reach while you train."],
+037142:                                                 [TrendingUp, "Progress you can inspect", "Lift trends, records, volume, measurements, and cycle history stay connected to the work that created them."],
+037143:                                             ].map(([Icon, title, sub], i) => (_jsxs("div", { className: "wpb-onboarding-feature", style: { display: "flex", gap: 12, marginBottom: 16 }, children: [_jsx("div", { className: "wpb-onboarding-feature-icon", style: { width: 40, height: 40, borderRadius: 12, background: C.accentDim, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: _jsx(Icon, { size: 19, color: C.accentInk }) }), _jsxs("div", { style: { flex: 1 }, children: [_jsx("div", { className: "wpb-onboarding-feature-title", style: { fontSize: 15, fontWeight: 700 }, children: title }), _jsx("div", { className: "wpb-onboarding-feature-copy", style: { fontSize: 13, color: C.muted, lineHeight: 1.45, marginTop: 2 }, children: sub })] })] }, i))) })] }) }), _jsxs("div", { className: "wpb-onboarding-footer", style: { flexShrink: 0, padding: "11px 22px calc(env(safe-area-inset-bottom) + 18px)", background: C.bg, borderTop: `1px solid ${C.borderSoft}`, boxShadow: "0 -12px 26px rgba(0,0,0,.10)" }, children: [_jsxs("button", { onClick: () => { setSeenIntroV(INTRO_VERSION); setSeenWhatsNew(WHATS_NEW_VERSION); setView("wizard"); }, className: "pressable wpb-primary-action wpb-onboarding-primary", style: { width: "100%", minHeight: 50, padding: "12px 16px", borderRadius: 13, border: "none", background: C.accent, color: C.accentText, fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }, children: [_jsx(Wand2, { size: 18 }), " Build my program"] }), _jsx("button", { onClick: () => { setSeenIntroV(INTRO_VERSION); setSeenWhatsNew(WHATS_NEW_VERSION); setHomeBrowse(true); setView("home"); }, className: "pressable wpb-secondary-action wpb-onboarding-secondary", style: { width: "100%", minHeight: 44, padding: "10px 13px", marginTop: 7, borderRadius: 12, border: `1px solid ${C.border}`, background: "none", color: C.text, fontSize: 14, fontWeight: 650, cursor: "pointer" }, children: "Browse templates instead" })] })] }))] })] }));
+037144: }
+037145: // Wrap the whole app so a render crash ANYWHERE (not just inside the two sections that already have
+037146: // their own closer ErrorBoundary) shows a recoverable full-screen message instead of silently
+037147: // white-screening with no way back in. Data is autosaved to localStorage independent of render state.
+037148: export default function RootApp() {
+037149:     return _jsx(ErrorBoundary, { full: true, children: _jsx(App, {}) });
+037150: }
+037151: export { exerciseSlotSec, candidateMinutes, extraSetMinutes, WARMUP_SET_SEC, baseSetsFor, loggedVolume, loggedSubVolume, pressAngle, movePattern, availableFor, warmupSets, warmupCount, rankSwapAlts, starvedRegions, programSetupChips, weeklySubVolume, directSubVolume, SUB_LANDMARKS, subRegionOf, weeklyVolume, landmarkFor, coverageGaps, expandEquipment, EQUIP_IMPLIES, paceFactor, estimateMinutesFor, sessionExercisePlan, volumeZone, partZone, mavFor, PLANNED_ROOM_RIR, EX_BY_ID, CHANGELOG, CHANGELOG_ITEMS, WHATS_NEW_MAX, groupSessionsByMonth, groupSessionsByCycle, planOverview, phaseTone, PCT_SCHEMES, MACHINE_SETUP, SETUP_LABELS, plateauSessions, pickTopSet, setupFieldsFor, setupFieldsWithStored, navPush, navPop, propagateCycleEditsPure, ALL_EQUIP_IDS, EQUIPMENT, ageFactor, strengthLevel, strengthSnapshot, STANDARDS, STD_LEVELS, ageFrom, birthParts, birthFromAge, todayISO, normalizeBwLog, normalizeMeasureLog, weeklyBodyweightTrend, lengthUnitFor, asLengthUnit, BW_LOG_CAP, STORE_MIGRATIONS, calibratedDayPerf, onPlanExempt, plannedGapHours, prescribedRIRof, isBarLike, isMachineLike, barFor, BARS, shareSession, shareStrengthScore, setGymLimits, gymCapFor, normalizeGyms, templateFacets, templateEmphasis, ExerciseFigure, figurePose, EXERCISES, assertFigureCoverage, FIGURE_GENERIC_OK, Exit, mergeStores, sessionSnapshotStatus, mergeSessionData, mergedSetCount, nextPrefillTargetIndex, encodeProgramCode, decodeProgramCode, decodeGallery, gallerySubmission, galleryIssueBody, programFingerprint, personalRepSlope, coachFacts, volumeResponse, volumeVerdicts, STRETCH_FOCUS, STRETCH_FOCUS_E2, STRETCH_FOCUS_E3, lastSetTech, techSetTag, techExplain, capHistory, HISTORY_CAP, HISTORY_BYTES, rirTrend, sessionCoach, coverageRelief, volumeLedger, landmarkOf, completionRate, recommendedSplit, SPLIT_RECOMMENDATIONS, NOVICE_INELIGIBLE_SPLITS, parseRIRNum, sameProgramContent, rirAtLoad, e1rmAnchorOf, regionGapsFor, regionGapFix, REGION_REQUIRED, previewVolumeNudge, coachNote, coachIntent, exerciseSeries, rmAt, EX_METRICS, EX_WINDOWS, exRecords, cycleProgress, blockReview, lastTopSet, betterTopSet, e1rmRIR, loadAtRIR, EPLEY_SLOPE, E1RM_REP_CAP, ASSUMED_RIR, isWorkSet, workSetsOf, dayMuscleBreakdown, weekMuscleBreakdown, plannedWeek, dayMuscleVolume, capWords, WHATS_NEW_WORDS, homeCardPlan, HOME_INSIGHT_BUDGET, WhatsNewCard, PATTERNS, patternOf, sameMovement, lengthOf, parseStoredData, recordReleaseDiag, readReleaseDiagnostics, clearReleaseDiagnostics, releaseDiagnosticsText };
+037152: export { ENGINE_V, ENGINES, ENGINE_RULES, engHas, engLacks, engineInfo, STORE_VERSION, migrateStore, GOALS, SESSIONS, EXP, THEMES, normalizeMusclePreferences, preferenceFloor, GEN_PIPELINE, runPipeline, openGeneration, schemeTierCount, COVERAGE_PASSES, coverageContext, prescribedDaySize, ASSISTANCE_SIZE, candidateSlotMin, daySeconds, advanceCycle, templateConfig, TEMPLATES, CYCLE_TEMPLATES, SPLITS, DAY_TEMPLATES, templateIntent, TEMPLATE_CATS, TEMPLATE_FILTER_GROUPS, sfrOf, axialCost, fitSessionTime, MRV_GRAIN, weekIntent, historyForProgram, IDEAL_SLOTS, dayMuscleLoad, dayOverlap, distributeVolBias, capWeeklyVolume, buildWeekPlan, programQuality, compareQuality, COVERED_MUSCLES, BEST_OF_N, traceGeneration, setPipeTrace, setClaimTrace, emitClaim, compositeMrv, PATTERN_GROUPS, PATTERN_MIN_SETS, patternTrainable, patternGapsOf, weeksOf, phaseFor, estimateMinutes, addedMinutes, addedSeconds, fitChip, daysInWeek, exerciseAt, rotationOf, fitSessionToTime, blockRetro, volumeAudit, LANDMARKS, secondaryOf, PART_ORDER, FOCUS_CAVEAT, WEEK_ORDER_TERMS, computeCell, pctSetsFor, gzPlanFor, gzAdvance, projectNextTM, nextTMEvidence, ddpNextForSet, lastSetEffort, styleFor, autoStyleFor, plateauOf, plateauOfLift, plateauSplitByDay, dayScopedTrends, fitText, fitFont, wrapList, drawRecapCard, exerciseTrends, summarizeSets, muscleRecovery, volumeAdvice, weeklyRecap, deloadAdvice, overreachSignal, constantLoadDecay, sessionE1RM, computeMilestones, ICON_CHOICES, ICON_GROUPS, ICON_COLORS, iconForProgram, iconForCycle, iconColorOf, nextSessionCursor, nextDueDayId, historyDayIndex, autoStyleDetail, explainPrescription, explainGeneration, perfAfterDelete, perfAfterHistoryReplace, normalizeEditedHistoryEntry, lifterModelKey, normalizeHistoryDayIds, normalizeCycleLinks, auditProgramWeek, auditSets, simulateAndAudit, repRange, goalForDay, blockPhase, rirFor, gymRackFor, pickActiveProgram, strengthScore, scoreAttribution, e1rm, loadStep, linearInc, lowerBodyLift, LOWER_PARTS, roundTo, setLoadInc, effortLabel, platesPerSide, setAvailPlates, strengthScoreHistory, restSec, effectiveRest, setRestScaleGlobal, dayPerfFor, lastDayPerf, anchorPerfFor, calibratedAnchorPerf, sessionSuggestion, prescribeSets, PROG_POLICIES, policyIdFor, resolveStyle, loggedRIRof, syncSubSets, growMyoSets, styleOverride, stallCountFor, SHED_TOL, STALL_ENGAGE, E1RM_HOLD, STALL_WINDOW, buildLifterModel, effortCalibration, calibrateDayPerf, readinessBand, bandForExercise, classifyPlateau, runSelfTest };
+037153: // Integration seams for storage and setup fault-injection gates; removed from the browser bundle.
+037154: export { loadStore, saveStore, Wizard };
+037155: /* Test-only: integration/m115-workout-browser-check.mjs imports these by name. They were missing from the shipped M116
+037156:    build, so that browser check could not load against it (its recorded PASS cannot have come from this App.js).
+037157:    The running app mounts only the default export; these change nothing in production. */
+037158: export { WorkoutSession, StepButton, StyleTag };
+037159: export { ExerciseAnimation, FormVideoLink, formVideoUrl, refusalMessage };
+037160: 
+037161: export { HomePrograms, homeProgramGroups, homePhaseIdentity };
+
+===== setDoc (0 hits) =====
+
+===== getDoc (0 hits) =====
+

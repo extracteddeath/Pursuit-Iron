@@ -1,0 +1,31 @@
+name: M178 PWA update audit
+
+on:
+  push:
+    branches: [m178-pwa-update-hardening]
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Inspect update handshake and live-session persistence
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '=== App update handshake ==='
+          grep -n -C 12 -E 'wpb:update-ready|pursuitUpdateRequested|SKIP_WAITING|update-ready|waitingWorker|updateReady' modules/App.js || true
+          echo '=== Live-session persistence ==='
+          grep -n -C 8 -E 'persistLive|pagehide|visibilitychange|freeze|wpb:live|LIVE_KEY' modules/App.js | head -n 360 || true
+          echo '=== Index registration ==='
+          grep -n -C 8 -E 'serviceWorker|updatefound|controllerchange|pursuitUpdateRequested|reg\.update' index.html || true
+          echo '=== Service worker lifecycle ==='
+          cat sw.js
+          echo '=== Current release gate references ==='
+          grep -n -E 'm176|m177|service|worker|pwa|restore' scripts/verify-release.mjs || true

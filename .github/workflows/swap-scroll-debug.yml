@@ -21,30 +21,21 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-          s=Path('modules/App.js').read_text()
-          lines=s.splitlines()
-          needles=['sheetDragRef','wpb-swap-results','.wpb-scroll','touchAction','touch-action','Swap Exercise']
-          ranges=[]
-          for needle in needles:
-              for i,l in enumerate(lines):
-                  if needle in l:
-                      ranges.append((max(0,i-16), min(len(lines),i+28), needle))
-          ranges.sort()
-          merged=[]
-          for a,b,n in ranges:
-              if merged and a <= merged[-1][1] + 3:
-                  merged[-1]=(merged[-1][0], max(merged[-1][1],b), merged[-1][2]+' | '+n)
-              else:
-                  merged.append((a,b,n))
+          lines=Path('modules/App.js').read_text().splitlines()
           out=[]
-          for a,b,n in merged:
-              out.append(f'=== {n} :: lines {a+1}-{b} ===')
+          def dump(title, idx, before, after):
+              a=max(0,idx-before); b=min(len(lines),idx+after)
+              out.append(f'=== {title} :: lines {a+1}-{b} ===')
               out.extend(f'{j+1}: {lines[j]}' for j in range(a,b))
               out.append('')
+          swap=[i for i,l in enumerate(lines) if 'wpb-swap-results' in l]
+          for n,i in enumerate(swap): dump(f'wpb-swap-results #{n+1}',i,45,120)
+          refs=[i for i,l in enumerate(lines) if 'sheetDragRef' in l and ('const ' in l or 'function ' in l or '=>' in l)]
+          for n,i in enumerate(refs[:4]): dump(f'sheetDragRef definition #{n+1}',i,25,85)
           Path('SWAP_DEBUG.txt').write_text('\n'.join(out))
           PY
           git config user.name "Pursuit Debug Bot"
           git config user.email "actions@users.noreply.github.com"
           git add SWAP_DEBUG.txt
-          git commit -m "chore: capture swap scroll source" || true
+          git commit -m "chore: narrow swap scroll source" || true
           git push

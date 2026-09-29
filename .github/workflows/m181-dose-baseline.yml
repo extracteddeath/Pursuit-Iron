@@ -1,0 +1,25 @@
+name: M181 dose-band baseline
+
+on:
+  push:
+    branches: [m181-volume-dose-intelligence]
+    paths:
+      - '.github/workflows/m181-dose-baseline.yml'
+      - 'verification/m181-dose-band-baseline.mjs'
+      - 'modules/next-engine/allocator.js'
+      - 'modules/next-engine/prescription.js'
+      - 'modules/next-engine/realizer.js'
+
+permissions:
+  contents: read
+
+jobs:
+  dose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run dose-band baseline
+        run: node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m181-dose-band-baseline.mjs

@@ -203,6 +203,9 @@ function applyAdaptiveProgressionStyles(program, previous, request, target, evid
                 currentStyle,
                 prescription: exercise.prescription,
                 blockWeeks,
+                // A global manual method remains manual across block review. Auto still re-selects
+                // exercise by exercise because explicitStyle ignores the literal 'auto' value.
+                requestedStyle: request.preferences?.progressionStyle,
                 evidence: progressionEvidenceFor(exercise.exerciseId, evidence, successful, fatigueLimited, techniqueLimited)
             });
             if (selection.style !== exercise.progressionStyle || selection.style !== currentStyle) {
@@ -238,7 +241,15 @@ function applyAdaptiveProgressionStyles(program, previous, request, target, evid
  * sets/reps/RIR/rest; continuity owns exercise identity/progression history.
  */
 export function transitionProgramPhase(previous, request, target, evidence) {
-    const generated = generateProgram(request, { phase: target }).program;
+    const nextBlockWeeks = Math.max(1, Number(evidence?.nextBlockWeeks ?? evidence?.blockWeeks ?? 6) || 6);
+    const generated = generateProgram(request, {
+        phase: target,
+        // New exercises introduced by the target phase must use the actual next-block duration too.
+        // Otherwise a four-week block can accidentally start a five-plus-week wave simply because
+        // the exercise has no prior history for the adaptive pass to correct.
+        blockWeeks: nextBlockWeeks,
+        progressionStyle: request.preferences?.progressionStyle
+    }).program;
     const successful = new Set(evidence.successfulExerciseIds);
     const protectedIds = new Set(evidence.protectedExerciseIds ?? []);
     const replaceIds = new Set(evidence.replaceExerciseIds ?? []);

@@ -181,7 +181,10 @@ export function shellConfigToNextRequest(config, banned = [], legacyExercises = 
         },
         preferences: {
             preferredSplit: split, lockedSplit: split, avoidedExercises: mapBanned(banned, legacyExercises),
-            volumeApproach: config.volumeApproach === 'minimalist' ? 'minimalist' : 'standard'
+            volumeApproach: config.volumeApproach === 'minimalist' ? 'minimalist' : 'standard',
+            // Persist the user's global method choice in the immutable request snapshot so later
+            // blocks cannot silently fall back to Auto after honoring the choice at creation.
+            progressionStyle: config.progressionStyle ?? 'auto'
         },
         seed: seed ?? Math.max(1, Math.floor(Date.now() % 2147483647))
     };
@@ -511,7 +514,9 @@ export function nextProgramToShellProgram(nextProgram, config, legacyExercises, 
                 displayLoadingModes[exercise.exerciseId] = shownMode;
             const key = `${id}:${slot}`;
             overrides[key] = {
-                nextEngine: true, nextExerciseId: exercise.exerciseId, legacyExerciseId: legacy.id, role: exercise.role, progressionStyle: schemeStyle(config, exercise.role, exercise.progressionStyle ?? 'auto')
+                nextEngine: true, nextExerciseId: exercise.exerciseId, legacyExerciseId: legacy.id, role: exercise.role,
+                progressionStyle: schemeStyle(config, exercise.role, exercise.progressionStyle ?? 'auto'),
+                progressionSelection: exercise.progressionSelection ? { ...exercise.progressionSelection } : undefined
             };
             // Manual mode is an explicit request to own the prescription in the shell. Seed the editable
             // values from week 1; auto mode stores metadata only so later weeks continue to come from 0.41.
@@ -559,7 +564,16 @@ export function nextProgramToShellProgram(nextProgram, config, legacyExercises, 
         // Keep v661 engineV for legacy shell feature gates. Provenance has its own explicit version fields.
         engineV: 33, engineSource: 'pursuit-next', engineSourceVersion: nextProgram.engineVersion,
         config: { ...config }, weeks: totalWeeks, days, overrides, progStyle, ss, nextWeekPrescriptions, weekPlan, schedule, scheduleBase: { ...schedule },
-        nextEngine: { displayLoadingModes, version: nextProgram.engineVersion, phase: nextProgram.phase, split: nextProgram.split, audit: nextProgram.audit, rationale: nextProgram.rationale, explainability: nextProgram.explainability, sourceProgramId: nextProgram.id }
+        nextEngine: {
+            displayLoadingModes, version: nextProgram.engineVersion, phase: nextProgram.phase, split: nextProgram.split, audit: nextProgram.audit, rationale: nextProgram.rationale, explainability: nextProgram.explainability, sourceProgramId: nextProgram.id,
+            progressionPlan: nextProgram.sessions.flatMap(session => session.exercises.map(exercise => ({
+                exerciseId: exercise.exerciseId, exerciseName: exercise.name, role: exercise.role,
+                style: schemeStyle(config, exercise.role, exercise.progressionStyle ?? 'auto'),
+                source: exercise.progressionSelection?.source ?? 'auto',
+                confidence: exercise.progressionSelection?.confidence ?? 'moderate',
+                reason: exercise.progressionSelection?.reason ?? 'Auto selected a progression that matches this exercise and block.'
+            })))
+        }
     };
 }
 export function generateNextProgramForShell(options) {

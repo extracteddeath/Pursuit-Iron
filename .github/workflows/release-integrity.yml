@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   verify-release:
@@ -20,56 +20,3 @@ jobs:
           node-version: '22'
       - name: Verify production runtime
         run: node scripts/verify-release.mjs
-
-  m174-harden:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: verify-release
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-      - name: Apply M174 candidate
-        run: python scripts/m174-promote.py
-      - name: Verify M174 focused and full gates
-        run: |
-          node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m174-causal-cycle-state-test.mjs
-          node scripts/verify-release.mjs
-      - name: Publish verified M174 and restore release workflow
-        shell: bash
-        run: |
-          set -euo pipefail
-          cat > .github/workflows/release-integrity.yml <<'YAML'
-          name: Release integrity
-
-          on:
-            push:
-              branches: [main]
-            pull_request:
-              branches: [main]
-            workflow_dispatch:
-
-          permissions:
-            contents: read
-
-          jobs:
-            verify-release:
-              runs-on: ubuntu-latest
-              steps:
-                - uses: actions/checkout@v4
-                - uses: actions/setup-node@v4
-                  with:
-                    node-version: '22'
-                - name: Verify production runtime
-                  run: node scripts/verify-release.mjs
-          YAML
-          rm -f .github/workflows/m174-causal-cycle-state.yml scripts/m174-promote.py
-          git config user.name "Pursuit Release Bot"
-          git config user.email "actions@users.noreply.github.com"
-          git add -A
-          git commit -m "M174: causal cycle-state hardening"
-          git push origin HEAD:main
-          git push origin --delete m174-causal-cycle-state || true

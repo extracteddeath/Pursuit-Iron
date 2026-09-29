@@ -1,4 +1,4 @@
-export const ENGINE_VERSION = '0.63.0';
+export const ENGINE_VERSION = '0.63.1';
 export const MUSCLE_DOSE_PRIOR = {
     novice: { minimum: 4, preferred: 6, upper: 10 },
     intermediate: { minimum: 6, preferred: 9, upper: 14 },

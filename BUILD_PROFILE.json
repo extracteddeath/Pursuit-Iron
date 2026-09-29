@@ -1,12 +1,12 @@
 {
   "profile": "portable-browser-esm-v661-workout-input",
-  "milestone": "M173",
-  "source": "M172 + cross-feature integration torture coverage + bootstrap/PWA resilience hardening",
-  "engine": "0.63.0 two-pass actual strength-anchor residual allocator",
+  "milestone": "M174",
+  "source": "M173 + causal cycle-state recovery/review hardening",
+  "engine": "0.63.1 causal recovery evidence through cycle-state transitions",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 43,
   "shadowRuntimeModules": 9,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-m173-integration-resilience",
+  "cache": "pursuit-iron-production-m174-causal-cycle-state",
   "uiMilestone": "M169 Swap Sheet Scrolling"
 }

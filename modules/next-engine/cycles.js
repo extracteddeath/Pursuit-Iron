@@ -1,4 +1,5 @@
 import { initialPhaseForGoal, phaseLabel } from './phase-policy.js';
+import { recoverySignalForDecision } from './recovery.js';
 export function createInitialCycleState(goal, daysPerWeek) {
     const minimumWorkouts = Math.max(4, daysPerWeek * 2);
     const reviewAfterWorkouts = Math.max(minimumWorkouts + 2, daysPerWeek * 4);
@@ -40,9 +41,19 @@ export function recommendNextPhase(goal, state, recovery) {
         return undefined;
     return nextDevelopmentPhase(goal, state.phase);
 }
+function causalCycleEvidence(decisions) {
+    const signals = (decisions ?? []).map(recoverySignalForDecision);
+    const negative = signals.filter(v => v < 0);
+    const positive = signals.filter(v => v > 0);
+    return {
+        negativeCount: negative.length,
+        negativeScore: negative.reduce((sum, value) => sum + Math.abs(value), 0),
+        positiveCount: positive.length,
+        positiveScore: positive.reduce((sum, value) => sum + value, 0)
+    };
+}
 function advanceRecoveryPhase(state, decisions, recovery, goal, workoutsInPhase) {
-    const concerning = decisions.filter(d => d.action === 'review' || d.action === 'hold' || d.action === 'decrease_load').length;
-    const positive = decisions.filter(d => d.action === 'increase_load' || d.action === 'add_reps').length;
+    const { negativeCount: concerning, negativeScore, positiveCount: positive } = causalCycleEvidence(decisions);
     let exitEvidence = state.recoveryExitEvidence ?? 0;
     let status = 'building';
     let rationale = 'Recovery phase remains active while the engine looks for repeated evidence that performance and fatigue have normalized.';
@@ -57,7 +68,7 @@ function advanceRecoveryPhase(state, decisions, recovery, goal, workoutsInPhase)
     }
     else if (recovery?.status === 'normal') {
         const acceptableConcern = Math.max(1, Math.floor(decisions.length * .25));
-        const favorable = decisions.length > 0 && concerning <= acceptableConcern && (positive > 0 || concerning === 0);
+        const favorable = decisions.length > 0 && positive > 0 && concerning <= acceptableConcern && negativeScore < .75;
         exitEvidence = favorable ? exitEvidence + 1 : Math.max(0, exitEvidence - 1);
         rationale = favorable
             ? `Recovery evidence is normalizing (${exitEvidence}/2 exit confirmations). Return to development only after repeated favorable exposures and the minimum recovery dose is complete.`
@@ -86,17 +97,19 @@ export function advanceCycleState(state, decisions, structuralAdaptation, recove
     const workoutsInPhase = state.workoutsInPhase + 1;
     if (state.phase === 'recovery')
         return advanceRecoveryPhase(state, decisions, recovery, goal, workoutsInPhase);
-    const reviews = decisions.filter(d => d.action === 'review').length;
-    const progress = decisions.filter(d => d.action === 'increase_load' || d.action === 'add_reps').length;
+    const evidence = causalCycleEvidence(decisions);
+    const concerning = evidence.negativeCount;
+    const negativeScore = evidence.negativeScore;
+    const progress = evidence.positiveCount;
     let status = 'building';
     let rationale = state.rationale;
     if (recovery?.status === 'deload_recommended') {
         status = 'recovery_review';
         rationale = recovery.rationale;
     }
-    else if (workoutsInPhase >= state.minimumWorkouts && reviews >= Math.max(2, Math.ceil(decisions.length * .4))) {
+    else if (workoutsInPhase >= state.minimumWorkouts && concerning >= Math.max(2, Math.ceil(decisions.length * .4)) && negativeScore >= 1.5) {
         status = 'recovery_review';
-        rationale = 'Several exercises need review after sufficient exposure. Evaluate fatigue, exercise fit, and recovery before changing phase or adding work.';
+        rationale = 'Several exercises show causal hard-effort, load, rep-floor, or incomplete-session concerns after sufficient exposure. Evaluate fatigue, exercise fit, and recovery before changing phase or adding work.';
     }
     else if (workoutsInPhase >= state.reviewAfterWorkouts) {
         status = 'review_eligible';

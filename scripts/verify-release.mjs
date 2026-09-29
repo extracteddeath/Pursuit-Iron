@@ -64,6 +64,7 @@ execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verifi
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/m172-actual-strength-baseline-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/m173-integration-torture-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['verification/m173-pwa-resilience-test.mjs'],{stdio:'inherit',cwd:root});
+execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/m174-causal-cycle-state-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/programs-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/set-display-integrity-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['verification/cycle-overview-ui-test.mjs'],{stdio:'inherit',cwd:root});

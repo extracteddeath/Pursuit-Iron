@@ -1,3 +1,10 @@
+## M174 — Causal Cycle-State Hardening (3.224.0 / build 780 / Engine 0.63.1)
+
+- Closes the remaining M170 recovery-causality gap inside `cycles.js`. Generic action labels such as `hold` and `review` no longer count as fatigue by themselves.
+- Development blocks now enter recovery review only from sufficiently broad, weighted negative causes such as effort overshoot, load-too-heavy, rep-floor misses, or incomplete sessions. Loading-inventory limitations remain neutral.
+- Recovery-phase exit now requires repeated positive causal evidence (`progression_success`) after the minimum recovery dose. Neutral holds/reviews neither delay recovery as fake fatigue nor count as exit confirmation.
+- Adds focused regression coverage and reruns the full M173 production suite.
+
 ## M173 — Integration + Bootstrap Resilience (3.223.0 / build 779)
 
 - Audited the M172 baseline before changing anything: history correction and cross-surface engine authority were already implemented and regression-gated, so they were preserved rather than rebuilt.

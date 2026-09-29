@@ -1,5 +1,5 @@
-/* M173 integration + bootstrap resilience hardening — Engine 0.63.0. */
-const CACHE="pursuit-iron-production-m173-integration-resilience";
+/* M174 causal cycle-state hardening — Engine 0.63.1. */
+const CACHE="pursuit-iron-production-m174-causal-cycle-state";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
   "./",

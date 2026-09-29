@@ -1,4 +1,4 @@
-name: M177 Store Schema Inspection
+name: M177 Editable History Merge Promotion
 
 on:
   push:
@@ -10,34 +10,43 @@ permissions:
   contents: write
 
 jobs:
-  inspect:
+  promote:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Capture M177 export and persistence boundaries
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply M177 candidate
         shell: bash
         run: |
-          python - <<'PY'
-          from pathlib import Path
-          lines=Path('modules/App.js').read_text().splitlines()
-          needles=['STORE_VERSION','const STORE_MIGRATIONS','function migrateStore','function mergeStores','const [history, setHistory]','stampedSetter','setHistory(normalizeHistoryDayIds','export {']
-          out=[]
-          for needle in needles:
-            hits=[i for i,line in enumerate(lines) if needle in line]
-            out.append(f'===== {needle} ({len(hits)} hits) =====')
-            for i in hits[:30]:
-              lo=max(0,i-8); hi=min(len(lines),i+18)
-              out.extend(f'{j+1:06d}: {lines[j]}' for j in range(lo,hi))
-              out.append('---')
-          Path('M177_SCHEMA.txt').write_text('\n'.join(out)+'\n')
-          PY
-      - name: Publish schema capture
+          set +e
+          python scripts/m177-promote-v2.py > /tmp/m177-promote.log 2>&1
+          code=$?
+          if [ "$code" -ne 0 ]; then
+            git reset --hard HEAD
+            cp /tmp/m177-promote.log M177_RUN.txt
+            git config user.name "Pursuit Release Bot"
+            git config user.email "actions@users.noreply.github.com"
+            git add M177_RUN.txt
+            git commit -m "chore: capture M177 promotion failure"
+            git push origin HEAD:main
+            exit "$code"
+          fi
+          cat /tmp/m177-promote.log
+      - name: Verify M177 focused and full gates
+        run: |
+          node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m177-history-merge-integrity-test.mjs
+          node scripts/verify-release.mjs
+      - name: Publish verified M177
         shell: bash
         run: |
+          set -euo pipefail
+          rm -f .github/workflows/m177-history-sync-inspect.yml M177_INSPECT.txt M177_RUN.txt M177_SCHEMA.txt scripts/m177-promote.py scripts/m177-promote-v2.py
           git config user.name "Pursuit Release Bot"
           git config user.email "actions@users.noreply.github.com"
-          git add M177_SCHEMA.txt
-          git commit -m "chore: capture M177 export and persistence boundaries"
+          git add -A
+          git commit -m "M177: editable history merge integrity"
           git push origin HEAD:main

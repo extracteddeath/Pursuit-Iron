@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/m180-oracle-audit.yml'
       - 'modules/next-engine/coach-quality-oracle.js'
+      - 'modules/next-engine/prescription.js'
       - 'verification/m180-coach-quality-oracle-test.mjs'
       - 'verification/m180-coach-quality-matrix.mjs'
 

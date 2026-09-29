@@ -15,6 +15,7 @@ import { auditProgram } from './arbiter.js';
 import { assessWeeklyRecovery, optimizeWeeklyRecovery } from './weekly-recovery.js';
 import { proposeRecoveryRedistributions } from './recovery-realization.js';
 import { buildProgramExplainability } from './explainability.js';
+import { reconcileRecoverableDose } from './dose-reconciliation.js';
 export function generateProgram(requestInput, options) {
     const normalized = normalizeRequest(requestInput);
     const phase = options?.phase ?? initialPhaseForGoal(normalized.goal.type);
@@ -297,10 +298,15 @@ export function generateProgram(requestInput, options) {
     // it out of intermediate generation prevents exercise order from feeding back into pairing, dose,
     // recovery, or repair decisions; the final transform is therefore prescription-neutral.
     const orderedSessions = assembled.base.sessions.map(session => optimizeSetupAwareSessionSequence(session, exerciseMap, request));
-    const orderedEvents = createTrainingSetEvents(orderedSessions, request.customExercises);
-    const finalBase = { ...assembled.base, sessions: orderedSessions, events: orderedEvents, muscleLedger: deriveMuscleLedger(orderedEvents) };
+    // M181 reconciles secondary/collateral muscle credits only after every additive repair has finished.
+    // This keeps the allocator's upper regions authoritative without teaching earlier repair passes to
+    // game a second ledger. Reduced sessions are re-finalized and then audited normally below.
+    const doseReconciliation = reconcileRecoverableDose(orderedSessions, request, phase);
+    const reconciledSessions = doseReconciliation.sessions.map(session => finalizePlannedSession({ ...session, estimatedMinutes: 0 }, request));
+    const orderedEvents = createTrainingSetEvents(reconciledSessions, request.customExercises);
+    const finalBase = { ...assembled.base, sessions: reconciledSessions, events: orderedEvents, muscleLedger: deriveMuscleLedger(orderedEvents) };
     const finalAudit = auditProgram(finalBase, request);
     const auditableProgram = { ...finalBase, audit: finalAudit };
     const program = { ...auditableProgram, explainability: buildProgramExplainability(auditableProgram, request) };
-    return { program, diagnostics: { allocationDecisions: allocation.decisions, allocationDecisionLog: allocation.decisionLog, allocationMetrics: allocation.metrics, topologyRationale: topology.rationale, topologyCandidates: topology.candidates } };
+    return { program, diagnostics: { allocationDecisions: allocation.decisions, allocationDecisionLog: allocation.decisionLog, allocationMetrics: allocation.metrics, topologyRationale: topology.rationale, topologyCandidates: topology.candidates, doseReconciliationAdjustments: doseReconciliation.adjustments, remainingDoseOverflow: doseReconciliation.remainingOverflow } };
 }

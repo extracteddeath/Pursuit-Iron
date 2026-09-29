@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   progression-deltas:
@@ -21,9 +21,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-
-      - name: Apply M192 progression deltas
-        run: node scripts/apply-m192-progression-deltas.mjs
 
       - name: Parse App bundle
         run: node --check modules/App.js
@@ -42,18 +39,3 @@ jobs:
 
       - name: Production torture regression
         run: node --no-warnings --experimental-loader ./verification/import-loader.mjs verification/m188-production-torture-test.mjs
-
-      - name: Persist certified M192 progression deltas
-        if: success()
-        shell: bash
-        run: |
-          set -euo pipefail
-          git add modules/next-engine/phase-transition.js modules/next-engine/app-shell-adapter.js modules/App.js
-          if git diff --cached --quiet; then
-            echo "M192 runtime already committed."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "M192: surface progression method changes across blocks"
-          git push origin HEAD:m192-progression-transition-deltas

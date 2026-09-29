@@ -45,8 +45,8 @@ replaceOnce(
 
 replaceOnce(
   'progression overview render',
-  `children: [_jsx("input", { value: q, onChange: e => setQ(e.target.value), placeholder: "Search a lift…"`,
-  `children: [progressionOverview, _jsx("input", { value: q, onChange: e => setQ(e.target.value), placeholder: "Search a lift…"`
+  `children: _jsxs("div", { style: { paddingTop: 4 }, children: [_jsx("input", { value: q, onChange: e => setQ(e.target.value),`,
+  `children: _jsxs("div", { style: { paddingTop: 4 }, children: [progressionOverview, _jsx("input", { value: q, onChange: e => setQ(e.target.value),`
 );
 
 replaceOnce(

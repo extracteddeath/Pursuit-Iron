@@ -1,8 +1,8 @@
 {
   "schemaVersion": 3,
-  "milestone": "M167",
-  "appVersion": "3.217.0",
-  "build": 773,
+  "milestone": "M168",
+  "appVersion": "3.218.0",
+  "build": 774,
   "engineVersion": "0.62.5",
   "shadowEngineVersion": "0.62.5-shadow",
   "validatedLiveBaseline": "M88-0.61.3-reviewed-baseline",
@@ -84,16 +84,16 @@
     "vendor/react.js": "24b2d220a5b2637cf3fb78fe0d961f227ea0a4b960485dbfb03c9d276e72147c"
   },
   "localCandidate": {
-    "name": "M167 Legacy Dose + Standalone Cycle Recovery",
-    "base": "M166 set-schedule/history-volume release (3.216.0 / 772)",
-    "validation": "Real SekuFit-shaped 31-set dose regression, standalone cycle bridge, generated set canonicalization, progression/history/engine authority, Programs interactions and full import suites required green. Real phone/device validation pending."
+    "name": "M168 Cycle Overview + Phase Semantics",
+    "base": "M167 legacy dose + standalone cycle recovery (3.217.0 / 773)",
+    "validation": "Cycle phase/goal semantic regression, simplified Cycle Detail hierarchy, existing progression/history/engine-authority/program interaction suites, and full import verification required green. Real phone/device validation pending."
   },
   "uiFiles": {
-    "modules/App.js": "3631716d1721fde715f6b6d2e36c451a9366bc9d75e16a14f2491d8b4b0e8ff4",
-    "index.html": "6fc3953479dcd4b96383504d7d347e5033445cb60cf187167440f91330e0f66d",
-    "sw.js": "ad0317b2c9816486ebc4de616b672f4b54bef89a5cef8666a9fb7737187fabc6",
-    "BUILD_PROFILE.json": "9a143f0a8f20e90ea56dffe4495e6405844fe4ea5ce184de9f96db267e5c5139",
-    "CHANGELOG.md": "4f6ab071e7603f8c96446d39273961298e6df107b1e98a7fb40eecb265ba7ea4"
+    "modules/App.js": "5820c118f3c097d780e88ef1f46b83ab02a8356ce3464103171e2ab8c6bf74f4",
+    "index.html": "2c6af30ee0df639c43d42d7f940cc30cd9a2248f476b3ff2b6fbe446d2df3364",
+    "sw.js": "f23a31f4f68918e6987c9c185fbf33b1e3d6254641aa6441c2d92d56f1bd90e4",
+    "BUILD_PROFILE.json": "0307e92848796aeb430235213590c5808539bc98f51aaeadb5efb8d66d033297",
+    "CHANGELOG.md": "2258589ac4194ef9b2ee1d7a6c3aff822842a3641f512cb1cf92527195a51b35"
   },
   "baselineSourceNextEngineAggregate": "9ba84ffe3a62d94849617af33a2eafeaa563ab4a3636579101990ed753d05a84",
   "baselineSourceFiles": {

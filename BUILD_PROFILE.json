@@ -1,12 +1,12 @@
 {
   "profile": "portable-browser-esm-v661-workout-input",
-  "milestone": "M167",
-  "source": "M166 + legacy custom role/bias dose restoration + standalone-to-cycle bridge",
+  "milestone": "M168",
+  "source": "M167 + cycle overview hierarchy cleanup + phase/goal semantic separation",
   "engine": "0.62.5 progression safety + 0.62.5-shadow evaluator",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 42,
   "shadowRuntimeModules": 9,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-m167-legacy-dose-cycle",
-  "uiMilestone": "M167 Legacy Dose + Standalone Cycle Recovery"
+  "cache": "pursuit-iron-production-m168-cycle-overview",
+  "uiMilestone": "M168 Cycle Overview + Phase Semantics"
 }

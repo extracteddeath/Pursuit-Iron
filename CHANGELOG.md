@@ -1,3 +1,10 @@
+## M168 — Cycle Overview + Phase Semantics (3.218.0 / build 774)
+
+- Simplifies Cycle Detail by removing the second unlabeled segmented progress bar; the overview now has one overall progress bar plus a separately labeled cycle path.
+- Removes duplicate block/week counters from the stat row, leaving actionable context: training days per week and sessions logged.
+- Separates block phase from training goal in the cycle path. A powerbuilding peak remains strength-goal programming internally but now displays as **Peak**, so the path reads Hypertrophy → Strength → Peak instead of Hypertrophy → Strength → Strength.
+- Adds a cycle-overview regression gate so phase labeling and the simplified hierarchy cannot silently revert. Pursuit Engine 0.62.5 programming math is unchanged.
+
 ## M167 — Legacy Dose + Standalone Cycle Recovery (3.217.0 / build 773)
 
 - Restores legacy/custom role-based working-set baselines plus saved `slotBias` and `autoBias`, fixing SekuFit being flattened to three sets across every exercise.

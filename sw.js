@@ -1,5 +1,5 @@
-/* M167 legacy-dose + standalone-cycle recovery — Engine 0.62.5; atomic startup recovery retained. */
-const CACHE="pursuit-iron-production-m167-legacy-dose-cycle";
+/* M168 cycle-overview clarity + phase semantics — Engine 0.62.5; atomic startup recovery retained. */
+const CACHE="pursuit-iron-production-m168-cycle-overview";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
   "./",

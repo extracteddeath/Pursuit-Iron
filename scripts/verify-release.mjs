@@ -19,13 +19,13 @@ const missing = shell.filter(p => p !== './' && !fs.existsSync(path.join(root,p.
 if (missing.length) fail(`missing precache files: ${missing.join(', ')}`);
 if (!sw.includes(`const CACHE="${profile.cache}"`)) fail('BUILD_PROFILE cache does not match sw.js');
 if (profile.milestone !== manifest.milestone) fail('BUILD_PROFILE milestone does not match manifest');
-if (profile.uiMilestone !== 'M167 Legacy Dose + Standalone Cycle Recovery') fail('unexpected UI milestone');
+if (profile.uiMilestone !== 'M168 Cycle Overview + Phase Semantics') fail('unexpected UI milestone');
 
 const app = read('modules/App.js');
 for (const marker of ['Turn into training cycle','convertProgramToNextCycleForShell','onConvertCycle: beginCycleConversion','Remove saved plan','Restore to library',
   'homeProgramGroups','homePhaseIdentity','data-program-group','This block starts when you finish the current one','action: "decrease_load"',
   'Correct workout log','normalizeEditedHistoryEntry','perfAfterHistoryReplace','const [lo, hi] = cellRepRange(cell, program, ex, slot === day?.primaryIndex)',
-  'legacyCustomSetCount(program, day, ex, slotIndex, weekIndex, o.sets, base.sets)','cycleConfigForStandaloneProgram','mergeStandaloneIntoGeneratedCycle','advanceLegacyFirstCycleBlock','historyVolumeIn(h, unit)','weeklyRecap(history, unit)','Keep the compact LAST reference to load × reps only','map(weeks => weeks?.[1] ?? weeks?.["1"])']) {
+  'legacyCustomSetCount(program, day, ex, slotIndex, weekIndex, o.sets, base.sets)','cyclePhaseLabel','cycleConfigForStandaloneProgram','mergeStandaloneIntoGeneratedCycle','advanceLegacyFirstCycleBlock','historyVolumeIn(h, unit)','weeklyRecap(history, unit)','Keep the compact LAST reference to load × reps only','map(weeks => weeks?.[1] ?? weeks?.["1"])']) {
   if (!app.includes(marker)) fail(`missing App marker: ${marker}`);
 }
 if (!app.includes(`const __APP_VERSION__='${manifest.appVersion}'; const __BUILD__='${manifest.build}';`)) fail('App version/build mismatch');
@@ -61,6 +61,7 @@ execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verifi
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/full-engine-import-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/programs-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/set-display-integrity-test.mjs'],{stdio:'inherit',cwd:root});
+execFileSync(process.execPath,['verification/cycle-overview-ui-test.mjs'],{stdio:'inherit',cwd:root});
 console.log(`Release integrity OK: ${shell.length} precache entries present; ${jsFiles.length} authored JS files parse.`);
 console.log(`Cache: ${profile.cache}`);
 console.log(`Milestone: ${manifest.milestone} / app ${manifest.appVersion} build ${manifest.build} / engine ${manifest.engineVersion}`);

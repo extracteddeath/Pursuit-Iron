@@ -1,0 +1,48 @@
+name: M167 Inspect Regressions
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/m167-inspect.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trace standalone cycle action and set prescription shapes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('modules/App.js')
+          s=p.read_text()
+          needles=[
+            'Turn into training cycle',
+            'convertProgramToNextCycleForShell',
+            'onConvertCycle',
+            'customAuthoredSetCount',
+            'function computeCell',
+            'nextWeekPrescriptions',
+            'map(weeks => weeks?.[1] ?? weeks?.["1"])',
+            'sets: 3',
+            'sets || 3',
+            'sets ?? 3'
+          ]
+          for needle in needles:
+            print('\n===== '+needle+' =====')
+            start=0; seen=0
+            while True:
+              i=s.find(needle,start)
+              if i<0 or seen>=10: break
+              a=max(0,i-1800); b=min(len(s),i+2600)
+              print(f'--- hit {seen+1} @ {i} ---')
+              print(s[a:b])
+              start=i+len(needle); seen+=1
+            if not seen: print('NO MATCH')
+          PY

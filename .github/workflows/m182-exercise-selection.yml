@@ -28,8 +28,12 @@ jobs:
         run: node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m182-exercise-selection-intelligence-test.mjs
       - name: Run M182 generated selection matrix
         run: node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m182-selection-matrix.mjs
-      - name: Run M180 coach quality matrix
-        run: node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m180-coach-quality-matrix.mjs
+      - name: Run M180 coach quality gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m180-coach-quality-oracle-test.mjs
+          node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m180-coach-quality-matrix.mjs
       - name: Preserve M181 dose reconciliation contract
         shell: bash
         run: |
@@ -47,6 +51,7 @@ jobs:
             verification/m174-causal-cycle-state-test.mjs \
             verification/m175-longitudinal-adaptation-memory-test.mjs \
             verification/prescription-integrity-test.mjs \
+            verification/programs-test.mjs \
             verification/progression-safety-test.mjs \
             verification/custom-progression-safety-test.mjs \
             verification/full-engine-import-test.mjs

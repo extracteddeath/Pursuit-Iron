@@ -123,20 +123,13 @@ const neutralHold=()=>({action:'hold',reasonCode:'normal_progression',role:'hype
 const hard=()=>({action:'hold',reasonCode:'effort_overshoot',role:'hypertrophy_compound'});
 const success=()=>({action:'increase_load',reasonCode:'progression_success',role:'hypertrophy_compound'});
 
-// The old cycle layer counted raw `review` actions. Loading-inventory limitations are neutral and
-// must not send a healthy development block to recovery review.
 let development=createInitialCycleState('mixed',3);
 development={...development,workoutsInPhase:development.minimumWorkouts-1};
 const neutralDevelopment=advanceCycleState(development,[neutralReview(),neutralReview(),neutralReview(),neutralReview()],false,normalRecovery,'mixed');
 assert.equal(neutralDevelopment.status,'building','neutral review labels must not masquerade as fatigue');
-
-// Genuine causal negatives still produce a block-level review once exposure is sufficient.
 const hardDevelopment=advanceCycleState(development,[hard(),hard(),hard(),hard()],false,normalRecovery,'mixed');
 assert.equal(hardDevelopment.status,'recovery_review');
 
-// In recovery, neutral hold/review labels are neither negative evidence nor a positive exit
-// confirmation. This prevents arbitrary holds from extending recovery while also preventing a
-// no-signal session from prematurely ending it.
 const prior={phase:'mixed_accumulation'};
 let recovery=startPhase(prior,'recovery','mixed',3);
 recovery=advanceCycleState(recovery,[neutralHold(),neutralReview()],false,normalRecovery,'mixed');
@@ -146,8 +139,6 @@ recovery=advanceCycleState(recovery,[neutralHold(),neutralReview()],false,normal
 assert.equal(recovery.recoveryExitEvidence,0);
 assert.notEqual(recovery.status,'review_eligible');
 
-// Repeated causal success is the thing that earns recovery exit. After the minimum recovery dose,
-// two positive confirmations restore the phase that recovery interrupted.
 let recovered=startPhase(prior,'recovery','mixed',3);
 recovered=advanceCycleState(recovered,[success(),neutralReview()],false,normalRecovery,'mixed');
 assert.equal(recovered.recoveryExitEvidence,1);
@@ -156,7 +147,6 @@ assert.equal(recovered.recoveryExitEvidence,2);
 assert.equal(recovered.status,'review_eligible');
 assert.equal(recovered.recommendedNextPhase,'mixed_accumulation');
 
-// A real negative cause cannot be hidden behind the generic `hold` label.
 let setback=startPhase(prior,'recovery','mixed',3);
 setback={...setback,recoveryExitEvidence:1};
 setback=advanceCycleState(setback,[hard(),neutralHold()],false,normalRecovery,'mixed');
@@ -220,3 +210,5 @@ console.log('M174 causal cycle-state tests OK: neutral labels stay neutral, caus
           git commit -m "M174: causal cycle-state hardening"
           git push origin HEAD:main
           git push origin --delete m174-causal-cycle-state || true
+
+# trigger

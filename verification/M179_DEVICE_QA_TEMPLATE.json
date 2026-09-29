@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "milestone": "M179",
+  "title": "Physical Android installed-PWA certification",
+  "purpose": "Certify the remaining mobile behaviors that browser/Node automation cannot reproduce: Android process death, installed-PWA relaunch, lifecycle persistence, and real update behavior.",
+  "requirements": {
+    "platform": "Android",
+    "launchMode": "installed PWA from home-screen icon",
+    "minimumEvidenceCharacters": 12,
+    "allRequiredScenariosMustPass": true
+  },
+  "scenarios": [
+    {
+      "id": "cold-start",
+      "name": "Cold start",
+      "required": true,
+      "instructions": [
+        "Force-stop the installed PWA from Android app/site settings or terminate its process.",
+        "Launch Pursuit Iron from the installed home-screen icon.",
+        "Confirm the app reaches the first usable screen without a black screen, startup error, or endless loading state."
+      ],
+      "expected": "The installed app boots normally and reaches a usable React UI."
+    },
+    {
+      "id": "active-workout-process-kill",
+      "name": "Active workout survives process kill",
+      "required": true,
+      "instructions": [
+        "Start a workout and log at least one completed set plus a note or changed input on a later set.",
+        "Background the PWA, then force-stop/kill it so the process is genuinely gone.",
+        "Relaunch from the installed icon and resume the workout."
+      ],
+      "expected": "The same program/day/week resumes; completed work and current inputs are preserved and exercise order still comes from the current program."
+    },
+    {
+      "id": "rest-timer-process-kill",
+      "name": "Rest timer restoration",
+      "required": true,
+      "instructions": [
+        "During a workout, start a rest timer and allow several seconds to elapse.",
+        "Background and kill the installed PWA process.",
+        "Relaunch and resume the workout."
+      ],
+      "expected": "The rest-timer state restores coherently without inventing elapsed training time or resetting logged work."
+    },
+    {
+      "id": "background-resume-no-kill",
+      "name": "Normal background/resume",
+      "required": true,
+      "instructions": [
+        "Start a workout, log work, and background the app without force-stopping it.",
+        "Use another app long enough for Android to suspend Pursuit Iron.",
+        "Return to Pursuit Iron."
+      ],
+      "expected": "The live session returns without duplicate navigation, reset inputs, lost notes, or timer corruption."
+    },
+    {
+      "id": "offline-relaunch",
+      "name": "Offline relaunch",
+      "required": true,
+      "instructions": [
+        "Open Pursuit Iron once while online so the current release is installed and cached.",
+        "Enable airplane mode or otherwise remove network access.",
+        "Kill the installed PWA and relaunch from the home-screen icon."
+      ],
+      "expected": "The cached app shell loads and locally stored training data remains available."
+    },
+    {
+      "id": "update-idle",
+      "name": "Update while idle",
+      "required": true,
+      "instructions": [
+        "With no workout active, deploy or make available a newer test build/service worker.",
+        "Open or foreground the installed PWA and wait for the update-ready control.",
+        "Use the in-app Restart action."
+      ],
+      "expected": "The new worker takes control through the app's Restart path, the app reloads successfully, and local training/history data survives."
+    },
+    {
+      "id": "update-active-workout-protection",
+      "name": "Update does not interrupt active workout",
+      "required": true,
+      "instructions": [
+        "Begin a workout and log at least one set.",
+        "Make a newer service worker/build available while the workout is active or minimized.",
+        "Observe update UI and continue training before finishing or explicitly ending the session."
+      ],
+      "expected": "The update/restart action does not force an active workout to reload or discard live state. The workout remains usable and restorable."
+    },
+    {
+      "id": "post-workout-update",
+      "name": "Deferred update after workout",
+      "required": true,
+      "instructions": [
+        "Complete the workout used for the active-update scenario.",
+        "Accept the pending update/restart after the live workout is no longer active.",
+        "Verify the completed workout appears once in history after reload."
+      ],
+      "expected": "The update completes after the workout and the completed session/history is preserved exactly once."
+    },
+    {
+      "id": "device-reboot-storage",
+      "name": "Device reboot storage persistence",
+      "required": true,
+      "instructions": [
+        "Confirm at least one workout/history record and app setting are present.",
+        "Reboot the Android device.",
+        "Launch Pursuit Iron from the installed home-screen icon."
+      ],
+      "expected": "Training history, current program state, and persistent settings survive the device reboot."
+    },
+    {
+      "id": "rapid-lifecycle-stress",
+      "name": "Rapid lifecycle stress",
+      "required": true,
+      "instructions": [
+        "During a workout, repeatedly background/foreground the app several times, including locking/unlocking the phone once.",
+        "Change at least one weight/reps input between transitions.",
+        "Finish by returning to the workout normally."
+      ],
+      "expected": "No duplicate live sessions, overwritten inputs, navigation explosions, black screens, or loss of logged work occur."
+    }
+  ]
+}

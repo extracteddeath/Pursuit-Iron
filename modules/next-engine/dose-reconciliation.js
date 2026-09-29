@@ -74,6 +74,16 @@ function sessionAcceptsMuscle(session, muscle) {
     return (INTENT_MUSCLES[session.intent] ?? INTENT_MUSCLES.full ?? []).includes(muscle);
 }
 
+function sourceStructurePreserved(intent, exercises, exerciseMap) {
+    if (intent !== 'full' && intent !== 'strength_full')
+        return true;
+    const defs = exercises.map(ex => exerciseMap.get(ex.exerciseId)).filter(Boolean);
+    const hasPush = defs.some(def => ['horizontal_press', 'vertical_press', 'chest_adduction'].includes(def.movementFamily));
+    const hasPull = defs.some(def => ['horizontal_pull', 'vertical_pull', 'shoulder_extension'].includes(def.movementFamily));
+    const hasLower = defs.some(def => ['squat', 'leg_press', 'knee_extension', 'hip_hinge', 'hip_extension', 'knee_flexion'].includes(def.movementFamily));
+    return hasPush && hasPull && hasLower;
+}
+
 function addedSetMinutes(exercise) {
     return .75 + Math.max(0, Number(exercise.prescription?.restSeconds) || 0) / 60;
 }
@@ -87,9 +97,10 @@ function addedSetMinutes(exercise) {
  * merges it into the same movement there, so weekly muscle dose is exactly unchanged.
  *
  * It runs after recoverable-dose trimming because that is the final point at which weekly set shape is known.
- * It never moves strength work, never breaks an existing superset pair, never lets the destination become
- * fragmented, respects the destination exercise-count budget, and uses conservative clock headroom. The
- * ordinary final program audit still remains authoritative after this pass.
+ * It never moves strength work, never breaks an existing superset pair, never sacrifices the source
+ * session's required movement identity, never lets the destination become fragmented, respects the
+ * destination exercise-count budget, and uses conservative clock headroom. The ordinary final program
+ * audit still remains authoritative after this pass.
  */
 function repairOneSetFragmentation(sessions, exerciseMap, phase) {
     const repairs = [];
@@ -107,15 +118,17 @@ function repairOneSetFragmentation(sessions, exerciseMap, phase) {
             .map(item => ({ ...item, muscle: primaryMuscle(item.def) }))
             .filter(item => !!item.muscle)
             .sort((a, b) => {
-                const roleA = a.exercise.role === 'hypertrophy_compound' ? 0 : 1;
-                const roleB = b.exercise.role === 'hypertrophy_compound' ? 0 : 1;
+                // True accessories are the cheapest fragments to relocate. A one-set compound may be the
+                // only push/pull/lower identity movement on a full-body day, so consider compounds last.
+                const roleA = a.exercise.role === 'hypertrophy_isolation' ? 0 : 1;
+                const roleB = b.exercise.role === 'hypertrophy_isolation' ? 0 : 1;
                 return roleA - roleB || (b.def.setupCost ?? 0) - (a.def.setupCost ?? 0) || a.exercise.exerciseId.localeCompare(b.exercise.exerciseId);
             });
 
         let best = null;
         for (const candidate of candidates) {
             const sourceProposal = source.exercises.filter((_, index) => index !== candidate.exerciseIndex);
-            if (sourceProposal.length < 3)
+            if (sourceProposal.length < 3 || !sourceStructurePreserved(source.intent, sourceProposal, exerciseMap))
                 continue;
             for (let destinationIndex = 0; destinationIndex < sessions.length; destinationIndex++) {
                 if (destinationIndex === sourceIndex)
@@ -147,7 +160,7 @@ function repairOneSetFragmentation(sessions, exerciseMap, phase) {
                 if (slackAfter < -EPS)
                     continue;
 
-                const score = (merge ? 100 : 0) + slackAfter + (candidate.exercise.role === 'hypertrophy_compound' ? 2 : 0);
+                const score = (merge ? 100 : 0) + slackAfter + (candidate.exercise.role === 'hypertrophy_isolation' ? 2 : 0);
                 if (!best || score > best.score + EPS) {
                     best = { candidate, sourceIndex, destinationIndex, sourceProposal, destinationProposal, merge, score };
                 }

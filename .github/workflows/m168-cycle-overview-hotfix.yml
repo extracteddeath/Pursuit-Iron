@@ -99,10 +99,15 @@ jobs:
             "'legacyCustomSetCount(program, day, ex, slotIndex, weekIndex, o.sets, base.sets)','cycleConfigForStandaloneProgram'",
             "'legacyCustomSetCount(program, day, ex, slotIndex, weekIndex, o.sets, base.sets)','cyclePhaseLabel','cycleConfigForStandaloneProgram'",
             'verify App markers');
-          verify = replaceOnce(verify,
-            "execFileSync(process.execPath,['verification/set-display-integrity-test.mjs'],{stdio:'inherit',cwd:root});",
-            "execFileSync(process.execPath,['verification/set-display-integrity-test.mjs'],{stdio:'inherit',cwd:root});\nexecFileSync(process.execPath,['verification/cycle-overview-ui-test.mjs'],{stdio:'inherit',cwd:root});",
-            'verify cycle UI test hook');
+          if (!verify.includes("verification/cycle-overview-ui-test.mjs")) {
+            const releaseLog = "console.log(`Release integrity OK: ${shell.length} precache entries present; ${jsFiles.length} authored JS files parse.`);";
+            verify = replaceOnce(
+              verify,
+              releaseLog,
+              "execFileSync(process.execPath,['verification/cycle-overview-ui-test.mjs'],{stdio:'inherit',cwd:root});\n" + releaseLog,
+              'verify cycle UI test hook'
+            );
+          }
           write('scripts/verify-release.mjs', verify);
 
           const uiTest = `import fs from 'node:fs';\n\nconst app = fs.readFileSync(new URL('../modules/App.js', import.meta.url), 'utf8');\nconst fail = msg => { console.error('CYCLE OVERVIEW UI TEST FAILED: ' + msg); process.exit(1); };\n\nif (!app.includes('if (phase === "peak") return "Peak";')) fail('peak phase is not explicitly labeled Peak');\nif (!app.includes('children: cyclePhaseLabel(b)')) fail('cycle path still derives display text from block goal');\nif (app.includes('_jsx(CycleTimeline, { progress: P }), _jsxs("div", { className: "wpb-cycle-stats"')) fail('detail overview still renders a second unlabeled progress timeline');\nif (!app.includes('children: [days ? stat("days/wk", days) : null, stat("sessions logged", totalSessions)]')) fail('overview stats are still redundant or sessions are ambiguously labeled');\nif (!app.includes('content:"Cycle path"')) fail('phase sequence is missing its label');\nconsole.log('Cycle overview UI integrity OK.');\n`;

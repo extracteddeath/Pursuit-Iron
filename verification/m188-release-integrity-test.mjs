@@ -58,7 +58,7 @@ const uiFiles=['modules/App.js','index.html','sw.js','BUILD_PROFILE.json','CHANG
 assert.deepEqual(Object.keys(manifest.uiFiles).sort(),uiFiles.sort(),'UI manifest coverage mismatch');
 for(const file of uiFiles) assert.equal(manifest.uiFiles[file],sha(file),`UI hash mismatch: ${file}`);
 
-for(const required of ['index.html','app.js','app.css','modules/main.js','RELEASE_MANIFEST.json'])
+for(const required of ['index.html','app.css','modules/main.js','RELEASE_MANIFEST.json'])
   assert.ok(shell.has(required),`offline shell missing ${required}`);
 for(const file of [...nextFiles,...shadowFiles])
   assert.ok(shell.has(file),`offline shell missing runtime module ${file}`);

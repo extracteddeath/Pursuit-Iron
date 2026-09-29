@@ -10,6 +10,7 @@ on:
       - 'scripts/finalize-m188-release.mjs'
       - 'verification/m188-production-torture-test.mjs'
       - 'verification/m188-novice-strength-fragmentation-test.mjs'
+      - 'verification/m188-premium-ux-carryforward-test.mjs'
       - 'verification/m188-release-integrity-test.mjs'
       - 'verification/**'
       - 'modules/next-engine/**'
@@ -39,11 +40,11 @@ jobs:
         run: node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m188-novice-strength-fragmentation-test.mjs
       - name: M188 broad + longitudinal production torture
         run: node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m188-production-torture-test.mjs
-      - name: Preserve M187 premium UX + certify M188 release identity
+      - name: Preserve premium UX + certify M188 release identity
         shell: bash
         run: |
           set -euo pipefail
-          node ./verification/m187-premium-ux-test.mjs
+          node ./verification/m188-premium-ux-carryforward-test.mjs
           node ./verification/m188-release-integrity-test.mjs
           node ./scripts/verify-release.mjs
       - name: Exercise state corruption, history edits, and longitudinal adaptation

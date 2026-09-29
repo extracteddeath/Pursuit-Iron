@@ -7,32 +7,71 @@ on:
       - '.github/workflows/m166-inspect.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect volume helper
+      - name: Build focused M166 report
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
-          s = Path('modules/App.js').read_text(errors='replace')
+          import re
+
+          p = Path('modules/App.js')
+          s = p.read_text(errors='replace')
           low = s.lower()
-          for needle in ['function volumeVerdicts', 'recent sessions', 'history.length', 'setsDone', 'entry.volume', 'h.volume', 'average', 'avg']:
-              pos = 0
-              shown = 0
-              while shown < 20:
-                  i = low.find(needle.lower(), pos)
-                  if i < 0:
-                      break
-                  chunk = s[max(0, i-1800):min(len(s), i+3200)]
-                  if needle in ['function volumeVerdicts', 'recent sessions'] or ('volume' in chunk.lower() and ('session' in chunk.lower() or 'history' in chunk.lower())):
-                      shown += 1
-                      print(f'--- {needle} #{shown} @ {i} ---')
-                      print(chunk.replace('\n','\\n'))
-                  pos = i + len(needle)
-              print(f'SHOWN {needle}={shown}')
+          out = ['# M166 focused source inspection', '', f'bytes: {len(s)}', '']
+
+          def emit(title, i, before=1800, after=3200):
+              if i < 0:
+                  out.extend([f'## {title}', '', 'NOT FOUND', ''])
+                  return
+              lo=max(0,i-before); hi=min(len(s),i+after)
+              chunk=s[lo:hi]
+              out.extend([f'## {title}', '', f'offset: {i}', '', '```js', chunk, '```', ''])
+
+          # Known custom set regression.
+          n='canonicalShellSetCount(o.sets, base.sets)'
+          emit('custom set regression', low.find(n.lower()), 2600, 4200)
+
+          # Direct labels/phrases first.
+          for n in ['Avg volume/session', 'volume/session', 'recent sessions', 'function volumeVerdicts', 'setsDone']:
+              pos=0; k=0
+              while True:
+                  i=low.find(n.lower(), pos)
+                  if i<0 or k>=8: break
+                  window=low[max(0,i-3000):min(len(s),i+5000)]
+                  if n.lower() in ['avg volume/session','volume/session','recent sessions','function volumeverdicts'] or ('volume' in window and ('history' in window or 'session' in window)):
+                      emit(f'{n} hit {k+1}', i, 3000, 5000)
+                      k+=1
+                  pos=i+len(n)
+
+          # Candidate chunks: history + perf + volume within ~8k chars.
+          positions=[]
+          pos=0
+          while True:
+              i=low.find('history',pos)
+              if i<0: break
+              lo=max(0,i-4000); hi=min(len(s),i+6000); c=low[lo:hi]
+              if 'perf' in c and 'volume' in c and ('avg' in c or 'average' in c or 'session' in c):
+                  positions.append(i)
+              pos=i+7
+          for idx,i in enumerate(positions[:12],1):
+              emit(f'history/perf/volume candidate {idx}', i, 4000, 6000)
+
+          Path('M166_INSPECT.md').write_text('\n'.join(out))
           PY
+
+      - name: Commit report
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add M166_INSPECT.md
+          git diff --cached --quiet && exit 0
+          git commit -m 'chore: capture M166 source inspection'
+          git push

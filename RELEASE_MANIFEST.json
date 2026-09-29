@@ -1,15 +1,15 @@
 {
   "schemaVersion": 3,
-  "milestone": "M170",
-  "appVersion": "3.220.0",
-  "build": 776,
-  "engineVersion": "0.62.6",
+  "milestone": "M171",
+  "appVersion": "3.221.0",
+  "build": 777,
+  "engineVersion": "0.62.7",
   "shadowEngineVersion": "0.62.5-shadow",
   "validatedLiveBaseline": "M88-0.61.3-reviewed-baseline",
   "candidateStatus": "local_verified_device_test_pending",
   "sourceNextEngineAggregate": null,
   "sourceShadowEngineAggregate": "3107199d20c86a5a12b82eccbc61c9a32b001a72c7f30418db696235d0da0c22",
-  "runtimeAggregate": "6740bf7422a845cdd7b7b05d7eb9c36e97a5ad420a1407184dd5b466c18cf590",
+  "runtimeAggregate": "c31fa634071d652dc01d9d07fd9d045ae387bdc107125f88c56a60ac398e030c",
   "sourceFiles": {},
   "shadowSourceFiles": {
     "src/shadow-engine/canary.ts": "854246970f93111ee873f0eb5f222195a02af688ef1a3285d0624f44d422c58a",
@@ -31,8 +31,8 @@
     "modules/next-engine/coach-regression.js": "a990fe47ffa77ca0a641f09d2c507150c37b6d03f17ac310f65f66e1347ff380",
     "modules/next-engine/coach-review.js": "f5adf1805c48c964b1530f273204b936b470e5cde2406af676f77551c456f9a8",
     "modules/next-engine/comparison.js": "799f592429cde6cf9080613d3c51a237f8fed5ef1ac70a4d0b8839259f42bc1a",
-    "modules/next-engine/config.js": "db8fde6330a3596f5e15c65118a8a491ecdc3beac820ec5486719fa833239d3e",
-    "modules/next-engine/cycle-runtime-adapter.js": "d733c4ce1a91027e431e4205e9e9e13f03b1075f77153bcf699a541fd8c3ff82",
+    "modules/next-engine/config.js": "6c7cf5482de6b7c76bb39db92ab1df031df2eab8f414bc79b10dc591a0e8cc19",
+    "modules/next-engine/cycle-runtime-adapter.js": "19c8b15c3958f762636b19a5b1c1c83c214d5d61577b9722a651aaa0789f259c",
     "modules/next-engine/cycles.js": "20d53919ec752e2d6dda5b61a5fd558a19cf9d65777b3e27a6b22da8ecd5be4b",
     "modules/next-engine/domain.js": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
     "modules/next-engine/events.js": "224b26bfbef0c398e0b0a3e32b26c96075f5c1dce5ce6aa9f5cad83d7a0b437a",
@@ -43,7 +43,7 @@
     "modules/next-engine/focus-intent.js": "6ad01f71b55575eb03984e4fc8e7f17b047cbddc4feb1fdfc87e0efc8c8e9d9f",
     "modules/next-engine/functional-coverage-repair.js": "560140b5bfe4c4ef0a7af1cc081b277cecab8c69f606aa4eefc6b4751065355b",
     "modules/next-engine/functional-coverage.js": "51e767145c0b87fa62445ce98c998d6d0158b42d36eaae35974a05707a660c2c",
-    "modules/next-engine/generate.js": "65d29cfd75e193e2e9ea14d88346610f7f1dc98d1b293cd737cba4d8a5ecf24e",
+    "modules/next-engine/generate.js": "d360a92ccfb504ceb467865c9dc81ab610c2022459ecf28f4d8cc7181bacc5ca",
     "modules/next-engine/generation-recovery.js": "83e916fb202b1f002615d91a834431c696ae7e7be84328f8a9fdb0cace2ecf73",
     "modules/next-engine/history.js": "252267ebbe2c56ec50aa7d606608409cca603598dcc48c7624721d206d8ede2b",
     "modules/next-engine/ledgers.js": "daf7476baaf8a3d1bf2e084d8c919bc38d4c892fe9c9a0584a8cda34adb53f5f",
@@ -51,7 +51,7 @@
     "modules/next-engine/method-policy.js": "b5b0a4f214c768ab76050d3daad56f0afea0b533b0fea470859ef475ad16d828",
     "modules/next-engine/performance.js": "21f566f3bb69dca915f1224e0fd2b6e4e3a57a9cb6df8b1b68f0e54c1c8c81e1",
     "modules/next-engine/phase-policy.js": "9655292b2e772f4f972b0e7d3e0a8c33fa8308dd17d980d5c6187a87b659c5c9",
-    "modules/next-engine/phase-transition.js": "9ffcc145979a70c86ce6db2f02525ff8ddc02a13868b22e693ea5cb01db364f1",
+    "modules/next-engine/phase-transition.js": "b10562021fef94c52b02f07a61f4422c1e12f28c67bd771be9a06e9d70ebbb02",
     "modules/next-engine/prescription.js": "60f95984019d235f6c5b322306422929ba6b9609f2c6cae372e6a926450c12d5",
     "modules/next-engine/progression-style.js": "b34c34524ee844727b352d39dc85a44632750d8ec845b3cc5c370460364526ff",
     "modules/next-engine/public-mev.js": "9aeb6117a3cf898e67221d9a0675aa3349108e64c700ca198abbaf1cc472e1a2",
@@ -81,19 +81,20 @@
     "vendor/react-jsx-runtime.js": "bde9f287ac956c2a8873443da27dbb828de7ee82bcec262b703aceab2a745954",
     "vendor/react-shared-JU7Z5GYC.js": "b8893896e31178fb4c8c0ce42cae975bec57bb70596c012d5d5c439cd20717d8",
     "vendor/react-shared-V673FGIV.js": "591c4bd8b0aae646cba73ca7ac17a2c2c950bdbaf288529ea14b691f2a4a9f22",
-    "vendor/react.js": "24b2d220a5b2637cf3fb78fe0d961f227ea0a4b960485dbfb03c9d276e72147c"
+    "vendor/react.js": "24b2d220a5b2637cf3fb78fe0d961f227ea0a4b960485dbfb03c9d276e72147c",
+    "modules/next-engine/engine-context.js": "40c63ad790d4ab3a83975acd557e58f0f85d4fdc1ceab9ba422468fc6ae1430f"
   },
   "localCandidate": {
-    "name": "M170 Engine Correctness 1-5",
-    "base": "M169 / Engine 0.62.5",
-    "validation": "Focused M170 engine correctness tests plus full release regression suite."
+    "name": "M171 Shared Transactional Context",
+    "base": "M170 / Engine 0.62.6",
+    "validation": "M171 context/memoization/comparator tests plus full release suite."
   },
   "uiFiles": {
-    "modules/App.js": "f6c7e19bb69f6a8653508d9ff573ae499ab3232513340b443a4eada5ce1cd8fa",
-    "index.html": "d7f595bffcf2d3743c7d0f95662c8d70d467fc023f1aa8c9747165987a965a0d",
-    "sw.js": "18376f1dbe010abbbe11decee1a950539ed85e518820374ca117ce0a6e2fd12e",
-    "BUILD_PROFILE.json": "64d8b1f547c06a1ad5efc060a56a2973bde5f8b7be443d61e27200f082009ffe",
-    "CHANGELOG.md": "7ba33f5b93367e08f6ac3c408010ce31c45e70ddcbe097defb99a49469b40cb4"
+    "modules/App.js": "503850030eeeed3d84444680b5b4685b7ca7fcb0fb0623654ec83900cf539342",
+    "index.html": "9dd44314cd362f70ccaa8e98941fb3677f1dc58e0f157b5d128f39196b2359ab",
+    "sw.js": "7de05baec52ceacbb881daeae5306650af3751f3baac4083e79fd816f0cdd27f",
+    "BUILD_PROFILE.json": "c44ad6725d0ddcf93159e6912adf8554c65fc128fa395b5279d0b6ec8ef7bb2e",
+    "CHANGELOG.md": "485ab1b9627a77c3d481c47558a87f9c9d4303d5d3d436b77c9ce7978ab43308"
   },
   "baselineSourceNextEngineAggregate": "9ba84ffe3a62d94849617af33a2eafeaa563ab4a3636579101990ed753d05a84",
   "baselineSourceFiles": {

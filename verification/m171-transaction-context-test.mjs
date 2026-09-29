@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import { createEngineContext, createTransactionalEvaluator, programFingerprint, auditVector, compareCandidateQuality } from '../modules/next-engine/engine-context.js';
+import { normalizeRequest } from '../modules/next-engine/prescription.js';
+const request=normalizeRequest({athlete:{experience:'intermediate'},goal:{type:'hypertrophy',musclePriorities:{},liftPriorities:{}},schedule:{days:[{day:'monday',maxMinutes:60},{day:'friday',maxMinutes:60}]},equipment:{available:['barbell','rack','bench','dumbbell','cable','machine','bodyweight'],bodyweight:'allow',loading:{unit:'lb',barbell:{barWeight:45,platePairs:[{weight:45,pairs:8}]},dumbbells:{availablePerHand:[10,20,30,40,50]},machine:{minimum:5,increment:5,maximum:500},cable:{minimum:5,increment:5,maximum:300},smith:{minimum:5,increment:5,maximum:500},exerciseOverrides:{}}},restrictions:{maxBarbellMovementsPerDay:3,allowSupersets:true},preferences:{preferredSplit:'full_body',lockedSplit:'full_body',avoidedExercises:[]},customExercises:[],seed:171});
+const context=createEngineContext(request); assert.ok(Object.isFrozen(context)); assert.equal(context.scheduleDay('monday').day,'monday'); assert.ok(context.exerciseCatalog.length>0);
+const candidate=context.exerciseCatalog.find(x=>context.equipmentEligible(x,'monday')); assert.ok(candidate); assert.equal(context.exerciseById(candidate.id),candidate);
+const sessions=[{id:'a',day:'monday',intent:'full',maxMinutes:60,exercises:[{exerciseId:candidate.id,role:'hypertrophy_compound',sets:3,prescription:{reps:[8,12],rir:[1,3],restSeconds:90},progression:'double'}]}];
+let calls=0; const tx=createTransactionalEvaluator(s=>{calls++;return {fingerprint:programFingerprint(s)};});
+const first=tx.evaluate(sessions); const second=tx.evaluate(structuredClone(sessions)); assert.equal(first,second); assert.equal(calls,1); assert.equal(tx.stats().hits,1); assert.equal(tx.stats().misses,1);
+const changed=structuredClone(sessions); changed[0].exercises[0].sets=4; assert.notEqual(programFingerprint(sessions),programFingerprint(changed)); tx.evaluate(changed); assert.equal(calls,2);
+const qA=auditVector({findings:[{severity:'warning'}]},99); const qB=auditVector({findings:[{severity:'warning'},{severity:'warning'}]},0); assert.ok(compareCandidateQuality(qA,qB)<0);
+const qC=auditVector({findings:[{severity:'warning'}]},2); assert.ok(compareCandidateQuality(qC,qA)<0);
+for(const [file,markers] of [['modules/next-engine/generate.js',['createEngineContext(request)','createTransactionalEvaluator(assembleRaw)']],['modules/next-engine/phase-transition.js',['createEngineContext(request)','createTransactionalEvaluator(sessions =>']],['modules/next-engine/cycle-runtime-adapter.js',['createEngineContext(normalized)','createTransactionalEvaluator(candidateSessions =>']]]){const src=fs.readFileSync(new URL('../'+file,import.meta.url),'utf8');for(const marker of markers)assert.ok(src.includes(marker),file+' missing '+marker);}
+console.log('M171 shared context/transaction tests OK.');

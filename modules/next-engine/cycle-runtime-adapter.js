@@ -1,6 +1,6 @@
 import { auditProgram } from './arbiter.js';
 import { createInitialCycleState, startPhase } from './cycles.js';
-import { createExerciseMap } from './exercise-db.js';
+import { createEngineContext, createTransactionalEvaluator, auditVector, compareCandidateQuality } from './engine-context.js';
 import { createTrainingSetEvents } from './events.js';
 import { generateProgram } from './generate.js';
 import { deriveMuscleLedger } from './ledgers.js';
@@ -19,7 +19,8 @@ function retargetStatic(previous, request, target) {
     const normalized = normalizeRequest(request);
     const sourcePolicy = phasePolicyFor(previous.phase);
     const targetPolicy = phasePolicyFor(target);
-    const exerciseMap = createExerciseMap(normalized.customExercises);
+    const context = createEngineContext(normalized);
+    const exerciseMap = context.exerciseMap;
     const sessions = previous.sessions.map(session => {
         const exercises = session.exercises.map(ex => {
             const def = exerciseMap.get(ex.exerciseId);
@@ -46,23 +47,26 @@ function retargetStatic(previous, request, target) {
     const events = createTrainingSetEvents(sessions, normalized.customExercises);
     const muscleLedger = deriveMuscleLedger(events);
     const base = { ...previous, phase: target, sessions, events, muscleLedger, rationale: [...previous.rationale, `Next Cycle structure lock: preserved the exercise skeleton while applying the ${phaseLabel(target).toLowerCase()} prescription.`] };
-    const reaudited = (candidate) => {
-        const events = createTrainingSetEvents(candidate.sessions, normalized.customExercises);
+    const transaction = createTransactionalEvaluator(candidateSessions => {
+        const events = createTrainingSetEvents(candidateSessions, normalized.customExercises);
         const muscleLedger = deriveMuscleLedger(events);
-        const prepared = { ...candidate, events, muscleLedger };
+        const prepared = { ...base, sessions: candidateSessions, events, muscleLedger };
         const { audit: _audit, ...auditable } = prepared;
         void _audit;
         return { ...prepared, audit: auditProgram(auditable, normalized) };
+    });
+    const reaudited = (candidate) => {
+        const checked = transaction.evaluate(candidate.sessions);
+        return { ...candidate, events: checked.events, muscleLedger: checked.muscleLedger, audit: checked.audit };
     };
-    const severity = (candidate) => candidate.audit.findings.reduce((sum, f) => sum + (f.severity === 'critical' ? 1000 : f.severity === 'major' ? 100 : f.severity === 'warning' ? 10 : 1), 0);
     let repaired = reaudited(base);
     // Structure-locked cycles may need a small dose top-up when a low-volume Foundation skeleton
     // enters Hypertrophy. Repair dose only; never change exercise identity. Every proposed set is
     // independently re-audited, so time/recovery/volume ceilings can veto the top-up.
     for (let step = 0; step < 24 && repaired.audit.result !== 'pass'; step++) {
-        const currentScore = severity(repaired);
+        const currentQuality = auditVector(repaired.audit);
         let best;
-        let bestScore = currentScore;
+        let bestQuality = currentQuality;
         let bestDelta = Number.POSITIVE_INFINITY;
         for (let si = 0; si < repaired.sessions.length; si++)
             for (let ei = 0; ei < repaired.sessions[si].exercises.length; ei++) {
@@ -80,11 +84,11 @@ function retargetStatic(previous, request, target) {
                     const sessions = repaired.sessions.map((session, sidx) => sidx !== si ? session : { ...session, exercises: session.exercises.map((ex, eidx) => eidx !== ei ? ex : { ...ex, sets: ex.sets + delta }) });
                     sessions[si] = { ...sessions[si], estimatedMinutes: estimateSessionMinutes(sessions[si].exercises) };
                     const proposal = reaudited({ ...repaired, sessions });
-                    const score = severity(proposal);
                     const magnitude = Math.abs(delta);
-                    if (score < bestScore || (score === bestScore && score < currentScore && magnitude < bestDelta)) {
+                    const proposalQuality = auditVector(proposal.audit, magnitude);
+                    if (compareCandidateQuality(proposalQuality, currentQuality) < 0 && compareCandidateQuality(proposalQuality, bestQuality) < 0) {
                         best = proposal;
-                        bestScore = score;
+                        bestQuality = proposalQuality;
                         bestDelta = magnitude;
                     }
                 }
@@ -117,11 +121,11 @@ function retargetStatic(previous, request, target) {
                                 if (rsi !== dsi)
                                     sessions[rsi] = { ...sessions[rsi], estimatedMinutes: estimateSessionMinutes(sessions[rsi].exercises) };
                                 const proposal = reaudited({ ...repaired, sessions });
-                                const score = severity(proposal);
                                 const penalty = donorPenalty + amount;
-                                if (score < bestScore || (score === bestScore && score < currentScore && penalty < bestPenalty)) {
+                                const proposalQuality = auditVector(proposal.audit, penalty);
+                                if (compareCandidateQuality(proposalQuality, currentQuality) < 0 && compareCandidateQuality(proposalQuality, bestQuality) < 0) {
                                     best = proposal;
-                                    bestScore = score;
+                                    bestQuality = proposalQuality;
                                     bestPenalty = penalty;
                                 }
                             }

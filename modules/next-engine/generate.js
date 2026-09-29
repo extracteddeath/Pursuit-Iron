@@ -8,7 +8,7 @@ import { finalizePlannedSession, optimizeSetupAwareSessionSequence, progressionF
 import { proposeExplicitFocusRepair } from './focus-intent.js';
 import { evaluateFunctionalCoverage } from './functional-coverage.js';
 import { proposeFunctionalCoverageRepairs } from './functional-coverage-repair.js';
-import { createExerciseCatalog, createExerciseMap } from './exercise-db.js';
+import { createEngineContext, createTransactionalEvaluator, auditVector, compareCandidateQuality } from './engine-context.js';
 import { armCoverageBias, evaluateArmCoverage } from './arm-coverage.js';
 import { INTENT_MUSCLES, solveTopology } from './topology.js';
 import { auditProgram } from './arbiter.js';
@@ -38,12 +38,13 @@ export function generateProgram(requestInput, options) {
                 targetExercises: day.targetExercises === undefined ? undefined : Math.max(structuralExerciseFloor, Math.min(experienceExerciseCap, Math.round(day.targetExercises * capacityMultiplier)))
             })) }
     };
+    const context = createEngineContext(request);
     const muscles = createMusclePrescriptions(request, phase);
     const strength = createStrengthClaims(request, phase);
     const allocation = allocateTraining(request, muscles, strength, phase);
     const topology = solveTopology(request, allocation.allocations);
     const realized = realizeSessions(topology.sessions, request, allocation.targetDose, allocation.directTargetDose, phase);
-    const assemble = (sessions) => {
+    const assembleRaw = (sessions) => {
         const recovery = optimizeWeeklyRecovery(sessions, request);
         const scheduled = recovery.sessions;
         const events = createTrainingSetEvents(scheduled, request.customExercises);
@@ -62,6 +63,8 @@ export function generateProgram(requestInput, options) {
         };
         return { base, audit: auditProgram(base, request, { skipRecoveryRealization: true }) };
     };
+    const transaction = createTransactionalEvaluator(assembleRaw);
+    const assemble = sessions => transaction.evaluate(sessions);
     // Explicit focus repair is transactional per session. A named Squat/Bench/Deadlift/Press day should
     // keep the corresponding lift when the swap/addition is compatible, but one difficult repair is never
     // allowed to veto valid repairs on the rest of the week or turn a valid program into repair/reject.
@@ -85,12 +88,11 @@ export function generateProgram(requestInput, options) {
     // a valid high-dose week crosses the diversity threshold only after protected strength/focus work is
     // realized. Never weaken the audit: propose conservative changes, then accept only a full-program
     // audit improvement with no new critical findings.
-    const exerciseMap = createExerciseMap(request.customExercises);
-    const auditCounts = (audit) => ({
-        critical: audit.findings.filter(f => f.severity === 'critical').length,
-        major: audit.findings.filter(f => f.severity === 'major').length,
-        warnings: audit.findings.filter(f => f.severity === 'warning').length
-    });
+    const exerciseMap = context.exerciseMap;
+    const auditCounts = (audit) => {
+        const vector = auditVector(audit);
+        return { critical: vector.critical, major: vector.major, warnings: vector.warning };
+    };
     for (let guard = 0; guard < 8; guard++) {
         const coverage = evaluateFunctionalCoverage(assembled.base.sessions, request, exerciseMap);
         const target = coverage.findings.find(f => f.severity === 'major');
@@ -110,8 +112,9 @@ export function generateProgram(requestInput, options) {
             const improves = counts.major < baselineCounts.major || (counts.major === baselineCounts.major && remaining < coverage.findings.length);
             if (!improves)
                 continue;
-            if (!best || counts.critical < best.critical || counts.major < best.major || (counts.major === best.major && remaining < best.coverageFindings) || (counts.major === best.major && remaining === best.coverageFindings && counts.warnings < best.warnings)) {
-                best = { checked, critical: counts.critical, major: counts.major, warnings: counts.warnings, coverageFindings: remaining };
+            const quality = auditVector(checked.audit, remaining);
+            if (!best || compareCandidateQuality(quality, best.quality) < 0) {
+                best = { checked, quality, critical: counts.critical, major: counts.major, warnings: counts.warnings, coverageFindings: remaining };
             }
             if (counts.critical === 0 && counts.major === 0 && remaining === 0)
                 break;
@@ -176,29 +179,23 @@ export function generateProgram(requestInput, options) {
     // bias only). The arbiter correctly rejected those blocks. Close the loop transactionally here:
     // prefer a one-set dose-neutral swap within the same muscle, then a one-set add only when it fits the
     // session clock. Every proposal is rebuilt and re-audited; no finding is suppressed or downgraded.
-    const exerciseCatalog = createExerciseCatalog(request.customExercises);
+    const exerciseCatalog = context.exerciseCatalog;
     const armBiasForCode = (code) => code === 'ARM_BICEPS_BIAS_MISSING' ? 'biceps_bias' :
         code === 'ARM_BRACHIALIS_BIAS_MISSING' || code === 'ARM_BRACHIORADIALIS_UNDERSERVED' ? 'brachialis_bias' :
             code === 'WRIST_FLEXION_MISSING' ? 'wrist_flexion' :
                 code === 'WRIST_EXTENSION_MISSING' ? 'wrist_extension' : null;
     const armMuscle = (bias) => bias === 'biceps_bias' || bias === 'brachialis_bias' ? 'biceps' : 'forearms';
     const equipmentEligibleForSession = (def, session) => {
-        const day = request.schedule.days.find(d => d.day === session.day);
-        if (!day)
+        if (!context.equipmentEligible(def, session.day))
             return false;
-        const equipment = day.equipmentOverride ?? request.equipment.available;
-        if ((def.flags.bodyweight || def.equipment.includes('bodyweight')) && request.equipment.bodyweight === 'exclude')
-            return false;
-        const setups = [def.equipment, ...(def.equipmentAlternatives ?? [])];
-        if (!setups.some(setup => setup.every(item => item === 'bodyweight' ? request.equipment.bodyweight !== 'exclude' : equipment.includes(item))))
-            return false;
+        const day = context.scheduleDay(session.day);
         if (def.flags.barbell) {
             const max = day.maxBarbellMovements ?? request.restrictions.maxBarbellMovementsPerDay;
             const used = session.exercises.filter(ex => exerciseMap.get(ex.exerciseId)?.flags.barbell).length;
             if (used >= max)
                 return false;
         }
-        return !request.preferences.avoidedExercises?.includes(def.id);
+        return true;
     };
     const plannedArmExercise = (def) => ({
         exerciseId: def.id, name: def.name, role: 'hypertrophy_isolation', sets: 1,

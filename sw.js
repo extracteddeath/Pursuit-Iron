@@ -1,5 +1,5 @@
-/* M170 causal progression/recovery + longitudinal transition continuity — Engine 0.62.6. */
-const CACHE="pursuit-iron-production-m170-engine-correctness";
+/* M171 shared generation context + transactional repair engine — Engine 0.62.7. */
+const CACHE="pursuit-iron-production-m171-transactional-context";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
   "./",
@@ -33,6 +33,7 @@ const SHELL=[
   "./modules/next-engine/domain.js",
   "./modules/next-engine/events.js",
   "./modules/next-engine/exercise-db.js",
+  "./modules/next-engine/engine-context.js",
   "./modules/next-engine/exercise-economy.js",
   "./modules/next-engine/explainability.js",
   "./modules/next-engine/extended-exercise-catalog.js",

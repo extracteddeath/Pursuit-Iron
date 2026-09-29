@@ -1,6 +1,6 @@
 import { auditProgram } from './arbiter.js';
 import { createTrainingSetEvents } from './events.js';
-import { createExerciseMap } from './exercise-db.js';
+import { createEngineContext, createTransactionalEvaluator } from './engine-context.js';
 import { generateProgram } from './generate.js';
 import { deriveMuscleLedger } from './ledgers.js';
 import { historyDecision, withProgramExplainability } from './explainability.js';
@@ -43,14 +43,14 @@ function roleCompatible(previous, candidate) {
     const hypertrophy = new Set(['hypertrophy_compound', 'hypertrophy_isolation']);
     return hypertrophy.has(previous.role) && hypertrophy.has(candidate.role);
 }
-function isCompatibleReplacement(previous, candidate, day, request, exerciseMap) {
-    const priorDef = exerciseMap.get(previous.exerciseId);
-    const candidateDef = exerciseMap.get(candidate.exerciseId);
+function isCompatibleReplacement(previous, candidate, day, request, context) {
+    const priorDef = context.exerciseById(previous.exerciseId);
+    const candidateDef = context.exerciseById(candidate.exerciseId);
     if (!priorDef || !candidateDef)
         return false;
-    if (!equipmentEligible(priorDef, day, request))
+    if (!context.equipmentEligible(priorDef, day))
         return false;
-    if (request.preferences.avoidedExercises?.includes(previous.exerciseId))
+    if (context.isAvoided(previous.exerciseId))
         return false;
     if (!roleCompatible(previous, candidate))
         return false;
@@ -64,8 +64,8 @@ function isCompatibleReplacement(previous, candidate, day, request, exerciseMap)
         return false;
     return similarity >= .5 && (sameMovement || similarity >= .72);
 }
-function withExercise(program, sessionId, candidateId, previous, request) {
-    const sessions = program.sessions.map(session => session.id !== sessionId ? session : {
+function sessionsWithExercise(program, sessionId, candidateId, previous) {
+    return program.sessions.map(session => session.id !== sessionId ? session : {
         ...session,
         exercises: session.exercises.map(ex => ex.exerciseId !== candidateId ? ex : {
             ...ex,
@@ -73,9 +73,6 @@ function withExercise(program, sessionId, candidateId, previous, request) {
             name: previous.name
         })
     });
-    const events = createTrainingSetEvents(sessions, request.customExercises);
-    const muscleLedger = deriveMuscleLedger(events);
-    return { ...program, sessions, events, muscleLedger };
 }
 function vectorSimilarity(a, b) {
     const keys = new Set([...a.keys(), ...b.keys()]);
@@ -106,7 +103,7 @@ function jaccard(a, b) {
     for (const value of a) if (b.has(value)) overlap++;
     return overlap / union.size;
 }
-function transitionSessionScore(previous, target, request, exerciseMap) {
+function transitionSessionScore(previous, target, request, exerciseMap, context) {
     let score = previous.intent === target.intent ? 5 : 0;
     score += vectorSimilarity(sessionMuscleVector(previous, exerciseMap), sessionMuscleVector(target, exerciseMap)) * 4;
     score += jaccard(sessionMovementSet(previous, exerciseMap), sessionMovementSet(target, exerciseMap)) * 3;
@@ -115,15 +112,16 @@ function transitionSessionScore(previous, target, request, exerciseMap) {
     score += Math.max(0, 2 - Math.abs(priorStrength - targetStrength) * .75);
     const eligible = (previous.exercises ?? []).filter(ex => {
         const def = exerciseMap.get(ex.exerciseId);
-        return def && equipmentEligible(def, target.day, request) && !request.preferences.avoidedExercises?.includes(ex.exerciseId);
+        return def && context.equipmentEligible(def, target.day);
     }).length;
     score += (previous.exercises?.length ? eligible / previous.exercises.length : 0) * 2;
     if (previous.day === target.day) score += .2;
     return score;
 }
 /** Deterministic maximum-score bipartite session matching for phase continuity. */
-export function matchPriorSessionsForTransition(previousSessions, targetSessions, request) {
-    const exerciseMap = createExerciseMap(request.customExercises);
+export function matchPriorSessionsForTransition(previousSessions, targetSessions, request, suppliedContext) {
+    const context = suppliedContext ?? createEngineContext(request);
+    const exerciseMap = context.exerciseMap;
     const previous = [...(previousSessions ?? [])].sort((a, b) => String(a.id).localeCompare(String(b.id)));
     const target = [...(targetSessions ?? [])].sort((a, b) => String(a.id).localeCompare(String(b.id)));
     const memo = new Map();
@@ -134,7 +132,7 @@ export function matchPriorSessionsForTransition(previousSessions, targetSessions
         let best = solve(i + 1, mask);
         for (let j = 0; j < previous.length; j++) {
             if (mask & (1 << j)) continue;
-            const local = transitionSessionScore(previous[j], target[i], request, exerciseMap);
+            const local = transitionSessionScore(previous[j], target[i], request, exerciseMap, context);
             if (local < 1.5) continue;
             const tail = solve(i + 1, mask | (1 << j));
             const candidate = { score: local + tail.score, pairs: [[target[i].id, previous[j]], ...tail.pairs] };
@@ -156,9 +154,17 @@ export function transitionProgramPhase(previous, request, target, evidence) {
     const successful = new Set(evidence.successfulExerciseIds);
     const protectedIds = new Set(evidence.protectedExerciseIds ?? []);
     const replaceIds = new Set(evidence.replaceExerciseIds ?? []);
-    const exerciseMap = createExerciseMap(request.customExercises);
+    const context = createEngineContext(request);
     let program = generated;
-    const previousByTargetSession = matchPriorSessionsForTransition(previous.sessions, program.sessions, request);
+    const previousByTargetSession = matchPriorSessionsForTransition(previous.sessions, program.sessions, request, context);
+    const transaction = createTransactionalEvaluator(sessions => {
+        const events = createTrainingSetEvents(sessions, request.customExercises);
+        const muscleLedger = deriveMuscleLedger(events);
+        const { audit: _audit, ...withoutAudit } = generated;
+        void _audit;
+        const base = { ...withoutAudit, sessions, events, muscleLedger };
+        return { base, audit: auditProgram(base, request) };
+    });
     // Exact retained IDs count automatically. For changed slots, try the most
     // successful/protected compatible previous exercise first.
     for (const session of [...program.sessions]) {
@@ -173,15 +179,13 @@ export function transitionProgramPhase(previous, request, target, evidence) {
                 .filter(ex => successful.has(ex.exerciseId) || protectedIds.has(ex.exerciseId))
                 .filter(ex => !replaceIds.has(ex.exerciseId))
                 .filter(ex => !alreadyUsed.has(ex.exerciseId))
-                .filter(ex => isCompatibleReplacement(ex, candidate, session.day, request, exerciseMap))
+                .filter(ex => isCompatibleReplacement(ex, candidate, session.day, request, context))
                 .sort((a, b) => Number(protectedIds.has(b.exerciseId)) - Number(protectedIds.has(a.exerciseId)) || a.exerciseId.localeCompare(b.exerciseId));
             for (const previousExercise of alternatives) {
-                const proposed = withExercise(program, session.id, candidate.exerciseId, previousExercise, request);
-                const { audit: _audit, ...auditable } = proposed;
-                void _audit;
-                const audit = auditProgram(auditable, request);
-                if (audit.result === 'pass') {
-                    program = { ...proposed, audit, rationale: [...proposed.rationale, `${previousExercise.name} was retained across the phase transition because recent performance supported continuity and the target-phase program still passed audit.`] };
+                const proposedSessions = sessionsWithExercise(program, session.id, candidate.exerciseId, previousExercise);
+                const checked = transaction.evaluate(proposedSessions);
+                if (checked.audit.result === 'pass') {
+                    program = { ...checked.base, audit: checked.audit, rationale: [...program.rationale, `${previousExercise.name} was retained across the phase transition because recent performance supported continuity and the target-phase program still passed audit.`] };
                     alreadyUsed.delete(candidate.exerciseId);
                     alreadyUsed.add(previousExercise.exerciseId);
                     break;

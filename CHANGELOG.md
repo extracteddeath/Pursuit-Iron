@@ -1,3 +1,10 @@
+## M171 — Shared Transactional Generation Context (3.221.0 / build 777 / Engine 0.62.7)
+
+- Adds a per-generation catalog/schedule/eligibility context and candidate indexes.
+- Memoizes structurally identical program candidates across repair loops.
+- Uses one strict audit comparison order: critical → major → warning → repair objective.
+- Routes generation repair, phase-transition swaps, and locked-cycle repair through the shared transaction layer.
+
 ## M170 — Engine Correctness 1–5 (3.220.0 / build 776 / Engine 0.62.6)
 
 - Excludes avoided exercises from feasibility.

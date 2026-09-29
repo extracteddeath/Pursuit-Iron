@@ -16,26 +16,35 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Inspect original legacy computeCell bias logic
+      - name: Trace legacy dose helpers and conversion bridge
         shell: bash
         run: |
           set -euo pipefail
-          for ref in 0ab4de3 $(git rev-list --all -- modules/App.js | tail -1); do
-            echo "===== REF $ref ====="
-            git show "$ref:modules/App.js" > /tmp/app-old.js 2>/dev/null || { echo missing; continue; }
-            python - <<'PY'
+          python - <<'PY'
           from pathlib import Path
-          s=Path('/tmp/app-old.js').read_text(errors='replace')
-          for marker in ['function computeCell(', 'function distributeVolBias(', 'slotBias?.[', 'autoBias?.[']:
-            print('\n--- '+marker+' ---')
+          s=Path('modules/App.js').read_text()
+          for marker in [
+            'function baseSetsFor(',
+            'function weeksOf(',
+            'function weekIntent(',
+            'function volumeLedger(',
+            'const beginCycleConversion = (p) =>',
+            'REBUILD A PREVIOUS-ENGINE PROGRAM',
+            'const rebuild',
+            'engineDeclined'
+          ]:
+            print('\n===== '+marker+' =====')
             start=0; hits=0
             while True:
               i=s.find(marker,start)
-              if i<0 or hits>=8: break
-              print(s[max(0,i-1200):min(len(s),i+6500)])
+              if i<0 or hits>=10: break
+              print(f'--- hit {hits+1} @ {i} ---')
+              print(s[max(0,i-1600):min(len(s),i+8000)])
               start=i+len(marker); hits+=1
             if not hits: print('NO MATCH')
+
+          c=Path('modules/next-engine/cycle-runtime-adapter.js').read_text()
+          a=c.find('export function convertProgramToNextCycleForShell')
+          print('\n===== FULL convertProgramToNextCycleForShell =====')
+          print(c[a:])
           PY
-          done
-          echo '===== commits mentioning custom branch introduction ====='
-          git log --all --oneline -S'program?.custom === true' -- modules/App.js | head -20 || true

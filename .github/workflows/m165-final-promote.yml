@@ -1,0 +1,46 @@
+name: M165 Final Promotion
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.m165-final/**'
+      - '.github/workflows/m165-final-promote.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Wait for complete payload
+        id: ready
+        shell: bash
+        run: |
+          if [ -f .m165-final/READY ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Apply verified M165 payload
+        if: steps.ready.outputs.ready == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .m165-final/part-* | base64 -d | gzip -d > /tmp/m165.patch
+          git apply --check /tmp/m165.patch
+          git apply /tmp/m165.patch
+          node scripts/verify-release.mjs
+          rm -rf .m164-promote .m165-promote .m165-final
+          rm -f .github/workflows/m165-final-promote.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Release M165 set display integrity"
+          git push origin HEAD:main

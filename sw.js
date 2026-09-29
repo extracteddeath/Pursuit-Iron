@@ -1,5 +1,5 @@
-/* M174 causal cycle-state hardening — Engine 0.63.1. */
-const CACHE="pursuit-iron-production-m174-causal-cycle-state";
+/* M175 longitudinal adaptation memory — Engine 0.63.2. */
+const CACHE="pursuit-iron-production-m175-longitudinal-adaptation-memory";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
   "./",

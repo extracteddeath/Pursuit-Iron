@@ -457,12 +457,21 @@ export function analyzeShellHistoryForNextEngine(program, history, legacyExercis
         readyForNextBlock: !!cycleState.recommendedNextPhase, recommendedNextPhase: cycleState.recommendedNextPhase
     };
 }
-function requestAdaptedFromHistory(request, analysis) {
-    const replace = new Set(analysis.replaceExerciseIds ?? []);
-    let adapted = replace.size ? {
-        ...request,
-        preferences: { ...request.preferences, avoidedExercises: [...new Set([...(request.preferences?.avoidedExercises ?? []), ...replace])] }
-    } : request;
+export function carryForwardAvoidedExercises(baseRequest, currentRequest, analysis) {
+    const avoided = [...new Set([
+        ...(baseRequest?.preferences?.avoidedExercises ?? []),
+        ...(currentRequest?.preferences?.avoidedExercises ?? []),
+        ...(analysis?.replaceExerciseIds ?? [])
+    ])];
+    if (!avoided.length)
+        return baseRequest;
+    return {
+        ...baseRequest,
+        preferences: { ...(baseRequest.preferences ?? {}), avoidedExercises: avoided }
+    };
+}
+function requestAdaptedFromHistory(request, currentRequest, analysis) {
+    const adapted = carryForwardAvoidedExercises(request, currentRequest, analysis);
     if (analysis.classification !== 'fatigue_limited' && analysis.recovery.status !== 'deload_recommended')
         return adapted;
     return {
@@ -487,7 +496,7 @@ export function generateNextBlockFromShellHistory(options) {
             workouts: analysis.workoutCount, minimumWorkouts: analysis.cycleState.minimumWorkouts, reviewAfterWorkouts: analysis.cycleState.reviewAfterWorkouts, recovery: analysis.recovery
         });
     const baseRequest = current?.nextEngine?.baseRequest ?? snap.request;
-    const adaptedRequest = requestAdaptedFromHistory(baseRequest, analysis);
+    const adaptedRequest = requestAdaptedFromHistory(baseRequest, snap.request, analysis);
     const normalized = normalizeRequest(adaptedRequest);
     const transitioned = transitionProgramPhase(snap.program, normalized, phase, {
         successfulExerciseIds: analysis.successfulExerciseIds,

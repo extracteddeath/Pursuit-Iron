@@ -1,12 +1,12 @@
 {
   "profile": "portable-browser-esm-v661-workout-input",
-  "milestone": "M174",
-  "source": "M173 + causal cycle-state recovery/review hardening",
-  "engine": "0.63.1 causal recovery evidence through cycle-state transitions",
+  "milestone": "M175",
+  "source": "M174 + persistent poor-fit/user avoidance memory across adapted blocks",
+  "engine": "0.63.2 longitudinal avoidance memory parity for standalone and adaptive cycles",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 43,
   "shadowRuntimeModules": 9,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-m174-causal-cycle-state",
+  "cache": "pursuit-iron-production-m175-longitudinal-adaptation-memory",
   "uiMilestone": "M169 Swap Sheet Scrolling"
 }

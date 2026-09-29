@@ -1,15 +1,15 @@
 {
   "schemaVersion": 3,
-  "milestone": "M174",
-  "appVersion": "3.224.0",
-  "build": 780,
-  "engineVersion": "0.63.1",
+  "milestone": "M175",
+  "appVersion": "3.225.0",
+  "build": 781,
+  "engineVersion": "0.63.2",
   "shadowEngineVersion": "0.62.5-shadow",
   "validatedLiveBaseline": "M88-0.61.3-reviewed-baseline",
   "candidateStatus": "local_verified_device_test_pending",
   "sourceNextEngineAggregate": null,
   "sourceShadowEngineAggregate": "3107199d20c86a5a12b82eccbc61c9a32b001a72c7f30418db696235d0da0c22",
-  "runtimeAggregate": "2319b0aa1917f33b055a467ce9bc5ea195dfd401d03816ee10cbde65a7e8ad04",
+  "runtimeAggregate": "067a0828e15d67969ad4d5f0bd5dcc9e60cc33c37d6e77e7577b75d5415fd0be",
   "sourceFiles": {},
   "shadowSourceFiles": {
     "src/shadow-engine/canary.ts": "854246970f93111ee873f0eb5f222195a02af688ef1a3285d0624f44d422c58a",
@@ -31,8 +31,8 @@
     "modules/next-engine/coach-regression.js": "a990fe47ffa77ca0a641f09d2c507150c37b6d03f17ac310f65f66e1347ff380",
     "modules/next-engine/coach-review.js": "f5adf1805c48c964b1530f273204b936b470e5cde2406af676f77551c456f9a8",
     "modules/next-engine/comparison.js": "799f592429cde6cf9080613d3c51a237f8fed5ef1ac70a4d0b8839259f42bc1a",
-    "modules/next-engine/config.js": "49b52593ee43cfcce6316a9b92ffbc789ce7bf28de629527280d697321a6f547",
-    "modules/next-engine/cycle-runtime-adapter.js": "19c8b15c3958f762636b19a5b1c1c83c214d5d61577b9722a651aaa0789f259c",
+    "modules/next-engine/config.js": "4e8ece758c6dfd075c8853390049ad2dca9f10f8d85fbe73ff5f7373b5aefddb",
+    "modules/next-engine/cycle-runtime-adapter.js": "bb9fd9e4ad46fbe856afed73e6e1a4fa70e4d0c2407fcb57d1d3ed6b58557447",
     "modules/next-engine/cycles.js": "3b949f73ecef2543e4aa3aa6910fe43a3d3526805fcbcd111424e5df2d6efc79",
     "modules/next-engine/domain.js": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
     "modules/next-engine/events.js": "224b26bfbef0c398e0b0a3e32b26c96075f5c1dce5ce6aa9f5cad83d7a0b437a",
@@ -64,7 +64,7 @@
     "modules/next-engine/techniques.js": "db98adbef9c5f1ea8f32520038580acb5e0850ede3885f8e9b0ec749a5a3fcac",
     "modules/next-engine/topology.js": "b04274f6f3df79698a6806897def63aae0101223f8e10539795afb59643e558b",
     "modules/next-engine/weekly-recovery.js": "92cf14bd6ca28715d1d3f9ddde1cc0f42502892f230d69650f83bf6b921c111c",
-    "modules/next-engine/workout-history-adapter.js": "ba72ed9f09b0ef2282fd8b2f28395b3f413f3851925b3344fe5613043c257751",
+    "modules/next-engine/workout-history-adapter.js": "471c3ff886912386fa4ecdbc330bc4293c9f3388586156cd4df0fa3abef31e2f",
     "modules/next-engine/workout-runtime.js": "009e3a66dcb4a48f93fe226a265a18f02ebdeffdc956d5c7bb12afbd8864ff9b",
     "modules/shadow-engine/canary.js": "0428125d70782059910ed3dbeac22a928caff1ed8e5c077ae5442fac6281b689",
     "modules/shadow-engine/config.js": "c4ede59d064132f543de9737618f45562104be0a6fbab1d3bbd9b85a36d052bc",
@@ -85,16 +85,16 @@
     "modules/next-engine/engine-context.js": "40c63ad790d4ab3a83975acd557e58f0f85d4fdc1ceab9ba422468fc6ae1430f"
   },
   "localCandidate": {
-    "name": "M174 Causal Cycle-State Hardening",
-    "base": "M173 / app 3.223.0 build 779 / Engine 0.63.0",
-    "validation": "Focused causal cycle-state regression plus the complete M173 production regression suite."
+    "name": "M175 Longitudinal Adaptation Memory",
+    "base": "M174 / app 3.224.0 build 780 / Engine 0.63.1",
+    "validation": "Focused multi-block avoidance-memory/parity regression plus the complete M174 production suite."
   },
   "uiFiles": {
-    "modules/App.js": "fb0a32179a043fe5080c6a242e001c472fac48f8ff1affecc6eb5e84689e300c",
-    "index.html": "2c049fee96be49503270cd82c3bc4e160c520d9cd56ed3e17d9043823d469af6",
-    "sw.js": "65d3f8a67e2ff3c48d09321139f32298cf27ee86b77ebfdfc4aac4000fde2f7b",
-    "BUILD_PROFILE.json": "b4b472ed80b48a449041c752f88510eec49f69ce1c97443818958f3d3d4bbe86",
-    "CHANGELOG.md": "44714cd22f2c81d2fe055cf8e6c93927ee1d5acea9808bb533cc55806cd540e1"
+    "modules/App.js": "ebc16a76ac938a9e43a521347da492966219bc1ce2651ae27891538460d43db5",
+    "index.html": "b5ee5f9014c3b8cb7feb142d582bef6abc9b40d6ce1becadff546d484257d996",
+    "sw.js": "82fa5b4928c78653fbc76628657c1acf52831644a0264e8f7286e6890016840d",
+    "BUILD_PROFILE.json": "8f2afcaec6a5a312e1ea1e215c9f92d03d218e11cf44e355425a352c3de148b2",
+    "CHANGELOG.md": "1737440f48980b183995d02604ff6043eaf8f3136b78564d9139ad0a68e42c92"
   },
   "baselineSourceNextEngineAggregate": "9ba84ffe3a62d94849617af33a2eafeaa563ab4a3636579101990ed753d05a84",
   "baselineSourceFiles": {

@@ -10,7 +10,7 @@ import { estimateSessionMinutes, progressionForExercise, repsForPhase, restForEx
 import { blocksForCycleTemplate, cycleTemplates, goalForCycleTemplate } from './simulation.js';
 import { transitionProgramPhase } from './phase-transition.js';
 import { historyDecision, withProgramExplainability } from './explainability.js';
-import { analyzeShellHistoryForNextEngine } from './workout-history-adapter.js';
+import { analyzeShellHistoryForNextEngine, carryForwardAvoidedExercises } from './workout-history-adapter.js';
 import { shellConfigToNextRequest, nextProgramToShellProgram, NextShellAdapterError } from './app-shell-adapter.js';
 const phaseGoal = (phase) => phase === 'hypertrophy_accumulation' ? 'hypertrophy' :
     (phase === 'strength_accumulation' || phase === 'intensification' || phase === 'peak') ? 'strength' : 'both';
@@ -372,7 +372,7 @@ function requestForAdvance(cycle, current, target, weeks, analysis) {
     const base = (cycle?.nextEngineCycle?.baseRequest ?? current?.nextEngine?.baseRequest);
     if (!base)
         throw new NextShellAdapterError('NEXT_CYCLE_REQUEST_MISSING', 'Next cycle is missing its immutable request snapshot.');
-    const request = clone(base);
+    let request = carryForwardAvoidedExercises(clone(base), current?.nextEngine?.request, analysis);
     if (target === 'recovery' || analysis.classification === 'fatigue_limited' || analysis.recovery.status === 'deload_recommended') {
         request.schedule = { days: request.schedule.days.map(day => ({ ...day, targetExercises: day.targetExercises === undefined ? undefined : Math.max(2, day.targetExercises - Math.max(1, Math.ceil(day.targetExercises * .2))) })) };
         request.preferences = { ...(request.preferences ?? {}), responseCapacityScale: target === 'recovery' ? .72 : .82 };
@@ -388,7 +388,7 @@ function buildAdaptedBlock(current, cycle, target, weeks, label, analysis, legac
     const normalized = normalizeRequest(request);
     let next;
     if (cycle?.nextEngineCycle?.adaptBetweenBlocks) {
-        next = transitionProgramPhase(source, normalized, target, { successfulExerciseIds: analysis.successfulExerciseIds, protectedExerciseIds: analysis.protectedExerciseIds }).program;
+        next = transitionProgramPhase(source, normalized, target, { successfulExerciseIds: analysis.successfulExerciseIds, protectedExerciseIds: analysis.protectedExerciseIds, replaceExerciseIds: analysis.replaceExerciseIds }).program;
     }
     else {
         next = retargetStatic(source, request, target);

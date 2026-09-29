@@ -1,3 +1,12 @@
+## M175 — Longitudinal Adaptation Memory (3.225.0 / build 781 / Engine 0.63.2)
+
+- Fixes a multi-block memory gap: an exercise diagnosed as poor fit could be avoided for the immediately following block and then become eligible again because later adaptation rebuilt from the original immutable request.
+- Adds one shared carry-forward boundary for exercise avoidances. Original user bans, previously learned poor-fit replacements, and newly diagnosed poor-fit exercises now accumulate across adapted blocks.
+- Applies the same behavior to standalone next-block adaptation and adaptive training-cycle advancement.
+- Adaptive cycles now also pass `replaceExerciseIds` into phase-transition continuity, matching the standalone path.
+- Temporary fatigue capacity reductions remain temporary; only exercise-avoidance memory is carried forward.
+- Adds focused regression coverage and reruns the complete M174 production suite.
+
 ## M174 — Causal Cycle-State Hardening (3.224.0 / build 780 / Engine 0.63.1)
 
 - Closes the remaining M170 recovery-causality gap inside `cycles.js`. Generic action labels such as `hold` and `review` no longer count as fatigue by themselves.

@@ -1,0 +1,67 @@
+name: M190 Progression Lifecycle
+
+on:
+  push:
+    branches:
+      - m190-progression-lifecycle
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  progression-lifecycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Apply M190 progression lifecycle
+        run: node scripts/apply-m190-progression-lifecycle.mjs
+
+      - name: M190 progression lifecycle
+        run: node --no-warnings --experimental-loader ./verification/import-loader.mjs verification/m190-progression-lifecycle-test.mjs
+
+      - name: M189 adaptive selector regression
+        run: node --no-warnings --experimental-loader ./verification/import-loader.mjs verification/m189-adaptive-progression-selection-test.mjs
+
+      - name: Progression safety regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          for test in \
+            verification/progression-safety-test.mjs \
+            verification/custom-progression-safety-test.mjs \
+            verification/shell-progression-safety-test.mjs \
+            verification/m183-progression-safeguards-test.mjs \
+            verification/m184-longitudinal-evidence-test.mjs \
+            verification/m185-phase-specialization-test.mjs \
+            verification/m186-explainable-block-review-test.mjs
+          do
+            echo "==> $test"
+            node --no-warnings --experimental-loader ./verification/import-loader.mjs "$test"
+          done
+
+      - name: Broad production torture regression
+        run: node --no-warnings --experimental-loader ./verification/import-loader.mjs verification/m188-production-torture-test.mjs
+
+      - name: Persist certified M190 lifecycle integration
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add modules/next-engine/realizer.js modules/next-engine/app-shell-adapter.js modules/next-engine/phase-transition.js
+          if git diff --cached --quiet; then
+            echo "M190 lifecycle integration already committed."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "M190: complete progression lifecycle integration"
+          git push origin HEAD:m190-progression-lifecycle

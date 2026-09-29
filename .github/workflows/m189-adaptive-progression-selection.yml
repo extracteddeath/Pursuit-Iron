@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   adaptive-progression:
@@ -22,8 +22,13 @@ jobs:
         with:
           node-version: 22
 
+      - name: Apply M189 integration wiring
+        run: node scripts/apply-m189-integration.mjs
+
       - name: M189 adaptive progression selection
-        run: node --no-warnings --experimental-loader ./verification/import-loader.mjs verification/m189-adaptive-progression-selection-test.mjs
+        run: |
+          node --no-warnings --experimental-loader ./verification/import-loader.mjs verification/m189-adaptive-progression-selection-test.mjs
+          node --no-warnings --experimental-loader ./verification/import-loader.mjs verification/m189-integration-wiring-test.mjs
 
       - name: Progression safety regression suite
         shell: bash
@@ -55,3 +60,18 @@ jobs:
 
       - name: Broad production torture regression
         run: node --no-warnings --experimental-loader ./verification/import-loader.mjs verification/m188-production-torture-test.mjs
+
+      - name: Persist certified M189 integration
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add modules/next-engine/generate.js modules/next-engine/realizer.js modules/next-engine/app-shell-adapter.js modules/next-engine/workout-history-adapter.js
+          if git diff --cached --quiet; then
+            echo "M189 integration already committed."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "M189: wire adaptive progression through creation and history"
+          git push origin HEAD:m189-adaptive-progression-selection

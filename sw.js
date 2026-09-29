@@ -1,5 +1,5 @@
-/* M178 real-browser PWA update lifecycle certification — Engine 0.63.2. */
-const CACHE="pursuit-iron-production-m178-pwa-update-lifecycle";
+/* M180 coach-quality oracle + mixed strength recovery protection — Engine 0.63.3. */
+const CACHE="pursuit-iron-production-m180-coach-quality-oracle";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
   "./",
@@ -24,6 +24,7 @@ const SHELL=[
   "./modules/next-engine/app-shell-adapter.js",
   "./modules/next-engine/arbiter.js",
   "./modules/next-engine/arm-coverage.js",
+  "./modules/next-engine/coach-quality-oracle.js",
   "./modules/next-engine/coach-regression.js",
   "./modules/next-engine/coach-review.js",
   "./modules/next-engine/comparison.js",

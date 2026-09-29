@@ -1,12 +1,12 @@
 {
   "profile": "portable-browser-esm-v661-workout-input",
-  "milestone": "M178",
-  "source": "M177 + real-browser service-worker update/takeover/reload certification",
-  "engine": "0.63.2 longitudinal avoidance memory parity for standalone and adaptive cycles",
+  "milestone": "M180",
+  "source": "M178 + domain-gated coach-quality oracle and mixed-plan lower-strength recovery protection",
+  "engine": "0.63.3 coach-quality oracle and mixed/powerbuilding lower-strength capacity protection",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
-  "nextRuntimeModules": 43,
+  "nextRuntimeModules": 44,
   "shadowRuntimeModules": 9,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-m178-pwa-update-lifecycle",
+  "cache": "pursuit-iron-production-m180-coach-quality-oracle",
   "uiMilestone": "M169 Swap Sheet Scrolling"
 }

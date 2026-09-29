@@ -1,3 +1,11 @@
+## M180 — Coach Quality Oracle 2.0 (3.229.0 / build 785 / Engine 0.63.3)
+
+- Adds a domain-gated coach-quality oracle above the existing structural audit, objective coach guardrails, and sampled blind-review framework. No blended score can hide a major defect in another quality domain.
+- Makes a 19-case representative program matrix pass-only across experience levels, goals, frequencies, splits, time budgets, supersets, and equipment constraints. Any review/reject result blocks release verification.
+- Fixes a real powerbuilding recovery defect found by the new oracle: generic mixed Upper/Lower plans no longer spend optional high-priority volume by stacking squat and deadlift strength work when required anchors can occupy separate lower sessions. Required strength anchors remain protected, while named strength systems retain their own exposure rules.
+- Adds M180 oracle and matrix tests to the permanent production release verifier and packages the oracle as a hashed/pre-cached Next engine module.
+- Physical Android installed-PWA process-kill certification remains the separate M179 device gate and is not claimed here.
+
 ## M178 — Real-Browser PWA Update Lifecycle Certification (3.228.0 / build 784 / Engine 0.63.2)
 
 - Adds a real headless-Chrome service-worker lifecycle gate instead of relying only on source-marker tests for PWA updates.

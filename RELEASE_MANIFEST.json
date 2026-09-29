@@ -1,15 +1,15 @@
 {
   "schemaVersion": 3,
-  "milestone": "M178",
-  "appVersion": "3.228.0",
-  "build": 784,
-  "engineVersion": "0.63.2",
+  "milestone": "M180",
+  "appVersion": "3.229.0",
+  "build": 785,
+  "engineVersion": "0.63.3",
   "shadowEngineVersion": "0.62.5-shadow",
   "validatedLiveBaseline": "M88-0.61.3-reviewed-baseline",
   "candidateStatus": "local_verified_device_test_pending",
   "sourceNextEngineAggregate": null,
   "sourceShadowEngineAggregate": "3107199d20c86a5a12b82eccbc61c9a32b001a72c7f30418db696235d0da0c22",
-  "runtimeAggregate": "067a0828e15d67969ad4d5f0bd5dcc9e60cc33c37d6e77e7577b75d5415fd0be",
+  "runtimeAggregate": "081d8f5a19edd8d5c65a7ef0ac17e3951b3a967e36c1c8dbd006e5bae8976d20",
   "sourceFiles": {},
   "shadowSourceFiles": {
     "src/shadow-engine/canary.ts": "854246970f93111ee873f0eb5f222195a02af688ef1a3285d0624f44d422c58a",
@@ -31,7 +31,7 @@
     "modules/next-engine/coach-regression.js": "a990fe47ffa77ca0a641f09d2c507150c37b6d03f17ac310f65f66e1347ff380",
     "modules/next-engine/coach-review.js": "f5adf1805c48c964b1530f273204b936b470e5cde2406af676f77551c456f9a8",
     "modules/next-engine/comparison.js": "799f592429cde6cf9080613d3c51a237f8fed5ef1ac70a4d0b8839259f42bc1a",
-    "modules/next-engine/config.js": "4e8ece758c6dfd075c8853390049ad2dca9f10f8d85fbe73ff5f7373b5aefddb",
+    "modules/next-engine/config.js": "138fca9be07e9f1162e22ac0618166fb2b3462134c733cc7e4a0a3a93e3db29a",
     "modules/next-engine/cycle-runtime-adapter.js": "bb9fd9e4ad46fbe856afed73e6e1a4fa70e4d0c2407fcb57d1d3ed6b58557447",
     "modules/next-engine/cycles.js": "3b949f73ecef2543e4aa3aa6910fe43a3d3526805fcbcd111424e5df2d6efc79",
     "modules/next-engine/domain.js": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
@@ -52,7 +52,7 @@
     "modules/next-engine/performance.js": "21f566f3bb69dca915f1224e0fd2b6e4e3a57a9cb6df8b1b68f0e54c1c8c81e1",
     "modules/next-engine/phase-policy.js": "9655292b2e772f4f972b0e7d3e0a8c33fa8308dd17d980d5c6187a87b659c5c9",
     "modules/next-engine/phase-transition.js": "b10562021fef94c52b02f07a61f4422c1e12f28c67bd771be9a06e9d70ebbb02",
-    "modules/next-engine/prescription.js": "60f95984019d235f6c5b322306422929ba6b9609f2c6cae372e6a926450c12d5",
+    "modules/next-engine/prescription.js": "c3c0c02bd33d88008b9cc5e530eb90eaf649c5fd0b3f65be72d8786fb2b7abec",
     "modules/next-engine/progression-style.js": "b34c34524ee844727b352d39dc85a44632750d8ec845b3cc5c370460364526ff",
     "modules/next-engine/public-mev.js": "9aeb6117a3cf898e67221d9a0675aa3349108e64c700ca198abbaf1cc472e1a2",
     "modules/next-engine/realizer.js": "d11fd1071ed52f902f9c80ff310720f81bf848bdc475593d6fb2faa2f44f63d7",
@@ -82,19 +82,20 @@
     "vendor/react-shared-JU7Z5GYC.js": "b8893896e31178fb4c8c0ce42cae975bec57bb70596c012d5d5c439cd20717d8",
     "vendor/react-shared-V673FGIV.js": "591c4bd8b0aae646cba73ca7ac17a2c2c950bdbaf288529ea14b691f2a4a9f22",
     "vendor/react.js": "24b2d220a5b2637cf3fb78fe0d961f227ea0a4b960485dbfb03c9d276e72147c",
-    "modules/next-engine/engine-context.js": "40c63ad790d4ab3a83975acd557e58f0f85d4fdc1ceab9ba422468fc6ae1430f"
+    "modules/next-engine/engine-context.js": "40c63ad790d4ab3a83975acd557e58f0f85d4fdc1ceab9ba422468fc6ae1430f",
+    "modules/next-engine/coach-quality-oracle.js": "1eea2ff4961a4d2af0072c3263423ff2d27cce6f5c1c67e3286d79d05b67a111"
   },
   "localCandidate": {
-    "name": "M178 Real-Browser PWA Update Lifecycle Certification",
-    "base": "M177 / app 3.227.0 build 783 / Engine 0.63.2",
-    "validation": "Real Chrome service-worker takeover/reload/storage lifecycle plus the complete M177 production suite."
+    "name": "M180 Coach Quality Oracle 2.0",
+    "base": "M178 / app 3.228.0 build 784 / Engine 0.63.2",
+    "validation": "Domain-gated oracle regressions, 19-case pass-only generated-program matrix, and the complete production release suite."
   },
   "uiFiles": {
-    "modules/App.js": "d071cf62a1a00abaf97eba4b5b72657fa8a46c67877d09b3b5177d1e1aa73f16",
-    "index.html": "bd397a3f737f4fa2821929e655d89c4c683ef44f0050a59ce5d84aea71699527",
-    "sw.js": "c244548563a10436942ce4fe6226b079f8476ee3099646e6e950d1258fd58265",
-    "BUILD_PROFILE.json": "c6a628a370ed8db03e6bd2e4556f2f17e564d0ea05a8aa86bdb7d065ee0e30f6",
-    "CHANGELOG.md": "8f10dd3f7da9760f6acb29d82dec3126d9e9eec4168715eda34a380cc5513fab"
+    "modules/App.js": "500262f1954d25b9df80b494b100938df93d8fee808459935e6a909e8397e30e",
+    "index.html": "1fbe96b7f9863c27c6b1a3c1f9882b219a83436f5289a98abe6bb9936a68a085",
+    "sw.js": "21fafe76bac62607aae56691d6130e441cc298ce2e574bad6e3f7b3855ccf6fc",
+    "BUILD_PROFILE.json": "836580768f0ea13a2714e2af1ea23f375af7c61d4c70a5524a8ac20d9ae29c0f",
+    "CHANGELOG.md": "c9b94bd50ec2ffbaca090161a32565cf581e05b5abb4462a25ea22887084fd41"
   },
   "baselineSourceNextEngineAggregate": "9ba84ffe3a62d94849617af33a2eafeaa563ab4a3636579101990ed753d05a84",
   "baselineSourceFiles": {

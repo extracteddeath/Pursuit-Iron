@@ -22,6 +22,8 @@ jobs:
         run: node verification/apply-m202-locked-cycle-dose.mjs
       - name: Apply locked-cycle overflow candidate expansion
         run: node verification/apply-m202-locked-cycle-dose-round2.mjs
+      - name: Apply exact weekly-cell overflow repair
+        run: node verification/apply-m202-weekly-cell-repair.mjs
       - name: Add failing-block diagnostics
         run: node verification/apply-m202-locked-cycle-dose-diagnostic.mjs
       - name: Locked-cycle displayed-volume regression

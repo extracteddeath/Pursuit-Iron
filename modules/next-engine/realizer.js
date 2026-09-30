@@ -1326,6 +1326,58 @@ export function realizeSessions(plans, request, targetDose = {}, directTargetDos
                             }
                         }
                     }
+                    // Appending a missing region is preferred, but a full-body day can already be at its
+                    // useful movement/time capacity. In that case the structural promise outranks an optional
+                    // normal-priority slot: replace the cheapest dispensable movement with the missing region
+                    // instead of returning a label-only Full Body session. The swap is dose/floor audited and
+                    // may never remove another required push/pull/lower region.
+                    if (!repaired) {
+                        const beforeDirect = currentDirect();
+                        const donors = session.exercises
+                            .map((exercise, index) => ({ exercise, index, def: exerciseMap.get(exercise.exerciseId) }))
+                            .filter(x => x.def && !['primary_strength', 'secondary_strength', 'strength_support', 'specialization'].includes(x.exercise.role))
+                            .map(x => {
+                                const primary = primaryMuscle(x.def);
+                                const priority = primary ? (request.goal.musclePriorities[primary] ?? 'normal') : 'normal';
+                                const fatigue = x.def.fatigue.systemic + x.def.fatigue.axial + x.def.fatigue.lowerBack;
+                                return { ...x, primary, priority, fatigue };
+                            })
+                            .filter(x => x.priority !== 'primary' && x.priority !== 'specialization' && x.priority !== 'high')
+                            .sort((a, b) => a.exercise.sets - b.exercise.sets || b.fatigue - a.fatigue || b.def.setupCost - a.def.setupCost || a.exercise.exerciseId.localeCompare(b.exercise.exerciseId));
+                        donorLoop: for (const donor of donors) {
+                            const withoutDonor = session.exercises.filter((_, i) => i !== donor.index);
+                            for (const muscle of targetMuscles) {
+                                const allocation = { id: 'full-body-region-swap-' + session.id + '-' + muscle, kind: 'muscle', muscle, role: 'hypertrophy_compound', dose: 2, importance: 'B' };
+                                const chosenDefs = withoutDonor.map(ex => exerciseMap.get(ex.exerciseId)).filter(Boolean);
+                                const def = muscleCandidate(allocation, session, request, chosenDefs, weeklyMovementUse, exerciseCatalog);
+                                if (!def || withoutDonor.some(ex => ex.exerciseId === def.id))
+                                    continue;
+                                const sets = Math.max(1, Math.min(2, donor.exercise.sets || 1));
+                                const replacementExercise = makePlanned(def, 'hypertrophy_compound', sets, policy, request.athlete.experience);
+                                const proposal = session.exercises.map((ex, i) => i === donor.index ? replacementExercise : ex);
+                                const after = regionStatus({ ...session, exercises: proposal });
+                                if (!after.push || !after.pull || !after.lower)
+                                    continue;
+                                const proposedTotals = totalsWithSessionProposal(session.id, proposal);
+                                const proposedDirect = directTotalsWithSessionProposal(session.id, proposal);
+                                const safe = capacityPrescriptions.filter(p => p.muscle !== 'front_delts').every(p => {
+                                    const fractionalRequired = Math.min(totals[p.muscle], p.minimum * .85);
+                                    const directRequired = Math.min(beforeDirect[p.muscle] ?? 0, p.directMinimum ?? 0);
+                                    return proposedTotals[p.muscle] + .001 >= fractionalRequired && proposedDirect[p.muscle] + .001 >= directRequired;
+                                });
+                                if (!safe)
+                                    continue;
+                                const optimized = assignAccessorySupersets({ ...session, exercises: proposal, estimatedMinutes: 0 }, exerciseMap, request.restrictions.allowSupersets);
+                                if (optimized.estimatedMinutes > session.maxMinutes)
+                                    continue;
+                                session.exercises = optimized.exercises;
+                                session.estimatedMinutes = optimized.estimatedMinutes;
+                                trackExerciseUse(def);
+                                repaired = true;
+                                break donorLoop;
+                            }
+                        }
+                    }
                     if (!repaired)
                         break;
                 }

@@ -1,5 +1,5 @@
 /* Pursuit Iron 4.0 production release — Engine 0.64.0 with M196 capacity-band and split-picker fixes. */
-const CACHE="pursuit-iron-production-v4-0-0-m196";
+const CACHE="pursuit-iron-production-v4-0-0";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
   "./",
@@ -23,7 +23,6 @@ const SHELL=[
   "./modules/wizard-stability.js",
   "./modules/next-engine/allocator.js",
   "./modules/next-engine/app-shell-adapter.js",
-  "./modules/next-engine/app-shell-adapter.js?capacity-base=1",
   "./modules/next-engine/app-shell-adapter-capacity.js",
   "./modules/next-engine/arbiter.js",
   "./modules/next-engine/arm-coverage.js",
@@ -38,8 +37,8 @@ const SHELL=[
   "./modules/next-engine/domain.js",
   "./modules/next-engine/dose-reconciliation.js",
   "./modules/next-engine/events.js",
-  "./modules/next-engine/exercise-db.js",
   "./modules/next-engine/engine-context.js",
+  "./modules/next-engine/exercise-db.js",
   "./modules/next-engine/exercise-economy.js",
   "./modules/next-engine/exercise-selection-intelligence.js",
   "./modules/next-engine/explainability.js",
@@ -92,4 +91,4 @@ const RESCUE_CACHE='pursuit-iron-production-m100';
 self.addEventListener('install',e=>{e.waitUntil((async()=>{const c=await caches.open(CACHE);await c.addAll(SHELL.map(u=>new Request(u,{cache:'reload'})));const keys=await caches.keys();if(keys.includes(RESCUE_CACHE))await self.skipWaiting();})());});
 self.addEventListener('message',e=>{if(e.data&&e.data.type==='SKIP_WAITING')self.skipWaiting();});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE&&(PURSUIT_CACHE.test(k)||/^wpb-shell-/.test(k))).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
-self.addEventListener('fetch',e=>{const r=e.request;if(r.method!=='GET')return;if(r.mode==='navigate'){e.respondWith(caches.open(CACHE).then(c=>c.match('./index.html')).then(x=>x||fetch(r)).catch(()=>caches.open(CACHE).then(c=>c.match('./index.html'))));return;}e.respondWith(caches.open(CACHE).then(c=>c.match(r).then(x=>x||fetch(r).then(res=>{if(res&&res.status===200&&res.type==='basic')c.put(r,res.clone()).catch(()=>{});return res;}))));});
+self.addEventListener('fetch',e=>{const r=e.request;if(r.method!=='GET')return;if(r.mode==='navigate'){e.respondWith(caches.open(CACHE).then(c=>c.match('./index.html')).then(x=>x||fetch(r)).catch(()=>caches.open(CACHE).then(c=>c.match('./index.html'))));return;}e.respondWith(caches.open(CACHE).then(c=>c.match(r,{ignoreSearch:true}).then(x=>x||fetch(r).then(res=>{if(res&&res.status===200&&res.type==='basic')c.put(r,res.clone()).catch(()=>{});return res;}))));});

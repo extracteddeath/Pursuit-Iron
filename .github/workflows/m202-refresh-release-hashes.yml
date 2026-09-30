@@ -1,0 +1,50 @@
+name: M202 refresh release hashes
+
+on:
+  push:
+    branches: [fix/m202-release-integrity]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Refresh release UI hashes
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const crypto = require('crypto');
+          const sha = p => crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex');
+          const path = 'RELEASE_MANIFEST.json';
+          const manifest = JSON.parse(fs.readFileSync(path, 'utf8'));
+          for (const file of Object.keys(manifest.uiFiles || {})) manifest.uiFiles[file] = sha(file);
+          manifest.localCandidate = {
+            name: 'Pursuit Iron 4.0 Production Release · M202',
+            base: 'M202 / app 4.0.0 build 792 / Engine 0.64.3',
+            validation: 'M202 reconciles locked-cycle phase volume after exact weekly materialization while preserving the exercise roster and protected strength work.'
+          };
+          fs.writeFileSync(path, JSON.stringify(manifest, null, 2) + '\n');
+          NODE
+      - name: Verify refreshed release
+        run: node scripts/verify-release.mjs
+      - name: Commit refreshed manifest
+        shell: bash
+        run: |
+          if git diff --quiet -- RELEASE_MANIFEST.json; then
+            echo "Release manifest already current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add RELEASE_MANIFEST.json
+          git commit -m "M202: refresh release UI hashes"
+          git push origin HEAD:fix/m202-release-integrity

@@ -5,6 +5,7 @@ on:
     branches: [audit/m198-creation-pipeline]
     paths:
       - 'verification/m198-strength-fb5-debug.mjs'
+      - 'verification/m198-strength-fb5-pipeline-debug.mjs'
       - '.github/workflows/m198-strength-fb5-debug.yml'
   workflow_dispatch:
 
@@ -24,11 +25,17 @@ jobs:
         shell: bash
         run: |
           node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m198-strength-fb5-debug.mjs 2>&1 | tee m198-strength-fb5-debug.log
+      - name: Trace Strength pipeline stages
+        shell: bash
+        run: |
+          node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m198-strength-fb5-pipeline-debug.mjs 2>&1 | tee m198-strength-fb5-pipeline-debug.log
       - name: Upload diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: m198-strength-fb5-debug
-          path: m198-strength-fb5-debug.log
+          path: |
+            m198-strength-fb5-debug.log
+            m198-strength-fb5-pipeline-debug.log
           if-no-files-found: error
           retention-days: 7

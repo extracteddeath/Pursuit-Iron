@@ -4,6 +4,7 @@ on:
   push:
     branches: [audit/m198-creation-pipeline]
     paths:
+      - 'verification/m198-patch-adaptive-transition-capacity.mjs'
       - '.github/workflows/m198-apply-adaptive-transition-capacity.yml'
   workflow_dispatch:
 

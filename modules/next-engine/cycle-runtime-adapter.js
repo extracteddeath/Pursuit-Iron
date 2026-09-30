@@ -228,11 +228,13 @@ export function generateNextCycleForShell(options) {
         else if (options.adaptBetweenBlocks) {
             const ids = previous.sessions.flatMap(s => s.exercises.map(e => e.exerciseId));
             const protectedIds = previous.sessions.flatMap(s => s.exercises.filter(e => e.role === 'primary_strength' || e.role === 'secondary_strength').map(e => e.exerciseId));
-            next = transitionProgramPhase(previous, normalized, spec.phase, {
+            const transitioned = transitionProgramPhase(previous, normalized, spec.phase, {
                 successfulExerciseIds: ids,
                 protectedExerciseIds: protectedIds,
-                nextBlockWeeks: spec.weeks
-            }).program;
+                nextBlockWeeks: spec.weeks,
+                capacityConfig: options.config
+            });
+            next = transitioned.program;
         }
         else {
             next = retargetStatic(previous, baseRequest, spec.phase, spec.weeks);

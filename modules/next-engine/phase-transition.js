@@ -2,6 +2,7 @@ import { auditProgram } from './arbiter.js';
 import { createTrainingSetEvents } from './events.js';
 import { createEngineContext, createTransactionalEvaluator } from './engine-context.js';
 import { generateProgram } from './generate.js';
+import { firstPassingCapacityProgram } from './capacity-generation.js';
 import { deriveMuscleLedger } from './ledgers.js';
 import { historyDecision, withBlockReviewExplainability, withProgramExplainability } from './explainability.js';
 import { progressionInstruction, reselectProgressionStyle } from './progression-style.js';
@@ -245,27 +246,32 @@ function applyAdaptiveProgressionStyles(program, previous, request, target, evid
  */
 export function transitionProgramPhase(previous, request, target, evidence) {
     const nextBlockWeeks = Math.max(1, Number(evidence?.nextBlockWeeks ?? evidence?.blockWeeks ?? 6) || 6);
-    const generated = generateProgram(request, {
+    // Adaptive transitions must use the same soft-capacity contract as initial program/cycle creation.
+    // A valid 60–90 minute Full Body cycle can otherwise enter Strength with a raw generation that
+    // violates Full Body coverage even though a nearby capacity candidate passes the normal arbiter.
+    const generation = firstPassingCapacityProgram(request, evidence?.capacityConfig, {
         phase: target,
         // New exercises introduced by the target phase must use the actual next-block duration too.
         // Otherwise a four-week block can accidentally start a five-plus-week wave simply because
         // the exercise has no prior history for the adaptive pass to correct.
         blockWeeks: nextBlockWeeks,
         progressionStyle: request.preferences?.progressionStyle
-    }).program;
+    });
+    const effectiveRequest = generation.request;
+    const generated = generation.result.program;
     const successful = new Set(evidence.successfulExerciseIds);
     const protectedIds = new Set(evidence.protectedExerciseIds ?? []);
     const replaceIds = new Set(evidence.replaceExerciseIds ?? []);
-    const context = createEngineContext(request);
+    const context = createEngineContext(effectiveRequest);
     let program = generated;
-    const previousByTargetSession = matchPriorSessionsForTransition(previous.sessions, program.sessions, request, context);
+    const previousByTargetSession = matchPriorSessionsForTransition(previous.sessions, program.sessions, effectiveRequest, context);
     const transaction = createTransactionalEvaluator(sessions => {
-        const events = createTrainingSetEvents(sessions, request.customExercises);
+        const events = createTrainingSetEvents(sessions, effectiveRequest.customExercises);
         const muscleLedger = deriveMuscleLedger(events);
         const { audit: _audit, ...withoutAudit } = generated;
         void _audit;
         const base = { ...withoutAudit, sessions, events, muscleLedger };
-        return { base, audit: auditProgram(base, request) };
+        return { base, audit: auditProgram(base, effectiveRequest) };
     });
     // Exact retained IDs count automatically. For changed slots, try the most
     // successful/protected compatible previous exercise first.
@@ -281,7 +287,7 @@ export function transitionProgramPhase(previous, request, target, evidence) {
                 .filter(ex => successful.has(ex.exerciseId) || protectedIds.has(ex.exerciseId))
                 .filter(ex => !replaceIds.has(ex.exerciseId))
                 .filter(ex => !alreadyUsed.has(ex.exerciseId))
-                .filter(ex => isCompatibleReplacement(ex, candidate, session.day, request, context))
+                .filter(ex => isCompatibleReplacement(ex, candidate, session.day, effectiveRequest, context))
                 .sort((a, b) => Number(protectedIds.has(b.exerciseId)) - Number(protectedIds.has(a.exerciseId)) || a.exerciseId.localeCompare(b.exerciseId));
             for (const previousExercise of alternatives) {
                 const proposedSessions = sessionsWithExercise(program, session.id, candidate.exerciseId, previousExercise);
@@ -298,7 +304,7 @@ export function transitionProgramPhase(previous, request, target, evidence) {
 
     // M189: exercise identity continuity no longer means progression-method continuity. Re-select the
     // method after the target prescription is known, using history only where the exercise actually has it.
-    const adaptive = applyAdaptiveProgressionStyles(program, previous, request, target, evidence, context);
+    const adaptive = applyAdaptiveProgressionStyles(program, previous, effectiveRequest, target, evidence, context);
     program = adaptive.program;
 
     const priorExerciseIds = new Set(previous.sessions.flatMap(s => s.exercises.map(e => e.exerciseId)));
@@ -334,14 +340,24 @@ export function transitionProgramPhase(previous, request, target, evidence) {
     const progressionSummary = adaptive.changes.length
         ? `${adaptive.changes.length} retained exercise progression method${adaptive.changes.length === 1 ? ' was' : 's were'} re-selected for the new phase/history evidence.`
         : 'Retained exercise progression methods remained appropriate after the block review.';
-    program = withProgramExplainability(program, request, [
+    program = withProgramExplainability(program, effectiveRequest, [
         historyDecision('Phase transition continuity', eligible.length ? `${preserved.length}/${continuityCapacity} structurally retainable successful exercises preserved` : 'Target phase generated without prior success evidence', continuity.rationale, { eligibleSuccessfulExercises: eligible.length, retainedSuccessfulExercises: preserved.length, continuityCapacity, capacityAdjustedRetentionRate: Math.round(capacityAdjustedRetentionRate * 1000) / 1000, structuralNewStrengthSlots }, replaced.length ? [`${replaced.length} successful exercise identities changed where the target phase or compatibility constraints required it.`] : ['No successful exercise identity was changed unnecessarily.']),
         historyDecision('Progression method review', adaptive.changes.length ? `${adaptive.changes.length} methods re-selected` : 'No method change required', progressionSummary, { progressionMethodChanges: adaptive.changes.length }, adaptive.changes.slice(0, 4).map(change => `${change.exerciseName}: ${change.previousStyle} → ${change.selectedStyle}. ${change.reason}`))
     ]);
-    program = withBlockReviewExplainability(previous, program, request, {
+    program = withBlockReviewExplainability(previous, program, effectiveRequest, {
         continuity,
         transitionReason: `The training cycle advanced from ${String(previous.phase || 'the prior focus').replace(/_/g, ' ')} to ${String(target || program.phase || 'the next focus').replace(/_/g, ' ')}.`,
         reasonCodes: ['block:transition:reviewed', 'progression:auto:reviewed']
     });
-    return { program, continuity };
+    return {
+        program,
+        continuity,
+        request: effectiveRequest,
+        capacityAdjustment: generation.adjusted ? {
+            requestedTargetExercises: generation.requestedTarget,
+            effectiveTargetExercises: generation.effectiveTarget,
+            requestedMinimumMinutes: generation.requestedMinimumMinutes,
+            effectiveMinimumMinutes: generation.effectiveMinimumMinutes
+        } : null
+    };
 }

@@ -1,0 +1,39 @@
+name: M199 apply startup loading copy
+
+on:
+  push:
+    branches: [audit/m199-performance-loading]
+    paths:
+      - 'verification/m199-patch-startup-loading-copy.mjs'
+      - '.github/workflows/m199-apply-startup-loading-copy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: audit/m199-performance-loading
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply loading copy
+        run: node verification/m199-patch-startup-loading-copy.mjs
+      - name: Commit patch
+        run: |
+          if git diff --quiet -- index.html; then
+            echo 'Startup loading copy already applied.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git commit -m 'M199: clarify startup loading state'
+          git pull --rebase origin audit/m199-performance-loading
+          git push origin HEAD:audit/m199-performance-loading

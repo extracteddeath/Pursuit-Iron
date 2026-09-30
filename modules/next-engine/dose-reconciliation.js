@@ -242,6 +242,15 @@ export function reconcileRecoverableDose(inputSessions, request, phase) {
                     proposed[sessionIndex].exercises.splice(exerciseIndex, 1);
                 else
                     proposed[sessionIndex].exercises[exerciseIndex].sets -= 1;
+
+                // Dose reconciliation is subtractive, but it may not invalidate the named session
+                // contract that generation already satisfied. In particular, removing a two-set row/
+                // pulldown from a Full Body day can leave weekly back dose acceptable while turning the
+                // actual session into lower + push only. Preserve push + pull + lower identity before
+                // considering the candidate's volume benefit.
+                if (!sourceStructurePreserved(session.intent, proposed[sessionIndex].exercises, exerciseMap))
+                    return;
+
                 const after = doseSnapshot(proposed, exerciseMap, prescriptions);
 
                 for (const p of prescriptions) {

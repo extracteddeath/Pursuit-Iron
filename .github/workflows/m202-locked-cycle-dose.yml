@@ -22,6 +22,8 @@ jobs:
         run: node verification/apply-m202-locked-cycle-dose.mjs
       - name: Apply locked-cycle overflow candidate expansion
         run: node verification/apply-m202-locked-cycle-dose-round2.mjs
+      - name: Add failing-block diagnostics
+        run: node verification/apply-m202-locked-cycle-dose-diagnostic.mjs
       - name: Locked-cycle displayed-volume regression
         run: node --no-warnings --experimental-loader ./verification/import-loader.mjs verification/m202-locked-cycle-dose-test.mjs
       - name: Regional-dose generation regression

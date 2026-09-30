@@ -1,0 +1,32 @@
+name: M202 source package
+
+on:
+  push:
+    branches: [m202-source-package]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package-source:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout validated M202 source
+        uses: actions/checkout@v4
+        with:
+          ref: 380b7898547a02fb5ec6b5df5d4699f7a5170279
+          fetch-depth: 1
+      - name: Create source ZIP
+        run: |
+          zip -qr pursuit-iron-m202-build792-source.zip . -x '.git/*' 'pursuit-iron-m202-build792-source.zip'
+          sha256sum pursuit-iron-m202-build792-source.zip > pursuit-iron-m202-build792-source.zip.sha256
+      - name: Upload source package
+        uses: actions/upload-artifact@v4
+        with:
+          name: pursuit-iron-m202-build792-source
+          path: |
+            pursuit-iron-m202-build792-source.zip
+            pursuit-iron-m202-build792-source.zip.sha256
+          compression-level: 0
+          retention-days: 7

@@ -75,3 +75,4 @@ manifest.runtimeHotfix = 'M202 reconcile locked-cycle weekly accessory volume to
 fs.writeFileSync('RELEASE_MANIFEST.json', JSON.stringify(manifest, null, 2) + '\n');
 
 console.log('M202 clean final candidate written from M201 production source.');
+// Trigger marker: verify this clean finalizer under the cleanup-only workflow.

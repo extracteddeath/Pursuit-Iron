@@ -1,0 +1,27 @@
+name: M198 creation audit
+
+on:
+  push:
+    branches: [audit/m198-creation-pipeline]
+    paths:
+      - 'modules/next-engine/**'
+      - 'verification/m198-creation-audit.mjs'
+      - '.github/workflows/m198-creation-audit.yml'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Audit Create Program / Create Cycle contract
+        run: node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m198-creation-audit.mjs

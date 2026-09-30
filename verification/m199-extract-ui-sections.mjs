@@ -1,0 +1,10 @@
+import fs from 'node:fs';
+const src=fs.readFileSync('modules/App.js','utf8');
+const take=(name,start,end,max=24000)=>{const a=src.indexOf(start);if(a<0)return `### ${name}\nNOT FOUND\n`;const b=end?src.indexOf(end,a+start.length):-1;return `### ${name}\n${src.slice(a,b<0?Math.min(src.length,a+max):Math.min(b,a+max))}\n\n`;};
+let out='';
+out+=take('generateNextWithShadow','function generateNextWithShadow','function attachShadowToShellProgram');
+out+=take('Wizard','function Wizard(','function Heading',60000);
+out+=take('cycle builder','const buildCycle =','const ',30000);
+out+=take('session tick','useEffect(() => { const t = setInterval(() => forceTick', '}, []);',6000);
+fs.writeFileSync('m199-ui-sections.txt',out);
+console.log('extracted',out.length,'bytes');

@@ -13,6 +13,7 @@ import { transitionProgramPhase } from './phase-transition.js';
 import { historyDecision, withProgramExplainability } from './explainability.js';
 import { analyzeShellHistoryForNextEngine, carryForwardAvoidedExercises } from './workout-history-adapter.js';
 import { shellConfigToNextRequest, nextProgramToShellProgram, NextShellAdapterError } from './app-shell-adapter.js';
+import { firstPassingCapacityProgram } from './capacity-generation.js';
 const phaseGoal = (phase) => phase === 'hypertrophy_accumulation' ? 'hypertrophy' :
     (phase === 'strength_accumulation' || phase === 'intensification' || phase === 'peak') ? 'strength' : 'both';
 const clone = (value) => JSON.parse(JSON.stringify(value));
@@ -201,8 +202,20 @@ export function generateNextCycleForShell(options) {
     const goal = goalForCycleTemplate(templateId);
     const seed = (options.seed ?? Math.max(1, Math.floor(Date.now() % 2147483647))) >>> 0;
     const cid = (options.makeId ?? (() => `next-cycle-${Math.random().toString(36).slice(2, 10)}`))();
-    const baseRequest = shellConfigToNextRequest({ ...options.config, goal: goal === 'mixed' ? 'both' : goal }, options.banned ?? [], options.legacyExercises, seed);
+    let baseRequest = shellConfigToNextRequest({ ...options.config, goal: goal === 'mixed' ? 'both' : goal }, options.banned ?? [], options.legacyExercises, seed);
     baseRequest.goal = { ...baseRequest.goal, type: goal };
+
+    // Program creation and cycle creation must share the same feasibility contract. The wizard
+    // already proves buildability with capacity-aware generation; bypassing it here made valid
+    // 60–90 minute Full Body cycles fail even though the equivalent single program passed.
+    const entrySpec = specs[0];
+    const entryAttempt = firstPassingCapacityProgram(baseRequest, options.config, {
+        phase: entrySpec.phase,
+        blockWeeks: entrySpec.weeks,
+        progressionStyle: baseRequest.preferences?.progressionStyle
+    });
+    baseRequest = entryAttempt.request;
+    const firstProgram = entryAttempt.result.program;
     const normalized = normalizeRequest(baseRequest);
     const blocks = [];
     let previous;
@@ -210,11 +223,7 @@ export function generateNextCycleForShell(options) {
         const spec = specs[i];
         let next;
         if (!previous) {
-            next = generateProgram(baseRequest, {
-                phase: spec.phase,
-                blockWeeks: spec.weeks,
-                progressionStyle: baseRequest.preferences?.progressionStyle
-            }).program;
+            next = firstProgram;
         }
         else if (options.adaptBetweenBlocks) {
             const ids = previous.sessions.flatMap(s => s.exercises.map(e => e.exerciseId));
@@ -242,7 +251,19 @@ export function generateNextCycleForShell(options) {
         engineSource: 'pursuit-next', engineSourceVersion: blocks[0]?.engineSourceVersion || '0.62.0', adaptExercises: !!options.adaptBetweenBlocks,
         blockIds: blocks.map(b => b.id), blockMeta: specs.map((s, i) => ({ label: s.label, note: `${phaseLabel(s.phase)} · ${s.weeks} weeks`, goal: phaseGoal(s.phase), weeks: s.weeks, phase: s.phase, id: blocks[i].id, plannedIndex: i, preview: i > 0 })),
         activeBlock: 0, advance: 'manual', onComplete: 'end', startedAt: null, done: false,
-        nextEngineCycle: { schemaVersion: 1, templateId, goal, adaptBetweenBlocks: !!options.adaptBetweenBlocks, baseRequest: clone(baseRequest), baseConfig: clone(options.config), plannedBlocks: clone(specs), recoveryInsertions: 0 }
+        nextEngineCycle: {
+            schemaVersion: 1, templateId, goal, adaptBetweenBlocks: !!options.adaptBetweenBlocks,
+            baseRequest: clone(baseRequest), baseConfig: clone(options.config), plannedBlocks: clone(specs), recoveryInsertions: 0,
+            ...(entryAttempt.adjusted ? { capacityAdjustment: {
+                policy: 'soft-capacity-band',
+                session: options.config?.session ?? 's60',
+                requestedTargetExercises: entryAttempt.requestedTarget,
+                effectiveTargetExercises: entryAttempt.effectiveTarget,
+                requestedMinimumMinutes: entryAttempt.requestedMinimumMinutes,
+                effectiveMinimumMinutes: entryAttempt.effectiveMinimumMinutes,
+                maxMinutes: baseRequest.schedule?.days?.[0]?.maxMinutes
+            } } : {})
+        }
     };
     return { cycle, blocks, baseRequest };
 }

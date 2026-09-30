@@ -20,6 +20,8 @@ jobs:
           node-version: '22'
       - name: Apply candidate patch
         run: node verification/apply-m202-locked-cycle-dose.mjs
+      - name: Apply locked-cycle overflow candidate expansion
+        run: node verification/apply-m202-locked-cycle-dose-round2.mjs
       - name: Locked-cycle displayed-volume regression
         run: node --no-warnings --experimental-loader ./verification/import-loader.mjs verification/m202-locked-cycle-dose-test.mjs
       - name: Regional-dose generation regression
@@ -40,5 +42,3 @@ jobs:
           git add modules/next-engine/volume-repair.js modules/next-engine/cycle-runtime-adapter.js modules/next-engine/config.js modules/App.js index.html sw.js BUILD_PROFILE.json RELEASE_MANIFEST.json CHANGELOG.md M202_LOCKED_CYCLE_DOSE_REPORT.md verification/m202-locked-cycle-dose-test.mjs
           git commit -m "M202: reconcile locked-cycle phase volume (build 792)"
           git push origin HEAD:fix/m202-locked-cycle-dose
-
-# rerun after patcher syntax correction

@@ -1,0 +1,32 @@
+name: M197 capacity monotonic
+
+on:
+  push:
+    branches: [fix/m197-capacity-minute-floor]
+    paths:
+      - 'modules/next-engine/capacity-policy.js'
+      - 'modules/next-engine/app-shell-adapter-capacity.js'
+      - 'verification/m197-capacity-monotonic-test.mjs'
+      - '.github/workflows/m197-capacity-monotonic.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'modules/next-engine/capacity-policy.js'
+      - 'modules/next-engine/app-shell-adapter-capacity.js'
+      - 'verification/m197-capacity-monotonic-test.mjs'
+      - '.github/workflows/m197-capacity-monotonic.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Full Body capacity monotonic regression
+        run: node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m197-capacity-monotonic-test.mjs

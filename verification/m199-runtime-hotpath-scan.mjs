@@ -11,14 +11,19 @@ function around(needle, radius=2400) {
 }
 
 const report={
+  appBytes: Buffer.byteLength(app),
   shadowAttach: around('attachShadowEvaluation('),
   shadowProgram: around('runShadowProgramForShell('),
   shadowCycle: around('attachShadowToCycleBuild('),
   shadowReads: ['nextEngine.shadow','nextEngine?.shadow','.shadow?.','shadow?.'].flatMap(x=>around(x,900)),
   forceTickUses: around('forceTick',2200),
+  timerTextRefUses: around('timerTextRef',2200),
   elapsedUses: around('runElapsedMs()',2200),
   oneSecondIntervals: around('setInterval(() => forceTick(n => n + 1), 1000)',5000),
   halfSecondIntervals: around('setInterval(',900).filter(x=>x.text.includes('500')),
+  saveStoreUses: around('saveStore(',2200),
+  storeStringify: around('text = JSON.stringify(data)',1800),
+  livePersistUses: around('persistLive()',1800),
   storageWrites: around('localStorage.setItem(',700)
 };
 fs.writeFileSync('m199-runtime-hotpath-scan.json',JSON.stringify(report,null,2));

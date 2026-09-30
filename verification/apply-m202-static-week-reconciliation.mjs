@@ -41,6 +41,7 @@ export function reconcileLockedCycleWeekOverflows(program, legacyExercises = [])
             .sort((a, b) => (a.def.flags.compound ? 1 : 0) - (b.def.flags.compound ? 1 : 0) ||
                 publicRegionContribution(b.def, issue.region) - publicRegionContribution(a.def, issue.region) ||
                 b.exercise.sets - a.exercise.sets || a.exercise.shellKey.localeCompare(b.exercise.shellKey));
+        console.error('M202_STATIC_WEEK_CANDIDATES ' + JSON.stringify({ guard, issue: { region: issue.region, week: issue.week, v: issue.v, mrv: issue.mrv }, candidates: candidates.map(x => ({ key: x.exercise.shellKey, id: x.exercise.exerciseId, sets: x.exercise.sets, role: x.exercise.role, contribution: publicRegionContribution(x.def, issue.region), storedSets: current.nextWeekPrescriptions?.[x.exercise.shellKey]?.[issue.week]?.sets })) }));
         let best = null;
         for (const x of candidates) {
             const key = x.exercise.shellKey, cells = current.nextWeekPrescriptions?.[key], prior = cells?.[issue.week];
@@ -48,7 +49,9 @@ export function reconcileLockedCycleWeekOverflows(program, legacyExercises = [])
             const candidate = { ...current, nextWeekPrescriptions: { ...current.nextWeekPrescriptions,
                 [key]: { ...cells, [issue.week]: { ...prior, sets: prior.sets - 1 } } } };
             const after = auditShellVolume(candidate, legacyExercises);
-            if (!safeCell(audit, after)) continue;
+            const safe = safeCell(audit, after);
+            console.error('M202_STATIC_WEEK_TRY ' + JSON.stringify({ key, from: prior.sets, to: prior.sets - 1, beforeDeficit: deficit(audit), afterDeficit: deficit(after), safe, afterIssues: after.issues.map(i => ({ region: i.region, status: i.status, week: i.week, v: i.v, limit: i.status === 'over' ? i.mrv : i.mev })) }));
+            if (!safe) continue;
             const score = deficit(audit) - deficit(after);
             if (!best || score > best.score + EPS) best = { candidate, after, score, key, week: issue.week };
         }

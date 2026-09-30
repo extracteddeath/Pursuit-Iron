@@ -1,3 +1,12 @@
+## M199 — Responsiveness and loading clarity
+
+- Split selection no longer runs a full engine generation for every visible option; hard equipment contracts stay instant and the selected session length receives the audited feasibility check.
+- Expensive session-length validation now paints a clear Checking state first and debounces abandoned taps.
+- User-facing program/cycle creation skips observational shadow-engine passes unless research or a reviewed promotion is actually enabled.
+- Workout elapsed time updates only its clock text instead of forcing the full workout tree to rerender every second.
+- Autosave reuses its serialized fallback snapshot instead of reparsing the entire store after every save.
+- Cold start now explicitly says Pursuit Iron is loading, with the existing slow-start and recovery safeguards retained.
+
 ## M197 — Monotonic session capacity
 
 - Longer session bands no longer become impossible just because Pursuit cannot justify filling their lower time edge.

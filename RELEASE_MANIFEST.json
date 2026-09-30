@@ -1,8 +1,8 @@
 {
   "schemaVersion": 3,
-  "milestone": "M197",
+  "milestone": "M199",
   "appVersion": "4.0.0",
-  "build": 788,
+  "build": 789,
   "engineVersion": "0.64.0",
   "shadowEngineVersion": "0.62.5-shadow",
   "validatedLiveBaseline": "M88-0.61.3-reviewed-baseline",
@@ -91,16 +91,16 @@
     "vendor/react.js": "24b2d220a5b2637cf3fb78fe0d961f227ea0a4b960485dbfb03c9d276e72147c"
   },
   "localCandidate": {
-    "name": "Pursuit Iron 4.0 Production Release · M197",
-    "base": "M197 / app 4.0.0 build 788 / Engine 0.64.0",
-    "validation": "M196 production baseline plus M197 monotonic long-band capacity fallback, end-to-end Full Body buildability regression, release integrity, and PWA lifecycle certification."
+    "name": "Pursuit Iron 4.0 Production Release · M199",
+    "base": "M199 / app 4.0.0 build 789 / Engine 0.64.0",
+    "validation": "M198 creation-contract regression plus M199 responsiveness/loading contract, throttled Chrome cold-start probe, release integrity, and PWA lifecycle certification."
   },
   "uiFiles": {
-    "modules/App.js": "a3cfe4c93a6c5c1695c6337639fc41186c9efba65272ccfca35962da41e6b5f0",
-    "index.html": "f08e7bf52efe187afbc555486318c6374221c6b37d896657bdbdba5a133e765f",
-    "sw.js": "ceeb4c6abd1cc7fe15f5bf8fc5307b1850b6c763c66142d96126a960cb91c262",
-    "BUILD_PROFILE.json": "5a0e760a6ad4219a1e82b5d13ea4d0da26a89c65192a7bfbff58b50e11ec814f",
-    "CHANGELOG.md": "b59444a9f9a14b4af30b7d34159c107a36a04d912bf9e56b6db2a81cb09e1dd2",
+    "modules/App.js": "e0f8972de371faca52bf6c3ebb9105c211f5fc67a28f5b85f7edd09652de3cf8",
+    "index.html": "b9dc412365f711c68a77708d3591571a84faa58d1aa6ffca5fe9f2c4b8a666f2",
+    "sw.js": "d326aba9d501e34fed41dc4807468e80ec22db223830282c665fce299a6e0be7",
+    "BUILD_PROFILE.json": "8f33aa0536a6933bd99567a2938fd8dc76f1225a2f8f3c890ac8507a3b690c46",
+    "CHANGELOG.md": "26eb59824ed09545a19889ce142aea62fd168c01839b294fccf07fcb6eda5ccf",
     "app.css": "5432859c3eb9624b9a27dc1c9de2e8cb85672b02bcd72c114ac963378184b85b"
   },
   "baselineSourceNextEngineAggregate": "9ba84ffe3a62d94849617af33a2eafeaa563ab4a3636579101990ed753d05a84",
@@ -191,6 +191,6 @@
       "Pursuit Engine 0.62.5 programming math is unchanged; M165 hardens the shell/display boundary."
     ]
   },
-  "cache": "pursuit-iron-production-v4-0-0-m197",
-  "uiMilestone": "Pursuit Iron 4.0 Production Release · M197"
+  "cache": "pursuit-iron-production-v4-0-0-m199",
+  "uiMilestone": "Pursuit Iron 4.0 Production Release · M199"
 }

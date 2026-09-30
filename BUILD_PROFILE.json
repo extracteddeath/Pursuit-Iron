@@ -1,12 +1,12 @@
 {
   "profile": "portable-browser-esm-v661-workout-input",
-  "milestone": "M197",
-  "source": "M196 production baseline + M197 monotonic session-capacity correction",
-  "engine": "0.64.0 coach-quality engine with M197 soft lower-time fallback and stable split feasibility UX",
+  "milestone": "M199",
+  "source": "M198 production baseline + M199 responsiveness/loading optimization pass",
+  "engine": "0.64.0 coach-quality engine with M198 creation contract and M199 runtime responsiveness optimizations",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 49,
   "shadowRuntimeModules": 9,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m197",
-  "uiMilestone": "Pursuit Iron 4.0 Production Release · M197"
+  "cache": "pursuit-iron-production-v4-0-0-m199",
+  "uiMilestone": "Pursuit Iron 4.0 Production Release · M199"
 }

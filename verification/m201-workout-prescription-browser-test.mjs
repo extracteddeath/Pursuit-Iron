@@ -5,11 +5,13 @@ import path from 'node:path';
 import puppeteer from 'puppeteer-core';
 
 const root = new URL('../', import.meta.url).pathname;
+const importMap = fs.readFileSync(path.join(root, 'index.html'), 'utf8').match(/<script type="importmap">[\s\S]*?<\/script>/)?.[0];
+assert.ok(importMap, 'browser probes must use the production import map');
 const fixture = { id: 'm201-browser-custom', name: 'Custom workout', custom: true, engineV: 4,
     config: { goal: 'both', experience: 'intermediate', progression: 'auto', weeks: 10, unit: 'lb', deload: true },
     slotBias: { 'd:0': 1 }, overrides: { 'd:0': { sets: 5, reps: '8-12', rir: '2' } },
     days: [{ id: 'd', label: 'Upper', primaryIndex: -1, exercises: ['inc-curl'] }] };
-const template = `<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/app.css"></head><body><div id="root"></div><script type="module">
+const template = `<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/app.css">${importMap}</head><body><div id="root"></div><script type="module">
 import React from '/vendor/react.js'; import {createRoot} from '/vendor/react-dom-client.js';
 import {WorkoutSession, EX_BY_ID, AttachmentGlyph, ExerciseAnimation} from '/modules/App.js';
 const params=new URL(location.href).searchParams, program=${JSON.stringify(fixture)}, week=Number(params.get('week')||4), exercise=params.get('exercise')||'inc-curl';
@@ -26,7 +28,7 @@ createRoot(document.getElementById('root')).render(React.createElement(WorkoutSe
 window.__m201Ready=true;
 </script></body></html>`;
 const variants = ['seated-db-lat-raise','single-db-lat-raise','chest-supported-lat-raise','seated-cable-lat-raise','cuff-cable-lat-raise','seated-rear-fly','single-cable-rear-fly','chest-supported-rear-fly'];
-const gallery = `<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/app.css"></head><body><div id="root"></div><script type="module">
+const gallery = `<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/app.css">${importMap}</head><body><div id="root"></div><script type="module">
 import React from '/vendor/react.js';import {createRoot} from '/vendor/react-dom-client.js';import {EX_BY_ID,AttachmentGlyph,ExerciseAnimation} from '/modules/App.js';
 createRoot(document.getElementById('root')).render(React.createElement('div',{style:{padding:16,display:'grid',gap:16}},${JSON.stringify(variants)}.map(id=>React.createElement('section',{key:id,'data-variant':id,style:{padding:16,border:'1px solid #604077',borderRadius:16}},React.createElement('h3',{},EX_BY_ID[id].name),React.createElement(AttachmentGlyph,{ex:EX_BY_ID[id]}),React.createElement(ExerciseAnimation,{ex:EX_BY_ID[id]})))));
 </script></body></html>`;
@@ -44,7 +46,7 @@ try {
     browser = await puppeteer.launch({executablePath:process.env.CHROME_BIN || '/usr/bin/google-chrome',headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
     const page = await browser.newPage();
     await page.setViewport({width:390,height:844,deviceScaleFactor:2,isMobile:true,hasTouch:true});
-    const errors=[];page.on('pageerror',e=>errors.push(e.message));
+    const errors=[];page.on('pageerror',e=>{errors.push(e.message);console.error('Browser page error:',e.message);});
     const open = async query => {await page.goto('http://127.0.0.1:8768/probe.html'+query,{waitUntil:'networkidle0'});await page.waitForSelector('input[aria-label="reps"]');};
     const rows = () => page.evaluate(() => JSON.parse(localStorage.getItem('wpb:live')).data[0].sets);
     await open('');

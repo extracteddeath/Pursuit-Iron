@@ -11,17 +11,9 @@
  * coverage and safety rules are never suppressed.
  */
 import * as base from './app-shell-adapter.js?capacity-base=1';
-import { generateProgram } from './generate.js';
 import { buildGenerationRecoveryPlan } from './generation-recovery.js';
 import { createInitialCycleState } from './cycles.js';
-import {
-    capacityMinimumCandidates,
-    capacityTargetCandidates,
-    requestWithExerciseTarget,
-    requestWithMinimumMinutes,
-    requestedExerciseTarget,
-    requestedMinimumMinutes
-} from './capacity-policy.js';
+import { firstPassingCapacityProgram } from './capacity-generation.js';
 
 export * from './app-shell-adapter.js?capacity-base=1';
 
@@ -30,58 +22,6 @@ function generationOptions(config) {
         blockWeeks: Math.max(1, Math.round(Number(config?.weeks) || 4)),
         progressionStyle: config?.progressionStyle
     };
-}
-
-function runProgram(request, config) {
-    return generateProgram(request, generationOptions(config));
-}
-
-function passingAttempt(candidateRequest, config, originalRequest) {
-    const candidate = runProgram(candidateRequest, config);
-    if (candidate.program?.audit?.result !== 'pass')
-        return null;
-    return {
-        request: candidateRequest,
-        result: candidate,
-        adjusted: candidateRequest !== originalRequest,
-        requestedTarget: requestedExerciseTarget(originalRequest),
-        effectiveTarget: requestedExerciseTarget(candidateRequest),
-        requestedMinimumMinutes: requestedMinimumMinutes(originalRequest),
-        effectiveMinimumMinutes: requestedMinimumMinutes(candidateRequest)
-    };
-}
-
-function firstPassingCapacityRequest(request, config) {
-    const initial = runProgram(request, config);
-    if (initial.program?.audit?.result === 'pass')
-        return { request, result: initial, adjusted: false };
-
-    const wantedTarget = requestedExerciseTarget(request);
-    const lowerTargets = capacityTargetCandidates(request, config?.session);
-
-    // Preserve the selected clock band first: only optional exercise density relaxes here.
-    for (const target of lowerTargets) {
-        const hit = passingAttempt(requestWithExerciseTarget(request, target), config, request);
-        if (hit)
-            return hit;
-    }
-
-    // If the lower CLOCK edge itself is what makes the longer choice fail, progressively inherit
-    // the floor of shorter proven bands while retaining the user's selected maxMinutes. At each step
-    // try the requested exercise count first, then only as much density reduction as needed.
-    for (const minimumMinutes of capacityMinimumCandidates(request, config?.session)) {
-        const targetOrder = wantedTarget ? [wantedTarget, ...lowerTargets] : [0];
-        for (const target of targetOrder) {
-            let candidateRequest = requestWithMinimumMinutes(request, minimumMinutes);
-            if (target)
-                candidateRequest = requestWithExerciseTarget(candidateRequest, target);
-            const hit = passingAttempt(candidateRequest, config, request);
-            if (hit)
-                return hit;
-        }
-    }
-
-    return { request, result: initial, adjusted: false };
 }
 
 function rejectionRecovery(result, request) {
@@ -100,7 +40,11 @@ export function generateNextProgramForShell(options) {
         options.legacyExercises,
         options.seed
     );
-    const attempt = firstPassingCapacityRequest(originalRequest, options.config);
+    const attempt = firstPassingCapacityProgram(
+        originalRequest,
+        options.config,
+        generationOptions(options.config)
+    );
     const { request, result } = attempt;
 
     if (result.program.audit.result !== 'pass') {

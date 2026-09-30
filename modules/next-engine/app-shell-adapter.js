@@ -4,6 +4,8 @@ import { buildGenerationRecoveryPlan } from './generation-recovery.js';
 import { prescriptionForSimulationWeek } from './simulation.js';
 import { createInitialCycleState } from './cycles.js';
 import { filterFeasibleLiftPriorities } from './prescription.js';
+import { shellExercisePerformableFor as performableFor } from './shell-equipment.js';
+export { setShellEquipmentExpander } from './shell-equipment.js';
 const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 const DAY_SETS = {
     1: ['monday'], 2: ['monday', 'friday'], 3: ['monday', 'wednesday', 'friday'], 4: ['monday', 'wednesday', 'friday', 'sunday'],
@@ -170,6 +172,21 @@ function mapBanned(banned, legacy) {
 }
 export function shellConfigToNextRequest(config, banned = [], legacyExercises = [], seed) {
     const split = splitOf(config.split);
+    const avoided = new Set(mapBanned(banned, legacyExercises));
+    const canPerform = performableFor(config);
+    const byId = new Map(legacyExercises.map(ex => [ex.id, ex]));
+    const byName = new Map();
+    for (const ex of legacyExercises) {
+        const key = norm(ex.name);
+        byName.set(key, [...(byName.get(key) ?? []), ex]);
+    }
+    // A generic engine equipment alternative must not invent a specific machine
+    // the athlete left unticked. Filter at selection time so cycle coverage and
+    // volume are audited on the same exercise identities the app will display.
+    for (const [exerciseId, def] of EXERCISE_MAP) {
+        const shell = resolveLegacyExerciseByIdentity({ exerciseId, name: def.name }, legacyExercises, byId, byName);
+        if (shell && !canPerform(shell)) avoided.add(exerciseId);
+    }
     const request = {
         athlete: { experience: experienceOf(config.experience) },
         goal: { type: goalOf(config.goal), musclePriorities: musclePriorities(config), liftPriorities: liftPriorities(config) },
@@ -180,7 +197,7 @@ export function shellConfigToNextRequest(config, banned = [], legacyExercises = 
             allowSupersets: !config.noSupersets
         },
         preferences: {
-            preferredSplit: split, lockedSplit: split, avoidedExercises: mapBanned(banned, legacyExercises),
+            preferredSplit: split, lockedSplit: split, avoidedExercises: [...avoided],
             volumeApproach: config.volumeApproach === 'minimalist' ? 'minimalist' : 'standard',
             // Persist the user's global method choice in the immutable request snapshot so later
             // blocks cannot silently fall back to Auto after honoring the choice at creation.
@@ -243,22 +260,6 @@ function primaryPart(def) {
     const map = { back: 'lats', side_delts: 'shoulders', rear_delts: 'shoulders', front_delts: 'shoulders', core: 'abs' };
     return map[top] ?? top;
 }
-let shellEquipmentExpander = null;
-export function setShellEquipmentExpander(fn) { shellEquipmentExpander = fn; }
-function performableFor(config) {
-    if (!shellEquipmentExpander || !Array.isArray(config?.equipment))
-        return () => true;
-    const have = new Set(shellEquipmentExpander(config.equipment));
-    const banned = new Set(Array.isArray(config?.banned) ? config.banned : []);
-    return (ex) => {
-        const equip = Array.isArray(ex?.equip) ? ex.equip : [];
-        if (banned.has(ex?.id))
-            return false;
-        if (!equip.length)
-            return !config?.noBodyweight;
-        return equip.every(q => have.has(q));
-    };
-}
 export function resolveLegacyExercise(nextExercise, legacy, canPerform = () => true) {
     const primary = resolveLegacyExerciseByIdentity(nextExercise, legacy);
     if (!primary || canPerform(primary))
@@ -287,15 +288,14 @@ export function resolveLegacyExercise(nextExercise, legacy, canPerform = () => t
     }
     return sibs[0];
 }
-function resolveLegacyExerciseByIdentity(nextExercise, legacy) {
-    const byId = new Map(legacy.map(ex => [ex.id, ex]));
+function resolveLegacyExerciseByIdentity(nextExercise, legacy, byId = new Map(legacy.map(ex => [ex.id, ex])), byName) {
     if (byId.has(nextExercise.exerciseId))
         return byId.get(nextExercise.exerciseId);
     const alias = EXPLICIT_EXERCISE_ALIASES[nextExercise.exerciseId];
     if (alias && byId.has(alias))
         return byId.get(alias);
     const nameKey = norm(nextExercise.name);
-    let candidates = legacy.filter(ex => norm(ex.name) === nameKey);
+    let candidates = byName ? byName.get(nameKey) ?? [] : legacy.filter(ex => norm(ex.name) === nameKey);
     if (candidates.length === 1)
         return candidates[0];
     const def = EXERCISE_MAP.get(nextExercise.exerciseId);
@@ -408,7 +408,7 @@ export function getNextShellCell(program, day, slotIndex, weekIndex) {
     const reps = shellRange(o.reps ?? cell.reps);
     const rir = shellRange(o.rir ?? cell.rir);
     const rest = o.rest ?? cell.rest;
-    const tech = o.techOverride ?? cell.tech ?? null;
+    const tech = Object.prototype.hasOwnProperty.call(o, 'techOverride') ? (o.techOverride || null) : (cell.tech ?? null);
     const role = o.role ?? cell.role;
     const progressionStyle = o.progressionStyle ?? cell.progressionStyle ?? 'auto';
     return {

@@ -1,3 +1,18 @@
+## M201 — Custom workout prescriptions and exercise variations (build 791)
+
+- Restored the implicit late-block last-set intensifiers on existing custom plans, preserving explicit technique edits and off settings.
+- Pending automatic rep entries now follow the active prescribed range after resume; completed sets and manual entries remain intact. Rep typing now marks the row as manually controlled.
+- Added seated, single-arm, chest-supported, and cuff lateral/rear-delt variations to the app and engine catalogs, with equipment-aware setup options and previews.
+- Connected existing band, side-lying, and behind-the-back raises to lateral-raise options.
+- Includes the recovered M200 regional-dose and equipment fixes. Engine 0.64.2; service-worker cache rotated for build 791.
+
+## M200 — Preserve regional dose during generation (build 790)
+
+- Final dose cleanup now preserves achieved accumulation reserves for lats, upper back, and other public muscle regions.
+- Cleanup still reduces excess accessory volume and protects strength prescriptions; new programs retain useful back work before they reach the volume display.
+- Added 18 creation cases plus overflow, shortfall, immutability, and locked/adaptive cycle regression checks. Recorded follow-up issues for short sessions, minimalist targets, and locked cycle carryover.
+- Engine 0.64.1; production service-worker cache rotated for build 790.
+
 # M199 — Volume Repair Integrity (build 789)
 
 - Auto-fix now updates engine-owned weekly prescriptions and commits the verified program to saved state.

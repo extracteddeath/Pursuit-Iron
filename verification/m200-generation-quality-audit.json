@@ -1,0 +1,1421 @@
+{
+  "baselineCommit": "725219098cf883fca8d464feb2528fc1a0336bb3",
+  "candidate": "M200 regional reserve preservation",
+  "catalog": "App.js EXERCISES (357)",
+  "summary": {
+    "routes": 37,
+    "standardContractRoutes": 14,
+    "baselineWarnings": 29,
+    "finalWarnings": 0,
+    "finalRejected": 0,
+    "finalOverTime": 0
+  },
+  "programs": [
+    {
+      "label": "FB2 s60",
+      "before": {
+        "engine": "pass",
+        "issues": [
+          {
+            "region": "chest",
+            "value": 5,
+            "floor": 6,
+            "week": 6
+          },
+          {
+            "region": "side_delts",
+            "value": 2,
+            "floor": 3,
+            "week": 2
+          },
+          {
+            "region": "rear_delts",
+            "value": 1,
+            "floor": 2,
+            "week": 1
+          },
+          {
+            "region": "quads",
+            "value": 5,
+            "floor": 6,
+            "week": 1
+          },
+          {
+            "region": "calves",
+            "value": 2,
+            "floor": 3,
+            "week": 6
+          },
+          {
+            "region": "lats",
+            "value": 2.2,
+            "floor": 3,
+            "week": 2
+          },
+          {
+            "region": "triceps",
+            "value": 2.5,
+            "floor": 3,
+            "week": 6
+          }
+        ],
+        "slots": 13,
+        "maxSession": 60,
+        "overTime": [],
+        "seed": 19800
+      },
+      "after": {
+        "label": "FB2 s60",
+        "audit": "pass",
+        "contract": false,
+        "issues": [
+          {
+            "region": "chest",
+            "status": "under",
+            "value": 5,
+            "floor": 6
+          },
+          {
+            "region": "side_delts",
+            "status": "under",
+            "value": 2,
+            "floor": 3
+          },
+          {
+            "region": "rear_delts",
+            "status": "under",
+            "value": 1,
+            "floor": 2
+          },
+          {
+            "region": "quads",
+            "status": "under",
+            "value": 5,
+            "floor": 6
+          },
+          {
+            "region": "calves",
+            "status": "under",
+            "value": 2,
+            "floor": 3
+          },
+          {
+            "region": "lats",
+            "status": "under",
+            "value": 2.2,
+            "floor": 3
+          },
+          {
+            "region": "triceps",
+            "status": "under",
+            "value": 2.5,
+            "floor": 3
+          }
+        ],
+        "slots": 13,
+        "overTime": false
+      }
+    },
+    {
+      "label": "FB3 s60",
+      "before": {
+        "engine": "pass",
+        "issues": [
+          {
+            "region": "side_delts",
+            "value": 1,
+            "floor": 3,
+            "week": 4
+          },
+          {
+            "region": "upper_back",
+            "value": 1.2,
+            "floor": 3,
+            "week": 3
+          },
+          {
+            "region": "rear_delts",
+            "value": 1,
+            "floor": 2,
+            "week": 1
+          },
+          {
+            "region": "calves",
+            "value": 2,
+            "floor": 3,
+            "week": 1
+          },
+          {
+            "region": "core",
+            "value": 1,
+            "floor": 2,
+            "week": 5
+          }
+        ],
+        "slots": 16,
+        "maxSession": 60,
+        "overTime": [],
+        "seed": 19801
+      },
+      "after": {
+        "label": "FB3 s60",
+        "audit": "pass",
+        "contract": false,
+        "issues": [
+          {
+            "region": "side_delts",
+            "status": "under",
+            "value": 1,
+            "floor": 3
+          },
+          {
+            "region": "upper_back",
+            "status": "under",
+            "value": 1.2,
+            "floor": 3
+          },
+          {
+            "region": "rear_delts",
+            "status": "under",
+            "value": 1,
+            "floor": 2
+          },
+          {
+            "region": "calves",
+            "status": "under",
+            "value": 2,
+            "floor": 3
+          },
+          {
+            "region": "core",
+            "status": "under",
+            "value": 1,
+            "floor": 2
+          }
+        ],
+        "slots": 16,
+        "overTime": false
+      }
+    },
+    {
+      "label": "FB3 s90",
+      "before": {
+        "engine": "pass",
+        "issues": [],
+        "slots": 18,
+        "maxSession": 70,
+        "overTime": [],
+        "seed": 19802
+      },
+      "after": {
+        "label": "FB3 s90",
+        "audit": "pass",
+        "contract": false,
+        "issues": [],
+        "slots": 18,
+        "overTime": false
+      }
+    },
+    {
+      "label": "FB3 s120",
+      "before": {
+        "engine": "pass",
+        "issues": [],
+        "slots": 23,
+        "maxSession": 85,
+        "overTime": [],
+        "seed": 19803
+      },
+      "after": {
+        "label": "FB3 s120",
+        "audit": "pass",
+        "contract": false,
+        "issues": [],
+        "slots": 23,
+        "overTime": false
+      }
+    },
+    {
+      "label": "FB4 s90",
+      "before": {
+        "engine": "pass",
+        "issues": [],
+        "slots": 23,
+        "maxSession": 58,
+        "overTime": [],
+        "seed": 19804
+      },
+      "after": {
+        "label": "FB4 s90",
+        "audit": "pass",
+        "contract": false,
+        "issues": [],
+        "slots": 23,
+        "overTime": false
+      }
+    },
+    {
+      "label": "FB5 s90",
+      "before": {
+        "engine": "pass",
+        "issues": [
+          {
+            "region": "upper_back",
+            "value": 5.6,
+            "floor": 8,
+            "week": 1
+          },
+          {
+            "region": "rear_delts",
+            "value": 7,
+            "floor": 8,
+            "week": 1
+          }
+        ],
+        "slots": 28,
+        "maxSession": 58,
+        "overTime": [],
+        "seed": 19805
+      },
+      "after": {
+        "label": "FB5 s90",
+        "audit": "pass",
+        "contract": true,
+        "issues": [],
+        "slots": 28,
+        "overTime": false
+      }
+    },
+    {
+      "label": "FB6 s90",
+      "before": {
+        "engine": "pass",
+        "issues": [
+          {
+            "region": "rear_delts",
+            "value": 4,
+            "floor": 8,
+            "week": 1
+          },
+          {
+            "region": "upper_back",
+            "value": 5.6,
+            "floor": 8,
+            "week": 1
+          }
+        ],
+        "slots": 31,
+        "maxSession": 52,
+        "overTime": [],
+        "seed": 19806
+      },
+      "after": {
+        "label": "FB6 s90",
+        "audit": "pass",
+        "contract": true,
+        "issues": [],
+        "slots": 32,
+        "overTime": false
+      }
+    },
+    {
+      "label": "UL2 s60",
+      "before": {
+        "engine": "pass",
+        "issues": [
+          {
+            "region": "rear_delts",
+            "value": 0,
+            "floor": 2,
+            "week": 1
+          },
+          {
+            "region": "lats",
+            "value": 1.2,
+            "floor": 3,
+            "week": 1
+          },
+          {
+            "region": "side_delts",
+            "value": 2,
+            "floor": 3,
+            "week": 1
+          },
+          {
+            "region": "quads",
+            "value": 5,
+            "floor": 6,
+            "week": 2
+          },
+          {
+            "region": "calves",
+            "value": 2,
+            "floor": 3,
+            "week": 1
+          },
+          {
+            "region": "biceps",
+            "value": 2.5,
+            "floor": 3,
+            "week": 3
+          }
+        ],
+        "slots": 12,
+        "maxSession": 58,
+        "overTime": [],
+        "seed": 19807
+      },
+      "after": {
+        "label": "UL2 s60",
+        "audit": "pass",
+        "contract": false,
+        "issues": [
+          {
+            "region": "rear_delts",
+            "status": "under",
+            "value": 0,
+            "floor": 2
+          },
+          {
+            "region": "lats",
+            "status": "under",
+            "value": 1.2,
+            "floor": 3
+          },
+          {
+            "region": "side_delts",
+            "status": "under",
+            "value": 2,
+            "floor": 3
+          },
+          {
+            "region": "quads",
+            "status": "under",
+            "value": 5,
+            "floor": 6
+          },
+          {
+            "region": "calves",
+            "status": "under",
+            "value": 2,
+            "floor": 3
+          },
+          {
+            "region": "biceps",
+            "status": "under",
+            "value": 2.5,
+            "floor": 3
+          }
+        ],
+        "slots": 12,
+        "overTime": false
+      }
+    },
+    {
+      "label": "UL4 s90",
+      "before": {
+        "engine": "pass",
+        "issues": [],
+        "slots": 22,
+        "maxSession": 56,
+        "overTime": [],
+        "seed": 19808
+      },
+      "after": {
+        "label": "UL4 s90",
+        "audit": "pass",
+        "contract": false,
+        "issues": [],
+        "slots": 22,
+        "overTime": false
+      }
+    },
+    {
+      "label": "UL6 s90",
+      "before": {
+        "engine": "pass",
+        "issues": [
+          {
+            "region": "upper_back",
+            "value": 4.6,
+            "floor": 8,
+            "week": 3
+          },
+          {
+            "region": "lats",
+            "value": 5.2,
+            "floor": 8,
+            "week": 3
+          },
+          {
+            "region": "biceps",
+            "value": 7.5,
+            "floor": 8,
+            "week": 3
+          }
+        ],
+        "slots": 25,
+        "maxSession": 61,
+        "overTime": [],
+        "seed": 19809
+      },
+      "after": {
+        "label": "UL6 s90",
+        "audit": "pass",
+        "contract": true,
+        "issues": [],
+        "slots": 27,
+        "overTime": false
+      }
+    },
+    {
+      "label": "PPL3 s60",
+      "before": {
+        "engine": "pass",
+        "issues": [
+          {
+            "region": "upper_back",
+            "value": 1.2,
+            "floor": 3,
+            "week": 1
+          },
+          {
+            "region": "chest",
+            "value": 5,
+            "floor": 6,
+            "week": 3
+          },
+          {
+            "region": "side_delts",
+            "value": 2,
+            "floor": 3,
+            "week": 1
+          },
+          {
+            "region": "calves",
+            "value": 2,
+            "floor": 3,
+            "week": 1
+          },
+          {
+            "region": "core",
+            "value": 1,
+            "floor": 2,
+            "week": 1
+          }
+        ],
+        "slots": 13,
+        "maxSession": 56,
+        "overTime": [],
+        "seed": 19810
+      },
+      "after": {
+        "label": "PPL3 s60",
+        "audit": "pass",
+        "contract": false,
+        "issues": [
+          {
+            "region": "upper_back",
+            "status": "under",
+            "value": 1.2,
+            "floor": 3
+          },
+          {
+            "region": "chest",
+            "status": "under",
+            "value": 5,
+            "floor": 6
+          },
+          {
+            "region": "side_delts",
+            "status": "under",
+            "value": 2,
+            "floor": 3
+          },
+          {
+            "region": "calves",
+            "status": "under",
+            "value": 2,
+            "floor": 3
+          },
+          {
+            "region": "core",
+            "status": "under",
+            "value": 1,
+            "floor": 2
+          }
+        ],
+        "slots": 13,
+        "overTime": false
+      }
+    },
+    {
+      "label": "PPL5 s90",
+      "before": {
+        "engine": "pass",
+        "issues": [
+          {
+            "region": "upper_back",
+            "value": 3.2,
+            "floor": 8,
+            "week": 1
+          }
+        ],
+        "slots": 27,
+        "maxSession": 61,
+        "overTime": [],
+        "seed": 19811
+      },
+      "after": {
+        "label": "PPL5 s90",
+        "audit": "pass",
+        "contract": true,
+        "issues": [],
+        "slots": 28,
+        "overTime": false
+      }
+    },
+    {
+      "label": "PPL6 s90",
+      "before": {
+        "engine": "pass",
+        "issues": [
+          {
+            "region": "upper_back",
+            "value": 4.2,
+            "floor": 8,
+            "week": 6
+          },
+          {
+            "region": "lats",
+            "value": 6.2,
+            "floor": 8,
+            "week": 6
+          }
+        ],
+        "slots": 25,
+        "maxSession": 57,
+        "overTime": [],
+        "seed": 19812
+      },
+      "after": {
+        "label": "PPL6 s90",
+        "audit": "pass",
+        "contract": true,
+        "issues": [],
+        "slots": 27,
+        "overTime": false
+      }
+    },
+    {
+      "label": "ULPPL5 s90",
+      "before": {
+        "engine": "pass",
+        "issues": [
+          {
+            "region": "upper_back",
+            "value": 4.6,
+            "floor": 8,
+            "week": 4
+          },
+          {
+            "region": "lats",
+            "value": 7.2,
+            "floor": 8,
+            "week": 4
+          }
+        ],
+        "slots": 24,
+        "maxSession": 57,
+        "overTime": [],
+        "seed": 19813
+      },
+      "after": {
+        "label": "ULPPL5 s90",
+        "audit": "pass",
+        "contract": true,
+        "issues": [],
+        "slots": 24,
+        "overTime": false
+      }
+    },
+    {
+      "label": "PPLUL5 s90",
+      "before": {
+        "engine": "pass",
+        "issues": [
+          {
+            "region": "upper_back",
+            "value": 4.6,
+            "floor": 8,
+            "week": 4
+          },
+          {
+            "region": "lats",
+            "value": 7.2,
+            "floor": 8,
+            "week": 4
+          }
+        ],
+        "slots": 25,
+        "maxSession": 57,
+        "overTime": [],
+        "seed": 19814
+      },
+      "after": {
+        "label": "PPLUL5 s90",
+        "audit": "pass",
+        "contract": true,
+        "issues": [],
+        "slots": 26,
+        "overTime": false
+      }
+    },
+    {
+      "label": "Hybrid5 s90",
+      "before": {
+        "engine": "pass",
+        "issues": [
+          {
+            "region": "upper_back",
+            "value": 4.6,
+            "floor": 8,
+            "week": 4
+          },
+          {
+            "region": "lats",
+            "value": 7.2,
+            "floor": 8,
+            "week": 4
+          }
+        ],
+        "slots": 24,
+        "maxSession": 59,
+        "overTime": [],
+        "seed": 19815
+      },
+      "after": {
+        "label": "Hybrid5 s90",
+        "audit": "pass",
+        "contract": true,
+        "issues": [],
+        "slots": 24,
+        "overTime": false
+      }
+    },
+    {
+      "label": "PHUL4 s90",
+      "before": {
+        "engine": "pass",
+        "issues": [],
+        "slots": 22,
+        "maxSession": 56,
+        "overTime": [],
+        "seed": 19816
+      },
+      "after": {
+        "label": "PHUL4 s90",
+        "audit": "pass",
+        "contract": false,
+        "issues": [],
+        "slots": 22,
+        "overTime": false
+      }
+    },
+    {
+      "label": "PHAT5 s90",
+      "before": {
+        "engine": "pass",
+        "issues": [
+          {
+            "region": "upper_back",
+            "value": 4.6,
+            "floor": 8,
+            "week": 4
+          },
+          {
+            "region": "lats",
+            "value": 7.2,
+            "floor": 8,
+            "week": 4
+          }
+        ],
+        "slots": 24,
+        "maxSession": 70,
+        "overTime": [],
+        "seed": 19817
+      },
+      "after": {
+        "label": "PHAT5 s90",
+        "audit": "pass",
+        "contract": true,
+        "issues": [],
+        "slots": 24,
+        "overTime": false
+      }
+    },
+    {
+      "label": "Bro5 s90",
+      "before": {
+        "engine": "pass",
+        "issues": [
+          {
+            "region": "upper_back",
+            "value": 4.2,
+            "floor": 8,
+            "week": 5
+          },
+          {
+            "region": "lats",
+            "value": 6.2,
+            "floor": 8,
+            "week": 5
+          }
+        ],
+        "slots": 25,
+        "maxSession": 85,
+        "overTime": [],
+        "seed": 19818
+      },
+      "after": {
+        "label": "Bro5 s90",
+        "audit": "pass",
+        "contract": true,
+        "issues": [],
+        "slots": 25,
+        "overTime": false
+      }
+    },
+    {
+      "label": "Arnold6 s90",
+      "before": {
+        "engine": "pass",
+        "issues": [
+          {
+            "region": "lats",
+            "value": 4.8,
+            "floor": 8,
+            "week": 1
+          },
+          {
+            "region": "rear_delts",
+            "value": 6,
+            "floor": 8,
+            "week": 4
+          },
+          {
+            "region": "upper_back",
+            "value": 7,
+            "floor": 8,
+            "week": 1
+          }
+        ],
+        "slots": 24,
+        "maxSession": 59,
+        "overTime": [],
+        "seed": 19819
+      },
+      "after": {
+        "label": "Arnold6 s90",
+        "audit": "pass",
+        "contract": true,
+        "issues": [],
+        "slots": 26,
+        "overTime": false
+      }
+    },
+    {
+      "label": "Patterns4 s90",
+      "before": {
+        "engine": "pass",
+        "issues": [],
+        "slots": 24,
+        "maxSession": 62,
+        "overTime": [],
+        "seed": 19820
+      },
+      "after": {
+        "label": "Patterns4 s90",
+        "audit": "pass",
+        "contract": false,
+        "issues": [],
+        "slots": 24,
+        "overTime": false
+      }
+    },
+    {
+      "label": "TorsoLimbs4 s90",
+      "before": {
+        "engine": "pass",
+        "issues": [],
+        "slots": 24,
+        "maxSession": 58,
+        "overTime": [],
+        "seed": 19821
+      },
+      "after": {
+        "label": "TorsoLimbs4 s90",
+        "audit": "pass",
+        "contract": false,
+        "issues": [],
+        "slots": 24,
+        "overTime": false
+      }
+    },
+    {
+      "label": "PPLA4 s90",
+      "before": {
+        "engine": "pass",
+        "issues": [],
+        "slots": 19,
+        "maxSession": 57,
+        "overTime": [],
+        "seed": 19822
+      },
+      "after": {
+        "label": "PPLA4 s90",
+        "audit": "pass",
+        "contract": false,
+        "issues": [],
+        "slots": 19,
+        "overTime": false
+      }
+    },
+    {
+      "label": "ULA5 s90",
+      "before": {
+        "engine": "pass",
+        "issues": [
+          {
+            "region": "upper_back",
+            "value": 4.6,
+            "floor": 8,
+            "week": 6
+          },
+          {
+            "region": "lats",
+            "value": 5.2,
+            "floor": 8,
+            "week": 6
+          },
+          {
+            "region": "biceps",
+            "value": 6.75,
+            "floor": 8,
+            "week": 6
+          }
+        ],
+        "slots": 22,
+        "maxSession": 78,
+        "overTime": [],
+        "seed": 19823
+      },
+      "after": {
+        "label": "ULA5 s90",
+        "audit": "pass",
+        "contract": true,
+        "issues": [],
+        "slots": 24,
+        "overTime": false
+      }
+    },
+    {
+      "label": "Glute4 s90",
+      "before": {
+        "engine": "pass",
+        "issues": [],
+        "slots": 22,
+        "maxSession": 56,
+        "overTime": [],
+        "seed": 19824
+      },
+      "after": {
+        "label": "Glute4 s90",
+        "audit": "pass",
+        "contract": false,
+        "issues": [],
+        "slots": 22,
+        "overTime": false
+      }
+    },
+    {
+      "label": "StrengthFB3 s90",
+      "before": {
+        "engine": "pass",
+        "issues": [
+          {
+            "region": "upper_back",
+            "value": 2.4,
+            "floor": 2.5,
+            "week": 6
+          }
+        ],
+        "slots": 14,
+        "maxSession": 64,
+        "overTime": [],
+        "seed": 19825
+      },
+      "after": {
+        "label": "StrengthFB3 s90",
+        "audit": "pass",
+        "contract": false,
+        "issues": [
+          {
+            "region": "upper_back",
+            "status": "under",
+            "value": 2.4,
+            "floor": 2.5
+          }
+        ],
+        "slots": 14,
+        "overTime": false
+      }
+    },
+    {
+      "label": "ULPPL hypertrophy",
+      "before": {
+        "engine": "pass",
+        "issues": [
+          {
+            "region": "upper_back",
+            "value": 5.4,
+            "floor": 8,
+            "week": 6
+          }
+        ],
+        "slots": 29,
+        "maxSession": 57,
+        "overTime": [],
+        "seed": 19826
+      },
+      "after": {
+        "label": "ULPPL hypertrophy",
+        "audit": "pass",
+        "contract": true,
+        "issues": [],
+        "slots": 28,
+        "overTime": false
+      }
+    },
+    {
+      "label": "ULPPL strength",
+      "before": {
+        "engine": "pass",
+        "issues": [
+          {
+            "region": "lats",
+            "value": 1.8,
+            "floor": 2.5,
+            "week": 5
+          },
+          {
+            "region": "upper_back",
+            "value": 2.4,
+            "floor": 2.5,
+            "week": 5
+          }
+        ],
+        "slots": 19,
+        "maxSession": 59,
+        "overTime": [],
+        "seed": 19827
+      },
+      "after": {
+        "label": "ULPPL strength",
+        "audit": "pass",
+        "contract": false,
+        "issues": [
+          {
+            "region": "lats",
+            "status": "under",
+            "value": 1.8,
+            "floor": 2.5
+          },
+          {
+            "region": "upper_back",
+            "status": "under",
+            "value": 2.4,
+            "floor": 2.5
+          }
+        ],
+        "slots": 19,
+        "overTime": false
+      }
+    },
+    {
+      "label": "FB beginner",
+      "before": {
+        "engine": "pass",
+        "issues": [],
+        "slots": 17,
+        "maxSession": 57,
+        "overTime": [],
+        "seed": 19828
+      },
+      "after": {
+        "label": "FB beginner",
+        "audit": "pass",
+        "contract": false,
+        "issues": [],
+        "slots": 17,
+        "overTime": false
+      }
+    },
+    {
+      "label": "FB advanced",
+      "before": {
+        "engine": "pass",
+        "issues": [],
+        "slots": 21,
+        "maxSession": 79,
+        "overTime": [],
+        "seed": 19829
+      },
+      "after": {
+        "label": "FB advanced",
+        "audit": "pass",
+        "contract": false,
+        "issues": [],
+        "slots": 21,
+        "overTime": false
+      }
+    },
+    {
+      "label": "FB no supersets",
+      "before": {
+        "engine": "pass",
+        "issues": [],
+        "slots": 18,
+        "maxSession": 71,
+        "overTime": [],
+        "seed": 19830
+      },
+      "after": {
+        "label": "FB no supersets",
+        "audit": "pass",
+        "contract": false,
+        "issues": [],
+        "slots": 18,
+        "overTime": false
+      }
+    },
+    {
+      "label": "UL no bodyweight",
+      "before": {
+        "engine": "pass",
+        "issues": [],
+        "slots": 22,
+        "maxSession": 56,
+        "overTime": [],
+        "seed": 19831
+      },
+      "after": {
+        "label": "UL no bodyweight",
+        "audit": "pass",
+        "contract": false,
+        "issues": [],
+        "slots": 22,
+        "overTime": false
+      }
+    },
+    {
+      "label": "ULPPL barbell cap 1",
+      "before": {
+        "engine": "pass",
+        "issues": [
+          {
+            "region": "upper_back",
+            "value": 4.6,
+            "floor": 8,
+            "week": 4
+          },
+          {
+            "region": "lats",
+            "value": 7.2,
+            "floor": 8,
+            "week": 4
+          }
+        ],
+        "slots": 24,
+        "maxSession": 57,
+        "overTime": [],
+        "seed": 19832
+      },
+      "after": {
+        "label": "ULPPL barbell cap 1",
+        "audit": "pass",
+        "contract": true,
+        "issues": [],
+        "slots": 24,
+        "overTime": false
+      }
+    },
+    {
+      "label": "PPL minimalist",
+      "before": {
+        "engine": "pass",
+        "issues": [
+          {
+            "region": "upper_back",
+            "value": 3.8,
+            "floor": 8,
+            "week": 4
+          },
+          {
+            "region": "rear_delts",
+            "value": 4,
+            "floor": 8,
+            "week": 1
+          },
+          {
+            "region": "side_delts",
+            "value": 5,
+            "floor": 8,
+            "week": 1
+          },
+          {
+            "region": "lats",
+            "value": 5.2,
+            "floor": 8,
+            "week": 4
+          },
+          {
+            "region": "biceps",
+            "value": 5.5,
+            "floor": 8,
+            "week": 4
+          },
+          {
+            "region": "core",
+            "value": 4,
+            "floor": 6,
+            "week": 5
+          },
+          {
+            "region": "chest",
+            "value": 7,
+            "floor": 8,
+            "week": 1
+          },
+          {
+            "region": "triceps",
+            "value": 5,
+            "floor": 6,
+            "week": 1
+          },
+          {
+            "region": "quads",
+            "value": 7,
+            "floor": 8,
+            "week": 6
+          },
+          {
+            "region": "hamstrings",
+            "value": 5,
+            "floor": 6,
+            "week": 1
+          }
+        ],
+        "slots": 26,
+        "maxSession": 50,
+        "overTime": [],
+        "seed": 19833
+      },
+      "after": {
+        "label": "PPL minimalist",
+        "audit": "pass",
+        "contract": true,
+        "issues": [
+          {
+            "region": "side_delts",
+            "status": "under",
+            "value": 4,
+            "floor": 8
+          },
+          {
+            "region": "rear_delts",
+            "status": "under",
+            "value": 4,
+            "floor": 8
+          },
+          {
+            "region": "core",
+            "status": "under",
+            "value": 4,
+            "floor": 6
+          },
+          {
+            "region": "upper_back",
+            "status": "under",
+            "value": 6.6,
+            "floor": 8
+          },
+          {
+            "region": "chest",
+            "status": "under",
+            "value": 7,
+            "floor": 8
+          },
+          {
+            "region": "triceps",
+            "status": "under",
+            "value": 5,
+            "floor": 6
+          },
+          {
+            "region": "quads",
+            "status": "under",
+            "value": 7,
+            "floor": 8
+          },
+          {
+            "region": "hamstrings",
+            "status": "under",
+            "value": 5,
+            "floor": 6
+          }
+        ],
+        "slots": 29,
+        "overTime": false
+      }
+    },
+    {
+      "label": "FB dumbbell gym",
+      "before": {
+        "engine": "pass",
+        "issues": [
+          {
+            "region": "rear_delts",
+            "value": 1,
+            "floor": 2,
+            "week": 6
+          },
+          {
+            "region": "quads",
+            "value": 5,
+            "floor": 6,
+            "week": 2
+          },
+          {
+            "region": "calves",
+            "value": 2,
+            "floor": 3,
+            "week": 1
+          },
+          {
+            "region": "upper_back",
+            "value": 2.8,
+            "floor": 3,
+            "week": 5
+          }
+        ],
+        "slots": 15,
+        "maxSession": 50,
+        "overTime": [],
+        "seed": 19834
+      },
+      "after": {
+        "label": "FB dumbbell gym",
+        "audit": "pass",
+        "contract": false,
+        "issues": [
+          {
+            "region": "rear_delts",
+            "status": "under",
+            "value": 1,
+            "floor": 2
+          },
+          {
+            "region": "quads",
+            "status": "under",
+            "value": 5,
+            "floor": 6
+          },
+          {
+            "region": "calves",
+            "status": "under",
+            "value": 2,
+            "floor": 3
+          },
+          {
+            "region": "upper_back",
+            "status": "under",
+            "value": 2.8,
+            "floor": 3
+          }
+        ],
+        "slots": 15,
+        "overTime": false
+      }
+    },
+    {
+      "label": "FB machine gym",
+      "before": {
+        "engine": "pass",
+        "issues": [
+          {
+            "region": "calves",
+            "value": 2,
+            "floor": 3,
+            "week": 4
+          }
+        ],
+        "slots": 17,
+        "maxSession": 52,
+        "overTime": [],
+        "seed": 19835
+      },
+      "after": {
+        "label": "FB machine gym",
+        "audit": "pass",
+        "contract": false,
+        "issues": [
+          {
+            "region": "calves",
+            "status": "under",
+            "value": 2,
+            "floor": 3
+          }
+        ],
+        "slots": 17,
+        "overTime": false
+      }
+    },
+    {
+      "label": "StrengthFB barbell gym",
+      "before": {
+        "engine": "pass",
+        "issues": [],
+        "slots": 14,
+        "maxSession": 64,
+        "overTime": [],
+        "seed": 19836
+      },
+      "after": {
+        "label": "StrengthFB barbell gym",
+        "audit": "pass",
+        "contract": false,
+        "issues": [],
+        "slots": 14,
+        "overTime": false
+      }
+    }
+  ],
+  "remainingFindings": [
+    {
+      "area": "Short sessions",
+      "evidence": "FB2/FB3, UL2, PPL3 at s60 retain phase-adjusted regional warnings despite passing the coarse engine audit.",
+      "next": "Evaluate working-week regional guidance against actual capacity and planned consolidation."
+    },
+    {
+      "area": "Minimalist volume",
+      "evidence": "PPL5 minimalist still reports eight regional warnings; its reduced dose policy and high-capacity public target contract disagree.",
+      "next": "Make minimalist intent explicit in both generation and public volume targets."
+    },
+    {
+      "area": "Locked cycle carryover",
+      "evidence": "Powerbuilding PPL5 locked strength block retains 12 weekly calf sets against a 9.6-set displayed upper boundary on the existing baseline.",
+      "next": "Reconcile phase-specific weekly upper limits while preserving the locked exercise roster."
+    }
+  ]
+}

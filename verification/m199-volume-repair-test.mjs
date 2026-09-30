@@ -61,8 +61,17 @@ if (horizontal.length === 1) {
     horizontal.push({ s: destination, e: extra });
 }
 assert.ok(horizontal.length >= 2);
+// Keep the two rows on separate days. A newer selection may place two
+// complementary rows on Pull; turning both into the same row there is invalid.
+if (horizontal[0].s === horizontal[1].s) {
+    const item = horizontal[1];
+    const destination = twoEngine.sessions.find(s => s !== item.s && ['upper', 'full', 'strength_full', 'pull'].includes(s.intent));
+    assert.ok(destination);
+    item.s.exercises.splice(item.s.exercises.indexOf(item.e), 1);
+    destination.exercises.push(item.e); item.s = destination;
+}
 for (const { e } of horizontal.slice(0, 2)) {
-    e.exerciseId = 'chest_supported_row'; e.name = 'Chest-Supported Row'; e.sets = 3;
+    e.exerciseId = 'cs-db-row'; e.name = 'Chest-Supported Dumbbell Row'; e.sets = 2;
 }
 const two = bridge(twoEngine);
 assert.ok(auditShellVolume(two, EXERCISES).issues.some(i => i.region === 'upper_back'), 'fixture must start below MEV');
@@ -77,7 +86,7 @@ assert.ok(performance.now() - start < 3000, 'ordinary repair must stay responsiv
 
 // Full sessions have high-dose chest accessory work that can donate useful clock time.
 const tightEngine = clone(twoEngine);
-const targetSession = tightEngine.sessions.find(s => s.exercises.some(e => e.exerciseId === 'chest_supported_row'));
+const targetSession = tightEngine.sessions.find(s => s.exercises.some(e => e.exerciseId === 'cs-db-row'));
 const donor = clone(generated.nextEngine.program.sessions.flatMap(s => s.exercises).find(e => map.get(e.exerciseId).movementFamily === 'chest_adduction'));
 assert.ok(donor, 'fixture needs an accessory donor');
 const existingDonor = targetSession.exercises.find(e => map.get(e.exerciseId).movementFamily === 'chest_adduction');

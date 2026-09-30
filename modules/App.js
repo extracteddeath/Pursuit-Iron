@@ -1,10 +1,10 @@
-const __APP_VERSION__='4.0.0'; const __BUILD__='789';
+const __APP_VERSION__='4.0.0'; const __BUILD__='791';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { setShellEquipmentExpander, splitContractGaps, splitBuildability, refusalFixes, generateNextProgramForShell, nextProgramToShellProgram, recommendNextSplitForShell, getNextShellCell, canonicalShellSetCount, cloneNextDayPrescriptions, swapNextSlotPrescriptions, removeNextSlotPrescription, nextExerciseIdForShellExercise, NextShellAdapterError } from "./next-engine/app-shell-adapter.js";
 import { generateNextBlockFromShellHistory, nextWorkoutSuggestionForShell, nextWorkoutSuggestionFromPerformedShell } from "./next-engine/workout-history-adapter.js";
 import { generateNextCycleForShell, convertProgramToNextCycleForShell, advanceNextCycleForShell, nextCycleTemplatesForShell } from "./next-engine/cycle-runtime-adapter.js";
-import { buildRuntimeSetTargets, techniqueProtocolFromCell, freestyleCellForRepRange, buildUserAddedSlotPrescriptions } from "./next-engine/workout-runtime.js";
+import { buildRuntimeSetTargets, reconcilePendingRepTargets, techniqueProtocolFromCell, freestyleCellForRepRange, buildUserAddedSlotPrescriptions } from "./next-engine/workout-runtime.js";
 import { deriveArmCoverage } from "./next-engine/arm-coverage.js";
 import { deriveFunctionalCoverage } from "./next-engine/functional-coverage.js";
 import { EXERCISE_MAP as NEXT_EXERCISE_MAP } from "./next-engine/exercise-db.js";
@@ -648,8 +648,7 @@ function StyleTag({ theme } = {}) {
         .wpb-set-controls>div:nth-child(4){grid-column:2;grid-row:2;position:relative;padding-top:18px;}
         .wpb-set-controls>div:nth-child(3)::before{content:"Load";display:block;font-size:11px;color:${C.muted};height:18px;}
         .wpb-set-controls>div:nth-child(4)::before{content:"Reps";position:absolute;top:0;left:0;font-size:11px;color:${C.muted};}
-        .wpb-set-controls>button:nth-child(5){grid-column:3;grid-row:2;align-self:center;margin-top:18px;}
-        .wpb-set-controls>button:nth-child(6){grid-column:3;grid-row:3;}
+        .wpb-set-controls>.wpb-set-actions{grid-column:3;grid-row:2;align-self:start;margin-top:18px;}
       }
       .wpb-step-button{position:relative;min-width:0!important;min-height:0!important;}
       .wpb-step-button::after{content:"";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:44px;height:44px;}
@@ -1718,10 +1717,10 @@ function StyleTag({ theme } = {}) {
       .wpb-workout [data-testid^="set-"][data-active="1"]{
         background:color-mix(in srgb,${C.accent} 7%,transparent)!important;
       }
-      .wpb-workout .wpb-set-controls>button[aria-pressed]{
+      .wpb-workout .wpb-set-actions>button[aria-pressed]{
         transition:background-color 160ms var(--e-out),border-color 160ms var(--e-out),color 160ms var(--e-out),box-shadow 260ms var(--e-spring),transform var(--m-press) var(--e-out);
       }
-      .wpb-workout .wpb-set-controls>button[aria-pressed="true"]{
+      .wpb-workout .wpb-set-actions>button[aria-pressed="true"]{
         box-shadow:0 0 0 3px color-mix(in srgb,${C.accent} 11%,transparent);
       }
 
@@ -3037,6 +3036,15 @@ const RAW = [
     ["paused-deadlift", "Paused Deadlift", "lower_back", "compound", ["barbell"], 3, 6],
     ["pin-press-ohp", "Pin Press (Overhead)", "shoulders", "compound", ["barbell", "rack"], 4, 8],
     ["barbell-skullover", "Barbell Skullover", "triceps", "isolation", ["barbell"], 8, 12],
+    // Appended so saved exercise indices and existing generation priorities stay stable.
+    ["seated-db-lat-raise", "Seated Dumbbell Lateral Raise", "shoulders", "isolation", ["dumbbell", "bench"], 12, 20, "side_delts", "shoulder-abduction"],
+    ["single-db-lat-raise", "Single-Arm Dumbbell Lateral Raise", "shoulders", "isolation", ["dumbbell"], 12, 20, "side_delts", "shoulder-abduction"],
+    ["chest-supported-lat-raise", "Chest-Supported Dumbbell Lateral Raise", "shoulders", "isolation", ["dumbbell", "inclinebench"], 12, 20, "side_delts", "shoulder-abduction"],
+    ["seated-cable-lat-raise", "Seated Cable Lateral Raise", "shoulders", "isolation", ["cable", "bench"], 12, 20, "side_delts", "shoulder-abduction"],
+    ["cuff-cable-lat-raise", "Cuff Cable Lateral Raise", "shoulders", "isolation", ["cable"], 12, 20, "side_delts", "shoulder-abduction"],
+    ["seated-rear-fly", "Seated Dumbbell Rear Delt Fly", "shoulders", "isolation", ["dumbbell", "bench"], 12, 20, "rear_delts", "shoulder-horizontal-abduction"],
+    ["single-cable-rear-fly", "Single-Arm Cable Rear Delt Fly", "shoulders", "isolation", ["cable"], 12, 20, "rear_delts", "shoulder-horizontal-abduction"],
+    ["chest-supported-rear-fly", "Chest-Supported Dumbbell Rear Delt Fly", "shoulders", "isolation", ["dumbbell", "inclinebench"], 12, 20, "rear_delts", "shoulder-horizontal-abduction"],
 ];
 /* ⚠ NINTH SLOT: MOVEMENT PATTERN. `region` (slot 8) says WHICH TISSUE a lift loads — wrist_flexors,
    rear_delts — and it already exists because the v574-v577 wrist work needed it. `pattern` says WHICH
@@ -6001,8 +6009,12 @@ const EX_FAMILY = {
     // side-delt lateral raises
     "lat-raise": "side-raise", "cable-lat-raise": "side-raise", "machine-lat-raise": "side-raise",
     "leaning-lat-raise": "side-raise", "single-cable-raise": "side-raise",
+    "seated-db-lat-raise": "side-raise", "single-db-lat-raise": "side-raise", "chest-supported-lat-raise": "side-raise",
+    "seated-cable-lat-raise": "side-raise", "cuff-cable-lat-raise": "side-raise",
+    "band-lateral-raise": "side-raise", "side-lying-raise": "side-raise", "cable-behind-back-lateral": "side-raise",
     // rear-delt flyes
     "rear-fly": "rear-delt-fly", "reverse-pec": "rear-delt-fly", "cable-rear-fly": "rear-delt-fly",
+    "seated-rear-fly": "rear-delt-fly", "single-cable-rear-fly": "rear-delt-fly", "chest-supported-rear-fly": "rear-delt-fly", "prone-rear-delt-raise": "rear-delt-fly",
     // chest flyes (flat)
     "cable-fly": "chest-fly", "pec-deck": "chest-fly", "db-fly": "chest-fly",
     // glute kickbacks
@@ -6039,10 +6051,22 @@ const VARIANT_PRESENTATION = {
     "leaning-lat-raise": { key: "lat-lean", name: "Leaning Cable Lateral Raise", setup: "Lean-away cable", detail: "Low cable · lean-away setup", visual: "lateral-lean", order: 30 },
     "single-cable-raise": { key: "lat-cross", name: "Single-Arm Cable Lateral Raise", setup: "Cross-body cable", detail: "Low cable · cross-body single arm", visual: "lateral-cross", order: 40 },
     "machine-lat-raise": { key: "lat-machine", name: "Machine Lateral Raise", setup: "Lateral-raise machine", detail: "Seated lateral-raise machine", visual: "lateral-machine", order: 50 },
+    "seated-db-lat-raise": { key: "lat-seated-db", name: "Seated Dumbbell Lateral Raise", setup: "Dumbbells + bench", detail: "Seated upright · no leg drive", visual: "lateral-seated-db", order: 12 },
+    "single-db-lat-raise": { key: "lat-single-db", name: "Single-Arm Dumbbell Lateral Raise", setup: "Single dumbbell", detail: "One arm at a time", visual: "lateral-single-db", order: 14 },
+    "chest-supported-lat-raise": { key: "lat-supported-db", name: "Chest-Supported Dumbbell Lateral Raise", setup: "Dumbbells + incline bench", detail: "Chest braced on an incline bench", visual: "lateral-supported-db", order: 16 },
+    "seated-cable-lat-raise": { key: "lat-seated-cable", name: "Seated Cable Lateral Raise", setup: "Cable + bench", detail: "Seated upright · low cable", visual: "lateral-seated-cable", order: 22 },
+    "cuff-cable-lat-raise": { key: "lat-cuff", name: "Cuff Cable Lateral Raise", setup: "Cable cuff", detail: "Cuff around the wrist · low cable", visual: "lateral-cuff", order: 24 },
+    "cable-behind-back-lateral": { key: "lat-behind", name: "Behind-the-Back Cable Lateral Raise", setup: "Cable behind the hips", detail: "Low cable · arm starts behind the torso", visual: "lateral-behind", order: 42 },
+    "band-lateral-raise": { key: "lat-band", name: "Band Lateral Raise", setup: "Resistance band", detail: "Band anchored under the feet", visual: "lateral-band", order: 60 },
+    "side-lying-raise": { key: "lat-side-lying", name: "Side-Lying Lateral Raise", setup: "Dumbbell + bench", detail: "Side-lying · one arm", visual: "lateral-side-lying", order: 70 },
     // Rear-delt flyes
     "rear-fly": { key: "rear-db", name: "Dumbbell Rear Delt Fly", setup: "Dumbbells", detail: "Bent-over dumbbells", visual: "rear-db", order: 10 },
     "cable-rear-fly": { key: "rear-cable", name: "Cable Rear Delt Fly", setup: "Dual cable", detail: "Dual cable · cross-body", visual: "rear-cable", order: 20 },
     "reverse-pec": { key: "rear-machine", name: "Reverse Pec Deck", setup: "Reverse pec deck", detail: "Reverse pec-deck machine", visual: "rear-machine", order: 30 },
+    "seated-rear-fly": { key: "rear-seated-db", name: "Seated Dumbbell Rear Delt Fly", setup: "Dumbbells + bench", detail: "Seated · torso hinged over the thighs", visual: "rear-seated-db", order: 12 },
+    "single-cable-rear-fly": { key: "rear-single-cable", name: "Single-Arm Cable Rear Delt Fly", setup: "Single cable handle", detail: "One arm · cable across the torso", visual: "rear-single-cable", order: 22 },
+    "chest-supported-rear-fly": { key: "rear-supported-db", name: "Chest-Supported Dumbbell Rear Delt Fly", setup: "Dumbbells + incline bench", detail: "Chest braced on an incline bench", visual: "rear-supported-db", order: 14 },
+    "prone-rear-delt-raise": { key: "rear-prone-bodyweight", name: "Prone Rear Delt Raise", setup: "Bodyweight", detail: "Prone on the floor · unloaded arms", visual: "rear-prone-bodyweight", order: 40 },
     // Chest flyes
     "db-fly": { key: "chest-db", name: "Dumbbell Fly", setup: "Dumbbells + bench", detail: "Dumbbells · flat bench", visual: "chest-db", order: 10 },
     "cable-fly": { key: "chest-cable", name: "Cable Fly", setup: "Dual cable", detail: "Dual cable · standing fly", visual: "chest-cable", order: 20 },
@@ -6103,9 +6127,9 @@ function movementFamilyDescription(ex) {
     if (family === "tri-kickback")
         return "Same triceps kickback pattern with either a dumbbell or a low cable.";
     if (family === "side-raise")
-        return "Compare dumbbell, standard cable, lean-away, cross-body single-arm, and machine lateral raises.";
+        return "Compare standing, seated, supported, side-lying, cable, cuff, band, and machine lateral raises.";
     if (family === "rear-delt-fly")
-        return "Compare dumbbell, dual-cable, and reverse pec-deck rear-delt fly setups.";
+        return "Compare standing, seated, chest-supported, single-arm cable, dual-cable, and machine rear-delt fly setups.";
     if (family === "chest-fly")
         return "Compare dumbbell-and-bench, standing cable, and pec-deck chest fly setups.";
     if (family === "glute-kickback")
@@ -6167,6 +6191,17 @@ function AttachmentGlyph({ ex, size = 46 }) {
     const F = { fill: "currentColor", stroke: "none" };
     const faint = { ...S, opacity: .42, strokeWidth: 2.1 };
     const glyph = (() => {
+        // Setup scenes for the seated/unilateral/supported variations. The equipment and posture
+        // belong to the variation, so none of these silently uses the generic attachment picture.
+        if (visual === "lateral-side-lying" || visual === "rear-prone-bodyweight")
+            return _jsxs("g", { children: [_jsx("path", { d: "M8 43h48", ...faint }), _jsx("circle", { cx: "15", cy: "34", r: "4", ...S }), _jsx("path", { d: "M19 35h22l12 3M28 35V13", ...S }), visual === "lateral-side-lying" && _jsx("path", { d: "M23 12h10M25 8v8M31 8v8", ...S })] });
+        if (visual === "lateral-supported-db" || visual === "rear-supported-db")
+            return _jsxs("g", { children: [_jsx("path", { d: "M18 19l26 20M31 31l-8 15M31 31l18 15", ...faint }), _jsx("circle", { cx: "21", cy: "13", r: "4", ...S }), _jsx("path", { d: "M24 17l17 15M30 22L10 25M30 22l24-9M41 32l-7 14M41 32l11 14", ...S }), _jsx("path", { d: visual === "rear-supported-db" ? "M5 25h10M7 21v8M13 21v8M49 13h10M51 9v8M57 9v8" : "M5 25h10M7 21v8M13 21v8M49 13h10M51 9v8M57 9v8M24 8l5-2", ...S, strokeWidth: "2.3" })] });
+        if (["lateral-seated-db", "lateral-single-db", "lateral-seated-cable", "lateral-cuff", "lateral-behind", "lateral-band", "rear-seated-db", "rear-single-cable"].includes(visual)) {
+            const seated = visual.includes("seated"), cable = /cable|cuff|behind/.test(visual), band = visual.includes("band"), single = /single|cuff|behind/.test(visual);
+            const rear = visual.startsWith("rear"), sh = rear && seated ? "M27 14l10 13M31 20L12 24M31 20l21-7" : `M32 14v18M32 20L13 23${single ? "" : "M32 20l19 3"}`;
+            return _jsxs("g", { children: [_jsx("circle", { cx: rear && seated ? "25" : "32", cy: "10", r: "4", ...S }), _jsx("path", { d: sh, ...S }), _jsx("path", { d: seated ? "M24 32h17M24 32l-5 7v8M41 32l5 7v8M20 34h25M23 34v13M42 34v13" : "M32 32l-7 15M32 32l7 15", ...(seated ? faint : S) }), cable ? _jsxs("g", { children: [_jsx("rect", { x: "54", y: "33", width: "6", height: "14", rx: "2", ...faint }), _jsx("path", { d: visual === "lateral-behind" ? "M57 37L13 23M27 29l10-3" : "M57 37L13 23", ...S }), visual === "lateral-cuff" ? _jsx("rect", { x: "10", y: "20", width: "6", height: "6", rx: "2", ...S }) : _jsx("path", { d: "M10 22h6", ...S, strokeWidth: "3.4" })] }) : band ? _jsx("path", { d: "M13 23L25 47M51 23L39 47", ...S, strokeWidth: "1.8" }) : _jsx("path", { d: `M8 23h10M10 19v8M16 19v8${single ? "" : "M46 23h10M48 19v8M54 19v8"}`, ...S, strokeWidth: "2.3" })] });
+        }
         if (visual === "overhead-dumbbell")
             return _jsxs("g", { children: [_jsx("path", { d: "M20 26h24", ...S, strokeWidth: "4" }), _jsx("path", { d: "M14 17v18M19 19v14M45 19v14M50 17v18", ...S, strokeWidth: "3.4" }), _jsx("path", { d: "M11 21v10M53 21v10", ...faint })] });
         if (visual === "overhead-ez" || visual === "ez-bar")
@@ -12398,6 +12433,8 @@ function techSetTag(cue) {
         return "+ stretch";
     if (cue.includes("myo-rep"))
         return "+ myo-reps";
+    if (/drop/i.test(cue))
+        return "+ drop set";
     return null;
 }
 /* Last-set intensity technique, periodized the way the program prescribes it: nothing until at
@@ -12450,6 +12487,24 @@ export function legacyCustomSetCount(program, day, ex, slotIndex, weekIndex, raw
     const authoredBase = rawSets == null ? roleBase : customAuthoredSetCount(rawSets, roleBase, weekIndex);
     const finiteDelta = v => Number.isFinite(Number(v)) ? Number(v) : 0;
     return clamp(Math.round(authoredBase + finiteDelta(slotMap[key]) + finiteDelta(autoMap[key])), 1, 5);
+}
+
+/* Existing custom plans stored their automatic last-set schedule implicitly, just like their
+   legacy set-dose deltas. Restore that saved contract without changing new engine prescriptions.
+   An explicit override (including null/empty = off) always wins. */
+export function customLastSetTechnique(program, day, ex, slotIndex, weekIndex) {
+    const o = program?.overrides?.[`${day?.id}:${slotIndex}`] || {};
+    if (Object.prototype.hasOwnProperty.call(o, 'techOverride'))
+        return o.techOverride || null;
+    if (Object.prototype.hasOwnProperty.call(o, 'tech'))
+        return o.tech || null;
+    const legacy = program?.engineV != null || program?.slotBias || program?.autoBias;
+    const weeks = weeksOf(program);
+    if (!legacy || program?.config?.progression === 'manual' || slotIndex === day?.primaryIndex
+        || (program?.config?.deload && weekIndex > weeks))
+        return null;
+    const focused = (program?.config?.focusList || []).includes(ex.part) || Number(program?.config?.focus?.[ex.part]) > 0;
+    return lastSetTech(ex, goalForDay(program, day) === 'strength', focused, blockPhase(program, weekIndex, 0), weeks);
 }
 
 /* A fixed standalone legacy/custom plan can remain EXACTLY itself as cycle block 1 while the
@@ -12532,7 +12587,7 @@ function computeCell(program, day, id, slotIndex, weekIndex) {
         const reps = repPair[0] === repPair[1] ? String(repPair[0]) : `${repPair[0]}-${repPair[1]}`;
         const effort = effortBounds(o.rir ?? base.rir);
         const rir = effort ? (effort[0] === effort[1] ? String(effort[0]) : `${effort[0]}-${effort[1]}`) : (o.rir ?? base.rir);
-        return { sets: legacyCustomSetCount(program, day, ex, slotIndex, weekIndex, o.sets, base.sets), reps, range: reps, rir, rest: o.rest ?? base.rest, tech: o.techOverride ?? base.tech ?? null,
+        return { sets: legacyCustomSetCount(program, day, ex, slotIndex, weekIndex, o.sets, base.sets), reps, range: reps, rir, rest: o.rest ?? base.rest, tech: customLastSetTechnique(program, day, ex, slotIndex, weekIndex),
             role: base.role, progressionStyle: o.progressionStyle ?? "auto", note: "Your program", custom: true };
     }
     const nextCell = getNextShellCell(program, day, slotIndex, weekIndex);
@@ -14169,6 +14224,8 @@ function movePattern(ex) {
    still lands on the do-nothing generic pose. */
 const FIGURE_VARIANTS = {
     "bench-dip": "benchdip", "side-lying-raise": "lyinglateral",
+    "seated-db-lat-raise": "seatedlateral", "seated-cable-lat-raise": "seatedlateral",
+    "chest-supported-lat-raise": "supportedraise", "chest-supported-rear-fly": "supportedraise", "seated-rear-fly": "seatedrearfly",
     "slrdl": "singlerdl", "dragon-flag": "dragonflag", "pike-pushup": "pikepress", "reverse-hyper": "reversehyper", "z-press": "zpress", "bent-db-pullover": "bentpullover",
     "machine-press": "machinepress", "incline-machine-press": "machinepress", "machine-row": "seatedrow", "wide-machine-row": "seatedrow", "neutral-machine-row": "seatedrow",
     "inv-row": "invertedrow", "bodyweight-doorway-row": "invertedrow",
@@ -22143,7 +22200,7 @@ function ExerciseAnimation({ ex, height = 190 }) {
         const armsInOrder = dLA.depthFrac <= dRA.depthFrac
             ? _jsxs(_Fragment, { children: [armBlock(dLA, true), armBlock(dRA, false)] })
             : _jsxs(_Fragment, { children: [armBlock(dRA, false), armBlock(dLA, true)] });
-        return (_jsxs("g", { children: [limb([cx, shY], [cx, hipY], 5.6, 4.6), "                  ", limb([cx, shY - 6], [cx, shY], 3.0, 2.6), "               ", limb(LA.sh, RA.sh, 2.8, 2.8), "                           ", limb([cx, hipY], [cx - 8, 90], 4.2, 3.0), limb([cx, hipY], [cx + 8, 90], 4.2, 3.0), "   ", foot([cx - 8, 90], -1), foot([cx + 8, 90], 1), joint([cx, shY], 3.4), joint([cx, hipY], 4.4), joint(LA.sh, 2.8), joint(RA.sh, 2.8), clothing([cx, shY], [cx, hipY], [cx - 8, 90], 9), _jsx("path", { d: `M${cx},${hipY} l-4,8 M${cx},${hipY} l4,8`, stroke: shorts, strokeWidth: "8", strokeLinecap: "round" }), head([cx, shY - 13]), armsInOrder, implement === "barbell" && _jsxs("g", { ...S, children: [_jsx("line", { x1: dLA.wr[0] - 9, y1: dLA.wr[1], x2: dRA.wr[0] + 9, y2: dRA.wr[1], strokeWidth: "2" }), _jsx("path", { d: `M${dLA.wr[0] - 7},${dLA.wr[1] - 6} v12 M${dRA.wr[0] + 7},${dRA.wr[1] - 6} v12`, strokeWidth: "4" })] })] }));
+        return (_jsxs("g", { children: [limb([cx, shY], [cx, hipY], 5.6, 4.6), "                  ", limb([cx, shY - 6], [cx, shY], 3.0, 2.6), "               ", limb(LA.sh, RA.sh, 2.8, 2.8), "                           ", ...(j.seated ? [limb([cx, hipY], [cx - 13, hipY + 8], 4.2, 3.0), limb([cx - 13, hipY + 8], [cx - 13, 90], 3.0, 2.5), limb([cx, hipY], [cx + 13, hipY + 8], 4.2, 3.0), limb([cx + 13, hipY + 8], [cx + 13, 90], 3.0, 2.5)] : [limb([cx, hipY], [cx - 8, 90], 4.2, 3.0), limb([cx, hipY], [cx + 8, 90], 4.2, 3.0)]), "   ", foot([cx - 8, 90], -1), foot([cx + 8, 90], 1), joint([cx, shY], 3.4), joint([cx, hipY], 4.4), joint(LA.sh, 2.8), joint(RA.sh, 2.8), clothing([cx, shY], [cx, hipY], [cx - 8, 90], 9), _jsx("path", { d: `M${cx},${hipY} l-4,8 M${cx},${hipY} l4,8`, stroke: shorts, strokeWidth: "8", strokeLinecap: "round" }), head([cx, shY - 13]), armsInOrder, implement === "barbell" && _jsxs("g", { ...S, children: [_jsx("line", { x1: dLA.wr[0] - 9, y1: dLA.wr[1], x2: dRA.wr[0] + 9, y2: dRA.wr[1], strokeWidth: "2" }), _jsx("path", { d: `M${dLA.wr[0] - 7},${dLA.wr[1] - 6} v12 M${dRA.wr[0] + 7},${dRA.wr[1] - 6} v12`, strokeWidth: "4" })] })] }));
     };
     // supine skeleton (bench press): head clearly at the left resting on the bench, torso flat,
     // the working arm presses the bar straight up, near leg bent with foot down to the floor.
@@ -22385,6 +22442,24 @@ function ExerciseAnimation({ ex, height = 190 }) {
         },
         // lateral raise: arms abduct from hanging down to out at shoulder height. Fixed-length arms arc
         // about the shoulders (mirror-symmetric); the slight elbow bend is constant, never stretching.
+        seatedlateral: (t) => {
+            const shY = 36, sh1 = [48, shY + 1], sh2 = [72, shY + 1];
+            const a = L(96, 172, t) * Math.PI / 180;
+            return { front: true, env: _jsxs(_Fragment, { children: [ground, seat(60, 63, 38)] }),
+                j: { shY, hipY: 58, seated: true, armL: frontArm(sh1, a, 24, 1), armR: frontArm(sh2, Math.PI - a, 24, -1) } };
+        },
+        supportedraise: (t) => {
+            const sh = [41, 43], hip = [62, 65], a = L(80, -25, t) * Math.PI / 180;
+            const wr = [sh[0] + Math.cos(a) * 25, sh[1] + Math.sin(a) * 25];
+            return { env: _jsxs(_Fragment, { children: [ground, bench(34, 47, 69, 72)] }),
+                j: { sh, hip, kn: [65, 79], an: [80, 92], el: solveIK(sh, wr, 13, 13, 1), wr, headDx: -3 }, eq: weightAt(wr[0], wr[1]) };
+        },
+        seatedrearfly: (t) => {
+            const sh = [42, 49], hip = [64, 65], a = L(80, -25, t) * Math.PI / 180;
+            const wr = [sh[0] + Math.cos(a) * 25, sh[1] + Math.sin(a) * 25];
+            return { env: _jsxs(_Fragment, { children: [ground, seat(63, 67, 32)] }),
+                j: { sh, hip, kn: [46, 71], an: [46, 92], el: solveIK(sh, wr, 13, 13, 1), wr, headDx: -3 }, eq: weightAt(wr[0], wr[1]) };
+        },
         lateral: (t) => { const shY = 42, sh1 = [48, shY + 1], sh2 = [72, shY + 1]; const lAng = L(96, 172, t) * Math.PI / 180, rAng = Math.PI - lAng; return { front: true, env: ground, j: { shY, hipY: 64, armL: frontArm(sh1, lAng, 24, 1), armR: frontArm(sh2, rAng, 24, -1) } }; },
         // --- vertical pulldown: seated, bar pulled down to chest ---
         // A lat-pulldown bar and a pull-up/chin-up bar are both plain bars gripped overhead — never a
@@ -25229,11 +25304,12 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
             return ({ id, slot, sets: buildSets(EX_BY_ID[id], slot, suggestions[slot], true), note: "", superset: !!program.ss?.[`${day.id}:${slot}`],
                 restCustom: program.overrides?.[`${day.id}:${slot}`]?.rest || 0 });
         });
-        if (liveStatus === "resume")
-            return liveMatch.data;
-        if (liveStatus === "partial")
-            return mergeSessionData(liveMatch.data, fresh);
-        return fresh;
+        const restored = liveStatus === "resume" ? liveMatch.data
+            : liveStatus === "partial" ? mergeSessionData(liveMatch.data, fresh) : fresh;
+        // A saved automatic prefill can come from an older range/tuner. Reconcile pending targets
+        // with the current cell; completed and manually controlled rows remain the lifter's record.
+        return restored.map(e => ({ ...e, sets: syncSubSets(reconcilePendingRepTargets(e.sets,
+            computeCell(program, day, e.id, e.slot, weekIndex)), EX_BY_ID[e.id], unit) }));
     });
     /* EVERY write to `data` goes through here, so that "a myo mini carries its activation set's load"
        is an INVARIANT of the session state rather than a line somebody has to remember inside each of
@@ -25250,7 +25326,8 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
             /* Grow BEFORE syncing so a freshly appended mini picks up its activation load in the same pass
                and never renders for a frame with a stale one. Both are pure and return the input array
                untouched when there is nothing to do, so an ordinary weight edit still costs no re-render. */
-            const sets = syncSubSets(growMyoSets(e.sets), EX_BY_ID[e.id], unit);
+            const cell = computeCell(program, day, e.id, e.slot, weekIndex);
+            const sets = syncSubSets(growMyoSets(reconcilePendingRepTargets(e.sets, cell)), EX_BY_ID[e.id], unit);
             if (sets === e.sets)
                 return e;
             changed = true;
@@ -25757,7 +25834,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
     // input's readOnly attribute (readOnly blocks real typing but not every programmatic path). No
     // legitimate flow edits a done set's numbers — to change one, untick it first.
     const editSet = (ei, si, field, val) => setData(d => d.map((e, i) => i !== ei ? e :
-        { ...e, sets: e.sets.map((s, j) => j !== si || s.done ? s : { ...s, [field]: field === "reps" ? cleanReps(val) : val }) }));
+        { ...e, sets: e.sets.map((s, j) => j !== si || s.done ? s : { ...s, [field]: field === "reps" ? cleanReps(val) : val, auto: false, hint: undefined }) }));
     // quick steppers: nudge reps by ±1 and weight by one load increment without the keyboard
     const bumpReps = (ei, si, delta) => setData(d => d.map((e, i) => i !== ei ? e :
         { ...e, sets: e.sets.map((s, j) => j !== si || s.done ? s : { ...s, reps: String(clamp((parseInt(s.reps) || 0) + delta, 0, 100)), auto: false, hint: undefined }) }));
@@ -26914,10 +26991,10 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
                                                         if (!sp.plates.length)
                                                             return null;
                                                         return _jsxs("div", { className: "mono", style: { fontSize: 11, fontWeight: 600, color: C.faint, textAlign: "center", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: [sp.plates.join("·"), "/s"] });
-                                                    })(), s.hint && !s.done && (_jsx("span", { title: "Set-to-set tuning \u2014 retuned from the set you just logged, separate from this lift's weekly progression style", style: { position: "absolute", top: -6, right: 18, width: 16, height: 16, borderRadius: 999, background: s.hint === "up" ? C.accent : C.warn, color: C.accentText, display: "flex", alignItems: "center", justifyContent: "center" }, children: s.hint === "up" ? _jsx(TrendingUp, { size: 10, strokeWidth: 3 }) : _jsx(TrendingDown, { size: 10, strokeWidth: 3 }) }))] }), _jsxs("div", { style: { flex: narrowSet ? .85 : 1, minWidth: 0, display: "flex", alignItems: "center", gap: narrowSet ? 1 : 2 }, children: [!s.done && _jsx(StepButton, { onStep: () => bumpReps(ei, si, -1), label: "reps down", glyph: "\u2212" }), _jsx("input", { inputMode: "numeric", enterKeyHint: "done", "aria-label": "reps", value: s.reps, placeholder: "\u2014", readOnly: s.done, onChange: ev => editSet(ei, si, "reps", ev.target.value), className: "mono wpb-num-input", style: { flex: 1, minWidth: 0, padding: "8px 4px", textAlign: "center", borderRadius: 8, border: s.warm || s.sub ? `1px dashed ${C.border}` : `1px solid ${C.border}`, background: s.done ? C.accentDim : C.bg2, color: C.text, fontSize: 15, fontWeight: 600 } }), !s.done && _jsx(StepButton, { onStep: () => bumpReps(ei, si, 1), label: "reps up", glyph: "+" })] }), _jsx("button", { onClick: () => toggleDone(ei, si), "aria-label": s.done ? "Mark set not done" : "Mark set done", "aria-pressed": s.done, "data-haptic-manual": "1", className: "pressable hit", style: {
+                                                    })(), s.hint && !s.done && (_jsx("span", { title: "Set-to-set tuning \u2014 retuned from the set you just logged, separate from this lift's weekly progression style", style: { position: "absolute", top: -6, right: 18, width: 16, height: 16, borderRadius: 999, background: s.hint === "up" ? C.accent : C.warn, color: C.accentText, display: "flex", alignItems: "center", justifyContent: "center" }, children: s.hint === "up" ? _jsx(TrendingUp, { size: 10, strokeWidth: 3 }) : _jsx(TrendingDown, { size: 10, strokeWidth: 3 }) }))] }), _jsxs("div", { style: { flex: narrowSet ? .85 : 1, minWidth: 0, display: "flex", alignItems: "center", gap: narrowSet ? 1 : 2 }, children: [!s.done && _jsx(StepButton, { onStep: () => bumpReps(ei, si, -1), label: "reps down", glyph: "\u2212" }), _jsx("input", { inputMode: "numeric", enterKeyHint: "done", "aria-label": "reps", value: s.reps, placeholder: "\u2014", readOnly: s.done, onChange: ev => editSet(ei, si, "reps", ev.target.value), className: "mono wpb-num-input", style: { flex: 1, minWidth: 0, padding: "8px 4px", textAlign: "center", borderRadius: 8, border: s.warm || s.sub ? `1px dashed ${C.border}` : `1px solid ${C.border}`, background: s.done ? C.accentDim : C.bg2, color: C.text, fontSize: 15, fontWeight: 600 } }), !s.done && _jsx(StepButton, { onStep: () => bumpReps(ei, si, 1), label: "reps up", glyph: "+" })] }), _jsxs("div", { className: "wpb-set-actions", style: { width: narrowSet ? 32 : 34, flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }, children: [_jsx("button", { onClick: () => toggleDone(ei, si), "aria-label": s.done ? "Mark set not done" : "Mark set done", "aria-pressed": s.done, "data-haptic-manual": "1", className: "pressable hit", style: {
                                                     width: narrowSet ? 32 : 34, height: narrowSet ? 34 : 34, borderRadius: 8, border: `1px solid ${s.done ? C.accent : C.border}`, cursor: "pointer", flexShrink: 0,
                                                     background: s.done ? C.accent : "transparent", color: s.done ? C.accentText : C.faint, display: "flex", alignItems: "center", justifyContent: "center"
-                                                }, children: _jsx(Check, { size: 17, strokeWidth: 3 }) }), ((s.sub && !s.prescribed) || s.added) && (_jsx("button", { "aria-label": "Remove this set", onClick: () => removeSubSet(ei, si), title: s.sub ? `Remove this ${s.kind === "drop" ? "drop" : "myo-rep"} set` : "Remove this set", className: "pressable hit", style: { width: 28, height: 34, borderRadius: 8, border: "none", background: "none", color: C.faint, cursor: "pointer", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }, children: _jsx(X, { size: 15 }) }))] }), isActive && !s.done && (hasSuggested || pvLast) && (_jsxs("div", { style: { display: "flex", gap: 6, flexWrap: "wrap", padding: "0 2px 6px 30px", marginTop: -1 }, children: [hasSuggested && (_jsxs("button", { onClick: () => { editWeight(ei, si, s.suggested.weight); editSet(ei, si, "reps", s.suggested.reps); }, "aria-label": `Use the suggested ${s.suggested.weight} by ${s.suggested.reps}`, className: "pressable", style: { display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 9px", borderRadius: 8, cursor: "pointer",
+                                                }, children: _jsx(Check, { size: 17, strokeWidth: 3 }) }), ((s.sub && !s.prescribed) || s.added) && (_jsx("button", { "aria-label": "Remove this set", onClick: () => removeSubSet(ei, si), title: s.sub ? `Remove this ${s.kind === "drop" ? "drop" : "myo-rep"} set` : "Remove this set", className: "pressable hit", style: { width: 28, height: 34, borderRadius: 8, border: "none", background: "none", color: C.faint, cursor: "pointer", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }, children: _jsx(X, { size: 15 }) }))] })] }), isActive && !s.done && (hasSuggested || pvLast) && (_jsxs("div", { style: { display: "flex", gap: 6, flexWrap: "wrap", padding: "0 2px 6px 30px", marginTop: -1 }, children: [hasSuggested && (_jsxs("button", { onClick: () => { editWeight(ei, si, s.suggested.weight); editSet(ei, si, "reps", s.suggested.reps); }, "aria-label": `Use the suggested ${s.suggested.weight} by ${s.suggested.reps}`, className: "pressable", style: { display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 9px", borderRadius: 8, cursor: "pointer",
                                                     border: `1px solid ${C.accent}55`, background: C.accentDim, color: C.accentInk, fontSize: 11, fontWeight: 700 }, children: [_jsx(RefreshCw, { size: 10, strokeWidth: 2.5, style: { flexShrink: 0 } }), "Suggested ", _jsxs("span", { className: "mono", children: [s.suggested.weight, "\u00D7", s.suggested.reps] })] })), pvLast && (_jsxs("button", { onClick: () => { editWeight(ei, si, String(pvLast.w)); editSet(ei, si, "reps", String(pvLast.r)); }, "aria-label": `Use last time's ${pvLast.w} by ${pvLast.r}`, className: "pressable", style: { display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 9px", borderRadius: 8, cursor: "pointer",
                                                     border: `1px solid ${C.border}`, background: C.bg2, color: C.muted, fontSize: 11, fontWeight: 600 }, children: [_jsx(History, { size: 10, strokeWidth: 2.5, style: { flexShrink: 0 } }), "Last time ", _jsxs("span", { className: "mono", children: [pvLast.w, "\u00D7", pvLast.r, pvLast.rir != null ? " @" + effortLabel(pvLast.rir, loadMode) : ""] })] }))] })), (() => {
                                         /* EFFORT, ASKED ONCE AND NEVER DEMANDED. The picker belongs to the set awaiting it
@@ -37247,6 +37324,7 @@ export { loadStore, saveStore, Wizard };
    build, so that browser check could not load against it (its recorded PASS cannot have come from this App.js).
    The running app mounts only the default export; these change nothing in production. */
 export { WorkoutSession, StepButton, StyleTag };
+export { movementFamilyOptions, VARIANT_PRESENTATION, AttachmentGlyph };
 export { ExerciseAnimation, FormVideoLink, formVideoUrl, refusalMessage };
 
 export { HomePrograms, homeProgramGroups, homePhaseIdentity };

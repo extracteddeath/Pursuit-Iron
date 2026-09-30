@@ -1,0 +1,37 @@
+name: M199 performance and loading audit
+
+on:
+  push:
+    branches: [audit/m199-performance-loading]
+    paths:
+      - 'modules/**'
+      - 'verification/m199-performance-audit.mjs'
+      - '.github/workflows/m199-performance-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run performance and loading audit
+        shell: bash
+        run: |
+          node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m199-performance-audit.mjs 2>&1 | tee m199-performance-audit.log
+      - name: Upload audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m199-performance-audit
+          path: |
+            m199-performance-audit.log
+            m199-performance-audit.json
+          if-no-files-found: error
+          retention-days: 7

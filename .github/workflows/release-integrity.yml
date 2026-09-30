@@ -18,5 +18,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Diagnostic UI hash
+        run: sha256sum modules/App.js
       - name: Verify production runtime
         run: node scripts/verify-release.mjs

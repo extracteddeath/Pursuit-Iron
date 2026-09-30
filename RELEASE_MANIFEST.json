@@ -1,6 +1,6 @@
 {
   "schemaVersion": 3,
-  "milestone": "M197",
+  "milestone": "M199",
   "appVersion": "4.0.0",
   "build": 788,
   "engineVersion": "0.64.0",
@@ -9,7 +9,7 @@
   "candidateStatus": "ci_verified_device_test_pending",
   "sourceNextEngineAggregate": null,
   "sourceShadowEngineAggregate": "3107199d20c86a5a12b82eccbc61c9a32b001a72c7f30418db696235d0da0c22",
-  "runtimeAggregate": "941c0bebd40f5f17c5d57bd58713499fbae892324aa7b296f6803e598f981548",
+  "runtimeAggregate": "a5e38dafe95a3cacb97aab078278628b927487c64da571f197f40ea5ebd5c5a9",
   "sourceFiles": {},
   "shadowSourceFiles": {
     "src/shadow-engine/canary.ts": "854246970f93111ee873f0eb5f222195a02af688ef1a3285d0624f44d422c58a",
@@ -25,11 +25,11 @@
   },
   "runtimeFiles": {
     "modules/next-engine/allocator.js": "a69e53295b8d930c6c3b515507258764be7f69baf1ae729f64d19611c24d2f7d",
-    "modules/next-engine/app-shell-adapter-capacity.js": "81489921d676d9135bfd6a63b8d923888c4c7990e5d7681c147e90a704bdd8ac",
+    "modules/next-engine/app-shell-adapter-capacity.js": "84731981fcdfe4f43f21cae334e1696eda684c18162d5a71402a36a086f5dc8b",
     "modules/next-engine/app-shell-adapter.js": "9a0369447c663abf266b2d1651b88f27401c2b9ac9c420b4e7894fff701489be",
     "modules/next-engine/arbiter.js": "cba22ac9d8a0dbd76177b3dd639f9794263f266c10f639fc1bab6009ac937c5d",
     "modules/next-engine/arm-coverage.js": "9216b888436bf51205be384a80efa14d26d93c5c3462471721318f93f36db1ce",
-    "modules/next-engine/capacity-generation.js": "7a1af57690627fce8248522fcbde66b960b6a0d3ad907f7c588874194619d222",
+    "modules/next-engine/capacity-generation.js": "1fed6ad20b90257bcf6f5a88337669bc568f5de7f6fe92ba06c80fe2de2f36dd",
     "modules/next-engine/capacity-policy.js": "7679d6f487a968d6e3d2144385cb33ac0c788d7565c2b132b9187b5e2693825b",
     "modules/next-engine/coach-quality-oracle.js": "1eea2ff4961a4d2af0072c3263423ff2d27cce6f5c1c67e3286d79d05b67a111",
     "modules/next-engine/coach-regression.js": "a990fe47ffa77ca0a641f09d2c507150c37b6d03f17ac310f65f66e1347ff380",
@@ -91,16 +91,16 @@
     "vendor/react.js": "24b2d220a5b2637cf3fb78fe0d961f227ea0a4b960485dbfb03c9d276e72147c"
   },
   "localCandidate": {
-    "name": "Pursuit Iron 4.0 Production Release · M197",
-    "base": "M197 / app 4.0.0 build 788 / Engine 0.64.0",
-    "validation": "M196 production baseline plus M197 monotonic long-band capacity fallback, end-to-end Full Body buildability regression, release integrity, and PWA lifecycle certification."
+    "name": "Pursuit Iron 4.0 Production Release · M199",
+    "base": "M199 / app 4.0.0 build 788 / Engine 0.64.0",
+    "validation": "M199 removes synchronous generation from wizard feasibility, retries rejected structural rolls with deterministic saved seeds, precaches capacity generation, and re-runs release/PWA integrity."
   },
   "uiFiles": {
     "modules/App.js": "a3cfe4c93a6c5c1695c6337639fc41186c9efba65272ccfca35962da41e6b5f0",
     "index.html": "f08e7bf52efe187afbc555486318c6374221c6b37d896657bdbdba5a133e765f",
-    "sw.js": "ceeb4c6abd1cc7fe15f5bf8fc5307b1850b6c763c66142d96126a960cb91c262",
-    "BUILD_PROFILE.json": "5a0e760a6ad4219a1e82b5d13ea4d0da26a89c65192a7bfbff58b50e11ec814f",
-    "CHANGELOG.md": "b59444a9f9a14b4af30b7d34159c107a36a04d912bf9e56b6db2a81cb09e1dd2",
+    "sw.js": "79661a1f8803ee3894ed8e388ae5fdbbc71b4c90bd99dcb40106d2a26419072a",
+    "BUILD_PROFILE.json": "45128949968ec2e637b9aaf242714c369e1d4ea671934d2ad474ee30d33b3c85",
+    "CHANGELOG.md": "49965c755a613a8590521f049e153217989e740faef0c4f320189c5292949c89",
     "app.css": "5432859c3eb9624b9a27dc1c9de2e8cb85672b02bcd72c114ac963378184b85b"
   },
   "baselineSourceNextEngineAggregate": "9ba84ffe3a62d94849617af33a2eafeaa563ab4a3636579101990ed753d05a84",
@@ -191,6 +191,6 @@
       "Pursuit Engine 0.62.5 programming math is unchanged; M165 hardens the shell/display boundary."
     ]
   },
-  "cache": "pursuit-iron-production-v4-0-0-m197",
-  "uiMilestone": "Pursuit Iron 4.0 Production Release · M197"
+  "cache": "pursuit-iron-production-v4-0-0-m199",
+  "uiMilestone": "Pursuit Iron 4.0 Production Release · M199"
 }

@@ -1,5 +1,5 @@
-/* Pursuit Iron 4.0 production release — Engine 0.64.0 with M197 monotonic session-capacity fix. */
-const CACHE="pursuit-iron-production-v4-0-0-m197";
+/* Pursuit Iron 4.0 production release — M199 wizard feasibility + deterministic structural retry. */
+const CACHE="pursuit-iron-production-v4-0-0-m199";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
   "./",
@@ -26,6 +26,7 @@ const SHELL=[
   "./modules/next-engine/app-shell-adapter-capacity.js",
   "./modules/next-engine/arbiter.js",
   "./modules/next-engine/arm-coverage.js",
+  "./modules/next-engine/capacity-generation.js",
   "./modules/next-engine/capacity-policy.js",
   "./modules/next-engine/coach-quality-oracle.js",
   "./modules/next-engine/coach-regression.js",

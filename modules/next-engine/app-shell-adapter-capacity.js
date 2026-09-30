@@ -77,7 +77,9 @@ export function generateNextProgramForShell(options) {
                 effectiveTargetExercises: attempt.effectiveTarget,
                 requestedMinimumMinutes: attempt.requestedMinimumMinutes,
                 effectiveMinimumMinutes: attempt.effectiveMinimumMinutes,
-                maxMinutes: request.schedule?.days?.[0]?.maxMinutes
+                maxMinutes: request.schedule?.days?.[0]?.maxMinutes,
+                requestedSeed: attempt.requestedSeed,
+                effectiveSeed: attempt.effectiveSeed
             }
         } : {})
     };
@@ -91,17 +93,24 @@ export function generateNextProgramForShell(options) {
 }
 
 export function splitBuildability(config, legacyExercises = []) {
+    // Wizard feasibility must stay CHEAP. This function runs once for every split/time card while
+    // the athlete is tapping through the builder. Running the full generator here blocks React's
+    // event loop and turns one unlucky random roll into a false "missing upper pull work" refusal.
+    // Hard named-lift contracts are deterministic and cheap, so keep those up-front. Everything
+    // else is validated by the real capacity-aware generator only when the athlete creates the plan.
     const gaps = base.splitContractGaps(config, legacyExercises);
     if (gaps.length)
         return { ok: false, kind: 'lifts', items: gaps.map(g => g.replace(/_/g, ' ')) };
 
-    try {
-        generateNextProgramForShell({ config, banned: [], legacyExercises, seed: 1 });
-        return { ok: true };
-    }
-    catch {
-        // A genuine refusal after every audited capacity fallback still belongs to the established
-        // classifier so equipment, lift-contract and structural errors remain visible to the wizard.
-        return base.splitBuildability(config, legacyExercises);
-    }
+    const request = base.shellConfigToNextRequest(config, [], legacyExercises, 1);
+    const usable = Array.isArray(request?.equipment?.available) ? request.equipment.available : [];
+    if (!usable.length)
+        return {
+            ok: false,
+            kind: 'coverage',
+            items: ['usable equipment'],
+            fixes: ['Enable bodyweight exercises or add available equipment']
+        };
+
+    return { ok: true };
 }

@@ -1,3 +1,9 @@
+## M199 — Stable program builder feasibility
+
+- Split and session-length cards no longer run full program generation while rendering, removing the UI-thread freeze/flicker in the time-selection step.
+- A single unlucky generation seed can no longer turn a valid Full Body setup into a false "missing upper pull work" refusal. The requested seed is preserved when it passes; deterministic alternates are tried only after a rejection and the successful seed is saved.
+- Capacity generation is now explicitly precached for installed/offline PWAs.
+
 ## M197 — Monotonic session capacity
 
 - Longer session bands no longer become impossible just because Pursuit cannot justify filling their lower time edge.

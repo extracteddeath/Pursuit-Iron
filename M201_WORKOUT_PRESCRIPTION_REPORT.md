@@ -12,6 +12,8 @@ The screenshot shows an incline-curl session whose advice says to build toward 1
 
 The screenshot and backup do not include the active `wpb:live` snapshot, so they cannot prove how those individual fields were originally produced. The release reproduces and closes the demonstrated restore gap without modifying stored history.
 
+Phone screenshot review also found that the remove action on an added set squeezed its numeric fields. Done and Remove now share one action column, keeping complete rep values visible. The browser gate measures the rendered text width against every rep field at 390px and 360px with the production styles.
+
 Eight appended exercise identities now exist in both the app and engine catalogs:
 
 - Seated Dumbbell Lateral Raise

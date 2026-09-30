@@ -1,0 +1,36 @@
+name: M198 apply adaptive transition capacity
+
+on:
+  push:
+    branches: [audit/m198-creation-pipeline]
+    paths:
+      - '.github/workflows/m198-apply-adaptive-transition-capacity.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: audit/m198-creation-pipeline
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply capacity-aware adaptive transition fix
+        run: node verification/m198-patch-adaptive-transition-capacity.mjs
+      - name: Commit patch
+        run: |
+          if git diff --quiet; then
+            echo 'Adaptive transition capacity patch already applied.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add modules/next-engine/phase-transition.js modules/next-engine/cycle-runtime-adapter.js
+          git commit -m 'M198: keep adaptive cycle transitions capacity-safe'
+          git push origin HEAD:audit/m198-creation-pipeline

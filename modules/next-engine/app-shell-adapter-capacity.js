@@ -1,19 +1,26 @@
 /*
  * Capacity-band compatibility layer.
  *
- * The established 60–90 minute programs remain the first attempt, unchanged. If the engine rejects
- * only that exact exercise-slot target, progressively smaller targets are tried while retaining the
- * SAME time band, split, equipment, goal, priorities, and restrictions. A fallback is accepted only
- * when the normal engine audit returns pass, so genuine equipment/design refusals remain refusals.
+ * The requested program remains the first attempt, unchanged. If the engine rejects it, optional
+ * exercise count is relaxed first. For LONGER bands only, the lower clock edge may then relax toward
+ * a proven shorter-band floor while the selected band's MAXIMUM stays unchanged. This makes time
+ * availability monotonic: giving Pursuit more time can never make a split impossible merely because
+ * the engine cannot justify enough extra work to fill the lower edge.
+ *
+ * Every fallback must still pass the normal engine audit. Equipment, split contracts, recovery,
+ * coverage and safety rules are never suppressed.
  */
 import * as base from './app-shell-adapter.js?capacity-base=1';
 import { generateProgram } from './generate.js';
 import { buildGenerationRecoveryPlan } from './generation-recovery.js';
 import { createInitialCycleState } from './cycles.js';
 import {
+    capacityMinimumCandidates,
     capacityTargetCandidates,
     requestWithExerciseTarget,
-    requestedExerciseTarget
+    requestWithMinimumMinutes,
+    requestedExerciseTarget,
+    requestedMinimumMinutes
 } from './capacity-policy.js';
 
 export * from './app-shell-adapter.js?capacity-base=1';
@@ -29,25 +36,51 @@ function runProgram(request, config) {
     return generateProgram(request, generationOptions(config));
 }
 
+function passingAttempt(candidateRequest, config, originalRequest) {
+    const candidate = runProgram(candidateRequest, config);
+    if (candidate.program?.audit?.result !== 'pass')
+        return null;
+    return {
+        request: candidateRequest,
+        result: candidate,
+        adjusted: candidateRequest !== originalRequest,
+        requestedTarget: requestedExerciseTarget(originalRequest),
+        effectiveTarget: requestedExerciseTarget(candidateRequest),
+        requestedMinimumMinutes: requestedMinimumMinutes(originalRequest),
+        effectiveMinimumMinutes: requestedMinimumMinutes(candidateRequest)
+    };
+}
+
 function firstPassingCapacityRequest(request, config) {
     const initial = runProgram(request, config);
     if (initial.program?.audit?.result === 'pass')
         return { request, result: initial, adjusted: false };
 
-    const wanted = requestedExerciseTarget(request);
-    for (const target of capacityTargetCandidates(request, config?.session)) {
-        const candidateRequest = requestWithExerciseTarget(request, target);
-        const candidate = runProgram(candidateRequest, config);
-        if (candidate.program?.audit?.result === 'pass') {
-            return {
-                request: candidateRequest,
-                result: candidate,
-                adjusted: true,
-                requestedTarget: wanted,
-                effectiveTarget: target
-            };
+    const wantedTarget = requestedExerciseTarget(request);
+    const lowerTargets = capacityTargetCandidates(request, config?.session);
+
+    // Preserve the selected clock band first: only optional exercise density relaxes here.
+    for (const target of lowerTargets) {
+        const hit = passingAttempt(requestWithExerciseTarget(request, target), config, request);
+        if (hit)
+            return hit;
+    }
+
+    // If the lower CLOCK edge itself is what makes the longer choice fail, progressively inherit
+    // the floor of shorter proven bands while retaining the user's selected maxMinutes. At each step
+    // try the requested exercise count first, then only as much density reduction as needed.
+    for (const minimumMinutes of capacityMinimumCandidates(request, config?.session)) {
+        const targetOrder = wantedTarget ? [wantedTarget, ...lowerTargets] : [0];
+        for (const target of targetOrder) {
+            let candidateRequest = requestWithMinimumMinutes(request, minimumMinutes);
+            if (target)
+                candidateRequest = requestWithExerciseTarget(candidateRequest, target);
+            const hit = passingAttempt(candidateRequest, config, request);
+            if (hit)
+                return hit;
         }
     }
+
     return { request, result: initial, adjusted: false };
 }
 
@@ -94,10 +127,13 @@ export function generateNextProgramForShell(options) {
         historySchemaVersion: 1,
         ...(attempt.adjusted ? {
             capacityAdjustment: {
-                policy: 'soft-exercise-target',
+                policy: 'soft-capacity-band',
                 session: options.config?.session ?? 's60',
                 requestedTargetExercises: attempt.requestedTarget,
-                effectiveTargetExercises: attempt.effectiveTarget
+                effectiveTargetExercises: attempt.effectiveTarget,
+                requestedMinimumMinutes: attempt.requestedMinimumMinutes,
+                effectiveMinimumMinutes: attempt.effectiveMinimumMinutes,
+                maxMinutes: request.schedule?.days?.[0]?.maxMinutes
             }
         } : {})
     };
@@ -120,8 +156,8 @@ export function splitBuildability(config, legacyExercises = []) {
         return { ok: true };
     }
     catch {
-        // If relaxing the optional slot target still cannot produce an audited program, defer to the
-        // existing classifier so real equipment, lift-contract, and structural errors stay visible.
+        // A genuine refusal after every audited capacity fallback still belongs to the established
+        // classifier so equipment, lift-contract and structural errors remain visible to the wizard.
         return base.splitBuildability(config, legacyExercises);
     }
 }

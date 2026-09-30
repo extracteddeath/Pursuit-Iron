@@ -1,0 +1,42 @@
+name: M202 locked-cycle dose integrity
+
+on:
+  push:
+    branches: [fix/m202-locked-cycle-dose]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply candidate patch
+        run: node verification/apply-m202-locked-cycle-dose.mjs
+      - name: Locked-cycle displayed-volume regression
+        run: node --no-warnings --experimental-loader ./verification/import-loader.mjs verification/m202-locked-cycle-dose-test.mjs
+      - name: Regional-dose generation regression
+        run: node --no-warnings --experimental-loader ./verification/import-loader.mjs verification/m200-regional-dose-test.mjs
+      - name: Volume repair regression
+        run: node --no-warnings --experimental-loader ./verification/import-loader.mjs verification/m199-volume-repair-test.mjs
+      - name: Workout prescription regression
+        run: node --no-warnings --experimental-loader ./verification/import-loader.mjs verification/m201-workout-prescription-test.mjs
+      - name: Commit verified candidate
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "Candidate already applied."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add modules/next-engine/volume-repair.js modules/next-engine/cycle-runtime-adapter.js modules/next-engine/config.js modules/App.js index.html sw.js BUILD_PROFILE.json RELEASE_MANIFEST.json CHANGELOG.md M202_LOCKED_CYCLE_DOSE_REPORT.md verification/m202-locked-cycle-dose-test.mjs
+          git commit -m "M202: reconcile locked-cycle phase volume (build 792)"
+          git push origin HEAD:fix/m202-locked-cycle-dose

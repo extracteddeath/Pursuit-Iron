@@ -1,5 +1,5 @@
-/* Pursuit Iron 4.0 production release — Engine 0.64.0 with adaptive progression lifecycle and simulation parity. */
-const CACHE="pursuit-iron-production-v4-0-0";
+/* Pursuit Iron 4.0 production release — Engine 0.64.0 with M196 capacity-band and split-picker fixes. */
+const CACHE="pursuit-iron-production-v4-0-0-m196";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
   "./",
@@ -20,10 +20,14 @@ const SHELL=[
   "./manifest.webmanifest",
   "./modules/App.js",
   "./modules/main.js",
+  "./modules/wizard-stability.js",
   "./modules/next-engine/allocator.js",
   "./modules/next-engine/app-shell-adapter.js",
+  "./modules/next-engine/app-shell-adapter.js?capacity-base=1",
+  "./modules/next-engine/app-shell-adapter-capacity.js",
   "./modules/next-engine/arbiter.js",
   "./modules/next-engine/arm-coverage.js",
+  "./modules/next-engine/capacity-policy.js",
   "./modules/next-engine/coach-quality-oracle.js",
   "./modules/next-engine/coach-regression.js",
   "./modules/next-engine/coach-review.js",

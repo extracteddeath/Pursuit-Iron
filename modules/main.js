@@ -4,6 +4,7 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
    ErrorBoundary, so a render crash anywhere still shows a recoverable screen. */
 import React from "react";
 import { createRoot } from "react-dom/client";
+import "./wizard-stability.js";
 import RootApp from "./App.js";
 /* Startup is not complete when createRoot().render() RETURNS — React/Preact may commit later.
    M44 marked __pursuitMounted too early, which could suppress the pre-mount fallback while the

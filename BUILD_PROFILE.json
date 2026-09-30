@@ -1,12 +1,12 @@
 {
   "profile": "portable-browser-esm-v661-workout-input",
-  "milestone": "M199",
-  "source": "Current M199 wizard fixes + verified volume repair and canonical persistence",
-  "engine": "0.64.0 with shared live-volume accounting and verified set reallocation",
+  "milestone": "M201",
+  "source": "M199 baseline + completed M200 regional dose + custom workout prescription integrity",
+  "engine": "0.64.2 with pending rep target reconciliation and expanded exercise variations",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
-  "nextRuntimeModules": 50,
+  "nextRuntimeModules": 51,
   "shadowRuntimeModules": 9,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m199-volume-repair-b789",
-  "uiMilestone": "Pursuit Iron 4.0 Production Release · M199 Volume Repair"
+  "cache": "pursuit-iron-production-v4-0-0-m201-workout-prescription-b791",
+  "uiMilestone": "Pursuit Iron 4.0 Production Release · M201 Workout Prescription"
 }

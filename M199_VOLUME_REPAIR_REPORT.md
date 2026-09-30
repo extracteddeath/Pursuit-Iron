@@ -28,6 +28,8 @@ Reps, RIR, rest, progression metadata, and user overrides remain attached to the
 - PASS: M199 wizard feasibility — 500 inexpensive checks and real Full Body generation across every time band.
 - PASS: M198 creation audit — 71 routes, zero enabled-to-build mismatches, five capacity ladders, including standalone programs and cycles.
 - PASS: full release integrity — existing progression/history/prescription/set-display/engine/coach-quality gates; 62 authored modules parse and 85 offline-shell entries are present.
-- Browser click/save/reload and GitHub certification: tracked by the `M199 volume repair integrity` workflow before production promotion.
+- PASS: real phone-size browser click/save/reload — 25 stable exercise slots; weekly prescribed sets changed from 92/90/88/88/86/83 to 94/92/90/89/88/85, persisted to the canonical saved program, and remained repaired after reload.
+- PASS: production Release integrity, PWA lifecycle integrity, volume repair integrity, and Pages deployment for commit `725219098cf883fca8d464feb2528fc1a0336bb3`.
+- Browser certification: https://github.com/extracteddeath/Pursuit-Iron/actions/runs/36760832393
 
 The service-worker cache rotates for build 789 so installed PWAs can receive the repair through their normal update flow.

@@ -22,7 +22,13 @@ if (rows.length === 1) {
     const extra = structuredClone(source.e), at = destination.exercises.findIndex(e => !map.get(e.exerciseId).flags.compound);
     destination.exercises.splice(at < 0 ? destination.exercises.length : at, 0, extra); rows.push({ s: destination, e: extra });
 }
-for (const { e } of rows.slice(0, 2)) { e.exerciseId = 'chest_supported_row'; e.name = 'Chest-Supported Row'; e.sets = 3; }
+if (rows[0].s === rows[1].s) {
+    const item = rows[1], destination = engine.sessions.find(s => s !== item.s && ['upper', 'full', 'strength_full', 'pull'].includes(s.intent));
+    assert.ok(destination);
+    item.s.exercises.splice(item.s.exercises.indexOf(item.e), 1);
+    destination.exercises.push(item.e); item.s = destination;
+}
+for (const { e } of rows.slice(0, 2)) { e.exerciseId = 'cs-db-row'; e.name = 'Chest-Supported Dumbbell Row'; e.sets = 2; }
 engine.sessions.forEach(s => { s.estimatedMinutes = estimateSessionMinutes(s.exercises); });
 engine.events = createTrainingSetEvents(engine.sessions, built.request.customExercises);
 engine.muscleLedger = deriveMuscleLedger(engine.events); engine.audit = auditProgram(engine, built.request);

@@ -1,7 +1,8 @@
-/* Pursuit Iron 4.0 — M199 verified volume repair and canonical persistence. */
-const CACHE="pursuit-iron-production-v4-0-0-m199-volume-repair-b789";
+/* Pursuit Iron 4.0 — M200 preserve regional accumulation dose during final cleanup. */
+const CACHE="pursuit-iron-production-v4-0-0-m201-workout-prescription-b791";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
+  "./modules/next-engine/shell-equipment.js",
   "./modules/next-engine/volume-repair.js",
   "./",
   "./BUILD_PROFILE.json",

@@ -1,6 +1,7 @@
 import { createExerciseMap } from './exercise-db.js';
 import { createMusclePrescriptions } from './prescription.js';
 import { INTENT_MUSCLES } from './topology.js';
+import { PUBLIC_MEV_REGIONS, publicMevBaseTarget, publicMevContractApplies, publicMevLedger, publicMevRequired } from './public-mev.js';
 
 const STRENGTH_ROLES = new Set(['primary_strength', 'secondary_strength', 'strength_support']);
 const EPS = .001;
@@ -213,9 +214,14 @@ export function reconcileRecoverableDose(inputSessions, request, phase) {
     const prescriptions = createMusclePrescriptions(request, phase)
         .filter(p => p.muscle !== 'front_delts' && p.priority !== 'maintenance' && p.upper > 0);
     const adjustments = [];
+    // Accumulation reserve is an explicit regional contract. Overflow cleanup must preserve
+    // achieved lat/upper-back and direct-delt floors before reducing collateral volume.
+    const protectedRegions = publicMevContractApplies(request, phase)
+        ? PUBLIC_MEV_REGIONS.filter(region => publicMevRequired(request, region)) : [];
 
     for (let guard = 0; guard < 160; guard++) {
         const before = doseSnapshot(sessions, exerciseMap, prescriptions);
+        const beforeRegions = protectedRegions.length ? publicMevLedger(sessions, exerciseMap) : null;
         const overflowing = prescriptions.filter(p => before.fractional[p.muscle] > materialCeiling(p) + EPS);
         if (!overflowing.length)
             break;
@@ -252,6 +258,12 @@ export function reconcileRecoverableDose(inputSessions, request, phase) {
                     return;
 
                 const after = doseSnapshot(proposed, exerciseMap, prescriptions);
+                if (beforeRegions) {
+                    const afterRegions = publicMevLedger(proposed, exerciseMap);
+                    if (protectedRegions.some(region => afterRegions[region] + EPS <
+                        Math.min(beforeRegions[region], publicMevBaseTarget(request, region))))
+                        return;
+                }
 
                 for (const p of prescriptions) {
                     const muscle = p.muscle;

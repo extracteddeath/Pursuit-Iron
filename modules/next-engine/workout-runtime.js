@@ -72,3 +72,32 @@ export function buildRuntimeSetTargets(args) {
         targets.push({ kind: 'work', weight: workingLoad, reps: workReps, repRange: reps, rir });
     return targets;
 }
+
+/** Saved automatic entries must obey the current prescription. This only repairs pending app-owned
+ * working rows; actual performance, manual entries, warmups, and technique extensions are immutable.
+ * Loads are deliberately retained because the lifter may have adjusted them during the workout. */
+export function reconcilePendingRepTargets(sets, cell) {
+    if (!Array.isArray(sets) || !cell || cell.missing)
+        return sets;
+    const [lo, hi] = numberPair(cell.range ?? cell.reps, [8, 12]);
+    if (!(lo > 0 && hi >= lo))
+        return sets;
+    const range = lo === hi ? String(lo) : `${lo}-${hi}`;
+    let changed = false;
+    const out = sets.map(s => {
+        if (!s || s.done || s.warm || s.sub || s.auto !== true)
+            return s;
+        const r = Number(s.reps);
+        const reps = String(s.reps ?? '').trim() && Number.isFinite(r)
+            ? String(Math.max(Math.ceil(lo), Math.min(Math.floor(hi), Math.round(r)))) : s.reps;
+        const suggested = s.suggested && Number.isFinite(Number(s.suggested.reps))
+            ? { ...s.suggested, reps: String(Math.max(Math.ceil(lo), Math.min(Math.floor(hi), Math.round(Number(s.suggested.reps))))) }
+            : s.suggested;
+        if (String(reps) === String(s.reps) && s.target?.reps === range
+            && (!s.suggested || String(suggested?.reps) === String(s.suggested.reps)))
+            return s;
+        changed = true;
+        return { ...s, reps, ...(suggested ? { suggested } : {}), target: { ...s.target, reps: range } };
+    });
+    return changed ? out : sets;
+}

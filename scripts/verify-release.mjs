@@ -59,6 +59,7 @@ execFileSync(process.execPath,['verification/progression-safety-test.mjs'],{stdi
 execFileSync(process.execPath,['verification/shell-progression-safety-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/prescription-integrity-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/custom-progression-safety-test.mjs'],{stdio:'inherit',cwd:root});
+execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/m201-workout-prescription-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/m167-legacy-dose-cycle-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/history-edit-integrity-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/history-volume-integrity-test.mjs'],{stdio:'inherit',cwd:root});

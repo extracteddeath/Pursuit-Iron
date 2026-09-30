@@ -1,0 +1,359 @@
+{
+  "cases": [
+    {
+      "label": "Full Body 5",
+      "slots": 28,
+      "regions": {
+        "chest": 12,
+        "lats": 9.799999999999999,
+        "upper_back": 8.6,
+        "side_delts": 8,
+        "rear_delts": 8,
+        "biceps": 9.5,
+        "triceps": 8,
+        "quads": 11,
+        "hamstrings": 7,
+        "glutes": 8,
+        "calves": 8,
+        "core": 6
+      }
+    },
+    {
+      "label": "Full Body 6",
+      "slots": 32,
+      "regions": {
+        "chest": 14,
+        "lats": 11.2,
+        "upper_back": 9.6,
+        "side_delts": 8,
+        "rear_delts": 8,
+        "biceps": 10,
+        "triceps": 9,
+        "quads": 9,
+        "hamstrings": 9,
+        "glutes": 8,
+        "calves": 8,
+        "core": 6
+      }
+    },
+    {
+      "label": "Upper/Lower 6",
+      "slots": 27,
+      "regions": {
+        "chest": 12,
+        "lats": 8.8,
+        "upper_back": 8.6,
+        "side_delts": 8,
+        "rear_delts": 8,
+        "biceps": 8.5,
+        "triceps": 8.5,
+        "quads": 10,
+        "hamstrings": 11,
+        "glutes": 9,
+        "calves": 8,
+        "core": 6
+      }
+    },
+    {
+      "label": "PPL 5",
+      "slots": 28,
+      "regions": {
+        "chest": 10,
+        "lats": 10.4,
+        "upper_back": 9.2,
+        "side_delts": 8,
+        "rear_delts": 8,
+        "biceps": 8.5,
+        "triceps": 8,
+        "quads": 9,
+        "hamstrings": 6,
+        "glutes": 6.5,
+        "calves": 12,
+        "core": 6
+      }
+    },
+    {
+      "label": "PPL 6",
+      "slots": 27,
+      "regions": {
+        "chest": 10,
+        "lats": 9.8,
+        "upper_back": 9,
+        "side_delts": 8,
+        "rear_delts": 8,
+        "biceps": 9.25,
+        "triceps": 8,
+        "quads": 10,
+        "hamstrings": 8,
+        "glutes": 7.5,
+        "calves": 8,
+        "core": 7
+      }
+    },
+    {
+      "label": "ULPPL",
+      "slots": 24,
+      "regions": {
+        "chest": 11,
+        "lats": 9.8,
+        "upper_back": 8.6,
+        "side_delts": 8,
+        "rear_delts": 8,
+        "biceps": 8.75,
+        "triceps": 8.5,
+        "quads": 10,
+        "hamstrings": 8,
+        "glutes": 7.5,
+        "calves": 8,
+        "core": 7
+      }
+    },
+    {
+      "label": "PPLUL",
+      "slots": 26,
+      "regions": {
+        "chest": 11,
+        "lats": 9.799999999999999,
+        "upper_back": 8.6,
+        "side_delts": 8,
+        "rear_delts": 8,
+        "biceps": 9.75,
+        "triceps": 8.5,
+        "quads": 10,
+        "hamstrings": 8,
+        "glutes": 7.5,
+        "calves": 8,
+        "core": 7
+      }
+    },
+    {
+      "label": "Hybrid",
+      "slots": 24,
+      "regions": {
+        "chest": 11,
+        "lats": 9.8,
+        "upper_back": 8.6,
+        "side_delts": 8,
+        "rear_delts": 8,
+        "biceps": 8.75,
+        "triceps": 8.5,
+        "quads": 9,
+        "hamstrings": 9,
+        "glutes": 7.5,
+        "calves": 8,
+        "core": 7
+      }
+    },
+    {
+      "label": "PHAT",
+      "slots": 24,
+      "regions": {
+        "chest": 10,
+        "lats": 9.8,
+        "upper_back": 8.6,
+        "side_delts": 8,
+        "rear_delts": 8,
+        "biceps": 8.75,
+        "triceps": 8.5,
+        "quads": 9,
+        "hamstrings": 9,
+        "glutes": 7.5,
+        "calves": 8,
+        "core": 7
+      }
+    },
+    {
+      "label": "Bro",
+      "slots": 25,
+      "regions": {
+        "chest": 10,
+        "lats": 9.8,
+        "upper_back": 8.6,
+        "side_delts": 8,
+        "rear_delts": 8,
+        "biceps": 8.75,
+        "triceps": 9.5,
+        "quads": 10,
+        "hamstrings": 6,
+        "glutes": 7,
+        "calves": 8,
+        "core": 7
+      }
+    },
+    {
+      "label": "Arnold",
+      "slots": 26,
+      "regions": {
+        "chest": 10,
+        "lats": 9.2,
+        "upper_back": 9.6,
+        "side_delts": 8,
+        "rear_delts": 8,
+        "biceps": 10,
+        "triceps": 8.5,
+        "quads": 9,
+        "hamstrings": 9,
+        "glutes": 7.5,
+        "calves": 8,
+        "core": 7
+      }
+    },
+    {
+      "label": "ULA",
+      "slots": 24,
+      "regions": {
+        "chest": 10,
+        "lats": 9.8,
+        "upper_back": 8.6,
+        "side_delts": 8,
+        "rear_delts": 8,
+        "biceps": 8.75,
+        "triceps": 9.5,
+        "quads": 9,
+        "hamstrings": 9,
+        "glutes": 8.5,
+        "calves": 8,
+        "core": 7
+      }
+    },
+    {
+      "label": "Hypertrophy",
+      "slots": 28,
+      "regions": {
+        "chest": 9,
+        "lats": 10.8,
+        "upper_back": 9.4,
+        "side_delts": 8,
+        "rear_delts": 8,
+        "biceps": 9.75,
+        "triceps": 7.5,
+        "quads": 10,
+        "hamstrings": 7.5,
+        "glutes": 5.5,
+        "calves": 8,
+        "core": 7
+      }
+    },
+    {
+      "label": "Barbell cap 1",
+      "slots": 24,
+      "regions": {
+        "chest": 11,
+        "lats": 9.8,
+        "upper_back": 8.6,
+        "side_delts": 8,
+        "rear_delts": 8,
+        "biceps": 8.75,
+        "triceps": 8.5,
+        "quads": 10,
+        "hamstrings": 8,
+        "glutes": 7.5,
+        "calves": 8,
+        "core": 7
+      }
+    },
+    {
+      "label": "Original seed 199",
+      "slots": 24,
+      "regions": {
+        "chest": 11,
+        "lats": 9.8,
+        "upper_back": 8.6,
+        "side_delts": 8,
+        "rear_delts": 8,
+        "biceps": 8.75,
+        "triceps": 8.5,
+        "quads": 10,
+        "hamstrings": 8,
+        "glutes": 7.5,
+        "calves": 8,
+        "core": 7
+      }
+    },
+    {
+      "label": "Four-week block",
+      "slots": 24,
+      "regions": {
+        "chest": 11,
+        "lats": 9.8,
+        "upper_back": 8.6,
+        "side_delts": 8,
+        "rear_delts": 8,
+        "biceps": 8.75,
+        "triceps": 8.5,
+        "quads": 10,
+        "hamstrings": 8,
+        "glutes": 7.5,
+        "calves": 8,
+        "core": 7
+      }
+    },
+    {
+      "label": "Eight-week block",
+      "slots": 24,
+      "regions": {
+        "chest": 11,
+        "lats": 9.8,
+        "upper_back": 8.6,
+        "side_delts": 8,
+        "rear_delts": 8,
+        "biceps": 8.75,
+        "triceps": 8.5,
+        "quads": 10,
+        "hamstrings": 8,
+        "glutes": 7.5,
+        "calves": 8,
+        "core": 7
+      }
+    },
+    {
+      "label": "No supersets",
+      "slots": 24,
+      "regions": {
+        "chest": 11,
+        "lats": 9.8,
+        "upper_back": 8.6,
+        "side_delts": 8,
+        "rear_delts": 8,
+        "biceps": 8.75,
+        "triceps": 8.5,
+        "quads": 10,
+        "hamstrings": 9,
+        "glutes": 7.5,
+        "calves": 8,
+        "core": 6
+      }
+    }
+  ],
+  "collateralCleanup": {
+    "before": {
+      "chest": 11,
+      "lats": 11.6,
+      "upper_back": 11,
+      "side_delts": 10,
+      "rear_delts": 10,
+      "biceps": 21,
+      "triceps": 9.5,
+      "quads": 11,
+      "hamstrings": 10,
+      "glutes": 8,
+      "calves": 10,
+      "core": 8
+    },
+    "after": {
+      "chest": 11,
+      "lats": 11.6,
+      "upper_back": 11,
+      "side_delts": 10,
+      "rear_delts": 10,
+      "biceps": 11,
+      "triceps": 9.5,
+      "quads": 11,
+      "hamstrings": 10,
+      "glutes": 8,
+      "calves": 10,
+      "core": 8
+    },
+    "adjustments": 10
+  }
+}

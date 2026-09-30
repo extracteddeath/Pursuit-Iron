@@ -145,3 +145,4 @@ if (failures.length) {
 assert.ok(rows.some(r => r.kind === 'program' && r.label === 'ULPPL5 s90' && r.built), 'ULPPL 60–90 must build');
 assert.ok(rows.some(r => r.kind === 'cycle' && r.label === 'Powerbuilding FB3 s90' && r.built), 'Full Body 60–90 powerbuilding must build');
 console.log('M198 creation audit: pass');
+// Trigger the post-fix M198 creation audit from a non-bot commit.

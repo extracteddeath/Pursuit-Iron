@@ -12,13 +12,24 @@ const to = `            if (afterOver.length) {
                         name: exercise.name, exerciseId: exercise.exerciseId, role: exercise.role, sets: exercise.sets, shellKey: exercise.shellKey
                     })) }))
                 }));
-                console.error('M202_LOCKED_VOLUME_DIAGNOSTIC ' + JSON.stringify({ phase: spec.phase, before: beforeOver, after: afterOver, weeks: diagnostic }));
+                const base = legacy.nextEngine.program.sessions.map(session => ({ day: session.day, exercises: session.exercises.map(exercise => ({
+                    name: exercise.name, exerciseId: exercise.exerciseId, role: exercise.role, sets: exercise.sets
+                })) }));
+                console.error('M202_LOCKED_VOLUME_DIAGNOSTIC ' + JSON.stringify({
+                    phase: spec.phase,
+                    allBefore: volumeRepair.before.issues,
+                    allAfter: volumeRepair.after.issues,
+                    beforeOver,
+                    afterOver,
+                    base,
+                    weeks: diagnostic
+                }));
                 throw new NextShellAdapterError('NEXT_CYCLE_STATIC_VOLUME_REJECTED', \`The locked exercise skeleton could not safely fit the \${phaseLabel(spec.phase).toLowerCase()} accessory-volume ceiling.\`, afterOver);
             }`;
 if (text.includes(to)) {
-  console.log('M202 diagnostic already applied.');
+  console.log('M202 expanded diagnostic already applied.');
   process.exit(0);
 }
-if (!text.includes(from)) throw new Error('M202 diagnostic anchor not found');
+if (!text.includes(from)) throw new Error('M202 expanded diagnostic anchor not found');
 fs.writeFileSync(path, text.replace(from, to));
-console.log('M202 diagnostic instrumentation applied.');
+console.log('M202 expanded diagnostic instrumentation applied.');

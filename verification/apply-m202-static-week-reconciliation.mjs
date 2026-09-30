@@ -17,8 +17,13 @@ const fn = `/** Static-cycle finishing pass. Base repair and exact week-cell rep
 export function reconcileLockedCycleWeekOverflows(program, legacyExercises = []) {
     let current = program, audit = auditShellVolume(program, legacyExercises), changed = false;
     const context = createEngineContext(requestOf(program));
-    const safeCell = (before, after) => {
-        if (after.missing || deficit(after) >= deficit(before) - EPS) return false;
+    const safeCell = (before, after, issue) => {
+        if (after.missing || deficit(after) > deficit(before) + EPS) return false;
+        const bw = before.weeks[issue.week - 1], aw = after.weeks[issue.week - 1];
+        // Tied worst weeks form a plateau: improving week 1 can move the same block-wide maximum
+        // to week 2 without changing aggregate deficit yet. Permit that non-worsening intermediate
+        // step only when the exact offending week/region itself strictly improves.
+        if (!bw || !aw || aw.regions[issue.region] >= bw.regions[issue.region] - EPS) return false;
         for (let wi = 0; wi < after.weeks.length; wi++) {
             const b = before.weeks[wi], a = after.weeks[wi];
             for (const target of before.targets) {
@@ -41,7 +46,6 @@ export function reconcileLockedCycleWeekOverflows(program, legacyExercises = [])
             .sort((a, b) => (a.def.flags.compound ? 1 : 0) - (b.def.flags.compound ? 1 : 0) ||
                 publicRegionContribution(b.def, issue.region) - publicRegionContribution(a.def, issue.region) ||
                 b.exercise.sets - a.exercise.sets || a.exercise.shellKey.localeCompare(b.exercise.shellKey));
-        console.error('M202_STATIC_WEEK_CANDIDATES ' + JSON.stringify({ guard, issue: { region: issue.region, week: issue.week, v: issue.v, mrv: issue.mrv }, candidates: candidates.map(x => ({ key: x.exercise.shellKey, id: x.exercise.exerciseId, sets: x.exercise.sets, role: x.exercise.role, contribution: publicRegionContribution(x.def, issue.region), storedSets: current.nextWeekPrescriptions?.[x.exercise.shellKey]?.[issue.week]?.sets })) }));
         let best = null;
         for (const x of candidates) {
             const key = x.exercise.shellKey, cells = current.nextWeekPrescriptions?.[key], prior = cells?.[issue.week];
@@ -49,9 +53,7 @@ export function reconcileLockedCycleWeekOverflows(program, legacyExercises = [])
             const candidate = { ...current, nextWeekPrescriptions: { ...current.nextWeekPrescriptions,
                 [key]: { ...cells, [issue.week]: { ...prior, sets: prior.sets - 1 } } } };
             const after = auditShellVolume(candidate, legacyExercises);
-            const safe = safeCell(audit, after);
-            console.error('M202_STATIC_WEEK_TRY ' + JSON.stringify({ key, from: prior.sets, to: prior.sets - 1, beforeDeficit: deficit(audit), afterDeficit: deficit(after), safe, afterIssues: after.issues.map(i => ({ region: i.region, status: i.status, week: i.week, v: i.v, limit: i.status === 'over' ? i.mrv : i.mev })) }));
-            if (!safe) continue;
+            if (!safeCell(audit, after, issue)) continue;
             const score = deficit(audit) - deficit(after);
             if (!best || score > best.score + EPS) best = { candidate, after, score, key, week: issue.week };
         }

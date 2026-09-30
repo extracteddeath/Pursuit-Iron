@@ -1,0 +1,54 @@
+name: M199 apply workout timer render isolation
+
+on:
+  push:
+    branches: [audit/m199-performance-loading]
+    paths:
+      - 'verification/m199-patch-workout-timer-render.mjs'
+      - '.github/workflows/m199-apply-workout-timer-render.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: audit/m199-performance-loading
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Isolate elapsed timer rendering
+        shell: bash
+        run: |
+          set +e
+          node verification/m199-patch-workout-timer-render.mjs 2>&1 | tee m199-timer-patch.log
+          status=${PIPESTATUS[0]}
+          echo "$status" > m199-timer-patch.exit
+          exit "$status"
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m199-timer-patch-diagnostics
+          path: |
+            m199-timer-patch.log
+            m199-timer-patch.exit
+          retention-days: 3
+      - name: Commit patch
+        run: |
+          if git diff --quiet -- modules/App.js; then
+            echo 'Workout timer render patch already applied.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add modules/App.js
+          git commit -m 'M199: isolate workout elapsed timer rendering'
+          git pull --rebase origin audit/m199-performance-loading
+          git push origin HEAD:audit/m199-performance-loading

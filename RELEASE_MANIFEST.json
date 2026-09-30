@@ -1,15 +1,15 @@
 {
   "schemaVersion": 3,
-  "milestone": "M196",
+  "milestone": "M197",
   "appVersion": "4.0.0",
-  "build": 787,
+  "build": 788,
   "engineVersion": "0.64.0",
   "shadowEngineVersion": "0.62.5-shadow",
   "validatedLiveBaseline": "M88-0.61.3-reviewed-baseline",
   "candidateStatus": "ci_verified_device_test_pending",
   "sourceNextEngineAggregate": null,
   "sourceShadowEngineAggregate": "3107199d20c86a5a12b82eccbc61c9a32b001a72c7f30418db696235d0da0c22",
-  "runtimeAggregate": "b0977236b14b7e65abd1f13ef16259cf783416d75635eaaf3605c048525f4a6d",
+  "runtimeAggregate": "d732f4b50e7e0ed8942b9df83e1d6b99d3d3ce242e7278d8457f7a283c12e9eb",
   "sourceFiles": {},
   "shadowSourceFiles": {
     "src/shadow-engine/canary.ts": "854246970f93111ee873f0eb5f222195a02af688ef1a3285d0624f44d422c58a",
@@ -25,11 +25,11 @@
   },
   "runtimeFiles": {
     "modules/next-engine/allocator.js": "a69e53295b8d930c6c3b515507258764be7f69baf1ae729f64d19611c24d2f7d",
-    "modules/next-engine/app-shell-adapter-capacity.js": "2f816f75bc678e59e3aea0d126a8d9a75e00073d56a3063025f790307ae184e9",
+    "modules/next-engine/app-shell-adapter-capacity.js": "da454aa550e5738498df804e8dee9f553d878e407f2f802d260ec9e981736921",
     "modules/next-engine/app-shell-adapter.js": "9a0369447c663abf266b2d1651b88f27401c2b9ac9c420b4e7894fff701489be",
     "modules/next-engine/arbiter.js": "cba22ac9d8a0dbd76177b3dd639f9794263f266c10f639fc1bab6009ac937c5d",
     "modules/next-engine/arm-coverage.js": "9216b888436bf51205be384a80efa14d26d93c5c3462471721318f93f36db1ce",
-    "modules/next-engine/capacity-policy.js": "83238054d6dbe5089c3b356ec9bee8c67ca7d7ec98ea52da35aa42edd64ffe78",
+    "modules/next-engine/capacity-policy.js": "7679d6f487a968d6e3d2144385cb33ac0c788d7565c2b132b9187b5e2693825b",
     "modules/next-engine/coach-quality-oracle.js": "1eea2ff4961a4d2af0072c3263423ff2d27cce6f5c1c67e3286d79d05b67a111",
     "modules/next-engine/coach-regression.js": "a990fe47ffa77ca0a641f09d2c507150c37b6d03f17ac310f65f66e1347ff380",
     "modules/next-engine/coach-review.js": "f5adf1805c48c964b1530f273204b936b470e5cde2406af676f77551c456f9a8",
@@ -90,16 +90,16 @@
     "vendor/react.js": "24b2d220a5b2637cf3fb78fe0d961f227ea0a4b960485dbfb03c9d276e72147c"
   },
   "localCandidate": {
-    "name": "Pursuit Iron 4.0 Production Release · M196",
-    "base": "M196 / app 4.0.0 build 787 / Engine 0.64.0",
-    "validation": "M195 production baseline plus M196 soft session-capacity fallback, split-picker stability, offline adapter routing, focused regression coverage, release integrity, and PWA lifecycle certification."
+    "name": "Pursuit Iron 4.0 Production Release · M197",
+    "base": "M197 / app 4.0.0 build 788 / Engine 0.64.0",
+    "validation": "M196 production baseline plus M197 monotonic long-band capacity fallback, end-to-end Full Body buildability regression, release integrity, and PWA lifecycle certification."
   },
   "uiFiles": {
-    "modules/App.js": "a26dd3f6e9b849b23e8ddecb9593a267b5a9073b7005ca9e5cb1df7c677b137c",
-    "index.html": "44b4fe78d4ac6cb28d982f438ca7647e65c23b30dcadd7afd973cf42688bde54",
-    "sw.js": "f609f4dce57c81c8085efdd242839fc24a6f9fa358e056eb983ed959cfc1ef7b",
-    "BUILD_PROFILE.json": "5df1d1cd7638487bfa8cfdc1457eeabb1c3833a102c046a920f8f1965bad5a36",
-    "CHANGELOG.md": "724f8f311d13abdaf5ffa922ef9573fe0e653aeef9255df70b7d37f356eb27c3",
+    "modules/App.js": "a3cfe4c93a6c5c1695c6337639fc41186c9efba65272ccfca35962da41e6b5f0",
+    "index.html": "f08e7bf52efe187afbc555486318c6374221c6b37d896657bdbdba5a133e765f",
+    "sw.js": "ceeb4c6abd1cc7fe15f5bf8fc5307b1850b6c763c66142d96126a960cb91c262",
+    "BUILD_PROFILE.json": "dd69aa362b1fee3dc67ef73ecbd4eaa328f76c10e331e8e5d34dfab2db2cab6f",
+    "CHANGELOG.md": "b59444a9f9a14b4af30b7d34159c107a36a04d912bf9e56b6db2a81cb09e1dd2",
     "app.css": "5432859c3eb9624b9a27dc1c9de2e8cb85672b02bcd72c114ac963378184b85b"
   },
   "baselineSourceNextEngineAggregate": "9ba84ffe3a62d94849617af33a2eafeaa563ab4a3636579101990ed753d05a84",
@@ -190,6 +190,6 @@
       "Pursuit Engine 0.62.5 programming math is unchanged; M165 hardens the shell/display boundary."
     ]
   },
-  "cache": "pursuit-iron-production-v4-0-0-m196",
-  "uiMilestone": "Pursuit Iron 4.0 Production Release · M196"
+  "cache": "pursuit-iron-production-v4-0-0-m197",
+  "uiMilestone": "Pursuit Iron 4.0 Production Release · M197"
 }

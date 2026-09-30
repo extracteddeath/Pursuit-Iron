@@ -1,3 +1,9 @@
+## M197 — Monotonic session capacity
+
+- Longer session bands no longer become impossible just because Pursuit cannot justify filling their lower time edge.
+- 60–90, 90–120, and 120+ preserve their full upper capacity while falling back to a proven shorter productive floor when needed.
+- Added an end-to-end Full Body regression so a buildable 40–60 setup must remain buildable when the athlete offers more time.
+
 ## Pursuit Iron 4.0.0 — M195 (build 787 / Engine 0.64.0)
 
 - Promotes the completed M189–M194 adaptive progression architecture to the production release line.

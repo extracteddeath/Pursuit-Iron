@@ -18583,111 +18583,62 @@ function Wizard({ initialEquipment, initialExperience, initialUnit = "kg", skipU
         set({ split: rec && SPLITS[rec]?.days.includes(config.days) ? rec : fallback });
     }, [config.days, nextRecommendedSplit]); // eslint-disable-line
     const focusTotal = Object.values(config.focus).reduce((a, b) => a + b, 0);
-    /* ⚠ MARK A CHOICE UNAVAILABLE ONLY IF NO REMAINING CHOICE CAN MAKE IT WORK. The split step comes BEFORE the session
-       step, so a split refused at the default length may build at another: measured, 11 of 17 coverage/design refusals at
-       60 minutes build at some other length — Bro 5-day "both" at 90+, bodyweight Upper/Lower 2-day at 40. The first
-       version of this disabled all 17, hiding programs the lifter could have built. Now:
-         split step   — blocked only if NO length the split allows builds; if only some do, it stays open with a hint;
-         session step — the lengths that refuse for the chosen split are disabled, with the reason.
-       Barbell-contract gaps don't depend on length. Coverage limits need a real generation (~20-50 ms each, more on a
-       phone), so one check per tick in the background, marked in place, cached per full config. A blocked choice can't be
-       continued with; it is NOT auto-cleared, because the recommendation effect above would re-select it and loop. */
+    /* M199 responsiveness: the old split/session availability pass ran a full audited generation for every visible choice.
+       A single check is already a long main-thread task; multiplying it across the list caused the split picker to hitch even
+       though each check started from setTimeout(0). Hard lift/equipment contracts are cheap and stay on the split screen.
+       Full audited feasibility now runs only for the session length the lifter actually selected. */
     const [buildable, setBuildable] = useState({});
     const fpBase = { ...config, goal: effectiveGoal, name: "" };
-    const buildKey = key === "split" ? "split|" + JSON.stringify({ ...fpBase, split: "" })
-        : key === "session" ? "session|" + JSON.stringify({ ...fpBase, session: "" }) : "";
+    const buildKey = key === "session" ? "session|" + JSON.stringify(fpBase) : "";
     useEffect(() => {
-        if (!buildKey)
+        if (!buildKey || !config.split || !config.session)
             return;
         let cancelled = false, timer = null;
-        const base = { ...config, goal: effectiveGoal };
-        const verdict = async (cfg) => {
+        const cfg = { ...config, goal: effectiveGoal };
+        setBuildable(prev => (prev.__key === buildKey ? prev : { __key: buildKey }));
+        const run = async () => {
+            // Paint the selected card's loading state before the synchronous engine validation begins.
             await new Promise(resolve => setTimeout(resolve, 0));
             if (cancelled)
-                return null;
+                return;
             const ck = JSON.stringify({ ...cfg, name: "" });
-            let r = SPLIT_BUILD_CACHE.get(ck);
-            if (!r) {
+            let result = SPLIT_BUILD_CACHE.get(ck);
+            if (!result) {
                 try {
-                    r = splitBuildability(cfg, EXERCISES);
+                    result = splitBuildability(cfg, EXERCISES);
                 }
                 catch {
-                    r = { ok: true };
+                    // Final generation still fails closed; a classifier failure must not strand the wizard.
+                    result = { ok: true };
                 }
                 if (SPLIT_BUILD_CACHE.size >= 256)
                     SPLIT_BUILD_CACHE.delete(SPLIT_BUILD_CACHE.keys().next().value);
-                SPLIT_BUILD_CACHE.set(ck, r);
+                SPLIT_BUILD_CACHE.set(ck, result);
             }
-            return r;
+            if (!cancelled)
+                setBuildable({ __key: buildKey, [config.session]: result });
         };
-        const todo = key === "split" ? compatibleSplits.map(([k]) => ["split", k]) : sessionChoicesFor(config.split).map(x => ["session", x.id]);
-        setBuildable(prev => (prev.__key === buildKey ? prev : { __key: buildKey }));
-        const tick = async () => {
-            if (cancelled)
-                return;
-            const item = todo.shift();
-            if (!item)
-                return;
-            const [kind, id] = item;
-            let r;
-            if (kind === "split") {
-                r = await verdict({ ...base, split: id });
-                if (cancelled || !r)
-                    return;
-                if (!r.ok && r.kind !== "lifts") {
-                    const okSessions = [];
-                    for (const x of sessionChoicesFor(id)) {
-                        if (x.id === base.session)
-                            continue;
-                        const result = await verdict({ ...base, split: id, session: x.id });
-                        if (cancelled || !result)
-                            return;
-                        if (result.ok)
-                            okSessions.push(x.id);
-                    }
-                    if (okSessions.length)
-                        r = { ok: true, okSessions };
-                }
-            }
-            else
-                r = await verdict({ ...base, session: id });
-            if (cancelled || !r)
-                return;
-            setBuildable(prev => ({ ...(prev.__key === buildKey ? prev : { __key: buildKey }), [id]: r }));
-            timer = setTimeout(tick, 0);
-        };
-        timer = setTimeout(tick, 0);
+        // Debounce quick taps so an abandoned session length never consumes a full generation pass.
+        timer = setTimeout(run, 90);
         return () => { cancelled = true; clearTimeout(timer); };
-    }, [buildKey, compatibleSplits]);
+    }, [buildKey]);
     const blockedHere = (id) => !!(buildable.__key === buildKey && buildable[id] && buildable[id].ok === false);
-    /* Don't leave the lifter on a disabled default. 24 of 450 non-contract split choices (5.3%) refuse at the default
-       60 minutes; they used to land here with 60 selected, disabled, and Next blocked. Once EVERY allowed length has a
-       verdict, a blocked current length moves to the nearest one that builds (ties go longer), and the step says so.
-       Cannot loop: the session step's fingerprint excludes the session itself, so moving it doesn't re-run the pass. */
-    const [autoLength, setAutoLength] = useState(null);
-    useEffect(() => {
-        if (key !== "session" || buildable.__key !== buildKey)
-            return;
-        const ids = sessionChoicesFor(config.split).map(x => x.id);
-        if (!ids.length || !ids.every(id => buildable[id]))
-            return;
-        if (!(buildable[config.session] && buildable[config.session].ok === false))
-            return;
-        const okIds = ids.filter(id => buildable[id].ok);
-        if (!okIds.length)
-            return;
-        const order = SESSIONS.map(x => x.id), cur = order.indexOf(config.session);
-        const best = okIds.slice().sort((a, b) => Math.abs(order.indexOf(a) - cur) - Math.abs(order.indexOf(b) - cur) || order.indexOf(b) - order.indexOf(a))[0];
-        setAutoLength({ split: config.split, from: config.session, to: best });
-        set({ session: best });
-    }, [key, buildKey, buildable, config.session, config.split]);
+    const autoLength = null;
     const canNext = (() => {
         if (key === "mode")
             return true;
         if (key === "name")
             return config.name.trim().length > 0;
-        if (key === "split")
-            return !!config.split && buildable.__key === buildKey && !!buildable[config.split] && !blockedHere(config.split);
+        if (key === "split") {
+            if (!config.split)
+                return false;
+            try {
+                return splitContractGaps({ ...config, goal: effectiveGoal, split: config.split }, EXERCISES).length === 0;
+            }
+            catch {
+                return true;
+            }
+        }
         if (key === "session")
             return buildable.__key === buildKey && !!buildable[config.session] && !blockedHere(config.session);
         if (key === "cycletype")
@@ -18859,23 +18810,15 @@ function StepBody({ stepKey, config, set, buildable = {}, autoLength = null, com
             return [];
         } };
         const liftName = (id) => String(id).replace(/_/g, " ");
-        /* Verdict per split: contract gaps are known now; coverage results arrive from the Wizard's background pass. */
-        const verdictOf = (k, gaps) => gaps.length ? { ok: false, kind: "lifts", items: gaps.map(liftName) } : (buildable[k] || null);
-        /* Only blame the gym when more equipment would actually help: `design` means a FULL gym is refused too. */
-        const lengthLabel = (id) => (SESSIONS.find(x => x.id === id)?.label || id).toLowerCase();
-        const noteOf = (v) => !v ? "Checking this split…"
-            : v.ok ? (v.okSessions ? `Works at ${config.days} days with ${v.okSessions.map(lengthLabel).join(" or ")} sessions` : null)
-                : v.kind === "lifts" ? `Needs equipment for: ${v.items.join(", ")}`
-                    /* At the split step a design verdict means EVERY allowed session length was tried (see the Wizard), so the
-                       engine's top suggestion — usually "increase weekly training capacity" — would be wrong advice here. */
-                    : v.kind === "design" ? `Doesn't come out balanced at ${config.days} days with any session length${v.items.length ? ` (${v.items.join(", ")})` : ""} — try another number of days or goal`
-                        : v.items.length ? `Not enough exercises with your equipment for ${v.items.join(", ")}` : "Not enough exercises with your equipment";
-        const withV = [...compatibleSplits].map(([k, sp]) => { const g = gapsOf(k); return [k, sp, g, verdictOf(k, g)]; });
+        /* Keep this list instant. Split-specific lift/equipment contracts are deterministic and cheap; the expensive full
+           generation check belongs on the next step because session length is part of that feasibility decision. */
+        const verdictOf = (gaps) => gaps.length ? { ok: false, kind: "lifts", items: gaps.map(liftName) } : { ok: true };
+        const noteOf = (v) => v.kind === "lifts" ? `Needs equipment for: ${v.items.join(", ")}` : null;
+        const withV = [...compatibleSplits].map(([k, sp]) => { const g = gapsOf(k); return [k, sp, g, verdictOf(g)]; });
         const ordered = withV.sort((a, b) => (a[2].length > 0) - (b[2].length > 0) || (a[0] === rec ? -1 : b[0] === rec ? 1 : 0));
-        const blockedEq = ordered.filter(x => x[3] && x[3].ok === false && x[3].kind !== "design").length;
-        const blockedDesign = ordered.filter(x => x[3] && x[3].ok === false && x[3].kind === "design").length;
-        return (_jsxs(_Fragment, { children: [_jsx(Heading, { sub: `Choose how to spread ${config.days} training days across the week.`, children: "Pick your split" }), _jsx("div", { role: "status", style: { fontSize: 13, color: C.muted, marginBottom: 12 }, children: ordered.some(x => !x[3]) ? "Checking your equipment and available session lengths…" : "Availability checked. Choose an available split to continue." }), blockedEq > 0 && (_jsxs("div", { role: "note", "data-testid": "split-equipment-note", style: { fontSize: 13, color: C.muted, lineHeight: 1.5, margin: "0 2px 12px" }, children: [blockedEq === 1 ? "One program can't" : `${blockedEq} programs can't`, " be built with your current equipment, so ", blockedEq === 1 ? "it's" : "they're", " marked below. Add equipment in your gym settings to open ", blockedEq === 1 ? "it" : "them", " up."] })), blockedDesign > 0 && (_jsxs("div", { role: "note", "data-testid": "split-design-note", style: { fontSize: 13, color: C.muted, lineHeight: 1.5, margin: "0 2px 12px" }, children: [blockedDesign === 1 ? "One program doesn't" : `${blockedDesign} programs don't`, " come out balanced at ", config.days, " days, so ", blockedDesign === 1 ? "it's" : "they're", " marked below \u2014 a different number of days usually fixes it."] })), _jsx(Col, { children: ordered.map(([k, sp, gaps, v]) => {
-                        const off = !!(v && v.ok === false);
+        const blockedEq = ordered.filter(x => !x[3].ok).length;
+        return (_jsxs(_Fragment, { children: [_jsx(Heading, { sub: `Choose how to spread ${config.days} training days across the week.`, children: "Pick your split" }), _jsx("div", { role: "status", style: { fontSize: 13, color: C.muted, marginBottom: 12 }, children: "Equipment requirements are checked here. Session-time fit is confirmed on the next step." }), blockedEq > 0 && (_jsxs("div", { role: "note", "data-testid": "split-equipment-note", style: { fontSize: 13, color: C.muted, lineHeight: 1.5, margin: "0 2px 12px" }, children: [blockedEq === 1 ? "One program can't" : `${blockedEq} programs can't`, " be built with your current equipment, so ", blockedEq === 1 ? "it's" : "they're", " marked below. Add equipment in your gym settings to open ", blockedEq === 1 ? "it" : "them", " up."] })), _jsx(Col, { children: ordered.map(([k, sp, gaps, v]) => {
+                        const off = !v.ok;
                         return (_jsx(OptionCard, { icon: Repeat, label: k === rec && !off ? `${sp.name} · Recommended` : sp.name, sub: sp.blurb, selected: config.split === k && !off, disabled: off, note: noteOf(v), onClick: () => set({ split: k }) }, k));
                     }) })] }));
     }
@@ -18893,7 +18836,7 @@ function StepBody({ stepKey, config, set, buildable = {}, autoLength = null, com
         const order = SESSIONS.map(x => x.id);
         const maxS = SPLITS[config.split]?.maxSession;
         const choices = sessionChoicesFor(config.split); /* one rule, shared with the split step's background check */
-        const sessionNote = (v) => !v ? "Checking this session length…" : v.ok ? null
+        const sessionNote = (id, v) => !v ? (config.session === id ? "Checking this session length…" : null) : v.ok ? "Fits your setup"
             : v.kind === "lifts" ? `Needs equipment for: ${v.items.join(", ")}`
                 : `Can't be built at this length${v.items && v.items.length ? ` (${v.items.join(", ")})` : ""}`;
         if (maxS && config.session && order.indexOf(config.session) > order.indexOf(maxS))
@@ -18908,7 +18851,7 @@ function StepBody({ stepKey, config, set, buildable = {}, autoLength = null, com
                        labelled "90 to 120 minutes", which is about an hour of work. It also could not vary
                        with goal, though rest length is what actually decides how much fits: the same two
                        hours holds ten hypertrophy exercises or six strength ones. */
-                    _jsx(OptionCard, { icon: Clock, label: s.label, sub: `~${sessionExercisePlan(s.id, config.goal, config.experience).count} exercises · optimized inside this time band`, selected: config.session === s.id && !(buildable[s.id] && buildable[s.id].ok === false), disabled: !!(buildable[s.id] && buildable[s.id].ok === false), note: sessionNote(buildable[s.id]), onClick: () => set({ session: s.id }) }, s.id))) })] }));
+                    _jsx(OptionCard, { icon: Clock, label: s.label, sub: `~${sessionExercisePlan(s.id, config.goal, config.experience).count} exercises · optimized inside this time band`, selected: config.session === s.id && !(buildable[s.id] && buildable[s.id].ok === false), disabled: !!(buildable[s.id] && buildable[s.id].ok === false), note: sessionNote(s.id, buildable[s.id]), onClick: () => set({ session: s.id }) }, s.id))) })] }));
     }
     if (stepKey === "equipment") {
         const toggle = (id) => set({ equipment: config.equipment.includes(id) ? config.equipment.filter(x => x !== id) : [...config.equipment, id] });

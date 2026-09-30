@@ -7,6 +7,12 @@ import {
   requestWithExerciseTarget
 } from '../modules/next-engine/capacity-policy.js';
 
+const patchedAdapter = await import('../modules/next-engine/app-shell-adapter-capacity.js');
+assert.equal(typeof patchedAdapter.generateNextProgramForShell, 'function');
+assert.equal(typeof patchedAdapter.splitBuildability, 'function');
+assert.equal(typeof patchedAdapter.nextProgramToShellProgram, 'function');
+assert.equal(typeof patchedAdapter.shellConfigToNextRequest, 'function');
+
 const s90Request = {
   schedule: {
     days: [

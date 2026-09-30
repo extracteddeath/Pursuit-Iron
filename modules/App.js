@@ -25306,7 +25306,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
     const [confirmExit, setConfirmExit] = useState(false);
     const [sessionMenu, setSessionMenu] = useState(false); // workout options sheet (timer / add lift / finish / discard)
     const [calc, setCalc] = useState(false);
-    const [, forceTick] = useState(0);
+    const timerTextRef = useRef(null);
     // Resume the workout clock from the ACTUAL training time logged in the snapshot, not the wall
     // clock since the workout first started. A session minimized at 9am and resumed at 9pm should
     // pick up at (say) 35 min of training, not 12 hours — time spent away from the app is dead time,
@@ -25375,7 +25375,6 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
         runPausedAccum.current = 0;
         runPausedAt.current = runPaused ? Date.now() : 0;
         setConfirmReset(false);
-        forceTick(n => n + 1);
     };
     const onResetClick = () => setConfirmReset(true); // always confirm — a reset wipes elapsed time
     const clearTimerHold = () => {
@@ -25600,7 +25599,31 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
         }
         catch { } };
     }, []);
-    useEffect(() => { const t = setInterval(() => forceTick(n => n + 1), 1000); return () => clearInterval(t); }, []);
+    // The elapsed workout clock used to force-render this entire, very large Session component every
+    // second. Duration math already comes from wall-clock refs, so update only the timer text node.
+    // State changes such as pause/resume/reset still render normally; visibility/focus resync keeps the
+    // display honest after background throttling without making every exercise/set/card rerender.
+    useEffect(() => {
+        const syncElapsedLabel = () => {
+            const node = timerTextRef.current;
+            if (!node)
+                return;
+            const seconds = Math.max(0, Math.floor(runElapsedMs() / 1000));
+            node.textContent = `${Math.floor(seconds / 3600)}:${String(Math.floor((seconds % 3600) / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+        };
+        syncElapsedLabel();
+        if (runPaused)
+            return;
+        const t = setInterval(syncElapsedLabel, 1000);
+        const onVisible = () => { if (document.visibilityState === "visible") syncElapsedLabel(); };
+        document.addEventListener("visibilitychange", onVisible);
+        window.addEventListener("focus", syncElapsedLabel);
+        return () => {
+            clearInterval(t);
+            document.removeEventListener("visibilitychange", onVisible);
+            window.removeEventListener("focus", syncElapsedLabel);
+        };
+    }, [runPaused]);
     // On leaving the session (finish, exit, discard), kill any rest-complete notification still
     // scheduled — otherwise a phantom "Rest complete" can pop seconds after you've closed the workout.
     useEffect(() => () => cancelRestNotif(), []);
@@ -26376,7 +26399,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
     };
     const elapsed = Math.max(0, Math.floor(runElapsedMs() / 1000));
     const fmtEl = `${Math.floor(elapsed / 3600)}:${String(Math.floor((elapsed % 3600) / 60)).padStart(2, "0")}:${String(elapsed % 60).padStart(2, "0")}`;
-    return (_jsxs("div", { ref: workoutRoot, className: "wpb-page-shell wpb-workout", "data-keyboard-open": keyboardOpen ? "true" : "false", style: { position: "relative", maxHeight: viewportHeight || undefined }, children: [_jsxs("div", { className: "wpb-workout-header", style: { padding: "14px 14px 10px", borderBottom: `1px solid ${C.borderSoft}` }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, minWidth: 0 }, children: [_jsx("button", { onClick: () => setConfirmExit(true), "aria-label": "Leave workout", className: "pressable hit wpb-workout-close", style: { width: 40, height: 40, background: "none", border: "none", color: C.text, cursor: "pointer", padding: 0, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 11 }, children: _jsx(X, { size: 23 }) }), _jsxs("button", { onClick: onTimerTap, onPointerDown: beginTimerHold, onPointerMove: moveTimerHold, onPointerUp: endTimerHold, onPointerCancel: endTimerHold, onContextMenu: e => e.preventDefault(), "aria-label": runPaused ? "Resume workout timer" : "Pause workout timer", "aria-description": "Long press to reset timer", title: `${runPaused ? "Resume" : "Pause"} workout timer · hold to reset`, className: "pressable wpb-workout-timer", style: { display: "flex", alignItems: "center", gap: 6, flexShrink: 0, minWidth: 90, overflow: "visible", color: runPaused ? C.accentInk : C.muted, fontSize: 13, background: runPaused ? C.accentDim : "none", border: runPaused ? `1px solid ${C.accentDim}` : "1px solid transparent", borderRadius: 8, padding: "5px 8px", cursor: "pointer", touchAction: "manipulation", WebkitTouchCallout: "none", userSelect: "none" }, children: [runPaused ? _jsx(Play, { size: 13, style: { flexShrink: 0 } }) : _jsx(Clock, { size: 14, style: { flexShrink: 0 } }), " ", _jsx("span", { className: "mono", style: { fontWeight: 600, color: runPaused ? C.accentInk : C.text, whiteSpace: "nowrap" }, children: fmtEl })] }), _jsx("div", { style: { flex: 1, minWidth: 4 } }), _jsxs("div", { className: "wpb-workout-actions", style: { display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }, children: [_jsx("button", { "aria-label": focus ? "Exit focused mode" : "Focused mode", onClick: () => setFocus(f => !f), className: "pressable hit wpb-workout-header-action", title: focus ? "Exit focused mode" : "Focused mode", "data-focus": focus ? "1" : "0", style: { ...iconBtn(), width: 40, height: 40, ...(focus ? { background: C.accent, borderColor: C.accent, color: C.accentText } : null) }, children: focus ? _jsx(Minimize2, { size: 18 }) : _jsx(Maximize2, { size: 18 }) }), _jsx("button", { onClick: () => setSessionMenu(true), className: "pressable hit wpb-workout-header-action", title: "Workout options", "aria-label": "Workout options", style: { ...iconBtn(), width: 40, height: 40 }, children: _jsx(MoreHorizontal, { size: 20 }) }), _jsxs("button", { onClick: () => setFinishing(true), "aria-label": "Finish workout", className: "pressable hit wpb-workout-finish wpb-workout-header-action", style: narrowSet
+    return (_jsxs("div", { ref: workoutRoot, className: "wpb-page-shell wpb-workout", "data-keyboard-open": keyboardOpen ? "true" : "false", style: { position: "relative", maxHeight: viewportHeight || undefined }, children: [_jsxs("div", { className: "wpb-workout-header", style: { padding: "14px 14px 10px", borderBottom: `1px solid ${C.borderSoft}` }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, minWidth: 0 }, children: [_jsx("button", { onClick: () => setConfirmExit(true), "aria-label": "Leave workout", className: "pressable hit wpb-workout-close", style: { width: 40, height: 40, background: "none", border: "none", color: C.text, cursor: "pointer", padding: 0, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 11 }, children: _jsx(X, { size: 23 }) }), _jsxs("button", { onClick: onTimerTap, onPointerDown: beginTimerHold, onPointerMove: moveTimerHold, onPointerUp: endTimerHold, onPointerCancel: endTimerHold, onContextMenu: e => e.preventDefault(), "aria-label": runPaused ? "Resume workout timer" : "Pause workout timer", "aria-description": "Long press to reset timer", title: `${runPaused ? "Resume" : "Pause"} workout timer · hold to reset`, className: "pressable wpb-workout-timer", style: { display: "flex", alignItems: "center", gap: 6, flexShrink: 0, minWidth: 90, overflow: "visible", color: runPaused ? C.accentInk : C.muted, fontSize: 13, background: runPaused ? C.accentDim : "none", border: runPaused ? `1px solid ${C.accentDim}` : "1px solid transparent", borderRadius: 8, padding: "5px 8px", cursor: "pointer", touchAction: "manipulation", WebkitTouchCallout: "none", userSelect: "none" }, children: [runPaused ? _jsx(Play, { size: 13, style: { flexShrink: 0 } }) : _jsx(Clock, { size: 14, style: { flexShrink: 0 } }), " ", _jsx("span", { ref: timerTextRef, className: "mono", style: { fontWeight: 600, color: runPaused ? C.accentInk : C.text, whiteSpace: "nowrap" }, children: fmtEl })] }), _jsx("div", { style: { flex: 1, minWidth: 4 } }), _jsxs("div", { className: "wpb-workout-actions", style: { display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }, children: [_jsx("button", { "aria-label": focus ? "Exit focused mode" : "Focused mode", onClick: () => setFocus(f => !f), className: "pressable hit wpb-workout-header-action", title: focus ? "Exit focused mode" : "Focused mode", "data-focus": focus ? "1" : "0", style: { ...iconBtn(), width: 40, height: 40, ...(focus ? { background: C.accent, borderColor: C.accent, color: C.accentText } : null) }, children: focus ? _jsx(Minimize2, { size: 18 }) : _jsx(Maximize2, { size: 18 }) }), _jsx("button", { onClick: () => setSessionMenu(true), className: "pressable hit wpb-workout-header-action", title: "Workout options", "aria-label": "Workout options", style: { ...iconBtn(), width: 40, height: 40 }, children: _jsx(MoreHorizontal, { size: 20 }) }), _jsxs("button", { onClick: () => setFinishing(true), "aria-label": "Finish workout", className: "pressable hit wpb-workout-finish wpb-workout-header-action", style: narrowSet
                                             ? { ...iconBtn(), width: 40, height: 40, background: C.accent, borderColor: C.accent, color: C.accentText }
                                             : { ...iconBtn(), width: "auto", height: 40, padding: "0 14px", gap: 6, background: C.accent, borderColor: C.accent, color: C.accentText, fontWeight: 700, fontSize: 15 }, children: [_jsx(CheckCircle2, { size: narrowSet ? 20 : 17, style: { flexShrink: 0 } }), narrowSet ? null : " Finish"] })] })] }), _jsx("div", { role: "progressbar", "aria-label": "Workout completion", "aria-valuemin": 0, "aria-valuemax": Math.max(1, totalSets), "aria-valuenow": doneSets, style: { marginTop: 8, height: 6, borderRadius: 999, background: C.bg2, overflow: "hidden" }, children: _jsx("div", { className: "wpb-bar", style: { background: C.accent, transform: `translateX(-${(1 - (totalSets ? doneSets / totalSets : 0)) * 100}%)` } }) }), _jsxs("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 11, color: C.muted, marginTop: 4 }, children: [_jsxs("span", { children: [doneSets, " / ", totalSets, " sets \u00B7 ", _jsxs("button", { onClick: () => setExList(true), className: "pressable", "aria-label": "Show today's exercises", style: { background: "none", border: "none", padding: 0, font: "inherit", color: C.accentInk, fontWeight: 700, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 2 }, children: ["ex ", exIdx + 1, "/", data.length] }), readiness && readiness.factor < 1 ? ` · ${readiness.label} −${Math.round((1 - readiness.factor) * 100)}%` : ""] }), _jsxs("span", { className: "mono", children: [Math.round(volume).toLocaleString(), " ", unit] })] }), !focus && !keyboardOpen && _jsx("div", { className: "wpb-hscroll wpb-ex-nav", style: { display: "flex", gap: 8, overflowX: "auto", overflowY: "hidden", touchAction: "pan-x pan-y", marginTop: 12, paddingBottom: 2 }, children: data.map((e, i) => {
                             const exDone = workOnly(e).length > 0 && workOnly(e).every(s => s.done);

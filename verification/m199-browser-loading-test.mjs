@@ -41,12 +41,15 @@ try {
   await page.waitForSelector('#pursuit-startup-status', { timeout: 5000 });
   const bootText = await page.$eval('#pursuit-startup-status', el => el.textContent?.trim());
   assert.equal(bootText, 'Loading Pursuit Iron…', 'cold start must visibly identify loading while App.js is unavailable');
+  const recoveryBeforeMount = await page.$('[data-boot-recovery]');
+  assert.equal(recoveryBeforeMount, null, 'normal delayed startup must not enter recovery before first render');
+
   await nav;
   await page.waitForFunction(() => window.__pursuitMounted === true, { timeout: 15000 });
   const result = await page.evaluate(() => ({
     mounted: !!window.__pursuitMounted,
     startupStillVisible: !!document.getElementById('pursuit-startup'),
-    startupFailure: document.body.textContent?.includes('Startup failed:') || false,
+    recoveryVisible: !!document.querySelector('[data-boot-recovery]'),
     longTasks: window.__m199LongTasks || [],
     nav: performance.getEntriesByType('navigation')[0] ? {
       domContentLoaded: Math.round(performance.getEntriesByType('navigation')[0].domContentLoadedEventEnd),
@@ -55,7 +58,7 @@ try {
   }));
   const wallMs = Date.now() - started;
   assert.equal(result.mounted, true, 'app must complete first render under a throttled cold start');
-  assert.equal(result.startupFailure, false, 'cold start must not fall into startup recovery');
+  assert.equal(result.recoveryVisible, false, 'cold start must not fall into boot recovery controls');
   assert.equal(result.startupStillVisible, false, 'boot shell must be removed after React commits');
   assert.ok(wallMs < 15000, `4x-CPU cold start exceeded 15s (${wallMs}ms)`);
   const maxLongTask = result.longTasks.length ? Math.max(...result.longTasks) : 0;

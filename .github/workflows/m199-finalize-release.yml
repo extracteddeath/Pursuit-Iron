@@ -1,0 +1,41 @@
+name: M199 finalize release candidate
+
+on:
+  push:
+    branches: [audit/m199-performance-loading]
+    paths:
+      - 'scripts/finalize-m199-release.mjs'
+      - '.github/workflows/m199-finalize-release.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: audit/m199-performance-loading
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Finalize M199 release identity
+        run: node scripts/finalize-m199-release.mjs
+      - name: Verify finalized production runtime
+        run: node scripts/verify-release.mjs
+      - name: Commit finalized M199 release
+        run: |
+          if git diff --quiet -- modules/App.js index.html sw.js BUILD_PROFILE.json RELEASE_MANIFEST.json CHANGELOG.md; then
+            echo 'M199 release identity already finalized.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add modules/App.js index.html sw.js BUILD_PROFILE.json RELEASE_MANIFEST.json CHANGELOG.md
+          git commit -m 'M199: finalize production release identity'
+          git pull --rebase origin audit/m199-performance-loading
+          git push origin HEAD:audit/m199-performance-loading

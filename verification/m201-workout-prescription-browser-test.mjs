@@ -47,7 +47,16 @@ try {
     const page = await browser.newPage();
     await page.setViewport({width:390,height:844,deviceScaleFactor:2,isMobile:true,hasTouch:true});
     const errors=[];page.on('pageerror',e=>{errors.push(e.message);console.error('Browser page error:',e.message);});
-    const open = async query => {await page.goto('http://127.0.0.1:8768/probe.html'+query,{waitUntil:'networkidle0'});await page.waitForSelector('input[aria-label="reps"]');};
+    const open = async query => {
+        await page.goto('http://127.0.0.1:8768/probe.html'+query,{waitUntil:'networkidle0'});
+        await page.waitForSelector('input[aria-label="reps"]');
+        const checkIn = await page.$('.wpb-backdrop button[data-wpb-system-back]');
+        if (checkIn) {
+            await checkIn.click();
+            await page.waitForFunction(()=>!!JSON.parse(localStorage.getItem('wpb:live')).readiness);
+            await page.waitForSelector('.wpb-backdrop',{hidden:true});
+        }
+    };
     const rows = () => page.evaluate(() => JSON.parse(localStorage.getItem('wpb:live')).data[0].sets);
     await open('');
     let restored=await rows();

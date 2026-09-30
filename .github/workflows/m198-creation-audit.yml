@@ -47,4 +47,4 @@ jobs:
             m198-creation-audit.exit
           if-no-files-found: error
           retention-days: 7
-# Post structural-swap verification trigger.
+# Post dose-reconciliation structural-guard verification trigger.

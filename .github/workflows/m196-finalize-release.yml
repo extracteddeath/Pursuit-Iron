@@ -1,0 +1,42 @@
+name: M196 finalize release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/m196-finalize-release.yml'
+      - 'scripts/finalize-m196-release.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Finalize M196 release identity
+        run: node scripts/finalize-m196-release.mjs
+      - name: Focused M196 regression
+        run: node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m196-capacity-band-regression-test.mjs
+      - name: Verify finalized production runtime
+        run: node scripts/verify-release.mjs
+      - name: Commit finalized metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- BUILD_PROFILE.json RELEASE_MANIFEST.json sw.js; then
+            echo "Release metadata already finalized."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add BUILD_PROFILE.json RELEASE_MANIFEST.json sw.js
+          git commit -m "M196: finalize production release identity"
+          git push origin HEAD:main

@@ -1,0 +1,39 @@
+name: M199 responsiveness regression and hotpaths
+
+on:
+  push:
+    branches: [audit/m199-performance-loading]
+    paths:
+      - 'modules/**'
+      - 'verification/m199-ui-responsiveness-test.mjs'
+      - 'verification/m199-runtime-hotpath-scan.mjs'
+      - 'verification/m198-creation-audit.mjs'
+      - '.github/workflows/m199-regression-and-hotpaths.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Wizard responsiveness/loading contract
+        run: node verification/m199-ui-responsiveness-test.mjs
+      - name: Creation regression
+        run: node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m198-creation-audit.mjs
+      - name: Scan runtime hot paths
+        run: node verification/m199-runtime-hotpath-scan.mjs
+      - name: Upload hot-path report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m199-runtime-hotpaths
+          path: m199-runtime-hotpath-scan.json
+          if-no-files-found: error
+          retention-days: 3

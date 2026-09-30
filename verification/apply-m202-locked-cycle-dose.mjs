@@ -56,10 +56,9 @@ write('modules/next-engine/cycle-runtime-adapter.js', cycle);
 const test = `import assert from 'node:assert/strict';\nimport { EXERCISES, EQUIPMENT } from '../modules/App.js';\nimport { generateNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';\nimport { auditShellVolume } from '../modules/next-engine/volume-repair.js';\n\nconst base = { name: 'M202 locked-cycle dose', split: 'ppl', days: 5, session: 's90', goal: 'both',\n  experience: 'intermediate', weeks: 6, deload: true, barbellCap: 3, equipment: EQUIPMENT.map(e => e.id) };\nconst seeds = [19908, 19811, 199, 20201];\nlet reproduced = 0, repaired = 0;\nfor (const seed of seeds) {\n  let n = 0;\n  const cycle = generateNextCycleForShell({ templateId: 'powerbuilding', config: base, legacyExercises: EXERCISES,\n    seed, adaptBetweenBlocks: false, makeId: () => 'm202-' + seed + '-' + (++n) });\n  const roster = cycle.blocks[0].days.map(day => [...day.exercises]);\n  for (let i = 1; i < cycle.blocks.length; i++) {\n    const block = cycle.blocks[i];\n    assert.deepEqual(block.days.map(day => [...day.exercises]), roster, 'locked block ' + i + ' must preserve every exercise identity');\n    assert.equal(block.nextEngine.program.audit.result, 'pass', 'locked block ' + i + ' engine audit');\n    const audit = auditShellVolume(block, EXERCISES);\n    const over = audit.issues.filter(issue => issue.status === 'over');\n    assert.deepEqual(over, [], 'locked block ' + i + ' must not exceed public phase ceilings');\n    assert.ok(audit.weeks.every(w => w.sessions.every(s => s.estimatedMinutes <= s.maxMinutes)), 'locked block ' + i + ' must still fit session time');\n    const marker = block.nextEngine.lockedCycleVolumeRepair;\n    assert.equal(marker?.rosterPreserved, true, 'locked block must record roster-preserving reconciliation');\n    reproduced += marker.beforeOver.length;\n    repaired += marker.changed ? 1 : 0;\n  }\n}\nassert.ok(reproduced > 0, 'regression matrix must reproduce at least one pre-repair locked-cycle overflow');\nassert.ok(repaired > 0, 'at least one locked block must require a real set-count repair');\nconsole.log('PASS M202 locked-cycle dose: ' + seeds.length + ' powerbuilding cycles; ' + reproduced + ' reproduced overflow issue(s); roster preserved; all repaired blocks within displayed ceilings.');\n`;
 write('verification/m202-locked-cycle-dose-test.mjs', test);
 
-// Release identity for the candidate branch.
-let app = read('modules/App.js').replace(/const __APP_VERSION__='4\\.0\\.0'; const __BUILD__='\\d+';/, "const __APP_VERSION__='4.0.0'; const __BUILD__='792';");
+let app = read('modules/App.js').replace(/const __APP_VERSION__='4\.0\.0'; const __BUILD__='\d+';/, "const __APP_VERSION__='4.0.0'; const __BUILD__='792';");
 write('modules/App.js', app);
-let index = read('index.html').replace(/build:'\\d+'/g, "build:'792'").replace(/build='\\d+'/g, "build='792'");
+let index = read('index.html').replace(/build:'\d+'/g, "build:'792'").replace(/build='\d+'/g, "build='792'");
 write('index.html', index);
 let config = read('modules/next-engine/config.js').replace(/ENGINE_VERSION = '[^']+'/, "ENGINE_VERSION = '0.64.3'");
 write('modules/next-engine/config.js', config);
@@ -68,14 +67,28 @@ let sw = read('sw.js').replace(/const CACHE="[^"]+"/, `const CACHE="${cache}"`);
 write('sw.js', sw);
 
 const profile = JSON.parse(read('BUILD_PROFILE.json'));
-Object.assign(profile, { milestone: 'M202', source: 'M201 production baseline + locked-cycle phase-specific volume reconciliation',\n  engine: '0.64.3 with roster-preserving locked-cycle accessory-volume repair', cache,\n  uiMilestone: 'Pursuit Iron 4.0 Production Release · M202 Locked Cycle Dose' });
-write('BUILD_PROFILE.json', JSON.stringify(profile, null, 2) + '\\n');
+Object.assign(profile, {
+  milestone: 'M202',
+  source: 'M201 production baseline + locked-cycle phase-specific volume reconciliation',
+  engine: '0.64.3 with roster-preserving locked-cycle accessory-volume repair',
+  cache,
+  uiMilestone: 'Pursuit Iron 4.0 Production Release · M202 Locked Cycle Dose'
+});
+write('BUILD_PROFILE.json', JSON.stringify(profile, null, 2) + '\n');
 
 const manifest = JSON.parse(read('RELEASE_MANIFEST.json'));
-Object.assign(manifest, { milestone: 'M202', build: 792, engineVersion: '0.64.3', cache, uiMilestone: profile.uiMilestone,\n  candidateStatus: 'verification_enforced_by_ci', runtimeHotfix: 'M202 reconcile locked-cycle weekly accessory volume to phase-specific displayed ceilings without changing the exercise roster' });
+Object.assign(manifest, {
+  milestone: 'M202',
+  build: 792,
+  engineVersion: '0.64.3',
+  cache,
+  uiMilestone: profile.uiMilestone,
+  candidateStatus: 'verification_enforced_by_ci',
+  runtimeHotfix: 'M202 reconcile locked-cycle weekly accessory volume to phase-specific displayed ceilings without changing the exercise roster'
+});
 for (const file of Object.keys(manifest.runtimeFiles)) manifest.runtimeFiles[file] = hash(fs.readFileSync(file));
-manifest.runtimeAggregate = hash(Object.keys(manifest.runtimeFiles).sort().map(file => file + ':' + manifest.runtimeFiles[file] + '\\n').join(''));
-write('RELEASE_MANIFEST.json', JSON.stringify(manifest, null, 2) + '\\n');
+manifest.runtimeAggregate = hash(Object.keys(manifest.runtimeFiles).sort().map(file => file + ':' + manifest.runtimeFiles[file] + '\n').join(''));
+write('RELEASE_MANIFEST.json', JSON.stringify(manifest, null, 2) + '\n');
 
 let changelog = read('CHANGELOG.md');
 if (!changelog.startsWith('## M202')) changelog = `## M202 — Locked-cycle phase volume reconciliation (build 792)\n\n- Locked/static cycle blocks now audit the exact weekly regional volume shown in the UI after phase retargeting.\n- Over-limit accessory work is reduced transactionally while every exercise identity remains locked and strength work stays protected.\n- Added a powerbuilding regression that reproduces the prior overflow, verifies roster identity, session-time fit, engine pass status, and zero remaining displayed-region overflow.\n- Pursuit Engine 0.64.3; service-worker cache rotated for build 792.\n\n` + changelog;

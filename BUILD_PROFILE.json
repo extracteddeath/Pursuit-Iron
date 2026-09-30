@@ -1,12 +1,12 @@
 {
   "profile": "portable-browser-esm-v661-workout-input",
   "milestone": "M199",
-  "source": "M197 production baseline + M199 wizard feasibility and structural retry correction",
-  "engine": "0.64.0 coach-quality engine with M199 non-blocking wizard feasibility and deterministic rejected-seed recovery",
+  "source": "Current M199 wizard fixes + verified volume repair and canonical persistence",
+  "engine": "0.64.0 with shared live-volume accounting and verified set reallocation",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
-  "nextRuntimeModules": 49,
+  "nextRuntimeModules": 50,
   "shadowRuntimeModules": 9,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m199",
-  "uiMilestone": "Pursuit Iron 4.0 Production Release · M199"
+  "cache": "pursuit-iron-production-v4-0-0-m199-volume-repair-b789",
+  "uiMilestone": "Pursuit Iron 4.0 Production Release · M199 Volume Repair"
 }

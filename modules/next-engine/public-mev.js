@@ -106,6 +106,8 @@ export function publicRegionContribution(def, region) {
     // independent regions. Mirror the legacy volume view: vertical/extension work is direct lat work;
     // rows are direct upper-back work, with modest cross-credit in the opposite region.
     if (region === 'lats') {
+        if (legacyPart === 'upper_back')
+            return .4;
         if (legacyPart === 'lats' || family === 'vertical_pull' || family === 'shoulder_extension')
             return 1;
         if (legacyPart === 'upper_back' || family === 'horizontal_pull')
@@ -113,6 +115,10 @@ export function publicRegionContribution(def, region) {
         return 0;
     }
     if (region === 'upper_back') {
+        // A tucked-elbow, lat-biased row is not a full upper-back set. Catalog intent takes
+        // precedence over the coarse horizontal-pull family, just as it does in exercise economy.
+        if (legacyPart === 'lats')
+            return family === 'shoulder_extension' ? 0 : .4;
         if (legacyPart === 'upper_back' || family === 'horizontal_pull')
             return 1;
         // The legacy shell gives vertical pulls modest thickness carryover, but pullovers/shoulder
@@ -130,9 +136,9 @@ export function directlyTargetsPublicRegion(def, region) {
     if (region === 'rear_delts')
         return def.movementFamily === 'rear_delt' || def.legacySubregion === 'rear_delts';
     if (region === 'lats')
-        return def.legacyPart === 'lats' || def.movementFamily === 'vertical_pull' || def.movementFamily === 'shoulder_extension';
+        return def.legacyPart === 'lats' || (def.legacyPart !== 'upper_back' && (def.movementFamily === 'vertical_pull' || def.movementFamily === 'shoulder_extension'));
     if (region === 'upper_back')
-        return def.legacyPart === 'upper_back' || def.movementFamily === 'horizontal_pull';
+        return def.legacyPart === 'upper_back' || (def.legacyPart !== 'lats' && def.movementFamily === 'horizontal_pull');
     const muscle = PUBLIC_REGION_MUSCLE[region];
     return (def.muscles[muscle]?.role === 'primary') || (def.muscles[muscle]?.credit ?? 0) >= 1;
 }

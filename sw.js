@@ -1,7 +1,8 @@
-/* Pursuit Iron 4.0 production release — M199 wizard feasibility + deterministic structural retry. */
-const CACHE="pursuit-iron-production-v4-0-0-m199";
+/* Pursuit Iron 4.0 — M199 verified volume repair and canonical persistence. */
+const CACHE="pursuit-iron-production-v4-0-0-m199-volume-repair-b789";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
+  "./modules/next-engine/volume-repair.js",
   "./",
   "./BUILD_PROFILE.json",
   "./CHANGELOG.md",

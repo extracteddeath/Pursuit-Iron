@@ -2,14 +2,14 @@
   "schemaVersion": 3,
   "milestone": "M199",
   "appVersion": "4.0.0",
-  "build": 788,
+  "build": 789,
   "engineVersion": "0.64.0",
   "shadowEngineVersion": "0.62.5-shadow",
   "validatedLiveBaseline": "M88-0.61.3-reviewed-baseline",
   "candidateStatus": "ci_verified_device_test_pending",
   "sourceNextEngineAggregate": null,
   "sourceShadowEngineAggregate": "3107199d20c86a5a12b82eccbc61c9a32b001a72c7f30418db696235d0da0c22",
-  "runtimeAggregate": "a5e38dafe95a3cacb97aab078278628b927487c64da571f197f40ea5ebd5c5a9",
+  "runtimeAggregate": "df8a58672fdc2c1553c9d768e64fec21eae67fed68f4c8cecdc4d677e81cabd8",
   "sourceFiles": {},
   "shadowSourceFiles": {
     "src/shadow-engine/canary.ts": "854246970f93111ee873f0eb5f222195a02af688ef1a3285d0624f44d422c58a",
@@ -26,7 +26,7 @@
   "runtimeFiles": {
     "modules/next-engine/allocator.js": "a69e53295b8d930c6c3b515507258764be7f69baf1ae729f64d19611c24d2f7d",
     "modules/next-engine/app-shell-adapter-capacity.js": "84731981fcdfe4f43f21cae334e1696eda684c18162d5a71402a36a086f5dc8b",
-    "modules/next-engine/app-shell-adapter.js": "9a0369447c663abf266b2d1651b88f27401c2b9ac9c420b4e7894fff701489be",
+    "modules/next-engine/app-shell-adapter.js": "8bfd2d1f288aef6246328c8c8c9f3d8ec2d26eb31164d5262edcb9c4b7b5833d",
     "modules/next-engine/arbiter.js": "cba22ac9d8a0dbd76177b3dd639f9794263f266c10f639fc1bab6009ac937c5d",
     "modules/next-engine/arm-coverage.js": "9216b888436bf51205be384a80efa14d26d93c5c3462471721318f93f36db1ce",
     "modules/next-engine/capacity-generation.js": "1fed6ad20b90257bcf6f5a88337669bc568f5de7f6fe92ba06c80fe2de2f36dd",
@@ -61,7 +61,7 @@
     "modules/next-engine/phase-transition.js": "2e82030bfd72fc533a48fee346103838038cdfd7b32f01fc3f55592362f790b5",
     "modules/next-engine/prescription.js": "c3c0c02bd33d88008b9cc5e530eb90eaf649c5fd0b3f65be72d8786fb2b7abec",
     "modules/next-engine/progression-style.js": "203b9cc984fe49b39b3c6b4da4e206036ef19111795612e428ca3b41399f0ca6",
-    "modules/next-engine/public-mev.js": "9aeb6117a3cf898e67221d9a0675aa3349108e64c700ca198abbaf1cc472e1a2",
+    "modules/next-engine/public-mev.js": "63b24275e3f7e4931417e74d15ed0136c2dde7739e6ed12fc6d1b708788c4f77",
     "modules/next-engine/realizer.js": "650d3b6dabf129a521b58f948c4bfd974bc191ea8e424b11ec51bb4b871217ac",
     "modules/next-engine/recovery-realization.js": "66520c4b3cb7a53761156a36ea37a0141c21323d0a9cd3428ce5d4b0247ca0a6",
     "modules/next-engine/recovery.js": "bede88b14aaef043e868a208e33624b06ad1e326f44ca1b13c2007db92de3ff7",
@@ -88,7 +88,8 @@
     "vendor/react-jsx-runtime.js": "bde9f287ac956c2a8873443da27dbb828de7ee82bcec262b703aceab2a745954",
     "vendor/react-shared-JU7Z5GYC.js": "b8893896e31178fb4c8c0ce42cae975bec57bb70596c012d5d5c439cd20717d8",
     "vendor/react-shared-V673FGIV.js": "591c4bd8b0aae646cba73ca7ac17a2c2c950bdbaf288529ea14b691f2a4a9f22",
-    "vendor/react.js": "24b2d220a5b2637cf3fb78fe0d961f227ea0a4b960485dbfb03c9d276e72147c"
+    "vendor/react.js": "24b2d220a5b2637cf3fb78fe0d961f227ea0a4b960485dbfb03c9d276e72147c",
+    "modules/next-engine/volume-repair.js": "3a23d6e982195385f4af0a92713fcc40b2d632cc5921ad25bbd23a44a31bd6e6"
   },
   "localCandidate": {
     "name": "Pursuit Iron 4.0 Production Release · M199",
@@ -96,11 +97,11 @@
     "validation": "M199 removes synchronous generation from wizard feasibility, retries rejected structural rolls with deterministic saved seeds, precaches capacity generation, and re-runs release/PWA integrity."
   },
   "uiFiles": {
-    "modules/App.js": "a3cfe4c93a6c5c1695c6337639fc41186c9efba65272ccfca35962da41e6b5f0",
-    "index.html": "f08e7bf52efe187afbc555486318c6374221c6b37d896657bdbdba5a133e765f",
-    "sw.js": "79661a1f8803ee3894ed8e388ae5fdbbc71b4c90bd99dcb40106d2a26419072a",
-    "BUILD_PROFILE.json": "45128949968ec2e637b9aaf242714c369e1d4ea671934d2ad474ee30d33b3c85",
-    "CHANGELOG.md": "49965c755a613a8590521f049e153217989e740faef0c4f320189c5292949c89",
+    "modules/App.js": "8744f39a7b1029ccf4de5ab01e10cccb595f8d0aed02607f50e6dbbcd6073cf4",
+    "index.html": "625a147d35ad7ef63d99ae821b02c278a3ab013450a282dc4f85ed555fa6ca27",
+    "sw.js": "23e49a972bfee8e77c85e910fc64e72e2f3692a9ba70afc564feda53f4329079",
+    "BUILD_PROFILE.json": "c42115c14a361bfa73f19ed0ac1d769a50c15ac53aa110203d18a3913faf4142",
+    "CHANGELOG.md": "15db0b51e596c0cb194a102911691a74e4b08f3f1047d7703578597b461ae2ed",
     "app.css": "5432859c3eb9624b9a27dc1c9de2e8cb85672b02bcd72c114ac963378184b85b"
   },
   "baselineSourceNextEngineAggregate": "9ba84ffe3a62d94849617af33a2eafeaa563ab4a3636579101990ed753d05a84",
@@ -179,18 +180,7 @@
   },
   "sourceFilesStatus": "M162 was produced from the M161.1 release-only artifact; TypeScript source was not present. Baseline source hashes are retained under baselineSource* for provenance, but M162 claims runtime integrity only.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
-  "runtimeHotfix": {
-    "changedFiles": [
-      "modules/App.js",
-      "modules/next-engine/app-shell-adapter.js"
-    ],
-    "regression": "Generated set counts must remain one scalar across Home/Program/Plan/Preview/Workout; LAST must not duplicate RIR in the compact reference column; cycle opening-dose summaries must read 1-based week 1.",
-    "notes": [
-      "Array-shaped persisted set counts are canonicalized at the shared shell boundary and ambiguous values recover from the immutable engine program when available.",
-      "New shell prescriptions are stored with canonical scalar set counts; custom plans normalize their editable count too.",
-      "Pursuit Engine 0.62.5 programming math is unchanged; M165 hardens the shell/display boundary."
-    ]
-  },
-  "cache": "pursuit-iron-production-v4-0-0-m199",
-  "uiMilestone": "Pursuit Iron 4.0 Production Release · M199"
+  "runtimeHotfix": "M199 live-volume repair, productive set reallocation, and canonical save",
+  "cache": "pursuit-iron-production-v4-0-0-m199-volume-repair-b789",
+  "uiMilestone": "Pursuit Iron 4.0 Production Release · M199 Volume Repair"
 }

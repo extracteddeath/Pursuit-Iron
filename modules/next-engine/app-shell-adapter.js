@@ -259,7 +259,7 @@ function performableFor(config) {
         return equip.every(q => have.has(q));
     };
 }
-function resolveLegacyExercise(nextExercise, legacy, canPerform = () => true) {
+export function resolveLegacyExercise(nextExercise, legacy, canPerform = () => true) {
     const primary = resolveLegacyExerciseByIdentity(nextExercise, legacy);
     if (!primary || canPerform(primary))
         return primary;

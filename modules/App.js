@@ -1,4 +1,4 @@
-const __APP_VERSION__='4.0.0'; const __BUILD__='788';
+const __APP_VERSION__='4.0.0'; const __BUILD__='789';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { setShellEquipmentExpander, splitContractGaps, splitBuildability, refusalFixes, generateNextProgramForShell, nextProgramToShellProgram, recommendNextSplitForShell, getNextShellCell, canonicalShellSetCount, cloneNextDayPrescriptions, swapNextSlotPrescriptions, removeNextSlotPrescription, nextExerciseIdForShellExercise, NextShellAdapterError } from "./next-engine/app-shell-adapter.js";
@@ -10,6 +10,7 @@ import { deriveFunctionalCoverage } from "./next-engine/functional-coverage.js";
 import { EXERCISE_MAP as NEXT_EXERCISE_MAP } from "./next-engine/exercise-db.js";
 import { avoidableExerciseOverlap } from "./next-engine/exercise-economy.js";
 import { ENGINE_VERSION } from "./next-engine/config.js";
+import { captureShellVolumeSnapshot, auditShellVolume, repairShellVolume, shellVolumeTargets, shellDayMuscleBreakdown } from "./next-engine/volume-repair.js";
 import { runShadowProgramForShell, runShadowTransitionForShell } from "./shadow-engine/shell-adapter.js";
 import { assignCanaryTrial, runCanaryBehaviorForShell, defaultCanaryResearchState, normalizeCanaryResearchState, recordCanaryWorkout, canarySummary, analyzeCanaryEvidence } from "./shadow-engine/canary.js";
 import { buildCanaryGovernanceDossier } from "./shadow-engine/governance.js";
@@ -14680,6 +14681,10 @@ function programSetupChips(program) {
     return out;
 }
 function weeklyVolume(program, weekIndex) {
+    if (program?.engineSource === "pursuit-next") {
+        const snapshot = captureShellVolumeSnapshot(program, weekIndex, EXERCISES);
+        if (snapshot) return snapshot.volume;
+    }
     const key = __volKey(program, weekIndex);
     let byWeek = __weeklyVolMemo.get(program);
     if (byWeek) {
@@ -14888,6 +14893,10 @@ function weekMuscleBreakdown(program, weekIndex) {
     return Object.values(map).map(e => ({ ...e, from: e.from.sort((a, b) => b.contrib - a.contrib) }));
 }
 function dayMuscleBreakdown(program, day, weekIndex) {
+    if (program?.engineSource === "pursuit-next") {
+        const rows = shellDayMuscleBreakdown(program, day, weekIndex, EXERCISES);
+        if (rows) return rows;
+    }
     const map = {};
     ((day && day.exercises) || []).forEach((id, slot) => {
         const ex = EX_BY_ID[id];
@@ -15064,6 +15073,10 @@ function directSubVolume(program, weekIndex) {
    Three implementations of one fact is the redundancy this codebase keeps paying for; all three now
    ask `daysInWeek` and `exerciseAt`. */
 function weeklySubVolume(program, weekIndex) {
+    if (program?.engineSource === "pursuit-next") {
+        const snapshot = captureShellVolumeSnapshot(program, weekIndex, EXERCISES);
+        if (snapshot) return snapshot.subVolume;
+    }
     const sub = {};
     const add = (k, v) => { if (k)
         sub[k] = (sub[k] || 0) + v; };
@@ -15332,6 +15345,15 @@ const uniformLandmarkFor = (part) => {
    History-driven callers (analytics over many programs, and helpers with no program at all) pass
    nothing and get the legacy table, which is right — they are not describing one program's plan. */
 const landmarkFor = (part, exp = "intermediate", src = 0) => {
+    if (src?.engineSource === "pursuit-next" && src.nextEngine?.request) {
+        const targets = shellVolumeTargets(src);
+        const target = targets.find(t => t.part === part || t.region === part);
+        if (target) return target;
+        if (part === "shoulders") {
+            const heads = targets.filter(t => ["side_delts", "rear_delts"].includes(t.region));
+            return { mev: heads.reduce((n, t) => n + t.mev, 0), mav: heads.reduce((n, t) => n + t.mav, 0), mrv: heads.reduce((n, t) => n + t.mrv, 0) };
+        }
+    }
     const stamped = src && typeof src === "object" ? src.landmarks : null;
     if (stamped)
         return stamped.uniform ? uniformLandmarkFor(part) : landmarkForLegacy(part, exp);
@@ -15487,7 +15509,7 @@ function regionGapFix(part, gaps) {
    recovery, and worth a look if progress or readiness is sliding; it is not a claim those sets did
    nothing. The colour and the threshold are unchanged — only the claim attached to them. */
 function volumeZone(part, sets, program = 0) {
-    const { mev, mrv } = landmarkFor(part, "intermediate", program);
+    const { mev, mrv } = landmarkFor(part, program?.config?.experience || "intermediate", program);
     const mav = mavFor(part, program);
     /* FOUR BANDS, NOT THREE. "Productive" covered everything from MEV to MRV — a range wide enough
        that 9 sets and 21 sets read identically, when one is the middle of the growth range and the
@@ -15537,7 +15559,8 @@ function compositeMrv(part, program = 0) {
 // Zone for a broad part, using per-head data when the part is a composite so a single over-built
 // head (not the harmless lumped sum) is what trips the warning. Falls back to the flat zone when
 // no sub-volume is available.
-function partZone(part, sets, subVolume) {
+function partZone(part, sets, subVolume, program = null) {
+    if (program?.engineSource === "pursuit-next") return volumeZone(part, sets, program);
     const heads = COMPOSITE_HEADS[part];
     if (!heads || !subVolume)
         return volumeZone(part, sets);
@@ -19839,11 +19862,23 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
     const [noteId, setNoteId] = useState(null);
     const [noteVal, setNoteVal] = useState("");
     const setDayNote = (dayId, note) => setProgram(p => ({ ...p, days: p.days.map(d => d.id === dayId ? { ...d, note: note.trim() || undefined } : d) }));
-    // Apply the set-level fixes from the volume audit: merge the per-part bias into the program's
-    // slotBias (adding/removing sets on existing exercises) so under-MEV muscles climb into the
-    // productive band and over-MRV muscles come back down — without adding exercises or changing the
-    // day/time structure. Exercise-add fixes are left to the user (we can't pick a movement for them).
+    // Auto-fix is a verified engine transaction, committed to the saved plan as well as the open view.
     const applyVolumeFix = (volBias) => {
+        if (program.engineSource === "pursuit-next") {
+            try {
+                const result = repairShellVolume(program, EXERCISES);
+                if (result.changed)
+                    (onCommitProgram || setProgram)(result.program);
+                setVolumeFixFeedback({ status: result.status, message: result.message });
+                setToast({ msg: result.message });
+            }
+            catch {
+                const message = "Couldn’t safely repair this plan. Your sets have been kept; try a longer session or swap redundant work.";
+                setVolumeFixFeedback({ status: "unable", message });
+                setToast({ msg: message });
+            }
+            return;
+        }
         if (!volBias || !Object.keys(volBias).length)
             return;
         setProgram(p => {
@@ -19853,6 +19888,8 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
         });
     };
     const renameDay = (dayId, label) => setProgram(p => ({ ...p, days: p.days.map(d => d.id === dayId ? { ...d, label: label.trim() || d.label } : d) }));
+    const [volumeFixFeedback, setVolumeFixFeedback] = useState(null);
+    useEffect(() => { setVolumeFixFeedback(null); }, [program.id]);
     // Per-day focus tag: "strength" | "hypertrophy" | null (null = follow the program goal).
     const setDayFocus = (dayId, focus) => setProgram(p => ({ ...p, days: p.days.map(d => d.id === dayId ? { ...d, focus: focus || undefined } : d) }));
     const addNewDay = () => setProgram(p => ({ ...p, days: [...p.days, { id: uid(), label: `Day ${p.days.length + 1}`, type: "custom", exercises: [], primaryIndex: 0 }] }));
@@ -20981,7 +21018,7 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
                                 ...(program.days.length > 1 ? [{ k: "del", icon: _jsx(Trash2, { size: 16, color: C.danger }), label: "Delete day", danger: true, on: () => setConfirmDeleteDay(day.id) }] : []),
                             ].map(it => (_jsxs("button", { role: "menuitem", onClick: () => { setDayOpts(null); it.on(); }, className: "pressable wpb-context-menu-item", style: { width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "10px 9px", borderRadius: 12, background: "none", border: "none", cursor: "pointer", textAlign: "left", color: it.danger ? C.danger : C.text, fontSize: 15, fontWeight: 600 }, children: [it.icon, _jsx("span", { children: it.label })] }, it.k))) })] }));
                 return menu;
-            })(), _jsx(Exit, { when: planInfo, children: planInfo && (_jsx("div", { onClick: () => setPlanInfo(false), className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "flex-end", zIndex: 70, animation: "fadeIn .2s both" }, children: _jsxs("div", { ref: sheetDragRef, onClick: e => e.stopPropagation(), style: { width: "100%", maxHeight: "86vh", overflowY: "auto", background: C.bg2, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: "10px 18px calc(env(safe-area-inset-bottom) + 20px)", animation: "sheetUp .26s cubic-bezier(.2,.8,.3,1) both" }, children: [_jsx("div", { style: { fontSize: 18, fontWeight: 700, marginBottom: 4 }, children: "Plan info" }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginBottom: 12, lineHeight: 1.5 }, children: "How this program was put together, how progression was chosen, what it trains each week, and the arc it follows." }), (program.engineV || 1) < ENGINE_V && (program.engineDeclined || 0) >= ENGINE_V && !program.quick && (_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, background: C.card, borderRadius: 12, padding: "11px 12px", marginBottom: 12 }, children: [_jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsxs("div", { style: { fontSize: 13, fontWeight: 700, color: C.text }, children: ["Built on ", publicTrainingCopy(engineInfo(program.engineV || 1).label).toLowerCase()] }), _jsx("div", { style: { fontSize: 11, color: C.faint, lineHeight: 1.45, marginTop: 2 }, children: "You chose to keep this program as it is. You can still update it." })] }), _jsx("button", { onClick: () => { setPlanInfo(false); setProgram(p => { const { engineDeclined, ...rest } = p; return rest; }); }, "aria-label": "Show the program update again", className: "pressable", style: { flexShrink: 0, padding: "8px 12px", borderRadius: 12, background: C.bg2, border: `1px solid ${C.border}`, color: C.text, fontSize: 13, fontWeight: 600, cursor: "pointer" }, children: "Review" })] })), _jsx(SetupCard, { program: program, open: showSetup, onToggle: () => setShowSetup(v => !v) }), _jsx(ProgressionCard, { program: program, open: showProg, onToggle: () => setShowProg(v => !v) }), _jsx(VolumeCard, { history: history, volume: wkVol, subVolume: wkSubVol, program: program, onApplyFix: applyVolumeFix, open: showVol, onToggle: () => setShowVol(v => !v), week: activeWeek }), (() => {
+            })(), _jsx(Exit, { when: planInfo, children: planInfo && (_jsx("div", { onClick: () => setPlanInfo(false), className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "flex-end", zIndex: 70, animation: "fadeIn .2s both" }, children: _jsxs("div", { ref: sheetDragRef, onClick: e => e.stopPropagation(), style: { width: "100%", maxHeight: "86vh", overflowY: "auto", background: C.bg2, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: "10px 18px calc(env(safe-area-inset-bottom) + 20px)", animation: "sheetUp .26s cubic-bezier(.2,.8,.3,1) both" }, children: [_jsx("div", { style: { fontSize: 18, fontWeight: 700, marginBottom: 4 }, children: "Plan info" }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginBottom: 12, lineHeight: 1.5 }, children: "How this program was put together, how progression was chosen, what it trains each week, and the arc it follows." }), (program.engineV || 1) < ENGINE_V && (program.engineDeclined || 0) >= ENGINE_V && !program.quick && (_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, background: C.card, borderRadius: 12, padding: "11px 12px", marginBottom: 12 }, children: [_jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsxs("div", { style: { fontSize: 13, fontWeight: 700, color: C.text }, children: ["Built on ", publicTrainingCopy(engineInfo(program.engineV || 1).label).toLowerCase()] }), _jsx("div", { style: { fontSize: 11, color: C.faint, lineHeight: 1.45, marginTop: 2 }, children: "You chose to keep this program as it is. You can still update it." })] }), _jsx("button", { onClick: () => { setPlanInfo(false); setProgram(p => { const { engineDeclined, ...rest } = p; return rest; }); }, "aria-label": "Show the program update again", className: "pressable", style: { flexShrink: 0, padding: "8px 12px", borderRadius: 12, background: C.bg2, border: `1px solid ${C.border}`, color: C.text, fontSize: 13, fontWeight: 600, cursor: "pointer" }, children: "Review" })] })), _jsx(SetupCard, { program: program, open: showSetup, onToggle: () => setShowSetup(v => !v) }), _jsx(ProgressionCard, { program: program, open: showProg, onToggle: () => setShowProg(v => !v) }), _jsx(VolumeCard, { history: history, volume: wkVol, subVolume: wkSubVol, program: program, onApplyFix: applyVolumeFix, fixFeedback: volumeFixFeedback, open: showVol, onToggle: () => setShowVol(v => !v), week: activeWeek }), (() => {
                                 const plan = blockPlan;
                                 if (!plan)
                                     return null;
@@ -21438,7 +21475,7 @@ function VolumeBars({ volume, subVolume, target, program = null, week = 0 }) {
     const subUnder = { shoulders: ["front_delts", "side_delts", "rear_delts"], traps: ["upper_traps"], abs: ["obliques", "serratus"], calves: ["tibialis"] };
     const subBar = (k) => {
         const v = (subVolume && subVolume[k]) || 0;
-        const lm = SUB_LANDMARKS[k] || { mev: 4, mrv: 20 };
+        const lm = program?.engineSource === "pursuit-next" && k !== "front_delts" ? landmarkFor(k, program.config?.experience, program) : SUB_LANDMARKS[k] || { mev: 4, mrv: 20 };
         /* SUB-HEADS GET THE SAME BANDS AS EVERYTHING ELSE, FROM ONE DEFINITION.
            This line used to carry its own copy of the three-band rule — so when the bands changed the
            broad parts above gained a MAV split and these sub-head rows silently kept the old two-band
@@ -21456,9 +21493,9 @@ function VolumeBars({ volume, subVolume, target, program = null, week = 0 }) {
     return (_jsxs(_Fragment, { children: [subVolume && (_jsxs("button", { onClick: () => setGranular(g => !g), className: "pressable", style: { display: "flex", alignItems: "center", gap: 6, marginTop: 8, padding: "6px 10px", borderRadius: 8, border: `1px solid ${C.border}`, background: granular ? C.accentDim : C.card, color: granular ? C.accentInk : C.muted, fontSize: 13, fontWeight: 600, cursor: "pointer" }, children: [_jsx(Layers, { size: 13 }), " ", granular ? "Hide" : "Show", " delt heads & detail"] })), parts.map(p => {
                 const v = volume[p] || 0;
                 const tgt = target ? (target[p] || 0) : 0;
-                const { mev } = landmarkFor(p);
-                const mrv = compositeMrv(p); // composite parts (shoulders) scale to the sum of their heads
-                const zone = partZone(p, v, subVolume);
+                const { mev } = landmarkFor(p, program?.config?.experience, program);
+                const mrv = compositeMrv(p, program); // composite parts (shoulders) scale to the sum of their heads
+                const zone = partZone(p, v, subVolume, program);
                 const scale = Math.max(mrv * 1.1, v, tgt); // bar axis tops out past MRV, the bar, and the target
                 return (_jsxs("div", { style: { marginTop: 12 }, children: [_jsxs("div", { "data-vol-part": p, onClick: () => program && setOpenPart(o => o === p ? null : p), style: { display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 13, marginBottom: 4, cursor: program ? "pointer" : "default" }, children: [_jsxs("span", { style: { color: C.text, fontWeight: 500, display: "inline-flex", alignItems: "center", gap: 4 }, children: [PART_LABEL[p], program && _jsx(ChevronDown, { size: 11, color: C.faint, style: { transform: openPart === p ? "rotate(180deg)" : "none", transition: "transform .15s" } })] }), _jsxs("span", { children: [_jsx("span", { className: "mono", style: { color: zone.color, fontWeight: 600 }, children: fmtSets(v) }), tgt > 0 && _jsxs("span", { className: "mono", style: { fontSize: 11, color: C.faint }, children: [" / ", fmtSets(tgt)] }), " ", _jsx("span", { style: { fontSize: 11, color: C.faint }, title: tgt > 0 ? undefined : zone.sub, children: tgt > 0 ? "planned" : zone.label })] })] }), _jsxs("div", { style: { position: "relative", height: 9, borderRadius: 999, background: C.bg2, overflow: "visible" }, children: [_jsxs("div", { style: { position: "absolute", inset: 0, borderRadius: 999, overflow: "hidden" }, children: [_jsx("div", { style: { position: "absolute", left: `${(mev / scale) * 100}%`, width: `${((mrv - mev) / scale) * 100}%`, top: 0, bottom: 0, background: C.accent, opacity: 0.13 } }), _jsx("div", { className: "wpb-bar", style: { background: zone.color, transform: `translateX(-${100 - Math.min(100, (v / scale) * 100)}%)` } })] }), _jsx("div", { style: { position: "absolute", left: `${(mev / scale) * 100}%`, top: -1, bottom: -1, width: 2, background: C.faint, opacity: 0.6 } }), _jsx("div", { style: { position: "absolute", left: `${(mrv / scale) * 100}%`, top: -1, bottom: -1, width: 2, background: C.warn, opacity: 0.7 } }), tgt > 0 && _jsxs(_Fragment, { children: [_jsx("div", { style: { position: "absolute", left: `calc(${(tgt / scale) * 100}% - 3px)`, top: -7, width: 0, height: 0, borderLeft: "3px solid transparent", borderRight: "3px solid transparent", borderTop: `5px solid ${C.text}` } }), _jsx("div", { style: { position: "absolute", left: `${(tgt / scale) * 100}%`, top: -2, bottom: -2, width: 2, background: C.text, opacity: 0.85 } })] })] }), openPart === p && program && (() => {
                             const entry = (weekBreak || []).find(e => e.part === p);
@@ -21483,7 +21520,7 @@ function VolumeRampTable({ program }) {
         return null;
     return (_jsxs("div", { style: { marginTop: 16, paddingTop: 12, borderTop: `1px solid ${C.borderSoft}` }, children: [_jsx("div", { style: { ...eyebrow(), marginBottom: 2 }, children: "Volume across the block" }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginBottom: 8 }, children: "Sets per muscle each week \u2014 color shows the MEV \u2192 MRV zone" }), _jsx("div", { className: "wpb-hscroll", style: { overflowX: "auto", overflowY: "hidden", touchAction: "pan-x pan-y" }, children: _jsxs("div", { style: { display: "inline-block", minWidth: "100%" }, children: [_jsxs("div", { style: { display: "flex", marginBottom: 6 }, children: [_jsx("div", { style: { width: 72, flexShrink: 0 } }), cols.map(c => (_jsx("div", { style: { width: CW, textAlign: "center", fontSize: 11, fontWeight: 700, color: c.label === "DL" ? C.muted : C.faint }, children: c.label }, c.w)))] }), parts.map(p => (_jsxs("div", { style: { display: "flex", alignItems: "center", marginBottom: 4 }, children: [_jsx("div", { style: { width: 72, flexShrink: 0, fontSize: 13, fontWeight: 500, color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", paddingRight: 4 }, children: PART_LABEL[p] }), cols.map((c, ci) => {
                                     const s = vols[ci][p] || 0;
-                                    const z = volumeZone(p, s);
+                                    const z = volumeZone(p, s, program);
                                     return (_jsx("div", { style: { width: CW, display: "flex", justifyContent: "center" }, children: _jsx("div", { className: "mono", title: `${PART_LABEL[p]} · ${z.label}`, style: { width: 25, height: 22, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 600, background: `${z.color}22`, color: z.color }, children: fmtSets(s) }) }, c.w));
                                 })] }, p)))] }) }), _jsx("div", { style: { display: "flex", gap: 12, marginTop: 8, fontSize: 11, color: C.muted }, children: [["below MEV", C.muted], ["productive", C.accent], ["over MRV", C.warn]].map(([l, col]) => (_jsxs("span", { style: { display: "flex", alignItems: "center", gap: 4 }, children: [_jsx("span", { style: { width: 9, height: 9, borderRadius: 8, background: `${col}33`, border: `1px solid ${col}` } }), l] }, l))) })] }));
 }
@@ -21630,7 +21667,7 @@ function LoadWaveCard({ program, open, onToggle }) {
                 return (_jsxs("div", { "data-wave-week": d.w, "data-wave-sets": d.sets, "data-wave-deload": dl ? "1" : "0", style: { flex: 1, minWidth: 0, textAlign: "center" }, children: [_jsx("div", { className: "mono", style: { fontSize: 11, fontWeight: 700, color: dl ? C.warn : first ? C.accentInk : C.faint, marginBottom: 2 }, children: d.sets }), _jsx("div", { style: { height: h, borderRadius: 8, background: dl ? C.warn : first ? C.accent : C.accentDim } }), _jsx("div", { className: "mono", style: { fontSize: 11, color: dl ? C.warn : first ? C.accentInk : C.faint, marginTop: 4 }, children: dl ? "DL" : `W${d.w}` })] }, d.w));
             }) }) }));
 }
-function VolumeCard({ volume, subVolume, program, onApplyFix, open, onToggle, title = "Weekly volume", emptyLabel, target, history = null, week = 0, collapsible = true }) {
+function VolumeCard({ volume, subVolume, program, onApplyFix, fixFeedback = null, open, onToggle, title = "Weekly volume", emptyLabel, target, history = null, week = 0, collapsible = true }) {
     const parts = PART_ORDER.filter(p => (volume[p] || 0) > 0.05);
     const verdicts = volumeVerdicts(history, volume, parts);
     const verb = program ? "is planned at" : "logged";
@@ -21642,11 +21679,11 @@ function VolumeCard({ volume, subVolume, program, onApplyFix, open, onToggle, ti
     // "outside MEV-MRV" must not count the `high` band, which is inside it — see volumeZone.
     const flags = program ? audit.issues.length : parts.filter(p => !["productive", "high"].includes(partZone(p, volume[p], subVolume).label)).length;
     const isEmpty = parts.length === 0;
-    return (_jsx(InfoCard, { icon: BarChart3, title: title, open: open, onToggle: onToggle, collapsible: collapsible, subtitle: isEmpty ? "No sets logged yet" : `${fmtSets(total)} sets · ${parts.length} muscles${flags ? ` · ${flags} outside MEV–MRV` : " · all in range"}`, children: isEmpty ? (_jsx("div", { style: { padding: "6px 2px 8px", fontSize: 13, color: C.muted, lineHeight: 1.5 }, children: emptyLabel || "Log a workout to see your set volume per muscle against your MEV–MRV landmarks." })) : (_jsxs(_Fragment, { children: [audit.issues.length > 0 && (_jsxs("div", { style: { marginBottom: 12, background: C.bg2, borderRadius: 12, padding: "12px 13px" }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }, children: [_jsx(AlertTriangle, { size: 14, color: C.warn }), _jsx("span", { style: { fontSize: 13, fontWeight: 700, color: C.text }, children: "Volume check" }), _jsx("span", { style: { fontSize: 11, color: C.faint, marginLeft: "auto" }, children: "peak week vs MEV\u2013MRV" })] }), audit.issues.map(iss => (_jsxs("div", { style: { display: "flex", gap: 8, padding: "7px 0", borderTop: `1px solid ${C.borderSoft}` }, children: [_jsx("span", { style: { flexShrink: 0, marginTop: 1, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: .3, color: iss.status === "under" ? C.muted : C.warn, width: 46 }, children: iss.status === "under" ? "Low" : "High" }), _jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsxs("div", { style: { fontSize: 13, fontWeight: 600, color: C.text }, children: [iss.label, " ", _jsxs("span", { className: "mono", style: { fontSize: 11, color: C.faint, fontWeight: 500 }, children: ["\u00B7 ", fmtSets(iss.v), " sets (", iss.status === "under" ? `MEV ${iss.mev}` : `MRV ${iss.mrv}`, ")"] })] }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginTop: 2, lineHeight: 1.4 }, children: iss.fix })] })] }, iss.part))), Object.keys(audit.volBias).length > 0 && onApplyFix && (_jsxs("button", { onClick: () => onApplyFix(audit.volBias), className: "pressable", style: { width: "100%", marginTop: 12, background: C.accent, border: "none", borderRadius: 12, color: C.accentText, cursor: "pointer", fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "10px" }, children: [_jsx(Wand2, { size: 14 }), " Auto-fix the set-level gaps"] })), Object.keys(audit.volBias).length === 0 && (_jsx("div", { style: { fontSize: 11, color: C.faint, marginTop: 8, lineHeight: 1.4 }, children: "These need an exercise added or a longer session \u2014 auto-fix can't resolve them without changing your day structure." }))] })), verdicts.length > 0 && (_jsxs("div", { style: { marginBottom: 12, background: C.bg2, borderRadius: 12, padding: "12px 13px" }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }, children: [_jsx(Brain, { size: 14, color: C.accentInk }), _jsx("span", { style: { fontSize: 13, fontWeight: 700, color: C.text }, children: "From your training" }), _jsx("span", { style: { fontSize: 11, color: C.faint, marginLeft: "auto" }, children: "your response, not averages" })] }), verdicts.map(v => (_jsxs("div", { style: { display: "flex", gap: 8, alignItems: "baseline", padding: "7px 0", borderTop: `1px solid ${C.borderSoft}` }, children: [_jsx("span", { style: { flexShrink: 0, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: .3, color: v.status === "in" ? C.accentInk : C.warn, minWidth: 44 }, children: v.status === "in" ? "on it" : v.status === "over" ? "above" : "below" }), _jsxs("div", { style: { flex: 1, minWidth: 0, fontSize: 13, color: C.muted, lineHeight: 1.5 }, children: [_jsx("b", { style: { color: C.text }, children: PART_LABEL[v.part] || v.part }), " ", v.status === "in"
+    return (_jsx(InfoCard, { icon: BarChart3, title: title, open: open, onToggle: onToggle, collapsible: collapsible, subtitle: isEmpty ? "No sets logged yet" : `${fmtSets(total)} sets · ${parts.length} muscles${flags ? ` · ${flags} outside MEV–MRV` : " · all in range"}`, children: isEmpty ? (_jsx("div", { style: { padding: "6px 2px 8px", fontSize: 13, color: C.muted, lineHeight: 1.5 }, children: emptyLabel || "Log a workout to see your set volume per muscle against your MEV–MRV landmarks." })) : (_jsxs(_Fragment, { children: [audit.issues.length > 0 && (_jsxs("div", { style: { marginBottom: 12, background: C.bg2, borderRadius: 12, padding: "12px 13px" }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }, children: [_jsx(AlertTriangle, { size: 14, color: C.warn }), _jsx("span", { style: { fontSize: 13, fontWeight: 700, color: C.text }, children: "Volume check" }), _jsx("span", { style: { fontSize: 11, color: C.faint, marginLeft: "auto" }, children: program?.engineSource === "pursuit-next" ? "all training weeks" : "peak week vs MEV\u2013MRV" })] }), audit.issues.map(iss => (_jsxs("div", { style: { display: "flex", gap: 8, padding: "7px 0", borderTop: `1px solid ${C.borderSoft}` }, children: [_jsx("span", { style: { flexShrink: 0, marginTop: 1, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: .3, color: iss.status === "under" ? C.muted : C.warn, width: 46 }, children: iss.status === "under" ? "Low" : "High" }), _jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsxs("div", { style: { fontSize: 13, fontWeight: 600, color: C.text }, children: [iss.label, " ", _jsxs("span", { className: "mono", style: { fontSize: 11, color: C.faint, fontWeight: 500 }, children: ["\u00B7 ", fmtSets(iss.v), " sets (", iss.status === "under" ? `MEV ${iss.mev}` : `MRV ${iss.mrv}`, ")"] })] }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginTop: 2, lineHeight: 1.4 }, children: iss.fix })] })] }, iss.part))), Object.keys(audit.volBias).length > 0 && onApplyFix && (_jsxs("button", { onClick: () => onApplyFix(audit.volBias), "data-volume-auto-fix": true, className: "pressable", style: { width: "100%", marginTop: 12, background: C.accent, border: "none", borderRadius: 12, color: C.accentText, cursor: "pointer", fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "10px" }, children: [_jsx(Wand2, { size: 14 }), " Auto-fix weekly volume"] })), Object.keys(audit.volBias).length === 0 && (_jsx("div", { style: { fontSize: 11, color: C.faint, marginTop: 8, lineHeight: 1.4 }, children: "These need an exercise added or a longer session \u2014 auto-fix can't resolve them without changing your day structure." }))] })), verdicts.length > 0 && (_jsxs("div", { style: { marginBottom: 12, background: C.bg2, borderRadius: 12, padding: "12px 13px" }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }, children: [_jsx(Brain, { size: 14, color: C.accentInk }), _jsx("span", { style: { fontSize: 13, fontWeight: 700, color: C.text }, children: "From your training" }), _jsx("span", { style: { fontSize: 11, color: C.faint, marginLeft: "auto" }, children: "your response, not averages" })] }), verdicts.map(v => (_jsxs("div", { style: { display: "flex", gap: 8, alignItems: "baseline", padding: "7px 0", borderTop: `1px solid ${C.borderSoft}` }, children: [_jsx("span", { style: { flexShrink: 0, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: .3, color: v.status === "in" ? C.accentInk : C.warn, minWidth: 44 }, children: v.status === "in" ? "on it" : v.status === "over" ? "above" : "below" }), _jsxs("div", { style: { flex: 1, minWidth: 0, fontSize: 13, color: C.muted, lineHeight: 1.5 }, children: [_jsx("b", { style: { color: C.text }, children: PART_LABEL[v.part] || v.part }), " ", v.status === "in"
                                             ? `${verb} ${fmtSets(v.planned)} sets — inside the ${v.lo}–${v.hi} range that has driven your fastest gains.`
                                             : v.status === "over"
                                                 ? `${verb} ${fmtSets(v.planned)} sets, above the ${v.lo}–${v.hi} that has driven your fastest gains. More sets haven't bought you more progress.`
-                                                : `${verb} ${fmtSets(v.planned)} sets, below the ${v.lo}–${v.hi} that has driven your fastest gains.`, _jsxs("span", { style: { color: C.faint }, children: [" (", v.weeks, " weeks compared)"] })] })] }, v.part)))] })), _jsx(VolumeBars, { volume: volume, subVolume: subVolume, target: target, program: program, week: week }), program && _jsx(VolumeRampTable, { program: program })] })) }));
+                                                : `${verb} ${fmtSets(v.planned)} sets, below the ${v.lo}–${v.hi} that has driven your fastest gains.`, _jsxs("span", { style: { color: C.faint }, children: [" (", v.weeks, " weeks compared)"] })] })] }, v.part)))] })), _jsx(VolumeBars, { volume: volume, subVolume: subVolume, target: target, program: program, week: week }), program && _jsx(VolumeRampTable, { program: program }), fixFeedback && _jsx("div", { role: "status", "data-volume-repair-status": fixFeedback.status, style: { marginTop: 10, padding: "10px 12px", borderRadius: 12, background: C.bg2, color: C.text, fontSize: 13, lineHeight: 1.5 }, children: fixFeedback.message })] })) }));
 }
 function AddSheet({ parts, usedIds = [], onPick, onAddById, onCreate, onClose }) {
     const [mode, setMode] = useState("pick"); // pick | create
@@ -28803,6 +28840,8 @@ function volumeAdvice(history, opts) {
    per-part set delta to hand to distributeVolBias, and `fits` says whether the set-level fix stays
    inside the time budget. Muscles already in the productive MEV→MRV band are not reported. */
 function volumeAudit(program) {
+    if (program?.engineSource === "pursuit-next")
+        return auditShellVolume(program, EXERCISES);
     if (!program || !program.days?.length)
         return { issues: [], volBias: {} };
     const peak = weeksOf(program); // peak training week (before any deload) carries the most volume

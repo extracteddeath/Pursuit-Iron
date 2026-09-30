@@ -1,3 +1,11 @@
+# M199 — Volume Repair Integrity (build 789)
+
+- Auto-fix now updates engine-owned weekly prescriptions and commits the verified program to saved state.
+- Existing movements absorb useful sets first; full sessions trigger accessory reallocation and redundant setup consolidation before another movement is considered.
+- Volume warnings, charts, and contributors share live engine accounting and phase/experience/priority/capacity targets across all working weeks.
+- Corrected fractional upper-back credit for lat-biased rows; success is checked after repair, with explicit partial/unable feedback.
+- Preserved M198 creation/capacity/split guards and the newer M199 wizard fixes; rotated the PWA cache for build 789.
+
 ## M199 — Stable program builder feasibility
 
 - Split and session-length cards no longer run full program generation while rendering, removing the UI-thread freeze/flicker in the time-selection step.

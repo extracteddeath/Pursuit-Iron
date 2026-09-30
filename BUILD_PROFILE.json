@@ -1,12 +1,12 @@
 {
   "profile": "portable-browser-esm-v661-workout-input",
-  "milestone": "M201",
-  "source": "M199 baseline + completed M200 regional dose + custom workout prescription integrity",
-  "engine": "0.64.2 with pending rep target reconciliation and expanded exercise variations",
+  "milestone": "M202",
+  "source": "M201 production baseline + locked-cycle phase-specific volume reconciliation",
+  "engine": "0.64.3 with roster-preserving locked-cycle accessory-volume repair",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 51,
   "shadowRuntimeModules": 9,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m201-workout-prescription-b791",
-  "uiMilestone": "Pursuit Iron 4.0 Production Release · M201 Workout Prescription"
+  "cache": "pursuit-iron-production-v4-0-0-m202-locked-cycle-dose-b792",
+  "uiMilestone": "Pursuit Iron 4.0 Production Release · M202 Locked Cycle Dose"
 }

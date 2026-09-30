@@ -140,7 +140,8 @@ function baseSessions(program, legacyExercises) {
     });
 }
 
-function rebuild(program, changes, legacyExercises, addition = null) {
+function rebuild(program, changes, legacyExercises, addition = null, options = {}) {
+    const preserveRoster = !!options.preserveRoster;
     const request = requestOf(program), sessions = baseSessions(program, legacyExercises);
     const next = { ...program, days: program.days.map(d => ({ ...d, exercises: [...d.exercises] })),
         overrides: { ...program.overrides }, nextWeekPrescriptions: { ...program.nextWeekPrescriptions }, nextEngine: { ...program.nextEngine } };
@@ -148,7 +149,17 @@ function rebuild(program, changes, legacyExercises, addition = null) {
     for (const change of changes) {
         const s = sessions.find(s => s.shellDayId === change.dayId), e = s?.exercises[change.slot];
         if (!e) return null;
+        // A locked roster can already be at the one-base-set floor while the session-level weekly
+        // allocator rounds that slot up to two sets. In that case the safe repair surface is the
+        // exact generated week cell, not a nonexistent zero-set base prescription.
+        if (Number.isInteger(change.week) && change.week > 0) {
+            const key = e.shellKey, cells = next.nextWeekPrescriptions?.[key], prior = cells?.[change.week];
+            if (!prior || !Number.isFinite(prior.sets) || prior.sets + change.delta < 1) return null;
+            changed.add(key);
+            continue;
+        }
         if (change.remove) {
+            if (preserveRoster) return null;
             const di = next.days.findIndex(d => d.id === change.dayId), day = next.days[di];
             day.exercises.splice(change.slot, 1);
             day.primaryIndex = Math.max(0, day.primaryIndex - (change.slot < day.primaryIndex ? 1 : 0));
@@ -174,13 +185,14 @@ function rebuild(program, changes, legacyExercises, addition = null) {
             continue;
         }
         e.sets += change.delta;
-        if (e.sets < 2) return null; // avoid new one-set fragments
+        if (e.sets < (preserveRoster ? 1 : 2)) return null; // locked cycles may retain a one-set accessory rather than delete the roster entry
         const key = e.shellKey;
         changed.add(key);
         if (next.overrides[key]?.sets != null)
             next.overrides[key] = { ...next.overrides[key], sets: e.sets };
     }
     if (addition) {
+        if (preserveRoster) return null;
         const di = next.days.findIndex(d => d.id === addition.dayId), day = next.days[di], s = sessions[di];
         const map = createExerciseMap(request.customExercises);
         const firstIsolation = s.exercises.findIndex(e => !STRENGTH.has(e.role) && !map.get(e.exerciseId)?.flags.compound);
@@ -226,6 +238,11 @@ function rebuild(program, changes, legacyExercises, addition = null) {
                     ...(prior ? {} : { reps: generated.prescription.reps.join('-'), rir: generated.prescription.rir.join('-'),
                         rest: generated.prescription.restSeconds, role: generated.role, progressionStyle: generated.progressionStyle, tech: null }) };
             }
+            for (const change of changes.filter(change => Number.isInteger(change.week) && change.week > 0 && `${change.dayId}:${change.slot}` === key)) {
+                const prior = cells[change.week];
+                if (!prior || !Number.isFinite(prior.sets) || prior.sets + change.delta < 1) return null;
+                cells[change.week] = { ...prior, sets: prior.sets + change.delta };
+            }
             next.nextWeekPrescriptions[key] = cells;
         }
     }
@@ -267,10 +284,67 @@ function safeImprovement(before, after, candidate, baselineEngineAudit, changedK
     return Object.entries(newCounts).every(([key, n]) => n <= (oldCounts[key] || 0));
 }
 
+/** Static-cycle finishing pass. Base repair and exact week-cell repair are deliberately separate:
+ * rebuilding a base session regenerates its weekly cells, so mixing both mutation layers can undo a
+ * safe weekly trim. This pass runs only after base repair has plateaued and changes generated work-week
+ * cells only; exercise identity and the immutable engine program are untouched. */
+export function reconcileLockedCycleWeekOverflows(program, legacyExercises = []) {
+    let current = program, audit = auditShellVolume(program, legacyExercises), changed = false;
+    const context = createEngineContext(requestOf(program));
+    const safeCell = (before, after, issue) => {
+        if (after.missing || deficit(after) > deficit(before) + EPS) return false;
+        const bw = before.weeks[issue.week - 1], aw = after.weeks[issue.week - 1];
+        // Tied worst weeks form a plateau: improving week 1 can move the same block-wide maximum
+        // to week 2 without changing aggregate deficit yet. Permit that non-worsening intermediate
+        // step only when the exact offending week/region itself strictly improves.
+        if (!bw || !aw || aw.regions[issue.region] >= bw.regions[issue.region] - EPS) return false;
+        for (let wi = 0; wi < after.weeks.length; wi++) {
+            const b = before.weeks[wi], a = after.weeks[wi];
+            for (const target of before.targets) {
+                const lo = Math.min(target.mev, b.regions[target.region]);
+                const hi = Math.max(target.mrv, b.regions[target.region]);
+                if (a.regions[target.region] + EPS < lo || a.regions[target.region] > hi + EPS) return false;
+            }
+            for (let di = 0; di < a.sessions.length; di++)
+                if (a.sessions[di].estimatedMinutes > Math.max(a.sessions[di].maxMinutes, b.sessions[di].estimatedMinutes)) return false;
+        }
+        return true;
+    };
+    for (let guard = 0; guard < 96; guard++) {
+        const issue = audit.issues.find(x => x.status === 'over');
+        if (!issue) break;
+        const week = audit.weeks[issue.week - 1];
+        const candidates = week.sessions.flatMap(session => session.exercises.map(exercise => ({ session, exercise,
+            def: context.exerciseById(exercise.exerciseId) })))
+            .filter(x => x.def && !STRENGTH.has(x.exercise.role) && x.exercise.sets > 1 && publicRegionContribution(x.def, issue.region) > 0)
+            .sort((a, b) => (a.def.flags.compound ? 1 : 0) - (b.def.flags.compound ? 1 : 0) ||
+                publicRegionContribution(b.def, issue.region) - publicRegionContribution(a.def, issue.region) ||
+                b.exercise.sets - a.exercise.sets || a.exercise.shellKey.localeCompare(b.exercise.shellKey));
+        let best = null;
+        for (const x of candidates) {
+            const key = x.exercise.shellKey, cells = current.nextWeekPrescriptions?.[key], prior = cells?.[issue.week];
+            if (!prior || !Number.isFinite(prior.sets) || prior.sets <= 1) continue;
+            const candidate = { ...current, nextWeekPrescriptions: { ...current.nextWeekPrescriptions,
+                [key]: { ...cells, [issue.week]: { ...prior, sets: prior.sets - 1 } } } };
+            const after = auditShellVolume(candidate, legacyExercises);
+            if (!safeCell(audit, after, issue)) continue;
+            const score = deficit(audit) - deficit(after);
+            if (!best || score > best.score + EPS) best = { candidate, after, score, key, week: issue.week };
+        }
+        if (!best) break;
+        current = best.candidate;
+        audit = best.after;
+        changed = true;
+    }
+    return { program: current, after: audit, changed,
+        status: audit.issues.some(x => x.status === 'over') ? (changed ? 'partial' : 'unable') : changed ? 'success' : 'unchanged' };
+}
+
 /** Verified transaction: existing set allocation, then reallocation, then one compatible new
  * movement. Every proposal uses the same public region ledger and complete engine safety audit.
  * Failed proposals are discarded; a partial repair is reported as partial, never as success. */
-export function repairShellVolume(program, legacyExercises = []) {
+export function repairShellVolume(program, legacyExercises = [], options = {}) {
+    const preserveRoster = !!options.preserveRoster;
     const before = auditShellVolume(program, legacyExercises);
     if (before.missing) return { program, status: 'unable', changed: false, before, after: before, message: 'Prescription data is incomplete. Rebuild this plan before fixing its volume.' };
     if (!before.issues.length) return { program, status: 'unchanged', changed: false, before, after: before, message: 'Weekly volume is already in range for this block.' };
@@ -284,7 +358,7 @@ export function repairShellVolume(program, legacyExercises = []) {
         const slots = sessions.flatMap(s => s.exercises.map((e, slot) => ({ dayId: s.shellDayId, slot, e, def: context.exerciseById(e.exerciseId), s })));
         let best = null;
         const consider = (ops, addition = null) => {
-            const candidate = rebuild(current, ops, legacyExercises, addition);
+            const candidate = rebuild(current, ops, legacyExercises, addition, { preserveRoster });
             if (!candidate) return;
             const after = auditShellVolume(candidate, legacyExercises);
             const keys = new Set(ops.map(op => `${op.dayId}:${op.slot}`));
@@ -298,14 +372,33 @@ export function repairShellVolume(program, legacyExercises = []) {
         const redundant = slots.filter(x => x.def && !STRENGTH.has(x.e.role) && x.s.exercises.length > 3 &&
             avoidableExerciseOverlap(x.def, x.e.role, x.s.exercises.filter(e => e.shellKey !== x.e.shellKey).map(e => ({ def: context.exerciseById(e.exerciseId), role: e.role })).filter(x => x.def)));
         for (const issue of audit.issues) {
-            const recipients = slots.filter(x => x.def && !STRENGTH.has(x.e.role) && publicRegionContribution(x.def, issue.region) > 0)
+            // Locked-cycle strength_support rows can be accessories whose identity must stay in the
+            // skeleton (calves are the concrete M202 case). Keep primary/secondary strength anchors
+            // fully protected, but allow an over-ceiling support row to shed sets when the exact
+            // weekly shell audit and the full engine audit both approve the change.
+            const recipients = slots.filter(x => x.def &&
+                (!STRENGTH.has(x.e.role) || (preserveRoster && issue.status === 'over' && x.e.role === 'strength_support')) &&
+                publicRegionContribution(x.def, issue.region) > 0)
                 .sort((a, b) => publicRegionContribution(b.def, issue.region) - publicRegionContribution(a.def, issue.region) || a.e.sets - b.e.sets);
             for (const r of recipients) {
-                consider([{ dayId: r.dayId, slot: r.slot, delta: issue.status === 'under' ? 1 : -1 }]);
-                // Whole-week rounding can absorb a single base set without increasing the lowest
-                // week. Test a bounded two-set step before interpreting that as exhausted headroom.
-                if (issue.status === 'under' && r.e.sets <= 3)
-                    consider([{ dayId: r.dayId, slot: r.slot, delta: 2 }]);
+                // At cycle creation there are no user-edited weekly cells to preserve. If a locked
+                // isolation is already at one base set but this specific week was rounded up, trim
+                // that generated cell directly. The public-region transaction still checks every
+                // other region and session clock before accepting it.
+                if (preserveRoster && issue.status === 'over' && r.e.role === 'hypertrophy_isolation' && r.e.sets <= 1) {
+                    const weekSession = audit.weeks[issue.week - 1]?.sessions.find(session => session.shellDayId === r.dayId);
+                    const weekExercise = weekSession?.exercises.find(exercise => exercise.shellKey === r.e.shellKey);
+                    if (weekExercise?.sets > 1)
+                        consider([{ dayId: r.dayId, slot: r.slot, delta: -1, week: issue.week }]);
+                }
+                const floor = preserveRoster ? 1 : 2;
+                // Work-week progression is rounded from the base prescription. A one-set base change
+                // can therefore leave the max week unchanged; search a small bounded decrement atomically
+                // rather than falsely concluding that a locked roster cannot be reconciled.
+                const deltas = issue.status === 'under' ? [1, ...(r.e.sets <= 3 ? [2] : [])]
+                    : [-1, -2, -3].filter(delta => r.e.sets + delta >= floor);
+                for (const delta of deltas)
+                    consider([{ dayId: r.dayId, slot: r.slot, delta }]);
             }
         }
         // Any legal increase on existing work wins before trades or a new setup are considered.
@@ -341,6 +434,56 @@ export function repairShellVolume(program, legacyExercises = []) {
                     if (!best) for (const d of donors.filter(d => d.dayId === s.shellDayId))
                         for (let n = 1; n <= Math.min(3, d.e.sets - 2); n++) consider([{ dayId: d.dayId, slot: d.slot, delta: -n }], addition);
                 }
+            }
+        }
+        // A static-cycle roster can be structurally safe while a one-set accessory is rounded
+        // upward by the session-level week allocator. Once base-set proposals are exhausted, repair
+        // only the offending generated work-week cell. This does not alter the exercise identity or
+        // base engine prescription, so validate it at the shell layer where the change actually lives:
+        // the displayed deficit must shrink, no other region may leave its prior safe envelope, and
+        // no session may become longer. The engine audit is unchanged because engine sessions are unchanged.
+        if (!best && preserveRoster) for (const issue of audit.issues.filter(issue => issue.status === 'over')) {
+            const week = audit.weeks[issue.week - 1];
+            const exact = week.sessions.flatMap(session => session.exercises.map(exercise => ({ session, exercise,
+                def: context.exerciseById(exercise.exerciseId) })))
+                .filter(x => x.def && x.exercise.role === 'hypertrophy_isolation' && x.exercise.sets > 1 &&
+                    publicRegionContribution(x.def, issue.region) > 0)
+                .sort((a, b) => publicRegionContribution(b.def, issue.region) - publicRegionContribution(a.def, issue.region) ||
+                    b.exercise.sets - a.exercise.sets || a.exercise.shellKey.localeCompare(b.exercise.shellKey));
+            for (const x of exact) {
+                const key = x.exercise.shellKey, cells = current.nextWeekPrescriptions?.[key], prior = cells?.[issue.week];
+                if (!prior || !Number.isFinite(prior.sets) || prior.sets <= 1) continue;
+                const candidate = { ...current,
+                    nextWeekPrescriptions: { ...current.nextWeekPrescriptions,
+                        [key]: { ...cells, [issue.week]: { ...prior, sets: prior.sets - 1 } } },
+                    nextEngine: { ...current.nextEngine } };
+                const after = auditShellVolume(candidate, legacyExercises);
+                if (after.missing || deficit(after) >= deficit(audit) - EPS) continue;
+                let exactSafe = true;
+                for (let wi = 0; wi < after.weeks.length && exactSafe; wi++) {
+                    const beforeWeek = audit.weeks[wi], afterWeek = after.weeks[wi];
+                    for (const target of audit.targets) {
+                        const lo = Math.min(target.mev, beforeWeek.regions[target.region]);
+                        const hi = Math.max(target.mrv, beforeWeek.regions[target.region]);
+                        if (afterWeek.regions[target.region] + EPS < lo || afterWeek.regions[target.region] > hi + EPS) {
+                            exactSafe = false;
+                            break;
+                        }
+                    }
+                    if (!exactSafe) break;
+                    for (let di = 0; di < afterWeek.sessions.length; di++) {
+                        const a = afterWeek.sessions[di], b = beforeWeek.sessions[di];
+                        if (a.estimatedMinutes > Math.max(a.maxMinutes, b.estimatedMinutes)) {
+                            exactSafe = false;
+                            break;
+                        }
+                    }
+                }
+                if (!exactSafe) continue;
+                const score = deficit(audit) - deficit(after);
+                if (!best || score > best.score + EPS) best = { candidate, after,
+                    ops: [{ dayId: x.session.shellDayId, slot: x.exercise.shellSlot, delta: -1, week: issue.week, weeklyCell: true }],
+                    addition: null, score };
             }
         }
         if (!best) break;

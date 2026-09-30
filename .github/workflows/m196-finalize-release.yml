@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/m196-finalize-release.yml'
       - 'scripts/finalize-m196-release.mjs'
+      - 'verification/m196-capacity-band-regression-test.mjs'
   workflow_dispatch:
 
 permissions:

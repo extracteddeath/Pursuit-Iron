@@ -7,8 +7,9 @@ const from = `        if (!best) break;
 const to = `        // A static-cycle roster can be structurally safe while a one-set accessory is rounded
         // upward by the session-level week allocator. Once base-set proposals are exhausted, repair
         // only the offending generated work-week cell. This does not alter the exercise identity or
-        // the base engine prescription; the same all-region, time, and engine-audit transaction still
-        // has to show a strict improvement before the cell is accepted.
+        // base engine prescription, so validate it at the shell layer where the change actually lives:
+        // the displayed deficit must shrink, no other region may leave its prior safe envelope, and
+        // no session may become longer. The engine audit is unchanged because engine sessions are unchanged.
         if (!best && preserveRoster) for (const issue of audit.issues.filter(issue => issue.status === 'over')) {
             const week = audit.weeks[issue.week - 1];
             const exact = week.sessions.flatMap(session => session.exercises.map(exercise => ({ session, exercise,
@@ -25,8 +26,28 @@ const to = `        // A static-cycle roster can be structurally safe while a on
                         [key]: { ...cells, [issue.week]: { ...prior, sets: prior.sets - 1 } } },
                     nextEngine: { ...current.nextEngine } };
                 const after = auditShellVolume(candidate, legacyExercises);
-                const keys = new Set([key]);
-                if (!safeImprovement(audit, after, candidate, initialEngineAudit, keys)) continue;
+                if (after.missing || deficit(after) >= deficit(audit) - EPS) continue;
+                let exactSafe = true;
+                for (let wi = 0; wi < after.weeks.length && exactSafe; wi++) {
+                    const beforeWeek = audit.weeks[wi], afterWeek = after.weeks[wi];
+                    for (const target of audit.targets) {
+                        const lo = Math.min(target.mev, beforeWeek.regions[target.region]);
+                        const hi = Math.max(target.mrv, beforeWeek.regions[target.region]);
+                        if (afterWeek.regions[target.region] + EPS < lo || afterWeek.regions[target.region] > hi + EPS) {
+                            exactSafe = false;
+                            break;
+                        }
+                    }
+                    if (!exactSafe) break;
+                    for (let di = 0; di < afterWeek.sessions.length; di++) {
+                        const a = afterWeek.sessions[di], b = beforeWeek.sessions[di];
+                        if (a.estimatedMinutes > Math.max(a.maxMinutes, b.estimatedMinutes)) {
+                            exactSafe = false;
+                            break;
+                        }
+                    }
+                }
+                if (!exactSafe) continue;
                 const score = deficit(audit) - deficit(after);
                 if (!best || score > best.score + EPS) best = { candidate, after,
                     ops: [{ dayId: x.session.shellDayId, slot: x.exercise.shellSlot, delta: -1, week: issue.week, weeklyCell: true }],

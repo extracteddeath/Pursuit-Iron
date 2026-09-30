@@ -5,6 +5,7 @@ on:
     branches: [audit/m198-creation-pipeline]
     paths:
       - '.github/workflows/m198-apply-full-body-structural-swap.yml'
+      - 'verification/m198-patch-full-body-structural-swap.mjs'
   workflow_dispatch:
 
 permissions:

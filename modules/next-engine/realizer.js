@@ -1250,13 +1250,23 @@ export function realizeSessions(plans, request, targetDose = {}, directTargetDos
                         const def = muscleCandidate(allocation, session, request, chosenDefs, weeklyMovementUse, exerciseCatalog);
                         if (!def)
                             continue;
-                        const structuralSets = session.maxMinutes <= 35 ? 1 : 2;
-                        const added = makePlanned(def, 'hypertrophy_compound', structuralSets, policy, request.athlete.experience);
-                        let proposal = [...session.exercises, added];
-                        const fitted = fitProposalBySafeDosage(session, proposal, proposal.length - 1);
-                        if (!fitted)
+                        // Full-body identity is structural, not a two-set volume mandate. Try the normal
+                        // two-set repair first, but if it cannot fit without violating protected weekly
+                        // minimums, retain a one-set push/pull/lower exposure rather than returning a
+                        // label-only Full Body session. The normal weekly dose ledger remains authoritative.
+                        const structuralSetOptions = session.maxMinutes <= 35 ? [1] : [2, 1];
+                        let proposal = null;
+                        for (const structuralSets of structuralSetOptions) {
+                            const added = makePlanned(def, 'hypertrophy_compound', structuralSets, policy, request.athlete.experience);
+                            const candidate = [...session.exercises, added];
+                            const fitted = fitProposalBySafeDosage(session, candidate, candidate.length - 1);
+                            if (fitted) {
+                                proposal = fitted;
+                                break;
+                            }
+                        }
+                        if (!proposal)
                             continue;
-                        proposal = fitted;
                         const minutes = estimateMinutes(proposal);
                         session.exercises = proposal;
                         session.estimatedMinutes = minutes;

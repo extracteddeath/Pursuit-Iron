@@ -40,7 +40,7 @@
     <title>Pursuit Iron — Strength Coach</title>
   </head>
   <body>
-    <div id="root"><div id="pursuit-startup" class="pursuit-boot"><div class="pursuit-boot-inner"><div class="pursuit-boot-brand">Pursuit Iron</div><div class="pursuit-boot-progress" aria-hidden="true"><span></span></div><div id="pursuit-startup-status" class="pursuit-boot-status">Starting…</div></div></div></div>
+    <div id="root"><div id="pursuit-startup" class="pursuit-boot"><div class="pursuit-boot-inner"><div class="pursuit-boot-brand">Pursuit Iron</div><div class="pursuit-boot-progress" aria-hidden="true"><span></span></div><div id="pursuit-startup-status" class="pursuit-boot-status">Loading Pursuit Iron…</div></div></div></div>
     <script>
 window.__pursuitMounted=false;
 (function(){
@@ -57,7 +57,7 @@ window.__pursuitMounted=false;
   window.__pursuitMarkMounted=function(){window.__pursuitMounted=true;bootHealth(true);if(softTimer){clearTimeout(softTimer);softTimer=null;}if(hardTimer){clearTimeout(hardTimer);hardTimer=null;}};
   window.addEventListener('error',function(e){showBootError(e&&e.message,'window.error');});
   window.addEventListener('unhandledrejection',function(e){var r=e&&e.reason;showBootError(r&&r.message?r.message:String(r||'Promise rejection'),'unhandledrejection');});
-  softTimer=setTimeout(function(){if(!window.__pursuitMounted)status('Still starting — your saved training is safe.');},8000);
+  softTimer=setTimeout(function(){if(!window.__pursuitMounted)status('Still loading — your saved training is safe.');},8000);
   hardTimer=setTimeout(function(){if(!window.__pursuitMounted)showBootError('App did not finish its first render','watchdog');},20000);
 })();
 </script>

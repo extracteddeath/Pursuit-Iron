@@ -98,7 +98,7 @@
     "validation": "M199 removes synchronous generation from wizard feasibility, retries rejected structural rolls with deterministic saved seeds, precaches capacity generation, and re-runs release/PWA integrity."
   },
   "uiFiles": {
-    "modules/App.js": "f5f8795d12cedd7d90f1153268fdc741d6ef568f5f9a97ca4fe0e0d58b6e7b06",
+    "modules/App.js": "e0461edeb5b6175f7279526fa97c597f6268bb0c435b6763cc2dc33436a2ad38",
     "index.html": "55672117c72aaecdf5f674ec69e2cc336e15b5476d4da3cc67e0ddeca6810c22",
     "sw.js": "7cf7b6ed19d4a2dba30572b11bea6d3e307a39117597df4156c18a516df811d9",
     "BUILD_PROFILE.json": "4d8d286f13b43d0b0b162f58e25b2e8cef9ec1bab20f8e31d9e0cdba7d7d9eb2",

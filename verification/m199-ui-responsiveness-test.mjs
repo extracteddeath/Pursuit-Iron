@@ -21,6 +21,18 @@ assert.match(app, /await afterNextPaint\(\)/, 'Final build must paint before hea
 assert.match(app, /Building your /, 'Final build must describe the active work.');
 assert.match(app, /Balancing exercises, volume, recovery, and session time\./, 'Final build must explain what is being processed.');
 
+// Observational research must not add another generation pass to ordinary user-facing builds.
+assert.match(app, /const promotionActive = Array\.isArray\(M76_SELECTIVE_PROMOTION_MANIFEST\?\.entries\)/, 'Shadow work should be gated by an active reviewed rollout or explicit research mode.');
+assert.match(app, /options\.canaryResearch\?\.enabled \|\| promotionActive/, 'Standalone shadow evaluation should stay off in ordinary production creation.');
+assert.match(app, /function attachShadowToCycleBuild\(built, banned = \[\], researchEnabled = false\)/, 'Cycle shadow evaluation should default off.');
+assert.match(app, /if \(!built\?\.blocks \|\| !researchEnabled\)/, 'Cycle shadow evaluation should return before per-block work when research is off.');
+
+// The workout clock must not force the entire Session tree to re-render once per second.
+assert.doesNotMatch(app, /setInterval\(\(\) => forceTick\(n => n \+ 1\), 1000\)/, 'Whole-session one-second force-render loop must stay removed.');
+assert.match(app, /const timerTextRef = useRef\(null\)/, 'Elapsed timer should have an isolated text ref.');
+assert.match(app, /const syncElapsedLabel = \(\) =>/, 'Elapsed timer should update only its own text node.');
+assert.match(app, /ref: timerTextRef, className: "mono"/, 'Visible workout clock should use the isolated timer ref.');
+
 assert.match(html, /"\.\/modules\/next-engine\/app-shell-adapter\.js":"\.\/modules\/next-engine\/app-shell-adapter-capacity\.js"/, 'Browser import map must keep the capacity-aware adapter authoritative.');
 
 console.log('M199 UI responsiveness/loading contract: pass');

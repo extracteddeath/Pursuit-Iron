@@ -58,3 +58,4 @@ cycle = replaceOnce(
 fs.writeFileSync(phasePath, phase);
 fs.writeFileSync(cyclePath, cycle);
 console.log('M198 adaptive transition capacity patch applied.');
+// Trigger path for the scoped M198 patch workflow.

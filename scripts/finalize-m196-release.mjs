@@ -79,4 +79,4 @@ write('RELEASE_MANIFEST.json', `${JSON.stringify(manifest, null, 2)}\n`);
 console.log(`Finalized ${milestone}: app ${manifest.appVersion} build ${manifest.build} / Engine ${manifest.engineVersion}.`);
 console.log(`Hashed ${runtimeFiles.length} runtime JS files and ${uiFiles.length} release-facing UI files.`);
 
-// Trigger M196 finalization after the workflow is installed on main.
+// Re-run the final production gates after the M196 release metadata has been committed.

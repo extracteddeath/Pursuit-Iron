@@ -33,6 +33,12 @@ assert.match(app, /const timerTextRef = useRef\(null\)/, 'Elapsed timer should h
 assert.match(app, /const syncElapsedLabel = \(\) =>/, 'Elapsed timer should update only its own text node.');
 assert.match(app, /ref: timerTextRef, className: "mono"/, 'Visible workout clock should use the isolated timer ref.');
 
+// Autosave should keep the immutable serialized snapshot without parsing the entire store a second time.
+assert.match(app, /const MEM = \{ text: null \};/, 'Memory fallback should retain serialized store text.');
+assert.match(app, /MEM\.text = text;/, 'Autosave should reuse the already serialized snapshot.');
+assert.match(app, /return MEM\.text == null \? null : parseStoredData\(MEM\.text\);/, 'Memory fallback reads should parse the retained serialized snapshot directly.');
+assert.doesNotMatch(app, /MEM\.data = JSON\.parse\(text\)/, 'Autosave must not synchronously parse the full store after serializing it.');
+
 assert.match(html, /"\.\/modules\/next-engine\/app-shell-adapter\.js":"\.\/modules\/next-engine\/app-shell-adapter-capacity\.js"/, 'Browser import map must keep the capacity-aware adapter authoritative.');
 
 console.log('M199 UI responsiveness/loading contract: pass');

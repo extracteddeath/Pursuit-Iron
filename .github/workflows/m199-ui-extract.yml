@@ -1,0 +1,24 @@
+name: M199 UI section extract
+on:
+  push:
+    branches: [audit/m199-performance-loading]
+    paths:
+      - 'verification/m199-extract-ui-sections.mjs'
+      - '.github/workflows/m199-ui-extract.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node verification/m199-extract-ui-sections.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: m199-ui-sections
+          path: m199-ui-sections.txt
+          retention-days: 3

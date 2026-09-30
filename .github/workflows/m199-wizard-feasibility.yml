@@ -1,0 +1,40 @@
+name: M199 wizard feasibility
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/apply-m199-wizard-feasibility.mjs'
+      - 'verification/m199-wizard-feasibility-test.mjs'
+      - '.github/workflows/m199-wizard-feasibility.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  repair-and-verify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply M199 correction
+        run: node scripts/apply-m199-wizard-feasibility.mjs
+      - name: Verify wizard feasibility regression
+        run: node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m199-wizard-feasibility-test.mjs
+      - name: Verify production release
+        run: node scripts/verify-release.mjs
+      - name: Publish M199 correction
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add modules/next-engine/app-shell-adapter-capacity.js modules/next-engine/capacity-generation.js sw.js BUILD_PROFILE.json RELEASE_MANIFEST.json CHANGELOG.md
+          if git diff --cached --quiet; then
+            echo "No generated changes to publish."
+          else
+            git commit -m "M199: fix wizard freeze and false upper-pull refusals"
+            git push
+          fi

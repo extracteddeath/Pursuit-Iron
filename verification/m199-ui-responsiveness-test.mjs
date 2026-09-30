@@ -4,16 +4,17 @@ import assert from 'node:assert/strict';
 const app = fs.readFileSync('modules/App.js', 'utf8');
 const html = fs.readFileSync('index.html', 'utf8');
 
-function section(start, end) {
+function bounded(start, end, label) {
   const a = app.indexOf(start);
-  assert.ok(a >= 0, `Missing start marker: ${start}`);
+  assert.ok(a >= 0, `Missing ${label} start marker: ${start}`);
   const b = app.indexOf(end, a + start.length);
-  assert.ok(b > a, `Missing end marker: ${end}`);
+  assert.ok(b > a, `Missing ${label} end marker: ${end}`);
   return app.slice(a, b);
 }
 
-const stepBody = section('function StepBody(', 'function Wizard(');
-const wizard = section('function Wizard(', 'function Heading(');
+// Generated module order is not source-component order, so use local content markers inside each component.
+const stepBody = bounded('function StepBody(', '    if (stepKey === "review") {', 'StepBody');
+const wizard = bounded('function Wizard(', '    const next = () => {', 'Wizard finish section');
 
 assert.match(stepBody, /const buildKey = key === "session" \? "session\|" \+ JSON\.stringify\(fpBase\) : "";/, 'Only the selected session should trigger full feasibility generation.');
 assert.doesNotMatch(stepBody, /compatibleSplits\.map\(\(\[k\]\) => \["split", k\]\)/, 'Split screen must not eagerly generate every split.');
@@ -28,8 +29,8 @@ assert.match(stepBody, /buildable\.__key === buildKey && !!buildable\[config\.se
 
 assert.match(wizard, /setBuilding\(true\)/, 'Final build must enter a visible building state.');
 assert.match(wizard, /await afterNextPaint\(\)/, 'Final build must paint before heavy synchronous generation.');
-assert.match(wizard, /Building your \$\{mode === "cycle" \? "cycle" : "program"\}…/, 'Final build must describe the active work.');
-assert.match(wizard, /Balancing exercises, volume, recovery, and session time\./, 'Final build must explain what is being processed.');
+assert.match(app, /Building your \$\{mode === "cycle" \? "cycle" : "program"\}…/, 'Final build must describe the active work.');
+assert.match(app, /Balancing exercises, volume, recovery, and session time\./, 'Final build must explain what is being processed.');
 
 assert.match(html, /"\.\/modules\/next-engine\/app-shell-adapter\.js":"\.\/modules\/next-engine\/app-shell-adapter-capacity\.js"/, 'Browser import map must keep the capacity-aware adapter authoritative.');
 

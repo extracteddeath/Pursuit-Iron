@@ -1,0 +1,34 @@
+name: M198 Strength FB5 deep debug
+
+on:
+  push:
+    branches: [audit/m198-creation-pipeline]
+    paths:
+      - 'verification/m198-strength-fb5-debug.mjs'
+      - '.github/workflows/m198-strength-fb5-debug.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Diagnose Strength Full Body C
+        shell: bash
+        run: |
+          node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m198-strength-fb5-debug.mjs 2>&1 | tee m198-strength-fb5-debug.log
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m198-strength-fb5-debug
+          path: m198-strength-fb5-debug.log
+          if-no-files-found: error
+          retention-days: 7

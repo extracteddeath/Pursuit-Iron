@@ -93,16 +93,16 @@
     "modules/next-engine/shell-equipment.js": "9c7481b10101d5ac2fc6e9fea46633755a5a524a062bedc68c5f295eb9e5f30e"
   },
   "localCandidate": {
-    "name": "Pursuit Iron 4.0 Production Release · M199",
-    "base": "M199 / app 4.0.0 build 788 / Engine 0.64.0",
-    "validation": "M199 removes synchronous generation from wizard feasibility, retries rejected structural rolls with deterministic saved seeds, precaches capacity generation, and re-runs release/PWA integrity."
+    "name": "Pursuit Iron 4.0 Production Release · M202",
+    "base": "M202 / app 4.0.0 build 792 / Engine 0.64.3",
+    "validation": "M202 reconciles locked-cycle phase volume after exact weekly materialization while preserving the exercise roster and protected strength work."
   },
   "uiFiles": {
-    "modules/App.js": "f5f8795d12cedd7d90f1153268fdc741d6ef568f5f9a97ca4fe0e0d58b6e7b06",
-    "index.html": "55672117c72aaecdf5f674ec69e2cc336e15b5476d4da3cc67e0ddeca6810c22",
-    "sw.js": "7cf7b6ed19d4a2dba30572b11bea6d3e307a39117597df4156c18a516df811d9",
-    "BUILD_PROFILE.json": "4d8d286f13b43d0b0b162f58e25b2e8cef9ec1bab20f8e31d9e0cdba7d7d9eb2",
-    "CHANGELOG.md": "8951b5603d51017ee697c3b74b9b165d5265a86ff65b7c2f3c6c4ea1a0ed5df9",
+    "modules/App.js": "e0461edeb5b6175f7279526fa97c597f6268bb0c435b6763cc2dc33436a2ad38",
+    "index.html": "c2df6db66276ab1672212020b39b5c561388351371b3d6e74c4a5dd8d5cb3e40",
+    "sw.js": "d1bd279041ada525d89b221926e9470de796db6f91e877d84e2e76ff702d0ae5",
+    "BUILD_PROFILE.json": "4bf5c064a812f9848aa81bcdc385e4d06d584ef7e20c2f0cd712ec1942ccfa8f",
+    "CHANGELOG.md": "1f5d02aba9ef6230cfe262dc9654ed0550e7cfbda48248d3356436b1d4c814c0",
     "app.css": "5432859c3eb9624b9a27dc1c9de2e8cb85672b02bcd72c114ac963378184b85b"
   },
   "baselineSourceNextEngineAggregate": "9ba84ffe3a62d94849617af33a2eafeaa563ab4a3636579101990ed753d05a84",

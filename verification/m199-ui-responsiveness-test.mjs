@@ -39,6 +39,10 @@ assert.match(app, /MEM\.text = text;/, 'Autosave should reuse the already serial
 assert.match(app, /return MEM\.text == null \? null : parseStoredData\(MEM\.text\);/, 'Memory fallback reads should parse the retained serialized snapshot directly.');
 assert.doesNotMatch(app, /MEM\.data = JSON\.parse\(text\)/, 'Autosave must not synchronously parse the full store after serializing it.');
 
+// Cold start is real work on a large module, so the boot shell must say that it is loading rather than appearing stuck.
+assert.match(html, />Loading Pursuit Iron…<\/div>/, 'Initial boot shell should clearly identify a loading state.');
+assert.match(html, /Still loading — your saved training is safe\./, 'Slow cold starts should retain reassuring progress copy before recovery controls appear.');
+assert.match(html, /showBootError\('App did not finish its first render','watchdog'\)/, 'Startup must still fail visibly rather than spin forever.');
 assert.match(html, /"\.\/modules\/next-engine\/app-shell-adapter\.js":"\.\/modules\/next-engine\/app-shell-adapter-capacity\.js"/, 'Browser import map must keep the capacity-aware adapter authoritative.');
 
 console.log('M199 UI responsiveness/loading contract: pass');

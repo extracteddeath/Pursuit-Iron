@@ -19,6 +19,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Locked-cycle phase volume regression
+        run: node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m202-locked-cycle-dose-test.mjs
       - name: Regional dose preservation during generation
         run: node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m200-regional-dose-test.mjs
       - name: Volume repair and live accounting regression

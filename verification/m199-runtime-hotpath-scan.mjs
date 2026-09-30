@@ -15,6 +15,8 @@ const report={
   shadowProgram: around('runShadowProgramForShell('),
   shadowCycle: around('attachShadowToCycleBuild('),
   shadowReads: ['nextEngine.shadow','nextEngine?.shadow','.shadow?.','shadow?.'].flatMap(x=>around(x,900)),
+  forceTickUses: around('forceTick',2200),
+  elapsedUses: around('runElapsedMs()',2200),
   oneSecondIntervals: around('setInterval(() => forceTick(n => n + 1), 1000)',5000),
   halfSecondIntervals: around('setInterval(',900).filter(x=>x.text.includes('500')),
   storageWrites: around('localStorage.setItem(',700)

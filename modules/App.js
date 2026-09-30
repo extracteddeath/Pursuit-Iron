@@ -7973,7 +7973,14 @@ function attachShadowEvaluation(result, config, banned = [], seed) {
 }
 function generateNextWithShadow(options) {
     const live = generateNextProgramForShell(options);
-    const withShadow = attachShadowEvaluation(live, options.config, options.banned || [], options.seed);
+    // Shadow scoring is observational research, not part of the user's program contract. It costs roughly
+    // another full generation pass, so production creation no longer pays for it unless research is
+    // explicitly enabled or a reviewed selective-promotion rollout is actually active.
+    const promotionActive = Array.isArray(M76_SELECTIVE_PROMOTION_MANIFEST?.entries)
+        && M76_SELECTIVE_PROMOTION_MANIFEST.entries.some(e => e?.status === "approved" && Number(e?.rolloutPercent) > 0);
+    const withShadow = (options.canaryResearch?.enabled || promotionActive)
+        ? attachShadowEvaluation(live, options.config, options.banned || [], options.seed)
+        : live;
     try {
         const promoted = runSelectivePromotionForShell({ config: options.config, banned: options.banned || [], legacyExercises: options.legacyExercises, seed: options.seed ?? withShadow.nextProgram.seed, liveProgram: withShadow.nextProgram, programId: withShadow.program.id, manifest: M76_SELECTIVE_PROMOTION_MANIFEST, runtimeState: options.selectivePromotionRuntime });
         if (promoted.assignment) {
@@ -8045,8 +8052,10 @@ function attachShadowToShellProgram(program, config, banned = [], seed) {
     }
     return program;
 }
-function attachShadowToCycleBuild(built, banned = []) {
-    if (!built?.blocks)
+function attachShadowToCycleBuild(built, banned = [], researchEnabled = false) {
+    // A cycle can contain several full programs. Running an observational shadow pass for every block
+    // can add hundreds of milliseconds to a user-facing build without changing the saved prescription.
+    if (!built?.blocks || !researchEnabled)
         return built;
     built.blocks.forEach(block => attachShadowToShellProgram(block, block.config, banned, block.seed));
     built.cycle.shadowEngineVersion = "0.62.5-shadow";
@@ -36005,7 +36014,7 @@ function App() {
             const built = attachShadowToCycleBuild(generateNextCycleForShell({
                 templateId: tmplId, config, banned, legacyExercises: EXERCISES,
                 adaptBetweenBlocks: !!config.cycleAdapt, makeId: uid
-            }), banned);
+            }), banned, !!canaryResearch?.enabled);
             // Cycle generation used to leave the try/catch here, then immediately assume every returned
             // field existed. A partial/malformed bridge result could therefore throw on blocks[0].id or
             // blockMeta[0].label and crash React instead of returning the user to the wizard. Validate the
@@ -36078,7 +36087,7 @@ function App() {
                     legacyExercises: EXERCISES,
                     adaptBetweenBlocks,
                     makeId: uid
-                }), banned));
+                }), banned, !!canaryResearch?.enabled));
             requireCompleteCycleShell(built.cycle, built.allBlocks);
             built.cycle.generationRoute = GENERATION_ROUTE;
             if (built.currentProgram.engineSource === "pursuit-next")
@@ -36169,7 +36178,7 @@ function App() {
                             templateId: cycle.templateId,
                             config: { ...(cycle.nextEngineCycle?.baseConfig || activeProgram.config || {}), name: cycle.name },
                             banned, legacyExercises: EXERCISES, adaptBetweenBlocks: !!cycle.adaptExercises, makeId: uid
-                        }), banned);
+                        }), banned, !!canaryResearch?.enabled);
                         if (!fresh?.cycle || !Array.isArray(fresh.blocks) || !fresh.blocks.length) {
                             const err = new Error("The loop rebuild returned an incomplete cycle.");
                             err.code = "NEXT_CYCLE_LOOP_INCOMPLETE";

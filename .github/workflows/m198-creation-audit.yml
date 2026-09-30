@@ -6,6 +6,7 @@ on:
     paths:
       - 'modules/next-engine/**'
       - 'verification/m198-creation-audit.mjs'
+      - 'verification/m198-fb5-debug.mjs'
       - '.github/workflows/m198-creation-audit.yml'
   pull_request:
     branches: [main]
@@ -23,6 +24,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Diagnose FB5 powerbuilding route
+        shell: bash
+        run: |
+          node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m198-fb5-debug.mjs 2>&1 | tee m198-fb5-debug.log
       - name: Audit Create Program / Create Cycle contract
         shell: bash
         run: |
@@ -37,6 +42,7 @@ jobs:
         with:
           name: m198-creation-audit-diagnostics
           path: |
+            m198-fb5-debug.log
             m198-creation-audit.log
             m198-creation-audit.exit
           if-no-files-found: error

@@ -20,8 +20,14 @@ if (!phase.includes("from './capacity-generation.js'")) {
   );
 }
 
-phase = replaceOnce(
-  phase,
+const transitionMarker = 'export function transitionProgramPhase(previous, request, target, evidence) {';
+const transitionStart = phase.indexOf(transitionMarker);
+if (transitionStart < 0) throw new Error('transitionProgramPhase marker not found');
+const phasePrefix = phase.slice(0, transitionStart);
+let transition = phase.slice(transitionStart);
+
+transition = replaceOnce(
+  transition,
   `    const generated = generateProgram(request, {\n        phase: target,\n        // New exercises introduced by the target phase must use the actual next-block duration too.\n        // Otherwise a four-week block can accidentally start a five-plus-week wave simply because\n        // the exercise has no prior history for the adaptive pass to correct.\n        blockWeeks: nextBlockWeeks,\n        progressionStyle: request.preferences?.progressionStyle\n    }).program;`,
   `    // Adaptive transitions must use the same soft-capacity contract as initial program/cycle creation.\n    // A valid 60–90 minute Full Body cycle can otherwise enter Strength with a raw generation that\n    // violates Full Body coverage even though a nearby capacity candidate passes the normal arbiter.\n    const generation = firstPassingCapacityProgram(request, evidence?.capacityConfig, {\n        phase: target,\n        // New exercises introduced by the target phase must use the actual next-block duration too.\n        // Otherwise a four-week block can accidentally start a five-plus-week wave simply because\n        // the exercise has no prior history for the adaptive pass to correct.\n        blockWeeks: nextBlockWeeks,\n        progressionStyle: request.preferences?.progressionStyle\n    });\n    const effectiveRequest = generation.request;\n    const generated = generation.result.program;`,
   'adaptive generation'
@@ -38,8 +44,9 @@ for (const [before, after, label] of [
   ['withBlockReviewExplainability(previous, program, request, {', 'withBlockReviewExplainability(previous, program, effectiveRequest, {', 'block review explainability'],
   ['return { program, continuity };', `return {\n        program,\n        continuity,\n        request: effectiveRequest,\n        capacityAdjustment: generation.adjusted ? {\n            requestedTargetExercises: generation.requestedTarget,\n            effectiveTargetExercises: generation.effectiveTarget,\n            requestedMinimumMinutes: generation.requestedMinimumMinutes,\n            effectiveMinimumMinutes: generation.effectiveMinimumMinutes\n        } : null\n    };`, 'transition return']
 ]) {
-  if (phase.includes(before)) phase = replaceOnce(phase, before, after, label);
+  transition = replaceOnce(transition, before, after, label);
 }
+phase = phasePrefix + transition;
 
 cycle = replaceOnce(
   cycle,

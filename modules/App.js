@@ -17784,7 +17784,7 @@ function personalRepSlope(history, ex) {
     return out;
 }
 /* ============================== PERSISTENCE ============================== */
-const MEM = { data: null };
+const MEM = { text: null };
 const KEY = "wpb:v1";
 const LIVE_KEY = "wpb:live";
 // Current store schema version. Bump this and add a STORE_MIGRATIONS entry for EVERY change to the
@@ -18242,7 +18242,7 @@ async function loadStore() {
         return raw === null ? null : parseStoredData(raw);
     if (readError)
         throw new Error("Device storage isn't responding. Try again when it becomes available.");
-    return MEM.data == null ? null : parseStoredData(JSON.stringify(MEM.data));
+    return MEM.text == null ? null : parseStoredData(MEM.text);
 }
 async function writeStoreText(key, text) {
     try {
@@ -18268,7 +18268,9 @@ function saveStore(data) {
     let text;
     try {
         text = JSON.stringify(data);
-        MEM.data = JSON.parse(text);
+        // The serialized text is already the immutable snapshot the fallback needs. Re-parsing the
+        // entire store here doubled synchronous autosave work as program/history data grew.
+        MEM.text = text;
     }
     catch {
         return Promise.resolve(false);

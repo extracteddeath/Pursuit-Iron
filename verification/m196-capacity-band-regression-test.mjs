@@ -41,6 +41,7 @@ assert.match(index, /app-shell-adapter\.js[^\n]*app-shell-adapter-capacity\.js/,
 assert.match(main, /wizard-stability\.js/, 'wizard stability guard must load before App');
 for (const asset of ['capacity-policy.js', 'app-shell-adapter-capacity.js', 'wizard-stability.js'])
   assert.ok(sw.includes(asset), `service worker must precache ${asset}`);
-assert.ok(sw.includes('app-shell-adapter.js?capacity-base=1'), 'offline cache must include the wrapper base-module URL');
+assert.ok(sw.includes('"./modules/next-engine/app-shell-adapter.js"'), 'offline cache must include the base shell adapter');
+assert.ok(/c\.match\(r,\{ignoreSearch:true\}\)/.test(sw), 'offline runtime must resolve query-mapped adapter imports from the cached base module');
 
 console.log('M196 capacity-band regression: pass');

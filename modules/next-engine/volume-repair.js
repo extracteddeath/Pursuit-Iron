@@ -140,7 +140,8 @@ function baseSessions(program, legacyExercises) {
     });
 }
 
-function rebuild(program, changes, legacyExercises, addition = null) {
+function rebuild(program, changes, legacyExercises, addition = null, options = {}) {
+    const preserveRoster = !!options.preserveRoster;
     const request = requestOf(program), sessions = baseSessions(program, legacyExercises);
     const next = { ...program, days: program.days.map(d => ({ ...d, exercises: [...d.exercises] })),
         overrides: { ...program.overrides }, nextWeekPrescriptions: { ...program.nextWeekPrescriptions }, nextEngine: { ...program.nextEngine } };
@@ -149,6 +150,7 @@ function rebuild(program, changes, legacyExercises, addition = null) {
         const s = sessions.find(s => s.shellDayId === change.dayId), e = s?.exercises[change.slot];
         if (!e) return null;
         if (change.remove) {
+            if (preserveRoster) return null;
             const di = next.days.findIndex(d => d.id === change.dayId), day = next.days[di];
             day.exercises.splice(change.slot, 1);
             day.primaryIndex = Math.max(0, day.primaryIndex - (change.slot < day.primaryIndex ? 1 : 0));
@@ -174,13 +176,14 @@ function rebuild(program, changes, legacyExercises, addition = null) {
             continue;
         }
         e.sets += change.delta;
-        if (e.sets < 2) return null; // avoid new one-set fragments
+        if (e.sets < (preserveRoster ? 1 : 2)) return null; // locked cycles may retain a one-set accessory instead of changing the roster
         const key = e.shellKey;
         changed.add(key);
         if (next.overrides[key]?.sets != null)
             next.overrides[key] = { ...next.overrides[key], sets: e.sets };
     }
     if (addition) {
+        if (preserveRoster) return null;
         const di = next.days.findIndex(d => d.id === addition.dayId), day = next.days[di], s = sessions[di];
         const map = createExerciseMap(request.customExercises);
         const firstIsolation = s.exercises.findIndex(e => !STRENGTH.has(e.role) && !map.get(e.exerciseId)?.flags.compound);
@@ -267,10 +270,65 @@ function safeImprovement(before, after, candidate, baselineEngineAudit, changedK
     return Object.entries(newCounts).every(([key, n]) => n <= (oldCounts[key] || 0));
 }
 
+/** Static locked-cycle finishing pass. Base-set repair must finish first because rebuilding a
+ * session regenerates all of its work-week cells. This pass touches generated work-week set counts
+ * only, preserves exercise identity and strength roles, and never allows another region or the
+ * session clock to leave its prior safe envelope. Tied worst weeks may require several individually
+ * non-worsening trims before the block-wide maximum falls. */
+export function reconcileLockedCycleWeekOverflows(program, legacyExercises = []) {
+    let current = program, audit = auditShellVolume(program, legacyExercises), changed = false;
+    const context = createEngineContext(requestOf(program));
+    const safeCell = (before, after, issue) => {
+        if (after.missing || deficit(after) > deficit(before) + EPS) return false;
+        const bw = before.weeks[issue.week - 1], aw = after.weeks[issue.week - 1];
+        if (!bw || !aw || aw.regions[issue.region] >= bw.regions[issue.region] - EPS) return false;
+        for (let wi = 0; wi < after.weeks.length; wi++) {
+            const b = before.weeks[wi], a = after.weeks[wi];
+            for (const target of before.targets) {
+                const lo = Math.min(target.mev, b.regions[target.region]);
+                const hi = Math.max(target.mrv, b.regions[target.region]);
+                if (a.regions[target.region] + EPS < lo || a.regions[target.region] > hi + EPS) return false;
+            }
+            for (let di = 0; di < a.sessions.length; di++)
+                if (a.sessions[di].estimatedMinutes > Math.max(a.sessions[di].maxMinutes, b.sessions[di].estimatedMinutes)) return false;
+        }
+        return true;
+    };
+    for (let guard = 0; guard < 96; guard++) {
+        const issue = audit.issues.find(x => x.status === 'over');
+        if (!issue) break;
+        const week = audit.weeks[issue.week - 1];
+        const candidates = week.sessions.flatMap(session => session.exercises.map(exercise => ({ session, exercise,
+            def: context.exerciseById(exercise.exerciseId) })))
+            .filter(x => x.def && !STRENGTH.has(x.exercise.role) && x.exercise.sets > 1 && publicRegionContribution(x.def, issue.region) > 0)
+            .sort((a, b) => (a.def.flags.compound ? 1 : 0) - (b.def.flags.compound ? 1 : 0) ||
+                publicRegionContribution(b.def, issue.region) - publicRegionContribution(a.def, issue.region) ||
+                b.exercise.sets - a.exercise.sets || a.exercise.shellKey.localeCompare(b.exercise.shellKey));
+        let best = null;
+        for (const x of candidates) {
+            const key = x.exercise.shellKey, cells = current.nextWeekPrescriptions?.[key], prior = cells?.[issue.week];
+            if (!prior || !Number.isFinite(prior.sets) || prior.sets <= 1) continue;
+            const candidate = { ...current, nextWeekPrescriptions: { ...current.nextWeekPrescriptions,
+                [key]: { ...cells, [issue.week]: { ...prior, sets: prior.sets - 1 } } } };
+            const after = auditShellVolume(candidate, legacyExercises);
+            if (!safeCell(audit, after, issue)) continue;
+            const score = deficit(audit) - deficit(after);
+            if (!best || score > best.score + EPS) best = { candidate, after, score };
+        }
+        if (!best) break;
+        current = best.candidate;
+        audit = best.after;
+        changed = true;
+    }
+    return { program: current, after: audit, changed,
+        status: audit.issues.some(x => x.status === 'over') ? (changed ? 'partial' : 'unable') : changed ? 'success' : 'unchanged' };
+}
+
 /** Verified transaction: existing set allocation, then reallocation, then one compatible new
  * movement. Every proposal uses the same public region ledger and complete engine safety audit.
  * Failed proposals are discarded; a partial repair is reported as partial, never as success. */
-export function repairShellVolume(program, legacyExercises = []) {
+export function repairShellVolume(program, legacyExercises = [], options = {}) {
+    const preserveRoster = !!options.preserveRoster;
     const before = auditShellVolume(program, legacyExercises);
     if (before.missing) return { program, status: 'unable', changed: false, before, after: before, message: 'Prescription data is incomplete. Rebuild this plan before fixing its volume.' };
     if (!before.issues.length) return { program, status: 'unchanged', changed: false, before, after: before, message: 'Weekly volume is already in range for this block.' };
@@ -284,7 +342,7 @@ export function repairShellVolume(program, legacyExercises = []) {
         const slots = sessions.flatMap(s => s.exercises.map((e, slot) => ({ dayId: s.shellDayId, slot, e, def: context.exerciseById(e.exerciseId), s })));
         let best = null;
         const consider = (ops, addition = null) => {
-            const candidate = rebuild(current, ops, legacyExercises, addition);
+            const candidate = rebuild(current, ops, legacyExercises, addition, { preserveRoster });
             if (!candidate) return;
             const after = auditShellVolume(candidate, legacyExercises);
             const keys = new Set(ops.map(op => `${op.dayId}:${op.slot}`));

@@ -13,6 +13,7 @@ import { transitionProgramPhase } from './phase-transition.js';
 import { historyDecision, withProgramExplainability } from './explainability.js';
 import { analyzeShellHistoryForNextEngine, carryForwardAvoidedExercises } from './workout-history-adapter.js';
 import { shellConfigToNextRequest, nextProgramToShellProgram, NextShellAdapterError } from './app-shell-adapter.js';
+import { repairShellVolume, reconcileLockedCycleWeekOverflows } from './volume-repair.js';
 import { firstPassingCapacityProgram } from './capacity-generation.js';
 const phaseGoal = (phase) => phase === 'hypertrophy_accumulation' ? 'hypertrophy' :
     (phase === 'strength_accumulation' || phase === 'intensification' || phase === 'peak') ? 'strength' : 'both';
@@ -242,9 +243,33 @@ export function generateNextCycleForShell(options) {
         if (next.audit.result !== 'pass')
             throw new NextShellAdapterError('NEXT_CYCLE_BLOCK_REJECTED', `Pursuit Engine ${next.engineVersion} rejected ${spec.label}.`, next.audit);
         const cfg = legacyBlockConfig(options.config, spec.phase, spec.weeks, `${options.config.name || cycleTemplates().find(t => t.id === templateId)?.name || 'Training Cycle'} · ${spec.label}`);
-        const legacy = nextProgramToShellProgram(next, cfg, options.legacyExercises, options.makeId);
+        let legacy = nextProgramToShellProgram(next, cfg, options.legacyExercises, options.makeId);
         legacy.cycleId = cid;
         attachBlockContext(legacy, next, blockRequest(baseRequest, spec.phase), baseRequest, { templateId, plannedIndex: i, blockIndex: i, label: spec.label, weeks: spec.weeks, phase: spec.phase, preview: i > 0, adaptBetweenBlocks: !!options.adaptBetweenBlocks });
+        // Static cycles lock exercise identity across blocks, but phase retargeting is complete
+        // before the shell expands base sets into exact work-week cells. Reconcile those exact public
+        // regional doses after materialization without adding, removing, or swapping any movement.
+        if (!options.adaptBetweenBlocks && i > 0) {
+            const rosterBefore = legacy.days.map(day => [...day.exercises]);
+            const baseRepair = repairShellVolume(legacy, options.legacyExercises, { preserveRoster: true });
+            const weeklyRepair = reconcileLockedCycleWeekOverflows(baseRepair.program, options.legacyExercises);
+            legacy = weeklyRepair.program;
+            const rosterAfter = legacy.days.map(day => [...day.exercises]);
+            if (JSON.stringify(rosterAfter) !== JSON.stringify(rosterBefore))
+                throw new NextShellAdapterError('NEXT_CYCLE_STATIC_ROSTER_CHANGED', 'Locked cycle volume repair changed the exercise roster.');
+            const beforeOver = baseRepair.before.issues.filter(issue => issue.status === 'over');
+            const afterOver = weeklyRepair.after.issues.filter(issue => issue.status === 'over');
+            if (afterOver.length)
+                throw new NextShellAdapterError('NEXT_CYCLE_STATIC_VOLUME_REJECTED', `The locked exercise skeleton could not safely fit the ${phaseLabel(spec.phase).toLowerCase()} accessory-volume ceiling.`, afterOver);
+            next = legacy.nextEngine.program;
+            legacy.nextEngine.lockedCycleVolumeRepair = {
+                status: baseRepair.changed || weeklyRepair.changed ? 'success' : 'unchanged',
+                changed: baseRepair.changed || weeklyRepair.changed,
+                rosterPreserved: true,
+                beforeOver: beforeOver.map(issue => ({ region: issue.region, actual: issue.v, ceiling: issue.mrv })),
+                afterOver: []
+            };
+        }
         blocks.push(legacy);
         previous = next;
     }

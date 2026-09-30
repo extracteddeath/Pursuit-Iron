@@ -1,3 +1,10 @@
+## M202 — Locked-cycle phase volume reconciliation (build 792)
+
+- Locked/static cycle blocks now audit the exact weekly regional volume shown in the UI after phase retargeting.
+- Over-limit accessory work is reduced transactionally while every exercise identity remains locked and strength work stays protected.
+- Added a powerbuilding regression that reproduces the prior overflow, verifies roster identity, session-time fit, engine pass status, and zero remaining displayed-region overflow.
+- Pursuit Engine 0.64.3; service-worker cache rotated for build 792.
+
 ## M201 — Custom workout prescriptions and exercise variations (build 791)
 
 - Restored the implicit late-block last-set intensifiers on existing custom plans, preserving explicit technique edits and off settings.

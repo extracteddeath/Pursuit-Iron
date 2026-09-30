@@ -1,8 +1,8 @@
-name: M199 volume repair integrity
+name: Engine volume integrity
 
 on:
   push:
-    branches: [main, fix/m199-volume-repair]
+    branches: [main, fix/m199-volume-repair, fix/m200-regional-dose]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -19,6 +19,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Regional dose preservation during generation
+        run: node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m200-regional-dose-test.mjs
       - name: Volume repair and live accounting regression
         run: node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m199-volume-repair-test.mjs
       - name: Wizard and real Full Body regression
@@ -39,5 +41,13 @@ jobs:
         with:
           name: m199-volume-repair-phone
           path: verification/m199-volume-repair-phone.png
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Upload regional dose verification
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m200-regional-dose-results
+          path: verification/m200-regional-dose-results.json
           if-no-files-found: ignore
           retention-days: 7

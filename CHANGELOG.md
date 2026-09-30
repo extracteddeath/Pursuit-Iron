@@ -1,3 +1,10 @@
+## M200 — Preserve regional dose during generation (build 790)
+
+- Final dose cleanup now preserves achieved accumulation reserves for lats, upper back, and other public muscle regions.
+- Cleanup still reduces excess accessory volume and protects strength prescriptions; new programs retain useful back work before they reach the volume display.
+- Added 18 creation cases plus overflow, shortfall, immutability, and locked/adaptive cycle regression checks. Recorded follow-up issues for short sessions, minimalist targets, and locked cycle carryover.
+- Engine 0.64.1; production service-worker cache rotated for build 790.
+
 # M199 — Volume Repair Integrity (build 789)
 
 - Auto-fix now updates engine-owned weekly prescriptions and commits the verified program to saved state.

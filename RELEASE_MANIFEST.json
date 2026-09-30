@@ -1,15 +1,15 @@
 {
   "schemaVersion": 3,
-  "milestone": "M199",
+  "milestone": "M200",
   "appVersion": "4.0.0",
-  "build": 789,
-  "engineVersion": "0.64.0",
+  "build": 790,
+  "engineVersion": "0.64.1",
   "shadowEngineVersion": "0.62.5-shadow",
   "validatedLiveBaseline": "M88-0.61.3-reviewed-baseline",
-  "candidateStatus": "ci_verified_device_test_pending",
+  "candidateStatus": "verification_enforced_by_ci",
   "sourceNextEngineAggregate": null,
   "sourceShadowEngineAggregate": "3107199d20c86a5a12b82eccbc61c9a32b001a72c7f30418db696235d0da0c22",
-  "runtimeAggregate": "df8a58672fdc2c1553c9d768e64fec21eae67fed68f4c8cecdc4d677e81cabd8",
+  "runtimeAggregate": "b61bcde12cf5bdf16a597f18dba2e805d72d8ee53c84b0a8fd090cebe904d025",
   "sourceFiles": {},
   "shadowSourceFiles": {
     "src/shadow-engine/canary.ts": "854246970f93111ee873f0eb5f222195a02af688ef1a3285d0624f44d422c58a",
@@ -35,11 +35,11 @@
     "modules/next-engine/coach-regression.js": "a990fe47ffa77ca0a641f09d2c507150c37b6d03f17ac310f65f66e1347ff380",
     "modules/next-engine/coach-review.js": "f5adf1805c48c964b1530f273204b936b470e5cde2406af676f77551c456f9a8",
     "modules/next-engine/comparison.js": "799f592429cde6cf9080613d3c51a237f8fed5ef1ac70a4d0b8839259f42bc1a",
-    "modules/next-engine/config.js": "6999a18a3fd14df73fdd3f05b201a2ac38389b797a7286154c8582e8cf2689c6",
+    "modules/next-engine/config.js": "aeb5ed5acb3a5e0674261960e12e873ffd08ce87abb1f33fbe79575344f4089f",
     "modules/next-engine/cycle-runtime-adapter.js": "b2f6f6ce0771d466dc72ca905a1dfbc4260488f3611e3ea2bf68a07b34377dfe",
     "modules/next-engine/cycles.js": "3b949f73ecef2543e4aa3aa6910fe43a3d3526805fcbcd111424e5df2d6efc79",
     "modules/next-engine/domain.js": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
-    "modules/next-engine/dose-reconciliation.js": "44c354b351ec0c4bcbdedc67f23903f0659634ffb420827df67b4713ed750fa5",
+    "modules/next-engine/dose-reconciliation.js": "49e003aaa5a3323fa58736a75030898100173268e48f58fd1fb76da502755570",
     "modules/next-engine/engine-context.js": "40c63ad790d4ab3a83975acd557e58f0f85d4fdc1ceab9ba422468fc6ae1430f",
     "modules/next-engine/events.js": "224b26bfbef0c398e0b0a3e32b26c96075f5c1dce5ce6aa9f5cad83d7a0b437a",
     "modules/next-engine/exercise-db.js": "5118cb7ee0c5c383be0e1ec68e0c0eeb8feb984c80ac5ba22f0b508b267d6e2f",
@@ -97,11 +97,11 @@
     "validation": "M199 removes synchronous generation from wizard feasibility, retries rejected structural rolls with deterministic saved seeds, precaches capacity generation, and re-runs release/PWA integrity."
   },
   "uiFiles": {
-    "modules/App.js": "8744f39a7b1029ccf4de5ab01e10cccb595f8d0aed02607f50e6dbbcd6073cf4",
-    "index.html": "625a147d35ad7ef63d99ae821b02c278a3ab013450a282dc4f85ed555fa6ca27",
-    "sw.js": "23e49a972bfee8e77c85e910fc64e72e2f3692a9ba70afc564feda53f4329079",
-    "BUILD_PROFILE.json": "c42115c14a361bfa73f19ed0ac1d769a50c15ac53aa110203d18a3913faf4142",
-    "CHANGELOG.md": "15db0b51e596c0cb194a102911691a74e4b08f3f1047d7703578597b461ae2ed",
+    "modules/App.js": "f87c79f1b3a0633a4bc02fce1b8ce92e6e121441175238df67716f63953f904e",
+    "index.html": "ee4b399747549b219e66ce761ffe030e29a3f9f271d3299a8cd84c9a9f4772f4",
+    "sw.js": "5b6a8d2ef0b7aa3bbddb467f99c61ccc75c230c7e8610ec961b9127ac0eaaf14",
+    "BUILD_PROFILE.json": "fd5a8373158ee6c65d0d268dda645f0d5c0fadc41f5e18d0988ab6e337fa8f1b",
+    "CHANGELOG.md": "63c39d4a952358f525e6e7bad6cca4f2862a212003b944c6738f43dd32174dde",
     "app.css": "5432859c3eb9624b9a27dc1c9de2e8cb85672b02bcd72c114ac963378184b85b"
   },
   "baselineSourceNextEngineAggregate": "9ba84ffe3a62d94849617af33a2eafeaa563ab4a3636579101990ed753d05a84",
@@ -180,7 +180,7 @@
   },
   "sourceFilesStatus": "M162 was produced from the M161.1 release-only artifact; TypeScript source was not present. Baseline source hashes are retained under baselineSource* for provenance, but M162 claims runtime integrity only.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
-  "runtimeHotfix": "M199 live-volume repair, productive set reallocation, and canonical save",
-  "cache": "pursuit-iron-production-v4-0-0-m199-volume-repair-b789",
-  "uiMilestone": "Pursuit Iron 4.0 Production Release · M199 Volume Repair"
+  "runtimeHotfix": "M200 preserve achieved public regional dose during final generation cleanup",
+  "cache": "pursuit-iron-production-v4-0-0-m200-regional-dose-b790",
+  "uiMilestone": "Pursuit Iron 4.0 Production Release · M200 Regional Dose"
 }

@@ -1,12 +1,12 @@
 {
   "profile": "portable-browser-esm-v661-workout-input",
-  "milestone": "M199",
-  "source": "Current M199 wizard fixes + verified volume repair and canonical persistence",
-  "engine": "0.64.0 with shared live-volume accounting and verified set reallocation",
+  "milestone": "M200",
+  "source": "Verified M199 volume repair + regional dose preservation during generation",
+  "engine": "0.64.1 with accumulation regional reserve protected during final dose cleanup",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 50,
   "shadowRuntimeModules": 9,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m199-volume-repair-b789",
-  "uiMilestone": "Pursuit Iron 4.0 Production Release · M199 Volume Repair"
+  "cache": "pursuit-iron-production-v4-0-0-m200-regional-dose-b790",
+  "uiMilestone": "Pursuit Iron 4.0 Production Release · M200 Regional Dose"
 }

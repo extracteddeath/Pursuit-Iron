@@ -26,6 +26,8 @@ jobs:
         run: node verification/apply-m202-weekly-cell-repair.mjs
       - name: Apply direct locked-week fallback
         run: node verification/apply-m202-direct-week-fallback.mjs
+      - name: Apply separate static weekly-cell reconciliation
+        run: node verification/apply-m202-static-week-reconciliation.mjs
       - name: Add failing-block diagnostics
         run: node verification/apply-m202-locked-cycle-dose-diagnostic.mjs
       - name: Locked-cycle displayed-volume regression

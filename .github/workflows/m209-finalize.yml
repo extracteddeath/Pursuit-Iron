@@ -1,0 +1,145 @@
+name: M209 unused engine binding cleanup finalizer
+
+on:
+  push:
+    branches:
+      - audit/m209-unused-locals
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    if: ${{ !contains(github.event.head_commit.message, '[m209-finalized]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: audit/m209-unused-locals
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Remove unused engine bindings and finalize M209
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const read = file => fs.readFileSync(file, 'utf8');
+          const write = (file, text) => fs.writeFileSync(file, text);
+          const replaceOnce = (file, from, to) => {
+            const text = read(file);
+            const first = text.indexOf(from);
+            if (first < 0 || text.indexOf(from, first + from.length) >= 0)
+              throw new Error(`${file}: expected exactly one match for ${from}`);
+            write(file, text.slice(0, first) + to + text.slice(first + from.length));
+          };
+
+          replaceOnce('modules/next-engine/allocator.js',
+            '    const byMuscle = new Map(muscles.map(p => [p.muscle, p]));\n', '');
+
+          replaceOnce('modules/next-engine/cycle-runtime-adapter.js',
+            "import { generateProgram } from './generate.js';\n", '');
+          replaceOnce('modules/next-engine/cycle-runtime-adapter.js',
+            '        let bestDelta = Number.POSITIVE_INFINITY;\n', '');
+          replaceOnce('modules/next-engine/cycle-runtime-adapter.js',
+            '                        bestDelta = magnitude;\n', '');
+          replaceOnce('modules/next-engine/cycle-runtime-adapter.js',
+            '                const sessions = repaired.sessions.map((session, sidx) => ({ ...session, exercises: session.exercises.map(ex => ({ ...ex })) }));',
+            '                const sessions = repaired.sessions.map(session => ({ ...session, exercises: session.exercises.map(ex => ({ ...ex })) }));');
+          replaceOnce('modules/next-engine/cycle-runtime-adapter.js',
+            '            let bestPenalty = Number.POSITIVE_INFINITY;\n', '');
+          replaceOnce('modules/next-engine/cycle-runtime-adapter.js',
+            '                                    bestPenalty = penalty;\n', '');
+          replaceOnce('modules/next-engine/cycle-runtime-adapter.js',
+            'function blockRequest(baseRequest, phase) {',
+            'function blockRequest(baseRequest) {');
+
+          {
+            const file = 'modules/next-engine/phase-transition.js';
+            let text = read(file);
+            text = text.replace("import { generateProgram } from './generate.js';\n", '');
+            const start = text.indexOf('function equipmentEligible(');
+            const end = text.indexOf('function muscleSimilarity(', start);
+            if (start < 0 || end < 0) throw new Error('phase-transition: equipmentEligible anchors not found');
+            text = text.slice(0, start) + text.slice(end);
+            write(file, text);
+          }
+
+          {
+            const file = 'modules/next-engine/realizer.js';
+            const text = read(file);
+            const start = text.indexOf('    const intentMuscles = {');
+            const end = text.indexOf('    const currentFractional = () => {', start);
+            if (start < 0 || end < 0) throw new Error('realizer: intentMuscles anchors not found');
+            write(file, text.slice(0, start) + text.slice(end));
+          }
+
+          replaceOnce('modules/next-engine/recovery-realization.js',
+            "            const priority = request.goal.musclePriorities[primary] ?? 'normal';\n", '');
+
+          replaceOnce('modules/next-engine/config.js', "ENGINE_VERSION = '0.64.8'", "ENGINE_VERSION = '0.64.9'");
+          replaceOnce('modules/next-engine/config.js',
+            "Object.freeze(['0.64.4', '0.64.5', '0.64.6', '0.64.7', ENGINE_VERSION])",
+            "Object.freeze(['0.64.5', '0.64.6', '0.64.7', '0.64.8', ENGINE_VERSION])");
+
+          const testFile = 'verification/m205-engine-cleanup-test.mjs';
+          const anchor = "assert.doesNotMatch(index, /app-shell-adapter/, 'Node and browser must resolve the same canonical adapter');";
+          const assertions = `const retiredUnusedBindings = {\n    'modules/next-engine/allocator.js': ['const byMuscle = new Map'],\n    'modules/next-engine/cycle-runtime-adapter.js': [\"import { generateProgram } from './generate.js'\", 'bestDelta =', 'bestPenalty =', '(session, sidx)', 'function blockRequest(baseRequest, phase)'],\n    'modules/next-engine/phase-transition.js': [\"import { generateProgram } from './generate.js'\", 'function equipmentEligible('],\n    'modules/next-engine/realizer.js': ['const intentMuscles = {'],\n    'modules/next-engine/recovery-realization.js': ['const priority = request.goal.musclePriorities[primary]']\n};\nfor (const [file, snippets] of Object.entries(retiredUnusedBindings)) {\n    const source = fs.readFileSync(new URL('../' + file, import.meta.url), 'utf8');\n    for (const snippet of snippets) assert.equal(source.includes(snippet), false, \`unused engine binding must stay removed: \${snippet}\`);\n}\n${anchor}`;
+          replaceOnce(testFile, anchor, assertions);
+
+          const manifestFile = 'RELEASE_MANIFEST.json';
+          const manifest = JSON.parse(read(manifestFile));
+          manifest.milestone = 'M209';
+          manifest.build = 799;
+          manifest.engineVersion = '0.64.9';
+          manifest.cache = 'pursuit-iron-production-v4-0-0-m209-unused-bindings-b799';
+          manifest.uiMilestone = 'Pursuit Iron 4.0 Production Release · M209 Unused Binding Cleanup';
+          manifest.localCandidate = {
+            name: 'Pursuit Iron 4.0 Production Release · M209',
+            base: 'M208 / app 4.0.0 build 798 / Engine 0.64.8',
+            validation: 'Unused engine imports, locals, helper state, and parameters are removed while the production module graph, release contracts, progression, volume, recovery, and backup behavior remain unchanged.'
+          };
+          manifest.runtimeHotfix = 'Remove ten statically proven unused engine bindings; preserve all live and verification-only contracts.';
+          write(manifestFile, JSON.stringify(manifest, null, 2) + '\n');
+
+          const profileFile = 'BUILD_PROFILE.json';
+          const profile = JSON.parse(read(profileFile));
+          profile.milestone = 'M209';
+          profile.source = 'M208 production baseline + unused-import/private-local static audit';
+          profile.engine = '0.64.9 with M208 behavior unchanged and unused engine bindings removed';
+          profile.cache = manifest.cache;
+          profile.uiMilestone = manifest.uiMilestone;
+          write(profileFile, JSON.stringify(profile, null, 2) + '\n');
+
+          const changelogFile = 'CHANGELOG.md';
+          const changelog = read(changelogFile);
+          const entry = `## M209 — Unused engine binding cleanup (build 799)\n\n- Ran a scope-aware static unused-binding audit across all authored runtime modules.\n- Removed ten unused engine-core bindings: stale imports/helpers, unused audit-selection bookkeeping, an obsolete capacity-intent table, and dead recovery/allocator reads.\n- Kept App-shell findings for a separate UI-aware pass rather than mixing shell cleanup with engine cleanup.\n- Added cleanup invariants preventing the removed engine bindings from returning. Pursuit Engine 0.64.9; offline cache rotated for build 799.\n\n`;
+          if (!changelog.startsWith('## M209')) write(changelogFile, entry + changelog);
+          NODE
+
+          find modules -name '*.js' -print0 | xargs -0 -n1 node --check
+
+          npm install --prefix /tmp/m209-final eslint@9 --no-save --ignore-scripts --silent
+          cat >eslint.m209.config.mjs <<'EOF'
+          export default [{
+            files: ['modules/next-engine/**/*.js'],
+            languageOptions: { ecmaVersion: 'latest', sourceType: 'module' },
+            rules: { 'no-unused-vars': ['error', { vars: 'all', args: 'after-used', ignoreRestSiblings: true, argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrors: 'none' }] }
+          }];
+          EOF
+          /tmp/m209-final/node_modules/.bin/eslint modules/next-engine --config ./eslint.m209.config.mjs
+          rm eslint.m209.config.mjs
+
+          node scripts/finalize-release.mjs
+          node scripts/verify-release.mjs
+          node scripts/verify-engine-contracts.mjs
+
+      - name: Commit finalized M209 candidate
+        shell: bash
+        run: |
+          rm -f .github/workflows/m209-unused-locals-audit.yml .github/workflows/m209-finalize.yml
+          git config user.name "Pursuit Iron Release Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "M209 unused engine binding cleanup [m209-finalized]"
+          git push origin HEAD:audit/m209-unused-locals

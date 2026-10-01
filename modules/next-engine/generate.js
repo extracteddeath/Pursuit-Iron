@@ -129,8 +129,9 @@ export function generateProgram(requestInput, options) {
             const counts = auditCounts(checked.audit);
             if (counts.critical > baselineCounts.critical || counts.major > baselineCounts.major)
                 continue;
-            const remaining = evaluateFunctionalCoverage(checked.base.sessions, request, exerciseMap).findings.length;
-            const targetGone = !evaluateFunctionalCoverage(checked.base.sessions, request, exerciseMap).findings.some(f => f.code === target.code);
+            const candidateCoverage = evaluateFunctionalCoverage(checked.base.sessions, request, exerciseMap);
+            const remaining = candidateCoverage.findings.length;
+            const targetGone = !candidateCoverage.findings.some(f => f.code === target.code);
             if (!targetGone)
                 continue;
             const improves = counts.major < baselineCounts.major || (counts.major === baselineCounts.major && remaining < coverage.findings.length);

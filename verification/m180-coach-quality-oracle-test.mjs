@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { evaluateCoachQualityEvidence } from '../modules/next-engine/coach-quality-oracle.js';
+import { evaluateCoachQualityEvidence } from './coach-quality-oracle.mjs';
 import { createStrengthClaims, normalizeRequest, selectStrengthClaimsForCapacity } from '../modules/next-engine/prescription.js';
 
 function cleanHumanAggregate(overrides = {}) {

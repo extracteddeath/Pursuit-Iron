@@ -1,0 +1,51 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import { EXERCISES, runSelfTest, mergeStores, migrateStore, STORE_VERSION } from '../modules/App.js';
+import { generateNextProgramForShell, getNextShellCell } from '../modules/next-engine/app-shell-adapter.js';
+import { ENGINE_VERSION, ENGINE_COMPATIBLE_VERSIONS } from '../modules/next-engine/config.js';
+import { preserveRetiredTrialData, preserveRetiredRolloutData } from '../modules/legacy-research-data.js';
+
+const app = fs.readFileSync(new URL('../modules/App.js', import.meta.url), 'utf8');
+const index = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+for (const retired of ['function generateLayout(', 'function generateProgramOnce(', 'const GEN_PIPELINE',
+    'generateNextWithShadow(', 'runShadowProgramForShell(', 'runShadowTransitionForShell(',
+    'assignCanaryTrial(', 'runCanaryBehaviorForShell(', 'runSelectivePromotionForShell(', 'applyControlledCanaryProgram'])
+    assert.equal(app.includes(retired), false, `retired execution path must stay removed: ${retired}`);
+assert.doesNotMatch(index, /app-shell-adapter/, 'Node and browser must resolve the same canonical adapter');
+assert.equal(fs.existsSync(new URL('../modules/shadow-engine', import.meta.url)), false);
+assert.equal(fs.existsSync(new URL('../modules/next-engine/app-shell-adapter-capacity.js', import.meta.url)), false);
+for (const file of ['domain.js', 'comparison.js', 'coach-review.js', 'coach-quality-oracle.js'])
+    assert.equal(fs.existsSync(new URL('../modules/next-engine/' + file, import.meta.url)), false,
+        'unused review helpers and verification-only code must not ship in the runtime');
+assert.equal(new Set(ENGINE_COMPATIBLE_VERSIONS).size, 5);
+assert.ok(ENGINE_COMPATIBLE_VERSIONS.includes(ENGINE_VERSION), 'diagnostics must inspect the current release');
+assert.ok(app.includes('new Set(ENGINE_COMPATIBLE_VERSIONS)'));
+
+// Retiring computation must not delete evidence or immutable prescriptions from old backups.
+const trials = { schemaVersion: 1, enabled: true, enrollmentId: 'old-enrollment',
+    trials: [{ trialId: 'old-control', behavior: 'time_reallocation', arm: 'control', sessions: [{ historyId: 'workout-1' }] }] };
+const rollouts = { schemaVersion: 1, releaseId: 'old-reviewed-release', rollbackLatched: true,
+    rollbackReason: 'historical stop', programs: [{ programId: 'saved-1', arm: 'fallback', sessions: [] }] };
+assert.deepEqual(preserveRetiredTrialData(trials).trials, trials.trials);
+assert.equal(preserveRetiredRolloutData(rollouts).releaseId, rollouts.releaseId, 'archive must not be reset to a new rollout release');
+assert.deepEqual(preserveRetiredRolloutData(rollouts).programs, rollouts.programs);
+const stored = { v: STORE_VERSION, saved: [], cycles: [], history: [], canaryResearch: trials, selectivePromotionRuntime: rollouts };
+assert.deepEqual(migrateStore(structuredClone(stored)).canaryResearch, trials);
+const merged = mergeStores(stored, { ...stored, savedAt: 2,
+    canaryResearch: { ...trials, trials: [{ trialId: 'old-treatment', behavior: 'phase_transition', arm: 'treatment', sessions: [] }] } }).data;
+assert.deepEqual(new Set(merged.canaryResearch.trials.map(t => t.trialId)), new Set(['old-control', 'old-treatment']));
+
+// Execute the app's own diagnostic, not just an assertion about its version-list source.
+const config = { name: 'Current diagnostic fixture', unit: 'lb', goal: 'both', experience: 'intermediate',
+    split: 'full_body', days: 3, session: 's60', weeks: 4, progression: 'auto', deload: false,
+    equipment: ['barbell','rack','bench','dumbbell','cable','machine','smith','pullup','dip','legpress','hacksquat','legext','legcurl','calfmachine'],
+    focus: {}, reduce: [], barbellCap: 3, noBodyweight: false, noSupersets: false };
+const current = generateNextProgramForShell({ config, legacyExercises: EXERCISES, seed: 205, makeId: () => 'current-diagnostic' }).program;
+const frozen = structuredClone(current);
+const result = await runSelfTest([current, { id: 'archived', engineSource: 'pursuit-next', engineSourceVersion: '0.60.0', days: [] }], [], {}, { scope: 'quick' });
+assert.equal(result.skippedArchived, 1, 'only the archived fixture may be skipped; the current saved program must be checked');
+assert.deepEqual(result.failures, []);
+assert.ok(result.programs > 0 && result.cells > 0);
+assert.deepEqual(current, frozen, 'self-test must not rewrite the saved program');
+assert.equal(getNextShellCell(current, current.days[0], 0, 1).ownership.sets, 'engine');
+console.log(`PASS M205 cleanup: no retired generator/research/adapter aliases; historical backup evidence preserved; current saved plan included in ${result.programs} diagnostic programs / ${result.cells} cells, zero failures.`);

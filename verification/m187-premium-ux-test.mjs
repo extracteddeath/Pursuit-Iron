@@ -5,10 +5,11 @@ const css=fs.readFileSync(new URL('../app.css',import.meta.url),'utf8');
 const sw=fs.readFileSync(new URL('../sw.js',import.meta.url),'utf8');
 const profile=JSON.parse(fs.readFileSync(new URL('../BUILD_PROFILE.json',import.meta.url),'utf8'));
 
-assert.equal(profile.milestone,'M187');
-assert.equal(profile.uiMilestone,'M187 Premium UX Audit + Cross-Screen Refactor');
-assert.equal(profile.cache,'pursuit-iron-production-m187-premium-ux');
-assert.match(sw,/const CACHE="pursuit-iron-production-m187-premium-ux"/,'service worker must rotate cache so the UX release actually reaches installed PWAs');
+const manifest=JSON.parse(fs.readFileSync(new URL('../RELEASE_MANIFEST.json',import.meta.url),'utf8'));
+assert.equal(profile.milestone,manifest.milestone);
+assert.equal(profile.uiMilestone,manifest.uiMilestone);
+assert.equal(profile.cache,manifest.cache);
+assert.ok(sw.includes(`const CACHE="${manifest.cache}"`),'service worker must use the current release cache so UX changes reach installed PWAs');
 assert.match(sw,/"\.\/app\.css"/,'premium stylesheet must remain in the offline shell');
 
 // Shared interaction contract: one place protects Home, Program, Workout, Progress, Settings and Onboarding.

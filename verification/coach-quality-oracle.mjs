@@ -1,5 +1,5 @@
-import { auditProgram } from './arbiter.js';
-import { evaluateObjectiveCoachGuardrails } from './coach-regression.js';
+import { auditProgram } from '../modules/next-engine/arbiter.js';
+import { evaluateObjectiveCoachGuardrails } from '../modules/next-engine/coach-regression.js';
 
 /**
  * M180 Coach Quality Oracle 2.0

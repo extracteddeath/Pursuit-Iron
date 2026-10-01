@@ -1,4 +1,7 @@
-export const ENGINE_VERSION = '0.64.4';
+export const ENGINE_VERSION = '0.64.5';
+// Current release plus the four preceding prescription engines. Older plans stay readable;
+// phone diagnostics must inspect current saved plans rather than silently skipping them.
+export const ENGINE_COMPATIBLE_VERSIONS = Object.freeze(['0.64.1', '0.64.2', '0.64.3', '0.64.4', ENGINE_VERSION]);
 export const MUSCLE_DOSE_PRIOR = {
     novice: { minimum: 4, preferred: 6, upper: 10 },
     intermediate: { minimum: 6, preferred: 9, upper: 14 },

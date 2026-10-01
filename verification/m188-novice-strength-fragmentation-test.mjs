@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { generateProgram } from '../modules/next-engine/generate.js';
-import { evaluateProgramCoachQuality } from '../modules/next-engine/coach-quality-oracle.js';
+import { evaluateProgramCoachQuality } from './coach-quality-oracle.mjs';
 
 const loading={
   unit:'lb',

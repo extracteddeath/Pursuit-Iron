@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { EXERCISES, EQUIPMENT, expandEquipment } from '../modules/App.js';
-import { generateNextProgramForShell } from '../modules/next-engine/app-shell-adapter-capacity.js';
+import { generateNextProgramForShell } from '../modules/next-engine/app-shell-adapter.js';
 import { generateNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
 import { createExerciseMap } from '../modules/next-engine/exercise-db.js';
 import { normalizeRequest } from '../modules/next-engine/prescription.js';

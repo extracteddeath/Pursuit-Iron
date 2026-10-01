@@ -1,4 +1,4 @@
-import { generateProgram } from './generate.js';
+import { firstPassingCapacityProgram } from './capacity-generation.js';
 import { EXERCISE_MAP } from './exercise-db.js';
 import { buildGenerationRecoveryPlan } from './generation-recovery.js';
 import { prescriptionForSimulationWeek } from './simulation.js';
@@ -577,7 +577,7 @@ export function nextProgramToShellProgram(nextProgram, config, legacyExercises, 
         const mapped = session.exercises.map((exercise, slot) => {
             const legacy = resolveLegacyExercise(exercise, legacyExercises, canPerform);
             if (!legacy)
-                throw new NextShellAdapterError('UNMAPPED_EXERCISE', `Could not map ${exercise.name} (${exercise.exerciseId}) into the v661 exercise catalog.`);
+                throw new NextShellAdapterError('UNMAPPED_EXERCISE', `Could not map ${exercise.name} (${exercise.exerciseId}) into the app's exercise catalog.`);
             const shownMode = displayedLoadingMode(exercise.exerciseId, legacy);
             if (shownMode && !(exercise.exerciseId in displayLoadingModes))
                 displayLoadingModes[exercise.exerciseId] = shownMode;
@@ -589,7 +589,7 @@ export function nextProgramToShellProgram(nextProgram, config, legacyExercises, 
                 nextEngine: true, nextExerciseId: exercise.exerciseId, legacyExerciseId: legacy.id
             };
             // Manual mode is an explicit request to own the prescription in the shell. Seed the editable
-            // values from week 1; auto mode stores metadata only so later weeks continue to come from 0.41.
+            // values from week 1; auto mode stores metadata only so later weeks use the generated cells.
             if (config.progression === 'manual')
                 Object.assign(overrides[key], {
                     sets: canonicalShellSetCount(exercise.sets), reps: range(exercise.prescription.reps), rir: range(exercise.prescription.rir), rest: exercise.prescription.restSeconds,
@@ -641,72 +641,7 @@ export function nextProgramToShellProgram(nextProgram, config, legacyExercises, 
         }
     };
 }
-export function generateNextProgramForShell(options) {
-    const request = shellConfigToNextRequest(options.config, options.banned ?? [], options.legacyExercises, options.seed);
-    const result = generateProgram(request, {
-        // The shell's configured work weeks are the block length the athlete will actually run.
-        // Feed that into Auto instead of letting progression selection assume a generic six-week block.
-        blockWeeks: Math.max(1, Math.round(Number(options.config?.weeks) || 4)),
-        progressionStyle: options.config?.progressionStyle
-    });
-    if (result.program.audit.result !== 'pass') {
-        let recovery;
-        try {
-            recovery = buildGenerationRecoveryPlan(result.program.audit, request);
-        }
-        catch {
-            recovery = undefined;
-        }
-        throw new NextShellAdapterError('NEXT_ENGINE_REJECTED', `Pursuit Engine ${result.program.engineVersion} could not safely satisfy this request.`, recovery);
-    }
-    const legacyProgram = nextProgramToShellProgram(result.program, options.config, options.legacyExercises, options.makeId);
-    // M41: preserve the immutable engine-side request/program snapshot inside the legacy program.
-    // v661 history remains the canonical performed-work store; these snapshots only provide the
-    // interpretation contract needed to replay that history through the Next engine later.
-    legacyProgram.nextEngine = {
-        ...legacyProgram.nextEngine,
-        request: JSON.parse(JSON.stringify(request)),
-        baseRequest: JSON.parse(JSON.stringify(request)),
-        program: JSON.parse(JSON.stringify(result.program)),
-        cycleState: JSON.parse(JSON.stringify(createInitialCycleState(request.goal.type, request.schedule.days.length))),
-        historySchemaVersion: 1
-    };
-    return { program: legacyProgram, nextProgram: result.program, request, diagnostics: result.diagnostics };
-}
-/* Plain-language reasons from engine findings. Unknown codes are skipped rather than shown raw ("fractional sets versus a
-   minimum region" is engine language, not lifter language). */
-function refusalItems(p) {
-    const dayName = new Map((p.sessions ?? []).map((s) => [s.id, String(s.label ?? s.name ?? s.id)]));
-    const items = [];
-    for (const f of (p.audit?.findings ?? [])) {
-        if (f.severity === 'warning')
-            continue;
-        const msg = String(f.message ?? '');
-        if (f.code === 'MUSCLE_UNDER_MIN')
-            items.push(msg.split(' ')[0].replace(/_/g, ' '));
-        else if (f.code === 'SESSION_CAPACITY_MISS')
-            items.push(`the ${dayName.get(f.sessionId) ?? 'a'} day`);
-        else if (f.code === 'FULL_BODY_INCOMPLETE') {
-            const m = msg.match(/missing (.+?) work/);
-            items.push(m ? `${m[1]} work on full-body days` : 'full-body coverage');
-        }
-        else if (f.code === 'LIFT_EXPOSURE_MISSING') {
-            const m = msg.match(/^(.+?) is high priority/);
-            if (m)
-                items.push(m[1]);
-        }
-    }
-    return [...new Set(items)];
-}
-function shellRefusal(config, legacyExercises) {
-    try {
-        generateNextProgramForShell({ config, banned: [], legacyExercises, seed: 1 });
-        return null;
-    }
-    catch (err) {
-        return err instanceof NextShellAdapterError ? err : null;
-    }
-}
+
 /** The engine's own recovery suggestions carried by a refusal (buildGenerationRecoveryPlan), best first. The engine knows
  *  what would fix a refusal — more time, another day, a lower lift priority — and the app used to show only the code. */
 export function refusalFixes(err) {
@@ -714,19 +649,102 @@ export function refusalFixes(err) {
     const list = Array.isArray(plan?.suggestions) ? plan.suggestions : [];
     return list.filter(x => x && x.code !== 'report_issue' && typeof x.title === 'string').map(x => String(x.title)).slice(0, 2);
 }
+
+
+function generationOptions(config) {
+    return {
+        blockWeeks: Math.max(1, Math.round(Number(config?.weeks) || 4)),
+        progressionStyle: config?.progressionStyle
+    };
+}
+
+function rejectionRecovery(result, request) {
+    try {
+        return buildGenerationRecoveryPlan(result.program.audit, request);
+    }
+    catch {
+        return undefined;
+    }
+}
+
+export function generateNextProgramForShell(options) {
+    const originalRequest = shellConfigToNextRequest(
+        options.config,
+        options.banned ?? [],
+        options.legacyExercises,
+        options.seed
+    );
+    const attempt = firstPassingCapacityProgram(
+        originalRequest,
+        options.config,
+        generationOptions(options.config)
+    );
+    const { request, result } = attempt;
+
+    if (result.program.audit.result !== 'pass') {
+        throw new NextShellAdapterError(
+            'NEXT_ENGINE_REJECTED',
+            `Pursuit Engine ${result.program.engineVersion} could not safely satisfy this request.`,
+            rejectionRecovery(result, originalRequest)
+        );
+    }
+
+    const legacyProgram = nextProgramToShellProgram(
+        result.program,
+        options.config,
+        options.legacyExercises,
+        options.makeId
+    );
+
+    legacyProgram.nextEngine = {
+        ...legacyProgram.nextEngine,
+        request: JSON.parse(JSON.stringify(request)),
+        baseRequest: JSON.parse(JSON.stringify(request)),
+        program: JSON.parse(JSON.stringify(result.program)),
+        cycleState: JSON.parse(JSON.stringify(createInitialCycleState(request.goal.type, request.schedule.days.length))),
+        historySchemaVersion: 1,
+        ...(attempt.adjusted ? {
+            capacityAdjustment: {
+                policy: 'soft-capacity-band',
+                session: options.config?.session ?? 's60',
+                requestedTargetExercises: attempt.requestedTarget,
+                effectiveTargetExercises: attempt.effectiveTarget,
+                requestedMinimumMinutes: attempt.requestedMinimumMinutes,
+                effectiveMinimumMinutes: attempt.effectiveMinimumMinutes,
+                maxMinutes: request.schedule?.days?.[0]?.maxMinutes,
+                requestedSeed: attempt.requestedSeed,
+                effectiveSeed: attempt.effectiveSeed
+            }
+        } : {})
+    };
+
+    return {
+        program: legacyProgram,
+        nextProgram: result.program,
+        request,
+        diagnostics: result.diagnostics
+    };
+}
+
 export function splitBuildability(config, legacyExercises = []) {
+    // Wizard feasibility must stay CHEAP. This function runs once for every split/time card while
+    // the athlete is tapping through the builder. Running the full generator here blocks React's
+    // event loop and turns one unlucky random roll into a false "missing upper pull work" refusal.
+    // Hard named-lift contracts are deterministic and cheap, so keep those up-front. Everything
+    // else is validated by the real capacity-aware generator only when the athlete creates the plan.
     const gaps = splitContractGaps(config, legacyExercises);
     if (gaps.length)
         return { ok: false, kind: 'lifts', items: gaps.map(g => g.replace(/_/g, ' ')) };
-    const refusal = shellRefusal(config, legacyExercises);
-    if (!refusal)
-        return { ok: true };
-    const p = generateProgram(shellConfigToNextRequest(config, [], legacyExercises, 1)).program;
-    /* ⚠ DON'T BLAME THE GYM FOR THE ENGINE. With a FULL gym, three offered combinations are still refused (goal "both": Bro
-       5 days leaves calves at 1 set, Glute Focus 3 days leaves chest at 5 of 6, Full Body Patterns 2 days misses upper push).
-       Telling that lifter "not enough exercises with your equipment" would send them shopping for nothing. So re-ask with
-       every piece of equipment the catalog knows: still refused means the setting, not the gym, is the problem. */
-    const everything = [...new Set(legacyExercises.flatMap((e) => Array.isArray(e?.equip) ? e.equip : []))];
-    const equipmentIsTheCause = !shellRefusal({ ...config, equipment: everything, noBodyweight: false }, legacyExercises);
-    return { ok: false, kind: equipmentIsTheCause ? 'coverage' : 'design', items: refusalItems(p), fixes: refusalFixes(refusal) };
+
+    const request = shellConfigToNextRequest(config, [], legacyExercises, 1);
+    const usable = Array.isArray(request?.equipment?.available) ? request.equipment.available : [];
+    if (!usable.length)
+        return {
+            ok: false,
+            kind: 'coverage',
+            items: ['usable equipment'],
+            fixes: ['Enable bodyweight exercises or add available equipment']
+        };
+
+    return { ok: true };
 }

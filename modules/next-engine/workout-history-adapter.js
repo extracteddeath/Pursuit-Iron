@@ -441,7 +441,7 @@ export function deriveProgressionSelectionEvidence(workouts = []) {
 export function analyzeShellHistoryForNextEngine(program, history, legacyExercises) {
     const snap = sourceSnapshot(program);
     if (!snap)
-        throw new NextShellAdapterError('NEXT_HISTORY_SNAPSHOT_MISSING', 'This beta program predates the M41 engine snapshot required for history adaptation. Regenerate it once before adapting the next block.');
+        throw new NextShellAdapterError('NEXT_HISTORY_SNAPSHOT_MISSING', 'This saved program lacks the engine snapshot required for history adaptation. Rebuild it before adapting the next block.');
     const entries = [...(history ?? [])].filter(h => h?.programId === program.id).sort((a, b) => (Number(a.date) || 0) - (Number(b.date) || 0));
     const workouts = entries.map(entry => workoutFromEntry(program, entry, legacyExercises)).filter((x) => !!x);
     let cycleState = { ...snap.cycleState };
@@ -534,10 +534,10 @@ function requestAdaptedFromHistory(request, currentRequest, analysis) {
 export function generateNextBlockFromShellHistory(options) {
     const current = options.program;
     if (current?.engineSource !== 'pursuit-next')
-        throw new NextShellAdapterError('NOT_NEXT_ENGINE_PROGRAM', 'Next-block history adaptation is only available for Pursuit Next beta programs.');
+        throw new NextShellAdapterError('NOT_NEXT_ENGINE_PROGRAM', 'Next-block history adaptation requires an engine-generated program.');
     const snap = sourceSnapshot(current);
     if (!snap)
-        throw new NextShellAdapterError('NEXT_HISTORY_SNAPSHOT_MISSING', 'This beta program does not contain the M41 source snapshot needed for safe adaptation.');
+        throw new NextShellAdapterError('NEXT_HISTORY_SNAPSHOT_MISSING', 'This saved program lacks the engine snapshot required for history adaptation. Rebuild it before adapting the next block.');
     const analysis = analyzeShellHistoryForNextEngine(current, options.history, options.legacyExercises);
     const phase = analysis.cycleState.recommendedNextPhase;
     if (!phase)

@@ -1,12 +1,11 @@
 {
-  "profile": "portable-browser-esm-v661-workout-input",
-  "milestone": "M204",
-  "source": "M203 production baseline + explicit prescription/live-value ownership and single-writer persistence hardening",
-  "engine": "0.64.4 with field-level prescription ownership, non-mirroring volume repair, and explicit live-row ownership",
+  "profile": "portable-browser-esm-canonical-engine",
+  "milestone": "M205",
+  "source": "M204 production baseline + retired generator/research cleanup and canonical capacity adapter",
+  "engine": "0.64.5 with one capacity-aware generation adapter, current-engine diagnostics, and single-owner prescriptions",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
-  "nextRuntimeModules": 51,
-  "shadowRuntimeModules": 9,
+  "nextRuntimeModules": 46,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m204-prescription-ownership-b794",
-  "uiMilestone": "Pursuit Iron 4.0 Production Release · M204 Prescription Ownership"
+  "cache": "pursuit-iron-production-v4-0-0-m205-engine-cleanup-b795",
+  "uiMilestone": "Pursuit Iron 4.0 Production Release · M205 Engine Cleanup"
 }

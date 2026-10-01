@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { EXERCISE_MAP } from '../modules/next-engine/exercise-db.js';
-import { generateNextProgramForShell, splitBuildability } from '../modules/next-engine/app-shell-adapter-capacity.js';
+import { generateNextProgramForShell, splitBuildability } from '../modules/next-engine/app-shell-adapter.js';
 import { generateNextCycleForShell, nextCycleTemplatesForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
 
 const EQ = {

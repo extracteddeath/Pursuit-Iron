@@ -1,5 +1,5 @@
 import { generateProgram } from '../modules/next-engine/generate.js';
-import { evaluateProgramCoachQuality } from '../modules/next-engine/coach-quality-oracle.js';
+import { evaluateProgramCoachQuality } from './coach-quality-oracle.mjs';
 import { EXERCISE_MAP } from '../modules/next-engine/exercise-db.js';
 
 const gymEquipment = ['barbell','rack','bench','dumbbell','cable','machine','smith','leg_press','pullup_bar','bodyweight'];

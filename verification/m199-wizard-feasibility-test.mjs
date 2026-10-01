@@ -1,10 +1,10 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { performance } from 'node:perf_hooks';
-import { shellConfigToNextRequest, splitBuildability } from '../modules/next-engine/app-shell-adapter-capacity.js';
+import { shellConfigToNextRequest, splitBuildability } from '../modules/next-engine/app-shell-adapter.js';
 import { firstPassingCapacityProgram } from '../modules/next-engine/capacity-generation.js';
 
-const adapterSource = fs.readFileSync(new URL('../modules/next-engine/app-shell-adapter-capacity.js', import.meta.url), 'utf8');
+const adapterSource = fs.readFileSync(new URL('../modules/next-engine/app-shell-adapter.js', import.meta.url), 'utf8');
 const capacitySource = fs.readFileSync(new URL('../modules/next-engine/capacity-generation.js', import.meta.url), 'utf8');
 const splitStart = adapterSource.indexOf('export function splitBuildability');
 assert.ok(splitStart >= 0, 'capacity adapter must export splitBuildability');

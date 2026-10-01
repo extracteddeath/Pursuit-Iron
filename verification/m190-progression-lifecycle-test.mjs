@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { generateProgram } from '../modules/next-engine/generate.js';
 import { transitionProgramPhase } from '../modules/next-engine/phase-transition.js';
-import { shellConfigToNextRequest } from '../modules/next-engine/app-shell-adapter.js';
+import { shellConfigToNextRequest, nextProgramToShellProgram } from '../modules/next-engine/app-shell-adapter.js';
+import { EXERCISE_MAP } from '../modules/next-engine/exercise-db.js';
 
 const equipment=['barbell','rack','bench','dumbbell','cable','machine','smith','leg_press','pullup_bar','bodyweight'];
 const loading={
@@ -80,6 +81,18 @@ for (const exercise of targetPrimary)
 // Shell adapter should expose a compact progression plan so UI can explain Auto without recomputing policy.
 const adapter=fs.readFileSync(new URL('../modules/next-engine/app-shell-adapter.js',import.meta.url),'utf8');
 assert.match(adapter,/progressionPlan:/,'shell program metadata should expose the selected progression plan');
-assert.match(adapter,/progressionSelection:/,'slot metadata should carry the engine selection explanation');
+const catalog = [...EXERCISE_MAP.values()].map(ex => ({ id: ex.id, name: ex.name,
+  part: ex.legacyPart || 'chest', type: ex.flags?.compound ? 'compound' : 'isolation', equip: ex.equipment }));
+const shell = nextProgramToShellProgram(initial, { weeks: 4, progression: 'auto', progressionStyle: 'auto' }, catalog, () => 'lifecycle-shell');
+assert.equal(shell.nextEngine.progressionPlan.length, initialExercises.length);
+for (let i = 0; i < initialExercises.length; i++) {
+  const item = shell.nextEngine.progressionPlan[i], exercise = initialExercises[i];
+  assert.equal(item.exerciseId, exercise.exerciseId);
+  assert.equal(item.reason, exercise.progressionSelection.reason, 'UI explanation must preserve the actual engine selection reason');
+  assert.equal(item.source, exercise.progressionSelection.source);
+  assert.equal(item.confidence, exercise.progressionSelection.confidence);
+}
+for (const override of Object.values(shell.overrides))
+  assert.equal(Object.hasOwn(override, 'progressionSelection'), false, 'generated selection must not become a second prescription owner');
 
 console.log('PASS M190: progression selection now survives the full creation/block lifecycle, uses the real next-block duration for new exercises, preserves manual choices, and exposes selection explanations for the UI.');

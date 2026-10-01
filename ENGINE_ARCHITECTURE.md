@@ -1,0 +1,89 @@
+# Production engine map
+
+Current release: M205, app 4.0.0 build 795, Pursuit Engine 0.64.5. The maintained source is the JavaScript in this repository. `RELEASE_MANIFEST.json` certifies the actual runtime and UI files. Historical TypeScript claims and development scripts are not the source of this release.
+
+## Generation and authority
+
+`modules/main.js` mounts `App.js`. Creation and rebuild actions call `generateNextProgramForShell`; cycle creation calls `generateNextCycleForShell`. Both use the same capacity policy and audited generator. The browser import map resolves React and icons only: it no longer substitutes an alternative engine adapter. Node verification therefore exercises the production adapter.
+
+```mermaid
+flowchart TD
+    A["Goal, time, equipment, priorities"] --> B["Canonical shell adapter"]
+    B --> C["Capacity attempts"]
+    C --> D["Allocate and realize sessions"]
+    D --> E["Transactional repairs and final audit"]
+    E --> F{Passing plan?}
+    F -->|Yes| G["Executable weekly cells"]
+    F -->|No| H["Refusal with recovery suggestions"]
+    G --> I["Program, Home, Workout"]
+```
+
+The selected time band is capacity, not a quota. `capacity-generation.js` tries the requested seed first, then a bounded deterministic seed family. If necessary it reduces optional exercise density or the lower time-band edge; the selected maximum remains intact. Every accepted candidate passes the normal engine audit. The actual seed, request, and capacity adjustment are stored for reproducibility.
+
+Within `generate.js`, muscle prescriptions and strength claims feed a provisional allocation and split topology. Actual strength anchors are realized before residual muscle allocation is recalculated, avoiding a circular estimate of how much time and muscle work the anchors consume. The realizer selects eligible exercises and prescriptions, sequences sessions, and protects structural intent. Later changes are evaluated as whole-program transactions; functional coverage, focus, recovery, arm coverage, and recoverable-dose repair cannot simply bypass the arbiter.
+
+| Responsibility | Production source |
+|---|---|
+| Shell configuration, stable identities, equipment mapping, cell ownership | `app-shell-adapter.js`, `shell-equipment.js` |
+| Time bands and deterministic attempts | `capacity-policy.js`, `capacity-generation.js` |
+| Experience, phase, goal, priority, and capacity dose model | `prescription.js`, `config.js`, `phase-policy.js` |
+| Strength-aware allocation and split/day contracts | `allocator.js`, `topology.js`, `focus-intent.js` |
+| Exercise catalog and selection | `exercise-db.js`, `extended-exercise-catalog.js`, `exercise-selection-intelligence.js` |
+| Realization, clock estimates, order, pairing, useful work | `realizer.js`, `exercise-economy.js`, `setup-economy.js`, `techniques.js` |
+| Set events and muscle accounting | `events.js`, `ledgers.js`, `public-mev.js` |
+| Final acceptance and conservative repair | `generate.js`, `arbiter.js`, `dose-reconciliation.js`, coverage/recovery modules |
+| Shared lookup indexes and memoized candidate evaluation | `engine-context.js` |
+| Rationale and prescription-method selection | `explainability.js`, `progression-style.js`, `method-policy.js` |
+
+Paths in this table are relative to `modules/next-engine/`. `coach-regression.js` remains production code because the arbiter calls its objective guardrails. The higher-level verification oracle lives in `verification/coach-quality-oracle.mjs` and is not precached.
+
+## One writer per prescription field
+
+`nextEngine.program` is the audited base-program snapshot. `nextWeekPrescriptions[day:slot][week]` is its executable projection, including phase modulation and a requested recovery week. All generated-plan surfaces resolve through `getNextShellCell`.
+
+| Data | Owner and purpose |
+|---|---|
+| Automatic sets, reps, RIR, rest, role, technique, progression style | Generated week cell, with immutable engine fallback |
+| `overrides` identity metadata | Maps the visible slot to engine/shell exercise IDs |
+| Explicit prescription edits | Per-field `prescriptionOwners: user`; manual plans seed editable fields as user-owned |
+| `progStyle` | Explicit lifter method selection; automatic methods remain in engine cells |
+| Pending workout input | `valueOwner: prescription` follows the current target; `valueOwner: user` preserves typed input |
+| Completed logged sets | Historical performed values, preserved across restore and tuning |
+
+Generated values must not be copied into overrides as a second writer. Volume repair refuses to change user-owned sets. `commitProgram` resolves the next object once and writes that same object to open and saved state. Stale historical `auto` booleans do not override current field ownership.
+
+`workout-runtime.js` builds runtime targets and reconciles pending input. The shell still owns timers, editable rows, warm-up/plate presentation, and its supported custom/template interfaces. Those pieces are active product behavior, not a second automatic program generator.
+
+## History, progression, and cycles
+
+`workout-history-adapter.js` resolves logged exercises by stable slot identity and normalized history, retaining missing effort values as missing. `performance.js`, `loading.js`, `history.js`, `response.js`, and `recovery.js` supply progression decisions and comparable longitudinal evidence. A below-range performance can recommend a load decrease; an incomplete or noisy history is not automatically classified as a real stall.
+
+`phase-transition.js` carries successful/protected exercises and per-exercise evidence into a new phase. Automatic progression selection knows block length and phase; explicit methods remain explicit. `simulation.js` supplies the weekly prescription projection used by production and shares tested progression context with the multi-block simulator.
+
+`cycle-runtime-adapter.js` creates previews through the same passing-plan contract. Adaptive previews transition phases; static previews retarget dosage while retaining exercise identity. Static later blocks then reconcile the exact projected regional dose without replacing the roster. When a real block completes, advancement checks history readiness, can insert recovery from fatigue evidence, and replaces the future preview with a history-informed block. It refuses to replace a preview that already has workout history.
+
+## Volume has two distinct audits
+
+The arbiter evaluates the realized base program against the coarse muscle ledger and other hard contracts. `volume-repair.js` separately reconstructs the live roster and exact executable cells for every working week. It reports regional dose, including distinct lat/upper-back regions and direct side/rear-delt work, and checks transactional repair against the session clock, protected roles, manual ownership, and the existing audit envelope.
+
+A passing base-engine audit does not imply zero weekly regional guidance findings. Experience/phase/capacity landmarks, fractional secondary credit, and MEV/MAV/MRV values are model estimates. The current short-session and minimalist discrepancies are recorded in [M205_ENGINE_AUDIT.md](M205_ENGINE_AUDIT.md); warnings remain visible. They are not individual physiological guarantees.
+
+## Compatibility that still belongs here
+
+- Stable exercise IDs, loading conventions, numeric `engineV`, and nine referenced saved-plan feature gates preserve custom/template schedules and historical display/runtime behavior. Forty unreferenced generator gates were retired.
+- Store migrations, history merge rules, user-added slot prescriptions, markerless custom-plan technique schedules, and legacy-first cycle conversion preserve actual user data.
+- `legacy-research-data.js` preserves bounded historical trial/rollout records for backups. It imports no engine, assigns no trial, searches no candidate, and controls no workout. Existing archived program metadata is not deleted.
+- Historical changelogs, engine descriptions, audit reports, and semantic regression fixtures remain useful records. Unreachable generation code, duplicate object properties, experimental execution, one-time patch scripts, old release writers, and placeholders do not.
+
+## Verification and maintenance
+
+```bash
+node scripts/finalize-release.mjs
+node scripts/verify-release.mjs
+node scripts/verify-engine-contracts.mjs generation adaptation quality
+CHROME_BIN=/path/to/chrome node --no-warnings --experimental-loader ./verification/import-loader.mjs verification/m201-workout-prescription-browser-test.mjs
+```
+
+Finalize only after intentionally setting the current manifest/profile identity. It hashes current files and rebuilds the offline list; it never commits or pushes. CI has one release gate, three engine-contract groups, and three real-browser gates. Workflows have read-only repository permissions. Settings self-test includes the current engine plus its four compatible predecessors; older Next artifacts are counted as archived instead of silently pretending to validate them.
+
+Generation is still synchronous. Shared candidate caches and cheap wizard feasibility avoid unnecessary work, but difficult generation can still block the main thread. Worker execution would require a separate behavioral and browser review; M205 does not claim it has been implemented.

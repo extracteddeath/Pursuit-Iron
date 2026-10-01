@@ -1,3 +1,14 @@
+## M205 — One production engine and retired-code cleanup (build 795)
+
+- Removed the unreachable old program generator and production shadow/canary/promotion execution. Program creation and block transitions use the current audited engine directly.
+- Browser and Node now use one capacity-aware shell adapter. The import-map substitution, duplicated base module, and old speculative feasibility generator are gone.
+- Current programs are included in Settings self-tests; the supported list now contains the current prescription engine and its four predecessors.
+- Historical custom-plan schedules, manual prescription ownership, workout history, and backup research records remain readable. Research records are handled by a small data-only compatibility module.
+- Retired milestone patch/finalizer scripts, obsolete release workflows, and stray placeholder files are removed. Release metadata comes from one current manifest; CI verifies it without rewriting or pushing code.
+- Removed unused comparison/review modules and the empty type artifact; the coach-quality verification oracle now lives with verification rather than in the offline runtime.
+- The numeric saved-plan registry keeps only its nine used compatibility gates; duplicate, overwritten historical descriptions and obsolete generator-development notes were removed.
+- Reused each candidate's functional-coverage evaluation within its repair transaction. Pursuit Engine 0.64.5; offline cache rotated for build 795.
+
 ## M204 — Prescription ownership hardening (build 794)
 
 - Automatic Engine plans now have one prescription owner: the generated week cell/audited Engine state. Stale `overrides` values can no longer freeze sets, reps, RIR, role, or progression style after migrations, phase changes, or repairs.

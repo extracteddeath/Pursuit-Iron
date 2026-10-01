@@ -23,10 +23,12 @@ if (profile.uiMilestone !== manifest.uiMilestone) fail('BUILD_PROFILE UI milesto
 if (profile.cache !== manifest.cache) fail('BUILD_PROFILE cache does not match manifest');
 
 if (!fs.existsSync(path.join(root,'verification/m178-pwa-update-browser-test.mjs'))) fail('missing M178 PWA browser lifecycle gate');
-if (!fs.existsSync(path.join(root,'modules/next-engine/coach-quality-oracle.js'))) fail('missing M180 coach quality oracle');
+if (!fs.existsSync(path.join(root,'verification/coach-quality-oracle.mjs'))) fail('missing coach quality verification oracle');
 if (!fs.existsSync(path.join(root,'verification/m180-coach-quality-matrix.mjs'))) fail('missing M180 pass-only coach-quality matrix');
 
 const app = read('modules/App.js');
+if (fs.existsSync(path.join(root, 'modules/shadow-engine'))) fail('retired research runtime must not ship');
+if (fs.existsSync(path.join(root, 'modules/next-engine/app-shell-adapter-capacity.js'))) fail('duplicate shell adapter must not ship');
 for (const marker of ['Turn into training cycle','convertProgramToNextCycleForShell','onConvertCycle: beginCycleConversion','Remove saved plan','Restore to library',
   'homeProgramGroups','homePhaseIdentity','data-program-group','This block starts when you finish the current one','action: "decrease_load"',
   'Correct workout log','normalizeEditedHistoryEntry','perfAfterHistoryReplace','const setHistory = useMemo(() => stampedSetter(setHistoryRaw), [])','const [lo, hi] = cellRepRange(cell, program, ex, slot === day?.primaryIndex)',
@@ -61,6 +63,7 @@ execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verifi
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/custom-progression-safety-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/m201-workout-prescription-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/m204-prescription-ownership-test.mjs'],{stdio:'inherit',cwd:root});
+execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/m205-engine-cleanup-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/m167-legacy-dose-cycle-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/history-edit-integrity-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/history-volume-integrity-test.mjs'],{stdio:'inherit',cwd:root});

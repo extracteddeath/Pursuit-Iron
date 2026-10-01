@@ -6,7 +6,7 @@ https://extracteddeath.github.io/Pursuit-Iron/
 
 Pursuit Iron builds you a complete training program, then keeps adjusting it as you lift.
 
-Tell it your goal, how many days a week you can train, how long each session can run, and what equipment you actually have. It generates a full week from a library of 349 exercises — or start from a proven template and let it handle the maths.
+Tell it your goal, how many days a week you can train, how long each session can run, and what equipment you actually have. It generates a full week from a library of 365 exercises — or start from a proven template and let it handle the maths.
 
 BUILT AROUND YOUR CONSTRAINTS
 • Full gym, garage rack, or a single pair of dumbbells — programs are built from the kit you own
@@ -41,3 +41,6 @@ HONEST BY DESIGN
 Volume advice shows the set counts it rests on. The model that estimates your personal productive volume range stays silent unless your history genuinely contains enough variation to identify one — a group average dressed up as a personal finding would be worse than no answer at all. That restraint is why the coaching is worth reading.
 
 Free, forever. Built by a tiny independent team..
+
+
+Developer map: [ENGINE_ARCHITECTURE.md](ENGINE_ARCHITECTURE.md). Current cleanup and verification: [M205_ENGINE_AUDIT.md](M205_ENGINE_AUDIT.md).

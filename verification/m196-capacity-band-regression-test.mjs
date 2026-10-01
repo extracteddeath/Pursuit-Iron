@@ -7,7 +7,7 @@ import {
   requestWithExerciseTarget
 } from '../modules/next-engine/capacity-policy.js';
 
-const patchedAdapter = await import('../modules/next-engine/app-shell-adapter-capacity.js');
+const patchedAdapter = await import('../modules/next-engine/app-shell-adapter.js');
 assert.equal(typeof patchedAdapter.generateNextProgramForShell, 'function');
 assert.equal(typeof patchedAdapter.splitBuildability, 'function');
 assert.equal(typeof patchedAdapter.nextProgramToShellProgram, 'function');
@@ -37,9 +37,9 @@ assert.equal(s90Request.schedule.days[0].targetExercises, 7, 'request cloning mu
 const index = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const main = fs.readFileSync(new URL('../modules/main.js', import.meta.url), 'utf8');
 const sw = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
-assert.match(index, /app-shell-adapter\.js[^\n]*app-shell-adapter-capacity\.js/, 'import map must route the shell adapter through the capacity layer');
+assert.doesNotMatch(index, /app-shell-adapter/, 'browser must use the same canonical adapter as Node without an import-map substitution');
 assert.match(main, /wizard-stability\.js/, 'wizard stability guard must load before App');
-for (const asset of ['capacity-policy.js', 'app-shell-adapter-capacity.js', 'wizard-stability.js'])
+for (const asset of ['capacity-policy.js', 'app-shell-adapter.js', 'wizard-stability.js'])
   assert.ok(sw.includes(asset), `service worker must precache ${asset}`);
 assert.ok(sw.includes('"./modules/next-engine/app-shell-adapter.js"'), 'offline cache must include the base shell adapter');
 assert.ok(/c\.match\(r,\{ignoreSearch:true\}\)/.test(sw), 'offline runtime must resolve query-mapped adapter imports from the cached base module');

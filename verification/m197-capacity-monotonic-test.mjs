@@ -3,7 +3,7 @@ import { EXERCISE_MAP } from '../modules/next-engine/exercise-db.js';
 import {
   generateNextProgramForShell,
   splitBuildability
-} from '../modules/next-engine/app-shell-adapter-capacity.js';
+} from '../modules/next-engine/app-shell-adapter.js';
 import {
   capacityMinimumCandidates,
   requestWithMinimumMinutes,

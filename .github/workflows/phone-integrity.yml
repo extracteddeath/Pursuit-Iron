@@ -1,36 +1,36 @@
-name: M201 workout prescription integrity
-
+name: Phone and offline integrity
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
-
 permissions:
   contents: read
-
 jobs:
-  verify-workout:
+  browser:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        test: [m178-pwa-update, m199-volume-repair, m201-workout-prescription]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Rep targets, intensifiers, and variation regression
-        run: node --no-warnings --experimental-loader ./verification/import-loader.mjs verification/m201-workout-prescription-test.mjs
       - name: Install browser harness
         run: npm install --no-save --ignore-scripts puppeteer-core@24
-      - name: Phone-size workout restore, typing, techniques, and previews
+      - name: Verify real-browser behavior
         env:
           CHROME_BIN: /usr/bin/google-chrome
-        run: node verification/m201-workout-prescription-browser-test.mjs
-      - name: Upload phone screenshots
+        run: node --no-warnings --experimental-loader ./verification/import-loader.mjs verification/${{ matrix.test }}-browser-test.mjs
+      - name: Upload phone verification screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: m201-workout-phone
-          path: verification/m201-*-phone.png
+          name: phone-${{ matrix.test }}
+          path: verification/*-phone.png
           if-no-files-found: ignore
           retention-days: 7

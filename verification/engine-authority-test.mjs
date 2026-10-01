@@ -49,7 +49,7 @@ assert.ok(Number(topDecision?.weight)>100);
 const app=fs.readFileSync(new URL('../modules/App.js',import.meta.url),'utf8');
 for(const marker of [
  'const GENERATION_ROUTE = "pursuit-next-only"',
- 'generateNextWithShadow({ config',
+ 'generateNextProgramForShell({ config',
  'generateNextCycleForShell({',
  'nextWorkoutSuggestionForShell(program, history',
  'buildRuntimeSetTargets({',

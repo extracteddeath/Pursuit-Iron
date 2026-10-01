@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { performance } from 'node:perf_hooks';
 import { EXERCISES, computeCell, weeklyVolume, weeklySubVolume, volumeAudit, dayMuscleBreakdown, plannedWeek, distributeVolBias } from '../modules/App.js';
-import { generateNextProgramForShell } from '../modules/next-engine/app-shell-adapter-capacity.js';
+import { generateNextProgramForShell } from '../modules/next-engine/app-shell-adapter.js';
 import { nextProgramToShellProgram } from '../modules/next-engine/app-shell-adapter.js';
 import { createExerciseMap } from '../modules/next-engine/exercise-db.js';
 import { createTrainingSetEvents } from '../modules/next-engine/events.js';

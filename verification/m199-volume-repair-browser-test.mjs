@@ -4,7 +4,7 @@ import http from 'node:http';
 import path from 'node:path';
 import puppeteer from 'puppeteer-core';
 import { EXERCISES, STORE_VERSION } from '../modules/App.js';
-import { generateNextProgramForShell } from '../modules/next-engine/app-shell-adapter-capacity.js';
+import { generateNextProgramForShell } from '../modules/next-engine/app-shell-adapter.js';
 import { nextProgramToShellProgram } from '../modules/next-engine/app-shell-adapter.js';
 import { createExerciseMap } from '../modules/next-engine/exercise-db.js';
 import { createTrainingSetEvents } from '../modules/next-engine/events.js';

@@ -15,7 +15,10 @@ const groups = {
         'm190-progression-lifecycle', 'm191-progression-explainability-ui', 'm192-progression-transition-deltas',
         'm193-cycle-progression-context', 'm194-simulation-progression-parity'
     ],
-    quality: ['m187-premium-ux', 'm188-novice-strength-fragmentation', 'm188-production-torture']
+    quality: [
+        'm187-premium-ux',
+        'm188-novice-strength-fragmentation', 'm188-production-torture'
+    ]
 };
 const requested = process.argv.slice(2);
 for (const group of requested.length ? requested : Object.keys(groups)) {

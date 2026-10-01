@@ -1,4 +1,4 @@
-const __APP_VERSION__='4.0.0'; const __BUILD__='800';
+const __APP_VERSION__='4.0.0'; const __BUILD__='801';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { setShellEquipmentExpander, splitContractGaps, splitBuildability, refusalFixes, generateNextProgramForShell, recommendNextSplitForShell, getNextShellCell, canonicalShellSetCount, cloneNextDayPrescriptions, swapNextSlotPrescriptions, removeNextSlotPrescription, nextExerciseIdForShellExercise, markUserPrescriptionOverride, clearUserPrescriptionOverride, NextShellAdapterError } from "./next-engine/app-shell-adapter.js";
@@ -128,28 +128,6 @@ const TOK = (p) => {
         warn, warnDim, warnText: _onFill(warn)
     };
 };
-/* ============================== DIMENSIONAL TOKENS ==============================
- *
- * ⚠ THE COLOURS WERE ENGINEERED AND THE DIMENSIONS WERE NOT. Measured across App.jsx before this
- * existed: 22 distinct fontSize values over 1,300 uses, 21 border radii over 783, 16 gap values, and
- * 851 of 906 fontWeight declarations set to 700 or 800. Sizes 11, 12, 13 and 14 were all in heavy use
- * — six sizes inside a five-pixel band is not a scale, it is a hundred reasonable local decisions.
- *
- * WHY THE SCALE IS NOT THE MINIMAL-MOVEMENT ONE. Fitting a 6-step scale that minimises total pixels
- * moved, weighted by usage, returns [11, 12, 13, 14, 18, 30] — four consecutive integers. That is the
- * optimiser faithfully preserving the defect: the adjacent sizes carrying 945 of 1,300 uses ARE the
- * problem, so any scale that leaves them alone has done nothing. A missing scale cannot be fixed
- * without moving things, and pretending otherwise is how it stayed missing.
- *
- * So: a ~1.2 ratio, six steps. 579 sites land unchanged; the rest move 1-2px.
- *
- * WEIGHT IS THE BIG ONE. Nothing was emphasised because everything was. Each declaration steps down
- * one notch, which preserves every relative relationship while giving the page a baseline again.
- * This is the single most visible change here and it is deliberately reversible on its own. */
-const TYPE = { xs: 11, sm: 13, md: 15, lg: 18, xl: 22, xxl: 28 };
-const WEIGHT = { body: 400, medium: 500, semi: 600, bold: 700, display: 800 };
-const SPACE = { none: 0, hair: 2, xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32, huge: 48 };
-const RADIUS = { sm: 8, md: 12, lg: 16, pill: 999 };
 const THEMES = {
     lime: { name: "Lime", base: "dark", accent: "#D4FF3D", palette: TOK({ bg: "#0A0908", bgTint: "#0F0D10", surface: "#15131A", surface2: "#1E1A25", border: "rgba(255,255,255,0.08)", borderSoft: "rgba(255,255,255,0.05)", cream: "#F2EEE4", muted: "#A29EA8", mutedSoft: "#6F6B76", accent: "#D4FF3D", onAccent: "#0A0908", warm: "#E4BC5D", danger: "#FF5D6C" }) },
     ember: { name: "Ember", base: "dark", accent: "#FF8A3D", palette: TOK({ bg: "#120907", bgTint: "#17100C", surface: "#1E1511", surface2: "#2A1D17", border: "rgba(255,200,150,0.09)", borderSoft: "rgba(255,200,150,0.04)", cream: "#F5EDE2", muted: "#A3968A", mutedSoft: "#786D64", accent: "#FF8A3D", onAccent: "#120907", warm: "#F5B85D", danger: "#FF5D6C" }) },
@@ -8938,7 +8916,6 @@ const landmarkFor = (part, exp = "intermediate", src = 0) => {
     const stamped = src && typeof src === "object" ? src.landmarks : null;
     if (stamped)
         return stamped.uniform ? uniformLandmarkFor(part) : landmarkForLegacy(part, exp);
-    const eng = typeof src === "number" ? src : 0;
     /* held: the uniform table returns here when the rule is registered again */
     /* ⚠ FRONT DELTS NEED AN EXCEPTION WHEN THIS SHIPS, AND THE ATTEMPT BELOW DID NOT WORK. Under
        uniform landmarks the anterior deltoid gets a floor of 4, but its entire requirement is met by
@@ -10271,7 +10248,7 @@ function autoStyleFor(program, ex, isPrimary, weekIndex, perf = null, history = 
  * "no logged history for this lift" is the true and useful answer, and printing a fallback constant
  * as though it were data is how an inspector starts lying. */
 function explainPrescription(o) {
-    const { program, day, ex, slot, perf, history, weekIndex, unit } = o || {};
+    const { program, day, ex, slot, perf, history, weekIndex } = o || {};
     if (!program || !day || !ex || program.engineSource !== "pursuit-next")
         return null;
     const cell = computeCell(program, day, ex.id, slot, weekIndex);
@@ -11593,7 +11570,6 @@ function StepBody({ stepKey, config, set, buildable = {}, autoLength = null, com
     }
     if (stepKey === "equipment") {
         const toggle = (id) => set({ equipment: config.equipment.includes(id) ? config.equipment.filter(x => x !== id) : [...config.equipment, id] });
-        const hasBarbell = isBarLike(config.equipment);
         return (_jsxs(_Fragment, { children: [_jsx(Heading, { sub: "Only exercises you can actually perform get programmed. Bodyweight is available by default and can be excluded below.", children: "What equipment do you have?" }), _jsx("div", { className: "wpb-hscroll", style: { display: "flex", gap: 6, overflowX: "auto", overflowY: "hidden", touchAction: "pan-x pan-y", marginBottom: 12, paddingBottom: 2 }, children: [
                         ["Full gym", ["barbell", "dumbbell", "bench", "cable", "machine", "smith", "ezbar", "pullup", "dip", "kettlebell", "bands"]],
                         ["Barbell + rack", ["barbell", "bench", "ezbar", "pullup"]],
@@ -12256,12 +12232,6 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
     }, [history, program.id, program.days?.length, program.config?.endless, program.config?.deload, retroWeeks]);
     const retro = retroState.retro;
     const hasRetro = !!(retroState.ready && retro.ok && retro.recs && retro.recs.length);
-    /* Single primitive for the effect's dependency list. blockRetro() early-returns
-       { ok:false, reason, sessions, weeks } with NO `recs` key at all when the window holds fewer than
-       three logged sessions, so reading retro.recs.length directly in the array below threw
-       "Cannot read properties of undefined" on every render of a new or lightly-used program — the
-       guarded read on the line above short-circuits, but a dependency array evaluates eagerly. */
-    const retroKey = hasRetro ? `${retro.headline}|${retro.recs.length}` : "";
     // A LAYOUT effect, for two reasons. It measures and writes geometry, so doing it before paint avoids
     // a frame of un-collapsed header when the view is re-entered scrolled; and it publishes pvHeadRoom,
     // which the spacer's own layout effect reads. Passive effects run after every layout effect, so as a
@@ -14575,7 +14545,6 @@ function ExerciseAnimation({ ex, height = 190 }) {
         return { mid, end };
     };
     // Front-view arm convenience wrapper (UL=14, FL=13) returning the shoulder/elbow/wrist triple.
-    const angArm = (sh, hOpen, hClose, sign, t) => { const { mid, end } = angLimb(sh, hOpen, hClose, 14, 13, sign, t); return { sh, el: mid, wr: end }; };
     // A front view projects the forearms toward the viewer as hands converge. Screen lengths
     // shorten with depth; they must not be forced around a full 2-D circle through the lap.
     const projectedFly = (sh, start, end, t) => {
@@ -16009,7 +15978,7 @@ function effortCalibration(history) {
         }
     }
     const obs = [];
-    for (const [id, sessions] of Object.entries(bySession)) {
+    for (const [, sessions] of Object.entries(bySession)) {
         const win = sessions.slice(0, WINDOW); // newest-first → the most recent WINDOW sessions
         // pass 1: reference, from sets the lifter was ASKED to take to maximum, within the window
         const maximal = [];
@@ -18596,7 +18565,6 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
         const oldId = data[ei].id;
         const isP = slot === day.primaryIndex;
         const swapCell = computeCell(program, day, newId, slot, weekIndex);
-        const swapTRIR = parseRIRNum(swapCell.rir);
         const swapRange = (() => {
             if (swapCell.range && String(swapCell.range).includes("-")) {
                 const [a, b] = (() => { const r = String(swapCell.range).split("-").map(Number); return [r[0], Number.isFinite(r[1]) ? r[1] : r[0]]; })(); /* "8" is a range of one, not [8, NaN] */
@@ -18732,7 +18700,6 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
                     return -1;
                 })();
                 const wDone = workOnly(e).filter(s => s.done).length;
-                const cellTRIR = parseRIRNum(cell.rir);
                 /* ⚠ A local `const cellRepRange = (() => { … return cellRepRange(cell, …) })()` stood here. It shadowed the global
                    cellRepRange() it meant to call, so whenever a prescription was not an "a-b" string — a single typed rep target like
                    "8", a range held as an array (custom programs), or no range at all — the fallback read the half-initialised local and
@@ -18889,7 +18856,6 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
                             if (!fv)
                                 return null;
                             const { idxs, hi, effSi, s } = fv;
-                            const stepW = loadStep(EX_BY_ID[e.id], unit);
                             const kind = s.warm ? "Warm-up" : s.kind === "drop" ? "Drop set" : s.kind === "myo" ? "Myo-rep" : null;
                             const workIdx = e.sets.slice(0, hi + 1).filter(isWorkSet).length;
                             const workTot = workOnly(e).length;
@@ -19481,7 +19447,6 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
                             return null;
                         return { name: ex.name, dir: sug.dir, delta: sug.weight != null ? sug.weight - s.weight : 0, weight: sug.weight, from: s.weight, reason: sug.reason };
                     }).filter(Boolean);
-                    const anyChange = nextPlan.some(p => p.dir !== "hold");
                     return (_jsx("div", { onClick: () => { setFinishing(false); setFinishFeedbackOpen(false); }, className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "flex-end", zIndex: 60, animation: "fadeIn .2s both" }, children: _jsxs("div", { ref: sheetDragRef, onClick: e => e.stopPropagation(), style: { width: "100%", background: C.bg2, borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: "8px 16px calc(env(safe-area-inset-bottom) + 22px)", animation: "sheetUp .28s cubic-bezier(.2,.7,.3,1) both", borderTop: `1px solid ${C.border}`, maxHeight: "88%", overflowY: "auto" }, className: "wpb-scroll wpb-finish-sheet", children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }, children: [_jsx("div", { style: { width: 40, height: 40, borderRadius: 11, background: C.accentDim, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: _jsx(Trophy, { size: 20, color: C.accentInk }) }), _jsxs("div", { children: [_jsx("div", { style: { fontSize: 18, fontWeight: 700 }, children: "Workout complete" }), _jsxs("div", { style: { fontSize: 13, color: C.muted }, children: [program.blockLabel ? _jsxs("span", { style: { color: C.accentInk, fontWeight: 600 }, children: [program.blockLabel, " \u00B7 "] }) : null, day.label, " \u00B7 Week ", weekIndex > weeksOf(program) ? "Deload" : weekIndex] })] })] }), _jsx("div", { className: "wpb-finish-metrics", style: { display: "flex", gap: 7, marginBottom: 12 }, children: [["Sets", `${doneSets}/${totalSets}`], ["Volume", `${Math.round(volume).toLocaleString()} ${unit}`], ["Time", `${Math.max(1, Math.round(runElapsedMs() / 60000))}m`]].map(([k, v]) => (_jsxs("div", { style: { flex: 1, background: C.card, borderRadius: 12, padding: "10px 7px", textAlign: "center" }, children: [_jsx("div", { className: "mono", style: { fontSize: 18, fontWeight: 600, color: C.accentInk }, children: v }), _jsx("div", { style: { fontSize: 11, color: C.muted, marginTop: 2 }, children: k })] }, k))) }), prs.length > 0 && (_jsxs("div", { style: { background: C.accentDim, borderRadius: 16, padding: "12px 14px", marginBottom: 16 }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 6, marginBottom: prs.length ? 8 : 0 }, children: [_jsx(Trophy, { size: 14, color: C.accentInk }), _jsxs("span", { style: { fontSize: 15, fontWeight: 700, color: C.accentInk }, children: [prs.length, " estimated-1RM PR", prs.length === 1 ? "" : "s", "!"] })] }), prs.map((p, i) => (_jsxs("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 13, padding: "3px 0" }, children: [_jsx("span", { style: { color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginRight: 8 }, children: p.name }), _jsxs("span", { className: "mono", style: { color: C.accentInk, fontWeight: 600, flexShrink: 0 }, children: ["+", p.gain, " ", unit] })] }, i)))] })), mainE1rm && (_jsxs("div", { style: { background: C.card, borderRadius: 16, padding: "13px 15px", marginBottom: 16 }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between" }, children: [_jsxs("div", { style: { ...eyebrow() }, children: ["Estimated 1RM \u00B7 ", mainE1rm.name] }), mainE1rm.prev > 0 && mainE1rm.est > mainE1rm.prev && _jsxs("span", { className: "mono", style: { fontSize: 11, fontWeight: 700, color: C.accentInk }, children: ["+", mainE1rm.est - mainE1rm.prev, " ", unit] })] }), _jsxs("div", { className: "mono", style: { fontSize: 28, fontWeight: 700, color: C.accentInk, lineHeight: 1.1, marginTop: 4 }, children: [mainE1rm.est, " ", _jsx("span", { style: { fontSize: 15, color: C.muted }, children: unit })] }), _jsxs("div", { style: { fontSize: 13, color: C.muted, marginTop: 2 }, children: ["from your top set of ", mainE1rm.weight, " ", unit, " \u00D7 ", mainE1rm.reps, mainE1rm.prev > 0 ? ` · previous best ${mainE1rm.prev} ${unit}` : ""] })] })), goalsHit.length > 0 && (_jsxs("div", { style: { background: C.accentDim, borderRadius: 16, padding: "12px 14px", marginBottom: 16 }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }, children: [_jsx(Target, { size: 15, color: C.accentInk }), _jsxs("span", { style: { fontSize: 15, fontWeight: 700, color: C.accentInk }, children: [goalsHit.length, " goal", goalsHit.length === 1 ? "" : "s", " reached"] })] }), goalsHit.map((g, i) => (_jsxs("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 13, padding: "3px 0" }, children: [_jsx("span", { style: { color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginRight: 8 }, children: g.name }), _jsxs("span", { className: "mono", style: { color: C.accentInk, fontWeight: 600, flexShrink: 0 }, children: [g.goal, " ", unit, " \u2713"] })] }, i)))] })), nextPlan.length > 0 && (_jsxs("div", { style: { background: C.card, borderRadius: 16, padding: "12px 14px", marginBottom: 16 }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }, children: [_jsx(TrendingUp, { size: 15, color: C.accentInk }), _jsx("span", { style: { fontSize: 15, fontWeight: 700 }, children: "Next session" })] }), nextPlan.map((p, i) => {
                                             const up = p.dir === "up", down = p.dir === "down";
                                             const col = up ? C.accent : down ? (C.warn || C.muted) : C.muted;
@@ -21558,7 +21523,6 @@ function PlateCalcSheet({ unit, onClose, initialBar = "barbell", initialWeight =
        Flooring makes the table honest at every row and self-consistent at 100%, and the most it ever
        costs is one increment of load on a percentage that is already an estimate of an estimate. */
     const roundDownTo = (v) => { const inc = unit === "lb" ? 5 : 2.5; return Math.floor(v / inc) * inc; };
-    const roundTo = (v) => { const inc = unit === "lb" ? 5 : 2.5; return Math.round(v / inc) * inc; };
     return (_jsx("div", { onClick: onClose, className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "flex-end", zIndex: 60, animation: "fadeIn .2s both" }, children: _jsxs("div", { ref: sheetDragRef, onClick: e => e.stopPropagation(), className: "wpb-scroll", style: { width: "100%", maxHeight: "88%", overflowY: "auto", background: C.bg2, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: "10px 18px calc(env(safe-area-inset-bottom) + 26px)", animation: "sheetUp .28s cubic-bezier(.2,.7,.3,1) both", borderTop: `1px solid ${C.border}` }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }, children: [_jsx("div", { style: { fontSize: 18, fontWeight: 700 }, children: "Calculators" }), _jsx("button", { className: "pressable hit wpb-sheet-close", onClick: onClose, "aria-label": "Close", style: iconBtn(), children: _jsx(X, { size: 18 }) })] }), _jsx("div", { style: { display: "flex", gap: 6, background: C.bg, borderRadius: 12, padding: 4, marginBottom: 16 }, children: [["plates", "Plates"], ["orm", "1RM estimate"]].map(([k, label]) => (_jsx("button", { onClick: () => setTab(k), className: "pressable", style: { flex: 1, padding: "10px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 15, fontWeight: 700, background: tab === k ? C.accent : "transparent", color: tab === k ? C.accentText : C.muted }, children: label }, k))) }), tab === "plates" ? (_jsxs(_Fragment, { children: [_jsx("div", { style: { display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }, children: Object.entries(BARS).map(([k, v]) => (_jsxs("button", { onClick: () => setBar(k), className: "pressable", style: {
                                     flex: "1 1 28%", minWidth: 70, padding: "9px 4px", borderRadius: 12, border: `1px solid ${bar === k ? C.accent : C.border}`, cursor: "pointer",
                                     background: bar === k ? C.accentDim : C.card, color: bar === k ? C.accentInk : C.muted, fontSize: 13, fontWeight: 600
@@ -21875,7 +21839,7 @@ function ThousandClubCard({ trends, unit }) {
     const snap = strengthClubSnapshot(trends, unit, mode);
     if (!snap.hasAny)
         return null; // nothing logged on the big three yet
-    const { rows, total, current, maxedOut, next, pct, remaining, inThousand } = snap;
+    const { rows, total, current, maxedOut, next, pct, remaining } = snap;
     const prevLb = current ? current.lb : 0;
     const fmt = (v) => unit === "lb" ? Math.round(v) : Math.round(v * 2) / 2;
     return (_jsxs("div", { style: { background: C.card, borderRadius: 16, padding: "16px", marginBottom: 12 }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }, children: [_jsx(Trophy, { size: 17, color: C.accentInk }), _jsx("div", { style: { fontSize: 15, fontWeight: 700, flex: 1 }, children: "Strength Club" }), current && _jsx("span", { style: { fontSize: 11, fontWeight: 700, color: C.accentInk, background: C.accentDim, borderRadius: 8, padding: "3px 9px", letterSpacing: .2 }, children: current.name.toUpperCase() })] }), _jsxs("div", { style: { display: "flex", alignItems: "baseline", gap: 8, marginBottom: 2 }, children: [_jsx("span", { className: "mono", style: { fontSize: 28, fontWeight: 700, color: C.text, lineHeight: 1 }, children: fmt(total).toLocaleString() }), _jsxs("span", { style: { fontSize: 15, fontWeight: 600, color: C.muted, flex: 1 }, children: [unit, " total"] }), _jsx("div", { role: "group", "aria-label": "Total measured by", style: { display: "flex", gap: 2, background: C.bg2, borderRadius: 8, padding: 2, alignSelf: "center", flexShrink: 0 }, children: [{ k: "lifted", label: "Lifted" }, { k: "e1rm", label: "Est. 1RM" }].map(o => (_jsx("button", { onClick: () => setMode(o.k), "aria-pressed": mode === o.k, className: "pressable", style: { border: "none", cursor: "pointer", borderRadius: 8, padding: "4px 9px", fontSize: 11, fontWeight: 700, letterSpacing: .2,
@@ -22626,7 +22590,7 @@ function MeasurementDetail({ label, log, unit }) {
     hi += rawSpan * 0.16;
     const plotW = W - padL - padR, plotH = H - padT - padB;
     const firstT = Number(log[0].date), lastT = Number(log[log.length - 1].date), tSpan = (lastT - firstT) || 1;
-    const xOf = (d, i) => padL + (log.length === 1 ? plotW / 2 : ((Number(d) - firstT) / tSpan) * plotW);
+    const xOf = (d) => padL + (log.length === 1 ? plotW / 2 : ((Number(d) - firstT) / tSpan) * plotW);
     const yOf = v => padT + plotH - ((Number(v) - lo) / (hi - lo)) * plotH;
     const line = log.map((e, i) => `${i ? "L" : "M"}${xOf(e.date, i).toFixed(1)},${yOf(e.v).toFixed(1)}`).join(" ");
     const ticks = Array.from({ length: 4 }, (_, i) => lo + (i / 3) * (hi - lo));
@@ -25789,10 +25753,9 @@ function CycleDetail({ cycle, saved = [], history = [], cycleInfo = null, onBack
     const goalColor = (g, phase = null) => phase === "recovery" ? C.muted : g === "strength" ? "#e0833b" : g === "both" ? C.accent : "#4f9d69";
     const deloadOf = (b) => !!progOf(b)?.config?.deload;
     const daysOf = (b) => progOf(b)?.days?.length || progOf(b)?.config?.days || null;
-    const totalOf = (b) => (b.weeks || 0) + (deloadOf(b) ? 1 : 0);
     const totalWeeks = P.totalWeeks;
     const isActiveCycle = !!(cycleInfo && cycleInfo.cycle && cycleInfo.cycle.id === cycle.id);
-    const doneWeeks = P.doneWeeks, pct = P.pct;
+    const pct = P.pct;
     const days = daysOf(blocks[activeIdx]) || daysOf(blocks[0]);
     const currentExists = !done && progOf(blocks[activeIdx]);
     const hasNext = !done && activeIdx < blocks.length - 1;

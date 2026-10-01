@@ -1,3 +1,10 @@
+## M211 — App pure-local cleanup (build 801)
+
+- Removed abandoned dimensional-token scaffolding whose values were never read.
+- Removed simple dead App reads/helpers and unused destructured fields without touching hooks, callbacks, prop contracts, or backup compatibility.
+- Added source-level cleanup invariants so the retired locals do not silently return.
+- Engine behavior remains 0.64.9; offline cache rotated for build 801.
+
 ## M210 — App shell static cleanup (build 800)
 
 - Removed three unused shell-adapter imports and three dead module-scope constants from the App bundle.

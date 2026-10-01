@@ -34,4 +34,6 @@ The release rotates the offline cache and refreshes the in-app notes. All 58 run
 
 The new browser flow joins the existing six Phone and offline integrity gates. Screenshot artifacts are produced by those gates for visual review.
 
+The Android viewport gate waits for finite entry/closing animations to finish before measuring the shell. Its original bounds assertion remains unchanged; this prevents an in-flight translation from being mistaken for a layout overflow on a faster CI runner.
+
 Local browser verification used Chromium's headless shell. Browser viewport and Back checks provide application evidence; physical Android keyboard, system font scale, gestures, and OEM lifecycle checks remain separate device-certification work.

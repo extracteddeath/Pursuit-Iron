@@ -45,12 +45,13 @@ const server = http.createServer((req, res) => {
     res.setHeader('Content-Type', mime[path.extname(file)] ?? 'application/octet-stream'); res.end(fs.readFileSync(file));
 });
 await new Promise(resolve => server.listen(8767, '127.0.0.1', resolve));
-let browser;
+let browser, page;
+const errors = [];
 try {
     browser = await puppeteer.launch({ executablePath: process.env.CHROME_BIN || '/usr/bin/google-chrome', headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage'] });
-    const page = await browser.newPage();
+    page = await browser.newPage();
     await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
-    const errors = []; page.on('pageerror', e => errors.push(e.message));
+    page.on('pageerror', e => errors.push(e.message));
     await page.goto('http://127.0.0.1:8767/', { waitUntil: 'networkidle0' });
     await page.evaluate((saved, v) => localStorage.setItem('wpb:v1', JSON.stringify({ v, savedAt: Date.now(), saved: [saved], pinnedId: saved.id,
         history: [], perf: {}, drafts: {}, cycles: [], custom: [], banned: [], equipDefault: saved.config.equipment, unit: 'lb', unitChosen: true,
@@ -58,8 +59,8 @@ try {
     await page.reload({ waitUntil: 'networkidle0' });
     await page.waitForFunction(() => !!window.__pursuitMounted);
     const openPlan = async () => {
-        await page.waitForSelector('.hp-open'); await page.click('.hp-open');
-        await page.waitForSelector('button[title="Program details"]'); await page.click('button[title="Program details"]');
+        await page.locator('.hp-open').click();
+        await page.locator('button[title="Program details"]').click();
         await page.waitForFunction(() => [...document.querySelectorAll('[data-infocard] > button')].some(b => /Weekly volume/.test(b.textContent)));
         await page.evaluate(() => [...document.querySelectorAll('[data-infocard] > button')].find(b => /Weekly volume/.test(b.textContent)).click());
     };
@@ -71,7 +72,17 @@ try {
         return { issues: volumeAudit(p).issues, counts: Array.from({ length: 6 }, (_, i) => plannedWeek(p, i + 1).sets) };
     }, fixture.id);
     assert.ok(before.issues.some(i => i.region === 'upper_back'));
-    await page.click('[data-volume-auto-fix]');
+    // The details sheet and volume panel animate. A coordinate click immediately after DOM
+    // attachment can miss a moving target on fast CI machines. Keep a real pointer click, but
+    // let the locator wait for a visible, enabled target with a stable bounding box.
+    await page.evaluate(() => {
+        window.__m199AutoFixClicked = false;
+        document.querySelector('[data-volume-auto-fix]').addEventListener('click', () => {
+            window.__m199AutoFixClicked = true;
+        }, { once: true });
+    });
+    await page.locator('[data-volume-auto-fix]').click();
+    await page.waitForFunction(() => window.__m199AutoFixClicked === true);
     await page.waitForSelector('[data-volume-repair-status]', { timeout: 30000 });
     const feedback = await page.$eval('[data-volume-repair-status]', e => ({ status: e.getAttribute('data-volume-repair-status'), text: e.textContent }));
     assert.equal(feedback.status, 'success', feedback.text);
@@ -94,5 +105,19 @@ try {
     assert.deepEqual(reloadCounts, after.counts);
     assert.deepEqual(errors, [], 'real UI must remain free of render/runtime errors');
     console.log(`PASS M199 browser Auto-fix: click -> canonical saved state -> audit -> reload; week counts ${before.counts.join('/')} -> ${after.counts.join('/')}; ${after.slots} stable exercise slots.`);
+}
+catch (error) {
+    if (page) {
+        await page.screenshot({ path: path.join(root, 'verification/m199-volume-repair-failure-phone.png'), fullPage: true }).catch(() => {});
+        const diagnostic = await page.evaluate(id => {
+            const saved = JSON.parse(localStorage.getItem('wpb:v1') || '{}').saved?.find(p => p.id === id);
+            return { clickDelivered: window.__m199AutoFixClicked,
+                feedback: document.querySelector('[data-volume-repair-status]')?.textContent,
+                persistedRepair: saved?.nextEngine?.volumeRepair,
+                visibleText: document.body.innerText.slice(-1800) };
+        }, fixture.id).catch(() => null);
+        console.error('Auto-fix browser failure:', JSON.stringify({ errors, diagnostic }));
+    }
+    throw error;
 }
 finally { if (browser) await browser.close(); await new Promise(resolve => server.close(resolve)); }

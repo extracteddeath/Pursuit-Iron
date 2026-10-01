@@ -48,6 +48,20 @@ for (const [file, snippets] of Object.entries(retiredUnusedBindings)) {
 }
 for (const retired of ['nextProgramToShellProgram', 'generateNextBlockFromShellHistory', 'advanceNextCycleForShell', 'SCALE_OK', 'PATTERN_SET', 'LOADABLE_EQUIP'])
     assert.equal(app.includes(retired), false, `proven-dead App shell binding must stay removed: ${retired}`);
+const retiredPureAppLocals = [
+    'const TYPE = {', 'const WEIGHT = {', 'const SPACE = {', 'const RADIUS = {',
+    'const eng = typeof src === "number" ? src : 0;',
+    'const { program, day, ex, slot, perf, history, weekIndex, unit } = o || {};',
+    'const retroKey = hasRetro ?', 'const angArm = (sh, hOpen, hClose, sign, t) =>', 'const [id, sessions]',
+    'const swapTRIR = parseRIRNum(swapCell.rir);', 'const cellTRIR = parseRIRNum(cell.rir);',
+    'const anyChange = nextPlan.some(p => p.dir !== "hold");',
+    'const roundTo = (v) => { const inc = unit === "lb" ? 5 : 2.5;', 'inThousand } = snap;',
+    'const xOf = (d, i) =>', 'const totalOf = (b) =>', 'const doneWeeks = P.doneWeeks, pct = P.pct;'
+];
+for (const snippet of retiredPureAppLocals)
+    assert.equal(app.includes(snippet), false, `pure dead App local must stay removed: ${snippet}`);
+const equipmentStep = app.slice(app.indexOf('if (stepKey === "equipment")'), app.indexOf('if (stepKey === "constraints")'));
+assert.equal(equipmentStep.includes('const hasBarbell = isBarLike(config.equipment);'), false, 'equipment-step dead hasBarbell read must stay removed');
 assert.doesNotMatch(index, /app-shell-adapter/, 'Node and browser must resolve the same canonical adapter');
 assert.equal(fs.existsSync(new URL('../modules/shadow-engine', import.meta.url)), false);
 assert.equal(fs.existsSync(new URL('../modules/next-engine/app-shell-adapter-capacity.js', import.meta.url)), false);

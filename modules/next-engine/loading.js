@@ -19,43 +19,6 @@ export const DEFAULT_LOADING_INVENTORY = {
     smith: { minimum: 5, increment: 5, maximum: 500 },
     exerciseOverrides: {}
 };
-export function summarizeLoadingInventory(input) {
-    const inventory = normalizeLoadingInventory(input);
-    const smallest = Math.min(...inventory.barbell.platePairs.map(p => p.weight));
-    const dumbbells = inventory.dumbbells.availablePerHand;
-    const diffs = dumbbells.slice(1).map((value, index) => round(value - dumbbells[index])).filter(v => v > 0);
-    const dumbbellIncrement = (diffs[0] ?? 5);
-    const smallestPlatePerSide = (smallest <= 1.25 ? 1.25 : smallest <= 2.5 ? 2.5 : 5);
-    const clampIncrement = (value) => value <= 2.5 ? 2.5 : value <= 5 ? 5 : value <= 10 ? 10 : 15;
-    return {
-        barWeight: inventory.barbell.barWeight,
-        smallestPlatePerSide,
-        dumbbellIncrement,
-        dumbbellMaximum: dumbbells.at(-1) ?? 100,
-        machineIncrement: clampIncrement(inventory.machine.increment),
-        cableIncrement: clampIncrement(inventory.cable.increment)
-    };
-}
-export function createLoadingInventory(settings = {}) {
-    const smallest = settings.smallestPlatePerSide ?? 2.5;
-    const standard = [1.25, 2.5, 5, 10, 25, 45].filter(weight => weight >= smallest);
-    const dumbbellIncrement = settings.dumbbellIncrement ?? 5;
-    const dumbbellMaximum = Math.max(dumbbellIncrement, settings.dumbbellMaximum ?? 100);
-    const dumbbells = [];
-    for (let value = dumbbellIncrement; value <= dumbbellMaximum + 1e-6; value += dumbbellIncrement)
-        dumbbells.push(round(value));
-    const machineIncrement = settings.machineIncrement ?? 5;
-    const cableIncrement = settings.cableIncrement ?? machineIncrement;
-    return normalizeLoadingInventory({
-        unit: 'lb',
-        barbell: { barWeight: settings.barWeight ?? 45, platePairs: standard.map(weight => ({ weight, pairs: weight >= 45 ? 10 : 4 })) },
-        dumbbells: { availablePerHand: dumbbells },
-        machine: { minimum: machineIncrement, increment: machineIncrement, maximum: 500 },
-        cable: { minimum: cableIncrement, increment: cableIncrement, maximum: 300 },
-        smith: { minimum: machineIncrement, increment: machineIncrement, maximum: 500 },
-        exerciseOverrides: {}
-    });
-}
 export function normalizeLoadingInventory(input) {
     if (!input)
         return structuredClone(DEFAULT_LOADING_INVENTORY);

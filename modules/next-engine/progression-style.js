@@ -149,10 +149,6 @@ export function selectProgressionStyle(ex, role, context = {}) {
     return selection('double', 'high', 'Isolation work uses rep-first double progression because it is simple and does not overreact to small performance noise.');
 }
 
-export function resolveProgressionStyle(ex, role, context = {}) {
-    return selectProgressionStyle(ex, role, context).style;
-}
-
 function validCurrent(style) {
     return SUPPORTED_PROGRESSION_STYLES.includes(style) && style !== 'auto';
 }

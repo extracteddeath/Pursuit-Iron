@@ -741,6 +741,3 @@ export function goalForCycleTemplate(id) {
 export function blocksForCycleTemplate(id) {
     return (CYCLE_TEMPLATES.find(template => template.id === id) ?? CYCLE_TEMPLATES[0]).blocks.map(block => ({ ...block }));
 }
-export function defaultPowerbuildingBlocks() {
-    return blocksForCycleTemplate('powerbuilding');
-}

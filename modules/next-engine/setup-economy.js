@@ -108,21 +108,3 @@ export function sessionSetupTransitionScore(exercises, exerciseMap) {
         total += setupTransitionCost(exerciseMap.get(exercises[i - 1].exerciseId), exerciseMap.get(exercises[i].exerciseId));
     return Math.round(total * 1000) / 1000;
 }
-/**
- * Counts station revisits in a sequence (A -> B -> A). This is a diagnostic only; some revisits are
- * protected by strength/compound ordering, so milestone gates should apply it to reorderable bands.
- */
-export function setupZoneRevisits(exercises, exerciseMap) {
-    const zones = exercises.map(ex => exerciseSetupDescriptors(exerciseMap.get(ex.exerciseId))[0]?.zone ?? 'other');
-    const seen = new Set();
-    let prior, revisits = 0;
-    for (const zone of zones) {
-        if (zone === prior)
-            continue;
-        if (seen.has(zone))
-            revisits++;
-        seen.add(zone);
-        prior = zone;
-    }
-    return revisits;
-}

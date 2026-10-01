@@ -182,6 +182,3 @@ export function diagnoseExerciseResponse(exercise, exposuresInput, recovery) {
     }
     return makeDiagnosis(exercise, 'uncertain', exposures.length >= 3 ? 'moderate' : 'low', exposures.length, 'The recent comparable exposures do not support a confident explanation that would justify a structural change.', 'collect_more_data', false, 'Keep the current structure and collect another comparable exposure.', .15, 0, 0, evidenceMeta);
 }
-export function diagnoseSessionResponses(exercises, exposures, recovery) {
-    return exercises.map(ex => diagnoseExerciseResponse(ex, exposures.get(ex.exerciseId) ?? [], recovery));
-}

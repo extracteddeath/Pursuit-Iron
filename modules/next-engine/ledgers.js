@@ -18,4 +18,3 @@ export function deriveMuscleLedger(events) {
     }
     return ledger;
 }
-export const ZERO_FATIGUE = { systemic: 0, axial: 0, lowerBack: 0, grip: 0, shoulder: 0, elbow: 0, knee: 0 };

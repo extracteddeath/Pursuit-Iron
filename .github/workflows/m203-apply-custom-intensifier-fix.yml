@@ -1,0 +1,148 @@
+name: M203 apply custom intensifier repair
+
+on:
+  push:
+    branches: [m203-custom-intensifier-repair]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  repair-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout production main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply M203 repair and release metadata
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json, hashlib
+
+          app = Path('modules/App.js')
+          s = app.read_text()
+          old = """    const legacy = program?.engineV != null || program?.slotBias || program?.autoBias;\n    const weeks = weeksOf(program);\n    if (!legacy || program?.config?.progression === 'manual' || slotIndex === day?.primaryIndex\n        || (program?.config?.deload && weekIndex > weeks))\n        return null;\n"""
+          new = """    /* M203 — the custom flag is the durable identity. Older migrations/imports can legitimately\n       lose engineV/slotBias/autoBias while still preserving `custom: true`, which made every\n       implicit last-set amplifier disappear even though the program itself remained runnable.\n       This helper is only called from the custom-program branch of computeCell, so do not gate the\n       authored program's technique schedule on optional legacy metadata. Explicit technique edits\n       above still win, including an explicit null/empty value meaning \"off\". */\n    const authoredCustom = program?.custom === true;\n    const weeks = weeksOf(program);\n    if (!authoredCustom || program?.config?.progression === 'manual' || slotIndex === day?.primaryIndex\n        || (program?.config?.deload && weekIndex > weeks))\n        return null;\n"""
+          if old not in s:
+              raise SystemExit('custom intensifier gate target not found')
+          s = s.replace(old, new, 1)
+          row_old = 'si === lastWorkRow && !s.done && techTag && isActive && (_jsxs("div"'
+          row_new = 'si === lastWorkRow && !s.done && techTag && (_jsxs("div"'
+          if row_old not in s:
+              raise SystemExit('final-set badge visibility target not found')
+          s = s.replace(row_old, row_new, 1)
+          if "const __APP_VERSION__='4.0.0'; const __BUILD__='792';" not in s:
+              raise SystemExit('build marker not found')
+          s = s.replace("const __APP_VERSION__='4.0.0'; const __BUILD__='792';", "const __APP_VERSION__='4.0.0'; const __BUILD__='793';", 1)
+          app.write_text(s)
+
+          unit = Path('verification/m201-workout-prescription-test.mjs')
+          s = unit.read_text()
+          needle = "assert.equal(computeCell({ ...program, config: { ...program.config, goal: 'strength' } }, day, 'inc-curl', 1, 8).tech, null);\n"
+          insert = needle + "// Imported/migrated custom programs can lose optional legacy engine metadata. `custom: true` is the\n// durable identity, so losing engineV/slotBias/autoBias must not erase the last-set schedule.\nconst markerlessCustom = structuredClone(program);\ndelete markerlessCustom.engineV; delete markerlessCustom.slotBias; delete markerlessCustom.autoBias;\nassert.match(computeCell(markerlessCustom, markerlessCustom.days[0], 'inc-curl', 1, 8).tech, /lengthened partials/);\nassert.match(computeCell(markerlessCustom, markerlessCustom.days[0], 'lat-raise', 2, 8).tech, /myo-reps/);\n"
+          if needle not in s:
+              raise SystemExit('unit regression insertion point not found')
+          s = s.replace(needle, insert, 1)
+          unit.write_text(s)
+
+          browser = Path('verification/m201-workout-prescription-browser-test.mjs')
+          s = browser.read_text()
+          old_fixture = "const fixture = { id: 'm201-browser-custom', name: 'Custom workout', custom: true, engineV: 4,\n"
+          if old_fixture not in s:
+              raise SystemExit('browser fixture marker not found')
+          s = s.replace(old_fixture, "const fixture = { id: 'm201-browser-custom', name: 'Custom workout', custom: true,\n", 1)
+          old_bias = "    slotBias: { 'd:0': 1 }, overrides: { 'd:0': { sets: 5, reps: '8-12', rir: '2' } },\n"
+          if old_bias not in s:
+              raise SystemExit('browser slotBias marker not found')
+          s = s.replace(old_bias, "    overrides: { 'd:0': { sets: 5, reps: '8-12', rir: '2' } },\n", 1)
+          old_assert = "    await open('?week=8');\n    assert.equal(await page.evaluate(()=>/lengthened partial/i.test(document.body.textContent)),true,'restored custom technique must render in the workout');\n"
+          new_assert = "    await open('?week=8');\n    assert.equal(await page.evaluate(()=>/lengthened partial/i.test(document.body.textContent)),true,'markerless custom technique must render in the workout');\n    assert.equal(await page.evaluate(()=>document.body.textContent.includes('+ partials')),true,'the final working set must visibly carry the intensifier tag');\n"
+          if old_assert not in s:
+              raise SystemExit('browser intensifier assertion marker not found')
+          s = s.replace(old_assert, new_assert, 1)
+          browser.write_text(s)
+
+          idx = Path('index.html')
+          s = idx.read_text()
+          if "build:'792'" not in s or "build='792'" not in s:
+              raise SystemExit('index build markers not found')
+          s = s.replace("build:'792'", "build:'793'").replace("build='792'", "build='793'")
+          idx.write_text(s)
+
+          sw = Path('sw.js')
+          s = sw.read_text()
+          old_cache = 'pursuit-iron-production-v4-0-0-m202-locked-cycle-dose-b792'
+          new_cache = 'pursuit-iron-production-v4-0-0-m203-custom-intensifier-b793'
+          if old_cache not in s:
+              raise SystemExit('service worker cache marker not found')
+          sw.write_text(s.replace(old_cache, new_cache, 1))
+
+          bp = Path('BUILD_PROFILE.json')
+          profile = json.loads(bp.read_text())
+          profile['milestone'] = 'M203'
+          profile['source'] = 'M202 production baseline + durable custom-program final-set intensifier restoration'
+          profile['engine'] = '0.64.3 with custom-program technique persistence and visible final-set amplifier badges'
+          profile['cache'] = new_cache
+          profile['uiMilestone'] = 'Pursuit Iron 4.0 Production Release · M203 Custom Intensifiers'
+          bp.write_text(json.dumps(profile, indent=2) + '\n')
+
+          ch = Path('CHANGELOG.md')
+          body = ch.read_text()
+          entry = """## M203 — Custom-program final-set intensifier persistence (build 793)\n\n- Custom programs no longer lose their implicit last-set technique schedule when optional legacy metadata such as `engineV`, `slotBias`, or `autoBias` is absent after migration/import. `custom: true` is now the durable identity.\n- Explicit technique choices still win, including an explicit Off value. Strength days, primary lifts, introductory timing, and deload behavior are unchanged.\n- The last working-set row now shows its `+ partials`, `+ myo-reps`, `+ stretch`, or `+ drop set` badge even before that row becomes active, so the intensifier is visibly attached to the correct final set.\n- Regression fixtures now use a markerless saved custom program and verify both technique restoration and the visible final-set badge. Engine remains 0.64.3; service-worker cache rotated for build 793.\n\n"""
+          if not body.startswith('## M202'):
+              raise SystemExit('unexpected changelog head')
+          ch.write_text(entry + body)
+
+          manifest_path = Path('RELEASE_MANIFEST.json')
+          manifest = json.loads(manifest_path.read_text())
+          manifest['milestone'] = 'M203'
+          manifest['build'] = 793
+          manifest['engineVersion'] = '0.64.3'
+          manifest['candidateStatus'] = 'verification_enforced_by_ci'
+          manifest['localCandidate'] = {
+              'name': 'Pursuit Iron 4.0 Production Release · M203',
+              'base': 'M203 / app 4.0.0 build 793 / Engine 0.64.3',
+              'validation': 'M203 restores custom-program last-set techniques without relying on optional legacy metadata and keeps the final-set badge visible on the correct working set.'
+          }
+          manifest['runtimeHotfix'] = 'M203 preserve implicit custom-program final-set intensifiers across migration/import metadata loss and show the badge on the actual final working set'
+          manifest['cache'] = new_cache
+          manifest['uiMilestone'] = 'Pursuit Iron 4.0 Production Release · M203 Custom Intensifiers'
+          tracked = ['modules/App.js', 'index.html', 'sw.js', 'BUILD_PROFILE.json', 'CHANGELOG.md', 'app.css']
+          manifest['uiFiles'] = {p: hashlib.sha256(Path(p).read_bytes()).hexdigest() for p in tracked}
+          manifest_path.write_text(json.dumps(manifest, indent=2) + '\n')
+
+          Path('M203_CUSTOM_INTENSIFIER_REPORT.md').write_text("""# M203 — Custom-program final-set intensifier repair\n\nPursuit Iron 4.0.0, build 793. Pursuit Engine 0.64.3.\n\n## Root cause\n\nM201 restored implicit custom-program last-set techniques only when the saved program still carried optional legacy metadata (`engineV`, `slotBias`, or `autoBias`). A migrated/imported program can correctly retain `custom: true` while losing those optional markers, causing every computed custom cell to return `tech: null`. The browser regression fixture itself carried those legacy markers, so it could not reproduce the user's saved-program path.\n\n## Repair\n\n`custom: true` is now the durable identity for this compatibility path. Explicit per-slot technique edits still take precedence, including explicit Off. The periodized eligibility rules are otherwise unchanged. The workout set list also keeps the intensifier badge visible on the final working-set row before that row becomes active, making the attachment unambiguous.\n\n## Verification\n\nThe unit regression deletes `engineV`, `slotBias`, and `autoBias` from the custom fixture and requires late-block partials/myo-reps to remain. The phone browser regression uses the same markerless custom-program shape and requires both the technique cue and the visible final-set `+ partials` badge. Existing rep-entry, variation, volume-repair, release-integrity, and PWA gates remain active on main.\n""")
+          PY
+      - name: Unit regression — markerless custom program
+        run: node --no-warnings --experimental-loader ./verification/import-loader.mjs verification/m201-workout-prescription-test.mjs
+      - name: Volume and regional-dose regressions
+        run: |
+          node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m200-regional-dose-test.mjs
+          node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m199-volume-repair-test.mjs
+      - name: Install browser harness
+        run: npm install --no-save --ignore-scripts puppeteer-core@24
+      - name: Phone browser — markerless custom intensifier and final-set badge
+        env:
+          CHROME_BIN: /usr/bin/google-chrome
+        run: node verification/m201-workout-prescription-browser-test.mjs
+      - name: Release integrity
+        run: node scripts/verify-release.mjs
+      - name: Publish M203 to main
+        shell: bash
+        run: |
+          rm -rf node_modules package-lock.json package.json
+          git config user.name 'extracteddeath'
+          git config user.email '92632906+extracteddeath@users.noreply.github.com'
+          git add modules/App.js verification/m201-workout-prescription-test.mjs verification/m201-workout-prescription-browser-test.mjs index.html sw.js BUILD_PROFILE.json CHANGELOG.md RELEASE_MANIFEST.json M203_CUSTOM_INTENSIFIER_REPORT.md
+          git diff --cached --check
+          git commit -m 'M203: preserve custom final-set intensifiers (build 793)'
+          git push origin HEAD:main

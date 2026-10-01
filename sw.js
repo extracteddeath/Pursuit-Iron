@@ -1,5 +1,5 @@
-/* Pursuit Iron 4.0 — M216 production release. */
-const CACHE="pursuit-iron-production-v4-0-0-m216-compact-duration-b806";
+/* Pursuit Iron 4.0 — M217 production release. */
+const CACHE="pursuit-iron-production-v4-0-0-m217-android-recovery-b807";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
   "./BUILD_PROFILE.json",
@@ -20,6 +20,7 @@ const SHELL=[
   "./modules/App.js",
   "./modules/legacy-research-data.js",
   "./modules/main.js",
+  "./modules/mobile-lifecycle.js",
   "./modules/next-engine/allocator.js",
   "./modules/next-engine/app-shell-adapter.js",
   "./modules/next-engine/arbiter.js",

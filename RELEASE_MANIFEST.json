@@ -1,14 +1,15 @@
 {
   "schemaVersion": 3,
-  "milestone": "M216",
+  "milestone": "M217",
   "appVersion": "4.0.0",
-  "build": 806,
+  "build": 807,
   "engineVersion": "0.64.10",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "8ca7552ecb4b7d5a5065edeea424ecefbac67a914a8c5087a02c4963d06d3b33",
+  "runtimeAggregate": "1a4ef68e097aa38ac695bf9ef235c2eda8ca14b39f6eff804ce7eaacf2e34d0e",
   "runtimeFiles": {
     "modules/legacy-research-data.js": "8b09be67d7c80da7602bb168726d7f7bc3f6ddb9a43b29293acdd18e208ba206",
     "modules/main.js": "535deb3adbf4269a36b7db9103fd0db48be1b8bf6ddfa062c8e02f206cc0a33d",
+    "modules/mobile-lifecycle.js": "12f1f8d8981de31903c777b5e49fedf29f583c159b2d695da7875fc8b398c04e",
     "modules/next-engine/allocator.js": "2b6e9a494c6297fe1cfb5070518d21934efc9e9ae33ca8fcdc34a73e03263e4b",
     "modules/next-engine/app-shell-adapter.js": "9dae7a036cfc105ae9c12fbda9663808624d5a71ef1a514ca1df9261f6c81ab4",
     "modules/next-engine/arbiter.js": "cba22ac9d8a0dbd76177b3dd639f9794263f266c10f639fc1bab6009ac937c5d",
@@ -71,16 +72,17 @@
     "validation": "Real production duration stepping, direct typing, invalid and blank drafts, 1/2/7/9/12-week persistence and phone-width checks; cycle duration and engine policy preserved."
   },
   "uiFiles": {
-    "modules/App.js": "ae3f3265e1c4a716a154c9122daa2191f50a19fa8e79e086de54b3ddcf777200",
-    "index.html": "f4274b26e7f54940166969b2fddb1c8a978ecef0daed78c7d445af08e7ad1a0a",
-    "sw.js": "04f9f02a6d734a053caed1c7d80405af3d4349ccfa2f21965ae19d72c1a8fe06",
-    "BUILD_PROFILE.json": "57590037cbe8001ab6aaf2fd015239d5aba4c72b522a17af41c50397f2ef1b39",
-    "CHANGELOG.md": "e91cf04962858da2ef5230016806c0bebef194d3f2a054c2e2c8afa82adeacfa",
-    "app.css": "5432859c3eb9624b9a27dc1c9de2e8cb85672b02bcd72c114ac963378184b85b"
+    "modules/App.js": "99cb46f34ae0fdf3def1e20e2d9a8f557832378acdf8ea734b50f8160a7b5698",
+    "index.html": "55b19d45a5de13be32b48f8dc6009b57d26e5d84029f99c0d88a52baa1e2e5ad",
+    "sw.js": "ed687acddd15b8b01c6346b2644c48d905292ecf36fdeb28d177572f7907d027",
+    "BUILD_PROFILE.json": "d6e70e4d3dd393d8bf4363f8b1926290e619790828765486d4720ca32695e5fc",
+    "CHANGELOG.md": "9c822abe3b1e5489c439bbea6a18ea56b58e57aaab10665fe60343db6d7f0f78",
+    "app.css": "5432859c3eb9624b9a27dc1c9de2e8cb85672b02bcd72c114ac963378184b85b",
+    "manifest.webmanifest": "46718c7b74d686446fdf40ea167992aacc86bdf74e5b9d835263155adedeb763"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Replace the duration preset row with a compact stepper and typed week field; preserve cycle-owned phase lengths and saved-program duration authority.",
-  "cache": "pursuit-iron-production-v4-0-0-m216-compact-duration-b806",
-  "uiMilestone": "Pursuit Iron 4.0 Production Release · M216 Compact Block Length"
+  "cache": "pursuit-iron-production-v4-0-0-m217-android-recovery-b807",
+  "uiMilestone": "Pursuit Iron 4.0 Production Release · M217 Android Recovery"
 }

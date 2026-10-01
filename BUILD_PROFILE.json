@@ -1,11 +1,11 @@
 {
   "profile": "portable-browser-esm-canonical-engine",
-  "milestone": "M216",
-  "source": "M215 production baseline + compact validated duration editing",
+  "milestone": "M217",
+  "source": "M216 production baseline + failure-safe workout completion, guarded minimize/restart, and screen-awake lifecycle",
   "engine": "0.64.10; engine prescription policy unchanged; saved programs own phase durations",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 46,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m216-compact-duration-b806",
-  "uiMilestone": "Pursuit Iron 4.0 Production Release · M216 Compact Block Length"
+  "cache": "pursuit-iron-production-v4-0-0-m217-android-recovery-b807",
+  "uiMilestone": "Pursuit Iron 4.0 Production Release · M217 Android Recovery"
 }

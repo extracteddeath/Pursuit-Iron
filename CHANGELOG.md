@@ -1,3 +1,12 @@
+## M217 — Android workout recovery (build 807)
+
+- Saving a completed workout now commits history and performance together before removing its recovery copy. If device storage rejects the write, the workout stays open with a retry action.
+- A stable workout ID prevents an interruption during cleanup from producing a second copy of a completed workout.
+- Minimize and Android Back keep the workout open when its current snapshot cannot be saved. Update restart also waits for a successful store save.
+- Screen-awake requests are deduplicated, released when backgrounded or closed, and reacquired on return. A late request cannot keep Home awake.
+- Installed apps allow landscape and split-screen layouts. The new production browser gate covers failed writes, Back, numeric entry, paused timers, a renderer crash, offline cold restore, and completion cleanup.
+- Engine prescription policy remains 0.64.10; recent intensifier and phase-duration fixes carry forward.
+
 ## M216 — compact block length (build 806)
 
 - Replaced the expanding duration button row with one week field and minus/plus controls. Custom routines support direct typing and one-week adjustments.

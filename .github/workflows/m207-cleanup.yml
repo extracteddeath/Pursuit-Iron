@@ -1,0 +1,120 @@
+name: M207 runtime cleanup finalizer
+
+on:
+  push:
+    branches:
+      - cleanup/m207-runtime-cleanup
+
+permissions:
+  contents: write
+
+jobs:
+  finalize-cleanup:
+    if: ${{ !contains(github.event.head_commit.message, '[m207-finalized]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: cleanup/m207-runtime-cleanup
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Remove retired runtime scaffolding
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const read = file => fs.readFileSync(file, 'utf8');
+          const write = (file, text) => fs.writeFileSync(file, text);
+          const replaceOnce = (file, from, to) => {
+            let text = read(file);
+            const first = text.indexOf(from);
+            if (first < 0 || text.indexOf(from, first + from.length) >= 0) throw new Error(`${file}: expected exactly one match for ${from}`);
+            text = text.slice(0, first) + to + text.slice(first + from.length);
+            write(file, text);
+          };
+
+          // Keep the objective production guardrails, remove the retired human-review proposal/approval wrapper.
+          {
+            const file = 'modules/next-engine/coach-regression.js';
+            const text = read(file);
+            const start = text.indexOf('function suggestedCheck(');
+            const guard = text.indexOf('export function evaluateObjectiveCoachGuardrails', start);
+            const tail = text.indexOf('function expectedCode(', guard);
+            if (start < 0 || guard < 0 || tail < 0) throw new Error('coach-regression cleanup anchors not found');
+            const prefix = text.slice(0, start);
+            const guardBody = text.slice(guard, tail).trimEnd();
+            write(file, `${prefix}/**\n * Objective plausibility checks used by the production audit and verification suites.\n * These intentionally cover concrete invariants only; they do not pretend to replace human taste.\n */\n${guardBody}\n`);
+          }
+
+          // Retired canary/rollout records remain in storage compatibility, but Settings no longer accepts dead UI props.
+          replaceOnce(
+            'modules/App.js',
+            'nextEngineOnly, canaryResearch, canarySummaryData, canaryAnalysisData, canaryGovernanceData, selectivePromotionStatusData, onExportCanaryDossier, onToggleCanary, theme',
+            'nextEngineOnly, theme'
+          );
+
+          replaceOnce('modules/next-engine/config.js', "ENGINE_VERSION = '0.64.6'", "ENGINE_VERSION = '0.64.7'");
+          replaceOnce(
+            'modules/next-engine/config.js',
+            "Object.freeze(['0.64.2', '0.64.3', '0.64.4', '0.64.5', ENGINE_VERSION])",
+            "Object.freeze(['0.64.3', '0.64.4', '0.64.5', '0.64.6', ENGINE_VERSION])"
+          );
+
+          // Extend the existing cleanup contract so these retired surfaces cannot creep back in.
+          {
+            const file = 'verification/m205-engine-cleanup-test.mjs';
+            let text = read(file);
+            replaceOnce(file,
+              "const index = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');",
+              "const index = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');\nconst coachRegression = fs.readFileSync(new URL('../modules/next-engine/coach-regression.js', import.meta.url), 'utf8');"
+            );
+            text = read(file);
+            const anchor = "assert.doesNotMatch(index, /app-shell-adapter/, 'Node and browser must resolve the same canonical adapter');";
+            const insertion = `for (const retired of ['proposeCoachRegressionFixture', 'approveCoachRegressionFixture', 'evaluateCoachRegressionFixture', 'function suggestedCheck(', 'function expectedCode('])\n    assert.equal(coachRegression.includes(retired), false, \`retired coach-review wrapper must stay removed: \${retired}\`);\nassert.ok(coachRegression.includes('export function evaluateObjectiveCoachGuardrails'), 'objective production guardrails must remain');\nfor (const retiredProp of ['canarySummaryData', 'canaryAnalysisData', 'canaryGovernanceData', 'selectivePromotionStatusData', 'onExportCanaryDossier', 'onToggleCanary'])\n    assert.equal(app.includes(retiredProp), false, \`retired Settings prop must stay removed: \${retiredProp}\`);\n${anchor}`;
+            if (!text.includes(anchor)) throw new Error('M205 cleanup assertion anchor not found');
+            write(file, text.replace(anchor, insertion));
+          }
+
+          const manifestFile = 'RELEASE_MANIFEST.json';
+          const manifest = JSON.parse(read(manifestFile));
+          manifest.milestone = 'M207';
+          manifest.build = 797;
+          manifest.engineVersion = '0.64.7';
+          manifest.cache = 'pursuit-iron-production-v4-0-0-m207-runtime-cleanup-b797';
+          manifest.uiMilestone = 'Pursuit Iron 4.0 Production Release · M207 Runtime Cleanup';
+          manifest.localCandidate = {
+            name: 'Pursuit Iron 4.0 Production Release · M207',
+            base: 'M206 / app 4.0.0 build 796 / Engine 0.64.6',
+            validation: 'Retired coach-review wrappers and dead Settings props are removed while objective audit guardrails, historical backup compatibility, prescription ownership, and current engine contracts remain enforced.'
+          };
+          manifest.runtimeHotfix = 'Remove retired review/UI plumbing without changing objective guardrails or backup compatibility; rotate the offline cache and retain current production contracts.';
+          write(manifestFile, JSON.stringify(manifest, null, 2) + '\n');
+
+          const profileFile = 'BUILD_PROFILE.json';
+          const profile = JSON.parse(read(profileFile));
+          profile.milestone = 'M207';
+          profile.source = 'M206 production baseline + final retired runtime/UI scaffolding removal';
+          profile.engine = '0.64.7 with M206 dose/progression behavior unchanged and retired review wrapper code removed';
+          profile.cache = manifest.cache;
+          profile.uiMilestone = manifest.uiMilestone;
+          write(profileFile, JSON.stringify(profile, null, 2) + '\n');
+
+          const changelog = read('CHANGELOG.md');
+          const entry = `## M207 — Runtime cleanup and compatibility separation (build 797)\n\n- Removed the unused coach-review proposal/approval/fixture wrapper while retaining the objective guardrails used by production audits and verification.\n- Removed retired canary/promotion props from the Settings component surface; historical research/rollout records remain data-only backup compatibility and still round-trip through migration/import/export.\n- Extended the cleanup regression contract so retired review APIs and dead Settings props cannot silently return.\n- Preserved M206 generation, volume, progression, ownership, and recovery behavior. Pursuit Engine 0.64.7; offline cache rotated for build 797.\n\n`;
+          if (!changelog.startsWith('## M207')) write('CHANGELOG.md', entry + changelog);
+          NODE
+
+          node scripts/finalize-release.mjs
+          node scripts/verify-release.mjs
+          node scripts/verify-engine-contracts.mjs
+
+      - name: Commit finalized release candidate
+        shell: bash
+        run: |
+          rm .github/workflows/m207-cleanup.yml
+          git config user.name "Pursuit Iron Release Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "M207 runtime cleanup [m207-finalized]"
+          git push origin HEAD:cleanup/m207-runtime-cleanup

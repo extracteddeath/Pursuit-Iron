@@ -1,5 +1,5 @@
 /* Pursuit Iron 4.0 — M200 preserve regional accumulation dose during final cleanup. */
-const CACHE="pursuit-iron-production-v4-0-0-m202-locked-cycle-dose-b792";
+const CACHE="pursuit-iron-production-v4-0-0-m203-custom-intensifier-b793";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
   "./modules/next-engine/shell-equipment.js",

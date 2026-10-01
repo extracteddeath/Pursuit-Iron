@@ -55,6 +55,12 @@ assert.match(computeCell(program, day, 'seated-calf', 3, 8).tech, /static stretc
 assert.equal(computeCell(program, day, 'bb-bench', 0, 8).tech, null);
 assert.equal(computeCell(program, day, 'inc-curl', 1, 11).tech, null);
 assert.equal(computeCell({ ...program, config: { ...program.config, goal: 'strength' } }, day, 'inc-curl', 1, 8).tech, null);
+// Imported/migrated custom programs can lose optional legacy engine metadata. `custom: true` is the
+// durable identity, so losing engineV/slotBias/autoBias must not erase the last-set schedule.
+const markerlessCustom = structuredClone(program);
+delete markerlessCustom.engineV; delete markerlessCustom.slotBias; delete markerlessCustom.autoBias;
+assert.match(computeCell(markerlessCustom, markerlessCustom.days[0], 'inc-curl', 1, 8).tech, /lengthened partials/);
+assert.match(computeCell(markerlessCustom, markerlessCustom.days[0], 'lat-raise', 2, 8).tech, /myo-reps/);
 const off = { ...program, overrides: { 'd:2': { techOverride: null } } };
 assert.equal(computeCell(off, day, 'lat-raise', 2, 8).tech, null);
 const drop = { ...program, overrides: { 'd:1': { techOverride: 'Last set: drop set — reduce load and continue' } } };

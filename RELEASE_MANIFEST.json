@@ -1,8 +1,8 @@
 {
   "schemaVersion": 3,
-  "milestone": "M202",
+  "milestone": "M203",
   "appVersion": "4.0.0",
-  "build": 792,
+  "build": 793,
   "engineVersion": "0.64.3",
   "shadowEngineVersion": "0.62.5-shadow",
   "validatedLiveBaseline": "M88-0.61.3-reviewed-baseline",
@@ -93,16 +93,16 @@
     "modules/next-engine/shell-equipment.js": "9c7481b10101d5ac2fc6e9fea46633755a5a524a062bedc68c5f295eb9e5f30e"
   },
   "localCandidate": {
-    "name": "Pursuit Iron 4.0 Production Release · M199",
-    "base": "M199 / app 4.0.0 build 788 / Engine 0.64.0",
-    "validation": "M199 removes synchronous generation from wizard feasibility, retries rejected structural rolls with deterministic saved seeds, precaches capacity generation, and re-runs release/PWA integrity."
+    "name": "Pursuit Iron 4.0 Production Release \u00b7 M203",
+    "base": "M203 / app 4.0.0 build 793 / Engine 0.64.3",
+    "validation": "M203 restores custom-program last-set techniques without relying on optional legacy metadata and keeps the final-set badge visible on the correct working set."
   },
   "uiFiles": {
-    "modules/App.js": "e0461edeb5b6175f7279526fa97c597f6268bb0c435b6763cc2dc33436a2ad38",
-    "index.html": "c2df6db66276ab1672212020b39b5c561388351371b3d6e74c4a5dd8d5cb3e40",
-    "sw.js": "d1bd279041ada525d89b221926e9470de796db6f91e877d84e2e76ff702d0ae5",
-    "BUILD_PROFILE.json": "4bf5c064a812f9848aa81bcdc385e4d06d584ef7e20c2f0cd712ec1942ccfa8f",
-    "CHANGELOG.md": "1f5d02aba9ef6230cfe262dc9654ed0550e7cfbda48248d3356436b1d4c814c0",
+    "modules/App.js": "26bec482642261dbdf48b1f005f86cb6d04f8dbf9d2fa7d694eff6167517c387",
+    "index.html": "af8669d6007d7d6fdec3ef9d4669e8ca96ba0ec92d64c3c6ea690f25eaf34444",
+    "sw.js": "c708d1d29766e5a58a73b62356baa8dafaaf1e768b076b3c2a23f462dccd430e",
+    "BUILD_PROFILE.json": "0fc18c0966b3d705886a02b0cc961cce9cddaf2d81e938b396d1b313dd1fac28",
+    "CHANGELOG.md": "aff9ff0337fa8f821f90954254aec9dac786e4829c9802c9777a425b1b56ccd3",
     "app.css": "5432859c3eb9624b9a27dc1c9de2e8cb85672b02bcd72c114ac963378184b85b"
   },
   "baselineSourceNextEngineAggregate": "9ba84ffe3a62d94849617af33a2eafeaa563ab4a3636579101990ed753d05a84",
@@ -181,7 +181,7 @@
   },
   "sourceFilesStatus": "M162 was produced from the M161.1 release-only artifact; TypeScript source was not present. Baseline source hashes are retained under baselineSource* for provenance, but M162 claims runtime integrity only.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
-  "runtimeHotfix": "M202 reconcile locked-cycle weekly accessory volume to phase-specific displayed ceilings without changing the exercise roster",
-  "cache": "pursuit-iron-production-v4-0-0-m202-locked-cycle-dose-b792",
-  "uiMilestone": "Pursuit Iron 4.0 Production Release · M202 Locked Cycle Dose"
+  "runtimeHotfix": "M203 preserve implicit custom-program final-set intensifiers across migration/import metadata loss and show the badge on the actual final working set",
+  "cache": "pursuit-iron-production-v4-0-0-m203-custom-intensifier-b793",
+  "uiMilestone": "Pursuit Iron 4.0 Production Release \u00b7 M203 Custom Intensifiers"
 }

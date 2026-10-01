@@ -1,12 +1,12 @@
 {
   "profile": "portable-browser-esm-v661-workout-input",
-  "milestone": "M202",
-  "source": "M201 production baseline + locked-cycle phase-specific volume reconciliation",
-  "engine": "0.64.3 with roster-preserving locked-cycle accessory-volume repair",
+  "milestone": "M203",
+  "source": "M202 production baseline + durable custom-program final-set intensifier restoration",
+  "engine": "0.64.3 with custom-program technique persistence and visible final-set amplifier badges",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 51,
   "shadowRuntimeModules": 9,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m202-locked-cycle-dose-b792",
-  "uiMilestone": "Pursuit Iron 4.0 Production Release · M202 Locked Cycle Dose"
+  "cache": "pursuit-iron-production-v4-0-0-m203-custom-intensifier-b793",
+  "uiMilestone": "Pursuit Iron 4.0 Production Release \u00b7 M203 Custom Intensifiers"
 }

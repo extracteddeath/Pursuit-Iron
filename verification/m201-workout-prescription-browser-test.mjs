@@ -7,9 +7,9 @@ import puppeteer from 'puppeteer-core';
 const root = new URL('../', import.meta.url).pathname;
 const importMap = fs.readFileSync(path.join(root, 'index.html'), 'utf8').match(/<script type="importmap">[\s\S]*?<\/script>/)?.[0];
 assert.ok(importMap, 'browser probes must use the production import map');
-const fixture = { id: 'm201-browser-custom', name: 'Custom workout', custom: true, engineV: 4,
+const fixture = { id: 'm201-browser-custom', name: 'Custom workout', custom: true,
     config: { goal: 'both', experience: 'intermediate', progression: 'auto', weeks: 10, unit: 'lb', deload: true },
-    slotBias: { 'd:0': 1 }, overrides: { 'd:0': { sets: 5, reps: '8-12', rir: '2' } },
+    overrides: { 'd:0': { sets: 5, reps: '8-12', rir: '2' } },
     days: [{ id: 'd', label: 'Upper', primaryIndex: -1, exercises: ['inc-curl'] }] };
 const template = `<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/app.css">${importMap}</head><body><div id="root"></div><script type="module">
 import React from '/vendor/react.js'; import {createRoot} from '/vendor/react-dom-client.js';
@@ -86,7 +86,8 @@ try {
     await page.reload({waitUntil:'networkidle0'});await page.waitForSelector('input[aria-label="reps"]');
     restored=await rows();assert.equal(restored[1].reps,'14');assert.equal(restored[2].reps,'');assert.equal(restored[0].reps,'11');
     await open('?week=8');
-    assert.equal(await page.evaluate(()=>/lengthened partial/i.test(document.body.textContent)),true,'restored custom technique must render in the workout');
+    assert.equal(await page.evaluate(()=>/lengthened partial/i.test(document.body.textContent)),true,'markerless custom technique must render in the workout');
+    assert.equal(await page.evaluate(()=>document.body.textContent.includes('+ partials')),true,'the final working set must visibly carry the intensifier tag');
     await open('?week=8&exercise=lat-raise');
     await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:live')).data[0].sets.some(s=>s.sub&&s.kind==='myo'));
     assert.equal((await rows()).filter(s=>s.sub&&s.kind==='myo'&&s.prescribed).length,3);

@@ -1,4 +1,4 @@
-const __APP_VERSION__='4.0.0'; const __BUILD__='792';
+const __APP_VERSION__='4.0.0'; const __BUILD__='793';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { setShellEquipmentExpander, splitContractGaps, splitBuildability, refusalFixes, generateNextProgramForShell, nextProgramToShellProgram, recommendNextSplitForShell, getNextShellCell, canonicalShellSetCount, cloneNextDayPrescriptions, swapNextSlotPrescriptions, removeNextSlotPrescription, nextExerciseIdForShellExercise, NextShellAdapterError } from "./next-engine/app-shell-adapter.js";
@@ -12498,9 +12498,15 @@ export function customLastSetTechnique(program, day, ex, slotIndex, weekIndex) {
         return o.techOverride || null;
     if (Object.prototype.hasOwnProperty.call(o, 'tech'))
         return o.tech || null;
-    const legacy = program?.engineV != null || program?.slotBias || program?.autoBias;
+    /* M203 — the custom flag is the durable identity. Older migrations/imports can legitimately
+       lose engineV/slotBias/autoBias while still preserving `custom: true`, which made every
+       implicit last-set amplifier disappear even though the program itself remained runnable.
+       This helper is only called from the custom-program branch of computeCell, so do not gate the
+       authored program's technique schedule on optional legacy metadata. Explicit technique edits
+       above still win, including an explicit null/empty value meaning "off". */
+    const authoredCustom = program?.custom === true;
     const weeks = weeksOf(program);
-    if (!legacy || program?.config?.progression === 'manual' || slotIndex === day?.primaryIndex
+    if (!authoredCustom || program?.config?.progression === 'manual' || slotIndex === day?.primaryIndex
         || (program?.config?.deload && weekIndex > weeks))
         return null;
     const focused = (program?.config?.focusList || []).includes(ex.part) || Number(program?.config?.focus?.[ex.part]) > 0;
@@ -26975,7 +26981,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
                                                     // style (DDP / double / wave), which only sets the session's STARTING targets.
                                                     const tunedApplied = !s.warm && !s.sub && !s.done && s.autoTuned && s.suggested
                                                         && String(s.weight) === String(s.suggested.weight) && String(s.reps) === String(s.suggested.reps);
-                                                    return (_jsxs(_Fragment, { children: [_jsxs("div", { className: "mono", style: { fontSize: 13, fontWeight: 600, color: C.muted }, children: [tgtW, _jsx("span", { style: { color: C.faint }, children: "\u00D7" }), tgtR] }), statusTag && (isActive || s.done) && (_jsx("div", { style: { fontSize: 11, fontWeight: 700, color: statusTag.color, marginTop: 1 }, children: statusTag.label })), si === lastWorkRow && !s.done && techTag && isActive && (_jsxs("div", { style: { fontSize: 11, fontWeight: 700, color: C.accentInk, marginTop: 1, display: "flex", alignItems: "center", gap: 2 }, children: [_jsx(Zap, { size: 8, strokeWidth: 2.5, style: { flexShrink: 0 } }), " ", techTag] })), tunedApplied && isActive && (_jsx("div", { style: { fontSize: 11, fontWeight: 600, color: C.faint, paddingTop: 2 }, children: "from last set" }))] }));
+                                                    return (_jsxs(_Fragment, { children: [_jsxs("div", { className: "mono", style: { fontSize: 13, fontWeight: 600, color: C.muted }, children: [tgtW, _jsx("span", { style: { color: C.faint }, children: "\u00D7" }), tgtR] }), statusTag && (isActive || s.done) && (_jsx("div", { style: { fontSize: 11, fontWeight: 700, color: statusTag.color, marginTop: 1 }, children: statusTag.label })), si === lastWorkRow && !s.done && techTag && (_jsxs("div", { style: { fontSize: 11, fontWeight: 700, color: C.accentInk, marginTop: 1, display: "flex", alignItems: "center", gap: 2 }, children: [_jsx(Zap, { size: 8, strokeWidth: 2.5, style: { flexShrink: 0 } }), " ", techTag] })), tunedApplied && isActive && (_jsx("div", { style: { fontSize: 11, fontWeight: 600, color: C.faint, paddingTop: 2 }, children: "from last set" }))] }));
                                                 })() }), _jsxs("div", { style: { flex: narrowSet ? 1.15 : 1, minWidth: 0, position: "relative" }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: narrowSet ? 1 : 2 }, children: [!s.done && _jsx(StepButton, { onStep: () => bumpWeight(ei, si, -1), label: "weight down", glyph: "\u2212" }), _jsx("input", { inputMode: "decimal", enterKeyHint: "next", "aria-label": "weight", value: s.weight, placeholder: (s.target?.w === "0" || s.target?.w === 0) ? "BW" : "—", readOnly: s.done, onChange: ev => editWeight(ei, si, ev.target.value), className: "mono wpb-num-input", style: { flex: 1, minWidth: 0, padding: "8px 4px", textAlign: "center", borderRadius: 8, border: s.hint && !s.done ? `1px solid ${s.hint === "up" ? C.accent : C.warn}` : (s.warm || s.sub ? `1px dashed ${C.border}` : `1px solid ${C.border}`), background: s.done ? C.accentDim : C.bg2, color: C.text, fontSize: 15, fontWeight: 600 } }), !s.done && _jsx(StepButton, { onStep: () => bumpWeight(ei, si, 1), label: "weight up", glyph: "+" })] }), (() => {
                                                         /* Plate maths sits under the WEIGHT BOX again. v485 moved it into a strip beneath
                                                            the whole row, which detached it from the number it describes — it is an

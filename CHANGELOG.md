@@ -1,3 +1,10 @@
+## M203 — Custom-program final-set intensifier persistence (build 793)
+
+- Custom programs no longer lose their implicit last-set technique schedule when optional legacy metadata such as `engineV`, `slotBias`, or `autoBias` is absent after migration/import. `custom: true` is now the durable identity.
+- Explicit technique choices still win, including an explicit Off value. Strength days, primary lifts, introductory timing, and deload behavior are unchanged.
+- The last working-set row now shows its `+ partials`, `+ myo-reps`, `+ stretch`, or `+ drop set` badge even before that row becomes active, so the intensifier is visibly attached to the correct final set.
+- Regression fixtures now use a markerless saved custom program and verify both technique restoration and the visible final-set badge. Engine remains 0.64.3; service-worker cache rotated for build 793.
+
 ## M202 — Locked-cycle phase volume reconciliation (build 792)
 
 - Locked/static cycle blocks now audit the exact weekly regional volume shown in the UI after phase retargeting.

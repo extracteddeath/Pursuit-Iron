@@ -44,21 +44,21 @@ jobs:
           replaceRegexOnce('modules/App.js', /\/\* ============================== DIMENSIONAL TOKENS[\s\S]*?const RADIUS = \{ sm: 8, md: 12, lg: 16, pill: 999 \};\n/, '');
 
           // Simple dead reads / helpers only. No hook, callback, prop-surface, or compatibility-path removal in M211.
-          replaceOnce('modules/App.js', '    const eng = typeof src === "number" ? src : 0;\n', '');
-          replaceOnce('modules/App.js', '    const { program, day, ex, slot, perf, history, weekIndex, unit } = o || {};', '    const { program, day, ex, slot, perf, history, weekIndex } = o || {};');
-          replaceOnce('modules/App.js', '        const hasBarbell = isBarLike(config.equipment);\n', '');
-          replaceRegexOnce('modules/App.js', /    \/\* Single primitive for the effect's dependency list\.[\s\S]*?    const retroKey = hasRetro \? `\$\{retro\.headline\}\|\$\{retro\.recs\.length\}` : "";\n/, '');
-          replaceOnce('modules/App.js', '    const angArm = (sh, hOpen, hClose, sign, t) => { const { mid, end } = angLimb(sh, hOpen, hClose, 14, 13, sign, t); return { sh, el: mid, wr: end }; };\n', '');
+          replaceRegexOnce('modules/App.js', /^\s*const eng = typeof src === "number" \? src : 0;\n/m, '');
+          replaceOnce('modules/App.js', 'const { program, day, ex, slot, perf, history, weekIndex, unit } = o || {};', 'const { program, day, ex, slot, perf, history, weekIndex } = o || {};');
+          replaceRegexOnce('modules/App.js', /^\s*const hasBarbell = isBarLike\(config\.equipment\);\n/m, '');
+          replaceRegexOnce('modules/App.js', /[ \t]*\/\* Single primitive for the effect's dependency list\.[\s\S]*?[ \t]*const retroKey = hasRetro \? `\$\{retro\.headline\}\|\$\{retro\.recs\.length\}` : "";\n/, '');
+          replaceRegexOnce('modules/App.js', /^\s*const angArm = \(sh, hOpen, hClose, sign, t\) => \{ const \{ mid, end \} = angLimb\(sh, hOpen, hClose, 14, 13, sign, t\); return \{ sh, el: mid, wr: end \}; \};\n/m, '');
           replaceOnce('modules/App.js', 'const [id, sessions]', 'const [, sessions]');
-          replaceOnce('modules/App.js', '        const swapTRIR = parseRIRNum(swapCell.rir);\n', '');
-          replaceOnce('modules/App.js', '            const cellTRIR = parseRIRNum(cell.rir);\n', '');
-          replaceOnce('modules/App.js', '                const stepW = loadStep(EX_BY_ID[e.id], unit);\n', '');
-          replaceOnce('modules/App.js', '        const anyChange = nextPlan.some(p => p.dir !== "hold");\n', '');
-          replaceOnce('modules/App.js', '    const roundTo = (v) => { const inc = unit === "lb" ? 5 : 2.5; return Math.round(v / inc) * inc; };\n', '');
-          replaceOnce('modules/App.js', '    const { rows, total, current, maxedOut, next, pct, remaining, inThousand } = snap;', '    const { rows, total, current, maxedOut, next, pct, remaining } = snap;');
-          replaceOnce('modules/App.js', '    const xOf = (d, i) => padL +', '    const xOf = (d) => padL +');
-          replaceOnce('modules/App.js', '    const totalOf = (b) => (b.weeks || 0) + (deloadOf(b) ? 1 : 0);\n', '');
-          replaceOnce('modules/App.js', '    const doneWeeks = P.doneWeeks, pct = P.pct;', '    const pct = P.pct;');
+          replaceRegexOnce('modules/App.js', /^\s*const swapTRIR = parseRIRNum\(swapCell\.rir\);\n/m, '');
+          replaceRegexOnce('modules/App.js', /^\s*const cellTRIR = parseRIRNum\(cell\.rir\);\n/m, '');
+          replaceRegexOnce('modules/App.js', /^\s*const stepW = loadStep\(EX_BY_ID\[e\.id\], unit\);\n/m, '');
+          replaceRegexOnce('modules/App.js', /^\s*const anyChange = nextPlan\.some\(p => p\.dir !== "hold"\);\n/m, '');
+          replaceRegexOnce('modules/App.js', /^\s*const roundTo = \(v\) => \{ const inc = unit === "lb" \? 5 : 2\.5; return Math\.round\(v \/ inc\) \* inc; \};\n/m, '');
+          replaceOnce('modules/App.js', 'const { rows, total, current, maxedOut, next, pct, remaining, inThousand } = snap;', 'const { rows, total, current, maxedOut, next, pct, remaining } = snap;');
+          replaceOnce('modules/App.js', 'const xOf = (d, i) => padL +', 'const xOf = (d) => padL +');
+          replaceRegexOnce('modules/App.js', /^\s*const totalOf = \(b\) => \(b\.weeks \|\| 0\) \+ \(deloadOf\(b\) \? 1 : 0\);\n/m, '');
+          replaceOnce('modules/App.js', 'const doneWeeks = P.doneWeeks, pct = P.pct;', 'const pct = P.pct;');
 
           const testFile = 'verification/m205-engine-cleanup-test.mjs';
           const anchor = "assert.doesNotMatch(index, /app-shell-adapter/, 'Node and browser must resolve the same canonical adapter');";

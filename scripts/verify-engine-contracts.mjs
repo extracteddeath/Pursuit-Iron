@@ -13,11 +13,11 @@ const groups = {
         'm183-progression-safeguards', 'm184-longitudinal-evidence', 'm185-phase-specialization',
         'm186-explainable-block-review', 'm189-adaptive-progression-selection', 'm189-integration-wiring',
         'm190-progression-lifecycle', 'm191-progression-explainability-ui', 'm192-progression-transition-deltas',
-        'm193-cycle-progression-context', 'm194-simulation-progression-parity'
+        'm193-cycle-progression-context', 'm194-simulation-progression-parity', 'm204-prescription-ownership'
     ],
     quality: [
-        'm187-premium-ux',
-        'm188-novice-strength-fragmentation', 'm188-production-torture'
+        'm187-premium-ux', 'm188-novice-strength-fragmentation', 'm188-production-torture',
+        'm205-engine-cleanup'
     ]
 };
 const requested = process.argv.slice(2);

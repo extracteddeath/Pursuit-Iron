@@ -1,0 +1,96 @@
+name: M208 dead-code audit
+
+on:
+  push:
+    branches:
+      - audit/m208-dead-code
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Audit production module reachability and exports
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const root = process.cwd();
+          const modulesRoot = path.join(root, 'modules');
+          const files = [];
+          function walk(dir) {
+            for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
+              const full = path.join(dir, ent.name);
+              if (ent.isDirectory()) walk(full);
+              else if (ent.name.endsWith('.js')) files.push(path.relative(root, full).replaceAll('\\','/'));
+            }
+          }
+          walk(modulesRoot);
+          const source = new Map(files.map(file => [file, fs.readFileSync(path.join(root, file), 'utf8')]));
+          const deps = new Map();
+          function resolve(from, spec) {
+            if (!spec.startsWith('.')) return null;
+            let target = path.posix.normalize(path.posix.join(path.posix.dirname(from), spec));
+            if (!path.posix.extname(target)) target += '.js';
+            return source.has(target) ? target : null;
+          }
+          for (const file of files) {
+            const text = source.get(file);
+            const specs = [];
+            for (const re of [/(?:import|export)\s+(?:[^'";]+?\s+from\s+)?['"]([^'"]+)['"]/g, /import\s*\(\s*['"]([^'"]+)['"]\s*\)/g]) {
+              let m; while ((m = re.exec(text))) specs.push(m[1]);
+            }
+            deps.set(file, [...new Set(specs.map(spec => resolve(file, spec)).filter(Boolean))]);
+          }
+          const reachable = new Set();
+          const stack = ['modules/main.js'];
+          while (stack.length) {
+            const file = stack.pop();
+            if (!file || reachable.has(file) || !source.has(file)) continue;
+            reachable.add(file);
+            for (const dep of deps.get(file) || []) stack.push(dep);
+          }
+          const unreachable = files.filter(file => !reachable.has(file)).sort();
+          console.log(`PRODUCTION_REACHABLE ${reachable.size}/${files.length}`);
+          console.log('UNREACHABLE_MODULES');
+          for (const file of unreachable) console.log(`  ${file}`);
+
+          const importedNames = new Set();
+          for (const file of reachable) {
+            const text = source.get(file);
+            const re = /import\s*\{([^}]+)\}\s*from\s*['"]([^'"]+)['"]/g;
+            let m;
+            while ((m = re.exec(text))) {
+              const target = resolve(file, m[2]);
+              if (!target || !reachable.has(target)) continue;
+              for (const raw of m[1].split(',')) {
+                const original = raw.trim().split(/\s+as\s+/)[0]?.trim();
+                if (original) importedNames.add(`${target}::${original}`);
+              }
+            }
+          }
+          const candidates = [];
+          for (const file of reachable) {
+            const text = source.get(file);
+            const names = [];
+            for (const re of [/export\s+(?:async\s+)?function\s+([A-Za-z_$][\w$]*)/g, /export\s+(?:const|let|var|class)\s+([A-Za-z_$][\w$]*)/g]) {
+              let m; while ((m = re.exec(text))) names.push(m[1]);
+            }
+            for (const name of [...new Set(names)]) {
+              const count = (text.match(new RegExp(`\\b${name.replace(/[$]/g,'\\$&')}\\b`, 'g')) || []).length;
+              const imported = importedNames.has(`${file}::${name}`);
+              if (!imported && count === 1) candidates.push({ file, name });
+            }
+          }
+          console.log('UNUSED_EXPORTED_SYMBOL_CANDIDATES');
+          for (const item of candidates.sort((a,b)=>a.file.localeCompare(b.file)||a.name.localeCompare(b.name)))
+            console.log(`  ${item.file} :: ${item.name}`);
+          console.log(`SUMMARY unreachable=${unreachable.length} unusedExportCandidates=${candidates.length}`);
+          NODE

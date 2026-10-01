@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { mergeStandaloneIntoGeneratedCycle, cycleProgress, planOverview, computeCell } from '../modules/App.js';
 import { currentProgram, generatedCycle, savedPrograms, staleCycle } from './m215-cycle-duration-fixture.mjs';
-import { programWorkingWeeks, programWeekOptions, cycleBlockMetadata } from '../modules/program-duration.js';
+import { programWorkingWeeks, cycleBlockMetadata } from '../modules/program-duration.js';
 
 const before = structuredClone({ currentProgram, generatedCycle, savedPrograms, staleCycle });
 const merged = mergeStandaloneIntoGeneratedCycle(currentProgram, structuredClone(generatedCycle));
@@ -26,8 +26,7 @@ assert.match(progress.blocks[0].note, /10 weeks/);
 assert.equal(cycleProgress(staleCycle, [], []).blocks[0].weeks, 6, 'metadata remains the fallback for an unavailable program');
 assert.equal(programWorkingWeeks({ weeks: 6, config: { weeks: '10' } }), 10);
 assert.equal(programWorkingWeeks({ weeks: 5, config: { weeks: 0 } }), 5);
-assert.ok(programWeekOptions({ weeks: 3 }).includes(3), 'three-week peak is a valid settings choice');
-for (const weeks of [1, 2, 7, 9, 12]) assert.ok(programWeekOptions({ weeks }).includes(weeks), `existing ${weeks}-week plans must retain a visible choice`);
+for (const weeks of [1, 2, 3, 7, 9, 12]) assert.equal(programWorkingWeeks({ weeks }), weeks, `existing ${weeks}-week plans must retain their duration`);
 assert.deepEqual(cycleBlockMetadata(staleCycle, [...savedPrograms].reverse()).map(b => b.weeks), [10, 5, 3], 'lookup must follow ids rather than program list order');
 
 const overview = planOverview(savedPrograms[0], 8, staleCycle, [], savedPrograms);

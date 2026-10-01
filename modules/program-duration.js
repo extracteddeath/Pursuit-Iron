@@ -8,11 +8,6 @@ export function programWorkingWeeks(program, fallback = 6) {
     return positiveWeeks(program?.config?.weeks) ?? positiveWeeks(program?.weeks) ?? fallback;
 }
 
-export function programWeekOptions(program, draftWeeks) {
-    return [...new Set([3, 4, 5, 6, 8, 10, programWorkingWeeks(program), positiveWeeks(draftWeeks)]
-        .filter(positiveWeeks))].sort((a, b) => a - b);
-}
-
 // Resolve by program id, so previously saved conversions and later duration edits read correctly
 // without rewriting the user's programs or history. Missing blocks retain their metadata.
 export function cycleBlockMetadata(cycle, programs = []) {

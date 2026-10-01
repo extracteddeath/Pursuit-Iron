@@ -1,5 +1,5 @@
-/* Pursuit Iron 4.0 — M215 production release. */
-const CACHE="pursuit-iron-production-v4-0-0-m215-cycle-duration-b805";
+/* Pursuit Iron 4.0 — M216 production release. */
+const CACHE="pursuit-iron-production-v4-0-0-m216-compact-duration-b806";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
   "./BUILD_PROFILE.json",

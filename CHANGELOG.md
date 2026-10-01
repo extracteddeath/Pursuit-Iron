@@ -1,3 +1,11 @@
+## M216 — compact block length (build 806)
+
+- Replaced the expanding duration button row with one week field and minus/plus controls. Custom routines support direct typing and one-week adjustments.
+- Blank, zero, negative, fractional and invalid entries remain editable and cannot be saved. The saved program changes only when a valid draft is applied.
+- Generated cycle phases display their assigned duration in a compact read-only card. Saved-program duration remains authoritative throughout cycle views.
+- Extended the production browser gate to cover stepping, keyboard arrows, direct entry, uncommon saved lengths, reload and 320/360/390-pixel layouts.
+- Engine prescription policy remains 0.64.10; offline cache rotated for build 806.
+
 ## M215 — cycle duration consistency (build 805)
 
 - Existing custom programs keep their actual working-week length when converted into a cycle; a 10-week routine no longer inherits the template's 6-week entry label.

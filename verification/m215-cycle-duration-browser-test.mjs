@@ -17,11 +17,12 @@ const cycle=${JSON.stringify(staleCycle)};
 localStorage.setItem('m215-programs',JSON.stringify(stored));
 const noop=()=>{};
 function Probe(){
- const [programs,setPrograms]=React.useState(stored),[draft,setDraft]=React.useState(null);
- const n=Number(params.get('index')||0),program=programs[n];
+ const n=Number(params.get('index')||0);
+ const [programs,setPrograms]=React.useState(stored),[draft,setDraft]=React.useState({...stored[n].config,folder:'',description:''});
+ const program=programs[n];
  const cfg=draft||{...program.config,folder:'',description:''};
  const common={cycles:[cycle],cycle,saved:programs,history:[],onBack:noop,onNew:noop,onOpenBlock:noop,onCompleteBlock:noop,onDelete:noop,onOpenCycle:noop,onReview:noop,onAdvance:noop,onNextWorkout:noop};
- const apply=()=>{const p={...program,weeks:cfg.weeks,config:{...program.config,...cfg}};const next=programs.map((v,i)=>i===n?p:v);localStorage.setItem('m215-programs',JSON.stringify(next));setPrograms(next);setDraft(null);};
+ const apply=()=>{const p={...program,weeks:cfg.weeks,config:{...program.config,...cfg}};const next=programs.map((v,i)=>i===n?p:v);localStorage.setItem('m215-programs',JSON.stringify(next));setPrograms(next);setDraft({...p.config,folder:'',description:''});};
  const content=screen==='home'?React.createElement(HomePrograms,{...common,activeId:programs[0].id,onOpen:noop,onOpenCycles:noop,onSetActive:noop,onCompare:noop,onOptions:noop})
  :screen==='detail'?React.createElement(CycleDetail,common)
  :screen==='settings'?React.createElement(ProgramSettingsSheet,{program,draft:cfg,setDraft,dirty:cfg.weeks!==program.config.weeks,onApply:apply,onClose:noop})
@@ -65,25 +66,51 @@ try{
  for(const [index,weeks] of [[0,10],[1,5],[2,3]]){
   await open('screen=settings&index='+index);
   await page.waitForSelector('[data-testid="program-settings-sheet"]');
-  assert.equal(await page.$eval('button[aria-label="'+weeks+' weeks"]',n=>n.getAttribute('aria-pressed')),'true');
   if(index>0){
-   assert.equal(await page.$eval('button[aria-label="'+weeks+' weeks"]',n=>n.disabled),true);
+   assert.match(await page.$eval('[data-testid="cycle-phase-duration"]',n=>n.innerText),new RegExp(weeks+' weeks'));
+   assert.equal(await page.$('input[aria-label="Block length in weeks"]'),null,'cycle-owned phases display their length without an editable field');
+   assert.equal(await page.$('button[aria-label="Increase block length"]'),null);
    assert.match(await page.evaluate(()=>document.body.innerText),/Set by this phase/);
+  }else{
+   assert.equal(await page.$eval('input[aria-label="Block length in weeks"]',n=>n.value),String(weeks));
   }
  }
- // Custom block lengths remain editable; the canonical saved value survives reload with stale metadata.
+ // Exercise the production draft control through actual keystrokes, including incomplete replacements.
  await open('screen=settings&index=0');
- await page.click('button[aria-label="3 weeks"]');
- await page.waitForSelector('button[aria-label="3 weeks"][aria-pressed="true"]');
- await page.$$eval('button',nodes=>nodes.find(n=>/Save/.test(n.textContent)&&!n.disabled).click());
- await page.waitForFunction(()=>JSON.parse(localStorage.getItem('m215-programs'))[0].config.weeks===3);
- await page.reload({waitUntil:'networkidle0'});
- assert.equal(await page.$eval('button[aria-label="3 weeks"]',n=>n.getAttribute('aria-pressed')),'true');
- await page.setViewport({width:360,height:844,deviceScaleFactor:2,isMobile:true,hasTouch:true});
- assert.equal(await page.$$eval('button[aria-label$=" weeks"]',nodes=>nodes.every(n=>{const r=n.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth;})),true,'all duration choices fit at 360px');
- await page.screenshot({path:path.join(root,'verification/m215-cycle-settings-phone.png'),fullPage:true});
+ const field='input[aria-label="Block length in weeks"]',save='button[aria-label="Save program settings"]';
+ await page.waitForSelector(field);
+ const readWeeks=()=>page.$eval(field,n=>n.value);
+ const replaceWeeks=async value=>{await page.click(field,{clickCount:3});await page.keyboard.press('Backspace');if(value)await page.type(field,value);};
+ assert.equal(await page.$('button[aria-label="3 weeks"]'),null,'a single field replaces the growing preset row');
+ await page.click('button[aria-label="Increase block length"]');assert.equal(await readWeeks(),'11');
+ await page.click('button[aria-label="Decrease block length"]');assert.equal(await readWeeks(),'10');
+ await page.focus(field);await page.keyboard.press('ArrowDown');assert.equal(await readWeeks(),'9');
+ await page.keyboard.press('ArrowUp');assert.equal(await readWeeks(),'10');
+ assert.equal(await page.$eval(save,n=>n.disabled),true,'returning to the saved length leaves no change');
+ for(const value of ['', '0', '-1', '3.5', 'abc', '9007199254740992']){
+  await replaceWeeks(value);assert.equal(await readWeeks(),value,'invalid or incomplete text stays editable');
+  assert.equal(await page.$eval(save,n=>n.disabled),true,'incomplete and invalid lengths cannot be saved');
+  assert.equal(await page.$eval(field,n=>n.getAttribute('aria-invalid')),'true');
+  assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('m215-programs'))[0].config.weeks),10,'typing never changes the saved program');
+ }
+ for(const weeks of [1,2,7,9,12,3]){
+  await replaceWeeks(String(weeks));assert.equal(await readWeeks(),String(weeks));
+  if(weeks===1){
+   assert.equal(await page.$eval('button[aria-label="Decrease block length"]',n=>n.disabled),true);
+   await page.keyboard.press('ArrowDown');assert.equal(await readWeeks(),'1','decrement cannot produce a zero-week program');
+  }
+  await page.click(save);
+  await page.waitForFunction(w=>{const p=JSON.parse(localStorage.getItem('m215-programs'))[0];return p.config.weeks===w&&p.weeks===w;},{},weeks);
+  await page.reload({waitUntil:'networkidle0'});assert.equal(await readWeeks(),String(weeks),'custom duration survives reload');
+ }
+ for(const width of [320,360,390]){
+  await page.setViewport({width,height:844,deviceScaleFactor:2,isMobile:true,hasTouch:true});
+  assert.equal(await page.$eval('[data-testid="program-duration-control"]',n=>{const r=n.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth;}),true,'duration field fits at '+width+'px');
+  assert.equal(await page.$$eval('[data-testid="program-duration-control"] button',nodes=>nodes.length===2&&nodes.every(n=>{const r=n.getBoundingClientRect();return r.width>=44&&r.height>=44;})),true,'step buttons retain usable touch targets');
+ }
+ await page.screenshot({path:path.join(root,'verification/m216-compact-duration-phone.png'),fullPage:true});
  await open('screen=cycles');
  assert.doesNotMatch(await page.evaluate(()=>document.body.innerText),/10w|6w|6 weeks/);
  assert.deepEqual(errors,[]);
- console.log('PASS M215 phone browser: saved ten-week block reads consistently in cycle list/detail/Home; 5/3-week cycle settings show their actual phase length; custom edits survive reload and fit at 360px.');
+ console.log('PASS M215/M216 phone browser: ten-week cycle duration is consistent; cycle-owned 5/3-week phases display their length; compact stepping, typing, invalid/blank drafts and uncommon custom lengths save/reload correctly at 320–390px.');
 }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}

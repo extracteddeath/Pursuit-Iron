@@ -1,11 +1,11 @@
 {
   "schemaVersion": 3,
-  "milestone": "M215",
+  "milestone": "M216",
   "appVersion": "4.0.0",
-  "build": 805,
+  "build": 806,
   "engineVersion": "0.64.10",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "d321f8b8e2172dc4829c0cd229122989c19e29c0977a6c05a0a3da2d1646f829",
+  "runtimeAggregate": "8ca7552ecb4b7d5a5065edeea424ecefbac67a914a8c5087a02c4963d06d3b33",
   "runtimeFiles": {
     "modules/legacy-research-data.js": "8b09be67d7c80da7602bb168726d7f7bc3f6ddb9a43b29293acdd18e208ba206",
     "modules/main.js": "535deb3adbf4269a36b7db9103fd0db48be1b8bf6ddfa062c8e02f206cc0a33d",
@@ -55,7 +55,7 @@
     "modules/next-engine/weekly-recovery.js": "92cf14bd6ca28715d1d3f9ddde1cc0f42502892f230d69650f83bf6b921c111c",
     "modules/next-engine/workout-history-adapter.js": "bca54faf796caa8d22209120d717d33d287051a7b569bccb78f3f8240fd1cafb",
     "modules/next-engine/workout-runtime.js": "96474ea8b77a042e917a84f4a4414eb3dfb6f4a62bfe7d18055d69fcb6013e11",
-    "modules/program-duration.js": "0758e2921888a097899dcb9169ecd8b8635e956457f014b38fb25185e1a4f11b",
+    "modules/program-duration.js": "52bffd0e7798f16f1217ba455de75c63c917ba9b7c6aa61dcd795b10dc665d95",
     "modules/wizard-stability.js": "a62b2bed8a1f5ab880bfeab036a83ec630c93048b8a352652fe00ae75374a3d1",
     "vendor/lucide-react.js": "f84db748249b6e57e1d5187e876da806c1733523a1fa1501224bf740519b2cf4",
     "vendor/react-dom-client.js": "e3d8fd1d433e1bee9110bcaa5f8e9547e64f2754806bed0dd4fc546d890baab5",
@@ -66,21 +66,21 @@
     "vendor/react.js": "24b2d220a5b2637cf3fb78fe0d961f227ea0a4b960485dbfb03c9d276e72147c"
   },
   "localCandidate": {
-    "name": "Pursuit Iron 4.0 Production Release · M215",
-    "base": "M214 / app 4.0.0 build 804 / Engine 0.64.10",
-    "validation": "Ten-week custom entry conversion, stale saved metadata recovery, cumulative cycle/calendar/deload durations, and real phone settings/save/reload checks; engine policy unchanged."
+    "name": "Pursuit Iron 4.0 Production Release · M216",
+    "base": "M215 / app 4.0.0 build 805 / Engine 0.64.10",
+    "validation": "Real production duration stepping, direct typing, invalid and blank drafts, 1/2/7/9/12-week persistence and phone-width checks; cycle duration and engine policy preserved."
   },
   "uiFiles": {
-    "modules/App.js": "d552bfa5cec74594019484be9485b7ad178c0dbabd89d90bec40b5cb2c4d72ad",
-    "index.html": "c476db0070bce22084253143a84183d8a2ce2e48885da345ab7e2ad1b9faf2e2",
-    "sw.js": "ff6fc98f104118e300eac3a47f5638978b8e522dc9c5f7c8da60723217c79c68",
-    "BUILD_PROFILE.json": "381af9a6523ea938fc821e900daf3fda2470d65bddfaa5627feb99e66a437fed",
-    "CHANGELOG.md": "762709ac0af6b2c2da216345f45517ac351bc32f4336268b383137586f136f36",
+    "modules/App.js": "ae3f3265e1c4a716a154c9122daa2191f50a19fa8e79e086de54b3ddcf777200",
+    "index.html": "f4274b26e7f54940166969b2fddb1c8a978ecef0daed78c7d445af08e7ad1a0a",
+    "sw.js": "04f9f02a6d734a053caed1c7d80405af3d4349ccfa2f21965ae19d72c1a8fe06",
+    "BUILD_PROFILE.json": "57590037cbe8001ab6aaf2fd015239d5aba4c72b522a17af41c50397f2ef1b39",
+    "CHANGELOG.md": "e91cf04962858da2ef5230016806c0bebef194d3f2a054c2e2c8afa82adeacfa",
     "app.css": "5432859c3eb9624b9a27dc1c9de2e8cb85672b02bcd72c114ac963378184b85b"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
-  "runtimeHotfix": "Resolve cycle phase durations from saved programs, retain custom entry duration and display valid phase lengths in settings.",
-  "cache": "pursuit-iron-production-v4-0-0-m215-cycle-duration-b805",
-  "uiMilestone": "Pursuit Iron 4.0 Production Release · M215 Cycle Duration Consistency"
+  "runtimeHotfix": "Replace the duration preset row with a compact stepper and typed week field; preserve cycle-owned phase lengths and saved-program duration authority.",
+  "cache": "pursuit-iron-production-v4-0-0-m216-compact-duration-b806",
+  "uiMilestone": "Pursuit Iron 4.0 Production Release · M216 Compact Block Length"
 }

@@ -1,6 +1,6 @@
 # Production engine map
 
-Current release: M215, app 4.0.0 build 805, Pursuit Engine 0.64.10. The maintained source is the JavaScript in this repository. `RELEASE_MANIFEST.json` certifies the actual runtime and UI files. Historical TypeScript claims and development scripts are not the source of this release. The unreferenced historical root `app.js` bundle has been removed; the production entry is `modules/main.js`.
+Current release: M216, app 4.0.0 build 806, Pursuit Engine 0.64.10. The maintained source is the JavaScript in this repository. `RELEASE_MANIFEST.json` certifies the actual runtime and UI files. Historical TypeScript claims and development scripts are not the source of this release. The unreferenced historical root `app.js` bundle has been removed; the production entry is `modules/main.js`.
 
 ## Generation and authority
 
@@ -94,4 +94,4 @@ Generation is still synchronous. Shared candidate caches and cheap wizard feasib
 
 ## Cycle duration authority
 
-`modules/program-duration.js` reads each block length from its saved program by id, with cycle metadata as a fallback. Home, cycle list/detail and Plan use this shared projection, including a separate calendar week for deload. Custom standalone conversion carries the current duration into its entry metadata and planned specification. Settings preserve three-week and other existing durations; generated cycle phases display their cycle-owned length.
+`modules/program-duration.js` reads each block length from its saved program by id, with cycle metadata as a fallback. Home, cycle list/detail and Plan use this shared projection, including a separate calendar week for deload. Custom standalone conversion carries the current duration into its entry metadata and planned specification. Settings use one compact numeric field with decrement/increment controls, validate staged input before Save, and preserve three-week and other existing durations. Generated cycle phases display their cycle-owned length without editable duration controls.

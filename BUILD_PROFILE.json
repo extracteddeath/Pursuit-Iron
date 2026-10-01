@@ -1,11 +1,11 @@
 {
   "profile": "portable-browser-esm-canonical-engine",
-  "milestone": "M215",
-  "source": "M214 production baseline + cycle duration metadata and display consistency",
+  "milestone": "M216",
+  "source": "M215 production baseline + compact validated duration editing",
   "engine": "0.64.10; engine prescription policy unchanged; saved programs own phase durations",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 46,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m215-cycle-duration-b805",
-  "uiMilestone": "Pursuit Iron 4.0 Production Release · M215 Cycle Duration Consistency"
+  "cache": "pursuit-iron-production-v4-0-0-m216-compact-duration-b806",
+  "uiMilestone": "Pursuit Iron 4.0 Production Release · M216 Compact Block Length"
 }

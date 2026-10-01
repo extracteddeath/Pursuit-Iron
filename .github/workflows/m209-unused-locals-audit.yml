@@ -20,9 +20,9 @@ jobs:
         shell: bash
         run: |
           npm install --prefix /tmp/m209 eslint@9 --no-save --ignore-scripts --silent
-          cat >/tmp/m209/eslint.config.mjs <<'EOF'
+          cat >eslint.audit.config.mjs <<'EOF'
           export default [{
-            files: ['**/*.js'],
+            files: ['modules/**/*.js'],
             languageOptions: {
               ecmaVersion: 'latest',
               sourceType: 'module',
@@ -44,8 +44,7 @@ jobs:
             }
           }];
           EOF
-          cd /tmp/m209
-          ./node_modules/.bin/eslint "$GITHUB_WORKSPACE/modules/**/*.js" --config ./eslint.config.mjs --format json > /tmp/m209-report.json || true
+          /tmp/m209/node_modules/.bin/eslint modules --config ./eslint.audit.config.mjs --format json > /tmp/m209-report.json || true
           node <<'NODE'
           const fs=require('node:fs');
           const path=require('node:path');
@@ -65,4 +64,5 @@ jobs:
             console.log(`FILE ${file} (${items.length})`);
             for(const f of items) console.log(`  ${f.line}:${f.column} ${f.message}`);
           }
+          rm eslint.audit.config.mjs
           NODE

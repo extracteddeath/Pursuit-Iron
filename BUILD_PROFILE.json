@@ -1,11 +1,11 @@
 {
   "profile": "portable-browser-esm-canonical-engine",
-  "milestone": "M207",
-  "source": "M206 production baseline + final retired runtime/UI scaffolding removal",
-  "engine": "0.64.7 with M206 dose/progression behavior unchanged and retired review wrapper code removed",
+  "milestone": "M208",
+  "source": "M207 production baseline + repository-wide production reachability/export audit",
+  "engine": "0.64.8 with M207 behavior unchanged and zero-reference runtime APIs removed",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 46,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m207-runtime-cleanup-b797",
-  "uiMilestone": "Pursuit Iron 4.0 Production Release · M207 Runtime Cleanup"
+  "cache": "pursuit-iron-production-v4-0-0-m208-dead-export-cleanup-b798",
+  "uiMilestone": "Pursuit Iron 4.0 Production Release · M208 Dead Export Cleanup"
 }

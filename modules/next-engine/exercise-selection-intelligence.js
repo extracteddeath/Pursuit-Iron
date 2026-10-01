@@ -275,6 +275,3 @@ export function exerciseSetupInefficiencyPenalty(candidate, chosen) {
   return round(nearestTransition * .18 + intrinsic);
 }
 
-export function exerciseSelectionPenalty(candidate, candidateRole, chosen, context = {}) {
-  return round(exerciseRedundancyPenalty(candidate, candidateRole, chosen, context) + exerciseSetupInefficiencyPenalty(candidate, chosen));
-}

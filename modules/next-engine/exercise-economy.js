@@ -156,14 +156,6 @@ export function exerciseEconomyCluster(def) {
             return `${def.movementFamily}_${primaryBias(def)}_${kind}`;
     }
 }
-/** M81 compatibility helper: the original reviewed quad compound cluster. */
-export function compoundEconomyCluster(def) {
-    if (!def?.flags.compound)
-        return null;
-    if (def.movementFamily !== 'squat' && def.movementFamily !== 'leg_press')
-        return null;
-    return inferredUnilateral(def) ? 'knee_dominant_unilateral' : 'knee_dominant_bilateral';
-}
 function sameSemanticSlot(a, b) {
     const clusterA = exerciseEconomyCluster(a), clusterB = exerciseEconomyCluster(b);
     if (clusterA && clusterA === clusterB && weightedMuscleSimilarity(a, b) >= .67)
@@ -201,21 +193,6 @@ export function avoidableExerciseOverlap(candidate, candidateRole, chosen, conte
         return comparable.length >= 2;
     return true;
 }
-/** M81 compatibility helper retained for targeted compound tests. */
-export function avoidableCompoundOverlap(candidate, candidateRole, chosen) {
-    if (!candidate.flags.compound || (candidate.movementFamily !== 'squat' && candidate.movementFamily !== 'leg_press'))
-        return false;
-    if (STRENGTH_ROLES.has(candidateRole) || isStrengthSpecificAnchor(candidate))
-        return false;
-    const cluster = compoundEconomyCluster(candidate);
-    return chosen.some(({ def, role }) => {
-        if (role && STRENGTH_ROLES.has(role))
-            return false;
-        if (isStrengthSpecificAnchor(def))
-            return false;
-        return cluster !== null && compoundEconomyCluster(def) === cluster && weightedMuscleSimilarity(candidate, def) >= .67;
-    });
-}
 export function redundantExercisePairs(exercises, defs, priorityForMuscle) {
     const out = [];
     for (let i = 0; i < exercises.length; i++) {
@@ -243,23 +220,6 @@ export function redundantExercisePairs(exercises, defs, priorityForMuscle) {
                     continue;
             }
             out.push({ a, b, cluster, kind: aDef.flags.compound && bDef.flags.compound ? 'compound' : 'accessory' });
-        }
-    }
-    return out;
-}
-export function redundantCompoundPairs(exercises, defs) {
-    const out = [];
-    for (let i = 0; i < exercises.length; i++) {
-        const a = exercises[i], aDef = defs.get(a.exerciseId), cluster = compoundEconomyCluster(aDef);
-        if (!cluster || STRENGTH_ROLES.has(a.role) || isStrengthSpecificAnchor(aDef))
-            continue;
-        for (let j = i + 1; j < exercises.length; j++) {
-            const b = exercises[j], bDef = defs.get(b.exerciseId);
-            if (!bDef || STRENGTH_ROLES.has(b.role) || isStrengthSpecificAnchor(bDef))
-                continue;
-            if (compoundEconomyCluster(bDef) !== cluster || weightedMuscleSimilarity(aDef, bDef) < .67)
-                continue;
-            out.push({ a, b, cluster });
         }
     }
     return out;

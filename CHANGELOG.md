@@ -1,3 +1,10 @@
+## M208 — Dead export cleanup (build 798)
+
+- Audited the complete production module graph: all 50 authored runtime modules remain reachable from the real app entry point.
+- Removed 15 runtime exports with zero references anywhere in production, verification, or documentation, including obsolete M81 compatibility helpers and unused diagnostic/loading APIs.
+- Preserved live shell-equipment wiring plus verification-only simulation/setup contracts that still protect engine behavior.
+- Added cleanup invariants preventing the removed APIs from silently returning. Pursuit Engine 0.64.8; offline cache rotated for build 798.
+
 ## M207 — Runtime cleanup and compatibility separation (build 797)
 
 - Removed the unused coach-review proposal/approval/fixture wrapper while retaining the objective guardrails used by production audits and verification.

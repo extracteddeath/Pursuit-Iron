@@ -17,6 +17,24 @@ for (const retired of ['proposeCoachRegressionFixture', 'approveCoachRegressionF
 assert.ok(coachRegression.includes('export function evaluateObjectiveCoachGuardrails'), 'objective production guardrails must remain');
 for (const retiredProp of ['canarySummaryData', 'canaryAnalysisData', 'canaryGovernanceData', 'selectivePromotionStatusData', 'onExportCanaryDossier', 'onToggleCanary'])
     assert.equal(app.includes(retiredProp), false, `retired Settings prop must stay removed: ${retiredProp}`);
+const retiredDeadExports = {
+    'modules/next-engine/exercise-db.js': ['getExerciseDefinition'],
+    'modules/next-engine/exercise-economy.js': ['avoidableCompoundOverlap', 'redundantCompoundPairs', 'compoundEconomyCluster'],
+    'modules/next-engine/exercise-selection-intelligence.js': ['exerciseSelectionPenalty'],
+    'modules/next-engine/extended-exercise-catalog.js': ['LEGACY_V661_EQUIPMENT_IDS'],
+    'modules/next-engine/focus-intent.js': ['enforceExplicitFocusIntents'],
+    'modules/next-engine/history.js': ['buildStrengthTrend'],
+    'modules/next-engine/ledgers.js': ['ZERO_FATIGUE'],
+    'modules/next-engine/loading.js': ['createLoadingInventory', 'summarizeLoadingInventory'],
+    'modules/next-engine/progression-style.js': ['resolveProgressionStyle'],
+    'modules/next-engine/response.js': ['diagnoseSessionResponses'],
+    'modules/next-engine/setup-economy.js': ['setupZoneRevisits'],
+    'modules/next-engine/simulation.js': ['defaultPowerbuildingBlocks']
+};
+for (const [file, symbols] of Object.entries(retiredDeadExports)) {
+    const source = fs.readFileSync(new URL('../' + file, import.meta.url), 'utf8');
+    for (const symbol of symbols) assert.equal(source.includes(symbol), false, `unreferenced runtime export must stay removed: ${symbol}`);
+}
 assert.doesNotMatch(index, /app-shell-adapter/, 'Node and browser must resolve the same canonical adapter');
 assert.equal(fs.existsSync(new URL('../modules/shadow-engine', import.meta.url)), false);
 assert.equal(fs.existsSync(new URL('../modules/next-engine/app-shell-adapter-capacity.js', import.meta.url)), false);

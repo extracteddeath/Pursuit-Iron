@@ -113,6 +113,3 @@ export function proposeExplicitFocusRepair(session, request, phase) {
     }
     return session;
 }
-export function enforceExplicitFocusIntents(sessions, request, phase) {
-    return sessions.map(session => proposeExplicitFocusRepair(session, request, phase));
-}

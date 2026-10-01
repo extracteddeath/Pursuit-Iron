@@ -72,8 +72,3 @@ export function createExerciseCatalog(customExercises = []) {
 export function createExerciseMap(customExercises = []) {
     return new Map(createExerciseCatalog(customExercises).map(ex => [ex.id, ex]));
 }
-export function getExerciseDefinition(id, customExercises = []) {
-    if (EXERCISE_MAP.has(id))
-        return EXERCISE_MAP.get(id);
-    return customExercises.find(ex => ex.id === id);
-}

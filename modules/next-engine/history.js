@@ -20,17 +20,3 @@ export function bestEstimated1RM(sets) {
     }
     return best;
 }
-export function buildStrengthTrend(exposures) {
-    const points = [];
-    for (const exposure of exposures) {
-        let best = null;
-        for (const set of exposure.sets) {
-            const estimated1RM = estimate1RM(set.load, set.reps, set.rir);
-            if (estimated1RM !== null && (!best || estimated1RM > best.estimated1RM))
-                best = { estimated1RM, set };
-        }
-        if (best && best.set.load !== null)
-            points.push({ completedAt: exposure.completedAt, estimated1RM: best.estimated1RM, load: best.set.load, reps: best.set.reps, rir: best.set.rir });
-    }
-    return points.sort((a, b) => a.completedAt.localeCompare(b.completedAt));
-}

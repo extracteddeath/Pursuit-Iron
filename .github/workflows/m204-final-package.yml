@@ -1,0 +1,51 @@
+name: M204 final verification and source package
+
+on:
+  push:
+    branches: [m204-final-package]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-and-package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact M204 production source
+        uses: actions/checkout@v4
+        with:
+          ref: 5fcb3f18fb035bb82a9010dbd59cdb5c1acdd8ff
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Full release integrity
+        run: node scripts/verify-release.mjs
+      - name: Prescription ownership regression
+        run: node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m204-prescription-ownership-test.mjs
+      - name: Install browser harness
+        run: npm install --no-save --ignore-scripts puppeteer-core@24
+      - name: Exact-commit workout and PWA browser verification
+        shell: bash
+        env:
+          CHROME_BIN: /usr/bin/google-chrome
+        run: |
+          set -euo pipefail
+          node verification/m201-workout-prescription-browser-test.mjs
+          node verification/m178-pwa-update-browser-test.mjs
+      - name: Create source ZIP and checksum
+        shell: bash
+        run: |
+          set -euo pipefail
+          zip -qr pursuit-iron-m204-build794-source.zip . -x '.git/*' 'pursuit-iron-m204-build794-source.zip'
+          sha256sum pursuit-iron-m204-build794-source.zip > pursuit-iron-m204-build794-source.zip.sha256
+          unzip -t pursuit-iron-m204-build794-source.zip >/dev/null
+          sha256sum -c pursuit-iron-m204-build794-source.zip.sha256
+      - name: Upload source package
+        uses: actions/upload-artifact@v4
+        with:
+          name: pursuit-iron-m204-build794-source
+          path: |
+            pursuit-iron-m204-build794-source.zip
+            pursuit-iron-m204-build794-source.zip.sha256
+          retention-days: 7

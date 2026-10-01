@@ -21,7 +21,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          base64 -d verification/m204-prescription-ownership.patch.gz.b64 | gunzip > /tmp/m204.patch
+          cat verification/m204.patch.part00 verification/m204.patch.part01 verification/m204.patch.part02 verification/m204.patch.part03 verification/m204.patch.part04 > /tmp/m204.b64
+          echo "a23de1d5dedcbbaf03154ed74a02fd7817b66b78af4a8a2066a0f2292246a652  /tmp/m204.b64" | sha256sum -c -
+          base64 -d /tmp/m204.b64 | gunzip > /tmp/m204.patch
+          echo "97a127e1dfc0179f3ae913ab86cd47d7da3497cee18762abc887f5edc9dafe9b  /tmp/m204.patch" | sha256sum -c -
           git fetch origin main
           git checkout -B m204-publish origin/main
           test "$(git rev-parse HEAD)" = "f1eca56f0a189ebcbdbb729a099fd4a7309c2978"

@@ -1,4 +1,4 @@
-const __APP_VERSION__='4.0.0'; const __BUILD__='802';
+const __APP_VERSION__='4.0.0'; const __BUILD__='803';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { setShellEquipmentExpander, splitContractGaps, splitBuildability, refusalFixes, generateNextProgramForShell, recommendNextSplitForShell, getNextShellCell, canonicalShellSetCount, cloneNextDayPrescriptions, swapNextSlotPrescriptions, removeNextSlotPrescription, nextExerciseIdForShellExercise, markUserPrescriptionOverride, clearUserPrescriptionOverride, NextShellAdapterError } from "./next-engine/app-shell-adapter.js";
@@ -27685,36 +27685,6 @@ function App() {
         // bodyweight and home ones) still wins — a push-up program is a push-up program in any gym.
         const equipment = gymEquipment && gymEquipment.length ? gymEquipment : (activeGym ? [] : ALL_EQUIP_IDS);
         handleGenerate(templateConfig(t, equipment));
-    };
-    /* When a cycle block's exercise SELECTION is edited, sibling blocks should follow — otherwise
-       editing block 1 leaves blocks 2-3 on the original auto-picked lifts. We copy the per-day
-       exercise lists (and primary/T2/superset structure) onto siblings, but preserve each sibling's
-       own goal, week count, rep scheme and intensity. Blocks with fewer slots per day (e.g. a Peak
-       block trims accessories) take the edited list truncated to their slot count, keeping the
-       compound-first order the generator established. Matching is by day index, which is stable
-       because all blocks of a cycle share the same split. */
-    const propagateCycleEdits = (edited, before) => {
-        if (!edited.cycleId)
-            return;
-        /* THE RULE ITSELF LIVES IN propagateCycleEditsPure, and this is now its only caller.
-           It used to live here, in the component, with a SIMPLIFIED copy of itself exported next to
-           navPush/navPop under the name propagateCycleEditsPure for the gate to test. The copy handled
-           the exercise list and nothing else — no primary/T2 remap, no superset rebuild — so the gate
-           could stay green while the shipped path did something materially different, and a change to
-           either one would never be reported against the other. That is the v496 lesson exactly: a rule
-           in a function nobody calls is how a fixed defect comes back. One function, one caller, and the
-           gate now tests the thing that runs. */
-        const adapt = !!cycles.find(c => c.id === edited.cycleId)?.adaptExercises;
-        setSaved(prev => {
-            const sibs = prev.filter(p => p.id !== edited.id && p.cycleId === edited.cycleId);
-            if (!sibs.length)
-                return prev;
-            const out = propagateCycleEditsPure(edited, before, sibs, adapt);
-            if (out === sibs)
-                return prev; // adapt cycle, no substitution to carry
-            const byId = new Map(out.map(p => [p.id, p]));
-            return prev.map(p => byId.get(p.id) || p);
-        });
     };
     // Persist an in-session swap into the saved program: replace oldId with newId on the given day,
     // keeping slot position, primary/T2 marker, and supersets intact. Also propagates to cycle

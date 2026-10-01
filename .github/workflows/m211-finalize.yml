@@ -40,10 +40,7 @@ jobs:
             write(file, text.replace(re, to));
           };
 
-          // The abandoned dimensional-token experiment is entirely unreachable; remove its prose and values together.
           replaceRegexOnce('modules/App.js', /\/\* ============================== DIMENSIONAL TOKENS[\s\S]*?const RADIUS = \{ sm: 8, md: 12, lg: 16, pill: 999 \};\n/, '');
-
-          // Simple dead reads / helpers only. No hook, callback, prop-surface, or compatibility-path removal in M211.
           replaceRegexOnce('modules/App.js', /^\s*const eng = typeof src === "number" \? src : 0;\n/m, '');
           replaceOnce('modules/App.js', 'const { program, day, ex, slot, perf, history, weekIndex, unit } = o || {};', 'const { program, day, ex, slot, perf, history, weekIndex } = o || {};');
           replaceRegexOnce('modules/App.js', /(if \(stepKey === "equipment"\) \{\n\s*const toggle = \(id\) => [^\n]+;\n)\s*const hasBarbell = isBarLike\(config\.equipment\);\n/, '$1');
@@ -52,7 +49,7 @@ jobs:
           replaceOnce('modules/App.js', 'const [id, sessions]', 'const [, sessions]');
           replaceRegexOnce('modules/App.js', /^\s*const swapTRIR = parseRIRNum\(swapCell\.rir\);\n/m, '');
           replaceRegexOnce('modules/App.js', /^\s*const cellTRIR = parseRIRNum\(cell\.rir\);\n/m, '');
-          replaceRegexOnce('modules/App.js', /^\s*const stepW = loadStep\(EX_BY_ID\[e\.id\], unit\);\n/m, '');
+          replaceRegexOnce('modules/App.js', /(focus && \(\(\) => \{\n\s*const fv = focusView\(e\);\n\s*if \(!fv\)\n\s*return null;\n\s*const \{ idxs, hi, effSi, s \} = fv;\n)\s*const stepW = loadStep\(EX_BY_ID\[e\.id\], unit\);\n/, '$1');
           replaceRegexOnce('modules/App.js', /^\s*const anyChange = nextPlan\.some\(p => p\.dir !== "hold"\);\n/m, '');
           replaceRegexOnce('modules/App.js', /^\s*const roundTo = \(v\) => \{ const inc = unit === "lb" \? 5 : 2\.5; return Math\.round\(v \/ inc\) \* inc; \};\n/m, '');
           replaceOnce('modules/App.js', 'const { rows, total, current, maxedOut, next, pct, remaining, inThousand } = snap;', 'const { rows, total, current, maxedOut, next, pct, remaining } = snap;');
@@ -62,7 +59,7 @@ jobs:
 
           const testFile = 'verification/m205-engine-cleanup-test.mjs';
           const anchor = "assert.doesNotMatch(index, /app-shell-adapter/, 'Node and browser must resolve the same canonical adapter');";
-          const assertions = `const retiredPureAppLocals = [\n    'const TYPE = {', 'const WEIGHT = {', 'const SPACE = {', 'const RADIUS = {',\n    'const eng = typeof src === "number" ? src : 0;',\n    'const { program, day, ex, slot, perf, history, weekIndex, unit } = o || {};',\n    'const retroKey = hasRetro ?', 'const angArm = (sh, hOpen, hClose, sign, t) =>', 'const [id, sessions]',\n    'const swapTRIR = parseRIRNum(swapCell.rir);', 'const cellTRIR = parseRIRNum(cell.rir);',\n    'const stepW = loadStep(EX_BY_ID[e.id], unit);', 'const anyChange = nextPlan.some(p => p.dir !== "hold");',\n    'const roundTo = (v) => { const inc = unit === "lb" ? 5 : 2.5;', 'inThousand } = snap;',\n    'const xOf = (d, i) =>', 'const totalOf = (b) =>', 'const doneWeeks = P.doneWeeks, pct = P.pct;'\n];\nfor (const snippet of retiredPureAppLocals)\n    assert.equal(app.includes(snippet), false, \`pure dead App local must stay removed: \${snippet}\`);\nconst equipmentStep = app.slice(app.indexOf('if (stepKey === "equipment")'), app.indexOf('if (stepKey === "constraints")'));\nassert.equal(equipmentStep.includes('const hasBarbell = isBarLike(config.equipment);'), false, 'equipment-step dead hasBarbell read must stay removed');\n${anchor}`;
+          const assertions = `const retiredPureAppLocals = [\n    'const TYPE = {', 'const WEIGHT = {', 'const SPACE = {', 'const RADIUS = {',\n    'const eng = typeof src === "number" ? src : 0;',\n    'const { program, day, ex, slot, perf, history, weekIndex, unit } = o || {};',\n    'const retroKey = hasRetro ?', 'const angArm = (sh, hOpen, hClose, sign, t) =>', 'const [id, sessions]',\n    'const swapTRIR = parseRIRNum(swapCell.rir);', 'const cellTRIR = parseRIRNum(cell.rir);',\n    'const anyChange = nextPlan.some(p => p.dir !== "hold");',\n    'const roundTo = (v) => { const inc = unit === "lb" ? 5 : 2.5;', 'inThousand } = snap;',\n    'const xOf = (d, i) =>', 'const totalOf = (b) =>', 'const doneWeeks = P.doneWeeks, pct = P.pct;'\n];\nfor (const snippet of retiredPureAppLocals)\n    assert.equal(app.includes(snippet), false, \`pure dead App local must stay removed: \${snippet}\`);\nconst equipmentStep = app.slice(app.indexOf('if (stepKey === "equipment")'), app.indexOf('if (stepKey === "constraints")'));\nassert.equal(equipmentStep.includes('const hasBarbell = isBarLike(config.equipment);'), false, 'equipment-step dead hasBarbell read must stay removed');\n${anchor}`;
           replaceOnce(testFile, anchor, assertions);
 
           const manifestFile = 'RELEASE_MANIFEST.json';

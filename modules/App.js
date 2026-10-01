@@ -1,9 +1,9 @@
-const __APP_VERSION__='4.0.0'; const __BUILD__='799';
+const __APP_VERSION__='4.0.0'; const __BUILD__='800';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
-import { setShellEquipmentExpander, splitContractGaps, splitBuildability, refusalFixes, generateNextProgramForShell, nextProgramToShellProgram, recommendNextSplitForShell, getNextShellCell, canonicalShellSetCount, cloneNextDayPrescriptions, swapNextSlotPrescriptions, removeNextSlotPrescription, nextExerciseIdForShellExercise, markUserPrescriptionOverride, clearUserPrescriptionOverride, NextShellAdapterError } from "./next-engine/app-shell-adapter.js";
-import { generateNextBlockFromShellHistory, nextWorkoutSuggestionForShell, nextWorkoutSuggestionFromPerformedShell } from "./next-engine/workout-history-adapter.js";
-import { generateNextCycleForShell, convertProgramToNextCycleForShell, advanceNextCycleForShell, nextCycleTemplatesForShell } from "./next-engine/cycle-runtime-adapter.js";
+import { setShellEquipmentExpander, splitContractGaps, splitBuildability, refusalFixes, generateNextProgramForShell, recommendNextSplitForShell, getNextShellCell, canonicalShellSetCount, cloneNextDayPrescriptions, swapNextSlotPrescriptions, removeNextSlotPrescription, nextExerciseIdForShellExercise, markUserPrescriptionOverride, clearUserPrescriptionOverride, NextShellAdapterError } from "./next-engine/app-shell-adapter.js";
+import { nextWorkoutSuggestionForShell, nextWorkoutSuggestionFromPerformedShell } from "./next-engine/workout-history-adapter.js";
+import { generateNextCycleForShell, convertProgramToNextCycleForShell, nextCycleTemplatesForShell } from "./next-engine/cycle-runtime-adapter.js";
 import { buildRuntimeSetTargets, reconcilePendingRepTargets, techniqueProtocolFromCell, freestyleCellForRepRange, buildUserAddedSlotPrescriptions } from "./next-engine/workout-runtime.js";
 import { deriveArmCoverage } from "./next-engine/arm-coverage.js";
 import { deriveFunctionalCoverage } from "./next-engine/functional-coverage.js";
@@ -150,12 +150,6 @@ const TYPE = { xs: 11, sm: 13, md: 15, lg: 18, xl: 22, xxl: 28 };
 const WEIGHT = { body: 400, medium: 500, semi: 600, bold: 700, display: 800 };
 const SPACE = { none: 0, hair: 2, xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32, huge: 48 };
 const RADIUS = { sm: 8, md: 12, lg: 16, pill: 999 };
-const SCALE_OK = {
-    fontSize: Object.values(TYPE),
-    fontWeight: Object.values(WEIGHT),
-    borderRadius: Object.values(RADIUS),
-    space: Object.values(SPACE)
-};
 const THEMES = {
     lime: { name: "Lime", base: "dark", accent: "#D4FF3D", palette: TOK({ bg: "#0A0908", bgTint: "#0F0D10", surface: "#15131A", surface2: "#1E1A25", border: "rgba(255,255,255,0.08)", borderSoft: "rgba(255,255,255,0.05)", cream: "#F2EEE4", muted: "#A29EA8", mutedSoft: "#6F6B76", accent: "#D4FF3D", onAccent: "#0A0908", warm: "#E4BC5D", danger: "#FF5D6C" }) },
     ember: { name: "Ember", base: "dark", accent: "#FF8A3D", palette: TOK({ bg: "#120907", bgTint: "#17100C", surface: "#1E1511", surface2: "#2A1D17", border: "rgba(255,200,150,0.09)", borderSoft: "rgba(255,200,150,0.04)", cream: "#F5EDE2", muted: "#A3968A", mutedSoft: "#786D64", accent: "#FF8A3D", onAccent: "#120907", warm: "#F5B85D", danger: "#FF5D6C" }) },
@@ -3059,12 +3053,6 @@ const PATTERNS = [
     "spinal-flexion", "lateral-flexion", "anti-extension", "anti-rotation", "neck", "shoulder-flexion",
     "dorsiflexion", "isometric-hold", "scapular-upward-rotation",
 ];
-/* ⚠ THE VOCABULARY IS ENFORCED, NOT DECORATIVE. `PATTERNS` existed as an exported list nothing read,
-   which gates/deadexports correctly flagged: a term list no code checks against is a comment that
-   looks like a constraint. A tag outside the vocabulary now resolves to null rather than passing
-   through as a one-off pattern that silently matches only itself — which is exactly how a typo'd
-   tag would make a lift permanently non-duplicable and invisible to every rule built on this. */
-const PATTERN_SET = new Set(PATTERNS);
 const EX_BY_ID = Object.fromEntries(EXERCISES.map(e => [e.id, e]));
 /* Live viewport width, for the few places a layout genuinely can't fit on one line below a
    breakpoint and has to reflow (the dense set-input row on a folded-closed phone / compact device).
@@ -3222,9 +3210,6 @@ const WEIGHTED_SWAP = {
     "bw-squat": "goblet", "bw-lunge": "walking-lunge", "bw-bulgarian": "bulgarian",
     "inv-row": "bb-row", "pike-pushup": "db-shoulder"
 };
-// Equipment that can actually add external load to a lift. Bands and a bench are deliberately absent:
-// neither lets you weight a pull-up in any way the app models.
-const LOADABLE_EQUIP = new Set(["barbell", "dumbbell", "kettlebell", "machine", "cable", "smith", "ezbar"]);
 const SPLITS = {
     full_body: { name: "Full Body", /* Was "Train everything each session", which is not what it builds. Measured across 3/4/5/6 days
              at every session length, a day covers 3-5 of the 7 major muscle groups and NEVER all seven —

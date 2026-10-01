@@ -1,3 +1,10 @@
+## M210 — App shell static cleanup (build 800)
+
+- Removed three unused shell-adapter imports and three dead module-scope constants from the App bundle.
+- Removed stale comments that described the retired constants as active constraints.
+- Deliberately left component props, state, and lifecycle-adjacent findings for separate context-aware review.
+- Added cleanup invariants preventing the six dead bindings from returning. Engine behavior remains 0.64.9; offline cache rotated for build 800.
+
 ## M209 — Unused engine binding cleanup (build 799)
 
 - Ran a scope-aware static unused-binding audit across all authored runtime modules.

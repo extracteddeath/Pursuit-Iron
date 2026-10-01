@@ -46,6 +46,8 @@ for (const [file, snippets] of Object.entries(retiredUnusedBindings)) {
     const source = fs.readFileSync(new URL('../' + file, import.meta.url), 'utf8');
     for (const snippet of snippets) assert.equal(source.includes(snippet), false, `unused engine binding must stay removed: ${snippet}`);
 }
+for (const retired of ['nextProgramToShellProgram', 'generateNextBlockFromShellHistory', 'advanceNextCycleForShell', 'SCALE_OK', 'PATTERN_SET', 'LOADABLE_EQUIP'])
+    assert.equal(app.includes(retired), false, `proven-dead App shell binding must stay removed: ${retired}`);
 assert.doesNotMatch(index, /app-shell-adapter/, 'Node and browser must resolve the same canonical adapter');
 assert.equal(fs.existsSync(new URL('../modules/shadow-engine', import.meta.url)), false);
 assert.equal(fs.existsSync(new URL('../modules/next-engine/app-shell-adapter-capacity.js', import.meta.url)), false);

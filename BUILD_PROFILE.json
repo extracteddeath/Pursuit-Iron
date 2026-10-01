@@ -1,11 +1,11 @@
 {
   "profile": "portable-browser-esm-canonical-engine",
-  "milestone": "M209",
-  "source": "M208 production baseline + unused-import/private-local static audit",
-  "engine": "0.64.9 with M208 behavior unchanged and unused engine bindings removed",
+  "milestone": "M210",
+  "source": "M209 production baseline + module-scope App unused-binding audit",
+  "engine": "0.64.9 unchanged; App shell static dead code removed",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 46,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m209-unused-bindings-b799",
-  "uiMilestone": "Pursuit Iron 4.0 Production Release · M209 Unused Binding Cleanup"
+  "cache": "pursuit-iron-production-v4-0-0-m210-app-shell-cleanup-b800",
+  "uiMilestone": "Pursuit Iron 4.0 Production Release · M210 App Shell Cleanup"
 }

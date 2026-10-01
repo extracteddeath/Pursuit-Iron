@@ -1,8 +1,8 @@
 {
   "schemaVersion": 3,
-  "milestone": "M209",
+  "milestone": "M210",
   "appVersion": "4.0.0",
-  "build": 799,
+  "build": 800,
   "engineVersion": "0.64.9",
   "candidateStatus": "verification_enforced_by_ci",
   "runtimeAggregate": "7ffebf5410991d66bb5c75d067bc5ad905a555f1f181c33743917708af863e15",
@@ -65,21 +65,21 @@
     "vendor/react.js": "24b2d220a5b2637cf3fb78fe0d961f227ea0a4b960485dbfb03c9d276e72147c"
   },
   "localCandidate": {
-    "name": "Pursuit Iron 4.0 Production Release · M209",
-    "base": "M208 / app 4.0.0 build 798 / Engine 0.64.8",
-    "validation": "Unused engine imports, locals, helper state, and parameters are removed while the production module graph, release contracts, progression, volume, recovery, and backup behavior remain unchanged."
+    "name": "Pursuit Iron 4.0 Production Release · M210",
+    "base": "M209 / app 4.0.0 build 799 / Engine 0.64.9",
+    "validation": "Six module-scope App bindings with zero references are removed while component props, state, backup compatibility, and engine behavior remain unchanged."
   },
   "uiFiles": {
-    "modules/App.js": "68cf5ec0d7863f54d40a229e910ab3e04167c21ed4b0c3972f105a5d9a12e437",
-    "index.html": "78328eb96f5ac888a43953013580297f14b6f7a4bf5789f4abfc11b886028cf4",
-    "sw.js": "1de8e72dc7cb16e9859bf2da3f4cf10046089a42d34d666b17579187b2dfa02d",
-    "BUILD_PROFILE.json": "b5be84b195b7272f9d81c0a297934a2b8d08d9e452b6e6735ff10b86d0b45098",
-    "CHANGELOG.md": "8dbe6498e30ca09b52db6c7545961c0834e3a2cb2c72f758e535ff92010d6397",
+    "modules/App.js": "7d90a80e31315a0651cecde7b961d67f4d9fae129eaba72d250d4e6c6b063be0",
+    "index.html": "0b3dbf907de2cc77b438c2d99072967f7ce84f1f1624d0b139211751ccd3810a",
+    "sw.js": "22ba38ee8635f11b8b431c2b7302a70ce01aa69016aa1de2ad2b0a899d6fd805",
+    "BUILD_PROFILE.json": "4572e15b12f0dcf97fa5adcfe10194adf1c0027500a7b7c0ce0b13d5275d5649",
+    "CHANGELOG.md": "cbd5b748372c0942df3be4582053ceff18e776752733c344f3839d7cf7a7bb2b",
     "app.css": "5432859c3eb9624b9a27dc1c9de2e8cb85672b02bcd72c114ac963378184b85b"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
-  "runtimeHotfix": "Remove ten statically proven unused engine bindings; preserve all live and verification-only contracts.",
-  "cache": "pursuit-iron-production-v4-0-0-m209-unused-bindings-b799",
-  "uiMilestone": "Pursuit Iron 4.0 Production Release · M209 Unused Binding Cleanup"
+  "runtimeHotfix": "Remove proven-dead App-shell imports/constants only; preserve component/lifecycle surfaces for separate review.",
+  "cache": "pursuit-iron-production-v4-0-0-m210-app-shell-cleanup-b800",
+  "uiMilestone": "Pursuit Iron 4.0 Production Release · M210 App Shell Cleanup"
 }

@@ -76,6 +76,7 @@ execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verifi
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/m172-actual-strength-baseline-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/m173-integration-torture-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['verification/m173-pwa-resilience-test.mjs'],{stdio:'inherit',cwd:root});
+execFileSync(process.execPath,['verification/m217-android-lifecycle-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/m174-causal-cycle-state-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/m175-longitudinal-adaptation-memory-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/m176-workout-restore-hardening-test.mjs'],{stdio:'inherit',cwd:root});

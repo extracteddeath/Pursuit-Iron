@@ -38,7 +38,7 @@ for(const marker of [
   'schemaVersion: 2, programId: program.id, dayId: day.id, weekIndex, dayExSig',
   'elapsedMs: runElapsedMs()',
   'restEndMs: restEndRef.current',
-  'const minimizeWorkout = () => { persistLive();',
+  'const minimizeWorkout = () => { if (!persistLive()) return;',
   'useLayoutEffect(() => {\n        persistLive();',
   'document.addEventListener("visibilitychange", onVis);',
   'window.addEventListener("pagehide", save);',

@@ -35,6 +35,6 @@ for (const key of ['shadowEngineVersion','validatedLiveBaseline','sourceNextEngi
 manifest.sourceFilesStatus = 'JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.';
 manifest.runtimeFiles = Object.fromEntries(runtimeFiles.map(file => [file, sha(fs.readFileSync(file))]));
 manifest.runtimeAggregate = sha(runtimeFiles.map(file => `${file}:${manifest.runtimeFiles[file]}\n`).join(''));
-manifest.uiFiles = Object.fromEntries(['modules/App.js','index.html','sw.js','BUILD_PROFILE.json','CHANGELOG.md','app.css'].map(file => [file, sha(fs.readFileSync(file))]));
+manifest.uiFiles = Object.fromEntries(['modules/App.js','index.html','sw.js','BUILD_PROFILE.json','CHANGELOG.md','app.css','manifest.webmanifest'].map(file => [file, sha(fs.readFileSync(file))]));
 write('RELEASE_MANIFEST.json', JSON.stringify(manifest, null, 2) + '\n');
 console.log(`Finalized ${manifest.milestone}: build ${manifest.build}, Engine ${manifest.engineVersion}, ${runtimeFiles.length} runtime files, ${shell.length} offline entries.`);

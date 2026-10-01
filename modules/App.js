@@ -1,6 +1,7 @@
-const __APP_VERSION__='4.0.0'; const __BUILD__='806';
+const __APP_VERSION__='4.0.0'; const __BUILD__='807';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
+import { holdWorkoutScreenAwake } from "./mobile-lifecycle.js";
 import { setShellEquipmentExpander, splitContractGaps, splitBuildability, refusalFixes, generateNextProgramForShell, recommendNextSplitForShell, getNextShellCell, canonicalShellSetCount, cloneNextDayPrescriptions, swapNextSlotPrescriptions, removeNextSlotPrescription, nextExerciseIdForShellExercise, resolveNextShellExerciseId, remapNextShellRoster, snapshotNextShellPrescription, markUserPrescriptionOverride, clearUserPrescriptionOverride, NextShellAdapterError } from "./next-engine/app-shell-adapter.js";
 import { nextWorkoutSuggestionForShell, nextWorkoutSuggestionFromPerformedShell } from "./next-engine/workout-history-adapter.js";
 import { generateNextCycleForShell, convertProgramToNextCycleForShell, nextCycleTemplatesForShell } from "./next-engine/cycle-runtime-adapter.js";
@@ -17424,7 +17425,8 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
                 if (!raw)
                     return null;
                 const s = JSON.parse(raw);
-                const status = sessionSnapshotStatus(s, { programId: program.id, dayId: day.id, weekIndex, dayExSig });
+                const status = s?.sessionId && history.some(h => h.id === s.sessionId)
+                    ? "none" : sessionSnapshotStatus(s, { programId: program.id, dayId: day.id, weekIndex, dayExSig });
                 return status === "none" ? null : { snap: s, status };
             }
             catch { }
@@ -17564,6 +17566,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
     const [pinEdit, setPinEdit] = useState(false); // editing the current exercise's pinned note
     const pinRef = useRef(null);
     const finishingRef = useRef(false); // re-entry guard for finish() — see its definition
+    const [finishSaving, setFinishSaving] = useState(false);
     const [addEx, setAddEx] = useState(false);
     const [exList, setExList] = useState(false);
     const [showWarmup, setShowWarmup] = useState(true); // session-local dismissal; `warmupCard` is the durable one
@@ -17637,18 +17640,23 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
     // elapsedMs is the actual training time so the timer resumes correctly rather than counting wall
     // clock through the time the app was closed.
     const [saveError, setSaveError] = useState(false);
+    const sessionIdRef = useRef(null);
+    if (sessionIdRef.current == null)
+        sessionIdRef.current = liveMatch?.sessionId || uid();
     const persistLive = () => {
         if (finishingRef.current)
-            return;
+            return false;
         try {
-            localStorage.setItem(LIVE_KEY, JSON.stringify({ schemaVersion: 2, programId: program.id, dayId: day.id, weekIndex, dayExSig, startedAt: startRef.current, elapsedMs: runElapsedMs(), savedAt: Date.now(), data, readiness, exIdx, focusPin, fbPump, fbSore, runPaused, restEndMs: restEndRef.current, restMax, restPaused: paused, restRemain: paused ? rest : 0 }));
+            localStorage.setItem(LIVE_KEY, JSON.stringify({ schemaVersion: 2, programId: program.id, dayId: day.id, weekIndex, dayExSig, startedAt: startRef.current, elapsedMs: runElapsedMs(), savedAt: Date.now(), data, readiness, exIdx, focusPin, fbPump, fbSore, runPaused, restEndMs: restEndRef.current, restMax, restPaused: paused, restRemain: paused ? rest : 0, sessionId: sessionIdRef.current }));
             setSaveError(false);
+            return true;
         }
         catch {
             setSaveError(true);
+            return false;
         }
     };
-    const minimizeWorkout = () => { persistLive(); setSessionMenu(false); onExit(); };
+    const minimizeWorkout = () => { if (!persistLive()) return; setSessionMenu(false); onExit(); };
     // Android/PWA system Back is owned by the app shell, but ONLY this component can flush the complete
     // in-memory workout snapshot before leaving. The shell emits one semantic event; keeping the real
     // minimize path here avoids creating a second, less-complete persistence implementation in App.
@@ -17887,22 +17895,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
         scheduleRestNotif(Math.ceil((restEndRef.current - Date.now()) / 1000)); }, []);
     // Keep the screen awake while a session is open (Chrome/Android, modern iOS Safari; silently
     // unsupported elsewhere). The OS releases the lock when the page hides, so re-acquire on return.
-    useEffect(() => {
-        let lock = null;
-        const acquire = () => { try {
-            if (navigator.wakeLock && document.visibilityState === "visible")
-                navigator.wakeLock.request("screen").then(l => { lock = l; }).catch(() => { });
-        }
-        catch { } };
-        acquire();
-        const onVis = () => { if (document.visibilityState === "visible")
-            acquire(); };
-        document.addEventListener("visibilitychange", onVis);
-        return () => { document.removeEventListener("visibilitychange", onVis); try {
-            lock && lock.release && lock.release().catch(() => { });
-        }
-        catch { } };
-    }, []);
+    useEffect(() => holdWorkoutScreenAwake(), []);
     useEffect(() => { const t = setInterval(() => forceTick(n => n + 1), 1000); return () => clearInterval(t); }, []);
     // On leaving the session (finish, exit, discard), kill any rest-complete notification still
     // scheduled — otherwise a phantom "Rest complete" can pop seconds after you've closed the workout.
@@ -18591,7 +18584,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
             flashSnack(`Swapped in ${newEx.name}`, snap, snapIdx);
         }
     };
-    const finish = () => {
+    const finish = async () => {
         // Guard against a fast double-tap: setView/setSessionDay below are React state updates and don't
         // synchronously unmount this button, so without this a second tap before the re-render could call
         // onFinish twice — a duplicate history entry, doubled logged volume, and doubled PRs/achievements
@@ -18600,73 +18593,84 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
         if (finishingRef.current)
             return;
         finishingRef.current = true;
+        setFinishSaving(true);
         try {
-            localStorage.removeItem(LIVE_KEY);
+            const perfOut = {};
+            data.forEach(e => {
+                const s = summarizeSets(e.sets, EX_BY_ID[e.id], unit);
+                const note = e.note.trim() || (perf[e.id] && perf[e.id].note) || undefined;
+                if (s) {
+                    const doneWork = e.sets.filter(x => x.done && !x.warm && parseInt(x.reps) > 0);
+                    const hasPos = doneWork.some(x => parseFloat(x.weight) > 0);
+                    const wv = x => { const w = parseFloat(x.weight); return isNaN(w) ? 0 : w; };
+                    // Persist the amrap flag from the prescription onto each logged set. Percent-scheme
+                    // progression (5/3/1 TM projection, GZCLP stage advancement) needs to identify the
+                    // AMRAP set directly rather than inferring it from being the unique top-weight set —
+                    // that heuristic silently breaks if a manually-edited weight ties with another set.
+                    // RIR: prefer the explicitly-logged actual RIR; otherwise fall back to the set's target
+                    // RIR so the LAST TIME column still shows the intended effort (most users just tick the
+                    // set done without tapping an RIR, which previously left the history with no effort at all).
+                    const setRIR = (x) => {
+                        if (x.actualRIR != null)
+                            return x.actualRIR;
+                        const t = x.target?.rir;
+                        const n = typeof t === "number" ? t : parseRIRNum(t);
+                        return Number.isFinite(n) ? n : null;
+                    };
+                    const logged = (hasPos ? doneWork.filter(x => parseFloat(x.weight) > 0) : doneWork)
+                        .map(x => {
+                        const r = setRIR(x);
+                        // Snapshot what was ASKED for alongside what was done: pw = prescribed weight, pt = the
+                        // prescribed rep target. Self-contained per set, so a logged session can be replayed and
+                        // scored against a different progression without needing the program that produced it.
+                        // Omitted for manual/freestyle sets, where nothing was prescribed.
+                        const pw = parseFloat(x.target?.w);
+                        const pt = x.target?.reps != null ? String(x.target.reps) : null;
+                        // PROVENANCE TRAVELS WITH THE SET. `sub` marks a drop set or myo mini — an extension of
+                        // the set above, not a working set. Every reader downstream already filters on it
+                        // (`!s.warm && !s.sub`), but the flag was never PERSISTED, so on replayed history those
+                        // filters matched nothing and extensions counted as full sets all over again — the exact
+                        // bug v493 fixed in the live session, surviving in the log.
+                        return { w: wv(x), r: parseInt(x.reps), ...(r != null ? { rir: r, rirReported: x.actualRIR != null } : {}), ...(x.sub ? { sub: true, ...(x.kind ? { kind: x.kind } : {}) } : {}), ...(prescribedRIRof(x) != null ? { tr: prescribedRIRof(x) } : {}), ...(x.target?.amrap ? { amrap: true } : {}), ...(x.auto && pw > 0 ? { pw } : {}), ...(!x.target?.freestyle && pt ? { pt } : {}) };
+                    });
+                    const prescription = snapshotNextShellPrescription(program, day, e.slot, EX_BY_ID[e.id], weekIndex);
+                    perfOut[e.id] = { weight: s.weight, reps: s.reps, date: Date.now(), sets: logged, note,
+                        ...(prescription ? { prescription } : {}) };
+                }
+            });
+            const committed = await onFinish({
+                id: sessionIdRef.current,
+                programId: program.id, programName: program.name, dayLabel: day.label, dayId: day.id,
+                engineV: program.engineV || 1, // which engine issued this session's prescriptions
+                weekIndex, // the block week this session belongs to — lets the program view mark a day done
+                setsDone: doneSets, totalSets, volume: Math.round(volume), unit,
+                durationMin: Math.max(1, Math.round(runElapsedMs() / 60000)),
+                /* The estimate this session was SOLD with, stored beside what it actually took. Pace can then
+                   be measured even after the program is deleted or edited, which is when the comparison would
+                   otherwise silently stop working. */
+                estMin: (() => { try {
+                    return estimateMinutes(program, day, weekIndex);
+                }
+                catch {
+                    return undefined;
+                } })(),
+                perf: perfOut,
+                feedback,
+                feedbackRaw: (() => { const r = {}; new Set([...Object.keys(fbPump), ...Object.keys(fbSore)]).forEach(p => { r[p] = { pump: fbPump[p], sore: fbSore[p] }; }); return Object.keys(r).length ? r : undefined; })()
+            });
+            if (committed === false)
+                throw new Error("Workout storage is unavailable.");
+            // History must be durable before the recovery copy is removed. The session id also makes
+            // a process kill between those two operations safe: an already-logged session cannot resume.
+            try { localStorage.removeItem(LIVE_KEY); } catch {}
+            buzz("success");
         }
-        catch { } // workout completed → discard the resume snapshot
-        buzz("success");
-        const perfOut = {};
-        data.forEach(e => {
-            const s = summarizeSets(e.sets, EX_BY_ID[e.id], unit);
-            const note = e.note.trim() || (perf[e.id] && perf[e.id].note) || undefined;
-            if (s) {
-                const doneWork = e.sets.filter(x => x.done && !x.warm && parseInt(x.reps) > 0);
-                const hasPos = doneWork.some(x => parseFloat(x.weight) > 0);
-                const wv = x => { const w = parseFloat(x.weight); return isNaN(w) ? 0 : w; };
-                // Persist the amrap flag from the prescription onto each logged set. Percent-scheme
-                // progression (5/3/1 TM projection, GZCLP stage advancement) needs to identify the
-                // AMRAP set directly rather than inferring it from being the unique top-weight set —
-                // that heuristic silently breaks if a manually-edited weight ties with another set.
-                // RIR: prefer the explicitly-logged actual RIR; otherwise fall back to the set's target
-                // RIR so the LAST TIME column still shows the intended effort (most users just tick the
-                // set done without tapping an RIR, which previously left the history with no effort at all).
-                const setRIR = (x) => {
-                    if (x.actualRIR != null)
-                        return x.actualRIR;
-                    const t = x.target?.rir;
-                    const n = typeof t === "number" ? t : parseRIRNum(t);
-                    return Number.isFinite(n) ? n : null;
-                };
-                const logged = (hasPos ? doneWork.filter(x => parseFloat(x.weight) > 0) : doneWork)
-                    .map(x => {
-                    const r = setRIR(x);
-                    // Snapshot what was ASKED for alongside what was done: pw = prescribed weight, pt = the
-                    // prescribed rep target. Self-contained per set, so a logged session can be replayed and
-                    // scored against a different progression without needing the program that produced it.
-                    // Omitted for manual/freestyle sets, where nothing was prescribed.
-                    const pw = parseFloat(x.target?.w);
-                    const pt = x.target?.reps != null ? String(x.target.reps) : null;
-                    // PROVENANCE TRAVELS WITH THE SET. `sub` marks a drop set or myo mini — an extension of
-                    // the set above, not a working set. Every reader downstream already filters on it
-                    // (`!s.warm && !s.sub`), but the flag was never PERSISTED, so on replayed history those
-                    // filters matched nothing and extensions counted as full sets all over again — the exact
-                    // bug v493 fixed in the live session, surviving in the log.
-                    return { w: wv(x), r: parseInt(x.reps), ...(r != null ? { rir: r, rirReported: x.actualRIR != null } : {}), ...(x.sub ? { sub: true, ...(x.kind ? { kind: x.kind } : {}) } : {}), ...(prescribedRIRof(x) != null ? { tr: prescribedRIRof(x) } : {}), ...(x.target?.amrap ? { amrap: true } : {}), ...(x.auto && pw > 0 ? { pw } : {}), ...(!x.target?.freestyle && pt ? { pt } : {}) };
-                });
-                const prescription = snapshotNextShellPrescription(program, day, e.slot, EX_BY_ID[e.id], weekIndex);
-                perfOut[e.id] = { weight: s.weight, reps: s.reps, date: Date.now(), sets: logged, note,
-                    ...(prescription ? { prescription } : {}) };
-            }
-        });
-        onFinish({
-            programId: program.id, programName: program.name, dayLabel: day.label, dayId: day.id,
-            engineV: program.engineV || 1, // which engine issued this session's prescriptions
-            weekIndex, // the block week this session belongs to — lets the program view mark a day done
-            setsDone: doneSets, totalSets, volume: Math.round(volume), unit,
-            durationMin: Math.max(1, Math.round(runElapsedMs() / 60000)),
-            /* The estimate this session was SOLD with, stored beside what it actually took. Pace can then
-               be measured even after the program is deleted or edited, which is when the comparison would
-               otherwise silently stop working. */
-            estMin: (() => { try {
-                return estimateMinutes(program, day, weekIndex);
-            }
-            catch {
-                return undefined;
-            } })(),
-            perf: perfOut,
-            feedback,
-            feedbackRaw: (() => { const r = {}; new Set([...Object.keys(fbPump), ...Object.keys(fbSore)]).forEach(p => { r[p] = { pump: fbPump[p], sore: fbSore[p] }; }); return Object.keys(r).length ? r : undefined; })()
-        });
+        catch {
+            finishingRef.current = false;
+            setSaveError(true);
+            setFinishing(false);
+        }
+        finally { setFinishSaving(false); }
     };
     const elapsed = Math.max(0, Math.floor(runElapsedMs() / 1000));
     const fmtEl = `${Math.floor(elapsed / 3600)}:${String(Math.floor((elapsed % 3600) / 60)).padStart(2, "0")}:${String(elapsed % 60).padStart(2, "0")}`;
@@ -19454,7 +19458,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
                             return null;
                         return { name: ex.name, dir: sug.dir, delta: sug.weight != null ? sug.weight - s.weight : 0, weight: sug.weight, from: s.weight, reason: sug.reason };
                     }).filter(Boolean);
-                    return (_jsx("div", { onClick: () => { setFinishing(false); setFinishFeedbackOpen(false); }, className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "flex-end", zIndex: 60, animation: "fadeIn .2s both" }, children: _jsxs("div", { ref: sheetDragRef, onClick: e => e.stopPropagation(), style: { width: "100%", background: C.bg2, borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: "8px 16px calc(env(safe-area-inset-bottom) + 22px)", animation: "sheetUp .28s cubic-bezier(.2,.7,.3,1) both", borderTop: `1px solid ${C.border}`, maxHeight: "88%", overflowY: "auto" }, className: "wpb-scroll wpb-finish-sheet", children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }, children: [_jsx("div", { style: { width: 40, height: 40, borderRadius: 11, background: C.accentDim, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: _jsx(Trophy, { size: 20, color: C.accentInk }) }), _jsxs("div", { children: [_jsx("div", { style: { fontSize: 18, fontWeight: 700 }, children: "Workout complete" }), _jsxs("div", { style: { fontSize: 13, color: C.muted }, children: [program.blockLabel ? _jsxs("span", { style: { color: C.accentInk, fontWeight: 600 }, children: [program.blockLabel, " \u00B7 "] }) : null, day.label, " \u00B7 Week ", weekIndex > weeksOf(program) ? "Deload" : weekIndex] })] })] }), _jsx("div", { className: "wpb-finish-metrics", style: { display: "flex", gap: 7, marginBottom: 12 }, children: [["Sets", `${doneSets}/${totalSets}`], ["Volume", `${Math.round(volume).toLocaleString()} ${unit}`], ["Time", `${Math.max(1, Math.round(runElapsedMs() / 60000))}m`]].map(([k, v]) => (_jsxs("div", { style: { flex: 1, background: C.card, borderRadius: 12, padding: "10px 7px", textAlign: "center" }, children: [_jsx("div", { className: "mono", style: { fontSize: 18, fontWeight: 600, color: C.accentInk }, children: v }), _jsx("div", { style: { fontSize: 11, color: C.muted, marginTop: 2 }, children: k })] }, k))) }), prs.length > 0 && (_jsxs("div", { style: { background: C.accentDim, borderRadius: 16, padding: "12px 14px", marginBottom: 16 }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 6, marginBottom: prs.length ? 8 : 0 }, children: [_jsx(Trophy, { size: 14, color: C.accentInk }), _jsxs("span", { style: { fontSize: 15, fontWeight: 700, color: C.accentInk }, children: [prs.length, " estimated-1RM PR", prs.length === 1 ? "" : "s", "!"] })] }), prs.map((p, i) => (_jsxs("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 13, padding: "3px 0" }, children: [_jsx("span", { style: { color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginRight: 8 }, children: p.name }), _jsxs("span", { className: "mono", style: { color: C.accentInk, fontWeight: 600, flexShrink: 0 }, children: ["+", p.gain, " ", unit] })] }, i)))] })), mainE1rm && (_jsxs("div", { style: { background: C.card, borderRadius: 16, padding: "13px 15px", marginBottom: 16 }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between" }, children: [_jsxs("div", { style: { ...eyebrow() }, children: ["Estimated 1RM \u00B7 ", mainE1rm.name] }), mainE1rm.prev > 0 && mainE1rm.est > mainE1rm.prev && _jsxs("span", { className: "mono", style: { fontSize: 11, fontWeight: 700, color: C.accentInk }, children: ["+", mainE1rm.est - mainE1rm.prev, " ", unit] })] }), _jsxs("div", { className: "mono", style: { fontSize: 28, fontWeight: 700, color: C.accentInk, lineHeight: 1.1, marginTop: 4 }, children: [mainE1rm.est, " ", _jsx("span", { style: { fontSize: 15, color: C.muted }, children: unit })] }), _jsxs("div", { style: { fontSize: 13, color: C.muted, marginTop: 2 }, children: ["from your top set of ", mainE1rm.weight, " ", unit, " \u00D7 ", mainE1rm.reps, mainE1rm.prev > 0 ? ` · previous best ${mainE1rm.prev} ${unit}` : ""] })] })), goalsHit.length > 0 && (_jsxs("div", { style: { background: C.accentDim, borderRadius: 16, padding: "12px 14px", marginBottom: 16 }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }, children: [_jsx(Target, { size: 15, color: C.accentInk }), _jsxs("span", { style: { fontSize: 15, fontWeight: 700, color: C.accentInk }, children: [goalsHit.length, " goal", goalsHit.length === 1 ? "" : "s", " reached"] })] }), goalsHit.map((g, i) => (_jsxs("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 13, padding: "3px 0" }, children: [_jsx("span", { style: { color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginRight: 8 }, children: g.name }), _jsxs("span", { className: "mono", style: { color: C.accentInk, fontWeight: 600, flexShrink: 0 }, children: [g.goal, " ", unit, " \u2713"] })] }, i)))] })), nextPlan.length > 0 && (_jsxs("div", { style: { background: C.card, borderRadius: 16, padding: "12px 14px", marginBottom: 16 }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }, children: [_jsx(TrendingUp, { size: 15, color: C.accentInk }), _jsx("span", { style: { fontSize: 15, fontWeight: 700 }, children: "Next session" })] }), nextPlan.map((p, i) => {
+                    return (_jsx("div", { onClick: () => { if (finishingRef.current) return; setFinishing(false); setFinishFeedbackOpen(false); }, className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "flex-end", zIndex: 60, animation: "fadeIn .2s both" }, children: _jsxs("div", { ref: sheetDragRef, onClick: e => e.stopPropagation(), style: { width: "100%", background: C.bg2, borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: "8px 16px calc(env(safe-area-inset-bottom) + 22px)", animation: "sheetUp .28s cubic-bezier(.2,.7,.3,1) both", borderTop: `1px solid ${C.border}`, maxHeight: "88%", overflowY: "auto" }, className: "wpb-scroll wpb-finish-sheet", children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }, children: [_jsx("div", { style: { width: 40, height: 40, borderRadius: 11, background: C.accentDim, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: _jsx(Trophy, { size: 20, color: C.accentInk }) }), _jsxs("div", { children: [_jsx("div", { style: { fontSize: 18, fontWeight: 700 }, children: "Workout complete" }), _jsxs("div", { style: { fontSize: 13, color: C.muted }, children: [program.blockLabel ? _jsxs("span", { style: { color: C.accentInk, fontWeight: 600 }, children: [program.blockLabel, " \u00B7 "] }) : null, day.label, " \u00B7 Week ", weekIndex > weeksOf(program) ? "Deload" : weekIndex] })] })] }), _jsx("div", { className: "wpb-finish-metrics", style: { display: "flex", gap: 7, marginBottom: 12 }, children: [["Sets", `${doneSets}/${totalSets}`], ["Volume", `${Math.round(volume).toLocaleString()} ${unit}`], ["Time", `${Math.max(1, Math.round(runElapsedMs() / 60000))}m`]].map(([k, v]) => (_jsxs("div", { style: { flex: 1, background: C.card, borderRadius: 12, padding: "10px 7px", textAlign: "center" }, children: [_jsx("div", { className: "mono", style: { fontSize: 18, fontWeight: 600, color: C.accentInk }, children: v }), _jsx("div", { style: { fontSize: 11, color: C.muted, marginTop: 2 }, children: k })] }, k))) }), prs.length > 0 && (_jsxs("div", { style: { background: C.accentDim, borderRadius: 16, padding: "12px 14px", marginBottom: 16 }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 6, marginBottom: prs.length ? 8 : 0 }, children: [_jsx(Trophy, { size: 14, color: C.accentInk }), _jsxs("span", { style: { fontSize: 15, fontWeight: 700, color: C.accentInk }, children: [prs.length, " estimated-1RM PR", prs.length === 1 ? "" : "s", "!"] })] }), prs.map((p, i) => (_jsxs("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 13, padding: "3px 0" }, children: [_jsx("span", { style: { color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginRight: 8 }, children: p.name }), _jsxs("span", { className: "mono", style: { color: C.accentInk, fontWeight: 600, flexShrink: 0 }, children: ["+", p.gain, " ", unit] })] }, i)))] })), mainE1rm && (_jsxs("div", { style: { background: C.card, borderRadius: 16, padding: "13px 15px", marginBottom: 16 }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between" }, children: [_jsxs("div", { style: { ...eyebrow() }, children: ["Estimated 1RM \u00B7 ", mainE1rm.name] }), mainE1rm.prev > 0 && mainE1rm.est > mainE1rm.prev && _jsxs("span", { className: "mono", style: { fontSize: 11, fontWeight: 700, color: C.accentInk }, children: ["+", mainE1rm.est - mainE1rm.prev, " ", unit] })] }), _jsxs("div", { className: "mono", style: { fontSize: 28, fontWeight: 700, color: C.accentInk, lineHeight: 1.1, marginTop: 4 }, children: [mainE1rm.est, " ", _jsx("span", { style: { fontSize: 15, color: C.muted }, children: unit })] }), _jsxs("div", { style: { fontSize: 13, color: C.muted, marginTop: 2 }, children: ["from your top set of ", mainE1rm.weight, " ", unit, " \u00D7 ", mainE1rm.reps, mainE1rm.prev > 0 ? ` · previous best ${mainE1rm.prev} ${unit}` : ""] })] })), goalsHit.length > 0 && (_jsxs("div", { style: { background: C.accentDim, borderRadius: 16, padding: "12px 14px", marginBottom: 16 }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }, children: [_jsx(Target, { size: 15, color: C.accentInk }), _jsxs("span", { style: { fontSize: 15, fontWeight: 700, color: C.accentInk }, children: [goalsHit.length, " goal", goalsHit.length === 1 ? "" : "s", " reached"] })] }), goalsHit.map((g, i) => (_jsxs("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 13, padding: "3px 0" }, children: [_jsx("span", { style: { color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginRight: 8 }, children: g.name }), _jsxs("span", { className: "mono", style: { color: C.accentInk, fontWeight: 600, flexShrink: 0 }, children: [g.goal, " ", unit, " \u2713"] })] }, i)))] })), nextPlan.length > 0 && (_jsxs("div", { style: { background: C.card, borderRadius: 16, padding: "12px 14px", marginBottom: 16 }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }, children: [_jsx(TrendingUp, { size: 15, color: C.accentInk }), _jsx("span", { style: { fontSize: 15, fontWeight: 700 }, children: "Next session" })] }), nextPlan.map((p, i) => {
                                             const up = p.dir === "up", down = p.dir === "down";
                                             const col = up ? C.accent : down ? (C.warn || C.muted) : C.muted;
                                             const txt = up ? `+${p.delta} ${unit} → ${p.weight}` : down ? `${p.delta} ${unit} → ${p.weight}` : "Hold · build reps";
@@ -19479,7 +19483,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
                                                             return (_jsx("button", { onClick: () => setter(f => ({ ...f, [part]: on ? undefined : v })), className: "pressable", style: { flex: 1, padding: "6px 4px", borderRadius: 8, cursor: "pointer", fontSize: 11, fontWeight: 600, border: `1px solid ${on ? C.accent : C.border}`, background: on ? C.accentDim : C.card, color: on ? C.accentInk : C.muted, textAlign: "center" }, children: label }, v));
                                                         }) }));
                                                     return (_jsxs("div", { style: { background: C.card, borderRadius: 12, padding: "10px 12px", marginBottom: 8 }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", marginBottom: 8 }, children: [_jsx("span", { style: { flex: 1, fontSize: 15, fontWeight: 600 }, children: PART_LABEL[part] }), nudge && _jsx("span", { style: { fontSize: 11, fontWeight: 700, color: nudge.c }, children: nudge.t })] }), nudge && (nv.blocked || (nv.advice !== 0 && nv.applied !== nv.feedback)) && (_jsx("div", { style: { fontSize: 11, color: C.faint, marginTop: -4, marginBottom: 6, lineHeight: 1.4 }, children: nv.blocked ? nv.why : `from your logged volume: ${(volumeAdvice(history, { program }).find(a => a.part === part) || {}).reason || ""}` })), _jsxs("div", { style: { display: "flex", gap: 8 }, children: [_jsxs("div", { style: { flex: 1 }, children: [_jsx("div", { style: { ...eyebrow(), marginBottom: 4 }, children: "Pump" }), axis(fbPump, setFbPump, [["flat", "Flat"], ["good", "Good"], ["huge", "Huge"]])] }), _jsxs("div", { style: { flex: 1 }, children: [_jsx("div", { style: { ...eyebrow(), marginBottom: 4 }, children: "Recovery" }), axis(fbSore, setFbSore, [["sore", "Sore"], ["ontime", "On time"], ["fresh", "Fresh"]])] })] })] }, part));
-                                                })] })] })), _jsx("button", { onClick: finish, className: "pressable", style: { width: "100%", padding: "15px", borderRadius: 16, border: "none", background: C.accent, color: C.accentText, fontSize: 15, fontWeight: 700, cursor: "pointer" }, children: "Save & finish" }), _jsxs("div", { className: "wpb-finish-share-row", style: { display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 8, marginTop: 8 }, children: [_jsx("button", { onClick: () => {
+                                                })] })] })), _jsx("button", { onClick: finish, disabled: finishSaving, "aria-busy": finishSaving, className: "pressable", style: { width: "100%", padding: "15px", borderRadius: 16, border: "none", background: C.accent, color: C.accentText, fontSize: 15, fontWeight: 700, cursor: "pointer" }, children: finishSaving ? "Saving…" : "Save & finish" }), _jsxs("div", { className: "wpb-finish-share-row", style: { display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 8, marginTop: 8 }, children: [_jsx("button", { onClick: () => {
                                                 const durMin = Math.max(1, Math.round(runElapsedMs() / 60000));
                                                 const tops = recapTops().map(t => `• ${t.name}: ${t.set}`).slice(0, 8);
                                                 const lines = [
@@ -19557,7 +19561,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
                                             } }, style: { width: "100%", boxSizing: "border-box", padding: "11px 12px", borderRadius: 12, border: `1px solid ${C.accent}`, background: C.card, color: C.text, fontSize: 15, fontWeight: 600 } }), _jsxs("div", { style: { display: "flex", gap: 8, marginTop: 8 }, children: [_jsxs("button", { onClick: () => { if (routineName.trim()) {
                                                         onSaveRoutine(data.map(x => x.id), routineName.trim());
                                                         finish();
-                                                    } }, disabled: !routineName.trim(), className: "pressable", style: { flex: 1, padding: "12px", borderRadius: 12, border: "none", background: routineName.trim() ? C.accent : C.card, color: routineName.trim() ? C.accentText : C.faint, fontSize: 15, fontWeight: 700, cursor: routineName.trim() ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }, children: [_jsx(Save, { size: 14 }), " Save & finish"] }), _jsx("button", { onClick: () => setRoutineName(null), className: "pressable", style: { padding: "12px 14px", borderRadius: 12, border: `1px solid ${C.border}`, background: "none", color: C.muted, fontSize: 15, fontWeight: 600, cursor: "pointer" }, children: "Cancel" })] })] }))), _jsx("button", { onClick: () => { setFinishing(false); setFinishFeedbackOpen(false); }, className: "pressable", style: { width: "100%", padding: "12px", marginTop: 8, borderRadius: 13, border: `1px solid ${C.border}`, background: "none", color: C.muted, fontSize: 15, fontWeight: 600, cursor: "pointer" }, children: "Keep training" })] }) }));
+                                                    } }, disabled: !routineName.trim(), className: "pressable", style: { flex: 1, padding: "12px", borderRadius: 12, border: "none", background: routineName.trim() ? C.accent : C.card, color: routineName.trim() ? C.accentText : C.faint, fontSize: 15, fontWeight: 700, cursor: routineName.trim() ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }, children: [_jsx(Save, { size: 14 }), " Save & finish"] }), _jsx("button", { onClick: () => setRoutineName(null), className: "pressable", style: { padding: "12px 14px", borderRadius: 12, border: `1px solid ${C.border}`, background: "none", color: C.muted, fontSize: 15, fontWeight: 600, cursor: "pointer" }, children: "Cancel" })] })] }))), _jsx("button", { onClick: () => { if (finishingRef.current) return; setFinishing(false); setFinishFeedbackOpen(false); }, className: "pressable", style: { width: "100%", padding: "12px", marginTop: 8, borderRadius: 13, border: `1px solid ${C.border}`, background: "none", color: C.muted, fontSize: 15, fontWeight: 600, cursor: "pointer" }, children: "Keep training" })] }) }));
                 })() }), _jsx(Exit, { when: !!calc, children: calc && _jsx(PlateCalcSheet, { unit: unit, initialBar: calc.bar, initialWeight: calc.weight, onClose: () => setCalc(false) }) }), _jsx(Exit, { when: goalEdit, children: goalEdit && (_jsx("div", { onClick: () => setGoalEdit(null), className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.65)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 70, animation: "fadeIn .2s both", padding: 24 }, children: _jsxs("div", { onClick: e => e.stopPropagation(), className: "wpb-dialog", style: { width: "100%", maxWidth: 320, background: C.bg2, borderRadius: 16, padding: 20, border: `1px solid ${C.border}` }, children: [_jsxs("div", { style: { fontSize: 15, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }, children: [_jsx(Target, { size: 17, color: C.accentInk }), " Goal weight"] }), _jsxs("div", { style: { fontSize: 13, color: C.muted, marginTop: 2, marginBottom: 16 }, children: [EX_BY_ID[goalEdit.exId]?.name, " \u2014 the top-set weight you're working toward."] }), _jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }, children: [_jsx("input", { "aria-label": "Goal weight", inputMode: "decimal", value: goalEdit.w, autoFocus: true, onChange: e => setGoalEdit(g => ({ ...g, w: e.target.value })), className: "mono", style: { flex: 1, padding: "12px 14px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: 18, fontWeight: 600, textAlign: "center" } }), _jsx("span", { style: { fontSize: 15, color: C.muted, fontWeight: 600 }, children: unit })] }), _jsx("button", { onClick: () => { onSetGoal?.(goalEdit.exId, parseFloat(goalEdit.w) || 0); setGoalEdit(null); }, className: "pressable", style: { width: "100%", padding: "13px", borderRadius: 12, border: "none", background: C.accent, color: C.accentText, fontSize: 15, fontWeight: 700, cursor: "pointer" }, children: "Save goal" }), _jsxs("div", { style: { display: "flex", gap: 8, marginTop: 8 }, children: [goals[goalEdit.exId] && _jsx("button", { onClick: () => { onSetGoal?.(goalEdit.exId, 0); setGoalEdit(null); }, className: "pressable", style: { flex: 1, padding: "11px", borderRadius: 12, border: `1px solid ${C.dangerDim}`, background: "none", color: C.danger, fontSize: 15, fontWeight: 600, cursor: "pointer" }, children: "Clear" }), _jsx("button", { onClick: () => setGoalEdit(null), className: "pressable", style: { flex: 1, padding: "11px", borderRadius: 12, border: `1px solid ${C.border}`, background: "none", color: C.muted, fontSize: 15, fontWeight: 600, cursor: "pointer" }, children: "Cancel" })] })] }) })) }), _jsx(Exit, { when: histEdit, children: histEdit && (_jsx("div", { onClick: () => setHistEdit(null), className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.65)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 70, animation: "fadeIn .2s both", padding: 24 }, children: _jsxs("div", { onClick: e => e.stopPropagation(), className: "wpb-dialog", style: { width: "100%", maxWidth: 340, background: C.bg2, borderRadius: 16, padding: 20, border: `1px solid ${C.border}` }, children: [_jsx("div", { style: { fontSize: 15, fontWeight: 700 }, children: "Edit logged set" }), _jsxs("div", { style: { fontSize: 13, color: C.muted, marginTop: 2, marginBottom: 16 }, children: [EX_BY_ID[histEdit.exId]?.name, " \u00B7 top set"] }), _jsxs("div", { style: { display: "flex", gap: 8, marginBottom: 16 }, children: [_jsxs("div", { style: { flex: 1 }, children: [_jsxs("div", { style: { fontSize: 11, fontWeight: 600, color: C.muted, marginBottom: 4 }, children: ["WEIGHT (", unit, ")"] }), _jsx("input", { "aria-label": "Weight lifted", inputMode: "decimal", value: histEdit.w, onChange: e => setHistEdit(h => ({ ...h, w: e.target.value })), className: "mono", style: { width: "100%", padding: "11px 12px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: 15, fontWeight: 600, textAlign: "center" } })] }), _jsxs("div", { style: { flex: 1 }, children: [_jsx("div", { style: { fontSize: 11, fontWeight: 600, color: C.muted, marginBottom: 4 }, children: "REPS" }), _jsx("input", { "aria-label": "Reps completed", inputMode: "numeric", value: histEdit.r, onChange: e => setHistEdit(h => ({ ...h, r: e.target.value })), className: "mono", style: { width: "100%", padding: "11px 12px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: 15, fontWeight: 600, textAlign: "center" } })] })] }), _jsx("button", { onClick: () => { const w = parseFloat(histEdit.w), r = parseInt(histEdit.r); if (w > 0 && r > 0)
                                     onEditHistory?.(histEdit.histId, histEdit.exId, { weight: w, reps: r }); setHistEdit(null); }, className: "pressable", style: { width: "100%", padding: "14px", borderRadius: 12, border: "none", background: C.accent, color: C.accentText, fontSize: 15, fontWeight: 700, cursor: "pointer" }, children: "Save" }), _jsxs("div", { style: { display: "flex", gap: 8, marginTop: 8 }, children: [_jsx("button", { onClick: () => { onEditHistory?.(histEdit.histId, histEdit.exId, null); setHistEdit(null); }, className: "pressable", style: { flex: 1, padding: "12px", borderRadius: 12, border: `1px solid ${C.dangerDim}`, background: "none", color: C.danger, fontSize: 15, fontWeight: 600, cursor: "pointer" }, children: "Delete entry" }), _jsx("button", { onClick: () => setHistEdit(null), className: "pressable", style: { flex: 1, padding: "12px", borderRadius: 12, border: `1px solid ${C.border}`, background: "none", color: C.muted, fontSize: 15, fontWeight: 600, cursor: "pointer" }, children: "Cancel" })] })] }) })) }), _jsx(Exit, { when: !!why, children: why && (() => {
                     /* The readiness context comes from buildLifterModel — the SAME model bandForExercise uses to
@@ -23276,6 +23280,7 @@ function StrengthSnapshotCard({ history, bodyweight, sex, age, unit, bwLog = [],
  * Newest release first, newest entry first within a release. */
 const WHATS_NEW_MAX = 10;
 const CHANGELOG = [
+    { version: "4.0.0", build: "807", items: ["Workouts now stay open if the device cannot save. Completed history is saved before the recovery copy is removed, with Retry save available when needed.", "Android Back and Minimize save your progress before leaving the workout. Update restarts also save the current app data first.", "An interruption during completion cleanup cannot create a second log of the same workout.", "Screen awake follows the workout and releases when you leave. Installed apps also support landscape and split-screen layouts.", "Block length uses a compact week field with minus/plus controls. Saved phase lengths remain consistent across cycle views.", "Custom routines keep their scheduled final-set techniques in later weeks."] },
     { version: "3.215.0", build: "771", items: ["Fixed generated-plan set counts at the shared engine-to-shell boundary: persisted array-shaped counts now resolve to one scalar, and ambiguous corrupt values recover from the immutable engine prescription instead of repeating/multiplying across Home, Program, Plan, Preview, or Workout.", "Cleaned up the workout SET / TARGET-LAST row: the phone columns have more breathing room and LAST shows load × reps only, without repeating RIR that is already shown in the suggestion/effort surfaces.", "Fixed cycle next-block dose previews reading nonexistent week 0; opening-set summaries now use the engine's 1-based week 1 prescription. Pursuit Engine 0.62.5 programming math is unchanged."] },
     { version: "3.214.0", build: "770", items: ["Workout History is now editable: correct date/time, duration, per-set load, reps and RIR, add/remove sets, or remove a lift; program/day/week ownership stays locked and derived progression/readiness data refreshes from the correction.", "Fixed custom-program double progression when a 10-15 rep range was stored as an array: 10 reps is the baseline, not the load-increase trigger; every prescribed set must reach 15 at the planned effort before weight goes up.", "Re-audited the live authority path: generated programs are created and audited by Pursuit Engine 0.62.5, workout set counts come from its week cells, and completed history is evaluated by its progression engine; legacy generated-plan progression remains bypassed."] },
     { version: "3.213.0", build: "769", items: ["Program and workout effort ranges now normalize engine array values such as [2,2] to a single clean 2 RIR label instead of showing 2,2.", "Finite-program week progress now advances from distinct completed days when modern history has explicit week/day data, so a repeated or duplicated workout cannot silently jump the plan into a later lower-volume week.", "The M162 double-progression rep-floor safety fix is retained unchanged; this update does not regenerate or reduce saved program volume."] },
@@ -24214,7 +24219,7 @@ function ChangelogSheet({ onClose }) {
    WHATS_NEW_MAX entries and still says how many more are in the full log. Measured after: ~700
    characters, the same information hierarchy the version pill at the top already implies. */
 function WhatsNewCard({ onDismiss, onFullLog }) {
-    const items = CHANGELOG_ITEMS.slice(0, WHATS_NEW_MAX);
+    const items = (CHANGELOG[0]?.items || []).slice(0, WHATS_NEW_MAX);
     // How many of those belong to the release this build IS — the ones the user has not seen before.
     const latest = Math.min(items.length, (CHANGELOG[0] && CHANGELOG[0].items.length) || items.length);
     return (_jsxs("div", { style: { background: C.card, borderRadius: 16, padding: "16px 16px 14px", marginBottom: 12 }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }, children: [_jsx(Zap, { size: 16, color: C.accentInk }), _jsx("span", { style: { fontSize: 15, fontWeight: 700 }, children: "What's new" }), _jsxs("span", { className: "mono", style: { fontSize: 11, fontWeight: 700, color: C.accentInk, background: C.accentDim, padding: "2px 7px", borderRadius: 8 }, children: ["v", APP_VERSION] }), _jsx("button", { onClick: onDismiss, "aria-label": "Dismiss", className: "pressable hit", style: { marginLeft: "auto", width: 28, height: 28, borderRadius: 8, border: "none", background: C.bg2, color: C.muted, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }, children: _jsx(X, { size: 15 }) })] }), _jsxs("div", { style: { fontSize: 13, color: C.muted, marginBottom: 12 }, children: ["The ", items.length, " most recent changes", CHANGELOG_ITEMS.length > items.length ? ` · ${CHANGELOG_ITEMS.length - items.length} more in the full log` : ""] }), items.map(({ Icon, title, sub }, i) => (_jsxs("div", { "data-wn-item": i < latest ? "full" : "brief", style: { display: "flex", gap: 12, alignItems: i < latest ? "flex-start" : "center", marginBottom: i < items.length - 1 ? (i < latest ? 13 : 9) : 14 }, children: [_jsx("div", { style: { width: i < latest ? 34 : 26, height: i < latest ? 34 : 26, borderRadius: 12, background: C.accentDim, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: _jsx(Icon, { size: i < latest ? 16 : 13, color: C.accentInk }) }), _jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { style: { fontSize: i < latest ? 15 : 13, fontWeight: 700 }, children: title }), i < latest && _jsx("div", { style: { fontSize: 13, color: C.muted, lineHeight: 1.45, marginTop: 1 }, children: capWords(sub) })] })] }, i))), CHANGELOG_ITEMS.length > items.length && (_jsx("button", { onClick: onFullLog, className: "pressable", style: { width: "100%", padding: "9px", marginBottom: 8, borderRadius: 12, border: `1px solid ${C.border}`, background: "none", color: C.accentInk, fontSize: 13, fontWeight: 700, cursor: "pointer" }, children: "Full changelog" })), _jsx("button", { onClick: onDismiss, className: "pressable", style: { width: "100%", padding: "11px", borderRadius: 12, border: "none", background: C.accent, color: C.accentText, fontSize: 15, fontWeight: 700, cursor: "pointer" }, children: "Got it" })] }));
@@ -25951,7 +25956,7 @@ function LibraryView({ onBack, banned = [], onBan, onSetBan, goals = {}, onSetGo
                                         setDetailId(null); }, className: "pressable", "aria-label": "Ban from all programs", "aria-pressed": banned.includes(detail.id), style: { width: "100%", padding: "13px", borderRadius: 12, border: `1px solid ${banned.includes(detail.id) ? C.border : C.dangerDim}`, background: "none", color: banned.includes(detail.id) ? C.muted : C.danger, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 8 }, children: [_jsx(Ban, { size: 15 }), " ", banned.includes(detail.id) ? "Banned \u2014 tap to unban" : "Ban from all programs"] })] })] })) })] }));
 }
 const INTRO_VERSION = 5; // bump when onboarding content changes → returning users see it once more
-const WHATS_NEW_VERSION = 214; // bump when there's an update worth showing existing users on Home
+const WHATS_NEW_VERSION = 217; // bump when there's an update worth showing existing users on Home
 /* How much training history to keep.
 
    Measured, not guessed: a typical logged session (7 exercises, 3–5 sets each) serialises to ~1,095
@@ -26540,11 +26545,17 @@ function App() {
         catch { }
         return () => window.removeEventListener("wpb:update-ready", on);
     }, []);
-    const applyUpdate = () => { try {
+    const applyUpdate = async () => { try {
+        if (!updateReady)
+            return;
+        if (!safeStart && !(await persistAppStore())) {
+            setAppToast({ msg: "Could not save before restarting. Free some device storage, then try again." });
+            return;
+        }
         window.__pursuitUpdateRequested = true;
-        updateReady && updateReady.postMessage({ type: "SKIP_WAITING" });
+        updateReady.postMessage({ type: "SKIP_WAITING" });
     }
-    catch { } };
+    catch { setAppToast({ msg: "The update could not restart. Your current screen is still open." }); } };
     // Native-feel: a subtle haptic tick on every tapped control. We fire on pointerup only when the
     // pointer barely moved since pointerdown, so scrolling a list of pressable cards never buzzes — only
     // a deliberate tap does. buzz() already self-gates on the user's haptics setting, so this respects it.
@@ -26940,20 +26951,23 @@ function App() {
         window.addEventListener("storage", onStorage);
         return () => window.removeEventListener("storage", onStorage);
     }, []);
+    // Autosave, completed workouts, and an explicit update restart share this one store writer.
+    // A completion supplies its next history/performance values before navigating away.
+    const persistAppStore = (changes = {}) => {
+        if (!loaded || safeStart)
+            return Promise.resolve(false);
+        // savedAt tells a merge which settings copy is newer. Keep deletion tombstones for six months.
+        const cutoff = Date.now() - 1000 * 60 * 60 * 24 * 180;
+        const tombsOut = {};
+        Object.entries(changes.tombs || tombs).forEach(([id, t]) => { if (t >= cutoff)
+            tombsOut[id] = t; });
+        return saveStore({ v: STORE_VERSION, savedAt: Date.now(), drafts, banned, equipDefault, gyms, activeGymId, unit, unitChosen, experience, loadMode, perf, history, custom, theme, bodyweight, sex, birth, birthEst, age, bwLog, measurements, restAutoStart, warmupCard, restScale, haptics, reminders, minInc, plates, seenIntro: seenIntroV, seenWhatsNew, goals, exNotes, exSetup, lastBackup, installDismissedAt, pinnedId, canaryResearch, selectivePromotionRuntime, ...changes, tombs: tombsOut, saved: withLegacy(changes.saved || saved, "saved"), cycles: withLegacy(changes.cycles || cycles, "cycles") });
+    };
     useEffect(() => {
         if (!loaded || safeStart)
             return;
         (async () => {
-            // savedAt is what tells a merge which of two copies is the more recent — without it, settings
-            // conflicts have nothing to resolve against. Tombstones are pruned to six months: long enough that
-            // a device left in a drawer over a training block still learns about the deletions it missed, short
-            // enough that a decade of them doesn't ride along in every backup.
-            const TOMB_TTL = 1000 * 60 * 60 * 24 * 180;
-            const cutoff = Date.now() - TOMB_TTL;
-            const tombsOut = {};
-            Object.entries(tombs).forEach(([id, t]) => { if (t >= cutoff)
-                tombsOut[id] = t; });
-            const ok = await saveStore({ v: STORE_VERSION, savedAt: Date.now(), tombs: tombsOut, saved: withLegacy(saved, "saved"), drafts, cycles: withLegacy(cycles, "cycles"), banned, equipDefault, gyms, activeGymId, unit, unitChosen, experience, loadMode, perf, history, custom, theme, bodyweight, sex, birth, birthEst, age, bwLog, measurements, restAutoStart, warmupCard, restScale, haptics, reminders, minInc, plates, seenIntro: seenIntroV, seenWhatsNew, goals, exNotes, exSetup, lastBackup, installDismissedAt, pinnedId, canaryResearch, selectivePromotionRuntime });
+            const ok = await persistAppStore();
             // If the device couldn't persist (quota full, private-mode block), tell the user ONCE so they
             // can export a backup before losing anything — far better than a silent failure on reload.
             if (!ok && !storageWarned.current) {
@@ -28405,24 +28419,30 @@ function App() {
     // Keep the minimized-workout resume bar in sync: whenever we're outside the session view (or the
     // library changes), re-read the live snapshot so the bar appears after minimizing and clears after
     // finishing/discarding.
+    const completedLiveSession = snapshot => !!(snapshot?.sessionId && history.some(entry => entry.id === snapshot.sessionId));
     useEffect(() => {
-        if (view === "session") {
+        if (!loaded || view === "session") {
             setLiveSession(null);
             return;
         }
         try {
             const lv = JSON.parse(localStorage.getItem(LIVE_KEY) || "null");
-            setLiveSession(lv && lv.programId ? lv : null);
+            if (completedLiveSession(lv)) {
+                try { localStorage.removeItem(LIVE_KEY); } catch {}
+                setLiveSession(null);
+            }
+            else
+                setLiveSession(lv && lv.programId ? lv : null);
         }
         catch {
             setLiveSession(null);
         }
-    }, [view, saved]);
+    }, [view, saved, history, loaded]);
     const resumeLive = () => {
         setDiscardArmed(false);
         try {
             const lv = JSON.parse(localStorage.getItem(LIVE_KEY) || "null");
-            if (!lv) {
+            if (!lv || completedLiveSession(lv)) {
                 setLiveSession(null);
                 return;
             }
@@ -28525,10 +28545,29 @@ function App() {
         setSaved(prev => [...prev, np]);
         setAppToast({ msg: `Saved "${nm}" to your library` });
     };
-    const finishSession = (log) => {
-        const entry = { id: uid(), date: Date.now(), ...log };
-
-
+    const finishSession = async (log) => {
+        const now = Date.now();
+        const entry = { id: uid(), date: now, ...log, updatedAt: now };
+        const nextHistory = capHistory([entry, ...history.filter(h => h.id !== entry.id)]);
+        const nextPerf = log.perf && Object.keys(log.perf).length ? { ...perf, ...log.perf } : perf;
+        const nextTombs = { ...tombs };
+        const keptIds = new Set(nextHistory.map(h => h.id));
+        history.forEach(h => { if (!keptIds.has(h.id)) nextTombs[h.id] = now; });
+        let clearedProgram = program;
+        let nextSaved = saved;
+        if (program?.deloadNext && log.perf) {
+            const trained = Object.keys(log.perf).filter(id => program.deloadNext[id] != null);
+            if (trained.length) {
+                const nd = { ...program.deloadNext };
+                trained.forEach(id => delete nd[id]);
+                clearedProgram = { ...program, deloadNext: Object.keys(nd).length ? nd : undefined, updatedAt: now };
+                nextSaved = saved.map(p => p.id === clearedProgram.id ? clearedProgram : p);
+            }
+        }
+        // A full/quota-blocked store must leave the live recovery copy and workout screen intact.
+        // Persist history, performance and consumed deload together before updating React state.
+        if (!(await persistAppStore({ history: nextHistory, perf: nextPerf, saved: nextSaved, tombs: nextTombs })))
+            return false;
         /* Both calls must use the SAME options the Achievements screen uses. Called bare, this defaulted
            to kg and a bodyweight of 0, which meant two things: for anyone logging in lb the tonnage
            badges were judged against kg thresholds and disagreed with the board they were reading, and
@@ -28541,19 +28580,12 @@ function App() {
         const fresh = computeMilestones([entry, ...history], msOpts).filter(m => m.done && !before.has(m.id));
         // capHistory, not a bare slice: the byte budget has to apply to the incremental path too, or a
         // lifter logging huge sessions walks past the storage limit one workout at a time.
-        setHistory(prev => capHistory([entry, ...prev]));
-        if (log.perf && Object.keys(log.perf).length)
-            setPerf(prev => ({ ...prev, ...log.perf }));
+        setHistory(nextHistory);
+        setPerf(nextPerf);
         // one-shot deload is consumed once the lift has been trained
-        if (program?.deloadNext && log.perf) {
-            const trained = Object.keys(log.perf).filter(id => program.deloadNext[id] != null);
-            if (trained.length) {
-                const nd = { ...program.deloadNext };
-                trained.forEach(id => delete nd[id]);
-                const cleared = { ...program, deloadNext: Object.keys(nd).length ? nd : undefined };
-                setProgram(cleared);
-                setSaved(prev => prev.map(p => p.id === cleared.id ? cleared : p));
-            }
+        if (clearedProgram !== program) {
+            setProgram(clearedProgram);
+            setSaved(nextSaved);
         }
         // M46: no scheme-specific legacy state mutation. Completed-set history is the only progression input.
         setSessionDay(null);
@@ -28567,6 +28599,7 @@ function App() {
             setTimeout(() => setAppToast({ msg: `${fresh[0].icon} Achievement unlocked — ${fresh[0].label}${fresh.length > 1 ? ` +${fresh.length - 1} more` : ""}` }), 400);
         else
             setTimeout(() => setAppToast({ msg: "Workout logged ✓" }), 400);
+        return true;
     };
     const setGoalWeight = (exId, w) => setGoals(prev => { const g = { ...prev }; if (w > 0)
         g[exId] = w;

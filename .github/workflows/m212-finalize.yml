@@ -51,6 +51,12 @@ jobs:
           replaceOnce(app, 'const handleRegenerate = (seed, toEngine = null, configPatch = null, metaPatch = null) => {', 'const handleRegenerate = (seed, _toEngine = null, configPatch = null, metaPatch = null) => {');
           replaceOnce(app, '`toEngine` is retained in', '`_toEngine` is retained in');
 
+          // Pursuit Next is already the only generation path; the old boolean flag now has no branch to control.
+          replaceOnce(app, ', allowModeChoice = false, nextEngineOnly = true }) {', ', allowModeChoice = false }) {');
+          replaceOnce(app, 'cycleMode: true, nextEngineOnly: nextEngineOnly, onCancel:', 'cycleMode: true, onCancel:');
+          replaceOnce(app, 'allowModeChoice: true, nextEngineOnly: nextEngineOnly, onCancel:', 'allowModeChoice: true, onCancel:');
+          replaceRegexOnce(app, /^\s*\/\/ M46: Pursuit Next is the sole owner of all user-facing plan generation\. This is intentionally\n\s*\/\/ not a preference anymore: a testing build cannot prove the new engine if the old generator can\n\s*\/\/ still be selected or reached as a silent fallback\.\n\s*const nextEngineOnly = true;\n/m, '');
+
           // Wizard / view prop contracts that no longer consume these values.
           replaceOnce(app, ', nextEngineOnly, nextRecommendedSplit }) {', ', nextRecommendedSplit }) {');
           replaceOnce(app, ', nextEngineOnly: nextEngineOnly, nextRecommendedSplit: nextRecommendedSplit', ', nextRecommendedSplit: nextRecommendedSplit');
@@ -69,12 +75,13 @@ jobs:
 
           // Pure calculations whose results are never read.
           replaceRegexOnce(app, /^\s*const isPrimary = slot === day\.primaryIndex;\n\s*let sets = null, sug = null;\n\s*try \{\n\s*const cell = computeCell\(program, day, ex\.id, slot, w\);\n\s*const range = cellRepRange\(cell, program, ex, isPrimary\);\n/m,
-            '                let sets = null, sug = null;\n                try {\n                    const cell = computeCell(program, day, ex.id, slot, w);\n');
+            '                let sets = null, sug = null;\n                try {\n');
           replaceRegexOnce(app, /^\s*const isP = slot === day\.primaryIndex;\n\s*const swapCell = computeCell\(program, day, newId, slot, weekIndex\);\n\s*const swapRange = \(\(\) => \{[\s\S]*?return cellRepRange\(swapCell, program, newEx, isP\);\n\s*\}\)\(\);\n/m, '');
 
           // Workout, home, settings, review, and gallery plumbing that no longer has a consumer.
           replaceOnce(app, 'weekIndex, unit, setUnit, perf,', 'weekIndex, unit, perf,');
           replaceOnce(app, 'weekIndex: sessionWeek, unit: unit, setUnit: chooseUnit, perf: perf,', 'weekIndex: sessionWeek, unit: unit, perf: perf,');
+          replaceRegexOnce(app, /^\s*const chooseUnit = \(u\) => \{ setUnit\(u\); setUnitChosen\(true\); \};\n/m, '');
           replaceOnce(app, 'function homeCardPlan(history, { bodyweight, unit, sex, age } = {}) {', 'function homeCardPlan(history, { bodyweight } = {}) {');
           replaceOnce(app, 'homeCardPlan(history, { bodyweight, unit, sex, age }), [history, bodyweight, unit, sex, age]', 'homeCardPlan(history, { bodyweight }), [history, bodyweight]');
           replaceOnce(app, ', onDuplicate, onNextBlock, onConvertCycle,', ', onDuplicate, onConvertCycle,');
@@ -90,7 +97,7 @@ jobs:
           // Cleanup invariants: M212 leaves only the separately-audited propagateCycleEdits callback.
           const testFile = 'verification/m205-engine-cleanup-test.mjs';
           const anchor = "assert.doesNotMatch(index, /app-shell-adapter/, 'Node and browser must resolve the same canonical adapter');";
-          const assertions = `const retiredAppSignaturePlumbing = [\n    'build: (n) => ["b531_a", "b531_b", "b531_a"]',\n    'function sessionExercisePlan(session, goal = "hypertrophy", experience =',\n    'function isAxialLoad(ex, eng = 1)', 'nextEngineOnly, nextRecommendedSplit',\n    'ordered.map(([k, sp, gaps, v])', 'function PlanView({ program, plan, unit,',\n    'function NextWorkoutView({ program, day, weekIndex, unit =', 'const [showWave, setShowWave]',\n    'program, day, unit, sessionExerciseIds', 'const barbell = (cx, cy, ang = 0, half = 20)',\n    'const arm = (sh, wr, sign) =>', 'const range = cellRepRange(cell, program, ex, isPrimary);',\n    'weekIndex, unit, setUnit, perf,', 'const swapRange = (() =>',\n    'function overreachSignal(history, program)', 'homeCardPlan(history, { bodyweight, unit, sex, age })',\n    'onDuplicate, onNextBlock, onConvertCycle', 'onGyms, nextEngineOnly, theme',\n    'historyCount, savedCount, onClearBanned', 'onNextBlock: startNextBlock',\n    'savedCount: saved.length', 'function BlockReviewView({ cycle, blockIdx, history = [], onBack, onOpenBlock })',\n    'const [err, setErr] = useState(null);', 'toEngine = null', '// eslint-disable-line'\n];\nfor (const snippet of retiredAppSignaturePlumbing)\n    assert.equal(app.includes(snippet), false, \`dead App signature plumbing must stay removed: \${snippet}\`);\n${anchor}`;
+          const assertions = `const retiredAppSignaturePlumbing = [\n    'build: (n) => ["b531_a", "b531_b", "b531_a"]',\n    'function sessionExercisePlan(session, goal = "hypertrophy", experience =',\n    'function isAxialLoad(ex, eng = 1)', 'function Wizard({ initialEquipment, initialExperience, initialUnit = "kg", skipUnits = false, onCancel, onDone, cycleMode: cycleModeInit = false, allowModeChoice = false, nextEngineOnly = true })',\n    'const nextEngineOnly = true;', 'nextEngineOnly, nextRecommendedSplit',\n    'ordered.map(([k, sp, gaps, v])', 'function PlanView({ program, plan, unit,',\n    'function NextWorkoutView({ program, day, weekIndex, unit =', 'const [showWave, setShowWave]',\n    'program, day, unit, sessionExerciseIds', 'const barbell = (cx, cy, ang = 0, half = 20)',\n    'const arm = (sh, wr, sign) =>', 'const range = cellRepRange(cell, program, ex, isPrimary);',\n    'weekIndex, unit, setUnit, perf,', 'const chooseUnit = (u) =>', 'const swapRange = (() =>',\n    'function overreachSignal(history, program)', 'homeCardPlan(history, { bodyweight, unit, sex, age })',\n    'onDuplicate, onNextBlock, onConvertCycle', 'onGyms, nextEngineOnly, theme',\n    'historyCount, savedCount, onClearBanned', 'onNextBlock: startNextBlock',\n    'savedCount: saved.length', 'function BlockReviewView({ cycle, blockIdx, history = [], onBack, onOpenBlock })',\n    'const [err, setErr] = useState(null);', 'toEngine = null', '// eslint-disable-line'\n];\nfor (const snippet of retiredAppSignaturePlumbing)\n    assert.equal(app.includes(snippet), false, \`dead App signature plumbing must stay removed: \${snippet}\`);\n${anchor}`;
           replaceOnce(testFile, anchor, assertions);
 
           const manifestFile = 'RELEASE_MANIFEST.json';
@@ -118,7 +125,7 @@ jobs:
 
           const changelogFile = 'CHANGELOG.md';
           const changelog = read(changelogFile);
-          const entry = `## M212 — App signature cleanup (build 802)\n\n- Removed unused view/component props and their call-site plumbing.\n- Removed discarded simulation/swap calculations and a no-op ProgramView state hook.\n- Preserved historical/exported positional seams with explicit ignored parameters instead of breaking callers.\n- Tightened the static gate: only the separately-audited cycle-propagation callback may remain unused after this release.\n- Engine behavior remains 0.64.9; offline cache rotated for build 802.\n\n`;
+          const entry = `## M212 — App signature cleanup (build 802)\n\n- Removed unused view/component props and their call-site plumbing.\n- Removed discarded simulation/swap calculations and a no-op ProgramView state hook.\n- Removed the retired next-engine-only boolean plumbing now that Pursuit Next is the sole generation path.\n- Preserved historical/exported positional seams with explicit ignored parameters instead of breaking callers.\n- Tightened the static gate: only the separately-audited cycle-propagation callback may remain unused after this release.\n- Engine behavior remains 0.64.9; offline cache rotated for build 802.\n\n`;
           if (!changelog.startsWith('## M212')) write(changelogFile, entry + changelog);
           NODE
 

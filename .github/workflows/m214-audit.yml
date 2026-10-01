@@ -1,0 +1,151 @@
+name: M214 repository dead-code audit
+
+on:
+  push:
+    branches:
+      - audit/m214-repo-dead-code
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Audit runtime reachability, exports, and unused locals
+        shell: bash
+        run: |
+          npm install --prefix /tmp/m214 eslint@9 espree@10 --no-save --ignore-scripts --silent
+
+          cat >eslint.m214.config.mjs <<'EOF'
+          export default [{
+            files: ['modules/**/*.js'],
+            languageOptions: {
+              ecmaVersion: 'latest', sourceType: 'module',
+              globals: {
+                window:'readonly', document:'readonly', navigator:'readonly', localStorage:'readonly', indexedDB:'readonly',
+                location:'readonly', history:'readonly', crypto:'readonly', performance:'readonly', requestAnimationFrame:'readonly',
+                cancelAnimationFrame:'readonly', setTimeout:'readonly', clearTimeout:'readonly', setInterval:'readonly', clearInterval:'readonly',
+                fetch:'readonly', Blob:'readonly', URL:'readonly', FileReader:'readonly', HTMLElement:'readonly', MutationObserver:'readonly',
+                ResizeObserver:'readonly', structuredClone:'readonly', console:'readonly', process:'readonly', Buffer:'readonly',
+                globalThis:'readonly', TextEncoder:'readonly', TextDecoder:'readonly', DOMException:'readonly', AbortController:'readonly'
+              }
+            },
+            rules: { 'no-unused-vars': ['warn',{vars:'all',args:'after-used',ignoreRestSiblings:true,argsIgnorePattern:'^_',varsIgnorePattern:'^_',caughtErrors:'none'}] }
+          }];
+          EOF
+          /tmp/m214/node_modules/.bin/eslint 'modules/**/*.js' --config ./eslint.m214.config.mjs --format json > /tmp/m214-eslint.json || true
+          rm eslint.m214.config.mjs
+
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import path from 'node:path';
+          import * as espree from '/tmp/m214/node_modules/espree/dist/espree.cjs';
+
+          const root = process.cwd();
+          const walk = dir => fs.readdirSync(dir,{withFileTypes:true}).flatMap(e => {
+            const p=path.join(dir,e.name);
+            if(e.isDirectory() && !['.git','node_modules'].includes(e.name)) return walk(p);
+            return e.isFile() ? [p] : [];
+          });
+          const allFiles = walk(root).map(p=>path.relative(root,p).replaceAll('\\','/'));
+          const runtime = allFiles.filter(f=>f.startsWith('modules/') && f.endsWith('.js'));
+          const sourceish = allFiles.filter(f=>/\.(?:m?js|html)$/.test(f) && !f.startsWith('.git/'));
+          const read=f=>fs.readFileSync(f,'utf8');
+          const parse=f=>espree.parse(read(f),{ecmaVersion:'latest',sourceType:'module',range:true,loc:true});
+          const resolve=(from,spec)=>{
+            if(!spec.startsWith('.')) return null;
+            const base=path.posix.normalize(path.posix.join(path.posix.dirname(from),spec));
+            for(const c of [base,base+'.js',path.posix.join(base,'index.js')]) if(runtime.includes(c)) return c;
+            return null;
+          };
+          const imports = new Map(runtime.map(f=>[f,[]]));
+          const importedNames = new Map(runtime.map(f=>[f,new Set()]));
+          const exportsByFile = new Map(runtime.map(f=>[f,[]]));
+
+          for(const f of runtime){
+            let ast;
+            try{ ast=parse(f); }catch(e){ console.log(`PARSE_ERROR ${f}: ${e.message}`); continue; }
+            const addDep=(spec,names=[])=>{
+              const dep=resolve(f,spec); if(!dep)return;
+              imports.get(f).push(dep);
+              for(const n of names) importedNames.get(dep).add(n);
+            };
+            const visit=node=>{
+              if(!node||typeof node!=='object')return;
+              if(node.type==='ImportDeclaration'){
+                const names=node.specifiers.map(s=>s.type==='ImportSpecifier' ? s.imported.name : s.type==='ImportDefaultSpecifier' ? 'default' : '*');
+                addDep(node.source.value,names);
+              } else if(node.type==='ExportNamedDeclaration'){
+                if(node.source){
+                  const names=node.specifiers.map(s=>s.local?.name || s.exported?.name).filter(Boolean);
+                  addDep(node.source.value,names);
+                }
+                if(node.declaration){
+                  const d=node.declaration;
+                  if(d.type==='FunctionDeclaration'||d.type==='ClassDeclaration') exportsByFile.get(f).push(d.id?.name);
+                  else if(d.type==='VariableDeclaration') for(const x of d.declarations) if(x.id.type==='Identifier') exportsByFile.get(f).push(x.id.name);
+                }
+                for(const s of node.specifiers||[]) exportsByFile.get(f).push(s.exported?.name);
+              } else if(node.type==='ExportDefaultDeclaration') exportsByFile.get(f).push('default');
+              else if(node.type==='ExportAllDeclaration') addDep(node.source.value,['*']);
+              else if(node.type==='ImportExpression' && node.source?.type==='Literal' && typeof node.source.value==='string') addDep(node.source.value,['*']);
+              for(const [k,v] of Object.entries(node)){
+                if(['loc','range'].includes(k))continue;
+                if(Array.isArray(v)) for(const x of v) visit(x);
+                else if(v&&typeof v==='object') visit(v);
+              }
+            };
+            visit(ast);
+          }
+
+          // Production entry roots: App plus any direct module scripts referenced by index.html.
+          const roots = new Set(runtime.includes('modules/App.js') ? ['modules/App.js'] : []);
+          if(fs.existsSync('index.html')){
+            const html=read('index.html');
+            for(const m of html.matchAll(/(?:src=|import\s*\()["']([^"']+\.js)["']/g)){
+              const s=m[1].replace(/^\.\//,'');
+              if(runtime.includes(s)) roots.add(s);
+            }
+          }
+          const reachable=new Set(), stack=[...roots];
+          while(stack.length){ const f=stack.pop(); if(reachable.has(f))continue; reachable.add(f); for(const d of imports.get(f)||[]) stack.push(d); }
+          const orphan=runtime.filter(f=>!reachable.has(f));
+
+          const eslint=JSON.parse(fs.readFileSync('/tmp/m214-eslint.json','utf8'));
+          const unused=[];
+          for(const r of eslint) for(const m of r.messages||[]) if(m.ruleId==='no-unused-vars') unused.push({file:path.relative(root,r.filePath).replaceAll('\\','/'),line:m.line,msg:m.message});
+
+          // Named exports with no static import anywhere in runtime. Also classify whether the symbol text occurs elsewhere in repo
+          // so test-only/public seams are visible rather than blindly called dead.
+          const zero=[];
+          for(const f of runtime){
+            for(const name of [...new Set(exportsByFile.get(f).filter(Boolean))]){
+              const used=importedNames.get(f).has(name)||importedNames.get(f).has('*');
+              if(used)continue;
+              let externalRefs=0, samples=[];
+              if(name!=='default') for(const sf of sourceish){
+                if(sf===f)continue;
+                const txt=read(sf);
+                const re=new RegExp(`\\b${name.replace(/[.*+?^${}()|[\\]\\]/g,'\\$&')}\\b`,'g');
+                const count=(txt.match(re)||[]).length;
+                if(count){ externalRefs+=count; if(samples.length<4)samples.push(`${sf}:${count}`); }
+              }
+              zero.push({file:f,name,externalRefs,samples});
+            }
+          }
+
+          console.log(`RUNTIME_MODULES ${runtime.length}`);
+          console.log(`PRODUCTION_ROOTS ${[...roots].join(',')}`);
+          console.log(`REACHABLE_MODULES ${reachable.size}`);
+          console.log(`ORPHAN_MODULES ${orphan.length}`);
+          for(const f of orphan) console.log(`ORPHAN ${f}`);
+          console.log(`UNUSED_LOCAL_BINDINGS ${unused.length}`);
+          for(const x of unused) console.log(`UNUSED ${x.file}:${x.line} | ${x.msg}`);
+          console.log(`ZERO_STATIC_IMPORT_EXPORTS ${zero.length}`);
+          for(const x of zero) console.log(`EXPORT ${x.file} | ${x.name} | OTHER_REFS ${x.externalRefs} | ${x.samples.join(',')}`);
+          NODE

@@ -64,5 +64,5 @@ jobs:
             console.log(`FILE ${file} (${items.length})`);
             for(const f of items) console.log(`  ${f.line}:${f.column} ${f.message}`);
           }
-          rm eslint.audit.config.mjs
           NODE
+          rm eslint.audit.config.mjs

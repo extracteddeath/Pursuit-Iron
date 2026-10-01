@@ -1,3 +1,10 @@
+## M213 — zero-unused App cleanup (build 803)
+
+- Removed the final dead App callback, the retired in-component cycle-edit propagation wrapper.
+- Kept the live `propagateCycleEditsPure` implementation used by `programSavePlan` and its exported verification seam.
+- App static analysis now requires zero unused bindings; the stale comment claiming the dead wrapper was the helper's only caller is gone with it.
+- Engine behavior remains 0.64.9; offline cache rotated for build 803.
+
 ## M212 — App signature cleanup (build 802)
 
 - Removed unused view/component props and their call-site plumbing.

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 3,
-  "milestone": "M212",
+  "milestone": "M213",
   "appVersion": "4.0.0",
-  "build": 802,
+  "build": 803,
   "engineVersion": "0.64.9",
   "candidateStatus": "verification_enforced_by_ci",
   "runtimeAggregate": "7ffebf5410991d66bb5c75d067bc5ad905a555f1f181c33743917708af863e15",
@@ -65,21 +65,21 @@
     "vendor/react.js": "24b2d220a5b2637cf3fb78fe0d961f227ea0a4b960485dbfb03c9d276e72147c"
   },
   "localCandidate": {
-    "name": "Pursuit Iron 4.0 Production Release · M212",
-    "base": "M211 / app 4.0.0 build 801 / Engine 0.64.9",
-    "validation": "Removed dead App prop/signature plumbing and discarded pure calculations while retaining positional compatibility seams; engine behavior unchanged."
+    "name": "Pursuit Iron 4.0 Production Release · M213",
+    "base": "M212 / app 4.0.0 build 802 / Engine 0.64.9",
+    "validation": "Removed the final dead App callback and stale duplicate-path commentary; App unused-binding audit is now zero while the live programSavePlan cycle-propagation path remains intact."
   },
   "uiFiles": {
-    "modules/App.js": "7539a5bf9d11d36cfca0566fcfebf00e00cc04134516f0fdea92d439d7aa8fcf",
-    "index.html": "801d99e67aa3963604454cf8da22740e39655b563dad714d658a28fb64bb2022",
-    "sw.js": "812185c9b593c3aa4a46305d0e6e84541f45345b35e69980b3cc3a1da482c5be",
-    "BUILD_PROFILE.json": "a4341d190a7a482acafe2e9206ff83f1f1499515276224f4c827088291faa2cb",
-    "CHANGELOG.md": "533d84f8a8fea2fc214a33a91ac38bbb2d03c1a4fd755c3015b4d693212e4272",
+    "modules/App.js": "0b24849cb10dc75a402e02716c158ca722ff800fd65b144e00b0244061fa75b8",
+    "index.html": "baee913337a13a2ae9a3a3dbf82bc58a52cb63d9bfcbba361e3661140ce13d2b",
+    "sw.js": "0b33f83d104bb34b2f074dc16d19dc8b5f507984dc4caf546a183e7297af2ecc",
+    "BUILD_PROFILE.json": "08d6b665b27b90638ee733d1dd65b74329b5a0042dfabe5b1e7a1d481f08105a",
+    "CHANGELOG.md": "26a024fe786c2ba281fc14e1853a2f5c9f2cf18678661f452a125e5f3a8f8c26",
     "app.css": "5432859c3eb9624b9a27dc1c9de2e8cb85672b02bcd72c114ac963378184b85b"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
-  "runtimeHotfix": "Prune unused App props, no-op state, and discarded calculations; retain historical positional seams with explicit ignored parameters.",
-  "cache": "pursuit-iron-production-v4-0-0-m212-app-signatures-b802",
-  "uiMilestone": "Pursuit Iron 4.0 Production Release · M212 App Signature Cleanup"
+  "runtimeHotfix": "Remove final dead App cycle-propagation wrapper; enforce zero unused App bindings.",
+  "cache": "pursuit-iron-production-v4-0-0-m213-zero-unused-app-b803",
+  "uiMilestone": "Pursuit Iron 4.0 Production Release · M213 Zero-Unused App"
 }

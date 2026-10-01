@@ -40,6 +40,10 @@ export const PUBLIC_REGION_MUSCLE = Object.freeze({
 });
 const ACCUMULATION_PHASES = new Set(['hypertrophy_accumulation', 'mixed_accumulation']);
 export function publicMevContractApplies(request, phase) {
+    // The public standard-volume reserve must not override the explicit reduced-dose approach.
+    // Minimalist generation and guidance both use the approach-aware muscle prescriptions.
+    if (request.preferences?.volumeApproach === 'minimalist')
+        return false;
     if (!ACCUMULATION_PHASES.has(phase))
         return false;
     if (request.schedule.days.length < 5)

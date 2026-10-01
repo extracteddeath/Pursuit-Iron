@@ -30,7 +30,7 @@ See [ENGINE_ARCHITECTURE.md](ENGINE_ARCHITECTURE.md) for the executable path, ow
 
 Cases include Full Body, Upper/Lower, ULPPL, PPL, Patterns, strength, advanced hypertrophy, no supersets, no bodyweight, minimalist intent, a dumbbell gym, and explicit muscle focus/reduction. Timing is one paired sample per case in one process, always baseline first. It is not a controlled multi-run estimate or a physical-phone measurement. The structural reason for less work is removal of unconditional experimental optimization, duplicate adapter loading, and repeated coverage evaluation.
 
-Reproduce the comparison with the M204 commit available in local git history:
+Reproduce this historical comparison from the M205 commit (`6789e3c8c250b3b9ffc4aa529122cbaeb2578ffa`) with the M204 commit available in local git history. Later releases intentionally change dose and need not retain M205 prescription parity:
 
 ```bash
 node --no-warnings --experimental-loader ./verification/import-loader.mjs verification/m205-generation-parity-benchmark.mjs

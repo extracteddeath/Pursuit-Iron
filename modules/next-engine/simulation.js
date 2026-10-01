@@ -439,7 +439,8 @@ function retargetProgramWithoutStructuralAdaptation(previous, request, target, b
             const targetScale = strength ? targetPolicy.strengthVolumeMultiplier : targetPolicy.volumeMultiplier;
             const ratio = sourceScale > 0 ? targetScale / sourceScale : 1;
             const minimumSets = strength ? 1 : 1;
-            const sets = Math.max(minimumSets, Math.round(ex.sets * ratio));
+            const workingSetCap = request.preferences.volumeApproach === 'minimalist' ? 3 : ex.workingSetCap;
+            const sets = Math.min(workingSetCap ?? Infinity, Math.max(minimumSets, Math.round(ex.sets * ratio)));
             const prescription = {
                 reps: repsForPhase(def, ex.role, targetPolicy),
                 rir: rirForPhase(ex.role, targetPolicy),
@@ -456,6 +457,7 @@ function retargetProgramWithoutStructuralAdaptation(previous, request, target, b
             return {
                 ...ex,
                 sets,
+                ...(workingSetCap !== undefined ? { workingSetCap } : {}),
                 prescription,
                 progressionStyle: progressionSelection.style,
                 progression: progressionInstruction(progressionSelection.style),
@@ -559,11 +561,18 @@ export function weeklyProgressionStyle(ex, phase, week, totalWeeks) {
 function allocateWeekSets(exercises, factors) {
     const raw = exercises.map((ex, i) => ex.sets * Math.max(.25, factors[i]));
     const mins = exercises.map(ex => (ex.role === 'primary_strength' || ex.role === 'secondary_strength') ? 2 : 1);
-    const out = raw.map((r, i) => Math.max(mins[i], Math.floor(r)));
+    const caps = exercises.map((ex, i) => Math.max(mins[i], ex.workingSetCap ?? Infinity));
+    const out = raw.map((r, i) => Math.min(caps[i], Math.max(mins[i], Math.floor(r))));
     let left = Math.round(raw.reduce((a, b) => a + b, 0)) - out.reduce((a, b) => a + b, 0);
     const order = raw.map((r, i) => ({ i, frac: r - Math.floor(r) })).sort((a, b) => b.frac - a.frac || a.i - b.i);
-    for (let k = 0; left > 0 && order.length; k++, left--)
-        out[order[k % order.length].i]++;
+    while (left > 0) {
+        const eligible = order.filter(({ i }) => out[i] < caps[i]);
+        if (!eligible.length) break;
+        for (const { i } of eligible) {
+            if (left <= 0) break;
+            out[i]++; left--;
+        }
+    }
     return out;
 }
 export function prescriptionForSimulationWeek(session, phase, week, totalWeeks) {

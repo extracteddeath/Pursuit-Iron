@@ -2730,5 +2730,8 @@ export function realizeSessions(plans, request, targetDose = {}, directTargetDos
     // contiguous in the rendered workout.
     for (let i = 0; i < realized.length; i++)
         realized[i] = sequenceSessionExercises(realized[i], exerciseMap);
-    return realized;
+    return request.preferences.volumeApproach === 'minimalist'
+        ? realized.map(session => ({ ...session,
+            exercises: session.exercises.map(ex => ({ ...ex, workingSetCap: 3 })) }))
+        : realized;
 }

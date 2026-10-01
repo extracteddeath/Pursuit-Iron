@@ -72,7 +72,9 @@ try {
     }, fixture.id);
     assert.ok(before.issues.some(i => i.region === 'upper_back'));
     await page.click('[data-volume-auto-fix]');
-    await page.waitForSelector('[data-volume-repair-status="success"]', { timeout: 30000 });
+    await page.waitForSelector('[data-volume-repair-status]', { timeout: 30000 });
+    const feedback = await page.$eval('[data-volume-repair-status]', e => ({ status: e.getAttribute('data-volume-repair-status'), text: e.textContent }));
+    assert.equal(feedback.status, 'success', feedback.text);
     await page.waitForFunction(id => JSON.parse(localStorage.getItem('wpb:v1'))?.saved?.find(p => p.id === id)?.nextEngine?.volumeRepair?.status === 'success', {}, fixture.id);
     const after = await page.evaluate(async id => {
         const { volumeAudit, plannedWeek } = await import('./modules/App.js');

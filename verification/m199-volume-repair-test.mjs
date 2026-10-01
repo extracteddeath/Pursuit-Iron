@@ -86,6 +86,8 @@ assert.ok(performance.now() - start < 3000, 'ordinary repair must stay responsiv
 
 // Full sessions have high-dose chest accessory work that can donate useful clock time.
 const tightEngine = clone(twoEngine);
+for (const s of tightEngine.sessions) for (const e of s.exercises)
+    if (e.exerciseId === 'cs-db-row') e.sets = 1;
 const targetSession = tightEngine.sessions.find(s => s.exercises.some(e => e.exerciseId === 'cs-db-row'));
 const donor = clone(generated.nextEngine.program.sessions.flatMap(s => s.exercises).find(e => map.get(e.exerciseId).movementFamily === 'chest_adduction'));
 assert.ok(donor, 'fixture needs an accessory donor');
@@ -93,6 +95,16 @@ const existingDonor = targetSession.exercises.find(e => map.get(e.exerciseId).mo
 if (existingDonor) existingDonor.sets = 7;
 else { donor.sets = 7; targetSession.exercises.push(donor); }
 const tight = bridge(tightEngine);
+// Fill every executable week to the base session's dose. A cap derived only from the peak week
+// leaves slack in low weeks, where exact-week repair can correctly add sets without a trade.
+// This fixture must force a real capacity trade for either base or exact-week repair.
+for (let di = 0; di < tight.days.length; di++) {
+    const day = tight.days[di], session = tight.nextEngine.program.sessions[di];
+    day.exercises.forEach((_, slot) => {
+        for (let week = 1; week <= tight.config.weeks; week++)
+            tight.nextWeekPrescriptions[`${day.id}:${slot}`][week].sets = session.exercises[slot].sets;
+    });
+}
 const tightWeeks = auditShellVolume(tight, EXERCISES).weeks;
 tight.nextEngine.program.sessions.forEach((s, i) => { s.maxMinutes = Math.max(estimateSessionMinutes(s.exercises), ...tightWeeks.map(w => w.sessions[i].estimatedMinutes)); });
 const constrained = repairShellVolume(tight, EXERCISES);

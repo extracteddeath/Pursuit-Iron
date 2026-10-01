@@ -5,7 +5,8 @@ import { execFileSync } from 'node:child_process';
 const groups = {
     generation: [
         'm196-capacity-band-regression', 'm197-capacity-monotonic', 'm198-creation-audit',
-        'm199-wizard-feasibility', 'm199-volume-repair', 'm200-regional-dose', 'm202-locked-cycle-dose'
+        'm199-wizard-feasibility', 'm199-volume-repair', 'm200-regional-dose', 'm202-locked-cycle-dose',
+        'm206-working-week-dose'
     ],
     adaptation: [
         'm181-dose-reconciliation', 'm182-exercise-selection-intelligence', 'm182-selection-matrix',

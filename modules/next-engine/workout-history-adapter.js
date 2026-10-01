@@ -8,6 +8,7 @@ import { availableLoadAtOrBelow } from './loading.js';
 import { normalizeRequest } from './prescription.js';
 import { transitionProgramPhase } from './phase-transition.js';
 import { nextProgramToShellProgram, NextShellAdapterError } from './app-shell-adapter.js';
+import { finalizeGeneratedShellVolume } from './volume-repair.js';
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 function numberOf(value) {
@@ -574,5 +575,6 @@ export function generateNextBlockFromShellHistory(options) {
         continuity: transitioned.continuity,
         historySummary: { positive: analysis.positiveDecisionCount, negative: analysis.negativeDecisionCount, successfulExercises: analysis.successfulExerciseIds.length, ignoredLegacyExerciseIds: analysis.ignoredLegacyExerciseIds }
     };
-    return { program: legacy, nextProgram: transitioned.program, request: adaptedRequest, analysis, continuity: transitioned.continuity };
+    const finalized = finalizeGeneratedShellVolume(legacy, options.legacyExercises);
+    return { program: finalized, nextProgram: finalized.nextEngine.program, request: adaptedRequest, analysis, continuity: transitioned.continuity };
 }

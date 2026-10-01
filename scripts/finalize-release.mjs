@@ -24,7 +24,7 @@ const previousShell = [...read('sw.js').match(/const SHELL=\[(.*?)\];/s)[1].matc
 const shell = [...new Set([...previousShell.filter(file => !file.startsWith('./modules/') && !file.startsWith('./vendor/')),
     './modules/App.js', ...runtimeFiles.map(file => `./${file}`)])].sort();
 write('sw.js', read('sw.js')
-    .replace(/^\/\* Pursuit Iron 4\.0[^\n]*\*\//, `/* Pursuit Iron 4.0 — ${manifest.milestone} canonical engine and retired-runtime cleanup. */`)
+    .replace(/^\/\* Pursuit Iron 4\.0[^\n]*\*\//, `/* Pursuit Iron 4.0 — ${manifest.milestone} production release. */`)
     .replace(/const CACHE="[^"]+"/, `const CACHE="${manifest.cache}"`)
     .replace(/const SHELL=\[(.*?)\];/s, `const SHELL=${JSON.stringify(shell, null, 2)};`));
 write('BUILD_PROFILE.json', JSON.stringify(profile, null, 2) + '\n');

@@ -1,6 +1,6 @@
 # Production engine map
 
-Current release: M205, app 4.0.0 build 795, Pursuit Engine 0.64.5. The maintained source is the JavaScript in this repository. `RELEASE_MANIFEST.json` certifies the actual runtime and UI files. Historical TypeScript claims and development scripts are not the source of this release.
+Current release: M206, app 4.0.0 build 796, Pursuit Engine 0.64.6. The maintained source is the JavaScript in this repository. `RELEASE_MANIFEST.json` certifies the actual runtime and UI files. Historical TypeScript claims and development scripts are not the source of this release.
 
 ## Generation and authority
 
@@ -54,6 +54,8 @@ Generated values must not be copied into overrides as a second writer. Volume re
 
 `workout-runtime.js` builds runtime targets and reconciles pending input. The shell still owns timers, editable rows, warm-up/plate presentation, and its supported custom/template interfaces. Those pieces are active product behavior, not a second automatic program generator.
 
+After projection, `volume-repair.js` finalizes exact working-week accessory sets against regional floors/ceilings and the executable session clock. Generation, cycle entry/adaptation, history-driven next blocks, and saved-plan Auto-fix share this transaction. The base engine snapshot remains immutable for a week-only correction; strength slots, user-owned counts, and recovery weeks stay protected. Repairs do not create an override mirror. Minimalist guidance uses the existing approach-aware prescriptions and its three-set cap survives weekly modulation and phase retargeting. Unresolved constraints retain an honest partial/unable result. See [M206_WORKING_WEEK_VOLUME_REPORT.md](M206_WORKING_WEEK_VOLUME_REPORT.md).
+
 ## History, progression, and cycles
 
 `workout-history-adapter.js` resolves logged exercises by stable slot identity and normalized history, retaining missing effort values as missing. `performance.js`, `loading.js`, `history.js`, `response.js`, and `recovery.js` supply progression decisions and comparable longitudinal evidence. A below-range performance can recommend a load decrease; an incomplete or noisy history is not automatically classified as a real stall.
@@ -66,7 +68,7 @@ Generated values must not be copied into overrides as a second writer. Volume re
 
 The arbiter evaluates the realized base program against the coarse muscle ledger and other hard contracts. `volume-repair.js` separately reconstructs the live roster and exact executable cells for every working week. It reports regional dose, including distinct lat/upper-back regions and direct side/rear-delt work, and checks transactional repair against the session clock, protected roles, manual ownership, and the existing audit envelope.
 
-A passing base-engine audit does not imply zero weekly regional guidance findings. Experience/phase/capacity landmarks, fractional secondary credit, and MEV/MAV/MRV values are model estimates. The current short-session and minimalist discrepancies are recorded in [M205_ENGINE_AUDIT.md](M205_ENGINE_AUDIT.md); warnings remain visible. They are not individual physiological guarantees.
+A passing base-engine audit does not imply zero weekly regional guidance findings. Experience/phase/capacity landmarks, fractional secondary credit, and MEV/MAV/MRV values are model estimates. The historical short-session and minimalist discrepancies in [M205_ENGINE_AUDIT.md](M205_ENGINE_AUDIT.md) are repaired for the 13 documented configurations by M206. Other constrained requests may still leave unresolved findings, which remain visible. These models are not individual physiological guarantees.
 
 ## Compatibility that still belongs here
 

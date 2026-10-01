@@ -13,7 +13,7 @@ import { transitionProgramPhase } from './phase-transition.js';
 import { historyDecision, withProgramExplainability } from './explainability.js';
 import { analyzeShellHistoryForNextEngine, carryForwardAvoidedExercises } from './workout-history-adapter.js';
 import { shellConfigToNextRequest, nextProgramToShellProgram, NextShellAdapterError } from './app-shell-adapter.js';
-import { repairShellVolume, reconcileLockedCycleWeekOverflows } from './volume-repair.js';
+import { repairShellVolume, reconcileLockedCycleWeekOverflows, finalizeGeneratedShellVolume } from './volume-repair.js';
 import { firstPassingCapacityProgram } from './capacity-generation.js';
 const phaseGoal = (phase) => phase === 'hypertrophy_accumulation' ? 'hypertrophy' :
     (phase === 'strength_accumulation' || phase === 'intensification' || phase === 'peak') ? 'strength' : 'both';
@@ -46,9 +46,11 @@ function retargetStatic(previous, request, target, blockWeeks = 6) {
                 prescription
             });
             const previousStyle = ex.progressionStyle ?? null;
+            const workingSetCap = normalized.preferences.volumeApproach === 'minimalist' ? 3 : ex.workingSetCap;
             return {
                 ...ex,
-                sets: Math.max(1, Math.round(ex.sets * ratio)),
+                ...(workingSetCap !== undefined ? { workingSetCap } : {}),
+                sets: Math.min(workingSetCap ?? Infinity, Math.max(1, Math.round(ex.sets * ratio))),
                 prescription,
                 progressionStyle: progressionSelection.style,
                 progression: progressionInstruction(progressionSelection.style),
@@ -270,8 +272,9 @@ export function generateNextCycleForShell(options) {
                 afterOver: []
             };
         }
+        legacy = finalizeGeneratedShellVolume(legacy, options.legacyExercises);
         blocks.push(legacy);
-        previous = next;
+        previous = legacy.nextEngine.program;
     }
     const cycle = {
         id: cid, name: options.config.name || template.name, templateId, createdAt: Date.now(), seed, engineV: 33,
@@ -387,7 +390,7 @@ export function convertProgramToNextCycleForShell(options) {
         if (next.audit.result !== 'pass')
             throw new NextShellAdapterError('NEXT_CYCLE_BLOCK_REJECTED', `Pursuit Engine ${next.engineVersion} rejected ${spec.label}.`, next.audit);
         const cfg = legacyBlockConfig(baseConfig, spec.phase, spec.weeks, `${cycleName} · ${spec.label}`);
-        const legacy = nextProgramToShellProgram(next, cfg, options.legacyExercises, makeId);
+        let legacy = nextProgramToShellProgram(next, cfg, options.legacyExercises, makeId);
         legacy.cycleId = cid;
         attachBlockContext(legacy, next, blockRequest(baseRequest, spec.phase), baseRequest, {
             templateId,
@@ -400,8 +403,9 @@ export function convertProgramToNextCycleForShell(options) {
             adaptBetweenBlocks: !!options.adaptBetweenBlocks,
             convertedFromStandalone: true
         });
+        legacy = finalizeGeneratedShellVolume(legacy, options.legacyExercises);
         blocks.push(legacy);
-        previous = next;
+        previous = legacy.nextEngine.program;
     }
 
     const cycle = {
@@ -489,7 +493,7 @@ function buildAdaptedBlock(current, cycle, target, weeks, label, analysis, legac
     attachBlockContext(legacy, next, request, cycle.nextEngineCycle.baseRequest, { templateId: cycle.templateId, plannedIndex, blockIndex: cycle.activeBlock + 1, label, weeks, phase: target, preview: false, adaptBetweenBlocks: !!cycle.adaptExercises, adaptedFrom: current.id });
     legacy.nextEngine.priorBlock = { programId: current.id, phase: source.phase, workouts: analysis.workoutCount, classification: analysis.classification, recovery: analysis.recovery.status };
     legacy.nextEngine.historySummary = { positive: analysis.positiveDecisionCount, negative: analysis.negativeDecisionCount, successfulExercises: analysis.successfulExerciseIds.length, ignoredLegacyExerciseIds: analysis.ignoredLegacyExerciseIds };
-    return legacy;
+    return finalizeGeneratedShellVolume(legacy, legacyExercises);
 }
 export function advanceNextCycleForShell(options) {
     const cycle = options.cycle, current = options.activeProgram;

@@ -24,15 +24,30 @@ const phaseOf = p => p.nextEngine.program.phase;
 const requestOf = p => normalizeRequest(p.nextEngine.request);
 const keyOf = (d, slot) => `${d.id}:${slot}`;
 const sessionForDay = (p, d, index) => p.nextEngine.program.sessions.find((s, i) => d.id === `next-${i + 1}-${s.day}`) ?? p.nextEngine.program.sessions[index];
+const engineRange = (value, fallback) => {
+    const numbers = (Array.isArray(value) ? value : String(value ?? '').match(/\d+(?:\.\d+)?/g) ?? []).map(Number);
+    return numbers.length && numbers.every(Number.isFinite) ? [numbers[0], numbers[1] ?? numbers[0]] : fallback;
+};
+const executableTechnique = (cue, original) => {
+    if (!cue) return undefined;
+    const text = String(cue).toLowerCase();
+    if (['off', 'none'].includes(text.trim())) return undefined;
+    const type = text.includes('myo') ? 'myo_reps' : text.includes('drop') ? 'drop_set'
+        : text.includes('partial') ? 'lengthened_partials' : original?.type;
+    return type ? { ...original, type, appliesTo: 'last_set', note: String(cue) } : undefined;
+};
+const snapshotContext = (program, legacyExercises) => {
+    const request = requestOf(program);
+    return { request, exerciseMap: createExerciseMap(request.customExercises),
+        legacyMap: new Map(legacyExercises.map(e => [e.id, e])) };
+};
 
 // Read the live shell roster and the exact cells used by Program/Home/Workout. Neither the
 // immutable generation snapshot nor legacy slotBias is a substitute for a current prescription.
-export function captureShellVolumeSnapshot(program, week, legacyExercises = [], dayId = null) {
-    if (!program?.nextEngine?.program || !program.nextEngine.request)
+export function captureShellVolumeSnapshot(program, week, legacyExercises = [], dayId = null, sharedContext = null) {
+    if (!program?.nextEngine?.program || !program.nextEngine.request || !Array.isArray(program.days))
         return null;
-    const request = requestOf(program);
-    const exerciseMap = createExerciseMap(request.customExercises);
-    const legacyMap = new Map(legacyExercises.map(e => [e.id, e]));
+    const { request, exerciseMap, legacyMap } = sharedContext ?? snapshotContext(program, legacyExercises);
     const sessions = [];
     let missing = false;
     program.days.forEach((day, di) => {
@@ -48,10 +63,20 @@ export function captureShellVolumeSnapshot(program, week, legacyExercises = [], 
             if (!def || !cell || !Number.isFinite(cell.sets)) { missing = true; return null; }
             const original = source.exercises.find(e => e.exerciseId === exerciseId) ?? source.exercises[slot];
             return { ...original, exerciseId, name: def.name, sets: cell.sets, role: cell.role,
-                prescription: { ...original?.prescription, restSeconds: Number(cell.rest) || 90 },
-                advancedTechnique: cell.tech ? original?.advancedTechnique : undefined,
+                prescription: { ...original?.prescription,
+                    reps: engineRange(cell.reps, original?.prescription?.reps),
+                    rir: engineRange(cell.rir, original?.prescription?.rir),
+                    restSeconds: cell.rest != null && cell.rest !== '' && Number.isFinite(Number(cell.rest)) && Number(cell.rest) >= 0 ? Number(cell.rest) : 90 },
+                advancedTechnique: executableTechnique(cell.tech, original?.advancedTechnique),
+                supersetGroup: undefined,
                 shellKey: key, shellId: id, shellSlot: slot };
         }).filter(Boolean);
+        for (let slot = 0; slot < exercises.length - 1; slot++) {
+            if (program.ss?.[keyOf(day, slot)] && !exercises[slot].supersetGroup && !exercises[slot + 1].supersetGroup) {
+                exercises[slot].supersetGroup = `${day.id}:pair:${slot}`;
+                exercises[slot + 1].supersetGroup = `${day.id}:pair:${slot}`;
+            }
+        }
         sessions.push({ ...source, shellDayId: day.id, exercises, estimatedMinutes: estimateSessionMinutes(exercises) });
     });
     const events = createTrainingSetEvents(sessions, request.customExercises);
@@ -64,13 +89,13 @@ export function captureShellVolumeSnapshot(program, week, legacyExercises = [], 
     volume.shoulders = volume.front_delts + volume.side_delts + volume.rear_delts;
     delete volume.front_delts; delete volume.side_delts; delete volume.rear_delts;
     const subVolume = Object.fromEntries(['front_delts', 'side_delts', 'rear_delts'].map(m => [m, muscleLedger[m].fractionalSets]));
-    return { sessions, muscleLedger, regions, volume, subVolume, armCoverage: deriveArmCoverage(sessions, exerciseMap), missing };
+    return { sessions, events, muscleLedger, regions, volume, subVolume, armCoverage: deriveArmCoverage(sessions, exerciseMap), missing };
 }
 
 // Normal floors come from the same experience/phase/priority/capacity prescriptions as the
 // allocator and arbiter. The explicit 5-day accumulation contract retains its public region MEVs.
-export function shellVolumeTargets(program) {
-    const request = requestOf(program), phase = phaseOf(program);
+export function shellVolumeTargets(program, normalizedRequest = null) {
+    const request = normalizedRequest ?? requestOf(program), phase = phaseOf(program);
     const prescriptions = createMusclePrescriptions(request, phase);
     const contract = publicMevContractApplies(request, phase);
     return PUBLIC_MEV_REGIONS.map(region => {
@@ -111,8 +136,11 @@ export function shellDayMuscleBreakdown(program, day, week, legacyExercises = []
 export function auditShellVolume(program, legacyExercises = []) {
     if (!program?.nextEngine?.program || !program.nextEngine.request)
         return { issues: [], volBias: {}, missing: true, targets: [] };
-    const targets = shellVolumeTargets(program);
-    const weeks = Array.from({ length: workWeeks(program) }, (_, i) => captureShellVolumeSnapshot(program, i + 1, legacyExercises));
+    const context = snapshotContext(program, legacyExercises);
+    const targets = shellVolumeTargets(program, context.request);
+    const weeks = Array.from({ length: workWeeks(program) }, (_, i) =>
+        captureShellVolumeSnapshot(program, i + 1, legacyExercises, null, context)
+        ?? { sessions: [], regions: Object.fromEntries(PUBLIC_MEV_REGIONS.map(r => [r, 0])), missing: true });
     const issues = [];
     for (const target of targets) {
         const values = weeks.map(s => s.regions[target.region]);
@@ -153,8 +181,15 @@ function rebuild(program, changes, legacyExercises, addition = null, options = {
     for (const change of changes) {
         const s = sessions.find(s => s.shellDayId === change.dayId), e = s?.exercises[change.slot];
         if (!e) return null;
+        const key = e.shellKey;
+        // Removing an exercise also removes its prescription. Ownership protection must run
+        // before either kind of mutation, including consolidation of a redundant movement.
+        if (shellPrescriptionFieldOwner(next, next.overrides?.[key] ?? {}, 'sets') === 'user')
+            return null;
         if (change.remove) {
             if (preserveRoster) return null;
+            if (['reps', 'rir', 'rest', 'tech', 'role', 'progressionStyle'].some(field =>
+                shellPrescriptionFieldOwner(next, next.overrides?.[key] ?? {}, field) === 'user')) return null;
             const di = next.days.findIndex(d => d.id === change.dayId), day = next.days[di];
             day.exercises.splice(change.slot, 1);
             day.primaryIndex = Math.max(0, day.primaryIndex - (change.slot < day.primaryIndex ? 1 : 0));
@@ -179,14 +214,12 @@ function rebuild(program, changes, legacyExercises, addition = null, options = {
             });
             continue;
         }
-        const key = e.shellKey;
         // A user-owned manual set prescription is not raw material for Auto-fix. Earlier repair code
         // changed both the engine snapshot and the override mirror, which made one value have two
         // writers and could silently rewrite a lifter's deliberate edit. Fail this proposal instead
         // and let the search choose another engine-owned slot.
-        if (shellPrescriptionFieldOwner(next, next.overrides?.[key] ?? {}, 'sets') === 'user')
-            return null;
         e.sets += change.delta;
+        if (request.preferences.volumeApproach === 'minimalist' && e.sets > 3) return null;
         if (e.sets < (preserveRoster ? 1 : 2)) return null; // locked cycles may retain a one-set accessory instead of changing the roster
         changed.add(key);
         // Do not mirror generated set counts back into overrides. nextWeekPrescriptions is the
@@ -265,6 +298,7 @@ const deficit = a => a.issues.reduce((sum, i) => sum + i.need, 0);
 
 function safeImprovement(before, after, candidate, baselineEngineAudit, changedKeys) {
     if (!candidate || after.missing || deficit(after) >= deficit(before) - EPS) return false;
+    const setCap = requestOf(candidate).preferences.volumeApproach === 'minimalist' ? 3 : 5;
     for (let w = 0; w < after.weeks.length; w++) {
         const b = before.weeks[w], a = after.weeks[w];
         for (const t of before.targets) {
@@ -275,7 +309,9 @@ function safeImprovement(before, after, candidate, baselineEngineAudit, changedK
             const s = a.sessions[di];
             if (s.estimatedMinutes > Math.max(s.maxMinutes, b.sessions[di].estimatedMinutes)) return false;
             for (const e of s.exercises)
-                if (changedKeys.has(e.shellKey) && e.sets > Math.max(5, b.sessions[di].exercises.find(x => x.shellKey === e.shellKey)?.sets ?? 0)) return false;
+                if (changedKeys.has(e.shellKey) && e.sets > Math.max(
+                    setCap,
+                    b.sessions[di].exercises.find(x => x.shellKey === e.shellKey)?.sets ?? 0)) return false;
         }
     }
     const oldCounts = auditCounts(baselineEngineAudit), newCounts = auditCounts(candidate.nextEngine.audit);
@@ -336,6 +372,98 @@ export function reconcileLockedCycleWeekOverflows(program, legacyExercises = [])
         status: audit.issues.some(x => x.status === 'over') ? (changed ? 'partial' : 'unable') : changed ? 'success' : 'unchanged' };
 }
 
+/** Finalize exact executable weeks, rather than increasing the entire base block to repair one
+ * rounded week. Moves keep the roster, protected strength work, explicit edits, phase methods,
+ * regional and focused-muscle envelopes, and session clock. Lookup context is shared for the pass. */
+export function reconcileShellWeekDose(program, legacyExercises = []) {
+    if (!program?.nextEngine?.program || !program.nextEngine.request || !Array.isArray(program.days))
+        return { program, after: auditShellVolume(program, legacyExercises), timeIssues: [],
+            changes: [], changed: false, status: 'unable' };
+    const context = snapshotContext(program, legacyExercises), { request } = context;
+    const targets = shellVolumeTargets(program, request);
+    const prescriptions = createMusclePrescriptions(request, phaseOf(program));
+    const cap = request.preferences.volumeApproach === 'minimalist' ? 3 : 5;
+    const objective = snapshot => targets.reduce((sum, t) => sum + Math.max(0, t.mev - snapshot.regions[t.region])
+        + Math.max(0, snapshot.regions[t.region] - t.mrv), 0)
+        + snapshot.sessions.reduce((sum, s) => sum + Math.max(0, s.estimatedMinutes - s.maxMinutes) * 4, 0);
+    const weekAudit = snapshot => auditProgram({ ...program.nextEngine.program,
+        sessions: snapshot.sessions, events: snapshot.events, muscleLedger: snapshot.muscleLedger }, request);
+    let current = program;
+    const changes = [];
+    for (let week = 1; week <= workWeeks(program); week++) {
+        let before = captureShellVolumeSnapshot(current, week, legacyExercises, null, context);
+        if (!before || before.missing) continue;
+        for (let guard = 0; guard < 32 && objective(before) > EPS; guard++) {
+            const slots = before.sessions.flatMap(s => s.exercises.map(e => ({ s, e,
+                def: context.exerciseMap.get(e.exerciseId) }))).filter(x => x.def && !STRENGTH.has(x.e.role)
+                && shellPrescriptionFieldOwner(current, current.overrides?.[x.e.shellKey] ?? {}, 'sets') !== 'user');
+            const proposals = [];
+            const propose = operations => {
+                const cells = { ...current.nextWeekPrescriptions };
+                for (const { key, delta } of operations) {
+                    const prior = cells[key]?.[week];
+                    if (!prior || !Number.isFinite(prior.sets) || prior.sets + delta < 1 || prior.sets + delta > cap) return;
+                    cells[key] = { ...cells[key], [week]: { ...prior, sets: prior.sets + delta } };
+                }
+                const candidate = { ...current, nextWeekPrescriptions: cells };
+                const after = captureShellVolumeSnapshot(candidate, week, legacyExercises, null, context);
+                if (after.missing || objective(after) >= objective(before) - EPS) return;
+                for (const target of targets) {
+                    const lo = Math.min(target.mev, before.regions[target.region]);
+                    const hi = Math.max(target.mrv, before.regions[target.region]);
+                    if (after.regions[target.region] < lo - EPS || after.regions[target.region] > hi + EPS) return;
+                }
+                for (const p of prescriptions) {
+                    const b = before.muscleLedger[p.muscle].fractionalSets;
+                    const a = after.muscleLedger[p.muscle].fractionalSets;
+                    const hi = publicMevInternalSafetyCeiling(request, phaseOf(program), p.muscle, p.upper) * 1.2;
+                    if (a < Math.min(p.minimum * .85, b) - EPS || a > Math.max(hi, b) + EPS) return;
+                }
+                if (after.sessions.some((s, i) => s.estimatedMinutes > Math.max(s.maxMinutes, before.sessions[i].estimatedMinutes))) return;
+                proposals.push({ candidate, after, operations, score: objective(before) - objective(after) });
+            };
+            const under = targets.filter(t => before.regions[t.region] < t.mev - EPS);
+            const donors = slots.filter(x => x.e.sets > 1);
+            const recipients = slots.filter(x => x.e.sets < cap && under.some(t => publicRegionContribution(x.def, t.region) > 0));
+            for (const x of recipients) propose([{ key: x.e.shellKey, delta: 1 }]);
+            for (const x of donors) propose([{ key: x.e.shellKey, delta: -1 }]);
+            const baselineCounts = auditCounts(weekAudit(before));
+            const selectBest = () => proposals.sort((a, b) => b.score - a.score).find(p => {
+                const counts = auditCounts(weekAudit(p.after));
+                return Object.entries(counts).every(([key, n]) => n <= (baselineCounts[key] || 0));
+            });
+            let best = selectBest();
+            // Try trades when no fully audited single move survives. A numerically promising
+            // single move may fail a recovery/coverage guard; it must not suppress the trade search.
+            if (!best) {
+                for (const r of recipients) for (const d of donors)
+                    if (r.s.shellDayId === d.s.shellDayId && r.e.shellKey !== d.e.shellKey)
+                        for (let n = 1; n <= Math.min(2, d.e.sets - 1); n++)
+                            propose([{ key: r.e.shellKey, delta: 1 }, { key: d.e.shellKey, delta: -n }]);
+                best = selectBest();
+            }
+            if (!best) break;
+            current = best.candidate; before = best.after;
+            changes.push({ week, sets: best.operations });
+        }
+    }
+    const after = auditShellVolume(current, legacyExercises);
+    const timeIssues = after.weeks.flatMap((w, wi) => w.sessions.filter(s => s.estimatedMinutes > s.maxMinutes)
+        .map(s => ({ week: wi + 1, dayId: s.shellDayId, minutes: s.estimatedMinutes, maximum: s.maxMinutes })));
+    return { program: current, after, timeIssues, changes, changed: current !== program,
+        status: !after.missing && !after.issues.length && !timeIssues.length ? (changes.length ? 'success' : 'unchanged')
+            : changes.length ? 'partial' : 'unable' };
+}
+
+export function finalizeGeneratedShellVolume(program, legacyExercises = []) {
+    if (!program?.nextEngine?.program || !program.nextEngine.request) return program;
+    const result = reconcileShellWeekDose(program, legacyExercises);
+    return { ...result.program, nextEngine: { ...result.program.nextEngine,
+        regionalDose: { status: result.status, changed: result.changed, changes: result.changes,
+            remaining: result.after.issues.map(i => ({ region: i.region, status: i.status, actual: i.v,
+                minimum: i.mev, upper: i.mrv, week: i.week })), timeIssues: result.timeIssues } } };
+}
+
 /** Verified transaction: existing set allocation, then reallocation, then one compatible new
  * movement. Every proposal uses the same public region ledger and complete engine safety audit.
  * Failed proposals are discarded; a partial repair is reported as partial, never as success. */
@@ -343,9 +471,13 @@ export function repairShellVolume(program, legacyExercises = [], options = {}) {
     const preserveRoster = !!options.preserveRoster;
     const before = auditShellVolume(program, legacyExercises);
     if (before.missing) return { program, status: 'unable', changed: false, before, after: before, message: 'Prescription data is incomplete. Rebuild this plan before fixing its volume.' };
-    if (!before.issues.length) return { program, status: 'unchanged', changed: false, before, after: before, message: 'Weekly volume is already in range for this block.' };
-    let current = program, audit = before;
-    const changes = [];
+    if (!before.issues.length && before.weeks.every(w => w.sessions.every(s => s.estimatedMinutes <= s.maxMinutes)))
+        return { program, status: 'unchanged', changed: false, before, after: before, message: 'Weekly volume is already in range for this block.' };
+    // Repair a rounded week before changing the base sets for the entire block. The same exact-week
+    // transaction handles fresh generation and the user's saved-plan Auto-fix action.
+    const weekly = reconcileShellWeekDose(program, legacyExercises);
+    let current = weekly.program, audit = weekly.after;
+    const changes = [...weekly.changes];
     const request = requestOf(program), context = createEngineContext(request), phase = phaseOf(program);
     const initialEngineAudit = auditProgram({ ...program.nextEngine.program, sessions: baseSessions(program, legacyExercises),
         muscleLedger: deriveMuscleLedger(createTrainingSetEvents(baseSessions(program, legacyExercises), request.customExercises)) }, request);
@@ -401,7 +533,8 @@ export function repairShellVolume(program, legacyExercises = [], options = {}) {
                     // Do not let a UI compatibility sibling silently change the selected movement's stimulus.
                     if (!legacy || nextExerciseIdForShellExercise(legacy) !== def.id) continue;
                     const role = def.flags.compound ? 'hypertrophy_compound' : 'hypertrophy_isolation', policy = phasePolicyFor(phase);
-                    const exercise = { exerciseId: def.id, name: def.name, role, sets: 3, prescription: {
+                    const exercise = { exerciseId: def.id, name: def.name, role, sets: 3,
+                        ...(request.preferences.volumeApproach === 'minimalist' ? { workingSetCap: 3 } : {}), prescription: {
                         reps: repsForPhase(def, role, policy), rir: rirForPhase(role, policy), restSeconds: restForExercise(role, def) },
                         progression: progressionForExercise(def, role, policy, request.athlete.experience), progressionStyle: progressionStyleForExercise(def, role, policy, request.athlete.experience) };
                     const addition = { dayId: s.shellDayId, legacy, exercise };
@@ -417,6 +550,11 @@ export function repairShellVolume(program, legacyExercises = [], options = {}) {
         current = best.candidate; audit = best.after;
         changes.push({ sets: best.ops, addedExercise: best.addition?.exercise.name });
     }
+    // A base repair regenerates cells in a touched session. Finish exact-week reconciliation only
+    // after base repair stops so those projections cannot undo a successful earlier correction.
+    const finishing = current !== weekly.program ? reconcileShellWeekDose(current, legacyExercises) : weekly;
+    current = finishing.program;
+    if (finishing !== weekly) changes.push(...finishing.changes);
     const changed = current !== program;
     // Re-read the returned artifact, including all work-week rounding, before describing success.
     const after = changed ? auditShellVolume(current, legacyExercises) : before;

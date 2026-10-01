@@ -1,3 +1,11 @@
+## M206 — Exact working-week volume (build 796)
+
+- Unified minimalist public guidance with the existing approach-aware engine dose model while retaining standard-volume floors.
+- Added immutable week-level accessory-set reconciliation across standalone generation, cycles, conversion, history adaptation, and saved-plan Auto-fix. Repairs preserve the roster, strength work, manual edits, recovery weeks, and session limits.
+- Kept minimalist sets capped through weekly modulation and static/adaptive block transitions, including older converted snapshots.
+- Corrected executable snapshot supersets, rep/RIR ranges, rest and technique accounting; shared lookup context and avoided needless session reconstruction for valid scalar cells.
+- Added 13-route regression coverage with four reproduced rounding failures plus capacity transfers, ownership, persistence, lifecycle caps, and honest unable/partial outcomes. Engine 0.64.6; cache rotated for build 796.
+
 ## M205 — One production engine and retired-code cleanup (build 795)
 
 - Removed the unreachable old program generator and production shadow/canary/promotion execution. Program creation and block transitions use the current audited engine directly.

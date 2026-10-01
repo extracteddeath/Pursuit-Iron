@@ -1,11 +1,11 @@
 {
   "profile": "portable-browser-esm-canonical-engine",
-  "milestone": "M205",
-  "source": "M204 production baseline + retired generator/research cleanup and canonical capacity adapter",
-  "engine": "0.64.5 with one capacity-aware generation adapter, current-engine diagnostics, and single-owner prescriptions",
+  "milestone": "M206",
+  "source": "M205 production baseline + exact working-week dose finalization and shared Auto-fix",
+  "engine": "0.64.6 with approach-aware public dose guidance, protected weekly set reconciliation, and lifecycle set caps",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 46,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m205-engine-cleanup-b795",
-  "uiMilestone": "Pursuit Iron 4.0 Production Release · M205 Engine Cleanup"
+  "cache": "pursuit-iron-production-v4-0-0-m206-working-week-dose-b796",
+  "uiMilestone": "Pursuit Iron 4.0 Production Release · M206 Working-Week Volume"
 }

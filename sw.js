@@ -1,5 +1,5 @@
-/* Pursuit Iron 4.0 — M205 canonical engine and retired-runtime cleanup. */
-const CACHE="pursuit-iron-production-v4-0-0-m205-engine-cleanup-b795";
+/* Pursuit Iron 4.0 — M206 production release. */
+const CACHE="pursuit-iron-production-v4-0-0-m206-working-week-dose-b796";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
   "./BUILD_PROFILE.json",

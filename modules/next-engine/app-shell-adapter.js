@@ -4,6 +4,7 @@ import { buildGenerationRecoveryPlan } from './generation-recovery.js';
 import { prescriptionForSimulationWeek } from './simulation.js';
 import { createInitialCycleState } from './cycles.js';
 import { filterFeasibleLiftPriorities } from './prescription.js';
+import { finalizeGeneratedShellVolume } from './volume-repair.js';
 import { shellExercisePerformableFor as performableFor } from './shell-equipment.js';
 export { setShellEquipmentExpander } from './shell-equipment.js';
 const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -456,8 +457,13 @@ export function getNextShellCell(program, day, slotIndex, weekIndex) {
        impossible/ambiguous set shape, replay the immutable engine snapshot rather than let
        Home/Program/Plan/Workout each interpret it differently. Engine-owned stale override mirrors
        are deliberately ignored; only an explicitly user-owned set count can replace the week cell. */
-    const engineSets = immutableEngineSetCount(program, day, slotIndex, weekIndex);
-    const sets = canonicalShellSetCount(ownedValue('sets', cell.sets), engineSets ?? cell.sets);
+    const rawSets = ownedValue('sets', cell.sets);
+    // Ordinary scalar cells are already executable. Rebuilding an entire simulated session for
+    // each read is only necessary when restoring an ambiguous/corrupt persisted count.
+    const scalarCount = !Array.isArray(rawSets) && (rawSets === null || typeof rawSets !== 'object')
+        ? canonicalShellSetCount(rawSets) : null;
+    const sets = scalarCount ?? canonicalShellSetCount(rawSets,
+        immutableEngineSetCount(program, day, slotIndex, weekIndex) ?? cell.sets);
     const reps = shellRange(ownedValue('reps', cell.reps));
     const rir = shellRange(ownedValue('rir', cell.rir));
     const rest = ownedValue('rest', cell.rest);
@@ -718,9 +724,10 @@ export function generateNextProgramForShell(options) {
         } : {})
     };
 
+    const finalProgram = finalizeGeneratedShellVolume(legacyProgram, options.legacyExercises);
     return {
-        program: legacyProgram,
-        nextProgram: result.program,
+        program: finalProgram,
+        nextProgram: finalProgram.nextEngine.program,
         request,
         diagnostics: result.diagnostics
     };

@@ -1,11 +1,11 @@
 {
   "profile": "portable-browser-esm-canonical-engine",
-  "milestone": "M211",
-  "source": "M210 production baseline + pure-local App unused-binding audit",
-  "engine": "0.64.9 unchanged; pure App dead locals removed",
+  "milestone": "M212",
+  "source": "M211 production baseline + App signature/callsite audit",
+  "engine": "0.64.9 unchanged; dead App signature plumbing removed",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 46,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m211-app-pure-locals-b801",
-  "uiMilestone": "Pursuit Iron 4.0 Production Release · M211 App Pure-Local Cleanup"
+  "cache": "pursuit-iron-production-v4-0-0-m212-app-signatures-b802",
+  "uiMilestone": "Pursuit Iron 4.0 Production Release · M212 App Signature Cleanup"
 }

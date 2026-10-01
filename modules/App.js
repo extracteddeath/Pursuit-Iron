@@ -1,4 +1,4 @@
-const __APP_VERSION__='4.0.0'; const __BUILD__='801';
+const __APP_VERSION__='4.0.0'; const __BUILD__='802';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { setShellEquipmentExpander, splitContractGaps, splitBuildability, refusalFixes, generateNextProgramForShell, recommendNextSplitForShell, getNextShellCell, canonicalShellSetCount, cloneNextDayPrescriptions, swapNextSlotPrescriptions, removeNextSlotPrescription, nextExerciseIdForShellExercise, markUserPrescriptionOverride, clearUserPrescriptionOverride, NextShellAdapterError } from "./next-engine/app-shell-adapter.js";
@@ -3205,7 +3205,7 @@ const SPLITS = {
     bro: { name: "Bro Split", blurb: "One muscle group per day, max volume each.", days: [5, 6], build: (d) => d >= 6 ? ["chest_day", "back_day", "shoulders_day", "legs_day", "arms", "legs_day"] : ["chest_day", "back_day", "shoulders_day", "legs_day", "arms"] },
     arnold: { name: "Chest + Back / Shoulders + Arms / Legs", blurb: "Chest+Back · Shoulders+Arms · Legs, twice over, with Pursuit-owned dose and progression.", days: [6], build: () => ["chest_back", "shoulders_arms", "legs_day", "chest_back", "shoulders_arms", "legs_day"] },
     five_three_one: { name: "Main-Lift Waves", blurb: "Four days, each built around one main barbell lift (Press · Deadlift · Bench · Squat) plus targeted accessories, loaded off a training max.", days: [4], minSession: "s60", maxSession: "s120", build: () => ["t531_press", "t531_deadlift", "t531_bench", "t531_squat"] },
-    five31_beginner: { minBarbells: 2, name: "Main-Lift Waves · Novice", blurb: "Three days a week, two main lifts each — fixed-rep top sets plus a same-load back-off block — so every lift is trained twice a week.", days: [3], minSession: "s60", maxSession: "s90", build: (n) => ["b531_a", "b531_b", "b531_a"] },
+    five31_beginner: { minBarbells: 2, name: "Main-Lift Waves · Novice", blurb: "Three days a week, two main lifts each — fixed-rep top sets plus a same-load back-off block — so every lift is trained twice a week.", days: [3], minSession: "s60", maxSession: "s90", build: (_n) => ["b531_a", "b531_b", "b531_a"] },
     strength_fb: { name: "Strength Full Body", blurb: "Squat, press and pull every session — the classic barbell linear-progression template for building base strength.", days: [3], build: () => ["full_a", "full_b", "full_c"] },
     academy_prep: { name: "Academy Prep", blurb: "Builds the strength base for the law-enforcement academy fitness test — pressing endurance for push-ups, a trained trunk for sit-ups, and posterior-chain/leg work to drive sprints and the 1.5-mile run. Pair with Pursuit Rated for the running side.", days: [3, 4], build: (d) => { const seq = ["acad_a", "acad_b", "acad_c"]; return Array.from({ length: d }, (_, i) => seq[i % seq.length]); } },
     texas: { name: "Volume / Recovery / Intensity", blurb: "Three-day strength undulation: a higher-volume session, a deliberately lower-fatigue session, then an intensity-focused session. The plan adapts the exact sets, reps and loading.", days: [3], minSession: "s60", maxSession: "s120", build: () => ["tx_volume", "tx_recovery", "tx_intensity"] },
@@ -6402,7 +6402,7 @@ const SESSION_EX_TYPICAL = {
    regenerates differently. Engine 6 and older keep reading the s60 fallback they were built against.
    The default is the CURRENT engine, so the label and any caller that does not care about replay get
    the truthful number; only the generator passes its own `eng` and gets the frozen one. */
-function sessionExercisePlan(session, goal = "hypertrophy", experience = "intermediate", eng = ENGINE_V) {
+function sessionExercisePlan(session, goal = "hypertrophy", _experience = "intermediate", eng = ENGINE_V) {
     const [lo, hi] = SESSION_BOUNDS[session] || [0, 60];
     const row = (engLacks(eng, "shortSessionRows") && !LEGACY_EX_TYPICAL_KEYS.has(session) ? null : SESSION_EX_TYPICAL[session]) || SESSION_EX_TYPICAL.s60;
     let count = row[goal] ?? row.hypertrophy;
@@ -7943,7 +7943,7 @@ if (typeof __BUILD__ === "undefined") {
    barbell rows, and standing barbell overhead presses. Bench presses, hip thrusts,
    chest-supported/seal rows, machine & seated work do NOT load the spine the same
    way. Used to stop too many of these from stacking in one session (recoverability). */
-function isAxialLoad(ex, eng = 1) {
+function isAxialLoad(ex, _eng = 1) {
     if (ex.type !== "compound" || !isBarLike(ex.equip))
         return false;
     const pat = movePattern(ex);
@@ -11154,7 +11154,7 @@ function afterNextPaint() {
         first = requestAnimationFrame(() => { second = requestAnimationFrame(done); });
     });
 }
-function Wizard({ initialEquipment, initialExperience, initialUnit = "kg", skipUnits = false, onCancel, onDone, cycleMode: cycleModeInit = false, allowModeChoice = false, nextEngineOnly = true }) {
+function Wizard({ initialEquipment, initialExperience, initialUnit = "kg", skipUnits = false, onCancel, onDone, cycleMode: cycleModeInit = false, allowModeChoice = false }) {
     const [building, setBuilding] = useState(false);
     const [buildError, setBuildError] = useState("");
     const buildLock = useRef(false);
@@ -11239,7 +11239,7 @@ function Wizard({ initialEquipment, initialExperience, initialUnit = "kg", skipU
         const rec = recommendedSplit({ ...config, goal: effectiveGoal }, nextRecommendedSplit);
         const fallback = Object.entries(SPLITS).find(([, s]) => s.days.includes(config.days))?.[0] || null;
         set({ split: rec && SPLITS[rec]?.days.includes(config.days) ? rec : fallback });
-    }, [config.days, nextRecommendedSplit]); // eslint-disable-line
+    }, [config.days, nextRecommendedSplit]);
     const focusTotal = Object.values(config.focus).reduce((a, b) => a + b, 0);
     /* ⚠ MARK A CHOICE UNAVAILABLE ONLY IF NO REMAINING CHOICE CAN MAKE IT WORK. The split step comes BEFORE the session
        step, so a split refused at the default length may build at another: measured, 11 of 17 coverage/design refusals at
@@ -11444,7 +11444,7 @@ function Wizard({ initialEquipment, initialExperience, initialUnit = "kg", skipU
     // The mode-choice screen is its own one-item flow (STEPS = ["mode"]), which used to make the
     // progress bar read 100% on the very first screen, then snap back — show a sliver instead.
     const progress = key === "mode" ? 0.06 : (step + 1) / STEPS.length;
-    return (_jsxs("div", { className: "wpb-page-shell wpb-wizard", children: [_jsxs("div", { className: "wpb-page-header wpb-program-header wpb-wizard-header", style: { padding: "14px 20px 0" }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 6, height: 34 }, children: [_jsx("button", { onClick: back, disabled: building, "aria-label": "Back", className: "pressable hit", style: { flexShrink: 0, width: 36, display: "flex", alignItems: "center", background: "none", border: "none", color: C.text, cursor: "pointer", padding: 4 }, children: _jsx(ChevronLeft, { size: 28 }) }), _jsx("div", { style: { flex: 1, minWidth: 0, textAlign: "center", fontSize: 18, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: key === "mode" ? "Create" : cycleMode ? "Create Cycle" : "Create Program" }), _jsx("div", { className: "mono", style: { flexShrink: 0, width: 36, textAlign: "right", fontSize: 11, fontWeight: 600, color: C.faint, letterSpacing: .4 }, children: key === "mode" ? "" : `${step + 1}/${STEPS.length}` })] }), _jsx("div", { className: "wpb-wizard-progress", role: "progressbar", "aria-label": "Setup progress", "aria-valuemin": 0, "aria-valuemax": STEPS.length, "aria-valuenow": key === "mode" ? 0 : step + 1, style: { height: 4, background: C.border, borderRadius: 999, marginTop: 16, overflow: "hidden" }, children: _jsx("div", { className: "wpb-bar", style: { background: C.accent, transform: `translateX(-${(1 - progress) * 100}%)` } }) })] }), _jsx("div", { ref: scrollRef, className: "wpb-scroll wpb-page-scroll", style: { flex: 1, minHeight: 0, overflowY: "auto", padding: "22px 20px 28px", overscrollBehavior: "contain" }, children: _jsx("fieldset", { className: "fadeUp wpb-wizard-step", disabled: building, "aria-busy": building, style: { border: 0, padding: 0, margin: 0, minWidth: 0 }, children: _jsx(StepBody, { stepKey: key, config: { ...config, goal: effectiveGoal }, set: set, buildable: buildable.__key === buildKey ? buildable : {}, autoLength: autoLength, compatibleSplits: compatibleSplits, focusTotal: focusTotal, cycleTemplate: cycleTemplate, setCycleTemplate: setCycleTemplate, cycleChoices: cycleChoices, cycleAdapt: cycleAdapt, setCycleAdapt: setCycleAdapt, cycleMode: cycleMode, setCycleMode: setCycleMode, nextEngineOnly: nextEngineOnly, nextRecommendedSplit: nextRecommendedSplit }, key) }, step) }), _jsxs("div", { className: "wpb-wizard-footer", style: { flexShrink: 0, zIndex: 3, padding: "10px 20px calc(env(safe-area-inset-bottom) + 14px)", background: C.bg, borderTop: `1px solid ${C.borderSoft}`, boxShadow: "0 -12px 26px rgba(0,0,0,.10)" }, children: [building && (_jsxs("div", { role: "status", "aria-live": "polite", className: "wpb-build-status", style: { padding: "8px 0", display: "flex", alignItems: "center", gap: 10 }, children: [_jsx("span", { className: "wpb-inline-spinner", "aria-hidden": "true" }), _jsxs("div", { style: { minWidth: 0 }, children: [_jsxs("div", { style: { fontSize: 13, fontWeight: 700, color: C.text }, children: ["Building your ", cycleMode ? "cycle" : "program", "\u2026"] }), _jsx("div", { style: { marginTop: 2, fontSize: 12, lineHeight: 1.35, color: C.muted }, children: "Balancing exercises, volume, recovery, and session time." })] })] })), buildError && _jsx("div", { role: "alert", className: "wpb-build-alert", style: { padding: "8px 0", fontSize: 13, lineHeight: 1.45, color: C.danger }, children: buildError }), _jsxs("div", { style: { display: "flex", gap: 8 }, children: [_jsxs("button", { onClick: back, disabled: building, className: "pressable wpb-wizard-back-action", style: {
+    return (_jsxs("div", { className: "wpb-page-shell wpb-wizard", children: [_jsxs("div", { className: "wpb-page-header wpb-program-header wpb-wizard-header", style: { padding: "14px 20px 0" }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 6, height: 34 }, children: [_jsx("button", { onClick: back, disabled: building, "aria-label": "Back", className: "pressable hit", style: { flexShrink: 0, width: 36, display: "flex", alignItems: "center", background: "none", border: "none", color: C.text, cursor: "pointer", padding: 4 }, children: _jsx(ChevronLeft, { size: 28 }) }), _jsx("div", { style: { flex: 1, minWidth: 0, textAlign: "center", fontSize: 18, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: key === "mode" ? "Create" : cycleMode ? "Create Cycle" : "Create Program" }), _jsx("div", { className: "mono", style: { flexShrink: 0, width: 36, textAlign: "right", fontSize: 11, fontWeight: 600, color: C.faint, letterSpacing: .4 }, children: key === "mode" ? "" : `${step + 1}/${STEPS.length}` })] }), _jsx("div", { className: "wpb-wizard-progress", role: "progressbar", "aria-label": "Setup progress", "aria-valuemin": 0, "aria-valuemax": STEPS.length, "aria-valuenow": key === "mode" ? 0 : step + 1, style: { height: 4, background: C.border, borderRadius: 999, marginTop: 16, overflow: "hidden" }, children: _jsx("div", { className: "wpb-bar", style: { background: C.accent, transform: `translateX(-${(1 - progress) * 100}%)` } }) })] }), _jsx("div", { ref: scrollRef, className: "wpb-scroll wpb-page-scroll", style: { flex: 1, minHeight: 0, overflowY: "auto", padding: "22px 20px 28px", overscrollBehavior: "contain" }, children: _jsx("fieldset", { className: "fadeUp wpb-wizard-step", disabled: building, "aria-busy": building, style: { border: 0, padding: 0, margin: 0, minWidth: 0 }, children: _jsx(StepBody, { stepKey: key, config: { ...config, goal: effectiveGoal }, set: set, buildable: buildable.__key === buildKey ? buildable : {}, autoLength: autoLength, compatibleSplits: compatibleSplits, focusTotal: focusTotal, cycleTemplate: cycleTemplate, setCycleTemplate: setCycleTemplate, cycleChoices: cycleChoices, cycleAdapt: cycleAdapt, setCycleAdapt: setCycleAdapt, cycleMode: cycleMode, setCycleMode: setCycleMode, nextRecommendedSplit: nextRecommendedSplit }, key) }, step) }), _jsxs("div", { className: "wpb-wizard-footer", style: { flexShrink: 0, zIndex: 3, padding: "10px 20px calc(env(safe-area-inset-bottom) + 14px)", background: C.bg, borderTop: `1px solid ${C.borderSoft}`, boxShadow: "0 -12px 26px rgba(0,0,0,.10)" }, children: [building && (_jsxs("div", { role: "status", "aria-live": "polite", className: "wpb-build-status", style: { padding: "8px 0", display: "flex", alignItems: "center", gap: 10 }, children: [_jsx("span", { className: "wpb-inline-spinner", "aria-hidden": "true" }), _jsxs("div", { style: { minWidth: 0 }, children: [_jsxs("div", { style: { fontSize: 13, fontWeight: 700, color: C.text }, children: ["Building your ", cycleMode ? "cycle" : "program", "\u2026"] }), _jsx("div", { style: { marginTop: 2, fontSize: 12, lineHeight: 1.35, color: C.muted }, children: "Balancing exercises, volume, recovery, and session time." })] })] })), buildError && _jsx("div", { role: "alert", className: "wpb-build-alert", style: { padding: "8px 0", fontSize: 13, lineHeight: 1.45, color: C.danger }, children: buildError }), _jsxs("div", { style: { display: "flex", gap: 8 }, children: [_jsxs("button", { onClick: back, disabled: building, className: "pressable wpb-wizard-back-action", style: {
                                     flex: step === 0 ? "0 0 auto" : "0 0 32%", minHeight: 50, padding: "12px 14px", borderRadius: 13, border: `1px solid ${C.border}`, cursor: "pointer",
                                     fontSize: 15, fontWeight: 700, background: C.card, color: C.text,
                                     display: "flex", alignItems: "center", justifyContent: "center", gap: 6
@@ -11460,7 +11460,7 @@ function Heading({ children, sub }) {
     return (_jsxs("div", { className: "wpb-wizard-heading", style: { marginBottom: 20 }, children: [_jsx("h1", { className: "wpb-wizard-heading-title", style: { fontSize: 28, lineHeight: 1.12, fontWeight: 700, margin: 0, letterSpacing: -0.5 }, children: children }), sub && _jsx("p", { className: "wpb-wizard-heading-sub", style: { color: C.muted, marginTop: 8, fontSize: 15, lineHeight: 1.45 }, children: sub })] }));
 }
 const Col = ({ children }) => _jsx("div", { className: "wpb-wizard-options", style: { display: "flex", flexDirection: "column", gap: 12 }, children: children });
-function StepBody({ stepKey, config, set, buildable = {}, autoLength = null, compatibleSplits, focusTotal, cycleTemplate, setCycleTemplate, cycleChoices, cycleMode, setCycleMode, cycleAdapt, setCycleAdapt, nextEngineOnly, nextRecommendedSplit }) {
+function StepBody({ stepKey, config, set, buildable = {}, autoLength = null, compatibleSplits, focusTotal, cycleTemplate, setCycleTemplate, cycleChoices, cycleMode, setCycleMode, cycleAdapt, setCycleAdapt, nextRecommendedSplit }) {
     if (stepKey === "units") {
         const opts = [["kg", "Kilograms", "kg"], ["lb", "Pounds", "lb"]];
         return (_jsxs(_Fragment, { children: [_jsx(Heading, { sub: "Used everywhere \u2014 plates, targets, history. You can change it later in Settings.", children: "Which units do you train in?" }), _jsx("div", { style: { display: "flex", gap: 12 }, children: opts.map(([v, label, suf]) => {
@@ -11532,7 +11532,7 @@ function StepBody({ stepKey, config, set, buildable = {}, autoLength = null, com
         const ordered = withV.sort((a, b) => (a[2].length > 0) - (b[2].length > 0) || (a[0] === rec ? -1 : b[0] === rec ? 1 : 0));
         const blockedEq = ordered.filter(x => x[3] && x[3].ok === false && x[3].kind !== "design").length;
         const blockedDesign = ordered.filter(x => x[3] && x[3].ok === false && x[3].kind === "design").length;
-        return (_jsxs(_Fragment, { children: [_jsx(Heading, { sub: `Choose how to spread ${config.days} training days across the week.`, children: "Pick your split" }), _jsx("div", { role: "status", style: { fontSize: 13, color: C.muted, marginBottom: 12 }, children: ordered.some(x => !x[3]) ? "Checking your equipment and available session lengths…" : "Availability checked. Choose an available split to continue." }), blockedEq > 0 && (_jsxs("div", { role: "note", "data-testid": "split-equipment-note", style: { fontSize: 13, color: C.muted, lineHeight: 1.5, margin: "0 2px 12px" }, children: [blockedEq === 1 ? "One program can't" : `${blockedEq} programs can't`, " be built with your current equipment, so ", blockedEq === 1 ? "it's" : "they're", " marked below. Add equipment in your gym settings to open ", blockedEq === 1 ? "it" : "them", " up."] })), blockedDesign > 0 && (_jsxs("div", { role: "note", "data-testid": "split-design-note", style: { fontSize: 13, color: C.muted, lineHeight: 1.5, margin: "0 2px 12px" }, children: [blockedDesign === 1 ? "One program doesn't" : `${blockedDesign} programs don't`, " come out balanced at ", config.days, " days, so ", blockedDesign === 1 ? "it's" : "they're", " marked below \u2014 a different number of days usually fixes it."] })), _jsx(Col, { children: ordered.map(([k, sp, gaps, v]) => {
+        return (_jsxs(_Fragment, { children: [_jsx(Heading, { sub: `Choose how to spread ${config.days} training days across the week.`, children: "Pick your split" }), _jsx("div", { role: "status", style: { fontSize: 13, color: C.muted, marginBottom: 12 }, children: ordered.some(x => !x[3]) ? "Checking your equipment and available session lengths…" : "Availability checked. Choose an available split to continue." }), blockedEq > 0 && (_jsxs("div", { role: "note", "data-testid": "split-equipment-note", style: { fontSize: 13, color: C.muted, lineHeight: 1.5, margin: "0 2px 12px" }, children: [blockedEq === 1 ? "One program can't" : `${blockedEq} programs can't`, " be built with your current equipment, so ", blockedEq === 1 ? "it's" : "they're", " marked below. Add equipment in your gym settings to open ", blockedEq === 1 ? "it" : "them", " up."] })), blockedDesign > 0 && (_jsxs("div", { role: "note", "data-testid": "split-design-note", style: { fontSize: 13, color: C.muted, lineHeight: 1.5, margin: "0 2px 12px" }, children: [blockedDesign === 1 ? "One program doesn't" : `${blockedDesign} programs don't`, " come out balanced at ", config.days, " days, so ", blockedDesign === 1 ? "it's" : "they're", " marked below \u2014 a different number of days usually fixes it."] })), _jsx(Col, { children: ordered.map(([k, sp, , v]) => {
                         const off = !!(v && v.ok === false);
                         return (_jsx(OptionCard, { icon: Repeat, label: k === rec && !off ? `${sp.name} · Recommended` : sp.name, sub: sp.blurb, selected: config.split === k && !off, disabled: off, note: noteOf(v), onClick: () => set({ split: k }) }, k));
                     }) })] }));
@@ -11861,7 +11861,7 @@ function phaseTone(label, index, accent) {
         return { hue: _rot(base, 150, 0.45), icon: DELOAD_ICON };
     return { hue: _rot(base, PHASE_ROT[k], 1), icon: PHASE_ICONS[k] };
 }
-function PlanView({ program, plan, unit, onOpenDay, onOpenProgram, onBack }) {
+function PlanView({ program, plan, onOpenDay, onOpenProgram, onBack }) {
     /* the current week starts EXPANDED — it is the one you came to look at, and making the common
        case cost a tap is the kind of small friction that reads as clunky */
     const [openWeek, setOpenWeek] = useState(plan ? plan.currentWeek : null);
@@ -11940,7 +11940,7 @@ function PlanView({ program, plan, unit, onOpenDay, onOpenProgram, onBack }) {
                                 })] }, ph.key));
                     })] })), _jsx("button", { onClick: onOpenProgram, className: "pressable", style: { width: "100%", marginTop: 12, background: "none", border: `1px solid ${C.border}`, borderRadius: 16, padding: "12px 14px", cursor: "pointer", color: C.text, fontSize: 13, fontWeight: 600 }, children: "Open full program" })] }));
 }
-function NextWorkoutView({ program, day, weekIndex, unit = "kg", loadMode = "rir", cycleInfo = null, freshness = null, alt = null, onStart, onStartAlt, onOpenProgram, onBack }) {
+function NextWorkoutView({ program, day, weekIndex, loadMode = "rir", cycleInfo = null, freshness = null, alt = null, onStart, onStartAlt, onOpenProgram, onBack }) {
     if (!program || !day)
         return null;
     const mins = estimateMinutes(program, day, weekIndex);
@@ -12157,7 +12157,6 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
     const [addDay, setAddDay] = useState(null); // dayId for the add-exercise sheet
     const [showVol, setShowVol] = useState(false);
     const [showProg, setShowProg] = useState(false);
-    const [showWave, setShowWave] = useState(false);
     const [planInfo, setPlanInfo] = useState(false); // the Plan sheet — reference material, opened on purpose
     const [showSetup, setShowSetup] = useState(false); // "How this was built" — reference, so closed by default
     const [showBlock, setShowBlock] = useState(false);
@@ -13871,7 +13870,7 @@ function ExercisePickerSheet({ onPick, onClose, banned = [], title = "Add exerci
     }, [q, part]);
     return (_jsx("div", { onClick: onClose, className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "flex-end", zIndex: 75, animation: "fadeIn .2s both" }, children: _jsxs("div", { ref: sheetDragRef, onClick: e => e.stopPropagation(), style: { width: "100%", maxHeight: "88%", display: "flex", flexDirection: "column", background: C.bg2, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingTop: 8, animation: "sheetUp .28s cubic-bezier(.2,.7,.3,1) both", borderTop: `1px solid ${C.border}` }, children: [_jsxs("div", { style: { padding: "0 18px", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }, children: [_jsx("div", { style: { fontSize: 18, fontWeight: 700 }, children: title }), _jsx("button", { className: "pressable", onClick: onClose, "aria-label": "Close", style: iconBtn(), children: _jsx(X, { size: 18 }) })] }), _jsxs("div", { style: { padding: "0 18px", display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }, children: [_jsx(Search, { size: 16, color: C.faint }), _jsx("input", { value: q, onChange: e => setQ(e.target.value), placeholder: `Search ${EXERCISES.length} exercises…`, autoFocus: true, style: { flex: 1, background: "none", border: "none", outline: "none", color: C.text, fontSize: 15 } })] }), _jsx("div", { className: "wpb-hscroll", style: { display: "flex", gap: 6, overflowX: "auto", overflowY: "hidden", touchAction: "pan-x pan-y", padding: "0 18px 10px" }, children: ["all", ...PART_ORDER].map(p => (_jsx("button", { onClick: () => setPart(p), className: "pressable", style: { flexShrink: 0, padding: "6px 12px", borderRadius: 999, border: `1px solid ${part === p ? C.accent : C.border}`, background: part === p ? C.accent : C.card, color: part === p ? C.accentText : C.muted, fontSize: 13, fontWeight: 600, cursor: "pointer", textTransform: "capitalize", whiteSpace: "nowrap" }, children: p === "all" ? "All" : PART_LABEL[p] }, p))) }), _jsxs("div", { className: "wpb-scroll", style: { flex: 1, overflowY: "auto", padding: "0 18px calc(env(safe-area-inset-bottom) + 20px)" }, children: [list.map(e => (_jsxs("button", { onClick: () => onPick(e.id), className: "pressable", style: { width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "11px 12px", marginBottom: 6, background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, cursor: "pointer", textAlign: "left", opacity: banned.includes(e.id) ? 0.5 : 1 }, children: [_jsxs("div", { style: { flex: 1 }, children: [_jsxs("div", { style: { fontSize: 15, fontWeight: 600, color: C.text }, children: [e.name, banned.includes(e.id) ? " · banned" : ""] }), _jsxs("div", { style: { fontSize: 13, color: C.muted, textTransform: "capitalize" }, children: [PART_LABEL[e.part], " \u00B7 ", e.type] })] }), _jsx(Plus, { size: 16, color: C.accentInk })] }, e.id))), list.length === 0 && _jsx("div", { style: { textAlign: "center", color: C.muted, fontSize: 13, padding: "30px 0" }, children: "No exercises match." })] })] }) }));
 }
-function SwapSheet({ ex, alts, onPick, onBanCurrent, onClose, trend, program, day, unit, sessionExerciseIds = null, scopeMode = "workout" }) {
+function SwapSheet({ ex, alts, onPick, onBanCurrent, onClose, trend, program, day, sessionExerciseIds = null, scopeMode = "workout" }) {
     /* The same starved-region set the ranking used, so the badge and the order tell one story: an item
        is flagged because it fills a gap this program has, not merely because it resembles what it
        replaces. Memoised — weeklySubVolume walks every day and this sheet re-renders on each keystroke
@@ -14370,7 +14369,7 @@ function ExerciseAnimation({ ex, height = 190 }) {
     const plateAt = (x, y, ang, r = 8) => _jsx("circle", { cx: x, cy: y, r: r * 0.62, ...S, fill: C.bg2 });
     // Barbell: a thin shaft with a plate stack at each end. Angle is the shaft angle
     // (0 = horizontal). Both hands grip one shaft — used for two-handed barbell lifts.
-    const barbell = (cx, cy, ang = 0, half = 20) => _jsxs("g", { "data-implement": "barbell", children: [_jsx("circle", { cx: cx, cy: cy, r: "5.4", fill: "#314256", stroke: A, strokeWidth: "1.8" }), _jsx("circle", { cx: cx, cy: cy, r: "1.5", fill: A })] });
+    const barbell = (cx, cy, _ang = 0, _half = 20) => _jsxs("g", { "data-implement": "barbell", children: [_jsx("circle", { cx: cx, cy: cy, r: "5.4", fill: "#314256", stroke: A, strokeWidth: "1.8" }), _jsx("circle", { cx: cx, cy: cy, r: "1.5", fill: A })] });
     const rotP = (px, py, x, y, deg) => {
         const r = deg * Math.PI / 180, c = Math.cos(r), s = Math.sin(r);
         const dx = x - px, dy = y - py;
@@ -14693,7 +14692,7 @@ function ExerciseAnimation({ ex, height = 190 }) {
         wallhold: () => ({ env: _jsxs(_Fragment, { children: [ground, _jsx("line", { x1: "43", y1: "15", x2: "43", y2: "92", ...T })] }), j: { sh: [50, 39], hip: [50, 65], kn: [75, 65], an: [75, 90], el: [59, 52], wr: [70, 60] }, eq: null }),
         rearfly: (t) => {
             const shY = 43, hipY = 66, reach = L(3, 25, t), wrL = [50 - reach, 45], wrR = [70 + reach, 45];
-            const arm = (sh, wr, sign) => ({ sh, el: [(sh[0] + wr[0]) / 2, sh[1] + 3], wr });
+            const arm = (sh, wr, _sign) => ({ sh, el: [(sh[0] + wr[0]) / 2, sh[1] + 3], wr });
             return { front: true, env: implement === 'machine' ? seat(60, 70, 32) : ground, j: { shY, hipY, armL: arm([50, shY], wrL, 1), armR: arm([70, shY], wrR, -1) }, eq: null };
         },
         neck: (t) => {
@@ -17295,11 +17294,8 @@ function simulateAndAudit(o) {
                 const ex = EX_BY_ID[id];
                 if (!ex)
                     return;
-                const isPrimary = slot === day.primaryIndex;
                 let sets = null, sug = null;
                 try {
-                    const cell = computeCell(program, day, ex.id, slot, w);
-                    const range = cellRepRange(cell, program, ex, isPrimary);
                     sug = sessionSuggestion(program, day, slot, perf, unit, w, history);
                     sets = prescribeSets(program, day, ex, slot, w, unit, sug, perf, perf, history, false);
                 }
@@ -17342,7 +17338,7 @@ function simulateAndAudit(o) {
     }
     return findings;
 }
-function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipment = null, day: rawDay, weekIndex, unit, setUnit, perf, onExit, onFinish, onSaveRoutine, onBan, banned = [], history = [], loadMode = "rir", onEditHistory, goals = {}, onSetGoal, restAutoStart = true, restScale = 1, exNotes = {}, onSetExNote, exSetup = {}, onSetExSetup, onSetExLoadInc, onUpdateProgramExercise, onSetRest }) {
+function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipment = null, day: rawDay, weekIndex, unit, perf, onExit, onFinish, onSaveRoutine, onBan, banned = [], history = [], loadMode = "rir", onEditHistory, goals = {}, onSetGoal, restAutoStart = true, restScale = 1, exNotes = {}, onSetExNote, exSetup = {}, onSetExSetup, onSetExLoadInc, onUpdateProgramExercise, onSetRest }) {
     // Resilient to a removed/unknown exercise id lingering in a saved program: drop it cleanly.
     const day = useMemo(() => (rawDay.exercises.every(id => EX_BY_ID[id]) ? rawDay : { ...rawDay, exercises: rawDay.exercises.filter(id => EX_BY_ID[id]) }), [rawDay]);
     const [histEdit, setHistEdit] = useState(null); // { histId, exId, w, r }
@@ -18563,16 +18559,6 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
         } // no duplicates
         const newEx = EX_BY_ID[newId];
         const oldId = data[ei].id;
-        const isP = slot === day.primaryIndex;
-        const swapCell = computeCell(program, day, newId, slot, weekIndex);
-        const swapRange = (() => {
-            if (swapCell.range && String(swapCell.range).includes("-")) {
-                const [a, b] = (() => { const r = String(swapCell.range).split("-").map(Number); return [r[0], Number.isFinite(r[1]) ? r[1] : r[0]]; })(); /* "8" is a range of one, not [8, NaN] */
-                if (a > 0 && b >= a)
-                    return [a, b];
-            }
-            return cellRepRange(swapCell, program, newEx, isP);
-        })();
         const sug = null; // M46: never invoke the removed legacy load engine for an ad-hoc swap.
         const keepWarm = data[ei].sets.some(s => s.warm);
         const snap = data, snapIdx = exIdx;
@@ -19316,7 +19302,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
                                this codebase has already paid for once (v516). */
                             const swapEquip = expandEquipment(gymEquipment && gymEquipment.length ? gymEquipment : program.config.equipment);
                             const pool = rankSwapAlts(ex, availableFor(ex.part, swapEquip, banned, !!program.config.noBodyweight).filter(a => a.id !== ex.id && !sessionIds.has(a.id)), starvedRegions(program), [...sessionIds].map(id => EX_BY_ID[id]), program, day);
-                            return (_jsx(SwapSheet, { ex: ex, alts: pool, trend: trendById[ex.id], program: program, day: day, sessionExerciseIds: data.map(item => item.id), unit: unit, onPick: doSwap, onBanCurrent: () => { onBan(ex.id); /* THIRD copy of the same pool, found by the source sweep rather than by looking — and the one that matters most, since it picks the replacement FOR you rather than offering a list. Reuses swapEquip above. */ /* THIRD copy of the same pool, found by the source sweep rather than by looking — and the one that matters most, since it picks the replacement FOR you rather than offering a list. Reuses swapEquip above. */ const alt = availableFor(ex.part, swapEquip, [...banned, ex.id], !!program.config.noBodyweight).find(a => !sessionIds.has(a.id)); if (alt)
+                            return (_jsx(SwapSheet, { ex: ex, alts: pool, trend: trendById[ex.id], program: program, day: day, sessionExerciseIds: data.map(item => item.id), onPick: doSwap, onBanCurrent: () => { onBan(ex.id); /* THIRD copy of the same pool, found by the source sweep rather than by looking — and the one that matters most, since it picks the replacement FOR you rather than offering a list. Reuses swapEquip above. */ /* THIRD copy of the same pool, found by the source sweep rather than by looking — and the one that matters most, since it picks the replacement FOR you rather than offering a list. Reuses swapEquip above. */ const alt = availableFor(ex.part, swapEquip, [...banned, ex.id], !!program.config.noBodyweight).find(a => !sessionIds.has(a.id)); if (alt)
                                     doSwap(alt.id);
                                 else
                                     setSwap(false); }, onClose: () => setSwap(false) }));
@@ -21356,7 +21342,7 @@ function constantLoadDecay(history, exId) {
 /* Program-level overreach: how many of the program's main lifts are decaying at constant load, and
    how deep the decay runs. Feeds the deload advisor with something falsifiable, replacing a mix of
    PR-drought counting and subjective feedback with a direct observation. */
-function overreachSignal(history, program) {
+function overreachSignal(history, _program) {
     const hs = history || [];
     if (hs.length < 4)
         return { level: "none", lifts: [], why: "" };
@@ -23151,7 +23137,7 @@ const miniInput = (w) => ({ width: w, padding: "7px 6px", textAlign: "center", b
  * components' render conditions.
  */
 const HOME_INSIGHT_BUDGET = 2;
-function homeCardPlan(history, { bodyweight, unit, sex, age } = {}) {
+function homeCardPlan(history, { bodyweight } = {}) {
     const h = Array.isArray(history) ? history : [];
     if (!h.length)
         return [];
@@ -24461,7 +24447,7 @@ function HomePrograms({ saved, cycles, activeId, onOpen, onOpenCycles, onSetActi
         limit > 4 && rest.length > 4 && h('button', { type: 'button', className: 'pressable hp-action hp-more', onClick: ev => { setLimit(4); ev.currentTarget.closest('section').scrollIntoView({ block: 'start' }); } }, 'Show fewer programs'));
 }
 
-function Home({ legacySaved = [], onRebuildLegacy, onRemoveLegacy, gyms = [], activeGymId = null, onSetGym, saved, history = [], bwLog = [], onCreate, onBuildOwn, onCycles, cycleCount = 0, cycleInfo = null, onOpenCycles, onQuick, onOpen, onDelete, onDuplicate, onNextBlock, onConvertCycle, activeId = null, onSwitchProgram, onSetActive, cycles = [], onHistory, onStrength, historyCount, upNext, onStartNext, onStartAlt, onOpenActive, onTemplate, onDeload, canDeload, onLight, canLight, onLibrary, onCalc, onCompare, bodyweight, sex, age, unit, needsBackup, onBackup, whatsNew, onDismissWhatsNew, onOpenChangelog, sessionActive = false, hasTabBar = false, showInstall = false, installEvent = null, isIosSafari = false, onDismissInstall, browseRequested = false, onBrowseHandled }) {
+function Home({ legacySaved = [], onRebuildLegacy, onRemoveLegacy, gyms = [], activeGymId = null, onSetGym, saved, history = [], bwLog = [], onCreate, onBuildOwn, onCycles, cycleCount = 0, cycleInfo = null, onOpenCycles, onQuick, onOpen, onDelete, onDuplicate, onConvertCycle, activeId = null, onSwitchProgram, onSetActive, cycles = [], onHistory, onStrength, historyCount, upNext, onStartNext, onStartAlt, onOpenActive, onTemplate, onDeload, canDeload, onLight, canLight, onLibrary, onCalc, onCompare, bodyweight, sex, age, unit, needsBackup, onBackup, whatsNew, onDismissWhatsNew, onOpenChangelog, sessionActive = false, hasTabBar = false, showInstall = false, installEvent = null, isIosSafari = false, onDismissInstall, browseRequested = false, onBrowseHandled }) {
     const [bkHide, setBkHide] = useState(false);
     const [upNextAll, setUpNextAll] = useState(false); // Up Next hero: show every exercise, not the first five
     /* Program-card overflow menu. Held at Home's TOP LEVEL, not inside the card, and carrying the
@@ -24488,7 +24474,7 @@ function Home({ legacySaved = [], onRebuildLegacy, onRemoveLegacy, gyms = [], ac
     /* Which insight cards earn a slot below the hero today. One owner (homeCardPlan), memoized on the
        inputs it actually reads — it calls weeklyRecap and muscleRecovery, and muscleRecovery is the
        expensive one (WeakMap-cached on the history array, so this costs nothing on a re-render). */
-    const insightPlan = useMemo(() => homeCardPlan(history, { bodyweight, unit, sex, age }), [history, bodyweight, unit, sex, age]);
+    const insightPlan = useMemo(() => homeCardPlan(history, { bodyweight }), [history, bodyweight]);
     const mins = upNext ? estimateMinutesFor(upNext.program, upNext.day, upNext.weekIndex, pace) : 0;
     const weekLabel = upNext
         ? (upNext.program.config?.endless
@@ -25297,7 +25283,7 @@ function GymsSheet({ gyms, activeGymId, onSave, onClose }) {
 }
 /* saved/history/perf are threaded in for the self-test: it now audits the LIFTER'S OWN programs
    against their real logged history, not only a synthetic sweep. */
-function SettingsView({ selfTestData = null, initialFocus = null, onFocusHandled, warmupCard, setWarmupCard, experience, setExperience, gymName, gymCount, onGyms, nextEngineOnly, theme, setTheme, unit, setUnit, loadMode, setLoadMode, restAutoStart, setRestAutoStart, restScale, setRestScale, haptics, setHaptics, reminders, setReminders, minInc, setMinInc, plates, setPlates, bodyweight, setBodyweight, sex, setSex, age, birth, setBirth, birthEst, bannedCount, customCount, historyCount, savedCount, onClearBanned, onClearHistory, onResetAll, onExport, onBackupSaved, onExportCSV, onExportBodyCSV, onImport, onPreviewImport, onLibrary, onImportProgram, onGallery, onShowIntro, onShowWhatsNew }) {
+function SettingsView({ selfTestData = null, initialFocus = null, onFocusHandled, warmupCard, setWarmupCard, experience, setExperience, gymName, gymCount, onGyms, theme, setTheme, unit, setUnit, loadMode, setLoadMode, restAutoStart, setRestAutoStart, restScale, setRestScale, haptics, setHaptics, reminders, setReminders, minInc, setMinInc, plates, setPlates, bodyweight, setBodyweight, sex, setSex, age, birth, setBirth, birthEst, bannedCount, customCount, historyCount, onClearBanned, onClearHistory, onResetAll, onExport, onBackupSaved, onExportCSV, onExportBodyCSV, onImport, onPreviewImport, onLibrary, onImportProgram, onGallery, onShowIntro, onShowWhatsNew }) {
     const [pasteProg, setPasteProg] = useState(null); // null | { text, result }
     const [backup, setBackup] = useState(null); // "export" | "import" | null
     const [exportText, setExportText] = useState("");
@@ -25801,7 +25787,7 @@ function CycleDetail({ cycle, saved = [], history = [], cycleInfo = null, onBack
  * IT REFUSES TO GUESS. Under three logged sessions it says so and stops, rather than reporting a trend
  * from two points — the whole value of a retrospective is that you can act on it, and advice built on
  * a thin window is worse than no advice because you cannot tell it apart from the real thing. */
-function BlockReviewView({ cycle, blockIdx, history = [], onBack, onOpenBlock }) {
+function BlockReviewView({ cycle, blockIdx, history = [], onBack }) {
     const R = useMemo(() => blockReview(history, cycle, blockIdx), [history, cycle, blockIdx]);
     const meta = R.block || {};
     const fmtD = ms => new Date(ms).toLocaleDateString(undefined, { month: "short", day: "numeric" });
@@ -26164,7 +26150,7 @@ class ErrorBoundary extends Component {
 function GalleryView({ onBack, onImport, source = "gallery.json" }) {
     const [status, setStatus] = useState("loading"); // loading | ready | error
     const [entries, setEntries] = useState([]);
-    const [err, setErr] = useState(null);
+    const [, setErr] = useState(null);
     const [f, setF] = useState({ split: "all", days: "all", goal: "all" });
     const [results, setResults] = useState({}); // code -> { ok, msg }
     const [scrolled, setScrolled] = useState(false); // header sheds its blurb once you are past the top
@@ -26348,10 +26334,6 @@ function App() {
     /* Experience is profile-scoped, like the unit: asked once, then editable in Settings. Null until
        the lifter has answered, which is what makes the wizard show the step the first time only. */
     const [experience, setExperience] = useState(null);
-    // M46: Pursuit Next is the sole owner of all user-facing plan generation. This is intentionally
-    // not a preference anymore: a testing build cannot prove the new engine if the old generator can
-    // still be selected or reached as a silent fallback.
-    const nextEngineOnly = true;
     const [unitChosen, setUnitChosen] = useState(false); // true once the user has explicitly picked a unit → onboarding stops asking
     const [loadMode, setLoadMode] = useState("rir");
     const [goals, setGoals] = useState({});
@@ -27043,7 +27025,6 @@ function App() {
         setBodyweight(String(val));
     };
     const chooseTheme = (id) => { applyTheme(id); setThemeState(id); };
-    const chooseUnit = (u) => { setUnit(u); setUnitChosen(true); };
     // Switching the weight unit must CONVERT the stored loads, not just relabel them. Programs, training
     // maxes, per-machine increments and the cross-session perf store all hold bare numbers interpreted
     // in the current unit — without conversion, a 200 lb training max would suddenly be read as 200 kg
@@ -27909,7 +27890,7 @@ function App() {
         if (p.id)
             setSaved(list => list.map(x => x.id === p.id ? p : x));
     };
-    const handleRegenerate = (seed, toEngine = null, configPatch = null, metaPatch = null) => {
+    const handleRegenerate = (seed, _toEngine = null, configPatch = null, metaPatch = null) => {
         if (!program)
             return;
         const nextOwnerCycle = program.cycleId ? cycles.find(c => c.id === program.cycleId) : null;
@@ -27924,7 +27905,7 @@ function App() {
         let p;
         try {
             // M46: rebuild/reroll is also a generation action, so even a legacy saved program migrates to
-            // Pursuit Next rather than invoking its historical generator again. `toEngine` is retained in
+            // Pursuit Next rather than invoking its historical generator again. `_toEngine` is retained in
             // the callback signature for compatibility with older UI cards, but cannot select v661 here.
             p = generateNextProgramForShell({
                 config: cfg, banned, legacyExercises: EXERCISES,
@@ -28893,13 +28874,13 @@ function App() {
                                     else {
                                         setFocusCycle(null);
                                         pushView("cycles", "home");
-                                    } }, onQuick: startQuickWorkout, onOpen: (p) => { openWithDraft(p); pushView("program", "home"); }, onDelete: handleDelete, onDuplicate: handleDuplicate, onNextBlock: startNextBlock, onConvertCycle: beginCycleConversion, activeId: upNext?.program?.id || null, onSwitchProgram: () => setSwitchOpen(true), onSetActive: setActiveProgram, cycles: cycles, onHistory: () => navToTab("progress"), onStrength: () => { setProgressFocus("strength"); navToTab("progress"); }, historyCount: history.length, upNext: upNext, onStartNext: startUpNext, onStartAlt: startUpNextAlt, onOpenActive: openActive, onTemplate: startTemplate, onDeload: startDeload, canDeload: !!upNext, onLight: startLight, canLight: !!upNext, onLibrary: () => pushView("library", "home"), onCalc: () => setCalcOpen(true), onCompare: () => { setCompareMode("programs"); pushView("compare", "home"); }, bodyweight: bodyweight, sex: sex, age: age, unit: unit, needsBackup: loaded && !liveDockVisible && (saved.length > 0 || history.length >= 3) && (Date.now() - (lastBackup || 0) > 14 * 86400000), onBackup: () => { setSettingsFocus("export"); navToTab("settings"); }, whatsNew: loaded && !liveDockVisible && seenWhatsNew < WHATS_NEW_VERSION && (history.length > 0 || saved.length > 0), onDismissWhatsNew: () => setSeenWhatsNew(WHATS_NEW_VERSION), onOpenChangelog: () => setChangelogOpen(true), sessionActive: !!liveSession, hasTabBar: tabView, showInstall: loaded && !liveDockVisible && !installed && (!!installEvent || isIosSafari) && (Date.now() - (installDismissedAt || 0) > 14 * 86400000), installEvent: installEvent, isIosSafari: isIosSafari, onDismissInstall: () => { setInstallDismissedAt(Date.now()); setInstallEvent(null); } })) : view === "progress" ? (_jsx(HistoryView, { history: history, onDeleteEntry: deleteHistoryEntry, onEditEntry: editHistoryWorkout, birth: birth, embedded: true, activeProgram: upNext?.program || null, activeWeek: upNext?.weekIndex || 1, onGoTrain: startUpNext, nextLabel: upNext?.day?.label || null, focusSection: progressFocus, onFocusHandled: () => setProgressFocus(null), onClear: () => { const prev = history; setHistory([]); if (prev.length)
+                                    } }, onQuick: startQuickWorkout, onOpen: (p) => { openWithDraft(p); pushView("program", "home"); }, onDelete: handleDelete, onDuplicate: handleDuplicate, onConvertCycle: beginCycleConversion, activeId: upNext?.program?.id || null, onSwitchProgram: () => setSwitchOpen(true), onSetActive: setActiveProgram, cycles: cycles, onHistory: () => navToTab("progress"), onStrength: () => { setProgressFocus("strength"); navToTab("progress"); }, historyCount: history.length, upNext: upNext, onStartNext: startUpNext, onStartAlt: startUpNextAlt, onOpenActive: openActive, onTemplate: startTemplate, onDeload: startDeload, canDeload: !!upNext, onLight: startLight, canLight: !!upNext, onLibrary: () => pushView("library", "home"), onCalc: () => setCalcOpen(true), onCompare: () => { setCompareMode("programs"); pushView("compare", "home"); }, bodyweight: bodyweight, sex: sex, age: age, unit: unit, needsBackup: loaded && !liveDockVisible && (saved.length > 0 || history.length >= 3) && (Date.now() - (lastBackup || 0) > 14 * 86400000), onBackup: () => { setSettingsFocus("export"); navToTab("settings"); }, whatsNew: loaded && !liveDockVisible && seenWhatsNew < WHATS_NEW_VERSION && (history.length > 0 || saved.length > 0), onDismissWhatsNew: () => setSeenWhatsNew(WHATS_NEW_VERSION), onOpenChangelog: () => setChangelogOpen(true), sessionActive: !!liveSession, hasTabBar: tabView, showInstall: loaded && !liveDockVisible && !installed && (!!installEvent || isIosSafari) && (Date.now() - (installDismissedAt || 0) > 14 * 86400000), installEvent: installEvent, isIosSafari: isIosSafari, onDismissInstall: () => { setInstallDismissedAt(Date.now()); setInstallEvent(null); } })) : view === "progress" ? (_jsx(HistoryView, { history: history, onDeleteEntry: deleteHistoryEntry, onEditEntry: editHistoryWorkout, birth: birth, embedded: true, activeProgram: upNext?.program || null, activeWeek: upNext?.weekIndex || 1, onGoTrain: startUpNext, nextLabel: upNext?.day?.label || null, focusSection: progressFocus, onFocusHandled: () => setProgressFocus(null), onClear: () => { const prev = history; setHistory([]); if (prev.length)
                                         setAppToast({ msg: `Cleared ${prev.length} workout${prev.length === 1 ? "" : "s"}`, undo: () => { setHistory(prev); setAppToast(null); } }); }, bodyweight: bodyweight, sex: sex, age: age, unit: unit, onSetProfile: (patch) => { if (patch.bodyweight !== undefined)
                                         setBodyweight(patch.bodyweight); if (patch.sex !== undefined)
                                         setSex(patch.sex); if (patch.birth !== undefined) {
                                         setBirth(patch.birth);
                                         setBirthEst(false);
-                                    } }, bwLog: bwLog, onLogBodyweight: logBodyweight, goals: goals, onRepeat: repeatWorkout, measurements: measurements, onLogMeasurement: logMeasurement, cycles: cycles, saved: saved })) : view === "profile" ? (_jsx(ProfileView, { history: history, bodyweight: bodyweight, sex: sex, age: age, unit: unit, onSettings: () => { setSettingsFocus("profile"); navToTab("settings"); } })) : view === "settings" ? (_jsx(SettingsView, { experience: experience, setExperience: setExperience, selfTestData: { saved, history, perf }, gymName: activeGym ? activeGym.name : "All equipment", gymCount: gyms.length, onGyms: () => setGymsOpen(true), nextEngineOnly: nextEngineOnly, initialFocus: settingsFocus, onFocusHandled: () => setSettingsFocus(null), theme: theme, setTheme: chooseTheme, unit: unit, setUnit: switchUnit, loadMode: loadMode, setLoadMode: setLoadMode, restAutoStart: restAutoStart, setRestAutoStart: setRestAutoStart, warmupCard: warmupCard, setWarmupCard: setWarmupCard, haptics: haptics, setHaptics: setHaptics, restScale: restScale, setRestScale: setRestScale, reminders: reminders, setReminders: setReminders, minInc: minInc, setMinInc: setMinInc, plates: plates, setPlates: setPlates, bodyweight: bodyweight, setBodyweight: setBodyweight, sex: sex, setSex: setSex, age: age, birth: birth, setBirth: (b) => { setBirth(b); setBirthEst(false); }, birthEst: birthEst, bannedCount: banned.length, customCount: custom.length, historyCount: history.length, savedCount: saved.length, onClearBanned: () => { const prev = banned; setBanned([]); if (prev.length)
+                                    } }, bwLog: bwLog, onLogBodyweight: logBodyweight, goals: goals, onRepeat: repeatWorkout, measurements: measurements, onLogMeasurement: logMeasurement, cycles: cycles, saved: saved })) : view === "profile" ? (_jsx(ProfileView, { history: history, bodyweight: bodyweight, sex: sex, age: age, unit: unit, onSettings: () => { setSettingsFocus("profile"); navToTab("settings"); } })) : view === "settings" ? (_jsx(SettingsView, { experience: experience, setExperience: setExperience, selfTestData: { saved, history, perf }, gymName: activeGym ? activeGym.name : "All equipment", gymCount: gyms.length, onGyms: () => setGymsOpen(true), initialFocus: settingsFocus, onFocusHandled: () => setSettingsFocus(null), theme: theme, setTheme: chooseTheme, unit: unit, setUnit: switchUnit, loadMode: loadMode, setLoadMode: setLoadMode, restAutoStart: restAutoStart, setRestAutoStart: setRestAutoStart, warmupCard: warmupCard, setWarmupCard: setWarmupCard, haptics: haptics, setHaptics: setHaptics, restScale: restScale, setRestScale: setRestScale, reminders: reminders, setReminders: setReminders, minInc: minInc, setMinInc: setMinInc, plates: plates, setPlates: setPlates, bodyweight: bodyweight, setBodyweight: setBodyweight, sex: sex, setSex: setSex, age: age, birth: birth, setBirth: (b) => { setBirth(b); setBirthEst(false); }, birthEst: birthEst, bannedCount: banned.length, customCount: custom.length, historyCount: history.length, onClearBanned: () => { const prev = banned; setBanned([]); if (prev.length)
                                         setAppToast({ msg: `Cleared ${prev.length} banned exercise${prev.length === 1 ? "" : "s"}`, undo: () => { setBanned(prev); setAppToast(null); } }); }, onClearHistory: () => { const prev = history; setHistory([]); if (prev.length)
                                         setAppToast({ msg: `Cleared ${prev.length} logged workout${prev.length === 1 ? "" : "s"}`, undo: () => { setHistory(prev); setAppToast(null); } }); }, onResetAll: resetAll, onExport: () => exportData(), onBackupSaved: () => setLastBackup(Date.now()), onExportCSV: exportCSV, onExportBodyCSV: exportBodyCSV, onImport: importData, onPreviewImport: text => importData(text, { preview: true }), onLibrary: () => pushView("library", "settings"), onImportProgram: importProgramText, onGallery: () => pushView("gallery", "settings"), onShowIntro: () => { setSeenIntroV(0); rootView("home"); }, onShowWhatsNew: () => setWhatsNewModal(true) })) : view === "library" ? (_jsx(LibraryView, { onBack: goBack, banned: banned, onBan: addBan, onSetBan: setBanFor, goals: goals, onSetGoal: setGoalWeight, unit: unit, history: history, onCreateCustom: () => pushView("wizard", "library"), onCompare: () => { setCompareMode("exercises"); pushView("compare", "library"); }, exNotes: exNotes, onSetExNote: (id, text) => setExNotes(prev => { const n = { ...prev }; const t = (text || "").trim(); if (t)
                                         n[id] = t;
@@ -28924,7 +28905,7 @@ function App() {
                                         }
                                         return _jsx(BlockReviewView, { cycle: rc, blockIdx: reviewOf.blockIdx, history: history, onBack: goBack });
                                     })())
-                                        : view === "cycleWizard" ? (_jsx(Wizard, { initialEquipment: gymEquipment, initialExperience: experience, initialUnit: unit, skipUnits: unitChosen, cycleMode: true, nextEngineOnly: nextEngineOnly, onCancel: goBack, onDone: (cfg) => buildCycle(rememberExperience(rememberEquipment(cfg))) })) : view === "wizard" ? (_jsx(Wizard, { initialEquipment: gymEquipment, initialExperience: experience, initialUnit: unit, skipUnits: unitChosen, allowModeChoice: true, nextEngineOnly: nextEngineOnly, onCancel: goBack, onDone: (cfg) => { rememberEquipment(cfg); rememberExperience(cfg); return cfg.cycleTemplate ? buildCycle(cfg) : handleGenerate(cfg); } })) : view === "nextWorkout" && (previewTarget || (program && upNext)) ? (() => {
+                                        : view === "cycleWizard" ? (_jsx(Wizard, { initialEquipment: gymEquipment, initialExperience: experience, initialUnit: unit, skipUnits: unitChosen, cycleMode: true, onCancel: goBack, onDone: (cfg) => buildCycle(rememberExperience(rememberEquipment(cfg))) })) : view === "wizard" ? (_jsx(Wizard, { initialEquipment: gymEquipment, initialExperience: experience, initialUnit: unit, skipUnits: unitChosen, allowModeChoice: true, onCancel: goBack, onDone: (cfg) => { rememberEquipment(cfg); rememberExperience(cfg); return cfg.cycleTemplate ? buildCycle(cfg) : handleGenerate(cfg); } })) : view === "nextWorkout" && (previewTarget || (program && upNext)) ? (() => {
                                             /* A preview target wins over the computed Up Next, so one screen serves both "what's
                                                next" and "show me week 4, day 2" without a second component to keep in step. */
                                             const pv = previewTarget && saved.find(x => x.id === previewTarget.programId);
@@ -28934,7 +28915,7 @@ function App() {
                                                 : upNext;
                                             if (!shown || !shown.program || !shown.day)
                                                 return null;
-                                            return (_jsx(NextWorkoutView, { program: shown.program, day: shown.day, weekIndex: shown.weekIndex, unit: unit, loadMode: loadMode, cycleInfo: (() => {
+                                            return (_jsx(NextWorkoutView, { program: shown.program, day: shown.day, weekIndex: shown.weekIndex, loadMode: loadMode, cycleInfo: (() => {
                                                     const c = cycles.find(c => !c.done && c.blockIds.includes(shown.program.id));
                                                     return c ? { cycle: c, blockIdx: c.blockIds.indexOf(shown.program.id) } : null;
                                                 })(), freshness: shown.freshness, alt: shown.alt, onStart: () => { setPreviewTarget(null); setProgram(shown.program); startSession(shown.day, shown.weekIndex); }, onStartAlt: startUpNextAlt, onOpenProgram: () => pushView("program", "nextWorkout"), onBack: () => { setPreviewTarget(null); goBack(); } }));
@@ -28956,7 +28937,7 @@ function App() {
                                                 return 1;
                                             } })();
                                             const cyc = cycles.find(c => Array.isArray(c.blockIds) && c.blockIds.includes(pp.id)) || null;
-                                            return (_jsx(PlanView, { program: pp, plan: planOverview(pp, wk, cyc, history), unit: unit, onOpenDay: (dayId, week) => { setPreviewTarget({ programId: pp.id, dayId, weekIndex: week }); pushView("nextWorkout", "plan"); }, onOpenProgram: () => { openWithDraft(pp); pushView("program", "plan"); }, onBack: goBack }));
+                                            return (_jsx(PlanView, { program: pp, plan: planOverview(pp, wk, cyc, history), onOpenDay: (dayId, week) => { setPreviewTarget({ programId: pp.id, dayId, weekIndex: week }); pushView("nextWorkout", "plan"); }, onOpenProgram: () => { openWithDraft(pp); pushView("program", "plan"); }, onBack: goBack }));
                                         })() : view === "session" && program && sessionDay ? (_jsx(WorkoutSession
                                         /* Same reasoning as ProgramView: mid-workout, the alternatives offered must be the
                                            ones the room actually has. */
@@ -28981,7 +28962,7 @@ function App() {
                                                Resolving by id at render makes the signature incapable of drifting: there is one
                                                day, the program's. `sessionDay` stays the pointer (it carries quick/freestyle days
                                                that are not in `saved` yet, hence the fallback). */
-                                            program: program, day: liveDay, weekIndex: sessionWeek, unit: unit, setUnit: chooseUnit, perf: perf, onExit: () => { const q = program?.quick; setSessionDay(null); if (q) {
+                                            program: program, day: liveDay, weekIndex: sessionWeek, unit: unit, perf: perf, onExit: () => { const q = program?.quick; setSessionDay(null); if (q) {
                                                 setProgram(null);
                                                 setView("home");
                                             }

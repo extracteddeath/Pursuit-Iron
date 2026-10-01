@@ -1,0 +1,47 @@
+name: M203 final verification and source package
+
+on:
+  push:
+    branches: [m203-final-package]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-and-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout validated M203 production source
+        uses: actions/checkout@v4
+        with:
+          ref: f1eca56f0a189ebcbdbb729a099fd4a7309c2978
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Release integrity
+        run: node scripts/verify-release.mjs
+      - name: Install browser harness
+        run: |
+          command -v google-chrome
+          npm install --no-save --ignore-scripts puppeteer-core@24
+      - name: Exact-commit PWA lifecycle
+        env:
+          CHROME_BIN: /usr/bin/google-chrome
+        run: node verification/m178-pwa-update-browser-test.mjs
+      - name: Create source ZIP and checksum
+        run: |
+          rm -rf node_modules package-lock.json package.json
+          zip -qr pursuit-iron-m203-build793-source.zip . -x '.git/*' 'pursuit-iron-m203-build793-source.zip'
+          sha256sum pursuit-iron-m203-build793-source.zip > pursuit-iron-m203-build793-source.zip.sha256
+      - name: Upload source package
+        uses: actions/upload-artifact@v4
+        with:
+          name: pursuit-iron-m203-build793-source
+          path: |
+            pursuit-iron-m203-build793-source.zip
+            pursuit-iron-m203-build793-source.zip.sha256
+          compression-level: 0
+          retention-days: 7

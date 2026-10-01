@@ -62,6 +62,24 @@ for (const snippet of retiredPureAppLocals)
     assert.equal(app.includes(snippet), false, `pure dead App local must stay removed: ${snippet}`);
 const equipmentStep = app.slice(app.indexOf('if (stepKey === "equipment")'), app.indexOf('if (stepKey === "constraints")'));
 assert.equal(equipmentStep.includes('const hasBarbell = isBarLike(config.equipment);'), false, 'equipment-step dead hasBarbell read must stay removed');
+const retiredAppSignaturePlumbing = [
+    'build: (n) => ["b531_a", "b531_b", "b531_a"]',
+    'function sessionExercisePlan(session, goal = "hypertrophy", experience =',
+    'function isAxialLoad(ex, eng = 1)', 'function Wizard({ initialEquipment, initialExperience, initialUnit = "kg", skipUnits = false, onCancel, onDone, cycleMode: cycleModeInit = false, allowModeChoice = false, nextEngineOnly = true })',
+    'const nextEngineOnly = true;', 'nextEngineOnly, nextRecommendedSplit',
+    'ordered.map(([k, sp, gaps, v])', 'function PlanView({ program, plan, unit,',
+    'function NextWorkoutView({ program, day, weekIndex, unit =', 'const [showWave, setShowWave]',
+    'program, day, unit, sessionExerciseIds', 'const barbell = (cx, cy, ang = 0, half = 20)',
+    'const arm = (sh, wr, sign) =>', 'const range = cellRepRange(cell, program, ex, isPrimary);',
+    'weekIndex, unit, setUnit, perf,', 'const chooseUnit = (u) =>', 'const swapRange = (() =>',
+    'function overreachSignal(history, program)', 'homeCardPlan(history, { bodyweight, unit, sex, age })',
+    'onDuplicate, onNextBlock, onConvertCycle', 'onGyms, nextEngineOnly, theme',
+    'historyCount, savedCount, onClearBanned', 'onNextBlock: startNextBlock',
+    'savedCount: saved.length', 'function BlockReviewView({ cycle, blockIdx, history = [], onBack, onOpenBlock })',
+    'const [err, setErr] = useState(null);', 'const handleRegenerate = (seed, toEngine = null,', '// eslint-disable-line'
+];
+for (const snippet of retiredAppSignaturePlumbing)
+    assert.equal(app.includes(snippet), false, `dead App signature plumbing must stay removed: ${snippet}`);
 assert.doesNotMatch(index, /app-shell-adapter/, 'Node and browser must resolve the same canonical adapter');
 assert.equal(fs.existsSync(new URL('../modules/shadow-engine', import.meta.url)), false);
 assert.equal(fs.existsSync(new URL('../modules/next-engine/app-shell-adapter-capacity.js', import.meta.url)), false);

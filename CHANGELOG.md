@@ -1,3 +1,12 @@
+## M212 — App signature cleanup (build 802)
+
+- Removed unused view/component props and their call-site plumbing.
+- Removed discarded simulation/swap calculations and a no-op ProgramView state hook.
+- Removed the retired next-engine-only boolean plumbing now that Pursuit Next is the sole generation path.
+- Preserved historical/exported positional seams with explicit ignored parameters instead of breaking callers.
+- Tightened the static gate: only the separately-audited cycle-propagation callback may remain unused after this release.
+- Engine behavior remains 0.64.9; offline cache rotated for build 802.
+
 ## M211 — App pure-local cleanup (build 801)
 
 - Removed abandoned dimensional-token scaffolding whose values were never read.

@@ -226,7 +226,6 @@ export function allocateTraining(request, muscles, strengthClaims, phase, option
             reason: 'Strength anchors were selected first; their actual exercise-level muscle credits, sets, rest and shared session overhead replaced generic lift-name projections before hypertrophy allocation.'
         });
     }
-    const byMuscle = new Map(muscles.map(p => [p.muscle, p]));
     const dose = Object.fromEntries(muscles.map(p => [p.muscle, projectedFromStrength[p.muscle] ?? 0]));
     const direct = Object.fromEntries(muscles.map(p => [p.muscle, 0]));
     const state = {

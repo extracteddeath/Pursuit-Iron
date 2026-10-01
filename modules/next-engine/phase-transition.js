@@ -1,22 +1,10 @@
 import { auditProgram } from './arbiter.js';
 import { createTrainingSetEvents } from './events.js';
 import { createEngineContext, createTransactionalEvaluator } from './engine-context.js';
-import { generateProgram } from './generate.js';
 import { firstPassingCapacityProgram } from './capacity-generation.js';
 import { deriveMuscleLedger } from './ledgers.js';
 import { historyDecision, withBlockReviewExplainability, withProgramExplainability } from './explainability.js';
 import { progressionInstruction, reselectProgressionStyle } from './progression-style.js';
-
-function equipmentEligible(def, day, request) {
-    const scheduleDay = request.schedule.days.find(d => d.day === day);
-    if (!scheduleDay)
-        return false;
-    const available = scheduleDay.equipmentOverride ?? request.equipment.available;
-    if ((def.flags.bodyweight || def.equipment.includes('bodyweight')) && request.equipment.bodyweight === 'exclude')
-        return false;
-    return [def.equipment, ...(def.equipmentAlternatives ?? [])]
-        .some(setup => setup.every(item => item === 'bodyweight' ? request.equipment.bodyweight !== 'exclude' : available.includes(item)));
-}
 
 function muscleSimilarity(a, b) {
     const muscles = new Set([

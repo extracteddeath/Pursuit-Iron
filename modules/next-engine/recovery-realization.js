@@ -183,7 +183,6 @@ export function proposeRecoveryRedistributions(sessions, request) {
             const primary = primaryMuscle(def);
             if (!primary)
                 continue;
-            const priority = request.goal.musclePriorities[primary] ?? 'normal';
             const splitAllowed = exercise.sets >= 4 && !exercise.advancedTechnique;
             const mergeSetAllowed = exercise.sets >= 3 && !exercise.advancedTechnique;
             const moveOptions = (softPolish ? [exercise.sets] : [exercise.sets, ...(splitAllowed ? [2] : []), ...(mergeSetAllowed ? [1] : [])]).filter((v, i, a) => a.indexOf(v) === i);

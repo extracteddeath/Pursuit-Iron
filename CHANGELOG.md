@@ -1,3 +1,10 @@
+## M209 — Unused engine binding cleanup (build 799)
+
+- Ran a scope-aware static unused-binding audit across all authored runtime modules.
+- Removed ten unused engine-core bindings: stale imports/helpers, unused audit-selection bookkeeping, an obsolete capacity-intent table, and dead recovery/allocator reads.
+- Kept App-shell findings for a separate UI-aware pass rather than mixing shell cleanup with engine cleanup.
+- Added cleanup invariants preventing the removed engine bindings from returning. Pursuit Engine 0.64.9; offline cache rotated for build 799.
+
 ## M208 — Dead export cleanup (build 798)
 
 - Audited the complete production module graph: all 50 authored runtime modules remain reachable from the real app entry point.

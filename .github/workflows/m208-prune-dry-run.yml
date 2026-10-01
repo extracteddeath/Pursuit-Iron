@@ -1,0 +1,87 @@
+name: M208 prune dry run
+
+on:
+  push:
+    branches:
+      - audit/m208-dead-code
+
+permissions:
+  contents: read
+
+jobs:
+  prune:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Prune dead exports in working tree and rescan
+        shell: bash
+        run: |
+          npm install --prefix /tmp/m208 acorn@8 --no-save --ignore-scripts --silent
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import path from 'node:path';
+          import { parse } from '/tmp/m208/node_modules/acorn/dist/acorn.mjs';
+
+          const targets = new Map([
+            ['modules/next-engine/exercise-db.js', ['getExerciseDefinition']],
+            ['modules/next-engine/exercise-economy.js', ['avoidableCompoundOverlap','redundantCompoundPairs']],
+            ['modules/next-engine/exercise-selection-intelligence.js', ['exerciseSelectionPenalty']],
+            ['modules/next-engine/extended-exercise-catalog.js', ['LEGACY_V661_EQUIPMENT_IDS']],
+            ['modules/next-engine/focus-intent.js', ['enforceExplicitFocusIntents']],
+            ['modules/next-engine/history.js', ['buildStrengthTrend']],
+            ['modules/next-engine/ledgers.js', ['ZERO_FATIGUE']],
+            ['modules/next-engine/loading.js', ['createLoadingInventory','summarizeLoadingInventory']],
+            ['modules/next-engine/progression-style.js', ['resolveProgressionStyle']],
+            ['modules/next-engine/response.js', ['diagnoseSessionResponses']],
+            ['modules/next-engine/setup-economy.js', ['setupZoneRevisits']],
+            ['modules/next-engine/simulation.js', ['defaultPowerbuildingBlocks']]
+          ]);
+          function exportName(node) {
+            const d=node.declaration;
+            if (!d) return [];
+            if (d.type==='FunctionDeclaration' || d.type==='ClassDeclaration') return d.id ? [d.id.name] : [];
+            if (d.type==='VariableDeclaration') return d.declarations.flatMap(x=>x.id?.type==='Identifier'?[x.id.name]:[]);
+            return [];
+          }
+          for (const [file,names] of targets) {
+            let text=fs.readFileSync(file,'utf8');
+            const ast=parse(text,{ecmaVersion:'latest',sourceType:'module'});
+            const removals=[];
+            for(const node of ast.body){
+              if(node.type!=='ExportNamedDeclaration') continue;
+              const found=exportName(node).filter(name=>names.includes(name));
+              if(found.length) removals.push({start:node.start,end:node.end,names:found});
+            }
+            const removed=new Set(removals.flatMap(x=>x.names));
+            for(const name of names) if(!removed.has(name)) throw new Error(`${file}: export ${name} not found`);
+            for(const r of removals.sort((a,b)=>b.start-a.start)) {
+              let end=r.end;
+              while(end<text.length && (text[end]==='\r'||text[end]==='\n')) end++;
+              text=text.slice(0,r.start)+text.slice(end);
+            }
+            fs.writeFileSync(file,text);
+          }
+
+          const root=process.cwd();
+          const runtime=[];
+          function walkRuntime(dir){ for(const ent of fs.readdirSync(dir,{withFileTypes:true})){ const full=path.join(dir,ent.name); if(ent.isDirectory()) walkRuntime(full); else if(ent.name.endsWith('.js')) runtime.push(path.relative(root,full).replaceAll('\\','/')); } }
+          walkRuntime(path.join(root,'modules'));
+          const source=new Map(runtime.map(file=>[file,fs.readFileSync(file,'utf8')]));
+          const deps=new Map();
+          function resolve(from,spec){ if(!spec.startsWith('.')) return null; let target=path.posix.normalize(path.posix.join(path.posix.dirname(from),spec)); if(!path.posix.extname(target)) target+='.js'; return source.has(target)?target:null; }
+          for(const file of runtime){ const text=source.get(file); const specs=[]; for(const re of [/(?:import|export)\s+(?:[^'";]+?\s+from\s+)?['"]([^'"]+)['"]/g,/import\s*\(\s*['"]([^'"]+)['"]\s*\)/g]){let m;while((m=re.exec(text)))specs.push(m[1]);} deps.set(file,[...new Set(specs.map(s=>resolve(file,s)).filter(Boolean))]); }
+          const reachable=new Set(), stack=['modules/main.js']; while(stack.length){const f=stack.pop(); if(!f||reachable.has(f)||!source.has(f))continue; reachable.add(f); for(const d of deps.get(f)||[])stack.push(d);}
+          const imported=new Set();
+          for(const file of reachable){const text=source.get(file); const re=/import\s*\{([^}]+)\}\s*from\s*['"]([^'"]+)['"]/g; let m; while((m=re.exec(text))){const target=resolve(file,m[2]); if(!target)continue; for(const raw of m[1].split(',')){const n=raw.trim().split(/\s+as\s+/)[0]?.trim(); if(n)imported.add(`${target}::${n}`);}}}
+          const repoFiles=[]; function walkAll(dir){for(const ent of fs.readdirSync(dir,{withFileTypes:true})){if(['.git','node_modules'].includes(ent.name))continue;const full=path.join(dir,ent.name);if(ent.isDirectory())walkAll(full);else if(/\.(?:js|mjs|jsx|ts|tsx|md)$/.test(ent.name))repoFiles.push(full);}} walkAll(root);
+          const post=[];
+          for(const file of reachable){const text=source.get(file); const ast=parse(text,{ecmaVersion:'latest',sourceType:'module'}); for(const node of ast.body){if(node.type!=='ExportNamedDeclaration')continue;for(const name of exportName(node)){const count=(text.match(new RegExp(`\\b${name.replace(/[$]/g,'\\$&')}\\b`,'g'))||[]).length;if(imported.has(`${file}::${name}`)||count!==1)continue;const external=[];const re=new RegExp(`\\b${name.replace(/[$]/g,'\\$&')}\\b`,'g');for(const full of repoFiles){const rel=path.relative(root,full).replaceAll('\\','/');if(rel===file)continue;const c=(fs.readFileSync(full,'utf8').match(re)||[]).length;if(c)external.push(rel);}post.push({file,name,external});}}
+          }
+          console.log('POST_PRUNE_UNUSED_EXPORTS');
+          for(const x of post.sort((a,b)=>a.file.localeCompare(b.file)||a.name.localeCompare(b.name))) console.log(`  ${x.file} :: ${x.name} => ${x.external.length?x.external.join(', '):'NO_EXTERNAL_REFERENCES'}`);
+          console.log(`POST_SUMMARY reachable=${reachable.size}/${runtime.length} candidates=${post.length}`);
+          NODE
+          find modules -name '*.js' -print0 | xargs -0 -n1 node --check

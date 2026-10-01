@@ -1,3 +1,12 @@
+## M204 — Prescription ownership hardening (build 794)
+
+- Automatic Engine plans now have one prescription owner: the generated week cell/audited Engine state. Stale `overrides` values can no longer freeze sets, reps, RIR, role, or progression style after migrations, phase changes, or repairs.
+- Explicit user edits are tracked per field with `prescriptionOwners`; manual-mode sets/reps/RIR/rest are seeded as user-owned, while legacy rest and technique edits remain compatible.
+- Live workout rows now carry `valueOwner: "prescription"` or `"user"`, preventing restore/tuning logic from overwriting typed values because of a stale `auto` boolean.
+- Volume repair no longer mirrors generated set counts into overrides and refuses to rewrite explicitly user-owned set counts. New Engine slot overrides store identity rather than duplicate prescription metadata.
+- `commitProgram` now resolves once and writes the same program object to both open and saved state; it no longer updates one React store from inside another state-updater callback.
+- Added an ownership regression gate plus compatibility coverage. Pursuit Engine 0.64.4; service-worker cache rotated for build 794.
+
 ## M203 — Custom-program final-set intensifier persistence (build 793)
 
 - Custom programs no longer lose their implicit last-set technique schedule when optional legacy metadata such as `engineV`, `slotBias`, or `autoBias` is absent after migration/import. `custom: true` is now the durable identity.

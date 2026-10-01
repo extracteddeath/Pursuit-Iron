@@ -1,7 +1,7 @@
-const __APP_VERSION__='4.0.0'; const __BUILD__='793';
+const __APP_VERSION__='4.0.0'; const __BUILD__='794';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
-import { setShellEquipmentExpander, splitContractGaps, splitBuildability, refusalFixes, generateNextProgramForShell, nextProgramToShellProgram, recommendNextSplitForShell, getNextShellCell, canonicalShellSetCount, cloneNextDayPrescriptions, swapNextSlotPrescriptions, removeNextSlotPrescription, nextExerciseIdForShellExercise, NextShellAdapterError } from "./next-engine/app-shell-adapter.js";
+import { setShellEquipmentExpander, splitContractGaps, splitBuildability, refusalFixes, generateNextProgramForShell, nextProgramToShellProgram, recommendNextSplitForShell, getNextShellCell, canonicalShellSetCount, cloneNextDayPrescriptions, swapNextSlotPrescriptions, removeNextSlotPrescription, nextExerciseIdForShellExercise, markUserPrescriptionOverride, clearUserPrescriptionOverride, NextShellAdapterError } from "./next-engine/app-shell-adapter.js";
 import { generateNextBlockFromShellHistory, nextWorkoutSuggestionForShell, nextWorkoutSuggestionFromPerformedShell } from "./next-engine/workout-history-adapter.js";
 import { generateNextCycleForShell, convertProgramToNextCycleForShell, advanceNextCycleForShell, nextCycleTemplatesForShell } from "./next-engine/cycle-runtime-adapter.js";
 import { buildRuntimeSetTargets, reconcilePendingRepTargets, techniqueProtocolFromCell, freestyleCellForRepRange, buildUserAddedSlotPrescriptions } from "./next-engine/workout-runtime.js";
@@ -4512,7 +4512,7 @@ function swapOverlapNames(candidate, peers = [], program = null, day = null) {
         if (!pd)
             return false;
         const slot = day?.exercises?.indexOf(peer.id);
-        const peerRole = slot >= 0 ? program?.overrides?.[`${day.id}:${slot}`]?.role : null;
+        const peerRole = slot >= 0 ? (getNextShellCell(program, day, slot, 1)?.role ?? program?.overrides?.[`${day.id}:${slot}`]?.role) : null;
         return avoidableExerciseOverlap(def, role, [{ def: pd, role: peerRole || (pd.flags.compound ? "hypertrophy_compound" : "hypertrophy_isolation") }], { priority: "normal" });
     }).map(peer => peer.name);
 }
@@ -20286,7 +20286,11 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
         setProgram(p => {
             const k = `${dayId}:${slot}`;
             const cur = p.overrides[k] || {};
-            return { ...p, overrides: { ...p.overrides, [k]: { ...cur, [field]: val } } };
+            const ownerField = field === "techOverride" ? "tech" : field;
+            const owned = ["sets", "reps", "rir", "rest", "tech", "role", "progressionStyle"].includes(ownerField)
+                ? markUserPrescriptionOverride(cur, ownerField, val)
+                : { ...cur, [field]: val };
+            return { ...p, overrides: { ...p.overrides, [k]: owned } };
         });
     };
     const setGroupRounds = (dayId, startSlot, len, rounds) => {
@@ -20499,8 +20503,7 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
             const nextExerciseId = nextExerciseIdForShellExercise(pick);
             overrides[key] = {
                 ...(overrides[key] || {}), added: true, nextEngine: true, legacyExerciseId: pick.id,
-                role: pick.type === "compound" ? "hypertrophy_compound" : "hypertrophy_isolation",
-                progressionStyle: "auto", ...(nextExerciseId ? { nextExerciseId } : {})
+                ...(nextExerciseId ? { nextExerciseId } : {})
             };
             const nextWeekPrescriptions = { ...(p.nextWeekPrescriptions || {}) };
             nextWeekPrescriptions[key] = buildUserAddedSlotPrescriptions({ repRange: pick.rep, weeks: weeksOf(p), compound: pick.type === "compound" });
@@ -20527,8 +20530,7 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
             const nextExerciseId = nextExerciseIdForShellExercise(ex);
             overrides[key] = {
                 ...(overrides[key] || {}), added: true, nextEngine: true, legacyExerciseId: exId,
-                role: ex?.type === "compound" ? "hypertrophy_compound" : "hypertrophy_isolation",
-                progressionStyle: "auto", ...(nextExerciseId ? { nextExerciseId } : {})
+                ...(nextExerciseId ? { nextExerciseId } : {})
             };
             const nextWeekPrescriptions = { ...(p.nextWeekPrescriptions || {}) };
             nextWeekPrescriptions[key] = buildUserAddedSlotPrescriptions({ repRange: ex?.rep, weeks: weeksOf(p), compound: ex?.type === "compound" });
@@ -23351,9 +23353,23 @@ function mergedSetCount(data) {
 // and sub-work). Returns -1 when there is none, or when that set is already done or has auto-fill
 // turned off — so re-tuning never reaches "two sets down" or overwrites a set the lifter already
 // committed to. (This targeting rule was a past source of surprising rewrites.)
+function userOwnsRuntimeSet(row) {
+    if (!row)
+        return false;
+    if (row.valueOwner != null)
+        return row.valueOwner === "user";
+    return row.auto === false; // pre-M204 live snapshots
+}
+function prescriptionOwnsRuntimeSet(row) {
+    if (!row)
+        return false;
+    if (row.valueOwner != null)
+        return row.valueOwner === "prescription";
+    return row.auto === true; // pre-M204 live snapshots
+}
 function nextPrefillTargetIndex(sets, si) {
     const ni = sets.findIndex((s, j) => j > si && !s.warm && !s.sub);
-    if (ni < 0 || sets[ni].done || sets[ni].auto === false)
+    if (ni < 0 || sets[ni].done || userOwnsRuntimeSet(sets[ni]))
         return -1;
     return ni;
 }
@@ -24782,7 +24798,7 @@ function syncSubSets(sets, ex, unit) {
             }
             return s;
         }
-        if (s.done || s.auto === false || !(actW > 0))
+        if (s.done || userOwnsRuntimeSet(s) || !(actW > 0))
             return s;
         let want;
         if (s.kind === "drop") {
@@ -24862,6 +24878,7 @@ function prescribeSets(program, day, ex, slot, weekIndex, unit, sug, dayPerf, pe
         warm: t.kind === "warmup",
         done: false,
         auto: true,
+        valueOwner: "prescription",
         target: t.kind === "warmup"
             ? { w: t.weight == null ? "—" : String(t.weight), reps: String(t.reps), rir: null }
             : { w: t.weight == null ? "—" : String(t.weight), reps: rangeText, rir: rirText, nextAction: sug?.action || "initial", confidence: sug?.confidence || null }
@@ -24882,7 +24899,7 @@ function prescribeSets(program, day, ex, slot, weekIndex, unit, sug, dayPerf, pe
             for (let i = 0; i < (mini?.minimum || 0); i++)
                 rows.push({
                     weight: base.weight, reps: String(mini?.targetReps || 5), warm: false, sub: true, myo: true,
-                    kind: 'myo', prescribed: true, done: false, auto: true,
+                    kind: 'myo', prescribed: true, done: false, auto: true, valueOwner: "prescription",
                     target: { w: base.weight || '—', reps: String(mini?.targetReps || 5), rir: null, rest: mini?.restSeconds || 15 }
                 });
         }
@@ -24899,7 +24916,7 @@ function prescribeSets(program, day, ex, slot, weekIndex, unit, sug, dayPerf, pe
             for (const drop of protocol.drops || [])
                 rows.push({
                     weight: base > 0 ? String(Math.round(base * drop.fraction * 100) / 100) : '', reps: '', warm: false,
-                    sub: true, kind: 'drop', dropF: drop.fraction, prescribed: true, done: false, auto: true,
+                    sub: true, kind: 'drop', dropF: drop.fraction, prescribed: true, done: false, auto: true, valueOwner: "prescription",
                     target: { w: base > 0 ? String(Math.round(base * drop.fraction * 100) / 100) : '—', reps: 'to failure', rir: null, rest: drop.restSeconds }
                 });
         }
@@ -25840,10 +25857,10 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
     // input's readOnly attribute (readOnly blocks real typing but not every programmatic path). No
     // legitimate flow edits a done set's numbers — to change one, untick it first.
     const editSet = (ei, si, field, val) => setData(d => d.map((e, i) => i !== ei ? e :
-        { ...e, sets: e.sets.map((s, j) => j !== si || s.done ? s : { ...s, [field]: field === "reps" ? cleanReps(val) : val, auto: false, hint: undefined }) }));
+        { ...e, sets: e.sets.map((s, j) => j !== si || s.done ? s : { ...s, [field]: field === "reps" ? cleanReps(val) : val, auto: false, valueOwner: "user", hint: undefined }) }));
     // quick steppers: nudge reps by ±1 and weight by one load increment without the keyboard
     const bumpReps = (ei, si, delta) => setData(d => d.map((e, i) => i !== ei ? e :
-        { ...e, sets: e.sets.map((s, j) => j !== si || s.done ? s : { ...s, reps: String(clamp((parseInt(s.reps) || 0) + delta, 0, 100)), auto: false, hint: undefined }) }));
+        { ...e, sets: e.sets.map((s, j) => j !== si || s.done ? s : { ...s, reps: String(clamp((parseInt(s.reps) || 0) + delta, 0, 100)), auto: false, valueOwner: "user", hint: undefined }) }));
     const bumpWeight = (ei, si, dir) => setData(d => d.map((e, i) => {
         if (i !== ei)
             return e;
@@ -25869,13 +25886,13 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
                 // zero into the negatives; "+" reduces assistance toward bodyweight (0) and can keep going
                 // into real added load. Normal lifts still floor at 0 (no such thing as negative load).
                 const floored = clamp(next, assisted ? -2000 : 0, 2000);
-                return { ...s, weight: String(floored), auto: false, hint: undefined };
+                return { ...s, weight: String(floored), auto: false, valueOwner: "user", hint: undefined };
             }) };
     }));
     // user typing a weight takes manual control of that set (and clears any auto hint).
     // Locked (done) sets are immutable here too — see editSet's note.
     const editWeight = (ei, si, val) => setData(d => d.map((e, i) => i !== ei ? e :
-        { ...e, sets: e.sets.map((s, j) => j !== si || s.done ? s : { ...s, weight: cleanWeight(val), auto: false, hint: undefined }) }));
+        { ...e, sets: e.sets.map((s, j) => j !== si || s.done ? s : { ...s, weight: cleanWeight(val), auto: false, valueOwner: "user", hint: undefined }) }));
     // Add an exercise to this session on the fly (freestyle logging + extending a program workout)
     const addExerciseToSession = (id) => {
         const ex = EX_BY_ID[id];
@@ -25883,7 +25900,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
             return;
         const slot = data.length;
         const [lo, hi] = Array.isArray(ex.rep) ? ex.rep : [8, 12];
-        const freestyleSets = Array.from({ length: 3 }, () => ({ weight: "", reps: String(lo || 8), warm: false, done: false, auto: false, added: true, target: { w: "—", reps: `${lo || 8}-${hi || 12}`, rir: null, freestyle: true } }));
+        const freestyleSets = Array.from({ length: 3 }, () => ({ weight: "", reps: String(lo || 8), warm: false, done: false, auto: false, valueOwner: "user", added: true, target: { w: "—", reps: `${lo || 8}-${hi || 12}`, rir: null, freestyle: true } }));
         setData(d => [...d, { id, slot, sets: freestyleSets, note: "", superset: false, added: true, freestyle: true }]);
         setExIdx(slot);
         setAddEx(false);
@@ -26038,7 +26055,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
                rollback only reclaims rows the app itself wrote and now has no reason to stand behind. */
             if (wasDone) {
                 sets = sets.map(s => {
-                    if (!s || s.retuneSrc !== si || s.done || s.auto === false || !s.retuneFrom)
+                    if (!s || s.retuneSrc !== si || s.done || userOwnsRuntimeSet(s) || !s.retuneFrom)
                         return s;
                     const { retuneFrom, retuneSrc, suggested, autoTuned, hint, over, belowRange, ceiling, ...rest } = s;
                     return { ...rest, weight: retuneFrom.weight, reps: retuneFrom.reps, target: retuneFrom.target };
@@ -26103,7 +26120,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
         // inherits the working weight, not a light warm-up load. Fall back to the suggestion, then blank.
         const work = e.sets.filter(s => !s.warm && !s.sub);
         const seed = work[work.length - 1] || (suggestions[ei] ? { weight: String(suggestions[ei].weight), reps: repsLow(suggestions[ei].reps) } : { weight: "", reps: "" });
-        return { ...e, sets: [...e.sets, { weight: seed.weight ?? "", reps: seed.reps ?? "", warm: false, done: false, auto: true, added: true, hint: undefined }] };
+        return { ...e, sets: [...e.sets, { weight: seed.weight ?? "", reps: seed.reps ?? "", warm: false, done: false, auto: true, valueOwner: "prescription", added: true, hint: undefined }] };
     }));
     // mark every remaining set of the current exercise done (using its prefilled targets)
     const completeRemaining = (ei) => setData(d => d.map((e, i) => i !== ei ? e :
@@ -26211,7 +26228,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
             setData(d => d.map(e => {
                 const step = loadStep(EX_BY_ID[e.id], unit);
                 return { ...e, sets: e.sets.map(s => {
-                        if (s.done || s.auto === false || !(parseFloat(s.weight) > 0))
+                        if (s.done || userOwnsRuntimeSet(s) || !(parseFloat(s.weight) > 0))
                             return s;
                         const cur = parseFloat(s.weight);
                         // Down-scaling (feeling weak) floors toward the target so a small adjustment can't round
@@ -35799,18 +35816,16 @@ function App() {
                 return p;
             const overrides = { ...(p.overrides || {}) };
             const cur = { ...(overrides[key] || {}) };
-            if (sec > 0)
-                cur.rest = sec;
-            else
-                delete cur.rest;
-            if (Object.keys(cur).length)
-                overrides[key] = cur;
+            const next = sec > 0
+                ? markUserPrescriptionOverride(cur, "rest", sec)
+                : clearUserPrescriptionOverride(cur, "rest");
+            if (next && Object.keys(next).length)
+                overrides[key] = next;
             else
                 delete overrides[key];
             return { ...p, overrides, edited: true };
         };
-        setProgram(apply(program));
-        setSaved(prev => prev.map(p => p.id === program.id ? apply(p) : p));
+        commitProgram(apply);
     };
     const updateProgramExercise = (dayId, oldId, newId) => {
         if (!program)
@@ -35834,8 +35849,7 @@ function App() {
             return changed ? { ...p, days, edited: true } : p;
         };
         const updated = apply(program);
-        setProgram(updated);
-        setSaved(prev => prev.map(p => p.id === program.id ? apply(p) : p));
+        commitProgram(updated);
         // keep cycle siblings aligned if this program is a cycle block
         if (program.cycleId) {
             setSaved(prev => prev.map(p => (p.cycleId === program.cycleId && p.id !== program.id) ? apply(p) : p));
@@ -35858,8 +35872,7 @@ function App() {
                 delete map[exId];
             return { ...p, exLoadInc: Object.keys(map).length ? map : undefined };
         };
-        setProgram(apply(program));
-        setSaved(prev => prev.map(p => p.id === program.id ? apply(p) : p));
+        commitProgram(apply);
         // A machine's weight step is a physical property of the equipment, not a per-block choice —
         // so propagate it to every sibling block in the same cycle. Without this, setting the leg
         // press to +50 lb in the Hypertrophy block would leave the Strength/Peak blocks stepping by
@@ -35951,12 +35964,16 @@ function App() {
      * `commitProgram` is now the one way to change the open program, so a future caller cannot make
      * this mistake by forgetting the second line. */
     const commitProgram = (next) => {
-        setProgram(prev => {
-            const p = typeof next === "function" ? next(prev) : next;
-            if (p && p.id)
-                setSaved(list => list.map(x => x.id === p.id ? p : x));
-            return p;
-        });
+        // Keep React updater callbacks pure. The old implementation called setSaved from inside a
+        // setProgram updater; React may replay updater functions, which made persistence a side effect
+        // of another state transition. Resolve the transaction once from the current open program,
+        // then publish the exact same object to both stores.
+        const p = typeof next === "function" ? next(program) : next;
+        if (!p)
+            return;
+        setProgram(p);
+        if (p.id)
+            setSaved(list => list.map(x => x.id === p.id ? p : x));
     };
     const handleRegenerate = (seed, toEngine = null, configPatch = null, metaPatch = null) => {
         if (!program)

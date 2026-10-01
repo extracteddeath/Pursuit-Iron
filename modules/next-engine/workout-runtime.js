@@ -85,7 +85,8 @@ export function reconcilePendingRepTargets(sets, cell) {
     const range = lo === hi ? String(lo) : `${lo}-${hi}`;
     let changed = false;
     const out = sets.map(s => {
-        if (!s || s.done || s.warm || s.sub || s.auto !== true)
+        const prescriptionOwned = s?.valueOwner != null ? s.valueOwner === 'prescription' : s?.auto === true;
+        if (!s || s.done || s.warm || s.sub || !prescriptionOwned)
             return s;
         const r = Number(s.reps);
         const reps = String(s.reps ?? '').trim() && Number.isFinite(r)

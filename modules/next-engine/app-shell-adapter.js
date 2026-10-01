@@ -389,6 +389,53 @@ function immutableEngineSetCount(program, day, slotIndex, weekIndex) {
     }
 }
 function legacyTypeForIntent(intent) { return intent || 'generated'; }
+
+/* M204 — prescription ownership is explicit at the shell boundary. The executable week cell is the
+ * owner for generated plans; overrides may replace individual fields only when that field is
+ * explicitly user-owned. Older manual-mode programs and the long-standing rest/tech overrides are
+ * recognized for backwards compatibility, but engine metadata living in `overrides` no longer
+ * silently freezes sets/reps/RIR/role/progression across later weeks. */
+const SHELL_PRESCRIPTION_FIELDS = ['sets', 'reps', 'rir', 'rest', 'tech', 'role', 'progressionStyle'];
+const hasOwn = (obj, key) => !!obj && Object.prototype.hasOwnProperty.call(obj, key);
+const overrideKeyForField = field => field === 'tech' ? 'techOverride' : field;
+export function shellPrescriptionFieldOwner(program, override, field) {
+    const explicit = override?.prescriptionOwners?.[field];
+    if (explicit === 'user' || explicit === 'engine')
+        return explicit;
+    const key = overrideKeyForField(field);
+    if (field === 'tech' && hasOwn(override, key))
+        return 'user';
+    // Rest has always been editable from the workout even while the rest of an Engine plan is Auto.
+    // No automatic bridge path writes `rest` into an Auto override, so a persisted value is a user fact.
+    if (field === 'rest' && hasOwn(override, key))
+        return 'user';
+    // Legacy manual-mode plans predate prescriptionOwners; their editable shell values remain theirs.
+    if (program?.config?.progression === 'manual' && ['sets', 'reps', 'rir'].includes(field) && hasOwn(override, key))
+        return 'user';
+    return 'engine';
+}
+export function shellPrescriptionOwners(program, override) {
+    return Object.fromEntries(SHELL_PRESCRIPTION_FIELDS.map(field => [field, shellPrescriptionFieldOwner(program, override, field)]));
+}
+export function markUserPrescriptionOverride(override, field, value) {
+    const key = overrideKeyForField(field);
+    const owners = { ...(override?.prescriptionOwners ?? {}), [field]: 'user' };
+    return { ...(override ?? {}), [key]: value, prescriptionOwners: owners };
+}
+export function clearUserPrescriptionOverride(override, field) {
+    if (!override)
+        return override;
+    const key = overrideKeyForField(field);
+    const next = { ...override };
+    delete next[key];
+    if (next.prescriptionOwners) {
+        const owners = { ...next.prescriptionOwners };
+        delete owners[field];
+        if (Object.keys(owners).length) next.prescriptionOwners = owners;
+        else delete next.prescriptionOwners;
+    }
+    return next;
+}
 export function getNextShellCell(program, day, slotIndex, weekIndex) {
     if (program?.engineSource !== 'pursuit-next')
         return null;
@@ -400,20 +447,27 @@ export function getNextShellCell(program, day, slotIndex, weekIndex) {
     // still win. Bridge-created overrides intentionally contain metadata only in auto mode, so this
     // overlay cannot accidentally freeze week-1 sets/reps across the entire block.
     const o = program?.overrides?.[key] ?? {};
+    const ownership = shellPrescriptionOwners(program, o);
+    const ownedValue = (field, engineValue) => {
+        const key = overrideKeyForField(field);
+        return ownership[field] === 'user' && hasOwn(o, key) ? o[key] : engineValue;
+    };
     /* One canonical scalar is returned to every consumer. If persisted shell state has an
        impossible/ambiguous set shape, replay the immutable engine snapshot rather than let
-       Home/Program/Plan/Workout each interpret it differently. */
+       Home/Program/Plan/Workout each interpret it differently. Engine-owned stale override mirrors
+       are deliberately ignored; only an explicitly user-owned set count can replace the week cell. */
     const engineSets = immutableEngineSetCount(program, day, slotIndex, weekIndex);
-    const sets = canonicalShellSetCount(o.sets ?? cell.sets, engineSets ?? cell.sets);
-    const reps = shellRange(o.reps ?? cell.reps);
-    const rir = shellRange(o.rir ?? cell.rir);
-    const rest = o.rest ?? cell.rest;
-    const tech = Object.prototype.hasOwnProperty.call(o, 'techOverride') ? (o.techOverride || null) : (cell.tech ?? null);
-    const role = o.role ?? cell.role;
-    const progressionStyle = o.progressionStyle ?? cell.progressionStyle ?? 'auto';
+    const sets = canonicalShellSetCount(ownedValue('sets', cell.sets), engineSets ?? cell.sets);
+    const reps = shellRange(ownedValue('reps', cell.reps));
+    const rir = shellRange(ownedValue('rir', cell.rir));
+    const rest = ownedValue('rest', cell.rest);
+    const techRaw = ownedValue('tech', cell.tech ?? null);
+    const tech = techRaw || null;
+    const role = ownedValue('role', cell.role);
+    const progressionStyle = ownedValue('progressionStyle', cell.progressionStyle ?? 'auto');
     return {
         sets, reps, note: `Pursuit Engine ${program.engineSourceVersion || 'Next'}`,
-        range: reps, rir, rest, tech, role, progressionStyle, nextEngine: true
+        range: reps, rir, rest, tech, role, progressionStyle, ownership, nextEngine: true
     };
 }
 export function cloneNextDayPrescriptions(store, fromDayId, toDayId) {
@@ -528,16 +582,18 @@ export function nextProgramToShellProgram(nextProgram, config, legacyExercises, 
             if (shownMode && !(exercise.exerciseId in displayLoadingModes))
                 displayLoadingModes[exercise.exerciseId] = shownMode;
             const key = `${id}:${slot}`;
+            // The override map owns slot identity and explicit user edits only. Generated role/style and
+            // progression-selection metadata already live in the engine program/week cell; duplicating them
+            // here creates a stale second source of truth after phase transitions or repairs.
             overrides[key] = {
-                nextEngine: true, nextExerciseId: exercise.exerciseId, legacyExerciseId: legacy.id, role: exercise.role,
-                progressionStyle: schemeStyle(config, exercise.role, exercise.progressionStyle ?? 'auto'),
-                progressionSelection: exercise.progressionSelection ? { ...exercise.progressionSelection } : undefined
+                nextEngine: true, nextExerciseId: exercise.exerciseId, legacyExerciseId: legacy.id
             };
             // Manual mode is an explicit request to own the prescription in the shell. Seed the editable
             // values from week 1; auto mode stores metadata only so later weeks continue to come from 0.41.
             if (config.progression === 'manual')
                 Object.assign(overrides[key], {
-                    sets: canonicalShellSetCount(exercise.sets), reps: range(exercise.prescription.reps), rir: range(exercise.prescription.rir), rest: exercise.prescription.restSeconds
+                    sets: canonicalShellSetCount(exercise.sets), reps: range(exercise.prescription.reps), rir: range(exercise.prescription.rir), rest: exercise.prescription.restSeconds,
+                    prescriptionOwners: { sets: 'user', reps: 'user', rir: 'user', rest: 'user' }
                 });
             nextWeekPrescriptions[key] = {};
             for (let week = 1; week <= totalWeeks; week++) {

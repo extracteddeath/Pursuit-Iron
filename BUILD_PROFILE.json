@@ -1,12 +1,12 @@
 {
   "profile": "portable-browser-esm-v661-workout-input",
-  "milestone": "M203",
-  "source": "M202 production baseline + durable custom-program final-set intensifier restoration",
-  "engine": "0.64.3 with custom-program technique persistence and visible final-set amplifier badges",
+  "milestone": "M204",
+  "source": "M203 production baseline + explicit prescription/live-value ownership and single-writer persistence hardening",
+  "engine": "0.64.4 with field-level prescription ownership, non-mirroring volume repair, and explicit live-row ownership",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 51,
   "shadowRuntimeModules": 9,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m203-custom-intensifier-b793",
-  "uiMilestone": "Pursuit Iron 4.0 Production Release \u00b7 M203 Custom Intensifiers"
+  "cache": "pursuit-iron-production-v4-0-0-m204-prescription-ownership-b794",
+  "uiMilestone": "Pursuit Iron 4.0 Production Release · M204 Prescription Ownership"
 }

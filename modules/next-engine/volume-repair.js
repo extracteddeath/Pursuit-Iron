@@ -1,5 +1,5 @@
 import { createExerciseMap } from './exercise-db.js';
-import { getNextShellCell, nextExerciseIdForShellExercise, resolveLegacyExercise } from './app-shell-adapter.js';
+import { getNextShellCell, nextExerciseIdForShellExercise, resolveLegacyExercise, shellPrescriptionFieldOwner } from './app-shell-adapter.js';
 import { normalizeRequest, createMusclePrescriptions } from './prescription.js';
 import { PUBLIC_MEV_REGIONS, PUBLIC_REGION_MUSCLE, publicMevContractApplies, publicMevForExperience, publicMevRequired, publicMevInternalSafetyCeiling, publicRegionContribution, publicMevLedger } from './public-mev.js';
 import { createTrainingSetEvents } from './events.js';
@@ -134,8 +134,12 @@ function baseSessions(program, legacyExercises) {
     const live = captureShellVolumeSnapshot(program, 1, legacyExercises);
     return live.sessions.map((s, di) => {
         const original = sessionForDay(program, program.days[di], di);
-        const exercises = s.exercises.map(e => ({ ...e, sets: Number(program.overrides?.[e.shellKey]?.sets) ||
-            original.exercises.find(x => x.exerciseId === e.exerciseId)?.sets || e.sets }));
+        const exercises = s.exercises.map(e => {
+            const override = program.overrides?.[e.shellKey] ?? {};
+            const userSets = shellPrescriptionFieldOwner(program, override, 'sets') === 'user' ? Number(override.sets) : null;
+            return { ...e, sets: (Number.isFinite(userSets) && userSets > 0 ? userSets : null)
+                ?? original.exercises.find(x => x.exerciseId === e.exerciseId)?.sets ?? e.sets };
+        });
         return { ...s, exercises, estimatedMinutes: estimateSessionMinutes(exercises) };
     });
 }
@@ -175,12 +179,19 @@ function rebuild(program, changes, legacyExercises, addition = null, options = {
             });
             continue;
         }
+        const key = e.shellKey;
+        // A user-owned manual set prescription is not raw material for Auto-fix. Earlier repair code
+        // changed both the engine snapshot and the override mirror, which made one value have two
+        // writers and could silently rewrite a lifter's deliberate edit. Fail this proposal instead
+        // and let the search choose another engine-owned slot.
+        if (shellPrescriptionFieldOwner(next, next.overrides?.[key] ?? {}, 'sets') === 'user')
+            return null;
         e.sets += change.delta;
         if (e.sets < (preserveRoster ? 1 : 2)) return null; // locked cycles may retain a one-set accessory instead of changing the roster
-        const key = e.shellKey;
         changed.add(key);
-        if (next.overrides[key]?.sets != null)
-            next.overrides[key] = { ...next.overrides[key], sets: e.sets };
+        // Do not mirror generated set counts back into overrides. nextWeekPrescriptions is the
+        // executable projection; nextEngine.program is the audited engine source. Overrides are only
+        // for explicit user ownership plus identity metadata.
     }
     if (addition) {
         if (preserveRoster) return null;
@@ -205,8 +216,9 @@ function rebuild(program, changes, legacyExercises, addition = null, options = {
         const e = { ...addition.exercise, shellKey: key, shellSlot: slot, shellId: addition.legacy.id };
         s.exercises.splice(slot, 0, e);
         s.exercises.forEach((ex, index) => { ex.shellSlot = index; ex.shellKey = keyOf(day, index); changed.add(ex.shellKey); });
-        next.overrides[key] = { nextEngine: true, nextExerciseId: e.exerciseId, legacyExerciseId: addition.legacy.id,
-            role: e.role, progressionStyle: e.progressionStyle };
+        // Generated slot identity lives here; its prescription/role/style live only in the regenerated
+        // week cells and audited engine program. Do not create a second prescription owner in overrides.
+        next.overrides[key] = { nextEngine: true, nextExerciseId: e.exerciseId, legacyExerciseId: addition.legacy.id };
         changed.add(key);
         next.nextEngine.progressionPlan = [...(next.nextEngine.progressionPlan ?? []), {
             exerciseId: e.exerciseId, exerciseName: e.name, style: e.progressionStyle, source: 'auto',

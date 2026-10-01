@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { canonicalShellSetCount, getNextShellCell } from '../modules/next-engine/app-shell-adapter.js';
+import { canonicalShellSetCount, getNextShellCell, markUserPrescriptionOverride } from '../modules/next-engine/app-shell-adapter.js';
 
 let passed=0;
 const check=(name,fn)=>{fn(); console.log('PASS '+name); passed++;};
@@ -20,10 +20,13 @@ let cell=getNextShellCell(program,program.days[0],0,1);
 check('shared Next shell cell repairs repeated-array set count',()=>assert.equal(cell.sets,3));
 program.overrides['d1:0']={sets:[4,4]};
 cell=getNextShellCell(program,program.days[0],0,1);
-check('manual shell override is normalized at the same boundary',()=>assert.equal(cell.sets,4));
-program.overrides['d1:0']={sets:[4,5]};
+check('unowned stale shell set mirror cannot replace Engine prescription',()=>assert.equal(cell.sets,3));
+program.overrides['d1:0']=markUserPrescriptionOverride({},'sets',[4,4]);
 cell=getNextShellCell(program,program.days[0],0,1);
-check('ambiguous generated override stays one scalar, never 45 or 9',()=>assert.equal(cell.sets,3));
+check('explicit user-owned shell override is normalized at the same boundary',()=>assert.equal(cell.sets,4));
+program.overrides['d1:0']=markUserPrescriptionOverride({},'sets',[4,5]);
+cell=getNextShellCell(program,program.days[0],0,1);
+check('ambiguous user override stays one scalar and falls back to Engine, never 45 or 9',()=>assert.equal(cell.sets,3));
 
 const app=fs.readFileSync(new URL('../modules/App.js',import.meta.url),'utf8');
 check('all generated program surfaces still enter through getNextShellCell',()=>assert.ok(app.includes('const nextCell = getNextShellCell(program, day, slotIndex, weekIndex);')));

@@ -1,15 +1,15 @@
 {
   "schemaVersion": 3,
-  "milestone": "M203",
+  "milestone": "M204",
   "appVersion": "4.0.0",
-  "build": 793,
-  "engineVersion": "0.64.3",
+  "build": 794,
+  "engineVersion": "0.64.4",
   "shadowEngineVersion": "0.62.5-shadow",
   "validatedLiveBaseline": "M88-0.61.3-reviewed-baseline",
   "candidateStatus": "verification_enforced_by_ci",
   "sourceNextEngineAggregate": null,
   "sourceShadowEngineAggregate": "3107199d20c86a5a12b82eccbc61c9a32b001a72c7f30418db696235d0da0c22",
-  "runtimeAggregate": "b648ba1975649c0678777dbb14d2edb96f38636c7a195fe0f4af6700631f41ac",
+  "runtimeAggregate": "20976d6cd8b5c3165cc1b322e0dc28392ac04f1e19e81653d7e0863944e4dced",
   "sourceFiles": {},
   "shadowSourceFiles": {
     "src/shadow-engine/canary.ts": "854246970f93111ee873f0eb5f222195a02af688ef1a3285d0624f44d422c58a",
@@ -26,7 +26,7 @@
   "runtimeFiles": {
     "modules/next-engine/allocator.js": "a69e53295b8d930c6c3b515507258764be7f69baf1ae729f64d19611c24d2f7d",
     "modules/next-engine/app-shell-adapter-capacity.js": "84731981fcdfe4f43f21cae334e1696eda684c18162d5a71402a36a086f5dc8b",
-    "modules/next-engine/app-shell-adapter.js": "0be8a858a7013762e27891300fd12a78adac5ed6e48cbb00f1e95f6a6847f412",
+    "modules/next-engine/app-shell-adapter.js": "3344a67d5ab8cf8785882425f052e0f2f05d311b51847ba6e19a84cc0cebec15",
     "modules/next-engine/arbiter.js": "cba22ac9d8a0dbd76177b3dd639f9794263f266c10f639fc1bab6009ac937c5d",
     "modules/next-engine/arm-coverage.js": "9216b888436bf51205be384a80efa14d26d93c5c3462471721318f93f36db1ce",
     "modules/next-engine/capacity-generation.js": "1fed6ad20b90257bcf6f5a88337669bc568f5de7f6fe92ba06c80fe2de2f36dd",
@@ -35,7 +35,7 @@
     "modules/next-engine/coach-regression.js": "a990fe47ffa77ca0a641f09d2c507150c37b6d03f17ac310f65f66e1347ff380",
     "modules/next-engine/coach-review.js": "f5adf1805c48c964b1530f273204b936b470e5cde2406af676f77551c456f9a8",
     "modules/next-engine/comparison.js": "799f592429cde6cf9080613d3c51a237f8fed5ef1ac70a4d0b8839259f42bc1a",
-    "modules/next-engine/config.js": "c854150b6ec41ee136b43db9c2e740fe70cdc2e424a5d5dcacd50c9a0d526399",
+    "modules/next-engine/config.js": "0eae42e004dbbd158a53fe595b7c96d965e67aa13670d77d215f76bfd43d92a7",
     "modules/next-engine/cycle-runtime-adapter.js": "74a1dc4dcd58709b4407a747705edc223548f7cc1432464d6ce3757f77791268",
     "modules/next-engine/cycles.js": "3b949f73ecef2543e4aa3aa6910fe43a3d3526805fcbcd111424e5df2d6efc79",
     "modules/next-engine/domain.js": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
@@ -72,7 +72,7 @@
     "modules/next-engine/topology.js": "b04274f6f3df79698a6806897def63aae0101223f8e10539795afb59643e558b",
     "modules/next-engine/weekly-recovery.js": "92cf14bd6ca28715d1d3f9ddde1cc0f42502892f230d69650f83bf6b921c111c",
     "modules/next-engine/workout-history-adapter.js": "59eb545414e6e4e0afce4a683cd4d4a7a006a45963b640c7782aa45ee46e0f99",
-    "modules/next-engine/workout-runtime.js": "06eb3e1af7712937c2e70c6b6be20375de8398893a50aefa40e389bba10dca5e",
+    "modules/next-engine/workout-runtime.js": "8fe7b0d80694e2fdabc64f7183bb6aa5f60cd147f92c0f1d6f8ef18fedeab67f",
     "modules/shadow-engine/canary.js": "0428125d70782059910ed3dbeac22a928caff1ed8e5c077ae5442fac6281b689",
     "modules/shadow-engine/config.js": "c4ede59d064132f543de9737618f45562104be0a6fbab1d3bbd9b85a36d052bc",
     "modules/shadow-engine/domain.js": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
@@ -89,20 +89,20 @@
     "vendor/react-shared-JU7Z5GYC.js": "b8893896e31178fb4c8c0ce42cae975bec57bb70596c012d5d5c439cd20717d8",
     "vendor/react-shared-V673FGIV.js": "591c4bd8b0aae646cba73ca7ac17a2c2c950bdbaf288529ea14b691f2a4a9f22",
     "vendor/react.js": "24b2d220a5b2637cf3fb78fe0d961f227ea0a4b960485dbfb03c9d276e72147c",
-    "modules/next-engine/volume-repair.js": "258625b09fb7b6cc17ee15141a898100a7df3a9027e777aa1bdbb254b0b37aaa",
+    "modules/next-engine/volume-repair.js": "448b3b9c754646ee1dd2668f682527a42334dcc4bfd4e1c0a9286d8f23973c22",
     "modules/next-engine/shell-equipment.js": "9c7481b10101d5ac2fc6e9fea46633755a5a524a062bedc68c5f295eb9e5f30e"
   },
   "localCandidate": {
-    "name": "Pursuit Iron 4.0 Production Release \u00b7 M203",
-    "base": "M203 / app 4.0.0 build 793 / Engine 0.64.3",
-    "validation": "M203 restores custom-program last-set techniques without relying on optional legacy metadata and keeps the final-set badge visible on the correct working set."
+    "name": "Pursuit Iron 4.0 Production Release · M204",
+    "base": "M204 / app 4.0.0 build 794 / Engine 0.64.4",
+    "validation": "M204 enforces one generated prescription owner, explicit per-field user ownership, explicit live-row ownership, and a pure open/saved program commit boundary."
   },
   "uiFiles": {
-    "modules/App.js": "26bec482642261dbdf48b1f005f86cb6d04f8dbf9d2fa7d694eff6167517c387",
-    "index.html": "af8669d6007d7d6fdec3ef9d4669e8ca96ba0ec92d64c3c6ea690f25eaf34444",
-    "sw.js": "c708d1d29766e5a58a73b62356baa8dafaaf1e768b076b3c2a23f462dccd430e",
-    "BUILD_PROFILE.json": "0fc18c0966b3d705886a02b0cc961cce9cddaf2d81e938b396d1b313dd1fac28",
-    "CHANGELOG.md": "aff9ff0337fa8f821f90954254aec9dac786e4829c9802c9777a425b1b56ccd3",
+    "modules/App.js": "ff0246b5487593d9adeca103e5cd8f03c330cf8e334786ad0bbf29b8b97405a8",
+    "index.html": "d64b74c6d8f193caab452158d433db832a574107d9e30181d0d70861565b00ad",
+    "sw.js": "0a7b44684bc00d5b9dc0a7357fbb64df132cadc3143ed7cbfcdfb138ac722b53",
+    "BUILD_PROFILE.json": "623e2d9c5ce41ac96d1b876c815bccef76441e23351eaf259ed253d90297a7c6",
+    "CHANGELOG.md": "2f786b173489d927d5cd7a8c5d7501a58296bd445a800163a2c363f16c96fad6",
     "app.css": "5432859c3eb9624b9a27dc1c9de2e8cb85672b02bcd72c114ac963378184b85b"
   },
   "baselineSourceNextEngineAggregate": "9ba84ffe3a62d94849617af33a2eafeaa563ab4a3636579101990ed753d05a84",
@@ -181,7 +181,7 @@
   },
   "sourceFilesStatus": "M162 was produced from the M161.1 release-only artifact; TypeScript source was not present. Baseline source hashes are retained under baselineSource* for provenance, but M162 claims runtime integrity only.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
-  "runtimeHotfix": "M203 preserve implicit custom-program final-set intensifiers across migration/import metadata loss and show the badge on the actual final working set",
-  "cache": "pursuit-iron-production-v4-0-0-m203-custom-intensifier-b793",
-  "uiMilestone": "Pursuit Iron 4.0 Production Release \u00b7 M203 Custom Intensifiers"
+  "runtimeHotfix": "M204 make generated prescriptions single-owned, track explicit user/manual field ownership, prevent volume-repair override mirroring, and make live-set/program persistence ownership explicit",
+  "cache": "pursuit-iron-production-v4-0-0-m204-prescription-ownership-b794",
+  "uiMilestone": "Pursuit Iron 4.0 Production Release · M204 Prescription Ownership"
 }

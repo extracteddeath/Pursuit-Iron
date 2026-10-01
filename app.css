@@ -46,7 +46,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root h1,#root h2,#root h3,#root h4{margin-block-start:0;text-wrap:balance;letter-spacing:-.025em}
 #root p,#root li{overflow-wrap:anywhere;text-wrap:pretty}
 #root button,#root [role="button"],#root input,#root textarea,#root select{font:inherit}
-#root button,#root [role="button"]{touch-action:manipulation;transform:translateZ(0);transition:transform var(--pi-motion-fast) var(--pi-ease),opacity var(--pi-motion-fast) ease,filter var(--pi-motion-fast) ease}
+/* No blanket translateZ(0): it gave every button (48 on the workout screen, hundreds in the library) its own
+   compositor layer for the whole session. The browser promotes a button only while its press scale runs. */
+#root button,#root [role="button"]{touch-action:manipulation;transition:transform var(--pi-motion-fast) var(--pi-ease),opacity var(--pi-motion-fast) ease,filter var(--pi-motion-fast) ease}
 #root button:active:not(:disabled),#root [role="button"]:active:not([aria-disabled="true"]){transform:scale(.985)}
 #root button:disabled,#root [role="button"][aria-disabled="true"]{cursor:default;opacity:.45}
 #root input,#root textarea,#root select{caret-color:currentColor;transition:border-color var(--pi-motion-fast) ease,box-shadow var(--pi-motion-fast) ease,background-color var(--pi-motion-fast) ease}

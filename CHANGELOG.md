@@ -1,3 +1,13 @@
+## M219 — UI integration (build 809)
+
+- Highlighted labels and training details are clearer across light and dark themes, with larger tap areas for common controls.
+- Finished sets and phase labels stay readable. Plan keeps its week navigation, and session estimates update when rest length or custom exercises change.
+- Sheets close smoothly and respect reduced-motion settings. Buttons release without an abrupt snap.
+- Workout chimes reuse one audio context while training and release it when you leave the workout.
+- The recent release-note repair, compact theme picker, manual entries and scheduled final-set techniques remain available.
+- The workout summary accommodates its exercise-list touch target without clipping, and all five effort choices stay together on narrow phones.
+- M218 phone polish remains the baseline; the AI archive is not used as a replacement. Engine prescription policy remains 0.64.10.
+
 ## M218 — phone polish (build 808)
 
 - Fixed “What's new couldn't load” on Home and in Settings. Current release notes now use the archive's shared formatting adapter, so plain-text entries receive a valid icon and title.

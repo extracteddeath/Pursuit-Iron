@@ -7,6 +7,7 @@ import puppeteer from 'puppeteer-core';
 // Use the complete production app: reading notes, choosing themes, jumping weeks, and editing a resumed workout
 // must preserve the user's training data as well as fit the phone.
 const root = path.resolve(new URL('../', import.meta.url).pathname);
+const releaseMilestone = Number(JSON.parse(fs.readFileSync(path.join(root, 'BUILD_PROFILE.json'), 'utf8')).milestone.replace(/^M/, ''));
 const program = {
     id: 'm218-phone', name: 'Ten-week upper training', custom: true, weeks: 10,
     config: { name: 'Ten-week upper training', goal: 'both', experience: 'intermediate', progression: 'manual',
@@ -71,7 +72,7 @@ try {
         await handle.dispose();
     };
     await clickText('Got it');
-    await page.waitForFunction(() => JSON.parse(localStorage.getItem('wpb:v1')).seenWhatsNew === 218);
+    await page.waitForFunction(version => JSON.parse(localStorage.getItem('wpb:v1')).seenWhatsNew === version, {}, releaseMilestone);
     await page.reload({ waitUntil: 'networkidle0' }); await page.waitForSelector('.wpb-tabbar');
     assert.equal(await page.$$eval('[data-wn-item]', nodes => nodes.length), 0, 'dismissal survives reload');
     const beforeNotes = await saved();
@@ -94,7 +95,7 @@ try {
     await page.waitForSelector('.wpb-backdrop', { hidden: true });
     assert.deepEqual((await saved()).saved, beforeNotes.saved, 'reading notes cannot rewrite the program');
     assert.deepEqual((await saved()).history, beforeNotes.history);
-    assert.equal((await saved()).seenWhatsNew, 218, 'replaying and closing notes preserves dismissal');
+    assert.equal((await saved()).seenWhatsNew, releaseMilestone, 'replaying and closing notes preserves dismissal');
     await page.evaluate(snapshot => localStorage.setItem('wpb:live', JSON.stringify(snapshot)), live);
     await page.reload({ waitUntil: 'networkidle0' }); await page.waitForSelector('.wpb-live-dock');
 

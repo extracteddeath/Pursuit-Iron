@@ -1,8 +1,8 @@
 {
   "schemaVersion": 3,
-  "milestone": "M218",
+  "milestone": "M219",
   "appVersion": "4.0.0",
-  "build": 808,
+  "build": 809,
   "engineVersion": "0.64.10",
   "candidateStatus": "verification_enforced_by_ci",
   "runtimeAggregate": "1a4ef68e097aa38ac695bf9ef235c2eda8ca14b39f6eff804ce7eaacf2e34d0e",
@@ -72,17 +72,17 @@
     "validation": "Real production duration stepping, direct typing, invalid and blank drafts, 1/2/7/9/12-week persistence and phone-width checks; cycle duration and engine policy preserved."
   },
   "uiFiles": {
-    "modules/App.js": "3e2c7e37713170d4fc47903f739c3b29d21f0010107e184131f064c6a1842e69",
-    "index.html": "2d04b0f8eb91beb48ee5b92e5d96c61e2c72e4869491f0306a4daf8f373895d1",
-    "sw.js": "540b9b423193b4b76e61aa18baaf06927e424e2f4cb75928b9f1cb5a72c8f359",
-    "BUILD_PROFILE.json": "d3d797bd7832d383861e2b1ae234f8347e06b7ff18631e6c8181f2f8cd3eb397",
-    "CHANGELOG.md": "97f799a9c979db2173c54b8861ac618f49f4098cd3a922c74448e16fccf63823",
-    "app.css": "5432859c3eb9624b9a27dc1c9de2e8cb85672b02bcd72c114ac963378184b85b",
+    "modules/App.js": "45d72de06d3fb2fe69284444e0c33fc6499cb4338649ca32b2f40a0cfb4caab4",
+    "index.html": "384ac6fa2ace8543f6debd84f480e43e939473135a507fc968892cd68715a56a",
+    "sw.js": "710648e28fcb8d8bbc14056cb11bdc5fceb07e07fde42f235ae1c0d896c4207c",
+    "BUILD_PROFILE.json": "a0bd7b33cf2888abe4b3b90bb687e9f0b3c2f4aeb576f381a67a61d854f166ad",
+    "CHANGELOG.md": "461f6f9040e0a68f9b1c3616183df7b9dc15c36e9c8be812fd638a8303418c3a",
+    "app.css": "27818b3319609aff1416b32d5afebe70598cc57dfa64f4467b8bfe5b1130e0dd",
     "manifest.webmanifest": "46718c7b74d686446fdf40ea167992aacc86bdf74e5b9d835263155adedeb763"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Replace the duration preset row with a compact stepper and typed week field; preserve cycle-owned phase lengths and saved-program duration authority.",
-  "cache": "pursuit-iron-production-v4-0-0-m218-phone-polish-b808",
-  "uiMilestone": "Pursuit Iron 4.0 Production Release · M218 Phone Polish"
+  "cache": "pursuit-iron-production-v4-0-0-m219-ui-integration-b809",
+  "uiMilestone": "Pursuit Iron 4.0 Production Release · M219 UI Integration"
 }

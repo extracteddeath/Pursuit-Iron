@@ -1,0 +1,106 @@
+name: M210 App shell static cleanup finalizer
+
+on:
+  push:
+    branches:
+      - audit/m210-app-shell-cleanup
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    if: ${{ !contains(github.event.head_commit.message, '[m210-finalized]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: audit/m210-app-shell-cleanup
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Remove proven-dead App shell bindings and finalize M210
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const read = file => fs.readFileSync(file, 'utf8');
+          const write = (file, text) => fs.writeFileSync(file, text);
+          const replaceOnce = (file, from, to) => {
+            const text = read(file);
+            const first = text.indexOf(from);
+            if (first < 0 || text.indexOf(from, first + from.length) >= 0)
+              throw new Error(`${file}: expected exactly one match for ${from}`);
+            write(file, text.slice(0, first) + to + text.slice(first + from.length));
+          };
+
+          replaceOnce('modules/App.js',
+            'generateNextProgramForShell, nextProgramToShellProgram, recommendNextSplitForShell',
+            'generateNextProgramForShell, recommendNextSplitForShell');
+          replaceOnce('modules/App.js',
+            'generateNextBlockFromShellHistory, nextWorkoutSuggestionForShell',
+            'nextWorkoutSuggestionForShell');
+          replaceOnce('modules/App.js',
+            'convertProgramToNextCycleForShell, advanceNextCycleForShell, nextCycleTemplatesForShell',
+            'convertProgramToNextCycleForShell, nextCycleTemplatesForShell');
+
+          replaceOnce('modules/App.js',
+            'const SCALE_OK = {\n    fontSize: Object.values(TYPE),\n    fontWeight: Object.values(WEIGHT),\n    borderRadius: Object.values(RADIUS),\n    space: Object.values(SPACE)\n};\n',
+            '');
+
+          replaceOnce('modules/App.js',
+            '/* ⚠ THE VOCABULARY IS ENFORCED, NOT DECORATIVE. `PATTERNS` existed as an exported list nothing read,\n   which gates/deadexports correctly flagged: a term list no code checks against is a comment that\n   looks like a constraint. A tag outside the vocabulary now resolves to null rather than passing\n   through as a one-off pattern that silently matches only itself — which is exactly how a typo\'d\n   tag would make a lift permanently non-duplicable and invisible to every rule built on this. */\nconst PATTERN_SET = new Set(PATTERNS);\n',
+            '');
+
+          replaceOnce('modules/App.js',
+            '// Equipment that can actually add external load to a lift. Bands and a bench are deliberately absent:\n// neither lets you weight a pull-up in any way the app models.\nconst LOADABLE_EQUIP = new Set(["barbell", "dumbbell", "kettlebell", "machine", "cable", "smith", "ezbar"]);\n',
+            '');
+
+          const testFile = 'verification/m205-engine-cleanup-test.mjs';
+          const anchor = "assert.doesNotMatch(index, /app-shell-adapter/, 'Node and browser must resolve the same canonical adapter');";
+          const assertions = `for (const retired of ['nextProgramToShellProgram', 'generateNextBlockFromShellHistory', 'advanceNextCycleForShell', 'SCALE_OK', 'PATTERN_SET', 'LOADABLE_EQUIP'])\n    assert.equal(app.includes(retired), false, \`proven-dead App shell binding must stay removed: \${retired}\`);\n${anchor}`;
+          replaceOnce(testFile, anchor, assertions);
+
+          const manifestFile = 'RELEASE_MANIFEST.json';
+          const manifest = JSON.parse(read(manifestFile));
+          manifest.milestone = 'M210';
+          manifest.build = 800;
+          manifest.cache = 'pursuit-iron-production-v4-0-0-m210-app-shell-cleanup-b800';
+          manifest.uiMilestone = 'Pursuit Iron 4.0 Production Release · M210 App Shell Cleanup';
+          manifest.localCandidate = {
+            name: 'Pursuit Iron 4.0 Production Release · M210',
+            base: 'M209 / app 4.0.0 build 799 / Engine 0.64.9',
+            validation: 'Six module-scope App bindings with zero references are removed while component props, state, backup compatibility, and engine behavior remain unchanged.'
+          };
+          manifest.runtimeHotfix = 'Remove proven-dead App-shell imports/constants only; preserve component/lifecycle surfaces for separate review.';
+          write(manifestFile, JSON.stringify(manifest, null, 2) + '\n');
+
+          const profileFile = 'BUILD_PROFILE.json';
+          const profile = JSON.parse(read(profileFile));
+          profile.milestone = 'M210';
+          profile.source = 'M209 production baseline + module-scope App unused-binding audit';
+          profile.engine = '0.64.9 unchanged; App shell static dead code removed';
+          profile.cache = manifest.cache;
+          profile.uiMilestone = manifest.uiMilestone;
+          write(profileFile, JSON.stringify(profile, null, 2) + '\n');
+
+          const changelogFile = 'CHANGELOG.md';
+          const changelog = read(changelogFile);
+          const entry = `## M210 — App shell static cleanup (build 800)\n\n- Removed three unused shell-adapter imports and three dead module-scope constants from the App bundle.\n- Removed stale comments that described the retired constants as active constraints.\n- Deliberately left component props, state, and lifecycle-adjacent findings for separate context-aware review.\n- Added cleanup invariants preventing the six dead bindings from returning. Engine behavior remains 0.64.9; offline cache rotated for build 800.\n\n`;
+          if (!changelog.startsWith('## M210')) write(changelogFile, entry + changelog);
+          NODE
+
+          node --check modules/App.js
+          node scripts/finalize-release.mjs
+          node scripts/verify-release.mjs
+          node scripts/verify-engine-contracts.mjs
+
+      - name: Commit finalized M210 candidate
+        shell: bash
+        run: |
+          rm -f .github/workflows/m210-top-level-audit.yml .github/workflows/m210-finalize.yml
+          git config user.name "Pursuit Iron Release Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "M210 App shell static cleanup [m210-finalized]"
+          git push origin HEAD:audit/m210-app-shell-cleanup

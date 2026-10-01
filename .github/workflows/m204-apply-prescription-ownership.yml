@@ -1,0 +1,73 @@
+name: M204 apply prescription ownership hardening
+
+on:
+  push:
+    branches: [m204-prescription-ownership]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  verify-and-promote:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout staging branch
+        uses: actions/checkout@v4
+        with:
+          ref: m204-prescription-ownership
+          fetch-depth: 0
+      - name: Prepare exact M204 patch on M203 production baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          base64 -d verification/m204-prescription-ownership.patch.gz.b64 | gunzip > /tmp/m204.patch
+          git fetch origin main
+          git checkout -B m204-publish origin/main
+          test "$(git rev-parse HEAD)" = "f1eca56f0a189ebcbdbb729a099fd4a7309c2978"
+          git apply --check /tmp/m204.patch
+          git apply /tmp/m204.patch
+          test "$(node -p "require('./RELEASE_MANIFEST.json').milestone")" = "M204"
+          test "$(node -p "require('./RELEASE_MANIFEST.json').build")" = "794"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Prescription ownership regression
+        run: node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m204-prescription-ownership-test.mjs
+      - name: Volume and transition regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m199-volume-repair-test.mjs
+          node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m200-regional-dose-test.mjs
+          node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m202-locked-cycle-dose-test.mjs
+      - name: Creation and wizard matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m198-creation-audit.mjs
+          node --no-warnings --experimental-loader ./verification/import-loader.mjs ./verification/m199-wizard-feasibility-test.mjs
+      - name: Full release integrity
+        run: node scripts/verify-release.mjs
+      - name: Install browser harness
+        run: npm install --no-save --ignore-scripts puppeteer-core@24
+      - name: Phone workout ownership and PWA lifecycle
+        shell: bash
+        env:
+          CHROME_BIN: /usr/bin/google-chrome
+        run: |
+          set -euo pipefail
+          node verification/m201-workout-prescription-browser-test.mjs
+          node verification/m178-pwa-update-browser-test.mjs
+      - name: Publish exact verified M204 snapshot to main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout -- verification/m200-regional-dose-results.json 2>/dev/null || true
+          rm -f verification/m201-*-phone.png verification/m178-*.png
+          git config user.name "extracteddeath"
+          git config user.email "92632906+extracteddeath@users.noreply.github.com"
+          git add BUILD_PROFILE.json CHANGELOG.md M204_ENGINE_OWNERSHIP_REPORT.md RELEASE_MANIFEST.json index.html modules/App.js modules/next-engine/app-shell-adapter.js modules/next-engine/config.js modules/next-engine/volume-repair.js modules/next-engine/workout-runtime.js scripts/finalize-m204-prescription-ownership.mjs scripts/verify-release.mjs sw.js verification/m204-prescription-ownership-test.mjs verification/set-display-integrity-test.mjs
+          git diff --cached --check
+          git commit -m "M204: harden prescription ownership (build 794)"
+          git push origin HEAD:main

@@ -119,6 +119,9 @@ try {
         await page.setViewport({ width, height, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
         await page.waitForFunction(w => window.innerWidth === w, {}, width);
         await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        // Entry and sheet-close animations can still translate the shell after two frames.
+        // Measure the settled layout while keeping the viewport bounds assertion unchanged.
+        await page.evaluate(() => Promise.allSettled(document.getAnimations().filter(a => a.effect?.getComputedTiming().iterations !== Infinity).map(a => a.finished)));
         const bounds = await page.$eval('.wpb-workout', el => { const r = el.getBoundingClientRect(); return { left: r.left, right: r.right, bottom: r.bottom }; });
         if (bounds.left < -1 || bounds.right > width + 1 || bounds.bottom > height + 1)
             await page.screenshot({ path: path.join(root, 'verification/m217-geometry-phone.png'), fullPage: true });

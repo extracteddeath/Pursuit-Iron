@@ -1,5 +1,5 @@
-/* Pursuit Iron 4.0 — M217 production release. */
-const CACHE="pursuit-iron-production-v4-0-0-m217-android-recovery-b807";
+/* Pursuit Iron 4.0 — M218 production release. */
+const CACHE="pursuit-iron-production-v4-0-0-m218-phone-polish-b808";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
   "./BUILD_PROFILE.json",

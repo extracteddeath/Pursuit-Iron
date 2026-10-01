@@ -1,3 +1,13 @@
+## M218 — phone polish (build 808)
+
+- Fixed “What's new couldn't load” on Home and in Settings. Current release notes now use the archive's shared formatting adapter, so plain-text entries receive a valid icon and title.
+- Workout actions use quieter controls and consistent spacing. Target loads and rep ranges have deliberate separate lines, and the final-set technique stays attached to the lift and its last working row.
+- Plan puts Up Next near the top, uses one completion summary, names weekly set counts clearly, and retains phase icons and the full schedule. Phase goals use readable labels.
+- Choosing a week brings its expanded days into view beneath a sticky week picker; view changes retain the selected week. Initial loading centers the current week without moving the page past its overview.
+- Settings displays the saved theme in a compact, keyboard-accessible disclosure. All light and dark themes remain selectable, with complete labels and persistent selections.
+- Added a full-app phone gate for release-note loading, persistent dismissal, Settings replay and archive navigation, theme selection/reload, later-week navigation, technique details, decimal entry, target readability, focused mode, and Back/resume at 320–390px and landscape.
+- Training-engine and storage policy remain unchanged from M217. Offline cache rotated for build 808.
+
 ## M217 — Android workout recovery (build 807)
 
 - Saving a completed workout now commits history and performance together before removing its recovery copy. If device storage rejects the write, the workout stays open with a retry action.

@@ -7,10 +7,16 @@ import { preserveRetiredTrialData, preserveRetiredRolloutData } from '../modules
 
 const app = fs.readFileSync(new URL('../modules/App.js', import.meta.url), 'utf8');
 const index = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+const coachRegression = fs.readFileSync(new URL('../modules/next-engine/coach-regression.js', import.meta.url), 'utf8');
 for (const retired of ['function generateLayout(', 'function generateProgramOnce(', 'const GEN_PIPELINE',
     'generateNextWithShadow(', 'runShadowProgramForShell(', 'runShadowTransitionForShell(',
     'assignCanaryTrial(', 'runCanaryBehaviorForShell(', 'runSelectivePromotionForShell(', 'applyControlledCanaryProgram'])
     assert.equal(app.includes(retired), false, `retired execution path must stay removed: ${retired}`);
+for (const retired of ['proposeCoachRegressionFixture', 'approveCoachRegressionFixture', 'evaluateCoachRegressionFixture', 'function suggestedCheck(', 'function expectedCode('])
+    assert.equal(coachRegression.includes(retired), false, `retired coach-review wrapper must stay removed: ${retired}`);
+assert.ok(coachRegression.includes('export function evaluateObjectiveCoachGuardrails'), 'objective production guardrails must remain');
+for (const retiredProp of ['canarySummaryData', 'canaryAnalysisData', 'canaryGovernanceData', 'selectivePromotionStatusData', 'onExportCanaryDossier', 'onToggleCanary'])
+    assert.equal(app.includes(retiredProp), false, `retired Settings prop must stay removed: ${retiredProp}`);
 assert.doesNotMatch(index, /app-shell-adapter/, 'Node and browser must resolve the same canonical adapter');
 assert.equal(fs.existsSync(new URL('../modules/shadow-engine', import.meta.url)), false);
 assert.equal(fs.existsSync(new URL('../modules/next-engine/app-shell-adapter-capacity.js', import.meta.url)), false);

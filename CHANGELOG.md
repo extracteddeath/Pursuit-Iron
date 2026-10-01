@@ -1,3 +1,10 @@
+## M207 — Runtime cleanup and compatibility separation (build 797)
+
+- Removed the unused coach-review proposal/approval/fixture wrapper while retaining the objective guardrails used by production audits and verification.
+- Removed retired canary/promotion props from the Settings component surface; historical research/rollout records remain data-only backup compatibility and still round-trip through migration/import/export.
+- Extended the cleanup regression contract so retired review APIs and dead Settings props cannot silently return.
+- Preserved M206 generation, volume, progression, ownership, and recovery behavior. Pursuit Engine 0.64.7; offline cache rotated for build 797.
+
 ## M206 — Exact working-week volume (build 796)
 
 - Unified minimalist public guidance with the existing approach-aware engine dose model while retaining standard-volume floors.

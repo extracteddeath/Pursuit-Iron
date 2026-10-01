@@ -5,75 +5,8 @@ import { exerciseEconomyCluster, redundantExercisePairs } from './exercise-econo
 const UPPER_ACCESSORY_FAMILIES = new Set(['lateral_raise', 'rear_delt', 'elbow_flexion', 'elbow_extension', 'grip', 'wrist_flexion', 'wrist_extension', 'wrist_deviation']);
 const LOWER_FAMILIES = new Set(['squat', 'leg_press', 'knee_extension', 'hip_hinge', 'hip_extension', 'knee_flexion', 'calf', 'hip_abduction', 'hip_adduction', 'dorsiflexion']);
 const STRENGTH_ROLES = new Set(['primary_strength', 'secondary_strength', 'strength_support']);
-function suggestedCheck(category, scope) {
-    if (category === 'redundant_work')
-        return 'redundant_accessory_family';
-    if (category === 'poor_sequence')
-        return 'strength_before_hypertrophy';
-    if (category === 'misplaced_exercise')
-        return 'lower_day_spillover_identity';
-    if (category === 'split_identity')
-        return 'session_intent_integrity';
-    if (category === 'underdosed')
-        return 'priority_floor';
-    if (category === 'overdosed')
-        return 'non_priority_volume_ceiling';
-    if (category === 'equipment_or_restriction')
-        return 'equipment_compliance';
-    if (category === 'prescription_issue')
-        return 'prescription_executable';
-    if (category === 'fatigue_risk')
-        return 'manual_triage';
-    return 'manual_triage';
-}
 /**
- * Converts a recurring review signal into a proposed regression fixture. The output is intentionally
- * non-blocking: review consensus can nominate a test, but it cannot silently rewrite release policy.
- */
-export function proposeCoachRegressionFixture(candidate) {
-    return {
-        id: `proposal-${candidate.id}`,
-        sourceCandidateId: candidate.id,
-        category: candidate.category,
-        scope: candidate.scope,
-        status: 'proposed',
-        sourcePackets: [...new Set(candidate.examples.map(example => example.packetId))].sort(),
-        sourceExamples: candidate.examples.map(example => ({ ...example })),
-        recommendedAssertion: candidate.recommendedAssertion,
-        suggestedCheck: suggestedCheck(candidate.category, candidate.scope),
-        evidenceLabel: 'synthetic_or_human_consensus_signal',
-        note: 'This is a review-derived hypothesis, not proof. A maintainer must choose an objective machine-check before it can block release.'
-    };
-}
-/** Explicit maintainer approval is required before a proposed review signal becomes release-blocking. */
-export function approveCoachRegressionFixture(proposal, approval) {
-    if (!approval.approved)
-        throw new Error(`${proposal.id}: maintainer approval is required.`);
-    if (!approval.maintainer.trim())
-        throw new Error(`${proposal.id}: maintainer identity is required.`);
-    if (!approval.rationale.trim())
-        throw new Error(`${proposal.id}: approval rationale is required.`);
-    const check = approval.check ?? proposal.suggestedCheck;
-    if (check === 'manual_triage')
-        throw new Error(`${proposal.id}: a concrete objective check is required before activation.`);
-    return {
-        id: proposal.id.replace(/^proposal-/, 'fixture-'),
-        sourceCandidateId: proposal.sourceCandidateId,
-        category: proposal.category,
-        scope: proposal.scope,
-        status: 'active',
-        sourcePackets: [...proposal.sourcePackets],
-        sourceExamples: proposal.sourceExamples.map(example => ({ ...example })),
-        recommendedAssertion: proposal.recommendedAssertion,
-        evidenceLabel: proposal.evidenceLabel,
-        note: proposal.note,
-        approvedBy: approval.maintainer.trim(),
-        approvalRationale: approval.rationale.trim(),
-        check
-    };
-}
-/**
- * Objective plausibility checks used for mutation testing and for approved coach-derived fixtures.
+ * Objective plausibility checks used by the production audit and verification suites.
  * These intentionally cover concrete invariants only; they do not pretend to replace human taste.
  */
 export function evaluateObjectiveCoachGuardrails(program, request) {
@@ -235,24 +168,4 @@ export function evaluateObjectiveCoachGuardrails(program, request) {
         }
     }
     return findings;
-}
-function expectedCode(check) {
-    if (check === 'redundant_accessory_family')
-        return 'REDUNDANT_ACCESSORY_FAMILY';
-    if (check === 'strength_before_hypertrophy')
-        return 'STRENGTH_AFTER_HYPERTROPHY';
-    if (check === 'lower_day_spillover_identity' || check === 'session_intent_integrity')
-        return 'LOWER_DAY_IDENTITY_DILUTED';
-    if (check === 'session_time_cap')
-        return 'SESSION_TIME_CAP_EXCEEDED';
-    if (check === 'one_set_fragmentation')
-        return 'ONE_SET_FRAGMENTATION';
-    return null;
-}
-export function evaluateCoachRegressionFixture(fixture, program, request) {
-    const code = expectedCode(fixture.check);
-    if (!code)
-        return { pass: true, findings: [], reason: `${fixture.check} is enforced by an existing engine audit rather than the objective mutation guardrail layer.` };
-    const findings = evaluateObjectiveCoachGuardrails(program, request).filter(finding => finding.code === code);
-    return { pass: findings.length === 0, findings, reason: findings.length ? `${findings.length} ${code} finding(s) violate the approved fixture.` : `No ${code} findings.` };
 }

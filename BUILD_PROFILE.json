@@ -1,11 +1,11 @@
 {
   "profile": "portable-browser-esm-canonical-engine",
-  "milestone": "M213",
-  "source": "M212 production baseline + final App unused-binding isolation audit",
-  "engine": "0.64.9 unchanged; App unused-binding count reduced to zero",
+  "milestone": "M214",
+  "source": "M213 production baseline + executable prescription/history/cycle synchronization",
+  "engine": "0.64.10; canonical field ownership and live movement identity across history, volume and cycle edits",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 46,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m213-zero-unused-app-b803",
-  "uiMilestone": "Pursuit Iron 4.0 Production Release · M213 Zero-Unused App"
+  "cache": "pursuit-iron-production-v4-0-0-m214-executable-sync-b804",
+  "uiMilestone": "Pursuit Iron 4.0 Production Release · M214 Executable Prescription Sync"
 }

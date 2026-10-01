@@ -6,13 +6,13 @@ import { deriveMuscleLedger } from './ledgers.js';
 import { phasePolicyFor, phaseLabel } from './phase-policy.js';
 import { normalizeRequest } from './prescription.js';
 import { estimateSessionMinutes, repsForPhase, restForExercise, rirForPhase } from './realizer.js';
-import { progressionInstruction, selectProgressionStyle } from './progression-style.js';
+import { progressionInstruction, selectProgressionStyle, continuationProgressionStyle } from './progression-style.js';
 import { blocksForCycleTemplate, cycleTemplates, goalForCycleTemplate } from './simulation.js';
 import { transitionProgramPhase } from './phase-transition.js';
 import { historyDecision, withProgramExplainability } from './explainability.js';
 import { analyzeShellHistoryForNextEngine, carryForwardAvoidedExercises } from './workout-history-adapter.js';
 import { shellConfigToNextRequest, nextProgramToShellProgram, NextShellAdapterError } from './app-shell-adapter.js';
-import { repairShellVolume, reconcileLockedCycleWeekOverflows, finalizeGeneratedShellVolume } from './volume-repair.js';
+import { repairShellVolume, reconcileLockedCycleWeekOverflows, finalizeGeneratedShellVolume, captureShellBaseProgram } from './volume-repair.js';
 import { firstPassingCapacityProgram } from './capacity-generation.js';
 const phaseGoal = (phase) => phase === 'hypertrophy_accumulation' ? 'hypertrophy' :
     (phase === 'strength_accumulation' || phase === 'intensification' || phase === 'peak') ? 'strength' : 'both';
@@ -41,7 +41,7 @@ function retargetStatic(previous, request, target, blockWeeks = 6) {
                 phase: target,
                 experience: normalized.athlete.experience,
                 blockWeeks: Math.max(1, Number(blockWeeks) || 6),
-                requestedStyle: normalized.preferences?.progressionStyle,
+                requestedStyle: continuationProgressionStyle(normalized.preferences?.progressionStyle, ex),
                 prescription
             });
             const previousStyle = ex.progressionStyle ?? null;
@@ -301,7 +301,7 @@ export function convertProgramToNextCycleForShell(options) {
         throw new NextShellAdapterError('NEXT_CYCLE_CONVERSION_ALREADY_LINKED', 'This program already belongs to a training cycle.');
     if (current.config?.endless)
         throw new NextShellAdapterError('NEXT_CYCLE_CONVERSION_ENDLESS', 'Endless programs do not have a block boundary. Switch to a fixed-length block before creating a cycle.');
-    const source = current.nextEngine?.program;
+    const source = captureShellBaseProgram(current, options.legacyExercises);
     const sourceRequest = current.nextEngine?.baseRequest ?? current.nextEngine?.request;
     if (!source || !sourceRequest)
         throw new NextShellAdapterError('NEXT_CYCLE_CONVERSION_SOURCE_MISSING', 'This program is missing the engine snapshot needed to build future cycle blocks safely.');
@@ -457,7 +457,7 @@ function requestForAdvance(cycle, current, target, weeks, analysis) {
     return request;
 }
 function buildAdaptedBlock(current, cycle, target, weeks, label, analysis, legacyExercises, makeId, existingId) {
-    const source = current?.nextEngine?.program;
+    const source = captureShellBaseProgram(current, legacyExercises);
     if (!source)
         throw new NextShellAdapterError('NEXT_CYCLE_SOURCE_MISSING', 'Current cycle block is missing its engine source snapshot.');
     const request = requestForAdvance(cycle, current, target, weeks, analysis);

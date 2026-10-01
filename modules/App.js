@@ -1,7 +1,7 @@
-const __APP_VERSION__='4.0.0'; const __BUILD__='803';
+const __APP_VERSION__='4.0.0'; const __BUILD__='804';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
-import { setShellEquipmentExpander, splitContractGaps, splitBuildability, refusalFixes, generateNextProgramForShell, recommendNextSplitForShell, getNextShellCell, canonicalShellSetCount, cloneNextDayPrescriptions, swapNextSlotPrescriptions, removeNextSlotPrescription, nextExerciseIdForShellExercise, markUserPrescriptionOverride, clearUserPrescriptionOverride, NextShellAdapterError } from "./next-engine/app-shell-adapter.js";
+import { setShellEquipmentExpander, splitContractGaps, splitBuildability, refusalFixes, generateNextProgramForShell, recommendNextSplitForShell, getNextShellCell, canonicalShellSetCount, cloneNextDayPrescriptions, swapNextSlotPrescriptions, removeNextSlotPrescription, nextExerciseIdForShellExercise, resolveNextShellExerciseId, remapNextShellRoster, snapshotNextShellPrescription, markUserPrescriptionOverride, clearUserPrescriptionOverride, NextShellAdapterError } from "./next-engine/app-shell-adapter.js";
 import { nextWorkoutSuggestionForShell, nextWorkoutSuggestionFromPerformedShell } from "./next-engine/workout-history-adapter.js";
 import { generateNextCycleForShell, convertProgramToNextCycleForShell, nextCycleTemplatesForShell } from "./next-engine/cycle-runtime-adapter.js";
 import { buildRuntimeSetTargets, reconcilePendingRepTargets, techniqueProtocolFromCell, freestyleCellForRepRange, buildUserAddedSlotPrescriptions } from "./next-engine/workout-runtime.js";
@@ -5745,7 +5745,7 @@ function propagateCycleEditsPure(edited, before, siblings, adapt) {
                 });
                 return dayChanged ? { ...d, exercises } : d;
             });
-            return touched ? { ...p, days } : p;
+            return touched ? remapNextShellRoster(p, days, EXERCISES) : p;
         });
     }
     /* NON-ADAPT (default): every phase trains the same lifts, so a genuine exercise change is meant
@@ -5832,7 +5832,7 @@ function propagateCycleEditsPure(edited, before, siblings, adapt) {
                 });
             });
         }
-        return { ...p, days, ss: nss };
+        return { ...remapNextShellRoster(p, days, EXERCISES), ss: nss };
     });
 }
 /* ═══ MOVEMENT PATTERN GROUPS — ONE OWNER ══════════════════════════════════════════════════════
@@ -16963,7 +16963,7 @@ function prescribeSets(program, day, ex, slot, weekIndex, unit, sug, dayPerf, pe
         return [];
     const request = program?.nextEngine?.request || program?.nextEngine?.baseRequest;
     const targets = buildRuntimeSetTargets({
-        exerciseId: program?.overrides?.[`${day.id}:${slot}`]?.nextExerciseId || program?.nextEngine?.program?.sessions?.[(program?.days || []).findIndex(d => d.id === day.id)]?.exercises?.[slot]?.exerciseId || ex.id,
+        exerciseId: resolveNextShellExerciseId(program, day, slot, ex) || ex.id,
         cell,
         workingLoad: sug?.weight ?? null,
         suggestedReps: sug?.target ?? null,
@@ -18622,9 +18622,11 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
                     // (`!s.warm && !s.sub`), but the flag was never PERSISTED, so on replayed history those
                     // filters matched nothing and extensions counted as full sets all over again — the exact
                     // bug v493 fixed in the live session, surviving in the log.
-                    return { w: wv(x), r: parseInt(x.reps), ...(r != null ? { rir: r } : {}), ...(x.sub ? { sub: true, ...(x.kind ? { kind: x.kind } : {}) } : {}), ...(prescribedRIRof(x) != null ? { tr: prescribedRIRof(x) } : {}), ...(x.target?.amrap ? { amrap: true } : {}), ...(x.auto && pw > 0 ? { pw } : {}), ...(x.auto && pt ? { pt } : {}) };
+                    return { w: wv(x), r: parseInt(x.reps), ...(r != null ? { rir: r, rirReported: x.actualRIR != null } : {}), ...(x.sub ? { sub: true, ...(x.kind ? { kind: x.kind } : {}) } : {}), ...(prescribedRIRof(x) != null ? { tr: prescribedRIRof(x) } : {}), ...(x.target?.amrap ? { amrap: true } : {}), ...(x.auto && pw > 0 ? { pw } : {}), ...(!x.target?.freestyle && pt ? { pt } : {}) };
                 });
-                perfOut[e.id] = { weight: s.weight, reps: s.reps, date: Date.now(), sets: logged, note };
+                const prescription = snapshotNextShellPrescription(program, day, e.slot, EX_BY_ID[e.id], weekIndex);
+                perfOut[e.id] = { weight: s.weight, reps: s.reps, date: Date.now(), sets: logged, note,
+                    ...(prescription ? { prescription } : {}) };
             }
         });
         onFinish({
@@ -22631,7 +22633,7 @@ function normalizeEditedHistoryEntry(original, draft) {
             ? rawPerf.sets
             : (rawPerf?.reps != null ? [{ w: rawPerf.weight ?? 0, r: rawPerf.reps }] : []);
         const sets = [];
-        for (const raw of sourceSets) {
+        for (const [setIndex, raw] of sourceSets.entries()) {
             if (!raw)
                 continue;
             const reps = Math.round(Number(raw.r));
@@ -22641,10 +22643,15 @@ function normalizeEditedHistoryEntry(original, draft) {
             if (!Number.isFinite(w0))
                 continue;
             const st = { ...raw, w: w0, r: reps };
-            if (raw.rir === "" || raw.rir == null || !Number.isFinite(Number(raw.rir)))
+            if (raw.rir === "" || raw.rir == null || !Number.isFinite(Number(raw.rir))) {
                 delete st.rir;
-            else
+                delete st.rirReported;
+            }
+            else {
                 st.rir = Math.max(0, Math.min(10, Number(raw.rir)));
+                if (Number(raw.rir) !== Number(prior.sets?.[setIndex]?.rir)
+                    || prior.sets?.[setIndex]?.rir == null) st.rirReported = true;
+            }
             sets.push(st);
         }
         const summary = summarizeHistoryLoggedSets(sets, EX_BY_ID[exId], original.unit || "lb");
@@ -25147,7 +25154,7 @@ function ProfileView({ history, bodyweight, sex, age, unit, onSettings }) {
                                     return (_jsxs("div", { style: { marginBottom: gi === groups.length - 1 ? 0 : 14 }, children: [_jsxs("div", { style: { display: "flex", justifyContent: "space-between", marginBottom: 7 }, children: [_jsx("span", { style: { ...eyebrow() }, children: g.cat }), _jsxs("span", { className: "mono", style: { fontSize: 11, fontWeight: 600, color: gEarned === g.items.length ? C.accentInk : C.muted }, children: [gEarned, "/", g.items.length] })] }), _jsx("div", { className: "wpb-profile-achievement-grid", style: { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 7 }, children: g.items.map(m => (_jsxs("button", { onClick: () => setDetail(m), className: "pressable", "aria-label": `${m.label}${m.done ? ", earned" : ", locked"}`, style: { background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "center", opacity: m.done ? 1 : 0.72 }, children: [_jsx("div", { style: { width: "100%", aspectRatio: "1", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, background: m.done ? C.accentDim : C.bg2, filter: m.done ? "none" : "grayscale(1)" }, children: m.icon }), _jsx("div", { style: { fontSize: 10.5, fontWeight: 600, color: m.done ? C.text : C.muted, marginTop: 3, lineHeight: 1.2 }, children: m.label }), !m.done && _jsxs("div", { className: "mono", style: { fontSize: 10, color: C.faint, marginTop: 1 }, children: [fmt(m.value, m.target), "/", fmt(m.target, m.target)] })] }, m.id))) })] }, g.cat));
                                 }) })] })] }), _jsx(AchievementDetailSheet, { m: detail, onClose: () => setDetail(null) })] }));
 }
-// The app shell (index.html, app.js, app.css) is served cache-first by the service worker for
+// The app shell (index.html, modules/main.js, modules/App.js, app.css) is served cache-first by the service worker for
 // instant loads and full offline support — which also means a shipped code fix can sit on the
 // server indefinitely without ever reaching an already-visited device until the normal
 // detect-new-worker → "Restart" flow completes. If that flow itself never gets a chance to run (the

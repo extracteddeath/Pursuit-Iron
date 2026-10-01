@@ -46,6 +46,13 @@ export function techniqueProtocolFromCell(cell) {
         return { type: 'lengthened_partials', partials: { onLastSet: true, position: 'lengthened' } };
     return { type: null };
 }
+// Audits and history evaluation must see the same final-set protocol as Workout, including Off.
+export function advancedTechniqueFromCell(cell, original) {
+    const protocol = techniqueProtocolFromCell(cell);
+    if (!protocol.type) return undefined;
+    return { ...(original?.type === protocol.type ? original : {}), ...protocol,
+        appliesTo: 'last_set', note: String(cell.tech) };
+}
 export function buildRuntimeSetTargets(args) {
     const { exerciseId, cell, loadingInventory, equipmentAvailable } = args;
     const reps = numberPair(cell.reps, [8, 12]);

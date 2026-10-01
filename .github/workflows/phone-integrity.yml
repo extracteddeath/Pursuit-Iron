@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        test: [m178-pwa-update, m199-volume-repair, m201-workout-prescription]
+        test: [m178-pwa-update, m199-volume-repair, m201-workout-prescription, m214-executable-prescription-sync]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

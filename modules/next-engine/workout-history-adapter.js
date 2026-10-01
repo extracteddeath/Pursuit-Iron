@@ -7,8 +7,9 @@ import { estimate1RM } from './history.js';
 import { availableLoadAtOrBelow } from './loading.js';
 import { normalizeRequest } from './prescription.js';
 import { transitionProgramPhase } from './phase-transition.js';
-import { nextProgramToShellProgram, NextShellAdapterError } from './app-shell-adapter.js';
-import { finalizeGeneratedShellVolume } from './volume-repair.js';
+import { nextProgramToShellProgram, getNextShellCell, resolveNextShellExerciseId, NextShellAdapterError } from './app-shell-adapter.js';
+import { advancedTechniqueFromCell } from './workout-runtime.js';
+import { finalizeGeneratedShellVolume, captureShellBaseProgram } from './volume-repair.js';
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 function numberOf(value) {
@@ -85,14 +86,10 @@ function resolveDay(program, entry) {
         return null;
     return { day: days[index], dayIndex: index };
 }
-function resolveNextExerciseId(program, day, slot, legacyId, sourceSession, legacyExercises) {
-    const meta = program?.overrides?.[`${day.id}:${slot}`];
-    if (meta?.nextExerciseId && (!meta.legacyExerciseId || meta.legacyExerciseId === legacyId))
-        return String(meta.nextExerciseId);
-    const sourceAtSlot = sourceSession.exercises?.[slot];
-    if (sourceAtSlot && meta?.legacyExerciseId === legacyId)
-        return sourceAtSlot.exerciseId;
-    const legacy = legacyExerciseById(legacyExercises).get(legacyId);
+function resolveNextExerciseId(program, day, slot, sourceSession, legacyMap) {
+    const legacy = legacyMap.get(String(day.exercises[slot]));
+    const current = resolveNextShellExerciseId(program, day, slot, legacy);
+    if (current) return current;
     const nameKey = norm(legacy?.name || '');
     const exact = sourceSession.exercises.find(ex => norm(ex.name) === nameKey);
     if (exact)
@@ -105,6 +102,20 @@ function resolveNextExerciseId(program, day, slot, legacyId, sourceSession, lega
         return global.exerciseId;
     const catalog = [...EXERCISE_MAP.values()].find(def => norm(def.name) === nameKey);
     return catalog?.id ?? null;
+}
+function historicalShellCell(program, day, slot, week, perf, exerciseId) {
+    const current = getNextShellCell(program, day, slot, week);
+    const saved = perf?.prescription;
+    if (!current || saved?.schemaVersion !== 1 || saved.exerciseId !== exerciseId) return current;
+    const reps = rangeOf(saved.reps, null), rir = rangeOf(saved.rir, null);
+    if (!Number.isInteger(saved.sets) || saved.sets < 1 || saved.sets > 20
+        || !reps || reps[0] <= 0 || !rir || rir[0] < 0 || rir[1] > 10
+        || saved.rest == null || saved.rest === '' || !Number.isFinite(Number(saved.rest)) || Number(saved.rest) < 0)
+        return current;
+    const textRange = pair => pair[0] === pair[1] ? String(pair[0]) : pair.join('-');
+    return { ...current, sets: saved.sets, reps: textRange(reps), rir: textRange(rir), rest: Number(saved.rest),
+        role: saved.role ?? current.role, progressionStyle: saved.progressionStyle ?? current.progressionStyle,
+        tech: saved.tech ?? null };
 }
 function plannedSessionForEntry(program, entry, legacyExercises) {
     const snap = sourceSnapshot(program);
@@ -125,30 +136,31 @@ function plannedSessionForEntry(program, entry, legacyExercises) {
         const legacyId = String(day.exercises[slot] ?? '');
         if (!legacyId)
             continue;
-        const cell = program?.nextWeekPrescriptions?.[`${day.id}:${slot}`]?.[week]
-            ?? program?.nextWeekPrescriptions?.[`${day.id}:${slot}`]?.[Math.max(...Object.keys(program?.nextWeekPrescriptions?.[`${day.id}:${slot}`] ?? {}).map(Number).filter(Number.isFinite), 1)];
-        if (!cell)
-            continue;
-        const nextId = resolveNextExerciseId(program, day, slot, legacyId, sourceSession, legacyExercises);
+        const nextId = resolveNextExerciseId(program, day, slot, sourceSession, legacyMap);
         if (!nextId)
+            continue;
+        const fallbackWeek = Math.max(...Object.keys(program?.nextWeekPrescriptions?.[`${day.id}:${slot}`] ?? {}).map(Number).filter(Number.isFinite), 1);
+        const cell = historicalShellCell(program, day, slot, week, entry.perf?.[legacyId], nextId)
+            ?? historicalShellCell(program, day, slot, fallbackWeek, entry.perf?.[legacyId], nextId);
+        if (!cell)
             continue;
         const sourceEx = sourceSession.exercises.find(ex => ex.exerciseId === nextId) ?? sourceSession.exercises[slot];
         const legacy = legacyMap.get(legacyId);
         const role = (cell.role ?? sourceEx?.role ?? 'hypertrophy_isolation');
         exercises.push({
             exerciseId: nextId,
-            name: sourceEx?.name ?? legacy?.name ?? legacyId,
+            name: sourceEx?.exerciseId === nextId ? sourceEx.name : legacy?.name ?? legacyId,
             role,
             sets: Math.max(1, Math.round(Number(cell.sets) || sourceEx?.sets || 1)),
             prescription: {
                 reps: rangeOf(cell.reps, sourceEx?.prescription.reps ?? [8, 12]),
                 rir: rangeOf(cell.rir, sourceEx?.prescription.rir ?? [1, 3]),
-                restSeconds: Math.max(15, Math.round(Number(cell.rest) || sourceEx?.prescription.restSeconds || 90))
+                restSeconds: cell.rest != null && cell.rest !== '' && Number.isFinite(Number(cell.rest)) && Number(cell.rest) >= 0
+                    ? Math.round(Number(cell.rest)) : sourceEx?.prescription.restSeconds ?? 90
             },
             progression: String(sourceEx?.progression ?? cell.progressionStyle ?? 'auto'),
             progressionStyle: (cell.progressionStyle ?? sourceEx?.progressionStyle ?? 'auto'),
-            advancedTechnique: sourceEx?.advancedTechnique,
-            supersetGroup: sourceEx?.supersetGroup
+            advancedTechnique: advancedTechniqueFromCell(cell, sourceEx?.advancedTechnique)
         });
         legacyIds.push(legacyId);
     }
@@ -173,8 +185,8 @@ function workoutFromEntry(program, entry, legacyExercises) {
             return;
         let setIndex = 0;
         for (const raw of perf.sets) {
-            if (raw?.sub)
-                continue; // drop/myo extensions are not independent prescribed work sets
+            if (raw?.sub || raw?.warm || raw?.done === false)
+                continue; // extensions, warmups and unfinished rows are not completed prescribed work
             const reps = intOf(raw?.r);
             if (reps === null || reps <= 0)
                 continue;
@@ -185,7 +197,9 @@ function workoutFromEntry(program, entry, legacyExercises) {
             // effort. Equal rir/tr values are therefore ambiguous. Treat only a value that differs from
             // the stored target (or has no target provenance) as observed effort; reps/completion remain
             // usable evidence either way. This prevents target effort from masquerading as athlete data.
-            const observedRir = rir0 !== null && (targetRir === null || Math.abs(rir0 - targetRir) > .001) ? clamp(rir0, 0, 10) : null;
+            const reported = raw.rirReported != null ? raw.rirReported === true
+                : targetRir === null || Math.abs(rir0 - targetRir) > .001;
+            const observedRir = rir0 !== null && reported ? clamp(rir0, 0, 10) : null;
             performed.push({
                 exerciseId: ex.exerciseId, setIndex: setIndex++, load: convertLoad(load0, entry.unit, targetUnit), reps,
                 rir: observedRir, advancedTechnique: ex.advancedTechnique?.type
@@ -272,10 +286,10 @@ export function nextWorkoutSuggestionForShell(program, history, legacyExercises,
     const legacyId = String(day?.exercises?.[slot] ?? '');
     if (!legacyId)
         return null;
-    const nextId = resolveNextExerciseId(program, day, slot, legacyId, sourceSession, legacyExercises);
+    const nextId = resolveNextExerciseId(program, day, slot, sourceSession, legacyExerciseById(legacyExercises));
     if (!nextId)
         return null;
-    const cell = program?.nextWeekPrescriptions?.[`${day.id}:${slot}`]?.[weekIndex];
+    const cell = getNextShellCell(program, day, slot, weekIndex);
     const reps = String(cell?.reps ?? cell?.range ?? '');
     const last = latestShellPerf(history, String(program.id), legacyId);
     let analysis;
@@ -302,7 +316,8 @@ export function nextWorkoutSuggestionForShell(program, history, legacyExercises,
        re-set the load from the lifter's estimated max so the new range lands mid-range, rounded DOWN to a load they can make.
        Same prescription -> the engine's decision stands (that is where add-reps / add-load double progression lives). */
     const lastEntry = [...(history ?? [])].filter(h => h?.programId === String(program.id) && h?.perf?.[legacyId]).sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0))[0];
-    const lastCell = program?.nextWeekPrescriptions?.[`${day.id}:${slot}`]?.[Number(lastEntry?.weekIndex) || 1];
+    const lastCell = historicalShellCell(program, day, slot, Number(lastEntry?.weekIndex) || 1,
+        lastEntry?.perf?.[legacyId], nextId);
     const changed = !!cell && !!lastCell && (String(cell.reps) !== String(lastCell.reps) || String(cell.rir) !== String(lastCell.rir) || cell.progressionStyle !== lastCell.progressionStyle);
     if (changed) {
         const shifted = represcribeForWeek(nextId, cell, lastCell, last, snap?.request);
@@ -375,14 +390,14 @@ export function nextWorkoutSuggestionFromPerformedShell(program, legacyExercises
     const sourceSession = snap.program.sessions[dayIndex];
     if (!sourceSession)
         return null;
-    const nextId = resolveNextExerciseId(program, day, slot, legacyId, sourceSession, legacyExercises);
+    const nextId = resolveNextExerciseId(program, day, slot, sourceSession, legacyExerciseById(legacyExercises));
     if (!nextId)
         return null;
     const decision = workout.progression.find(d => d.exerciseId === nextId);
     if (!decision)
         return null;
     const last = perf?.[legacyId] ?? null;
-    const cell = program?.nextWeekPrescriptions?.[`${day.id}:${slot}`]?.[weekIndex];
+    const cell = getNextShellCell(program, day, slot, weekIndex);
     return {
         weight: decision.suggestedLoad ?? decision.currentLoad ?? representativeShellLoad(last),
         dir: decision.action === 'increase_load' ? 'up' : decision.action === 'decrease_load' ? 'down' : (decision.suggestedLoad != null && decision.currentLoad != null && decision.suggestedLoad < decision.currentLoad ? 'down' : 'hold'),
@@ -473,7 +488,10 @@ export function analyzeShellHistoryForNextEngine(program, history, legacyExercis
             exposures.set(ex.exerciseId, list);
         }
     }
-    const sourceExercises = snap.program.sessions.flatMap(s => s.exercises);
+    // Response/protection evidence follows the live roster too. A user swap or added movement is
+    // absent from the immutable generation snapshot, but its logged exposures must still be diagnosed.
+    const sourceExercises = (program.days ?? []).flatMap(day => plannedSessionForEntry(program,
+        { dayId: day.id, weekIndex: 1 }, legacyExercises)?.session.exercises ?? []);
     const unique = new Map(sourceExercises.map(ex => [ex.exerciseId, ex]));
     const diagnoses = [...unique.values()].map(ex => diagnoseExerciseResponse(ex, exposures.get(ex.exerciseId) ?? [], recovery));
     let positive = 0, negative = 0;
@@ -555,7 +573,10 @@ export function generateNextBlockFromShellHistory(options) {
         ?? current?.nextEngine?.cycleTemplate?.weeks
         ?? 4
     ) || 4));
-    const transitioned = transitionProgramPhase(snap.program, normalized, phase, {
+    const source = captureShellBaseProgram(current, options.legacyExercises);
+    if (!source)
+        throw new NextShellAdapterError('NEXT_HISTORY_SNAPSHOT_MISSING', 'This plan has incomplete current prescriptions. Rebuild it before adapting the next block.');
+    const transitioned = transitionProgramPhase(source, normalized, phase, {
         successfulExerciseIds: analysis.successfulExerciseIds,
         protectedExerciseIds: analysis.protectedExerciseIds,
         replaceExerciseIds: analysis.replaceExerciseIds,

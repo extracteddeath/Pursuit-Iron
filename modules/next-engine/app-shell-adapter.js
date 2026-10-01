@@ -321,6 +321,71 @@ export function nextExerciseIdForShellExercise(exercise) {
     const match = [...EXERCISE_MAP.values()].find(def => norm(def.name) === key);
     return match?.id ?? null;
 }
+// The visible roster owns movement identity. A slot's saved engine ID is valid only while its
+// shell identity still matches; old cycle propagation could leave this metadata pointing at a
+// different lift. Resolve the current catalog identity before trusting unbound legacy metadata.
+export function resolveNextShellExerciseId(program, day, slotIndex, legacyExercise) {
+    const legacyId = String(day?.exercises?.[slotIndex] ?? '');
+    const meta = program?.overrides?.[`${day?.id}:${slotIndex}`];
+    if (meta?.nextExerciseId && meta.legacyExerciseId === legacyId)
+        return String(meta.nextExerciseId);
+    const current = nextExerciseIdForShellExercise(legacyExercise);
+    if (current) return current;
+    return meta?.nextExerciseId && (!meta.legacyExerciseId || meta.legacyExerciseId === legacyId)
+        ? String(meta.nextExerciseId) : null;
+}
+
+// Propagating a roster edit into another phase must keep THAT phase's prescriptions attached to
+// its surviving movements. Match existing identities first, then reuse vacant slots for genuine
+// substitutions. This copies no prescriptions from the edited phase and leaves the base immutable.
+export function remapNextShellRoster(program, days, legacyExercises) {
+    if (program?.engineSource !== 'pursuit-next') return { ...program, days };
+    const legacyMap = new Map(legacyExercises.map(ex => [ex.id, ex]));
+    let next = { ...program, days };
+    for (const day of days) {
+        const prior = program.days.find(d => d.id === day.id);
+        if (!prior || day.exercises.length === prior.exercises.length
+            && day.exercises.every((id, slot) => id === prior.exercises[slot])) continue;
+        const used = new Set();
+        const fromSlots = day.exercises.map(id => {
+            const slot = prior.exercises.findIndex((old, i) => old === id && !used.has(i));
+            if (slot >= 0) used.add(slot);
+            return slot;
+        });
+        fromSlots.forEach((from, slot) => {
+            if (from >= 0) return;
+            const available = !used.has(slot) && slot < prior.exercises.length ? slot
+                : prior.exercises.findIndex((_, i) => !used.has(i));
+            fromSlots[slot] = available;
+            if (available >= 0) used.add(available);
+        });
+        for (const field of ['overrides', 'nextWeekPrescriptions', 'progStyle', 'slotBias', 'autoBias', 'rounds', 'weekOff', 'pairs']) {
+            const store = next[field];
+            if (!store) continue;
+            const prefix = `${day.id}:`, out = { ...store };
+            const entries = Object.entries(store).filter(([key]) => key.startsWith(prefix)
+                && /^\d+(?:$|:)/.test(key.slice(prefix.length)));
+            for (const [key] of entries) delete out[key];
+            fromSlots.forEach((from, slot) => {
+                for (const [key, value] of entries) {
+                    const match = key.slice(prefix.length).match(/^(\d+)(.*)$/);
+                    if (Number(match[1]) === from) out[`${prefix}${slot}${match[2]}`] = value;
+                }
+            });
+            next[field] = out;
+        }
+        const overrides = { ...next.overrides };
+        day.exercises.forEach((id, slot) => {
+            const key = `${day.id}:${slot}`, meta = { ...(overrides[key] ?? {}), nextEngine: true, legacyExerciseId: id };
+            const engineId = nextExerciseIdForShellExercise(legacyMap.get(id));
+            if (engineId) meta.nextExerciseId = engineId;
+            else if (id !== prior.exercises[fromSlots[slot]]) delete meta.nextExerciseId;
+            overrides[key] = meta;
+        });
+        next.overrides = overrides;
+    }
+    return next;
+}
 function range(pair) { return pair[0] === pair[1] ? String(pair[0]) : `${pair[0]}-${pair[1]}`; }
 function shellRange(value) {
     if (!Array.isArray(value))
@@ -470,11 +535,24 @@ export function getNextShellCell(program, day, slotIndex, weekIndex) {
     const techRaw = ownedValue('tech', cell.tech ?? null);
     const tech = techRaw || null;
     const role = ownedValue('role', cell.role);
-    const progressionStyle = ownedValue('progressionStyle', cell.progressionStyle ?? 'auto');
+    const explicitStyle = program?.progStyle?.[key];
+    if (explicitStyle && explicitStyle !== 'auto') ownership.progressionStyle = 'user';
+    const progressionStyle = explicitStyle && explicitStyle !== 'auto'
+        ? explicitStyle : ownedValue('progressionStyle', cell.progressionStyle ?? 'auto');
     return {
         sets, reps, note: `Pursuit Engine ${program.engineSourceVersion || 'Next'}`,
         range: reps, rir, rest, tech, role, progressionStyle, ownership, nextEngine: true
     };
+}
+// A completed exposure owns its historical target. Later plan edits must not rewrite the question
+// that the lifter was asked to complete; this snapshot is history, never a current-plan override.
+export function snapshotNextShellPrescription(program, day, slotIndex, legacyExercise, weekIndex) {
+    const cell = getNextShellCell(program, day, slotIndex, weekIndex);
+    if (!cell || legacyExercise?.id !== day?.exercises?.[slotIndex]) return null;
+    const exerciseId = resolveNextShellExerciseId(program, day, slotIndex, legacyExercise);
+    if (!exerciseId) return null;
+    return { schemaVersion: 1, exerciseId, engineVersion: program.engineSourceVersion,
+        ...Object.fromEntries(SHELL_PRESCRIPTION_FIELDS.map(field => [field, cell[field]])) };
 }
 export function cloneNextDayPrescriptions(store, fromDayId, toDayId) {
     if (!store)

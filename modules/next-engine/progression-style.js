@@ -12,6 +12,15 @@ function explicitStyle(context = {}) {
     return SUPPORTED_PROGRESSION_STYLES.includes(requested) && requested !== 'auto' ? requested : null;
 }
 
+// An explicit global choice wins; otherwise a retained lift keeps its own user-selected method.
+// Auto methods remain eligible for phase/evidence-based re-selection.
+export function continuationProgressionStyle(requestedStyle, previous) {
+    return explicitStyle({ requestedStyle })
+        ?? (previous?.progressionSelection?.source === 'manual'
+            ? explicitStyle({ requestedStyle: previous.progressionStyle }) : null)
+        ?? requestedStyle;
+}
+
 function repRangeFor(ex, role, context = {}) {
     const prescribed = context?.prescription?.reps;
     if (Array.isArray(prescribed) && prescribed.length >= 2) {

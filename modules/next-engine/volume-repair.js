@@ -1,5 +1,6 @@
 import { createExerciseMap } from './exercise-db.js';
-import { getNextShellCell, nextExerciseIdForShellExercise, resolveLegacyExercise, shellPrescriptionFieldOwner } from './app-shell-adapter.js';
+import { getNextShellCell, nextExerciseIdForShellExercise, resolveNextShellExerciseId, resolveLegacyExercise, shellPrescriptionFieldOwner } from './app-shell-adapter.js';
+import { advancedTechniqueFromCell } from './workout-runtime.js';
 import { normalizeRequest, createMusclePrescriptions } from './prescription.js';
 import { PUBLIC_MEV_REGIONS, PUBLIC_REGION_MUSCLE, publicMevContractApplies, publicMevForExperience, publicMevRequired, publicMevInternalSafetyCeiling, publicRegionContribution, publicMevLedger } from './public-mev.js';
 import { createTrainingSetEvents } from './events.js';
@@ -28,14 +29,6 @@ const engineRange = (value, fallback) => {
     const numbers = (Array.isArray(value) ? value : String(value ?? '').match(/\d+(?:\.\d+)?/g) ?? []).map(Number);
     return numbers.length && numbers.every(Number.isFinite) ? [numbers[0], numbers[1] ?? numbers[0]] : fallback;
 };
-const executableTechnique = (cue, original) => {
-    if (!cue) return undefined;
-    const text = String(cue).toLowerCase();
-    if (['off', 'none'].includes(text.trim())) return undefined;
-    const type = text.includes('myo') ? 'myo_reps' : text.includes('drop') ? 'drop_set'
-        : text.includes('partial') ? 'lengthened_partials' : original?.type;
-    return type ? { ...original, type, appliesTo: 'last_set', note: String(cue) } : undefined;
-};
 const snapshotContext = (program, legacyExercises) => {
     const request = requestOf(program);
     return { request, exerciseMap: createExerciseMap(request.customExercises),
@@ -56,18 +49,21 @@ export function captureShellVolumeSnapshot(program, week, legacyExercises = [], 
         if (!source) { missing = true; return; }
         const exercises = day.exercises.map((id, slot) => {
             const key = keyOf(day, slot);
-            const meta = program.overrides?.[key] ?? {};
-            const exerciseId = meta.nextExerciseId ?? nextExerciseIdForShellExercise(legacyMap.get(id) ?? {});
+            const exerciseId = resolveNextShellExerciseId(program, day, slot, legacyMap.get(id));
             const def = exerciseMap.get(exerciseId);
             const cell = getNextShellCell(program, day, slot, week);
             if (!def || !cell || !Number.isFinite(cell.sets)) { missing = true; return null; }
             const original = source.exercises.find(e => e.exerciseId === exerciseId) ?? source.exercises[slot];
             return { ...original, exerciseId, name: def.name, sets: cell.sets, role: cell.role,
+                progressionStyle: cell.progressionStyle,
+                progressionSelection: cell.ownership.progressionStyle === 'user'
+                    ? { ...original?.progressionSelection, source: 'manual', confidence: 'high', reason: 'You selected this progression method.' }
+                    : original?.progressionSelection,
                 prescription: { ...original?.prescription,
                     reps: engineRange(cell.reps, original?.prescription?.reps),
                     rir: engineRange(cell.rir, original?.prescription?.rir),
                     restSeconds: cell.rest != null && cell.rest !== '' && Number.isFinite(Number(cell.rest)) && Number(cell.rest) >= 0 ? Number(cell.rest) : 90 },
-                advancedTechnique: executableTechnique(cell.tech, original?.advancedTechnique),
+                advancedTechnique: advancedTechniqueFromCell(cell, original?.advancedTechnique),
                 supersetGroup: undefined,
                 shellKey: key, shellId: id, shellSlot: slot };
         }).filter(Boolean);
@@ -158,8 +154,8 @@ export function auditShellVolume(program, legacyExercises = []) {
         targets, weeks, missing: weeks.some(w => w.missing) };
 }
 
-function baseSessions(program, legacyExercises) {
-    const live = captureShellVolumeSnapshot(program, 1, legacyExercises);
+function baseSessions(program, legacyExercises, snapshot = null) {
+    const live = snapshot ?? captureShellVolumeSnapshot(program, 1, legacyExercises);
     return live.sessions.map((s, di) => {
         const original = sessionForDay(program, program.days[di], di);
         const exercises = s.exercises.map(e => {
@@ -170,6 +166,22 @@ function baseSessions(program, legacyExercises) {
         });
         return { ...s, exercises, estimatedMinutes: estimateSessionMinutes(exercises) };
     });
+}
+
+// Block transitions read a temporary live base view, not stale generation identities. Keep base
+// set allocation for ordinary slots, honor explicit edits, and recalculate events/clock/audit for
+// the current roster. The immutable source and executable week cells remain separate and untouched.
+export function captureShellBaseProgram(program, legacyExercises = []) {
+    if (!program?.nextEngine?.program || !program.nextEngine.request) return null;
+    const context = snapshotContext(program, legacyExercises);
+    const live = captureShellVolumeSnapshot(program, 1, legacyExercises, null, context);
+    if (!live || live.missing) return null;
+    const sessions = baseSessions(program, legacyExercises, live);
+    const request = context.request;
+    const events = createTrainingSetEvents(sessions, request.customExercises);
+    const projected = { ...program.nextEngine.program, sessions, events, muscleLedger: deriveMuscleLedger(events) };
+    projected.audit = auditProgram(projected, request);
+    return projected;
 }
 
 function rebuild(program, changes, legacyExercises, addition = null, options = {}) {
@@ -479,8 +491,10 @@ export function repairShellVolume(program, legacyExercises = [], options = {}) {
     let current = weekly.program, audit = weekly.after;
     const changes = [...weekly.changes];
     const request = requestOf(program), context = createEngineContext(request), phase = phaseOf(program);
-    const initialEngineAudit = auditProgram({ ...program.nextEngine.program, sessions: baseSessions(program, legacyExercises),
-        muscleLedger: deriveMuscleLedger(createTrainingSetEvents(baseSessions(program, legacyExercises), request.customExercises)) }, request);
+    const initialSessions = baseSessions(program, legacyExercises);
+    const initialEvents = createTrainingSetEvents(initialSessions, request.customExercises);
+    const initialEngineAudit = auditProgram({ ...program.nextEngine.program, sessions: initialSessions,
+        events: initialEvents, muscleLedger: deriveMuscleLedger(initialEvents) }, request);
     for (let guard = 0; guard < 48 && audit.issues.length; guard++) {
         const sessions = baseSessions(current, legacyExercises);
         const slots = sessions.flatMap(s => s.exercises.map((e, slot) => ({ dayId: s.shellDayId, slot, e, def: context.exerciseById(e.exerciseId), s })));

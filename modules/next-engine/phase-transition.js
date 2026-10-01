@@ -4,7 +4,7 @@ import { createEngineContext, createTransactionalEvaluator } from './engine-cont
 import { firstPassingCapacityProgram } from './capacity-generation.js';
 import { deriveMuscleLedger } from './ledgers.js';
 import { historyDecision, withBlockReviewExplainability, withProgramExplainability } from './explainability.js';
-import { progressionInstruction, reselectProgressionStyle } from './progression-style.js';
+import { progressionInstruction, reselectProgressionStyle, continuationProgressionStyle } from './progression-style.js';
 
 function muscleSimilarity(a, b) {
     const muscles = new Set([
@@ -192,9 +192,8 @@ function applyAdaptiveProgressionStyles(program, previous, request, target, evid
                 currentStyle,
                 prescription: exercise.prescription,
                 blockWeeks,
-                // A global manual method remains manual across block review. Auto still re-selects
-                // exercise by exercise because explicitStyle ignores the literal 'auto' value.
-                requestedStyle: request.preferences?.progressionStyle,
+                // Explicit global and per-lift methods survive review; Auto may still re-select.
+                requestedStyle: continuationProgressionStyle(request.preferences?.progressionStyle, prior),
                 evidence: progressionEvidenceFor(exercise.exerciseId, evidence, successful, fatigueLimited, techniqueLimited)
             });
             if (selection.style !== exercise.progressionStyle || selection.style !== currentStyle) {

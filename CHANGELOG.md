@@ -1,3 +1,12 @@
+## M214 — executable prescription synchronization (build 804)
+
+- History evaluation and workout suggestions now read the same user-owned sets, reps, effort, rest, techniques and progression methods as the visible workout.
+- New completed-workout logs retain a prescription snapshot and explicit effort provenance, so later plan edits cannot rewrite their historical targets. Unfinished rows, warmups and technique extensions cannot count as completed working sets.
+- Cycle-wide swaps and reorders update movement identity and keep each later phase's own prescriptions and explicit edits attached to its lifts. Existing stale saved identities resolve from the visible roster.
+- Conversion and actual block advancement use an immutable live-roster projection; retained per-lift manual methods survive locked/adaptive continuation.
+- Removed the unreferenced 1,447,745-byte root bundle and duplicated technique decoder; reused catalog/snapshot work at history and repair boundaries.
+- Added behavioral and phone-sized browser release gates. Pursuit Engine 0.64.10; offline cache rotated for build 804.
+
 ## M213 — zero-unused App cleanup (build 803)
 
 - Removed the final dead App callback, the retired in-component cycle-edit propagation wrapper.

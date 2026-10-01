@@ -89,6 +89,7 @@ assert.match(app, /programSavePlan[\s\S]*?propagateCycleEditsPure\(/,
 assert.doesNotMatch(index, /app-shell-adapter/, 'Node and browser must resolve the same canonical adapter');
 assert.equal(fs.existsSync(new URL('../modules/shadow-engine', import.meta.url)), false);
 assert.equal(fs.existsSync(new URL('../modules/next-engine/app-shell-adapter-capacity.js', import.meta.url)), false);
+assert.equal(fs.existsSync(new URL('../app.js', import.meta.url)), false, 'the unreferenced historical root bundle must not ship');
 for (const file of ['domain.js', 'comparison.js', 'coach-review.js', 'coach-quality-oracle.js'])
     assert.equal(fs.existsSync(new URL('../modules/next-engine/' + file, import.meta.url)), false,
         'unused review helpers and verification-only code must not ship in the runtime');

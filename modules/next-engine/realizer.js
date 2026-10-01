@@ -988,18 +988,6 @@ export function realizeSessions(plans, request, targetDose = {}, directTargetDos
     // prefer muscles still below their preferred region, avoid normal front-delt filler, and must fit time.
     const capacityPrescriptions = createMusclePrescriptions(request, phase);
     const prescriptionMap = new Map(capacityPrescriptions.map(p => [p.muscle, p]));
-    const intentMuscles = {
-        upper: ['chest', 'back', 'side_delts', 'rear_delts', 'biceps', 'triceps'],
-        lower: ['quads', 'hamstrings', 'glutes', 'calves', 'core'],
-        push: ['chest', 'side_delts', 'triceps'],
-        pull: ['back', 'rear_delts', 'biceps'],
-        legs: ['quads', 'hamstrings', 'glutes', 'calves', 'core'],
-        // Torso/Limbs is a strict named split rather than a generic fallback. Torso keeps chest/back/delts;
-        // Limbs owns legs plus direct arm work. This prevents capacity filler from adding quads/glutes to Torso.
-        torso: ['chest', 'back', 'side_delts', 'rear_delts'],
-        limbs: ['quads', 'hamstrings', 'glutes', 'calves', 'biceps', 'triceps', 'forearms', 'core'],
-        full: ['chest', 'back', 'quads', 'hamstrings', 'glutes', 'side_delts', 'rear_delts', 'biceps', 'triceps', 'calves', 'core']
-    };
     const currentFractional = () => {
         const totals = Object.fromEntries(ALL_MUSCLES.map(m => [m, 0]));
         for (const session of realized)

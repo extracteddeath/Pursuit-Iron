@@ -35,6 +35,17 @@ for (const [file, symbols] of Object.entries(retiredDeadExports)) {
     const source = fs.readFileSync(new URL('../' + file, import.meta.url), 'utf8');
     for (const symbol of symbols) assert.equal(source.includes(symbol), false, `unreferenced runtime export must stay removed: ${symbol}`);
 }
+const retiredUnusedBindings = {
+    'modules/next-engine/allocator.js': ['const byMuscle = new Map'],
+    'modules/next-engine/cycle-runtime-adapter.js': ["import { generateProgram } from './generate.js'", 'bestDelta =', 'bestPenalty =', 'function blockRequest(baseRequest, phase)'],
+    'modules/next-engine/phase-transition.js': ["import { generateProgram } from './generate.js'", 'function equipmentEligible('],
+    'modules/next-engine/realizer.js': ['const intentMuscles = {'],
+    'modules/next-engine/recovery-realization.js': ['const priority = request.goal.musclePriorities[primary]']
+};
+for (const [file, snippets] of Object.entries(retiredUnusedBindings)) {
+    const source = fs.readFileSync(new URL('../' + file, import.meta.url), 'utf8');
+    for (const snippet of snippets) assert.equal(source.includes(snippet), false, `unused engine binding must stay removed: ${snippet}`);
+}
 assert.doesNotMatch(index, /app-shell-adapter/, 'Node and browser must resolve the same canonical adapter');
 assert.equal(fs.existsSync(new URL('../modules/shadow-engine', import.meta.url)), false);
 assert.equal(fs.existsSync(new URL('../modules/next-engine/app-shell-adapter-capacity.js', import.meta.url)), false);

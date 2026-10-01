@@ -2,7 +2,6 @@ import { auditProgram } from './arbiter.js';
 import { createInitialCycleState, startPhase } from './cycles.js';
 import { createEngineContext, createTransactionalEvaluator, auditVector, compareCandidateQuality } from './engine-context.js';
 import { createTrainingSetEvents } from './events.js';
-import { generateProgram } from './generate.js';
 import { deriveMuscleLedger } from './ledgers.js';
 import { phasePolicyFor, phaseLabel } from './phase-policy.js';
 import { normalizeRequest } from './prescription.js';
@@ -89,7 +88,6 @@ function retargetStatic(previous, request, target, blockWeeks = 6) {
         const currentQuality = auditVector(repaired.audit);
         let best;
         let bestQuality = currentQuality;
-        let bestDelta = Number.POSITIVE_INFINITY;
         for (let si = 0; si < repaired.sessions.length; si++)
             for (let ei = 0; ei < repaired.sessions[si].exercises.length; ei++) {
                 const currentSets = repaired.sessions[si].exercises[ei].sets;
@@ -111,7 +109,6 @@ function retargetStatic(previous, request, target, blockWeeks = 6) {
                     if (compareCandidateQuality(proposalQuality, currentQuality) < 0 && compareCandidateQuality(proposalQuality, bestQuality) < 0) {
                         best = proposal;
                         bestQuality = proposalQuality;
-                        bestDelta = magnitude;
                     }
                 }
             }
@@ -122,7 +119,6 @@ function retargetStatic(previous, request, target, blockWeeks = 6) {
         // strength work, and primary strength only as a last resort; the arbiter still vetoes any unsafe
         // trade.
         if (!best) {
-            let bestPenalty = Number.POSITIVE_INFINITY;
             for (let dsi = 0; dsi < repaired.sessions.length; dsi++)
                 for (let dei = 0; dei < repaired.sessions[dsi].exercises.length; dei++) {
                     const donor = repaired.sessions[dsi].exercises[dei];
@@ -136,7 +132,7 @@ function retargetStatic(previous, request, target, blockWeeks = 6) {
                             for (const amount of [1, 2]) {
                                 if (donor.sets - amount < 1)
                                     continue;
-                                const sessions = repaired.sessions.map((session, sidx) => ({ ...session, exercises: session.exercises.map(ex => ({ ...ex })) }));
+                                const sessions = repaired.sessions.map(session => ({ ...session, exercises: session.exercises.map(ex => ({ ...ex })) }));
                                 sessions[dsi].exercises[dei].sets -= amount;
                                 sessions[rsi].exercises[rei].sets += amount;
                                 sessions[dsi] = { ...sessions[dsi], estimatedMinutes: estimateSessionMinutes(sessions[dsi].exercises) };
@@ -148,7 +144,6 @@ function retargetStatic(previous, request, target, blockWeeks = 6) {
                                 if (compareCandidateQuality(proposalQuality, currentQuality) < 0 && compareCandidateQuality(proposalQuality, bestQuality) < 0) {
                                     best = proposal;
                                     bestQuality = proposalQuality;
-                                    bestPenalty = penalty;
                                 }
                             }
                         }
@@ -162,7 +157,7 @@ function retargetStatic(previous, request, target, blockWeeks = 6) {
         throw new NextShellAdapterError('NEXT_CYCLE_STATIC_REJECTED', `The locked exercise skeleton could not safely support ${phaseLabel(target)}.`, repaired.audit);
     return withProgramExplainability(repaired, normalized, [historyDecision('Cycle block prescription', `${phaseLabel(previous.phase)} → ${phaseLabel(target)}`, `The exercise skeleton stayed locked while sets, reps, RIR, rest and progression were retargeted for ${phaseLabel(target).toLowerCase()}.`, { fromPhase: previous.phase, toPhase: target, exerciseIdentityLocked: true }, ['Every retargeted session was re-audited', 'Dose top-ups were accepted only when they reduced audit severity'])]);
 }
-function blockRequest(baseRequest, phase) {
+function blockRequest(baseRequest) {
     return { ...clone(baseRequest), goal: { ...clone(baseRequest.goal), type: baseRequest.goal.type } };
 }
 function legacyBlockConfig(base, phase, weeks, name) {

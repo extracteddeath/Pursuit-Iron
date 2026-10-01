@@ -1,11 +1,11 @@
 {
   "profile": "portable-browser-esm-canonical-engine",
-  "milestone": "M206",
-  "source": "M205 production baseline + exact working-week dose finalization and shared Auto-fix",
-  "engine": "0.64.6 with approach-aware public dose guidance, protected weekly set reconciliation, and lifecycle set caps",
+  "milestone": "M207",
+  "source": "M206 production baseline + final retired runtime/UI scaffolding removal",
+  "engine": "0.64.7 with M206 dose/progression behavior unchanged and retired review wrapper code removed",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 46,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m206-working-week-dose-b796",
-  "uiMilestone": "Pursuit Iron 4.0 Production Release · M206 Working-Week Volume"
+  "cache": "pursuit-iron-production-v4-0-0-m207-runtime-cleanup-b797",
+  "uiMilestone": "Pursuit Iron 4.0 Production Release · M207 Runtime Cleanup"
 }

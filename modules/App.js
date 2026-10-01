@@ -1,4 +1,4 @@
-const __APP_VERSION__='4.0.0'; const __BUILD__='796';
+const __APP_VERSION__='4.0.0'; const __BUILD__='797';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { setShellEquipmentExpander, splitContractGaps, splitBuildability, refusalFixes, generateNextProgramForShell, nextProgramToShellProgram, recommendNextSplitForShell, getNextShellCell, canonicalShellSetCount, cloneNextDayPrescriptions, swapNextSlotPrescriptions, removeNextSlotPrescription, nextExerciseIdForShellExercise, markUserPrescriptionOverride, clearUserPrescriptionOverride, NextShellAdapterError } from "./next-engine/app-shell-adapter.js";
@@ -25348,7 +25348,7 @@ function GymsSheet({ gyms, activeGymId, onSave, onClose }) {
 }
 /* saved/history/perf are threaded in for the self-test: it now audits the LIFTER'S OWN programs
    against their real logged history, not only a synthetic sweep. */
-function SettingsView({ selfTestData = null, initialFocus = null, onFocusHandled, warmupCard, setWarmupCard, experience, setExperience, gymName, gymCount, onGyms, nextEngineOnly, canaryResearch, canarySummaryData, canaryAnalysisData, canaryGovernanceData, selectivePromotionStatusData, onExportCanaryDossier, onToggleCanary, theme, setTheme, unit, setUnit, loadMode, setLoadMode, restAutoStart, setRestAutoStart, restScale, setRestScale, haptics, setHaptics, reminders, setReminders, minInc, setMinInc, plates, setPlates, bodyweight, setBodyweight, sex, setSex, age, birth, setBirth, birthEst, bannedCount, customCount, historyCount, savedCount, onClearBanned, onClearHistory, onResetAll, onExport, onBackupSaved, onExportCSV, onExportBodyCSV, onImport, onPreviewImport, onLibrary, onImportProgram, onGallery, onShowIntro, onShowWhatsNew }) {
+function SettingsView({ selfTestData = null, initialFocus = null, onFocusHandled, warmupCard, setWarmupCard, experience, setExperience, gymName, gymCount, onGyms, nextEngineOnly, theme, setTheme, unit, setUnit, loadMode, setLoadMode, restAutoStart, setRestAutoStart, restScale, setRestScale, haptics, setHaptics, reminders, setReminders, minInc, setMinInc, plates, setPlates, bodyweight, setBodyweight, sex, setSex, age, birth, setBirth, birthEst, bannedCount, customCount, historyCount, savedCount, onClearBanned, onClearHistory, onResetAll, onExport, onBackupSaved, onExportCSV, onExportBodyCSV, onImport, onPreviewImport, onLibrary, onImportProgram, onGallery, onShowIntro, onShowWhatsNew }) {
     const [pasteProg, setPasteProg] = useState(null); // null | { text, result }
     const [backup, setBackup] = useState(null); // "export" | "import" | null
     const [exportText, setExportText] = useState("");

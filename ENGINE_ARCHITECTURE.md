@@ -1,6 +1,6 @@
 # Production engine map
 
-Current release: M214, app 4.0.0 build 804, Pursuit Engine 0.64.10. The maintained source is the JavaScript in this repository. `RELEASE_MANIFEST.json` certifies the actual runtime and UI files. Historical TypeScript claims and development scripts are not the source of this release. The unreferenced historical root `app.js` bundle has been removed; the production entry is `modules/main.js`.
+Current release: M215, app 4.0.0 build 805, Pursuit Engine 0.64.10. The maintained source is the JavaScript in this repository. `RELEASE_MANIFEST.json` certifies the actual runtime and UI files. Historical TypeScript claims and development scripts are not the source of this release. The unreferenced historical root `app.js` bundle has been removed; the production entry is `modules/main.js`.
 
 ## Generation and authority
 
@@ -91,3 +91,7 @@ CHROME_BIN=/path/to/chrome node --no-warnings --experimental-loader ./verificati
 Finalize only after intentionally setting the current manifest/profile identity. It hashes current files and rebuilds the offline list; it never commits or pushes. CI has one release gate, three engine-contract groups, and four real-browser gates. Workflows have read-only repository permissions. Settings self-test includes the current engine plus its four compatible predecessors; older Next artifacts are counted as archived instead of silently pretending to validate them.
 
 Generation is still synchronous. Shared candidate caches and cheap wizard feasibility avoid unnecessary work, but difficult generation can still block the main thread. Worker execution would require a separate behavioral and browser review; M205 does not claim it has been implemented.
+
+## Cycle duration authority
+
+`modules/program-duration.js` reads each block length from its saved program by id, with cycle metadata as a fallback. Home, cycle list/detail and Plan use this shared projection, including a separate calendar week for deload. Custom standalone conversion carries the current duration into its entry metadata and planned specification. Settings preserve three-week and other existing durations; generated cycle phases display their cycle-owned length.

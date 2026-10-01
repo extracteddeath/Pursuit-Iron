@@ -1,11 +1,11 @@
 {
   "profile": "portable-browser-esm-canonical-engine",
-  "milestone": "M214",
-  "source": "M213 production baseline + executable prescription/history/cycle synchronization",
-  "engine": "0.64.10; canonical field ownership and live movement identity across history, volume and cycle edits",
+  "milestone": "M215",
+  "source": "M214 production baseline + cycle duration metadata and display consistency",
+  "engine": "0.64.10; engine prescription policy unchanged; saved programs own phase durations",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 46,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m214-executable-sync-b804",
-  "uiMilestone": "Pursuit Iron 4.0 Production Release · M214 Executable Prescription Sync"
+  "cache": "pursuit-iron-production-v4-0-0-m215-cycle-duration-b805",
+  "uiMilestone": "Pursuit Iron 4.0 Production Release · M215 Cycle Duration Consistency"
 }

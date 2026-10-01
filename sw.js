@@ -1,5 +1,5 @@
-/* Pursuit Iron 4.0 — M214 production release. */
-const CACHE="pursuit-iron-production-v4-0-0-m214-executable-sync-b804";
+/* Pursuit Iron 4.0 — M215 production release. */
+const CACHE="pursuit-iron-production-v4-0-0-m215-cycle-duration-b805";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
   "./BUILD_PROFILE.json",
@@ -66,6 +66,7 @@ const SHELL=[
   "./modules/next-engine/weekly-recovery.js",
   "./modules/next-engine/workout-history-adapter.js",
   "./modules/next-engine/workout-runtime.js",
+  "./modules/program-duration.js",
   "./modules/wizard-stability.js",
   "./vendor/lucide-react.js",
   "./vendor/react-dom-client.js",

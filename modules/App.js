@@ -1,4 +1,4 @@
-const __APP_VERSION__='4.0.0'; const __BUILD__='804';
+const __APP_VERSION__='4.0.0'; const __BUILD__='805';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { setShellEquipmentExpander, splitContractGaps, splitBuildability, refusalFixes, generateNextProgramForShell, recommendNextSplitForShell, getNextShellCell, canonicalShellSetCount, cloneNextDayPrescriptions, swapNextSlotPrescriptions, removeNextSlotPrescription, nextExerciseIdForShellExercise, resolveNextShellExerciseId, remapNextShellRoster, snapshotNextShellPrescription, markUserPrescriptionOverride, clearUserPrescriptionOverride, NextShellAdapterError } from "./next-engine/app-shell-adapter.js";
@@ -11,6 +11,7 @@ import { EXERCISE_MAP as NEXT_EXERCISE_MAP } from "./next-engine/exercise-db.js"
 import { avoidableExerciseOverlap } from "./next-engine/exercise-economy.js";
 import { ENGINE_VERSION, ENGINE_COMPATIBLE_VERSIONS } from "./next-engine/config.js";
 import { captureShellVolumeSnapshot, auditShellVolume, repairShellVolume, shellVolumeTargets, shellDayMuscleBreakdown } from "./next-engine/volume-repair.js";
+import { programWorkingWeeks, programWeekOptions, cycleBlockMetadata } from "./program-duration.js";
 
 
 
@@ -3795,7 +3796,7 @@ const BUILD_NUM = (typeof __BUILD__ !== "undefined") ? __BUILD__ : "dev";
 // Sponsors, Stripe, PayPal, etc.). Leave empty ("") to hide the support card entirely.
 const SUPPORT_URL = "https://ko-fi.com/extracteddeath";
 const SUPPORT_BLURB = "This app is built by a tiny independent team and is completely free — no ads, no accounts, no subscriptions, and your data never leaves your device. If it's helped your training, a small tip keeps development going and new features coming.";
-const weeksOf = (program) => (program && (program.config?.weeks || program.weeks)) || TOTAL_WEEKS;
+const weeksOf = program => programWorkingWeeks(program, TOTAL_WEEKS);
 // Effective block phase (0 → 1) for a given program week, remapped through a cycle block's
 // phaseWindow. A cycle block can occupy a SLICE of the macro accumulate→intensify→realize arc (e.g.
 // a 2-week "Realize" block tagged [0.8, 1]); honoring the window means that block is treated as that
@@ -6181,9 +6182,13 @@ export function mergeStandaloneIntoGeneratedCycle(program, generated) {
     cycle.blockMeta = cycle.blockIds.map((id, i) => i === 0
         ? { ...(sourceMeta[0] || {}), id, label: current.blockLabel, note: current.blockNote, preview: false, legacyCurrent: true }
         : { ...(sourceMeta[i] || {}), id, preview: true });
+    cycle.blockMeta = cycleBlockMetadata(cycle, [current, ...generatedFuture]);
     cycle.activeBlock = 0;
     cycle.startedAt = cycle.startedAt || Date.now();
-    cycle.nextEngineCycle = { ...(cycle.nextEngineCycle || {}), legacyFirstBlockId: current.id, legacyFirstBlock: true };
+    cycle.nextEngineCycle = { ...(cycle.nextEngineCycle || {}), legacyFirstBlockId: current.id, legacyFirstBlock: true,
+        ...(Array.isArray(cycle.nextEngineCycle?.plannedBlocks) ? {
+            plannedBlocks: cycle.nextEngineCycle.plannedBlocks.map((block, i) => i === 0 ? { ...block, weeks: weeksOf(current) } : block)
+        } : {}) };
     return { cycle, currentProgram: current, blocks: generatedFuture, allBlocks: [current, ...generatedFuture], baseRequest: generated.baseRequest };
 }
 
@@ -13688,15 +13693,17 @@ function ProgramSaveReview({ program, changes, scope, onScope, conflicts, onConf
     return _jsx("div", { className: "wpb-backdrop", role: "dialog", "aria-modal": "true", "aria-labelledby": "program-save-title", onClick: onClose, style: { position: "fixed", inset: 0, zIndex: 100, padding: 16, background: "rgba(0,0,0,.65)", display: "flex", alignItems: "center", justifyContent: "center" }, children: _jsxs("div", { onClick: e => e.stopPropagation(), style: { width: "100%", maxWidth: 440, maxHeight: "85dvh", display: "flex", flexDirection: "column", overflow: "hidden", padding: 18, borderRadius: 20, background: C.bg2, border: `1px solid ${C.border}` }, children: [_jsxs("div", { style: { display: "flex", flexShrink: 0, alignItems: "center", justifyContent: "space-between", gap: 12 }, children: [_jsx("h2", { id: "program-save-title", style: { fontSize: 19, margin: 0 }, children: "Review changes" }), _jsx("button", { "aria-label": "Close change review", onClick: onClose, style: iconBtn(), children: _jsx(X, { size: 18 }) })] }), _jsxs("div", { className: "wpb-scroll", style: { minHeight: 0, overflowY: "auto", overscrollBehavior: "contain" }, children: [_jsx("p", { style: { fontSize: 13, color: C.muted, lineHeight: 1.5 }, children: "Review the saved programs affected. Completed workout history stays as logged." }), program.cycleId && _jsxs("fieldset", { style: { border: `1px solid ${C.border}`, borderRadius: 12, padding: 12, margin: "12px 0", minWidth: 0 }, children: [_jsx("legend", { style: { fontWeight: 700, fontSize: 13 }, children: "Apply exercise changes to" }), [["program", "This block only"], ["cycle", "Linked cycle blocks"]].map(([value, label]) => _jsxs("label", { style: { display: "flex", alignItems: "center", gap: 10, padding: "9px 0", fontSize: 14, cursor: "pointer" }, children: [_jsx("input", { type: "radio", name: "program-save-scope", value: value, checked: scope === value, onChange: () => onScope(value) }), label] }, value)), _jsx("div", { style: { fontSize: 12, lineHeight: 1.5, color: C.muted }, children: "Linked blocks use the cycle's exercise-sharing rules. Only blocks listed below will change; each keeps its own training targets." })] }), _jsxs("div", { style: { fontSize: 14, fontWeight: 700, marginBottom: 8 }, children: [changes.length, " saved ", changes.length === 1 ? "program" : "programs", " will change"] }), changes.map(({ before, after }) => _jsxs("div", { style: { padding: "12px 0", borderTop: `1px solid ${C.border}`, overflowWrap: "anywhere" }, children: [_jsx("strong", { style: { fontSize: 14 }, children: after.name }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginTop: 4, lineHeight: 1.5 }, children: programChangeLabels(before, after).join(" · ") })] }, after.id)), !!conflicts.length && _jsxs("div", { role: "alert", style: { padding: 12, margin: "8px 0", borderRadius: 12, background: C.card, color: C.text, fontSize: 13, lineHeight: 1.5 }, children: ["Another affected block has draft changes: ", conflicts.map(x => x.after.name).join(", "), ". Save or discard that draft first, or choose This block only."] }), _jsx("div", { style: { fontSize: 12, color: C.muted, margin: "10px 0 14px", lineHeight: 1.5 }, children: "You can undo this save from the program screen until the next save or app reload. Later edits can prevent undo." })] }), _jsxs("div", { style: { flexShrink: 0, paddingTop: 10, borderTop: `1px solid ${C.border}` }, children: [_jsx("button", { disabled: !changes.length || !!conflicts.length, onClick: onConfirm, className: "pressable", style: { width: "100%", padding: 13, border: "none", borderRadius: 12, background: C.accent, color: C.accentText, fontWeight: 700, opacity: !changes.length || conflicts.length ? .45 : 1, cursor: "pointer" }, children: "Save reviewed changes" }), _jsx("button", { onClick: onClose, className: "pressable", style: { width: "100%", padding: 13, marginTop: 8, border: `1px solid ${C.border}`, borderRadius: 12, background: "none", color: C.text, fontWeight: 600, cursor: "pointer" }, children: "Keep editing" })] })] }) });
 }
 function ProgramSettingsSheet({ program, draft: cfgDraft, setDraft: setCfgDraft, dirty: cfgDirty, onApply: applyCfgDraft, onClose }) {
+    const cycleLengthOwned = program.engineSource === "pursuit-next" && !!program.cycleId;
+    const weekOptions = cycleLengthOwned ? [weeksOf(program)] : programWeekOptions(program, cfgDraft?.weeks);
     const setCfgSheet = (v) => { if (!v)
         onClose(); };
     return (_jsx("div", { "data-testid": "program-settings-sheet", onClick: () => setCfgSheet(false), className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "flex-end", zIndex: 60, animation: "fadeIn .2s both" }, children: _jsxs("div", { ref: sheetDragRef, onClick: e => e.stopPropagation(), style: { width: "100%", background: C.bg2, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: "10px 18px 0", animation: "sheetUp .28s cubic-bezier(.2,.7,.3,1) both", borderTop: `1px solid ${C.border}`, maxHeight: "88%", overflowY: "auto" }, className: "wpb-scroll", children: [_jsxs("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }, children: [_jsx("div", { style: { fontSize: 18, fontWeight: 700 }, children: "Program settings" }), _jsx("button", { "aria-label": "Close", className: "pressable hit wpb-sheet-close", onClick: () => setCfgSheet(false), style: iconBtn(), children: _jsx(X, { size: 18 }) })] }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginBottom: 16 }, children: program.engineSource === "pursuit-next" ? "Adjust your program, then save to rebuild it with the latest program logic. Your current program stays unchanged if the rebuild cannot be completed safely." : "Adjust your program, then save to apply. Changes re-balance your current exercises." }), !program.config?.percentScheme && (_jsxs(_Fragment, { children: [_jsx("div", { style: { ...eyebrow(), marginBottom: 8 }, children: "Training goal" }), _jsx("div", { style: { display: "flex", gap: 8, marginBottom: 16 }, children: ["strength", "both", "hypertrophy"].map(k => {
                                 const on = cfgDraft?.goal === k;
                                 const lbl = k === "both" ? "Both" : GOALS[k].label;
                                 return _jsx("button", { onClick: () => setCfgDraft(d => ({ ...d, goal: k })), className: "pressable", style: { flex: 1, padding: "12px 4px", borderRadius: 12, cursor: "pointer", fontSize: 13, fontWeight: 700, border: `1px solid ${on ? C.accent : C.border}`, background: on ? C.accent : C.card, color: on ? C.accentText : C.muted, boxShadow: on ? "0 2px 8px rgba(0,0,0,.18)" : "none", transition: "background .12s" }, children: lbl }, k);
-                            }) }), _jsx("div", { style: { ...eyebrow(), marginBottom: 8 }, children: "Block length" }), _jsx("div", { style: { display: "flex", gap: 8, marginBottom: 16 }, children: [4, 5, 6, 8, 10].map(w => {
+                            }) }), _jsx("div", { style: { ...eyebrow(), marginBottom: 8 }, children: "Block length" }), cycleLengthOwned && _jsx("div", { style: { fontSize: 12, color: C.muted, marginBottom: 8 }, children: "Set by this phase of the training cycle." }), _jsx("div", { style: { display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }, children: weekOptions.map(w => {
                                 const on = cfgDraft?.weeks === w;
-                                return _jsxs("button", { onClick: () => setCfgDraft(d => ({ ...d, weeks: w })), className: "pressable", style: { flex: 1, padding: "12px 3px", borderRadius: 12, cursor: "pointer", fontSize: 13, fontWeight: 700, border: `1px solid ${on ? C.accent : C.border}`, background: on ? C.accent : C.card, color: on ? C.accentText : C.muted, boxShadow: on ? "0 2px 8px rgba(0,0,0,.18)" : "none", transition: "background .12s" }, children: [w, " wks"] }, w);
+                                return _jsxs("button", { "aria-label": `${w} weeks`, "aria-pressed": on, disabled: cycleLengthOwned, onClick: () => setCfgDraft(d => ({ ...d, weeks: w })), className: "pressable", style: { flex: "1 0 44px", padding: "12px 3px", borderRadius: 12, cursor: cycleLengthOwned ? "default" : "pointer", fontSize: 13, fontWeight: 700, border: `1px solid ${on ? C.accent : C.border}`, background: on ? C.accent : C.card, color: on ? C.accentText : C.muted, boxShadow: on ? "0 2px 8px rgba(0,0,0,.18)" : "none", transition: "background .12s" }, children: [w, " wks"] }, w);
                             }) }), _jsx("div", { style: { ...eyebrow(), marginBottom: 8 }, children: "Set & rep targets" }), _jsx("div", { style: { display: "flex", flexDirection: "column", gap: 6, marginBottom: 16 }, children: [["auto", "Auto", "Periodized for you — sets & load ramp each week, with a deload"], ["manual", "Manual", "Set your own sets & reps on every exercise"]].map(([v, label, sub]) => {
                                 const on = cfgDraft?.progression === v;
                                 return (_jsxs("button", { onClick: () => setCfgDraft(d => ({ ...d, progression: v })), className: "pressable", style: { display: "flex", alignItems: "center", gap: 12, padding: "11px 13px", borderRadius: 12, border: `1px solid ${on ? C.accent : C.border}`, background: on ? C.cardHi : C.card, color: C.text, cursor: "pointer", textAlign: "left", boxShadow: on ? `inset 0 0 0 1px ${C.accent}` : "none" }, children: [_jsx("div", { style: { width: 18, height: 18, borderRadius: 999, border: `2px solid ${on ? C.accent : C.border}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: on && _jsx("div", { style: { width: 8, height: 8, borderRadius: 999, background: C.accent } }) }), _jsxs("div", { style: { flex: 1 }, children: [_jsx("div", { style: { fontSize: 15, fontWeight: 600 }, children: label }), _jsx("div", { style: { fontSize: 11, color: C.muted }, children: sub })] })] }, v));
@@ -22255,7 +22262,7 @@ function normalizeBwLog(bwLog, to) {
  *
  * `weekIndex` is the lifter's CURRENT week (from nextSessionCursor at the call site, not recomputed
  * here) so the caller decides what "now" means and this stays a pure function of its arguments. */
-function planOverview(program, weekIndex = 1, cycle = null, history = []) {
+function planOverview(program, weekIndex = 1, cycle = null, history = [], saved = []) {
     if (!program || !Array.isArray(program.days) || !program.days.length)
         return null;
     const days = program.days;
@@ -22338,9 +22345,9 @@ function planOverview(program, weekIndex = 1, cycle = null, history = []) {
     let phases;
     if (cycle && Array.isArray(cycle.blockMeta) && cycle.blockMeta.length) {
         const here = cycle.blockIds ? cycle.blockIds.indexOf(program.id) : -1;
-        phases = cycle.blockMeta.map((m, i) => ({
+        phases = cycleBlockMetadata(cycle, [...saved.filter(p => p.id !== program.id), program]).map((m, i) => ({
             key: m.id || `b${i}`, label: m.label || `Block ${i + 1}`, goal: m.goal || null,
-            weeks: m.weeks || null, current: i === here, done: here >= 0 && i < here, isBlock: true
+            weeks: m.weeks || null, deload: m.deload, current: i === here, done: here >= 0 && i < here, isBlock: true
         }));
     }
     else {
@@ -22375,7 +22382,7 @@ function planOverview(program, weekIndex = 1, cycle = null, history = []) {
     {
         let cursor = 0;
         for (const ph of phases) {
-            const span = ph.weeks || (ph.key === "deload" ? 1 : ph.isBlock ? 0 : total);
+            const span = (ph.weeks || (ph.key === "deload" ? 1 : ph.isBlock ? 0 : total)) + (ph.isBlock && ph.deload ? 1 : 0);
             ph.weekFrom = cursor + 1;
             ph.weekTo = cursor + Math.max(span, 1);
             cursor += Math.max(span, 1);
@@ -24348,7 +24355,7 @@ function HomePrograms({ saved, cycles, activeId, onOpen, onOpenCycles, onSetActi
     const renderCard = g => {
         const c = g.cycle, first = g.programs[0];
         const activeIndex = Math.max(0, Number(c?.activeBlock) || 0);
-        const blockRows = g.cycleId ? (c?.blockMeta?.length ? c.blockMeta : g.programs.map(p => ({ label: p.blockLabel || p.name, goal: p.config?.goal, weeks: p.weeks }))).map((meta, i) => {
+        const blockRows = g.cycleId ? (c?.blockMeta?.length ? cycleBlockMetadata(c, g.programs) : g.programs.map(p => ({ label: p.blockLabel || p.name, goal: p.config?.goal, weeks: weeksOf(p) }))).map((meta, i) => {
             const p = g.programs.find(p => p.id === c?.blockIds?.[i]) || g.programs.find(p => (p.cycleIndex ?? -1) === i) || (!c ? g.programs[i] : null);
             const identity = homePhaseIdentity(meta, p || {});
             const prefix = c?.name ? c.name + ' · ' : '';
@@ -25624,12 +25631,12 @@ function CompareView({ saved = [], onBack, initialA = null, initialB = null, ini
  * lifter three days into week 3 reads "week 3 of 20" with 2 done. Counting it would let a fresh cycle
  * open at 5% before a single session is logged. */
 function cycleProgress(cycle, saved = [], history = [], cycleInfo = null) {
-    const meta = (cycle && cycle.blockMeta) || [];
+    const meta = cycleBlockMetadata(cycle, saved);
     const done = !!(cycle && cycle.done);
     const activeIdx = done ? meta.length : (cycle?.activeBlock || 0);
     const isActiveCycle = !!(cycleInfo && cycleInfo.cycle && cycle && cycleInfo.cycle.id === cycle.id);
     const progOf = b => (b ? saved.find(s => s.id === b.id) : null);
-    const totalOf = b => (b?.weeks || 0) + (progOf(b)?.config?.deload ? 1 : 0);
+    const totalOf = b => (b?.weeks || 0) + (b?.deload ? 1 : 0);
     const totalWeeks = meta.reduce((n, b) => n + totalOf(b), 0);
     const startMs = cycle?.startedAt || cycle?.createdAt || null;
     let doneWeeks = 0, acc = 0;
@@ -25723,7 +25730,7 @@ function CycleDetail({ cycle, saved = [], history = [], cycleInfo = null, onBack
     useEffect(() => { const el = cdScroll.current; if (!el)
         return; el.scrollTop = 0; requestAnimationFrame(() => { el.scrollTop = 0; }); }, [cycle && cycle.id]);
     const P = cycleProgress(cycle, saved, history, cycleInfo); // one source for the week maths — see cycleProgress
-    const blocks = cycle.blockMeta || [];
+    const blocks = P.blocks;
     const done = !!cycle.done;
     const activeIdx = done ? blocks.length : (cycle.activeBlock || 0);
     const progOf = (b) => b ? saved.find(s => s.id === b.id) : null;
@@ -25820,7 +25827,7 @@ function CyclesView({ onBack, cycles = [], saved = [], history = [], cycleInfo =
                         const fmtD = ms => new Date(ms).toLocaleDateString(undefined, { month: "short", day: "numeric" });
                         return (_jsxs("div", { ref: c.id === focusId ? focusRef : null, className: "wpb-cycle-card wpb-cycle-list-card wpb-render-auto", style: { padding: "15px 15px 13px", boxShadow: glow && c.id === focusId ? `0 0 0 2px ${C.accent}55` : undefined, transition: "box-shadow .45s ease, border-color .45s ease" }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }, children: [_jsx("div", { style: { width: 30, height: 30, borderRadius: 8, background: C.accentDim, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: _jsx(Ic, { size: 16, color: iconColorOf(c) }) }), _jsxs("button", { onClick: () => onOpenCycle && onOpenCycle(c), className: "pressable", style: { flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", padding: 0, cursor: "pointer", color: C.text, textAlign: "left" }, children: [_jsx("span", { style: { fontSize: 15, fontWeight: 700, color: C.text, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflowWrap: "anywhere", lineHeight: 1.2 }, children: c.name }), _jsx(ChevronRight, { size: 15, color: C.faint, style: { flexShrink: 0 } })] }), c.done
                                             ? _jsxs("span", { className: "wpb-cycle-state", style: { fontSize: 11, fontWeight: 700, color: C.accentInk, background: C.accentDim, borderRadius: 8, padding: "3px 8px" }, children: ["Complete", c.loops ? ` ×${c.loops + 1}` : ""] })
-                                            : _jsxs("span", { style: { fontSize: 11, fontWeight: 600, color: C.muted }, children: ["Block ", active + 1, " of ", c.blockMeta.length] }), _jsx("button", { onClick: () => onDelete(c.id), "aria-label": "Delete cycle", className: "pressable", style: { background: "none", border: "none", color: C.danger, cursor: "pointer", padding: 4 }, children: _jsx(Trash2, { size: 16 }) })] }), _jsxs("div", { className: "wpb-cycle-list-progress", "data-cycleprogress": String(P.pct), style: { marginTop: 8 }, children: [_jsx("div", { style: { height: 6, borderRadius: 999, background: C.bg2, overflow: "hidden", border: `1px solid ${C.borderSoft}` }, children: _jsx("div", { style: { width: `${P.pct}%`, height: "100%", background: C.accent, transition: "width .4s ease" } }) }), _jsxs("div", { style: { display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap", marginTop: 6, fontSize: 13, color: C.muted }, children: [_jsx("span", { style: { fontWeight: 700, color: C.text }, children: P.done ? `${P.totalWeeks} weeks done` : `Week ${P.curWeek} of ${P.totalWeeks}` }), !P.done && P.weeksLeft > 0 && _jsxs("span", { children: ["\u00B7 ", P.weeksLeft, " to go"] }), _jsxs("span", { children: ["\u00B7 ", P.sessions, " session", P.sessions === 1 ? "" : "s", " logged"] }), P.startMs && _jsxs("span", { style: { marginLeft: "auto", color: C.faint }, children: [fmtD(P.startMs), " \u2013 ", fmtD(P.endMs)] })] })] }), _jsx("div", { style: { marginTop: 9 }, children: _jsx(CycleTimeline, { progress: P, compact: true }) }), _jsx("div", { className: "wpb-cycle-block-list", style: { display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }, children: c.blockMeta.map((b, i) => {
+                                            : _jsxs("span", { style: { fontSize: 11, fontWeight: 600, color: C.muted }, children: ["Block ", active + 1, " of ", c.blockMeta.length] }), _jsx("button", { onClick: () => onDelete(c.id), "aria-label": "Delete cycle", className: "pressable", style: { background: "none", border: "none", color: C.danger, cursor: "pointer", padding: 4 }, children: _jsx(Trash2, { size: 16 }) })] }), _jsxs("div", { className: "wpb-cycle-list-progress", "data-cycleprogress": String(P.pct), style: { marginTop: 8 }, children: [_jsx("div", { style: { height: 6, borderRadius: 999, background: C.bg2, overflow: "hidden", border: `1px solid ${C.borderSoft}` }, children: _jsx("div", { style: { width: `${P.pct}%`, height: "100%", background: C.accent, transition: "width .4s ease" } }) }), _jsxs("div", { style: { display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap", marginTop: 6, fontSize: 13, color: C.muted }, children: [_jsx("span", { style: { fontWeight: 700, color: C.text }, children: P.done ? `${P.totalWeeks} weeks done` : `Week ${P.curWeek} of ${P.totalWeeks}` }), !P.done && P.weeksLeft > 0 && _jsxs("span", { children: ["\u00B7 ", P.weeksLeft, " to go"] }), _jsxs("span", { children: ["\u00B7 ", P.sessions, " session", P.sessions === 1 ? "" : "s", " logged"] }), P.startMs && _jsxs("span", { style: { marginLeft: "auto", color: C.faint }, children: [fmtD(P.startMs), " \u2013 ", fmtD(P.endMs)] })] })] }), _jsx("div", { style: { marginTop: 9 }, children: _jsx(CycleTimeline, { progress: P, compact: true }) }), _jsx("div", { className: "wpb-cycle-block-list", style: { display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }, children: P.blocks.map((b, i) => {
                                         const isActive = !c.done && i === active;
                                         const past = c.done || i < active;
                                         const exists = saved.some(s => s.id === b.id);
@@ -28914,7 +28921,7 @@ function App() {
                                                 return 1;
                                             } })();
                                             const cyc = cycles.find(c => Array.isArray(c.blockIds) && c.blockIds.includes(pp.id)) || null;
-                                            return (_jsx(PlanView, { program: pp, plan: planOverview(pp, wk, cyc, history), onOpenDay: (dayId, week) => { setPreviewTarget({ programId: pp.id, dayId, weekIndex: week }); pushView("nextWorkout", "plan"); }, onOpenProgram: () => { openWithDraft(pp); pushView("program", "plan"); }, onBack: goBack }));
+                                            return (_jsx(PlanView, { program: pp, plan: planOverview(pp, wk, cyc, history, saved), onOpenDay: (dayId, week) => { setPreviewTarget({ programId: pp.id, dayId, weekIndex: week }); pushView("nextWorkout", "plan"); }, onOpenProgram: () => { openWithDraft(pp); pushView("program", "plan"); }, onBack: goBack }));
                                         })() : view === "session" && program && sessionDay ? (_jsx(WorkoutSession
                                         /* Same reasoning as ProgramView: mid-workout, the alternatives offered must be the
                                            ones the room actually has. */
@@ -29070,3 +29077,5 @@ export { movementFamilyOptions, VARIANT_PRESENTATION, AttachmentGlyph };
 export { ExerciseAnimation, FormVideoLink, formVideoUrl, refusalMessage };
 
 export { HomePrograms, homeProgramGroups, homePhaseIdentity };
+
+export { ProgramSettingsSheet, CyclesView, CycleDetail };

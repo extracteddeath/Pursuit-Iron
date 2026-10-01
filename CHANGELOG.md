@@ -1,3 +1,11 @@
+## M215 — cycle duration consistency (build 805)
+
+- Existing custom programs keep their actual working-week length when converted into a cycle; a 10-week routine no longer inherits the template's 6-week entry label.
+- Cycle list, detail, Home block rows, Plan phase ranges and calendar totals resolve each phase's duration from its saved program. Older stale cycle metadata remains readable, with deload counted separately.
+- Program settings include 3-week and existing uncommon lengths. Generated cycle phases show their actual cycle-owned duration; custom routines remain editable.
+- Confirmed custom intensifiers remain on their scheduled later weeks; duration correction preserves exercises, prescriptions and history.
+- Added behavior and 390/360-pixel browser gates. Engine policy remains 0.64.10; offline cache rotated for build 805.
+
 ## M214 — executable prescription synchronization (build 804)
 
 - History evaluation and workout suggestions now read the same user-owned sets, reps, effort, rest, techniques and progression methods as the visible workout.

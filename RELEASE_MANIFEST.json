@@ -1,11 +1,11 @@
 {
   "schemaVersion": 3,
-  "milestone": "M219",
+  "milestone": "M220",
   "appVersion": "4.0.0",
-  "build": 809,
+  "build": 810,
   "engineVersion": "0.64.10",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "1a4ef68e097aa38ac695bf9ef235c2eda8ca14b39f6eff804ce7eaacf2e34d0e",
+  "runtimeAggregate": "7f71e1009155a52175006cf17d2d1de5bd4663759cbdac371f5d7d3fa363ce9c",
   "runtimeFiles": {
     "modules/legacy-research-data.js": "8b09be67d7c80da7602bb168726d7f7bc3f6ddb9a43b29293acdd18e208ba206",
     "modules/main.js": "535deb3adbf4269a36b7db9103fd0db48be1b8bf6ddfa062c8e02f206cc0a33d",
@@ -54,7 +54,7 @@
     "modules/next-engine/topology.js": "b04274f6f3df79698a6806897def63aae0101223f8e10539795afb59643e558b",
     "modules/next-engine/volume-repair.js": "2683e0b2dbbd5891c247d4dfba3fc03d6023b8594c1026a1a57f5cbf7efb599e",
     "modules/next-engine/weekly-recovery.js": "92cf14bd6ca28715d1d3f9ddde1cc0f42502892f230d69650f83bf6b921c111c",
-    "modules/next-engine/workout-history-adapter.js": "bca54faf796caa8d22209120d717d33d287051a7b569bccb78f3f8240fd1cafb",
+    "modules/next-engine/workout-history-adapter.js": "872983e6f346d55bca75878cd92561dc6d627e0fb2fd4bbafad4a9ee8e0ca93e",
     "modules/next-engine/workout-runtime.js": "96474ea8b77a042e917a84f4a4414eb3dfb6f4a62bfe7d18055d69fcb6013e11",
     "modules/program-duration.js": "52bffd0e7798f16f1217ba455de75c63c917ba9b7c6aa61dcd795b10dc665d95",
     "modules/wizard-stability.js": "a62b2bed8a1f5ab880bfeab036a83ec630c93048b8a352652fe00ae75374a3d1",
@@ -72,17 +72,17 @@
     "validation": "Real production duration stepping, direct typing, invalid and blank drafts, 1/2/7/9/12-week persistence and phone-width checks; cycle duration and engine policy preserved."
   },
   "uiFiles": {
-    "modules/App.js": "45d72de06d3fb2fe69284444e0c33fc6499cb4338649ca32b2f40a0cfb4caab4",
-    "index.html": "384ac6fa2ace8543f6debd84f480e43e939473135a507fc968892cd68715a56a",
-    "sw.js": "710648e28fcb8d8bbc14056cb11bdc5fceb07e07fde42f235ae1c0d896c4207c",
-    "BUILD_PROFILE.json": "a0bd7b33cf2888abe4b3b90bb687e9f0b3c2f4aeb576f381a67a61d854f166ad",
-    "CHANGELOG.md": "461f6f9040e0a68f9b1c3616183df7b9dc15c36e9c8be812fd638a8303418c3a",
+    "modules/App.js": "d75a635660dfa0bbb616f0f46d936290f4b1f4d981a33ae29e4a47be78064028",
+    "index.html": "f98525e6e51baf77e982199dc7a26fedff8d25c8ae1de180a4b5537010f4b67d",
+    "sw.js": "9606dd1edf200878c5023a6ef517bd47764ae76b0db6a02ffe1eeed4345a91b0",
+    "BUILD_PROFILE.json": "9114659ed427202144a169181347815b56af5bac6a1ae9b8e0720ee4ab5a124d",
+    "CHANGELOG.md": "3f156886dfd10f23bc467c62ead760fdde80c067cc610736dcfde4e7fd0760c6",
     "app.css": "27818b3319609aff1416b32d5afebe70598cc57dfa64f4467b8bfe5b1130e0dd",
     "manifest.webmanifest": "46718c7b74d686446fdf40ea167992aacc86bdf74e5b9d835263155adedeb763"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Replace the duration preset row with a compact stepper and typed week field; preserve cycle-owned phase lengths and saved-program duration authority.",
-  "cache": "pursuit-iron-production-v4-0-0-m219-ui-integration-b809",
-  "uiMilestone": "Pursuit Iron 4.0 Production Release · M219 UI Integration"
+  "cache": "pursuit-iron-production-v4-0-0-m220-day-progression-b810",
+  "uiMilestone": "Pursuit Iron 4.0 Production Release · M220 Day Progression"
 }

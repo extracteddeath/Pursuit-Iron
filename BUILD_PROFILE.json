@@ -1,11 +1,11 @@
 {
   "profile": "portable-browser-esm-canonical-engine",
-  "milestone": "M219",
-  "source": "M218 phone polish + selectively merged contrast and interaction improvements; dependency-aware Plan cache and reduced-motion exit repair",
+  "milestone": "M220",
+  "source": "M219 UI integration + day-specific double progression and protected automatic-load recovery",
   "engine": "0.64.10; engine prescription policy unchanged; saved programs own phase durations",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 46,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m219-ui-integration-b809",
-  "uiMilestone": "Pursuit Iron 4.0 Production Release · M219 UI Integration"
+  "cache": "pursuit-iron-production-v4-0-0-m220-day-progression-b810",
+  "uiMilestone": "Pursuit Iron 4.0 Production Release · M220 Day Progression"
 }

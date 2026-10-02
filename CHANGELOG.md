@@ -1,3 +1,11 @@
+## M220 — day-specific double progression (build 810)
+
+- Custom routines use the newest session of the same program and training day for repeated exercises. Other days supply a starting load only until that day has its own history.
+- Suggestions and Last values share the same reference; a three-set Legs workout cannot replace a five-set Lower workout or qualify its load increase.
+- The generated-program bridge also keeps its prior-session details and changed-week reference aligned with the day its evaluator used.
+- Resume corrects untouched automatic custom-plan loads while preserving completed, manual, edited, added and technique sets.
+- Added the reported 205/210 lb calf-raise regression to release and phone checks. M219 UI integration remains available; training-engine prescription policy is unchanged.
+
 ## M219 — UI integration (build 809)
 
 - Highlighted labels and training details are clearer across light and dark themes, with larger tap areas for common controls.

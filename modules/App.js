@@ -1,4 +1,4 @@
-const __APP_VERSION__='4.0.0'; const __BUILD__='809';
+const __APP_VERSION__='4.0.0'; const __BUILD__='810';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { holdWorkoutScreenAwake } from "./mobile-lifecycle.js";
@@ -15998,14 +15998,18 @@ function loadableAbove(ex, w, unit) {
    (found with Haiden's real backup). Double progression on their last session of THIS exercise (any program): hold the working
    weight and build reps; once every prescribed set reaches the top of the range, move up to the next weight the equipment can
    make (loadableAbove — the same rule the workout's loadable check uses). The reason says which. */
+// A repeated lift belongs to its program/day occurrence. Other days are only an initialization
+// fallback until this day has its own evidence; advice and LAST use this same raw history record.
+function customExerciseHistory(program, day, id, history) {
+    const entries = (history || []).filter(h => h?.perf?.[id]).slice().sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0));
+    return entries.find(h => h.programId === program.id && h.dayId === day.id)
+        || entries.find(h => h.programId === program.id) || entries[0] || null;
+}
 function customProgramSuggestion(program, day, slot, unit, weekIndex, history) {
     const ex = EX_BY_ID[day?.exercises?.[slot]];
     if (!ex)
         return null;
-    /* This program's own history first — a light session logged in another program (25-40 lb bench while trying a new build)
-       must not reset this program's working weight (250 lb). Other programs only when this one has never had the exercise. */
-    const withEx = (history || []).filter(h => h?.perf?.[ex.id]).sort((a, b) => (b.date || 0) - (a.date || 0));
-    const last = withEx.find(h => h.programId === program.id) || withEx[0];
+    const last = customExerciseHistory(program, day, ex.id, history);
     if (!last)
         return null;
     const conv = (w) => { const from = last.unit || unit; return from === unit ? w : from === "kg" ? w * 2.20462 : w / 2.20462; };
@@ -16178,9 +16182,13 @@ function effortCalibration(history) {
    this day), so the two are interchangeable as an anchor map. Extracted from <WorkoutSession>'s
    lastPerf memo, which is now this function — a display column and a prescription anchor cannot be
    allowed to drift apart while both claim to mean "last time". */
-function lastDayPerf(day, perf, history) {
+function lastDayPerf(day, perf, history, program = null) {
     const out = {};
     for (const id of day.exercises) {
+        if (program?.custom === true && program?.engineSource !== "pursuit-next") {
+            out[id] = customExerciseHistory(program, day, id, history)?.perf?.[id] || perf?.[id];
+            continue;
+        }
         for (const h of (history || [])) { // history is newest-first
             if (h.dayId === day.id && h.perf?.[id] && h.perf[id].reps != null) {
                 out[id] = h.perf[id];
@@ -17094,6 +17102,20 @@ function syncSubSets(sets, ex, unit) {
     });
     return changed ? out : sets;
 }
+// On resume, repair only untouched automatic custom-plan loads. Logged and manually owned values
+// remain the lifter's record; the old target must still match the prefill before it can be replaced.
+function refreshPendingCustomLoads(sets, workingLoad) {
+    if (!Array.isArray(sets) || !(Number(workingLoad) > 0)) return sets;
+    let changed = false;
+    const weight = String(workingLoad);
+    const out = sets.map(s => {
+        if (!s || s.done || s.warm || s.sub || s.added || s.valueOwner !== "prescription"
+            || s.auto !== true || Number(s.weight) !== Number(s.target?.w) || s.weight === weight) return s;
+        changed = true;
+        return { ...s, weight, target: { ...s.target, w: weight } };
+    });
+    return changed ? out : sets;
+}
 function prescribeSets(program, day, ex, slot, weekIndex, unit, sug, dayPerf, perf, history, withWarm) {
     void unit;
     void dayPerf;
@@ -17510,7 +17532,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
        against a session the lifter isn't looking at. Kept separate from the anchor regardless, because
        a column reporting what you did must not be re-interpreted by the RIR calibration the engine
        applies before reading effort. The two now share one implementation of "last session". */
-    const lastPerf = useMemo(() => lastDayPerf(day, perf, history), [history, day, perf]);
+    const lastPerf = useMemo(() => lastDayPerf(day, perf, history, program), [history, day, perf, program]);
     const dayPerf = useMemo(() => {
         return calibratedAnchorPerf(program, day, perf, history, weekIndex, lifterModel.effort);
     }, [history, day, perf, program, weekIndex, lifterModel]);
@@ -17572,8 +17594,12 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
             : liveStatus === "partial" ? mergeSessionData(liveMatch.data, fresh) : fresh;
         // A saved automatic prefill can come from an older range/tuner. Reconcile pending targets
         // with the current cell; completed and manually controlled rows remain the lifter's record.
-        return restored.map(e => ({ ...e, sets: syncSubSets(reconcilePendingRepTargets(e.sets,
-            computeCell(program, day, e.id, e.slot, weekIndex)), EX_BY_ID[e.id], unit) }));
+        return restored.map(e => {
+            const sets = liveMatch && program?.custom === true && program?.engineSource !== "pursuit-next"
+                ? refreshPendingCustomLoads(e.sets, suggestions[e.slot]?.weight) : e.sets;
+            return { ...e, sets: syncSubSets(reconcilePendingRepTargets(sets,
+                computeCell(program, day, e.id, e.slot, weekIndex)), EX_BY_ID[e.id], unit) };
+        });
     });
     /* EVERY write to `data` goes through here, so that "a myo mini carries its activation set's load"
        is an INVARIANT of the session state rather than a line somebody has to remember inside each of
@@ -23430,6 +23456,7 @@ function StrengthSnapshotCard({ history, bodyweight, sex, age, unit, bwLog = [],
  * Newest release first, newest entry first within a release. */
 const WHATS_NEW_MAX = 10;
 const CHANGELOG = [
+    {"version": "4.0.0", "build": "810", "items": ["Repeated exercises in custom programs now progress from the last session of the same training day.", "The suggestion and Last column use the same session, so a newer Legs workout cannot replace Lower's working load.", "A shorter workout on another day cannot qualify a longer day's load increase. Each day builds toward its own full set target.", "Resuming refreshes untouched automatic custom-plan loads while preserving completed sets and manually entered values.", "The reviewed theme contrast, phone layout, Plan estimates, reduced-motion sheets and workout audio improvements remain available."]},
     {"version":"4.0.0","build":"809","items":["Highlighted labels and training details are clearer across light and dark themes, with larger tap areas for common controls.","Finished sets and phase labels stay readable. Plan keeps its week navigation, and session estimates update when rest length or custom exercises change.","Sheets close smoothly and respect reduced-motion settings. Buttons release without an abrupt snap.","Workout chimes reuse one audio context while training and release it when you leave the workout.","The recent release-note repair, compact theme picker, manual entries and scheduled final-set techniques remain available."]},
     { version: "4.0.0", build: "808", items: ["Workout controls are quieter and prescribed rep ranges stay together. Small steppers, manual entries, and final-set techniques remain available.", "Plan puts Up Next near the top and shows one completion summary. Phase names, icons, week lengths, and all four plan views remain available.", "Choosing a later week brings its days into view beneath the week picker. The picker stays reachable as you scroll.", "Settings shows your saved theme in one row. Expand it to choose from every light and dark theme.", "What's new loads correctly on Home and from Settings. Dismissed notes stay dismissed, and the full changelog remains available."] },
     { version: "4.0.0", build: "807", items: ["Workouts now stay open if the device cannot save. Completed history is saved before the recovery copy is removed, with Retry save available when needed.", "Android Back and Minimize save your progress before leaving the workout. Update restarts also save the current app data first.", "An interruption during completion cleanup cannot create a second log of the same workout.", "Screen awake follows the workout and releases when you leave. Installed apps also support landscape and split-screen layouts.", "Block length uses a compact week field with minus/plus controls. Saved phase lengths remain consistent across cycle views.", "Custom routines keep their scheduled final-set techniques in later weeks."] },
@@ -26116,7 +26143,7 @@ function LibraryView({ onBack, banned = [], onBan, onSetBan, goals = {}, onSetGo
                                         setDetailId(null); }, className: "pressable", "aria-label": "Ban from all programs", "aria-pressed": banned.includes(detail.id), style: { width: "100%", padding: "13px", borderRadius: 12, border: `1px solid ${banned.includes(detail.id) ? C.border : C.dangerDim}`, background: "none", color: banned.includes(detail.id) ? C.muted : C.danger, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 8 }, children: [_jsx(Ban, { size: 15 }), " ", banned.includes(detail.id) ? "Banned \u2014 tap to unban" : "Ban from all programs"] })] })] })) })] }));
 }
 const INTRO_VERSION = 5; // bump when onboarding content changes → returning users see it once more
-const WHATS_NEW_VERSION = 219; // bump when there's an update worth showing existing users on Home
+const WHATS_NEW_VERSION = 220; // bump when there's an update worth showing existing users on Home
 /* How much training history to keep.
 
    Measured, not guessed: a typical logged session (7 exercises, 3–5 sets each) serialises to ~1,095
@@ -29286,4 +29313,4 @@ export { HomePrograms, homeProgramGroups, homePhaseIdentity };
 export { ProgramSettingsSheet, CyclesView, CycleDetail };
 
 // Overview cache seam used by the rest-setting and catalog invalidation regression gate.
-export { planOverviewMemo };
+export { planOverviewMemo, refreshPendingCustomLoads };

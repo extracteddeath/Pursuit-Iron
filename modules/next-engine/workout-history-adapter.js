@@ -232,9 +232,9 @@ function classify(recovery, positive, negative, diagnoses, workouts) {
         return 'productive';
     return 'mixed';
 }
-function latestShellPerf(history, programId, legacyId) {
+function latestShellEntry(history, programId, legacyId, dayId) {
     const entries = [...(history ?? [])].filter(h => h?.programId === programId && h?.perf?.[legacyId]).sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0));
-    return entries[0]?.perf?.[legacyId] ?? null;
+    return entries.find(h => h.dayId === dayId) ?? entries[0] ?? null;
 }
 function representativeShellLoad(perf) {
     if (!perf)
@@ -291,7 +291,8 @@ export function nextWorkoutSuggestionForShell(program, history, legacyExercises,
         return null;
     const cell = getNextShellCell(program, day, slot, weekIndex);
     const reps = String(cell?.reps ?? cell?.range ?? '');
-    const last = latestShellPerf(history, String(program.id), legacyId);
+    const lastEntry = latestShellEntry(history, String(program.id), legacyId, String(day.id));
+    const last = lastEntry?.perf?.[legacyId] ?? null;
     let analysis;
     try {
         analysis = analyzeShellHistoryForNextEngine(program, history, legacyExercises);
@@ -315,7 +316,7 @@ export function nextWorkoutSuggestionForShell(program, history, legacyExercises,
        prescription (reps, reps in reserve, or progression style) differs from the one the last workout was trained under,
        re-set the load from the lifter's estimated max so the new range lands mid-range, rounded DOWN to a load they can make.
        Same prescription -> the engine's decision stands (that is where add-reps / add-load double progression lives). */
-    const lastEntry = [...(history ?? [])].filter(h => h?.programId === String(program.id) && h?.perf?.[legacyId]).sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0))[0];
+
     const lastCell = historicalShellCell(program, day, slot, Number(lastEntry?.weekIndex) || 1,
         lastEntry?.perf?.[legacyId], nextId);
     const changed = !!cell && !!lastCell && (String(cell.reps) !== String(lastCell.reps) || String(cell.rir) !== String(lastCell.rir) || cell.progressionStyle !== lastCell.progressionStyle);

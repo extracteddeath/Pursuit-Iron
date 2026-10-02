@@ -67,6 +67,7 @@ try {
         await page.waitForFunction(label => Array.from(document.querySelectorAll('button')).some(n => n.textContent.trim() === label && n.getBoundingClientRect().width > 0), {}, text);
         const handle = await page.evaluateHandle(label => Array.from(document.querySelectorAll('button')).find(n => n.textContent.trim() === label && n.getBoundingClientRect().width > 0), text);
         assert.ok(handle.asElement(), 'button is available: ' + text);
+        await handle.asElement().evaluate(n => n.scrollIntoView({ block: 'center', inline: 'nearest' }));
         await page.evaluate(() => Promise.allSettled(document.getAnimations().filter(a => a.effect?.getComputedTiming().iterations !== Infinity).map(a => a.finished)));
         await handle.asElement().click();
         await handle.dispose();

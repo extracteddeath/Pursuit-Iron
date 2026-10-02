@@ -86,6 +86,7 @@ execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verifi
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/programs-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/set-display-integrity-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/m219-ui-integration-test.mjs'],{stdio:'inherit',cwd:root});
+execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/m220-day-progression-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['verification/cycle-overview-ui-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['verification/swap-scroll-integrity-test.mjs'],{stdio:'inherit',cwd:root});
 console.log(`Release integrity OK: ${shell.length} precache entries present; ${jsFiles.length} authored JS files parse.`);

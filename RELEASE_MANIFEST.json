@@ -1,11 +1,11 @@
 {
   "schemaVersion": 3,
-  "milestone": "M220",
+  "milestone": "M221",
   "appVersion": "4.0.0",
-  "build": 810,
-  "engineVersion": "0.64.10",
+  "build": 811,
+  "engineVersion": "0.64.11",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "7f71e1009155a52175006cf17d2d1de5bd4663759cbdac371f5d7d3fa363ce9c",
+  "runtimeAggregate": "75e42339a582d969549fd1b313a24c2931a4cda191405b61b0040758f2c000dc",
   "runtimeFiles": {
     "modules/legacy-research-data.js": "8b09be67d7c80da7602bb168726d7f7bc3f6ddb9a43b29293acdd18e208ba206",
     "modules/main.js": "535deb3adbf4269a36b7db9103fd0db48be1b8bf6ddfa062c8e02f206cc0a33d",
@@ -17,7 +17,7 @@
     "modules/next-engine/capacity-generation.js": "1fed6ad20b90257bcf6f5a88337669bc568f5de7f6fe92ba06c80fe2de2f36dd",
     "modules/next-engine/capacity-policy.js": "7679d6f487a968d6e3d2144385cb33ac0c788d7565c2b132b9187b5e2693825b",
     "modules/next-engine/coach-regression.js": "f4bf6719070076f2ec8eab6d76ba5f29386ea2e638b106556caad35df6c00e1b",
-    "modules/next-engine/config.js": "7fec15190fb836c0ebcae0b10d53dd3b4e932e3d710e417e3e2f300ded4d08e9",
+    "modules/next-engine/config.js": "3223a3dbd7861f441f36e5f63ddfc542285dab5b4bd32d5e6ce840e58abf080c",
     "modules/next-engine/cycle-runtime-adapter.js": "6c298954460ad9471e9ec287a1c65f492ee1e2d7a921dc82b86c76bfb439072f",
     "modules/next-engine/cycles.js": "3b949f73ecef2543e4aa3aa6910fe43a3d3526805fcbcd111424e5df2d6efc79",
     "modules/next-engine/dose-reconciliation.js": "49e003aaa5a3323fa58736a75030898100173268e48f58fd1fb76da502755570",
@@ -33,9 +33,9 @@
     "modules/next-engine/functional-coverage.js": "51e767145c0b87fa62445ce98c998d6d0158b42d36eaae35974a05707a660c2c",
     "modules/next-engine/generate.js": "fb8fe4643f305c3bf654adfed9d0c1d32624663211634da187ec4ad7ffbde942",
     "modules/next-engine/generation-recovery.js": "83e916fb202b1f002615d91a834431c696ae7e7be84328f8a9fdb0cace2ecf73",
-    "modules/next-engine/history.js": "7dfa20d82e55f5689cd0518123ce518647e8666af1396015a0041c1ca561f759",
+    "modules/next-engine/history.js": "8c2c2c0e92c1d4ab51b4326d22e2b7c5425f8c6e3f14c1cea6afe3c3b99b931c",
     "modules/next-engine/ledgers.js": "c5e9e637e8c52df6b1b59ed91cf3723be8e6edcc83b40523c7316f92a5706d1d",
-    "modules/next-engine/loading.js": "98a6504ed7b1cc4625f2077114c76df487edf432870fae98ff2ab9e7e3a74e57",
+    "modules/next-engine/loading.js": "be312481bcfa5b9654fcffed9c4ff85469f5a1c50a79b583a06c1abe4df697c2",
     "modules/next-engine/method-policy.js": "b5b0a4f214c768ab76050d3daad56f0afea0b533b0fea470859ef475ad16d828",
     "modules/next-engine/performance.js": "a4a0c3d8edc8907417d910481e86c0ca582fbc3a24d749382adc7ba9b465eaf4",
     "modules/next-engine/phase-policy.js": "9655292b2e772f4f972b0e7d3e0a8c33fa8308dd17d980d5c6187a87b659c5c9",
@@ -55,7 +55,7 @@
     "modules/next-engine/volume-repair.js": "2683e0b2dbbd5891c247d4dfba3fc03d6023b8594c1026a1a57f5cbf7efb599e",
     "modules/next-engine/weekly-recovery.js": "92cf14bd6ca28715d1d3f9ddde1cc0f42502892f230d69650f83bf6b921c111c",
     "modules/next-engine/workout-history-adapter.js": "872983e6f346d55bca75878cd92561dc6d627e0fb2fd4bbafad4a9ee8e0ca93e",
-    "modules/next-engine/workout-runtime.js": "96474ea8b77a042e917a84f4a4414eb3dfb6f4a62bfe7d18055d69fcb6013e11",
+    "modules/next-engine/workout-runtime.js": "68e6f0159b12b0da5cb25e02784916c58c1fa449fddfd5f0c2ebae98f7e34976",
     "modules/program-duration.js": "52bffd0e7798f16f1217ba455de75c63c917ba9b7c6aa61dcd795b10dc665d95",
     "modules/wizard-stability.js": "a62b2bed8a1f5ab880bfeab036a83ec630c93048b8a352652fe00ae75374a3d1",
     "vendor/lucide-react.js": "f84db748249b6e57e1d5187e876da806c1733523a1fa1501224bf740519b2cf4",
@@ -67,22 +67,22 @@
     "vendor/react.js": "24b2d220a5b2637cf3fb78fe0d961f227ea0a4b960485dbfb03c9d276e72147c"
   },
   "localCandidate": {
-    "name": "Pursuit Iron 4.0 Production Release · M216",
-    "base": "M215 / app 4.0.0 build 805 / Engine 0.64.10",
-    "validation": "Real production duration stepping, direct typing, invalid and blank drafts, 1/2/7/9/12-week persistence and phone-width checks; cycle duration and engine policy preserved."
+    "name": "Pursuit Iron 4.0 Production Release · M221 Engine Stability",
+    "base": "M220 / app 4.0.0 build 810 / Engine 0.64.10",
+    "validation": "M221 malformed/empty equipment, finite history estimates, blank runtime ranges and 2394 exhaustive loading comparisons; permanent release and engine gates."
   },
   "uiFiles": {
-    "modules/App.js": "d75a635660dfa0bbb616f0f46d936290f4b1f4d981a33ae29e4a47be78064028",
-    "index.html": "f98525e6e51baf77e982199dc7a26fedff8d25c8ae1de180a4b5537010f4b67d",
-    "sw.js": "9606dd1edf200878c5023a6ef517bd47764ae76b0db6a02ffe1eeed4345a91b0",
-    "BUILD_PROFILE.json": "9114659ed427202144a169181347815b56af5bac6a1ae9b8e0720ee4ab5a124d",
-    "CHANGELOG.md": "3f156886dfd10f23bc467c62ead760fdde80c067cc610736dcfde4e7fd0760c6",
+    "modules/App.js": "3c41c0081189063b9c6eb897c2e1ecfac88ff03fa719d261e3522e7183b927e7",
+    "index.html": "eacbfd712f36c8a9ba407b6139569c801688824457a463f65a36ef5f9ef22dcc",
+    "sw.js": "f929d807658a381cf69504350c6d4fa90e385b2053e22cf6e23c4e5049b2b5ad",
+    "BUILD_PROFILE.json": "22cd30ea996a2a81ca16de6b5948fb8e84229f3aa28e87a8dc9fbd727cc3faae",
+    "CHANGELOG.md": "0811ace33aa9a2fe21024463044bf1df1b919c208fb185ed040b5c4dd50e6bc6",
     "app.css": "27818b3319609aff1416b32d5afebe70598cc57dfa64f4467b8bfe5b1130e0dd",
     "manifest.webmanifest": "46718c7b74d686446fdf40ea167992aacc86bdf74e5b9d835263155adedeb763"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
-  "runtimeHotfix": "Replace the duration preset row with a compact stepper and typed week field; preserve cycle-owned phase lengths and saved-program duration authority.",
-  "cache": "pursuit-iron-production-v4-0-0-m220-day-progression-b810",
-  "uiMilestone": "Pursuit Iron 4.0 Production Release · M220 Day Progression"
+  "runtimeHotfix": "Harden equipment and history input handling; preserve exact load selection under a bounded query and repair blank runtime ranges.",
+  "cache": "pursuit-iron-production-v4-0-0-m221-engine-stability-b811",
+  "uiMilestone": "Pursuit Iron 4.0 Production Release · M221 Engine Stability"
 }

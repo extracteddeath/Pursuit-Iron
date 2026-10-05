@@ -1,15 +1,21 @@
 import { availableLoadAtOrBelow, resolveLoadingMode } from './loading.js';
-const numberPair = (value, fallback) => {
+const numberPair = (value, fallback, minimum = 0) => {
+    const valid = nums => nums.every(n => Number.isFinite(n) && n >= minimum);
     if (Array.isArray(value) && value.length >= 2) {
-        const a = Number(value[0]), b = Number(value[1]);
-        if (Number.isFinite(a) && Number.isFinite(b))
+        const a = value[0] == null || String(value[0]).trim() === '' ? NaN : Number(value[0]);
+        const b = value[1] == null || String(value[1]).trim() === '' ? NaN : Number(value[1]);
+        if (valid([a, b]))
             return [Math.min(a, b), Math.max(a, b)];
     }
-    if (typeof value === 'number' && Number.isFinite(value))
+    if (typeof value === 'number' && valid([value]))
         return [value, value];
     const raw = String(value ?? '').trim();
-    const nums = raw.split(/[-–]/).map(x => Number(x.trim())).filter(Number.isFinite);
-    if (nums.length >= 2)
+    if (!raw) return fallback;
+    const parts = raw.split(/[-–]/);
+    if (parts.some(x => !x.trim()) || parts.length > 2) return fallback;
+    const nums = parts.map(x => Number(x.trim()));
+    if (!valid(nums)) return fallback;
+    if (nums.length === 2)
         return [Math.min(nums[0], nums[1]), Math.max(nums[0], nums[1])];
     if (nums.length === 1)
         return [nums[0], nums[0]];
@@ -55,7 +61,7 @@ export function advancedTechniqueFromCell(cell, original) {
 }
 export function buildRuntimeSetTargets(args) {
     const { exerciseId, cell, loadingInventory, equipmentAvailable } = args;
-    const reps = numberPair(cell.reps, [8, 12]);
+    const reps = numberPair(cell.reps, [8, 12], 1);
     const rir = numberPair(cell.rir, [2, 2]);
     const workReps = args.suggestedReps && args.suggestedReps >= reps[0] && args.suggestedReps <= reps[1] ? Math.round(args.suggestedReps) : Math.round(reps[0]);
     const count = Math.max(1, Math.round(Number(cell.sets) || 1));
@@ -86,7 +92,7 @@ export function buildRuntimeSetTargets(args) {
 export function reconcilePendingRepTargets(sets, cell) {
     if (!Array.isArray(sets) || !cell || cell.missing)
         return sets;
-    const [lo, hi] = numberPair(cell.range ?? cell.reps, [8, 12]);
+    const [lo, hi] = numberPair(cell.range ?? cell.reps, [8, 12], 1);
     if (!(lo > 0 && hi >= lo))
         return sets;
     const range = lo === hi ? String(lo) : `${lo}-${hi}`;

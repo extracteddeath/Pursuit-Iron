@@ -1,3 +1,12 @@
+## M221 — engine input stability (build 811)
+
+- Normalize malformed equipment lists without throwing; explicit empty lists remain empty rather than reverting to an imaginary default inventory.
+- Bound plate-combination queries to the requested load and fail closed on pathological expansion. Prevent non-finite load recommendations.
+- Reject invalid strength-estimate evidence without poisoning stronger valid sets.
+- Blank, partial or invalid rep ranges use safe workout defaults; completed/manual entries and loads remain untouched during restoration.
+- Engine 0.64.11 retains the last five compatible engine versions. Current designs, training-dose rules and day-specific progression stay in place.
+- Add permanent M221 semantic checks, including 2,394 exhaustive finite-inventory comparisons.
+
 ## M220 — day-specific double progression (build 810)
 
 - Custom routines use the newest session of the same program and training day for repeated exercises. Other days supply a starting load only until that day has its own history.

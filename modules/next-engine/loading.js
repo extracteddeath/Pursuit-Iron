@@ -1,6 +1,11 @@
 import { EXERCISE_MAP } from './exercise-db.js';
 const round = (value) => Number(value.toFixed(2));
-const clean = (values) => [...new Set(values.filter(v => Number.isFinite(v) && v >= 0).map(round))].sort((a, b) => a - b);
+const clean = (values) => [...new Set((Array.isArray(values) ? values : []).filter(v => Number.isFinite(v) && v >= 0).map(round))].sort((a, b) => a - b);
+const record = value => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+// Defaults describe unspecified equipment. Explicit empty/malformed lists must stay empty rather
+// than inventing selectable loads. Invalid numeric limits likewise cannot authorize a load step.
+const limit = (value, fallback) => value === undefined ? fallback : Number.isFinite(value) ? Math.max(0, value) : 0;
+const exactLoads = value => value === undefined ? undefined : clean(value);
 export const DEFAULT_LOADING_INVENTORY = {
     unit: 'lb',
     barbell: {
@@ -22,24 +27,33 @@ export const DEFAULT_LOADING_INVENTORY = {
 export function normalizeLoadingInventory(input) {
     if (!input)
         return structuredClone(DEFAULT_LOADING_INVENTORY);
-    const platePairs = (input.barbell?.platePairs ?? DEFAULT_LOADING_INVENTORY.barbell.platePairs)
-        .filter(p => Number.isFinite(p.weight) && p.weight > 0 && Number.isFinite(p.pairs) && p.pairs > 0)
+    input = record(input);
+    const rawPlates = input.barbell?.platePairs === undefined ? DEFAULT_LOADING_INVENTORY.barbell.platePairs : input.barbell?.platePairs;
+    const platePairs = (Array.isArray(rawPlates) ? rawPlates : [])
+        .filter(p => p && Number.isFinite(p.weight) && p.weight > 0 && Number.isFinite(p.pairs) && p.pairs > 0)
         .map(p => ({ weight: round(p.weight), pairs: Math.max(1, Math.floor(p.pairs)) }))
         .sort((a, b) => a.weight - b.weight);
     const normalizeIncrement = (candidate, fallback) => ({
-        minimum: Number.isFinite(candidate?.minimum) ? Math.max(0, candidate.minimum) : fallback.minimum,
-        increment: Number.isFinite(candidate?.increment) && candidate.increment > 0 ? candidate.increment : fallback.increment,
-        maximum: Number.isFinite(candidate?.maximum) ? Math.max(0, candidate.maximum) : fallback.maximum,
-        availableLoads: candidate?.availableLoads?.length ? clean(candidate.availableLoads) : undefined
+        minimum: limit(candidate?.minimum, fallback.minimum),
+        increment: limit(candidate?.increment, fallback.increment),
+        maximum: limit(candidate?.maximum, fallback.maximum),
+        availableLoads: exactLoads(candidate?.availableLoads)
     });
+    const exerciseOverrides = Object.fromEntries(Object.entries(record(input.exerciseOverrides)).map(([id, raw]) => {
+        const override = { ...record(raw) };
+        for (const key of ['minimum', 'increment', 'maximum'])
+            if (override[key] !== undefined) override[key] = limit(override[key], 0);
+        if (override.availableLoads !== undefined) override.availableLoads = clean(override.availableLoads);
+        return [id, override];
+    }));
     return {
         unit: input.unit === 'kg' ? 'kg' : 'lb',
-        barbell: { barWeight: Number.isFinite(input.barbell?.barWeight) ? Math.max(0, input.barbell.barWeight) : 45, platePairs },
-        dumbbells: { availablePerHand: clean(input.dumbbells?.availablePerHand?.length ? input.dumbbells.availablePerHand : DEFAULT_LOADING_INVENTORY.dumbbells.availablePerHand) },
+        barbell: { barWeight: limit(input.barbell?.barWeight, 45), platePairs },
+        dumbbells: { availablePerHand: clean(input.dumbbells?.availablePerHand === undefined ? DEFAULT_LOADING_INVENTORY.dumbbells.availablePerHand : input.dumbbells.availablePerHand) },
         machine: normalizeIncrement(input.machine, DEFAULT_LOADING_INVENTORY.machine),
         cable: normalizeIncrement(input.cable, DEFAULT_LOADING_INVENTORY.cable),
         smith: normalizeIncrement(input.smith, DEFAULT_LOADING_INVENTORY.smith),
-        exerciseOverrides: { ...(input.exerciseOverrides ?? {}) }
+        exerciseOverrides
     };
 }
 function availableSetup(exerciseId, equipment) {
@@ -68,13 +82,24 @@ function modeFromSetup(exerciseId, equipment) {
         return 'machine_stack';
     return 'external_load';
 }
-function achievableBarbellLoads(barWeight, plates) {
+function achievableBarbellLoads(barWeight, plates, ceiling) {
+    if (!Number.isFinite(ceiling) || barWeight > ceiling) return [];
+    // A load query needs only reachable totals near its target, never the full stock of plates.
+    // Bound pathological imported inventories without substituting imaginary plate combinations.
+    const operationBudget = 100000;
+    let operations = 0;
     let totals = new Set([round(barWeight)]);
     for (const plate of plates) {
         const before = [...totals];
         for (const current of before) {
-            for (let count = 1; count <= plate.pairs; count++)
-                totals.add(round(current + plate.weight * 2 * count));
+            const step = plate.weight * 2;
+            const usable = Math.min(plate.pairs, Math.floor((ceiling - current + 1e-6) / step));
+            if (!Number.isFinite(step) || !(step > 0)) continue;
+            for (let count = 1; count <= usable; count++) {
+                if (++operations > operationBudget) return null;
+                const load = round(current + step * count);
+                if (Number.isFinite(load) && load <= ceiling + 1e-6) totals.add(load);
+            }
         }
     }
     // Combining denominations requires repeated expansion after each denomination; the loop above does that.
@@ -84,7 +109,7 @@ function nextFromExact(values, current) {
     return clean(values).find(v => v > current + 1e-6) ?? null;
 }
 function nextFromIncrement(profile, current) {
-    if (profile.availableLoads?.length)
+    if (Array.isArray(profile.availableLoads))
         return nextFromExact(profile.availableLoads, current);
     const minimum = profile.minimum ?? 0;
     const increment = profile.increment;
@@ -96,12 +121,12 @@ function nextFromIncrement(profile, current) {
         next = round(next + increment);
     if (profile.maximum !== undefined && next > profile.maximum + 1e-6)
         return null;
-    return next;
+    return Number.isFinite(next) && next > current + 1e-6 ? next : null;
 }
 function overrideNext(override, current) {
-    if (override.availableLoads?.length)
+    if (Array.isArray(override.availableLoads))
         return nextFromExact(override.availableLoads, current);
-    if (override.increment && override.increment > 0)
+    if (override.increment !== undefined)
         return nextFromIncrement({ minimum: override.minimum ?? 0, increment: override.increment, maximum: override.maximum }, current);
     return undefined;
 }
@@ -128,7 +153,7 @@ export function availableLoadAtOrBelow(exerciseId, desiredLoad, inventoryInput, 
     const mode = override?.mode ?? modeFromSetup(exerciseId, equipment);
     let values = [];
     const incrementValues = (profile) => {
-        if (profile.availableLoads?.length)
+        if (Array.isArray(profile.availableLoads))
             return clean(profile.availableLoads);
         if (!Number.isFinite(profile.increment) || !(profile.increment > 0) || !Number.isFinite(profile.minimum))
             return [];
@@ -140,14 +165,14 @@ export function availableLoadAtOrBelow(exerciseId, desiredLoad, inventoryInput, 
         const steps = Math.floor((max - profile.minimum + 1e-6) / profile.increment);
         return [round(profile.minimum + steps * profile.increment)];
     };
-    if (override?.availableLoads?.length)
+    if (Array.isArray(override?.availableLoads))
         values = clean(override.availableLoads);
-    else if (override?.increment && override.increment > 0)
+    else if (override?.increment !== undefined)
         values = incrementValues({ minimum: override.minimum ?? 0, increment: override.increment, maximum: override.maximum });
     else
         switch (mode) {
             case 'barbell_total':
-                values = achievableBarbellLoads(inventory.barbell.barWeight, inventory.barbell.platePairs);
+                values = achievableBarbellLoads(inventory.barbell.barWeight, inventory.barbell.platePairs, desiredLoad) ?? [];
                 break;
             case 'dumbbell_per_hand':
                 values = clean(inventory.dumbbells.availablePerHand);
@@ -181,7 +206,13 @@ export function nextAvailableLoad(exerciseId, currentLoad, inventoryInput, equip
         return overridden;
     const mode = override?.mode ?? modeFromSetup(exerciseId, equipment);
     switch (mode) {
-        case 'barbell_total': return nextFromExact(achievableBarbellLoads(inventory.barbell.barWeight, inventory.barbell.platePairs), currentLoad);
+        case 'barbell_total': {
+            // Any first reachable total above current is at most one largest plate-pair step away:
+            // take an ascending path to a heavier setup and examine its first crossing.
+            const largestStep = inventory.barbell.platePairs.reduce((max, p) => Math.max(max, p.weight * 2), 0);
+            const ceiling = Math.max(inventory.barbell.barWeight, currentLoad + largestStep);
+            return nextFromExact(achievableBarbellLoads(inventory.barbell.barWeight, inventory.barbell.platePairs, ceiling), currentLoad);
+        }
         case 'dumbbell_per_hand': return nextFromExact(inventory.dumbbells.availablePerHand, currentLoad);
         case 'machine_stack': return nextFromIncrement(inventory.machine, currentLoad);
         case 'cable_stack': return nextFromIncrement(inventory.cable, currentLoad);

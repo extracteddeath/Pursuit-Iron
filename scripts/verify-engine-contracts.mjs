@@ -9,7 +9,7 @@ const groups = {
         'm206-working-week-dose'
     ],
     adaptation: [
-        'm181-dose-reconciliation', 'm182-exercise-selection-intelligence', 'm182-selection-matrix',
+        'm221-engine-input-stability', 'm181-dose-reconciliation', 'm182-exercise-selection-intelligence', 'm182-selection-matrix',
         'm183-progression-safeguards', 'm184-longitudinal-evidence', 'm185-phase-specialization',
         'm186-explainable-block-review', 'm189-adaptive-progression-selection', 'm189-integration-wiring',
         'm190-progression-lifecycle', 'm191-progression-explainability-ui', 'm192-progression-transition-deltas',

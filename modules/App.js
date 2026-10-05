@@ -1,4 +1,4 @@
-const __APP_VERSION__='4.0.0'; const __BUILD__='810';
+const __APP_VERSION__='4.0.0'; const __BUILD__='811';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { holdWorkoutScreenAwake } from "./mobile-lifecycle.js";
@@ -23456,6 +23456,7 @@ function StrengthSnapshotCard({ history, bodyweight, sex, age, unit, bwLog = [],
  * Newest release first, newest entry first within a release. */
 const WHATS_NEW_MAX = 10;
 const CHANGELOG = [
+    {"version": "4.0.0", "build": "811", "items": ["Load suggestions handle incomplete or malformed equipment lists without crashing or inventing unavailable weights.", "Large imported plate inventories no longer require enumerating the entire stock before selecting a load.", "Invalid strength-history values cannot spoil valid strength estimates.", "Blank or incomplete rep targets use safe defaults instead of producing zero-rep working sets.", "Your themes, programs, completed sets and manual workout entries remain intact."]},
     {"version": "4.0.0", "build": "810", "items": ["Repeated exercises in custom programs now progress from the last session of the same training day.", "The suggestion and Last column use the same session, so a newer Legs workout cannot replace Lower's working load.", "A shorter workout on another day cannot qualify a longer day's load increase. Each day builds toward its own full set target.", "Resuming refreshes untouched automatic custom-plan loads while preserving completed sets and manually entered values.", "The reviewed theme contrast, phone layout, Plan estimates, reduced-motion sheets and workout audio improvements remain available."]},
     {"version":"4.0.0","build":"809","items":["Highlighted labels and training details are clearer across light and dark themes, with larger tap areas for common controls.","Finished sets and phase labels stay readable. Plan keeps its week navigation, and session estimates update when rest length or custom exercises change.","Sheets close smoothly and respect reduced-motion settings. Buttons release without an abrupt snap.","Workout chimes reuse one audio context while training and release it when you leave the workout.","The recent release-note repair, compact theme picker, manual entries and scheduled final-set techniques remain available."]},
     { version: "4.0.0", build: "808", items: ["Workout controls are quieter and prescribed rep ranges stay together. Small steppers, manual entries, and final-set techniques remain available.", "Plan puts Up Next near the top and shows one completion summary. Phase names, icons, week lengths, and all four plan views remain available.", "Choosing a later week brings its days into view beneath the week picker. The picker stays reachable as you scroll.", "Settings shows your saved theme in one row. Expand it to choose from every light and dark theme.", "What's new loads correctly on Home and from Settings. Dismissed notes stay dismissed, and the full changelog remains available."] },
@@ -26143,7 +26144,7 @@ function LibraryView({ onBack, banned = [], onBan, onSetBan, goals = {}, onSetGo
                                         setDetailId(null); }, className: "pressable", "aria-label": "Ban from all programs", "aria-pressed": banned.includes(detail.id), style: { width: "100%", padding: "13px", borderRadius: 12, border: `1px solid ${banned.includes(detail.id) ? C.border : C.dangerDim}`, background: "none", color: banned.includes(detail.id) ? C.muted : C.danger, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 8 }, children: [_jsx(Ban, { size: 15 }), " ", banned.includes(detail.id) ? "Banned \u2014 tap to unban" : "Ban from all programs"] })] })] })) })] }));
 }
 const INTRO_VERSION = 5; // bump when onboarding content changes → returning users see it once more
-const WHATS_NEW_VERSION = 220; // bump when there's an update worth showing existing users on Home
+const WHATS_NEW_VERSION = 221; // bump when there's an update worth showing existing users on Home
 /* How much training history to keep.
 
    Measured, not guessed: a typical logged session (7 exercises, 3–5 sets each) serialises to ~1,095

@@ -57,6 +57,7 @@ const jsFiles=[];
 const walk = p => { for (const ent of fs.readdirSync(p,{withFileTypes:true})) { const full=path.join(p,ent.name); if(ent.isDirectory()) walk(full); else if(ent.name.endsWith('.js')) jsFiles.push(full); } };
 walk(path.join(root,'modules'));
 for (const f of jsFiles) execFileSync(process.execPath,['--check',f],{stdio:'ignore'});
+execFileSync(process.execPath,['verification/m221-engine-input-stability-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['verification/progression-safety-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['verification/shell-progression-safety-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/prescription-integrity-test.mjs'],{stdio:'inherit',cwd:root});

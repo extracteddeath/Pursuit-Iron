@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { EXERCISES, EX_BY_ID, TEMPLATES, templateConfig, sessionSuggestion, prescribeSets,
-    computeCell, percentagePlanFor, trainingMaxForUnit, withTrainingMax, nextSessionCursor,
+    computeCell, percentagePlanFor, trainingMaxForUnit, withTrainingMax, nextSessionCursor, nextDueDayId,
     exerciseSeries, exerciseTrends, exRecords, strengthSnapshot, strengthScoreHistory, daySeconds, loggedWorkoutPerformance } from '../modules/App.js';
 import { generateNextProgramForShell, snapshotNextShellPrescription, markUserPrescriptionOverride } from '../modules/next-engine/app-shell-adapter.js';
 import { analyzeShellHistoryForNextEngine, deriveProgressionSelectionEvidence,
@@ -77,11 +77,59 @@ assert.equal(suggest(p, [corrupt, ...good]).weight, suggest(p, good).weight);
 assert.equal(normalizeHistoryEntries([corrupt, ...good], p.id).excluded[0].reason, 'invalid_date');
 const revised = { ...good[0], updatedAt: good[0].date + 1, perf: {} };
 assert.equal(normalizeHistoryEntries([good[0], revised], p.id).entries[0], revised);
+
+// Repeated movements are owned by their program/day occurrence. Another day may seed an initial
+// reference, but it cannot become comparable progression evidence even when labels collide.
+const repeatedDayProgram = structuredClone(p);
+const repeatedSourceDay = repeatedDayProgram.days[0], repeatedTargetDay = repeatedDayProgram.days[1];
+repeatedTargetDay.label = repeatedSourceDay.label;
+repeatedTargetDay.exercises = [...repeatedSourceDay.exercises];
+repeatedTargetDay.primaryIndex = repeatedSourceDay.primaryIndex;
+repeatedTargetDay.t2Index = repeatedSourceDay.t2Index;
+repeatedDayProgram.nextEngine.program.sessions[1] = structuredClone(repeatedDayProgram.nextEngine.program.sessions[0]);
+for (let i = 0; i < repeatedSourceDay.exercises.length; i++)
+    repeatedDayProgram.nextWeekPrescriptions[`${repeatedTargetDay.id}:${i}`] = structuredClone(repeatedDayProgram.nextWeekPrescriptions[`${repeatedSourceDay.id}:${i}`]);
+const otherDayOnly = history(rows(100, 15)).map(h => ({ ...h, dayId: repeatedSourceDay.id, dayLabel: repeatedSourceDay.label }));
+const repeatedDaySuggestion = sessionSuggestion(repeatedDayProgram, repeatedTargetDay, slot, null, 'lb', 1, otherDayOnly);
+assert.equal(repeatedDaySuggestion?.referenceOnly, true);
+assert.equal(repeatedDaySuggestion?.action, 'initial');
+assert.match(repeatedDaySuggestion?.reason || '', /starting reference/i);
+const ambiguousReplay = { ...otherDayOnly[0], id: 'ambiguous-replay', dayId: 'retired-day-id',
+    dayLabel: repeatedSourceDay.label };
+const ambiguousAnalysis = analyzeShellHistoryForNextEngine(repeatedDayProgram, [ambiguousReplay], EXERCISES);
+assert.equal(ambiguousAnalysis.workoutCount, 0, 'duplicate-label stale history must not be replayed against an arbitrary day');
+assert.ok(ambiguousAnalysis.excludedHistoryEntries.some(row => row.id === 'ambiguous-replay' && row.reason === 'unresolved_session'));
 for (const count of [23, 28, 100]) {
     const cursor = nextSessionCursor(p, Array.from({ length: count }, (_, i) => ({ ...good[0], id: `duplicate-day-${i}` })));
     assert.equal(cursor.weekIndex, 1);
     assert.notEqual(cursor.dayIndex, 0);
 }
+const cursorOlder = { ...good[0], id: 'cursor-older', dayId: p.days[0].id, date: 1000 };
+const cursorNewer = { ...good[0], id: 'cursor-newer', dayId: p.days[1].id, date: 2000 };
+const orderedCursor = nextSessionCursor(p, [cursorNewer, cursorOlder]);
+const reversedCursor = nextSessionCursor(p, [cursorOlder, cursorNewer]);
+assert.deepEqual(reversedCursor, orderedCursor, 'next-session cursor is independent of imported history array order');
+assert.equal(nextDueDayId(p, [cursorOlder, cursorNewer]), nextDueDayId(p, [cursorNewer, cursorOlder]),
+    'program-view next day is independent of imported history array order');
+const invalidFutureCursor = { ...cursorOlder, id: 'cursor-invalid-future', dayId: p.days.at(-1).id, date: 1e100 };
+assert.deepEqual(nextSessionCursor(p, [invalidFutureCursor, cursorNewer, cursorOlder]), orderedCursor,
+    'invalid imported timestamps cannot hijack the next-session cursor');
+assert.equal(nextDueDayId(p, [invalidFutureCursor, cursorNewer, cursorOlder]), nextDueDayId(p, [cursorNewer, cursorOlder]),
+    'invalid imported timestamps cannot hijack the program-view next day');
+const supersededCursor = { ...cursorNewer, dayId: p.days[0].id, updatedAt: 1500 };
+const correctedCursor = { ...cursorNewer, dayId: p.days[1].id, updatedAt: 2500 };
+assert.deepEqual(nextSessionCursor(p, [supersededCursor, correctedCursor, cursorOlder]), orderedCursor,
+    'duplicate history identities use the newest revision once rather than advancing twice');
+const unresolvedCursor = { ...cursorNewer, id: 'cursor-unresolved', dayId: 'retired-unresolved-day',
+    dayLabel: 'No matching authored day', date: 3000, perf: {} };
+assert.deepEqual(nextSessionCursor(p, [unresolvedCursor, cursorNewer, cursorOlder]), orderedCursor,
+    'valid-timestamp history that cannot resolve to an authored day cannot advance finite program progress');
+assert.equal(nextDueDayId(p, [unresolvedCursor, cursorNewer, cursorOlder]), nextDueDayId(p, [cursorNewer, cursorOlder]),
+    'unresolved history cannot hijack Program View next-day selection');
+const endlessCursorProgram = { ...p, config: { ...p.config, endless: true } };
+assert.deepEqual(nextSessionCursor(endlessCursorProgram, [unresolvedCursor, cursorNewer, cursorOlder]),
+    nextSessionCursor(endlessCursorProgram, [cursorNewer, cursorOlder]),
+    'unresolved history cannot advance endless accumulation or deload cadence');
 
 // A saved custom target survives subsequent dose edits. Imported target effort has identical semantics.
 const custom = { id: 'custom', custom: true, weeks: 6, config, days: [{ id: 'custom-day', label: 'Push', primaryIndex: -1, exercises: [id] }],

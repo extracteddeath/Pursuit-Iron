@@ -761,6 +761,12 @@ function customExerciseHistoryRefs(program, day, id, history) {
     const entries = (history || []).filter(h => validHistoryDate(h) && h?.perf?.[id]).slice().sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0));
     return { comparable: null, reference: entries[0] || null };
 }
+function customExerciseHistory(program, day, id, history) {
+    return customExerciseHistoryRefs(program, day, id, history).comparable;
+}
+function customExerciseReferenceHistory(program, id, history) {
+    return customExerciseHistoryRefs(program, null, id, history).reference;
+}
 
 function representativeCustomLoad(perf) {
     const direct = historyNumber(perf?.weight);

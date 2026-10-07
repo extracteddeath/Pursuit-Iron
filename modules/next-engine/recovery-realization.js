@@ -1,23 +1,12 @@
 import { createExerciseMap } from './exercise-db.js';
 import { publicRegionContribution } from './public-mev.js';
 import { finalizePlannedSession } from './realizer.js';
+import { equipmentEligible, maxBarbells, primaryMuscle } from './realizer-ranking.js';
 import { INTENT_MUSCLES } from './topology.js';
 import { assessWeeklyRecovery, optimizeWeeklyRecovery, weeklyRecoveryCollisions } from './weekly-recovery.js';
 const STRENGTH_ROLES = new Set(['primary_strength', 'secondary_strength', 'strength_support']);
 const UPPER_ACCESSORY_MUSCLES = new Set(['side_delts', 'rear_delts', 'biceps', 'triceps', 'forearms', 'traps', 'neck']);
 const LOWER_ACCESSORY_MUSCLES = new Set(['calves', 'core', 'adductors', 'abductors']);
-function primaryMuscle(def) {
-    return Object.entries(def.muscles).find(([, c]) => c.role === 'primary')?.[0];
-}
-function equipmentEligible(def, session, request) {
-    const day = request.schedule.days.find(d => d.day === session.day);
-    if (!day)
-        return false;
-    const available = day.equipmentOverride ?? request.equipment.available;
-    if ((def.flags.bodyweight || def.equipment.includes('bodyweight')) && request.equipment.bodyweight === 'exclude')
-        return false;
-    return [def.equipment, ...(def.equipmentAlternatives ?? [])].some(setup => setup.every(req => req === 'bodyweight' ? request.equipment.bodyweight !== 'exclude' : available.includes(req)));
-}
 function sessionAccepts(def, session) {
     const primary = primaryMuscle(def);
     if (!primary)
@@ -93,10 +82,6 @@ function mergeOrAdd(target, exercise, movedSets, def, defs) {
     if (movedSets !== exercise.sets)
         delete next.advancedTechnique;
     return [...cloned, next];
-}
-function maxBarbells(session, request) {
-    const day = request.schedule.days.find(d => d.day === session.day);
-    return day?.maxBarbellMovements ?? request.restrictions.maxBarbellMovementsPerDay;
 }
 function validTargetShape(target, proposal, defs, request) {
     if (target.targetExercises !== undefined && proposal.length > target.targetExercises + 3)
@@ -193,7 +178,7 @@ export function proposeRecoveryRedistributions(sessions, request) {
                     if (targetIndex === sourceIndex)
                         continue;
                     const target = sessions[targetIndex];
-                    if (!sessionAccepts(def, target) || !equipmentEligible(def, target, request))
+                    if (!sessionAccepts(def, target) || !request.schedule.days.some(day => day.day === target.day) || !equipmentEligible(def, target, request))
                         continue;
                     const targetExercises = mergeOrAdd(target, exercise, movedSets, def, defs);
                     if (!targetExercises)

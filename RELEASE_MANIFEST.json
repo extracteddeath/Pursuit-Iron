@@ -85,7 +85,7 @@
     "modules/training-domain.js": "030aac1553e3eea48805c75a7295a82293f5aee77d9a4ae230ffca48f51e3c6e",
     "modules/training-domain/analytics.js": "02bb31eb0044d7f57bdaa8836ec64175ebb456be95e620faa0fc715cb4bb5146",
     "modules/training-domain/catalog.js": "b9e6071c78ffdf790da90337843b2fe6466f05a26c04624a4951518e784941e4",
-    "modules/training-domain/prescriptions.js": "a4608f9de196b81d8e34c318277691c51bbcd470014a563930cc0cbafece5d8f",
+    "modules/training-domain/prescriptions.js": "319f32d1bfa2d3fdbfb9f29432f341e70456979cf3adffcc35fe5c649bd88a3b",
     "modules/training-domain/programs.js": "725a8a6adc8aa9148962035df5144cbf252415d8d76592f303c333fe679bf81c",
     "modules/training-domain/records.js": "47d1bc55779162cce41dd5cb0273d3836ed04b25e0b3399b36b8ae166af9efdf",
     "modules/wizard-stability.js": "a62b2bed8a1f5ab880bfeab036a83ec630c93048b8a352652fe00ae75374a3d1",

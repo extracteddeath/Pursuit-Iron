@@ -26,8 +26,10 @@ assert.doesNotMatch(shellHistoryAdapterSource, /latestComparableShellEntry|lates
 const prescriptionHistorySource = fs.readFileSync(new URL('../modules/training-domain/prescriptions.js', import.meta.url), 'utf8');
 assert.match(prescriptionHistorySource, /function customExerciseHistoryRefs\(/,
     'custom comparable/reference history must share one canonical same-program revision pass');
-assert.doesNotMatch(prescriptionHistorySource, /function customExerciseHistory\(|function customExerciseReferenceHistory\(/,
-    'separate custom comparable/reference lookup paths must not return');
+assert.match(prescriptionHistorySource, /function customExerciseHistory\(program, day, id, history\) \{\s*return customExerciseHistoryRefs\(program, day, id, history\)\.comparable;\s*\}/,
+    'custom comparable compatibility export must delegate to the canonical lookup');
+assert.match(prescriptionHistorySource, /function customExerciseReferenceHistory\(program, id, history\) \{\s*return customExerciseHistoryRefs\(program, null, id, history\)\.reference;\s*\}/,
+    'custom reference compatibility export must delegate to the canonical lookup');
 const duplicateDays = [
     { id: 'a', label: 'Repeat', exercises: ['lift'] },
     { id: 'b', label: 'Repeat', exercises: ['lift'] }

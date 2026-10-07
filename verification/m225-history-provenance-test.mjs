@@ -7,7 +7,7 @@ import { EXERCISES, EX_BY_ID, prescribeSets, sessionSuggestion, loggedWorkoutPer
 import { generateNextProgramForShell } from '../modules/next-engine/app-shell-adapter.js';
 import { analyzeShellHistoryForNextEngine, nextWorkoutSuggestionForShell } from '../modules/next-engine/workout-history-adapter.js';
 import { progressionHistoryForProgram, customExerciseHistory, customExerciseReferenceHistory, muscleRecoveryUncached } from '../modules/training-domain/prescriptions.js';
-import { buildLifterModel, deloadAdvice, exRecords, exerciseSeries, exerciseTrends } from '../modules/training-domain/analytics.js';
+import { buildLifterModel, computeLevel, computeMilestones, deloadAdvice, exRecords, exerciseSeries, exerciseTrends } from '../modules/training-domain/analytics.js';
 
 for (const value of [true, false, [], [15], {}, { valueOf: () => 15 }, Symbol('load')])
     assert.equal(historyNumber(value), null);
@@ -102,6 +102,15 @@ for (const revisions of [[staleRevision, editedRevision], [editedRevision, stale
         'exercise series must render one point per canonical persisted workout revision');
     assert.equal(series.points[0]?.top, 80,
         'exercise series must reflect the newest edited workout revision, not stale values');
+}
+
+const canonicalMilestones = computeMilestones([editedRevision], { unit: 'lb' });
+for (const revisions of [[staleRevision, editedRevision], [editedRevision, staleRevision]]) {
+    const milestones = computeMilestones(revisions, { unit: 'lb' });
+    assert.deepEqual(milestones, canonicalMilestones,
+        'milestones must not count a superseded revision as another workout, PR opportunity, set, rep or volume exposure');
+    assert.deepEqual(computeLevel(revisions, milestones), computeLevel([editedRevision], canonicalMilestones),
+        'level XP must count one canonical persisted workout rather than every stale revision');
 }
 
 const recoveryExercise = EXERCISES.find(ex => ex?.id && ['chest','lats','upper_back','shoulders','biceps','triceps','quads','hamstrings','glutes','lower_back','adductors','abductors','calves','abs','traps','forearms','neck'].includes(ex.part));

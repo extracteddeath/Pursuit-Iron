@@ -1,9 +1,26 @@
 // M230 canonical ranking stage. Stage context is local to one realization.
 import { armCoverageBias } from './arm-coverage.js';
+import { cachedCandidatePool, selectBestCandidate } from './candidate-optimization.js';
 import { avoidableExerciseOverlap } from './exercise-economy.js';
 import { exerciseSetupInefficiencyPenalty } from './exercise-selection-intelligence.js';
 import { functionalCoverageBiases } from './functional-coverage.js';
 import { INTENT_MUSCLES } from './topology.js';
+
+function staticCandidateKey(session, request) {
+    const day = request.schedule.days.find(d => d.day === session.day);
+    return JSON.stringify([
+        session.day,
+        request.equipment.bodyweight,
+        day?.equipmentOverride ?? request.equipment.available,
+        request.preferences.avoidedExercises ?? []
+    ]);
+}
+
+function staticCandidatePool(catalog, session, request) {
+    return cachedCandidatePool(catalog, staticCandidateKey(session, request), ex =>
+        equipmentEligible(ex, session, request)
+        && !request.preferences.avoidedExercises?.includes(ex.id));
+}
 
 export /* M230:PRESERVE:top.MUSCLE_MOVEMENTS:BEGIN */
 const MUSCLE_MOVEMENTS = {
@@ -50,11 +67,7 @@ function maxBarbells(session, request) {
 export /* M230:PRESERVE:top.strengthCandidate:BEGIN */
 function strengthCandidate(a, session, request, chosen, catalog) {
     const barbells = chosen.filter(e => e.flags.barbell).length;
-    const candidates = catalog.filter(e => equipmentEligible(e, session, request))
-        .filter(e => !request.preferences.avoidedExercises?.includes(e.id))
-        .filter(e => (e.liftSpecificity?.[a.lift] ?? 0) > .45)
-        .filter(e => !e.flags.barbell || barbells < maxBarbells(session, request));
-    return candidates.sort((x, y) => {
+    const compare = (x, y) => {
         const xs = x.liftSpecificity?.[a.lift] ?? 0, ys = y.liftSpecificity?.[a.lift] ?? 0;
         if (a.role === 'secondary_strength') {
             // Volume/secondary exposures should retain transfer without blindly repeating the highest-fatigue
@@ -71,7 +84,13 @@ function strengthCandidate(a, session, request, chosen, catalog) {
             return specificity;
         const confidence = (x.source === 'legacy_v661' ? 1 : 0) - (y.source === 'legacy_v661' ? 1 : 0);
         return confidence || y.loadability - x.loadability || x.id.localeCompare(y.id);
-    })[0];
+    };
+    return selectBestCandidate(staticCandidatePool(catalog, session, request), {
+        accept: e => (e.liftSpecificity?.[a.lift] ?? 0) > .45
+            && (!e.flags.barbell || barbells < maxBarbells(session, request)),
+        compare,
+        preCompare: compare
+    }).candidate;
 }
 /* M230:PRESERVE:top.strengthCandidate:END */
 
@@ -170,20 +189,28 @@ function muscleCandidate(a, session, request, chosen, weeklyMovementUse, catalog
     const specialization = priority === 'high' || priority === 'specialization' || priority === 'primary';
     const defaultFamilyCap = a.role === 'hypertrophy_isolation' ? (dedicatedArmFamily || specialization ? 2 : 1) : 2;
     const familyCap = maxSameMovementFamily ?? defaultFamilyCap;
-    return catalog.filter(e => equipmentEligible(e, session, request))
-        .filter(e => !request.preferences.avoidedExercises?.includes(e.id))
+    const accepted = e =>
         // movementFamily is intentionally broad. Add a semantic economy guard for reviewed near-equivalent
         // compounds so `squat` vs `leg_press` labels cannot sneak Hack Squat + Leg Press into two ordinary
         // hypertrophy slots. True strength anchors remain exempt (e.g. Back Squat -> Leg Press).
-        .filter(e => !avoidableExerciseOverlap(e, a.role, chosen.map(def => ({ def })), { priority }))
-        .filter(e => movementAllowed.includes(e.movementFamily) || (minCredit > 0 && minCredit < 1 && (e.muscles[muscle]?.credit ?? 0) >= minCredit))
-        .filter(e => (e.muscles[muscle]?.credit ?? 0) >= minCredit)
-        .filter(e => e.movementFamily !== 'horizontal_press' || horizontalPresses < 2)
-        .filter(e => sameFamilyCount(e.movementFamily) < familyCap)
-        .filter(e => !chosen.some(c => c.id === e.id))
-        .filter(e => !e.flags.barbell || barbells < maxBarbells(session, request))
-        .map(e => ({ e, score: muscleScore(e, muscle, a.role, session, chosen, weeklyMovementUse, request) }))
-        .sort((x, y) => y.score - x.score)[0]?.e;
+        !avoidableExerciseOverlap(e, a.role, chosen.map(def => ({ def })), { priority })
+        && (movementAllowed.includes(e.movementFamily) || (minCredit > 0 && minCredit < 1 && (e.muscles[muscle]?.credit ?? 0) >= minCredit))
+        && (e.muscles[muscle]?.credit ?? 0) >= minCredit
+        && (e.movementFamily !== 'horizontal_press' || horizontalPresses < 2)
+        && sameFamilyCount(e.movementFamily) < familyCap
+        && !chosen.some(c => c.id === e.id)
+        && (!e.flags.barbell || barbells < maxBarbells(session, request));
+    const cheapRank = (x, y) => {
+        const cheapScore = e => (e.muscles[muscle]?.credit ?? 0) * 4
+            + e.suitability.hypertrophy * .35 + e.stability * .15
+            - (e.fatigue.systemic + e.fatigue.axial * .7 + e.fatigue.lowerBack * .8) * .1;
+        return cheapScore(y) - cheapScore(x) || x.id.localeCompare(y.id);
+    };
+    return selectBestCandidate(staticCandidatePool(catalog, session, request), {
+        accept: accepted,
+        score: e => muscleScore(e, muscle, a.role, session, chosen, weeklyMovementUse, request),
+        preCompare: cheapRank
+    }).candidate;
 }
 /* M230:PRESERVE:top.muscleCandidate:END */
 

@@ -331,12 +331,13 @@ function nextScheduledIndex(days, schedule, lastDoneId) {
 function nextDueDayId(program, history) {
     if (!program || !Array.isArray(program.days) || !program.days.length)
         return undefined;
-    const entries = normalizeHistoryEntries(history, program.id).entries.slice()
+    const entries = normalizeHistoryEntries(history, program.id).entries
+        .filter(entry => historyDayIndex(program.days, entry) >= 0)
         .sort((a, b) => (Number(b?.date) || 0) - (Number(a?.date) || 0));
-    // Same resolution as nextSessionCursor — this decides which day the PROGRAM VIEW opens to, so a
-    // stale id here lands the lifter on the wrong day even when the cursor itself is right.
+    // Only a session that can be attached to one authored day is allowed to advance Program View.
+    // Valid timestamps and program ownership are necessary provenance, but not sufficient day identity.
     const lastIdx = entries.length ? historyDayIndex(program.days, entries[0]) : -1;
-    const lastDoneId = lastIdx >= 0 ? program.days[lastIdx].id : (entries.length ? entries[0].dayId : null);
+    const lastDoneId = lastIdx >= 0 ? program.days[lastIdx].id : null;
     const si = nextScheduledIndex(program.days, program.schedule, lastDoneId);
     if (si >= 0)
         return program.days[si].id;
@@ -374,8 +375,11 @@ function historyDayIndex(days, h) {
 function nextSessionCursor(program, history) {
     const days = program.days || [];
     const dpw = days.length || 1;
-    const entries = normalizeHistoryEntries(history, program.id).entries.slice()
+    const entries = normalizeHistoryEntries(history, program.id).entries
+        .filter(entry => historyDayIndex(days, entry) >= 0)
         .sort((a, b) => (Number(b?.date) || 0) - (Number(a?.date) || 0));
+    // A valid but unresolved imported row is history, not evidence that a scheduled day was completed.
+    // Excluding it here keeps finite week progress, endless accumulation and next-day rotation aligned.
     const done = entries.length;
     const lastDoneId = entries.length ? entries[0].dayId : null;
     // Resolved, not matched raw: a pre-v578 entry carries a random dayId that no longer exists, and

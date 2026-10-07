@@ -20,7 +20,7 @@ M235 proved the engine candidate. M236 audits the machinery around that proof so
 
 ## CI efficiency and determinism
 
-All four workflows use branch/head-ref concurrency with `cancel-in-progress: true`. A newer commit cancels stale work on that branch, and a pull-request run replaces the redundant push run for the same branch.
+All four workflows run automatically on pushes to `main` and on pull requests targeting `main`; feature-branch pushes do not start duplicate suites. `workflow_dispatch` remains available for intentional pre-PR verification. Branch/head-ref concurrency with `cancel-in-progress: true` cancels stale PR or main work when a newer commit supersedes it.
 
 The browser suite now uses four shards instead of twelve separate harness-install jobs while preserving all twelve browser contracts. This reduces repeated Puppeteer installation and runner overhead without reducing behavioral coverage.
 

@@ -209,18 +209,15 @@ function classify(recovery, positive, negative, diagnoses, workouts) {
         return 'productive';
     return 'mixed';
 }
-function latestComparableShellEntry(history, program, legacyId, day) {
+function latestShellEntries(history, program, legacyId, day) {
     const targetIndex = (program?.days ?? []).findIndex(candidate => candidate?.id === day?.id);
-    if (targetIndex < 0) return null;
     const entries = normalizeHistoryEntries(history, program?.id).entries
         .filter(h => completedHistorySets(h?.perf?.[legacyId]).length)
         .sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0));
-    return entries.find(entry => resolveHistoryDayIndex(program.days, entry) === targetIndex) ?? null;
-}
-function latestShellReferenceEntry(history, programId, legacyId) {
-    return normalizeHistoryEntries(history, programId).entries
-        .filter(h => completedHistorySets(h?.perf?.[legacyId]).length)
-        .sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0))[0] ?? null;
+    return {
+        comparable: targetIndex < 0 ? null : entries.find(entry => resolveHistoryDayIndex(program.days, entry) === targetIndex) ?? null,
+        reference: entries[0] ?? null
+    };
 }
 function representativeShellLoad(perf) {
     if (!perf)
@@ -277,8 +274,9 @@ export function nextWorkoutSuggestionForShell(program, history, legacyExercises,
         return null;
     const cell = getNextShellCell(program, day, slot, weekIndex);
     const reps = String(cell?.reps ?? cell?.range ?? '');
-    const lastEntry = latestComparableShellEntry(history, program, legacyId, day);
-    const referenceEntry = lastEntry ?? latestShellReferenceEntry(history, String(program.id), legacyId);
+    const latest = latestShellEntries(history, program, legacyId, day);
+    const lastEntry = latest.comparable;
+    const referenceEntry = lastEntry ?? latest.reference;
     const rawLast = lastEntry?.perf?.[legacyId] ?? null;
     const last = rawLast;
     const lastLoad = convertLoad(representativeShellLoad(last), lastEntry?.unit, program.config?.unit);

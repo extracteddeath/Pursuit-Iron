@@ -5,6 +5,7 @@ import { evaluateWorkoutProgression } from '../modules/next-engine/performance.j
 import { EXERCISES, EX_BY_ID, prescribeSets, sessionSuggestion, loggedWorkoutPerformance } from '../modules/App.js';
 import { generateNextProgramForShell } from '../modules/next-engine/app-shell-adapter.js';
 import { analyzeShellHistoryForNextEngine } from '../modules/next-engine/workout-history-adapter.js';
+import { progressionHistoryForProgram, customExerciseHistory, customExerciseReferenceHistory } from '../modules/training-domain/prescriptions.js';
 
 for (const value of [true, false, [], [15], {}, { valueOf: () => 15 }, Symbol('load')])
     assert.equal(historyNumber(value), null);
@@ -33,6 +34,22 @@ assert.equal(resolveHistoryDayIndex(distinguishableDays, { perf: { press: {} } }
     'pre-label legacy history may reattach only when its complete logged roster identifies exactly one day');
 assert.equal(resolveHistoryDayIndex(duplicateDays, { perf: { lift: {} } }), -1,
     'pre-label history with a movement repeated across days remains unresolved');
+
+const revisionDay = { id: 'revision-day', label: 'Revision', exercises: ['lift'] };
+const revisionProgram = { id: 'revision-program', days: [revisionDay] };
+const staleRevision = { id: 'revision-workout', programId: revisionProgram.id, dayId: revisionDay.id,
+    date: 1000, updatedAt: 1100, unit: 'lb', perf: { lift: { weight: 100, reps: 10, sets: [{ w: 100, r: 10 }] } } };
+const editedRevision = { ...staleRevision, updatedAt: 1200,
+    perf: { lift: { weight: 80, reps: 8, sets: [{ w: 80, r: 8 }] } } };
+for (const revisions of [[staleRevision, editedRevision], [editedRevision, staleRevision]]) {
+    const scoped = progressionHistoryForProgram(revisionProgram, revisions);
+    assert.equal(scoped.length, 1, 'adaptive progression must count one persisted workout identity once');
+    assert.equal(scoped[0].perf.lift.weight, 80, 'adaptive progression must use the newest workout revision');
+    assert.equal(customExerciseHistory({ ...revisionProgram, custom: true }, revisionDay, 'lift', revisions)?.perf?.lift?.weight, 80,
+        'custom comparable history must use the newest same-program revision');
+    assert.equal(customExerciseReferenceHistory({ ...revisionProgram, custom: true }, 'lift', revisions)?.perf?.lift?.weight, 80,
+        'custom starting reference must prefer the newest canonical same-program revision');
+}
 
 const exercise = { exerciseId: 'lift', name: 'Lift', sets: 2, progressionStyle: 'double',
     prescription: { reps: [10, 15], rir: [2, 2] } };
@@ -93,5 +110,5 @@ for (const program of [generated, custom]) for (const [flag, outcome] of flags) 
     if (program.nextEngine) assert.equal(analyzeShellHistoryForNextEngine(program, history, EXERCISES).workouts[0].progression[0].outcome, outcome);
     checks++;
 }
-console.log(`PASS M225: malformed numeric/revision evidence, ${checks} context/provenance routes, additive flags, actual generated/custom log roundtrips and immutable tiered replay.`);
+console.log(`PASS M225: malformed numeric/revision evidence, canonical adaptive revision ownership, ${checks} context/provenance routes, additive flags, actual generated/custom log roundtrips and immutable tiered replay.`);
 

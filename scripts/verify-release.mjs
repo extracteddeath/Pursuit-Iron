@@ -18,6 +18,8 @@ const shell = [...shellMatch[1].matchAll(/"(\.\/[^\"]+)"/g)].map(m=>m[1]);
 const missing = shell.filter(p => p !== './' && !fs.existsSync(path.join(root,p.slice(2))));
 if (missing.length) fail(`missing precache files: ${missing.join(', ')}`);
 execFileSync(process.execPath,['verification/m223-icon-update-test.mjs'],{stdio:'inherit',cwd:root});
+for (const name of ['m224-engine-hardening', 'm225-history-provenance'])
+  execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs',`verification/${name}-test.mjs`],{stdio:'inherit',cwd:root});
 if (!sw.includes(`const CACHE="${profile.cache}"`)) fail('BUILD_PROFILE cache does not match sw.js');
 if (profile.milestone !== manifest.milestone) fail('BUILD_PROFILE milestone does not match manifest');
 if (profile.uiMilestone !== manifest.uiMilestone) fail('BUILD_PROFILE UI milestone does not match manifest');

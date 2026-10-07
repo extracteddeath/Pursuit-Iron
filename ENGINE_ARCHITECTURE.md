@@ -2,11 +2,11 @@
 
 Current source candidate: M224, app 4.0.0 build 814, Pursuit Engine 0.64.13. The maintained source is the JavaScript in this repository. `RELEASE_MANIFEST.json` certifies the actual runtime and UI files. Historical TypeScript claims and development scripts are not the source of this release. The unreferenced historical root `app.js` bundle has been removed; the production entry is `modules/main.js`.
 
-## Independent engine audits
+## Canonical computation and independent audits
 
-`engine-lab/export-engine.mjs` creates a separate, runnable Node package from current production source. It includes all 48 engine modules and the full exercise catalog unchanged, plus the top-level shell declarations indexed in `coverage.json` whose transitive dependencies do not include React or icon components. Extraction retains original source text and production equipment registration; a new unreviewed top-level initializer fails the export. Coverage, source ranges, dependencies, release identity and hashes are included. Thirty-one semantic suites run without the app or a browser. `engine-lab/verify-parity.mjs` compares catalogs, templates, prescription cells, weekly volume and week plans against the actual application.
+Current engineering candidate: M228, Engine 0.65.0. `modules/engine-api.js` is the shared production API. The UI imports training calculations and domain transactions from it; it no longer contains their implementations. `modules/training-domain/` contains catalog, record migrations, program transactions, prescription/loading coordination and historical analytics. These are maintained source modules, not generated files. React, DOM, storage I/O, notifications, audio and rendering remain UI-side concerns.
 
-The full original `App.js` is retained as reference evidence because UI event handlers still coordinate saved state, storage, cycle edits and workout actions. Those handlers are not misrepresented as independent engine APIs. The isolated package therefore contains all original engine source and integration-boundary evidence, while clearly indexing UI-dependent declarations. It is an audit/development export, not a second production authority. Changes must be reviewed, ported to the canonical sources and checked with the application's integration gates. See [engine-lab/README.md](engine-lab/README.md).
+`engine-lab/export-engine.mjs` copies the canonical runtime byte for byte into an independent Node package. It extracts zero App.js declarations. Coverage schema 2 and snapshot hashes certify copied source identity. The complete App.js is retained only as integration evidence. `engine-lab/verify-parity.mjs` compares the standalone package with the running application's shared functions. `verification/m228-canonical-boundary-test.mjs` independently compares sessions, weekly prescriptions, volume and scheduling against 13 Build 816 golden scenarios.
 
 ## Generation and authority
 

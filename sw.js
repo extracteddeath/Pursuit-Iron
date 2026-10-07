@@ -1,5 +1,5 @@
-/* Pursuit Iron 4.0 — M225 production release. */
-const CACHE="pursuit-iron-production-v4-0-0-m225-history-provenance-b815";
+/* Pursuit Iron 4.0 — M228 production release. */
+const CACHE="pursuit-iron-production-v4-0-0-m228-canonical-engine-b817";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
   "./BUILD_PROFILE.json",
@@ -21,6 +21,8 @@ const SHELL=[
   "./index.html",
   "./manifest.webmanifest",
   "./modules/App.js",
+  "./modules/engine-api.js",
+  "./modules/engine-shell.js",
   "./modules/legacy-research-data.js",
   "./modules/main.js",
   "./modules/mobile-lifecycle.js",
@@ -73,6 +75,12 @@ const SHELL=[
   "./modules/next-engine/workout-history-adapter.js",
   "./modules/next-engine/workout-runtime.js",
   "./modules/program-duration.js",
+  "./modules/training-domain.js",
+  "./modules/training-domain/analytics.js",
+  "./modules/training-domain/catalog.js",
+  "./modules/training-domain/prescriptions.js",
+  "./modules/training-domain/programs.js",
+  "./modules/training-domain/records.js",
   "./modules/wizard-stability.js",
   "./vendor/lucide-react.js",
   "./vendor/react-dom-client.js",

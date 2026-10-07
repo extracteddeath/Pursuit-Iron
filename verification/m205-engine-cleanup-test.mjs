@@ -1,3 +1,4 @@
+import { productionSource } from './production-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { EXERCISES, runSelfTest, mergeStores, migrateStore, STORE_VERSION } from '../modules/App.js';
@@ -5,7 +6,7 @@ import { generateNextProgramForShell, getNextShellCell } from '../modules/next-e
 import { ENGINE_VERSION, ENGINE_COMPATIBLE_VERSIONS } from '../modules/next-engine/config.js';
 import { preserveRetiredTrialData, preserveRetiredRolloutData } from '../modules/legacy-research-data.js';
 
-const app = fs.readFileSync(new URL('../modules/App.js', import.meta.url), 'utf8');
+const app = productionSource();
 const index = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const coachRegression = fs.readFileSync(new URL('../modules/next-engine/coach-regression.js', import.meta.url), 'utf8');
 for (const retired of ['function generateLayout(', 'function generateProgramOnce(', 'const GEN_PIPELINE',

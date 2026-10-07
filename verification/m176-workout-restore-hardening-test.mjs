@@ -1,3 +1,4 @@
+import { productionSource } from './production-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { EXERCISES, sessionSnapshotStatus, mergeSessionData } from '../modules/App.js';
@@ -33,7 +34,7 @@ assert.deepEqual(merged[1].sets,fresh[1].sets,'new/replacement exercise must use
 assert.deepEqual(merged[2].sets,snap.data[0].sets);
 assert.equal(merged[2].note,'keep A');
 
-const src=fs.readFileSync(new URL('../modules/App.js',import.meta.url),'utf8');
+const src=productionSource();
 for(const marker of [
   'schemaVersion: 2, programId: program.id, dayId: day.id, weekIndex, dayExSig',
   'elapsedMs: runElapsedMs()',

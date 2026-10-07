@@ -1,3 +1,4 @@
+import { productionSource } from './production-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { generateNextProgramForShell, getNextShellCell } from '../modules/next-engine/app-shell-adapter.js';
@@ -46,7 +47,7 @@ assert.equal(baselineDecision?.weight,100);
 const topDecision=nextWorkoutSuggestionForShell(built.program,mkHistory(repHi,2000),legacy,day,0,1);
 assert.equal(topDecision?.action,'increase_load','top of range across every prescribed set must earn load progression');
 assert.ok(Number(topDecision?.weight)>100);
-const app=fs.readFileSync(new URL('../modules/App.js',import.meta.url),'utf8');
+const app=productionSource();
 for(const marker of [
  'const GENERATION_ROUTE = "pursuit-next-only"',
  'generateNextProgramForShell({ config',

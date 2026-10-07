@@ -1,3 +1,10 @@
+# M227 · build 816 · Engine 0.64.16
+
+- Scope progression, stall, fatigue and training-max evidence to the active program and authored workout day; unrelated history can seed a conservative starting reference but cannot earn progression.
+- Parse and bound imported percentage/tiered progression state so malformed semantic state fails safely instead of producing plausible wrong prescriptions.
+- Canonicalize equipment, loading units, booleans, split names, volume strategy, exercise preferences and custom-exercise records at the public generation boundary.
+- Preserve request immutability and deterministic output for cosmetically equivalent requests; add permanent M226/M227 regression gates.
+
 # M225 · build 815 · Engine 0.64.14
 
 - Complete the recovered M224 engine audit repairs.

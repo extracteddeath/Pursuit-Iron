@@ -1,11 +1,11 @@
 {
   "profile": "portable-browser-esm-canonical-engine",
-  "milestone": "M225",
-  "source": "M224 audit repairs + shared exposure provenance and strict history evidence",
-  "engine": "0.64.14; recovery-aware progression and durable history context",
+  "milestone": "M227",
+  "source": "M225 + M226 progression ownership hardening + M227 fail-closed request canonicalization",
+  "engine": "0.64.16; owned progression evidence and canonical public request semantics",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 48,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m225-history-provenance-b815",
-  "uiMilestone": "Pursuit Iron 4.0 Production Release · M225 Engine History Integrity"
+  "cache": "pursuit-iron-production-v4-0-0-m227-request-canonicalization-b816",
+  "uiMilestone": "Pursuit Iron 4.0 Production Release · M227 Request Canonicalization"
 }

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { EXERCISES, EX_BY_ID, TEMPLATES, templateConfig, sessionSuggestion, prescribeSets,
-    computeCell, percentagePlanFor, trainingMaxForUnit, withTrainingMax, nextSessionCursor,
+    computeCell, percentagePlanFor, trainingMaxForUnit, withTrainingMax, nextSessionCursor, nextDueDayId,
     exerciseSeries, exerciseTrends, exRecords, strengthSnapshot, strengthScoreHistory, daySeconds, loggedWorkoutPerformance } from '../modules/App.js';
 import { generateNextProgramForShell, snapshotNextShellPrescription, markUserPrescriptionOverride } from '../modules/next-engine/app-shell-adapter.js';
 import { analyzeShellHistoryForNextEngine, deriveProgressionSelectionEvidence,
@@ -104,6 +104,13 @@ for (const count of [23, 28, 100]) {
     assert.equal(cursor.weekIndex, 1);
     assert.notEqual(cursor.dayIndex, 0);
 }
+const cursorOlder = { ...good[0], id: 'cursor-older', dayId: p.days[0].id, date: 1000 };
+const cursorNewer = { ...good[0], id: 'cursor-newer', dayId: p.days[1].id, date: 2000 };
+const orderedCursor = nextSessionCursor(p, [cursorNewer, cursorOlder]);
+const reversedCursor = nextSessionCursor(p, [cursorOlder, cursorNewer]);
+assert.deepEqual(reversedCursor, orderedCursor, 'next-session cursor is independent of imported history array order');
+assert.equal(nextDueDayId(p, [cursorOlder, cursorNewer]), nextDueDayId(p, [cursorNewer, cursorOlder]),
+    'program-view next day is independent of imported history array order');
 
 // A saved custom target survives subsequent dose edits. Imported target effort has identical semantics.
 const custom = { id: 'custom', custom: true, weeks: 6, config, days: [{ id: 'custom-day', label: 'Push', primaryIndex: -1, exercises: [id] }],

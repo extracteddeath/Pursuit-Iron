@@ -211,9 +211,29 @@ function classify(recovery, positive, negative, diagnoses, workouts) {
         return 'productive';
     return 'mixed';
 }
-function latestShellEntry(history, programId, legacyId, dayId) {
-    const entries = [...(history ?? [])].filter(h => h?.programId === programId && validHistoryDate(h) && completedHistorySets(h?.perf?.[legacyId]).length).sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0));
-    return entries.find(h => h.dayId === dayId) ?? entries[0] ?? null;
+function latestComparableShellEntry(history, program, legacyId, day) {
+    const entries = [...(history ?? [])].filter(h => h?.programId === program?.id && validHistoryDate(h)
+        && completedHistorySets(h?.perf?.[legacyId]).length).sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0));
+    const exact = entries.find(h => String(h.dayId ?? '') === String(day?.id ?? ''));
+    if (exact) return exact;
+    // Day labels are a migration fallback only when they identify one authored occurrence of this
+    // movement. Duplicate labels cannot make two different prescriptions comparable.
+    const label = String(day?.label || '').trim();
+    if (label) {
+        const matchingDays = (program?.days ?? []).filter(d => String(d?.label || '').trim() === label
+            && Array.isArray(d?.exercises) && d.exercises.includes(legacyId));
+        if (matchingDays.length === 1) {
+            const byLabel = entries.find(h => String(h.dayLabel || '').trim() === label);
+            if (byLabel) return byLabel;
+        }
+    }
+    // Pre-day-identity logs are comparable only if this movement has one authored occurrence.
+    const authoredDays = (program?.days ?? []).filter(d => Array.isArray(d?.exercises) && d.exercises.includes(legacyId));
+    return authoredDays.length === 1 ? entries.find(h => !h.dayId && !h.dayLabel) ?? null : null;
+}
+function latestShellReferenceEntry(history, programId, legacyId) {
+    return [...(history ?? [])].filter(h => h?.programId === programId && validHistoryDate(h)
+        && completedHistorySets(h?.perf?.[legacyId]).length).sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0))[0] ?? null;
 }
 function representativeShellLoad(perf) {
     if (!perf)
@@ -270,7 +290,8 @@ export function nextWorkoutSuggestionForShell(program, history, legacyExercises,
         return null;
     const cell = getNextShellCell(program, day, slot, weekIndex);
     const reps = String(cell?.reps ?? cell?.range ?? '');
-    const lastEntry = latestShellEntry(history, String(program.id), legacyId, String(day.id));
+    const lastEntry = latestComparableShellEntry(history, program, legacyId, day);
+    const referenceEntry = lastEntry ?? latestShellReferenceEntry(history, String(program.id), legacyId);
     const rawLast = lastEntry?.perf?.[legacyId] ?? null;
     const last = rawLast;
     const lastLoad = convertLoad(representativeShellLoad(last), lastEntry?.unit, program.config?.unit);
@@ -279,7 +300,10 @@ export function nextWorkoutSuggestionForShell(program, history, legacyExercises,
         analysis = analyzeShellHistoryForNextEngine(program, history, legacyExercises);
     }
     catch {
-        return last ? { weight: lastLoad, dir: 'hold', reason: 'Hold the last logged load until the new engine has comparable completed-set evidence.', reps, last, lastUnit: lastEntry?.unit || program.config?.unit, action: 'initial' } : null;
+        if (last) return { weight: lastLoad, dir: 'hold', reason: 'Hold the last logged load until the new engine has comparable completed-set evidence.', reps, last, lastUnit: lastEntry?.unit || program.config?.unit, action: 'initial' };
+        const reference = referenceEntry?.perf?.[legacyId] ?? null;
+        const referenceLoad = convertLoad(representativeShellLoad(reference), referenceEntry?.unit, program.config?.unit);
+        return reference && referenceLoad !== null ? { weight: referenceLoad, dir: 'hold', reason: 'Use the other day only as a starting reference. This program day has no comparable completed history yet.', reps, last: reference, lastUnit: referenceEntry?.unit || program.config?.unit, action: 'initial', referenceOnly: true } : null;
     }
     let decision;
     for (let i = analysis.workouts.length - 1; i >= 0 && !decision; i--) {
@@ -288,9 +312,15 @@ export function nextWorkoutSuggestionForShell(program, history, legacyExercises,
             continue;
         decision = workout.progression.find(d => d.exerciseId === nextId);
     }
-    if (!decision)
-        return last ? { weight: lastLoad, dir: 'hold', reason: 'Hold the last logged load until the new engine has comparable completed-set evidence.', reps, last, lastUnit: lastEntry?.unit || program.config?.unit, action: 'initial' }
-            : semanticStartingReferenceForShell(program, history, day, nextId, cell);
+    if (!decision) {
+        if (last) return { weight: lastLoad, dir: 'hold', reason: 'Hold the last logged load until the new engine has comparable completed-set evidence.', reps, last, lastUnit: lastEntry?.unit || program.config?.unit, action: 'initial' };
+        const reference = referenceEntry?.perf?.[legacyId] ?? null;
+        const referenceLoad = convertLoad(representativeShellLoad(reference), referenceEntry?.unit, program.config?.unit);
+        if (reference && referenceLoad !== null) return { weight: referenceLoad, dir: 'hold',
+            reason: 'Use the other day only as a starting reference. This program day has no comparable completed history yet.',
+            reps, last: reference, lastUnit: referenceEntry?.unit || program.config?.unit, action: 'initial', referenceOnly: true };
+        return semanticStartingReferenceForShell(program, history, day, nextId, cell);
+    }
     const current = decision.currentLoad ?? lastLoad;
     /* ⚠ SUGGEST FOR THIS WEEK, NOT FOR THE WEEK THE LAST WORKOUT WAS LOGGED IN. `decision` was made when the last workout was
        analysed, against THAT workout's prescription; this function then only relabelled the rep range. Measured on a 6-week

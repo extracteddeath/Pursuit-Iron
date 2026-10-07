@@ -3,6 +3,7 @@ import { normalizeRequest } from '../modules/next-engine/prescription.js';
 import { initialPhaseForGoal, phaseLabel, phasePolicyFor, SUPPORTED_PHASES } from '../modules/next-engine/phase-policy.js';
 import { shellConfigToNextRequest, NextShellAdapterError } from '../modules/next-engine/app-shell-adapter.js';
 import { generateNextCycleForShell, convertProgramToNextCycleForShell, advanceNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
+import { createInitialCycleState, advanceCycleState, recommendNextPhase, startPhase } from '../modules/next-engine/cycles.js';
 
 const request = {
     athlete: { experience: 'intermediate', trainingAgeMonths: 24 },
@@ -61,7 +62,27 @@ requestError(x => { x.preferences.progressionStyle = 'guess'; }, /Unsupported pr
 requestError(x => { x.equipment.available = 'dumbbell'; }, /equipment availability array/);
 requestError(x => { x.schedule.days[0].equipmentOverride = 'dumbbell'; }, /Equipment override/);
 requestError(x => { x.customExercises = {}; }, /Custom exercises must be an array/);
-console.log('PASS boundary request: valid aliases normalize deliberately; unsupported goal/experience/day/priority/style and malformed arrays fail closed.');
+requestError(x => { x.athlete.trainingAgeMonths = true; }, /Training age in months must be a finite number/);
+requestError(x => { x.athlete.trainingAgeMonths = 12.5; }, /Training age in months must be a whole number/);
+requestError(x => { x.restrictions.maxBarbellMovementsPerDay = 'many'; }, /Maximum barbell movements per day must be a finite number/);
+requestError(x => { x.restrictions.maxBarbellMovementsPerDay = -1; }, /Maximum barbell movements per day must be between/);
+requestError(x => { x.restrictions.allowSupersets = 'false'; }, /Superset permission must be a boolean/);
+requestError(x => { x.preferences.responseCapacityScale = {}; }, /Response capacity scale must be a finite number/);
+requestError(x => { x.preferences.responseCapacityScale = 'oops'; }, /Response capacity scale must be a finite number/);
+requestError(x => { x.preferences.volumeApproach = 'extreme'; }, /Unsupported volume approach/);
+requestError(x => { x.equipment.available = ['dumbbell', '']; }, /nonblank equipment IDs/);
+requestError(x => { x.equipment.bodyweight = 'sometimes'; }, /Unsupported bodyweight policy/);
+const numericAlias = structuredClone(request);
+numericAlias.athlete.trainingAgeMonths = '36';
+numericAlias.restrictions.maxBarbellMovementsPerDay = '3';
+numericAlias.preferences.responseCapacityScale = '0.75';
+numericAlias.equipment.available = ['dumbbell','bench','dumbbell'];
+const numericNormalized = normalizeRequest(numericAlias);
+assert.equal(numericNormalized.athlete.trainingAgeMonths, 36);
+assert.equal(numericNormalized.restrictions.maxBarbellMovementsPerDay, 3);
+assert.equal(numericNormalized.preferences.responseCapacityScale, .75);
+assert.deepEqual(numericNormalized.equipment.available, ['dumbbell','bench']);
+console.log('PASS boundary request: aliases normalize deliberately; malformed enums, arrays and numeric settings fail closed without NaN propagation.');
 
 assert.ok(SUPPORTED_PHASES.includes('peak'));
 assert.equal(initialPhaseForGoal('mixed'), 'mixed_accumulation');
@@ -71,6 +92,19 @@ assert.throws(() => initialPhaseForGoal('both'), /Unsupported training goal/);
 assert.throws(() => phasePolicyFor('not_a_phase'), /Unsupported training phase/);
 assert.throws(() => phaseLabel('not_a_phase'), /Unsupported training phase/);
 console.log('PASS boundary phase: internal goals/phases have one explicit vocabulary and invalid values cannot fall through to mixed/undefined behavior.');
+
+const initialCycle = createInitialCycleState('mixed', 4);
+assert.equal(initialCycle.minimumWorkouts, 8);
+assert.equal(initialCycle.reviewAfterWorkouts, 16);
+assert.equal(createInitialCycleState('strength', '5').minimumWorkouts, 10);
+assert.throws(() => createInitialCycleState('mixed', 0), /Days per week/);
+assert.throws(() => createInitialCycleState('mixed', true), /Days per week/);
+assert.throws(() => recommendNextPhase('power', initialCycle), /Unsupported training goal/);
+assert.throws(() => recommendNextPhase('mixed', { ...initialCycle, phase: 'bogus' }), /Unsupported training phase/);
+assert.throws(() => advanceCycleState({ ...initialCycle, workoutsInPhase: '2' }, [], false, { status: 'normal' }, 'mixed'), /workouts-in-phase/);
+assert.throws(() => advanceCycleState({ ...initialCycle, minimumWorkouts: NaN }, [], false, { status: 'normal' }, 'mixed'), /minimum workouts/);
+assert.throws(() => startPhase(initialCycle, 'bogus', 'mixed', 4), /Unsupported training phase/);
+console.log('PASS boundary cycle state: invalid imported counters, phases, goals and days cannot poison lifecycle math.');
 
 const shellBase = {
     days: 4,

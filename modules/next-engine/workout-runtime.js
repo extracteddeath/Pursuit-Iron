@@ -22,6 +22,15 @@ const numberPair = (value, fallback, minimum = 0) => {
         return [nums[0], nums[0]];
     return fallback;
 };
+const safeWholeCount = (value, fallback, minimum, maximum) => {
+    if (value === undefined || value === null || value === '' || typeof value === 'boolean' || typeof value === 'object')
+        return fallback;
+    const n = Number(value);
+    if (!Number.isFinite(n))
+        return fallback;
+    const rounded = Math.round(n);
+    return rounded >= minimum && rounded <= maximum ? rounded : fallback;
+};
 export function freestyleCellForRepRange(repRange) {
     const lo = Number(repRange?.[0]), hi = Number(repRange?.[1]);
     const range = Number.isFinite(lo) && Number.isFinite(hi) ? [Math.max(1, Math.round(Math.min(lo, hi))), Math.max(1, Math.round(Math.max(lo, hi)))] : [8, 12];
@@ -35,16 +44,17 @@ export function freestyleCellForRepRange(repRange) {
         tech: null
     };
 }
-export function buildUserAddedSlotPrescriptions(args) {
+export function buildUserAddedSlotPrescriptions(args = {}) {
     const base = freestyleCellForRepRange(args.repRange);
     const role = args.compound ? 'hypertrophy_compound' : 'hypertrophy_isolation';
+    const weeks = safeWholeCount(args.weeks, 1, 1, 52);
     const out = {};
-    for (let week = 1; week <= Math.max(1, Math.round(args.weeks || 1)); week++)
+    for (let week = 1; week <= weeks; week++)
         out[week] = { ...base, role, progressionStyle: 'auto' };
     return out;
 }
 export function techniqueProtocolFromCell(cell) {
-    const cue = String(cell.tech ?? '').toLowerCase();
+    const cue = String(cell?.tech ?? '').toLowerCase();
     if (cue.includes('myo'))
         return { type: 'myo_reps', miniSets: { minimum: 3, maximum: 5, targetReps: 5, restSeconds: 15 } };
     if (cue.includes('drop'))
@@ -58,14 +68,16 @@ export function advancedTechniqueFromCell(cell, original) {
     const protocol = techniqueProtocolFromCell(cell);
     if (!protocol.type) return undefined;
     return { ...(original?.type === protocol.type ? original : {}), ...protocol,
-        appliesTo: 'last_set', note: String(cell.tech) };
+        appliesTo: 'last_set', note: String(cell?.tech ?? '') };
 }
-export function buildRuntimeSetTargets(args) {
-    const { exerciseId, cell, loadingInventory, equipmentAvailable } = args;
+export function buildRuntimeSetTargets(args = {}) {
+    const { exerciseId, loadingInventory, equipmentAvailable } = args;
+    const cell = args.cell && typeof args.cell === 'object' ? args.cell : {};
     const reps = numberPair(cell.reps, [8, 12], 1);
     const rir = numberPair(cell.rir, [2, 2]);
-    const workReps = args.suggestedReps && args.suggestedReps >= reps[0] && args.suggestedReps <= reps[1] ? Math.round(args.suggestedReps) : Math.round(reps[0]);
-    const count = Math.max(1, Math.round(Number(cell.sets) || 1));
+    const workReps = Number.isFinite(Number(args.suggestedReps)) && Number(args.suggestedReps) >= reps[0] && Number(args.suggestedReps) <= reps[1]
+        ? Math.round(Number(args.suggestedReps)) : Math.round(reps[0]);
+    const count = safeWholeCount(cell.sets, 1, 1, 20);
     const workingLoad = Number.isFinite(args.workingLoad) && Number(args.workingLoad) > 0 ? Number(args.workingLoad) : null;
     const targets = [];
     const role = String(cell.role ?? '');

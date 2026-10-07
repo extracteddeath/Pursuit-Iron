@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import { normalizeRequest } from '../modules/next-engine/prescription.js';
+import { completedHistorySets, attemptedHistorySets, convertHistoryLoad } from '../modules/next-engine/history-contract.js';
+import { evaluateWorkoutProgression } from '../modules/next-engine/performance.js';
 import { initialPhaseForGoal, phaseLabel, phasePolicyFor, SUPPORTED_PHASES } from '../modules/next-engine/phase-policy.js';
 import { shellConfigToNextRequest, NextShellAdapterError } from '../modules/next-engine/app-shell-adapter.js';
 import { generateNextCycleForShell, convertProgramToNextCycleForShell, advanceNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
@@ -154,3 +156,35 @@ assert.throws(() => convertProgramToNextCycleForShell({ legacyExercises: [] }), 
 assert.throws(() => advanceNextCycleForShell({}), e => e instanceof NextShellAdapterError && e.code === 'NEXT_CYCLE_HISTORY_INVALID');
 assert.throws(() => advanceNextCycleForShell({ history: [], legacyExercises: {} }), e => e instanceof NextShellAdapterError && e.code === 'NEXT_CYCLE_EXERCISES_INVALID');
 console.log('PASS boundary cycles: malformed public adapter inputs fail at the boundary with stable error codes instead of incidental runtime exceptions.');
+
+assert.equal(convertHistoryLoad(100, 'kg', 'lb') > 220 && convertHistoryLoad(100, 'kg', 'lb') < 221, true);
+assert.equal(convertHistoryLoad(100, 'KGS', 'LBs') > 220, true);
+assert.equal(convertHistoryLoad(100, 'stone', 'lb'), null);
+assert.equal(convertHistoryLoad(100, 'lb', 'mystery'), null);
+assert.equal(convertHistoryLoad(100, undefined, 'kg'), 100);
+const completionProbe = { sets: [
+    { r: 8, done: true },
+    { r: 8 },
+    { r: 8, done: false },
+    { r: 8, done: 'false' },
+    { r: 0, done: true, failedAttempt: true },
+    { r: 0, done: 'true', failedAttempt: true }
+] };
+assert.equal(completedHistorySets(completionProbe).length, 2);
+assert.equal(attemptedHistorySets(completionProbe).length, 3);
+const progExercise = { exerciseId: 'back_squat', name: 'Back Squat', role: 'primary_strength', sets: 3,
+    prescription: { reps: [5, 8], rir: [2, 2] }, progressionStyle: 'double' };
+const duplicateRows = [
+    { exerciseId: 'back_squat', setIndex: 0, load: 185, reps: 8, rir: 2 },
+    { exerciseId: 'back_squat', setIndex: 0, load: 185, reps: 8, rir: 2 },
+    { exerciseId: 'back_squat', setIndex: 1, load: 185, reps: 8, rir: 2 },
+    { exerciseId: 'back_squat', setIndex: 2, load: 185, reps: 8, rir: 2 }
+];
+const duplicateDecision = evaluateWorkoutProgression({ exercises: [progExercise] }, duplicateRows, { equipmentAvailable: ['barbell','rack'] })[0];
+assert.equal(duplicateDecision.outcome, 'non_comparable');
+assert.equal(duplicateDecision.reasonCode, 'duplicate_set_index');
+assert.notEqual(duplicateDecision.action, 'increase_load');
+const invalidPositionDecision = evaluateWorkoutProgression({ exercises: [progExercise] },
+    duplicateRows.map(({ setIndex, ...row }) => row), { equipmentAvailable: ['barbell','rack'] })[0];
+assert.equal(invalidPositionDecision.outcome, 'unobserved');
+console.log('PASS boundary history/progression: bad units, ambiguous completion flags, duplicate set positions and missing positions fail closed.');

@@ -6,7 +6,8 @@ import { buildRuntimeSetTargets, buildUserAddedSlotPrescriptions, techniqueProto
 import { percentageProtocolFor, deriveTieredLinearState } from '../modules/next-engine/percentage-protocols.js';
 import { runPowerbuildingSimulation } from '../modules/next-engine/simulation.js';
 import { initialPhaseForGoal, phaseLabel, phasePolicyFor, SUPPORTED_PHASES } from '../modules/next-engine/phase-policy.js';
-import { shellConfigToNextRequest, NextShellAdapterError } from '../modules/next-engine/app-shell-adapter.js';
+import { shellConfigToNextRequest, splitBuildability, NextShellAdapterError } from '../modules/next-engine/app-shell-adapter.js';
+import { supportedTrainingDaysForSplit } from '../modules/next-engine/topology.js';
 import { generateNextCycleForShell, convertProgramToNextCycleForShell, advanceNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
 import { createInitialCycleState, advanceCycleState, recommendNextPhase, startPhase } from '../modules/next-engine/cycles.js';
 
@@ -146,6 +147,13 @@ shellCode({ days: 1 }, 'NEXT_CONFIG_DAYS_INVALID');
 shellCode({ days: 4.5 }, 'NEXT_CONFIG_DAYS_INVALID');
 shellCode({ session: 'forever' }, 'NEXT_CONFIG_SESSION_INVALID');
 shellCode({ progressionStyle: 'guess' }, 'NEXT_CONFIG_PROGRESSION_INVALID');
+shellCode({ split: 'hybrid', days: 4 }, 'NEXT_CONFIG_SPLIT_DAYS_INVALID');
+assert.deepEqual(supportedTrainingDaysForSplit('hybrid'), [5]);
+assert.deepEqual(supportedTrainingDaysForSplit('phul'), [4]);
+assert.deepEqual(supportedTrainingDaysForSplit('full_body'), [2,3,4,5,6,7]);
+const hybridBuildability = splitBuildability({ ...shellBase, split: 'hybrid', days: 4 }, []);
+assert.equal(hybridBuildability.ok, false);
+assert.equal(hybridBuildability.kind, 'schedule');
 assert.throws(() => shellConfigToNextRequest(null, [], [], 1), e => e instanceof NextShellAdapterError && e.code === 'NEXT_CONFIG_INVALID');
 assert.throws(() => shellConfigToNextRequest(shellBase, 'bench', [], 1), e => e instanceof NextShellAdapterError && e.code === 'NEXT_CONFIG_BANNED_INVALID');
 assert.throws(() => shellConfigToNextRequest(shellBase, [], {}, 1), e => e instanceof NextShellAdapterError && e.code === 'NEXT_CONFIG_EXERCISES_INVALID');

@@ -2,7 +2,7 @@ name: Release integrity
 
 on:
   push:
-    branches: [main, 'verification/**', 'engine/**']
+    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:

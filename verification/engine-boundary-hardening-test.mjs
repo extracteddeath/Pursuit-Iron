@@ -3,6 +3,7 @@ import { normalizeRequest } from '../modules/next-engine/prescription.js';
 import { completedHistorySets, attemptedHistorySets, convertHistoryLoad } from '../modules/next-engine/history-contract.js';
 import { evaluateWorkoutProgression } from '../modules/next-engine/performance.js';
 import { buildRuntimeSetTargets, buildUserAddedSlotPrescriptions, techniqueProtocolFromCell } from '../modules/next-engine/workout-runtime.js';
+import { percentageProtocolFor, deriveTieredLinearState } from '../modules/next-engine/percentage-protocols.js';
 import { initialPhaseForGoal, phaseLabel, phasePolicyFor, SUPPORTED_PHASES } from '../modules/next-engine/phase-policy.js';
 import { shellConfigToNextRequest, NextShellAdapterError } from '../modules/next-engine/app-shell-adapter.js';
 import { generateNextCycleForShell, convertProgramToNextCycleForShell, advanceNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
@@ -199,3 +200,16 @@ assert.equal(buildRuntimeSetTargets({ exerciseId: 'back_squat', cell: { sets: '4
 assert.equal(buildRuntimeSetTargets({ exerciseId: 'back_squat', cell: null, includeWarmups: false }).length, 1);
 assert.deepEqual(techniqueProtocolFromCell(undefined), { type: null });
 console.log('PASS boundary runtime: corrupted set/week counts cannot create unbounded loops; valid numeric strings remain usable.');
+
+const safePct = percentageProtocolFor({ scheme: '531', tm: 200, weekIndex: 1, weeksTotal: 4, snapLoad: 'not-a-function' });
+assert.equal(safePct.sets.length, 3);
+assert.equal(safePct.sets[0].weight, 130);
+assert.equal(percentageProtocolFor(undefined), null);
+assert.deepEqual(deriveTieredLinearState({ initialStage: 99, initialLoad: 'bad' }), { stage: 0, weight: null });
+const noCallbacksEntry = { id: 'p', programId: 'p', date: 1, unit: 'lb', perf: { lift: {
+    sets: [{ w: 50, r: 3, done: true }],
+    prescription: { sets: 1, protocol: { scheme: 'gzclp', tier: 't1', stage: 0 }, setTargets: [{ weight: 50, reps: 3 }] }
+} } };
+assert.deepEqual(deriveTieredLinearState({ programId: 'p', exerciseId: 'lift', tier: 't1', initialLoad: 50, unit: 'lb', entries: [noCallbacksEntry] }),
+    { stage: 0, weight: 50 });
+console.log('PASS boundary percentage replay: invalid callbacks and initial tier state cannot crash or carry impossible state.');

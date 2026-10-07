@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { historyNumber, normalizeHistoryEntries, progressionExposureContext } from '../modules/next-engine/history-contract.js';
+import { historyNumber, normalizeHistoryEntries, progressionExposureContext, resolveHistoryDayIndex } from '../modules/next-engine/history-contract.js';
 import { deriveTieredLinearState } from '../modules/next-engine/percentage-protocols.js';
 import { evaluateWorkoutProgression } from '../modules/next-engine/performance.js';
 import { EXERCISES, EX_BY_ID, prescribeSets, sessionSuggestion, loggedWorkoutPerformance } from '../modules/App.js';
@@ -14,6 +14,21 @@ const edited = { ...old, date: 2, updatedAt: NaN, perf: { lift: { sets: [] } } }
 for (const entries of [[old, edited], [edited, old]])
     assert.equal(normalizeHistoryEntries(entries, 'p').entries[0], edited);
 assert.equal(normalizeHistoryEntries([{ ...old, updatedAt: 3 }, edited], 'p').entries[0].date, 1);
+
+const duplicateDays = [
+    { id: 'a', label: 'Repeat', exercises: ['lift'] },
+    { id: 'b', label: 'Repeat', exercises: ['lift'] }
+];
+assert.equal(resolveHistoryDayIndex(duplicateDays, { dayId: 'b', dayLabel: 'Repeat', perf: { lift: {} } }), 1,
+    'an exact persisted day id always wins');
+assert.equal(resolveHistoryDayIndex(duplicateDays, { dayId: 'retired', dayLabel: 'Repeat', perf: { lift: {} } }), -1,
+    'a stale id plus duplicate label must not guess between identical day occurrences');
+const distinguishableDays = [
+    { id: 'a', label: 'Repeat', exercises: ['lift', 'row'] },
+    { id: 'b', label: 'Repeat', exercises: ['press'] }
+];
+assert.equal(resolveHistoryDayIndex(distinguishableDays, { dayId: 'retired', dayLabel: 'Repeat', perf: { row: {} } }), 0,
+    'legacy label fallback may reattach when the logged roster uniquely identifies one duplicate-label day');
 
 const exercise = { exerciseId: 'lift', name: 'Lift', sets: 2, progressionStyle: 'double',
     prescription: { reps: [10, 15], rir: [2, 2] } };

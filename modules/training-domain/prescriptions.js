@@ -408,8 +408,8 @@ function progressionHistoryForProgram(program, history) {
     return rows.slice().sort((a, b) => Number(b.date) - Number(a.date));
 }
 
-function plateauSessions(history, exId, dayId, limit = 6, program = null) {
-    const scoped = program ? progressionHistoryForProgram(program, history) : (Array.isArray(history) ? history : []);
+function plateauSessions(history, exId, dayId, limit = 6, program = null, scopedHistory = null) {
+    const scoped = scopedHistory ?? (program ? progressionHistoryForProgram(program, history) : (Array.isArray(history) ? history : []));
     const withEx = scoped.filter(h => historyNumber(h?.perf?.[exId]?.weight) > 0);
     if (!dayId)
         return withEx.slice(0, limit);
@@ -427,7 +427,7 @@ function plateauSessions(history, exId, dayId, limit = 6, program = null) {
 
 const STALL_WINDOW = 8;
 
-function stallCountFor(perf, ex, history, dayId, program = null) {
+function stallCountFor(perf, ex, history, dayId, program = null, scopedHistory = null) {
     if (!perf || !ex || !history)
         return 0;
     const p = perf[ex.id];
@@ -435,7 +435,7 @@ function stallCountFor(perf, ex, history, dayId, program = null) {
         return 0;
     // history is newest-first already — take the front directly. (An earlier .reverse() here grabbed
     // the OLDEST sessions, which inverted prIdx and made progressing lifters look stalled.)
-    const sessions = plateauSessions(history, ex.id, dayId, STALL_WINDOW, program);
+    const sessions = plateauSessions(history, ex.id, dayId, STALL_WINDOW, program, scopedHistory);
     if (sessions.length < 3)
         return 0;
     const e1rms = sessions.map(h => {
@@ -465,7 +465,12 @@ const STALL_ENGAGE = 4;
 
 const E1RM_HOLD = 3;
 
-function styleOverride(program, ex, isPrimary, weekIndex, perf, history, dayId) {
+function adaptiveProgressionContext(program, perf, ex, history, dayId) {
+    const scopedHistory = progressionHistoryForProgram(program, history);
+    return { scopedHistory, stall: stallCountFor(perf, ex, history, dayId, program, scopedHistory) };
+}
+
+function styleOverride(program, ex, isPrimary, weekIndex, perf, history, dayId, adaptive = null) {
     if (!ex || styleFor(program, ex.id) !== "auto")
         return null; // an explicit choice is not ours to override
     if (program?.config?.percentScheme)
@@ -473,8 +478,8 @@ function styleOverride(program, ex, isPrimary, weekIndex, perf, history, dayId) 
     const exp = program?.config?.experience || "intermediate";
     if (exp === "none" || exp === "beginner")
         return null; // beginners are on linear by structure
-    const scopedHistory = progressionHistoryForProgram(program, history);
-    const stall = stallCountFor(perf, ex, history, dayId, program);
+    const scopedHistory = adaptive?.scopedHistory ?? progressionHistoryForProgram(program, history);
+    const stall = Number.isFinite(adaptive?.stall) ? adaptive.stall : stallCountFor(perf, ex, history, dayId, program, scopedHistory);
     if (stall >= STALL_ENGAGE) {
         if (stall < STALL_ENGAGE + E1RM_HOLD) {
             const left = STALL_ENGAGE + E1RM_HOLD - stall;
@@ -512,7 +517,7 @@ function linearStalled(perf, ex, history, program = null, dayId = null) {
         return false;
     const scopedHistory = program ? progressionHistoryForProgram(program, history) : (Array.isArray(history) ? history : []);
     const recent = dayId
-        ? plateauSessions(history, ex.id, dayId, 4, program)
+        ? plateauSessions(history, ex.id, dayId, 4, program, scopedHistory)
         : scopedHistory.filter(h => historyNumber(h?.perf?.[ex.id]?.weight) > 0).slice(0, 4);
     if (recent.length < 3)
         return false;
@@ -556,8 +561,9 @@ function autoStyleDetail(program, ex, isPrimary, weekIndex, perf = null, history
             return linearStalled(perf, ex, history, program, dayId)
                 ? R("double", "beginner compound whose linear progression stalled — same weight for 3 sessions, so it graduates to double progression")
                 : R("linear", "beginner compound — linear progression is the simplest thing that still works");
-        const stallN = stallCountFor(perf, ex, history, dayId, program);
-        const ovN = styleOverride(program, ex, isPrimary, weekIndex, perf, history, dayId);
+        const adaptiveN = adaptiveProgressionContext(program, perf, ex, history, dayId);
+        const stallN = adaptiveN.stall;
+        const ovN = styleOverride(program, ex, isPrimary, weekIndex, perf, history, dayId, adaptiveN);
         if (ovN && ovN.kind === "plateau")
             return R(ovN.style, `plateau override — ${ovN.why || "a hard plateau was detected"}${ovN.clears ? `. ${ovN.clears}` : ""}`, { stallSessions: stallN, override: ovN });
         if (stallN >= 2 && !strength)
@@ -588,8 +594,9 @@ function autoStyleDetail(program, ex, isPrimary, weekIndex, perf = null, history
        PRECEDENCE IS PRESERVED EXACTLY: hard plateau, then the soft-plateau nudge, then fatigue. The
        soft nudge stays inline because it is not an override with a hold window; it swaps one
        rep-range style for a simpler one and reverses itself the moment the stall clears. */
-    const stallSessions = stallCountFor(perf, ex, history, dayId, program);
-    const ov = styleOverride(program, ex, isPrimary, weekIndex, perf, history, dayId);
+    const adaptive = adaptiveProgressionContext(program, perf, ex, history, dayId);
+    const stallSessions = adaptive.stall;
+    const ov = styleOverride(program, ex, isPrimary, weekIndex, perf, history, dayId, adaptive);
     if (ov && ov.kind === "plateau")
         return R(ov.style, `plateau override — ${ov.why || "a hard plateau was detected"}${ov.clears ? `. ${ov.clears}` : ""}`, { stallSessions, override: ov });
     if (stallSessions >= 2 && !strength)

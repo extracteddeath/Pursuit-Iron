@@ -30,6 +30,14 @@ assert.match(prescriptionHistorySource, /function customExerciseHistory\(program
     'custom comparable compatibility export must delegate to the canonical lookup');
 assert.match(prescriptionHistorySource, /function customExerciseReferenceHistory\(program, id, history\) \{\s*return customExerciseHistoryRefs\(program, null, id, history\)\.reference;\s*\}/,
     'custom reference compatibility export must delegate to the canonical lookup');
+assert.match(prescriptionHistorySource, /function adaptiveProgressionContext\(/,
+    'adaptive style selection must build one scoped history/stall context per decision');
+assert.match(prescriptionHistorySource, /plateauSessions\(history, ex\.id, dayId, STALL_WINDOW, program, scopedHistory\)/,
+    'stall detection must reuse an already-normalized program history when supplied');
+assert.match(prescriptionHistorySource, /styleOverride\(program, ex, isPrimary, weekIndex, perf, history, dayId, adaptiveN\)/,
+    'next-engine style override must reuse the precomputed adaptive context');
+assert.match(prescriptionHistorySource, /styleOverride\(program, ex, isPrimary, weekIndex, perf, history, dayId, adaptive\)/,
+    'legacy/custom style override must reuse the precomputed adaptive context');
 const duplicateDays = [
     { id: 'a', label: 'Repeat', exercises: ['lift'] },
     { id: 'b', label: 'Repeat', exercises: ['lift'] }

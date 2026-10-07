@@ -23,6 +23,9 @@ assert.deepEqual(matrixValues(core, 'group'), Object.keys(contractGroups).sort()
 assert.deepEqual(matrixValues(phone, 'shard'), Object.keys(browserShards).sort(), 'browser workflow and registry shards diverged');
 
 for (const [name, workflow] of Object.entries({ core, phone, audit, release })) {
+    assert.match(workflow, /push:\s*\n\s*branches: \[main\]/, name + ' workflow push trigger must be main-only');
+    assert.match(workflow, /pull_request:\s*\n\s*branches: \[main\]/, name + ' workflow must verify pull requests into main');
+    assert.match(workflow, /workflow_dispatch:/, name + ' workflow must support manual pre-PR verification');
     assert.match(workflow, /concurrency:/, name + ' workflow lost concurrency control');
     assert.match(workflow, /github\.event\.pull_request\.head\.ref \|\| github\.ref_name/, name + ' workflow must share one branch/head concurrency key');
     assert.match(workflow, /cancel-in-progress: true/, name + ' workflow must cancel stale branch runs');
@@ -50,5 +53,5 @@ assert.equal(registry.releaseCount, 1, 'release-only semantics should remain nar
 console.log(
     `PASS M236 verification topology: ${registry.contractCount} uniquely owned source contracts, `
     + `${registry.browserCount} browser contracts in ${Object.keys(browserShards).length} shards, `
-    + `${registry.releaseCount} release-specific contract; stale branch CI cancels and exporter has zero dependencies.`
+    + `${registry.releaseCount} release-specific contract; feature branches are PR-only, stale PR/main CI cancels, and exporter has zero dependencies.`
 );

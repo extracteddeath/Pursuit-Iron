@@ -749,23 +749,23 @@ function loadableAbove(ex, w, unit) {
     return step > 0 ? (Math.floor(w / step + 1e-9) + 1) * step : null;
 }
 
-function customExerciseHistory(program, day, id, history) {
+function customExerciseHistoryRefs(program, day, id, history) {
     const targetIndex = (program?.days || []).findIndex(candidate => candidate?.id === day?.id);
-    if (targetIndex < 0) return null;
-    const entries = normalizeHistoryEntries(history, program.id).entries.filter(h => h?.perf?.[id])
-        .slice().sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0));
-    return entries.find(entry => resolveHistoryDayIndex(program.days, entry) === targetIndex) ?? null;
-}
-
-function customExerciseReferenceHistory(program, id, history) {
-    // Prefer a canonical same-program revision before using cross-program history as the explicitly
-    // low-confidence, reference-only starting load.
     const own = normalizeHistoryEntries(history, program.id).entries.filter(h => h?.perf?.[id])
         .slice().sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0));
-    if (own.length)
-        return own[0];
+    const comparable = targetIndex < 0 ? null : own.find(entry => resolveHistoryDayIndex(program.days, entry) === targetIndex) ?? null;
+    if (comparable || own.length)
+        return { comparable, reference: own[0] ?? null };
+    // Cross-program history is deliberately reference-only and is consulted only when this program
+    // has no canonical history for the exercise at all.
     const entries = (history || []).filter(h => validHistoryDate(h) && h?.perf?.[id]).slice().sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0));
-    return entries[0] || null;
+    return { comparable: null, reference: entries[0] || null };
+}
+function customExerciseHistory(program, day, id, history) {
+    return customExerciseHistoryRefs(program, day, id, history).comparable;
+}
+function customExerciseReferenceHistory(program, id, history) {
+    return customExerciseHistoryRefs(program, null, id, history).reference;
 }
 
 function representativeCustomLoad(perf) {
@@ -780,9 +780,10 @@ function customProgramSuggestion(program, day, slot, unit, weekIndex, history) {
     const ex = EX_BY_ID[day?.exercises?.[slot]];
     if (!ex)
         return null;
-    const last = customExerciseHistory(program, day, ex.id, history);
+    const historyRefs = customExerciseHistoryRefs(program, day, ex.id, history);
+    const last = historyRefs.comparable;
     if (!last) {
-        const reference = customExerciseReferenceHistory(program, ex.id, history);
+        const reference = historyRefs.reference;
         const rawLoad = representativeCustomLoad(reference?.perf?.[ex.id]);
         if (!reference || rawLoad === null)
             return null;

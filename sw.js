@@ -1,5 +1,5 @@
-/* Pursuit Iron 4.0 — M233 production release. */
-const CACHE="pursuit-iron-production-v4-0-0-m233-semantic-exercise-graph-b822";
+/* Pursuit Iron 4.0 — M234 production release candidate. */
+const CACHE="pursuit-iron-production-v4-0-0-m234-candidate-selection-b823";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
   "./BUILD_PROFILE.json",
@@ -33,6 +33,7 @@ const SHELL=[
   "./modules/next-engine/athlete-response.js",
   "./modules/next-engine/capacity-generation.js",
   "./modules/next-engine/capacity-policy.js",
+  "./modules/next-engine/candidate-optimization.js",
   "./modules/next-engine/coach-regression.js",
   "./modules/next-engine/config.js",
   "./modules/next-engine/cycle-runtime-adapter.js",

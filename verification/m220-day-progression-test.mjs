@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { sessionSuggestion, lastDayPerf, prescribeSets, EX_BY_ID } from '../modules/App.js';
+import { sessionSuggestion, lastDayPerf, dayPerfFor, prescribeSets, EX_BY_ID } from '../modules/App.js';
+import { linearStalled, plateauSessions, styleOverride } from '../modules/training-domain/prescriptions.js';
 import { refreshPendingSetTargets } from '../modules/next-engine/workout-runtime.js';
 const id = 'seated-calf';
 export const program = { id: 'm220-custom', custom: true, weeks: 10, config: { unit: 'lb', weeks: 10, progression: 'manual', goal: 'both', experience: 'intermediate', deload: false },
@@ -34,6 +35,27 @@ assert.equal(lastDayPerf(program.days[0], {}, [unrelated, ...history], program)[
 assert.equal(suggest(program.days[0], [...history].reverse()).weight, 205, 'date ordering is independent of input order');
 assert.equal(suggest(program.days[0], [entry('lower', Date.UTC(2026,9,1), 90, [20,20,20,20,20], 'other')]).weight, 90, 'M226: another program may initialize load but cannot earn an increase');
 assert.deepEqual(history[1].perf[id].sets.map(s => s.w), [205,205,205,205,205], 'logged evidence is immutable');
+const onlyLegs = [entry('legs', Date.UTC(2026,9,3), 210, [20,20,20])];
+assert.deepEqual(plateauSessions(onlyLegs, id, 'lower', 8, program), [],
+    'adaptive style detection cannot borrow stall evidence from another authored day');
+const migratedLower = { ...entry('retired-lower', Date.UTC(2026,9,4), 205, [15,15,15,15,15]), dayLabel: 'Lower' };
+assert.equal(plateauSessions([migratedLower], id, 'lower', 8, program).length, 1,
+    'a unique stable day label still recovers migrated adaptive-style history');
+const duplicateLabelProgram = structuredClone(program);
+duplicateLabelProgram.days.forEach(day => { day.label = 'Lower'; });
+assert.deepEqual(plateauSessions([{ ...migratedLower, dayLabel: 'Lower' }], id, 'lower', 8, duplicateLabelProgram), [],
+    'duplicate labels keep stale adaptive-style history unresolved instead of guessing');
+const flatOtherDay = Array.from({ length: 5 }, (_, i) => entry('legs', Date.UTC(2026, 9, 1 + i), 210, [15,15,15]));
+const targetPerf = { [id]: { weight: 210, reps: 15 } };
+assert.equal(linearStalled(targetPerf, EX_BY_ID[id], flatOtherDay, program, 'lower'), false,
+    'beginner linear-stall detection cannot graduate a different authored day');
+assert.notEqual(styleOverride(program, EX_BY_ID[id], false, 1, targetPerf, flatOtherDay, 'lower')?.kind, 'plateau',
+    'hard plateau override cannot borrow a different day through a non-program-aware stall call');
+const flatLower = Array.from({ length: 5 }, (_, i) => entry('lower', Date.UTC(2026, 9, 1 + i), 210, [15,15,15,15,15]));
+assert.equal(linearStalled(targetPerf, EX_BY_ID[id], flatLower, program, 'lower'), true,
+    'same-day flat beginner history still triggers the intended linear-stall graduation');
+assert.equal(styleOverride(program, EX_BY_ID[id], false, 1, targetPerf, flatLower, 'lower')?.kind, 'plateau',
+    'same-day flat intermediate history still triggers the intended plateau override');
 console.log('PASS M220: screenshot Lower/Legs regression, separate day loads, set-count qualification, earned progression, scoped fallbacks, shared LAST/advice and immutable history.');
 
 const automatic = { weight: '210', reps: '20', auto: true, done: false, valueOwner: 'prescription', target: { w: '210', reps: '12-20' } };
@@ -69,4 +91,10 @@ const generatedSuggestion = nextWorkoutSuggestionForShell(generated, [newOtherDa
 assert.equal(generatedSuggestion.last, oldDay.perf[lift], 'generated suggestion metadata shares its evaluator day');
 assert.equal(generatedSuggestion.weight, 205);
 assert.equal(generatedSuggestion.action, 'add_reps');
-console.log('PASS M220 generated bridge: decision and prior-session metadata share the same day even when another occurrence is newer.');
+const otherProgramSameDay = { ...oldDay, id: 'other-program-same-day', programId: 'other-program',
+    date: 3000, perf: { [lift]: { weight: 400, reps: 20, sets: [{ w: 400, r: 20, rir: 2, tr: 2, done: true }] } } };
+assert.equal(lastDayPerf(first, {}, [otherProgramSameDay, oldDay], generated)[lift], oldDay.perf[lift],
+    'LAST cannot be stolen by the same day id from another program');
+assert.equal(dayPerfFor(first, {}, [otherProgramSameDay, oldDay], generated)[lift], oldDay.perf[lift],
+    'best-of-recent anchor cannot use another program with a colliding day id');
+console.log('PASS M220 generated bridge: decision, LAST and anchor metadata stay program/day scoped even when another occurrence or program is newer.');

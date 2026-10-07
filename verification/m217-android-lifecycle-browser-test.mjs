@@ -75,7 +75,7 @@ try {
     browser = await launch(); let page = await browser.newPage(); await configure(page);
     await page.goto('http://127.0.0.1:8772/', { waitUntil: 'networkidle0' }); await openWorkout(page);
     const fields = await page.$$('input[aria-label="weight"]');
-    await fields[1].click({ clickCount: 3 }); await page.keyboard.type('155'); await page.keyboard.press('Enter');
+    await fields[1].click(); await page.keyboard.down('Control'); await page.keyboard.press('KeyA'); await page.keyboard.up('Control'); await page.keyboard.press('Backspace'); await page.keyboard.type('155'); await page.keyboard.press('Enter');
     assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('aria-label')), 'reps', 'numeric Next advances load to reps');
     await page.keyboard.down('Control'); await page.keyboard.press('KeyA'); await page.keyboard.up('Control');
     await page.keyboard.type('14'); await page.keyboard.press('Enter');

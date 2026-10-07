@@ -33,7 +33,7 @@ try {
     assert.deepEqual(await values(), ['100', '100', '100']);
     for (let i = 0; i < 2; i++) {
         const row = `[data-testid="set-0-${i}"]`, reps = await page.$(row + ' input[aria-label="reps"]');
-        await reps.click({ clickCount: 3 }); await reps.type('6');
+        await reps.click(); await page.keyboard.down('Control'); await page.keyboard.press('KeyA'); await page.keyboard.up('Control'); await page.keyboard.press('Backspace'); await reps.type('6');
         await page.click(row + ' button[aria-label="Mark set done"]');
         await page.waitForSelector(row + ' button[aria-label="Failure, no reps left"]');
         await page.click(row + ' button[aria-label="Failure, no reps left"]');

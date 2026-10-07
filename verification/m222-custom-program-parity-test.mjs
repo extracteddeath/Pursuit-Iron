@@ -21,6 +21,15 @@ const effort=structuredClone(history);effort[0].perf['cable-fly'].sets=Array.fro
 assert.equal(rowsFor(program,effort).suggestion.weight,25,'failure effort cannot earn a load increase');
 const incomplete=structuredClone(effort);incomplete[0].perf['cable-fly'].sets=incomplete[0].perf['cable-fly'].sets.slice(0,3);assert.notEqual(rowsFor(program,incomplete).suggestion.action,'increase_load');
 const mixed=structuredClone(history);mixed[0].perf['cable-fly'].sets.forEach(s=>s.r=20);assert.notEqual(rowsFor(program,mixed).suggestion.action,'increase_load','lighter sets cannot qualify the heaviest load');
+const relabeledHistory=structuredClone(history);relabeledHistory[0].dayLabel='Push';
+const regenerated=structuredClone(program);regenerated.days[0].id='push-regenerated';regenerated.overrides['push-regenerated:0']={...regenerated.overrides['push:0']};
+const regeneratedSuggestion=sessionSuggestion(regenerated,regenerated.days[0],0,null,'lb',1,relabeledHistory);
+assert.notEqual(regeneratedSuggestion?.referenceOnly,true,'a unique stable day label may recover comparable history after a day-id migration');
+const ambiguous=structuredClone(program);ambiguous.days.push({id:'push-2',label:'Push',primaryIndex:-1,exercises:['cable-fly']});
+ambiguous.overrides['push-2:0']={...ambiguous.overrides['push:0']};
+const crossDay=sessionSuggestion(ambiguous,ambiguous.days[1],0,null,'lb',1,relabeledHistory);
+assert.equal(crossDay?.referenceOnly,true,'duplicate labels cannot make another day comparable');
+assert.equal(crossDay?.action,'initial');assert.equal(crossDay?.weight,25);
 const input=history[0].perf['cable-fly'].sets.map((s,i)=>({exerciseId:ex.id,setIndex:i,load:s.w,reps:s.r,rir:s.rir}));
 const engine=evaluateWorkoutProgression({exercises:[{exerciseId:ex.id,name:ex.name,sets:4,role:'accessory',progressionStyle:'double',prescription:{reps:[10,20],rir:[2,2]}}]},input,{loadingInventory:{unit:'lb',exerciseOverrides:{[ex.id]:{increment:5,minimum:0}}}})[0];
 assert.deepEqual(fly.suggestion.setTargets,engine.setTargets,'authored and generated cells use identical engine decisions');
@@ -36,4 +45,4 @@ assert.equal(computeCell(edited,day,ex.id,0,8).tech,'Last set: myo-reps');assert
 const drop=structuredClone(edited);drop.overrides['push:0'].techOverride='Last set: drop set';assert.equal(rowsFor(drop).rows.filter(s=>s.sub&&s.kind==='drop').length,2);
 const restored=parseStoredData(JSON.stringify({v:STORE_VERSION,saved:[edited],history,custom:[],cycles:[],perf:{}}));
 assert.equal(restored.saved[0].id,edited.id);assert.equal(restored.saved[0].overrides['push:0'].techOverride,'Last set: myo-reps');
-console.log('PASS M222: Cable Fly row targets; DDP positional loads/reps; reduced-load floor; effort/incomplete/mixed-load gates; canonical-engine parity; immutable resume repair; authored roster/settings and late-week Myo/Drop techniques.');
+console.log('PASS M222: Cable Fly row targets; DDP positional loads/reps; reduced-load floor; effort/incomplete/mixed-load gates; per-day custom history ownership; canonical-engine parity; immutable resume repair; authored roster/settings and late-week Myo/Drop techniques.');

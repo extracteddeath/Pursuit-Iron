@@ -43,4 +43,4 @@ Volume advice shows the set counts it rests on. The model that estimates your pe
 Free, forever. Built by a tiny independent team..
 
 
-Developer map: [ENGINE_ARCHITECTURE.md](ENGINE_ARCHITECTURE.md). Verified engine sequence: [ENGINE_UPGRADE_PLAN.md](ENGINE_UPGRADE_PLAN.md). Engine verification: [M235_ENGINE_VERIFICATION_2_REPORT.md](M235_ENGINE_VERIFICATION_2_REPORT.md). Post-merge assurance: [M236_VERIFICATION_ASSURANCE_REPORT.md](M236_VERIFICATION_ASSURANCE_REPORT.md).
+Developer map: [ENGINE_ARCHITECTURE.md](ENGINE_ARCHITECTURE.md). Verified engine sequence: [ENGINE_UPGRADE_PLAN.md](ENGINE_UPGRADE_PLAN.md). Engine verification: [M235_ENGINE_VERIFICATION_2_REPORT.md](M235_ENGINE_VERIFICATION_2_REPORT.md). Post-merge assurance: [M236_VERIFICATION_ASSURANCE_REPORT.md](M236_VERIFICATION_ASSURANCE_REPORT.md). CI supply-chain assurance: [M237_CI_SUPPLY_CHAIN_REPORT.md](M237_CI_SUPPLY_CHAIN_REPORT.md).

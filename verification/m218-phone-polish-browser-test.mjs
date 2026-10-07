@@ -171,7 +171,7 @@ try {
     assert.match(await page.$eval('.wpb-workout', n => n.textContent), /continue with lengthened partials/);
     await page.click('.wpb-tech-cue');
     const weight = '[data-testid="set-0-1"] input[aria-label="weight"]';
-    await page.click(weight, { clickCount: 3 }); await page.keyboard.type('125.5'); await page.keyboard.press('Enter');
+    await page.click(weight); await page.keyboard.down('Control'); await page.keyboard.press('KeyA'); await page.keyboard.up('Control'); await page.keyboard.press('Backspace'); await page.keyboard.type('125.5'); await page.keyboard.press('Enter');
     assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('aria-label')), 'reps');
     await page.keyboard.down('Control'); await page.keyboard.press('KeyA'); await page.keyboard.up('Control');
     await page.keyboard.type('14'); await page.keyboard.press('Enter');

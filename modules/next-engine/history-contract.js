@@ -74,6 +74,35 @@ export function normalizeHistoryEntries(history, programId) {
     return { entries: [...entries, ...identities.values()].sort((a, b) => Number(a.date) - Number(b.date)), excluded };
 }
 
+// Resolve a persisted workout to one authored program day without guessing. Exact IDs win.
+// Legacy/stale IDs may fall back to a label only when that label is unique, or when the logged
+// exercise roster uniquely identifies one of the same-label days. Ambiguity stays unresolved.
+export function resolveHistoryDayIndex(days, entry) {
+    const roster = Array.isArray(days) ? days : [];
+    if (!entry) return -1;
+    const dayId = entry.dayId == null ? '' : String(entry.dayId);
+    if (dayId) {
+        const byId = roster.findIndex(day => String(day?.id ?? '') === dayId);
+        if (byId >= 0) return byId;
+    }
+    const label = String(entry.dayLabel ?? '').trim();
+    if (!label) return -1;
+    const candidates = roster.map((day, index) => ({ day, index }))
+        .filter(({ day }) => String(day?.label ?? '').trim() === label);
+    if (candidates.length === 1) return candidates[0].index;
+    if (candidates.length < 2) return -1;
+    const loggedIds = Object.keys(entry.perf ?? {}).filter(id => entry.perf?.[id] != null);
+    if (!loggedIds.length) return -1;
+    const scored = candidates.map(candidate => ({
+        ...candidate,
+        score: loggedIds.reduce((count, id) => count + (candidate.day?.exercises ?? []).includes(id), 0)
+    }));
+    const best = Math.max(...scored.map(candidate => candidate.score));
+    if (best <= 0) return -1;
+    const winners = scored.filter(candidate => candidate.score === best);
+    return winners.length === 1 ? winners[0].index : -1;
+}
+
 export function historyLoadReason(reason, unit) {
     return typeof reason === 'string' ? reason.replace(/\b(\d+(?:\.\d+)?)\s*(lb|kg)\b/g,
         (_, value, from) => `${Math.round(convertHistoryLoad(value, from, unit) * 100) / 100} ${unit}`) : reason;

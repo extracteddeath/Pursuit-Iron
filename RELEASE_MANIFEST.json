@@ -5,7 +5,7 @@
   "build": 823,
   "engineVersion": "0.65.6",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "782dec0143e3b7c18651d569c47f59de29f360158ae5884cc3d72f647e7caf5a",
+  "runtimeAggregate": "42226bb8a1c7c9d3892a417ec69fc58403d647337f4aecc2963db369dca9a8cf",
   "runtimeFiles": {
     "modules/engine-api.js": "40d3253be40bd5390001f16d63b74aae90d0e045df6a015b1764a1bc2404bd56",
     "modules/engine-shell.js": "73645bf4d914423074c0e90b992b58a6c57f7fbb726621d417803e906d140675",
@@ -17,6 +17,7 @@
     "modules/next-engine/arbiter.js": "cba22ac9d8a0dbd76177b3dd639f9794263f266c10f639fc1bab6009ac937c5d",
     "modules/next-engine/arm-coverage.js": "9216b888436bf51205be384a80efa14d26d93c5c3462471721318f93f36db1ce",
     "modules/next-engine/athlete-response.js": "16c8cbed91979ed0c9f5c261eea9ec94d6bbe29cd36dc2eb8a1d887d3b1fa0c0",
+    "modules/next-engine/candidate-optimization.js": "b56d058a7b10118b015ece840067e5fe3dcd8982c589c44ca8b94a299898b396",
     "modules/next-engine/capacity-generation.js": "1fed6ad20b90257bcf6f5a88337669bc568f5de7f6fe92ba06c80fe2de2f36dd",
     "modules/next-engine/capacity-policy.js": "7679d6f487a968d6e3d2144385cb33ac0c788d7565c2b132b9187b5e2693825b",
     "modules/next-engine/coach-regression.js": "f4bf6719070076f2ec8eab6d76ba5f29386ea2e638b106556caad35df6c00e1b",
@@ -83,11 +84,11 @@
     "modules/next-engine/workout-runtime.js": "e55ae9863410c1119fafbe9652322f9e0dedf08fd263389f4baee94bf7b02d68",
     "modules/program-duration.js": "52bffd0e7798f16f1217ba455de75c63c917ba9b7c6aa61dcd795b10dc665d95",
     "modules/training-domain.js": "030aac1553e3eea48805c75a7295a82293f5aee77d9a4ae230ffca48f51e3c6e",
-    "modules/training-domain/analytics.js": "cce28824267c2ff1ab071859f237581866e7aedb8e90d4343562f6db2ad7df72",
+    "modules/training-domain/analytics.js": "8285f0179cad664ab919ff79fdd1ff56811121f34a26c9e59eccf91968cbb737",
     "modules/training-domain/catalog.js": "b9e6071c78ffdf790da90337843b2fe6466f05a26c04624a4951518e784941e4",
-    "modules/training-domain/prescriptions.js": "a878431a96a30f554a7ed2f5360fe58112575862c0ed136f41bd8ec93f64394a",
-    "modules/training-domain/programs.js": "f4070e706bfe8d1f75bf012d5a979fe17a585edc0159cc5f409fdbc66e6baee2",
-    "modules/training-domain/records.js": "47d1bc55779162cce41dd5cb0273d3836ed04b25e0b3399b36b8ae166af9efdf",
+    "modules/training-domain/prescriptions.js": "7927d0f1a4343d0ca25ba0deb8b1da616da05372a0a3214a3285d35581055d5f",
+    "modules/training-domain/programs.js": "27ade346bc7b2bdd94c51564f1292ec126c2fd2bbbbc8d440ee04b4455d5c11b",
+    "modules/training-domain/records.js": "b07d5d53e75b522542f30ad6a78975379841b285ce8c1356d7afcb6923350928",
     "modules/wizard-stability.js": "a62b2bed8a1f5ab880bfeab036a83ec630c93048b8a352652fe00ae75374a3d1",
     "vendor/lucide-react.js": "f84db748249b6e57e1d5187e876da806c1733523a1fa1501224bf740519b2cf4",
     "vendor/react-dom-client.js": "e3d8fd1d433e1bee9110bcaa5f8e9547e64f2754806bed0dd4fc546d890baab5",
@@ -95,8 +96,7 @@
     "vendor/react-jsx-runtime.js": "bde9f287ac956c2a8873443da27dbb828de7ee82bcec262b703aceab2a745954",
     "vendor/react-shared-JU7Z5GYC.js": "b8893896e31178fb4c8c0ce42cae975bec57bb70596c012d5d5c439cd20717d8",
     "vendor/react-shared-V673FGIV.js": "591c4bd8b0aae646cba73ca7ac17a2c2c950bdbaf288529ea14b691f2a4a9f22",
-    "vendor/react.js": "24b2d220a5b2637cf3fb78fe0d961f227ea0a4b960485dbfb03c9d276e72147c",
-    "modules/next-engine/candidate-optimization.js": "b56d058a7b10118b015ece840067e5fe3dcd8982c589c44ca8b94a299898b396"
+    "vendor/react.js": "24b2d220a5b2637cf3fb78fe0d961f227ea0a4b960485dbfb03c9d276e72147c"
   },
   "localCandidate": {
     "name": "Pursuit Iron 4.0 · M234 Candidate Selection Hardening",

@@ -10,4 +10,4 @@ npm run verify
 npm test
 ```
 
-Choose an empty output directory outside the repository. The package has no runtime dependencies. Coverage lists the copied canonical source, public domain exports, release identity and hashes. UI source and browser/source integration suites are retained as reference evidence.
+Choose an empty output directory outside the repository. The package has no runtime dependencies. Coverage lists the copied canonical source, public domain exports, release identity and hashes. UI source and browser/source integration suites remain in the application repository; parity checks verify the standalone package against that source before publication.

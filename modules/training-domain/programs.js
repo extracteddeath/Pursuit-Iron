@@ -1,7 +1,7 @@
 // Canonical programs domain. Maintained production source; independent of React and browser APIs.
-import { setShellEquipmentExpander, splitContractGaps, splitBuildability, refusalFixes, generateNextProgramForShell, recommendNextSplitForShell, getNextShellCell, canonicalShellSetCount, cloneNextDayPrescriptions, swapNextSlotPrescriptions, removeNextSlotPrescription, nextExerciseIdForShellExercise, resolveNextShellExerciseId, remapNextShellRoster, snapshotNextShellPrescription, markUserPrescriptionOverride, clearUserPrescriptionOverride, NextShellAdapterError } from "../next-engine/app-shell-adapter.js";
-import { historyNumber, convertHistoryLoad, observedHistoryRIR, completedHistorySets, historyExposureContext, progressionExposureContext, normalizeHistoryEntries, validHistoryDate, resolveHistoryDayIndex, historyLoadReason } from '../next-engine/history-contract.js';
-import { programWorkingWeeks, cycleBlockMetadata } from "../program-duration.js";
+import { remapNextShellRoster } from "../next-engine/app-shell-adapter.js";
+import { convertHistoryLoad, normalizeHistoryEntries, resolveHistoryDayIndex } from '../next-engine/history-contract.js';
+import { cycleBlockMetadata } from "../program-duration.js";
 import { LEGACY_EQUIP_IMPLIES, baseSetsFor, isBarLike, movePattern, secondaryOf, weeksOf } from './records.js';
 import { ENGINE_V, EQUIPMENT, EXERCISES, EX_BY_ID, SPLITS } from './catalog.js';
 

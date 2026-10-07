@@ -1,12 +1,12 @@
 // Canonical analytics domain. Maintained production source; independent of React and browser APIs.
 import { EXERCISE_MAP as NEXT_EXERCISE_MAP } from "../next-engine/exercise-db.js";
-import { setShellEquipmentExpander, splitContractGaps, splitBuildability, refusalFixes, generateNextProgramForShell, recommendNextSplitForShell, getNextShellCell, canonicalShellSetCount, cloneNextDayPrescriptions, swapNextSlotPrescriptions, removeNextSlotPrescription, nextExerciseIdForShellExercise, resolveNextShellExerciseId, remapNextShellRoster, snapshotNextShellPrescription, markUserPrescriptionOverride, clearUserPrescriptionOverride, NextShellAdapterError } from "../next-engine/app-shell-adapter.js";
+import { generateNextProgramForShell, getNextShellCell, nextExerciseIdForShellExercise } from "../next-engine/app-shell-adapter.js";
 import { avoidableExerciseOverlap } from "../next-engine/exercise-economy.js";
-import { captureShellVolumeSnapshot, auditShellVolume, repairShellVolume, shellVolumeTargets, shellDayMuscleBreakdown } from "../next-engine/volume-repair.js";
-import { historyNumber, convertHistoryLoad, observedHistoryRIR, completedHistorySets, historyExposureContext, progressionExposureContext, normalizeHistoryEntries, normalizeHistoryRevisions, validHistoryDate, resolveHistoryDayIndex, historyLoadReason } from '../next-engine/history-contract.js';
-import { programWorkingWeeks, cycleBlockMetadata } from "../program-duration.js";
-import { nextWorkoutSuggestionForShell, nextWorkoutSuggestionFromPerformedShell } from "../next-engine/workout-history-adapter.js";
-import { ENGINE_VERSION, ENGINE_COMPATIBLE_VERSIONS } from "../next-engine/config.js";
+import { captureShellVolumeSnapshot, auditShellVolume, shellDayMuscleBreakdown } from "../next-engine/volume-repair.js";
+import { historyNumber, convertHistoryLoad, observedHistoryRIR, completedHistorySets, normalizeHistoryEntries, normalizeHistoryRevisions, validHistoryDate, resolveHistoryDayIndex } from '../next-engine/history-contract.js';
+import { cycleBlockMetadata } from "../program-duration.js";
+import { nextWorkoutSuggestionForShell } from "../next-engine/workout-history-adapter.js";
+import { ENGINE_COMPATIBLE_VERSIONS } from "../next-engine/config.js";
 import { ALL_EQUIP_IDS, ENGINE_V, EXERCISES, EX_BY_ID, SESSIONS, SPLITS, expandEquipment } from './catalog.js';
 import { GYM_PRESETS, LOWER_PARTS, SECONDARY, SUB_LANDMARKS, blockPhase, cellRepRange, clamp, compositeMrv, computeCell, effortBounds, goalForDay, isBarLike, isMachineLike, landmarkFor, lastSetTech, loadStep, movePattern, roundTo, secondaryOf, weeksOf } from './records.js';
 import { GYM_LIMITS, INVENTORY_KEYS, PART_LABEL, anchorPerfFor, effortCalibration, gymRackFor, muscleRecovery, parseRIRNum, personalRecoveryHours, prescribeSets, prescribedRIRof, progressionHistoryForProgram, sessionSuggestion, setsOf, toUnit } from './prescriptions.js';
@@ -1325,10 +1325,11 @@ function patternCues(ex) {
 }
 
 function weeklyRecap(history, unit) {
+    history = normalizeHistoryRevisions(history).entries;
     const now = Date.now(), wk = 7 * 86400000;
     const inWin = (h, a, b) => h.date > now - a && h.date <= now - b;
-    const thisW = (history || []).filter(h => h && h.date > now - wk);
-    const prevW = (history || []).filter(h => inWin(h, 2 * wk, wk));
+    const thisW = history.filter(h => h.date > now - wk);
+    const prevW = history.filter(h => inWin(h, 2 * wk, wk));
     const sets = arr => arr.reduce((s, h) => s + (h.setsDone || 0), 0);
     const vol = arr => arr.reduce((s, h) => s + historyVolumeIn(h, unit || h?.unit), 0);
     const muscle = {};
@@ -1338,7 +1339,7 @@ function weeklyRecap(history, unit) {
         return; muscle[ex.part] = (muscle[ex.part] || 0) + setsOf(p).filter(isWorkSet).length; }));
     const topMuscle = Object.entries(muscle).sort((a, b) => b[1] - a[1])[0] || null;
     const byId = {};
-    (history || []).forEach(h => Object.entries(h.perf || {}).forEach(([id, p]) => {
+    history.forEach(h => Object.entries(h.perf || {}).forEach(([id, p]) => {
         if (!(p && p.weight > 0))
             return;
         const ss = setsOf(p);
@@ -1646,8 +1647,8 @@ function weeklySubVolume(program, weekIndex) {
 
 function logWindow(history, days, until, visit) {
     const since = until - days * 86400000;
-    (history || []).forEach(h => {
-        if (!h || h.date <= since || h.date > until)
+    normalizeHistoryRevisions(history).entries.forEach(h => {
+        if (h.date <= since || h.date > until)
             return;
         Object.entries(h.perf || {}).forEach(([id, p]) => {
             const ex = EX_BY_ID[id];

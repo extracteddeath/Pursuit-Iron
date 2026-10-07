@@ -412,7 +412,10 @@ export function semanticStartingReferenceForShell(program, history, day, nextId,
     const request = program?.nextEngine?.request;
     if (!request || program.config?.percentScheme) return null;
     const asOf = options.asOf ?? Date.now();
-    const entries = normalizeHistoryEntries(history, program.id).entries.filter(entry => entry.dayId === day.id && Number(entry.date) <= asOf && asOf - Number(entry.date) <= 90 * 86400000
+    const targetIndex = (program?.days ?? []).findIndex(candidate => candidate?.id === day?.id);
+    if (targetIndex < 0) return null;
+    const entries = normalizeHistoryEntries(history, program.id).entries.filter(entry => resolveHistoryDayIndex(program.days, entry) === targetIndex
+        && Number(entry.date) <= asOf && asOf - Number(entry.date) <= 90 * 86400000
         && Object.values(entry.perf ?? {}).some(perf => perf?.prescription?.exerciseId && perf.prescription.exerciseId !== nextId));
     if (!entries.length) return null;
     const graph = createSemanticExerciseGraph(request.customExercises), targetUnit = program.config?.unit ?? request.equipment.loading?.unit ?? 'lb';

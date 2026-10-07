@@ -14,7 +14,7 @@ const release=JSON.parse(read('RELEASE_MANIFEST.json'));
 if(!runtimeOnly)for(const name of coverage.engineModules)assert.equal(sha(read('modules/next-engine/'+name)),release.runtimeFiles['modules/next-engine/'+name],`Production engine mismatch: ${name}`);
 const entry=await import(new URL('../index.js',import.meta.url));
 assert.equal(coverage.schemaVersion, 2, 'canonical source coverage schema');
-assert.deepEqual(coverage.entryRoots, ['modules/engine-api.js', 'modules/engine-shell.js'], 'canonical engine entry roots');
+assert.equal(coverage.entryRoot, 'modules/engine-api.js', 'canonical engine entry root');
 if(!runtimeOnly)for(const file of coverage.canonicalRuntimeFiles)assert.equal(sha(read(file)),release.runtimeFiles[file],`Canonical runtime mismatch: ${file}`);
 for(const file of coverage.canonicalRuntimeFiles){
  const text=read(file).toString();

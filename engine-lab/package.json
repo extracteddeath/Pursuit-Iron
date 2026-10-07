@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "export": "node export-engine.mjs"
+    "export": "node canonical-export.mjs"
   },
   "engines": {
     "node": ">=22"

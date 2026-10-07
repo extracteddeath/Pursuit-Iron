@@ -1,4 +1,4 @@
-import { historyNumber as numberOf, convertHistoryLoad as convertLoad, observedHistoryRIR, completedHistorySets, historyExposureContext, progressionExposureContext, normalizeHistoryEntries, validHistoryDate, historyLoadReason } from './history-contract.js';
+import { historyNumber as numberOf, convertHistoryLoad as convertLoad, observedHistoryRIR, completedHistorySets, historyExposureContext, progressionExposureContext, normalizeHistoryEntries, validHistoryDate, resolveHistoryDayIndex, historyLoadReason } from './history-contract.js';
 import { advanceCycleState, createInitialCycleState, startPhase } from './cycles.js';
 import { evaluateWorkoutProgression } from './performance.js';
 import { assessRecovery, recoverySignalForDecision } from './recovery.js';
@@ -61,9 +61,7 @@ function sourceSnapshot(program) {
 }
 function resolveDay(program, entry) {
     const days = Array.isArray(program?.days) ? program.days : [];
-    let index = entry.dayId ? days.findIndex((d) => d?.id === entry.dayId) : -1;
-    if (index < 0 && entry.dayLabel)
-        index = days.findIndex((d) => d?.label === entry.dayLabel);
+    const index = resolveHistoryDayIndex(days, entry);
     if (index < 0)
         return null;
     return { day: days[index], dayIndex: index };

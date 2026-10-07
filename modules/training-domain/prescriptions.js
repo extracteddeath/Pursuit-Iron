@@ -1,7 +1,7 @@
 // Canonical prescriptions domain. Maintained production source; independent of React and browser APIs.
 import { EXERCISE_MAP as NEXT_EXERCISE_MAP } from "../next-engine/exercise-db.js";
 import { setShellEquipmentExpander, splitContractGaps, splitBuildability, refusalFixes, generateNextProgramForShell, recommendNextSplitForShell, getNextShellCell, canonicalShellSetCount, cloneNextDayPrescriptions, swapNextSlotPrescriptions, removeNextSlotPrescription, nextExerciseIdForShellExercise, resolveNextShellExerciseId, remapNextShellRoster, snapshotNextShellPrescription, markUserPrescriptionOverride, clearUserPrescriptionOverride, NextShellAdapterError } from "../next-engine/app-shell-adapter.js";
-import { historyNumber, convertHistoryLoad, observedHistoryRIR, completedHistorySets, historyExposureContext, progressionExposureContext, normalizeHistoryEntries, validHistoryDate, historyLoadReason } from '../next-engine/history-contract.js';
+import { historyNumber, convertHistoryLoad, observedHistoryRIR, completedHistorySets, historyExposureContext, progressionExposureContext, normalizeHistoryEntries, validHistoryDate, resolveHistoryDayIndex, historyLoadReason } from '../next-engine/history-contract.js';
 import { PCT_SCHEMES, percentageProtocolFor, adaptPercentageSetBudget, deriveTieredLinearState } from '../next-engine/percentage-protocols.js';
 import { buildRuntimeSetTargets, customProgramProgressionStyle, refreshPendingSetTargets, reconcilePendingRepTargets, techniqueProtocolFromCell, freestyleCellForRepRange, buildUserAddedSlotPrescriptions } from "../next-engine/workout-runtime.js";
 import { nextWorkoutSuggestionForShell, nextWorkoutSuggestionFromPerformedShell } from "../next-engine/workout-history-adapter.js";
@@ -742,30 +742,11 @@ function loadableAbove(ex, w, unit) {
 }
 
 function customExerciseHistory(program, day, id, history) {
-    const entries = (history || []).filter(h => validHistoryDate(h) && h?.perf?.[id]).slice().sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0));
-    const own = entries.filter(h => h.programId === program.id);
-    const exact = own.find(h => h.dayId === day.id);
-    if (exact)
-        return exact;
-    // A regenerated day ID can still be matched by its stable authored label. Do not use a different
-    // day merely because it contains the same exercise: set count, rep target and progression method
-    // are properties of this day slot, not of the movement globally.
-    const label = String(day?.label || '').trim();
-    if (label) {
-        const matchingDays = (program?.days || []).filter(d => String(d?.label || '').trim() === label
-            && Array.isArray(d?.exercises) && d.exercises.includes(id));
-        if (matchingDays.length === 1) {
-            const byLabel = own.find(h => String(h.dayLabel || '').trim() === label);
-            if (byLabel)
-                return byLabel;
-        }
-    }
-    // Old custom logs may predate day identity. They are comparable only when this exercise occurs on
-    // exactly one authored day, making the ownership unambiguous. Otherwise they are reference-only.
-    const authoredDays = (program?.days || []).filter(d => Array.isArray(d?.exercises) && d.exercises.includes(id));
-    if (authoredDays.length === 1)
-        return own.find(h => !h.dayId && !h.dayLabel) || null;
-    return null;
+    const targetIndex = (program?.days || []).findIndex(candidate => candidate?.id === day?.id);
+    if (targetIndex < 0) return null;
+    const entries = (history || []).filter(h => validHistoryDate(h) && h?.perf?.[id] && h.programId === program.id)
+        .slice().sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0));
+    return entries.find(entry => resolveHistoryDayIndex(program.days, entry) === targetIndex) ?? null;
 }
 
 function customExerciseReferenceHistory(program, id, history) {

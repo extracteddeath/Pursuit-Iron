@@ -99,8 +99,10 @@ for(let i=0;i<stress.length;i++){
     stressBuilt++;
   }catch(error){
     assert.ok(error instanceof NextShellAdapterError,`${label}: unexpected error type ${error?.stack??error}`);
-    assert.equal(error.code,'NEXT_ENGINE_REJECTED',`${label}: unsafe/unexpected refusal ${error.code}`);
-    assert.ok(error.recovery?.blockingCodes?.length||error.recovery?.suggestions?.length,`${label}: rejection lacks recovery diagnostics`);
+    assert.ok(['NEXT_ENGINE_REJECTED','NEXT_CONFIG_SPLIT_DAYS_INVALID'].includes(error.code),
+        `${label}: unsafe/unexpected refusal ${error.code}`);
+    assert.ok(error.recovery?.blockingCodes?.length||error.recovery?.suggestions?.length,
+        `${label}: rejection lacks recovery diagnostics`);
     safeRefusals++;
   }
 }

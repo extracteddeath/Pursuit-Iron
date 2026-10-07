@@ -1,3 +1,15 @@
+# M225 · build 815 · Engine 0.64.14
+
+- Complete the recovered M224 engine audit repairs.
+- Share recovery/edit/interruption context rules across progression methods and preserve exercise/set provenance in actual workout logs.
+- Reject malformed numeric evidence and recover from invalid revision timestamps.
+- Verify standalone generation against production directly; require M224/M225 regression gates.
+
+# M224 · build 814 · Engine 0.64.13
+
+- Fix all 14 reproduced audit families: units, effort provenance, history identity, custom snapshots, capacity, instruction types and percentage runtime parity.
+- Add shared history contracts, pure workout serialization and executable percentage protocols.
+
 # M223 — Installed icon refresh and independent engine audits
 
 - Use content-hashed PNG icon URLs with the same installed app identity and data namespace.

@@ -1,13 +1,13 @@
 {
   "schemaVersion": 3,
-  "milestone": "M231",
+  "milestone": "M232",
   "appVersion": "4.0.0",
   "build": 817,
-  "engineVersion": "0.65.3",
+  "engineVersion": "0.65.4",
   "candidateStatus": "engineering_branch_not_deployed",
-  "runtimeAggregate": "a005ff4dc0d6f977d1610fff607d1d94600773cad4b37d4d8ee1428b0c743f97",
+  "runtimeAggregate": "e24218234e0141fd9b70a6e6c2f5fb465b6e9a99b8bf9bbf823f5599d5ab3f42",
   "runtimeFiles": {
-    "modules/engine-api.js": "15733572987427b5d8e63e368948b5caa8f33c34ec1c2fe0e1806c76544c0466",
+    "modules/engine-api.js": "696e08d8144b042b9d9e504d3133010adae71b4cc7ee18317d25dc34ad96e25d",
     "modules/engine-shell.js": "73645bf4d914423074c0e90b992b58a6c57f7fbb726621d417803e906d140675",
     "modules/legacy-research-data.js": "8b09be67d7c80da7602bb168726d7f7bc3f6ddb9a43b29293acdd18e208ba206",
     "modules/main.js": "535deb3adbf4269a36b7db9103fd0db48be1b8bf6ddfa062c8e02f206cc0a33d",
@@ -20,7 +20,7 @@
     "modules/next-engine/capacity-generation.js": "1fed6ad20b90257bcf6f5a88337669bc568f5de7f6fe92ba06c80fe2de2f36dd",
     "modules/next-engine/capacity-policy.js": "7679d6f487a968d6e3d2144385cb33ac0c788d7565c2b132b9187b5e2693825b",
     "modules/next-engine/coach-regression.js": "f4bf6719070076f2ec8eab6d76ba5f29386ea2e638b106556caad35df6c00e1b",
-    "modules/next-engine/config.js": "82d4e070111aabd38dd3c82aaa4bee4becfebae41ee142004a1c7237e2bee266",
+    "modules/next-engine/config.js": "0dc6f361d457b2de446d206e53940f423f7fa42e45d6ddba516f63337682708d",
     "modules/next-engine/cycle-runtime-adapter.js": "b734cd209eff8b0b294f9386907ac6d86b0373b3a43029da1aaf459eacb1196e",
     "modules/next-engine/cycles.js": "3b949f73ecef2543e4aa3aa6910fe43a3d3526805fcbcd111424e5df2d6efc79",
     "modules/next-engine/domain-contracts.js": "29930ec2e0ab3c9cdb70d3ff3b9fa1a036e18813b83a4c6d4ebead9eea4f5083",
@@ -40,6 +40,7 @@
     "modules/next-engine/history-contract.js": "6143186e231e1f959f866bcbba62051e24ad7594ffeda401371defa40c2122e1",
     "modules/next-engine/history.js": "8c2c2c0e92c1d4ab51b4326d22e2b7c5425f8c6e3f14c1cea6afe3c3b99b931c",
     "modules/next-engine/ledgers.js": "c5e9e637e8c52df6b1b59ed91cf3723be8e6edcc83b40523c7316f92a5706d1d",
+    "modules/next-engine/live-autoregulation.js": "8462de14861e7f11c9f5f0f3adfbb0e71fc54a6ecd05221c22fcaa847e4ffdff",
     "modules/next-engine/loading.js": "9ebeb1072dc98aedf90f50a9ffb5d22d0948642ceae6a53a67fab689ff6cb748",
     "modules/next-engine/method-policy.js": "b5b0a4f214c768ab76050d3daad56f0afea0b533b0fea470859ef475ad16d828",
     "modules/next-engine/percentage-protocols.js": "6898b022d081d4bab891cc32de5b321be944187f3d846dc69fb66f15c8d44f4b",
@@ -71,7 +72,7 @@
     "modules/next-engine/volume-repair.js": "489756539c4bded6dcda72fb9a0f5d5312de4419ee97340daf82f28c3cb926c6",
     "modules/next-engine/weekly-recovery.js": "92cf14bd6ca28715d1d3f9ddde1cc0f42502892f230d69650f83bf6b921c111c",
     "modules/next-engine/workout-history-adapter.js": "a44881ef5036e3b66e360ed33ab10c2a79459cb550f126ac6f8db99748be47b9",
-    "modules/next-engine/workout-runtime.js": "306d94bf10622baf654094d951d89fc1ce1d4de5ffca0e607c78a3cbc9bc8b69",
+    "modules/next-engine/workout-runtime.js": "e55ae9863410c1119fafbe9652322f9e0dedf08fd263389f4baee94bf7b02d68",
     "modules/program-duration.js": "52bffd0e7798f16f1217ba455de75c63c917ba9b7c6aa61dcd795b10dc665d95",
     "modules/training-domain.js": "030aac1553e3eea48805c75a7295a82293f5aee77d9a4ae230ffca48f51e3c6e",
     "modules/training-domain/analytics.js": "d4c8a241b3d68614d728236dfe66704413c9b0d814d405e4fc0c0141bc140806",
@@ -89,22 +90,22 @@
     "vendor/react.js": "24b2d220a5b2637cf3fb78fe0d961f227ea0a4b960485dbfb03c9d276e72147c"
   },
   "localCandidate": {
-    "name": "Pursuit Iron 4.0 Engineering Candidate · M231 Owned athlete response and bounded capacity memory",
+    "name": "Pursuit Iron 4.0 Engineering Candidate · M232 Reversible live recovery adjustment",
     "base": "M228 / Engine 0.65.0",
     "validation": "See milestone report and verification scripts."
   },
   "uiFiles": {
-    "modules/App.js": "e44bc401ce8862f44d8f663d5386ce128364bd2b375113d4d249b51d8414a49d",
+    "modules/App.js": "e58b772066c40539dc8acef7fb0fdcb6dfa067bb76cc92ec1fe678c5699a65c5",
     "index.html": "fbe6717c7460271ca10678bb59256621dc4b0b8d38fe946d154497d8325a4cf6",
-    "sw.js": "d70ec46a22b76c20d847018c2264c9b94e25f515ce5737d7cb77342d0c99c01f",
-    "BUILD_PROFILE.json": "3ab9d9431881150ac66738bcd1f4c166e9e9671d396e367a59ddb365ab2f10c6",
-    "CHANGELOG.md": "9045704a5c87af20ddb734092fe395be2832bb56143ef3e101217f9de2f850e0",
+    "sw.js": "8e0d2dddeae08893eb2606719ac5fa8567fe16765199ef7372c9cc00096acfa1",
+    "BUILD_PROFILE.json": "67e504737f34aab1c95338ed991ad9f0a2d0452e57ee786e02eb51a50f604363",
+    "CHANGELOG.md": "3c8d787337ef0c31637e6764d698572c497256d813bc8d66572180bcbe586aff",
     "app.css": "27818b3319609aff1416b32d5afebe70598cc57dfa64f4467b8bfe5b1130e0dd",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
-  "runtimeHotfix": "Owned athlete response and bounded capacity memory",
-  "cache": "pursuit-iron-production-v4-0-0-m231-engine-b817",
-  "uiMilestone": "Pursuit Iron 4.0 Engineering Candidate · M231 Owned athlete response and bounded capacity memory"
+  "runtimeHotfix": "Reversible live recovery adjustment",
+  "cache": "pursuit-iron-production-v4-0-0-m232-engine-b817",
+  "uiMilestone": "Pursuit Iron 4.0 Engineering Candidate · M232 Reversible live recovery adjustment"
 }

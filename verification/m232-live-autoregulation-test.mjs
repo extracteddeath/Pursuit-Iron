@@ -1,0 +1,33 @@
+import assert from 'node:assert/strict';
+import { applyConservativeLiveAdjustment } from '../modules/next-engine/live-autoregulation.js';
+import { refreshPendingSetTargets } from '../modules/next-engine/workout-runtime.js';
+import { evaluateWorkoutProgression } from '../modules/next-engine/performance.js';
+import { loggedWorkoutPerformance } from '../modules/engine-shell.js';
+const row = (done=false,reps='12',extra={}) => ({weight:'100',reps,done,auto:true,valueOwner:'prescription',target:{w:100,prefillReps:'12',reps:'10-15',rir:'2'},...extra});
+const sets=[row(true,'8'),row(true,'9'),row(),row(false,'13',{valueOwner:'user',auto:false}),row(false,'5',{warm:true}),row(false,'5',{sub:true})];
+const cell={sets:4,reps:'10-15',rir:'2',role:'hypertrophy_isolation'};
+const args={sets,cell,exerciseId:'cable_fly',snapLoad:x=>Math.floor(x/5)*5};
+const before=structuredClone(sets), result=applyConservativeLiveAdjustment(args);
+assert.equal(result.changedRows,1);assert.equal(result.sets[2].weight,'95');assert.equal(result.sets[2].reps,'10');
+assert.equal(result.sets[2].recoveryLimited,true);assert.deepEqual(sets,before);
+for(const i of [0,1,3,4,5])assert.equal(result.sets[i],sets[i]);
+assert.equal(applyConservativeLiveAdjustment({...args,sets:result.sets}).sets,result.sets,'idempotent overlay');
+const restored=applyConservativeLiveAdjustment({...args,sets:result.sets.map((r,i)=>i===0?{...r,done:false}:r)});
+assert.equal(restored.sets[2].weight,'100');assert.equal(restored.sets[2].reps,'12');assert.equal(restored.sets[2].liveAdjustment,undefined);
+const manual=result.sets.map((r,i)=>i===2?{...r,valueOwner:'user',weight:'97'}:i===0?{...r,done:false}:r);
+assert.equal(applyConservativeLiveAdjustment({...args,sets:manual}).sets,manual,'undo preserves subsequent manual typing');
+for(const extra of [{manual:true},{isAssisted:true},{context:{interrupted:true}},{context:{readinessStatus:'low'}},{snapLoad:()=>90}])
+    assert.equal(applyConservativeLiveAdjustment({...args,...extra}).sets,sets);
+const percentage=sets.map((r,i)=>i===2?{...r,target:{...r.target,nextAction:'percentage'}}:r);
+assert.equal(applyConservativeLiveAdjustment({...args,sets:percentage}).sets,percentage);
+const serialized=JSON.parse(JSON.stringify(result.sets));
+assert.deepEqual(applyConservativeLiveAdjustment({...args,sets:serialized}).sets,serialized);
+assert.equal(refreshPendingSetTargets(result.sets,sets)[2],result.sets[2],'resume does not overwrite a saved overlay');
+const exercise={exerciseId:'cable_fly',name:'Fly',sets:3,progressionStyle:'double',prescription:{reps:[10,15],rir:[2,2]}};
+const performed=[0,1,2].map(setIndex=>({exerciseId:'cable_fly',setIndex,load:95,reps:15,rir:2,recoveryLimited:setIndex===2}));
+assert.equal(evaluateWorkoutProgression({exercises:[exercise]},performed)[0].outcome,'context_limited');
+const program={id:'p',custom:true,weeks:4,config:{weeks:4,goal:'hypertrophy',experience:'intermediate',progression:'auto'},
+    days:[{id:'d',label:'Pull',primaryIndex:-1,exercises:['cable-fly']}],overrides:{'d:0':cell}};
+const logged=loggedWorkoutPerformance(program,program.days[0],[{id:'cable-fly',slot:0,note:'',sets:[{...result.sets[2],done:true}]}],1,'lb',{},[]);
+assert.equal(logged['cable-fly'].sets[0].recoveryLimited,true,'actual logs preserve adjustment context');
+console.log('PASS M232: immutable/manual/completed protection, <=5% load reductions, rep-floor reset, no percentage/assistance rewrite, undo, resume and context-limited logged progression.');

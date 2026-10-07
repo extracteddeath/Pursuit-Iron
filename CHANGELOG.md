@@ -1,3 +1,7 @@
+# M232 · Engine 0.65.4
+
+- Reversible live recovery adjustment.
+
 # M231 · Engine 0.65.3
 
 - Owned athlete response and bounded capacity memory.

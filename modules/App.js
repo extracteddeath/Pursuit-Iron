@@ -1,4 +1,4 @@
-const __APP_VERSION__='4.0.0'; const __BUILD__='812';
+const __APP_VERSION__='4.0.0'; const __BUILD__='813';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { holdWorkoutScreenAwake } from "./mobile-lifecycle.js";

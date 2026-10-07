@@ -1,8 +1,8 @@
 {
   "schemaVersion": 3,
-  "milestone": "M222",
+  "milestone": "M223",
   "appVersion": "4.0.0",
-  "build": 812,
+  "build": 813,
   "engineVersion": "0.64.12",
   "candidateStatus": "verification_enforced_by_ci",
   "runtimeAggregate": "2cd7122b782c48323840a7156e45ff8fccc89fd9b0375c397b6790e60ef42c55",
@@ -72,17 +72,17 @@
     "validation": "M221 malformed/empty equipment, finite history estimates, blank runtime ranges and 2394 exhaustive loading comparisons; permanent release and engine gates."
   },
   "uiFiles": {
-    "modules/App.js": "bfd73d2850c6c18b7762bbe631184997fc3a90b105e771399f80832fed90314d",
-    "index.html": "be594217252863969f8103693c640da2d35d79191c60df3ee93e34ce6d14bff4",
-    "sw.js": "c74f5250952fd0f11a127965bb921cb525d5a426c6d26fc0b9264de6fadad1e2",
-    "BUILD_PROFILE.json": "ef287b9a03f1236c880b9782d6962b18c235e1a8c00d4221c3f2302cab719fc0",
-    "CHANGELOG.md": "b65d814dfbd6e1d663f10e74a2ef3c991d77b0e772728aeb59fcae100bb03d9b",
+    "modules/App.js": "410219b7eb321dc74479834fcb636f4a72c6ce9d4ebbbc9b8047e67bd82f36a1",
+    "index.html": "b79ae5525eaabf5a6cae4993bed8c518494e7b96cbabc17eff6bbdede09b91bf",
+    "sw.js": "1e37656beb68f923bd8082ba5f183e9089c488e9f9d6fe06b8875f410d2d096a",
+    "BUILD_PROFILE.json": "467447a795fd83cf59674cea3f2b0268ec94a5cf775efb9c858c6236028389ba",
+    "CHANGELOG.md": "4d1a89ac9ebd547b0c486db762dae385b7de1443469fdba7dc19ba7e3f55606b",
     "app.css": "27818b3319609aff1416b32d5afebe70598cc57dfa64f4467b8bfe5b1130e0dd",
-    "manifest.webmanifest": "46718c7b74d686446fdf40ea167992aacc86bdf74e5b9d835263155adedeb763"
+    "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Harden equipment and history input handling; preserve exact load selection under a bounded query and repair blank runtime ranges.",
-  "cache": "pursuit-iron-production-v4-0-0-m222-custom-parity-b812",
-  "uiMilestone": "Pursuit Iron 4.0 Production Release · M222 Custom Program Progression"
+  "cache": "pursuit-iron-production-v4-0-0-m223-icon-engine-audit-b813",
+  "uiMilestone": "Pursuit Iron 4.0 Production Release · M223 Icon Refresh and Engine Audit"
 }

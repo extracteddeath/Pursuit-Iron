@@ -1,11 +1,11 @@
 {
   "profile": "portable-browser-esm-canonical-engine",
-  "milestone": "M222",
-  "source": "M221 + shared custom-program progression, per-set targets and protected recovery",
+  "milestone": "M223",
+  "source": "M222 + data-preserving installed icon refresh and independent engine audit export",
   "engine": "0.64.12; authored/program progression parity and positional working targets",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 46,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m222-custom-parity-b812",
-  "uiMilestone": "Pursuit Iron 4.0 Production Release · M222 Custom Program Progression"
+  "cache": "pursuit-iron-production-v4-0-0-m223-icon-engine-audit-b813",
+  "uiMilestone": "Pursuit Iron 4.0 Production Release · M223 Icon Refresh and Engine Audit"
 }

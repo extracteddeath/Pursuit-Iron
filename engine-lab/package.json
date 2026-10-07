@@ -1,0 +1,15 @@
+{
+  "dependencies": {
+    "@babel/parser": "8.0.6",
+    "@babel/traverse": "8.0.6"
+  },
+  "name": "pursuit-iron-engine-exporter",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "export": "node export-engine.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

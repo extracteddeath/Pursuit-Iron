@@ -1,3 +1,10 @@
+# M223 — Installed icon refresh and independent engine audits
+
+- Use content-hashed PNG icon URLs with the same installed app identity and data namespace.
+- Retrieve the current manifest online and retain an offline fallback; no data reset or reinstall.
+- Add a reproducible independent engine export: all 46 engine modules, the complete catalog, headless shell computations, semantic tests and complete integration-boundary source evidence.
+- Engine behavior remains 0.64.12.
+
 # M222 · build 812 · Engine 0.64.12
 
 - Custom programs use canonical progression with selected methods, completed-set and effort safeguards.

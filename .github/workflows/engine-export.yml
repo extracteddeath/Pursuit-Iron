@@ -1,0 +1,29 @@
+name: Independent engine audit
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --prefix engine-lab --ignore-scripts
+      - run: node engine-lab/export-engine.mjs ../pursuit-iron-engine
+      - run: node engine-lab/verify-parity.mjs ../pursuit-iron-engine
+      - name: Verify source identity and independent regressions
+        working-directory: ../pursuit-iron-engine
+        run: npm run verify && npm test
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pursuit-iron-engine
+          path: ../pursuit-iron-engine
+          retention-days: 30

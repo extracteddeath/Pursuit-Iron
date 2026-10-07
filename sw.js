@@ -1,5 +1,5 @@
-/* Pursuit Iron 4.0 — M222 production release. */
-const CACHE="pursuit-iron-production-v4-0-0-m222-custom-parity-b812";
+/* Pursuit Iron 4.0 — M223 production release. */
+const CACHE="pursuit-iron-production-v4-0-0-m223-icon-engine-audit-b813";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
   "./BUILD_PROFILE.json",
@@ -10,8 +10,11 @@ const SHELL=[
   "./apple-touch-icon.png",
   "./favicon.ico",
   "./gallery.json",
+  "./icons/icon-192-aa9e4b77f520.png",
   "./icons/icon-192.png",
+  "./icons/icon-512-5bdeae240e55.png",
   "./icons/icon-512.png",
+  "./icons/icon-maskable-512-1d7393c9a2de.png",
   "./icons/icon-maskable-512.png",
   "./icons/icon.svg",
   "./icons/mark-alpha.png",
@@ -81,4 +84,12 @@ const RESCUE_CACHE='pursuit-iron-production-m100';
 self.addEventListener('install',e=>{e.waitUntil((async()=>{const c=await caches.open(CACHE);await c.addAll(SHELL.map(u=>new Request(u,{cache:'reload'})));const keys=await caches.keys();if(keys.includes(RESCUE_CACHE))await self.skipWaiting();})());});
 self.addEventListener('message',e=>{if(e.data&&e.data.type==='SKIP_WAITING')self.skipWaiting();});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE&&(PURSUIT_CACHE.test(k)||/^wpb-shell-/.test(k))).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
-self.addEventListener('fetch',e=>{const r=e.request;if(r.method!=='GET')return;if(r.mode==='navigate'){e.respondWith(caches.open(CACHE).then(c=>c.match('./index.html')).then(x=>x||fetch(r)).catch(()=>caches.open(CACHE).then(c=>c.match('./index.html'))));return;}e.respondWith(caches.open(CACHE).then(c=>c.match(r,{ignoreSearch:true}).then(x=>x||fetch(r).then(res=>{if(res&&res.status===200&&res.type==='basic')c.put(r,res.clone()).catch(()=>{});return res;}))));});
+self.addEventListener('fetch',e=>{const r=e.request;if(r.method!=='GET')return;
+// Android checks this stable manifest URL independently of our in-app update prompt.
+// Always offer the current network manifest, while retaining the certified offline copy.
+const manifestUrl=new URL('./manifest.webmanifest',self.registration.scope);
+const requestUrl=new URL(r.url);
+if(requestUrl.origin===manifestUrl.origin&&requestUrl.pathname===manifestUrl.pathname){
+  e.respondWith((async()=>{const c=await caches.open(CACHE);try{const res=await fetch(new Request(r,{cache:'no-cache'}));if(res.ok){await c.put(manifestUrl.href,res.clone()).catch(()=>{});return res;}}catch{}const saved=await c.match(manifestUrl.href);return saved||new Response('Manifest unavailable',{status:503});})());return;
+}
+if(r.mode==='navigate'){e.respondWith(caches.open(CACHE).then(c=>c.match('./index.html')).then(x=>x||fetch(r)).catch(()=>caches.open(CACHE).then(c=>c.match('./index.html'))));return;}e.respondWith(caches.open(CACHE).then(c=>c.match(r,{ignoreSearch:true}).then(x=>x||fetch(r).then(res=>{if(res&&res.status===200&&res.type==='basic')c.put(r,res.clone()).catch(()=>{});return res;}))));});

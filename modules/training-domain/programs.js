@@ -1,6 +1,6 @@
 // Canonical programs domain. Maintained production source; independent of React and browser APIs.
 import { setShellEquipmentExpander, splitContractGaps, splitBuildability, refusalFixes, generateNextProgramForShell, recommendNextSplitForShell, getNextShellCell, canonicalShellSetCount, cloneNextDayPrescriptions, swapNextSlotPrescriptions, removeNextSlotPrescription, nextExerciseIdForShellExercise, resolveNextShellExerciseId, remapNextShellRoster, snapshotNextShellPrescription, markUserPrescriptionOverride, clearUserPrescriptionOverride, NextShellAdapterError } from "../next-engine/app-shell-adapter.js";
-import { historyNumber, convertHistoryLoad, observedHistoryRIR, completedHistorySets, historyExposureContext, progressionExposureContext, normalizeHistoryEntries, validHistoryDate, historyLoadReason } from '../next-engine/history-contract.js';
+import { historyNumber, convertHistoryLoad, observedHistoryRIR, completedHistorySets, historyExposureContext, progressionExposureContext, normalizeHistoryEntries, validHistoryDate, resolveHistoryDayIndex, historyLoadReason } from '../next-engine/history-contract.js';
 import { programWorkingWeeks, cycleBlockMetadata } from "../program-duration.js";
 import { LEGACY_EQUIP_IMPLIES, baseSetsFor, isBarLike, movePattern, secondaryOf, weeksOf } from './records.js';
 import { ENGINE_V, EQUIPMENT, EXERCISES, EX_BY_ID, SPLITS } from './catalog.js';
@@ -367,14 +367,7 @@ function endlessStalled(program, entries, dpw) {
 }
 
 function historyDayIndex(days, h) {
-    if (!h)
-        return -1;
-    const byId = h.dayId ? (days || []).findIndex(d => d.id === h.dayId) : -1;
-    if (byId >= 0)
-        return byId;
-    if (!h.dayLabel)
-        return -1;
-    return (days || []).findIndex(d => d.label === h.dayLabel);
+    return resolveHistoryDayIndex(days, h);
 }
 
 function nextSessionCursor(program, history) {

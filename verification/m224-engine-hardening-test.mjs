@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { EXERCISES, EX_BY_ID, TEMPLATES, templateConfig, sessionSuggestion, prescribeSets,
     computeCell, percentagePlanFor, trainingMaxForUnit, withTrainingMax, nextSessionCursor, nextDueDayId,
-    exerciseSeries, exerciseTrends, exRecords, strengthSnapshot, strengthScoreHistory, daySeconds, loggedWorkoutPerformance } from '../modules/App.js';
+    exerciseSeries, exerciseTrends, exRecords, strengthSnapshot, strengthScore, strengthScoreHistory,
+    scoreAttribution, daySeconds, loggedWorkoutPerformance } from '../modules/App.js';
 import { generateNextProgramForShell, snapshotNextShellPrescription, markUserPrescriptionOverride } from '../modules/next-engine/app-shell-adapter.js';
 import { analyzeShellHistoryForNextEngine, deriveProgressionSelectionEvidence,
     nextWorkoutSuggestionFromPerformedShell } from '../modules/next-engine/workout-history-adapter.js';
@@ -163,6 +164,52 @@ const canonical = mixed.map(h => ({ ...h, unit: 'lb', perf: { [bench]: { weight:
 assert.ok(Math.abs(strengthSnapshot(mixed, 180, 'lb', 'male', 30).score - strengthSnapshot(canonical, 180, 'lb', 'male', 30).score) < .1);
 
 assert.deepEqual(strengthScoreHistory(mixed, 180, 'lb', 'male', 30), strengthScoreHistory(canonical, 180, 'lb', 'male', 30));
+
+// Strength maturity, trend and attribution must share the same persisted-revision owner. A stale
+// duplicate cannot add training maturity, preserve a corrected PR or reappear before a date cutoff.
+const statsDay = 86400000, statsNow = Date.now();
+const strengthLog = (logId, exId, weight, date, updatedAt = date, programId = 'strength-stats') => ({
+    id: logId, programId, date, updatedAt, unit: 'lb',
+    perf: { [exId]: { weight, reps: 5, sets: [{ w: weight, r: 5 }] } }
+});
+const strengthBase = [
+    strengthLog('bench-1', 'bb-bench', 150, statsNow - 5 * statsDay),
+    strengthLog('bench-2', 'bb-bench', 160, statsNow - 4 * statsDay),
+    strengthLog('squat-1', 'back-squat', 90, statsNow - 3 * statsDay),
+    strengthLog('squat-2', 'back-squat', 100, statsNow - 2 * statsDay)
+];
+const oldStrengthPR = strengthLog('corrected-pr', 'bb-bench', 300, statsNow - 6 * statsDay);
+const correctedStrengthPR = strengthLog('corrected-pr', 'bb-bench', 100, oldStrengthPR.date, statsNow);
+const movedStrengthOld = strengthLog('moved-date', 'bb-bench', 120, statsNow - 100 * statsDay);
+const movedStrength = strengthLog('moved-date', 'bb-bench', 120, statsNow - 10 * statsDay, statsNow);
+const otherStrengthProgram = strengthLog('corrected-pr', 'bb-bench', 130, statsNow - 8 * statsDay, statsNow, 'other-program');
+const legacyStrengthLog = strengthLog(null, 'back-squat', 95, statsNow - 7 * statsDay);
+const strengthWinners = [correctedStrengthPR, movedStrength, otherStrengthProgram,
+    legacyStrengthLog, structuredClone(legacyStrengthLog), ...strengthBase];
+const strengthRevisions = [...strengthWinners, oldStrengthPR, movedStrengthOld, strengthBase[2],
+    null, { ...oldStrengthPR, id: 'invalid-strength-date', date: 'invalid' }];
+const strengthOriginal = structuredClone(strengthRevisions);
+const scoreOf = hs => strengthScore(hs, 180, 'lb', 'male', 30);
+const trendOf = hs => strengthScoreHistory(hs, 180, 'lb', 'male', 30);
+const attributionOf = hs => scoreAttribution(hs,
+    [{ date: statsNow - 120 * statsDay, w: 180, unit: 'lb' }], 180, 'lb', 'male', 30);
+assert.equal(scoreOf(strengthBase).overall, 39, 'distinct workouts retain the existing maturity model');
+assert.ok(trendOf(strengthWinners)?.overall.length >= 2, 'fixture must exercise a real strength trend');
+assert.equal(attributionOf(strengthWinners), null, 'a date-corrected workout provides no prior-window baseline');
+for (const revisedHistory of [strengthRevisions, strengthRevisions.slice().reverse()]) {
+    assert.deepEqual(scoreOf(revisedHistory), scoreOf(strengthWinners), 'strength maturity counts current revisions once');
+    assert.deepEqual(trendOf(revisedHistory), trendOf(strengthWinners), 'corrected PRs cannot survive in the strength trend');
+    assert.deepEqual(attributionOf(revisedHistory), attributionOf(strengthWinners), 'attribution resolves revisions before its date cutoff');
+}
+const baselineStrengthLog = strengthLog('prior-baseline', 'bb-bench', 90, statsNow - 110 * statsDay);
+const strengthWithBaseline = [baselineStrengthLog, ...strengthWinners];
+const attributionWithBaseline = attributionOf(strengthWithBaseline);
+assert.ok(attributionWithBaseline, 'an independent genuine baseline remains eligible');
+assert.deepEqual(attributionOf([baselineStrengthLog, ...strengthRevisions]), attributionWithBaseline);
+assert.equal(scoreOf([null, { date: 'invalid', perf: {} }]), null);
+assert.equal(trendOf([null, { date: 'invalid', perf: {} }]), null);
+assert.equal(attributionOf([null, { date: 'invalid', perf: {} }]), null);
+assert.deepEqual(strengthRevisions, strengthOriginal, 'strength analytics cannot mutate persisted revisions');
 
 // The final executable clock is hard; protected manual counts cannot be silently trimmed.
 const capacity = generateNextProgramForShell({ config: { ...config, goal: 'hypertrophy', split: 'strength_fb', days: 3,

@@ -1,6 +1,6 @@
-# Engine upgrade and assurance sequence through M261
+# Engine upgrade and assurance sequence through M262
 
-The behavior-bearing engine remains M234 / Pursuit Engine 0.65.6 / app 4.0.0 build 823. M235 verifies that behavior line. M236–M261 harden ownership, verification, CI, history provenance, standalone packaging, and internal responsibility boundaries without changing training behavior or release identity.
+The behavior-bearing engine remains M234 / Pursuit Engine 0.65.6 / app 4.0.0 build 823. M235 verifies that behavior line. M236–M262 harden ownership, verification, CI, history provenance, standalone packaging, and internal responsibility boundaries without changing training behavior or release identity.
 
 | Milestone | Scope | Acceptance |
 |---|---|---|
@@ -37,6 +37,8 @@ The behavior-bearing engine remains M234 / Pursuit Engine 0.65.6 / app 4.0.0 bui
 | M259 | Log revision ownership | Log search plus month/cycle grouping use canonical persisted workout revisions so edited sessions cannot appear twice or inflate grouped counts and volume |
 | M260 | Plan completion ownership | Week completion counts distinct canonical workouts only when they resolve to an authored program day, preventing stale revisions or orphaned imports from marking plan sessions complete |
 | M261 | Weekly dose revision ownership and domain import cleanup | Weekly recaps, PRs and logged muscle/regional dose resolve current revisions before date windows; 97 unused domain import bindings removed with module evaluation order preserved |
+
+| M262 | Strength analytics revision ownership | Strength-score maturity, strength trends and score attribution consume canonical persisted revisions before counting exposures or applying date cutoffs; corrected bests and moved dates cannot leave stale evidence |
 
 ## Current ownership rules
 

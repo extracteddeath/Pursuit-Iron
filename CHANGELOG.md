@@ -1,3 +1,7 @@
+# M231 · Engine 0.65.3
+
+- Owned athlete response and bounded capacity memory.
+
 # M230 · Engine 0.65.2
 
 - Session realization decomposition.

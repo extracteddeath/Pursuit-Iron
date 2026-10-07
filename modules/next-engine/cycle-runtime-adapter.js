@@ -449,6 +449,8 @@ function requestForAdvance(cycle, current, target, weeks, analysis) {
     if (!base)
         throw new NextShellAdapterError('NEXT_CYCLE_REQUEST_MISSING', 'Next cycle is missing its immutable request snapshot.');
     let request = carryForwardAvoidedExercises(clone(base), current?.nextEngine?.request, analysis);
+    if (analysis.athleteResponse?.action !== 'maintain' && analysis.athleteResponse)
+        request.preferences = { ...request.preferences, responseCapacityScale: analysis.athleteResponse.capacityScale };
     if (target === 'recovery' || analysis.classification === 'fatigue_limited' || analysis.recovery.status === 'deload_recommended') {
         request.schedule = { days: request.schedule.days.map(day => ({ ...day, targetExercises: day.targetExercises === undefined ? undefined : Math.max(2, day.targetExercises - Math.max(1, Math.ceil(day.targetExercises * .2))) })) };
         request.preferences = { ...(request.preferences ?? {}), responseCapacityScale: target === 'recovery' ? .72 : .82 };
@@ -487,6 +489,7 @@ function buildAdaptedBlock(current, cycle, target, weeks, label, analysis, legac
     const plannedIndex = target === 'recovery' ? null : (cycle.blockMeta?.find((m) => m.id === existingId)?.plannedIndex ?? null);
     attachBlockContext(legacy, next, request, cycle.nextEngineCycle.baseRequest, { templateId: cycle.templateId, plannedIndex, blockIndex: cycle.activeBlock + 1, label, weeks, phase: target, preview: false, adaptBetweenBlocks: !!cycle.adaptExercises, adaptedFrom: current.id });
     legacy.nextEngine.priorBlock = { programId: current.id, phase: source.phase, workouts: analysis.workoutCount, classification: analysis.classification, recovery: analysis.recovery.status };
+    legacy.nextEngine.priorAthleteResponse = analysis.athleteResponse;
     legacy.nextEngine.historySummary = { positive: analysis.positiveDecisionCount, negative: analysis.negativeDecisionCount, successfulExercises: analysis.successfulExerciseIds.length, ignoredLegacyExerciseIds: analysis.ignoredLegacyExerciseIds };
     return finalizeGeneratedShellVolume(legacy, legacyExercises);
 }

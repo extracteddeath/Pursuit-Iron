@@ -1,4 +1,4 @@
-export const ENGINE_VERSION = '0.65.2';
+export const ENGINE_VERSION = '0.65.3';
 // Current release plus the four preceding prescription engines. Older plans stay readable;
 // phone diagnostics must inspect current saved plans rather than silently skipping them.
 export const ENGINE_COMPATIBLE_VERSIONS = Object.freeze(['0.64.13', '0.64.14', '0.64.15', '0.64.16', ENGINE_VERSION]);

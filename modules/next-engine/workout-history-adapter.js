@@ -11,6 +11,7 @@ import { transitionProgramPhase } from './phase-transition.js';
 import { nextProgramToShellProgram, getNextShellCell, resolveNextShellExerciseId, NextShellAdapterError } from './app-shell-adapter.js';
 import { advancedTechniqueFromCell } from './workout-runtime.js';
 import { finalizeGeneratedShellVolume, captureShellBaseProgram } from './volume-repair.js';
+import { deriveAthleteResponse } from './athlete-response.js';
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 function intOf(value) {
@@ -93,7 +94,7 @@ function historicalShellCell(program, day, slot, week, perf, exerciseId) {
         || saved.rest == null || saved.rest === '' || !Number.isFinite(Number(saved.rest)) || Number(saved.rest) < 0)
         return current;
     const textRange = pair => pair[0] === pair[1] ? String(pair[0]) : pair.join('-');
-    return { ...current, sets: saved.sets, reps: textRange(reps), rir: textRange(rir), rest: Number(saved.rest),
+    return { ...current, historyOwned: true, sets: saved.sets, reps: textRange(reps), rir: textRange(rir), rest: Number(saved.rest),
         role: saved.role ?? current.role, progressionStyle: saved.progressionStyle ?? current.progressionStyle,
         tech: saved.tech ?? null,
         setTargets: Array.isArray(saved.setTargets) && saved.setTargets.length === saved.sets
@@ -131,6 +132,7 @@ function plannedSessionForEntry(program, entry, legacyExercises) {
         const legacy = legacyMap.get(legacyId);
         const role = (cell.role ?? sourceEx?.role ?? 'hypertrophy_isolation');
         exercises.push({
+            prescriptionSource: cell.historyOwned === true ? 'logged_snapshot' : 'current_projection',
             exerciseId: nextId,
             name: sourceEx?.exerciseId === nextId ? sourceEx.name : legacy?.name ?? legacyId,
             role,
@@ -186,6 +188,7 @@ function workoutFromEntry(program, entry, legacyExercises) {
     const source = sourceSnapshot(program);
     const progression = evaluateWorkoutProgression(planned.session, performed, { ...historyExposureContext(entry), loadingInventory: source?.request.equipment.loading, equipmentAvailable: source?.request.equipment.available });
     return {
+        programId: program.id,
         historyId: String(entry.id ?? `${entry.date ?? 0}-${entry.dayId ?? entry.dayLabel ?? 'session'}`),
         completedAt: new Date(Number(entry.date) || 0).toISOString(),
         dayId: String(found.day.id), dayLabel: String(found.day.label || entry.dayLabel || planned.session.name),
@@ -497,7 +500,11 @@ export function analyzeShellHistoryForNextEngine(program, history, legacyExercis
         recovery = { ...recovery, status: 'watch', confidence: 'moderate', rationale: `${recovery.rationale} Subjective soreness also remained unresolved in ${subjective} of the last five logged sessions.` };
     const classification = classify(recovery, positive, negative, diagnoses, workouts.length);
     const ignoredIds = [...new Set(workouts.flatMap(w => w.ignoredLegacyExerciseIds))];
+    const athleteResponse = deriveAthleteResponse(workouts, { programId: program.id,
+        dayIds: program.days.map(day => day.id), customExercises: snap.request.customExercises,
+        previousCapacityScale: snap.request.preferences?.responseCapacityScale, recovery });
     return {
+        athleteResponse,
         excludedHistoryEntries: normalized.excluded, workouts, workoutCount: workouts.length, performedSetCount: workouts.reduce((n, w) => n + w.performedSets.length, 0),
         ignoredSetCount: entries.reduce((n, e) => n + Object.entries(e.perf ?? {}).filter(([id]) => ignoredIds.includes(id)).reduce((m, [, p]) => m + (p.sets?.filter(s => !s.sub).length ?? 0), 0), 0),
         ignoredLegacyExerciseIds: ignoredIds, recovery, cycleState, classification,
@@ -522,7 +529,9 @@ export function carryForwardAvoidedExercises(baseRequest, currentRequest, analys
     };
 }
 function requestAdaptedFromHistory(request, currentRequest, analysis) {
-    const adapted = carryForwardAvoidedExercises(request, currentRequest, analysis);
+    let adapted = carryForwardAvoidedExercises(request, currentRequest, analysis);
+    if (analysis.athleteResponse && analysis.athleteResponse.action !== 'maintain') adapted = { ...adapted,
+        preferences: { ...adapted.preferences, responseCapacityScale: analysis.athleteResponse.capacityScale } };
     if (analysis.classification !== 'fatigue_limited' && analysis.recovery.status !== 'deload_recommended')
         return adapted;
     return {
@@ -577,6 +586,7 @@ export function generateNextBlockFromShellHistory(options) {
         ...legacy.nextEngine, request: JSON.parse(JSON.stringify(adaptedRequest)), baseRequest: JSON.parse(JSON.stringify(baseRequest)), program: JSON.parse(JSON.stringify(transitioned.program)), cycleState: JSON.parse(JSON.stringify(nextCycle)), historySchemaVersion: 1,
         priorBlock: { programId: current.id, phase: snap.program.phase, workouts: analysis.workoutCount, classification: analysis.classification, recovery: analysis.recovery.status },
         continuity: transitioned.continuity,
+        priorAthleteResponse: analysis.athleteResponse,
         historySummary: { positive: analysis.positiveDecisionCount, negative: analysis.negativeDecisionCount, successfulExercises: analysis.successfulExerciseIds.length, ignoredLegacyExerciseIds: analysis.ignoredLegacyExerciseIds }
     };
     const finalized = finalizeGeneratedShellVolume(legacy, options.legacyExercises);

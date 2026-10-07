@@ -39,7 +39,7 @@ function populateHypertrophySessions(context) {
         }
     }
     // 3) Direct isolation after compound carryover is known.
-    
+
     for (const muscle of SMALL) {
         if (muscle === 'front_delts' && request.goal.musclePriorities.front_delts === 'normal')
             continue;

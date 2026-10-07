@@ -1,6 +1,6 @@
-# Engine upgrade and assurance sequence through M259
+# Engine upgrade and assurance sequence through M260
 
-The behavior-bearing engine remains M234 / Pursuit Engine 0.65.6 / app 4.0.0 build 823. M235 verifies that behavior line. M236–M259 harden ownership, verification, CI, history provenance, standalone packaging, and internal responsibility boundaries without changing training behavior or release identity.
+The behavior-bearing engine remains M234 / Pursuit Engine 0.65.6 / app 4.0.0 build 823. M235 verifies that behavior line. M236–M260 harden ownership, verification, CI, history provenance, standalone packaging, and internal responsibility boundaries without changing training behavior or release identity.
 
 | Milestone | Scope | Acceptance |
 |---|---|---|
@@ -35,6 +35,7 @@ The behavior-bearing engine remains M234 / Pursuit Engine 0.65.6 / app 4.0.0 bui
 | M257 | Exercise analytics revision ownership | Exercise records and chart series consume canonical persisted workout revisions so edited workouts cannot leave stale records or duplicate points |
 | M258 | Progress revision ownership | Milestones and level XP count canonical persisted workouts so superseded edits cannot inflate sessions, volume, PRs, sets, reps, hours or XP |
 | M259 | Log revision ownership | Log search plus month/cycle grouping use canonical persisted workout revisions so edited sessions cannot appear twice or inflate grouped counts and volume |
+| M260 | Plan completion ownership | Week completion counts distinct canonical workouts only when they resolve to an authored program day, preventing stale revisions or orphaned imports from marking plan sessions complete |
 
 ## Current ownership rules
 

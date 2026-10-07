@@ -24,10 +24,25 @@ try {
     const edited = planOverviewMemo(program, 1, null, history, saved);
     assert.notEqual(edited, long, 'same-count catalog replacement invalidates the cache');
     assert.ok(edited.lifts.some(lift => lift.name === renamed.name));
-    const logged = [{ programId: program.id, dayId: 'upper', weekIndex: 1 }];
+    const logged = [{ id: 'm219-log', programId: program.id, dayId: 'upper', weekIndex: 1, date: 1000, updatedAt: 1000 }];
     const completed = planOverviewMemo(program, 1, null, logged, saved);
     assert.equal(completed.weeks[0].done, 1, 'new history updates completion');
     assert.equal(planOverviewMemo(program, 2, null, logged, saved).currentWeek, 2);
+
+    const progressProgram = { ...program, id: 'm219-progress',
+        config: { ...program.config, days: 2 },
+        days: [program.days[0], { id: 'lower', label: 'Lower', primaryIndex: 0, exercises: ['back-squat'] }],
+        overrides: { ...program.overrides, 'lower:0': { sets: 3, reps: '6-8', rir: '2' } } };
+    const stale = { id: 'm219-progress-log', programId: progressProgram.id, dayId: 'upper', weekIndex: 1,
+        date: 2000, updatedAt: 2100 };
+    const corrected = { ...stale, updatedAt: 2200 };
+    const orphan = { id: 'm219-orphan-log', programId: progressProgram.id, dayId: 'retired', dayLabel: 'Unknown',
+        weekIndex: 1, date: 3000, updatedAt: 3000 };
+    const owned = planOverview(progressProgram, 1, null, [stale, corrected, orphan], [progressProgram]);
+    assert.equal(owned.weeks[0].done, 1,
+        'plan completion counts one canonical authored day, not stale revisions or unresolved imported rows');
+    assert.equal(owned.weeks[0].days.find(d => d.dayId === 'upper').done, true);
+    assert.equal(owned.weeks[0].days.find(d => d.dayId === 'lower').done, false);
 } finally { EXERCISES[index] = original; EX_BY_ID[original.id] = original; setRestScaleGlobal(1); }
 
 function inspect(node) {

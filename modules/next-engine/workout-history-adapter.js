@@ -487,11 +487,13 @@ export function analyzeShellHistoryForNextEngine(program, history, legacyExercis
         throw new NextShellAdapterError('NEXT_HISTORY_SNAPSHOT_MISSING', 'This saved program lacks the engine snapshot required for history adaptation. Rebuild it before adapting the next block.');
     const normalized = normalizeHistoryEntries(history, program.id);
     const { entries } = normalized;
-    const workouts = entries.map(entry => workoutFromEntry(program, entry, legacyExercises)).filter(x => {
-        if (x && x.performedSets.length) return true;
-        normalized.excluded.push({ id: x?.historyId ?? null, reason: x ? 'no_completed_working_sets' : 'unresolved_session' });
-        return false;
-    });
+    const workouts = entries.map(entry => ({ entry, workout: workoutFromEntry(program, entry, legacyExercises) }))
+        .filter(({ entry, workout }) => {
+            if (workout && workout.performedSets.length) return true;
+            normalized.excluded.push({ id: workout?.historyId ?? entry?.id ?? null,
+                reason: workout ? 'no_completed_working_sets' : 'unresolved_session' });
+            return false;
+        }).map(({ workout }) => workout);
     let cycleState = { ...snap.cycleState };
     // Fixed-length cycle blocks can be shorter than the open-ended four-week
     // review window. Apply this while reading history so existing saved cycles

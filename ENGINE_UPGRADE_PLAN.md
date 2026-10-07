@@ -1,4 +1,4 @@
-# Engine upgrade and assurance sequence through M250
+# Engine upgrade and assurance sequence through M251
 
 The behavior-bearing engine remains M234 / Pursuit Engine 0.65.6 / app 4.0.0 build 823. M235 verifies that behavior line. M236–M248 harden ownership, verification, CI, history provenance, and standalone packaging without changing training behavior or release identity.
 
@@ -26,6 +26,7 @@ The behavior-bearing engine remains M234 / Pursuit Engine 0.65.6 / app 4.0.0 bui
 | M247 | Remove dead UI hash coupling | Standalone coverage no longer reads full UI source as metadata |
 | M248 | Remove redundant exporter entrypoint | CI, package scripts and docs call `canonical-export.mjs` directly; forwarding shim removed |
 | M250 | Shared repair eligibility ownership | Recovery and functional-coverage repair consume the canonical realizer ranking rules for equipment, barbell caps and primary-muscle identity instead of reimplementing them |
+| M251 | Single shell-history lookup | Comparable-day progression history and cross-day starting-reference history share one revision-normalized/filter/sort pass while preserving day-specific progression ownership |
 
 ## Current ownership rules
 

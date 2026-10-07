@@ -4490,15 +4490,16 @@ function strengthClubSnapshot(trends, unit, mode = "lifted") {
 const BIG_THREE = { bench: "bb-bench", squat: "back-squat", deadlift: "deadlift" };
 
 function computeMilestones(history, opts = {}) {
+    const canonicalHistory = canonicalHistoryNewest(history);
     const unit = opts.unit || "kg";
     const bw = parseFloat(opts.bodyweight) > 0 ? parseFloat(opts.bodyweight) : 0; // already in `unit`
-    const n = history.length;
+    const n = canonicalHistory.length;
     // Sessions are stored in the unit they were logged in. Summing them raw double-counts anyone who
     // has ever switched kg <-> lb, so normalise into the unit the lifter is reading right now.
-    const totalVol = history.reduce((a, h) => a + toUnit(h.volume || 0, h.unit || unit, unit), 0);
+    const totalVol = canonicalHistory.reduce((a, h) => a + toUnit(h.volume || 0, h.unit || unit, unit), 0);
     const weekKey = weekKeyOf;
     const byWeek = {}, partsByWeek = {}, idsByWeek = {};
-    history.forEach(h => {
+    canonicalHistory.forEach(h => {
         const k = weekKey(h.date);
         byWeek[k] = (byWeek[k] || 0) + 1;
         // Distinct muscle groups touched in the week, for the coverage badge. Unknown ids (a custom
@@ -4532,7 +4533,7 @@ function computeMilestones(history, opts = {}) {
     }
     // Walk the log oldest-first: personal records, exercise breadth, training hours, and the best e1RM
     // reached on each of the big three.
-    const chrono = history.slice().sort((a, b) => a.date - b.date);
+    const chrono = canonicalHistory.slice().sort((a, b) => a.date - b.date);
     const bestE1 = {}; // exercise -> best e1RM so far, in `unit`
     let prs = 0, bestPrDay = 0, earlyBird = 0, nightOwl = 0, comeback = 0, prevDate = null;
     // Hours under the bar, weekend sessions, and the single biggest session — the comment above has
@@ -4693,7 +4694,7 @@ const LEVEL_TITLES = [
 ];
 
 function computeLevel(history, milestones) {
-    const n = (history || []).length;
+    const n = canonicalHistoryNewest(history).length;
     const K = 8; // tuned so level 2 lands on your first workout and a maxed multi-year veteran lands ~level 35-40
     const milestoneXP = (milestones || []).filter(m => m.done).reduce((s, m) => s + (MILESTONE_XP[m.id] ?? 15), 0);
     const xp = n * 8 + milestoneXP;

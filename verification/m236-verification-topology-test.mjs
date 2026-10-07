@@ -42,8 +42,10 @@ assert.match(releaseRunner, /verifyContractRegistry/, 'release runner must valid
 
 assert.equal(Object.keys(exporterPackage.dependencies ?? {}).length, 0, 'canonical exporter must not retain unused runtime dependencies');
 assert.equal(Object.keys(exporterPackage.devDependencies ?? {}).length, 0, 'canonical exporter must not retain unused dev dependencies');
-assert.match(canonicalExporter, /engineRoots = Object\.freeze\(\['modules\/engine-api\.js', 'modules\/engine-shell\.js'\]\)/,
-    'standalone export must be derived from canonical engine API roots');
+assert.match(canonicalExporter, /engineRoot = 'modules\/engine-api\.js'/,
+    'standalone export must be derived from the single canonical engine API root');
+assert.doesNotMatch(canonicalExporter, /engineRoots|\[engineRoot,\s*['"]modules\/engine-shell\.js['"]\]/,
+    'engine-shell may remain a compatibility surface but must not become a second export authority');
 assert.doesNotMatch(canonicalExporter, /reference\/App\.production|reference\/verification|integration-suites/,
     'standalone export must not duplicate UI or verification reference source');
 assert.match(canonicalExporter, /importsOutsideEngine = productionImports\.some\(moduleFile => !runtimeSet\.has\(moduleFile\)\)/,

@@ -18,8 +18,9 @@ const shell = [...shellMatch[1].matchAll(/"(\.\/[^\"]+)"/g)].map(m=>m[1]);
 const missing = shell.filter(p => p !== './' && !fs.existsSync(path.join(root,p.slice(2))));
 if (missing.length) fail(`missing precache files: ${missing.join(', ')}`);
 execFileSync(process.execPath,['verification/m223-icon-update-test.mjs'],{stdio:'inherit',cwd:root});
-for (const name of ['m224-engine-hardening', 'm225-history-provenance'])
-  execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs',`verification/${name}-test.mjs`],{stdio:'inherit',cwd:root});
+// Engine semantic regressions are owned by scripts/verify-engine-contracts.mjs.
+// Release integrity owns the shipped artifact: identity, precache/runtime completeness,
+// parseability, app-shell wiring, history/UI integrity, and non-engine release behavior.
 if (!sw.includes(`const CACHE="${profile.cache}"`)) fail('BUILD_PROFILE cache does not match sw.js');
 if (profile.milestone !== manifest.milestone) fail('BUILD_PROFILE milestone does not match manifest');
 if (profile.uiMilestone !== manifest.uiMilestone) fail('BUILD_PROFILE UI milestone does not match manifest');
@@ -60,16 +61,12 @@ const jsFiles=[];
 const walk = p => { for (const ent of fs.readdirSync(p,{withFileTypes:true})) { const full=path.join(p,ent.name); if(ent.isDirectory()) walk(full); else if(ent.name.endsWith('.js')) jsFiles.push(full); } };
 walk(path.join(root,'modules'));
 for (const f of jsFiles) execFileSync(process.execPath,['--check',f],{stdio:'ignore'});
-execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','verification/m222-custom-program-parity-test.mjs'],{stdio:'inherit',cwd:root});
-execFileSync(process.execPath,['verification/m221-engine-input-stability-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['verification/progression-safety-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['verification/shell-progression-safety-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/prescription-integrity-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/custom-progression-safety-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/m201-workout-prescription-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/m204-prescription-ownership-test.mjs'],{stdio:'inherit',cwd:root});
-execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/m214-executable-prescription-sync-test.mjs'],{stdio:'inherit',cwd:root});
-execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/m215-cycle-duration-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/m205-engine-cleanup-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/m167-legacy-dose-cycle-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','./verification/history-edit-integrity-test.mjs'],{stdio:'inherit',cwd:root});

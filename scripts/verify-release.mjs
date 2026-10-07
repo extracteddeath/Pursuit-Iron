@@ -45,16 +45,20 @@ if (!config.includes(`ENGINE_VERSION = '${manifest.engineVersion}'`))
 for (const [file, expected] of Object.entries(manifest.runtimeFiles ?? {})) {
     const full = path.join(root, file);
     if (!fs.existsSync(full)) fail(`manifest runtime file missing: ${file}`);
-    if (sha(bytes(file)) !== expected) fail(`runtime hash mismatch: ${file}`);
+    const actual = sha(bytes(file));
+    if (actual !== expected) fail(`runtime hash mismatch: ${file}; expected ${expected}, got ${actual}`);
     if (!shellSet.has('./' + file)) fail(`runtime file is not available offline: ${file}`);
 }
 const aggregateBlob = Object.keys(manifest.runtimeFiles ?? {}).sort()
     .map(file => `${file}:${manifest.runtimeFiles[file]}\n`).join('');
-if (sha(Buffer.from(aggregateBlob)) !== manifest.runtimeAggregate) fail('runtime aggregate mismatch');
+const actualAggregate = sha(Buffer.from(aggregateBlob));
+if (actualAggregate !== manifest.runtimeAggregate)
+    fail(`runtime aggregate mismatch; expected ${manifest.runtimeAggregate}, got ${actualAggregate}`);
 
 for (const [file, expected] of Object.entries(manifest.uiFiles ?? {})) {
     if (!fs.existsSync(path.join(root, file))) fail(`manifest UI file missing: ${file}`);
-    if (sha(bytes(file)) !== expected) fail(`UI hash mismatch: ${file}`);
+    const actual = sha(bytes(file));
+    if (actual !== expected) fail(`UI hash mismatch: ${file}; expected ${expected}, got ${actual}`);
 }
 
 const jsFiles = [];

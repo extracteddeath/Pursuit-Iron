@@ -53,6 +53,7 @@ export const contractGroups = Object.freeze({
     ]),
     integration: Object.freeze([
         'm236-verification-topology-test.mjs',
+        'm236-runtime-reachability-test.mjs',
         'custom-progression-safety-test.mjs',
         'cycle-overview-ui-test.mjs',
         'engine-authority-test.mjs',

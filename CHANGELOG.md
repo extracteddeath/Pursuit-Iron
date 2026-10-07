@@ -1,3 +1,9 @@
+# M229 · build 818 candidate · Engine 0.65.1
+
+- Add versioned request, program, prescription and history contracts, core TypeScript declarations, explicit unversioned migrations and future-schema refusal.
+- Separate prescription projection from generation, removing the adapter–volume dependency cycle.
+- Preserve existing program and workout decisions across Build 816 golden scenarios.
+
 # M228 · build 817 candidate · Engine 0.65.0
 
 - Move 456 training-domain declarations from App.js into five canonical production modules; UI and independent audits import the same API.

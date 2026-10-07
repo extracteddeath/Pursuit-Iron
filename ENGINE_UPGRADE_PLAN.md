@@ -14,3 +14,5 @@ Continuation branch: `engine/m228-m231`. Each milestone is committed only with i
 | M235 | Verification 2.0: properties, mutation checks, replay, benchmarks and differential testing | Reproducible runner, meaningful mutation kills, stable replay, performance budgets, complete integration evidence |
 
 Completed milestone details and limitations are recorded in the corresponding reports. A milestone with unfinished acceptance work is not reported as complete.
+
+Verified checkpoints: M228 and M229. The continuation remains on the engineering branch.

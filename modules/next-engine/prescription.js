@@ -1,3 +1,4 @@
+import { migrateDomainRecord } from './domain-contracts.js';
 import { ALL_MUSCLES, MUSCLE_DOSE_PRIOR, OPTIONAL_MUSCLES, PRIORITY_MULTIPLIER } from './config.js';
 import { initialPhaseForGoal, phasePolicyFor } from './phase-policy.js';
 import { normalizeLoadingInventory } from './loading.js';
@@ -162,6 +163,7 @@ export function normalizeRequest(request) {
     const dayOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
     if (!request || typeof request !== 'object' || Array.isArray(request))
         throw new Error('A program request object is required.');
+    request = migrateDomainRecord('request', request);
     requireRecord(request.goal, 'Goal');
     requireRecord(request.athlete, 'Athlete');
     requireRecord(request.schedule, 'Training schedule');

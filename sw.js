@@ -1,5 +1,5 @@
-/* Pursuit Iron 4.0 — M228 production release. */
-const CACHE="pursuit-iron-production-v4-0-0-m228-canonical-engine-b817";
+/* Pursuit Iron 4.0 — M229 production release. */
+const CACHE="pursuit-iron-production-v4-0-0-m229-domain-contracts-b818";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
   "./BUILD_PROFILE.json",
@@ -36,6 +36,7 @@ const SHELL=[
   "./modules/next-engine/config.js",
   "./modules/next-engine/cycle-runtime-adapter.js",
   "./modules/next-engine/cycles.js",
+  "./modules/next-engine/domain-contracts.js",
   "./modules/next-engine/dose-reconciliation.js",
   "./modules/next-engine/engine-context.js",
   "./modules/next-engine/events.js",
@@ -67,6 +68,7 @@ const SHELL=[
   "./modules/next-engine/response.js",
   "./modules/next-engine/setup-economy.js",
   "./modules/next-engine/shell-equipment.js",
+  "./modules/next-engine/shell-projection.js",
   "./modules/next-engine/simulation.js",
   "./modules/next-engine/techniques.js",
   "./modules/next-engine/topology.js",

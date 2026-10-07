@@ -1,3 +1,4 @@
+import { validateEngineProgram } from './domain-contracts.js';
 import { ENGINE_VERSION } from './config.js';
 import { initialPhaseForGoal, phasePolicyFor } from './phase-policy.js';
 import { createTrainingSetEvents } from './events.js';
@@ -88,6 +89,7 @@ export function generateProgram(requestInput, options) {
         const events = createTrainingSetEvents(scheduled, request.customExercises);
         const muscleLedger = deriveMuscleLedger(events);
         const base = {
+            schemaVersion: 1,
             id: `program-${request.seed}`,
             engineVersion: ENGINE_VERSION,
             seed: request.seed,
@@ -340,5 +342,6 @@ export function generateProgram(requestInput, options) {
     const finalAudit = auditProgram(finalBase, request);
     const auditableProgram = { ...finalBase, audit: finalAudit };
     const program = { ...auditableProgram, explainability: buildProgramExplainability(auditableProgram, request) };
+    if (finalAudit.result === 'pass') validateEngineProgram(program);
     return { program, diagnostics: { allocationDecisions: allocation.decisions, allocationDecisionLog: allocation.decisionLog, allocationMetrics: allocation.metrics, topologyRationale: topology.rationale, topologyCandidates: topology.candidates, doseReconciliationAdjustments: doseReconciliation.adjustments, remainingDoseOverflow: doseReconciliation.remainingOverflow } };
 }

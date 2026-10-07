@@ -22,6 +22,7 @@ const walk = directory => fs.readdirSync(path.join(root, directory), { withFileT
 });
 const runtime = walk('modules').filter(f => f.endsWith('.js') && !['modules/App.js', 'modules/main.js', 'modules/wizard-stability.js'].includes(f));
 for (const file of runtime) copy(file);
+for (const file of walk('modules').filter(f => f.endsWith('.d.ts'))) copy(file);
 
 write('index.js', "export * from './modules/engine-api.js';\n");
 copy('modules/App.js', 'reference/App.production.js');

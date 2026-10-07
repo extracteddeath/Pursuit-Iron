@@ -74,6 +74,30 @@ export function normalizeHistoryEntries(history, programId) {
     return { entries: [...entries, ...identities.values()].sort((a, b) => Number(a.date) - Number(b.date)), excluded };
 }
 
+// Resolve a persisted workout to one authored program day without guessing. Exact IDs win.
+// Legacy/stale IDs may fall back to a label only when that label is unique, or when the logged
+// exercise roster uniquely identifies one of the same-label days. Ambiguity stays unresolved.
+export function resolveHistoryDayIndex(days, entry) {
+    const roster = Array.isArray(days) ? days : [];
+    if (!entry) return -1;
+    const dayId = entry.dayId == null ? '' : String(entry.dayId);
+    if (dayId) {
+        const byId = roster.findIndex(day => String(day?.id ?? '') === dayId);
+        if (byId >= 0) return byId;
+    }
+    const label = String(entry.dayLabel ?? '').trim();
+    const all = roster.map((day, index) => ({ day, index }));
+    const candidates = label ? all.filter(({ day }) => String(day?.label ?? '').trim() === label) : all;
+    if (label && candidates.length === 1) return candidates[0].index;
+    if (!candidates.length) return -1;
+    const loggedIds = Object.keys(entry.perf ?? {}).filter(id => entry.perf?.[id] != null);
+    if (!loggedIds.length) return -1;
+    // With an ambiguous/missing label, reattach only when the recorded exercise roster is fully
+    // contained by exactly one authored day. Partial-overlap scoring would still be a guess.
+    const rosterMatches = candidates.filter(({ day }) => loggedIds.every(id => (day?.exercises ?? []).includes(id)));
+    return rosterMatches.length === 1 ? rosterMatches[0].index : -1;
+}
+
 export function historyLoadReason(reason, unit) {
     return typeof reason === 'string' ? reason.replace(/\b(\d+(?:\.\d+)?)\s*(lb|kg)\b/g,
         (_, value, from) => `${Math.round(convertHistoryLoad(value, from, unit) * 100) / 100} ${unit}`) : reason;

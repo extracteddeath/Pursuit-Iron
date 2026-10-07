@@ -49,6 +49,16 @@ const stable = selectBestCandidate([
 ], { score: candidate => candidate.value });
 assert.equal(stable.candidate.id, 'first', 'score ties must retain catalog order');
 
+
+const explicitTie = selectBestCandidate([
+    { id: 'z', value: 10 },
+    { id: 'a', value: 10 }
+], {
+    score: candidate => candidate.value,
+    tieBreak: (a, b) => a.id.localeCompare(b.id)
+});
+assert.equal(explicitTie.candidate.id, 'a', 'explicit tie-breaks must preserve legacy ordering contracts');
+
 const compared = selectBestCandidate([
     { id: 'x', specificity: .7, loadability: 4 },
     { id: 'y', specificity: .8, loadability: 2 }

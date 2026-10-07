@@ -4,12 +4,14 @@ import { execFileSync } from 'node:child_process';
 // none of these checks rewrites release identity or pushes a historical patch.
 const groups = {
     generation: [
+        'm171-transaction-context', 'm172-actual-strength-baseline',
         'm196-capacity-band-regression', 'm197-capacity-monotonic', 'm198-creation-audit',
         'm199-wizard-feasibility', 'm199-volume-repair', 'm200-regional-dose', 'm202-locked-cycle-dose',
         'm206-working-week-dose'
     ],
     adaptation: [
         'm235-engine-verification', 'm234-candidate-optimization', 'm233-semantic-exercise-graph', 'm232-live-autoregulation', 'm231-athlete-response', 'm230-realizer-decomposition', 'm229-domain-contracts', 'm228-canonical-boundary', 'm224-engine-hardening', 'm225-history-provenance', 'm226-engine-boundary-integrity', 'm227-request-canonicalization',
+        'm170-engine-correctness', 'm174-causal-cycle-state', 'm175-longitudinal-adaptation-memory',
         'm222-custom-program-parity', 'm221-engine-input-stability', 'm181-dose-reconciliation', 'm182-exercise-selection-intelligence', 'm182-selection-matrix',
         'm183-progression-safeguards', 'm184-longitudinal-evidence', 'm185-phase-specialization',
         'm186-explainable-block-review', 'm189-adaptive-progression-selection', 'm189-integration-wiring',
@@ -17,6 +19,7 @@ const groups = {
         'm193-cycle-progression-context', 'm194-simulation-progression-parity', 'm214-executable-prescription-sync', 'm215-cycle-duration'
     ],
     quality: [
+        'm180-coach-quality-oracle', 'm180-coach-quality-matrix',
         'm187-premium-ux',
         'm188-novice-strength-fragmentation', 'm188-production-torture'
     ]
@@ -26,7 +29,7 @@ for (const group of requested.length ? requested : Object.keys(groups)) {
     if (!groups[group]) throw new Error(`Unknown engine verification group: ${group}`);
     for (const name of groups[group]) {
         // Two historical matrices intentionally use a matrix filename instead of a test suffix.
-        const file = ['m198-creation-audit','m182-selection-matrix'].includes(name)
+        const file = ['m198-creation-audit','m182-selection-matrix','m180-coach-quality-matrix'].includes(name)
             ? `verification/${name}.mjs` : `verification/${name}-test.mjs`;
         execFileSync(process.execPath, ['--no-warnings','--experimental-loader','./verification/import-loader.mjs',file], { stdio: 'inherit' });
     }

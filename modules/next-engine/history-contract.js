@@ -86,21 +86,16 @@ export function resolveHistoryDayIndex(days, entry) {
         if (byId >= 0) return byId;
     }
     const label = String(entry.dayLabel ?? '').trim();
-    if (!label) return -1;
-    const candidates = roster.map((day, index) => ({ day, index }))
-        .filter(({ day }) => String(day?.label ?? '').trim() === label);
-    if (candidates.length === 1) return candidates[0].index;
-    if (candidates.length < 2) return -1;
+    const all = roster.map((day, index) => ({ day, index }));
+    const candidates = label ? all.filter(({ day }) => String(day?.label ?? '').trim() === label) : all;
+    if (label && candidates.length === 1) return candidates[0].index;
+    if (!candidates.length) return -1;
     const loggedIds = Object.keys(entry.perf ?? {}).filter(id => entry.perf?.[id] != null);
     if (!loggedIds.length) return -1;
-    const scored = candidates.map(candidate => ({
-        ...candidate,
-        score: loggedIds.reduce((count, id) => count + (candidate.day?.exercises ?? []).includes(id), 0)
-    }));
-    const best = Math.max(...scored.map(candidate => candidate.score));
-    if (best <= 0) return -1;
-    const winners = scored.filter(candidate => candidate.score === best);
-    return winners.length === 1 ? winners[0].index : -1;
+    // With an ambiguous/missing label, reattach only when the recorded exercise roster is fully
+    // contained by exactly one authored day. Partial-overlap scoring would still be a guess.
+    const rosterMatches = candidates.filter(({ day }) => loggedIds.every(id => (day?.exercises ?? []).includes(id)));
+    return rosterMatches.length === 1 ? rosterMatches[0].index : -1;
 }
 
 export function historyLoadReason(reason, unit) {

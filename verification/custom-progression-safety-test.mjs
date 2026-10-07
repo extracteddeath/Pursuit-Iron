@@ -28,7 +28,7 @@ assert.ok(baseline);
 assert.equal(baseline.action,'add_reps');
 assert.equal(baseline.dir,'hold');
 assert.equal(baseline.weight,100);
-assert.equal(baseline.target,15);
+assert.equal(baseline.target,11);
 assert.match(baseline.reason,/toward 15 reps/);
 assert.doesNotMatch(baseline.reason,/reached 10 reps/);
 
@@ -41,7 +41,7 @@ assert.equal(top.action,'increase_load');
 assert.equal(top.dir,'up');
 assert.equal(top.weight,105);
 assert.equal(top.target,10);
-assert.match(top.reason,/reached 15 reps/);
+assert.match(top.reason,/top of the rep range/);
 console.log('PASS custom 10-15 array range: 10s hold/build; only 15s across all sets earn a load increase.');
 
 

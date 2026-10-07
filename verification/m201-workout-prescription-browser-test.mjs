@@ -63,7 +63,7 @@ try {
     assert.deepEqual(restored.map(s=>s.reps),['11','12','12','12','12']);
     assert.deepEqual(restored.map(s=>s.weight),['30','25','25','25','25']);
     assert.equal(restored[0].done,true);
-    assert.equal(await page.evaluate(()=>document.body.textContent.includes('toward 12 reps')),true);
+    assert.equal(await page.evaluate(()=>document.body.textContent.includes('4 of 5 prescribed sets')),true);
     const repFieldsFit = () => page.$$eval('input[aria-label="reps"]',nodes=>nodes.every(input=>{
         const style=getComputedStyle(input),canvas=document.createElement('canvas'),ctx=canvas.getContext('2d');
         ctx.font=style.font;

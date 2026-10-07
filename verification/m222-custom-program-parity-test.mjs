@@ -1,0 +1,39 @@
+import assert from 'node:assert/strict';
+import { sessionSuggestion, prescribeSets, computeCell, resolveStyle, EX_BY_ID, applyCustomProgramSettings, parseStoredData, STORE_VERSION } from '../modules/App.js';
+import { evaluateWorkoutProgression } from '../modules/next-engine/performance.js';
+import { refreshPendingSetTargets } from '../modules/next-engine/workout-runtime.js';
+export const program = {id:'m222-custom',custom:true,weeks:10,config:{unit:'lb',weeks:10,goal:'both',experience:'intermediate',progression:'auto',deload:false,equipment:['cable','machine','barbell','bench','rack']},
+    days:[{id:'push',label:'Push',primaryIndex:-1,exercises:['cable-fly']}],
+    overrides:{'push:0':{sets:4,reps:'10-20',rir:'2',progressionStyle:'double',techOverride:null}}, ss:{'push:0':true}};
+export const history = [{id:'fly-last',programId:program.id,dayId:'push',date:2000,weekIndex:1,unit:'lb',perf:{'cable-fly':{weight:25,reps:13,sets:[{w:25,r:19,rir:2},{w:25,r:10,rir:2},{w:20,r:11,rir:2},{w:25,r:10,rir:2}]}}}];
+const day=program.days[0],ex=EX_BY_ID['cable-fly'];
+export function rowsFor(p=program,hs=history){const s=sessionSuggestion(p,p.days[0],0,null,'lb',1,hs);return {suggestion:s,rows:prescribeSets(p,p.days[0],ex,0,1,'lb',s,{}, {},hs,false)};}
+const fly=rowsFor();assert.deepEqual(fly.rows.map(s=>[s.weight,s.reps]),[['25','20'],['25','11'],['25','10'],['25','11']]);
+assert.ok(fly.rows.every(s=>s.target.w===s.weight&&s.target.prefillReps===s.reps));
+const dynamic=structuredClone(program);dynamic.progStyle={'cable-fly':'dynamic'};
+assert.equal(resolveStyle(dynamic,ex,false,1,{},history,day.id),'dynamic');
+assert.equal(computeCell(dynamic,day,ex.id,0,1).progressionStyle,'dynamic');
+assert.deepEqual(rowsFor(dynamic).rows.map(s=>[s.weight,s.reps]),[['25','20'],['25','11'],['20','12'],['25','11']],'DDP retains each positional load, and advances its own reps');
+const safety=structuredClone(program);safety.overrides['push:0'].reps='10-15';
+const hard=structuredClone(history);hard[0].perf['cable-fly'].sets=Array.from({length:4},()=>({w:25,r:8,rir:0}));
+const reduced=rowsFor(safety,hard);assert.equal(reduced.suggestion.action,'decrease_load');assert.ok(reduced.rows.every(s=>s.weight==='20'&&s.reps==='10'),'reduced load starts at floor, not max');
+const effort=structuredClone(history);effort[0].perf['cable-fly'].sets=Array.from({length:4},()=>({w:25,r:20,rir:0}));
+assert.equal(rowsFor(program,effort).suggestion.weight,25,'failure effort cannot earn a load increase');
+const incomplete=structuredClone(effort);incomplete[0].perf['cable-fly'].sets=incomplete[0].perf['cable-fly'].sets.slice(0,3);assert.notEqual(rowsFor(program,incomplete).suggestion.action,'increase_load');
+const mixed=structuredClone(history);mixed[0].perf['cable-fly'].sets.forEach(s=>s.r=20);assert.notEqual(rowsFor(program,mixed).suggestion.action,'increase_load','lighter sets cannot qualify the heaviest load');
+const input=history[0].perf['cable-fly'].sets.map((s,i)=>({exerciseId:ex.id,setIndex:i,load:s.w,reps:s.r,rir:s.rir}));
+const engine=evaluateWorkoutProgression({exercises:[{exerciseId:ex.id,name:ex.name,sets:4,role:'accessory',progressionStyle:'double',prescription:{reps:[10,20],rir:[2,2]}}]},input,{loadingInventory:{unit:'lb',exerciseOverrides:{[ex.id]:{increment:5,minimum:0}}}})[0];
+assert.deepEqual(fly.suggestion.setTargets,engine.setTargets,'authored and generated cells use identical engine decisions');
+const saved=fly.rows.map(s=>({...s,weight:'20',reps:'20',target:{...s.target,w:'20',prefillReps:'20'}}));
+saved[0].done=true;saved[1].auto=false;saved[1].valueOwner='user';saved[2].weight='17.5';
+const before=structuredClone(saved),refreshed=refreshPendingSetTargets(saved,fly.rows);
+assert.equal(refreshed[0],saved[0]);assert.equal(refreshed[1],saved[1]);assert.equal(refreshed[2],saved[2]);assert.equal(refreshed[3].weight,'25');assert.equal(refreshed[3].reps,'11');assert.deepEqual(saved,before);
+assert.equal(refreshPendingSetTargets(refreshed,fly.rows),refreshed,'repair is idempotent');
+const tech=structuredClone(program);tech.overrides['push:0'].techOverride='Last set: myo-reps';
+const edited=applyCustomProgramSettings(tech,{...tech.config,weeks:8,session:'s40',noSupersets:true,folder:' Custom ',description:'My plan'});
+assert.equal(edited.days,tech.days);assert.equal(edited.overrides,tech.overrides);assert.equal(edited.config.noSupersets,true);assert.equal(edited.weeks,8);assert.equal(edited.folder,'Custom');
+assert.equal(computeCell(edited,day,ex.id,0,8).tech,'Last set: myo-reps');assert.equal(rowsFor(edited).rows.filter(s=>s.sub&&s.kind==='myo').length,3);
+const drop=structuredClone(edited);drop.overrides['push:0'].techOverride='Last set: drop set';assert.equal(rowsFor(drop).rows.filter(s=>s.sub&&s.kind==='drop').length,2);
+const restored=parseStoredData(JSON.stringify({v:STORE_VERSION,saved:[edited],history,custom:[],cycles:[],perf:{}}));
+assert.equal(restored.saved[0].id,edited.id);assert.equal(restored.saved[0].overrides['push:0'].techOverride,'Last set: myo-reps');
+console.log('PASS M222: Cable Fly row targets; DDP positional loads/reps; reduced-load floor; effort/incomplete/mixed-load gates; canonical-engine parity; immutable resume repair; authored roster/settings and late-week Myo/Drop techniques.');

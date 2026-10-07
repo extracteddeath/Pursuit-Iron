@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { sessionSuggestion, lastDayPerf, prescribeSets, refreshPendingCustomLoads, EX_BY_ID } from '../modules/App.js';
+import { sessionSuggestion, lastDayPerf, prescribeSets, EX_BY_ID } from '../modules/App.js';
+import { refreshPendingSetTargets } from '../modules/next-engine/workout-runtime.js';
 const id = 'seated-calf';
 export const program = { id: 'm220-custom', custom: true, weeks: 10, config: { unit: 'lb', weeks: 10, progression: 'manual', goal: 'both', experience: 'intermediate', deload: false },
     days: [{ id: 'lower', label: 'Lower', primaryIndex: -1, exercises: [id] }, { id: 'legs', label: 'Legs', primaryIndex: -1, exercises: [id] }],
@@ -35,11 +36,11 @@ console.log('PASS M220: screenshot Lower/Legs regression, separate day loads, se
 const automatic = { weight: '210', reps: '20', auto: true, done: false, valueOwner: 'prescription', target: { w: '210', reps: '12-20' } };
 const pending = [automatic, { ...automatic, done: true }, { ...automatic, valueOwner: 'user', auto: false }, { ...automatic, weight: '212.5' }, { ...automatic, added: true }, { ...automatic, sub: true }];
 const before = structuredClone(pending);
-const refreshed = refreshPendingCustomLoads(pending, 205);
+const refreshed = refreshPendingSetTargets(pending, [{...automatic,weight:'205',target:{...automatic.target,w:'205'}}]);
 assert.equal(refreshed[0].weight, '205'); assert.equal(refreshed[0].target.w, '205');
 for (let i = 1; i < pending.length; i++) assert.equal(refreshed[i], pending[i], 'completed, manual, edited, added and sub rows are protected');
 assert.deepEqual(pending, before);
-assert.equal(refreshPendingCustomLoads(refreshed, 205), refreshed, 'unchanged targets preserve identity');
+assert.equal(refreshPendingSetTargets(refreshed, [{...automatic,weight:'205',target:{...automatic.target,w:'205'}}]), refreshed, 'unchanged targets preserve identity');
 console.log('PASS M220 recovery: stale automatic custom loads refresh; completed/manual/edited/added/sub values and original snapshot remain intact.');
 
 // Generated programs already evaluate day-specific workouts, but their returned LAST/changed-week

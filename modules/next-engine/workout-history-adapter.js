@@ -333,6 +333,7 @@ export function nextWorkoutSuggestionForShell(program, history, legacyExercises,
         reason: decision.reason,
         reps,
         target: decision.suggestedReps,
+        setTargets: decision.setTargets,
         last,
         action: decision.action,
         confidence: decision.confidence
@@ -405,6 +406,7 @@ export function nextWorkoutSuggestionFromPerformedShell(program, legacyExercises
         reason: decision.reason,
         reps: String(cell?.reps ?? cell?.range ?? ''),
         target: decision.suggestedReps,
+        setTargets: decision.setTargets,
         last,
         action: decision.action,
         confidence: decision.confidence

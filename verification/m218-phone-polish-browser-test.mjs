@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import puppeteer from 'puppeteer-core';
+import { CHANGELOG } from '../modules/App.js';
 
 // Use the complete production app: reading notes, choosing themes, jumping weeks, and editing a resumed workout
 // must preserve the user's training data as well as fit the phone.
@@ -59,7 +60,7 @@ try {
 
     await page.waitForFunction(() => document.querySelector('[data-wn-item]') || /What's new couldn.t load/.test(document.body.textContent));
     const notes = await page.$$eval('[data-wn-item]', nodes => nodes.map(n => ({ text: n.textContent.trim(), icon: !!n.querySelector('svg') })));
-    assert.equal(notes.length, 5, 'Home must render the current release instead of its error boundary');
+    assert.equal(notes.length, CHANGELOG[0].items.length, 'Home must render every item from the current release instead of its error boundary');
     assert.ok(notes.every(n => n.icon && n.text), 'plain-text release notes receive readable text and a valid icon');
     assert.ok(notes.every(n => !n.text.includes('Completed history is saved')), 'Home shows the current release only');
     await page.screenshot({ path: path.join(root, 'verification/m218-whats-new-phone.png') });
@@ -80,7 +81,7 @@ try {
     await page.click('[data-tab="settings"]');
     await clickText("What's new in this version");
     await page.waitForSelector('.wpb-backdrop [data-wn-item]', { visible: true });
-    assert.equal(await page.$$eval('.wpb-backdrop [data-wn-item]', nodes => nodes.length), 5, 'Settings replays the dismissed release');
+    assert.equal(await page.$$eval('.wpb-backdrop [data-wn-item]', nodes => nodes.length), CHANGELOG[0].items.length, 'Settings replays the dismissed release');
     await page.evaluate(() => history.back());
     await page.waitForSelector('.wpb-backdrop', { hidden: true });
     await clickText("What's new in this version");

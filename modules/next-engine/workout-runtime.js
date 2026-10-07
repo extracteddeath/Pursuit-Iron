@@ -1,3 +1,4 @@
+import { selectProgressionStyle } from './progression-style.js';
 import { availableLoadAtOrBelow, resolveLoadingMode } from './loading.js';
 const numberPair = (value, fallback, minimum = 0) => {
     const valid = nums => nums.every(n => Number.isFinite(n) && n >= minimum);
@@ -81,8 +82,12 @@ export function buildRuntimeSetTargets(args) {
             last = snapped;
         }
     }
-    for (let i = 0; i < count; i++)
-        targets.push({ kind: 'work', weight: workingLoad, reps: workReps, repRange: reps, rir });
+    for (let i = 0; i < count; i++) {
+        const target = args.setTargets?.[i];
+        const weight = Number.isFinite(target?.weight) ? target.weight : workingLoad;
+        const repTarget = Number.isFinite(target?.reps) ? Math.max(reps[0], Math.min(reps[1], Math.round(target.reps))) : workReps;
+        targets.push({ kind: 'work', weight, reps: repTarget, repRange: reps, rir });
+    }
     return targets;
 }
 
@@ -114,4 +119,32 @@ export function reconcilePendingRepTargets(sets, cell) {
         return { ...s, reps, ...(suggested ? { suggested } : {}), target: { ...s.target, reps: range } };
     });
     return changed ? out : sets;
+}
+
+// Refresh a resumed prescription only while BOTH values still equal the saved automatic prefill.
+// Old snapshots without ownership metadata, manual/added rows and logged work are preserved.
+export function refreshPendingSetTargets(sets, fresh) {
+    if (!Array.isArray(sets) || !Array.isArray(fresh)) return sets;
+    const work = fresh.filter(s => !s.warm && !s.sub && !s.added);
+    let ordinal = 0, changed = false;
+    const out = sets.map(s => {
+        if (!s || s.warm || s.sub || s.added) return s;
+        const target = work[ordinal++];
+        if (!target || s.done || s.valueOwner !== 'prescription' || s.auto !== true
+            || String(s.weight) !== String(s.target?.w)
+            || (s.target?.prefillReps != null && String(s.reps) !== String(s.target.prefillReps))) return s;
+        // Pre-M222 automatic rows only stored the range; auto+ownership are still required.
+        if (s.weight === target.weight && s.reps === target.reps
+            && s.target?.prefillReps === target.target?.prefillReps) return s;
+        changed = true;
+        return { ...s, weight: target.weight, reps: target.reps, target: target.target };
+    });
+    return changed ? out : sets;
+}
+
+export function customProgramProgressionStyle(exercise, cell, requestedStyle, config = {}) {
+    return selectProgressionStyle(exercise, cell?.role || 'accessory', {
+        requestedStyle, experience: config.experience,
+        blockWeeks: config.weeks, prescription: { reps: numberPair(cell?.reps, [8,12], 1) }
+    }).style;
 }

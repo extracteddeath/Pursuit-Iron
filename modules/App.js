@@ -1,11 +1,12 @@
-const __APP_VERSION__='4.0.0'; const __BUILD__='811';
+const __APP_VERSION__='4.0.0'; const __BUILD__='812';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { holdWorkoutScreenAwake } from "./mobile-lifecycle.js";
 import { setShellEquipmentExpander, splitContractGaps, splitBuildability, refusalFixes, generateNextProgramForShell, recommendNextSplitForShell, getNextShellCell, canonicalShellSetCount, cloneNextDayPrescriptions, swapNextSlotPrescriptions, removeNextSlotPrescription, nextExerciseIdForShellExercise, resolveNextShellExerciseId, remapNextShellRoster, snapshotNextShellPrescription, markUserPrescriptionOverride, clearUserPrescriptionOverride, NextShellAdapterError } from "./next-engine/app-shell-adapter.js";
 import { nextWorkoutSuggestionForShell, nextWorkoutSuggestionFromPerformedShell } from "./next-engine/workout-history-adapter.js";
 import { generateNextCycleForShell, convertProgramToNextCycleForShell, nextCycleTemplatesForShell } from "./next-engine/cycle-runtime-adapter.js";
-import { buildRuntimeSetTargets, reconcilePendingRepTargets, techniqueProtocolFromCell, freestyleCellForRepRange, buildUserAddedSlotPrescriptions } from "./next-engine/workout-runtime.js";
+import { buildRuntimeSetTargets, customProgramProgressionStyle, refreshPendingSetTargets, reconcilePendingRepTargets, techniqueProtocolFromCell, freestyleCellForRepRange, buildUserAddedSlotPrescriptions } from "./next-engine/workout-runtime.js";
+import { evaluateWorkoutProgression } from "./next-engine/performance.js";
 import { deriveArmCoverage } from "./next-engine/arm-coverage.js";
 import { deriveFunctionalCoverage } from "./next-engine/functional-coverage.js";
 import { EXERCISE_MAP as NEXT_EXERCISE_MAP } from "./next-engine/exercise-db.js";
@@ -1746,7 +1747,7 @@ function StyleTag({ theme } = {}) {
       .wpb-workout[data-keyboard-open="true"] .wpb-rest-card{
         opacity:0;max-height:0;margin-top:0!important;margin-bottom:0!important;padding-top:0!important;padding-bottom:0!important;border-width:0!important;
       }
-      .wpb-workout .wpb-num-input{scroll-margin-block:92px;transition:background-color 180ms var(--e-out),border-color 180ms var(--e-out),color 180ms var(--e-out),box-shadow 180ms var(--e-out);}
+      .wpb-workout .wpb-num-input{padding-inline:2px!important;scroll-margin-block:92px;transition:background-color 180ms var(--e-out),border-color 180ms var(--e-out),color 180ms var(--e-out),box-shadow 180ms var(--e-out);}
       .wpb-workout .wpb-num-input:focus{box-shadow:0 0 0 3px color-mix(in srgb,${C.accentDim} 72%,transparent)!important;border-color:color-mix(in srgb,${C.accent} 52%,${C.border})!important;}
 
       /* Logged rows are history, not disabled controls. Keep them readable and remove the pair of
@@ -6273,6 +6274,12 @@ export function advanceLegacyFirstCycleBlock(cycle, programs) {
 /* compute a cell {sets,reps,note,range,rir} for a given week.
    Auto mode prescribes each lift's own rep RANGE; the week selector drives
    load & RIR (and a small overreach set in the last hypertrophy week). */
+export function applyCustomProgramSettings(program, draft) {
+    const weeks = Math.max(1, Math.min(52, Math.round(Number(draft.weeks) || weeksOf(program))));
+    const { folder, description, ...config } = draft;
+    return { ...program, weeks, folder: String(folder || '').trim() || undefined,
+        description: description || undefined, config: { ...program.config, ...config, weeks } };
+}
 function computeCell(program, day, id, slotIndex, weekIndex) {
     const ex = EX_BY_ID[id];
     if (!ex)
@@ -6295,7 +6302,7 @@ function computeCell(program, day, id, slotIndex, weekIndex) {
         const effort = effortBounds(o.rir ?? base.rir);
         const rir = effort ? (effort[0] === effort[1] ? String(effort[0]) : `${effort[0]}-${effort[1]}`) : (o.rir ?? base.rir);
         return { sets: legacyCustomSetCount(program, day, ex, slotIndex, weekIndex, o.sets, base.sets), reps, range: reps, rir, rest: o.rest ?? base.rest, tech: customLastSetTechnique(program, day, ex, slotIndex, weekIndex),
-            role: base.role, progressionStyle: o.progressionStyle ?? "auto", note: "Your program", custom: true };
+            role: base.role, progressionStyle: program.progStyle?.[id] ?? o.progressionStyle ?? "auto", note: "Your program", custom: true };
     }
     const nextCell = getNextShellCell(program, day, slotIndex, weekIndex);
     if (nextCell)
@@ -9989,6 +9996,14 @@ function engineWeekOneStyles(program, id) {
    One function, all seven arguments, every caller. dayId is REQUIRED here on purpose: a caller that
    cannot name the day is a caller that should not be resolving a style. */
 function resolveStyle(program, ex, isPrimary, weekIndex, perf, history, dayId) {
+    if (program?.custom === true && program?.engineSource !== "pursuit-next") {
+        const day = program.days?.find(d => d.id === dayId), slot = day?.exercises?.indexOf(ex?.id);
+        const cell = slot >= 0 ? computeCell(program, day, ex.id, slot, weekIndex) : null;
+        const requested = program.progStyle?.[ex?.id] ?? cell?.progressionStyle ?? "auto";
+        const nextEx = NEXT_EXERCISE_MAP.get(nextExerciseIdForShellExercise(ex)) || {
+            flags: { compound: ex?.type === "compound", barbell: isBarLike(ex?.equip) }, equipment: ex?.equip || [] };
+        return customProgramProgressionStyle(nextEx, cell, requested, program.config);
+    }
     const explicit = styleFor(program, ex?.id);
     return explicit === "auto"
         ? autoStyleFor(program, ex, isPrimary, weekIndex, perf, history, dayId)
@@ -12608,6 +12623,13 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
             return;
         }
         const c = program.config;
+        if (program.custom === true && program.engineSource !== "pursuit-next") {
+            setProgram(p => applyCustomProgramSettings(p, d));
+            setWeekIndex(i => Math.min(i, d.weeks));
+            setCfgSheet(false);
+            setToast("Program settings saved");
+            return;
+        }
         if (program.engineSource === "pursuit-next") {
             // These fields change the generation contract. Rebuild once through the canonical adapter.
             const patch = {};
@@ -15958,6 +15980,11 @@ function dayPerfFor(day, perf, history) {
     });
     return out;
 }
+function suggestionLoadLabel(suggestion) {
+    const weights = (suggestion.setTargets || []).map(s => s.weight).filter(Number.isFinite);
+    return weights.length && Math.min(...weights) !== Math.max(...weights)
+        ? `${Math.min(...weights)}–${Math.max(...weights)}` : suggestion.weight;
+}
 function sessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, history) {
     void dayPerf;
     if (program?.custom === true && program?.engineSource !== "pursuit-next")
@@ -15977,10 +16004,16 @@ function sessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, history
     let w = loadableAtOrBelow(ex, eng, unit);
     if (s.action === "increase_load" && w <= current)
         w = loadableAbove(ex, current, unit) ?? w;
-    if (w === eng)
-        return s;
-    const reason = typeof s.reason === "string" ? s.reason.replace(new RegExp(`\\bto ${eng}( ?${unit})`), `to ${w}$1`) : s.reason; // say the weight actually suggested
-    return { ...s, weight: w, reason, dir: current && w > current ? "up" : current && w < current ? "down" : s.dir };
+    const cell = computeCell(program, day, ex.id, slot, weekIndex);
+    const floor = cellRepRange(cell, program, ex, slot === day.primaryIndex)[0];
+    const setTargets = s.setTargets?.map(target => {
+        const weight = s.action === "increase_load" ? w : loadableAtOrBelow(ex, target.weight, unit);
+        return { ...target, weight, reps: weight < target.weight ? floor : target.reps };
+    });
+    const reason = typeof s.reason === "string" ? s.reason.replace(new RegExp(`\\bto ${eng}( ?${unit})`), `to ${w}$1`) : s.reason;
+    return { ...s, weight: w, setTargets, reason, target: w < eng ? floor : s.target,
+        dir: current && w > current ? "up" : current && w < current ? "down" : s.dir };
+
 }
 function loadableAbove(ex, w, unit) {
     if (!ex || !(w > 0))
@@ -15993,11 +16026,7 @@ function loadableAbove(ex, w, unit) {
     const step = loadStep(ex, unit) || 0;
     return step > 0 ? (Math.floor(w / step + 1e-9) + 1) * step : null;
 }
-/* ⚠ CUSTOM PROGRAMS SUGGEST FROM THE LIFTER'S OWN HISTORY. The engine's suggestions need an engine-built program, so a program
-   the lifter wrote (Build your own, custom: true) got NO suggested weight — every field read "—" even with a logged 250 lb bench
-   (found with Haiden's real backup). Double progression on their last session of THIS exercise (any program): hold the working
-   weight and build reps; once every prescribed set reaches the top of the range, move up to the next weight the equipment can
-   make (loadableAbove — the same rule the workout's loadable check uses). The reason says which. */
+// User-authored cells feed the canonical evaluator without generating a replacement roster.
 // A repeated lift belongs to its program/day occurrence. Other days are only an initialization
 // fallback until this day has its own evidence; advice and LAST use this same raw history record.
 function customExerciseHistory(program, day, id, history) {
@@ -16012,52 +16041,31 @@ function customProgramSuggestion(program, day, slot, unit, weekIndex, history) {
     const last = customExerciseHistory(program, day, ex.id, history);
     if (!last)
         return null;
-    const conv = (w) => { const from = last.unit || unit; return from === unit ? w : from === "kg" ? w * 2.20462 : w / 2.20462; };
-    const work = (last.perf[ex.id].sets || []).filter(x => x && !x.warm && !x.sub && x.done !== false && Number(x.w) > 0);
-    if (!work.length)
-        return null;
+    const conv = w => { const from = last.unit || unit; return from === unit ? w : from === "kg" ? w * 2.20462 : w / 2.20462; };
     const cell = computeCell(program, day, ex.id, slot, weekIndex);
-    // Reuse the same range parser as the workout rows. Array-shaped persisted ranges such as [10,15]
-    // must mean 10-15 here too — never "10,15" -> 10. This is the progression decision, not just text.
     const [lo, hi] = cellRepRange(cell, program, ex, slot === day?.primaryIndex);
-    const top = loadableAtOrBelow(ex, conv(Math.max(...work.map(x => Number(x.w)))), unit);
-    /* A custom plan uses the same safety rule as Pursuit Engine: missing the BOTTOM of a double-progression
-       range must not promote the heaviest accidental/ramped set into next session's straight-set load.
-       If the miss was actually hard (or effort was not logged), infer a range-appropriate load from the
-       conservative e1RM and snap DOWN to equipment the lifter can make. Easy intentional short sets stay put. */
-    const misses = work.filter(x => Number(x.r) < lo);
-    if (misses.length) {
-        const rirPair = effortBounds(cell?.rir);
-        const rirLo = rirPair ? rirPair[0] : 2, rirHi = rirPair ? rirPair[1] : rirLo;
-        const hardOrUnknown = misses.filter(x => x.rir == null || Number(x.rir) < rirLo);
-        const explicitHard = misses.filter(x => x.rir != null && Number(x.rir) <= Math.max(1, rirLo - 1));
-        const widespread = hardOrUnknown.length >= Math.ceil(misses.length / 2) && misses.length >= Math.ceil(work.length / 2);
-        const deep = Math.max(...misses.map(x => lo - Number(x.r))) >= 2;
-        if (hardOrUnknown.length && (explicitHard.length || widespread || deep)) {
-            const basis = explicitHard.length ? explicitHard : hardOrUnknown;
-            const estimates = basis.map(x => e1rmRIR(conv(Number(x.w)), Number(x.r), x.rir == null ? 0 : Number(x.rir))).filter(Number.isFinite);
-            if (estimates.length) {
-                const e1 = explicitHard.length ? Math.min(...estimates) : Math.max(...estimates);
-                const targetRir = Math.max(0, (rirLo + rirHi) / 2);
-                const raw = Math.min(top - 1e-6, e1 / (1 + (lo + targetRir) / EPLEY_SLOPE));
-                const down = loadableAtOrBelow(ex, raw, unit);
-                if (down > 0 && down < top) {
-                    const hardest = explicitHard.length ? [...explicitHard].sort((a, b) => (Number(a.rir) - Number(b.rir)) || (Number(b.w) - Number(a.w)))[0] : null;
-                    const detail = hardest ? `, including ${conv(Number(hardest.w))}×${hardest.r}${hardest.rir != null ? ` at ${hardest.rir} RIR` : ""}` : "";
-                    return { weight: down, dir: "down", action: "decrease_load", reps: cell?.range, target: lo, last: last.perf[ex.id], confidence: explicitHard.length ? "high" : "moderate",
-                        reason: `${misses.length}/${work.length} logged sets fell below the ${lo}-rep floor${detail}. Reduce to ${down} ${unit} and rebuild from ${lo} reps instead of carrying the heaviest logged set forward.` };
-                }
-            }
-        }
-    }
-    const atTop = work.filter(x => Math.abs(conv(Number(x.w)) - top) < 1e-6 || conv(Number(x.w)) >= top);
-    const earned = atTop.length >= Math.max(1, Number(cell?.sets) || 1) && atTop.every(x => Number(x.r) >= hi);
-    const up = earned ? loadableAbove(ex, top, unit) : null;
-    return up
-        ? { weight: up, dir: "up", action: "increase_load", reps: cell?.range, target: lo, last: last.perf[ex.id], confidence: "history",
-            reason: `Every set reached ${hi} reps at ${top} ${unit} last time — move up to ${up} ${unit} and build back up from ${lo}.` }
-        : { weight: top, dir: "hold", action: "add_reps", reps: cell?.range, target: hi, last: last.perf[ex.id], confidence: "history",
-            reason: `Last time: ${top} ${unit}. Stay here and build toward ${hi} reps on every set, then the weight goes up.` };
+    const rir = effortBounds(cell.rir) || [2, 2];
+    const work = (Array.isArray(last.perf[ex.id].sets) ? last.perf[ex.id].sets : [])
+        .filter(x => x && !x.warm && !x.sub && x.done !== false && Number.isFinite(Number(x.w)) && Number(x.w) >= 0
+            && Number.isFinite(Number(x.r)) && Number(x.r) > 0);
+    if (!work.length) return null;
+    const style = resolveStyle(program, ex, slot === day.primaryIndex, weekIndex, null, history, day.id);
+    const rack = gymRackFor(ex, unit), step = loadStep(ex, unit);
+    const loadingInventory = { unit, exerciseOverrides: { [ex.id]: rack?.length
+        ? { availableLoads: rack } : { increment: step, minimum: 0 } } };
+    const performed = work.map((x, i) => ({ exerciseId: ex.id, setIndex: i, load: conv(Number(x.w)), reps: Number(x.r),
+        rir: x.rir == null || !Number.isFinite(Number(x.rir)) ? null : Number(x.rir) }));
+    const exercise = { exerciseId: ex.id, name: ex.name, role: cell.role, sets: Number(cell.sets),
+        progressionStyle: style, prescription: { reps: [lo, hi], rir } };
+    const result = evaluateWorkoutProgression({ exercises: [exercise] }, performed, {
+        loadingInventory, equipmentAvailable: program.config?.equipment || [],
+        interrupted: last.interrupted, readinessStatus: last.readinessStatus
+    })[0];
+    const weight = result.suggestedLoad ?? result.currentLoad;
+    return { weight, dir: weight > result.currentLoad ? "up" : weight < result.currentLoad ? "down" : "hold",
+        action: result.action, reps: cell.range, target: result.suggestedReps ?? lo,
+        setTargets: result.setTargets, last: last.perf[ex.id], confidence: result.confidence, reason: result.reason };
+
 }
 function loadableAtOrBelow(ex, w, unit) {
     if (!ex || !(w > 0))
@@ -17102,20 +17110,6 @@ function syncSubSets(sets, ex, unit) {
     });
     return changed ? out : sets;
 }
-// On resume, repair only untouched automatic custom-plan loads. Logged and manually owned values
-// remain the lifter's record; the old target must still match the prefill before it can be replaced.
-function refreshPendingCustomLoads(sets, workingLoad) {
-    if (!Array.isArray(sets) || !(Number(workingLoad) > 0)) return sets;
-    let changed = false;
-    const weight = String(workingLoad);
-    const out = sets.map(s => {
-        if (!s || s.done || s.warm || s.sub || s.added || s.valueOwner !== "prescription"
-            || s.auto !== true || Number(s.weight) !== Number(s.target?.w) || s.weight === weight) return s;
-        changed = true;
-        return { ...s, weight, target: { ...s.target, w: weight } };
-    });
-    return changed ? out : sets;
-}
 function prescribeSets(program, day, ex, slot, weekIndex, unit, sug, dayPerf, perf, history, withWarm) {
     void unit;
     void dayPerf;
@@ -17130,6 +17124,7 @@ function prescribeSets(program, day, ex, slot, weekIndex, unit, sug, dayPerf, pe
         cell,
         workingLoad: sug?.weight ?? null,
         suggestedReps: sug?.target ?? null,
+        setTargets: sug?.setTargets,
         includeWarmups: !!withWarm,
         loadingInventory: request?.equipment?.loading,
         equipmentAvailable: request?.equipment?.available
@@ -17146,7 +17141,7 @@ function prescribeSets(program, day, ex, slot, weekIndex, unit, sug, dayPerf, pe
         valueOwner: "prescription",
         target: t.kind === "warmup"
             ? { w: t.weight == null ? "—" : String(t.weight), reps: String(t.reps), rir: null }
-            : { w: t.weight == null ? "—" : String(t.weight), reps: rangeText, rir: rirText, nextAction: sug?.action || "initial", confidence: sug?.confidence || null }
+            : { w: t.weight == null ? "—" : String(t.weight), reps: rangeText, rir: rirText, nextAction: sug?.action || "initial", confidence: sug?.confidence || null, prefillReps: String(t.reps) }
     }));
     // Advanced-technique selection is engine-owned; this shell helper only realizes the engine's cue
     // as loggable rows. The protocol itself is now defined in next-engine/workout-runtime.ts.
@@ -17587,7 +17582,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
         const ids = day.exercises.map((_id, slot) => exerciseAt(program, day, slot, weekIndex));
         const fresh = day.exercises.map((_id, slot) => {
             const id = ids[slot];
-            return ({ id, slot, sets: buildSets(EX_BY_ID[id], slot, suggestions[slot], true), note: "", superset: !!program.ss?.[`${day.id}:${slot}`],
+            return ({ id, slot, sets: buildSets(EX_BY_ID[id], slot, suggestions[slot], true), note: "", superset: !program.config?.noSupersets && !!program.ss?.[`${day.id}:${slot}`],
                 restCustom: program.overrides?.[`${day.id}:${slot}`]?.rest || 0 });
         });
         const restored = liveStatus === "resume" ? liveMatch.data
@@ -17595,9 +17590,8 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
         // A saved automatic prefill can come from an older range/tuner. Reconcile pending targets
         // with the current cell; completed and manually controlled rows remain the lifter's record.
         return restored.map(e => {
-            const sets = liveMatch && program?.custom === true && program?.engineSource !== "pursuit-next"
-                ? refreshPendingCustomLoads(e.sets, suggestions[e.slot]?.weight) : e.sets;
-            return { ...e, sets: syncSubSets(reconcilePendingRepTargets(sets,
+            const sets = liveMatch ? refreshPendingSetTargets(e.sets, fresh.find(row => row.id === e.id && row.slot === e.slot)?.sets) : e.sets;
+            return { ...e, ...(program.config?.noSupersets ? { superset: false } : {}), sets: syncSubSets(reconcilePendingRepTargets(sets,
                 computeCell(program, day, e.id, e.slot, weekIndex)), EX_BY_ID[e.id], unit) };
         });
     });
@@ -18433,21 +18427,8 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
                 // the anchor is applied to the remaining undone working sets.
                 if (s.warm || s.sub || s.done || !(parseFloat(s.weight) > 0))
                     return s;
-                // weight + logged reps update; target.w follows the weight, but target.reps (the prescribed
-                // range) is preserved so the range still displays.
-                //
-                // `auto` is deliberately NOT cleared here, and that is the whole point. auto:false means "the
-                // lifter typed this by hand — never overwrite it", and nextPrefillTargetIndex refuses to retune
-                // any set carrying it. Levelling used to set it, which silently switched off RIR retuning for the
-                // rest of the exercise: level, then grind out the bottom of the range at RIR 0, and the next set
-                // would still cheerfully ask for the same reps at the same weight, because nothing was listening
-                // any more. But levelling is not a hand-typed weight — it is the APP writing a derived anchor
-                // across the pending sets, and an anchor is a starting point, not a contract. If the very next
-                // set says the anchor is too heavy, the anchor should move. Sets the lifter genuinely typed still
-                // carry auto:false from setWeight() and are still left alone; levelling no longer forges their
-                // signature. `suggested`/`autoTuned` are cleared so the levelled weight isn't mislabelled in the
-                // UI as something the engine proposed.
-                return { ...s, weight: tw, reps: tr != null ? tr : s.reps, hint: undefined, suggested: undefined, autoTuned: false, levelled: true, target: { ...s.target, w: tw } };
+                // Choosing average load is an explicit user edit; recovery must preserve it.
+                return { ...s, weight: tw, reps: tr != null ? tr : s.reps, auto: false, valueOwner: "user", hint: undefined, suggested: undefined, autoTuned: false, levelled: true, target: { ...s.target, w: tw } };
             }) };
     }));
     const editNote = (ei, val) => setData(d => d.map((e, i) => i !== ei ? e : { ...e, note: val }));
@@ -18977,44 +18958,19 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
                                                         ].filter(Boolean).map(([k, v]) => (_jsxs("span", { style: { fontSize: 11, fontWeight: 600, color: C.muted, background: C.bg2, borderRadius: 8, padding: "2px 7px" }, children: [_jsxs("span", { style: { color: C.faint }, children: [k, ":"] }), " ", v] }, k))) }))] }));
                                         })()] }), _jsxs("div", { style: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, flexShrink: 0 }, children: [isPrimary && _jsx("span", { style: { fontSize: 11, fontWeight: 700, color: C.accentInk, background: C.accentDim, padding: "3px 7px", borderRadius: 8 }, children: "KEY LIFT" }), !focus && _jsxs("div", { className: "wpb-exercise-head-actions", style: { display: "flex", gap: 8 }, children: [_jsx("button", { "aria-label": `Exercise info for ${ex.name}`, onClick: () => setInfo(true), title: "Exercise info", className: "pressable hit", style: { width: 36, height: 36, borderRadius: 8, border: "none", background: "none", color: C.muted, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }, children: _jsx(Info, { size: 16 }) }), _jsx("button", { "aria-label": `History for ${ex.name}`, onClick: () => setHistSheet(true), title: "Exercise history", className: "pressable hit", style: { width: 36, height: 36, borderRadius: 8, border: "none", background: "none", color: C.muted, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }, children: _jsx(History, { size: 16 }) }), confirmRemoveEx === ei ? (_jsxs("button", { onClick: () => removeExerciseFromSession(ei), title: "Tap again to skip for today", className: "pressable hit", style: { height: 36, padding: "0 11px", borderRadius: 10, border: `1px solid ${C.warn}`, background: C.warn, color: C.warnText, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontSize: 13, fontWeight: 700, whiteSpace: "nowrap" }, children: [_jsx(SkipForward, { size: 14 }), " Skip?"] })) : (_jsx("button", { "aria-label": "Skip this exercise for today", onClick: () => setConfirmRemoveEx(ei), title: "Skip this exercise for today (stays in your program)", className: "pressable hit", style: { width: 36, height: 36, borderRadius: 8, border: "none", background: "none", color: C.muted, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }, children: _jsx(SkipForward, { size: 15 }) }))] })] })] }), !focus && _jsx("div", { "data-noswipe": true, className: "wpb-hscroll wpb-workout-tools", style: { display: "flex", gap: 8, overflowX: "auto", overflowY: "hidden", touchAction: "pan-x pan-y", margin: "11px 0 7px", paddingBottom: 2 }, children: [
                                 { k: "warm", label: e.sets.some(s => s.warm) ? "Remove warm-up" : "Warm-up", icon: Flame, on: () => toggleWarmups(ei) },
-                                { k: "ss", label: e.superset ? "Unlink superset" : "Superset", icon: Layers, on: () => e.superset ? toggleSuperset(ei) : setSupersetPick(true) },
+                                { k: "ss", hidden: !!program.config?.noSupersets, label: e.superset ? "Unlink superset" : "Superset", icon: Layers, on: () => e.superset ? toggleSuperset(ei) : setSupersetPick(true) },
                                 { k: "swap", label: "Swap", icon: Repeat, on: () => setSwap(true) },
                                 ...(exNotes[e.id] || exSetup[e.id] ? [] : [{ k: "pin", label: "Pin a note", icon: Pin, on: () => setPinEdit(true) }]),
                                 ...(barFor(ex) ? [{ k: "plates", label: "Plates", icon: Dumbbell, on: () => setCalc({ bar: barFor(ex), weight: workOnly(e)[0]?.weight || "" }) }] : []),
-                            ].map(c => (_jsxs("button", { onClick: c.on, className: "pressable wpb-workout-tool", style: { flexShrink: 0, display: "flex", alignItems: "center", gap: 6, padding: "8px 13px", borderRadius: 999, border: `1px solid ${C.border}`, background: C.card, color: C.text, cursor: "pointer", fontSize: 12.5, fontWeight: 600 }, children: [_jsx(c.icon, { size: 13, color: C.accentInk }), " ", c.label] }, c.k))) }), focus ? null : pinEdit ? (_jsxs("div", { style: { marginBottom: 12, padding: 12, borderRadius: 12, background: C.bg2 }, children: [_jsxs("div", { style: { ...eyebrowAccent(), display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }, children: [_jsx(Pin, { size: 12 }), " Pinned note \u00B7 ", ex.name] }), _jsx(SetupFieldsGrid, { ex: ex, value: exSetup[e.id], onChange: (key, v) => onSetExSetup?.(e.id, key, v) }), _jsx("textarea", { ref: pinRef, autoFocus: true, defaultValue: exNotes[e.id] || "", placeholder: "e.g. pause on chest \u00B7 pinky on ring", rows: 3, className: "wpb-scroll", style: { width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: 13, resize: "vertical", fontFamily: "inherit" } }), _jsx("div", { style: { fontSize: 11, color: C.faint, margin: "6px 2px 10px" }, children: "Saved to this exercise and shown every time it comes up \u2014 in any workout or program." }), _jsxs("div", { style: { display: "flex", gap: 8 }, children: [_jsx("button", { className: "pressable", onClick: () => { onSetExNote?.(e.id, pinRef.current?.value || ""); setPinEdit(false); }, style: { flex: 1, padding: "10px", borderRadius: 12, border: "none", background: C.accent, color: C.accentText, fontWeight: 700, fontSize: 15, cursor: "pointer" }, children: "Save note" }), (exNotes[e.id] || exSetup[e.id]) && _jsx("button", { className: "pressable", onClick: () => { onSetExNote?.(e.id, ""); clearSetup(e.id, exSetup[e.id], onSetExSetup); setPinEdit(false); }, style: { padding: "10px 14px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.danger, fontWeight: 600, fontSize: 13, cursor: "pointer" }, children: "Remove" }), _jsx("button", { className: "pressable", onClick: () => setPinEdit(false), style: { padding: "10px 14px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.muted, fontWeight: 600, fontSize: 13, cursor: "pointer" }, children: "Cancel" })] })] })) : (exNotes[e.id] || exSetup[e.id]) ? (_jsxs("button", { className: "pressable", onClick: () => setPinEdit(true), "aria-label": `Edit pinned note for ${ex.name}`, style: { width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 7, marginBottom: 9, padding: "8px 10px", borderRadius: 11, background: C.accentDim, border: `1px solid ${C.accent}38`, color: C.text, cursor: "pointer" }, children: [_jsx(Pin, { size: 12, color: C.accentInk, style: { flexShrink: 0 } }), _jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx(SetupFieldsDisplay, { ex: ex, value: exSetup[e.id] }), exNotes[e.id] && _jsx("div", { style: { fontSize: 12, lineHeight: 1.3, color: C.muted, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", whiteSpace: "pre-wrap" }, children: exNotes[e.id] })] }), _jsx(Pencil, { size: 11, color: C.faint, style: { flexShrink: 0 } })] })) : null, !focus && (() => {
+                            ].filter(c => !c.hidden).map(c => (_jsxs("button", { onClick: c.on, className: "pressable wpb-workout-tool", style: { flexShrink: 0, display: "flex", alignItems: "center", gap: 6, padding: "8px 13px", borderRadius: 999, border: `1px solid ${C.border}`, background: C.card, color: C.text, cursor: "pointer", fontSize: 12.5, fontWeight: 600 }, children: [_jsx(c.icon, { size: 13, color: C.accentInk }), " ", c.label] }, c.k))) }), focus ? null : pinEdit ? (_jsxs("div", { style: { marginBottom: 12, padding: 12, borderRadius: 12, background: C.bg2 }, children: [_jsxs("div", { style: { ...eyebrowAccent(), display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }, children: [_jsx(Pin, { size: 12 }), " Pinned note \u00B7 ", ex.name] }), _jsx(SetupFieldsGrid, { ex: ex, value: exSetup[e.id], onChange: (key, v) => onSetExSetup?.(e.id, key, v) }), _jsx("textarea", { ref: pinRef, autoFocus: true, defaultValue: exNotes[e.id] || "", placeholder: "e.g. pause on chest \u00B7 pinky on ring", rows: 3, className: "wpb-scroll", style: { width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: 13, resize: "vertical", fontFamily: "inherit" } }), _jsx("div", { style: { fontSize: 11, color: C.faint, margin: "6px 2px 10px" }, children: "Saved to this exercise and shown every time it comes up \u2014 in any workout or program." }), _jsxs("div", { style: { display: "flex", gap: 8 }, children: [_jsx("button", { className: "pressable", onClick: () => { onSetExNote?.(e.id, pinRef.current?.value || ""); setPinEdit(false); }, style: { flex: 1, padding: "10px", borderRadius: 12, border: "none", background: C.accent, color: C.accentText, fontWeight: 700, fontSize: 15, cursor: "pointer" }, children: "Save note" }), (exNotes[e.id] || exSetup[e.id]) && _jsx("button", { className: "pressable", onClick: () => { onSetExNote?.(e.id, ""); clearSetup(e.id, exSetup[e.id], onSetExSetup); setPinEdit(false); }, style: { padding: "10px 14px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.danger, fontWeight: 600, fontSize: 13, cursor: "pointer" }, children: "Remove" }), _jsx("button", { className: "pressable", onClick: () => setPinEdit(false), style: { padding: "10px 14px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.muted, fontWeight: 600, fontSize: 13, cursor: "pointer" }, children: "Cancel" })] })] })) : (exNotes[e.id] || exSetup[e.id]) ? (_jsxs("button", { className: "pressable", onClick: () => setPinEdit(true), "aria-label": `Edit pinned note for ${ex.name}`, style: { width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 7, marginBottom: 9, padding: "8px 10px", borderRadius: 11, background: C.accentDim, border: `1px solid ${C.accent}38`, color: C.text, cursor: "pointer" }, children: [_jsx(Pin, { size: 12, color: C.accentInk, style: { flexShrink: 0 } }), _jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx(SetupFieldsDisplay, { ex: ex, value: exSetup[e.id] }), exNotes[e.id] && _jsx("div", { style: { fontSize: 12, lineHeight: 1.3, color: C.muted, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", whiteSpace: "pre-wrap" }, children: exNotes[e.id] })] }), _jsx(Pencil, { size: 11, color: C.faint, style: { flexShrink: 0 } })] })) : null, !focus && (() => {
                             // Per-set DDP: when each set has its own weight, the session-level banner would be
                             // misleading (it shows only the first set's weight). Show a different banner instead.
-                            const resolvedProgStyle = resolveStyle(program, ex, isPrimary, weekIndex, perf, history, day?.id);
-                            const isPerSetDDP = resolvedProgStyle === "dynamic";
-                            const prevSetsExist = !!(dayPerf[ex.id]?.sets || []).filter(isWorkSet).length;
-                            if (isPerSetDDP && prevSetsExist) {
-                                const prevSets = dayPerf[ex.id].sets.filter(isWorkSet); // extensions are not ladder positions
-                                const [cLo, cHi] = (() => { const r = String(computeCell(program, day, ex.id, e.slot, weekIndex).range).split("-").map(Number); return [r[0], Number.isFinite(r[1]) ? r[1] : r[0]]; })(); /* "8" is a range of one, not [8, NaN] */
-                                const advances = prevSets.filter(ps => ps.r >= cHi).length;
-                                const holds = prevSets.filter(ps => ps.r >= cLo && ps.r < cHi).length;
-                                const drops = prevSets.filter(ps => ps.r < cLo).length;
-                                return (_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 8, padding: "9px 11px", borderRadius: 12, background: C.bg2 }, children: [_jsx(TrendingUp, { size: 15, color: C.accentInk, style: { flexShrink: 0 } }), _jsxs("div", { style: { minWidth: 0, flex: 1 }, children: [_jsx("div", { style: { fontSize: 13, fontWeight: 600, color: C.text }, children: "Dynamic double \u2014 per-set progression" }), _jsxs("div", { style: { fontSize: 11, color: C.muted, marginTop: 1 }, children: [advances > 0 && _jsxs("span", { style: { color: C.accentInk }, children: [advances, " set", advances > 1 ? "s" : "", " advance"] }), advances > 0 && (holds > 0 || drops > 0) && " · ", holds > 0 && _jsxs("span", { children: [holds, " hold"] }), holds > 0 && drops > 0 && " · ", drops > 0 && _jsxs("span", { style: { color: C.warn }, children: [drops, " step down"] }), advances === 0 && holds === 0 && drops === 0 && "Build reps to the top of the range set by set"] })] })] }));
-                            }
+                            // The displayed advice is the same evaluated decision used to fill the rows.
                             if (!sug)
                                 return (_jsxs("div", { style: { fontSize: 13, color: C.faint, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }, children: [_jsx(Info, { size: 12 }), " First time logging this \u2014 your data sets next time's suggestion."] }));
                             const col = sug.dir === "up" ? C.accent : sug.dir === "down" ? C.warn : C.muted;
                             const Arrow = sug.dir === "up" ? TrendingUp : sug.dir === "down" ? TrendingDown : Minus;
-                            return (_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 8, padding: "9px 11px", borderRadius: 12, background: C.bg2 }, children: [_jsx(Arrow, { size: 15, color: col, style: { flexShrink: 0 } }), _jsxs("div", { style: { minWidth: 0, flex: 1 }, children: [_jsxs("div", { style: { fontSize: 13, fontWeight: 600 }, children: [_jsxs("span", { className: "mono", style: { color: col }, children: [sug.weight, " ", unit] }), sug.last?.reps != null && (() => {
-                                                        // RIR is stored per-set, not at the top level of the perf object, so
-                                                        // sug.last.rir is always undefined — pull the effort from the last logged
-                                                        // working set (or any set that recorded an RIR) instead.
-                                                        /* Show the set THIS SUGGESTION WAS DERIVED FROM when the engine names one
-                                                           (see `basis`). Falling back to the best set — which is what this printed
-                                                           unconditionally — put a number on screen that the sentence beside it was
-                                                           not talking about. */
-                                                        const ls = sug.last.sets;
-                                                        const w = sug.basis ? sug.basis.w : sug.last.weight;
-                                                        const r = sug.basis ? sug.basis.r : sug.last.reps;
-                                                        const rir = sug.basis ? sug.basis.rir
-                                                            : sug.last.rir != null ? sug.last.rir
-                                                                : (Array.isArray(ls) && ls.length ? (ls[ls.length - 1].rir ?? ls.find(x => x.rir != null)?.rir) : undefined);
-                                                        return _jsxs("span", { style: { color: C.faint, fontWeight: 400 }, children: [" \u00B7 last ", w, "\u00D7", r, rir != null ? " @" + effortLabel(rir, loadMode) : ""] });
-                                                    })()] }), _jsxs("div", { style: { fontSize: 11, color: C.muted, marginTop: 1 }, children: [sug.autoNote ? _jsxs("span", { style: { color: C.accentInk }, children: [sug.autoNote, " \u00B7 "] }) : null, sug.reason] })] }), sug.swapTo && EX_BY_ID[sug.swapTo] && (_jsxs("button", { onClick: () => doSwap(sug.swapTo, "session"), className: "pressable", title: `Switch to ${EX_BY_ID[sug.swapTo].name}`, style: { flexShrink: 0, display: "flex", alignItems: "center", gap: 4, padding: "6px 9px", borderRadius: 8, border: `1px solid ${C.accent}`, background: C.accentDim, color: C.accentInk, fontSize: 11, fontWeight: 700, cursor: "pointer" }, children: [_jsx(ArrowUpRight, { size: 13 }), " Level up"] }))] }));
+                            return (_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 8, padding: "9px 11px", borderRadius: 12, background: C.bg2 }, children: [_jsx(Arrow, { size: 15, color: col, style: { flexShrink: 0 } }), _jsxs("div", { style: { minWidth: 0, flex: 1 }, children: [_jsxs("div", { style: { fontSize: 13, fontWeight: 600 }, children: [_jsxs("span", { className: "mono", style: { color: col }, children: [suggestionLoadLabel(sug), " ", unit] }), Array.isArray(sug.last?.sets) && _jsxs("span", { style: { color: C.faint, fontWeight: 400 }, children: [" · ", sug.last.sets.filter(x => x && !x.warm && !x.sub && x.done !== false).length, " prior sets"] })] }), _jsxs("div", { style: { fontSize: 11, color: C.muted, marginTop: 1 }, children: [sug.autoNote ? _jsxs("span", { style: { color: C.accentInk }, children: [sug.autoNote, " \u00B7 "] }) : null, sug.reason] })] }), sug.swapTo && EX_BY_ID[sug.swapTo] && (_jsxs("button", { onClick: () => doSwap(sug.swapTo, "session"), className: "pressable", title: `Switch to ${EX_BY_ID[sug.swapTo].name}`, style: { flexShrink: 0, display: "flex", alignItems: "center", gap: 4, padding: "6px 9px", borderRadius: 8, border: `1px solid ${C.accent}`, background: C.accentDim, color: C.accentInk, fontSize: 11, fontWeight: 700, cursor: "pointer" }, children: [_jsx(ArrowUpRight, { size: 13 }), " Level up"] }))] }));
                         })(), !focus && (_jsxs("div", { className: "wpb-set-head", style: { display: "flex", alignItems: "center", color: C.faint, fontSize: 11, fontWeight: 700, letterSpacing: .4, padding: "2px 2px 6px", gap: narrowSet ? 5 : 8 }, children: [_jsx("span", { style: { width: narrowSet ? 24 : 26 }, children: "SET" }), _jsxs("button", { onClick: () => setTargetMode(m => m === "target" ? "last" : "target"), className: "pressable wpb-target-toggle", "aria-label": targetMode === "target" ? "Show previous workout values" : "Show prescribed targets", style: { width: narrowSet ? 60 : 82, textAlign: "left", background: "none", border: "none", padding: 0, margin: 0, cursor: "pointer", color: C.accentInk, fontSize: 11, fontWeight: 700, letterSpacing: .4, display: "flex", alignItems: "center", gap: 2, whiteSpace: "nowrap", overflow: "hidden" }, children: [targetMode === "target" ? "TARGET" : "LAST", _jsx(RefreshCw, { size: 9, strokeWidth: 3 })] }), _jsx("span", { style: { flex: narrowSet ? 1.15 : 1, textAlign: "center" }, children: unit.toUpperCase() }), _jsx("span", { style: { flex: narrowSet ? .85 : 1, textAlign: "center" }, children: "REPS" }), _jsx("span", { style: { width: narrowSet ? 32 : 36 } })] })), (() => {
                             const warms = e.sets.filter(x => x.warm);
                             if (!warms.length || !warms.every(x => x.done))
@@ -19271,7 +19227,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
                                                     const tunedApplied = !s.warm && !s.sub && !s.done && s.autoTuned && s.suggested
                                                         && String(s.weight) === String(s.suggested.weight) && String(s.reps) === String(s.suggested.reps);
                                                     return (_jsxs(_Fragment, { children: [_jsxs("div", { className: "mono wpb-set-reference", style: { fontSize: narrowSet ? 12 : 13, fontWeight: 600, color: C.muted, lineHeight: 1.25 }, children: [_jsx("span", { style: { display: "block", whiteSpace: "nowrap" }, children: tgtW }), _jsxs("span", { className: "wpb-target-reps", style: { display: "block", whiteSpace: "nowrap", color: C.muted }, children: ["\u00D7", String(tgtR).replace(/(\d)-(?=\d)/g, "$1–")] })] }), statusTag && (isActive || s.done) && (_jsx("div", { style: { fontSize: 11, fontWeight: 700, color: catInk(statusTag.color), marginTop: 1 }, children: statusTag.label })), si === lastWorkRow && !s.done && techTag && (_jsx("div", { className: "wpb-set-tech-tag", style: { fontSize: 11, fontWeight: 700, color: C.accentInk, marginTop: 1, whiteSpace: "nowrap" }, children: techTag })), tunedApplied && isActive && (_jsx("div", { style: { fontSize: 11, fontWeight: 600, color: C.faint, paddingTop: 2 }, children: "from last set" }))] }));
-                                                })() }), _jsxs("div", { style: { flex: narrowSet ? 1.15 : 1, minWidth: 0, position: "relative" }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: narrowSet ? 1 : 2 }, children: [!s.done && _jsx(StepButton, { onStep: () => bumpWeight(ei, si, -1), label: "weight down", glyph: "\u2212" }), _jsx("input", { inputMode: "decimal", enterKeyHint: "next", "aria-label": "weight", value: s.weight, placeholder: (s.target?.w === "0" || s.target?.w === 0) ? "BW" : "—", readOnly: s.done, onChange: ev => editWeight(ei, si, ev.target.value), className: "mono wpb-num-input", style: { flex: 1, minWidth: 0, padding: "8px 4px", textAlign: "center", borderRadius: 8, border: s.hint && !s.done ? `1px solid ${s.hint === "up" ? C.accent : C.warn}` : (s.warm || s.sub ? `1px dashed ${C.border}` : `1px solid ${C.border}`), background: s.done ? C.accentDim : C.bg2, color: C.text, fontSize: 15, fontWeight: 600 } }), !s.done && _jsx(StepButton, { onStep: () => bumpWeight(ei, si, 1), label: "weight up", glyph: "+" })] }), (() => {
+                                                })() }), _jsxs("div", { style: { flex: narrowSet ? 1.15 : 1, minWidth: 0, position: "relative" }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: narrowSet ? 1 : 2 }, children: [!s.done && _jsx(StepButton, { onStep: () => bumpWeight(ei, si, -1), label: "weight down", glyph: "\u2212" }), _jsx("input", { inputMode: "decimal", enterKeyHint: "next", "aria-label": "weight", value: s.weight, placeholder: (s.target?.w === "0" || s.target?.w === 0) ? "BW" : "—", readOnly: s.done, onChange: ev => editWeight(ei, si, ev.target.value), className: "mono wpb-num-input", style: { flex: 1, minWidth: 0, padding: "8px 4px", textAlign: "center", borderRadius: 8, border: s.hint && !s.done ? `1px solid ${s.hint === "up" ? C.accent : C.warn}` : (s.warm || s.sub ? `1px dashed ${C.border}` : `1px solid ${C.border}`), background: s.done ? C.accentDim : C.bg2, color: C.text, fontSize: narrowSet ? Math.max(10, 15 - Math.max(0, String(s.weight).length - 5) * 1.5) : 15, fontWeight: 600 } }), !s.done && _jsx(StepButton, { onStep: () => bumpWeight(ei, si, 1), label: "weight up", glyph: "+" })] }), (() => {
                                                         /* Plate maths sits under the WEIGHT BOX again. v485 moved it into a strip beneath
                                                            the whole row, which detached it from the number it describes — it is an
                                                            annotation on that weight, not a fact about the set, and it reads as one only
@@ -23456,6 +23412,7 @@ function StrengthSnapshotCard({ history, bodyweight, sex, age, unit, bwLog = [],
  * Newest release first, newest entry first within a release. */
 const WHATS_NEW_MAX = 10;
 const CHANGELOG = [
+    {"version": "4.0.0", "build": "812", "items": ["Custom programs now use the same progression evaluator as generated plans and honor your selected method.", "Rep targets follow each set\u2019s previous performance. Reduced weights rebuild from the bottom of your range.", "Resumed workouts refresh untouched suggestions while protecting completed sets and manual entries.", "Custom settings save the no-superset option and preserve your exercise list and last-set techniques."]},
     {"version": "4.0.0", "build": "811", "items": ["Load suggestions handle incomplete or malformed equipment lists without crashing or inventing unavailable weights.", "Large imported plate inventories no longer require enumerating the entire stock before selecting a load.", "Invalid strength-history values cannot spoil valid strength estimates.", "Blank or incomplete rep targets use safe defaults instead of producing zero-rep working sets.", "Your themes, programs, completed sets and manual workout entries remain intact."]},
     {"version": "4.0.0", "build": "810", "items": ["Repeated exercises in custom programs now progress from the last session of the same training day.", "The suggestion and Last column use the same session, so a newer Legs workout cannot replace Lower's working load.", "A shorter workout on another day cannot qualify a longer day's load increase. Each day builds toward its own full set target.", "Resuming refreshes untouched automatic custom-plan loads while preserving completed sets and manually entered values.", "The reviewed theme contrast, phone layout, Plan estimates, reduced-motion sheets and workout audio improvements remain available."]},
     {"version":"4.0.0","build":"809","items":["Highlighted labels and training details are clearer across light and dark themes, with larger tap areas for common controls.","Finished sets and phase labels stay readable. Plan keeps its week navigation, and session estimates update when rest length or custom exercises change.","Sheets close smoothly and respect reduced-motion settings. Buttons release without an abrupt snap.","Workout chimes reuse one audio context while training and release it when you leave the workout.","The recent release-note repair, compact theme picker, manual entries and scheduled final-set techniques remain available."]},
@@ -26144,7 +26101,7 @@ function LibraryView({ onBack, banned = [], onBan, onSetBan, goals = {}, onSetGo
                                         setDetailId(null); }, className: "pressable", "aria-label": "Ban from all programs", "aria-pressed": banned.includes(detail.id), style: { width: "100%", padding: "13px", borderRadius: 12, border: `1px solid ${banned.includes(detail.id) ? C.border : C.dangerDim}`, background: "none", color: banned.includes(detail.id) ? C.muted : C.danger, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 8 }, children: [_jsx(Ban, { size: 15 }), " ", banned.includes(detail.id) ? "Banned \u2014 tap to unban" : "Ban from all programs"] })] })] })) })] }));
 }
 const INTRO_VERSION = 5; // bump when onboarding content changes → returning users see it once more
-const WHATS_NEW_VERSION = 221; // bump when there's an update worth showing existing users on Home
+const WHATS_NEW_VERSION = 222; // bump when there's an update worth showing existing users on Home
 /* How much training history to keep.
 
    Measured, not guessed: a typical logged session (7 exercises, 3–5 sets each) serialises to ~1,095
@@ -29314,4 +29271,4 @@ export { HomePrograms, homeProgramGroups, homePhaseIdentity };
 export { ProgramSettingsSheet, CyclesView, CycleDetail };
 
 // Overview cache seam used by the rest-setting and catalog invalidation regression gate.
-export { planOverviewMemo, refreshPendingCustomLoads };
+export { planOverviewMemo };

@@ -102,7 +102,7 @@ function belowRangeLoadCorrection(exercise, actual, currentLoad, context) {
         reason: `${misses.length}/${actual.length} logged set${actual.length === 1 ? '' : 's'} fell below the ${repFloor}-rep floor${effortDetail}. Holding the heaviest logged weight would repeat an off-target load. Reduce to ${targetLabel} and rebuild from ${repFloor} reps inside the ${range} range at the planned effort.`
     };
 }
-export function evaluateWorkoutProgression(session, performedSets, context = {}) {
+function evaluateProgression(session, performedSets, context = {}) {
     const grouped = byExercise(performedSets);
     return session.exercises.map(ex => {
         const actual = (grouped.get(ex.exerciseId) ?? []).sort((a, b) => a.setIndex - b.setIndex);
@@ -113,7 +113,7 @@ export function evaluateWorkoutProgression(session, performedSets, context = {})
         const estimated1RM = bestEstimated1RM(actual);
         const completion = actual.length / Math.max(1, ex.sets);
         const completedPrescription = actual.length >= ex.sets;
-        const allAtTop = completedPrescription && actual.every(s => s.reps >= ex.prescription.reps[1]);
+        const allAtTop = completedPrescription && actual.every(s => s.reps >= ex.prescription.reps[1] && s.load === currentLoad);
         const allAtLeastBottom = actual.every(s => s.reps >= ex.prescription.reps[0]);
         const rirReported = actual.filter(s => s.rir !== null);
         const targetRirFloor = Math.max(0, Number(ex.prescription.rir[0]) || 0);
@@ -205,7 +205,34 @@ export function evaluateWorkoutProgression(session, performedSets, context = {})
                         ? `e1RM autoregulation: hold the load and work toward ${suggestedReps} rep${suggestedReps === 1 ? '' : 's'} at the planned effort; a heavier load requires a complete top-range exposure.`
                         : style === 'linear'
                             ? `Linear progression: build the complete prescription to the top of the ${ex.prescription.reps[0]}–${ex.prescription.reps[1]} range at planned effort before adding load.`
-                            : `The exercise is within the prescribed range; keep the load and work toward ${suggestedReps} rep${suggestedReps === 1 ? '' : 's'} where practical before increasing load.`;
+                            : `Keep the load and build each set toward ${ex.prescription.reps[1]} reps at the planned effort. Next rep targets follow each set’s own last performance.`;
         return decision(ex, { outcome: 'productive', reasonCode: 'normal_progression', action: 'add_reps', confidence: 'moderate', reason, currentLoad, suggestedLoad: currentLoad, suggestedReps, estimated1RM });
+    });
+}
+
+// Realize the evaluator's decision at each working-set position. Never copy the best set's reps
+// to every row, and never estimate extra reps from a load reduction (especially high-rep cables).
+export function progressionSetTargets(exercise, actual, result) {
+    const [lo, hi] = exercise.prescription.reps;
+    const dynamic = exercise.progressionStyle === 'dynamic';
+    const increasing = result.action === 'increase_load';
+    const decreasing = result.action === 'decrease_load';
+    return Array.from({ length: Math.max(1, exercise.sets) }, (_, index) => {
+        const previous = actual[index];
+        const load = dynamic && !increasing && !decreasing && previous?.load != null
+            ? previous.load : result.suggestedLoad ?? result.currentLoad;
+        const sameLoad = previous?.load != null && load != null && Math.abs(previous.load - load) < 1e-6;
+        const advance = result.action === 'add_reps' ? 1 : 0;
+        const reps = !increasing && !decreasing && sameLoad && Number.isFinite(previous?.reps)
+            ? Math.max(lo, Math.min(hi, Math.round(previous.reps) + advance)) : lo;
+        return { weight: load, reps };
+    });
+}
+export function evaluateWorkoutProgression(session, performedSets, context = {}) {
+    const results = evaluateProgression(session, performedSets, context);
+    return results.map((result, index) => {
+        const exercise = session.exercises[index];
+        const actual = performedSets.filter(s => s.exerciseId === exercise.exerciseId).slice().sort((a,b) => a.setIndex-b.setIndex);
+        return { ...result, setTargets: progressionSetTargets(exercise, actual, result) };
     });
 }

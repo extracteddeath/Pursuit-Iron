@@ -1,5 +1,5 @@
-/* Pursuit Iron 4.0 — M221 production release. */
-const CACHE="pursuit-iron-production-v4-0-0-m221-engine-stability-b811";
+/* Pursuit Iron 4.0 — M222 production release. */
+const CACHE="pursuit-iron-production-v4-0-0-m222-custom-parity-b812";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
   "./BUILD_PROFILE.json",

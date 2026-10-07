@@ -1,3 +1,11 @@
+# M222 · build 812 · Engine 0.64.12
+
+- Custom programs use canonical progression with selected methods, completed-set and effort safeguards.
+- Position-specific rep targets replace max-rep defaults; dynamic targets retain positional loads.
+- Load reductions restart at the rep floor. Advice, targets and saved automatic rows stay synchronized.
+- Custom settings preserve authored rosters/techniques and persist Disallow supersets.
+- Existing workout edits, logged sets, import/history and cycle structure are retained.
+
 ## M221 — engine input stability (build 811)
 
 - Normalize malformed equipment lists without throwing; explicit empty lists remain empty rather than reverting to an imaginary default inventory.

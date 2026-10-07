@@ -26,7 +26,7 @@ try {
     const values=()=>page.$$eval('input[aria-label="weight"]',ns=>ns.map(n=>n.value));
     assert.deepEqual(await values(),['205','205','205','205','205'],'fresh five-set Lower workout holds at its own 205 load');
     const text=await page.$eval('.wpb-workout',n=>n.innerText);
-    assert.match(text,/Last time: 205 lb/);assert.doesNotMatch(text,/last 210×15/);
+    assert.match(text,/5 prior sets/);assert.doesNotMatch(text,/last 210×15/);
     await page.click('button[aria-label="Show previous workout values"]');
     const lastText=await page.$eval('.wpb-workout',n=>n.innerText);
     assert.match(lastText,/205×16/);assert.match(lastText,/205×12/);

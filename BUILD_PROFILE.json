@@ -1,11 +1,11 @@
 {
   "profile": "portable-browser-esm-canonical-engine",
-  "milestone": "M221",
-  "source": "M220 + engine input stability and bounded exact load selection",
-  "engine": "0.64.11; equipment/history/runtime input hardening; training dose and progression rules preserved",
+  "milestone": "M222",
+  "source": "M221 + shared custom-program progression, per-set targets and protected recovery",
+  "engine": "0.64.12; authored/program progression parity and positional working targets",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 46,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m221-engine-stability-b811",
-  "uiMilestone": "Pursuit Iron 4.0 Production Release · M221 Engine Stability"
+  "cache": "pursuit-iron-production-v4-0-0-m222-custom-parity-b812",
+  "uiMilestone": "Pursuit Iron 4.0 Production Release · M222 Custom Program Progression"
 }

@@ -30,7 +30,7 @@ const app = read('modules/App.js');
 if (fs.existsSync(path.join(root, 'modules/shadow-engine'))) fail('retired research runtime must not ship');
 if (fs.existsSync(path.join(root, 'modules/next-engine/app-shell-adapter-capacity.js'))) fail('duplicate shell adapter must not ship');
 for (const marker of ['Turn into training cycle','convertProgramToNextCycleForShell','onConvertCycle: beginCycleConversion','Remove saved plan','Restore to library',
-  'homeProgramGroups','homePhaseIdentity','data-program-group','This block starts when you finish the current one','action: "decrease_load"',
+  'homeProgramGroups','homePhaseIdentity','data-program-group','This block starts when you finish the current one','evaluateWorkoutProgression',
   'Correct workout log','normalizeEditedHistoryEntry','perfAfterHistoryReplace','const setHistory = useMemo(() => stampedSetter(setHistoryRaw), [])','const [lo, hi] = cellRepRange(cell, program, ex, slot === day?.primaryIndex)',
   'legacyCustomSetCount(program, day, ex, slotIndex, weekIndex, o.sets, base.sets)','cyclePhaseLabel','cycleConfigForStandaloneProgram','mergeStandaloneIntoGeneratedCycle','advanceLegacyFirstCycleBlock','historyVolumeIn(h, unit)','weeklyRecap(history, unit)','Keep the compact LAST reference to load × reps only','map(weeks => weeks?.[1] ?? weeks?.["1"])']) {
   if (!app.includes(marker)) fail(`missing App marker: ${marker}`);
@@ -57,6 +57,7 @@ const jsFiles=[];
 const walk = p => { for (const ent of fs.readdirSync(p,{withFileTypes:true})) { const full=path.join(p,ent.name); if(ent.isDirectory()) walk(full); else if(ent.name.endsWith('.js')) jsFiles.push(full); } };
 walk(path.join(root,'modules'));
 for (const f of jsFiles) execFileSync(process.execPath,['--check',f],{stdio:'ignore'});
+execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs','verification/m222-custom-program-parity-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['verification/m221-engine-input-stability-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['verification/progression-safety-test.mjs'],{stdio:'inherit',cwd:root});
 execFileSync(process.execPath,['verification/shell-progression-safety-test.mjs'],{stdio:'inherit',cwd:root});

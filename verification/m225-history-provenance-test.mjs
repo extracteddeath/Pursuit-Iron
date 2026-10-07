@@ -44,6 +44,12 @@ assert.match(prescriptionHistorySource, /styleOverride\(program, ex, isPrimary, 
     'next-engine style override must reuse the precomputed adaptive context');
 assert.match(prescriptionHistorySource, /styleOverride\(program, ex, isPrimary, weekIndex, perf, history, dayId, adaptive\)/,
     'legacy/custom style override must reuse the precomputed adaptive context');
+assert.match(prescriptionHistorySource, /effortCalibration\(canonicalHistory, \{ normalizedHistory: canonicalHistory \}\)/,
+    'recovery effort calibration must reuse the already-normalized revision set');
+assert.match(prescriptionHistorySource, /personalRecoveryHours\(canonicalHistory, part, clockHours, \{ normalizedHistory: canonicalHistory \}\)/,
+    'per-muscle recovery fitting must reuse the same normalized revision set');
+assert.match(prescriptionHistorySource, /options\.normalizedHistory \?\? normalizeHistoryRevisions\(history\)\.entries/,
+    'recovery helpers must retain standalone canonicalization fallback');
 const duplicateDays = [
     { id: 'a', label: 'Repeat', exercises: ['lift'] },
     { id: 'b', label: 'Repeat', exercises: ['lift'] }

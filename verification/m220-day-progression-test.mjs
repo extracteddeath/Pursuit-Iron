@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { sessionSuggestion, lastDayPerf, dayPerfFor, prescribeSets, EX_BY_ID } from '../modules/App.js';
+import { sessionSuggestion, lastDayPerf, dayPerfFor, plateauSessions, prescribeSets, EX_BY_ID } from '../modules/App.js';
 import { refreshPendingSetTargets } from '../modules/next-engine/workout-runtime.js';
 const id = 'seated-calf';
 export const program = { id: 'm220-custom', custom: true, weeks: 10, config: { unit: 'lb', weeks: 10, progression: 'manual', goal: 'both', experience: 'intermediate', deload: false },
@@ -34,6 +34,16 @@ assert.equal(lastDayPerf(program.days[0], {}, [unrelated, ...history], program)[
 assert.equal(suggest(program.days[0], [...history].reverse()).weight, 205, 'date ordering is independent of input order');
 assert.equal(suggest(program.days[0], [entry('lower', Date.UTC(2026,9,1), 90, [20,20,20,20,20], 'other')]).weight, 90, 'M226: another program may initialize load but cannot earn an increase');
 assert.deepEqual(history[1].perf[id].sets.map(s => s.w), [205,205,205,205,205], 'logged evidence is immutable');
+const onlyLegs = [entry('legs', Date.UTC(2026,9,3), 210, [20,20,20])];
+assert.deepEqual(plateauSessions(onlyLegs, id, 'lower', 8, program), [],
+    'adaptive style detection cannot borrow stall evidence from another authored day');
+const migratedLower = { ...entry('retired-lower', Date.UTC(2026,9,4), 205, [15,15,15,15,15]), dayLabel: 'Lower' };
+assert.equal(plateauSessions([migratedLower], id, 'lower', 8, program).length, 1,
+    'a unique stable day label still recovers migrated adaptive-style history');
+const duplicateLabelProgram = structuredClone(program);
+duplicateLabelProgram.days.forEach(day => { day.label = 'Lower'; });
+assert.deepEqual(plateauSessions([{ ...migratedLower, dayLabel: 'Lower' }], id, 'lower', 8, duplicateLabelProgram), [],
+    'duplicate labels keep stale adaptive-style history unresolved instead of guessing');
 console.log('PASS M220: screenshot Lower/Legs regression, separate day loads, set-count qualification, earned progression, scoped fallbacks, shared LAST/advice and immutable history.');
 
 const automatic = { weight: '210', reps: '20', auto: true, done: false, valueOwner: 'prescription', target: { w: '210', reps: '12-20' } };

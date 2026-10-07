@@ -3,6 +3,7 @@ export * from './training-domain.js';
 export * from './program-duration.js';
 export * as shell from './engine-shell.js';
 export * from './next-engine/config.js';
+export * from './next-engine/domain-contracts.js';
 export * from './next-engine/generate.js';
 export * from './next-engine/app-shell-adapter.js';
 export * from './next-engine/cycle-runtime-adapter.js';

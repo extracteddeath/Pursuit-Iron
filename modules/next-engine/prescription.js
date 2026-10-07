@@ -4,6 +4,7 @@ import { normalizeLoadingInventory } from './loading.js';
 import { EXERCISE_MAP } from './exercise-db.js';
 import { SUPPORTED_PROGRESSION_STYLES } from './progression-style.js';
 import { SUPPORTED_SPLIT_FAMILIES } from './topology.js';
+import { readDomainRecord } from './domain-contracts.js';
 const DEFAULT_PRIORITY = 'normal';
 const VALID_GOALS = new Set(['hypertrophy', 'strength', 'mixed']);
 const VALID_EXPERIENCES = new Set(['novice', 'intermediate', 'advanced']);
@@ -159,6 +160,8 @@ const MUSCLE_SCALE = {
     lower_back: { minimum: .10, preferred: .24, upper: .38, direct: .45 }
 };
 export function normalizeRequest(request) {
+    if (request && typeof request === 'object' && 'schemaVersion' in request)
+        request = readDomainRecord('request', request);
     const dayOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
     if (!request || typeof request !== 'object' || Array.isArray(request))
         throw new Error('A program request object is required.');

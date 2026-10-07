@@ -1,5 +1,5 @@
 import { createExerciseMap } from './exercise-db.js';
-import { getNextShellCell, nextExerciseIdForShellExercise, resolveNextShellExerciseId, resolveLegacyExercise, shellPrescriptionFieldOwner, NextShellAdapterError } from './app-shell-adapter.js';
+import { getNextShellCell, nextExerciseIdForShellExercise, resolveNextShellExerciseId, resolveLegacyExercise, shellPrescriptionFieldOwner, NextShellAdapterError } from './shell-projection.js';
 import { advancedTechniqueFromCell } from './workout-runtime.js';
 import { normalizeRequest, createMusclePrescriptions } from './prescription.js';
 import { PUBLIC_MEV_REGIONS, PUBLIC_REGION_MUSCLE, publicMevContractApplies, publicMevForExperience, publicMevRequired, publicMevInternalSafetyCeiling, publicRegionContribution, publicMevLedger } from './public-mev.js';

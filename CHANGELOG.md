@@ -1,3 +1,7 @@
+# M229 · Engine 0.65.1
+
+- Domain contracts and acyclic projection.
+
 # M228 · build 817 candidate · Engine 0.65.0
 
 - Move 456 training-domain declarations from App.js into five canonical production modules; UI and independent audits import the same API.

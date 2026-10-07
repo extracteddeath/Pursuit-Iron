@@ -1,5 +1,5 @@
 import { createExerciseMap } from './exercise-db.js';
-import { getNextShellCell, nextExerciseIdForShellExercise, resolveNextShellExerciseId, resolveLegacyExercise, shellPrescriptionFieldOwner } from './app-shell-adapter.js';
+import { getNextShellCell, nextExerciseIdForShellExercise, resolveNextShellExerciseId, resolveLegacyExercise, shellPrescriptionFieldOwner, NextShellAdapterError } from './app-shell-adapter.js';
 import { advancedTechniqueFromCell } from './workout-runtime.js';
 import { normalizeRequest, createMusclePrescriptions } from './prescription.js';
 import { PUBLIC_MEV_REGIONS, PUBLIC_REGION_MUSCLE, publicMevContractApplies, publicMevForExperience, publicMevRequired, publicMevInternalSafetyCeiling, publicRegionContribution, publicMevLedger } from './public-mev.js';
@@ -68,7 +68,7 @@ export function captureShellVolumeSnapshot(program, week, legacyExercises = [], 
                 shellKey: key, shellId: id, shellSlot: slot };
         }).filter(Boolean);
         for (let slot = 0; slot < exercises.length - 1; slot++) {
-            if (program.ss?.[keyOf(day, slot)] && !exercises[slot].supersetGroup && !exercises[slot + 1].supersetGroup) {
+            if (!program.config?.noSupersets && program.ss?.[keyOf(day, slot)] && !exercises[slot].supersetGroup && !exercises[slot + 1].supersetGroup) {
                 exercises[slot].supersetGroup = `${day.id}:pair:${slot}`;
                 exercises[slot + 1].supersetGroup = `${day.id}:pair:${slot}`;
             }
@@ -467,13 +467,53 @@ export function reconcileShellWeekDose(program, legacyExercises = []) {
             : changes.length ? 'partial' : 'unable' };
 }
 
+// Capacity is a hard constraint. Volume floors are guidance when the schedule cannot fit them.
+// Trim only engine-owned accessory sets; never shorten prescribed strength rest or overwrite edits.
+export function enforceShellWeekCapacity(program, legacyExercises = []) {
+    let current = program;
+    const changes = [];
+    for (let week = 1; week <= workWeeks(program); week++) {
+        for (let guard = 0; guard < 400; guard++) {
+            const before = captureShellVolumeSnapshot(current, week, legacyExercises);
+            if (!before || before.missing) break;
+            const over = before.sessions.filter(s => s.estimatedMinutes > s.maxMinutes);
+            if (!over.length) break;
+            const proposals = [];
+            for (const session of over) for (const exercise of session.exercises) {
+                const key = exercise.shellKey, prior = current.nextWeekPrescriptions?.[key]?.[week];
+                if (STRENGTH.has(exercise.role) || exercise.sets <= 1 || !prior
+                    || shellPrescriptionFieldOwner(current, current.overrides?.[key] ?? {}, 'sets') === 'user') continue;
+                const candidate = { ...current, nextWeekPrescriptions: { ...current.nextWeekPrescriptions,
+                    [key]: { ...current.nextWeekPrescriptions[key], [week]: { ...prior, sets: exercise.sets - 1 } } } };
+                const after = captureShellVolumeSnapshot(candidate, week, legacyExercises);
+                const next = after.sessions.find(s => s.shellDayId === session.shellDayId);
+                const saved = session.estimatedMinutes - next.estimatedMinutes;
+                if (saved >= 0) proposals.push({ candidate, key, saved: saved || .01, dayId: session.shellDayId });
+            }
+            const best = proposals.sort((a, b) => b.saved - a.saved || a.key.localeCompare(b.key))[0];
+            if (!best) {
+                const error = new NextShellAdapterError('NEXT_WEEK_CAPACITY_EXCEEDED', 'The final weekly prescription cannot fit the session limit while preserving strength work and user-owned sets. Increase session time or reduce the requested work.',
+                    { suggestions: [{ code: 'increase_time', title: 'Choose a longer session' }, { code: 'reduce_work', title: 'Reduce requested work' }] });
+                error.details = { week, sessions: over.map(s => ({ dayId: s.shellDayId, minutes: s.estimatedMinutes, maximum: s.maxMinutes })) };
+                throw error;
+            }
+            current = best.candidate;
+            changes.push({ week, sets: [{ key: best.key, delta: -1 }], reason: 'session_capacity' });
+        }
+    }
+    return { program: current, changes };
+}
 export function finalizeGeneratedShellVolume(program, legacyExercises = []) {
     if (!program?.nextEngine?.program || !program.nextEngine.request) return program;
     const result = reconcileShellWeekDose(program, legacyExercises);
-    return { ...result.program, nextEngine: { ...result.program.nextEngine,
-        regionalDose: { status: result.status, changed: result.changed, changes: result.changes,
-            remaining: result.after.issues.map(i => ({ region: i.region, status: i.status, actual: i.v,
-                minimum: i.mev, upper: i.mrv, week: i.week })), timeIssues: result.timeIssues } } };
+    const capacity = enforceShellWeekCapacity(result.program, legacyExercises);
+    const after = auditShellVolume(capacity.program, legacyExercises);
+    const changes = [...result.changes, ...capacity.changes];
+    return { ...capacity.program, nextEngine: { ...capacity.program.nextEngine,
+        regionalDose: { status: after.issues.length ? 'partial' : changes.length ? 'success' : 'unchanged',
+            changed: changes.length > 0, changes,
+            remaining: after.issues.map(i => ({ region: i.region, status: i.status, actual: i.v,
+                minimum: i.mev, upper: i.mrv, week: i.week })), timeIssues: [] } } };
 }
 
 /** Verified transaction: existing set allocation, then reallocation, then one compatible new

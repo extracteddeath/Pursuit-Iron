@@ -75,7 +75,8 @@ export function buildRuntimeSetTargets(args) {
         const ramps = role === 'primary_strength' ? [[.5, 5], [.7, 3], [.85, 1]] : [[.6, 5], [.8, 3]];
         let last = null;
         for (const [fraction, warmReps] of ramps) {
-            const snapped = availableLoadAtOrBelow(exerciseId, workingLoad * fraction, loadingInventory, equipmentAvailable);
+            const snapped = args.snapLoad ? args.snapLoad(workingLoad * fraction)
+                : availableLoadAtOrBelow(exerciseId, workingLoad * fraction, loadingInventory, equipmentAvailable);
             if (snapped === null || snapped <= 0 || snapped >= workingLoad || snapped === last)
                 continue;
             targets.push({ kind: 'warmup', weight: snapped, reps: warmReps, repRange: [warmReps, warmReps], rir: null });
@@ -104,7 +105,7 @@ export function reconcilePendingRepTargets(sets, cell) {
     let changed = false;
     const out = sets.map(s => {
         const prescriptionOwned = s?.valueOwner != null ? s.valueOwner === 'prescription' : s?.auto === true;
-        if (!s || s.done || s.warm || s.sub || !prescriptionOwned)
+        if (!s || s.done || s.warm || s.sub || (s.target?.nextAction === 'percentage' && cell.ownership?.reps !== 'user') || !prescriptionOwned)
             return s;
         const r = Number(s.reps);
         const reps = String(s.reps ?? '').trim() && Number.isFinite(r)

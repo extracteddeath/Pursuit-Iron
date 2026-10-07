@@ -1,3 +1,4 @@
+import { historyNumber as numberOf, convertHistoryLoad as convertLoad, observedHistoryRIR, completedHistorySets, historyExposureContext, progressionExposureContext, normalizeHistoryEntries, validHistoryDate, historyLoadReason } from './history-contract.js';
 import { advanceCycleState, createInitialCycleState, startPhase } from './cycles.js';
 import { evaluateWorkoutProgression } from './performance.js';
 import { assessRecovery, recoverySignalForDecision } from './recovery.js';
@@ -12,14 +13,6 @@ import { advancedTechniqueFromCell } from './workout-runtime.js';
 import { finalizeGeneratedShellVolume, captureShellBaseProgram } from './volume-repair.js';
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-function numberOf(value) {
-    // Missing numeric fields must stay missing. Number(null) and Number('') are 0, which previously
-    // turned an unreported RIR into a reported 0 RIR (failure) and distorted load calibration.
-    if (value === null || value === undefined || (typeof value === 'string' && value.trim() === ''))
-        return null;
-    const n = typeof value === 'number' ? value : Number(value);
-    return Number.isFinite(n) ? n : null;
-}
 function intOf(value) {
     const n = numberOf(value);
     return n === null ? null : Math.round(n);
@@ -41,19 +34,6 @@ function rangeOf(value, fallback) {
     if (parts.length === 1)
         return [parts[0], parts[0]];
     return fallback;
-}
-function convertLoad(value, fromUnit, toUnit) {
-    if (value === null)
-        return null;
-    const from = String(fromUnit || toUnit || 'lb').toLowerCase();
-    const to = String(toUnit || fromUnit || 'lb').toLowerCase();
-    if (from === to)
-        return value;
-    if (from === 'kg' && to === 'lb')
-        return Math.round(value * 2.2046226218 * 100) / 100;
-    if (from === 'lb' && to === 'kg')
-        return Math.round(value / 2.2046226218 * 100) / 100;
-    return value;
 }
 function legacyExerciseById(legacyExercises) {
     return new Map(legacyExercises.map(ex => [ex.id, ex]));
@@ -115,7 +95,10 @@ function historicalShellCell(program, day, slot, week, perf, exerciseId) {
     const textRange = pair => pair[0] === pair[1] ? String(pair[0]) : pair.join('-');
     return { ...current, sets: saved.sets, reps: textRange(reps), rir: textRange(rir), rest: Number(saved.rest),
         role: saved.role ?? current.role, progressionStyle: saved.progressionStyle ?? current.progressionStyle,
-        tech: saved.tech ?? null };
+        tech: saved.tech ?? null,
+        setTargets: Array.isArray(saved.setTargets) && saved.setTargets.length === saved.sets
+            && saved.setTargets.every(t => numberOf(t.reps) > 0 && numberOf(t.weight) >= 0)
+            ? saved.setTargets : undefined };
 }
 function plannedSessionForEntry(program, entry, legacyExercises) {
     const snap = sourceSnapshot(program);
@@ -155,6 +138,7 @@ function plannedSessionForEntry(program, entry, legacyExercises) {
             prescription: {
                 reps: rangeOf(cell.reps, sourceEx?.prescription.reps ?? [8, 12]),
                 rir: rangeOf(cell.rir, sourceEx?.prescription.rir ?? [1, 3]),
+                ...(cell.setTargets ? { setTargets: cell.setTargets.map(t => ({ ...t, weight: convertLoad(t.weight, t.unit || entry.unit, program.config?.unit) })) } : {}),
                 restSeconds: cell.rest != null && cell.rest !== '' && Number.isFinite(Number(cell.rest)) && Number(cell.rest) >= 0
                     ? Math.round(Number(cell.rest)) : sourceEx?.prescription.restSeconds ?? 90
             },
@@ -169,6 +153,7 @@ function plannedSessionForEntry(program, entry, legacyExercises) {
     return { session: { ...sourceSession, id: String(day.id), name: String(day.label || sourceSession.name), intent: String(day.focus || day.type || sourceSession.intent), exercises }, legacyIds };
 }
 function workoutFromEntry(program, entry, legacyExercises) {
+    if (!validHistoryDate(entry)) return null;
     const planned = plannedSessionForEntry(program, entry, legacyExercises);
     if (!planned)
         return null;
@@ -184,24 +169,13 @@ function workoutFromEntry(program, entry, legacyExercises) {
         if (!ex || !perf?.sets?.length)
             return;
         let setIndex = 0;
-        for (const raw of perf.sets) {
-            if (raw?.sub || raw?.warm || raw?.done === false)
-                continue; // extensions, warmups and unfinished rows are not completed prescribed work
-            const reps = intOf(raw?.r);
-            if (reps === null || reps <= 0)
-                continue;
-            const load0 = numberOf(raw?.w);
-            const rir0 = numberOf(raw?.rir);
-            const targetRir = numberOf(raw?.tr);
-            // v661 historically stores target RIR into `rir` when the user does not explicitly report
-            // effort. Equal rir/tr values are therefore ambiguous. Treat only a value that differs from
-            // the stored target (or has no target provenance) as observed effort; reps/completion remain
-            // usable evidence either way. This prevents target effort from masquerading as athlete data.
-            const reported = raw.rirReported != null ? raw.rirReported === true
-                : targetRir === null || Math.abs(rir0 - targetRir) > .001;
-            const observedRir = rir0 !== null && reported ? clamp(rir0, 0, 10) : null;
+        for (const raw of completedHistorySets(perf)) {
+            const reps = intOf(raw.r), load0 = numberOf(raw.w);
+            const observedRir = observedHistoryRIR(raw);
+            const exposure = progressionExposureContext([perf, raw]);
             performed.push({
-                exerciseId: ex.exerciseId, setIndex: setIndex++, load: convertLoad(load0, entry.unit, targetUnit), reps,
+                ...historyExposureContext(raw), exerciseId: ex.exerciseId, setIndex: setIndex++, load: convertLoad(load0, entry.unit, targetUnit), reps,
+                badDay: exposure.badDay, interrupted: exposure.interrupted, prescriptionEdited: exposure.nonComparable,
                 rir: observedRir, advancedTechnique: ex.advancedTechnique?.type
             });
         }
@@ -210,7 +184,7 @@ function workoutFromEntry(program, entry, legacyExercises) {
         if (!planned.legacyIds.includes(legacyId))
             ignored.push(legacyId);
     const source = sourceSnapshot(program);
-    const progression = evaluateWorkoutProgression(planned.session, performed, { loadingInventory: source?.request.equipment.loading, equipmentAvailable: source?.request.equipment.available });
+    const progression = evaluateWorkoutProgression(planned.session, performed, { ...historyExposureContext(entry), loadingInventory: source?.request.equipment.loading, equipmentAvailable: source?.request.equipment.available });
     return {
         historyId: String(entry.id ?? `${entry.date ?? 0}-${entry.dayId ?? entry.dayLabel ?? 'session'}`),
         completedAt: new Date(Number(entry.date) || 0).toISOString(),
@@ -233,7 +207,7 @@ function classify(recovery, positive, negative, diagnoses, workouts) {
     return 'mixed';
 }
 function latestShellEntry(history, programId, legacyId, dayId) {
-    const entries = [...(history ?? [])].filter(h => h?.programId === programId && h?.perf?.[legacyId]).sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0));
+    const entries = [...(history ?? [])].filter(h => h?.programId === programId && validHistoryDate(h) && completedHistorySets(h?.perf?.[legacyId]).length).sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0));
     return entries.find(h => h.dayId === dayId) ?? entries[0] ?? null;
 }
 function representativeShellLoad(perf) {
@@ -292,13 +266,15 @@ export function nextWorkoutSuggestionForShell(program, history, legacyExercises,
     const cell = getNextShellCell(program, day, slot, weekIndex);
     const reps = String(cell?.reps ?? cell?.range ?? '');
     const lastEntry = latestShellEntry(history, String(program.id), legacyId, String(day.id));
-    const last = lastEntry?.perf?.[legacyId] ?? null;
+    const rawLast = lastEntry?.perf?.[legacyId] ?? null;
+    const last = rawLast;
+    const lastLoad = convertLoad(representativeShellLoad(last), lastEntry?.unit, program.config?.unit);
     let analysis;
     try {
         analysis = analyzeShellHistoryForNextEngine(program, history, legacyExercises);
     }
     catch {
-        return last ? { weight: representativeShellLoad(last), dir: 'hold', reason: 'Hold the last logged load until the new engine has comparable completed-set evidence.', reps, last, action: 'initial' } : null;
+        return last ? { weight: lastLoad, dir: 'hold', reason: 'Hold the last logged load until the new engine has comparable completed-set evidence.', reps, last, lastUnit: lastEntry?.unit || program.config?.unit, action: 'initial' } : null;
     }
     let decision;
     for (let i = analysis.workouts.length - 1; i >= 0 && !decision; i--) {
@@ -308,8 +284,8 @@ export function nextWorkoutSuggestionForShell(program, history, legacyExercises,
         decision = workout.progression.find(d => d.exerciseId === nextId);
     }
     if (!decision)
-        return last ? { weight: representativeShellLoad(last), dir: 'hold', reason: 'Hold the last logged load until the new engine has comparable completed-set evidence.', reps, last, action: 'initial' } : null;
-    const current = decision.currentLoad ?? representativeShellLoad(last);
+        return last ? { weight: lastLoad, dir: 'hold', reason: 'Hold the last logged load until the new engine has comparable completed-set evidence.', reps, last, lastUnit: lastEntry?.unit || program.config?.unit, action: 'initial' } : null;
+    const current = decision.currentLoad ?? lastLoad;
     /* ⚠ SUGGEST FOR THIS WEEK, NOT FOR THE WEEK THE LAST WORKOUT WAS LOGGED IN. `decision` was made when the last workout was
        analysed, against THAT workout's prescription; this function then only relabelled the rep range. Measured on a 6-week
        strength block: week 5 prescribes 1–3 reps, but the suggestion kept the week-1 load and "target 5". When this week's
@@ -320,11 +296,11 @@ export function nextWorkoutSuggestionForShell(program, history, legacyExercises,
     const lastCell = historicalShellCell(program, day, slot, Number(lastEntry?.weekIndex) || 1,
         lastEntry?.perf?.[legacyId], nextId);
     const changed = !!cell && !!lastCell && (String(cell.reps) !== String(lastCell.reps) || String(cell.rir) !== String(lastCell.rir) || cell.progressionStyle !== lastCell.progressionStyle);
-    if (changed) {
-        const shifted = represcribeForWeek(nextId, cell, lastCell, last, snap?.request);
+    if (changed && !['unobserved', 'non_comparable', 'context_limited', 'interrupted', 'incomplete'].includes(decision.outcome)) {
+        const shifted = represcribeForWeek(nextId, cell, lastCell, rawLast, snap?.request, lastEntry?.unit, program.config?.unit);
         if (shifted)
             return { weight: shifted.weight, dir: current != null && shifted.weight > current ? 'up' : current != null && shifted.weight < current ? 'down' : 'hold',
-                reason: shifted.reason, reps, target: shifted.target, last, action: 'represcribe', confidence: decision.confidence };
+                reason: shifted.reason, reps, target: shifted.target, last, lastUnit: lastEntry?.unit || program.config?.unit, action: 'represcribe', confidence: decision.confidence };
     }
     const weight = decision.suggestedLoad ?? current ?? null;
     return {
@@ -334,7 +310,7 @@ export function nextWorkoutSuggestionForShell(program, history, legacyExercises,
         reps,
         target: decision.suggestedReps,
         setTargets: decision.setTargets,
-        last,
+        last, lastUnit: lastEntry?.unit || program.config?.unit,
         action: decision.action,
         confidence: decision.confidence
     };
@@ -349,22 +325,20 @@ function pairOf(v) {
 /* Load for a changed prescription, from the lifter's estimated max. The estimate uses each logged set's reps-in-reserve; where
    none was logged it assumes the LOWER bound of the RIR prescribed for the week that set was trained in — the conservative end
    of what the lifter was told to do. (Assuming failure instead would underestimate the max and cancel out the heavier week.) */
-function represcribeForWeek(exerciseId, cell, lastCell, last, request) {
+function represcribeForWeek(exerciseId, cell, lastCell, last, request, fromUnit, toUnit) {
     const reps = pairOf(cell?.reps ?? cell?.range), rir = pairOf(cell?.rir), lastRir = pairOf(lastCell?.rir);
     if (!reps || !last)
         return null;
     const assumedRir = lastRir ? lastRir[0] : null;
     let e1 = null;
-    for (const set of (last.sets ?? [])) {
-        if (set?.sub || set?.done === false)
-            continue;
-        const w = numberOf(set?.w), r = numberOf(set?.r), reported = numberOf(set?.rir);
+    for (const set of completedHistorySets(last)) {
+        const w = convertLoad(set?.w, fromUnit, toUnit), r = numberOf(set?.r), reported = observedHistoryRIR(set);
         const est = estimate1RM(w, r ?? 0, reported ?? assumedRir);
         if (est !== null && (e1 === null || est > e1))
             e1 = est;
     }
     if (e1 === null)
-        e1 = estimate1RM(numberOf(last.weight), numberOf(last.reps) ?? 0, assumedRir);
+        e1 = estimate1RM(convertLoad(last.weight, fromUnit, toUnit), numberOf(last.reps) ?? 0, assumedRir);
     if (e1 === null)
         return null;
     const repsMid = Math.round((reps[0] + reps[1]) / 2), rirMid = rir ? (rir[0] + rir[1]) / 2 : 2;
@@ -372,7 +346,7 @@ function represcribeForWeek(exerciseId, cell, lastCell, last, request) {
     if (weight === null)
         return null;
     const range = reps[0] === reps[1] ? String(reps[0]) : `${reps[0]}–${reps[1]}`, reserve = rir ? (rir[0] === rir[1] ? String(rir[0]) : `${rir[0]}–${rir[1]}`) : null;
-    return { weight, target: repsMid, reason: `This week's prescription changes to ${range} reps${reserve ? ` with ${reserve} in reserve` : ''}, so the load is re-set from your estimated max (about ${Math.round(e1)}) to land mid-range.` };
+    return { weight, target: repsMid, reason: `This week's prescription changes to ${range} reps${reserve ? ` with ${reserve} in reserve` : ''}, so the load is re-set from your estimated max (about ${Math.round(e1)} ${toUnit || request?.equipment?.loading?.unit || 'lb'}) to land mid-range.` };
 }
 export function nextWorkoutSuggestionFromPerformedShell(program, legacyExercises, day, slot, weekIndex, perf, unit) {
     if (program?.engineSource !== 'pursuit-next')
@@ -400,13 +374,14 @@ export function nextWorkoutSuggestionFromPerformedShell(program, legacyExercises
         return null;
     const last = perf?.[legacyId] ?? null;
     const cell = getNextShellCell(program, day, slot, weekIndex);
+    const convert = value => convertLoad(value, program.config?.unit, unit);
     return {
-        weight: decision.suggestedLoad ?? decision.currentLoad ?? representativeShellLoad(last),
+        weight: convert(decision.suggestedLoad ?? decision.currentLoad) ?? representativeShellLoad(last),
         dir: decision.action === 'increase_load' ? 'up' : decision.action === 'decrease_load' ? 'down' : (decision.suggestedLoad != null && decision.currentLoad != null && decision.suggestedLoad < decision.currentLoad ? 'down' : 'hold'),
-        reason: decision.reason,
+        reason: historyLoadReason(decision.reason, unit),
         reps: String(cell?.reps ?? cell?.range ?? ''),
         target: decision.suggestedReps,
-        setTargets: decision.setTargets,
+        setTargets: decision.setTargets?.map(t => ({ ...t, weight: convert(t.weight) })),
         last,
         action: decision.action,
         confidence: decision.confidence
@@ -439,10 +414,10 @@ export function deriveProgressionSelectionEvidence(workouts = []) {
                 row.stallCount += 1;
             }
             if (decision.outcome === 'success_blocked') row.loadingBlockedCount += 1;
-            if (Number.isFinite(Number(decision.estimated1RM))) row.e1rmSamples += 1;
+            if (numberOf(decision.estimated1RM) > 0) row.e1rmSamples += 1;
             for (const set of sets) {
                 row.rirEligibleSets += 1;
-                if (set.rir !== null && Number.isFinite(Number(set.rir))) row.rirReportedSets += 1;
+                if (numberOf(set.rir) !== null) row.rirReportedSets += 1;
             }
         }
     }
@@ -461,8 +436,13 @@ export function analyzeShellHistoryForNextEngine(program, history, legacyExercis
     const snap = sourceSnapshot(program);
     if (!snap)
         throw new NextShellAdapterError('NEXT_HISTORY_SNAPSHOT_MISSING', 'This saved program lacks the engine snapshot required for history adaptation. Rebuild it before adapting the next block.');
-    const entries = [...(history ?? [])].filter(h => h?.programId === program.id).sort((a, b) => (Number(a.date) || 0) - (Number(b.date) || 0));
-    const workouts = entries.map(entry => workoutFromEntry(program, entry, legacyExercises)).filter((x) => !!x);
+    const normalized = normalizeHistoryEntries(history, program.id);
+    const { entries } = normalized;
+    const workouts = entries.map(entry => workoutFromEntry(program, entry, legacyExercises)).filter(x => {
+        if (x && x.performedSets.length) return true;
+        normalized.excluded.push({ id: x?.historyId ?? null, reason: x ? 'no_completed_working_sets' : 'unresolved_session' });
+        return false;
+    });
     let cycleState = { ...snap.cycleState };
     // Fixed-length cycle blocks can be shorter than the open-ended four-week
     // review window. Apply this while reading history so existing saved cycles
@@ -518,7 +498,7 @@ export function analyzeShellHistoryForNextEngine(program, history, legacyExercis
     const classification = classify(recovery, positive, negative, diagnoses, workouts.length);
     const ignoredIds = [...new Set(workouts.flatMap(w => w.ignoredLegacyExerciseIds))];
     return {
-        workouts, workoutCount: workouts.length, performedSetCount: workouts.reduce((n, w) => n + w.performedSets.length, 0),
+        excludedHistoryEntries: normalized.excluded, workouts, workoutCount: workouts.length, performedSetCount: workouts.reduce((n, w) => n + w.performedSets.length, 0),
         ignoredSetCount: entries.reduce((n, e) => n + Object.entries(e.perf ?? {}).filter(([id]) => ignoredIds.includes(id)).reduce((m, [, p]) => m + (p.sets?.filter(s => !s.sub).length ?? 0), 0), 0),
         ignoredLegacyExerciseIds: ignoredIds, recovery, cycleState, classification,
         successfulExerciseIds: successful, protectedExerciseIds: [...new Set(protectedIds)], replaceExerciseIds: evidence.replaceExerciseIds,

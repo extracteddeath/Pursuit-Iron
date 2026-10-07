@@ -1,7 +1,7 @@
 // Canonical prescriptions domain. Maintained production source; independent of React and browser APIs.
 import { EXERCISE_MAP as NEXT_EXERCISE_MAP } from "../next-engine/exercise-db.js";
 import { setShellEquipmentExpander, splitContractGaps, splitBuildability, refusalFixes, generateNextProgramForShell, recommendNextSplitForShell, getNextShellCell, canonicalShellSetCount, cloneNextDayPrescriptions, swapNextSlotPrescriptions, removeNextSlotPrescription, nextExerciseIdForShellExercise, resolveNextShellExerciseId, remapNextShellRoster, snapshotNextShellPrescription, markUserPrescriptionOverride, clearUserPrescriptionOverride, NextShellAdapterError } from "../next-engine/app-shell-adapter.js";
-import { historyNumber, convertHistoryLoad, observedHistoryRIR, completedHistorySets, historyExposureContext, progressionExposureContext, normalizeHistoryEntries, validHistoryDate, historyLoadReason } from '../next-engine/history-contract.js';
+import { historyNumber, convertHistoryLoad, observedHistoryRIR, completedHistorySets, historyExposureContext, progressionExposureContext, normalizeHistoryEntries, validHistoryDate, resolveHistoryDayIndex, historyLoadReason } from '../next-engine/history-contract.js';
 import { PCT_SCHEMES, percentageProtocolFor, adaptPercentageSetBudget, deriveTieredLinearState } from '../next-engine/percentage-protocols.js';
 import { buildRuntimeSetTargets, customProgramProgressionStyle, refreshPendingSetTargets, reconcilePendingRepTargets, techniqueProtocolFromCell, freestyleCellForRepRange, buildUserAddedSlotPrescriptions } from "../next-engine/workout-runtime.js";
 import { nextWorkoutSuggestionForShell, nextWorkoutSuggestionFromPerformedShell } from "../next-engine/workout-history-adapter.js";
@@ -410,9 +410,14 @@ function plateauSessions(history, exId, dayId, limit = 6, program = null) {
     const withEx = scoped.filter(h => historyNumber(h?.perf?.[exId]?.weight) > 0);
     if (!dayId)
         return withEx.slice(0, limit);
+    if (program) {
+        const targetIndex = (program.days || []).findIndex(day => String(day?.id ?? '') === String(dayId));
+        if (targetIndex >= 0)
+            return withEx.filter(h => resolveHistoryDayIndex(program.days, h) === targetIndex).slice(0, limit);
+    }
     const sameDay = withEx.filter(h => h?.dayId != null && String(h.dayId) === String(dayId));
-    // If this lift has only ever been trained on one identified day, scoping changed nothing — use
-    // everything so a regenerated day ID does not silently lose otherwise unambiguous legacy history.
+    // Legacy callers without a program cannot resolve migrated IDs safely. Preserve their old
+    // unambiguous single-day fallback, while program-aware progression uses authored day ownership above.
     const days = new Set(withEx.map(h => h.dayId == null ? null : String(h.dayId)).filter(Boolean));
     return (days.size <= 1 ? withEx : sameDay).slice(0, limit);
 }
@@ -466,7 +471,7 @@ function styleOverride(program, ex, isPrimary, weekIndex, perf, history, dayId) 
     if (exp === "none" || exp === "beginner")
         return null; // beginners are on linear by structure
     const scopedHistory = progressionHistoryForProgram(program, history);
-    const stall = stallCountFor(perf, ex, scopedHistory, dayId);
+    const stall = stallCountFor(perf, ex, history, dayId, program);
     if (stall >= STALL_ENGAGE) {
         if (stall < STALL_ENGAGE + E1RM_HOLD) {
             const left = STALL_ENGAGE + E1RM_HOLD - stall;
@@ -496,16 +501,16 @@ function styleOverride(program, ex, isPrimary, weekIndex, perf, history, dayId) 
     return null;
 }
 
-function linearStalled(perf, ex, history, program = null) {
+function linearStalled(perf, ex, history, program = null, dayId = null) {
     if (!perf || !ex)
         return false;
     const p = perf[ex.id];
     if (!p?.weight || !p.reps)
         return false;
     const scopedHistory = program ? progressionHistoryForProgram(program, history) : (Array.isArray(history) ? history : []);
-    if (scopedHistory.length < 3)
-        return false;
-    const recent = scopedHistory.filter(h => historyNumber(h?.perf?.[ex.id]?.weight) > 0).slice(0, 4);
+    const recent = dayId
+        ? plateauSessions(history, ex.id, dayId, 4, program)
+        : scopedHistory.filter(h => historyNumber(h?.perf?.[ex.id]?.weight) > 0).slice(0, 4);
     if (recent.length < 3)
         return false;
     const weights = recent.map(h => h.perf[ex.id].weight);
@@ -545,7 +550,7 @@ function autoStyleDetail(program, ex, isPrimary, weekIndex, perf = null, history
         if (program?.config?.percentScheme && nextBase === "e1rm")
             return R("e1rm", "percent-scheme lift — load is matched to %TM, not to a rep range");
         if (nextBase === "linear")
-            return linearStalled(perf, ex, history, program)
+            return linearStalled(perf, ex, history, program, dayId)
                 ? R("double", "beginner compound whose linear progression stalled — same weight for 3 sessions, so it graduates to double progression")
                 : R("linear", "beginner compound — linear progression is the simplest thing that still works");
         const stallN = stallCountFor(perf, ex, history, dayId, program);
@@ -565,7 +570,7 @@ function autoStyleDetail(program, ex, isPrimary, weekIndex, perf = null, history
     if (exp === "none" || exp === "beginner") {
         if (comp) {
             // Check for LP stall: 3+ consecutive sessions without hitting the rep target → graduate
-            const lpStall = linearStalled(perf, ex, history, program);
+            const lpStall = linearStalled(perf, ex, history, program, dayId);
             if (lpStall)
                 return R("double", "beginner compound whose linear progression stalled — same weight for 3 sessions, so it graduates to double progression");
             return R("linear", `beginner (${exp}) compound — linear progression is the simplest thing that still works`);
@@ -656,8 +661,10 @@ function prescribedRIRof(set) {
     return Number.isFinite(n) ? n : null;
 }
 
-function dayPerfFor(day, perf, history) {
+function dayPerfFor(day, perf, history, program = null) {
     const out = {};
+    const scopedHistory = program ? progressionHistoryForProgram(program, history) : (history || []);
+    const targetIndex = program ? (program.days || []).findIndex(candidate => candidate?.id === day?.id) : -1;
     // Estimated 1RM of a session's best logged set — used only to pick which recent session anchors
     // the next suggestion, so demonstrated capacity wins over a single off day.
     const anchorE1 = pp => {
@@ -671,15 +678,13 @@ function dayPerfFor(day, perf, history) {
         return best;
     };
     day.exercises.forEach(id => {
-        // Anchor the suggestion on the BEST of the last few sessions OF THIS DAY that logged this lift,
-        // not strictly the most recent one. A single fatigued / readiness-reduced light day shouldn't
-        // drop your working load and keep it there once you've recovered — your demonstrated capacity
-        // should hold. A genuine multi-session decline still pulls the best-of-recent down with it, and
-        // ties favor the most recent session (so real progression is reflected immediately). `reps !=
-        // null` (not weight > 0) keeps assisted/bodyweight lifts tracked per-day.
+        // Anchor the suggestion on the BEST of the last few comparable sessions OF THIS DAY. When the
+        // program is known, program ownership and day migration both resolve through the canonical
+        // provenance rules; another program/day can never become progression evidence by id collision.
         const recent = [];
-        for (const h of history) {
-            if (h.dayId === day.id && h.perf && h.perf[id] && h.perf[id].reps != null) {
+        for (const h of scopedHistory) {
+            const sameDay = program ? resolveHistoryDayIndex(program.days, h) === targetIndex : h.dayId === day.id;
+            if (sameDay && h.perf && h.perf[id] && h.perf[id].reps != null) {
                 recent.push(h.perf[id]);
                 if (recent.length >= 3)
                     break;
@@ -742,26 +747,11 @@ function loadableAbove(ex, w, unit) {
 }
 
 function customExerciseHistory(program, day, id, history) {
-    const entries = (history || []).filter(h => validHistoryDate(h) && h?.perf?.[id]).slice().sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0));
-    const own = entries.filter(h => h.programId === program.id);
-    const exact = own.find(h => h.dayId === day.id);
-    if (exact)
-        return exact;
-    // A regenerated day ID can still be matched by its stable authored label. Do not use a different
-    // day merely because it contains the same exercise: set count, rep target and progression method
-    // are properties of this day slot, not of the movement globally.
-    const label = String(day?.label || '').trim();
-    if (label) {
-        const byLabel = own.find(h => String(h.dayLabel || '').trim() === label);
-        if (byLabel)
-            return byLabel;
-    }
-    // Old custom logs may predate day identity. They are comparable only when this exercise occurs on
-    // exactly one authored day, making the ownership unambiguous. Otherwise they are reference-only.
-    const authoredDays = (program?.days || []).filter(d => Array.isArray(d?.exercises) && d.exercises.includes(id));
-    if (authoredDays.length === 1)
-        return own.find(h => !h.dayId && !h.dayLabel) || null;
-    return null;
+    const targetIndex = (program?.days || []).findIndex(candidate => candidate?.id === day?.id);
+    if (targetIndex < 0) return null;
+    const entries = (history || []).filter(h => validHistoryDate(h) && h?.perf?.[id] && h.programId === program.id)
+        .slice().sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0));
+    return entries.find(entry => resolveHistoryDayIndex(program.days, entry) === targetIndex) ?? null;
 }
 
 function customExerciseReferenceHistory(program, id, history) {
@@ -930,6 +920,8 @@ function effortCalibration(history) {
 
 function lastDayPerf(day, perf, history, program = null) {
     const out = {};
+    const scopedHistory = program ? progressionHistoryForProgram(program, history) : (history || []);
+    const targetIndex = program ? (program.days || []).findIndex(candidate => candidate?.id === day?.id) : -1;
     for (const id of day.exercises) {
         if (program?.custom === true && program?.engineSource !== "pursuit-next") {
             const comparable = customExerciseHistory(program, day, id, history);
@@ -937,20 +929,21 @@ function lastDayPerf(day, perf, history, program = null) {
                 out[id] = comparable.perf[id];
             continue;
         }
-        for (const h of (history || [])) { // history is newest-first
-            if (h.dayId === day.id && h.perf?.[id] && h.perf[id].reps != null) {
+        for (const h of scopedHistory) { // history is newest-first
+            const sameDay = program ? resolveHistoryDayIndex(program.days, h) === targetIndex : h.dayId === day.id;
+            if (sameDay && h.perf?.[id] && h.perf[id].reps != null) {
                 out[id] = h.perf[id];
                 break;
             }
         }
         if (!out[id] && perf?.[id])
-            out[id] = perf[id]; // never trained on this day → carry global
+            out[id] = perf[id]; // no comparable history for this day → caller-provided reference only
     }
     return out;
 }
 
 function anchorPerfFor(program, day, perf, history, weekIndex) {
-    const best = dayPerfFor(day, perf, history);
+    const best = dayPerfFor(day, perf, history, program);
     if (!day || !Array.isArray(day.exercises))
         return best;
     let last = null; // computed lazily — most days have no DDP lift
@@ -962,7 +955,7 @@ function anchorPerfFor(program, day, perf, history, weekIndex) {
         if (resolveStyle(program, ex, slot === day.primaryIndex, weekIndex, perf, history, day?.id) !== "dynamic")
             return;
         if (!last)
-            last = lastDayPerf(day, perf, history);
+            last = lastDayPerf(day, perf, history, program);
         if (last[id])
             out[id] = last[id];
     });

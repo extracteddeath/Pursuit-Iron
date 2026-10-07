@@ -331,7 +331,7 @@ function nextScheduledIndex(days, schedule, lastDoneId) {
 function nextDueDayId(program, history) {
     if (!program || !Array.isArray(program.days) || !program.days.length)
         return undefined;
-    const entries = (history || []).filter(h => h.programId === program.id).slice()
+    const entries = normalizeHistoryEntries(history, program.id).entries.slice()
         .sort((a, b) => (Number(b?.date) || 0) - (Number(a?.date) || 0));
     // Same resolution as nextSessionCursor — this decides which day the PROGRAM VIEW opens to, so a
     // stale id here lands the lifter on the wrong day even when the cursor itself is right.
@@ -374,7 +374,7 @@ function historyDayIndex(days, h) {
 function nextSessionCursor(program, history) {
     const days = program.days || [];
     const dpw = days.length || 1;
-    const entries = (history || []).filter(h => h.programId === program.id).slice()
+    const entries = normalizeHistoryEntries(history, program.id).entries.slice()
         .sort((a, b) => (Number(b?.date) || 0) - (Number(a?.date) || 0));
     const done = entries.length;
     const lastDoneId = entries.length ? entries[0].dayId : null;

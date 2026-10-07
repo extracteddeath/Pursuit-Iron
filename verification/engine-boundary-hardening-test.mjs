@@ -4,6 +4,7 @@ import { completedHistorySets, attemptedHistorySets, convertHistoryLoad } from '
 import { evaluateWorkoutProgression } from '../modules/next-engine/performance.js';
 import { buildRuntimeSetTargets, buildUserAddedSlotPrescriptions, techniqueProtocolFromCell } from '../modules/next-engine/workout-runtime.js';
 import { percentageProtocolFor, deriveTieredLinearState } from '../modules/next-engine/percentage-protocols.js';
+import { runPowerbuildingSimulation } from '../modules/next-engine/simulation.js';
 import { initialPhaseForGoal, phaseLabel, phasePolicyFor, SUPPORTED_PHASES } from '../modules/next-engine/phase-policy.js';
 import { shellConfigToNextRequest, NextShellAdapterError } from '../modules/next-engine/app-shell-adapter.js';
 import { generateNextCycleForShell, convertProgramToNextCycleForShell, advanceNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
@@ -213,3 +214,14 @@ const noCallbacksEntry = { id: 'p', programId: 'p', date: 1, unit: 'lb', perf: {
 assert.deepEqual(deriveTieredLinearState({ programId: 'p', exerciseId: 'lift', tier: 't1', initialLoad: 50, unit: 'lb', entries: [noCallbacksEntry] }),
     { stage: 0, weight: 50 });
 console.log('PASS boundary percentage replay: invalid callbacks and initial tier state cannot crash or carry impossible state.');
+
+assert.throws(() => runPowerbuildingSimulation(), /Simulation options must be an object/);
+assert.throws(() => runPowerbuildingSimulation({}), /program request object/);
+assert.throws(() => runPowerbuildingSimulation({ request, blocks: 'bad' }), /Simulation blocks must be an array/);
+assert.throws(() => runPowerbuildingSimulation({ request, blocks: [{ phase: 'mixed_accumulation', weeks: Infinity }] }), /weeks must be a finite number/);
+assert.throws(() => runPowerbuildingSimulation({ request, blocks: [{ phase: 'mixed_accumulation', weeks: 1000000 }] }), /weeks must be between 1 and 52/);
+assert.throws(() => runPowerbuildingSimulation({ request, blocks: Array.from({ length: 13 }, () => ({ phase: 'mixed_accumulation', weeks: 1 })) }), /at most 12 blocks/);
+assert.throws(() => runPowerbuildingSimulation({ request, blocks: [{ phase: 'bogus', weeks: 1 }] }), /Unsupported training phase/);
+assert.throws(() => runPowerbuildingSimulation({ request, responseProfile: 'mystery' }), /Unsupported simulation response profile/);
+assert.throws(() => runPowerbuildingSimulation({ request, adaptBetweenBlocks: 'false' }), /adaptBetweenBlocks must be a boolean/);
+console.log('PASS boundary simulation: malformed block counts, durations, phases and response modes fail before any simulation loop can start.');

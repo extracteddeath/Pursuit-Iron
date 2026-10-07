@@ -393,7 +393,9 @@ function progressionHistoryForProgram(program, history) {
         return [];
     const programId = program?.id;
     if (programId != null) {
-        const own = rows.filter(h => h?.programId != null && String(h.programId) === String(programId));
+        // Adaptive evidence obeys the same revision contract as the next-engine adapter:
+        // one persisted workout identity contributes once, and only its newest revision survives.
+        const own = normalizeHistoryEntries(rows, programId).entries;
         if (own.length)
             return own.slice().sort((a, b) => Number(b.date) - Number(a.date));
         // Once any tagged program history exists, unowned/other-program rows are ambiguous for adaptive
@@ -749,14 +751,20 @@ function loadableAbove(ex, w, unit) {
 function customExerciseHistory(program, day, id, history) {
     const targetIndex = (program?.days || []).findIndex(candidate => candidate?.id === day?.id);
     if (targetIndex < 0) return null;
-    const entries = (history || []).filter(h => validHistoryDate(h) && h?.perf?.[id] && h.programId === program.id)
+    const entries = normalizeHistoryEntries(history, program.id).entries.filter(h => h?.perf?.[id])
         .slice().sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0));
     return entries.find(entry => resolveHistoryDayIndex(program.days, entry) === targetIndex) ?? null;
 }
 
 function customExerciseReferenceHistory(program, id, history) {
+    // Prefer a canonical same-program revision before using cross-program history as the explicitly
+    // low-confidence, reference-only starting load.
+    const own = normalizeHistoryEntries(history, program.id).entries.filter(h => h?.perf?.[id])
+        .slice().sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0));
+    if (own.length)
+        return own[0];
     const entries = (history || []).filter(h => validHistoryDate(h) && h?.perf?.[id]).slice().sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0));
-    return entries.find(h => h.programId === program.id) || entries[0] || null;
+    return entries[0] || null;
 }
 
 function representativeCustomLoad(perf) {

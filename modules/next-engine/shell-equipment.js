@@ -1,5 +1,6 @@
-// Keep equipment expansion behind one shared registration seam so every shell
-// caller uses the same inventory rules without importing UI-owned catalog code.
+// The capacity adapter and the direct adapter may have distinct module URLs. Keep
+// their catalog registration in one module so cycles and standalone plans enforce
+// the same gym inventory.
 let expander = null;
 
 export function setShellEquipmentExpander(fn) { expander = fn; }

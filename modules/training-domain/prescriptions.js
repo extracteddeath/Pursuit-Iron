@@ -471,7 +471,7 @@ function styleOverride(program, ex, isPrimary, weekIndex, perf, history, dayId) 
     if (exp === "none" || exp === "beginner")
         return null; // beginners are on linear by structure
     const scopedHistory = progressionHistoryForProgram(program, history);
-    const stall = stallCountFor(perf, ex, scopedHistory, dayId);
+    const stall = stallCountFor(perf, ex, history, dayId, program);
     if (stall >= STALL_ENGAGE) {
         if (stall < STALL_ENGAGE + E1RM_HOLD) {
             const left = STALL_ENGAGE + E1RM_HOLD - stall;
@@ -501,16 +501,16 @@ function styleOverride(program, ex, isPrimary, weekIndex, perf, history, dayId) 
     return null;
 }
 
-function linearStalled(perf, ex, history, program = null) {
+function linearStalled(perf, ex, history, program = null, dayId = null) {
     if (!perf || !ex)
         return false;
     const p = perf[ex.id];
     if (!p?.weight || !p.reps)
         return false;
     const scopedHistory = program ? progressionHistoryForProgram(program, history) : (Array.isArray(history) ? history : []);
-    if (scopedHistory.length < 3)
-        return false;
-    const recent = scopedHistory.filter(h => historyNumber(h?.perf?.[ex.id]?.weight) > 0).slice(0, 4);
+    const recent = dayId
+        ? plateauSessions(history, ex.id, dayId, 4, program)
+        : scopedHistory.filter(h => historyNumber(h?.perf?.[ex.id]?.weight) > 0).slice(0, 4);
     if (recent.length < 3)
         return false;
     const weights = recent.map(h => h.perf[ex.id].weight);
@@ -550,7 +550,7 @@ function autoStyleDetail(program, ex, isPrimary, weekIndex, perf = null, history
         if (program?.config?.percentScheme && nextBase === "e1rm")
             return R("e1rm", "percent-scheme lift — load is matched to %TM, not to a rep range");
         if (nextBase === "linear")
-            return linearStalled(perf, ex, history, program)
+            return linearStalled(perf, ex, history, program, dayId)
                 ? R("double", "beginner compound whose linear progression stalled — same weight for 3 sessions, so it graduates to double progression")
                 : R("linear", "beginner compound — linear progression is the simplest thing that still works");
         const stallN = stallCountFor(perf, ex, history, dayId, program);
@@ -570,7 +570,7 @@ function autoStyleDetail(program, ex, isPrimary, weekIndex, perf = null, history
     if (exp === "none" || exp === "beginner") {
         if (comp) {
             // Check for LP stall: 3+ consecutive sessions without hitting the rep target → graduate
-            const lpStall = linearStalled(perf, ex, history, program);
+            const lpStall = linearStalled(perf, ex, history, program, dayId);
             if (lpStall)
                 return R("double", "beginner compound whose linear progression stalled — same weight for 3 sessions, so it graduates to double progression");
             return R("linear", `beginner (${exp}) compound — linear progression is the simplest thing that still works`);

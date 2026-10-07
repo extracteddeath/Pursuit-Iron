@@ -58,7 +58,6 @@ const coverage = {
     release: { milestone: manifest.milestone, build: manifest.build, engineVersion: manifest.engineVersion },
     sourceCommit: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim(),
     sourceWorkingTree: execFileSync('git', ['status', '--porcelain'], { cwd: root, encoding: 'utf8' }).trim() ? 'modified' : 'clean',
-    appSourceSha256: crypto.createHash('sha256').update(fs.readFileSync(path.join(root, 'modules/App.js'))).digest('hex'),
     engineModules: runtime.filter(f => f.startsWith('modules/next-engine/')).map(f => path.basename(f)).sort(),
     canonicalRuntimeFiles: runtime.sort(),
     domainExports: Object.keys(domain).sort(),

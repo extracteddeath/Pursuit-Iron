@@ -28,14 +28,8 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '22'
-      - name: Resolve and install browser harness
-        run: |
-          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
-          echo M237_LOCK_BEGIN
-          base64 -w0 package-lock.json
-          echo
-          echo M237_LOCK_END
-          npm ci --ignore-scripts --no-audit --no-fund
+      - name: Install locked browser harness
+        run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Verify browser contract shard
         env:
           CHROME_BIN: /usr/bin/google-chrome

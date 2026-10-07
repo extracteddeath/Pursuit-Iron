@@ -1,9 +1,9 @@
 // Canonical records domain. Maintained production source; independent of React and browser APIs.
-import { programWorkingWeeks, cycleBlockMetadata } from "../program-duration.js";
-import { setShellEquipmentExpander, splitContractGaps, splitBuildability, refusalFixes, generateNextProgramForShell, recommendNextSplitForShell, getNextShellCell, canonicalShellSetCount, cloneNextDayPrescriptions, swapNextSlotPrescriptions, removeNextSlotPrescription, nextExerciseIdForShellExercise, resolveNextShellExerciseId, remapNextShellRoster, snapshotNextShellPrescription, markUserPrescriptionOverride, clearUserPrescriptionOverride, NextShellAdapterError } from "../next-engine/app-shell-adapter.js";
-import { buildRuntimeSetTargets, customProgramProgressionStyle, refreshPendingSetTargets, reconcilePendingRepTargets, techniqueProtocolFromCell, freestyleCellForRepRange, buildUserAddedSlotPrescriptions } from "../next-engine/workout-runtime.js";
-import { captureShellVolumeSnapshot, auditShellVolume, repairShellVolume, shellVolumeTargets, shellDayMuscleBreakdown } from "../next-engine/volume-repair.js";
-import { emptyRetiredTrialData, preserveRetiredTrialData, emptyRetiredRolloutData, preserveRetiredRolloutData } from "../legacy-research-data.js";
+import { programWorkingWeeks } from "../program-duration.js";
+import { getNextShellCell, canonicalShellSetCount } from "../next-engine/app-shell-adapter.js";
+import { freestyleCellForRepRange } from "../next-engine/workout-runtime.js";
+import { shellVolumeTargets } from "../next-engine/volume-repair.js";
+import { emptyRetiredTrialData, preserveRetiredTrialData, emptyRetiredRolloutData } from "../legacy-research-data.js";
 import { ALL_EQUIP_IDS, EQUIPMENT, EX_BY_ID } from './catalog.js';
 
 const MACHINE_EQUIP = new Set(EQUIPMENT.filter(e => e.cat === "Machines").map(e => e.id));

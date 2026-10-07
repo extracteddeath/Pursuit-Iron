@@ -193,7 +193,9 @@ function applyAdaptiveProgressionStyles(program, previous, request, target, evid
                 const matchedPrior = matchedSession?.exercises?.find(ex => ex.exerciseId === exercise.exerciseId) ?? null;
                 const uniquePrior = occurrences.length === 1 ? occurrences[0] : null;
                 const prior = matchedPrior ?? uniquePrior?.exercise ?? null;
-                const priorSessionId = matchedPrior ? matchedSession.id : uniquePrior?.session?.id ?? null;
+                const priorSessionId = matchedPrior
+                    ? (matchedSession.shellDayId ?? matchedSession.id)
+                    : (uniquePrior?.session?.shellDayId ?? uniquePrior?.session?.id ?? null);
                 const def = context.exerciseById(exercise.exerciseId);
                 if (!prior || !def)
                     return exercise;

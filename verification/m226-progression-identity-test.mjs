@@ -61,6 +61,9 @@ assert.match(phaseSource, /previousByTargetSession\?\.get\(session\.id\)/,
     'adaptive progression must resolve the prior occurrence through the matched session');
 assert.match(phaseSource, /progressionEvidenceBySessionExercise/,
     'adaptive progression must consume occurrence-scoped evidence');
+assert.match(phaseSource, /matchedSession\.shellDayId \?\? matchedSession\.id/,
+    'shell day identity must bridge history evidence into engine transition sessions');
+
 assert.doesNotMatch(phaseSource, /const previousById = new Map\(previous\.sessions\.flatMap/,
     'duplicate movement occurrences must not collapse into one global prior style');
 

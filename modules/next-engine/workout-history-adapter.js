@@ -305,7 +305,7 @@ export function nextWorkoutSuggestionForShell(program, history, legacyExercises,
         if (reference && referenceLoad !== null) return { weight: referenceLoad, dir: 'hold',
             reason: 'Use the other day only as a starting reference. This program day has no comparable completed history yet.',
             reps, last: reference, lastUnit: referenceEntry?.unit || program.config?.unit, action: 'initial', referenceOnly: true };
-        return semanticStartingReferenceForShell(program, history, day, nextId, cell);
+        return semanticStartingReferenceForShell(program, history, day, nextId, cell, { normalizedHistory });
     }
     const current = decision.currentLoad ?? lastLoad;
     /* ⚠ SUGGEST FOR THIS WEEK, NOT FOR THE WEEK THE LAST WORKOUT WAS LOGGED IN. `decision` was made when the last workout was
@@ -415,7 +415,7 @@ export function semanticStartingReferenceForShell(program, history, day, nextId,
     const asOf = options.asOf ?? Date.now();
     const targetIndex = (program?.days ?? []).findIndex(candidate => candidate?.id === day?.id);
     if (targetIndex < 0) return null;
-    const entries = normalizeHistoryEntries(history, program.id).entries.filter(entry => resolveHistoryDayIndex(program.days, entry) === targetIndex
+    const entries = (options.normalizedHistory ?? normalizeHistoryEntries(history, program.id)).entries.filter(entry => resolveHistoryDayIndex(program.days, entry) === targetIndex
         && Number(entry.date) <= asOf && asOf - Number(entry.date) <= 90 * 86400000
         && Object.values(entry.perf ?? {}).some(perf => perf?.prescription?.exerciseId && perf.prescription.exerciseId !== nextId));
     if (!entries.length) return null;

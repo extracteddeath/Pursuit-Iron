@@ -1,3 +1,9 @@
+# M234 · build 823 candidate · Engine 0.65.6
+
+- Cache static exercise eligibility against full canonical exercise objects; never project away prescription, technique, provenance, or semantic metadata.
+- Evaluate hard constraints before ranking and cap expensive ranking work for pathological custom catalogs while preserving M233 ordering for normal catalogs.
+- Keep M230 decomposition verification intact; only the two deliberately evolved ranking snapshots move forward.
+
 # M233 · build 822 candidate · Engine 0.65.5
 
 - Add immutable semantic exercise relationships and explicit versioned custom mechanics; protect complementary functions and strength specificity.

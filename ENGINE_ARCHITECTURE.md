@@ -1,10 +1,10 @@
 # Production engine map
 
-Current source candidate: M224, app 4.0.0 build 814, Pursuit Engine 0.64.13. The maintained source is the JavaScript in this repository. `RELEASE_MANIFEST.json` certifies the actual runtime and UI files. Historical TypeScript claims and development scripts are not the source of this release. The unreferenced historical root `app.js` bundle has been removed; the production entry is `modules/main.js`.
+Current release candidate: M234, app 4.0.0 build 823, Pursuit Engine 0.65.6; M235 verifies this exact candidate without changing runtime identity. The maintained source is the JavaScript in this repository. `RELEASE_MANIFEST.json` certifies the actual runtime and UI files. Historical TypeScript claims and development scripts are not the source of this release. The unreferenced historical root `app.js` bundle has been removed; the production entry is `modules/main.js`.
 
 ## Canonical computation and independent audits
 
-Current engineering candidate: M228, Engine 0.65.0. `modules/engine-api.js` is the shared production API. The UI imports training calculations and domain transactions from it; it no longer contains their implementations. `modules/training-domain/` contains catalog, record migrations, program transactions, prescription/loading coordination and historical analytics. These are maintained source modules, not generated files. React, DOM, storage I/O, notifications, audio and rendering remain UI-side concerns.
+Current engineering candidate: M234, Engine 0.65.6, with the M228–M235 milestone sequence fully verified. `modules/engine-api.js` is the shared production API. The UI imports training calculations and domain transactions from it; it no longer contains their implementations. `modules/training-domain/` contains catalog, record migrations, program transactions, prescription/loading coordination and historical analytics. These are maintained source modules, not generated files. React, DOM, storage I/O, notifications, audio and rendering remain UI-side concerns.
 
 `engine-lab/export-engine.mjs` copies the canonical runtime byte for byte into an independent Node package. It extracts zero App.js declarations. Coverage schema 2 and snapshot hashes certify copied source identity. The complete App.js is retained only as integration evidence. `engine-lab/verify-parity.mjs` compares the standalone package with the running application's shared functions. `verification/m228-canonical-boundary-test.mjs` independently compares sessions, weekly prescriptions, volume and scheduling against 13 Build 816 golden scenarios.
 
@@ -94,9 +94,9 @@ node scripts/verify-engine-contracts.mjs generation adaptation quality
 CHROME_BIN=/path/to/chrome node --no-warnings --experimental-loader ./verification/import-loader.mjs verification/m201-workout-prescription-browser-test.mjs
 ```
 
-Finalize only after intentionally setting the current manifest/profile identity. It hashes current files and rebuilds the offline list; it never commits or pushes. CI has one release gate, three engine-contract groups, and four real-browser gates. Workflows have read-only repository permissions. Settings self-test includes the current engine plus its four compatible predecessors; older Next artifacts are counted as archived instead of silently pretending to validate them.
+Finalize only after intentionally setting the current manifest/profile identity. It hashes current files and rebuilds the offline list; it never commits or pushes. CI has one release-integrity gate, three engine-contract groups, twelve phone/offline browser gates, and an independent engine-audit gate. Workflows have read-only repository permissions. Settings self-test includes the current engine plus its four compatible predecessors; older Next artifacts are counted as archived instead of silently pretending to validate them.
 
-Generation is still synchronous. Shared candidate caches and cheap wizard feasibility avoid unnecessary work, but difficult generation can still block the main thread. Worker execution would require a separate behavioral and browser review; M205 does not claim it has been implemented.
+Generation is still synchronous. Shared candidate caches and cheap wizard feasibility avoid unnecessary work, but difficult generation can still block the main thread. Worker execution would require a separate behavioral and browser review; the verified M235 candidate does not claim it has been implemented.
 
 ## Cycle duration authority
 

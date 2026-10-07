@@ -46,8 +46,9 @@ export function normalizeLoadingInventory(input) {
         if (override.availableLoads !== undefined) override.availableLoads = clean(override.availableLoads);
         return [id, override];
     }));
+    const unitToken = typeof input.unit === 'string' ? input.unit.trim().toLowerCase() : '';
     return {
-        unit: input.unit === 'kg' ? 'kg' : 'lb',
+        unit: unitToken === 'kg' ? 'kg' : 'lb',
         barbell: { barWeight: limit(input.barbell?.barWeight, 45), platePairs },
         dumbbells: { availablePerHand: clean(input.dumbbells?.availablePerHand === undefined ? DEFAULT_LOADING_INVENTORY.dumbbells.availablePerHand : input.dumbbells.availablePerHand) },
         machine: normalizeIncrement(input.machine, DEFAULT_LOADING_INVENTORY.machine),

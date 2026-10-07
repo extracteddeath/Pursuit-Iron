@@ -18,20 +18,34 @@ import { buildProgramExplainability } from './explainability.js';
 import { reconcileRecoverableDose } from './dose-reconciliation.js';
 export function generateProgram(requestInput, options) {
     const normalized = normalizeRequest(requestInput);
-    const phase = options?.phase ?? initialPhaseForGoal(normalized.goal.type);
+    const requestedPhase = options?.phase;
+    const phase = requestedPhase == null ? initialPhaseForGoal(normalized.goal.type)
+        : (typeof requestedPhase === 'string' ? requestedPhase.trim().toLowerCase() : '');
+    const basePolicy = phasePolicyFor(phase);
+    if (!basePolicy)
+        throw new Error(`Unsupported training phase: ${requestedPhase}.`);
+    const rawBlockWeeks = options?.blockWeeks;
+    if (rawBlockWeeks !== undefined && (!Number.isFinite(rawBlockWeeks) || rawBlockWeeks <= 0))
+        throw new Error('Block weeks must be a finite positive number.');
+    const rawStyle = options?.progressionStyle;
+    if (rawStyle !== undefined && typeof rawStyle !== 'string')
+        throw new Error('Progression style must be a string.');
+    const optionStyle = rawStyle === undefined ? undefined : rawStyle.trim().toLowerCase();
+    if (optionStyle !== undefined && !['auto', 'double', 'dynamic', 'ladder', 'linear', 'wave', 'e1rm'].includes(optionStyle))
+        throw new Error(`Unsupported progression style: ${rawStyle}.`);
     const policy = {
-        ...phasePolicyFor(phase),
+        ...basePolicy,
         // M189: block duration is part of progression-method selection. A four-week
         // intensification block should not start a wave that needs five+ weeks to justify itself.
-        blockWeeks: Number(options?.blockWeeks) > 0 ? Math.max(1, Math.round(Number(options.blockWeeks))) : undefined,
-        requestedProgressionStyle: options?.progressionStyle ?? requestInput?.preferences?.progressionStyle
+        blockWeeks: rawBlockWeeks === undefined ? undefined : Math.max(1, Math.round(rawBlockWeeks)),
+        requestedProgressionStyle: optionStyle ?? normalized.preferences?.progressionStyle
     };
     // Session-time cards describe available capacity, not a quota that must be filled. Experience and
     // phase determine how much of that capacity is likely productive. Advanced accumulation can use the
     // full target; novice/intermediate and lower-fatigue phases deliberately cap exercise count lower.
     const experienceCapacityMultiplier = normalized.athlete.experience === 'novice' ? .75 : normalized.athlete.experience === 'intermediate' ? .9 : 1;
     const experienceExerciseCap = normalized.athlete.experience === 'novice' ? 6 : normalized.athlete.experience === 'intermediate' ? 8 : 12;
-    const responseCapacityMultiplier = requestInput.preferences?.responseCapacityScale ?? 1;
+    const responseCapacityMultiplier = normalized.preferences?.responseCapacityScale ?? 1;
     const capacityMultiplier = policy.sessionCapacityMultiplier * experienceCapacityMultiplier * responseCapacityMultiplier;
     const split = normalized.preferences.lockedSplit ?? normalized.preferences.preferredSplit;
     // Full-body structures have a three-region identity (push + pull + lower). Phase tapering may cut

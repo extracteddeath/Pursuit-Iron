@@ -23,6 +23,12 @@ export const INTENT_MUSCLES = {
     deadlift_focus: ['hamstrings', 'glutes', 'back', 'calves', 'core', 'lower_back', 'traps', 'forearms', 'biceps'],
     press_focus: ['front_delts', 'triceps', 'side_delts', 'back']
 };
+export const SUPPORTED_SPLIT_FAMILIES = Object.freeze([
+    'full_body', 'upper_lower', 'custom', 'ppl', 'ulppl', 'pplul', 'hybrid', 'phat', 'bro',
+    'glute_focus', 'torso_limbs', 'ppla', 'ula', 'arnold', 'full_body_patterns', 'phul',
+    'five_three_one', 'academy_prep', 'gzclp', 'rippler', 'jt', 'sbd_power', 'five31_beginner',
+    'strength_fb', 'texas', 'upper_lower_alt'
+]);
 const FLEX_ACCESSORY_MUSCLES = new Set(['biceps', 'triceps', 'side_delts', 'rear_delts', 'forearms']);
 const FLEX_ACCESSORY_SPLITS = new Set(['upper_lower', 'phul', 'ulppl', 'pplul', 'hybrid', 'upper_lower_alt']);
 const FLEX_LOWER_INTENTS = new Set(['lower', 'legs', 'glute', 'limbs']);

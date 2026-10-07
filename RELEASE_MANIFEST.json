@@ -106,7 +106,7 @@
   "uiFiles": {
     "modules/App.js": "9fad9cdad3062e4e3d686e1a96d8a6261af46a4551a8a5fd5ddd5df1e3eb3d7a",
     "index.html": "fb9f879e882f016b41d486f62f39c5605c74aac53a463a2fe1e82cbbaaa65e3b",
-    "sw.js": "5a251b190251a7105551cf7df4fb7a9a5422d6695089790d833e0e351ad838f6",
+    "sw.js": "5540c30593aa4f69b774f3b0ecaeb703e92ad7a4f4c122dc1ceedbc28b6f335f",
     "BUILD_PROFILE.json": "d70e36f140d2b04bf7f99f62d8471ee330c0d6bf96ae974458367a637afec33c",
     "CHANGELOG.md": "0851b9f4d675dd8420fc278ba9595b18f4957196a83f6c4d05bf2f83c438d1c0",
     "app.css": "27818b3319609aff1416b32d5afebe70598cc57dfa64f4467b8bfe5b1130e0dd",

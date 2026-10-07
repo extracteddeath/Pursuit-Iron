@@ -12,6 +12,7 @@ const coreRunner = read('scripts/verify-engine-contracts.mjs');
 const browserRunner = read('scripts/verify-browser-contracts.mjs');
 const releaseRunner = read('scripts/verify-release.mjs');
 const exporterPackage = JSON.parse(read('engine-lab/package.json'));
+const canonicalExporter = read('engine-lab/canonical-export.mjs');
 
 const matrixValues = (text, key) => {
     const match = text.match(new RegExp(key + ': \\[([^\\]]+)\\]'));
@@ -41,6 +42,14 @@ assert.match(releaseRunner, /verifyContractRegistry/, 'release runner must valid
 
 assert.equal(Object.keys(exporterPackage.dependencies ?? {}).length, 0, 'canonical exporter must not retain unused runtime dependencies');
 assert.equal(Object.keys(exporterPackage.devDependencies ?? {}).length, 0, 'canonical exporter must not retain unused dev dependencies');
+assert.match(canonicalExporter, /engineRoots = Object\.freeze\(\['modules\/engine-api\.js', 'modules\/engine-shell\.js'\]\)/,
+    'standalone export must be derived from canonical engine API roots');
+assert.doesNotMatch(canonicalExporter, /reference\/App\.production|reference\/verification|integration-suites/,
+    'standalone export must not duplicate UI or verification reference source');
+assert.match(canonicalExporter, /importsOutsideEngine = productionImports\.some\(moduleFile => !runtimeSet\.has\(moduleFile\)\)/,
+    'standalone verification must exclude suites that depend on non-engine production modules');
+assert.doesNotMatch(canonicalExporter, /\^M22\[4-9\]|\^M23\[0-5\]/,
+    'standalone export must not bundle milestone reports as runtime evidence');
 assert.doesNotMatch(audit, /npm ci --prefix engine-lab/, 'independent audit must not reinstall retired AST tooling');
 assert.match(audit, /github\.ref == 'refs\/heads\/main' \|\| github\.event_name == 'workflow_dispatch'/, 'engine artifact publication must stay main/manual only');
 
@@ -53,5 +62,5 @@ assert.equal(registry.releaseCount, 1, 'release-only semantics should remain nar
 console.log(
     `PASS M236 verification topology: ${registry.contractCount} uniquely owned source contracts, `
     + `${registry.browserCount} browser contracts in ${Object.keys(browserShards).length} shards, `
-    + `${registry.releaseCount} release-specific contract; feature branches are PR-only, stale PR/main CI cancels, and exporter has zero dependencies.`
+    + `${registry.releaseCount} release-specific contract; feature branches are PR-only, stale PR/main CI cancels, and exporter has zero dependencies or duplicated UI/reference payload.`
 );

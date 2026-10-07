@@ -29,6 +29,10 @@ const distinguishableDays = [
 ];
 assert.equal(resolveHistoryDayIndex(distinguishableDays, { dayId: 'retired', dayLabel: 'Repeat', perf: { row: {} } }), 0,
     'legacy label fallback may reattach when the logged roster uniquely identifies one duplicate-label day');
+assert.equal(resolveHistoryDayIndex(distinguishableDays, { perf: { press: {} } }), 1,
+    'pre-label legacy history may reattach only when its complete logged roster identifies exactly one day');
+assert.equal(resolveHistoryDayIndex(duplicateDays, { perf: { lift: {} } }), -1,
+    'pre-label history with a movement repeated across days remains unresolved');
 
 const exercise = { exerciseId: 'lift', name: 'Lift', sets: 2, progressionStyle: 'double',
     prescription: { reps: [10, 15], rir: [2, 2] } };

@@ -23,6 +23,11 @@ assert.match(shellHistoryAdapterSource, /function latestShellEntries\(/,
     'shell progression/reference lookup must share one canonical normalized-history pass');
 assert.doesNotMatch(shellHistoryAdapterSource, /latestComparableShellEntry|latestShellReferenceEntry/,
     'separate comparable/reference normalization paths must not return');
+const prescriptionHistorySource = fs.readFileSync(new URL('../modules/training-domain/prescriptions.js', import.meta.url), 'utf8');
+assert.match(prescriptionHistorySource, /function customExerciseHistoryRefs\(/,
+    'custom comparable/reference history must share one canonical same-program revision pass');
+assert.doesNotMatch(prescriptionHistorySource, /function customExerciseHistory\(|function customExerciseReferenceHistory\(/,
+    'separate custom comparable/reference lookup paths must not return');
 const duplicateDays = [
     { id: 'a', label: 'Repeat', exercises: ['lift'] },
     { id: 'b', label: 'Repeat', exercises: ['lift'] }

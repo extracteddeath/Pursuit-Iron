@@ -1,8 +1,21 @@
 import { initialPhaseForGoal, phaseLabel } from './phase-policy.js';
 import { recoverySignalForDecision } from './recovery.js';
+function normalizedDaysPerWeek(value) {
+    if (typeof value === 'boolean' || typeof value === 'object' || value === null || value === '')
+        throw new TypeError('Days per week must be a whole number between 1 and 7.');
+    const n = Number(value);
+    if (!Number.isInteger(n) || n < 1 || n > 7)
+        throw new RangeError('Days per week must be a whole number between 1 and 7.');
+    return n;
+}
+function validCyclePhase(phase) {
+    phaseLabel(phase);
+    return phase;
+}
 export function createInitialCycleState(goal, daysPerWeek) {
-    const minimumWorkouts = Math.max(4, daysPerWeek * 2);
-    const reviewAfterWorkouts = Math.max(minimumWorkouts + 2, daysPerWeek * 4);
+    const days = normalizedDaysPerWeek(daysPerWeek);
+    const minimumWorkouts = Math.max(4, days * 2);
+    const reviewAfterWorkouts = Math.max(minimumWorkouts + 2, days * 4);
     const phase = initialPhaseForGoal(goal);
     return {
         phase, phaseLabel: phaseLabel(phase), workoutsInPhase: 0, minimumWorkouts, reviewAfterWorkouts, status: 'building',
@@ -28,6 +41,10 @@ function nextDevelopmentPhase(goal, current) {
     return 'hypertrophy_accumulation';
 }
 export function recommendNextPhase(goal, state, recovery) {
+    initialPhaseForGoal(goal);
+    if (!state || typeof state !== 'object')
+        throw new TypeError('Cycle state must be an object.');
+    validCyclePhase(state.phase);
     if (state.phase === 'recovery') {
         if (state.status !== 'review_eligible' || (state.recoveryExitEvidence ?? 0) < 2)
             return undefined;
@@ -94,6 +111,17 @@ function advanceRecoveryPhase(state, decisions, recovery, goal, workoutsInPhase)
     return { ...interim, recommendedNextPhase: goal ? recommendNextPhase(goal, interim, recovery) : undefined };
 }
 export function advanceCycleState(state, decisions, structuralAdaptation, recovery, goal) {
+    if (!state || typeof state !== 'object')
+        throw new TypeError('Cycle state must be an object.');
+    validCyclePhase(state.phase);
+    if (!Number.isInteger(state.workoutsInPhase) || state.workoutsInPhase < 0)
+        throw new RangeError('Cycle workouts-in-phase must be a non-negative whole number.');
+    if (!Number.isInteger(state.minimumWorkouts) || state.minimumWorkouts < 1)
+        throw new RangeError('Cycle minimum workouts must be a positive whole number.');
+    if (!Number.isInteger(state.reviewAfterWorkouts) || state.reviewAfterWorkouts < state.minimumWorkouts)
+        throw new RangeError('Cycle review threshold must be a whole number at or above the minimum workouts.');
+    if (state.recoveryExitEvidence !== undefined && (!Number.isInteger(state.recoveryExitEvidence) || state.recoveryExitEvidence < 0))
+        throw new RangeError('Recovery exit evidence must be a non-negative whole number.');
     const workoutsInPhase = state.workoutsInPhase + 1;
     if (state.phase === 'recovery')
         return advanceRecoveryPhase(state, decisions, recovery, goal, workoutsInPhase);
@@ -122,10 +150,15 @@ export function advanceCycleState(state, decisions, structuralAdaptation, recove
     return { ...interim, recommendedNextPhase };
 }
 export function startPhase(state, phase, goal, daysPerWeek) {
-    const base = createInitialCycleState(goal, daysPerWeek);
+    const days = normalizedDaysPerWeek(daysPerWeek);
+    validCyclePhase(phase);
+    if (!state || typeof state !== 'object')
+        throw new TypeError('Cycle state must be an object.');
+    validCyclePhase(state.phase);
+    const base = createInitialCycleState(goal, days);
     const enteringRecovery = phase === 'recovery';
-    const minimumWorkouts = enteringRecovery ? Math.max(2, Math.ceil(daysPerWeek * .6)) : base.minimumWorkouts;
-    const reviewAfterWorkouts = enteringRecovery ? Math.max(minimumWorkouts + 2, daysPerWeek) : base.reviewAfterWorkouts;
+    const minimumWorkouts = enteringRecovery ? Math.max(2, Math.ceil(days * .6)) : base.minimumWorkouts;
+    const reviewAfterWorkouts = enteringRecovery ? Math.max(minimumWorkouts + 2, days) : base.reviewAfterWorkouts;
     const recoveryEntryPhase = enteringRecovery
         ? (state.phase === 'recovery' ? state.recoveryEntryPhase : state.phase)
         : undefined;

@@ -16,6 +16,7 @@ const read = path => fs.readFileSync(new URL('../' + path, import.meta.url), 'ut
 const manifest = JSON.parse(read('RELEASE_MANIFEST.json'));
 const profile = JSON.parse(read('BUILD_PROFILE.json'));
 const contracts = read('scripts/verify-engine-contracts.mjs');
+const contractRegistry = read('verification/contract-registry.mjs');
 const sw = read('sw.js');
 const parityRows = JSON.parse(read('verification/m205-generation-parity-results.json')).rows;
 const golden = JSON.parse(read('verification/fixtures/engine-816-golden.json'));
@@ -33,8 +34,9 @@ assert.equal(DEFAULT_CANDIDATE_EVALUATION_LIMIT, 512);
 assert.equal(parityRows.length, 13);
 assert.equal(golden.length, 13);
 
+assert.match(contracts, /contract-registry\.mjs/, 'contract runner must delegate ownership to the canonical registry');
 for (const milestone of ['m228-canonical-boundary', 'm229-domain-contracts', 'm230-realizer-decomposition', 'm231-athlete-response', 'm232-live-autoregulation', 'm233-semantic-exercise-graph', 'm234-candidate-optimization'])
-    assert.match(contracts, new RegExp(milestone), 'permanent contract runner lost ' + milestone);
+    assert.match(contractRegistry, new RegExp(milestone), 'permanent contract registry lost ' + milestone);
 
 for (const report of [
     'M228_CANONICAL_ENGINE_REPORT.md',

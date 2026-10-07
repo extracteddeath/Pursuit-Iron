@@ -108,7 +108,7 @@ for (const ex of decisionExercises)
     assert.equal(decisionModel.lifts?.[ex.id]?.sessions, 3,
         'lifter model plateau evidence must count each persisted workout identity once');
 assert.equal(deloadAdvice(decisionHistory), null,
-    'three actual sessions with edited revisions must not satisfy the four-session deload evidence floor');
+    'three actual sessions with edited revisions must not satisfy the deload evidence floors');
 
 const exercise = { exerciseId: 'lift', name: 'Lift', sets: 2, progressionStyle: 'double',
     prescription: { reps: [10, 15], rir: [2, 2] } };

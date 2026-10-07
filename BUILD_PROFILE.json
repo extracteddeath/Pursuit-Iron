@@ -1,11 +1,11 @@
 {
   "profile": "portable-browser-esm-canonical-engine",
-  "milestone": "M229",
-  "source": "M229 continuation of canonical engine plan",
-  "engine": "0.65.1; Domain contracts and acyclic projection",
+  "milestone": "M230",
+  "source": "M230 continuation of canonical engine plan",
+  "engine": "0.65.2; Session realization decomposition",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
-  "nextRuntimeModules": 50,
+  "nextRuntimeModules": 59,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m229-engine-b817",
-  "uiMilestone": "Pursuit Iron 4.0 Engineering Candidate · M229 Domain contracts and acyclic projection"
+  "cache": "pursuit-iron-production-v4-0-0-m230-engine-b817",
+  "uiMilestone": "Pursuit Iron 4.0 Engineering Candidate · M230 Session realization decomposition"
 }

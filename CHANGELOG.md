@@ -1,3 +1,7 @@
+# M230 · Engine 0.65.2
+
+- Session realization decomposition.
+
 # M229 · Engine 0.65.1
 
 - Domain contracts and acyclic projection.

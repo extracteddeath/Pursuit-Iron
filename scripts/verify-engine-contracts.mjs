@@ -9,7 +9,7 @@ const groups = {
         'm206-working-week-dose'
     ],
     adaptation: [
-        'm229-domain-contracts', 'module-graph',
+        'm229-domain-contracts', 'm230-realizer-decomposition', 'module-graph',
         'm228-canonical-boundary', 'm224-engine-hardening', 'm225-history-provenance', 'm226-engine-boundary-integrity', 'm227-request-canonicalization',
         'm222-custom-program-parity', 'm221-engine-input-stability', 'm181-dose-reconciliation', 'm182-exercise-selection-intelligence', 'm182-selection-matrix',
         'm183-progression-safeguards', 'm184-longitudinal-evidence', 'm185-phase-specialization',

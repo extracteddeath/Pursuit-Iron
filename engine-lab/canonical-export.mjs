@@ -34,7 +34,7 @@ const coverage = {
     sourceCommit: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim(),
     sourceWorkingTree: execFileSync('git', ['status', '--porcelain'], { cwd: root, encoding: 'utf8' }).trim() ? 'modified' : 'clean',
     appSourceSha256: crypto.createHash('sha256').update(fs.readFileSync(path.join(root, 'modules/App.js'))).digest('hex'),
-    engineModules: runtime.filter(f => f.startsWith('modules/next-engine/')).map(f => path.basename(f)).sort(),
+    engineModules: runtime.filter(f => f.startsWith('modules/next-engine/')).map(f => f.slice('modules/next-engine/'.length)).sort(),
     canonicalRuntimeFiles: runtime.sort(),
     domainExports: Object.keys(domain).sort(),
     boundary: 'Canonical production modules are copied byte for byte. No declarations are extracted from App.js. The UI source is retained only as integration evidence.'

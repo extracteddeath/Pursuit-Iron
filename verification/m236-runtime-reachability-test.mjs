@@ -30,11 +30,9 @@ function resolveRelative(from, specifier) {
 function dependencies(file) {
     const source = fs.readFileSync(path.join(root, file), 'utf8');
     const specs = [];
-    for (const line of source.split('\n')) {
-        const match = line.match(/^\s*(?:import\s+(?:.*?\s+from\s+)?|export\s+(?:\*(?:\s+as\s+[A-Za-z_$][\w$]*)?|\{.*\})\s+from\s+)['"]([^'"]+)['"]/);
-        if (match)
-            specs.push(match[1]);
-    }
+    const staticImport = /(?:^|\n)\s*(?:import\s+(?:[\s\S]*?\s+from\s+)?|export\s+(?:\*(?:\s+as\s+[A-Za-z_$][\w$]*)?|\{[\s\S]*?\})\s+from\s+)['"]([^'"]+)['"]/g;
+    for (const match of source.matchAll(staticImport))
+        specs.push(match[1]);
     for (const match of source.matchAll(/\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)/g))
         specs.push(match[1]);
     return [...new Set(specs.map(spec => resolveRelative(file, spec)).filter(Boolean))];

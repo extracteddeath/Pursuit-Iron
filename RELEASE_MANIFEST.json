@@ -86,7 +86,7 @@
     "modules/training-domain/analytics.js": "02bb31eb0044d7f57bdaa8836ec64175ebb456be95e620faa0fc715cb4bb5146",
     "modules/training-domain/catalog.js": "b9e6071c78ffdf790da90337843b2fe6466f05a26c04624a4951518e784941e4",
     "modules/training-domain/prescriptions.js": "407ba880a89a519863d6eda6f39e88447595b3285f15c08b899a3c4dbfcb6ac4",
-    "modules/training-domain/programs.js": "725a8a6adc8aa9148962035df5144cbf252415d8d76592f303c333fe679bf81c",
+    "modules/training-domain/programs.js": "f4070e706bfe8d1f75bf012d5a979fe17a585edc0159cc5f409fdbc66e6baee2",
     "modules/training-domain/records.js": "47d1bc55779162cce41dd5cb0273d3836ed04b25e0b3399b36b8ae166af9efdf",
     "modules/wizard-stability.js": "a62b2bed8a1f5ab880bfeab036a83ec630c93048b8a352652fe00ae75374a3d1",
     "vendor/lucide-react.js": "f84db748249b6e57e1d5187e876da806c1733523a1fa1501224bf740519b2cf4",

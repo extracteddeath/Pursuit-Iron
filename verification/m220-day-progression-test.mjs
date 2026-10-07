@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { sessionSuggestion, lastDayPerf, prescribeSets, EX_BY_ID } from '../modules/App.js';
+import { sessionSuggestion, lastDayPerf, dayPerfFor, prescribeSets, EX_BY_ID } from '../modules/App.js';
 import { refreshPendingSetTargets } from '../modules/next-engine/workout-runtime.js';
 const id = 'seated-calf';
 export const program = { id: 'm220-custom', custom: true, weeks: 10, config: { unit: 'lb', weeks: 10, progression: 'manual', goal: 'both', experience: 'intermediate', deload: false },
@@ -69,4 +69,10 @@ const generatedSuggestion = nextWorkoutSuggestionForShell(generated, [newOtherDa
 assert.equal(generatedSuggestion.last, oldDay.perf[lift], 'generated suggestion metadata shares its evaluator day');
 assert.equal(generatedSuggestion.weight, 205);
 assert.equal(generatedSuggestion.action, 'add_reps');
-console.log('PASS M220 generated bridge: decision and prior-session metadata share the same day even when another occurrence is newer.');
+const otherProgramSameDay = { ...oldDay, id: 'other-program-same-day', programId: 'other-program',
+    date: 3000, perf: { [lift]: { weight: 400, reps: 20, sets: [{ w: 400, r: 20, rir: 2, tr: 2, done: true }] } } };
+assert.equal(lastDayPerf(first, {}, [otherProgramSameDay, oldDay], generated)[lift], oldDay.perf[lift],
+    'LAST cannot be stolen by the same day id from another program');
+assert.equal(dayPerfFor(first, {}, [otherProgramSameDay, oldDay], generated)[lift], oldDay.perf[lift],
+    'best-of-recent anchor cannot use another program with a colliding day id');
+console.log('PASS M220 generated bridge: decision, LAST and anchor metadata stay program/day scoped even when another occurrence or program is newer.');

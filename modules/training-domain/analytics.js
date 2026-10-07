@@ -3,7 +3,7 @@ import { EXERCISE_MAP as NEXT_EXERCISE_MAP } from "../next-engine/exercise-db.js
 import { setShellEquipmentExpander, splitContractGaps, splitBuildability, refusalFixes, generateNextProgramForShell, recommendNextSplitForShell, getNextShellCell, canonicalShellSetCount, cloneNextDayPrescriptions, swapNextSlotPrescriptions, removeNextSlotPrescription, nextExerciseIdForShellExercise, resolveNextShellExerciseId, remapNextShellRoster, snapshotNextShellPrescription, markUserPrescriptionOverride, clearUserPrescriptionOverride, NextShellAdapterError } from "../next-engine/app-shell-adapter.js";
 import { avoidableExerciseOverlap } from "../next-engine/exercise-economy.js";
 import { captureShellVolumeSnapshot, auditShellVolume, repairShellVolume, shellVolumeTargets, shellDayMuscleBreakdown } from "../next-engine/volume-repair.js";
-import { historyNumber, convertHistoryLoad, observedHistoryRIR, completedHistorySets, historyExposureContext, progressionExposureContext, normalizeHistoryEntries, validHistoryDate, resolveHistoryDayIndex, historyLoadReason } from '../next-engine/history-contract.js';
+import { historyNumber, convertHistoryLoad, observedHistoryRIR, completedHistorySets, historyExposureContext, progressionExposureContext, normalizeHistoryEntries, normalizeHistoryRevisions, validHistoryDate, resolveHistoryDayIndex, historyLoadReason } from '../next-engine/history-contract.js';
 import { programWorkingWeeks, cycleBlockMetadata } from "../program-duration.js";
 import { nextWorkoutSuggestionForShell, nextWorkoutSuggestionFromPerformedShell } from "../next-engine/workout-history-adapter.js";
 import { ENGINE_VERSION, ENGINE_COMPATIBLE_VERSIONS } from "../next-engine/config.js";
@@ -17,6 +17,10 @@ const FOCUS_CAVEAT = { neck: "Rarely fits — most sessions have no room for dir
 const VIEW_DEPTH = { home: 0, program: 1, library: 1, cycles: 1, compare: 1, progress: 1, settings: 1, wizard: 1, cycleWizard: 1, session: 2, cycleDetail: 2 };
 
 const newGymId = () => `gym_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+
+function canonicalHistoryNewest(history) {
+    return normalizeHistoryRevisions(history).entries.slice().sort((a, b) => Number(b.date) - Number(a.date));
+}
 
 function normalizeGyms(list, activeId) {
     const arr = (Array.isArray(list) ? list : []).filter(g => g && typeof g === "object").map((g, i) => ({
@@ -2473,7 +2477,7 @@ function lifterModelKey(hs) {
 }
 
 function buildLifterModel(history, perf, program) {
-    const hs = history || [];
+    const hs = canonicalHistoryNewest(history);
     const key = lifterModelKey(hs) + "|" + (program ? `${program.id}:${program.updatedAt || ""}:${program.weeks || ""}` : "-");
     if (_lmCache.key === key && _lmCache.val)
         return _lmCache.val;
@@ -3420,7 +3424,7 @@ function exerciseSeries(history, id, metricId = "e1rm", windowId = "all", now = 
 
 function exerciseTrends(history, dayId = null) {
     const map = {}, units = {};
-    const ordered = (Array.isArray(history) ? history : []).filter(validHistoryDate).slice().sort((a, b) => Number(a.date) - Number(b.date));
+    const ordered = normalizeHistoryRevisions(history).entries;
     for (const h of ordered) if (!dayId || h.dayId === dayId)
         for (const id of Object.keys(h.perf || {})) units[id] = h.unit || units[id] || 'kg';
     ordered.forEach(h => {
@@ -3565,7 +3569,7 @@ const MIN_DAY_SESSIONS = 3;
 let _dstCache = { key: null, val: null };
 
 function dayScopedTrends(history) {
-    const hs = history || [];
+    const hs = canonicalHistoryNewest(history);
     // Content fingerprint, not array identity: identity alone would serve a stale index to any caller
     // that mutates history in place. EXERCISES.length is folded in because exerciseTrends() drops ids
     // missing from EX_BY_ID — a custom exercise registered after the first call would otherwise stay
@@ -4225,6 +4229,7 @@ function prescribedRIRofAny(s) {
 }
 
 function rirTrend(history) {
+    history = canonicalHistoryNewest(history);
     const MIN_SETS = 4; // a week needs this many RIR-logged sets to be a point at all
     const BASELINE_WEEKS = 4; // "prior" compares against recent weeks, not a lifetime mean
     const weekKey = weekKeyOf;
@@ -4296,9 +4301,10 @@ function rirTrend(history) {
 
 function constantLoadDecay(history, exId) {
     // Collect (date, weight, reps, rir) for the TOP working set of each session of this lift.
+    const hs = canonicalHistoryNewest(history);
     const sess = [];
-    for (let i = (history || []).length - 1; i >= 0; i--) { // oldest → newest
-        const p = history[i]?.perf?.[exId];
+    for (let i = hs.length - 1; i >= 0; i--) { // oldest → newest
+        const p = hs[i]?.perf?.[exId];
         if (!p)
             continue;
         const sets = (p.sets && p.sets.length) ? p.sets : [{ w: p.weight, r: p.reps, rir: null }];
@@ -4311,7 +4317,7 @@ function constantLoadDecay(history, exId) {
                 best = { w, r, rir: s.rir != null ? s.rir : null };
         }
         if (best)
-            sess.push({ ...best, date: history[i].date });
+            sess.push({ ...best, date: hs[i].date });
     }
     if (sess.length < 3)
         return null;
@@ -4339,7 +4345,7 @@ function constantLoadDecay(history, exId) {
 }
 
 function overreachSignal(history, _program) {
-    const hs = history || [];
+    const hs = canonicalHistoryNewest(history);
     if (hs.length < 4)
         return { level: "none", lifts: [], why: "" };
     // only judge lifts trained often enough to compare
@@ -4372,26 +4378,27 @@ function overreachSignal(history, _program) {
 }
 
 function deloadAdvice(history, program = null) {
-    if ((history || []).length < 6)
+    const hs = canonicalHistoryNewest(history);
+    if (hs.length < 6)
         return null;
     // PHASE 4′: direct, identifiable overreach evidence — lifts losing reps at an UNCHANGED load.
     // This is the strongest signal available and it outranks the proxies below (PR droughts, RIR
     // drift), which can both fire for reasons that have nothing to do with fatigue.
-    const over = overreachSignal(history, program);
-    const trends = exerciseTrends(history);
+    const over = overreachSignal(hs, program);
+    const trends = exerciseTrends(hs);
     // A "stall" worth weighing toward a deload is a GENUINE multi-session plateau — not a lift that
     // merely failed to set an estimated-1RM PR in the last session or two (you don't PR every
     // session, so at any moment some lift is "2 sessions since a PR"). Require 4+ sessions without a
     // PR to count, 6+ to count as a hard stall.
     let stalled = 0, hardStall = 0;
-    trends.forEach(t => { const pl = plateauOfLift(history, t); if (pl && pl.since >= 4) {
+    trends.forEach(t => { const pl = plateauOfLift(hs, t); if (pl && pl.since >= 4) {
         stalled++;
         if (pl.since >= 6)
             hardStall++;
     } });
-    const rt = rirTrend(history);
+    const rt = rirTrend(hs);
     let smashed = 0;
-    (history || []).slice(0, 8).forEach(h => { if (h.feedback)
+    hs.slice(0, 8).forEach(h => { if (h.feedback)
         smashed += Object.values(h.feedback).filter(v => v < 0).length; });
     // Deloads are earned by PERFORMANCE evidence (real plateaus) and sustained TRENDS (reps-in-reserve
     // falling over weeks, repeated "smashed" self-reports) — NEVER by instantaneous time-based
@@ -4411,7 +4418,7 @@ function deloadAdvice(history, program = null) {
         || (stalled >= 2 && smashed >= 6);
     if (!advised)
         return null;
-    const rec = muscleRecovery(history);
+    const rec = muscleRecovery(hs);
     const major = ["chest", "lats", "upper_back", "shoulders", "quads", "hamstrings", "glutes", "biceps", "triceps"];
     const mt = rec.filter(r => major.includes(r.part) && r.daysSince != null);
     const avgReady = mt.length ? mt.reduce((s, r) => s + r.readiness, 0) / mt.length : 100;

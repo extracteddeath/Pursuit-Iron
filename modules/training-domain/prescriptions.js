@@ -410,9 +410,14 @@ function plateauSessions(history, exId, dayId, limit = 6, program = null) {
     const withEx = scoped.filter(h => historyNumber(h?.perf?.[exId]?.weight) > 0);
     if (!dayId)
         return withEx.slice(0, limit);
+    if (program) {
+        const targetIndex = (program.days || []).findIndex(day => String(day?.id ?? '') === String(dayId));
+        if (targetIndex >= 0)
+            return withEx.filter(h => resolveHistoryDayIndex(program.days, h) === targetIndex).slice(0, limit);
+    }
     const sameDay = withEx.filter(h => h?.dayId != null && String(h.dayId) === String(dayId));
-    // If this lift has only ever been trained on one identified day, scoping changed nothing — use
-    // everything so a regenerated day ID does not silently lose otherwise unambiguous legacy history.
+    // Legacy callers without a program cannot resolve migrated IDs safely. Preserve their old
+    // unambiguous single-day fallback, while program-aware progression uses authored day ownership above.
     const days = new Set(withEx.map(h => h.dayId == null ? null : String(h.dayId)).filter(Boolean));
     return (days.size <= 1 ? withEx : sameDay).slice(0, limit);
 }

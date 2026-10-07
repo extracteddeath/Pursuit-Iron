@@ -7,7 +7,7 @@ import { EXERCISES, EX_BY_ID, prescribeSets, sessionSuggestion, loggedWorkoutPer
 import { generateNextProgramForShell } from '../modules/next-engine/app-shell-adapter.js';
 import { analyzeShellHistoryForNextEngine, nextWorkoutSuggestionForShell } from '../modules/next-engine/workout-history-adapter.js';
 import { progressionHistoryForProgram, customExerciseHistory, customExerciseReferenceHistory, muscleRecoveryUncached } from '../modules/training-domain/prescriptions.js';
-import { buildLifterModel, deloadAdvice, exerciseTrends } from '../modules/training-domain/analytics.js';
+import { buildLifterModel, deloadAdvice, exRecords, exerciseSeries, exerciseTrends } from '../modules/training-domain/analytics.js';
 
 for (const value of [true, false, [], [15], {}, { valueOf: () => 15 }, Symbol('load')])
     assert.equal(historyNumber(value), null);
@@ -92,6 +92,17 @@ for (const revisions of [[staleRevision, editedRevision], [editedRevision, stale
 const crossProgramRevision = { ...editedRevision, programId: 'other-program' };
 assert.equal(normalizeHistoryRevisions([staleRevision, editedRevision, crossProgramRevision]).entries.length, 2,
     'global revision normalization must keep identical row ids from different programs independent');
+
+for (const revisions of [[staleRevision, editedRevision], [editedRevision, staleRevision]]) {
+    const records = exRecords(revisions, 'lift', 'lb');
+    assert.equal(records.maxWeight?.w, 80,
+        'exercise records must ignore a stale heavier revision after the persisted workout was edited');
+    const series = exerciseSeries(revisions, 'lift', 'e1rm', 'all', 2_000_000);
+    assert.equal(series.sessions, 1,
+        'exercise series must render one point per canonical persisted workout revision');
+    assert.equal(series.points[0]?.top, 80,
+        'exercise series must reflect the newest edited workout revision, not stale values');
+}
 
 const recoveryExercise = EXERCISES.find(ex => ex?.id && ['chest','lats','upper_back','shoulders','biceps','triceps','quads','hamstrings','glutes','lower_back','adductors','abductors','calves','abs','traps','forearms','neck'].includes(ex.part));
 assert.ok(recoveryExercise, 'recovery revision regression needs one catalog exercise with a canonical muscle part');

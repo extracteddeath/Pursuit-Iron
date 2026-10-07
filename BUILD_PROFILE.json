@@ -1,11 +1,11 @@
 {
   "profile": "portable-browser-esm-canonical-engine",
-  "milestone": "M231",
+  "milestone": "M232",
   "source": "Canonical engine with milestone contract verification",
-  "engine": "0.65.3; Athlete Response",
+  "engine": "0.65.4; Live Autoregulation",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
-  "nextRuntimeModules": 67,
+  "nextRuntimeModules": 68,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m231-athlete-response-b820",
-  "uiMilestone": "Pursuit Iron 4.0 Production Release · M231 Athlete Response"
+  "cache": "pursuit-iron-production-v4-0-0-m232-live-autoregulation-b821",
+  "uiMilestone": "Pursuit Iron 4.0 Production Release · M232 Live Autoregulation"
 }

@@ -18,3 +18,4 @@ export { avoidableExerciseOverlap } from './next-engine/exercise-economy.js';
 export { captureShellVolumeSnapshot, auditShellVolume, repairShellVolume, shellVolumeTargets, shellDayMuscleBreakdown } from './next-engine/volume-repair.js';
 export * from './next-engine/domain-contracts.js';
 export * from './next-engine/athlete-response.js';
+export * from './next-engine/live-autoregulation.js';

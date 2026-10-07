@@ -1,3 +1,9 @@
+# M232 · build 821 candidate · Engine 0.65.4
+
+- Ease one untouched automatic accessory row only after two explicitly observed misses; preserve manual/completed work and strength protocols.
+- Keep changes bounded and loadable, recover them without compounding, and roll back pending targets when source evidence is undone.
+- Carry live recovery limitations into history so eased work cannot earn progression.
+
 # M231 · build 820 candidate · Engine 0.65.3
 
 - Learn bounded, confidence-aware dose and capacity preferences from program/day-owned completed observations.

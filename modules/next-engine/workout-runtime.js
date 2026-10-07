@@ -131,7 +131,7 @@ export function refreshPendingSetTargets(sets, fresh) {
     const out = sets.map(s => {
         if (!s || s.warm || s.sub || s.added) return s;
         const target = work[ordinal++];
-        if (!target || s.done || s.valueOwner !== 'prescription' || s.auto !== true
+        if (!target || s.done || s.liveAdjustment || s.valueOwner !== 'prescription' || s.auto !== true
             || String(s.weight) !== String(s.target?.w)
             || (s.target?.prefillReps != null && String(s.reps) !== String(s.target.prefillReps))) return s;
         // Pre-M222 automatic rows only stored the range; auto+ownership are still required.

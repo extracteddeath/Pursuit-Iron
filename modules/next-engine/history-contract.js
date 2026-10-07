@@ -5,15 +5,31 @@ export function historyNumber(value) {
     const n = Number(value);
     return Number.isFinite(n) ? n : null;
 }
+function normalizedHistoryUnit(value) {
+    if (value === undefined || value === null || String(value).trim() === '')
+        return undefined;
+    const raw = String(value).trim().toLowerCase();
+    if (['lb', 'lbs', 'pound', 'pounds'].includes(raw))
+        return 'lb';
+    if (['kg', 'kgs', 'kilogram', 'kilograms'].includes(raw))
+        return 'kg';
+    return null;
+}
 export function convertHistoryLoad(value, fromUnit, toUnit) {
     const n = historyNumber(value);
     if (n === null) return null;
-    const from = String(fromUnit || toUnit || 'lb').trim().toLowerCase();
-    const to = String(toUnit || from).trim().toLowerCase();
+    const source = normalizedHistoryUnit(fromUnit);
+    const target = normalizedHistoryUnit(toUnit);
+    // Missing historical units remain backward compatible by inheriting the known side (or lb).
+    // An explicit unknown unit is different: treating "stone", "lbs?" or corrupted text as lb/kg
+    // can fabricate records and progression. Fail that value closed instead.
+    if (source === null || target === null) return null;
+    const from = source ?? target ?? 'lb';
+    const to = target ?? source ?? 'lb';
     if (from === to) return n;
     if (from === 'kg' && to === 'lb') return n * 2.2046226218487757;
     if (from === 'lb' && to === 'kg') return n / 2.2046226218487757;
-    return n;
+    return null;
 }
 export function observedHistoryRIR(set) {
     const rir = historyNumber(set?.rir), target = historyNumber(set?.tr);
@@ -21,13 +37,16 @@ export function observedHistoryRIR(set) {
         : target === null || (rir !== null && Math.abs(rir - target) > .001);
     return rir !== null && reported ? Math.max(0, Math.min(10, rir)) : null;
 }
+function completedFlagAllowsHistory(set) {
+    return set?.done === undefined || set?.done === true;
+}
 export function completedHistorySets(perf) {
     return (Array.isArray(perf?.sets) ? perf.sets : []).filter(s => s && !s.sub && !s.warm
-        && s.done !== false && historyNumber(s.r) > 0);
+        && completedFlagAllowsHistory(s) && historyNumber(s.r) > 0);
 }
 export function attemptedHistorySets(perf) {
     return (Array.isArray(perf?.sets) ? perf.sets : []).filter(s => s && !s.sub && !s.warm
-        && s.done !== false && (historyNumber(s.r) > 0 || (historyNumber(s.r) === 0 && s.failedAttempt === true)));
+        && completedFlagAllowsHistory(s) && (historyNumber(s.r) > 0 || (historyNumber(s.r) === 0 && s.failedAttempt === true)));
 }
 export function historyExposureContext(value) {
     const keys = ['readinessStatus', 'readiness', 'badDay', 'readinessDisrupted', 'recoveryLimited',

@@ -77,6 +77,23 @@ assert.equal(suggest(p, [corrupt, ...good]).weight, suggest(p, good).weight);
 assert.equal(normalizeHistoryEntries([corrupt, ...good], p.id).excluded[0].reason, 'invalid_date');
 const revised = { ...good[0], updatedAt: good[0].date + 1, perf: {} };
 assert.equal(normalizeHistoryEntries([good[0], revised], p.id).entries[0], revised);
+
+// Repeated movements are owned by their program/day occurrence. Another day may seed an initial
+// reference, but it cannot become comparable progression evidence even when labels collide.
+const repeatedDayProgram = structuredClone(p);
+const repeatedSourceDay = repeatedDayProgram.days[0], repeatedTargetDay = repeatedDayProgram.days[1];
+repeatedTargetDay.label = repeatedSourceDay.label;
+repeatedTargetDay.exercises = [...repeatedSourceDay.exercises];
+repeatedTargetDay.primaryIndex = repeatedSourceDay.primaryIndex;
+repeatedTargetDay.t2Index = repeatedSourceDay.t2Index;
+repeatedDayProgram.nextEngine.program.sessions[1] = structuredClone(repeatedDayProgram.nextEngine.program.sessions[0]);
+for (let i = 0; i < repeatedSourceDay.exercises.length; i++)
+    repeatedDayProgram.nextWeekPrescriptions[`${repeatedTargetDay.id}:${i}`] = structuredClone(repeatedDayProgram.nextWeekPrescriptions[`${repeatedSourceDay.id}:${i}`]);
+const otherDayOnly = history(rows(100, 15)).map(h => ({ ...h, dayId: repeatedSourceDay.id, dayLabel: repeatedSourceDay.label }));
+const repeatedDaySuggestion = sessionSuggestion(repeatedDayProgram, repeatedTargetDay, slot, null, 'lb', 1, otherDayOnly);
+assert.equal(repeatedDaySuggestion?.referenceOnly, true);
+assert.equal(repeatedDaySuggestion?.action, 'initial');
+assert.match(repeatedDaySuggestion?.reason || '', /starting reference/i);
 for (const count of [23, 28, 100]) {
     const cursor = nextSessionCursor(p, Array.from({ length: count }, (_, i) => ({ ...good[0], id: `duplicate-day-${i}` })));
     assert.equal(cursor.weekIndex, 1);

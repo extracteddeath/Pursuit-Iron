@@ -8,6 +8,36 @@ const SUPPORTED_GOALS = new Set(['hypertrophy', 'strength', 'mixed']);
 const SUPPORTED_EXPERIENCE = new Set(['novice', 'intermediate', 'advanced']);
 const SUPPORTED_PRIORITIES = new Set(Object.keys(PRIORITY_MULTIPLIER));
 const SUPPORTED_LIFTS = new Set(['bench_press', 'back_squat', 'deadlift', 'overhead_press']);
+function strictFiniteSetting(value, label, { defaultValue, integer = false, min = -Infinity, max = Infinity } = {}) {
+    if (value === undefined || value === null || value === '')
+        return defaultValue;
+    if (typeof value === 'boolean' || typeof value === 'object')
+        throw new TypeError(`${label} must be a finite number.`);
+    const raw = typeof value === 'string' ? value.trim() : value;
+    if (raw === '')
+        return defaultValue;
+    const n = Number(raw);
+    if (!Number.isFinite(n))
+        throw new TypeError(`${label} must be a finite number.`);
+    if (integer && !Number.isInteger(n))
+        throw new RangeError(`${label} must be a whole number.`);
+    if (n < min || n > max)
+        throw new RangeError(`${label} must be between ${min} and ${max}.`);
+    return n;
+}
+function normalizeEquipmentList(values, label) {
+    if (!Array.isArray(values))
+        throw new TypeError(`${label} must be an array.`);
+    const out = [];
+    for (const raw of values) {
+        if (typeof raw !== 'string' || !raw.trim())
+            throw new TypeError(`${label} must contain only nonblank equipment IDs.`);
+        const id = raw.trim();
+        if (!out.includes(id))
+            out.push(id);
+    }
+    return out;
+}
 function exerciseEligibleForRequest(ex, request) {
     // Feasibility uses the same candidate universe as realization. An exercise the athlete
     // explicitly avoided cannot rescue a lift/muscle feasibility check and then disappear later.
@@ -113,6 +143,10 @@ export function normalizeRequest(request) {
         throw new TypeError('Program request requires a schedule day array.');
     if (!request.equipment || !Array.isArray(request.equipment.available))
         throw new TypeError('Program request requires an equipment availability array.');
+    const availableEquipment = normalizeEquipmentList(request.equipment.available, 'Equipment availability');
+    const bodyweightPolicy = request.equipment.bodyweight ?? 'allow';
+    if (!['allow', 'exclude'].includes(bodyweightPolicy))
+        throw new RangeError(`Unsupported bodyweight policy: ${String(request.equipment.bodyweight)}.`);
 
     const rawGoal = String(request.goal.type ?? '').trim().toLowerCase();
     const goalType = rawGoal === 'both' ? 'mixed' : rawGoal;
@@ -134,7 +168,10 @@ export function normalizeRequest(request) {
             throw new RangeError(`Unsupported training day: ${String(day.day)}.`);
         if (day.equipmentOverride !== undefined && !Array.isArray(day.equipmentOverride))
             throw new TypeError(`Equipment override for ${name} must be an array.`);
-        return { ...day, day: name };
+        const equipmentOverride = day.equipmentOverride === undefined
+            ? undefined
+            : normalizeEquipmentList(day.equipmentOverride, `Equipment override for ${name}`);
+        return { ...day, day: name, ...(equipmentOverride === undefined ? {} : { equipmentOverride }) };
     });
     if (new Set(normalizedDays.map(d => d.day)).size !== normalizedDays.length)
         throw new Error('Training days must be unique.');
@@ -173,6 +210,18 @@ export function normalizeRequest(request) {
     if (progressionStyle && !SUPPORTED_PROGRESSION_STYLES.includes(progressionStyle))
         throw new RangeError(`Unsupported progression style: ${String(rawStyle)}.`);
 
+    const trainingAgeMonths = strictFiniteSetting(request.athlete.trainingAgeMonths, 'Training age in months', { defaultValue: 12, integer: true, min: 0, max: 1200 });
+    const maxBarbellMovementsPerDay = strictFiniteSetting(request.restrictions?.maxBarbellMovementsPerDay, 'Maximum barbell movements per day', { defaultValue: 2, integer: true, min: 0, max: 12 });
+    if (request.restrictions?.allowSupersets !== undefined && typeof request.restrictions.allowSupersets !== 'boolean')
+        throw new TypeError('Superset permission must be a boolean.');
+    const rawResponseScale = request.preferences?.responseCapacityScale;
+    const responseCapacityScale = rawResponseScale === undefined
+        ? undefined
+        : strictFiniteSetting(rawResponseScale, 'Response capacity scale', { min: 0, max: 2 });
+    const rawVolumeApproach = request.preferences?.volumeApproach;
+    if (rawVolumeApproach !== undefined && !['standard', 'minimalist'].includes(rawVolumeApproach))
+        throw new RangeError(`Unsupported volume approach: ${String(rawVolumeApproach)}.`);
+
     if (request.customExercises !== undefined && !Array.isArray(request.customExercises))
         throw new TypeError('Custom exercises must be an array.');
     const customIds = new Set();
@@ -205,7 +254,7 @@ export function normalizeRequest(request) {
         athlete: { ...request.athlete, experience },
         goal: { ...request.goal, type: goalType, musclePriorities: explicitMusclePriorities, liftPriorities: explicitLiftPriorities },
         schedule: { days: scheduleDays },
-        equipment: { ...request.equipment, available: [...request.equipment.available] },
+        equipment: { ...request.equipment, available: availableEquipment, bodyweight: bodyweightPolicy },
         preferences: {
             ...(request.preferences ?? {}),
             ...(progressionStyle ? { progressionStyle } : {})
@@ -214,15 +263,15 @@ export function normalizeRequest(request) {
     return {
         ...normalizedForInference,
         equipment: { ...normalizedForInference.equipment, loading: normalizeLoadingInventory(request.equipment.loading) },
-        athlete: { experience, trainingAgeMonths: request.athlete.trainingAgeMonths ?? 12 },
+        athlete: { experience, trainingAgeMonths },
         goal: { ...normalizedForInference.goal, ...goalWeights, musclePriorities, liftPriorities: inferredLiftPriorities(normalizedForInference) },
         restrictions: {
-            maxBarbellMovementsPerDay: request.restrictions?.maxBarbellMovementsPerDay ?? 2,
-            allowSupersets: request.restrictions?.allowSupersets !== false
+            maxBarbellMovementsPerDay,
+            allowSupersets: request.restrictions?.allowSupersets ?? true
         },
         preferences: {
             ...(normalizedForInference.preferences ?? {}),
-            responseCapacityScale: request.preferences?.responseCapacityScale === undefined ? undefined : Math.max(.6, Math.min(1, request.preferences.responseCapacityScale))
+            responseCapacityScale: responseCapacityScale === undefined ? undefined : Math.max(.6, Math.min(1, responseCapacityScale))
         },
         customExercises: request.customExercises?.map(ex => structuredClone(ex)) ?? [],
         seed: request.seed ?? 42

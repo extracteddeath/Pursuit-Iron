@@ -55,6 +55,6 @@ if (create) {
         const source = fs.readFileSync(new URL('../modules/training-domain/' + file, import.meta.url), 'utf8');
         assert.doesNotMatch(source, /from\s*['"](?:react|react\/|lucide-react)|\b(?:window|document|localStorage|sessionStorage|navigator)\s*[.[]/);
     }
-    assert.doesNotMatch(fs.readFileSync(new URL('../engine-lab/export-engine.mjs', import.meta.url), 'utf8'), /@babel|\.traverse|parse\(/);
+    assert.doesNotMatch(fs.readFileSync(new URL('../engine-lab/canonical-export.mjs', import.meta.url), 'utf8'), /@babel|\.traverse|parse\(/);
 }
-console.log(`PASS M228: ${configs.length} Build 816 golden projections, canonical UI binding identity and browser-free computation; zero declaration extraction.`);
+console.log(`PASS M228: ${configs.length} Build 816 golden projections, canonical UI binding identity and browser-free computation; canonical exporter has zero declaration extraction.`);

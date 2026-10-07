@@ -80,7 +80,7 @@ try{
  const field='input[aria-label="Block length in weeks"]',save='button[aria-label="Save program settings"]';
  await page.waitForSelector(field);
  const readWeeks=()=>page.$eval(field,n=>n.value);
- const replaceWeeks=async value=>{await page.click(field);await page.keyboard.press('Control+A');await page.keyboard.press('Backspace');if(value)await page.type(field,value);};
+ const replaceWeeks=async value=>{await page.click(field);await page.keyboard.down('Control');await page.keyboard.press('KeyA');await page.keyboard.up('Control');await page.keyboard.press('Backspace');if(value)await page.type(field,value);};
  assert.equal(await page.$('button[aria-label="3 weeks"]'),null,'a single field replaces the growing preset row');
  await page.click('button[aria-label="Increase block length"]');assert.equal(await readWeeks(),'11');
  await page.click('button[aria-label="Decrease block length"]');assert.equal(await readWeeks(),'10');

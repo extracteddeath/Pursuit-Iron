@@ -1,23 +1,13 @@
-/* Pursuit Iron 4.0 — M234 production release candidate. */
+/* Pursuit Iron 4.0 — M234 production release. */
 const CACHE="pursuit-iron-production-v4-0-0-m234-candidate-selection-b823";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
-  "./BUILD_PROFILE.json",
-  "./CHANGELOG.md",
-  "./CONTRIBUTING-gallery.md",
-  "./RELEASE_MANIFEST.json",
   "./app.css",
-  "./apple-touch-icon.png",
   "./favicon.ico",
   "./gallery.json",
   "./icons/icon-192-aa9e4b77f520.png",
-  "./icons/icon-192.png",
   "./icons/icon-512-5bdeae240e55.png",
-  "./icons/icon-512.png",
   "./icons/icon-maskable-512-1d7393c9a2de.png",
-  "./icons/icon-maskable-512.png",
-  "./icons/icon.svg",
-  "./icons/mark-alpha.png",
   "./index.html",
   "./manifest.webmanifest",
   "./modules/App.js",
@@ -31,9 +21,9 @@ const SHELL=[
   "./modules/next-engine/arbiter.js",
   "./modules/next-engine/arm-coverage.js",
   "./modules/next-engine/athlete-response.js",
+  "./modules/next-engine/candidate-optimization.js",
   "./modules/next-engine/capacity-generation.js",
   "./modules/next-engine/capacity-policy.js",
-  "./modules/next-engine/candidate-optimization.js",
   "./modules/next-engine/coach-regression.js",
   "./modules/next-engine/config.js",
   "./modules/next-engine/cycle-runtime-adapter.js",

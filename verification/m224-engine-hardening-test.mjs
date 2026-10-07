@@ -94,6 +94,11 @@ const repeatedDaySuggestion = sessionSuggestion(repeatedDayProgram, repeatedTarg
 assert.equal(repeatedDaySuggestion?.referenceOnly, true);
 assert.equal(repeatedDaySuggestion?.action, 'initial');
 assert.match(repeatedDaySuggestion?.reason || '', /starting reference/i);
+const ambiguousReplay = { ...otherDayOnly[0], id: 'ambiguous-replay', dayId: 'retired-day-id',
+    dayLabel: repeatedSourceDay.label };
+const ambiguousAnalysis = analyzeShellHistoryForNextEngine(repeatedDayProgram, [ambiguousReplay], EXERCISES);
+assert.equal(ambiguousAnalysis.workoutCount, 0, 'duplicate-label stale history must not be replayed against an arbitrary day');
+assert.ok(ambiguousAnalysis.excludedHistoryEntries.some(row => row.id === 'ambiguous-replay' && row.reason === 'unresolved_session'));
 for (const count of [23, 28, 100]) {
     const cursor = nextSessionCursor(p, Array.from({ length: count }, (_, i) => ({ ...good[0], id: `duplicate-day-${i}` })));
     assert.equal(cursor.weekIndex, 1);

@@ -29,7 +29,7 @@
     {
       "key": "top.strengthCandidate",
       "file": "modules/next-engine/realizer-ranking.js",
-      "sha256": "dc8ba74db4d4c164a4dc24e906054fb504bbeb28d02b52684770740ada6b5029"
+      "sha256": "a69ae7c7ee19605fe0e995a5086557ad61ea938d445b58880aeb76b8e9c6fcfd"
     },
     {
       "key": "top.muscleScore",
@@ -39,7 +39,7 @@
     {
       "key": "top.muscleCandidate",
       "file": "modules/next-engine/realizer-ranking.js",
-      "sha256": "f11e2833295da1e3731ce7014e569a24f121961d448cc45ae0de22aa7e5c96ef"
+      "sha256": "694d2c7ef241dc418b0288d5a0a056e76bc4c6aa0741b0305f6562508f6a3851"
     },
     {
       "key": "top.primaryMuscle",

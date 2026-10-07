@@ -1,3 +1,8 @@
+# M230 · build 819 candidate · Engine 0.65.2
+
+- Split the realizer into canonical strength, hypertrophy, ranking, timing, pairing, sequencing, construction and repair owners.
+- Preserve 67 source fragments and all 13 Build 816 golden scenarios; reduce the public coordinator to 317 lines.
+
 # M229 · build 818 candidate · Engine 0.65.1
 
 - Add versioned request, program, prescription and history contracts, core TypeScript declarations, explicit unversioned migrations and future-schema refusal.

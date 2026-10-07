@@ -1,11 +1,11 @@
 {
   "profile": "portable-browser-esm-canonical-engine",
-  "milestone": "M229",
-  "source": "Canonical versioned domain contracts with Build 816 golden parity",
-  "engine": "0.65.1; versioned canonical domain contracts",
+  "milestone": "M230",
+  "source": "Canonical engine with milestone contract verification",
+  "engine": "0.65.2; Realizer Decomposition",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
-  "nextRuntimeModules": 50,
+  "nextRuntimeModules": 66,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m229-domain-contracts-b818",
-  "uiMilestone": "Pursuit Iron 4.0 Production Release · M229 Domain Contracts"
+  "cache": "pursuit-iron-production-v4-0-0-m230-realizer-decomposition-b819",
+  "uiMilestone": "Pursuit Iron 4.0 Production Release · M230 Realizer Decomposition"
 }

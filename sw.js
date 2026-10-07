@@ -1,5 +1,5 @@
-/* Pursuit Iron 4.0 — M229 production release. */
-const CACHE="pursuit-iron-production-v4-0-0-m229-domain-contracts-b818";
+/* Pursuit Iron 4.0 — M230 production release. */
+const CACHE="pursuit-iron-production-v4-0-0-m230-realizer-decomposition-b819";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
   "./BUILD_PROFILE.json",
@@ -62,6 +62,22 @@ const SHELL=[
   "./modules/next-engine/prescription.js",
   "./modules/next-engine/progression-style.js",
   "./modules/next-engine/public-mev.js",
+  "./modules/next-engine/realizer-arm-repair.js",
+  "./modules/next-engine/realizer-capacity-repair.js",
+  "./modules/next-engine/realizer-dose-ledger.js",
+  "./modules/next-engine/realizer-dose-repair.js",
+  "./modules/next-engine/realizer-fragment-repair.js",
+  "./modules/next-engine/realizer-hypertrophy.js",
+  "./modules/next-engine/realizer-math.js",
+  "./modules/next-engine/realizer-pairing.js",
+  "./modules/next-engine/realizer-prescriptions.js",
+  "./modules/next-engine/realizer-public-dose-repair.js",
+  "./modules/next-engine/realizer-ranking.js",
+  "./modules/next-engine/realizer-sequence.js",
+  "./modules/next-engine/realizer-session-builder.js",
+  "./modules/next-engine/realizer-strength.js",
+  "./modules/next-engine/realizer-structure-repair.js",
+  "./modules/next-engine/realizer-time-budget.js",
   "./modules/next-engine/realizer.js",
   "./modules/next-engine/recovery-realization.js",
   "./modules/next-engine/recovery.js",

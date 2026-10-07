@@ -48,6 +48,8 @@ assert.doesNotMatch(canonicalExporter, /engineRoots|\[engineRoot,\s*['"]modules\
     'engine-shell may remain a compatibility surface but must not become a second export authority');
 assert.doesNotMatch(canonicalExporter, /reference\/App\.production|reference\/verification|integration-suites/,
     'standalone export must not duplicate UI or verification reference source');
+assert.doesNotMatch(canonicalExporter, /appSourceSha256|readFileSync\(path\.join\(root, ['"]modules\/App\.js['"]\)\)/,
+    'standalone export must not retain dead UI-source hash coupling');
 assert.match(canonicalExporter, /importsOutsideEngine = productionImports\.some\(moduleFile => !runtimeSet\.has\(moduleFile\)\)/,
     'standalone verification must exclude suites that depend on non-engine production modules');
 assert.doesNotMatch(canonicalExporter, /\^M22\[4-9\]|\^M23\[0-5\]/,

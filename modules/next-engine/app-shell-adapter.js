@@ -7,6 +7,7 @@ import { filterFeasibleLiftPriorities } from './prescription.js';
 import { finalizeGeneratedShellVolume } from './volume-repair.js';
 import { shellExercisePerformableFor as performableFor } from './shell-equipment.js';
 import { SUPPORTED_PROGRESSION_STYLES } from './progression-style.js';
+import { splitSupportsTrainingDays, supportedTrainingDaysForSplit } from './topology.js';
 export { setShellEquipmentExpander } from './shell-equipment.js';
 const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 const DAY_SETS = {
@@ -207,6 +208,16 @@ export function shellConfigToNextRequest(config, banned = [], legacyExercises = 
     if (!SUPPORTED_PROGRESSION_STYLES.includes(requestedStyle))
         throw new NextShellAdapterError('NEXT_CONFIG_PROGRESSION_INVALID', `Unsupported progression style: ${String(config.progressionStyle)}.`, { field: 'progressionStyle', value: config.progressionStyle });
     const split = splitOf(config.split);
+    const schedule = scheduleOf(config);
+    if (!splitSupportsTrainingDays(split, schedule.days.length)) {
+        const supportedDays = supportedTrainingDaysForSplit(split);
+        throw new NextShellAdapterError(
+            'NEXT_CONFIG_SPLIT_DAYS_INVALID',
+            `${split.replace(/_/g, ' ')} does not support ${schedule.days.length} training days.`,
+            { field: 'days', split, requestedDays: schedule.days.length, supportedDays,
+                suggestions: supportedDays.length ? [`Use ${supportedDays.join(', ')} training days for this split`, 'Choose a split that supports the selected schedule'] : ['Choose a supported split'] }
+        );
+    }
     const avoided = new Set(mapBanned(banned, legacyExercises));
     const canPerform = performableFor(config);
     const byId = new Map(legacyExercises.map(ex => [ex.id, ex]));
@@ -225,7 +236,7 @@ export function shellConfigToNextRequest(config, banned = [], legacyExercises = 
     const request = {
         athlete: { experience: experienceOf(config.experience) },
         goal: { type: goalOf(config.goal), musclePriorities: musclePriorities(config), liftPriorities: liftPriorities(config) },
-        schedule: scheduleOf(config),
+        schedule,
         equipment: { available: equipmentOf(config), bodyweight: config.noBodyweight ? 'exclude' : 'allow', loading: loadingInventoryOf(config) },
         restrictions: {
             maxBarbellMovementsPerDay: Number.isFinite(config.barbellCap) ? Math.max(0, Math.round(config.barbellCap)) : 3,
@@ -849,8 +860,19 @@ export function splitBuildability(config, legacyExercises = []) {
     // Wizard feasibility must stay CHEAP. This function runs once for every split/time card while
     // the athlete is tapping through the builder. Running the full generator here blocks React's
     // event loop and turns one unlucky random roll into a false "missing upper pull work" refusal.
-    // Hard named-lift contracts are deterministic and cheap, so keep those up-front. Everything
-    // else is validated by the real capacity-aware generator only when the athlete creates the plan.
+    // Hard structural/day contracts and named-lift contracts are deterministic and cheap.
+    const split = splitOf(config?.split);
+    const schedule = scheduleOf(config ?? {});
+    if (!splitSupportsTrainingDays(split, schedule.days.length)) {
+        const supportedDays = supportedTrainingDaysForSplit(split);
+        return {
+            ok: false, kind: 'schedule',
+            items: [`${schedule.days.length} training days`],
+            fixes: supportedDays.length
+                ? [`Use ${supportedDays.join(', ')} days for this split`, 'Choose a different split']
+                : ['Choose a supported split']
+        };
+    }
     const gaps = splitContractGaps(config, legacyExercises);
     if (gaps.length)
         return { ok: false, kind: 'lifts', items: gaps.map(g => g.replace(/_/g, ' ')) };

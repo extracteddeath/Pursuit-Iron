@@ -82,13 +82,10 @@ for(const bodyPath of program.get('body')){
 edits.sort((a,b)=>b[0]-a[0]);
 let app=source;
 for(const [a,b,repl] of edits) app=app.slice(0,a)+repl+app.slice(b);
-const after=parse(app,{sourceType:'module'});
-let insert=0;
-for(const n of after.program.body) if(n.type==='ImportDeclaration' && !n.source.value.startsWith('.')) insert=Math.max(insert,n.end);
 const names=[...moved].sort();
 const rows=[]; for(let i=0;i<names.length;i+=8) rows.push('  '+names.slice(i,i+8).join(', ')+',');
 const boundary=`import {\n${rows.join('\n')}\n} from "./engine-shell.js";\n`;
-app=app.slice(0,insert)+'\n'+boundary+app.slice(insert);
+app=boundary+app;
 parse(app,{sourceType:'module'});
 if(/from\s*['"]\.\/next-engine\//.test(app)) throw new Error('M228 migration left a direct App -> next-engine import.');
 if(app.includes('setShellEquipmentExpander(expandEquipment);')) throw new Error('M228 migration left engine registration in App.');

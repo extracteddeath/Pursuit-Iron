@@ -46,6 +46,8 @@ assert.match(canonicalExporter, /engineRoots = Object\.freeze\(\['modules\/engin
     'standalone export must be derived from canonical engine API roots');
 assert.doesNotMatch(canonicalExporter, /reference\/App\.production|reference\/verification|integration-suites/,
     'standalone export must not duplicate UI or verification reference source');
+assert.match(canonicalExporter, /importsOutsideEngine = productionImports\.some\(moduleFile => !runtimeSet\.has\(moduleFile\)\)/,
+    'standalone verification must exclude suites that depend on non-engine production modules');
 assert.doesNotMatch(canonicalExporter, /\^M22\[4-9\]|\^M23\[0-5\]/,
     'standalone export must not bundle milestone reports as runtime evidence');
 assert.doesNotMatch(audit, /npm ci --prefix engine-lab/, 'independent audit must not reinstall retired AST tooling');

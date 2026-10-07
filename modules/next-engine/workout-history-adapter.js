@@ -232,9 +232,14 @@ function classify(recovery, positive, negative, diagnoses, workouts) {
         return 'productive';
     return 'mixed';
 }
-function latestShellEntry(history, programId, legacyId, dayId) {
-    const entries = [...(history ?? [])].filter(h => h?.programId === programId && h?.perf?.[legacyId]).sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0));
-    return entries.find(h => h.dayId === dayId) ?? entries[0] ?? null;
+function shellEntryEvidence(history, programId, legacyId, dayId) {
+    const entries = [...(history ?? [])]
+        .filter(h => h?.programId === programId && h?.perf?.[legacyId])
+        .sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0));
+    const comparable = entries.find(h => String(h.dayId ?? '') === String(dayId ?? '')) ?? null;
+    // Cross-day history is useful only as a starting-load reference. It must never become evidence
+    // that earns progression, changed-week recalibration, or a completed prescription for this day.
+    return { comparable, reference: comparable ?? entries[0] ?? null };
 }
 function representativeShellLoad(perf) {
     if (!perf)
@@ -291,14 +296,17 @@ export function nextWorkoutSuggestionForShell(program, history, legacyExercises,
         return null;
     const cell = getNextShellCell(program, day, slot, weekIndex);
     const reps = String(cell?.reps ?? cell?.range ?? '');
-    const lastEntry = latestShellEntry(history, String(program.id), legacyId, String(day.id));
-    const last = lastEntry?.perf?.[legacyId] ?? null;
+    const evidenceEntry = shellEntryEvidence(history, String(program.id), legacyId, String(day.id));
+    const lastEntry = evidenceEntry.comparable;
+    const referenceEntry = evidenceEntry.reference;
+    const comparableLast = lastEntry?.perf?.[legacyId] ?? null;
+    const referenceLast = referenceEntry?.perf?.[legacyId] ?? null;
     let analysis;
     try {
         analysis = analyzeShellHistoryForNextEngine(program, history, legacyExercises);
     }
     catch {
-        return last ? { weight: representativeShellLoad(last), dir: 'hold', reason: 'Hold the last logged load until the new engine has comparable completed-set evidence.', reps, last, action: 'initial' } : null;
+        return referenceLast ? { weight: representativeShellLoad(referenceLast), dir: 'hold', reason: 'Hold the last logged load until the new engine has comparable completed-set evidence.', reps, last: referenceLast, action: 'initial' } : null;
     }
     let decision;
     for (let i = analysis.workouts.length - 1; i >= 0 && !decision; i--) {
@@ -308,23 +316,24 @@ export function nextWorkoutSuggestionForShell(program, history, legacyExercises,
         decision = workout.progression.find(d => d.exerciseId === nextId);
     }
     if (!decision)
-        return last ? { weight: representativeShellLoad(last), dir: 'hold', reason: 'Hold the last logged load until the new engine has comparable completed-set evidence.', reps, last, action: 'initial' } : null;
-    const current = decision.currentLoad ?? representativeShellLoad(last);
+        return referenceLast ? { weight: representativeShellLoad(referenceLast), dir: 'hold', reason: 'Hold the last logged load until the new engine has comparable completed-set evidence.', reps, last: referenceLast, action: 'initial' } : null;
+    const current = decision.currentLoad ?? representativeShellLoad(comparableLast);
     /* ⚠ SUGGEST FOR THIS WEEK, NOT FOR THE WEEK THE LAST WORKOUT WAS LOGGED IN. `decision` was made when the last workout was
        analysed, against THAT workout's prescription; this function then only relabelled the rep range. Measured on a 6-week
        strength block: week 5 prescribes 1–3 reps, but the suggestion kept the week-1 load and "target 5". When this week's
        prescription (reps, reps in reserve, or progression style) differs from the one the last workout was trained under,
        re-set the load from the lifter's estimated max so the new range lands mid-range, rounded DOWN to a load they can make.
-       Same prescription -> the engine's decision stands (that is where add-reps / add-load double progression lives). */
+       Same prescription -> the engine's decision stands (that is where add-reps / add-load double progression lives).
+       Only same-day history is comparable enough to power this recalibration; cross-day data is reference-only. */
 
-    const lastCell = historicalShellCell(program, day, slot, Number(lastEntry?.weekIndex) || 1,
-        lastEntry?.perf?.[legacyId], nextId);
+    const lastCell = lastEntry ? historicalShellCell(program, day, slot, Number(lastEntry.weekIndex) || 1,
+        comparableLast, nextId) : null;
     const changed = !!cell && !!lastCell && (String(cell.reps) !== String(lastCell.reps) || String(cell.rir) !== String(lastCell.rir) || cell.progressionStyle !== lastCell.progressionStyle);
     if (changed) {
-        const shifted = represcribeForWeek(nextId, cell, lastCell, last, snap?.request);
+        const shifted = represcribeForWeek(nextId, cell, lastCell, comparableLast, snap?.request);
         if (shifted)
             return { weight: shifted.weight, dir: current != null && shifted.weight > current ? 'up' : current != null && shifted.weight < current ? 'down' : 'hold',
-                reason: shifted.reason, reps, target: shifted.target, last, action: 'represcribe', confidence: decision.confidence };
+                reason: shifted.reason, reps, target: shifted.target, last: comparableLast, action: 'represcribe', confidence: decision.confidence };
     }
     const weight = decision.suggestedLoad ?? current ?? null;
     return {
@@ -334,7 +343,7 @@ export function nextWorkoutSuggestionForShell(program, history, legacyExercises,
         reps,
         target: decision.suggestedReps,
         setTargets: decision.setTargets,
-        last,
+        last: comparableLast,
         action: decision.action,
         confidence: decision.confidence
     };

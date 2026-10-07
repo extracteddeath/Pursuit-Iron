@@ -3,7 +3,7 @@ import { EXERCISE_MAP as NEXT_EXERCISE_MAP } from "../next-engine/exercise-db.js
 import { setShellEquipmentExpander, splitContractGaps, splitBuildability, refusalFixes, generateNextProgramForShell, recommendNextSplitForShell, getNextShellCell, canonicalShellSetCount, cloneNextDayPrescriptions, swapNextSlotPrescriptions, removeNextSlotPrescription, nextExerciseIdForShellExercise, resolveNextShellExerciseId, remapNextShellRoster, snapshotNextShellPrescription, markUserPrescriptionOverride, clearUserPrescriptionOverride, NextShellAdapterError } from "../next-engine/app-shell-adapter.js";
 import { avoidableExerciseOverlap } from "../next-engine/exercise-economy.js";
 import { captureShellVolumeSnapshot, auditShellVolume, repairShellVolume, shellVolumeTargets, shellDayMuscleBreakdown } from "../next-engine/volume-repair.js";
-import { historyNumber, convertHistoryLoad, observedHistoryRIR, completedHistorySets, historyExposureContext, progressionExposureContext, normalizeHistoryEntries, validHistoryDate, historyLoadReason } from '../next-engine/history-contract.js';
+import { historyNumber, convertHistoryLoad, observedHistoryRIR, completedHistorySets, historyExposureContext, progressionExposureContext, normalizeHistoryEntries, validHistoryDate, resolveHistoryDayIndex, historyLoadReason } from '../next-engine/history-contract.js';
 import { programWorkingWeeks, cycleBlockMetadata } from "../program-duration.js";
 import { nextWorkoutSuggestionForShell, nextWorkoutSuggestionFromPerformedShell } from "../next-engine/workout-history-adapter.js";
 import { ENGINE_VERSION, ENGINE_COMPATIBLE_VERSIONS } from "../next-engine/config.js";
@@ -2103,7 +2103,8 @@ function explainPrescription(o) {
             lastPerformance: Number.isFinite(lastW) && Number.isFinite(lastR) ? { weight: lastW, reps: lastR, sets: rirRows.length || null } : null,
             perSet: rirRows.length ? rirRows : null,
             e1rm: Number.isFinite(lastW) && Number.isFinite(lastR) ? e1rm(lastW, lastR) : null,
-            historyEntriesForThisDay: (history || []).filter(h => h?.programId === program.id && (h?.dayId === day.id || h?.dayLabel === day.label)).length,
+            historyEntriesForThisDay: (history || []).filter(h => h?.programId === program.id
+                && resolveHistoryDayIndex(program.days, h) === program.days.indexOf(day)).length,
             stallSessions: 0, plateauSessions: 0, readiness: null
         },
         decided: {

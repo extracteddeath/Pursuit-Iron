@@ -210,24 +210,11 @@ function classify(recovery, positive, negative, diagnoses, workouts) {
     return 'mixed';
 }
 function latestComparableShellEntry(history, program, legacyId, day) {
+    const targetIndex = (program?.days ?? []).findIndex(candidate => candidate?.id === day?.id);
+    if (targetIndex < 0) return null;
     const entries = [...(history ?? [])].filter(h => h?.programId === program?.id && validHistoryDate(h)
         && completedHistorySets(h?.perf?.[legacyId]).length).sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0));
-    const exact = entries.find(h => String(h.dayId ?? '') === String(day?.id ?? ''));
-    if (exact) return exact;
-    // Day labels are a migration fallback only when they identify one authored occurrence of this
-    // movement. Duplicate labels cannot make two different prescriptions comparable.
-    const label = String(day?.label || '').trim();
-    if (label) {
-        const matchingDays = (program?.days ?? []).filter(d => String(d?.label || '').trim() === label
-            && Array.isArray(d?.exercises) && d.exercises.includes(legacyId));
-        if (matchingDays.length === 1) {
-            const byLabel = entries.find(h => String(h.dayLabel || '').trim() === label);
-            if (byLabel) return byLabel;
-        }
-    }
-    // Pre-day-identity logs are comparable only if this movement has one authored occurrence.
-    const authoredDays = (program?.days ?? []).filter(d => Array.isArray(d?.exercises) && d.exercises.includes(legacyId));
-    return authoredDays.length === 1 ? entries.find(h => !h.dayId && !h.dayLabel) ?? null : null;
+    return entries.find(entry => resolveHistoryDayIndex(program.days, entry) === targetIndex) ?? null;
 }
 function latestShellReferenceEntry(history, programId, legacyId) {
     return [...(history ?? [])].filter(h => h?.programId === programId && validHistoryDate(h)

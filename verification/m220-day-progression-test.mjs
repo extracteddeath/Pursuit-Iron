@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { sessionSuggestion, lastDayPerf, dayPerfFor, plateauSessions, prescribeSets, EX_BY_ID } from '../modules/App.js';
+import { sessionSuggestion, lastDayPerf, dayPerfFor, prescribeSets, EX_BY_ID } from '../modules/App.js';
+import { plateauSessions } from '../modules/training-domain/prescriptions.js';
 import { refreshPendingSetTargets } from '../modules/next-engine/workout-runtime.js';
 const id = 'seated-calf';
 export const program = { id: 'm220-custom', custom: true, weeks: 10, config: { unit: 'lb', weeks: 10, progression: 'manual', goal: 'both', experience: 'intermediate', deload: false },

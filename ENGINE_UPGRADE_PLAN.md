@@ -1,6 +1,6 @@
-# Engine upgrade sequence through M235
+# Engine upgrade and assurance sequence through M236
 
-Final engineering verification branch: `engine/m235-verification-2`. Each milestone was committed with its own passing evidence. The application release remains separate from this engineering sequence; `main` is not advanced by these checkpoints.
+M228–M235 are merged to `main`. M236 continues on `engine/post-m235-assurance` as a verification/release-assurance milestone rather than an engine behavior change.
 
 | Milestone | Scope | Acceptance |
 |---|---|---|
@@ -12,7 +12,8 @@ Final engineering verification branch: `engine/m235-verification-2`. Each milest
 | M233 | Semantic exercise graph and safe transfer/custom metadata | Explicit semantic compatibility, equipment/avoidance constraints, unknown metadata fails closed |
 | M234 | Unified candidate objective and constraints instead of competing repair acceptance rules | Hard constraints first, deterministic tie handling, bounded search, immutable candidates, audited final output |
 | M235 | Verification 2.0: properties, mutation checks, replay, benchmarks and differential testing | Reproducible runner, meaningful mutation kills, stable replay, performance budgets, complete integration evidence |
+| M236 | Assurance simplification: unique gate ownership, CI deduplication, runtime reachability, exporter cleanup and exact offline-shell ownership | No orphan/duplicate executable gates, no unreachable authored modules, no retired exporter dependencies, exact required precache set, full existing behavior coverage |
 
 Completed milestone details and limitations are recorded in the corresponding reports. A milestone with unfinished acceptance work is not reported as complete.
 
-Verified checkpoints: M228–M235. The M235 behavior-bearing verification commit `94377683c45d8449d1eec5488d76664fcb781822` passed the permanent engine-contract matrix, release integrity, all phone/offline browser gates, and the independent engine audit. Its Verification 2.0 gate passed 26 deterministic property cases, 13/13 Build 816 differentials, stable replay, 2/2 mutation kills, and the performance budgets.
+Verified behavior checkpoints: M228–M235. The M235 behavior-bearing verification commit `94377683c45d8449d1eec5488d76664fcb781822` passed the permanent contract matrix, release integrity, all phone/offline browser gates, and the independent engine audit. Its Verification 2.0 gate passed 26 deterministic property cases, 13/13 Build 816 differentials, stable replay, 2/2 mutation kills, and the performance budgets. M236 changes assurance infrastructure and offline packaging only; see `M236_VERIFICATION_ASSURANCE_REPORT.md`.

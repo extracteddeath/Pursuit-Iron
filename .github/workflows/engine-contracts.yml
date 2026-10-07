@@ -1,24 +1,30 @@
-name: Engine contracts
+name: Core contracts
 on:
   push:
-    branches: [main, 'verification/**', 'engine/**']
+    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
+
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        group: [generation, adaptation, quality]
+        group: [generation, adaptation, quality, integration]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Verify current engine contracts
+      - name: Verify contract group
         run: node scripts/verify-engine-contracts.mjs ${{ matrix.group }}

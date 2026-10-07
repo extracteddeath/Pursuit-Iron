@@ -212,13 +212,15 @@ function classify(recovery, positive, negative, diagnoses, workouts) {
 function latestComparableShellEntry(history, program, legacyId, day) {
     const targetIndex = (program?.days ?? []).findIndex(candidate => candidate?.id === day?.id);
     if (targetIndex < 0) return null;
-    const entries = [...(history ?? [])].filter(h => h?.programId === program?.id && validHistoryDate(h)
-        && completedHistorySets(h?.perf?.[legacyId]).length).sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0));
+    const entries = normalizeHistoryEntries(history, program?.id).entries
+        .filter(h => completedHistorySets(h?.perf?.[legacyId]).length)
+        .sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0));
     return entries.find(entry => resolveHistoryDayIndex(program.days, entry) === targetIndex) ?? null;
 }
 function latestShellReferenceEntry(history, programId, legacyId) {
-    return [...(history ?? [])].filter(h => h?.programId === programId && validHistoryDate(h)
-        && completedHistorySets(h?.perf?.[legacyId]).length).sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0))[0] ?? null;
+    return normalizeHistoryEntries(history, programId).entries
+        .filter(h => completedHistorySets(h?.perf?.[legacyId]).length)
+        .sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0))[0] ?? null;
 }
 function representativeShellLoad(perf) {
     if (!perf)

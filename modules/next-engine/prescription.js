@@ -1,4 +1,5 @@
 import { migrateDomainRecord } from './domain-contracts.js';
+import { validateAthleteResponse, personalizeMusclePrescription } from './athlete-response.js';
 import { ALL_MUSCLES, MUSCLE_DOSE_PRIOR, OPTIONAL_MUSCLES, PRIORITY_MULTIPLIER } from './config.js';
 import { initialPhaseForGoal, phasePolicyFor } from './phase-policy.js';
 import { normalizeLoadingInventory } from './loading.js';
@@ -164,6 +165,7 @@ export function normalizeRequest(request) {
     if (!request || typeof request !== 'object' || Array.isArray(request))
         throw new Error('A program request object is required.');
     request = migrateDomainRecord('request', request);
+    if (request.preferences?.athleteResponse !== undefined) validateAthleteResponse(request.preferences.athleteResponse);
     requireRecord(request.goal, 'Goal');
     requireRecord(request.athlete, 'Athlete');
     requireRecord(request.schedule, 'Training schedule');
@@ -369,7 +371,7 @@ export function createMusclePrescriptions(request, phase = initialPhaseForGoal(r
         const upper = equipmentImpossibleNormal ? 0 : normalFrontDelt ? Math.max(isPeak ? 2 : 4, Math.round(base.upper * .45)) : optionalMaintenance ? Math.max(2, Math.round(base.upper * .25)) : Math.max(preferred, Math.round(base.upper * mult * scale.upper));
         const directPreferred = normalWithoutDirect ? 0 : optionalMaintenance || equipmentImpossibleNormal ? 0 : Math.round(preferred * scale.direct);
         const directMinimum = normalWithoutDirect ? 0 : optionalMaintenance || equipmentImpossibleNormal ? 0 : priority === 'high' || priority === 'specialization' || priority === 'primary' ? Math.max(2, Math.round(minimum * scale.direct)) : 0;
-        return {
+        return personalizeMusclePrescription({
             muscle,
             priority,
             minimum,
@@ -377,7 +379,7 @@ export function createMusclePrescriptions(request, phase = initialPhaseForGoal(r
             upper,
             directMinimum,
             directPreferred
-        };
+        }, request.preferences?.athleteResponse);
     });
 }
 /**

@@ -1,3 +1,9 @@
+# M231 · build 820 candidate · Engine 0.65.3
+
+- Learn bounded, confidence-aware dose and capacity preferences from program/day-owned completed observations.
+- Track frequency, fatigue, exercise fit, progression velocity and recovery with explicit exclusions; preserve sparse-evidence priors and authored intent.
+- Connect actual shell history and next-block/cycle adaptation to the canonical response model.
+
 # M230 · build 819 candidate · Engine 0.65.2
 
 - Split the realizer into canonical strength, hypertrophy, ranking, timing, pairing, sequencing, construction and repair owners.

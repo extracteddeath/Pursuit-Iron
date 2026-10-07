@@ -3,6 +3,7 @@ import { advanceCycleState, createInitialCycleState, startPhase } from './cycles
 import { evaluateWorkoutProgression } from './performance.js';
 import { assessRecovery, recoverySignalForDecision } from './recovery.js';
 import { diagnoseExerciseResponse } from './response.js';
+import { deriveAthleteResponse, requestWithAthleteResponse } from './athlete-response.js';
 import { EXERCISE_MAP } from './exercise-db.js';
 import { estimate1RM } from './history.js';
 import { availableLoadAtOrBelow } from './loading.js';
@@ -176,7 +177,8 @@ function workoutFromEntry(program, entry, legacyExercises) {
             performed.push({
                 ...historyExposureContext(raw), exerciseId: ex.exerciseId, setIndex: setIndex++, load: convertLoad(load0, entry.unit, targetUnit), reps,
                 badDay: exposure.badDay, interrupted: exposure.interrupted, prescriptionEdited: exposure.nonComparable,
-                rir: observedRir, advancedTechnique: ex.advancedTechnique?.type
+                rir: observedRir, painFlag: raw.painFlag === true, techniqueQuality: raw.techniqueQuality,
+                advancedTechnique: ex.advancedTechnique?.type
             });
         }
     });
@@ -186,6 +188,8 @@ function workoutFromEntry(program, entry, legacyExercises) {
     const source = sourceSnapshot(program);
     const progression = evaluateWorkoutProgression(planned.session, performed, { ...historyExposureContext(entry), loadingInventory: source?.request.equipment.loading, equipmentAvailable: source?.request.equipment.available });
     return {
+        programId: String(program.id), unit: targetUnit,
+        ...historyExposureContext(entry),
         historyId: String(entry.id ?? `${entry.date ?? 0}-${entry.dayId ?? entry.dayLabel ?? 'session'}`),
         completedAt: new Date(Number(entry.date) || 0).toISOString(),
         dayId: String(found.day.id), dayLabel: String(found.day.label || entry.dayLabel || planned.session.name),
@@ -432,7 +436,7 @@ export function deriveProgressionSelectionEvidence(workouts = []) {
     }]));
 }
 
-export function analyzeShellHistoryForNextEngine(program, history, legacyExercises) {
+export function analyzeShellHistoryForNextEngine(program, history, legacyExercises, options = {}) {
     const snap = sourceSnapshot(program);
     if (!snap)
         throw new NextShellAdapterError('NEXT_HISTORY_SNAPSHOT_MISSING', 'This saved program lacks the engine snapshot required for history adaptation. Rebuild it before adapting the next block.');
@@ -497,7 +501,11 @@ export function analyzeShellHistoryForNextEngine(program, history, legacyExercis
         recovery = { ...recovery, status: 'watch', confidence: 'moderate', rationale: `${recovery.rationale} Subjective soreness also remained unresolved in ${subjective} of the last five logged sessions.` };
     const classification = classify(recovery, positive, negative, diagnoses, workouts.length);
     const ignoredIds = [...new Set(workouts.flatMap(w => w.ignoredLegacyExerciseIds))];
+    const athleteResponse = deriveAthleteResponse({ programId: String(program.id), workouts,
+        customExercises: snap.request.customExercises, unit: snap.request.equipment?.loading?.unit ?? program.config?.unit ?? 'lb',
+        asOf: options.asOf ?? Date.now() });
     return {
+        athleteResponse,
         excludedHistoryEntries: normalized.excluded, workouts, workoutCount: workouts.length, performedSetCount: workouts.reduce((n, w) => n + w.performedSets.length, 0),
         ignoredSetCount: entries.reduce((n, e) => n + Object.entries(e.perf ?? {}).filter(([id]) => ignoredIds.includes(id)).reduce((m, [, p]) => m + (p.sets?.filter(s => !s.sub).length ?? 0), 0), 0),
         ignoredLegacyExerciseIds: ignoredIds, recovery, cycleState, classification,
@@ -522,7 +530,7 @@ export function carryForwardAvoidedExercises(baseRequest, currentRequest, analys
     };
 }
 function requestAdaptedFromHistory(request, currentRequest, analysis) {
-    const adapted = carryForwardAvoidedExercises(request, currentRequest, analysis);
+    const adapted = requestWithAthleteResponse(carryForwardAvoidedExercises(request, currentRequest, analysis), analysis.athleteResponse);
     if (analysis.classification !== 'fatigue_limited' && analysis.recovery.status !== 'deload_recommended')
         return adapted;
     return {

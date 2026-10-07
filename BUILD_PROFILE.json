@@ -1,11 +1,11 @@
 {
   "profile": "portable-browser-esm-canonical-engine",
-  "milestone": "M230",
+  "milestone": "M231",
   "source": "Canonical engine with milestone contract verification",
-  "engine": "0.65.2; Realizer Decomposition",
+  "engine": "0.65.3; Athlete Response",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
-  "nextRuntimeModules": 66,
+  "nextRuntimeModules": 67,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m230-realizer-decomposition-b819",
-  "uiMilestone": "Pursuit Iron 4.0 Production Release · M230 Realizer Decomposition"
+  "cache": "pursuit-iron-production-v4-0-0-m231-athlete-response-b820",
+  "uiMilestone": "Pursuit Iron 4.0 Production Release · M231 Athlete Response"
 }

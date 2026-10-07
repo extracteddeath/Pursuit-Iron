@@ -15,4 +15,4 @@ Continuation branch: `engine/m228-m231`. Each milestone is committed only with i
 
 Completed milestone details and limitations are recorded in the corresponding reports. A milestone with unfinished acceptance work is not reported as complete.
 
-Verified checkpoints: M228, M229 and M230. The continuation remains on the engineering branch.
+Verified checkpoints: M228–M231. The continuation remains on the engineering branch.

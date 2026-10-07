@@ -1,5 +1,5 @@
-/* Pursuit Iron 4.0 — M230 production release. */
-const CACHE="pursuit-iron-production-v4-0-0-m230-realizer-decomposition-b819";
+/* Pursuit Iron 4.0 — M231 production release. */
+const CACHE="pursuit-iron-production-v4-0-0-m231-athlete-response-b820";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
   "./BUILD_PROFILE.json",
@@ -30,6 +30,7 @@ const SHELL=[
   "./modules/next-engine/app-shell-adapter.js",
   "./modules/next-engine/arbiter.js",
   "./modules/next-engine/arm-coverage.js",
+  "./modules/next-engine/athlete-response.js",
   "./modules/next-engine/capacity-generation.js",
   "./modules/next-engine/capacity-policy.js",
   "./modules/next-engine/coach-regression.js",

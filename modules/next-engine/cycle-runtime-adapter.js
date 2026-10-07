@@ -11,6 +11,7 @@ import { blocksForCycleTemplate, cycleTemplates, goalForCycleTemplate } from './
 import { transitionProgramPhase } from './phase-transition.js';
 import { historyDecision, withProgramExplainability } from './explainability.js';
 import { analyzeShellHistoryForNextEngine, carryForwardAvoidedExercises } from './workout-history-adapter.js';
+import { requestWithAthleteResponse } from './athlete-response.js';
 import { shellConfigToNextRequest, nextProgramToShellProgram, NextShellAdapterError } from './app-shell-adapter.js';
 import { repairShellVolume, reconcileLockedCycleWeekOverflows, finalizeGeneratedShellVolume, captureShellBaseProgram } from './volume-repair.js';
 import { firstPassingCapacityProgram } from './capacity-generation.js';
@@ -448,7 +449,7 @@ function requestForAdvance(cycle, current, target, weeks, analysis) {
     const base = (cycle?.nextEngineCycle?.baseRequest ?? current?.nextEngine?.baseRequest);
     if (!base)
         throw new NextShellAdapterError('NEXT_CYCLE_REQUEST_MISSING', 'Next cycle is missing its immutable request snapshot.');
-    let request = carryForwardAvoidedExercises(clone(base), current?.nextEngine?.request, analysis);
+    let request = requestWithAthleteResponse(carryForwardAvoidedExercises(clone(base), current?.nextEngine?.request, analysis), analysis.athleteResponse);
     if (target === 'recovery' || analysis.classification === 'fatigue_limited' || analysis.recovery.status === 'deload_recommended') {
         request.schedule = { days: request.schedule.days.map(day => ({ ...day, targetExercises: day.targetExercises === undefined ? undefined : Math.max(2, day.targetExercises - Math.max(1, Math.ceil(day.targetExercises * .2))) })) };
         request.preferences = { ...(request.preferences ?? {}), responseCapacityScale: target === 'recovery' ? .72 : .82 };

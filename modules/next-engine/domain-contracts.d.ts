@@ -22,6 +22,15 @@ export interface PrescriptionV1 { reps: Range; rir: Range; restSeconds: number }
 export interface PlannedExerciseV1 { exerciseId: string; name: string; sets: number; role: string; prescription: PrescriptionV1; progressionStyle?: ProgressionStyle; [extension: string]: unknown }
 export interface EngineProgramV1 { schemaVersion: 1; id: string; engineVersion: string; phase: string; sessions: Array<{ id: string; day: Weekday; maxMinutes: number; estimatedMinutes: number; exercises: PlannedExerciseV1[]; [extension: string]: unknown }>; [extension: string]: unknown }
 export interface HistoryExposureV1 { schemaVersion: 1; exerciseId: string; completedAt: string; programId?: string; sessionId?: string; unit?: Unit; sets: Array<{ load: number; reps: number; rir: number | null; painFlag?: boolean; techniqueQuality?: string }>; [extension: string]: unknown }
+export interface AthleteResponseV1 { schemaVersion: 1; programId: string; unit: Unit; asOf: string;
+    muscles: Record<string, { sampleCount: number; spanDays: number; effortCoverage: number; confidence: number; doseScale: number; observedMeanSets: number; fatiguePressure: number; reason: string }>;
+    frequency: Record<string, { observedPerWeek: number | null; medianGapDays: number | null; confidence: number; recommendedExposureDelta: number; application: string }>;
+    exerciseSuccess: Record<string, { sampleCount: number; successes: number; failures: number; discomfortExposures: number; poorTechniqueExposures: number; confidence: number }>;
+    progressionVelocity: Record<string, { sessionId: string; exerciseId: string; sampleCount: number; relativePerWeek: number | null; confidence: number; basis: string }>;
+    fatigue: { pressure: number; confidence: number; capacityScale: number };
+    recovery: { status: 'watch' | 'tolerated' | 'unknown'; confidence: number; observedMedianGapHours: number | null };
+    evidence: { comparableExposures: number; comparableWorkouts: number; excluded: Record<string, number>; provenance: string; interpretation: string };
+}
 export declare const DOMAIN_SCHEMA_VERSIONS: Readonly<Record<'request' | 'program' | 'prescription' | 'exposure' | 'response', 1>>;
 export declare const DOMAIN_SCHEMAS: Readonly<Record<string, { version: 1; required: readonly string[]; legacyVersion: 'unversioned' }>>;
 export declare class DomainContractError extends Error { constructor(code: string, path: string, message: string); code: string; path: string }

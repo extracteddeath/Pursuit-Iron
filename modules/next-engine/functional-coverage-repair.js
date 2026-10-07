@@ -1,6 +1,7 @@
 import { createExerciseCatalog, createExerciseMap } from './exercise-db.js';
 import { functionalCoverageBiases } from './functional-coverage.js';
 import { estimateSessionMinutes, progressionForExercise, progressionStyleForExercise, repsForPhase, restForExercise, rirForPhase } from './realizer.js';
+import { equipmentEligible, maxBarbells } from './realizer-ranking.js';
 import { phasePolicyFor } from './phase-policy.js';
 const FINDING_BIAS = {
     HAMSTRINGS_HIP_EXTENSION_MISSING: 'hamstrings_hip_extension',
@@ -24,20 +25,9 @@ const MUSCLE_INTENTS = {
     triceps: new Set(['push', 'upper', 'bench_focus', 'press_focus', 'strength_full', 'full']),
     back: new Set(['pull', 'upper', 'deadlift_focus', 'strength_full', 'full'])
 };
-function dayFor(session, request) { return request.schedule.days.find(day => day.day === session.day); }
-function equipmentEligible(def, session, request) {
-    const day = dayFor(session, request);
-    if (!day)
-        return false;
-    const equipment = day.equipmentOverride ?? request.equipment.available;
-    if ((def.flags.bodyweight || def.equipment.includes('bodyweight')) && request.equipment.bodyweight === 'exclude')
-        return false;
-    return [def.equipment, ...(def.equipmentAlternatives ?? [])].some(setup => setup.every(required => required === 'bodyweight' ? request.equipment.bodyweight !== 'exclude' : equipment.includes(required)));
-}
 function barbellCount(session, defs) { return session.exercises.filter(ex => defs.get(ex.exerciseId)?.flags.barbell).length; }
-function maxBarbells(session, request) { return dayFor(session, request)?.maxBarbellMovements ?? request.restrictions.maxBarbellMovementsPerDay; }
 function candidateEligible(def, session, request, defs) {
-    if (!equipmentEligible(def, session, request) || request.preferences.avoidedExercises?.includes(def.id) || session.exercises.some(ex => ex.exerciseId === def.id))
+    if (!request.schedule.days.some(day => day.day === session.day) || !equipmentEligible(def, session, request) || request.preferences.avoidedExercises?.includes(def.id) || session.exercises.some(ex => ex.exerciseId === def.id))
         return false;
     if (def.flags.barbell && barbellCount(session, defs) >= maxBarbells(session, request))
         return false;

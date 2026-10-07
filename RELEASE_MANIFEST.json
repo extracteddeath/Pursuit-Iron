@@ -106,8 +106,8 @@
   "uiFiles": {
     "modules/App.js": "9fad9cdad3062e4e3d686e1a96d8a6261af46a4551a8a5fd5ddd5df1e3eb3d7a",
     "index.html": "fb9f879e882f016b41d486f62f39c5605c74aac53a463a2fe1e82cbbaaa65e3b",
-    "sw.js": "5540c30593aa4f69b774f3b0ecaeb703e92ad7a4f4c122dc1ceedbc28b6f335f",
-    "BUILD_PROFILE.json": "d70e36f140d2b04bf7f99f62d8471ee330c0d6bf96ae974458367a637afec33c",
+    "sw.js": "905e40d2d86b882d5ce15144e3fccfb167f94cba4d4cfb37f919862b38c372a7",
+    "BUILD_PROFILE.json": "35b1598a57ab3576b92649eaef08a4bc0a351d46f422f912d995c06a16edba15",
     "CHANGELOG.md": "0851b9f4d675dd8420fc278ba9595b18f4957196a83f6c4d05bf2f83c438d1c0",
     "app.css": "27818b3319609aff1416b32d5afebe70598cc57dfa64f4467b8bfe5b1130e0dd",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
@@ -115,6 +115,6 @@
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Candidate selection hardening; verified engineering continuation.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b823",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b823-r1ef5d3d8b6f80402",
   "uiMilestone": "Pursuit Iron 4.0 Production Release · M234 Candidate Selection Hardening"
 }

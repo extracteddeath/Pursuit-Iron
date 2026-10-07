@@ -1,6 +1,6 @@
-# Engine upgrade and assurance sequence through M262
+# Engine upgrade and assurance sequence through M263
 
-The behavior-bearing engine remains M234 / Pursuit Engine 0.65.6 / app 4.0.0 build 823. M235 verifies that behavior line. M236–M262 harden ownership, verification, CI, history provenance, standalone packaging, and internal responsibility boundaries without changing training behavior or release identity.
+The behavior-bearing engine remains M234 / Pursuit Engine 0.65.6 / app 4.0.0 build 823. M235 verifies that behavior line. M236–M263 harden ownership, verification, CI, history provenance, standalone packaging, and internal responsibility boundaries without changing the training model or authored build identity. Offline cache identity also certifies shipped content so same-build repairs reach installed copies.
 
 | Milestone | Scope | Acceptance |
 |---|---|---|
@@ -39,6 +39,8 @@ The behavior-bearing engine remains M234 / Pursuit Engine 0.65.6 / app 4.0.0 bui
 | M261 | Weekly dose revision ownership and domain import cleanup | Weekly recaps, PRs and logged muscle/regional dose resolve current revisions before date windows; 97 unused domain import bindings removed with module evaluation order preserved |
 
 | M262 | Strength analytics revision ownership | Strength-score maturity, strength trends and score attribution consume canonical persisted revisions before counting exposures or applying date cutoffs; corrected bests and moved dates cannot leave stale evidence |
+
+| M263 | Content-addressed offline releases | Every shipped offline asset contributes to the cache revision; same-build runtime repairs create a waiting worker and isolated cache, unchanged finalization is stable, and Restart preserves training storage |
 
 ## Current ownership rules
 

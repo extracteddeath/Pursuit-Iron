@@ -3315,7 +3315,7 @@ function isWorkSet(s) { return !!s && !s.warm && !s.sub; }
 function exRecords(history, id, unit = "kg") {
     let maxWeight = null, maxE1rm = null, maxVol = null;
     const perRep = {}; // reps → { w, date }
-    (Array.isArray(history) ? history : []).forEach(h => {
+    canonicalHistoryNewest(history).forEach(h => {
         const p = h.perf?.[id];
         if (!(p && p.weight > 0))
             return;
@@ -3378,9 +3378,9 @@ function exerciseSeries(history, id, metricId = "e1rm", windowId = "all", now = 
     const win = exWindow(windowId);
     const since = win.days == null ? -Infinity : now - win.days * 86400000;
     const rows = [];
-    let unit = (Array.isArray(history) ? history : []).filter(h => validHistoryDate(h) && h.perf?.[id])
-        .sort((a, b) => Number(b.date) - Number(a.date))[0]?.unit || 'kg';
-    for (const h of (Array.isArray(history) ? history : [])) {
+    const canonicalHistory = canonicalHistoryNewest(history);
+    let unit = canonicalHistory.find(h => validHistoryDate(h) && h.perf?.[id])?.unit || 'kg';
+    for (const h of canonicalHistory) {
         if (!h || typeof h !== "object" || !h.perf)
             continue;
         if (!(h.date >= since))

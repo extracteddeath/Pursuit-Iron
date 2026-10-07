@@ -40,6 +40,7 @@ export function selectBestCandidate(pool, options = {}) {
     const compare = options.compare;
     const score = options.score;
     const preCompare = options.preCompare;
+    const tieBreak = options.tieBreak;
     const limit = Math.max(1, Math.floor(options.maxEvaluations ?? DEFAULT_CANDIDATE_EVALUATION_LIMIT));
     if (typeof accept !== 'function')
         throw new TypeError('Candidate accept must be a function.');
@@ -49,6 +50,8 @@ export function selectBestCandidate(pool, options = {}) {
         throw new TypeError('Candidate score must be a function.');
     if (preCompare !== undefined && typeof preCompare !== 'function')
         throw new TypeError('Candidate preCompare must be a function.');
+    if (tieBreak !== undefined && typeof tieBreak !== 'function')
+        throw new TypeError('Candidate tieBreak must be a function.');
 
     const accepted = [];
     for (let index = 0; index < pool.length; index++) {
@@ -90,7 +93,10 @@ export function selectBestCandidate(pool, options = {}) {
     let best = null;
     for (const item of shortlist) {
         const value = finiteScore(score ? score(item.candidate, item.index) : 0);
-        if (!best || value > best.score || (value === best.score && item.index < best.index))
+        const winsTie = best && value === best.score && tieBreak
+            ? tieBreak(item.candidate, best.candidate) < 0
+            : best && value === best.score && item.index < best.index;
+        if (!best || value > best.score || winsTie)
             best = { ...item, score: value };
     }
     return {

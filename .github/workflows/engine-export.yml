@@ -1,12 +1,18 @@
 name: Independent engine audit
 on:
   push:
-    branches: [main, 'verification/**', 'engine/**']
+    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions:
   contents: read
+
 jobs:
   audit:
     runs-on: ubuntu-latest

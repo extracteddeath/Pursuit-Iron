@@ -72,7 +72,14 @@ for (const file of fs.readdirSync(path.join(root, 'verification'))) {
     const text = fs.readFileSync(path.join(root, 'verification', file), 'utf8');
     const appImports = [...text.matchAll(/import\s*\{([^}]+)\}\s*from\s*['"]\.\.\/modules\/App\.js['"]/gs)]
         .flatMap(m => m[1].split(',').map(s => s.trim().split(/\s+as\s+/)[0]));
-    if (/browser|import-loader|production-source/.test(file) || /productionSource|puppeteer|readFileSync|\bfs\./.test(text) || appImports.some(n => !(n in shell))) {
+    const productionImports = [...text.matchAll(/(?:from\s*|import\s*)['"]\.\.\/modules\/([^'"]+\.js)['"]/g)]
+        .map(match => 'modules/' + match[1])
+        .filter(moduleFile => moduleFile !== 'modules/App.js');
+    const importsOutsideEngine = productionImports.some(moduleFile => !runtimeSet.has(moduleFile));
+    if (/browser|import-loader|production-source/.test(file)
+        || /productionSource|puppeteer|readFileSync|\bfs\./.test(text)
+        || importsOutsideEngine
+        || appImports.some(n => !(n in shell))) {
         continue;
     }
     write('verification/' + file, text.replaceAll('../modules/App.js', '../modules/engine-shell.js'));

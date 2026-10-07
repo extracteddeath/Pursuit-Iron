@@ -10,6 +10,7 @@ import { normalizeRequest } from './prescription.js';
 import { transitionProgramPhase } from './phase-transition.js';
 import { nextProgramToShellProgram, getNextShellCell, resolveNextShellExerciseId, NextShellAdapterError } from './app-shell-adapter.js';
 import { advancedTechniqueFromCell } from './workout-runtime.js';
+import { SUPPORTED_PROGRESSION_STYLES } from './progression-style.js';
 import { finalizeGeneratedShellVolume, captureShellBaseProgram } from './volume-repair.js';
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
@@ -22,18 +23,22 @@ function rangeOf(value, fallback) {
         const a = numberOf(value[0]), b = numberOf(value[1]);
         if (a !== null && b !== null)
             return [Math.min(a, b), Math.max(a, b)];
+        return fallback;
     }
     if (typeof value === 'number' && Number.isFinite(value))
         return [value, value];
     const raw = String(value ?? '').trim();
     if (!raw)
         return fallback;
-    const parts = raw.split(/[-–]/).map(x => Number(x.trim())).filter(Number.isFinite);
-    if (parts.length >= 2)
-        return [Math.min(parts[0], parts[1]), Math.max(parts[0], parts[1])];
-    if (parts.length === 1)
-        return [parts[0], parts[0]];
-    return fallback;
+    const parts = raw.split(/[-–]/);
+    if (parts.length > 2 || parts.some(part => !part.trim()))
+        return fallback;
+    const nums = parts.map(part => numberOf(part.trim()));
+    if (nums.some(n => n === null))
+        return fallback;
+    if (nums.length === 2)
+        return [Math.min(nums[0], nums[1]), Math.max(nums[0], nums[1])];
+    return nums.length === 1 ? [nums[0], nums[0]] : fallback;
 }
 function legacyExerciseById(legacyExercises) {
     return new Map(legacyExercises.map(ex => [ex.id, ex]));
@@ -93,8 +98,11 @@ function historicalShellCell(program, day, slot, week, perf, exerciseId) {
         || saved.rest == null || saved.rest === '' || !Number.isFinite(Number(saved.rest)) || Number(saved.rest) < 0)
         return current;
     const textRange = pair => pair[0] === pair[1] ? String(pair[0]) : pair.join('-');
+    const validRoles = new Set(['primary_strength', 'secondary_strength', 'hypertrophy_compound', 'hypertrophy_isolation']);
+    const role = validRoles.has(saved.role) ? saved.role : current.role;
+    const progressionStyle = SUPPORTED_PROGRESSION_STYLES.includes(saved.progressionStyle) ? saved.progressionStyle : current.progressionStyle;
     return { ...current, sets: saved.sets, reps: textRange(reps), rir: textRange(rir), rest: Number(saved.rest),
-        role: saved.role ?? current.role, progressionStyle: saved.progressionStyle ?? current.progressionStyle,
+        role, progressionStyle,
         tech: saved.tech ?? null,
         setTargets: Array.isArray(saved.setTargets) && saved.setTargets.length === saved.sets
             && saved.setTargets.every(t => numberOf(t.reps) > 0 && numberOf(t.weight) >= 0)

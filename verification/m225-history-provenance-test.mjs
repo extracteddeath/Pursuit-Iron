@@ -7,7 +7,7 @@ import { EXERCISES, EX_BY_ID, prescribeSets, sessionSuggestion, loggedWorkoutPer
 import { generateNextProgramForShell } from '../modules/next-engine/app-shell-adapter.js';
 import { analyzeShellHistoryForNextEngine, nextWorkoutSuggestionForShell } from '../modules/next-engine/workout-history-adapter.js';
 import { progressionHistoryForProgram, customExerciseHistory, customExerciseReferenceHistory, muscleRecoveryUncached } from '../modules/training-domain/prescriptions.js';
-import { buildLifterModel, computeLevel, computeMilestones, deloadAdvice, exRecords, exerciseSeries, exerciseTrends } from '../modules/training-domain/analytics.js';
+import { buildLifterModel, computeLevel, computeMilestones, deloadAdvice, exRecords, exerciseSeries, exerciseTrends, filterWorkoutHistory, groupSessionsByCycle, groupSessionsByMonth } from '../modules/training-domain/analytics.js';
 
 for (const value of [true, false, [], [15], {}, { valueOf: () => 15 }, Symbol('load')])
     assert.equal(historyNumber(value), null);
@@ -111,6 +111,24 @@ for (const revisions of [[staleRevision, editedRevision], [editedRevision, stale
         'milestones must not count a superseded revision as another workout, PR opportunity, set, rep or volume exposure');
     assert.deepEqual(computeLevel(revisions, milestones), computeLevel([editedRevision], canonicalMilestones),
         'level XP must count one canonical persisted workout rather than every stale revision');
+}
+
+for (const revisions of [[staleRevision, editedRevision], [editedRevision, staleRevision]]) {
+    const filtered = filterWorkoutHistory(revisions, [], '', 'all', 'all', 2_000_000);
+    assert.equal(filtered.length, 1,
+        'Log search must show one canonical row for one persisted workout identity');
+    assert.equal(filtered[0].perf.lift.weight, 80,
+        'Log search must show the newest edited revision');
+    const byCycle = groupSessionsByCycle(revisions, [], [], 'lb');
+    assert.equal(byCycle.length, 1);
+    assert.equal(byCycle[0].count, 1,
+        'cycle/program Log grouping must not inflate session counts with stale revisions');
+    assert.equal(byCycle[0].items[0].perf.lift.weight, 80,
+        'cycle/program Log grouping must retain the newest revision');
+    const byMonth = groupSessionsByMonth(revisions, 'lb');
+    assert.equal(byMonth.length, 1);
+    assert.equal(byMonth[0].count, 1,
+        'monthly Log grouping must not inflate session counts with stale revisions');
 }
 
 const recoveryExercise = EXERCISES.find(ex => ex?.id && ['chest','lats','upper_back','shoulders','biceps','triceps','quads','hamstrings','glutes','lower_back','adductors','abductors','calves','abs','traps','forearms','neck'].includes(ex.part));

@@ -11,6 +11,7 @@ import { functionalCoverageBiases, functionalCoverageUseKeys } from './functiona
 import { avoidableExerciseOverlap, exerciseEconomyCluster } from './exercise-economy.js';
 import { setupTransitionCost } from './setup-economy.js';
 import { exerciseSetupInefficiencyPenalty } from './exercise-selection-intelligence.js';
+import { buildCandidatePool, selectBestCandidate } from './candidate-optimization.js';
 const MUSCLE_MOVEMENTS = {
     chest: ['horizontal_press', 'chest_adduction'],
     back: ['horizontal_pull', 'vertical_pull', 'shoulder_extension'],
@@ -38,30 +39,41 @@ function equipmentEligible(ex, session, request) {
 function maxBarbells(session, request) {
     return request.schedule.days.find(d => d.day === session.day)?.maxBarbellMovements ?? request.restrictions.maxBarbellMovementsPerDay;
 }
+function createSessionCandidatePoolCache(request, catalog) {
+    const byDay = new Map();
+    return (session) => {
+        const key = String(session?.day ?? session?.id ?? 'unknown');
+        if (!byDay.has(key)) {
+            byDay.set(key, buildCandidatePool(catalog, ex => equipmentEligible(ex, session, request)
+                && !request.preferences.avoidedExercises?.includes(ex.id)));
+        }
+        return byDay.get(key);
+    };
+}
 function strengthCandidate(a, session, request, chosen, catalog) {
     const barbells = chosen.filter(e => e.flags.barbell).length;
-    const candidates = catalog.filter(e => equipmentEligible(e, session, request))
-        .filter(e => !request.preferences.avoidedExercises?.includes(e.id))
-        .filter(e => (e.liftSpecificity?.[a.lift] ?? 0) > .45)
-        .filter(e => !e.flags.barbell || barbells < maxBarbells(session, request));
-    return candidates.sort((x, y) => {
-        const xs = x.liftSpecificity?.[a.lift] ?? 0, ys = y.liftSpecificity?.[a.lift] ?? 0;
-        if (a.role === 'secondary_strength') {
-            // Volume/secondary exposures should retain transfer without blindly repeating the highest-fatigue
-            // competition lift. This makes paused bench / RDL-style secondary work viable when specificity
-            // remains meaningful, while exact competition lifts still dominate primary-strength slots.
-            const fatigue = (e) => e.fatigue.systemic + e.fatigue.axial * .8 + e.fatigue.lowerBack;
-            const xScore = xs * 5 + x.loadability * .12 + x.suitability.strength * .1 - fatigue(x) * .13;
-            const yScore = ys * 5 + y.loadability * .12 + y.suitability.strength * .1 - fatigue(y) * .13;
-            if (Math.abs(yScore - xScore) > .02)
-                return yScore - xScore;
+    return selectBestCandidate(catalog, {
+        accept: e => (e.liftSpecificity?.[a.lift] ?? 0) > .45
+            && (!e.flags.barbell || barbells < maxBarbells(session, request)),
+        compare: (x, y) => {
+            const xs = x.liftSpecificity?.[a.lift] ?? 0, ys = y.liftSpecificity?.[a.lift] ?? 0;
+            if (a.role === 'secondary_strength') {
+                // Volume/secondary exposures should retain transfer without blindly repeating the highest-fatigue
+                // competition lift. This makes paused bench / RDL-style secondary work viable when specificity
+                // remains meaningful, while exact competition lifts still dominate primary-strength slots.
+                const fatigue = (e) => e.fatigue.systemic + e.fatigue.axial * .8 + e.fatigue.lowerBack;
+                const xScore = xs * 5 + x.loadability * .12 + x.suitability.strength * .1 - fatigue(x) * .13;
+                const yScore = ys * 5 + y.loadability * .12 + y.suitability.strength * .1 - fatigue(y) * .13;
+                if (Math.abs(yScore - xScore) > .02)
+                    return yScore - xScore;
+            }
+            const specificity = ys - xs;
+            if (Math.abs(specificity) > .02)
+                return specificity;
+            const confidence = (x.source === 'legacy_v661' ? 1 : 0) - (y.source === 'legacy_v661' ? 1 : 0);
+            return confidence || y.loadability - x.loadability || x.id.localeCompare(y.id);
         }
-        const specificity = ys - xs;
-        if (Math.abs(specificity) > .02)
-            return specificity;
-        const confidence = (x.source === 'legacy_v661' ? 1 : 0) - (y.source === 'legacy_v661' ? 1 : 0);
-        return confidence || y.loadability - x.loadability || x.id.localeCompare(y.id);
-    })[0];
+    }).candidate;
 }
 function muscleScore(ex, muscle, role, session, chosen, weeklyMovementUse, request) {
     const credit = ex.muscles[muscle]?.credit ?? 0;
@@ -154,20 +166,16 @@ function muscleCandidate(a, session, request, chosen, weeklyMovementUse, catalog
     const specialization = priority === 'high' || priority === 'specialization' || priority === 'primary';
     const defaultFamilyCap = a.role === 'hypertrophy_isolation' ? (dedicatedArmFamily || specialization ? 2 : 1) : 2;
     const familyCap = maxSameMovementFamily ?? defaultFamilyCap;
-    return catalog.filter(e => equipmentEligible(e, session, request))
-        .filter(e => !request.preferences.avoidedExercises?.includes(e.id))
-        // movementFamily is intentionally broad. Add a semantic economy guard for reviewed near-equivalent
-        // compounds so `squat` vs `leg_press` labels cannot sneak Hack Squat + Leg Press into two ordinary
-        // hypertrophy slots. True strength anchors remain exempt (e.g. Back Squat -> Leg Press).
-        .filter(e => !avoidableExerciseOverlap(e, a.role, chosen.map(def => ({ def })), { priority }))
-        .filter(e => movementAllowed.includes(e.movementFamily) || (minCredit > 0 && minCredit < 1 && (e.muscles[muscle]?.credit ?? 0) >= minCredit))
-        .filter(e => (e.muscles[muscle]?.credit ?? 0) >= minCredit)
-        .filter(e => e.movementFamily !== 'horizontal_press' || horizontalPresses < 2)
-        .filter(e => sameFamilyCount(e.movementFamily) < familyCap)
-        .filter(e => !chosen.some(c => c.id === e.id))
-        .filter(e => !e.flags.barbell || barbells < maxBarbells(session, request))
-        .map(e => ({ e, score: muscleScore(e, muscle, a.role, session, chosen, weeklyMovementUse, request) }))
-        .sort((x, y) => y.score - x.score)[0]?.e;
+    return selectBestCandidate(catalog, {
+        accept: e => !avoidableExerciseOverlap(e, a.role, chosen.map(def => ({ def })), { priority })
+            && (movementAllowed.includes(e.movementFamily) || (minCredit > 0 && minCredit < 1 && (e.muscles[muscle]?.credit ?? 0) >= minCredit))
+            && (e.muscles[muscle]?.credit ?? 0) >= minCredit
+            && (e.movementFamily !== 'horizontal_press' || horizontalPresses < 2)
+            && sameFamilyCount(e.movementFamily) < familyCap
+            && !chosen.some(c => c.id === e.id)
+            && (!e.flags.barbell || barbells < maxBarbells(session, request)),
+        score: e => muscleScore(e, muscle, a.role, session, chosen, weeklyMovementUse, request)
+    }).candidate;
 }
 export function repsForPhase(ex, role, policy) {
     if (role === 'primary_strength' || role === 'secondary_strength') {
@@ -710,6 +718,7 @@ export function realizeStrengthAnchors(plans, request, phase, options = {}) {
         requestedProgressionStyle: options.requestedProgressionStyle
     };
     const exerciseCatalog = createExerciseCatalog(request.customExercises);
+    const candidatePoolFor = createSessionCandidatePoolCache(request, exerciseCatalog);
     const ledger = { fractional: {}, direct: {} };
     const anchors = {};
     const sessionMinutes = {};
@@ -719,7 +728,7 @@ export function realizeStrengthAnchors(plans, request, phase, options = {}) {
         const chosen = [];
         const planned = [];
         for (const allocation of plan.allocations.filter(x => x.kind === 'lift')) {
-            const def = strengthCandidate(allocation, plan, request, chosen, exerciseCatalog);
+            const def = strengthCandidate(allocation, plan, request, chosen, candidatePoolFor(plan));
             if (!def) {
                 missingAllocationIds.push(allocation.id);
                 continue;
@@ -756,6 +765,7 @@ export function realizeSessions(plans, request, targetDose = {}, directTargetDos
     };
     const exerciseCatalog = createExerciseCatalog(request.customExercises);
     const exerciseMap = createExerciseMap(request.customExercises);
+    const candidatePoolFor = createSessionCandidatePoolCache(request, exerciseCatalog);
     const sessions = plans.map(plan => ({ plan, defs: [], exercises: [], importance: [] }));
     const ledger = { fractional: {}, direct: {} };
     const pinnedStrengthAnchors = options.strengthAnchors ?? {};
@@ -781,7 +791,7 @@ export function realizeSessions(plans, request, targetDose = {}, directTargetDos
     for (const s of sessions)
         for (const a of s.plan.allocations.filter(x => x.kind === 'lift')) {
             const pinned = pinnedStrengthAnchors[a.id];
-            const def = pinned ? exerciseMap.get(pinned.exerciseId) : strengthCandidate(a, s.plan, request, s.defs, exerciseCatalog);
+            const def = pinned ? exerciseMap.get(pinned.exerciseId) : strengthCandidate(a, s.plan, request, s.defs, candidatePoolFor(s.plan));
             if (!def)
                 continue;
             if (pinned) {
@@ -823,7 +833,7 @@ export function realizeSessions(plans, request, targetDose = {}, directTargetDos
             const sets = setPlan.get(entry) ?? 0;
             if (sets <= 0)
                 continue;
-            const def = muscleCandidate(entry.allocation, entry.session.plan, request, entry.session.defs, weeklyMovementUse, exerciseCatalog);
+            const def = muscleCandidate(entry.allocation, entry.session.plan, request, entry.session.defs, weeklyMovementUse, candidatePoolFor(entry.session.plan));
             if (!def)
                 continue;
             add(entry.session, entry.allocation, def, sets);
@@ -858,7 +868,7 @@ export function realizeSessions(plans, request, targetDose = {}, directTargetDos
                 const need = Math.max(totalResidual, directResidual);
                 if (need < .75)
                     continue;
-                const def = muscleCandidate(a, s.plan, request, s.defs, weeklyMovementUse, exerciseCatalog);
+                const def = muscleCandidate(a, s.plan, request, s.defs, weeklyMovementUse, candidatePoolFor(s.plan));
                 if (!def)
                     continue;
                 const sets = Math.max(1, Math.min(4, Math.round(Math.min(a.dose, need))));
@@ -2404,22 +2414,20 @@ export function realizeSessions(plans, request, targetDose = {}, directTargetDos
             const exactUses = (id) => realized.reduce((n, s) => n + s.exercises.filter(ex => ex.exerciseId === id).length, 0);
             const barbells = chosen.filter(def => def.flags.barbell).length;
             const role = roleForRegion(region);
-            return exerciseCatalog
-                .filter(def => equipmentEligible(def, session, request))
-                .filter(def => !request.preferences.avoidedExercises?.includes(def.id))
-                .filter(def => directlyTargetsPublicRegion(def, region))
-                .filter(def => !chosen.some(x => x.id === def.id))
-                .filter(def => !avoidableExerciseOverlap(def, role, chosenWithRoles, { priority: request.goal.musclePriorities[muscle] ?? 'normal' }))
-                .filter(def => (families.get(def.movementFamily) ?? 0) < ((region === 'lats' || region === 'upper_back') ? 2 : 1))
-                .filter(def => !def.flags.barbell || barbells < maxBarbells(session, request))
-                .map(def => {
-                const exact = exactUses(def.id), familyUses = realized.reduce((n, s) => n + s.exercises.filter(ex => exerciseMap.get(ex.exerciseId)?.movementFamily === def.movementFamily).length, 0);
-                const fatigue = def.fatigue.systemic + def.fatigue.axial * .7 + def.fatigue.lowerBack * .8;
-                const base = muscleScore(def, muscle, role, session, chosen, weeklyMovementUse, request);
-                const direct = publicRegionContribution(def, region);
-                return { def, score: base + direct * 4 - exact * 3.5 - familyUses * .12 - fatigue * .04 };
-            })
-                .sort((a, b) => b.score - a.score || a.def.id.localeCompare(b.def.id))[0]?.def;
+            return selectBestCandidate(candidatePoolFor(session), {
+                accept: def => directlyTargetsPublicRegion(def, region)
+                    && !chosen.some(x => x.id === def.id)
+                    && !avoidableExerciseOverlap(def, role, chosenWithRoles, { priority: request.goal.musclePriorities[muscle] ?? 'normal' })
+                    && (families.get(def.movementFamily) ?? 0) < ((region === 'lats' || region === 'upper_back') ? 2 : 1)
+                    && (!def.flags.barbell || barbells < maxBarbells(session, request)),
+                score: def => {
+                    const exact = exactUses(def.id), familyUses = realized.reduce((n, s) => n + s.exercises.filter(ex => exerciseMap.get(ex.exerciseId)?.movementFamily === def.movementFamily).length, 0);
+                    const fatigue = def.fatigue.systemic + def.fatigue.axial * .7 + def.fatigue.lowerBack * .8;
+                    const base = muscleScore(def, muscle, role, session, chosen, weeklyMovementUse, request);
+                    const direct = publicRegionContribution(def, region);
+                    return base + direct * 4 - exact * 3.5 - familyUses * .12 - fatigue * .04;
+                }
+            }).candidate;
         };
         const prescriptionByMuscle = new Map(capacityPrescriptions.map(p => [p.muscle, p]));
         const priorityRankPublic = { maintenance: 0, normal: 1, high: 2, specialization: 3, primary: 4 };

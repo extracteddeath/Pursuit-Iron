@@ -120,6 +120,16 @@ const supersededCursor = { ...cursorNewer, dayId: p.days[0].id, updatedAt: 1500 
 const correctedCursor = { ...cursorNewer, dayId: p.days[1].id, updatedAt: 2500 };
 assert.deepEqual(nextSessionCursor(p, [supersededCursor, correctedCursor, cursorOlder]), orderedCursor,
     'duplicate history identities use the newest revision once rather than advancing twice');
+const unresolvedCursor = { ...cursorNewer, id: 'cursor-unresolved', dayId: 'retired-unresolved-day',
+    dayLabel: 'No matching authored day', date: 3000, perf: {} };
+assert.deepEqual(nextSessionCursor(p, [unresolvedCursor, cursorNewer, cursorOlder]), orderedCursor,
+    'valid-timestamp history that cannot resolve to an authored day cannot advance finite program progress');
+assert.equal(nextDueDayId(p, [unresolvedCursor, cursorNewer, cursorOlder]), nextDueDayId(p, [cursorNewer, cursorOlder]),
+    'unresolved history cannot hijack Program View next-day selection');
+const endlessCursorProgram = { ...p, config: { ...p.config, endless: true } };
+assert.deepEqual(nextSessionCursor(endlessCursorProgram, [unresolvedCursor, cursorNewer, cursorOlder]),
+    nextSessionCursor(endlessCursorProgram, [cursorNewer, cursorOlder]),
+    'unresolved history cannot advance endless accumulation or deload cadence');
 
 // A saved custom target survives subsequent dose edits. Imported target effort has identical semantics.
 const custom = { id: 'custom', custom: true, weeks: 6, config, days: [{ id: 'custom-day', label: 'Push', primaryIndex: -1, exercises: [id] }],

@@ -24,7 +24,8 @@ assert.equal(suggest(program.days[0], cappedLower).weight, 210, 'all five sets a
 assert.equal(suggest(program.days[0], [entry('lower', Date.UTC(2026,9,1), 205, [20,20,20]), ...history]).weight, 205, 'three sets do not satisfy a five-set prescription');
 const fallback = suggest(program.days[0], [history[0]]);
 assert.equal(fallback.weight, 210, 'a never-trained day may initialize from the same program');
-assert.equal(lastDayPerf(program.days[0], {}, [history[0]], program)[id], fallback.last, 'initialization fallback is also shown honestly');
+assert.equal(fallback.referenceOnly, true, 'cross-day initialization is explicitly reference-only');
+assert.equal(lastDayPerf(program.days[0], {}, [history[0]], program)[id], undefined, 'reference-only initialization must not masquerade as comparable LAST evidence');
 const unrelated = entry('lower', Date.UTC(2026,9,2), 400, [20,20,20,20,20], 'other-program');
 assert.equal(suggest(program.days[0], [unrelated, ...history]).weight, 205, 'same day IDs in other programs cannot replace this program evidence');
 assert.equal(lastDayPerf(program.days[0], {}, [unrelated, ...history], program)[id], lower.last);

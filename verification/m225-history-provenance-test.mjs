@@ -6,6 +6,7 @@ import { EXERCISES, EX_BY_ID, prescribeSets, sessionSuggestion, loggedWorkoutPer
 import { generateNextProgramForShell } from '../modules/next-engine/app-shell-adapter.js';
 import { analyzeShellHistoryForNextEngine } from '../modules/next-engine/workout-history-adapter.js';
 import { progressionHistoryForProgram, customExerciseHistory, customExerciseReferenceHistory, muscleRecoveryUncached } from '../modules/training-domain/prescriptions.js';
+import { buildLifterModel, deloadAdvice, exerciseTrends } from '../modules/training-domain/analytics.js';
 
 for (const value of [true, false, [], [15], {}, { valueOf: () => 15 }, Symbol('load')])
     assert.equal(historyNumber(value), null);
@@ -79,6 +80,36 @@ try {
     Date.now = originalNow;
 }
 
+const decisionExercises = EXERCISES.filter(ex => ex?.id && EX_BY_ID[ex.id]).slice(0, 2);
+assert.equal(decisionExercises.length, 2, 'decision revision regression needs two catalog exercises');
+const decisionHistory = [];
+for (let i = 2; i >= 0; i--) {
+    const date = 2_000_000 + i * 86_400_000;
+    const currentReps = 8 + (2 - i) * 2;
+    const perf = Object.fromEntries(decisionExercises.map(ex => [ex.id, {
+        weight: 50, reps: currentReps, sets: [{ w: 50, r: currentReps, rir: 1, tr: 2 }]
+    }]));
+    const current = { id: `decision-${i}`, programId: 'decision-program', dayId: 'decision-day',
+        date, updatedAt: date + 2, unit: 'lb', perf };
+    const stalePerf = Object.fromEntries(decisionExercises.map(ex => [ex.id, {
+        weight: 50, reps: currentReps + 1, sets: [{ w: 50, r: currentReps + 1, rir: 1, tr: 2 }]
+    }]));
+    const stale = { ...current, updatedAt: date + 1, perf: stalePerf };
+    decisionHistory.push(current, stale);
+}
+const decisionTrends = exerciseTrends(decisionHistory);
+for (const ex of decisionExercises) {
+    const trend = decisionTrends.find(row => row.id === ex.id);
+    assert.equal(trend?.sessionsCount, 3,
+        'decision trends must count three persisted workouts, not six stale/current revisions');
+}
+const decisionModel = buildLifterModel(decisionHistory, null, null);
+for (const ex of decisionExercises)
+    assert.equal(decisionModel.lifts?.[ex.id]?.sessions, 3,
+        'lifter model plateau evidence must count each persisted workout identity once');
+assert.equal(deloadAdvice(decisionHistory), null,
+    'three actual sessions with edited revisions must not satisfy the four-session deload evidence floor');
+
 const exercise = { exerciseId: 'lift', name: 'Lift', sets: 2, progressionStyle: 'double',
     prescription: { reps: [10, 15], rir: [2, 2] } };
 const performed = () => Array.from({ length: 2 }, (_, setIndex) => ({ exerciseId: 'lift', setIndex, load: 50, reps: 15, rir: 2 }));
@@ -138,5 +169,5 @@ for (const program of [generated, custom]) for (const [flag, outcome] of flags) 
     if (program.nextEngine) assert.equal(analyzeShellHistoryForNextEngine(program, history, EXERCISES).workouts[0].progression[0].outcome, outcome);
     checks++;
 }
-console.log(`PASS M225: malformed numeric/revision evidence, canonical adaptive/recovery revision ownership, ${checks} context/provenance routes, additive flags, actual generated/custom log roundtrips and immutable tiered replay.`);
+console.log(`PASS M225: malformed numeric/revision evidence, canonical adaptive/recovery/decision revision ownership, ${checks} context/provenance routes, additive flags, actual generated/custom log roundtrips and immutable tiered replay.`);
 

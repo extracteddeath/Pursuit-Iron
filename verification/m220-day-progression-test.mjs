@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { sessionSuggestion, lastDayPerf, dayPerfFor, prescribeSets, EX_BY_ID } from '../modules/App.js';
-import { plateauSessions } from '../modules/training-domain/prescriptions.js';
+import { linearStalled, plateauSessions, styleOverride } from '../modules/training-domain/prescriptions.js';
 import { refreshPendingSetTargets } from '../modules/next-engine/workout-runtime.js';
 const id = 'seated-calf';
 export const program = { id: 'm220-custom', custom: true, weeks: 10, config: { unit: 'lb', weeks: 10, progression: 'manual', goal: 'both', experience: 'intermediate', deload: false },
@@ -45,6 +45,17 @@ const duplicateLabelProgram = structuredClone(program);
 duplicateLabelProgram.days.forEach(day => { day.label = 'Lower'; });
 assert.deepEqual(plateauSessions([{ ...migratedLower, dayLabel: 'Lower' }], id, 'lower', 8, duplicateLabelProgram), [],
     'duplicate labels keep stale adaptive-style history unresolved instead of guessing');
+const flatOtherDay = Array.from({ length: 5 }, (_, i) => entry('legs', Date.UTC(2026, 9, 1 + i), 210, [15,15,15]));
+const targetPerf = { [id]: { weight: 210, reps: 15 } };
+assert.equal(linearStalled(targetPerf, EX_BY_ID[id], flatOtherDay, program, 'lower'), false,
+    'beginner linear-stall detection cannot graduate a different authored day');
+assert.notEqual(styleOverride(program, EX_BY_ID[id], false, 1, targetPerf, flatOtherDay, 'lower')?.kind, 'plateau',
+    'hard plateau override cannot borrow a different day through a non-program-aware stall call');
+const flatLower = Array.from({ length: 5 }, (_, i) => entry('lower', Date.UTC(2026, 9, 1 + i), 210, [15,15,15,15,15]));
+assert.equal(linearStalled(targetPerf, EX_BY_ID[id], flatLower, program, 'lower'), true,
+    'same-day flat beginner history still triggers the intended linear-stall graduation');
+assert.equal(styleOverride(program, EX_BY_ID[id], false, 1, targetPerf, flatLower, 'lower')?.kind, 'plateau',
+    'same-day flat intermediate history still triggers the intended plateau override');
 console.log('PASS M220: screenshot Lower/Legs regression, separate day loads, set-count qualification, earned progression, scoped fallbacks, shared LAST/advice and immutable history.');
 
 const automatic = { weight: '210', reps: '20', auto: true, done: false, valueOwner: 'prescription', target: { w: '210', reps: '12-20' } };

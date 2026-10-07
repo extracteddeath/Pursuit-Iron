@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { normalizeRequest } from '../modules/next-engine/prescription.js';
 import { completedHistorySets, attemptedHistorySets, convertHistoryLoad } from '../modules/next-engine/history-contract.js';
 import { evaluateWorkoutProgression } from '../modules/next-engine/performance.js';
+import { buildRuntimeSetTargets, buildUserAddedSlotPrescriptions, techniqueProtocolFromCell } from '../modules/next-engine/workout-runtime.js';
 import { initialPhaseForGoal, phaseLabel, phasePolicyFor, SUPPORTED_PHASES } from '../modules/next-engine/phase-policy.js';
 import { shellConfigToNextRequest, NextShellAdapterError } from '../modules/next-engine/app-shell-adapter.js';
 import { generateNextCycleForShell, convertProgramToNextCycleForShell, advanceNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
@@ -188,3 +189,13 @@ const invalidPositionDecision = evaluateWorkoutProgression({ exercises: [progExe
     duplicateRows.map(({ setIndex, ...row }) => row), { equipmentAvailable: ['barbell','rack'] })[0];
 assert.equal(invalidPositionDecision.outcome, 'unobserved');
 console.log('PASS boundary history/progression: bad units, ambiguous completion flags, duplicate set positions and missing positions fail closed.');
+
+assert.equal(Object.keys(buildUserAddedSlotPrescriptions({ weeks: Infinity, repRange: [8,12] })).length, 1);
+assert.equal(Object.keys(buildUserAddedSlotPrescriptions({ weeks: 1e9, repRange: [8,12] })).length, 1);
+assert.equal(Object.keys(buildUserAddedSlotPrescriptions({ weeks: '6', repRange: [8,12] })).length, 6);
+assert.equal(buildRuntimeSetTargets({ exerciseId: 'back_squat', cell: { sets: Infinity, reps: '5-8', rir: 2 }, includeWarmups: false }).length, 1);
+assert.equal(buildRuntimeSetTargets({ exerciseId: 'back_squat', cell: { sets: 1000000, reps: '5-8', rir: 2 }, includeWarmups: false }).length, 1);
+assert.equal(buildRuntimeSetTargets({ exerciseId: 'back_squat', cell: { sets: '4', reps: '5-8', rir: 2 }, includeWarmups: false }).length, 4);
+assert.equal(buildRuntimeSetTargets({ exerciseId: 'back_squat', cell: null, includeWarmups: false }).length, 1);
+assert.deepEqual(techniqueProtocolFromCell(undefined), { type: null });
+console.log('PASS boundary runtime: corrupted set/week counts cannot create unbounded loops; valid numeric strings remain usable.');

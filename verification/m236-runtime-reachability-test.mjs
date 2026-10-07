@@ -31,7 +31,7 @@ function dependencies(file) {
     const source = fs.readFileSync(path.join(root, file), 'utf8');
     const specs = [];
     for (const line of source.split('\n')) {
-        const match = line.match(/^\s*(?:import\s+(?:.*?\s+from\s+)?|export\s+(?:\*|\{.*\})\s+from\s+)['"]([^'"]+)['"]/);
+        const match = line.match(/^\s*(?:import\s+(?:.*?\s+from\s+)?|export\s+(?:\*(?:\s+as\s+[A-Za-z_$][\w$]*)?|\{.*\})\s+from\s+)['"]([^'"]+)['"]/);
         if (match)
             specs.push(match[1]);
     }

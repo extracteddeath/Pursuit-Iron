@@ -3,7 +3,7 @@ import { EXERCISE_MAP as NEXT_EXERCISE_MAP } from "../next-engine/exercise-db.js
 import { generateNextProgramForShell, getNextShellCell, nextExerciseIdForShellExercise } from "../next-engine/app-shell-adapter.js";
 import { avoidableExerciseOverlap } from "../next-engine/exercise-economy.js";
 import { captureShellVolumeSnapshot, auditShellVolume, shellDayMuscleBreakdown } from "../next-engine/volume-repair.js";
-import { historyNumber, convertHistoryLoad, observedHistoryRIR, completedHistorySets, normalizeHistoryRevisions, validHistoryDate, resolveHistoryDayIndex } from '../next-engine/history-contract.js';
+import { historyNumber, convertHistoryLoad, observedHistoryRIR, completedHistorySets, normalizeHistoryEntries, normalizeHistoryRevisions, validHistoryDate, resolveHistoryDayIndex } from '../next-engine/history-contract.js';
 import { cycleBlockMetadata } from "../program-duration.js";
 import { nextWorkoutSuggestionForShell } from "../next-engine/workout-history-adapter.js";
 import { ENGINE_COMPATIBLE_VERSIONS } from "../next-engine/config.js";
@@ -4741,21 +4741,20 @@ function planOverview(program, weekIndex = 1, cycle = null, history = [], saved 
     /* SESSIONS ALREADY LOGGED, per week. History entries carry `weekIndex`, so the plan can say how
        much of each week you actually did rather than only what it prescribes — which is the difference
        between a plan you read and a plan you are inside of. */
-    const doneByWeek = {}, doneDaysByWeek = {};
-    for (const h of history || []) {
-        if (!h || h.programId !== program.id)
+    const doneDaysByWeek = {};
+    for (const h of normalizeHistoryEntries(history, program.id).entries) {
+        const dayIndex = resolveHistoryDayIndex(days, h);
+        if (dayIndex < 0)
             continue;
         const w = Number(h.weekIndex);
         if (!Number.isFinite(w) || w < 1)
             continue;
-        doneByWeek[w] = (doneByWeek[w] || 0) + 1;
-        if (h.dayId)
-            (doneDaysByWeek[w] = doneDaysByWeek[w] || new Set()).add(h.dayId);
+        (doneDaysByWeek[w] = doneDaysByWeek[w] || new Set()).add(days[dayIndex].id);
     }
     const weeks = [];
     for (let w = 1; w <= total; w++) {
         const isDeload = hasDeload && w === total;
-        const done = Math.min(doneByWeek[w] || 0, days.length);
+        const done = Math.min(doneDaysByWeek[w]?.size || 0, days.length);
         /* status drives the badge. Exactly one week is NOW and at most one is NEXT, so the list has a
            single obvious entry point rather than several competing highlights. */
         const status = w === weekIndex ? "now" : w === weekIndex + 1 ? "next" : w < weekIndex ? "past" : "todo";

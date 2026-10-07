@@ -15861,9 +15861,8 @@ function customProgramSuggestion(program, day, slot, unit, weekIndex, history) {
         rir: Array.isArray(saved.rir) ? saved.rir.join('-') : saved.rir } : currentCell;
     const [lo, hi] = cellRepRange(cell, program, ex, slot === day?.primaryIndex);
     const rir = effortBounds(cell.rir) || [2, 2];
-    const work = (Array.isArray(last.perf[ex.id].sets) ? last.perf[ex.id].sets : [])
-        .filter(x => x && !x.warm && !x.sub && x.done !== false && historyNumber(x.w) !== null && historyNumber(x.w) >= 0
-            && historyNumber(x.r) > 0);
+    const work = completedHistorySets(last.perf[ex.id])
+        .filter(x => historyNumber(x.w) !== null && historyNumber(x.w) >= 0);
     if (!work.length) return null;
     const style = resolveStyle(program, ex, slot === day.primaryIndex, weekIndex, null, history, day.id);
     const rack = gymRackFor(ex, unit), step = loadStep(ex, unit);

@@ -2426,7 +2426,8 @@ export function realizeSessions(plans, request, targetDose = {}, directTargetDos
                     const base = muscleScore(def, muscle, role, session, chosen, weeklyMovementUse, request);
                     const direct = publicRegionContribution(def, region);
                     return base + direct * 4 - exact * 3.5 - familyUses * .12 - fatigue * .04;
-                }
+                },
+                tieBreak: (a, b) => a.id.localeCompare(b.id)
             }).candidate;
         };
         const prescriptionByMuscle = new Map(capacityPrescriptions.map(p => [p.muscle, p]));

@@ -32,7 +32,12 @@ const POLICIES = {
         hypertrophyRirShift: 2, strengthRirShift: 2, strengthRepBias: 'normal', advancedTechniqueBudget: 0, specificityBias: .78, sessionCapacityMultiplier: .55
     }
 };
+export const SUPPORTED_PHASES = Object.freeze(Object.keys(POLICIES));
+const SUPPORTED_GOALS = new Set(['hypertrophy', 'strength', 'mixed']);
+
 export function initialPhaseForGoal(goal) {
+    if (!SUPPORTED_GOALS.has(goal))
+        throw new RangeError(`Unsupported training goal: ${String(goal)}.`);
     if (goal === 'hypertrophy')
         return 'hypertrophy_accumulation';
     if (goal === 'strength')
@@ -40,8 +45,12 @@ export function initialPhaseForGoal(goal) {
     return 'mixed_accumulation';
 }
 export function phasePolicyFor(phase) {
-    return POLICIES[phase];
+    const policy = POLICIES[phase];
+    if (!policy)
+        throw new RangeError(`Unsupported training phase: ${String(phase)}.`);
+    return policy;
 }
 export function phaseLabel(phase) {
+    phasePolicyFor(phase);
     return phase.split('_').map(x => x[0].toUpperCase() + x.slice(1)).join(' ');
 }

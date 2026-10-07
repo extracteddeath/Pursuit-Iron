@@ -72,7 +72,9 @@ write('modules/engine-shell.js', shell);
 // from an audit. It is never imported by the independent engine runtime.
 write('reference/App.production.js', source);
 copy('ENGINE_ARCHITECTURE.md'); copy('RELEASE_MANIFEST.json'); copy('BUILD_PROFILE.json');
-write('index.js', "export * as shell from './modules/engine-shell.js';\nexport * from './modules/next-engine/config.js';\nexport * from './modules/next-engine/generate.js';\nexport * from './modules/next-engine/app-shell-adapter.js';\nexport * from './modules/next-engine/cycle-runtime-adapter.js';\nexport * from './modules/next-engine/performance.js';\nexport * from './modules/next-engine/workout-runtime.js';\n");
+for (const file of ['M224_ENGINE_AUDIT_REPAIR.md', 'M225_ENGINE_HISTORY_REPORT.md'])
+  if (fs.existsSync(path.join(root,file))) copy(file);
+write('index.js', "export * as shell from './modules/engine-shell.js';\nexport * from './modules/next-engine/config.js';\nexport * from './modules/next-engine/generate.js';\nexport * from './modules/next-engine/app-shell-adapter.js';\nexport * from './modules/next-engine/cycle-runtime-adapter.js';\nexport * from './modules/next-engine/performance.js';\nexport * from './modules/next-engine/workout-runtime.js';\nexport * from './modules/next-engine/history-contract.js';\nexport * from './modules/next-engine/percentage-protocols.js';\n");
 const manifest = JSON.parse(fs.readFileSync(path.join(root,'RELEASE_MANIFEST.json')));
 const coverage = {
   schemaVersion: 1, release: { milestone: manifest.milestone, build: manifest.build, engineVersion: manifest.engineVersion },

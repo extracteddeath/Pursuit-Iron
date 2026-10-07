@@ -4897,7 +4897,7 @@ function filterWorkoutHistory(history, saved, query, programId, period, now = Da
     const names = new Map((saved || []).map(p => [p.id, p.name]));
     const words = query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
     const cutoff = period === "all" ? -Infinity : now - Number(period) * 86400000;
-    return (history || []).filter(h => {
+    return canonicalHistoryNewest(history).filter(h => {
         if (!h || h.date == null || !Number.isFinite(new Date(h.date).getTime()))
             return false;
         if (programId !== "all" && String(h.programId || "none") !== programId)
@@ -4913,7 +4913,7 @@ function groupSessionsByCycle(history, cycles, saved, unit) {
     const progById = new Map((saved || []).map(p => [p.id, p]));
     const cycleById = new Map((cycles || []).map(c => [c.id, c]));
     const groups = new Map();
-    for (const h of history || []) {
+    for (const h of canonicalHistoryNewest(history)) {
         if (!h || h.date == null || isNaN(new Date(h.date)))
             continue;
         const prog = progById.get(h.programId);
@@ -4969,7 +4969,7 @@ function groupSessionsByCycle(history, cycles, saved, unit) {
 function groupSessionsByMonth(history, unit) {
     const groups = new Map();
     const thisYear = new Date().getFullYear();
-    for (const h of history || []) {
+    for (const h of canonicalHistoryNewest(history)) {
         if (!h || h.date == null)
             continue;
         const d = new Date(h.date);

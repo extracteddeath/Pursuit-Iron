@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process';
 // none of these checks rewrites release identity or pushes a historical patch.
 const groups = {
     generation: [
-        'm196-capacity-band-regression', 'm197-capacity-monotonic', 'm198-creation-audit',
+        'engine-production-fuzz', 'm196-capacity-band-regression', 'm197-capacity-monotonic', 'm198-creation-audit',
         'm199-wizard-feasibility', 'm199-volume-repair', 'm200-regional-dose', 'm202-locked-cycle-dose',
         'm206-working-week-dose'
     ],

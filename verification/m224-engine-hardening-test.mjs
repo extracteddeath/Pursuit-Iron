@@ -111,6 +111,15 @@ const reversedCursor = nextSessionCursor(p, [cursorOlder, cursorNewer]);
 assert.deepEqual(reversedCursor, orderedCursor, 'next-session cursor is independent of imported history array order');
 assert.equal(nextDueDayId(p, [cursorOlder, cursorNewer]), nextDueDayId(p, [cursorNewer, cursorOlder]),
     'program-view next day is independent of imported history array order');
+const invalidFutureCursor = { ...cursorOlder, id: 'cursor-invalid-future', dayId: p.days.at(-1).id, date: 1e100 };
+assert.deepEqual(nextSessionCursor(p, [invalidFutureCursor, cursorNewer, cursorOlder]), orderedCursor,
+    'invalid imported timestamps cannot hijack the next-session cursor');
+assert.equal(nextDueDayId(p, [invalidFutureCursor, cursorNewer, cursorOlder]), nextDueDayId(p, [cursorNewer, cursorOlder]),
+    'invalid imported timestamps cannot hijack the program-view next day');
+const supersededCursor = { ...cursorNewer, dayId: p.days[0].id, updatedAt: 1500 };
+const correctedCursor = { ...cursorNewer, dayId: p.days[1].id, updatedAt: 2500 };
+assert.deepEqual(nextSessionCursor(p, [supersededCursor, correctedCursor, cursorOlder]), orderedCursor,
+    'duplicate history identities use the newest revision once rather than advancing twice');
 
 // A saved custom target survives subsequent dose edits. Imported target effort has identical semantics.
 const custom = { id: 'custom', custom: true, weeks: 6, config, days: [{ id: 'custom-day', label: 'Push', primaryIndex: -1, exercises: [id] }],

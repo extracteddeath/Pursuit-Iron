@@ -22,7 +22,7 @@ const walk = directory => fs.readdirSync(path.join(root, directory), { withFileT
 });
 const moduleFiles = walk('modules').filter(f => f.endsWith('.js'));
 const moduleSet = new Set(moduleFiles);
-const engineRoots = Object.freeze(['modules/engine-api.js', 'modules/engine-shell.js']);
+const engineRoot = 'modules/engine-api.js';
 function resolveRelative(from, specifier) {
     if (!specifier.startsWith('.')) return null;
     let resolved = path.posix.normalize(path.posix.join(path.posix.dirname(from), specifier));
@@ -38,7 +38,7 @@ function dependencies(file) {
     return [...new Set(specs.map(specifier => resolveRelative(file, specifier)).filter(Boolean))];
 }
 const runtimeSet = new Set();
-const stack = [...engineRoots];
+const stack = [engineRoot];
 while (stack.length) {
     const file = stack.pop();
     if (runtimeSet.has(file)) continue;
@@ -62,8 +62,8 @@ const coverage = {
     engineModules: runtime.filter(f => f.startsWith('modules/next-engine/')).map(f => path.basename(f)).sort(),
     canonicalRuntimeFiles: runtime.sort(),
     domainExports: Object.keys(domain).sort(),
-    entryRoots: engineRoots,
-    boundary: 'Canonical engine dependencies are copied byte for byte from the engine API closure. No declarations are extracted from App.js, and UI/reference source is not bundled. Application parity is verified before artifact publication.'
+    entryRoot: engineRoot,
+    boundary: 'Canonical engine dependencies are copied byte for byte from the single engine-api root. engine-shell remains a transitive compatibility surface, not a second authority. No declarations are extracted from App.js, and UI/reference source is not bundled. Application parity is verified before artifact publication.'
 };
 write('coverage.json', JSON.stringify(coverage, null, 2) + '\n');
 const suites = [];

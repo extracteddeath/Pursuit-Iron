@@ -752,9 +752,13 @@ function customExerciseHistory(program, day, id, history) {
     // are properties of this day slot, not of the movement globally.
     const label = String(day?.label || '').trim();
     if (label) {
-        const byLabel = own.find(h => String(h.dayLabel || '').trim() === label);
-        if (byLabel)
-            return byLabel;
+        const matchingDays = (program?.days || []).filter(d => String(d?.label || '').trim() === label
+            && Array.isArray(d?.exercises) && d.exercises.includes(id));
+        if (matchingDays.length === 1) {
+            const byLabel = own.find(h => String(h.dayLabel || '').trim() === label);
+            if (byLabel)
+                return byLabel;
+        }
     }
     // Old custom logs may predate day identity. They are comparable only when this exercise occurs on
     // exactly one authored day, making the ownership unambiguous. Otherwise they are reference-only.

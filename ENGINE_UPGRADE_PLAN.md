@@ -1,6 +1,6 @@
 # Engine upgrade sequence through M235
 
-Continuation branch: `engine/m228-m231`. Each milestone is committed only with its own passing evidence. The application release stays separate from this engineering sequence; `main` is not advanced by these checkpoints.
+Final engineering verification branch: `engine/m235-verification-2`. Each milestone was committed with its own passing evidence. The application release remains separate from this engineering sequence; `main` is not advanced by these checkpoints.
 
 | Milestone | Scope | Acceptance |
 |---|---|---|
@@ -15,4 +15,4 @@ Continuation branch: `engine/m228-m231`. Each milestone is committed only with i
 
 Completed milestone details and limitations are recorded in the corresponding reports. A milestone with unfinished acceptance work is not reported as complete.
 
-Verified checkpoints: M228–M234. The continuation remains on the engineering branch.
+Verified checkpoints: M228–M235. The M235 behavior-bearing verification commit `94377683c45d8449d1eec5488d76664fcb781822` passed the permanent engine-contract matrix, release integrity, all phone/offline browser gates, and the independent engine audit. Its Verification 2.0 gate passed 26 deterministic property cases, 13/13 Build 816 differentials, stable replay, 2/2 mutation kills, and the performance budgets.

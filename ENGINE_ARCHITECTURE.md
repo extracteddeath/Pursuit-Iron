@@ -1,10 +1,10 @@
 # Production engine map
 
-Current release: M223, app 4.0.0 build 813, Pursuit Engine 0.64.12. The maintained source is the JavaScript in this repository. `RELEASE_MANIFEST.json` certifies the actual runtime and UI files. Historical TypeScript claims and development scripts are not the source of this release. The unreferenced historical root `app.js` bundle has been removed; the production entry is `modules/main.js`.
+Current source candidate: M224, app 4.0.0 build 814, Pursuit Engine 0.64.13. The maintained source is the JavaScript in this repository. `RELEASE_MANIFEST.json` certifies the actual runtime and UI files. Historical TypeScript claims and development scripts are not the source of this release. The unreferenced historical root `app.js` bundle has been removed; the production entry is `modules/main.js`.
 
 ## Independent engine audits
 
-`engine-lab/export-engine.mjs` creates a separate, runnable Node package from current production source. It includes all 46 engine modules and the full exercise catalog unchanged, plus 636 top-level shell declarations whose transitive dependencies do not include React or icon components. Extraction retains original source text and production equipment registration; a new unreviewed top-level initializer fails the export. Coverage, source ranges, dependencies, release identity and hashes are included. Thirty existing semantic suites run without the app or a browser. `engine-lab/verify-parity.mjs` compares catalogs, templates, prescription cells, weekly volume and week plans against the actual application.
+`engine-lab/export-engine.mjs` creates a separate, runnable Node package from current production source. It includes all 48 engine modules and the full exercise catalog unchanged, plus the top-level shell declarations indexed in `coverage.json` whose transitive dependencies do not include React or icon components. Extraction retains original source text and production equipment registration; a new unreviewed top-level initializer fails the export. Coverage, source ranges, dependencies, release identity and hashes are included. Thirty-one semantic suites run without the app or a browser. `engine-lab/verify-parity.mjs` compares catalogs, templates, prescription cells, weekly volume and week plans against the actual application.
 
 The full original `App.js` is retained as reference evidence because UI event handlers still coordinate saved state, storage, cycle edits and workout actions. Those handlers are not misrepresented as independent engine APIs. The isolated package therefore contains all original engine source and integration-boundary evidence, while clearly indexing UI-dependent declarations. It is an audit/development export, not a second production authority. Changes must be reviewed, ported to the canonical sources and checked with the application's integration gates. See [engine-lab/README.md](engine-lab/README.md).
 
@@ -101,3 +101,11 @@ Generation is still synchronous. Shared candidate caches and cheap wizard feasib
 ## Cycle duration authority
 
 `modules/program-duration.js` reads each block length from its saved program by id, with cycle metadata as a fallback. Home, cycle list/detail and Plan use this shared projection, including a separate calendar week for deload. Custom standalone conversion carries the current duration into its entry metadata and planned specification. Settings use one compact numeric field with decrement/increment controls, validate staged input before Save, and preserve three-week and other existing durations. Generated cycle phases display their cycle-owned length without editable duration controls.
+
+## M224 history and percentage contracts
+
+The audit repairs and independent API guide are in [M224_ENGINE_AUDIT_REPAIR.md](M224_ENGINE_AUDIT_REPAIR.md). `history-contract.js` centralizes numeric absence, physical-unit conversion, observed-effort provenance, completed working rows, context, timestamp validation and identity deduplication. Adaptation reports excluded rows rather than allowing one invalid date to suppress usable evidence.
+
+`percentage-protocols.js` owns load/rep waves and capacity adaptation. Preview, the training-max editor and Workout call one executable plan builder. Per-set targets and tier/stage provenance are serialized through the pure `loggedWorkoutPerformance` seam and replayed from history. Explicit user rep/effort edits win; percentages never silently introduce a second set-count owner.
+
+Generation now enforces the final executable weekly clock after dose reconciliation. It can trim engine-owned accessory counts while preserving strength work and manual counts; otherwise it returns an actionable capacity refusal. Remaining regional-volume guidance is reported as partial.

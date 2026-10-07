@@ -1,6 +1,6 @@
-# Engine upgrade and assurance sequence through M256
+# Engine upgrade and assurance sequence through M257
 
-The behavior-bearing engine remains M234 / Pursuit Engine 0.65.6 / app 4.0.0 build 823. M235 verifies that behavior line. M236–M256 harden ownership, verification, CI, history provenance, standalone packaging, and internal responsibility boundaries without changing training behavior or release identity.
+The behavior-bearing engine remains M234 / Pursuit Engine 0.65.6 / app 4.0.0 build 823. M235 verifies that behavior line. M236–M257 harden ownership, verification, CI, history provenance, standalone packaging, and internal responsibility boundaries without changing training behavior or release identity.
 
 | Milestone | Scope | Acceptance |
 |---|---|---|
@@ -32,6 +32,7 @@ The behavior-bearing engine remains M234 / Pursuit Engine 0.65.6 / app 4.0.0 bui
 | M254 | Single suggestion history normalization | Generated-program latest/reference selection and full engine history analysis reuse one canonical revision-normalized history object per suggestion |
 | M255 | Single recovery history context | Recovery/readiness canonicalizes persisted revisions once and reuses that set for effort calibration and per-muscle recovery fitting |
 | M256 | Single semantic-reference history context | Generated suggestions reuse their canonical history object when falling back to semantic exercise-transfer starting references |
+| M257 | Exercise analytics revision ownership | Exercise records and chart series consume canonical persisted workout revisions so edited workouts cannot leave stale records or duplicate points |
 
 ## Current ownership rules
 

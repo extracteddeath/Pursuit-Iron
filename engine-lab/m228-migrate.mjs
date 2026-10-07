@@ -75,6 +75,22 @@ for(const bodyPath of program.get('body')){
     else edits.push([n.start,n.end,`${n.kind} ${keep.map(d=>source.slice(d.start,d.end)).join(', ')};`]);
   } else if((bodyPath.isFunctionDeclaration()||bodyPath.isClassDeclaration()) && n.id && moved.has(n.id.name)){
     edits.push([n.start,n.end,'']);
+  } else if(bodyPath.isExportNamedDeclaration() && bodyPath.get('declaration')?.node){
+    const dp=bodyPath.get('declaration');
+    const d=dp.node;
+    if((dp.isFunctionDeclaration()||dp.isClassDeclaration()) && d.id && moved.has(d.id.name)){
+      edits.push([n.start,n.end,'']);
+    } else if(dp.isVariableDeclaration()){
+      const decPaths=dp.get('declarations');
+      const keep=[];
+      for(const decPath of decPaths){
+        const names=Object.keys(decPath.get('id').getBindingIdentifiers());
+        if(!(names.length && names.every(name=>moved.has(name)))) keep.push(decPath.node);
+      }
+      if(keep.length!==decPaths.length){
+        edits.push([n.start,n.end,keep.length ? `export ${d.kind} ${keep.map(x=>source.slice(x.start,x.end)).join(', ')};` : '']);
+      }
+    }
   } else if(bodyPath.isExpressionStatement() && source.slice(n.start,n.end)==='setShellEquipmentExpander(expandEquipment);'){
     edits.push([n.start,n.end,'']);
   }

@@ -4,7 +4,7 @@ import { deriveTieredLinearState } from '../modules/next-engine/percentage-proto
 import { evaluateWorkoutProgression } from '../modules/next-engine/performance.js';
 import { EXERCISES, EX_BY_ID, prescribeSets, sessionSuggestion, loggedWorkoutPerformance } from '../modules/App.js';
 import { generateNextProgramForShell } from '../modules/next-engine/app-shell-adapter.js';
-import { analyzeShellHistoryForNextEngine } from '../modules/next-engine/workout-history-adapter.js';
+import { analyzeShellHistoryForNextEngine, nextWorkoutSuggestionForShell } from '../modules/next-engine/workout-history-adapter.js';
 import { progressionHistoryForProgram, customExerciseHistory, customExerciseReferenceHistory, muscleRecoveryUncached } from '../modules/training-domain/prescriptions.js';
 import { buildLifterModel, deloadAdvice, exerciseTrends } from '../modules/training-domain/analytics.js';
 
@@ -151,6 +151,16 @@ const generated = generateNextProgramForShell({ config, legacyExercises: EXERCIS
 const day = generated.days[0], slot = 0, id = day.exercises[slot], ex = EX_BY_ID[id];
 for (const cell of Object.values(generated.nextWeekPrescriptions[`${day.id}:${slot}`]))
     Object.assign(cell, { sets: 2, reps: '10-15', rir: '2', progressionStyle: 'double' });
+
+const shellRevisionBase = { id: 'shell-revision', programId: generated.id, dayId: day.id, date: 2_000_000, unit: 'lb' };
+const shellStale = { ...shellRevisionBase, updatedAt: 2_000_001,
+    perf: { [id]: { weight: 100, reps: 15, sets: [{ w: 100, r: 15, rir: 2, tr: 2 }, { w: 100, r: 15, rir: 2, tr: 2 }] } } };
+const shellEdited = { ...shellRevisionBase, updatedAt: 2_000_002,
+    perf: { [id]: { weight: 80, reps: 10, sets: [{ w: 80, r: 10, rir: 2, tr: 2 }, { w: 80, r: 10, rir: 2, tr: 2 }] } } };
+const shellExpected = nextWorkoutSuggestionForShell(generated, [shellEdited], EXERCISES, day, slot, 1);
+for (const revisions of [[shellStale, shellEdited], [shellEdited, shellStale]])
+    assert.deepEqual(nextWorkoutSuggestionForShell(generated, revisions, EXERCISES, day, slot, 1), shellExpected,
+        'shell latest/reference progression must use only the newest persisted workout revision');
 const custom = { id: 'custom', custom: true, weeks: 6, config, days: [{ id: 'custom-day', label: 'Push', primaryIndex: -1, exercises: [id] }],
     overrides: { 'custom-day:0': { sets: 2, reps: '10-15', rir: '2', progressionStyle: 'double' } } };
 for (const program of [generated, custom]) for (const [flag, outcome] of flags) for (const scope of ['exercise', 'set']) {
@@ -169,5 +179,5 @@ for (const program of [generated, custom]) for (const [flag, outcome] of flags) 
     if (program.nextEngine) assert.equal(analyzeShellHistoryForNextEngine(program, history, EXERCISES).workouts[0].progression[0].outcome, outcome);
     checks++;
 }
-console.log(`PASS M225: malformed numeric/revision evidence, canonical adaptive/recovery/decision revision ownership, ${checks} context/provenance routes, additive flags, actual generated/custom log roundtrips and immutable tiered replay.`);
+console.log(`PASS M225: malformed numeric/revision evidence, canonical adaptive/recovery/decision/shell revision ownership, ${checks} context/provenance routes, additive flags, actual generated/custom log roundtrips and immutable tiered replay.`);
 

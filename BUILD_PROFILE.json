@@ -1,11 +1,11 @@
 {
   "profile": "portable-browser-esm-canonical-engine",
-  "milestone": "M232",
+  "milestone": "M233",
   "source": "Canonical engine with milestone contract verification",
-  "engine": "0.65.4; Live Autoregulation",
+  "engine": "0.65.5; Semantic Exercise Graph",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
-  "nextRuntimeModules": 68,
+  "nextRuntimeModules": 69,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m232-live-autoregulation-b821",
-  "uiMilestone": "Pursuit Iron 4.0 Production Release · M232 Live Autoregulation"
+  "cache": "pursuit-iron-production-v4-0-0-m233-semantic-exercise-graph-b822",
+  "uiMilestone": "Pursuit Iron 4.0 Production Release · M233 Semantic Exercise Graph"
 }

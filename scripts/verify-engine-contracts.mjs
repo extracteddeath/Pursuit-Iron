@@ -9,7 +9,7 @@ const groups = {
         'm206-working-week-dose'
     ],
     adaptation: [
-        'm232-live-autoregulation', 'm231-athlete-response', 'm230-realizer-decomposition', 'm229-domain-contracts', 'm228-canonical-boundary', 'm224-engine-hardening', 'm225-history-provenance', 'm226-engine-boundary-integrity', 'm227-request-canonicalization',
+        'm233-semantic-exercise-graph', 'm232-live-autoregulation', 'm231-athlete-response', 'm230-realizer-decomposition', 'm229-domain-contracts', 'm228-canonical-boundary', 'm224-engine-hardening', 'm225-history-provenance', 'm226-engine-boundary-integrity', 'm227-request-canonicalization',
         'm222-custom-program-parity', 'm221-engine-input-stability', 'm181-dose-reconciliation', 'm182-exercise-selection-intelligence', 'm182-selection-matrix',
         'm183-progression-safeguards', 'm184-longitudinal-evidence', 'm185-phase-specialization',
         'm186-explainable-block-review', 'm189-adaptive-progression-selection', 'm189-integration-wiring',

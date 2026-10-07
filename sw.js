@@ -1,5 +1,5 @@
-/* Pursuit Iron 4.0 — M232 production release. */
-const CACHE="pursuit-iron-production-v4-0-0-m232-live-autoregulation-b821";
+/* Pursuit Iron 4.0 — M233 production release. */
+const CACHE="pursuit-iron-production-v4-0-0-m233-semantic-exercise-graph-b822";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
   "./BUILD_PROFILE.json",
@@ -84,6 +84,7 @@ const SHELL=[
   "./modules/next-engine/recovery-realization.js",
   "./modules/next-engine/recovery.js",
   "./modules/next-engine/response.js",
+  "./modules/next-engine/semantic-exercise-graph.js",
   "./modules/next-engine/setup-economy.js",
   "./modules/next-engine/shell-equipment.js",
   "./modules/next-engine/shell-projection.js",

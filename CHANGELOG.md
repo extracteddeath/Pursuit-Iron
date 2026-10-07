@@ -1,3 +1,9 @@
+# M233 · build 822 candidate · Engine 0.65.5
+
+- Add immutable semantic exercise relationships and explicit versioned custom mechanics; protect complementary functions and strength specificity.
+- Use one semantic gate for phase continuity and require stricter evidence for numeric transfer than for stimulus transfer.
+- Allow conservative, loadable reference-only starts from recent owned observations of reviewed barbell variants; borrowed history never earns progression.
+
 # M232 · build 821 candidate · Engine 0.65.4
 
 - Ease one untouched automatic accessory row only after two explicitly observed misses; preserve manual/completed work and strength protocols.

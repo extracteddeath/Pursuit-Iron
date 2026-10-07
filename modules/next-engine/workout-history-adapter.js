@@ -4,6 +4,7 @@ import { evaluateWorkoutProgression } from './performance.js';
 import { assessRecovery, recoverySignalForDecision } from './recovery.js';
 import { diagnoseExerciseResponse } from './response.js';
 import { deriveAthleteResponse, requestWithAthleteResponse } from './athlete-response.js';
+import { createSemanticExerciseGraph, transferExerciseStartingReference } from './semantic-exercise-graph.js';
 import { EXERCISE_MAP } from './exercise-db.js';
 import { estimate1RM } from './history.js';
 import { availableLoadAtOrBelow } from './loading.js';
@@ -288,7 +289,8 @@ export function nextWorkoutSuggestionForShell(program, history, legacyExercises,
         decision = workout.progression.find(d => d.exerciseId === nextId);
     }
     if (!decision)
-        return last ? { weight: lastLoad, dir: 'hold', reason: 'Hold the last logged load until the new engine has comparable completed-set evidence.', reps, last, lastUnit: lastEntry?.unit || program.config?.unit, action: 'initial' } : null;
+        return last ? { weight: lastLoad, dir: 'hold', reason: 'Hold the last logged load until the new engine has comparable completed-set evidence.', reps, last, lastUnit: lastEntry?.unit || program.config?.unit, action: 'initial' }
+            : semanticStartingReferenceForShell(program, history, day, nextId, cell);
     const current = decision.currentLoad ?? lastLoad;
     /* ⚠ SUGGEST FOR THIS WEEK, NOT FOR THE WEEK THE LAST WORKOUT WAS LOGGED IN. `decision` was made when the last workout was
        analysed, against THAT workout's prescription; this function then only relabelled the rep range. Measured on a 6-week
@@ -391,6 +393,34 @@ export function nextWorkoutSuggestionFromPerformedShell(program, legacyExercises
         confidence: decision.confidence
     };
 }
+export function semanticStartingReferenceForShell(program, history, day, nextId, cell, options = {}) {
+    const request = program?.nextEngine?.request;
+    if (!request || program.config?.percentScheme) return null;
+    const asOf = options.asOf ?? Date.now();
+    const entries = normalizeHistoryEntries(history, program.id).entries.filter(entry => entry.dayId === day.id && Number(entry.date) <= asOf && asOf - Number(entry.date) <= 90 * 86400000
+        && Object.values(entry.perf ?? {}).some(perf => perf?.prescription?.exerciseId && perf.prescription.exerciseId !== nextId));
+    if (!entries.length) return null;
+    const graph = createSemanticExerciseGraph(request.customExercises), targetUnit = program.config?.unit ?? request.equipment.loading?.unit ?? 'lb';
+    const scheduledDay = program.nextEngine.program.sessions[program.days.findIndex(d => d.id === day.id)]?.day;
+    const available = request.schedule.days.find(d => d.day === scheduledDay)?.equipmentOverride ?? request.equipment.available;
+    for (const entry of [...entries].reverse()) for (const perf of Object.values(entry.perf ?? {})) {
+        const fromId = perf?.prescription?.exerciseId;
+        if (!fromId || fromId === nextId || !graph.node(fromId)) continue;
+        const sets = completedHistorySets(perf).map(raw => ({ ...historyExposureContext(raw), done: true,
+            load: numberOf(raw.w), reps: intOf(raw.r), rir: observedHistoryRIR(raw), painFlag: raw.painFlag === true, techniqueQuality: raw.techniqueQuality }));
+        const flags = progressionExposureContext([entry, perf, ...sets]);
+        const transfer = transferExerciseStartingReference({ graph, fromId, toId: nextId, sets,
+            sourceUnit: entry.unit ?? targetUnit, targetUnit,
+            context: { interrupted: flags.interrupted, prescriptionEdited: flags.nonComparable, recoveryLimited: flags.badDay,
+                role: cell?.role, request, day: scheduledDay },
+            snapLoad: load => { const inventoryUnit = request.equipment.loading?.unit ?? targetUnit;
+                return convertLoad(availableLoadAtOrBelow(nextId, convertLoad(load, targetUnit, inventoryUnit), request.equipment.loading, available), inventoryUnit, targetUnit); } });
+        if (transfer.load !== null) return { weight: transfer.load, dir: 'hold', reps: String(cell?.reps ?? ''), action: 'initial', referenceOnly: true,
+            confidence: 'low', reason: `Conservative starting reference from ${graph.node(fromId).name}. This is not earned progression for the new exercise.`, transfer };
+    }
+    return null;
+}
+
 export function deriveProgressionSelectionEvidence(workouts = []) {
     const rows = new Map();
     const excluded = new Set(['unobserved', 'non_comparable', 'context_limited', 'interrupted', 'incomplete']);

@@ -1,5 +1,6 @@
 import { migrateDomainRecord } from './domain-contracts.js';
 import { validateAthleteResponse, personalizeMusclePrescription } from './athlete-response.js';
+import { validateCustomExerciseSemantics } from './semantic-exercise-graph.js';
 import { ALL_MUSCLES, MUSCLE_DOSE_PRIOR, OPTIONAL_MUSCLES, PRIORITY_MULTIPLIER } from './config.js';
 import { initialPhaseForGoal, phasePolicyFor } from './phase-policy.js';
 import { normalizeLoadingInventory } from './loading.js';
@@ -270,6 +271,7 @@ export function normalizeRequest(request) {
         if (!recordLike(exercise.muscles) || !Object.keys(exercise.muscles).length)
             throw new Error(`Custom exercise ${name} needs at least one muscle target.`);
         const clone = structuredClone(exercise);
+        if (clone.semanticMetadata !== undefined) clone.semanticMetadata = validateCustomExerciseSemantics(clone.semanticMetadata);
         normalizedCustomExercises.push({ ...clone, id, name, ...(equipment === undefined ? {} : { equipment }),
             ...(equipmentAlternatives === undefined ? {} : { equipmentAlternatives }) });
     }

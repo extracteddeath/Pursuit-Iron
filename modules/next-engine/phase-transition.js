@@ -5,38 +5,13 @@ import { firstPassingCapacityProgram } from './capacity-generation.js';
 import { deriveMuscleLedger } from './ledgers.js';
 import { historyDecision, withBlockReviewExplainability, withProgramExplainability } from './explainability.js';
 import { progressionInstruction, reselectProgressionStyle, continuationProgressionStyle } from './progression-style.js';
+import { evaluateExerciseTransfer } from './semantic-exercise-graph.js';
 
-function muscleSimilarity(a, b) {
-    const muscles = new Set([
-        ...Object.keys(a.muscles),
-        ...Object.keys(b.muscles)
-    ]);
-    let overlap = 0;
-    let union = 0;
-    for (const muscle of muscles) {
-        const av = a.muscles[muscle]?.credit ?? 0;
-        const bv = b.muscles[muscle]?.credit ?? 0;
-        overlap += Math.min(av, bv);
-        union += Math.max(av, bv);
-    }
-    return union > 0 ? overlap / union : 0;
-}
 
-function strengthCompatible(previous, candidate) {
-    const lifts = ['bench_press', 'back_squat', 'deadlift', 'overhead_press'];
-    return lifts.some(lift => {
-        const prior = previous.liftSpecificity?.[lift] ?? 0;
-        const next = candidate.liftSpecificity?.[lift] ?? 0;
-        return next > .45 && prior > .45 && prior >= next - .15;
-    });
-}
 
-function roleCompatible(previous, candidate) {
-    if (previous.role === candidate.role)
-        return true;
-    const hypertrophy = new Set(['hypertrophy_compound', 'hypertrophy_isolation']);
-    return hypertrophy.has(previous.role) && hypertrophy.has(candidate.role);
-}
+
+
+
 
 function isCompatibleReplacement(previous, candidate, day, request, context) {
     const priorDef = context.exerciseById(previous.exerciseId);
@@ -47,17 +22,9 @@ function isCompatibleReplacement(previous, candidate, day, request, context) {
         return false;
     if (context.isAvoided(previous.exerciseId))
         return false;
-    if (!roleCompatible(previous, candidate))
-        return false;
-    if (candidate.role === 'primary_strength' || candidate.role === 'secondary_strength') {
-        return strengthCompatible(priorDef, candidateDef);
-    }
-    const similarity = muscleSimilarity(priorDef, candidateDef);
-    const sameMovement = priorDef.movementFamily === candidateDef.movementFamily;
-    const sameCompoundClass = priorDef.flags.compound === candidateDef.flags.compound;
-    if (candidate.advancedTechnique && !sameCompoundClass)
-        return false;
-    return similarity >= .5 && (sameMovement || similarity >= .72);
+    if (previous.role !== candidate.role && !(['hypertrophy_compound', 'hypertrophy_isolation'].includes(previous.role)
+        && ['hypertrophy_compound', 'hypertrophy_isolation'].includes(candidate.role))) return false;
+    return evaluateExerciseTransfer(priorDef, candidateDef, { role: candidate.role, request, day }).allowed;
 }
 
 function sessionsWithExercise(program, sessionId, candidateId, previous) {

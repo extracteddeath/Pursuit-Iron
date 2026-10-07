@@ -656,8 +656,10 @@ function prescribedRIRof(set) {
     return Number.isFinite(n) ? n : null;
 }
 
-function dayPerfFor(day, perf, history) {
+function dayPerfFor(day, perf, history, program = null) {
     const out = {};
+    const scopedHistory = program ? progressionHistoryForProgram(program, history) : (history || []);
+    const targetIndex = program ? (program.days || []).findIndex(candidate => candidate?.id === day?.id) : -1;
     // Estimated 1RM of a session's best logged set — used only to pick which recent session anchors
     // the next suggestion, so demonstrated capacity wins over a single off day.
     const anchorE1 = pp => {
@@ -671,15 +673,13 @@ function dayPerfFor(day, perf, history) {
         return best;
     };
     day.exercises.forEach(id => {
-        // Anchor the suggestion on the BEST of the last few sessions OF THIS DAY that logged this lift,
-        // not strictly the most recent one. A single fatigued / readiness-reduced light day shouldn't
-        // drop your working load and keep it there once you've recovered — your demonstrated capacity
-        // should hold. A genuine multi-session decline still pulls the best-of-recent down with it, and
-        // ties favor the most recent session (so real progression is reflected immediately). `reps !=
-        // null` (not weight > 0) keeps assisted/bodyweight lifts tracked per-day.
+        // Anchor the suggestion on the BEST of the last few comparable sessions OF THIS DAY. When the
+        // program is known, program ownership and day migration both resolve through the canonical
+        // provenance rules; another program/day can never become progression evidence by id collision.
         const recent = [];
-        for (const h of history) {
-            if (h.dayId === day.id && h.perf && h.perf[id] && h.perf[id].reps != null) {
+        for (const h of scopedHistory) {
+            const sameDay = program ? resolveHistoryDayIndex(program.days, h) === targetIndex : h.dayId === day.id;
+            if (sameDay && h.perf && h.perf[id] && h.perf[id].reps != null) {
                 recent.push(h.perf[id]);
                 if (recent.length >= 3)
                     break;
@@ -915,6 +915,8 @@ function effortCalibration(history) {
 
 function lastDayPerf(day, perf, history, program = null) {
     const out = {};
+    const scopedHistory = program ? progressionHistoryForProgram(program, history) : (history || []);
+    const targetIndex = program ? (program.days || []).findIndex(candidate => candidate?.id === day?.id) : -1;
     for (const id of day.exercises) {
         if (program?.custom === true && program?.engineSource !== "pursuit-next") {
             const comparable = customExerciseHistory(program, day, id, history);
@@ -922,20 +924,21 @@ function lastDayPerf(day, perf, history, program = null) {
                 out[id] = comparable.perf[id];
             continue;
         }
-        for (const h of (history || [])) { // history is newest-first
-            if (h.dayId === day.id && h.perf?.[id] && h.perf[id].reps != null) {
+        for (const h of scopedHistory) { // history is newest-first
+            const sameDay = program ? resolveHistoryDayIndex(program.days, h) === targetIndex : h.dayId === day.id;
+            if (sameDay && h.perf?.[id] && h.perf[id].reps != null) {
                 out[id] = h.perf[id];
                 break;
             }
         }
         if (!out[id] && perf?.[id])
-            out[id] = perf[id]; // never trained on this day → carry global
+            out[id] = perf[id]; // no comparable history for this day → caller-provided reference only
     }
     return out;
 }
 
 function anchorPerfFor(program, day, perf, history, weekIndex) {
-    const best = dayPerfFor(day, perf, history);
+    const best = dayPerfFor(day, perf, history, program);
     if (!day || !Array.isArray(day.exercises))
         return best;
     let last = null; // computed lazily — most days have no DDP lift
@@ -947,7 +950,7 @@ function anchorPerfFor(program, day, perf, history, weekIndex) {
         if (resolveStyle(program, ex, slot === day.primaryIndex, weekIndex, perf, history, day?.id) !== "dynamic")
             return;
         if (!last)
-            last = lastDayPerf(day, perf, history);
+            last = lastDayPerf(day, perf, history, program);
         if (last[id])
             out[id] = last[id];
     });

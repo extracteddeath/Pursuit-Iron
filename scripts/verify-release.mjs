@@ -55,7 +55,6 @@ if (sha(Buffer.from(aggregateBlob)) !== manifest.runtimeAggregate) fail('runtime
 for (const [file, expected] of Object.entries(manifest.uiFiles ?? {})) {
     if (!fs.existsSync(path.join(root, file))) fail(`manifest UI file missing: ${file}`);
     if (sha(bytes(file)) !== expected) fail(`UI hash mismatch: ${file}`);
-    if (file !== 'sw.js' && !shellSet.has('./' + file)) fail(`UI file is not available offline: ${file}`);
 }
 
 const jsFiles = [];

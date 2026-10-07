@@ -1,4 +1,6 @@
-const __APP_VERSION__='4.0.0'; const __BUILD__='813';
+import { PCT_SCHEMES, percentageProtocolFor, adaptPercentageSetBudget, deriveTieredLinearState } from './next-engine/percentage-protocols.js';
+import { historyNumber, convertHistoryLoad, observedHistoryRIR, completedHistorySets, historyExposureContext, progressionExposureContext, normalizeHistoryEntries, validHistoryDate, historyLoadReason } from './next-engine/history-contract.js';
+const __APP_VERSION__='4.0.0'; const __BUILD__='815';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { holdWorkoutScreenAwake } from "./mobile-lifecycle.js";
@@ -4851,7 +4853,7 @@ function endlessStalled(program, entries, dpw) {
             if (!mains.has(id) || !p.sets)
                 return;
             p.sets.forEach(s => { if (s.w > 0 && s.r > 0)
-                best = Math.max(best, e1rm(s.w, s.r)); });
+                best = Math.max(best, e1rm(convertHistoryLoad(s.w, h.unit, program.config?.unit), s.r)); });
         }));
         return best;
     };
@@ -5061,8 +5063,7 @@ function nextSessionCursor(program, history) {
        first pass through a block we can use those facts instead of an inferred row count. Legacy/mixed
        history (missing either field), and post-block looping behavior, keep the old count fallback rather
        than guessing at data that cannot be reconstructed safely. */
-    const firstPass = done < maxWeek * dpw;
-    const explicit = firstPass && entries.length > 0 && entries.every(h => Number.isInteger(Number(h.weekIndex))
+    const explicit = entries.length > 0 && entries.every(h => Number.isInteger(Number(h.weekIndex))
         && Number(h.weekIndex) >= 1 && Number(h.weekIndex) <= maxWeek && historyDayIndex(days, h) >= 0);
     if (explicit) {
         let weekIndex = 1;
@@ -6818,7 +6819,7 @@ function addedSeconds(program, day, weekIndex, withTransitions) {
         sec += exerciseSlotSec(ex, {
             sets: Number(computeCell(program, day, id, slot, weekIndex).sets) || 0,
             goal: goalForDay(program, day), isPrimary: slot === day.primaryIndex,
-            linked: !!program.ss?.[`${day.id}:${slot}`],
+            linked: !program.config?.noSupersets && !!program.ss?.[`${day.id}:${slot}`],
             restCustom: program.overrides?.[`${day.id}:${slot}`]?.rest,
             withTransitions
         });
@@ -6836,7 +6837,7 @@ function daySeconds(program, day, weekIndex, withTransitions) {
         sec += exerciseSlotSec(ex, {
             sets: Number(computeCell(program, day, id, slot, weekIndex).sets) || 0,
             goal: goalForDay(program, day), isPrimary: slot === day.primaryIndex,
-            linked: !!program.ss?.[`${day.id}:${slot}`],
+            linked: !program.config?.noSupersets && !!program.ss?.[`${day.id}:${slot}`],
             restCustom: program.overrides?.[`${day.id}:${slot}`]?.rest,
             withTransitions
         });
@@ -8104,7 +8105,7 @@ function personalRecoveryHours(history, part, clockHours) {
             for (const s of ss) {
                 const w = +(s.w != null ? s.w : s.weight), r = +(s.r != null ? s.r : s.reps);
                 if (w > 0 && r > 0 && !s.warm && !s.sub) {
-                    const e = e1rmRIR(w, r, 0);
+                    const e = e1rmRIR(convertHistoryLoad(w, h.unit, "kg"), r, 0);
                     if (e > best)
                         best = e;
                 }
@@ -8248,7 +8249,7 @@ function weeklyRecap(history, unit) {
         if (!(p && p.weight > 0))
             return;
         const ss = setsOf(p);
-        const best = ss.length ? Math.max(...ss.map(s => e1rm(s.w, s.r || 1))) : e1rm(p.weight, p.reps || 1);
+        const best = ss.length ? Math.max(...ss.map(s => e1rm(convertHistoryLoad(s.w, h.unit, unit), s.r || 1))) : e1rm(convertHistoryLoad(p.weight, h.unit, unit), p.reps || 1);
         (byId[id] = byId[id] || []).push({ date: h.date, best });
     }));
     let prs = 0;
@@ -9332,240 +9333,40 @@ function loadStep(ex, unit) {
 }
 // Percentage-of-Training-Max loading for strength programs. The "main lift" of each day
 // follows a weekly wave; weights = Training Max × percent, rounded to the bar.
-const PCT_SCHEMES = {
-    "531": {
-        name: "Main-Lift Waves",
-        basis: "Training Max (90% of 1RM)",
-        weeks: [
-            { label: "5s", sets: [[0.65, "5"], [0.75, "5"], [0.85, "5+"]] },
-            { label: "3s", sets: [[0.70, "3"], [0.80, "3"], [0.90, "3+"]] },
-            { label: "1s", sets: [[0.75, "5"], [0.85, "3"], [0.95, "1+"]] },
-            { label: "Deload", sets: [[0.40, "5"], [0.50, "5"], [0.60, "5"]] },
-        ],
-        deloadWeek: 3
-    },
-    // 5/3/1 for Beginners (Wendler): TWO main lifts per session, run as 5's PRO — the main work is
-    // straight 5×3 (no AMRAP on the mains) across the 5s/3s/1s waves — followed by First-Set-Last
-    // (FSL) supplemental volume of 5×5 at the week's first-set percentage. T2 = the FSL lift, which
-    // is the OTHER main lift of the pair, so each lift gets heavy 5×3 one slot and 5×5 volume the next.
-    "531beg": {
-        name: "Main-Lift Waves · Novice",
-        basis: "Training Max (90% of 1RM)",
-        fivesPro: true,
-        weeks: [
-            { label: "5s · 5's PRO", sets: [[0.65, "5"], [0.75, "5"], [0.85, "5"]] },
-            { label: "3s · 5's PRO", sets: [[0.70, "5"], [0.80, "5"], [0.90, "5"]] },
-            { label: "1s · 5's PRO", sets: [[0.75, "5"], [0.85, "5"], [0.95, "5"]] },
-            { label: "Deload", sets: [[0.40, "5"], [0.50, "5"], [0.60, "5"]] },
-        ],
-        deloadWeek: 3,
-        t2: { label: "FSL 5×5", sets: [[0.65, "5"], [0.65, "5"], [0.65, "5"], [0.65, "5"], [0.65, "5"]] }
-    },
-    madcow: {
-        name: "Ramping 5×5",
-        basis: "top 5×5 weight",
-        // ramp to a top set of 5; week-over-week the top rises ~2.5% (handled via TM growth note)
-        weeks: [
-            { label: "Ramp 5×5", sets: [[0.50, "5"], [0.625, "5"], [0.75, "5"], [0.875, "5"], [1.0, "5"]] },
-        ]
-    },
-    nsuns: {
-        name: "High-Volume Wave LP",
-        basis: "Training Max (90% of 1RM)",
-        // T1 nine-set ramp (Scheme B): up to a 95% AMRAP single, then descending back-off sets.
-        // The top AMRAP drives a weekly training-max bump — pure linear progression, no monthly waves.
-        weeks: [
-            { label: "T1 · 9 sets", sets: [
-                    [0.75, "5"], [0.85, "3"], [0.95, "1+"], [0.90, "3"], [0.85, "3"],
-                    [0.80, "5"], [0.75, "5"], [0.70, "5"], [0.65, "5+"],
-                ] },
-        ]
-    },
-    // Texas Method: the squat's load is set per DAY — heavy 5×5 volume (≈90% of the 5RM),
-    // a light recovery day (≈80% × 2×5), and an intensity day building to a new top 5RM.
-    // The 5RM (the basis) creeps up week to week — that weekly bump is the progression.
-    texas: {
-        name: "Texas Method",
-        basis: "top 5RM",
-        linearPerWeek: 0.015,
-        days: {
-            tx_volume: { label: "Volume 5×5", sets: [[0.90, "5"], [0.90, "5"], [0.90, "5"], [0.90, "5"], [0.90, "5"]] },
-            tx_recovery: { label: "Recovery 2×5", sets: [[0.80, "5"], [0.80, "5"]] },
-            tx_intensity: { label: "Intensity 1×5", sets: [[1.00, "5+"]] }
-        },
-        weeks: [{ label: "Texas", sets: [[0.90, "5"]] }], // fallback if day unknown
-    },
-    // GZCLP: T1 main lift = 5 sets of 3, last set AMRAP (5×3+), at one working weight; add load
-    // every session you clear the AMRAP. (When you stall the stage cascades 5×3 → 6×2 → 10×1.)
-    gzclp: {
-        /* ⚠ THE PROGRAM PRESCRIBES ITS ACCESSORY WORK TOO, and until now only T1 and T2 were expressed
-           here -- so every remaining slot on a GZCL day was filled by the generic coverage floors, and
-           the time model (which assumed it owned every set count) got a session it had not budgeted for.
-           GZCL's T3 is ONE TO THREE movements at 3x15+, last set AMRAP, and the source states the count
-           three times with the same qualifier: "choose one to two movements, SOMETIMES THREE IF TIME AND
-           ENERGY PERMITS". The range is conditioned on TIME, which is exactly what the session bracket
-           already expresses -- so min/max here and the bracket picks within it, rather than a fixed count
-           that is too many at sixty minutes and too few at a hundred and twenty. And the choice is
-           not open: the Method article has a section headed "But where is the Back Work? (And Biceps
-           Too!)" because T1 and T2 are the four barbell lifts and contain no pulling at all. Cody's
-           answer is supersets in the Method; GZCLP puts it in T3, which is conventionally a lat pulldown
-           and a row. So `categories` is pull-weighted by the program's own design, not by our guess.
-           An earlier reading of this as "three movements, one push one pull one legs" was measured and
-           cost the named bucket rearUnderMEV 348 -> 597 -- the pulling the program deliberately puts
-           here was being spent on pressing and legs the T1/T2 pins already cover.
-           `categories` deliberately does NOT name exercises. The program specifies the SHAPE -- how many
-           accessories and of what kind -- and the app still chooses which row, which single-leg movement,
-           from what the lifter's equipment allows and which muscles the T1/T2 pins left short. That is
-           the division that was missing: the program owns how much accessory work it prescribes, the
-           generator owns which movements fill it. */
-        t3: { min: 1, max: 3, sets: 3, reps: "15+", pct: 0.65, categories: ["pull", "pull", "legs"] },
-        name: "Tiered Linear Progression",
-        basis: "T1 5×3 working weight",
-        // No linearPerWeek here — GZCLP progresses per-SESSION via gzAdvance's stage cascade
-        // (gzPlanFor / gzWorkWeight), not a weekly percentage creep. A linearPerWeek value would
-        // double-progress the lift on top of the session-based AMRAP advancement.
-        cascadeNote: "On a failed AMRAP, drop to 6×2, then 10×1, then reset +5 lb on a new 5×3.",
-        weeks: [{ label: "T1 · 5×3+", sets: [[1.0, "3"], [1.0, "3"], [1.0, "3"], [1.0, "3"], [1.0, "3+"]] }]
-    },
-    // German Volume Training: 10 sets of 10 on the day's main lift at ~60% of 1RM. Brutal volume;
-    // add ~2.5–5% once all 100 reps are clean.
-    gvt: {
-        name: "German Volume Training",
-        basis: "60% of 1RM (enter your 1RM)",
-        linearPerWeek: 0.02,
-        weeks: [{ label: "10×10", sets: Array.from({ length: 10 }, () => [0.60, "10"]) }]
-    },
-    // The Rippler (GZCL): T1 rides a 3-week microcycle (volume → base → intensity) that repeats a
-    // touch heavier each pass, building toward a peak. T2 is a tiered secondary lift.
-    rippler: {
-        /* ⚠ THE PROGRAM PRESCRIBES ITS ACCESSORY WORK TOO, and until now only T1 and T2 were expressed
-           here -- so every remaining slot on a GZCL day was filled by the generic coverage floors, and
-           the time model (which assumed it owned every set count) got a session it had not budgeted for.
-           GZCL's T3 is ONE TO THREE movements at 3x15+, last set AMRAP, and the source states the count
-           three times with the same qualifier: "choose one to two movements, SOMETIMES THREE IF TIME AND
-           ENERGY PERMITS". The range is conditioned on TIME, which is exactly what the session bracket
-           already expresses -- so min/max here and the bracket picks within it, rather than a fixed count
-           that is too many at sixty minutes and too few at a hundred and twenty. And the choice is
-           not open: the Method article has a section headed "But where is the Back Work? (And Biceps
-           Too!)" because T1 and T2 are the four barbell lifts and contain no pulling at all. Cody's
-           answer is supersets in the Method; GZCLP puts it in T3, which is conventionally a lat pulldown
-           and a row. So `categories` is pull-weighted by the program's own design, not by our guess.
-           An earlier reading of this as "three movements, one push one pull one legs" was measured and
-           cost the named bucket rearUnderMEV 348 -> 597 -- the pulling the program deliberately puts
-           here was being spent on pressing and legs the T1/T2 pins already cover.
-           `categories` deliberately does NOT name exercises. The program specifies the SHAPE -- how many
-           accessories and of what kind -- and the app still chooses which row, which single-leg movement,
-           from what the lifter's equipment allows and which muscles the T1/T2 pins left short. That is
-           the division that was missing: the program owns how much accessory work it prescribes, the
-           generator owns which movements fill it. */
-        t3: { min: 1, max: 3, sets: 3, reps: "15+", pct: 0.65, categories: ["pull", "pull", "legs"] },
-        name: "Tiered Wave",
-        basis: "Training Max (90% of 1RM)",
-        wave: true,
-        linearPerWeek: 0.005,
-        weeks: [
-            { label: "Volume", sets: [[0.70, "5"], [0.75, "5"], [0.80, "5"], [0.75, "5"], [0.70, "5+"]] },
-            { label: "Base", sets: [[0.725, "4"], [0.80, "3"], [0.85, "2"], [0.80, "3"], [0.75, "4+"]] },
-            { label: "Intensity", sets: [[0.75, "3"], [0.825, "2"], [0.90, "1"], [0.825, "2"], [0.775, "3+"]] },
-        ],
-        t2: { label: "T2 volume", sets: [[0.65, "8"], [0.70, "6"], [0.65, "8+"]] }
-    },
-    // Jacked & Tan 2.0 (GZCL): T1 ramps to a heavy max-rep set (the MRS, last single is AMRAP) then
-    // back-off volume; T2 is higher-rep accessory volume. The MRS drives the weekly load creep.
-    jt: {
-        /* ⚠ THE PROGRAM PRESCRIBES ITS ACCESSORY WORK TOO, and until now only T1 and T2 were expressed
-           here -- so every remaining slot on a GZCL day was filled by the generic coverage floors, and
-           the time model (which assumed it owned every set count) got a session it had not budgeted for.
-           GZCL's T3 is ONE TO THREE movements at 3x15+, last set AMRAP, and the source states the count
-           three times with the same qualifier: "choose one to two movements, SOMETIMES THREE IF TIME AND
-           ENERGY PERMITS". The range is conditioned on TIME, which is exactly what the session bracket
-           already expresses -- so min/max here and the bracket picks within it, rather than a fixed count
-           that is too many at sixty minutes and too few at a hundred and twenty. And the choice is
-           not open: the Method article has a section headed "But where is the Back Work? (And Biceps
-           Too!)" because T1 and T2 are the four barbell lifts and contain no pulling at all. Cody's
-           answer is supersets in the Method; GZCLP puts it in T3, which is conventionally a lat pulldown
-           and a row. So `categories` is pull-weighted by the program's own design, not by our guess.
-           An earlier reading of this as "three movements, one push one pull one legs" was measured and
-           cost the named bucket rearUnderMEV 348 -> 597 -- the pulling the program deliberately puts
-           here was being spent on pressing and legs the T1/T2 pins already cover.
-           `categories` deliberately does NOT name exercises. The program specifies the SHAPE -- how many
-           accessories and of what kind -- and the app still chooses which row, which single-leg movement,
-           from what the lifter's equipment allows and which muscles the T1/T2 pins left short. That is
-           the division that was missing: the program owns how much accessory work it prescribes, the
-           generator owns which movements fill it. */
-        t3: { min: 1, max: 3, sets: 3, reps: "15+", pct: 0.65, categories: ["pull", "pull", "legs"] },
-        name: "Tiered Powerbuilding",
-        basis: "Training Max (90% of 1RM)",
-        linearPerWeek: 0.015,
-        weeks: [{ label: "T1 ramp + MRS", sets: [[0.70, "5"], [0.80, "3"], [0.875, "2"], [0.925, "1+"], [0.825, "3"], [0.75, "5+"]] }],
-        t2: { label: "T2 volume", sets: [[0.65, "10"], [0.70, "8"], [0.70, "6+"]] }
-    }
-};
-// returns [{ pct, reps, weight, amrap }] for the main lift this week, or null
+function trainingMaxForUnit(program, exerciseId, unit) {
+    return convertHistoryLoad(program.trainingMax?.[exerciseId], program.trainingMaxUnit || program.config?.unit || unit, unit);
+}
+function withTrainingMax(program, exerciseId, value, unit) {
+    const storageUnit = program.trainingMaxUnit || program.config?.unit || unit;
+    const load = convertHistoryLoad(value, unit, storageUnit);
+    return { ...program, trainingMaxUnit: storageUnit,
+        trainingMax: { ...(program.trainingMax || {}), [exerciseId]: load > 0 ? load : 0 }, edited: true };
+}
 function pctSetsFor(scheme, tm, weekIndex, weeksTotal, unit, ex, dayType, tier = "t1") {
-    const S = PCT_SCHEMES[scheme];
-    if (!S || !(tm > 0))
-        return null;
-    let wk;
-    if (scheme === "531" || scheme === "531beg") {
-        // 5/3/1 block design: weeksTotal=4 means weeks 1-3 are the wave (5s/3s/5·3·1) and week 4
-        // is baked-in as the deload (cyc index 3) — that's the (weekIndex-1)%4 indexing below.
-        // weekIndex > weeksTotal happens only when the UI's separate "Deload" pill is tapped
-        // AFTER the block (a second, explicit deload beyond the one inside the 4-week cycle) —
-        // that always shows cyc[3] regardless of how far past weeksTotal it is, so it never
-        // wraps back into a fresh wave on repeated taps.
-        const cyc = S.weeks;
-        if (tier === "t2" && S.t2 && weekIndex <= weeksTotal) {
-            // FSL: 5×5 at THIS week's first working-set percentage (0.65 → 0.70 → 0.75)
-            const first = cyc[(weekIndex - 1) % cyc.length].sets[0][0];
-            wk = { label: S.t2.label, sets: S.t2.sets.map(([, r]) => [first, r]) };
-        }
-        else {
-            wk = cyc[(weekIndex - 1) % cyc.length];
-            if (weekIndex > weeksTotal)
-                wk = cyc[3]; // explicit deload week beyond the block
-        }
-    }
-    else if (tier === "t2" && S.t2) {
-        wk = S.t2; // tiered T2 loading (GZCL Rippler / J&T)
-    }
-    else if (S.days && dayType && S.days[dayType]) {
-        wk = S.days[dayType]; // per-day loading (Texas: volume / recovery / intensity)
-    }
-    else if (S.wave && S.weeks.length > 1) {
-        wk = S.weeks[(weekIndex - 1) % S.weeks.length]; // repeating microcycle (The Rippler)
-    }
-    else {
-        wk = S.weeks[0];
-    }
-    const step = loadStep(ex, unit);
-    // A forced deload week (weekIndex beyond the block) must actually be LIGHT. 5/3/1 handles its own
-    // deload above (cyc[3] is genuinely submaximal), but the linear-creep schemes (Madcow, Texas, GVT,
-    // Rippler, J&T) would otherwise apply their HIGHEST weekly multiplier here, and single-week schemes
-    // (nSuns) would repeat full load — turning the "deload" into the heaviest session of the block. So:
-    // freeze the creep, thin the sets to ~half, drop the AMRAP, and scale the load to ~60%.
-    const isDeloadWk = weekIndex > weeksTotal;
-    const selfDeloads = scheme === "531" || scheme === "531beg"; // already returned its own deload table
-    const genericDeload = isDeloadWk && !selfDeloads;
-    let mult = 1, suffix = "";
-    const per = scheme === "madcow" ? 0.025 : (S.linearPerWeek || 0);
-    if (per && weekIndex > 1 && !isDeloadWk) { // no linear creep on a deload week
-        mult = 1 + per * (weekIndex - 1);
-        const bump = Math.round((mult - 1) * 100);
-        if (bump >= 1)
-            suffix = ` · wk ${weekIndex} (+${bump}%)`;
-    }
-    const DELOAD_SCALE = 0.6;
-    const srcSets = genericDeload ? wk.sets.slice(0, Math.max(2, Math.ceil(wk.sets.length / 2))) : wk.sets;
-    return {
-        label: genericDeload ? "Deload · light" : wk.label + suffix,
-        sets: srcSets.map(([pct, reps]) => ({
-            pct,
-            reps: genericDeload ? String(reps).replace("+", "") : reps, // no max-rep set on a deload
-            amrap: genericDeload ? false : String(reps).includes("+"),
-            weight: roundTo(tm * pct * mult * (genericDeload ? DELOAD_SCALE : 1), step)
-        }))
-    };
+    return percentageProtocolFor({ scheme, tm, weekIndex, weeksTotal, dayType, tier,
+        snapLoad: value => loadableAtOrBelow(ex, value, unit) });
+}
+// Percentage protocols supply load/rep waves; the accepted cell supplies the set budget.
+// Keep the peak/AMRAP when thinning a protocol. Extra budget repeats the first submaximal set.
+// TM values belong to program.config.unit and are converted before equipment rounding.
+function percentagePlanFor(program, day, ex, slot, weekIndex, unit, history = []) {
+    const tier = tierOf(day, slot);
+    if (!tier || !program.config?.percentScheme) return null;
+    const cell = computeCell(program, day, ex.id, slot, weekIndex);
+    if (cell.ownership?.reps === 'user' || cell.ownership?.rir === 'user') return null;
+    const sourceUnit = program.trainingMaxUnit || program.config?.unit || unit;
+    const tm = trainingMaxForUnit(program, ex.id, unit);
+    let plan;
+    if (program.config.percentScheme === 'gzclp') {
+        const source = gzPlanFor(program, day, ex, slot, sourceUnit, history);
+        plan = source ? { ...source, sets: source.sets.map(t => ({ ...t,
+            weight: loadableAtOrBelow(ex, convertHistoryLoad(t.weight, sourceUnit, unit), unit) })) } : null;
+    } else plan = pctSetsFor(program.config.percentScheme, tm, weekIndex, weeksOf(program), unit, ex, day.type, tier);
+    if (!plan?.sets?.length) return null;
+    if (program.config.percentScheme === 'gzclp' && weekIndex > weeksOf(program))
+        plan = { ...plan, label: 'Deload · light', sets: plan.sets.map(t => ({ ...t,
+            weight: loadableAtOrBelow(ex, t.weight * .6, unit), reps: String(t.reps).replace('+',''), amrap: false })) };
+    return adaptPercentageSetBudget(plan, Number(cell.sets));
 }
 // Which scheme tier a slot is, for tiered GZCL programs: T1 = primary, T2 = the pinned second lift.
 function tierOf(day, slot) {
@@ -9623,7 +9424,7 @@ function gzWorkWeight(program, exId, tier, unit, ex) {
     const t1 = program.trainingMax?.[exId] || 0;
     return t1 > 0 ? roundTo(t1 * 0.66, step) : 0; // a sensible T2 start (~10RM ≈ ⅔ of the 3RM weight)
 }
-function gzPlanFor(program, day, ex, slot, unit) {
+function gzPlanFor(program, day, ex, slot, unit, history = []) {
     const tier = gzTierOf(program, day, slot);
     if (!tier)
         return null;
@@ -9631,12 +9432,16 @@ function gzPlanFor(program, day, ex, slot, unit) {
     if (!(w > 0))
         return null;
     const defs = tier === "t1" ? GZ_T1_STAGES : GZ_T2_STAGES;
-    const stage = Math.min((program.gzStage?.[ex.id + ":" + tier]) || 0, defs.length - 1);
-    const st = defs[stage];
+    const replay = deriveTieredLinearState({ programId: program.id, exerciseId: ex.id, tier,
+        initialStage: Math.max(0, Math.min((program.gzStage?.[ex.id + ':' + tier]) || 0, defs.length - 1)),
+        initialLoad: w, entries: history, unit,
+        nextLoad: weight => loadableAbove(ex, weight, unit),
+        resetLoad: weight => loadableAtOrBelow(ex, weight * .85, unit) });
+    const stage = replay.stage, st = defs[stage];
     const sets = [];
     for (let i = 0; i < st.n; i++) {
         const amrap = i === st.n - 1; // last set is AMRAP — it drives the progression
-        sets.push({ weight: w, reps: amrap ? st.reps + "+" : String(st.reps), amrap, pct: 100 });
+        sets.push({ weight: replay.weight, reps: amrap ? st.reps + "+" : String(st.reps), amrap, pct: 100 });
     }
     return { label: st.label, sets, tier, stage };
 }
@@ -9656,6 +9461,7 @@ function nextTMEvidence(program, history, id) {
 }
 // Project the next cycle's training maxes from the current ones + last AMRAP performance.
 function projectNextTM(program, history, unit) {
+    unit = program.trainingMaxUnit || program.config?.unit || unit;
     const out = {};
     const tm = program.trainingMax || {};
     Object.keys(tm).forEach(id => {
@@ -13385,13 +13191,10 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
                                                    right way to be wrong about a warning. */
                                                 const stall = program.config?.percentScheme ? null
                                                     : plateauOf((trendByDayEx[day.id] || {})[id] || null);
-                                                const gzPlan = program.config?.percentScheme === "gzclp" ? gzPlanFor(program, day, ex, slot, unit) : null;
-                                                const pctTier = tierOf(day, slot);
-                                                const pctMain = gzPlan || ((program.config?.percentScheme && pctTier && program.trainingMax?.[id] > 0)
-                                                    ? pctSetsFor(program.config.percentScheme, program.trainingMax[id], activeWeek, weeksOf(program), unit, ex, day.type, pctTier) : null);
+                                                const pctMain = percentagePlanFor(program, day, ex, slot, activeWeek, unit, history);
                                                 const ssKey = s => `${day.id}:${s}`;
-                                                const linkedPrev = slot > 0 && !!program.ss?.[ssKey(slot - 1)];
-                                                const linkedNext = !!program.ss?.[ssKey(slot)];
+                                                const linkedPrev = !program.config?.noSupersets && slot > 0 && !!program.ss?.[ssKey(slot - 1)];
+                                                const linkedNext = !program.config?.noSupersets && !!program.ss?.[ssKey(slot)];
                                                 const inGroup = linkedPrev || linkedNext;
                                                 const groupStart = linkedNext && !linkedPrev;
                                                 let groupLen = 0;
@@ -13508,8 +13311,8 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
                 })() }), _jsx(Exit, { when: !!swap, children: swap && (_jsx(SwapSheet, { ex: EX_BY_ID[program.days.find(d => d.id === swap.dayId).exercises[swap.slot]], alts: altsFor(swap.dayId, swap.slot), scopeMode: "program", onPick: (id) => { const snap = program; const nm = EX_BY_ID[id]?.name || "exercise"; replaceSlot(swap.dayId, swap.slot, id); setSwap(null); flashUndo(`Swapped in ${nm}`, snap); }, onBanCurrent: () => { const snap = program; banAndReplace(swap.dayId, swap.slot, snap); setSwap(null); }, onClose: () => setSwap(null) })) }), _jsx(Exit, { when: !!addDay, children: addDay && (_jsx(AddSheet, { parts: addablePartsFor(addDay), usedIds: program.days.find(d => d.id === addDay)?.exercises || [], onPick: (part) => { addExercise(addDay, part); setAddDay(null); }, onAddById: (exId) => { addSpecific(addDay, exId); setAddDay(null); }, onCreate: (partial) => { const ex = onCreateCustom(partial); addSpecific(addDay, ex.id); setAddDay(null); }, onClose: () => setAddDay(null) })) }), _jsx(Exit, { when: cycleSheet, children: cycleSheet && (() => {
                     const next = projectNextTM(program, history, unit);
                     const rows = mainLifts.filter(id => (program.trainingMax?.[id] || 0) > 0).map(id => {
-                        const cur = program.trainingMax[id];
-                        const nw = next[id];
+                        const cur = trainingMaxForUnit(program, id, unit);
+                        const nw = convertHistoryLoad(next[id], program.trainingMaxUnit || program.config?.unit || unit, unit);
                         const { note } = nextTMEvidence(program, history, id);
                         return { id, name: EX_BY_ID[id]?.name, cur, nw, note, up: nw > cur };
                     });
@@ -13518,9 +13321,10 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
                                 const ex = EX_BY_ID[id];
                                 if (!ex)
                                     return null;
-                                const cur = program.trainingMax?.[id] || "";
-                                return (_jsxs("div", { style: { marginBottom: 12 }, children: [_jsx("div", { style: { fontSize: 15, fontWeight: 600, marginBottom: 6 }, children: ex.name }), _jsxs("div", { style: { display: "flex", gap: 8, alignItems: "center" }, children: [_jsx("input", { inputMode: "decimal", value: cur === "" ? "" : String(cur), placeholder: `Training max (${unit})`, onChange: e => { const v = e.target.value.replace(/[^0-9.]/g, ""); setProgram(p => ({ ...p, trainingMax: { ...(p.trainingMax || {}), [id]: v === "" ? 0 : parseFloat(v) }, edited: true })); }, className: "mono", style: { flex: 1, padding: "11px 12px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: 15, fontWeight: 600 } }), _jsx("button", { className: "pressable", onClick: () => setOneRmEdit({ exId: id, val: "" }), style: { padding: "11px 12px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.accentInk, fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }, children: "Use 1RM" })] }), cur > 0 && (() => {
-                                            const wk = pctSetsFor(program.config.percentScheme, cur, 1, weeksOf(program), unit, ex);
+                                const cur = trainingMaxForUnit(program, id, unit) || "";
+                                return (_jsxs("div", { style: { marginBottom: 12 }, children: [_jsx("div", { style: { fontSize: 15, fontWeight: 600, marginBottom: 6 }, children: ex.name }), _jsxs("div", { style: { display: "flex", gap: 8, alignItems: "center" }, children: [_jsx("input", { inputMode: "decimal", value: cur === "" ? "" : String(cur), placeholder: `Training max (${unit})`, onChange: e => { const v = e.target.value.replace(/[^0-9.]/g, ""); setProgram(p => withTrainingMax(p, id, v === "" ? 0 : parseFloat(v), unit)); }, className: "mono", style: { flex: 1, padding: "11px 12px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: 15, fontWeight: 600 } }), _jsx("button", { className: "pressable", onClick: () => setOneRmEdit({ exId: id, val: "" }), style: { padding: "11px 12px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.accentInk, fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }, children: "Use 1RM" })] }), cur > 0 && (() => {
+                                            const ownerDay = program.days.find(d => d.exercises.includes(id));
+                                            const wk = ownerDay ? percentagePlanFor(program, ownerDay, ex, ownerDay.exercises.indexOf(id), 1, unit) : null;
                                             if (!wk)
                                                 return null;
                                             return _jsxs("div", { style: { fontSize: 11, color: C.faint, marginTop: 4 }, className: "mono", children: ["Week 1 (", wk.label, "): ", wk.sets.map(s => `${s.weight}×${s.reps}`).join("  ·  ")] });
@@ -13534,7 +13338,7 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
                             setOneRmEdit(null);
                             return;
                         }
-                        setProgram(p => ({ ...p, trainingMax: { ...(p.trainingMax || {}), [oneRmEdit.exId]: tm }, edited: true }));
+                        setProgram(p => withTrainingMax(p, oneRmEdit.exId, tm, unit));
                         setOneRmEdit(null);
                     };
                     return (_jsx("div", { onClick: () => setOneRmEdit(null), className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.65)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 75, animation: "fadeIn .2s both", padding: 24 }, children: _jsxs("div", { onClick: e => e.stopPropagation(), className: "wpb-pop", style: { width: "100%", maxWidth: 320, background: C.bg2, borderRadius: 16, padding: 20, border: `1px solid ${C.border}` }, children: [_jsxs("div", { style: { fontSize: 15, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }, children: [_jsx(Dumbbell, { size: 17, color: C.accentInk }), " Set from 1RM"] }), _jsxs("div", { style: { fontSize: 13, color: C.muted, marginTop: 2, marginBottom: 16 }, children: [ex?.name, " \u2014 enter a recent one-rep max; the training max is set to 90% of it."] }), _jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }, children: [_jsx("input", { "aria-label": "One-rep max", inputMode: "decimal", value: oneRmEdit.val, autoFocus: true, onChange: e => setOneRmEdit(o => ({ ...o, val: e.target.value.replace(/[^0-9.]/g, "") })), onKeyDown: e => { if (e.key === "Enter")
@@ -13689,7 +13493,7 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
                         return null;
                     const isP = slot === day.primaryIndex;
                     const canRemove = day.exercises.length > 1;
-                    const isLinked = !!program.ss?.[`${dayId}:${slot}`];
+                    const isLinked = !program.config?.noSupersets && !!program.ss?.[`${dayId}:${slot}`];
                     const close = () => { setRowMenu(null); setConfirmRemove(null); };
                     const item = (icon, label, sub, onClick, danger) => (_jsxs("button", { className: "pressable wpb-sheet-action", onClick: onClick, style: { width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "13px 14px", background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 12, color: danger ? C.danger : C.text, cursor: "pointer", textAlign: "left", marginBottom: 8 }, children: [_jsx("span", { style: { flexShrink: 0, width: 22, display: "flex", justifyContent: "center" }, children: icon }), _jsxs("span", { style: { flex: 1, minWidth: 0 }, children: [_jsx("span", { style: { display: "block", fontSize: 15, fontWeight: 600 }, children: label }), sub && _jsx("span", { style: { display: "block", fontSize: 13, color: C.muted, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: sub })] })] }));
                     return (_jsx("div", { onClick: close, className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "flex-end", zIndex: 80, animation: "fadeIn .2s both" }, children: _jsxs("div", { ref: sheetDragRef, "data-sheet-drag": true, onClick: e => e.stopPropagation(), className: "wpb-scroll wpb-exercise-options-sheet", style: { width: "100%", maxHeight: "82vh", overflowY: "auto", background: C.bg, borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: "10px 16px calc(20px + env(safe-area-inset-bottom))", boxShadow: "0 -8px 30px rgba(0,0,0,.5)", animation: "sheetUp .25s cubic-bezier(.2,.8,.2,1) both" }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 16, padding: "0 2px" }, children: [_jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { style: { fontSize: 18, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: ex.name }), _jsxs("div", { style: { fontSize: 13, color: C.muted, marginTop: 1 }, children: [PART_LABEL[ex.part], " \u00B7 ", ex.type, isP ? " · key lift" : ""] })] }), _jsx("button", { className: "pressable hit wpb-sheet-close", onClick: close, "aria-label": "Close", style: { flexShrink: 0, width: 34, height: 34, borderRadius: 999, border: `1px solid ${C.border}`, background: C.card, color: C.muted, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }, children: _jsx(X, { size: 17 }) })] }), item(_jsx(Pin, { size: 18, color: (exNotes[exId] || exSetup[exId]) ? C.accentInk : C.muted }), (exNotes[exId] || exSetup[exId]) ? "Edit pinned note" : "Add pinned note", exSetup[exId] ? [formatSetup(exSetup[exId]), exNotes[exId]].filter(Boolean).join(" — ") : exNotes[exId] ? exNotes[exId] : "A cue you'll see every time — seat height, tempo…", () => { close(); setNoteEdit(exId); }), slot < day.exercises.length - 1 && item(_jsx(Layers, { size: 18, color: isLinked ? C.accentInk : C.muted }), isLinked ? "Unlink superset" : "Superset with next", isLinked ? "Currently paired with the next exercise" : "Pair with the next exercise, alternating sets", () => { close(); toggleSS(dayId, slot); }), item(_jsx(HelpCircle, { size: 18, color: C.muted }), "Why this lift?", "See why the program selected this exercise", () => { close(); setWhyPick({ dayId, slot, exId }); }), item(_jsx(Info, { size: 18, color: C.muted }), "Exercise info", "Muscles worked, equipment, form demo", () => { close(); setExInfo({ dayId, slot, exId }); }), item(_jsx(Ban, { size: 18, color: C.danger }), "Ban exercise", "Never auto-pick this again, swap it out now", () => { close(); banAndReplace(dayId, slot); }, true), canRemove && (confirmRemove === `${dayId}:${slot}`
@@ -15989,7 +15793,12 @@ function sessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, history
     void dayPerf;
     if (program?.custom === true && program?.engineSource !== "pursuit-next")
         return customProgramSuggestion(program, day, slot, unit, weekIndex, history);
-    const s = nextWorkoutSuggestionForShell(program, history || [], EXERCISES, day, slot, weekIndex);
+    const original = nextWorkoutSuggestionForShell(program, history || [], EXERCISES, day, slot, weekIndex);
+    const convert = value => convertHistoryLoad(value, program.config?.unit, unit);
+    const s = original ? { ...original, weight: convert(original.weight),
+        last: original.last,
+        setTargets: original.setTargets?.map(t => ({ ...t, weight: convert(t.weight) })),
+        reason: historyLoadReason(original.reason, unit) } : null;
     /* ⚠ WHAT IS LOADABLE HAS ONE OWNER: the app's loadStep / gymRackFor — the same rule the workout's "load-not-loadable" check
        uses. The engine rounds against its own loading inventory, which can allow a weight the app's implement cannot make (45 lb on
        a 10 lb machine stack). Measured: the week-aware re-prescription produced 1,160 such loads in the self-test. Every suggestion
@@ -16000,7 +15809,7 @@ function sessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, history
     /* ⚠ DIRECTION MATTERS. An EARNED increase rounds UP to the next weight the equipment can make; everything else rounds DOWN
        (conservative). Rounding an increase down erased it: the engine said "Increase from 140 lb to 145 lb", the 10 lb machine stack
        snapped it back to 140, and the lift could never progress (found by m158-adaptive-loop-check's simulated lifter). */
-    const current = Number(s.last?.weight) || 0;
+    const current = convertHistoryLoad(s.last?.weight, s.lastUnit || program.config?.unit, unit) || 0;
     let w = loadableAtOrBelow(ex, eng, unit);
     if (s.action === "increase_load" && w <= current)
         w = loadableAbove(ex, current, unit) ?? w;
@@ -16030,7 +15839,7 @@ function loadableAbove(ex, w, unit) {
 // A repeated lift belongs to its program/day occurrence. Other days are only an initialization
 // fallback until this day has its own evidence; advice and LAST use this same raw history record.
 function customExerciseHistory(program, day, id, history) {
-    const entries = (history || []).filter(h => h?.perf?.[id]).slice().sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0));
+    const entries = (history || []).filter(h => validHistoryDate(h) && h?.perf?.[id]).slice().sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0));
     return entries.find(h => h.programId === program.id && h.dayId === day.id)
         || entries.find(h => h.programId === program.id) || entries[0] || null;
 }
@@ -16041,25 +15850,34 @@ function customProgramSuggestion(program, day, slot, unit, weekIndex, history) {
     const last = customExerciseHistory(program, day, ex.id, history);
     if (!last)
         return null;
-    const conv = w => { const from = last.unit || unit; return from === unit ? w : from === "kg" ? w * 2.20462 : w / 2.20462; };
-    const cell = computeCell(program, day, ex.id, slot, weekIndex);
+    const conv = w => convertHistoryLoad(w, last.unit, unit);
+    const currentCell = computeCell(program, day, ex.id, slot, weekIndex);
+    const saved = last.perf[ex.id].prescription;
+    const validSaved = saved?.schemaVersion === 1 && saved.exerciseId === ex.id
+        && Number.isInteger(saved.sets) && saved.sets > 0 && saved.sets <= 20
+        && effortBounds(saved.reps)?.[0] > 0 && effortBounds(saved.rir)?.[0] >= 0;
+    const cell = validSaved ? { ...currentCell, ...saved, range: Array.isArray(saved.reps) ? saved.reps.join('-') : saved.reps,
+        reps: Array.isArray(saved.reps) ? saved.reps.join('-') : saved.reps,
+        rir: Array.isArray(saved.rir) ? saved.rir.join('-') : saved.rir } : currentCell;
     const [lo, hi] = cellRepRange(cell, program, ex, slot === day?.primaryIndex);
     const rir = effortBounds(cell.rir) || [2, 2];
     const work = (Array.isArray(last.perf[ex.id].sets) ? last.perf[ex.id].sets : [])
-        .filter(x => x && !x.warm && !x.sub && x.done !== false && Number.isFinite(Number(x.w)) && Number(x.w) >= 0
-            && Number.isFinite(Number(x.r)) && Number(x.r) > 0);
+        .filter(x => x && !x.warm && !x.sub && x.done !== false && historyNumber(x.w) !== null && historyNumber(x.w) >= 0
+            && historyNumber(x.r) > 0);
     if (!work.length) return null;
     const style = resolveStyle(program, ex, slot === day.primaryIndex, weekIndex, null, history, day.id);
     const rack = gymRackFor(ex, unit), step = loadStep(ex, unit);
     const loadingInventory = { unit, exerciseOverrides: { [ex.id]: rack?.length
         ? { availableLoads: rack } : { increment: step, minimum: 0 } } };
-    const performed = work.map((x, i) => ({ exerciseId: ex.id, setIndex: i, load: conv(Number(x.w)), reps: Number(x.r),
-        rir: x.rir == null || !Number.isFinite(Number(x.rir)) ? null : Number(x.rir) }));
+    const performed = work.map((x, i) => ({ exerciseId: ex.id, setIndex: i, load: conv(x.w), reps: Number(x.r),
+        ...historyExposureContext(x), rir: observedHistoryRIR(x) }));
     const exercise = { exerciseId: ex.id, name: ex.name, role: cell.role, sets: Number(cell.sets),
         progressionStyle: style, prescription: { reps: [lo, hi], rir } };
+    const exposure = progressionExposureContext([last.perf[ex.id], ...performed], last);
     const result = evaluateWorkoutProgression({ exercises: [exercise] }, performed, {
         loadingInventory, equipmentAvailable: program.config?.equipment || [],
-        interrupted: last.interrupted, readinessStatus: last.readinessStatus
+        ...historyExposureContext(last), badDay: exposure.badDay, interrupted: exposure.interrupted,
+        prescriptionEdited: exposure.nonComparable
     })[0];
     const weight = result.suggestedLoad ?? result.currentLoad;
     return { weight, dir: weight > result.currentLoad ? "up" : weight < result.currentLoad ? "down" : "hold",
@@ -16123,7 +15941,7 @@ function effortCalibration(history) {
         for (const [id, p] of Object.entries(h.perf || {})) {
             // setsOf, not p.sets: a corrupt backup can put nulls (or a string) in here, and this function is
             // now reached from muscleRecovery — so a malformed entry would take out the whole session view.
-            const ss = setsOf(p).filter(x => x && typeof x === "object");
+            const ss = completedHistorySets(p).map(x => ({ ...x, w: convertHistoryLoad(x.w, h.unit, "kg"), rir: observedHistoryRIR(x) }));
             if (!ss.length)
                 continue;
             (bySession[id] = bySession[id] || []).push(ss);
@@ -16470,13 +16288,14 @@ function buildLifterModel(history, perf, program) {
                 const w = parseFloat(s.w != null ? s.w : s.weight), r = parseInt(s.r != null ? s.r : s.reps);
                 if (!(w > 0) || !(r > 0))
                     continue;
-                const rirRaw = s.rir != null ? s.rir : 2;
+                const observedRir = observedHistoryRIR(s);
+                const rirRaw = observedRir ?? 2;
                 const rirAdj = clamp(rirRaw - effort.bias, 0, 6); // interpret through the calibration
-                const e = e1rmRIR(w, r, rirAdj);
+                const e = e1rmRIR(convertHistoryLoad(w, h.unit, program?.config?.unit || hs[0]?.unit || "kg"), r, rirAdj);
                 if (e > best) {
                     best = e;
                     bestR = r;
-                    bestRir = s.rir != null ? s.rir : null;
+                    bestRir = observedRir;
                 }
             }
             if (best > 0) {
@@ -17111,23 +16930,23 @@ function syncSubSets(sets, ex, unit) {
     return changed ? out : sets;
 }
 function prescribeSets(program, day, ex, slot, weekIndex, unit, sug, dayPerf, perf, history, withWarm) {
-    void unit;
     void dayPerf;
     void perf;
-    void history;
     const cell = computeCell(program, day, ex.id, slot, weekIndex);
     if (!cell || cell.missing || !(Number(cell.sets) > 0))
         return [];
     const request = program?.nextEngine?.request || program?.nextEngine?.baseRequest;
+    const percentage = percentagePlanFor(program, day, ex, slot, weekIndex, unit, history);
     const targets = buildRuntimeSetTargets({
         exerciseId: resolveNextShellExerciseId(program, day, slot, ex) || ex.id,
         cell,
-        workingLoad: sug?.weight ?? null,
+        workingLoad: percentage?.sets[0]?.weight ?? sug?.weight ?? null,
         suggestedReps: sug?.target ?? null,
         setTargets: sug?.setTargets,
         includeWarmups: !!withWarm,
         loadingInventory: request?.equipment?.loading,
-        equipmentAvailable: request?.equipment?.available
+        equipmentAvailable: request?.equipment?.available,
+        snapLoad: value => loadableAtOrBelow(ex, value, unit)
     });
     const range = cellRepRange(cell, program, ex, slot === day.primaryIndex);
     const rangeText = range[0] === range[1] ? String(range[0]) : `${range[0]}-${range[1]}`;
@@ -17143,6 +16962,15 @@ function prescribeSets(program, day, ex, slot, weekIndex, unit, sug, dayPerf, pe
             ? { w: t.weight == null ? "—" : String(t.weight), reps: String(t.reps), rir: null }
             : { w: t.weight == null ? "—" : String(t.weight), reps: rangeText, rir: rirText, nextAction: sug?.action || "initial", confidence: sug?.confidence || null, prefillReps: String(t.reps) }
     }));
+    if (percentage) {
+        rows = [...rows.filter(r => r.warm), ...percentage.sets.map(t => ({
+            weight: String(t.weight), reps: String(t.reps).replace('+', ''), warm: false, done: false,
+            auto: true, valueOwner: 'prescription',
+            target: { w: String(t.weight), reps: String(t.reps).replace('+', ''),
+                rir: t.amrap ? '0' : rirText, amrap: !!t.amrap,
+                nextAction: 'percentage', confidence: null, prefillReps: String(t.reps).replace('+', '') }
+        }))];
+    }
     // Advanced-technique selection is engine-owned; this shell helper only realizes the engine's cue
     // as loggable rows. The protocol itself is now defined in next-engine/workout-runtime.ts.
     const protocol = techniqueProtocolFromCell(cell);
@@ -17183,6 +17011,67 @@ function prescribeSets(program, day, ex, slot, weekIndex, unit, sug, dayPerf, pe
     }
     return rows;
 }
+// The logger and the independent package share this pure serialization boundary.
+// A zero-rep failed attempt is explicit and cannot masquerade as completed work.
+function loggedExercisePerformance(program, day, e, weekIndex, unit, perf, history) {
+    const failedRows = program.config?.percentScheme === 'gzclp' ? e.sets.filter(x => x.done
+        && !x.warm && !x.sub && parseInt(x.reps) === 0 && parseFloat(x.weight) > 0) : [];
+    const s = summarizeSets(e.sets, EX_BY_ID[e.id], unit) || (failedRows.length
+        ? { weight: Math.max(...failedRows.map(x => parseFloat(x.weight))), reps: 0 } : null);
+    const note = e.note.trim() || (perf[e.id] && perf[e.id].note) || undefined;
+    if (s) {
+        const doneWork = e.sets.filter(x => x.done && !x.warm && (parseInt(x.reps) > 0 || (failedRows.includes(x))));
+        const hasPos = doneWork.some(x => parseFloat(x.weight) > 0);
+        const wv = x => { const w = parseFloat(x.weight); return isNaN(w) ? 0 : w; };
+        // Persist the amrap flag from the prescription onto each logged set. Percent-scheme
+        // progression (5/3/1 TM projection, GZCLP stage advancement) needs to identify the
+        // AMRAP set directly rather than inferring it from being the unique top-weight set —
+        // that heuristic silently breaks if a manually-edited weight ties with another set.
+        // RIR: prefer the explicitly-logged actual RIR; otherwise fall back to the set's target
+        // RIR so the LAST TIME column still shows the intended effort (most users just tick the
+        // set done without tapping an RIR, which previously left the history with no effort at all).
+        const setRIR = (x) => {
+            if (x.actualRIR != null)
+                return x.actualRIR;
+            const t = x.target?.rir;
+            const n = typeof t === "number" ? t : parseRIRNum(t);
+            return Number.isFinite(n) ? n : null;
+        };
+        const logged = (hasPos ? doneWork.filter(x => parseFloat(x.weight) > 0) : doneWork)
+            .map(x => {
+            const r = setRIR(x);
+            // Snapshot what was ASKED for alongside what was done: pw = prescribed weight, pt = the
+            // prescribed rep target. Self-contained per set, so a logged session can be replayed and
+            // scored against a different progression without needing the program that produced it.
+            // Omitted for manual/freestyle sets, where nothing was prescribed.
+            const pw = parseFloat(x.target?.w);
+            const pt = x.target?.reps != null ? String(x.target.reps) : null;
+            // PROVENANCE TRAVELS WITH THE SET. `sub` marks a drop set or myo mini — an extension of
+            // the set above, not a working set. Every reader downstream already filters on it
+            // (`!s.warm && !s.sub`), but the flag was never PERSISTED, so on replayed history those
+            // filters matched nothing and extensions counted as full sets all over again — the exact
+            // bug v493 fixed in the live session, surviving in the log.
+            return { ...historyExposureContext(x), w: wv(x), r: parseInt(x.reps), ...(failedRows.includes(x) ? { failedAttempt: true } : {}), ...(r != null ? { rir: r, rirReported: x.actualRIR != null } : {}), ...(x.sub ? { sub: true, ...(x.kind ? { kind: x.kind } : {}) } : {}), ...(prescribedRIRof(x) != null ? { tr: prescribedRIRof(x) } : {}), ...(x.target?.amrap ? { amrap: true } : {}), ...(x.auto && pw > 0 ? { pw } : {}), ...(!x.target?.freestyle && pt ? { pt } : {}) };
+        });
+        const prescription = snapshotNextShellPrescription(program, day, e.slot, EX_BY_ID[e.id], weekIndex)
+            || { schemaVersion: 1, exerciseId: e.id, ...computeCell(program, day, e.id, e.slot, weekIndex) };
+        const percentage = percentagePlanFor(program, day, EX_BY_ID[e.id], e.slot, weekIndex, unit, history);
+        if (percentage) prescription.protocol = { scheme: program.config.percentScheme,
+            ...(percentage.tier ? { tier: percentage.tier, stage: percentage.stage } : {}) };
+        if (percentage) prescription.setTargets = percentage.sets.map(t => ({
+            reps: Number.parseInt(t.reps), weight: t.weight, unit, amrap: !!t.amrap,
+            rir: t.amrap ? 0 : parseRIRNum(prescription.rir)
+        }));
+        return { ...historyExposureContext(e), weight: s.weight, reps: s.reps, date: Date.now(), sets: logged, note,
+            ...(prescription ? { prescription } : {}) };
+    }
+    return null;
+}
+function loggedWorkoutPerformance(program, day, data, weekIndex, unit, perf, history) {
+    return Object.fromEntries(data.map(e => [e.id, loggedExercisePerformance(program, day, e, weekIndex, unit, perf, history)])
+        .filter(([, value]) => value !== null));
+}
+
 /* ── AUDITING EVERY PRESCRIBED SET ──────────────────────────────────────────────────────────────
  *
  * WHY THE OLD SELF-TEST NEVER CAUGHT ANYTHING, stated plainly because it is the whole design brief.
@@ -18736,55 +18625,16 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
         finishingRef.current = true;
         setFinishSaving(true);
         try {
-            const perfOut = {};
-            data.forEach(e => {
-                const s = summarizeSets(e.sets, EX_BY_ID[e.id], unit);
-                const note = e.note.trim() || (perf[e.id] && perf[e.id].note) || undefined;
-                if (s) {
-                    const doneWork = e.sets.filter(x => x.done && !x.warm && parseInt(x.reps) > 0);
-                    const hasPos = doneWork.some(x => parseFloat(x.weight) > 0);
-                    const wv = x => { const w = parseFloat(x.weight); return isNaN(w) ? 0 : w; };
-                    // Persist the amrap flag from the prescription onto each logged set. Percent-scheme
-                    // progression (5/3/1 TM projection, GZCLP stage advancement) needs to identify the
-                    // AMRAP set directly rather than inferring it from being the unique top-weight set —
-                    // that heuristic silently breaks if a manually-edited weight ties with another set.
-                    // RIR: prefer the explicitly-logged actual RIR; otherwise fall back to the set's target
-                    // RIR so the LAST TIME column still shows the intended effort (most users just tick the
-                    // set done without tapping an RIR, which previously left the history with no effort at all).
-                    const setRIR = (x) => {
-                        if (x.actualRIR != null)
-                            return x.actualRIR;
-                        const t = x.target?.rir;
-                        const n = typeof t === "number" ? t : parseRIRNum(t);
-                        return Number.isFinite(n) ? n : null;
-                    };
-                    const logged = (hasPos ? doneWork.filter(x => parseFloat(x.weight) > 0) : doneWork)
-                        .map(x => {
-                        const r = setRIR(x);
-                        // Snapshot what was ASKED for alongside what was done: pw = prescribed weight, pt = the
-                        // prescribed rep target. Self-contained per set, so a logged session can be replayed and
-                        // scored against a different progression without needing the program that produced it.
-                        // Omitted for manual/freestyle sets, where nothing was prescribed.
-                        const pw = parseFloat(x.target?.w);
-                        const pt = x.target?.reps != null ? String(x.target.reps) : null;
-                        // PROVENANCE TRAVELS WITH THE SET. `sub` marks a drop set or myo mini — an extension of
-                        // the set above, not a working set. Every reader downstream already filters on it
-                        // (`!s.warm && !s.sub`), but the flag was never PERSISTED, so on replayed history those
-                        // filters matched nothing and extensions counted as full sets all over again — the exact
-                        // bug v493 fixed in the live session, surviving in the log.
-                        return { w: wv(x), r: parseInt(x.reps), ...(r != null ? { rir: r, rirReported: x.actualRIR != null } : {}), ...(x.sub ? { sub: true, ...(x.kind ? { kind: x.kind } : {}) } : {}), ...(prescribedRIRof(x) != null ? { tr: prescribedRIRof(x) } : {}), ...(x.target?.amrap ? { amrap: true } : {}), ...(x.auto && pw > 0 ? { pw } : {}), ...(!x.target?.freestyle && pt ? { pt } : {}) };
-                    });
-                    const prescription = snapshotNextShellPrescription(program, day, e.slot, EX_BY_ID[e.id], weekIndex);
-                    perfOut[e.id] = { weight: s.weight, reps: s.reps, date: Date.now(), sets: logged, note,
-                        ...(prescription ? { prescription } : {}) };
-                }
-            });
+            const perfOut = loggedWorkoutPerformance(program, day, data, weekIndex, unit, perf, history);
             const committed = await onFinish({
                 id: sessionIdRef.current,
                 programId: program.id, programName: program.name, dayLabel: day.label, dayId: day.id,
                 engineV: program.engineV || 1, // which engine issued this session's prescriptions
                 weekIndex, // the block week this session belongs to — lets the program view mark a day done
                 setsDone: doneSets, totalSets, volume: Math.round(volume), unit,
+                readiness, readinessStatus: readiness?.factor < 1 ? 'low' : 'normal',
+                badDay: readiness?.factor < 1,
+                substitutionOccurred: data.some(e => e.id !== exerciseAt(program, day, e.slot, weekIndex)),
                 durationMin: Math.max(1, Math.round(runElapsedMs() / 60000)),
                 /* The estimate this session was SOLD with, stored beside what it actually took. Pace can then
                    be measured even after the program is deleted or edited, which is when the comparison would
@@ -19856,26 +19706,34 @@ function exRecords(history, id, unit = "kg") {
         const p = h.perf?.[id];
         if (!(p && p.weight > 0))
             return;
-        const u = h.unit || unit;
-        const sets = setsOf(p);
+        const u = unit;
+        const sets = completedHistorySets(p).map(x => ({ ...x, w: convertHistoryLoad(x.w, h.unit, unit) }));
         sets.forEach(s => {
             if (!(s.w > 0) || s.sub)
                 return; // exclude sub-sets (myo-reps, drop sets) from records
             if (betterTopSet(maxWeight, { w: s.w, r: s.r }) !== maxWeight)
-                maxWeight = { w: s.w, r: s.r, date: h.date, unit: u };
+                maxWeight = { w: s.w, r: s.r, date: h.date, unit: u, sourceUnit: h.unit || unit };
             if (s.r != null) {
                 const e = e1rm(s.w, s.r);
                 if (!maxE1rm || e > maxE1rm.v)
-                    maxE1rm = { v: e, date: h.date, unit: u };
+                    maxE1rm = { v: e, date: h.date, unit: u, sourceUnit: h.unit || unit };
                 const vol = s.w * s.r;
                 if (!maxVol || vol > maxVol.v)
-                    maxVol = { v: vol, date: h.date, unit: u };
+                    maxVol = { v: vol, date: h.date, unit: u, sourceUnit: h.unit || unit };
                 if (!perRep[s.r] || s.w > perRep[s.r].w)
-                    perRep[s.r] = { w: s.w, date: h.date, unit: u };
+                    perRep[s.r] = { w: s.w, date: h.date, unit: u, sourceUnit: h.unit || unit };
             }
         });
     });
-    return { maxWeight, maxE1rm, maxVol, perRep };
+    const originalUnits = record => {
+        if (!record) return record;
+        const { sourceUnit, ...out } = record;
+        if (out.w != null) out.w = convertHistoryLoad(out.w, unit, sourceUnit);
+        if (out.v != null) out.v = convertHistoryLoad(out.v, unit, sourceUnit);
+        return { ...out, unit: sourceUnit };
+    };
+    return { maxWeight: originalUnits(maxWeight), maxE1rm: originalUnits(maxE1rm),
+        maxVol: originalUnits(maxVol), perRep: Object.fromEntries(Object.entries(perRep).map(([r, v]) => [r, originalUnits(v)])) };
 }
 /* ===================== EXERCISE METRIC SERIES (library charts) =====================
  * One pure read that every chart in the exercise library is built from. The library had exactly one
@@ -19923,7 +19781,8 @@ function exerciseSeries(history, id, metricId = "e1rm", windowId = "all", now = 
     const win = exWindow(windowId);
     const since = win.days == null ? -Infinity : now - win.days * 86400000;
     const rows = [];
-    let unit = null;
+    let unit = (Array.isArray(history) ? history : []).filter(h => validHistoryDate(h) && h.perf?.[id])
+        .sort((a, b) => Number(b.date) - Number(a.date))[0]?.unit || 'kg';
     for (const h of (Array.isArray(history) ? history : [])) {
         if (!h || typeof h !== "object" || !h.perf)
             continue;
@@ -19932,10 +19791,10 @@ function exerciseSeries(history, id, metricId = "e1rm", windowId = "all", now = 
         const p = h.perf[id];
         if (!p)
             continue;
-        const sets = setsOf(p).filter(s => s && s.w > 0 && !s.warm && !s.sub);
+        const sets = completedHistorySets(p).filter(s => s.w > 0).map(s => ({ ...s, w: convertHistoryLoad(s.w, h.unit, unit) }));
         if (!sets.length)
             continue;
-        unit = h.unit || unit || "kg";
+
         const withReps = sets.filter(s => s.r > 0);
         const bestE = withReps.length ? Math.max(...withReps.map(s => e1rm(s.w, s.r))) : Math.max(...sets.map(s => s.w));
         const topW = Math.max(...sets.map(s => s.w));
@@ -19949,7 +19808,7 @@ function exerciseSeries(history, id, metricId = "e1rm", windowId = "all", now = 
             v = sets.length ? vol / sets.length : 0;
         if (!(v > 0))
             continue;
-        rows.push({ date: h.date, v: Math.round(v * 10) / 10, sets: sets.length, reps: withReps.reduce((n, s) => n + s.r, 0), top: topW, e1rm: bestE, unit: h.unit || unit });
+        rows.push({ date: h.date, v: Math.round(v * 10) / 10, sets: sets.length, reps: withReps.reduce((n, s) => n + s.r, 0), top: topW, e1rm: bestE, unit });
     }
     rows.sort((a, b) => a.date - b.date);
     if (!rows.length)
@@ -19970,8 +19829,11 @@ function exerciseSeries(history, id, metricId = "e1rm", windowId = "all", now = 
    different loads, and interleaving them produces a saw-tooth that reads as a stall even when each
    day is climbing steadily. Callers that care about a specific day's progress pass its id. */
 function exerciseTrends(history, dayId = null) {
-    const map = {};
-    (Array.isArray(history) ? [...history] : []).reverse().forEach(h => {
+    const map = {}, units = {};
+    const ordered = (Array.isArray(history) ? history : []).filter(validHistoryDate).slice().sort((a, b) => Number(a.date) - Number(b.date));
+    for (const h of ordered) if (!dayId || h.dayId === dayId)
+        for (const id of Object.keys(h.perf || {})) units[id] = h.unit || units[id] || 'kg';
+    ordered.forEach(h => {
         if (!h || typeof h !== "object" || !h.perf)
             return; // a corrupt entry skips, never throws
         if (dayId && h.dayId !== dayId)
@@ -19979,8 +19841,8 @@ function exerciseTrends(history, dayId = null) {
         Object.entries(h.perf).forEach(([id, p]) => {
             if (!(p && p.weight > 0))
                 return;
-            const unit = h.unit || "kg";
-            const raw = setsOf(p);
+            const unit = units[id];
+            const raw = completedHistorySets(p).map(s => ({ ...s, w: convertHistoryLoad(s.w, h.unit, unit) }));
             const sets = raw.filter(s => s.w > 0).map(s => ({ w: s.w, r: s.r ?? null, e1rm: s.r != null ? e1rm(s.w, s.r) : s.w }));
             if (!sets.length)
                 return;
@@ -20058,7 +19920,7 @@ function blockRetro(history, opts = {}) {
             for (const s of ss) {
                 const w = +(s.w != null ? s.w : s.weight), r = +(s.r != null ? s.r : s.reps);
                 if (w > 0 && r > 0 && isWorkSet(s)) {
-                    const e = e1rm(w, r);
+                    const e = e1rm(convertHistoryLoad(w, h.unit, "kg"), r);
                     if (e > best)
                         best = e;
                 }
@@ -20891,7 +20753,7 @@ function strengthScoreHistory(history, bw, bwUnit, sex, age) {
     const weighted = Object.keys(patSessions).filter(pt => scoreMatur(patSessions[pt]) > 0);
     const seenPats = new Set();
     sessions.forEach(h => {
-        const unit = h.unit || "kg";
+        const unit = bwUnit || "kg";
         let touched = false;
         const liftsThis = new Set(), patsThis = new Set();
         Object.entries(h.perf).forEach(([id, p]) => {
@@ -20901,7 +20763,7 @@ function strengthScoreHistory(history, bw, bwUnit, sex, age) {
             const pt = scorePatternFor(id);
             if (pt)
                 patsThis.add(pt);
-            const raw = setsOf(p);
+            const raw = completedHistorySets(p).map(s => ({ ...s, w: convertHistoryLoad(s.w, h.unit, unit) }));
             const e = Math.max(...raw.filter(s => s.w > 0).map(s => s.r != null ? e1rm(s.w, s.r) : s.w));
             if (!(e > 0))
                 return;
@@ -21343,15 +21205,16 @@ function rirTrend(history) {
     const weekKey = weekKeyOf;
     const byWeek = {}, byWeekDev = {}, byWeekE = {};
     (history || []).forEach(h => Object.values(h.perf || {}).forEach(p => (p.sets || []).forEach(s => {
-        if (s.rir == null || !(s.r > 0))
+        const observedRir = observedHistoryRIR(s);
+        if (observedRir == null || s.warm || s.sub || s.done === false || !(s.r > 0))
             return;
         const k = weekKey(h.date);
-        (byWeek[k] = byWeek[k] || []).push(s.rir);
+        (byWeek[k] = byWeek[k] || []).push(observedRir);
         const rx = prescribedRIRofAny(s);
         if (rx != null)
-            (byWeekDev[k] = byWeekDev[k] || []).push(s.rir - rx);
+            (byWeekDev[k] = byWeekDev[k] || []).push(observedRir - rx);
         if (s.w > 0) {
-            const e = e1rmRIR(s.w, s.r, 0);
+            const e = e1rmRIR(convertHistoryLoad(s.w, h.unit, "kg"), s.r, 0);
             byWeekE[k] = Math.max(byWeekE[k] || 0, e);
         }
     })));
@@ -23412,6 +23275,7 @@ function StrengthSnapshotCard({ history, bodyweight, sex, age, unit, bwLog = [],
  * Newest release first, newest entry first within a release. */
 const WHATS_NEW_MAX = 10;
 const CHANGELOG = [
+    { version: "4.0.0", build: "815", items: ["Custom workouts save their original targets, so later program edits cannot award an unearned weight increase.", "Percentage workouts now match the preview, including training-max units, rep-out sets and deloads.", "Recovery, interruption and exercise-edit flags remain attached to saved performance and protect future suggestions.", "Duplicate, empty or malformed workout records no longer advance a training block or hide valid history.", "Mixed-unit strength records and trends compare the same physical loads. Session estimates respect the accepted weekly set budget."] },
     {"version": "4.0.0", "build": "812", "items": ["Custom programs now use the same progression evaluator as generated plans and honor your selected method.", "Rep targets follow each set\u2019s previous performance. Reduced weights rebuild from the bottom of your range.", "Resumed workouts refresh untouched suggestions while protecting completed sets and manual entries.", "Custom settings save the no-superset option and preserve your exercise list and last-set techniques."]},
     {"version": "4.0.0", "build": "811", "items": ["Load suggestions handle incomplete or malformed equipment lists without crashing or inventing unavailable weights.", "Large imported plate inventories no longer require enumerating the entire stock before selecting a load.", "Invalid strength-history values cannot spoil valid strength estimates.", "Blank or incomplete rep targets use safe defaults instead of producing zero-rep working sets.", "Your themes, programs, completed sets and manual workout entries remain intact."]},
     {"version": "4.0.0", "build": "810", "items": ["Repeated exercises in custom programs now progress from the last session of the same training day.", "The suggestion and Last column use the same session, so a newer Legs workout cannot replace Lower's working load.", "A shorter workout on another day cannot qualify a longer day's load increase. Each day builds toward its own full set target.", "Resuming refreshes untouched automatic custom-plan loads while preserving completed sets and manually entered values.", "The reviewed theme contrast, phone layout, Plan estimates, reduced-motion sheets and workout audio improvements remain available."]},
@@ -26101,7 +25965,7 @@ function LibraryView({ onBack, banned = [], onBan, onSetBan, goals = {}, onSetGo
                                         setDetailId(null); }, className: "pressable", "aria-label": "Ban from all programs", "aria-pressed": banned.includes(detail.id), style: { width: "100%", padding: "13px", borderRadius: 12, border: `1px solid ${banned.includes(detail.id) ? C.border : C.dangerDim}`, background: "none", color: banned.includes(detail.id) ? C.muted : C.danger, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 8 }, children: [_jsx(Ban, { size: 15 }), " ", banned.includes(detail.id) ? "Banned \u2014 tap to unban" : "Ban from all programs"] })] })] })) })] }));
 }
 const INTRO_VERSION = 5; // bump when onboarding content changes → returning users see it once more
-const WHATS_NEW_VERSION = 222; // bump when there's an update worth showing existing users on Home
+const WHATS_NEW_VERSION = 225; // bump when there's an update worth showing existing users on Home
 /* How much training history to keep.
 
    Measured, not guessed: a typical logged session (7 exercises, 3–5 sets each) serialises to ~1,095
@@ -29272,3 +29136,7 @@ export { ProgramSettingsSheet, CyclesView, CycleDetail };
 
 // Overview cache seam used by the rest-setting and catalog invalidation regression gate.
 export { planOverviewMemo };
+
+export { percentagePlanFor, trainingMaxForUnit, withTrainingMax };
+
+export { loggedWorkoutPerformance };

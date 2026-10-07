@@ -202,6 +202,15 @@ function candidateStructures(days, locked, preferred) {
         return bp - ap || a.display.localeCompare(b.display);
     });
 }
+export function supportedTrainingDaysForSplit(split) {
+    const family = String(split ?? '').trim();
+    return [2, 3, 4, 5, 6, 7].filter(days =>
+        candidateStructures(days, family, family).some(seed => seed.family === family));
+}
+export function splitSupportsTrainingDays(split, days) {
+    return Number.isInteger(days) && supportedTrainingDaysForSplit(split).includes(days);
+}
+
 function liftPreferredIntent(lift) {
     if (lift === 'bench_press')
         return ['bench_focus', 'upper', 'push', 'chest', 'chest_back', 'torso', 'shoulders', 'strength_full', 'full'];

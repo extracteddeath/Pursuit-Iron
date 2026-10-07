@@ -4,7 +4,6 @@ Use Node 22 or newer. Runtime and tests require no downloads, React, browser, UI
 
 ```sh
 npm test
-npm run verify
 npm run example > generated-program.json
 ```
 
@@ -15,8 +14,6 @@ npm run example > generated-program.json
 `npm test` checks full module imports and all included existing semantic suites, including after deliberate edits. `npm run verify` separately checks snapshot hashes and exact production-module identity. Browser/source-text integration suites remain unchanged under `reference/verification/`; they still run in the application repository. Their original assertions have not been weakened to fit the package. No private workout data is included.
 
 Edit `modules/next-engine/*.js` to audit or improve the engine directly. For improvements to extracted shell computation, use `coverage.json` and `reference/App.production.js` to locate the exact production declaration and port the reviewed change back to `modules/App.js`. Run the isolated semantic suites and the application's integration suites before release. Never copy the generated headless file wholesale over `App.js`.
-
-`history-contract.js` defines physical units, numeric evidence, unique history revisions and additive session/exercise/set context. The ordinary and tiered evaluators use the same exposure rules. `shell.loggedWorkoutPerformance` is the app's pure log serializer; recovery, edit and interruption flags survive its output. `percentage-protocols.js` supplies percentage waves and history-derived tiered progression; the accepted prescription owns the executable set budget. The M224 repair guide and M225 history report describe these boundaries and their limitations.
 
 This is a reproducible export, not a second engine authority. From the application repository:
 

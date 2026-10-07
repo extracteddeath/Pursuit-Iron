@@ -1,6 +1,26 @@
 import { bestEstimated1RM, estimate1RM } from './history.js';
 import { availableLoadAtOrBelow, formatExerciseLoad, loadingRecommendation } from './loading.js';
 import { progressionExposureContext } from './history-contract.js';
+function normalizePerformedSets(sets) {
+    const rows = [];
+    const seen = new Set();
+    const duplicateExerciseIds = new Set();
+    for (const set of Array.isArray(sets) ? sets : []) {
+        if (!set || typeof set !== 'object' || !set.exerciseId)
+            continue;
+        const setIndex = Number(set.setIndex);
+        if (!Number.isInteger(setIndex) || setIndex < 0)
+            continue;
+        const key = `${set.exerciseId}:${setIndex}`;
+        if (seen.has(key)) {
+            duplicateExerciseIds.add(set.exerciseId);
+            continue;
+        }
+        seen.add(key);
+        rows.push({ ...set, setIndex });
+    }
+    return { rows, duplicateExerciseIds };
+}
 function byExercise(sets) {
     const map = new Map();
     for (const set of sets) {
@@ -220,10 +240,26 @@ export function progressionSetTargets(exercise, actual, result) {
     });
 }
 export function evaluateWorkoutProgression(session, performedSets, context = {}) {
-    const results = evaluateProgression(session, performedSets, context);
+    if (!session || !Array.isArray(session.exercises))
+        throw new TypeError('Workout progression requires a session with an exercise array.');
+    const normalized = normalizePerformedSets(performedSets);
+    const results = evaluateProgression(session, normalized.rows, context);
     return results.map((result, index) => {
         const exercise = session.exercises[index];
-        const actual = performedSets.filter(s => s.exerciseId === exercise.exerciseId).slice().sort((a,b) => a.setIndex-b.setIndex);
-        return { ...result, setTargets: progressionSetTargets(exercise, actual, result) };
+        const actual = normalized.rows.filter(s => s.exerciseId === exercise.exerciseId).slice().sort((a,b) => a.setIndex-b.setIndex);
+        const setTargets = progressionSetTargets(exercise, actual, result);
+        if (normalized.duplicateExerciseIds.has(exercise.exerciseId)) {
+            return {
+                ...result,
+                outcome: 'non_comparable',
+                reasonCode: 'duplicate_set_index',
+                action: 'review',
+                confidence: 'high',
+                reason: 'This exposure contains duplicate working-set positions, so it is ambiguous and cannot safely drive automatic progression.',
+                suggestedLoad: result.currentLoad,
+                setTargets
+            };
+        }
+        return { ...result, setTargets };
     });
 }

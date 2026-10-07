@@ -1,7 +1,9 @@
 name: Engine contracts
 on:
   push:
-    branches: [main, 'verification/**']
+    branches:
+      - main
+      - 'verification/**'
   pull_request:
     branches: [main]
   workflow_dispatch:

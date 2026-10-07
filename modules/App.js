@@ -1,6 +1,6 @@
 import { PCT_SCHEMES, percentageProtocolFor, adaptPercentageSetBudget, deriveTieredLinearState } from './next-engine/percentage-protocols.js';
 import { historyNumber, convertHistoryLoad, observedHistoryRIR, completedHistorySets, historyExposureContext, progressionExposureContext, normalizeHistoryEntries, validHistoryDate, historyLoadReason } from './next-engine/history-contract.js';
-const __APP_VERSION__='4.0.0'; const __BUILD__='815';
+const __APP_VERSION__='4.0.0'; const __BUILD__='813';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { holdWorkoutScreenAwake } from "./mobile-lifecycle.js";
@@ -15846,8 +15846,8 @@ function customExerciseHistory(program, day, id, history) {
     const sameDay = own.find(h => h.dayId != null
         ? String(h.dayId) === String(day.id)
         : h.dayLabel != null && day?.label != null && String(h.dayLabel) === String(day.label)) ?? null;
-    // Another occurrence of the movement is useful only as a starting-load reference. It cannot earn
-    // reps/load progression or lend its saved set/rep prescription to this program-day occurrence.
+    // Movement history from another occurrence is useful for initialization only. It must not lend
+    // this day its prior set count, rep range, RIR target, or a completed exposure that earns progress.
     const reference = sameDay ?? own[0] ?? valid.find(h => h.programId !== program.id) ?? null;
     return { sameDay, reference };
 }
@@ -15886,9 +15886,8 @@ function customProgramSuggestion(program, day, slot, unit, weekIndex, history) {
         rir: Array.isArray(saved.rir) ? saved.rir.join('-') : saved.rir } : currentCell;
     const [lo, hi] = cellRepRange(cell, program, ex, slot === day?.primaryIndex);
     const rir = effortBounds(cell.rir) || [2, 2];
-    const work = (Array.isArray(last.perf[ex.id].sets) ? last.perf[ex.id].sets : [])
-        .filter(x => x && !x.warm && !x.sub && x.done !== false && historyNumber(x.w) !== null && historyNumber(x.w) >= 0
-            && historyNumber(x.r) > 0);
+    const work = completedHistorySets(last.perf[ex.id])
+        .filter(x => historyNumber(x.w) !== null && historyNumber(x.w) >= 0);
     if (!work.length) return null;
     const style = resolveStyle(program, ex, slot === day.primaryIndex, weekIndex, null, history, day.id);
     const rack = gymRackFor(ex, unit), step = loadStep(ex, unit);
@@ -23300,7 +23299,6 @@ function StrengthSnapshotCard({ history, bodyweight, sex, age, unit, bwLog = [],
  * Newest release first, newest entry first within a release. */
 const WHATS_NEW_MAX = 10;
 const CHANGELOG = [
-    { version: "4.0.0", build: "815", items: ["Custom workouts save their original targets, so later program edits cannot award an unearned weight increase.", "Percentage workouts now match the preview, including training-max units, rep-out sets and deloads.", "Recovery, interruption and exercise-edit flags remain attached to saved performance and protect future suggestions.", "Duplicate, empty or malformed workout records no longer advance a training block or hide valid history.", "Mixed-unit strength records and trends compare the same physical loads. Session estimates respect the accepted weekly set budget."] },
     {"version": "4.0.0", "build": "812", "items": ["Custom programs now use the same progression evaluator as generated plans and honor your selected method.", "Rep targets follow each set\u2019s previous performance. Reduced weights rebuild from the bottom of your range.", "Resumed workouts refresh untouched suggestions while protecting completed sets and manual entries.", "Custom settings save the no-superset option and preserve your exercise list and last-set techniques."]},
     {"version": "4.0.0", "build": "811", "items": ["Load suggestions handle incomplete or malformed equipment lists without crashing or inventing unavailable weights.", "Large imported plate inventories no longer require enumerating the entire stock before selecting a load.", "Invalid strength-history values cannot spoil valid strength estimates.", "Blank or incomplete rep targets use safe defaults instead of producing zero-rep working sets.", "Your themes, programs, completed sets and manual workout entries remain intact."]},
     {"version": "4.0.0", "build": "810", "items": ["Repeated exercises in custom programs now progress from the last session of the same training day.", "The suggestion and Last column use the same session, so a newer Legs workout cannot replace Lower's working load.", "A shorter workout on another day cannot qualify a longer day's load increase. Each day builds toward its own full set target.", "Resuming refreshes untouched automatic custom-plan loads while preserving completed sets and manually entered values.", "The reviewed theme contrast, phone layout, Plan estimates, reduced-motion sheets and workout audio improvements remain available."]},

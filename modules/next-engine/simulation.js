@@ -32,6 +32,28 @@ const CYCLE_TEMPLATES = [
         ] }
 ];
 const DEFAULT_BLOCKS = CYCLE_TEMPLATES[0].blocks;
+const RESPONSE_PROFILES = new Set(['steady', 'mixed', 'fast_responder', 'fatigue_prone']);
+function normalizedSimulationBlocks(value) {
+    if (value !== undefined && !Array.isArray(value))
+        throw new TypeError('Simulation blocks must be an array.');
+    const raw = Array.isArray(value) && value.length ? value : DEFAULT_BLOCKS;
+    if (raw.length > 12)
+        throw new RangeError('Simulation supports at most 12 blocks.');
+    return raw.map((block, index) => {
+        if (!block || typeof block !== 'object' || Array.isArray(block))
+            throw new TypeError(`Simulation block ${index + 1} must be an object.`);
+        phasePolicyFor(block.phase);
+        if (typeof block.weeks === 'boolean' || typeof block.weeks === 'object' || block.weeks === null || block.weeks === '')
+            throw new TypeError(`Simulation block ${index + 1} weeks must be a finite number.`);
+        const numericWeeks = Number(block.weeks);
+        if (!Number.isFinite(numericWeeks))
+            throw new TypeError(`Simulation block ${index + 1} weeks must be a finite number.`);
+        const weeks = Math.round(numericWeeks);
+        if (weeks < 1 || weeks > 52)
+            throw new RangeError(`Simulation block ${index + 1} weeks must be between 1 and 52.`);
+        return { ...block, weeks };
+    });
+}
 function hashString(value) {
     let hash = 2166136261;
     for (let i = 0; i < value.length; i++) {
@@ -634,8 +656,16 @@ function simulateBlock(index, spec, program, request, profile, states) {
     return { weeks, response: blockResponse(program, states, totalActions, before) };
 }
 export function runPowerbuildingSimulation(options) {
-    const specs = (options.blocks?.length ? options.blocks : DEFAULT_BLOCKS).map(block => ({ ...block, weeks: Math.max(1, Math.round(block.weeks)) }));
+    if (!options || typeof options !== 'object' || Array.isArray(options))
+        throw new TypeError('Simulation options must be an object.');
+    if (!options.request || typeof options.request !== 'object' || Array.isArray(options.request))
+        throw new TypeError('Simulation requires a program request object.');
+    if (options.adaptBetweenBlocks !== undefined && typeof options.adaptBetweenBlocks !== 'boolean')
+        throw new TypeError('Simulation adaptBetweenBlocks must be a boolean.');
+    const specs = normalizedSimulationBlocks(options.blocks);
     const profile = options.responseProfile ?? 'mixed';
+    if (!RESPONSE_PROFILES.has(profile))
+        throw new RangeError(`Unsupported simulation response profile: ${String(profile)}.`);
     const blocks = [];
     const states = new Map();
     let priorProgram;

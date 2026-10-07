@@ -88,7 +88,7 @@ const coverage = {
   boundary: 'All engine modules and every top-level declaration independent of UI-framework bindings are included. The exact complete App.js is retained for nested UI event-handler and boundary audits. UI-dependent declarations are indexed rather than represented as headless code.'
 };
 write('coverage.json', JSON.stringify(coverage,null,2)+'\n');
-write('package.json', JSON.stringify({name:'pursuit-iron-engine',version:manifest.engineVersion,private:true,type:'module',engines:{node:'>=22'},exports:{'.':'./index.js','./shell':'./modules/engine-shell.js','./engine/*':'./modules/next-engine/*'},scripts:{test:'node scripts/audit.mjs',example:'node examples/generate.mjs',verify:'node scripts/verify-snapshot.mjs'}},null,2)+'\n');
+write('package.json', JSON.stringify({name:'pursuit-iron-engine',version:manifest.engineVersion,private:true,type:'module',engines:{node:'>=22'},exports:{'.':'./index.js','./shell':'./modules/engine-shell.js','./engine/*':'./modules/next-engine/*'},scripts:{test:'node scripts/audit.mjs',example:'node examples/generate.mjs',verify:'node scripts/verify-snapshot.mjs','verify:published':'node scripts/verify-snapshot.mjs --published-release'}},null,2)+'\n');
 // Existing semantic suites run against extracted computation. UI source-text gates remain
 // in the reference integration set instead of weakening their original assertions.
 const suites=[];

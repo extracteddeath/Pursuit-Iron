@@ -1,0 +1,227 @@
+import assert from 'node:assert/strict';
+import { normalizeRequest } from '../modules/next-engine/prescription.js';
+import { completedHistorySets, attemptedHistorySets, convertHistoryLoad } from '../modules/next-engine/history-contract.js';
+import { evaluateWorkoutProgression } from '../modules/next-engine/performance.js';
+import { buildRuntimeSetTargets, buildUserAddedSlotPrescriptions, techniqueProtocolFromCell } from '../modules/next-engine/workout-runtime.js';
+import { percentageProtocolFor, deriveTieredLinearState } from '../modules/next-engine/percentage-protocols.js';
+import { runPowerbuildingSimulation } from '../modules/next-engine/simulation.js';
+import { initialPhaseForGoal, phaseLabel, phasePolicyFor, SUPPORTED_PHASES } from '../modules/next-engine/phase-policy.js';
+import { shellConfigToNextRequest, NextShellAdapterError } from '../modules/next-engine/app-shell-adapter.js';
+import { generateNextCycleForShell, convertProgramToNextCycleForShell, advanceNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
+import { createInitialCycleState, advanceCycleState, recommendNextPhase, startPhase } from '../modules/next-engine/cycles.js';
+
+const request = {
+    athlete: { experience: 'intermediate', trainingAgeMonths: 24 },
+    goal: {
+        type: 'mixed',
+        musclePriorities: { chest: 'high' },
+        liftPriorities: { bench_press: 'normal' }
+    },
+    schedule: {
+        days: [
+            { day: 'monday', minMinutes: 40, maxMinutes: 60, targetExercises: 5 },
+            { day: 'friday', minMinutes: 40, maxMinutes: 60, targetExercises: 5 }
+        ]
+    },
+    equipment: { available: ['dumbbell', 'bench'], bodyweight: 'allow' },
+    restrictions: { maxBarbellMovementsPerDay: 2, allowSupersets: true },
+    preferences: { progressionStyle: 'double', volumeApproach: 'standard' },
+    customExercises: [],
+    seed: 17
+};
+
+const before = structuredClone(request);
+const normalized = normalizeRequest(request);
+assert.equal(normalized.goal.type, 'mixed');
+assert.equal(normalized.athlete.experience, 'intermediate');
+assert.equal(normalized.goal.musclePriorities.chest, 'high');
+assert.equal(normalized.goal.liftPriorities.bench_press, 'normal');
+assert.deepEqual(request, before, 'request normalization must remain immutable');
+
+const alias = structuredClone(request);
+alias.goal.type = ' BOTH ';
+alias.athlete.experience = ' Beginner ';
+alias.goal.musclePriorities.chest = ' HIGH ';
+alias.goal.liftPriorities.bench_press = ' NORMAL ';
+alias.schedule.days[0].day = ' Monday ';
+alias.preferences.progressionStyle = ' DOUBLE ';
+const normalizedAlias = normalizeRequest(alias);
+assert.equal(normalizedAlias.goal.type, 'mixed');
+assert.equal(normalizedAlias.athlete.experience, 'novice');
+assert.equal(normalizedAlias.schedule.days[0].day, 'monday');
+assert.equal(normalizedAlias.goal.musclePriorities.chest, 'high');
+assert.equal(normalizedAlias.preferences.progressionStyle, 'double');
+
+const requestError = (mutate, pattern) => {
+    const candidate = structuredClone(request);
+    mutate(candidate);
+    assert.throws(() => normalizeRequest(candidate), pattern);
+};
+requestError(x => { x.goal.type = 'power'; }, /Unsupported training goal/);
+requestError(x => { x.athlete.experience = 'expert'; }, /Unsupported training experience/);
+requestError(x => { x.schedule.days[0].day = 'funday'; }, /Unsupported training day/);
+requestError(x => { x.goal.musclePriorities.chest = 'extreme'; }, /Unsupported priority/);
+requestError(x => { x.goal.musclePriorities.pecs = 'high'; }, /Unsupported muscle priority target/);
+requestError(x => { x.goal.liftPriorities.clean = 'high'; }, /Unsupported lift priority target/);
+requestError(x => { x.preferences.progressionStyle = 'guess'; }, /Unsupported progression style/);
+requestError(x => { x.equipment.available = 'dumbbell'; }, /equipment availability array/);
+requestError(x => { x.schedule.days[0].equipmentOverride = 'dumbbell'; }, /Equipment override/);
+requestError(x => { x.customExercises = {}; }, /Custom exercises must be an array/);
+requestError(x => { x.athlete.trainingAgeMonths = true; }, /Training age in months must be a finite number/);
+requestError(x => { x.athlete.trainingAgeMonths = 12.5; }, /Training age in months must be a whole number/);
+requestError(x => { x.restrictions.maxBarbellMovementsPerDay = 'many'; }, /Maximum barbell movements per day must be a finite number/);
+requestError(x => { x.restrictions.maxBarbellMovementsPerDay = -1; }, /Maximum barbell movements per day must be between/);
+requestError(x => { x.restrictions.allowSupersets = 'false'; }, /Superset permission must be a boolean/);
+requestError(x => { x.preferences.responseCapacityScale = {}; }, /Response capacity scale must be a finite number/);
+requestError(x => { x.preferences.responseCapacityScale = 'oops'; }, /Response capacity scale must be a finite number/);
+requestError(x => { x.preferences.volumeApproach = 'extreme'; }, /Unsupported volume approach/);
+requestError(x => { x.equipment.available = ['dumbbell', '']; }, /nonblank equipment IDs/);
+requestError(x => { x.equipment.bodyweight = 'sometimes'; }, /Unsupported bodyweight policy/);
+const numericAlias = structuredClone(request);
+numericAlias.athlete.trainingAgeMonths = '36';
+numericAlias.restrictions.maxBarbellMovementsPerDay = '3';
+numericAlias.preferences.responseCapacityScale = '0.75';
+numericAlias.equipment.available = ['dumbbell','bench','dumbbell'];
+const numericNormalized = normalizeRequest(numericAlias);
+assert.equal(numericNormalized.athlete.trainingAgeMonths, 36);
+assert.equal(numericNormalized.restrictions.maxBarbellMovementsPerDay, 3);
+assert.equal(numericNormalized.preferences.responseCapacityScale, .75);
+assert.deepEqual(numericNormalized.equipment.available, ['dumbbell','bench']);
+console.log('PASS boundary request: aliases normalize deliberately; malformed enums, arrays and numeric settings fail closed without NaN propagation.');
+
+assert.ok(SUPPORTED_PHASES.includes('peak'));
+assert.equal(initialPhaseForGoal('mixed'), 'mixed_accumulation');
+assert.equal(phasePolicyFor('recovery').phase, 'recovery');
+assert.equal(phaseLabel('strength_accumulation'), 'Strength Accumulation');
+assert.throws(() => initialPhaseForGoal('both'), /Unsupported training goal/);
+assert.throws(() => phasePolicyFor('not_a_phase'), /Unsupported training phase/);
+assert.throws(() => phaseLabel('not_a_phase'), /Unsupported training phase/);
+console.log('PASS boundary phase: internal goals/phases have one explicit vocabulary and invalid values cannot fall through to mixed/undefined behavior.');
+
+const initialCycle = createInitialCycleState('mixed', 4);
+assert.equal(initialCycle.minimumWorkouts, 8);
+assert.equal(initialCycle.reviewAfterWorkouts, 16);
+assert.equal(createInitialCycleState('strength', '5').minimumWorkouts, 10);
+assert.throws(() => createInitialCycleState('mixed', 0), /Days per week/);
+assert.throws(() => createInitialCycleState('mixed', true), /Days per week/);
+assert.throws(() => recommendNextPhase('power', initialCycle), /Unsupported training goal/);
+assert.throws(() => recommendNextPhase('mixed', { ...initialCycle, phase: 'bogus' }), /Unsupported training phase/);
+assert.throws(() => advanceCycleState({ ...initialCycle, workoutsInPhase: '2' }, [], false, { status: 'normal' }, 'mixed'), /workouts-in-phase/);
+assert.throws(() => advanceCycleState({ ...initialCycle, minimumWorkouts: NaN }, [], false, { status: 'normal' }, 'mixed'), /minimum workouts/);
+assert.throws(() => startPhase(initialCycle, 'bogus', 'mixed', 4), /Unsupported training phase/);
+console.log('PASS boundary cycle state: invalid imported counters, phases, goals and days cannot poison lifecycle math.');
+
+const shellBase = {
+    days: 4,
+    session: 's60',
+    goal: 'both',
+    experience: 'intermediate',
+    split: 'full_body',
+    equipment: ['dumbbell', 'bench'],
+    progressionStyle: 'auto'
+};
+const shell = shellConfigToNextRequest(shellBase, [], [], 123);
+assert.equal(shell.goal.type, 'mixed');
+assert.equal(shell.athlete.experience, 'intermediate');
+assert.equal(shell.schedule.days.length, 4);
+assert.equal(shell.preferences.lockedSplit, 'full_body');
+assert.equal(shell.preferences.progressionStyle, 'auto');
+
+const legacyDefaults = shellConfigToNextRequest({ equipment: ['dumbbell'] }, [], [], 123);
+assert.equal(legacyDefaults.goal.type, 'hypertrophy');
+assert.equal(legacyDefaults.athlete.experience, 'intermediate');
+assert.equal(legacyDefaults.schedule.days.length, 4);
+assert.equal(legacyDefaults.preferences.lockedSplit, 'full_body');
+
+const shellCode = (patch, code) => {
+    assert.throws(
+        () => shellConfigToNextRequest({ ...shellBase, ...patch }, [], [], 123),
+        error => error instanceof NextShellAdapterError && error.code === code
+    );
+};
+shellCode({ goal: 'power' }, 'NEXT_CONFIG_GOAL_INVALID');
+shellCode({ experience: 'expert' }, 'NEXT_CONFIG_EXPERIENCE_INVALID');
+shellCode({ split: 'mystery' }, 'NEXT_CONFIG_SPLIT_INVALID');
+shellCode({ days: 1 }, 'NEXT_CONFIG_DAYS_INVALID');
+shellCode({ days: 4.5 }, 'NEXT_CONFIG_DAYS_INVALID');
+shellCode({ session: 'forever' }, 'NEXT_CONFIG_SESSION_INVALID');
+shellCode({ progressionStyle: 'guess' }, 'NEXT_CONFIG_PROGRESSION_INVALID');
+assert.throws(() => shellConfigToNextRequest(null, [], [], 1), e => e instanceof NextShellAdapterError && e.code === 'NEXT_CONFIG_INVALID');
+assert.throws(() => shellConfigToNextRequest(shellBase, 'bench', [], 1), e => e instanceof NextShellAdapterError && e.code === 'NEXT_CONFIG_BANNED_INVALID');
+assert.throws(() => shellConfigToNextRequest(shellBase, [], {}, 1), e => e instanceof NextShellAdapterError && e.code === 'NEXT_CONFIG_EXERCISES_INVALID');
+console.log('PASS boundary shell: backward-compatible omissions keep deliberate defaults; explicit invalid config no longer silently changes the requested program.');
+
+assert.throws(() => generateNextCycleForShell(null), e => e instanceof NextShellAdapterError && e.code === 'NEXT_CYCLE_OPTIONS_INVALID');
+assert.throws(() => generateNextCycleForShell({ templateId: 'powerbuilding' }), e => e instanceof NextShellAdapterError && e.code === 'NEXT_CYCLE_CONFIG_INVALID');
+assert.throws(() => generateNextCycleForShell({ templateId: 'powerbuilding', config: shellBase, legacyExercises: {} }), e => e instanceof NextShellAdapterError && e.code === 'NEXT_CYCLE_EXERCISES_INVALID');
+assert.throws(() => convertProgramToNextCycleForShell(null), e => e instanceof NextShellAdapterError && e.code === 'NEXT_CYCLE_CONVERSION_OPTIONS_INVALID');
+assert.throws(() => convertProgramToNextCycleForShell({ legacyExercises: [] }), e => e instanceof NextShellAdapterError && e.code === 'NEXT_CYCLE_CONVERSION_UNSUPPORTED');
+assert.throws(() => advanceNextCycleForShell({}), e => e instanceof NextShellAdapterError && e.code === 'NEXT_CYCLE_HISTORY_INVALID');
+assert.throws(() => advanceNextCycleForShell({ history: [], legacyExercises: {} }), e => e instanceof NextShellAdapterError && e.code === 'NEXT_CYCLE_EXERCISES_INVALID');
+console.log('PASS boundary cycles: malformed public adapter inputs fail at the boundary with stable error codes instead of incidental runtime exceptions.');
+
+assert.equal(convertHistoryLoad(100, 'kg', 'lb') > 220 && convertHistoryLoad(100, 'kg', 'lb') < 221, true);
+assert.equal(convertHistoryLoad(100, 'KGS', 'LBs') > 220, true);
+assert.equal(convertHistoryLoad(100, 'stone', 'lb'), null);
+assert.equal(convertHistoryLoad(100, 'lb', 'mystery'), null);
+assert.equal(convertHistoryLoad(100, undefined, 'kg'), 100);
+const completionProbe = { sets: [
+    { r: 8, done: true },
+    { r: 8 },
+    { r: 8, done: false },
+    { r: 8, done: 'false' },
+    { r: 0, done: true, failedAttempt: true },
+    { r: 0, done: 'true', failedAttempt: true }
+] };
+assert.equal(completedHistorySets(completionProbe).length, 2);
+assert.equal(attemptedHistorySets(completionProbe).length, 3);
+const progExercise = { exerciseId: 'back_squat', name: 'Back Squat', role: 'primary_strength', sets: 3,
+    prescription: { reps: [5, 8], rir: [2, 2] }, progressionStyle: 'double' };
+const duplicateRows = [
+    { exerciseId: 'back_squat', setIndex: 0, load: 185, reps: 8, rir: 2 },
+    { exerciseId: 'back_squat', setIndex: 0, load: 185, reps: 8, rir: 2 },
+    { exerciseId: 'back_squat', setIndex: 1, load: 185, reps: 8, rir: 2 },
+    { exerciseId: 'back_squat', setIndex: 2, load: 185, reps: 8, rir: 2 }
+];
+const duplicateDecision = evaluateWorkoutProgression({ exercises: [progExercise] }, duplicateRows, { equipmentAvailable: ['barbell','rack'] })[0];
+assert.equal(duplicateDecision.outcome, 'non_comparable');
+assert.equal(duplicateDecision.reasonCode, 'duplicate_set_index');
+assert.notEqual(duplicateDecision.action, 'increase_load');
+const invalidPositionDecision = evaluateWorkoutProgression({ exercises: [progExercise] },
+    duplicateRows.map(({ setIndex, ...row }) => row), { equipmentAvailable: ['barbell','rack'] })[0];
+assert.equal(invalidPositionDecision.outcome, 'unobserved');
+console.log('PASS boundary history/progression: bad units, ambiguous completion flags, duplicate set positions and missing positions fail closed.');
+
+assert.equal(Object.keys(buildUserAddedSlotPrescriptions({ weeks: Infinity, repRange: [8,12] })).length, 1);
+assert.equal(Object.keys(buildUserAddedSlotPrescriptions({ weeks: 1e9, repRange: [8,12] })).length, 1);
+assert.equal(Object.keys(buildUserAddedSlotPrescriptions({ weeks: '6', repRange: [8,12] })).length, 6);
+assert.equal(buildRuntimeSetTargets({ exerciseId: 'back_squat', cell: { sets: Infinity, reps: '5-8', rir: 2 }, includeWarmups: false }).length, 1);
+assert.equal(buildRuntimeSetTargets({ exerciseId: 'back_squat', cell: { sets: 1000000, reps: '5-8', rir: 2 }, includeWarmups: false }).length, 1);
+assert.equal(buildRuntimeSetTargets({ exerciseId: 'back_squat', cell: { sets: '4', reps: '5-8', rir: 2 }, includeWarmups: false }).length, 4);
+assert.equal(buildRuntimeSetTargets({ exerciseId: 'back_squat', cell: null, includeWarmups: false }).length, 1);
+assert.deepEqual(techniqueProtocolFromCell(undefined), { type: null });
+console.log('PASS boundary runtime: corrupted set/week counts cannot create unbounded loops; valid numeric strings remain usable.');
+
+const safePct = percentageProtocolFor({ scheme: '531', tm: 200, weekIndex: 1, weeksTotal: 4, snapLoad: 'not-a-function' });
+assert.equal(safePct.sets.length, 3);
+assert.equal(safePct.sets[0].weight, 130);
+assert.equal(percentageProtocolFor(undefined), null);
+assert.deepEqual(deriveTieredLinearState({ initialStage: 99, initialLoad: 'bad' }), { stage: 0, weight: null });
+const noCallbacksEntry = { id: 'p', programId: 'p', date: 1, unit: 'lb', perf: { lift: {
+    sets: [{ w: 50, r: 3, done: true }],
+    prescription: { sets: 1, protocol: { scheme: 'gzclp', tier: 't1', stage: 0 }, setTargets: [{ weight: 50, reps: 3 }] }
+} } };
+assert.deepEqual(deriveTieredLinearState({ programId: 'p', exerciseId: 'lift', tier: 't1', initialLoad: 50, unit: 'lb', entries: [noCallbacksEntry] }),
+    { stage: 0, weight: 50 });
+console.log('PASS boundary percentage replay: invalid callbacks and initial tier state cannot crash or carry impossible state.');
+
+assert.throws(() => runPowerbuildingSimulation(), /Simulation options must be an object/);
+assert.throws(() => runPowerbuildingSimulation({}), /program request object/);
+assert.throws(() => runPowerbuildingSimulation({ request, blocks: 'bad' }), /Simulation blocks must be an array/);
+assert.throws(() => runPowerbuildingSimulation({ request, blocks: [{ phase: 'mixed_accumulation', weeks: Infinity }] }), /weeks must be a finite number/);
+assert.throws(() => runPowerbuildingSimulation({ request, blocks: [{ phase: 'mixed_accumulation', weeks: 1000000 }] }), /weeks must be between 1 and 52/);
+assert.throws(() => runPowerbuildingSimulation({ request, blocks: Array.from({ length: 13 }, () => ({ phase: 'mixed_accumulation', weeks: 1 })) }), /at most 12 blocks/);
+assert.throws(() => runPowerbuildingSimulation({ request, blocks: [{ phase: 'bogus', weeks: 1 }] }), /Unsupported training phase/);
+assert.throws(() => runPowerbuildingSimulation({ request, responseProfile: 'mystery' }), /Unsupported simulation response profile/);
+assert.throws(() => runPowerbuildingSimulation({ request, adaptBetweenBlocks: 'false' }), /adaptBetweenBlocks must be a boolean/);
+console.log('PASS boundary simulation: malformed block counts, durations, phases and response modes fail before any simulation loop can start.');

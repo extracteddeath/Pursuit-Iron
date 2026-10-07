@@ -4,13 +4,12 @@ import { execFileSync } from 'node:child_process';
 // none of these checks rewrites release identity or pushes a historical patch.
 const groups = {
     generation: [
-        'm196-capacity-band-regression', 'm197-capacity-monotonic', 'm198-creation-audit',
+        'engine-production-fuzz', 'm196-capacity-band-regression', 'm197-capacity-monotonic', 'm198-creation-audit',
         'm199-wizard-feasibility', 'm199-volume-repair', 'm200-regional-dose', 'm202-locked-cycle-dose',
         'm206-working-week-dose'
     ],
     adaptation: [
-        'm224-engine-hardening', 'm225-history-provenance', 'm226-progression-identity',
-        'm222-custom-program-parity', 'm221-engine-input-stability', 'm181-dose-reconciliation', 'm182-exercise-selection-intelligence', 'm182-selection-matrix',
+        'm224-engine-hardening', 'm225-history-provenance', 'm226-progression-identity', 'engine-boundary-hardening', 'm222-custom-program-parity', 'm221-engine-input-stability', 'm181-dose-reconciliation', 'm182-exercise-selection-intelligence', 'm182-selection-matrix',
         'm183-progression-safeguards', 'm184-longitudinal-evidence', 'm185-phase-specialization',
         'm186-explainable-block-review', 'm189-adaptive-progression-selection', 'm189-integration-wiring',
         'm190-progression-lifecycle', 'm191-progression-explainability-ui', 'm192-progression-transition-deltas',

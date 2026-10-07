@@ -6,6 +6,7 @@ import { createInitialCycleState } from './cycles.js';
 import { filterFeasibleLiftPriorities } from './prescription.js';
 import { finalizeGeneratedShellVolume } from './volume-repair.js';
 import { shellExercisePerformableFor as performableFor } from './shell-equipment.js';
+import { SUPPORTED_PROGRESSION_STYLES } from './progression-style.js';
 export { setShellEquipmentExpander } from './shell-equipment.js';
 const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 const DAY_SETS = {
@@ -38,13 +39,31 @@ const EXPLICIT_EXERCISE_ALIASES = {
     db_overhead_triceps: 'db-oh-ext', db_split_squat: 'bulgarian', db_rdl: 'db-rdl', db_calf_raise: 'db-calf', dumbbell_crunch: 'db-weighted-crunch', bodyweight_crunch: 'crunch',
     conventional_deadlift: 'deadlift', barbell_ohp: 'ohp'
 };
-function experienceOf(value) {
-    if (value === 'none' || value === 'beginner')
-        return 'novice';
-    return value === 'advanced' ? 'advanced' : 'intermediate';
+function invalidShellConfig(code, message, recovery) {
+    throw new NextShellAdapterError(code, message, recovery);
 }
-function goalOf(value) { return value === 'strength' ? 'strength' : value === 'both' ? 'mixed' : 'hypertrophy'; }
-function splitOf(value) { return SUPPORTED_SPLITS.has(value) ? value : 'full_body'; }
+function experienceOf(value) {
+    const raw = String(value ?? 'intermediate').trim().toLowerCase();
+    if (raw === 'none' || raw === 'beginner' || raw === 'novice')
+        return 'novice';
+    if (raw === 'intermediate' || raw === 'advanced')
+        return raw;
+    return invalidShellConfig('NEXT_CONFIG_EXPERIENCE_INVALID', `Unsupported experience setting: ${String(value)}.`, { field: 'experience', value });
+}
+function goalOf(value) {
+    const raw = String(value ?? 'hypertrophy').trim().toLowerCase();
+    if (raw === 'both' || raw === 'mixed')
+        return 'mixed';
+    if (raw === 'strength' || raw === 'hypertrophy')
+        return raw;
+    return invalidShellConfig('NEXT_CONFIG_GOAL_INVALID', `Unsupported training goal: ${String(value)}.`, { field: 'goal', value });
+}
+function splitOf(value) {
+    const raw = String(value ?? 'full_body').trim().toLowerCase();
+    if (SUPPORTED_SPLITS.has(raw))
+        return raw;
+    return invalidShellConfig('NEXT_CONFIG_SPLIT_INVALID', `Unsupported training split: ${String(value)}.`, { field: 'split', value });
+}
 function muscleId(value) {
     const map = {
         chest: 'chest', back: 'back', lats: 'back', upper_back: 'back', lower_back: 'lower_back', shoulders: 'side_delts', side_delts: 'side_delts', rear_delts: 'rear_delts', front_delts: 'front_delts',
@@ -148,12 +167,16 @@ function equipmentOf(config) {
     return [...set];
 }
 function scheduleOf(config) {
-    const count = Math.max(1, Math.min(7, Math.round(Number(config.days) || 4)));
-    const days = DAY_SETS[count] ?? DAY_SETS[4];
-    const session = String(config.session || 's60');
-    const band = SESSION_BANDS[session] ?? SESSION_BANDS.s60;
+    const rawCount = config.days === undefined || config.days === null || config.days === '' ? 4 : Number(config.days);
+    if (!Number.isInteger(rawCount) || rawCount < 2 || rawCount > 7)
+        return invalidShellConfig('NEXT_CONFIG_DAYS_INVALID', 'Training days must be a whole number between 2 and 7.', { field: 'days', value: config.days });
+    const days = DAY_SETS[rawCount];
+    const session = String(config.session ?? 's60').trim().toLowerCase();
+    const band = SESSION_BANDS[session];
+    if (!band)
+        return invalidShellConfig('NEXT_CONFIG_SESSION_INVALID', `Unsupported session-length setting: ${String(config.session)}.`, { field: 'session', value: config.session });
     const goal = goalOf(config.goal);
-    const targetExercises = SESSION_EXERCISES[session]?.[goal] ?? SESSION_EXERCISES.s60[goal];
+    const targetExercises = SESSION_EXERCISES[session][goal];
     return { days: days.map(day => ({ day, minMinutes: band.minMinutes, maxMinutes: band.maxMinutes, targetExercises })) };
 }
 function mapBanned(banned, legacy) {
@@ -172,6 +195,17 @@ function mapBanned(banned, legacy) {
     return [...out];
 }
 export function shellConfigToNextRequest(config, banned = [], legacyExercises = [], seed) {
+    if (!config || typeof config !== 'object' || Array.isArray(config))
+        throw new NextShellAdapterError('NEXT_CONFIG_INVALID', 'Program configuration must be an object.');
+    if (!Array.isArray(banned))
+        throw new NextShellAdapterError('NEXT_CONFIG_BANNED_INVALID', 'The excluded-exercise list must be an array.');
+    if (!Array.isArray(legacyExercises))
+        throw new NextShellAdapterError('NEXT_CONFIG_EXERCISES_INVALID', 'The exercise catalog must be an array.');
+    const requestedStyle = config.progressionStyle === undefined || config.progressionStyle === null || config.progressionStyle === ''
+        ? 'auto'
+        : String(config.progressionStyle).trim().toLowerCase();
+    if (!SUPPORTED_PROGRESSION_STYLES.includes(requestedStyle))
+        throw new NextShellAdapterError('NEXT_CONFIG_PROGRESSION_INVALID', `Unsupported progression style: ${String(config.progressionStyle)}.`, { field: 'progressionStyle', value: config.progressionStyle });
     const split = splitOf(config.split);
     const avoided = new Set(mapBanned(banned, legacyExercises));
     const canPerform = performableFor(config);
@@ -202,7 +236,7 @@ export function shellConfigToNextRequest(config, banned = [], legacyExercises = 
             volumeApproach: config.volumeApproach === 'minimalist' ? 'minimalist' : 'standard',
             // Persist the user's global method choice in the immutable request snapshot so later
             // blocks cannot silently fall back to Auto after honoring the choice at creation.
-            progressionStyle: config.progressionStyle ?? 'auto'
+            progressionStyle: requestedStyle
         },
         seed: seed ?? Math.max(1, Math.floor(Date.now() % 2147483647))
     };

@@ -170,8 +170,9 @@ export const PCT_SCHEMES = {
     }
 };
 // returns [{ pct, reps, weight, amrap }] for the main lift this week, or null
-export function percentageProtocolFor({ scheme, tm, weekIndex, weeksTotal, dayType, tier = "t1", snapLoad = value => value }) {
+export function percentageProtocolFor({ scheme, tm, weekIndex, weeksTotal, dayType, tier = "t1", snapLoad } = {}) {
     const S = PCT_SCHEMES[scheme];
+    const snap = typeof snapLoad === 'function' ? snapLoad : value => value;
     if (!S || !Number.isFinite(tm) || !(tm > 0) || !Number.isInteger(weekIndex) || weekIndex < 1
         || !Number.isInteger(weeksTotal) || weeksTotal < 1)
         return null;
@@ -231,7 +232,7 @@ export function percentageProtocolFor({ scheme, tm, weekIndex, weeksTotal, dayTy
             pct,
             reps: genericDeload ? String(reps).replace("+", "") : reps, // no max-rep set on a deload
             amrap: genericDeload ? false : String(reps).includes("+"),
-            weight: snapLoad(tm * pct * mult * (genericDeload ? DELOAD_SCALE : 1))
+            weight: snap(tm * pct * mult * (genericDeload ? DELOAD_SCALE : 1))
         }))
     };
 }
@@ -261,8 +262,12 @@ export function adaptPercentageSetBudget(plan, count) {
 // Replay saved targets, rather than mutating a second progression state at workout finish.
 // Legacy logs without a protocol snapshot cannot safely reconstruct a tier/stage.
 export function deriveTieredLinearState({ programId, exerciseId, tier, initialStage = 0,
-    initialLoad, entries = [], unit, nextLoad, resetLoad }) {
-    let state = { stage: initialStage, weight: initialLoad };
+    initialLoad, entries = [], unit, nextLoad, resetLoad } = {}) {
+    const stage0 = Number.isInteger(initialStage) && initialStage >= 0 && initialStage <= 2 ? initialStage : 0;
+    const load0 = Number(initialLoad);
+    let state = { stage: stage0, weight: Number.isFinite(load0) && load0 > 0 ? load0 : null };
+    const increase = typeof nextLoad === 'function' ? nextLoad : value => value;
+    const reset = typeof resetLoad === 'function' ? resetLoad : value => value;
     for (const entry of normalizeHistoryEntries(entries, programId).entries) {
         const perf = entry.perf?.[exerciseId], saved = perf?.prescription, protocol = saved?.protocol;
         if (protocol?.scheme !== 'gzclp' || protocol.tier !== tier
@@ -278,9 +283,9 @@ export function deriveTieredLinearState({ programId, exerciseId, tier, initialSt
             || Math.abs(convertHistoryLoad(t.weight, t.unit || entry.unit, unit) - loads[i]) > .01)) continue;
         const passed = sets.every((s, i) => Number(s.r) >= Number(saved.setTargets[i].reps));
         const stage = protocol.stage, weight = loads[0];
-        if (passed) state = { stage, weight: nextLoad(weight) ?? weight };
+        if (passed) state = { stage, weight: increase(weight) ?? weight };
         else if (stage < 2) state = { stage: stage + 1, weight };
-        else state = { stage: 0, weight: resetLoad(weight) ?? weight };
+        else state = { stage: 0, weight: reset(weight) ?? weight };
     }
     return state;
 }

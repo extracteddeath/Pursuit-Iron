@@ -187,16 +187,16 @@ function applyAdaptiveProgressionStyles(program, previous, request, target, evid
     const sessions = program.sessions.map(session => {
         const matchedSession = previousByTargetSession?.get(session.id) ?? null;
         return {
-        ...session,
-        exercises: session.exercises.map(exercise => {
-            const occurrences = previousOccurrences.get(exercise.exerciseId) ?? [];
-            const matchedPrior = matchedSession?.exercises?.find(ex => ex.exerciseId === exercise.exerciseId) ?? null;
-            const uniquePrior = occurrences.length === 1 ? occurrences[0] : null;
-            const prior = matchedPrior ?? uniquePrior?.exercise ?? null;
-            const priorSessionId = matchedPrior ? matchedSession.id : uniquePrior?.session?.id ?? null;
-            const def = context.exerciseById(exercise.exerciseId);
-            if (!prior || !def)
-                return exercise;
+            ...session,
+            exercises: session.exercises.map(exercise => {
+                const occurrences = previousOccurrences.get(exercise.exerciseId) ?? [];
+                const matchedPrior = matchedSession?.exercises?.find(ex => ex.exerciseId === exercise.exerciseId) ?? null;
+                const uniquePrior = occurrences.length === 1 ? occurrences[0] : null;
+                const prior = matchedPrior ?? uniquePrior?.exercise ?? null;
+                const priorSessionId = matchedPrior ? matchedSession.id : uniquePrior?.session?.id ?? null;
+                const def = context.exerciseById(exercise.exerciseId);
+                if (!prior || !def)
+                    return exercise;
             const currentStyle = prior.progressionStyle ?? exercise.progressionStyle ?? 'double';
             const selection = reselectProgressionStyle(def, exercise.role, {
                 phase: target,
@@ -234,8 +234,9 @@ function applyAdaptiveProgressionStyles(program, previous, request, target, evid
                     changed: selection.style !== currentStyle
                 }
             };
-        })
-    };});
+            })
+        };
+    });
     return { program: { ...program, sessions }, changes };
 }
 

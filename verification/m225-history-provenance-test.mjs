@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { historyNumber, normalizeHistoryEntries, normalizeHistoryRevisions, progressionExposureContext, resolveHistoryDayIndex } from '../modules/next-engine/history-contract.js';
 import { deriveTieredLinearState } from '../modules/next-engine/percentage-protocols.js';
 import { evaluateWorkoutProgression } from '../modules/next-engine/performance.js';
@@ -17,6 +18,11 @@ for (const entries of [[old, edited], [edited, old]])
     assert.equal(normalizeHistoryEntries(entries, 'p').entries[0], edited);
 assert.equal(normalizeHistoryEntries([{ ...old, updatedAt: 3 }, edited], 'p').entries[0].date, 1);
 
+const shellHistoryAdapterSource = fs.readFileSync(new URL('../modules/next-engine/workout-history-adapter.js', import.meta.url), 'utf8');
+assert.match(shellHistoryAdapterSource, /function latestShellEntries\(/,
+    'shell progression/reference lookup must share one canonical normalized-history pass');
+assert.doesNotMatch(shellHistoryAdapterSource, /latestComparableShellEntry|latestShellReferenceEntry/,
+    'separate comparable/reference normalization paths must not return');
 const duplicateDays = [
     { id: 'a', label: 'Repeat', exercises: ['lift'] },
     { id: 'b', label: 'Repeat', exercises: ['lift'] }

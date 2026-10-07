@@ -1,10 +1,10 @@
 {
   "profile": "portable-browser-esm-canonical-engine",
   "milestone": "M223",
-  "source": "M222 + data-preserving installed icon refresh and independent engine audit export",
-  "engine": "0.64.12; authored/program progression parity and positional working targets",
+  "source": "M223 shipped identity + unreleased M235 engine verification candidate",
+  "engine": "0.64.12 release identity; M235 candidate-selection hardening under verification",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
-  "nextRuntimeModules": 46,
+  "nextRuntimeModules": 49,
   "storageNamespace": "wpb",
   "cache": "pursuit-iron-production-v4-0-0-m223-icon-engine-audit-b813",
   "uiMilestone": "Pursuit Iron 4.0 Production Release · M223 Icon Refresh and Engine Audit"

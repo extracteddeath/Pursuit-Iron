@@ -284,4 +284,3 @@ export function deriveTieredLinearState({ programId, exerciseId, tier, initialSt
     }
     return state;
 }
-

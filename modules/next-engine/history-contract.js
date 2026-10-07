@@ -78,4 +78,3 @@ export function historyLoadReason(reason, unit) {
     return typeof reason === 'string' ? reason.replace(/\b(\d+(?:\.\d+)?)\s*(lb|kg)\b/g,
         (_, value, from) => `${Math.round(convertHistoryLoad(value, from, unit) * 100) / 100} ${unit}`) : reason;
 }
-

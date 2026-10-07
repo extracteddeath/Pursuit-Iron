@@ -29,6 +29,10 @@ assert.match(shellHistoryAdapterSource, /analyzeShellHistoryForNextEngine\(progr
     'one suggestion must pass the same normalized history into full engine analysis');
 assert.match(shellHistoryAdapterSource, /options\.normalizedHistory \?\? normalizeHistoryEntries\(history, program\.id\)/,
     'full history analysis must reuse supplied canonical normalization and retain standalone fallback');
+assert.match(shellHistoryAdapterSource, /semanticStartingReferenceForShell\(program, history, day, nextId, cell, \{ normalizedHistory \}\)/,
+    'semantic starting-reference fallback must reuse the suggestion canonical history');
+assert.match(shellHistoryAdapterSource, /\(options\.normalizedHistory \?\? normalizeHistoryEntries\(history, program\.id\)\)\.entries\.filter/,
+    'semantic starting-reference lookup must retain standalone normalization fallback');
 const prescriptionHistorySource = fs.readFileSync(new URL('../modules/training-domain/prescriptions.js', import.meta.url), 'utf8');
 assert.match(prescriptionHistorySource, /function customExerciseHistoryRefs\(/,
     'custom comparable/reference history must share one canonical same-program revision pass');

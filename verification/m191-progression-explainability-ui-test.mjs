@@ -1,7 +1,8 @@
+import { productionSource } from './production-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
-const app = fs.readFileSync(new URL('../modules/App.js', import.meta.url), 'utf8');
+const app = productionSource();
 
 assert.ok(!app.includes('Auto applies double-progression / load ramps across the block.'), 'stale one-size-fits-all Auto copy must be removed');
 assert.ok(app.includes('Auto · choose per exercise'), 'program creation should explain that Auto selects per exercise');

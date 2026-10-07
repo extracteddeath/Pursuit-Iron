@@ -43,4 +43,4 @@ Volume advice shows the set counts it rests on. The model that estimates your pe
 Free, forever. Built by a tiny independent team..
 
 
-Developer map: [ENGINE_ARCHITECTURE.md](ENGINE_ARCHITECTURE.md). Current cleanup and verification: [M205_ENGINE_AUDIT.md](M205_ENGINE_AUDIT.md).
+Developer map: [ENGINE_ARCHITECTURE.md](ENGINE_ARCHITECTURE.md). Verified engine sequence: [ENGINE_UPGRADE_PLAN.md](ENGINE_UPGRADE_PLAN.md). Latest verification evidence: [M235_ENGINE_VERIFICATION_2_REPORT.md](M235_ENGINE_VERIFICATION_2_REPORT.md).

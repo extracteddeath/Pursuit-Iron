@@ -1,3 +1,4 @@
+import { productionSource } from './production-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -38,7 +39,7 @@ function inspect(node) {
     }
 }
 inspect(WhatsNewCard({}));
-const source = fs.readFileSync(new URL('../modules/App.js', import.meta.url), 'utf8');
+const source = productionSource();
 const scope = vm.createContext({});
 vm.runInContext(source.slice(source.indexOf('const _fillLum ='), source.indexOf('/* ═══ TYPE TOKENS')) + `
 globalThis.measure = colors => Object.entries(THEMES).flatMap(([theme, t]) => {

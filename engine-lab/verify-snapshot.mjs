@@ -13,12 +13,14 @@ const coverage=JSON.parse(read('coverage.json'));
 if(!runtimeOnly)assert.equal(sha(read('reference/App.production.js')),coverage.appSourceSha256);
 const release=JSON.parse(read('RELEASE_MANIFEST.json'));
 if(!runtimeOnly)for(const name of coverage.engineModules)assert.equal(sha(read('modules/next-engine/'+name)),release.runtimeFiles['modules/next-engine/'+name],`Production engine mismatch: ${name}`);
-const shell=read('modules/engine-shell.js').toString();
-const original=read('reference/App.production.js').toString();
-if(!runtimeOnly)for(const r of coverage.includedDeclarations)assert.ok(shell.includes(original.slice(r.start,r.end)),`Declaration not retained verbatim: ${r.name}`);
-assert.doesNotMatch(shell,/from\s*['"](?:react|react\/|lucide-react)/);
-for(const name of coverage.engineModules)await import(new URL('../modules/next-engine/'+name,import.meta.url));
 const entry=await import(new URL('../index.js',import.meta.url));
+assert.equal(coverage.schemaVersion, 2, 'canonical source coverage schema');
+if(!runtimeOnly)for(const file of coverage.canonicalRuntimeFiles)assert.equal(sha(read(file)),release.runtimeFiles[file],`Canonical runtime mismatch: ${file}`);
+for(const file of coverage.canonicalRuntimeFiles){
+ const text=read(file).toString();
+ assert.doesNotMatch(text,/from\s*['"](?:react|react\/|lucide-react)/,file);
+ await import(new URL('../'+file,import.meta.url));
+}
 if(!runtimeOnly)assert.equal(entry.ENGINE_VERSION,coverage.release.engineVersion);
-for(const r of coverage.includedDeclarations)assert.ok(r.name in entry.shell,`Missing headless binding: ${r.name}`);
-console.log(`PASS ${runtimeOnly?'headless imports':'snapshot hashes and production identity'}: ${coverage.engineModules.length} engine modules, ${coverage.includedDeclarations.length} headless declarations, complete app boundary source retained.`);
+for(const name of coverage.domainExports)assert.ok(name in entry.shell,`Missing canonical domain export: ${name}`);
+console.log(`PASS ${runtimeOnly?'headless imports':'snapshot hashes and canonical production identity'}: ${coverage.engineModules.length} engine modules, ${coverage.domainExports.length} domain exports, zero App declaration extraction.`);

@@ -39,9 +39,16 @@ export function initialPhaseForGoal(goal) {
         return 'strength_accumulation';
     return 'mixed_accumulation';
 }
+export const SUPPORTED_PHASES = Object.freeze(Object.keys(POLICIES));
 export function phasePolicyFor(phase) {
-    return POLICIES[phase];
+    const key = typeof phase === 'string' ? phase.trim().toLowerCase() : '';
+    const policy = POLICIES[key];
+    if (!policy)
+        throw new RangeError(`Unsupported training phase: ${String(phase)}`);
+    return policy;
 }
 export function phaseLabel(phase) {
-    return phase.split('_').map(x => x[0].toUpperCase() + x.slice(1)).join(' ');
+    const key = typeof phase === 'string' ? phase.trim().toLowerCase() : '';
+    phasePolicyFor(key);
+    return key.split('_').map(x => x[0].toUpperCase() + x.slice(1)).join(' ');
 }

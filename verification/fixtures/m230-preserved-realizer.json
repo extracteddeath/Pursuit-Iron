@@ -1,0 +1,340 @@
+{
+  "baseline": "M229 Engine 0.65.1",
+  "records": [
+    {
+      "key": "top.MUSCLE_MOVEMENTS",
+      "file": "modules/next-engine/realizer-ranking.js",
+      "sha256": "0d63159cab4fa2c0c8755ae3ad7fc1cb512ab4a495454b2b6ccda4b21c290221"
+    },
+    {
+      "key": "top.LARGE",
+      "file": "modules/next-engine/realizer-ranking.js",
+      "sha256": "6305feb6ed289bc2d7c96dd2d4d90e961e73b7d6ecce1bcd511a80f8dc5b15bb"
+    },
+    {
+      "key": "top.SMALL",
+      "file": "modules/next-engine/realizer-ranking.js",
+      "sha256": "b089d286419a469ba39286abc1f21291bd65824be13d4b30bdd52c709fcacbb9"
+    },
+    {
+      "key": "top.equipmentEligible",
+      "file": "modules/next-engine/realizer-ranking.js",
+      "sha256": "34b58aee2cdae34ee9ec2b5f47ed834705207f49c41ec60bb65a5208c1740aad"
+    },
+    {
+      "key": "top.maxBarbells",
+      "file": "modules/next-engine/realizer-ranking.js",
+      "sha256": "787d0cfed989fdc8539da658e2e6e6552ff8325390c714154f95da887c1b6988"
+    },
+    {
+      "key": "top.strengthCandidate",
+      "file": "modules/next-engine/realizer-ranking.js",
+      "sha256": "a69ae7c7ee19605fe0e995a5086557ad61ea938d445b58880aeb76b8e9c6fcfd"
+    },
+    {
+      "key": "top.muscleScore",
+      "file": "modules/next-engine/realizer-ranking.js",
+      "sha256": "f2c095a58e874c1a92a029f45d0558a3d46e582306da69d64344cc3ddcaa3936"
+    },
+    {
+      "key": "top.muscleCandidate",
+      "file": "modules/next-engine/realizer-ranking.js",
+      "sha256": "694d2c7ef241dc418b0288d5a0a056e76bc4c6aa0741b0305f6562508f6a3851"
+    },
+    {
+      "key": "top.primaryMuscle",
+      "file": "modules/next-engine/realizer-ranking.js",
+      "sha256": "fb7a3666d856000885edc2a4a9338766f2d1d7166e38dd632d1e397cf115499f"
+    },
+    {
+      "key": "top.intentAcceptsMuscle",
+      "file": "modules/next-engine/realizer-ranking.js",
+      "sha256": "5d551b51d91884e526dbfa3c61758e4335922798063950e8f4802402d23a0875"
+    },
+    {
+      "key": "top.floorSpilloverAllowed",
+      "file": "modules/next-engine/realizer-ranking.js",
+      "sha256": "40c70bda4e809306892e036867c46b4d788603cc1c36e1424c5a5d3d7f453b47"
+    },
+    {
+      "key": "top.repsForPhase",
+      "file": "modules/next-engine/realizer-prescriptions.js",
+      "sha256": "efeed4a2df827bc200d74f30126b6b4f2989ef5e5aa51988ab91d802e9415250"
+    },
+    {
+      "key": "top.rirForPhase",
+      "file": "modules/next-engine/realizer-prescriptions.js",
+      "sha256": "07864bf216fa4416e0fb8599e868a79d0dc2b5f711d11b518668787786692f6e"
+    },
+    {
+      "key": "top.restForExercise",
+      "file": "modules/next-engine/realizer-prescriptions.js",
+      "sha256": "f66b263481c0b7d11c09a80642c07c9a4cc175e97ab2924fb9d0d7bd0b132d5b"
+    },
+    {
+      "key": "top.progressionStyleForExercise",
+      "file": "modules/next-engine/realizer-prescriptions.js",
+      "sha256": "7e6494810cba5df7e67274c112e746ff07bed526c0d994ea7d4b2b8070424f08"
+    },
+    {
+      "key": "top.progressionForExercise",
+      "file": "modules/next-engine/realizer-prescriptions.js",
+      "sha256": "fbf8c58a204cff3c3d09ce75cebdbc1d43d2627641a8b8b79e02e819699279ae"
+    },
+    {
+      "key": "top.makePlanned",
+      "file": "modules/next-engine/realizer-prescriptions.js",
+      "sha256": "c2fc9cdd203ea0f29a76f4ec1aafbd16ee74901c9edbd578171007b6469ecde2"
+    },
+    {
+      "key": "top.compactRestCompression",
+      "file": "modules/next-engine/realizer-time-budget.js",
+      "sha256": "e9922cb0c820b0837fdcebd5f7c97748c35172f6ece42aa6d7cc4decd8c91ecf"
+    },
+    {
+      "key": "top.fitCompactRestToSession",
+      "file": "modules/next-engine/realizer-time-budget.js",
+      "sha256": "0a1d56ee6bc38df153bf3f12b67c775cb9c3bf399e7fd717c0b8c6cab7a70af6"
+    },
+    {
+      "key": "top.estimateSessionMinutes",
+      "file": "modules/next-engine/realizer-time-budget.js",
+      "sha256": "339bb60f6f9801426669680a534ebe801ab5395cc7be8364293c57092a0038a5"
+    },
+    {
+      "key": "top.estimateMinutes",
+      "file": "modules/next-engine/realizer-time-budget.js",
+      "sha256": "b6525303e8f49b8cc9c26a30e07133cc0ae1d0841f88bace7ab13645c52abb9f"
+    },
+    {
+      "key": "top.addToLedger",
+      "file": "modules/next-engine/realizer-math.js",
+      "sha256": "8383d1c3ad52522799432a944668339d2bfb44ae096e604d86ca8afb4e277cc7"
+    },
+    {
+      "key": "top.integerSetPlan",
+      "file": "modules/next-engine/realizer-math.js",
+      "sha256": "85b267dcd2ae33370f6396ea4948e8c293517d02bff8beb6d8b7df090ea83b8e"
+    },
+    {
+      "key": "top.desiredDirect",
+      "file": "modules/next-engine/realizer-math.js",
+      "sha256": "668b556dbcc0f752e71233b9467928e67b7111919fce8ed37b58bb884e7320e4"
+    },
+    {
+      "key": "top.assignAccessorySupersets",
+      "file": "modules/next-engine/realizer-pairing.js",
+      "sha256": "b7661ed381c4fb558ecfc7786f922ab994089f92663d1b86cf272bafb136d2ea"
+    },
+    {
+      "key": "top.sequenceSessionExercises",
+      "file": "modules/next-engine/realizer-sequence.js",
+      "sha256": "d0a23f8f5a5c9b4cbdc6df92ea3af47617abc39455ba21f103be7ee54b0a715a"
+    },
+    {
+      "key": "top.optimizeSetupAwareSessionSequence",
+      "file": "modules/next-engine/realizer-sequence.js",
+      "sha256": "8213c2c53c8ad6ea2556fc807ae39c65698fbad06bc643d94aecd234c7daae2f"
+    },
+    {
+      "key": "top.finalizePlannedSession",
+      "file": "modules/next-engine/realizer-session-builder.js",
+      "sha256": "cff17710d48cf1a84e291c4101f3f1e240f3890c1dc4dd2adf5d068b1e832551"
+    },
+    {
+      "key": "top.strengthSetsForAllocation",
+      "file": "modules/next-engine/realizer-strength.js",
+      "sha256": "0b0515d3ad4dd6ae550403865a7f2c0cf6c3f9674e691160c2f9d3d840c30923"
+    },
+    {
+      "key": "top.realizeStrengthAnchors",
+      "file": "modules/next-engine/realizer-strength.js",
+      "sha256": "04c68fdfd78b0a063e6bb5ee089583fc01aba11635426ea971464728b1596892"
+    },
+    {
+      "key": "helper.trackExerciseUse",
+      "file": "modules/next-engine/realizer-session-builder.js",
+      "sha256": "63287debfaecdad5d001859f6c212403b841a019d14515ec3ceb22cd6751c8ba"
+    },
+    {
+      "key": "helper.add",
+      "file": "modules/next-engine/realizer-session-builder.js",
+      "sha256": "b8b3791e436e78f0e450a36bc6bc26485970ec34ca752711c31f19ee42165155"
+    },
+    {
+      "key": "stage.realizePinnedStrength",
+      "file": "modules/next-engine/realizer-strength.js",
+      "sha256": "e1a7b91bbe3a56dc6e6d950beb53cc11258a34f7cbe13c1c109e219ccbb88e42"
+    },
+    {
+      "key": "stage.realizeMajorMuscles",
+      "file": "modules/next-engine/realizer-hypertrophy.js",
+      "sha256": "8be7d714ad879c557a57c0a11ef86d9eb912c9d9cf10c1a4f2f4d5daa9425c01"
+    },
+    {
+      "key": "stage.realizeDirectIsolations",
+      "file": "modules/next-engine/realizer-hypertrophy.js",
+      "sha256": "e5dee92b2636716682cf62a5db034fa91bb6dbea590890d1d7d5099f9b6cfc99"
+    },
+    {
+      "key": "builder.buildRealizedSessions",
+      "file": "modules/next-engine/realizer-session-builder.js",
+      "sha256": "2aff9f0ce56787ce8d2613702390cc89b4ba3372b31ea2d94198c7d2a0b6e809"
+    },
+    {
+      "key": "stage.redistributeFullBodyAccessories",
+      "file": "modules/next-engine/realizer-capacity-repair.js",
+      "sha256": "eae15971ec6a5473823c7cee57d39ebdd4c8cd80791acd8084e6e3b29fadfd31"
+    },
+    {
+      "key": "stage.diversifySparseSessions",
+      "file": "modules/next-engine/realizer-capacity-repair.js",
+      "sha256": "91a1e3839bc7f3efb7af9a810184b663e6e90ae94ea4133a3e5b8757fcae2021"
+    },
+    {
+      "key": "helper.currentFractional",
+      "file": "modules/next-engine/realizer-dose-ledger.js",
+      "sha256": "4b979054469ab12e65d903f49e1b32250921abed6a56785dd40909370e9e7fb1"
+    },
+    {
+      "key": "helper.totalsWithSessionProposal",
+      "file": "modules/next-engine/realizer-dose-ledger.js",
+      "sha256": "cb190601104a433f943ebdfabe861d001aab26f05d50346bc5aabaae7ce22714"
+    },
+    {
+      "key": "helper.directTotalsWithSessionProposal",
+      "file": "modules/next-engine/realizer-dose-ledger.js",
+      "sha256": "427d559875097d3713854f4d9a50827e317a3e61a51ce823e621e5a12c39fcc2"
+    },
+    {
+      "key": "helper.fitProposalBySafeDosage",
+      "file": "modules/next-engine/realizer-dose-repair.js",
+      "sha256": "7d5845238592020d994d883234b2b177895e8b72621fc0c2afe3b254257e9c23"
+    },
+    {
+      "key": "stage.fillSessionCapacity",
+      "file": "modules/next-engine/realizer-capacity-repair.js",
+      "sha256": "b928cb71804ae6dee9ba19f39af8e4eb1cac264acdc710f84fd0e7fa7499b439"
+    },
+    {
+      "key": "helper.currentDirect",
+      "file": "modules/next-engine/realizer-dose-ledger.js",
+      "sha256": "1a4795db21aca9d16783fe26381f4fad091d674695d64f3259ce9c492bcec0f1"
+    },
+    {
+      "key": "stage.satisfyDirectFloors",
+      "file": "modules/next-engine/realizer-dose-repair.js",
+      "sha256": "1830cdcb5afa17ce08dee21033750767e78df73f1973bc586b6c7d836c4833a2"
+    },
+    {
+      "key": "stage.satisfySmallMuscleFloors",
+      "file": "modules/next-engine/realizer-dose-repair.js",
+      "sha256": "58de7aee09e69d4efc9d2872d97c71a51d663a481f157ba32ed9e4722d7ab1b3"
+    },
+    {
+      "key": "helper.repairFullBodyStructure",
+      "file": "modules/next-engine/realizer-structure-repair.js",
+      "sha256": "994fe701c1bc9d8584739e3ddf82a236932dda849263cc537927062c0e108129"
+    },
+    {
+      "key": "helper.repairMinimumFloors",
+      "file": "modules/next-engine/realizer-dose-repair.js",
+      "sha256": "33ca715c57eb0cd9e5ad3c120c8ea29380a9bcf9848770e425af475b7f21dd8f"
+    },
+    {
+      "key": "stage.satisfyDedicatedIntentFloors",
+      "file": "modules/next-engine/realizer-dose-repair.js",
+      "sha256": "989eeb1d6ff2a0956295e48d48f32b5044d64ade111ac87510385e353f7d6642"
+    },
+    {
+      "key": "helper.rebalanceRepeatedIntents",
+      "file": "modules/next-engine/realizer-structure-repair.js",
+      "sha256": "127cb3e8ca02c485538814af46d87f18b364739fa21e2d460dd5ad7dcfd17abc"
+    },
+    {
+      "key": "helper.finalStructureValid",
+      "file": "modules/next-engine/realizer-structure-repair.js",
+      "sha256": "eadf1acd8b4ab49ccd0c14096e1588726ef9881a63b661145ee64181eae17972"
+    },
+    {
+      "key": "helper.consolidateOneSetDuplicates",
+      "file": "modules/next-engine/realizer-fragment-repair.js",
+      "sha256": "77dd933731ed1d058b9d33b2e17ea1ca69d2f95aa4afe81b60efda2bf0e1f326"
+    },
+    {
+      "key": "helper.rebalanceOneSetFragmentsBySwap",
+      "file": "modules/next-engine/realizer-fragment-repair.js",
+      "sha256": "1567729e5841a033e0a4b542684ad8bc9ccc829624861412e0a86d20b744a21b"
+    },
+    {
+      "key": "helper.pruneCompactOneSetFragments",
+      "file": "modules/next-engine/realizer-fragment-repair.js",
+      "sha256": "1380c6a237ab260671aadc2fe78fc4be6d441279164f7f30c728e90d872d7894"
+    },
+    {
+      "key": "helper.consolidateRedundantAccessoryFamilies",
+      "file": "modules/next-engine/realizer-fragment-repair.js",
+      "sha256": "86b011742e32e738214aeeffb6f38a51e1348331bd1d6c03a851ee086f27c45f"
+    },
+    {
+      "key": "stage.fitPreferredDosage",
+      "file": "modules/next-engine/realizer-dose-repair.js",
+      "sha256": "b1ef6f44035b637fb06d5cf2946eb2f75464bd84be6b3d0d00948236dd51fd0d"
+    },
+    {
+      "key": "stage.redistributeUpperAccessories",
+      "file": "modules/next-engine/realizer-structure-repair.js",
+      "sha256": "c39e852e4071e6826d1e3e52a4227b9c592b2a19e3100bd8a42192231d0e7f2f"
+    },
+    {
+      "key": "stage.scheduleAdvancedTechniques",
+      "file": "modules/next-engine/realizer-capacity-repair.js",
+      "sha256": "dfd3c7fcef210c9c964c749eb23093026e267581e68b9ed0e5d9bde711b6846b"
+    },
+    {
+      "key": "stage.consolidateCompoundFragments",
+      "file": "modules/next-engine/realizer-fragment-repair.js",
+      "sha256": "0f0f45dc1d5d90861910432a45ddef919e2c269a9a3e23a032e2ac702ad22ce2"
+    },
+    {
+      "key": "helper.usefulTarget",
+      "file": "modules/next-engine/realizer-capacity-repair.js",
+      "sha256": "c990ef91721fecd0de3c26ca2af0d8734da73f0801dab0b16f196908c374887d"
+    },
+    {
+      "key": "stage.expandProductiveCapacity",
+      "file": "modules/next-engine/realizer-capacity-repair.js",
+      "sha256": "38d26c262a267d9fe64788415a61378f7812c9489e2a5e184aed61dbbfc70178"
+    },
+    {
+      "key": "stage.reconcileAllocationTargets",
+      "file": "modules/next-engine/realizer-dose-repair.js",
+      "sha256": "3fe4f20c029538e41bb60f02d5f731a3f3e93a7a4bf755e0181ef874f5bddbdd"
+    },
+    {
+      "key": "stage.reconcilePublicDose",
+      "file": "modules/next-engine/realizer-public-dose-repair.js",
+      "sha256": "e80cddcf1e48264d6ba7a5e68a57781cd9a3d4ad54ff321a1e9d60df9ad873d6"
+    },
+    {
+      "key": "stage.enforceFinalTimeLimits",
+      "file": "modules/next-engine/realizer-dose-repair.js",
+      "sha256": "ce1c43d7287b4d71a5982e5b5e38e7f227f2cffc657f68289190cbb1e841f331"
+    },
+    {
+      "key": "stage.pruneFinalCompactFragments",
+      "file": "modules/next-engine/realizer-fragment-repair.js",
+      "sha256": "2c478ad3574c7751ba8303d190ca4cff090387b8e4a31b7652d25eb9fa456cfc"
+    },
+    {
+      "key": "stage.restoreFinalFloors",
+      "file": "modules/next-engine/realizer-structure-repair.js",
+      "sha256": "4263cba0620174efb7465d251cabcd4a8087012715bbecb24682ca2502c1934b"
+    },
+    {
+      "key": "helper.repairMajorArmCoverage",
+      "file": "modules/next-engine/realizer-arm-repair.js",
+      "sha256": "6297a3c39a7f88425e5c374573f58b94632746745a88a29ab780940be090d6a2"
+    }
+  ]
+}

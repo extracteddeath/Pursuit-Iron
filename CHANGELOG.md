@@ -1,3 +1,63 @@
+# M234 · build 823 candidate · Engine 0.65.6
+
+- Cache static exercise eligibility against full canonical exercise objects; never project away prescription, technique, provenance, or semantic metadata.
+- Evaluate hard constraints before ranking and cap expensive ranking work for pathological custom catalogs while preserving M233 ordering for normal catalogs.
+- Keep M230 decomposition verification intact; only the two deliberately evolved ranking snapshots move forward.
+
+# M233 · build 822 candidate · Engine 0.65.5
+
+- Add immutable semantic exercise relationships and explicit versioned custom mechanics; protect complementary functions and strength specificity.
+- Use one semantic gate for phase continuity and require stricter evidence for numeric transfer than for stimulus transfer.
+- Allow conservative, loadable reference-only starts from recent owned observations of reviewed barbell variants; borrowed history never earns progression.
+
+# M232 · build 821 candidate · Engine 0.65.4
+
+- Ease one untouched automatic accessory row only after two explicitly observed misses; preserve manual/completed work and strength protocols.
+- Keep changes bounded and loadable, recover them without compounding, and roll back pending targets when source evidence is undone.
+- Carry live recovery limitations into history so eased work cannot earn progression.
+
+# M231 · build 820 candidate · Engine 0.65.3
+
+- Learn bounded, confidence-aware dose and capacity preferences from program/day-owned completed observations.
+- Track frequency, fatigue, exercise fit, progression velocity and recovery with explicit exclusions; preserve sparse-evidence priors and authored intent.
+- Connect actual shell history and next-block/cycle adaptation to the canonical response model.
+
+# M230 · build 819 candidate · Engine 0.65.2
+
+- Split the realizer into canonical strength, hypertrophy, ranking, timing, pairing, sequencing, construction and repair owners.
+- Preserve 67 source fragments and all 13 Build 816 golden scenarios; reduce the public coordinator to 317 lines.
+
+# M229 · build 818 candidate · Engine 0.65.1
+
+- Add versioned request, program, prescription and history contracts, core TypeScript declarations, explicit unversioned migrations and future-schema refusal.
+- Separate prescription projection from generation, removing the adapter–volume dependency cycle.
+- Preserve existing program and workout decisions across Build 816 golden scenarios.
+
+# M228 · build 817 candidate · Engine 0.65.0
+
+- Move 456 training-domain declarations from App.js into five canonical production modules; UI and independent audits import the same API.
+- Distribute the engine byte for byte without AST declaration extraction.
+- Preserve Build 816 output across 13 golden program/prescription/volume/scheduling scenarios and correct stale M220 assertions to enforce M226 progression ownership.
+
+# M227 · build 816 · Engine 0.64.16
+
+- Scope progression, stall, fatigue and training-max evidence to the active program and authored workout day; unrelated history can seed a conservative starting reference but cannot earn progression.
+- Parse and bound imported percentage/tiered progression state so malformed semantic state fails safely instead of producing plausible wrong prescriptions.
+- Canonicalize equipment, loading units, booleans, split names, volume strategy, exercise preferences and custom-exercise records at the public generation boundary.
+- Preserve request immutability and deterministic output for cosmetically equivalent requests; add permanent M226/M227 regression gates.
+
+# M225 · build 815 · Engine 0.64.14
+
+- Complete the recovered M224 engine audit repairs.
+- Share recovery/edit/interruption context rules across progression methods and preserve exercise/set provenance in actual workout logs.
+- Reject malformed numeric evidence and recover from invalid revision timestamps.
+- Verify standalone generation against production directly; require M224/M225 regression gates.
+
+# M224 · build 814 · Engine 0.64.13
+
+- Fix all 14 reproduced audit families: units, effort provenance, history identity, custom snapshots, capacity, instruction types and percentage runtime parity.
+- Add shared history contracts, pure workout serialization and executable percentage protocols.
+
 # M223 — Installed icon refresh and independent engine audits
 
 - Use content-hashed PNG icon URLs with the same installed app identity and data namespace.

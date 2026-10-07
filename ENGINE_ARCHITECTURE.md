@@ -1,12 +1,12 @@
 # Production engine map
 
-Current release: M223, app 4.0.0 build 813, Pursuit Engine 0.64.12. The maintained source is the JavaScript in this repository. `RELEASE_MANIFEST.json` certifies the actual runtime and UI files. Historical TypeScript claims and development scripts are not the source of this release. The unreferenced historical root `app.js` bundle has been removed; the production entry is `modules/main.js`.
+Current release candidate: M234, app 4.0.0 build 823, Pursuit Engine 0.65.6; M235 verifies this exact candidate without changing runtime identity. The maintained source is the JavaScript in this repository. `RELEASE_MANIFEST.json` certifies the actual runtime and UI files. Historical TypeScript claims and development scripts are not the source of this release. The unreferenced historical root `app.js` bundle has been removed; the production entry is `modules/main.js`.
 
-## Independent engine audits
+## Canonical computation and independent audits
 
-`engine-lab/export-engine.mjs` creates a separate, runnable Node package from current production source. It includes all 46 engine modules and the full exercise catalog unchanged, plus 636 top-level shell declarations whose transitive dependencies do not include React or icon components. Extraction retains original source text and production equipment registration; a new unreviewed top-level initializer fails the export. Coverage, source ranges, dependencies, release identity and hashes are included. Thirty existing semantic suites run without the app or a browser. `engine-lab/verify-parity.mjs` compares catalogs, templates, prescription cells, weekly volume and week plans against the actual application.
+Current engineering candidate: M234, Engine 0.65.6, with the M228–M235 milestone sequence fully verified. `modules/engine-api.js` is the shared production API. The UI imports training calculations and domain transactions from it; it no longer contains their implementations. `modules/training-domain/` contains catalog, record migrations, program transactions, prescription/loading coordination and historical analytics. These are maintained source modules, not generated files. React, DOM, storage I/O, notifications, audio and rendering remain UI-side concerns.
 
-The full original `App.js` is retained as reference evidence because UI event handlers still coordinate saved state, storage, cycle edits and workout actions. Those handlers are not misrepresented as independent engine APIs. The isolated package therefore contains all original engine source and integration-boundary evidence, while clearly indexing UI-dependent declarations. It is an audit/development export, not a second production authority. Changes must be reviewed, ported to the canonical sources and checked with the application's integration gates. See [engine-lab/README.md](engine-lab/README.md).
+`engine-lab/export-engine.mjs` copies the canonical runtime byte for byte into an independent Node package. It extracts zero App.js declarations. Coverage schema 2 and snapshot hashes certify copied source identity. The complete App.js is retained only as integration evidence. `engine-lab/verify-parity.mjs` compares the standalone package with the running application's shared functions. `verification/m228-canonical-boundary-test.mjs` independently compares sessions, weekly prescriptions, volume and scheduling against 13 Build 816 golden scenarios.
 
 ## Generation and authority
 
@@ -94,10 +94,18 @@ node scripts/verify-engine-contracts.mjs generation adaptation quality
 CHROME_BIN=/path/to/chrome node --no-warnings --experimental-loader ./verification/import-loader.mjs verification/m201-workout-prescription-browser-test.mjs
 ```
 
-Finalize only after intentionally setting the current manifest/profile identity. It hashes current files and rebuilds the offline list; it never commits or pushes. CI has one release gate, three engine-contract groups, and four real-browser gates. Workflows have read-only repository permissions. Settings self-test includes the current engine plus its four compatible predecessors; older Next artifacts are counted as archived instead of silently pretending to validate them.
+Finalize only after intentionally setting the current manifest/profile identity. It hashes current files and rebuilds the offline list; it never commits or pushes. CI has one release-integrity gate, three engine-contract groups, twelve phone/offline browser gates, and an independent engine-audit gate. Workflows have read-only repository permissions. Settings self-test includes the current engine plus its four compatible predecessors; older Next artifacts are counted as archived instead of silently pretending to validate them.
 
-Generation is still synchronous. Shared candidate caches and cheap wizard feasibility avoid unnecessary work, but difficult generation can still block the main thread. Worker execution would require a separate behavioral and browser review; M205 does not claim it has been implemented.
+Generation is still synchronous. Shared candidate caches and cheap wizard feasibility avoid unnecessary work, but difficult generation can still block the main thread. Worker execution would require a separate behavioral and browser review; the verified M235 candidate does not claim it has been implemented.
 
 ## Cycle duration authority
 
 `modules/program-duration.js` reads each block length from its saved program by id, with cycle metadata as a fallback. Home, cycle list/detail and Plan use this shared projection, including a separate calendar week for deload. Custom standalone conversion carries the current duration into its entry metadata and planned specification. Settings use one compact numeric field with decrement/increment controls, validate staged input before Save, and preserve three-week and other existing durations. Generated cycle phases display their cycle-owned length without editable duration controls.
+
+## M224 history and percentage contracts
+
+The audit repairs and independent API guide are in [M224_ENGINE_AUDIT_REPAIR.md](M224_ENGINE_AUDIT_REPAIR.md). `history-contract.js` centralizes numeric absence, physical-unit conversion, observed-effort provenance, completed working rows, context, timestamp validation and identity deduplication. Adaptation reports excluded rows rather than allowing one invalid date to suppress usable evidence.
+
+`percentage-protocols.js` owns load/rep waves and capacity adaptation. Preview, the training-max editor and Workout call one executable plan builder. Per-set targets and tier/stage provenance are serialized through the pure `loggedWorkoutPerformance` seam and replayed from history. Explicit user rep/effort edits win; percentages never silently introduce a second set-count owner.
+
+Generation now enforces the final executable weekly clock after dose reconciliation. It can trim engine-owned accessory counts while preserving strength work and manual counts; otherwise it returns an actionable capacity refusal. Remaining regional-volume guidance is reported as partial.

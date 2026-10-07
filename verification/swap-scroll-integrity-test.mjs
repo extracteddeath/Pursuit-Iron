@@ -1,6 +1,7 @@
+import { productionSource } from './production-source.mjs';
 import fs from 'node:fs';
 
-const app = fs.readFileSync(new URL('../modules/App.js', import.meta.url), 'utf8');
+const app = productionSource();
 const fail = msg => { console.error('SWAP SCROLL TEST FAILED: ' + msg); process.exit(1); };
 
 const resultAt = app.indexOf('"data-swap-results": true');

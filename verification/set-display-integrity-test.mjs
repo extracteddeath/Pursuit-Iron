@@ -1,3 +1,4 @@
+import { productionSource } from './production-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { canonicalShellSetCount, getNextShellCell, markUserPrescriptionOverride } from '../modules/next-engine/app-shell-adapter.js';
@@ -28,7 +29,7 @@ program.overrides['d1:0']=markUserPrescriptionOverride({},'sets',[4,5]);
 cell=getNextShellCell(program,program.days[0],0,1);
 check('ambiguous user override stays one scalar and falls back to Engine, never 45 or 9',()=>assert.equal(cell.sets,3));
 
-const app=fs.readFileSync(new URL('../modules/App.js',import.meta.url),'utf8');
+const app=productionSource();
 check('all generated program surfaces still enter through getNextShellCell',()=>assert.ok(app.includes('const nextCell = getNextShellCell(program, day, slotIndex, weekIndex);')));
 check('legacy custom programs restore authored schedules and saved dose deltas before display',()=>assert.ok(app.includes('sets: legacyCustomSetCount(program, day, ex, slotIndex, weekIndex, o.sets, base.sets)')));
 check('phone set row keeps protected 520px breakpoint',()=>assert.ok(app.includes('const narrowSet = useNarrow(520);')));

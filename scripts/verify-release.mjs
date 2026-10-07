@@ -18,6 +18,8 @@ const shell = [...shellMatch[1].matchAll(/"(\.\/[^\"]+)"/g)].map(m=>m[1]);
 const missing = shell.filter(p => p !== './' && !fs.existsSync(path.join(root,p.slice(2))));
 if (missing.length) fail(`missing precache files: ${missing.join(', ')}`);
 execFileSync(process.execPath,['verification/m223-icon-update-test.mjs'],{stdio:'inherit',cwd:root});
+for (const name of ['m224-engine-hardening', 'm225-history-provenance'])
+  execFileSync(process.execPath,['--no-warnings','--experimental-loader','./verification/import-loader.mjs',`verification/${name}-test.mjs`],{stdio:'inherit',cwd:root});
 if (!sw.includes(`const CACHE="${profile.cache}"`)) fail('BUILD_PROFILE cache does not match sw.js');
 if (profile.milestone !== manifest.milestone) fail('BUILD_PROFILE milestone does not match manifest');
 if (profile.uiMilestone !== manifest.uiMilestone) fail('BUILD_PROFILE UI milestone does not match manifest');
@@ -27,7 +29,7 @@ if (!fs.existsSync(path.join(root,'verification/m178-pwa-update-browser-test.mjs
 if (!fs.existsSync(path.join(root,'verification/coach-quality-oracle.mjs'))) fail('missing coach quality verification oracle');
 if (!fs.existsSync(path.join(root,'verification/m180-coach-quality-matrix.mjs'))) fail('missing M180 pass-only coach-quality matrix');
 
-const app = read('modules/App.js');
+const app = read('modules/App.js') + '\n' + fs.readdirSync('modules/training-domain').filter(f => f.endsWith('.js')).sort().map(f => read('modules/training-domain/' + f)).join('\n');
 if (fs.existsSync(path.join(root, 'modules/shadow-engine'))) fail('retired research runtime must not ship');
 if (fs.existsSync(path.join(root, 'modules/next-engine/app-shell-adapter-capacity.js'))) fail('duplicate shell adapter must not ship');
 for (const marker of ['Turn into training cycle','convertProgramToNextCycleForShell','onConvertCycle: beginCycleConversion','Remove saved plan','Restore to library',

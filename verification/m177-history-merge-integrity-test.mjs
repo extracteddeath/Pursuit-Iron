@@ -1,3 +1,4 @@
+import { productionSource } from './production-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { mergeStores, migrateStore, STORE_VERSION } from '../modules/App.js';
@@ -38,7 +39,7 @@ const oldCorrected=hist(180,30,1000);
 const mergedChron=mergeStores(store(500,[recent,hist(200,10,1000)],perf(205,8,2000)),store(400,[oldCorrected],perf(180,8,1000))).data;
 assert.equal(mergedChron.perf.bench.weight,205,'an older corrected session must not replace a newer workout as the current perf mirror');
 
-const src=fs.readFileSync(new URL('../modules/App.js',import.meta.url),'utf8');
+const src=productionSource();
 for (const marker of [
   'const STORE_VERSION = 13;',
   '13: (d) => {',

@@ -24,12 +24,15 @@ assert.equal(suggest(program.days[0], cappedLower).weight, 210, 'all five sets a
 assert.equal(suggest(program.days[0], [entry('lower', Date.UTC(2026,9,1), 205, [20,20,20]), ...history]).weight, 205, 'three sets do not satisfy a five-set prescription');
 const fallback = suggest(program.days[0], [history[0]]);
 assert.equal(fallback.weight, 210, 'a never-trained day may initialize from the same program');
-assert.equal(lastDayPerf(program.days[0], {}, [history[0]], program)[id], fallback.last, 'initialization fallback is also shown honestly');
+assert.equal(lastDayPerf(program.days[0], {}, [history[0]], program)[id], undefined, 'M226: another day is a load reference, not LAST for this day');
+assert.equal(fallback.last, history[0].perf[id]);
+assert.equal(fallback.referenceOnly, true);
+assert.equal(fallback.action, 'initial', 'a cross-day reference cannot earn progression');
 const unrelated = entry('lower', Date.UTC(2026,9,2), 400, [20,20,20,20,20], 'other-program');
 assert.equal(suggest(program.days[0], [unrelated, ...history]).weight, 205, 'same day IDs in other programs cannot replace this program evidence');
 assert.equal(lastDayPerf(program.days[0], {}, [unrelated, ...history], program)[id], lower.last);
 assert.equal(suggest(program.days[0], [...history].reverse()).weight, 205, 'date ordering is independent of input order');
-assert.equal(suggest(program.days[0], [entry('lower', Date.UTC(2026,9,1), 90, [20,20,20,20,20], 'other')]).weight, 95, 'exercise history can initialize a program with no own evidence');
+assert.equal(suggest(program.days[0], [entry('lower', Date.UTC(2026,9,1), 90, [20,20,20,20,20], 'other')]).weight, 90, 'M226: another program may initialize load but cannot earn an increase');
 assert.deepEqual(history[1].perf[id].sets.map(s => s.w), [205,205,205,205,205], 'logged evidence is immutable');
 console.log('PASS M220: screenshot Lower/Legs regression, separate day loads, set-count qualification, earned progression, scoped fallbacks, shared LAST/advice and immutable history.');
 

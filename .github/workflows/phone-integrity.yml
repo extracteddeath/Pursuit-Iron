@@ -1,7 +1,7 @@
 name: Phone and offline integrity
 on:
   push:
-    branches: [main]
+    branches: [main, 'verification/**', 'engine/**']
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        test: [m178-pwa-update, m199-volume-repair, m201-workout-prescription, m214-executable-prescription-sync, m215-cycle-duration, m217-android-lifecycle, m218-phone-polish, m219-ui-integration, m220-day-progression, m222-custom-program-parity]
+        test: [m178-pwa-update, m199-volume-repair, m201-workout-prescription, m214-executable-prescription-sync, m215-cycle-duration, m217-android-lifecycle, m218-phone-polish, m219-ui-integration, m220-day-progression, m222-custom-program-parity, m225-percentage-workout, m232-live-autoregulation]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

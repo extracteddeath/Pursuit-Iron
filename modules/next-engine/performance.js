@@ -1,5 +1,6 @@
 import { bestEstimated1RM, estimate1RM } from './history.js';
 import { availableLoadAtOrBelow, formatExerciseLoad, loadingRecommendation } from './loading.js';
+import { progressionExposureContext } from './history-contract.js';
 function byExercise(sets) {
     const map = new Map();
     for (const set of sets) {
@@ -21,20 +22,6 @@ function meanTargetRir(exercise) {
     if (Number.isFinite(low))
         return Math.max(0, low);
     return 2;
-}
-function truthySignal(source, keys) {
-    return !!source && keys.some(key => source[key] === true);
-}
-function progressionContext(actual, context) {
-    const readinessRaw = context?.readinessStatus ?? context?.readiness?.status ?? (typeof context?.readiness === 'string' ? context.readiness : null);
-    const readiness = String(readinessRaw ?? '').toLowerCase().replace(/\s+/g, '_');
-    const badReadiness = ['low', 'very_low', 'poor', 'bad', 'watch', 'recover', 'recovery', 'deload_recommended'].includes(readiness);
-    const nonComparable = truthySignal(context, ['prescriptionEdited', 'exerciseEdited', 'substitutionOccurred', 'exerciseSubstituted', 'manualPrescriptionOverride'])
-        || actual.some(set => truthySignal(set, ['prescriptionEdited', 'exerciseEdited', 'substituted', 'wasEdited', 'manualOverride']));
-    const interrupted = truthySignal(context, ['interrupted', 'sessionInterrupted', 'workoutInterrupted'])
-        || actual.some(set => truthySignal(set, ['interrupted', 'sessionInterrupted']));
-    const badDay = truthySignal(context, ['badDay', 'readinessDisrupted', 'recoveryLimited']) || badReadiness;
-    return { nonComparable, interrupted, badDay, readiness };
 }
 function decision(exercise, fields) {
     return { exerciseId: exercise.exerciseId, exerciseName: exercise.name, role: exercise.role, ...fields };
@@ -113,17 +100,21 @@ function evaluateProgression(session, performedSets, context = {}) {
         const estimated1RM = bestEstimated1RM(actual);
         const completion = actual.length / Math.max(1, ex.sets);
         const completedPrescription = actual.length >= ex.sets;
-        const allAtTop = completedPrescription && actual.every(s => s.reps >= ex.prescription.reps[1] && s.load === currentLoad);
-        const allAtLeastBottom = actual.every(s => s.reps >= ex.prescription.reps[0]);
+        const targets = ex.prescription.setTargets;
+        const targetFor = s => targets?.[s.setIndex];
+        const allAtTop = completedPrescription && actual.every(s => targetFor(s)
+            ? s.reps >= targetFor(s).reps && s.load != null && Math.abs(s.load - targetFor(s).weight) < .01
+            : s.reps >= ex.prescription.reps[1] && s.load === currentLoad);
+        const allAtLeastBottom = actual.every(s => s.reps >= (targetFor(s)?.reps ?? ex.prescription.reps[0]));
         const rirReported = actual.filter(s => s.rir !== null);
         const targetRirFloor = Math.max(0, Number(ex.prescription.rir[0]) || 0);
-        const belowTargetRir = rirReported.filter(s => Number(s.rir) < targetRirFloor);
+        const belowTargetRir = rirReported.filter(s => Number(s.rir) < (targetFor(s)?.rir ?? targetRirFloor));
         const effortInRange = rirReported.length === 0 || belowTargetRir.length === 0;
         const effortBelowTarget = belowTargetRir.length > 0;
         const repeatedEffortOvershoot = rirReported.length > 0 && belowTargetRir.length >= Math.ceil(rirReported.length / 2);
         const severeEffortOvershoot = rirReported.length > 0 && rirReported.filter(s => Number(s.rir) < Math.max(0, targetRirFloor - 1)).length >= Math.ceil(rirReported.length / 2);
         const style = ex.progressionStyle ?? 'double';
-        const exposure = progressionContext(actual, context);
+        const exposure = progressionExposureContext(actual, context);
 
         // A user edit/substitution changes the question being measured. Never translate that exposure into
         // an automatic load prescription for the original exercise; collect one comparable exposure first.

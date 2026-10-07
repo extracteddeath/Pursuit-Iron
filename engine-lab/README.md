@@ -1,15 +1,13 @@
-# Independent engine export
+# Canonical independent engine export
 
-The published application remains the engine authority. Export its current code into an independent Node package:
+The application and standalone package share `modules/engine-api.js` and the maintained production domain modules. Export copies those modules unchanged; there is no AST declaration extraction or generated calculation fork.
 
 ```sh
-npm ci --prefix engine-lab
 node engine-lab/export-engine.mjs ../pursuit-iron-engine
+node engine-lab/verify-parity.mjs ../pursuit-iron-engine
 cd ../pursuit-iron-engine
+npm run verify
 npm test
-npm run example > generated-program.json
 ```
 
-The package carries all production engine modules and catalogs unchanged, headless computation extracted from `App.js`, independent semantic regression suites, hashes, a dependency/coverage index, and complete boundary source evidence. It has no runtime dependencies and mounts no UI. Read the generated README for the important distinction between headless computation and UI event-handler coordination.
-
-`node engine-lab/verify-parity.mjs ../pursuit-iron-engine` compares exported computation against the actual app source through the app's existing Node import loader. Run this before distributing a snapshot. Changes to shared modules can be copied back file for file; shell changes must be reviewed and applied to the matching source declarations. The exported package is never precached or imported by the running app.
+Choose an empty output directory outside the repository. The package has no runtime dependencies. Coverage lists the copied canonical source, public domain exports, release identity and hashes. UI source and browser/source integration suites are retained as reference evidence.

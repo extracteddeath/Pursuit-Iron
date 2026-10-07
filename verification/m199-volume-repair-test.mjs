@@ -1,3 +1,4 @@
+import { productionSource } from './production-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { performance } from 'node:perf_hooks';
@@ -149,7 +150,7 @@ for (const goal of ['hypertrophy', 'strength', 'both']) {
     }
 }
 
-const app = fs.readFileSync(new URL('../modules/App.js', import.meta.url), 'utf8');
+const app = productionSource();
 assert.match(app, /\(onCommitProgram \|\| setProgram\)\(result.program\)/, 'Auto-fix must use canonical commit, not only the draft setter');
 assert.match(app, /data-volume-repair-status/, 'failed/partial repairs need visible feedback');
 console.log('PASS M199 volume repair: ignored legacy bias reproduced; row credits corrected; existing rows first; capacity reallocation; honest failure; reload/accounting consistency; arm buckets; Full Body across three goals.');

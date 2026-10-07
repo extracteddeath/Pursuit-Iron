@@ -1,3 +1,4 @@
+import { productionSource } from './production-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {
@@ -119,7 +120,7 @@ assert.match(volumeRepair, /shellPrescriptionFieldOwner\(next, next\.overrides\?
   'volume repair must refuse to rewrite explicitly user-owned sets');
 assert.doesNotMatch(volumeRepair, /next\.overrides\[key\]\s*=\s*\{[^\n]*sets:\s*e\.sets/,
   'engine volume repair must not mirror generated set counts into overrides');
-const app = fs.readFileSync(new URL('../modules/App.js', import.meta.url), 'utf8');
+const app = productionSource();
 for (const marker of [
   'markUserPrescriptionOverride(cur, "rest", sec)',
   'commitProgram(apply)',

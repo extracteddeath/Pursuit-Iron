@@ -1,3 +1,4 @@
+import { productionSource } from './production-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { computeCell, cycleConfigForStandaloneProgram, mergeStandaloneIntoGeneratedCycle, advanceLegacyFirstCycleBlock } from '../modules/App.js';
@@ -41,7 +42,7 @@ assert.equal(step.cycle.activeBlock,1);
 assert.equal(step.nextProgram.id,'g1');
 assert.equal(step.cycle.blockMeta[1].preview,false);
 
-const app=fs.readFileSync(new URL('../modules/App.js',import.meta.url),'utf8');
+const app=productionSource();
 assert.ok(app.includes('!p.config?.endless && !p.cycleId && onConvertCycle'),'fixed standalone plans must expose Turn into training cycle');
 assert.ok(!app.includes('!p.config?.endless && !p.cycleId && p.engineSource === "pursuit-next" && onConvertCycle'),'cycle action must not be hidden solely because a plan predates Next');
 console.log('PASS M167 legacy-dose/cycle regression: SekuFit 31-set Lower restored; standalone cycle action restored; exact legacy Block 1 preserved; first transition activates audited Next future block.');

@@ -12,7 +12,7 @@ function cloneSessions(sessions) {
         exercises: session.exercises.map(exercise => ({
             ...exercise,
             prescription: exercise.prescription ? { ...exercise.prescription } : exercise.prescription,
-            progression: exercise.progression ? { ...exercise.progression } : exercise.progression
+            progression: exercise.progression && typeof exercise.progression === 'object' ? { ...exercise.progression } : exercise.progression
         }))
     }));
 }

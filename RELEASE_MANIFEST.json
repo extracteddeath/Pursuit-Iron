@@ -1,11 +1,11 @@
 {
   "schemaVersion": 3,
-  "milestone": "M233",
+  "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": 822,
-  "engineVersion": "0.65.5",
+  "build": 823,
+  "engineVersion": "0.65.6",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "42eb7f627abce292915c18c34aa04d6a27e5778ffc66f07e398fb9301258d0f9",
+  "runtimeAggregate": "946363b640e81e31010961c20d5c823bc310d5019016f981b721b7cbdaf15ccc",
   "runtimeFiles": {
     "modules/engine-api.js": "40d3253be40bd5390001f16d63b74aae90d0e045df6a015b1764a1bc2404bd56",
     "modules/engine-shell.js": "73645bf4d914423074c0e90b992b58a6c57f7fbb726621d417803e906d140675",
@@ -20,7 +20,7 @@
     "modules/next-engine/capacity-generation.js": "1fed6ad20b90257bcf6f5a88337669bc568f5de7f6fe92ba06c80fe2de2f36dd",
     "modules/next-engine/capacity-policy.js": "7679d6f487a968d6e3d2144385cb33ac0c788d7565c2b132b9187b5e2693825b",
     "modules/next-engine/coach-regression.js": "f4bf6719070076f2ec8eab6d76ba5f29386ea2e638b106556caad35df6c00e1b",
-    "modules/next-engine/config.js": "1d73c623ac42e9a584604325508f6620e12d66492f87d9e0d3d0e5d81f10d5c7",
+    "modules/next-engine/config.js": "8f55ff083b61954e1487d340301b56505d46563117d3c4e778d6a8890fec86d6",
     "modules/next-engine/cycle-runtime-adapter.js": "fd51f8312bf471e9ba8352f941ce291ea83bb773f162571308a0587e600e9158",
     "modules/next-engine/cycles.js": "3b949f73ecef2543e4aa3aa6910fe43a3d3526805fcbcd111424e5df2d6efc79",
     "modules/next-engine/domain-contracts.js": "fc35224050b1c20769cc38f727852a180f6ac50e990dc6ddeb213f9e30ec755f",
@@ -60,7 +60,7 @@
     "modules/next-engine/realizer-pairing.js": "71aec4add2ab93b8004d5bda7935acf6a71b542e5d30edc96293317c4e23c325",
     "modules/next-engine/realizer-prescriptions.js": "edd7e5f4db8f74a5b391004533ce9cc67e5af00ea1e45076848cbd15f846991b",
     "modules/next-engine/realizer-public-dose-repair.js": "a91a71567ceefcd16d9c6c56c7dd05ef35b25220fd646d01d41eb8c8a033bcf3",
-    "modules/next-engine/realizer-ranking.js": "3697e03ff2586a3917f875f8e3794d3959fc6364435ac83cf45f7f09bbed6a78",
+    "modules/next-engine/realizer-ranking.js": "d3e92a8d05301cfe939b7b1c692d6996c66e6fb0a37c0bead2a814540efb923b",
     "modules/next-engine/realizer-sequence.js": "3f5b0358c0856d32c51f56c0925e8443859e4d94e2dbd276c10c99bd8c46f6a0",
     "modules/next-engine/realizer-session-builder.js": "17242b75bf7cab1a5fd39ff80bd1d9cfebf30ee355b8a64e37e46a26b77646f2",
     "modules/next-engine/realizer-strength.js": "19f41a732cdf01f1862fe26717b4931d8044081623243f9c70f1096f6977795d",
@@ -95,25 +95,26 @@
     "vendor/react-jsx-runtime.js": "bde9f287ac956c2a8873443da27dbb828de7ee82bcec262b703aceab2a745954",
     "vendor/react-shared-JU7Z5GYC.js": "b8893896e31178fb4c8c0ce42cae975bec57bb70596c012d5d5c439cd20717d8",
     "vendor/react-shared-V673FGIV.js": "591c4bd8b0aae646cba73ca7ac17a2c2c950bdbaf288529ea14b691f2a4a9f22",
-    "vendor/react.js": "24b2d220a5b2637cf3fb78fe0d961f227ea0a4b960485dbfb03c9d276e72147c"
+    "vendor/react.js": "24b2d220a5b2637cf3fb78fe0d961f227ea0a4b960485dbfb03c9d276e72147c",
+    "modules/next-engine/candidate-optimization.js": "b56d058a7b10118b015ece840067e5fe3dcd8982c589c44ca8b94a299898b396"
   },
   "localCandidate": {
-    "name": "Pursuit Iron 4.0 Production Release · M227 Request Canonicalization",
-    "base": "M225 / app 4.0.0 build 815 / Engine 0.64.14",
-    "validation": "M226 program/day evidence ownership and malformed-state hardening; M227 immutable fail-closed request canonicalization with deterministic canonical-equivalence coverage."
+    "name": "Pursuit Iron 4.0 · M234 Candidate Selection Hardening",
+    "base": "M233 / app 4.0.0 build 822 / Engine 0.65.5",
+    "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "7f671997f20b306a4e5d8bbaaaba3526bd4bb9a9d314ac630a78316ca75f602d",
-    "index.html": "c53f61d78a5da7ba838191611ca6268816ed0b9b355063d68b1a3fc2ff4ce32f",
-    "sw.js": "de228ee4ce4212ef0de11626b169f448b34ef506878e52c7c03c736f2820550e",
-    "BUILD_PROFILE.json": "99ad0c33e35f9469dd244e728fe2a5a9f68c7e946904f4785b68e0ac512a2133",
-    "CHANGELOG.md": "f5274e5886f247038f20bf2bbfbdd0d991d93ffd49516752ce309ef5c79f6e0d",
+    "modules/App.js": "9fad9cdad3062e4e3d686e1a96d8a6261af46a4551a8a5fd5ddd5df1e3eb3d7a",
+    "index.html": "fb9f879e882f016b41d486f62f39c5605c74aac53a463a2fe1e82cbbaaa65e3b",
+    "sw.js": "5a251b190251a7105551cf7df4fb7a9a5422d6695089790d833e0e351ad838f6",
+    "BUILD_PROFILE.json": "d70e36f140d2b04bf7f99f62d8471ee330c0d6bf96ae974458367a637afec33c",
+    "CHANGELOG.md": "0851b9f4d675dd8420fc278ba9595b18f4957196a83f6c4d05bf2f83c438d1c0",
     "app.css": "27818b3319609aff1416b32d5afebe70598cc57dfa64f4467b8bfe5b1130e0dd",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
-  "runtimeHotfix": "Semantic Exercise Graph; verified engineering continuation.",
-  "cache": "pursuit-iron-production-v4-0-0-m233-semantic-exercise-graph-b822",
-  "uiMilestone": "Pursuit Iron 4.0 Production Release · M233 Semantic Exercise Graph"
+  "runtimeHotfix": "Candidate selection hardening; verified engineering continuation.",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b823",
+  "uiMilestone": "Pursuit Iron 4.0 Production Release · M234 Candidate Selection Hardening"
 }

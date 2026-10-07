@@ -209,9 +209,9 @@ function classify(recovery, positive, negative, diagnoses, workouts) {
         return 'productive';
     return 'mixed';
 }
-function latestShellEntries(history, program, legacyId, day) {
+function latestShellEntries(history, program, legacyId, day, normalizedHistory = null) {
     const targetIndex = (program?.days ?? []).findIndex(candidate => candidate?.id === day?.id);
-    const entries = normalizeHistoryEntries(history, program?.id).entries
+    const entries = (normalizedHistory ?? normalizeHistoryEntries(history, program?.id)).entries
         .filter(h => completedHistorySets(h?.perf?.[legacyId]).length)
         .sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0));
     return {
@@ -274,7 +274,8 @@ export function nextWorkoutSuggestionForShell(program, history, legacyExercises,
         return null;
     const cell = getNextShellCell(program, day, slot, weekIndex);
     const reps = String(cell?.reps ?? cell?.range ?? '');
-    const latest = latestShellEntries(history, program, legacyId, day);
+    const normalizedHistory = normalizeHistoryEntries(history, program.id);
+    const latest = latestShellEntries(history, program, legacyId, day, normalizedHistory);
     const lastEntry = latest.comparable;
     const referenceEntry = lastEntry ?? latest.reference;
     const rawLast = lastEntry?.perf?.[legacyId] ?? null;
@@ -282,7 +283,7 @@ export function nextWorkoutSuggestionForShell(program, history, legacyExercises,
     const lastLoad = convertLoad(representativeShellLoad(last), lastEntry?.unit, program.config?.unit);
     let analysis;
     try {
-        analysis = analyzeShellHistoryForNextEngine(program, history, legacyExercises);
+        analysis = analyzeShellHistoryForNextEngine(program, history, legacyExercises, { normalizedHistory });
     }
     catch {
         if (last) return { weight: lastLoad, dir: 'hold', reason: 'Hold the last logged load until the new engine has comparable completed-set evidence.', reps, last, lastUnit: lastEntry?.unit || program.config?.unit, action: 'initial' };
@@ -488,7 +489,7 @@ export function analyzeShellHistoryForNextEngine(program, history, legacyExercis
     const snap = sourceSnapshot(program);
     if (!snap)
         throw new NextShellAdapterError('NEXT_HISTORY_SNAPSHOT_MISSING', 'This saved program lacks the engine snapshot required for history adaptation. Rebuild it before adapting the next block.');
-    const normalized = normalizeHistoryEntries(history, program.id);
+    const normalized = options.normalizedHistory ?? normalizeHistoryEntries(history, program.id);
     const { entries } = normalized;
     const workouts = entries.map(entry => ({ entry, workout: workoutFromEntry(program, entry, legacyExercises) }))
         .filter(({ entry, workout }) => {

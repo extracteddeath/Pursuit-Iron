@@ -23,6 +23,12 @@ assert.match(shellHistoryAdapterSource, /function latestShellEntries\(/,
     'shell progression/reference lookup must share one canonical normalized-history pass');
 assert.doesNotMatch(shellHistoryAdapterSource, /latestComparableShellEntry|latestShellReferenceEntry/,
     'separate comparable/reference normalization paths must not return');
+assert.match(shellHistoryAdapterSource, /function latestShellEntries\(history, program, legacyId, day, normalizedHistory = null\)/,
+    'shell latest/reference selection must accept an already-normalized history context');
+assert.match(shellHistoryAdapterSource, /analyzeShellHistoryForNextEngine\(program, history, legacyExercises, \{ normalizedHistory \}\)/,
+    'one suggestion must pass the same normalized history into full engine analysis');
+assert.match(shellHistoryAdapterSource, /options\.normalizedHistory \?\? normalizeHistoryEntries\(history, program\.id\)/,
+    'full history analysis must reuse supplied canonical normalization and retain standalone fallback');
 const prescriptionHistorySource = fs.readFileSync(new URL('../modules/training-domain/prescriptions.js', import.meta.url), 'utf8');
 assert.match(prescriptionHistorySource, /function customExerciseHistoryRefs\(/,
     'custom comparable/reference history must share one canonical same-program revision pass');

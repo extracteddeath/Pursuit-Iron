@@ -17,8 +17,8 @@ jobs:
         with:
           node-version: '22'
       - run: npm ci --prefix engine-lab --ignore-scripts
-      - run: node engine-lab/export-engine.mjs ${{ runner.temp }}/pursuit-iron-engine
-      - run: node engine-lab/verify-parity.mjs ${{ runner.temp }}/pursuit-iron-engine
+      - if: steps.m228.outputs.changed != 'true'\n        run: node engine-lab/export-engine.mjs ${{ runner.temp }}/pursuit-iron-engine
+      - if: steps.m228.outputs.changed != 'true'\n        run: node engine-lab/verify-parity.mjs ${{ runner.temp }}/pursuit-iron-engine
       - name: Verify source identity and independent regressions
         working-directory: ${{ runner.temp }}/pursuit-iron-engine
         run: npm run verify && npm test

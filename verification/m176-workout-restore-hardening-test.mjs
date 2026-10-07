@@ -46,7 +46,9 @@ for(const marker of [
   'document.addEventListener("freeze", save);',
   'return () => { document.removeEventListener("visibilitychange", onVis); window.removeEventListener("pagehide", save); document.removeEventListener("freeze", save); };'
 ]) assert.ok(src.includes(marker),`missing live-session persistence marker: ${marker}`);
-assert.ok(src.includes('const startRef = useRef((liveMatch && Number.isFinite(liveMatch.elapsedMs))'),'workout clock must resume from actual training time, not wall time away');
+assert.ok(src.includes('const restoredClock = restoreWorkoutClock(liveMatch)')
+  && src.includes('const startRef = useRef(restoredClock.startedAt)'),
+  'workout clock must use the shared recovery owner; M217 verifies exact saved elapsed time and legacy fallback');
 assert.ok(src.includes('if (m.restPaused && m.restRemain > 0)'),'paused rest timer must restore remaining seconds');
 assert.ok(src.includes('if (m.restEndMs && m.restEndMs > Date.now())'),'running rest timer must restore by absolute end time');
 console.log('M176 workout restore hardening OK: exact/partial resume, malformed-data rejection, merge preservation, timer state, and mobile lifecycle flush hooks are release-gated.');

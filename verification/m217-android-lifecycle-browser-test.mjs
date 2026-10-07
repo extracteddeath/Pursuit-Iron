@@ -81,6 +81,7 @@ try {
     await page.keyboard.type('14'); await page.keyboard.press('Enter');
     await page.waitForFunction(() => JSON.parse(localStorage.getItem('wpb:live')).data[0].sets[1].reps === '14');
     const typed = await snapshot(page);
+    assert.equal(typed.elapsedMs, live.elapsedMs, 'a restored paused workout retains its exact elapsed duration');
     assert.equal(typed.data[0].sets[1].weight, '155');
     assert.equal(typed.data[0].sets[1].done, false, 'keyboard Next/Done cannot log a set');
 
@@ -102,6 +103,9 @@ try {
     assert.equal(resumed.data[0].sets[1].weight, '155'); assert.equal(resumed.data[0].sets[1].reps, '14');
     assert.equal(resumed.restPaused, true); assert.equal(resumed.restRemain, 47);
     assert.equal(resumed.runPaused, true); assert.equal(resumed.elapsedMs, typed.elapsedMs);
+    await page.evaluate(() => history.back()); await page.waitForSelector('.wpb-workout', { hidden: true });
+    await openWorkout(page);
+    assert.equal((await snapshot(page)).elapsedMs, live.elapsedMs, 'repeated minimize/resume cannot drift a paused clock');
 
     // Production save failure must retain BOTH the live recovery copy and the current screen.
     await page.evaluate(() => { window.__m217FailKeys = ['wpb:v1']; });

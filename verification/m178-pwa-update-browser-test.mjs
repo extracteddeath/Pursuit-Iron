@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import puppeteer from 'puppeteer-core';
 
 const root = new URL('../', import.meta.url).pathname;
@@ -9,7 +9,14 @@ const originalSw = fs.readFileSync(swPath, 'utf8');
 const baseMatch = originalSw.match(/const CACHE="([^"]+)"/);
 assert.ok(baseMatch, 'service-worker cache id must be discoverable');
 const oldCache = baseMatch[1];
-const newCache = `${oldCache}-m178-browser-probe`;
+const runtimePath = new URL('../modules/training-domain/analytics.js', import.meta.url);
+const revisionProbe = '// m178 runtime content revision probe';
+const originalRuntime = fs.readFileSync(runtimePath, 'utf8');
+const originalReleaseFiles = ['sw.js', 'RELEASE_MANIFEST.json', 'BUILD_PROFILE.json'].map(file => {
+  const url = new URL('../' + file, import.meta.url);
+  return [url, fs.readFileSync(url)];
+});
+let newCache;
 
 const chrome = process.env.CHROME_BIN || '/usr/bin/google-chrome';
 assert.ok(fs.existsSync(chrome), `Chrome not found at ${chrome}`);
@@ -42,8 +49,12 @@ try {
   assert.ok(before.controller, 'baseline page must be controlled by the installed worker');
   assert.ok(before.caches.includes(oldCache), 'baseline release cache must be active');
 
-  // Change only the worker version/cache id. This models a deployed release while the old app is open.
-  fs.writeFileSync(swPath, originalSw.replace(`const CACHE="${oldCache}"`, `const CACHE="${newCache}"`));
+  // A same-build runtime repair must produce a waiting update through the actual release writer.
+  // It must keep the active tab on its old cached source until the user accepts Restart.
+  fs.writeFileSync(runtimePath, originalRuntime + '\n' + revisionProbe + '\n');
+  execFileSync(process.execPath, ['scripts/finalize-release.mjs'], { cwd: root, stdio: 'pipe' });
+  newCache = fs.readFileSync(swPath, 'utf8').match(/const CACHE="([^"]+)"/)[1];
+  assert.notEqual(newCache, oldCache, 'runtime-only changes must create a distinct offline release');
   await page.evaluate(async () => {
     const reg = await navigator.serviceWorker.getRegistration();
     if (!reg) throw new Error('registration missing');
@@ -56,6 +67,8 @@ try {
     return !!reg?.waiting;
   });
   assert.equal(waitingBeforeClick, true, 'new worker must wait until the in-app Restart action');
+  const activeRuntime = await page.evaluate(async () => (await fetch('./modules/training-domain/analytics.js')).text());
+  assert.equal(activeRuntime.includes(revisionProbe), false, 'installing a repair cannot overwrite the active release cache');
 
   const nav = page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 30000 });
   await page.evaluate(() => {
@@ -70,16 +83,19 @@ try {
     caches: await caches.keys(),
     sentinel: localStorage.getItem('wpb:m178-update-sentinel'),
     requested: !!window.__pursuitUpdateRequested,
-    mounted: !!window.__pursuitMounted
+    mounted: !!window.__pursuitMounted,
+    runtime: await (await fetch('./modules/training-domain/analytics.js')).text()
   }));
   assert.equal(after.sentinel, before.sentinel, 'service-worker takeover/reload must preserve local training storage');
   assert.ok(after.caches.includes(newCache), 'new release cache must become active');
   assert.ok(!after.caches.includes(oldCache), 'old production cache must be removed after activation');
   assert.equal(after.mounted, true, 'app must complete first render after update-driven restart');
+  assert.ok(after.runtime.includes(revisionProbe), 'restart must load the repaired runtime from its new offline cache');
 
-  console.log('M178 PWA browser lifecycle OK: waiting update surfaced, user Restart activated it, controller reload completed, cache rotated, and local training storage survived.');
+  console.log('M178 PWA browser lifecycle OK: same-build runtime repair surfaced a waiting update, old source stayed isolated, Restart loaded the new cache, and local training storage survived.');
 } finally {
-  fs.writeFileSync(swPath, originalSw);
+  fs.writeFileSync(runtimePath, originalRuntime);
+  for (const [url, bytes] of originalReleaseFiles) fs.writeFileSync(url, bytes);
   if (browser) await browser.close();
   server.kill('SIGTERM');
 }

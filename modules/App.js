@@ -4,7 +4,7 @@ import { historyNumber, convertHistoryLoad, observedHistoryRIR, completedHistory
 const __APP_VERSION__='4.0.0'; const __BUILD__='823';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
-import { holdWorkoutScreenAwake } from "./mobile-lifecycle.js";
+import { holdWorkoutScreenAwake, restoreWorkoutClock, workoutElapsedMs } from "./mobile-lifecycle.js";
 import { splitContractGaps, splitBuildability, refusalFixes, generateNextProgramForShell, recommendNextSplitForShell, getNextShellCell, canonicalShellSetCount, cloneNextDayPrescriptions, swapNextSlotPrescriptions, removeNextSlotPrescription, nextExerciseIdForShellExercise, resolveNextShellExerciseId, remapNextShellRoster, snapshotNextShellPrescription, markUserPrescriptionOverride, clearUserPrescriptionOverride, NextShellAdapterError } from './engine-api.js';
 import { nextWorkoutSuggestionForShell, nextWorkoutSuggestionFromPerformedShell } from './engine-api.js';
 import { generateNextCycleForShell, convertProgramToNextCycleForShell, nextCycleTemplatesForShell } from './engine-api.js';
@@ -10986,15 +10986,14 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
     // pick up at (say) 35 min of training, not 12 hours — time spent away from the app is dead time,
     // effectively a long pause. We reconstruct startRef as "now minus elapsed-so-far". Older
     // snapshots without elapsedMs fall back to startedAt (the prior, wall-clock behaviour).
-    const startRef = useRef((liveMatch && Number.isFinite(liveMatch.elapsedMs))
-        ? Date.now() - liveMatch.elapsedMs
-        : (liveMatch?.startedAt || Date.now()));
+    const restoredClock = restoreWorkoutClock(liveMatch);
+    const startRef = useRef(restoredClock.startedAt);
     // Pausable full-workout timer: rather than move startRef around, we accumulate paused time.
     // Every place that measures workout duration uses runElapsedMs() so the pause is honoured
     // consistently (header clock, finish duration, recap). runPausedAt holds the pause start while frozen.
     const [runPaused, setRunPaused] = useState(!!liveMatch?.runPaused);
     const runPausedAccum = useRef(0); // total ms spent paused
-    const runPausedAt = useRef(liveMatch?.runPaused ? Date.now() : 0);
+    const runPausedAt = useRef(restoredClock.pausedAt);
     const [confirmReset, setConfirmReset] = useState(false);
     // M143: the workout timer has two intentional gestures: tap toggles pause/resume, while a
     // deliberate long-press opens the existing reset confirmation. Keep the gesture state outside
@@ -11002,7 +11001,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
     const timerHoldRef = useRef({ timer: 0, pointerId: null, x: 0, y: 0, fired: false });
     const suppressTimerClickRef = useRef(0);
     const [confirmRemoveEx, setConfirmRemoveEx] = useState(null); // exercise index pending remove-confirm
-    const runElapsedMs = () => (Date.now() - startRef.current) - runPausedAccum.current - (runPausedAt.current ? Date.now() - runPausedAt.current : 0);
+    const runElapsedMs = () => workoutElapsedMs(startRef.current, runPausedAccum.current, runPausedAt.current);
     // Write the current session to the resume snapshot regardless of whether a set is logged yet, so
     // "Minimize" always leaves something to come back to (the auto-save only fires once a set is done).
     // elapsedMs is the actual training time so the timer resumes correctly rather than counting wall
@@ -11050,9 +11049,10 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
     // only start training once you arrive. Preserves the running/paused state: if paused, it sits
     // frozen at 0:00 until you hit play; if running, it counts fresh from now.
     const resetRunTimer = () => {
-        startRef.current = Date.now();
+        const now = Date.now();
+        startRef.current = now;
         runPausedAccum.current = 0;
-        runPausedAt.current = runPaused ? Date.now() : 0;
+        runPausedAt.current = runPaused ? now : 0;
         setConfirmReset(false);
         forceTick(n => n + 1);
     };

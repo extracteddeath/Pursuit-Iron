@@ -3864,6 +3864,7 @@ function scoreEquivalent(id, e1rmVal, unit, bw, bwUnit) {
 }
 
 function strengthScore(history, bw, bwUnit, sex, age) {
+    history = canonicalHistoryNewest(history);
     const snap = strengthSnapshot(history, bw, bwUnit, sex, age);
     if (!snap)
         return null;
@@ -3924,6 +3925,7 @@ function strengthScore(history, bw, bwUnit, sex, age) {
 }
 
 function scoreAttribution(history, bwLog, bwNow, bwUnit, sex, age, days = 90) {
+    history = canonicalHistoryNewest(history);
     if (!(bwNow > 0) || !history || !history.length)
         return null;
     const cutoff = Date.now() - days * 86400000;
@@ -3954,7 +3956,7 @@ function strengthScoreHistory(history, bw, bwUnit, sex, age) {
     if (!(bw > 0) || !history || !history.length)
         return null;
     // chronological sessions, each with the lifts performed and their best e1RM that day
-    const sessions = [...(history || [])].filter(h => h && h.date && h.perf).sort((a, b) => a.date - b.date);
+    const sessions = canonicalHistoryNewest(history).filter(h => h.date && h.perf).reverse();
     if (!sessions.length)
         return null;
     const bestById = {}; // running max e1RM per lift id (in that lift's unit)

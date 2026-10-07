@@ -1,3 +1,16 @@
+// Restore both timer anchors from one instant. While paused, elapsed time depends only on the
+// pause anchor; sampling the moving wall clock twice can otherwise lose milliseconds on save.
+export function restoreWorkoutClock(snapshot, now = Date.now()) {
+    return {
+        startedAt: Number.isFinite(snapshot?.elapsedMs) ? now - snapshot.elapsedMs : (snapshot?.startedAt || now),
+        pausedAt: snapshot?.runPaused ? now : 0
+    };
+}
+
+export function workoutElapsedMs(startedAt, pausedAccum = 0, pausedAt = 0, now = Date.now()) {
+    return (pausedAt || now) - startedAt - pausedAccum;
+}
+
 // A screen-lock request can finish after Android backgrounds the app or the workout unmounts.
 // Keep one request in flight and release late results instead of leaking a lock into Home.
 export function holdWorkoutScreenAwake(nav = globalThis.navigator, doc = globalThis.document, win = globalThis.window) {

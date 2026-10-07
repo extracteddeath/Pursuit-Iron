@@ -35,6 +35,12 @@ const shell = [...new Set([
     ...runtimeFiles.map(file => `./${file}`)
 ])].sort();
 
+// Browsers detect updates from sw.js bytes. Even a repair at the same build must produce a new
+// worker and isolated cache when any offline asset changes; the worker itself is outside this hash.
+const shellRevision = sha(shell.map(file => `${file}:${sha(fs.readFileSync(file.slice(2)))}\n`).join('')).slice(0, 16);
+manifest.cache = `${manifest.cache.replace(/-r[0-9a-f]{16}$/, '')}-r${shellRevision}`;
+profile.cache = manifest.cache;
+
 write('sw.js', read('sw.js')
     .replace(/^\/\* Pursuit Iron 4\.0[^\n]*\*\//, `/* Pursuit Iron 4.0 — ${manifest.milestone} production release. */`)
     .replace(/const CACHE="[^"]+"/, `const CACHE="${manifest.cache}"`)

@@ -1,5 +1,22 @@
 import assert from 'node:assert/strict';
-import { holdWorkoutScreenAwake } from '../modules/mobile-lifecycle.js';
+import { holdWorkoutScreenAwake, restoreWorkoutClock, workoutElapsedMs } from '../modules/mobile-lifecycle.js';
+
+const pausedClock = restoreWorkoutClock({ elapsedMs: 120000, runPaused: true }, 1000000);
+assert.deepEqual(pausedClock, { startedAt: 880000, pausedAt: 1000000 });
+for (const now of [1000000, 1000001, 1001000, 2000000]) {
+    assert.equal(workoutElapsedMs(pausedClock.startedAt, 0, pausedClock.pausedAt, now), 120000,
+        'a paused timer is invariant under later wall-clock reads');
+    const resumed = restoreWorkoutClock({ elapsedMs: 120000, runPaused: true }, now);
+    assert.equal(workoutElapsedMs(resumed.startedAt, 0, resumed.pausedAt, now + 1), 120000,
+        'restoring a paused snapshot cannot add or lose a millisecond');
+}
+assert.equal(workoutElapsedMs(1000, 200, 0, 1700), 500, 'running elapsed time excludes accumulated pauses');
+assert.equal(workoutElapsedMs(1000, 200, 1600, 1700), 400, 'paused elapsed time ends at its pause anchor');
+assert.equal(workoutElapsedMs(1700, 0, 1700, 1701), 0, 'a paused reset remains exactly zero');
+assert.deepEqual(restoreWorkoutClock({ elapsedMs: 0, runPaused: true }, 1700), { startedAt: 1700, pausedAt: 1700 });
+assert.deepEqual(restoreWorkoutClock({ startedAt: 1000 }, 1700), { startedAt: 1000, pausedAt: 0 },
+    'legacy snapshots retain their wall-clock start');
+assert.deepEqual(restoreWorkoutClock(null, 1700), { startedAt: 1700, pausedAt: 0 });
 
 const flush = () => new Promise(resolve => setImmediate(resolve));
 const deferred = () => { let resolve, reject; const promise = new Promise((ok, no) => { resolve = ok; reject = no; }); return { promise, resolve, reject }; };
@@ -50,3 +67,4 @@ const environment = () => {
 }
 assert.doesNotThrow(() => holdWorkoutScreenAwake({}, new EventTarget(), new EventTarget())());
 console.log('PASS M217 screen-awake lifecycle: one request, background release, foreground/page restoration, denied requests, and release after unmount.');
+console.log('PASS exact workout-clock recovery: shared restore instant, paused invariance, running pause accounting, zero reset and legacy fallback.');

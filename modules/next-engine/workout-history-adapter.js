@@ -206,9 +206,14 @@ function classify(recovery, positive, negative, diagnoses, workouts) {
         return 'productive';
     return 'mixed';
 }
-function latestShellEntry(history, programId, legacyId, dayId) {
-    const entries = [...(history ?? [])].filter(h => h?.programId === programId && validHistoryDate(h) && completedHistorySets(h?.perf?.[legacyId]).length).sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0));
-    return entries.find(h => h.dayId === dayId) ?? entries[0] ?? null;
+function latestShellEvidence(history, programId, legacyId, day) {
+    const entries = normalizeHistoryEntries(history, programId).entries
+        .filter(h => completedHistorySets(h?.perf?.[legacyId]).length)
+        .slice().sort((a, b) => Number(b.date) - Number(a.date));
+    const sameDay = entries.find(h => h.dayId != null
+        ? String(h.dayId) === String(day?.id ?? '')
+        : h.dayLabel != null && day?.label != null && String(h.dayLabel) === String(day.label)) ?? null;
+    return { sameDay, reference: sameDay ?? entries[0] ?? null };
 }
 function representativeShellLoad(perf) {
     if (!perf)
@@ -265,16 +270,24 @@ export function nextWorkoutSuggestionForShell(program, history, legacyExercises,
         return null;
     const cell = getNextShellCell(program, day, slot, weekIndex);
     const reps = String(cell?.reps ?? cell?.range ?? '');
-    const lastEntry = latestShellEntry(history, String(program.id), legacyId, String(day.id));
+    const historyEvidence = latestShellEvidence(history, String(program.id), legacyId, day);
+    const sameDayEntry = historyEvidence.sameDay;
+    const lastEntry = sameDayEntry ?? historyEvidence.reference;
+    const sameDayLast = sameDayEntry?.perf?.[legacyId] ?? null;
     const rawLast = lastEntry?.perf?.[legacyId] ?? null;
-    const last = rawLast;
-    const lastLoad = convertLoad(representativeShellLoad(last), lastEntry?.unit, program.config?.unit);
+    const last = sameDayLast ?? rawLast;
+    const lastLoad = convertLoad(representativeShellLoad(rawLast), lastEntry?.unit, program.config?.unit);
+    const sameDayLoad = convertLoad(representativeShellLoad(sameDayLast), sameDayEntry?.unit, program.config?.unit);
     let analysis;
     try {
         analysis = analyzeShellHistoryForNextEngine(program, history, legacyExercises);
     }
     catch {
-        return last ? { weight: lastLoad, dir: 'hold', reason: 'Hold the last logged load until the new engine has comparable completed-set evidence.', reps, last, lastUnit: lastEntry?.unit || program.config?.unit, action: 'initial' } : null;
+        return rawLast ? { weight: lastLoad, dir: 'hold',
+            reason: sameDayLast
+                ? 'Hold the last logged load until the new engine has comparable completed-set evidence.'
+                : 'Use the latest logged load for this movement as a starting reference. This program day has no comparable completed-set evidence yet, so progression is held.',
+            reps, last: rawLast, lastUnit: lastEntry?.unit || program.config?.unit, action: 'initial' } : null;
     }
     let decision;
     for (let i = analysis.workouts.length - 1; i >= 0 && !decision; i--) {
@@ -284,8 +297,12 @@ export function nextWorkoutSuggestionForShell(program, history, legacyExercises,
         decision = workout.progression.find(d => d.exerciseId === nextId);
     }
     if (!decision)
-        return last ? { weight: lastLoad, dir: 'hold', reason: 'Hold the last logged load until the new engine has comparable completed-set evidence.', reps, last, lastUnit: lastEntry?.unit || program.config?.unit, action: 'initial' } : null;
-    const current = decision.currentLoad ?? lastLoad;
+        return rawLast ? { weight: lastLoad, dir: 'hold',
+            reason: sameDayLast
+                ? 'Hold the last logged load until the new engine has comparable completed-set evidence.'
+                : 'Use the latest logged load for this movement as a starting reference. This program day has no comparable completed-set evidence yet, so progression is held.',
+            reps, last: rawLast, lastUnit: lastEntry?.unit || program.config?.unit, action: 'initial' } : null;
+    const current = decision.currentLoad ?? sameDayLoad ?? lastLoad;
     /* ⚠ SUGGEST FOR THIS WEEK, NOT FOR THE WEEK THE LAST WORKOUT WAS LOGGED IN. `decision` was made when the last workout was
        analysed, against THAT workout's prescription; this function then only relabelled the rep range. Measured on a 6-week
        strength block: week 5 prescribes 1–3 reps, but the suggestion kept the week-1 load and "target 5". When this week's
@@ -293,11 +310,11 @@ export function nextWorkoutSuggestionForShell(program, history, legacyExercises,
        re-set the load from the lifter's estimated max so the new range lands mid-range, rounded DOWN to a load they can make.
        Same prescription -> the engine's decision stands (that is where add-reps / add-load double progression lives). */
 
-    const lastCell = historicalShellCell(program, day, slot, Number(lastEntry?.weekIndex) || 1,
-        lastEntry?.perf?.[legacyId], nextId);
+    const lastCell = sameDayEntry ? historicalShellCell(program, day, slot, Number(sameDayEntry.weekIndex) || 1,
+        sameDayLast, nextId) : null;
     const changed = !!cell && !!lastCell && (String(cell.reps) !== String(lastCell.reps) || String(cell.rir) !== String(lastCell.rir) || cell.progressionStyle !== lastCell.progressionStyle);
     if (changed && !['unobserved', 'non_comparable', 'context_limited', 'interrupted', 'incomplete'].includes(decision.outcome)) {
-        const shifted = represcribeForWeek(nextId, cell, lastCell, rawLast, snap?.request, lastEntry?.unit, program.config?.unit);
+        const shifted = represcribeForWeek(nextId, cell, lastCell, sameDayLast, snap?.request, sameDayEntry?.unit, program.config?.unit);
         if (shifted)
             return { weight: shifted.weight, dir: current != null && shifted.weight > current ? 'up' : current != null && shifted.weight < current ? 'down' : 'hold',
                 reason: shifted.reason, reps, target: shifted.target, last, lastUnit: lastEntry?.unit || program.config?.unit, action: 'represcribe', confidence: decision.confidence };
@@ -387,9 +404,11 @@ export function nextWorkoutSuggestionFromPerformedShell(program, legacyExercises
         confidence: decision.confidence
     };
 }
-export function deriveProgressionSelectionEvidence(workouts = []) {
+export function deriveProgressionSelectionEvidence(workouts = [], scope = 'exercise') {
     const rows = new Map();
     const excluded = new Set(['unobserved', 'non_comparable', 'context_limited', 'interrupted', 'incomplete']);
+    const evidenceKey = (workout, exerciseId) => scope === 'session_exercise'
+        ? `${String(workout?.dayId ?? '')}::${exerciseId}` : exerciseId;
     const ensure = (id) => {
         const existing = rows.get(id);
         if (existing) return existing;
@@ -401,7 +420,7 @@ export function deriveProgressionSelectionEvidence(workouts = []) {
         for (const decision of workout?.progression ?? []) {
             const id = decision?.exerciseId;
             if (!id) continue;
-            const row = ensure(id);
+            const row = ensure(evidenceKey(workout, id));
             const sets = (workout?.performedSets ?? []).filter(set => set.exerciseId === id);
             const comparable = !excluded.has(decision.outcome);
             if (!comparable) continue;
@@ -490,6 +509,7 @@ export function analyzeShellHistoryForNextEngine(program, history, legacyExercis
     // M189 keeps progression-method evidence separate from volume/response diagnosis. Method changes
     // need repeated comparable exposures, actual failure counts, effort coverage and loading constraints.
     const progressionEvidenceByExercise = deriveProgressionSelectionEvidence(workouts);
+    const progressionEvidenceBySessionExercise = deriveProgressionSelectionEvidence(workouts, 'session_exercise');
     const successful = evidence.successfulExerciseIds;
     const protectedIds = evidence.protectedExerciseIds;
     const subjective = subjectiveUnderRecovery(entries);
@@ -503,7 +523,7 @@ export function analyzeShellHistoryForNextEngine(program, history, legacyExercis
         ignoredLegacyExerciseIds: ignoredIds, recovery, cycleState, classification,
         successfulExerciseIds: successful, protectedExerciseIds: [...new Set(protectedIds)], replaceExerciseIds: evidence.replaceExerciseIds,
         techniqueLimitedExerciseIds: evidence.techniqueLimitedExerciseIds, fatigueLimitedExerciseIds: evidence.fatigueLimitedExerciseIds,
-        progressionEvidenceByExercise, diagnoses,
+        progressionEvidenceByExercise, progressionEvidenceBySessionExercise, diagnoses,
         positiveDecisionCount: positive, negativeDecisionCount: negative, subjectiveUnderRecoverySignals: subjective,
         readyForNextBlock: !!cycleState.recommendedNextPhase, recommendedNextPhase: cycleState.recommendedNextPhase
     };
@@ -566,6 +586,7 @@ export function generateNextBlockFromShellHistory(options) {
         techniqueLimitedExerciseIds: analysis.techniqueLimitedExerciseIds,
         fatigueLimitedExerciseIds: analysis.fatigueLimitedExerciseIds,
         progressionEvidenceByExercise: analysis.progressionEvidenceByExercise,
+        progressionEvidenceBySessionExercise: analysis.progressionEvidenceBySessionExercise,
         nextBlockWeeks
     });
     if (transitioned.program.audit.result !== 'pass')

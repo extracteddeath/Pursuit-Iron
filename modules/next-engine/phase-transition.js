@@ -146,8 +146,10 @@ export function matchPriorSessionsForTransition(previousSessions, targetSessions
     return new Map(solve(0, 0).pairs);
 }
 
-function progressionEvidenceFor(id, evidence, successful, fatigueLimited, techniqueLimited) {
-    const detailed = evidence?.progressionEvidenceByExercise?.[id] ?? {};
+function progressionEvidenceFor(priorSessionId, id, evidence, successful, fatigueLimited, techniqueLimited, allowGlobalFallback) {
+    const scopedKey = priorSessionId == null ? null : `${String(priorSessionId)}::${id}`;
+    const scoped = scopedKey ? evidence?.progressionEvidenceBySessionExercise?.[scopedKey] : null;
+    const detailed = scoped ?? (allowGlobalFallback ? evidence?.progressionEvidenceByExercise?.[id] : null) ?? {};
     const hasSignal = successful.has(id) || fatigueLimited.has(id) || techniqueLimited.has(id)
         || Number(detailed.comparableExposures) > 0;
     return {
@@ -170,17 +172,28 @@ function progressionEvidenceFor(id, evidence, successful, fatigueLimited, techni
  * retained IDs and audit-gated retained replacements, while brand-new exercises keep the selector used
  * during generation.
  */
-function applyAdaptiveProgressionStyles(program, previous, request, target, evidence, context) {
-    const previousById = new Map(previous.sessions.flatMap(session => session.exercises).map(ex => [ex.exerciseId, ex]));
+function applyAdaptiveProgressionStyles(program, previous, request, target, evidence, context, previousByTargetSession) {
+    const previousOccurrences = new Map();
+    for (const session of previous.sessions ?? []) for (const exercise of session.exercises ?? []) {
+        const list = previousOccurrences.get(exercise.exerciseId) ?? [];
+        list.push({ session, exercise });
+        previousOccurrences.set(exercise.exerciseId, list);
+    }
     const successful = new Set(evidence?.successfulExerciseIds ?? []);
     const fatigueLimited = new Set(evidence?.fatigueLimitedExerciseIds ?? []);
     const techniqueLimited = new Set(evidence?.techniqueLimitedExerciseIds ?? []);
     const blockWeeks = Math.max(1, Number(evidence?.nextBlockWeeks ?? evidence?.blockWeeks ?? 6) || 6);
     const changes = [];
-    const sessions = program.sessions.map(session => ({
+    const sessions = program.sessions.map(session => {
+        const matchedSession = previousByTargetSession?.get(session.id) ?? null;
+        return {
         ...session,
         exercises: session.exercises.map(exercise => {
-            const prior = previousById.get(exercise.exerciseId);
+            const occurrences = previousOccurrences.get(exercise.exerciseId) ?? [];
+            const matchedPrior = matchedSession?.exercises?.find(ex => ex.exerciseId === exercise.exerciseId) ?? null;
+            const uniquePrior = occurrences.length === 1 ? occurrences[0] : null;
+            const prior = matchedPrior ?? uniquePrior?.exercise ?? null;
+            const priorSessionId = matchedPrior ? matchedSession.id : uniquePrior?.session?.id ?? null;
             const def = context.exerciseById(exercise.exerciseId);
             if (!prior || !def)
                 return exercise;
@@ -194,7 +207,7 @@ function applyAdaptiveProgressionStyles(program, previous, request, target, evid
                 blockWeeks,
                 // Explicit global and per-lift methods survive review; Auto may still re-select.
                 requestedStyle: continuationProgressionStyle(request.preferences?.progressionStyle, prior),
-                evidence: progressionEvidenceFor(exercise.exerciseId, evidence, successful, fatigueLimited, techniqueLimited)
+                evidence: progressionEvidenceFor(priorSessionId, exercise.exerciseId, evidence, successful, fatigueLimited, techniqueLimited, occurrences.length === 1)
             });
             if (selection.style !== exercise.progressionStyle || selection.style !== currentStyle) {
                 changes.push({
@@ -222,7 +235,7 @@ function applyAdaptiveProgressionStyles(program, previous, request, target, evid
                 }
             };
         })
-    }));
+    };});
     return { program: { ...program, sessions }, changes };
 }
 
@@ -291,7 +304,7 @@ export function transitionProgramPhase(previous, request, target, evidence) {
 
     // M189: exercise identity continuity no longer means progression-method continuity. Re-select the
     // method after the target prescription is known, using history only where the exercise actually has it.
-    const adaptive = applyAdaptiveProgressionStyles(program, previous, effectiveRequest, target, evidence, context);
+    const adaptive = applyAdaptiveProgressionStyles(program, previous, effectiveRequest, target, evidence, context, previousByTargetSession);
     program = adaptive.program;
 
     const priorExerciseIds = new Set(previous.sessions.flatMap(s => s.exercises.map(e => e.exerciseId)));

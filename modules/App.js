@@ -15839,19 +15839,44 @@ function loadableAbove(ex, w, unit) {
 // A repeated lift belongs to its program/day occurrence. Other days are only an initialization
 // fallback until this day has its own evidence; advice and LAST use this same raw history record.
 function customExerciseHistory(program, day, id, history) {
-    const entries = (history || []).filter(h => validHistoryDate(h) && h?.perf?.[id]).slice().sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0));
-    return entries.find(h => h.programId === program.id && h.dayId === day.id)
-        || entries.find(h => h.programId === program.id) || entries[0] || null;
+    const valid = (history || []).filter(h => validHistoryDate(h) && h?.perf?.[id])
+        .slice().sort((a, b) => Number(b.date) - Number(a.date));
+    const own = normalizeHistoryEntries(valid, program.id).entries
+        .filter(h => h?.perf?.[id]).slice().sort((a, b) => Number(b.date) - Number(a.date));
+    const sameDay = own.find(h => h.dayId != null
+        ? String(h.dayId) === String(day.id)
+        : h.dayLabel != null && day?.label != null && String(h.dayLabel) === String(day.label)) ?? null;
+    // Another occurrence of the movement is useful only as a starting-load reference. It cannot earn
+    // reps/load progression or lend its saved set/rep prescription to this program-day occurrence.
+    const reference = sameDay ?? own[0] ?? valid.find(h => h.programId !== program.id) ?? null;
+    return { sameDay, reference };
 }
 function customProgramSuggestion(program, day, slot, unit, weekIndex, history) {
     const ex = EX_BY_ID[day?.exercises?.[slot]];
     if (!ex)
         return null;
-    const last = customExerciseHistory(program, day, ex.id, history);
+    const evidence = customExerciseHistory(program, day, ex.id, history);
+    const last = evidence.sameDay ?? evidence.reference;
     if (!last)
         return null;
     const conv = w => convertHistoryLoad(w, last.unit, unit);
     const currentCell = computeCell(program, day, ex.id, slot, weekIndex);
+    if (!evidence.sameDay) {
+        const reference = last.perf[ex.id];
+        const loads = completedHistorySets(reference).map(set => historyNumber(set.w)).filter(n => n !== null);
+        const raw = historyNumber(reference.weight) ?? (loads.length ? Math.max(...loads) : null);
+        if (raw === null)
+            return null;
+        const [lo, hi] = cellRepRange(currentCell, program, ex, slot === day?.primaryIndex);
+        const converted = conv(raw);
+        const weight = converted > 0 ? loadableAtOrBelow(ex, converted, unit) : converted;
+        return {
+            weight, dir: 'hold', action: 'initial',
+            reps: String(currentCell.range ?? currentCell.reps ?? (lo === hi ? lo : `${lo}-${hi}`)),
+            target: lo, last: reference, lastUnit: last.unit || unit, confidence: 'low',
+            reason: 'Using the latest logged load for this movement as a starting reference. This program day has no comparable completed exposure yet, so reps and load progression are held.'
+        };
+    }
     const saved = last.perf[ex.id].prescription;
     const validSaved = saved?.schemaVersion === 1 && saved.exerciseId === ex.id
         && Number.isInteger(saved.sets) && saved.sets > 0 && saved.sets <= 20

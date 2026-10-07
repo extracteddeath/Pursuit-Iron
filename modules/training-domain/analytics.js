@@ -4740,21 +4740,20 @@ function planOverview(program, weekIndex = 1, cycle = null, history = [], saved 
     /* SESSIONS ALREADY LOGGED, per week. History entries carry `weekIndex`, so the plan can say how
        much of each week you actually did rather than only what it prescribes — which is the difference
        between a plan you read and a plan you are inside of. */
-    const doneByWeek = {}, doneDaysByWeek = {};
-    for (const h of history || []) {
-        if (!h || h.programId !== program.id)
+    const doneDaysByWeek = {};
+    for (const h of normalizeHistoryEntries(history, program.id).entries) {
+        const dayIndex = resolveHistoryDayIndex(days, h);
+        if (dayIndex < 0)
             continue;
         const w = Number(h.weekIndex);
         if (!Number.isFinite(w) || w < 1)
             continue;
-        doneByWeek[w] = (doneByWeek[w] || 0) + 1;
-        if (h.dayId)
-            (doneDaysByWeek[w] = doneDaysByWeek[w] || new Set()).add(h.dayId);
+        (doneDaysByWeek[w] = doneDaysByWeek[w] || new Set()).add(days[dayIndex].id);
     }
     const weeks = [];
     for (let w = 1; w <= total; w++) {
         const isDeload = hasDeload && w === total;
-        const done = Math.min(doneByWeek[w] || 0, days.length);
+        const done = Math.min(doneDaysByWeek[w]?.size || 0, days.length);
         /* status drives the badge. Exactly one week is NOW and at most one is NEXT, so the list has a
            single obvious entry point rather than several competing highlights. */
         const status = w === weekIndex ? "now" : w === weekIndex + 1 ? "next" : w < weekIndex ? "past" : "todo";

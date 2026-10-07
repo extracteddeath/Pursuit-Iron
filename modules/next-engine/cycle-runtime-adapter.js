@@ -3,7 +3,7 @@ import { createInitialCycleState, startPhase } from './cycles.js';
 import { createEngineContext, createTransactionalEvaluator, auditVector, compareCandidateQuality } from './engine-context.js';
 import { createTrainingSetEvents } from './events.js';
 import { deriveMuscleLedger } from './ledgers.js';
-import { phasePolicyFor, phaseLabel } from './phase-policy.js';
+import { phasePolicyFor, phaseLabel, SUPPORTED_PHASES } from './phase-policy.js';
 import { normalizeRequest } from './prescription.js';
 import { estimateSessionMinutes, repsForPhase, restForExercise, rirForPhase } from './realizer.js';
 import { progressionInstruction, selectProgressionStyle, continuationProgressionStyle } from './progression-style.js';
@@ -17,6 +17,12 @@ import { firstPassingCapacityProgram } from './capacity-generation.js';
 const phaseGoal = (phase) => phase === 'hypertrophy_accumulation' ? 'hypertrophy' :
     (phase === 'strength_accumulation' || phase === 'intensification' || phase === 'peak') ? 'strength' : 'both';
 const clone = (value) => JSON.parse(JSON.stringify(value));
+const PHASE_SET = new Set(SUPPORTED_PHASES);
+function requireCyclePhase(phase, code = 'NEXT_CYCLE_PHASE_INVALID') {
+    if (!PHASE_SET.has(phase))
+        throw new NextShellAdapterError(code, `Unsupported cycle phase: ${String(phase)}.`, { phase });
+    return phase;
+}
 function retargetStatic(previous, request, target, blockWeeks = 6) {
     const normalized = normalizeRequest(request);
     const sourcePolicy = phasePolicyFor(previous.phase);
@@ -192,6 +198,14 @@ export function nextCycleTemplatesForShell() {
     }));
 }
 export function generateNextCycleForShell(options) {
+    if (!options || typeof options !== 'object' || Array.isArray(options))
+        throw new NextShellAdapterError('NEXT_CYCLE_OPTIONS_INVALID', 'Cycle generation options must be an object.');
+    if (!options.config || typeof options.config !== 'object' || Array.isArray(options.config))
+        throw new NextShellAdapterError('NEXT_CYCLE_CONFIG_INVALID', 'Cycle generation requires a program configuration object.');
+    if (!Array.isArray(options.legacyExercises))
+        throw new NextShellAdapterError('NEXT_CYCLE_EXERCISES_INVALID', 'Cycle generation requires an exercise catalog array.');
+    if (options.banned !== undefined && !Array.isArray(options.banned))
+        throw new NextShellAdapterError('NEXT_CYCLE_BANNED_INVALID', 'Cycle excluded exercises must be an array.');
     const templateId = options.templateId;
     const template = cycleTemplates().find(t => t.id === templateId);
     if (!template)
@@ -294,7 +308,11 @@ export function generateNextCycleForShell(options) {
 }
 
 export function convertProgramToNextCycleForShell(options) {
-    const current = options?.program;
+    if (!options || typeof options !== 'object' || Array.isArray(options))
+        throw new NextShellAdapterError('NEXT_CYCLE_CONVERSION_OPTIONS_INVALID', 'Cycle conversion options must be an object.');
+    if (!Array.isArray(options.legacyExercises))
+        throw new NextShellAdapterError('NEXT_CYCLE_EXERCISES_INVALID', 'Cycle conversion requires an exercise catalog array.');
+    const current = options.program;
     if (!current || current.engineSource !== 'pursuit-next')
         throw new NextShellAdapterError('NEXT_CYCLE_CONVERSION_UNSUPPORTED', 'Only a current Pursuit program can be turned into a training cycle.');
     if (current.cycleId)
@@ -311,6 +329,7 @@ export function convertProgramToNextCycleForShell(options) {
         throw new NextShellAdapterError('NEXT_CYCLE_TEMPLATE_INVALID', 'Choose a supported training cycle before converting this program.');
     const specs = blocksForCycleTemplate(templateId);
     const goal = goalForCycleTemplate(templateId);
+    requireCyclePhase(source.phase, 'NEXT_CYCLE_SOURCE_PHASE_INVALID');
     const sourceIndex = specs.findIndex(spec => spec.phase === source.phase);
     const currentWeeks = Math.max(1, Math.round(Number(current.config?.weeks || current.weeks) || 4));
     const currentSpec = sourceIndex >= 0
@@ -457,6 +476,9 @@ function requestForAdvance(cycle, current, target, weeks, analysis) {
     return request;
 }
 function buildAdaptedBlock(current, cycle, target, weeks, label, analysis, legacyExercises, makeId, existingId) {
+    requireCyclePhase(target);
+    if (!Number.isInteger(Number(weeks)) || Number(weeks) < 1 || Number(weeks) > 52)
+        throw new NextShellAdapterError('NEXT_CYCLE_WEEKS_INVALID', 'Cycle block length must be a whole number between 1 and 52 weeks.', { weeks });
     const source = captureShellBaseProgram(current, legacyExercises);
     if (!source)
         throw new NextShellAdapterError('NEXT_CYCLE_SOURCE_MISSING', 'Current cycle block is missing its engine source snapshot.');
@@ -491,6 +513,12 @@ function buildAdaptedBlock(current, cycle, target, weeks, label, analysis, legac
     return finalizeGeneratedShellVolume(legacy, legacyExercises);
 }
 export function advanceNextCycleForShell(options) {
+    if (!options || typeof options !== 'object' || Array.isArray(options))
+        throw new NextShellAdapterError('NEXT_CYCLE_ADVANCE_OPTIONS_INVALID', 'Cycle advancement options must be an object.');
+    if (!Array.isArray(options.history))
+        throw new NextShellAdapterError('NEXT_CYCLE_HISTORY_INVALID', 'Cycle advancement requires a workout-history array.');
+    if (!Array.isArray(options.legacyExercises))
+        throw new NextShellAdapterError('NEXT_CYCLE_EXERCISES_INVALID', 'Cycle advancement requires an exercise catalog array.');
     const cycle = options.cycle, current = options.activeProgram;
     if (cycle?.engineSource !== 'pursuit-next' || current?.engineSource !== 'pursuit-next')
         throw new NextShellAdapterError('NOT_NEXT_ENGINE_CYCLE', 'This cycle is not owned by Pursuit Next.');
@@ -508,6 +536,11 @@ export function advanceNextCycleForShell(options) {
         return { cycle: { ...cycle, done: true, completedAt: Date.now() }, analysis, insertedRecovery: false, done: true };
     }
     const targetSpec = planned[nextPlannedIndex];
+    if (!targetSpec || typeof targetSpec !== 'object')
+        throw new NextShellAdapterError('NEXT_CYCLE_TARGET_INVALID', 'The next planned cycle block is missing or malformed.');
+    requireCyclePhase(targetSpec.phase);
+    if (!Number.isInteger(Number(targetSpec.weeks)) || Number(targetSpec.weeks) < 1 || Number(targetSpec.weeks) > 52)
+        throw new NextShellAdapterError('NEXT_CYCLE_WEEKS_INVALID', 'The next planned cycle block has an invalid duration.', { weeks: targetSpec.weeks });
     const fatigue = analysis.classification === 'fatigue_limited' || analysis.recovery.status === 'deload_recommended';
     if (fatigue && !isRecovery) {
         const recovery = buildAdaptedBlock(current, cycle, 'recovery', 1, 'Recovery', analysis, options.legacyExercises, options.makeId);

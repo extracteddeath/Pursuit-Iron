@@ -3,7 +3,7 @@
 The application and standalone package share `modules/engine-api.js` and the maintained production domain modules. Export copies those modules unchanged; there is no AST declaration extraction or generated calculation fork.
 
 ```sh
-node engine-lab/export-engine.mjs ../pursuit-iron-engine
+node engine-lab/canonical-export.mjs ../pursuit-iron-engine
 node engine-lab/verify-parity.mjs ../pursuit-iron-engine
 cd ../pursuit-iron-engine
 npm run verify

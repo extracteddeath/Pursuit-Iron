@@ -13,6 +13,7 @@ const browserRunner = read('scripts/verify-browser-contracts.mjs');
 const releaseRunner = read('scripts/verify-release.mjs');
 const exporterPackage = JSON.parse(read('engine-lab/package.json'));
 const canonicalExporter = read('engine-lab/canonical-export.mjs');
+const retiredExporterShim = new URL('../engine-lab/export-engine.mjs', import.meta.url);
 
 const matrixValues = (text, key) => {
     const match = text.match(new RegExp(key + ': \\[([^\\]]+)\\]'));
@@ -41,6 +42,7 @@ assert.match(releaseRunner, /releaseTests/, 'release runner must use release-spe
 assert.match(releaseRunner, /verifyContractRegistry/, 'release runner must validate gate ownership');
 
 assert.equal(Object.keys(exporterPackage.dependencies ?? {}).length, 0, 'canonical exporter must not retain unused runtime dependencies');
+assert.equal(fs.existsSync(retiredExporterShim), false, 'retired exporter shim must not return; callers must use canonical-export.mjs directly');
 assert.equal(Object.keys(exporterPackage.devDependencies ?? {}).length, 0, 'canonical exporter must not retain unused dev dependencies');
 assert.match(canonicalExporter, /engineRoot = 'modules\/engine-api\.js'/,
     'standalone export must be derived from the single canonical engine API root');
@@ -55,6 +57,7 @@ assert.match(canonicalExporter, /importsOutsideEngine = productionImports\.some\
 assert.doesNotMatch(canonicalExporter, /\^M22\[4-9\]|\^M23\[0-5\]/,
     'standalone export must not bundle milestone reports as runtime evidence');
 assert.doesNotMatch(audit, /npm ci --prefix engine-lab/, 'independent audit must not reinstall retired AST tooling');
+assert.match(audit, /node engine-lab\/canonical-export\.mjs/, 'independent audit must call the canonical exporter directly');
 assert.match(audit, /github\.ref == 'refs\/heads\/main' \|\| github\.event_name == 'workflow_dispatch'/, 'engine artifact publication must stay main/manual only');
 
 assert.equal(registry.contractCount, Object.values(contractGroups).flat().length);

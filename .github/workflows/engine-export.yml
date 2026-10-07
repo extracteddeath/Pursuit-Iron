@@ -1,7 +1,7 @@
 name: Independent engine audit
 on:
   push:
-    branches: [main, 'verification/**', 'engine/**']
+    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:

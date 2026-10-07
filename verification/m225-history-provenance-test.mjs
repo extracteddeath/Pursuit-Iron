@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
-import { historyNumber, normalizeHistoryEntries, progressionExposureContext, resolveHistoryDayIndex } from '../modules/next-engine/history-contract.js';
+import { historyNumber, normalizeHistoryEntries, normalizeHistoryRevisions, progressionExposureContext, resolveHistoryDayIndex } from '../modules/next-engine/history-contract.js';
 import { deriveTieredLinearState } from '../modules/next-engine/percentage-protocols.js';
 import { evaluateWorkoutProgression } from '../modules/next-engine/performance.js';
 import { EXERCISES, EX_BY_ID, prescribeSets, sessionSuggestion, loggedWorkoutPerformance } from '../modules/App.js';
 import { generateNextProgramForShell } from '../modules/next-engine/app-shell-adapter.js';
 import { analyzeShellHistoryForNextEngine } from '../modules/next-engine/workout-history-adapter.js';
-import { progressionHistoryForProgram, customExerciseHistory, customExerciseReferenceHistory } from '../modules/training-domain/prescriptions.js';
+import { progressionHistoryForProgram, customExerciseHistory, customExerciseReferenceHistory, muscleRecoveryUncached } from '../modules/training-domain/prescriptions.js';
 
 for (const value of [true, false, [], [15], {}, { valueOf: () => 15 }, Symbol('load')])
     assert.equal(historyNumber(value), null);
@@ -49,6 +49,34 @@ for (const revisions of [[staleRevision, editedRevision], [editedRevision, stale
         'custom comparable history must use the newest same-program revision');
     assert.equal(customExerciseReferenceHistory({ ...revisionProgram, custom: true }, 'lift', revisions)?.perf?.lift?.weight, 80,
         'custom starting reference must prefer the newest canonical same-program revision');
+}
+
+const crossProgramRevision = { ...editedRevision, programId: 'other-program' };
+assert.equal(normalizeHistoryRevisions([staleRevision, editedRevision, crossProgramRevision]).entries.length, 2,
+    'global revision normalization must keep identical row ids from different programs independent');
+
+const recoveryExercise = EXERCISES.find(ex => ex?.id && ['chest','lats','upper_back','shoulders','biceps','triceps','quads','hamstrings','glutes','lower_back','adductors','abductors','calves','abs','traps','forearms','neck'].includes(ex.part));
+assert.ok(recoveryExercise, 'recovery revision regression needs one catalog exercise with a canonical muscle part');
+const fixedNow = 10_000_000;
+const recoveryDate = fixedNow - 3_600_000;
+const recoveryBase = { id: 'recovery-revision', programId: 'recovery-program', dayId: 'recovery-day',
+    date: recoveryDate, unit: 'lb' };
+const recoveryStale = { ...recoveryBase, updatedAt: recoveryDate + 1,
+    perf: { [recoveryExercise.id]: { sets: [{ w: 50, r: 10, rir: 4, tr: 2 }] } } };
+const recoveryEdited = { ...recoveryBase, updatedAt: recoveryDate + 2,
+    perf: { [recoveryExercise.id]: { sets: Array.from({ length: 8 }, () => ({ w: 50, r: 10, rir: 0, tr: 2 })) } } };
+const originalNow = Date.now;
+try {
+    Date.now = () => fixedNow;
+    const forward = muscleRecoveryUncached([recoveryStale, recoveryEdited]);
+    const reverse = muscleRecoveryUncached([recoveryEdited, recoveryStale]);
+    assert.deepEqual(forward, reverse,
+        'recovery/readiness must be independent of stale-vs-edited revision array order');
+    const row = forward.find(item => item.part === recoveryExercise.part);
+    assert.ok(row && row.sets > 6,
+        'recovery/readiness must reflect the newest hard edited exposure, not the stale easy revision');
+} finally {
+    Date.now = originalNow;
 }
 
 const exercise = { exerciseId: 'lift', name: 'Lift', sets: 2, progressionStyle: 'double',
@@ -110,5 +138,5 @@ for (const program of [generated, custom]) for (const [flag, outcome] of flags) 
     if (program.nextEngine) assert.equal(analyzeShellHistoryForNextEngine(program, history, EXERCISES).workouts[0].progression[0].outcome, outcome);
     checks++;
 }
-console.log(`PASS M225: malformed numeric/revision evidence, canonical adaptive revision ownership, ${checks} context/provenance routes, additive flags, actual generated/custom log roundtrips and immutable tiered replay.`);
+console.log(`PASS M225: malformed numeric/revision evidence, canonical adaptive/recovery revision ownership, ${checks} context/provenance routes, additive flags, actual generated/custom log roundtrips and immutable tiered replay.`);
 

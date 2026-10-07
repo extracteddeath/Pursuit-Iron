@@ -59,19 +59,25 @@ export function validHistoryDate(entry) {
     return date !== null && Math.abs(date) <= 8640000000000000;
 }
 // Newest revision wins for an identity. Records without an ID are independent legacy exposures.
-export function normalizeHistoryEntries(history, programId) {
+// Global consumers must include program ownership in the identity key so two programs that happen to
+// reuse the same persisted row id cannot erase one another.
+export function normalizeHistoryRevisions(history) {
     const identities = new Map(), entries = [], excluded = [];
+    const revisionDate = entry => validHistoryDate({ date: entry?.updatedAt })
+        ? historyNumber(entry.updatedAt) : historyNumber(entry?.date);
+    const identityKey = row => `${typeof row?.programId}:${String(row?.programId)}\u0000${String(row.id)}`;
     for (const row of Array.isArray(history) ? history : []) {
-        if (row?.programId !== programId) continue;
         if (!validHistoryDate(row)) { excluded.push({ id: row?.id ?? null, reason: 'invalid_date' }); continue; }
         if (!row.id) { entries.push(row); continue; }
-        const prior = identities.get(String(row.id));
+        const key = identityKey(row), prior = identities.get(key);
         if (prior) excluded.push({ id: row.id, reason: 'duplicate_identity' });
-        const revisionDate = entry => validHistoryDate({ date: entry.updatedAt })
-            ? historyNumber(entry.updatedAt) : historyNumber(entry.date);
-        if (!prior || revisionDate(row) >= revisionDate(prior)) identities.set(String(row.id), row);
+        if (!prior || revisionDate(row) >= revisionDate(prior)) identities.set(key, row);
     }
     return { entries: [...entries, ...identities.values()].sort((a, b) => Number(a.date) - Number(b.date)), excluded };
+}
+
+export function normalizeHistoryEntries(history, programId) {
+    return normalizeHistoryRevisions((Array.isArray(history) ? history : []).filter(row => row?.programId === programId));
 }
 
 // Resolve a persisted workout to one authored program day without guessing. Exact IDs win.

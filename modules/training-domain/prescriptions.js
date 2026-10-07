@@ -1,7 +1,7 @@
 // Canonical prescriptions domain. Maintained production source; independent of React and browser APIs.
 import { EXERCISE_MAP as NEXT_EXERCISE_MAP } from "../next-engine/exercise-db.js";
 import { setShellEquipmentExpander, splitContractGaps, splitBuildability, refusalFixes, generateNextProgramForShell, recommendNextSplitForShell, getNextShellCell, canonicalShellSetCount, cloneNextDayPrescriptions, swapNextSlotPrescriptions, removeNextSlotPrescription, nextExerciseIdForShellExercise, resolveNextShellExerciseId, remapNextShellRoster, snapshotNextShellPrescription, markUserPrescriptionOverride, clearUserPrescriptionOverride, NextShellAdapterError } from "../next-engine/app-shell-adapter.js";
-import { historyNumber, convertHistoryLoad, observedHistoryRIR, completedHistorySets, historyExposureContext, progressionExposureContext, normalizeHistoryEntries, validHistoryDate, resolveHistoryDayIndex, historyLoadReason } from '../next-engine/history-contract.js';
+import { historyNumber, convertHistoryLoad, observedHistoryRIR, completedHistorySets, historyExposureContext, progressionExposureContext, normalizeHistoryEntries, normalizeHistoryRevisions, validHistoryDate, resolveHistoryDayIndex, historyLoadReason } from '../next-engine/history-contract.js';
 import { PCT_SCHEMES, percentageProtocolFor, adaptPercentageSetBudget, deriveTieredLinearState } from '../next-engine/percentage-protocols.js';
 import { buildRuntimeSetTargets, customProgramProgressionStyle, refreshPendingSetTargets, reconcilePendingRepTargets, techniqueProtocolFromCell, freestyleCellForRepRange, buildUserAddedSlotPrescriptions } from "../next-engine/workout-runtime.js";
 import { nextWorkoutSuggestionForShell, nextWorkoutSuggestionFromPerformedShell } from "../next-engine/workout-history-adapter.js";
@@ -68,7 +68,7 @@ function personalRecoveryHours(history, part, clockHours) {
     if (byPart.has(part))
         return byPart.get(part);
     const sess = []; // per-muscle session best e1RM, oldest→newest
-    const sorted = [...(history || [])].filter(h => h && h.date).sort((a, b) => a.date - b.date);
+    const sorted = normalizeHistoryRevisions(history).entries;
     for (const h of sorted) {
         let best = 0;
         for (const [id, p] of Object.entries(h.perf || {})) {
@@ -118,6 +118,7 @@ function personalRecoveryHours(history, part, clockHours) {
 
 function muscleRecoveryUncached(history) {
     const now = Date.now();
+    const canonicalHistory = normalizeHistoryRevisions(history).entries;
     /* Read effort through the SAME calibration the load engine uses. Fatigue is driven by how close to
        failure a set actually was, not by how close the lifter believed it was — and the app already
        measures the gap between those two and corrects load selection for it. Leaving recovery on the
@@ -125,9 +126,9 @@ function muscleRecoveryUncached(history) {
        as though a logged "2 RIR" were really 0, while charging fatigue as though it were a comfortable
        2. For someone logging conservatively this UNDER-states fatigue, so it can raise trims, not lower
        them; that is the honest direction. A lifter with no measurable bias gets bias 0 and is unaffected. */
-    const effortBias = (effortCalibration(history) || {}).bias || 0;
+    const effortBias = (effortCalibration(canonicalHistory) || {}).bias || 0;
     const last = {}; // part -> {date, sets}
-    const sorted = [...(history || [])].filter(h => h && h.date).sort((a, b) => b.date - a.date);
+    const sorted = canonicalHistory.slice().sort((a, b) => Number(b.date) - Number(a.date));
     sorted.forEach(h => {
         const sess = {}, overW = {}, overN = {}, prescW = {}, prescN = {};
         Object.entries(h.perf || {}).forEach(([id, p]) => {
@@ -199,7 +200,7 @@ function muscleRecoveryUncached(history) {
            estimate is a population average and has no idea what frequency this program was designed
            around, while a measured one is this lifter's own demonstrated dip on short rest. Only the
            second is evidence worth overruling a plan with. */
-        const personal = personalRecoveryHours(history, part, clockHours);
+        const personal = personalRecoveryHours(canonicalHistory, part, clockHours);
         const recoveryHours = personal ?? clockHours; // lifter's measured recovery when history earns it, else the clock model
         const readiness = Math.round(clamp(hours / recoveryHours, 0, 1) * 100);
         return { part, readiness, hoursSince: hours, measured: personal != null, overBy: l.overBy || 0, plannedRIR: l.plannedRIR != null ? l.plannedRIR : null, daysSince: Math.floor(hours / 24), status: readiness >= 85 ? "fresh" : readiness >= 55 ? "recovering" : "fatigued", sets: l.sets };
@@ -858,7 +859,7 @@ function effortCalibration(history) {
     // sessions holds strength approximately constant, which is the only condition under which the
     // comparison means anything.
     const WINDOW = 8; // recent sessions per lift on both sides of the comparison
-    const hs = history || [];
+    const hs = normalizeHistoryRevisions(history).entries.slice().sort((a, b) => Number(b.date) - Number(a.date));
     const bySession = {}; // exId -> [{sets, date}] newest-first
     for (const h of hs) {
         for (const [id, p] of Object.entries(h.perf || {})) {

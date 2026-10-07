@@ -17,13 +17,13 @@ jobs:
         with:
           node-version: '22'
       - run: npm ci --prefix engine-lab --ignore-scripts
-      - run: node engine-lab/export-engine.mjs ../pursuit-iron-engine
-      - run: node engine-lab/verify-parity.mjs ../pursuit-iron-engine
+      - run: node engine-lab/export-engine.mjs ${{ runner.temp }}/pursuit-iron-engine
+      - run: node engine-lab/verify-parity.mjs ${{ runner.temp }}/pursuit-iron-engine
       - name: Verify source identity and independent regressions
-        working-directory: ../pursuit-iron-engine
+        working-directory: ${{ runner.temp }}/pursuit-iron-engine
         run: npm run verify && npm test
       - uses: actions/upload-artifact@v4
         with:
           name: pursuit-iron-engine
-          path: ../pursuit-iron-engine
+          path: ${{ runner.temp }}/pursuit-iron-engine
           retention-days: 30

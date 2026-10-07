@@ -8,7 +8,10 @@ import { CHANGELOG } from '../modules/App.js';
 // Use the complete production app: reading notes, choosing themes, jumping weeks, and editing a resumed workout
 // must preserve the user's training data as well as fit the phone.
 const root = path.resolve(new URL('../', import.meta.url).pathname);
-const releaseMilestone = Number(JSON.parse(fs.readFileSync(path.join(root, 'BUILD_PROFILE.json'), 'utf8')).milestone.replace(/^M/, ''));
+// A packaging-only milestone can leave the user-facing release announcement unchanged.
+const announcement = fs.readFileSync(path.join(root, 'modules/App.js'), 'utf8').match(/const WHATS_NEW_VERSION = (\d+);/);
+assert.ok(announcement, 'production release announcement has a numeric identity');
+const releaseMilestone = Number(announcement[1]);
 const program = {
     id: 'm218-phone', name: 'Ten-week upper training', custom: true, weeks: 10,
     config: { name: 'Ten-week upper training', goal: 'both', experience: 'intermediate', progression: 'manual',

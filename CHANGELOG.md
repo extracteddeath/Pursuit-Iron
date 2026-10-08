@@ -1,3 +1,11 @@
+# Build 825 · stable set logging · Engine 0.65.6
+
+- Keep Next exercise and Finish workout available in their bottom navigation slots during rest.
+- Keep LAST and TARGET in the same row space, with load × reps together and compact effort guidance.
+- Preserve input positions when logging and undoing sets, and reserve one consistent strip for shortcuts and reported effort.
+- Keep long load explanations behind a Why disclosure and reduce duplicated history text in LAST mode.
+- Add full-app phone regressions for reference toggles, set/effort logging, navigation during rest and undo at 320–430px.
+
 # Build 824 · workout history and load correction · Engine 0.65.6
 
 - Use one latest-workout set reference for the Last column, Last time shortcut and Focus view.

@@ -1,3 +1,11 @@
+# M265 · responsive plan building · Engine 0.65.6
+
+- Build and rebuild programs and cycles in the background, with visible status and Cancel.
+- Prevent cancelled or outdated builds from replacing a newer plan; keep the current plan intact if building fails.
+- Connect standalone next-block and cycle-advance actions to the audited, history-aware engine.
+- Keep completed cycles, programs and workout history when rolling a fresh cycle.
+- Include background building in the installed offline app.
+
 # M234 · build 823 candidate · Engine 0.65.6
 
 - Cache static exercise eligibility against full canonical exercise objects; never project away prescription, technique, provenance, or semantic metadata.

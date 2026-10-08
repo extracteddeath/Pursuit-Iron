@@ -50,10 +50,14 @@ assert.ok(Number(topDecision?.weight)>100);
 const app=productionSource();
 for(const marker of [
  'const GENERATION_ROUTE = "pursuit-next-only"',
- 'generateNextProgramForShell({ config',
- 'generateNextCycleForShell({',
+ "runGeneration('program', { config",
+ "runGeneration('cycle', {",
  'nextWorkoutSuggestionForShell(program, history',
  'buildRuntimeSetTargets({',
  'M46: no scheme-specific legacy state mutation. Completed-set history is the only progression input.'
 ]) assert.ok(app.includes(marker),`missing authority boundary marker: ${marker}`);
+const worker=fs.readFileSync(new URL('../modules/generation-worker.js',import.meta.url),'utf8');
+assert.match(worker,/program: generateNextProgramForShell/);
+assert.match(worker,/cycle: generateNextCycleForShell/);
+assert.match(worker,/from '\.\/engine-api\.js'/,'worker generation must use the canonical production API');
 console.log(`PASS engine authority: generated/audited by Pursuit Engine ${ENGINE_VERSION}, shell snapshot preserved, runtime realizes the engine cell, bottom-range work builds reps, top-range work earns load, and creation/cycle/progression routes remain Next-owned.`);

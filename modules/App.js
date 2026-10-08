@@ -7,7 +7,7 @@ import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, C
 import { holdWorkoutScreenAwake, restoreWorkoutClock, workoutElapsedMs } from "./mobile-lifecycle.js";
 import { splitContractGaps, splitBuildability, refusalFixes, generateNextProgramForShell, recommendNextSplitForShell, getNextShellCell, canonicalShellSetCount, cloneNextDayPrescriptions, swapNextSlotPrescriptions, removeNextSlotPrescription, nextExerciseIdForShellExercise, resolveNextShellExerciseId, remapNextShellRoster, snapshotNextShellPrescription, markUserPrescriptionOverride, clearUserPrescriptionOverride, NextShellAdapterError } from './engine-api.js';
 import { nextWorkoutSuggestionForShell, nextWorkoutSuggestionFromPerformedShell } from './engine-api.js';
-import { generateNextCycleForShell, convertProgramToNextCycleForShell, nextCycleTemplatesForShell } from './engine-api.js';
+import { generateNextCycleForShell, nextCycleTemplatesForShell } from './engine-api.js';
 import { buildRuntimeSetTargets, customProgramProgressionStyle, refreshPendingSetTargets, reconcilePendingRepTargets, techniqueProtocolFromCell, freestyleCellForRepRange, buildUserAddedSlotPrescriptions } from './engine-api.js';
 import { evaluateWorkoutProgression } from './engine-api.js';
 import { applyLiveAutoregulation, rollbackLiveAutoregulation } from './engine-api.js';
@@ -17,6 +17,7 @@ import { EXERCISE_MAP as NEXT_EXERCISE_MAP } from './engine-api.js';
 import { avoidableExerciseOverlap } from './engine-api.js';
 import { ENGINE_VERSION, ENGINE_COMPATIBLE_VERSIONS } from './engine-api.js';
 import { captureShellVolumeSnapshot, auditShellVolume, repairShellVolume, shellVolumeTargets, shellDayMuscleBreakdown } from './engine-api.js';
+import { createGenerationClient, diagnosticGenerationClient, generationAbortError } from './generation-runtime.js';
 import { programWorkingWeeks, cycleBlockMetadata } from "./program-duration.js";
 
 
@@ -7947,7 +7948,7 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
                                                     background: "none", color: C.muted, cursor: "pointer", fontSize: 13, fontWeight: 600,
                                                     display: "flex", alignItems: "center", justifyContent: "center", gap: 6
                                                 }, children: [_jsx(PlusCircle, { size: 15 }), " Add exercise"] })] }) }))] }, day.id));
-                    }), _jsxs("button", { className: "pressable", onClick: addNewDay, style: { width: "100%", marginTop: 12, padding: "13px", borderRadius: 12, border: `1px dashed ${C.accent}66`, background: C.accentDim, color: C.accentInk, cursor: "pointer", fontSize: 15, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }, children: [_jsx(PlusCircle, { size: 16 }), " Add a day"] }), isSaved && program.config?.percentScheme && onNextCycle && tmSet > 0 && (_jsxs("button", { className: "pressable", onClick: () => setCycleSheet(true), style: { width: "100%", marginTop: 16, padding: "13px", borderRadius: 12, border: `1px solid ${C.accent}55`, background: C.accentDim, color: C.accentInk, cursor: "pointer", fontSize: 15, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }, children: [_jsx(RefreshCw, { size: 16 }), " Start next cycle"] })), _jsxs("button", { "aria-label": "Share program", className: "pressable", onClick: () => setShareSheet(true), style: { width: "100%", marginTop: 16, padding: "13px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.text, cursor: "pointer", fontSize: 15, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }, children: [_jsx(Copy, { size: 16 }), " Share as text"] }), _jsxs("div", { style: { textAlign: "center", color: C.faint, fontSize: 13, marginTop: 16, padding: "0 24px", lineHeight: 1.5 }, children: [banned.length > 0 && _jsxs("div", { children: [banned.length, " exercise", banned.length > 1 ? "s" : "", " banned from all programs."] }), _jsx("div", { style: { marginTop: 6 }, children: "Open the volume panel to balance sets per muscle \u00B7 swap, ban or remove any lift \u00B7 add more anytime" })] }), _jsx("div", { ref: pvSpacer, "aria-hidden": true, style: { flexShrink: 0 } })] }), _jsx(Exit, { when: !!whyPick, children: whyPick && (() => {
+                    }), _jsxs("button", { className: "pressable", onClick: addNewDay, style: { width: "100%", marginTop: 12, padding: "13px", borderRadius: 12, border: `1px dashed ${C.accent}66`, background: C.accentDim, color: C.accentInk, cursor: "pointer", fontSize: 15, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }, children: [_jsx(PlusCircle, { size: 16 }), " Add a day"] }), isSaved && !cycleLink && onNextCycle && (program.engineSource === "pursuit-next" || (program.config?.percentScheme && tmSet > 0)) && (_jsxs("button", { className: "pressable", onClick: () => setCycleSheet(true), style: { width: "100%", marginTop: 16, padding: "13px", borderRadius: 12, border: `1px solid ${C.accent}55`, background: C.accentDim, color: C.accentInk, cursor: "pointer", fontSize: 15, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }, children: [_jsx(RefreshCw, { size: 16 }), program.engineSource === "pursuit-next" ? " Build next block" : " Start next cycle"] })), _jsxs("button", { "aria-label": "Share program", className: "pressable", onClick: () => setShareSheet(true), style: { width: "100%", marginTop: 16, padding: "13px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.text, cursor: "pointer", fontSize: 15, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }, children: [_jsx(Copy, { size: 16 }), " Share as text"] }), _jsxs("div", { style: { textAlign: "center", color: C.faint, fontSize: 13, marginTop: 16, padding: "0 24px", lineHeight: 1.5 }, children: [banned.length > 0 && _jsxs("div", { children: [banned.length, " exercise", banned.length > 1 ? "s" : "", " banned from all programs."] }), _jsx("div", { style: { marginTop: 6 }, children: "Open the volume panel to balance sets per muscle \u00B7 swap, ban or remove any lift \u00B7 add more anytime" })] }), _jsx("div", { ref: pvSpacer, "aria-hidden": true, style: { flexShrink: 0 } })] }), _jsx(Exit, { when: !!whyPick, children: whyPick && (() => {
                     const day = program.days.find(d => d.id === whyPick.dayId);
                     const ex = EX_BY_ID[whyPick.exId];
                     if (!day || !ex)
@@ -7981,7 +7982,7 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
                         const { note } = nextTMEvidence(program, history, id);
                         return { id, name: EX_BY_ID[id]?.name, cur, nw, note, up: nw > cur };
                     });
-                    return (_jsx("div", { onClick: () => setCycleSheet(false), className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "flex-end", zIndex: 70, animation: "fadeIn .2s both" }, children: _jsxs("div", { ref: sheetDragRef, onClick: e => e.stopPropagation(), className: "wpb-scroll", style: { width: "100%", maxHeight: "86%", overflowY: "auto", background: C.bg2, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: "10px 18px calc(env(safe-area-inset-bottom) + 26px)", animation: "sheetUp .28s cubic-bezier(.2,.7,.3,1) both", borderTop: `1px solid ${C.border}` }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }, children: [_jsx("div", { style: { fontSize: 18, fontWeight: 700 }, children: "Start next cycle" }), _jsx("button", { "aria-label": "Close", className: "pressable hit wpb-sheet-close", onClick: () => setCycleSheet(false), style: iconBtn(), children: _jsx(X, { size: 18 }) })] }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginBottom: 16, lineHeight: 1.5 }, children: "New training maxes are projected from your last top-set AMRAP on each lift. This creates a fresh block \u2014 your current one is kept." }), rows.map(r => (_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, padding: "11px 0", borderBottom: `1px solid ${C.borderSoft || C.border}` }, children: [_jsxs("div", { style: { flex: 1 }, children: [_jsx("div", { style: { fontSize: 15, fontWeight: 600 }, children: r.name }), _jsx("div", { style: { fontSize: 11, color: C.muted }, children: r.note })] }), _jsx("div", { className: "mono", style: { fontSize: 15, color: C.muted }, children: r.cur }), _jsx(ChevronRight, { size: 14, color: C.faint }), _jsxs("div", { className: "mono", style: { fontSize: 15, fontWeight: 700, color: r.up ? C.accentInk : C.muted }, children: [r.nw, _jsxs("span", { style: { fontSize: 11, color: C.faint }, children: [" ", unit] })] })] }, r.id))), _jsxs("button", { onClick: () => { setCycleSheet(false); onNextCycle(program); }, className: "pressable", style: { width: "100%", padding: "14px", borderRadius: 12, border: "none", background: C.accent, color: C.accentText, fontSize: 15, fontWeight: 700, cursor: "pointer", marginTop: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }, children: [_jsx(RefreshCw, { size: 16 }), " Create next block"] })] }) }));
+                    return (_jsx("div", { onClick: () => setCycleSheet(false), className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "flex-end", zIndex: 70, animation: "fadeIn .2s both" }, children: _jsxs("div", { ref: sheetDragRef, onClick: e => e.stopPropagation(), className: "wpb-scroll", style: { width: "100%", maxHeight: "86%", overflowY: "auto", background: C.bg2, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: "10px 18px calc(env(safe-area-inset-bottom) + 26px)", animation: "sheetUp .28s cubic-bezier(.2,.7,.3,1) both", borderTop: `1px solid ${C.border}` }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }, children: [_jsx("div", { style: { fontSize: 18, fontWeight: 700 }, children: program.engineSource === "pursuit-next" ? "Build next block" : "Start next cycle" }), _jsx("button", { "aria-label": "Close", className: "pressable hit wpb-sheet-close", onClick: () => setCycleSheet(false), style: iconBtn(), children: _jsx(X, { size: 18 }) })] }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginBottom: 16, lineHeight: 1.5 }, children: program.engineSource === "pursuit-next" ? "Complete your current block first. The next block uses its logged workouts and reported effort. Your current plan and history stay saved." : "New training maxes are projected from your last top-set AMRAP on each lift. This creates a fresh block \u2014 your current one is kept." }), rows.map(r => (_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, padding: "11px 0", borderBottom: `1px solid ${C.borderSoft || C.border}` }, children: [_jsxs("div", { style: { flex: 1 }, children: [_jsx("div", { style: { fontSize: 15, fontWeight: 600 }, children: r.name }), _jsx("div", { style: { fontSize: 11, color: C.muted }, children: r.note })] }), _jsx("div", { className: "mono", style: { fontSize: 15, color: C.muted }, children: r.cur }), _jsx(ChevronRight, { size: 14, color: C.faint }), _jsxs("div", { className: "mono", style: { fontSize: 15, fontWeight: 700, color: r.up ? C.accentInk : C.muted }, children: [r.nw, _jsxs("span", { style: { fontSize: 11, color: C.faint }, children: [" ", unit] })] })] }, r.id))), _jsxs("button", { onClick: () => { setCycleSheet(false); onNextCycle(program); }, className: "pressable", style: { width: "100%", padding: "14px", borderRadius: 12, border: "none", background: C.accent, color: C.accentText, fontSize: 15, fontWeight: 700, cursor: "pointer", marginTop: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }, children: [_jsx(RefreshCw, { size: 16 }), " Create next block"] })] }) }));
                 })() }), _jsx(Exit, { when: tmSheet, children: tmSheet && (_jsx("div", { onClick: () => setTmSheet(false), className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "flex-end", zIndex: 70, animation: "fadeIn .2s both" }, children: _jsxs("div", { ref: sheetDragRef, onClick: e => e.stopPropagation(), className: "wpb-scroll", style: { width: "100%", maxHeight: "86%", overflowY: "auto", background: C.bg2, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: "10px 18px calc(env(safe-area-inset-bottom) + 26px)", animation: "sheetUp .28s cubic-bezier(.2,.7,.3,1) both", borderTop: `1px solid ${C.border}` }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }, children: [_jsx("div", { style: { fontSize: 18, fontWeight: 700 }, children: "Training maxes" }), _jsx("button", { "aria-label": "Close", className: "pressable hit wpb-sheet-close", onClick: () => setTmSheet(false), style: iconBtn(), children: _jsx(X, { size: 18 }) })] }), _jsxs("div", { style: { fontSize: 13, color: C.muted, marginBottom: 16, lineHeight: 1.5 }, children: [PCT_SCHEMES[program.config.percentScheme]?.name, " loads each main lift from its ", PCT_SCHEMES[program.config.percentScheme]?.basis, ". Enter your training max, or tap \u201CUse 1RM\u201D to set it to 90% of a one-rep max."] }), mainLifts.map(id => {
                                 const ex = EX_BY_ID[id];
                                 if (!ex)
@@ -16351,6 +16352,10 @@ async function yieldSelfTestThread() {
     await new Promise(resolve => setTimeout(resolve, 0));
 }
 async function runSelfTest(saved = [], history = [], perf = {}, options = {}) {
+    const buildProgram = options.buildProgram || (typeof window === 'undefined' ? generateNextProgramForShell
+        : input => diagnosticGenerationClient.run('program', input, { signal: options.signal }));
+    const buildDiagnosticCycle = options.buildCycle || (typeof window === 'undefined' ? generateNextCycleForShell
+        : input => diagnosticGenerationClient.run('cycle', input, { signal: options.signal }));
     const ALL = EQUIPMENT.map(e => e.id);
     const fails = [];
     const audit = [];
@@ -16472,7 +16477,7 @@ async function runSelfTest(saved = [], history = [], perf = {}, options = {}) {
     lastYieldAt = selfTestClock();
     for (const t of tmplSet) {
         try {
-            check(`tmpl:${t.id}`, generateNextProgramForShell({ config: templateConfig(t, ALL), banned: [], legacyExercises: EXERCISES, seed: 606 }).program, t.cfg.days, ALL);
+            check(`tmpl:${t.id}`, (await buildProgram({ config: templateConfig(t, ALL), banned: [], legacyExercises: EXERCISES, seed: 606 })).program, t.cfg.days, ALL);
         }
         catch (e) {
             fails.push(`tmpl:${t.id}: generate threw`);
@@ -16483,7 +16488,7 @@ async function runSelfTest(saved = [], history = [], perf = {}, options = {}) {
         const sp = SPLITS[k], days = sp.days[0];
         const cfg = { name: k, experience: "intermediate", goal: "both", split: k, days, session: "s90", weeks: 6, equipment: ALL, focus: {}, focusList: [], reduce: [], progression: "auto", deload: true, barbellCap: null, percentScheme: null };
         try {
-            check(`split:${k}`, generateNextProgramForShell({ config: cfg, banned: [], legacyExercises: EXERCISES, seed: 606 }).program, days, ALL);
+            check(`split:${k}`, (await buildProgram({ config: cfg, banned: [], legacyExercises: EXERCISES, seed: 606 })).program, days, ALL);
         }
         catch (e) {
             fails.push(`split:${k}: generate threw`);
@@ -16496,7 +16501,7 @@ async function runSelfTest(saved = [], history = [], perf = {}, options = {}) {
     // phone self-test gains coverage without returning to the long blocking sweep M62 removed.
     try {
         const armCfg = { name: "arm coverage", experience: "intermediate", goal: "hypertrophy", split: "ulppl", days: 5, session: "s90", weeks: 4, equipment: ALL, focus: { biceps: 1, forearms: 1 }, focusList: ["biceps", "forearms"], reduce: [], progression: "auto", deload: true, barbellCap: null, percentScheme: null };
-        const armResult = generateNextProgramForShell({ config: armCfg, banned: [], legacyExercises: EXERCISES, seed: 63063 });
+        const armResult = (await buildProgram({ config: armCfg, banned: [], legacyExercises: EXERCISES, seed: 63063 }));
         const arm = deriveArmCoverage(armResult.nextProgram.sessions, NEXT_EXERCISE_MAP);
         if (arm.directElbowFlexionSets >= 5 && arm.bicepsBiasedSets < 1)
             fails.push("arm coverage: missing biceps-biased elbow flexion");
@@ -16516,7 +16521,7 @@ async function runSelfTest(saved = [], history = [], perf = {}, options = {}) {
     // triceps, or back onto only one repeated function.
     try {
         const functionCfg = { name: "functional coverage", experience: "intermediate", goal: "hypertrophy", split: "ulppl", days: 5, session: "s90", weeks: 4, equipment: ALL, focus: { hamstrings: 1, calves: 1, triceps: 1, back: 1 }, focusList: ["hamstrings", "calves", "triceps", "back"], reduce: [], progression: "auto", deload: true, barbellCap: null, percentScheme: null };
-        const functionResult = generateNextProgramForShell({ config: functionCfg, banned: [], legacyExercises: EXERCISES, seed: 65065 });
+        const functionResult = (await buildProgram({ config: functionCfg, banned: [], legacyExercises: EXERCISES, seed: 65065 }));
         const coverage = deriveFunctionalCoverage(functionResult.nextProgram.sessions, NEXT_EXERCISE_MAP);
         if (coverage.hamstrings.totalDirectSets >= 5 && coverage.hamstrings.hipExtensionSets < 1)
             fails.push("functional coverage: hamstrings missing hip extension/hinge");
@@ -16551,7 +16556,7 @@ async function runSelfTest(saved = [], history = [], perf = {}, options = {}) {
     ];
     for (const test of cycleRegressionCases) {
         try {
-            const built = generateNextCycleForShell({ templateId: "powerbuilding", config: test.cfg, banned: [], legacyExercises: EXERCISES, seed: 61070, adaptBetweenBlocks: test.adaptBetweenBlocks });
+            const built = (await buildDiagnosticCycle({ templateId: "powerbuilding", config: test.cfg, banned: [], legacyExercises: EXERCISES, seed: 61070, adaptBetweenBlocks: test.adaptBetweenBlocks }));
             if (!Array.isArray(built.blocks) || built.blocks.length !== 3)
                 fails.push(`cycle ${test.label}: expected 3 blocks`);
             const rejected = (built.blocks || []).find(block => block?.nextEngine?.program?.audit?.result !== "pass");
@@ -16573,7 +16578,7 @@ async function runSelfTest(saved = [], history = [], perf = {}, options = {}) {
                 const cfg = { name: k, experience: "intermediate", goal: "hypertrophy", split: k, days: SPLITS[k].days[0], session: "s90", weeks: 3, equipment: equip, focus: {}, focusList: [], reduce: [], progression: "auto", deload: true, barbellCap: null, percentScheme: null };
                 let p = null;
                 try {
-                    p = generateNextProgramForShell({ config: cfg, banned: [], legacyExercises: EXERCISES, seed: 606 }).program;
+                    p = (await buildProgram({ config: cfg, banned: [], legacyExercises: EXERCISES, seed: 606 })).program;
                     p.id = "selftest";
                 }
                 catch {
@@ -16631,7 +16636,7 @@ async function runSelfTest(saved = [], history = [], perf = {}, options = {}) {
                 const cfg = { name: k, experience: "intermediate", goal: "hypertrophy", split: k, days: dcount, session: "s60", weeks: 3, equipment: equip, focus: {}, focusList: [], reduce: [], progression: "auto", deload: true, barbellCap: null, percentScheme: null };
                 let p = null;
                 try {
-                    p = generateNextProgramForShell({ config: cfg, banned: [], legacyExercises: EXERCISES, seed: 606 }).program;
+                    p = (await buildProgram({ config: cfg, banned: [], legacyExercises: EXERCISES, seed: 606 })).program;
                 }
                 catch {
                     await checkpoint("Checking weekly structure", 1);
@@ -17736,6 +17741,7 @@ function GalleryView({ onBack, onImport, source = "gallery.json" }) {
    which every refusal carries (buildGenerationRecoveryPlan) and the app used to discard in favour of a bare code;
    (3) a plain fallback. Pure, so the integration checks can call it with real refusals. */
 function refusalMessage(err, config, code = "NEXT_ENGINE_ERROR") {
+    if (String(code).startsWith('NEXT_GENERATION_')) return String(err?.message || 'The plan builder could not start. Try again.');
     let gaps = [];
     try {
         gaps = splitContractGaps(config, EXERCISES);
@@ -17758,6 +17764,18 @@ function refusalMessage(err, config, code = "NEXT_ENGINE_ERROR") {
    copied into load, restore-undo and import, and none admitted custom programs: an imported custom program was DISCARDED, and
    one built here vanished into the legacy card on the next reload. Reported: "my programs aren't transferring when trying to
    import them. It's a custom program that I wrote myself." */
+
+function GenerationProgress({ label, onCancel }) {
+    return _jsx('div', { className: 'wpb-backdrop', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'generation-progress-title',
+        'data-generation-busy': true, onClick: onCancel, onKeyDown: event => { if (event.key === 'Escape') { event.preventDefault(); onCancel(); } },
+        style: { position: 'fixed', inset: 0, zIndex: 120, background: 'rgba(0,0,0,.6)', padding: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' },
+        children: _jsxs('div', { className: 'wpb-dialog', onClick: event => event.stopPropagation(), style: { width: '100%', maxWidth: 340, padding: 20, background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 16 }, children: [
+            _jsx('div', { id: 'generation-progress-title', role: 'status', style: { fontSize: 18, fontWeight: 700, color: C.text }, children: `${label}…` }),
+            _jsx('p', { style: { fontSize: 14, color: C.muted, lineHeight: 1.5, margin: '10px 0 16px' }, children: 'Your current plan stays unchanged until the new one is ready.' }),
+            _jsx('button', { type: 'button', autoFocus: true, onClick: onCancel, className: 'pressable', 'data-cancel-generation': true,
+                style: { width: '100%', padding: 13, borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.text, fontWeight: 600 }, children: 'Cancel build' })
+        ] }) });
+}
 
 function App() {
     const [view, setView] = useState("home");
@@ -18031,6 +18049,39 @@ function App() {
     const [confirmDelete, setConfirmDelete] = useState(null); // { kind, id, name, ... }
     const [confirmAdvance, setConfirmAdvance] = useState(null); // cycle pending a block-advance / finish / roll confirmation
     const [cycleConvertId, setCycleConvertId] = useState(null); // standalone program being converted into a multi-block cycle
+    const [generationTask, setGenerationTask] = useState(null);
+    const generationClient = useRef(null), generationFlight = useRef(null), generationOwner = useRef(null), generationMounted = useRef(false);
+    if (!generationClient.current) generationClient.current = createGenerationClient();
+    generationOwner.current = { view, program, saved, cycles, history, banned, custom, drafts, legacyStore, cycleConvertId, unit, minInc, plates, restScale, gymSig };
+    const generationOwnerChanged = owner => Object.keys(owner).some(key => owner[key] !== generationOwner.current[key]);
+    useEffect(() => {
+        generationMounted.current = true;
+        return () => {
+            generationMounted.current = false;
+            generationFlight.current?.controller.abort();
+            generationClient.current.dispose();
+        };
+    }, []);
+    useEffect(() => {
+        const task = generationFlight.current;
+        if (task && generationOwnerChanged(task.owner)) task.controller.abort();
+    }, [view, program, saved, cycles, history, banned, custom, drafts, legacyStore, cycleConvertId, unit, minInc, plates, restScale, gymSig]);
+    const runGeneration = async (operation, input, label = 'Building your plan') => {
+        if (generationFlight.current) throw new NextShellAdapterError('NEXT_GENERATION_BUSY', 'A plan is already being built. Wait or cancel it first.');
+        const task = { owner: generationOwner.current, controller: new AbortController(), label };
+        generationFlight.current = task;
+        setGenerationTask(task);
+        try {
+            const result = await generationClient.current.run(operation, input, { signal: task.controller.signal });
+            if (!generationMounted.current || task.controller.signal.aborted || generationOwnerChanged(task.owner)) throw generationAbortError();
+            return result;
+        } finally {
+            if (generationFlight.current === task) {
+                generationFlight.current = null;
+                if (generationMounted.current) setGenerationTask(null);
+            }
+        }
+    };
     const [progressFocus, setProgressFocus] = useState(null); // section to scroll to when opening the progress tab ("strength" | null)
     const [settingsFocus, setSettingsFocus] = useState(null); // deep-link into Settings ("export" opens the backup sheet — used by Home's backup nudge)
     useEffect(() => { if (!appToast)
@@ -19164,15 +19215,16 @@ function App() {
             setLegacyReview(null);
         setAppToast({ msg: `Removed ${old.name || "saved plan"} from previous-version plans. Workout history was kept.` });
     };
-    const rebuildLegacyProgram = (id) => {
+    const rebuildLegacyProgram = async (id) => {
         const old = (legacyStore.saved || []).find(x => x && x.id === id);
         if (!old)
             return { ok: false, msg: "That program is no longer available to rebuild." };
         let p;
         try {
-            p = generateNextProgramForShell({ config: { ...(old.config || {}) }, banned, legacyExercises: EXERCISES, makeId: uid,  }).program;
+            p = (await runGeneration('program', { config: { ...(old.config || {}) }, banned, legacyExercises: EXERCISES, makeId: uid })).program;
         }
         catch (err) {
+            if (err?.name === 'AbortError') return { ok: false, cancelled: true, msg: 'Build cancelled. Your original plan is unchanged.' };
             const code = err instanceof NextShellAdapterError ? err.code : "NEXT_ENGINE_ERROR";
             recordReleaseDiag("legacy_rebuild_failed_closed", { engine: ENGINE_VERSION, code, reason: String(err?.message || err) });
             return { ok: false, msg: `This program couldn't be rebuilt safely (${code}). It's kept exactly as it was — you can create a new program with different settings.` };
@@ -19198,13 +19250,15 @@ function App() {
         setLegacyReview(null);
         setAppToast({ msg: `Restored ${p.name} to your programs. Your original plan is still included in backups.` });
     };
-    const handleGenerate = (config) => {
+    const handleGenerate = async (config) => {
         let p;
         try {
-            p = generateNextProgramForShell({ config, banned, legacyExercises: EXERCISES, makeId: uid,  }).program;
+            p = (await runGeneration('program', { config, banned, legacyExercises: EXERCISES, makeId: uid })).program;
             p.generationRoute = GENERATION_ROUTE;
         }
         catch (err) {
+            // A second tap is already represented by the visible in-flight build.
+            if (err?.name === 'AbortError' || err?.code === 'NEXT_GENERATION_BUSY') return;
             // M46 fail-closed contract: never turn a Next rejection into a plausible-looking v661 plan.
             const code = err instanceof NextShellAdapterError ? err.code : "NEXT_ENGINE_ERROR";
             const reason = String(err?.message || err);
@@ -19416,7 +19470,7 @@ function App() {
         if (p.id)
             setSaved(list => list.map(x => x.id === p.id ? p : x));
     };
-    const handleRegenerate = (seed, _toEngine = null, configPatch = null, metaPatch = null) => {
+    const handleRegenerate = async (seed, _toEngine = null, configPatch = null, metaPatch = null) => {
         if (!program)
             return;
         const nextOwnerCycle = program.cycleId ? cycles.find(c => c.id === program.cycleId) : null;
@@ -19433,13 +19487,14 @@ function App() {
             // M46: rebuild/reroll is also a generation action, so even a legacy saved program migrates to
             // Pursuit Next rather than invoking its historical generator again. `_toEngine` is retained in
             // the callback signature for compatibility with older UI cards, but cannot select v661 here.
-            p = generateNextProgramForShell({
+            p = (await runGeneration('program', {
                 config: cfg, banned, legacyExercises: EXERCISES,
                 seed: seed != null ? seed : undefined, makeId: uid,
-            }).program;
+            })).program;
             p.generationRoute = GENERATION_ROUTE;
         }
         catch (err) {
+            if (err?.name === 'AbortError') return;
             const code = err instanceof NextShellAdapterError ? err.code : "NEXT_ENGINE_ERROR";
             recordReleaseDiag("next_regenerate_failed_closed", { action: "regenerate", engine: ENGINE_VERSION, code, reason: String(err?.message || err) });
             setAppToast({ msg: `This program could not be rebuilt safely (${code}). Your current program was left unchanged.` });
@@ -19634,13 +19689,13 @@ function App() {
         }
         return { cycle, ids, meta, byId };
     };
-    const buildCycle = (config) => {
+    const buildCycle = async (config) => {
         const tmplId = config.cycleTemplate || nextCycleTemplatesForShell()[0]?.id || "powerbuilding";
         try {
-            const built = generateNextCycleForShell({
+            const built = await runGeneration('cycle', {
                 templateId: tmplId, config, banned, legacyExercises: EXERCISES,
                 adaptBetweenBlocks: !!config.cycleAdapt, makeId: uid
-            });
+            }, 'Building your training cycle');
             // Cycle generation used to leave the try/catch here, then immediately assume every returned
             // field existed. A partial/malformed bridge result could therefore throw on blocks[0].id or
             // blockMeta[0].label and crash React instead of returning the user to the wizard. Validate the
@@ -19677,6 +19732,7 @@ function App() {
             setAppToast({ msg: `Cycle started — ${meta.length} blocks, beginning with ${meta[0].label || "first block"}` });
         }
         catch (err) {
+            if (err?.name === 'AbortError') return;
             recordReleaseDiag("next_cycle_build_failed", { action: "cycle_build", engine: ENGINE_VERSION, code: err?.code || (err instanceof NextShellAdapterError ? err.code : "NEXT_ENGINE_ERROR"), reason: String(err?.message || err) });
             const reason = err instanceof NextShellAdapterError ? String(err.message || err.code)
                 : err?.code === "NEXT_CYCLE_INCOMPLETE" ? "The cycle could not be assembled safely."
@@ -19697,23 +19753,23 @@ function App() {
         }
         setCycleConvertId(p.id);
     };
-    const confirmCycleConversion = ({ templateId, name, adaptBetweenBlocks }) => {
+    const confirmCycleConversion = async ({ templateId, name, adaptBetweenBlocks }) => {
         const p = saved.find(x => x.id === cycleConvertId);
         if (!p)
             return { ok: false, msg: "That program is no longer in your library." };
         try {
             const built = (p.engineSource === "pursuit-next" && p.nextEngine?.program)
-                ? convertProgramToNextCycleForShell({
+                ? await runGeneration('convert_cycle', {
                     program: p, templateId, name, adaptBetweenBlocks, legacyExercises: EXERCISES, makeId: uid
-                })
-                : mergeStandaloneIntoGeneratedCycle(p, generateNextCycleForShell({
+                }, 'Building your training cycle')
+                : mergeStandaloneIntoGeneratedCycle(p, await runGeneration('cycle', {
                     templateId,
                     config: cycleConfigForStandaloneProgram(p, name),
                     banned,
                     legacyExercises: EXERCISES,
                     adaptBetweenBlocks,
                     makeId: uid
-                }));
+                }, 'Building your training cycle'));
             requireCompleteCycleShell(built.cycle, built.allBlocks);
             built.cycle.generationRoute = GENERATION_ROUTE;
             if (built.currentProgram.engineSource === "pursuit-next")
@@ -19735,6 +19791,7 @@ function App() {
             return { ok: true };
         }
         catch (err) {
+            if (err?.name === 'AbortError') return { ok: false, cancelled: true, msg: 'Build cancelled. Your current program is unchanged.' };
             const code = err instanceof NextShellAdapterError ? err.code : "NEXT_CYCLE_CONVERSION_ERROR";
             recordReleaseDiag("next_cycle_convert_failed", { action: "cycle_convert", engine: ENGINE_VERSION, code, reason: String(err?.message || err) });
             return { ok: false, msg: err instanceof NextShellAdapterError ? String(err.message || "Could not create the training cycle.") : "The training cycle could not be assembled safely. Your current program was left unchanged." };
@@ -19761,7 +19818,7 @@ function App() {
     // the lifter just left. Opening a review does not change program.id, so the review screen itself is stable.
     useEffect(() => { setReviewOf(null); }, [program?.id]);
     const completeCycleBlock = (cycle) => setConfirmAdvance(cycle);
-    const doCompleteCycleBlock = (cycle) => {
+    const doCompleteCycleBlock = async (cycle) => {
         /* A cycle converted from a legacy/custom standalone plan deliberately keeps that exact plan as
            Block 1. Its first transition activates the already-audited Next preview; only subsequent
            transitions use history-driven Next adaptation, because there is no honest engine snapshot
@@ -19790,7 +19847,53 @@ function App() {
                 setAppToast({ msg: "The active Pursuit Next cycle block could not be found. Nothing changed." });
                 return;
             }
-
+            try {
+                const advanced = await runGeneration('advance_cycle', { cycle, activeProgram, history, legacyExercises: EXERCISES, makeId: uid }, 'Preparing your next block');
+                const nextCycle = advanced.cycle;
+                const nextSaved = advanced.nextProgram
+                    ? [...saved.filter(p => p.id !== advanced.nextProgram.id), advanced.nextProgram]
+                    : saved;
+                requireCompleteCycleShell(nextCycle, nextSaved, { allowDone: true, expectedCycleId: cycle.id });
+                if (!advanced.done && !advanced.nextProgram) throw new NextShellAdapterError('NEXT_CYCLE_INCOMPLETE', 'The next block is missing.');
+                if (advanced.done && cycle.onComplete === 'loop') {
+                    const rolled = await runGeneration('cycle', {
+                        templateId: cycle.templateId,
+                        config: { ...(cycle.nextEngineCycle?.baseConfig || activeProgram.config), name: cycle.name },
+                        banned, legacyExercises: EXERCISES,
+                        adaptBetweenBlocks: !!cycle.nextEngineCycle?.adaptBetweenBlocks, makeId: uid
+                    }, 'Building your next training cycle');
+                    const { ids } = requireCompleteCycleShell(rolled.cycle, rolled.blocks);
+                    if (rolled.blocks.length !== ids.length || rolled.cycle.id === cycle.id
+                        || rolled.blocks.some(b => saved.some(p => p.id === b.id)))
+                        throw new NextShellAdapterError('NEXT_CYCLE_INCOMPLETE', 'The new cycle could not be assembled safely.');
+                    rolled.cycle.onComplete = 'loop';
+                    rolled.cycle.continuedFrom = cycle.id;
+                    rolled.cycle.generationRoute = GENERATION_ROUTE;
+                    rolled.blocks.forEach(b => { b.generationRoute = GENERATION_ROUTE; });
+                    setSaved(prev => [...prev, ...rolled.blocks]);
+                    setCycles(prev => [...prev.map(c => c.id === cycle.id ? nextCycle : c), rolled.cycle]);
+                    setPinnedId(rolled.blocks[0].id);
+                    setProgram(rolled.blocks[0]);
+                    rootView('program');
+                    setAppToast({ msg: 'New training cycle ready. Your completed cycle and workout history are saved.' });
+                    return;
+                }
+                if (advanced.nextProgram) {
+                    advanced.nextProgram.generationRoute = GENERATION_ROUTE;
+                    setSaved(nextSaved);
+                    setPinnedId(advanced.nextProgram.id);
+                    setProgram(advanced.nextProgram);
+                    rootView('program');
+                }
+                setCycles(prev => prev.map(c => c.id === cycle.id ? nextCycle : c));
+                setAppToast({ msg: advanced.done ? 'Training cycle complete. Your programs and workout history are saved.'
+                    : advanced.insertedRecovery ? 'Recovery block added from your completed workouts.'
+                        : `Advanced to ${advanced.nextProgram.blockLabel || 'your next block'}` });
+            } catch (err) {
+                if (err?.name === 'AbortError') return;
+                recordReleaseDiag('next_cycle_advance_failed', { action: 'cycle_advance', engine: ENGINE_VERSION, code: err?.code || 'NEXT_ENGINE_ERROR', reason: String(err?.message || err) });
+                setAppToast({ msg: err instanceof NextShellAdapterError ? err.message : 'The next block could not be prepared safely. Nothing changed.' });
+            }
             return;
         }
         // M46 does not execute legacy cycles. They cannot enter the normal lab store, and a malformed or
@@ -19846,7 +19949,7 @@ function App() {
        set biases into a week-1 restart prescribes a ramp the lifter has not done. Unlike
        startNextBlock this does NOT advance a percent-scheme training max — restarting is not
        progressing, and bumping the TM would silently make the reset harder than the block it repeats. */
-    const resetProgram = (mode) => {
+    const resetProgram = async (mode) => {
         if (!program)
             return;
         const nextOwnerCycle = program.cycleId ? cycles.find(c => c.id === program.cycleId) : null;
@@ -19859,12 +19962,13 @@ function App() {
         let np;
         if (mode === "original") {
             try {
-                np = generateNextProgramForShell({
+                np = (await runGeneration('program', {
                     config: program.config, banned, legacyExercises: EXERCISES, seed: program.seed, makeId: uid,
-                }).program;
+                })).program;
                 np.generationRoute = GENERATION_ROUTE;
             }
             catch (err) {
+                if (err?.name === 'AbortError') return;
                 const code = err instanceof NextShellAdapterError ? err.code : "NEXT_ENGINE_ERROR";
                 recordReleaseDiag("next_reset_failed_closed", { action: "reset_original", engine: ENGINE_VERSION, code, reason: String(err?.message || err) });
                 setAppToast({ msg: `This program could not be reset safely (${code}). Nothing was changed.` });
@@ -19896,7 +20000,7 @@ function App() {
         setPinnedId(np.id);
         setProgram(np);
     };
-    const startNextBlock = (p) => {
+    const startNextBlock = async (p) => {
         const nextOwnerCycle = p?.cycleId ? cycles.find(c => c.id === p.cycleId) : null;
         if (nextOwnerCycle) {
             setAppToast({ msg: nextOwnerCycle.engineSource === "pursuit-next"
@@ -19905,16 +20009,33 @@ function App() {
             return;
         }
         if (p?.engineSource === "pursuit-next") {
-
+            try {
+                const built = await runGeneration('next_block', { program: p, history, legacyExercises: EXERCISES, makeId: uid }, 'Preparing your next block');
+                const np = built.program;
+                const m = (p.name || '').match(/^(.*?)\s*·\s*Block\s*(\d+)\s*$/);
+                np.name = m ? `${m[1]} · Block ${Number(m[2]) + 1}` : `${p.name} · Block 2`;
+                np.folder = p.folder;
+                np.description = p.description;
+                np.generationRoute = GENERATION_ROUTE;
+                setSaved(prev => [...prev, np]);
+                setPinnedId(np.id);
+                setProgram(np);
+                rootView('program');
+                setAppToast({ msg: 'Next block built from your completed workouts.' });
+            } catch (err) {
+                if (err?.name === 'AbortError') return;
+                recordReleaseDiag('next_block_failed_closed', { action: 'next_block', engine: ENGINE_VERSION, code: err?.code || 'NEXT_ENGINE_ERROR', reason: String(err?.message || err) });
+                setAppToast({ msg: err instanceof NextShellAdapterError ? err.message : 'The next block could not be created safely. Your current program is unchanged.' });
+            }
             return;
         }
         // A legacy standalone program can still be trained, but its next generated block must migrate to
         // Pursuit Next. We intentionally do NOT clone the old program forward: that would keep v661 in
         // active generation under a different name.
         try {
-            const np = generateNextProgramForShell({
+            const np = (await runGeneration('program', {
                 config: p.config, banned, legacyExercises: EXERCISES, makeId: uid,
-            }).program;
+            })).program;
             np.generationRoute = GENERATION_ROUTE;
             const m = (p.name || "").match(/^(.*?)\s*·\s*Block\s*(\d+)\s*$/);
             np.name = m ? `${m[1]} · Block ${Number(m[2]) + 1}` : `${p.name} · Block 2`;
@@ -19927,6 +20048,7 @@ function App() {
             setAppToast({ msg: "Next block created with the current program logic." });
         }
         catch (err) {
+            if (err?.name === 'AbortError') return;
             const code = err instanceof NextShellAdapterError ? err.code : "NEXT_ENGINE_ERROR";
             recordReleaseDiag("legacy_next_block_migration_failed", { action: "next_block", engine: ENGINE_VERSION, code, reason: String(err?.message || err) });
             setAppToast({ msg: `The next block could not be created safely (${code}). The current program was left unchanged.` });
@@ -20604,7 +20726,7 @@ function App() {
                             const willLoop = isLast && c.onComplete === "loop";
                             const title = willLoop ? "Finish & roll a new cycle?" : isLast ? "Finish this cycle?" : `Complete ${c.blockMeta[active]?.label || "this block"}?`;
                             const body = willLoop
-                                ? `"${c.name}" will restart from the top: every block is regenerated fresh at your current strength, replacing the existing ones. This can't be undone.`
+                                ? `A new "${c.name}" cycle will use the same plan settings. Your completed cycle, programs and workout history stay saved.`
                                 : isLast
                                     ? `"${c.name}" will be marked complete. Your blocks stay in the library.`
                                     : `You'll move on to ${c.blockMeta[active + 1]?.label || "the next block"}. Any un-trained days left in ${c.blockMeta[active]?.label || "this block"} are skipped — this can't be undone.`;
@@ -20614,7 +20736,7 @@ function App() {
                                                 return null;
                                             return (_jsxs("button", { "data-review-cta": true, onClick: () => { setConfirmAdvance(null); setReviewOf({ cycleId: c.id, blockIdx: active }); pushView("blockReview", view); }, className: "pressable", style: { width: "100%", textAlign: "left", padding: "11px 12px", borderRadius: 12, border: `1px solid ${C.accent}33`, background: C.accentDim, color: C.text, cursor: "pointer", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }, children: [_jsx(Milestone, { size: 15, color: C.accentInk, style: { flexShrink: 0 } }), _jsxs("span", { style: { flex: 1, minWidth: 0 }, children: [_jsx("span", { style: { display: "block", fontSize: 13, fontWeight: 700 }, children: "See how this block went" }), _jsx("span", { style: { display: "block", fontSize: 11, color: C.muted }, children: R.headline })] }), _jsx(ChevronRight, { size: 15, color: C.muted, style: { flexShrink: 0 } })] }));
                                         })(), _jsxs("button", { onClick: () => { setConfirmAdvance(null); doCompleteCycleBlock(c); }, className: "pressable", style: { width: "100%", padding: "13px", borderRadius: 12, border: "none", background: C.accent, color: C.accentText, fontWeight: 700, cursor: "pointer", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }, children: [_jsx(Check, { size: 16 }), " ", willLoop ? "Roll new cycle" : isLast ? "Finish cycle" : "Complete block"] }), _jsx("button", { onClick: () => setConfirmAdvance(null), className: "pressable", style: { width: "100%", padding: "13px", borderRadius: 12, border: `1px solid ${C.border}`, background: "none", color: C.text, fontWeight: 600, cursor: "pointer" }, children: "Cancel" })] }) }));
-                        })() }), loaded && seenIntroV < INTRO_VERSION && (_jsxs("div", { className: "wpb-onboarding", style: { position: "absolute", inset: 0, zIndex: 90, background: C.bg, display: "flex", flexDirection: "column", animation: "fadeIn .25s both" }, children: [_jsx("div", { className: "wpb-scroll wpb-onboarding-scroll", style: { flex: 1, minHeight: 0, overflowY: "auto", padding: "calc(env(safe-area-inset-top) + 34px) 26px 24px" }, children: _jsxs("div", { className: "wpb-onboarding-content", children: [_jsx("div", { className: "wpb-onboarding-mark", style: { width: 56, height: 56, borderRadius: 16, background: C.accent, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }, children: _jsx("svg", { width: "28", height: "28", viewBox: "0 0 28 28", "aria-hidden": "true", children: _jsxs("g", { fill: C.accentText, children: [_jsx("rect", { x: "1", y: "10", width: "3.4", height: "8", rx: "1.4" }), _jsx("rect", { x: "5.6", y: "6.5", width: "4.6", height: "15", rx: "2" }), _jsx("rect", { x: "10.8", y: "12.4", width: "6.4", height: "3.2", rx: "1.6" }), _jsx("rect", { x: "17.8", y: "6.5", width: "4.6", height: "15", rx: "2" }), _jsx("rect", { x: "23.6", y: "10", width: "3.4", height: "8", rx: "1.4" })] }) }) }), _jsx("div", { className: "wpb-onboarding-kicker", style: { fontSize: 13, fontWeight: 700, letterSpacing: 1.4, textTransform: "uppercase", color: C.accentInk, marginBottom: 8 }, children: "Pursuit Iron \u00B7 Strength Coach" }), _jsxs("div", { className: "wpb-onboarding-title", style: { fontSize: 28, fontWeight: 700, letterSpacing: -0.6, lineHeight: 1.15 }, children: ["Your training,", _jsx("br", {}), "built around you."] }), _jsx("div", { className: "wpb-onboarding-copy", style: { fontSize: 15, color: C.muted, marginTop: 12, lineHeight: 1.5 }, children: "Build around your goal, schedule, and equipment. Log what you actually did; the next prescription stays grounded in that history. Your data remains on this device unless you export it." }), _jsx("div", { className: "wpb-onboarding-features", style: { marginTop: 22 }, children: [
+                        })() }), generationTask && _jsx(GenerationProgress, { label: generationTask.label, onCancel: () => generationTask.controller.abort() }), loaded && seenIntroV < INTRO_VERSION && (_jsxs("div", { className: "wpb-onboarding", style: { position: "absolute", inset: 0, zIndex: 90, background: C.bg, display: "flex", flexDirection: "column", animation: "fadeIn .25s both" }, children: [_jsx("div", { className: "wpb-scroll wpb-onboarding-scroll", style: { flex: 1, minHeight: 0, overflowY: "auto", padding: "calc(env(safe-area-inset-top) + 34px) 26px 24px" }, children: _jsxs("div", { className: "wpb-onboarding-content", children: [_jsx("div", { className: "wpb-onboarding-mark", style: { width: 56, height: 56, borderRadius: 16, background: C.accent, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }, children: _jsx("svg", { width: "28", height: "28", viewBox: "0 0 28 28", "aria-hidden": "true", children: _jsxs("g", { fill: C.accentText, children: [_jsx("rect", { x: "1", y: "10", width: "3.4", height: "8", rx: "1.4" }), _jsx("rect", { x: "5.6", y: "6.5", width: "4.6", height: "15", rx: "2" }), _jsx("rect", { x: "10.8", y: "12.4", width: "6.4", height: "3.2", rx: "1.6" }), _jsx("rect", { x: "17.8", y: "6.5", width: "4.6", height: "15", rx: "2" }), _jsx("rect", { x: "23.6", y: "10", width: "3.4", height: "8", rx: "1.4" })] }) }) }), _jsx("div", { className: "wpb-onboarding-kicker", style: { fontSize: 13, fontWeight: 700, letterSpacing: 1.4, textTransform: "uppercase", color: C.accentInk, marginBottom: 8 }, children: "Pursuit Iron \u00B7 Strength Coach" }), _jsxs("div", { className: "wpb-onboarding-title", style: { fontSize: 28, fontWeight: 700, letterSpacing: -0.6, lineHeight: 1.15 }, children: ["Your training,", _jsx("br", {}), "built around you."] }), _jsx("div", { className: "wpb-onboarding-copy", style: { fontSize: 15, color: C.muted, marginTop: 12, lineHeight: 1.5 }, children: "Build around your goal, schedule, and equipment. Log what you actually did; the next prescription stays grounded in that history. Your data remains on this device unless you export it." }), _jsx("div", { className: "wpb-onboarding-features", style: { marginTop: 22 }, children: [
                                                 [Wand2, "Built for your setup", "Goals, days, equipment, and session length shape the program instead of forcing one template."],
                                                 [Activity, "Log without friction", "Weight, reps, effort, rest, and the next target stay within reach while you train."],
                                                 [TrendingUp, "Progress you can inspect", "Lift trends, records, volume, measurements, and cycle history stay connected to the work that created them."],

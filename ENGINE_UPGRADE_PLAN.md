@@ -1,6 +1,6 @@
-# Engine upgrade and assurance sequence through M264
+# Engine upgrade and assurance sequence through M265
 
-The behavior-bearing engine remains M234 / Pursuit Engine 0.65.6 / app 4.0.0 build 823. M235 verifies that behavior line. M236–M264 harden ownership, verification, CI, history provenance, standalone packaging, and internal responsibility boundaries without changing the training model or authored build identity. Offline cache identity also certifies shipped content so same-build repairs reach installed copies.
+The behavior-bearing engine remains M234 / Pursuit Engine 0.65.6 / app 4.0.0 build 823. M235 verifies that behavior line. M236–M264 harden ownership, verification, CI, history provenance, standalone packaging, and internal responsibility boundaries without changing the training model or authored build identity. Offline cache identity also certifies shipped content so same-build repairs reach installed copies. M265 moves interactive generation off the main thread and connects the continuation controls to the canonical engine.
 
 | Milestone | Scope | Acceptance |
 |---|---|---|
@@ -43,6 +43,8 @@ The behavior-bearing engine remains M234 / Pursuit Engine 0.65.6 / app 4.0.0 bui
 | M263 | Content-addressed offline releases | Every shipped offline asset contributes to the cache revision; same-build runtime repairs create a waiting worker and isolated cache, unchanged finalization is stable, and Restart preserves training storage |
 
 | M264 | Exact paused workout-clock recovery | Timer restore/reset share one instant; paused duration uses its fixed anchor so saves and repeated minimize/resume cannot drift by milliseconds; existing exact browser assertions remain enforced |
+
+| M265 | Background plan generation and live continuation wiring | Full artifact parity across five canonical operations; current catalog/settings snapshots; cancellation, stale ownership, duplicate taps, failure/retry and offline browser checks; completed programs/history preserved |
 
 ## Current ownership rules
 

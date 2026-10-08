@@ -63,7 +63,7 @@ assert.match(audit, /github\.ref == 'refs\/heads\/main' \|\| github\.event_name 
 assert.equal(registry.contractCount, Object.values(contractGroups).flat().length);
 assert.equal(registry.browserCount, Object.values(browserShards).flat().length);
 assert.equal(registry.releaseCount, releaseTests.length);
-assert.equal(registry.browserCount, 12, 'browser coverage count changed unexpectedly');
+assert.equal(registry.browserCount, 13, 'worker generation must retain its browser integration coverage');
 assert.equal(registry.releaseCount, 1, 'release-only semantics should remain narrow');
 
 console.log(

@@ -24,6 +24,33 @@ assert.equal(reported.suggestedLoad, 185);
 assert.equal(reported.suggestedReps, 5);
 assert.ok(reported.suggestedLoad < reported.currentLoad);
 
+// October 8 screenshot: three completed ramp sets must not become four straight sets at 215.
+// Missing the fourth set blocks earned progression; it does not erase the observed rep misses.
+for (const prescribedSets of [3, 4, 5]) {
+  const partialMiss = decide({ prescribedSets, sets: [
+    {load:205,reps:3,rir:null}, {load:210,reps:2,rir:null}, {load:215,reps:3,rir:0}
+  ] });
+  assert.equal(partialMiss.action, 'decrease_load', `${prescribedSets} prescribed sets: actual misses still recalibrate`);
+  assert.equal(partialMiss.reasonCode, 'load_too_heavy');
+  assert.equal(partialMiss.suggestedLoad, 190);
+  assert.deepEqual(partialMiss.setTargets, Array.from({length:prescribedSets},()=>({weight:190,reps:5})));
+}
+
+// Stopping early while reporting enough reserve is execution evidence, not a heavy-load failure.
+const easyPartial = decide({ prescribedSets:4, sets:[
+  {load:205,reps:3,rir:4}, {load:210,reps:2,rir:5}, {load:215,reps:3,rir:4}
+] });
+assert.equal(easyPartial.action, 'hold');
+assert.equal(easyPartial.outcome, 'incomplete');
+
+for (const context of [{sessionInterrupted:true}, {badDay:true}, {prescriptionEdited:true}]) {
+  const limitedMiss = decide({ prescribedSets:4, sets:[
+    {load:205,reps:3,rir:0}, {load:210,reps:2,rir:0}, {load:215,reps:3,rir:0}
+  ], context });
+  assert.notEqual(limitedMiss.action, 'decrease_load', 'explicit exposure limitations retain precedence');
+  assert.notEqual(limitedMiss.action, 'increase_load');
+}
+
 // 75% completion used to be enough to reach the generic all-at-top branch. Missing sets are now a hard progression block.
 const partialTop = decide({ prescribedSets:4, sets:[
   {load:185,reps:8,rir:2}, {load:185,reps:8,rir:2}, {load:185,reps:8,rir:2}

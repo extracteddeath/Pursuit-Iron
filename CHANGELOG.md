@@ -1,3 +1,11 @@
+# Build 824 · workout history and load correction · Engine 0.65.6
+
+- Use one latest-workout set reference for the Last column, Last time shortcut and Focus view.
+- Keep missing prior sets empty and show reported effort without substituting planned effort.
+- Correct excessive loads from completed below-range sets before the incomplete-workout hold; missing sets never earn progression or count as failure.
+- Preserve explicit interruption, recovery and prescription-edit protections, along with completed and manually edited resumed rows.
+- Extend the existing generated/custom progression and phone regressions with the incomplete squat ramp.
+
 # M265 · responsive plan building · Engine 0.65.6
 
 - Build and rebuild programs and cycles in the background, with visible status and Cancel.

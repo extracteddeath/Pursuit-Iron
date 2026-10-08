@@ -106,10 +106,10 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "a3b690ab9d4d8ba868ecdb4e63b21d62445c48b9f9c7aab6f568fae6de4d045d",
+    "modules/App.js": "b66b6c668e1039d0bff969838951866a099421cf680c9a81ffcf528c3dbd2310",
     "index.html": "050e4dc51eca8c174fde088bcbad2f6fa713c20b549032ae7ab975925ab96142",
-    "sw.js": "222bf87b22d83f3682a8fe01687693dfcc48c3d93d009fbd6c9ac0ccd6041a4b",
-    "BUILD_PROFILE.json": "78ae716ca5c468989fae9101df876f623c0fbe700b67476ce8602a11859b5c06",
+    "sw.js": "36d081a9ac99cb8635c29bb93e919fdcb99f5f375778040086ee2138bd444fb8",
+    "BUILD_PROFILE.json": "55000c255103d7915364e71f1e9b2400c1a141b45836d003177a63562e5cc4da",
     "CHANGELOG.md": "58964a536980bcec3f0c49262638eb964cf4a5fadb7330facdf979ea445cf2e6",
     "app.css": "27818b3319609aff1416b32d5afebe70598cc57dfa64f4467b8bfe5b1130e0dd",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
@@ -117,6 +117,6 @@
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Retains build 824 workout-history consistency and rep-miss correction; build 825 stabilizes logging UI and navigation during rest without changing engine behavior.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b825-rc667b1d8590e32dd",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b825-r2e62790754106017",
   "uiMilestone": "Pursuit Iron 4.0 Production Release · M234 Candidate Selection Hardening"
 }

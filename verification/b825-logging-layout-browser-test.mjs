@@ -78,6 +78,29 @@ try {
         stable(last, await geometry(), `LAST to TARGET at ${width}px`);
         assert.equal(await page.$eval('[data-testid="set-0-0"] input[aria-label="weight"]', n => n.value), '190', 'reference toggles cannot rewrite typed values');
         assert.ok(await page.$$eval('.wpb-set-reference-value', nodes => nodes.every(n => n.scrollWidth <= n.clientWidth + 1)), 'target summaries fit the reference track');
+        const weightField = '[data-testid="set-0-0"] input[aria-label="weight"]';
+        const repsField = '[data-testid="set-0-0"] input[aria-label="reps"]';
+        const selected = selector => page.$eval(selector, input => [input.selectionStart, input.selectionEnd]);
+        for (const [selector, replacement] of [[weightField, '205.5'], [repsField, '6']]) {
+            await page.tap(selector);
+            const length = await page.$eval(selector, input => input.value.length);
+            assert.deepEqual(await selected(selector), [0, length], `tap selects the whole value at ${width}px`);
+            await page.keyboard.type(replacement);
+            assert.equal(await page.$eval(selector, input => input.value), replacement, 'typing replaces the value without Select All');
+        }
+        await page.click('[data-testid="set-0-0"] button[aria-label="weight up"]');
+        assert.ok(Number(await page.$eval(weightField, input => input.value)) > 205.5, 'steppers continue from the typed decimal');
+        await page.focus('[data-testid="set-0-0"] button[aria-label="weight down"]');
+        await page.keyboard.press('Tab');
+        assert.deepEqual(await selected(weightField), [0, await page.$eval(weightField, input => input.value.length)], 'keyboard focus selects the value');
+        await page.keyboard.press('Backspace');
+        assert.equal(await page.$eval(weightField, input => input.value), '', 'a selected value can still be cleared');
+        await page.keyboard.type('190');
+        await page.tap(repsField); await page.keyboard.type('5');
+        await page.waitForFunction(() => {
+            const set = JSON.parse(localStorage.getItem('wpb:live')).data[0].sets[0];
+            return set.weight === '190' && set.reps === '5';
+        });
         if (width === 390) await page.screenshot({ path: path.join(root, 'verification/b825-before-log-phone.png') });
 
         await page.click('[data-testid="set-0-0"] button[aria-label="Mark set done"]');
@@ -94,6 +117,8 @@ try {
         stable(logged, effort, `log effort at ${width}px`);
         const snapshot = await page.evaluate(() => JSON.parse(localStorage.getItem('wpb:live')));
         assert.equal(snapshot.data[0].sets[0].actualRIR, 3); assert.equal(snapshot.data[0].sets[0].weight, '190'); assert.equal(snapshot.data[0].sets[0].reps, '5');
+        await page.tap(weightField); await page.keyboard.type('999');
+        assert.equal(await page.$eval(weightField, input => input.value), '190', 'completed sets remain read-only');
         if (width === 390) await page.screenshot({ path: path.join(root, 'verification/b825-after-log-phone.png') });
         await page.click('.wpb-workout-footer button[aria-label="Next exercise"]');
         await page.waitForSelector('[data-testid="set-1-0"]');
@@ -106,7 +131,20 @@ try {
         assert.equal(await page.$eval('[data-testid="set-0-0"] input[aria-label="weight"]', n => n.value), '190');
         await page.click('button[aria-label="Skip rest"]'); await settle();
         assert.ok(await visibleFooter());
-        console.log(`PASS stable logging, LAST/TARGET, RIR, navigation during rest, and undo at ${width}px.`);
+        await page.click('button[aria-label="Focused mode"]');
+        await page.waitForSelector('.wpb-focus-value-input');
+        for (const [label, replacement] of [['weight', '195'], ['reps', '6']]) {
+            const selector = `.wpb-focus-value-input[aria-label="${label}"]`;
+            await page.tap(selector);
+            assert.deepEqual(await selected(selector), [0, await page.$eval(selector, input => input.value.length)], 'Focus mode selects on tap');
+            await page.keyboard.type(replacement);
+            assert.equal(await page.$eval(selector, input => input.value), replacement);
+        }
+        await page.click('button[aria-label="Exit focused mode"]');
+        await page.waitForSelector('[data-testid="set-0-0"]');
+        assert.equal(await page.$eval(weightField, input => input.value), '195');
+        assert.equal(await page.$eval(repsField, input => input.value), '6');
+        console.log(`PASS tap-to-select, Focus entry, stable logging, LAST/TARGET, RIR, navigation during rest, and undo at ${width}px.`);
     }
     assert.deepEqual(errors, []);
 } finally { if (browser) await browser.close(); await new Promise(resolve => server.close(resolve)); }

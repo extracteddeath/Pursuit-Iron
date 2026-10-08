@@ -130,6 +130,19 @@ function evaluateProgression(session, performedSets, context = {}) {
         if (exposure.interrupted && !completedPrescription) {
             return decision(ex, { outcome: 'interrupted', reasonCode: 'interrupted_exposure', action: 'review', confidence: 'high', reason: 'The workout was interrupted before the prescribed sets were completed. Do not interpret missing work as either progression success or a load failure.', currentLoad, suggestedLoad: currentLoad, estimated1RM });
         }
+        // Missing work blocks earned progression, but completed rep misses still describe the load.
+        // Evaluate those observations before the completion hold, without treating an unlogged set
+        // as a failure. Explicit edit/readiness/interruption protections above retain precedence.
+        if (!allAtLeastBottom) {
+            const correction = belowRangeLoadCorrection(ex, actual, currentLoad, context);
+            if (correction) {
+                return decision(ex, {
+                    outcome: 'failure', reasonCode: 'load_too_heavy', action: 'decrease_load', confidence: correction.confidence,
+                    reason: correction.reason, currentLoad, suggestedLoad: correction.suggestedLoad, suggestedReps: correction.suggestedReps,
+                    estimated1RM, calibrationEstimated1RM: correction.calibrationE1RM
+                });
+            }
+        }
         // Missing sets are a hard block on load progression even if every logged set hit the top of the range.
         // Previously 3/4 top-end sets (75% completion) could fall through to the allAtTop branch and advance.
         if (!completedPrescription) {
@@ -163,16 +176,6 @@ function evaluateProgression(session, performedSets, context = {}) {
                     : `All prescribed sets reached the top of the rep range without exceeding target effort. Increase load by the smallest available increment next exposure.${styleDetail}`,
                 currentLoad, suggestedLoad, loadMode: loading.mode, suggestedLoadLabel: loading.suggestedLabel ?? undefined, estimated1RM
             });
-        }
-        if (!allAtLeastBottom) {
-            const correction = belowRangeLoadCorrection(ex, actual, currentLoad, context);
-            if (correction) {
-                return decision(ex, {
-                    outcome: 'failure', reasonCode: 'load_too_heavy', action: 'decrease_load', confidence: correction.confidence,
-                    reason: correction.reason, currentLoad, suggestedLoad: correction.suggestedLoad, suggestedReps: correction.suggestedReps,
-                    estimated1RM, calibrationEstimated1RM: correction.calibrationE1RM
-                });
-            }
         }
         if (effortBelowTarget) {
             const code = repeatedEffortOvershoot ? 'effort_overshoot' : 'effort_below_target';

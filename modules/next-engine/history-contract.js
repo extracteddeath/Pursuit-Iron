@@ -25,6 +25,19 @@ export function completedHistorySets(perf) {
     return (Array.isArray(perf?.sets) ? perf.sets : []).filter(s => s && !s.sub && !s.warm
         && s.done !== false && historyNumber(s.r) > 0);
 }
+// All previous-workout surfaces use the same raw working-set position. A missing fourth
+// set has no counterpart; it must never borrow the third. Summary-only legacy saves are
+// explicitly lift references, and planned effort is never displayed as a reported result.
+export function previousWorkoutSet(perf, index) {
+    if (!Number.isInteger(index) || index < 0) return null;
+    const hasRows = Array.isArray(perf?.sets) && perf.sets.length > 0;
+    const row = hasRows ? completedHistorySets(perf)[index]
+        : perf ? { w: perf.weight, r: perf.reps, summary: true } : null;
+    if (!row) return null;
+    const w = historyNumber(row.w), r = historyNumber(row.r);
+    if (!(w > 0) || !(r > 0 || row.summary && r === null)) return null;
+    return { ...row, w, r, rir: observedHistoryRIR(row) };
+}
 export function attemptedHistorySets(perf) {
     return (Array.isArray(perf?.sets) ? perf.sets : []).filter(s => s && !s.sub && !s.warm
         && s.done !== false && (historyNumber(s.r) > 0 || (historyNumber(s.r) === 0 && s.failedAttempt === true)));

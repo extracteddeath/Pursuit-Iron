@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { sessionSuggestion, lastDayPerf, dayPerfFor, prescribeSets, EX_BY_ID } from '../modules/App.js';
 import { linearStalled, plateauSessions, styleOverride } from '../modules/training-domain/prescriptions.js';
 import { refreshPendingSetTargets } from '../modules/next-engine/workout-runtime.js';
+import { previousWorkoutSet } from '../modules/next-engine/history-contract.js';
 const id = 'seated-calf';
 export const program = { id: 'm220-custom', custom: true, weeks: 10, config: { unit: 'lb', weeks: 10, progression: 'manual', goal: 'both', experience: 'intermediate', deload: false },
     days: [{ id: 'lower', label: 'Lower', primaryIndex: -1, exercises: [id] }, { id: 'legs', label: 'Legs', primaryIndex: -1, exercises: [id] }],
@@ -98,3 +99,37 @@ assert.equal(lastDayPerf(first, {}, [otherProgramSameDay, oldDay], generated)[li
 assert.equal(dayPerfFor(first, {}, [otherProgramSameDay, oldDay], generated)[lift], oldDay.perf[lift],
     'best-of-recent anchor cannot use another program with a colliding day id');
 console.log('PASS M220 generated bridge: decision, LAST and anchor metadata stay program/day scoped even when another occurrence or program is newer.');
+
+// The October 8 squat report needs an older stronger anchor as well as the latest incomplete ramp.
+export const squatProgram = generateNextProgramForShell({ config: fixture.config, legacyExercises: EXERCISES,
+    seed: fixture.seed, makeId: () => 'squat-history-regression' }).program;
+export const squatDay = squatProgram.days.find(d => d.exercises[0] === 'back-squat');
+for (const [field, value] of [['sets',4], ['reps','5-8'], ['rir','2'], ['progressionStyle','double']])
+    squatProgram.overrides[`${squatDay.id}:0`] = markUserPrescriptionOverride(squatProgram.overrides[`${squatDay.id}:0`] || {}, field, value);
+const squatEntry = (date, sets) => ({ id:`squat-${date}`, programId:squatProgram.id, dayId:squatDay.id,
+    date, weekIndex:1, unit:'lb', perf:{'back-squat':{weight:Math.max(...sets.map(s=>s.w)),reps:sets.at(-1).r,sets}} });
+export const squatHistory = [
+    squatEntry(3000, [{w:205,r:3,rir:2,tr:2,rirReported:false},{w:210,r:2,rir:2,tr:2,rirReported:false},{w:215,r:3,rir:0,rirReported:true}]),
+    squatEntry(2000, [{w:200,r:3,rir:4},{w:205,r:5,rir:4},{w:210,r:5,rir:4},{w:215,r:5,rir:4}])
+];
+assert.equal(dayPerfFor(squatDay, {}, squatHistory, squatProgram)['back-squat'], squatHistory[1].perf['back-squat'],
+    'older stronger progression anchor differs from the most recent workout in this regression');
+assert.equal(lastDayPerf(squatDay, {}, squatHistory, squatProgram)['back-squat'], squatHistory[0].perf['back-squat']);
+const rawSquat = squatHistory[0].perf['back-squat'], originalSquat = structuredClone(rawSquat);
+assert.deepEqual([0,1,2].map(i=>previousWorkoutSet(rawSquat,i)).map(s=>[s.w,s.r,s.rir]),
+    [[205,3,null],[210,2,null],[215,3,0]],'history references retain raw values and only observed effort');
+assert.equal(previousWorkoutSet(rawSquat,3),null,'a new fourth set must not borrow the final prior row');
+const noisy = {sets:[{w:45,r:10,warm:true},null,...rawSquat.sets,{w:100,r:10,sub:true},{w:225,r:8,done:false}]};
+assert.deepEqual([0,1,2,3].map(i=>previousWorkoutSet(noisy,i)),[0,1,2,3].map(i=>previousWorkoutSet(rawSquat,i)),
+    'warmups, extensions, nulls and pending rows do not shift working-set references');
+assert.deepEqual(previousWorkoutSet({weight:'200',reps:'5'},3),{w:200,r:5,rir:null,summary:true});
+assert.equal(previousWorkoutSet({weight:200,reps:5,sets:[null]},0),null,'malformed per-set records do not invent a summary result');
+assert.deepEqual(rawSquat,originalSquat,'display references do not calibrate or mutate history');
+for (const candidate of [squatProgram, {...squatProgram,engineSource:undefined,custom:true}]) {
+    const advice = sessionSuggestion(candidate,squatDay,0,null,'lb',1,squatHistory);
+    assert.equal(advice.action,'decrease_load','generated and custom owners both lower the incomplete heavy ramp');
+    assert.equal(advice.weight,190);
+    const sets = prescribeSets(candidate,squatDay,EX_BY_ID['back-squat'],0,1,'lb',advice,{}, {},squatHistory,false);
+    assert.deepEqual(sets.map(s=>[s.weight,s.reps]),Array.from({length:4},()=>['190','5']));
+}
+console.log('PASS M220 squat regression: latest evidence remains raw; generated/custom incomplete rep misses lower all four targets to 190 x 5.');

@@ -36,6 +36,9 @@ function dependencies(file) {
         specs.push(match[1]);
     for (const match of source.matchAll(/\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)/g))
         specs.push(match[1]);
+    // A module-worker entry is executable production code loaded through a URL, not an import.
+    for (const match of source.matchAll(/\bnew\s+Worker\s*\(\s*new\s+URL\s*\(\s*['"]([^'"]+)['"]\s*,\s*import\.meta\.url/g))
+        specs.push(match[1]);
     return [...new Set(specs.map(spec => resolveRelative(file, spec)).filter(Boolean))];
 }
 

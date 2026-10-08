@@ -5,10 +5,12 @@
   "build": 823,
   "engineVersion": "0.65.6",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "da3fb7549d14a622a15bad4670c48843eae8c2f8a4ab9ad7f1ededd1ca46a4ee",
+  "runtimeAggregate": "8886852bd3f4fd7da4973fe3e20371d51968f5ab17e89dbb9bd0fd1765d3eb5a",
   "runtimeFiles": {
     "modules/engine-api.js": "40d3253be40bd5390001f16d63b74aae90d0e045df6a015b1764a1bc2404bd56",
     "modules/engine-shell.js": "73645bf4d914423074c0e90b992b58a6c57f7fbb726621d417803e906d140675",
+    "modules/generation-runtime.js": "a8375d92b33d226ef25fce6a2efddb3b84cfbb93e7327a92a4d749ca3071fb76",
+    "modules/generation-worker.js": "0afe425752a2a64510b1625778934de64ae78d729b96b32a21f1c5e62b067c03",
     "modules/legacy-research-data.js": "8b09be67d7c80da7602bb168726d7f7bc3f6ddb9a43b29293acdd18e208ba206",
     "modules/main.js": "535deb3adbf4269a36b7db9103fd0db48be1b8bf6ddfa062c8e02f206cc0a33d",
     "modules/mobile-lifecycle.js": "52f6db9f34b21a7fec3fd6b3e70c50a31d4f38864b6754b40477843807155cc7",
@@ -104,17 +106,17 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "3a566c0cabd408908c2702aa3a151d7e235e94a526449ed5738fbbb911b5aa41",
+    "modules/App.js": "abf47f280abef1725821cae3269bde7bf70893772ae5ce213e55e697a02b52dd",
     "index.html": "fb9f879e882f016b41d486f62f39c5605c74aac53a463a2fe1e82cbbaaa65e3b",
-    "sw.js": "48f53cb2d1a603530e406aed8df6cb14c9ed5795ce9462a891f44e28451ba97e",
-    "BUILD_PROFILE.json": "1b9fc1a5777f301ab0eb6bb26953f942cb76f4fccfed3d1ee2faac9ccab69e13",
-    "CHANGELOG.md": "0851b9f4d675dd8420fc278ba9595b18f4957196a83f6c4d05bf2f83c438d1c0",
+    "sw.js": "99dd53bfde9188b1bf15a4adcbfc26557c6c89dab86742cb9fb04f32f9e55a38",
+    "BUILD_PROFILE.json": "1e78fe63e90b8d4c7f1fd1254aa73272117e82783f296220d449899e93791714",
+    "CHANGELOG.md": "a407910be3a141e2329cdd674183a0d742f5b892d50e480bcc08fd8cd7a64b83",
     "app.css": "27818b3319609aff1416b32d5afebe70598cc57dfa64f4467b8bfe5b1130e0dd",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Candidate selection hardening; verified engineering continuation.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b823-rdedee4e37366f905",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b823-rb146451f0df3733f",
   "uiMilestone": "Pursuit Iron 4.0 Production Release · M234 Candidate Selection Hardening"
 }

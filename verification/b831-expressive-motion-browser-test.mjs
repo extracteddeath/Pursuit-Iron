@@ -286,7 +286,7 @@ try {
         });
         assert.ok(menuGeometry.radius >= 16 && menuGeometry.minItem >= 44 &&
             menuGeometry.left >= 0 && menuGeometry.right <= width + 1,
-            'M3 contextual menus are rounded, scroll-safe and touch accessible');
+            'M3 contextual menus are rounded, scroll-safe and touch accessible: ' + JSON.stringify({ width, menuGeometry }));
         assert.ok(menuGeometry.items >= 2, 'contextual actions keep their original features');
         if (width === 430)
             await page.screenshot({ path: path.join(root, 'verification/b831-m3-program-menu-phone.png') });

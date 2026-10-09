@@ -85,6 +85,10 @@ and hit testing remain attached to the original React buttons.
 - Resizes settle immediately to the updated responsive layout. Rapid second selections
   interrupt the same spring rather than stacking timers or blocking interaction.
 - Reduced-motion preferences settle instantly. Unmounting disconnects the track observer.
+- Progress is an actual keyboard tablist: Left/Right arrows select adjacent tabs (wrapping),
+  Home/End select the first/last, and focus follows selection. This delegates a regular
+  button click to React, so the tab content and moving indicator remain in sync. Settings
+  aria-pressed toggle buttons are left independent rather than borrowing tab semantics.
 - The workout's dense set controls, completed-set fade, steppers, RIR, prior/target loads,
   sheet gestures and progression code are excluded.
 

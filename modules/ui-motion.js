@@ -270,6 +270,23 @@ export function installAppMotion(root) {
             }
         });
     }
+    function refreshTrackTheme() {
+        // ThemePicker updates the same React buttons in place. The active ink fill
+        // must follow its new inline token even if the selected index did not change.
+        root.querySelectorAll(trackSelector).forEach(group => {
+            const state = selectionTracks.get(group);
+            const chosen = group.querySelector('button[aria-selected="true"],button[aria-pressed="true"]');
+            const fill = chosen?.style.backgroundColor;
+            if (state && fill && fill !== 'transparent' && fill !== state.fill) {
+                state.fill = fill;
+                group.style.setProperty('--pi-m3-track-fill', fill);
+            }
+        });
+    }
+    const themeSelection = e => {
+        if (e.target.closest?.('[data-theme-option]'))
+            requestAnimationFrame(refreshTrackTheme);
+    };
     function reference(el, initial = false) {
         const key = el.getAttribute('data-motion-key'), before = referenceKeys.get(el); referenceKeys.set(el, key);
         if (initial || before === undefined || before === key) return;
@@ -335,6 +352,7 @@ export function installAppMotion(root) {
     document.addEventListener('pointerup', up, { passive: true });
     document.addEventListener('pointercancel', up, { passive: true });
     document.addEventListener('pointermove', move, { passive: true });
+    root.addEventListener('click', themeSelection);
     root.addEventListener('keydown', keydown); document.addEventListener('keyup', keyup);
     document.addEventListener('visibilitychange', visibility);
     window.addEventListener('blur', settleAll);
@@ -344,6 +362,7 @@ export function installAppMotion(root) {
         root.removeEventListener('animationend', inkEnd);
         root.removeEventListener('pointerdown', down); document.removeEventListener('pointerup', up);
         document.removeEventListener('pointercancel', up); document.removeEventListener('pointermove', move);
+        root.removeEventListener('click', themeSelection);
         root.removeEventListener('keydown', keydown); document.removeEventListener('keyup', keyup);
         document.removeEventListener('visibilitychange', visibility);
         window.removeEventListener('blur', settleAll);

@@ -178,8 +178,18 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   opacity:0!important;
   pointer-events:none;
 }
+/* Override the legacy display:none !important on the old top-marker.
+   The new icon pill must paint above the button background but below its glyph. */
+#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab::before{
+  display:block!important;
+  z-index:0!important;
+}
 #root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab[aria-current="page"]{
   background:transparent!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab[aria-current="page"]::after{
+  content:none!important;
+  display:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab[aria-current="page"]::before{
   opacity:1!important;

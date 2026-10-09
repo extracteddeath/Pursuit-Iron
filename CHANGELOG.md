@@ -1,3 +1,9 @@
+# Build 828 · completed-set readability hotfix · Engine 0.65.6
+
+- Restores visible set number and actual logged weight × reps on every completed set, without brightly highlighting completed rows.
+- Keeps compact RIR editing and Undo, including when all sets in the exercise are complete.
+- Includes mobile-width regression tests for the all-sets-complete case; no progression or engine changes.
+
 # Build 827 · current-set focus · Engine 0.65.6
 
 - Smaller complete buttons and narrower weight fields leave more room for the four steppers.

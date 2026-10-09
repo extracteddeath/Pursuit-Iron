@@ -1756,8 +1756,15 @@ function StyleTag({ theme } = {}) {
       .wpb-workout .wpb-num-input{padding-inline:2px!important;scroll-margin-block:92px;transition:background-color 180ms var(--e-out),border-color 180ms var(--e-out),color 180ms var(--e-out),box-shadow 180ms var(--e-out);}
       .wpb-workout .wpb-num-input:focus{box-shadow:0 0 0 3px color-mix(in srgb,${C.accentDim} 72%,transparent)!important;border-color:color-mix(in srgb,${C.accent} 52%,${C.border})!important;}
 
-      /* Completed rows leave a quiet effort bar; the active row owns the accent. */
-      .wpb-workout [data-completed-bar]{background:transparent!important;box-shadow:none!important;transition:none!important;}
+      /* Completed rows keep their original full-width control grids.
+         Quiet only the logged read-only values; the active pending row owns the accent. */
+      .wpb-workout [data-testid^="set-"][data-done="1"] .wpb-set-controls{opacity:.7!important;}
+      .wpb-workout [data-testid^="set-"][data-done="1"] .wpb-num-input{
+        background:transparent!important;border-color:transparent!important;color:${C.muted}!important;box-shadow:none!important;
+      }
+      .wpb-workout [data-testid^="set-"][data-done="1"] .wpb-set-actions>button[aria-pressed="true"]{
+        background:${C.cardHi}!important;color:${C.muted}!important;border-color:${C.border}!important;box-shadow:none!important;
+      }
       .wpb-workout [data-testid^="set-"][data-active="1"]{
         background:color-mix(in srgb,${C.accent} 7%,transparent)!important;
       }
@@ -12259,7 +12266,13 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
                                                             color: os.actualRIR === r ? C.accentText : C.text, fontSize: 15, fontWeight: 700, cursor: "pointer" }, children: r === 4 ? "4+" : r }, r))) })] }));
                                     })()] }));
                         })(), !focus && e.sets.map((s, si) => {
-                            // The first pending set owns the accent highlight.
+                            /* THE SET YOU ARE ON: the first one not yet logged. Everything else — logged already, or
+                               still ahead — is dimmed, and this one keeps full contrast plus a left accent rule.
+                               Before this, five rows shared one visual weight and finding your place meant reading
+                               them; a glance between sets should not require reading. Deliberately DIMMING rather
+                               than hiding: the sets around it are the context that makes it mean anything (what you
+                               just did, what is left), and a lifter checking the last set's reps must not have to
+                               tap for them. */
                             const activeSi = e.sets.findIndex(x => !x.done);
                             const isActive = si === activeSi;
                             /* PREFILL SOURCES, at ROW scope. Both were computed inside the target column's IIFE,
@@ -12279,55 +12292,37 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
                                     return null;
                                 return pv;
                             })();
+                            /* THE SET AWAITING ITS EFFORT. Ticking weight and reps is not the whole of logging a
+                               set — how hard it was is the input that retunes the next one — but the flow treated
+                               the tick as the end: the band jumped to the next set, the row you had just finished
+                               dimmed to 0.56, and the reps-left question was asked inside that dimmed, already-past
+                               row. The line-by-line advance stepped straight over it.
+                               So the advance now LANDS here: the most recent working set with a real weight and no
+                               logged effort keeps full contrast and a soft accent rule (not the solid one — that
+                               stays the unique mark of the set you are ON). Crucially the next set becomes active
+                               at the same moment, so NOTHING is blocked: reaching for the next set's steppers walks
+                               past this and the prompt retires itself. Asked in the flow, never in the way — which
+                               is what an optional field should feel like.
+                               Only the LATEST one prompts. Chips on every done set stacked five pickers up the
+                               screen; earlier sets keep a one-tap tag instead (see the effort tag below), so
+                               nothing became unreachable. */
+                            const effortSi = (() => {
+                                for (let j = e.sets.length - 1; j >= 0; j--) {
+                                    const x = e.sets[j];
+                                    if (x.done && !x.warm && !x.sub && parseFloat(x.weight) > 0)
+                                        return x.actualRIR == null ? j : -1;
+                                }
+                                return -1;
+                            })();
+                            const isEffort = si === effortSi;
+                            const effKey = `${ei}:${si}`;
                             const warms = e.sets.filter(x => x.warm);
                             if (s.warm && !warmOpen[e.id] && warms.length && warms.every(x => x.done))
                                 return null;
                             const label = s.warm ? `W${e.sets.slice(0, si + 1).filter(x => x.warm).length}`
                                 : s.sub ? (s.kind === "drop" ? "↓" : "M")
                                     : e.sets.slice(0, si + 1).filter(x => !x.warm && !x.sub).length;
-
-                            // Completed sets keep their actual logged values readable.
-                            // Effort may expand beneath the compact summary, never instead of it.
-                            if (s.done) {
-                                const loggable = !s.warm && !s.sub && parseFloat(s.weight) > 0;
-                                const effKey = ei + ":" + si;
-                                const latestDone = e.sets.findLastIndex(x => x.done && !x.warm && !x.sub && parseFloat(x.weight) > 0);
-                                const open = loggable && (Object.prototype.hasOwnProperty.call(effortOpen, effKey) ? !!effortOpen[effKey] : (si === latestDone && s.actualRIR == null));
-                                const summary = String(s.weight ?? "—") + " " + unit + " × " + String(s.reps ?? "—");
-                                return _jsxs("div", { "data-testid": "set-" + ei + "-" + si, "data-warm": s.warm ? "1" : "0", "data-sub": s.sub ? "1" : "0", "data-done": "1", "data-active": "0", "data-completed-bar": true,
-                                    "aria-label": "Completed set " + label + ": " + String(s.weight) + " " + unit + ", " + String(s.reps) + " reps",
-                                    style: { display: "flex", flexDirection: "column", gap: 3, padding: "5px 2px", borderBottom: "1px solid " + C.borderSoft, color: C.muted },
-                                    children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 6, minHeight: 34 }, children: [
-                                        _jsx(Check, { size: 13, strokeWidth: 2, color: C.muted, style: { flexShrink: 0 } }),
-                                        _jsx("span", { className: "mono", style: { fontSize: 11, fontWeight: 650, color: C.muted, flexShrink: 0 }, children: String(label) }),
-                                        _jsx("span", { "data-completed-summary": true, className: "mono", style: { fontSize: 12, fontWeight: 650, color: C.text, minWidth: 0, flex: 1, whiteSpace: "nowrap" }, children: summary }),
-                                        loggable && _jsx("button", { "data-effort-tag": true,
-                                            onClick: () => setEffortOpen(o => ({ ...o, [effKey]: !open })),
-                                            "aria-label": "Change reps left for set " + label,
-                                            "aria-expanded": !!open,
-                                            className: "pressable",
-                                            style: { minHeight: 34, padding: "4px 2px", border: "none", background: "none", color: C.muted, fontSize: 11, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 },
-                                            children: s.actualRIR != null ? "RIR " + effortLabel(s.actualRIR, loadMode) : "RIR —" }),
-                                        _jsx("button", { onClick: () => toggleDone(ei, si), "aria-label": "Mark set not done", title: "Undo set " + label, className: "pressable",
-                                            style: { width: 30, minHeight: 36, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", border: "none", background: "none", color: C.faint, cursor: "pointer" },
-                                            children: _jsx(Undo2, { size: 13 }) })
-                                    ] }),
-                                    open && _jsxs("div", { "data-effort-picker": true,
-                                        style: { display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", padding: "2px 0 4px 24px" },
-                                        children: [_jsx("span", { style: { fontSize: 11, fontWeight: 600, color: C.muted }, children: "Reps left" }),
-                                            _jsx("div", { className: "wpb-effort-scale", style: { display: "flex", gap: 4, flexWrap: "nowrap" },
-                                                children: [0, 1, 2, 3, 4].map(v => _jsx("button", {
-                                                    onClick: () => { setActualRIR(ei, si, v); setEffortOpen(o => { const n = { ...o }; delete n[effKey]; return n; }); },
-                                                    className: "pressable", title: v === 0 ? "Failure" : v + " reps in reserve",
-                                                    "aria-label": v === 0 ? "Failure, no reps left" : (v === 4 ? "4 or more" : v) + " rep" + (v === 1 ? "" : "s") + " left",
-                                                    "aria-pressed": s.actualRIR === v,
-                                                    style: { minWidth: 32, minHeight: 36, padding: "6px 8px", borderRadius: 8, border: "1px solid " + (s.actualRIR === v ? C.muted : C.border), background: s.actualRIR === v ? C.cardHi : "transparent", color: s.actualRIR === v ? C.text : C.muted, fontSize: 13, fontWeight: 600, cursor: "pointer" },
-                                                    children: v === 4 ? "4+" : v }, v))
-                                            })
-                                        ] })
-                                ] }, si);
-                            }
-                            return (_jsxs("div", { "data-testid": `set-${ei}-${si}`, "data-warm": s.warm ? "1" : "0", "data-sub": s.sub ? "1" : "0", "data-done": s.done ? "1" : "0", "data-active": isActive ? "1" : "0", style: {
+                            return (_jsxs("div", { "data-testid": `set-${ei}-${si}`, "data-warm": s.warm ? "1" : "0", "data-sub": s.sub ? "1" : "0", "data-done": s.done ? "1" : "0", "data-active": isActive ? "1" : "0", "data-effort": isEffort ? "1" : "0", style: {
                                     /* No fade on upcoming or logged rows: faint and accentInk are derived to sit at 4.5:1, so any opacity drops them
                                        under AA. The active row's accentDim band and 4px accent rule carry focus instead. */
                                     /* FULL-BLEED. The highlight was an inset rounded card, which made the active set look
@@ -12337,10 +12332,10 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
                                        the number sits clear of the rule. */
                                     margin: `0 -${SET_ROW_BLEED}px`,
                                     padding: isActive ? `2px ${SET_ROW_BLEED}px 2px ${SET_ROW_BLEED - 4}px` : `2px ${SET_ROW_BLEED}px`,
-                                    borderLeft: `4px solid ${isActive ? C.accent : "transparent"}`,
+                                    borderLeft: `4px solid ${isActive ? C.accent : isEffort ? `${C.accent}55` : "transparent"}`,
                                     background: isActive ? C.accentDim : "transparent",
                                     transition: "opacity .18s, background .18s"
-                                }, children: [_jsxs("div", { className: "wpb-set-controls", style: { display: "flex", alignItems: "flex-start", flexWrap: "nowrap", gap: narrowSet ? 5 : 6, paddingTop: 2, paddingBottom: 2, paddingRight: 2, paddingLeft: s.sub ? 8 : 2, opacity: (s.warm || s.sub) && !s.done ? 0.85 : 1, borderLeft: s.sub ? `2px solid ${C.accentDim}` : "none" }, children: [_jsx("span", { className: "mono", style: { width: narrowSet ? 24 : (s.sub ? 20 : 24), flexShrink: 0, paddingTop: 8, fontSize: s.warm || s.sub ? 11 : 14, fontWeight: 600, color: s.warm || s.sub ? C.muted : (s.done ? C.accentInk : C.muted) }, children: label }), _jsx("div", { style: { width: narrowSet ? 60 : (s.sub ? 70 : 80), flex: "0 0 auto", paddingTop: 6, lineHeight: 1.2, overflow: "hidden" }, children: (() => {
+                                }, children: [_jsxs("div", { className: "wpb-set-controls", style: { display: "flex", alignItems: "flex-start", flexWrap: "nowrap", gap: narrowSet ? 5 : 6, paddingTop: 2, paddingBottom: 2, paddingRight: 2, paddingLeft: s.sub ? 8 : 2, opacity: (s.warm || s.sub) && !s.done ? 0.85 : 1, borderLeft: s.sub ? `2px solid ${C.accentDim}` : "none" }, children: [_jsx("span", { className: "mono", style: { width: narrowSet ? 24 : (s.sub ? 20 : 24), flexShrink: 0, paddingTop: 8, fontSize: s.warm || s.sub ? 11 : 14, fontWeight: 600, color: C.muted }, children: label }), _jsx("div", { style: { width: narrowSet ? 60 : (s.sub ? 70 : 80), flex: "0 0 auto", paddingTop: 6, lineHeight: 1.2, overflow: "hidden" }, children: (() => {
                                                     // ── Shared TARGET / LAST column ──────────────────────────────
                                                     // LAST mode: show previous session's matching set as a tap-to-fill button.
                                                     if (targetMode === "last" && !s.warm && !s.sub) {
@@ -12415,7 +12410,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
                                                     const tunedApplied = !s.warm && !s.sub && !s.done && s.autoTuned && s.suggested
                                                         && String(s.weight) === String(s.suggested.weight) && String(s.reps) === String(s.suggested.reps);
                                                     return (_jsxs(_Fragment, { children: [_jsxs("div", { className: "mono wpb-set-reference", style: { fontSize: narrowSet ? 12 : 13, fontWeight: 600, color: C.muted, lineHeight: 1.25 }, children: [_jsx("span", { style: { display: "block", whiteSpace: "nowrap" }, children: tgtW }), _jsxs("span", { className: "wpb-target-reps", style: { display: "block", whiteSpace: "nowrap", color: C.muted }, children: ["\u00D7", String(tgtR).replace(/(\d)-(?=\d)/g, "$1–")] })] }), statusTag && (isActive || s.done) && (_jsx("div", { style: { fontSize: 11, fontWeight: 700, color: catInk(statusTag.color), marginTop: 1 }, children: statusTag.label })), si === lastWorkRow && !s.done && techTag && (_jsx("div", { className: "wpb-set-tech-tag", style: { fontSize: 11, fontWeight: 700, color: C.accentInk, marginTop: 1, whiteSpace: "nowrap" }, children: techTag })), tunedApplied && isActive && (_jsx("div", { style: { fontSize: 11, fontWeight: 600, color: C.faint, paddingTop: 2 }, children: "from last set" }))] }));
-                                                })() }), _jsxs("div", { style: { flex: 1, minWidth: 0, position: "relative" }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: narrowSet ? 1 : 2 }, children: [!s.done && _jsx(StepButton, { onStep: () => bumpWeight(ei, si, -1), label: "weight down", glyph: "\u2212" }), _jsx("input", { inputMode: "decimal", onFocus: selectNumericInput, onClick: selectNumericInput, enterKeyHint: "next", "aria-label": "weight", value: s.weight, placeholder: (s.target?.w === "0" || s.target?.w === 0) ? "BW" : "—", readOnly: s.done, onChange: ev => editWeight(ei, si, ev.target.value), className: "mono wpb-num-input", style: { flex: 1, minWidth: 0, padding: "8px 4px", textAlign: "center", borderRadius: 8, border: s.hint && !s.done ? `1px solid ${s.hint === "up" ? C.accent : C.warn}` : (s.warm || s.sub ? `1px dashed ${C.border}` : `1px solid ${C.border}`), background: s.done ? C.accentDim : C.bg2, color: C.text, fontSize: narrowSet ? Math.max(10, 15 - Math.max(0, String(s.weight).length - 4) * 1.9) : 15, fontWeight: 600 } }), !s.done && _jsx(StepButton, { onStep: () => bumpWeight(ei, si, 1), label: "weight up", glyph: "+" })] }), (() => {
+                                                })() }), _jsxs("div", { style: { flex: narrowSet ? 1.15 : 1, minWidth: 0, position: "relative" }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: narrowSet ? 1 : 2 }, children: [!s.done && _jsx(StepButton, { onStep: () => bumpWeight(ei, si, -1), label: "weight down", glyph: "\u2212" }), _jsx("input", { inputMode: "decimal", onFocus: selectNumericInput, onClick: selectNumericInput, enterKeyHint: "next", "aria-label": "weight", value: s.weight, placeholder: (s.target?.w === "0" || s.target?.w === 0) ? "BW" : "—", readOnly: s.done, onChange: ev => editWeight(ei, si, ev.target.value), className: "mono wpb-num-input", style: { flex: 1, minWidth: 0, padding: "8px 4px", textAlign: "center", borderRadius: 8, border: s.hint && !s.done ? `1px solid ${s.hint === "up" ? C.accent : C.warn}` : (s.warm || s.sub ? `1px dashed ${C.border}` : `1px solid ${C.border}`), background: C.bg2, color: C.text, fontSize: narrowSet ? Math.max(10, 15 - Math.max(0, String(s.weight).length - 5) * 1.5) : 15, fontWeight: 600 } }), !s.done && _jsx(StepButton, { onStep: () => bumpWeight(ei, si, 1), label: "weight up", glyph: "+" })] }), (() => {
                                                         /* Plate maths sits under the WEIGHT BOX again. v485 moved it into a strip beneath
                                                            the whole row, which detached it from the number it describes — it is an
                                                            annotation on that weight, not a fact about the set, and it reads as one only
@@ -12430,12 +12425,40 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
                                                         if (!sp.plates.length)
                                                             return null;
                                                         return _jsxs("div", { className: "mono", style: { fontSize: 11, fontWeight: 600, color: C.faint, textAlign: "center", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: [sp.plates.join("·"), "/s"] });
-                                                    })(), s.hint && !s.done && (_jsx("span", { title: "Set-to-set tuning \u2014 retuned from the set you just logged, separate from this lift's weekly progression style", style: { position: "absolute", top: -6, right: 18, width: 16, height: 16, borderRadius: 999, background: s.hint === "up" ? C.accent : C.warn, color: C.accentText, display: "flex", alignItems: "center", justifyContent: "center" }, children: s.hint === "up" ? _jsx(TrendingUp, { size: 10, strokeWidth: 3 }) : _jsx(TrendingDown, { size: 10, strokeWidth: 3 }) }))] }), _jsxs("div", { style: { flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: narrowSet ? 1 : 2 }, children: [!s.done && _jsx(StepButton, { onStep: () => bumpReps(ei, si, -1), label: "reps down", glyph: "\u2212" }), _jsx("input", { inputMode: "numeric", onFocus: selectNumericInput, onClick: selectNumericInput, enterKeyHint: "done", "aria-label": "reps", value: s.reps, placeholder: "\u2014", readOnly: s.done, onChange: ev => editSet(ei, si, "reps", ev.target.value), className: "mono wpb-num-input", style: { flex: 1, minWidth: 0, padding: "8px 4px", textAlign: "center", borderRadius: 8, border: s.warm || s.sub ? `1px dashed ${C.border}` : `1px solid ${C.border}`, background: s.done ? C.accentDim : C.bg2, color: C.text, fontSize: 15, fontWeight: 600 } }), !s.done && _jsx(StepButton, { onStep: () => bumpReps(ei, si, 1), label: "reps up", glyph: "+" })] }), _jsxs("div", { className: "wpb-set-actions", style: { width: 30, flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }, children: [_jsx("button", { onClick: () => toggleDone(ei, si), "aria-label": s.done ? "Mark set not done" : "Mark set done", "aria-pressed": s.done, "data-haptic-manual": "1", className: "pressable wpb-set-complete", style: {
-                                                    width: 30, height: 34, borderRadius: 8, border: `1px solid ${s.done ? C.accent : C.border}`, cursor: "pointer", flexShrink: 0,
-                                                    background: s.done ? C.accent : "transparent", color: s.done ? C.accentText : C.faint, display: "flex", alignItems: "center", justifyContent: "center"
+                                                    })(), s.hint && !s.done && (_jsx("span", { title: "Set-to-set tuning \u2014 retuned from the set you just logged, separate from this lift's weekly progression style", style: { position: "absolute", top: -6, right: 18, width: 16, height: 16, borderRadius: 999, background: s.hint === "up" ? C.accent : C.warn, color: C.accentText, display: "flex", alignItems: "center", justifyContent: "center" }, children: s.hint === "up" ? _jsx(TrendingUp, { size: 10, strokeWidth: 3 }) : _jsx(TrendingDown, { size: 10, strokeWidth: 3 }) }))] }), _jsxs("div", { style: { flex: narrowSet ? .85 : 1, minWidth: 0, display: "flex", alignItems: "center", gap: narrowSet ? 1 : 2 }, children: [!s.done && _jsx(StepButton, { onStep: () => bumpReps(ei, si, -1), label: "reps down", glyph: "\u2212" }), _jsx("input", { inputMode: "numeric", onFocus: selectNumericInput, onClick: selectNumericInput, enterKeyHint: "done", "aria-label": "reps", value: s.reps, placeholder: "\u2014", readOnly: s.done, onChange: ev => editSet(ei, si, "reps", ev.target.value), className: "mono wpb-num-input", style: { flex: 1, minWidth: 0, padding: "8px 4px", textAlign: "center", borderRadius: 8, border: s.warm || s.sub ? `1px dashed ${C.border}` : `1px solid ${C.border}`, background: C.bg2, color: C.text, fontSize: 15, fontWeight: 600 } }), !s.done && _jsx(StepButton, { onStep: () => bumpReps(ei, si, 1), label: "reps up", glyph: "+" })] }), _jsxs("div", { className: "wpb-set-actions", style: { width: 30, flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }, children: [_jsx("button", { onClick: () => toggleDone(ei, si), "aria-label": s.done ? "Mark set not done" : "Mark set done", "aria-pressed": s.done, "data-haptic-manual": "1", className: "pressable wpb-set-complete", style: {
+                                                    width: 30, height: 34, borderRadius: 8, border: `1px solid ${C.border}`, cursor: "pointer", flexShrink: 0,
+                                                    background: s.done ? C.cardHi : "transparent", color: s.done ? C.muted : C.faint, display: "flex", alignItems: "center", justifyContent: "center"
                                                 }, children: _jsx(Check, { size: 17, strokeWidth: 3 }) }), ((s.sub && !s.prescribed) || s.added) && (_jsx("button", { "aria-label": "Remove this set", onClick: () => removeSubSet(ei, si), title: s.sub ? `Remove this ${s.kind === "drop" ? "drop" : "myo-rep"} set` : "Remove this set", className: "pressable hit", style: { width: 28, height: 34, borderRadius: 8, border: "none", background: "none", color: C.faint, cursor: "pointer", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }, children: _jsx(X, { size: 15 }) }))] })] }), isActive && !s.done && (hasSuggested || pvLast) && (_jsxs("div", { style: { display: "flex", gap: 6, flexWrap: "wrap", padding: "0 2px 6px 30px", marginTop: -1 }, children: [hasSuggested && (_jsxs("button", { onClick: () => { editWeight(ei, si, s.suggested.weight); editSet(ei, si, "reps", s.suggested.reps); }, "aria-label": `Use the suggested ${s.suggested.weight} by ${s.suggested.reps}`, className: "pressable", style: { display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 9px", borderRadius: 8, cursor: "pointer",
                                                     border: `1px solid ${C.accent}55`, background: C.accentDim, color: C.accentInk, fontSize: 11, fontWeight: 700 }, children: [_jsx(RefreshCw, { size: 10, strokeWidth: 2.5, style: { flexShrink: 0 } }), "Suggested ", _jsxs("span", { className: "mono", children: [s.suggested.weight, "\u00D7", s.suggested.reps] })] })), pvLast && (_jsxs("button", { onClick: () => { editWeight(ei, si, String(pvLast.w)); editSet(ei, si, "reps", String(pvLast.r)); }, "aria-label": `Use last time's ${pvLast.w} by ${pvLast.r}`, className: "pressable", style: { display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 9px", borderRadius: 8, cursor: "pointer",
-                                                    border: `1px solid ${C.border}`, background: C.bg2, color: C.muted, fontSize: 11, fontWeight: 600 }, children: [_jsx(History, { size: 10, strokeWidth: 2.5, style: { flexShrink: 0 } }), "Last time ", _jsxs("span", { className: "mono", children: [pvLast.w, "\u00D7", pvLast.r, pvLast.rir != null ? " @" + effortLabel(pvLast.rir, loadMode) : ""] })] }))] }))] }, si));
+                                                    border: `1px solid ${C.border}`, background: C.bg2, color: C.muted, fontSize: 11, fontWeight: 600 }, children: [_jsx(History, { size: 10, strokeWidth: 2.5, style: { flexShrink: 0 } }), "Last time ", _jsxs("span", { className: "mono", children: [pvLast.w, "\u00D7", pvLast.r, pvLast.rir != null ? " @" + effortLabel(pvLast.rir, loadMode) : ""] })] }))] })), (() => {
+                                        /* EFFORT, ASKED ONCE AND NEVER DEMANDED. The picker belongs to the set awaiting it
+                                           (or one deliberately reopened); every other logged set carries a one-tap tag
+                                           instead — the value if it has one, "+ effort" if it doesn't. Before: five done
+                                           sets meant five pickers stacked up the screen, all dimmed, none of them clearly
+                                           the live question. The word "optional" is on the prompt on purpose: this field
+                                           retunes the next set, which is worth saying, and it is skippable, which is worth
+                                           saying just as plainly. */
+                                        const loggable = s.done && !s.warm && !s.sub && parseFloat(s.weight) > 0;
+                                        if (!loggable)
+                                            return null;
+                                        const open = isEffort || !!effortOpen[effKey];
+                                        if (!open) {
+                                            return (
+                                            /* Tightened: this tag sits on its OWN line under every logged set that has
+                                               no effort yet, so on a finished exercise it was adding a full row of
+                                               padding five or six times over and the list read as loose. Verified the set
+                                               row itself is byte-identical to pre-v536 — the height was all coming from
+                                               here. */
+                                            _jsx("div", { style: { padding: "0 2px 3px 30px", marginTop: -2 }, children: _jsx("button", { "data-effort-tag": true, onClick: () => setEffortOpen(o => ({ ...o, [effKey]: true })), className: "pressable", "aria-label": s.actualRIR != null ? "Change the effort logged for this set" : "Log the effort for this set", style: { display: "inline-flex", alignItems: "center", gap: 4, padding: "2px 7px", borderRadius: 8, cursor: "pointer",
+                                                        border: `1px ${s.actualRIR != null ? "solid" : "dashed"} ${C.border}`,
+                                                        background: "none", color: s.actualRIR != null ? C.muted : C.faint, fontSize: 11, fontWeight: 700 }, children: s.actualRIR != null ? `logged ${effortLabel(s.actualRIR, loadMode)}` : "+ effort" }) }));
+                                        }
+                                        return (_jsxs("div", { "data-effort-picker": true, style: { display: "flex", alignItems: "center", gap: 6, padding: "2px 2px 8px 30px", flexWrap: "wrap" }, children: [_jsx("span", { style: { ...eyebrow(), marginRight: 1 }, children: "Reps left" }), _jsx("div", { className: "wpb-effort-scale", style: { display: "flex", gap: 6, flexWrap: "nowrap" }, children: [0, 1, 2, 3, 4].map(v => {
+                                                    const on = s.actualRIR === v;
+                                                    return (_jsx("button", { onClick: () => { setActualRIR(ei, si, v); if (!isEffort)
+                                                            setEffortOpen(o => { const n = { ...o }; delete n[effKey]; return n; }); }, className: "pressable hit", title: v === 0 ? "Failure" : `${v} rep${v === 1 ? "" : "s"} in reserve`, "aria-label": v === 0 ? "Failure, no reps left" : `${v === 4 ? "4 or more" : v} rep${v === 1 ? "" : "s"} left`, "aria-pressed": on, style: { minWidth: 32, minHeight: 36, padding: "6px 8px", borderRadius: 10, border: `1px solid ${on ? C.muted : C.border}`, background: on ? C.cardHi : C.bg2, color: on ? C.text : C.muted, fontSize: 13, fontWeight: 700, cursor: "pointer" }, children: v === 4 ? "4+" : v }, v));
+                                                }) }), _jsx("span", { style: { fontSize: 11, color: C.faint }, children: s.actualRIR != null ? "tunes next set" : "optional · tunes the next set" })] }));
+                                    })()] }, si));
                         }), !focus && pl && pl.plates.length > 0 && (_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 6, marginTop: 6, padding: "8px 10px", borderRadius: 8, background: C.bg2, fontSize: 11, color: C.muted }, children: [_jsx(Dumbbell, { size: 12, color: C.accentInk, style: { flexShrink: 0 } }), _jsx("span", { className: "mono", style: { color: C.text, fontWeight: 600 }, children: pl.barW }), " bar +", _jsx("span", { className: "mono", style: { color: C.accentInk, fontWeight: 600 }, children: pl.plates.join(" · ") }), _jsxs("span", { children: ["/ side", pl.leftover > 0 ? ` · ${pl.leftover} over` : ""] })] })), (!focus || focusView(e)?.last) && (_jsxs("div", { style: { display: "flex", gap: 6, marginTop: focus ? 10 : 6 }, children: [_jsxs("button", { onClick: () => addSetRow(ei), className: "pressable", style: { flex: 1, background: "none", border: `1px dashed ${C.border}`, borderRadius: 12, color: C.muted, cursor: "pointer", fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, padding: "10px" }, children: [_jsx(Plus, { size: 14 }), " Add set"] }), (() => {
                                     const hasDrop = e.sets.some(s => s.sub && s.kind === "drop");
                                     const hasMyo = e.sets.some(s => s.sub && s.kind === "myo");

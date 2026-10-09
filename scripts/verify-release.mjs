@@ -4,12 +4,6 @@ import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { releaseTests, verifyContractRegistry } from '../verification/contract-registry.mjs';
 
-// Temporary CI-only handoff: finalize the candidate in the checkout and publish
-// exact source-only release metadata to diagnostic logs. Removed before merge.
-execFileSync(process.execPath, ['scripts/finalize-release.mjs'], { stdio: 'inherit' });
-for (const stampFile of ['index.html', 'sw.js', 'BUILD_PROFILE.json', 'RELEASE_MANIFEST.json']) {
-    console.log('STAMPFILE|' + stampFile + '|' + JSON.stringify(fs.readFileSync(stampFile, 'utf8')));
-}
 const root = process.cwd();
 const read = p => fs.readFileSync(path.join(root, p), 'utf8');
 const bytes = p => fs.readFileSync(path.join(root, p));

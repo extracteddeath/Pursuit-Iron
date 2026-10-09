@@ -57,13 +57,14 @@ try {
             const navPill = await page.$eval(`[data-tab="${tab}"]`, el => {
                 const style = getComputedStyle(el, '::before');
                 return { height: parseFloat(style.height), radius: style.borderRadius,
-                    opacity: parseFloat(style.opacity), width: style.width };
+                    opacity: parseFloat(style.opacity), width: style.width,
+                    display: style.display, oldUnderline: getComputedStyle(el, '::after').display };
             });
             assert.ok(navPill.height >= 27 && navPill.height <= 32 &&
                 (parseFloat(navPill.width) >= 30 || navPill.width.startsWith('min(')),
                 'selected navigation has a compact expressive pill: ' + JSON.stringify(navPill));
-            assert.ok(navPill.opacity > .9 && navPill.radius.includes('px'),
-                'selected navigation uses a visible rounded tonal selection');
+            assert.ok(navPill.opacity > .9 && navPill.radius.includes('px') && navPill.display !== 'none' &&
+                navPill.oldUnderline === 'none', 'selected navigation paints only the rounded tonal pill: ' + JSON.stringify(navPill));
             if (tab === 'home') {
                 assert.ok(await page.$eval('.wpb-home-hero', el =>
                     parseFloat(getComputedStyle(el).borderTopLeftRadius) >= 18 &&

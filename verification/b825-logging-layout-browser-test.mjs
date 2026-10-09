@@ -139,8 +139,8 @@ try {
         const quietBar = await page.$eval('[data-testid="set-0-0"]', n => ({ height: n.getBoundingClientRect().height, background: getComputedStyle(n).backgroundColor, text: n.innerText }));
         assert.ok(quietBar.height <= 50, 'completed row is only a compact reps-left bar');
         assert.equal(quietBar.background, 'rgba(0, 0, 0, 0)', 'completed bar has no bright background');
-        assert.match(quietBar.text, /190\\s*lb\\s*×\\s*5/, 'logged weight and reps stay visible after completion');
-        assert.match(quietBar.text, /RIR\\s*3/, 'completed summary retains recorded effort');
+        assert.match(quietBar.text, /190\s*lb\s*×\s*5/, 'logged weight and reps stay visible after completion');
+        assert.match(quietBar.text, /RIR\s*3/, 'completed summary retains recorded effort');
         assert.doesNotMatch(quietBar.text, /Last time|TARGET/, 'reference controls stay out of completed rows');
         // Completing another set retires the older picker, while its effort and Undo stay reachable.
         await page.click('[data-testid="set-0-1"] button[aria-label="Mark set done"]'); await settle();
@@ -191,7 +191,7 @@ try {
         }));
         assert.equal(completed.length, 4, 'all four completed Back Squat rows remain present');
         completed.forEach((row, index) => {
-            assert.match(row.text, /\\b(?:190|195)\\s*lb\\s*×\\s*[56]\\b/, 'completed row retains the actual logged weight and reps');
+            assert.match(row.text, /\b(?:190|195)\s*lb\s*×\s*[56]\b/, 'completed row retains the actual logged weight and reps');
             assert.equal(row.number, String(index + 1), 'completed row identifies its set number');
             assert.ok(row.fit, `completed set ${index + 1} fits at ${width}px`);
             assert.ok(row.undo, 'Undo is reachable from every logged set');

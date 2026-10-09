@@ -1,3 +1,12 @@
+# Build 831 · expressive interactions across the app · Engine 0.65.6
+
+- Apply shared spring feedback to buttons, selected controls, navigation and switches across the app.
+- Keep sheets continuous through opening, dragging, cancellation, dismissal and quick reopening.
+- Smoothly expand and collapse Info sections and RIR prompts; confirm effort within the existing picker width.
+- Animate Target / Last reference changes without altering entered weights, reps or progression.
+- Preserve compact, muted completed rows and inline effort; honor reduced motion and background lifecycle.
+- Include browser coverage for the main tabs, sheet drag, rapid navigation, persistence and narrow phones.
+
 # Build 830 · compact logged effort · Engine 0.65.6
 
 - Place recorded effort directly under logged reps as 2 RIR; tap the value to edit.

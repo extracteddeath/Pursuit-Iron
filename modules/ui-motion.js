@@ -135,6 +135,25 @@ export function installAppMotion(root) {
     root.dataset.piMotion = 'expressive';
     const pressed = new Map(), controls = new WeakMap(), choiceStates = new WeakMap(), referenceKeys = new WeakMap();
     const media = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)');
+    // A brief touch-origin state layer on navigation and choices, not the dense workout set grid.
+    // It never inserts a DOM child, changes a hit target, or consumes a click.
+    const inkTargets = '.wpb-tab, .wpb-segmented > button, .wpb-premium-tabs > button, [role="tablist"] > button, button.wpb-toggle';
+    function ink(el, x, y) {
+        if (reduced() || !el.matches(inkTargets)) return;
+        const r = el.getBoundingClientRect();
+        if (!r.width || !r.height) return;
+        const px = Number.isFinite(x) ? Math.max(0, Math.min(r.width, x - r.left)) : r.width / 2;
+        const py = Number.isFinite(y) ? Math.max(0, Math.min(r.height, y - r.top)) : r.height / 2;
+        el.style.setProperty('--pi-ink-x', `${px}px`);
+        el.style.setProperty('--pi-ink-y', `${py}px`);
+        if (el.hasAttribute('data-pi-ink')) {
+            delete el.dataset.piInk;
+            void el.offsetWidth; // restart a repeated tap without replacing a React-owned element
+        }
+        el.dataset.piInk = '1';
+    }
+    const inkEnd = e => { if (e.animationName === 'piInkBurst' && e.target?.dataset) delete e.target.dataset.piInk; };
+    const clearInk = () => root.querySelectorAll('[data-pi-ink]').forEach(el => delete el.dataset.piInk);
     function control(el) {
         if (controls.has(el)) return;
         const css = getComputedStyle(el), box = el.getBoundingClientRect();
@@ -150,9 +169,12 @@ export function installAppMotion(root) {
         spring(el, '--pi-control-shape', (selected ? 7 : 0) - (held ? 3 : 0),
             { from: 0, write: pixels(el, '--pi-control-shape'), stiffness: 850, damping: .9 });
     }
-    function press(el, id, x = 0, y = 0) {
+    function press(el, id, x = null, y = null) {
         if (disabled(el)) return;
+        // A second pointer/keyboard press may supersede an interrupted first one.
+        if (pressed.has(id)) release(id);
         control(el); pressed.set(id, { el, x, y });
+        ink(el, x, y);
         spring(el, '--pi-control-scale', .97, { from: 1, stiffness: 1300, damping: 1, precision: .001 }); shape(el, true);
     }
     function release(id) {
@@ -239,20 +261,30 @@ export function installAppMotion(root) {
     });
     observer.observe(root, { subtree: true, childList: true, attributes: true,
         attributeFilter: ['data-view-frame','data-motion-key','aria-pressed','aria-selected','aria-current','aria-checked'] });
-    const settleAll = () => { [...pressed.keys()].forEach(release); [...active].filter(state => root.contains(state.el)).forEach(settle); };
+    const settleAll = () => {
+        [...pressed.keys()].forEach(release);
+        [...active].filter(state => root.contains(state.el)).forEach(settle);
+        clearInk();
+    };
     const visibility = () => { if (document.visibilityState === 'hidden') settleAll(); };
     const preference = () => { if (media.matches) settleAll(); };
+    root.addEventListener('animationend', inkEnd);
     root.addEventListener('pointerdown', down, { passive: true });
     document.addEventListener('pointerup', up, { passive: true });
     document.addEventListener('pointercancel', up, { passive: true });
     document.addEventListener('pointermove', move, { passive: true });
     root.addEventListener('keydown', keydown); document.addEventListener('keyup', keyup);
-    document.addEventListener('visibilitychange', visibility); media?.addEventListener('change', preference);
+    document.addEventListener('visibilitychange', visibility);
+    window.addEventListener('blur', settleAll);
+    media?.addEventListener('change', preference);
     return () => {
         observer.disconnect(); settleAll(); delete root.dataset.piMotion;
+        root.removeEventListener('animationend', inkEnd);
         root.removeEventListener('pointerdown', down); document.removeEventListener('pointerup', up);
         document.removeEventListener('pointercancel', up); document.removeEventListener('pointermove', move);
         root.removeEventListener('keydown', keydown); document.removeEventListener('keyup', keyup);
-        document.removeEventListener('visibilitychange', visibility); media?.removeEventListener('change', preference);
+        document.removeEventListener('visibilitychange', visibility);
+        window.removeEventListener('blur', settleAll);
+        media?.removeEventListener('change', preference);
     };
 }

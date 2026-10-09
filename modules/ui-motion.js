@@ -136,6 +136,35 @@ export function installAppMotion(root) {
     const pressed = new Map(), controls = new WeakMap(), choiceStates = new WeakMap(), referenceKeys = new WeakMap();
     const media = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)');
     let menuOpener = null;
+    // Anchored program menus must clear the live workout dock as well as the
+    // bottom tab bar. The old viewport-only flip can hide Delete underneath
+    // a resumed-workout dock even though the menu fits within window.innerHeight.
+    // Individual CSS translate composes with the existing popIn animation.
+    function positionContextMenu(el) {
+        if (!el || !el.isConnected) return;
+        el.dataset.piM3Menu = '1';
+        requestAnimationFrame(() => {
+            if (!el.isConnected) return;
+            const existing = Number.parseFloat(el.style.getPropertyValue('--pi-menu-shift-y')) || 0;
+            const box = el.getBoundingClientRect();
+            let bottomLimit = Math.min(window.innerHeight - 8,
+                globalThis.visualViewport ? visualViewport.height + visualViewport.offsetTop - 8 : Infinity);
+            for (const barrier of root.querySelectorAll('.wpb-live-dock,.wpb-tabbar')) {
+                const r = barrier.getBoundingClientRect();
+                if (r.width && r.height && r.bottom > 0 && r.top < window.innerHeight &&
+                    getComputedStyle(barrier).visibility !== 'hidden') {
+                    bottomLimit = Math.min(bottomLimit, r.top - 8);
+                }
+            }
+            // Undo any previous translate so repeated resizes cannot accumulate a drift.
+            const rawBottom = box.bottom - existing, rawTop = box.top - existing;
+            const shift = Math.max(8 - rawTop, Math.min(0, bottomLimit - rawBottom));
+            el.style.setProperty('--pi-menu-shift-y', `${Math.round(shift * 100) / 100}px`);
+        });
+    }
+    const positionOpenMenus = () => root.querySelectorAll('.wpb-context-menu')
+        .forEach(positionContextMenu);
+
     // Material 3 selection tracks sit behind the actual React-owned buttons. Geometry is
     // measured, never guessed, so four-column and two-column selectors share one behavior.
     const selectionTracks = new WeakMap();
@@ -206,7 +235,10 @@ export function installAppMotion(root) {
         }
         el.dataset.piInk = '1';
     }
-    const inkEnd = e => { if (e.animationName === 'piInkBurst' && e.target?.dataset) delete e.target.dataset.piInk; };
+    const inkEnd = e => {
+        if (e.animationName === 'piInkBurst' && e.target?.dataset) delete e.target.dataset.piInk;
+        if (e.target?.matches?.('.wpb-context-menu')) positionContextMenu(e.target);
+    };
     const clearInk = () => root.querySelectorAll('[data-pi-ink]').forEach(el => delete el.dataset.piInk);
     function control(el) {
         if (controls.has(el)) return;
@@ -357,6 +389,7 @@ export function installAppMotion(root) {
         each(surfaceSelector, enterSurface);
         each(groupSelector, selection);
         each('.wpb-toggle[aria-checked]', toggle);
+        each('.wpb-context-menu', positionContextMenu);
         each('button[aria-pressed]:not(.wpb-set-complete)', option);
         each('[data-pi-reference]', reference);
         each('.wpb-backdrop', el => {
@@ -399,6 +432,8 @@ export function installAppMotion(root) {
     root.addEventListener('keydown', keydown); document.addEventListener('keyup', keyup);
     document.addEventListener('visibilitychange', visibility);
     window.addEventListener('blur', settleAll);
+    window.addEventListener('resize', positionOpenMenus);
+    globalThis.visualViewport?.addEventListener('resize', positionOpenMenus);
     media?.addEventListener('change', preference);
     return () => {
         observer.disconnect(); trackResize?.disconnect(); menuOpener = null;
@@ -410,6 +445,8 @@ export function installAppMotion(root) {
         root.removeEventListener('keydown', keydown); document.removeEventListener('keyup', keyup);
         document.removeEventListener('visibilitychange', visibility);
         window.removeEventListener('blur', settleAll);
+        window.removeEventListener('resize', positionOpenMenus);
+        globalThis.visualViewport?.removeEventListener('resize', positionOpenMenus);
         media?.removeEventListener('change', preference);
     };
 }

@@ -131,7 +131,55 @@ try {
             }
             if (width === 430) await page.screenshot({ path: path.join(root, `verification/b831-${tab}-phone.png`) });
         }
+        // The Material 3 tab indicator actually travels with the semantic selection,
+        // is theme-derived, and changes paint only (not target geometry or DOM children).
+        await page.click('[data-tab="progress"]');
+        await page.waitForSelector('.wpb-progress .wpb-premium-tabs[data-pi-m3-track]');
+        const beforeTrack = await page.$eval('.wpb-progress .wpb-premium-tabs', el => ({
+            x: Number.parseFloat(el.style.getPropertyValue('--pi-m3-track-x')),
+            fill: el.style.getPropertyValue('--pi-m3-track-fill'),
+            children: el.childElementCount,
+            widths: [...el.children].map(b => b.offsetWidth)
+        }));
+        assert.ok(beforeTrack.fill.length > 3 && beforeTrack.fill !== 'transparent',
+            'M3 track borrows the active Pursuit theme surface');
+        await page.click('.wpb-progress .wpb-premium-tabs>button:nth-child(2)');
+        await page.waitForFunction(() => {
+            const group = document.querySelector('.wpb-progress .wpb-premium-tabs');
+            const selected = group?.querySelector('[aria-selected="true"]');
+            return selected?.textContent?.trim() === 'Lifts' &&
+                Math.abs(Number.parseFloat(group.style.getPropertyValue('--pi-m3-track-x')) - selected.offsetLeft) < .15;
+        }, { timeout: 5000 });
+        const afterTrack = await page.$eval('.wpb-progress .wpb-premium-tabs', el => {
+            const selected = el.querySelector('[aria-selected="true"]');
+            return { x: Number.parseFloat(el.style.getPropertyValue('--pi-m3-track-x')),
+                w: Number.parseFloat(el.style.getPropertyValue('--pi-m3-track-width')),
+                targetW: selected.offsetWidth, childCount: el.childElementCount,
+                indicator: getComputedStyle(el, '::before').content,
+                activeBackground: getComputedStyle(selected).backgroundColor };
+        });
+        assert.ok(afterTrack.x > beforeTrack.x && Math.abs(afterTrack.w - afterTrack.targetW) < .15,
+            'shared M3 selection slides and resizes to the exact chosen segment');
+        assert.equal(afterTrack.childCount, beforeTrack.children,
+            'selection motion never adds a DOM element or reduces tap targets');
+        assert.ok(afterTrack.indicator !== 'none' && afterTrack.activeBackground === 'rgba(0, 0, 0, 0)',
+            'moving indicator paints the selection, not the old static button fill');
+        if (width === 430)
+            await page.screenshot({ path: path.join(root, 'verification/b831-m3-selected-progress-phone.png') });
         await page.click('[data-tab="settings"]'); await page.waitForSelector('.wpb-settings');
+        const settingsTrack = await page.$eval('.wpb-settings .wpb-segmented[data-pi-m3-track]', el => ({
+            x: Number.parseFloat(el.style.getPropertyValue('--pi-m3-track-x')),
+            width: Number.parseFloat(el.style.getPropertyValue('--pi-m3-track-width')),
+            selected: el.querySelector('[aria-pressed="true"]')?.textContent?.trim(),
+            fill: el.style.getPropertyValue('--pi-m3-track-fill'),
+            count: el.childElementCount
+        }));
+        assert.ok(settingsTrack.width >= 20 && settingsTrack.fill.length > 3 &&
+            settingsTrack.selected?.length > 0 && settingsTrack.count >= 2,
+            'Settings uses the same M3 track with live unit and effort choices');
+        if (width === 430)
+            await page.screenshot({ path: path.join(root, 'verification/b831-m3-selected-settings-phone.png') });
+
         // Choice controls show a quiet touch-origin state layer, even for rapid repeated taps.
         // This must not add nodes or modify the actual workout logging grid.
         const ink = await page.$eval('[data-tab="settings"]', el => {

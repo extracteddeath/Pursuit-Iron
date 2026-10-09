@@ -184,6 +184,40 @@ try {
         assert.equal(await page.$eval('.wpb-progress .wpb-premium-tabs>button:first-child',
             b => document.activeElement === b), true,
             'M3 keyboard Home moves focus to the first Progress tab');
+        // Exercise-detail tabs must share the actual moving selection track.
+        // Use the real page observer without mutating React-owned training data.
+        await page.evaluate(() => {
+            const group = document.createElement('div');
+            group.className = 'wpb-exercise-tabs'; group.setAttribute('role','tablist');
+            group.dataset.piExerciseTest = '1';
+            for (const [i,name] of ['Overview','History','Notes'].entries()) {
+                const b = document.createElement('button');
+                b.textContent = name; b.setAttribute('role','tab');
+                b.setAttribute('aria-selected',String(i===0));
+                b.addEventListener('click',()=>{
+                    for (const peer of group.children) peer.setAttribute('aria-selected',String(peer===b));
+                });
+                group.append(b);
+            }
+            document.querySelector('.wpb-progress').append(group);
+        });
+        await page.waitForSelector('[data-pi-exercise-test][data-pi-m3-track]');
+        const exerciseTrack = await page.$eval('[data-pi-exercise-test]', el => ({
+            fill: el.style.getPropertyValue('--pi-m3-track-fill'), count: el.childElementCount,
+            paint: getComputedStyle(el,'::before').content
+        }));
+        assert.ok(exerciseTrack.fill && exerciseTrack.fill !== 'transparent' &&
+            exerciseTrack.count === 3 && exerciseTrack.paint !== 'none',
+            'exercise details preserve three real controls and a painted active track');
+        await page.focus('[data-pi-exercise-test]>button:first-child');
+        await page.keyboard.press('End');
+        await page.waitForFunction(() => {
+            const group = document.querySelector('[data-pi-exercise-test]');
+            const chosen = group?.querySelector('[aria-selected="true"]');
+            return chosen?.textContent === 'Notes' && document.activeElement === chosen &&
+                Math.abs(parseFloat(group.style.getPropertyValue('--pi-m3-track-x')) - chosen.offsetLeft) < .2;
+        },{timeout:5000});
+        await page.evaluate(() => document.querySelector('[data-pi-exercise-test]').remove());
         await page.click('[data-tab="settings"]'); await page.waitForSelector('.wpb-settings');
         const settingsTrack = await page.$eval('.wpb-settings .wpb-segmented[data-pi-m3-track]', el => ({
             x: Number.parseFloat(el.style.getPropertyValue('--pi-m3-track-x')),

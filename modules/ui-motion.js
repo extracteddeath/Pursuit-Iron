@@ -70,7 +70,7 @@ function tick(now) {
 }
 const pixels = (el, name) => v => el.style.setProperty(name, `${v}px`);
 const surfaceSelector = '[data-view-frame], [data-pi-workout-page], [data-sheet-drag], .wpb-pop, .wpb-dialog, .wpb-slideL, .wpb-slideR, .wpb-state-enter, .wpb-float-in, .wpb-notice-in';
-const groupSelector = '.wpb-segmented, .wpb-premium-tabs, .wpb-effort-scale, .wpb-tabbar, [role="tablist"]';
+const groupSelector = '.wpb-segmented, .wpb-premium-tabs, .wpb-exercise-tabs, .wpb-effort-scale, .wpb-tabbar, [role="tablist"]';
 const surfaceOwners = new WeakMap();
 
 function enterSurface(el, initial = false) {
@@ -168,7 +168,7 @@ export function installAppMotion(root) {
     // Material 3 selection tracks sit behind the actual React-owned buttons. Geometry is
     // measured, never guessed, so four-column and two-column selectors share one behavior.
     const selectionTracks = new WeakMap();
-    const trackSelector = '.wpb-progress .wpb-premium-tabs, .wpb-settings .wpb-segmented';
+    const trackSelector = '.wpb-progress .wpb-premium-tabs, .wpb-settings .wpb-segmented, .wpb-exercise-tabs';
     const trackResize = typeof ResizeObserver === 'function' ? new ResizeObserver(entries => {
         for (const entry of entries) {
             const group = entry.target, selected = choiceStates.get(group);
@@ -183,7 +183,11 @@ export function installAppMotion(root) {
         // overlay; all attributes are restored synchronously before the next paint.
         const tracked = group.hasAttribute('data-pi-m3-track');
         if (tracked) delete group.dataset.piM3Track;
-        const fill = getComputedStyle(button).backgroundColor;
+        const css = getComputedStyle(button);
+        const color = css.backgroundColor;
+        // Exercise detail uses a theme-tonal gradient instead of a solid fill.
+        const fill = (color === 'transparent' || color === 'rgba(0, 0, 0, 0)') && css.backgroundImage !== 'none'
+            ? css.backgroundImage : color;
         if (tracked) group.dataset.piM3Track = '1';
         return fill;
     }
@@ -220,7 +224,7 @@ export function installAppMotion(root) {
     }
     // A brief touch-origin state layer on navigation and choices, not the dense workout set grid.
     // It never inserts a DOM child, changes a hit target, or consumes a click.
-    const inkTargets = '.wpb-tab, .wpb-segmented > button, .wpb-premium-tabs > button, [role="tablist"] > button, button.wpb-toggle, .wpb-context-menu-item, .wpb-sheet-close';
+    const inkTargets = '.wpb-tab, .wpb-segmented > button, .wpb-premium-tabs > button, .wpb-exercise-tabs > button, [role="tablist"] > button, button.wpb-toggle, .wpb-context-menu-item, .wpb-sheet-close';
     function ink(el, x, y) {
         if (reduced() || !el.matches(inkTargets)) return;
         const r = el.getBoundingClientRect();
@@ -304,7 +308,7 @@ export function installAppMotion(root) {
         }
         // Progress is a real tablist: arrow/Home/End keys move focus AND activate the
         // selected panel. Settings' independent toggle buttons retain native semantics.
-        const tab = e.target.closest?.('.wpb-progress .wpb-premium-tabs [role="tab"]');
+        const tab = e.target.closest?.('.wpb-progress .wpb-premium-tabs [role="tab"], .wpb-exercise-tabs button[aria-selected]');
         if (tab && !e.altKey && !e.ctrlKey && !e.metaKey &&
             ['ArrowRight','ArrowLeft','Home','End'].includes(e.key)) {
             const tabs = [...tab.parentElement.children].filter(el => el.matches('[role="tab"]') && !disabled(el));

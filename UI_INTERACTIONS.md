@@ -125,3 +125,12 @@ Google colors or adding another component framework:
 The Build 831 phone browser contract checks actual gym-sheet geometry,
 program-menu alignment, keyboard focus/dismissal, and unchanged program access
 at 320px and 430px alongside existing engine and logging tests.
+
+## M3 exercise-detail selection
+
+Exercise-detail Overview/History/Notes-style tabs share the Progress/Settings
+moving selected indicator, sampled from the saved theme including tonal gradient
+fills. The real buttons, existing actions and DOM geometry are untouched.
+Arrow navigation and Home/End keep focus with the selected tab. The phone test
+installs a transient fixture through the same observer, checks the indicator,
+and leaves the app's training state and compact workout logger unchanged.

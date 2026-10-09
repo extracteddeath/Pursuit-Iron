@@ -1,3 +1,10 @@
+# Build 830 · compact logged effort · Engine 0.65.6
+
+- Place recorded effort directly under logged reps as 2 RIR; tap the value to edit.
+- Remove the separate + effort row and completed target effort tag; unreported effort stays unreported.
+- Preserve muted completed rows, original logged fields, Undo, active steppers and the latest reps-left prompt.
+- Verify completed-row density and effort persistence at 320–520px.
+
 # Build 829 · restore full faded set rows · Engine 0.65.6
 
 - Restore original full set row renderer: logged sets retain their reference, weight and reps columns, completed check and RIR prompt.

@@ -12292,7 +12292,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
                                 const loggable = !s.warm && !s.sub && parseFloat(s.weight) > 0;
                                 const effKey = ei + ":" + si;
                                 const latestDone = e.sets.findLastIndex(x => x.done && !x.warm && !x.sub && parseFloat(x.weight) > 0);
-                                const open = loggable && (!!effortOpen[effKey] || (si === latestDone && s.actualRIR == null));
+                                const open = loggable && (Object.prototype.hasOwnProperty.call(effortOpen, effKey) ? !!effortOpen[effKey] : (si === latestDone && s.actualRIR == null));
                                 const summary = String(s.weight ?? "—") + " " + unit + " × " + String(s.reps ?? "—");
                                 return _jsxs("div", { "data-testid": "set-" + ei + "-" + si, "data-warm": s.warm ? "1" : "0", "data-sub": s.sub ? "1" : "0", "data-done": "1", "data-active": "0", "data-completed-bar": true,
                                     "aria-label": "Completed set " + label + ": " + String(s.weight) + " " + unit + ", " + String(s.reps) + " reps",

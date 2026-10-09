@@ -378,7 +378,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb-home .wpb-home-header h1{
   margin-top:4px!important;
 }
-#root[data-pi-motion="expressive"] .wpb-home .wpb-home-header [aria-hidden="true"]{
+#root[data-pi-motion="expressive"] .wpb-home .wpb-home-header>div:last-child>div[aria-hidden="true"]{
   height:7px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero>button>div:first-child{

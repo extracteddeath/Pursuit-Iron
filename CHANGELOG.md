@@ -1,3 +1,10 @@
+# Build 829 · restore full faded set rows · Engine 0.65.6
+
+- Restore original full set row renderer: logged sets retain their reference, weight and reps columns, completed check and RIR prompt.
+- Dim completed rows and checks with theme tokens instead of bright filled states; preserve the strong highlight for the current incomplete set.
+- Remove summary-only completed-row renderer, retain numerical tap-to-select, last-time shortcuts, rest, Focus and engine behavior.
+- Add browser assertions for 320–520px, all sets completed, legible logged values and Undo.
+
 # Build 828 · completed-set readability hotfix · Engine 0.65.6
 
 - Restores visible set number and actual logged weight × reps on every completed set, without brightly highlighting completed rows.

@@ -72,7 +72,14 @@ try {
                 return .2126 * linear[0] + .7152 * linear[1] + .0722 * linear[2];
             };
             return buttons.map(button => {
-                const css = getComputedStyle(button), text = luminance(css.color), background = luminance(css.backgroundColor);
+                const css = getComputedStyle(button), text = luminance(css.color);
+                // The M3 indicator is painted by the tab group's ::before. Contrast
+                // must use the visible selected surface, not the transparent button.
+                const group = button.closest('[data-pi-m3-track]');
+                const surface = group ? group.style.getPropertyValue('--pi-m3-track-fill') : css.backgroundColor;
+                const expectedTheme = button.style.backgroundColor;
+                if (group && (!expectedTheme || expectedTheme !== surface)) return 0;
+                const background = luminance(surface);
                 return (Math.max(text, background) + .05) / (Math.min(text, background) + .05);
             });
         });

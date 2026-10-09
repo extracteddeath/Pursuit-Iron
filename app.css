@@ -187,7 +187,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab[aria-current="page"]{
   background:transparent!important;
 }
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab[aria-current="page"]::after{
+/* An active touch temporarily borrows ::after for its origin ripple.
+   Hide only the retired underline when the ripple is NOT playing. */
+#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab[aria-current="page"]:not([data-pi-ink])::after{
   content:none!important;
   display:none!important;
 }

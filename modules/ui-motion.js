@@ -135,6 +135,48 @@ export function installAppMotion(root) {
     root.dataset.piMotion = 'expressive';
     const pressed = new Map(), controls = new WeakMap(), choiceStates = new WeakMap(), referenceKeys = new WeakMap();
     const media = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)');
+    // Material 3 selection tracks sit behind the actual React-owned buttons. Geometry is
+    // measured, never guessed, so four-column and two-column selectors share one behavior.
+    const selectionTracks = new WeakMap();
+    const trackSelector = '.wpb-progress .wpb-premium-tabs, .wpb-settings .wpb-segmented';
+    const trackResize = typeof ResizeObserver === 'function' ? new ResizeObserver(entries => {
+        for (const entry of entries) {
+            const group = entry.target, selected = choiceStates.get(group);
+            if (root.contains(group) && Number.isInteger(selected) && selected >= 0)
+                positionTrack(group, [...group.children].filter(el => el.matches('button')), selected, true);
+        }
+    }) : null;
+    function positionTrack(group, buttons, selected, instant = false) {
+        if (!group.matches(trackSelector) || selected < 0 || !buttons[selected]) return;
+        const button = buttons[selected];
+        let state = selectionTracks.get(group);
+        if (!state) {
+            // Sample the real selected surface BEFORE overriding it with the moving track.
+            // Settings derives its active fill from the saved theme; Progress uses its card tone.
+            const fill = button.style.backgroundColor || getComputedStyle(button).backgroundColor;
+            state = { fill }; selectionTracks.set(group, state);
+            group.style.setProperty('--pi-m3-track-fill', fill);
+            group.dataset.piM3Track = '1';
+            trackResize?.observe(group);
+        }
+        if (button.style.backgroundColor && button.style.backgroundColor !== 'transparent' &&
+            button.style.backgroundColor !== state.fill) {
+            state.fill = button.style.backgroundColor;
+            group.style.setProperty('--pi-m3-track-fill', state.fill);
+        }
+        const target = {
+            '--pi-m3-track-x': button.offsetLeft,
+            '--pi-m3-track-y': button.offsetTop,
+            '--pi-m3-track-width': button.offsetWidth,
+            '--pi-m3-track-height': button.offsetHeight
+        };
+        for (const [key, value] of Object.entries(target)) {
+            if (instant || state[key] === undefined) setMotionValue(group, key, value, pixels(group, key));
+            else if (Math.abs(state[key] - value) > .05)
+                spring(group, key, value, { write: pixels(group, key), stiffness: 800, damping: .89, precision: .01 });
+            state[key] = value;
+        }
+    }
     // A brief touch-origin state layer on navigation and choices, not the dense workout set grid.
     // It never inserts a DOM child, changes a hit target, or consumes a click.
     const inkTargets = '.wpb-tab, .wpb-segmented > button, .wpb-premium-tabs > button, [role="tablist"] > button, button.wpb-toggle';
@@ -193,6 +235,7 @@ export function installAppMotion(root) {
         const selected = buttons.findIndex(b => b.getAttribute('aria-pressed') === 'true' || b.getAttribute('aria-selected') === 'true' || b.getAttribute('aria-current') === 'page');
         const previous = choiceStates.get(group); choiceStates.set(group, selected);
         if (previous === selected && !initial) return;
+        positionTrack(group, buttons, selected, initial);
         const rir = group.matches('.wpb-effort-scale');
         buttons.forEach((b, i) => {
             if (!rir && !b.hasAttribute('aria-selected') && !b.hasAttribute('aria-pressed') && !b.hasAttribute('aria-current') && !group.matches('.wpb-tabbar')) return;
@@ -278,7 +321,7 @@ export function installAppMotion(root) {
     window.addEventListener('blur', settleAll);
     media?.addEventListener('change', preference);
     return () => {
-        observer.disconnect(); settleAll(); delete root.dataset.piMotion;
+        observer.disconnect(); trackResize?.disconnect(); settleAll(); delete root.dataset.piMotion;
         root.removeEventListener('animationend', inkEnd);
         root.removeEventListener('pointerdown', down); document.removeEventListener('pointerup', up);
         document.removeEventListener('pointercancel', up); document.removeEventListener('pointermove', move);

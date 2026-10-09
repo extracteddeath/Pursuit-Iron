@@ -4,8 +4,8 @@ import http from 'node:http';
 import path from 'node:path';
 import puppeteer from 'puppeteer-core';
 
-// Preserve the build 827 compact layout without hiding logged loads or reps.
-// Completed sets retain readable evidence, effort editing, and Undo.
+// Restore the original full set grid: completed rows stay visible and dimmed, never collapsed.
+// Exercise target, logged values, readonly fields, muted check, effort and Undo remain accessible.
 
 const root = path.resolve(new URL('../', import.meta.url).pathname);
 const program = { id: 'b825-logging', custom: true, weeks: 6,
@@ -134,14 +134,26 @@ try {
         await usableRows(`effort recorded at ${width}px`);
         const snapshot = await page.evaluate(() => JSON.parse(localStorage.getItem('wpb:live')));
         assert.equal(snapshot.data[0].sets[0].actualRIR, 3); assert.equal(snapshot.data[0].sets[0].weight, '190'); assert.equal(snapshot.data[0].sets[0].reps, '5');
-        assert.equal(await page.$$eval('[data-testid="set-0-0"] input', nodes => nodes.length), 0, 'completed fields collapse out of the row');
-        assert.equal(await page.$$eval('[data-testid="set-0-0"] .wpb-set-controls', nodes => nodes.length), 0, 'completed controls are removed');
-        const quietBar = await page.$eval('[data-testid="set-0-0"]', n => ({ height: n.getBoundingClientRect().height, background: getComputedStyle(n).backgroundColor, text: n.innerText }));
-        assert.ok(quietBar.height <= 50, 'completed row is only a compact reps-left bar');
-        assert.equal(quietBar.background, 'rgba(0, 0, 0, 0)', 'completed bar has no bright background');
-        assert.match(quietBar.text, /190\s*lb\s*×\s*5/, 'logged weight and reps stay visible after completion');
-        assert.match(quietBar.text, /RIR\s*3/, 'completed summary retains recorded effort');
-        assert.doesNotMatch(quietBar.text, /Last time|TARGET/, 'reference controls stay out of completed rows');
+        // Completed rows retain the same control grid with read-only logged inputs.
+        const completedFirst = await page.$eval('[data-testid="set-0-0"]', row => {
+            const weight = row.querySelector('input[aria-label="weight"]');
+            const reps = row.querySelector('input[aria-label="reps"]');
+            const check = row.querySelector('button[aria-label="Mark set not done"]');
+            const controls = row.querySelector('.wpb-set-controls');
+            return { weight: weight?.value, reps: reps?.value, readonly: weight?.readOnly && reps?.readOnly,
+                hasControls: !!controls, opacity: controls && Number(getComputedStyle(controls).opacity),
+                checkFill: check && getComputedStyle(check).backgroundColor,
+                oldCollapse: row.hasAttribute('data-completed-bar') };
+        });
+        assert.equal(completedFirst.weight, '190');
+        assert.equal(completedFirst.reps, '5');
+        assert.equal(completedFirst.readonly, true, 'completed values are protected until Undo');
+        assert.equal(completedFirst.hasControls, true, 'original row structure remains');
+        assert.ok(completedFirst.opacity < 0.85, 'finished values are visibly faded');
+        assert.equal(completedFirst.oldCollapse, false, 'no summary-only completed-set bar');
+        assert.notEqual(completedFirst.checkFill, 'rgb(255, 103, 145)', 'completed check must not retain the former bright pink fill');
+        assert.equal(await page.$$eval('[data-testid="set-0-0"] .wpb-set-stepper', nodes => nodes.length), 0,
+            'completed set steppers retire while their weight/reps tracks stay put');
         // Completing another set retires the older picker, while its effort and Undo stay reachable.
         await page.click('[data-testid="set-0-1"] button[aria-label="Mark set done"]'); await settle();
         assert.equal(await page.$$eval('[data-testid="set-0-0"] [data-effort-picker]', nodes => nodes.length), 0);
@@ -177,29 +189,38 @@ try {
         await page.waitForSelector('[data-testid="set-0-0"]');
         assert.equal(await page.$eval(weightField, input => input.value), '195');
         assert.equal(await page.$eval(repsField, input => input.value), '6');
-        // The screenshot regression: when every set is done, the workout must not
-        // collapse into four unlabeled 'Reps left' placeholders.
+        // Regression: four finished sets must look like the ORIGINAL faded set rows,
+        // not collapsed to summaries, even when the exercise itself is complete.
         for (let si = 0; si < 4; si++) {
             await page.click(`[data-testid="set-0-${si}"] button[aria-label="Mark set done"]`);
             await settle();
         }
         const completed = await page.$$eval('[data-testid^="set-0-"][data-done="1"]', rows => rows.map(row => {
-            const summary = row.querySelector('[data-completed-summary]');
+            const weight = row.querySelector('input[aria-label="weight"]');
+            const reps = row.querySelector('input[aria-label="reps"]');
+            const number = row.querySelector('.wpb-set-controls>span')?.textContent;
+            const controls = row.querySelector('.wpb-set-controls');
             const box = row.getBoundingClientRect();
-            return { text: summary?.textContent || '', number: row.querySelector('[data-completed-summary]')?.previousElementSibling?.textContent || '',
-                fit: box.left >= -1 && box.right <= innerWidth + 1, undo: !!row.querySelector('button[aria-label="Mark set not done"]') };
+            return { number, weight: weight?.value, reps: reps?.value,
+                readonly: weight?.readOnly && reps?.readOnly,
+                opacity: controls ? Number(getComputedStyle(controls).opacity) : 1,
+                fit: box.left >= -1 && box.right <= innerWidth + 1,
+                hasOldControls: !!controls, notCollapsed: !row.hasAttribute('data-completed-bar'),
+                hasUndo: !!row.querySelector('button[aria-label="Mark set not done"]') };
         }));
-        assert.equal(completed.length, 4, 'all four completed Back Squat rows remain present');
+        assert.equal(completed.length, 4, 'all four Back Squat rows remain present');
         completed.forEach((row, index) => {
-            assert.match(row.text, /\b(?:190|195)\s*lb\s*×\s*[56]\b/, 'completed row retains the actual logged weight and reps');
-            assert.equal(row.number, String(index + 1), 'completed row identifies its set number');
-            assert.ok(row.fit, `completed set ${index + 1} fits at ${width}px`);
-            assert.ok(row.undo, 'Undo is reachable from every logged set');
+            assert.equal(row.number, String(index + 1), 'set number remains in original column');
+            assert.match(row.weight, /^(?:190|195)$/, 'actual logged weight remains readable');
+            assert.match(row.reps, /^[56]$/, 'actual logged reps remain readable');
+            assert.ok(row.readonly && row.hasOldControls && row.notCollapsed && row.hasUndo,
+                'completed set keeps the original grid and edit-via-Undo path');
+            assert.ok(row.opacity < .85 && row.fit, `set ${index + 1} is muted and fits at ${width}px`);
         });
         assert.equal(await page.$$eval('[data-testid^="set-0-"] [data-effort-picker]', nodes => nodes.length), 1,
-            'only the most recent unanswered effort picker is expanded');
-        if (width === 390) await page.screenshot({ path: path.join(root, 'verification/b828-all-done-readable-phone.png') });
-        console.log(`PASS readable all-done sets, compact rows, tap-to-select, Focus, LAST/TARGET, RIR, rest and undo at ${width}px.`);
+            'one newest unanswered effort editor remains available');
+        if (width === 390) await page.screenshot({ path: path.join(root, 'verification/b829-faded-sets-phone.png') });
+        console.log(`PASS original faded row grid, legible logged fields, controls, typing, RIR and Undo at ${width}px.`);
     }
     assert.deepEqual(errors, []);
 } finally { if (browser) await browser.close(); await new Promise(resolve => server.close(resolve)); }

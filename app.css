@@ -96,3 +96,35 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   #root[data-pi-motion="expressive"] .wpb [data-pi-surface]{translate:none!important;scale:1!important}
   #root[data-pi-motion="expressive"] .wpb button[data-pi-control],#root[data-pi-motion="expressive"] .wpb .wpb-tab svg{scale:1!important;transition:none!important}
 }
+
+/* Next expressive pass: ephemeral origin-aware state layer for top-level navigation,
+   segmented choices and switches. No DOM children, extra height or enlarged set rows.
+   Completed workout controls deliberately keep their quiet, muted appearance. */
+#root[data-pi-motion="expressive"] .wpb button[data-pi-ink]{
+  position:relative;
+  isolation:isolate;
+}
+#root[data-pi-motion="expressive"] .wpb button[data-pi-ink]::after{
+  content:"";
+  position:absolute;
+  inset:1px;
+  border-radius:inherit;
+  pointer-events:none;
+  background:radial-gradient(circle at var(--pi-ink-x,50%) var(--pi-ink-y,50%),color-mix(in srgb,currentColor 23%,transparent),transparent 74%);
+  animation:piInkBurst 360ms cubic-bezier(.2,.8,.2,1) both;
+}
+@keyframes piInkBurst{
+  0%{opacity:0;transform:scale(.72)}
+  18%{opacity:.60}
+  100%{opacity:0;transform:scale(1)}
+}
+/* The former hard-coded white ring disappears on light themes. Use each control's
+   on-surface foreground for high visibility without introducing accent colors. */
+#root :focus-visible{outline-color:currentColor}
+#root[data-pi-motion="expressive"] .wpb button[data-pi-control]:focus-visible{
+  outline:2px solid currentColor;
+  outline-offset:3px;
+}
+@media (prefers-reduced-motion:reduce),(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb button[data-pi-ink]::after{content:none;animation:none}
+}

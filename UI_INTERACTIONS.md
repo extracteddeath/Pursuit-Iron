@@ -110,7 +110,10 @@ Google colors or adding another component framework:
   arrangement, with consistent focus affordances and larger rounded surfaces.
 - Anchored contextual menus retain their viewport flip logic and original
   Duplicate / Delete / Cycle actions, but use rounded 44px rows and quiet
-  touch-origin press feedback.
+  touch-origin press feedback. An additional calculated translate keeps the
+  menu above both the live-workout dock and bottom navigation; it never steals
+  the hit targets or buries the last (possibly destructive) menu action.
+  The offset is recomputed after entrance animation and viewport resizes.
 - Menu keyboard semantics: ArrowUp/ArrowDown wrap through native menuitems;
   Home/End focus extremes; Escape delegates to the existing dismiss layer and
   returns focus to the source button. No action fires during focus movement.

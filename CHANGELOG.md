@@ -1,3 +1,9 @@
+# Build 827 · current-set focus · Engine 0.65.6
+
+- Smaller complete buttons and narrower weight fields leave more room for the four steppers.
+- Completed sets collapse into muted reps-left bars; the current set keeps the accent highlight.
+- Effort edits, undo, tap-to-select, last-time shortcuts, plates and rest navigation stay available.
+
 # Build 826 · restore workout layout baseline · Engine 0.65.6
 
 - Restore build 824's workout rows, history shortcut, plate annotations and effort presentation; remove build 825's reserved detail space.

@@ -22,7 +22,7 @@ const parityRows = JSON.parse(read('verification/m205-generation-parity-results.
 const golden = JSON.parse(read('verification/fixtures/engine-816-golden.json'));
 
 assert.equal(manifest.milestone, 'M234', 'M235 verifies M234 rather than inventing a behaviorless release bump');
-assert.equal(manifest.build, 826, 'restored workout layout has its own app release identity; generation retains the M234 baseline');
+assert.equal(manifest.build, 827, 'compact set controls have their own app release identity; generation retains the M234 baseline');
 assert.equal(manifest.engineVersion, '0.65.6');
 assert.equal(ENGINE_VERSION, '0.65.6', 'a new engine line must create an explicit M235 successor baseline');
 assert.deepEqual(ENGINE_COMPATIBLE_VERSIONS, ['0.65.2', '0.65.3', '0.65.4', '0.65.5', '0.65.6']);

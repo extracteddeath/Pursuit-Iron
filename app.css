@@ -724,3 +724,18 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     transition:none!important;
   }
 }
+
+/* PI M3 CONTEXTUAL CLEARANCE — offset program actions above the active
+   workout dock and bottom navigation instead of letting their z-index mask
+   the final action. Composes with the existing popIn transform animation. */
+#root[data-pi-motion="expressive"] .wpb .wpb-context-menu[data-pi-m3-menu]{
+  translate:0 var(--pi-menu-shift-y,0px);
+  max-height:calc(var(--visual-h,var(--app-h,100dvh)) - 20px)!important;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+}
+@media(prefers-reduced-motion:reduce){
+  #root[data-pi-motion="expressive"] .wpb .wpb-context-menu[data-pi-m3-menu]{
+    transition:none!important;
+  }
+}

@@ -96,3 +96,29 @@ and hit testing remain attached to the original React buttons.
 
 The integration contract checks the indicator's exact responsive position, width, theme
 fill, absence of extra DOM children and native selected semantics at 320px and 430px.
+
+## Material 3 overlay components and contextual actions
+
+The app now treats actual (React-owned) sheets, dialogs, program action menus,
+and configuration fields as a cohesive Material-inspired family without adopting
+Google colors or adding another component framework:
+
+- Sheets have a compact drag indicator and responsive large top corners.
+  The native viewport height, drag gesture, escape/dismiss stack, focus lock,
+  content scrolling, recovery and safe-area handling remain unchanged.
+- Dialogs keep their existing actions, destructive warning colors and content
+  arrangement, with consistent focus affordances and larger rounded surfaces.
+- Anchored contextual menus retain their viewport flip logic and original
+  Duplicate / Delete / Cycle actions, but use rounded 44px rows and quiet
+  touch-origin press feedback.
+- Menu keyboard semantics: ArrowUp/ArrowDown wrap through native menuitems;
+  Home/End focus extremes; Escape delegates to the existing dismiss layer and
+  returns focus to the source button. No action fires during focus movement.
+- Fields in Settings and configuration overlays receive outlined focus feedback.
+  Workout set inputs, RIR, compact steppers, muted completion states, history
+  reference buttons and working-session dimensions remain excluded.
+- Reduced motion eliminates ripple/press animations but retains full controls.
+
+The Build 831 phone browser contract checks actual gym-sheet geometry,
+program-menu alignment, keyboard focus/dismissal, and unchanged program access
+at 320px and 430px alongside existing engine and logging tests.

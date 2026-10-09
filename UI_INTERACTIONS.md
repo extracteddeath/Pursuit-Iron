@@ -39,3 +39,33 @@ transform transition to an owned element, reserve blank space for animation, or 
 The browser contract is `verification/b831-expressive-motion-browser-test.mjs` in the integration
 shard. The existing logging gate still covers compact rows, typing, steppers, effort and Undo at
 320–520px; the theme integration gate covers all twenty themes and the five main tabs at 320px.
+
+## Layout and visual hierarchy (expressive continuation)
+
+The Material-inspired interaction layer is also a compact visual system. It does not replace
+Pursuit Iron's saved color themes or add another component library:
+
+- Bottom navigation: icon-centered tonal selection pill, always-visible labels, existing 52px
+  button targets, no new elevation stack or persistent motion.
+- Home: one dominant next-workout hero, restrained tonal gradient, tighter space to the following
+  actions and visually related action tiles. Do not create a second giant call-to-action.
+- Program: next scheduled day gets a slim tonal cue; other days keep an even card cadence.
+  Exercise rows, collapsed day details and program editing retain their existing semantics.
+- Progress and exercise detail: selected subsection is a rounded segmented surface; the
+  three-column summary stays legible at 320px. Data, history ordering and chart scaling are unchanged.
+- Settings: jump control, row groups and selected options use consistent corner geometry and
+  restrained dividers; row content, assistive labels and tap targets retain their heights.
+- Workout: header/tool corners and exercise navigation join the design. **Do not style,
+  expand or reorganize** `[data-testid^="set-"]`, `.wpb-set-controls`, logged RIR,
+  stepper tracks, numeric fields, target/previous references or completed rows. Keep
+  the muted bright-to-faded completion behavior from Builds 829–830.
+- Sheets and popovers: the radius follows the page-level card family; viewport detents,
+  drag handling, focus stack, keyboard avoidance, and Exit/Undo behavior remain authoritative.
+
+Surface tones derive from the current theme via `currentColor` color mixing, not hardcoded
+purple or light/dark overrides. New styles are contained in the named **PI EXPRESSIVE LAYOUT**
+section of `app.css`, scoped to `#root[data-pi-motion="expressive"]` so the previous screen
+geometry remains available if the shared motion module is not installed.
+
+Verification adds layout assertions to the existing Build 831 integration browser test;
+existing phone/theme, typography, keyboard, logging, and engine gates remain mandatory.

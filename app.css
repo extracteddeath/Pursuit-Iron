@@ -73,3 +73,26 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 @media (hover:hover) and (pointer:fine){#root button:hover:not(:disabled),#root [role="button"]:hover:not([aria-disabled="true"]){filter:brightness(1.035)}}
 @media (prefers-contrast:more){:focus-visible{outline-width:3px;outline-color:currentColor}#root button:disabled,#root [role="button"][aria-disabled="true"]{opacity:.58}}
 @media (prefers-reduced-motion:reduce){#root button,#root [role="button"],#root input,#root textarea,#root select,#root [role="tab"]{transform:none!important;transition:none!important}}
+
+/* Shared expressive motion owns spatial properties. Existing screen styles keep their dimensions,
+   typography, themes and color effects. CSS press/keyframe transforms cannot run underneath it. */
+#root[data-pi-motion="expressive"] .wpb [data-pi-surface]{animation:none!important;translate:var(--pi-surface-x,0px) var(--pi-surface-y,0px);opacity:var(--pi-surface-opacity,1);scale:var(--pi-surface-scale,1)}
+#root[data-pi-motion="expressive"] .wpb [data-pi-backdrop]{animation:none!important;opacity:var(--pi-backdrop-opacity,1)}
+#root[data-pi-motion="expressive"] .wpb .wpb-closing [data-pi-surface],#root[data-pi-motion="expressive"] .wpb .wpb-closing [data-pi-backdrop]{animation:none!important}
+#root[data-pi-motion="expressive"] .wpb button[data-pi-control]{
+  scale:var(--pi-control-scale,1);
+  border-radius:max(0px,calc(var(--pi-corner-0,10px) + var(--pi-control-shape,0px))) max(0px,calc(var(--pi-corner-1,10px) + var(--pi-control-shape,0px))) max(0px,calc(var(--pi-corner-2,10px) + var(--pi-control-shape,0px))) max(0px,calc(var(--pi-corner-3,10px) + var(--pi-control-shape,0px)))!important;
+  transition:background-color 140ms var(--pi-ease),border-color 140ms var(--pi-ease),color 140ms var(--pi-ease),opacity 140ms var(--pi-ease),box-shadow 140ms var(--pi-ease),filter 140ms var(--pi-ease)!important;
+}
+#root[data-pi-motion="expressive"] .wpb button[data-pi-control]:active:not(:disabled){transform:none!important}
+#root[data-pi-motion="expressive"] .wpb .wpb-effort-scale{width:min(220px,100%);max-width:100%;flex-wrap:nowrap!important}
+#root[data-pi-motion="expressive"] .wpb .wpb-effort-scale>button{flex:var(--pi-choice-grow,1) 1 0;min-width:0!important;width:0!important;padding-inline:0!important}
+#root[data-pi-motion="expressive"] .wpb .wpb-tab svg{scale:var(--pi-nav-scale,1)}
+#root[data-pi-motion="expressive"] .wpb .wpb-toggle>[data-pi-thumb]{transform:translateX(var(--pi-switch-x,0px))!important;transition:box-shadow 140ms var(--pi-ease)!important}
+#root[data-pi-motion="expressive"] .wpb .wpb-tab{position:relative;isolation:isolate}
+#root[data-pi-motion="expressive"] .wpb .wpb-tab::before{content:"";position:absolute;z-index:-1;top:4px;width:46px;height:28px;border-radius:16px;background:color-mix(in srgb,currentColor 10%,transparent);opacity:0;transition:opacity 140ms var(--pi-ease)}
+#root[data-pi-motion="expressive"] .wpb .wpb-tab[aria-current="page"]::before{opacity:1}
+@media(prefers-reduced-motion:reduce){
+  #root[data-pi-motion="expressive"] .wpb [data-pi-surface]{translate:none!important;scale:1!important}
+  #root[data-pi-motion="expressive"] .wpb button[data-pi-control],#root[data-pi-motion="expressive"] .wpb .wpb-tab svg{scale:1!important;transition:none!important}
+}

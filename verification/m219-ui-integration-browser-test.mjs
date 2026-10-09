@@ -65,6 +65,18 @@ try {
             const bounds = await page.$eval('.wpb', n => ({ width: n.getBoundingClientRect().width, scroll: n.scrollWidth }));
             assert.ok(bounds.width <= 321 && bounds.scroll <= 321, JSON.stringify({ theme, tab, bounds }));
         }
+        const contrast = await page.$$eval('.wpb-settings .wpb-segmented>button[aria-pressed="true"]', buttons => {
+            const luminance = color => {
+                const rgb = color.match(/[\d.]+/g).slice(0, 3).map(Number).map(v => v / 255);
+                const linear = rgb.map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4);
+                return .2126 * linear[0] + .7152 * linear[1] + .0722 * linear[2];
+            };
+            return buttons.map(button => {
+                const css = getComputedStyle(button), text = luminance(css.color), background = luminance(css.backgroundColor);
+                return (Math.max(text, background) + .05) / (Math.min(text, background) + .05);
+            });
+        });
+        assert.ok(contrast.length >= 4 && contrast.every(ratio => ratio >= 4.5), `${theme}: selected settings remain legible`);
     }
     await page.$eval('.wpb-theme-picker', n => { n.open = true; });
     await page.click('[data-theme-option="amethyst"]');

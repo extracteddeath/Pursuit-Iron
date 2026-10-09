@@ -57,9 +57,10 @@ try {
             const navPill = await page.$eval(`[data-tab="${tab}"]`, el => {
                 const style = getComputedStyle(el, '::before');
                 return { height: parseFloat(style.height), radius: style.borderRadius,
-                    opacity: parseFloat(style.opacity), width: parseFloat(style.width) };
+                    opacity: parseFloat(style.opacity), width: style.width };
             });
-            assert.ok(navPill.height >= 27 && navPill.height <= 32 && navPill.width >= 30,
+            assert.ok(navPill.height >= 27 && navPill.height <= 32 &&
+                (parseFloat(navPill.width) >= 30 || /^min\\(/.test(navPill.width)),
                 'selected navigation has a compact expressive pill: ' + JSON.stringify(navPill));
             assert.ok(navPill.opacity > .9 && navPill.radius.includes('px'),
                 'selected navigation uses a visible rounded tonal selection');

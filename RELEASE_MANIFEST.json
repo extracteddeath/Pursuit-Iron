@@ -5,7 +5,7 @@
   "build": 831,
   "engineVersion": "0.65.6",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "6d0e7792cef4efca3faf649b234e40cd566da5323f63a0e631274b060d22679f",
+  "runtimeAggregate": "77bec71bd5f440d181d0cacff982cf225587ac5b651c7ca1f561e7dca8cc98a9",
   "runtimeFiles": {
     "modules/engine-api.js": "40d3253be40bd5390001f16d63b74aae90d0e045df6a015b1764a1bc2404bd56",
     "modules/engine-shell.js": "73645bf4d914423074c0e90b992b58a6c57f7fbb726621d417803e906d140675",
@@ -91,7 +91,7 @@
     "modules/training-domain/prescriptions.js": "7927d0f1a4343d0ca25ba0deb8b1da616da05372a0a3214a3285d35581055d5f",
     "modules/training-domain/programs.js": "27ade346bc7b2bdd94c51564f1292ec126c2fd2bbbbc8d440ee04b4455d5c11b",
     "modules/training-domain/records.js": "b07d5d53e75b522542f30ad6a78975379841b285ce8c1356d7afcb6923350928",
-    "modules/ui-motion.js": "190bd8b9878fdb652ac738d140f29d61037777121f3abe289108e1be7e7936f7",
+    "modules/ui-motion.js": "0d6ed1d34a6a7cb1b7ddc4754a1cefb5b61943bb284557eac327d4186d5ae11d",
     "modules/wizard-stability.js": "a62b2bed8a1f5ab880bfeab036a83ec630c93048b8a352652fe00ae75374a3d1",
     "vendor/lucide-react.js": "f84db748249b6e57e1d5187e876da806c1733523a1fa1501224bf740519b2cf4",
     "vendor/react-dom-client.js": "e3d8fd1d433e1bee9110bcaa5f8e9547e64f2754806bed0dd4fc546d890baab5",
@@ -112,7 +112,7 @@
     "sw.js": "c7d995c0621bbd414643b546a273480dc434975d8b2a0778489d8961a1b7b2b0",
     "BUILD_PROFILE.json": "ff7ec39d122e46b4275bb624040f73c1c1ca7a5a2752e04e0881093f571cad1b",
     "CHANGELOG.md": "f1bbe548dbecdb0e91fc39155337fd65520baf8cc7de32a936af0cc65f21f935",
-    "app.css": "e4b912fdb1cdf9a2e4021095cecc5492281e394351b1bc9dff542e9545f909eb",
+    "app.css": "2d8902cacd6292f504b157b2e214e2186a31a87a6f92ca5a045f41fa044a4986",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",

@@ -57,6 +57,40 @@ try {
             if (width === 430) await page.screenshot({ path: path.join(root, `verification/b831-${tab}-phone.png`) });
         }
         await page.click('[data-tab="settings"]'); await page.waitForSelector('.wpb-settings');
+        // Choice controls show a quiet touch-origin state layer, even for rapid repeated taps.
+        // This must not add nodes or modify the actual workout logging grid.
+        const ink = await page.$eval('[data-tab="settings"]', el => {
+            const r = el.getBoundingClientRect(), children = el.childElementCount;
+            const x = r.left + r.width * .25, y = r.top + r.height * .35;
+            el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, pointerId: 95, clientX: x, clientY: y }));
+            const state = { ink: el.dataset.piInk, x: parseFloat(el.style.getPropertyValue('--pi-ink-x')),
+                y: parseFloat(el.style.getPropertyValue('--pi-ink-y')),
+                animation: getComputedStyle(el, '::after').animationName, childrenUnchanged: el.childElementCount === children };
+            document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 95 }));
+            return state;
+        });
+        assert.equal(ink.ink, '1', 'the press state layer activates on root navigation');
+        assert.ok(ink.x > 0 && ink.y > 0 && ink.childrenUnchanged, 'tap origin is tracked without DOM or layout additions');
+        assert.ok(ink.animation.includes('piInkBurst'), 'touch feedback is transient');
+        await page.waitForFunction(() => !document.querySelector('[data-tab="settings"]')?.hasAttribute('data-pi-ink'));
+        // Losing window focus cancels a held button instead of leaving a scaled control.
+        await page.$eval('[data-tab="settings"]', el => {
+            const r = el.getBoundingClientRect();
+            el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, pointerId: 96,
+                clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 }));
+            window.dispatchEvent(new Event('blur'));
+        });
+        await page.waitForFunction(() => document.querySelector('[data-tab="settings"]')?.style.getPropertyValue('--pi-control-scale') === '1');
+        await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
+        const reducedInk = await page.$eval('[data-tab="settings"]', el => {
+            const r = el.getBoundingClientRect();
+            el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, pointerId: 97,
+                clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 }));
+            document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 97 }));
+            return el.hasAttribute('data-pi-ink');
+        });
+        assert.equal(reducedInk, false, 'reduced motion never starts the state-layer burst');
+        await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'no-preference' }]);
         await page.focus('[data-tab="settings"]'); await page.keyboard.down(' ');
         await page.waitForFunction(() => Number.parseFloat(document.querySelector('[data-tab="settings"]').style.getPropertyValue('--pi-control-scale')) < .999);
         await page.keyboard.up(' ');

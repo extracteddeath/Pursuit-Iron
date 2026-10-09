@@ -352,3 +352,181 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 @media (prefers-reduced-motion:reduce){
   #root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab::before{transition:none!important}
 }
+
+/* PI TYPOGRAPHY & COMPOSITION — the information architecture pass after the
+   Build 831 motion layer. Components keep their existing content and training
+   semantics; only page composition, labels, and surface pacing change. */
+#root[data-pi-motion="expressive"] .wpb{
+  --pi-title-size:clamp(26px,6.5vw,30px);
+  --pi-section-size:15px;
+  --pi-meta-size:12px;
+  --pi-reading-line:1.42;
+  --pi-section-spacing:14px;
+}
+#root[data-pi-motion="expressive"] .wpb :is(
+  .wpb-home-header h1,
+  .wpb-settings>.wpb-page-header h1,
+  .wpb-progress .wpb-progress-title,
+  .wpb-profile .wpb-profile-title){
+  font-size:var(--pi-title-size)!important;
+  font-weight:750!important;
+  letter-spacing:-.038em!important;
+  line-height:1.1!important;
+  overflow-wrap:anywhere;
+  text-wrap:balance;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-home-header h1{
+  margin-top:4px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-home-header [aria-hidden="true"]{
+  height:7px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero>button>div:first-child{
+  font-size:11px!important;
+  font-weight:750!important;
+  letter-spacing:.08em!important;
+  line-height:1.35;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero>button>div{
+  max-width:100%;
+  overflow-wrap:anywhere;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero .wpb-primary-action{
+  min-height:44px!important;
+  border-radius:13px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-program-name span{
+  font-size:clamp(19px,5.3vw,22px)!important;
+  font-weight:740!important;
+  letter-spacing:-.028em!important;
+  line-height:1.16;
+  overflow-wrap:anywhere;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-day-title{
+  font-size:15.5px!important;
+  font-weight:730!important;
+  letter-spacing:-.018em;
+  line-height:1.23;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-day-meta{
+  font-size:12px!important;
+  line-height:1.38!important;
+  margin-top:3px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-day-exercise-preview{
+  font-size:12px!important;
+  line-height:1.38!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress>.wpb-page-header{
+  padding-top:19px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs{
+  margin-top:10px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs>button{
+  font-size:13.5px!important;
+  font-weight:650!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs>button[aria-selected="true"]{
+  font-weight:760!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item>.mono{
+  font-size:clamp(21px,5.5vw,24px)!important;
+  font-weight:770!important;
+  letter-spacing:-.04em;
+  line-height:1!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-label{
+  font-size:10.5px!important;
+  font-weight:700!important;
+  letter-spacing:.015em!important;
+  margin-top:5px!important;
+  line-height:1.3!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item>div:last-child{
+  font-size:10.5px!important;
+  line-height:1.25!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session{
+  margin-bottom:7px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session-detail{
+  transform-origin:top center;
+}
+#root[data-pi-motion="expressive"] .wpb-settings>.wpb-page-header{
+  padding-top:19px!important;
+  padding-bottom:4px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-title{
+  font-size:12.5px!important;
+  font-weight:740!important;
+  letter-spacing:.012em!important;
+  text-transform:none!important;
+  margin:15px 4px 7px!important;
+  color:inherit!important;
+  line-height:1.3!important;
+}
+#root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-row{
+  min-height:44px;
+  padding:12px 13px!important;
+  gap:10px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-row>div:first-child>div:first-child{
+  font-size:14.5px!important;
+  font-weight:650!important;
+  line-height:1.28!important;
+}
+#root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-row>div:first-child>div:nth-child(2){
+  font-size:12px!important;
+  line-height:var(--pi-reading-line)!important;
+  margin-top:3px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-profile .wpb-profile-inner{
+  padding-top:19px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-profile .wpb-profile-identity{
+  font-size:12.5px!important;
+  line-height:1.42!important;
+}
+#root[data-pi-motion="expressive"] .wpb-profile .wpb-profile-strength-grid{
+  gap:6px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-profile .wpb-profile-strength-cell{
+  border-radius:12px!important;
+  padding:9px 5px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-profile .wpb-profile-strength-cell>.mono{
+  font-size:clamp(16px,4vw,18px)!important;
+  letter-spacing:-.025em;
+}
+#root[data-pi-motion="expressive"] .wpb-profile .wpb-profile-section{
+  border-radius:16px!important;
+}
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-history-session-detail,.wpb-advanced-body){
+  /* Only newly mounted/expanded content moves. Never animate row height or saved state. */
+  animation:piDisclosureReveal 175ms cubic-bezier(.2,.8,.25,1) both;
+}
+@keyframes piDisclosureReveal{
+  from{opacity:.58;translate:0 -4px}
+  to{opacity:1;translate:0 0}
+}
+@media(max-width:350px){
+  #root[data-pi-motion="expressive"] .wpb-progress [data-progress-glance]{
+    gap:5px!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item{
+    padding:9px 6px!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-label{
+    font-size:10px!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb-profile .wpb-profile-strength-cell{
+    padding:8px 3px!important;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  #root[data-pi-motion="expressive"] .wpb :is(.wpb-history-session-detail,.wpb-advanced-body){
+    animation:none!important;
+    translate:none!important;
+  }
+}

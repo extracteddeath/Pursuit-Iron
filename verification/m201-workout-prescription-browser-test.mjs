@@ -77,11 +77,11 @@ try {
     await page.setViewport({width:390,height:844,deviceScaleFactor:2,isMobile:true,hasTouch:true});
     // A manually typed number remains user-owned even outside the planned range, after deletion,
     // further edits, and an actual browser reload. The repair cannot corrupt a workout log.
-    const reps=await page.$$('input[aria-label="reps"]');
-    await reps[1].click();await page.keyboard.down('Control');await page.keyboard.press('KeyA');await page.keyboard.up('Control');await page.keyboard.type('14');
+    const reps=await Promise.all([1,2].map(si=>page.$(`[data-testid="set-0-${si}"] input[aria-label="reps"]`)));
+    await reps[0].click();await page.keyboard.down('Control');await page.keyboard.press('KeyA');await page.keyboard.up('Control');await page.keyboard.type('14');
     await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:live')).data[0].sets[1].reps==='14');
     assert.equal((await rows())[1].auto,false);
-    await reps[2].click();await page.keyboard.down('Control');await page.keyboard.press('KeyA');await page.keyboard.up('Control');await page.keyboard.press('Backspace');
+    await reps[1].click();await page.keyboard.down('Control');await page.keyboard.press('KeyA');await page.keyboard.up('Control');await page.keyboard.press('Backspace');
     await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:live')).data[0].sets[2].reps==='');
     await page.reload({waitUntil:'networkidle0'});await page.waitForSelector('input[aria-label="reps"]');
     restored=await rows();assert.equal(restored[1].reps,'14');assert.equal(restored[2].reps,'');assert.equal(restored[0].reps,'11');

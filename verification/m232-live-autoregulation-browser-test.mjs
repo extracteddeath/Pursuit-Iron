@@ -29,24 +29,28 @@ try {
     await page.goto('http://127.0.0.1:8782/probe.html', { waitUntil: 'networkidle0' });
     await page.waitForSelector('[data-testid="set-0-2"]');
     const check = await page.$('.wpb-backdrop button[data-wpb-system-back]'); if (check) await check.click();
-    const values = () => page.$$eval('input[aria-label="weight"]', nodes => nodes.map(n => n.value));
+    const values = () => page.evaluate(() => JSON.parse(localStorage.getItem('wpb:live')).data[0].sets.map(s => s.weight));
     assert.deepEqual(await values(), ['100', '100', '100']);
     for (let i = 0; i < 2; i++) {
         const row = `[data-testid="set-0-${i}"]`, reps = await page.$(row + ' input[aria-label="reps"]');
         await reps.click(); await page.keyboard.down('Control'); await page.keyboard.press('KeyA'); await page.keyboard.up('Control'); await page.keyboard.press('Backspace'); await reps.type('6');
         await page.click(row + ' button[aria-label="Mark set done"]');
         await page.waitForSelector(row + ' button[aria-label="Failure, no reps left"]');
-        await page.click(row + ' button[aria-label="Failure, no reps left"]');
+        await page.locator(row + ' button[aria-label="Failure, no reps left"]').click();
+        await page.waitForFunction(i => JSON.parse(localStorage.getItem('wpb:live'))?.data[0].sets[i].actualRIR === 0, {}, i);
     }
     await page.waitForFunction(() => JSON.parse(localStorage.getItem('wpb:live'))?.data[0].sets[2].weight === '95');
     assert.deepEqual(await values(), ['100', '100', '95']);
+    assert.equal(await page.$eval('[data-testid="set-0-2"] input[aria-label="weight"]', n => n.value), '95', 'pending row renders the adapted load');
     const snapshot = await page.evaluate(() => JSON.parse(localStorage.getItem('wpb:live')));
     assert.equal(snapshot.data[0].sets[2].recoveryLimited, true);
     await page.reload({ waitUntil: 'networkidle0' }); await page.waitForSelector('[data-testid="set-0-2"]');
     assert.deepEqual(await values(), ['100', '100', '95'], 'live adaptation survives real component recovery');
+    assert.equal(await page.$eval('[data-testid="set-0-2"] input[aria-label="weight"]', n => n.value), '95', 'recovered row renders the adapted load');
     await page.click('[data-testid="set-0-0"] button[aria-label="Mark set not done"]');
     await page.waitForFunction(() => JSON.parse(localStorage.getItem('wpb:live'))?.data[0].sets[2].weight === '100');
     assert.deepEqual(await values(), ['100', '100', '100']);
+    assert.equal(await page.$eval('[data-testid="set-0-2"] input[aria-label="weight"]', n => n.value), '100', 'undo restores the rendered pending load');
     assert.deepEqual(errors, []);
     console.log('PASS M232 phone: report two misses → one 5% accessory reduction → autosave/reload preserves it → undo either source restores it; no runtime errors.');
 } finally { if (browser) await browser.close(); await new Promise(resolve => server.close(resolve)); }

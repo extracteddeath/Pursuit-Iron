@@ -4,8 +4,8 @@ import http from 'node:http';
 import path from 'node:path';
 import puppeteer from 'puppeteer-core';
 
-// The build 825 reserved-height layout was withdrawn. Keep its functional
-// regressions, but exercise the restored build 824 rows without enforcing gaps.
+// Keep the restored compact layout and verify the build 827 completed-set bars.
+// Pending sets retain editable controls; completed sets keep effort and undo only.
 
 const root = path.resolve(new URL('../', import.meta.url).pathname);
 const program = { id: 'b825-logging', custom: true, weeks: 6,
@@ -35,7 +35,7 @@ let browser;
 try {
     browser = await puppeteer.launch({ executablePath: process.env.CHROME_BIN || '/usr/bin/google-chrome', headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage'] });
     const page = await browser.newPage(), errors = [];
-    page.on('pageerror', error => errors.push(error.message));
+    page.on('pageerror', error => { errors.push(error.message); console.error(error.message); });
     await page.evaluateOnNewDocument((store, live) => {
         if (location.origin !== 'http://127.0.0.1:8784' || window !== window.top) return;
         localStorage.setItem('wpb:v1', JSON.stringify(store));
@@ -46,7 +46,7 @@ try {
     const geometry = () => page.evaluate(() => {
         const rect = n => { const r = n.getBoundingClientRect(); return { x: r.x, y: r.y, width: r.width, height: r.height }; };
         const scroller = document.querySelector('.wpb-workout-scroll');
-        return { scrollTop: scroller.scrollTop, rows: Array.from(document.querySelectorAll('[data-testid^="set-0-"]')).map(row => ({
+        return { scrollTop: scroller.scrollTop, rows: Array.from(document.querySelectorAll('[data-testid^="set-0-"][data-done="0"]')).map(row => ({
             box: rect(row), controls: rect(row.querySelector('.wpb-set-controls')), weight: rect(row.querySelector('input[aria-label="weight"]')), reps: rect(row.querySelector('input[aria-label="reps"]')), check: rect(row.querySelector('.wpb-set-actions>button'))
         })), next: rect(document.querySelector('.wpb-workout-footer button[aria-label="Next exercise"]')) };
     });
@@ -55,8 +55,8 @@ try {
         for (const [i, row] of layout.rows.entries()) {
             assert.ok(row.weight.width >= 20 && row.reps.width >= 20, `${label}: set ${i + 1} has usable fields`);
             assert.ok(row.weight.x + row.weight.width <= row.reps.x, `${label}: fields do not overlap`);
-            // The existing 44px hit target extends 1px into the adjacent track.
-            assert.ok(row.reps.x + row.reps.width <= row.check.x + 1, `${label}: check stays to the right`);
+            // The compact check keeps its tap target inside its own horizontal track.
+            assert.ok(row.reps.x + row.reps.width <= row.check.x, `${label}: check stays to the right`);
             assert.ok(row.weight.x >= 0 && row.check.x + row.check.width <= await page.evaluate(() => innerWidth) + 1, `${label}: controls fit the phone`);
         }
     };
@@ -64,7 +64,7 @@ try {
         const buttons = Array.from(footer.querySelectorAll('button'));
         return buttons.every(button => { const r = button.getBoundingClientRect(); return r.width > 0 && r.left >= 0 && r.right <= innerWidth + 1 && r.top >= 0 && r.bottom <= innerHeight + 1; });
     });
-    for (const width of [320, 360, 390, 430]) {
+    for (const width of [320, 360, 390, 430, 520]) {
         await page.setViewport({ width, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
         await page.goto('http://127.0.0.1:8784/index.html', { waitUntil: 'networkidle0' });
         await page.waitForSelector('.wpb-live-dock button[aria-label="Resume workout"]');
@@ -76,6 +76,17 @@ try {
         assert.ok(initial.rows.slice(1).every(row => row.box.height - row.controls.height <= 8), 'pending rows contain only their controls and normal padding');
         assert.equal(await page.$$eval('.wpb-set-detail--work', nodes => nodes.length), 0, 'reserved-height detail wrappers are removed');
         await usableRows(`TARGET at ${width}px`);
+        const targets = await page.$eval('[data-testid="set-0-0"]', row => {
+            const buttons = [...row.querySelectorAll('.wpb-set-stepper, .wpb-set-complete')];
+            return buttons.map(n => { const r = n.getBoundingClientRect(); const hit = document.elementFromPoint(r.x + r.width - 1, r.y + r.height / 2); return { width: r.width, owned: hit === n || n.contains(hit) }; });
+        });
+        assert.ok(targets.every(t => t.width === 30 && t.owned), 'each 30px button owns its whole horizontal track');
+        for (const [label, field, delta] of [['weight up', 'weight', 5], ['weight down', 'weight', -5], ['reps up', 'reps', 1], ['reps down', 'reps', -1]]) {
+            const input = `[data-testid="set-0-0"] input[aria-label="${field}"]`;
+            const before = Number(await page.$eval(input, n => n.value));
+            await page.tap(`[data-testid="set-0-0"] button[aria-label="${label}"]`);
+            assert.equal(Number(await page.$eval(input, n => n.value)), before + delta, 'a tap changes exactly one increment');
+        }
         await page.click('button[aria-label="Show previous workout values"]'); await settle();
         await usableRows(`LAST at ${width}px`);
         assert.match(await page.$eval('[data-testid="set-0-0"]', n => n.innerText), /205×3/);
@@ -107,7 +118,7 @@ try {
             const set = JSON.parse(localStorage.getItem('wpb:live')).data[0].sets[0];
             return set.weight === '190' && set.reps === '5';
         });
-        if (width === 390) await page.screenshot({ path: path.join(root, 'verification/b825-before-log-phone.png') });
+        if (width === 390) await page.screenshot({ path: path.join(root, 'verification/b827-before-log-phone.png') });
 
         await page.click('[data-testid="set-0-0"] button[aria-label="Mark set done"]');
         await page.waitForSelector('[data-rest-card]'); await settle();
@@ -116,16 +127,31 @@ try {
         const logged = await geometry();
         await usableRows(`logged at ${width}px`);
         assert.equal(await page.$$eval('[data-effort-picker]', nodes => nodes.length), 1, 'one reps-left prompt opens after completing a set');
-        if (width === 390) await page.screenshot({ path: path.join(root, 'verification/b825-effort-picker-phone.png') });
+        if (width === 390) await page.screenshot({ path: path.join(root, 'verification/b827-effort-picker-phone.png') });
         assert.ok(Math.abs(initial.next.y - logged.next.y) < 1, 'Next exercise stays in its bottom slot');
         const picker = '[data-testid="set-0-0"] button[aria-label="3 reps left"]';
         await page.waitForSelector(picker); await page.click(picker); await settle();
         await usableRows(`effort recorded at ${width}px`);
         const snapshot = await page.evaluate(() => JSON.parse(localStorage.getItem('wpb:live')));
         assert.equal(snapshot.data[0].sets[0].actualRIR, 3); assert.equal(snapshot.data[0].sets[0].weight, '190'); assert.equal(snapshot.data[0].sets[0].reps, '5');
-        await page.tap(weightField); await page.keyboard.type('999');
-        assert.equal(await page.$eval(weightField, input => input.value), '190', 'completed sets remain read-only');
-        if (width === 390) await page.screenshot({ path: path.join(root, 'verification/b825-after-log-phone.png') });
+        assert.equal(await page.$$eval('[data-testid="set-0-0"] input', nodes => nodes.length), 0, 'completed fields collapse out of the row');
+        assert.equal(await page.$$eval('[data-testid="set-0-0"] .wpb-set-controls', nodes => nodes.length), 0, 'completed controls are removed');
+        const quietBar = await page.$eval('[data-testid="set-0-0"]', n => ({ height: n.getBoundingClientRect().height, background: getComputedStyle(n).backgroundColor, text: n.innerText }));
+        assert.ok(quietBar.height <= 50, 'completed row is only a compact reps-left bar');
+        assert.equal(quietBar.background, 'rgba(0, 0, 0, 0)', 'completed bar has no bright background');
+        assert.match(quietBar.text, /Reps left/);
+        assert.doesNotMatch(quietBar.text, /190|Last time|TARGET/, 'completed bar contains no old load or reference controls');
+        // Completing another set retires the older picker, while its effort and Undo stay reachable.
+        await page.click('[data-testid="set-0-1"] button[aria-label="Mark set done"]'); await settle();
+        assert.equal(await page.$$eval('[data-testid="set-0-0"] [data-effort-picker]', nodes => nodes.length), 0);
+        assert.equal(await page.$$eval('[data-testid="set-0-1"] [data-effort-picker]', nodes => nodes.length), 1);
+        assert.equal(await page.$$eval('[data-testid="set-0-0"] [data-effort-tag]', nodes => nodes.length), 1);
+        await page.click('[data-testid="set-0-0"] [data-effort-tag]'); await settle();
+        await page.click('[data-testid="set-0-0"] button[aria-label="2 reps left"]'); await settle();
+        assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('wpb:live')).data[0].sets[0].actualRIR), 2, 'older effort stays editable');
+        await page.click('[data-testid="set-0-1"] button[aria-label="Mark set not done"]'); await settle();
+        assert.equal(await page.$eval('[data-testid="set-0-1"] input[aria-label="weight"]', n => n.value), '190', 'Undo preserves the logged weight');
+        if (width === 390) await page.screenshot({ path: path.join(root, 'verification/b827-after-log-phone.png') });
         await page.click('.wpb-workout-footer button[aria-label="Next exercise"]');
         await page.waitForSelector('[data-testid="set-1-0"]');
         assert.match(await page.$eval('.wpb-workout-footer-primary', n => n.innerText), /Finish workout/);

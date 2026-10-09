@@ -33,7 +33,11 @@ try {
     await open('?dynamic');assert.deepEqual(await values(),['25','25','20','25']);assert.deepEqual(await reps(),['20','11','12','11']);
     assert.match(await page.$eval('.wpb-workout',n=>n.innerText),/20–25 lb/);
     await open('?down');assert.deepEqual(await values(),['20','20','20','20']);assert.deepEqual(await reps(),['10','10','10','10']);
-    await open('?resume&nosuperset');assert.deepEqual(await values(),['20','20','17.5','25']);assert.deepEqual(await reps(),['20','20','20','11']);
+    await open('?resume&nosuperset');assert.deepEqual(await values(),['20','17.5','25']);assert.deepEqual(await reps(),['20','20','11']);
+    const resumed=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:live')).data[0].sets);
+    assert.deepEqual(resumed.map(s=>s.weight),['20','20','17.5','25']);assert.deepEqual(resumed.map(s=>s.reps),['20','20','20','11']);
+    assert.equal(resumed[0].done,true,'completed set keeps its logged values');
+    assert.equal(await page.$$eval('[data-testid="set-0-0"] input',ns=>ns.length),0,'completed custom set retains its collapsed effort bar');
     assert.ok(!(await page.$eval('.wpb-workout',n=>n.innerText)).includes('Unlink superset'));assert.equal(await page.$eval('.wpb-workout-tools',n=>n.innerText.includes('Superset')),false);
     // Typed/manual values survive state writes and a reload.
     const input=await page.$('[data-testid="set-0-3"] input[aria-label="reps"]');await input.click();await page.keyboard.down('Control');await page.keyboard.press('KeyA');await page.keyboard.up('Control');await page.keyboard.press('Backspace');await input.type('13');

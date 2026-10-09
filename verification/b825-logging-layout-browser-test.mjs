@@ -183,7 +183,7 @@ try {
             await page.click(`[data-testid="set-0-${si}"] button[aria-label="Mark set done"]`);
             await settle();
         }
-        const completed = await page.$eval('[data-testid^="set-0-"][data-done="1"]', rows => rows.map(row => {
+        const completed = await page.$$eval('[data-testid^="set-0-"][data-done="1"]', rows => rows.map(row => {
             const summary = row.querySelector('[data-completed-summary]');
             const box = row.getBoundingClientRect();
             return { text: summary?.textContent || '', number: row.querySelector('[data-completed-summary]')?.previousElementSibling?.textContent || '',
@@ -196,7 +196,7 @@ try {
             assert.ok(row.fit, `completed set ${index + 1} fits at ${width}px`);
             assert.ok(row.undo, 'Undo is reachable from every logged set');
         });
-        assert.equal(await page.$eval('[data-testid^="set-0-"] [data-effort-picker]', nodes => nodes.length), 1,
+        assert.equal(await page.$$eval('[data-testid^="set-0-"] [data-effort-picker]', nodes => nodes.length), 1,
             'only the most recent unanswered effort picker is expanded');
         if (width === 390) await page.screenshot({ path: path.join(root, 'verification/b828-all-done-readable-phone.png') });
         console.log(`PASS readable all-done sets, compact rows, tap-to-select, Focus, LAST/TARGET, RIR, rest and undo at ${width}px.`);

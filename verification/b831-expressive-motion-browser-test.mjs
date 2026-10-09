@@ -241,6 +241,24 @@ try {
         await page.waitForFunction(() => document.querySelector('[data-tab="settings"]').style.getPropertyValue('--pi-control-scale') === '1');
         await clickText('Your gyms'); await page.waitForSelector('[data-sheet-drag][data-pi-surface]');
         await page.waitForFunction(() => document.querySelector('[data-sheet-drag]')?.style.getPropertyValue('--pi-surface-y') === '0px');
+        // Shared M3 sheets retain the existing native edge-attachment, detent and
+        // scroll ownership; the new handle is visual and has no extra DOM children.
+        const sheetStyle = await page.$eval('.wpb-backdrop>[data-sheet-drag]', el => {
+            const rect = el.getBoundingClientRect(), face = getComputedStyle(el);
+            const handle = getComputedStyle(el, '::before');
+            return { topRadius: parseFloat(face.borderTopLeftRadius),
+                width: rect.width, right: rect.right, handleWidth: parseFloat(handle.width),
+                handleHeight: parseFloat(handle.height), handleDisplay: handle.display,
+                children: el.childElementCount, translate: el.style.getPropertyValue('--pi-surface-y') };
+        });
+        assert.ok(sheetStyle.topRadius >= 25 && sheetStyle.handleWidth >= 34 &&
+            sheetStyle.handleHeight === 4 && sheetStyle.handleDisplay !== 'none',
+            'M3 sheet paints the compact centered drag handle and generous top corners');
+        assert.ok(sheetStyle.right <= width + 1 && sheetStyle.width <= width + 1 &&
+            sheetStyle.translate === '0px', 'M3 sheet does not overflow or move its resting detent');
+        if (width === 430)
+            await page.screenshot({ path: path.join(root, 'verification/b831-m3-gym-sheet-phone.png') });
+
         // A partial drag belongs to the sheet and returns to rest; it cannot leave an offset behind.
         await page.$eval('[data-sheet-drag]', el => {
             const r = el.getBoundingClientRect();
@@ -254,7 +272,40 @@ try {
         await page.waitForFunction(() => document.querySelector('[data-sheet-drag]')?.style.getPropertyValue('--pi-surface-y') === '0px');
         await page.keyboard.press('Escape'); await page.waitForFunction(() => !document.querySelector('.wpb-backdrop'));
         assert.equal(await page.$$eval('[data-wpb-lock]', els => els.length), 0, 'sheet exit releases scrolling');
-        await page.click('[data-tab="home"]'); await page.waitForSelector('.hp-open'); await page.click('.hp-open');
+        await page.click('[data-tab="home"]'); await page.waitForSelector('.hp-open');
+        // The saved-program menu is a real, anchored three-action surface.
+        // Keyboard navigation and Escape must preserve the authored program
+        // instead of navigating or calling the destructive Delete item.
+        await page.click('button[aria-haspopup="menu"]');
+        await page.waitForSelector('.wpb-context-menu[role="menu"]');
+        const menuGeometry = await page.$eval('.wpb-context-menu', el => {
+            const r = el.getBoundingClientRect();
+            const item = el.querySelector('[role="menuitem"]');
+            return { left: r.left, right: r.right, radius: parseFloat(getComputedStyle(el).borderTopLeftRadius),
+                minItem: item.getBoundingClientRect().height, items: el.querySelectorAll('[role="menuitem"]').length };
+        });
+        assert.ok(menuGeometry.radius >= 16 && menuGeometry.minItem >= 44 &&
+            menuGeometry.left >= 0 && menuGeometry.right <= width + 1,
+            'M3 contextual menus are rounded, scroll-safe and touch accessible');
+        assert.ok(menuGeometry.items >= 2, 'contextual actions keep their original features');
+        if (width === 430)
+            await page.screenshot({ path: path.join(root, 'verification/b831-m3-program-menu-phone.png') });
+        await page.focus('.wpb-context-menu [role="menuitem"]:first-child');
+        await page.keyboard.press('ArrowDown');
+        assert.ok(await page.$eval('.wpb-context-menu', el =>
+            document.activeElement === el.querySelectorAll('[role="menuitem"]')[1]),
+            'M3 ArrowDown advances focus to the next available contextual action');
+        await page.keyboard.press('End');
+        assert.ok(await page.$eval('.wpb-context-menu', el =>
+            document.activeElement === [...el.querySelectorAll('[role="menuitem"]')].at(-1)),
+            'M3 End moves to last menu action without triggering it');
+        await page.keyboard.press('Escape');
+        await page.waitForFunction(() => !document.querySelector('.wpb-context-menu'));
+        assert.ok(await page.$eval('button[aria-haspopup="menu"]', el =>
+            document.activeElement === el), 'Escape dismisses menu and restores its opener focus');
+        assert.equal(await page.$eval('.hp-open', n => n.length > 0), true,
+            'menu dismiss preserves the program card and its original action');
+        await page.click('.hp-open');
         await page.waitForSelector('.wpb-program');
         // Info sections preserve content while closing and survive an immediate reopen.
         const card = await page.$('[data-infocard][data-collapsible="1"]');

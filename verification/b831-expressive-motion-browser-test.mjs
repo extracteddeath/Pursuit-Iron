@@ -166,6 +166,24 @@ try {
             'moving indicator paints the selection, not the old static button fill');
         if (width === 430)
             await page.screenshot({ path: path.join(root, 'verification/b831-m3-selected-progress-phone.png') });
+        // True tablist keyboard navigation (including screen-reader-friendly selection)
+        // must update the panel and follow the very same animated track.
+        await page.focus('.wpb-progress .wpb-premium-tabs>button:nth-child(2)');
+        await page.keyboard.press('ArrowRight');
+        await page.waitForFunction(() => {
+            const group = document.querySelector('.wpb-progress .wpb-premium-tabs');
+            const selected = group?.querySelector('[aria-selected="true"]');
+            return selected?.textContent?.trim() === 'Volume' &&
+                Math.abs(Number.parseFloat(group.style.getPropertyValue('--pi-m3-track-x')) - selected.offsetLeft) < .15;
+        }, { timeout: 5000 });
+        await page.keyboard.press('Home');
+        await page.waitForFunction(() => {
+            const group = document.querySelector('.wpb-progress .wpb-premium-tabs');
+            return group?.querySelector('[aria-selected="true"]')?.textContent?.trim() === 'Sessions';
+        }, { timeout: 5000 });
+        assert.equal(await page.$eval('.wpb-progress .wpb-premium-tabs>button:first-child',
+            b => document.activeElement === b), true,
+            'M3 keyboard Home moves focus to the first Progress tab');
         await page.click('[data-tab="settings"]'); await page.waitForSelector('.wpb-settings');
         const settingsTrack = await page.$eval('.wpb-settings .wpb-segmented[data-pi-m3-track]', el => ({
             x: Number.parseFloat(el.style.getPropertyValue('--pi-m3-track-x')),

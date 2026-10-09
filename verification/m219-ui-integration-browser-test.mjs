@@ -78,12 +78,14 @@ try {
                 const group = button.closest('[data-pi-m3-track]');
                 const surface = group ? group.style.getPropertyValue('--pi-m3-track-fill') : css.backgroundColor;
                 const expectedTheme = button.style.backgroundColor;
-                if (group && (!expectedTheme || expectedTheme !== surface)) return 0;
                 const background = luminance(surface);
-                return (Math.max(text, background) + .05) / (Math.min(text, background) + .05);
+                const ratio = (Math.max(text, background) + .05) / (Math.min(text, background) + .05);
+                return { label: button.textContent.trim(), ratio,
+                    textColor: css.color, sourceFill: expectedTheme, surfaceFill: surface,
+                    fresh: !group || (Boolean(expectedTheme) && expectedTheme === surface) };
             });
         });
-        assert.ok(contrast.length >= 4 && contrast.every(ratio => ratio >= 4.5), `${theme}: selected settings remain legible`);
+        assert.ok(contrast.length >= 4 && contrast.every(item => item.ratio >= 4.5 && item.fresh), `${theme}: selected settings remain legible: ${JSON.stringify(contrast)}`);
     }
     await page.$eval('.wpb-theme-picker', n => { n.open = true; });
     await page.click('[data-theme-option="amethyst"]');

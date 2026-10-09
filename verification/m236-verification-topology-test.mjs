@@ -63,7 +63,9 @@ assert.match(audit, /github\.ref == 'refs\/heads\/main' \|\| github\.event_name 
 assert.equal(registry.contractCount, Object.values(contractGroups).flat().length);
 assert.equal(registry.browserCount, Object.values(browserShards).flat().length);
 assert.equal(registry.releaseCount, releaseTests.length);
-assert.equal(registry.browserCount, 14, 'logging layout and worker generation retain their browser integration coverage');
+assert.equal(registry.browserCount, 15, 'logging layout, worker generation and expressive motion retain their browser integration coverage');
+assert.ok(browserShards.integration.includes('b831-expressive-motion-browser-test.mjs'),
+    'app-wide expressive interaction coverage must run in the integration shard');
 assert.equal(registry.releaseCount, 1, 'release-only semantics should remain narrow');
 
 console.log(

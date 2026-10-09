@@ -5,7 +5,7 @@ import path from 'node:path';
 import puppeteer from 'puppeteer-core';
 
 // Restore the original full set grid: completed rows stay visible and dimmed, never collapsed.
-// Exercise target, logged values, readonly fields, muted check, effort and Undo remain accessible.
+// Logged effort sits under reps inside the grid; completed rows have no extra effort line.
 
 const root = path.resolve(new URL('../', import.meta.url).pathname);
 const program = { id: 'b825-logging', custom: true, weeks: 6,
@@ -154,6 +154,17 @@ try {
         assert.notEqual(completedFirst.checkFill, 'rgb(255, 103, 145)', 'completed check must not retain the former bright pink fill');
         assert.equal(await page.$$eval('[data-testid="set-0-0"] .wpb-set-stepper', nodes => nodes.length), 0,
             'completed set steppers retire while their weight/reps tracks stay put');
+        const effortLayout = await page.$eval('[data-testid="set-0-0"]', row => {
+            const tag = row.querySelector('[data-effort-tag]'), reps = row.querySelector('input[aria-label="reps"]');
+            const t = tag.getBoundingClientRect(), r = reps.getBoundingClientRect();
+            return { text: tag.textContent, inReps: tag.parentElement.classList.contains('wpb-set-reps'),
+                below: t.top >= r.bottom, centered: Math.abs((t.left + t.width / 2) - (r.left + r.width / 2)) < 1,
+                height: row.getBoundingClientRect().height, picker: !!row.querySelector('[data-effort-picker]') };
+        });
+        assert.equal(effortLayout.text, '3 RIR', 'actual effort is distinct from the 2 RIR target');
+        assert.ok(effortLayout.inReps && effortLayout.below && effortLayout.centered, 'effort sits under the reps value');
+        assert.ok(effortLayout.height <= 64 && !effortLayout.picker, `recorded completed set has no extra full-width effort line: ${JSON.stringify(effortLayout)}`);
+        assert.ok(!await page.$eval('[data-testid="set-0-0"]', n => n.innerText.includes('+ effort')));
         // Completing another set retires the older picker, while its effort and Undo stay reachable.
         await page.click('[data-testid="set-0-1"] button[aria-label="Mark set done"]'); await settle();
         assert.equal(await page.$$eval('[data-testid="set-0-0"] [data-effort-picker]', nodes => nodes.length), 0);
@@ -217,9 +228,28 @@ try {
                 'completed set keeps the original grid and edit-via-Undo path');
             assert.ok(row.opacity < .85 && row.fit, `set ${index + 1} is muted and fits at ${width}px`);
         });
+        const compact = await page.$$eval('[data-testid^="set-0-"]', rows => rows.map(row => ({
+            effort: row.querySelector('[data-effort-tag]')?.textContent,
+            height: row.getBoundingClientRect().height,
+            picker: !!row.querySelector('[data-effort-picker]'), text: row.innerText
+        })));
+        assert.equal(compact[0].effort, '— RIR', 'Undo clears prior effort before re-completion');
+        assert.equal(compact[1].effort, '— RIR', 'unreported effort never copies the target');
+        assert.ok(compact.filter(row => !row.picker).every(row => row.height <= 64), 'older completed rows stay compact');
+        assert.ok(compact.every(row => !row.text.includes('+ effort')), 'no separate add-effort line');
+        await page.click('[data-testid="set-0-0"] [data-effort-tag]'); await settle();
+        await page.click('[data-testid="set-0-0"] button[aria-label="2 reps left"]'); await settle();
+        assert.equal(await page.$eval('[data-testid="set-0-0"] [data-effort-tag]', n => n.textContent), '2 RIR');
+        await page.click('[data-testid="set-0-0"] [data-effort-tag]'); await settle();
+        await page.click('[data-testid="set-0-0"] button[aria-label="Failure, no reps left"]'); await settle();
+        assert.equal(await page.$eval('[data-testid="set-0-0"] [data-effort-tag]', n => n.textContent), '0 RIR', 'zero effort is a logged value');
+        await page.waitForFunction(() => JSON.parse(localStorage.getItem('wpb:live')).data[0].sets[0].actualRIR === 0);
         assert.equal(await page.$$eval('[data-testid^="set-0-"] [data-effort-picker]', nodes => nodes.length), 1,
             'one newest unanswered effort editor remains available');
-        if (width === 390) await page.screenshot({ path: path.join(root, 'verification/b829-faded-sets-phone.png') });
+        await page.click('[data-testid="set-0-3"] [data-effort-tag]'); await settle();
+        await page.click('[data-testid="set-0-3"] button[aria-label="2 reps left"]'); await settle();
+        assert.equal(await page.$$eval('[data-effort-picker]', nodes => nodes.length), 0, 'recording latest effort closes even after tapping its inline label');
+        if (width === 390) await page.screenshot({ path: path.join(root, 'verification/b830-rir-under-reps-phone.png') });
         console.log(`PASS original faded row grid, legible logged fields, controls, typing, RIR and Undo at ${width}px.`);
     }
     assert.deepEqual(errors, []);

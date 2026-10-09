@@ -278,6 +278,13 @@ try {
         // instead of navigating or calling the destructive Delete item.
         await page.click('button[aria-haspopup="menu"]');
         await page.waitForSelector('.wpb-context-menu[role="menu"]');
+        // popIn starts slightly scaled, so boundingClientRect is temporarily
+        // smaller than the real 44px target. Measure resting layout instead.
+        await page.waitForFunction(() => {
+            const menu = document.querySelector('.wpb-context-menu');
+            return menu && menu.getAnimations({ subtree: false }).every(a =>
+                a.playState === 'finished' || a.playState === 'idle');
+        }, { timeout: 5000 });
         const menuGeometry = await page.$eval('.wpb-context-menu', el => {
             const r = el.getBoundingClientRect();
             const item = el.querySelector('[role="menuitem"]');

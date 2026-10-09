@@ -12285,29 +12285,47 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
                             const label = s.warm ? `W${e.sets.slice(0, si + 1).filter(x => x.warm).length}`
                                 : s.sub ? (s.kind === "drop" ? "↓" : "M")
                                     : e.sets.slice(0, si + 1).filter(x => !x.warm && !x.sub).length;
-                            // Logged sets leave only an effort bar. Keep the newest bar open;
-                            // older bars can reopen effort, and Undo restores the editable row.
+
+                            // Completed sets keep their actual logged values readable.
+                            // Effort may expand beneath the compact summary, never instead of it.
                             if (s.done) {
                                 const loggable = !s.warm && !s.sub && parseFloat(s.weight) > 0;
-                                const effKey = `${ei}:${si}`;
+                                const effKey = ei + ":" + si;
                                 const latestDone = e.sets.findLastIndex(x => x.done && !x.warm && !x.sub && parseFloat(x.weight) > 0);
-                                const open = loggable && (si === latestDone || !!effortOpen[effKey]);
-                                return _jsxs("div", { "data-testid": `set-${ei}-${si}`, "data-warm": s.warm ? "1" : "0", "data-sub": s.sub ? "1" : "0", "data-done": "1", "data-active": "0", "data-completed-bar": true,
-                                    "aria-label": `Completed set ${label}: ${s.weight} ${unit}, ${s.reps} reps`,
-                                    style: { display: "flex", alignItems: "center", gap: 6, padding: "4px 2px", borderBottom: `1px solid ${C.borderSoft}`, color: C.muted },
-                                    children: [open ? _jsxs("div", { "data-effort-picker": true, style: { flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }, children: [
-                                        _jsx("span", { style: { fontSize: 11, fontWeight: 600, color: C.muted }, children: "Reps left" }),
-                                        _jsx("div", { className: "wpb-effort-scale", style: { display: "flex", gap: 4, flexWrap: "nowrap" }, children: [0, 1, 2, 3, 4].map(v => _jsx("button", {
-                                            onClick: () => { setActualRIR(ei, si, v); setEffortOpen(o => { const n = { ...o }; delete n[effKey]; return n; }); },
-                                            className: "pressable", title: v === 0 ? "Failure" : `${v} reps in reserve`,
-                                            "aria-label": v === 0 ? "Failure, no reps left" : `${v === 4 ? "4 or more" : v} rep${v === 1 ? "" : "s"} left`, "aria-pressed": s.actualRIR === v,
-                                            style: { minWidth: 32, minHeight: 36, padding: "6px 8px", borderRadius: 8, border: `1px solid ${s.actualRIR === v ? C.muted : C.border}`, background: s.actualRIR === v ? C.cardHi : "transparent", color: s.actualRIR === v ? C.text : C.muted, fontSize: 13, fontWeight: 600, cursor: "pointer" }, children: v === 4 ? "4+" : v }, v)) })
-                                    ] }) : _jsx("button", { "data-effort-tag": loggable || undefined, onClick: () => loggable ? setEffortOpen(o => ({ ...o, [effKey]: !o[effKey] })) : toggleDone(ei, si),
-                                        className: "pressable", "aria-label": loggable ? `Change reps left for set ${label}` : `Reopen completed set ${label}`,
-                                        style: { flex: 1, minHeight: 36, padding: "4px 0", border: "none", background: "none", color: C.muted, fontSize: 11, fontWeight: 600, textAlign: "left", cursor: "pointer" },
-                                        children: loggable ? `Reps left · ${s.actualRIR != null ? effortLabel(s.actualRIR, loadMode) : "optional"}` : `${s.warm ? "Warm-up" : s.sub ? "Additional" : "Set"} ${label} complete` }),
-                                        _jsx("button", { onClick: () => toggleDone(ei, si), "aria-label": "Mark set not done", title: `Undo set ${label}`, className: "pressable", style: { width: 30, minHeight: 36, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", border: "none", background: "none", color: C.faint, cursor: "pointer" }, children: _jsx(Undo2, { size: 13 }) })]
-                                }, si);
+                                const open = loggable && (!!effortOpen[effKey] || (si === latestDone && s.actualRIR == null));
+                                const summary = String(s.weight ?? "—") + " " + unit + " × " + String(s.reps ?? "—");
+                                return _jsxs("div", { "data-testid": "set-" + ei + "-" + si, "data-warm": s.warm ? "1" : "0", "data-sub": s.sub ? "1" : "0", "data-done": "1", "data-active": "0", "data-completed-bar": true,
+                                    "aria-label": "Completed set " + label + ": " + String(s.weight) + " " + unit + ", " + String(s.reps) + " reps",
+                                    style: { display: "flex", flexDirection: "column", gap: 3, padding: "5px 2px", borderBottom: "1px solid " + C.borderSoft, color: C.muted },
+                                    children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 6, minHeight: 34 }, children: [
+                                        _jsx(Check, { size: 13, strokeWidth: 2, color: C.muted, style: { flexShrink: 0 } }),
+                                        _jsx("span", { className: "mono", style: { fontSize: 11, fontWeight: 650, color: C.muted, flexShrink: 0 }, children: String(label) }),
+                                        _jsx("span", { "data-completed-summary": true, className: "mono", style: { fontSize: 12, fontWeight: 650, color: C.text, minWidth: 0, flex: 1, whiteSpace: "nowrap" }, children: summary }),
+                                        loggable && _jsx("button", { "data-effort-tag": true,
+                                            onClick: () => setEffortOpen(o => ({ ...o, [effKey]: !open })),
+                                            "aria-label": "Change reps left for set " + label,
+                                            "aria-expanded": !!open,
+                                            className: "pressable",
+                                            style: { minHeight: 34, padding: "4px 2px", border: "none", background: "none", color: C.muted, fontSize: 11, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 },
+                                            children: s.actualRIR != null ? "RIR " + effortLabel(s.actualRIR, loadMode) : "RIR —" }),
+                                        _jsx("button", { onClick: () => toggleDone(ei, si), "aria-label": "Mark set not done", title: "Undo set " + label, className: "pressable",
+                                            style: { width: 30, minHeight: 36, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", border: "none", background: "none", color: C.faint, cursor: "pointer" },
+                                            children: _jsx(Undo2, { size: 13 }) })
+                                    ] }),
+                                    open && _jsxs("div", { "data-effort-picker": true,
+                                        style: { display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", padding: "2px 0 4px 24px" },
+                                        children: [_jsx("span", { style: { fontSize: 11, fontWeight: 600, color: C.muted }, children: "Reps left" }),
+                                            _jsx("div", { className: "wpb-effort-scale", style: { display: "flex", gap: 4, flexWrap: "nowrap" },
+                                                children: [0, 1, 2, 3, 4].map(v => _jsx("button", {
+                                                    onClick: () => { setActualRIR(ei, si, v); setEffortOpen(o => { const n = { ...o }; delete n[effKey]; return n; }); },
+                                                    className: "pressable", title: v === 0 ? "Failure" : v + " reps in reserve",
+                                                    "aria-label": v === 0 ? "Failure, no reps left" : (v === 4 ? "4 or more" : v) + " rep" + (v === 1 ? "" : "s") + " left",
+                                                    "aria-pressed": s.actualRIR === v,
+                                                    style: { minWidth: 32, minHeight: 36, padding: "6px 8px", borderRadius: 8, border: "1px solid " + (s.actualRIR === v ? C.muted : C.border), background: s.actualRIR === v ? C.cardHi : "transparent", color: s.actualRIR === v ? C.text : C.muted, fontSize: 13, fontWeight: 600, cursor: "pointer" },
+                                                    children: v === 4 ? "4+" : v }, v))
+                                            })
+                                        ] })
+                                ] }, si);
                             }
                             return (_jsxs("div", { "data-testid": `set-${ei}-${si}`, "data-warm": s.warm ? "1" : "0", "data-sub": s.sub ? "1" : "0", "data-done": s.done ? "1" : "0", "data-active": isActive ? "1" : "0", style: {
                                     /* No fade on upcoming or logged rows: faint and accentInk are derived to sit at 4.5:1, so any opacity drops them

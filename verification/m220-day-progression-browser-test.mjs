@@ -25,7 +25,7 @@ try {
     await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
     const open=async query=>{await page.goto('http://127.0.0.1:8775/probe.html'+query,{waitUntil:'networkidle0'});await page.waitForSelector('[data-testid="set-0-1"]');const check=await page.$('.wpb-backdrop button[data-wpb-system-back]');if(check)await check.click();};
     await open('');
-    const values=()=>page.$$eval('input[aria-label="weight"]',ns=>ns.map(n=>n.value));
+    const values=()=>page.$$eval('[data-done="0"] input[aria-label="weight"]',ns=>ns.map(n=>n.value));
     const savedWorkSets=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:live')).data[0].sets.filter(s=>!s.warm&&!s.sub));
     assert.deepEqual(await values(),['205','205','205','205','205'],'fresh five-set Lower workout holds at its own 205 load');
     const text=await page.$eval('.wpb-workout',n=>n.innerText);
@@ -38,7 +38,7 @@ try {
     const resumedCalf=await savedWorkSets();
     assert.deepEqual(resumedCalf.map(s=>s.weight),['210','205','212.5','205','205']);
     assert.equal(resumedCalf[0].done,true,'completed 210 lb set survives');
-    assert.equal(await page.$$eval('[data-testid="set-0-0"] input',ns=>ns.length),0,'completed set uses the compact effort bar');
+    assert.equal(await page.$$eval('[data-testid="set-0-0"] input', ns=>ns.every(n=>n.readOnly) && ns.length===2),true,'completed logged values remain visible and locked');
     await page.screenshot({path:path.join(root,'verification/m220-progression-phone.png')});
     for(const variant of ['?squat','?squat&custom']){
         await open(variant);
@@ -69,13 +69,13 @@ try {
     }
     for(const variant of ['?squat&resume','?squat&resume&custom']){
         await open(variant);
-        assert.deepEqual(await page.$$eval('[data-testid^="set-0-"] input[aria-label="weight"]',ns=>ns.map(n=>n.value)),['190','200','190'],
+        assert.deepEqual(await page.$$eval('[data-testid^="set-0-"][data-done="0"] input[aria-label="weight"]',ns=>ns.map(n=>n.value)),['190','200','190'],
             'stale automatic 215 targets refresh, while completed 215 and manually typed 200 survive');
-        assert.deepEqual(await page.$$eval('[data-testid^="set-0-"] input[aria-label="reps"]',ns=>ns.map(n=>n.value)),['5','6','5']);
+        assert.deepEqual(await page.$$eval('[data-testid^="set-0-"][data-done="0"] input[aria-label="reps"]',ns=>ns.map(n=>n.value)),['5','6','5']);
         const resumedSquat=await savedWorkSets();
         assert.deepEqual(resumedSquat.map(s=>s.weight),['215','190','200','190']);
         assert.deepEqual(resumedSquat.map(s=>s.reps),['3','5','6','5']);
-        assert.equal(resumedSquat[0].done,true,'completed squat load and reps stay persisted after collapse');
+        assert.equal(resumedSquat[0].done,true,'completed squat load and reps stay persisted after completion');
     }
     assert.deepEqual(errors,[]);
     console.log('PASS M220 browser: scoped Lower history, protected resume, generated/custom incomplete squat recalibration, latest LAST/shortcut agreement and tap-to-fill.');

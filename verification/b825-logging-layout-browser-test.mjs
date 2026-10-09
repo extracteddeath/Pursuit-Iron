@@ -4,8 +4,7 @@ import http from 'node:http';
 import path from 'node:path';
 import puppeteer from 'puppeteer-core';
 
-// Keep the restored compact layout and verify the build 827 completed-set bars.
-// Pending sets retain editable controls; completed sets keep effort and undo only.
+// Keep the original compact layout; completed rows retain muted, locked logged values.
 
 const root = path.resolve(new URL('../', import.meta.url).pathname);
 const program = { id: 'b825-logging', custom: true, weeks: 6,
@@ -118,7 +117,7 @@ try {
             const set = JSON.parse(localStorage.getItem('wpb:live')).data[0].sets[0];
             return set.weight === '190' && set.reps === '5';
         });
-        if (width === 390) await page.screenshot({ path: path.join(root, 'verification/b827-before-log-phone.png') });
+        if (width === 390) await page.screenshot({ path: path.join(root, 'verification/b829-before-log-phone.png') });
 
         await page.click('[data-testid="set-0-0"] button[aria-label="Mark set done"]');
         await page.waitForSelector('[data-rest-card]'); await settle();
@@ -127,20 +126,35 @@ try {
         const logged = await geometry();
         await usableRows(`logged at ${width}px`);
         assert.equal(await page.$$eval('[data-effort-picker]', nodes => nodes.length), 1, 'one reps-left prompt opens after completing a set');
-        if (width === 390) await page.screenshot({ path: path.join(root, 'verification/b827-effort-picker-phone.png') });
+        if (width === 390) await page.screenshot({ path: path.join(root, 'verification/b829-effort-picker-phone.png') });
         assert.ok(Math.abs(initial.next.y - logged.next.y) < 1, 'Next exercise stays in its bottom slot');
         const picker = '[data-testid="set-0-0"] button[aria-label="3 reps left"]';
         await page.waitForSelector(picker); await page.click(picker); await settle();
         await usableRows(`effort recorded at ${width}px`);
         const snapshot = await page.evaluate(() => JSON.parse(localStorage.getItem('wpb:live')));
         assert.equal(snapshot.data[0].sets[0].actualRIR, 3); assert.equal(snapshot.data[0].sets[0].weight, '190'); assert.equal(snapshot.data[0].sets[0].reps, '5');
-        assert.equal(await page.$$eval('[data-testid="set-0-0"] input', nodes => nodes.length), 0, 'completed fields collapse out of the row');
-        assert.equal(await page.$$eval('[data-testid="set-0-0"] .wpb-set-controls', nodes => nodes.length), 0, 'completed controls are removed');
-        const quietBar = await page.$eval('[data-testid="set-0-0"]', n => ({ height: n.getBoundingClientRect().height, background: getComputedStyle(n).backgroundColor, text: n.innerText }));
-        assert.ok(quietBar.height <= 50, 'completed row is only a compact reps-left bar');
-        assert.equal(quietBar.background, 'rgba(0, 0, 0, 0)', 'completed bar has no bright background');
-        assert.match(quietBar.text, /Reps left/);
-        assert.doesNotMatch(quietBar.text, /190|Last time|TARGET/, 'completed bar contains no old load or reference controls');
+        await page.waitForFunction(() => getComputedStyle(document.querySelector('[data-testid="set-0-0"]')).backgroundColor === 'rgba(0, 0, 0, 0)');
+        const completed = await page.$eval('[data-testid="set-0-0"]', n => ({
+            values: [...n.querySelectorAll('input')].map(i => [i.value, i.readOnly]),
+            steppers: n.querySelectorAll('.wpb-set-stepper').length,
+            background: getComputedStyle(n).backgroundColor,
+            undoShadow: getComputedStyle(n.querySelector('button[aria-label="Mark set not done"]')).boxShadow,
+            textColor: getComputedStyle(n.querySelector('input')).color,
+            number: n.querySelector('.wpb-set-controls>span').textContent,
+            weightCenter: (() => { const r=n.querySelector('input[aria-label="weight"]').getBoundingClientRect();return r.x+r.width/2; })()
+        }));
+        assert.deepEqual(completed.values, [['190', true], ['5', true]], 'logged values remain visible and locked');
+        assert.equal(completed.number, '1', 'completed set stays identifiable');
+        assert.equal(completed.steppers, 0, 'logged values cannot change through a stepper');
+        assert.equal(completed.background, 'rgba(0, 0, 0, 0)', 'completed row has no bright background');
+        assert.equal(completed.undoShadow, 'none', 'completed button has no accent glow');
+        assert.ok(Math.abs(completed.weightCenter - (initial.rows[0].weight.x + initial.rows[0].weight.width / 2)) <= 5, 'logging keeps the load aligned');
+        await page.click('button[aria-label="Show previous workout values"]');
+        assert.equal(await page.$$eval('[data-testid="set-0-0"] .wpb-set-controls button', ns => ns.length), 1, 'completed references are read-only and Undo remains available');
+        await page.click('button[aria-label="Show prescribed targets"]');
+        await page.tap('[data-testid="set-0-0"] input[aria-label="weight"]');
+        await page.keyboard.type('999');
+        assert.equal(await page.$eval('[data-testid="set-0-0"] input[aria-label="weight"]', n => n.value), '190', 'typing cannot rewrite a completed set');
         // Completing another set retires the older picker, while its effort and Undo stay reachable.
         await page.click('[data-testid="set-0-1"] button[aria-label="Mark set done"]'); await settle();
         assert.equal(await page.$$eval('[data-testid="set-0-0"] [data-effort-picker]', nodes => nodes.length), 0);
@@ -151,7 +165,7 @@ try {
         assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('wpb:live')).data[0].sets[0].actualRIR), 2, 'older effort stays editable');
         await page.click('[data-testid="set-0-1"] button[aria-label="Mark set not done"]'); await settle();
         assert.equal(await page.$eval('[data-testid="set-0-1"] input[aria-label="weight"]', n => n.value), '190', 'Undo preserves the logged weight');
-        if (width === 390) await page.screenshot({ path: path.join(root, 'verification/b827-after-log-phone.png') });
+        if (width === 390) await page.screenshot({ path: path.join(root, 'verification/b829-after-log-phone.png') });
         await page.click('.wpb-workout-footer button[aria-label="Next exercise"]');
         await page.waitForSelector('[data-testid="set-1-0"]');
         assert.match(await page.$eval('.wpb-workout-footer-primary', n => n.innerText), /Finish workout/);
@@ -178,5 +192,28 @@ try {
         assert.equal(await page.$eval(repsField, input => input.value), '6');
         console.log(`PASS restored compact rows, tap-to-select, Focus entry, LAST/TARGET, RIR, navigation during rest, and undo at ${width}px.`);
     }
+    await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+    await page.goto('http://127.0.0.1:8784/index.html', { waitUntil: 'networkidle0' });
+    await page.waitForSelector('.wpb-live-dock button[aria-label="Resume workout"]');
+    await page.click('.wpb-live-dock button[aria-label="Resume workout"]');
+    await page.waitForSelector('[data-testid="set-0-3"]');
+    await page.waitForFunction(() => !document.body.innerText.includes('Resumed your in-progress workout'));
+    for (let i = 0; i < 4; i++) await page.click(`[data-testid="set-0-${i}"] button[aria-label="Mark set done"]`);
+    const loggedRows = await page.$$eval('[data-testid^="set-0-"][data-done="1"]', ns => ns.map(n => ({
+        number: n.querySelector('.wpb-set-controls>span').textContent,
+        values: [...n.querySelectorAll('input')].map(i => [i.value, i.readOnly]),
+        undo: !!n.querySelector('button[aria-label="Mark set not done"]'),
+        effort: !!n.querySelector('.wpb-completed-effort')
+    })));
+    assert.deepEqual(loggedRows.map(r => r.number), ['1', '2', '3', '4']);
+    assert.ok(loggedRows.every(r => JSON.stringify(r.values) === JSON.stringify([['190', true], ['5', true]]) && r.undo && r.effort));
+    assert.ok(await visibleFooter(), 'all sets complete still retains rest and navigation');
+    await settle();
+    await page.screenshot({ path: path.join(root, 'verification/b829-all-completed-phone.png') });
+    await page.click('[data-testid="set-0-2"] button[aria-label="Mark set not done"]');
+    assert.equal(await page.$eval('[data-testid="set-0-2"] input[aria-label="weight"]', n => n.readOnly), false);
+    assert.equal(await page.$eval('[data-testid="set-0-2"] input[aria-label="weight"]', n => n.value), '190');
+    assert.equal(await page.$eval('[data-testid="set-0-2"]', n => n.getAttribute('data-active')), '1');
+    console.log('PASS screenshot regression: all four completed rows keep their set number, load/reps, effort and Undo; reopening restores editing.');
     assert.deepEqual(errors, []);
 } finally { if (browser) await browser.close(); await new Promise(resolve => server.close(resolve)); }

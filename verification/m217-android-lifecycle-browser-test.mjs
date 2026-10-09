@@ -74,7 +74,7 @@ const openWorkout = async page => {
 try {
     browser = await launch(); let page = await browser.newPage(); await configure(page);
     await page.goto('http://127.0.0.1:8772/', { waitUntil: 'networkidle0' }); await openWorkout(page);
-    assert.equal(await page.$$eval('[data-testid="set-0-0"] input', nodes => nodes.length), 0, 'restored completed set retains its collapsed presentation');
+    assert.equal(await page.$$eval('[data-testid="set-0-0"] input', ns=>ns.every(n=>n.readOnly) && ns.length===2),true,'completed logged values remain visible and locked');
     const pendingWeight = await page.waitForSelector('[data-testid="set-0-1"] input[aria-label="weight"]');
     await pendingWeight.click(); await page.keyboard.down('Control'); await page.keyboard.press('KeyA'); await page.keyboard.up('Control'); await page.keyboard.press('Backspace'); await page.keyboard.type('155'); await page.keyboard.press('Enter');
     assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('aria-label')), 'reps', 'numeric Next advances load to reps');

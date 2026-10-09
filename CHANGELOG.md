@@ -1,3 +1,9 @@
+# Build 829 candidate · muted completed rows · Engine 0.65.6
+
+- Completed sets keep their number, logged weight and reps visible.
+- Colors stay muted, with effort editing and right-side Undo available.
+- The original workout layout and Target/Last toggle remain in place.
+
 # Build 827 · current-set focus · Engine 0.65.6
 
 - Smaller complete buttons and narrower weight fields leave more room for the four steppers.

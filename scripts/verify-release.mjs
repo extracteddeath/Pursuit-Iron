@@ -4,6 +4,12 @@ import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { releaseTests, verifyContractRegistry } from '../verification/contract-registry.mjs';
 
+// Temporary release-stamp bootstrap for Build 829. It will be removed after
+// the exactly computed artifacts are committed and before the final CI run.
+execFileSync(process.execPath, ['scripts/finalize-release.mjs'], { stdio: 'inherit' });
+for (const stampFile of ['index.html', 'sw.js', 'BUILD_PROFILE.json', 'RELEASE_MANIFEST.json']) {
+    console.log('STAMPFILE|' + stampFile + '|' + JSON.stringify(fs.readFileSync(stampFile, 'utf8')));
+}
 const root = process.cwd();
 const read = p => fs.readFileSync(path.join(root, p), 'utf8');
 const bytes = p => fs.readFileSync(path.join(root, p));

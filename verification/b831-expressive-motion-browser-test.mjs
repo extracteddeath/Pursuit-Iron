@@ -310,7 +310,7 @@ try {
         await page.waitForFunction(() => !document.querySelector('.wpb-context-menu'));
         assert.ok(await page.$eval('button[aria-haspopup="menu"]', el =>
             document.activeElement === el), 'Escape dismisses menu and restores its opener focus');
-        assert.equal(await page.$eval('.hp-open', n => n.length > 0), true,
+        assert.equal(await page.$eval('.hp-open', el => el.isConnected), true,
             'menu dismiss preserves the program card and its original action');
         await page.click('.hp-open');
         await page.waitForSelector('.wpb-program');

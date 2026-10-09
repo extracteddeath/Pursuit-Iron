@@ -4,6 +4,9 @@ import http from 'node:http';
 import path from 'node:path';
 import puppeteer from 'puppeteer-core';
 
+// The build 825 reserved-height layout was withdrawn. Keep its functional
+// regressions, but exercise the restored build 824 rows without enforcing gaps.
+
 const root = path.resolve(new URL('../', import.meta.url).pathname);
 const program = { id: 'b825-logging', custom: true, weeks: 6,
     config: { unit: 'lb', goal: 'both', experience: 'intermediate', progression: 'double', deload: false },
@@ -44,13 +47,17 @@ try {
         const rect = n => { const r = n.getBoundingClientRect(); return { x: r.x, y: r.y, width: r.width, height: r.height }; };
         const scroller = document.querySelector('.wpb-workout-scroll');
         return { scrollTop: scroller.scrollTop, rows: Array.from(document.querySelectorAll('[data-testid^="set-0-"]')).map(row => ({
-            box: rect(row), weight: rect(row.querySelector('input[aria-label="weight"]')), reps: rect(row.querySelector('input[aria-label="reps"]')), check: rect(row.querySelector('.wpb-set-actions>button'))
+            box: rect(row), controls: rect(row.querySelector('.wpb-set-controls')), weight: rect(row.querySelector('input[aria-label="weight"]')), reps: rect(row.querySelector('input[aria-label="reps"]')), check: rect(row.querySelector('.wpb-set-actions>button'))
         })), next: rect(document.querySelector('.wpb-workout-footer button[aria-label="Next exercise"]')) };
     });
-    const stable = (before, after, label, vertical = true) => {
-        for (let i = 0; i < before.rows.length; i++) for (const part of ['box', 'weight', 'reps', 'check']) {
-            for (const key of vertical ? ['x', 'y', 'width', 'height'] : ['x', 'width', 'height'])
-                assert.ok(Math.abs(before.rows[i][part][key] - after.rows[i][part][key]) < 1, `${label}: set ${i + 1} ${part}.${key} shifted`);
+    const usableRows = async label => {
+        const layout = await geometry();
+        for (const [i, row] of layout.rows.entries()) {
+            assert.ok(row.weight.width >= 20 && row.reps.width >= 20, `${label}: set ${i + 1} has usable fields`);
+            assert.ok(row.weight.x + row.weight.width <= row.reps.x, `${label}: fields do not overlap`);
+            // The existing 44px hit target extends 1px into the adjacent track.
+            assert.ok(row.reps.x + row.reps.width <= row.check.x + 1, `${label}: check stays to the right`);
+            assert.ok(row.weight.x >= 0 && row.check.x + row.check.width <= await page.evaluate(() => innerWidth) + 1, `${label}: controls fit the phone`);
         }
     };
     const visibleFooter = () => page.$eval('.wpb-workout-footer', footer => {
@@ -64,20 +71,19 @@ try {
         await page.click('.wpb-live-dock button[aria-label="Resume workout"]');
         await page.waitForSelector('[data-testid="set-0-3"]');
         await page.waitForFunction(() => !document.body.innerText.includes('Resumed your in-progress workout'));
-        assert.equal(await page.$eval('.wpb-workout-suggestion', n => n.open), false, 'long advice starts collapsed');
-        await page.click('.wpb-workout-suggestion summary');
-        assert.match(await page.$eval('.wpb-workout-suggestion', n => n.innerText), /rep floor|rep-floor|below|range/);
-        await page.click('.wpb-workout-suggestion summary');
         await settle();
         const initial = await geometry();
+        assert.ok(initial.rows.slice(1).every(row => row.box.height - row.controls.height <= 8), 'pending rows contain only their controls and normal padding');
+        assert.equal(await page.$$eval('.wpb-set-detail--work', nodes => nodes.length), 0, 'reserved-height detail wrappers are removed');
+        await usableRows(`TARGET at ${width}px`);
         await page.click('button[aria-label="Show previous workout values"]'); await settle();
-        const last = await geometry();
-        stable(initial, last, `TARGET to LAST at ${width}px`);
+        await usableRows(`LAST at ${width}px`);
         assert.match(await page.$eval('[data-testid="set-0-0"]', n => n.innerText), /205×3/);
+        assert.match(await page.$eval('[data-testid="set-0-0"] button[aria-label="Use last time\'s 205 by 3"]', n => n.innerText), /Last time\s+205×3/);
+        assert.match(await page.$eval('[data-testid="set-0-3"]', n => n.innerText), /new/);
         await page.click('button[aria-label="Show prescribed targets"]'); await settle();
-        stable(last, await geometry(), `LAST to TARGET at ${width}px`);
+        await usableRows(`back to TARGET at ${width}px`);
         assert.equal(await page.$eval('[data-testid="set-0-0"] input[aria-label="weight"]', n => n.value), '190', 'reference toggles cannot rewrite typed values');
-        assert.ok(await page.$$eval('.wpb-set-reference-value', nodes => nodes.every(n => n.scrollWidth <= n.clientWidth + 1)), 'target summaries fit the reference track');
         const weightField = '[data-testid="set-0-0"] input[aria-label="weight"]';
         const repsField = '[data-testid="set-0-0"] input[aria-label="reps"]';
         const selected = selector => page.$eval(selector, input => [input.selectionStart, input.selectionEnd]);
@@ -108,13 +114,13 @@ try {
         assert.ok(await page.$('.wpb-workout-footer button[aria-label="Next exercise"]'), 'rest must retain exercise navigation');
         assert.ok(await visibleFooter(), `timer and navigation fit at ${width}px`);
         const logged = await geometry();
-        stable(initial, logged, `log set at ${width}px`, false);
+        await usableRows(`logged at ${width}px`);
+        assert.equal(await page.$$eval('[data-effort-picker]', nodes => nodes.length), 1, 'one reps-left prompt opens after completing a set');
         if (width === 390) await page.screenshot({ path: path.join(root, 'verification/b825-effort-picker-phone.png') });
         assert.ok(Math.abs(initial.next.y - logged.next.y) < 1, 'Next exercise stays in its bottom slot');
         const picker = '[data-testid="set-0-0"] button[aria-label="3 reps left"]';
         await page.waitForSelector(picker); await page.click(picker); await settle();
-        const effort = await geometry();
-        stable(logged, effort, `log effort at ${width}px`);
+        await usableRows(`effort recorded at ${width}px`);
         const snapshot = await page.evaluate(() => JSON.parse(localStorage.getItem('wpb:live')));
         assert.equal(snapshot.data[0].sets[0].actualRIR, 3); assert.equal(snapshot.data[0].sets[0].weight, '190'); assert.equal(snapshot.data[0].sets[0].reps, '5');
         await page.tap(weightField); await page.keyboard.type('999');
@@ -144,7 +150,7 @@ try {
         await page.waitForSelector('[data-testid="set-0-0"]');
         assert.equal(await page.$eval(weightField, input => input.value), '195');
         assert.equal(await page.$eval(repsField, input => input.value), '6');
-        console.log(`PASS tap-to-select, Focus entry, stable logging, LAST/TARGET, RIR, navigation during rest, and undo at ${width}px.`);
+        console.log(`PASS restored compact rows, tap-to-select, Focus entry, LAST/TARGET, RIR, navigation during rest, and undo at ${width}px.`);
     }
     assert.deepEqual(errors, []);
 } finally { if (browser) await browser.close(); await new Promise(resolve => server.close(resolve)); }

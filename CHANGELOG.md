@@ -1,3 +1,9 @@
+# Unreleased · restore workout layout baseline
+
+- Restore build 824's workout rows, history shortcut, plate annotations and effort presentation; remove build 825's reserved detail space.
+- Retain the history and load-correction fixes and keep exercise navigation available during rest.
+- Select the contents of editable numeric fields on tap or keyboard focus for quick replacement typing.
+
 # Build 825 · stable set logging · Engine 0.65.6
 
 - Keep Next exercise and Finish workout available in their bottom navigation slots during rest.

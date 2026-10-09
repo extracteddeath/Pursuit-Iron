@@ -200,11 +200,11 @@ try {
             const reps = row.querySelector('input[aria-label="reps"]');
             const number = row.querySelector('.wpb-set-controls>span')?.textContent;
             const controls = row.querySelector('.wpb-set-controls');
-            const box = row.getBoundingClientRect();
             return { number, weight: weight?.value, reps: reps?.value,
                 readonly: weight?.readOnly && reps?.readOnly,
                 opacity: controls ? Number(getComputedStyle(controls).opacity) : 1,
-                fit: box.left >= -1 && box.right <= innerWidth + 1,
+                fit: !!weight && !!reps && weight.getBoundingClientRect().left >= 0 &&
+                     reps.getBoundingClientRect().right <= innerWidth + 1,
                 hasOldControls: !!controls, notCollapsed: !row.hasAttribute('data-completed-bar'),
                 hasUndo: !!row.querySelector('button[aria-label="Mark set not done"]') };
         }));

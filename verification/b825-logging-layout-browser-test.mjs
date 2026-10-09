@@ -246,6 +246,9 @@ try {
         await page.waitForFunction(() => JSON.parse(localStorage.getItem('wpb:live')).data[0].sets[0].actualRIR === 0);
         assert.equal(await page.$$eval('[data-testid^="set-0-"] [data-effort-picker]', nodes => nodes.length), 1,
             'one newest unanswered effort editor remains available');
+        await page.click('[data-testid="set-0-3"] [data-effort-tag]'); await settle();
+        await page.click('[data-testid="set-0-3"] button[aria-label="2 reps left"]'); await settle();
+        assert.equal(await page.$$eval('[data-effort-picker]', nodes => nodes.length), 0, 'recording latest effort closes even after tapping its inline label');
         if (width === 390) await page.screenshot({ path: path.join(root, 'verification/b830-rir-under-reps-phone.png') });
         console.log(`PASS original faded row grid, legible logged fields, controls, typing, RIR and Undo at ${width}px.`);
     }

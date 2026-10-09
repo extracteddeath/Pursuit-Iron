@@ -60,7 +60,7 @@ try {
                     opacity: parseFloat(style.opacity), width: style.width };
             });
             assert.ok(navPill.height >= 27 && navPill.height <= 32 &&
-                (parseFloat(navPill.width) >= 30 || /^min\\(/.test(navPill.width)),
+                (parseFloat(navPill.width) >= 30 || navPill.width.startsWith('min(')),
                 'selected navigation has a compact expressive pill: ' + JSON.stringify(navPill));
             assert.ok(navPill.opacity > .9 && navPill.radius.includes('px'),
                 'selected navigation uses a visible rounded tonal selection');

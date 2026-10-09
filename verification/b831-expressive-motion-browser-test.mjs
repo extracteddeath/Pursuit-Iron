@@ -60,7 +60,7 @@ try {
                     opacity: parseFloat(style.opacity), width: parseFloat(style.width) };
             });
             assert.ok(navPill.height >= 27 && navPill.height <= 32 && navPill.width >= 30,
-                'selected navigation has a compact expressive pill');
+                'selected navigation has a compact expressive pill: ' + JSON.stringify(navPill));
             assert.ok(navPill.opacity > .9 && navPill.radius.includes('px'),
                 'selected navigation uses a visible rounded tonal selection');
             if (tab === 'home') {

@@ -530,3 +530,83 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     translate:none!important;
   }
 }
+
+/* PI M3 SHARED SELECTION — one indicator travels between actual semantic choices.
+   The React buttons remain real controls; the track is paint-only and never covers
+   touch targets, changes layout, modifies workout rows or overrides theme colors. */
+#root[data-pi-motion="expressive"] .wpb :is(
+  .wpb-progress .wpb-premium-tabs,
+  .wpb-settings .wpb-segmented)[data-pi-m3-track]{
+  position:relative!important;
+  isolation:isolate;
+}
+#root[data-pi-motion="expressive"] .wpb :is(
+  .wpb-progress .wpb-premium-tabs,
+  .wpb-settings .wpb-segmented)[data-pi-m3-track]::before{
+  content:"";
+  position:absolute;
+  z-index:0;
+  left:0;
+  top:0;
+  width:var(--pi-m3-track-width,0px);
+  height:var(--pi-m3-track-height,0px);
+  translate:var(--pi-m3-track-x,0px) var(--pi-m3-track-y,0px);
+  background:var(--pi-m3-track-fill,transparent);
+  border-radius:11px;
+  box-shadow:0 1px 3px color-mix(in srgb,currentColor 9%,transparent);
+  pointer-events:none;
+  will-change:translate,width;
+}
+#root[data-pi-motion="expressive"] .wpb :is(
+  .wpb-progress .wpb-premium-tabs,
+  .wpb-settings .wpb-segmented)[data-pi-m3-track]>button{
+  position:relative;
+  z-index:1;
+  min-width:0;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs[data-pi-m3-track]>button[aria-selected="true"]{
+  background:transparent!important;
+  background-image:none!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-settings .wpb-segmented[data-pi-m3-track]>button[aria-pressed="true"]{
+  background:transparent!important;
+  background-image:none!important;
+  box-shadow:none!important;
+}
+/* M3 text-field and card affordances. No repaint of the compact set log. */
+#root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-jump-control:focus-within{
+  border-color:color-mix(in srgb,currentColor 36%,transparent)!important;
+  box-shadow:0 0 0 2px color-mix(in srgb,currentColor 10%,transparent);
+}
+#root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-jump-control select:focus-visible{
+  outline-offset:-2px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-action-tile,
+#root[data-pi-motion="expressive"] .wpb-program .wpb-day-card,
+#root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-card>button{
+  transition:border-color 150ms cubic-bezier(.2,.8,.25,1),
+             box-shadow 150ms cubic-bezier(.2,.8,.25,1),
+             background-color 150ms cubic-bezier(.2,.8,.25,1)!important;
+}
+@media(hover:hover) and (pointer:fine){
+  #root[data-pi-motion="expressive"] .wpb-home .wpb-action-tile:hover,
+  #root[data-pi-motion="expressive"] .wpb-program .wpb-day-card:hover{
+    border-color:color-mix(in srgb,currentColor 24%,transparent)!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-card>button:hover:not(:disabled){
+    background-color:color-mix(in srgb,currentColor 5%,transparent)!important;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  #root[data-pi-motion="expressive"] .wpb :is(
+    .wpb-progress .wpb-premium-tabs,
+    .wpb-settings .wpb-segmented)[data-pi-m3-track]::before{
+    will-change:auto;
+  }
+  #root[data-pi-motion="expressive"] .wpb-home .wpb-action-tile,
+  #root[data-pi-motion="expressive"] .wpb-program .wpb-day-card,
+  #root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-card>button{
+    transition:none!important;
+  }
+}

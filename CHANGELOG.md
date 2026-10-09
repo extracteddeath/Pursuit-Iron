@@ -1,4 +1,4 @@
-# Unreleased · restore workout layout baseline
+# Build 826 · restore workout layout baseline · Engine 0.65.6
 
 - Restore build 824's workout rows, history shortcut, plate annotations and effort presentation; remove build 825's reserved detail space.
 - Retain the history and load-correction fixes and keep exercise navigation available during rest.

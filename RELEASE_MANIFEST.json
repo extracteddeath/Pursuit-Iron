@@ -2,7 +2,7 @@
   "schemaVersion": 3,
   "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": 825,
+  "build": 826,
   "engineVersion": "0.65.6",
   "candidateStatus": "verification_enforced_by_ci",
   "runtimeAggregate": "748e2b4e9590fb9e139754516144e3ef366a2b2f6fa6ec6524efaa344142cad5",
@@ -106,17 +106,17 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "d6ab3076b6af03ee449764c21945abbab04843a4233e156085bec5364dde9e0d",
-    "index.html": "050e4dc51eca8c174fde088bcbad2f6fa713c20b549032ae7ab975925ab96142",
-    "sw.js": "fca43a14c08df8d6f7b215f02c42670ca4ceb4f57962771eca1a4969768564b5",
-    "BUILD_PROFILE.json": "361df2ca0e57310c8b178597c9c6305ee9bbdf934b7c2620af56b28c1f4cab02",
-    "CHANGELOG.md": "42956480e867debf1b79902e495203e913085e5d5e2c35818e4f72d3a90ae94f",
+    "modules/App.js": "be99e2eaa922b00f38fb015e145336ec99c83fd1b77a2080c3bb4ad60114f1fb",
+    "index.html": "eef416b796e3580b9c045c4beaab066f7cac4bf4722dbc9377dd97279f4019e7",
+    "sw.js": "c63c07e3265ead1725c2bac7180ecbab49223fadc8eaee444501b80a809b6378",
+    "BUILD_PROFILE.json": "b2690f5cc2f7bb04956cf0b4b51eb421bc55b7eccbfd8780ef34e8c9057017b6",
+    "CHANGELOG.md": "490ea313da0e992d78e94b58aca0cb4249e8c2c3eadfbd1b36520de7b213b36e",
     "app.css": "27818b3319609aff1416b32d5afebe70598cc57dfa64f4467b8bfe5b1130e0dd",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Retains build 824 workout-history consistency and rep-miss correction; build 825 stabilizes logging UI and navigation during rest without changing engine behavior.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b825-rae47aa3a1d4538b3",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b826-r05be0512c79db420",
   "uiMilestone": "Pursuit Iron 4.0 Production Release · M234 Candidate Selection Hardening"
 }

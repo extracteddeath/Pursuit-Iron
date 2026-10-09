@@ -228,7 +228,26 @@ export function installAppMotion(root) {
     const down = e => { if (e.button === 0) press(button(e), e.pointerId, e.clientX, e.clientY); };
     const up = e => release(e.pointerId);
     const move = e => { const h = pressed.get(e.pointerId); if (h && Math.hypot(e.clientX - h.x, e.clientY - h.y) > 12) release(e.pointerId); };
-    const keydown = e => { if (!e.repeat && !e.isComposing && (e.key === ' ' || e.key === 'Enter')) press(button(e), 'keyboard'); };
+    const keydown = e => {
+        // Progress is a real tablist: arrow/Home/End keys move focus AND activate the
+        // selected panel. Settings' independent toggle buttons retain native semantics.
+        const tab = e.target.closest?.('.wpb-progress .wpb-premium-tabs [role="tab"]');
+        if (tab && !e.altKey && !e.ctrlKey && !e.metaKey &&
+            ['ArrowRight','ArrowLeft','Home','End'].includes(e.key)) {
+            const tabs = [...tab.parentElement.children].filter(el => el.matches('[role="tab"]') && !disabled(el));
+            if (tabs.length > 1) {
+                const at = tabs.indexOf(tab);
+                const next = e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1 :
+                    (at + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+                e.preventDefault();
+                tabs[next].focus({ preventScroll: true });
+                tabs[next].click();
+            }
+            return;
+        }
+        if (!e.repeat && !e.isComposing && (e.key === ' ' || e.key === 'Enter'))
+            press(button(e), 'keyboard');
+    };
     const keyup = e => { if (e.key === ' ' || e.key === 'Enter') release('keyboard'); };
     function selection(group, initial = false) {
         const buttons = [...group.children].filter(el => el.matches('button'));

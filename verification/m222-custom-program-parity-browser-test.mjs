@@ -22,8 +22,8 @@ try {
     await page.setViewport({width:390,height:844,deviceScaleFactor:2,isMobile:true,hasTouch:true});
     await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
     const open=async query=>{await page.goto('http://127.0.0.1:8776/probe.html'+query,{waitUntil:'networkidle0'});await page.waitForSelector('[data-testid="set-0-1"]');const check=await page.$('.wpb-backdrop button[data-wpb-system-back]');if(check)await check.click();};
-    const values=()=>page.$$eval('input[aria-label="weight"]',ns=>ns.map(n=>n.value));
-    const reps=()=>page.$$eval('input[aria-label="reps"]',ns=>ns.map(n=>n.value));
+    const values=()=>page.$$eval('[data-testid^="set-0-"][data-done="0"] input[aria-label="weight"]',ns=>ns.map(n=>n.value));
+    const reps=()=>page.$$eval('[data-testid^="set-0-"][data-done="0"] input[aria-label="reps"]',ns=>ns.map(n=>n.value));
     await open('');
     assert.deepEqual(await values(),['25','25','25','25']);assert.deepEqual(await reps(),['20','11','10','11']);
     assert.match(await page.$eval('.wpb-workout',n=>n.innerText),/4 prior sets/);
@@ -37,7 +37,7 @@ try {
     const resumed=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:live')).data[0].sets);
     assert.deepEqual(resumed.map(s=>s.weight),['20','20','17.5','25']);assert.deepEqual(resumed.map(s=>s.reps),['20','20','20','11']);
     assert.equal(resumed[0].done,true,'completed set keeps its logged values');
-    assert.equal(await page.$$eval('[data-testid="set-0-0"] input',ns=>ns.length),0,'completed custom set retains its collapsed effort bar');
+    assert.deepEqual(await page.$eval('[data-testid="set-0-0"]',row=>[row.querySelector('input[aria-label="weight"]')?.value,row.querySelector('input[aria-label="reps"]')?.value,row.querySelector('input[aria-label="weight"]')?.readOnly]),['20','20',true],'completed custom set retains full faded read-only row');
     assert.ok(!(await page.$eval('.wpb-workout',n=>n.innerText)).includes('Unlink superset'));assert.equal(await page.$eval('.wpb-workout-tools',n=>n.innerText.includes('Superset')),false);
     // Typed/manual values survive state writes and a reload.
     const input=await page.$('[data-testid="set-0-3"] input[aria-label="reps"]');await input.click();await page.keyboard.down('Control');await page.keyboard.press('KeyA');await page.keyboard.up('Control');await page.keyboard.press('Backspace');await input.type('13');

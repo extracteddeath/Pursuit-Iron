@@ -92,13 +92,16 @@ try {
             el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, pointerId: 95, clientX: x, clientY: y }));
             const state = { ink: el.dataset.piInk, x: parseFloat(el.style.getPropertyValue('--pi-ink-x')),
                 y: parseFloat(el.style.getPropertyValue('--pi-ink-y')),
-                animation: getComputedStyle(el, '::after').animationName, childrenUnchanged: el.childElementCount === children };
+                animation: getComputedStyle(el, '::after').animationName,
+                rippleVisible: getComputedStyle(el, '::after').display !== 'none',
+                childrenUnchanged: el.childElementCount === children };
             document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 95 }));
             return state;
         });
         assert.equal(ink.ink, '1', 'the press state layer activates on root navigation');
         assert.ok(ink.x > 0 && ink.y > 0 && ink.childrenUnchanged, 'tap origin is tracked without DOM or layout additions');
-        assert.ok(ink.animation.includes('piInkBurst'), 'touch feedback is transient');
+        assert.ok(ink.animation.includes('piInkBurst') && ink.rippleVisible,
+            'touch feedback is painted and transient even on the selected navigation tab');
         await page.waitForFunction(() => !document.querySelector('[data-tab="settings"]')?.hasAttribute('data-pi-ink'));
         // Losing window focus cancels a held button instead of leaving a scaled control.
         await page.$eval('[data-tab="settings"]', el => {

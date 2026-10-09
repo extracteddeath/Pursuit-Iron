@@ -69,3 +69,24 @@ geometry remains available if the shared motion module is not installed.
 
 Verification adds layout assertions to the existing Build 831 integration browser test;
 existing phone/theme, typography, keyboard, logging, and engine gates remain mandatory.
+
+## Material 3 shared selection tracks
+
+Progress's four subsection tabs and Settings's two-to-four-option segmented controls
+use a single moving selected surface. The `modules/ui-motion.js` controller measures
+each selected real button's `offsetLeft`, `offsetTop`, `offsetWidth`, and
+`offsetHeight`, and springs the group's CSS variables to the new geometry; all text
+and hit testing remain attached to the original React buttons.
+
+- The surface fill is sampled from the active theme's already-selected control, never
+  hardcoded purple/blue. It follows the Settings color when a selection changes.
+- The pseudo-element sits behind the controls (`pointer-events:none`); no child,
+  accessible-name change, navigation event, DOM restructuring, or row height change occurs.
+- Resizes settle immediately to the updated responsive layout. Rapid second selections
+  interrupt the same spring rather than stacking timers or blocking interaction.
+- Reduced-motion preferences settle instantly. Unmounting disconnects the track observer.
+- The workout's dense set controls, completed-set fade, steppers, RIR, prior/target loads,
+  sheet gestures and progression code are excluded.
+
+The integration contract checks the indicator's exact responsive position, width, theme
+fill, absence of extra DOM children and native selected semantics at 320px and 430px.

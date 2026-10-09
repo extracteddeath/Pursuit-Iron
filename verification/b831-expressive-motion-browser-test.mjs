@@ -285,16 +285,31 @@ try {
             return menu && menu.getAnimations({ subtree: false }).every(a =>
                 a.playState === 'finished' || a.playState === 'idle');
         }, { timeout: 5000 });
+        await page.waitForFunction(() => {
+            const menu = document.querySelector('.wpb-context-menu');
+            const dock = document.querySelector('.wpb-live-dock');
+            if (!menu || !dock) return false;
+            return menu.getBoundingClientRect().bottom <= dock.getBoundingClientRect().top - 3;
+        }, { timeout: 5000 });
         const menuGeometry = await page.$eval('.wpb-context-menu', el => {
             const r = el.getBoundingClientRect();
             const item = el.querySelector('[role="menuitem"]');
-            return { left: r.left, right: r.right, radius: parseFloat(getComputedStyle(el).borderTopLeftRadius),
+            const dock = document.querySelector('.wpb-live-dock')?.getBoundingClientRect();
+            const bar = document.querySelector('.wpb-tabbar')?.getBoundingClientRect();
+            return { left: r.left, right: r.right, bottom: r.bottom,
+                dockTop: dock?.top, navTop: bar?.top,
+                offset: parseFloat(el.style.getPropertyValue('--pi-menu-shift-y')) || 0,
+                radius: parseFloat(getComputedStyle(el).borderTopLeftRadius),
                 minItem: item.getBoundingClientRect().height, items: el.querySelectorAll('[role="menuitem"]').length };
         });
         assert.ok(menuGeometry.radius >= 16 && menuGeometry.minItem >= 44 &&
             menuGeometry.left >= 0 && menuGeometry.right <= width + 1,
             'M3 contextual menus are rounded, scroll-safe and touch accessible: ' + JSON.stringify({ width, menuGeometry }));
         assert.ok(menuGeometry.items >= 2, 'contextual actions keep their original features');
+        assert.ok(menuGeometry.bottom < menuGeometry.dockTop &&
+            menuGeometry.bottom < menuGeometry.navTop,
+            'M3 program actions remain above the active workout dock and tab bar: ' +
+            JSON.stringify(menuGeometry));
         if (width === 430)
             await page.screenshot({ path: path.join(root, 'verification/b831-m3-program-menu-phone.png') });
         await page.focus('.wpb-context-menu [role="menuitem"]:first-child');

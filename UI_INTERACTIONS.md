@@ -78,8 +78,10 @@ each selected real button's `offsetLeft`, `offsetTop`, `offsetWidth`, and
 `offsetHeight`, and springs the group's CSS variables to the new geometry; all text
 and hit testing remain attached to the original React buttons.
 
-- The surface fill is sampled from the active theme's already-selected control, never
-  hardcoded purple/blue. It follows the Settings color when a selection changes.
+- The moving surface reproduces the active theme's original **computed**, contrast-safe
+  selected fill—not its raw accent. Lime, for example, can use a dark selected surface
+  behind light text even though the separate accent is bright. A theme change resamples
+  the original cascade before repainting the track; no hardcoded color is introduced.
 - The pseudo-element sits behind the controls (`pointer-events:none`); no child,
   accessible-name change, navigation event, DOM restructuring, or row height change occurs.
 - Resizes settle immediately to the updated responsive layout. Rapid second selections

@@ -135,6 +135,7 @@ export function installAppMotion(root) {
     root.dataset.piMotion = 'expressive';
     const pressed = new Map(), controls = new WeakMap(), choiceStates = new WeakMap(), referenceKeys = new WeakMap();
     const media = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)');
+    let menuOpener = null;
     // Material 3 selection tracks sit behind the actual React-owned buttons. Geometry is
     // measured, never guessed, so four-column and two-column selectors share one behavior.
     const selectionTracks = new WeakMap();
@@ -190,7 +191,7 @@ export function installAppMotion(root) {
     }
     // A brief touch-origin state layer on navigation and choices, not the dense workout set grid.
     // It never inserts a DOM child, changes a hit target, or consumes a click.
-    const inkTargets = '.wpb-tab, .wpb-segmented > button, .wpb-premium-tabs > button, [role="tablist"] > button, button.wpb-toggle';
+    const inkTargets = '.wpb-tab, .wpb-segmented > button, .wpb-premium-tabs > button, [role="tablist"] > button, button.wpb-toggle, .wpb-context-menu-item, .wpb-sheet-close';
     function ink(el, x, y) {
         if (reduced() || !el.matches(inkTargets)) return;
         const r = el.getBoundingClientRect();
@@ -240,6 +241,35 @@ export function installAppMotion(root) {
     const up = e => release(e.pointerId);
     const move = e => { const h = pressed.get(e.pointerId); if (h && Math.hypot(e.clientX - h.x, e.clientY - h.y) > 12) release(e.pointerId); };
     const keydown = e => {
+        // Contextual program actions are a real role=menu. Keep keyboard focus
+        // within its existing items for arrows/Home/End; Escape delegates to the
+        // original React dismissal layer and returns to the initiating control.
+        // No new menu elements, event handlers on items or backdrop gestures.
+        const menu = e.target.closest?.('.wpb-context-menu[role="menu"]');
+        if (menu && !e.altKey && !e.ctrlKey && !e.metaKey &&
+            !e.isComposing && !e.target.matches('input,textarea,select,[contenteditable]')) {
+            if (e.key === 'Escape') {
+                const dismiss = root.querySelector('.wpb-dismiss-layer');
+                if (dismiss) {
+                    e.preventDefault(); e.stopPropagation();
+                    dismiss.click();
+                    if (menuOpener?.isConnected) menuOpener.focus({ preventScroll: true });
+                    return;
+                }
+            }
+            if (['ArrowDown','ArrowUp','Home','End'].includes(e.key)) {
+                const items = [...menu.querySelectorAll('[role="menuitem"]')]
+                    .filter(el => !disabled(el));
+                if (items.length) {
+                    const at = items.indexOf(e.target.closest('[role="menuitem"]'));
+                    const next = e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1 :
+                        (at + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+                    e.preventDefault(); e.stopPropagation();
+                    items[next].focus({ preventScroll: true });
+                    return;
+                }
+            }
+        }
         // Progress is a real tablist: arrow/Home/End keys move focus AND activate the
         // selected panel. Settings' independent toggle buttons retain native semantics.
         const tab = e.target.closest?.('.wpb-progress .wpb-premium-tabs [role="tab"]');
@@ -295,6 +325,8 @@ export function installAppMotion(root) {
         });
     }
     const themeSelection = e => {
+        const opener = e.target.closest?.('button[aria-haspopup="menu"]');
+        if (opener) menuOpener = opener;
         if (e.target.closest?.('[data-theme-option]'))
             requestAnimationFrame(refreshTrackTheme);
     };
@@ -369,7 +401,8 @@ export function installAppMotion(root) {
     window.addEventListener('blur', settleAll);
     media?.addEventListener('change', preference);
     return () => {
-        observer.disconnect(); trackResize?.disconnect(); settleAll(); delete root.dataset.piMotion;
+        observer.disconnect(); trackResize?.disconnect(); menuOpener = null;
+        settleAll(); delete root.dataset.piMotion;
         root.removeEventListener('animationend', inkEnd);
         root.removeEventListener('pointerdown', down); document.removeEventListener('pointerup', up);
         document.removeEventListener('pointercancel', up); document.removeEventListener('pointermove', move);

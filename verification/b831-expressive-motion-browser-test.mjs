@@ -54,6 +54,31 @@ try {
             await page.waitForFunction(tab => document.querySelector(`[data-view-frame="${tab}"]`)?.style.getPropertyValue('--pi-surface-opacity') === '1', {}, tab);
             assert.equal(await page.$eval(`[data-tab="${tab}"]`, b => b.getAttribute('aria-current')), 'page');
             assert.ok(await page.$eval('.wpb', el => el.scrollWidth <= innerWidth + 1), `${tab} fits at ${width}px`);
+            const navPill = await page.$eval(`[data-tab="${tab}"]`, el => {
+                const style = getComputedStyle(el, '::before');
+                return { height: parseFloat(style.height), radius: style.borderRadius,
+                    opacity: parseFloat(style.opacity), width: parseFloat(style.width) };
+            });
+            assert.ok(navPill.height >= 27 && navPill.height <= 32 && navPill.width >= 30,
+                'selected navigation has a compact expressive pill');
+            assert.ok(navPill.opacity > .9 && navPill.radius.includes('px'),
+                'selected navigation uses a visible rounded tonal selection');
+            if (tab === 'home') {
+                assert.ok(await page.$eval('.wpb-home-hero', el =>
+                    parseFloat(getComputedStyle(el).borderTopLeftRadius) >= 18 &&
+                    parseFloat(getComputedStyle(el).marginBottom) <= 14),
+                    'home hero has a tighter spacious-card hierarchy');
+            }
+            if (tab === 'progress') {
+                assert.ok(await page.$eval('.wpb-progress .wpb-premium-tabs', el =>
+                    parseFloat(getComputedStyle(el).borderTopLeftRadius) >= 14),
+                    'progress uses a unified pill-tab surface');
+            }
+            if (tab === 'settings') {
+                assert.ok(await page.$eval('.wpb-settings-card', el =>
+                    parseFloat(getComputedStyle(el).borderTopLeftRadius) >= 15),
+                    'settings sections share the card geometry');
+            }
             if (width === 430) await page.screenshot({ path: path.join(root, `verification/b831-${tab}-phone.png`) });
         }
         await page.click('[data-tab="settings"]'); await page.waitForSelector('.wpb-settings');
@@ -121,6 +146,8 @@ try {
             await card.$eval('button[aria-expanded]', b => b.click());
             await page.waitForFunction(() => [...document.querySelectorAll('[data-pi-reveal]')].some(el => el.style.height === 'auto'));
         }
+        assert.ok(await page.$eval('.wpb-program .wpb-day-card', el =>
+            parseFloat(getComputedStyle(el).borderTopLeftRadius) >= 15), 'program day cards share the expressive radius');
         await page.click('.wpb-live-dock button[aria-label="Resume workout"]'); await page.waitForSelector('.wpb-workout');
         await page.waitForFunction(() => !document.body.innerText.includes('Resumed your in-progress workout'));
         const row = '[data-testid="set-0-0"]';

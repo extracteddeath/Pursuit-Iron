@@ -146,6 +146,17 @@ export function installAppMotion(root) {
                 positionTrack(group, [...group.children].filter(el => el.matches('button')), selected, true);
         }
     }) : null;
+    function selectedSurface(group, button) {
+        // The original theme uses contrast-tested selected fills that may NOT be
+        // its bright accent color (e.g. lime uses a dark surface with light text).
+        // Temporarily resolve the original CSS cascade before enabling the moving
+        // overlay; all attributes are restored synchronously before the next paint.
+        const tracked = group.hasAttribute('data-pi-m3-track');
+        if (tracked) delete group.dataset.piM3Track;
+        const fill = getComputedStyle(button).backgroundColor;
+        if (tracked) group.dataset.piM3Track = '1';
+        return fill;
+    }
     function positionTrack(group, buttons, selected, instant = false) {
         if (!group.matches(trackSelector) || selected < 0 || !buttons[selected]) return;
         const button = buttons[selected];
@@ -153,15 +164,15 @@ export function installAppMotion(root) {
         if (!state) {
             // Sample the real selected surface BEFORE overriding it with the moving track.
             // Settings derives its active fill from the saved theme; Progress uses its card tone.
-            const fill = button.style.backgroundColor || getComputedStyle(button).backgroundColor;
+            const fill = selectedSurface(group, button);
             state = { fill }; selectionTracks.set(group, state);
             group.style.setProperty('--pi-m3-track-fill', fill);
             group.dataset.piM3Track = '1';
             trackResize?.observe(group);
         }
-        if (button.style.backgroundColor && button.style.backgroundColor !== 'transparent' &&
-            button.style.backgroundColor !== state.fill) {
-            state.fill = button.style.backgroundColor;
+        const computedFill = selectedSurface(group, button);
+        if (computedFill && computedFill !== 'transparent' && computedFill !== state.fill) {
+            state.fill = computedFill;
             group.style.setProperty('--pi-m3-track-fill', state.fill);
         }
         const target = {
@@ -276,7 +287,7 @@ export function installAppMotion(root) {
         root.querySelectorAll(trackSelector).forEach(group => {
             const state = selectionTracks.get(group);
             const chosen = group.querySelector('button[aria-selected="true"],button[aria-pressed="true"]');
-            const fill = chosen?.style.backgroundColor;
+            const fill = chosen ? selectedSurface(group, chosen) : null;
             if (state && fill && fill !== 'transparent' && fill !== state.fill) {
                 state.fill = fill;
                 group.style.setProperty('--pi-m3-track-fill', fill);

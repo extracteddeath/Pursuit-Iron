@@ -128,3 +128,215 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 @media (prefers-reduced-motion:reduce),(forced-colors:active){
   #root[data-pi-motion="expressive"] .wpb button[data-pi-ink]::after{content:none;animation:none}
 }
+
+/* PI EXPRESSIVE LAYOUT — Material-inspired spatial and tonal hierarchy, not a new theme.
+   Every surface uses the user's existing theme colors. Dimensions of the logging grid,
+   steppers, RIR, load/reference fields and completed sets are intentionally untouched. */
+#root[data-pi-motion="expressive"] .wpb{
+  --pi-layout-radius:16px;
+  --pi-layout-radius-large:20px;
+  --pi-layout-border:color-mix(in srgb,currentColor 10%,transparent);
+  --pi-layout-wash:color-mix(in srgb,currentColor 3%,transparent);
+  --pi-layout-wash-strong:color-mix(in srgb,currentColor 6%,transparent);
+}
+#root[data-pi-motion="expressive"] .wpb-page-shell:not(.wpb-workout)>.wpb-page-header{
+  border-bottom-color:var(--pi-layout-border);
+}
+#root[data-pi-motion="expressive"] .wpb-page-shell:not(.wpb-workout)>.wpb-page-header :is(h1,.wpb-title,.wpb-progress-title){
+  letter-spacing:-.035em!important;
+  line-height:1.14;
+}
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-primary-action,.wpb-secondary-action,.wpb-danger-action){
+  border-radius:14px!important;
+  letter-spacing:-.012em;
+}
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-primary-action,.wpb-secondary-action,.wpb-danger-action):focus-visible{
+  outline-offset:3px;
+}
+/* Navigation: a quiet tonal pill sits under the icon. Labels stay visible without expanding the bar. */
+#root[data-pi-motion="expressive"] .wpb .wpb-tabbar{
+  padding:3px 6px calc(4px + env(safe-area-inset-bottom))!important;
+  background-image:linear-gradient(to bottom,var(--pi-layout-wash),transparent)!important;
+  box-shadow:0 -1px 0 var(--pi-layout-border)!important;
+  isolation:isolate;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab{
+  min-width:0!important;
+  min-height:52px!important;
+  border-radius:14px!important;
+  padding-inline:2px!important;
+  overflow:visible;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab::before{
+  top:4px!important;
+  left:50%!important;
+  transform:translateX(-50%)!important;
+  width:min(70%,54px)!important;
+  height:30px!important;
+  border-radius:100px!important;
+  background:color-mix(in srgb,currentColor 14%,transparent)!important;
+  opacity:0!important;
+  pointer-events:none;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab[aria-current="page"]{
+  background:transparent!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab[aria-current="page"]::before{
+  opacity:1!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab :is(svg,span){
+  position:relative;
+  z-index:1;
+}
+/* Home: stronger headline-to-action hierarchy, less ornamental empty space. */
+#root[data-pi-motion="expressive"] .wpb-home .wpb-home-header{
+  padding-top:8px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-home-tools{
+  border-radius:13px!important;
+  background-image:linear-gradient(var(--pi-layout-wash),var(--pi-layout-wash));
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero{
+  padding:15px!important;
+  margin-bottom:13px!important;
+  border-radius:var(--pi-layout-radius-large)!important;
+  background-image:linear-gradient(125deg,var(--pi-layout-wash-strong),transparent 70%)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home :is(.wpb-action-tile,.wpb-carousel-card){
+  border-radius:var(--pi-layout-radius)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-action-tile{
+  padding:12px!important;
+  gap:10px!important;
+  background-image:linear-gradient(var(--pi-layout-wash),var(--pi-layout-wash))!important;
+}
+/* Program: next day reads as the active destination without adding a large accent block. */
+#root[data-pi-motion="expressive"] .wpb-program .wpb-day-card{
+  position:relative;
+  border-radius:var(--pi-layout-radius)!important;
+  background-image:linear-gradient(var(--pi-layout-wash),var(--pi-layout-wash))!important;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-day-card[data-next="true"]{
+  background-image:linear-gradient(110deg,var(--pi-layout-wash-strong),transparent 78%)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-day-card[data-next="true"]::before{
+  content:"";
+  position:absolute;
+  top:10px;bottom:10px;left:0;
+  width:3px;
+  background:currentColor;
+  border-radius:0 4px 4px 0;
+  opacity:.27;
+  pointer-events:none;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-day-toggle{
+  min-height:68px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-day-index{
+  border-radius:11px!important;
+}
+/* Progress: legible statistics and tab selection; the existing graph owns the data. */
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs,
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-tabs{
+  border-radius:15px!important;
+  padding:3px!important;
+  gap:3px!important;
+  overflow:visible;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs>button,
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-tabs>button{
+  min-height:40px!important;
+  border-radius:12px!important;
+  border-bottom:0!important;
+  line-height:1.15;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs>button[aria-selected="true"],
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-tabs>button[aria-selected="true"]{
+  background-image:linear-gradient(var(--pi-layout-wash-strong),var(--pi-layout-wash-strong))!important;
+  box-shadow:0 1px 2px color-mix(in srgb,currentColor 10%,transparent)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress [data-progress-glance]{
+  gap:7px!important;
+  margin-bottom:11px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item{
+  min-width:0;
+  padding:11px 9px!important;
+  border-radius:var(--pi-layout-radius)!important;
+  background-image:linear-gradient(var(--pi-layout-wash),var(--pi-layout-wash))!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-label{
+  font-size:10px!important;
+  letter-spacing:.025em!important;
+  line-height:1.24;
+  overflow-wrap:normal;
+  text-transform:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session{
+  border-radius:var(--pi-layout-radius)!important;
+  border:1px solid var(--pi-layout-border);
+}
+/* Settings: section groups look like one intentional list, without adding row height. */
+#root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-jump{
+  padding-bottom:8px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-jump-control{
+  min-height:44px!important;
+  border-radius:13px!important;
+  background-image:linear-gradient(var(--pi-layout-wash),var(--pi-layout-wash));
+}
+#root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-card{
+  margin-bottom:13px!important;
+  border-radius:var(--pi-layout-radius)!important;
+  background-image:linear-gradient(var(--pi-layout-wash),var(--pi-layout-wash))!important;
+}
+#root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-card>button:not(:last-child){
+  border-bottom:1px solid var(--pi-layout-border)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-settings .wpb-segmented{
+  border-radius:13px!important;
+  gap:2px;
+}
+#root[data-pi-motion="expressive"] .wpb-settings .wpb-segmented>button{
+  border-radius:11px!important;
+}
+/* Workout: coherent header/tools/exercise navigation but zero changes to the set grid. */
+#root[data-pi-motion="expressive"] .wpb-workout .wpb-ex-nav-step{
+  border-radius:13px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-workout .wpb-workout-tools{
+  margin-top:7px!important;
+  margin-bottom:7px!important;
+  gap:4px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-workout .wpb-workout-tool{
+  border-radius:11px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-workout .wpb-coach-card{
+  border-radius:var(--pi-layout-radius)!important;
+}
+/* Sheets and dialogs share the same geometric family, but still use viewport-owned detents. */
+#root[data-pi-motion="expressive"] .wpb [data-sheet-drag]{
+  border-radius:22px 22px 0 0!important;
+  box-shadow:0 -14px 45px rgba(0,0,0,.16);
+}
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-pop,.wpb-dialog){
+  border-radius:var(--pi-layout-radius-large)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-profile .wpb-profile-head{
+  margin-bottom:11px!important;
+}
+@media(max-width:420px){
+  #root[data-pi-motion="expressive"] .wpb :is(.wpb-home,.wpb-settings,.wpb-progress)>.wpb-page-scroll{
+    padding-left:14px!important;padding-right:14px!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-label{font-size:10px!important}
+}
+@media(min-width:760px){
+  #root[data-pi-motion="expressive"] .wpb :is(.wpb-home,.wpb-settings,.wpb-progress)>.wpb-page-scroll{
+    width:100%;max-width:780px;margin-inline:auto;
+  }
+}
+@media (prefers-reduced-motion:reduce){
+  #root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab::before{transition:none!important}
+}

@@ -81,6 +81,50 @@ try {
                     parseFloat(getComputedStyle(el).borderTopLeftRadius) >= 15),
                     'settings sections share the card geometry');
             }
+            // Layout and typography: meaningful hierarchy without overflow at 320 or 430px.
+            if (tab === 'home') {
+                const homeType = await page.$eval('.wpb-home-header h1', el => {
+                    const title = getComputedStyle(el);
+                    const logo = el.closest('.wpb-home-header').querySelector('div[aria-hidden="true"]');
+                    return { size: parseFloat(title.fontSize), weight: Number(title.fontWeight),
+                        logoHeight: logo.getBoundingClientRect().height };
+                });
+                assert.ok(homeType.size >= 26 && homeType.size <= 31 && homeType.weight >= 700,
+                    'Home title follows the expressive type scale');
+                assert.ok(homeType.logoHeight >= 24, 'Home header spacing does not collapse its logo');
+            }
+            if (tab === 'progress') {
+                const progressType = await page.$eval('.wpb-progress', el => {
+                    const title = getComputedStyle(el.querySelector('.wpb-progress-title'));
+                    const metric = el.querySelector('.wpb-progress-glance-item > .mono');
+                    return { size: parseFloat(title.fontSize),
+                        metric: metric ? parseFloat(getComputedStyle(metric).fontSize) : null };
+                });
+                assert.ok(progressType.size >= 26 && progressType.metric >= 21,
+                    'Progress keeps dominant title and readable numerical summaries');
+            }
+            if (tab === 'settings') {
+                const settingsType = await page.$eval('.wpb-settings', el => {
+                    const title = getComputedStyle(el.querySelector('.wpb-settings-title'));
+                    const row = el.querySelector('.wpb-settings-row');
+                    return { title: parseFloat(title.fontSize),
+                        rowHeight: row?.getBoundingClientRect().height };
+                });
+                assert.ok(settingsType.title >= 12 && settingsType.title <= 15,
+                    'Settings section headings are legible and distinct');
+                assert.ok(settingsType.rowHeight == null || settingsType.rowHeight >= 44,
+                    'compact Settings rows retain adequate height');
+            }
+            if (tab === 'profile') {
+                const profileType = await page.$eval('.wpb-profile', el => {
+                    const title = getComputedStyle(el.querySelector('.wpb-profile-title'));
+                    const stat = el.querySelector('.wpb-profile-strength-cell');
+                    return { title: parseFloat(title.fontSize),
+                        radius: stat ? parseFloat(getComputedStyle(stat).borderTopLeftRadius) : null };
+                });
+                assert.ok(profileType.title >= 26 && profileType.radius >= 11,
+                    'Profile uses the shared title scale and consistent stat geometry');
+            }
             if (width === 430) await page.screenshot({ path: path.join(root, `verification/b831-${tab}-phone.png`) });
         }
         await page.click('[data-tab="settings"]'); await page.waitForSelector('.wpb-settings');
@@ -153,6 +197,10 @@ try {
         }
         assert.ok(await page.$eval('.wpb-program .wpb-day-card', el =>
             parseFloat(getComputedStyle(el).borderTopLeftRadius) >= 15), 'program day cards share the expressive radius');
+        assert.ok(await page.$eval('.wpb-program .wpb-day-title', el => {
+            const style = getComputedStyle(el);
+            return parseFloat(style.fontSize) >= 15 && parseFloat(style.lineHeight) >= 18;
+        }), 'Plan day titles are legible without expanding or rearranging the day cards');
         await page.click('.wpb-live-dock button[aria-label="Resume workout"]'); await page.waitForSelector('.wpb-workout');
         await page.waitForFunction(() => !document.body.innerText.includes('Resumed your in-progress workout'));
         const row = '[data-testid="set-0-0"]';

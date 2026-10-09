@@ -4,8 +4,8 @@ import http from 'node:http';
 import path from 'node:path';
 import puppeteer from 'puppeteer-core';
 
-// Keep the restored compact layout and verify the build 827 completed-set bars.
-// Pending sets retain editable controls; completed sets keep effort and undo only.
+// Preserve the build 827 compact layout without hiding logged loads or reps.
+// Completed sets retain readable evidence, effort editing, and Undo.
 
 const root = path.resolve(new URL('../', import.meta.url).pathname);
 const program = { id: 'b825-logging', custom: true, weeks: 6,
@@ -139,8 +139,9 @@ try {
         const quietBar = await page.$eval('[data-testid="set-0-0"]', n => ({ height: n.getBoundingClientRect().height, background: getComputedStyle(n).backgroundColor, text: n.innerText }));
         assert.ok(quietBar.height <= 50, 'completed row is only a compact reps-left bar');
         assert.equal(quietBar.background, 'rgba(0, 0, 0, 0)', 'completed bar has no bright background');
-        assert.match(quietBar.text, /Reps left/);
-        assert.doesNotMatch(quietBar.text, /190|Last time|TARGET/, 'completed bar contains no old load or reference controls');
+        assert.match(quietBar.text, /190\\s*lb\\s*×\\s*5/, 'logged weight and reps stay visible after completion');
+        assert.match(quietBar.text, /RIR\\s*3/, 'completed summary retains recorded effort');
+        assert.doesNotMatch(quietBar.text, /Last time|TARGET/, 'reference controls stay out of completed rows');
         // Completing another set retires the older picker, while its effort and Undo stay reachable.
         await page.click('[data-testid="set-0-1"] button[aria-label="Mark set done"]'); await settle();
         assert.equal(await page.$$eval('[data-testid="set-0-0"] [data-effort-picker]', nodes => nodes.length), 0);
@@ -176,7 +177,29 @@ try {
         await page.waitForSelector('[data-testid="set-0-0"]');
         assert.equal(await page.$eval(weightField, input => input.value), '195');
         assert.equal(await page.$eval(repsField, input => input.value), '6');
-        console.log(`PASS restored compact rows, tap-to-select, Focus entry, LAST/TARGET, RIR, navigation during rest, and undo at ${width}px.`);
+        // The screenshot regression: when every set is done, the workout must not
+        // collapse into four unlabeled 'Reps left' placeholders.
+        for (let si = 0; si < 4; si++) {
+            await page.click(`[data-testid="set-0-${si}"] button[aria-label="Mark set done"]`);
+            await settle();
+        }
+        const completed = await page.$eval('[data-testid^="set-0-"][data-done="1"]', rows => rows.map(row => {
+            const summary = row.querySelector('[data-completed-summary]');
+            const box = row.getBoundingClientRect();
+            return { text: summary?.textContent || '', number: row.querySelector('[data-completed-summary]')?.previousElementSibling?.textContent || '',
+                fit: box.left >= -1 && box.right <= innerWidth + 1, undo: !!row.querySelector('button[aria-label="Mark set not done"]') };
+        }));
+        assert.equal(completed.length, 4, 'all four completed Back Squat rows remain present');
+        completed.forEach((row, index) => {
+            assert.match(row.text, /\\b(?:190|195)\\s*lb\\s*×\\s*[56]\\b/, 'completed row retains the actual logged weight and reps');
+            assert.equal(row.number, String(index + 1), 'completed row identifies its set number');
+            assert.ok(row.fit, `completed set ${index + 1} fits at ${width}px`);
+            assert.ok(row.undo, 'Undo is reachable from every logged set');
+        });
+        assert.equal(await page.$eval('[data-testid^="set-0-"] [data-effort-picker]', nodes => nodes.length), 1,
+            'only the most recent unanswered effort picker is expanded');
+        if (width === 390) await page.screenshot({ path: path.join(root, 'verification/b828-all-done-readable-phone.png') });
+        console.log(`PASS readable all-done sets, compact rows, tap-to-select, Focus, LAST/TARGET, RIR, rest and undo at ${width}px.`);
     }
     assert.deepEqual(errors, []);
 } finally { if (browser) await browser.close(); await new Promise(resolve => server.close(resolve)); }

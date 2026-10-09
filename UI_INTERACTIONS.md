@@ -7,6 +7,12 @@ layouts, with no new UI library or online dependency.
 - Buttons compress and change corner shape on press, then settle with a spring. Keyboard and
   pointer activation share feedback. Scrolling, cancelled touches and disabled controls cannot
   leave a button pressed.
+- Navigation tabs, segmented choices and switches also receive a short, theme-colored state layer
+  centered on the finger (or the control for keyboard input). This is presentation-only, does
+  not insert children into React controls, and is intentionally excluded from workout set rows.
+  The animation is cancelled by reduced-motion preferences, and window blur releases a held press.
+- Keyboard focus rings inherit each theme's foreground rather than fixed white, so light themes
+  keep a visible focus indicator without adding persistent visual clutter for touch users.
 - Selection is immediate. Segmented settings, Progress tabs, onboarding choices and RIR use
   their existing semantic state. RIR neighbors respond within a fixed group width.
 - Root navigation uses a quiet transition; drill-down and exercise navigation retain direction.

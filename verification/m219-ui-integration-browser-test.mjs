@@ -77,12 +77,17 @@ try {
                 // must use the visible selected surface, not the transparent button.
                 const group = button.closest('[data-pi-m3-track]');
                 const surface = group ? group.style.getPropertyValue('--pi-m3-track-fill') : css.backgroundColor;
-                const expectedTheme = button.style.backgroundColor;
+                // The original theme can intentionally use a contrast-safe dark
+                // selection fill with a bright accent elsewhere. Check that the M3
+                // moving track reproduces that visible fill, not the inline accent.
+                if (group) delete group.dataset.piM3Track;
+                const originalSelectedFill = getComputedStyle(button).backgroundColor;
+                if (group) group.dataset.piM3Track = '1';
                 const background = luminance(surface);
                 const ratio = (Math.max(text, background) + .05) / (Math.min(text, background) + .05);
                 return { label: button.textContent.trim(), ratio,
-                    textColor: css.color, sourceFill: expectedTheme, surfaceFill: surface,
-                    fresh: !group || (Boolean(expectedTheme) && expectedTheme === surface) };
+                    textColor: css.color, originalSelectedFill, surfaceFill: surface,
+                    fresh: !group || originalSelectedFill === surface };
             });
         });
         assert.ok(contrast.length >= 4 && contrast.every(item => item.ratio >= 4.5 && item.fresh), `${theme}: selected settings remain legible: ${JSON.stringify(contrast)}`);

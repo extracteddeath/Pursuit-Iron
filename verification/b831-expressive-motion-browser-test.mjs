@@ -54,6 +54,10 @@ try {
             await page.waitForFunction(tab => document.querySelector(`[data-view-frame="${tab}"]`)?.style.getPropertyValue('--pi-surface-opacity') === '1', {}, tab);
             assert.equal(await page.$eval(`[data-tab="${tab}"]`, b => b.getAttribute('aria-current')), 'page');
             assert.ok(await page.$eval('.wpb', el => el.scrollWidth <= innerWidth + 1), `${tab} fits at ${width}px`);
+            // page.click produces a real touch ripple. Check idle icon styling only AFTER
+            // animationend clears the transient layer, not while the active ::after paints.
+            await page.waitForFunction(tab => !document.querySelector(`[data-tab="${tab}"]`)?.hasAttribute('data-pi-ink'),
+                { timeout: 5000 }, tab);
             const navPill = await page.$eval(`[data-tab="${tab}"]`, el => {
                 const style = getComputedStyle(el, '::before');
                 return { height: parseFloat(style.height), radius: style.borderRadius,

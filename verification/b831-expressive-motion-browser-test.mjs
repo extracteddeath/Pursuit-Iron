@@ -598,7 +598,7 @@ try {
         await page.waitForSelector('#root[data-pi-motion="expressive"] .wpb-home-create');
         await page.click('.wpb-home-create');
         await page.waitForSelector('.wpb-wizard .wpb-wizard-progress');
-        const optionShapes = await page.$$eval('.wpb-wizard .wpb-wizard-option', controls =>
+        const optionShapes = await page.$$eval('.wpb-wizard .wpb-wizard-option, .wpb-wizard .wpb-wizard-step>div>button[aria-pressed]', controls =>
             controls.map(el => ({radius:parseFloat(getComputedStyle(el).borderTopLeftRadius),
                 height:el.getBoundingClientRect().height})));
         assert.ok(optionShapes.length>=2 && optionShapes.every(el=>el.radius>=18&&el.height>=58),

@@ -86,6 +86,22 @@ try {
                 secondary:paint(document.querySelector('.wpb-home-create')),
                 hero:paint(document.querySelector('.wpb-home-hero')) };
         });
+        // Read real resting containers, not source hex colors. The 20-theme
+        // UI test already establishes light-theme selection contrast separately.
+        const tonalSurfaceReport = async (names) => page.evaluate(names => {
+            const output = {};
+            for (const [key,selector] of Object.entries(names)) {
+                const el = document.querySelector(selector);
+                if (!el) { output[key]=null; continue; }
+                const c = getComputedStyle(el);
+                output[key] = {
+                    bg:c.backgroundColor, image:c.backgroundImage,
+                    width:el.getBoundingClientRect().width,
+                    height:el.getBoundingClientRect().height
+                };
+            }
+            return { dark:getComputedStyle(document.documentElement).colorScheme.includes('dark'), output };
+        }, names);
         // Root tabs keep their navigation semantics, respond immediately, and settle without layout growth.
         for (const tab of ['plan','progress','profile','settings','home']) {
             await page.click(`[data-tab="${tab}"]`);
@@ -158,6 +174,47 @@ try {
                     return item.getBoundingClientRect().height >= 44 &&
                         parseFloat(bar.style.getPropertyValue('--pi-m3-track-corner')) >= 17.9;
                 }), 'R9 selection flex retains real navigation tap geometry');
+            }
+            if (tab === 'plan') {
+                const tonal = await tonalSurfaceReport({
+                    featured:'.wpb-plan-glance-tile[data-featured="true"]',
+                    secondary:'.wpb-plan-glance-tile:not([data-featured="true"])',
+                    next:'.wpb-plan-up-next'
+                });
+                const {featured,secondary,next}=tonal.output;
+                assert.ok(featured && secondary && next,
+                    'R11 Plan retains measured real summary and next-day cards: '+JSON.stringify(tonal));
+                if (tonal.dark) assert.ok(featured.bg !== secondary.bg &&
+                    featured.image === 'none' && secondary.image === 'none' &&
+                    next.image === 'none' && featured.width > 0 &&
+                    next.height >= 70,
+                    'R11 Plan features a single flat tonal week without extra space: '+JSON.stringify(tonal));
+            }
+            if (tab === 'progress') {
+                const tonal = await tonalSurfaceReport({
+                    featured:'.wpb-progress-glance-item:first-child',
+                    secondary:'.wpb-progress-glance-item:nth-child(2)',
+                    history:'.wpb-progress .wpb-history-session'
+                });
+                const {featured,secondary}=tonal.output;
+                assert.ok(featured && secondary,'R11 Progress retains its metric tiles: '+JSON.stringify(tonal));
+                if (tonal.dark) assert.ok(featured.bg !== secondary.bg &&
+                    featured.image === 'none' && secondary.image === 'none',
+                    'R11 Progress maintains a quieter secondary fact: '+JSON.stringify(tonal));
+            }
+            if (tab === 'profile') {
+                const tonal = await tonalSurfaceReport({
+                    featured:'.wpb-profile-strength-cell:first-child',
+                    secondary:'.wpb-profile-strength-cell:nth-child(2)',
+                    identity:'.wpb-profile-identity'
+                });
+                const {featured,secondary,identity}=tonal.output;
+                assert.ok(featured && secondary && identity,
+                    'R11 Profile retains strength records and identity: '+JSON.stringify(tonal));
+                if (tonal.dark) assert.ok(featured.bg !== secondary.bg &&
+                    featured.image === 'none' && secondary.image === 'none' &&
+                    identity.image === 'none',
+                    'R11 Profile emphasis is tonal, not a gradient: '+JSON.stringify(tonal));
             }
             if (tab === 'home') {
                 // In the active-workout fixture, the optional Create Program
@@ -920,6 +977,20 @@ try {
         }));
         assert.ok(rowShape.radius >= 19 && rowShape.image === 'none' &&
             rowShape.height >= 59, 'M3E list remains flat, responsive and tappable: ' + JSON.stringify(rowShape));
+        const libraryTone = await tonalSurfaceReport({
+            header:'.wpb-library-header',
+            search:'.wpb-library-search',
+            results:'.wpb-library-results>.wpb-library-row',
+            filters:'.wpb-library-flag-filter'
+        });
+        const {header,search,results,filters}=libraryTone.output;
+        assert.ok(header && search && results && filters,
+            'R11 Library retains all actual search/filter/list controls: '+JSON.stringify(libraryTone));
+        if (libraryTone.dark) assert.ok(search.bg !== results.bg &&
+            header.image === 'none' && search.image === 'none' &&
+            results.image === 'none' && filters.image === 'none' &&
+            results.height >= 59 && search.height >= 44,
+            'R11 Library search stays elevated over quiet flat results: '+JSON.stringify(libraryTone));
         await page.click('.wpb-library-row');
         await page.waitForSelector('[data-exercisedetail] .wpb-exercise-tabs[data-pi-m3-track]');
         const overlayPaint = await page.$eval('.wpb-exercise-detail', el=>({

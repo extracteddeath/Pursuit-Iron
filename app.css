@@ -1388,3 +1388,58 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     will-change:auto;
   }
 }
+
+/* PI M3 DISCLOSURE CHOREOGRAPHY — cross-screen layout and motion system.
+   React still owns the open state and all action callbacks. Movement is only
+   on card geometry and arriving content, never the workout logging rows. */
+#root[data-pi-motion="expressive"] .wpb :is(
+  .wpb-program .wpb-day-card,
+  .hp-card)[data-pi-disclosure]{
+  border-radius:var(--pi-disclosure-radius,16px)!important;
+  transition:border-color 180ms var(--pi-ease),
+             background-color 180ms var(--pi-ease),
+             box-shadow 180ms var(--pi-ease)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-program .wpb-day-card[data-pi-disclosure="open"]{
+  border-color:color-mix(in srgb,currentColor 21%,transparent)!important;
+  box-shadow:0 3px 14px color-mix(in srgb,currentColor 6%,transparent)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .hp-card[data-pi-disclosure="open"]{
+  border-color:color-mix(in srgb,currentColor 22%,transparent)!important;
+  box-shadow:0 4px 16px color-mix(in srgb,currentColor 6%,transparent)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-program .wpb-day-toggle:focus-visible{
+  outline:2px solid currentColor!important;
+  outline-offset:-3px!important;
+  border-radius:13px;
+}
+#root[data-pi-motion="expressive"] .wpb :is(
+  .wpb-program .wpb-expand,
+  .hp-card .hp-blocks,
+  .wpb-profile-achievement-board,
+  .wpb-progress-disclosure> :not(summary),
+  .wpb-advanced .wpb-advanced-body)[data-pi-expand-enter]{
+  animation:piDisclosureContent 260ms cubic-bezier(.2,.83,.22,1) both!important;
+}
+@keyframes piDisclosureContent{
+  0%{opacity:.7;translate:0 -6px}
+  55%{opacity:1;translate:0 1px}
+  100%{opacity:1;translate:0 0}
+}
+#root[data-pi-motion="expressive"] .wpb :is(
+  .wpb-progress-disclosure,
+  .wpb-settings details.wpb-advanced)[data-pi-disclosure="open"]{
+  border-color:color-mix(in srgb,currentColor 17%,transparent)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-profile-achievement-toggle[aria-expanded="true"]{
+  color:inherit;
+}
+@media(prefers-reduced-motion:reduce),(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb [data-pi-expand-enter]{
+    animation:none!important;translate:none!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb :is(
+    .wpb-program .wpb-day-card,.hp-card)[data-pi-disclosure]{
+    transition:none!important;
+  }
+}

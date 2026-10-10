@@ -64,8 +64,8 @@ try {
         const homePalette = async () => page.evaluate(() => {
             const luminance = color => {
                 if (!color) return NaN;
-                const srgb = color.match(/^color\\(srgb\\s+([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)/);
-                const rgb = color.match(/^rgba?\\(\\s*([\\d.]+)[, ]+([\\d.]+)[, ]+([\\d.]+)/);
+                const srgb = color.match(/^color\(srgb\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)/);
+                const rgb = color.match(/^rgba?\(\s*([\d.]+)[, ]+([\d.]+)[, ]+([\d.]+)/);
                 const numbers = srgb ? srgb.slice(1,4).map(Number) :
                     rgb ? rgb.slice(1,4).map(n => Number(n)/255) : null;
                 if (!numbers) return NaN;

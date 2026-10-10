@@ -420,8 +420,14 @@ try {
         // Continue into real program-authoring and exercise-library screens,
         // verifying the new compact M3 hierarchy with the saved program intact.
         await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'no-preference' }]);
-        // Reset the view cleanly rather than assuming browser Back always
-        // lands on a root tab; the workout can have nested app-owned history.
+        // The completed workout interaction test intentionally leaves a live
+        // session snapshot. Start the secondary-screen check from a normal
+        // seeded Home state; an active session legitimately reopens Workout.
+        // This is test fixture cleanup, after assertions of live persistence.
+        await page.evaluate(store => {
+            localStorage.removeItem('wpb:live');
+            localStorage.setItem('wpb:v1', JSON.stringify(store));
+        }, initial);
         await page.goto('http://127.0.0.1:8794/', { waitUntil: 'networkidle0' });
         await page.waitForSelector('#root[data-pi-motion="expressive"] .wpb-home-create');
         await page.click('.wpb-home-create');

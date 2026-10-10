@@ -823,6 +823,18 @@ try {
                 first: items[0] ? parseFloat(getComputedStyle(items[0]).borderTopLeftRadius) : 0,
                 last: items.at(-1) ? parseFloat(getComputedStyle(items.at(-1)).borderBottomRightRadius) : 0 };
         });
+        const menuSurfaceR21 = await page.$eval('.wpb-context-menu', menu => {
+            const style=getComputedStyle(menu);
+            const ctx=document.createElement('canvas').getContext('2d',{willReadFrequently:true});
+            ctx.fillStyle=style.backgroundColor;ctx.fillRect(0,0,1,1);
+            return {alpha:ctx.getImageData(0,0,1,1).data[3],
+                image:style.backgroundImage,
+                width:menu.getBoundingClientRect().width,
+                overflow:menu.scrollWidth>menu.clientWidth+1};
+        });
+        assert.ok(menuSurfaceR21.alpha===255 && menuSurfaceR21.image==='none' &&
+            menuSurfaceR21.width<=width-16 && !menuSurfaceR21.overflow,
+            'R21 context menu uses a solid, viewport-safe theme surface: '+JSON.stringify(menuSurfaceR21));
         assert.ok(menuGroupShape.count >= 2 && menuGroupShape.first >= 20 &&
             menuGroupShape.last >= 20, 'connected expressive menu outer shapes: ' + JSON.stringify(menuGroupShape));
         assert.ok(menuGeometry.bottom < menuGeometry.dockTop &&
@@ -1384,6 +1396,58 @@ try {
         await page.waitForSelector('[data-exercisedetail]',{hidden:true});
         assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),initial.saved,
             'exercise detail view and charts do not change saved training programs');
+        // R21: temporarily introduce a second *valid* program to exercise
+        // the real Home switcher. Never tap Switch; check selection/disabled
+        // semantics, close without altering ownership, then restore the
+        // fixture before closing the browser context.
+        await page.evaluate(seed => {
+            const copy={...seed.saved[0],id:'r21-secondary',name:
+                'Secondary customized strength and hypertrophy development program'};
+            localStorage.setItem('wpb:v1',JSON.stringify({
+                ...seed,saved:[seed.saved[0],copy]
+            }));
+            localStorage.removeItem('wpb:live');
+        },initial);
+        await page.reload({waitUntil:'networkidle0'});
+        await page.waitForSelector('button[aria-label="Switch program"]');
+        await page.click('button[aria-label="Switch program"]');
+        await page.waitForSelector('.wpb-switcher-sheet .wpb-switcher-row');
+        const switcherR21 = await page.$eval('.wpb-switcher-sheet', sheet => {
+            const rows=[...sheet.querySelectorAll('.wpb-switcher-row')];
+            const active=rows.find(row=>row.dataset.state==='active');
+            const available=rows.find(row=>row.dataset.state==='available');
+            const longTitle=available?.querySelector(':scope > div:first-child > div:first-child > span:first-child');
+            const done=sheet.querySelector(':scope > div:first-child > button');
+            const ctx=document.createElement('canvas').getContext('2d',{willReadFrequently:true});
+            const paint=getComputedStyle(sheet);ctx.fillStyle=paint.backgroundColor;
+            ctx.fillRect(0,0,1,1);
+            return {alpha:ctx.getImageData(0,0,1,1).data[3],
+                image:paint.backgroundImage,
+                doneHeight:done?.getBoundingClientRect().height||0,
+                rows:rows.length,activeDisabled:active?.disabled,
+                availableDisabled:available?.disabled,
+                minRowHeight:Math.min(...rows.map(x=>x.getBoundingClientRect().height)),
+                titleWhiteSpace:longTitle?getComputedStyle(longTitle).whiteSpace:null,
+                titleTextOverflow:longTitle?getComputedStyle(longTitle).textOverflow:null,
+                clipped:sheet.scrollWidth>sheet.clientWidth+1};
+        });
+        assert.ok(switcherR21.alpha===255 && switcherR21.image==='none' &&
+            switcherR21.doneHeight>=44 && switcherR21.rows===2 &&
+            switcherR21.activeDisabled===true && switcherR21.availableDisabled===false &&
+            switcherR21.minRowHeight>=70 && switcherR21.titleWhiteSpace==='normal' &&
+            switcherR21.titleTextOverflow!=='ellipsis' && !switcherR21.clipped,
+            'R21 switcher retains working program-state semantics with readable names: '+JSON.stringify(switcherR21));
+        if (width===430) await page.screenshot({path:path.join(root,'verification/b831-m3-program-switcher-phone.png')});
+        await page.click('.wpb-switcher-sheet>div:first-child>button');
+        await page.waitForSelector('.wpb-switcher-sheet',{hidden:true});
+        assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('wpb:v1')).saved.length),2,
+            'closing the switcher must not change saved programs');
+        await page.evaluate(seed => {
+            localStorage.setItem('wpb:v1',JSON.stringify(seed));
+        },initial);
+        await page.reload({waitUntil:'networkidle0'});
+        assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),initial.saved,
+            'R21 switcher test restores the source program unchanged');
         assert.deepEqual(errors, []);
         await page.close();
         await context.close();

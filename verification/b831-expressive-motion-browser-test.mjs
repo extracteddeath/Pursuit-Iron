@@ -919,7 +919,7 @@ try {
                 width:button.getBoundingClientRect().width}));
         assert.ok(triggerR22.height>=44 && triggerR22.width>=44,
             'R22 program exercise options opener is accessible: '+JSON.stringify(triggerR22));
-        const openerStateR22=await page.$eval('.wpb-program button[aria-label^="More options for "]', buttons =>
+        const openerStateR22=await page.$$eval('.wpb-program button[aria-label^="More options for "]', buttons =>
             buttons.map(b=>{
                 const r=b.getBoundingClientRect(),card=b.closest('.wpb-day-card');
                 return {label:b.getAttribute('aria-label'),x:r.x,y:r.y,

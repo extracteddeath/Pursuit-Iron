@@ -1443,3 +1443,43 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     transition:none!important;
   }
 }
+
+/* PI M3 FEEDBACK SYSTEM — clear confirmations and Undo without ever
+   stealing space from the active set grid. The existing React toast owns
+   its message/action, focus, stacking, rest dock clearance and lifetime. */
+#root[data-pi-motion="expressive"] .wpb .wpb-toast{
+  border-radius:16px!important;
+  border:1px solid color-mix(in srgb,currentColor 13%,transparent)!important;
+  background-image:linear-gradient(135deg,
+    color-mix(in srgb,currentColor 4%,transparent),transparent 75%);
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-toast>button{
+  min-height:40px;
+  min-width:36px;
+  border-radius:10px!important;
+  outline-offset:2px;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-toast>button:focus-visible{
+  outline:2px solid currentColor!important;
+}
+/* One product-specific hero moment: a finished session receives a quick
+   numerical summary reveal. No count-up, no altering any logged value,
+   and no animation on every single completed set. */
+#root[data-pi-motion="expressive"] .wpb .wpb-finish-sheet .wpb-finish-metrics>div{
+  animation:piFinishMetricIn 260ms cubic-bezier(.2,.85,.22,1) both;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-finish-sheet .wpb-finish-metrics>div:nth-child(2){
+  animation-delay:38ms;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-finish-sheet .wpb-finish-metrics>div:nth-child(3){
+  animation-delay:76ms;
+}
+@keyframes piFinishMetricIn{
+  from{opacity:.72;translate:0 6px}
+  to{opacity:1;translate:0 0}
+}
+@media(prefers-reduced-motion:reduce),(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb .wpb-finish-sheet .wpb-finish-metrics>div{
+    animation:none!important;translate:none!important;
+  }
+}

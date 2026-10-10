@@ -974,6 +974,16 @@ try {
             'disclosure motion preserves the complete saved prescription');
         await page.click('.wpb-live-dock button[aria-label="Resume workout"]'); await page.waitForSelector('.wpb-workout');
         await page.waitForFunction(() => !document.body.innerText.includes('Resumed your in-progress workout'));
+        // R23: actual on-screen tool controls stay touch-safe; do not touch
+        // the compact weight/reps grid, navigation ownership or log state.
+        const liveToolsR23=await page.$eval('.wpb-workout-tools .wpb-workout-tool', controls =>
+            controls.filter(el => el.getClientRects().length).map(el => {
+                const s=getComputedStyle(el),r=el.getBoundingClientRect();
+                return {w:r.width,h:r.height,image:s.backgroundImage};
+            }));
+        assert.ok(liveToolsR23.length>0 && liveToolsR23.every(x=>
+            x.w>=44 && x.h>=44 && x.image==='none'),
+            'R23 live tool controls use stable 44px opaque tonal targets: '+JSON.stringify(liveToolsR23));
         const row = '[data-testid="set-0-0"]';
         await page.click(`${row} input[aria-label="weight"]`); await page.keyboard.type('195.5');
         const before = await page.$$eval(`${row} input`, els => els.map(el => el.value));
@@ -993,6 +1003,24 @@ try {
             const r = button.getBoundingClientRect(), hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
             return hit === button || button.contains(hit);
         }, {}, row);
+        // Rest can be collapsed or auto-dismissed based on the active session.
+        // When rendered, its action buttons and surface must remain readable.
+        const restR23=await page.evaluate(() => {
+            const card=document.querySelector('.wpb-workout .wpb-rest-card');
+            if(!card || !card.getClientRects().length) return null;
+            const s=getComputedStyle(card);
+            const controls=[...card.querySelectorAll('.wpb-rest-actions>button')]
+                .filter(el=>el.getClientRects().length)
+                .map(el=>({w:el.getBoundingClientRect().width,h:el.getBoundingClientRect().height}));
+            const ctx=document.createElement('canvas').getContext('2d',{willReadFrequently:true});
+            ctx.fillStyle=s.backgroundColor;ctx.fillRect(0,0,1,1);
+            return {alpha:ctx.getImageData(0,0,1,1).data[3],
+                image:s.backgroundImage,controls,
+                overflow:card.scrollWidth>card.clientWidth+1};
+        });
+        if(restR23) assert.ok(restR23.alpha===255 && restR23.image==='none' &&
+            !restR23.overflow && restR23.controls.every(x=>x.w>=44 && x.h>=44),
+            'R23 rest controls fit within a solid accessible container: '+JSON.stringify(restR23));
         const groupWidth = await page.$eval(`${row} .wpb-effort-scale`, el => el.offsetWidth);
         await page.click(`${row} button[aria-label="3 reps left"]`);
         await page.waitForFunction(() => JSON.parse(localStorage.getItem('wpb:live')).data[0].sets[0].actualRIR === 3);

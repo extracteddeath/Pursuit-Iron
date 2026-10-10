@@ -134,3 +134,19 @@ fills. The real buttons, existing actions and DOM geometry are untouched.
 Arrow navigation and Home/End keep focus with the selected tab. The phone test
 installs a transient fixture through the same observer, checks the indicator,
 and leaves the app's training state and compact workout logger unchanged.
+
+## M3 secondary screen composition
+
+The onboarding welcome, program builder, exercise library, and exercise swap list
+share the existing Pursuit Iron theme's compact hierarchy. Welcome copy and
+features have closer spacing and safe-area-aware actions. Wizard heading, step
+progress, selected options and footer adopt coherent geometry without adding
+questions, changing defaults, increasing card height or blocking fast taps.
+The exercise library keeps its dense scrolling results and filters, but uses a
+smooth measured selection surface for All/Recent/Goals/Banned, improved search
+focus and accessible compact chips. Swap alternatives retain their exact actions
+and ranking; only their surface shape/hover changes. The touch-origin ripple
+now covers these semantic options (not set logging). Reduced-motion disables
+transitions. Browser regression follows the *real* Create Program and Exercise
+library routes at 320/430px to check footer visibility, filter animation,
+search focus, width stability and unchanged saved prescriptions.

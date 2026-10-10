@@ -536,13 +536,13 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    touch targets, changes layout, modifies workout rows or overrides theme colors. */
 #root[data-pi-motion="expressive"] .wpb :is(
   .wpb-progress .wpb-premium-tabs,
-  .wpb-settings .wpb-segmented, .wpb-exercise-tabs)[data-pi-m3-track]{
+  .wpb-settings .wpb-segmented, .wpb-exercise-tabs, .wpb-library-flag-filter)[data-pi-m3-track]{
   position:relative!important;
   isolation:isolate;
 }
 #root[data-pi-motion="expressive"] .wpb :is(
   .wpb-progress .wpb-premium-tabs,
-  .wpb-settings .wpb-segmented, .wpb-exercise-tabs)[data-pi-m3-track]::before{
+  .wpb-settings .wpb-segmented, .wpb-exercise-tabs, .wpb-library-flag-filter)[data-pi-m3-track]::before{
   content:"";
   position:absolute;
   z-index:0;
@@ -559,7 +559,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root[data-pi-motion="expressive"] .wpb :is(
   .wpb-progress .wpb-premium-tabs,
-  .wpb-settings .wpb-segmented, .wpb-exercise-tabs)[data-pi-m3-track]>button{
+  .wpb-settings .wpb-segmented, .wpb-exercise-tabs, .wpb-library-flag-filter)[data-pi-m3-track]>button{
   position:relative;
   z-index:1;
   min-width:0;
@@ -611,7 +611,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 @media(prefers-reduced-motion:reduce){
   #root[data-pi-motion="expressive"] .wpb :is(
     .wpb-progress .wpb-premium-tabs,
-    .wpb-settings .wpb-segmented, .wpb-exercise-tabs)[data-pi-m3-track]::before{
+    .wpb-settings .wpb-segmented, .wpb-exercise-tabs, .wpb-library-flag-filter)[data-pi-m3-track]::before{
     will-change:auto;
   }
   #root[data-pi-motion="expressive"] .wpb-home .wpb-action-tile,
@@ -731,6 +731,218 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 @media(prefers-reduced-motion:reduce){
   #root[data-pi-motion="expressive"] .wpb .wpb-sheet-close{
+    transition:none!important;
+  }
+}
+
+/* PI M3 SECONDARY SURFACES — onboarding, program builder, library and swap.
+   Preserve React-owned content and all generator inputs; optimize visual rhythm
+   and direct manipulation without increasing dense workout-set dimensions. */
+#root[data-pi-motion="expressive"] .wpb{
+  --pi-m3-secondary-radius:15px;
+  --pi-m3-secondary-stroke:color-mix(in srgb,currentColor 11%,transparent);
+  --pi-m3-secondary-wash:color-mix(in srgb,currentColor 3.5%,transparent);
+}
+#root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-scroll{
+  padding:calc(env(safe-area-inset-top) + 25px) 20px 14px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-content{
+  max-width:500px;
+}
+#root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-mark{
+  margin-bottom:17px!important;
+  border-radius:15px!important;
+  box-shadow:0 7px 24px color-mix(in srgb,currentColor 9%,transparent)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-title{
+  font-size:clamp(27px,7.5vw,32px)!important;
+  line-height:1.1!important;
+  letter-spacing:-.04em!important;
+}
+#root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-copy{
+  line-height:1.46!important;
+  max-width:44ch;
+}
+#root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-features{
+  margin-top:20px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-feature{
+  padding:12px 0!important;
+  gap:11px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-feature-icon{
+  width:34px!important;
+  height:34px!important;
+  flex:0 0 34px;
+  border-radius:11px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-footer{
+  padding:11px max(16px,env(safe-area-inset-right)) calc(env(safe-area-inset-bottom) + 10px)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-onboarding :is(.wpb-onboarding-primary,.wpb-onboarding-secondary){
+  min-height:48px!important;
+  border-radius:14px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-secondary{
+  margin-top:6px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-header{
+  padding-top:10px!important;
+  padding-bottom:10px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-wizard .wpb-page-scroll{
+  padding:15px 16px 20px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-heading{
+  margin-bottom:13px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-heading-title{
+  font-size:clamp(23px,6.2vw,27px)!important;
+  line-height:1.17!important;
+  letter-spacing:-.033em!important;
+  font-weight:740!important;
+}
+#root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-heading-sub{
+  margin-top:6px!important;
+  max-width:53ch;
+  line-height:1.42!important;
+}
+#root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-options{
+  gap:7px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-option{
+  border-radius:var(--pi-m3-secondary-radius)!important;
+  padding:11px 12px!important;
+  background-image:linear-gradient(var(--pi-m3-secondary-wash),var(--pi-m3-secondary-wash))!important;
+  transition:border-color 160ms var(--pi-ease), background-color 160ms var(--pi-ease),
+             box-shadow 160ms var(--pi-ease)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-option[aria-pressed="true"]{
+  box-shadow:inset 3px 0 0 currentColor,0 1px 9px color-mix(in srgb,currentColor 6%,transparent)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-option-icon{
+  border-radius:11px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-progress{
+  margin-top:10px!important;
+  height:4px!important;
+  border-radius:999px!important;
+  overflow:hidden;
+}
+#root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-progress>.wpb-bar{
+  transition:transform 260ms cubic-bezier(.2,.8,.25,1);
+}
+#root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-footer{
+  padding-top:9px!important;
+  padding-bottom:calc(env(safe-area-inset-bottom) + 8px)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-wizard :is(.wpb-wizard-back-action,.wpb-wizard-next-action){
+  min-height:48px!important;
+  border-radius:14px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-wizard :is(.wpb-wizard-preset,.wpb-wizard-choice){
+  border-radius:11px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-wizard :is(.wpb-wizard-option,.wpb-wizard-choice,.wpb-wizard-preset):focus-visible{
+  outline:2px solid currentColor!important;
+  outline-offset:2px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-library .wpb-library-header{
+  padding-top:10px!important;
+  padding-bottom:9px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-library .wpb-library-search{
+  margin-bottom:7px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-library .wpb-library-search input{
+  min-height:44px!important;
+  border-radius:14px!important;
+  transition:border-color 150ms var(--pi-ease),box-shadow 150ms var(--pi-ease)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-library .wpb-library-search input:focus-visible{
+  outline:2px solid color-mix(in srgb,currentColor 35%,transparent)!important;
+  outline-offset:2px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-library .wpb-filter-chip{
+  min-height:36px!important;
+  border-radius:12px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-library .wpb-library-flag-filter{
+  border-radius:14px!important;
+  padding:3px!important;
+  gap:2px!important;
+  margin-top:4px!important;
+  isolation:isolate;
+}
+#root[data-pi-motion="expressive"] .wpb-library .wpb-library-flag{
+  min-width:0!important;
+  min-height:39px!important;
+  border-radius:11px!important;
+  padding:7px 3px!important;
+  gap:4px!important;
+  white-space:normal!important;
+  line-height:1.18!important;
+}
+#root[data-pi-motion="expressive"] .wpb-library .wpb-library-flag-filter[data-pi-m3-track]>button[aria-pressed="true"]{
+  background:transparent!important;
+  background-image:none!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-library .wpb-library-flag:focus-visible,
+#root[data-pi-motion="expressive"] .wpb-library .wpb-filter-chip:focus-visible{
+  outline:2px solid currentColor!important;
+  outline-offset:-2px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-library .wpb-library-results{
+  padding-top:4px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-library .wpb-library-row{
+  min-height:58px!important;
+  border-radius:0!important;
+  transition:background-color 140ms var(--pi-ease)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-library .wpb-library-row:focus-visible{
+  outline:2px solid currentColor!important;
+  outline-offset:-2px!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-swap-results button[aria-label^="Swap to "]{
+  min-height:64px;
+  border-radius:var(--pi-m3-secondary-radius)!important;
+  border-color:var(--pi-m3-secondary-stroke)!important;
+  transition:background-color 160ms var(--pi-ease),border-color 160ms var(--pi-ease)!important;
+}
+@media(hover:hover) and (pointer:fine){
+  #root[data-pi-motion="expressive"] .wpb-library .wpb-library-row:hover{
+    background-color:var(--pi-m3-secondary-wash)!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-swap-results button[aria-label^="Swap to "]:hover{
+    border-color:color-mix(in srgb,currentColor 25%,transparent)!important;
+  }
+}
+@media(max-width:360px){
+  #root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-scroll{
+    padding-inline:17px!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb-wizard .wpb-page-scroll{
+    padding-inline:14px!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb-library .wpb-library-flag{
+    font-size:12px!important;
+  }
+}
+@media(max-height:700px){
+  #root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-scroll{
+    padding-top:calc(env(safe-area-inset-top) + 15px)!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-feature{
+    padding-block:10px!important;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  #root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-progress>.wpb-bar,
+  #root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-option,
+  #root[data-pi-motion="expressive"] .wpb-library .wpb-library-row,
+  #root[data-pi-motion="expressive"] .wpb .wpb-swap-results button[aria-label^="Swap to "]{
     transition:none!important;
   }
 }

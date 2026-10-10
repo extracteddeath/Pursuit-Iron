@@ -417,6 +417,58 @@ try {
         assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('wpb:v1')).saved), initial.saved, 'motion cannot change program prescriptions');
         assert.deepEqual(errors, []);
         await page.screenshot({ path: path.join(root, `verification/b831-motion-${width}-phone.png`) });
+        // Continue into real program-authoring and exercise-library screens,
+        // verifying the new compact M3 hierarchy with the saved program intact.
+        await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'no-preference' }]);
+        await page.evaluate(() => history.back());
+        await page.waitForSelector('.wpb-workout', { hidden: true });
+        await page.click('[data-tab="home"]');
+        await page.waitForSelector('.wpb-home-create');
+        await page.click('.wpb-home-create');
+        await page.waitForSelector('.wpb-wizard .wpb-wizard-progress');
+        const wizardGeometry = await page.$eval('.wpb-wizard', el => {
+            const bar = el.querySelector('.wpb-wizard-progress').getBoundingClientRect();
+            const footer = el.querySelector('.wpb-wizard-footer').getBoundingClientRect();
+            const screen = el.getBoundingClientRect();
+            return { barHeight: bar.height, footer: footer.bottom, screen: screen.bottom,
+                width: el.scrollWidth, viewport: innerWidth };
+        });
+        assert.ok(wizardGeometry.barHeight >= 4 && wizardGeometry.width <= width + 1 &&
+            wizardGeometry.footer <= innerHeight + 2, 'M3 program wizard is compact, visible and never horizontally clipped: ' + JSON.stringify(wizardGeometry));
+        if (width === 430) await page.screenshot({ path: path.join(root, 'verification/b831-m3-wizard-phone.png') });
+        await page.click('.wpb-wizard-header button[aria-label="Back"]');
+        await page.waitForSelector('.wpb-home-create');
+        await page.click('[data-tab="settings"]');
+        await page.waitForSelector('.wpb-settings');
+        await clickText('Exercise library');
+        await page.waitForSelector('.wpb-library-flag-filter[data-pi-m3-track]');
+        const libraryStart = await page.$eval('.wpb-library-flag-filter', el => ({
+            x: parseFloat(el.style.getPropertyValue('--pi-m3-track-x')),
+            fill: el.style.getPropertyValue('--pi-m3-track-fill'),
+            children: el.childElementCount,
+            w: el.getBoundingClientRect().width
+        }));
+        assert.equal(libraryStart.children, 4, 'library retains all four working filter modes');
+        assert.ok(libraryStart.fill && libraryStart.fill !== 'transparent',
+            'library moving selection uses the chosen theme');
+        await page.click('.wpb-library-flag:nth-child(2)');
+        await page.waitForFunction(() => {
+            const el = document.querySelector('.wpb-library-flag-filter');
+            const chosen = el?.querySelector('[aria-pressed="true"]');
+            return chosen?.textContent?.includes('Recent') &&
+                Math.abs(parseFloat(el.style.getPropertyValue('--pi-m3-track-x')) - chosen.offsetLeft) < .2;
+        }, { timeout: 5000 });
+        await page.$eval('.wpb-library-search input', input => input.focus());
+        const libraryFocus = await page.$eval('.wpb-library-search input', el =>
+            parseFloat(getComputedStyle(el).borderTopLeftRadius) >= 12 &&
+            getComputedStyle(el).outlineStyle === 'solid');
+        assert.ok(libraryFocus, 'library search keeps a visible, comfortably rounded keyboard focus');
+        assert.ok(await page.$eval('.wpb-library', el => el.scrollWidth <= innerWidth + 1),
+            'library filters and list do not overflow phone width');
+        assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('wpb:v1')).saved), initial.saved,
+            'secondary screen M3 styling cannot mutate programs');
+        if (width === 430) await page.screenshot({ path: path.join(root, 'verification/b831-m3-library-phone.png') });
+        assert.deepEqual(errors, []);
         await page.close();
         console.log(`PASS expressive app motion, sheet drag, rapid navigation, reference/RIR persistence and reduced motion at ${width}px.`);
     }

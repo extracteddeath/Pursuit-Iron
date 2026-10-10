@@ -70,7 +70,7 @@ function tick(now) {
 }
 const pixels = (el, name) => v => el.style.setProperty(name, `${v}px`);
 const surfaceSelector = '[data-view-frame], [data-pi-workout-page], [data-sheet-drag], .wpb-pop, .wpb-dialog, .wpb-slideL, .wpb-slideR, .wpb-state-enter, .wpb-float-in, .wpb-notice-in';
-const groupSelector = '.wpb-segmented, .wpb-premium-tabs, .wpb-exercise-tabs, .wpb-effort-scale, .wpb-tabbar, [role="tablist"]';
+const groupSelector = '.wpb-segmented, .wpb-premium-tabs, .wpb-exercise-tabs, .wpb-library-flag-filter, .wpb-effort-scale, .wpb-tabbar, [role="tablist"]';
 const surfaceOwners = new WeakMap();
 
 function enterSurface(el, initial = false) {
@@ -168,7 +168,7 @@ export function installAppMotion(root) {
     // Material 3 selection tracks sit behind the actual React-owned buttons. Geometry is
     // measured, never guessed, so four-column and two-column selectors share one behavior.
     const selectionTracks = new WeakMap();
-    const trackSelector = '.wpb-progress .wpb-premium-tabs, .wpb-settings .wpb-segmented, .wpb-exercise-tabs';
+    const trackSelector = '.wpb-progress .wpb-premium-tabs, .wpb-settings .wpb-segmented, .wpb-exercise-tabs, .wpb-library-flag-filter';
     const trackResize = typeof ResizeObserver === 'function' ? new ResizeObserver(entries => {
         for (const entry of entries) {
             const group = entry.target, selected = choiceStates.get(group);
@@ -224,7 +224,7 @@ export function installAppMotion(root) {
     }
     // A brief touch-origin state layer on navigation and choices, not the dense workout set grid.
     // It never inserts a DOM child, changes a hit target, or consumes a click.
-    const inkTargets = '.wpb-tab, .wpb-segmented > button, .wpb-premium-tabs > button, .wpb-exercise-tabs > button, [role="tablist"] > button, button.wpb-toggle, .wpb-context-menu-item, .wpb-sheet-close';
+    const inkTargets = '.wpb-tab, .wpb-segmented > button, .wpb-premium-tabs > button, .wpb-exercise-tabs > button, .wpb-wizard-option, .wpb-wizard-choice, .wpb-wizard-preset, .wpb-filter-chip, .wpb-library-flag, .wpb-onboarding-primary, .wpb-onboarding-secondary, [role="tablist"] > button, button.wpb-toggle, .wpb-context-menu-item, .wpb-sheet-close';
     function ink(el, x, y) {
         if (reduced() || !el.matches(inkTargets)) return;
         const r = el.getBoundingClientRect();

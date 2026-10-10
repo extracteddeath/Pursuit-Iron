@@ -3651,3 +3651,165 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     border-color:CanvasText!important;
   }
 }
+
+
+/* M3 EXPRESSIVE R20 — EXERCISE DETAIL AND SECONDARY SHEET FINISHING PASS
+   Treat a destination title as content, not single-line tab chrome.
+   The fullscreen layer remains opaque and the R12 linked-entry animation
+   continues to own motion; never animate the page backdrop itself. */
+#root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail
+  .wpb-exercise-detail-header{
+  min-height:64px;
+  align-items:center!important;
+  gap:10px!important;
+  padding-top:calc(env(safe-area-inset-top) + 9px)!important;
+  padding-bottom:10px!important;
+  border-bottom:1px solid var(--pi-r11-edge)!important;
+  border-radius:0 0 21px 21px!important;
+  background-color:var(--wpb-focus-bg,#110c15)!important;
+  background-image:none!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail
+  .wpb-exercise-detail-header>div:last-child{
+  min-width:0!important;
+  white-space:normal!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  overflow-wrap:anywhere!important;
+  text-wrap:pretty;
+  font-size:clamp(17px,4.7vw,20px)!important;
+  line-height:1.24!important;
+  letter-spacing:-.025em!important;
+}
+#root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail
+  .wpb-exercise-detail-header>button:first-child{
+  width:44px!important;
+  height:44px!important;
+  min-width:44px!important;
+  min-height:44px!important;
+  flex:0 0 44px!important;
+  border-radius:15px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail
+  .wpb-exercise-figure-wrap{
+  margin-bottom:9px!important;
+  border-radius:23px!important;
+  background-image:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail
+  .wpb-exercise-meta{
+  margin:5px 0 12px!important;
+  gap:6px!important;
+  line-height:1.4!important;
+}
+#root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail
+  .wpb-exercise-tabs{
+  min-height:52px!important;
+  padding:4px!important;
+  gap:3px!important;
+  border:1px solid var(--pi-r11-edge)!important;
+  border-radius:19px!important;
+  background-color:var(--pi-r11-quiet)!important;
+  background-image:none!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail
+  .wpb-exercise-tabs>button{
+  min-width:0!important;
+  min-height:44px!important;
+  padding:9px 3px!important;
+  border-radius:15px!important;
+  line-height:1.2!important;
+  text-align:center;
+}
+#root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail
+  .wpb-exercise-window-tabs{
+  border:1px solid var(--pi-r11-edge)!important;
+  border-radius:16px!important;
+  background-color:var(--pi-r11-quiet)!important;
+  background-image:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail
+  .wpb-exercise-window-tabs>button{
+  min-height:44px!important;
+  min-width:0!important;
+  border-radius:13px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail
+  .wpb-exercise-chart-surface{
+  max-width:100%!important;
+  overflow-x:clip;
+}
+/* Shared sheet chrome should look and behave like a tangible surface.
+   Lift only real dismiss buttons to 44px; the radio/select rows retain
+   their existing React-owned interactions and gesture/draggable detents. */
+#root[data-pi-motion="expressive"] .wpb .wpb-sheet-close{
+  width:44px!important;
+  height:44px!important;
+  min-width:44px!important;
+  min-height:44px!important;
+  padding:0!important;
+  border-radius:15px!important;
+  border:1px solid var(--pi-r11-edge)!important;
+  background-color:var(--pi-r11-raised)!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-backdrop>[data-sheet-drag]{
+  background-color:var(--wpb-focus-bg,#110c15)!important;
+  background-image:none!important;
+  border-top:1px solid var(--pi-r11-edge)!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-gym-sheet{
+  padding-left:max(16px,env(safe-area-inset-left))!important;
+  padding-right:max(16px,env(safe-area-inset-right))!important;
+  padding-top:12px!important;
+  border-radius:27px 27px 0 0!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-gym-done{
+  min-height:44px!important;
+  padding:10px 16px!important;
+  border-radius:15px!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-gym-card{
+  min-width:0;
+  margin-top:9px!important;
+  border:1px solid var(--pi-r11-edge)!important;
+  border-radius:19px!important;
+  background-color:var(--pi-r11-quiet)!important;
+  background-image:none!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-gym-sheet .wpb-hscroll .wpb-filter-chip{
+  min-height:40px!important;
+  border-radius:14px!important;
+}
+@media(max-width:350px){
+  #root[data-pi-motion="expressive"] .wpb .wpb-exercise-detail-header{
+    gap:8px!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-exercise-tabs>button{
+    font-size:12px!important;
+    padding-inline:1px!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-gym-sheet{
+    padding-left:max(12px,env(safe-area-inset-left))!important;
+    padding-right:max(12px,env(safe-area-inset-right))!important;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  #root[data-pi-motion="expressive"] .wpb :is(.wpb-exercise-tabs>button,.wpb-exercise-window-tabs>button,.wpb-sheet-close,.wpb-gym-done){
+    transition:none!important;
+  }
+}
+@media(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb :is(
+    .wpb-exercise-detail-header,.wpb-exercise-tabs,.wpb-exercise-window-tabs,
+    .wpb-sheet-close,.wpb-backdrop>[data-sheet-drag],.wpb-gym-card){
+    background-color:Canvas!important;
+    color:CanvasText!important;
+    border-color:CanvasText!important;
+  }
+}

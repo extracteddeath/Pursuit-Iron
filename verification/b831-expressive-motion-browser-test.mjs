@@ -919,29 +919,11 @@ try {
                 width:button.getBoundingClientRect().width}));
         assert.ok(triggerR22.height>=44 && triggerR22.width>=44,
             'R22 program exercise options opener is accessible: '+JSON.stringify(triggerR22));
-        const openerStateR22=await page.$$eval('.wpb-program button[aria-label^="More options for "]', buttons =>
-            buttons.map(b=>{
-                const r=b.getBoundingClientRect(),card=b.closest('.wpb-day-card');
-                return {label:b.getAttribute('aria-label'),x:r.x,y:r.y,
-                    width:r.width,height:r.height,
-                    disclosure:card?.dataset.piDisclosure,
-                    hit:document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.getAttribute('aria-label')};
-            }));
-        console.log('R22 OPENER DIAGNOSTIC '+JSON.stringify(openerStateR22));
-        const actionableR22 = '.wpb-program .wpb-day-card[data-pi-disclosure="open"] button[aria-label^="More options for "]';
+        // Match an actual exercise, not the day-level More options control.
+        const actionableR22='.wpb-program button[aria-label="More options for Back Squat"]';
         await page.waitForSelector(actionableR22);
         await page.click(actionableR22);
-        const optionsOpenedR22=await page.evaluate(() => ({
-            sheet:!!document.querySelector('.wpb-exercise-options-sheet'),
-            actions:document.querySelectorAll('.wpb-exercise-options-sheet .wpb-sheet-action').length,
-            overlays:[...document.querySelectorAll('.wpb-backdrop')].map(el=>({
-                label:el.textContent?.slice(0,120),sheet:el.firstElementChild?.className
-            })),
-            cardOpen:document.querySelector('.wpb-program .wpb-day-card')?.dataset.piDisclosure,
-            openerCount:document.querySelectorAll('.wpb-program button[aria-label^="More options for "]').length
-        }));
-        console.log('R22 OPTIONS DIAGNOSTIC '+JSON.stringify(optionsOpenedR22));
-        await page.waitForSelector('.wpb-exercise-options-sheet .wpb-sheet-action',{timeout:4000});
+        await page.waitForSelector('.wpb-exercise-options-sheet .wpb-sheet-action');
         const optionsR22=await page.$eval('.wpb-exercise-options-sheet', sheet=>{
             const title=sheet.querySelector(':scope > div:first-child > div:first-child > div:first-child');
             const close=sheet.querySelector('.wpb-sheet-close');

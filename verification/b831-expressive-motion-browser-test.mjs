@@ -12,6 +12,11 @@ const gradientCount = [...expressiveCss.matchAll(/(?:linear|radial|conic)-gradie
 assert.equal(gradientCount, 1, 'only the transient touch ink may use a radial gradient');
 assert.match(expressiveCss, /--pi-m3e-primary-container:/, 'theme-derived tonal hierarchy required');
 assert.match(expressiveCss, /--pi-m3e-surface-container-high:/, 'high-emphasis tonal container required');
+assert.match(expressiveCss, /M3 EXPRESSIVE R26 — CROSS-SCREEN INTERACTION CONTRACT/,
+    'cross-screen touch and keyboard interaction contract must be present');
+assert.doesNotMatch(expressiveCss,
+    /\.wpb-workout \.wpb-rest-actions>button\{\s*min-height:40px;/,
+    'R26 eliminates superseded 40px rest control rules');
 assert.match(expressiveCss, /\.wpb-home \.wpb-home-hero\{[\s\S]*?background-image:none!important;/, 'Home hero must not render a gradient');
 const program = { id: 'b831-motion', name: 'Motion check', custom: true, weeks: 6,
     config: { unit: 'lb', goal: 'both', experience: 'intermediate', progression: 'double', split: 'custom', deload: false },
@@ -1020,10 +1025,10 @@ try {
         const liveToolsR23=await page.$$eval('.wpb-workout-tools .wpb-workout-tool', controls =>
             controls.filter(el => el.getClientRects().length).map(el => {
                 const s=getComputedStyle(el),r=el.getBoundingClientRect();
-                return {w:r.width,h:r.height,image:s.backgroundImage};
+                return {w:r.width,h:r.height,image:s.backgroundImage,touch:s.touchAction};
             }));
         assert.ok(liveToolsR23.length>0 && liveToolsR23.every(x=>
-            x.w>=44 && x.h>=44 && x.image==='none'),
+            x.w>=44 && x.h>=44 && x.image==='none' && x.touch==='manipulation'),
             'R23 live tool controls use stable 44px opaque tonal targets: '+JSON.stringify(liveToolsR23));
         const row = '[data-testid="set-0-0"]';
         await page.click(`${row} input[aria-label="weight"]`); await page.keyboard.type('195.5');
@@ -1211,13 +1216,17 @@ try {
                 backHeight:back.getBoundingClientRect().height,
                 actionHeights:actions.map(x=>x.getBoundingClientRect().height),
                 optionHeight:option?.getBoundingClientRect().height ?? 0,
+                optionTouch:option ? getComputedStyle(option).touchAction : '',
+                footerActionTouches:actions.map(el=>getComputedStyle(el).touchAction),
                 overflow:shell.scrollWidth>shell.clientWidth+1};
         });
         assert.ok(wizardR19.footerAlpha===255 && wizardR19.footerImage==='none' &&
             wizardR19.backHeight>=44 &&
             wizardR19.actionHeights.length===2 &&
             wizardR19.actionHeights.every(x=>x>=48) &&
-            wizardR19.optionHeight>=58 && !wizardR19.overflow,
+            wizardR19.optionHeight>=58 && !wizardR19.overflow &&
+            wizardR19.optionTouch==='manipulation' &&
+            wizardR19.footerActionTouches.every(v=>v==='manipulation'),
             'R19 creation footer is solid and actions/options remain tap safe: '+JSON.stringify(wizardR19));
         const wizardR5 = await page.$eval('.wpb-wizard', el => ({
             title:parseFloat(getComputedStyle(el.querySelector('.wpb-wizard-heading-title')).fontSize),
@@ -1593,14 +1602,17 @@ try {
                 featureOverflow:features.some(el=>el.scrollWidth>el.clientWidth+1),
                 primaryHeight:primary?.getBoundingClientRect().height||0,
                 secondaryHeight:secondary?.getBoundingClientRect().height||0,
+                primaryTouch:primary?getComputedStyle(primary).touchAction:'',
+                secondaryTouch:secondary?getComputedStyle(secondary).touchAction:'',
                 overflow:screen.scrollWidth>screen.clientWidth+1};
         });
         assert.ok(startR25.paint.alpha===255 && startR25.paint.image==='none' &&
             startR25.footer.alpha===255 && startR25.footer.image==='none' &&
             startR25.featureCount>=2 && startR25.featurePaint?.alpha===255 &&
             startR25.featurePaint?.image==='none' && !startR25.featureOverflow &&
-            startR25.primaryHeight>=50 &&
-            (startR25.secondaryHeight===0 || startR25.secondaryHeight>=50) &&
+            startR25.primaryHeight>=50 && startR25.primaryTouch==='manipulation' &&
+            (startR25.secondaryHeight===0 || (startR25.secondaryHeight>=50 &&
+                startR25.secondaryTouch==='manipulation')) &&
             !startR25.overflow,
             'R25 cold-start welcome is solid and touch-safe: '+JSON.stringify(startR25));
         if(width===430) await welcome.screenshot({path:path.join(root,'verification/b831-m3-onboarding-phone.png')});

@@ -59,6 +59,33 @@ try {
             if (!button) throw new Error('Missing button: ' + text);
             button.click();
         }, text);
+        // Normalized resolved colors: Chrome returns modern color(srgb ...)
+        // for light-dark()/color-mix() but classic rgb(...) for most text.
+        const homePalette = async () => page.evaluate(() => {
+            const luminance = color => {
+                if (!color) return NaN;
+                const srgb = color.match(/^color\\(srgb\\s+([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)/);
+                const rgb = color.match(/^rgba?\\(\\s*([\\d.]+)[, ]+([\\d.]+)[, ]+([\\d.]+)/);
+                const numbers = srgb ? srgb.slice(1,4).map(Number) :
+                    rgb ? rgb.slice(1,4).map(n => Number(n)/255) : null;
+                if (!numbers) return NaN;
+                const linear = numbers.map(v => v <= .04045 ? v/12.92 : ((v+.055)/1.055)**2.4);
+                return .2126*linear[0]+.7152*linear[1]+.0722*linear[2];
+            };
+            const paint = element => {
+                if (!element) return null;
+                const c = getComputedStyle(element);
+                const background = luminance(c.backgroundColor), foreground = luminance(c.color);
+                return { background, foreground,
+                    contrast: (Math.max(background,foreground)+.05)/(Math.min(background,foreground)+.05),
+                    backgroundImage:c.backgroundImage, height:element.getBoundingClientRect().height,
+                    bg:c.backgroundColor, fg:c.color };
+            };
+            return { scheme:getComputedStyle(document.documentElement).colorScheme,
+                primary:paint(document.querySelector('.wpb-home .wpb-home-hero .wpb-primary-action')),
+                secondary:paint(document.querySelector('.wpb-home-create')),
+                hero:paint(document.querySelector('.wpb-home-hero')) };
+        });
         // Root tabs keep their navigation semantics, respond immediately, and settle without layout growth.
         for (const tab of ['plan','progress','profile','settings','home']) {
             await page.click(`[data-tab="${tab}"]`);
@@ -133,44 +160,17 @@ try {
                 }), 'R9 selection flex retains real navigation tap geometry');
             }
             if (tab === 'home') {
-                // R10 screenshot regression: only Start Workout is a filled,
-                // dark-theme high-emphasis action. Create Program remains a
-                // visible, tappable, high-contrast secondary affordance.
-                const homeAccent = await page.evaluate(() => {
-                    const first = document.querySelector('.wpb-home .wpb-home-hero .wpb-primary-action');
-                    const create = document.querySelector('.wpb-home-create');
-                    const hero = document.querySelector('.wpb-home-hero');
-                    const luminance = color => {
-                        const channels = color.match(/[\\d.]+/g)?.slice(0,3).map(Number);
-                        if (!channels || channels.length !== 3) return NaN;
-                        const values = channels.map(v => v/255).map(v =>
-                            v <= .04045 ? v/12.92 : ((v+.055)/1.055) ** 2.4);
-                        return .2126*values[0] + .7152*values[1] + .0722*values[2];
-                    };
-                    const paint = element => {
-                        if (!element) return null;
-                        const c = getComputedStyle(element);
-                        const background = luminance(c.backgroundColor), foreground = luminance(c.color);
-                        return { background, foreground, contrast:(Math.max(background,foreground)+.05) /
-                            (Math.min(background,foreground)+.05),
-                            backgroundImage:c.backgroundImage, height:element.getBoundingClientRect().height,
-                            bg:c.backgroundColor, fg:c.color };
-                    };
-                    return { scheme:getComputedStyle(document.documentElement).colorScheme,
-                        primary:paint(first),secondary:paint(create),hero:paint(hero) };
-                });
-                assert.ok(homeAccent.primary && homeAccent.secondary && homeAccent.hero &&
-                    homeAccent.secondary.height >= 44 && homeAccent.primary.height >= 44,
-                    'R10 both actual Home actions keep 44px+ targets: '+JSON.stringify(homeAccent));
+                // In the active-workout fixture, the optional Create Program
+                // dock is hidden by the resumed-workout bar. Only assert what
+                // actually exists; the no-live scenario below checks both.
+                const homeAccent = await homePalette();
+                assert.ok(homeAccent.primary && homeAccent.primary.height >= 44,
+                    'R10 Start Workout retains its accessible 44px+ target: '+JSON.stringify(homeAccent));
                 if (homeAccent.scheme.includes('dark')) {
                     assert.ok(homeAccent.primary.contrast >= 4.5 &&
-                        homeAccent.secondary.contrast >= 4.5 &&
                         homeAccent.primary.background < .30 &&
-                        homeAccent.secondary.background < .12 &&
-                        homeAccent.primary.background > homeAccent.secondary.background * 1.3 &&
-                        homeAccent.primary.backgroundImage === 'none' &&
-                        homeAccent.secondary.backgroundImage === 'none',
-                        'R10 dark theme has one subdued but legible primary action: '+JSON.stringify(homeAccent));
+                        homeAccent.primary.backgroundImage === 'none',
+                        'R10 dark Start Workout is subdued, filled and legible: '+JSON.stringify(homeAccent));
                 }
             }
             if (tab === 'home') {
@@ -807,6 +807,23 @@ try {
         }, initial);
         await page.goto('http://127.0.0.1:8794/', { waitUntil: 'networkidle0' });
         await page.waitForSelector('#root[data-pi-motion="expressive"] .wpb-home-create');
+        // The separate no-live Home fixture displays both screenshot CTAs.
+        // Require differentiated emphasis, text contrast and unchanged targets.
+        const homeWithoutDock = await homePalette();
+        assert.ok(homeWithoutDock.primary && homeWithoutDock.secondary &&
+            homeWithoutDock.primary.height >= 44 &&
+            homeWithoutDock.secondary.height >= 44,
+            'R10 Home actions exist and remain tappable without live workout: '+JSON.stringify(homeWithoutDock));
+        if (homeWithoutDock.scheme.includes('dark')) {
+            assert.ok(homeWithoutDock.primary.contrast >= 4.5 &&
+                homeWithoutDock.secondary.contrast >= 4.5 &&
+                homeWithoutDock.primary.background < .30 &&
+                homeWithoutDock.secondary.background < .12 &&
+                homeWithoutDock.primary.background > homeWithoutDock.secondary.background * 1.3 &&
+                homeWithoutDock.primary.backgroundImage === 'none' &&
+                homeWithoutDock.secondary.backgroundImage === 'none',
+                'R10 dark Home has one tonal primary and quiet secondary: '+JSON.stringify(homeWithoutDock));
+        }
         await page.click('.wpb-home-create');
         await page.waitForSelector('.wpb-wizard .wpb-wizard-progress');
         const optionShapes = await page.$$eval('.wpb-wizard .wpb-wizard-option, .wpb-wizard .wpb-wizard-step>div>button[aria-pressed]', controls =>

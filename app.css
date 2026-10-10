@@ -3080,3 +3080,70 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     opacity:1!important;
   }
 }
+
+
+/* M3 EXPRESSIVE R13 — HOME PRIMARY ACTION FINISHING PASS
+   R12's quiet dark tonal palette is preserved. The actual Start Workout
+   control gets a centered, legible play glyph, stable target dimensions and
+   responsive type without a decorative glow, gradient or duplicate action.
+   Keep data-pi-control spring corners authoritative while a finger presses. */
+#root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero>.wpb-primary-action{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:10px!important;
+  min-height:52px!important;
+  padding:11px 16px!important;
+  font-size:15.5px!important;
+  line-height:1.2!important;
+  font-weight:760!important;
+  letter-spacing:-.018em!important;
+  text-align:center;
+  text-shadow:none!important;
+  --pi-corner-0:24px;
+  --pi-corner-1:24px;
+  --pi-corner-2:24px;
+  --pi-corner-3:24px;
+}
+/* A lucide Play outline used to show the card behind the triangle. Fill only
+   the play polygon, not the whole SVG viewport, and use the button's on-color.
+   The glyph stays readable in dark, light and custom accent themes. */
+#root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero>.wpb-primary-action svg{
+  width:20px!important;
+  height:20px!important;
+  min-width:20px!important;
+  flex:0 0 20px!important;
+  color:inherit!important;
+  stroke:currentColor!important;
+  stroke-width:2!important;
+  filter:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero>.wpb-primary-action svg polygon{
+  fill:currentColor!important;
+  stroke:currentColor!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero>.wpb-primary-action svg path{
+  stroke:currentColor!important;
+}
+/* For all non-motion environments, retain a plain softly rounded capsule
+   rather than relying on JS-only corner variables. */
+#root:not([data-pi-motion="expressive"]) .wpb-home .wpb-home-hero>.wpb-primary-action{
+  min-height:52px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+}
+@media(max-width:350px){
+  #root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero>.wpb-primary-action{
+    font-size:15px!important;
+    padding-inline:12px!important;
+    gap:8px!important;
+  }
+}
+@media(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero>.wpb-primary-action svg{
+    color:ButtonText!important;
+    stroke:ButtonText!important;
+  }
+}

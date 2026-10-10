@@ -370,7 +370,7 @@ function disclosure(el, initial = false) {
     }
     // A brief touch-origin state layer on navigation and choices, not the dense workout set grid.
     // It never inserts a DOM child, changes a hit target, or consumes a click.
-    const inkTargets = '.wpb-tab, .wpb-segmented > button, .wpb-premium-tabs > button, .wpb-exercise-tabs > button, .wpb-exercise-window-tabs > button, .wpb-exercise-metric-tabs > button, .wpb-progress-grouping > button, .wpb-plan-panes > button, .wpb-wizard-option, .wpb-wizard-choice, .wpb-wizard-preset, .wpb-filter-chip, .wpb-library-flag, .wpb-onboarding-primary, .wpb-onboarding-secondary, [role="tablist"] > button, button.wpb-toggle, .wpb-context-menu-item, .wpb-sheet-close';
+    const inkTargets = '.wpb-tab, .wpb-segmented > button, .wpb-premium-tabs > button, .wpb-exercise-tabs > button, .wpb-exercise-window-tabs > button, .wpb-exercise-metric-tabs > button, .wpb-progress-grouping > button, .wpb-plan-panes > button, .wpb-wizard-option, .wpb-wizard-choice, .wpb-wizard-preset, .wpb-filter-chip, .wpb-library-flag, .wpb-onboarding-primary, .wpb-onboarding-secondary, .wpb-home-create, .wpb-home .wpb-action-tile, [role="tablist"] > button, button.wpb-toggle, .wpb-context-menu-item, .wpb-sheet-close';
     function ink(el, x, y) {
         if (reduced() || !el.matches(inkTargets)) return;
         const r = el.getBoundingClientRect();
@@ -405,7 +405,7 @@ function disclosure(el, initial = false) {
     const disabled = el => !el || el.disabled || el.getAttribute('aria-disabled') === 'true' || el.closest('[inert],.wpb-closing');
     function shape(el, held = false) {
         const selected = el.dataset.piChoice === 'selected';
-        const expressive = el.matches('.wpb-wizard-option,.wpb-wizard-choice,.wpb-wizard-preset,.wpb-filter-chip,.wpb-library-flag');
+        const expressive = el.matches('.wpb-wizard-option,.wpb-wizard-choice,.wpb-wizard-preset,.wpb-filter-chip,.wpb-library-flag,.wpb-home-create');
         const change = selected ? (expressive ? 11 : 7) : 0;
         spring(el, '--pi-control-shape', change - (held ? expressive ? 5 : 3 : 0),
             { from: 0, write: pixels(el, '--pi-control-shape'),
@@ -424,7 +424,7 @@ function disclosure(el, initial = false) {
         if (pressed.has(id)) release(id);
         control(el); pressed.set(id, { el, x, y });
         ink(el, x, y);
-        const expressiveAction = el.matches('.wpb-home .wpb-action-tile,.wpb-home .wpb-primary-action,.wpb-wizard .wpb-wizard-option,.wpb-wizard .wpb-wizard-next-action');
+        const expressiveAction = el.matches('.wpb-home .wpb-action-tile,.wpb-home .wpb-primary-action,.wpb-home-create,.wpb-wizard .wpb-wizard-option,.wpb-wizard .wpb-wizard-next-action');
         spring(el, '--pi-control-scale', expressiveAction ? .956 : .97,
             { from: 1, stiffness: expressiveAction ? 930 : 1300,
                 damping: expressiveAction ? .83 : 1, precision: .001 });
@@ -433,7 +433,7 @@ function disclosure(el, initial = false) {
     function release(id) {
         const held = pressed.get(id); if (!held) return;
         pressed.delete(id);
-        const expressiveAction = held.el.matches('.wpb-home .wpb-action-tile,.wpb-home .wpb-primary-action,.wpb-wizard .wpb-wizard-option,.wpb-wizard .wpb-wizard-next-action');
+        const expressiveAction = held.el.matches('.wpb-home .wpb-action-tile,.wpb-home .wpb-primary-action,.wpb-home-create,.wpb-wizard .wpb-wizard-option,.wpb-wizard .wpb-wizard-next-action');
         spring(held.el, '--pi-control-scale', 1,
             { stiffness: expressiveAction ? 640 : 850,
                 damping: expressiveAction ? .72 : .78, precision: .001 });

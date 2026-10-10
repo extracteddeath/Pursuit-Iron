@@ -421,3 +421,24 @@ Expressive size hierarchy while *keeping the same real data and controls*.
 
 Release requires passing 320px/430px visual-geometry assertions, all phone
 shards, core contracts, independent engine parity and PWA release integrity.
+
+## Material 3 Expressive 2026 color correction (R7)
+
+Use **solid tonal surfaces** sourced from the current Pursuit theme. A hierarchy of
+surface-container-low, surface-container, surface-container-high, primary-container,
+and outline-variant keeps Home/Plan/Progress/Library/Profile/creation distinct without
+directional light effects. Decorative linear and radial gradients were removed
+from app.css; the single retained radial state layer is transient touch feedback.
+
+Size, shape, containment and spring-led interaction supply expression; gradients
+do not supply hierarchy. Primary actions preserve the user's theme fill; selected
+controls use the existing measured indicators and interruptible shape motion.
+High-contrast users retain explicit borders and text; reduced-motion users retain
+instant functional changes. No new UI package, download-only fonts, data model,
+logger geometry, load editing behavior, engine logic or persistence path is used.
+
+**Acceptance:** inspect 320px and 430px viewport layouts, light/dark themes, top
+bars before/after scrolling, the Next-day card, the History/Chart/Library detail,
+dialog/backdrop, and keyboard/focus. Phone regression explicitly guards against
+decorative gradients returning. Physical Android gestures and frame timings still
+require a device-level check.

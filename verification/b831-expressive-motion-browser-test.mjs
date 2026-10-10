@@ -96,9 +96,12 @@ try {
                 const bento = await page.$eval('.wpb-home .wpb-action-grid', grid => {
                     const tiles=[...grid.querySelectorAll(':scope > .wpb-action-tile')];
                     const boxes=tiles.map(tile=>tile.getBoundingClientRect().toJSON());
+                    const featuredLabel=tiles[0]?.lastElementChild?.firstElementChild?.getBoundingClientRect().toJSON();
+                    const dock=document.querySelector('.wpb-live-dock')?.getBoundingClientRect().toJSON();
                     const hero=document.querySelector('.wpb-home-hero');
                     const shell=document.querySelector('#root');
-                    return {count:tiles.length, boxes,
+                    return {count:tiles.length, boxes, featuredLabelBottom:featuredLabel?.bottom,
+                        dockTop:dock?.top,
                         heroRadius:parseFloat(getComputedStyle(hero).borderTopLeftRadius),
                         heroFill:getComputedStyle(hero).backgroundImage,
                         accent:shell.style.getPropertyValue('--pi-m3-accent'),
@@ -108,6 +111,7 @@ try {
                 assert.ok(bento.count>=3 && feature.height>option.height+40 &&
                     feature.x+feature.width<=option.x+2 &&
                     Math.abs(feature.y-option.y)<3 && cycles.y>option.y+20 &&
+                    (!Number.isFinite(bento.dockTop) || bento.featuredLabelBottom < bento.dockTop - 4) &&
                     bento.heroRadius>=28 && bento.accent.length>3 &&
                     bento.heroFill.includes('radial-gradient'),
                     'R4 asymmetric vertical bento and theme-derived vivid hero are substantive layout changes: '+JSON.stringify(bento));

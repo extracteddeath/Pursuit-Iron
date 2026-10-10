@@ -307,3 +307,23 @@ navigation measured geometry and creation-option size; the existing full
 workout, persistence, custom-program and all-theme checks remain in place.
 This is an additional visible-design iteration, not a claim that every M3
 Expressive idea is exhausted.
+
+## Expressive R3 — fluid adaptive button groups
+
+The first R2 layout did not yet reproduce M3 Expressive's characteristic
+*stretch and yield* of adjacent selection buttons. Progress's four section
+buttons and Library's four view modes now share that behavior: the selected
+control springs to 1.20 of its relative share while neighbors soften to
+0.95. Each button remains a real button with unchanged order, labels, focus
+and hit height; no extra element or training state is introduced.
+
+The already theme-aware selection track follows the **measured, animated**
+button bounds rather than the old fixed layout. Follow-through is coalesced
+to one frame per group and stops when the interrupted spring settles.
+Other segmented controls, numeric workout controls and RIR choices remain
+on their proven geometry (the RIR scale keeps its independent 1.18 growth).
+When reduced motion is requested, spring values settle immediately.
+
+Real browser checks at 320px and 430px verify selected width growth, matched
+track geometry, Library overflow, keyboard tab selection and original
+prescriptions.

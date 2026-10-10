@@ -2531,21 +2531,25 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    gradients. The only retained radial fill is the transient touch ink feedback.
    Existing spatial springs, morphing controls, offline assets and compact
    strength logger are not reimplemented or displaced by this paint layer. */
+/* R16: these are *surface* roles, not translucent state layers.
+   Preserve their original tonal percentages by mixing against the live
+   theme background. Ink/outline/ripple layers deliberately retain alpha. */
 #root[data-pi-motion="expressive"] .wpb{
   --pi-m3e-primary:var(--wpb-focus,currentColor);
+  --pi-m3e-base:var(--wpb-focus-bg,var(--boot-bg,#110c15));
   --pi-m3e-surface-container-low:light-dark(
-    color-mix(in srgb,var(--pi-m3e-primary) 5%,transparent),
-    color-mix(in srgb,currentColor 3%,transparent));
+    color-mix(in srgb,var(--pi-m3e-base) 95%,var(--pi-m3e-primary) 5%),
+    color-mix(in srgb,var(--pi-m3e-base) 97%,currentColor 3%));
   --pi-m3e-surface-container:light-dark(
-    color-mix(in srgb,var(--pi-m3e-primary) 9%,transparent),
-    color-mix(in srgb,currentColor 5%,transparent));
+    color-mix(in srgb,var(--pi-m3e-base) 91%,var(--pi-m3e-primary) 9%),
+    color-mix(in srgb,var(--pi-m3e-base) 95%,currentColor 5%));
   --pi-m3e-surface-container-high:light-dark(
-    color-mix(in srgb,var(--pi-m3e-primary) 14%,transparent),
-    color-mix(in srgb,currentColor 8%,transparent));
+    color-mix(in srgb,var(--pi-m3e-base) 86%,var(--pi-m3e-primary) 14%),
+    color-mix(in srgb,var(--pi-m3e-base) 92%,currentColor 8%));
   --pi-m3e-primary-container:light-dark(
-    color-mix(in srgb,var(--pi-m3e-primary) 23%,transparent),
-    color-mix(in srgb,var(--pi-m3e-primary) 10%,transparent));
-  --pi-m3e-secondary-container:color-mix(in srgb,currentColor 9%,transparent);
+    color-mix(in srgb,var(--pi-m3e-base) 77%,var(--pi-m3e-primary) 23%),
+    color-mix(in srgb,var(--pi-m3e-base) 90%,var(--pi-m3e-primary) 10%));
+  --pi-m3e-secondary-container:color-mix(in srgb,var(--pi-m3e-base) 91%,currentColor 9%);
   --pi-m3e-outline-variant:color-mix(in srgb,currentColor 14%,transparent);
   --pi-m3e-motion-emphasized:cubic-bezier(.2,.8,.2,1);
 }

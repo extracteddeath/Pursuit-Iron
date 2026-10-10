@@ -54,6 +54,44 @@ try {
         }, initial, live);
         await page.goto('http://127.0.0.1:8794/', { waitUntil: 'networkidle0' });
         await page.waitForSelector('#root[data-pi-motion="expressive"] .wpb-tabbar');
+        // R16: a named solid surface must not be a 3%-alpha color wash.
+        // Probe all five theme-derived roles in both browser color schemes
+        // without touching saved theme state or exercise/workout data.
+        const surfaceRoles = await page.evaluate(() => {
+            const host = document.querySelector('#root[data-pi-motion="expressive"] .wpb');
+            const probe = document.createElement('div');
+            probe.style.cssText = 'position:absolute;top:-9999px;left:-9999px;width:1px;height:1px;pointer-events:none';
+            host.appendChild(probe);
+            const roles = ['--pi-m3e-surface-container-low','--pi-m3e-surface-container',
+                '--pi-m3e-surface-container-high','--pi-m3e-primary-container',
+                '--pi-m3e-secondary-container'];
+            const ctx = document.createElement('canvas').getContext('2d', {willReadFrequently:true});
+            const result = {};
+            for (const scheme of ['dark','light']) {
+                probe.style.colorScheme = scheme;
+                result[scheme] = {};
+                for (const role of roles) {
+                    probe.style.backgroundColor = 'var(' + role + ')';
+                    const computed = getComputedStyle(probe).backgroundColor;
+                    ctx.clearRect(0,0,1,1);
+                    ctx.fillStyle = computed;
+                    ctx.fillRect(0,0,1,1);
+                    result[scheme][role] = [...ctx.getImageData(0,0,1,1).data];
+                }
+            }
+            probe.remove();
+            return result;
+        });
+        for (const [scheme, colors] of Object.entries(surfaceRoles)) {
+            for (const [role, rgba] of Object.entries(colors)) {
+                assert.equal(rgba[3],255,'R16 ' + scheme + ' ' + role +
+                    ' must be a solid, rendered M3 surface: ' + JSON.stringify(surfaceRoles));
+            }
+            assert.notDeepEqual(colors['--pi-m3e-surface-container-low'].slice(0,3),
+                colors['--pi-m3e-surface-container-high'].slice(0,3),
+                'R16 low and high elevations must remain visually distinct in ' + scheme);
+        }
+
         const clickText = text => page.$$eval('button', (buttons, text) => {
             const button = buttons.find(b => b.textContent.includes(text));
             if (!button) throw new Error('Missing button: ' + text);

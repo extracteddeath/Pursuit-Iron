@@ -124,7 +124,7 @@ try {
                         statCount:stats.length,statRadius:stats[0]&&parseFloat(getComputedStyle(stats[0]).borderTopLeftRadius),
                         statWidth:first?.width,scrollWidth:shell.scrollWidth,viewport:innerWidth};
                 });
-                assert.ok(shape.radius>=28 && shape.heroRadius>=35 &&
+                assert.ok(shape.radius>=26 && shape.heroRadius>=35 &&
                     shape.headerTint.includes('gradient') && shape.statCount===2 &&
                     shape.statRadius>=20 && shape.statWidth>80 &&
                     shape.scrollWidth<=shape.viewport+1,

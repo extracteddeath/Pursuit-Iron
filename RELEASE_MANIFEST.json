@@ -110,8 +110,8 @@
   "uiFiles": {
     "modules/App.js": "3cfce5dba62df95a0213309eca5149a78d5c0c4fe2e5503052863c6e5ea31508",
     "index.html": "33765bd62fc051961e6dd2e03db7e224f9546135606979cbfcb13f82d8d0dc66",
-    "sw.js": "37b5a5af44e0038c45ab987ab82700443e662105ab20da9586834301fd1c91e3",
-    "BUILD_PROFILE.json": "728f605eb5429be0a9513c2eb98ef9c6f1a912368c4040010834da797572ead5",
+    "sw.js": "0a54f26ec8734968bdec0271ab3b1c3bfa4e7511165835553e2d1410fdb9fba7",
+    "BUILD_PROFILE.json": "f9346c689df31bb7f5889c7f3e41c8858b5e433ca2a0c561e88869dedba3a4b9",
     "CHANGELOG.md": "f1bbe548dbecdb0e91fc39155337fd65520baf8cc7de32a936af0cc65f21f935",
     "app.css": "ad04b85afe35934d70ef7b6c2321bb514eb6a89da13d0019b6c9fe8d304ece61",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"

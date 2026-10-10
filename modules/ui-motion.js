@@ -92,10 +92,12 @@ function enterSurface(el, initial = false) {
         write: pixels(el, '--pi-surface-x'), stiffness: view ? 730 : 700, damping: view ? .89 : .9 });
     spring(el, '--pi-surface-y', 0, { from: quiet ? 0 : y, restart: restart('--pi-surface-y', y), write: pixels(el, '--pi-surface-y'), damping: sheet ? .94 : 1 });
     spring(el, '--pi-surface-opacity', 1, { from: quiet ? 1 : .55, restart: restart('--pi-surface-opacity', .55), stiffness: 1200, damping: 1, precision: .001 });
-    if (dialog || view) spring(el, '--pi-surface-scale', 1, {
-        from: quiet ? 1 : dialog ? .97 : .982,
-        restart: restart('--pi-surface-scale', dialog ? .97 : .982),
-        stiffness: view ? 810 : 700, damping: .95, precision: .001 });
+    // A whole-screen scale also scales every real tap target while settling.
+    // Keep directional translation and fade for page changes; limit scale
+    // to dialogs, which have an isolated dedicated hit surface.
+    if (dialog) spring(el, '--pi-surface-scale', 1, {
+        from: quiet ? 1 : .97, restart: restart('--pi-surface-scale', .97),
+        stiffness: 700, damping: .95, precision: .001 });
 }
 export function exitMotion(wrapper, complete) {
     let cancelled = false;

@@ -884,6 +884,27 @@ try {
                 homeWithoutDock.secondary.backgroundImage === 'none',
                 'R10 dark Home has one tonal primary and quiet secondary: '+JSON.stringify(homeWithoutDock));
         }
+        // R13: the real Start Workout CTA must retain a centered, monochrome
+        // glyph instead of an outlined dark triangle on the muted accent.
+        const startIcon = await page.$eval('.wpb-home-hero .wpb-primary-action', button => {
+            const icon = button.querySelector('svg');
+            if (!icon) return null;
+            const glyph = icon.querySelector('polygon');
+            const ic = getComputedStyle(icon);
+            const ib = icon.getBoundingClientRect();
+            const bb = button.getBoundingClientRect();
+            return {
+                width: ib.width, height: ib.height, stroke: ic.stroke, color: ic.color,
+                polygonFill: glyph ? getComputedStyle(glyph).fill : null,
+                verticalOffset: Math.abs((ib.top + ib.height / 2) - (bb.top + bb.height / 2)),
+                buttonHeight: bb.height
+            };
+        });
+        assert.ok(startIcon && startIcon.width >= 18 && startIcon.height >= 18 &&
+            startIcon.verticalOffset <= 7 && startIcon.stroke === startIcon.color &&
+            startIcon.buttonHeight >= 44 &&
+            (!startIcon.polygonFill || startIcon.polygonFill === startIcon.color),
+            'R13 Start Workout has a centered, on-color play glyph: ' + JSON.stringify(startIcon));
         await page.click('.wpb-home-create');
         await page.waitForSelector('.wpb-wizard .wpb-wizard-progress');
         const optionShapes = await page.$$eval('.wpb-wizard .wpb-wizard-option, .wpb-wizard .wpb-wizard-step>div>button[aria-pressed]', controls =>

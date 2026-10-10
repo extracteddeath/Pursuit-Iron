@@ -216,7 +216,8 @@ function disclosure(el, initial = false) {
     if (day) {
         // The day header currently omits expanded semantics. Reflect the real
         // mounted panel without changing its React click/scroll behavior.
-        trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+        if (trigger.getAttribute('aria-expanded') !== (open ? 'true' : 'false'))
+            trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
         if (panel && el.id) {
             const id = el.id + '-content';
             panel.id = id;

@@ -2785,7 +2785,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 @media(max-width:350px){
   #root[data-pi-motion="expressive"] .wpb{
     --pi-m3e-list-gap:4px;
-    --pi-m3e-list-corner:17px;
+    --pi-m3e-list-corner:19px;
     --pi-m3e-list-edge:23px;
   }
 }

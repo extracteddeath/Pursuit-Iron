@@ -119,6 +119,40 @@ try {
                     mission.inside && mission.rows >= 1 && mission.rows <= 3 && mission.start >= 44,
                     'semantic M3 training dial and three-row preview fit the phone');
             }
+            if (tab === 'plan') {
+                const state = await page.$eval('.wpb-plan-view', el => {
+                    const metrics = [...el.querySelectorAll('.wpb-plan-glance-tile')];
+                    const first = metrics[0];
+                    const group = el.querySelector('.wpb-plan-panes[data-pi-m3-track]');
+                    const title = el.querySelector('.wpb-plan-title');
+                    return {
+                        count:metrics.length,
+                        size:parseFloat(getComputedStyle(title).fontSize),
+                        firstRadius:first ? parseFloat(getComputedStyle(first).borderTopLeftRadius) : 0,
+                        firstSize:first ? parseFloat(getComputedStyle(first.lastElementChild).fontSize) : 0,
+                        buttons:group?.querySelectorAll('button').length,
+                        selected:group?.querySelectorAll('[aria-pressed="true"]').length,
+                        trackFill:group?.style.getPropertyValue('--pi-m3-track-fill'),
+                        overflow:el.scrollWidth>el.clientWidth+1
+                    };
+                });
+                assert.ok(state.count===3 && state.size>=27 && state.firstRadius>=26 &&
+                    state.firstSize>=24 && state.buttons===4 && state.selected===1 &&
+                    state.trackFill?.length>3 && !state.overflow,
+                    'Plan has a real featured week and elastic four-pane navigator: '+JSON.stringify(state));
+            }
+            if (tab === 'progress') {
+                const metrics = await page.$eval('.wpb-progress [data-progress-glance]', grid => {
+                    const cards = [...grid.querySelectorAll('.wpb-progress-glance-item')];
+                    const first = cards[0]?.getBoundingClientRect(),second = cards[1]?.getBoundingClientRect();
+                    return {count:cards.length, firstHeight:first?.height, secondHeight:second?.height,
+                        firstFont:parseFloat(getComputedStyle(cards[0].querySelector('.mono')).fontSize),
+                        overflow:grid.scrollWidth>grid.clientWidth+1};
+                });
+                assert.ok(metrics.count===3 && metrics.firstHeight>metrics.secondHeight+20 &&
+                    metrics.firstFont>=36 && !metrics.overflow,
+                    'Progress uses a true bento statistic hierarchy at phone widths: '+JSON.stringify(metrics));
+            }
             if (tab === 'progress') {
                 assert.ok(await page.$eval('.wpb-progress .wpb-premium-tabs', el =>
                     parseFloat(getComputedStyle(el).borderTopLeftRadius) >= 14),

@@ -905,6 +905,21 @@ try {
             startIcon.buttonHeight >= 44 &&
             (!startIcon.polygonFill || startIcon.polygonFill === startIcon.color),
             'R13 Start Workout has a centered, on-color play glyph: ' + JSON.stringify(startIcon));
+        const dockPaint = await page.$eval('.wpb-home-compose-bar', bar => {
+            const c = getComputedStyle(bar);
+            const primary = bar.querySelector('.wpb-home-create')?.getBoundingClientRect();
+            const quick = bar.querySelector('.wpb-home-quick')?.getBoundingClientRect();
+            return {
+                image: c.backgroundImage, background: c.backgroundColor,
+                primaryHeight: primary?.height ?? 0, quickHeight: quick?.height ?? 0,
+                primaryWidth: primary?.width ?? 0, quickWidth: quick?.width ?? 0
+            };
+        });
+        assert.ok(dockPaint.image === 'none' &&
+            dockPaint.background !== 'rgba(0, 0, 0, 0)' &&
+            dockPaint.primaryHeight >= 44 && dockPaint.quickHeight >= 44 &&
+            dockPaint.primaryWidth >= dockPaint.quickWidth,
+            'R14 solid, readable Home action dock retains both targets: ' + JSON.stringify(dockPaint));
         await page.click('.wpb-home-create');
         await page.waitForSelector('.wpb-wizard .wpb-wizard-progress');
         const optionShapes = await page.$$eval('.wpb-wizard .wpb-wizard-option, .wpb-wizard .wpb-wizard-step>div>button[aria-pressed]', controls =>

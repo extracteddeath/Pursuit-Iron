@@ -731,6 +731,10 @@ try {
         // This extends verification beyond synthetic tab fixtures; it also
         // captures the real history and charts screens for review.
         await page.click('.wpb-library-flag:first-child');
+        const librarySearchRestRadius = await page.$eval('.wpb-library-search', el =>
+            parseFloat(getComputedStyle(el).borderTopLeftRadius));
+        assert.ok(librarySearchRestRadius >= 20,
+            'R5 Library resting search is generously rounded');
         await page.click('.wpb-library-search input');
         await page.keyboard.type('Back Squat');
         await page.waitForSelector('.wpb-library-row');
@@ -743,7 +747,7 @@ try {
                 overflow:el.scrollWidth>el.clientWidth+1 };
         });
         assert.ok(libraryR5.radius>=18 && libraryR5.height>=59 &&
-            libraryR5.searchRadius>=19 && !libraryR5.overflow,
+            libraryR5.searchRadius>=15 && libraryR5.searchRadius<librarySearchRestRadius && !libraryR5.overflow,
             'R5 Library uses sculpted responsive rows and prominent search: '+JSON.stringify(libraryR5));
         await page.click('.wpb-library-row');
         await page.waitForSelector('[data-exercisedetail] .wpb-exercise-tabs[data-pi-m3-track]');

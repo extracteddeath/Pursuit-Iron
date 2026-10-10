@@ -512,3 +512,35 @@ and the January 2026 Google Drive expressive search/tab grouping
 route link origins, selector rest state, workout drafts and generated/custom
 programs. Post-merge Pages deployment and all four verification workflows
 must be rechecked independently.
+
+## R10 — Dark Expressive tonal emphasis and action priority
+
+The real Android Home screenshot on October 10, 2026 shows two identical,
+oversized vivid accent fills (Start Workout and persistent Create Program)
+against a nearly-black canvas. In a dark M3 Expressive interface that defeats
+the intended visual hierarchy: a user can no longer tell the next task from
+the optional action.
+
+- Keep the **Start Workout** CTA filled, but give the dark color scheme a
+  deeper theme-native accent container with contrast-safe light foreground.
+  The user's accent hue remains recognizable, without a neon full-width slab.
+- The existing **Create Program** control is now visually secondary: a
+  quiet near-surface fill plus subtle outline and legible foreground. Preserve
+  its button, text, click handler, hit area, dock location, and feature parity.
+- Use the existing light-dark() CSS color-scheme resolution so users
+  explicitly selecting a light theme are not forced into Android OS dark style.
+- Neutralize lower-level dark container fills; reduce the previously
+  over-tinted Hero without changing card size, day indicator, exercises
+  disclosure, workout length, program labels, or motion.
+- Add only a shared spring-controlled press/shape response and ephemeral
+  touch ink to Create Program, no competing animation implementation.
+- The phone regression checks the real Home Start and Create buttons for
+  44px+ hit size, WCAG-level text contrast in dark mode, one primary versus
+  one quieter secondary fill, and absence of decorative gradients.
+- Keep workout steppers, completed sets, Target/Previous toggles,
+  rest intervals and RIR exactly as they were. Preserve forced-colors,
+  reduced-motion, light themes, and offline PWA behavior.
+
+This is an app-wide **color role principle**, not a blanket reduction of
+accent saturation: focused primary actions retain emphasis, while support
+containers and secondary actions should not compete.

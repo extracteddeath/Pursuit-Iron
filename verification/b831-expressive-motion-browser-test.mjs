@@ -181,6 +181,8 @@ try {
         });
         const navEnd=await page.$eval('.wpb-tabbar',x=>parseFloat(x.style.getPropertyValue('--pi-m3-track-x')));
         assert.ok(Math.abs(navEnd-navStart)>20,'navigation spring moves between real tabs');
+        const routeDirection = await page.$eval('#root', el => el.dataset.piRouteDirection);
+        assert.equal(routeDirection, 'forward', 'tab sequence carries a directional spring');
         assert.ok(await page.$eval('[data-view-frame="profile"]',el=>el.dataset.piCascade==='1'),
             'visible profile components are coordinated by the page-level motion system');
         assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),initial.saved,

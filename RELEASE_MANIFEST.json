@@ -119,6 +119,6 @@
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b831-r5132797cd03d2cc7",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b831-r46e07af27bee5504",
   "uiMilestone": "Build 831 · M3 Expressive R4 connected navigation and Home mission"
 }

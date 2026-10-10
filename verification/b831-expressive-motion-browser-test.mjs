@@ -1567,4 +1567,44 @@ try {
         await context.close();
         console.log(`PASS expressive app motion, sheet drag, rapid navigation, reference/RIR persistence and reduced motion at ${width}px.`);
     }
+    // R25: true first-run storage, isolated from every saved-program and
+    // resumed-workout fixture. Inspect welcome paint and hitboxes only.
+    for (const width of [320,430]) {
+        const cleanContext=await browser.createBrowserContext();
+        const welcome=await cleanContext.newPage();
+        await welcome.setViewport({width,height:844,deviceScaleFactor:1,isMobile:true,hasTouch:true});
+        const welcomeErrors=[];
+        welcome.on('pageerror',error=>welcomeErrors.push(error.message));
+        await welcome.goto('http://127.0.0.1:8794/',{waitUntil:'networkidle0'});
+        await welcome.waitForSelector('.wpb-onboarding',{timeout:12000});
+        const startR25=await welcome.$eval('.wpb-onboarding',screen=>{
+            const footer=screen.querySelector('.wpb-onboarding-footer');
+            const primary=screen.querySelector('.wpb-onboarding-primary');
+            const secondary=screen.querySelector('.wpb-onboarding-secondary');
+            const features=[...screen.querySelectorAll('.wpb-onboarding-feature')];
+            const rgba=el=>{
+                const style=getComputedStyle(el),canvas=document.createElement('canvas').getContext('2d',{willReadFrequently:true});
+                canvas.fillStyle=style.backgroundColor;canvas.fillRect(0,0,1,1);
+                return {alpha:canvas.getImageData(0,0,1,1).data[3],image:style.backgroundImage};
+            };
+            return {paint:rgba(screen),footer:rgba(footer),
+                featureCount:features.length,
+                featurePaint:features[0]?rgba(features[0]):null,
+                featureOverflow:features.some(el=>el.scrollWidth>el.clientWidth+1),
+                primaryHeight:primary?.getBoundingClientRect().height||0,
+                secondaryHeight:secondary?.getBoundingClientRect().height||0,
+                overflow:screen.scrollWidth>screen.clientWidth+1};
+        });
+        assert.ok(startR25.paint.alpha===255 && startR25.paint.image==='none' &&
+            startR25.footer.alpha===255 && startR25.footer.image==='none' &&
+            startR25.featureCount>=2 && startR25.featurePaint?.alpha===255 &&
+            startR25.featurePaint?.image==='none' && !startR25.featureOverflow &&
+            startR25.primaryHeight>=50 &&
+            (startR25.secondaryHeight===0 || startR25.secondaryHeight>=50) &&
+            !startR25.overflow,
+            'R25 cold-start welcome is solid and touch-safe: '+JSON.stringify(startR25));
+        if(width===430) await welcome.screenshot({path:path.join(root,'verification/b831-m3-onboarding-phone.png')});
+        assert.deepEqual(welcomeErrors,[]);
+        await cleanContext.close();
+    }
 } finally { if (browser) await browser.close(); await new Promise(resolve => server.close(resolve)); }

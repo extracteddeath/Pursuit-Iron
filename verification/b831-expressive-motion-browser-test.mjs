@@ -920,7 +920,17 @@ try {
         assert.ok(triggerR22.height>=44 && triggerR22.width>=44,
             'R22 program exercise options opener is accessible: '+JSON.stringify(triggerR22));
         await page.click('.wpb-program button[aria-label^="More options for "]');
-        await page.waitForSelector('.wpb-exercise-options-sheet .wpb-sheet-action');
+        const optionsOpenedR22=await page.evaluate(() => ({
+            sheet:!!document.querySelector('.wpb-exercise-options-sheet'),
+            actions:document.querySelectorAll('.wpb-exercise-options-sheet .wpb-sheet-action').length,
+            overlays:[...document.querySelectorAll('.wpb-backdrop')].map(el=>({
+                label:el.textContent?.slice(0,120),sheet:el.firstElementChild?.className
+            })),
+            cardOpen:document.querySelector('.wpb-program .wpb-day-card')?.dataset.piDisclosure,
+            openerCount:document.querySelectorAll('.wpb-program button[aria-label^="More options for "]').length
+        }));
+        console.log('R22 OPTIONS DIAGNOSTIC '+JSON.stringify(optionsOpenedR22));
+        await page.waitForSelector('.wpb-exercise-options-sheet .wpb-sheet-action',{timeout:4000});
         const optionsR22=await page.$eval('.wpb-exercise-options-sheet', sheet=>{
             const title=sheet.querySelector(':scope > div:first-child > div:first-child > div:first-child');
             const close=sheet.querySelector('.wpb-sheet-close');

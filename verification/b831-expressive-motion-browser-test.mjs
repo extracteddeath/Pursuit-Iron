@@ -129,11 +129,13 @@ try {
                     return {radius:parseFloat(getComputedStyle(header).borderBottomLeftRadius),
                         heroRadius:parseFloat(getComputedStyle(hero).borderTopLeftRadius),
                         headerTint:getComputedStyle(header).backgroundImage,
+                        headerSurface:getComputedStyle(header).backgroundColor,
                         statCount:stats.length,statRadius:stats[0]&&parseFloat(getComputedStyle(stats[0]).borderTopLeftRadius),
                         statWidth:first?.width,scrollWidth:shell.scrollWidth,viewport:innerWidth};
                 });
                 assert.ok(shape.radius>=26 && shape.heroRadius>=35 &&
-                    shape.headerTint.includes('gradient') && shape.statCount===2 &&
+                    shape.headerTint==='none' && shape.headerSurface!=='transparent' &&
+                    shape.headerSurface!=='rgba(0, 0, 0, 0)' && shape.statCount===2 &&
                     shape.statRadius>=20 && shape.statWidth>80 &&
                     shape.scrollWidth<=shape.viewport+1,
                     'R4 connected color-tinted dashboard has true tonal hierarchy without overflow: '+JSON.stringify(shape));

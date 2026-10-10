@@ -659,6 +659,16 @@ try {
         assert.ok(detailGeometry.back>=44 && detailGeometry.count===4 &&
             detailGeometry.minTabHeight>=40 && !detailGeometry.overflow &&
             detailGeometry.selection===1, 'exercise details keep compact touch-safe tabs: '+JSON.stringify(detailGeometry));
+        const formLink=await page.$eval('.wpb-exercise-detail a[data-testid="form-video-link"]', link=>{
+            const box=link.getBoundingClientRect(),css=getComputedStyle(link);
+            const details=link.querySelector(':scope > div:last-child');
+            return {height:box.height,width:box.width,direction:css.flexDirection,
+                href:link.getAttribute('href'),align:getComputedStyle(details).textAlign};
+        });
+        assert.ok(formLink.height>=70&&formLink.height<=96&&
+            formLink.width<=width&&formLink.direction==='row'&&
+            formLink.align==='left'&&formLink.href?.startsWith('https://'),
+            'video guidance becomes a compact real link, not a large chart-blocking hero: '+JSON.stringify(formLink));
         if (width===430) await page.screenshot({ path: path.join(root, 'verification/b831-m3-exercise-history-phone.png') });
         await page.click('.wpb-exercise-tabs>button:nth-child(2)');
         await page.waitForSelector('[data-exercisecharts]');

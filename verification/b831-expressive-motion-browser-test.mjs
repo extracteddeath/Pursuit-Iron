@@ -66,12 +66,12 @@ try {
                 const el=document.querySelector('.wpb-tabbar[data-pi-m3-track]');
                 const b=el?.querySelector('[aria-current="page"]');
                 return b && Math.abs(parseFloat(el.style.getPropertyValue('--pi-m3-track-x')) -
-                    (b.offsetLeft+(b.offsetWidth-Math.min(54,b.offsetWidth*.7))/2)) < .8;
+                    (b.offsetLeft+(b.offsetWidth-Math.min(60,b.offsetWidth*.78))/2)) < .8;
             }, { timeout: 5000 });
             const navPill = await page.$eval('.wpb-tabbar[data-pi-m3-track]', el => {
                 const selected = el.querySelector('[aria-current="page"]');
                 const indicator = getComputedStyle(el, '::before');
-                const width = Math.min(54, selected.offsetWidth * .7);
+                const width = Math.min(60, selected.offsetWidth * .78);
                 return { height: parseFloat(indicator.height), radius: indicator.borderRadius,
                     width: parseFloat(indicator.width), expectedWidth: width,
                     x: parseFloat(el.style.getPropertyValue('--pi-m3-track-x')),
@@ -80,7 +80,7 @@ try {
                     oldPill: getComputedStyle(selected, '::before').display,
                     oldUnderline: getComputedStyle(selected, '::after').display };
             });
-            assert.ok(navPill.height >= 29 && navPill.height <= 31 &&
+            assert.ok(navPill.height >= 32 && navPill.height <= 34 &&
                 Math.abs(navPill.width-navPill.expectedWidth)<.8 &&
                 Math.abs(navPill.x-navPill.expected)<.8, 'spatial navigation indicator stays centered: ' + JSON.stringify(navPill));
             assert.ok(navPill.radius.includes('px') && navPill.fill.includes('color-mix') &&
@@ -88,9 +88,21 @@ try {
                 'moving navigation paints one theme-native pill instead of separate underlines: ' + JSON.stringify(navPill));
             if (tab === 'home') {
                 assert.ok(await page.$eval('.wpb-home-hero', el =>
-                    parseFloat(getComputedStyle(el).borderTopLeftRadius) >= 18 &&
+                    parseFloat(getComputedStyle(el).borderTopLeftRadius) >= 30 &&
                     parseFloat(getComputedStyle(el).marginBottom) <= 14),
                     'home hero has a tighter spacious-card hierarchy');
+            }
+            if (tab === 'home') {
+                const bento = await page.$eval('.wpb-home .wpb-action-grid', grid => {
+                    const tiles=[...grid.querySelectorAll(':scope > .wpb-action-tile')];
+                    const first=tiles[0]?.getBoundingClientRect();
+                    return {count:tiles.length, firstWidth:first?.width,
+                        gridWidth:grid.getBoundingClientRect().width,
+                        heroRadius:parseFloat(getComputedStyle(document.querySelector('.wpb-home-hero')).borderTopLeftRadius)};
+                });
+                assert.ok(bento.count>=2 && bento.firstWidth >= bento.gridWidth-2 &&
+                    bento.heroRadius>=30,
+                    'M3 bento uses a full-width feature without extra layout rows: '+JSON.stringify(bento));
             }
             if (tab === 'progress') {
                 assert.ok(await page.$eval('.wpb-progress .wpb-premium-tabs', el =>
@@ -156,7 +168,7 @@ try {
             const b=el?.querySelector('[aria-current="page"]');
             return b?.dataset.tab==='plan' &&
                 Math.abs(parseFloat(el.style.getPropertyValue('--pi-m3-track-x')) -
-                  (b.offsetLeft+(b.offsetWidth-Math.min(54,b.offsetWidth*.7))/2))<.8;
+                  (b.offsetLeft+(b.offsetWidth-Math.min(60,b.offsetWidth*.78))/2))<.8;
         });
         const navStart=await page.$eval('.wpb-tabbar',x=>parseFloat(x.style.getPropertyValue('--pi-m3-track-x')));
         await page.click('[data-tab="profile"]');
@@ -165,7 +177,7 @@ try {
             const b=el?.querySelector('[aria-current="page"]');
             return b?.dataset.tab==='profile' &&
                 Math.abs(parseFloat(el.style.getPropertyValue('--pi-m3-track-x')) -
-                  (b.offsetLeft+(b.offsetWidth-Math.min(54,b.offsetWidth*.7))/2))<.8;
+                  (b.offsetLeft+(b.offsetWidth-Math.min(60,b.offsetWidth*.78))/2))<.8;
         });
         const navEnd=await page.$eval('.wpb-tabbar',x=>parseFloat(x.style.getPropertyValue('--pi-m3-track-x')));
         assert.ok(Math.abs(navEnd-navStart)>20,'navigation spring moves between real tabs');
@@ -586,6 +598,11 @@ try {
         await page.waitForSelector('#root[data-pi-motion="expressive"] .wpb-home-create');
         await page.click('.wpb-home-create');
         await page.waitForSelector('.wpb-wizard .wpb-wizard-progress');
+        const optionShapes = await page.$$eval('.wpb-wizard .wpb-wizard-option', controls =>
+            controls.map(el => ({radius:parseFloat(getComputedStyle(el).borderTopLeftRadius),
+                height:el.getBoundingClientRect().height})));
+        assert.ok(optionShapes.length>=2 && optionShapes.every(el=>el.radius>=18&&el.height>=58),
+            'M3 wizard options use large asymmetric shapes without smaller touch targets: '+JSON.stringify(optionShapes));
         const wizardGeometry = await page.$eval('.wpb-wizard', el => {
             const bar = el.querySelector('.wpb-wizard-progress').getBoundingClientRect();
             const footer = el.querySelector('.wpb-wizard-footer').getBoundingClientRect();

@@ -261,3 +261,16 @@ Reduced-motion users receive all numbers and actions immediately.
 
 The integration browser now tests this boundary after actual weight editing,
 Target/Last switching and completing a set at 320px and 430px.
+
+## Exercise-detail visual hierarchy follow-up
+
+Phone screenshot QA showed the generic YouTube form-video link occupied
+disproportionate space above actual exercise history and charts. Within
+**navigated Library Exercise Detail only**, the link now becomes a compact
+horizontal information row: recognizable play affordance, readable title,
+secondary destination text, full-width touch area, explicit keyboard focus.
+It remains a real HTTPS link and does not preload external content.
+
+No video source changes, training charts/data changes, or live-workout
+form-link changes. The phone browser verifies link geometry and behavior
+at 320px and 430px, and captures the real detail page for comparison.

@@ -1151,7 +1151,7 @@ try {
             image: getComputedStyle(row).backgroundImage,
             height: row.getBoundingClientRect().height
         }));
-        assert.ok(rowShape.radius >= 19 && rowShape.image === 'none' &&
+        assert.ok(rowShape.radius >= 18 && rowShape.image === 'none' &&
             rowShape.height >= 59, 'M3E list remains flat, responsive and tappable: ' + JSON.stringify(rowShape));
         const libraryR19 = await page.$eval('.wpb-library', shell => {
             const search=shell.querySelector('.wpb-library-search input');

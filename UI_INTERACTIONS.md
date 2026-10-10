@@ -544,3 +544,35 @@ the optional action.
 This is an app-wide **color role principle**, not a blanket reduction of
 accent saturation: focused primary actions retain emphasis, while support
 containers and secondary actions should not compete.
+
+## R11 — Consistent dark-theme hierarchy beyond Home (October 2026)
+
+The user-approved R10 correction removed two competing saturated Home calls
+to action. R11 extends the same design rule to the rest of the *actual*
+secondary surfaces: Plan, Progress, Profile, and Exercise Library.
+
+- **Plan:** the current week and next training day remain distinct themed
+  primary containers; companion facts, week selectors, and day lists receive
+  quiet neutral dark surfaces. The next session has a narrow accent edge,
+  not a full bright background. Keep 4-pane selection and day disclosures.
+- **Progress:** first measured metric retains prominence through size and a
+  restrained theme container, while the other metrics and session history
+  are neutral. Do not alter charts, PR values, time ranges, or persistence.
+- **Profile:** strength summary uses the same spotlight role; identity,
+  achievements and subsidiary cells are neutral, grouped by existing shapes.
+- **Library:** search has a clearer raised input role; filters, header and
+  exercise results are neutral until a row is selected, pressed or focused.
+  Preserve data, keyboard flow, actual touch targets and filtering.
+- **Theme correctness:** dark containers derive from boot bg/fg and the
+  theme's own primary role, never hard-coded purple/pink. Light-theme roles
+  remain unchanged. High-contrast mode receives explicit Canvas borders.
+- **Motion:** R9 origin-linked navigation and moving segment indicators
+  remain the only spatial motion owners. This is color-role polish, not a
+  separate animation framework.
+- **Acceptance:** test real rendered Plan/Progress/Profile/Library containers
+  at 320px and 430px, and run all 20-theme, offline, core contract and engine
+  gates. Existing workout set row, RIR, Target/Last and Create Program controls
+  must retain identical behavior.
+
+Physical Android screenshots and gesture/frame performance require a separate
+device review; browser CI is necessary but not a device certification.

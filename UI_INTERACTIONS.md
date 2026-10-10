@@ -360,3 +360,28 @@ radius values or a decorative ripple.
 
 Phone verification checks both semantic dial geometry and directional route
 intent. Visual screenshots are required before approval.
+
+## Expressive R5 — the screens that still looked unchanged
+
+The Plan overview and Progress history were previously almost entirely uniform
+rows and three tiny metric chips. This pass gives both a clear Material 3
+Expressive size hierarchy while *keeping the same real data and controls*.
+
+- **Plan overview:** current week is a featured 28px-corner tile, with its
+  actual week number enlarged; Sessions and Week sets become smaller supporting
+  tiles. Completion stays one unobstructed seven-pixel bar under these metrics.
+  Up Next has a more prominent task-card hierarchy. The existing four Plan
+  panes now participate in the shared, elastic selection system, with a
+  measured theme-derived track that follows actual selected button widths.
+  Each pane is still activated by its original button callback.
+- **Progress:** Sessions (last seven days) occupies the larger left-hand
+  visual field; Sets and Recent PRs are two right-hand tiles. Labels and
+  date-window copy remain visible with no recalculation or graph mutations.
+  The new grid is phone-scoped and remains readable at 320px.
+- **Motion and semantics:** initial page entrances include Plan's prominent
+  surfaces, but never any live workout rows. The fluent tabs retain their
+  existing button labels and pressed semantics. Original history, graphs,
+  logging, data exports and engine remain unchanged.
+
+Release requires passing 320px/430px visual-geometry assertions, all phone
+shards, core contracts, independent engine parity and PWA release integrity.

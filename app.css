@@ -2653,3 +2653,154 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     border-color:CanvasText!important;
   }
 }
+
+
+/* M3 EXPRESSIVE 2026 R8 — ADAPTIVE LISTS AND CONNECTED GROUPS
+   Informed by Google's 2026 expressive list/menu primitives and actual Drive,
+   Gmail, Chrome and Tasks screen patterns. One primary action per group;
+   readable multi-line content, solid theme-tonal surfaces, shape-coded grouping.
+   No new containers or whitespace and no edits to the live workout logger. */
+#root[data-pi-motion="expressive"] .wpb{
+  --pi-m3e-list-gap:5px;
+  --pi-m3e-list-corner:19px;
+  --pi-m3e-list-edge:27px;
+  --pi-m3e-list-compressed:13px;
+  --pi-m3e-content-ease:cubic-bezier(.2,.78,.17,1);
+}
+/* Library results adopt independent, tightly related containers, with a
+   rounded opening and closing edge. Every row retains its original hit target,
+   semantics, ordering, filtered content and scroll position. */
+#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-results>.wpb-library-row{
+  min-height:61px!important;
+  max-width:100%;
+  margin-bottom:var(--pi-m3e-list-gap)!important;
+  border-radius:var(--pi-m3e-list-corner)!important;
+  background-color:var(--pi-m3e-surface-container-low)!important;
+  border-color:var(--pi-m3e-outline-variant)!important;
+  transition:border-radius 265ms var(--pi-m3e-content-ease),
+    border-color 165ms var(--pi-m3e-content-ease),
+    background-color 165ms var(--pi-m3e-content-ease),
+    transform 195ms var(--pi-m3e-content-ease)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-results>.wpb-library-row:first-child{
+  border-radius:var(--pi-m3e-list-edge) var(--pi-m3e-list-edge) var(--pi-m3e-list-corner) var(--pi-m3e-list-corner)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-results>.wpb-library-row:last-child{
+  border-radius:var(--pi-m3e-list-corner) var(--pi-m3e-list-corner) var(--pi-m3e-list-edge) var(--pi-m3e-list-edge)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-results>.wpb-library-row:only-child{
+  border-radius:var(--pi-m3e-list-edge)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-results>.wpb-library-row:is(:active,:focus-visible){
+  border-radius:var(--pi-m3e-list-compressed) 23px 23px var(--pi-m3e-list-compressed)!important;
+  border-color:color-mix(in srgb,var(--pi-m3e-primary) 44%,transparent)!important;
+  background-color:var(--pi-m3e-surface-container-high)!important;
+}
+/* Responsive 2026 list height: long names can wrap, and the actual content
+   determines the row height. No rigid cropping or a second inaccessible title. */
+#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-results>.wpb-library-row :is(span,strong,.wpb-library-row-title){
+  min-width:0;
+  overflow-wrap:anywhere;
+  white-space:normal;
+  line-height:1.28;
+}
+#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-results>.wpb-library-row:focus-visible{
+  outline:2px solid var(--pi-m3e-primary)!important;
+  outline-offset:2px!important;
+}
+/* A Settings section is a single contiguous group, while each real action
+   remains an individually focusable control. Avoid expanding dense options. */
+#root[data-pi-motion="expressive"] .wpb-settings.wpb-settings .wpb-settings-card{
+  overflow:visible;
+  border:1px solid var(--pi-m3e-outline-variant)!important;
+  border-radius:25px!important;
+  background-color:var(--pi-m3e-surface-container-low)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-settings.wpb-settings .wpb-settings-card>:is(button,.wpb-settings-row){
+  min-width:0;
+  min-height:44px;
+  border-radius:var(--pi-m3e-list-compressed)!important;
+  transition:border-radius 230ms var(--pi-m3e-content-ease),
+    background-color 170ms var(--pi-m3e-content-ease)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-settings.wpb-settings .wpb-settings-card>:is(button,.wpb-settings-row):first-child{
+  border-radius:23px 23px var(--pi-m3e-list-compressed) var(--pi-m3e-list-compressed)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-settings.wpb-settings .wpb-settings-card>:is(button,.wpb-settings-row):last-child{
+  border-radius:var(--pi-m3e-list-compressed) var(--pi-m3e-list-compressed) 23px 23px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-settings.wpb-settings .wpb-settings-card>:is(button,.wpb-settings-row):only-child{
+  border-radius:23px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-settings.wpb-settings .wpb-settings-card>:is(button,.wpb-settings-row):is(:active,:focus-within){
+  background-color:var(--pi-m3e-surface-container-high)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-settings.wpb-settings .wpb-settings-row :is(span,strong){
+  min-width:0;
+  overflow-wrap:anywhere;
+}
+/* Context menus follow 2026 expressive group shapes: a first/last contour
+   reveals the relationship among actions. Compact rows keep the old 44px
+   minimum, dock avoidance and keyboard navigation with native focus return. */
+#root[data-pi-motion="expressive"] .wpb .wpb-context-menu{
+  border-radius:27px!important;
+  padding:5px!important;
+  background-color:var(--pi-m3e-surface-container-high)!important;
+  border-color:var(--pi-m3e-outline-variant)!important;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-context-menu>.wpb-context-menu-item{
+  min-height:44px!important;
+  border-radius:var(--pi-m3e-list-compressed)!important;
+  transition:border-radius 255ms var(--pi-m3e-content-ease),
+    background-color 155ms var(--pi-m3e-content-ease)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-context-menu>.wpb-context-menu-item:first-child{
+  border-radius:22px 22px var(--pi-m3e-list-compressed) var(--pi-m3e-list-compressed)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-context-menu>.wpb-context-menu-item:last-child{
+  border-radius:var(--pi-m3e-list-compressed) var(--pi-m3e-list-compressed) 22px 22px!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-context-menu>.wpb-context-menu-item:only-child{
+  border-radius:22px!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-context-menu>.wpb-context-menu-item:is(:active,:focus-visible){
+  border-radius:9px 19px 19px 9px!important;
+  background-color:var(--pi-m3e-primary-container)!important;
+}
+/* Recent history has a distinct, quiet item rhythm, without adding padding
+   to charts, overriding workouts, or changing displayed training statistics. */
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session{
+  border-radius:19px!important;
+  border-color:var(--pi-m3e-outline-variant)!important;
+  background-color:var(--pi-m3e-surface-container-low)!important;
+  transition:border-radius 250ms var(--pi-m3e-content-ease),
+    border-color 160ms var(--pi-m3e-content-ease)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session:focus-within{
+  border-radius:25px!important;
+  border-color:color-mix(in srgb,var(--pi-m3e-primary) 42%,transparent)!important;
+}
+@media(max-width:350px){
+  #root[data-pi-motion="expressive"] .wpb{
+    --pi-m3e-list-gap:4px;
+    --pi-m3e-list-corner:17px;
+    --pi-m3e-list-edge:23px;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  #root[data-pi-motion="expressive"] .wpb :is(
+    .wpb-library-row,.wpb-settings-card>.wpb-settings-row,
+    .wpb-settings-card>button,.wpb-context-menu-item,.wpb-history-session){
+    transition:none!important;
+    transform:none!important;
+  }
+}
+@media(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb :is(
+    .wpb-library-row,.wpb-settings-card,.wpb-context-menu,.wpb-context-menu-item,.wpb-history-session){
+    border-color:CanvasText!important;
+    background-color:Canvas!important;
+  }
+}

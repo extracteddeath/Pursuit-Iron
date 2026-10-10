@@ -33,7 +33,11 @@ let browser;
 try {
     browser = await puppeteer.launch({ executablePath: process.env.CHROME_BIN || '/usr/bin/google-chrome', headless: true, args: ['--no-sandbox','--disable-dev-shm-usage'] });
     for (const width of [320, 430]) {
-        let page = await browser.newPage(); const errors = [];
+        // Every phone width has its own storage namespace. The secondary-screen
+        // smoke deliberately clears the workout fixture, which must not leak
+        // into the next width's dock/menu regression.
+        const context = await browser.createBrowserContext();
+        let page = await context.newPage(); const errors = [];
         page.on('pageerror', error => errors.push(error.message));
         await page.setViewport({ width, height: 844, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
         await page.evaluateOnNewDocument((store, snapshot) => {
@@ -424,7 +428,7 @@ try {
         // fresh page starts with only the same persisted programs (not the
         // deliberately unfinished training session tested above).
         await page.close();
-        page = await browser.newPage();
+        page = await context.newPage();
         page.on('pageerror', error => errors.push(error.message));
         await page.setViewport({ width, height: 844, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
         await page.evaluateOnNewDocument(store => {
@@ -480,6 +484,7 @@ try {
         if (width === 430) await page.screenshot({ path: path.join(root, 'verification/b831-m3-library-phone.png') });
         assert.deepEqual(errors, []);
         await page.close();
+        await context.close();
         console.log(`PASS expressive app motion, sheet drag, rapid navigation, reference/RIR persistence and reduced motion at ${width}px.`);
     }
 } finally { if (browser) await browser.close(); await new Promise(resolve => server.close(resolve)); }

@@ -6,6 +6,6 @@
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 70,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b831-r5c31b3c5b4401e20",
-  "uiMilestone": "Build 831 · Material 3 Expressive 2026 tonal R7"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b831-r2cb2a5e0e9662223",
+  "uiMilestone": "Build 831 · Material 3 Expressive 2026 adaptive lists R8"
 }

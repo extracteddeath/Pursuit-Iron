@@ -442,3 +442,39 @@ bars before/after scrolling, the Next-day card, the History/Chart/Library detail
 dialog/backdrop, and keyboard/focus. Phone regression explicitly guards against
 decorative gradients returning. Physical Android gestures and frame timings still
 require a device-level check.
+
+## 2026 adoption R8 — proven list and menu patterns (October 10, 2026)
+
+This pass deliberately borrows **behaviors**, not Google branding or gradients.
+Sources: Google's 2026 Compose Material 3 release notes
+(https://developer.android.com/jetpack/androidx/releases/compose-material3),
+Expressive menu/group APIs (https://developer.android.com/reference/kotlin/androidx/compose/material3/MenuDefaults),
+and observed Gmail/Drive list containment
+(https://9to5google.com/2025/09/02/gmail-material-3-expressive-containers/).
+
+- **Library:** content-sized list rows rather than clipped fixed-line labels. Each
+  row keeps original navigation and filtering; first/last edges have a stronger
+  enclosure, middle rows are quiet, and presses morph their own corners. Do not
+  alter row ordering, scroll ownership, search or attachment information.
+- **Settings:** a contiguous section container with shape-aware first/middle/last
+  rows. Keyboard focus/press emphasize only the currently operated control.
+  Avoid allocating extra height between items or increasing screen density.
+- **Context menus:** bounded popup with 44px minimum item targets, clear outer
+  corner grouping and lower-corner focused/pressed feedback. Preserve focus
+  restoration, Arrow/Home/End navigation, dismissal, anchor flipping and dock
+  clearance.
+- **Progress history:** separate source-backed sessions with focus affordance,
+  not synthetic metrics, extra action buttons or a larger section footprint.
+- **Motion/accessibility:** existing R6 measured selection springs remain the
+  sole interaction owner. Reduced motion disables decorative transitions; forced
+  colors retain explicit boundaries. No gradient return, download-only assets
+  or new persistence paths.
+
+**Implementation boundary:** This is a paint/shape/typography pass only.
+Engine, workout set inputs/steppers, timers, current/previous weights,
+target prescriptions, RIR, amplifiers, completion, Undo, focus mode, offline
+storage and generated/custom program behavior must remain unchanged.
+
+**Acceptance:** 320px and 430px phone browser results, all four Action workflow
+groups, release manifest and offline digest. Inspect on a physical Android
+device for gesture latency before claiming native-like device performance.

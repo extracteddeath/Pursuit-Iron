@@ -309,6 +309,16 @@ try {
                     'R4 connected color-tinted dashboard has true tonal hierarchy without overflow: '+JSON.stringify(shape));
             }
             if (tab === 'plan') {
+                const nextTitle = await page.$eval('.wpb-plan-up-next>div:first-child>div:nth-child(2)', el => {
+                    const cs=getComputedStyle(el);
+                    return {whiteSpace:cs.whiteSpace,overflow:cs.overflow,
+                        textOverflow:cs.textOverflow,wrap:cs.overflowWrap};
+                });
+                assert.ok(nextTitle.whiteSpace==='normal' && nextTitle.overflow!=='hidden' &&
+                    nextTitle.textOverflow!=='ellipsis',
+                    'R18 Plan next-session name should wrap instead of truncating: '+JSON.stringify(nextTitle));
+            }
+            if (tab === 'plan') {
                 const state = await page.$eval('.wpb-plan-view', el => {
                     const metrics = [...el.querySelectorAll('.wpb-plan-glance-tile')];
                     const first = metrics[0];
@@ -338,14 +348,32 @@ try {
                         firstFont:parseFloat(getComputedStyle(cards[0].querySelector('.mono')).fontSize),
                         overflow:grid.scrollWidth>grid.clientWidth+1};
                 });
-                assert.ok(metrics.count===3 && metrics.firstHeight>metrics.secondHeight+20 &&
-                    metrics.firstFont>=36 && !metrics.overflow,
-                    'Progress uses a true bento statistic hierarchy at phone widths: '+JSON.stringify(metrics));
+                assert.ok(metrics.count===3 && metrics.firstFont>=22 && !metrics.overflow &&
+                    Math.abs(metrics.firstHeight-metrics.secondHeight)<3,
+                    'R18 Progress has a compact, equal-height metric row at phone widths: '+JSON.stringify(metrics));
             }
             if (tab === 'progress') {
                 assert.ok(await page.$eval('.wpb-progress .wpb-premium-tabs', el =>
                     parseFloat(getComputedStyle(el).borderTopLeftRadius) >= 14),
                     'progress uses a unified pill-tab surface');
+            }
+            if (tab === 'settings') {
+                const heading = await page.$eval('.wpb-settings', el => {
+                    const header=el.querySelector(':scope > .wpb-page-header');
+                    const picker=el.querySelector('.wpb-settings-jump-control');
+                    const select=picker?.querySelector('select');
+                    const title=header?.querySelector('h1');
+                    return { headerHeight:header?.getBoundingClientRect().height,
+                        pickerHeight:picker?.getBoundingClientRect().height,
+                        selectHeight:select?.getBoundingClientRect().height,
+                        titleSize:title ? parseFloat(getComputedStyle(title).fontSize) : 0,
+                        pickerBackground:picker ? getComputedStyle(picker).backgroundImage : '',
+                        overflow:el.scrollWidth>el.clientWidth+1 };
+                });
+                assert.ok(heading.titleSize>=27 && heading.pickerHeight>=44 &&
+                    heading.selectHeight>=44 && heading.headerHeight<115 &&
+                    heading.pickerBackground==='none' && !heading.overflow,
+                    'R18 Settings keeps a compact header and functional section jump: '+JSON.stringify(heading));
             }
             if (tab === 'settings') {
                 assert.ok(await page.$eval('.wpb-settings-card', el =>

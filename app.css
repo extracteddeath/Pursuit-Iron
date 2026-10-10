@@ -2106,3 +2106,37 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb-home .wpb-action-grid{
  margin-top:8px!important;
 }
+
+/* R4 compact bento companion cards. The large Templates tile is a distinct
+   feature, while the other two are horizontal actions. Both titles stay
+   above the resumed workout dock at 320 and 430px without a new scroll row. */
+#root[data-pi-motion="expressive"] .wpb-home .wpb-action-grid{
+ grid-template-rows:repeat(2,minmax(68px,auto))!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-action-grid>.wpb-action-tile:first-child{
+ min-height:144px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-action-grid>.wpb-action-tile:not(:first-child){
+ min-height:68px!important;
+ display:flex!important;
+ flex-direction:row!important;
+ align-items:center!important;
+ justify-content:flex-start!important;
+ padding:9px 9px!important;
+ gap:8px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-action-grid>.wpb-action-tile:not(:first-child)>div:first-child{
+ width:29px!important;height:29px!important;
+ flex:0 0 29px!important;
+ border-radius:11px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-action-grid>.wpb-action-tile:not(:first-child)>div:last-child>div:first-child{
+ font-size:clamp(12px,3.2vw,14px)!important;
+ letter-spacing:-.018em!important;
+ line-height:1.12!important;
+ overflow-wrap:normal!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-action-grid>.wpb-action-tile:not(:first-child)>div:last-child>div:last-child{
+ font-size:10.5px!important;
+ line-height:1.2!important;
+}

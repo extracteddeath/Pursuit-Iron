@@ -8,7 +8,7 @@ const root = path.resolve(new URL('../', import.meta.url).pathname);
 // M3E 2026 design contract: colored surfaces stay tonal, never decorative
 // gradients. The one radial-gradient is a transient finger-origin state layer.
 const expressiveCss = fs.readFileSync(path.join(root, 'app.css'), 'utf8');
-const gradientCount = [...expressiveCss.matchAll(/(?:linear|radial|conic)-gradient\\(/g)].length;
+const gradientCount = [...expressiveCss.matchAll(/(?:linear|radial|conic)-gradient\(/g)].length;
 assert.equal(gradientCount, 1, 'only the transient touch ink may use a radial gradient');
 assert.match(expressiveCss, /--pi-m3e-primary-container:/, 'theme-derived tonal hierarchy required');
 assert.match(expressiveCss, /--pi-m3e-surface-container-high:/, 'high-emphasis tonal container required');

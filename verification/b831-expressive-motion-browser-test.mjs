@@ -33,7 +33,7 @@ let browser;
 try {
     browser = await puppeteer.launch({ executablePath: process.env.CHROME_BIN || '/usr/bin/google-chrome', headless: true, args: ['--no-sandbox','--disable-dev-shm-usage'] });
     for (const width of [320, 430]) {
-        const page = await browser.newPage(), errors = [];
+        let page = await browser.newPage(); const errors = [];
         page.on('pageerror', error => errors.push(error.message));
         await page.setViewport({ width, height: 844, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
         await page.evaluateOnNewDocument((store, snapshot) => {
@@ -420,12 +420,16 @@ try {
         // Continue into real program-authoring and exercise-library screens,
         // verifying the new compact M3 hierarchy with the saved program intact.
         await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'no-preference' }]);
-        // The completed workout interaction test intentionally leaves a live
-        // session snapshot. Start the secondary-screen check from a normal
-        // seeded Home state; an active session legitimately reopens Workout.
-        // This is test fixture cleanup, after assertions of live persistence.
-        await page.evaluate(store => {
-            localStorage.removeItem('wpb:live');
+        // Isolate authoring/library QA from the live-workout fixture. A separate
+        // fresh page starts with only the same persisted programs (not the
+        // deliberately unfinished training session tested above).
+        await page.close();
+        page = await browser.newPage();
+        page.on('pageerror', error => errors.push(error.message));
+        await page.setViewport({ width, height: 844, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
+        await page.evaluateOnNewDocument(store => {
+            localStorage.clear();
+            localStorage.setItem('b831-seeded', '1');
             localStorage.setItem('wpb:v1', JSON.stringify(store));
         }, initial);
         await page.goto('http://127.0.0.1:8794/', { waitUntil: 'networkidle0' });

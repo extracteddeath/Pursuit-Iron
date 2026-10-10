@@ -384,3 +384,40 @@ rendering. Reduced motion and forced-colors disable decorative transforms;
 focus outlines and all existing actions remain intact. This PR is stacked on
 R4 PR #63, separate from the competing Plan/Progress R5 PR #62, and must be
 reconciled before any combined publication.
+
+## R6 unified Material 3 Expressive integration
+
+The final unified candidate keeps the adaptive shell, connected navigation,
+Profile/Library/Wizard overhaul, and restores the actual training-rotation
+ring and compact three-exercise preview from the parallel Home work. The
+verified Plan current-week bento and Progress sessions-led dashboard also
+enter this branch, as does the Plan panes' measured spring selection track.
+The source of every number remains its existing program, schedule or history.
+Engine and workout logging remain unchanged; all deferred branches are kept
+separate until the integrated CI passes. No additional app features or
+persistence keys are introduced.
+
+## Expressive R5 — the screens that still looked unchanged
+
+The Plan overview and Progress history were previously almost entirely uniform
+rows and three tiny metric chips. This pass gives both a clear Material 3
+Expressive size hierarchy while *keeping the same real data and controls*.
+
+- **Plan overview:** current week is a featured 28px-corner tile, with its
+  actual week number enlarged; Sessions and Week sets become smaller supporting
+  tiles. Completion stays one unobstructed seven-pixel bar under these metrics.
+  Up Next has a more prominent task-card hierarchy. The existing four Plan
+  panes now participate in the shared, elastic selection system, with a
+  measured theme-derived track that follows actual selected button widths.
+  Each pane is still activated by its original button callback.
+- **Progress:** Sessions (last seven days) occupies the larger left-hand
+  visual field; Sets and Recent PRs are two right-hand tiles. Labels and
+  date-window copy remain visible with no recalculation or graph mutations.
+  The new grid is phone-scoped and remains readable at 320px.
+- **Motion and semantics:** initial page entrances include Plan's prominent
+  surfaces, but never any live workout rows. The fluent tabs retain their
+  existing button labels and pressed semantics. Original history, graphs,
+  logging, data exports and engine remain unchanged.
+
+Release requires passing 320px/430px visual-geometry assertions, all phone
+shards, core contracts, independent engine parity and PWA release integrity.

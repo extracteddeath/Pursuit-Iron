@@ -70,7 +70,7 @@ function tick(now) {
 }
 const pixels = (el, name) => v => el.style.setProperty(name, `${v}px`);
 const surfaceSelector = '[data-view-frame], [data-pi-workout-page], [data-sheet-drag], .wpb-pop, .wpb-dialog, .wpb-slideL, .wpb-slideR, .wpb-state-enter, .wpb-float-in, .wpb-notice-in';
-const groupSelector = '.wpb-segmented, .wpb-premium-tabs, .wpb-exercise-tabs, .wpb-library-flag-filter, .wpb-progress-grouping, .wpb-exercise-window-tabs, .wpb-exercise-metric-tabs, .wpb-effort-scale, .wpb-tabbar, [role="tablist"]';
+const groupSelector = '.wpb-segmented, .wpb-premium-tabs, .wpb-exercise-tabs, .wpb-library-flag-filter, .wpb-progress-grouping, .wpb-plan-panes, .wpb-exercise-window-tabs, .wpb-exercise-metric-tabs, .wpb-effort-scale, .wpb-tabbar, [role="tablist"]';
 const surfaceOwners = new WeakMap();
 const primaryRoutes = ['home','plan','progress','profile','settings'];
 let lastPrimaryRoute = -1;
@@ -208,11 +208,11 @@ export function installAppMotion(root) {
     // Material 3 selection tracks sit behind the actual React-owned buttons. Geometry is
     // measured, never guessed, so four-column and two-column selectors share one behavior.
     const selectionTracks = new WeakMap();
-    const trackSelector = '.wpb-progress .wpb-premium-tabs, .wpb-settings .wpb-segmented, .wpb-exercise-tabs, .wpb-library-flag-filter, .wpb-progress-grouping, .wpb-exercise-window-tabs, .wpb-tabbar';
+    const trackSelector = '.wpb-progress .wpb-premium-tabs, .wpb-settings .wpb-segmented, .wpb-exercise-tabs, .wpb-library-flag-filter, .wpb-progress-grouping, .wpb-plan-panes, .wpb-exercise-window-tabs, .wpb-tabbar';
 // Delayed visual entrances are bounded to five high-level cards per new page.
 // No workout logger controls, engine values or React-owned children participate.
 const entranceKeys = new WeakMap();
-const entranceSelector = '.wpb-home-hero, .wpb-home .wpb-action-tile, .wpb-program .wpb-day-card, .wpb-progress .wpb-progress-glance-item, .wpb-profile .wpb-profile-strength-cell, .wpb-settings .wpb-settings-card';
+const entranceSelector = '.wpb-home-hero, .wpb-home .wpb-action-tile, .wpb-program .wpb-day-card, .wpb-progress .wpb-progress-glance-item, .wpb-profile .wpb-profile-strength-cell, .wpb-settings .wpb-settings-card, .wpb-plan-view .wpb-plan-glance-tile, .wpb-plan-view .wpb-plan-up-next';
 function stagePage(el, initial = false) {
     if (!el.matches('[data-view-frame]')) return;
     const key = el.getAttribute('data-view-frame');
@@ -338,7 +338,7 @@ function disclosure(el, initial = false) {
     }
     // A brief touch-origin state layer on navigation and choices, not the dense workout set grid.
     // It never inserts a DOM child, changes a hit target, or consumes a click.
-    const inkTargets = '.wpb-tab, .wpb-segmented > button, .wpb-premium-tabs > button, .wpb-exercise-tabs > button, .wpb-exercise-window-tabs > button, .wpb-exercise-metric-tabs > button, .wpb-progress-grouping > button, .wpb-wizard-option, .wpb-wizard-choice, .wpb-wizard-preset, .wpb-filter-chip, .wpb-library-flag, .wpb-onboarding-primary, .wpb-onboarding-secondary, [role="tablist"] > button, button.wpb-toggle, .wpb-context-menu-item, .wpb-sheet-close';
+    const inkTargets = '.wpb-tab, .wpb-segmented > button, .wpb-premium-tabs > button, .wpb-exercise-tabs > button, .wpb-exercise-window-tabs > button, .wpb-exercise-metric-tabs > button, .wpb-progress-grouping > button, .wpb-plan-panes > button, .wpb-wizard-option, .wpb-wizard-choice, .wpb-wizard-preset, .wpb-filter-chip, .wpb-library-flag, .wpb-onboarding-primary, .wpb-onboarding-secondary, [role="tablist"] > button, button.wpb-toggle, .wpb-context-menu-item, .wpb-sheet-close';
     function ink(el, x, y) {
         if (reduced() || !el.matches(inkTargets)) return;
         const r = el.getBoundingClientRect();
@@ -472,7 +472,7 @@ function disclosure(el, initial = false) {
         // space, adjacent options yield gently, and the painted selection
         // follows their measured bounds. The underlying React controls stay
         // present and in the same order, with identical keyboard semantics.
-        const fluid = group.matches('.wpb-progress .wpb-premium-tabs,.wpb-library .wpb-library-flag-filter');
+        const fluid = group.matches('.wpb-progress .wpb-premium-tabs,.wpb-library .wpb-library-flag-filter,.wpb-plan-panes');
         if (fluid) group.dataset.piM3Fluid = '1';
         let trackQueued = false;
         const followFluid = () => {

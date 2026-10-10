@@ -205,3 +205,20 @@ For shorter histories the original individual SVG point interactions stay
 unchanged. The phone test seeds 80 sessions in an independent synthetic
 history without changing saved program prescriptions and verifies the full
 point count, aria state and keyboard navigation at 320px and 430px.
+
+## Shared spatial navigation and page orchestration
+
+Bottom navigation now uses the same measured, interruptible spring as
+Progress/Settings/Exercise tab indicators. Instead of fading five static
+pills, **one** paint-only rounded 30px tonal selection follows the real
+selected button, derives its fill from the theme's computed foreground, and
+resizes on layout changes. Native tab elements, icons, labels, pointer
+targets, back behavior and persistence remain untouched. Rapid navigation
+changes retarget the same spring instead of stacking animations.
+
+On screen transitions, up to five top-level Home, Plan, Progress, Profile or
+Settings cards enter with a brief staggered motion. This does not delay data
+or interaction. It excludes all workout rows, set controls, sheets, and the
+engine, and settles immediately for reduced-motion or forced-color users.
+Phone regression follows actual tab navigation at 320px/430px to verify
+indicator geometry, stored-program immutability and bounded page staging.

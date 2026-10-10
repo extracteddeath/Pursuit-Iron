@@ -3188,3 +3188,160 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     border-color:ButtonText!important;
   }
 }
+
+
+/* M3 EXPRESSIVE R17 — PROFILE AS A SCANNABLE TRAINING DASHBOARD
+   The previous R5 Profile treated bodyweight as a giant capsule and one
+   arbitrary movement pattern as a full-width hero. Google’s layout guidance
+   calls for consistent related alignment and a meaningful, not decorative,
+   information hierarchy. CSS-only: all four real scores, milestones, trends,
+   sharing, edit and achievements keep their existing behavior. */
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-inner{
+  width:100%;
+  max-width:740px;
+  margin-inline:auto;
+  padding:10px 16px 28px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-head{
+  display:flex;
+  align-items:center!important;
+  min-height:64px;
+  padding:7px 0 9px!important;
+  margin-bottom:8px!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  gap:12px!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-title{
+  font-size:clamp(27px,6.6vw,33px)!important;
+  font-weight:770!important;
+  letter-spacing:-.045em!important;
+  line-height:1.08!important;
+}
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-identity{
+  display:flex!important;
+  flex-wrap:wrap;
+  align-items:center;
+  width:auto;
+  max-width:100%;
+  padding:0!important;
+  margin-top:5px!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  font-size:12.5px!important;
+  line-height:1.35!important;
+}
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-edit{
+  min-height:44px!important;
+  min-width:44px!important;
+  padding:0 14px!important;
+  border:1px solid var(--pi-r11-edge)!important;
+  border-radius:16px!important;
+  background-color:var(--pi-r11-quiet)!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-hero{
+  padding:14px!important;
+  margin:0 0 8px!important;
+  background-color:var(--pi-r11-raised)!important;
+  border:1px solid var(--pi-r11-edge)!important;
+  border-radius:24px!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-level-mark{
+  width:52px!important;
+  height:52px!important;
+  border-radius:17px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-stat-grid{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:6px!important;
+  margin-bottom:10px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-stat{
+  min-width:0;
+  min-height:66px;
+  padding:10px 5px!important;
+  background-color:var(--pi-r11-quiet)!important;
+  border-radius:16px!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-stat .mono{
+  min-width:0;
+  flex-wrap:wrap;
+  column-gap:3px!important;
+  row-gap:0;
+}
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength{
+  padding:15px 13px 13px!important;
+  margin-bottom:10px!important;
+  background-color:var(--pi-r11-quiet)!important;
+  border:1px solid var(--pi-r11-edge)!important;
+  border-radius:25px!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength-grid{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  grid-auto-flow:row!important;
+  align-items:stretch!important;
+  gap:7px!important;
+  margin-bottom:11px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength-cell,
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength-cell:first-child,
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength-cell:last-child{
+  grid-column:auto!important;
+  grid-row:auto!important;
+  min-width:0!important;
+  min-height:70px!important;
+  padding:12px 8px!important;
+  border:1px solid var(--pi-r11-edge)!important;
+  border-radius:17px!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength-cell:first-child{
+  border-color:var(--pi-r11-accent-stroke)!important;
+  background-color:var(--pi-r11-hero)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength-cell>.mono{
+  font-size:21px!important;
+  line-height:1.14!important;
+  font-weight:780!important;
+  letter-spacing:-.025em!important;
+}
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-next-strength{
+  padding:10px 11px!important;
+  margin-bottom:3px;
+  background-color:var(--pi-r11-raised)!important;
+  border-radius:14px!important;
+  line-height:1.4!important;
+}
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-achievements,
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-setup{
+  border-radius:24px!important;
+  box-shadow:none!important;
+}
+@media(max-width:350px){
+  #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-inner{
+    padding-inline:12px!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength-cell{
+    padding-inline:6px!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-stat{
+    padding-inline:3px!important;
+  }
+}
+@media(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile
+    :is(.wpb-profile-hero,.wpb-profile-stat,.wpb-profile-strength,.wpb-profile-next-strength,.wpb-profile-edit){
+    background-color:Canvas!important;
+    color:CanvasText!important;
+    border:1px solid CanvasText!important;
+  }
+}

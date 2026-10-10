@@ -189,6 +189,55 @@ function stagePage(el, initial = false) {
 }
 const navSurface = button =>
     `color-mix(in srgb, ${getComputedStyle(button).color} 14%, transparent)`;
+
+/* Shared disclosure orchestration.
+   The content is still mounted/removed by React: this layer observes actual
+   semantic state and animates only the card shell/arriving content. Never
+   clone a live form or delay a program/logging state change to finish a tween. */
+const disclosureSelector = '.wpb-program .wpb-day-card, .hp-card, .wpb-profile-achievement-toggle, .wpb-progress-disclosure, .wpb-settings details.wpb-advanced';
+const disclosureStates = new WeakMap();
+function disclosure(el, initial = false) {
+    const day = el.matches('.wpb-program .wpb-day-card');
+    const history = el.matches('.hp-card');
+    const native = el.matches('details');
+    const trigger = day ? el.querySelector('.wpb-day-toggle') :
+        history ? el.querySelector('.hp-action[aria-expanded]') :
+        el.matches('.wpb-profile-achievement-toggle') ? el :
+        native ? el.querySelector('summary') : null;
+    if (!trigger) return;
+    const panel = day ? el.querySelector(':scope > .wpb-expand') :
+        history ? el.querySelector(':scope > .hp-blocks') :
+        el.matches('.wpb-profile-achievement-toggle')
+            ? (el.nextElementSibling?.matches('.wpb-profile-achievement-board') ? el.nextElementSibling : null) :
+        native ? el.querySelector(':scope > .wpb-advanced-body') :
+        el.querySelector(':scope > *:not(summary)');
+    const open = native ? el.open : day ? !!panel : trigger.getAttribute('aria-expanded') === 'true';
+    const previous = disclosureStates.get(el);
+    if (day) {
+        // The day header currently omits expanded semantics. Reflect the real
+        // mounted panel without changing its React click/scroll behavior.
+        trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+        if (panel && el.id) {
+            const id = el.id + '-content';
+            panel.id = id;
+            trigger.setAttribute('aria-controls', id);
+        } else trigger.removeAttribute('aria-controls');
+    }
+    el.dataset.piDisclosure = open ? 'open' : 'closed';
+    if (previous === open && !initial) return;
+    disclosureStates.set(el, open);
+    if (day || history) {
+        const target = open ? 21 : 16;
+        if (previous === undefined || initial)
+            setMotionValue(el, '--pi-disclosure-radius', target, pixels(el, '--pi-disclosure-radius'));
+        else
+            spring(el, '--pi-disclosure-radius', target, { write: pixels(el, '--pi-disclosure-radius'), stiffness: 760, damping: .84, precision: .015 });
+    }
+    if (open && panel && previous === false && !reduced()) {
+        panel.dataset.piExpandEnter = '1';
+    }
+}
+
     const trackResize = typeof ResizeObserver === 'function' ? new ResizeObserver(entries => {
         for (const entry of entries) {
             const group = entry.target, selected = choiceStates.get(group);
@@ -264,6 +313,7 @@ const navSurface = button =>
     const inkEnd = e => {
         if (e.animationName === 'piInkBurst' && e.target?.dataset) delete e.target.dataset.piInk;
         if (e.animationName === 'piContentCascade' && e.target?.dataset) delete e.target.dataset.piReveal;
+        if (e.animationName === 'piDisclosureContent' && e.target?.dataset) delete e.target.dataset.piExpandEnter;
         if (e.target?.matches?.('.wpb-context-menu')) positionContextMenu(e.target);
     };
     const clearInk = () => root.querySelectorAll('[data-pi-ink]').forEach(el => delete el.dataset.piInk);
@@ -415,6 +465,7 @@ const navSurface = button =>
         const each = (selector, fn) => { if (node.matches(selector)) fn(node, initial); node.querySelectorAll(selector).forEach(el => fn(el, initial)); };
         each(surfaceSelector, enterSurface);
         each('[data-view-frame]', stagePage);
+        each(disclosureSelector, disclosure);
         each(groupSelector, selection);
         each('.wpb-toggle[aria-checked]', toggle);
         each('.wpb-context-menu', positionContextMenu);
@@ -428,22 +479,30 @@ const navSurface = button =>
     }
     scan(root, true);
     const observer = new MutationObserver(records => {
-        const groups = new Set();
+        const groups = new Set(), disclosures = new Set();
         records.forEach(record => {
-            if (record.type === 'childList') record.addedNodes.forEach(node => scan(node));
-            else {
+            if (record.type === 'childList') {
+                record.addedNodes.forEach(node => scan(node));
+                const host = record.target.nodeType === 1 ? record.target.closest(disclosureSelector) : null;
+                if (host) disclosures.add(host);
+            } else {
                 const el = record.target;
                 if (record.attributeName === 'data-motion-key') { if (el.matches('[data-pi-reference]')) reference(el); else enterSurface(el); }
                 if (record.attributeName === 'data-view-frame') { enterSurface(el); stagePage(el); }
                 if (record.attributeName === 'aria-checked' && el.matches('.wpb-toggle')) toggle(el);
                 if (record.attributeName === 'aria-pressed' && el.matches('button')) option(el);
+                if (record.attributeName === 'aria-expanded' || record.attributeName === 'open') {
+                    const host = el.closest(disclosureSelector);
+                    if (host) disclosures.add(host);
+                }
                 const group = el.closest(groupSelector); if (group) groups.add(group);
             }
         });
         groups.forEach(group => selection(group));
+        disclosures.forEach(el => disclosure(el));
     });
     observer.observe(root, { subtree: true, childList: true, attributes: true,
-        attributeFilter: ['data-view-frame','data-motion-key','aria-pressed','aria-selected','aria-current','aria-checked'] });
+        attributeFilter: ['data-view-frame','data-motion-key','aria-pressed','aria-selected','aria-current','aria-checked','aria-expanded','open'] });
     const settleAll = () => {
         [...pressed.keys()].forEach(release);
         [...active].filter(state => root.contains(state.el)).forEach(settle);

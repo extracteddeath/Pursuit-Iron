@@ -596,6 +596,9 @@ try {
         await page.click('[data-tab="settings"]');
         await page.waitForSelector('.wpb-settings');
         await clickText('Exercise library');
+        await page.waitForSelector('.wpb-library-search input');
+        await page.click('.wpb-library-search input');
+        await page.keyboard.type('Back Squat');
         await page.waitForSelector('.wpb-library-row');
         await page.click('.wpb-library-row');
         await page.waitForSelector('[data-exercisedetail] .wpb-exercise-tabs');

@@ -108,7 +108,7 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "4dce9935c7e56fb86afcebdd901588894131abfb56d6fe2c6bc22d7137ca7592",
+    "modules/App.js": "e2855ac546eea4746d24a329486d71831b3c70281db9891e33415391bdbe9420",
     "index.html": "33765bd62fc051961e6dd2e03db7e224f9546135606979cbfcb13f82d8d0dc66",
     "sw.js": "1096b7c5540dbcdc16029534e1800e1bb2c4c65de122ba48262f776fcbdd4998",
     "BUILD_PROFILE.json": "fc125cb3ccad1763976af91fb59faea8454fffa8a82c8dd2c9d22bad44825ba7",

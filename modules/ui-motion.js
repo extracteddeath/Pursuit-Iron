@@ -168,7 +168,27 @@ export function installAppMotion(root) {
     // Material 3 selection tracks sit behind the actual React-owned buttons. Geometry is
     // measured, never guessed, so four-column and two-column selectors share one behavior.
     const selectionTracks = new WeakMap();
-    const trackSelector = '.wpb-progress .wpb-premium-tabs, .wpb-settings .wpb-segmented, .wpb-exercise-tabs, .wpb-library-flag-filter, .wpb-progress-grouping, .wpb-exercise-window-tabs';
+    const trackSelector = '.wpb-progress .wpb-premium-tabs, .wpb-settings .wpb-segmented, .wpb-exercise-tabs, .wpb-library-flag-filter, .wpb-progress-grouping, .wpb-exercise-window-tabs, .wpb-tabbar';
+// Delayed visual entrances are bounded to five high-level cards per new page.
+// No workout logger controls, engine values or React-owned children participate.
+const entranceKeys = new WeakMap();
+const entranceSelector = '.wpb-home-hero, .wpb-home .wpb-action-tile, .wpb-program .wpb-day-card, .wpb-progress .wpb-progress-glance-item, .wpb-profile .wpb-profile-strength-cell, .wpb-settings .wpb-settings-card';
+function stagePage(el, initial = false) {
+    if (!el.matches('[data-view-frame]')) return;
+    const key = el.getAttribute('data-view-frame');
+    if (entranceKeys.get(el) === key) return;
+    entranceKeys.set(el, key);
+    if (initial || reduced() || !key || key === 'workout' || el.closest('[data-pi-workout-page]')) return;
+    el.dataset.piCascade = '1';
+    [...el.querySelectorAll(entranceSelector)].slice(0, 5).forEach((item, index) => {
+        if (item.closest('.wpb-workout,[data-pi-workout-page],[data-sheet-drag]')) return;
+        delete item.dataset.piReveal;
+        item.style.setProperty('--pi-reveal-delay', `${index * 26}ms`);
+        item.dataset.piReveal = '1';
+    });
+}
+const navSurface = button =>
+    `color-mix(in srgb, ${getComputedStyle(button).color} 14%, transparent)`;
     const trackResize = typeof ResizeObserver === 'function' ? new ResizeObserver(entries => {
         for (const entry of entries) {
             const group = entry.target, selected = choiceStates.get(group);
@@ -198,22 +218,24 @@ export function installAppMotion(root) {
         if (!state) {
             // Sample the real selected surface BEFORE overriding it with the moving track.
             // Settings derives its active fill from the saved theme; Progress uses its card tone.
-            const fill = selectedSurface(group, button);
+            const fill = group.matches('.wpb-tabbar') ? navSurface(button) : selectedSurface(group, button);
             state = { fill }; selectionTracks.set(group, state);
             group.style.setProperty('--pi-m3-track-fill', fill);
             group.dataset.piM3Track = '1';
             trackResize?.observe(group);
         }
-        const computedFill = selectedSurface(group, button);
+        const computedFill = group.matches('.wpb-tabbar') ? navSurface(button) : selectedSurface(group, button);
         if (computedFill && computedFill !== 'transparent' && computedFill !== state.fill) {
             state.fill = computedFill;
             group.style.setProperty('--pi-m3-track-fill', state.fill);
         }
+        const nav = group.matches('.wpb-tabbar');
+        const width = nav ? Math.min(54, button.offsetWidth * .7) : button.offsetWidth;
         const target = {
-            '--pi-m3-track-x': button.offsetLeft,
-            '--pi-m3-track-y': button.offsetTop,
-            '--pi-m3-track-width': button.offsetWidth,
-            '--pi-m3-track-height': button.offsetHeight
+            '--pi-m3-track-x': button.offsetLeft + (nav ? (button.offsetWidth - width) / 2 : 0),
+            '--pi-m3-track-y': button.offsetTop + (nav ? 4 : 0),
+            '--pi-m3-track-width': width,
+            '--pi-m3-track-height': nav ? 30 : button.offsetHeight
         };
         for (const [key, value] of Object.entries(target)) {
             if (instant || state[key] === undefined) setMotionValue(group, key, value, pixels(group, key));
@@ -241,6 +263,7 @@ export function installAppMotion(root) {
     }
     const inkEnd = e => {
         if (e.animationName === 'piInkBurst' && e.target?.dataset) delete e.target.dataset.piInk;
+        if (e.animationName === 'piContentCascade' && e.target?.dataset) delete e.target.dataset.piReveal;
         if (e.target?.matches?.('.wpb-context-menu')) positionContextMenu(e.target);
     };
     const clearInk = () => root.querySelectorAll('[data-pi-ink]').forEach(el => delete el.dataset.piInk);
@@ -353,7 +376,7 @@ export function installAppMotion(root) {
         root.querySelectorAll(trackSelector).forEach(group => {
             const state = selectionTracks.get(group);
             const chosen = group.querySelector('button[aria-selected="true"],button[aria-pressed="true"]');
-            const fill = chosen ? selectedSurface(group, chosen) : null;
+            const fill = chosen ? (group.matches('.wpb-tabbar') ? navSurface(chosen) : selectedSurface(group, chosen)) : null;
             if (state && fill && fill !== 'transparent' && fill !== state.fill) {
                 state.fill = fill;
                 group.style.setProperty('--pi-m3-track-fill', fill);
@@ -391,6 +414,7 @@ export function installAppMotion(root) {
         if (node.nodeType !== 1 || !root.contains(node)) return;
         const each = (selector, fn) => { if (node.matches(selector)) fn(node, initial); node.querySelectorAll(selector).forEach(el => fn(el, initial)); };
         each(surfaceSelector, enterSurface);
+        each('[data-view-frame]', stagePage);
         each(groupSelector, selection);
         each('.wpb-toggle[aria-checked]', toggle);
         each('.wpb-context-menu', positionContextMenu);
@@ -410,7 +434,7 @@ export function installAppMotion(root) {
             else {
                 const el = record.target;
                 if (record.attributeName === 'data-motion-key') { if (el.matches('[data-pi-reference]')) reference(el); else enterSurface(el); }
-                if (record.attributeName === 'data-view-frame') enterSurface(el);
+                if (record.attributeName === 'data-view-frame') { enterSurface(el); stagePage(el); }
                 if (record.attributeName === 'aria-checked' && el.matches('.wpb-toggle')) toggle(el);
                 if (record.attributeName === 'aria-pressed' && el.matches('button')) option(el);
                 const group = el.closest(groupSelector); if (group) groups.add(group);

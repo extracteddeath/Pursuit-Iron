@@ -3981,3 +3981,105 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     border-color:CanvasText!important;
   }
 }
+
+
+/* M3 EXPRESSIVE R22 — PROGRAM EXERCISE OPTIONS AND SWAP CHOICES
+   Real, on-demand workout-adjacent controls. Respect the runtime's drag
+   ownership, touch/keyboard dismiss, data model and navigation callbacks. */
+#root[data-pi-motion="expressive"] .wpb-program button[aria-label^="More options for "]{
+  min-width:44px!important;
+  min-height:44px!important;
+  height:44px!important;
+  border-radius:15px!important;
+  flex-shrink:0;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-options-sheet{
+  box-sizing:border-box;
+  padding:14px max(16px,env(safe-area-inset-left)) calc(env(safe-area-inset-bottom) + 20px) max(16px,env(safe-area-inset-right))!important;
+  border-radius:27px 27px 0 0!important;
+  border:1px solid var(--pi-r11-edge)!important;
+  border-bottom:0!important;
+  background-color:var(--wpb-focus-bg,#110c15)!important;
+  background-image:none!important;
+  box-shadow:none!important;
+  overscroll-behavior-y:contain;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-options-sheet>div:first-child{
+  align-items:center!important;
+  gap:10px!important;
+  padding:0 0 8px!important;
+  margin-bottom:8px!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-options-sheet>div:first-child>div:first-child{
+  min-width:0!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-options-sheet>div:first-child>div:first-child>div:first-child{
+  white-space:normal!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  overflow-wrap:anywhere!important;
+  font-size:17px!important;
+  line-height:1.25!important;
+  letter-spacing:-.022em;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-options-sheet .wpb-sheet-close{
+  flex:0 0 44px!important;
+  align-self:center;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-options-sheet>.wpb-sheet-action{
+  min-height:54px!important;
+  margin-bottom:6px!important;
+  padding:11px 12px!important;
+  border:1px solid var(--pi-r11-edge)!important;
+  border-radius:18px!important;
+  background-color:var(--pi-r11-quiet)!important;
+  background-image:none!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-options-sheet>.wpb-sheet-action>span:last-child{
+  min-width:0!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-options-sheet>.wpb-sheet-action>span:last-child>span{
+  white-space:normal!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  overflow-wrap:anywhere!important;
+  line-height:1.35!important;
+}
+/* Swap recommendations have variable-length attachment and equipment labels.
+   Preserve their real button layouts but prevent a long name from clipping. */
+#root[data-pi-motion="expressive"] .wpb .wpb-swap-results [aria-label^="Swap to "]{
+  min-width:0!important;
+  min-height:64px!important;
+  border-radius:18px!important;
+  border-color:var(--pi-r11-edge)!important;
+  background-color:var(--pi-r11-quiet)!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-swap-results [aria-label^="Swap to "] span{
+  overflow-wrap:anywhere;
+}
+@media(max-width:350px){
+  #root[data-pi-motion="expressive"] .wpb .wpb-exercise-options-sheet{
+    padding-left:max(12px,env(safe-area-inset-left))!important;
+    padding-right:max(12px,env(safe-area-inset-right))!important;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  #root[data-pi-motion="expressive"] .wpb :is(
+    .wpb-exercise-options-sheet>.wpb-sheet-action,
+    .wpb-program button[aria-label^="More options for "],
+    .wpb-swap-results [aria-label^="Swap to "]){
+    transition:none!important;
+    transform:none!important;
+  }
+}
+@media(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb :is(
+    .wpb-exercise-options-sheet,.wpb-exercise-options-sheet>.wpb-sheet-action,
+    .wpb-swap-results [aria-label^="Swap to "]){
+    background-color:Canvas!important;
+    color:CanvasText!important;
+    border-color:CanvasText!important;
+  }
+}

@@ -327,3 +327,36 @@ When reduced motion is requested, spring values settle immediately.
 Real browser checks at 320px and 430px verify selected width growth, matched
 track geometry, Library overflow, keyboard tab selection and original
 prescriptions.
+
+## M3 Expressive R4 — connected navigation and a meaningful Home mission
+
+This milestone changes **content composition and route choreography**, not just
+radius values or a decorative ripple.
+
+- **Home mission:** the top-level training hero now includes a graphical
+  day-in-rotation ring, driven only by the active program's actual day index and
+  number of days. Its text alternative exposes the same number to assistive
+  technology. This is a rotation indicator, *not* a fake readiness or adherence
+  score. Its location remains within the card at 320/430px.
+- **Workout outline:** the existing live calculated set and rep previews show
+  three exercises by default, rather than five; the original Show All / Show
+  Fewer control keeps the complete list available. This cuts the hero's
+  initial height and pulls Start workout up without reducing feature parity.
+- **Action bento:** featured Templates remains full width; Custom Split and
+  Cycles become smaller vertical composer cards, visually different from
+  current-workout and metric surfaces without another row of controls.
+- **Spatial tab navigation:** before React changes the view, the originating
+  and destination bottom tabs determine forward/backward motion. The normal
+  screen-spring system animates the destination from the appropriate physical
+  direction, using the existing view frame; no duplicate screen nodes, saved
+  scroll offsets or state-machine changes. Nested routes, wizards, dialogs and
+  workout screens do not inherit this motion because their target differs.
+- **Adaptive app bar:** existing real scroll state lifts the nonworkout header
+  slightly and tucks supporting page titles without a heavy blur layer.
+- **A11y:** the rotation ring has a real accessible description, reduced-motion
+  turns off tracing, and all original action buttons remain keyboard/touch
+  accessible. Current workout logging, Target/Last, completed sets, RIR,
+  numeric fields and engine prescriptions are untouched.
+
+Phone verification checks both semantic dial geometry and directional route
+intent. Visual screenshots are required before approval.

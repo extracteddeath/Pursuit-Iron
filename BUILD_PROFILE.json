@@ -6,6 +6,6 @@
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 70,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b831-r1fe0b3332145851c",
-  "uiMilestone": "Build 831 · M3 Expressive R3 fluid layout and grouped springs"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b831-rd2a441a7d17e745b",
+  "uiMilestone": "Build 831 · M3 Expressive R4 adaptive app bars and connected spatial motion"
 }

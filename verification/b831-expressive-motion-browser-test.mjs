@@ -522,7 +522,7 @@ try {
         await page.click(`${row} input[aria-label="weight"]`); await page.keyboard.type('195.5');
         const before = await page.$$eval(`${row} input`, els => els.map(el => el.value));
         for (let tap = 0; tap < 8; tap++) await page.click(tap % 2 ? 'button[aria-label="Show prescribed targets"]' : 'button[aria-label="Show previous workout values"]');
-        assert.deepEqual(await page.$eval(`${row} input`, els => els.map(el => el.value)), before, 'reference transitions never overwrite typed values');
+        assert.deepEqual(await page.$$eval(`${row} input`, els => els.map(el => el.value)), before, 'reference transitions never overwrite typed values');
         assert.ok(await page.$eval('.wpb-target-toggle', button => !button.hasAttribute('data-pi-control')),
             'Target/Last control retains its own compact feedback and never takes global shape morph');
 

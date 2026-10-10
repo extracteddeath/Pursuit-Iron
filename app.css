@@ -1483,3 +1483,44 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     animation:none!important;translate:none!important;
   }
 }
+
+/* PI M3 EXERCISE DETAIL VISUAL QA — the video-search link is secondary
+   metadata, not a hero. Keep a real tappable link (no third-party embed)
+   while bringing History/Charts/Records above the fold on short phones.
+   Only the navigated Library detail is affected; workout forms are not. */
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-detail a[data-testid="form-video-link"]{
+  display:flex!important;
+  flex-direction:row!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  gap:12px!important;
+  min-height:74px!important;
+  width:100%;
+  padding:10px 13px!important;
+  border-radius:15px!important;
+  text-align:left!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-detail a[data-testid="form-video-link"]>div:first-child{
+  width:42px!important;
+  height:42px!important;
+  min-width:42px!important;
+  flex:0 0 42px;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-detail a[data-testid="form-video-link"]>div:first-child svg{
+  width:20px;height:20px;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-detail a[data-testid="form-video-link"]>div:last-child{
+  min-width:0;
+  flex:1 1 auto;
+  text-align:left!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-detail a[data-testid="form-video-link"]>div:last-child>div:last-child{
+  justify-content:flex-start!important;
+  flex-wrap:wrap;
+  gap:3px!important;
+  overflow-wrap:anywhere;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-detail a[data-testid="form-video-link"]:focus-visible{
+  outline:2px solid currentColor!important;
+  outline-offset:3px!important;
+}

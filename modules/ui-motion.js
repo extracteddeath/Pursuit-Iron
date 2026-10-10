@@ -72,6 +72,8 @@ const pixels = (el, name) => v => el.style.setProperty(name, `${v}px`);
 const surfaceSelector = '[data-view-frame], [data-pi-workout-page], [data-sheet-drag], .wpb-pop, .wpb-dialog, .wpb-slideL, .wpb-slideR, .wpb-state-enter, .wpb-float-in, .wpb-notice-in';
 const groupSelector = '.wpb-segmented, .wpb-premium-tabs, .wpb-exercise-tabs, .wpb-library-flag-filter, .wpb-progress-grouping, .wpb-exercise-window-tabs, .wpb-exercise-metric-tabs, .wpb-effort-scale, .wpb-tabbar, [role="tablist"]';
 const surfaceOwners = new WeakMap();
+const primaryRoutes = ['home','plan','progress','profile','settings'];
+let lastPrimaryRoute = -1;
 
 function enterSurface(el, initial = false) {
     if (el.closest('.wpb-closing')) return;
@@ -81,14 +83,46 @@ function enterSurface(el, initial = false) {
     surfaceOwners.set(el, key); el.dataset.piSurface = '1';
     const sheet = el.matches('[data-sheet-drag]');
     const dialog = el.matches('.wpb-pop,.wpb-dialog');
-    const dir = el.matches('.wpb-slideR') || el.getAttribute('data-motion-direction') === 'r' ? -1 : el.matches('.wpb-slideL') || el.getAttribute('data-motion-direction') === 'l' ? 1 : 0;
+    // Top-level navigation is a connected motion system: neighboring pages
+    // arrive from their actual relative tab direction. Deep-link, exercise,
+    // full-screen log and sheet transitions keep their own existing semantics.
+    const route = el.matches('[data-view-frame]')
+        ? primaryRoutes.indexOf(el.getAttribute('data-view-frame')) : -1;
+    const navTravel = route >= 0 && lastPrimaryRoute >= 0 && route !== lastPrimaryRoute
+        ? Math.sign(route - lastPrimaryRoute) : 0;
+    if (route >= 0) lastPrimaryRoute = route;
+    if (route >= 0) {
+        el.dataset.piNavDirection = navTravel < 0 ? 'back' : navTravel > 0 ? 'forward' : 'stationary';
+        el.style.setProperty('--pi-page-reveal-x', navTravel > 0 ? '13px' : navTravel < 0 ? '-13px' : '0px');
+    }
+    const dir = el.matches('.wpb-slideR') || el.getAttribute('data-motion-direction') === 'r'
+        ? -1 : el.matches('.wpb-slideL') || el.getAttribute('data-motion-direction') === 'l'
+        ? 1 : navTravel;
     const y = sheet ? 52 : dialog ? 8 : el.matches('.wpb-notice-in') ? -6 : dir ? 0 : 4;
     const quiet = initial || reduced();
     const restart = (name, value) => !first && !quiet && !active.has(states.get(el)?.get(name)) ? value : undefined;
-    spring(el, '--pi-surface-x', 0, { from: quiet ? 0 : dir * 18, restart: restart('--pi-surface-x', dir * 18), write: pixels(el, '--pi-surface-x') });
-    spring(el, '--pi-surface-y', 0, { from: quiet ? 0 : y, restart: restart('--pi-surface-y', y), write: pixels(el, '--pi-surface-y'), damping: sheet ? .94 : 1 });
-    spring(el, '--pi-surface-opacity', 1, { from: quiet ? 1 : .55, restart: restart('--pi-surface-opacity', .55), stiffness: 1200, damping: 1, precision: .001 });
-    if (dialog) spring(el, '--pi-surface-scale', 1, { from: quiet ? 1 : .97, damping: .9, precision: .001 });
+    spring(el, '--pi-surface-x', 0, {
+        from: quiet ? 0 : dir * (route >= 0 ? 34 : 18),
+        restart: restart('--pi-surface-x', dir * (route >= 0 ? 34 : 18)),
+        write: pixels(el, '--pi-surface-x'), stiffness: route >= 0 ? 660 : 700,
+        damping: route >= 0 ? .88 : .9
+    });
+    spring(el, '--pi-surface-y', 0, { from: quiet ? 0 : y,
+        restart: restart('--pi-surface-y', y), write: pixels(el, '--pi-surface-y'),
+        damping: sheet ? .94 : 1 });
+    spring(el, '--pi-surface-opacity', 1, { from: quiet ? 1 : route >= 0 ? .78 : .55,
+        restart: restart('--pi-surface-opacity', route >= 0 ? .78 : .55),
+        stiffness: 1200, damping: 1, precision: .001 });
+    if (dialog || route >= 0)
+        spring(el, '--pi-surface-scale', 1, {
+            from: quiet ? 1 : dialog ? .97 : .985,
+            restart: restart('--pi-surface-scale', dialog ? .97 : .985),
+            stiffness: 770, damping: .88, precision: .001
+        });
+    if (sheet)
+        spring(el, '--pi-sheet-radius', 29, { from: quiet ? 29 : 46,
+            restart: restart('--pi-sheet-radius', 46),
+            write: pixels(el, '--pi-sheet-radius'), stiffness: 740, damping: .87 });
 }
 export function exitMotion(wrapper, complete) {
     let cancelled = false;
@@ -101,6 +135,9 @@ export function exitMotion(wrapper, complete) {
     panels.forEach(el => {
         el.dataset.piSurface = '1';
         spring(el, '--pi-surface-opacity', 0, { stiffness: 1400, damping: 1, precision: .001 });
+        if (el.matches('[data-sheet-drag]'))
+            spring(el, '--pi-sheet-radius', 42, { write: pixels(el, '--pi-sheet-radius'),
+                stiffness: 740, damping: 1 });
         stops.push(spring(el, '--pi-surface-y', el.matches('[data-sheet-drag]') ? 64 : 8,
             { write: pixels(el, '--pi-surface-y'), stiffness: 1100, damping: 1, complete: done }));
     });
@@ -116,6 +153,9 @@ export function resumeMotion(wrapper) {
         if (!surfaceOwners.has(el)) { enterSurface(el); return; }
         spring(el, '--pi-surface-y', 0, { write: pixels(el, '--pi-surface-y'), damping: .94 });
         spring(el, '--pi-surface-opacity', 1, { stiffness: 1200, damping: 1, precision: .001 });
+        if (el.matches('[data-sheet-drag]'))
+            spring(el, '--pi-sheet-radius', 29, { write: pixels(el, '--pi-sheet-radius'),
+                stiffness: 740, damping: .87 });
     });
     wrapper.querySelectorAll('.wpb-backdrop').forEach(el => {
         el.dataset.piBackdrop = '1';

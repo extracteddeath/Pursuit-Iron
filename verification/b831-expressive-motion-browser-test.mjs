@@ -479,6 +479,15 @@ try {
         // A real plan-day accordion must morph its surface and expose the
         // actual mounted panel to assistive technology. No extra rows,
         // reserved height or program-data mutation is permitted.
+        // Plan opens the next training day by default. Normalize to a
+        // collapsed card so we exercise a genuine closed -> open transition.
+        const initiallyOpen = await page.$eval('.wpb-program .wpb-day-card', card =>
+            !!card.querySelector(':scope > .wpb-expand'));
+        if (initiallyOpen) {
+            await page.click('.wpb-program .wpb-day-toggle');
+            await page.waitForFunction(() =>
+                !document.querySelector('.wpb-program .wpb-day-card > .wpb-expand'));
+        }
         await page.click('.wpb-program .wpb-day-toggle');
         await page.waitForFunction(() => {
             const card=document.querySelector('.wpb-program .wpb-day-card');

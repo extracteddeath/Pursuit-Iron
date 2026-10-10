@@ -202,7 +202,9 @@ try {
             const group = document.querySelector('.wpb-progress .wpb-premium-tabs');
             const selected = group?.querySelector('[aria-selected="true"]');
             return selected?.textContent?.trim() === 'Lifts' &&
-                Math.abs(Number.parseFloat(group.style.getPropertyValue('--pi-m3-track-x')) - selected.offsetLeft) < .15;
+                Math.abs(Number.parseFloat(group.style.getPropertyValue('--pi-m3-track-x')) - selected.offsetLeft) < .3 &&
+                Math.abs(Number.parseFloat(group.style.getPropertyValue('--pi-m3-track-width')) - selected.offsetWidth) < .3 &&
+                Number.parseFloat(selected.style.getPropertyValue('--pi-choice-grow')) > 1.18;
         }, { timeout: 5000 });
         const afterTrack = await page.$eval('.wpb-progress .wpb-premium-tabs', el => {
             const selected = el.querySelector('[aria-selected="true"]');
@@ -214,6 +216,8 @@ try {
         });
         assert.ok(afterTrack.x > beforeTrack.x && Math.abs(afterTrack.w - afterTrack.targetW) < .15,
             'shared M3 selection slides and resizes to the exact chosen segment');
+        assert.ok(afterTrack.w > beforeTrack.widths[1] + 4,
+            'selected Progress segment physically expands while adjacent segments yield');
         assert.equal(afterTrack.childCount, beforeTrack.children,
             'selection motion never adds a DOM element or reduces tap targets');
         assert.ok(afterTrack.indicator !== 'none' && afterTrack.activeBackground === 'rgba(0, 0, 0, 0)',
@@ -633,7 +637,9 @@ try {
             const el = document.querySelector('.wpb-library-flag-filter');
             const chosen = el?.querySelector('[aria-pressed="true"]');
             return chosen?.textContent?.includes('Recent') &&
-                Math.abs(parseFloat(el.style.getPropertyValue('--pi-m3-track-x')) - chosen.offsetLeft) < .2;
+                Math.abs(parseFloat(el.style.getPropertyValue('--pi-m3-track-x')) - chosen.offsetLeft) < .3 &&
+                Math.abs(parseFloat(el.style.getPropertyValue('--pi-m3-track-width')) - chosen.offsetWidth) < .3 &&
+                parseFloat(chosen.style.getPropertyValue('--pi-choice-grow')) > 1.18;
         }, { timeout: 5000 });
         await page.$eval('.wpb-library-search input', input => input.focus());
         const libraryFocus = await page.$eval('.wpb-library-search input', el =>

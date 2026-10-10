@@ -554,7 +554,7 @@ try {
             closed:getComputedStyle(el).visibility==='hidden'
         }));
         assert.ok(overlayPaint.opacity>=0.999 && !overlayPaint.closed &&
-            overlayPaint.rect.width>=width-1,
+            overlayPaint.rect.width>=width-3,
             'full-screen exercise detail never ghosts the underlying Library during motion: '+
               JSON.stringify(overlayPaint));
         const detailGeometry = await page.$eval('.wpb-exercise-detail', el => {

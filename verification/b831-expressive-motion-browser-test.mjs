@@ -603,6 +603,27 @@ try {
         await page.click('.wpb-library-row');
         await page.waitForSelector('[data-exercisedetail] .wpb-exercise-tabs');
         await page.click('.wpb-exercise-tabs>button:nth-child(2)');
+        await page.waitForSelector('[data-exercisecharts]');
+        const denseDiagnostic = await page.evaluate(() => {
+            const saved = JSON.parse(localStorage.getItem('wpb:v1') || '{}');
+            const svg = document.querySelector('.wpb-chart[data-metricchart]');
+            return {
+                savedHistory: saved.history?.length,
+                savedFirst: saved.history?.[0]?.date,
+                savedLast: saved.history?.at(-1)?.date,
+                visibleHistory: document.querySelectorAll('.wpb-exercise-history-session').length,
+                chartPoints: svg?.dataset.points,
+                chartMetric: svg?.dataset.metricchart,
+                emptyRange: !!document.querySelector('[data-empty-window]'),
+                detailTabs: [...document.querySelectorAll('.wpb-exercise-tabs>button')].map(b => ({
+                    label: b.textContent, selected: b.getAttribute('aria-selected')
+                })),
+                surfaceExcerpt: document.querySelector('[data-exercisecharts]')?.textContent?.slice(0, 180)
+            };
+        });
+        console.log('B831 DENSE CHART DIAGNOSTIC ' + JSON.stringify(denseDiagnostic));
+        assert.ok(Number(denseDiagnostic.chartPoints) > 36,
+            'dense seeded lift must appear on the real chart before scrubbing: ' + JSON.stringify(denseDiagnostic));
         await page.waitForSelector('[data-chart-scrubber]');
         const denseSummary=await page.$eval('.wpb-chart[data-metricchart]',svg=>({
             n:Number(svg.dataset.points),touches:svg.querySelectorAll('[role="button"]').length,

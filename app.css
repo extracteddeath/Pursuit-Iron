@@ -2219,7 +2219,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-context-menu-item{
   border-radius:14px!important;
-  min-height:43px;
+  min-height:45px;
   transition:background-color 140ms var(--pi-ease),border-radius 180ms var(--pi-r4-spring-ease)!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-context-menu-item:active{

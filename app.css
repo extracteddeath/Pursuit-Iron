@@ -2804,3 +2804,48 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     background-color:Canvas!important;
   }
 }
+
+
+/* M3 EXPRESSIVE R9 — SOURCE-CONNECTED NAVIGATION AND FLUID INDICATOR MOTION
+   Inspired by Google's 2026 container-transform guidance and physically
+   responsive button groups. Animate only first meaningful destination content
+   relative to the real originating control, never a replicated screen.
+   Existing React routing, training state, hit boxes and offline behavior own
+   the entire interaction. A short clamped path prevents excessive flying UI. */
+#root[data-pi-motion="expressive"] .wpb [data-view-frame][data-pi-nav-direction]
+  [data-pi-reveal="1"][data-pi-connected="source"]{
+  animation:piR9ConnectedArrival 355ms cubic-bezier(.18,.8,.22,1)
+    var(--pi-reveal-delay,0ms) both!important;
+}
+@keyframes piR9ConnectedArrival{
+  0%{
+    opacity:.66;
+    translate:var(--pi-connected-x,0px) var(--pi-connected-y,0px);
+    scale:.977;
+  }
+  70%{opacity:1;translate:0 -1px;scale:1.003}
+  100%{opacity:1;translate:0 0;scale:1}
+}
+/* Indicator stretch is paint-only. Its logical button bounds are measured by
+   the existing selected-surface spring; pointer and keyboard targets don't
+   scale or move. This works in narrow/wide theme layouts. */
+#root[data-pi-motion="expressive"] .wpb :is(
+  .wpb-tabbar,.wpb-plan-panes,.wpb-premium-tabs,.wpb-segmented,
+  .wpb-exercise-tabs,.wpb-library-flag-filter,.wpb-progress-grouping,
+  .wpb-exercise-window-tabs)[data-pi-m3-track]::before{
+  scale:var(--pi-m3-track-stretch,1) 1;
+  transform-origin:center center;
+  border-radius:var(--pi-m3-track-corner,18px)!important;
+}
+@media(prefers-reduced-motion:reduce),(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb [data-view-frame]
+    [data-pi-connected="source"]{
+    animation:none!important;
+    translate:none!important;
+    scale:1!important;
+    opacity:1!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb [data-pi-m3-track]::before{
+    scale:1!important;
+  }
+}

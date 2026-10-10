@@ -685,6 +685,13 @@ try {
         });
         assert.ok(wizardGeometry.barHeight >= 4 && wizardGeometry.width <= width + 1 &&
             wizardGeometry.footer <= wizardGeometry.screen + 2, 'M3 program wizard is compact, visible and never horizontally clipped: ' + JSON.stringify(wizardGeometry));
+        const wizardR5 = await page.$eval('.wpb-wizard', el => ({
+            title:parseFloat(getComputedStyle(el.querySelector('.wpb-wizard-heading-title')).fontSize),
+            progressHeight:el.querySelector('.wpb-wizard-progress').getBoundingClientRect().height,
+            clipped:el.scrollWidth>innerWidth+1
+        }));
+        assert.ok(wizardR5.title>=28 && wizardR5.progressHeight>=6 && !wizardR5.clipped,
+            'R5 wizard retains a large guided headline and slim responsive progress track: '+JSON.stringify(wizardR5));
         if (width === 430) await page.screenshot({ path: path.join(root, 'verification/b831-m3-wizard-phone.png') });
         await page.click('.wpb-wizard-header button[aria-label="Back"]');
         await page.waitForSelector('.wpb-home-create');

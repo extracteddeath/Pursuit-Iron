@@ -13865,6 +13865,12 @@ function MetricChart({ series, height = 210 }) {
     const plotW = VW - padL - padR, plotH = VH - padT - padB;
     const pts = series.points;
     const n = pts.length;
+    const dense = n > 36;
+    // Long-term chronology keeps all the original values and the date-spaced
+    // trend line. The tiny overlapping circles are replaced by one real
+    // plot-wide pointer and keyboard inspector when the chart gets crowded.
+    const inspected = Number.isInteger(activePoint) && activePoint >= 0 && activePoint < n ? activePoint : null;
+    useEffect(() => { setActivePoint(null); }, [series]);
     let lo = Math.min(...pts.map(p => p.v)), hi = Math.max(...pts.map(p => p.v));
     if (lo === hi) {
         const pad = Math.max(1, Math.abs(lo) * 0.05);
@@ -13882,11 +13888,53 @@ function MetricChart({ series, height = 210 }) {
     const grid = Array.from({ length: ticks + 1 }, (_, k) => lo + (k / ticks) * (hi - lo));
     const fmtY = v => Math.abs(v) >= 10000 ? `${Math.round(v / 1000)}k` : String(Math.round(v));
     const dF = t => new Date(t).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    const multiYear = new Date(t0).getFullYear() !== new Date(t1).getFullYear();
+    const axisDate = t => multiYear ? new Date(t).toLocaleDateString(undefined, { month: "short", year: "2-digit" }) : dF(t);
+    const exactDate = t => new Date(t).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+    const pointText = p => `${exactDate(p.date)}, ${series.metric.label} ${p.v}${series.unit ? ` ${series.unit}` : ""}`;
+    const scrub = e => {
+        const box = e.currentTarget.getBoundingClientRect();
+        if (!(box.width > 0 && box.height > 0)) return;
+        const xx = Math.max(0, Math.min(1, (e.clientX - box.left) / box.width));
+        const yy = Math.max(0, Math.min(1, (e.clientY - box.top) / box.height));
+        let index = 0, distance = Infinity;
+        for (let i = 0; i < n; i++) {
+            const dx = Math.abs((n === 1 ? .5 : (pts[i].date - t0) / tSpan) - xx);
+            const dy = Math.abs((yOf(pts[i].v) - padT) / plotH - yy);
+            const score = dx * 2 + dy * .003;
+            if (score < distance) { distance = score; index = i; }
+        }
+        setActivePoint(index);
+    };
+    const scrubKey = e => {
+        const current = inspected == null ? n - 1 : inspected;
+        const next = e.key === "ArrowLeft" ? Math.max(0, current - 1)
+            : e.key === "ArrowRight" ? Math.min(n - 1, current + 1)
+            : e.key === "Home" ? 0 : e.key === "End" ? n - 1 : null;
+        if (next == null) return;
+        e.preventDefault(); setActivePoint(next);
+    };
     const best = pts.reduce((m, p) => (p.v > m.v ? p : m), pts[0]);
-    return (_jsxs("div", { className: "wpb-chart-wrap", children: [_jsxs("svg", { className: "wpb-chart", role: "img", "aria-label": `${series.metric.label} trend`, viewBox: `0 0 ${VW} ${VH}`, width: "100%", style: { display: "block" }, "data-metricchart": series.metric.id, "data-points": n, children: [grid.map((g, k) => (_jsxs("g", { children: [_jsx("line", { x1: padL, y1: yOf(g), x2: VW - padR, y2: yOf(g), stroke: C.borderSoft, strokeWidth: "1", strokeDasharray: "3 4" }), _jsx("text", { x: padL - 8, y: yOf(g) + 3, textAnchor: "end", fontSize: "9", fill: C.faint, fontFamily: "monospace", children: fmtY(g) })] }, k))), n >= 2 && _jsx("path", { d: `${line} L${xOf(t1).toFixed(1)},${(VH - padB).toFixed(1)} L${xOf(t0).toFixed(1)},${(VH - padB).toFixed(1)} Z`, fill: C.accent, opacity: "0.10" }), n >= 2 && _jsx("path", { d: line, fill: "none", stroke: C.accent, strokeWidth: "2", strokeLinejoin: "round", strokeLinecap: "round" }), pts.map((p, i) => _jsx("circle", { cx: xOf(p.date), cy: yOf(p.v), r: "3", fill: C.bg, stroke: C.accent, strokeWidth: "1.8", children: _jsx("title", { children: `${dF(p.date)} · ${series.metric.label} ${p.v}${series.unit ? ` ${series.unit}` : ""}` }) }, i)), pts.map((p, i) => _jsx("circle", { cx: xOf(p.date), cy: yOf(p.v), r: "12", fill: "transparent", role: "button", tabIndex: "0", "aria-label": `${dF(p.date)}, ${series.metric.label} ${p.v}${series.unit ? ` ${series.unit}` : ""}`, onPointerDown: () => setActivePoint(i), onKeyDown: e => { if (e.key === "Enter" || e.key === " ") {
+    return (_jsxs("div", { className: "wpb-chart-wrap", children: [_jsxs("svg", { className: "wpb-chart", role: "img", "aria-label": `${series.metric.label} trend`, viewBox: `0 0 ${VW} ${VH}`, width: "100%", style: { display: "block" }, "data-metricchart": series.metric.id, "data-points": n, children: [grid.map((g, k) => (_jsxs("g", { children: [_jsx("line", { x1: padL, y1: yOf(g), x2: VW - padR, y2: yOf(g), stroke: C.borderSoft, strokeWidth: "1", strokeDasharray: "3 4" }), _jsx("text", { x: padL - 8, y: yOf(g) + 3, textAnchor: "end", fontSize: "9", fill: C.faint, fontFamily: "monospace", children: fmtY(g) })] }, k))), n >= 2 && _jsx("path", { d: `${line} L${xOf(t1).toFixed(1)},${(VH - padB).toFixed(1)} L${xOf(t0).toFixed(1)},${(VH - padB).toFixed(1)} Z`, fill: C.accent, opacity: "0.10" }), n >= 2 && _jsx("path", { d: line, fill: "none", stroke: C.accent, strokeWidth: "2", strokeLinejoin: "round", strokeLinecap: "round" }), (dense ? [] : pts).map((p, i) => _jsx("circle", { cx: xOf(p.date), cy: yOf(p.v), r: "3", fill: C.bg, stroke: C.accent, strokeWidth: "1.8", children: _jsx("title", { children: `${dF(p.date)} · ${series.metric.label} ${p.v}${series.unit ? ` ${series.unit}` : ""}` }) }, i)), (dense ? [] : pts).map((p, i) => _jsx("circle", { cx: xOf(p.date), cy: yOf(p.v), r: "12", fill: "transparent", role: "button", tabIndex: "0", "aria-label": `${dF(p.date)}, ${series.metric.label} ${p.v}${series.unit ? ` ${series.unit}` : ""}`, onPointerDown: () => setActivePoint(i), onKeyDown: e => { if (e.key === "Enter" || e.key === " ") {
                             e.preventDefault();
                             setActivePoint(i);
-                        } } }, `hit-${i}`)), _jsx("circle", { cx: xOf(best.date), cy: yOf(best.v), r: "5.5", fill: "none", stroke: C.accent, strokeWidth: "1.6", opacity: ".7" })] }), activePoint != null && pts[activePoint] && _jsxs("div", { className: "wpb-chart-popover", role: "status", children: [dF(pts[activePoint].date), " \u00B7 ", series.metric.label, " ", _jsxs("b", { children: [pts[activePoint].v, series.unit ? ` ${series.unit}` : ""] })] }), _jsxs("div", { className: "wpb-chart-axis", "aria-hidden": "true", children: [_jsx("span", { children: dF(t0) }), n >= 2 && _jsx("span", { children: dF(t1) })] })] }));
+                        } } }, `hit-${i}`)), dense && _jsx("rect", {
+        x: padL, y: padT, width: plotW, height: plotH,
+        fill: "transparent", role: "slider", tabIndex: 0, "data-chart-scrubber": true,
+        "aria-label": `Inspect ${series.metric.label} history`,
+        "aria-valuemin": 1, "aria-valuemax": n, "aria-valuenow": (inspected ?? (n - 1)) + 1,
+        "aria-valuetext": pointText(pts[inspected ?? (n - 1)]),
+        style: { cursor: "crosshair", touchAction: "pan-y" },
+        onPointerDown: e => { scrub(e); e.currentTarget.focus(); },
+        onPointerMove: e => { if (e.buttons > 0) scrub(e); },
+        onKeyDown: scrubKey
+    }), dense && inspected != null && _jsxs("g", { "aria-hidden": "true", children: [
+        _jsx("line", { x1: xOf(pts[inspected].date), y1: padT,
+            x2: xOf(pts[inspected].date), y2: VH - padB,
+            stroke: C.accent, strokeWidth: "1", opacity: ".5", strokeDasharray: "3 3" }),
+        _jsx("circle", { cx: xOf(pts[inspected].date), cy: yOf(pts[inspected].v),
+            r: "5", fill: C.accent, stroke: C.bg, strokeWidth: "2" })
+    ] }), _jsx("circle", { cx: xOf(best.date), cy: yOf(best.v), r: "5.5", fill: "none", stroke: C.accent, strokeWidth: "1.6", opacity: ".7" })] }), inspected != null && pts[inspected] && _jsxs("div", { className: "wpb-chart-popover", role: "status", children: [exactDate(pts[inspected].date), " \u00B7 ", series.metric.label, " ", _jsxs("b", { children: [pts[inspected].v, series.unit ? ` ${series.unit}` : ""] })] }), _jsxs("div", { className: "wpb-chart-axis", "aria-hidden": "true", children: [_jsx("span", { children: axisDate(t0) }), n >= 2 && _jsx("span", { children: axisDate(t1) })] }), dense && _jsx("div", { className: "wpb-chart-scrub-hint", children: `${n} sessions · Drag the chart or use ← → keys to inspect` })] }));
 }
 /* The library's charts tab. Metric strip on top (scrolls horizontally — six metrics do not fit a
    phone width and truncating the row would hide the ones added last), the reading for the CURRENT

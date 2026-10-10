@@ -25,7 +25,7 @@ const missing = shell.filter(p => p !== './' && !fs.existsSync(path.join(root, p
 if (missing.length) fail(`missing precache files: ${missing.join(', ')}`);
 
 const shellRevision = sha(shell.slice().sort().map(file => `${file}:${sha(bytes(file.slice(2)))}\n`).join('')).slice(0, 16);
-if (!profile.cache.endsWith(`-r${shellRevision}`)) fail('offline cache revision does not certify the current shell content');
+if (!profile.cache.endsWith(`-r${shellRevision}`)) fail(`offline cache revision does not certify the current shell content; expected suffix -r${shellRevision}`);
 if (!sw.includes(`const CACHE="${profile.cache}"`)) fail('BUILD_PROFILE cache does not match sw.js');
 if (profile.milestone !== manifest.milestone) fail('BUILD_PROFILE milestone does not match manifest');
 if (profile.uiMilestone !== manifest.uiMilestone) fail('BUILD_PROFILE UI milestone does not match manifest');

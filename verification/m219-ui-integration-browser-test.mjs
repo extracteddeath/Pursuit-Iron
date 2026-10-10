@@ -72,11 +72,25 @@ try {
                 return .2126 * linear[0] + .7152 * linear[1] + .0722 * linear[2];
             };
             return buttons.map(button => {
-                const css = getComputedStyle(button), text = luminance(css.color), background = luminance(css.backgroundColor);
-                return (Math.max(text, background) + .05) / (Math.min(text, background) + .05);
+                const css = getComputedStyle(button), text = luminance(css.color);
+                // The M3 indicator is painted by the tab group's ::before. Contrast
+                // must use the visible selected surface, not the transparent button.
+                const group = button.closest('[data-pi-m3-track]');
+                const surface = group ? group.style.getPropertyValue('--pi-m3-track-fill') : css.backgroundColor;
+                // The original theme can intentionally use a contrast-safe dark
+                // selection fill with a bright accent elsewhere. Check that the M3
+                // moving track reproduces that visible fill, not the inline accent.
+                if (group) delete group.dataset.piM3Track;
+                const originalSelectedFill = getComputedStyle(button).backgroundColor;
+                if (group) group.dataset.piM3Track = '1';
+                const background = luminance(surface);
+                const ratio = (Math.max(text, background) + .05) / (Math.min(text, background) + .05);
+                return { label: button.textContent.trim(), ratio,
+                    textColor: css.color, originalSelectedFill, surfaceFill: surface,
+                    fresh: !group || originalSelectedFill === surface };
             });
         });
-        assert.ok(contrast.length >= 4 && contrast.every(ratio => ratio >= 4.5), `${theme}: selected settings remain legible`);
+        assert.ok(contrast.length >= 4 && contrast.every(item => item.ratio >= 4.5 && item.fresh), `${theme}: selected settings remain legible: ${JSON.stringify(contrast)}`);
     }
     await page.$eval('.wpb-theme-picker', n => { n.open = true; });
     await page.click('[data-theme-option="amethyst"]');

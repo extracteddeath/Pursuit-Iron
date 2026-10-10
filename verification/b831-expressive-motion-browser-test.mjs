@@ -33,7 +33,11 @@ let browser;
 try {
     browser = await puppeteer.launch({ executablePath: process.env.CHROME_BIN || '/usr/bin/google-chrome', headless: true, args: ['--no-sandbox','--disable-dev-shm-usage'] });
     for (const width of [320, 430]) {
-        const page = await browser.newPage(), errors = [];
+        // Every phone width has its own storage namespace. The secondary-screen
+        // smoke deliberately clears the workout fixture, which must not leak
+        // into the next width's dock/menu regression.
+        const context = await browser.createBrowserContext();
+        let page = await context.newPage(); const errors = [];
         page.on('pageerror', error => errors.push(error.message));
         await page.setViewport({ width, height: 844, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
         await page.evaluateOnNewDocument((store, snapshot) => {
@@ -54,15 +58,339 @@ try {
             await page.waitForFunction(tab => document.querySelector(`[data-view-frame="${tab}"]`)?.style.getPropertyValue('--pi-surface-opacity') === '1', {}, tab);
             assert.equal(await page.$eval(`[data-tab="${tab}"]`, b => b.getAttribute('aria-current')), 'page');
             assert.ok(await page.$eval('.wpb', el => el.scrollWidth <= innerWidth + 1), `${tab} fits at ${width}px`);
+            // page.click produces a real touch ripple. Check idle icon styling only AFTER
+            // animationend clears the transient layer, not while the active ::after paints.
+            await page.waitForFunction(tab => !document.querySelector(`[data-tab="${tab}"]`)?.hasAttribute('data-pi-ink'),
+                { timeout: 5000 }, tab);
+            await page.waitForFunction(() => {
+                const el=document.querySelector('.wpb-tabbar[data-pi-m3-track]');
+                const b=el?.querySelector('[aria-current="page"]');
+                return b && Math.abs(parseFloat(el.style.getPropertyValue('--pi-m3-track-x')) -
+                    (b.offsetLeft+(b.offsetWidth-Math.min(54,b.offsetWidth*.7))/2)) < .8;
+            }, { timeout: 5000 });
+            const navPill = await page.$eval('.wpb-tabbar[data-pi-m3-track]', el => {
+                const selected = el.querySelector('[aria-current="page"]');
+                const indicator = getComputedStyle(el, '::before');
+                const width = Math.min(54, selected.offsetWidth * .7);
+                return { height: parseFloat(indicator.height), radius: indicator.borderRadius,
+                    width: parseFloat(indicator.width), expectedWidth: width,
+                    x: parseFloat(el.style.getPropertyValue('--pi-m3-track-x')),
+                    expected: selected.offsetLeft + (selected.offsetWidth-width)/2,
+                    fill: el.style.getPropertyValue('--pi-m3-track-fill'),
+                    oldPill: getComputedStyle(selected, '::before').display,
+                    oldUnderline: getComputedStyle(selected, '::after').display };
+            });
+            assert.ok(navPill.height >= 29 && navPill.height <= 31 &&
+                Math.abs(navPill.width-navPill.expectedWidth)<.8 &&
+                Math.abs(navPill.x-navPill.expected)<.8, 'spatial navigation indicator stays centered: ' + JSON.stringify(navPill));
+            assert.ok(navPill.radius.includes('px') && navPill.fill.includes('color-mix') &&
+                navPill.oldPill === 'none' && navPill.oldUnderline === 'none',
+                'moving navigation paints one theme-native pill instead of separate underlines: ' + JSON.stringify(navPill));
+            if (tab === 'home') {
+                assert.ok(await page.$eval('.wpb-home-hero', el =>
+                    parseFloat(getComputedStyle(el).borderTopLeftRadius) >= 18 &&
+                    parseFloat(getComputedStyle(el).marginBottom) <= 14),
+                    'home hero has a tighter spacious-card hierarchy');
+            }
+            if (tab === 'progress') {
+                assert.ok(await page.$eval('.wpb-progress .wpb-premium-tabs', el =>
+                    parseFloat(getComputedStyle(el).borderTopLeftRadius) >= 14),
+                    'progress uses a unified pill-tab surface');
+            }
+            if (tab === 'settings') {
+                assert.ok(await page.$eval('.wpb-settings-card', el =>
+                    parseFloat(getComputedStyle(el).borderTopLeftRadius) >= 15),
+                    'settings sections share the card geometry');
+            }
+            // Layout and typography: meaningful hierarchy without overflow at 320 or 430px.
+            if (tab === 'home') {
+                const homeType = await page.$eval('.wpb-home-header h1', el => {
+                    const title = getComputedStyle(el);
+                    const logo = el.closest('.wpb-home-header').querySelector('div[aria-hidden="true"]');
+                    return { size: parseFloat(title.fontSize), weight: Number(title.fontWeight),
+                        logoHeight: logo.getBoundingClientRect().height };
+                });
+                assert.ok(homeType.size >= 26 && homeType.size <= 31 && homeType.weight >= 700,
+                    'Home title follows the expressive type scale');
+                assert.ok(homeType.logoHeight >= 24, 'Home header spacing does not collapse its logo');
+            }
+            if (tab === 'progress') {
+                const progressType = await page.$eval('.wpb-progress', el => {
+                    const title = getComputedStyle(el.querySelector('.wpb-progress-title'));
+                    const metric = el.querySelector('.wpb-progress-glance-item > .mono');
+                    return { size: parseFloat(title.fontSize),
+                        metric: metric ? parseFloat(getComputedStyle(metric).fontSize) : null };
+                });
+                assert.ok(progressType.size >= 26 && progressType.metric >= 21,
+                    'Progress keeps dominant title and readable numerical summaries');
+            }
+            if (tab === 'settings') {
+                const settingsType = await page.$eval('.wpb-settings', el => {
+                    const title = getComputedStyle(el.querySelector('.wpb-settings-title'));
+                    const row = el.querySelector('.wpb-settings-row');
+                    return { title: parseFloat(title.fontSize),
+                        rowHeight: row?.getBoundingClientRect().height };
+                });
+                assert.ok(settingsType.title >= 12 && settingsType.title <= 15,
+                    'Settings section headings are legible and distinct');
+                assert.ok(settingsType.rowHeight == null || settingsType.rowHeight >= 44,
+                    'compact Settings rows retain adequate height');
+            }
+            if (tab === 'profile') {
+                const profileType = await page.$eval('.wpb-profile', el => {
+                    const title = getComputedStyle(el.querySelector('.wpb-profile-title'));
+                    const stat = el.querySelector('.wpb-profile-strength-cell');
+                    return { title: parseFloat(title.fontSize),
+                        radius: stat ? parseFloat(getComputedStyle(stat).borderTopLeftRadius) : null };
+                });
+                assert.ok(profileType.title >= 26 && profileType.radius >= 11,
+                    'Profile uses the shared title scale and consistent stat geometry');
+            }
             if (width === 430) await page.screenshot({ path: path.join(root, `verification/b831-${tab}-phone.png`) });
         }
+        // Native navigation semantics and DOM children remain constant while a
+        // single measured indicator travels between nonadjacent destinations.
+        await page.click('[data-tab="plan"]');
+        await page.waitForFunction(() => {
+            const el=document.querySelector('.wpb-tabbar');
+            const b=el?.querySelector('[aria-current="page"]');
+            return b?.dataset.tab==='plan' &&
+                Math.abs(parseFloat(el.style.getPropertyValue('--pi-m3-track-x')) -
+                  (b.offsetLeft+(b.offsetWidth-Math.min(54,b.offsetWidth*.7))/2))<.8;
+        });
+        const navStart=await page.$eval('.wpb-tabbar',x=>parseFloat(x.style.getPropertyValue('--pi-m3-track-x')));
+        await page.click('[data-tab="profile"]');
+        await page.waitForFunction(() => {
+            const el=document.querySelector('.wpb-tabbar');
+            const b=el?.querySelector('[aria-current="page"]');
+            return b?.dataset.tab==='profile' &&
+                Math.abs(parseFloat(el.style.getPropertyValue('--pi-m3-track-x')) -
+                  (b.offsetLeft+(b.offsetWidth-Math.min(54,b.offsetWidth*.7))/2))<.8;
+        });
+        const navEnd=await page.$eval('.wpb-tabbar',x=>parseFloat(x.style.getPropertyValue('--pi-m3-track-x')));
+        assert.ok(Math.abs(navEnd-navStart)>20,'navigation spring moves between real tabs');
+        assert.ok(await page.$eval('[data-view-frame="profile"]',el=>el.dataset.piCascade==='1'),
+            'visible profile components are coordinated by the page-level motion system');
+        assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),initial.saved,
+            'global navigation motion never modifies saved program data');
+        // The Material 3 tab indicator actually travels with the semantic selection,
+        // is theme-derived, and changes paint only (not target geometry or DOM children).
+        await page.click('[data-tab="progress"]');
+        await page.waitForSelector('.wpb-progress .wpb-premium-tabs[data-pi-m3-track]');
+        const beforeTrack = await page.$eval('.wpb-progress .wpb-premium-tabs', el => ({
+            x: Number.parseFloat(el.style.getPropertyValue('--pi-m3-track-x')),
+            fill: el.style.getPropertyValue('--pi-m3-track-fill'),
+            children: el.childElementCount,
+            widths: [...el.children].map(b => b.offsetWidth)
+        }));
+        assert.ok(beforeTrack.fill.length > 3 && beforeTrack.fill !== 'transparent',
+            'M3 track borrows the active Pursuit theme surface');
+        await page.click('.wpb-progress .wpb-premium-tabs>button:nth-child(2)');
+        await page.waitForFunction(() => {
+            const group = document.querySelector('.wpb-progress .wpb-premium-tabs');
+            const selected = group?.querySelector('[aria-selected="true"]');
+            return selected?.textContent?.trim() === 'Lifts' &&
+                Math.abs(Number.parseFloat(group.style.getPropertyValue('--pi-m3-track-x')) - selected.offsetLeft) < .15;
+        }, { timeout: 5000 });
+        const afterTrack = await page.$eval('.wpb-progress .wpb-premium-tabs', el => {
+            const selected = el.querySelector('[aria-selected="true"]');
+            return { x: Number.parseFloat(el.style.getPropertyValue('--pi-m3-track-x')),
+                w: Number.parseFloat(el.style.getPropertyValue('--pi-m3-track-width')),
+                targetW: selected.offsetWidth, childCount: el.childElementCount,
+                indicator: getComputedStyle(el, '::before').content,
+                activeBackground: getComputedStyle(selected).backgroundColor };
+        });
+        assert.ok(afterTrack.x > beforeTrack.x && Math.abs(afterTrack.w - afterTrack.targetW) < .15,
+            'shared M3 selection slides and resizes to the exact chosen segment');
+        assert.equal(afterTrack.childCount, beforeTrack.children,
+            'selection motion never adds a DOM element or reduces tap targets');
+        assert.ok(afterTrack.indicator !== 'none' && afterTrack.activeBackground === 'rgba(0, 0, 0, 0)',
+            'moving indicator paints the selection, not the old static button fill');
+        if (width === 430)
+            await page.screenshot({ path: path.join(root, 'verification/b831-m3-selected-progress-phone.png') });
+        // True tablist keyboard navigation (including screen-reader-friendly selection)
+        // must update the panel and follow the very same animated track.
+        await page.focus('.wpb-progress .wpb-premium-tabs>button:nth-child(2)');
+        await page.keyboard.press('ArrowRight');
+        await page.waitForFunction(() => {
+            const group = document.querySelector('.wpb-progress .wpb-premium-tabs');
+            const selected = group?.querySelector('[aria-selected="true"]');
+            return selected?.textContent?.trim() === 'Volume' &&
+                Math.abs(Number.parseFloat(group.style.getPropertyValue('--pi-m3-track-x')) - selected.offsetLeft) < .15;
+        }, { timeout: 5000 });
+        await page.keyboard.press('Home');
+        await page.waitForFunction(() => {
+            const group = document.querySelector('.wpb-progress .wpb-premium-tabs');
+            return group?.querySelector('[aria-selected="true"]')?.textContent?.trim() === 'Sessions';
+        }, { timeout: 5000 });
+        assert.equal(await page.$eval('.wpb-progress .wpb-premium-tabs>button:first-child',
+            b => document.activeElement === b), true,
+            'M3 keyboard Home moves focus to the first Progress tab');
+        // Training-history grouping is a real two-option control; the existing
+        // React state updates a painted indicator without resizing either button.
+        await page.waitForSelector('.wpb-progress .wpb-progress-grouping[data-pi-m3-track]');
+        const historyGrouping = await page.$eval('.wpb-progress-grouping', el => ({
+            selected: el.querySelector('[aria-pressed="true"]')?.textContent?.trim(),
+            count: el.childElementCount, x: Number.parseFloat(el.style.getPropertyValue('--pi-m3-track-x')),
+            widths: [...el.children].map(b => b.offsetWidth),
+            fill: el.style.getPropertyValue('--pi-m3-track-fill')
+        }));
+        assert.equal(historyGrouping.count, 2, 'both history group choices remain present');
+        assert.ok(historyGrouping.fill.length > 3 && historyGrouping.fill !== 'transparent',
+            'history grouping borrows the theme selection surface');
+        await page.click('.wpb-progress-grouping > button:nth-child(2)');
+        await page.waitForFunction(() => {
+            const g = document.querySelector('.wpb-progress-grouping');
+            const selected = g?.querySelector('[aria-pressed="true"]');
+            return selected?.textContent?.includes('month') &&
+                Math.abs(Number.parseFloat(g.style.getPropertyValue('--pi-m3-track-x')) - selected.offsetLeft) < .2;
+        },{timeout:5000});
+        assert.deepEqual(await page.$eval('.wpb-progress-grouping', g =>
+            [...g.children].map(b => b.offsetWidth)), historyGrouping.widths,
+            'history grouping indicator does not alter tap target widths');
+        // A real semantic range tablist (same class as Exercise > Charts)
+        // uses the existing keyboard and moving selection controller.
+        await page.evaluate(() => {
+            const g = document.createElement('div');
+            g.className = 'wpb-exercise-window-tabs';
+            g.setAttribute('role','tablist');
+            g.dataset.piRangeTest = '1';
+            g.style.display = 'flex';
+            for (const [i,label] of ['Month','Quarter','All'].entries()) {
+                const b = document.createElement('button');
+                b.setAttribute('role','tab');
+                b.setAttribute('aria-selected',String(i===0));
+                b.textContent=label;
+                b.style.flex='1';
+                b.addEventListener('click',()=>{
+                    for (const child of g.children) child.setAttribute('aria-selected',String(child===b));
+                });
+                g.append(b);
+            }
+            document.querySelector('.wpb-progress').append(g);
+        });
+        await page.waitForSelector('[data-pi-range-test][data-pi-m3-track]');
+        await page.focus('[data-pi-range-test]>button:first-child');
+        await page.keyboard.press('End');
+        await page.waitForFunction(() => {
+            const g = document.querySelector('[data-pi-range-test]');
+            const b = g?.querySelector('[aria-selected="true"]');
+            return b?.textContent==='All' && document.activeElement===b &&
+                Math.abs(parseFloat(g.style.getPropertyValue('--pi-m3-track-x'))-b.offsetLeft)<.2;
+        },{timeout:5000});
+        assert.ok(await page.$eval('[data-pi-range-test]', g =>
+            g.childElementCount===3 && getComputedStyle(g,'::before').content!=='none'),
+            'exercise chart range keeps real accessible tabs behind the animated indicator');
+        await page.evaluate(() => document.querySelector('[data-pi-range-test]').remove());
+        // Exercise-detail tabs must share the actual moving selection track.
+        // Use the real page observer without mutating React-owned training data.
+        await page.evaluate(() => {
+            const group = document.createElement('div');
+            group.className = 'wpb-exercise-tabs'; group.setAttribute('role','tablist');
+            group.dataset.piExerciseTest = '1';
+            for (const [i,name] of ['Overview','History','Notes'].entries()) {
+                const b = document.createElement('button');
+                b.textContent = name; b.setAttribute('role','tab');
+                b.setAttribute('aria-selected',String(i===0));
+                b.addEventListener('click',()=>{
+                    for (const peer of group.children) peer.setAttribute('aria-selected',String(peer===b));
+                });
+                group.append(b);
+            }
+            document.querySelector('.wpb-progress').append(group);
+        });
+        await page.waitForSelector('[data-pi-exercise-test][data-pi-m3-track]');
+        const exerciseTrack = await page.$eval('[data-pi-exercise-test]', el => ({
+            fill: el.style.getPropertyValue('--pi-m3-track-fill'), count: el.childElementCount,
+            paint: getComputedStyle(el,'::before').content
+        }));
+        assert.ok(exerciseTrack.fill && exerciseTrack.fill !== 'transparent' &&
+            exerciseTrack.count === 3 && exerciseTrack.paint !== 'none',
+            'exercise details preserve three real controls and a painted active track');
+        await page.focus('[data-pi-exercise-test]>button:first-child');
+        await page.keyboard.press('End');
+        await page.waitForFunction(() => {
+            const group = document.querySelector('[data-pi-exercise-test]');
+            const chosen = group?.querySelector('[aria-selected="true"]');
+            return chosen?.textContent === 'Notes' && document.activeElement === chosen &&
+                Math.abs(parseFloat(group.style.getPropertyValue('--pi-m3-track-x')) - chosen.offsetLeft) < .2;
+        },{timeout:5000});
+        await page.evaluate(() => document.querySelector('[data-pi-exercise-test]').remove());
         await page.click('[data-tab="settings"]'); await page.waitForSelector('.wpb-settings');
+        const settingsTrack = await page.$eval('.wpb-settings .wpb-segmented[data-pi-m3-track]', el => ({
+            x: Number.parseFloat(el.style.getPropertyValue('--pi-m3-track-x')),
+            width: Number.parseFloat(el.style.getPropertyValue('--pi-m3-track-width')),
+            selected: el.querySelector('[aria-pressed="true"]')?.textContent?.trim(),
+            fill: el.style.getPropertyValue('--pi-m3-track-fill'),
+            count: el.childElementCount
+        }));
+        assert.ok(settingsTrack.width >= 20 && settingsTrack.fill.length > 3 &&
+            settingsTrack.selected?.length > 0 && settingsTrack.count >= 2,
+            'Settings uses the same M3 track with live unit and effort choices');
+        if (width === 430)
+            await page.screenshot({ path: path.join(root, 'verification/b831-m3-selected-settings-phone.png') });
+
+        // Choice controls show a quiet touch-origin state layer, even for rapid repeated taps.
+        // This must not add nodes or modify the actual workout logging grid.
+        const ink = await page.$eval('[data-tab="settings"]', el => {
+            const r = el.getBoundingClientRect(), children = el.childElementCount;
+            const x = r.left + r.width * .25, y = r.top + r.height * .35;
+            el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, pointerId: 95, clientX: x, clientY: y }));
+            const state = { ink: el.dataset.piInk, x: parseFloat(el.style.getPropertyValue('--pi-ink-x')),
+                y: parseFloat(el.style.getPropertyValue('--pi-ink-y')),
+                animation: getComputedStyle(el, '::after').animationName,
+                rippleVisible: getComputedStyle(el, '::after').display !== 'none',
+                childrenUnchanged: el.childElementCount === children };
+            document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 95 }));
+            return state;
+        });
+        assert.equal(ink.ink, '1', 'the press state layer activates on root navigation');
+        assert.ok(ink.x > 0 && ink.y > 0 && ink.childrenUnchanged, 'tap origin is tracked without DOM or layout additions');
+        assert.ok(ink.animation.includes('piInkBurst') && ink.rippleVisible,
+            'touch feedback is painted and transient even on the selected navigation tab');
+        await page.waitForFunction(() => !document.querySelector('[data-tab="settings"]')?.hasAttribute('data-pi-ink'));
+        // Losing window focus cancels a held button instead of leaving a scaled control.
+        await page.$eval('[data-tab="settings"]', el => {
+            const r = el.getBoundingClientRect();
+            el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, pointerId: 96,
+                clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 }));
+            window.dispatchEvent(new Event('blur'));
+        });
+        await page.waitForFunction(() => document.querySelector('[data-tab="settings"]')?.style.getPropertyValue('--pi-control-scale') === '1');
+        await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
+        const reducedInk = await page.$eval('[data-tab="settings"]', el => {
+            const r = el.getBoundingClientRect();
+            el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, pointerId: 97,
+                clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 }));
+            document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 97 }));
+            return el.hasAttribute('data-pi-ink');
+        });
+        assert.equal(reducedInk, false, 'reduced motion never starts the state-layer burst');
+        await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'no-preference' }]);
         await page.focus('[data-tab="settings"]'); await page.keyboard.down(' ');
         await page.waitForFunction(() => Number.parseFloat(document.querySelector('[data-tab="settings"]').style.getPropertyValue('--pi-control-scale')) < .999);
         await page.keyboard.up(' ');
         await page.waitForFunction(() => document.querySelector('[data-tab="settings"]').style.getPropertyValue('--pi-control-scale') === '1');
         await clickText('Your gyms'); await page.waitForSelector('[data-sheet-drag][data-pi-surface]');
         await page.waitForFunction(() => document.querySelector('[data-sheet-drag]')?.style.getPropertyValue('--pi-surface-y') === '0px');
+        // Shared M3 sheets retain the existing native edge-attachment, detent and
+        // scroll ownership; the new handle is visual and has no extra DOM children.
+        const sheetStyle = await page.$eval('.wpb-backdrop>[data-sheet-drag]', el => {
+            const rect = el.getBoundingClientRect(), face = getComputedStyle(el);
+            const handle = getComputedStyle(el, '::before');
+            return { topRadius: parseFloat(face.borderTopLeftRadius),
+                width: rect.width, right: rect.right, handleWidth: parseFloat(handle.width),
+                handleHeight: parseFloat(handle.height), handleDisplay: handle.display,
+                children: el.childElementCount, translate: el.style.getPropertyValue('--pi-surface-y') };
+        });
+        assert.ok(sheetStyle.topRadius >= 25 && sheetStyle.handleWidth >= 34 &&
+            sheetStyle.handleHeight === 4 && sheetStyle.handleDisplay !== 'none',
+            'M3 sheet paints the compact centered drag handle and generous top corners');
+        assert.ok(sheetStyle.right <= width + 1 && sheetStyle.width <= width + 1 &&
+            sheetStyle.translate === '0px', 'M3 sheet does not overflow or move its resting detent');
+        if (width === 430)
+            await page.screenshot({ path: path.join(root, 'verification/b831-m3-gym-sheet-phone.png') });
+
         // A partial drag belongs to the sheet and returns to rest; it cannot leave an offset behind.
         await page.$eval('[data-sheet-drag]', el => {
             const r = el.getBoundingClientRect();
@@ -76,7 +404,62 @@ try {
         await page.waitForFunction(() => document.querySelector('[data-sheet-drag]')?.style.getPropertyValue('--pi-surface-y') === '0px');
         await page.keyboard.press('Escape'); await page.waitForFunction(() => !document.querySelector('.wpb-backdrop'));
         assert.equal(await page.$$eval('[data-wpb-lock]', els => els.length), 0, 'sheet exit releases scrolling');
-        await page.click('[data-tab="home"]'); await page.waitForSelector('.hp-open'); await page.click('.hp-open');
+        await page.click('[data-tab="home"]'); await page.waitForSelector('.hp-open');
+        // The saved-program menu is a real, anchored three-action surface.
+        // Keyboard navigation and Escape must preserve the authored program
+        // instead of navigating or calling the destructive Delete item.
+        await page.click('button[aria-haspopup="menu"]');
+        await page.waitForSelector('.wpb-context-menu[role="menu"]');
+        // popIn starts slightly scaled, so boundingClientRect is temporarily
+        // smaller than the real 44px target. Measure resting layout instead.
+        await page.waitForFunction(() => {
+            const menu = document.querySelector('.wpb-context-menu');
+            return menu && menu.getAnimations({ subtree: false }).every(a =>
+                a.playState === 'finished' || a.playState === 'idle');
+        }, { timeout: 5000 });
+        await page.waitForFunction(() => {
+            const menu = document.querySelector('.wpb-context-menu');
+            const dock = document.querySelector('.wpb-live-dock');
+            if (!menu || !dock) return false;
+            return menu.getBoundingClientRect().bottom <= dock.getBoundingClientRect().top - 3;
+        }, { timeout: 5000 });
+        const menuGeometry = await page.$eval('.wpb-context-menu', el => {
+            const r = el.getBoundingClientRect();
+            const item = el.querySelector('[role="menuitem"]');
+            const dock = document.querySelector('.wpb-live-dock')?.getBoundingClientRect();
+            const bar = document.querySelector('.wpb-tabbar')?.getBoundingClientRect();
+            return { left: r.left, right: r.right, bottom: r.bottom,
+                dockTop: dock?.top, navTop: bar?.top,
+                offset: parseFloat(el.style.getPropertyValue('--pi-menu-shift-y')) || 0,
+                radius: parseFloat(getComputedStyle(el).borderTopLeftRadius),
+                minItem: item.getBoundingClientRect().height, items: el.querySelectorAll('[role="menuitem"]').length };
+        });
+        assert.ok(menuGeometry.radius >= 16 && menuGeometry.minItem >= 44 &&
+            menuGeometry.left >= 0 && menuGeometry.right <= width + 1,
+            'M3 contextual menus are rounded, scroll-safe and touch accessible: ' + JSON.stringify({ width, menuGeometry }));
+        assert.ok(menuGeometry.items >= 2, 'contextual actions keep their original features');
+        assert.ok(menuGeometry.bottom < menuGeometry.dockTop &&
+            menuGeometry.bottom < menuGeometry.navTop,
+            'M3 program actions remain above the active workout dock and tab bar: ' +
+            JSON.stringify(menuGeometry));
+        if (width === 430)
+            await page.screenshot({ path: path.join(root, 'verification/b831-m3-program-menu-phone.png') });
+        await page.focus('.wpb-context-menu [role="menuitem"]:first-child');
+        await page.keyboard.press('ArrowDown');
+        assert.ok(await page.$eval('.wpb-context-menu', el =>
+            document.activeElement === el.querySelectorAll('[role="menuitem"]')[1]),
+            'M3 ArrowDown advances focus to the next available contextual action');
+        await page.keyboard.press('End');
+        assert.ok(await page.$eval('.wpb-context-menu', el =>
+            document.activeElement === [...el.querySelectorAll('[role="menuitem"]')].at(-1)),
+            'M3 End moves to last menu action without triggering it');
+        await page.keyboard.press('Escape');
+        await page.waitForFunction(() => !document.querySelector('.wpb-context-menu'));
+        assert.ok(await page.$eval('button[aria-haspopup="menu"]', el =>
+            document.activeElement === el), 'Escape dismisses menu and restores its opener focus');
+        assert.equal(await page.$eval('.hp-open', el => el.isConnected), true,
+            'menu dismiss preserves the program card and its original action');
+        await page.click('.hp-open');
         await page.waitForSelector('.wpb-program');
         // Info sections preserve content while closing and survive an immediate reopen.
         const card = await page.$('[data-infocard][data-collapsible="1"]');
@@ -87,6 +470,52 @@ try {
             await card.$eval('button[aria-expanded]', b => b.click());
             await page.waitForFunction(() => [...document.querySelectorAll('[data-pi-reveal]')].some(el => el.style.height === 'auto'));
         }
+        assert.ok(await page.$eval('.wpb-program .wpb-day-card', el =>
+            parseFloat(getComputedStyle(el).borderTopLeftRadius) >= 15), 'program day cards share the expressive radius');
+        assert.ok(await page.$eval('.wpb-program .wpb-day-title', el => {
+            const style = getComputedStyle(el);
+            return parseFloat(style.fontSize) >= 15 && parseFloat(style.lineHeight) >= 18;
+        }), 'Plan day titles are legible without expanding or rearranging the day cards');
+        // A real plan-day accordion must morph its surface and expose the
+        // actual mounted panel to assistive technology. No extra rows,
+        // reserved height or program-data mutation is permitted.
+        // Plan opens the next training day by default. Normalize to a
+        // collapsed card so we exercise a genuine closed -> open transition.
+        const initiallyOpen = await page.$eval('.wpb-program .wpb-day-card', card =>
+            !!card.querySelector(':scope > .wpb-expand'));
+        if (initiallyOpen) {
+            await page.click('.wpb-program .wpb-day-toggle');
+            await page.waitForFunction(() =>
+                !document.querySelector('.wpb-program .wpb-day-card > .wpb-expand'));
+        }
+        await page.click('.wpb-program .wpb-day-toggle');
+        await page.waitForFunction(() => {
+            const card=document.querySelector('.wpb-program .wpb-day-card');
+            const panel=card?.querySelector(':scope > .wpb-expand');
+            const toggle=card?.querySelector('.wpb-day-toggle');
+            return card?.dataset.piDisclosure==='open' && panel &&
+                toggle?.getAttribute('aria-expanded')==='true' &&
+                toggle?.getAttribute('aria-controls')===panel.id &&
+                parseFloat(getComputedStyle(card).borderTopLeftRadius)>=20;
+        }, { timeout: 5000 });
+        const disclosureOpen=await page.$eval('.wpb-program .wpb-day-card', el => ({
+            touch:el.querySelector('.wpb-day-toggle').getBoundingClientRect().height,
+            panel:el.querySelector(':scope > .wpb-expand')?.getBoundingClientRect().height,
+            radius:parseFloat(getComputedStyle(el).borderTopLeftRadius),
+            children:el.children.length
+        }));
+        assert.ok(disclosureOpen.touch>=44 && disclosureOpen.panel>40 &&
+            disclosureOpen.children>=2,'M3 day disclosure is accessible without smaller hit targets');
+        await page.click('.wpb-program .wpb-day-toggle');
+        await page.waitForFunction(() => {
+            const card=document.querySelector('.wpb-program .wpb-day-card');
+            return card?.dataset.piDisclosure==='closed' &&
+                !card.querySelector(':scope > .wpb-expand') &&
+                card.querySelector('.wpb-day-toggle')?.getAttribute('aria-expanded')==='false' &&
+                parseFloat(getComputedStyle(card).borderTopLeftRadius)<=16.5;
+        }, { timeout: 5000 });
+        assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('wpb:v1')).saved), initial.saved,
+            'disclosure motion preserves the complete saved prescription');
         await page.click('.wpb-live-dock button[aria-label="Resume workout"]'); await page.waitForSelector('.wpb-workout');
         await page.waitForFunction(() => !document.body.innerText.includes('Resumed your in-progress workout'));
         const row = '[data-testid="set-0-0"]';
@@ -94,9 +523,14 @@ try {
         const before = await page.$$eval(`${row} input`, els => els.map(el => el.value));
         for (let tap = 0; tap < 8; tap++) await page.click(tap % 2 ? 'button[aria-label="Show prescribed targets"]' : 'button[aria-label="Show previous workout values"]');
         assert.deepEqual(await page.$$eval(`${row} input`, els => els.map(el => el.value)), before, 'reference transitions never overwrite typed values');
+        assert.ok(await page.$eval('.wpb-target-toggle', button => !button.hasAttribute('data-pi-control')),
+            'Target/Last control retains its own compact feedback and never takes global shape morph');
+
         await page.waitForFunction(() => [...document.querySelectorAll('[data-pi-reference][data-pi-surface]')].every(el => el.style.getPropertyValue('--pi-surface-y') === '0px'));
         await page.click(`${row} button[aria-label="Mark set done"]`);
         await page.waitForSelector(`${row} [data-effort-picker]`);
+        assert.ok(await page.$eval(`${row} .wpb-set-complete`, button => !button.hasAttribute('data-pi-control')),
+            'completing a set never installs expressive press scaling on the protected row');
         await page.waitForFunction(row => {
             const button = document.querySelector(row + ' button[aria-label="3 reps left"]');
             if (!button) return false;
@@ -126,7 +560,201 @@ try {
         assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('wpb:v1')).saved), initial.saved, 'motion cannot change program prescriptions');
         assert.deepEqual(errors, []);
         await page.screenshot({ path: path.join(root, `verification/b831-motion-${width}-phone.png`) });
+        // Continue into real program-authoring and exercise-library screens,
+        // verifying the new compact M3 hierarchy with the saved program intact.
+        await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'no-preference' }]);
+        // Isolate authoring/library QA from the live-workout fixture. A separate
+        // fresh page starts with only the same persisted programs (not the
+        // deliberately unfinished training session tested above).
         await page.close();
+        page = await context.newPage();
+        page.on('pageerror', error => errors.push(error.message));
+        await page.setViewport({ width, height: 844, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
+        await page.evaluateOnNewDocument(store => {
+            // Seed this independent secondary browser page exactly once.
+            // A subsequent reload must retain its newly added 80-session chart
+            // fixture, not silently overwrite it with the original one-session
+            // state. The previous unconditional clear caused the dense-chart
+            // test to fail before any scrub interaction was exercised.
+            if (localStorage.getItem('b831-secondary-seeded')) return;
+            localStorage.clear();
+            localStorage.setItem('b831-secondary-seeded', '1');
+            localStorage.setItem('b831-seeded', '1');
+            localStorage.setItem('wpb:v1', JSON.stringify(store));
+        }, initial);
+        await page.goto('http://127.0.0.1:8794/', { waitUntil: 'networkidle0' });
+        await page.waitForSelector('#root[data-pi-motion="expressive"] .wpb-home-create');
+        await page.click('.wpb-home-create');
+        await page.waitForSelector('.wpb-wizard .wpb-wizard-progress');
+        const wizardGeometry = await page.$eval('.wpb-wizard', el => {
+            const bar = el.querySelector('.wpb-wizard-progress').getBoundingClientRect();
+            const footer = el.querySelector('.wpb-wizard-footer').getBoundingClientRect();
+            const screen = el.getBoundingClientRect();
+            return { barHeight: bar.height, footer: footer.bottom, screen: screen.bottom,
+                width: el.scrollWidth, viewport: innerWidth };
+        });
+        assert.ok(wizardGeometry.barHeight >= 4 && wizardGeometry.width <= width + 1 &&
+            wizardGeometry.footer <= wizardGeometry.screen + 2, 'M3 program wizard is compact, visible and never horizontally clipped: ' + JSON.stringify(wizardGeometry));
+        if (width === 430) await page.screenshot({ path: path.join(root, 'verification/b831-m3-wizard-phone.png') });
+        await page.click('.wpb-wizard-header button[aria-label="Back"]');
+        await page.waitForSelector('.wpb-home-create');
+        await page.click('[data-tab="settings"]');
+        await page.waitForSelector('.wpb-settings');
+        await clickText('Exercise library');
+        await page.waitForSelector('.wpb-library-flag-filter[data-pi-m3-track]');
+        const libraryStart = await page.$eval('.wpb-library-flag-filter', el => ({
+            x: parseFloat(el.style.getPropertyValue('--pi-m3-track-x')),
+            fill: el.style.getPropertyValue('--pi-m3-track-fill'),
+            children: el.childElementCount,
+            w: el.getBoundingClientRect().width
+        }));
+        assert.equal(libraryStart.children, 4, 'library retains all four working filter modes');
+        assert.ok(libraryStart.fill && libraryStart.fill !== 'transparent',
+            'library moving selection uses the chosen theme');
+        await page.click('.wpb-library-flag:nth-child(2)');
+        await page.waitForFunction(() => {
+            const el = document.querySelector('.wpb-library-flag-filter');
+            const chosen = el?.querySelector('[aria-pressed="true"]');
+            return chosen?.textContent?.includes('Recent') &&
+                Math.abs(parseFloat(el.style.getPropertyValue('--pi-m3-track-x')) - chosen.offsetLeft) < .2;
+        }, { timeout: 5000 });
+        await page.$eval('.wpb-library-search input', input => input.focus());
+        const libraryFocus = await page.$eval('.wpb-library-search input', el =>
+            parseFloat(getComputedStyle(el).borderTopLeftRadius) >= 12 &&
+            getComputedStyle(el).outlineStyle === 'solid');
+        assert.ok(libraryFocus, 'library search keeps a visible, comfortably rounded keyboard focus');
+        assert.ok(await page.$eval('.wpb-library', el => el.scrollWidth <= innerWidth + 1),
+            'library filters and list do not overflow phone width');
+        assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('wpb:v1')).saved), initial.saved,
+            'secondary screen M3 styling cannot mutate programs');
+        if (width === 430) await page.screenshot({ path: path.join(root, 'verification/b831-m3-library-phone.png') });
+        // Navigate an actual exercise from Library into its full-screen detail.
+        // This extends verification beyond synthetic tab fixtures; it also
+        // captures the real history and charts screens for review.
+        await page.click('.wpb-library-flag:first-child');
+        await page.click('.wpb-library-search input');
+        await page.keyboard.type('Back Squat');
+        await page.waitForSelector('.wpb-library-row');
+        await page.click('.wpb-library-row');
+        await page.waitForSelector('[data-exercisedetail] .wpb-exercise-tabs[data-pi-m3-track]');
+        const overlayPaint = await page.$eval('.wpb-exercise-detail', el=>({
+            opacity:Number.parseFloat(getComputedStyle(el).opacity),
+            background:getComputedStyle(el).backgroundColor,
+            rect:el.getBoundingClientRect().toJSON(),
+            closed:getComputedStyle(el).visibility==='hidden'
+        }));
+        assert.ok(overlayPaint.opacity>=0.999 && !overlayPaint.closed &&
+            overlayPaint.rect.width>=width-3,
+            'full-screen exercise detail never ghosts the underlying Library during motion: '+
+              JSON.stringify(overlayPaint));
+        const detailGeometry = await page.$eval('.wpb-exercise-detail', el => {
+            const h = el.querySelector('.wpb-exercise-detail-header button[aria-label="Back to library"]');
+            const tabs = [...el.querySelectorAll('.wpb-exercise-tabs>button')];
+            const body = el.querySelector('[data-exercisedetail]');
+            return { back: h?.getBoundingClientRect().width,
+                count: tabs.length, minTabHeight: Math.min(...tabs.map(b=>b.getBoundingClientRect().height)),
+                overflow: body?.scrollWidth > body?.clientWidth + 1,
+                selection: tabs.filter(b=>b.getAttribute('aria-selected')==='true').length };
+        });
+        assert.ok(detailGeometry.back>=44 && detailGeometry.count===4 &&
+            detailGeometry.minTabHeight>=40 && !detailGeometry.overflow &&
+            detailGeometry.selection===1, 'exercise details keep compact touch-safe tabs: '+JSON.stringify(detailGeometry));
+        const formLink=await page.$eval('.wpb-exercise-detail a[data-testid="form-video-link"]', link=>{
+            const box=link.getBoundingClientRect(),css=getComputedStyle(link);
+            const details=link.querySelector(':scope > div:last-child');
+            return {height:box.height,width:box.width,direction:css.flexDirection,
+                href:link.getAttribute('href'),align:getComputedStyle(details).textAlign};
+        });
+        assert.ok(formLink.height>=70&&formLink.height<=96&&
+            formLink.width<=width&&formLink.direction==='row'&&
+            formLink.align==='left'&&formLink.href?.startsWith('https://'),
+            'video guidance becomes a compact real link, not a large chart-blocking hero: '+JSON.stringify(formLink));
+        if (width===430) await page.screenshot({ path: path.join(root, 'verification/b831-m3-exercise-history-phone.png') });
+        await page.click('.wpb-exercise-tabs>button:nth-child(2)');
+        await page.waitForSelector('[data-exercisecharts]');
+        assert.equal(await page.$eval('.wpb-exercise-tabs>button:nth-child(2)',
+            b=>b.getAttribute('aria-selected')), 'true', 'exercise charts tab selects the real panel');
+        assert.ok(await page.$eval('[data-exercisedetail]',el=>el.scrollWidth<=el.clientWidth+1),
+            'exercise chart metric choices scroll rather than clipping screen width');
+        // Capture the selected Charts tab, not a transient keyboard focus ring
+        // on the next tab. Keyboard focus remains separately tested above.
+        if (width===430) await page.screenshot({ path: path.join(root, 'verification/b831-m3-exercise-charts-phone.png') });
+        // An 80-session, multi-year chronology needs one scrub target, not 80
+        // overlapping 12px circles. Use a separate synthetic history fixture,
+        // preserving the user's simulated saved-program fields exactly.
+        await page.evaluate(store => {
+            const denseHistory = Array.from({length:80},(_,i)=>{
+                const w=175+i;
+                return {id:'b831-dense-'+i, programId:store.saved[0].id,dayId:'lower',
+                    date:Date.UTC(2024,0,1+i*7),unit:'lb',
+                    perf:{'back-squat':{weight:w,reps:5,sets:[{w,r:5,done:true,rir:2}]}}};
+            });
+            localStorage.setItem('wpb:v1',JSON.stringify({...store,history:denseHistory}));
+        },initial);
+        await page.reload({waitUntil:'networkidle0'});
+        await page.waitForSelector('.wpb-tabbar');
+        await page.click('[data-tab="settings"]');
+        await page.waitForSelector('.wpb-settings');
+        await clickText('Exercise library');
+        await page.waitForSelector('.wpb-library-search input');
+        await page.click('.wpb-library-search input');
+        await page.keyboard.type('Back Squat');
+        await page.waitForSelector('.wpb-library-row');
+        await page.click('.wpb-library-row');
+        await page.waitForSelector('[data-exercisedetail] .wpb-exercise-tabs');
+        await page.click('.wpb-exercise-tabs>button:nth-child(2)');
+        await page.waitForSelector('[data-exercisecharts]');
+        const denseDiagnostic = await page.evaluate(() => {
+            const saved = JSON.parse(localStorage.getItem('wpb:v1') || '{}');
+            const svg = document.querySelector('.wpb-chart[data-metricchart]');
+            return {
+                savedHistory: saved.history?.length,
+                savedFirst: saved.history?.[0]?.date,
+                savedLast: saved.history?.at(-1)?.date,
+                visibleHistory: document.querySelectorAll('.wpb-exercise-history-session').length,
+                chartPoints: svg?.dataset.points,
+                chartMetric: svg?.dataset.metricchart,
+                emptyRange: !!document.querySelector('[data-empty-window]'),
+                detailTabs: [...document.querySelectorAll('.wpb-exercise-tabs>button')].map(b => ({
+                    label: b.textContent, selected: b.getAttribute('aria-selected')
+                })),
+                surfaceExcerpt: document.querySelector('[data-exercisecharts]')?.textContent?.slice(0, 180)
+            };
+        });
+        console.log('B831 DENSE CHART DIAGNOSTIC ' + JSON.stringify(denseDiagnostic));
+        assert.ok(Number(denseDiagnostic.chartPoints) > 36,
+            'dense seeded lift must appear on the real chart before scrubbing: ' + JSON.stringify(denseDiagnostic));
+        await page.waitForSelector('[data-chart-scrubber]');
+        const denseSummary=await page.$eval('.wpb-chart[data-metricchart]',svg=>({
+            n:Number(svg.dataset.points),touches:svg.querySelectorAll('[role="button"]').length,
+            max:Number(svg.querySelector('[data-chart-scrubber]').getAttribute('aria-valuemax'))}));
+        assert.ok(denseSummary.n>=60 && denseSummary.touches===0 &&
+            denseSummary.max===denseSummary.n, 'dense history preserves all records and uses one scrubber: '+JSON.stringify(denseSummary));
+        // Puppeteer's page.focus only accepts HTMLElement; the accessible
+        // chart inspector is an SVG element with a native focus() method.
+        await page.$eval('[data-chart-scrubber]', element => {
+            element.focus();
+            assertFocus(element);
+            function assertFocus(el) {
+                if (document.activeElement !== el) throw new Error('SVG inspector is not keyboard-focusable');
+            }
+        });
+        await page.keyboard.press('Home');
+        assert.equal(await page.$eval('[data-chart-scrubber]',x=>x.getAttribute('aria-valuenow')),'1');
+        await page.keyboard.press('End');
+        assert.equal(Number(await page.$eval('[data-chart-scrubber]',x=>x.getAttribute('aria-valuenow'))),denseSummary.n);
+        await page.keyboard.press('ArrowLeft');
+        assert.equal(Number(await page.$eval('[data-chart-scrubber]',x=>x.getAttribute('aria-valuenow'))),denseSummary.n-1);
+        assert.ok(await page.$eval('.wpb-chart-axis',x=>x.textContent.includes('24')&&x.textContent.includes('25')),
+            'date labels distinguish multiple years');
+        if(width===430)await page.screenshot({path:path.join(root,'verification/b831-m3-dense-chart-phone.png')});
+        await page.click('.wpb-exercise-detail-header button[aria-label="Back to library"]');
+        await page.waitForSelector('[data-exercisedetail]',{hidden:true});
+        assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),initial.saved,
+            'exercise detail view and charts do not change saved training programs');
+        assert.deepEqual(errors, []);
+        await page.close();
+        await context.close();
         console.log(`PASS expressive app motion, sheet drag, rapid navigation, reference/RIR persistence and reduced motion at ${width}px.`);
     }
 } finally { if (browser) await browser.close(); await new Promise(resolve => server.close(resolve)); }

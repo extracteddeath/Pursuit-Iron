@@ -5,7 +5,7 @@
   "build": 831,
   "engineVersion": "0.65.6",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "df66ed6b7dc2b0fe0985b6f4393633c1597a9fdd45467b2b47056f8f7e985a68",
+  "runtimeAggregate": "fca69c52713956415755fbac1b3485bba8cfacbe0046dbeb1a79576f69309177",
   "runtimeFiles": {
     "modules/engine-api.js": "40d3253be40bd5390001f16d63b74aae90d0e045df6a015b1764a1bc2404bd56",
     "modules/engine-shell.js": "73645bf4d914423074c0e90b992b58a6c57f7fbb726621d417803e906d140675",
@@ -91,7 +91,7 @@
     "modules/training-domain/prescriptions.js": "7927d0f1a4343d0ca25ba0deb8b1da616da05372a0a3214a3285d35581055d5f",
     "modules/training-domain/programs.js": "27ade346bc7b2bdd94c51564f1292ec126c2fd2bbbbc8d440ee04b4455d5c11b",
     "modules/training-domain/records.js": "b07d5d53e75b522542f30ad6a78975379841b285ce8c1356d7afcb6923350928",
-    "modules/ui-motion.js": "2c5b8d0ac8d27d361116f696bd2ca8d203300da1317867dfff1f434ef1407b17",
+    "modules/ui-motion.js": "f3bf9dd5cee9dd9931c393b3cbc8b521836ed36ad931aa779f2c8a35a05a5097",
     "modules/wizard-stability.js": "a62b2bed8a1f5ab880bfeab036a83ec630c93048b8a352652fe00ae75374a3d1",
     "vendor/lucide-react.js": "f84db748249b6e57e1d5187e876da806c1733523a1fa1501224bf740519b2cf4",
     "vendor/react-dom-client.js": "e3d8fd1d433e1bee9110bcaa5f8e9547e64f2754806bed0dd4fc546d890baab5",
@@ -110,15 +110,15 @@
   "uiFiles": {
     "modules/App.js": "e2855ac546eea4746d24a329486d71831b3c70281db9891e33415391bdbe9420",
     "index.html": "33765bd62fc051961e6dd2e03db7e224f9546135606979cbfcb13f82d8d0dc66",
-    "sw.js": "790c8e46853a30e781ca0f4649aca205352bdfcb005c34ec21a7ce04e88b2b82",
-    "BUILD_PROFILE.json": "b5ab386241f8b092842d4d159e55fe61c950266834537cc48239a2587a47f16d",
+    "sw.js": "cec34db66eb5a044f4974be4b08a058d9e789bcdb56f30740551e5709a1d785e",
+    "BUILD_PROFILE.json": "7f13543230a361e0ac2446a16b5cfdc8c3d0d7387439fa7be4544fc501d1f810",
     "CHANGELOG.md": "f1bbe548dbecdb0e91fc39155337fd65520baf8cc7de32a936af0cc65f21f935",
-    "app.css": "576b8ef3d73c4e300dd27d2ad7c84023ae2773e4bebdf5c2c78e58296abad050",
+    "app.css": "e08503c264bd04e7a4ba4b1fe5c77f2365ea985a3f54965faaf76b4c95a6b69d",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b831-r1fe0b3332145851c",
-  "uiMilestone": "Build 831 · M3 Expressive R3 fluid layout and grouped springs"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b831-r4d3e0a94ac43f368",
+  "uiMilestone": "Build 831 · M3 Expressive R4 editorial composition and spatial spring transitions"
 }

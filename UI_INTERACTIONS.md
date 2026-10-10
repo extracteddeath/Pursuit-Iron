@@ -274,3 +274,150 @@ It remains a real HTTPS link and does not preload external content.
 No video source changes, training charts/data changes, or live-workout
 form-link changes. The phone browser verifies link geometry and behavior
 at 320px and 430px, and captures the real detail page for comparison.
+
+## Expressive R2 — beyond animation overlays
+
+The previous M3 pass standardized interactions but left Home's quick actions as
+two similarly sized tiles with an orphaned third, gave every major surface
+nearly the same corner shape and kept navigation's selection modest. This pass
+recomposes existing elements rather than introducing more content or controls.
+
+- **Home:** a sculpted Up Next hero and larger integrated Start action; two
+  bento rows (featured Templates across full width, Custom Split + Cycles as
+  complementary equal-width routes), still only two rows, no extra scrolling.
+- **Plan:** next-day prominence plus spring-driven, asymmetrical card shapes
+  on actual open/closed transitions; original session drag, start and menu
+  behavior untouched.
+- **Progress:** three existing metrics stay readable on a single row with
+  differentiated first-stat proportion, and soft grouped containers.
+- **Profile/Settings:** distinct instrument and list-group shape families.
+- **Creation/Library:** more expressive selection shapes (not just color),
+  differentiated decision cards, fully rounded filter chips and a brief
+  motion sequence when a *new* wizard step mounts.
+- **Navigation:** its existing, measured, interruptible selection track is
+  wider (up to 60px) and taller (33px), with no change to five tab hitboxes
+  or the live-workout dock.
+- **Motion:** hero and choice presses respond with a longer spatial spring;
+  option corners spring to an even more rounded selected state. No form
+  cloning, data mutation or artificial delays. Reduced-motion accessibility
+  remains mandatory.
+
+Phone verification at 320px and 430px explicitly checks the bento layout,
+navigation measured geometry and creation-option size; the existing full
+workout, persistence, custom-program and all-theme checks remain in place.
+This is an additional visible-design iteration, not a claim that every M3
+Expressive idea is exhausted.
+
+## Expressive R3 — fluid adaptive button groups
+
+The first R2 layout did not yet reproduce M3 Expressive's characteristic
+*stretch and yield* of adjacent selection buttons. Progress's four section
+buttons and Library's four view modes now share that behavior: the selected
+control springs to 1.20 of its relative share while neighbors soften to
+0.95. Each button remains a real button with unchanged order, labels, focus
+and hit height; no extra element or training state is introduced.
+
+The already theme-aware selection track follows the **measured, animated**
+button bounds rather than the old fixed layout. Follow-through is coalesced
+to one frame per group and stops when the interrupted spring settles.
+Other segmented controls, numeric workout controls and RIR choices remain
+on their proven geometry (the RIR scale keeps its independent 1.18 growth).
+When reduced motion is requested, spring values settle immediately.
+
+Real browser checks at 320px and 430px verify selected width growth, matched
+track geometry, Library overflow, keyboard tab selection and original
+prescriptions.
+
+## Material 3 Expressive R4 — connected screen composition
+
+This pass deliberately changes how the app *feels as a whole* instead of just
+reshaping individual cards. The palette derives from the user's active theme
+focus token; existing accessible selected colors and button text are preserved.
+
+- **Home:** real edge-to-edge tonal top bar with an oversized responsive
+  headline, sharply differentiated asymmetrical workout hero, raised start
+  action, and two compact, left-aligned tonal statistic tiles. Featured
+  template doorway has stronger visual priority than its two complementary
+  secondary routes; no feature is removed or duplicated.
+- **Progress and Settings:** the page header, tabs and grouped content read as
+  connected surfaces, with distinct corner/weight families. Actual chart,
+  date, history and setting controls are unchanged.
+- **Plan:** scroll-snapping week rail plus a more obvious theme-tinted Next
+  day container. Existing drag/schedule/saved-cycle logic remains unchanged.
+- **Adaptive app bars:** the existing `data-scrolled` marker collapses visual
+  padding, size and corner radius on Home, Progress and Settings when the user
+  scrolls; no extra scroll listeners, intercepts or sticky overlays.
+- **Navigation choreography:** the real `data-view-frame` enters from the
+  previous primary tab's direction, scales subtly to rest and coordinates a
+  small number of important existing content surfaces. Interruption remains
+  safe because it uses the shared velocity-aware spring; screen routing and
+  training data stay owned by React.
+- **Sheet choreography:** leading sheet corners spring from 46px to 29px
+  while opening, return toward 42px on close, and remain distinct from
+  the sheet's velocity-aware vertical drag/detent. Reduced-motion and forced
+  colors remain quiet.
+- **Regression protection:** 320px and 430px browser checks validate true
+  direction-aware navigation, actual scroll-driven header collapse, tonal
+  dashboard and dashboard grid geometry, theme-specific navigation and
+  unchanged workout logger/persistence. No extra package dependencies.
+
+Prior R2/R3 were code-level expressive layout and fluid controls; R4 now
+connects page *composition and motion*. This does not imply Android-device
+frame timing has been certified: a physical-device visual/gesture pass is
+still valuable before merging/publishing to main.
+
+## Material 3 Expressive R5 — creation, Library, Profile and contextual utilities
+
+This branch extends the connected visual language beyond the primary tabs while
+keeping the **workout set logger, live dock, Target/Previous, RIR, typed weight
+fields, timers, program data and engine code unchanged**. The Profile identity
+and strength statistics gain a clear feature-first bento hierarchy. Exercise
+Library gets a tonal header, prominent responsive search instrument, and
+individual tactile results rather than a flat list. Creation gets a larger
+step headline, uninterrupted progress track, and selected options that truly
+morph their shape. Menus, dialogs, exercise detail and Settings receive an
+adapted version of the same shape and feedback language without modifying
+positioning or adding controls. All colors use the active theme token.
+
+320px/430px browser geometry assertions guard Profile, creation and Library
+rendering. Reduced motion and forced-colors disable decorative transforms;
+focus outlines and all existing actions remain intact. This PR is stacked on
+R4 PR #63, separate from the competing Plan/Progress R5 PR #62, and must be
+reconciled before any combined publication.
+
+## R6 unified Material 3 Expressive integration
+
+The final unified candidate keeps the adaptive shell, connected navigation,
+Profile/Library/Wizard overhaul, and restores the actual training-rotation
+ring and compact three-exercise preview from the parallel Home work. The
+verified Plan current-week bento and Progress sessions-led dashboard also
+enter this branch, as does the Plan panes' measured spring selection track.
+The source of every number remains its existing program, schedule or history.
+Engine and workout logging remain unchanged; all deferred branches are kept
+separate until the integrated CI passes. No additional app features or
+persistence keys are introduced.
+
+## Expressive R5 — the screens that still looked unchanged
+
+The Plan overview and Progress history were previously almost entirely uniform
+rows and three tiny metric chips. This pass gives both a clear Material 3
+Expressive size hierarchy while *keeping the same real data and controls*.
+
+- **Plan overview:** current week is a featured 28px-corner tile, with its
+  actual week number enlarged; Sessions and Week sets become smaller supporting
+  tiles. Completion stays one unobstructed seven-pixel bar under these metrics.
+  Up Next has a more prominent task-card hierarchy. The existing four Plan
+  panes now participate in the shared, elastic selection system, with a
+  measured theme-derived track that follows actual selected button widths.
+  Each pane is still activated by its original button callback.
+- **Progress:** Sessions (last seven days) occupies the larger left-hand
+  visual field; Sets and Recent PRs are two right-hand tiles. Labels and
+  date-window copy remain visible with no recalculation or graph mutations.
+  The new grid is phone-scoped and remains readable at 320px.
+- **Motion and semantics:** initial page entrances include Plan's prominent
+  surfaces, but never any live workout rows. The fluent tabs retain their
+  existing button labels and pressed semantics. Original history, graphs,
+  logging, data exports and engine remain unchanged.
+
+Release requires passing 320px/430px visual-geometry assertions, all phone
+shards, core contracts, independent engine parity and PWA release integrity.

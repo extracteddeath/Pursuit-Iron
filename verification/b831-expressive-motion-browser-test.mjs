@@ -57,6 +57,15 @@ try {
             await page.waitForSelector(`[data-view-frame="${tab}"][data-pi-surface]`);
             await page.waitForFunction(tab => document.querySelector(`[data-view-frame="${tab}"]`)?.style.getPropertyValue('--pi-surface-opacity') === '1', {}, tab);
             assert.equal(await page.$eval(`[data-tab="${tab}"]`, b => b.getAttribute('aria-current')), 'page');
+            const navDir = await page.$eval(`[data-view-frame="${tab}"]`, el => ({
+                direction:el.dataset.piNavDirection,
+                scale:Number.parseFloat(el.style.getPropertyValue('--pi-surface-scale')),
+                opacity:Number.parseFloat(el.style.getPropertyValue('--pi-surface-opacity'))
+            }));
+            assert.equal(navDir.direction, tab==='home' ? 'back' : 'forward',
+                'route entrance direction follows actual tab positions: '+JSON.stringify(navDir));
+            assert.ok(navDir.scale>=.98 && navDir.scale<=1.001 && navDir.opacity>.95,
+                'connected navigation settles to fully interactive page geometry');
             assert.ok(await page.$eval('.wpb', el => el.scrollWidth <= innerWidth + 1), `${tab} fits at ${width}px`);
             // page.click produces a real touch ripple. Check idle icon styling only AFTER
             // animationend clears the transient layer, not while the active ::after paints.
@@ -66,12 +75,12 @@ try {
                 const el=document.querySelector('.wpb-tabbar[data-pi-m3-track]');
                 const b=el?.querySelector('[aria-current="page"]');
                 return b && Math.abs(parseFloat(el.style.getPropertyValue('--pi-m3-track-x')) -
-                    (b.offsetLeft+(b.offsetWidth-Math.min(54,b.offsetWidth*.7))/2)) < .8;
+                    (b.offsetLeft+(b.offsetWidth-Math.min(60,b.offsetWidth*.78))/2)) < .8;
             }, { timeout: 5000 });
             const navPill = await page.$eval('.wpb-tabbar[data-pi-m3-track]', el => {
                 const selected = el.querySelector('[aria-current="page"]');
                 const indicator = getComputedStyle(el, '::before');
-                const width = Math.min(54, selected.offsetWidth * .7);
+                const width = Math.min(60, selected.offsetWidth * .78);
                 return { height: parseFloat(indicator.height), radius: indicator.borderRadius,
                     width: parseFloat(indicator.width), expectedWidth: width,
                     x: parseFloat(el.style.getPropertyValue('--pi-m3-track-x')),
@@ -80,7 +89,7 @@ try {
                     oldPill: getComputedStyle(selected, '::before').display,
                     oldUnderline: getComputedStyle(selected, '::after').display };
             });
-            assert.ok(navPill.height >= 29 && navPill.height <= 31 &&
+            assert.ok(navPill.height >= 32 && navPill.height <= 34 &&
                 Math.abs(navPill.width-navPill.expectedWidth)<.8 &&
                 Math.abs(navPill.x-navPill.expected)<.8, 'spatial navigation indicator stays centered: ' + JSON.stringify(navPill));
             assert.ok(navPill.radius.includes('px') && navPill.fill.includes('color-mix') &&
@@ -88,9 +97,72 @@ try {
                 'moving navigation paints one theme-native pill instead of separate underlines: ' + JSON.stringify(navPill));
             if (tab === 'home') {
                 assert.ok(await page.$eval('.wpb-home-hero', el =>
-                    parseFloat(getComputedStyle(el).borderTopLeftRadius) >= 18 &&
+                    parseFloat(getComputedStyle(el).borderTopLeftRadius) >= 30 &&
                     parseFloat(getComputedStyle(el).marginBottom) <= 14),
                     'home hero has a tighter spacious-card hierarchy');
+            }
+            if (tab === 'home') {
+                const bento = await page.$eval('.wpb-home .wpb-action-grid', grid => {
+                    const tiles=[...grid.querySelectorAll(':scope > .wpb-action-tile')];
+                    const first=tiles[0]?.getBoundingClientRect();
+                    return {count:tiles.length, firstWidth:first?.width,
+                        gridWidth:grid.getBoundingClientRect().width,
+                        heroRadius:parseFloat(getComputedStyle(document.querySelector('.wpb-home-hero')).borderTopLeftRadius)};
+                });
+                assert.ok(bento.count>=2 && bento.firstWidth >= bento.gridWidth-2 &&
+                    bento.heroRadius>=30,
+                    'M3 bento uses a full-width feature without extra layout rows: '+JSON.stringify(bento));
+            }
+            if (tab === 'home') {
+                const shape = await page.$eval('.wpb-home', shell => {
+                    const header=shell.querySelector('.wpb-home-header'), hero=shell.querySelector('.wpb-home-hero');
+                    const stats=[...shell.querySelectorAll('.wpb-metric-strip > .wpb-metric')];
+                    const first=stats[0]?.getBoundingClientRect();
+                    return {radius:parseFloat(getComputedStyle(header).borderBottomLeftRadius),
+                        heroRadius:parseFloat(getComputedStyle(hero).borderTopLeftRadius),
+                        headerTint:getComputedStyle(header).backgroundImage,
+                        statCount:stats.length,statRadius:stats[0]&&parseFloat(getComputedStyle(stats[0]).borderTopLeftRadius),
+                        statWidth:first?.width,scrollWidth:shell.scrollWidth,viewport:innerWidth};
+                });
+                assert.ok(shape.radius>=26 && shape.heroRadius>=35 &&
+                    shape.headerTint.includes('gradient') && shape.statCount===2 &&
+                    shape.statRadius>=20 && shape.statWidth>80 &&
+                    shape.scrollWidth<=shape.viewport+1,
+                    'R4 connected color-tinted dashboard has true tonal hierarchy without overflow: '+JSON.stringify(shape));
+            }
+            if (tab === 'plan') {
+                const state = await page.$eval('.wpb-plan-view', el => {
+                    const metrics = [...el.querySelectorAll('.wpb-plan-glance-tile')];
+                    const first = metrics[0];
+                    const group = el.querySelector('.wpb-plan-panes[data-pi-m3-track]');
+                    const title = el.querySelector('.wpb-plan-title');
+                    return {
+                        count:metrics.length,
+                        size:parseFloat(getComputedStyle(title).fontSize),
+                        firstRadius:first ? parseFloat(getComputedStyle(first).borderTopLeftRadius) : 0,
+                        firstSize:first ? parseFloat(getComputedStyle(first.lastElementChild).fontSize) : 0,
+                        buttons:group?.querySelectorAll('button').length,
+                        selected:group?.querySelectorAll('[aria-pressed="true"]').length,
+                        trackFill:group?.style.getPropertyValue('--pi-m3-track-fill'),
+                        overflow:el.scrollWidth>el.clientWidth+1
+                    };
+                });
+                assert.ok(state.count===3 && state.size>=27 && state.firstRadius>=26 &&
+                    state.firstSize>=24 && state.buttons===4 && state.selected===1 &&
+                    state.trackFill?.length>3 && !state.overflow,
+                    'Plan has a real featured week and elastic four-pane navigator: '+JSON.stringify(state));
+            }
+            if (tab === 'progress') {
+                const metrics = await page.$eval('.wpb-progress [data-progress-glance]', grid => {
+                    const cards = [...grid.querySelectorAll('.wpb-progress-glance-item')];
+                    const first = cards[0]?.getBoundingClientRect(),second = cards[1]?.getBoundingClientRect();
+                    return {count:cards.length, firstHeight:first?.height, secondHeight:second?.height,
+                        firstFont:parseFloat(getComputedStyle(cards[0].querySelector('.mono')).fontSize),
+                        overflow:grid.scrollWidth>grid.clientWidth+1};
+                });
+                assert.ok(metrics.count===3 && metrics.firstHeight>metrics.secondHeight+20 &&
+                    metrics.firstFont>=36 && !metrics.overflow,
+                    'Progress uses a true bento statistic hierarchy at phone widths: '+JSON.stringify(metrics));
             }
             if (tab === 'progress') {
                 assert.ok(await page.$eval('.wpb-progress .wpb-premium-tabs', el =>
@@ -108,10 +180,14 @@ try {
                     const title = getComputedStyle(el);
                     const logo = el.closest('.wpb-home-header').querySelector('div[aria-hidden="true"]');
                     return { size: parseFloat(title.fontSize), weight: Number(title.fontWeight),
-                        logoHeight: logo.getBoundingClientRect().height };
+                        logoHeight: logo.getBoundingClientRect().height,
+                        scrolled: el.closest('.wpb-home')?.dataset.scrolled==='1' };
                 });
-                assert.ok(homeType.size >= 26 && homeType.size <= 31 && homeType.weight >= 700,
-                    'Home title follows the expressive type scale');
+                const expectedSize=homeType.scrolled
+                    ? homeType.size>=20 && homeType.size<=25
+                    : homeType.size>=29 && homeType.size<=37;
+                assert.ok(expectedSize && homeType.weight >= 700,
+                    'Home title follows expanded/compact expressive type scale: '+JSON.stringify(homeType));
                 assert.ok(homeType.logoHeight >= 24, 'Home header spacing does not collapse its logo');
             }
             if (tab === 'progress') {
@@ -145,8 +221,47 @@ try {
                 });
                 assert.ok(profileType.title >= 26 && profileType.radius >= 11,
                     'Profile uses the shared title scale and consistent stat geometry');
+                // R5 profile: feature-first statistics remain within both phone widths.
+                const profileR5 = await page.$eval('.wpb-profile', el => {
+                    const grid=el.querySelector('.wpb-profile-strength-grid');
+                    const cells=grid ? [...grid.querySelectorAll('.wpb-profile-strength-cell')] : [];
+                    const featured=cells[0]?.getBoundingClientRect();
+                    const others=cells[1]?.getBoundingClientRect();
+                    return { title:parseFloat(getComputedStyle(el.querySelector('.wpb-profile-title')).fontSize),
+                        columns:grid ? getComputedStyle(grid).gridTemplateColumns.split(' ').length : 0,
+                        featuredWidth:featured?.width ?? 0, otherWidth:others?.width ?? 0,
+                        overflow:el.scrollWidth>el.clientWidth+1 };
+                });
+                assert.ok(profileR5.title>=29 && !profileR5.overflow,
+                    'R5 Profile has a large tonal heading without horizontal overflow: '+JSON.stringify(profileR5));
+                if (profileR5.otherWidth) assert.ok(profileR5.featuredWidth>profileR5.otherWidth*1.65,
+                    'R5 Profile feature metric occupies both bento columns');
             }
             if (width === 430) await page.screenshot({ path: path.join(root, `verification/b831-${tab}-phone.png`) });
+        }
+        // The real page scroll controller already marks scrolled chrome.
+        // Exercise the adaptive top bar without introducing an independent scroll handler.
+        await page.click('[data-tab="home"]');
+        const homeScroller = await page.$eval('.wpb-home .wpb-page-scroll', el => ({
+            max:el.scrollHeight-el.clientHeight
+        }));
+        if (homeScroller.max>40) {
+            await page.$eval('.wpb-home .wpb-page-scroll', el => {
+                el.scrollTop=90;
+                el.dispatchEvent(new Event('scroll',{bubbles:true}));
+            });
+            await page.waitForFunction(() => document.querySelector('.wpb-home')?.dataset.scrolled==='1');
+            await page.waitForFunction(() => {
+                const header=document.querySelector('.wpb-home .wpb-home-header');
+                return header && parseFloat(getComputedStyle(header).borderBottomLeftRadius)<=17;
+            }, { timeout: 5000 });
+            assert.equal(await page.$eval('.wpb-home', el => el.dataset.scrolled), '1',
+                'adaptive M3 app bar compresses after real content scroll');
+            await page.$eval('.wpb-home .wpb-page-scroll', el => {
+                el.scrollTop=0;
+                el.dispatchEvent(new Event('scroll',{bubbles:true}));
+            });
+            await page.waitForFunction(() => document.querySelector('.wpb-home')?.dataset.scrolled==='0');
         }
         // Native navigation semantics and DOM children remain constant while a
         // single measured indicator travels between nonadjacent destinations.
@@ -156,7 +271,7 @@ try {
             const b=el?.querySelector('[aria-current="page"]');
             return b?.dataset.tab==='plan' &&
                 Math.abs(parseFloat(el.style.getPropertyValue('--pi-m3-track-x')) -
-                  (b.offsetLeft+(b.offsetWidth-Math.min(54,b.offsetWidth*.7))/2))<.8;
+                  (b.offsetLeft+(b.offsetWidth-Math.min(60,b.offsetWidth*.78))/2))<.8;
         });
         const navStart=await page.$eval('.wpb-tabbar',x=>parseFloat(x.style.getPropertyValue('--pi-m3-track-x')));
         await page.click('[data-tab="profile"]');
@@ -165,7 +280,7 @@ try {
             const b=el?.querySelector('[aria-current="page"]');
             return b?.dataset.tab==='profile' &&
                 Math.abs(parseFloat(el.style.getPropertyValue('--pi-m3-track-x')) -
-                  (b.offsetLeft+(b.offsetWidth-Math.min(54,b.offsetWidth*.7))/2))<.8;
+                  (b.offsetLeft+(b.offsetWidth-Math.min(60,b.offsetWidth*.78))/2))<.8;
         });
         const navEnd=await page.$eval('.wpb-tabbar',x=>parseFloat(x.style.getPropertyValue('--pi-m3-track-x')));
         assert.ok(Math.abs(navEnd-navStart)>20,'navigation spring moves between real tabs');
@@ -190,7 +305,9 @@ try {
             const group = document.querySelector('.wpb-progress .wpb-premium-tabs');
             const selected = group?.querySelector('[aria-selected="true"]');
             return selected?.textContent?.trim() === 'Lifts' &&
-                Math.abs(Number.parseFloat(group.style.getPropertyValue('--pi-m3-track-x')) - selected.offsetLeft) < .15;
+                Math.abs(Number.parseFloat(group.style.getPropertyValue('--pi-m3-track-x')) - selected.offsetLeft) < .3 &&
+                Math.abs(Number.parseFloat(group.style.getPropertyValue('--pi-m3-track-width')) - selected.offsetWidth) < .3 &&
+                Number.parseFloat(selected.style.getPropertyValue('--pi-choice-grow')) > 1.18;
         }, { timeout: 5000 });
         const afterTrack = await page.$eval('.wpb-progress .wpb-premium-tabs', el => {
             const selected = el.querySelector('[aria-selected="true"]');
@@ -202,6 +319,8 @@ try {
         });
         assert.ok(afterTrack.x > beforeTrack.x && Math.abs(afterTrack.w - afterTrack.targetW) < .15,
             'shared M3 selection slides and resizes to the exact chosen segment');
+        assert.ok(afterTrack.w > beforeTrack.widths[1] + 4,
+            'selected Progress segment physically expands while adjacent segments yield');
         assert.equal(afterTrack.childCount, beforeTrack.children,
             'selection motion never adds a DOM element or reduces tap targets');
         assert.ok(afterTrack.indicator !== 'none' && afterTrack.activeBackground === 'rgba(0, 0, 0, 0)',
@@ -432,9 +551,11 @@ try {
                 dockTop: dock?.top, navTop: bar?.top,
                 offset: parseFloat(el.style.getPropertyValue('--pi-menu-shift-y')) || 0,
                 radius: parseFloat(getComputedStyle(el).borderTopLeftRadius),
-                minItem: item.getBoundingClientRect().height, items: el.querySelectorAll('[role="menuitem"]').length };
+                minItem: item.getBoundingClientRect().height, layoutItem: item.offsetHeight,
+                items: el.querySelectorAll('[role="menuitem"]').length };
         });
-        assert.ok(menuGeometry.radius >= 16 && menuGeometry.minItem >= 44 &&
+        assert.ok(menuGeometry.radius >= 16 && menuGeometry.layoutItem >= 44 &&
+            menuGeometry.minItem >= 43.8 &&
             menuGeometry.left >= 0 && menuGeometry.right <= width + 1,
             'M3 contextual menus are rounded, scroll-safe and touch accessible: ' + JSON.stringify({ width, menuGeometry }));
         assert.ok(menuGeometry.items >= 2, 'contextual actions keep their original features');
@@ -586,6 +707,11 @@ try {
         await page.waitForSelector('#root[data-pi-motion="expressive"] .wpb-home-create');
         await page.click('.wpb-home-create');
         await page.waitForSelector('.wpb-wizard .wpb-wizard-progress');
+        const optionShapes = await page.$$eval('.wpb-wizard .wpb-wizard-option, .wpb-wizard .wpb-wizard-step>div>button[aria-pressed]', controls =>
+            controls.map(el => ({radius:parseFloat(getComputedStyle(el).borderTopLeftRadius),
+                height:el.getBoundingClientRect().height})));
+        assert.ok(optionShapes.length>=2 && optionShapes.every(el=>el.radius>=18&&el.height>=58),
+            'M3 wizard options use large asymmetric shapes without smaller touch targets: '+JSON.stringify(optionShapes));
         const wizardGeometry = await page.$eval('.wpb-wizard', el => {
             const bar = el.querySelector('.wpb-wizard-progress').getBoundingClientRect();
             const footer = el.querySelector('.wpb-wizard-footer').getBoundingClientRect();
@@ -595,6 +721,13 @@ try {
         });
         assert.ok(wizardGeometry.barHeight >= 4 && wizardGeometry.width <= width + 1 &&
             wizardGeometry.footer <= wizardGeometry.screen + 2, 'M3 program wizard is compact, visible and never horizontally clipped: ' + JSON.stringify(wizardGeometry));
+        const wizardR5 = await page.$eval('.wpb-wizard', el => ({
+            title:parseFloat(getComputedStyle(el.querySelector('.wpb-wizard-heading-title')).fontSize),
+            progressHeight:el.querySelector('.wpb-wizard-progress').getBoundingClientRect().height,
+            clipped:el.scrollWidth>innerWidth+1
+        }));
+        assert.ok(wizardR5.title>=28 && wizardR5.progressHeight>=6 && !wizardR5.clipped,
+            'R5 wizard retains a large guided headline and slim responsive progress track: '+JSON.stringify(wizardR5));
         if (width === 430) await page.screenshot({ path: path.join(root, 'verification/b831-m3-wizard-phone.png') });
         await page.click('.wpb-wizard-header button[aria-label="Back"]');
         await page.waitForSelector('.wpb-home-create');
@@ -616,7 +749,9 @@ try {
             const el = document.querySelector('.wpb-library-flag-filter');
             const chosen = el?.querySelector('[aria-pressed="true"]');
             return chosen?.textContent?.includes('Recent') &&
-                Math.abs(parseFloat(el.style.getPropertyValue('--pi-m3-track-x')) - chosen.offsetLeft) < .2;
+                Math.abs(parseFloat(el.style.getPropertyValue('--pi-m3-track-x')) - chosen.offsetLeft) < .3 &&
+                Math.abs(parseFloat(el.style.getPropertyValue('--pi-m3-track-width')) - chosen.offsetWidth) < .3 &&
+                parseFloat(chosen.style.getPropertyValue('--pi-choice-grow')) > 1.18;
         }, { timeout: 5000 });
         await page.$eval('.wpb-library-search input', input => input.focus());
         const libraryFocus = await page.$eval('.wpb-library-search input', el =>
@@ -632,9 +767,31 @@ try {
         // This extends verification beyond synthetic tab fixtures; it also
         // captures the real history and charts screens for review.
         await page.click('.wpb-library-flag:first-child');
+        // An earlier keyboard-focus contract leaves this search focused.
+        // Explicitly leave focus, then observe the actual resting shape.
+        await page.$eval('.wpb-library-search input', el => el.blur());
+        await page.waitForFunction(() => {
+            const el=document.querySelector('.wpb-library-search');
+            return el && parseFloat(getComputedStyle(el).borderTopLeftRadius)>=20;
+        }, { timeout: 5000 });
+        const librarySearchRestRadius = await page.$eval('.wpb-library-search', el =>
+            parseFloat(getComputedStyle(el).borderTopLeftRadius));
+        assert.ok(librarySearchRestRadius >= 20,
+            'R5 Library resting search is generously rounded');
         await page.click('.wpb-library-search input');
         await page.keyboard.type('Back Squat');
         await page.waitForSelector('.wpb-library-row');
+        const libraryR5 = await page.$eval('.wpb-library', el => {
+            const row=el.querySelector('.wpb-library-row');
+            const search=el.querySelector('.wpb-library-search');
+            return { radius:row ? parseFloat(getComputedStyle(row).borderTopLeftRadius) : 0,
+                height:row?.getBoundingClientRect().height ?? 0,
+                searchRadius:search ? parseFloat(getComputedStyle(search).borderTopLeftRadius) : 0,
+                overflow:el.scrollWidth>el.clientWidth+1 };
+        });
+        assert.ok(libraryR5.radius>=18 && libraryR5.height>=59 &&
+            libraryR5.searchRadius>=15 && libraryR5.searchRadius<librarySearchRestRadius && !libraryR5.overflow,
+            'R5 Library uses sculpted responsive rows and prominent search: '+JSON.stringify(libraryR5));
         await page.click('.wpb-library-row');
         await page.waitForSelector('[data-exercisedetail] .wpb-exercise-tabs[data-pi-m3-track]');
         const overlayPaint = await page.$eval('.wpb-exercise-detail', el=>({

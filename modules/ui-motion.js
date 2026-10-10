@@ -70,8 +70,10 @@ function tick(now) {
 }
 const pixels = (el, name) => v => el.style.setProperty(name, `${v}px`);
 const surfaceSelector = '[data-view-frame], [data-pi-workout-page], [data-sheet-drag], .wpb-pop, .wpb-dialog, .wpb-slideL, .wpb-slideR, .wpb-state-enter, .wpb-float-in, .wpb-notice-in';
-const groupSelector = '.wpb-segmented, .wpb-premium-tabs, .wpb-exercise-tabs, .wpb-library-flag-filter, .wpb-progress-grouping, .wpb-exercise-window-tabs, .wpb-exercise-metric-tabs, .wpb-effort-scale, .wpb-tabbar, [role="tablist"]';
+const groupSelector = '.wpb-segmented, .wpb-premium-tabs, .wpb-exercise-tabs, .wpb-library-flag-filter, .wpb-progress-grouping, .wpb-plan-panes, .wpb-exercise-window-tabs, .wpb-exercise-metric-tabs, .wpb-effort-scale, .wpb-tabbar, [role="tablist"]';
 const surfaceOwners = new WeakMap();
+const primaryRoutes = ['home','plan','progress','profile','settings'];
+let lastPrimaryRoute = -1;
 
 function enterSurface(el, initial = false) {
     if (el.closest('.wpb-closing')) return;
@@ -81,14 +83,46 @@ function enterSurface(el, initial = false) {
     surfaceOwners.set(el, key); el.dataset.piSurface = '1';
     const sheet = el.matches('[data-sheet-drag]');
     const dialog = el.matches('.wpb-pop,.wpb-dialog');
-    const dir = el.matches('.wpb-slideR') || el.getAttribute('data-motion-direction') === 'r' ? -1 : el.matches('.wpb-slideL') || el.getAttribute('data-motion-direction') === 'l' ? 1 : 0;
+    // Top-level navigation is a connected motion system: neighboring pages
+    // arrive from their actual relative tab direction. Deep-link, exercise,
+    // full-screen log and sheet transitions keep their own existing semantics.
+    const route = el.matches('[data-view-frame]')
+        ? primaryRoutes.indexOf(el.getAttribute('data-view-frame')) : -1;
+    const navTravel = route >= 0 && lastPrimaryRoute >= 0 && route !== lastPrimaryRoute
+        ? Math.sign(route - lastPrimaryRoute) : 0;
+    if (route >= 0) lastPrimaryRoute = route;
+    if (route >= 0) {
+        el.dataset.piNavDirection = navTravel < 0 ? 'back' : navTravel > 0 ? 'forward' : 'stationary';
+        el.style.setProperty('--pi-page-reveal-x', navTravel > 0 ? '13px' : navTravel < 0 ? '-13px' : '0px');
+    }
+    const dir = el.matches('.wpb-slideR') || el.getAttribute('data-motion-direction') === 'r'
+        ? -1 : el.matches('.wpb-slideL') || el.getAttribute('data-motion-direction') === 'l'
+        ? 1 : navTravel;
     const y = sheet ? 52 : dialog ? 8 : el.matches('.wpb-notice-in') ? -6 : dir ? 0 : 4;
     const quiet = initial || reduced();
     const restart = (name, value) => !first && !quiet && !active.has(states.get(el)?.get(name)) ? value : undefined;
-    spring(el, '--pi-surface-x', 0, { from: quiet ? 0 : dir * 18, restart: restart('--pi-surface-x', dir * 18), write: pixels(el, '--pi-surface-x') });
-    spring(el, '--pi-surface-y', 0, { from: quiet ? 0 : y, restart: restart('--pi-surface-y', y), write: pixels(el, '--pi-surface-y'), damping: sheet ? .94 : 1 });
-    spring(el, '--pi-surface-opacity', 1, { from: quiet ? 1 : .55, restart: restart('--pi-surface-opacity', .55), stiffness: 1200, damping: 1, precision: .001 });
-    if (dialog) spring(el, '--pi-surface-scale', 1, { from: quiet ? 1 : .97, damping: .9, precision: .001 });
+    spring(el, '--pi-surface-x', 0, {
+        from: quiet ? 0 : dir * (route >= 0 ? 34 : 18),
+        restart: restart('--pi-surface-x', dir * (route >= 0 ? 34 : 18)),
+        write: pixels(el, '--pi-surface-x'), stiffness: route >= 0 ? 660 : 700,
+        damping: route >= 0 ? .88 : .9
+    });
+    spring(el, '--pi-surface-y', 0, { from: quiet ? 0 : y,
+        restart: restart('--pi-surface-y', y), write: pixels(el, '--pi-surface-y'),
+        damping: sheet ? .94 : 1 });
+    spring(el, '--pi-surface-opacity', 1, { from: quiet ? 1 : route >= 0 ? .78 : .55,
+        restart: restart('--pi-surface-opacity', route >= 0 ? .78 : .55),
+        stiffness: 1200, damping: 1, precision: .001 });
+    if (dialog || route >= 0)
+        spring(el, '--pi-surface-scale', 1, {
+            from: quiet ? 1 : dialog ? .97 : .985,
+            restart: restart('--pi-surface-scale', dialog ? .97 : .985),
+            stiffness: 770, damping: .88, precision: .001
+        });
+    if (sheet)
+        spring(el, '--pi-sheet-radius', 29, { from: quiet ? 29 : 46,
+            restart: restart('--pi-sheet-radius', 46),
+            write: pixels(el, '--pi-sheet-radius'), stiffness: 740, damping: .87 });
 }
 export function exitMotion(wrapper, complete) {
     let cancelled = false;
@@ -101,6 +135,9 @@ export function exitMotion(wrapper, complete) {
     panels.forEach(el => {
         el.dataset.piSurface = '1';
         spring(el, '--pi-surface-opacity', 0, { stiffness: 1400, damping: 1, precision: .001 });
+        if (el.matches('[data-sheet-drag]'))
+            spring(el, '--pi-sheet-radius', 42, { write: pixels(el, '--pi-sheet-radius'),
+                stiffness: 740, damping: 1 });
         stops.push(spring(el, '--pi-surface-y', el.matches('[data-sheet-drag]') ? 64 : 8,
             { write: pixels(el, '--pi-surface-y'), stiffness: 1100, damping: 1, complete: done }));
     });
@@ -116,6 +153,9 @@ export function resumeMotion(wrapper) {
         if (!surfaceOwners.has(el)) { enterSurface(el); return; }
         spring(el, '--pi-surface-y', 0, { write: pixels(el, '--pi-surface-y'), damping: .94 });
         spring(el, '--pi-surface-opacity', 1, { stiffness: 1200, damping: 1, precision: .001 });
+        if (el.matches('[data-sheet-drag]'))
+            spring(el, '--pi-sheet-radius', 29, { write: pixels(el, '--pi-sheet-radius'),
+                stiffness: 740, damping: .87 });
     });
     wrapper.querySelectorAll('.wpb-backdrop').forEach(el => {
         el.dataset.piBackdrop = '1';
@@ -168,11 +208,11 @@ export function installAppMotion(root) {
     // Material 3 selection tracks sit behind the actual React-owned buttons. Geometry is
     // measured, never guessed, so four-column and two-column selectors share one behavior.
     const selectionTracks = new WeakMap();
-    const trackSelector = '.wpb-progress .wpb-premium-tabs, .wpb-settings .wpb-segmented, .wpb-exercise-tabs, .wpb-library-flag-filter, .wpb-progress-grouping, .wpb-exercise-window-tabs, .wpb-tabbar';
+    const trackSelector = '.wpb-progress .wpb-premium-tabs, .wpb-settings .wpb-segmented, .wpb-exercise-tabs, .wpb-library-flag-filter, .wpb-progress-grouping, .wpb-plan-panes, .wpb-exercise-window-tabs, .wpb-tabbar';
 // Delayed visual entrances are bounded to five high-level cards per new page.
 // No workout logger controls, engine values or React-owned children participate.
 const entranceKeys = new WeakMap();
-const entranceSelector = '.wpb-home-hero, .wpb-home .wpb-action-tile, .wpb-program .wpb-day-card, .wpb-progress .wpb-progress-glance-item, .wpb-profile .wpb-profile-strength-cell, .wpb-settings .wpb-settings-card';
+const entranceSelector = '.wpb-home-hero, .wpb-home .wpb-action-tile, .wpb-program .wpb-day-card, .wpb-progress .wpb-progress-glance-item, .wpb-profile .wpb-profile-strength-cell, .wpb-settings .wpb-settings-card, .wpb-plan-view .wpb-plan-glance-tile, .wpb-plan-view .wpb-plan-up-next';
 function stagePage(el, initial = false) {
     if (!el.matches('[data-view-frame]')) return;
     const key = el.getAttribute('data-view-frame');
@@ -280,12 +320,14 @@ function disclosure(el, initial = false) {
             group.style.setProperty('--pi-m3-track-fill', state.fill);
         }
         const nav = group.matches('.wpb-tabbar');
-        const width = nav ? Math.min(54, button.offsetWidth * .7) : button.offsetWidth;
+        // Expressive selection grows into the surrounding whitespace while
+        // retaining all five original tab widths and labels.
+        const width = nav ? Math.min(60, button.offsetWidth * .78) : button.offsetWidth;
         const target = {
             '--pi-m3-track-x': button.offsetLeft + (nav ? (button.offsetWidth - width) / 2 : 0),
-            '--pi-m3-track-y': button.offsetTop + (nav ? 4 : 0),
+            '--pi-m3-track-y': button.offsetTop + (nav ? 3 : 0),
             '--pi-m3-track-width': width,
-            '--pi-m3-track-height': nav ? 30 : button.offsetHeight
+            '--pi-m3-track-height': nav ? 33 : button.offsetHeight
         };
         for (const [key, value] of Object.entries(target)) {
             if (instant || state[key] === undefined) setMotionValue(group, key, value, pixels(group, key));
@@ -296,7 +338,7 @@ function disclosure(el, initial = false) {
     }
     // A brief touch-origin state layer on navigation and choices, not the dense workout set grid.
     // It never inserts a DOM child, changes a hit target, or consumes a click.
-    const inkTargets = '.wpb-tab, .wpb-segmented > button, .wpb-premium-tabs > button, .wpb-exercise-tabs > button, .wpb-exercise-window-tabs > button, .wpb-exercise-metric-tabs > button, .wpb-progress-grouping > button, .wpb-wizard-option, .wpb-wizard-choice, .wpb-wizard-preset, .wpb-filter-chip, .wpb-library-flag, .wpb-onboarding-primary, .wpb-onboarding-secondary, [role="tablist"] > button, button.wpb-toggle, .wpb-context-menu-item, .wpb-sheet-close';
+    const inkTargets = '.wpb-tab, .wpb-segmented > button, .wpb-premium-tabs > button, .wpb-exercise-tabs > button, .wpb-exercise-window-tabs > button, .wpb-exercise-metric-tabs > button, .wpb-progress-grouping > button, .wpb-plan-panes > button, .wpb-wizard-option, .wpb-wizard-choice, .wpb-wizard-preset, .wpb-filter-chip, .wpb-library-flag, .wpb-onboarding-primary, .wpb-onboarding-secondary, [role="tablist"] > button, button.wpb-toggle, .wpb-context-menu-item, .wpb-sheet-close';
     function ink(el, x, y) {
         if (reduced() || !el.matches(inkTargets)) return;
         const r = el.getBoundingClientRect();
@@ -315,6 +357,7 @@ function disclosure(el, initial = false) {
         if (e.animationName === 'piInkBurst' && e.target?.dataset) delete e.target.dataset.piInk;
         if (e.animationName === 'piContentCascade' && e.target?.dataset) delete e.target.dataset.piReveal;
         if (e.animationName === 'piDisclosureContent' && e.target?.dataset) delete e.target.dataset.piExpandEnter;
+        if (e.animationName === 'piExpressiveStepIn' && e.target?.dataset) delete e.target.dataset.piStepEnter;
         if (e.target?.matches?.('.wpb-context-menu')) positionContextMenu(e.target);
     };
     const clearInk = () => root.querySelectorAll('[data-pi-ink]').forEach(el => delete el.dataset.piInk);
@@ -330,8 +373,11 @@ function disclosure(el, initial = false) {
     const disabled = el => !el || el.disabled || el.getAttribute('aria-disabled') === 'true' || el.closest('[inert],.wpb-closing');
     function shape(el, held = false) {
         const selected = el.dataset.piChoice === 'selected';
-        spring(el, '--pi-control-shape', (selected ? 7 : 0) - (held ? 3 : 0),
-            { from: 0, write: pixels(el, '--pi-control-shape'), stiffness: 850, damping: .9 });
+        const expressive = el.matches('.wpb-wizard-option,.wpb-wizard-choice,.wpb-wizard-preset,.wpb-filter-chip,.wpb-library-flag');
+        const change = selected ? (expressive ? 11 : 7) : 0;
+        spring(el, '--pi-control-shape', change - (held ? expressive ? 5 : 3 : 0),
+            { from: 0, write: pixels(el, '--pi-control-shape'),
+                stiffness: expressive ? 680 : 850, damping: expressive ? .81 : .9 });
     }
     // Utilitarian logging controls own their pre-existing compact feedback.
     // Do not morph/compress the set-complete check, numeric steppers, RIR row,
@@ -346,12 +392,20 @@ function disclosure(el, initial = false) {
         if (pressed.has(id)) release(id);
         control(el); pressed.set(id, { el, x, y });
         ink(el, x, y);
-        spring(el, '--pi-control-scale', .97, { from: 1, stiffness: 1300, damping: 1, precision: .001 }); shape(el, true);
+        const expressiveAction = el.matches('.wpb-home .wpb-action-tile,.wpb-home .wpb-primary-action,.wpb-wizard .wpb-wizard-option,.wpb-wizard .wpb-wizard-next-action');
+        spring(el, '--pi-control-scale', expressiveAction ? .956 : .97,
+            { from: 1, stiffness: expressiveAction ? 930 : 1300,
+                damping: expressiveAction ? .83 : 1, precision: .001 });
+        shape(el, true);
     }
     function release(id) {
         const held = pressed.get(id); if (!held) return;
         pressed.delete(id);
-        spring(held.el, '--pi-control-scale', 1, { stiffness: 850, damping: .78, precision: .001 }); shape(held.el);
+        const expressiveAction = held.el.matches('.wpb-home .wpb-action-tile,.wpb-home .wpb-primary-action,.wpb-wizard .wpb-wizard-option,.wpb-wizard .wpb-wizard-next-action');
+        spring(held.el, '--pi-control-scale', 1,
+            { stiffness: expressiveAction ? 640 : 850,
+                damping: expressiveAction ? .72 : .78, precision: .001 });
+        shape(held.el);
     }
     const button = e => e.target.closest?.('button');
     const down = e => { if (e.button === 0) press(button(e), e.pointerId, e.clientX, e.clientY); };
@@ -414,12 +468,37 @@ function disclosure(el, initial = false) {
         if (previous === selected && !initial) return;
         positionTrack(group, buttons, selected, initial);
         const rir = group.matches('.wpb-effort-scale');
+        // Material's expressive button group: the active option takes more
+        // space, adjacent options yield gently, and the painted selection
+        // follows their measured bounds. The underlying React controls stay
+        // present and in the same order, with identical keyboard semantics.
+        const fluid = group.matches('.wpb-progress .wpb-premium-tabs,.wpb-library .wpb-library-flag-filter,.wpb-plan-panes');
+        if (fluid) group.dataset.piM3Fluid = '1';
+        let trackQueued = false;
+        const followFluid = () => {
+            if (!fluid || trackQueued) return;
+            trackQueued = true;
+            requestAnimationFrame(() => {
+                trackQueued = false;
+                if (root.contains(group) && choiceStates.get(group) === selected)
+                    positionTrack(group, buttons, selected, true);
+            });
+        };
         buttons.forEach((b, i) => {
             if (!rir && !b.hasAttribute('aria-selected') && !b.hasAttribute('aria-pressed') && !b.hasAttribute('aria-current') && !group.matches('.wpb-tabbar')) return;
             control(b); b.dataset.piChoice = i === selected ? 'selected' : 'unselected';
             const neighbor = selected >= 0 && Math.abs(i - selected) === 1;
-            const grow = rir ? i === selected ? 1.18 : neighbor ? .91 : 1 : 1;
-            spring(b, '--pi-choice-grow', grow, { from: initial ? grow : 1, damping: .9, stiffness: 850, precision: .001 });
+            const grow = rir ? i === selected ? 1.18 : neighbor ? .91 : 1 :
+                fluid ? i === selected ? 1.20 : neighbor ? .95 : 1 : 1;
+            spring(b, '--pi-choice-grow', grow, {
+                from: initial ? grow : 1,
+                damping: fluid ? .83 : .9, stiffness: fluid ? 620 : 850,
+                precision: .001,
+                ...(fluid ? { write: value => {
+                    b.style.setProperty('--pi-choice-grow', String(value));
+                    followFluid();
+                } } : {})
+            });
             shape(b);
             if (group.matches('.wpb-tabbar')) {
                 const icon = b.querySelector('svg');
@@ -468,11 +547,21 @@ function disclosure(el, initial = false) {
         if (el.closest(groupSelector) || el.matches('.wpb-set-complete,[role="switch"]')) return;
         control(el); el.dataset.piChoice = el.getAttribute('aria-pressed') === 'true' ? 'selected' : 'unselected'; shape(el);
     }
+    const enteredWizard = new WeakSet();
+    function wizardStep(el, initial = false) {
+        if (enteredWizard.has(el)) return;
+        enteredWizard.add(el);
+        if (initial || reduced()) return;
+        // A keyed fieldset is mounted for each real step; animate the entire
+        // authored step once. No control is cloned or delayed.
+        el.dataset.piStepEnter = '1';
+    }
     function scan(node, initial = false) {
         if (node.nodeType !== 1 || !root.contains(node)) return;
         const each = (selector, fn) => { if (node.matches(selector)) fn(node, initial); node.querySelectorAll(selector).forEach(el => fn(el, initial)); };
         each(surfaceSelector, enterSurface);
         each('[data-view-frame]', stagePage);
+        each('.wpb-wizard-step', wizardStep);
         each(disclosureSelector, disclosure);
         each(groupSelector, selection);
         each('.wpb-toggle[aria-checked]', toggle);

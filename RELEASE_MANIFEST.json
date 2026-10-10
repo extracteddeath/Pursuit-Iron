@@ -5,7 +5,7 @@
   "build": 831,
   "engineVersion": "0.65.6",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "af367da10e426bf4b6fbbd1f7e0049797a99b4eaef0df8ffface7739a014fac6",
+  "runtimeAggregate": "3040bcfb5b67135f3320dcf3cbf7c1086006667066fc1ecf58f4133a29da8836",
   "runtimeFiles": {
     "modules/engine-api.js": "40d3253be40bd5390001f16d63b74aae90d0e045df6a015b1764a1bc2404bd56",
     "modules/engine-shell.js": "73645bf4d914423074c0e90b992b58a6c57f7fbb726621d417803e906d140675",
@@ -91,7 +91,7 @@
     "modules/training-domain/prescriptions.js": "7927d0f1a4343d0ca25ba0deb8b1da616da05372a0a3214a3285d35581055d5f",
     "modules/training-domain/programs.js": "27ade346bc7b2bdd94c51564f1292ec126c2fd2bbbbc8d440ee04b4455d5c11b",
     "modules/training-domain/records.js": "b07d5d53e75b522542f30ad6a78975379841b285ce8c1356d7afcb6923350928",
-    "modules/ui-motion.js": "b5d05f3947ff4df0f75e27eb8782c23ddae2984d85e7653a7f8399f8ce65ce87",
+    "modules/ui-motion.js": "f0242d7dccda8c25ee7a6ec27d98bd5d6b82e1db7985e056231b721f76aa4607",
     "modules/wizard-stability.js": "a62b2bed8a1f5ab880bfeab036a83ec630c93048b8a352652fe00ae75374a3d1",
     "vendor/lucide-react.js": "f84db748249b6e57e1d5187e876da806c1733523a1fa1501224bf740519b2cf4",
     "vendor/react-dom-client.js": "e3d8fd1d433e1bee9110bcaa5f8e9547e64f2754806bed0dd4fc546d890baab5",
@@ -100,7 +100,7 @@
     "vendor/react-shared-JU7Z5GYC.js": "b8893896e31178fb4c8c0ce42cae975bec57bb70596c012d5d5c439cd20717d8",
     "vendor/react-shared-V673FGIV.js": "591c4bd8b0aae646cba73ca7ac17a2c2c950bdbaf288529ea14b691f2a4a9f22",
     "vendor/react.js": "24b2d220a5b2637cf3fb78fe0d961f227ea0a4b960485dbfb03c9d276e72147c",
-    "modules/App.js": "e2855ac546eea4746d24a329486d71831b3c70281db9891e33415391bdbe9420"
+    "modules/App.js": "047b87810c57cd611045faa673e54c0a85447ffc80e08c8ac62ba7d0b692ddc6"
   },
   "localCandidate": {
     "name": "Pursuit Iron 4.0 · M234 Candidate Selection Hardening",
@@ -108,17 +108,17 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "e2855ac546eea4746d24a329486d71831b3c70281db9891e33415391bdbe9420",
+    "modules/App.js": "047b87810c57cd611045faa673e54c0a85447ffc80e08c8ac62ba7d0b692ddc6",
     "index.html": "33765bd62fc051961e6dd2e03db7e224f9546135606979cbfcb13f82d8d0dc66",
-    "sw.js": "f381083d608374b6f5b84dc07ca4ac38a9342555e0d922ffaf2349417e02ef21",
-    "BUILD_PROFILE.json": "cac24715760a18f7b34376404a1ea2423b6945477ef9f2930fced7fe9c872673",
+    "sw.js": "d60fe5a6737652609d220db561f94013e2bc2a0d8692e63927fb0007743a1d0d",
+    "BUILD_PROFILE.json": "0de051a0ce3b15676e1e3fff9c6129fc8bbc731498283aaaad4dabb8f7ffb88e",
     "CHANGELOG.md": "f1bbe548dbecdb0e91fc39155337fd65520baf8cc7de32a936af0cc65f21f935",
-    "app.css": "f34c538ff7c43a8169e9995adc57eb38b9d2abd3105f122d357db5ef3a6441f5",
+    "app.css": "d445a5b947a0df364b1f908d0389194de1fc943c21f7e1886f930f09d8a8d7dd",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b831-rf70d755644b0e02c",
-  "uiMilestone": "Build 831 · Expressive interactions across the app"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b831-r8b05bd28a323ad40",
+  "uiMilestone": "Build 831 · unified Material 3 Expressive R6"
 }

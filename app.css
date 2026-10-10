@@ -2089,3 +2089,20 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
  }
  #root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero::before{display:none!important}
 }
+
+/* R4 phone review: keep the featured route's *text* above the resumed-workout
+   dock. The column-spanning card previously used space-between, putting its
+   useful label at the very bottom, behind the dock on a normal phone. */
+#root[data-pi-motion="expressive"] .wpb-home .wpb-action-grid>.wpb-action-tile:first-child{
+ justify-content:flex-start!important;
+ gap:15px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-action-grid>.wpb-action-tile:first-child>div:last-child{
+ margin-top:0!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-metric-strip{
+ margin-bottom:8px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-action-grid{
+ margin-top:8px!important;
+}

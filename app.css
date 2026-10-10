@@ -3284,6 +3284,15 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-radius:25px!important;
   box-shadow:none!important;
 }
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile
+  .wpb-profile-strength button[aria-label="Share Strength Score"]{
+  width:44px!important;
+  height:44px!important;
+  min-width:44px!important;
+  border-radius:15px!important;
+  background-color:var(--pi-r11-raised)!important;
+  border-color:var(--pi-r11-edge)!important;
+}
 #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength-grid{
   display:grid!important;
   grid-template-columns:repeat(2,minmax(0,1fr))!important;

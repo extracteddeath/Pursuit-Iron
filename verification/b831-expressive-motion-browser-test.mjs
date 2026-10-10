@@ -547,6 +547,16 @@ try {
         await page.waitForSelector('.wpb-library-row');
         await page.click('.wpb-library-row');
         await page.waitForSelector('[data-exercisedetail] .wpb-exercise-tabs[data-pi-m3-track]');
+        const overlayPaint = await page.$eval('.wpb-exercise-detail', el=>({
+            opacity:Number.parseFloat(getComputedStyle(el).opacity),
+            background:getComputedStyle(el).backgroundColor,
+            rect:el.getBoundingClientRect().toJSON(),
+            closed:getComputedStyle(el).visibility==='hidden'
+        }));
+        assert.ok(overlayPaint.opacity>=0.999 && !overlayPaint.closed &&
+            overlayPaint.rect.width>=width-1,
+            'full-screen exercise detail never ghosts the underlying Library during motion: '+
+              JSON.stringify(overlayPaint));
         const detailGeometry = await page.$eval('.wpb-exercise-detail', el => {
             const h = el.querySelector('.wpb-exercise-detail-header button[aria-label="Back to library"]');
             const tabs = [...el.querySelectorAll('.wpb-exercise-tabs>button')];
@@ -566,7 +576,8 @@ try {
             b=>b.getAttribute('aria-selected')), 'true', 'exercise charts tab selects the real panel');
         assert.ok(await page.$eval('[data-exercisedetail]',el=>el.scrollWidth<=el.clientWidth+1),
             'exercise chart metric choices scroll rather than clipping screen width');
-        await page.keyboard.press('Tab');
+        // Capture the selected Charts tab, not a transient keyboard focus ring
+        // on the next tab. Keyboard focus remains separately tested above.
         if (width===430) await page.screenshot({ path: path.join(root, 'verification/b831-m3-exercise-charts-phone.png') });
         await page.click('.wpb-exercise-detail-header button[aria-label="Back to library"]');
         await page.waitForSelector('[data-exercisedetail]',{hidden:true});

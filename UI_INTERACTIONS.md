@@ -183,3 +183,12 @@ confirms program data integrity, and exports screenshots of both surfaces.
 All changes are scoped to Library details; the live workout's set grid,
 effort, target/previous, amplifier, rest persistence and safety controls
 remain unchanged.
+
+### Full-screen Exercise Detail transition guard
+
+The Library drill-in is a fully opaque navigated screen, **not a dimming
+scrim**. The shared spring motion must never set the opacity of the entire
+Exercise Detail page below 1, because doing so exposes the previous Library
+rows and header behind readable content. The phone browser now checks its
+computed opacity immediately after entering the real exercise, and captures
+History and Charts without intermediate keyboard-focus transitions.

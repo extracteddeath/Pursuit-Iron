@@ -1151,6 +1151,13 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   }
 }
 
+/* Drill-in screens fill the viewport and MUST be fully opaque from first paint.
+   The shared scrim fade only belongs to sheets/dialogs. Fading an entire
+   navigated detail page exposes the underlying Library text through it. */
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-detail.wpb-backdrop{
+  opacity:1!important;
+  background-clip:border-box;
+}
 /* PI M3 EXERCISE DETAIL — denser information hierarchy, not denser taps.
    Scoped to the full-screen Library detail; no workout set grids are altered. */
 #root[data-pi-motion="expressive"] .wpb .wpb-exercise-detail-header{

@@ -538,6 +538,40 @@ try {
         assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('wpb:v1')).saved), initial.saved,
             'secondary screen M3 styling cannot mutate programs');
         if (width === 430) await page.screenshot({ path: path.join(root, 'verification/b831-m3-library-phone.png') });
+        // Navigate an actual exercise from Library into its full-screen detail.
+        // This extends verification beyond synthetic tab fixtures; it also
+        // captures the real history and charts screens for review.
+        await page.click('.wpb-library-flag:first-child');
+        await page.click('.wpb-library-search input');
+        await page.keyboard.type('Back Squat');
+        await page.waitForSelector('.wpb-library-row');
+        await page.click('.wpb-library-row');
+        await page.waitForSelector('[data-exercisedetail] .wpb-exercise-tabs[data-pi-m3-track]');
+        const detailGeometry = await page.$eval('.wpb-exercise-detail', el => {
+            const h = el.querySelector('.wpb-exercise-detail-header button[aria-label="Back to library"]');
+            const tabs = [...el.querySelectorAll('.wpb-exercise-tabs>button')];
+            const body = el.querySelector('[data-exercisedetail]');
+            return { back: h?.getBoundingClientRect().width,
+                count: tabs.length, minTabHeight: Math.min(...tabs.map(b=>b.getBoundingClientRect().height)),
+                overflow: body?.scrollWidth > body?.clientWidth + 1,
+                selection: tabs.filter(b=>b.getAttribute('aria-selected')==='true').length };
+        });
+        assert.ok(detailGeometry.back>=44 && detailGeometry.count===4 &&
+            detailGeometry.minTabHeight>=40 && !detailGeometry.overflow &&
+            detailGeometry.selection===1, 'exercise details keep compact touch-safe tabs: '+JSON.stringify(detailGeometry));
+        if (width===430) await page.screenshot({ path: path.join(root, 'verification/b831-m3-exercise-history-phone.png') });
+        await page.click('.wpb-exercise-tabs>button:nth-child(2)');
+        await page.waitForSelector('[data-exercisecharts]');
+        assert.equal(await page.$eval('.wpb-exercise-tabs>button:nth-child(2)',
+            b=>b.getAttribute('aria-selected')), 'true', 'exercise charts tab selects the real panel');
+        assert.ok(await page.$eval('[data-exercisedetail]',el=>el.scrollWidth<=el.clientWidth+1),
+            'exercise chart metric choices scroll rather than clipping screen width');
+        await page.keyboard.press('Tab');
+        if (width===430) await page.screenshot({ path: path.join(root, 'verification/b831-m3-exercise-charts-phone.png') });
+        await page.click('.wpb-exercise-detail-header button[aria-label="Back to library"]');
+        await page.waitForSelector('[data-exercisedetail]',{hidden:true});
+        assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),initial.saved,
+            'exercise detail view and charts do not change saved training programs');
         assert.deepEqual(errors, []);
         await page.close();
         await context.close();

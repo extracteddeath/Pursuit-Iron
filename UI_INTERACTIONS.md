@@ -168,3 +168,18 @@ Rest-card actions and completion metrics receive shared geometry without
 altering weight/reps steppers, active sets, or completed-set fade.
 Phone integration tests verify real history grouping and range-tab keyboard
 motion at 320px/430px, retained hit geometry and saved programs.
+
+## M3 real Exercise Detail composition and verification
+
+The Exercise Library detail destination now has a reliable 44px Back target,
+compact readable full-screen header, contained exercise figure, evenly-sized
+History/Charts/Records/About tabs and consistent exercise metadata.
+History is a chronological ledger instead of redundant cards; rep-max
+records remain tabular and numerical. Chart metric choices remain horizontally
+scrollable and keyboard-focusable; SVG values and plotted points are not
+recomputed or altered. At 320/430px the browser now opens a real Back Squat
+detail, checks tab hit size and horizontal overflow, switches to Charts,
+confirms program data integrity, and exports screenshots of both surfaces.
+All changes are scoped to Library details; the live workout's set grid,
+effort, target/previous, amplifier, rest persistence and safety controls
+remain unchanged.

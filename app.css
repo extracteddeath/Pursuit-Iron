@@ -3154,14 +3154,19 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    bled Strength Score content through behind the dock. Replace the rendered
    paint with a fully opaque theme-native surface, keep the existing scroll
    spacer, and preserve separate Create Program / Quick click targets. */
+/* R15 regression correction: R14's "surface-container" variables use
+   translucent 3% / 8% currentColor paints. "No gradient" is not the same
+   as an opaque surface. Mix with the *live* theme background published by
+   applyTheme(), so dark, light and custom themes all yield alpha=1. */
 #root[data-pi-motion="expressive"] .wpb-home .wpb-home-compose-bar{
-  background-color:var(--pi-m3e-surface-container-low)!important;
+  background-color:color-mix(in srgb,var(--wpb-focus-bg,var(--boot-bg,#110c15)) 94%,currentColor 6%)!important;
   background-image:none!important;
   border-top:1px solid var(--pi-m3e-outline-variant)!important;
   box-shadow:none!important;
+  pointer-events:auto!important; /* no ghost taps on covered Strength Score */
 }
 #root[data-pi-motion="expressive"] .wpb-home .wpb-home-compose-bar .wpb-home-quick{
-  background-color:var(--pi-m3e-surface-container-high)!important;
+  background-color:color-mix(in srgb,var(--wpb-focus-bg,var(--boot-bg,#110c15)) 83%,currentColor 17%)!important;
   background-image:none!important;
   border-color:var(--pi-m3e-outline-variant)!important;
   color:inherit!important;

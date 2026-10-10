@@ -905,21 +905,39 @@ try {
             startIcon.buttonHeight >= 44 &&
             (!startIcon.polygonFill || startIcon.polygonFill === startIcon.color),
             'R13 Start Workout has a centered, on-color play glyph: ' + JSON.stringify(startIcon));
+        // R15: background-color can be rgba(...,.03) and still pass a
+        // "not transparent" check. Measure the rendered alpha channel for
+        // both surfaces; reject anything less than fully opaque on phones.
         const dockPaint = await page.$eval('.wpb-home-compose-bar', bar => {
             const c = getComputedStyle(bar);
+            const quickEl = bar.querySelector('.wpb-home-quick');
             const primary = bar.querySelector('.wpb-home-create')?.getBoundingClientRect();
-            const quick = bar.querySelector('.wpb-home-quick')?.getBoundingClientRect();
+            const quick = quickEl?.getBoundingClientRect();
+            const alpha = el => {
+                const canvas = document.createElement('canvas');
+                canvas.width = canvas.height = 1;
+                const ctx = canvas.getContext('2d', {willReadFrequently:true});
+                ctx.clearRect(0,0,1,1);
+                ctx.fillStyle = getComputedStyle(el).backgroundColor;
+                ctx.fillRect(0,0,1,1);
+                return ctx.getImageData(0,0,1,1).data[3];
+            };
             return {
                 image: c.backgroundImage, background: c.backgroundColor,
+                dockAlpha: alpha(bar), quickAlpha: quickEl ? alpha(quickEl) : 0,
+                quickImage: quickEl ? getComputedStyle(quickEl).backgroundImage : null,
+                pointerEvents: c.pointerEvents, opacity: c.opacity,
                 primaryHeight: primary?.height ?? 0, quickHeight: quick?.height ?? 0,
-                primaryWidth: primary?.width ?? 0, quickWidth: quick?.width ?? 0
+                primaryWidth: primary?.width ?? 0, quickWidth: quick?.width ?? 0,
+                separated: !!(primary && quick && quick.left >= primary.right-1)
             };
         });
-        assert.ok(dockPaint.image === 'none' &&
-            dockPaint.background !== 'rgba(0, 0, 0, 0)' &&
+        assert.ok(dockPaint.image === 'none' && dockPaint.quickImage === 'none' &&
+            dockPaint.dockAlpha === 255 && dockPaint.quickAlpha === 255 &&
+            dockPaint.pointerEvents === 'auto' && dockPaint.opacity === '1' &&
             dockPaint.primaryHeight >= 44 && dockPaint.quickHeight >= 44 &&
-            dockPaint.primaryWidth >= dockPaint.quickWidth,
-            'R14 solid, readable Home action dock retains both targets: ' + JSON.stringify(dockPaint));
+            dockPaint.primaryWidth >= dockPaint.quickWidth && dockPaint.separated,
+            'R15 home dock and Quick are truly opaque and intercept underlying taps: ' + JSON.stringify(dockPaint));
         await page.click('.wpb-home-create');
         await page.waitForSelector('.wpb-wizard .wpb-wizard-progress');
         const optionShapes = await page.$$eval('.wpb-wizard .wpb-wizard-option, .wpb-wizard .wpb-wizard-step>div>button[aria-pressed]', controls =>

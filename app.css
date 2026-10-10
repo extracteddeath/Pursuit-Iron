@@ -208,12 +208,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-radius:13px!important;
   background-image:none!important;
 }
-#root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero{
-  padding:15px!important;
-  margin-bottom:13px!important;
-  border-radius:var(--pi-layout-radius-large)!important;
-  background-image:none!important;
-}
+
 #root[data-pi-motion="expressive"] .wpb-home :is(.wpb-action-tile,.wpb-carousel-card){
   border-radius:var(--pi-layout-radius)!important;
 }
@@ -262,11 +257,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-bottom:0!important;
   line-height:1.15;
 }
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs>button[aria-selected="true"],
-#root[data-pi-motion="expressive"] .wpb .wpb-exercise-tabs>button[aria-selected="true"]{
-  background-image:none!important;
-  box-shadow:0 1px 2px color-mix(in srgb,currentColor 10%,transparent)!important;
-}
+
 #root[data-pi-motion="expressive"] .wpb-progress [data-progress-glance]{
   gap:7px!important;
   margin-bottom:11px!important;
@@ -284,10 +275,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   overflow-wrap:normal;
   text-transform:none!important;
 }
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session{
-  border-radius:var(--pi-layout-radius)!important;
-  border:1px solid var(--pi-layout-border);
-}
+
 /* Settings: section groups look like one intentional list, without adding row height. */
 #root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-jump{
   padding-bottom:8px!important;
@@ -328,10 +316,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-radius:var(--pi-layout-radius)!important;
 }
 /* Sheets and dialogs share the same geometric family, but still use viewport-owned detents. */
-#root[data-pi-motion="expressive"] .wpb [data-sheet-drag]{
-  border-radius:22px 22px 0 0!important;
-  box-shadow:0 -14px 45px rgba(0,0,0,.16);
-}
+
 #root[data-pi-motion="expressive"] .wpb :is(.wpb-pop,.wpb-dialog){
   border-radius:var(--pi-layout-radius-large)!important;
 }
@@ -391,10 +376,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   max-width:100%;
   overflow-wrap:anywhere;
 }
-#root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero .wpb-primary-action{
-  min-height:44px!important;
-  border-radius:13px!important;
-}
+
 #root[data-pi-motion="expressive"] .wpb-program .wpb-program-name span{
   font-size:clamp(19px,5.3vw,22px)!important;
   font-weight:740!important;
@@ -443,10 +425,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   margin-top:5px!important;
   line-height:1.3!important;
 }
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item>div:last-child{
-  font-size:10.5px!important;
-  line-height:1.25!important;
-}
+
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session{
   margin-bottom:7px!important;
 }
@@ -678,15 +657,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 /* Anchored menus are compact, legible and constrain long titles safely.
    The existing viewport-flip logic still owns the actual top/bottom location. */
-#root[data-pi-motion="expressive"] .wpb .wpb-context-menu{
-  max-width:min(calc(100vw - 24px),320px)!important;
-  min-width:min(190px,calc(100vw - 24px))!important;
-  border-radius:17px!important;
-  border:1px solid var(--pi-m3-overlay-stroke)!important;
-  padding:5px!important;
-  box-shadow:0 9px 30px rgba(0,0,0,.18)!important;
-  background-image:none!important;
-}
+
 #root[data-pi-motion="expressive"] .wpb .wpb-context-menu-item{
   min-height:44px!important;
   width:100%;
@@ -1516,12 +1487,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 /* High-priority training task uses a differentiated, sculpted container.
    The focused start action reads as part of the hero, not another tile. */
-#root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero{
-  border-radius:32px 32px 20px 32px!important;
-  border-color:var(--pi-r2-outline)!important;
-  background-image:none!important;
-  padding:17px 16px 16px!important;
-}
+
 #root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero .wpb-primary-action{
   border-radius:20px!important;
   min-height:50px!important;
@@ -1589,20 +1555,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 /* A glanceable first statistic is larger, but all three stats stay on one
    row at narrow phone widths and retain their original labels. */
-#root[data-pi-motion="expressive"] .wpb-progress [data-progress-glance]{
-  grid-template-columns:minmax(0,1.23fr) minmax(0,1fr) minmax(0,1fr)!important;
-  gap:6px!important;
-}
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item{
-  border-radius:20px 20px 12px 20px!important;
-  background-image:none!important;
-  padding:11px 9px!important;
-  min-width:0!important;
-}
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item:first-child{
-  border-radius:25px 25px 12px 25px!important;
-  background-image:none!important;
-}
+
+
+
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item:nth-child(2){
   border-radius:20px 12px 20px 20px!important;
 }
@@ -1627,10 +1582,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 /* Settings rows remain grouped, but group containers now feel different
    from controls and hero cards. Do not turn the toggles into large tiles. */
-#root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-card{
-  border-radius:22px 22px 16px 22px!important;
-  background-image:none!important;
-}
+
 #root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-jump-control{
   border-radius:16px 16px 12px 16px!important;
 }
@@ -1907,10 +1859,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   min-height:44px!important;
   border-radius:18px!important;
 }
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item:first-child{
-  border-radius:28px 15px 28px 28px!important;
-  background-image:none!important;
-}
+
 /* Plan: week navigation becomes a continuous "rail", without making an
    occupied lower-screen workout dock taller. */
 #root[data-pi-motion="expressive"] .wpb-program .wpb-week-rail{
@@ -2052,12 +2001,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   padding:20px 17px 17px!important;
   margin-bottom:12px!important;
 }
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-title{
-  font-size:clamp(29px,7.1vw,37px)!important;
-  font-weight:800!important;
-  letter-spacing:-.05em!important;
-  line-height:1.05!important;
-}
+
 #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-identity{
   border-radius:29px 17px 29px 29px!important;
   border:1px solid var(--pi-r5-stroke)!important;
@@ -2314,11 +2258,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   min-height:38px;
   border-radius:13px!important;
 }
-#root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero>.wpb-primary-action{
-  min-height:54px!important;
-  border-radius:21px 21px 14px 21px!important;
-  box-shadow:0 4px 13px color-mix(in srgb,currentColor 11%,transparent)!important;
-}
+
 
 /* Restoring the training-rotation dial from R4 must not animate for readers
    requesting reduced motion; the static progress is always visible. */
@@ -2482,10 +2422,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   font-size:22px!important;
   font-weight:790!important;
 }
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item>div:last-child{
-  font-size:10.5px!important;
-  line-height:1.2!important;
-}
+
 @media(max-width:350px){
   #root[data-pi-motion="expressive"] .wpb .wpb-plan-glance{gap:5px!important}
   #root[data-pi-motion="expressive"] .wpb .wpb-plan-glance-tile{
@@ -2573,20 +2510,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 /* Plan: current week and next workout are the only high-emphasis containers.
    Calendar entries, program text and completion markers keep original data. */
-#root[data-pi-motion="expressive"] .wpb .wpb-plan-glance-tile,
-#root[data-pi-motion="expressive"] .wpb .wpb-plan-panes,
-#root[data-pi-motion="expressive"] .wpb-program .wpb-day-card,
-#root[data-pi-motion="expressive"] .wpb-program .wpb-week-rail>button{
-  background-image:none!important;
-  background-color:var(--pi-m3e-surface-container-low)!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-plan-glance-tile[data-featured="true"],
-#root[data-pi-motion="expressive"] .wpb .wpb-plan-up-next,
-#root[data-pi-motion="expressive"] .wpb-program .wpb-day-card[data-next="true"]{
-  background-image:none!important;
-  background-color:var(--pi-m3e-primary-container)!important;
-  border-color:color-mix(in srgb,var(--pi-m3e-primary) 27%,transparent)!important;
-}
+
+
 /* One large measured fact per dashboard; companion numbers are secondary. */
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item,
 #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength-cell,
@@ -2760,17 +2685,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 /* Recent history has a distinct, quiet item rhythm, without adding padding
    to charts, overriding workouts, or changing displayed training statistics. */
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session{
-  border-radius:19px!important;
-  border-color:var(--pi-m3e-outline-variant)!important;
-  background-color:var(--pi-m3e-surface-container-low)!important;
-  transition:border-radius 250ms var(--pi-m3e-content-ease),
-    border-color 160ms var(--pi-m3e-content-ease)!important;
-}
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session:focus-within{
-  border-radius:25px!important;
-  border-color:color-mix(in srgb,var(--pi-m3e-primary) 42%,transparent)!important;
-}
+
+
 @media(max-width:350px){
   #root[data-pi-motion="expressive"] .wpb{
     --pi-m3e-list-gap:4px;
@@ -2956,10 +2872,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-color:var(--pi-r11-edge)!important;
   box-shadow:none!important;
 }
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item:first-child{
-  background-color:var(--pi-r11-hero)!important;
-  border-color:var(--pi-r11-accent-stroke)!important;
-}
+
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session{
   background-image:none!important;
   background-color:var(--pi-r11-quiet)!important;
@@ -3010,9 +2923,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 /* Tabs and search remain easy to identify on dark surfaces. No forced pink
    background. Only the real semantic selected/keyboard-focused surface moves
    or gains an accent outline; underlines are never duplicated. */
-#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-search:focus-within{
-  border-color:var(--pi-m3e-primary)!important;
-}
+
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs,
 #root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-flag-filter{
   border-color:var(--pi-r11-edge)!important;

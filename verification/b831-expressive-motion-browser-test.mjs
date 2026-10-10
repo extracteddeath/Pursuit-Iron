@@ -444,7 +444,7 @@ try {
                 width: el.scrollWidth, viewport: innerWidth };
         });
         assert.ok(wizardGeometry.barHeight >= 4 && wizardGeometry.width <= width + 1 &&
-            wizardGeometry.footer <= innerHeight + 2, 'M3 program wizard is compact, visible and never horizontally clipped: ' + JSON.stringify(wizardGeometry));
+            wizardGeometry.footer <= wizardGeometry.screen + 2, 'M3 program wizard is compact, visible and never horizontally clipped: ' + JSON.stringify(wizardGeometry));
         if (width === 430) await page.screenshot({ path: path.join(root, 'verification/b831-m3-wizard-phone.png') });
         await page.click('.wpb-wizard-header button[aria-label="Back"]');
         await page.waitForSelector('.wpb-home-create');

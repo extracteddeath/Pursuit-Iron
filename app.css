@@ -3420,7 +3420,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-radius:0 0 23px 23px!important;
   box-shadow:none!important;
 }
-#root[data-pi-motion="expressive"] .wpb-settings>.wpb-page-header h1{
+#root[data-pi-motion="expressive"] .wpb .wpb-settings>.wpb-page-header h1{
   font-size:clamp(27px,6.7vw,32px)!important;
   font-weight:770!important;
   line-height:1.1!important;

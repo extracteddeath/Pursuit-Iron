@@ -675,7 +675,15 @@ try {
             max:Number(svg.querySelector('[data-chart-scrubber]').getAttribute('aria-valuemax'))}));
         assert.ok(denseSummary.n>=60 && denseSummary.touches===0 &&
             denseSummary.max===denseSummary.n, 'dense history preserves all records and uses one scrubber: '+JSON.stringify(denseSummary));
-        await page.focus('[data-chart-scrubber]');
+        // Puppeteer's page.focus only accepts HTMLElement; the accessible
+        // chart inspector is an SVG element with a native focus() method.
+        await page.$eval('[data-chart-scrubber]', element => {
+            element.focus();
+            assertFocus(element);
+            function assertFocus(el) {
+                if (document.activeElement !== el) throw new Error('SVG inspector is not keyboard-focusable');
+            }
+        });
         await page.keyboard.press('Home');
         assert.equal(await page.$eval('[data-chart-scrubber]',x=>x.getAttribute('aria-valuenow')),'1');
         await page.keyboard.press('End');

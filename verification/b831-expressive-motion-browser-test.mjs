@@ -202,8 +202,11 @@ try {
                 el.dispatchEvent(new Event('scroll',{bubbles:true}));
             });
             await page.waitForFunction(() => document.querySelector('.wpb-home')?.dataset.scrolled==='1');
-            assert.ok(await page.$eval('.wpb-home .wpb-home-header', el =>
-                parseFloat(getComputedStyle(el).borderBottomLeftRadius)<=17),
+            await page.waitForFunction(() => {
+                const header=document.querySelector('.wpb-home .wpb-home-header');
+                return header && parseFloat(getComputedStyle(header).borderBottomLeftRadius)<=17;
+            }, { timeout: 5000 });
+            assert.equal(await page.$eval('.wpb-home', el => el.dataset.scrolled), '1',
                 'adaptive M3 app bar compresses after real content scroll');
             await page.$eval('.wpb-home .wpb-page-scroll', el => {
                 el.scrollTop=0;

@@ -1743,3 +1743,25 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     animation:none!important;translate:none!important;scale:1!important;opacity:1!important;
   }
 }
+
+/* The wizard's initial Single Program / Training Cycle screen predates the
+   shared Option component. Give those real radio-like buttons the same
+   expressive family, including their spring-selected radius. */
+#root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-step>div>button[aria-pressed]{
+  min-height:68px!important;
+  border-radius:23px 23px 14px 23px!important;
+  background-image:linear-gradient(115deg,var(--pi-r2-tone),transparent 82%)!important;
+  transition:background-color 190ms var(--pi-ease),
+    border-color 190ms var(--pi-ease),box-shadow 190ms var(--pi-ease)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-step>div>button[aria-pressed="true"]{
+  background-image:linear-gradient(115deg,var(--pi-r2-tone-strong),transparent 73%)!important;
+  box-shadow:inset 3px 0 0 color-mix(in srgb,currentColor 36%,transparent)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-step>div>button[aria-pressed] > div:first-child{
+  border-radius:15px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-step>div>button[aria-pressed]:focus-visible{
+  outline:2px solid currentColor!important;
+  outline-offset:3px!important;
+}

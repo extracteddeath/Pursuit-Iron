@@ -2899,7 +2899,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     color 180ms var(--pi-m3e-motion-emphasized)!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-home-create :is(svg,[data-icon]){
-  color:light-dark(inherit,var(--pi-m3e-primary));
+  color:light-dark(currentColor,var(--pi-m3e-primary));
 }
 /* Card shape, day dial and legible workout metrics remain prominent because
    of scale and grouping, not a luminous backdrop or shadow. */

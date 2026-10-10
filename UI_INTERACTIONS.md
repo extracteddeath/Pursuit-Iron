@@ -222,3 +222,23 @@ or interaction. It excludes all workout rows, set controls, sheets, and the
 engine, and settles immediately for reduced-motion or forced-color users.
 Phone regression follows actual tab navigation at 320px/430px to verify
 indicator geometry, stored-program immutability and bounded page staging.
+
+## M3 expressive disclosures and geometric continuity
+
+Real Plan day cards now morph smoothly between compact (16px) and expanded
+(21px) corner shapes, with quiet theme-derived depth and a brief content
+entrance. The transition is intentionally *not* a delayed close animation:
+React immediately owns mounted/unmounted content and any training state.
+Card drag/reorder, day menu, start action, renaming, prescriptions, workout
+sets, and every persisted field are unaffected. The visual controller now
+reflects the actual open day body to the existing header button using
+`aria-expanded` and a matching `aria-controls` ID.
+
+The same disclosure observer covers expandable saved-cycle groups,
+Profile achievements, native Settings diagnostics and Progress calendar
+sections. It animates only entering content and available card surfaces,
+never clones form controls, never intercepts native disclosure/touch
+events, and stops animation for reduced motion/forced colors.
+The phone regression opens and closes a real Plan day at 320px/430px
+and verifies semantic state, morph geometry, minimum touch size and
+unchanged saved programs.

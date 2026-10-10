@@ -209,12 +209,15 @@ try {
                     identity:'.wpb-profile-identity'
                 });
                 const {featured,secondary,identity}=tonal.output;
-                assert.ok(featured && secondary && identity,
-                    'R11 Profile retains strength records and identity: '+JSON.stringify(tonal));
-                if (tonal.dark) assert.ok(featured.bg !== secondary.bg &&
-                    featured.image === 'none' && secondary.image === 'none' &&
+                // A one-lift/one-cell profile is valid, and does not display a
+                // second strength tile. Compare the featured cell against the
+                // always-present identity surface in that real fixture.
+                assert.ok(featured && identity,
+                    'R11 Profile retains strength summary and identity: '+JSON.stringify(tonal));
+                if (tonal.dark) assert.ok(featured.bg !== (secondary?.bg ?? identity.bg) &&
+                    featured.image === 'none' && (secondary?.image ?? 'none') === 'none' &&
                     identity.image === 'none',
-                    'R11 Profile emphasis is tonal, not a gradient: '+JSON.stringify(tonal));
+                    'R11 Profile emphasis remains tonal for one or multiple cells: '+JSON.stringify(tonal));
             }
             if (tab === 'home') {
                 // In the active-workout fixture, the optional Create Program

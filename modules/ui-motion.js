@@ -217,6 +217,8 @@ const entranceSelector = '.wpb-home-hero, .wpb-home .wpb-action-tile, .wpb-progr
 // destination uses a short, bounded translation of its first meaningful card.
 // This is spatial continuity (not a cloned shared element or a second router).
 let connectedSource = null;
+let detailOrigin = null;
+const enteredExerciseDetails = new WeakSet();
 const connectedOriginSelector = '.wpb-tabbar .wpb-tab, .wpb-home .wpb-action-tile, .wpb-home .wpb-home-hero .wpb-primary-action, .wpb-library .wpb-library-row';
 function rememberConnectedOrigin(event) {
     const source = event.target.closest?.(connectedOriginSelector);
@@ -226,8 +228,37 @@ function rememberConnectedOrigin(event) {
     if (destination && destination === current) return;
     const rect = source.getBoundingClientRect();
     if (rect.width < 1 || rect.height < 1) return;
-    connectedSource = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2,
-        from: current, target: destination, at: performance.now() };
+    const center = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2,
+        at: performance.now() };
+    if (source.matches('.wpb-library .wpb-library-row')) {
+        // The Library detail uses its own opaque full-screen surface.
+        // Do not let a row tap poison the next top-level navigation entrance.
+        detailOrigin = center;
+        connectedSource = null;
+        return;
+    }
+    detailOrigin = null;
+    connectedSource = { ...center, from: current, target: destination };
+}
+function stageExerciseDetail(el, initial = false) {
+    if (enteredExerciseDetails.has(el)) return;
+    const lead = el.querySelector('.wpb-exercise-detail-header>div:last-child') ||
+        el.querySelector('.wpb-exercise-figure-wrap');
+    if (!lead) return; // Detail content may mount after its opaque backdrop.
+    enteredExerciseDetails.add(el);
+    const source = detailOrigin;
+    detailOrigin = null;
+    if (initial || reduced() || !source || performance.now() - source.at > 1400) return;
+    const rect = lead.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    // Translate content only: never fade or scale the backdrop, the Back control
+    // or hit-target geometry. The source is a real tapped Library row.
+    const clamp = (v, limit) => Math.max(-limit, Math.min(limit, v));
+    el.style.setProperty('--pi-detail-arrive-x',
+        `${clamp((source.x - (rect.left + rect.width / 2)) * .18, 22)}px`);
+    el.style.setProperty('--pi-detail-arrive-y',
+        `${clamp((source.y - (rect.top + rect.height / 2)) * .12, 15)}px`);
+    el.dataset.piDetailLinked = '1';
 }
 function stagePage(el, initial = false) {
     if (!el.matches('[data-view-frame]')) return;
@@ -607,6 +638,7 @@ function disclosure(el, initial = false) {
         const each = (selector, fn) => { if (node.matches(selector)) fn(node, initial); node.querySelectorAll(selector).forEach(el => fn(el, initial)); };
         each(surfaceSelector, enterSurface);
         each('[data-view-frame]', stagePage);
+        each('.wpb-exercise-detail', stageExerciseDetail);
         each('.wpb-wizard-step', wizardStep);
         each(disclosureSelector, disclosure);
         each(groupSelector, selection);
@@ -628,6 +660,8 @@ function disclosure(el, initial = false) {
                 record.addedNodes.forEach(node => scan(node));
                 const host = record.target.nodeType === 1 ? record.target.closest(disclosureSelector) : null;
                 if (host) disclosures.add(host);
+                const detail = record.target.nodeType === 1 ? record.target.closest('.wpb-exercise-detail') : null;
+                if (detail) stageExerciseDetail(detail);
             } else {
                 const el = record.target;
                 if (record.attributeName === 'data-motion-key') { if (el.matches('[data-pi-reference]')) reference(el); else enterSurface(el); }

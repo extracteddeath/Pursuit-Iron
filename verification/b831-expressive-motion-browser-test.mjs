@@ -62,6 +62,12 @@ try {
             // animationend clears the transient layer, not while the active ::after paints.
             await page.waitForFunction(tab => !document.querySelector(`[data-tab="${tab}"]`)?.hasAttribute('data-pi-ink'),
                 { timeout: 5000 }, tab);
+            await page.waitForFunction(() => {
+                const el=document.querySelector('.wpb-tabbar[data-pi-m3-track]');
+                const b=el?.querySelector('[aria-current="page"]');
+                return b && Math.abs(parseFloat(el.style.getPropertyValue('--pi-m3-track-x')) -
+                    (b.offsetLeft+(b.offsetWidth-Math.min(54,b.offsetWidth*.7))/2)) < .8;
+            }, { timeout: 5000 });
             const navPill = await page.$eval('.wpb-tabbar[data-pi-m3-track]', el => {
                 const selected = el.querySelector('[aria-current="page"]');
                 const indicator = getComputedStyle(el, '::before');

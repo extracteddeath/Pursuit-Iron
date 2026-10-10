@@ -476,6 +476,37 @@ try {
             const style = getComputedStyle(el);
             return parseFloat(style.fontSize) >= 15 && parseFloat(style.lineHeight) >= 18;
         }), 'Plan day titles are legible without expanding or rearranging the day cards');
+        // A real plan-day accordion must morph its surface and expose the
+        // actual mounted panel to assistive technology. No extra rows,
+        // reserved height or program-data mutation is permitted.
+        await page.click('.wpb-program .wpb-day-toggle');
+        await page.waitForFunction(() => {
+            const card=document.querySelector('.wpb-program .wpb-day-card');
+            const panel=card?.querySelector(':scope > .wpb-expand');
+            const toggle=card?.querySelector('.wpb-day-toggle');
+            return card?.dataset.piDisclosure==='open' && panel &&
+                toggle?.getAttribute('aria-expanded')==='true' &&
+                toggle?.getAttribute('aria-controls')===panel.id &&
+                parseFloat(getComputedStyle(card).borderTopLeftRadius)>=20;
+        }, { timeout: 5000 });
+        const disclosureOpen=await page.$eval('.wpb-program .wpb-day-card', el => ({
+            touch:el.querySelector('.wpb-day-toggle').getBoundingClientRect().height,
+            panel:el.querySelector(':scope > .wpb-expand')?.getBoundingClientRect().height,
+            radius:parseFloat(getComputedStyle(el).borderTopLeftRadius),
+            children:el.children.length
+        }));
+        assert.ok(disclosureOpen.touch>=44 && disclosureOpen.panel>40 &&
+            disclosureOpen.children>=2,'M3 day disclosure is accessible without smaller hit targets');
+        await page.click('.wpb-program .wpb-day-toggle');
+        await page.waitForFunction(() => {
+            const card=document.querySelector('.wpb-program .wpb-day-card');
+            return card?.dataset.piDisclosure==='closed' &&
+                !card.querySelector(':scope > .wpb-expand') &&
+                card.querySelector('.wpb-day-toggle')?.getAttribute('aria-expanded')==='false' &&
+                parseFloat(getComputedStyle(card).borderTopLeftRadius)<=16.5;
+        }, { timeout: 5000 });
+        assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('wpb:v1')).saved), initial.saved,
+            'disclosure motion preserves the complete saved prescription');
         await page.click('.wpb-live-dock button[aria-label="Resume workout"]'); await page.waitForSelector('.wpb-workout');
         await page.waitForFunction(() => !document.body.innerText.includes('Resumed your in-progress workout'));
         const row = '[data-testid="set-0-0"]';

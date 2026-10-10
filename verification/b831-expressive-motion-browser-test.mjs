@@ -1050,6 +1050,29 @@ try {
         });
         assert.ok(wizardGeometry.barHeight >= 4 && wizardGeometry.width <= width + 1 &&
             wizardGeometry.footer <= wizardGeometry.screen + 2, 'M3 program wizard is compact, visible and never horizontally clipped: ' + JSON.stringify(wizardGeometry));
+        // R19: guided creation uses solid footer chrome and consistent,
+        // accessible hit sizes instead of a translucent bottom veil.
+        const wizardR19 = await page.$eval('.wpb-wizard', shell => {
+            const footer=shell.querySelector('.wpb-wizard-footer');
+            const back=shell.querySelector('.wpb-wizard-header button[aria-label="Back"]');
+            const actions=[...shell.querySelectorAll('.wpb-wizard-back-action,.wpb-wizard-next-action')];
+            const option=shell.querySelector('.wpb-wizard-option');
+            const bg=getComputedStyle(footer).backgroundColor;
+            const ctx=document.createElement('canvas').getContext('2d',{willReadFrequently:true});
+            ctx.fillStyle=bg;ctx.fillRect(0,0,1,1);
+            return {footerAlpha:ctx.getImageData(0,0,1,1).data[3],
+                footerImage:getComputedStyle(footer).backgroundImage,
+                backHeight:back.getBoundingClientRect().height,
+                actionHeights:actions.map(x=>x.getBoundingClientRect().height),
+                optionHeight:option?.getBoundingClientRect().height ?? 0,
+                overflow:shell.scrollWidth>shell.clientWidth+1};
+        });
+        assert.ok(wizardR19.footerAlpha===255 && wizardR19.footerImage==='none' &&
+            wizardR19.backHeight>=44 &&
+            wizardR19.actionHeights.length===2 &&
+            wizardR19.actionHeights.every(x=>x>=48) &&
+            wizardR19.optionHeight>=58 && !wizardR19.overflow,
+            'R19 creation footer is solid and actions/options remain tap safe: '+JSON.stringify(wizardR19));
         const wizardR5 = await page.$eval('.wpb-wizard', el => ({
             title:parseFloat(getComputedStyle(el.querySelector('.wpb-wizard-heading-title')).fontSize),
             progressHeight:el.querySelector('.wpb-wizard-progress').getBoundingClientRect().height,
@@ -1130,6 +1153,30 @@ try {
         }));
         assert.ok(rowShape.radius >= 19 && rowShape.image === 'none' &&
             rowShape.height >= 59, 'M3E list remains flat, responsive and tappable: ' + JSON.stringify(rowShape));
+        const libraryR19 = await page.$eval('.wpb-library', shell => {
+            const search=shell.querySelector('.wpb-library-search input');
+            const row=shell.querySelector('.wpb-library-row');
+            const title=row?.querySelector(':scope > div:nth-child(2) > div:first-child');
+            const statusButtons=[...shell.querySelectorAll('.wpb-library-flag')];
+            const headerBack=shell.querySelector('.wpb-library-header button[aria-label="Back"]');
+            return {searchHeight:search?.getBoundingClientRect().height,
+                inputBackground:getComputedStyle(search).backgroundColor,
+                inputBorder:getComputedStyle(search).borderTopWidth,
+                titleWrap:title ? getComputedStyle(title).whiteSpace : null,
+                titleOverflow:title ? getComputedStyle(title).overflow : null,
+                rowHeight:row?.getBoundingClientRect().height,
+                flagHeights:statusButtons.map(x=>x.getBoundingClientRect().height),
+                backHeight:headerBack?.getBoundingClientRect().height ?? 0,
+                overflow:shell.scrollWidth>shell.clientWidth+1};
+        });
+        assert.ok(libraryR19.searchHeight>=44 &&
+            libraryR19.inputBorder==='0px' &&
+            libraryR19.titleWrap==='normal' && libraryR19.titleOverflow!=='hidden' &&
+            libraryR19.rowHeight>=60 &&
+            libraryR19.flagHeights.length===4 &&
+            libraryR19.flagHeights.every(x=>x>=44) &&
+            libraryR19.backHeight>=44 && !libraryR19.overflow,
+            'R19 Library search, wrapped titles and four filters stay accessible: '+JSON.stringify(libraryR19));
         const libraryTone = await tonalSurfaceReport({
             header:'.wpb-library-header',
             search:'.wpb-library-search',

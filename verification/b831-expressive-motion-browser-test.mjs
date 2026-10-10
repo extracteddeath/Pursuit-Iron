@@ -146,10 +146,14 @@ try {
                     const title = getComputedStyle(el);
                     const logo = el.closest('.wpb-home-header').querySelector('div[aria-hidden="true"]');
                     return { size: parseFloat(title.fontSize), weight: Number(title.fontWeight),
-                        logoHeight: logo.getBoundingClientRect().height };
+                        logoHeight: logo.getBoundingClientRect().height,
+                        scrolled: el.closest('.wpb-home')?.dataset.scrolled==='1' };
                 });
-                assert.ok(homeType.size >= 29 && homeType.size <= 37 && homeType.weight >= 700,
-                    'Home title follows the expressive type scale');
+                const expectedSize=homeType.scrolled
+                    ? homeType.size>=20 && homeType.size<=25
+                    : homeType.size>=29 && homeType.size<=37;
+                assert.ok(expectedSize && homeType.weight >= 700,
+                    'Home title follows expanded/compact expressive type scale: '+JSON.stringify(homeType));
                 assert.ok(homeType.logoHeight >= 24, 'Home header spacing does not collapse its logo');
             }
             if (tab === 'progress') {

@@ -569,6 +569,16 @@ try {
             menuGeometry.left >= 0 && menuGeometry.right <= width + 1,
             'M3 contextual menus are rounded, scroll-safe and touch accessible: ' + JSON.stringify({ width, menuGeometry }));
         assert.ok(menuGeometry.items >= 2, 'contextual actions keep their original features');
+        // 2026 expressive menu group: rounded outside corners without a
+        // wider popup, extra item height, lost keyboard order or new React state.
+        const menuGroupShape = await page.$eval('.wpb-context-menu', menu => {
+            const items = [...menu.querySelectorAll(':scope > .wpb-context-menu-item')];
+            return { count: items.length,
+                first: items[0] ? parseFloat(getComputedStyle(items[0]).borderTopLeftRadius) : 0,
+                last: items.at(-1) ? parseFloat(getComputedStyle(items.at(-1)).borderBottomRightRadius) : 0 };
+        });
+        assert.ok(menuGroupShape.count >= 2 && menuGroupShape.first >= 20 &&
+            menuGroupShape.last >= 20, 'connected expressive menu outer shapes: ' + JSON.stringify(menuGroupShape));
         assert.ok(menuGeometry.bottom < menuGeometry.dockTop &&
             menuGeometry.bottom < menuGeometry.navTop,
             'M3 program actions remain above the active workout dock and tab bar: ' +
@@ -802,6 +812,15 @@ try {
         assert.ok(libraryR5.radius>=18 && libraryR5.height>=59 &&
             libraryR5.searchRadius>=15 && libraryR5.searchRadius<librarySearchRestRadius && !libraryR5.overflow,
             'R5 Library uses sculpted responsive rows and prominent search: '+JSON.stringify(libraryR5));
+        // The one filtered match uses a content-sized 2026 expressive list
+        // surface, not a gradient or a rigid one-line clipped control.
+        const rowShape = await page.$eval('.wpb-library-row', row => ({
+            radius: parseFloat(getComputedStyle(row).borderTopLeftRadius),
+            image: getComputedStyle(row).backgroundImage,
+            height: row.getBoundingClientRect().height
+        }));
+        assert.ok(rowShape.radius >= 19 && rowShape.image === 'none' &&
+            rowShape.height >= 59, 'M3E list remains flat, responsive and tappable: ' + JSON.stringify(rowShape));
         await page.click('.wpb-library-row');
         await page.waitForSelector('[data-exercisedetail] .wpb-exercise-tabs[data-pi-m3-track]');
         const overlayPaint = await page.$eval('.wpb-exercise-detail', el=>({

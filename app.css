@@ -2015,3 +2015,33 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     transition:none!important;
   }
 }
+
+/* R4 SPATIAL ROUTE CONTINUITY. The single React-owned view enters from the
+   actual tab direction; content is never duplicated or asynchronously routed.
+   The same page can be swiped back without any additional event handlers. */
+#root[data-pi-motion="expressive"] .wpb [data-view-frame][data-pi-nav-direction] [data-pi-reveal="1"]{
+  animation:piR4ConnectedEntrance 355ms cubic-bezier(.17,.83,.23,1)
+    var(--pi-reveal-delay,0ms) both!important;
+}
+@keyframes piR4ConnectedEntrance{
+  0%{opacity:.68;translate:var(--pi-page-reveal-x,0px) 7px;scale:.984}
+  68%{opacity:1;translate:0 -1px;scale:1.005}
+  100%{opacity:1;translate:0 0;scale:1}
+}
+/* The sheet handle and leading corners carry the spatial cue as the panel
+   arrives and leaves. Detents, safe-area math, gestures and stacking remain
+   in the original component. */
+#root[data-pi-motion="expressive"] .wpb [data-sheet-drag][data-pi-surface]{
+  border-radius:var(--pi-sheet-radius,29px) var(--pi-sheet-radius,29px) 0 0!important;
+}
+#root[data-pi-motion="expressive"] .wpb [data-sheet-drag]::before{
+  transition:opacity 210ms var(--pi-ease)!important;
+}
+@media(prefers-reduced-motion:reduce),(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb [data-view-frame][data-pi-nav-direction] [data-pi-reveal="1"]{
+    animation:none!important;translate:none!important;scale:1!important;opacity:1!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb [data-sheet-drag][data-pi-surface]{
+    border-radius:29px 29px 0 0!important;
+  }
+}

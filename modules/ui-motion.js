@@ -333,8 +333,15 @@ function disclosure(el, initial = false) {
         spring(el, '--pi-control-shape', (selected ? 7 : 0) - (held ? 3 : 0),
             { from: 0, write: pixels(el, '--pi-control-shape'), stiffness: 850, damping: .9 });
     }
+    // Utilitarian logging controls own their pre-existing compact feedback.
+    // Do not morph/compress the set-complete check, numeric steppers, RIR row,
+    // or Target/Last selector. Expressive feedback continues elsewhere.
+    const protectedWorkoutPress = el => !!el && (
+        !!el.closest('[data-testid^="set-"],.wpb-set-controls') ||
+        el.matches('.wpb-set-complete,.wpb-set-stepper,.wpb-target-toggle')
+    );
     function press(el, id, x = null, y = null) {
-        if (disabled(el)) return;
+        if (disabled(el) || protectedWorkoutPress(el)) return;
         // A second pointer/keyboard press may supersede an interrupted first one.
         if (pressed.has(id)) release(id);
         control(el); pressed.set(id, { el, x, y });

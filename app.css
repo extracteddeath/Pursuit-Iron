@@ -2924,3 +2924,128 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     border:1px solid ButtonText!important;
   }
 }
+
+
+/* MATERIAL 3 EXPRESSIVE R11 — DARK SECONDARY-SCREEN TONAL ROLES
+   The R10 screenshot correction belongs to the entire app, not just Home.
+   Plan/Progress/Profile/Library should carry hierarchy in type, containment,
+   shape and the selected item—not saturated pink coatings across the page.
+   Theme-specific light appearance is intentionally left on the R7/R8/R9
+   baseline. Dark roles are opaque theme-derived neutrals and restrained
+   primary containers; no gradients or hard-coded brand hue. */
+#root[data-pi-motion="expressive"] .wpb{
+  --pi-r11-quiet:light-dark(var(--pi-m3e-surface-container-low),
+    color-mix(in srgb,var(--boot-bg,#110c15) 94%,var(--boot-fg,#f7eff4) 6%));
+  --pi-r11-raised:light-dark(var(--pi-m3e-surface-container),
+    color-mix(in srgb,var(--boot-bg,#110c15) 90%,var(--boot-fg,#f7eff4) 10%));
+  --pi-r11-hero:light-dark(var(--pi-m3e-primary-container),
+    color-mix(in srgb,var(--boot-bg,#110c15) 87%,var(--pi-m3e-primary) 13%));
+  --pi-r11-selected:light-dark(var(--pi-m3e-primary-container),
+    color-mix(in srgb,var(--boot-bg,#110c15) 88%,var(--pi-m3e-primary) 12%));
+  --pi-r11-edge:light-dark(var(--pi-m3e-outline-variant),
+    color-mix(in srgb,var(--boot-fg,#f7eff4) 14%,transparent));
+  --pi-r11-accent-stroke:light-dark(var(--pi-m3e-outline-variant),
+    color-mix(in srgb,var(--pi-m3e-primary) 32%,transparent));
+}
+/* PLAN. A current week and next session are distinct, but the background
+   doesn't shout in pink. The existing 4-way animated view selector and
+   upcoming-day accordion retain exactly their measured hit geometry. */
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-glance-tile,
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-panes,
+#root[data-pi-motion="expressive"] .wpb-program .wpb-day-card,
+#root[data-pi-motion="expressive"] .wpb-program .wpb-week-rail>button{
+  background-image:none!important;
+  background-color:var(--pi-r11-quiet)!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-glance-tile[data-featured="true"],
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-up-next,
+#root[data-pi-motion="expressive"] .wpb-program .wpb-day-card[data-next="true"]{
+  background-image:none!important;
+  background-color:var(--pi-r11-hero)!important;
+  border-color:var(--pi-r11-accent-stroke)!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-up-next{
+  box-shadow:inset 3px 0 0 color-mix(in srgb,var(--pi-m3e-primary) 44%,transparent)!important;
+}
+/* PROGRESS. The dominant real measurement uses one contained tint; the
+   two secondary facts, charts and history have neutral ground. No numeric
+   colors, chart scales, tracking periods or recorded lifts are modified. */
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item{
+  background-image:none!important;
+  background-color:var(--pi-r11-quiet)!important;
+  border-color:var(--pi-r11-edge)!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item:first-child{
+  background-color:var(--pi-r11-hero)!important;
+  border-color:var(--pi-r11-accent-stroke)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session{
+  background-image:none!important;
+  background-color:var(--pi-r11-quiet)!important;
+  border-color:var(--pi-r11-edge)!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress>.wpb-page-header{
+  background-image:none!important;
+  background-color:var(--pi-r11-quiet)!important;
+}
+/* PROFILE. Strength summary leads through measured size and its distinctive
+   corner; supporting strength records and the profile identity are quiet. */
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-head,
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-identity,
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength-cell,
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-section,
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-achievement-board{
+  background-image:none!important;
+  background-color:var(--pi-r11-quiet)!important;
+  border-color:var(--pi-r11-edge)!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength-cell:first-child{
+  background-color:var(--pi-r11-hero)!important;
+  border-color:var(--pi-r11-accent-stroke)!important;
+}
+/* LIBRARY. Search is the primary tool, filters are one connected set, and
+   exercise rows are low-emphasis contiguous list items until focus/selection.
+   Existing spring press/shape and accessible per-row targets remain active. */
+#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-header,
+#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-flag-filter,
+#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-results>.wpb-library-row{
+  background-image:none!important;
+  background-color:var(--pi-r11-quiet)!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-search{
+  background-image:none!important;
+  background-color:var(--pi-r11-raised)!important;
+  border-color:var(--pi-r11-edge)!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-results>.wpb-library-row[aria-selected="true"],
+#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-results>.wpb-library-row:is(:active,:focus-visible){
+  background-color:var(--pi-r11-selected)!important;
+  border-color:var(--pi-r11-accent-stroke)!important;
+}
+/* Tabs and search remain easy to identify on dark surfaces. No forced pink
+   background. Only the real semantic selected/keyboard-focused surface moves
+   or gains an accent outline; underlines are never duplicated. */
+#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-search:focus-within{
+  border-color:var(--pi-m3e-primary)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs,
+#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-flag-filter{
+  border-color:var(--pi-r11-edge)!important;
+}
+@media(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb :is(
+    .wpb-plan-glance-tile,.wpb-plan-up-next,.wpb-progress-glance-item,
+    .wpb-history-session,.wpb-profile-strength-cell,.wpb-profile-identity,
+    .wpb-library-search,.wpb-library-row,.wpb-library-flag-filter){
+    background-color:Canvas!important;
+    border-color:CanvasText!important;
+    box-shadow:none!important;
+  }
+}

@@ -274,3 +274,36 @@ It remains a real HTTPS link and does not preload external content.
 No video source changes, training charts/data changes, or live-workout
 form-link changes. The phone browser verifies link geometry and behavior
 at 320px and 430px, and captures the real detail page for comparison.
+
+## Expressive R2 — beyond animation overlays
+
+The previous M3 pass standardized interactions but left Home's quick actions as
+two similarly sized tiles with an orphaned third, gave every major surface
+nearly the same corner shape and kept navigation's selection modest. This pass
+recomposes existing elements rather than introducing more content or controls.
+
+- **Home:** a sculpted Up Next hero and larger integrated Start action; two
+  bento rows (featured Templates across full width, Custom Split + Cycles as
+  complementary equal-width routes), still only two rows, no extra scrolling.
+- **Plan:** next-day prominence plus spring-driven, asymmetrical card shapes
+  on actual open/closed transitions; original session drag, start and menu
+  behavior untouched.
+- **Progress:** three existing metrics stay readable on a single row with
+  differentiated first-stat proportion, and soft grouped containers.
+- **Profile/Settings:** distinct instrument and list-group shape families.
+- **Creation/Library:** more expressive selection shapes (not just color),
+  differentiated decision cards, fully rounded filter chips and a brief
+  motion sequence when a *new* wizard step mounts.
+- **Navigation:** its existing, measured, interruptible selection track is
+  wider (up to 60px) and taller (33px), with no change to five tab hitboxes
+  or the live-workout dock.
+- **Motion:** hero and choice presses respond with a longer spatial spring;
+  option corners spring to an even more rounded selected state. No form
+  cloning, data mutation or artificial delays. Reduced-motion accessibility
+  remains mandatory.
+
+Phone verification at 320px and 430px explicitly checks the bento layout,
+navigation measured geometry and creation-option size; the existing full
+workout, persistence, custom-program and all-theme checks remain in place.
+This is an additional visible-design iteration, not a claim that every M3
+Expressive idea is exhausted.

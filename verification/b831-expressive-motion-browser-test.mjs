@@ -1301,7 +1301,7 @@ try {
             b=>b.getAttribute('aria-selected')), 'true', 'exercise charts tab selects the real panel');
         // The actual range choices (when rendered) remain real, touch-sized
         // tabs. Do not inject or replace the chart/range React controls.
-        const rangesR20=await page.$eval('.wpb-exercise-window-tabs>button', buttons =>
+        const rangesR20=await page.$$eval('.wpb-exercise-window-tabs>button', buttons =>
             buttons.map(b=>b.getBoundingClientRect().height));
         assert.ok(rangesR20.every(h=>h>=44),
             'R20 rendered exercise chart ranges use accessible hit heights: '+JSON.stringify(rangesR20));

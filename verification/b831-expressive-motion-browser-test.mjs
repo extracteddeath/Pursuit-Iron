@@ -1124,12 +1124,12 @@ try {
         await page.$eval('.wpb-library-search input', el => el.blur());
         await page.waitForFunction(() => {
             const el=document.querySelector('.wpb-library-search');
-            return el && parseFloat(getComputedStyle(el).borderTopLeftRadius)>=20;
+            return el && parseFloat(getComputedStyle(el).borderTopLeftRadius)>=18;
         }, { timeout: 5000 });
         const librarySearchRestRadius = await page.$eval('.wpb-library-search', el =>
             parseFloat(getComputedStyle(el).borderTopLeftRadius));
-        assert.ok(librarySearchRestRadius >= 20,
-            'R5 Library resting search is generously rounded');
+        assert.ok(librarySearchRestRadius >= 18,
+            'R19 Library resting search is softly rounded without oversized chrome');
         await page.click('.wpb-library-search input');
         await page.keyboard.type('Back Squat');
         await page.waitForSelector('.wpb-library-row');

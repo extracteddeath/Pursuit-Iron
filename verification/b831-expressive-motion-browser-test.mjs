@@ -104,6 +104,21 @@ try {
                     bento.heroRadius>=30,
                     'M3 bento uses a full-width feature without extra layout rows: '+JSON.stringify(bento));
             }
+            if (tab === 'home') {
+                const mission = await page.$eval('.wpb-home-hero', hero => {
+                    const dial = hero.querySelector('.wpb-m3-day-orbit');
+                    const route = hero.querySelector('.wpb-m3-session-preview');
+                    const bounds = dial?.getBoundingClientRect(), outer = hero.getBoundingClientRect();
+                    const rows = route ? Array.from(route.children).filter(el =>
+                        el.tagName === 'DIV' && !el.classList.contains('wpb-m3-preview-heading')) : [];
+                    return {label:dial?.getAttribute('aria-label'),
+                        width:bounds?.width, inside:bounds?.right <= outer.right + 1,
+                        rows:rows.length, start:hero.querySelector('.wpb-primary-action')?.getBoundingClientRect().height};
+                });
+                assert.ok(mission.label?.startsWith('Session ') && mission.width >= 74 &&
+                    mission.inside && mission.rows >= 1 && mission.rows <= 3 && mission.start >= 44,
+                    'semantic M3 training dial and three-row preview fit the phone');
+            }
             if (tab === 'progress') {
                 assert.ok(await page.$eval('.wpb-progress .wpb-premium-tabs', el =>
                     parseFloat(getComputedStyle(el).borderTopLeftRadius) >= 14),

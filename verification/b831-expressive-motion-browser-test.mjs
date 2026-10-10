@@ -63,6 +63,22 @@ try {
         for (const tab of ['plan','progress','profile','settings','home']) {
             await page.click(`[data-tab="${tab}"]`);
             await page.waitForSelector(`[data-view-frame="${tab}"][data-pi-surface]`);
+            // The mounted destination receives a linked entrance sourced from
+            // the actual tapped navigation control. No duplicate views, no
+            // animation on workout rows, and no change to navigation state.
+            if (tab === 'plan' || tab === 'progress') {
+                const linked = await page.$eval(`[data-view-frame="${tab}"]`, el => {
+                    const lead = el.querySelector('[data-pi-connected="source"]');
+                    return { count:el.querySelectorAll('[data-pi-connected="source"]').length,
+                        x:lead?.style.getPropertyValue('--pi-connected-x'),
+                        y:lead?.style.getPropertyValue('--pi-connected-y') };
+                });
+                assert.ok(linked.count === 1 && Number.isFinite(parseFloat(linked.x)) &&
+                    Number.isFinite(parseFloat(linked.y)) &&
+                    Math.abs(parseFloat(linked.x)) <= 24.01 &&
+                    Math.abs(parseFloat(linked.y)) <= 18.01,
+                    'R9 connected route bounds one actual lead card: '+JSON.stringify(linked));
+            }
             await page.waitForFunction(tab => document.querySelector(`[data-view-frame="${tab}"]`)?.style.getPropertyValue('--pi-surface-opacity') === '1', {}, tab);
             assert.equal(await page.$eval(`[data-tab="${tab}"]`, b => b.getAttribute('aria-current')), 'page');
             const navDir = await page.$eval(`[data-view-frame="${tab}"]`, el => ({
@@ -103,6 +119,19 @@ try {
             assert.ok(navPill.radius.includes('px') && navPill.fill.includes('color-mix') &&
                 navPill.oldPill === 'none' && navPill.oldUnderline === 'none',
                 'moving navigation paints one theme-native pill instead of separate underlines: ' + JSON.stringify(navPill));
+            if (tab === 'progress') {
+                // Selected group indicator springs independently from actual
+                // button hit targets, and settles to an unscaled resting pill.
+                await page.waitForFunction(() => {
+                    const bar=document.querySelector('.wpb-tabbar[data-pi-m3-track]');
+                    return bar?.style.getPropertyValue('--pi-m3-track-stretch') === '1';
+                }, { timeout: 5000 });
+                assert.ok(await page.$eval('.wpb-tabbar', bar => {
+                    const item = bar.querySelector('[aria-current="page"]');
+                    return item.getBoundingClientRect().height >= 44 &&
+                        parseFloat(bar.style.getPropertyValue('--pi-m3-track-corner')) >= 17.9;
+                }), 'R9 selection flex retains real navigation tap geometry');
+            }
             if (tab === 'home') {
                 assert.ok(await page.$eval('.wpb-home-hero', el =>
                     parseFloat(getComputedStyle(el).borderTopLeftRadius) >= 30 &&
@@ -638,6 +667,18 @@ try {
                 toggle?.getAttribute('aria-expanded')==='true' &&
                 toggle?.getAttribute('aria-controls')===panel.id &&
                 parseFloat(getComputedStyle(card).borderTopLeftRadius)>=20;
+        }, { timeout: 5000 });
+        // React mounts the disclosure immediately but its measured content
+        // height settles after the shape/height spring. Check the *settled*
+        // 44px target instead of racing the first animation frame (the prior
+        // post-merge 430px failure). Do not relax the actual hit-size contract.
+        await page.waitForFunction(() => {
+            const card=document.querySelector('.wpb-program .wpb-day-card');
+            const button=card?.querySelector('.wpb-day-toggle');
+            const panel=card?.querySelector(':scope > .wpb-expand');
+            return button?.getBoundingClientRect().height >= 44 &&
+                panel?.getBoundingClientRect().height > 40 &&
+                card.children.length >= 2;
         }, { timeout: 5000 });
         const disclosureOpen=await page.$eval('.wpb-program .wpb-day-card', el => ({
             touch:el.querySelector('.wpb-day-toggle').getBoundingClientRect().height,

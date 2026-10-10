@@ -4160,3 +4160,108 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     border-color:CanvasText!important;
   }
 }
+
+
+/* M3 EXPRESSIVE R24 — SESSION HISTORY AND FINISH REVIEW
+   Keep history values, edit/delete handlers, grouping, and finish persistence
+   exactly as authored. Only clarify tonal hierarchy and touch affordances. */
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session{
+  box-sizing:border-box;
+  min-width:0;
+  border-radius:20px!important;
+  border:1px solid var(--pi-r11-edge)!important;
+  background-color:var(--pi-r11-quiet)!important;
+  background-image:none!important;
+  box-shadow:none!important;
+  overflow-wrap:anywhere;
+  transition:border-radius 200ms var(--pi-ease),border-color 160ms var(--pi-ease),background-color 160ms var(--pi-ease)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session:focus-within{
+  border-radius:23px!important;
+  border-color:var(--pi-r11-accent-stroke)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session-detail{
+  box-sizing:border-box;
+  min-width:0;
+  border-top:1px solid var(--pi-r11-edge)!important;
+  background-color:var(--pi-r11-raised)!important;
+  background-image:none!important;
+  border-radius:0 0 19px 19px;
+  overflow-wrap:anywhere;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-actions{
+  min-width:0;
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-actions>button{
+  box-sizing:border-box;
+  min-width:44px!important;
+  min-height:44px!important;
+  border-radius:14px!important;
+  background-image:none!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-actions>button:focus-visible,
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session :is(button,summary):focus-visible{
+  outline:2px solid var(--pi-m3e-primary)!important;
+  outline-offset:2px;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-filters{
+  min-width:0;
+  flex-wrap:wrap;
+  gap:7px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-group-header{
+  min-width:0;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-finish-sheet{
+  box-sizing:border-box;
+  min-width:0;
+  background-color:var(--wpb-focus-bg,#110c15)!important;
+  background-image:none!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-finish-sheet .wpb-finish-metrics{
+  min-width:0;
+  gap:8px!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-finish-sheet .wpb-finish-metrics>div{
+  box-sizing:border-box;
+  min-width:0;
+  border:1px solid var(--pi-r11-edge)!important;
+  border-radius:18px!important;
+  background-color:var(--pi-r11-quiet)!important;
+  background-image:none!important;
+  box-shadow:none!important;
+  overflow-wrap:anywhere;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-finish-sheet .wpb-finish-metrics .mono{
+  font-variant-numeric:tabular-nums;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-finish-sheet button{
+  min-height:44px;
+}
+@media(max-width:350px){
+  #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-actions{
+    gap:4px!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-finish-sheet .wpb-finish-metrics{
+    gap:5px!important;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session{
+    transition:none!important;
+  }
+}
+@media(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb :is(
+    .wpb-history-session,.wpb-history-session-detail,
+    .wpb-finish-sheet,.wpb-finish-sheet .wpb-finish-metrics>div){
+    background-color:Canvas!important;
+    color:CanvasText!important;
+    border-color:CanvasText!important;
+  }
+}

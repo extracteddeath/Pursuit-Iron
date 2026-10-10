@@ -239,6 +239,22 @@ try {
                 if (tonal.dark) assert.ok(featured.bg !== secondary.bg &&
                     featured.image === 'none' && secondary.image === 'none',
                     'R11 Progress maintains a quieter secondary fact: '+JSON.stringify(tonal));
+                // R24 history is the real saved-session list. Every visible
+                // action must remain touch-safe; never activate edit/delete.
+                const historyR24=await page.evaluate(() => {
+                    const card=document.querySelector('.wpb-progress .wpb-history-session');
+                    if(!card) return null;
+                    const style=getComputedStyle(card),r=card.getBoundingClientRect();
+                    const buttons=[...card.querySelectorAll('.wpb-history-actions>button')]
+                        .filter(el=>el.getClientRects().length)
+                        .map(el=>({w:el.getBoundingClientRect().width,h:el.getBoundingClientRect().height}));
+                    return {image:style.backgroundImage,w:r.width,
+                        overflows:card.scrollWidth>card.clientWidth+1,buttons};
+                });
+                if(historyR24) assert.ok(historyR24.image==='none' &&
+                    historyR24.w>0 && !historyR24.overflows &&
+                    historyR24.buttons.every(b=>b.w>=44&&b.h>=44),
+                    'R24 history surfaces and real actions fit the phone: '+JSON.stringify(historyR24));
             }
             if (tab === 'profile') {
                 const tonal = await tonalSurfaceReport({
@@ -524,6 +540,31 @@ try {
             'visible profile components are coordinated by the page-level motion system');
         assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),initial.saved,
             'global navigation motion never modifies saved program data');
+        // R24: test the finish-sheet CSS even though this fixture deliberately
+        // keeps its unfinished workout alive. Do not finish or mutate the log.
+        const finishThemeR24=await page.evaluate(() => {
+            const root=document.querySelector('.wpb');
+            const sheet=document.createElement('div');
+            sheet.className='wpb-finish-sheet';
+            const metrics=document.createElement('div');
+            metrics.className='wpb-finish-metrics';
+            const metric=document.createElement('div');
+            metric.textContent='Summary metric';
+            metrics.append(metric);sheet.append(metrics);root.append(sheet);
+            const panel=getComputedStyle(sheet),tile=getComputedStyle(metric);
+            const c=document.createElement('canvas').getContext('2d',{willReadFrequently:true});
+            const alpha=value=>{c.clearRect(0,0,1,1);c.fillStyle=value;c.fillRect(0,0,1,1);return c.getImageData(0,0,1,1).data[3];};
+            const out={panelAlpha:alpha(panel.backgroundColor),
+                panelImage:panel.backgroundImage,tileAlpha:alpha(tile.backgroundColor),
+                tileImage:tile.backgroundImage,
+                tileRadius:parseFloat(tile.borderTopLeftRadius)};
+            sheet.remove();
+            return out;
+        });
+        assert.ok(finishThemeR24.panelAlpha===255 && finishThemeR24.tileAlpha===255 &&
+            finishThemeR24.panelImage==='none' && finishThemeR24.tileImage==='none' &&
+            finishThemeR24.tileRadius>=18,
+            'R24 finished-workout summary uses solid rounded theme-native surfaces: '+JSON.stringify(finishThemeR24));
         // The Material 3 tab indicator actually travels with the semantic selection,
         // is theme-derived, and changes paint only (not target geometry or DOM children).
         await page.click('[data-tab="progress"]');

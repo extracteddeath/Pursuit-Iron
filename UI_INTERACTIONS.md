@@ -576,3 +576,32 @@ secondary surfaces: Plan, Progress, Profile, and Exercise Library.
 
 Physical Android screenshots and gesture/frame performance require a separate
 device review; browser CI is necessary but not a device certification.
+
+## R12 — Library-to-detail continuity and design-token consolidation
+
+The same shared motion controller used by top-level R9 navigation now records
+the exact tapped Exercise Library row before React opens its existing detail
+overlay. The detail title and exercise figure inherit a bounded origin offset
+(maximum 22px horizontally and 15px vertically), with a short decelerated
+content entrance. No DOM element is cloned, no route or exercise data is
+changed, and no loading state is introduced.
+
+The detail **backdrop stays fully opaque from its first rendered frame**.
+Back remains in its original 44px target and is immediately usable. The
+source is cleared after one use, and a row tap cannot leak into the next
+top-level tab transition. Stale source positions expire automatically.
+The user can toggle reduced motion while the detail is open without losing
+readability or turning the overlay transparent.
+
+Maintenance: R7 first declared the app's three surface-container color
+roles; R10 re-declared those exact same variables at the end of the CSS.
+Those redundant overrides are now folded into their authoritative R7
+definitions, preserving identical light/dark values while reducing cascade
+ambiguity. R11 role overrides remain deliberately screen-specific.
+
+Acceptance: verify a real filtered exercise row and its actual detail
+overlay at 320px and 430px; check bounded source offsets, first-frame
+opacity, chart tabs, content navigation, reduced-motion, and Back target.
+Run the full 20-theme browser, release integrity, offline, engine and
+custom-program tests. No changes to the strength engine, logging controls,
+program construction, persistence, rest timer or RIR.

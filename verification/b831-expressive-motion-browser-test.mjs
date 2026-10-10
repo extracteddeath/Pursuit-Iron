@@ -743,6 +743,26 @@ try {
             'M3 sheet paints the compact centered drag handle and generous top corners');
         assert.ok(sheetStyle.right <= width + 1 && sheetStyle.width <= width + 1 &&
             sheetStyle.translate === '0px', 'M3 sheet does not overflow or move its resting detent');
+        // R20: measure the actual sheet, not an illustration of a modal.
+        // A solid background is necessary because underlying Settings content
+        // must not show through. All working gym selection rows remain present.
+        const gymR20 = await page.$eval('.wpb-gym-sheet', sheet => {
+            const done=sheet.querySelector('.wpb-gym-done');
+            const card=sheet.querySelector('.wpb-gym-card');
+            const c=getComputedStyle(sheet);
+            const ctx=document.createElement('canvas').getContext('2d',{willReadFrequently:true});
+            ctx.fillStyle=c.backgroundColor;ctx.fillRect(0,0,1,1);
+            return {alpha:ctx.getImageData(0,0,1,1).data[3],
+                image:c.backgroundImage,doneHeight:done?.getBoundingClientRect().height ?? 0,
+                doneWidth:done?.getBoundingClientRect().width ?? 0,
+                cardRadius:card?parseFloat(getComputedStyle(card).borderTopLeftRadius):null,
+                cardCount:sheet.querySelectorAll('.wpb-gym-card').length,
+                overflow:sheet.scrollWidth>sheet.clientWidth+1};
+        });
+        assert.ok(gymR20.alpha===255 && gymR20.image==='none' &&
+            gymR20.doneHeight>=44 && gymR20.doneWidth>=44 &&
+            gymR20.cardCount>=1 && gymR20.cardRadius>=18 && !gymR20.overflow,
+            'R20 solid gym sheet preserves selection cards and full-size Done: '+JSON.stringify(gymR20));
         if (width === 430)
             await page.screenshot({ path: path.join(root, 'verification/b831-m3-gym-sheet-phone.png') });
 
@@ -1246,6 +1266,24 @@ try {
         assert.ok(detailGeometry.back>=44 && detailGeometry.count===4 &&
             detailGeometry.minTabHeight>=40 && !detailGeometry.overflow &&
             detailGeometry.selection===1, 'exercise details keep compact touch-safe tabs: '+JSON.stringify(detailGeometry));
+        const detailR20 = await page.$eval('.wpb-exercise-detail', sheet => {
+            const header=sheet.querySelector('.wpb-exercise-detail-header');
+            const title=header?.querySelector(':scope > div:last-child');
+            const figure=sheet.querySelector('.wpb-exercise-figure-wrap');
+            const tabs=[...sheet.querySelectorAll('.wpb-exercise-tabs>button')];
+            const headerStyle=title ? getComputedStyle(title) : null;
+            return {wrap:headerStyle?.whiteSpace,overflow:headerStyle?.overflow,
+                textOverflow:headerStyle?.textOverflow,
+                headerHeight:header?.getBoundingClientRect().height ?? 0,
+                figureRadius:figure?parseFloat(getComputedStyle(figure).borderTopLeftRadius):0,
+                tabs:tabs.length,tabHeights:tabs.map(x=>x.getBoundingClientRect().height),
+                width:sheet.getBoundingClientRect().width};
+        });
+        assert.ok(detailR20.wrap==='normal' && detailR20.overflow!=='hidden' &&
+            detailR20.textOverflow!=='ellipsis' && detailR20.headerHeight>=64 &&
+            detailR20.figureRadius>=22 && detailR20.tabs===4 &&
+            detailR20.tabHeights.every(h=>h>=44) && detailR20.width<=width+2,
+            'R20 Exercise Detail title, illustration and real tabs are readable: '+JSON.stringify(detailR20));
         const formLink=await page.$eval('.wpb-exercise-detail a[data-testid="form-video-link"]', link=>{
             const box=link.getBoundingClientRect(),css=getComputedStyle(link);
             const details=link.querySelector(':scope > div:last-child');
@@ -1261,6 +1299,13 @@ try {
         await page.waitForSelector('[data-exercisecharts]');
         assert.equal(await page.$eval('.wpb-exercise-tabs>button:nth-child(2)',
             b=>b.getAttribute('aria-selected')), 'true', 'exercise charts tab selects the real panel');
+        // The actual range choices (when rendered) remain real, touch-sized
+        // tabs. Do not inject or replace the chart/range React controls.
+        const rangesR20=await page.$eval('.wpb-exercise-window-tabs>button', buttons =>
+            buttons.map(b=>b.getBoundingClientRect().height));
+        assert.ok(rangesR20.every(h=>h>=44),
+            'R20 rendered exercise chart ranges use accessible hit heights: '+JSON.stringify(rangesR20));
+
         assert.ok(await page.$eval('[data-exercisedetail]',el=>el.scrollWidth<=el.clientWidth+1),
             'exercise chart metric choices scroll rather than clipping screen width');
         // Capture the selected Charts tab, not a transient keyboard focus ring

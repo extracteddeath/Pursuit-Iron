@@ -88,23 +88,37 @@ try {
                 'moving navigation paints one theme-native pill instead of separate underlines: ' + JSON.stringify(navPill));
             if (tab === 'home') {
                 assert.ok(await page.$eval('.wpb-home-hero', el =>
-                    parseFloat(getComputedStyle(el).borderTopLeftRadius) >= 30 &&
+                    parseFloat(getComputedStyle(el).borderTopLeftRadius)  >= 28 &&
                     parseFloat(getComputedStyle(el).marginBottom) <= 14),
                     'home hero has a tighter spacious-card hierarchy');
             }
             if (tab === 'home') {
                 const bento = await page.$eval('.wpb-home .wpb-action-grid', grid => {
                     const tiles=[...grid.querySelectorAll(':scope > .wpb-action-tile')];
-                    const first=tiles[0]?.getBoundingClientRect();
-                    return {count:tiles.length, firstWidth:first?.width,
-                        gridWidth:grid.getBoundingClientRect().width,
-                        heroRadius:parseFloat(getComputedStyle(document.querySelector('.wpb-home-hero')).borderTopLeftRadius)};
+                    const boxes=tiles.map(tile=>tile.getBoundingClientRect().toJSON());
+                    const hero=document.querySelector('.wpb-home-hero');
+                    const shell=document.querySelector('#root');
+                    return {count:tiles.length, boxes,
+                        heroRadius:parseFloat(getComputedStyle(hero).borderTopLeftRadius),
+                        heroFill:getComputedStyle(hero).backgroundImage,
+                        accent:shell.style.getPropertyValue('--pi-m3-accent'),
+                        gridWidth:grid.getBoundingClientRect().width};
                 });
-                assert.ok(bento.count>=2 && bento.firstWidth >= bento.gridWidth-2 &&
-                    bento.heroRadius>=30,
-                    'M3 bento uses a full-width feature without extra layout rows: '+JSON.stringify(bento));
+                const [feature,option,cycles]=bento.boxes;
+                assert.ok(bento.count>=3 && feature.height>option.height+40 &&
+                    feature.x+feature.width<=option.x+2 &&
+                    Math.abs(feature.y-option.y)<3 && cycles.y>option.y+20 &&
+                    bento.heroRadius>=28 && bento.accent.length>3 &&
+                    bento.heroFill.includes('color-mix'),
+                    'R4 asymmetric vertical bento and theme-derived vivid hero are substantive layout changes: '+JSON.stringify(bento));
             }
             if (tab === 'progress') {
+                const header=await page.$eval('.wpb-progress > .wpb-page-header', el => ({
+                    radius:parseFloat(getComputedStyle(el).borderTopLeftRadius),
+                    gradient:getComputedStyle(el).backgroundImage
+                }));
+                assert.ok(header.radius>=28 && header.gradient.includes('color-mix'),
+                    'Progress gains its own colored editorial header: '+JSON.stringify(header));
                 assert.ok(await page.$eval('.wpb-progress .wpb-premium-tabs', el =>
                     parseFloat(getComputedStyle(el).borderTopLeftRadius) >= 14),
                     'progress uses a unified pill-tab surface');

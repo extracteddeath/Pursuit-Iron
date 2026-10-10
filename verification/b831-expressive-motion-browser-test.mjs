@@ -526,7 +526,14 @@ try {
         page.on('pageerror', error => errors.push(error.message));
         await page.setViewport({ width, height: 844, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
         await page.evaluateOnNewDocument(store => {
+            // Seed this independent secondary browser page exactly once.
+            // A subsequent reload must retain its newly added 80-session chart
+            // fixture, not silently overwrite it with the original one-session
+            // state. The previous unconditional clear caused the dense-chart
+            // test to fail before any scrub interaction was exercised.
+            if (localStorage.getItem('b831-secondary-seeded')) return;
             localStorage.clear();
+            localStorage.setItem('b831-secondary-seeded', '1');
             localStorage.setItem('b831-seeded', '1');
             localStorage.setItem('wpb:v1', JSON.stringify(store));
         }, initial);

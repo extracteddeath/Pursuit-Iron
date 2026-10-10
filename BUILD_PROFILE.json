@@ -6,6 +6,6 @@
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 70,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b831-r0bf4142f90c7599a",
-  "uiMilestone": "Build 831 · Material 3 Expressive R14 solid Home action dock"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b831-r588f011d63093e7c",
+  "uiMilestone": "Build 831 · Material 3 Expressive R15 opaque Home action dock"
 }

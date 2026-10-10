@@ -909,6 +909,48 @@ try {
                 panel?.getBoundingClientRect().height > 40 &&
                 card.children.length >= 2;
         }, { timeout: 5000 });
+        // R22: the actual More options button in the expanded day needs a
+        // 44px hit box, and the sheet must not clip its title or action hints.
+        await page.waitForSelector('.wpb-program button[aria-label^="More options for "]');
+        const programBeforeOptions=await page.evaluate(() =>
+            JSON.stringify(JSON.parse(localStorage.getItem('wpb:v1')||'{}').saved));
+        const triggerR22=await page.$eval('.wpb-program button[aria-label^="More options for "]',
+            button=>({height:button.getBoundingClientRect().height,
+                width:button.getBoundingClientRect().width}));
+        assert.ok(triggerR22.height>=44 && triggerR22.width>=44,
+            'R22 program exercise options opener is accessible: '+JSON.stringify(triggerR22));
+        await page.click('.wpb-program button[aria-label^="More options for "]');
+        await page.waitForSelector('.wpb-exercise-options-sheet .wpb-sheet-action');
+        const optionsR22=await page.$eval('.wpb-exercise-options-sheet', sheet=>{
+            const title=sheet.querySelector(':scope > div:first-child > div:first-child > div:first-child');
+            const close=sheet.querySelector('.wpb-sheet-close');
+            const actions=[...sheet.querySelectorAll(':scope > .wpb-sheet-action')];
+            const firstDescription=actions[0]?.querySelector(':scope > span:last-child > span:last-child');
+            const c=getComputedStyle(sheet);
+            const ctx=document.createElement('canvas').getContext('2d',{willReadFrequently:true});
+            ctx.fillStyle=c.backgroundColor;ctx.fillRect(0,0,1,1);
+            return {alpha:ctx.getImageData(0,0,1,1).data[3],
+                image:c.backgroundImage,
+                titleWrap:title?getComputedStyle(title).whiteSpace:null,
+                titleOverflow:title?getComputedStyle(title).overflow:null,
+                closeHeight:close?.getBoundingClientRect().height||0,
+                actions:actions.length,
+                minActionHeight:Math.min(...actions.map(a=>a.getBoundingClientRect().height)),
+                descriptionWrap:firstDescription?getComputedStyle(firstDescription).whiteSpace:null,
+                overflow:sheet.scrollWidth>sheet.clientWidth+1};
+        });
+        assert.ok(optionsR22.alpha===255 && optionsR22.image==='none' &&
+            optionsR22.titleWrap==='normal' && optionsR22.titleOverflow!=='hidden' &&
+            optionsR22.closeHeight>=44 && optionsR22.actions>=4 &&
+            optionsR22.minActionHeight>=54 && optionsR22.descriptionWrap==='normal' &&
+            !optionsR22.overflow,
+            'R22 exercise options maintain readable names/descriptions and touch targets: '+JSON.stringify(optionsR22));
+        if(width===430) await page.screenshot({path:path.join(root,'verification/b831-m3-exercise-options-phone.png')});
+        await page.click('.wpb-exercise-options-sheet .wpb-sheet-close');
+        await page.waitForSelector('.wpb-exercise-options-sheet',{hidden:true});
+        assert.equal(await page.evaluate(() =>
+            JSON.stringify(JSON.parse(localStorage.getItem('wpb:v1')||'{}').saved)),programBeforeOptions,
+            'R22 opening and dismissing exercise options preserves the entire program');
         const disclosureOpen=await page.$eval('.wpb-program .wpb-day-card', el => ({
             touch:el.querySelector('.wpb-day-toggle').getBoundingClientRect().height,
             panel:el.querySelector(':scope > .wpb-expand')?.getBoundingClientRect().height,

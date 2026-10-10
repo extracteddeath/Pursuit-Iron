@@ -242,3 +242,22 @@ events, and stops animation for reduced motion/forced colors.
 The phone regression opens and closes a real Plan day at 320px/430px
 and verifies semantic state, morph geometry, minimum touch size and
 unchanged saved programs.
+
+## Expressive vs utilitarian motion boundaries
+
+Material's expressive motions belong to navigation, sheets, menus, choices,
+disclosures and major achievement moments—not every gym log control. Global
+button compression now explicitly ignores the entire live `data-testid^="set-"`
+row, compact set steppers/checkmarks and the Target/Last header switch. Their
+own existing instant input, muted completed state, reference fade and
+reported RIR semantics remain authoritative. The independent RIR choice-group
+selection feedback still operates on its existing fixed width.
+
+App Undo/status toasts keep their React-owned message, action, lifetime,
+z-index and dock clearance; the presentation receives a more coherent tonal
+border/corner and keyboard focus. Finished-workout summary numbers appear in
+a short three-part stagger without modifying values or adding a count-up.
+Reduced-motion users receive all numbers and actions immediately.
+
+The integration browser now tests this boundary after actual weight editing,
+Target/Last switching and completing a set at 320px and 430px.

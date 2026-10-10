@@ -1342,3 +1342,49 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     transition:none!important;
   }
 }
+
+/* PI M3 SPATIAL NAVIGATION — measured, interruptible spring between the
+   existing bottom tabs. This track replaces five static selected pills without
+   adding a node, changing tab height, routing or the original hit targets. */
+#root[data-pi-motion="expressive"] .wpb .wpb-tabbar[data-pi-m3-track]{
+  isolation:isolate;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-tabbar[data-pi-m3-track]::before{
+  content:"";
+  position:absolute;
+  left:0;top:0;z-index:0;
+  width:var(--pi-m3-track-width,0px);
+  height:var(--pi-m3-track-height,30px);
+  translate:var(--pi-m3-track-x,0px) var(--pi-m3-track-y,0px);
+  background:var(--pi-m3-track-fill,transparent);
+  border-radius:999px;
+  pointer-events:none;
+  will-change:translate,width;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-tabbar[data-pi-m3-track] .wpb-tab{
+  z-index:1;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-tabbar[data-pi-m3-track] .wpb-tab::before{
+  display:none!important;
+  content:none!important;
+  opacity:0!important;
+}
+/* Cohesive but compact surface entrances. Content remains immediately
+   interactive; only the first five important cards participate, never sets. */
+#root[data-pi-motion="expressive"] .wpb [data-pi-reveal="1"]{
+  animation:piContentCascade 260ms cubic-bezier(.2,.85,.2,1)
+    var(--pi-reveal-delay,0ms) both;
+}
+@keyframes piContentCascade{
+  0%{opacity:.78;translate:0 6px}
+  72%{opacity:1;translate:0 -1px}
+  100%{opacity:1;translate:0 0}
+}
+@media(prefers-reduced-motion:reduce),(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb [data-pi-reveal="1"]{
+    animation:none!important;translate:none!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-tabbar[data-pi-m3-track]::before{
+    will-change:auto;
+  }
+}

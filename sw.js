@@ -1,5 +1,5 @@
 /* Pursuit Iron 4.0 — M234 production release. */
-const CACHE="pursuit-iron-production-v4-0-0-m234-candidate-selection-b831-r35aae1a8a61c1113";
+const CACHE="pursuit-iron-production-v4-0-0-m234-candidate-selection-b831-re4513c83be73cc55";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
   "./app.css",

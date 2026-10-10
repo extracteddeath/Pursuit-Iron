@@ -1765,3 +1765,37 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   outline:2px solid currentColor!important;
   outline-offset:3px!important;
 }
+
+/* M3 EXPRESSIVE FLUID BUTTON GROUPS — selected width responds physically,
+   not merely with a fixed pill overlay. The actual tabs retain their native
+   roles, hit areas, ordering and focus. Only non-workout four-way groups. */
+#root[data-pi-motion="expressive"] .wpb :is(
+  .wpb-progress .wpb-premium-tabs,
+  .wpb-library .wpb-library-flag-filter)[data-pi-m3-fluid]{
+  display:flex!important;
+  align-items:stretch!important;
+  overflow:visible;
+}
+#root[data-pi-motion="expressive"] .wpb :is(
+  .wpb-progress .wpb-premium-tabs,
+  .wpb-library .wpb-library-flag-filter)[data-pi-m3-fluid]>button{
+  flex:var(--pi-choice-grow,1) 1 0%!important;
+  min-width:0!important;
+  position:relative;
+  z-index:1;
+  /* The one selected spring drives every button's flex basis.
+     No CSS transitions are stacked onto the existing spring. */
+  transition:background-color 180ms var(--pi-ease),
+             color 180ms var(--pi-ease)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-premium-tabs[data-pi-m3-fluid]>button[aria-selected="true"],
+#root[data-pi-motion="expressive"] .wpb .wpb-library-flag-filter[data-pi-m3-fluid]>button[aria-pressed="true"]{
+  font-weight:760!important;
+}
+@media(prefers-reduced-motion:reduce),(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb :is(
+    .wpb-progress .wpb-premium-tabs,
+    .wpb-library .wpb-library-flag-filter)[data-pi-m3-fluid]>button{
+    transition:none!important;
+  }
+}

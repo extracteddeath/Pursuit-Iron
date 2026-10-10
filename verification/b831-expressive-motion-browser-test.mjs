@@ -57,6 +57,15 @@ try {
             await page.waitForSelector(`[data-view-frame="${tab}"][data-pi-surface]`);
             await page.waitForFunction(tab => document.querySelector(`[data-view-frame="${tab}"]`)?.style.getPropertyValue('--pi-surface-opacity') === '1', {}, tab);
             assert.equal(await page.$eval(`[data-tab="${tab}"]`, b => b.getAttribute('aria-current')), 'page');
+            const navDir = await page.$eval(`[data-view-frame="${tab}"]`, el => ({
+                direction:el.dataset.piNavDirection,
+                scale:Number.parseFloat(el.style.getPropertyValue('--pi-surface-scale')),
+                opacity:Number.parseFloat(el.style.getPropertyValue('--pi-surface-opacity'))
+            }));
+            assert.equal(navDir.direction, tab==='home' ? 'back' : 'forward',
+                'route entrance direction follows actual tab positions: '+JSON.stringify(navDir));
+            assert.ok(navDir.scale>=.98 && navDir.scale<=1.001 && navDir.opacity>.95,
+                'connected navigation settles to fully interactive page geometry');
             assert.ok(await page.$eval('.wpb', el => el.scrollWidth <= innerWidth + 1), `${tab} fits at ${width}px`);
             // page.click produces a real touch ripple. Check idle icon styling only AFTER
             // animationend clears the transient layer, not while the active ::after paints.
@@ -104,6 +113,23 @@ try {
                     bento.heroRadius>=30,
                     'M3 bento uses a full-width feature without extra layout rows: '+JSON.stringify(bento));
             }
+            if (tab === 'home') {
+                const shape = await page.$eval('.wpb-home', shell => {
+                    const header=shell.querySelector('.wpb-home-header'), hero=shell.querySelector('.wpb-home-hero');
+                    const stats=[...shell.querySelectorAll('.wpb-metric-strip > .wpb-metric')];
+                    const first=stats[0]?.getBoundingClientRect();
+                    return {radius:parseFloat(getComputedStyle(header).borderBottomLeftRadius),
+                        heroRadius:parseFloat(getComputedStyle(hero).borderTopLeftRadius),
+                        headerTint:getComputedStyle(header).backgroundImage,
+                        statCount:stats.length,statRadius:stats[0]&&parseFloat(getComputedStyle(stats[0]).borderTopLeftRadius),
+                        statWidth:first?.width,scrollWidth:shell.scrollWidth,viewport:innerWidth};
+                });
+                assert.ok(shape.radius>=28 && shape.heroRadius>=35 &&
+                    shape.headerTint.includes('gradient') && shape.statCount===2 &&
+                    shape.statRadius>=20 && shape.statWidth>80 &&
+                    shape.scrollWidth<=shape.viewport+1,
+                    'R4 connected color-tinted dashboard has true tonal hierarchy without overflow: '+JSON.stringify(shape));
+            }
             if (tab === 'progress') {
                 assert.ok(await page.$eval('.wpb-progress .wpb-premium-tabs', el =>
                     parseFloat(getComputedStyle(el).borderTopLeftRadius) >= 14),
@@ -122,7 +148,7 @@ try {
                     return { size: parseFloat(title.fontSize), weight: Number(title.fontWeight),
                         logoHeight: logo.getBoundingClientRect().height };
                 });
-                assert.ok(homeType.size >= 26 && homeType.size <= 31 && homeType.weight >= 700,
+                assert.ok(homeType.size >= 29 && homeType.size <= 37 && homeType.weight >= 700,
                     'Home title follows the expressive type scale');
                 assert.ok(homeType.logoHeight >= 24, 'Home header spacing does not collapse its logo');
             }
@@ -159,6 +185,27 @@ try {
                     'Profile uses the shared title scale and consistent stat geometry');
             }
             if (width === 430) await page.screenshot({ path: path.join(root, `verification/b831-${tab}-phone.png`) });
+        }
+        // The real page scroll controller already marks scrolled chrome.
+        // Exercise the adaptive top bar without introducing an independent scroll handler.
+        await page.click('[data-tab="home"]');
+        const homeScroller = await page.$eval('.wpb-home .wpb-page-scroll', el => ({
+            max:el.scrollHeight-el.clientHeight
+        }));
+        if (homeScroller.max>40) {
+            await page.$eval('.wpb-home .wpb-page-scroll', el => {
+                el.scrollTop=90;
+                el.dispatchEvent(new Event('scroll',{bubbles:true}));
+            });
+            await page.waitForFunction(() => document.querySelector('.wpb-home')?.dataset.scrolled==='1');
+            assert.ok(await page.$eval('.wpb-home .wpb-home-header', el =>
+                parseFloat(getComputedStyle(el).borderBottomLeftRadius)<=17),
+                'adaptive M3 app bar compresses after real content scroll');
+            await page.$eval('.wpb-home .wpb-page-scroll', el => {
+                el.scrollTop=0;
+                el.dispatchEvent(new Event('scroll',{bubbles:true}));
+            });
+            await page.waitForFunction(() => document.querySelector('.wpb-home')?.dataset.scrolled==='0');
         }
         // Native navigation semantics and DOM children remain constant while a
         // single measured indicator travels between nonadjacent destinations.

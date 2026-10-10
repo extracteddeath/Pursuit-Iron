@@ -770,18 +770,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   padding:12px 0!important;
   gap:11px!important;
 }
-#root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-feature-icon{
-  width:34px!important;
-  height:34px!important;
-  flex:0 0 34px;
-  border-radius:11px!important;
-}
 #root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-footer{
   padding:11px max(16px,env(safe-area-inset-right)) calc(env(safe-area-inset-bottom) + 10px)!important;
-}
-#root[data-pi-motion="expressive"] .wpb-onboarding :is(.wpb-onboarding-primary,.wpb-onboarding-secondary){
-  min-height:48px!important;
-  border-radius:14px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-secondary{
   margin-top:6px!important;
@@ -1038,11 +1028,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session-detail{
   background-image:none!important;
 }
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-actions>button{
-  border-radius:12px!important;
-  min-width:40px;
-  min-height:40px;
-}
 #root[data-pi-motion="expressive"] .wpb .wpb-exercise-metric-tabs{
   overflow-x:auto!important;
   overscroll-behavior-x:contain;
@@ -1122,14 +1107,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   outline:none!important;
   stroke:currentColor;
   stroke-width:2px;
-}
-#root[data-pi-motion="expressive"] .wpb-workout .wpb-rest-card{
-  border-radius:15px!important;
-}
-#root[data-pi-motion="expressive"] .wpb-workout .wpb-rest-actions>button{
-  min-height:40px;
-  min-width:40px;
-  border-radius:11px!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-finish-metrics>div{
   min-width:0;
@@ -4342,5 +4319,46 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     background-color:Canvas!important;
     color:CanvasText!important;
     border-color:CanvasText!important;
+  }
+}
+
+
+/* M3 EXPRESSIVE R26 — CROSS-SCREEN INTERACTION CONTRACT
+   One keyboard-visible focus language and reliable touch targets on real
+   action controls. Layout, DOM events, program settings and active workout
+   input handlers remain owned by the original components. */
+#root[data-pi-motion="expressive"] :is(
+  .wpb-home-create,.wpb-action-tile,.wpb-plan-panes>button,
+  .wpb-premium-tabs>button,.wpb-settings-row,.wpb-settings-jump-control,
+  .wpb-profile-achievement-toggle,.wpb-wizard-option,
+  .wpb-wizard-back-action,.wpb-wizard-next-action,
+  .wpb-onboarding-primary,.wpb-onboarding-secondary,
+  .wpb-workout-tool,.wpb-rest-actions>button,
+  .wpb-history-actions>button,.wpb-sheet-close,.wpb-context-menu-item
+){
+  touch-action:manipulation;
+}
+#root[data-pi-motion="expressive"] :is(
+  .wpb-home-create,.wpb-action-tile,.wpb-plan-panes>button,
+  .wpb-premium-tabs>button,.wpb-settings-row,.wpb-settings-jump-control,
+  .wpb-profile-achievement-toggle,.wpb-wizard-option,
+  .wpb-wizard-back-action,.wpb-wizard-next-action,
+  .wpb-onboarding-primary,.wpb-onboarding-secondary,
+  .wpb-workout-tool,.wpb-rest-actions>button,
+  .wpb-history-actions>button,.wpb-sheet-close,.wpb-context-menu-item
+):focus-visible{
+  outline:2px solid var(--pi-m3e-primary)!important;
+  outline-offset:2px!important;
+}
+@media(forced-colors:active){
+  #root[data-pi-motion="expressive"] :is(
+    .wpb-home-create,.wpb-action-tile,.wpb-plan-panes>button,
+    .wpb-premium-tabs>button,.wpb-settings-row,
+    .wpb-profile-achievement-toggle,.wpb-wizard-option,
+    .wpb-onboarding-primary,.wpb-onboarding-secondary,
+    .wpb-workout-tool,.wpb-rest-actions>button,
+    .wpb-history-actions>button,.wpb-sheet-close,.wpb-context-menu-item
+  ):focus-visible{
+    outline-color:Highlight!important;
   }
 }

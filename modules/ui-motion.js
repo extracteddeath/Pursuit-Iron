@@ -82,13 +82,20 @@ function enterSurface(el, initial = false) {
     const sheet = el.matches('[data-sheet-drag]');
     const dialog = el.matches('.wpb-pop,.wpb-dialog');
     const dir = el.matches('.wpb-slideR') || el.getAttribute('data-motion-direction') === 'r' ? -1 : el.matches('.wpb-slideL') || el.getAttribute('data-motion-direction') === 'l' ? 1 : 0;
-    const y = sheet ? 52 : dialog ? 8 : el.matches('.wpb-notice-in') ? -6 : dir ? 0 : 4;
+    const view = el.matches('[data-view-frame]') && el.getAttribute('data-view-frame') !== 'workout';
+    const navAxis = view ? Number(el.closest('#root')?.dataset.piNavDirection || 0) : 0;
+    const entryX = dir ? dir * 18 : navAxis ? navAxis * 26 : 0;
+    const y = sheet ? 52 : dialog ? 8 : el.matches('.wpb-notice-in') ? -6 : dir || navAxis ? 0 : 4;
     const quiet = initial || reduced();
     const restart = (name, value) => !first && !quiet && !active.has(states.get(el)?.get(name)) ? value : undefined;
-    spring(el, '--pi-surface-x', 0, { from: quiet ? 0 : dir * 18, restart: restart('--pi-surface-x', dir * 18), write: pixels(el, '--pi-surface-x') });
+    spring(el, '--pi-surface-x', 0, { from: quiet ? 0 : entryX, restart: restart('--pi-surface-x', entryX),
+        write: pixels(el, '--pi-surface-x'), stiffness: view ? 730 : 700, damping: view ? .89 : .9 });
     spring(el, '--pi-surface-y', 0, { from: quiet ? 0 : y, restart: restart('--pi-surface-y', y), write: pixels(el, '--pi-surface-y'), damping: sheet ? .94 : 1 });
     spring(el, '--pi-surface-opacity', 1, { from: quiet ? 1 : .55, restart: restart('--pi-surface-opacity', .55), stiffness: 1200, damping: 1, precision: .001 });
-    if (dialog) spring(el, '--pi-surface-scale', 1, { from: quiet ? 1 : .97, damping: .9, precision: .001 });
+    if (dialog || view) spring(el, '--pi-surface-scale', 1, {
+        from: quiet ? 1 : dialog ? .97 : .982,
+        restart: restart('--pi-surface-scale', dialog ? .97 : .982),
+        stiffness: view ? 810 : 700, damping: .95, precision: .001 });
 }
 export function exitMotion(wrapper, complete) {
     let cancelled = false;
@@ -136,6 +143,23 @@ export function installAppMotion(root) {
     const pressed = new Map(), controls = new WeakMap(), choiceStates = new WeakMap(), referenceKeys = new WeakMap();
     const media = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)');
     let menuOpener = null;
+    // Use the real selected tab icon as the current theme's tonal source.
+    // Expressive layouts must inherit theme choices rather than hard-coding purple.
+    function syncExpressiveAccent() {
+        const icon = root.querySelector('.wpb-tabbar .wpb-tab[aria-current="page"] svg');
+        const color = icon && getComputedStyle(icon).color;
+        if (color && color !== root.style.getPropertyValue('--pi-m3-accent'))
+            root.style.setProperty('--pi-m3-accent', color);
+    }
+    const setNavDirection = e => {
+        const tab = e.target.closest?.('.wpb-tabbar .wpb-tab[data-tab]');
+        if (!tab || tab.disabled) return;
+        const tabs = [...tab.parentElement.children].filter(el => el.matches('[data-tab]'));
+        const current = tabs.findIndex(el => el.getAttribute('aria-current') === 'page');
+        const target = tabs.indexOf(tab);
+        if (current >= 0 && target >= 0 && current !== target)
+            root.dataset.piNavDirection = target > current ? '1' : '-1';
+    };
     // Anchored program menus must clear the live workout dock as well as the
     // bottom tab bar. The old viewport-only flip can hide Delete underneath
     // a resumed-workout dock even though the menu fits within window.innerHeight.
@@ -425,6 +449,7 @@ function disclosure(el, initial = false) {
         const buttons = [...group.children].filter(el => el.matches('button'));
         const selected = buttons.findIndex(b => b.getAttribute('aria-pressed') === 'true' || b.getAttribute('aria-selected') === 'true' || b.getAttribute('aria-current') === 'page');
         const previous = choiceStates.get(group); choiceStates.set(group, selected);
+        if (group.matches('.wpb-tabbar')) syncExpressiveAccent();
         if (previous === selected && !initial) return;
         positionTrack(group, buttons, selected, initial);
         const rir = group.matches('.wpb-effort-scale');
@@ -535,6 +560,7 @@ function disclosure(el, initial = false) {
         });
     }
     scan(root, true);
+    syncExpressiveAccent();
     const observer = new MutationObserver(records => {
         const groups = new Set(), disclosures = new Set();
         records.forEach(record => {
@@ -572,6 +598,7 @@ function disclosure(el, initial = false) {
     document.addEventListener('pointerup', up, { passive: true });
     document.addEventListener('pointercancel', up, { passive: true });
     document.addEventListener('pointermove', move, { passive: true });
+    root.addEventListener('click', setNavDirection, true);
     root.addEventListener('click', themeSelection);
     root.addEventListener('keydown', keydown); document.addEventListener('keyup', keyup);
     document.addEventListener('visibilitychange', visibility);
@@ -585,6 +612,7 @@ function disclosure(el, initial = false) {
         root.removeEventListener('animationend', inkEnd);
         root.removeEventListener('pointerdown', down); document.removeEventListener('pointerup', up);
         document.removeEventListener('pointercancel', up); document.removeEventListener('pointermove', move);
+        root.removeEventListener('click', setNavDirection, true);
         root.removeEventListener('click', themeSelection);
         root.removeEventListener('keydown', keydown); document.removeEventListener('keyup', keyup);
         document.removeEventListener('visibilitychange', visibility);

@@ -3147,3 +3147,35 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     stroke:ButtonText!important;
   }
 }
+
+
+/* M3 EXPRESSIVE R14 — SOLID, CONNECTED HOME COMPOSE DOCK
+   The legacy Home bottom actions used an inline linear-gradient veil that
+   bled Strength Score content through behind the dock. Replace the rendered
+   paint with a fully opaque theme-native surface, keep the existing scroll
+   spacer, and preserve separate Create Program / Quick click targets. */
+#root[data-pi-motion="expressive"] .wpb-home .wpb-home-compose-bar{
+  background-color:var(--pi-m3e-surface-container-low)!important;
+  background-image:none!important;
+  border-top:1px solid var(--pi-m3e-outline-variant)!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-home-compose-bar .wpb-home-quick{
+  background-color:var(--pi-m3e-surface-container-high)!important;
+  background-image:none!important;
+  border-color:var(--pi-m3e-outline-variant)!important;
+  color:inherit!important;
+  border-radius:18px!important;
+  box-shadow:none!important;
+}
+@media(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb-home .wpb-home-compose-bar{
+    background:Canvas!important;
+    border-top-color:CanvasText!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb-home .wpb-home-compose-bar .wpb-home-quick{
+    background:ButtonFace!important;
+    color:ButtonText!important;
+    border-color:ButtonText!important;
+  }
+}

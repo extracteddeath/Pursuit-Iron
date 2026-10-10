@@ -327,3 +327,41 @@ When reduced motion is requested, spring values settle immediately.
 Real browser checks at 320px and 430px verify selected width growth, matched
 track geometry, Library overflow, keyboard tab selection and original
 prescriptions.
+
+## Material 3 Expressive R4 — connected screen composition
+
+This pass deliberately changes how the app *feels as a whole* instead of just
+reshaping individual cards. The palette derives from the user's active theme
+focus token; existing accessible selected colors and button text are preserved.
+
+- **Home:** real edge-to-edge tonal top bar with an oversized responsive
+  headline, sharply differentiated asymmetrical workout hero, raised start
+  action, and two compact, left-aligned tonal statistic tiles. Featured
+  template doorway has stronger visual priority than its two complementary
+  secondary routes; no feature is removed or duplicated.
+- **Progress and Settings:** the page header, tabs and grouped content read as
+  connected surfaces, with distinct corner/weight families. Actual chart,
+  date, history and setting controls are unchanged.
+- **Plan:** scroll-snapping week rail plus a more obvious theme-tinted Next
+  day container. Existing drag/schedule/saved-cycle logic remains unchanged.
+- **Adaptive app bars:** the existing `data-scrolled` marker collapses visual
+  padding, size and corner radius on Home, Progress and Settings when the user
+  scrolls; no extra scroll listeners, intercepts or sticky overlays.
+- **Navigation choreography:** the real `data-view-frame` enters from the
+  previous primary tab's direction, scales subtly to rest and coordinates a
+  small number of important existing content surfaces. Interruption remains
+  safe because it uses the shared velocity-aware spring; screen routing and
+  training data stay owned by React.
+- **Sheet choreography:** leading sheet corners spring from 46px to 29px
+  while opening, return toward 42px on close, and remain distinct from
+  the sheet's velocity-aware vertical drag/detent. Reduced-motion and forced
+  colors remain quiet.
+- **Regression protection:** 320px and 430px browser checks validate true
+  direction-aware navigation, actual scroll-driven header collapse, tonal
+  dashboard and dashboard grid geometry, theme-specific navigation and
+  unchanged workout logger/persistence. No extra package dependencies.
+
+Prior R2/R3 were code-level expressive layout and fluid controls; R4 now
+connects page *composition and motion*. This does not imply Android-device
+frame timing has been certified: a physical-device visual/gesture pass is
+still valuable before merging/publishing to main.

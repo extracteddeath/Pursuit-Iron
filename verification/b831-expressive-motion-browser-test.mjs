@@ -976,7 +976,7 @@ try {
         await page.waitForFunction(() => !document.body.innerText.includes('Resumed your in-progress workout'));
         // R23: actual on-screen tool controls stay touch-safe; do not touch
         // the compact weight/reps grid, navigation ownership or log state.
-        const liveToolsR23=await page.$eval('.wpb-workout-tools .wpb-workout-tool', controls =>
+        const liveToolsR23=await page.$$eval('.wpb-workout-tools .wpb-workout-tool', controls =>
             controls.filter(el => el.getClientRects().length).map(el => {
                 const s=getComputedStyle(el),r=el.getBoundingClientRect();
                 return {w:r.width,h:r.height,image:s.backgroundImage};

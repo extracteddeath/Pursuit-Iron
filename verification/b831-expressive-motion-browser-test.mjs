@@ -109,7 +109,7 @@ try {
                     feature.x+feature.width<=option.x+2 &&
                     Math.abs(feature.y-option.y)<3 && cycles.y>option.y+20 &&
                     bento.heroRadius>=28 && bento.accent.length>3 &&
-                    bento.heroFill.includes('color-mix'),
+                    bento.heroFill.includes('radial-gradient'),
                     'R4 asymmetric vertical bento and theme-derived vivid hero are substantive layout changes: '+JSON.stringify(bento));
             }
             if (tab === 'progress') {
@@ -117,7 +117,7 @@ try {
                     radius:parseFloat(getComputedStyle(el).borderTopLeftRadius),
                     gradient:getComputedStyle(el).backgroundImage
                 }));
-                assert.ok(header.radius>=28 && header.gradient.includes('color-mix'),
+                assert.ok(header.radius>=28 && header.gradient.includes('radial-gradient'),
                     'Progress gains its own colored editorial header: '+JSON.stringify(header));
                 assert.ok(await page.$eval('.wpb-progress .wpb-premium-tabs', el =>
                     parseFloat(getComputedStyle(el).borderTopLeftRadius) >= 14),

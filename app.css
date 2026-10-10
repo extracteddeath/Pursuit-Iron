@@ -1799,3 +1799,293 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     transition:none!important;
   }
 }
+
+/* PURSUIT EXPRESSIVE R4 — editorial composition, tonal color, spatial rhythm.
+   The previous passes rounded existing dark rectangles. Here the screen's visual
+   organization changes: a hero that owns the destination, an offset vertical
+   bento composition, real colored stat instruments and more memorable chrome.
+   The accent is resolved from the actual selected navigation glyph per theme.
+   Scope excludes workout sets, RIR, weight/reps steppers and reference toggles. */
+#root[data-pi-motion="expressive"] .wpb {
+ --pi-vivid:var(--pi-m3-accent,currentColor);
+ --pi-vivid-faint:color-mix(in srgb,var(--pi-vivid) 9%,transparent);
+ --pi-vivid-wash:color-mix(in srgb,var(--pi-vivid) 18%,transparent);
+ --pi-vivid-medium:color-mix(in srgb,var(--pi-vivid) 29%,transparent);
+ --pi-vivid-edge:color-mix(in srgb,var(--pi-vivid) 42%,transparent);
+ --pi-editorial-ease:cubic-bezier(.19,.85,.24,1);
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-home-header{
+ padding-top:16px!important;
+ padding-bottom:10px!important;
+ background-image:linear-gradient(110deg,var(--pi-vivid-faint),transparent 65%)!important;
+ border-bottom-color:transparent!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-home-header h1{
+ font-size:clamp(33px,8.6vw,40px)!important;
+ letter-spacing:-.065em!important;
+ line-height:1.02!important;
+ font-weight:830!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-home-header h1::after{
+ content:"";display:inline-block;width:9px;height:9px;margin-left:7px;
+ border-radius:50%;background:var(--pi-vivid);opacity:.85;vertical-align:baseline;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-page-scroll{
+ padding-top:7px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero{
+ position:relative;
+ isolation:isolate;
+ padding:20px 17px 17px!important;
+ border-radius:29px 29px 29px 13px!important;
+ border:1px solid var(--pi-vivid-edge)!important;
+ background-image:radial-gradient(ellipse at 99% 0%,var(--pi-vivid-wash),transparent 56%),
+   linear-gradient(130deg,var(--pi-vivid-faint),transparent 86%)!important;
+ box-shadow:0 12px 36px color-mix(in srgb,var(--pi-vivid) 12%,transparent)!important;
+ margin-bottom:10px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero::before{
+ content:"";position:absolute;right:-51px;top:-72px;width:169px;height:169px;
+ border:24px solid var(--pi-vivid-wash);border-radius:48% 52% 45% 55%;
+ rotate:-29deg;z-index:-1;pointer-events:none;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero>button:first-child{
+ text-align:left!important;max-width:100%;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero>button:first-child>div[style*="font-size: 28px"]{
+ font-size:clamp(29px,8vw,38px)!important;
+ font-weight:830!important;letter-spacing:-.053em!important;
+ line-height:1.05!important;margin-top:10px!important;
+ max-width:100%;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero>div{
+ border-radius:23px 23px 14px 23px!important;
+ background:color-mix(in srgb,var(--pi-vivid) 7%,transparent)!important;
+ border:1px solid color-mix(in srgb,var(--pi-vivid) 16%,transparent);
+ padding:10px 13px!important;
+ margin-top:15px!important;
+ backdrop-filter:blur(2px);
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero>div>div:not(:last-child){
+ border-bottom:1px solid color-mix(in srgb,var(--pi-vivid) 12%,transparent);
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero>div>div>span:first-child{
+ background:var(--pi-vivid-wash)!important;
+ color:var(--pi-vivid)!important;
+ border-radius:10px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero>.wpb-primary-action{
+ border-radius:19px 19px 19px 10px!important;
+ min-height:51px!important;
+ margin-top:13px!important;
+ font-size:16px!important;
+ letter-spacing:-.02em!important;
+ box-shadow:0 4px 0 color-mix(in srgb,var(--pi-vivid) 25%,transparent);
+}
+/* A genuine asymmetric 2-column, 2-row action feature: Templates owns
+   the full left column; Custom split and Cycles form the right-side stack.
+   320px uses the same simple layout without extra scrollbars. */
+#root[data-pi-motion="expressive"] .wpb-home .wpb-action-grid{
+ display:grid!important;
+ grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr)!important;
+ grid-template-rows:repeat(2,minmax(70px,auto))!important;
+ gap:8px!important;
+ margin-top:11px!important;
+ margin-bottom:15px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-action-grid>.wpb-action-tile{
+ grid-column:2!important;
+ min-width:0!important;
+ min-height:70px!important;
+ display:flex!important;
+ flex-direction:column!important;
+ align-items:flex-start!important;
+ justify-content:center!important;
+ gap:7px!important;
+ border-radius:20px 11px 20px 20px!important;
+ padding:11px 11px!important;
+ border:1px solid color-mix(in srgb,var(--pi-vivid) 16%,transparent)!important;
+ background-image:linear-gradient(120deg,var(--pi-vivid-faint),transparent 95%)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-action-grid>.wpb-action-tile:first-child{
+ grid-column:1!important;grid-row:1/span 2!important;
+ align-items:flex-start!important;
+ justify-content:space-between!important;
+ gap:12px!important;
+ min-height:148px!important;
+ border-radius:30px 13px 30px 30px!important;
+ padding:15px 14px!important;
+ background-image:radial-gradient(circle at 100% 0%,var(--pi-vivid-medium),transparent 74%),
+   linear-gradient(135deg,var(--pi-vivid-wash),var(--pi-vivid-faint))!important;
+ border:1px solid var(--pi-vivid-edge)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-action-grid>.wpb-action-tile:nth-child(2){grid-row:1!important}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-action-grid>.wpb-action-tile:nth-child(3){grid-row:2!important;border-radius:11px 20px 20px 20px!important}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-action-grid>.wpb-action-tile>div:first-child{
+ display:grid!important;place-items:center;
+ width:32px!important;height:32px!important;
+ flex:0 0 32px!important;
+ border-radius:12px!important;
+ background:var(--pi-vivid-wash)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-action-grid>.wpb-action-tile:first-child>div:first-child{
+ width:48px!important;height:48px!important;
+ flex:0 0 48px!important;border-radius:18px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-action-grid>.wpb-action-tile:first-child>div:first-child svg{
+ width:24px;height:24px;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-action-grid>.wpb-action-tile>div:last-child{
+ min-width:0!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-action-grid>.wpb-action-tile>div:last-child>div:first-child{
+ font-size:clamp(13px,3.8vw,16px)!important;line-height:1.2!important;
+ font-weight:760!important;
+ white-space:normal!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-action-grid>.wpb-action-tile>div:last-child>div:last-child{
+ font-size:11px!important;white-space:normal!important;
+ line-height:1.24!important;margin-top:3px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-metric-strip{
+ display:grid!important;
+ grid-template-columns:repeat(2,minmax(0,1fr))!important;
+ gap:8px!important;
+ border:0!important;
+ margin:10px 0 14px!important;
+ padding:0!important;
+ background:transparent!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-metric-strip .wpb-metric{
+ border:1px solid color-mix(in srgb,var(--pi-vivid) 13%,transparent)!important;
+ border-radius:21px 21px 11px 21px!important;
+ background:linear-gradient(115deg,var(--pi-vivid-faint),transparent 82%)!important;
+ padding:10px 8px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-metric-strip .wpb-metric:last-child{
+ border-radius:11px 21px 21px 21px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-metric-strip .wpb-metric .mono{
+ font-size:clamp(23px,6vw,27px)!important;
+ font-weight:820!important;
+}
+/* The Plan screen becomes a vertical training sequence, not a uniform stack. */
+#root[data-pi-motion="expressive"] .wpb-program .wpb-day-card[data-next="true"]{
+ border:1px solid var(--pi-vivid-edge)!important;
+ background-image:linear-gradient(130deg,var(--pi-vivid-wash),transparent 87%)!important;
+ box-shadow:0 6px 27px color-mix(in srgb,var(--pi-vivid) 12%,transparent)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-day-card[data-next="true"]::before{
+ width:5px!important;opacity:1!important;background:var(--pi-vivid)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-day-card[data-next="true"] .wpb-day-title{
+ font-size:17px!important;font-weight:780!important;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-week-rail{
+ padding:7px 3px 11px!important;
+ scroll-padding-inline:12px;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-week-rail>button{
+ min-height:54px!important;
+ border-radius:17px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-week-rail>button[style*="background"]{
+ transition:border-color 180ms var(--pi-editorial-ease)!important;
+}
+/* Progress: the analytical header is a visibly distinct colored destination,
+   with navigation and indicators occupying the same continuous surface. */
+#root[data-pi-motion="expressive"] .wpb-progress>.wpb-page-header{
+ position:relative;
+ margin:8px 12px 6px!important;
+ padding:17px 14px 14px!important;
+ border:1px solid var(--pi-vivid-edge)!important;
+ border-radius:29px 29px 14px 29px!important;
+ background-image:radial-gradient(ellipse at 92% 0%,var(--pi-vivid-wash),transparent 76%)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-title{
+ font-size:clamp(29px,7.5vw,37px)!important;
+ letter-spacing:-.056em!important;
+ font-weight:800!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs{
+ margin-top:13px!important;
+ background:color-mix(in srgb,var(--pi-vivid) 9%,transparent)!important;
+ border:1px solid color-mix(in srgb,var(--pi-vivid) 13%,transparent)!important;
+ border-radius:18px!important;
+ padding:4px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs::before{
+ border-radius:16px 16px 10px 16px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item:first-child{
+ background-image:linear-gradient(133deg,var(--pi-vivid-wash),transparent 96%)!important;
+ border:1px solid var(--pi-vivid-edge)!important;
+}
+/* Profile and settings use their own header grammar instead of inherited
+   flat page furniture. No scroll or toolbar remount is required. */
+#root[data-pi-motion="expressive"] .wpb-profile .wpb-profile-head{
+ border:1px solid color-mix(in srgb,var(--pi-vivid) 20%,transparent)!important;
+ border-radius:28px 28px 14px 28px!important;
+ padding:16px 13px!important;
+ background-image:linear-gradient(115deg,var(--pi-vivid-wash),transparent 81%)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-profile .wpb-profile-title{
+ font-size:clamp(31px,8vw,38px)!important;
+ letter-spacing:-.05em!important;
+}
+#root[data-pi-motion="expressive"] .wpb-profile .wpb-profile-strength-cell:first-child{
+ background-image:linear-gradient(130deg,var(--pi-vivid-wash),transparent 90%)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-settings>.wpb-page-header{
+ margin:7px 12px 5px!important;
+ border-radius:24px 24px 11px 24px!important;
+ padding:15px 13px 9px!important;
+ background-image:linear-gradient(120deg,var(--pi-vivid-faint),transparent 81%)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-card{
+ border-left:3px solid var(--pi-vivid-wash)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-option[aria-pressed="true"]{
+ border-color:var(--pi-vivid-edge)!important;
+ box-shadow:inset 4px 0 0 var(--pi-vivid),0 3px 19px var(--pi-vivid-faint)!important;
+ background-image:linear-gradient(120deg,var(--pi-vivid-wash),transparent 88%)!important;
+}
+/* Bottom navigation becomes a single distinctive pill toolbar rather than
+   five separate flat cells; no increase in total reserved height. */
+#root[data-pi-motion="expressive"] .wpb .wpb-tabbar{
+ border-top:1px solid color-mix(in srgb,var(--pi-vivid) 17%,transparent)!important;
+ background-image:linear-gradient(90deg,var(--pi-vivid-faint),transparent 60%)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-tabbar[data-pi-m3-track]::before{
+ background:color-mix(in srgb,var(--pi-vivid) 20%,transparent)!important;
+ border:1px solid color-mix(in srgb,var(--pi-vivid) 25%,transparent)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab[aria-current="page"] svg{
+ scale:1.08;
+}
+#root[data-pi-motion="expressive"] .wpb [data-pi-reveal="1"]:is(.wpb-home-hero,.wpb-home .wpb-action-tile,.wpb-profile .wpb-profile-strength-cell){
+ animation:piEditorialEnter 390ms var(--pi-editorial-ease) var(--pi-reveal-delay,0ms) both!important;
+}
+@keyframes piEditorialEnter{
+ 0%{opacity:.55;translate:0 12px;scale:.962}
+ 62%{opacity:1;translate:0 -2px;scale:1.008}
+ 100%{opacity:1;translate:0 0;scale:1}
+}
+@media(max-width:350px){
+ #root[data-pi-motion="expressive"] .wpb-home .wpb-action-grid{
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+  gap:6px!important;
+ }
+ #root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero{
+  padding:16px 13px 14px!important;
+ }
+ #root[data-pi-motion="expressive"] .wpb-progress>.wpb-page-header{
+  margin-inline:8px!important;
+ }
+}
+@media(prefers-reduced-motion:reduce),(forced-colors:active){
+ #root[data-pi-motion="expressive"] .wpb [data-pi-reveal="1"]{
+  animation:none!important;translate:none!important;scale:1!important;opacity:1!important;
+ }
+ #root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero::before{display:none!important}
+}

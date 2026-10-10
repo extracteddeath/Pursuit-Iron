@@ -4083,3 +4083,80 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     border-color:CanvasText!important;
   }
 }
+
+
+/* M3 EXPRESSIVE R23 — LIVE WORKOUT TOOLS AND REST ACTIONS
+   Only paint and touch affordances. Never change the compact set-entry grid,
+   button ownership, rest countdown, targets, logged values or workout footer. */
+#root[data-pi-motion="expressive"] .wpb-workout .wpb-workout-tools{
+  min-width:0;
+  gap:5px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-workout .wpb-workout-tool{
+  box-sizing:border-box;
+  min-width:44px;
+  min-height:44px!important;
+  border:1px solid var(--pi-r11-edge)!important;
+  border-radius:15px!important;
+  background-color:var(--pi-r11-quiet)!important;
+  background-image:none!important;
+  box-shadow:none!important;
+  transition:background-color 165ms var(--pi-ease),border-color 165ms var(--pi-ease),color 165ms var(--pi-ease)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-workout .wpb-workout-tool:focus-visible,
+#root[data-pi-motion="expressive"] .wpb-workout .wpb-rest-actions>button:focus-visible{
+  outline:2px solid var(--pi-m3e-primary)!important;
+  outline-offset:2px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-workout .wpb-rest-card{
+  box-sizing:border-box;
+  min-width:0;
+  border:1px solid var(--pi-r11-edge)!important;
+  border-radius:20px!important;
+  background-color:var(--pi-r11-raised)!important;
+  background-image:none!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-workout .wpb-rest-card .mono{
+  font-variant-numeric:tabular-nums;
+}
+#root[data-pi-motion="expressive"] .wpb-workout .wpb-rest-actions{
+  min-width:0;
+  gap:6px!important;
+  flex-wrap:wrap;
+}
+#root[data-pi-motion="expressive"] .wpb-workout .wpb-rest-actions>button{
+  box-sizing:border-box;
+  min-width:44px!important;
+  min-height:44px!important;
+  border:1px solid var(--pi-r11-edge)!important;
+  border-radius:14px!important;
+  background-color:var(--pi-r11-quiet)!important;
+  background-image:none!important;
+  box-shadow:none!important;
+  transition:background-color 165ms var(--pi-ease),border-color 165ms var(--pi-ease),color 165ms var(--pi-ease)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-workout .wpb-rest-actions>button:disabled{
+  opacity:.56;
+}
+@media(max-width:350px){
+  #root[data-pi-motion="expressive"] .wpb-workout .wpb-workout-tools{
+    gap:3px!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb-workout .wpb-rest-actions{
+    gap:4px!important;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  #root[data-pi-motion="expressive"] .wpb-workout :is(.wpb-workout-tool,.wpb-rest-actions>button){
+    transition:none!important;
+    transform:none!important;
+  }
+}
+@media(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb-workout :is(.wpb-workout-tool,.wpb-rest-card,.wpb-rest-actions>button){
+    background-color:Canvas!important;
+    color:CanvasText!important;
+    border-color:CanvasText!important;
+  }
+}

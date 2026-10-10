@@ -2533,9 +2533,15 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    strength logger are not reimplemented or displaced by this paint layer. */
 #root[data-pi-motion="expressive"] .wpb{
   --pi-m3e-primary:var(--wpb-focus,currentColor);
-  --pi-m3e-surface-container-low:color-mix(in srgb,var(--pi-m3e-primary) 5%,transparent);
-  --pi-m3e-surface-container:color-mix(in srgb,var(--pi-m3e-primary) 9%,transparent);
-  --pi-m3e-surface-container-high:color-mix(in srgb,var(--pi-m3e-primary) 14%,transparent);
+  --pi-m3e-surface-container-low:light-dark(
+    color-mix(in srgb,var(--pi-m3e-primary) 5%,transparent),
+    color-mix(in srgb,currentColor 3%,transparent));
+  --pi-m3e-surface-container:light-dark(
+    color-mix(in srgb,var(--pi-m3e-primary) 9%,transparent),
+    color-mix(in srgb,currentColor 5%,transparent));
+  --pi-m3e-surface-container-high:light-dark(
+    color-mix(in srgb,var(--pi-m3e-primary) 14%,transparent),
+    color-mix(in srgb,currentColor 8%,transparent));
   --pi-m3e-primary-container:light-dark(
     color-mix(in srgb,var(--pi-m3e-primary) 23%,transparent),
     color-mix(in srgb,var(--pi-m3e-primary) 10%,transparent));
@@ -2860,15 +2866,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    light-dark() follows the effective theme color-scheme (not OS preference),
    so manually selected light themes keep their prior controls. */
 #root[data-pi-motion="expressive"] .wpb{
-  --pi-m3e-surface-container-low:light-dark(
-    color-mix(in srgb,var(--pi-m3e-primary) 5%,transparent),
-    color-mix(in srgb,currentColor 3%,transparent));
-  --pi-m3e-surface-container:light-dark(
-    color-mix(in srgb,var(--pi-m3e-primary) 9%,transparent),
-    color-mix(in srgb,currentColor 5%,transparent));
-  --pi-m3e-surface-container-high:light-dark(
-    color-mix(in srgb,var(--pi-m3e-primary) 14%,transparent),
-    color-mix(in srgb,currentColor 8%,transparent));
   --pi-m3e-on-dark-accent:var(--boot-fg,#f7eff4);
   --pi-m3e-dark-action:color-mix(in srgb,var(--pi-m3e-primary) 52%,var(--boot-bg,#110c15));
   --pi-m3e-dark-support:color-mix(in srgb,var(--boot-bg,#110c15) 91%,var(--pi-m3e-primary) 9%);
@@ -3047,5 +3044,39 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     background-color:Canvas!important;
     border-color:CanvasText!important;
     box-shadow:none!important;
+  }
+}
+
+
+/* M3 EXPRESSIVE R12 — LIBRARY TO FULL-SCREEN DETAIL CONTINUITY
+   Detail already paints an opaque fullscreen backdrop; animate only the
+   visible title and exercise art relative to the row the user tapped.
+   No backdrop fade/ghosting, duplicate image, layout reflow or Back hit change.
+   CSS owns only the bounded presentation while ui-motion.js owns the source
+   geometry and the React detail screen owns content and dismissal. */
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-detail[data-pi-detail-linked="1"]
+  .wpb-exercise-detail-header>div:last-child{
+  animation:piR12DetailTitleArrival 315ms cubic-bezier(.18,.82,.2,1) both;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-detail[data-pi-detail-linked="1"]
+  .wpb-exercise-figure-wrap{
+  animation:piR12DetailFigureArrival 345ms cubic-bezier(.18,.82,.2,1) both;
+}
+@keyframes piR12DetailTitleArrival{
+  0%{opacity:.70;translate:var(--pi-detail-arrive-x,0px) var(--pi-detail-arrive-y,0px)}
+  73%{opacity:1;translate:0 -1px}
+  100%{opacity:1;translate:0 0}
+}
+@keyframes piR12DetailFigureArrival{
+  0%{opacity:.80;translate:calc(var(--pi-detail-arrive-x,0px) * .55) 8px}
+  74%{opacity:1;translate:0 -1px}
+  100%{opacity:1;translate:0 0}
+}
+@media(prefers-reduced-motion:reduce),(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb .wpb-exercise-detail[data-pi-detail-linked="1"]
+    :is(.wpb-exercise-detail-header>div:last-child,.wpb-exercise-figure-wrap){
+    animation:none!important;
+    translate:none!important;
+    opacity:1!important;
   }
 }

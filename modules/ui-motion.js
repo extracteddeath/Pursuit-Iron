@@ -280,12 +280,14 @@ function disclosure(el, initial = false) {
             group.style.setProperty('--pi-m3-track-fill', state.fill);
         }
         const nav = group.matches('.wpb-tabbar');
-        const width = nav ? Math.min(54, button.offsetWidth * .7) : button.offsetWidth;
+        // Expressive selection grows into the surrounding whitespace while
+        // retaining all five original tab widths and labels.
+        const width = nav ? Math.min(60, button.offsetWidth * .78) : button.offsetWidth;
         const target = {
             '--pi-m3-track-x': button.offsetLeft + (nav ? (button.offsetWidth - width) / 2 : 0),
-            '--pi-m3-track-y': button.offsetTop + (nav ? 4 : 0),
+            '--pi-m3-track-y': button.offsetTop + (nav ? 3 : 0),
             '--pi-m3-track-width': width,
-            '--pi-m3-track-height': nav ? 30 : button.offsetHeight
+            '--pi-m3-track-height': nav ? 33 : button.offsetHeight
         };
         for (const [key, value] of Object.entries(target)) {
             if (instant || state[key] === undefined) setMotionValue(group, key, value, pixels(group, key));
@@ -315,6 +317,7 @@ function disclosure(el, initial = false) {
         if (e.animationName === 'piInkBurst' && e.target?.dataset) delete e.target.dataset.piInk;
         if (e.animationName === 'piContentCascade' && e.target?.dataset) delete e.target.dataset.piReveal;
         if (e.animationName === 'piDisclosureContent' && e.target?.dataset) delete e.target.dataset.piExpandEnter;
+        if (e.animationName === 'piExpressiveStepIn' && e.target?.dataset) delete e.target.dataset.piStepEnter;
         if (e.target?.matches?.('.wpb-context-menu')) positionContextMenu(e.target);
     };
     const clearInk = () => root.querySelectorAll('[data-pi-ink]').forEach(el => delete el.dataset.piInk);
@@ -330,8 +333,11 @@ function disclosure(el, initial = false) {
     const disabled = el => !el || el.disabled || el.getAttribute('aria-disabled') === 'true' || el.closest('[inert],.wpb-closing');
     function shape(el, held = false) {
         const selected = el.dataset.piChoice === 'selected';
-        spring(el, '--pi-control-shape', (selected ? 7 : 0) - (held ? 3 : 0),
-            { from: 0, write: pixels(el, '--pi-control-shape'), stiffness: 850, damping: .9 });
+        const expressive = el.matches('.wpb-wizard-option,.wpb-wizard-choice,.wpb-wizard-preset,.wpb-filter-chip,.wpb-library-flag');
+        const change = selected ? (expressive ? 11 : 7) : 0;
+        spring(el, '--pi-control-shape', change - (held ? expressive ? 5 : 3 : 0),
+            { from: 0, write: pixels(el, '--pi-control-shape'),
+                stiffness: expressive ? 680 : 850, damping: expressive ? .81 : .9 });
     }
     // Utilitarian logging controls own their pre-existing compact feedback.
     // Do not morph/compress the set-complete check, numeric steppers, RIR row,
@@ -346,12 +352,20 @@ function disclosure(el, initial = false) {
         if (pressed.has(id)) release(id);
         control(el); pressed.set(id, { el, x, y });
         ink(el, x, y);
-        spring(el, '--pi-control-scale', .97, { from: 1, stiffness: 1300, damping: 1, precision: .001 }); shape(el, true);
+        const expressiveAction = el.matches('.wpb-home .wpb-action-tile,.wpb-home .wpb-primary-action,.wpb-wizard .wpb-wizard-option,.wpb-wizard .wpb-wizard-next-action');
+        spring(el, '--pi-control-scale', expressiveAction ? .956 : .97,
+            { from: 1, stiffness: expressiveAction ? 930 : 1300,
+                damping: expressiveAction ? .83 : 1, precision: .001 });
+        shape(el, true);
     }
     function release(id) {
         const held = pressed.get(id); if (!held) return;
         pressed.delete(id);
-        spring(held.el, '--pi-control-scale', 1, { stiffness: 850, damping: .78, precision: .001 }); shape(held.el);
+        const expressiveAction = held.el.matches('.wpb-home .wpb-action-tile,.wpb-home .wpb-primary-action,.wpb-wizard .wpb-wizard-option,.wpb-wizard .wpb-wizard-next-action');
+        spring(held.el, '--pi-control-scale', 1,
+            { stiffness: expressiveAction ? 640 : 850,
+                damping: expressiveAction ? .72 : .78, precision: .001 });
+        shape(held.el);
     }
     const button = e => e.target.closest?.('button');
     const down = e => { if (e.button === 0) press(button(e), e.pointerId, e.clientX, e.clientY); };
@@ -468,11 +482,21 @@ function disclosure(el, initial = false) {
         if (el.closest(groupSelector) || el.matches('.wpb-set-complete,[role="switch"]')) return;
         control(el); el.dataset.piChoice = el.getAttribute('aria-pressed') === 'true' ? 'selected' : 'unselected'; shape(el);
     }
+    const enteredWizard = new WeakSet();
+    function wizardStep(el, initial = false) {
+        if (enteredWizard.has(el)) return;
+        enteredWizard.add(el);
+        if (initial || reduced()) return;
+        // A keyed fieldset is mounted for each real step; animate the entire
+        // authored step once. No control is cloned or delayed.
+        el.dataset.piStepEnter = '1';
+    }
     function scan(node, initial = false) {
         if (node.nodeType !== 1 || !root.contains(node)) return;
         const each = (selector, fn) => { if (node.matches(selector)) fn(node, initial); node.querySelectorAll(selector).forEach(el => fn(el, initial)); };
         each(surfaceSelector, enterSurface);
         each('[data-view-frame]', stagePage);
+        each('.wpb-wizard-step', wizardStep);
         each(disclosureSelector, disclosure);
         each(groupSelector, selection);
         each('.wpb-toggle[aria-checked]', toggle);

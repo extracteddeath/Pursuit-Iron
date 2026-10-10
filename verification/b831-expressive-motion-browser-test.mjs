@@ -919,7 +919,18 @@ try {
                 width:button.getBoundingClientRect().width}));
         assert.ok(triggerR22.height>=44 && triggerR22.width>=44,
             'R22 program exercise options opener is accessible: '+JSON.stringify(triggerR22));
-        await page.click('.wpb-program button[aria-label^="More options for "]');
+        const openerStateR22=await page.$eval('.wpb-program button[aria-label^="More options for "]', buttons =>
+            buttons.map(b=>{
+                const r=b.getBoundingClientRect(),card=b.closest('.wpb-day-card');
+                return {label:b.getAttribute('aria-label'),x:r.x,y:r.y,
+                    width:r.width,height:r.height,
+                    disclosure:card?.dataset.piDisclosure,
+                    hit:document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.getAttribute('aria-label')};
+            }));
+        console.log('R22 OPENER DIAGNOSTIC '+JSON.stringify(openerStateR22));
+        const actionableR22 = '.wpb-program .wpb-day-card[data-pi-disclosure="open"] button[aria-label^="More options for "]';
+        await page.waitForSelector(actionableR22);
+        await page.click(actionableR22);
         const optionsOpenedR22=await page.evaluate(() => ({
             sheet:!!document.querySelector('.wpb-exercise-options-sheet'),
             actions:document.querySelectorAll('.wpb-exercise-options-sheet .wpb-sheet-action').length,

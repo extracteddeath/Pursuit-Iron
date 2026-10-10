@@ -62,17 +62,24 @@ try {
             // animationend clears the transient layer, not while the active ::after paints.
             await page.waitForFunction(tab => !document.querySelector(`[data-tab="${tab}"]`)?.hasAttribute('data-pi-ink'),
                 { timeout: 5000 }, tab);
-            const navPill = await page.$eval(`[data-tab="${tab}"]`, el => {
-                const style = getComputedStyle(el, '::before');
-                return { height: parseFloat(style.height), radius: style.borderRadius,
-                    opacity: parseFloat(style.opacity), width: style.width,
-                    display: style.display, oldUnderline: getComputedStyle(el, '::after').display };
+            const navPill = await page.$eval('.wpb-tabbar[data-pi-m3-track]', el => {
+                const selected = el.querySelector('[aria-current="page"]');
+                const indicator = getComputedStyle(el, '::before');
+                const width = Math.min(54, selected.offsetWidth * .7);
+                return { height: parseFloat(indicator.height), radius: indicator.borderRadius,
+                    width: parseFloat(indicator.width), expectedWidth: width,
+                    x: parseFloat(el.style.getPropertyValue('--pi-m3-track-x')),
+                    expected: selected.offsetLeft + (selected.offsetWidth-width)/2,
+                    fill: el.style.getPropertyValue('--pi-m3-track-fill'),
+                    oldPill: getComputedStyle(selected, '::before').display,
+                    oldUnderline: getComputedStyle(selected, '::after').display };
             });
-            assert.ok(navPill.height >= 27 && navPill.height <= 32 &&
-                (parseFloat(navPill.width) >= 30 || navPill.width.startsWith('min(')),
-                'selected navigation has a compact expressive pill: ' + JSON.stringify(navPill));
-            assert.ok(navPill.opacity > .9 && navPill.radius.includes('px') && navPill.display !== 'none' &&
-                navPill.oldUnderline === 'none', 'selected navigation paints only the rounded tonal pill: ' + JSON.stringify(navPill));
+            assert.ok(navPill.height >= 29 && navPill.height <= 31 &&
+                Math.abs(navPill.width-navPill.expectedWidth)<.8 &&
+                Math.abs(navPill.x-navPill.expected)<.8, 'spatial navigation indicator stays centered: ' + JSON.stringify(navPill));
+            assert.ok(navPill.radius.includes('px') && navPill.fill.includes('color-mix') &&
+                navPill.oldPill === 'none' && navPill.oldUnderline === 'none',
+                'moving navigation paints one theme-native pill instead of separate underlines: ' + JSON.stringify(navPill));
             if (tab === 'home') {
                 assert.ok(await page.$eval('.wpb-home-hero', el =>
                     parseFloat(getComputedStyle(el).borderTopLeftRadius) >= 18 &&
@@ -135,6 +142,31 @@ try {
             }
             if (width === 430) await page.screenshot({ path: path.join(root, `verification/b831-${tab}-phone.png`) });
         }
+        // Native navigation semantics and DOM children remain constant while a
+        // single measured indicator travels between nonadjacent destinations.
+        await page.click('[data-tab="plan"]');
+        await page.waitForFunction(() => {
+            const el=document.querySelector('.wpb-tabbar');
+            const b=el?.querySelector('[aria-current="page"]');
+            return b?.dataset.tab==='plan' &&
+                Math.abs(parseFloat(el.style.getPropertyValue('--pi-m3-track-x')) -
+                  (b.offsetLeft+(b.offsetWidth-Math.min(54,b.offsetWidth*.7))/2))<.8;
+        });
+        const navStart=await page.$eval('.wpb-tabbar',x=>parseFloat(x.style.getPropertyValue('--pi-m3-track-x')));
+        await page.click('[data-tab="profile"]');
+        await page.waitForFunction(() => {
+            const el=document.querySelector('.wpb-tabbar');
+            const b=el?.querySelector('[aria-current="page"]');
+            return b?.dataset.tab==='profile' &&
+                Math.abs(parseFloat(el.style.getPropertyValue('--pi-m3-track-x')) -
+                  (b.offsetLeft+(b.offsetWidth-Math.min(54,b.offsetWidth*.7))/2))<.8;
+        });
+        const navEnd=await page.$eval('.wpb-tabbar',x=>parseFloat(x.style.getPropertyValue('--pi-m3-track-x')));
+        assert.ok(Math.abs(navEnd-navStart)>20,'navigation spring moves between real tabs');
+        assert.ok(await page.$eval('[data-view-frame="profile"]',el=>el.dataset.piCascade==='1'),
+            'visible profile components are coordinated by the page-level motion system');
+        assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),initial.saved,
+            'global navigation motion never modifies saved program data');
         // The Material 3 tab indicator actually travels with the semantic selection,
         // is theme-derived, and changes paint only (not target geometry or DOM children).
         await page.click('[data-tab="progress"]');

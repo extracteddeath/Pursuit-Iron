@@ -109,8 +109,8 @@
   "uiFiles": {
     "modules/App.js": "4dce9935c7e56fb86afcebdd901588894131abfb56d6fe2c6bc22d7137ca7592",
     "index.html": "33765bd62fc051961e6dd2e03db7e224f9546135606979cbfcb13f82d8d0dc66",
-    "sw.js": "96b469d8ab57daff82ea2f641d4285d7728a9d78e7ece65b6c89c409bbd93936",
-    "BUILD_PROFILE.json": "2262fcf04b47c311bb5ba861a7fa7ee382671b8f8df0918c0d704194935950a2",
+    "sw.js": "e01baeadb2a7e721df1d8e8ba1c014f5f22f67617d4d0491b4ca09a530ccf3a0",
+    "BUILD_PROFILE.json": "be3ab9510309d1b398d02084faef1c936e4ec138db59a590f128049ede896785",
     "CHANGELOG.md": "f1bbe548dbecdb0e91fc39155337fd65520baf8cc7de32a936af0cc65f21f935",
     "app.css": "450e9449e34e7e39bad88c8551c93f4b7841db4c3153d7b3a42ec721ad303a68",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
@@ -118,6 +118,6 @@
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b831-rf3b82eb699a851c9",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b831-r44d181f223a1af9a",
   "uiMilestone": "Build 831 · Expressive interactions across the app"
 }

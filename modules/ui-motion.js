@@ -213,6 +213,22 @@ export function installAppMotion(root) {
 // No workout logger controls, engine values or React-owned children participate.
 const entranceKeys = new WeakMap();
 const entranceSelector = '.wpb-home-hero, .wpb-home .wpb-action-tile, .wpb-program .wpb-day-card, .wpb-progress .wpb-progress-glance-item, .wpb-profile .wpb-profile-strength-cell, .wpb-settings .wpb-settings-card, .wpb-plan-view .wpb-plan-glance-tile, .wpb-plan-view .wpb-plan-up-next';
+// Record the real source geometry before React navigates. The next mounted
+// destination uses a short, bounded translation of its first meaningful card.
+// This is spatial continuity (not a cloned shared element or a second router).
+let connectedSource = null;
+const connectedOriginSelector = '.wpb-tabbar .wpb-tab, .wpb-home .wpb-action-tile, .wpb-home .wpb-home-hero .wpb-primary-action, .wpb-library .wpb-library-row';
+function rememberConnectedOrigin(event) {
+    const source = event.target.closest?.(connectedOriginSelector);
+    if (!source || source.disabled || source.closest('.wpb-workout,[data-pi-workout-page]')) return;
+    const current = root.querySelector('.wpb-tab[aria-current="page"]')?.getAttribute('data-tab');
+    const destination = source.getAttribute('data-tab');
+    if (destination && destination === current) return;
+    const rect = source.getBoundingClientRect();
+    if (rect.width < 1 || rect.height < 1) return;
+    connectedSource = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2,
+        from: current, target: destination, at: performance.now() };
+}
 function stagePage(el, initial = false) {
     if (!el.matches('[data-view-frame]')) return;
     const key = el.getAttribute('data-view-frame');
@@ -220,8 +236,24 @@ function stagePage(el, initial = false) {
     entranceKeys.set(el, key);
     if (initial || reduced() || !key || key === 'workout' || el.closest('[data-pi-workout-page]')) return;
     el.dataset.piCascade = '1';
-    [...el.querySelectorAll(entranceSelector)].slice(0, 5).forEach((item, index) => {
-        if (item.closest('.wpb-workout,[data-pi-workout-page],[data-sheet-drag]')) return;
+    const cards = [...el.querySelectorAll(entranceSelector)].filter(item =>
+        !item.closest('.wpb-workout,[data-pi-workout-page],[data-sheet-drag]')).slice(0, 5);
+    const source = connectedSource;
+    const linked = source && performance.now() - source.at < 1100 &&
+        source.from !== key && (!source.target || source.target === key);
+    if (linked && cards.length) {
+        const lead = cards[0], rect = lead.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+            // Use the true origin direction, but never fly UI from the bottom bar
+            // through the workout or across the screen. No element is cloned.
+            const clamp = (value, distance) => Math.max(-distance, Math.min(distance, value));
+            lead.style.setProperty('--pi-connected-x', `${clamp((source.x - (rect.left + rect.width / 2)) * .16, 24)}px`);
+            lead.style.setProperty('--pi-connected-y', `${clamp((source.y - (rect.top + rect.height / 2)) * .12, 18)}px`);
+            lead.dataset.piConnected = 'source';
+        }
+        connectedSource = null;
+    }
+    cards.forEach((item, index) => {
         delete item.dataset.piReveal;
         item.style.setProperty('--pi-reveal-delay', `${index * 26}ms`);
         item.dataset.piReveal = '1';
@@ -467,6 +499,20 @@ function disclosure(el, initial = false) {
         const previous = choiceStates.get(group); choiceStates.set(group, selected);
         if (previous === selected && !initial) return;
         positionTrack(group, buttons, selected, initial);
+        // 2026 expressive connected button groups briefly compress their painted
+        // active container while it travels, then spring to the measured size.
+        // This never scales a button's hit target or touches the workout logger.
+        if (!initial && previous !== undefined && selected >= 0 &&
+            group.matches(trackSelector) && !reduced()) {
+            spring(group, '--pi-m3-track-stretch', 1, {
+                restart: .88, stiffness: 690, damping: .76,
+                precision: .001
+            });
+            spring(group, '--pi-m3-track-corner', 18, {
+                restart: 25, write: pixels(group, '--pi-m3-track-corner'),
+                stiffness: 780, damping: .82, precision: .02
+            });
+        }
         const rir = group.matches('.wpb-effort-scale');
         // Material's expressive button group: the active option takes more
         // space, adjacent options yield gently, and the painted selection
@@ -612,6 +658,7 @@ function disclosure(el, initial = false) {
     document.addEventListener('pointerup', up, { passive: true });
     document.addEventListener('pointercancel', up, { passive: true });
     document.addEventListener('pointermove', move, { passive: true });
+    root.addEventListener('click', rememberConnectedOrigin, true);
     root.addEventListener('click', themeSelection);
     root.addEventListener('keydown', keydown); document.addEventListener('keyup', keyup);
     document.addEventListener('visibilitychange', visibility);
@@ -625,6 +672,7 @@ function disclosure(el, initial = false) {
         root.removeEventListener('animationend', inkEnd);
         root.removeEventListener('pointerdown', down); document.removeEventListener('pointerup', up);
         document.removeEventListener('pointercancel', up); document.removeEventListener('pointermove', move);
+        root.removeEventListener('click', rememberConnectedOrigin, true);
         root.removeEventListener('click', themeSelection);
         root.removeEventListener('keydown', keydown); document.removeEventListener('keyup', keyup);
         document.removeEventListener('visibilitychange', visibility);

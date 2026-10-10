@@ -536,13 +536,13 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    touch targets, changes layout, modifies workout rows or overrides theme colors. */
 #root[data-pi-motion="expressive"] .wpb :is(
   .wpb-progress .wpb-premium-tabs,
-  .wpb-settings .wpb-segmented, .wpb-exercise-tabs, .wpb-library-flag-filter)[data-pi-m3-track]{
+  .wpb-settings .wpb-segmented, .wpb-exercise-tabs, .wpb-library-flag-filter, .wpb-progress-grouping, .wpb-exercise-window-tabs)[data-pi-m3-track]{
   position:relative!important;
   isolation:isolate;
 }
 #root[data-pi-motion="expressive"] .wpb :is(
   .wpb-progress .wpb-premium-tabs,
-  .wpb-settings .wpb-segmented, .wpb-exercise-tabs, .wpb-library-flag-filter)[data-pi-m3-track]::before{
+  .wpb-settings .wpb-segmented, .wpb-exercise-tabs, .wpb-library-flag-filter, .wpb-progress-grouping, .wpb-exercise-window-tabs)[data-pi-m3-track]::before{
   content:"";
   position:absolute;
   z-index:0;
@@ -559,7 +559,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root[data-pi-motion="expressive"] .wpb :is(
   .wpb-progress .wpb-premium-tabs,
-  .wpb-settings .wpb-segmented, .wpb-exercise-tabs, .wpb-library-flag-filter)[data-pi-m3-track]>button{
+  .wpb-settings .wpb-segmented, .wpb-exercise-tabs, .wpb-library-flag-filter, .wpb-progress-grouping, .wpb-exercise-window-tabs)[data-pi-m3-track]>button{
   position:relative;
   z-index:1;
   min-width:0;
@@ -611,7 +611,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 @media(prefers-reduced-motion:reduce){
   #root[data-pi-motion="expressive"] .wpb :is(
     .wpb-progress .wpb-premium-tabs,
-    .wpb-settings .wpb-segmented, .wpb-exercise-tabs, .wpb-library-flag-filter)[data-pi-m3-track]::before{
+    .wpb-settings .wpb-segmented, .wpb-exercise-tabs, .wpb-library-flag-filter, .wpb-progress-grouping, .wpb-exercise-window-tabs)[data-pi-m3-track]::before{
     will-change:auto;
   }
   #root[data-pi-motion="expressive"] .wpb-home .wpb-action-tile,
@@ -943,6 +943,210 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   #root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-option,
   #root[data-pi-motion="expressive"] .wpb-library .wpb-library-row,
   #root[data-pi-motion="expressive"] .wpb .wpb-swap-results button[aria-label^="Swap to "]{
+    transition:none!important;
+  }
+}
+
+/* PI M3 HISTORY + CHARTS — metadata-led presentation with original data,
+   points and set layouts preserved. A horizontal metric strip remains scrollable;
+   only the fixed-width chart range and history group selectors use moving tracks. */
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-filters{
+  margin-bottom:12px!important;
+  padding-bottom:12px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-filters input,
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-filters select{
+  min-height:44px!important;
+  min-width:0;
+  border-radius:13px!important;
+  font-size:14px!important;
+  transition:border-color 150ms var(--pi-ease), box-shadow 150ms var(--pi-ease)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-filters :is(input,select):focus-visible{
+  outline:2px solid color-mix(in srgb,currentColor 35%,transparent)!important;
+  outline-offset:2px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-filter-help{
+  margin-top:5px;
+  max-width:53ch;
+  line-height:1.42!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-disclosure{
+  margin-bottom:13px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-disclosure>summary{
+  min-height:44px!important;
+  position:relative;
+  padding-right:26px!important;
+  line-height:1.28;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-disclosure>summary::after{
+  content:"";
+  position:absolute;
+  right:7px;
+  top:calc(50% - 5px);
+  width:8px;height:8px;
+  border-right:1.8px solid currentColor;
+  border-bottom:1.8px solid currentColor;
+  transform:rotate(45deg);
+  opacity:.65;
+  transition:transform 180ms var(--pi-ease);
+  pointer-events:none;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-disclosure[open]>summary::after{
+  transform:translateY(4px) rotate(225deg);
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-disclosure>summary:focus-visible{
+  outline:2px solid currentColor!important;
+  outline-offset:-2px!important;
+  border-radius:10px;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-grouping{
+  border-radius:13px!important;
+  padding:3px!important;
+  gap:2px!important;
+  isolation:isolate;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-grouping>button{
+  min-height:38px!important;
+  border-radius:10px!important;
+  min-width:0;
+  line-height:1.22;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-grouping[data-pi-m3-track]>button[aria-pressed="true"]{
+  background:transparent!important;
+  background-image:none!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-grouping>button:focus-visible{
+  outline:2px solid currentColor!important;
+  outline-offset:-2px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-group-header{
+  gap:8px!important;
+  padding-top:11px!important;
+  padding-bottom:8px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-group-header>div{
+  min-width:0;
+  overflow-wrap:anywhere;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-group-header>div:last-child{
+  text-align:right;
+  font-variant-numeric:tabular-nums;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session-detail{
+  background-image:linear-gradient(var(--pi-m3-secondary-wash),var(--pi-m3-secondary-wash));
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-actions>button{
+  border-radius:12px!important;
+  min-width:40px;
+  min-height:40px;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-metric-tabs{
+  overflow-x:auto!important;
+  overscroll-behavior-x:contain;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
+  padding-bottom:7px!important;
+  scroll-padding-inline:8px;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-metric-tabs::-webkit-scrollbar{
+  display:none;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-metric-tab{
+  min-height:39px!important;
+  border-radius:11px!important;
+  padding:8px 12px!important;
+  flex:0 0 auto;
+  transition:background-color 150ms var(--pi-ease),border-color 150ms var(--pi-ease)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-metric-tab:focus-visible{
+  outline:2px solid currentColor!important;
+  outline-offset:-2px!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-window-tabs{
+  border-radius:14px!important;
+  gap:2px!important;
+  padding:3px!important;
+  isolation:isolate;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-window-tabs>button{
+  min-width:0;
+  min-height:40px!important;
+  border-radius:11px!important;
+  line-height:1.18;
+  white-space:normal;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-window-tabs[data-pi-m3-track]>button[aria-selected="true"]{
+  background:transparent!important;
+  background-image:none!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-window-tabs>button:focus-visible{
+  outline:2px solid currentColor!important;
+  outline-offset:-2px!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-chart-surface{
+  min-width:0;
+  max-width:100%;
+  padding:10px 0 4px!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-chart-wrap{
+  min-width:0;
+  max-width:100%;
+  overflow:hidden;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-chart{
+  display:block;
+  max-width:100%;
+  height:auto;
+  shape-rendering:geometricPrecision;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-chart-axis{
+  min-width:0;
+  line-height:1.35!important;
+  font-variant-numeric:tabular-nums;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-chart-axis>span{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-chart-popover{
+  border-radius:11px!important;
+  line-height:1.38!important;
+  box-shadow:0 6px 20px rgba(0,0,0,.16)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-chart circle[role="button"]:focus-visible{
+  outline:none!important;
+  stroke:currentColor;
+  stroke-width:2px;
+}
+#root[data-pi-motion="expressive"] .wpb-workout .wpb-rest-card{
+  border-radius:15px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-workout .wpb-rest-actions>button{
+  min-height:40px;
+  min-width:40px;
+  border-radius:11px!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-finish-metrics>div{
+  min-width:0;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-finish-metrics>div>.mono{
+  font-variant-numeric:tabular-nums;
+  overflow-wrap:anywhere;
+}
+@media(max-width:350px){
+  #root[data-pi-motion="expressive"] .wpb .wpb-chart-axis{font-size:10px!important;}
+  #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-group-header>div:last-child{
+    font-size:10px!important;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-disclosure>summary::after,
+  #root[data-pi-motion="expressive"] .wpb .wpb-exercise-metric-tab{
     transition:none!important;
   }
 }

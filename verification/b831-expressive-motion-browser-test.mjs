@@ -188,6 +188,62 @@ try {
         assert.equal(await page.$eval('.wpb-progress .wpb-premium-tabs>button:first-child',
             b => document.activeElement === b), true,
             'M3 keyboard Home moves focus to the first Progress tab');
+        // Training-history grouping is a real two-option control; the existing
+        // React state updates a painted indicator without resizing either button.
+        await page.waitForSelector('.wpb-progress .wpb-progress-grouping[data-pi-m3-track]');
+        const historyGrouping = await page.$eval('.wpb-progress-grouping', el => ({
+            selected: el.querySelector('[aria-pressed="true"]')?.textContent?.trim(),
+            count: el.childElementCount, x: Number.parseFloat(el.style.getPropertyValue('--pi-m3-track-x')),
+            widths: [...el.children].map(b => b.offsetWidth),
+            fill: el.style.getPropertyValue('--pi-m3-track-fill')
+        }));
+        assert.equal(historyGrouping.count, 2, 'both history group choices remain present');
+        assert.ok(historyGrouping.fill.length > 3 && historyGrouping.fill !== 'transparent',
+            'history grouping borrows the theme selection surface');
+        await page.click('.wpb-progress-grouping > button:nth-child(2)');
+        await page.waitForFunction(() => {
+            const g = document.querySelector('.wpb-progress-grouping');
+            const selected = g?.querySelector('[aria-pressed="true"]');
+            return selected?.textContent?.includes('month') &&
+                Math.abs(Number.parseFloat(g.style.getPropertyValue('--pi-m3-track-x')) - selected.offsetLeft) < .2;
+        },{timeout:5000});
+        assert.deepEqual(await page.$eval('.wpb-progress-grouping', g =>
+            [...g.children].map(b => b.offsetWidth)), historyGrouping.widths,
+            'history grouping indicator does not alter tap target widths');
+        // A real semantic range tablist (same class as Exercise > Charts)
+        // uses the existing keyboard and moving selection controller.
+        await page.evaluate(() => {
+            const g = document.createElement('div');
+            g.className = 'wpb-exercise-window-tabs';
+            g.setAttribute('role','tablist');
+            g.dataset.piRangeTest = '1';
+            g.style.display = 'flex';
+            for (const [i,label] of ['Month','Quarter','All'].entries()) {
+                const b = document.createElement('button');
+                b.setAttribute('role','tab');
+                b.setAttribute('aria-selected',String(i===0));
+                b.textContent=label;
+                b.style.flex='1';
+                b.addEventListener('click',()=>{
+                    for (const child of g.children) child.setAttribute('aria-selected',String(child===b));
+                });
+                g.append(b);
+            }
+            document.querySelector('.wpb-progress').append(g);
+        });
+        await page.waitForSelector('[data-pi-range-test][data-pi-m3-track]');
+        await page.focus('[data-pi-range-test]>button:first-child');
+        await page.keyboard.press('End');
+        await page.waitForFunction(() => {
+            const g = document.querySelector('[data-pi-range-test]');
+            const b = g?.querySelector('[aria-selected="true"]');
+            return b?.textContent==='All' && document.activeElement===b &&
+                Math.abs(parseFloat(g.style.getPropertyValue('--pi-m3-track-x'))-b.offsetLeft)<.2;
+        },{timeout:5000});
+        assert.ok(await page.$eval('[data-pi-range-test]', g =>
+            g.childElementCount===3 && getComputedStyle(g,'::before').content!=='none'),
+            'exercise chart range keeps real accessible tabs behind the animated indicator');
+        await page.evaluate(() => document.querySelector('[data-pi-range-test]').remove());
         // Exercise-detail tabs must share the actual moving selection track.
         // Use the real page observer without mutating React-owned training data.
         await page.evaluate(() => {

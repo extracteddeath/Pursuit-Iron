@@ -150,3 +150,21 @@ now covers these semantic options (not set logging). Reduced-motion disables
 transitions. Browser regression follows the *real* Create Program and Exercise
 library routes at 320/430px to check footer visibility, filter animation,
 search focus, width stability and unchanged saved prescriptions.
+
+## M3 Progress history, charts and workout-adjacent feedback
+
+Progress > Sessions now uses the shared theme-native moving selection for
+cycle/month grouping; search/period filters have accessible focus indicators
+and 44px touch height. Training-calendar disclosure receives a clear state
+chevron and keeps native details semantics. Dense history ledger, sticky
+group headers and detail actions retain their original content and actions.
+Exercise chart range tabs share measured selection motion and keyboard
+Home/End/Left/Right. Horizontally scrollable metric tabs remain genuinely
+scrollable, with native selected states and keyboard focus (no misleading
+indicator that could scroll outside the visible range). Chart SVG coordinate
+systems, plotted values, point hit targets, tooltip semantics and date-axis
+data are unchanged; chart presentation improves clipping/ink precision.
+Rest-card actions and completion metrics receive shared geometry without
+altering weight/reps steppers, active sets, or completed-set fade.
+Phone integration tests verify real history grouping and range-tab keyboard
+motion at 320px/430px, retained hit geometry and saved programs.

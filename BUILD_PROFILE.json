@@ -6,6 +6,6 @@
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 70,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b831-rf5ebd2e28378ac66",
-  "uiMilestone": "Build 831 · Material 3 Expressive R24 history and finish review"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b831-r552ca08d1225e697",
+  "uiMilestone": "Build 831 · Material 3 Expressive R25 cold-start onboarding"
 }

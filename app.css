@@ -4265,3 +4265,82 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     border-color:CanvasText!important;
   }
 }
+
+
+/* M3 EXPRESSIVE R25 — FIRST-RUN WELCOME
+   Finish the real cold-start screen using the same opaque tonal hierarchy as
+   Home/Plan. Preserve first-run actions, restore/import semantics and scroll. */
+#root[data-pi-motion="expressive"] .wpb-onboarding{
+  background-color:var(--wpb-focus-bg,#110c15)!important;
+  background-image:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-content{
+  min-width:0;
+}
+#root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-mark{
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-features{
+  display:grid;
+  gap:6px!important;
+  margin-top:17px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-feature{
+  box-sizing:border-box;
+  min-width:0;
+  margin:0!important;
+  padding:10px 12px!important;
+  border:1px solid var(--pi-r11-edge)!important;
+  border-radius:18px!important;
+  background-color:var(--pi-r11-quiet)!important;
+  background-image:none!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-feature>div:last-child{
+  min-width:0;
+  overflow-wrap:anywhere;
+}
+#root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-feature-icon{
+  width:36px!important;
+  height:36px!important;
+  flex:0 0 36px;
+  border-radius:13px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-footer{
+  box-sizing:border-box;
+  border-top:1px solid var(--pi-r11-edge)!important;
+  background-color:var(--wpb-focus-bg,#110c15)!important;
+  background-image:none!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-onboarding :is(.wpb-onboarding-primary,.wpb-onboarding-secondary){
+  box-sizing:border-box;
+  min-height:50px!important;
+  border-radius:17px!important;
+  background-image:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-secondary{
+  border:1px solid var(--pi-r11-edge)!important;
+  background-color:var(--pi-r11-raised)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-onboarding :is(.wpb-onboarding-primary,.wpb-onboarding-secondary):focus-visible{
+  outline:2px solid var(--pi-m3e-primary)!important;
+  outline-offset:2px!important;
+}
+@media(max-width:350px),(max-height:700px){
+  #root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-features{
+    gap:5px!important;
+    margin-top:12px!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-feature{
+    padding:8px 10px!important;
+  }
+}
+@media(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb-onboarding :is(
+    .wpb-onboarding-feature,.wpb-onboarding-footer,.wpb-onboarding-secondary){
+    background-color:Canvas!important;
+    color:CanvasText!important;
+    border-color:CanvasText!important;
+  }
+}

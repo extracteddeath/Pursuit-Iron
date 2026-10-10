@@ -478,3 +478,37 @@ storage and generated/custom program behavior must remain unchanged.
 **Acceptance:** 320px and 430px phone browser results, all four Action workflow
 groups, release manifest and offline digest. Inspect on a physical Android
 device for gesture latency before claiming native-like device performance.
+
+## R9 — Source-connected navigation and fluid selection (October 2026)
+
+Research inspiration: Android Material container-transform motion
+(https://github.com/material-components/material-components-android/blob/master/docs/theming/Motion.md),
+the October 7, 2026 Compose Material 3 release notes
+(https://developer.android.com/jetpack/androidx/releases/compose-material3),
+and the January 2026 Google Drive expressive search/tab grouping
+(https://9to5google.com/2026/01/06/google-drive-m3-expressive-redesign-complete/).
+
+- A valid tap on a top-level destination or Home/Library entry records the
+  **actual source bounding box** before the React click handler navigates.
+  When a different route renders, its first real content surface travels a
+  short, clamped distance from that origin. No duplicate DOM, crossfade image
+  or replacement router is added; content is selectable immediately.
+- Only the first non-workout content card receives the source-linked entrance.
+  Remaining first-screen elements keep their existing five-item bounded
+  stagger. Sources expire quickly and are not used to animate stale routes.
+  Workouts, steppers, numeric fields, RIR and rest bars are excluded.
+- Measured selector indicators briefly compress horizontally and morph their
+  corner radius while moving; the button hit boxes and native tab roles remain
+  unchanged. The existing interruptible spring remains the sole owner of track
+  geometry, including rapid back/forward taps.
+- The R8 post-merge phone integration's transient 430px disclosure failure
+  is addressed by waiting for the measured accordion content to settle before
+  checking the **same unchanged** 44px hit-target and >40px panel conditions.
+  We do not lower the accessibility acceptance threshold.
+- Respect reduced motion and forced colors; no decorative gradients, no
+  new UI dependencies, persistence migrations or engine changes.
+
+**Acceptance:** all four pre-merge workflows, 320/430px browser geometry,
+route link origins, selector rest state, workout drafts and generated/custom
+programs. Post-merge Pages deployment and all four verification workflows
+must be rechecked independently.

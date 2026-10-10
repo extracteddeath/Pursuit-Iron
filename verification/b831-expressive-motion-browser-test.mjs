@@ -399,21 +399,51 @@ try {
                 });
                 assert.ok(profileType.title >= 26 && profileType.radius >= 11,
                     'Profile uses the shared title scale and consistent stat geometry');
-                // R5 profile: feature-first statistics remain within both phone widths.
-                const profileR5 = await page.$eval('.wpb-profile', el => {
+                // R17: actual profile dashboard geometry, not the old
+                // R5 full-width Push tile with its orphaned last row.
+                const profileR17 = await page.$eval('.wpb-profile', el => {
+                    const rect = x => x?.getBoundingClientRect();
+                    const header=el.querySelector('.wpb-profile-head');
+                    const identity=el.querySelector('.wpb-profile-identity');
+                    const edit=el.querySelector('.wpb-profile-edit');
+                    const stats=[...el.querySelectorAll('.wpb-profile-stat')].map(rect);
                     const grid=el.querySelector('.wpb-profile-strength-grid');
-                    const cells=grid ? [...grid.querySelectorAll('.wpb-profile-strength-cell')] : [];
-                    const featured=cells[0]?.getBoundingClientRect();
-                    const others=cells[1]?.getBoundingClientRect();
-                    return { title:parseFloat(getComputedStyle(el.querySelector('.wpb-profile-title')).fontSize),
+                    const cells=grid ? [...grid.querySelectorAll('.wpb-profile-strength-cell')].map(rect) : [];
+                    const identityPaint=identity ? getComputedStyle(identity) : null;
+                    return {
+                        title:parseFloat(getComputedStyle(el.querySelector('.wpb-profile-title')).fontSize),
+                        headerHeight:rect(header)?.height ?? 0,
+                        identityHeight:rect(identity)?.height ?? 0,
+                        identityBorder:identityPaint?.borderTopWidth,
+                        identityBackground:identityPaint?.backgroundColor,
+                        editHeight:rect(edit)?.height ?? 0,
                         columns:grid ? getComputedStyle(grid).gridTemplateColumns.split(' ').length : 0,
-                        featuredWidth:featured?.width ?? 0, otherWidth:others?.width ?? 0,
-                        overflow:el.scrollWidth>el.clientWidth+1 };
+                        cells:cells.map(b=>({x:b.x,y:b.y,width:b.width,height:b.height})),
+                        stats:stats.map(b=>({y:b.y,width:b.width,height:b.height})),
+                        overflow:el.scrollWidth>el.clientWidth+1
+                    };
                 });
-                assert.ok(profileR5.title>=29 && !profileR5.overflow,
-                    'R5 Profile has a large tonal heading without horizontal overflow: '+JSON.stringify(profileR5));
-                if (profileR5.otherWidth) assert.ok(profileR5.featuredWidth>profileR5.otherWidth*1.65,
-                    'R5 Profile feature metric occupies both bento columns');
+                assert.ok(profileR17.title>=27 && profileR17.headerHeight<=112 &&
+                    profileR17.identityHeight<=40 && profileR17.identityBorder==='0px' &&
+                    profileR17.identityBackground==='rgba(0, 0, 0, 0)' &&
+                    profileR17.editHeight>=44 && !profileR17.overflow,
+                    'R17 Profile is compact, readable and editable: '+JSON.stringify(profileR17));
+                assert.ok(profileR17.stats.length===3 &&
+                    profileR17.stats.every(s=>Math.abs(s.y-profileR17.stats[0].y)<=1 && s.width>=60),
+                    'R17 three lifetime summary stats share a stable row: '+JSON.stringify(profileR17));
+                if (profileR17.cells.length>=2) {
+                    assert.equal(profileR17.columns,2,
+                        'R17 strength metrics use a balanced two-column grid');
+                    const [a,b]=profileR17.cells;
+                    assert.ok(Math.abs(a.y-b.y)<2 && Math.abs(a.width-b.width)<3 &&
+                        a.height>=60 && b.height>=60,
+                        'R17 Push/Pull are equally sized peers: '+JSON.stringify(profileR17));
+                }
+                if (profileR17.cells.length===4) {
+                    const [,,c,d]=profileR17.cells;
+                    assert.ok(Math.abs(c.y-d.y)<2 && Math.abs(c.width-d.width)<3,
+                        'R17 Squat/Hinge have no orphaned row: '+JSON.stringify(profileR17));
+                }
             }
             if (width === 430) await page.screenshot({ path: path.join(root, `verification/b831-${tab}-phone.png`) });
         }

@@ -1056,7 +1056,7 @@ try {
             const footer=shell.querySelector('.wpb-wizard-footer');
             const back=shell.querySelector('.wpb-wizard-header button[aria-label="Back"]');
             const actions=[...shell.querySelectorAll('.wpb-wizard-back-action,.wpb-wizard-next-action')];
-            const option=shell.querySelector('.wpb-wizard-option');
+            const option=shell.querySelector('.wpb-wizard-option, .wpb-wizard-step>div>button[aria-pressed]');
             const bg=getComputedStyle(footer).backgroundColor;
             const ctx=document.createElement('canvas').getContext('2d',{willReadFrequently:true});
             ctx.fillStyle=bg;ctx.fillRect(0,0,1,1);

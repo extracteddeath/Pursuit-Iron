@@ -365,3 +365,22 @@ Prior R2/R3 were code-level expressive layout and fluid controls; R4 now
 connects page *composition and motion*. This does not imply Android-device
 frame timing has been certified: a physical-device visual/gesture pass is
 still valuable before merging/publishing to main.
+
+## Material 3 Expressive R5 — creation, Library, Profile and contextual utilities
+
+This branch extends the connected visual language beyond the primary tabs while
+keeping the **workout set logger, live dock, Target/Previous, RIR, typed weight
+fields, timers, program data and engine code unchanged**. The Profile identity
+and strength statistics gain a clear feature-first bento hierarchy. Exercise
+Library gets a tonal header, prominent responsive search instrument, and
+individual tactile results rather than a flat list. Creation gets a larger
+step headline, uninterrupted progress track, and selected options that truly
+morph their shape. Menus, dialogs, exercise detail and Settings receive an
+adapted version of the same shape and feedback language without modifying
+positioning or adding controls. All colors use the active theme token.
+
+320px/430px browser geometry assertions guard Profile, creation and Library
+rendering. Reduced motion and forced-colors disable decorative transforms;
+focus outlines and all existing actions remain intact. This PR is stacked on
+R4 PR #63, separate from the competing Plan/Progress R5 PR #62, and must be
+reconciled before any combined publication.

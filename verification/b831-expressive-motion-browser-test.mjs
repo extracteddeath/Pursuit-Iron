@@ -187,6 +187,21 @@ try {
                 });
                 assert.ok(profileType.title >= 26 && profileType.radius >= 11,
                     'Profile uses the shared title scale and consistent stat geometry');
+                // R5 profile: feature-first statistics remain within both phone widths.
+                const profileR5 = await page.$eval('.wpb-profile', el => {
+                    const grid=el.querySelector('.wpb-profile-strength-grid');
+                    const cells=grid ? [...grid.querySelectorAll('.wpb-profile-strength-cell')] : [];
+                    const featured=cells[0]?.getBoundingClientRect();
+                    const others=cells[1]?.getBoundingClientRect();
+                    return { title:parseFloat(getComputedStyle(el.querySelector('.wpb-profile-title')).fontSize),
+                        columns:grid ? getComputedStyle(grid).gridTemplateColumns.split(' ').length : 0,
+                        featuredWidth:featured?.width ?? 0, otherWidth:others?.width ?? 0,
+                        overflow:el.scrollWidth>el.clientWidth+1 };
+                });
+                assert.ok(profileR5.title>=29 && !profileR5.overflow,
+                    'R5 Profile has a large tonal heading without horizontal overflow: '+JSON.stringify(profileR5));
+                if (profileR5.otherWidth) assert.ok(profileR5.featuredWidth>profileR5.otherWidth*1.65,
+                    'R5 Profile feature metric occupies both bento columns');
             }
             if (width === 430) await page.screenshot({ path: path.join(root, `verification/b831-${tab}-phone.png`) });
         }
@@ -712,6 +727,17 @@ try {
         await page.click('.wpb-library-search input');
         await page.keyboard.type('Back Squat');
         await page.waitForSelector('.wpb-library-row');
+        const libraryR5 = await page.$eval('.wpb-library', el => {
+            const row=el.querySelector('.wpb-library-row');
+            const search=el.querySelector('.wpb-library-search');
+            return { radius:row ? parseFloat(getComputedStyle(row).borderTopLeftRadius) : 0,
+                height:row?.getBoundingClientRect().height ?? 0,
+                searchRadius:search ? parseFloat(getComputedStyle(search).borderTopLeftRadius) : 0,
+                overflow:el.scrollWidth>el.clientWidth+1 };
+        });
+        assert.ok(libraryR5.radius>=18 && libraryR5.height>=59 &&
+            libraryR5.searchRadius>=19 && !libraryR5.overflow,
+            'R5 Library uses sculpted responsive rows and prominent search: '+JSON.stringify(libraryR5));
         await page.click('.wpb-library-row');
         await page.waitForSelector('[data-exercisedetail] .wpb-exercise-tabs[data-pi-m3-track]');
         const overlayPaint = await page.$eval('.wpb-exercise-detail', el=>({

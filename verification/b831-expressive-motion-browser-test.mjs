@@ -733,6 +733,13 @@ try {
         // This extends verification beyond synthetic tab fixtures; it also
         // captures the real history and charts screens for review.
         await page.click('.wpb-library-flag:first-child');
+        // An earlier keyboard-focus contract leaves this search focused.
+        // Explicitly leave focus, then observe the actual resting shape.
+        await page.$eval('.wpb-library-search input', el => el.blur());
+        await page.waitForFunction(() => {
+            const el=document.querySelector('.wpb-library-search');
+            return el && parseFloat(getComputedStyle(el).borderTopLeftRadius)>=20;
+        }, { timeout: 5000 });
         const librarySearchRestRadius = await page.$eval('.wpb-library-search', el =>
             parseFloat(getComputedStyle(el).borderTopLeftRadius));
         assert.ok(librarySearchRestRadius >= 20,

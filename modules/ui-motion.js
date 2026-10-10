@@ -81,11 +81,20 @@ function enterSurface(el, initial = false) {
     surfaceOwners.set(el, key); el.dataset.piSurface = '1';
     const sheet = el.matches('[data-sheet-drag]');
     const dialog = el.matches('.wpb-pop,.wpb-dialog');
-    const dir = el.matches('.wpb-slideR') || el.getAttribute('data-motion-direction') === 'r' ? -1 : el.matches('.wpb-slideL') || el.getAttribute('data-motion-direction') === 'l' ? 1 : 0;
+    const root = el.closest('#root');
+    const routeView = el.getAttribute('data-view-frame');
+    const routeDirection = !initial && routeView && root?.dataset.piRouteTarget === routeView
+        ? root.dataset.piRouteDirection : null;
+    const dir = el.matches('.wpb-slideR') || el.getAttribute('data-motion-direction') === 'r' ? -1
+        : el.matches('.wpb-slideL') || el.getAttribute('data-motion-direction') === 'l' ? 1
+        : routeDirection === 'forward' ? 1 : routeDirection === 'backward' ? -1 : 0;
     const y = sheet ? 52 : dialog ? 8 : el.matches('.wpb-notice-in') ? -6 : dir ? 0 : 4;
     const quiet = initial || reduced();
     const restart = (name, value) => !first && !quiet && !active.has(states.get(el)?.get(name)) ? value : undefined;
-    spring(el, '--pi-surface-x', 0, { from: quiet ? 0 : dir * 18, restart: restart('--pi-surface-x', dir * 18), write: pixels(el, '--pi-surface-x') });
+    spring(el, '--pi-surface-x', 0, { from: quiet ? 0 : dir * (routeDirection ? 34 : 18),
+        restart: restart('--pi-surface-x', dir * (routeDirection ? 34 : 18)),
+        stiffness: routeDirection ? 520 : 700, damping: routeDirection ? .9 : .93,
+        write: pixels(el, '--pi-surface-x') });
     spring(el, '--pi-surface-y', 0, { from: quiet ? 0 : y, restart: restart('--pi-surface-y', y), write: pixels(el, '--pi-surface-y'), damping: sheet ? .94 : 1 });
     spring(el, '--pi-surface-opacity', 1, { from: quiet ? 1 : .55, restart: restart('--pi-surface-opacity', .55), stiffness: 1200, damping: 1, precision: .001 });
     if (dialog) spring(el, '--pi-surface-scale', 1, { from: quiet ? 1 : .97, damping: .9, precision: .001 });
@@ -480,6 +489,21 @@ function disclosure(el, initial = false) {
             }
         });
     }
+    // A native-feeling directional handoff between the *existing* five
+    // destinations. Direction is captured before React switches the frame.
+    // A sheet, a workout or a nested Library route never inherits a stale
+    // direction because the destination must match the actual next frame.
+    const rootTabs = ['home', 'plan', 'progress', 'profile', 'settings'];
+    const navigationIntent = e => {
+        const target = e.target.closest?.('.wpb-tabbar [data-tab]');
+        if (!target) return;
+        const current = root.querySelector('.wpb-tabbar [aria-current="page"][data-tab]');
+        const from = rootTabs.indexOf(current?.dataset.tab);
+        const to = rootTabs.indexOf(target.dataset.tab);
+        if (from < 0 || to < 0 || from === to) return;
+        root.dataset.piRouteTarget = target.dataset.tab;
+        root.dataset.piRouteDirection = to > from ? 'forward' : 'backward';
+    };
     const themeSelection = e => {
         const opener = e.target.closest?.('button[aria-haspopup="menu"]');
         if (opener) menuOpener = opener;
@@ -572,6 +596,7 @@ function disclosure(el, initial = false) {
     document.addEventListener('pointerup', up, { passive: true });
     document.addEventListener('pointercancel', up, { passive: true });
     document.addEventListener('pointermove', move, { passive: true });
+    root.addEventListener('click', navigationIntent, true);
     root.addEventListener('click', themeSelection);
     root.addEventListener('keydown', keydown); document.addEventListener('keyup', keyup);
     document.addEventListener('visibilitychange', visibility);
@@ -585,6 +610,8 @@ function disclosure(el, initial = false) {
         root.removeEventListener('animationend', inkEnd);
         root.removeEventListener('pointerdown', down); document.removeEventListener('pointerup', up);
         document.removeEventListener('pointercancel', up); document.removeEventListener('pointermove', move);
+        root.removeEventListener('click', navigationIntent, true);
+        delete root.dataset.piRouteTarget; delete root.dataset.piRouteDirection;
         root.removeEventListener('click', themeSelection);
         root.removeEventListener('keydown', keydown); document.removeEventListener('keyup', keyup);
         document.removeEventListener('visibilitychange', visibility);

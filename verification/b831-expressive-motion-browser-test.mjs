@@ -996,6 +996,37 @@ try {
             'R11 Library search stays elevated over quiet flat results: '+JSON.stringify(libraryTone));
         await page.click('.wpb-library-row');
         await page.waitForSelector('[data-exercisedetail] .wpb-exercise-tabs[data-pi-m3-track]');
+        // R12: the actual Library row supplied the bounded direction for the
+        // detail's first title/art entrance. The opaque backdrop and 44px Back
+        // control remain untouched throughout the transition.
+        const linkedDetail = await page.$eval('.wpb-exercise-detail', el => {
+            const title=el.querySelector('.wpb-exercise-detail-header>div:last-child');
+            const back=el.querySelector('.wpb-exercise-detail-header button[aria-label="Back to library"]');
+            const figure=el.querySelector('.wpb-exercise-figure-wrap');
+            const bound=key=>parseFloat(el.style.getPropertyValue(key));
+            return { connected:el.dataset.piDetailLinked,
+                x:bound('--pi-detail-arrive-x'),y:bound('--pi-detail-arrive-y'),
+                titleAnimation:title ? getComputedStyle(title).animationName : null,
+                figureAnimation:figure ? getComputedStyle(figure).animationName : null,
+                opacity:parseFloat(getComputedStyle(el).opacity),
+                backWidth:back?.getBoundingClientRect().width };
+        });
+        assert.ok(linkedDetail.connected === '1' &&
+            Number.isFinite(linkedDetail.x) && Number.isFinite(linkedDetail.y) &&
+            Math.abs(linkedDetail.x)<=22.01 && Math.abs(linkedDetail.y)<=15.01 &&
+            linkedDetail.titleAnimation === 'piR12DetailTitleArrival' &&
+            linkedDetail.opacity>=.999 && linkedDetail.backWidth>=44,
+            'R12 uses true row-origin motion without ghosting detail or shrinking Back: '+JSON.stringify(linkedDetail));
+        if (linkedDetail.figureAnimation)
+            assert.equal(linkedDetail.figureAnimation,'piR12DetailFigureArrival',
+                'art follows same detail entrance rather than competing animation');
+        await page.emulateMediaFeatures([{ name:'prefers-reduced-motion',value:'reduce' }]);
+        assert.ok(await page.$eval('.wpb-exercise-detail', el => {
+            const title=el.querySelector('.wpb-exercise-detail-header>div:last-child');
+            return title && getComputedStyle(title).animationName === 'none' &&
+                getComputedStyle(el).opacity >= .999;
+        }), 'R12 respects a mid-detail reduced-motion preference with a fully opaque page');
+        await page.emulateMediaFeatures([{ name:'prefers-reduced-motion',value:'no-preference' }]);
         const overlayPaint = await page.$eval('.wpb-exercise-detail', el=>({
             opacity:Number.parseFloat(getComputedStyle(el).opacity),
             background:getComputedStyle(el).backgroundColor,

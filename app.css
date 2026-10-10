@@ -2045,3 +2045,18 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     border-radius:29px 29px 0 0!important;
   }
 }
+
+/* R4 precedence correction: the React-mounted legacy typography stylesheet
+   loads after app.css and has equivalent selector specificity. Give the new
+   display headline an unambiguous app-shell selector so the intended 30–36px
+   expanded / 22px collapsed scale reaches the actual painted screen. */
+#root[data-pi-motion="expressive"] .wpb .wpb-home .wpb-home-header h1{
+  font-size:clamp(30px,7.4vw,36px)!important;
+  font-weight:760!important;
+  line-height:1.02!important;
+  letter-spacing:-.053em!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-home[data-scrolled="1"] .wpb-home-header h1{
+  font-size:22px!important;
+  line-height:1.08!important;
+}

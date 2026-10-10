@@ -1524,3 +1524,202 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   outline:2px solid currentColor!important;
   outline-offset:3px!important;
 }
+
+/* PI M3 EXPRESSIVE R2 — VISUAL COMPOSITION
+   A real hierarchy of hero, supporting, grouped and dense surfaces rather
+   than giving every rectangle the same radius. Existing theme colors remain
+   authoritative. Everything below is paint/layout for non-logging screens. */
+#root[data-pi-motion="expressive"] .wpb{
+  --pi-r2-hero:32px;
+  --pi-r2-featured:25px;
+  --pi-r2-group:20px;
+  --pi-r2-small:12px;
+  --pi-r2-tone:color-mix(in srgb,currentColor 4%,transparent);
+  --pi-r2-tone-strong:color-mix(in srgb,currentColor 8%,transparent);
+  --pi-r2-outline:color-mix(in srgb,currentColor 16%,transparent);
+}
+/* High-priority training task uses a differentiated, sculpted container.
+   The focused start action reads as part of the hero, not another tile. */
+#root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero{
+  border-radius:32px 32px 20px 32px!important;
+  border-color:var(--pi-r2-outline)!important;
+  background-image:
+    radial-gradient(ellipse at 100% 0%,var(--pi-r2-tone-strong),transparent 67%),
+    linear-gradient(130deg,var(--pi-r2-tone),transparent 74%)!important;
+  padding:17px 16px 16px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero .wpb-primary-action{
+  border-radius:20px!important;
+  min-height:50px!important;
+  font-weight:770!important;
+  letter-spacing:-.025em!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero .wpb-primary-action[data-pi-control]{
+  /* Leave the existing shared spring-controlled radius intact on touch. */
+  letter-spacing:-.025em!important;
+}
+/* Expressive bento: one featured doorway, two related secondary routes.
+   Still two rows tall, but no orphaned half-width last action. */
+#root[data-pi-motion="expressive"] .wpb-home .wpb-action-grid{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:7px!important;
+  margin-bottom:15px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-action-tile{
+  width:100%;
+  min-width:0;
+  min-height:59px!important;
+  border-radius:20px 20px 13px 20px!important;
+  padding:10px 12px!important;
+  background-image:linear-gradient(135deg,var(--pi-r2-tone),transparent 78%)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-action-tile:first-child{
+  grid-column:1/-1;
+  min-height:58px!important;
+  border-radius:24px 24px 16px 24px!important;
+  padding:10px 14px!important;
+  background-image:linear-gradient(115deg,var(--pi-r2-tone-strong),transparent 65%)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-action-tile:first-child>div:first-child{
+  border-radius:15px!important;
+  width:36px!important;height:36px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-action-tile:nth-child(2){
+  border-radius:19px 11px 19px 19px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-action-tile:nth-child(3){
+  border-radius:11px 19px 19px 19px!important;
+}
+/* Plan next-up and active disclosures visibly differ from the rest.
+   Radii are supplied by the same interruptible spring used in R1. */
+#root[data-pi-motion="expressive"] .wpb-program .wpb-day-card[data-pi-disclosure]{
+  border-radius:
+    calc(var(--pi-disclosure-radius,16px) + 7px)
+    calc(var(--pi-disclosure-radius,16px) + 7px)
+    calc(var(--pi-disclosure-radius,16px) - 3px)
+    calc(var(--pi-disclosure-radius,16px) + 5px)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-day-card[data-next="true"]{
+  border-color:var(--pi-r2-outline)!important;
+  background-image:linear-gradient(115deg,var(--pi-r2-tone-strong),transparent 78%)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-day-index{
+  border-radius:12px 12px 8px 12px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-day-start{
+  border-radius:15px 15px 11px 15px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-day-start:focus-visible{
+  outline:2px solid currentColor!important;outline-offset:3px!important;
+}
+/* A glanceable first statistic is larger, but all three stats stay on one
+   row at narrow phone widths and retain their original labels. */
+#root[data-pi-motion="expressive"] .wpb-progress [data-progress-glance]{
+  grid-template-columns:minmax(0,1.23fr) minmax(0,1fr) minmax(0,1fr)!important;
+  gap:6px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item{
+  border-radius:20px 20px 12px 20px!important;
+  background-image:linear-gradient(125deg,var(--pi-r2-tone),transparent 76%)!important;
+  padding:11px 9px!important;
+  min-width:0!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item:first-child{
+  border-radius:25px 25px 12px 25px!important;
+  background-image:linear-gradient(125deg,var(--pi-r2-tone-strong),transparent 80%)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item:nth-child(2){
+  border-radius:20px 12px 20px 20px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item:nth-child(3){
+  border-radius:12px 20px 20px 20px!important;
+}
+/* Strength summary is a different family from the Plan cards: small
+   connected instrument tiles and large, readable primary number. */
+#root[data-pi-motion="expressive"] .wpb-profile .wpb-profile-strength-cell{
+  min-width:0!important;
+  border-radius:16px 16px 10px 16px!important;
+  background-image:linear-gradient(145deg,var(--pi-r2-tone),transparent 90%)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-profile .wpb-profile-strength-cell:first-child{
+  border-radius:22px 14px 14px 22px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-profile .wpb-profile-strength-cell:last-child{
+  border-radius:14px 22px 22px 14px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-profile .wpb-profile-section{
+  border-radius:24px 24px 17px 24px!important;
+}
+/* Settings rows remain grouped, but group containers now feel different
+   from controls and hero cards. Do not turn the toggles into large tiles. */
+#root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-card{
+  border-radius:22px 22px 16px 22px!important;
+  background-image:linear-gradient(130deg,var(--pi-r2-tone),transparent 88%)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-jump-control{
+  border-radius:16px 16px 12px 16px!important;
+}
+/* Creation flow: actual option containers change shape between selection
+   states. The shared spring controls selected and pressed corner deltas. */
+#root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-option{
+  min-height:62px!important;
+  border-radius:20px 20px 13px 20px!important;
+  background-image:linear-gradient(120deg,var(--pi-r2-tone),transparent 90%)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-option[aria-pressed="true"]{
+  border-color:var(--pi-r2-outline)!important;
+  background-image:linear-gradient(120deg,var(--pi-r2-tone-strong),transparent 77%)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-option-icon{
+  border-radius:14px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-choice[aria-pressed="true"],
+#root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-preset[aria-pressed="true"]{
+  border-radius:17px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-next-action,
+#root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-primary{
+  border-radius:19px!important;
+}
+/* Filter chips belong to the full-pill family; Library rows remain tight. */
+#root[data-pi-motion="expressive"] .wpb-library .wpb-filter-chip{
+  border-radius:999px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-library .wpb-library-flag-filter{
+  border-radius:18px!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-context-menu{
+  border-radius:22px 22px 15px 22px!important;
+}
+#root[data-pi-motion="expressive"] .wpb [data-sheet-drag]{
+  border-radius:29px 29px 0 0!important;
+}
+/* Reframe the bottom navigation's moving selection as an expressive container:
+   a slightly wider active region and a spring-scale icon, with no bar height
+   increase or labels hidden when the workout dock is present. */
+#root[data-pi-motion="expressive"] .wpb .wpb-tabbar[data-pi-m3-track]::before{
+  border-radius:19px 19px 15px 19px!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab[aria-current="page"] svg{
+  stroke-width:2.35px;
+}
+@media(hover:hover) and (pointer:fine){
+  #root[data-pi-motion="expressive"] .wpb-home .wpb-action-tile:hover,
+  #root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-option:hover{
+    border-color:var(--pi-r2-outline)!important;
+  }
+}
+@media(max-width:350px){
+  #root[data-pi-motion="expressive"] .wpb-home .wpb-action-tile{
+    padding-inline:9px!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item{
+    padding-inline:6px!important;
+  }
+}
+@media(prefers-reduced-motion:reduce),(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb :is(.wpb-action-tile,.wpb-wizard-option,.wpb-filter-chip){
+    transition:none!important;
+  }
+}

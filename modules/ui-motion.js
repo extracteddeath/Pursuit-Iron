@@ -145,11 +145,22 @@ export function installAppMotion(root) {
     let menuOpener = null;
     // Use the real selected tab icon as the current theme's tonal source.
     // Expressive layouts must inherit theme choices rather than hard-coding purple.
-    function syncExpressiveAccent() {
+    let themeAccent = '';
+    function syncExpressiveAccent(force = false) {
+        // The actual Start button owns the strongest palette color: use its
+        // fully opaque background while Home is mounted, then persist that
+        // token across tabs. Nav icon color can temporarily be inherited
+        // gray while React swaps view/style; never replace a known accent
+        // with that intermediate paint.
+        const heroAction = root.querySelector('.wpb-home-hero > .wpb-primary-action');
         const icon = root.querySelector('.wpb-tabbar .wpb-tab[aria-current="page"] svg');
-        const color = icon && getComputedStyle(icon).color;
-        if (color && color !== root.style.getPropertyValue('--pi-m3-accent'))
-            root.style.setProperty('--pi-m3-accent', color);
+        const sampled = heroAction ? getComputedStyle(heroAction).backgroundColor :
+            icon ? getComputedStyle(icon).color : '';
+        const next = heroAction || force || !themeAccent ? sampled : themeAccent;
+        if (!next || next === 'transparent' || next === 'rgba(0, 0, 0, 0)') return;
+        themeAccent = next;
+        if (next !== root.style.getPropertyValue('--pi-m3-accent'))
+            root.style.setProperty('--pi-m3-accent', next);
     }
     const setNavDirection = e => {
         const tab = e.target.closest?.('.wpb-tabbar .wpb-tab[data-tab]');
@@ -509,7 +520,11 @@ function disclosure(el, initial = false) {
         const opener = e.target.closest?.('button[aria-haspopup="menu"]');
         if (opener) menuOpener = opener;
         if (e.target.closest?.('[data-theme-option]'))
-            requestAnimationFrame(refreshTrackTheme);
+            requestAnimationFrame(() => {
+                refreshTrackTheme();
+                // Theme CSS can be replaced on a later React commit.
+                requestAnimationFrame(() => syncExpressiveAccent(true));
+            });
     };
     function reference(el, initial = false) {
         const key = el.getAttribute('data-motion-key'), before = referenceKeys.get(el); referenceKeys.set(el, key);

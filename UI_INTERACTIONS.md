@@ -327,3 +327,30 @@ When reduced motion is requested, spring values settle immediately.
 Real browser checks at 320px and 430px verify selected width growth, matched
 track geometry, Library overflow, keyboard tab selection and original
 prescriptions.
+
+## R4 — editorial layout and spatial continuity
+
+Previous iterations did not sufficiently alter the screen composition. R4
+deliberately breaks away from uniformly sized dark cards: the Home training
+destination gets a vivid theme-derived hero with a sculpted background,
+bolder typography and integrated exercise summary. The three quick actions
+form an **asymmetric left-hand featured card + two stacked right-hand
+cards**, not a full-width banner followed by two familiar list rows.
+Supporting statistics are compact tonal instrument cards.
+
+The Plan's next session gets a clear accent spine and higher-signal surface.
+Progress now has an editorial colored navigation/header container. Profile,
+Settings and program choices acquire differentiated thematic hierarchy,
+rather than simply receiving the same corner-radius override.
+
+The accent is computed from the **selected tab glyph's actual theme
+color**, never hard-coded to purple, and refreshed with theme/navigation.
+Navigation changes enter from the spatial direction of the selected tab
+and receive a subtle scale spring; sheet drag and workout logging retain
+their independent mechanics. Reduced-motion and forced-color media
+preferences suppress optional entrance motion.
+
+The real 320px/430px browser contract checks that the Home feature is
+actually left of, and vertically spans, the two right actions; the hero
+and Progress header have their own color geometry; and controls, saved
+data, offline update hashes and engine outputs are unchanged.

@@ -1306,6 +1306,28 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   }
 }
 
+/* Long exercise histories: accessible drag/keyboard inspection rather than
+   dozens of overlapping 12px SVG circles. All source points stay plotted. */
+#root[data-pi-motion="expressive"] .wpb .wpb-chart [data-chart-scrubber]{
+  touch-action:pan-y;
+  -webkit-tap-highlight-color:transparent;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-chart [data-chart-scrubber]:focus-visible{
+  outline:none!important;
+  stroke:currentColor;
+  stroke-width:1.5px;
+  stroke-opacity:.55;
+  stroke-dasharray:3 3;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-chart-scrub-hint{
+  margin:5px 0 2px;
+  padding:0 5px;
+  font-size:11px;
+  line-height:1.4;
+  color:color-mix(in srgb,currentColor 63%,transparent);
+  text-align:center;
+}
+
 /* PI M3 CONTEXTUAL CLEARANCE — offset program actions above the active
    workout dock and bottom navigation instead of letting their z-index mask
    the final action. Composes with the existing popIn transform animation. */

@@ -579,6 +579,43 @@ try {
         // Capture the selected Charts tab, not a transient keyboard focus ring
         // on the next tab. Keyboard focus remains separately tested above.
         if (width===430) await page.screenshot({ path: path.join(root, 'verification/b831-m3-exercise-charts-phone.png') });
+        // An 80-session, multi-year chronology needs one scrub target, not 80
+        // overlapping 12px circles. Use a separate synthetic history fixture,
+        // preserving the user's simulated saved-program fields exactly.
+        await page.evaluate(store => {
+            const denseHistory = Array.from({length:80},(_,i)=>{
+                const w=175+i;
+                return {id:'b831-dense-'+i, programId:store.saved[0].id,dayId:'lower',
+                    date:Date.UTC(2024,0,1+i*7),unit:'lb',
+                    perf:{'back-squat':{weight:w,reps:5,sets:[{w,r:5,done:true,rir:2}]}}};
+            });
+            localStorage.setItem('wpb:v1',JSON.stringify({...store,history:denseHistory}));
+        },initial);
+        await page.reload({waitUntil:'networkidle0'});
+        await page.waitForSelector('.wpb-tabbar');
+        await page.click('[data-tab="settings"]');
+        await page.waitForSelector('.wpb-settings');
+        await clickText('Exercise library');
+        await page.waitForSelector('.wpb-library-row');
+        await page.click('.wpb-library-row');
+        await page.waitForSelector('[data-exercisedetail] .wpb-exercise-tabs');
+        await page.click('.wpb-exercise-tabs>button:nth-child(2)');
+        await page.waitForSelector('[data-chart-scrubber]');
+        const denseSummary=await page.$eval('.wpb-chart[data-metricchart]',svg=>({
+            n:Number(svg.dataset.points),touches:svg.querySelectorAll('[role="button"]').length,
+            max:Number(svg.querySelector('[data-chart-scrubber]').getAttribute('aria-valuemax'))}));
+        assert.ok(denseSummary.n>=60 && denseSummary.touches===0 &&
+            denseSummary.max===denseSummary.n, 'dense history preserves all records and uses one scrubber: '+JSON.stringify(denseSummary));
+        await page.focus('[data-chart-scrubber]');
+        await page.keyboard.press('Home');
+        assert.equal(await page.$eval('[data-chart-scrubber]',x=>x.getAttribute('aria-valuenow')),'1');
+        await page.keyboard.press('End');
+        assert.equal(Number(await page.$eval('[data-chart-scrubber]',x=>x.getAttribute('aria-valuenow'))),denseSummary.n);
+        await page.keyboard.press('ArrowLeft');
+        assert.equal(Number(await page.$eval('[data-chart-scrubber]',x=>x.getAttribute('aria-valuenow'))),denseSummary.n-1);
+        assert.ok(await page.$eval('.wpb-chart-axis',x=>x.textContent.includes('24')&&x.textContent.includes('25')),
+            'date labels distinguish multiple years');
+        if(width===430)await page.screenshot({path:path.join(root,'verification/b831-m3-dense-chart-phone.png')});
         await page.click('.wpb-exercise-detail-header button[aria-label="Back to library"]');
         await page.waitForSelector('[data-exercisedetail]',{hidden:true});
         assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),initial.saved,

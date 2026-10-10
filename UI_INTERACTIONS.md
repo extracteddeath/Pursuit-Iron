@@ -192,3 +192,16 @@ Exercise Detail page below 1, because doing so exposes the previous Library
 rows and header behind readable content. The phone browser now checks its
 computed opacity immediately after entering the real exercise, and captures
 History and Charts without intermediate keyboard-focus transitions.
+
+## Long History Chart Inspection
+
+For 37+ recorded data points, the chart keeps every original date/value
+and the date-proportional line but replaces overlapping SVG circle hit areas
+with one plot-wide slider-like touch/keyboard inspector. Touch-drag selects
+the nearest real session; Home/End/Left/Right navigate the exact original
+chronology. A visible marker and tooltip identify the inspected session,
+with full dates, and multi-year ranges include years on both axis endpoints.
+For shorter histories the original individual SVG point interactions stay
+unchanged. The phone test seeds 80 sessions in an independent synthetic
+history without changing saved program prescriptions and verifies the full
+point count, aria state and keyboard navigation at 320px and 430px.

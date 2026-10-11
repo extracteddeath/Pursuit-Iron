@@ -2,8 +2,8 @@
   "schemaVersion": 3,
   "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": 844,
-  "engineVersion": "0.65.6",
+  "build": 845,
+  "engineVersion": "0.65.7",
   "candidateStatus": "verification_enforced_by_ci",
   "runtimeAggregate": "b9f654f94066b85c0c8eed01d1299b84ded05350b3f6b31e9a838383b38dab1d",
   "runtimeFiles": {
@@ -118,6 +118,6 @@
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b844-rd18a90142d0a278b",
-  "uiMilestone": "Build 844 · R65 adaptive tablet/desktop shell and navigation rail"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b845-rd18a90142d0a278b",
+  "uiMilestone": "Build 845 · R66 dumbbell manual weight + per-set Dynamic Double fix"
 }

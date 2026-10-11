@@ -4369,11 +4369,11 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    no hard-coded hue, translucent small text, or blanket brighten on dark UI. */
 #root[data-pi-motion="expressive"] .wpb{
   --pi-r36-accent-label:light-dark(
-    color-mix(in srgb,var(--pi-m3e-primary) 80%,var(--boot-fg) 20%),
+    color-mix(in srgb,var(--pi-m3e-primary) 80%,#000000 20%),
     var(--pi-m3e-primary));
   --pi-r36-secondary-label:light-dark(
-    color-mix(in srgb,var(--boot-fg) 82%,var(--pi-m3e-base) 18%),
-    color-mix(in srgb,var(--boot-fg) 82%,var(--pi-m3e-base) 18%));
+    color-mix(in srgb,var(--pi-m3e-primary) 8%,#3e3c43 92%),
+    color-mix(in srgb,var(--boot-fg) 76%,#000000 24%));
 }
 #root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero>button:first-child>div:first-child,
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-up-next>div:first-child>div:first-child{

@@ -87,6 +87,56 @@ try {
         assert.ok(idleR28.subtreeScans===0 && idleR28.stepEntered &&
             idleR28.queued===0 && idleR28.paints<=2,
             'R28 idle motion and leaf updates avoid unnecessary frame/selector work: '+JSON.stringify(idleR28));
+        // R29: detached tablists must leave ResizeObserver immediately.
+        // React can also move a group within the same mutation batch: that
+        // must remain observed and must not duplicate an observation.
+        const resizeLifecycleR29 = await page.evaluate(async () => {
+            const root=document.querySelector('.wpb');
+            const wrapper=document.createElement('section');
+            wrapper.className='wpb-progress';
+            const group=document.createElement('div');
+            group.className='wpb-premium-tabs';
+            const button=document.createElement('button');
+            button.type='button'; button.setAttribute('aria-selected','true');
+            button.textContent='Test tab';
+            group.append(button); wrapper.append(group);
+            const oldObserve=ResizeObserver.prototype.observe;
+            const oldUnobserve=ResizeObserver.prototype.unobserve;
+            let observes=0,unobserves=0;
+            ResizeObserver.prototype.observe=function(el,...rest){
+                if(el===group)observes++;
+                return oldObserve.call(this,el,...rest);
+            };
+            ResizeObserver.prototype.unobserve=function(el,...rest){
+                if(el===group)unobserves++;
+                return oldUnobserve.call(this,el,...rest);
+            };
+            const flush=()=>new Promise(resolve=>setTimeout(resolve,20));
+            try {
+                root.append(wrapper); await flush();
+                const firstTracked=group.dataset.piM3Track==='1';
+                wrapper.remove(); root.append(wrapper); await flush();
+                const movesDontUnobserve=observes===1 && unobserves===0;
+                wrapper.remove(); await flush();
+                const released=unobserves===1;
+                root.append(wrapper); await flush();
+                const resumed=observes===2 && group.dataset.piM3Track==='1';
+                wrapper.remove(); await flush();
+                return {firstTracked,movesDontUnobserve,released,resumed,
+                    observes,unobserves};
+            } finally {
+                wrapper.remove();
+                ResizeObserver.prototype.observe=oldObserve;
+                ResizeObserver.prototype.unobserve=oldUnobserve;
+            }
+        });
+        assert.ok(resizeLifecycleR29.firstTracked &&
+            resizeLifecycleR29.movesDontUnobserve &&
+            resizeLifecycleR29.released && resizeLifecycleR29.resumed &&
+            resizeLifecycleR29.observes===2 && resizeLifecycleR29.unobserves===2,
+            'R29 ResizeObserver groups release on unmount and safely rejoin after move: '+
+                JSON.stringify(resizeLifecycleR29));
+
 
         // R16: a named solid surface must not be a 3%-alpha color wash.
         // Probe all five theme-derived roles in both browser color schemes

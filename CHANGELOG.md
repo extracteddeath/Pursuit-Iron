@@ -1,3 +1,10 @@
+## Build 847 — R67 adaptive surfaces pilot
+
+- On sufficiently tall tablets/laptops, limit gym editor, achievement and program-switcher sheets to readable centered surfaces. On phones and short landscape windows, preserve the familiar bottom-sheet interaction and gesture handlers.
+- Expand Plan's reading width only in the rail layout; preserve all current Plan mode, selected-week and next-session state.
+- Keep chosen theme surfaces, focus rings, reduced-motion support and high-contrast fallback. Do not alter workout logger layout, existing progression rules, gym bar weight behavior or user data.
+- Extend the phone/desktop gym browser contract with geometry assertions; record the remaining app-wide responsive work and the release gates in UI_UX_MASTER_PLAN_R67.md.
+
 ## Build 846 — Editable barbell and Smith bar weights
 
 - Add independent empty-bar mass settings for barbells and Smith machines in each gym. Smith bars can be 0 when counterbalanced. Changing units converts actual values instead of reinterpreting numbers.

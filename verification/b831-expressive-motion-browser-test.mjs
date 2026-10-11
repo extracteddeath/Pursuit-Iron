@@ -136,6 +136,53 @@ try {
             resizeLifecycleR29.observes===2 && resizeLifecycleR29.unobserves===2,
             'R29 ResizeObserver groups release on unmount and safely rejoin after move: '+
                 JSON.stringify(resizeLifecycleR29));
+        // R30: resizing an observed selection group must resolve its latest
+        // button bounds even when multiple widths arrive before the next paint.
+        // The indicator remains behind the real buttons (not a second hitbox).
+        const trackResizeR30=await page.evaluate(async()=>{
+            const root=document.querySelector('.wpb');
+            const host=document.createElement('section');
+            host.className='wpb-progress';
+            const group=document.createElement('div');
+            group.className='wpb-premium-tabs';
+            group.style.cssText='width:148px;display:flex;max-width:none';
+            const first=document.createElement('button');
+            const second=document.createElement('button');
+            for(const button of [first,second]){
+                button.type='button';
+                button.textContent='Resize test';
+                button.style.cssText='flex:1 1 0;min-width:0';
+            }
+            first.setAttribute('aria-selected','true');
+            group.append(first,second);host.append(group);root.append(host);
+            const frames=()=>new Promise(resolve=>
+                requestAnimationFrame(()=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+            try{
+                await frames();
+                const before=Number.parseFloat(group.style.getPropertyValue('--pi-m3-track-width'));
+                group.style.width='178px';
+                group.style.width='198px';
+                group.style.width='218px';
+                await frames();
+                const after=Number.parseFloat(group.style.getPropertyValue('--pi-m3-track-width'));
+                const expected=first.offsetWidth;
+                const selectedX=first.offsetLeft;
+                const targetX=Number.parseFloat(group.style.getPropertyValue('--pi-m3-track-x'));
+                const selectedIsReal=first.getAttribute('aria-selected')==='true' &&
+                    second.getAttribute('aria-selected')!=='true';
+                return {before,after,expected,targetX,selectedX,selectedIsReal,
+                    groupWidth:group.offsetWidth};
+            }finally{host.remove();}
+        });
+        assert.ok(Number.isFinite(trackResizeR30.before) &&
+            Number.isFinite(trackResizeR30.after) &&
+            trackResizeR30.after > trackResizeR30.before + 8 &&
+            Math.abs(trackResizeR30.after-trackResizeR30.expected)<2 &&
+            Math.abs(trackResizeR30.targetX-trackResizeR30.selectedX)<2 &&
+            trackResizeR30.selectedIsReal,
+            'R30 coalesced ResizeObserver still tracks final selected button geometry: '+
+                JSON.stringify(trackResizeR30));
+
 
 
         // R16: a named solid surface must not be a 3%-alpha color wash.

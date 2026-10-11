@@ -1142,9 +1142,9 @@ try {
         // instead of navigating or calling the destructive Delete item.
         await page.click('button[aria-haspopup="menu"]');
         await page.waitForSelector('.wpb-context-menu[role="menu"]');
-        console.log('R36 MENU '+JSON.stringify(await contrastAuditR36([
-            ['menuAction','.wpb-context-menu [role="menuitem"]']
-        ])));
+        const menuR36=await contrastAuditR36([['menuAction','.wpb-context-menu [role="menuitem"]']]);
+        console.log('R36 MENU '+JSON.stringify(menuR36));
+        assert.ok(menuR36.every(x=>x.absent||x.ratio>=4.5),'R36 contextual actions remain readable: '+JSON.stringify(menuR36));
         // popIn starts slightly scaled, so boundingClientRect is temporarily
         // smaller than the real 44px target. Measure resting layout instead.
         await page.waitForFunction(() => {
@@ -1302,10 +1302,13 @@ try {
         await page.waitForSelector(actionableR22);
         await page.click(actionableR22);
         await page.waitForSelector('.wpb-exercise-options-sheet .wpb-sheet-action');
-        console.log('R36 SHEET '+JSON.stringify(await contrastAuditR36([
+        const optionsContrastR36=await contrastAuditR36([
             ['sheetAction','.wpb-exercise-options-sheet>.wpb-sheet-action'],
             ['sheetClose','.wpb-exercise-options-sheet .wpb-sheet-close']
-        ])));
+        ]);
+        console.log('R36 SHEET '+JSON.stringify(optionsContrastR36));
+        assert.ok(optionsContrastR36.every(x=>x.absent||x.ratio>=4.5),
+            'R36 sheet labels meet AA contrast: '+JSON.stringify(optionsContrastR36));
         const optionsR22=await page.$eval('.wpb-exercise-options-sheet', sheet=>{
             const title=sheet.querySelector(':scope > div:first-child > div:first-child > div:first-child');
             const close=sheet.querySelector('.wpb-sheet-close');
@@ -1367,12 +1370,16 @@ try {
             x.w>=44 && x.h>=44 && x.image==='none' && x.touch==='manipulation'),
             'R23 live tool controls use stable 44px opaque tonal targets: '+JSON.stringify(liveToolsR23));
         const row = '[data-testid="set-0-0"]';
-        console.log('R36 WORKOUT '+JSON.stringify(await contrastAuditR36([
+        const workoutContrastR36=await contrastAuditR36([
             ['weightInput','[data-testid="set-0-0"] input[aria-label="weight"]'],
             ['repsInput','[data-testid="set-0-0"] input[aria-label="reps"]'],
             ['workoutTool','.wpb-workout-tools .wpb-workout-tool'],
             ['restTimer','.wpb-workout .wpb-rest-card .mono']
-        ])));
+        ]);
+        console.log('R36 WORKOUT '+JSON.stringify(workoutContrastR36));
+        assert.ok(workoutContrastR36.filter(x=>!x.absent).length>=3 &&
+            workoutContrastR36.every(x=>x.absent||x.ratio>=4.5),
+            'R36 workout inputs, tools and rest contrast meet AA: '+JSON.stringify(workoutContrastR36));
         await page.click(`${row} input[aria-label="weight"]`); await page.keyboard.type('195.5');
         const before = await page.$$eval(`${row} input`, els => els.map(el => el.value));
         for (let tap = 0; tap < 8; tap++) await page.click(tap % 2 ? 'button[aria-label="Show prescribed targets"]' : 'button[aria-label="Show previous workout values"]');
@@ -1630,6 +1637,15 @@ try {
         await page.click('.wpb-library-search input');
         await page.keyboard.type('Back Squat');
         await page.waitForSelector('.wpb-library-row');
+        // R36: wait until the existing spring-owned focus corner settles.
+        // Input events and filtered list paint can land in different frames
+        // at 430px; keep the original strict radius contract unchanged.
+        await page.waitForFunction(rest => {
+            const field=document.querySelector('.wpb-library-search input');
+            const search=document.querySelector('.wpb-library-search');
+            return field===document.activeElement && search &&
+                parseFloat(getComputedStyle(search).borderTopLeftRadius)<rest;
+        }, {timeout:5000}, librarySearchRestRadius);
         const libraryR5 = await page.$eval('.wpb-library', el => {
             const row=el.querySelector('.wpb-library-row');
             const search=el.querySelector('.wpb-library-search');
@@ -1774,11 +1790,15 @@ try {
         if (width===430) await page.screenshot({ path: path.join(root, 'verification/b831-m3-exercise-history-phone.png') });
         await page.click('.wpb-exercise-tabs>button:nth-child(2)');
         await page.waitForSelector('[data-exercisecharts]');
-        console.log('R36 CHART '+JSON.stringify(await contrastAuditR36([
+        const chartContrastR36=await contrastAuditR36([
             ['chartAxis','.wpb-chart-axis>span'],
             ['chartHint','.wpb-chart-scrub-hint'],
             ['svgText','.wpb-chart[data-metricchart] text']
-        ])));
+        ]);
+        console.log('R36 CHART '+JSON.stringify(chartContrastR36));
+        assert.ok(chartContrastR36.filter(x=>!x.absent).length>=2 &&
+            chartContrastR36.every(x=>x.absent||x.ratio>=4.5),
+            'R36 chart axis and SVG data labels remain readable: '+JSON.stringify(chartContrastR36));
         assert.equal(await page.$eval('.wpb-exercise-tabs>button:nth-child(2)',
             b=>b.getAttribute('aria-selected')), 'true', 'exercise charts tab selects the real panel');
         // The actual range choices (when rendered) remain real, touch-sized

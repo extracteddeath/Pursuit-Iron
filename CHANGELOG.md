@@ -1,3 +1,13 @@
+## Build 838 — R59 app flow and return navigation
+
+- Plan follows the active training program even after another saved program is browsed.
+- Day previews open the correct full program on the selected week and return through the same preview.
+- Keep each program's selected Plan week, section and disclosures during the current app visit; restore Plan and preview scroll positions on Back.
+- Minimizing or finishing a workout returns to its launch screen. Resuming from a different screen updates that return destination without replacing entered sets.
+- Program-switch notifications immediately clear the returned workout dock, keeping Resume and Discard tappable with reduced motion.
+- Finishing the current training week reveals the next due week and its workout action; deliberately browsed weeks retain their context.
+- Extend production phone journeys at 320/393px in paired light/dark themes, including completed history, active-program switching and offline recovery.
+
 ## Build 837 — R58 Material controls and CSS cleanup
 
 - Kept the collapsed Home header at 56px with real 48px toolbar buttons; aligned Plan Back, Profile Edit and Settings Jump touch sizes.

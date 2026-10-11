@@ -105,6 +105,7 @@ try {
     await page.evaluate(() => history.back()); await page.waitForSelector('.wpb-backdrop', { hidden: true });
     assert.ok(await page.$('.wpb-workout'), 'Back closes the top sheet before minimizing');
     await page.evaluate(() => history.back()); await page.waitForSelector('.wpb-workout', { hidden: true });
+    assert.ok(await page.$('[data-view-frame="home"]'), 'a workout resumed from Home minimizes back to Home');
     await openWorkout(page); const resumed = await snapshot(page);
     assert.ok(resumed.sessionId, 'live workouts carry a stable completion id');
     assert.equal(resumed.sessionId, typed.sessionId);
@@ -164,6 +165,7 @@ try {
     await page.click('button[aria-label="Finish workout"]');
     await page.waitForFunction(() => [...document.querySelectorAll('button')].some(b => b.textContent.trim() === 'Save & finish'));
     await clickText(page, 'Save & finish'); await page.waitForSelector('.wpb-workout', { hidden: true });
+    assert.ok(await page.$('[data-view-frame="home"]'), 'a workout recovered offline finishes back at its launch destination');
     const logged = await training(page);
     assert.equal(logged.history.length, 1); assert.equal(logged.history[0].id, beforeKill.sessionId);
     assert.ok(logged.history[0].perf['inc-curl'].sets.length > 0);

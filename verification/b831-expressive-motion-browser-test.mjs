@@ -1679,6 +1679,23 @@ try {
         // Match an actual exercise, not the day-level More options control.
         const actionableR22='.wpb-program button[aria-label="More options for Back Squat"]';
         await page.waitForSelector(actionableR22);
+        // The accordion has mounted once it reaches 40px, but the exercise row may still be moving.
+        // Scroll first, then wait for a stable, unobstructed real tap target before clicking it.
+        await page.$eval(actionableR22,button=>button.scrollIntoView({block:'center',behavior:'instant'}));
+        await page.waitForFunction(async selector=>{
+            const button=document.querySelector(selector);
+            if(!button)return false;
+            let before=button.getBoundingClientRect();
+            for(let frame=0;frame<4;frame++){
+                await new Promise(resolve=>requestAnimationFrame(resolve));
+                const after=button.getBoundingClientRect();
+                if(Math.abs(before.top-after.top)>.1||Math.abs(before.left-after.left)>.1)return false;
+                before=after;
+            }
+            const x=before.left+before.width/2,y=before.top+before.height/2;
+            return before.width>=44&&before.height>=44&&y>0&&y<innerHeight&&
+                button.contains(document.elementFromPoint(x,y));
+        },{timeout:5000},actionableR22);
         await page.click(actionableR22);
         await page.waitForSelector('.wpb-exercise-options-sheet .wpb-sheet-action');
         const optionsContrastR36=await contrastAuditR36([
@@ -2307,7 +2324,8 @@ try {
             const denseHistory = Array.from({length:80},(_,i)=>{
                 const w=175+i;
                 return {id:'b831-dense-'+i, programId:store.saved[0].id,dayId:'lower',
-                    date:Date.UTC(2024,0,1+i*7),unit:'lb',
+                    // Noon UTC keeps the first sample in 2024 in every supported local timezone.
+                    date:Date.UTC(2024,0,1+i*7,12),unit:'lb',
                     perf:{'back-squat':{weight:w,reps:5,sets:[{w,r:5,done:true,rir:2}]}}};
             });
             localStorage.setItem('wpb:v1',JSON.stringify({...store,history:denseHistory}));

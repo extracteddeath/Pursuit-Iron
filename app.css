@@ -6639,7 +6639,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   box-shadow:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-settings.wpb-settings>.wpb-page-header h1{
-  font-size:25px!important;
+  font-size:27px!important;
   line-height:1.16!important;
   font-weight:750!important;
   letter-spacing:-.04em!important;
@@ -6650,7 +6650,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   background:var(--pi-color-canvas)!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-settings.wpb-settings .wpb-settings-jump-control{
-  min-height:44px!important;
+  min-height:48px!important;
   background:var(--pi-color-control)!important;
   border:1px solid var(--pi-color-divider)!important;
   border-radius:13px!important;

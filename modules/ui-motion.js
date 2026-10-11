@@ -88,6 +88,7 @@ const surfaceOwners = new WeakMap();
 const exitOwners = new WeakMap();
 const primaryRoutes = ['home','plan','progress','profile','settings'];
 let lastPrimaryRoute = -1;
+let lastPrimaryChangeAt = -Infinity;
 
 function enterSurface(el, initial = false) {
     if (el.closest('.wpb-closing')) return;
@@ -104,10 +105,21 @@ function enterSurface(el, initial = false) {
         ? primaryRoutes.indexOf(el.getAttribute('data-view-frame')) : -1;
     const navTravel = route >= 0 && lastPrimaryRoute >= 0 && route !== lastPrimaryRoute
         ? Math.sign(route - lastPrimaryRoute) : 0;
-    if (route >= 0) lastPrimaryRoute = route;
+    // On consecutive tab switches, retain spatial direction but avoid
+    // replaying a full card cascade or sending the surface the same long
+    // distance every time. A deliberate next navigation gets full motion.
+    const now = performance.now();
+    const rapid = navTravel !== 0 && now - lastPrimaryChangeAt < 420;
+    if (route >= 0 && route !== lastPrimaryRoute) {
+        lastPrimaryRoute = route;
+        lastPrimaryChangeAt = now;
+    }
     if (route >= 0) {
         el.dataset.piNavDirection = navTravel < 0 ? 'back' : navTravel > 0 ? 'forward' : 'stationary';
-        el.style.setProperty('--pi-page-reveal-x', navTravel > 0 ? '13px' : navTravel < 0 ? '-13px' : '0px');
+        if (rapid) el.dataset.piNavQuick = '1';
+        else delete el.dataset.piNavQuick;
+        const reveal = rapid ? 6 : 13;
+        el.style.setProperty('--pi-page-reveal-x', navTravel > 0 ? reveal + 'px' : navTravel < 0 ? -reveal + 'px' : '0px');
     }
     const dir = el.matches('.wpb-slideR') || el.getAttribute('data-motion-direction') === 'r'
         ? -1 : el.matches('.wpb-slideL') || el.getAttribute('data-motion-direction') === 'l'
@@ -116,8 +128,8 @@ function enterSurface(el, initial = false) {
     const quiet = initial || reduced();
     const restart = (name, value) => !first && !quiet && !active.has(states.get(el)?.get(name)) ? value : undefined;
     spring(el, '--pi-surface-x', 0, {
-        from: quiet ? 0 : dir * (route >= 0 ? 34 : 18),
-        restart: restart('--pi-surface-x', dir * (route >= 0 ? 34 : 18)),
+        from: quiet ? 0 : dir * (route >= 0 ? rapid ? 16 : 34 : 18),
+        restart: restart('--pi-surface-x', dir * (route >= 0 ? rapid ? 16 : 34 : 18)),
         write: pixels(el, '--pi-surface-x'), stiffness: route >= 0 ? 660 : 700,
         damping: route >= 0 ? .88 : .9
     });
@@ -207,6 +219,12 @@ export function moveSheet(el, value) {
 export function installAppMotion(root) {
     if (!root) return () => {};
     root.dataset.piMotion = 'expressive';
+    // The module can survive React app-shell replacement. Never carry a
+    // previous mount's direction or quick-switch timing into a new session.
+    lastPrimaryRoute = -1;
+    lastPrimaryChangeAt = -Infinity;
+    // connectedSource/detailOrigin are scoped below within this function and
+    // initialize themselves on each mount; accessing them here is a TDZ error.
     const pressed = new Map(), controls = new WeakMap(), choiceStates = new WeakMap(), referenceKeys = new WeakMap();
     const media = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)');
     let menuOpener = null;
@@ -308,7 +326,9 @@ function stagePage(el, initial = false) {
     if (entranceKeys.get(el) === key) return;
     entranceKeys.set(el, key);
     if (initial || reduced() || !key || key === 'workout' || el.closest('[data-pi-workout-page]')) return;
-    el.dataset.piCascade = '1';
+    const rapid = el.dataset.piNavQuick === '1';
+    if (rapid) delete el.dataset.piCascade;
+    else el.dataset.piCascade = '1';
     const cards = [...el.querySelectorAll(entranceSelector)].filter(item =>
         !item.closest('.wpb-workout,[data-pi-workout-page],[data-sheet-drag]')).slice(0, 5);
     const source = connectedSource;
@@ -328,6 +348,10 @@ function stagePage(el, initial = false) {
     }
     cards.forEach((item, index) => {
         delete item.dataset.piReveal;
+        if (rapid) {
+            item.style.removeProperty('--pi-reveal-delay');
+            return;
+        }
         item.style.setProperty('--pi-reveal-delay', `${index * 26}ms`);
         item.dataset.piReveal = '1';
     });
@@ -808,6 +832,10 @@ function disclosure(el, initial = false) {
         if (trackFrame) cancelAnimationFrame(trackFrame);
         trackFrame = 0; pendingTracks.clear(); menuOpener = null;
         settleAll(); delete root.dataset.piMotion;
+        lastPrimaryRoute = -1;
+        lastPrimaryChangeAt = -Infinity;
+        connectedSource = null;
+        detailOrigin = null;
         root.removeEventListener('animationend', inkEnd);
         root.removeEventListener('pointerdown', down); document.removeEventListener('pointerup', up);
         document.removeEventListener('pointercancel', up); document.removeEventListener('pointermove', move);

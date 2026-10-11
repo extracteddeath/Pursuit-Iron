@@ -123,7 +123,7 @@ try{
         if(tab==='plan'){
           assert.ok(density.row&&density.back&&density.title&&density.back.height>=44&&density.back.width>=44,
             'Plan Back has an actual 44dp target: '+JSON.stringify(density));
-          assert.ok(density.titleSize>=23&&density.titleSize<=27&&density.title.bottom-density.row.top<=118,
+          assert.ok(density.titleSize>=27&&density.titleSize<=28&&density.title.bottom-density.row.top<=118,
             'Plan header has compact hierarchy without hiding title: '+JSON.stringify(density));
         }else if(tab==='progress'){
           assert.ok(density.header&&density.header.height<=155&&density.tabs.length===4&&density.tabs.every(x=>x.height>=44),

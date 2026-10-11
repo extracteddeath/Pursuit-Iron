@@ -176,31 +176,42 @@ try {
                 `R35 ${theme} filled primary action must have 4.5:1 text contrast: ${JSON.stringify(accessibility)}`);
         }
         const contrast = await page.$$eval('.wpb-settings .wpb-segmented>button[aria-pressed="true"]', buttons => {
-            const luminance = color => {
-                const rgb = color.match(/[\d.]+/g).slice(0, 3).map(Number).map(v => v / 255);
-                const linear = rgb.map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4);
-                return .2126 * linear[0] + .7152 * linear[1] + .0722 * linear[2];
+            // R52: inspect the actual painted indicator. Old tests sampled
+            // pre-animation theme paint rather than the new semantic track.
+            // CSS Color 4 color(srgb ...) must be parsed through Canvas.
+            const pixel=color=>{
+                const canvas=document.createElement('canvas');canvas.width=canvas.height=1;
+                const ctx=canvas.getContext('2d',{willReadFrequently:true});
+                ctx.fillStyle=color;
+                ctx.fillRect(0,0,1,1);
+                return [...ctx.getImageData(0,0,1,1).data];
             };
-            return buttons.map(button => {
-                const css = getComputedStyle(button), text = luminance(css.color);
-                // The M3 indicator is painted by the tab group's ::before. Contrast
-                // must use the visible selected surface, not the transparent button.
-                const group = button.closest('[data-pi-m3-track]');
-                const surface = group ? group.style.getPropertyValue('--pi-m3-track-fill') : css.backgroundColor;
-                // The original theme can intentionally use a contrast-safe dark
-                // selection fill with a bright accent elsewhere. Check that the M3
-                // moving track reproduces that visible fill, not the inline accent.
-                if (group) delete group.dataset.piM3Track;
-                const originalSelectedFill = getComputedStyle(button).backgroundColor;
-                if (group) group.dataset.piM3Track = '1';
-                const background = luminance(surface);
-                const ratio = (Math.max(text, background) + .05) / (Math.min(text, background) + .05);
-                return { label: button.textContent.trim(), ratio,
-                    textColor: css.color, originalSelectedFill, surfaceFill: surface,
-                    fresh: !group || originalSelectedFill === surface };
+            const luminance=color=>{
+                const linear=pixel(color).slice(0,3).map(n=>{
+                    const v=n/255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4;
+                });
+                return .2126*linear[0]+.7152*linear[1]+.0722*linear[2];
+            };
+            const ratio=(a,b)=>{
+                const x=luminance(a),y=luminance(b);
+                return (Math.max(x,y)+.05)/(Math.min(x,y)+.05);
+            };
+            return buttons.map(button=>{
+                const css=getComputedStyle(button);
+                const group=button.closest('[data-pi-m3-track]');
+                const surface=group?getComputedStyle(group,'::before').backgroundColor:css.backgroundColor;
+                const rail=group?getComputedStyle(group).backgroundColor:
+                    getComputedStyle(button.parentElement).backgroundColor;
+                return {label:button.textContent.trim(),
+                    ratio:ratio(css.color,surface),stateRatio:ratio(surface,rail),
+                    textColor:css.color,surfaceFill:surface,rail,
+                    opaque:pixel(surface)[3]===255,
+                    painted:!!group};
             });
         });
-        assert.ok(contrast.length >= 4 && contrast.every(item => item.ratio >= 4.5 && item.fresh), `${theme}: selected settings remain legible: ${JSON.stringify(contrast)}`);
+        assert.ok(contrast.length>=4 && contrast.every(item=>
+            item.ratio>=4.5 && item.stateRatio>=3 && item.opaque && item.painted),
+            theme+': selected settings require readable foreground and distinct rendered indicator: '+JSON.stringify(contrast));
     }
     const r36Fails=r36Observations.flatMap(({theme,tab,nestedContrast})=>
         nestedContrast.filter(x=>Number.isFinite(x.ratio)&&x.ratio<4.5)

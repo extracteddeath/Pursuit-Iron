@@ -11477,7 +11477,15 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
         if (i !== ei)
             return e;
         const ex = EX_BY_ID[e.id];
-        const step = loadStep(ex, unit);
+        const prescribedStep = loadStep(ex, unit);
+        // A configured equipment notch can be coarse (even 25 lb). That is
+        // appropriate for automatic prescriptions, not the user's manual
+        // dumbbell +/- control. Allow the finer ordinary per-hand 5 lb/2 kg
+        // movement, and honor a smaller user-selected increment if present.
+        // No arbitrary 25 lb minimum applies to editable dumbbell work sets.
+        const step = ex?.equip?.includes("dumbbell")
+            ? Math.min(prescribedStep, unit === "lb" ? 5 : 2)
+            : prescribedStep;
         const assisted = isAssistedEx(ex);
         return { ...e, sets: e.sets.map((s, j) => {
                 if (j !== si || s.done)

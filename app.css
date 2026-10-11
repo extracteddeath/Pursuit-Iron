@@ -1175,6 +1175,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    existing bottom tabs. This track replaces five static selected pills without
    adding a node, changing tab height, routing or the original hit targets. */
 #root[data-pi-motion="expressive"] .wpb .wpb-tabbar[data-pi-m3-track]{
+  /* Keep offsetTop and the paint track in the same local coordinate space.
+     A height-only resize must not leave the indicator at the old shell y. */
+  position:relative;
   isolation:isolate;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-tabbar[data-pi-m3-track]::before{
@@ -1273,6 +1276,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 /* PI M3 FEEDBACK SYSTEM — clear confirmations and Undo without ever
    stealing space from the active set grid. The existing React toast owns
    its message/action, focus, stacking, rest dock clearance and lifetime. */
+.wpb .wpb-toast{pointer-events:none}
+.wpb .wpb-toast>button{pointer-events:auto}
 #root[data-pi-motion="expressive"] .wpb .wpb-toast{
   border-radius:16px!important;
   border:1px solid color-mix(in srgb,currentColor 13%,transparent)!important;
@@ -5263,7 +5268,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    Reduce dead height in the static summary, not the real exercise rows or
    Start button. Preserve the >=35px featured corner and program-orbit dial. */
 #root[data-pi-motion="expressive"] .wpb .wpb-home.wpb-home.wpb-home>.wpb-home-header{
-  padding:11px 16px 13px!important;
+  padding:11px var(--pi-page-inset,16px) 13px!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-home.wpb-home.wpb-home .wpb-home-hero{
   padding:14px 15px 13px!important;
@@ -5729,16 +5734,27 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   outline:2px solid var(--pi-m3e-primary)!important;
   outline-offset:2px!important;
 }
-/* Nested session rows receive one raised neutral level; the NEXT row
-   becomes a *subtle* active destination, with no independently-tinted fields. */
+/* R62: sessions belong to one connected list within the selected week.
+   Keep each native button's full target, with an inset focus outline. */
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-session-list{
+  --pi-radius-control:0px;
+  border:1px solid var(--pi-plan-line);
+  border-radius:14px;
+  overflow:hidden;
+}
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-view .wpb-plan-session-link{
   background:var(--pi-plan-raised)!important;
   background-image:none!important;
-  border:1px solid var(--pi-plan-line)!important;
+  border:0!important;
+  border-bottom:1px solid var(--pi-plan-line)!important;
   color:var(--wpb-theme-text)!important;
-  border-radius:14px!important;
+  border-radius:0!important;
+  margin-top:0!important;
   box-shadow:none!important;
   min-height:48px!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-view .wpb-plan-session-link:last-child{
+  border-bottom:0!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-view .wpb-plan-session-link[data-next="true"]{
   background:var(--pi-color-feature)!important;
@@ -5748,6 +5764,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-open-program:focus-visible{
   outline:2px solid var(--pi-m3e-primary)!important;
   outline-offset:2px!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-session-list .wpb-plan-session-link:focus-visible{
+  outline-offset:-3px!important;
 }
 /* The program's block-explanation panel was painted from ph.color + '14'.
    Its phase-colored dot and title still communicate purpose, but the
@@ -6245,23 +6264,46 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   }
 }
 
+/* R62 foundations: spacing and width roles are available to later adaptive
+   panes, while only Home/Plan opt into the bounded reading layout here. */
+.wpb{
+  --pi-space-1:4px;
+  --pi-space-2:8px;
+  --pi-space-3:12px;
+  --pi-space-4:16px;
+  --pi-space-6:24px;
+  --pi-space-8:32px;
+  --pi-type-body:.9375rem;
+  --pi-type-support:.8125rem;
+  --pi-type-section:1rem;
+  --pi-control-min:48px;
+  --pi-primary-min:52px;
+  --pi-radius-control:12px;
+  --pi-reading-max:720px;
+  --pi-workspace-max:1280px;
+  --pi-page-inset:16px;
+}
+@media(max-width:359px){.wpb{--pi-page-inset:12px}}
+@media(min-width:600px){.wpb{--pi-page-inset:24px}}
+
 /* R61 — shared Home/Plan foundation pilot. These component classes are the
    final presentation owner for migrated controls; legacy screen classes keep
    layout and behavior selectors while actions read the current palette. */
-.wpb .wpb-ui-header{display:flex;align-items:center;min-height:48px;min-width:0}
-.wpb .wpb-ui-status{font-size:.8125rem;line-height:1.5;overflow-wrap:anywhere}
+.wpb .wpb-ui-header{display:flex;align-items:center;min-height:var(--pi-control-min,48px);min-width:0}
+.wpb .wpb-ui-status{font-size:var(--pi-type-support,.8125rem);line-height:1.5;overflow-wrap:anywhere}
+.wpb .wpb-ui-section{min-width:0}
 #root[data-pi-motion="expressive"] .wpb .wpb-ui-action.wpb-ui-action[data-action],
 #root[data-pi-motion="expressive"] .wpb .wpb-ui-choice.wpb-ui-choice{
   box-sizing:border-box!important;
-  min-height:48px!important;
-  border-radius:12px!important;
+  min-height:var(--pi-control-min,48px)!important;
+  border-radius:var(--pi-radius-control,12px)!important;
   cursor:pointer;
   line-height:1.4!important;
   font-weight:700;
   box-shadow:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-ui-action.wpb-ui-action[data-action="primary"]{
-  min-height:52px!important;
+  min-height:var(--pi-primary-min,52px)!important;
   background:light-dark(var(--pi-ui-primary-fill),var(--pi-m3e-dark-action))!important;
   color:light-dark(var(--pi-ui-primary-ink),var(--wpb-theme-text))!important;
   border:1px solid transparent!important;
@@ -6273,6 +6315,11 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   background:var(--pi-color-control,var(--wpb-theme-bg))!important;
   color:var(--pi-color-on-control,var(--wpb-theme-text))!important;
   border:1px solid var(--pi-color-divider)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-ui-action.wpb-ui-action[data-action="text"]{
+  background:transparent!important;
+  color:var(--pi-color-on-control,var(--wpb-theme-text))!important;
+  border:0!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-ui-action.wpb-ui-action[data-action="icon"]{
   min-width:48px!important;
@@ -6311,6 +6358,46 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   white-space:normal!important;
   overflow-wrap:anywhere;
   line-height:1.35;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-view,
+#root[data-pi-motion="expressive"] .wpb .wpb-home>.wpb-page-scroll{
+  box-sizing:border-box;
+  width:100%;
+  max-width:var(--pi-reading-max)!important;
+  margin-inline:auto;
+  padding-inline:var(--pi-page-inset)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-home>.wpb-home-header,
+#root[data-pi-motion="expressive"] .wpb .wpb-home>.wpb-home-compose-bar{
+  box-sizing:border-box;
+  width:100%;
+  max-width:var(--pi-reading-max);
+  margin-inline:auto;
+  padding-inline:var(--pi-page-inset)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-home>.wpb-home-compose-bar{
+  /* Reserve real layout space so an options/search control cannot appear
+     visible to native scrolling while sitting behind Create or Quick. */
+  position:relative!important;
+  inset:auto!important;
+  flex-shrink:0;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-home-session-summary{
+  overflow-wrap:anywhere;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-home-hero>.wpb-primary-action{
+  margin-top:var(--pi-space-3)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-overview{
+  margin-block:var(--pi-space-6) var(--pi-space-3);
+  padding-top:var(--pi-space-4);
+  border-top:1px solid var(--pi-color-divider);
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-overview>h2{
+  margin:0 0 var(--pi-space-3);
+  font-size:var(--pi-type-section);
+  line-height:1.4;
+  color:var(--pi-color-on-control);
 }
 @media(forced-colors:active){
   #root[data-pi-motion="expressive"] .wpb :is(.wpb-ui-action.wpb-ui-action[data-action],.wpb-ui-choice.wpb-ui-choice){

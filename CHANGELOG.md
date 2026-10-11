@@ -1,3 +1,13 @@
+## Build 841 — R62 Home and Plan task hierarchy
+
+- Put Home's Start workout action before the exercise outline and saved programs before creation discovery.
+- Put Plan's next session, week picker and connected session rows before the program overview; retain Volume, Progression, Blueprint and full-program access.
+- Extend shared actions to text and row controls, and introduce spacing, type, shape, target-size and content-width roles for later responsive layouts.
+- Use available-window insets on Home and Plan while retaining the current single-column shell; navigation rails and multiple panes remain planned work.
+- Let passive notification text pass pointer input through to underlying controls while keeping Undo, action and Dismiss buttons clickable.
+- Anchor the selected navigation indicator to its own bar so height-only resizing cannot leave it floating over content.
+- Extend the existing paired-theme browser gate with reading/action order, continuous phone/tablet/laptop resizing, retained outline/week state, short windows and enlarged text.
+
 ## Build 840 — R61 foundations pilot
 
 - Plan session labels and shared runtime surfaces follow the live saved theme on cold start, warm start and in-app theme changes.

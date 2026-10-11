@@ -31,3 +31,5 @@ Check both contrast ratios and visual results. A passing computed-style test doe
 R53 increments UI build to 832 and regenerates the PWA shell cache revision by the canonical finalizer. All CI workflows already in the repo remain as designed; use and remove a one-shot finalizer only for release fingerprint calculation.
 
 Certification workflow is temporary and must be deleted before PR merge.
+
+Visual follow-up: neutral off-white light surface roles, themed selection only on active controls, and program Suggested Week/exercise-row surface consolidation; signoff checks text contrast and unwrapped experience choices.

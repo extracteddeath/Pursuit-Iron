@@ -6713,7 +6713,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb :is(
   .wpb-plan-heading-row>button[aria-label="Back"],
   .wpb-profile-edit,
-  .wpb-progress .wpb-premium-tabs>button,
   .wpb-settings .wpb-settings-jump-control select):focus-visible{
   outline:2px solid var(--pi-m3e-primary)!important;
   outline-offset:2px!important;

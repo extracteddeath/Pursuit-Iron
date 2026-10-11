@@ -55,6 +55,7 @@ try {
     assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('wpb:v1')).saved), initial.saved, 'changing rest duration cannot rewrite training prescriptions');
 
     const themes = await page.evaluate(async () => Object.keys((await import('/modules/App.js')).THEMES));
+    const r36Observations = [];
     for (const theme of themes) {
         await page.click('[data-tab="settings"]'); await page.waitForSelector('[data-theme-summary]');
         await page.$eval('.wpb-theme-picker', n => { n.open = true; });
@@ -64,6 +65,49 @@ try {
             await page.click('[data-tab="' + tab + '"]'); await settled();
             const bounds = await page.$eval('.wpb', n => ({ width: n.getBoundingClientRect().width, scroll: n.scrollWidth }));
             assert.ok(bounds.width <= 321 && bounds.scroll <= 321, JSON.stringify({ theme, tab, bounds }));
+
+            // R36 deep audit: resolve rendered text against the nearest opaque
+            // ancestor surface (including alpha-composited painted containers).
+            // Capture cases before deciding which theme roles to adjust. This
+            // stage deliberately audits, rather than overriding, native data.
+            const nestedContrast = await page.evaluate(tab => {
+                const selectors = {
+                    home:['.wpb-home .wpb-home-hero','.wpb-home .wpb-action-tile'],
+                    plan:['.wpb-plan-up-next','.wpb-plan-glance-tile'],
+                    progress:['.wpb-progress-glance-item','.wpb-progress .wpb-history-filter-help'],
+                    profile:['.wpb-profile-stat','.wpb-profile-strength-cell'],
+                    settings:['.wpb-settings-card','.wpb-settings-row']
+                }[tab] || [];
+                const ctx=document.createElement('canvas').getContext('2d',{willReadFrequently:true});
+                const rgba=color=>{
+                    ctx.clearRect(0,0,1,1);ctx.fillStyle='rgba(0,0,0,0)';
+                    try{ctx.fillStyle=color;ctx.fillRect(0,0,1,1);}catch{return [0,0,0,0]}
+                    return [...ctx.getImageData(0,0,1,1).data].map((x,i)=>i===3?x/255:x/255);
+                };
+                const blend=(front,back)=>front.slice(0,3).map((x,i)=>x*front[3]+back[i]*(1-front[3]));
+                const lum=rgb=>{const v=rgb.map(x=>x<=.04045?x/12.92:((x+.055)/1.055)**2.4);
+                    return .2126*v[0]+.7152*v[1]+.0722*v[2]};
+                const contrast=(x,y)=>{const a=lum(x),b=lum(y);return (Math.max(a,b)+.05)/(Math.min(a,b)+.05)};
+                const background=el=>{
+                    let bg=[1,1,1],stack=[];
+                    for(let n=el;n&&n.nodeType===1;n=n.parentElement)stack.push(n);
+                    for(const n of stack.reverse()){const c=rgba(getComputedStyle(n).backgroundColor);bg=blend(c,bg)}
+                    return bg;
+                };
+                return selectors.map(selector=>{
+                    const container=[...document.querySelectorAll(selector)].find(el=>el.getClientRects().length);
+                    if(!container)return {selector,missing:true};
+                    const candidates=[container,...container.querySelectorAll('span,small,p,h1,h2,h3,button,.mono,div')];
+                    const label=candidates.find(el=>el.getClientRects().length &&
+                        [...el.childNodes].some(n=>n.nodeType===3&&n.textContent.trim().length>=2));
+                    if(!label)return {selector,noLabel:true};
+                    const c=getComputedStyle(label),paint=background(label),fg=rgba(c.color);
+                    const ratio=contrast(blend(fg,[...paint,1]),paint);
+                    return {selector,label:label.textContent.trim().slice(0,48),
+                        ratio:+ratio.toFixed(2),font:c.fontSize,paint:c.color};
+                });
+            }, tab);
+            r36Observations.push({theme,tab,nestedContrast});
             // R34/R35: verify actual responsive tab targets and rendered color
             // roles under each of the 20 saved themes, not just source tokens.
             const accessibility = await page.evaluate(tab => {
@@ -137,6 +181,84 @@ try {
             });
         });
         assert.ok(contrast.length >= 4 && contrast.every(item => item.ratio >= 4.5 && item.fresh), `${theme}: selected settings remain legible: ${JSON.stringify(contrast)}`);
+    }
+    const r36Fails=r36Observations.flatMap(({theme,tab,nestedContrast})=>
+        nestedContrast.filter(x=>Number.isFinite(x.ratio)&&x.ratio<4.5)
+            .map(x=>({theme,tab,...x})));
+    console.log('R36 NESTED COLOR AUDIT '+JSON.stringify({
+        themeCount:themes.length,samples:r36Observations.reduce((n,x)=>n+x.nestedContrast.filter(y=>Number.isFinite(y.ratio)).length,0),
+        failures:r36Fails.length,examples:r36Fails.slice(0,35)
+    }));
+    assert.ok(themes.length===20 && r36Observations.length===themes.length*5 &&
+        r36Observations.reduce((n,x)=>n+x.nestedContrast.filter(y=>Number.isFinite(y.ratio)).length,0)>=170 &&
+        r36Fails.length===0,
+        'R36 rendered secondary labels meet 4.5:1 on all 20 saved themes: '+JSON.stringify(r36Fails));
+    // R36: a separate LIGHT-theme Android-size context validates the actual
+    // sheet and dense workout fields, without changing the audio lifecycle,
+    // saved history, or active workout fixture of the main integration test.
+    const lightContext = await browser.createBrowserContext();
+    const lightPage = await lightContext.newPage();
+    await lightPage.setViewport({width:320,height:740,deviceScaleFactor:2,isMobile:true,hasTouch:true});
+    await lightPage.evaluateOnNewDocument((store,snapshot)=>{
+        localStorage.setItem('wpb:v1',JSON.stringify({...store,theme:'light'}));
+        localStorage.setItem('wpb:live',JSON.stringify(snapshot));
+    },initial,live);
+    try {
+        await lightPage.goto('http://127.0.0.1:8774/',{waitUntil:'networkidle0'});
+        await lightPage.waitForSelector('.wpb-tabbar');
+        await lightPage.click('[data-tab="settings"]');
+        await lightPage.waitForSelector('.wpb-settings');
+        console.log('R36 LIGHT SETTINGS ACTIONS '+JSON.stringify(
+            await lightPage.evaluate(() => [...document.querySelectorAll('.wpb-settings button')]
+                .map(x=>x.textContent.trim().slice(0,65)))));
+        await lightPage.waitForFunction(() => [...document.querySelectorAll('.wpb-settings button')]
+            .some(x=>x.textContent.includes('Your gyms')),{timeout:12000});
+        await lightPage.evaluate(()=>{
+            const b=[...document.querySelectorAll('.wpb-settings button')]
+                .find(x=>x.textContent.includes('Your gyms'));
+            if(!b)throw new Error('Light theme gym sheet opener missing');
+            b.click();
+        });
+        await lightPage.waitForSelector('.wpb-gym-sheet');
+        const lightSheet = await lightPage.$eval('.wpb-gym-sheet',sheet=>{
+            const c=getComputedStyle(sheet),r=sheet.getBoundingClientRect();
+            return {background:c.backgroundColor,gradient:c.backgroundImage,width:r.width,overflow:sheet.scrollWidth>sheet.clientWidth+1};
+        });
+        assert.ok(lightSheet.gradient==='none'&&!lightSheet.overflow&&lightSheet.width<=321,
+            'R36 light sheet stays opaque and phone-sized: '+JSON.stringify(lightSheet));
+        await lightPage.keyboard.press('Escape');
+        await lightPage.waitForSelector('.wpb-gym-sheet',{hidden:true});
+        await lightPage.click('.wpb-live-dock button[aria-label="Resume workout"]');
+        await lightPage.waitForSelector('[data-testid="set-0-0"] input[aria-label="weight"]');
+        const lightFields = await lightPage.evaluate(()=>{
+            const context=document.createElement('canvas').getContext('2d',{willReadFrequently:true});
+            const rgba=color=>{
+                context.clearRect(0,0,1,1);context.fillStyle=color;context.fillRect(0,0,1,1);
+                return [...context.getImageData(0,0,1,1).data].map(v=>v/255);
+            };
+            const mix=(fg,bg)=>fg.slice(0,3).map((v,i)=>v*fg[3]+bg[i]*(1-fg[3]));
+            const lum=c=>c.map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4)
+                .reduce((n,v,i)=>n+v*[.2126,.7152,.0722][i],0);
+            const measure=selector=>{
+                const el=document.querySelector(selector);if(!el)return null;
+                const ancestor=[];for(let p=el;p;p=p.parentElement)ancestor.unshift(p);
+                const bg=ancestor.reduce((v,p)=>mix(rgba(getComputedStyle(p).backgroundColor),v),[1,1,1]);
+                const fg=mix(rgba(getComputedStyle(el).color),[...bg,1]);
+                const x=lum(fg),y=lum(bg);
+                return +((Math.max(x,y)+.05)/(Math.min(x,y)+.05)).toFixed(2);
+            };
+            return {weight:measure('[data-testid="set-0-0"] input[aria-label="weight"]'),
+                reps:measure('[data-testid="set-0-0"] input[aria-label="reps"]')};
+        });
+        assert.ok(lightFields.weight>=4.5&&lightFields.reps>=4.5,
+            'R36 light workout numeric fields meet AA without changing muted completed set semantics: '+JSON.stringify(lightFields));
+        await lightPage.screenshot({path:path.join(root,'verification/r36-light-workout-phone.png')});
+        assert.deepEqual(await lightPage.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),
+            initial.saved,'R36 light surfaces do not alter the saved training prescription');
+        console.log('R36 LIGHT SHEET/WORKOUT '+JSON.stringify({sheet:lightSheet,fields:lightFields}));
+    } finally {
+        await lightPage.close();
+        await lightContext.close();
     }
     await page.$eval('.wpb-theme-picker', n => { n.open = true; });
     await page.click('[data-theme-option="amethyst"]');

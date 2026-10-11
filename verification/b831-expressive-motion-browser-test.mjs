@@ -332,6 +332,36 @@ try {
             }
             return { dark:getComputedStyle(document.documentElement).colorScheme.includes('dark'), output };
         }, names);
+        // R36: diagnose contrast on real mobile UI in workouts, sheets,
+        // menus, charts and disabled rows. Inactive content is measured for
+        // design review but does not inherit active WCAG text requirements.
+        const contrastAuditR36 = async selectors => page.evaluate(selectors => {
+            const ctx=document.createElement('canvas').getContext('2d',{willReadFrequently:true});
+            const rgba=color=>{
+                ctx.clearRect(0,0,1,1);
+                try{ctx.fillStyle=color;ctx.fillRect(0,0,1,1);}catch{return [0,0,0,0];}
+                return [...ctx.getImageData(0,0,1,1).data].map(v=>v/255);
+            };
+            const mix=(a,b)=>a.slice(0,3).map((v,i)=>v*a[3]+b[i]*(1-a[3]));
+            const lum=v=>v.map(x=>x<=.04045?x/12.92:((x+.055)/1.055)**2.4)
+                .reduce((sum,x,i)=>sum+x*[.2126,.7152,.0722][i],0);
+            const ratio=(a,b)=>{const x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05)};
+            const backdrop=el=>{
+                const stack=[];for(let n=el;n&&n.nodeType===1;n=n.parentElement)stack.unshift(n);
+                return stack.reduce((bg,node)=>mix(rgba(getComputedStyle(node).backgroundColor),bg),[1,1,1]);
+            };
+            return selectors.map(([name,selector])=>{
+                const el=[...document.querySelectorAll(selector)].find(x=>x.getClientRects().length);
+                if(!el)return {name,absent:true};
+                const css=getComputedStyle(el),bg=backdrop(el);
+                const color=el instanceof SVGElement&&css.fill!=='none' ? css.fill : css.color;
+                const ink=rgba(color);const contrast=ratio(mix(ink,[...bg,1]),bg);
+                return {name,ratio:+contrast.toFixed(2),color,background:css.backgroundColor,
+                    fontSize:css.fontSize,disabled:el.matches(':disabled,[aria-disabled="true"]'),
+                    opacity:css.opacity,visible:css.visibility!=='hidden',
+                    width:+el.getBoundingClientRect().width.toFixed(1)};
+            });
+        }, selectors);
         // Root tabs keep their navigation semantics, respond immediately, and settle without layout growth.
         for (const tab of ['plan','progress','profile','settings','home']) {
             await page.click(`[data-tab="${tab}"]`);
@@ -1112,6 +1142,9 @@ try {
         // instead of navigating or calling the destructive Delete item.
         await page.click('button[aria-haspopup="menu"]');
         await page.waitForSelector('.wpb-context-menu[role="menu"]');
+        const menuR36=await contrastAuditR36([['menuAction','.wpb-context-menu [role="menuitem"]']]);
+        console.log('R36 MENU '+JSON.stringify(menuR36));
+        assert.ok(menuR36.every(x=>x.absent||x.ratio>=4.5),'R36 contextual actions remain readable: '+JSON.stringify(menuR36));
         // popIn starts slightly scaled, so boundingClientRect is temporarily
         // smaller than the real 44px target. Measure resting layout instead.
         await page.waitForFunction(() => {
@@ -1269,6 +1302,13 @@ try {
         await page.waitForSelector(actionableR22);
         await page.click(actionableR22);
         await page.waitForSelector('.wpb-exercise-options-sheet .wpb-sheet-action');
+        const optionsContrastR36=await contrastAuditR36([
+            ['sheetAction','.wpb-exercise-options-sheet>.wpb-sheet-action'],
+            ['sheetClose','.wpb-exercise-options-sheet .wpb-sheet-close']
+        ]);
+        console.log('R36 SHEET '+JSON.stringify(optionsContrastR36));
+        assert.ok(optionsContrastR36.every(x=>x.absent||x.ratio>=4.5),
+            'R36 sheet labels meet AA contrast: '+JSON.stringify(optionsContrastR36));
         const optionsR22=await page.$eval('.wpb-exercise-options-sheet', sheet=>{
             const title=sheet.querySelector(':scope > div:first-child > div:first-child > div:first-child');
             const close=sheet.querySelector('.wpb-sheet-close');
@@ -1330,6 +1370,16 @@ try {
             x.w>=44 && x.h>=44 && x.image==='none' && x.touch==='manipulation'),
             'R23 live tool controls use stable 44px opaque tonal targets: '+JSON.stringify(liveToolsR23));
         const row = '[data-testid="set-0-0"]';
+        const workoutContrastR36=await contrastAuditR36([
+            ['weightInput','[data-testid="set-0-0"] input[aria-label="weight"]'],
+            ['repsInput','[data-testid="set-0-0"] input[aria-label="reps"]'],
+            ['workoutTool','.wpb-workout-tools .wpb-workout-tool'],
+            ['restTimer','.wpb-workout .wpb-rest-card .mono']
+        ]);
+        console.log('R36 WORKOUT '+JSON.stringify(workoutContrastR36));
+        assert.ok(workoutContrastR36.filter(x=>!x.absent).length>=3 &&
+            workoutContrastR36.every(x=>x.absent||x.ratio>=4.5),
+            'R36 workout inputs, tools and rest contrast meet AA: '+JSON.stringify(workoutContrastR36));
         await page.click(`${row} input[aria-label="weight"]`); await page.keyboard.type('195.5');
         const before = await page.$$eval(`${row} input`, els => els.map(el => el.value));
         for (let tap = 0; tap < 8; tap++) await page.click(tap % 2 ? 'button[aria-label="Show prescribed targets"]' : 'button[aria-label="Show previous workout values"]');
@@ -1587,6 +1637,15 @@ try {
         await page.click('.wpb-library-search input');
         await page.keyboard.type('Back Squat');
         await page.waitForSelector('.wpb-library-row');
+        // R36: wait until the existing spring-owned focus corner settles.
+        // Input events and filtered list paint can land in different frames
+        // at 430px; keep the original strict radius contract unchanged.
+        await page.waitForFunction(rest => {
+            const field=document.querySelector('.wpb-library-search input');
+            const search=document.querySelector('.wpb-library-search');
+            return field===document.activeElement && search &&
+                parseFloat(getComputedStyle(search).borderTopLeftRadius)<rest;
+        }, {timeout:5000}, librarySearchRestRadius);
         const libraryR5 = await page.$eval('.wpb-library', el => {
             const row=el.querySelector('.wpb-library-row');
             const search=el.querySelector('.wpb-library-search');
@@ -1731,6 +1790,15 @@ try {
         if (width===430) await page.screenshot({ path: path.join(root, 'verification/b831-m3-exercise-history-phone.png') });
         await page.click('.wpb-exercise-tabs>button:nth-child(2)');
         await page.waitForSelector('[data-exercisecharts]');
+        const chartContrastR36=await contrastAuditR36([
+            ['chartAxis','.wpb-chart-axis>span'],
+            ['chartHint','.wpb-chart-scrub-hint'],
+            ['svgText','.wpb-chart[data-metricchart] text']
+        ]);
+        console.log('R36 CHART '+JSON.stringify(chartContrastR36));
+        assert.ok(chartContrastR36.filter(x=>!x.absent).length>=2 &&
+            chartContrastR36.every(x=>x.absent||x.ratio>=4.5),
+            'R36 chart axis and SVG data labels remain readable: '+JSON.stringify(chartContrastR36));
         assert.equal(await page.$eval('.wpb-exercise-tabs>button:nth-child(2)',
             b=>b.getAttribute('aria-selected')), 'true', 'exercise charts tab selects the real panel');
         // The actual range choices (when rendered) remain real, touch-sized
@@ -1834,6 +1902,10 @@ try {
         await page.waitForSelector('button[aria-label="Switch program"]');
         await page.click('button[aria-label="Switch program"]');
         await page.waitForSelector('.wpb-switcher-sheet .wpb-switcher-row');
+        console.log('R36 DISABLED '+JSON.stringify(await contrastAuditR36([
+            ['disabledProgram','.wpb-switcher-row[data-state="active"]'],
+            ['enabledProgram','.wpb-switcher-row[data-state="available"]']
+        ])));
         const switcherR21 = await page.$eval('.wpb-switcher-sheet', sheet => {
             const rows=[...sheet.querySelectorAll('.wpb-switcher-row')];
             const active=rows.find(row=>row.dataset.state==='active');

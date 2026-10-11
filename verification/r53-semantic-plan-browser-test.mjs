@@ -89,6 +89,62 @@ try{
       }
       captures[theme][tab]=Buffer.from(await page.screenshot({type:'png'}));
       surfaces[tab]=basic;
+      if(tab==='home'){
+        // R56: before the patch, scrolling hid the greeting but retained a
+        // 70dp brand slab. Check real masthead height, touch areas, scroll-back
+        // restoration and narrow-phone geometry in both saved palettes.
+        const measure=()=>page.evaluate(()=>{
+          const home=document.querySelector('.wpb-home');
+          const head=home.querySelector('.wpb-home-header');
+          const brand=home.querySelector('.wpb-home-brand');
+          const tools=home.querySelector('.wpb-home-tools');
+          const sc=home.querySelector('.wpb-page-scroll');
+          const rect=x=>{const r=x.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height,right:r.right};};
+          const buttons=[...tools.querySelectorAll('button')];
+          return {compact:home.dataset.homeCompact,
+            header:rect(head),brand:rect(brand),tools:rect(tools),
+            buttons:buttons.map(b=>({label:b.getAttribute('aria-label'),...rect(b)})),
+            long:getComputedStyle(home.querySelector('.wpb-home-brand-long')).display,
+            short:getComputedStyle(home.querySelector('.wpb-home-brand-short')).display,
+            maxScroll:sc.scrollHeight-sc.clientHeight,
+            overflow:home.scrollWidth>home.clientWidth+1,
+            scrollTop:sc.scrollTop};
+        });
+        const expanded=await measure();
+        assert.ok(expanded.maxScroll>180,'Seeded Home can actually scroll: '+JSON.stringify(expanded));
+        assert.notEqual(expanded.long,'none','Full brand shown before scrolling');
+        await page.$eval('.wpb-home .wpb-page-scroll',sc=>{sc.scrollTop=sc.scrollHeight;});
+        await page.waitForFunction(()=>document.querySelector('.wpb-home')?.dataset.homeCompact==='1');
+        const compact=await measure();
+        assert.ok(compact.header.h<=64&&expanded.header.h-compact.header.h>=24,
+          'Scrolled Home returns real vertical space, not only hidden text: '+JSON.stringify({expanded,compact}));
+        assert.equal(compact.long,'none','Long brand no longer occupies scrolled header');
+        assert.notEqual(compact.short,'none','Short brand preserves location context');
+        assert.ok(compact.buttons.length===3&&compact.buttons.every(b=>b.w>=44&&b.h>=44),
+          'All Home tools remain accessible 44dp touch targets: '+JSON.stringify(compact));
+        assert.ok(compact.brand.right+8<=compact.tools.x&&!compact.overflow,
+          'Collapsed Home brand/tools never overlap: '+JSON.stringify(compact));
+        captures[theme].homeCompact=Buffer.from(await page.screenshot({type:'png'}));
+        await page.setViewport({width:320,height:700,deviceScaleFactor:1,isMobile:true,hasTouch:true});
+        await page.$eval('.wpb-home .wpb-page-scroll',sc=>{sc.scrollTop=sc.scrollHeight;});
+        await page.waitForFunction(()=>document.querySelector('.wpb-home')?.dataset.homeCompact==='1');
+        const small=await measure();
+        assert.ok(small.header.h<=64&&small.brand.right+4<=small.tools.x&&!small.overflow,
+          '320dp Home compact header has no collision or overflow: '+JSON.stringify(small));
+        assert.ok(small.buttons.every(b=>b.w>=44&&b.h>=44),
+          'Small-screen actions retain 44dp targets: '+JSON.stringify(small));
+        await page.setViewport({width:393,height:852,deviceScaleFactor:1,isMobile:true,hasTouch:true});
+        await page.$eval('.wpb-home .wpb-page-scroll',sc=>{sc.scrollTop=0;});
+        await page.waitForFunction(()=>document.querySelector('.wpb-home')?.dataset.homeCompact==='0');
+        const restored=await measure();
+        assert.notEqual(restored.long,'none','Full masthead returns on scroll-to-top');
+        await page.click('.wpb-home-tools button[aria-label="Exercise library"]');
+        await page.waitForSelector('.wpb-library');
+        await page.click('.wpb-library-header button[aria-label="Back"]');
+        await page.waitForSelector('.wpb-home');
+        surfaces[tab].header={expanded:expanded.header.h,compact:compact.header.h,
+          compactButtons:compact.buttons.length,smallHeader:small.header.h};
+      }
     }
     assert.equal(surfaces.plan.weekCard,await page.evaluate(()=>{
       const card=document.querySelector('.wpb-settings .wpb-settings-card');
@@ -168,7 +224,7 @@ try{
   // Build genuine 1:1 side-by-side PNGs for visual signoff (left dark / right light),
   // not two disjoint galleries where differences are difficult to compare.
   const canvasPage=await browser.newPage();
-  const pairs=['home','plan','progress','profile','settings','program'];
+  const pairs=['home','homeCompact','plan','progress','profile','settings','program'];
   for(const tab of pairs){
     const result=await canvasPage.evaluate(async({dark,light})=>{
       const load=src=>new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=reject;img.src=src;});
@@ -183,7 +239,7 @@ try{
     fs.writeFileSync(path.join(root,'verification/r53-'+tab+'-phone.png'),Buffer.from(result,'base64'));
   }
   await canvasPage.close();
-  console.log('PASS R53: 6 paired Rose dark/Rosewater light screenshots at 393px; matching semantic card colors, active week semantics, no page overflow; '+JSON.stringify(measurements));
+  console.log('PASS R56: 7 paired Rose dark/Rosewater light screenshots; compact Home height/44dp actions, 320dp fit, real Library navigation and existing R53 Plan/Program roles; '+JSON.stringify(measurements));
 }finally{
   if(browser)await browser.close();
   await new Promise(resolve=>server.close(resolve));

@@ -6463,3 +6463,109 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     outline-color:Highlight!important;
   }
 }
+
+
+/* R56 — Home's compact masthead is a layout state, not just hidden greeting.
+   The title expands with the real scroll pane; once collapsed, return useful
+   screen height while keeping all three tools >=44dp and fully accessible. */
+#root[data-pi-motion="expressive"] .wpb .wpb-home .wpb-home-topline{
+  min-width:0;
+  gap:12px;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-home .wpb-home-brand{
+  min-width:0;
+  flex:0 1 auto;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-home .wpb-home-brand-short{
+  display:none;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-home .wpb-home-tools{
+  background:var(--pi-color-control)!important;
+  background-image:none!important;
+  border:1px solid var(--pi-color-divider)!important;
+  border-radius:14px!important;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-home.wpb-home.wpb-home[data-home-compact="1"]>.wpb-home-header{
+  /* The greeting's JS height can briefly remain nonzero during fast scroll
+     or view restoration. Fix the actual chrome box, not just its padding. */
+  box-sizing:border-box!important;
+  height:56px!important;
+  min-height:56px!important;
+  max-height:56px!important;
+  overflow:hidden!important;
+  padding:2px 12px!important;
+  border-bottom-color:var(--pi-color-divider)!important;
+  border-radius:0 0 14px 14px!important;
+  background:var(--pi-color-card)!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-home[data-home-compact="1"] .wpb-home-topline{
+  min-height:44px;
+  padding-bottom:0!important;
+  gap:10px;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-home[data-home-compact="1"] .wpb-home-brand{
+  gap:7px!important;
+  flex-shrink:0;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-home[data-home-compact="1"] .wpb-home-brand-mark{
+  width:25px!important;
+  height:25px!important;
+  border-radius:9px!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-home[data-home-compact="1"] .wpb-home-brand-long{
+  display:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-home[data-home-compact="1"] .wpb-home-brand-short{
+  display:inline!important;
+  font-size:14px!important;
+  font-weight:740!important;
+  letter-spacing:-.02em;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-home[data-home-compact="1"] .wpb-home-tools{
+  padding:1px!important;
+  gap:1px!important;
+  border-radius:13px!important;
+  flex-shrink:0;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-home[data-home-compact="1"] .wpb-home-tools>button{
+  box-sizing:border-box;
+  min-width:44px!important;
+  min-height:44px!important;
+  width:44px!important;
+  height:44px!important;
+  padding:0!important;
+  background:transparent!important;
+  color:var(--pi-color-on-control)!important;
+  border-radius:11px!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-home .wpb-home-tools>button:focus-visible{
+  outline:2px solid var(--pi-m3e-primary)!important;
+  outline-offset:-3px!important;
+}
+@media(max-width:359px){
+  #root[data-pi-motion="expressive"] .wpb .wpb-home[data-home-compact="1"]>.wpb-home-header{
+    padding-inline:9px!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-home[data-home-compact="1"] .wpb-home-brand{
+    gap:5px!important;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  #root[data-pi-motion="expressive"] .wpb .wpb-home[data-home-compact="1"]>.wpb-home-header{
+    transition:none!important;
+  }
+}
+@media(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb .wpb-home .wpb-home-tools{
+    background:Canvas!important;
+    border-color:CanvasText!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-home[data-home-compact="1"] .wpb-home-tools>button{
+    color:ButtonText!important;
+  }
+}

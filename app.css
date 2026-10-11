@@ -6336,7 +6336,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   line-height:1.25;
 }
 #root[data-pi-motion="expressive"] .wpb-program .wpb-day-hit-chip[data-strong="true"]{
-  color:var(--pi-m3e-primary)!important;
+  color:var(--pi-color-on-control)!important;
   background:var(--pi-color-feature)!important;
   border-color:color-mix(in srgb,var(--pi-m3e-primary) 32%,var(--pi-color-divider))!important;
 }
@@ -6375,12 +6375,12 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   line-height:1.32;
   white-space:normal!important;
   overflow-wrap:break-word;
-  color:var(--boot-fg)!important;
+  color:var(--pi-color-on-control)!important;
 }
 #root[data-pi-motion="expressive"] .wpb-program .wpb-program-lift-badge{
   flex:0 0 auto;
   background:var(--pi-color-feature)!important;
-  color:var(--pi-m3e-primary)!important;
+  color:var(--pi-color-on-control)!important;
   border:1px solid color-mix(in srgb,var(--pi-m3e-primary) 24%,transparent);
   font-size:10px!important;
   letter-spacing:.02em!important;

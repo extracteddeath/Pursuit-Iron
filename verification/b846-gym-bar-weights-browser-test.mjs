@@ -72,7 +72,7 @@ try{
       const smith='input[aria-label="Smith empty bar weight"]';
       const change=async(selector,value)=>{
         await page.click(selector,{clickCount:3});
-        await page.keyboard.press('ControlOrMeta+A');
+        await page.keyboard.press('Control+A');
         await page.keyboard.type(value);
       };
       await change(bar,'35');

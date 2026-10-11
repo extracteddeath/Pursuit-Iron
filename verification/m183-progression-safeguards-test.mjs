@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { evaluateWorkoutProgression } from '../modules/next-engine/performance.js';
+import { sessionSuggestion, prescribeSets, EX_BY_ID } from '../modules/engine-api.js';
 
 const ctx = { equipmentAvailable: ['barbell','rack'] };
 function exercise(style = 'double', sets = 3) {
@@ -114,6 +115,32 @@ const incompleteCurl=evaluateCurl([
   {load:25,reps:12,rir:2},{load:25,reps:10,rir:2}
 ]);
 assert.notEqual(incompleteCurl.action,'increase_load','Missing prescribed sets still block unsafe progression');
+
+// The actual legacy incline dumbbell curl must retain the independent rows when
+// the shared evaluator crosses the shell bridge and creates next session's sets.
+const curlDay={id:'upper',label:'Upper',primaryIndex:0,exercises:['inc-curl']};
+const curlProgram={
+  id:'b845-incline-curl', custom:true, weeks:4,
+  config:{unit:'lb',goal:'both',experience:'intermediate',progression:'double'},
+  progStyle:{'inc-curl':'dynamic'},days:[curlDay],
+  overrides:{'upper:0':{sets:3,reps:'8-12',rir:'2'}}
+};
+const curlLog={id:'b845-history',date:Date.now()-86400000,programId:curlProgram.id,dayId:'upper',
+  weekIndex:1,unit:'lb',perf:{'inc-curl':{weight:25,reps:12,sets:[
+    {w:25,r:12,done:true,rir:2,rirReported:true},
+    {w:25,r:10,done:true,rir:2,rirReported:true},
+    {w:20,r:11,done:true,rir:2,rirReported:true}
+  ]}}};
+const realSuggestion=sessionSuggestion(curlProgram,curlDay,0,{},'lb',2,[curlLog]);
+assert.equal(realSuggestion?.perSet,true,
+  'Legacy incline curl must retain dynamic per-set progression in the shell');
+assert.deepEqual(realSuggestion.setTargets.map(t=>[t.weight,t.reps]),
+  [[30,8],[25,11],[20,12]]);
+const realRows=prescribeSets(curlProgram,curlDay,EX_BY_ID['inc-curl'],0,2,'lb',
+  realSuggestion,{}, {},[curlLog],false).filter(row=>!row.warm && !row.sub);
+assert.deepEqual(realRows.map(row=>[Number(row.weight),Number(row.reps)]),
+  [[30,8],[25,11],[20,12]],
+  'Actual loggable rows must preserve the individual weights and rep resets');
 
 // The old linear/e1RM branch referenced an undefined clearOvershoot variable. These cases prove both paths return safely.
 for (const style of ['linear','e1rm']) {

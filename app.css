@@ -2630,6 +2630,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-radius:25px!important;
   background-color:var(--pi-m3e-surface-container-low)!important;
 }
+#root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-row{
+  min-height:48px!important;
+}
 #root[data-pi-motion="expressive"] .wpb-settings.wpb-settings .wpb-settings-card>:is(button,.wpb-settings-row){
   min-width:0;
   min-height:44px;

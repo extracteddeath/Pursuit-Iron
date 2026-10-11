@@ -401,7 +401,7 @@ try {
             // No ghosted translucent chrome or overflow on narrow Android.
             const shellR45=await page.evaluate(tab=>{
                 const root=document.querySelector('.wpb');
-                const page=root.querySelector('.wpb-'+tab);
+                const page=root.querySelector(tab==='plan'?'.wpb-plan-view':'.wpb-'+tab);
                 const nav=root.querySelector('.wpb-tabbar');
                 const selected=nav.querySelector('[aria-current="page"]');
                 const ink=getComputedStyle(nav,'::before');

@@ -4338,7 +4338,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    supplies the required non-text state distinction without brightening the
    whole navigation bar or dimming any workout values. */
 #root[data-pi-motion="expressive"] .wpb{
-  --pi-r35-control-outline:color-mix(in srgb,currentColor 62%,transparent);
+  --pi-r35-control-outline:color-mix(in srgb,currentColor 62%,var(--pi-m3e-base));
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-tabbar[data-pi-m3-track]::before{
   outline:2px solid var(--pi-r35-control-outline);

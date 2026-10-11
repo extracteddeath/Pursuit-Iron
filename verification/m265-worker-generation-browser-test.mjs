@@ -186,6 +186,10 @@ try {
     {
         const { page, context } = await open(storeFor(), 390);
         await page.click(`button[aria-label="More options for ${program.name}"]`);
+        // The menu mounts on React's next commit; click only after its real action exists.
+        // Preserve the original conversion button and all saved-block/history assertions.
+        await page.waitForFunction(() => [...document.querySelectorAll('button[role="menuitem"]')]
+            .some(button => button.textContent.trim() === 'Turn into training cycle'));
         await textButton(page, 'Turn into training cycle');
         await page.waitForSelector('[aria-label="Turn program into training cycle"]');
         await textButton(page, 'Create training cycle');

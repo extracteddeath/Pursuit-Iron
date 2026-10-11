@@ -1,0 +1,32 @@
+name: Temporary R65 release finalizer
+
+on:
+  push:
+    branches: [ui/r65-adaptive-shell-844]
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+      - name: Finalize offline and UI hashes
+        run: node scripts/finalize-release.mjs
+      - name: Verify finished release
+        run: node scripts/verify-release.mjs
+      - name: Commit generated integrity files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add RELEASE_MANIFEST.json BUILD_PROFILE.json sw.js modules/App.js index.html
+          if ! git diff --cached --quiet; then
+            git commit -m "Certify Build 844 offline and UI hashes"
+            git push origin HEAD:ui/r65-adaptive-shell-844
+          fi

@@ -6710,15 +6710,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   height:50px!important;
   border-radius:15px!important;
 }
-#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-stat-grid{
-  gap:7px!important;
-  margin-bottom:10px!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-stat{
-  padding:10px 8px!important;
-  border:1px solid var(--pi-color-divider)!important;
-  border-radius:14px!important;
-}
 #root[data-pi-motion="expressive"] .wpb :is(
   .wpb-plan-heading-row>button[aria-label="Back"],
   .wpb-profile-edit,
@@ -6731,9 +6722,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   #root[data-pi-motion="expressive"] .wpb{--pi-r57-inset:12px}
   #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-hero{
     padding-inline:11px!important;
-  }
-  #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-stat{
-    padding-inline:5px!important;
   }
 }
 @media(forced-colors:active){

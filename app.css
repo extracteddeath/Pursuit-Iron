@@ -6670,7 +6670,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   }
   #root[data-pi-motion="expressive"] .wpb .wpb-plan-view>.wpb-plan-overview{
     grid-column:2;
-    grid-row:4;
+    grid-row:4 / span 3;
     align-self:start;
     margin:0!important;
     padding:12px 0 0 18px!important;

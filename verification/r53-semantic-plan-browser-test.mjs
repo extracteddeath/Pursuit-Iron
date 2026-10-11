@@ -26,6 +26,103 @@ const initial=theme=>({
   unit:'lb',unitChosen:true,experience:'intermediate',bodyweight:185,
   installDismissedAt:Date.now(),lastBackup:Date.now()
 });
+// R61: inspect the actual painted foreground against its composited background.
+// A surface-only screenshot check missed pale session names on a light palette.
+async function controlStyle(page,selector){
+  return page.evaluate(sel=>{
+    const node=document.querySelector(sel);
+    if(!node)throw new Error('Missing control: '+sel);
+    const canvas=document.createElement('canvas');canvas.width=canvas.height=1;
+    const ctx=canvas.getContext('2d');
+    const rgba=color=>{ctx.clearRect(0,0,1,1);ctx.fillStyle=color;ctx.fillRect(0,0,1,1);
+      return [...ctx.getImageData(0,0,1,1).data];};
+    const blend=(fg,bg)=>fg.slice(0,3).map((n,i)=>n*fg[3]/255+bg[i]*(1-fg[3]/255));
+    const chain=[];for(let p=node;p;p=p.parentElement)chain.unshift(p);
+    let bg=[255,255,255];for(const p of chain)bg=blend(rgba(getComputedStyle(p).backgroundColor),bg);
+    const ink=blend(rgba(getComputedStyle(node).color),bg);
+    const luminance=v=>v.map(n=>{n/=255;return n<=.04045?n/12.92:((n+.055)/1.055)**2.4;})
+      .reduce((sum,n,i)=>sum+n*[.2126,.7152,.0722][i],0);
+    const a=luminance(ink),b=luminance(bg),r=node.getBoundingClientRect();
+    const button=node.closest('button')||node;
+    const hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
+    return {label:node.textContent.trim(),contrast:(Math.max(a,b)+.05)/(Math.min(a,b)+.05),
+      width:r.width,height:r.height,background:getComputedStyle(node).backgroundColor,
+      foreground:getComputedStyle(node).color,pressed:node.getAttribute('aria-pressed'),
+      action:node.dataset.action,hit:hit===button||button.contains(hit)};
+  },selector);
+}
+async function verifyFoundationStates(browser){
+  for(const theme of ['rose','rosewater'])for(const state of ['missing-weight','missing-lifts','scored']){
+    const context=await browser.createBrowserContext(),page=await context.newPage();
+    const errors=[];page.on('pageerror',e=>errors.push(e.message));
+    const store={...initial(theme),bodyweight:state==='missing-weight'?'':185,
+      history:state==='scored'?[{id:'r61-score',date:Date.now(),programId:program.id,
+        programName:program.name,dayId:'upper',dayLabel:'Upper',weekIndex:1,unit:'lb',
+        duration:1800,totalSets:1,tonnage:1110,
+        perf:{'bb-bench':{weight:185,reps:6,sets:[{w:185,r:6,done:true,rir:2,rirReported:true}]}}}]:[]};
+    try{
+      await page.setViewport({width:393,height:852,deviceScaleFactor:1,isMobile:true,hasTouch:true});
+      await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
+      await page.evaluateOnNewDocument(seed=>{
+        if(localStorage.getItem('r61-seeded'))return;
+        localStorage.setItem('r61-seeded','1');localStorage.setItem('wpb:v1',JSON.stringify(seed));
+        // Deliberately inconsistent startup cache: current store must win without a reload.
+        localStorage.setItem('wpb:boot-theme',JSON.stringify({base:seed.theme==='rose'?'light':'dark',
+          bg:'#080808',text:'#f8f8f8',muted:'#cccccc',accent:'#ffffff',onAccent:'#080808'}));
+      },store);
+      await page.goto('http://127.0.0.1:8795/',{waitUntil:'networkidle0'});
+      await page.waitForSelector('.wpb-tabbar');
+      await page.click('[data-tab="profile"]');
+      await page.waitForSelector('.wpb-profile');
+      const profile=await page.$eval('.wpb-profile',el=>el.textContent);
+      if(state==='missing-weight'){
+        assert.match(profile,/Add bodyweight to unlock/);
+        await page.click('button[aria-label="Add bodyweight"]');
+        await page.waitForSelector('.wpb-settings');
+      }else if(state==='missing-lifts'){
+        assert.match(profile,/185 lb/);assert.match(profile,/Log a weighted set for a supported lift/);
+        assert.doesNotMatch(profile,/Add bodyweight to unlock/);
+        assert.equal(await page.$('button[aria-label="Add bodyweight"]'),null);
+      }else{
+        await page.waitForSelector('.wpb-profile-strength');
+        assert.equal(await page.$('.wpb-profile-setup'),null,'Scored history keeps its existing Strength card');
+      }
+      if(state==='missing-lifts'){
+        // Exercise the Settings theme control itself, then reopen Plan and warm reload.
+        const other=theme==='rose'?'rosewater':'rose';
+        for(const palette of [theme,other,theme]){
+          await page.click('[data-tab="settings"]');
+          await page.waitForSelector('.wpb-theme-picker');
+          await page.$eval('.wpb-theme-picker',el=>el.open=true);
+          await page.click('[data-theme-option="'+palette+'"]');
+          await page.click('[data-tab="plan"]');
+          await page.waitForSelector('.wpb-plan-session-name');
+          for(const width of [320,393]){
+            await page.setViewport({width,height:852,deviceScaleFactor:1,isMobile:true,hasTouch:true});
+            const name=await controlStyle(page,'.wpb-plan-session-name');
+            assert.ok(name.contrast>=4.5,'Session label after actual theme selection: '+JSON.stringify({palette,width,name}));
+            const week=await controlStyle(page,'.wpb-plan-week-chip[aria-pressed="true"]');
+            assert.ok(week.contrast>=4.5&&week.height>=48,'Selected week is readable and tappable: '+JSON.stringify(week));
+          }
+        }
+        await page.reload({waitUntil:'networkidle0'});
+        await page.waitForSelector('.wpb-tabbar');await page.click('[data-tab="plan"]');
+        await page.waitForSelector('.wpb-plan-session-name');
+        assert.ok((await controlStyle(page,'.wpb-plan-session-name')).contrast>=4.5,'Warm launch keeps readable session names');
+        await page.click('[data-tab="home"]');await page.waitForSelector('.wpb-home');
+        const start=await controlStyle(page,'.wpb-home .wpb-ui-action[data-action="primary"]');
+        const create=await controlStyle(page,'.wpb-home-create');
+        assert.equal(create.action,'secondary','Ready workout gives Create secondary emphasis');
+        assert.ok(start.contrast>=4.5&&create.contrast>=4.5&&start.height>=52&&create.height>=48,
+          'Primary/secondary Home actions have readable labels and full targets: '+JSON.stringify({start,create}));
+        assert.notEqual(start.background,create.background,'Ready workout retains one stronger action');
+        assert.ok(start.hit&&create.hit,'Home actions are reachable by real pointer hits');
+      }
+      assert.equal(errors.length,0,'Foundation states have no runtime errors: '+errors.join('; '));
+    }finally{await context.close();}
+  }
+  console.log('PASS R61: stale startup and warm theme changes; actual Plan label/action contrast; accurate Profile missing-weight, missing-lifts and scored states; full Home hit targets.');
+}
 const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.json':'application/json','.png':'image/png','.svg':'image/svg+xml','.webmanifest':'application/manifest+json'};
 const server=http.createServer((req,res)=>{
   const name=new URL(req.url,'http://localhost').pathname;
@@ -332,6 +429,7 @@ try{
     measurements[theme]={...surfaces,program:detail};
     await context.close();
   }
+  await verifyFoundationStates(browser);
   // Build genuine 1:1 side-by-side PNGs for visual signoff (left dark / right light),
   // not two disjoint galleries where differences are difficult to compare.
   const canvasPage=await browser.newPage();

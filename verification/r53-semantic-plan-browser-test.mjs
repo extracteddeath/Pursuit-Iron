@@ -103,15 +103,19 @@ try{
             out.titleSize=parseFloat(getComputedStyle(el('.wpb-plan-title')).fontSize);
           }else if(which==='progress'){
             out.header=box('.wpb-progress>.wpb-page-header');
+            out.titleSize=parseFloat(getComputedStyle(el('.wpb-progress-title')).fontSize);
             out.tabs=[...document.querySelectorAll('.wpb-progress .wpb-premium-tabs>button')]
               .map(b=>{const r=b.getBoundingClientRect();return {width:r.width,height:r.height}});
           }else if(which==='settings'){
             out.header=box('.wpb-settings>.wpb-page-header');
             out.jump=box('.wpb-settings>.wpb-settings-jump');
+            out.picker=box('.wpb-settings-jump-control');
+            out.titleSize=parseFloat(getComputedStyle(el('.wpb-settings>.wpb-page-header h1')).fontSize);
             out.select=box('.wpb-settings-jump select');
           }else if(which==='profile'){
             out.topPadding=parseFloat(getComputedStyle(el('.wpb-profile-inner')).paddingTop);
             out.head=box('.wpb-profile-head');
+            out.titleSize=parseFloat(getComputedStyle(el('.wpb-profile-title')).fontSize);
             out.edit=box('.wpb-profile-edit');
             out.hero=box('.wpb-profile-hero');
             out.stats=[...document.querySelectorAll('.wpb-profile-stat')].map(b=>b.getBoundingClientRect().width);
@@ -126,14 +130,14 @@ try{
           assert.ok(density.titleSize>=27&&density.titleSize<=28&&density.title.bottom-density.row.top<=118,
             'Plan header has compact hierarchy without hiding title: '+JSON.stringify(density));
         }else if(tab==='progress'){
-          assert.ok(density.header&&density.header.height<=155&&density.tabs.length===4&&density.tabs.every(x=>x.height>=44),
+          assert.ok(density.header&&density.header.height<=155&&density.titleSize>=26&&density.tabs.length===4&&density.tabs.every(x=>x.height>=44),
             'Progress title and four 44dp tabs fit its header: '+JSON.stringify(density));
         }else if(tab==='settings'){
-          assert.ok(density.header&&density.jump&&density.select&&density.select.height>=44
+          assert.ok(density.header&&density.jump&&density.picker&&density.picker.height>=48&&density.titleSize>=27&&density.select&&density.select.height>=44
             &&density.jump.bottom-density.header.top<=128,
             'Settings title and Jump control use a compact, accessible header: '+JSON.stringify(density));
         }else if(tab==='profile'){
-          assert.ok(density.head&&density.edit&&density.hero&&density.topPadding<=16
+          assert.ok(density.head&&density.edit&&density.hero&&density.titleSize>=27&&density.topPadding<=16
             &&density.edit.width>=44&&density.edit.height>=44,
             'Profile identity/edit start promptly with full-size edit action: '+JSON.stringify(density));
           assert.ok(density.hero.top-density.head.bottom<=16&&density.stats.length===3

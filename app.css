@@ -4610,3 +4610,241 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     border-color:CanvasText!important;
   }
 }
+
+
+/* M3 EXPRESSIVE R39 — PROFILE & PROGRESS AS USEFUL DASHBOARDS
+   A quiet, consistent instrument-panel grammar: grouped related numbers,
+   use full-width space when there is one actual lift, and keep filter/form
+   controls comfortably interactive. These are purely presentation rules;
+   metrics, personal records, logging and all action ownership stay intact. */
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-inner{
+  padding-top:12px!important;
+  padding-bottom:calc(28px + env(safe-area-inset-bottom))!important;
+}
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-head{
+  margin-bottom:9px!important;
+  min-height:58px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-edit{
+  min-width:48px!important;
+  min-height:48px!important;
+  border-radius:16px!important;
+}
+/* These three readings form one metric group, not three unrelated cards.
+   Dividers preserve separation without doubling the number of borders. */
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-stat-grid{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:0!important;
+  padding:0!important;
+  margin:0 0 10px!important;
+  overflow:hidden;
+  border:1px solid var(--pi-r11-edge)!important;
+  border-radius:20px!important;
+  background-color:var(--pi-r11-quiet)!important;
+  background-image:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-stat{
+  box-sizing:border-box;
+  display:flex!important;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  min-width:0!important;
+  min-height:70px!important;
+  padding:10px 6px!important;
+  margin:0!important;
+  border:none!important;
+  border-radius:0!important;
+  background-color:transparent!important;
+  background-image:none!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-stat:not(:last-child){
+  border-right:1px solid var(--pi-r11-edge)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-stat .mono{
+  line-height:1.15!important;
+  font-variant-numeric:tabular-nums;
+  overflow-wrap:normal!important;
+}
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-stat :not(.mono){
+  line-height:1.3!important;
+}
+/* R39 fixes the visible lone Squat tile taking only half of Strength.
+   When there is only one real strength pattern, make it a meaningful full
+   width summary; multiple patterns still retain the two-column comparison. */
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength-grid:has(> .wpb-profile-strength-cell:only-child){
+  grid-template-columns:minmax(0,1fr)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength-grid>.wpb-profile-strength-cell:only-child{
+  grid-column:1/-1!important;
+  width:100%!important;
+  min-height:72px!important;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  border-radius:18px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength{
+  margin-bottom:9px!important;
+  padding:14px!important;
+  border-radius:23px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-next-strength{
+  min-height:38px;
+  padding:10px 12px!important;
+  border:1px solid var(--pi-r11-edge)!important;
+  border-radius:14px!important;
+  background-color:var(--pi-r11-raised)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-section{
+  box-sizing:border-box;
+  min-width:0;
+  padding:15px!important;
+  border:1px solid var(--pi-r11-edge)!important;
+  border-radius:23px!important;
+  background-image:none!important;
+  background-color:var(--pi-r11-quiet)!important;
+  overflow-wrap:anywhere;
+}
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile
+  .wpb-profile-strength button[aria-label="Share Strength Score"]{
+  min-width:48px!important;
+  min-height:48px!important;
+  width:48px!important;
+  height:48px!important;
+}
+/* Progress: compact, readable data first, controls next. Keep every actual
+   metric and its time window visible rather than hiding secondary labels. */
+#root[data-pi-motion="expressive"] .wpb-progress>.wpb-page-header{
+  padding:14px 16px 12px!important;
+  border-radius:0 0 23px 23px!important;
+  background-color:var(--pi-r11-quiet)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-title{
+  font-size:clamp(27px,6.7vw,32px)!important;
+  line-height:1.1!important;
+  margin-bottom:8px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs{
+  min-width:0;
+  margin-top:7px!important;
+  padding:4px!important;
+  border-radius:19px!important;
+  background-color:var(--pi-r11-raised)!important;
+  background-image:none!important;
+  border:1px solid var(--pi-r11-edge)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs>button{
+  min-width:0!important;
+  min-height:44px!important;
+  padding-inline:6px!important;
+  border-radius:15px!important;
+  line-height:1.15!important;
+  text-align:center;
+}
+#root[data-pi-motion="expressive"] .wpb-progress [data-progress-glance]{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:6px!important;
+  margin:6px 0 11px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item{
+  min-width:0!important;
+  min-height:80px!important;
+  padding:11px 9px!important;
+  border-radius:17px!important;
+  background-color:var(--pi-r11-quiet)!important;
+  border-color:var(--pi-r11-edge)!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item:first-child{
+  background-color:var(--pi-r11-hero)!important;
+  border-color:var(--pi-r11-accent-stroke)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-label{
+  font-size:11.5px!important;
+  line-height:1.28!important;
+  letter-spacing:0!important;
+  margin-top:4px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item>div:last-child{
+  font-size:10.5px!important;
+  line-height:1.3!important;
+}
+/* Related history tools share one clear rhythm without amplifying empty
+   periods with giant, decorative cards. Semantic search/filters untouched. */
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-filters{
+  min-width:0;
+  margin-bottom:10px!important;
+  padding-bottom:10px!important;
+  gap:7px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-filters :is(input,select){
+  box-sizing:border-box;
+  min-height:48px!important;
+  border:1px solid var(--pi-r11-edge)!important;
+  border-radius:15px!important;
+  background-color:var(--pi-r11-quiet)!important;
+  background-image:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-filter-help{
+  font-size:11.5px!important;
+  line-height:1.42!important;
+  max-width:52ch;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-disclosure>summary{
+  min-height:48px!important;
+  display:flex;
+  align-items:center;
+  line-height:1.35!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-grouping{
+  background-color:var(--pi-r11-quiet)!important;
+  background-image:none!important;
+  border:1px solid var(--pi-r11-edge)!important;
+  border-radius:15px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-grouping>button{
+  min-height:44px!important;
+  padding-inline:12px!important;
+  border-radius:12px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session{
+  background-color:var(--pi-r11-quiet)!important;
+  border-radius:20px!important;
+}
+@media(max-width:359px){
+  #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-inner{
+    padding-inline:12px!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-stat{
+    padding-inline:3px!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item{
+    padding-inline:7px!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-label{
+    font-size:11px!important;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-grouping>button,
+  #root[data-pi-motion="expressive"] .wpb-profile .wpb-profile-edit{
+    transition:none!important;
+  }
+}
+@media(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile :is(
+    .wpb-profile-stat-grid,.wpb-profile-stat,.wpb-profile-section,
+    .wpb-profile-strength,.wpb-profile-strength-cell:only-child),
+  #root[data-pi-motion="expressive"] .wpb-progress :is(
+    .wpb-progress-glance-item,.wpb-premium-tabs,
+    .wpb-history-filters input,.wpb-history-filters select,.wpb-progress-grouping){
+    background-color:Canvas!important;
+    color:CanvasText!important;
+    border-color:CanvasText!important;
+  }
+}

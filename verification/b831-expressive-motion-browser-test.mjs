@@ -59,6 +59,35 @@ try {
         }, initial, live);
         await page.goto('http://127.0.0.1:8794/', { waitUntil: 'networkidle0' });
         await page.waitForSelector('#root[data-pi-motion="expressive"] .wpb-tabbar');
+        // R28 frame efficiency: a settled spring must not request any frames
+        // and MutationObserver leaf inserts must not run subtree selectors.
+        // Synthetic nodes are entirely outside the trainer's persisted state.
+        const idleR28 = await page.evaluate(async () => {
+            const host=document.querySelector('.wpb');
+            const leaf=document.createElement('div');
+            leaf.className='wpb-wizard-step';
+            let subtreeScans=0;
+            leaf.querySelectorAll=() => { subtreeScans++; return []; };
+            host.append(leaf);
+            await new Promise(resolve=>setTimeout(resolve,0));
+            const stepEntered=leaf.dataset.piStepEnter==='1';
+            const probe=document.createElement('div');
+            host.append(probe);
+            await new Promise(resolve=>setTimeout(resolve,0));
+            const {spring}=await import('/modules/ui-motion.js');
+            const frame=window.requestAnimationFrame;
+            let queued=0,paints=0;
+            window.requestAnimationFrame=(...args)=>{ queued++; return frame.apply(window,args); };
+            try{
+                spring(probe,'--pi-r28-idle',1,{from:1,write:v=>{paints++;probe.style.setProperty('--pi-r28-idle',String(v));}});
+            }finally{window.requestAnimationFrame=frame;}
+            leaf.remove();probe.remove();
+            return {subtreeScans,stepEntered,queued,paints};
+        });
+        assert.ok(idleR28.subtreeScans===0 && idleR28.stepEntered &&
+            idleR28.queued===0 && idleR28.paints<=2,
+            'R28 idle motion and leaf updates avoid unnecessary frame/selector work: '+JSON.stringify(idleR28));
+
         // R16: a named solid surface must not be a 3%-alpha color wash.
         // Probe all five theme-derived roles in both browser color schemes
         // without touching saved theme state or exercise/workout data.
@@ -861,6 +890,24 @@ try {
             menuGeometry.left >= 0 && menuGeometry.right <= width + 1,
             'M3 contextual menus are rounded, scroll-safe and touch accessible: ' + JSON.stringify({ width, menuGeometry }));
         assert.ok(menuGeometry.items >= 2, 'contextual actions keep their original features');
+        // Repeated resize signals in a single turn must trigger at most one
+        // remeasurement of the open anchored menu; the menu still clears dock.
+        const resizeR28=await page.evaluate(async()=>{
+            const menu=document.querySelector('.wpb-context-menu');
+            const original=menu.getBoundingClientRect, dock=document.querySelector('.wpb-live-dock');
+            let reads=0;
+            menu.getBoundingClientRect=function(...args){reads++;return original.apply(this,args);};
+            try{
+                for(let i=0;i<6;i++) window.dispatchEvent(new Event('resize'));
+                await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+            }finally{menu.getBoundingClientRect=original;}
+            const box=menu.getBoundingClientRect(),dockBox=dock.getBoundingClientRect();
+            return {reads,clearsDock:box.bottom<=dockBox.top-3,overflow:box.right>innerWidth+1};
+        });
+        assert.ok(resizeR28.reads>=1 && resizeR28.reads<=3 &&
+            resizeR28.clearsDock && !resizeR28.overflow,
+            'R28 coalesces open-menu reposition reads on burst resize: '+JSON.stringify(resizeR28));
+
         // 2026 expressive menu group: rounded outside corners without a
         // wider popup, extra item height, lost keyboard order or new React state.
         const menuGroupShape = await page.$eval('.wpb-context-menu', menu => {

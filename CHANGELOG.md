@@ -1,3 +1,10 @@
+## Build 848 — R68 responsive Plan supporting pane
+
+- On suitably wide, tall windows, the existing Plan schedule and tabs become the primary reading column; the existing Up Next and program overview move into a supporting column using CSS Grid. No duplicate week selection, router, or prescription state.
+- Compact and medium windows retain the established vertical Plan layout. The selected-week picker, day links, training data, themes, focus treatment and phone workout logger are unchanged.
+- Extend the existing adaptive-shell real-browser test to assert Plan schedule/supporting-pane geometry and no horizontal document overflow across light/dark themes and all four viewport sizes.
+- Require the unchanged four permanent CI workflows and post-merge Pages verification before shipping.
+
 ## Build 847 — R67 adaptive surfaces pilot
 
 - On sufficiently tall tablets/laptops, limit gym editor, achievement and program-switcher sheets to readable centered surfaces. On phones and short landscape windows, preserve the familiar bottom-sheet interaction and gesture handlers.

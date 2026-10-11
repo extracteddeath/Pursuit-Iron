@@ -10,7 +10,12 @@ export function motionValue(el, key, fallback = 0) {
 }
 export function stopMotion(el, key) {
     const state = states.get(el)?.get(key);
-    if (state) { active.delete(state); state.complete = null; }
+    if (state) {
+        // Invalidate every previously returned disposer, including when a
+        // drag or user gesture replaces this spring via setMotionValue.
+        state.run = (state.run || 0) + 1;
+        active.delete(state); state.complete = null;
+    }
 }
 export function setMotionValue(el, key, value, write) {
     stopMotion(el, key);
@@ -30,8 +35,11 @@ export function spring(el, key, target, options = {}) {
         state = { el, key, value: options.from ?? target, velocity: 0 };
         map.set(key, state);
     }
+    // Each retarget gets a unique run token. A disposer returned by an older
+    // no-callback spring must never stop a newer spring on the same property.
+    const run = (state.run || 0) + 1;
     Object.assign(state, {
-        target, stiffness: options.stiffness ?? 700, damping: options.damping ?? .9,
+        run, target, stiffness: options.stiffness ?? 700, damping: options.damping ?? .9,
         write: options.write || (v => el.style.setProperty(key, String(v))),
         complete: options.complete, precision: options.precision ?? .02
     });
@@ -50,8 +58,7 @@ export function spring(el, key, target, options = {}) {
     }
     active.add(state);
     if (!frame) { previousAt = performance.now(); frame = requestAnimationFrame(tick); }
-    const callback = state.complete;
-    return () => { if (state.complete === callback) stopMotion(el, key); };
+    return () => { if (state.run === run) stopMotion(el, key); };
 }
 function settle(state) {
     state.value = state.target; state.velocity = 0;
@@ -78,6 +85,7 @@ const pixels = (el, name) => v => el.style.setProperty(name, `${v}px`);
 const surfaceSelector = '[data-view-frame], [data-pi-workout-page], [data-sheet-drag], .wpb-pop, .wpb-dialog, .wpb-slideL, .wpb-slideR, .wpb-state-enter, .wpb-float-in, .wpb-notice-in';
 const groupSelector = '.wpb-segmented, .wpb-premium-tabs, .wpb-exercise-tabs, .wpb-library-flag-filter, .wpb-progress-grouping, .wpb-plan-panes, .wpb-exercise-window-tabs, .wpb-exercise-metric-tabs, .wpb-effort-scale, .wpb-tabbar, [role="tablist"]';
 const surfaceOwners = new WeakMap();
+const exitOwners = new WeakMap();
 const primaryRoutes = ['home','plan','progress','profile','settings'];
 let lastPrimaryRoute = -1;
 
@@ -131,13 +139,31 @@ function enterSurface(el, initial = false) {
             write: pixels(el, '--pi-sheet-radius'), stiffness: 740, damping: .87 });
 }
 export function exitMotion(wrapper, complete) {
+    // A sheet can reverse direction while it is closing. Invalidate any
+    // earlier close transaction before wiring this one, so its stale callback
+    // cannot remove a newly reopened React-owned sheet.
+    exitOwners.get(wrapper)?.cancel();
     let cancelled = false;
     const panels = [...wrapper.querySelectorAll('[data-sheet-drag],.wpb-pop,.wpb-dialog')];
     const backs = [...wrapper.querySelectorAll('.wpb-backdrop')];
     let pending = panels.length + backs.length;
     const stops = [];
-    const done = () => { if (--pending === 0 && !cancelled) complete(); };
+    const transaction = {
+        cancel: () => {
+            if (cancelled) return;
+            cancelled = true;
+            if (exitOwners.get(wrapper) === transaction) exitOwners.delete(wrapper);
+            stops.forEach(stop => stop());
+        }
+    };
     if (!pending) { complete(); return () => {}; }
+    exitOwners.set(wrapper, transaction);
+    const done = () => {
+        if (cancelled || --pending !== 0) return;
+        if (exitOwners.get(wrapper) !== transaction) return;
+        exitOwners.delete(wrapper);
+        complete();
+    };
     panels.forEach(el => {
         el.dataset.piSurface = '1';
         spring(el, '--pi-surface-opacity', 0, { stiffness: 1400, damping: 1, precision: .001 });
@@ -151,10 +177,12 @@ export function exitMotion(wrapper, complete) {
         el.dataset.piBackdrop = '1';
         stops.push(spring(el, '--pi-backdrop-opacity', 0, { from: 1, stiffness: 1400, damping: 1, precision: .001, complete: done }));
     });
-    return () => { cancelled = true; stops.forEach(stop => stop()); };
+    return transaction.cancel;
 }
 export function resumeMotion(wrapper) {
     if (!wrapper) return;
+    // Cancel the pending close before starting the reverse springs.
+    exitOwners.get(wrapper)?.cancel();
     wrapper.querySelectorAll('[data-sheet-drag],.wpb-pop,.wpb-dialog').forEach(el => {
         if (!surfaceOwners.has(el)) { enterSurface(el); return; }
         spring(el, '--pi-surface-y', 0, { write: pixels(el, '--pi-surface-y'), damping: .94 });

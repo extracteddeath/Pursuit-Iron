@@ -4976,3 +4976,192 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     .wpb-profile-edit,.wpb-onboarding-primary,.wpb-onboarding-secondary
   ):focus-visible{outline-color:Highlight!important}
 }
+
+
+/* M3 EXPRESSIVE R41 — TIGHT TONAL SCALE / PROGRESS RECOMPOSITION
+   A design-system response to real Android reference screenshots. The new
+   neutral-dark roles have measurable steps: page 17–19, card 25–28,
+   raised 34–38 RGB levels. User theme accent remains reserved for selection,
+   progress and primary actions. Original light theme roles are preserved. */
+#root[data-pi-motion="expressive"] .wpb{
+  --pi-r41-gap-1:4px;
+  --pi-r41-gap-2:8px;
+  --pi-r41-gap-3:12px;
+  --pi-r41-gap-4:16px;
+  --pi-r41-gap-5:20px;
+  --pi-r41-gap-6:24px;
+  --pi-r41-page:color-mix(in srgb,#111317 91%,var(--pi-m3e-base) 9%);
+  --pi-r41-surface-1:color-mix(in srgb,#1a1d22 90%,var(--pi-m3e-base) 10%);
+  --pi-r41-surface-2:color-mix(in srgb,#24272d 90%,var(--pi-m3e-base) 10%);
+  --pi-r41-surface-3:color-mix(in srgb,#2c3037 90%,var(--pi-m3e-base) 10%);
+  --pi-r41-separator:color-mix(in srgb,var(--boot-fg,#f5f0f5) 10%,transparent);
+  --pi-r11-quiet:light-dark(var(--pi-m3e-surface-container-low),var(--pi-r41-surface-1));
+  --pi-r11-raised:light-dark(var(--pi-m3e-surface-container),var(--pi-r41-surface-2));
+  --pi-r11-hero:light-dark(var(--pi-m3e-primary-container),
+    color-mix(in srgb,var(--pi-r41-surface-2) 94%,var(--pi-m3e-primary) 6%));
+  --pi-r11-selected:light-dark(var(--pi-m3e-primary-container),
+    color-mix(in srgb,var(--pi-r41-surface-2) 89%,var(--pi-m3e-primary) 11%));
+  --pi-r11-edge:light-dark(var(--pi-m3e-outline-variant),var(--pi-r41-separator));
+  --pi-r11-accent-stroke:light-dark(var(--pi-m3e-outline-variant),
+    color-mix(in srgb,var(--pi-m3e-primary) 28%,transparent));
+}
+/* Make the page-level hierarchy consistent; don't recolor the independent
+   fullscreen workout logger, its training fields or completed rows. */
+#root[data-pi-motion="expressive"] .wpb :is(
+  .wpb-home,.wpb-plan-view,.wpb-progress,.wpb-profile,.wpb-settings){
+  background-color:light-dark(var(--pi-m3e-base),var(--pi-r41-page))!important;
+  background-image:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-tabbar{
+  background-color:light-dark(var(--pi-m3e-surface-container-low),var(--pi-r41-surface-1))!important;
+  border-top-color:var(--pi-r11-edge)!important;
+  box-shadow:none!important;
+}
+/* Progress's primary navigation owns one expressive track. Everything else
+   follows the page's 16px outer inset rather than nested floating panels. */
+#root[data-pi-motion="expressive"] .wpb-progress>.wpb-page-header{
+  box-sizing:border-box;
+  background-color:light-dark(var(--pi-m3e-surface-container-low),var(--pi-r41-surface-1))!important;
+  background-image:none!important;
+  border-radius:0 0 22px 22px!important;
+  border-bottom:1px solid var(--pi-r11-edge)!important;
+  box-shadow:none!important;
+  padding:14px 16px 13px!important;
+  isolation:isolate;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-title{
+  margin-bottom:12px!important;
+  letter-spacing:-.035em!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs{
+  background-color:light-dark(var(--pi-m3e-surface-container),var(--pi-r41-surface-2))!important;
+  background-image:none!important;
+  border:1px solid var(--pi-r11-edge)!important;
+  border-radius:18px!important;
+  box-shadow:none!important;
+  padding:4px!important;
+  margin:0!important;
+  min-height:52px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs>button{
+  min-height:44px!important;
+  padding-inline:5px!important;
+  border-radius:14px!important;
+}
+/* "By cycle / By month" is deliberately visually subordinate to the
+   primary Sessions/Lifts/Volume/Body tabs. Never hide or clip either group. */
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-grouping{
+  box-sizing:border-box;
+  width:max-content;
+  max-width:100%;
+  margin:10px 0 16px!important;
+  min-height:48px!important;
+  padding:3px!important;
+  gap:2px!important;
+  border:1px solid var(--pi-r11-edge)!important;
+  border-radius:15px!important;
+  background-color:light-dark(var(--pi-m3e-surface-container-low),var(--pi-r41-surface-1))!important;
+  background-image:none!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-grouping>button{
+  min-height:44px!important;
+  padding:7px 13px!important;
+  border-radius:11px!important;
+  font-weight:650!important;
+}
+/* The cycle summary is a section heading, not another pill/card. */
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-group-header{
+  box-sizing:border-box;
+  display:flex;
+  align-items:center;
+  min-height:48px!important;
+  gap:12px!important;
+  margin:8px 0 5px!important;
+  padding:8px 2px!important;
+  border-bottom:1px solid var(--pi-r11-edge)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-group-header>div:last-child{
+  max-width:55%;
+  font-size:max(11px,.72rem);
+  line-height:1.3;
+  text-align:right;
+}
+/* Expanded sessions are ONE surface: rows are differentiated by subtle
+   separators, not another much lighter floating rectangle inside the card. */
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session{
+  margin:0 0 12px!important;
+  border:1px solid var(--pi-r11-edge)!important;
+  border-radius:22px!important;
+  background-color:light-dark(var(--pi-m3e-surface-container-low),var(--pi-r41-surface-1))!important;
+  background-image:none!important;
+  box-shadow:none!important;
+  overflow:hidden;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session-detail{
+  background-color:light-dark(var(--pi-m3e-surface-container-low),var(--pi-r41-surface-1))!important;
+  border-top:1px solid var(--pi-r11-edge)!important;
+  background-image:none!important;
+  box-shadow:none!important;
+  border-radius:0 0 21px 21px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-actions{
+  gap:8px!important;
+  align-items:center;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-actions>button{
+  box-sizing:border-box;
+  width:48px!important;
+  height:48px!important;
+  min-width:48px!important;
+  min-height:48px!important;
+  flex:0 0 48px!important;
+  border-radius:14px!important;
+  border:1px solid var(--pi-r11-edge)!important;
+  background-color:light-dark(var(--pi-m3e-surface-container-high),var(--pi-r41-surface-2))!important;
+  background-image:none!important;
+  box-shadow:none!important;
+}
+/* One quiet horizontal rule between actual exercises; no new fake data. */
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session-detail hr{
+  border:none!important;
+  border-top:1px solid var(--pi-r11-edge)!important;
+  margin-block:12px!important;
+}
+/* Rein in the page-level card radius/spacing without touching the logger.
+   Shared low cards are 20–22px; selection controls are smaller. */
+#root[data-pi-motion="expressive"] .wpb :is(
+  .wpb-plan-glance-tile,.wpb-plan-up-next,
+  .wpb-profile-section,.wpb-settings-card,.wpb-progress-glance-item){
+  border-radius:20px!important;
+  box-shadow:none!important;
+  background-image:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item{
+  background-color:var(--pi-r11-quiet)!important;
+  border-color:var(--pi-r11-edge)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item:first-child{
+  background-color:var(--pi-r11-hero)!important;
+  border-color:var(--pi-r11-accent-stroke)!important;
+}
+/* Reserve strong accent for selected state and primary action, not the
+   supporting outlines of every nested card. R36 text roles stay unchanged. */
+@media(max-width:359px){
+  #root[data-pi-motion="expressive"] .wpb-progress>.wpb-page-header{
+    padding-inline:12px!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-actions{
+    gap:6px!important;
+  }
+}
+@media(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb :is(
+    .wpb-history-session,.wpb-history-session-detail,.wpb-premium-tabs,
+    .wpb-progress-grouping,.wpb-history-actions>button,
+    .wpb-history-group-header,.wpb-settings-card,.wpb-profile-section){
+    background-color:Canvas!important;
+    color:CanvasText!important;
+    border-color:CanvasText!important;
+  }
+}

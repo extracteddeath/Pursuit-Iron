@@ -2,7 +2,7 @@ import { productionSource } from './production-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
-import { planOverviewMemo, planOverview, setRestScaleGlobal, EXERCISES, EX_BY_ID, WhatsNewCard } from '../modules/App.js';
+import { planOverviewMemo, planOverview, paceFactor, estimateMinutesFor, estimateMinutes, setRestScaleGlobal, EXERCISES, EX_BY_ID, WhatsNewCard } from '../modules/App.js';
 
 const program = { id: 'm219', name: 'Overview cache', custom: true, engineV: 70, weeks: 4,
     config: { goal: 'both', experience: 'intermediate', weeks: 4, split: 'custom', days: 1, session: 's60', deload: false },
@@ -11,6 +11,23 @@ const program = { id: 'm219', name: 'Overview cache', custom: true, engineV: 70,
 const history = [], saved = [program];
 setRestScaleGlobal(1);
 const first = planOverviewMemo(program, 1, null, history, saved);
+// R50: a real pace factor must affect the same Plan day and week numbers the lifter sees on Home.
+// Historical calibration is independent from the active program's completion records.
+const paceHistory = Array.from({ length: 4 }, (_, i) => ({
+    id: 'pace-' + i, programId: 'historical-training', dayId: 'older-day',
+    estMin: 60, durationMin: 78, setsDone: 20, totalSets: 20, date: 1000 + i
+}));
+const pace = paceFactor(paceHistory, saved);
+assert.equal(pace.known, true);
+assert.equal(pace.factor, 1.3);
+const userMinutes = estimateMinutesFor(program, program.days[0], 1, pace);
+const personalOverview = planOverview(program, 1, null, paceHistory, saved);
+assert.equal(personalOverview.upNext.minutes, userMinutes, 'Plan Up Next must use Home\'s calibrated duration model');
+assert.equal(personalOverview.weeks[0].days[0].minutes, userMinutes, 'Plan day duration must match preview and Home');
+assert.equal(personalOverview.weeks[0].minutes, userMinutes, 'Plan week total must sum the displayed day estimates');
+assert.ok(userMinutes > estimateMinutes(program, program.days[0], 1), 'the generation budget remains distinct from personal elapsed time');
+assert.equal(first.upNext.minutes, estimateMinutesFor(program, program.days[0], 1),
+    'without calibration the estimate still includes exercise transitions');
 assert.equal(planOverviewMemo(program, 1, null, history, saved), first, 'unchanged inputs reuse the expensive overview');
 setRestScaleGlobal(1.3);
 const long = planOverviewMemo(program, 1, null, history, saved);

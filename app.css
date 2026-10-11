@@ -6074,11 +6074,15 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-color:var(--pi-color-divider)!important;
   box-shadow:none!important;
 }
-/* Give the long Intermediate option more room at normal phone widths.
-   Preserve the real 48px button target and natural 125%-text wrapping rather
-   than shrinking the font or truncating a user-facing experience level. */
-#root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-experience-segmented>button:nth-child(3){
-  flex:1.28 1 0%!important;
+/* The Experience control is a 4-column GRID, not a flex row.
+   Give "Intermediate" a meaningfully wider column at regular phone widths
+   without shrinking text; tiny screens can still wrap naturally at 125%. */
+#root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-experience-segmented{
+  display:grid!important;
+  grid-template-columns:minmax(0,.85fr) minmax(0,1fr) minmax(0,1.5fr) minmax(0,1fr)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-experience-segmented>button{
+  min-width:0;
   letter-spacing:-.01em!important;
 }
 /* Preserve the R41 primary/secondary hierarchy: By cycle/By month is

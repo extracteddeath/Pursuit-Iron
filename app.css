@@ -6080,7 +6080,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    without shrinking text; tiny screens can still wrap naturally at 125%. */
 #root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-experience-segmented{
   display:grid!important;
-  grid-template-columns:minmax(0,.8fr) minmax(0,1fr) minmax(0,1.43fr) minmax(0,1.37fr)!important;
+  grid-template-columns:minmax(44px,.66fr) minmax(0,1.14fr) minmax(0,1.43fr) minmax(0,1.37fr)!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-experience-segmented>button{
   min-width:0;

@@ -16,9 +16,9 @@ instances, all concentrated in the following labels:
 - Stone Plan current-week and Progress Sessions summary labels measured 4.39:1.
 
 R36 maps these specific small labels to two fully opaque, theme-derived
-foreground roles. Accent text mixes the theme primary with its original
-foreground on **light themes**; secondary metric labels use a distinct
-foreground/background tone. The existing dark action emphasis is retained.
+foreground roles. Accent text uses the theme primary toned toward black
+on **light themes**; secondary metric labels use a near-neutral, subtly
+theme-tinted dark ink instead of a bright fallback foreground. The existing dark action emphasis is retained.
 This does not alter typography geometry, set completion fading, workout data,
 or other established branded color roles.
 

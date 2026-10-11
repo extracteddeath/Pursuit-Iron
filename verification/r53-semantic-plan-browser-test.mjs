@@ -10,7 +10,7 @@ import puppeteer from 'puppeteer-core';
 const root=path.resolve(new URL('../',import.meta.url).pathname);
 const program={
   id:'r53-surface',name:'R53 Plan Surface',custom:true,weeks:4,
-  config:{name:'R53 Plan Surface',goal:'both',experience:'intermediate',progression:'manual',split:'custom',weeks:4,days:2,session:'s60',unit:'lb',deload:false},
+  config:{name:'R53 Plan Surface',goal:'both',experience:'intermediate',progression:'double',split:'custom',weeks:4,days:2,session:'s60',unit:'lb',deload:false},
   days:[
     {id:'upper',label:'Upper',primaryIndex:0,exercises:['bb-bench','inc-curl']},
     {id:'lower',label:'Lower',primaryIndex:1,exercises:['back-squat','leg-press']}

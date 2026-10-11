@@ -1,3 +1,11 @@
+# R52 · semantic surfaces and theme-aware selection · Build 831
+
+- Correct actual Settings Theme and Units containers that previously bypassed the shared dark surface roles.
+- Use a consistent quiet card for Settings content and subdued Plan day cards instead of repeating deep plum panels.
+- Return the user's theme hue to segmented choices and navigation, using accessible light-tonal indicators rather than unrelated slate-gray selected pills.
+- Distinguish primary Progress navigation from its secondary grouping; preserve motion, 48px controls, all saved theme variants and training state.
+- Add rendered Settings/Program paint assertions and screenshot evidence; no changes to logger inputs, training engine, storage, or lifecycle.
+
 # Material 3 Expressive R51 — shared selection and neutral dark surfaces
 
 - Use one dark page/card/control ladder across Settings and other destinations instead of purple/maroon surfaces.

@@ -55,6 +55,7 @@ try {
     assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('wpb:v1')).saved), initial.saved, 'changing rest duration cannot rewrite training prescriptions');
 
     const themes = await page.evaluate(async () => Object.keys((await import('/modules/App.js')).THEMES));
+    const r36Observations = [];
     for (const theme of themes) {
         await page.click('[data-tab="settings"]'); await page.waitForSelector('[data-theme-summary]');
         await page.$eval('.wpb-theme-picker', n => { n.open = true; });
@@ -64,6 +65,49 @@ try {
             await page.click('[data-tab="' + tab + '"]'); await settled();
             const bounds = await page.$eval('.wpb', n => ({ width: n.getBoundingClientRect().width, scroll: n.scrollWidth }));
             assert.ok(bounds.width <= 321 && bounds.scroll <= 321, JSON.stringify({ theme, tab, bounds }));
+
+            // R36 deep audit: resolve rendered text against the nearest opaque
+            // ancestor surface (including alpha-composited painted containers).
+            // Capture cases before deciding which theme roles to adjust. This
+            // stage deliberately audits, rather than overriding, native data.
+            const nestedContrast = await page.evaluate(tab => {
+                const selectors = {
+                    home:['.wpb-home .wpb-home-hero','.wpb-home .wpb-action-tile'],
+                    plan:['.wpb-plan-up-next','.wpb-plan-glance-tile'],
+                    progress:['.wpb-progress-glance-item','.wpb-progress .wpb-history-filter-help'],
+                    profile:['.wpb-profile-stat','.wpb-profile-strength-cell'],
+                    settings:['.wpb-settings-card','.wpb-settings-row']
+                }[tab] || [];
+                const ctx=document.createElement('canvas').getContext('2d',{willReadFrequently:true});
+                const rgba=color=>{
+                    ctx.clearRect(0,0,1,1);ctx.fillStyle='rgba(0,0,0,0)';
+                    try{ctx.fillStyle=color;ctx.fillRect(0,0,1,1);}catch{return [0,0,0,0]}
+                    return [...ctx.getImageData(0,0,1,1).data].map((x,i)=>i===3?x/255:x/255);
+                };
+                const blend=(front,back)=>front.slice(0,3).map((x,i)=>x*front[3]+back[i]*(1-front[3]));
+                const lum=rgb=>{const v=rgb.map(x=>x<=.04045?x/12.92:((x+.055)/1.055)**2.4);
+                    return .2126*v[0]+.7152*v[1]+.0722*v[2]};
+                const contrast=(x,y)=>{const a=lum(x),b=lum(y);return (Math.max(a,b)+.05)/(Math.min(a,b)+.05)};
+                const background=el=>{
+                    let bg=[1,1,1],stack=[];
+                    for(let n=el;n&&n.nodeType===1;n=n.parentElement)stack.push(n);
+                    for(const n of stack.reverse()){const c=rgba(getComputedStyle(n).backgroundColor);bg=blend(c,bg)}
+                    return bg;
+                };
+                return selectors.map(selector=>{
+                    const container=[...document.querySelectorAll(selector)].find(el=>el.getClientRects().length);
+                    if(!container)return {selector,missing:true};
+                    const candidates=[container,...container.querySelectorAll('span,small,p,h1,h2,h3,button,.mono,div')];
+                    const label=candidates.find(el=>el.getClientRects().length &&
+                        [...el.childNodes].some(n=>n.nodeType===3&&n.textContent.trim().length>=2));
+                    if(!label)return {selector,noLabel:true};
+                    const c=getComputedStyle(label),paint=background(label),fg=rgba(c.color);
+                    const ratio=contrast(blend(fg,[...paint,1]),paint);
+                    return {selector,label:label.textContent.trim().slice(0,48),
+                        ratio:+ratio.toFixed(2),font:c.fontSize,paint:c.color};
+                });
+            }, tab);
+            r36Observations.push({theme,tab,nestedContrast});
             // R34/R35: verify actual responsive tab targets and rendered color
             // roles under each of the 20 saved themes, not just source tokens.
             const accessibility = await page.evaluate(tab => {
@@ -138,6 +182,13 @@ try {
         });
         assert.ok(contrast.length >= 4 && contrast.every(item => item.ratio >= 4.5 && item.fresh), `${theme}: selected settings remain legible: ${JSON.stringify(contrast)}`);
     }
+    const r36Fails=r36Observations.flatMap(({theme,tab,nestedContrast})=>
+        nestedContrast.filter(x=>Number.isFinite(x.ratio)&&x.ratio<4.5)
+            .map(x=>({theme,tab,...x})));
+    console.log('R36 NESTED COLOR AUDIT '+JSON.stringify({
+        themeCount:themes.length,samples:r36Observations.reduce((n,x)=>n+x.nestedContrast.filter(y=>Number.isFinite(y.ratio)).length,0),
+        failures:r36Fails.length,examples:r36Fails.slice(0,35)
+    }));
     await page.$eval('.wpb-theme-picker', n => { n.open = true; });
     await page.click('[data-theme-option="amethyst"]');
     await page.click('[data-tab="plan"]'); await settled();

@@ -5988,24 +5988,25 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    do not own .wpb-settings-card. One coherent surface ladder; saved accent
    only inside intentional active states and main actions. No JS or logger. */
 #root[data-pi-motion="expressive"] .wpb{
-  --pi-color-canvas:light-dark(var(--pi-m3e-base),#111317);
-  --pi-color-card:light-dark(var(--pi-m3e-surface-container-low),#1b1e24);
-  --pi-color-control:light-dark(var(--pi-m3e-surface-container-high),#22272f);
+  --pi-color-canvas:light-dark(#f8f8fa,#111317);
+  --pi-color-card:light-dark(#ffffff,#1b1e24);
+  --pi-color-control:light-dark(#eef0f4,#22272f);
   --pi-color-on-control:light-dark(#434650,#c4c7ce);
-  --pi-color-divider:light-dark(var(--pi-m3e-outline-variant),rgba(228,231,240,.12));
+  --pi-color-text:light-dark(#22232b,#f1eff6);
+  --pi-color-divider:light-dark(rgba(35,39,50,.14),rgba(228,231,240,.12));
   /* Selection belongs to the theme; an accessible *tonal* accent, not a
      loud saturated primary CTA or a universal slate-gray slab. */
   --pi-color-active:light-dark(
     color-mix(in srgb,var(--pi-m3e-primary) 22%,#373943 78%),
     color-mix(in srgb,var(--pi-m3e-primary) 35%,#c0c4cd 65%));
   --pi-color-on-active:light-dark(#fff,#17191d);
-  --pi-color-feature:light-dark(var(--pi-m3e-primary-container),#272b33);
+  --pi-color-feature:light-dark(color-mix(in srgb,var(--pi-m3e-primary) 9%,#ffffff 91%),#272b33);
   /* Compatibility with older components still reading R11/R51 surface roles.
      Keep the same charcoal values already in R51 for the workout logger. */
   --pi-r11-quiet:var(--pi-color-card);
   --pi-r11-raised:var(--pi-color-control);
   --pi-r11-hero:var(--pi-color-feature);
-  --pi-r11-selected:light-dark(var(--pi-m3e-primary-container),#2c3039);
+  --pi-r11-selected:light-dark(var(--pi-color-feature),#2c3039);
   --pi-r11-edge:var(--pi-color-divider);
   --pi-r51-page:var(--pi-color-canvas);
   --pi-r51-surface:var(--pi-color-card);
@@ -6061,7 +6062,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-settings-jump-control select{
   background:transparent!important;
   background-image:none!important;
-  color:var(--boot-fg)!important;
+  color:var(--pi-color-text)!important;
 }
 /* Common control tracks: identical roles for Settings, Plan, Progress,
    filters and Exercise Detail, not arbitrary colors per screen. */
@@ -6079,7 +6080,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    without shrinking text; tiny screens can still wrap naturally at 125%. */
 #root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-experience-segmented{
   display:grid!important;
-  grid-template-columns:minmax(0,.85fr) minmax(0,1fr) minmax(0,1.5fr) minmax(0,1fr)!important;
+  grid-template-columns:minmax(0,.8fr) minmax(0,1fr) minmax(0,1.43fr) minmax(0,1.37fr)!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-experience-segmented>button{
   min-width:0;
@@ -6217,7 +6218,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   background:var(--pi-plan-raised)!important;
   background-image:none!important;
   border:1px solid var(--pi-plan-line)!important;
-  color:var(--boot-fg)!important;
+  color:var(--pi-color-text)!important;
   border-radius:14px!important;
   box-shadow:none!important;
   min-height:48px!important;
@@ -6259,6 +6260,64 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   #root[data-pi-motion="expressive"] .wpb .wpb-plan-week-picker>.wpb-plan-week-chip[aria-pressed="true"]{
     background:Highlight!important;
     color:HighlightText!important;
+  }
+}
+
+
+/* R53 light and dark share one neutral surface ladder. Home's primary
+   action remains theme-colored, but its large informational hero and header
+   are no longer coated in an independent light-theme primary container. */
+#root[data-pi-motion="expressive"] .wpb .wpb-home .wpb-home-hero{
+  background:var(--pi-color-feature)!important;
+  background-image:none!important;
+  border-color:var(--pi-color-divider)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-home>.wpb-page-header{
+  background:var(--pi-color-card)!important;
+  background-image:none!important;
+  box-shadow:none!important;
+}
+/* Program's Suggested Week / Workout Exercise rows previously painted
+   their own C.card, C.bg2 and C.accentDim inline colors. Preserve their
+   information, custom schedule and drag effects; use the canonical roles. */
+#root[data-pi-motion="expressive"] .wpb .wpb-program .wpb-program-suggested-week{
+  background:var(--pi-color-card)!important;
+  background-image:none!important;
+  border:1px solid var(--pi-color-divider)!important;
+  border-radius:18px!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-program .wpb-program-week-slot{
+  background:var(--pi-color-control)!important;
+  background-image:none!important;
+  border-radius:9px!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-program .wpb-program-week-slot[data-training="true"]{
+  background:var(--pi-color-feature)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-program .wpb-program-exercise-row{
+  background:var(--pi-color-control)!important;
+  background-image:none!important;
+  border-radius:16px!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-program .wpb-program-exercise-row[data-dragging="true"]{
+  background:var(--pi-color-feature)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-program :is(
+  [data-hit-chip]:not([aria-expanded="true"]),[data-hit-panel]){
+  background:var(--pi-color-control)!important;
+  background-image:none!important;
+  border-color:var(--pi-color-divider)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-program [data-hit-chip]:not([aria-expanded="true"]){
+  color:var(--pi-color-text)!important;
+}
+@media(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb .wpb-program :is(
+    .wpb-program-suggested-week,.wpb-program-week-slot,.wpb-program-exercise-row,[data-hit-panel]){
+    background:Canvas!important;
+    color:CanvasText!important;
+    border-color:CanvasText!important;
   }
 }
 

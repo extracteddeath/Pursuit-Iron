@@ -6569,3 +6569,178 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     color:ButtonText!important;
   }
 }
+
+
+/* R57 — one spacing cadence for the four supporting primary destinations.
+   Home's certified 56dp collapsed state and Workout's logger are deliberately
+   excluded. Surfaces read the R55 semantic palette (no extra gray literals). */
+#root[data-pi-motion="expressive"] .wpb{
+  --pi-r57-inset:16px;
+  --pi-r57-header-gap:10px;
+  --pi-r57-on-support:var(--pi-color-on-muted);
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-view .wpb-plan-heading-row{
+  min-height:44px;
+  gap:8px!important;
+  padding:2px 0 0!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-view .wpb-plan-heading-row>button[aria-label="Back"]{
+  box-sizing:border-box;
+  width:44px!important;
+  height:44px!important;
+  padding:0!important;
+  display:grid!important;
+  place-items:center!important;
+  flex-shrink:0!important;
+  color:var(--pi-color-on-control)!important;
+  border-radius:12px!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-view .wpb-plan-heading-row>div:last-child{
+  color:var(--pi-r57-on-support)!important;
+  font-size:12px!important;
+  letter-spacing:.06em!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-view h1.wpb-plan-title{
+  font-size:clamp(23px,6.2vw,27px)!important;
+  line-height:1.15!important;
+  letter-spacing:-.035em!important;
+  margin:2px 0 10px!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-progress.wpb-progress>.wpb-page-header{
+  padding:11px var(--pi-r57-inset) 8px!important;
+  border-radius:0 0 18px 18px!important;
+  border-bottom:1px solid var(--pi-color-divider)!important;
+  background:var(--pi-color-card)!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-progress.wpb-progress .wpb-progress-title{
+  font-size:25px!important;
+  font-weight:745!important;
+  line-height:1.12!important;
+  letter-spacing:-.04em!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-progress.wpb-progress .wpb-premium-tabs{
+  margin-top:8px!important;
+  background:var(--pi-color-control)!important;
+  border-color:var(--pi-color-divider)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-progress.wpb-progress .wpb-premium-tabs>button{
+  box-sizing:border-box;
+  min-height:44px!important;
+  font-size:12.5px!important;
+  line-height:1.2!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-settings.wpb-settings>.wpb-page-header{
+  padding:11px var(--pi-r57-inset) 4px!important;
+  min-height:0!important;
+  border-radius:0!important;
+  border-bottom:0!important;
+  background:var(--pi-color-canvas)!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-settings.wpb-settings>.wpb-page-header h1{
+  font-size:25px!important;
+  line-height:1.16!important;
+  font-weight:750!important;
+  letter-spacing:-.04em!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-settings.wpb-settings>.wpb-settings-jump{
+  padding:0 var(--pi-r57-inset) 9px!important;
+  border-bottom:1px solid var(--pi-color-divider)!important;
+  background:var(--pi-color-canvas)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-settings.wpb-settings .wpb-settings-jump-control{
+  min-height:44px!important;
+  background:var(--pi-color-control)!important;
+  border:1px solid var(--pi-color-divider)!important;
+  border-radius:13px!important;
+  color:var(--pi-color-on-control)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-settings.wpb-settings .wpb-settings-jump-control select{
+  min-height:44px!important;
+  color:var(--pi-color-on-control)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-inner{
+  padding:13px var(--pi-r57-inset) 0!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-head{
+  align-items:center!important;
+  gap:10px!important;
+  margin-bottom:10px!important;
+  min-width:0;
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-title{
+  font-size:25px!important;
+  font-weight:750!important;
+  line-height:1.15!important;
+  letter-spacing:-.04em!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-identity{
+  font-size:12px!important;
+  line-height:1.35!important;
+  color:var(--pi-r57-on-support)!important;
+  background:transparent!important;
+  padding:0!important;
+  border:0!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-edit{
+  box-sizing:border-box!important;
+  min-height:44px!important;
+  min-width:62px!important;
+  padding:0 11px!important;
+  border:1px solid var(--pi-color-divider)!important;
+  background:var(--pi-color-control)!important;
+  color:var(--pi-color-on-control)!important;
+  border-radius:12px!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-hero{
+  padding:13px 14px!important;
+  margin-bottom:10px!important;
+  border:1px solid var(--pi-color-divider)!important;
+  background:var(--pi-color-card)!important;
+  border-radius:17px!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-level-mark{
+  width:50px!important;
+  height:50px!important;
+  border-radius:15px!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-stat-grid{
+  gap:7px!important;
+  margin-bottom:10px!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-stat{
+  padding:10px 8px!important;
+  border:1px solid var(--pi-color-divider)!important;
+  border-radius:14px!important;
+}
+#root[data-pi-motion="expressive"] .wpb :is(
+  .wpb-plan-heading-row>button[aria-label="Back"],
+  .wpb-profile-edit,
+  .wpb-progress .wpb-premium-tabs>button,
+  .wpb-settings .wpb-settings-jump-control select):focus-visible{
+  outline:2px solid var(--pi-m3e-primary)!important;
+  outline-offset:2px!important;
+}
+@media(max-width:359px){
+  #root[data-pi-motion="expressive"] .wpb{--pi-r57-inset:12px}
+  #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-hero{
+    padding-inline:11px!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-stat{
+    padding-inline:5px!important;
+  }
+}
+@media(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb :is(
+    .wpb-profile-edit,.wpb-settings-jump-control,.wpb-progress .wpb-premium-tabs){
+    color:ButtonText!important;
+    background:Canvas!important;
+    border-color:CanvasText!important;
+  }
+}

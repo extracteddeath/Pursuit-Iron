@@ -1,0 +1,28 @@
+name: R54 temporary release certification
+on:
+  push:
+    branches: ['ui/r54-cross-screen-consistency']
+permissions:
+  contents: write
+jobs:
+  finalize:
+    if: "contains(github.event.head_commit.message, 'R54: run canonical finalizer')"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: {persist-credentials: true}
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with: {node-version: '22'}
+      - name: Regenerate canonical release and offline hashes
+        run: node scripts/finalize-release.mjs
+      - name: Run release integrity and canonical source contracts
+        run: node scripts/verify-release.mjs
+      - name: Push certified shell and manifests to feature branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add modules/App.js index.html sw.js RELEASE_MANIFEST.json BUILD_PROFILE.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "R54: certify exact build and offline fingerprints"
+          git push origin HEAD:ui/r54-cross-screen-consistency

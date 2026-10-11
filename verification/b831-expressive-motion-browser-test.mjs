@@ -689,6 +689,44 @@ try {
                     state.firstSize>=24 && state.buttons===4 && state.selected===1 &&
                     state.trackFill?.length>3 && !state.overflow,
                     'Plan has a real featured week and elastic four-pane navigator: '+JSON.stringify(state));
+                // R43 uses solid and distinct low/raised/hero surfaces on
+                // the real Plan dashboard, not merely declared theme tokens.
+                const r43Plan = await page.$eval('.wpb-plan-view', root => {
+                    const el=selector=>root.querySelector(selector);
+                    const first=el('.wpb-plan-glance-tile[data-featured="true"]');
+                    const second=el('.wpb-plan-glance-tile:not([data-featured="true"])');
+                    const next=el('.wpb-plan-up-next');
+                    const choices=el('.wpb-plan-panes');
+                    const buttons=[...(choices?.querySelectorAll('button')||[])];
+                    const cs=x=>x?getComputedStyle(x):null;
+                    const box=x=>x?.getBoundingClientRect();
+                    const opaque=x=>{
+                        const ctx=document.createElement('canvas').getContext('2d',{willReadFrequently:true});
+                        ctx.fillStyle=cs(x).backgroundColor;
+                        ctx.fillRect(0,0,1,1);
+                        return ctx.getImageData(0,0,1,1).data[3]===255;
+                    };
+                    return {featured:cs(first)?.backgroundColor,
+                        quiet:cs(second)?.backgroundColor,
+                        raised:cs(choices)?.backgroundColor,
+                        hero:cs(next)?.backgroundColor,
+                        opaque:[first,second,choices,next].every(x=>x&&opaque(x)),
+                        images:[first,second,choices,next].map(x=>cs(x)?.backgroundImage),
+                        featuredHeight:box(first)?.height||0,
+                        choiceHeight:box(choices)?.height||0,
+                        buttonHeights:buttons.map(x=>box(x).height),
+                        overflow:root.scrollWidth>root.clientWidth+1};
+                });
+                assert.ok(r43Plan.opaque &&
+                    r43Plan.featured!==r43Plan.quiet &&
+                    r43Plan.quiet!==r43Plan.raised &&
+                    r43Plan.images.every(x=>x==='none') &&
+                    r43Plan.featuredHeight>=80 && r43Plan.choiceHeight>=52 &&
+                    r43Plan.buttonHeights.length===4 &&
+                    r43Plan.buttonHeights.every(x=>x>=44) &&
+                    !r43Plan.overflow,
+                    'R43 Plan separates summary, active workout and four-way control at '+
+                    width+'px: '+JSON.stringify(r43Plan));
             }
             if (tab === 'progress') {
                 const metrics = await page.$eval('.wpb-progress [data-progress-glance]', grid => {
@@ -1402,6 +1440,29 @@ try {
             const style = getComputedStyle(el);
             return parseFloat(style.fontSize) >= 15 && parseFloat(style.lineHeight) >= 18;
         }), 'Plan day titles are legible without expanding or rearranging the day cards');
+        // R43 examines real Program containers before toggling any content.
+        const r43Program = await page.$eval('.wpb-program', root => {
+            const card=root.querySelector('.wpb-day-card');
+            const day=root.querySelector('.wpb-day-toggle');
+            const weeks=[...root.querySelectorAll('.wpb-week-rail>button')];
+            const cs=x=>x?getComputedStyle(x):null;
+            const box=x=>x?.getBoundingClientRect();
+            return {page:cs(root)?.backgroundColor,
+                card:cs(card)?.backgroundColor,
+                image:cs(card)?.backgroundImage,
+                cardEdge:cs(card)?.borderTopWidth,
+                dayHeight:box(day)?.height||0,
+                weekHeights:weeks.map(x=>box(x).height),
+                weekImages:weeks.map(x=>cs(x).backgroundImage),
+                overflow:root.scrollWidth>root.clientWidth+1};
+        });
+        assert.ok(r43Program.page!==r43Program.card &&
+            r43Program.image==='none' && r43Program.cardEdge==='1px' &&
+            r43Program.dayHeight>=68 &&
+            r43Program.weekHeights.every(x=>x>=51) &&
+            r43Program.weekImages.every(x=>x==='none') &&
+            !r43Program.overflow,
+            'R43 Program has neutral day-card hierarchy and viable week actions: '+JSON.stringify(r43Program));
         // A real plan-day accordion must morph its surface and expose the
         // actual mounted panel to assistive technology. No extra rows,
         // reserved height or program-data mutation is permitted.

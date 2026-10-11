@@ -9,6 +9,7 @@ import puppeteer from 'puppeteer-core';
 
 const root = path.resolve(new URL('../', import.meta.url).pathname);
 const program = { id: 'b825-logging', custom: true, weeks: 6,
+    exLoadInc: { 'inc-curl': { v: 25, unit: 'lb' } },
     config: { unit: 'lb', goal: 'both', experience: 'intermediate', progression: 'double', deload: false },
     days: [{ id: 'lower', label: 'Lower', primaryIndex: 0, exercises: ['back-squat', 'inc-curl'] }],
     overrides: { 'lower:0': { sets: 4, reps: '5-8', rir: '2', rest: 120 }, 'lower:1': { sets: 2, reps: '10-15', rir: '2', rest: 90 } } };
@@ -178,6 +179,17 @@ try {
         if (width === 390) await page.screenshot({ path: path.join(root, 'verification/b827-after-log-phone.png') });
         await page.click('.wpb-workout-footer button[aria-label="Next exercise"]');
         await page.waitForSelector('[data-testid="set-1-0"]');
+        // B845: real Android-style tap, type and decrement for incline dumbbell
+        // curls. A previous coarse +25 step must not block 20/15 lb.
+        const curlField='[data-testid="set-1-0"] input[aria-label="weight"]';
+        await page.click(curlField); await page.keyboard.type('25'); await settle();
+        assert.equal(await page.$eval(curlField, n=>n.value),'25');
+        await page.click('[data-testid="set-1-0"] button[aria-label="weight down"]'); await settle();
+        assert.equal(await page.$eval(curlField,n=>n.value),'20',
+            'curl minus step should move from 25 to 20 lb');
+        await page.click('[data-testid="set-1-0"] button[aria-label="weight down"]'); await settle();
+        assert.equal(await page.$eval(curlField,n=>n.value),'15',
+            'curl minus step should continue below 20 lb');
         assert.match(await page.$eval('.wpb-workout-footer-primary', n => n.innerText), /Finish workout/);
         assert.ok(await visibleFooter(), 'Finish workout remains reachable during rest');
         assert.ok(await page.$('[data-rest-card]'), 'moving to the next exercise preserves running rest');

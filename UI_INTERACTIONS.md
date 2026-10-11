@@ -708,3 +708,31 @@ score card. This is a *design-system* fix, not a change to exercise data.
 
 The screenshot is a product review reference; physical Android tap and
 TalkBack inspection still require a device after deployment.
+
+## R39 — Profile and Progress scannability
+
+The October 11 (430px Android) browser captures made two issues visible:
+three Profile mini-stats were separate floating tiles, and a lone strength
+category took one half of a two-column comparison. The Progress overview used
+too-small labels in three bulky cards while its search/filter controls had
+their own competing shapes.
+
+- Profile statistics share a single bounded, three-column metric strip with
+  fine separators. Values are still individually visible and retain exact
+  program history/volume semantics. The empty second half of a single-pattern
+  strength grid is reclaimed automatically using :has() and :only-child.
+  Two or more real patterns still use the existing two-column layout.
+- Profile sections gain consistent inner padding, so total-lift measurements
+  and badges do not run into the edge of their container. Edit and Share are
+  unchanged actions, with 48px touch targets.
+- Progress Sessions summary cards become denser and more readable. Secondary
+  labels are 11–11.5px instead of 10px. Search and filter controls are
+  at least 48px high; grouping and expandable histories have at least 44px
+  targets. Theme-derived quiet/raised/accent roles carry over from R38.
+- The normal history data, session count, score calculations, PRs, search,
+  grouping, and all visible actions are unchanged. No cards are duplicated,
+  no empty summaries are hidden, and no workout logging code is touched.
+- Browser certification now inspects the *rendered* Profile three-way
+  grouping, singleton strength bounds, section padding, Progress metric
+  label sizes, filter hit areas and horizontal overflows at 320px and 430px
+  before the branch can merge.

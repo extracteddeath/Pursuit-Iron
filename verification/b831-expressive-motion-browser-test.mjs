@@ -492,6 +492,64 @@ try {
                     'R24 history surfaces and real actions fit the phone: '+JSON.stringify(historyR24));
             }
             if (tab === 'profile') {
+                const r39 = await page.evaluate(() => {
+                    const stats=document.querySelector('.wpb-profile-stat-grid');
+                    const strength=document.querySelector('.wpb-profile-strength-grid');
+                    const cells=[...document.querySelectorAll('.wpb-profile-strength-grid>.wpb-profile-strength-cell')];
+                    const sections=[...document.querySelectorAll('.wpb-profile-section')];
+                    const groupStyle=stats&&getComputedStyle(stats);
+                    const statsBox=stats?.getBoundingClientRect();
+                    const strengthBox=strength?.getBoundingClientRect();
+                    return {count:stats?.children.length||0,
+                        columns:groupStyle?.gridTemplateColumns||'',
+                        statsWidth:statsBox?.width||0,
+                        statsOverflow:!!stats&&stats.scrollWidth>stats.clientWidth+1,
+                        groupGap:groupStyle?.gap,
+                        groupBackground:groupStyle?.backgroundColor,
+                        strengthCount:cells.length,
+                        singletonWidth:cells.length===1?cells[0].getBoundingClientRect().width:null,
+                        strengthWidth:strengthBox?.width||0,
+                        singletonMinHeight:cells.length===1?cells[0].getBoundingClientRect().height:null,
+                        sections:sections.slice(0,3).map(el=>({
+                            padding:parseFloat(getComputedStyle(el).paddingLeft),
+                            overflows:el.scrollWidth>el.clientWidth+1
+                        }))};
+                });
+                assert.ok(r39.count===3&&r39.statsWidth>0&&!r39.statsOverflow &&
+                    r39.groupGap==='0px'&&r39.groupBackground!=='rgba(0, 0, 0, 0)' &&
+                    (r39.strengthCount!==1 || (
+                        r39.singletonWidth>=r39.strengthWidth-2 &&
+                        r39.singletonMinHeight>=70))&&
+                    r39.sections.every(x=>x.padding>=14&&!x.overflows),
+                    'R39 Profile grouped metrics and single lift use phone space cleanly: '+JSON.stringify(r39));
+            }
+            if (tab === 'progress') {
+                const r39 = await page.evaluate(() => {
+                    const cards=[...document.querySelectorAll('[data-progress-glance] .wpb-progress-glance-item')];
+                    const filters=document.querySelector('.wpb-history-filters');
+                    const inputs=filters?[...filters.querySelectorAll('input,select')]:[];
+                    const grouping=document.querySelector('.wpb-progress-grouping');
+                    return {cards:cards.map(el=>{
+                            const box=el.getBoundingClientRect();
+                            const label=el.querySelector('.wpb-progress-glance-label');
+                            return {width:box.width,height:box.height,
+                                font:label?parseFloat(getComputedStyle(label).fontSize):0,
+                                overflow:el.scrollWidth>el.clientWidth+1};
+                        }),
+                        controls:inputs.map(el=>({height:el.getBoundingClientRect().height,
+                            overflows:el.scrollWidth>el.clientWidth+1})),
+                        groupingHeights:grouping?[...grouping.querySelectorAll('button')].map(el=>
+                            el.getBoundingClientRect().height):[],
+                        scrollOverflow:document.querySelector('.wpb')?.scrollWidth>innerWidth+1};
+                });
+                assert.ok(r39.cards.length===3&&r39.cards.every(x=>
+                    x.width>50&&x.height>=80&&x.font>=11&&!x.overflow) &&
+                    !r39.scrollOverflow &&
+                    r39.controls.every(x=>x.height>=48&&!x.overflows) &&
+                    r39.groupingHeights.every(h=>h>=44),
+                    'R39 Progress metrics, filter controls and grouping remain readable: '+JSON.stringify(r39));
+            }
+            if (tab === 'profile') {
                 const tonal = await tonalSurfaceReport({
                     featured:'.wpb-profile-strength-cell:first-child',
                     secondary:'.wpb-profile-strength-cell:nth-child(2)',

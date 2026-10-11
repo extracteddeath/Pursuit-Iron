@@ -153,6 +153,40 @@ function evaluateProgression(session, performedSets, context = {}) {
             return decision(ex, { outcome: 'incomplete', reasonCode: completion < .75 ? 'incomplete_session' : 'incomplete_prescription', action: completion < .75 ? 'review' : 'hold', confidence: 'moderate', reason, currentLoad, suggestedLoad: currentLoad, estimated1RM });
         }
 
+        // Dynamic Double is deliberately per-set: a completed comparable exposure is required,
+        // but a successful set does not depend on the rep count of its neighbors.
+        // Only a position that reached the actual upper rep bound at acceptable RIR can go up.
+        // All other positions retain their own loads (and can keep earning reps).
+        if (style === 'dynamic' && allAtLeastBottom && effortInRange) {
+            const ceiling = Number(ex.prescription.reps[1]);
+            const earned = actual.map(set => {
+                const targetRir = targetFor(set)?.rir ?? targetRirFloor;
+                if (!(set.load > 0) || !(set.reps >= ceiling) ||
+                    (set.rir !== null && Number(set.rir) < targetRir)) return null;
+                return loadingRecommendation(ex.exerciseId, set.load, context.loadingInventory,
+                    context.equipmentAvailable).suggestedLoad;
+            });
+            const advanced = earned.filter((weight, index) => weight !== null &&
+                weight > actual[index].load + 1e-6);
+            if (advanced.length) {
+                return decision(ex, {
+                    outcome: 'success', reasonCode: 'dynamic_per_set_success',
+                    action: 'increase_load', perSet: true, advancedSets: advanced.length,
+                    confidence: rirReported.length === actual.length ? 'high' : 'moderate',
+                    reason: `Dynamic double progression: ${advanced.length} of ${actual.length} completed set positions earned the next available load by reaching ${ceiling} reps at the planned effort. The other positions keep their own weights and build reps.`,
+                    currentLoad, suggestedLoad: Math.max(currentLoad, ...advanced), estimated1RM
+                });
+            }
+            if (actual.some(set => set.reps >= ceiling)) {
+                return decision(ex, {
+                    outcome: 'success_blocked', reasonCode: 'loading_inventory_blocked',
+                    action: 'review', confidence: 'moderate',
+                    reason: 'A completed set reached the top of the range, but no heavier load was available for that set. Keep its weight until the loading inventory or exercise can support a safe increase.',
+                    currentLoad, suggestedLoad: currentLoad, estimated1RM
+                });
+            }
+        }
+
         // M183 progression invariant: automatic load increases require a complete top-of-range exposure at
         // acceptable effort. Progression styles may change how work is accumulated, but no style can use a
         // merely in-range or partial exposure as proof that a heavier prescription was earned.
@@ -206,13 +240,29 @@ function evaluateProgression(session, performedSets, context = {}) {
 
 // Realize the evaluator's decision at each working-set position. Never copy the best set's reps
 // to every row, and never estimate extra reps from a load reduction (especially high-rep cables).
-export function progressionSetTargets(exercise, actual, result) {
+export function progressionSetTargets(exercise, actual, result, context = {}) {
     const [lo, hi] = exercise.prescription.reps;
     const dynamic = exercise.progressionStyle === 'dynamic';
     const increasing = result.action === 'increase_load';
     const decreasing = result.action === 'decrease_load';
+    const indexed = new Map(actual.map(set => [set.setIndex, set]));
     return Array.from({ length: Math.max(1, exercise.sets) }, (_, index) => {
-        const previous = actual[index];
+        const previous = indexed.get(index);
+        // Do not copy the single heaviest increment across all Dynamic Double sets.
+        // Each completed slot earns its own smallest available increase or keeps its load.
+        if (dynamic && result.perSet && previous?.load != null) {
+            const rirFloor = exercise.prescription.setTargets?.[index]?.rir ??
+                Math.max(0, Number(exercise.prescription.rir?.[0]) || 0);
+            const eligible = previous.reps >= hi &&
+                (previous.rir === null || Number(previous.rir) >= rirFloor);
+            const next = eligible
+                ? loadingRecommendation(exercise.exerciseId, previous.load, context.loadingInventory,
+                    context.equipmentAvailable).suggestedLoad : null;
+            const advanced = next !== null && next > previous.load + 1e-6;
+            return { weight: advanced ? next : previous.load,
+                reps: advanced ? lo : Math.max(lo, Math.min(hi, Math.round(previous.reps) + 1)),
+                advanced };
+        }
         const load = dynamic && !increasing && !decreasing && previous?.load != null
             ? previous.load : result.suggestedLoad ?? result.currentLoad;
         const sameLoad = previous?.load != null && load != null && Math.abs(previous.load - load) < 1e-6;
@@ -227,6 +277,6 @@ export function evaluateWorkoutProgression(session, performedSets, context = {})
     return results.map((result, index) => {
         const exercise = session.exercises[index];
         const actual = performedSets.filter(s => s.exerciseId === exercise.exerciseId).slice().sort((a,b) => a.setIndex-b.setIndex);
-        return { ...result, setTargets: progressionSetTargets(exercise, actual, result) };
+        return { ...result, setTargets: progressionSetTargets(exercise, actual, result, context) };
     });
 }

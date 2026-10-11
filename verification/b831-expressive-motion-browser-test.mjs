@@ -2117,6 +2117,24 @@ try {
                 startR25.secondaryTouch==='manipulation')) &&
             !startR25.overflow,
             'R25 cold-start welcome is solid and touch-safe: '+JSON.stringify(startR25));
+        // R40 first-run/empty-program path remains usable with enlarged text.
+        await welcome.evaluate(()=>{document.documentElement.style.fontSize='20px';});
+        const r40Welcome=await welcome.$eval('.wpb-onboarding',el=>{
+            const primary=el.querySelector('.wpb-onboarding-primary');
+            const secondary=el.querySelector('.wpb-onboarding-secondary');
+            const buttons=[primary,secondary].filter(x=>x&&x.getClientRects().length);
+            const features=[...el.querySelectorAll('.wpb-onboarding-feature')];
+            return {scrollOverflow:el.scrollWidth>el.clientWidth+1,
+                buttons:buttons.map(x=>({h:x.getBoundingClientRect().height,
+                    textOverflow:x.scrollWidth>x.clientWidth+1})),
+                featureOverflows:features.filter(x=>x.scrollWidth>x.clientWidth+1).length};
+        });
+        assert.ok(!r40Welcome.scrollOverflow &&
+            r40Welcome.buttons.length>=1 &&
+            r40Welcome.buttons.every(x=>x.h>=50&&!x.textOverflow) &&
+            r40Welcome.featureOverflows===0,
+            'R40 cold-start content survives enlarged Android text: '+JSON.stringify(r40Welcome));
+        await welcome.evaluate(()=>{document.documentElement.style.fontSize='';});
         if(width===430) await welcome.screenshot({path:path.join(root,'verification/b831-m3-onboarding-phone.png')});
         assert.deepEqual(welcomeErrors,[]);
         await cleanContext.close();

@@ -30,6 +30,174 @@ const snapshot={
      valueOwner:'user',target:{w:slot?'30':'190',reps:slot?'10-15':'6-8',rir:'2'}}
   ]}))
 };
+// R59: exercise complete journeys using the production router and Android Back bridge.
+// The active program must survive browsing, and a launch must retain its caller and selected week.
+async function verifyNavigationFlow(browser,theme,width){
+  const alternate={...program,id:'r59-alternate',name:'R59 Alternate',
+    config:{...program.config,name:'R59 Alternate'}};
+  const initial={...store(theme),saved:[program,alternate]};
+  const context=await browser.createBrowserContext();
+  const page=await context.newPage();
+  const errors=[];
+  page.on('pageerror',error=>errors.push(error.message));
+  try{
+    await page.setViewport({width,height:852,deviceScaleFactor:1,isMobile:true,hasTouch:true});
+    await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
+    await page.evaluateOnNewDocument(value=>localStorage.setItem('wpb:v1',JSON.stringify(value)),initial);
+    await page.goto('http://127.0.0.1:8796/',{waitUntil:'networkidle0'});
+    await page.waitForSelector('.wpb-tabbar');
+    const route=async name=>page.waitForSelector('[data-view-frame="'+name+'"]');
+    const back=async()=>page.$eval('[data-view-frame] button[aria-label="Back"]',button=>button.click());
+    const clickText=async text=>page.$$eval('button',(buttons,label)=>{
+      const button=buttons.find(node=>node.textContent.trim()===label);
+      if(!button)throw new Error('Missing flow action: '+label);
+      button.click();
+    },text);
+    const settle=async()=>page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+    const selectedWeek=()=>page.$eval('.wpb-plan-week-chip[aria-pressed="true"]',button=>button.getAttribute('aria-label'));
+    const assertPlan=async week=>{
+      await route('plan');
+      assert.equal(await page.$eval('.wpb-plan-title',node=>node.textContent),program.name,
+        'Plan follows the active program rather than the last browsed program');
+      assert.equal(await selectedWeek(),'Week '+week,'Plan retains its selected browsing week');
+    };
+
+    // On a fresh load the program editor has never been opened. Preview must initialize it itself.
+    await page.click('[data-tab="plan"]');
+    await page.click('[data-plan-week-picker] [aria-label="Week 3"]');
+    await settle();
+    const beforeScroll=await page.$eval('.wpb-plan-view',node=>node.scrollTop);
+    assert.ok(beforeScroll>50,'The selected week has a real scroll position to restore');
+    await page.click('[data-plan-week="3"] .wpb-plan-session-link');
+    await route('nextWorkout');
+    await page.$$eval('button',buttons=>buttons.find(node=>node.textContent.includes('View full program')).click());
+    await page.waitForSelector('.wpb-program');
+    assert.ok(await page.$eval('.wpb-program',node=>node.textContent.includes('R54 Manual')),
+      'Preview opens the correct full program without bouncing to Home');
+    assert.equal(await page.$eval('.wpb-program .wpb-week-rail>button[aria-pressed="true"]',node=>node.textContent.trim().startsWith('Week 3')),true,
+      'Full program opens on the previewed week');
+    await back();await route('nextWorkout');
+    assert.ok(await page.$eval('.wpb-next-workout-view',node=>node.textContent.includes('Week 3 of 4')),
+      'Full program Back returns to the same day and week preview');
+    await back();await assertPlan(3);await settle();
+    const returnedScroll=await page.$eval('.wpb-plan-view',node=>node.scrollTop);
+    assert.ok(Math.abs(returnedScroll-beforeScroll)<=2,'Back restores the selected week scroll position: '+JSON.stringify({beforeScroll,returnedScroll}));
+
+    // Browsing a second program is not a request to change the active training program.
+    await page.click('[data-tab="home"]');
+    await page.click('button[aria-label="Open R59 Alternate"]');await page.waitForSelector('.wpb-program');
+    await back();await route('home');await page.click('[data-tab="plan"]');await assertPlan(3);
+    await page.click('[data-plan-pane="volume"]');
+    await page.click('[data-tab="profile"]');await page.click('[data-tab="plan"]');
+    assert.equal(await page.$eval('[data-plan-pane="volume"]',node=>node.getAttribute('aria-pressed')),'true',
+      'Switching tabs retains the selected Plan section');
+
+    // Each actual program switch gets its own browsing context, never another program's week.
+    await page.click('[data-tab="home"]');await page.click('button[aria-label="Switch to R59 Alternate"]');
+    await page.click('[data-tab="plan"]');await route('plan');
+    assert.equal(await page.$eval('.wpb-plan-title',node=>node.textContent),'R59 Alternate');
+    assert.equal(await selectedWeek(),'Week 1','A newly active program starts at its own current week');
+    await page.click('[data-plan-week-picker] [aria-label="Week 2"]');
+    await page.click('[data-tab="home"]');await page.click('button[aria-label="Switch to R54 Manual"]');
+    await page.click('[data-tab="plan"]');
+    assert.equal(await page.$eval('[data-plan-pane="volume"]',node=>node.getAttribute('aria-pressed')),'true');
+    await page.click('[data-plan-pane="schedule"]');await assertPlan(3);
+
+    await page.click('[data-plan-week="3"] .wpb-plan-session-link');await route('nextWorkout');
+    await clickText('Start workout');await page.waitForSelector('.wpb-workout');
+    const checkIn=await page.$('.wpb-backdrop button[data-wpb-system-back]');
+    if(checkIn){await checkIn.click();await page.waitForSelector('.wpb-backdrop',{hidden:true});}
+    const weight=await page.$('[data-testid="set-0-0"] input[aria-label="weight"]');
+    await weight.click();await page.keyboard.down('Control');await page.keyboard.press('KeyA');await page.keyboard.up('Control');
+    await page.keyboard.type('185');await page.keyboard.press('Tab');
+    await page.evaluate(()=>history.back());await page.waitForSelector('.wpb-workout',{hidden:true});await assertPlan(3);
+    await page.waitForSelector('.wpb-live-dock button[aria-label="Resume workout"]');
+    const minimized=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:live')));
+    assert.equal(minimized.weekIndex,3,'Minimizing does not replace the selected workout week');
+    assert.equal(minimized.data[0].sets[0].weight,'185','Minimizing retains typed set values');
+
+    // Resuming from a different tab should return to that tab, keeping the same live workout.
+    await page.click('[data-tab="progress"]');
+    await page.click('.wpb-live-dock button[aria-label="Resume workout"]');await page.waitForSelector('.wpb-workout');
+    await page.evaluate(()=>history.back());await page.waitForSelector('.wpb-workout',{hidden:true});await route('progress');
+    const resumed=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:live')));
+    assert.equal(resumed.sessionId,minimized.sessionId,'Resume and minimize retain the same workout identity');
+    assert.deepEqual(resumed.data,minimized.data,'Resume and minimize retain every entered set');
+    const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')));
+    assert.deepEqual(saved.saved,initial.saved,'Navigation never edits saved program content');
+    assert.deepEqual(saved.history,[],'Navigation never logs an unfinished workout');
+    assert.equal(saved.pinnedId,program.id,'Only an explicit Switch changes the active program');
+    await page.click('.wpb-live-dock button[aria-label="Resume workout"]');await page.waitForSelector('.wpb-workout');
+    const reps=await page.$('[data-testid="set-0-0"] input[aria-label="reps"]');
+    await reps.click();await page.keyboard.down('Control');await page.keyboard.press('KeyA');await page.keyboard.up('Control');
+    await page.keyboard.type('6');await page.keyboard.press('Tab');
+    await page.click('[data-testid="set-0-0"] .wpb-set-complete');
+    await page.click('button[aria-label="Finish workout"]');await clickText('Save & finish');
+    await page.waitForSelector('.wpb-workout',{hidden:true});await route('progress');
+    const completed=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')));
+    assert.equal(completed.history.length,1,'Finishing logs the workout exactly once');
+    assert.equal(completed.history[0].id,minimized.sessionId,'The completed record retains the resumed session identity');
+    assert.equal(completed.history[0].weekIndex,3,'The completed record retains the selected workout week');
+    assert.ok(completed.history[0].perf['bb-bench'].sets.some(set=>set.w===185&&set.r===6),
+      'Finishing retains the real entered weight and reps');
+    assert.deepEqual(completed.saved,initial.saved,'Finishing does not edit either saved program');
+    assert.equal(await page.evaluate(()=>localStorage.getItem('wpb:live')),null,'Successful finish clears live recovery state');
+    await page.click('[data-tab="plan"]');await assertPlan(3);
+    await page.$eval('.wpb-plan-open-program',button=>button.click());await page.waitForSelector('.wpb-program');
+    assert.equal(await page.$eval('.wpb-program .wpb-week-rail>button[aria-pressed="true"]',node=>node.textContent.trim().startsWith('Week 3')),true,
+      'Plan full-program action retains the selected week');
+    await page.$eval('.wpb-program button[title="Start workout"]',button=>button.click());await page.waitForSelector('.wpb-workout');
+    const secondCheckIn=await page.$('.wpb-backdrop button[data-wpb-system-back]');
+    if(secondCheckIn){await secondCheckIn.click();await page.waitForSelector('.wpb-backdrop',{hidden:true});}
+    await page.evaluate(()=>history.back());await page.waitForSelector('.wpb-workout',{hidden:true});await page.waitForSelector('.wpb-program');
+    await back();await assertPlan(3);
+    assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).history.length),1,
+      'Minimizing from full Program preserves its Back path and does not add another completed workout');
+    assert.equal(errors.length,0,'No flow errors in '+theme+'/'+width+': '+errors.join('; '));
+    return {theme,width,selectedWeek:3,beforeScroll,returnedScroll,sessionId:resumed.sessionId};
+  }finally{await context.close();}
+}
+async function verifyNextSessionFlow(browser,theme,width){
+  const context=await browser.createBrowserContext();
+  const page=await context.newPage();
+  const errors=[];
+  page.on('pageerror',error=>errors.push(error.message));
+  try{
+    await page.setViewport({width,height:852,deviceScaleFactor:1,isMobile:true,hasTouch:true});
+    await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
+    await page.evaluateOnNewDocument(value=>localStorage.setItem('wpb:v1',JSON.stringify(value)),store(theme));
+    await page.goto('http://127.0.0.1:8796/',{waitUntil:'networkidle0'});
+    await page.waitForSelector('.wpb-tabbar');await page.click('[data-tab="plan"]');
+    await page.$eval('.wpb-plan-view',node=>{node.scrollTop=180;});
+    await page.click('[data-plan-week="1"] .wpb-plan-session-link');
+    await page.$$eval('button',buttons=>buttons.find(button=>button.textContent.trim()==='Start workout').click());
+    await page.waitForSelector('.wpb-workout');
+    const checkIn=await page.$('.wpb-backdrop button[data-wpb-system-back]');
+    if(checkIn){await checkIn.click();await page.waitForSelector('.wpb-backdrop',{hidden:true});}
+    for(const [label,value] of [['weight','185'],['reps','6']]){
+      const input=await page.$('[data-testid="set-0-0"] input[aria-label="'+label+'"]');
+      await input.click();await page.keyboard.down('Control');await page.keyboard.press('KeyA');await page.keyboard.up('Control');
+      await page.keyboard.type(value);await page.keyboard.press('Tab');
+    }
+    await page.click('[data-testid="set-0-0"] .wpb-set-complete');
+    await page.click('button[aria-label="Finish workout"]');
+    await page.$$eval('button',buttons=>buttons.find(button=>button.textContent.trim()==='Save & finish').click());
+    await page.waitForSelector('[data-view-frame="plan"]');
+    await page.waitForFunction(()=>document.querySelector('.wpb-plan-week-chip[aria-pressed="true"]')?.getAttribute('aria-label')==='Week 2');
+    const next=await page.evaluate(()=>({
+      selected:document.querySelector('.wpb-plan-week-chip[aria-pressed="true"]').getAttribute('aria-label'),
+      action:document.querySelector('.wpb-plan-up-next').textContent,
+      scroll:document.querySelector('.wpb-plan-view').scrollTop,
+      records:JSON.parse(localStorage.getItem('wpb:v1')).history.length
+    }));
+    assert.equal(next.selected,'Week 2','Completing the current week follows the new due week');
+    assert.ok(next.action.includes('Week 2'),'The visible next action agrees with the completed history');
+    assert.equal(next.scroll,0,'A newly due week returns to the next-workout action at the top');
+    assert.equal(next.records,1,'Revealing the next session does not duplicate the completed workout');
+    assert.deepEqual(errors,[],'No errors while advancing the next-session flow');
+    return {theme,width,...next};
+  }finally{await context.close();}
+}
 const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html',
   '.json':'application/json','.png':'image/png','.svg':'image/svg+xml',
   '.webmanifest':'application/manifest+json'};
@@ -133,7 +301,14 @@ try{
     diagnostics[theme]={library,detail,weeks,workout,inputs};
     await context.close();
   }
-  console.log('PASS R54: Rose dark/Rosewater light Library, Exercise Detail, manual Program week picker and resumed Workout at 393px; '+JSON.stringify(diagnostics));
+  const flows=[];
+  const nextSessions=[];
+  for(const theme of ['rose','rosewater'])
+    for(const width of [320,393]){
+      flows.push(await verifyNavigationFlow(browser,theme,width));
+      nextSessions.push(await verifyNextSessionFlow(browser,theme,width));
+    }
+  console.log('PASS R54/R59: paired Library/Detail/Program/Workout layouts; active Plan, preview/full-program Back, remembered week/section/scroll, per-program context, safe workout returns and next due week at 320/393px; '+JSON.stringify({diagnostics,flows,nextSessions}));
 }finally{
   if(browser)await browser.close();
   await new Promise(resolve=>server.close(resolve));

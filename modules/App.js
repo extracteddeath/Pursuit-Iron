@@ -1,7 +1,7 @@
 import { ALL_EQUIP_IDS, ALL_PLATES, ASSIST_IDS, ASSUMED_RIR, AVAIL_PLATES, AXIAL_ADJACENT_COST, BARS, BAR_EQUIP, BAR_LABEL, BASE_SET_COST, BIG_THREE, BIRTH_RE, BW_LOG_CAP, CODE_ALPHA, CODE_ASSIST, CODE_CARRIED_KEYS, CODE_EQUIP, CODE_EXERCISES, CODE_EXP, CODE_GOALS, CODE_IGNORED_KEYS, CODE_PROG, CODE_SCHEMES, CODE_SESSION, CODE_SPLITS, COMPOSITE_HEADS, COVERED_MUSCLES, DELT_HEAD, E1RM_HOLD, E1RM_REP_CAP, EFFORT_MAX_BIAS, EFFORT_MIN_PAIRS, EFFORT_REP_CAP, ENGINES, ENGINE_RULES, ENGINE_V, EPLEY_SLOPE, EQUIPMENT, EQUIP_CATS, EQUIP_IMPLIES, EXERCISES, EXP, EXP_BAND, EX_ABBREV, EX_BY_ID, EX_FAMILY, EX_LOAD_INC, EX_METRICS, EX_METRIC_BY_ID, EX_SPECIFIC, EX_WINDOWS, FOCUS_CAVEAT, GAP_FRACTION, GENERATION_ROUTE, GYM_LIMITS, GYM_LIMIT_KEYS, GYM_PRESETS, GZ_T1_STAGES, GZ_T2_STAGES, HISTORY_BYTES, HISTORY_BYTE_CHECK_FROM, HISTORY_CAP, IDEAL_SLOTS, INTENT_FROM_CAT, INVENTORY_KEYS, LANDMARKS, LEGACY_EQUIP_IMPLIES, LEGACY_EX_TYPICAL_KEYS, LEVEL_TITLES, LOAD_INC, LOWER_PARTS, MACHINE_EQUIP, MACHINE_SETUP, MILESTONE_XP, MIN_DAY_SESSIONS, MOBILITY, MRV_GRAIN, MUSCLE_SYNONYM, MYO_MAX_SETS, MYO_MINI_REPS, MYO_MINI_SETS, MYO_MIN_REPS, MYO_PARTS, MYO_TARGET_REPS, NOVICE_INELIGIBLE_SPLITS, PART_LABEL, PART_ORDER, PATTERNS, PATTERN_BY_ID, PATTERN_GROUPS, PATTERN_MIN_SETS, PHASES, PHASE_ROT, PLANNED_ROOM_RIR, PLATES, PROG_POLICIES, PROG_STYLES, PV_PAD_TOP, PV_ROW_GAP, RACK_PRESETS, RAW, REDUCE_FRACTION, REFERENCES, REGION_MOVEMENT, REGION_REQUIRED, RELEASE_DIAG_CAP, RELEASE_DIAG_FIELDS, RELEASE_DIAG_KEY, REST_SCALE, SCORE_BANDS, SCORE_EQUIV, SCORE_PATTERN, SCORE_PATTERN_LABEL, SECONDARY, SELF_TEST_FRAME_BUDGET_MS, SELF_TEST_HISTORY_LIMIT, SELF_TEST_SUPPORTED_ENGINES, SESSIONS, SESSION_BOUNDS, SESSION_EX_TYPICAL, SETUP_FIELD_ORDER, SETUP_LABELS, SET_ROW_BLEED, SEX_FACTOR, SPLITS, STALL_ENGAGE, STALL_WINDOW, STANDARDS, STD_LEVELS, STORE_MIGRATIONS, STORE_VERSION, STRENGTH_CLUB_LIFTS, STRENGTH_CLUB_TIERS_LB, STRETCH_FOCUS_E2, STRETCH_FOCUS_E3, STRETCH_PARTIAL_PARTS, SUBMUSCLE_LABEL, SUB_LANDMARKS, TECHNICAL_LIFTS, TEMPLATES, TEMPLATE_CATS, TOTAL_WEEKS, UNIFORM_LANDMARK, VIEW_DEPTH, WARMUP_PYRAMIDS, WARMUP_SET_SEC, WEIGHTED_SWAP, __doseMemo, __recovFitMemo, __recoveryMemo, __slopeMemo, __volKey, __weeklyVolMemo, _dstCache, _lmCache, _planOverviewMemo, addedMinutes, addedSeconds, advanceLegacyFirstCycleBlock, ageFactor, ageFrom, anchorPerfFor, applyCustomProgramSettings, asLengthUnit, assertExerciseData, auditProgramWeek, auditSets, autoStyleDetail, autoStyleFor, availableFor, axialCost, backupRecordImpact, barFor, baseSetsFor, betterTopSet, birthFromAge, birthParts, bitsToCode, blockChangeSummary, blockPhase, blockPlanFor, blockRetro, blockReview, budgetIncludesTransitions, buildLifterModel, buildWeekPlan, calibrateDayPerf, calibratedAnchorPerf, canUndoProgramSave, capHistory, capWeeklyVolume, cellRepRange, clamp, classifyPlateau, clearSetup, coachFacts, codeToBits, completionRate, compositeMrv, computeCell, computeLevel, computeMilestones, constantLoadDecay, coverageGaps, coverageRelief, cuesFor, customAuthoredSetCount, customExerciseHistory, customExerciseReferenceHistory, customLastSetTechnique, customProgramSuggestion, cycleConfigForStandaloneProgram, cycleProgress, dayMuscleBreakdown, dayMuscleLoad, dayMuscleVolume, dayOverlap, dayPerfFor, dayScopedTrends, daySeconds, daysInWeek, decodeGallery, decodeProgramCode, deloadAdvice, distributeVolBias, e1rm, e1rmRIR, effectiveRest, effortBounds, effortCalibration, effortLabel, effortValueLabel, encodeProgramCode, endlessStalled, engHas, engLacks, engineInfo, engineWeekOneStyles, estimateMinutes, estimateMinutesFor, exMatches, exRecords, exWindow, exerciseAt, exerciseProfile, exerciseSeries, exerciseSlotSec, exerciseTrends, expandEquipment, expandLegacyEquipment, explainPrescription, feedbackDelta, filterWorkoutHistory, fmtSets, formatSetup, galleryIssueBody, gallerySubmission, getBits, goalForDay, groupPctSets, groupSessionsByCycle, groupSessionsByMonth, growMyoSets, gymById, gymCapFor, gymRackFor, gzPlanFor, gzTierOf, gzWorkWeight, historyDayIndex, historyForProgram, historyVolumeIn, homeProgramGroups, isAssistedEx, isAxialLoad, isBarLike, isMachineLike, isRuntimeProgram, isStretchFocus, isWorkSet, landmarkFor, landmarkForLegacy, landmarkOf, lastDayPerf, lastSetEffort, lastSetTech, lastTopSet, legacyCustomSetCount, lengthUnitFor, lifterModelKey, linearInc, linearStalled, liveCoachForContext, loadStep, loadableAbove, loadableAtOrBelow, logWindow, loggedExercisePerformance, loggedSubVolume, loggedVolume, loggedWorkoutPerformance, lowerBodyLift, makeMyoMini, mavFor, mergeSessionData, mergeStandaloneIntoGeneratedCycle, mergeStores, mergedSetCount, migrateStore, movePattern, muscleRecovery, muscleRecoveryUncached, newGymId, nextDueDayId, nextEngineStyleFor, nextScheduledIndex, nextSessionCursor, nextTMEvidence, normalizeBwLog, normalizeCycleLinks, normalizeEditedHistoryEntry, normalizeGyms, normalizeHistoryDayIds, normalizeMeasureLog, overreachSignal, paceFactor, parseRIRNum, parseStoredData, patternCues, patternTrainable, pctSetsFor, perWeekOf, percentagePlanFor, perfAfterDelete, perfAfterHistoryReplace, personalMav, personalRecoveryHours, personalRepSlope, phaseFor, phaseKind, pickActiveProgram, pickTopSet, planOverview, planOverviewMemo, plannedWeek, plateauOf, plateauOfLift, plateauSessions, plateauSplitByDay, platesPerSide, poolOf, preferenceFloor, prescribeSets, prescribedRIRof, prescribedRIRofAny, programChangeLabels, programFingerprint, programSavePlan, progressionHistoryForProgram, projectNextTM, propagateCycleEditsPure, putBits, rankSwapAlts, readinessBand, recommendedSplit, regionGapFix, regionGapsFor, repRange, representativeCustomLoad, repsLow, resolveStyle, restSec, rirTrend, rmAt, rotationOf, roundTo, ruleEngine, sameProgramContent, sanitizeInventory, sanitizeLimits, sanitizeRepsInput, sanitizeWeightInput, scoreAttribution, scoreCompose, scoreContin, scoreEquivalent, scoreEquivalentInverse, scoreLevelIdx, scoreLevelLabel, scoreMatur, scorePatternFor, scoreTargetFor, scoreTo100, secondaryOf, sessionE1RM, sessionExercisePlan, sessionSnapshotStatus, sessionSuggestion, setAvailPlates, setExLoadInc, setGymLimits, setLoadInc, setRestScaleGlobal, setsOf, setupFieldsFor, setupFieldsWithStored, setupLabel, simulateAndAudit, squatHamCredit, stallCountFor, starvedRegions, strengthClubSnapshot, strengthLevel, strengthScore, strengthScoreHistory, strengthSnapshot, stretchTable, styleFor, styleOverride, subRegionOf, summarizeHistoryLoggedSets, summarizeSets, swapOverlapNames, syncSubSets, techExplain, techSetTag, templateConfig, templateIntent, tempoFor, tierOf, toLength, toUnit, todayISO, trainingMaxForUnit, uid, underRecoveredWeekly, uniformLandmarkFor, userOwnsRuntimeSet, volumeAudit, volumeLedger, volumeResponse, volumeVerdicts, warmupCount, warmupPlan, warmupRoutine, warmupSets, weekIntent, weekKeyOf, weekMuscleBreakdown, weeklyBodyweightTrend, weeklyRecap, weeklySubVolume, weeklyVolume, weeksOf, withTrainingMax, workoutPlanCoachFact } from './engine-api.js';
 import { PCT_SCHEMES, percentageProtocolFor, adaptPercentageSetBudget, deriveTieredLinearState } from './engine-api.js';
 import { historyNumber, convertHistoryLoad, observedHistoryRIR, completedHistorySets, previousWorkoutSet, historyExposureContext, progressionExposureContext, normalizeHistoryEntries, validHistoryDate, historyLoadReason } from './engine-api.js';
-const __APP_VERSION__='4.0.0'; const __BUILD__='837';
+const __APP_VERSION__='4.0.0'; const __BUILD__='838';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { holdWorkoutScreenAwake, restoreWorkoutClock, workoutElapsedMs } from "./mobile-lifecycle.js";
@@ -3648,7 +3648,7 @@ function AttachmentGlyph({ ex, size = 46 }) {
 /* The back-stack rule, pure so the loop this replaced can be reproduced in a test rather than
    described in a comment. TAB_VIEWS are the bottom-bar destinations: arriving at one is a fresh
    start, so the stack empties. */
-const NAV_TABS = ["home", "progress", "profile", "settings"];
+const NAV_TABS = ["home", "plan", "progress", "profile", "settings"];
 function navPush(stack, origin, next) {
     if (NAV_TABS.includes(next))
         return [];
@@ -6449,21 +6449,39 @@ function phaseTone(label, index, accent) {
         return { hue: _rot(base, 150, 0.45), icon: DELOAD_ICON };
     return { hue: _rot(base, PHASE_ROT[k], 1), icon: PHASE_ICONS[k] };
 }
-function PlanView({ program, plan, onOpenDay, onOpenProgram, onBack }) {
-    /* the current week starts EXPANDED — it is the one you came to look at, and making the common
-       case cost a tap is the kind of small friction that reads as clunky */
-    const [openWeek, setOpenWeek] = useState(plan ? plan.currentWeek : null);
+function PlanView({ program, plan, navigationMemory, onCurrentWeekAdvance, onOpenDay, onOpenProgram, onBack }) {
+    /* The first visit opens the current week. Later visits restore the week being browsed rather
+       than making Back or a tab switch feel like starting the plan again. */
+    const remembered = navigationMemory?.[program?.id];
+    const [openWeek, setOpenWeek] = useState(() => {
+        if (remembered && remembered.openWeek === remembered.currentWeek)
+            return plan?.currentWeek ?? null;
+        return remembered && (remembered.openWeek === null || plan?.weeks.some(w => w.week === remembered.openWeek))
+            ? remembered.openWeek : plan?.currentWeek ?? null;
+    });
     /* FOUR VIEWS OF ONE PLAN, not four screens. The schedule answers "what am I doing and when";
        the other three answer questions a lifter asks ABOUT a plan rather than of it — is the volume
        where it should be, how do the lifts progress, what shape is the block. Those three previously
        existed only behind a button on the PROGRAM screen, which is a different destination reached a
        different way, so the tab named Plan could not answer any of them. Schedule stays the default
        because it is the one you open the tab for. */
-    const [pane, setPane] = useState("schedule");
-    const [volOpen, setVolOpen] = useState(true);
-    const [progOpen, setProgOpen] = useState(true);
-    const [waveOpen, setWaveOpen] = useState(true);
-    const [blockOpen, setBlockOpen] = useState(true);
+    const [pane, setPane] = useState(() => ["schedule", "volume", "progression", "blueprint"].includes(remembered?.pane) ? remembered.pane : "schedule");
+    const [volOpen, setVolOpen] = useState(remembered?.volOpen ?? true);
+    const [progOpen, setProgOpen] = useState(remembered?.progOpen ?? true);
+    const [waveOpen, setWaveOpen] = useState(remembered?.waveOpen ?? true);
+    const [blockOpen, setBlockOpen] = useState(remembered?.blockOpen ?? true);
+    // Browsing context belongs to this program for the current app visit. It never enters training
+    // storage, and changing the active program cannot inherit another program's selected week.
+    useEffect(() => {
+        // Follow a newly due week when the lifter was viewing the current one. Deliberate browsing
+        // of another week keeps its place, while finishing the current week reveals the next action.
+        if (remembered && remembered.currentWeek !== plan?.currentWeek && remembered.openWeek === remembered.currentWeek) {
+            setOpenWeek(plan.currentWeek);
+            onCurrentWeekAdvance?.();
+        }
+        if (navigationMemory && program?.id)
+            navigationMemory[program.id] = { currentWeek: plan?.currentWeek, openWeek, pane, volOpen, progOpen, waveOpen, blockOpen };
+    }, [navigationMemory, program?.id, plan?.currentWeek, onCurrentWeekAdvance, openWeek, pane, volOpen, progOpen, waveOpen, blockOpen]);
     const scrollRoot = useRef(null);
     const pickedWeek = useRef(null);
     useEffect(() => {
@@ -6544,7 +6562,7 @@ function PlanView({ program, plan, onOpenDay, onOpenProgram, onBack }) {
                                                     return (_jsxs("button", { onClick: () => onOpenDay && onOpenDay(d.dayId, w.week), className: "pressable wpb-plan-session-link", "data-next": isNext ? "true" : "false", "aria-label": `${d.label}, week ${w.week}${d.done ? ", done" : ""}`, style: { width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "9px 10px", marginTop: 4, cursor: "pointer", color: C.text, textAlign: "left" }, children: [_jsx("span", { style: { width: 18, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }, children: d.done ? _jsx(Check, { size: 14, color: C.accentInk }) : _jsx("span", { style: { width: 7, height: 7, borderRadius: 999, border: `1.5px solid ${C.border}` } }) }), _jsxs("span", { style: { flex: 1, minWidth: 0 }, children: [_jsxs("span", { style: { display: "flex", alignItems: "center", gap: 6 }, children: [_jsx("span", { style: { minWidth: 0, fontSize: 15, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textDecoration: d.done ? "line-through" : "none" }, children: d.label }), isNext && _jsx("span", { style: { fontSize: 11, fontWeight: 700, letterSpacing: .3, color: C.accentInk, flexShrink: 0 }, children: "NEXT" })] }), d.lead && (_jsxs("span", { className: "mono", style: { display: "block", fontSize: 11, color: C.muted, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: [d.lead, d.exCount > 1 ? ` +${d.exCount - 1}` : ""] })), d.focus && d.focus.length > 0 && (_jsx("span", { className: "mono", style: { display: "block", fontSize: 11, color: C.muted, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: d.focus.map(k => PART_LABEL[k] || SUBMUSCLE_LABEL[k] || k).join(" · ") }))] }), _jsxs("span", { className: "mono", style: { fontSize: 11, color: C.muted, flexShrink: 0, textAlign: "right" }, children: [d.sets, " sets", _jsx("br", {}), d.minutes, "m"] }), _jsx(ChevronRight, { size: 15, color: C.muted, style: { flexShrink: 0 } })] }, di));
                                                 }) }))] }, w.week));
                                 })] }, ph.key));
-                    })] })), _jsx("button", { onClick: onOpenProgram, className: "pressable wpb-plan-open-program", style: { width: "100%", marginTop: 12, padding: "12px 14px", cursor: "pointer", color: C.text, fontSize: 13, fontWeight: 600 }, children: "Open full program" })] }));
+                    })] })), _jsx("button", { onClick: () => onOpenProgram(openWeek || plan.currentWeek), className: "pressable wpb-plan-open-program", style: { width: "100%", marginTop: 12, padding: "12px 14px", cursor: "pointer", color: C.text, fontSize: 13, fontWeight: 600 }, children: "Open full program" })] }));
 }
 function NextWorkoutView({ program, day, weekIndex, loadMode = "rir", pace = null, cycleInfo = null, freshness = null, alt = null, onStart, onStartAlt, onOpenProgram, onBack }) {
     if (!program || !day)
@@ -6556,7 +6574,7 @@ function NextWorkoutView({ program, day, weekIndex, loadMode = "rir", pace = nul
         ? (isDeload ? "Continuous · Deload" : `Continuous · Week ${weekIndex}`)
         : (isDeload ? "Deload week" : `Week ${weekIndex} of ${total}`);
     const mv = dayMuscleVolume(program, day, weekIndex);
-    return (_jsxs("div", { className: "wpb-scroll", style: { height: "100%", overflowY: "auto", padding: "0 16px calc(env(safe-area-inset-bottom) + 108px)" }, children: [_jsx("div", { style: { display: "flex", alignItems: "center", gap: 6, padding: "10px 0 2px" }, children: _jsxs("button", { onClick: onBack, "aria-label": "Back", className: "pressable hit", style: { background: "none", border: "none", color: C.text, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, padding: "8px 6px 8px 0", fontSize: 15, fontWeight: 600 }, children: [_jsx(ChevronLeft, { size: 20 }), " Back"] }) }), _jsxs("div", { style: { fontSize: 13, fontWeight: 700, letterSpacing: 1.2, color: C.accentInk, textTransform: "uppercase" }, children: ["Next workout \u00B7 ", weekLabel] }), cycleInfo && (_jsxs("div", { style: { display: "inline-flex", alignItems: "center", gap: 4, marginTop: 8, padding: "4px 9px", borderRadius: 999, background: C.accentDim, border: `1px solid ${C.accent}33`, fontSize: 11, fontWeight: 700, color: C.accentInk }, children: [_jsx(Layers, { size: 11 }), " ", cycleInfo.cycle.blockMeta?.[cycleInfo.blockIdx]?.label, " \u00B7 Block ", cycleInfo.blockIdx + 1, "/", cycleInfo.cycle.blockMeta?.length] })), _jsx("h1", { style: { fontSize: 28, fontWeight: 700, letterSpacing: -0.6, margin: "8px 0 0", lineHeight: 1.1 }, children: day.label }), _jsxs("div", { style: { fontSize: 13, color: C.muted, marginTop: 6, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }, children: [_jsx("span", { style: { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 190 }, children: program.name }), _jsx("span", { style: { color: C.faint }, children: "\u00B7" }), _jsx(Clock, { size: 12 }), " ~", mins, " min", _jsx("span", { style: { color: C.faint }, children: "\u00B7" }), day.exercises.length, " exercises", freshness != null && (_jsxs(_Fragment, { children: [_jsx("span", { style: { color: C.faint }, children: "\u00B7" }), _jsxs("span", { children: [freshness, "% fresh"] })] }))] }), day.note && (_jsxs("div", { style: { display: "flex", gap: 8, alignItems: "flex-start", background: C.accentDim, borderRadius: 12, padding: "10px 12px", marginTop: 12 }, children: [_jsx(Info, { size: 14, color: C.accentInk, style: { flexShrink: 0, marginTop: 1 } }), _jsx("span", { style: { fontSize: 13, color: C.text, lineHeight: 1.45 }, children: day.note })] })), _jsx("div", { style: { marginTop: 16, background: C.card, borderRadius: 16, overflow: "hidden" }, children: day.exercises.map((_id, slot) => {
+    return (_jsxs("div", { className: "wpb-scroll wpb-next-workout-view", style: { height: "100%", overflowY: "auto", padding: "0 16px calc(env(safe-area-inset-bottom) + 108px)" }, children: [_jsx("div", { style: { display: "flex", alignItems: "center", gap: 6, padding: "10px 0 2px" }, children: _jsxs("button", { onClick: onBack, "aria-label": "Back", className: "pressable hit", style: { background: "none", border: "none", color: C.text, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, padding: "8px 6px 8px 0", fontSize: 15, fontWeight: 600 }, children: [_jsx(ChevronLeft, { size: 20 }), " Back"] }) }), _jsxs("div", { style: { fontSize: 13, fontWeight: 700, letterSpacing: 1.2, color: C.accentInk, textTransform: "uppercase" }, children: ["Next workout \u00B7 ", weekLabel] }), cycleInfo && (_jsxs("div", { style: { display: "inline-flex", alignItems: "center", gap: 4, marginTop: 8, padding: "4px 9px", borderRadius: 999, background: C.accentDim, border: `1px solid ${C.accent}33`, fontSize: 11, fontWeight: 700, color: C.accentInk }, children: [_jsx(Layers, { size: 11 }), " ", cycleInfo.cycle.blockMeta?.[cycleInfo.blockIdx]?.label, " \u00B7 Block ", cycleInfo.blockIdx + 1, "/", cycleInfo.cycle.blockMeta?.length] })), _jsx("h1", { style: { fontSize: 28, fontWeight: 700, letterSpacing: -0.6, margin: "8px 0 0", lineHeight: 1.1 }, children: day.label }), _jsxs("div", { style: { fontSize: 13, color: C.muted, marginTop: 6, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }, children: [_jsx("span", { style: { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 190 }, children: program.name }), _jsx("span", { style: { color: C.faint }, children: "\u00B7" }), _jsx(Clock, { size: 12 }), " ~", mins, " min", _jsx("span", { style: { color: C.faint }, children: "\u00B7" }), day.exercises.length, " exercises", freshness != null && (_jsxs(_Fragment, { children: [_jsx("span", { style: { color: C.faint }, children: "\u00B7" }), _jsxs("span", { children: [freshness, "% fresh"] })] }))] }), day.note && (_jsxs("div", { style: { display: "flex", gap: 8, alignItems: "flex-start", background: C.accentDim, borderRadius: 12, padding: "10px 12px", marginTop: 12 }, children: [_jsx(Info, { size: 14, color: C.accentInk, style: { flexShrink: 0, marginTop: 1 } }), _jsx("span", { style: { fontSize: 13, color: C.text, lineHeight: 1.45 }, children: day.note })] })), _jsx("div", { style: { marginTop: 16, background: C.card, borderRadius: 16, overflow: "hidden" }, children: day.exercises.map((_id, slot) => {
                     const id = exerciseAt(program, day, slot, weekIndex);
                     const ex = EX_BY_ID[id];
                     if (!ex)
@@ -12945,7 +12963,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
                                             return (_jsxs("div", { style: { display: "flex", alignItems: "flex-start", gap: 8, padding: "10px 2px", borderBottom: i < entries.length - 1 ? `1px solid ${C.borderSoft}` : "none" }, children: [_jsxs("div", { style: { width: 52, flexShrink: 0 }, children: [_jsx("div", { style: { fontSize: 13, fontWeight: 700, color: C.text }, children: new Date(h.date).toLocaleDateString(undefined, { month: "short", day: "numeric" }) }), _jsx("div", { style: { fontSize: 11, color: C.faint }, children: h.dayLabel ? h.dayLabel.split("·")[0].trim() : "" })] }), _jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { className: "mono", style: { fontSize: 13, fontWeight: 600, color: C.muted, lineHeight: 1.5, display: "flex", flexWrap: "wrap", gap: "2px 8px" }, children: (Array.isArray(p.sets) && p.sets.length ? p.sets : [{ w: p.weight, r: p.reps }]).map((sx, j) => (_jsxs("span", { children: [sx.w, _jsx("span", { style: { color: C.faint }, children: "\u00D7" }), sx.r, sx.rir != null ? _jsxs("span", { style: { color: C.faint, fontSize: 11 }, children: ["@", sx.rir] }) : null] }, j))) }), p.note && _jsx("div", { style: { fontSize: 11, color: C.faint, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: p.note })] }), _jsxs("div", { className: "mono", style: { flexShrink: 0, fontSize: 13, fontWeight: 700, color: oneRM >= best ? C.accentInk : C.muted }, children: [oneRM, _jsx("span", { style: { fontSize: 11, color: C.faint }, children: " e1RM" })] })] }, i));
                                         })] }))] }) }));
                 })() }), _jsx(Exit, { when: confirmReset, children: confirmReset && (_jsx("div", { onClick: () => setConfirmReset(false), className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 60, padding: 24, animation: "fadeIn .2s both" }, children: _jsxs("div", { onClick: e => e.stopPropagation(), className: "wpb-pop", style: { width: "100%", maxWidth: 320, background: C.bg2, borderRadius: 16, padding: 20, border: `1px solid ${C.border}` }, children: [_jsx("div", { style: { fontSize: 18, fontWeight: 700, marginBottom: 6 }, children: "Reset workout timer?" }), _jsx("div", { style: { fontSize: 15, color: C.muted, marginBottom: 16 }, children: "The elapsed time will go back to 0:00:00. Your logged sets aren't affected." }), _jsxs("button", { onClick: resetRunTimer, className: "pressable", style: { width: "100%", padding: "13px", borderRadius: 12, border: "none", background: C.accent, color: C.accentText, fontWeight: 700, cursor: "pointer", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }, children: [_jsx(RefreshCw, { size: 16 }), " Reset to zero"] }), _jsx("button", { onClick: () => setConfirmReset(false), className: "pressable", style: { width: "100%", padding: "13px", borderRadius: 12, border: `1px solid ${C.border}`, background: "none", color: C.text, fontWeight: 600, cursor: "pointer" }, children: "Cancel" })] }) })) }), _jsx(Exit, { when: sessionMenu, children: sessionMenu && (_jsx("div", { onClick: () => setSessionMenu(false), className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "flex-end", zIndex: 70, animation: "fadeIn .2s both" }, children: _jsxs("div", { ref: sheetDragRef, onClick: e => e.stopPropagation(), style: { width: "100%", background: C.bg2, borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: "10px 16px calc(env(safe-area-inset-bottom) + 20px)", borderTop: `1px solid ${C.border}`, animation: "sheetUp .28s cubic-bezier(.2,.7,.3,1) both" }, children: [_jsx("div", { style: { fontSize: 13, fontWeight: 700, color: C.muted, letterSpacing: .4, textTransform: "uppercase", padding: "0 4px 8px" }, children: "Workout options" }), [
-                                { icon: Minimize2, label: "Minimize workout", sub: "Keep it running — go view your program, then resume", on: minimizeWorkout },
+                                { icon: Minimize2, label: "Minimize workout", sub: "Keep it running and return to your previous screen", on: minimizeWorkout },
                                 { icon: RefreshCw, label: "Reset timer", sub: "Set elapsed workout time back to zero", on: () => { setSessionMenu(false); onResetClick(); } },
                                 { icon: Plus, label: "Add exercise", sub: "Add another lift to this workout", on: () => { setSessionMenu(false); setAddEx(true); } },
                             ].map((o, i) => (_jsxs("button", { onClick: o.on, className: "pressable", style: { width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "13px 8px", background: "none", border: "none", borderBottom: `1px solid ${C.borderSoft}`, cursor: "pointer", textAlign: "left" }, children: [_jsx("div", { style: { width: 38, height: 38, borderRadius: 12, background: o.accent ? C.accent : C.card, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: _jsx(o.icon, { size: 18, color: o.accent ? C.accentText : C.text }) }), _jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { style: { fontSize: 15, fontWeight: 600, color: C.text }, children: o.label }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginTop: 1 }, children: o.sub })] })] }, i))), _jsxs("button", { onClick: () => { setSessionMenu(false); setConfirmExit(true); }, className: "pressable", style: { width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "13px 8px", background: "none", border: "none", cursor: "pointer", textAlign: "left", marginTop: 2 }, children: [_jsx("div", { style: { width: 38, height: 38, borderRadius: 12, background: C.dangerDim, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: _jsx(Trash2, { size: 17, color: C.danger }) }), _jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { style: { fontSize: 15, fontWeight: 600, color: C.danger }, children: "Discard workout" }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginTop: 1 }, children: "Leave without saving this session" })] })] })] }) })) }), _jsx(Exit, { when: confirmExit, children: confirmExit && (_jsx("div", { onClick: () => setConfirmExit(false), className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 90, padding: 24, animation: "fadeIn .2s both" }, children: _jsxs("div", { onClick: e => e.stopPropagation(), className: "wpb-pop wpb-workout-confirm", style: { width: "100%", maxWidth: 320, background: C.bg2, borderRadius: 16, padding: 20, border: `1px solid ${C.border}` }, children: [_jsx("div", { style: { fontSize: 18, fontWeight: 700, marginBottom: 6 }, children: "Leave this workout?" }), _jsx("div", { style: { fontSize: 15, color: C.muted, marginBottom: 16 }, children: doneSets > 0 ? `You've logged ${doneSets} set${doneSets === 1 ? "" : "s"}. You can save them now or discard them.` : "You haven't logged any sets yet. Nothing will be saved." }), doneSets > 0 && _jsxs("button", { onClick: () => { setConfirmExit(false); setFinishing(true); }, className: "pressable", style: { width: "100%", padding: "13px", borderRadius: 12, border: "none", background: C.accent, color: C.accentText, fontWeight: 700, cursor: "pointer", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }, children: [_jsx(Check, { size: 16 }), " Review & save"] }), _jsx("button", { onClick: () => { finishingRef.current = true; try {
@@ -17876,6 +17894,8 @@ function GenerationProgress({ label, onCancel }) {
 function App() {
     const [view, setView] = useState("home");
     const scrollMemory = useRef({}); // per-screen scroll restoration; views return exactly where the user left them
+    const planNavigationMemory = useRef(Object.create(null));
+    const sessionReturn = useRef({ view: "home", stack: [] });
     const [homeBrowse, setHomeBrowse] = useState(false);
     const [legacyReview, setLegacyReview] = useState(null);
     // Directional screen transitions: compare the new view's depth to the previous one's (synchronously,
@@ -18253,8 +18273,10 @@ function App() {
     // the shell that owns the scroller. This is presentation state only — no React state, no extra
     // renders on scroll, and nothing about navigation or page data changes.
     useEffect(() => {
+        const primaryScroller = () => document.querySelector(`[data-view-frame="${view}"]`)
+            ?.querySelector(".wpb-page-scroll, .wpb-plan-view, .wpb-next-workout-view");
         const sync = (scroller) => {
-            if (!(scroller instanceof Element) || !scroller.classList.contains("wpb-page-scroll"))
+            if (!(scroller instanceof Element) || scroller !== primaryScroller())
                 return;
             const shell = scroller.closest(".wpb-page-shell");
             if (shell)
@@ -18267,8 +18289,7 @@ function App() {
         // A keyed view mounts at scrollTop 0. Restore BEFORE the first meaningful paint of its chrome so
         // Back feels like returning to a native screen, not reopening a web route from the top.
         const raf = requestAnimationFrame(() => {
-            const frame = document.querySelector(`[data-view-frame="${view}"]`);
-            const scroller = frame?.querySelector(".wpb-page-scroll");
+            const scroller = primaryScroller();
             if (scroller) {
                 const saved = Number(scrollMemory.current[view] || 0);
                 const max = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
@@ -20223,6 +20244,12 @@ function App() {
         if (program && !program.quick && !saved.some(p => p.id === program.id)) {
             setSaved(prev => prev.some(p => p.id === program.id) ? prev : [...prev, program]);
         }
+        // A workout interrupts the screen the lifter was using. A preview is a launch step, so
+        // return to its caller; resuming from another tab makes that tab the new return destination.
+        if (view !== "session") {
+            const destination = view === "nextWorkout" ? navPop(backStack) : { view, stack: backStack };
+            sessionReturn.current = { view: destination.view, stack: [...destination.stack] };
+        }
         setSessionDay(day);
         setSessionWeek(wk || 1);
         setView("session");
@@ -20235,6 +20262,14 @@ function App() {
                 msg: `Set your training maxes so the main lifts load by the ${PCT_SCHEMES[program.config.percentScheme]?.name || "program"} scheme`,
                 actionLabel: "Set maxes", action: () => { rootView("program"); setAppToast(null); }
             }), 450);
+    };
+    const leaveSession = () => {
+        const destination = sessionReturn.current;
+        setSessionDay(null);
+        if (program?.quick && destination.view !== "program")
+            setProgram(null);
+        setBackStack([...destination.stack]);
+        setView(destination.view);
     };
     const startQuickWorkout = () => {
         const day = { id: uid(), label: "Quick workout", exercises: [], primaryIndex: 0 };
@@ -20322,13 +20357,7 @@ function App() {
             setSaved(nextSaved);
         }
         // M46: no scheme-specific legacy state mutation. Completed-set history is the only progression input.
-        setSessionDay(null);
-        if (program?.quick) {
-            setProgram(null);
-            setView("home");
-        }
-        else
-            setView("program");
+        leaveSession();
         if (fresh.length)
             setTimeout(() => setAppToast({ msg: `${fresh[0].icon} Achievement unlocked — ${fresh[0].label}${fresh.length > 1 ? ` +${fresh.length - 1} more` : ""}` }), 400);
         else
@@ -20681,7 +20710,7 @@ function App() {
                                             return (_jsx(NextWorkoutView, { program: shown.program, day: shown.day, weekIndex: shown.weekIndex, loadMode: loadMode, pace: paceFactor(history, saved), cycleInfo: (() => {
                                                     const c = cycles.find(c => !c.done && c.blockIds.includes(shown.program.id));
                                                     return c ? { cycle: c, blockIdx: c.blockIds.indexOf(shown.program.id) } : null;
-                                                })(), freshness: shown.freshness, alt: shown.alt, onStart: () => { setPreviewTarget(null); setProgram(shown.program); startSession(shown.day, shown.weekIndex); }, onStartAlt: startUpNextAlt, onOpenProgram: () => pushView("program", "nextWorkout"), onBack: () => { setPreviewTarget(null); goBack(); } }));
+                                                })(), freshness: shown.freshness, alt: shown.alt, onStart: () => { setPreviewTarget(null); setProgram(shown.program); startSession(shown.day, shown.weekIndex); }, onStartAlt: startUpNextAlt, onOpenProgram: () => { openWithDraft(shown.program); if (shown.weekIndex >= 1 && shown.weekIndex <= weeksOf(shown.program)) setProgWeek(m => ({ ...m, [shown.program.id]: shown.weekIndex })); pushView("program", "nextWorkout"); }, onBack: () => { setPreviewTarget(null); goBack(); } }));
                                         })() : view === "plan" ? (() => {
                                             /* A TAB MUST ALWAYS RENDER SOMETHING. Guarding the route on `program` instead would let
                                                the tab fall through to another branch when nothing is pinned, which reads as a dead
@@ -20691,7 +20720,7 @@ function App() {
                                             /* The plan is of the program you are actually running: the pinned one if there is one,
                                                otherwise whatever Up Next resolved to. The week comes from the SAME cursor that
                                                decides Up Next, so "now" on this screen is the week you would train if you started. */
-                                            const pp = program || upNext.program;
+                                            const pp = upNext?.program || program;
                                             const wk = (() => { try {
                                                 const w = nextSessionCursor(pp, history).weekIndex;
                                                 return Number.isFinite(w) && w > 0 ? w : 1;
@@ -20700,7 +20729,7 @@ function App() {
                                                 return 1;
                                             } })();
                                             const cyc = cycles.find(c => Array.isArray(c.blockIds) && c.blockIds.includes(pp.id)) || null;
-                                            return (_jsx(PlanView, { program: pp, plan: planOverviewMemo(pp, wk, cyc, history, saved), onOpenDay: (dayId, week) => { setPreviewTarget({ programId: pp.id, dayId, weekIndex: week }); pushView("nextWorkout", "plan"); }, onOpenProgram: () => { openWithDraft(pp); pushView("program", "plan"); }, onBack: goBack }));
+                                            return (_jsx(PlanView, { program: pp, plan: planOverviewMemo(pp, wk, cyc, history, saved), navigationMemory: planNavigationMemory.current, onCurrentWeekAdvance: () => { scrollMemory.current.plan = 0; }, onOpenDay: (dayId, week) => { setPreviewTarget({ programId: pp.id, dayId, weekIndex: week }); pushView("nextWorkout", "plan"); }, onOpenProgram: (week) => { openWithDraft(pp); setProgWeek(m => ({ ...m, [pp.id]: week })); pushView("program", "plan"); }, onBack: goBack }, pp.id));
                                         })() : view === "session" && program && sessionDay ? (_jsx(WorkoutSession
                                         /* Same reasoning as ProgramView: mid-workout, the alternatives offered must be the
                                            ones the room actually has. */
@@ -20725,12 +20754,7 @@ function App() {
                                                Resolving by id at render makes the signature incapable of drifting: there is one
                                                day, the program's. `sessionDay` stays the pointer (it carries quick/freestyle days
                                                that are not in `saved` yet, hence the fallback). */
-                                            program: program, day: liveDay, weekIndex: sessionWeek, unit: unit, perf: perf, onExit: () => { const q = program?.quick; setSessionDay(null); if (q) {
-                                                setProgram(null);
-                                                setView("home");
-                                            }
-                                            else
-                                                setView("program"); }, onFinish: finishSession, onSaveRoutine: saveRoutine, restAutoStart: restAutoStart, warmupCard: warmupCard, onSetWarmupCard: setWarmupCard, restScale: restScale, onBan: addBan, banned: banned, history: history, loadMode: loadMode, onEditHistory: editHistoryEntry, goals: goals, onSetGoal: setGoalWeight, onUpdateProgramExercise: updateProgramExercise, onSetRest: setProgramRest, exNotes: exNotes, onSetExNote: (id, text) => setExNotes(prev => { const n = { ...prev }; const t = (text || "").trim(); if (t)
+                                            program: program, day: liveDay, weekIndex: sessionWeek, unit: unit, perf: perf, onExit: leaveSession, onFinish: finishSession, onSaveRoutine: saveRoutine, restAutoStart: restAutoStart, warmupCard: warmupCard, onSetWarmupCard: setWarmupCard, restScale: restScale, onBan: addBan, banned: banned, history: history, loadMode: loadMode, onEditHistory: editHistoryEntry, goals: goals, onSetGoal: setGoalWeight, onUpdateProgramExercise: updateProgramExercise, onSetRest: setProgramRest, exNotes: exNotes, onSetExNote: (id, text) => setExNotes(prev => { const n = { ...prev }; const t = (text || "").trim(); if (t)
                                                 n[id] = t;
                                             else
                                                 delete n[id]; return n; }), exSetup: exSetup, onSetExSetup: (id, key, value) => setExSetup(prev => { const cur = { ...(prev[id] || {}) }; const v = (value || "").trim(); if (v)

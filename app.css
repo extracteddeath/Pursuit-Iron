@@ -5856,3 +5856,127 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     color:CanvasText!important;
   }
 }
+
+/* M3 EXPRESSIVE R49 — REAL ANDROID LIVE WORKOUT HIERARCHY
+   Screenshot: 0/29 sets, Upper/1 of 7, Start 195 x 7, J-hooks setup.
+   Keep numeric input/target/last-set/effort/complete controls fully owned by
+   the logger. The primary accent belongs to the currently editable set.
+   Unfinished Next exercise stays accessible, but is visually a NAV action. */
+#root[data-pi-motion="expressive"] .wpb-workout .wpb-workout-header{
+  padding:8px 12px 8px!important;
+  border-bottom-color:var(--pi-r11-edge)!important;
+  background-image:none!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-workout .wpb-workout-header>[role="progressbar"]{
+  margin-top:6px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-workout .wpb-workout-actions>.wpb-workout-finish{
+  background-color:var(--pi-r11-raised)!important;
+  background-image:none!important;
+  color:var(--boot-fg)!important;
+  border:1px solid var(--pi-r11-edge)!important;
+  box-shadow:none!important;
+  border-radius:14px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-workout .wpb-workout-scroll{
+  padding-top:9px!important;
+}
+/* Coach summary is a compact disclosure, not a competing colored notice;
+   preserve its semantic Expand action and access to all detailed guidance. */
+#root[data-pi-motion="expressive"] .wpb-workout .wpb-workout-scroll>
+  button[aria-label="Expand Coach guidance"]{
+  box-sizing:border-box;
+  min-height:40px!important;
+  margin-bottom:8px!important;
+  padding:7px 10px!important;
+  background-color:var(--pi-r11-quiet)!important;
+  background-image:none!important;
+  border:1px solid var(--pi-r11-edge)!important;
+  border-radius:14px!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-workout .wpb-workout-scroll>.wpb-coach-card{
+  background-color:var(--pi-r11-quiet)!important;
+  background-image:none!important;
+  border:1px solid var(--pi-r11-edge)!important;
+  border-radius:16px!important;
+  box-shadow:none!important;
+  margin-bottom:10px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-workout .wpb-exercise-heading{
+  padding:1px 2px 0!important;
+  gap:8px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-workout .wpb-workout-tools{
+  gap:6px!important;
+  margin:8px 0 7px!important;
+  padding-bottom:3px!important;
+  border-bottom:1px solid var(--pi-r11-edge)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-workout .wpb-workout-tool{
+  min-height:48px!important;
+  padding:9px 11px!important;
+  border:1px solid var(--pi-r11-edge)!important;
+  border-radius:15px!important;
+  background-color:var(--pi-r11-quiet)!important;
+  background-image:none!important;
+  box-shadow:none!important;
+}
+/* User-saved rack/seat/tempo setup is helpful, but shouldn't look more
+   important than the working-set inputs. Retain its Edit action and text. */
+#root[data-pi-motion="expressive"] .wpb-workout .wpb-workout-scroll>
+  button[aria-label^="Edit pinned note for "]{
+  box-sizing:border-box;
+  min-height:44px!important;
+  margin-bottom:7px!important;
+  padding:8px 10px!important;
+  border:1px solid var(--pi-r11-edge)!important;
+  border-radius:14px!important;
+  background-color:var(--pi-r11-quiet)!important;
+  background-image:none!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-workout .wpb-workout-scroll>
+  button[aria-label^="Edit pinned note for "]:focus-visible{
+  outline:2px solid var(--pi-r45-keyboard-ring)!important;
+  outline-offset:2px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-workout .wpb-workout-footer{
+  border-top:1px solid var(--pi-r11-edge)!important;
+  box-shadow:none!important;
+}
+/* Normal workout mode: a NEXT action is navigation, not the primary log-set
+   affordance while a current exercise still has incomplete rows. This
+   selector explicitly needs the normal-mode navigation rail, so focused
+   mode's prominent LOG SET action never changes. When every visible set is
+   completed, the original theme accent comes back automatically. */
+#root[data-pi-motion="expressive"] .wpb-workout:has(.wpb-ex-nav):has(
+  .wpb-workout-scroll [data-testid^="set-"]:not([data-done="1"])
+) .wpb-workout-footer-primary[aria-label="Next exercise"]{
+  background-color:var(--pi-r11-raised)!important;
+  background-image:none!important;
+  border:1px solid var(--pi-r11-edge)!important;
+  color:var(--boot-fg)!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-workout .wpb-workout-footer-primary{
+  min-height:50px!important;
+  transition:background-color 170ms var(--pi-ease),border-color 170ms var(--pi-ease),color 170ms var(--pi-ease)!important;
+}
+@media(prefers-reduced-motion:reduce){
+  #root[data-pi-motion="expressive"] .wpb-workout .wpb-workout-footer-primary{
+    transition:none!important;
+  }
+}
+@media(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb-workout :is(
+    .wpb-workout-actions>.wpb-workout-finish,.wpb-workout-tool,
+    .wpb-coach-card,button[aria-label="Expand Coach guidance"],
+    button[aria-label^="Edit pinned note for "],
+    .wpb-workout-footer-primary[aria-label="Next exercise"]){
+    background-color:ButtonFace!important;
+    color:ButtonText!important;
+    border-color:ButtonText!important;
+  }
+}

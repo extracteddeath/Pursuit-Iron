@@ -6131,7 +6131,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 /* R51 certified semantic selection: geometry and interaction state unchanged. */
 /* R51 secondary control: grouping/filter rails are lower emphasis than the
    main destination tabs. This preserves the R41 two-level hierarchy. */
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-grouping{
+#root[data-pi-motion="expressive"] .wpb .wpb-progress.wpb-progress .wpb-progress-grouping{
   background:var(--pi-r51-surface)!important;
   background-image:none!important;
 }

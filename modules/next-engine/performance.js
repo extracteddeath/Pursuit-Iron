@@ -156,7 +156,7 @@ function evaluateProgression(session, performedSets, context = {}) {
         // Dynamic double is genuinely set-specific: a completed, comparable session can
         // earn heavier weight on set 1 while set 2 continues building its own reps.
         // The exercise-wide rules above still block interrupted/edited/bad-day work.
-        if (style === 'dynamic' && allAtLeastBottom) {
+        if (style === 'dynamic' && !context.percentageLoading && allAtLeastBottom) {
             const [repFloor, repCeiling] = ex.prescription.reps;
             let advanced = 0, blocked = 0;
             const setTargets = Array.from({ length: ex.sets }, (_, index) => {

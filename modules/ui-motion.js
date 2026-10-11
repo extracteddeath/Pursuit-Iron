@@ -223,8 +223,8 @@ export function installAppMotion(root) {
     // previous mount's direction or quick-switch timing into a new session.
     lastPrimaryRoute = -1;
     lastPrimaryChangeAt = -Infinity;
-    connectedSource = null;
-    detailOrigin = null;
+    // connectedSource/detailOrigin are scoped below within this function and
+    // initialize themselves on each mount; accessing them here is a TDZ error.
     const pressed = new Map(), controls = new WeakMap(), choiceStates = new WeakMap(), referenceKeys = new WeakMap();
     const media = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)');
     let menuOpener = null;

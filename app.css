@@ -6601,7 +6601,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   letter-spacing:.06em!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-view h1.wpb-plan-title{
-  font-size:clamp(23px,6.2vw,27px)!important;
+  font-size:clamp(27px,6.2vw,28px)!important;
   line-height:1.15!important;
   letter-spacing:-.035em!important;
   margin:2px 0 10px!important;

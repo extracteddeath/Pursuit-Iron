@@ -1566,6 +1566,22 @@ try {
             'menu dismiss preserves the program card and its original action');
         await page.click('.hp-open');
         await page.waitForSelector('.wpb-program');
+
+        const r52ProgramStyles=await page.$eval('.wpb-program',root=>{
+            const css=el=>{const s=getComputedStyle(el);return {tag:el.tagName,class:String(el.className).slice(0,100),bg:s.backgroundColor,color:s.color,border:s.borderTopColor,ring:s.boxShadow,width:Math.round(el.getBoundingClientRect().width)}};
+            const labels=['Week 1','Week 2','Week 3','Hypertrophy'];
+            const nodes=labels.map(label=>{
+                const e=[...root.querySelectorAll('*')].find(e=>e.children.length===0 && e.textContent.trim()===label);
+                const chain=[];for(let p=e,i=0;p&&i<5;p=p.parentElement,i++)chain.push(css(p));
+                return {label,chain};
+            });
+            const weeks=[...root.querySelectorAll('.wpb-week-rail>button')].slice(0,6).map(css);
+            const dayCards=[...root.querySelectorAll('.wpb-day-card')].slice(0,4).map(css);
+            const hpCards=[...root.querySelectorAll('.hp-card')].slice(0,4).map(css);
+            return {nodes,weeks,dayCards,hpCards};
+        });
+        console.log('R52 PROGRAM DIAGNOSTIC '+JSON.stringify(r52ProgramStyles));
+
         // Info sections preserve content while closing and survive an immediate reopen.
         const card = await page.$('[data-infocard][data-collapsible="1"]');
         if (card) {

@@ -21,3 +21,5 @@ Screenshots are `verification/r54-{library,detail,manual-week,workout}-{rose,ros
 Run canonical integrity, core contracts, independent engine audit, all four browser groups (17 browser contracts total), and main-branch post-merge CI. Visual screenshots are for review rather than automatic aesthetic certification. No claim of physical Android TalkBack, gesture, keyboard, font 200% or OLED color validation without device evidence. The remaining long-tail CSS contains older local aliases; avoid deleting them until computed-style parity and screenshot review prove redundancy.
 
 Source decisions follow Android Material 3 semantic foreground/background pairings rather than per-screen hexes: https://developer.android.com/codelabs/m3-design-theming
+
+Canonical integrity finalization requested for Build 833 after source changes.

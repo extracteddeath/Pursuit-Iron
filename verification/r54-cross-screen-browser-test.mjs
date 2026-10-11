@@ -224,6 +224,134 @@ async function verifyNextSessionFlow(browser,theme,width){
     return {theme,width,...next};
   }finally{await context.close();}
 }
+// R60: browsing a different destination must retain filters, content and its own scroll position.
+async function verifyBrowseMemory(browser,theme,width){
+  const context=await browser.createBrowserContext();
+  const page=await context.newPage();
+  const errors=[];
+  page.on('pageerror',error=>errors.push(error.message));
+  const entries=Array.from({length:64},(_,i)=>({
+    id:'r60-history-'+i,programId:program.id,programName:program.name,dayId:'upper',dayLabel:'Upper',
+    weekIndex:1,date:Date.now()-(i+1)*86400000,unit:'lb',duration:1800,totalSets:2,tonnage:1470,
+    perf:{'bb-bench':{weight:185,reps:6,sets:[{w:185,r:6,done:true,rir:2,rirReported:true}]},
+      'inc-curl':{weight:30,reps:12,sets:[{w:30,r:12,done:true,rir:2,rirReported:true}]}}
+  }));
+  try{
+    await page.setViewport({width,height:852,deviceScaleFactor:1,isMobile:true,hasTouch:true});
+    await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
+    await page.evaluateOnNewDocument(initial=>{
+      if(localStorage.getItem('r60-seeded'))return;
+      localStorage.setItem('r60-seeded','1');
+      localStorage.setItem('wpb:v1',JSON.stringify(initial));
+    },{...store(theme),history:entries});
+    await page.goto('http://127.0.0.1:8796/',{waitUntil:'networkidle0'});
+    await page.waitForSelector('.wpb-tabbar');
+    const settle=()=>page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+    const clickText=async(label,selector='button')=>{
+      const handle=await page.evaluateHandle((label,selector)=>[...document.querySelectorAll(selector)]
+        .find(button=>button.textContent.trim()===label),label,selector);
+      assert.ok(handle.asElement(),'The real '+label+' control exists');
+      try{await handle.asElement().click();}finally{await handle.dispose();}
+    };
+    const training=()=>page.evaluate(()=>{
+      const s=JSON.parse(localStorage.getItem('wpb:v1'));
+      return {saved:s.saved,cycles:s.cycles,history:s.history,perf:s.perf,drafts:s.drafts};
+    });
+    const before=await training();
+    const scroll=()=>page.$eval('[data-view-frame] .wpb-page-scroll',node=>node.scrollTop);
+    const setScroll=async value=>{await page.$eval('[data-view-frame] .wpb-page-scroll',(node,value)=>{node.scrollTop=value;},value);await settle();return scroll();};
+    const assertScroll=async(expected,label)=>{await settle();assert.ok(Math.abs(await scroll()-expected)<=2,label);};
+
+    await page.click('button[aria-label="Exercise library"]');await page.waitForSelector('.wpb-library');
+    const libraryScroll=await setScroll(180);assert.ok(libraryScroll>50,'Library has a real browsing position');
+    await clickText('Compare','.wpb-library-header button');await page.waitForSelector('[data-view-frame="compare"]');
+    await page.evaluate(()=>history.back());await page.waitForSelector('.wpb-library');
+    await assertScroll(libraryScroll,'Compare Back restores the Library position');
+    await page.type('input[aria-label="Search exercises"]','press');
+    await clickText('Chest','.wpb-filter-chip--primary');await clickText('Barbell','.wpb-filter-chip--secondary');
+    await clickText('Recent','.wpb-library-flag');
+    const libraryState=()=>page.evaluate(()=>({
+      query:document.querySelector('.wpb-library-search input').value,
+      muscle:document.querySelector('.wpb-filter-chip--primary[aria-pressed="true"]').textContent,
+      equipment:document.querySelector('.wpb-filter-chip--secondary[aria-pressed="true"]').textContent,
+      flag:document.querySelector('.wpb-library-flag[aria-pressed="true"]').textContent,
+      results:document.querySelectorAll('.wpb-library-row').length
+    }));
+    const filtered=await libraryState();assert.ok(filtered.results>0,'The combined filters have real results');
+    await clickText('Compare','.wpb-library-header button');await page.waitForSelector('[data-view-frame="compare"]');
+    await page.evaluate(()=>history.back());await page.waitForSelector('.wpb-library');
+    assert.deepEqual(await libraryState(),filtered,'Compare Back retains query, muscle, equipment, Recent and matching results');
+    assert.equal(await page.$$eval('.wpb-library-header>.wpb-hscroll',groups=>groups.every(group=>{
+      const box=group.querySelector('[aria-pressed="true"]').getBoundingClientRect(),bounds=group.getBoundingClientRect();
+      return box.left>=bounds.left-1&&box.right<=bounds.right+1;
+    })),true,'Restored selected muscle and equipment chips are fully visible');
+    const clear=await page.$eval('button[aria-label="Clear exercise search"]',button=>{
+      const box=button.getBoundingClientRect(),top=document.elementFromPoint(box.x+box.width/2,box.y+box.height/2);
+      return {width:box.width,height:box.height,clear:button.contains(top)};
+    });
+    assert.ok(clear.width>=48&&clear.height>=48&&clear.clear,'Clear search is a real unobstructed 48px target: '+JSON.stringify(clear));
+    if(process.env.R60_CAPTURE_DIR){fs.mkdirSync(process.env.R60_CAPTURE_DIR,{recursive:true});
+      await page.screenshot({path:path.join(process.env.R60_CAPTURE_DIR,`library-${theme}-${width}.png`)});}
+    await page.click('button[aria-label="Clear exercise search"]');
+    assert.equal(await page.$eval('.wpb-library-search input',input=>input.value),'');
+    assert.equal(await page.$eval('.wpb-library-search input',input=>document.activeElement===input),true,'Clear returns focus to the search field');
+    const cleared=await libraryState();assert.equal(cleared.muscle,'Chest');assert.equal(cleared.equipment,'Barbell');assert.equal(cleared.flag,'Recent');
+    await page.type('.wpb-library-search input','no matching exercise');await clickText('Clear filters');
+    const reset=await libraryState();assert.equal(reset.query,'');assert.equal(reset.muscle,'All muscles');
+    assert.equal(reset.equipment,'Any equipment');assert.equal(reset.flag,'All');
+    await page.evaluate(()=>history.back());await page.waitForSelector('[data-view-frame="home"]');
+
+    await page.click('[data-tab="progress"]');await page.waitForSelector('#history-search');
+    await page.type('#history-search','Upper');await page.select('select[aria-label="Filter history by program"]',program.id);
+    await page.select('select[aria-label="Filter history by time"]','90');await clickText('By month');
+    await clickText('Show 14 more workouts');
+    await page.$eval('[data-history-id="r60-history-0"] button[aria-expanded]',button=>button.scrollIntoView({block:'center'}));
+    await settle();
+    await page.click('[data-history-id="r60-history-0"] button[aria-expanded]');
+    await page.waitForFunction(()=>document.querySelector('[data-history-id="r60-history-0"]')?.dataset.open==='1');
+    const sessionsScroll=await setScroll(150);assert.ok(sessionsScroll>50);
+    await page.click('[data-tab="profile"]');await page.click('[data-tab="progress"]');
+    assert.equal(await page.$eval('#history-search',input=>input.value),'Upper','History search survives a destination change');
+    assert.equal(await page.$eval('select[aria-label="Filter history by program"]',input=>input.value),program.id);
+    assert.equal(await page.$eval('select[aria-label="Filter history by time"]',input=>input.value),'90');
+    assert.equal(await page.$$eval('.wpb-history-session',rows=>rows.length),64,'The expanded history page is retained');
+    assert.equal(await page.$eval('[data-history-id="r60-history-0"]',row=>row.dataset.open),'1','The expanded session is retained');
+    assert.equal(await page.$$eval('.wpb-progress button',buttons=>buttons.find(b=>b.textContent==='By month').getAttribute('aria-pressed')),'true');
+    await assertScroll(sessionsScroll,'Sessions returns to its own exact scroll position');
+    await clickText('Lifts','.wpb-premium-tabs button');await clickText('Records','[data-lift-pane]');
+    await assertScroll(0,'A newly selected Lifts pane starts at its own top');
+    const recordsScroll=await setScroll(120);assert.ok(recordsScroll>50);
+    await clickText('Exercises','[data-lift-pane]');await assertScroll(0,'Exercises does not inherit the Records offset');
+    await page.type('input[aria-label="Search your lifts"]','curl');
+    await page.click('[data-tab="settings"]');await page.click('[data-tab="progress"]');
+    assert.equal(await page.$eval('.wpb-premium-tabs [aria-selected="true"]',button=>button.textContent),'Lifts');
+    assert.equal(await page.$eval('[data-lift-pane][aria-current="true"]',button=>button.dataset.liftPane),'exercises');
+    assert.equal(await page.$eval('input[aria-label="Search your lifts"]',input=>input.value),'curl');
+    assert.equal(await page.$$eval('.wpb-progress button.opt',buttons=>buttons.length),1,'The restored lift query retains its matching row');
+    await clickText('Records','[data-lift-pane]');await assertScroll(recordsScroll,'Records returns to its own scroll position');
+    await clickText('Body','.wpb-premium-tabs button');await assertScroll(0,'Body does not inherit a long Records offset');
+    await clickText('Sessions','.wpb-premium-tabs button');await assertScroll(sessionsScroll,'Switching sections restores Sessions exactly');
+    await clickText('Lifts','.wpb-premium-tabs button');
+    await page.click('[data-tab="home"]');await page.click('button[aria-label="Workout history"]');
+    await page.waitForSelector('#history-search');await assertScroll(0,'The explicit Home history shortcut opens Sessions at the top');
+    assert.equal(await page.$eval('.wpb-premium-tabs [aria-selected="true"]',button=>button.textContent),'Sessions');
+    assert.deepEqual(await training(),before,'Browsing never changes saved programs, history, performance or drafts');
+    assert.equal(await page.evaluate(()=>localStorage.getItem('wpb:live')),null,'Browsing never starts a workout');
+
+    await page.reload({waitUntil:'networkidle0'});await page.waitForSelector('.wpb-tabbar');
+    await page.click('[data-tab="progress"]');await page.waitForSelector('#history-search');
+    assert.equal(await page.$eval('#history-search',input=>input.value),'','A new app visit starts with fresh browsing choices');
+    assert.equal(await page.$eval('select[aria-label="Filter history by program"]',input=>input.value),'all');
+    assert.equal(await page.$eval('select[aria-label="Filter history by time"]',input=>input.value),'all');
+    assert.equal(await page.$$eval('.wpb-history-session',rows=>rows.length),50,'A new visit uses the standard first history page');
+    // The existing startup normalizer refreshes history updatedAt through the stamped setter.
+    // Every record identity and training field must still match; in-visit checks above include stamps.
+    const withoutLoadStamp=s=>({...s,history:s.history.map(({updatedAt,...record})=>record)});
+    assert.deepEqual(withoutLoadStamp(await training()),withoutLoadStamp(before),'Reload retains every training record');
+    assert.deepEqual(errors,[],'No browsing or reload errors');
+    return {theme,width,libraryScroll,sessionsScroll,recordsScroll,clear};
+  }finally{await context.close();}
+}
 const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html',
   '.json':'application/json','.png':'image/png','.svg':'image/svg+xml',
   '.webmanifest':'application/manifest+json'};
@@ -329,12 +457,14 @@ try{
   }
   const flows=[];
   const nextSessions=[];
+  const browsing=[];
   for(const theme of ['rose','rosewater'])
     for(const width of [320,393]){
       flows.push(await verifyNavigationFlow(browser,theme,width));
       nextSessions.push(await verifyNextSessionFlow(browser,theme,width));
+      browsing.push(await verifyBrowseMemory(browser,theme,width));
     }
-  console.log('PASS R54/R59: paired Library/Detail/Program/Workout layouts; active Plan, preview/full-program Back, remembered week/section/scroll, per-program context, safe workout returns and next due week at 320/393px; '+JSON.stringify({diagnostics,flows,nextSessions}));
+  console.log('PASS R54/R59/R60: paired Library/Detail/Program/Workout layouts; active Plan, safe workout returns, next due week, retained Library/history/lift filters and independent Progress scroll at 320/393px; '+JSON.stringify({diagnostics,flows,nextSessions,browsing}));
 }finally{
   if(browser)await browser.close();
   await new Promise(resolve=>server.close(resolve));

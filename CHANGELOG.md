@@ -1,3 +1,12 @@
+## Build 839 — R60 browsing context
+
+- Exercise Library retains search, muscle, equipment and Recent/Goals/Banned filters when returning from Compare.
+- Clear the exercise search with a 48px button while keeping the selected filters.
+- Progress remembers its section, lift pane, searches, history filters, grouping, expanded sessions and loaded history page during the current app visit.
+- Each Progress section and lift pane keeps its own scroll position; switching to Body cannot inherit a long Records offset.
+- Home’s Workout history shortcut explicitly opens Sessions at the top; a fresh app visit or data reset clears browsing context.
+- Extend the existing phone-flow gate in paired light/dark themes at 320/393px, including exact scroll restoration and training-record preservation.
+
 ## Build 838 — R59 app flow and return navigation
 
 - Plan follows the active training program even after another saved program is browsed.

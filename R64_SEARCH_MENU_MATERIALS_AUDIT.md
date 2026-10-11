@@ -12,3 +12,7 @@ Follow Build 842's owner-approved original themed materials and compact workout 
 
 ## Release constraints
 This is a surface-only R64 stage of the existing UI/UX plan. No new component owner, animation engine, verification workflow or training policy. All four existing CI workflows, browser shards and offline integrity checks are required on the *final* PR head and again on main, followed by GitHub Pages deployment. Adaptive tablet/laptop navigation remains the next substantial layout task.
+
+## Acceptance and evidence limits
+
+The source change is presentation-only. Release integrity, 32 integration contracts, all four browser shards, independent engine audit and main-branch Pages remain mandatory. The browser harness uses simulated data; real Android keyboard/assistive-technology testing is not claimed by this release. R64 deliberately does not implement tablet navigation rails or related panes.

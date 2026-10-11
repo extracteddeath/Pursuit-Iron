@@ -5,7 +5,7 @@
   "build": 845,
   "engineVersion": "0.65.6",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "c431b7e6a49f2936a783958bf9b9f33dcc23a58f0f7776a6989e944219656d22",
+  "runtimeAggregate": "18bd25e0083549842b2e99c904b57f5114b19439ce96712710aad15fa952ba54",
   "runtimeFiles": {
     "modules/engine-api.js": "40d3253be40bd5390001f16d63b74aae90d0e045df6a015b1764a1bc2404bd56",
     "modules/engine-shell.js": "73645bf4d914423074c0e90b992b58a6c57f7fbb726621d417803e906d140675",
@@ -47,7 +47,7 @@
     "modules/next-engine/loading.js": "9ebeb1072dc98aedf90f50a9ffb5d22d0948642ceae6a53a67fab689ff6cb748",
     "modules/next-engine/method-policy.js": "b5b0a4f214c768ab76050d3daad56f0afea0b533b0fea470859ef475ad16d828",
     "modules/next-engine/percentage-protocols.js": "6898b022d081d4bab891cc32de5b321be944187f3d846dc69fb66f15c8d44f4b",
-    "modules/next-engine/performance.js": "2b1fa3b51c96462c0e245e16857bd33aaf36a3ab48ecfd9faabdf26e1fcaeb17",
+    "modules/next-engine/performance.js": "1d588b875cc9534ff385e6f8dfe7c393814517be40ed676e35f0206cbc64dbf0",
     "modules/next-engine/phase-policy.js": "31770fb6bc4f3834acfc321e95206a9be384faa3731e97f60cec814cabd3150f",
     "modules/next-engine/phase-transition.js": "81d91bb067c575b9bd48aae9c74647af946f496ae0358b0d6b06d6bfe53e5b05",
     "modules/next-engine/prescription.js": "63b942fd23031f9dfefbb27d5fcd80c6657f4b0cdc8424e7c8cb5080ff05d02a",
@@ -82,13 +82,13 @@
     "modules/next-engine/topology.js": "0ee4f80c1179ec980bd79a58a7e6b529e50fe0fedfcff910eb3046193505939d",
     "modules/next-engine/volume-repair.js": "489756539c4bded6dcda72fb9a0f5d5312de4419ee97340daf82f28c3cb926c6",
     "modules/next-engine/weekly-recovery.js": "92cf14bd6ca28715d1d3f9ddde1cc0f42502892f230d69650f83bf6b921c111c",
-    "modules/next-engine/workout-history-adapter.js": "0017826b5b46280045034d9d485eb4bab0a404a5cdbfa037932a85540ba5ad8d",
+    "modules/next-engine/workout-history-adapter.js": "09719cab0c8ee38d126e0b1be1a4542db3bf75d7383f1a42783aa2881c8b37c5",
     "modules/next-engine/workout-runtime.js": "e55ae9863410c1119fafbe9652322f9e0dedf08fd263389f4baee94bf7b02d68",
     "modules/program-duration.js": "52bffd0e7798f16f1217ba455de75c63c917ba9b7c6aa61dcd795b10dc665d95",
     "modules/training-domain.js": "030aac1553e3eea48805c75a7295a82293f5aee77d9a4ae230ffca48f51e3c6e",
     "modules/training-domain/analytics.js": "d08c4a0f53a74da34986f07abfdcd70721e8c3b104d62c51feedd66cd757d49a",
     "modules/training-domain/catalog.js": "b9e6071c78ffdf790da90337843b2fe6466f05a26c04624a4951518e784941e4",
-    "modules/training-domain/prescriptions.js": "33663a165d3ef62db0cf2e8d07c0a30df9fb5a02a362ac9dda98dc2e990b080a",
+    "modules/training-domain/prescriptions.js": "39e18a024697b8285a98bb7b0902ad39c1eb92f8b1fc0cb56261140dea3d5ae1",
     "modules/training-domain/programs.js": "27ade346bc7b2bdd94c51564f1292ec126c2fd2bbbbc8d440ee04b4455d5c11b",
     "modules/training-domain/records.js": "b07d5d53e75b522542f30ad6a78975379841b285ce8c1356d7afcb6923350928",
     "modules/ui-motion.js": "83d0f1f1aa8befaae3564454ce6007d04b3efbe326def86e5628c20f18a0bd4a",
@@ -109,8 +109,8 @@
   "uiFiles": {
     "modules/App.js": "345a847a68d1a379e9cbdb579ec8d745852c6bca3855a2bb4f309da469cffa0a",
     "index.html": "c13e9b5a9a6df8812512f7caa29736b95f8e20d52797fa71b4ec85d8e8f4eb15",
-    "sw.js": "855492f6346a3b3ae1bf45900b9654eaeb1150955421c510435b3658257ae97e",
-    "BUILD_PROFILE.json": "880c1030e814aa8150f0906bc62f63784d1998f4da2afd9f84f83d7ca96c8ac6",
+    "sw.js": "063b99c0e149e76aca10564fee9251acd5b5ecec14f482ff83407bdcdd6e8904",
+    "BUILD_PROFILE.json": "c0f7e5c45f7247a0c2acf5b64653148cd2c965ff9b5c03707682e3f5b07ab05e",
     "CHANGELOG.md": "b91b1a8f94138e9a456c4f70df6ae15a8d53b0eb5bb193861885c26d6e77f43d",
     "app.css": "b3def23c9a1d35f1731af85e2a711427200b6ccc1530fa91f1946ba4c5367c47",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
@@ -118,6 +118,6 @@
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b845-r13771025d4f014f3",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b845-rbe0d89bf704301ed",
   "uiMilestone": "Build 845 · incline dumbbell stepper and independent Dynamic Double"
 }

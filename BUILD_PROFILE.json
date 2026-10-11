@@ -2,10 +2,10 @@
   "profile": "portable-browser-esm-canonical-engine",
   "milestone": "M234",
   "source": "Canonical engine with milestone contract verification",
-  "engine": "0.65.6; Candidate Selection Hardening",
+  "engine": "0.65.7; Candidate Selection Hardening and Dynamic Double per-set correction",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 70,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b844-rd18a90142d0a278b",
-  "uiMilestone": "Build 844 · R65 adaptive tablet/desktop shell and navigation rail"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b845-rd18a90142d0a278b",
+  "uiMilestone": "Build 845 · R66 dumbbell manual weight + per-set Dynamic Double fix"
 }

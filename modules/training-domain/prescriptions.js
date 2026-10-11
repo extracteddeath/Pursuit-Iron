@@ -8,7 +8,6 @@ import { nextWorkoutSuggestionForShell } from "../next-engine/workout-history-ad
 import { evaluateWorkoutProgression } from "../next-engine/performance.js";
 import { blockPhase, cellRepRange, clamp, computeCell, effortBounds, isBarLike, isMachineLike, loadStep, roundTo, secondaryOf, weeksOf } from './records.js';
 import { EXERCISES, EX_BY_ID } from './catalog.js';
-import { isAssistedEx } from './analytics.js';
 import { PART_ORDER, e1rmRIR } from './programs.js';
 
 const PART_LABEL = {
@@ -766,7 +765,7 @@ function sessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, history
 function nudgeWorkoutLoad(ex, unit, rawWeight, direction) {
     const current = Number.parseFloat(rawWeight) || 0;
     const dir = direction < 0 ? -1 : 1;
-    const assisted = isAssistedEx(ex);
+    const assisted = !!ex && /^(?:assisted-pullup|assisted-chinup|assisted-dip|assisted-)/.test(ex.id || '');
     const rack = !assisted ? gymRackFor(ex, unit) : null;
     if (rack?.length) {
         const next = dir < 0 ? rack.filter(weight => weight < current - 1e-9).at(-1)

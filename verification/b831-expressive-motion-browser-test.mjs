@@ -410,20 +410,30 @@ try {
                 const selected = el.querySelector('[aria-current="page"]');
                 const indicator = getComputedStyle(el, '::before');
                 const width = Math.min(60, selected.offsetWidth * .78);
-                return { height: parseFloat(indicator.height), radius: indicator.borderRadius,
-                    width: parseFloat(indicator.width), expectedWidth: width,
-                    x: parseFloat(el.style.getPropertyValue('--pi-m3-track-x')),
-                    expected: selected.offsetLeft + (selected.offsetWidth-width)/2,
-                    fill: el.style.getPropertyValue('--pi-m3-track-fill'),
-                    oldPill: getComputedStyle(selected, '::before').display,
-                    oldUnderline: getComputedStyle(selected, '::after').display };
+                const icon=selected.querySelector('svg'),label=selected.querySelector('span');
+                const labelTop=label?.getBoundingClientRect().top??0;
+                const iconBottom=icon?.getBoundingClientRect().bottom??0;
+                const indicatorBottom=el.getBoundingClientRect().top+
+                    parseFloat(el.style.getPropertyValue('--pi-m3-track-y'))+parseFloat(indicator.height);
+                return {height:parseFloat(indicator.height),radius:indicator.borderRadius,
+                    width:parseFloat(indicator.width),expectedWidth:width,
+                    x:parseFloat(el.style.getPropertyValue('--pi-m3-track-x')),
+                    expected:selected.offsetLeft+(selected.offsetWidth-width)/2,
+                    labelGap:labelTop-indicatorBottom,iconLabelGap:labelTop-iconBottom,
+                    fill:el.style.getPropertyValue('--pi-m3-track-fill'),
+                    renderedFill:indicator.backgroundColor,
+                    oldPill:getComputedStyle(selected,'::before').display,
+                    oldUnderline:getComputedStyle(selected,'::after').display};
             });
-            assert.ok(navPill.height >= 32 && navPill.height <= 34 &&
+            assert.ok(navPill.height >=26 && navPill.height <=28 &&
                 Math.abs(navPill.width-navPill.expectedWidth)<.8 &&
-                Math.abs(navPill.x-navPill.expected)<.8, 'spatial navigation indicator stays centered: ' + JSON.stringify(navPill));
-            assert.ok(navPill.radius.includes('px') && navPill.fill.includes('color-mix') &&
-                navPill.oldPill === 'none' && navPill.oldUnderline === 'none',
-                'moving navigation paints one theme-native pill instead of separate underlines: ' + JSON.stringify(navPill));
+                Math.abs(navPill.x-navPill.expected)<.8 &&
+                navPill.labelGap>=5 && navPill.iconLabelGap>=7,
+                'R38 navigation indicator and icon clear the label at '+width+'px: '+JSON.stringify(navPill));
+            assert.ok(navPill.radius.includes('px') && navPill.fill &&
+                navPill.renderedFill!=='rgba(0, 0, 0, 0)' &&
+                navPill.oldPill==='none' && navPill.oldUnderline==='none',
+                'R38 one opaque tonal indicator replaces translucent hollow pill: '+JSON.stringify(navPill));
             if (tab === 'progress') {
                 // Selected group indicator springs independently from actual
                 // button hit targets, and settles to an unscaled resting pill.

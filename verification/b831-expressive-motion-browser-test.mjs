@@ -771,6 +771,7 @@ try {
             rapidNavR32.home.direction==='back' &&
             rapidNavR32.progress.quick==='1' &&
             rapidNavR32.home.quick==='1' &&
+            rapidNavR32.progress.connected===0 && rapidNavR32.home.connected===0 &&
             !rapidNavR32.progress.cascade && !rapidNavR32.home.cascade &&
             rapidNavR32.progress.reveal===0 && rapidNavR32.home.reveal===0 &&
             rapidNavR32.progress.travel==='6px' &&
@@ -788,6 +789,28 @@ try {
         },{timeout:5000});
         assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),initial.saved,
             'R32 quick navigation never mutates program state');
+
+        // R33: exercise the actual native bottom-navigation buttons with
+        // keyboard input. The indicator is presentation-only; React owns both
+        // selection and route contents. Arrow keys wrap at both ends.
+        const navigateKeyboardR33 = async (from, key, destination) => {
+            await page.focus(`.wpb-tabbar button[data-tab="${from}"]`);
+            await page.keyboard.press(key);
+            await page.waitForFunction(target => {
+                const button=document.querySelector(`.wpb-tabbar button[data-tab="${target}"]`);
+                return button?.getAttribute('aria-current')==='page' &&
+                    document.querySelectorAll('[data-view-frame]').length===1 &&
+                    document.querySelector('[data-view-frame]')?.getAttribute('data-view-frame')===target;
+            }, {timeout:5000}, destination);
+            const focus=await page.evaluate(() => document.activeElement?.getAttribute('data-tab'));
+            assert.equal(focus,destination,`R33 ${key}: focus follows ${destination}`);
+        };
+        await navigateKeyboardR33('home','ArrowLeft','settings');
+        await navigateKeyboardR33('settings','ArrowRight','home');
+        await navigateKeyboardR33('home','End','settings');
+        await navigateKeyboardR33('settings','Home','home');
+        assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),initial.saved,
+            'R33 keyboard navigation preserves the saved training program');
 
         // R24: test the finish-sheet CSS even though this fixture deliberately
         // keeps its unfinished workout alive. Do not finish or mutate the log.

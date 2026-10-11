@@ -66,7 +66,7 @@ try{
         const gym=buttons.find(b=>b.textContent.includes('Test Garage'));
         if(!gym)throw new Error('Test Garage gym missing');gym.click();
       });
-      const box='.wpb-gym-card:first-of-type .wpb-gym-bar-masses';
+      const box='.wpb-gym-bar-masses';
       await page.waitForSelector(box);
       const bar='input[aria-label="Barbell empty bar weight"]';
       const smith='input[aria-label="Smith empty bar weight"]';

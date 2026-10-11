@@ -96,6 +96,8 @@ try{
                 panes:rect(parent.querySelector('.wpb-plan-panes')),
                 upNext:rect(parent.querySelector('.wpb-plan-up-next')),
                 overview:rect(parent.querySelector('.wpb-plan-overview')),
+                weekPicker:rect(parent.querySelector('.wpb-plan-week-picker')),
+                weekIntent:rect(parent.querySelector('[data-week-intent]')),
                 overflow:document.documentElement.scrollWidth>innerWidth+2};
             });
             const supporting=width>=1060&&height>=700;
@@ -106,6 +108,9 @@ try{
                 'Program overview is the supporting pane beside schedule');
               if(layout.upNext)assert.ok(layout.upNext.x>=layout.panes.right-2,
                 'Same Up Next card moves beside schedule without cloning state');
+              if(layout.weekPicker&&layout.weekIntent)assert.ok(
+                layout.weekIntent.y-layout.weekPicker.bottom<70,
+                'Supporting-pane height does not create a gap between picker and week content');
             }else{
               assert.ok(layout.overview.y>=layout.panes.bottom-2,
                 'Phone, medium and short windows retain vertical Plan reading order');

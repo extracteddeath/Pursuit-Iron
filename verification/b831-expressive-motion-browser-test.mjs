@@ -163,6 +163,10 @@ try {
                 group.style.width='178px';
                 group.style.width='198px';
                 group.style.width='218px';
+                // Wait for the ResizeObserver callback and its scheduled
+                // presentation frame; three rAFs can sample one intermediate
+                // button width on a loaded CI phone browser.
+                await frames();
                 await frames();
                 const after=Number.parseFloat(group.style.getPropertyValue('--pi-m3-track-width'));
                 const expected=first.offsetWidth;

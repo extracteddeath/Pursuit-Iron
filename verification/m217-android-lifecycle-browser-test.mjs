@@ -81,6 +81,9 @@ try {
     }), [true, true, true], 'resumed completed set retains the full faded row with read-only weight and reps');
     const pendingWeight = await page.waitForSelector('[data-testid="set-0-1"] input[aria-label="weight"]');
     await pendingWeight.click(); await page.keyboard.down('Control'); await page.keyboard.press('KeyA'); await page.keyboard.up('Control'); await page.keyboard.press('Backspace'); await page.keyboard.type('155'); await page.keyboard.press('Enter');
+    // Enter/IME Next is sometimes scheduled on the next React/animation frame.
+    // Wait for the real app to move focus; never fake the transition in the test.
+    await page.waitForFunction(() => document.activeElement?.getAttribute('aria-label') === 'reps', {timeout:3000});
     assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('aria-label')), 'reps', 'numeric Next advances load to reps');
     await page.keyboard.down('Control'); await page.keyboard.press('KeyA'); await page.keyboard.up('Control');
     await page.keyboard.type('14'); await page.keyboard.press('Enter');

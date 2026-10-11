@@ -193,6 +193,66 @@ try {
         r36Observations.reduce((n,x)=>n+x.nestedContrast.filter(y=>Number.isFinite(y.ratio)).length,0)>=170 &&
         r36Fails.length===0,
         'R36 rendered secondary labels meet 4.5:1 on all 20 saved themes: '+JSON.stringify(r36Fails));
+    // R36: a separate LIGHT-theme Android-size context validates the actual
+    // sheet and dense workout fields, without changing the audio lifecycle,
+    // saved history, or active workout fixture of the main integration test.
+    const lightContext = await browser.createBrowserContext();
+    const lightPage = await lightContext.newPage();
+    await lightPage.setViewport({width:320,height:740,deviceScaleFactor:2,isMobile:true,hasTouch:true});
+    await lightPage.evaluateOnNewDocument((store,snapshot)=>{
+        localStorage.setItem('wpb:v1',JSON.stringify({...store,theme:'light'}));
+        localStorage.setItem('wpb:live',JSON.stringify(snapshot));
+    },initial,live);
+    try {
+        await lightPage.goto('http://127.0.0.1:8774/',{waitUntil:'networkidle0'});
+        await lightPage.waitForSelector('.wpb-tabbar');
+        await lightPage.click('[data-tab="settings"]');
+        await lightPage.$eval('button',buttons=>{
+            const b=buttons.find(x=>x.textContent.trim()==='Your gyms');
+            if(!b)throw new Error('Light theme gym sheet opener missing');
+            b.click();
+        });
+        await lightPage.waitForSelector('.wpb-gym-sheet');
+        const lightSheet = await lightPage.$eval('.wpb-gym-sheet',sheet=>{
+            const c=getComputedStyle(sheet),r=sheet.getBoundingClientRect();
+            return {background:c.backgroundColor,gradient:c.backgroundImage,width:r.width,overflow:sheet.scrollWidth>sheet.clientWidth+1};
+        });
+        assert.ok(lightSheet.gradient==='none'&&!lightSheet.overflow&&lightSheet.width<=321,
+            'R36 light sheet stays opaque and phone-sized: '+JSON.stringify(lightSheet));
+        await lightPage.keyboard.press('Escape');
+        await lightPage.waitForSelector('.wpb-gym-sheet',{hidden:true});
+        await lightPage.click('.wpb-live-dock button[aria-label="Resume workout"]');
+        await lightPage.waitForSelector('[data-testid="set-0-0"] input[aria-label="weight"]');
+        const lightFields = await lightPage.evaluate(()=>{
+            const context=document.createElement('canvas').getContext('2d',{willReadFrequently:true});
+            const rgba=color=>{
+                context.clearRect(0,0,1,1);context.fillStyle=color;context.fillRect(0,0,1,1);
+                return [...context.getImageData(0,0,1,1).data].map(v=>v/255);
+            };
+            const mix=(fg,bg)=>fg.slice(0,3).map((v,i)=>v*fg[3]+bg[i]*(1-fg[3]));
+            const lum=c=>c.map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4)
+                .reduce((n,v,i)=>n+v*[.2126,.7152,.0722][i],0);
+            const measure=selector=>{
+                const el=document.querySelector(selector);if(!el)return null;
+                const ancestor=[];for(let p=el;p;p=p.parentElement)ancestor.unshift(p);
+                const bg=ancestor.reduce((v,p)=>mix(rgba(getComputedStyle(p).backgroundColor),v),[1,1,1]);
+                const fg=mix(rgba(getComputedStyle(el).color),[...bg,1]);
+                const x=lum(fg),y=lum(bg);
+                return +((Math.max(x,y)+.05)/(Math.min(x,y)+.05)).toFixed(2);
+            };
+            return {weight:measure('[data-testid="set-0-0"] input[aria-label="weight"]'),
+                reps:measure('[data-testid="set-0-0"] input[aria-label="reps"]')};
+        });
+        assert.ok(lightFields.weight>=4.5&&lightFields.reps>=4.5,
+            'R36 light workout numeric fields meet AA without changing muted completed set semantics: '+JSON.stringify(lightFields));
+        await lightPage.screenshot({path:path.join(root,'verification/r36-light-workout-phone.png')});
+        assert.deepEqual(await lightPage.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),
+            initial.saved,'R36 light surfaces do not alter the saved training prescription');
+        console.log('R36 LIGHT SHEET/WORKOUT '+JSON.stringify({sheet:lightSheet,fields:lightFields}));
+    } finally {
+        await lightPage.close();
+        await lightContext.close();
+    }
     await page.$eval('.wpb-theme-picker', n => { n.open = true; });
     await page.click('[data-theme-option="amethyst"]');
     await page.click('[data-tab="plan"]'); await settled();

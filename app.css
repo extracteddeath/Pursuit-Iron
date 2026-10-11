@@ -5740,3 +5740,119 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   overflow-wrap:anywhere!important;
   text-overflow:clip!important;
 }
+
+/* M3 EXPRESSIVE R48 — REAL ANDROID SCREENSHOT REFINEMENT
+   Reference: four October 11 device captures of Home, Plan, Progress, Profile.
+   The app's training content is already rich. Make the surfaces *quieter* and
+   spend less screen height on ornament, while retaining buttons, typography,
+   semantic accent, all moving indicators, and logger/engine ownership. */
+#root[data-pi-motion="expressive"] .wpb{
+  --pi-r48-page:light-dark(var(--pi-m3e-base),var(--pi-r41-page));
+  --pi-r48-quiet:var(--pi-r11-quiet);
+  --pi-r48-raised:var(--pi-r11-raised);
+  --pi-r48-divider:var(--pi-r11-edge);
+}
+/* The 690px Android screenshots show a very tall next-session doorway.
+   Reduce dead height in the static summary, not the real exercise rows or
+   Start button. Preserve the >=35px featured corner and program-orbit dial. */
+#root[data-pi-motion="expressive"] .wpb .wpb-home.wpb-home.wpb-home>.wpb-home-header{
+  padding:11px 16px 13px!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-home.wpb-home.wpb-home .wpb-home-hero{
+  padding:14px 15px 13px!important;
+  margin-top:10px!important;
+  margin-bottom:9px!important;
+  border-color:var(--pi-r48-divider)!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero>button:first-child{
+  min-height:102px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-m3-session-preview{
+  padding:10px 12px!important;
+  border-radius:19px!important;
+  margin-block:8px!important;
+  border-color:var(--pi-r48-divider)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-m3-preview-heading{
+  margin:0 0 4px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-m3-session-preview>button[aria-expanded]{
+  min-height:44px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-home-compose-bar{
+  padding-block:6px!important;
+  border-top-color:var(--pi-r48-divider)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-home-compose-bar button{
+  min-height:48px!important;
+}
+/* Different header generations still coexist in Home / Progress.
+   Same neutral page + low surface from R41 on both: no purple header slab. */
+#root[data-pi-motion="expressive"] .wpb .wpb-progress.wpb-progress>.wpb-page-header{
+  background:var(--pi-r48-quiet)!important;
+  background-image:none!important;
+  border-bottom:1px solid var(--pi-r48-divider)!important;
+  border-radius:0 0 22px 22px!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs{
+  background:var(--pi-r48-raised)!important;
+  background-image:none!important;
+  border-color:var(--pi-r48-divider)!important;
+}
+/* The Plan screenshot has one primary current week, one Up Next action,
+   then many large, purple week cards. Past/future entries are supporting
+   information: demote their fill, keep the real selected/next accent. */
+#root[data-pi-motion="expressive"] .wpb .wpb-program.wpb-program
+  .wpb-day-card:not([data-next="true"]):not([data-pi-disclosure="open"]),
+#root[data-pi-motion="expressive"] .wpb .wpb-program.wpb-program .hp-card:not([data-pi-disclosure="open"]){
+  background:var(--pi-r48-quiet)!important;
+  background-image:none!important;
+  border-color:var(--pi-r48-divider)!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-program.wpb-program .wpb-day-card[data-next="true"]{
+  background:var(--pi-r11-hero)!important;
+  background-image:none!important;
+  border-color:var(--pi-r11-accent-stroke)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-program.wpb-program .wpb-week-rail{
+  gap:6px!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-program.wpb-program .wpb-week-rail>button:not(
+  [aria-pressed="true"]):not([aria-current="page"]):not([data-active="true"]){
+  background:var(--pi-r48-quiet)!important;
+  background-image:none!important;
+  border-color:var(--pi-r48-divider)!important;
+}
+/* Profile is a dashboard, not an award-card wall. Carry shared neutral
+   edges into score subcards and keep the strength score as the single accent. */
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength-cell:not(:first-child){
+  background:var(--pi-r48-quiet)!important;
+  background-image:none!important;
+  border-color:var(--pi-r48-divider)!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength{
+  border-color:var(--pi-r48-divider)!important;
+  box-shadow:none!important;
+}
+@media(max-width:359px){
+  #root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero{
+    padding-inline:12px!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb-home .wpb-m3-session-preview{
+    padding-inline:10px!important;
+  }
+}
+@media(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb :is(
+    .wpb-home-hero,.wpb-m3-session-preview,.wpb-progress>.wpb-page-header,
+    .wpb-program .wpb-day-card,.wpb-program .hp-card,
+    .wpb-profile-strength,.wpb-profile-strength-cell){
+    background-color:Canvas!important;
+    border-color:CanvasText!important;
+    color:CanvasText!important;
+  }
+}

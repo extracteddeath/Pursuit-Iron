@@ -220,7 +220,9 @@ function withTrainingMax(program, exerciseId, value, unit) {
 
 function pctSetsFor(scheme, tm, weekIndex, weeksTotal, unit, ex, dayType, tier = "t1") {
     return percentageProtocolFor({ scheme, tm, weekIndex, weeksTotal, dayType, tier,
-        snapLoad: value => loadableAtOrBelow(ex, value, unit) });
+        // The evaluator already used its declared loading inventory for each
+        // Dynamic Double set; re-snapping here can erase one earned 5 lb increase.
+        snapLoad: value => sug?.perSet ? value : loadableAtOrBelow(ex, value, unit) });
 }
 
 function percentagePlanFor(program, day, ex, slot, weekIndex, unit, history = []) {
@@ -734,8 +736,25 @@ function sessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, history
         w = loadableAbove(ex, current, unit) ?? w;
     const cell = computeCell(program, day, ex.id, slot, weekIndex);
     const floor = cellRepRange(cell, program, ex, slot === day.primaryIndex)[0];
-    const setTargets = s.setTargets?.map(target => {
-        const weight = s.action === "increase_load" ? w : loadableAtOrBelow(ex, target.weight, unit);
+    const previousWork = s.perSet ? completedHistorySets(s.last) : [];
+    const setTargets = s.setTargets?.map((target, index) => {
+        let weight;
+        if (s.perSet) {
+            // Dynamic Double has an independent load per position. Do not replace the
+            // entire set ladder with the single heaviest suggested weight.
+            // Holding a manually entered lighter dumbbell must not snap UP to the
+            // gym inventory's lowest listed bell (e.g. 20 -> 25).
+            weight = target.weight;
+            if (target.advanced) {
+                const prev = convertHistoryLoad(previousWork[index]?.w, s.lastUnit || program.config?.unit, unit);
+                const snapped = loadableAtOrBelow(ex, target.weight, unit);
+                weight = prev > 0 && !(snapped > prev)
+                    ? (loadableAbove(ex, prev, unit) ?? target.weight)
+                    : (snapped ?? target.weight);
+            }
+        } else {
+            weight = s.action === "increase_load" ? w : loadableAtOrBelow(ex, target.weight, unit);
+        }
         return { ...target, weight, reps: weight < target.weight ? floor : target.reps };
     });
     const reason = typeof s.reason === "string" ? s.reason.replace(new RegExp(`\\bto ${eng}( ?${unit})`), `to ${w}$1`) : s.reason;
@@ -833,7 +852,8 @@ function customProgramSuggestion(program, day, slot, unit, weekIndex, history) {
     const weight = result.suggestedLoad ?? result.currentLoad;
     return { weight, dir: weight > result.currentLoad ? "up" : weight < result.currentLoad ? "down" : "hold",
         action: result.action, reps: cell.range, target: result.suggestedReps ?? lo,
-        setTargets: result.setTargets, last: last.perf[ex.id], confidence: result.confidence, reason: result.reason };
+        setTargets: result.setTargets, perSet: result.perSet === true,
+        last: last.perf[ex.id], confidence: result.confidence, reason: result.reason };
 
 }
 

@@ -26,7 +26,8 @@ These points were confirmed by a real-browser computed-style and DOM ancestor au
 3. Style the real Settings `.wpb-theme-picker` and anonymous direct settings-row group. Keep card paint consistent with `.wpb-settings-card`, without recoloring underlying accent theme swatches.
 4. Reapply quiet cards to repeated Program day/phase surfaces; retain current/next distinction and the active week indicator.
 5. Preserve the R41 Progress primary/secondary tab distinction and all existing motion geometry. CSS-only changes to rendered paint; no training engine, numeric input, completed-row behavior, program data or state storage changes.
-6. Add browser assertions for computed Settings card paint, active control contrast and Program elevation; capture R52 phone screenshots.
+6. Allocate proportionally more real control width to the long 'Intermediate' experience label, preserving large-text wrapping and 48px target geometry.
+7. Add browser assertions for computed Settings card paint, active control contrast and Program elevation; capture R52 phone screenshots.
 
 ## Verification and release gate
 

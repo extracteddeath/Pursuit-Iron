@@ -356,6 +356,10 @@ function disclosure(el, initial = false) {
     }
 }
 
+    // Observed elements are held strongly by ResizeObserver. Release detached
+    // route/tab groups immediately instead of retaining them for the lifetime
+    // of the app shell during long training sessions.
+    const observedTracks = new Set();
     const trackResize = typeof ResizeObserver === 'function' ? new ResizeObserver(entries => {
         for (const entry of entries) {
             const group = entry.target, selected = choiceStates.get(group);
@@ -389,7 +393,10 @@ function disclosure(el, initial = false) {
             state = { fill }; selectionTracks.set(group, state);
             group.style.setProperty('--pi-m3-track-fill', fill);
             group.dataset.piM3Track = '1';
-            trackResize?.observe(group);
+        }
+        if (trackResize && !observedTracks.has(group)) {
+            trackResize.observe(group);
+            observedTracks.add(group);
         }
         const computedFill = group.matches('.wpb-tabbar') ? navSurface(button) : selectedSurface(group, button);
         if (computedFill && computedFill !== 'transparent' && computedFill !== state.fill) {
@@ -542,7 +549,15 @@ function disclosure(el, initial = false) {
         const buttons = [...group.children].filter(el => el.matches('button'));
         const selected = buttons.findIndex(b => b.getAttribute('aria-pressed') === 'true' || b.getAttribute('aria-selected') === 'true' || b.getAttribute('aria-current') === 'page');
         const previous = choiceStates.get(group); choiceStates.set(group, selected);
-        if (previous === selected && !initial) return;
+        if (previous === selected && !initial) {
+            // DOM moves can detach and reattach the same group without
+            // changing selection. Rejoin observation without replaying motion.
+            if (trackResize && selectionTracks.has(group) && !observedTracks.has(group)) {
+                trackResize.observe(group);
+                observedTracks.add(group);
+            }
+            return;
+        }
         positionTrack(group, buttons, selected, initial);
         // 2026 expressive connected button groups briefly compress their painted
         // active container while it travels, then spring to the measured size.
@@ -679,6 +694,20 @@ function disclosure(el, initial = false) {
         records.forEach(record => {
             if (record.type === 'childList') {
                 record.addedNodes.forEach(node => scan(node));
+                // Skip moved nodes that still belong to the same root after
+                // React's batch; only truly detached groups are unobserved.
+                if (trackResize && observedTracks.size) {
+                    const release = group => {
+                        if (!root.contains(group) && observedTracks.delete(group))
+                            trackResize.unobserve(group);
+                    };
+                    record.removedNodes.forEach(node => {
+                        if (node.nodeType !== 1) return;
+                        if (node.matches(trackSelector)) release(node);
+                        if (node.firstElementChild)
+                            node.querySelectorAll(trackSelector).forEach(release);
+                    });
+                }
                 const host = record.target.nodeType === 1 ? record.target.closest(disclosureSelector) : null;
                 if (host) disclosures.add(host);
                 const detail = record.target.nodeType === 1 ? record.target.closest('.wpb-exercise-detail') : null;
@@ -722,7 +751,7 @@ function disclosure(el, initial = false) {
     globalThis.visualViewport?.addEventListener('resize', positionOpenMenus);
     media?.addEventListener('change', preference);
     return () => {
-        observer.disconnect(); trackResize?.disconnect(); menuOpener = null;
+        observer.disconnect(); trackResize?.disconnect(); observedTracks.clear(); menuOpener = null;
         settleAll(); delete root.dataset.piMotion;
         root.removeEventListener('animationend', inkEnd);
         root.removeEventListener('pointerdown', down); document.removeEventListener('pointerup', up);

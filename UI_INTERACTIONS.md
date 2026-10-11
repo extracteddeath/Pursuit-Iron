@@ -618,3 +618,26 @@ program construction, persistence, rest timer or RIR.
   one mounted main view, focus retention and zero program mutations at 320/430px.
 - Reduced motion, workout logging, set layout, timers, sheet gestures, library
   contents, training engine and offline support are unchanged.
+
+## R34 / R35 — adaptive composition and contrast audit
+
+- R34: primary tab labels can wrap at narrow widths instead of clipping or
+  shrinking hit targets; safe-area left/right padding follows the device. The
+  Profile strength figures and Progress/Home cards adapt at 320–359px without
+  rearranging data or changing the two-column strength comparison.
+- R34: on low-height landscape devices, decorative page-header spacing
+  compresses without reducing tap targets or changing fixed workout controls.
+- R35: selection is not conveyed by a faint color wash alone. The actual
+  spring-driven bottom-tab pill has a high-contrast, theme-derived perimeter,
+  while retaining subdued filled surfaces in dark mode.
+- R35: primary action and bottom navigation remain contrast-tested against
+  their rendered backgrounds; native keyboard focus is visible on primary,
+  creation, and onboarding actions in both light and dark schemes.
+- Acceptance: the existing M219 phone suite now probes all saved themes, all
+  five tabs, the actual selected tab label (4.5:1), the meaningful tab
+  indicator perimeter (3:1), and the filled primary action (4.5:1). This
+  does not imply that every untested element in the app has been certified.
+  Full release integrity, phone/browser, independent engine and offline gates
+  remain required. Inactive controls have the standard WCAG exemptions.
+- No changes to exercise selection, set values, RIR, Target/Last, rest timing,
+  program history, or engine algorithms.

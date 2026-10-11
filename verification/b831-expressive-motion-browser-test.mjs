@@ -681,6 +681,29 @@ try {
                     !homeTonesR45.overflow,
                     'R45 Home resolves the common quiet/raised/hero roles: '+
                     JSON.stringify(homeTonesR45));
+                // R48 validates the compact, real Home summary shown in
+                // October device screenshots. Touch targets are not compressed.
+                const r48Home=await page.$eval('.wpb-home',shell=>{
+                    const el=sel=>shell.querySelector(sel),style=x=>x&&getComputedStyle(x);
+                    const card=el('.wpb-home-hero'),summary=el('.wpb-home-hero>button:first-child');
+                    const preview=el('.wpb-m3-session-preview');
+                    const open=preview?.querySelector('button[aria-expanded]');
+                    const start=el('.wpb-home-hero>.wpb-primary-action');
+                    return {summaryHeight:summary?.offsetHeight||0,
+                        minSummary:parseFloat(style(summary)?.minHeight)||0,
+                        previewPad:parseFloat(style(preview)?.paddingTop)||0,
+                        openHeight:open?.offsetHeight||0,
+                        startHeight:start?.offsetHeight||0,
+                        radius:parseFloat(style(card)?.borderTopLeftRadius)||0,
+                        overflow:shell.scrollWidth>shell.clientWidth+1};
+                });
+                assert.ok(r48Home.minSummary<=104 &&
+                    r48Home.previewPad<=11 &&
+                    (!r48Home.openHeight||r48Home.openHeight>=44)&&
+                    r48Home.startHeight>=50&&r48Home.radius>=35&&
+                    !r48Home.overflow,
+                    'R48 real Home hierarchy is compact without shrinking essential actions: '+
+                    JSON.stringify(r48Home));
                 const homeAccent = await homePalette();
                 assert.ok(homeAccent.primary && homeAccent.primary.height >= 44,
                     'R10 Start Workout retains its accessible 44px+ target: '+JSON.stringify(homeAccent));
@@ -727,6 +750,22 @@ try {
                     shape.statRadius>=20 && shape.statWidth>80 &&
                     shape.scrollWidth<=shape.viewport+1,
                     'R4 connected color-tinted dashboard has true tonal hierarchy without overflow: '+JSON.stringify(shape));
+            }
+            if(tab==='progress'){
+                const r48Progress=await page.$eval('.wpb-progress',screen=>{
+                    const header=screen.querySelector(':scope > .wpb-page-header');
+                    const style=header&&getComputedStyle(header);
+                    const probe=document.createElement('div');
+                    probe.style.cssText='position:absolute;visibility:hidden;background:var(--pi-r48-quiet)';
+                    screen.append(probe);
+                    const role=getComputedStyle(probe).backgroundColor;probe.remove();
+                    return {header:style?.backgroundColor,expected:role,
+                        image:style?.backgroundImage,overflow:screen.scrollWidth>screen.clientWidth+1};
+                });
+                assert.ok(r48Progress.header===r48Progress.expected &&
+                    r48Progress.image==='none'&&!r48Progress.overflow,
+                    'R48 Progress header paints quiet neutral surface instead of purple slab: '+
+                    JSON.stringify(r48Progress));
             }
             if (tab === 'plan') {
                 const nextTitle = await page.$eval('.wpb-plan-up-next>div:first-child>div:nth-child(2)', el => {
@@ -1510,6 +1549,17 @@ try {
             const style = getComputedStyle(el);
             return parseFloat(style.fontSize) >= 15 && parseFloat(style.lineHeight) >= 18;
         }), 'Plan day titles are legible without expanding or rearranging the day cards');
+        // R48: past/future program day cards must no longer inherit a
+        // saturated purple blanket from older styles; Next remains emphasized.
+        const r48Day=await page.$eval('.wpb-program',root=>{
+            const card=root.querySelector('.wpb-day-card:not([data-next="true"]):not([data-pi-disclosure="open"])');
+            const quietCard=card||root.querySelector('.wpb-day-card');
+            const style=quietCard&&getComputedStyle(quietCard);
+            return {background:style?.backgroundColor,image:style?.backgroundImage,
+                border:style?.borderTopColor,overflow:root.scrollWidth>root.clientWidth+1};
+        });
+        assert.ok(r48Day.background&&r48Day.image==='none'&&!r48Day.overflow,
+            'R48 Program uses quiet, gradient-free day information: '+JSON.stringify(r48Day));
         // R43 examines real Program containers before toggling any content.
         const r43Program = await page.$eval('.wpb-program', root => {
             const card=root.querySelector('.wpb-day-card');

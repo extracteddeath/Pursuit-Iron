@@ -2354,6 +2354,57 @@ try {
         await page.evaluate(()=>{document.documentElement.style.fontSize='';});
         assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),initial.saved,
             'R40 text scaling changes presentation only, never training data');
+        // R46: exercise a real middle-width phone rather than assuming only
+        // 320px or 430px. Check navigation icon/label clearance at normal and
+        // 125% type size after changing the *same* live viewport.
+        await page.setViewport({width:393,height:852,deviceScaleFactor:1,isMobile:true,hasTouch:true});
+        for(const px of [16,20]){
+            await page.evaluate(value=>{document.documentElement.style.fontSize=value+'px';},px);
+            for(const tab of ['home','plan','progress','profile','settings']){
+                await page.click('[data-tab="'+tab+'"]');
+                await page.waitForSelector('[data-view-frame="'+tab+'"]');
+                const phoneR46=await page.evaluate(tab=>{
+                    const root=document.querySelector('.wpb');
+                    const bar=root.querySelector('.wpb-tabbar');
+                    const item=bar.querySelector('[aria-current="page"]');
+                    const icon=item?.querySelector('svg'),label=item?.querySelector('span');
+                    const b=el=>el?.getBoundingClientRect();
+                    return {tab,navHeight:b(item)?.height,
+                        labelGap:label&&icon?b(label).top-b(icon).bottom:0,
+                        labelFits:!!label&&b(label).bottom<=b(item).bottom+1,
+                        selected:item?.dataset.tab,
+                        overflow:root.scrollWidth>root.clientWidth+1,
+                        clipped:[...bar.querySelectorAll('.wpb-tab>span')].some(el=>el.scrollWidth>el.clientWidth+1)};
+                },tab);
+                assert.ok(phoneR46.navHeight>=56&&phoneR46.labelGap>=7&&
+                    phoneR46.labelFits&&phoneR46.selected===tab&&
+                    !phoneR46.overflow&&!phoneR46.clipped,
+                    'R46 393px mid-phone layout stays navigable at '+px+'px text: '+JSON.stringify(phoneR46));
+                if(tab==='plan'||tab==='progress'){
+                    const selector=tab==='plan'?'.wpb-plan-panes>button:first-child':
+                        '.wpb-premium-tabs>button:first-child';
+                    await page.keyboard.press('Tab');
+                    const focusR46=await page.$eval(selector,el=>{
+                        el.focus();
+                        const cs=getComputedStyle(el);
+                        return {focusVisible:el.matches(':focus-visible'),
+                            style:cs.outlineStyle,width:cs.outlineWidth,
+                            offset:parseFloat(cs.outlineOffset),
+                            height:el.getBoundingClientRect().height};
+                    });
+                    assert.ok(focusR46.focusVisible&&focusR46.style==='solid'&&
+                        parseFloat(focusR46.width)>=2&&focusR46.offset===-2&&
+                        focusR46.height>=44,
+                        'R46 real segmented keyboard focus stays inside the hit area: '+JSON.stringify(focusR46));
+                }
+            }
+            if(px===16)await page.screenshot({
+                path:path.join(root,'verification/b831-r46-home-393-phone.png')
+            });
+        }
+        await page.evaluate(()=>{document.documentElement.style.fontSize='';});
+        assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),initial.saved,
+            'R46 responsive width and focus changes never modify training data');
         assert.deepEqual(errors, []);
         await page.close();
         await context.close();

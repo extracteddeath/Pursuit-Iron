@@ -6147,6 +6147,121 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab[aria-current="page"]>span{
   color:var(--pi-m3e-primary)!important;
 }
+
+/* R53 — Plan is a first-class semantic component hierarchy, not a collection
+   of anonymous inline plum panels. The JSX gives each role an explicit class.
+   All 20 themes reuse exactly these neutral / selected roles; no per-theme hex. */
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-view .wpb-plan-phase-group{
+  --pi-plan-card:var(--pi-color-card);
+  --pi-plan-raised:var(--pi-color-control);
+  --pi-plan-line:var(--pi-color-divider);
+  min-width:0;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-view .wpb-plan-phase-header{
+  border-bottom:1px solid var(--pi-plan-line)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-view .wpb-plan-phase-header>div:first-child{
+  background:var(--pi-plan-raised)!important;
+  box-shadow:none!important;
+}
+/* All weeks are neutral information cards, independent of the theme hue.
+   Current/expanded week is indicated with one quiet outline, not a plum slab.
+   No height, visibility, disclosure semantics, or scroll anchors change. */
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-view .wpb-plan-week-card{
+  background:var(--pi-plan-card)!important;
+  background-image:none!important;
+  border:1px solid var(--pi-plan-line)!important;
+  border-radius:20px!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-view .wpb-plan-week-card[data-current-week="true"]{
+  border-color:color-mix(in srgb,var(--pi-m3e-primary) 30%,var(--pi-plan-line))!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-view .wpb-plan-week-card>button{
+  min-height:66px;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-view .wpb-plan-week-card>button:focus-visible{
+  outline:2px solid var(--pi-m3e-primary)!important;
+  outline-offset:-3px!important;
+}
+/* Week picker is a location picker, not a second carousel of large,
+   theme-saturated action cards. Retain accent on the *chosen* week only. */
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-week-picker{
+  background:var(--pi-color-canvas)!important;
+  background-image:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-week-picker>.wpb-plan-week-chip{
+  background:var(--pi-color-card)!important;
+  color:var(--pi-color-on-control)!important;
+  border-color:var(--pi-color-divider)!important;
+  border-radius:15px!important;
+  box-shadow:none!important;
+  min-height:48px!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-week-picker>.wpb-plan-week-chip[aria-pressed="true"]{
+  background:var(--pi-color-feature)!important;
+  color:var(--boot-fg)!important;
+  border-color:var(--pi-m3e-primary)!important;
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--pi-m3e-primary) 25%,transparent)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-week-picker>.wpb-plan-week-chip[aria-pressed="true"]>div{
+  color:var(--pi-m3e-primary)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-week-picker>.wpb-plan-week-chip:focus-visible{
+  outline:2px solid var(--pi-m3e-primary)!important;
+  outline-offset:2px!important;
+}
+/* Nested session rows receive one raised neutral level; the NEXT row
+   becomes a *subtle* active destination, with no independently-tinted fields. */
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-view .wpb-plan-session-link{
+  background:var(--pi-plan-raised)!important;
+  background-image:none!important;
+  border:1px solid var(--pi-plan-line)!important;
+  color:var(--boot-fg)!important;
+  border-radius:14px!important;
+  box-shadow:none!important;
+  min-height:48px!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-view .wpb-plan-session-link[data-next="true"]{
+  background:var(--pi-color-feature)!important;
+  border-color:color-mix(in srgb,var(--pi-m3e-primary) 30%,var(--pi-plan-line))!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-view .wpb-plan-session-link:focus-visible,
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-open-program:focus-visible{
+  outline:2px solid var(--pi-m3e-primary)!important;
+  outline-offset:2px!important;
+}
+/* The program's block-explanation panel was painted from ph.color + '14'.
+   Its phase-colored dot and title still communicate purpose, but the
+   repeated panel uses the same neutral material role as Plan/Settings. */
+#root[data-pi-motion="expressive"] .wpb .wpb-program .wpb-phase-block>div>div{
+  background:var(--pi-color-card)!important;
+  background-image:none!important;
+  border:1px solid var(--pi-color-divider)!important;
+  border-radius:18px!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-open-program{
+  background:var(--pi-color-card)!important;
+  background-image:none!important;
+  border:1px solid var(--pi-color-divider)!important;
+  min-height:48px!important;
+  box-shadow:none!important;
+}
+@media(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb .wpb-plan-view :is(
+    .wpb-plan-week-card,.wpb-plan-session-link,.wpb-plan-week-chip,.wpb-plan-open-program),
+  #root[data-pi-motion="expressive"] .wpb .wpb-program .wpb-phase-block>div>div{
+    background:Canvas!important;
+    color:CanvasText!important;
+    border-color:CanvasText!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-plan-week-picker>.wpb-plan-week-chip[aria-pressed="true"]{
+    background:Highlight!important;
+    color:HighlightText!important;
+  }
+}
+
 /* Program schedule cards currently inherit scattered old purple inline
    paints. Neutralize repeating containers, retaining ONE current/next cue. */
 #root[data-pi-motion="expressive"] .wpb .wpb-program.wpb-program .wpb-day-card:not([data-next="true"]),

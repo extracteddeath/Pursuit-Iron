@@ -1,3 +1,11 @@
+# Build 832 · R53 Material 3 Expressive Plan surface architecture
+
+- Give Plan phase, week, week-picker, and session rows named, reusable semantic component classes rather than anonymous inline color blocks.
+- Use neutral Material surface roles for repeated weeks and nested workouts; reserve accent for the current week, NEXT destination and completed markers.
+- Remove inline week/phase panel background paints and expose full-program WeekPill active selection with aria-pressed.
+- Add permanent side-by-side Rose dark / Rosewater light screenshot audits of Home, Plan, Progress, Profile, Settings and Program at 393px.
+- Preserve 20-theme contrast coverage, movement data, workout logger, touch geometry, reduced motion, and offline behavior.
+
 # R52 · semantic surfaces and theme-aware selection · Build 831
 
 - Correct actual Settings Theme and Units containers that previously bypassed the shared dark surface roles.

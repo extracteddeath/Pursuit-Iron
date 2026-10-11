@@ -32,12 +32,23 @@ existing workout component still persists before minimizing, and completion
 still commits durable history before leaving the session. No new storage
 schema or training-data persistence path is introduced.
 
+The first release-head CI run exposed a missed repeated Resume tap. A real
+pointer audit reproduced the program-switch Undo notification covering Resume
+for one frame: its inline bottom was already 142px, but the computed bottom
+was still 78px. The global reduced-motion duration had created an all-property
+transition on the toast. Toast layout now changes immediately, while the
+shared motion owner retains its entrance. Its dock clearance cannot animate
+through Resume or Discard.
+
 Permanent coverage extends the existing R54 and M217 gates rather than adding
 another gate or parallel implementation. R54 exercises both 320px and 393px in
 Rose dark and Rosewater light, including fresh previews, full-program week
 handoff, exact Back scroll restoration, remembered Plan sections, explicit
 program switches, typed sets, same-session resume, one completed history record,
-full-program workout returns, and the next due week. M217 additionally checks
+full-program workout returns, and the next due week. Repeated resume/minimize
+journeys check the real 44px pointer target is unobstructed as soon as the dock
+appears and verify all entered sets and the session identity remain intact.
+M217 additionally checks
 Home returns after minimizing and finishing a workout recovered offline.
 
 The B831 chart fixture now uses noon UTC, keeping its first sample in 2024

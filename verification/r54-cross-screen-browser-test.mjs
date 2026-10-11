@@ -32,6 +32,21 @@ const snapshot={
 };
 // R59: exercise complete journeys using the production router and Android Back bridge.
 // The active program must survive browsing, and a launch must retain its caller and selected week.
+async function assertResumeClear(page){
+  const selector='.wpb-live-dock button[aria-label="Resume workout"]';
+  await page.waitForSelector(selector,{visible:true});
+  const target=await page.$eval(selector,button=>{
+    const box=button.getBoundingClientRect();
+    const top=document.elementFromPoint(box.left+box.width/2,box.top+box.height/2);
+    const toast=document.querySelector('.wpb-toast');
+    return {width:box.width,height:box.height,clear:button.contains(top),
+      covering:top?.closest('.wpb-toast')?.textContent||top?.getAttribute('aria-label'),
+      toastBottom:toast?getComputedStyle(toast).bottom:null,
+      toastTarget:toast?.style.bottom};
+  });
+  assert.ok(target.width>=44&&target.height>=44,'Resume retains its real 44px pointer target');
+  assert.ok(target.clear,'Resume is immediately tappable when its dock appears: '+JSON.stringify(target));
+}
 async function verifyNavigationFlow(browser,theme,width){
   const alternate={...program,id:'r59-alternate',name:'R59 Alternate',
     config:{...program.config,name:'R59 Alternate'}};
@@ -118,6 +133,7 @@ async function verifyNavigationFlow(browser,theme,width){
 
     // Resuming from a different tab should return to that tab, keeping the same live workout.
     await page.click('[data-tab="progress"]');
+    await assertResumeClear(page);
     await page.click('.wpb-live-dock button[aria-label="Resume workout"]');await page.waitForSelector('.wpb-workout');
     await page.evaluate(()=>history.back());await page.waitForSelector('.wpb-workout',{hidden:true});await route('progress');
     const resumed=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:live')));
@@ -127,6 +143,16 @@ async function verifyNavigationFlow(browser,theme,width){
     assert.deepEqual(saved.saved,initial.saved,'Navigation never edits saved program content');
     assert.deepEqual(saved.history,[],'Navigation never logs an unfinished workout');
     assert.equal(saved.pinnedId,program.id,'Only an explicit Switch changes the active program');
+    // An active Undo notification must never cover the newly returned dock, even for one frame.
+    for(let retry=0;retry<3;retry++){
+      await assertResumeClear(page);
+      await page.click('.wpb-live-dock button[aria-label="Resume workout"]');await page.waitForSelector('.wpb-workout');
+      await page.evaluate(()=>history.back());await page.waitForSelector('.wpb-workout',{hidden:true});await route('progress');
+      const recovered=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:live')));
+      assert.equal(recovered.sessionId,minimized.sessionId,'Repeated resume retains the same workout identity');
+      assert.deepEqual(recovered.data,minimized.data,'Repeated resume retains every entered set');
+    }
+    await assertResumeClear(page);
     await page.click('.wpb-live-dock button[aria-label="Resume workout"]');await page.waitForSelector('.wpb-workout');
     const reps=await page.$('[data-testid="set-0-0"] input[aria-label="reps"]');
     await reps.click();await page.keyboard.down('Control');await page.keyboard.press('KeyA');await page.keyboard.up('Control');

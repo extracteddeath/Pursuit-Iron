@@ -250,6 +250,7 @@ export function installAppMotion(root) {
             for (const barrier of root.querySelectorAll('.wpb-live-dock,.wpb-tabbar')) {
                 const r = barrier.getBoundingClientRect();
                 if (r.width && r.height && r.bottom > 0 && r.top < window.innerHeight &&
+                    !(barrier.classList.contains('wpb-tabbar') && r.height > r.width * 2) &&
                     getComputedStyle(barrier).visibility !== 'hidden') {
                     bottomLimit = Math.min(bottomLimit, r.top - 8);
                 }
@@ -614,13 +615,16 @@ function disclosure(el, initial = false) {
         // focus follows the activated native button, never a cloned indicator.
         const nav = e.target.closest?.('.wpb-tabbar button[data-tab]');
         if (nav && !e.altKey && !e.ctrlKey && !e.metaKey && !e.isComposing &&
-            ['ArrowRight','ArrowLeft','Home','End'].includes(e.key)) {
+            ['ArrowRight','ArrowLeft','ArrowUp','ArrowDown','Home','End'].includes(e.key)) {
             const bar = nav.closest('.wpb-tabbar');
+            const vertical = getComputedStyle(bar).flexDirection.startsWith('column');
+            if ((vertical && ['ArrowLeft','ArrowRight'].includes(e.key)) ||
+                (!vertical && ['ArrowUp','ArrowDown'].includes(e.key))) return;
             const destinations = [...bar.querySelectorAll('button[data-tab]')].filter(el => !disabled(el));
             const at = destinations.indexOf(nav);
             if (at >= 0 && destinations.length > 1) {
                 const next = e.key === 'Home' ? 0 : e.key === 'End' ? destinations.length - 1 :
-                    (at + (e.key === 'ArrowRight' ? 1 : -1) + destinations.length) % destinations.length;
+                    (at + (['ArrowRight','ArrowDown'].includes(e.key) ? 1 : -1) + destinations.length) % destinations.length;
                 e.preventDefault();
                 destinations[next].focus({ preventScroll: true });
                 destinations[next].click();

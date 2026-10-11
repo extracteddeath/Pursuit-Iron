@@ -34,3 +34,5 @@ These points were confirmed by a real-browser computed-style and DOM ancestor au
 - Existing 20-theme R36 checks and B831 browser integration, workout, program, and lifecycle shards must all pass, plus independent engine and core contracts.
 - Android screenshot review in Rose Dark is essential: after deployment, physically verify Theme, Units, Program Week 1–3, and selected Plan/Settings navigation. CI with Amethyst and 20-theme synthetic checks is not a substitute for this real-device validation.
 - Do not merge if background mismatch, light-theme readability, button overflow, or workout-set geometry regress.
+
+Note: the temporary release workflow must not be included in the final merge.

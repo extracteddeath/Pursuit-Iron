@@ -1,3 +1,10 @@
+## Build 844 — R65 adaptive tablet and desktop shell (candidate)
+
+- Use a theme-native 100–112px navigation rail and wider reading-width primary screens when windows are at least 840px wide and 560px high. Keep the five existing navigation actions and moving M3 selection track.
+- Keep the familiar bottom bar and capped phone layout on narrow and short landscape windows; do not touch workout logging or its controls.
+- Make navigation keys follow the displayed axis (up/down for the rail, left/right for the bottom bar), and prevent the rail from masquerading as a bottom barrier to contextual menu positioning.
+- Add a real-browser, paired light/dark adaptive shell contract at 393x852, 900x480, 900x1000 and 1280x850. Non-primary screens and split-pane information architecture are reserved for the next responsive slice.
+
 ## Build 843 — R64 theme-native search and contextual menus
 
 - Use the saved theme's control, ink, and outline roles for Library search, program-switcher search, and Progress history filters.

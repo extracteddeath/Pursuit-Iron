@@ -191,7 +191,7 @@ async function verifyTaskHierarchy(browser){
       for(const width of widths){
         await resize(width,width===768?1024:800);
         const home=await geometry('.wpb-home>.wpb-page-scroll');
-        assert.ok(home.width<=720.1&&home.left>=-.1&&home.right<=home.viewport+.1&&!home.overflow,
+        assert.ok(home.width<=(width>=840?940.1:720.1)&&home.left>=-.1&&home.right<=home.viewport+.1&&!home.overflow,
           'Home stays bounded through continuous resizing: '+JSON.stringify({width,home}));
         assert.equal(home.padding,width<360?12:width<600?16:24,'Home window inset follows available width');
         assert.ok(home.navTrackAligned,'Selected navigation indicator stays with its tab after resize: '+JSON.stringify({width,home}));
@@ -218,7 +218,7 @@ async function verifyTaskHierarchy(browser){
       for(const width of [...widths,393]){
         await resize(width,width===768?1024:800);
         const plan=await geometry('.wpb-plan-view');
-        assert.ok(plan.width<=720.1&&plan.left>=-.1&&plan.right<=plan.viewport+.1&&!plan.overflow,
+        assert.ok(plan.width<=(width>=840?width:720.1)&&plan.left>=-.1&&plan.right<=plan.viewport+.1&&!plan.overflow,
           'Plan stays bounded through continuous resizing: '+JSON.stringify({width,plan}));
         assert.equal(plan.padding,width<360?12:width<600?16:24,'Plan window inset follows available width');
         assert.ok(plan.navTrackAligned,'Plan navigation indicator stays inside its bar after resize: '+JSON.stringify({width,plan}));
@@ -243,7 +243,7 @@ async function verifyTaskHierarchy(browser){
       assert.equal(errors.length,0,'Hierarchy/resize flow has no runtime errors: '+errors.join('; '));
     }finally{await context.close();}
   }
-  console.log('PASS R62: Home/Plan action and reading order; connected full-size rows; bounded tablet/laptop widths; outline/week retention during resize; short window and enlarged text.');
+  console.log('PASS R62: Home/Plan action and reading order; connected full-size rows; window-bounded adaptive tablet/laptop widths; outline/week retention during resize; short window and enlarged text.');
 }
 const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.json':'application/json','.png':'image/png','.svg':'image/svg+xml','.webmanifest':'application/manifest+json'};
 const server=http.createServer((req,res)=>{

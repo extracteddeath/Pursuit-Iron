@@ -71,8 +71,7 @@ try{
       const bar='input[aria-label="Barbell empty bar weight"]';
       const smith='input[aria-label="Smith empty bar weight"]';
       const change=async(selector,value)=>{
-        await page.click(selector,{clickCount:3});
-        await page.keyboard.press('Control+A');
+        await page.$eval(selector, input => { input.focus(); input.select(); });
         await page.keyboard.type(value);
       };
       await change(bar,'35');

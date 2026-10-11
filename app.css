@@ -5980,3 +5980,158 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     border-color:ButtonText!important;
   }
 }
+
+
+/* M3 EXPRESSIVE R51 — ONE SEMANTIC SURFACE + SELECTION SYSTEM
+   Source: actual Rose/Dark Android Settings capture, 2026-10-11.
+   Backgrounds are calm neutrals on *every* destination; accent color is
+   reserved for primary actions and meaningful highlights. Real selected
+   controls have their own high-contrast paint, never the rail's shade.
+   The live workout set grid/steppers/target/previous are NOT in scope. */
+#root[data-pi-motion="expressive"] .wpb{
+  --pi-r51-page:light-dark(var(--pi-m3e-base),#111317);
+  --pi-r51-surface:light-dark(var(--pi-m3e-surface-container-low),#1b1e24);
+  --pi-r51-rail:light-dark(var(--pi-m3e-surface-container-high),#22272f);
+  --pi-r51-selected:light-dark(#485363,#6d727b);
+  --pi-r51-on-selected:#ffffff;
+  --pi-r51-on-rail:light-dark(#3b4351,#c4c7ce);
+  --pi-r51-separator:light-dark(var(--pi-m3e-outline-variant),rgba(228,231,240,.12));
+  /* Backward-compatible role aliases: new screens must use R51 tokens. */
+  --pi-r11-quiet:var(--pi-r51-surface);
+  --pi-r11-raised:var(--pi-r51-rail);
+  --pi-r11-hero:light-dark(var(--pi-m3e-primary-container),#272b33);
+  --pi-r11-selected:light-dark(var(--pi-m3e-primary-container),#2c3039);
+  --pi-r11-edge:var(--pi-r51-separator);
+}
+/* A consistent visual ladder: page → low card → neutral control rail.
+   Specific selectors intentionally supersede historical CSS generations. */
+#root[data-pi-motion="expressive"] .wpb :is(
+  .wpb-home,.wpb-plan-view,.wpb-progress,.wpb-profile,.wpb-settings,.wpb-library,.wpb-program){
+  background-color:var(--pi-r51-page)!important;
+  background-image:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-settings.wpb-settings .wpb-settings-card,
+#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-section,
+#root[data-pi-motion="expressive"] .wpb .wpb-progress.wpb-progress .wpb-history-session{
+  background:var(--pi-r51-surface)!important;
+  border-color:var(--pi-r51-separator)!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-settings.wpb-settings>.wpb-page-header,
+#root[data-pi-motion="expressive"] .wpb .wpb-progress.wpb-progress>.wpb-page-header,
+#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-head{
+  background:var(--pi-r51-surface)!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-settings-jump{
+  background-color:var(--pi-r51-page)!important;
+  background-image:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-settings-jump-control{
+  background:var(--pi-r51-rail)!important;
+  border-color:var(--pi-r51-separator)!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-settings-jump-control select{
+  background:transparent!important;
+  background-image:none!important;
+  color:var(--boot-fg)!important;
+}
+/* M3E uses one meaningful filled *selection*, separate from the neutral
+   track. It remains a real button; the existing motion JS moves its
+   paint-only ::before and preserves all pointer/keyboard hit geometry. */
+#root[data-pi-motion="expressive"] .wpb :is(
+  .wpb-settings .wpb-segmented,.wpb-plan-panes,
+  .wpb-premium-tabs,.wpb-progress-grouping,.wpb-library-flag-filter,
+  .wpb-exercise-tabs,.wpb-exercise-window-tabs){
+  background:var(--pi-r51-rail)!important;
+  background-image:none!important;
+  border-color:var(--pi-r51-separator)!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb :is(
+  .wpb-settings .wpb-segmented,.wpb-plan-panes,
+  .wpb-premium-tabs,.wpb-progress-grouping,.wpb-library-flag-filter,
+  .wpb-exercise-tabs,.wpb-exercise-window-tabs)[data-pi-m3-track]::before{
+  background:var(--pi-r51-selected)!important;
+  background-image:none!important;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.10)!important;
+}
+#root[data-pi-motion="expressive"] .wpb :is(
+  .wpb-settings .wpb-segmented,.wpb-plan-panes,
+  .wpb-premium-tabs,.wpb-progress-grouping,.wpb-library-flag-filter,
+  .wpb-exercise-tabs,.wpb-exercise-window-tabs):not([data-pi-m3-track])
+  >button:is([aria-pressed="true"],[aria-selected="true"],[aria-current="page"]){
+  background:var(--pi-r51-selected)!important;
+  background-image:none!important;
+  color:var(--pi-r51-on-selected)!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb :is(
+  .wpb-settings .wpb-segmented,.wpb-plan-panes,
+  .wpb-premium-tabs,.wpb-progress-grouping,.wpb-library-flag-filter,
+  .wpb-exercise-tabs,.wpb-exercise-window-tabs)[data-pi-m3-track]
+  >button:is([aria-pressed="true"],[aria-selected="true"],[aria-current="page"]){
+  background:transparent!important;
+  background-image:none!important;
+  color:var(--pi-r51-on-selected)!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb :is(
+  .wpb-settings .wpb-segmented,.wpb-plan-panes,
+  .wpb-premium-tabs,.wpb-progress-grouping,.wpb-library-flag-filter,
+  .wpb-exercise-tabs,.wpb-exercise-window-tabs)
+  >button:not([aria-pressed="true"]):not([aria-selected="true"]):not([aria-current="page"]){
+  color:var(--pi-r51-on-rail)!important;
+}
+/* Navigation shares the exact same selected-state contrast and role. */
+#root[data-pi-motion="expressive"] .wpb .wpb-tabbar{
+  background:var(--pi-r51-surface)!important;
+  background-image:none!important;
+  border-top-color:var(--pi-r51-separator)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-tabbar[data-pi-m3-track]::before{
+  background:var(--pi-r51-selected)!important;
+  background-image:none!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab[aria-current="page"] svg,
+#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab[aria-selected="true"] svg{
+  color:var(--pi-r51-on-selected)!important;
+}
+/* Focus cannot be inferred only from selection color or from a tiny border. */
+#root[data-pi-motion="expressive"] .wpb :is(
+  .wpb-settings .wpb-segmented,.wpb-plan-panes,.wpb-premium-tabs,
+  .wpb-progress-grouping,.wpb-library-flag-filter,
+  .wpb-exercise-tabs,.wpb-exercise-window-tabs)>button:focus-visible{
+  outline:2px solid var(--pi-m3e-primary)!important;
+  outline-offset:-2px!important;
+}
+@media(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb :is(
+    .wpb-settings-card,.wpb-settings-jump-control,.wpb-profile-section,
+    .wpb-history-session,.wpb-segmented,.wpb-plan-panes,.wpb-premium-tabs,
+    .wpb-progress-grouping,.wpb-library-flag-filter,
+    .wpb-exercise-tabs,.wpb-exercise-window-tabs){
+    background:Canvas!important;
+    border-color:CanvasText!important;
+    color:CanvasText!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb [data-pi-m3-track]::before{
+    background:Highlight!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb :is(
+    .wpb-segmented,.wpb-plan-panes,.wpb-premium-tabs,
+    .wpb-progress-grouping,.wpb-library-flag-filter,
+    .wpb-exercise-tabs,.wpb-exercise-window-tabs)>button:focus-visible{
+    outline-color:Highlight!important;
+  }
+}
+
+/* R51 certified semantic selection: geometry and interaction state unchanged. */
+/* R51 secondary control: grouping/filter rails are lower emphasis than the
+   main destination tabs. This preserves the R41 two-level hierarchy. */
+#root[data-pi-motion="expressive"] .wpb .wpb-progress.wpb-progress .wpb-progress-grouping{
+  background:var(--pi-r51-surface)!important;
+  background-image:none!important;
+}

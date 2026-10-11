@@ -1,3 +1,10 @@
+# Material 3 Expressive R51 — shared selection and neutral dark surfaces
+
+- Use one dark page/card/control ladder across Settings and other destinations instead of purple/maroon surfaces.
+- Give segmented controls and the animated bottom-nav indicator a clearly distinct selected fill with readable active text.
+- Preserve workout logger geometry, spring motion, 20 user accents, existing training functionality, and light themes.
+- See R51_COLOR_SYSTEM_AUDIT.md for research, contrast targets and device validation plan.
+
 # Build 831 · expressive interactions across the app · Engine 0.65.6
 
 - Apply shared spring feedback to buttons, selected controls, navigation and switches across the app.

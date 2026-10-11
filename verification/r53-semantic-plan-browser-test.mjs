@@ -125,7 +125,17 @@ try{
     const nested=await page.evaluate(()=>{
       const el=sel=>document.querySelector(sel);
       const css=sel=>getComputedStyle(el(sel));
-      const rgb=x=>(x.match(/[\d.]+/g)||[]).slice(0,3).map(Number);
+      // Computed CSS color-mix() serializes to color(srgb 0..1), whereas
+      // rgb() uses 0..255. Treating srgb channels as 8-bit values previously
+      // fabricated contrast failures (and could fabricate false passes).
+      const rgb=value=>{
+        const v=String(value).trim();
+        const srgb=v.match(/^color\\(srgb\\s+([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)/i);
+        if(srgb)return srgb.slice(1,4).map(n=>Number(n)*255);
+        const legacy=v.match(/^rgba?\\(\\s*([\\d.]+)[,\\s]+([\\d.]+)[,\\s]+([\\d.]+)/i);
+        if(legacy)return legacy.slice(1,4).map(Number);
+        throw new Error('Unsupported computed contrast color: '+v);
+      };
       const luminance=v=>v.map(n=>{n/=255;return n<=.04045?n/12.92:Math.pow((n+.055)/1.055,2.4)})
         .reduce((sum,n,i)=>sum+n*[.2126,.7152,.0722][i],0);
       const contrast=(a,b)=>{const x=luminance(rgb(a)),y=luminance(rgb(b));return (Math.max(x,y)+.05)/(Math.min(x,y)+.05)};

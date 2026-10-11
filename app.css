@@ -5392,3 +5392,126 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     border-color:CanvasText!important;
   }
 }
+
+/* M3 EXPRESSIVE R44 — LIBRARY AND EXERCISE DETAIL CONTINUITY
+   R41 introduced the neutral-dark tonal ladder. Bring the complete exercise
+   discovery -> detail journey onto it without changing Library filtering,
+   search focus morph, R12 linked-entry motion, lift history or active workout. */
+#root[data-pi-motion="expressive"] .wpb .wpb-library{
+  background-color:light-dark(var(--pi-m3e-base),var(--pi-r41-page))!important;
+  background-image:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-header{
+  background-color:var(--pi-r11-quiet)!important;
+  background-image:none!important;
+  border-bottom:1px solid var(--pi-r11-edge)!important;
+  border-radius:0 0 21px 21px!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-search{
+  box-sizing:border-box;
+  min-height:50px!important;
+  background-color:var(--pi-r11-raised)!important;
+  background-image:none!important;
+  border-color:var(--pi-r11-edge)!important;
+  box-shadow:none!important;
+  /* Keep the existing spring-owned 18px -> 15px search focus geometry. */
+}
+#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-flag-filter{
+  box-sizing:border-box;
+  min-height:50px!important;
+  background-color:var(--pi-r11-raised)!important;
+  background-image:none!important;
+  border:1px solid var(--pi-r11-edge)!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-library .wpb-library-flag{
+  min-width:0;
+  min-height:44px!important;
+  text-wrap:balance;
+}
+#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-results{
+  padding-top:8px!important;
+  padding-bottom:18px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-results>.wpb-library-row{
+  box-sizing:border-box;
+  min-width:0;
+  min-height:64px!important;
+  margin-bottom:4px!important;
+  background-color:var(--pi-r11-quiet)!important;
+  background-image:none!important;
+  border:1px solid var(--pi-r11-edge)!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-results>.wpb-library-row:is(
+  [aria-selected="true"],:active,:focus-visible){
+  border-color:var(--pi-r11-accent-stroke)!important;
+  background-color:var(--pi-r11-selected)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-results>.wpb-library-row>div:nth-child(2){
+  min-width:0;
+  overflow-wrap:anywhere;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-detail.wpb-backdrop{
+  background-color:light-dark(var(--pi-m3e-base),var(--pi-r41-page))!important;
+  background-image:none!important;
+  opacity:1!important;
+}
+#root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail .wpb-exercise-detail-header{
+  background-color:var(--pi-r11-quiet)!important;
+  background-image:none!important;
+  border-bottom:1px solid var(--pi-r11-edge)!important;
+  border-radius:0 0 21px 21px!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail .wpb-exercise-detail-body{
+  min-width:0;
+  padding-inline:max(16px,env(safe-area-inset-left))!important;
+}
+#root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail .wpb-exercise-figure-wrap{
+  background-color:var(--pi-r11-quiet)!important;
+  background-image:none!important;
+  border:1px solid var(--pi-r11-edge)!important;
+  border-radius:23px!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail .wpb-exercise-tabs{
+  background-color:var(--pi-r11-raised)!important;
+  background-image:none!important;
+  border:1px solid var(--pi-r11-edge)!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail .wpb-exercise-window-tabs{
+  background-color:var(--pi-r11-raised)!important;
+  background-image:none!important;
+  border:1px solid var(--pi-r11-edge)!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail .wpb-exercise-chart-surface{
+  box-sizing:border-box;
+  max-width:100%!important;
+  border-color:var(--pi-r11-edge)!important;
+  background-image:none!important;
+  box-shadow:none!important;
+}
+/* Never shrink touch targets or overlap the title at 320px / large text. */
+@media(max-width:359px){
+  #root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-results{
+    padding-inline:9px!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail .wpb-exercise-detail-body{
+    padding-inline:max(12px,env(safe-area-inset-left))!important;
+  }
+}
+@media(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb :is(
+    .wpb-library,.wpb-library-header,.wpb-library-search,
+    .wpb-library-flag-filter,.wpb-library-results>.wpb-library-row,
+    .wpb-exercise-detail,.wpb-exercise-detail-header,.wpb-exercise-figure-wrap,
+    .wpb-exercise-tabs,.wpb-exercise-window-tabs){
+    background-color:Canvas!important;
+    color:CanvasText!important;
+    border-color:CanvasText!important;
+  }
+}

@@ -490,6 +490,47 @@ try {
                     historyR24.w>0 && !historyR24.overflows &&
                     historyR24.buttons.every(b=>b.w>=48&&b.h>=48),
                     'R24 history surfaces and real actions fit the phone: '+JSON.stringify(historyR24));
+                // R41 verifies the actual distinction between primary mode
+                // and subordinate By cycle / By month, and one flat session
+                // card rather than many competing purple/gray surfaces.
+                const r41=await page.evaluate(()=>{
+                    const root=document.querySelector('.wpb-progress');
+                    const header=root?.querySelector(':scope > .wpb-page-header');
+                    const primary=root?.querySelector('.wpb-premium-tabs');
+                    const secondary=root?.querySelector('.wpb-progress-grouping');
+                    const session=root?.querySelector('.wpb-history-session');
+                    const detail=session?.querySelector('.wpb-history-session-detail');
+                    const actions=[...(session?.querySelectorAll('.wpb-history-actions>button')||[])];
+                    const st=el=>el?getComputedStyle(el):null;
+                    const box=el=>el?.getBoundingClientRect();
+                    const scroll=root?.scrollWidth>root?.clientWidth+1;
+                    return {page:st(root)?.backgroundColor,primary:st(primary)?.backgroundColor,
+                        secondary:st(secondary)?.backgroundColor,
+                        groupWidth:box(secondary)?.width||0,
+                        tabsWidth:box(primary)?.width||0,
+                        headerBottom:box(header)?.bottom??null,
+                        groupTop:box(secondary)?.top??null,
+                        primaryHeight:box(primary)?.height||0,
+                        groupHeight:box(secondary)?.height||0,
+                        history:st(session)?.backgroundColor,
+                        detail:st(detail)?.backgroundColor||null,
+                        historyImage:st(session)?.backgroundImage,
+                        detailImage:st(detail)?.backgroundImage||null,
+                        actionSizes:actions.map(a=>({width:box(a).width,height:box(a).height})),
+                        scroll};
+                });
+                assert.ok(!r41.scroll && r41.page && r41.primary &&
+                    r41.secondary && r41.primary!==r41.secondary &&
+                    r41.groupWidth>0 && r41.groupWidth<r41.tabsWidth &&
+                    r41.primaryHeight>=52 && r41.groupHeight>=48 &&
+                    (r41.headerBottom==null || r41.groupTop==null ||
+                        r41.groupTop>=r41.headerBottom-1) &&
+                    (!r41.history || (r41.historyImage==='none' &&
+                        (r41.detail===null || (r41.history===r41.detail &&
+                            r41.detailImage==='none')))) &&
+                    r41.actionSizes.every(a=>a.width>=48&&a.height>=48),
+                    'R41 primary/secondary Progress controls and single-surface history do not crowd the phone: '+
+                    JSON.stringify(r41));
             }
             if (tab === 'profile') {
                 const r39 = await page.evaluate(() => {

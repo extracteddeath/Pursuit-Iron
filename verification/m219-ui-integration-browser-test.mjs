@@ -136,8 +136,8 @@ try {
                 const selectedLabel=selected.querySelector('span');
                 const labelTop=selectedLabel?.getBoundingClientRect().top??0;
                 const iconBottom=selectedIcon?.getBoundingClientRect().bottom??0;
-                const indicatorBottom=nav.getBoundingClientRect().top+
-                    parseFloat(nav.style.getPropertyValue('--pi-m3-track-y'))+
+                const indicatorBottom=selected.getBoundingClientRect().top+
+                    (parseFloat(nav.style.getPropertyValue('--pi-m3-track-y'))-selected.offsetTop)+
                     parseFloat(ringStyle.height);
                 const compose=tab==='home' ? document.querySelector('.wpb-home-compose-bar') : null;
                 const dockClearance=compose&&compose.getClientRects().length ?

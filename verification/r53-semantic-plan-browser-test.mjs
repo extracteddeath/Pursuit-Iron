@@ -105,6 +105,27 @@ async function verifyFoundationStates(browser){
             assert.ok(week.contrast>=4.5&&week.height>=48,'Selected week is readable and tappable: '+JSON.stringify(week));
           }
         }
+        // R63: a change to shared materials must survive every real theme choice.
+        // Check painted Plan labels and selected week text after a live switch.
+        if(theme==='rose'){
+          await page.click('[data-tab="settings"]');
+          const palettes=await page.$$eval('[data-theme-option]',buttons=>buttons.map(b=>b.dataset.themeOption));
+          for(const palette of palettes){
+            await page.click('[data-tab="settings"]');
+            await page.$eval('.wpb-theme-picker',el=>el.open=true);
+            await page.click('[data-theme-option="'+palette+'"]');
+            await page.click('[data-tab="plan"]');
+            await page.waitForSelector('.wpb-plan-session-name');
+            const name=await controlStyle(page,'.wpb-plan-session-name');
+            const week=await controlStyle(page,'.wpb-plan-week-chip[aria-pressed="true"]');
+            assert.ok(name.contrast>=4.5&&week.contrast>=4.5,
+              'Every theme keeps Plan names and selected weeks readable: '+JSON.stringify({palette,name,week}));
+          }
+          await page.click('[data-tab="settings"]');
+          await page.$eval('.wpb-theme-picker',el=>el.open=true);
+          await page.click('[data-theme-option="'+theme+'"]');
+          console.log('PASS R63: live theme switching and actual Plan label/selected-week contrast for '+palettes.length+' presets.');
+        }
         await page.reload({waitUntil:'networkidle0'});
         await page.waitForSelector('.wpb-tabbar');await page.click('[data-tab="plan"]');
         await page.waitForSelector('.wpb-plan-session-name');

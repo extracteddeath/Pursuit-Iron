@@ -1764,7 +1764,7 @@ try {
             }));
         assert.ok(liveToolsR23.length>0 && liveToolsR23.every(x=>
             x.w>=48 && x.h>=48 && x.image==='none' && x.touch==='manipulation'),
-            'R23 live tool controls use stable 44px opaque tonal targets: '+JSON.stringify(liveToolsR23));
+            'R23/R63 live tools retain stable 48px targets without enlarging their visual controls: '+JSON.stringify(liveToolsR23));
         // R49: screenshot-led real workout hierarchy. A skipped exercise
         // remains reachable, but navigation never competes with logging an
         // unfinished set. The training grid and Focus mode are untouched.

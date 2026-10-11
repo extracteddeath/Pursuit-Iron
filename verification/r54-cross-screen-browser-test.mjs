@@ -75,7 +75,7 @@ try{
     await page.click('[data-tab="settings"]');
     await page.waitForSelector('.wpb-settings');
     await page.$$eval('button',buttons=>{
-      const b=buttons.find(n=>n.textContent.trim()==='Exercise library');
+      const b=buttons.find(n=>n.textContent.includes('Exercise library'));
       if(!b)throw new Error('Exercise library navigation missing');
       b.click();
     });

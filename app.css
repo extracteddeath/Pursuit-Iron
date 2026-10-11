@@ -5715,3 +5715,28 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     outline-color:Highlight!important;
   }
 }
+
+/* R47 enlarged-text audit uncovered real clipped Settings segmented labels
+   at 393px/125% font scaling. Use genuine wrapping instead of visually
+   truncating preference names; retain 48px minimum hits and the animated
+   selection track's measured width. This is NOT the workout set logger. */
+#root[data-pi-motion="expressive"] .wpb-settings .wpb-segmented>button{
+  min-width:0!important;
+  max-width:100%;
+  height:auto!important;
+  min-height:48px!important;
+  padding:8px 5px!important;
+  white-space:normal!important;
+  overflow-wrap:anywhere!important;
+  word-break:normal!important;
+  text-overflow:clip!important;
+  line-height:1.2!important;
+  text-align:center;
+}
+#root[data-pi-motion="expressive"] .wpb-settings .wpb-segmented>button :is(span,b,strong){
+  min-width:0;
+  max-width:100%;
+  white-space:normal!important;
+  overflow-wrap:anywhere!important;
+  text-overflow:clip!important;
+}

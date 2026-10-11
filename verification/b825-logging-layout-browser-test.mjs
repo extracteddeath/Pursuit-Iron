@@ -9,6 +9,7 @@ import puppeteer from 'puppeteer-core';
 
 const root = path.resolve(new URL('../', import.meta.url).pathname);
 const program = { id: 'b825-logging', custom: true, weeks: 6,
+    exLoadInc: { 'inc-curl': { v: 25, unit: 'lb' } },
     config: { unit: 'lb', goal: 'both', experience: 'intermediate', progression: 'double', deload: false },
     days: [{ id: 'lower', label: 'Lower', primaryIndex: 0, exercises: ['back-squat', 'inc-curl'] }],
     overrides: { 'lower:0': { sets: 4, reps: '5-8', rir: '2', rest: 120 }, 'lower:1': { sets: 2, reps: '10-15', rir: '2', rest: 90 } } };
@@ -178,6 +179,20 @@ try {
         if (width === 390) await page.screenshot({ path: path.join(root, 'verification/b827-after-log-phone.png') });
         await page.click('.wpb-workout-footer button[aria-label="Next exercise"]');
         await page.waitForSelector('[data-testid="set-1-0"]');
+        // R66/B845: a coarse 25 lb configured loading notch must never make a
+        // 25 lb incline curl the lowest manually editable weight. The stepper
+        // is a per-hand 5 lb adjustment, independent of the generator's notch.
+        const curlInput='[data-testid="set-1-0"] input[aria-label="weight"]';
+        await page.$eval(curlInput,el=>{el.focus();el.select();});
+        await page.keyboard.type('25');
+        await page.waitForFunction(sel=>document.querySelector(sel)?.value==='25',{},curlInput);
+        await page.tap('[data-testid="set-1-0"] button[aria-label="weight down"]');
+        assert.equal(await page.$eval(curlInput,el=>el.value),'20',
+            'Incline dumbbell weight decrements below 25 despite coarse load config');
+        await page.tap('[data-testid="set-1-0"] button[aria-label="weight down"]');
+        assert.equal(await page.$eval(curlInput,el=>el.value),'15',
+            'Lower per-hand curl weights remain selectable via the same compact stepper');
+
         assert.match(await page.$eval('.wpb-workout-footer-primary', n => n.innerText), /Finish workout/);
         assert.ok(await visibleFooter(), 'Finish workout remains reachable during rest');
         assert.ok(await page.$('[data-rest-card]'), 'moving to the next exercise preserves running rest');

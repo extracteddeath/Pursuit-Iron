@@ -112,6 +112,44 @@ try{
     });
     assert.ok(!detail.overflow&&detail.weekCount>1&&detail.activeWeeks===1,
       'Full Program has one semantic selected week and no overflow: '+JSON.stringify(detail));
+    // R54: inspect the expanded exercise view. R53 previously photographed
+    // only the collapsed Program shell, hiding its legacy dark-purple rows.
+    const dayPresent=await page.evaluate(()=>{
+      const day=document.querySelector('.wpb-program .wpb-day-card');
+      if(!day)return false;
+      if(!day.querySelector('[data-exrow]'))day.querySelector('.wpb-day-toggle')?.click();
+      return true;
+    });
+    assert.ok(dayPresent,'Full Program contains a real workout day');
+    await page.waitForSelector('.wpb-program .wpb-program-exercise');
+    const nested=await page.evaluate(()=>{
+      const el=sel=>document.querySelector(sel);
+      const css=sel=>getComputedStyle(el(sel));
+      const rgb=x=>(x.match(/[\d.]+/g)||[]).slice(0,3).map(Number);
+      const luminance=v=>v.map(n=>{n/=255;return n<=.04045?n/12.92:Math.pow((n+.055)/1.055,2.4)})
+        .reduce((sum,n,i)=>sum+n*[.2126,.7152,.0722][i],0);
+      const contrast=(a,b)=>{const x=luminance(rgb(a)),y=luminance(rgb(b));return (Math.max(x,y)+.05)/(Math.min(x,y)+.05)};
+      const chips=[...document.querySelectorAll('.wpb-day-hit-chip')];
+      const row=el('.wpb-program-exercise');
+      return {
+        card:css('.wpb-day-card').backgroundColor,
+        row:css('.wpb-program-exercise').backgroundColor,
+        nameContrast:contrast(css('.wpb-program-exercise-name').color,getComputedStyle(row).backgroundColor),
+        metaContrast:contrast(css('.wpb-program-exercise-meta').color,getComputedStyle(row).backgroundColor),
+        nameWrap:css('.wpb-program-exercise-name').whiteSpace,
+        chips:chips.length,
+        chipContrast:chips.length?contrast(getComputedStyle(chips[0]).color,getComputedStyle(chips[0]).backgroundColor):0,
+        overflow:el('.wpb-program').scrollWidth>el('.wpb-program').clientWidth+1
+      };
+    });
+    assert.notEqual(nested.card,nested.row,
+      'Program exercise card must use a distinct tonal elevation: '+JSON.stringify(nested));
+    assert.ok(nested.chips>0&&nested.nameWrap==='normal',
+      'Muscle chips remain visible and exercise names wrap: '+JSON.stringify(nested));
+    assert.ok(nested.nameContrast>=4.5&&nested.metaContrast>=4.5&&nested.chipContrast>=4.5,
+      'Program name, metadata and chip labels meet WCAG AA contrast: '+JSON.stringify(nested));
+    assert.ok(!nested.overflow,'No horizontal clipping with expanded exercises: '+JSON.stringify(nested));
+    detail.nested=nested;
     captures[theme].program=Buffer.from(await page.screenshot({type:'png'}));
     assert.equal(errors.length,0,'No runtime errors while checking paired themes: '+errors.join('; '));
     measurements[theme]={...surfaces,program:detail};

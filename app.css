@@ -5988,18 +5988,22 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    do not own .wpb-settings-card. One coherent surface ladder; saved accent
    only inside intentional active states and main actions. No JS or logger. */
 #root[data-pi-motion="expressive"] .wpb{
-  --pi-color-canvas:light-dark(var(--pi-m3e-base),#111317);
-  --pi-color-card:light-dark(var(--pi-m3e-surface-container-low),#1b1e24);
-  --pi-color-control:light-dark(var(--pi-m3e-surface-container-high),#22272f);
-  --pi-color-on-control:light-dark(#434650,#c4c7ce);
-  --pi-color-divider:light-dark(var(--pi-m3e-outline-variant),rgba(228,231,240,.12));
+  /* Tonal neutrals follow the saved palette, not a universal blue-gray.
+     Elevation increases inward: canvas < card < control < inset. */
+  --pi-color-canvas:light-dark(var(--pi-m3e-base),color-mix(in srgb,var(--boot-bg,#110c18) 55%,#15171c 45%));
+  --pi-color-card:light-dark(var(--pi-m3e-surface-container-low),color-mix(in srgb,var(--boot-bg,#110c18) 30%,#202126 70%));
+  --pi-color-control:light-dark(var(--pi-m3e-surface-container),color-mix(in srgb,var(--boot-bg,#110c18) 24%,#2c2c33 76%));
+  --pi-color-inset:light-dark(var(--pi-m3e-surface-container-high),color-mix(in srgb,var(--boot-bg,#110c18) 18%,#37353d 82%));
+  --pi-color-on-control:light-dark(#38323f,#e3dce8);
+  --pi-color-on-muted:light-dark(#5d5265,#c6bdcc);
+  --pi-color-divider:light-dark(var(--pi-m3e-outline-variant),color-mix(in srgb,var(--boot-fg,#f0eaf3) 18%,transparent));
   /* Selection belongs to the theme; an accessible *tonal* accent, not a
      loud saturated primary CTA or a universal slate-gray slab. */
   --pi-color-active:light-dark(
     color-mix(in srgb,var(--pi-m3e-primary) 22%,#373943 78%),
     color-mix(in srgb,var(--pi-m3e-primary) 35%,#c0c4cd 65%));
   --pi-color-on-active:light-dark(#fff,#17191d);
-  --pi-color-feature:light-dark(var(--pi-m3e-primary-container),#272b33);
+  --pi-color-feature:light-dark(var(--pi-m3e-primary-container),color-mix(in srgb,var(--pi-color-card) 88%,var(--pi-m3e-primary) 12%));
   /* Compatibility with older components still reading R11/R51 surface roles.
      Keep the same charcoal values already in R51 for the workout logger. */
   --pi-r11-quiet:var(--pi-color-card);
@@ -6282,6 +6286,155 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   background-image:none!important;
   border-color:var(--pi-color-divider)!important;
   box-shadow:none!important;
+}
+
+/* R54 — shared design roles in the *expanded* full Program. The live workout
+   logger is excluded. Next is signalled by an accent edge, not a gray slab. */
+#root[data-pi-motion="expressive"] .wpb .wpb-program.wpb-program .wpb-day-card[data-next="true"]{
+  background:var(--pi-color-card)!important;
+  border-color:color-mix(in srgb,var(--pi-m3e-primary) 36%,var(--pi-color-divider))!important;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-day-card>.wpb-expand{
+  background:transparent!important;
+  border-top-color:var(--pi-color-divider)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-day-meta,
+#root[data-pi-motion="expressive"] .wpb-program .wpb-day-exercise-preview{
+  color:var(--pi-color-on-muted)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-schedule-day{
+  background:var(--pi-color-card)!important;
+  border-color:var(--pi-color-divider)!important;
+  color:var(--pi-color-on-control)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-schedule-day:not([data-training="true"]){
+  background:transparent!important;
+  color:var(--pi-color-on-muted)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-schedule-day>div:first-child{
+  color:var(--pi-color-on-muted)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-schedule-day[data-today="true"]{
+  border-color:color-mix(in srgb,var(--pi-m3e-primary) 45%,var(--pi-color-divider))!important;
+  background:var(--pi-color-feature)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-day-hits{
+  margin-block:4px 10px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-day-hits>div:first-child{
+  color:var(--pi-color-on-muted)!important;
+  font-size:12px!important;
+  letter-spacing:.025em!important;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-day-hit-chip{
+  min-height:32px;
+  padding:5px 10px!important;
+  background:var(--pi-color-control)!important;
+  color:var(--pi-color-on-control)!important;
+  border:1px solid var(--pi-color-divider)!important;
+  font-size:12.5px!important;
+  line-height:1.25;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-day-hit-chip[data-strong="true"]{
+  color:var(--pi-m3e-primary)!important;
+  background:var(--pi-color-feature)!important;
+  border-color:color-mix(in srgb,var(--pi-m3e-primary) 32%,var(--pi-color-divider))!important;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-day-hit-chip[aria-expanded="true"]{
+  box-shadow:inset 0 0 0 1px var(--pi-m3e-primary)!important;
+  color:var(--boot-fg)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-day-hit-panel{
+  background:var(--pi-color-control)!important;
+  border:1px solid var(--pi-color-divider);
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-program-exercise{
+  background:var(--pi-color-control)!important;
+  padding:10px 10px 10px 7px!important;
+  border:1px solid var(--pi-color-divider);
+  border-radius:16px!important;
+  margin-top:8px!important;
+  box-shadow:none!important;
+  min-width:0;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-program-exercise[data-dragging="true"]{
+  background:var(--pi-color-inset)!important;
+  box-shadow:0 5px 16px rgba(0,0,0,.18)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-program-exercise-heading{
+  flex-wrap:wrap;
+  column-gap:6px!important;
+  row-gap:4px;
+  min-width:0;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-program-exercise-name{
+  flex:1 1 130px;
+  min-width:0;
+  font-size:14.5px!important;
+  font-weight:690!important;
+  line-height:1.32;
+  white-space:normal!important;
+  overflow-wrap:break-word;
+  color:var(--boot-fg)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-program-lift-badge{
+  flex:0 0 auto;
+  background:var(--pi-color-feature)!important;
+  color:var(--pi-m3e-primary)!important;
+  border:1px solid color-mix(in srgb,var(--pi-m3e-primary) 24%,transparent);
+  font-size:10px!important;
+  letter-spacing:.02em!important;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-program-exercise-meta{
+  font-size:12px!important;
+  line-height:1.45!important;
+  color:var(--pi-color-on-muted)!important;
+  overflow-wrap:anywhere;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-program-exercise-meta .mono{
+  color:var(--pi-color-on-control)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-exercise-actions{
+  gap:7px!important;
+  margin-top:8px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-exercise-actions>button{
+  min-height:40px!important;
+  background:var(--pi-color-inset)!important;
+  color:var(--pi-color-on-control)!important;
+  border:1px solid var(--pi-color-divider)!important;
+  border-radius:12px!important;
+  font-size:12px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-exercise-actions>button[aria-label^="How "]{
+  font-weight:660!important;
+}
+#root[data-pi-motion="expressive"] .wpb-program :is(
+  .wpb-day-hit-chip,.wpb-exercise-actions>button,.wpb-day-toggle):focus-visible{
+  outline:2px solid var(--pi-m3e-primary)!important;
+  outline-offset:2px!important;
+}
+@media (max-width:359px){
+  #root[data-pi-motion="expressive"] .wpb-program .wpb-program-exercise{
+    padding-inline:5px 7px!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb-program .wpb-program-exercise-heading{
+    gap:4px!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb-program .wpb-program-exercise-name{
+    flex-basis:112px;
+  }
+}
+@media (forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb-program :is(
+    .wpb-program-exercise,.wpb-day-hit-chip,.wpb-day-hit-panel,.wpb-schedule-day){
+    background:Canvas!important;
+    color:CanvasText!important;
+    border-color:CanvasText!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb-program .wpb-day-hit-chip[aria-expanded="true"]{
+    outline:2px solid Highlight!important;
+  }
 }
 #root[data-pi-motion="expressive"] .wpb :is(
   .wpb-settings .wpb-segmented,.wpb-plan-panes,.wpb-premium-tabs,

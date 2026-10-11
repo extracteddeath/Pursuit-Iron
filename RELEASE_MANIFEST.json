@@ -107,17 +107,17 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "80443a1d2782f2f7c0c28b1ea2a3c392f334cd9ff4f36d2a05c6bd9361b2b81f",
-    "index.html": "835317c53b898540fe35203415f2de92ddb00c7bbd10f40121118b62fad82958",
-    "sw.js": "7ce93c08009c9db650368fe6542d1e991cca092123869a6bdaaa36c8a3ad9f93",
-    "BUILD_PROFILE.json": "7c1701959492950f6af3e6b1bb11ab8395a03e3bc14c7f51a37dd2bb0fe43f8d",
-    "CHANGELOG.md": "557d9419d4a9c4f13b1c167560ce939ac79636a52e2cc2dd702282b354b882e8",
-    "app.css": "123583a7609a4db680e28263d88f8ae0ca168c846d106195b0fe57245dd87cd8",
+    "modules/App.js": "6370b19211431df68f5789a7ecbf4a47f395d0755f8fc04888afaee1900d8430",
+    "index.html": "b3665097586b188a5adf45d92feeb7ca870852980644c206ff5ee50ce8e5e9f4",
+    "sw.js": "75ec38a96b17a75b732b835fa958f0753ec200561ffc051b034227c91cc2e362",
+    "BUILD_PROFILE.json": "70df9f1a58d2e8ce4e64392e396a1e4e70593382000b08053c6ba7bcfc44bbf0",
+    "CHANGELOG.md": "3d392f9872934fa6717e678a186a16483ce2f05827cc9817301ec51261d945a3",
+    "app.css": "1b12a7ecd282b5e5821dc3151c4256e220f7af0b2a1a30d043720af1580dd66e",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b833-r00a5d074f96178c1",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b833-rab0f7dbec8d8176f",
   "uiMilestone": "Build 835 · M3 Expressive R56 Compact Home Masthead"
 }

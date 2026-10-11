@@ -37,3 +37,5 @@ These points were confirmed by a real-browser computed-style and DOM ancestor au
 - Do not merge if background mismatch, light-theme readability, button overflow, or workout-set geometry regress.
 
 Note: the temporary release workflow must not be included in the final merge.
+
+Final release certification includes the updated selected-label width contract.

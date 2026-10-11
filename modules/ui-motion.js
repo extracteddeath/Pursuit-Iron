@@ -360,12 +360,29 @@ function disclosure(el, initial = false) {
     // route/tab groups immediately instead of retaining them for the lifetime
     // of the app shell during long training sessions.
     const observedTracks = new Set();
-    const trackResize = typeof ResizeObserver === 'function' ? new ResizeObserver(entries => {
-        for (const entry of entries) {
-            const group = entry.target, selected = choiceStates.get(group);
-            if (root.contains(group) && Number.isInteger(selected) && selected >= 0)
+    const pendingTracks = new Set();
+    let trackFrame = 0;
+    const flushTracks = () => {
+        trackFrame = 0;
+        // Read all selected track geometry together after ResizeObserver
+        // batches are delivered, rather than alternating layout writes with
+        // each callback. Current selection is resolved at flush, not enqueue.
+        const groups = [...pendingTracks];
+        pendingTracks.clear();
+        for (const group of groups) {
+            const selected = choiceStates.get(group);
+            if (observedTracks.has(group) && root.contains(group) &&
+                Number.isInteger(selected) && selected >= 0)
                 positionTrack(group, [...group.children].filter(el => el.matches('button')), selected, true);
         }
+    };
+    const trackResize = typeof ResizeObserver === 'function' ? new ResizeObserver(entries => {
+        for (const entry of entries) {
+            if (observedTracks.has(entry.target) && root.contains(entry.target))
+                pendingTracks.add(entry.target);
+        }
+        if (pendingTracks.size && !trackFrame)
+            trackFrame = requestAnimationFrame(flushTracks);
     }) : null;
     function selectedSurface(group, button) {
         // The original theme uses contrast-tested selected fills that may NOT be
@@ -414,9 +431,15 @@ function disclosure(el, initial = false) {
             '--pi-m3-track-height': nav ? 33 : button.offsetHeight
         };
         for (const [key, value] of Object.entries(target)) {
-            if (instant || state[key] === undefined) setMotionValue(group, key, value, pixels(group, key));
-            else if (Math.abs(state[key] - value) > .05)
-                spring(group, key, value, { write: pixels(group, key), stiffness: 800, damping: .89, precision: .01 });
+            // ResizeObserver may fire for a parent resize with no change in
+            // this indicator's bounds. Don't repaint identical CSS variables
+            // or interrupt a valid spring still travelling to that target.
+            if (state[key] === undefined || Math.abs(state[key] - value) > .05) {
+                if (instant || state[key] === undefined)
+                    setMotionValue(group, key, value, pixels(group, key));
+                else
+                    spring(group, key, value, { write: pixels(group, key), stiffness: 800, damping: .89, precision: .01 });
+            }
             state[key] = value;
         }
     }
@@ -698,8 +721,10 @@ function disclosure(el, initial = false) {
                 // React's batch; only truly detached groups are unobserved.
                 if (trackResize && observedTracks.size) {
                     const release = group => {
-                        if (!root.contains(group) && observedTracks.delete(group))
+                        if (!root.contains(group) && observedTracks.delete(group)) {
+                            pendingTracks.delete(group);
                             trackResize.unobserve(group);
+                        }
                     };
                     record.removedNodes.forEach(node => {
                         if (node.nodeType !== 1) return;
@@ -751,7 +776,9 @@ function disclosure(el, initial = false) {
     globalThis.visualViewport?.addEventListener('resize', positionOpenMenus);
     media?.addEventListener('change', preference);
     return () => {
-        observer.disconnect(); trackResize?.disconnect(); observedTracks.clear(); menuOpener = null;
+        observer.disconnect(); trackResize?.disconnect(); observedTracks.clear();
+        if (trackFrame) cancelAnimationFrame(trackFrame);
+        trackFrame = 0; pendingTracks.clear(); menuOpener = null;
         settleAll(); delete root.dataset.piMotion;
         root.removeEventListener('animationend', inkEnd);
         root.removeEventListener('pointerdown', down); document.removeEventListener('pointerup', up);

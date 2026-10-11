@@ -1,0 +1,41 @@
+name: R53 temporary visual verification and sealing
+on:
+  push:
+    branches: ['ui/r53-plan-surface-architecture']
+permissions:
+  contents: write
+jobs:
+  seal:
+    if: "contains(github.event.head_commit.message, 'R53: verify and seal release')"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: {persist-credentials: true}
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with: {node-version: '22'}
+      - name: Install locked phone-browser tooling
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Parse maintained App
+        run: node --check modules/App.js
+      - name: Verify dark/light contrast and paired screenshots
+        env: {CHROME_BIN: /usr/bin/google-chrome}
+        run: node --no-warnings --experimental-loader ./verification/import-loader.mjs verification/r53-semantic-plan-browser-test.mjs
+      - name: Finalize offline update signatures and build
+        run: node scripts/finalize-release.mjs
+      - name: Verify canonical release
+        run: node scripts/verify-release.mjs
+      - name: Commit verified generated metadata
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add modules/App.js index.html sw.js RELEASE_MANIFEST.json BUILD_PROFILE.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "R53: certify post-review semantic palette and offline fingerprints"
+          git push origin HEAD:ui/r53-plan-surface-architecture
+      - name: Upload light/dark paired screenshots
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4.6.2
+        with:
+          name: r53-paired-screen-review
+          path: verification/r53-*-phone.png
+          retention-days: 7

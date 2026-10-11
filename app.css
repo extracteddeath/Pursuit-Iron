@@ -6490,6 +6490,13 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   box-shadow:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-home.wpb-home.wpb-home[data-home-compact="1"]>.wpb-home-header{
+  /* The greeting's JS height can briefly remain nonzero during fast scroll
+     or view restoration. Fix the actual chrome box, not just its padding. */
+  box-sizing:border-box!important;
+  height:56px!important;
+  min-height:56px!important;
+  max-height:56px!important;
+  overflow:hidden!important;
   padding:2px 12px!important;
   border-bottom-color:var(--pi-color-divider)!important;
   border-radius:0 0 14px 14px!important;

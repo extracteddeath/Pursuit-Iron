@@ -4361,3 +4361,34 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     background-color:Canvas!important;
   }
 }
+
+/* M3 EXPRESSIVE R36 — HIGH-CONTRAST SECONDARY LABEL ROLES
+   Diagnostic measurements across all 20 saved themes showed 10.5px Home
+   and Plan kicker text at 4.04–4.14:1 for several light schemes and a Stone
+   metric label at 4.39:1. Use the existing theme primary/foreground roles:
+   no hard-coded hue, translucent small text, or blanket brighten on dark UI. */
+#root[data-pi-motion="expressive"] .wpb{
+  --pi-r36-accent-label:light-dark(
+    color-mix(in srgb,var(--pi-m3e-primary) 80%,var(--boot-fg) 20%),
+    var(--pi-m3e-primary));
+  --pi-r36-secondary-label:light-dark(
+    color-mix(in srgb,var(--boot-fg) 82%,var(--pi-m3e-base) 18%),
+    color-mix(in srgb,var(--boot-fg) 82%,var(--pi-m3e-base) 18%));
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero>button:first-child>div:first-child,
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-up-next>div:first-child>div:first-child{
+  color:var(--pi-r36-accent-label)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-glance-tile>div:first-child,
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-label{
+  color:var(--pi-r36-secondary-label)!important;
+}
+@media(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb :is(
+    .wpb-home-hero>button:first-child>div:first-child,
+    .wpb-plan-up-next>div:first-child>div:first-child,
+    .wpb-plan-glance-tile>div:first-child,
+    .wpb-progress-glance-label){
+    color:CanvasText!important;
+  }
+}

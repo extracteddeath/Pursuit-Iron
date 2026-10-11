@@ -6637,6 +6637,31 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 
 
+/* R67 — modal/viewport positioning safeguard for workout overlays.
+   A translated view-frame is a containing block for fixed children. Workout
+   dialogs are currently nested inside a scrolling workout page; with a
+   transformed ancestor they can inherit the scroll offset and put Close above
+   the visible viewport. Keep a quiet opacity-only entry for the workout
+   view; its own exercise-level animation remains unchanged. */
+@keyframes piWorkoutViewEnter {
+  from { opacity: .92; }
+  to { opacity: 1; }
+}
+#root[data-pi-motion="expressive"] .wpb [data-view-frame="workout"] {
+  animation:piWorkoutViewEnter 220ms ease-out both!important;
+  transform:none!important;
+  translate:none!important;
+  scale:none!important;
+  filter:none!important;
+  perspective:none!important;
+  will-change:auto!important;
+}
+@media (prefers-reduced-motion:reduce){
+  #root[data-pi-motion="expressive"] .wpb [data-view-frame="workout"]{
+    animation:none!important;
+  }
+}
+
 /* R68 — Plan schedule / supporting-pane reflow.
    The same PlanView, week-picker, Up Next and overview own the state at
    every width. CSS Grid only repositions the original DOM nodes. On

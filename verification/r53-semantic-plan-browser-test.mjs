@@ -220,7 +220,10 @@ async function verifyTaskHierarchy(browser){
         const plan=await geometry('.wpb-plan-view');
         assert.ok(plan.width<=(width>=840?width:720.1)&&plan.left>=-.1&&plan.right<=plan.viewport+.1&&!plan.overflow,
           'Plan stays bounded through continuous resizing: '+JSON.stringify({width,plan}));
-        assert.equal(plan.padding,width<360?12:width<600?16:24,'Plan window inset follows available width');
+        const expectedPlanPadding=width>=840?Math.min(36,Math.max(20,width*.03))
+          :width<360?12:width<600?16:24;
+        assert.ok(Math.abs(plan.padding-expectedPlanPadding)<.6,
+          'Plan window inset follows compact or responsive wide padding: '+JSON.stringify({width,padding:plan.padding,expectedPlanPadding}));
         assert.ok(plan.navTrackAligned,'Plan navigation indicator stays inside its bar after resize: '+JSON.stringify({width,plan}));
         assert.equal(await page.$eval('.wpb-plan-week-chip[aria-pressed="true"]',b=>b.getAttribute('aria-label')),'Week 3',
           'Resize preserves the deliberately selected week');

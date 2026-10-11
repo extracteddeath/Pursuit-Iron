@@ -45,6 +45,18 @@ try{
       });
       assert.equal(opened,true,'settings exposes gym editor');
       await page.waitForSelector('.wpb-gym-sheet');
+      // CSS sheet entrance and window reflow are asynchronous. Test the final
+      // reachable geometry, not an in-flight sheetUp transform; a persistently
+      // off-screen or wrong-size editor still fails at the timeout.
+      await page.waitForFunction(({width,height})=>{
+        const sheet=document.querySelector('.wpb-gym-sheet');
+        if(!sheet)return false;
+        const r=sheet.getBoundingClientRect();
+        if(r.x<-1||r.right>width+1)return false;
+        return width>=840
+          ? r.width<=742&&r.width>=520&&Math.abs(r.x+r.width/2-width/2)<4&&r.y>8&&r.bottom<height-8
+          : r.width>width-5&&r.bottom>=height-2;
+      },{timeout:5000},{width,height});
       const sheetBounds = await page.$eval('.wpb-gym-sheet', element => {
         const r=element.getBoundingClientRect();
         return { x:r.x,y:r.y,width:r.width,height:r.height,right:r.right,bottom:r.bottom };

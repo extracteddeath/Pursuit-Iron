@@ -185,7 +185,7 @@ function workoutFromEntry(program, entry, legacyExercises) {
         if (!planned.legacyIds.includes(legacyId))
             ignored.push(legacyId);
     const source = sourceSnapshot(program);
-    const progression = evaluateWorkoutProgression(planned.session, performed, { ...historyExposureContext(entry), loadingInventory: source?.request.equipment.loading, equipmentAvailable: source?.request.equipment.available });
+    const progression = evaluateWorkoutProgression(planned.session, performed, { ...historyExposureContext(entry), percentageLoading: !!program.config?.percentScheme, loadingInventory: source?.request.equipment.loading, equipmentAvailable: source?.request.equipment.available });
     return {
         programId: String(program.id), unit: targetUnit,
         ...historyExposureContext(entry),

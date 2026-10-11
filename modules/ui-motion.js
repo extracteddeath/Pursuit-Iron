@@ -709,6 +709,47 @@ function disclosure(el, initial = false) {
             }
         });
     }
+    // R35: resolve 'on' colors from the ACTUAL filled surface, not the
+    // accent hue. Most saved themes already pair correctly; on the rare
+    // noncompliant pair (e.g. Lime), choose the higher-contrast neutral.
+    // This is paint-only: no exercise, workout or button data is touched.
+    const filledActionSelector = '.wpb-home .wpb-home-hero .wpb-primary-action, .wpb-home-create, .wpb-onboarding-primary, .wpb-wizard-next-action';
+    const contrastCanvas = document.createElement('canvas');
+    contrastCanvas.width = contrastCanvas.height = 1;
+    const contrastContext = contrastCanvas.getContext('2d', { willReadFrequently: true });
+    const colorLuminance = color => {
+        if (!contrastContext || !color || color === 'transparent') return null;
+        contrastContext.clearRect(0, 0, 1, 1);
+        contrastContext.fillStyle = color;
+        contrastContext.fillRect(0, 0, 1, 1);
+        const rgba = contrastContext.getImageData(0, 0, 1, 1).data;
+        if (rgba[3] !== 255) return null; // composite surfaces are not a valid solid pair
+        const values = [rgba[0], rgba[1], rgba[2]].map(v => {
+            const c = v / 255;
+            return c <= .04045 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4;
+        });
+        return .2126 * values[0] + .7152 * values[1] + .0722 * values[2];
+    };
+    const contrastRatio = (a, b) =>
+        a === null || b === null ? 0 : (Math.max(a, b) + .05) / (Math.min(a, b) + .05);
+    function correctFilledAction(el) {
+        if (!el || !el.isConnected) return;
+        if (el.dataset.piContrastCorrected === '1') {
+            el.style.removeProperty('color');
+            delete el.dataset.piContrastCorrected;
+        }
+        const css = getComputedStyle(el);
+        if (css.visibility === 'hidden' || css.display === 'none') return;
+        const bg = colorLuminance(css.backgroundColor);
+        if (bg === null || contrastRatio(bg, colorLuminance(css.color)) >= 4.5) return;
+        // White and black are always a compliant pair with an opaque sRGB
+        // surface; only failing theme pairings receive an explicit override.
+        const on = contrastRatio(bg, 0) >= contrastRatio(bg, 1) ? '#000000' : '#ffffff';
+        el.style.setProperty('color', on, 'important');
+        el.dataset.piContrastCorrected = '1';
+    }
+    const refreshFilledActionContrast = () =>
+        root.querySelectorAll(filledActionSelector).forEach(correctFilledAction);
     function refreshTrackTheme() {
         // ThemePicker updates the same React buttons in place. The active ink fill
         // must follow its new inline token even if the selected index did not change.
@@ -726,7 +767,10 @@ function disclosure(el, initial = false) {
         const opener = e.target.closest?.('button[aria-haspopup="menu"]');
         if (opener) menuOpener = opener;
         if (e.target.closest?.('[data-theme-option]'))
-            requestAnimationFrame(refreshTrackTheme);
+            requestAnimationFrame(() => {
+                refreshTrackTheme();
+                refreshFilledActionContrast();
+            });
     };
     function reference(el, initial = false) {
         const key = el.getAttribute('data-motion-key'), before = referenceKeys.get(el); referenceKeys.set(el, key);
@@ -774,6 +818,7 @@ function disclosure(el, initial = false) {
         each('.wpb-wizard-step', wizardStep);
         each(disclosureSelector, disclosure);
         each(groupSelector, selection);
+        each(filledActionSelector, correctFilledAction);
         each('.wpb-toggle[aria-checked]', toggle);
         each('.wpb-context-menu', positionContextMenu);
         each('button[aria-pressed]:not(.wpb-set-complete)', option);

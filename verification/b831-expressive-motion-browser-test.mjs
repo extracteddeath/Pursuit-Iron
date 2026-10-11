@@ -1914,6 +1914,41 @@ try {
             results.image === 'none' && filters.image === 'none' &&
             results.height >= 59 && search.height >= 44,
             'R11 Library search stays elevated over quiet flat results: '+JSON.stringify(libraryTone));
+        // R44 measures the actual rendered Library surfaces at phone width.
+        // The search and filter instruments sit above quiet results, without
+        // adding fake rows or hiding any of the four real filters.
+        const r44Library=await page.$eval('.wpb-library',root=>{
+            const get=selector=>root.querySelector(selector);
+            const bg=el=>el?getComputedStyle(el).backgroundColor:null;
+            const alpha=el=>{
+                const ctx=document.createElement('canvas').getContext('2d',{willReadFrequently:true});
+                ctx.fillStyle=bg(el);ctx.fillRect(0,0,1,1);
+                return ctx.getImageData(0,0,1,1).data[3];
+            };
+            const header=get('.wpb-library-header');
+            const search=get('.wpb-library-search');
+            const filter=get('.wpb-library-flag-filter');
+            const row=get('.wpb-library-results>.wpb-library-row');
+            const flags=[...root.querySelectorAll('.wpb-library-flag')];
+            const style=el=>el?getComputedStyle(el):null;
+            return {page:bg(root),header:bg(header),search:bg(search),
+                filter:bg(filter),result:bg(row),
+                opaque:[header,search,filter,row].every(el=>el&&alpha(el)===255),
+                images:[header,search,filter,row].map(el=>style(el)?.backgroundImage),
+                rowHeight:row?.getBoundingClientRect().height||0,
+                flags:flags.map(el=>el.getBoundingClientRect().height),
+                overflow:root.scrollWidth>root.clientWidth+1};
+        });
+        assert.ok(r44Library.opaque && r44Library.page!==r44Library.header &&
+            r44Library.header===r44Library.result &&
+            r44Library.search===r44Library.filter &&
+            r44Library.search!==r44Library.result &&
+            r44Library.images.every(x=>x==='none') &&
+            r44Library.rowHeight>=64 &&
+            r44Library.flags.length===4 && r44Library.flags.every(h=>h>=44) &&
+            !r44Library.overflow,
+            'R44 Library tonal hierarchy and all four real filters fit '+width+'px: '+
+            JSON.stringify(r44Library));
         await page.click('.wpb-library-row');
         await page.waitForSelector('[data-exercisedetail] .wpb-exercise-tabs[data-pi-m3-track]');
         // R12: the actual Library row supplied the bounded direction for the
@@ -1987,6 +2022,41 @@ try {
             detailR20.figureRadius>=22 && detailR20.tabs===4 &&
             detailR20.tabHeights.every(h=>h>=44) && detailR20.width<=width+2,
             'R20 Exercise Detail title, illustration and real tabs are readable: '+JSON.stringify(detailR20));
+        // R44 checks the actual full-screen canvas and connected detail
+        // controls. Preserve R12 animation and screen-reader tab semantics.
+        const r44Detail=await page.$eval('.wpb-exercise-detail',root=>{
+            const el=selector=>root.querySelector(selector);
+            const header=el('.wpb-exercise-detail-header');
+            const figure=el('.wpb-exercise-figure-wrap');
+            const tabs=el('.wpb-exercise-tabs');
+            const back=el('.wpb-exercise-detail-header button[aria-label="Back to library"]');
+            const body=el('.wpb-exercise-detail-body');
+            const style=x=>x?getComputedStyle(x):null;
+            const bg=x=>style(x)?.backgroundColor;
+            const alpha=x=>{
+                const ctx=document.createElement('canvas').getContext('2d',{willReadFrequently:true});
+                ctx.fillStyle=bg(x);ctx.fillRect(0,0,1,1);
+                return ctx.getImageData(0,0,1,1).data[3];
+            };
+            return {page:bg(root),header:bg(header),figure:bg(figure),
+                tabs:bg(tabs),opaque:[root,header,figure,tabs].every(x=>x&&alpha(x)===255),
+                images:[root,header,figure,tabs].map(x=>style(x)?.backgroundImage),
+                backWidth:back?.getBoundingClientRect().width||0,
+                tabHeights:[...tabs.querySelectorAll('button')].map(x=>x.getBoundingClientRect().height),
+                selected:tabs.querySelectorAll('[aria-selected="true"]').length,
+                overflow:body?.scrollWidth>body?.clientWidth+1};
+        });
+        assert.ok(r44Detail.opaque &&
+            r44Detail.page!==r44Detail.header &&
+            r44Detail.header===r44Detail.figure &&
+            r44Detail.figure!==r44Detail.tabs &&
+            r44Detail.images.every(x=>x==='none') &&
+            r44Detail.backWidth>=48 &&
+            r44Detail.tabHeights.length===4 &&
+            r44Detail.tabHeights.every(x=>x>=44) &&
+            r44Detail.selected===1 && !r44Detail.overflow,
+            'R44 Exercise detail retains opaque separated surfaces and touch-safe tabs at '+
+            width+'px: '+JSON.stringify(r44Detail));
         const formLink=await page.$eval('.wpb-exercise-detail a[data-testid="form-video-link"]', link=>{
             const box=link.getBoundingClientRect(),css=getComputedStyle(link);
             const details=link.querySelector(':scope > div:last-child');

@@ -1,3 +1,10 @@
+## Build 845 — Curl weight stepping and Dynamic Double progression
+
+- Incline dumbbell curl steppers follow the gym's available dumbbell rack, including loads below 25 lb. Without a rack list, a coarse legacy exercise increment cannot skip from 25 lb straight to zero; light dumbbells step down by normal 5 lb / 2 kg increments.
+- Dynamic Double advances each completed set independently when its own reps reach the prescribed ceiling at acceptable effort. Other sets retain their own loads and advance reps rather than inheriting a jump from the top performer.
+- Incomplete, edited, interrupted and recovery-limited sessions retain their safety gates. Conventional Double Progression remains an all-sets rule.
+- Preserve actual logged sets and user-entered values; no engine generation, cycle, equipment persistence, UI theme or storage migration.
+
 ## Build 844 — R65 adaptive tablet and desktop shell (candidate)
 
 - Use a theme-native 100–112px navigation rail and wider reading-width primary screens when windows are at least 840px wide and 560px high. Keep the five existing navigation actions and moving M3 selection track.

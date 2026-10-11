@@ -103,3 +103,55 @@ for (const id of ids) {
 for (const id of ['band-lateral-raise', 'side-lying-raise', 'cable-behind-back-lateral'])
     assert.ok(movementFamilyOptions(EX_BY_ID['lat-raise'], gym).some(x => x.id === id), id + ' existing variation must be discoverable');
 console.log('PASS M201: screenshot rep mismatch, immutable/manual resume, custom intensifier schedule, explicit off/drop/myo, and eight complete exercise variants.');
+
+
+// B845: an incline dumbbell curl at 25 lb must be able to descend into
+// realistic lighter increments, even with a stale coarse per-exercise notch.
+// The actual gym rack, if supplied, is authoritative.
+{
+    const { nudgeWorkoutLoad, setGymLimits } = await import('../modules/training-domain/prescriptions.js');
+    const { setLoadInc, setExLoadInc } = await import('../modules/training-domain/records.js');
+    setLoadInc(0, null);
+    setExLoadInc({});
+    setGymLimits(null);
+    assert.equal(nudgeWorkoutLoad(curl, 'lb', '25', -1), 20);
+    assert.equal(nudgeWorkoutLoad(curl, 'lb', '20', -1), 15);
+    assert.equal(nudgeWorkoutLoad(curl, 'lb', '20', 1), 25);
+    setExLoadInc({ 'inc-curl': { v: 25, unit: 'lb' } });
+    assert.equal(nudgeWorkoutLoad(curl, 'lb', '25', -1), 20,
+        'a coarse historical machine notch must not force a 25 lb dumbbell to zero');
+    setGymLimits({ limitUnit: 'lb', inventory: { dumbbell: [5, 10, 15, 20, 25, 30] } });
+    assert.equal(nudgeWorkoutLoad(curl, 'lb', '25', -1), 20,
+        'dumbbell stepper follows actual gym rack before a chosen increment');
+    assert.equal(nudgeWorkoutLoad(curl, 'lb', '25', 1), 30);
+    setGymLimits(null);
+    setExLoadInc({});
+}
+
+// B845: Dynamic Double must raise ONLY the particular set that achieved the
+// rep ceiling, not require all sets, not copy the increase to every set.
+{
+    const { evaluateWorkoutProgression } = await import('../modules/next-engine/performance.js');
+    const exercise = { exerciseId: 'db_curl', name: 'Dumbbell Curl', role: 'hypertrophy_isolation',
+        sets: 2, progressionStyle: 'dynamic',
+        prescription: { reps: [8, 12], rir: [2, 2] } };
+    const session = { exercises: [exercise] };
+    const result = sets => evaluateWorkoutProgression(session, sets.map((setIndex) => setIndex), {})[0];
+    const samples = (reps1, reps2, rir1 = 2, rir2 = 2) => [
+        { exerciseId: 'db_curl', setIndex: 0, load: 25, reps: reps1, rir: rir1 },
+        { exerciseId: 'db_curl', setIndex: 1, load: 25, reps: reps2, rir: rir2 }
+    ];
+    const earned = result(samples(12, 9));
+    assert.equal(earned.action, 'increase_load');
+    assert.deepEqual(earned.setTargets.map(x => [x.weight, x.reps]), [[30, 8], [25, 10]]);
+    assert.deepEqual(earned.setTargets.map(x => x.earnedLoadIncrease), [true, false]);
+    const incomplete = result(samples(12, 9).slice(0, 1));
+    assert.notEqual(incomplete.action, 'increase_load', 'missing sets cannot earn extra load');
+    const exhausted = result(samples(12, 9, 0, 2));
+    assert.notEqual(exhausted.action, 'increase_load', 'effort below target does not earn a weight bump');
+    const limited = evaluateWorkoutProgression(session, samples(12, 9), { badDay: true })[0];
+    assert.notEqual(limited.action, 'increase_load', 'recovery-limited sessions hold loads');
+    const standard = evaluateWorkoutProgression({ exercises: [{ ...exercise, progressionStyle: 'double' }] }, samples(12, 9))[0];
+    assert.notEqual(standard.action, 'increase_load', 'classic double still waits for all working sets');
+}
+console.log('PASS B845: incline dumbbell weight step below 25, real rack priority, set-specific dynamic double with safety gates.');

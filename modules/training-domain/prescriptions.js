@@ -729,19 +729,59 @@ function sessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, history
        (conservative). Rounding an increase down erased it: the engine said "Increase from 140 lb to 145 lb", the 10 lb machine stack
        snapped it back to 140, and the lift could never progress (found by m158-adaptive-loop-check's simulated lifter). */
     const current = convertHistoryLoad(s.last?.weight, s.lastUnit || program.config?.unit, unit) || 0;
+    const perSetIncrease = Array.isArray(s.setTargets) && s.setTargets.some(t => t.earnedLoadIncrease === true);
     let w = loadableAtOrBelow(ex, eng, unit);
-    if (s.action === "increase_load" && w <= current)
+    // Classic progression is a single session weight. Dynamic double is NOT:
+    // preserve the individual earned bump, never increase every row (or a
+    // heavier but non-qualifying row) just because one other set succeeded.
+    if (!perSetIncrease && s.action === "increase_load" && w <= current)
         w = loadableAbove(ex, current, unit) ?? w;
     const cell = computeCell(program, day, ex.id, slot, weekIndex);
     const floor = cellRepRange(cell, program, ex, slot === day.primaryIndex)[0];
     const setTargets = s.setTargets?.map(target => {
+        if (perSetIncrease) {
+            const previous = convertHistoryLoad(target.previousLoad, program.config?.unit, unit);
+            let weight = loadableAtOrBelow(ex, target.weight, unit);
+            if (target.earnedLoadIncrease && previous > 0 && weight <= previous)
+                weight = loadableAbove(ex, previous, unit) ?? previous;
+            if (!target.earnedLoadIncrease && previous > 0 && weight < previous)
+                weight = loadableAtOrBelow(ex, previous, unit);
+            return { ...target, weight, reps: weight < target.weight ? floor : target.reps };
+        }
         const weight = s.action === "increase_load" ? w : loadableAtOrBelow(ex, target.weight, unit);
         return { ...target, weight, reps: weight < target.weight ? floor : target.reps };
     });
+    if (perSetIncrease && setTargets?.length)
+        w = Math.max(...setTargets.map(target => target.weight).filter(Number.isFinite));
     const reason = typeof s.reason === "string" ? s.reason.replace(new RegExp(`\\bto ${eng}( ?${unit})`), `to ${w}$1`) : s.reason;
     return { ...s, weight: w, setTargets, reason, target: w < eng ? floor : s.target,
         dir: current && w > current ? "up" : current && w < current ? "down" : s.dir };
 
+}
+
+/** Nudge through the gym's actual load inventory when known. With a coarse
+ * user-selected step, a low dumbbell load still needs normal small increments
+ * rather than jumping directly from 25 lb to zero. */
+function nudgeWorkoutLoad(ex, unit, rawWeight, direction) {
+    const current = Number.parseFloat(rawWeight) || 0;
+    const dir = direction < 0 ? -1 : 1;
+    const assisted = !!ex && /^(?:assisted-pullup|assisted-chinup|assisted-dip|assisted-)/.test(ex.id || '');
+    const rack = !assisted ? gymRackFor(ex, unit) : null;
+    if (rack?.length) {
+        const next = dir < 0 ? rack.filter(weight => weight < current - 1e-9).at(-1)
+            : rack.find(weight => weight > current + 1e-9);
+        return next ?? (dir < 0 ? 0 : current);
+    }
+    let step = loadStep(ex, unit);
+    const equipment = ex?.equip || [];
+    if (dir < 0 && !assisted && equipment.includes('dumbbell') &&
+        current <= step && step > (unit === 'lb' ? 5 : 2))
+        step = unit === 'lb' ? 5 : 2;
+    if (!(step > 0) || !Number.isFinite(step)) return current;
+    const onGrid = Math.abs(current - roundTo(current, step)) < 1e-6;
+    const next = onGrid ? current + dir * step
+        : dir > 0 ? Math.ceil(current / step) * step : Math.floor(current / step) * step;
+    return Math.round(clamp(next, assisted ? -2000 : 0, 2000) * 1000) / 1000;
 }
 
 function loadableAbove(ex, w, unit) {
@@ -1137,4 +1177,4 @@ function setGymLimits(gym) {
     GYM_LIMITS = gym ? { limits: gym.limits || {}, inventory: gym.inventory || {}, unit: gym.limitUnit || gym.unit || "kg" } : null;
 }
 
-export { setGymLimits, ASSUMED_RIR, BASE_SET_COST, E1RM_HOLD, EFFORT_MAX_BIAS, EFFORT_MIN_PAIRS, EFFORT_REP_CAP, GYM_LIMITS, GZ_T1_STAGES, GZ_T2_STAGES, INVENTORY_KEYS, PART_LABEL, STALL_ENGAGE, STALL_WINDOW, __recovFitMemo, __recoveryMemo, anchorPerfFor, autoStyleDetail, autoStyleFor, customExerciseHistory, customExerciseReferenceHistory, customProgramSuggestion, dayPerfFor, effortCalibration, engineWeekOneStyles, gymRackFor, gzPlanFor, gzTierOf, gzWorkWeight, lastDayPerf, linearStalled, loadableAbove, loadableAtOrBelow, loggedExercisePerformance, loggedWorkoutPerformance, muscleRecovery, muscleRecoveryUncached, nextEngineStyleFor, parseRIRNum, pctSetsFor, percentagePlanFor, personalRecoveryHours, plateauSessions, prescribeSets, prescribedRIRof, progressionHistoryForProgram, representativeCustomLoad, resolveStyle, sessionSuggestion, setsOf, stallCountFor, styleFor, styleOverride, summarizeSets, tierOf, toUnit, trainingMaxForUnit, withTrainingMax };
+export { setGymLimits, ASSUMED_RIR, BASE_SET_COST, E1RM_HOLD, EFFORT_MAX_BIAS, EFFORT_MIN_PAIRS, EFFORT_REP_CAP, GYM_LIMITS, GZ_T1_STAGES, GZ_T2_STAGES, INVENTORY_KEYS, PART_LABEL, STALL_ENGAGE, STALL_WINDOW, __recovFitMemo, __recoveryMemo, anchorPerfFor, autoStyleDetail, autoStyleFor, customExerciseHistory, customExerciseReferenceHistory, customProgramSuggestion, dayPerfFor, effortCalibration, engineWeekOneStyles, gymRackFor, gzPlanFor, gzTierOf, gzWorkWeight, lastDayPerf, linearStalled, loadableAbove, loadableAtOrBelow, nudgeWorkoutLoad, loggedExercisePerformance, loggedWorkoutPerformance, muscleRecovery, muscleRecoveryUncached, nextEngineStyleFor, parseRIRNum, pctSetsFor, percentagePlanFor, personalRecoveryHours, plateauSessions, prescribeSets, prescribedRIRof, progressionHistoryForProgram, representativeCustomLoad, resolveStyle, sessionSuggestion, setsOf, stallCountFor, styleFor, styleOverride, summarizeSets, tierOf, toUnit, trainingMaxForUnit, withTrainingMax };

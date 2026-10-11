@@ -5515,3 +5515,104 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     border-color:CanvasText!important;
   }
 }
+
+/* M3 EXPRESSIVE R45 — ONE APP-WIDE TONAL GRAMMAR AND FOCUS RING
+   Home was still resolving the older R38 surface family after R41 replaced
+   it on Plan/Progress/Settings and R43/R44 aligned Program/Library. This final
+   reconciliation is presentation-only: no workout/logger/engine selectors.
+   Accent is the semantic focus or primary CTA, not decorative gray/purple
+   surface noise. */
+#root[data-pi-motion="expressive"] .wpb{
+  --pi-r45-keyboard-ring:light-dark(
+    color-mix(in srgb,var(--pi-m3e-primary) 83%,#000 17%),
+    color-mix(in srgb,var(--pi-m3e-primary) 72%,var(--boot-fg,#f5f0f5) 28%));
+  /* Keep the R38 icon-label gap, but make the selected pill less dominant
+     over the category labels at narrow widths and in dark themes. */
+  --pi-r38-nav-indicator-fill:light-dark(
+    color-mix(in srgb,var(--pi-m3e-base) 70%,var(--pi-m3e-primary) 30%),
+    color-mix(in srgb,var(--pi-r41-surface-2) 76%,var(--pi-m3e-primary) 24%));
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-home-header,
+#root[data-pi-motion="expressive"] .wpb-home>.wpb-page-header{
+  background-color:var(--pi-r11-quiet)!important;
+  background-image:none!important;
+  border-bottom-color:var(--pi-r11-edge)!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero{
+  background-color:var(--pi-r11-hero)!important;
+  background-image:none!important;
+  border-color:var(--pi-r11-edge)!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-m3-session-preview{
+  background-color:var(--pi-r11-raised)!important;
+  background-image:none!important;
+  border-color:var(--pi-r11-edge)!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home :is(
+  .wpb-metric-strip>.wpb-metric,.wpb-action-tile){
+  background-color:var(--pi-r11-quiet)!important;
+  background-image:none!important;
+  border-color:var(--pi-r11-edge)!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-home-compose-bar{
+  background-color:var(--pi-r11-quiet)!important;
+  background-image:none!important;
+  border-top:1px solid var(--pi-r11-edge)!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-home-compose-bar .wpb-home-quick{
+  background-color:var(--pi-r11-raised)!important;
+  background-image:none!important;
+  border-color:var(--pi-r11-edge)!important;
+}
+/* Header chrome on all five destinations shares one restrained divider and
+   no ornamental gradient; original height/content/layout remain owned by
+   each screen's dedicated spacing rules. */
+#root[data-pi-motion="expressive"] .wpb :is(
+  .wpb-home>.wpb-page-header,.wpb-progress>.wpb-page-header,
+  .wpb-settings>.wpb-page-header,.wpb-profile .wpb-profile-head,
+  .wpb-library .wpb-library-header){
+  background-image:none!important;
+  box-shadow:none!important;
+}
+/* Keyboard/TV/switch navigation should be clearly visible regardless of
+   accent/theme and component border style. Outlines do not affect geometry. */
+#root[data-pi-motion="expressive"] .wpb :is(
+  .wpb-tabbar .wpb-tab,
+  .wpb-plan-panes>button,.wpb-premium-tabs>button,
+  .wpb-week-rail>button,.wpb-day-toggle,
+  .wpb-profile-edit,.wpb-library-flag,.wpb-filter-chip,
+  .wpb-exercise-tabs>button,.wpb-exercise-window-tabs>button,
+  .wpb-settings-jump-control,.wpb-settings .wpb-segmented>button
+):focus-visible{
+  outline:2px solid var(--pi-r45-keyboard-ring)!important;
+  outline-offset:2px!important;
+}
+/* Press feedback uses the existing moving selection indicator, not a
+   permanent overlay that competes with input labels or menu text. */
+#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab:focus-visible{
+  border-radius:14px!important;
+}
+@media(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb :is(
+    .wpb-tabbar .wpb-tab,.wpb-plan-panes>button,.wpb-premium-tabs>button,
+    .wpb-week-rail>button,.wpb-day-toggle,
+    .wpb-profile-edit,.wpb-library-flag,.wpb-filter-chip,
+    .wpb-exercise-tabs>button,.wpb-exercise-window-tabs>button,
+    .wpb-settings-jump-control,.wpb-settings .wpb-segmented>button
+  ):focus-visible{
+    outline-color:Highlight!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb-home :is(
+    .wpb-home-header,.wpb-home-hero,.wpb-m3-session-preview,
+    .wpb-metric-strip>.wpb-metric,.wpb-action-tile,
+    .wpb-home-compose-bar,.wpb-home-quick){
+    background-color:Canvas!important;
+    color:CanvasText!important;
+    border-color:CanvasText!important;
+  }
+}

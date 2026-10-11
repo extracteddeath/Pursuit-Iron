@@ -6626,7 +6626,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-progress.wpb-progress .wpb-premium-tabs>button{
   box-sizing:border-box;
-  min-height:44px!important;
+  min-height:48px!important;
   font-size:12.5px!important;
   line-height:1.2!important;
 }

@@ -6262,9 +6262,12 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-ui-action.wpb-ui-action[data-action="primary"]{
   min-height:52px!important;
-  background:var(--pi-ui-primary-fill)!important;
-  color:var(--pi-ui-primary-ink)!important;
+  background:light-dark(var(--pi-ui-primary-fill),var(--pi-m3e-dark-action))!important;
+  color:light-dark(var(--pi-ui-primary-ink),var(--wpb-theme-text))!important;
   border:1px solid transparent!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-ui-action[data-action="primary"] svg[fill]:not([fill="none"]){
+  fill:currentColor;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-ui-action.wpb-ui-action[data-action="secondary"]{
   background:var(--pi-color-control,var(--wpb-theme-bg))!important;

@@ -12,7 +12,7 @@ Profile formerly interpreted a null Strength Score as missing bodyweight even wh
 
 `UiHeader`, `UiAction`, `UiChoice` and `UiStatus` own recurring presentation/native control semantics for migrated Home/Plan controls. Screen callbacks, scroll memory, selected state and persisted training data retain their existing owners. Static guidance is not a repeated live announcement. Animated tab tracks keep their existing motion/surface owner; location/filter choices use shared tonal foreground/surface roles.
 
-Start workout is the strongest Home action. Create Program becomes secondary while a next session is ready and stays primary without that session. All creation, freestyle, calculator, Library and history routes remain available. Icon and secondary targets stay at least 48px; primary actions start at 52px. Plan session names can wrap. The collapsed Home masthead remains 56px with three actual 48px controls.
+Start workout is the strongest Home action, retaining the established tonal fill in dark themes. Create Program becomes secondary while a next session is ready and stays primary without that session. All creation, freestyle, calculator, Library and history routes remain available. Icon and secondary targets stay at least 48px; primary actions start at 52px. Plan session names can wrap. The collapsed Home masthead remains 56px with three actual 48px controls.
 
 ## Evidence and limits
 

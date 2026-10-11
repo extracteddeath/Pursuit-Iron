@@ -6,7 +6,7 @@ Follow Build 842's owner-approved original themed materials and compact workout 
 ## Changed
 - Library search and its actual 48px clear action use the current theme's control/ink roles. The existing focus-shape morph and input text selection remain owned by their current components.
 - Program switcher search and Progress history filters use the same control role, including readable focus feedback; no search/filter state is changed.
-- Contextual action menus keep their anchored measured position, keyboard controls, row shape and touch targets. The panel follows the theme's card; hover is quiet; active/focus uses the theme's paired selection colors.
+- Contextual action menus keep their anchored measured position, keyboard controls, row shape and touch targets. The panel follows the theme's card; hover is quiet; active/focus uses the theme's selected background without overriding row-owned ink. Destructive action labels retain danger red and the chosen Jump-to-day row retains its original selection background.
 - Forced-colors users continue to receive Canvas/CanvasText and Highlight/HighlightText rather than authored translucent tones.
 - The workout set grid, warm-up tools, coaching, pinned notes, generated programs, engine version and data storage are deliberately untouched.
 

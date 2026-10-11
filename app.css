@@ -6455,9 +6455,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   color:var(--pi-color-on-control)!important;
   border-color:var(--pi-color-divider)!important;
 }
+/* Keep row-owned ink and resting fill: danger stays red, selected day stays selected. */
 #root[data-pi-motion="expressive"] .wpb .wpb-context-menu>.wpb-context-menu-item{
-  color:var(--pi-color-on-control)!important;
-  background:transparent!important;
   background-image:none!important;
 }
 @media(hover:hover) and (pointer:fine){
@@ -6467,7 +6466,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-context-menu>.wpb-context-menu-item:is(:active,:focus-visible){
   background:var(--pi-color-active)!important;
-  color:var(--pi-color-on-active)!important;
 }
 @media(forced-colors:active){
   #root[data-pi-motion="expressive"] .wpb :is(.wpb-library-search,.wpb-switcher-search,.wpb-context-menu),

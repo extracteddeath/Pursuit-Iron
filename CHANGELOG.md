@@ -1,3 +1,9 @@
+## Build 843 — R64 theme-native search and contextual menus
+
+- Use the saved theme's control, ink, and outline roles for Library search, program-switcher search, and Progress history filters.
+- Contextual menus follow theme card materials while retaining the original selected-day highlight and danger red for destructive actions.
+- Preserve existing 48px clear action, search/filter state, menu placement and keyboard behavior. Engine 0.65.6 and workout logger are unchanged.
+
 ## Build 842 — R63 themed materials and quiet workout tools
 
 - Restore each dark preset's own background, card and control colors across the main screens and shared controls; use the saved accent/foreground pair for selected choices.

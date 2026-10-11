@@ -112,7 +112,7 @@
     "sw.js": "305ccb08f32c1214c669a805ea749afed4e138a8a1f73dec6a03d35b906804e4",
     "BUILD_PROFILE.json": "c5353f74e3c60bc399fbcac2c877ae1557aff52cf5f14174baaef30e306ce378",
     "CHANGELOG.md": "5a9c0b6e4d3676636dc5f335f7a5d55f4236406c1ea9cc1aa1b40d637ed6fe2b",
-    "app.css": "9a722fcd82713b01f62602bba0e5e58c0eb079c7e6ae258f43348e1be21ef259",
+    "app.css": "eee123476241f77a09751d5968bd596eaff5668a9ddb667ece94569e99e1f451",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",

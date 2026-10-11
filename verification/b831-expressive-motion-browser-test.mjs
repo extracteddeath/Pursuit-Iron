@@ -2380,6 +2380,10 @@ try {
                     phoneR46.labelFits&&phoneR46.selected===tab&&
                     !phoneR46.overflow&&!phoneR46.clipped,
                     'R46 393px mid-phone layout stays navigable at '+px+'px text: '+JSON.stringify(phoneR46));
+                if(px===16&&tab==='home')
+                    await page.screenshot({path:path.join(root,'verification/b831-r46-home-393-phone.png')});
+                if(px===16&&tab==='settings')
+                    await page.screenshot({path:path.join(root,'verification/b831-r46-settings-393-phone.png')});
                 if(tab==='plan'||tab==='progress'){
                     const selector=tab==='plan'?'.wpb-plan-panes>button:first-child':
                         '.wpb-premium-tabs>button:first-child';
@@ -2398,9 +2402,6 @@ try {
                         'R46 real segmented keyboard focus stays inside the hit area: '+JSON.stringify(focusR46));
                 }
             }
-            if(px===16)await page.screenshot({
-                path:path.join(root,'verification/b831-r46-home-393-phone.png')
-            });
         }
         await page.evaluate(()=>{document.documentElement.style.fontSize='';});
         assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),initial.saved,

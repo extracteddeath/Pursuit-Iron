@@ -33,3 +33,5 @@ R53 increments UI build to 832 and regenerates the PWA shell cache revision by t
 Certification workflow is temporary and must be deleted before PR merge.
 
 Visual follow-up: neutral off-white light surface roles, themed selection only on active controls, and program Suggested Week/exercise-row surface consolidation; signoff checks text contrast and unwrapped experience choices.
+
+Final phone audit additionally enforces single-line New, Beginner, Intermediate, and Advanced choices at 393px, while smaller widths retain responsive wrapping.

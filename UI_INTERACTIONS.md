@@ -641,3 +641,10 @@ program construction, persistence, rest timer or RIR.
   remain required. Inactive controls have the standard WCAG exemptions.
 - No changes to exercise selection, set values, RIR, Target/Last, rest timing,
   program history, or engine algorithms.
+
+R35 follow-up: an opaque, theme-neutral perimeter supplies reliable selection
+contrast. The shared UI motion module only corrects filled-action text if its
+computed solid background and foreground fall below 4.5:1; it preserves the
+saved theme's own on-color otherwise. This explicitly repairs the Lime primary
+action pairing found by the 20-theme regression without hardcoding a Lime-only
+color, adding an online dependency, or touching workout logs.

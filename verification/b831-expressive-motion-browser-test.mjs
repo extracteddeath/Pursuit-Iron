@@ -730,6 +730,45 @@ try {
                     parseFloat(getComputedStyle(el).borderTopLeftRadius) >= 15),
                     'settings sections share the card geometry');
             }
+            // R42: inspect real Settings lists rather than a synthetic card.
+            // Low-elevation groups and raised choice tracks must stay opaque,
+            // visually distinct, accessible, and free of horizontal scroll.
+            if (tab === 'settings') {
+                const r42 = await page.$eval('.wpb-settings', root => {
+                    const cards=[...root.querySelectorAll('.wpb-settings-card')];
+                    const rows=[...root.querySelectorAll('.wpb-settings-row')]
+                        .filter(el=>el.getClientRects().length);
+                    const seg=root.querySelector('.wpb-segmented');
+                    const picker=root.querySelector('.wpb-settings-jump-control');
+                    const cs=el=>el?getComputedStyle(el):null;
+                    const bg=el=>cs(el)?.backgroundColor||'';
+                    const alpha=el=>{
+                        const ctx=document.createElement('canvas').getContext('2d',{willReadFrequently:true});
+                        ctx.fillStyle=bg(el);ctx.fillRect(0,0,1,1);
+                        return ctx.getImageData(0,0,1,1).data[3];
+                    };
+                    return {cards:cards.length,rows:rows.length,
+                        list:bg(cards[0]),rail:bg(seg),jump:bg(picker),
+                        listAlpha:cards[0]?alpha(cards[0]):0,
+                        railAlpha:seg?alpha(seg):0,
+                        listImage:cs(cards[0])?.backgroundImage,
+                        railImage:cs(seg)?.backgroundImage,
+                        radius:parseFloat(cs(cards[0])?.borderTopLeftRadius||0),
+                        rowMinimum:rows.length?Math.min(...rows.map(el=>el.getBoundingClientRect().height)):0,
+                        segmentHeight:seg?.getBoundingClientRect().height||0,
+                        pickerHeight:picker?.getBoundingClientRect().height||0,
+                        overflow:root.scrollWidth>root.clientWidth+1,
+                        selected:!!seg?.querySelector('[aria-pressed="true"]')};
+                });
+                assert.ok(r42.cards>=1 && r42.rows>=1 && r42.list!==r42.rail &&
+                    r42.listAlpha===255 && r42.railAlpha===255 &&
+                    r42.listImage==='none' && r42.railImage==='none' &&
+                    r42.radius>=19 && r42.rowMinimum>=48 &&
+                    r42.segmentHeight>=48 && r42.pickerHeight>=48 &&
+                    r42.selected && !r42.overflow,
+                    'R42 Settings grouped surfaces and active choices stay usable at '+width+'px: '+
+                    JSON.stringify(r42));
+            }
             // Layout and typography: meaningful hierarchy without overflow at 320 or 430px.
             if (tab === 'home') {
                 const homeType = await page.$eval('.wpb-home-header h1', el => {

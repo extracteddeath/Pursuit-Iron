@@ -2630,6 +2630,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-radius:25px!important;
   background-color:var(--pi-m3e-surface-container-low)!important;
 }
+#root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-row{
+  min-height:48px!important;
+}
 #root[data-pi-motion="expressive"] .wpb-settings.wpb-settings .wpb-settings-card>:is(button,.wpb-settings-row){
   min-width:0;
   min-height:44px;
@@ -5160,6 +5163,99 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     .wpb-history-session,.wpb-history-session-detail,.wpb-premium-tabs,
     .wpb-progress-grouping,.wpb-history-actions>button,
     .wpb-history-group-header,.wpb-settings-card,.wpb-profile-section){
+    background-color:Canvas!important;
+    color:CanvasText!important;
+    border-color:CanvasText!important;
+  }
+}
+
+/* M3 EXPRESSIVE R42 — SETTINGS AS CONNECTED TONAL LISTS
+   R41 introduced the neutral dark surface ladder, but Settings still layered
+   the older full-tint header, raised item rectangles and asymmetrical cards.
+   Unify its grouping with Progress: one quiet list surface, economical rules,
+   raised compact choice rails, and accent only in the selection indicator.
+   The actual settings, input handlers and workout logger are untouched. */
+#root[data-pi-motion="expressive"] .wpb-settings.wpb-settings>.wpb-page-header{
+  background-color:var(--pi-r11-quiet)!important;
+  background-image:none!important;
+  border-bottom:1px solid var(--pi-r11-edge)!important;
+  box-shadow:none!important;
+  border-radius:0 0 20px 20px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-jump{
+  padding:8px 16px 10px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-jump-control{
+  box-sizing:border-box;
+  min-height:48px!important;
+  background-color:var(--pi-r11-raised)!important;
+  background-image:none!important;
+  border:1px solid var(--pi-r11-edge)!important;
+  border-radius:16px!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-title{
+  margin:16px 4px 8px!important;
+  font-size:12px!important;
+  line-height:1.4!important;
+  font-weight:750!important;
+  letter-spacing:.015em!important;
+}
+#root[data-pi-motion="expressive"] .wpb-settings.wpb-settings .wpb-settings-card{
+  box-sizing:border-box;
+  margin-bottom:12px!important;
+  border:1px solid var(--pi-r11-edge)!important;
+  border-radius:20px!important;
+  background-color:var(--pi-r11-quiet)!important;
+  background-image:none!important;
+  box-shadow:none!important;
+  /* Preserve focus outlines and popovers rather than clipping the card. */
+  overflow:visible!important;
+}
+#root[data-pi-motion="expressive"] .wpb-settings.wpb-settings .wpb-settings-card>:is(button,.wpb-settings-row){
+  box-sizing:border-box;
+  min-height:48px!important;
+  min-width:0;
+  border-bottom:0!important;
+  background-color:transparent!important;
+  background-image:none!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-settings.wpb-settings .wpb-settings-card>
+  :is(button,.wpb-settings-row)+:is(button,.wpb-settings-row){
+  border-top:1px solid var(--pi-r11-edge)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-settings.wpb-settings .wpb-settings-card>
+  :is(button,.wpb-settings-row):is(:focus-within,:active){
+  background-color:var(--pi-r11-raised)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-settings .wpb-segmented{
+  box-sizing:border-box;
+  min-height:48px!important;
+  padding:3px!important;
+  border:1px solid var(--pi-r11-edge)!important;
+  border-radius:15px!important;
+  background-color:var(--pi-r11-raised)!important;
+  background-image:none!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-settings .wpb-segmented>button{
+  min-height:40px!important;
+  min-width:0;
+  border-radius:11px!important;
+}
+@media(max-width:359px){
+  #root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-jump{
+    padding-inline:12px!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb-settings.wpb-settings .wpb-settings-card>
+    :is(button,.wpb-settings-row){
+    padding-inline:10px!important;
+  }
+}
+@media(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb-settings :is(
+    .wpb-settings-card,.wpb-settings-jump-control,.wpb-segmented){
     background-color:Canvas!important;
     color:CanvasText!important;
     border-color:CanvasText!important;

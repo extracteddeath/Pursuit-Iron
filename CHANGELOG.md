@@ -5,6 +5,7 @@
 - Extend shared actions to text and row controls, and introduce spacing, type, shape, target-size and content-width roles for later responsive layouts.
 - Use available-window insets on Home and Plan while retaining the current single-column shell; navigation rails and multiple panes remain planned work.
 - Let passive notification text pass pointer input through to underlying controls while keeping Undo, action and Dismiss buttons clickable.
+- Reserve layout space for Home's opaque Create/Quick bar so native scrolling cannot leave program options hidden behind its buttons.
 - Anchor the selected navigation indicator to its own bar so height-only resizing cannot leave it floating over content.
 - Extend the existing paired-theme browser gate with reading/action order, continuous phone/tablet/laptop resizing, retained outline/week state, short windows and enlarged text.
 

@@ -161,9 +161,11 @@ async function verifyTaskHierarchy(browser){
         const group=nav.getBoundingClientRect(),item=tab.getBoundingClientRect(),paint=getComputedStyle(nav,'::before');
         const [x,y]=paint.translate.split(' ').map(parseFloat);
         const cx=group.left+x+parseFloat(paint.width)/2,top=group.top+y;
+        const dock=document.querySelector('.wpb-home-compose-bar')?.getBoundingClientRect();
         return {width:box.width,left:box.left,right:box.right,padding:parseFloat(css.paddingLeft),
           viewport:innerWidth,overflow:document.querySelector('.wpb').scrollWidth>innerWidth+1,
-          navTrackAligned:cx>=item.left&&cx<=item.right&&top>=group.top&&top+parseFloat(paint.height)<=group.bottom};
+          navTrackAligned:cx>=item.left&&cx<=item.right&&top>=group.top&&top+parseFloat(paint.height)<=group.bottom,
+          footerClear:!dock||box.bottom<=dock.top+1};
       });
       for(const width of widths){
         await resize(width,width===768?1024:800);
@@ -172,6 +174,7 @@ async function verifyTaskHierarchy(browser){
           'Home stays bounded through continuous resizing: '+JSON.stringify({width,home}));
         assert.equal(home.padding,width<360?12:width<600?16:24,'Home window inset follows available width');
         assert.ok(home.navTrackAligned,'Selected navigation indicator stays with its tab after resize: '+JSON.stringify({width,home}));
+        assert.ok(home.footerClear,'Home scroll viewport ends above the persistent actions: '+JSON.stringify({width,home}));
         assert.equal(await page.$eval('.wpb-m3-session-preview button',b=>b.getAttribute('aria-expanded')),'true',
           'Resize preserves expanded session outline');
         if([768,1366].includes(width))await page.screenshot({path:path.join(root,`verification/r62-home-${theme}-${width}.png`)});

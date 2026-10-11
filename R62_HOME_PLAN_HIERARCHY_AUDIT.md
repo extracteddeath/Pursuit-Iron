@@ -13,6 +13,7 @@ moves the actionable content first in DOM, reading and keyboard order.
 | Shared components | Native text and row actions, labelled sections, spacing/type/shape roles, target-size roles and reading/workspace width constraints extend the R61 pilot. Existing navigation, disclosure, storage and motion owners remain in place. |
 | Wider-window foundations | Home/Plan use 12/16/24px available-window insets and a bounded reading-width role. The existing 460px shell remains; adaptive navigation rails and related panes are subsequent work. |
 | Notifications | Passive message content no longer intercepts the Plan session click after switching programs. Undo, labelled actions and Dismiss keep pointer access and existing announcements/lifetimes. |
+| Persistent Home actions | Create/Quick reserve real layout space. The scroll viewport ends above the opaque bar, and the obsolete overlay spacer is removed, so program options are reached by native scrolling. |
 | Navigation paint | The existing selection track is positioned relative to its bar. Height-only resizing can no longer leave it at the old shell coordinate over page content. |
 
 Connected session rows retain their accessible names, NEXT/done markers, all
@@ -26,7 +27,8 @@ No training prescription, engine, storage schema or logger geometry changes.
   839/840/841, 1024, 1280, 1366, 1600 and 1920px, and a 900×450 short window.
 - Resize the same mounted screens: expanded session outline, deliberately
   selected week and saved training data remain intact. Inspect actual selected
-  navigation paint within the bar. Check enlarged Plan text at 320px and keyboard
+  navigation paint within the bar and clearance above persistent Home actions.
+  Check enlarged Plan text at 320px and keyboard
   focus after keyboard input. Paired Rose/Rosewater captures use simulated data.
 - Retain R61 cold/warm/theme-switch contrast and truthful Profile checks, R54/R59/
   R60 preview/Back, active-program, exact workout return and browsing-memory flows,
@@ -40,7 +42,11 @@ The inset test waits for the browser's resize frames before inspecting media
 query results. This prevents reading an old frame as the new viewport's paint.
 The notification issue was reproduced by the existing real preview-click flow;
 the height-only navigation drift was reproduced in computed geometry and a
-tablet capture before repair. Gates were retained and extended.
+tablet capture before repair. The complete worker-generation gate exposed
+program options sitting behind Quick after the Home reordering; reserving the
+bar's actual layout space repairs that real pointer journey. The unchanged
+worker gate verifies program-to-cycle conversion and preserved first-block data.
+Gates were retained and extended.
 
 ## Remaining scope
 

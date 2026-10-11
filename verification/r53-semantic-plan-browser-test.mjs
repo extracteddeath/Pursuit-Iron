@@ -74,10 +74,17 @@ try{
           const css=(sel)=>{const x=el(sel);return x?getComputedStyle(x).backgroundColor:null};
           const chip=el('.wpb-plan-week-chip[aria-pressed="true"]');
           const all=[...document.querySelectorAll('.wpb-plan-week-card')];
+          const contrast=(fg,bg)=>{
+            const ctx=document.createElement('canvas').getContext('2d',{willReadFrequently:true});
+            const rgb=c=>{ctx.clearRect(0,0,1,1);ctx.fillStyle=c;ctx.fillRect(0,0,1,1);return [...ctx.getImageData(0,0,1,1).data].slice(0,3).map(v=>v/255);};
+            const lum=c=>rgb(c).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4).reduce((a,v,i)=>a+v*[.2126,.7152,.0722][i],0);
+            const x=lum(fg),y=lum(bg);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05);
+          };
+          const next=el('.wpb-plan-session-link');
           return {
             weekCard:css('.wpb-plan-week-card'),
             weekImage:el('.wpb-plan-week-card')&&getComputedStyle(el('.wpb-plan-week-card')).backgroundImage,
-            nested:css('.wpb-plan-session-link'),weekCount:all.length,
+            nested:css('.wpb-plan-session-link'),nestedRatio:next?contrast(getComputedStyle(next).color,getComputedStyle(next).backgroundColor):0,weekCount:all.length,
             currentCount:all.filter(x=>x.dataset.currentWeek==='true').length,
             chip:chip?.textContent.trim()||null,
             chipSelected:chip?.getAttribute('aria-pressed')==='true'
@@ -85,7 +92,29 @@ try{
         }));
         assert.ok(basic.weekCount>=2&&basic.currentCount===1&&basic.weekImage==='none',
           'Plan has real semantic week cards with exactly one current week: '+JSON.stringify(basic));
-        assert.ok(basic.nested&&basic.chipSelected,'Plan nested row and active week are accessible: '+JSON.stringify(basic));
+        assert.ok(basic.nested&&basic.chipSelected&&basic.nestedRatio>=4.5,'Plan nested row text remains readable on both palettes: '+JSON.stringify(basic));
+      }
+      if(tab==='settings'){
+        const legibility=await page.evaluate(()=>{
+          const selected=['Intermediate','Advanced'].map(label=>{
+            const el=[...document.querySelectorAll('.wpb-experience-segmented>button')].find(b=>b.textContent.trim()===label);
+            if(!el)return {label,missing:true};
+            const range=document.createRange();range.selectNodeContents(el);
+            const rects=[...range.getClientRects()].filter(r=>r.width&&r.height);
+            return {label,lines:rects.length,width:el.getBoundingClientRect().width};
+          });
+          const select=document.querySelector('.wpb-settings-jump-control select');
+          const rail=document.querySelector('.wpb-settings-jump-control');
+          const canvas=document.createElement('canvas');canvas.width=canvas.height=1;
+          const ctx=canvas.getContext('2d',{willReadFrequently:true});
+          const rgb=value=>{ctx.clearRect(0,0,1,1);ctx.fillStyle=value;ctx.fillRect(0,0,1,1);return [...ctx.getImageData(0,0,1,1).data].slice(0,3).map(v=>v/255);};
+          const lum=value=>rgb(value).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4).reduce((acc,v,i)=>acc+v*[.2126,.7152,.0722][i],0);
+          const x=lum(getComputedStyle(select).color),y=lum(getComputedStyle(rail).backgroundColor);
+          return {selected,jumpRatio:(Math.max(x,y)+.05)/(Math.min(x,y)+.05)};
+        });
+        assert.ok(legibility.selected.every(s=>!s.missing&&s.lines===1)&&legibility.jumpRatio>=4.5,
+          'R53 Experience labels and section jump text must stay legible at 393px: '+JSON.stringify(legibility));
+        basic.legibility=legibility;
       }
       captures[theme][tab]=Buffer.from(await page.screenshot({type:'png'}));
       surfaces[tab]=basic;
@@ -106,12 +135,18 @@ try{
         overflow:root.scrollWidth>root.clientWidth+1,
         activeWeeks:week.filter(b=>b.getAttribute('aria-pressed')==='true').length,
         weekCount:week.length,
+        suggested:getComputedStyle(root.querySelector('.wpb-program-suggested-week')).backgroundColor,
+        exercise:getComputedStyle(root.querySelector('.wpb-program-exercise-row')).backgroundColor,
         phase:phase&&getComputedStyle(phase).backgroundColor,
         phaseImage:phase&&getComputedStyle(phase).backgroundImage
       };
     });
     assert.ok(!detail.overflow&&detail.weekCount>1&&detail.activeWeeks===1,
       'Full Program has one semantic selected week and no overflow: '+JSON.stringify(detail));
+    assert.equal(detail.suggested,surfaces.plan.weekCard,
+      'Program suggested-week panel shares the same neutral semantic card role');
+    assert.ok(detail.exercise&&detail.exercise!==detail.suggested,
+      'Program exercise rows sit at one neutral raised elevation above the card');
     captures[theme].program=Buffer.from(await page.screenshot({type:'png'}));
     assert.equal(errors.length,0,'No runtime errors while checking paired themes: '+errors.join('; '));
     measurements[theme]={...surfaces,program:detail};

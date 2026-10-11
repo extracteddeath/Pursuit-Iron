@@ -189,6 +189,10 @@ try {
         themeCount:themes.length,samples:r36Observations.reduce((n,x)=>n+x.nestedContrast.filter(y=>Number.isFinite(y.ratio)).length,0),
         failures:r36Fails.length,examples:r36Fails.slice(0,35)
     }));
+    assert.ok(themes.length===20 && r36Observations.length===themes.length*5 &&
+        r36Observations.reduce((n,x)=>n+x.nestedContrast.filter(y=>Number.isFinite(y.ratio)).length,0)>=170 &&
+        r36Fails.length===0,
+        'R36 rendered secondary labels meet 4.5:1 on all 20 saved themes: '+JSON.stringify(r36Fails));
     await page.$eval('.wpb-theme-picker', n => { n.open = true; });
     await page.click('[data-theme-option="amethyst"]');
     await page.click('[data-tab="plan"]'); await settled();

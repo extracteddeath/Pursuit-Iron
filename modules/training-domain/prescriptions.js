@@ -6,8 +6,9 @@ import { percentageProtocolFor, adaptPercentageSetBudget, deriveTieredLinearStat
 import { buildRuntimeSetTargets, customProgramProgressionStyle, techniqueProtocolFromCell } from "../next-engine/workout-runtime.js";
 import { nextWorkoutSuggestionForShell } from "../next-engine/workout-history-adapter.js";
 import { evaluateWorkoutProgression } from "../next-engine/performance.js";
-import { blockPhase, cellRepRange, clamp, computeCell, effortBounds, isAssistedEx, isBarLike, isMachineLike, loadStep, roundTo, secondaryOf, weeksOf } from './records.js';
+import { blockPhase, cellRepRange, clamp, computeCell, effortBounds, isBarLike, isMachineLike, loadStep, roundTo, secondaryOf, weeksOf } from './records.js';
 import { EXERCISES, EX_BY_ID } from './catalog.js';
+import { isAssistedEx } from './analytics.js';
 import { PART_ORDER, e1rmRIR } from './programs.js';
 
 const PART_LABEL = {

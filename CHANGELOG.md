@@ -1,3 +1,10 @@
+## Build 845 — R66 incline dumbbell weight and Dynamic Double corrections
+
+- Manual dumbbell +/- buttons no longer inherit a 25 lb per-exercise loading notch as a minimum adjustment: 25→20→15 lb is possible, while configured smaller increments remain supported. The typed number stays user-owned and completed sets remain locked.
+- Dynamic Double now advances each completed top-of-range working set independently on the following comparable session, while other set positions hold weight and build reps. Progression still observes effort, missing-set, recovery and edited-exposure safeguards.
+- Preserve individual set targets across the performance evaluator, history adapter, shell normalization and displayed workout rows; avoid copying the highest new load into every set.
+- New regression coverage checks actual incline dumbbell curls, per-hand loading, the stepper in the workout browser and safe dynamic progression. Engine 0.65.7; runtime data schema remains 13.
+
 ## Build 844 — R65 adaptive tablet and desktop shell (candidate)
 
 - Use a theme-native 100–112px navigation rail and wider reading-width primary screens when windows are at least 840px wide and 560px high. Keep the five existing navigation actions and moving M3 selection track.

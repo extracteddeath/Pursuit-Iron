@@ -38,7 +38,13 @@ export function spring(el, key, target, options = {}) {
     if (options.restart !== undefined) { state.value = options.restart; state.velocity = 0; }
     if (options.velocity !== undefined) state.velocity = options.velocity;
     state.write(state.value);
-    if (reduced() || globalThis.document?.visibilityState === 'hidden') {
+    // Zero-distance springs are common during the initial mount of large
+    // segmented groups. They already have their target paint, so spending a
+    // requestAnimationFrame (and style write) cannot produce any motion.
+    // Preserve synchronous completion and avoid a needless frame entirely.
+    if (reduced() || globalThis.document?.visibilityState === 'hidden' ||
+        (Math.abs(state.target - state.value) < state.precision &&
+            Math.abs(state.velocity) < state.precision)) {
         settle(state);
         return () => {};
     }
@@ -180,10 +186,16 @@ export function installAppMotion(root) {
     // bottom tab bar. The old viewport-only flip can hide Delete underneath
     // a resumed-workout dock even though the menu fits within window.innerHeight.
     // Individual CSS translate composes with the existing popIn animation.
+    // Resize, visualViewport and menu animationend may all request layout
+    // in one event turn. One measurement per menu per frame is sufficient.
+    const menuFrames = new WeakSet();
     function positionContextMenu(el) {
         if (!el || !el.isConnected) return;
         el.dataset.piM3Menu = '1';
+        if (menuFrames.has(el)) return;
+        menuFrames.add(el);
         requestAnimationFrame(() => {
+            menuFrames.delete(el);
             if (!el.isConnected) return;
             const existing = Number.parseFloat(el.style.getPropertyValue('--pi-menu-shift-y')) || 0;
             const box = el.getBoundingClientRect();
@@ -199,7 +211,9 @@ export function installAppMotion(root) {
             // Undo any previous translate so repeated resizes cannot accumulate a drift.
             const rawBottom = box.bottom - existing, rawTop = box.top - existing;
             const shift = Math.max(8 - rawTop, Math.min(0, bottomLimit - rawBottom));
-            el.style.setProperty('--pi-menu-shift-y', `${Math.round(shift * 100) / 100}px`);
+            const nextShift = Math.round(shift * 100) / 100;
+            if (Math.abs(nextShift - existing) > .005)
+                el.style.setProperty('--pi-menu-shift-y', `${nextShift}px`);
         });
     }
     const positionOpenMenus = () => root.querySelectorAll('.wpb-context-menu')
@@ -635,7 +649,14 @@ function disclosure(el, initial = false) {
     }
     function scan(node, initial = false) {
         if (node.nodeType !== 1 || !root.contains(node)) return;
-        const each = (selector, fn) => { if (node.matches(selector)) fn(node, initial); node.querySelectorAll(selector).forEach(el => fn(el, initial)); };
+        // The observer delivers many isolated buttons/labels during React
+        // updates. Leaf nodes have no descendants: skip twelve subtree
+        // selector queries while keeping self-matches and branch scans intact.
+        const descend = node.firstElementChild !== null;
+        const each = (selector, fn) => {
+            if (node.matches(selector)) fn(node, initial);
+            if (descend) node.querySelectorAll(selector).forEach(el => fn(el, initial));
+        };
         each(surfaceSelector, enterSurface);
         each('[data-view-frame]', stagePage);
         each('.wpb-exercise-detail', stageExerciseDetail);

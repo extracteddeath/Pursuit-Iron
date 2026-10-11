@@ -6572,3 +6572,92 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     border-right-color:CanvasText!important;
   }
 }
+
+/* R67 — tablet and desktop adaptive sheet surfaces.
+   A large window does not warrant a full-width bottom drawer. Change
+   placement only at sufficiently tall expanded sizes; preserve compact
+   phone/landscape sheet behavior and the original drag/close callbacks. */
+@media (min-width:840px) and (min-height:640px){
+  #root[data-pi-motion="expressive"] .wpb .wpb-backdrop:has(>.wpb-gym-sheet),
+  #root[data-pi-motion="expressive"] .wpb .wpb-backdrop:has(>.wpb-switcher-sheet),
+  #root[data-pi-motion="expressive"] .wpb .wpb-backdrop:has(>.wpb-achievement-sheet){
+    box-sizing:border-box;
+    align-items:center!important;
+    justify-content:center!important;
+    padding:clamp(16px,3vw,32px)!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-backdrop>.wpb-gym-sheet,
+  #root[data-pi-motion="expressive"] .wpb .wpb-backdrop>.wpb-switcher-sheet,
+  #root[data-pi-motion="expressive"] .wpb .wpb-backdrop>.wpb-achievement-sheet{
+    box-sizing:border-box;
+    width:min(740px,100%)!important;
+    max-width:740px!important;
+    max-height:min(86dvh,850px)!important;
+    margin:0!important;
+    border:1px solid var(--pi-color-divider)!important;
+    border-radius:26px!important;
+    overflow-y:auto!important;
+    overscroll-behavior:contain;
+    box-shadow:0 20px 52px rgba(0,0,0,.19)!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-backdrop>.wpb-switcher-sheet,
+  #root[data-pi-motion="expressive"] .wpb .wpb-backdrop>.wpb-achievement-sheet{
+    max-width:620px!important;
+  }
+  /* Plan reading width grows only when the rail is active. Its existing
+     schedule/volume/progression state survives reflow without a second router. */
+  #root[data-pi-motion="expressive"] .wpb .wpb-plan-view{
+    box-sizing:border-box;
+    max-width:940px!important;
+    padding-inline:clamp(20px,3vw,36px)!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-gym-bar-masses input{
+    min-height:44px;
+    color:var(--pi-color-on-control)!important;
+    border-color:var(--pi-color-divider)!important;
+    background:var(--pi-color-control)!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-gym-bar-masses input:focus-visible{
+    outline:2px solid var(--pi-m3e-primary)!important;
+    outline-offset:2px!important;
+  }
+}
+@media (forced-colors:active) and (min-width:840px) and (min-height:640px){
+  #root[data-pi-motion="expressive"] .wpb .wpb-backdrop>:is(.wpb-gym-sheet,.wpb-switcher-sheet,.wpb-achievement-sheet){
+    background:Canvas!important;
+    color:CanvasText!important;
+    border-color:CanvasText!important;
+    box-shadow:none!important;
+  }
+}
+@media (prefers-reduced-motion:reduce) and (min-width:840px) and (min-height:640px){
+  #root[data-pi-motion="expressive"] .wpb .wpb-backdrop>:is(.wpb-gym-sheet,.wpb-switcher-sheet,.wpb-achievement-sheet){
+    animation:none!important;
+  }
+}
+
+
+/* R67 — modal/viewport positioning safeguard for workout overlays.
+   A translated view-frame is a containing block for fixed children. Workout
+   dialogs are currently nested inside a scrolling workout page; with a
+   transformed ancestor they can inherit the scroll offset and put Close above
+   the visible viewport. Keep a quiet opacity-only entry for the workout
+   view; its own exercise-level animation remains unchanged. */
+@keyframes piWorkoutViewEnter {
+  from { opacity: .92; }
+  to { opacity: 1; }
+}
+#root[data-pi-motion="expressive"] .wpb [data-view-frame="workout"] {
+  animation:piWorkoutViewEnter 220ms ease-out both!important;
+  transform:none!important;
+  translate:none!important;
+  scale:none!important;
+  filter:none!important;
+  perspective:none!important;
+  will-change:auto!important;
+}
+@media (prefers-reduced-motion:reduce){
+  #root[data-pi-motion="expressive"] .wpb [data-view-frame="workout"]{
+    animation:none!important;
+  }
+}

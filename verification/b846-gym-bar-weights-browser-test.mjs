@@ -45,6 +45,35 @@ try{
       });
       assert.equal(opened,true,'settings exposes gym editor');
       await page.waitForSelector('.wpb-gym-sheet');
+      // CSS sheet entrance and window reflow are asynchronous. Test the final
+      // reachable geometry, not an in-flight sheetUp transform; a persistently
+      // off-screen or wrong-size editor still fails at the timeout.
+      await page.waitForFunction(({width,height})=>{
+        const sheet=document.querySelector('.wpb-gym-sheet');
+        if(!sheet)return false;
+        const r=sheet.getBoundingClientRect();
+        if(r.x<-1||r.right>width+1)return false;
+        return width>=840
+          ? r.width<=742&&r.width>=520&&Math.abs(r.x+r.width/2-width/2)<4&&r.y>8&&r.bottom<height-8
+          : r.width>width-5&&r.bottom>=height-2;
+      },{timeout:5000},{width,height});
+      const sheetBounds = await page.$eval('.wpb-gym-sheet', element => {
+        const r=element.getBoundingClientRect();
+        return { x:r.x,y:r.y,width:r.width,height:r.height,right:r.right,bottom:r.bottom };
+      });
+      assert.ok(sheetBounds.x>=-1&&sheetBounds.right<=width+1,
+        'gym sheet fits viewport width');
+      if(width>=840){
+        assert.ok(sheetBounds.width<=742&&sheetBounds.width>=520,
+          'expanded gym editor uses contained dialog instead of full-width phone drawer');
+        assert.ok(Math.abs(sheetBounds.x+sheetBounds.width/2-width/2)<4,
+          'expanded gym editor is centered on available window');
+        assert.ok(sheetBounds.y>8&&sheetBounds.bottom<height-8,
+          'expanded gym editor is centered vertically and scrollable');
+      }else{
+        assert.ok(sheetBounds.width>width-5&&sheetBounds.bottom>=height-2,
+          'compact gym editor retains original full-width bottom-sheet behavior');
+      }
       await page.$$eval('.wpb-gym-card button',buttons=>{
         const gym=buttons.find(b=>b.textContent.includes('Test Garage'));
         if(!gym)throw new Error('Test Garage gym missing');gym.click();

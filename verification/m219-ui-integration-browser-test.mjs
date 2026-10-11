@@ -222,14 +222,16 @@ try {
         await lightPage.waitForSelector('.wpb-gym-sheet');
         const lightSheet = await lightPage.$eval('.wpb-gym-sheet',sheet=>{
             const c=getComputedStyle(sheet),r=sheet.getBoundingClientRect();
-            return {background:c.backgroundColor,gradient:c.backgroundImage,width:r.width,overflow:sheet.scrollWidth>sheet.clientWidth+1};
+            const done=sheet.querySelector('.wpb-gym-done');return {background:c.backgroundColor,gradient:c.backgroundImage,width:r.width,doneHeight:done?.getBoundingClientRect().height ?? 0,overflow:sheet.scrollWidth>sheet.clientWidth+1};
         });
-        assert.ok(lightSheet.gradient==='none'&&!lightSheet.overflow&&lightSheet.width<=321,
+        assert.ok(lightSheet.gradient==='none'&&!lightSheet.overflow&&lightSheet.width<=321&&lightSheet.doneHeight>=48,
             'R36 light sheet stays opaque and phone-sized: '+JSON.stringify(lightSheet));
         await lightPage.keyboard.press('Escape');
         await lightPage.waitForSelector('.wpb-gym-sheet',{hidden:true});
         await lightPage.click('.wpb-live-dock button[aria-label="Resume workout"]');
         await lightPage.waitForSelector('[data-testid="set-0-0"] input[aria-label="weight"]');
+        const r37ToolSize=await lightPage.$eval('.wpb-workout-tools .wpb-workout-tool',items=>items.filter(x=>x.getClientRects().length).map(x=>({w:x.getBoundingClientRect().width,h:x.getBoundingClientRect().height})));
+        assert.ok(r37ToolSize.length>0&&r37ToolSize.every(x=>x.w>=48&&x.h>=48),'R37 light workout tools have Android 48dp targets: '+JSON.stringify(r37ToolSize));
         const lightFields = await lightPage.evaluate(()=>{
             const context=document.createElement('canvas').getContext('2d',{willReadFrequently:true});
             const rgba=color=>{

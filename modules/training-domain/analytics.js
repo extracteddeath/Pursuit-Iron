@@ -4734,6 +4734,9 @@ function planOverview(program, weekIndex = 1, cycle = null, history = [], saved 
     if (!program || !Array.isArray(program.days) || !program.days.length)
         return null;
     const days = program.days;
+    // Display one honest, history-calibrated duration model throughout Home, Plan and Preview.
+    // The engine's uncalibrated estimateMinutes remains the immutable generation budget.
+    const displayPace = paceFactor(history, saved);
     const accum = weeksOf(program);
     const hasDeload = !!(program.config && program.config.deload);
     const total = accum + (hasDeload ? 1 : 0);
@@ -4767,7 +4770,7 @@ function planOverview(program, weekIndex = 1, cycle = null, history = [], saved 
                 const c = computeCell(program, d, id, si, w);
                 sets += Number(c && c.sets) || 0;
             });
-            const mins = estimateMinutes(program, d, w) || 0;
+            const mins = estimateMinutesFor(program, d, w, displayPace) || 0;
             /* WHAT THE DAY ACTUALLY IS, not just how long it takes. A row reading "Push · Chest · 27 sets
                · 62m" describes a container; the lifter wants to know what is IN it. The lead lift and the
                muscles it works are the two things that distinguish one day from another at a glance, and

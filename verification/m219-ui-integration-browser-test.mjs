@@ -207,8 +207,9 @@ try {
         await lightPage.goto('http://127.0.0.1:8774/',{waitUntil:'networkidle0'});
         await lightPage.waitForSelector('.wpb-tabbar');
         await lightPage.click('[data-tab="settings"]');
-        await lightPage.$eval('button',buttons=>{
-            const b=buttons.find(x=>x.textContent.trim()==='Your gyms');
+        await lightPage.evaluate(()=>{
+            const b=[...document.querySelectorAll('button')]
+                .find(x=>x.textContent.trim()==='Your gyms');
             if(!b)throw new Error('Light theme gym sheet opener missing');
             b.click();
         });

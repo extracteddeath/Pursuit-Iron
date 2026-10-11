@@ -385,7 +385,12 @@ try {
                     const luma=rgb=>rgb.map(n=>{const v=n/255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4;})
                         .reduce((sum,v,i)=>sum+v*[.2126,.7152,.0722][i],0);
                     const contrast=(a,b)=>{const x=luma(pix(a)),y=luma(pix(b));return (Math.max(x,y)+.05)/(Math.min(x,y)+.05);};
-                    return {card:card&&color(card),picker:picker&&color(picker),
+                    const intermediate=[...seg.querySelectorAll('button')].find(b=>b.textContent.trim()==='Intermediate');
+                    const range=document.createRange();range.selectNodeContents(intermediate);
+                    const textLines=[...range.getClientRects()].filter(r=>r.width>0&&r.height>0);
+                    return {intermediateLines:textLines.length,
+                        intermediateWidth:Math.round(intermediate.getBoundingClientRect().width),
+                        card:card&&color(card),picker:picker&&color(picker),
                         units:units&&color(units),rail:seg&&color(seg),
                         selected:seg&&painted(seg,'::before'),
                         contrast:seg?contrast(color(seg),painted(seg,'::before')):0};
@@ -393,6 +398,8 @@ try {
                 assert.ok(r52.card && r52.card===r52.picker && r52.card===r52.units &&
                     r52.rail!==r52.selected && r52.contrast>=3,
                     'R52 real Settings Theme/Units/Gyms share neutral card and distinct active choice: '+JSON.stringify(r52));
+                if(width===430)assert.ok(r52.intermediateLines===1,
+                    'R52 Intermediate label fits as one word at regular width: '+JSON.stringify(r52));
                 if(width===430)await page.screenshot({path:path.join(root,'verification/r52-settings-phone.png')});
             }
             // The mounted destination receives a linked entrance sourced from

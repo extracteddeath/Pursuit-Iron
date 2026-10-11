@@ -5982,54 +5982,80 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 
 
-/* M3 EXPRESSIVE R51 — ONE SEMANTIC SURFACE + SELECTION SYSTEM
-   Source: actual Rose/Dark Android Settings capture, 2026-10-11.
-   Backgrounds are calm neutrals on *every* destination; accent color is
-   reserved for primary actions and meaningful highlights. Real selected
-   controls have their own high-contrast paint, never the rail's shade.
-   The live workout set grid/steppers/target/previous are NOT in scope. */
+/* R52 — SEMANTIC SURFACE AND ACCENT STATE DESIGN SYSTEM
+   Evidence: owner Rose/Dark Settings and SekuFit program screenshots.
+   Replaces R51's blunt gray selection and repairs Settings wrappers which
+   do not own .wpb-settings-card. One coherent surface ladder; saved accent
+   only inside intentional active states and main actions. No JS or logger. */
 #root[data-pi-motion="expressive"] .wpb{
-  --pi-r51-page:light-dark(var(--pi-m3e-base),#111317);
-  --pi-r51-surface:light-dark(var(--pi-m3e-surface-container-low),#1b1e24);
-  --pi-r51-rail:light-dark(var(--pi-m3e-surface-container-high),#22272f);
-  --pi-r51-selected:light-dark(#485363,#6d727b);
-  --pi-r51-on-selected:#ffffff;
-  --pi-r51-on-rail:light-dark(#3b4351,#c4c7ce);
-  --pi-r51-separator:light-dark(var(--pi-m3e-outline-variant),rgba(228,231,240,.12));
-  /* Backward-compatible role aliases: new screens must use R51 tokens. */
-  --pi-r11-quiet:var(--pi-r51-surface);
-  --pi-r11-raised:var(--pi-r51-rail);
-  --pi-r11-hero:light-dark(var(--pi-m3e-primary-container),#272b33);
+  --pi-color-canvas:light-dark(var(--pi-m3e-base),#111317);
+  --pi-color-card:light-dark(var(--pi-m3e-surface-container-low),#1b1e24);
+  --pi-color-control:light-dark(var(--pi-m3e-surface-container-high),#22272f);
+  --pi-color-on-control:light-dark(#434650,#c4c7ce);
+  --pi-color-divider:light-dark(var(--pi-m3e-outline-variant),rgba(228,231,240,.12));
+  /* Selection belongs to the theme; an accessible *tonal* accent, not a
+     loud saturated primary CTA or a universal slate-gray slab. */
+  --pi-color-active:light-dark(
+    color-mix(in srgb,var(--pi-m3e-primary) 22%,#373943 78%),
+    color-mix(in srgb,var(--pi-m3e-primary) 35%,#c0c4cd 65%));
+  --pi-color-on-active:light-dark(#fff,#17191d);
+  --pi-color-feature:light-dark(var(--pi-m3e-primary-container),#272b33);
+  /* Compatibility with older components still reading R11/R51 surface roles.
+     Keep the same charcoal values already in R51 for the workout logger. */
+  --pi-r11-quiet:var(--pi-color-card);
+  --pi-r11-raised:var(--pi-color-control);
+  --pi-r11-hero:var(--pi-color-feature);
   --pi-r11-selected:light-dark(var(--pi-m3e-primary-container),#2c3039);
-  --pi-r11-edge:var(--pi-r51-separator);
+  --pi-r11-edge:var(--pi-color-divider);
+  --pi-r51-page:var(--pi-color-canvas);
+  --pi-r51-surface:var(--pi-color-card);
+  --pi-r51-rail:var(--pi-color-control);
+  --pi-r51-selected:var(--pi-color-active);
+  --pi-r51-on-selected:var(--pi-color-on-active);
+  --pi-r51-on-rail:var(--pi-color-on-control);
+  --pi-r51-separator:var(--pi-color-divider);
 }
-/* A consistent visual ladder: page → low card → neutral control rail.
-   Specific selectors intentionally supersede historical CSS generations. */
 #root[data-pi-motion="expressive"] .wpb :is(
-  .wpb-home,.wpb-plan-view,.wpb-progress,.wpb-profile,.wpb-settings,.wpb-library,.wpb-program){
-  background-color:var(--pi-r51-page)!important;
+  .wpb-home,.wpb-plan-view,.wpb-progress,.wpb-profile,.wpb-settings,
+  .wpb-library,.wpb-program){
+  background-color:var(--pi-color-canvas)!important;
   background-image:none!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-settings.wpb-settings .wpb-settings-card,
-#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-section,
-#root[data-pi-motion="expressive"] .wpb .wpb-progress.wpb-progress .wpb-history-session{
-  background:var(--pi-r51-surface)!important;
-  border-color:var(--pi-r51-separator)!important;
-  box-shadow:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-settings.wpb-settings>.wpb-page-header,
 #root[data-pi-motion="expressive"] .wpb .wpb-progress.wpb-progress>.wpb-page-header,
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-head{
-  background:var(--pi-r51-surface)!important;
+  background:var(--pi-color-card)!important;
   box-shadow:none!important;
 }
+#root[data-pi-motion="expressive"] .wpb .wpb-settings.wpb-settings .wpb-settings-card,
+#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-section,
+#root[data-pi-motion="expressive"] .wpb .wpb-progress.wpb-progress .wpb-history-session{
+  background:var(--pi-color-card)!important;
+  border-color:var(--pi-color-divider)!important;
+  box-shadow:none!important;
+}
+/* Previously uncovered actual Settings containers:
+   Theme is a <details.wpb-theme-picker>; Units is an unnamed <div>
+   containing direct .wpb-settings-row children. R51 styled neither. */
+#root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-page-scroll > .wpb-theme-picker,
+#root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-page-scroll > div:has(> .wpb-settings-row){
+  background:var(--pi-color-card)!important;
+  background-image:none!important;
+  border:1px solid var(--pi-color-divider)!important;
+  box-shadow:none!important;
+  border-radius:20px!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-theme-picker > summary{
+  background:transparent!important;
+  background-image:none!important;
+}
 #root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-settings-jump{
-  background-color:var(--pi-r51-page)!important;
+  background:var(--pi-color-canvas)!important;
   background-image:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-settings-jump-control{
-  background:var(--pi-r51-rail)!important;
-  border-color:var(--pi-r51-separator)!important;
+  background:var(--pi-color-control)!important;
+  border-color:var(--pi-color-divider)!important;
   box-shadow:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-settings-jump-control select{
@@ -6037,34 +6063,41 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   background-image:none!important;
   color:var(--boot-fg)!important;
 }
-/* M3E uses one meaningful filled *selection*, separate from the neutral
-   track. It remains a real button; the existing motion JS moves its
-   paint-only ::before and preserves all pointer/keyboard hit geometry. */
+/* Common control tracks: identical roles for Settings, Plan, Progress,
+   filters and Exercise Detail, not arbitrary colors per screen. */
 #root[data-pi-motion="expressive"] .wpb :is(
   .wpb-settings .wpb-segmented,.wpb-plan-panes,
   .wpb-premium-tabs,.wpb-progress-grouping,.wpb-library-flag-filter,
   .wpb-exercise-tabs,.wpb-exercise-window-tabs){
-  background:var(--pi-r51-rail)!important;
+  background:var(--pi-color-control)!important;
   background-image:none!important;
-  border-color:var(--pi-r51-separator)!important;
+  border-color:var(--pi-color-divider)!important;
   box-shadow:none!important;
 }
+/* Preserve the R41 primary/secondary hierarchy: By cycle/By month is
+   visibly quieter than the main Progress destination tabs. */
+#root[data-pi-motion="expressive"] .wpb .wpb-progress.wpb-progress .wpb-progress-grouping{
+  background:var(--pi-color-card)!important;
+  background-image:none!important;
+}
+/* The spring owns selection geometry, while semantic color owns paint.
+   Prevent stale JS theme sampling from yielding a different selected fill. */
 #root[data-pi-motion="expressive"] .wpb :is(
   .wpb-settings .wpb-segmented,.wpb-plan-panes,
   .wpb-premium-tabs,.wpb-progress-grouping,.wpb-library-flag-filter,
   .wpb-exercise-tabs,.wpb-exercise-window-tabs)[data-pi-m3-track]::before{
-  background:var(--pi-r51-selected)!important;
+  background:var(--pi-color-active)!important;
   background-image:none!important;
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,.10)!important;
+  box-shadow:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb :is(
   .wpb-settings .wpb-segmented,.wpb-plan-panes,
   .wpb-premium-tabs,.wpb-progress-grouping,.wpb-library-flag-filter,
   .wpb-exercise-tabs,.wpb-exercise-window-tabs):not([data-pi-m3-track])
   >button:is([aria-pressed="true"],[aria-selected="true"],[aria-current="page"]){
-  background:var(--pi-r51-selected)!important;
+  background:var(--pi-color-active)!important;
   background-image:none!important;
-  color:var(--pi-r51-on-selected)!important;
+  color:var(--pi-color-on-active)!important;
   box-shadow:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb :is(
@@ -6074,7 +6107,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   >button:is([aria-pressed="true"],[aria-selected="true"],[aria-current="page"]){
   background:transparent!important;
   background-image:none!important;
-  color:var(--pi-r51-on-selected)!important;
+  color:var(--pi-color-on-active)!important;
   box-shadow:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb :is(
@@ -6082,24 +6115,48 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   .wpb-premium-tabs,.wpb-progress-grouping,.wpb-library-flag-filter,
   .wpb-exercise-tabs,.wpb-exercise-window-tabs)
   >button:not([aria-pressed="true"]):not([aria-selected="true"]):not([aria-current="page"]){
-  color:var(--pi-r51-on-rail)!important;
+  color:var(--pi-color-on-control)!important;
 }
-/* Navigation shares the exact same selected-state contrast and role. */
+/* The same pastel-tonal active role applies to the selected bottom nav
+   icon, with accent colored label outside the indicator. */
 #root[data-pi-motion="expressive"] .wpb .wpb-tabbar{
-  background:var(--pi-r51-surface)!important;
+  background:var(--pi-color-card)!important;
   background-image:none!important;
-  border-top-color:var(--pi-r51-separator)!important;
+  border-top-color:var(--pi-color-divider)!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-tabbar[data-pi-m3-track]::before{
-  background:var(--pi-r51-selected)!important;
+  background:var(--pi-color-active)!important;
   background-image:none!important;
   box-shadow:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab[aria-current="page"] svg,
 #root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab[aria-selected="true"] svg{
-  color:var(--pi-r51-on-selected)!important;
+  color:var(--pi-color-on-active)!important;
 }
-/* Focus cannot be inferred only from selection color or from a tiny border. */
+#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab[aria-current="page"]>span{
+  color:var(--pi-m3e-primary)!important;
+}
+/* Program schedule cards currently inherit scattered old purple inline
+   paints. Neutralize repeating containers, retaining ONE current/next cue. */
+#root[data-pi-motion="expressive"] .wpb .wpb-program.wpb-program .wpb-day-card:not([data-next="true"]),
+#root[data-pi-motion="expressive"] .wpb .wpb-program.wpb-program .hp-card:not([data-next="true"]){
+  background:var(--pi-color-card)!important;
+  background-image:none!important;
+  border-color:var(--pi-color-divider)!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-program.wpb-program .wpb-day-card[data-next="true"]{
+  background:var(--pi-color-feature)!important;
+  background-image:none!important;
+  border-color:var(--pi-r11-accent-stroke)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-program.wpb-program .wpb-week-rail>button:not(
+  [aria-pressed="true"]):not([aria-current="page"]):not([data-active="true"]){
+  background:var(--pi-color-card)!important;
+  background-image:none!important;
+  border-color:var(--pi-color-divider)!important;
+  box-shadow:none!important;
+}
 #root[data-pi-motion="expressive"] .wpb :is(
   .wpb-settings .wpb-segmented,.wpb-plan-panes,.wpb-premium-tabs,
   .wpb-progress-grouping,.wpb-library-flag-filter,
@@ -6109,10 +6166,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 @media(forced-colors:active){
   #root[data-pi-motion="expressive"] .wpb :is(
-    .wpb-settings-card,.wpb-settings-jump-control,.wpb-profile-section,
-    .wpb-history-session,.wpb-segmented,.wpb-plan-panes,.wpb-premium-tabs,
-    .wpb-progress-grouping,.wpb-library-flag-filter,
-    .wpb-exercise-tabs,.wpb-exercise-window-tabs){
+    .wpb-settings-card,.wpb-theme-picker,.wpb-settings-jump-control,
+    .wpb-profile-section,.wpb-history-session,.wpb-segmented,
+    .wpb-plan-panes,.wpb-premium-tabs,.wpb-progress-grouping,
+    .wpb-library-flag-filter,.wpb-exercise-tabs,.wpb-exercise-window-tabs){
     background:Canvas!important;
     border-color:CanvasText!important;
     color:CanvasText!important;
@@ -6126,12 +6183,4 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     .wpb-exercise-tabs,.wpb-exercise-window-tabs)>button:focus-visible{
     outline-color:Highlight!important;
   }
-}
-
-/* R51 certified semantic selection: geometry and interaction state unchanged. */
-/* R51 secondary control: grouping/filter rails are lower emphasis than the
-   main destination tabs. This preserves the R41 two-level hierarchy. */
-#root[data-pi-motion="expressive"] .wpb .wpb-progress.wpb-progress .wpb-progress-grouping{
-  background:var(--pi-r51-surface)!important;
-  background-image:none!important;
 }

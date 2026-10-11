@@ -736,3 +736,35 @@ their own competing shapes.
   grouping, singleton strength bounds, section padding, Progress metric
   label sizes, filter hit areas and horizontal overflows at 320px and 430px
   before the branch can merge.
+
+## R40 — Enlarged reading scale, short viewports and first-run clarity
+
+Material 3 Expressive R39 made the primary dashboards more scannable.
+R40 addresses the remaining fixed-pixel-size trap: on Android large-font
+settings, bottom tabs may lose labels and 3-column metric subtitles can
+become tiny or clipped even though the viewport itself remains the same.
+
+- The five native bottom navigation buttons retain the R38 icon-only
+  indicator and all navigation callbacks. Their label line may grow and
+  wrap instead of being cut off by a fixed 56px button height. This is
+  presentation only; text cannot cover the selected indicator.
+- Profile identity and its supporting stat labels, Progress summary
+  subtitles/history hints, and Plan summary captions acquire rem-based
+  minimums. At the normal font baseline they retain the R39 geometry;
+  increasing the browser/OS reading base enlarges text without stealing
+  room from compact workout steppers or limiting pinch zoom.
+- Actual Profile first-run/low-history setup content shares the quiet
+  tonal surface family used by live data. First-run welcome feature
+  descriptions can grow in height. No fake workouts or metrics are added.
+- Short landscape viewports compact *only* page headers. Scrolling and
+  bottom navigation remain available. Search/selection focus rings
+  become clear at normal, high-contrast and keyboard input settings.
+- The browser contract programmatically sets root font size to 20px
+  (125% of the 16px baseline), then checks all five destinations at
+  320px and 430px, the real Plan/Progress/Profile labels, navigation
+  wrapping and horizontal overflow, and the no-program welcome path.
+  It also confirms original saved programs are byte-for-byte unchanged.
+
+This is targeted accessibility coverage, not a claim of complete TalkBack
+or Android OS font-scaling certification. Native font scaling, TalkBack,
+keyboard-inset and physical-device touch behavior still need manual review.

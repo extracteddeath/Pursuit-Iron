@@ -366,6 +366,38 @@ try {
         for (const tab of ['plan','progress','profile','settings','home']) {
             await page.click(`[data-tab="${tab}"]`);
             await page.waitForSelector(`[data-view-frame="${tab}"][data-pi-surface]`);
+
+            /* Temporary R52 DOM material diagnostics (removed after inspecting
+               actual component ancestry and computed backgrounds). */
+            if (tab === 'settings' || tab === 'plan') {
+                const r52Styles = await page.evaluate(tab => {
+                    const selector = tab === 'settings' ? '.wpb-settings' : '.wpb-plan-view';
+                    const root = document.querySelector(selector);
+                    const css = el => {
+                        const c=getComputedStyle(el);
+                        return {tag:el.tagName.toLowerCase(),class:String(el.className).slice(0,90),
+                            bg:c.backgroundColor,img:c.backgroundImage,color:c.color,bd:c.borderColor,
+                            w:Math.round(el.getBoundingClientRect().width),
+                            h:Math.round(el.getBoundingClientRect().height)};
+                    };
+                    const labels=tab==='settings'
+                        ? ['Theme','Weight unit','Training experience','Advanced','RIR','Smallest jump','Your gyms']
+                        : ['Motion check','Schedule','Volume','Progression'];
+                    const matches=labels.map(label=>{
+                        const a=[...root.querySelectorAll('*')].filter(e=>e.children.length===0 && (e.textContent||'').trim()===label);
+                        const el=a[0];
+                        const ancestors=[];
+                        for(let x=el,depth=0;x&&depth<6;x=x.parentElement,depth++)ancestors.push(css(x));
+                        return {label,matched:!!el,ancestors};
+                    });
+                    const surfaces=[...root.querySelectorAll('section,article,header,button,[class*="settings"],[class*="card"]')]
+                        .filter(e=>e.getClientRects().length && getComputedStyle(e).backgroundColor!=='rgba(0, 0, 0, 0)')
+                        .slice(0,42).map(css);
+                    return {tab,matches,surfaces};
+                },tab);
+                console.log('R52 STYLE DIAGNOSTIC '+JSON.stringify(r52Styles));
+            }
+
             // The mounted destination receives a linked entrance sourced from
             // the actual tapped navigation control. No duplicate views, no
             // animation on workout rows, and no change to navigation state.

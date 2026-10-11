@@ -332,7 +332,7 @@ function stagePage(el, initial = false) {
     const cards = [...el.querySelectorAll(entranceSelector)].filter(item =>
         !item.closest('.wpb-workout,[data-pi-workout-page],[data-sheet-drag]')).slice(0, 5);
     const source = connectedSource;
-    const linked = source && performance.now() - source.at < 1100 &&
+    const linked = !rapid && source && performance.now() - source.at < 1100 &&
         source.from !== key && (!source.target || source.target === key);
     if (linked && cards.length) {
         const lead = cards[0], rect = lead.getBoundingClientRect();
@@ -346,6 +346,9 @@ function stagePage(el, initial = false) {
         }
         connectedSource = null;
     }
+    // Each fresh quick-switch owns its navigation; a stale tab-origin cannot
+    // carry a second, unrelated connected-card movement into the next screen.
+    if (rapid) connectedSource = null;
     cards.forEach((item, index) => {
         delete item.dataset.piReveal;
         if (rapid) {
@@ -599,6 +602,24 @@ function disclosure(el, initial = false) {
                     return;
                 }
             }
+        }
+        // Give the five primary destinations the same keyboard continuity as
+        // the inner tab groups. React remains the sole owner of route changes;
+        // focus follows the activated native button, never a cloned indicator.
+        const nav = e.target.closest?.('.wpb-tabbar button[data-tab]');
+        if (nav && !e.altKey && !e.ctrlKey && !e.metaKey && !e.isComposing &&
+            ['ArrowRight','ArrowLeft','Home','End'].includes(e.key)) {
+            const bar = nav.closest('.wpb-tabbar');
+            const destinations = [...bar.querySelectorAll('button[data-tab]')].filter(el => !disabled(el));
+            const at = destinations.indexOf(nav);
+            if (at >= 0 && destinations.length > 1) {
+                const next = e.key === 'Home' ? 0 : e.key === 'End' ? destinations.length - 1 :
+                    (at + (e.key === 'ArrowRight' ? 1 : -1) + destinations.length) % destinations.length;
+                e.preventDefault();
+                destinations[next].focus({ preventScroll: true });
+                destinations[next].click();
+            }
+            return;
         }
         // Progress is a real tablist: arrow/Home/End keys move focus AND activate the
         // selected panel. Settings' independent toggle buttons retain native semantics.

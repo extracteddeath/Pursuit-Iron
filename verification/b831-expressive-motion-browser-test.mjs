@@ -728,8 +728,15 @@ try {
         });
         const navEnd=await page.$eval('.wpb-tabbar',x=>parseFloat(x.style.getPropertyValue('--pi-m3-track-x')));
         assert.ok(Math.abs(navEnd-navStart)>20,'navigation spring moves between real tabs');
-        assert.ok(await page.$eval('[data-view-frame="profile"]',el=>el.dataset.piCascade==='1'),
-            'visible profile components are coordinated by the page-level motion system');
+        const profileMotionR32=await page.$eval('[data-view-frame="profile"]',el=>({
+            quick:el.dataset.piNavQuick==='1',
+            cascade:el.dataset.piCascade==='1',
+            direction:el.dataset.piNavDirection
+        }));
+        assert.ok(profileMotionR32.direction==='forward' &&
+            (profileMotionR32.quick ? !profileMotionR32.cascade : profileMotionR32.cascade),
+            'profile keeps spatial direction and uses a cascade only outside rapid navigation: '+
+                JSON.stringify(profileMotionR32));
         assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),initial.saved,
             'global navigation motion never modifies saved program data');
 

@@ -1699,6 +1699,44 @@ try {
         assert.ok(liveToolsR23.length>0 && liveToolsR23.every(x=>
             x.w>=48 && x.h>=48 && x.image==='none' && x.touch==='manipulation'),
             'R23 live tool controls use stable 44px opaque tonal targets: '+JSON.stringify(liveToolsR23));
+        // R49: screenshot-led real workout hierarchy. A skipped exercise
+        // remains reachable, but navigation never competes with logging an
+        // unfinished set. The training grid and Focus mode are untouched.
+        const r49=await page.evaluate(()=>{
+            const root=document.querySelector('.wpb-workout');
+            const next=root.querySelector('.wpb-workout-footer-primary[aria-label="Next exercise"]');
+            const finish=root.querySelector('.wpb-workout-finish');
+            const coach=root.querySelector('button[aria-label="Expand Coach guidance"]');
+            const note=root.querySelector('button[aria-label^="Edit pinned note for "]');
+            const tools=[...root.querySelectorAll('.wpb-workout-tool')];
+            const unlogged=root.querySelector('.wpb-workout-scroll [data-testid^="set-"]:not([data-done="1"])');
+            const swatch=document.createElement('div');
+            swatch.style.cssText='position:absolute;visibility:hidden;pointer-events:none;background:var(--pi-r11-raised)';
+            root.append(swatch);
+            const neutral=getComputedStyle(swatch).backgroundColor;swatch.remove();
+            return {pending:!!unlogged,next:next&&{
+                background:getComputedStyle(next).backgroundColor,
+                height:next.offsetHeight,
+                label:next.getAttribute('aria-label'),
+                border:getComputedStyle(next).borderTopWidth,
+                gradient:getComputedStyle(next).backgroundImage},
+              neutral,finishBg:finish&&getComputedStyle(finish).backgroundColor,
+              coachHeight:coach?.offsetHeight??null,noteHeight:note?.offsetHeight??null,
+              toolHeights:tools.map(el=>el.offsetHeight),
+              weightWidth:root.querySelector('[data-testid="set-0-0"] input[aria-label="weight"]')?.offsetWidth,
+              repsWidth:root.querySelector('[data-testid="set-0-0"] input[aria-label="reps"]')?.offsetWidth,
+              overflow:root.scrollWidth>root.clientWidth+1};
+        });
+        assert.ok(r49.pending&&r49.next?.background===r49.neutral&&
+            r49.next.height>=50&&r49.next.border==='1px'&&
+            r49.next.gradient==='none'&&
+            r49.finishBg===r49.neutral&&
+            (!r49.coachHeight||r49.coachHeight>=40)&&
+            (!r49.noteHeight||r49.noteHeight>=44)&&
+            r49.toolHeights.length>=1&&r49.toolHeights.every(h=>h>=48)&&
+            r49.weightWidth>0&&r49.repsWidth>0&&!r49.overflow,
+            'R49 keeps the live editable set dominant without losing Next, notes or tools: '+
+            JSON.stringify(r49));
         const row = '[data-testid="set-0-0"]';
         const workoutContrastR36=await contrastAuditR36([
             ['weightInput','[data-testid="set-0-0"] input[aria-label="weight"]'],

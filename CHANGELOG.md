@@ -1,3 +1,10 @@
+## Build 837 — R58 Material controls and CSS cleanup
+
+- Kept the collapsed Home header at 56px with real 48px toolbar buttons; aligned Plan Back, Profile Edit and Settings Jump touch sizes.
+- Prevented broken Settings experience labels with readable, text-size-aware four/two/one-column controls.
+- Removed 389 superseded CSS declarations after comparing computed styles across 16 light/dark screen states.
+- Extended phone regression coverage for narrow layouts, larger text and persisted experience choices.
+
 ## Build 836 — R57 cross-screen header and spacing consistency
 
 - Tightened Plan, Progress, Profile and Settings header rhythm against one set of inset/spacing tokens rather than conflicting legacy paddings.

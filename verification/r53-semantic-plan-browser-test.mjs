@@ -88,7 +88,7 @@ try{
         assert.ok(basic.nested&&basic.chipSelected,'Plan nested row and active week are accessible: '+JSON.stringify(basic));
       }
       // R57: the other four destinations have distinct content structures,
-      // but share density, ≥44dp secondary controls, and no clipping.
+      // but share density, ≥48px secondary controls, and no clipping.
       if(tab!=='home'){
         const measure=()=>page.evaluate(which=>{
           const el=s=>document.querySelector(s);
@@ -125,20 +125,20 @@ try{
         const density=await measure();
         assert.ok(!density.overflow,'R57 destination must not overflow: '+JSON.stringify({tab,density}));
         if(tab==='plan'){
-          assert.ok(density.row&&density.back&&density.title&&density.back.height>=44&&density.back.width>=44,
-            'Plan Back has an actual 44dp target: '+JSON.stringify(density));
+          assert.ok(density.row&&density.back&&density.title&&density.back.height>=48&&density.back.width>=48,
+            'Plan Back has an actual 48px target: '+JSON.stringify(density));
           assert.ok(density.titleSize>=27&&density.titleSize<=28&&density.title.bottom-density.row.top<=118,
             'Plan header has compact hierarchy without hiding title: '+JSON.stringify(density));
         }else if(tab==='progress'){
           assert.ok(density.header&&density.header.height<=155&&density.titleSize>=26&&density.tabs.length===4&&density.tabs.every(x=>x.height>=48),
-            'Progress title and four 44dp tabs fit its header: '+JSON.stringify(density));
+            'Progress title and four 48px tabs fit its header: '+JSON.stringify(density));
         }else if(tab==='settings'){
-          assert.ok(density.header&&density.jump&&density.picker&&density.picker.height>=48&&density.titleSize>=27&&density.select&&density.select.height>=44
+          assert.ok(density.header&&density.jump&&density.picker&&density.picker.height>=48&&density.titleSize>=27&&density.select&&density.select.height>=48
             &&density.jump.bottom-density.header.top<=128,
             'Settings title and Jump control use a compact, accessible header: '+JSON.stringify(density));
         }else if(tab==='profile'){
           assert.ok(density.head&&density.edit&&density.hero&&density.titleSize>=27&&density.topPadding<=16
-            &&density.edit.width>=44&&density.edit.height>=44,
+            &&density.edit.width>=48&&density.edit.height>=48,
             'Profile identity/edit start promptly with full-size edit action: '+JSON.stringify(density));
           assert.ok(density.hero.top-density.head.bottom<=16&&density.stats.length===3
             &&density.stats.every(w=>w>=68),'Profile cards follow a consistent density: '+JSON.stringify(density));
@@ -148,15 +148,55 @@ try{
           await page.setViewport({width:320,height:700,deviceScaleFactor:1,isMobile:true,hasTouch:true});
           const small=await measure();
           assert.ok(!small.overflow,'320dp '+tab+' must not overflow: '+JSON.stringify(small));
-          if(tab==='plan')assert.ok(small.back.width>=44&&small.title.bottom-small.row.top<=136,
+          if(tab==='plan')assert.ok(small.back.width>=48&&small.title.bottom-small.row.top<=136,
             'Plan still fits at 320dp: '+JSON.stringify(small));
-          if(tab==='profile')assert.ok(small.edit.height>=44&&small.stats.every(w=>w>=64),
+          if(tab==='profile')assert.ok(small.edit.height>=48&&small.stats.every(w=>w>=64),
             'Profile edit/stats remain usable at 320dp: '+JSON.stringify(small));
-          if(tab==='settings')assert.ok(small.select.height>=44&&small.jump.bottom-small.header.top<=136,
+          if(tab==='settings')assert.ok(small.select.height>=48&&small.jump.bottom-small.header.top<=136,
             'Settings Jump remains usable at 320dp: '+JSON.stringify(small));
           basic.smallDensity=small;
           await page.setViewport({width:393,height:852,deviceScaleFactor:1,isMobile:true,hasTouch:true});
         }
+      }
+      if(tab==='settings'){
+        // R58: whole preference labels must fit at narrow widths and larger
+        // Android reading sizes; exercise the real selection and persistence.
+        const responsive=[];
+        for(const width of [393,320])for(const font of [16,20]){
+          await page.setViewport({width,height:852,deviceScaleFactor:1,isMobile:true,hasTouch:true});
+          await page.evaluate(px=>document.documentElement.style.fontSize=px+'px',font);
+          await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+          const geometry=await page.evaluate(()=>{
+            const group=document.querySelector('.wpb-experience-segmented');
+            const controls=[...group.querySelectorAll('button')].map(b=>{
+              const range=document.createRange();range.selectNodeContents(b);
+              const rect=b.getBoundingClientRect();
+              const fragments=[...range.getClientRects()].filter(r=>r.width>1&&r.height>1);
+              return {label:b.textContent.trim(),width:b.offsetWidth,height:b.offsetHeight,
+                fragments:fragments.length,font:parseFloat(getComputedStyle(b).fontSize),
+                clipped:fragments.some(r=>r.left<rect.left-1||r.right>rect.right+1
+                  ||r.top<rect.top-1||r.bottom>rect.bottom+1)};
+            });
+            return {controls,columns:getComputedStyle(group).gridTemplateColumns.split(' ').length,
+              overflow:document.querySelector('.wpb').scrollWidth>innerWidth+1};
+          });
+          assert.ok(!geometry.overflow&&geometry.controls.length===4&&geometry.controls.every(b=>
+            b.width>=48&&b.height>=48&&!b.clipped&&b.fragments===1&&b.font>=font*.875-.1),
+            'Whole Settings experience labels and 48px targets fit '+JSON.stringify({width,font,geometry}));
+          assert.equal(geometry.columns,width===393&&font===16?4:width===320&&font===20?1:2,
+            'Experience controls make room for text instead of splitting words');
+          await page.click('.wpb-experience-segmented>button:nth-child(4)');
+          await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:v1')).experience==='advanced');
+          assert.equal(await page.$eval('.wpb-experience-segmented>button:nth-child(4)',b=>b.getAttribute('aria-pressed')),'true');
+          await page.click('.wpb-experience-segmented>button:nth-child(3)');
+          await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:v1')).experience==='intermediate');
+          responsive.push({width,font,columns:geometry.columns});
+        }
+        basic.experienceResponsive=responsive;
+        assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),initial(theme).saved,
+          'Preference layout and selection preserve saved program data');
+        await page.evaluate(()=>{document.documentElement.style.fontSize='';document.querySelector('.wpb-settings>.wpb-page-scroll').scrollTop=0;});
+        await page.setViewport({width:393,height:852,deviceScaleFactor:1,isMobile:true,hasTouch:true});
       }
       captures[theme][tab]=Buffer.from(await page.screenshot({type:'png'}));
       surfaces[tab]=basic;
@@ -191,8 +231,8 @@ try{
           'Scrolled Home returns real vertical space, not only hidden text: '+JSON.stringify({expanded,compact}));
         assert.equal(compact.long,'none','Long brand no longer occupies scrolled header');
         assert.notEqual(compact.short,'none','Short brand preserves location context');
-        assert.ok(compact.buttons.length===3&&compact.buttons.every(b=>b.w>=44&&b.h>=44),
-          'All Home tools remain accessible 44dp touch targets: '+JSON.stringify(compact));
+        assert.ok(compact.buttons.length===3&&compact.buttons.every(b=>b.w>=48&&b.h>=48),
+          'All Home tools remain accessible 48px touch targets: '+JSON.stringify(compact));
         assert.ok(compact.brand.right+8<=compact.tools.x&&!compact.overflow,
           'Collapsed Home brand/tools never overlap: '+JSON.stringify(compact));
         captures[theme].homeCompact=Buffer.from(await page.screenshot({type:'png'}));
@@ -202,8 +242,8 @@ try{
         const small=await measure();
         assert.ok(small.header.h<=64&&small.brand.right+4<=small.tools.x&&!small.overflow,
           '320dp Home compact header has no collision or overflow: '+JSON.stringify(small));
-        assert.ok(small.buttons.every(b=>b.w>=44&&b.h>=44),
-          'Small-screen actions retain 44dp targets: '+JSON.stringify(small));
+        assert.ok(small.buttons.every(b=>b.w>=48&&b.h>=48),
+          'Small-screen actions retain 48px targets: '+JSON.stringify(small));
         await page.setViewport({width:393,height:852,deviceScaleFactor:1,isMobile:true,hasTouch:true});
         await page.$eval('.wpb-home .wpb-page-scroll',sc=>{sc.scrollTop=0;});
         await page.waitForFunction(()=>document.querySelector('.wpb-home')?.dataset.homeCompact==='0');
@@ -310,7 +350,7 @@ try{
     fs.writeFileSync(path.join(root,'verification/r53-'+tab+'-phone.png'),Buffer.from(result,'base64'));
   }
   await canvasPage.close();
-  console.log('PASS R57: 7 paired Rose dark/Rosewater light screens, shared Plan/Progress/Profile/Settings density, 320dp overflow and 44dp controls, R56 compact Home and prior Plan/Program color checks; '+JSON.stringify(measurements));
+  console.log('PASS R58: paired Rose dark/Rosewater light screens; 48px header controls and compact Home; Settings whole labels, responsive 4/2/1-column controls, real preference selection and saved data at 320/393px and 100/125% text; '+JSON.stringify(measurements));
 }finally{
   if(browser)await browser.close();
   await new Promise(resolve=>server.close(resolve));

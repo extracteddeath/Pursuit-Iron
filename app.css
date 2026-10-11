@@ -156,14 +156,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 /* Navigation: a quiet tonal pill sits under the icon. Labels stay visible without expanding the bar. */
 #root[data-pi-motion="expressive"] .wpb .wpb-tabbar{
   padding:3px 6px calc(4px + env(safe-area-inset-bottom))!important;
-  background-image:none!important;
-  box-shadow:0 -1px 0 var(--pi-layout-border)!important;
   isolation:isolate;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab{
-  min-width:0!important;
   min-height:52px!important;
-  border-radius:14px!important;
   padding-inline:2px!important;
   overflow:visible;
 }
@@ -205,7 +201,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   padding-top:8px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-home .wpb-home-tools{
-  border-radius:13px!important;
   background-image:none!important;
 }
 
@@ -213,34 +208,20 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-radius:var(--pi-layout-radius)!important;
 }
 #root[data-pi-motion="expressive"] .wpb-home .wpb-action-tile{
-  padding:12px!important;
   gap:10px!important;
-  background-image:none!important;
 }
 /* Program: next day reads as the active destination without adding a large accent block. */
 #root[data-pi-motion="expressive"] .wpb-program .wpb-day-card{
   position:relative;
   border-radius:var(--pi-layout-radius)!important;
-  background-image:none!important;
-}
-#root[data-pi-motion="expressive"] .wpb-program .wpb-day-card[data-next="true"]{
-  background-image:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb-program .wpb-day-card[data-next="true"]::before{
   content:"";
   position:absolute;
   top:10px;bottom:10px;left:0;
-  width:3px;
   background:currentColor;
   border-radius:0 4px 4px 0;
-  opacity:.27;
   pointer-events:none;
-}
-#root[data-pi-motion="expressive"] .wpb-program .wpb-day-toggle{
-  min-height:68px!important;
-}
-#root[data-pi-motion="expressive"] .wpb-program .wpb-day-index{
-  border-radius:11px!important;
 }
 /* Progress: legible statistics and tab selection; the existing graph owns the data. */
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs,
@@ -259,20 +240,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 
 #root[data-pi-motion="expressive"] .wpb-progress [data-progress-glance]{
-  gap:7px!important;
   margin-bottom:11px!important;
-}
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item{
-  min-width:0;
-  padding:11px 9px!important;
-  border-radius:var(--pi-layout-radius)!important;
-  background-image:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-label{
   font-size:10px!important;
-  letter-spacing:.025em!important;
-  line-height:1.24;
-  overflow-wrap:normal;
   text-transform:none!important;
 }
 
@@ -280,25 +251,15 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-jump{
   padding-bottom:8px!important;
 }
-#root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-jump-control{
-  min-height:44px!important;
-  border-radius:13px!important;
-  background-image:none!important;
-}
 #root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-card{
   margin-bottom:13px!important;
-  border-radius:var(--pi-layout-radius)!important;
   background-image:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-card>button:not(:last-child){
   border-bottom:1px solid var(--pi-layout-border)!important;
 }
 #root[data-pi-motion="expressive"] .wpb-settings .wpb-segmented{
-  border-radius:13px!important;
   gap:2px;
-}
-#root[data-pi-motion="expressive"] .wpb-settings .wpb-segmented>button{
-  border-radius:11px!important;
 }
 /* Workout: coherent header/tools/exercise navigation but zero changes to the set grid. */
 #root[data-pi-motion="expressive"] .wpb-workout .wpb-ex-nav-step{
@@ -307,19 +268,11 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb-workout .wpb-workout-tools{
   margin-top:7px!important;
   margin-bottom:7px!important;
-  gap:4px!important;
-}
-#root[data-pi-motion="expressive"] .wpb-workout .wpb-workout-tool{
-  border-radius:11px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-workout .wpb-coach-card{
   border-radius:var(--pi-layout-radius)!important;
 }
 /* Sheets and dialogs share the same geometric family, but still use viewport-owned detents. */
-
-#root[data-pi-motion="expressive"] .wpb :is(.wpb-pop,.wpb-dialog){
-  border-radius:var(--pi-layout-radius-large)!important;
-}
 #root[data-pi-motion="expressive"] .wpb-profile .wpb-profile-head{
   margin-bottom:11px!important;
 }
@@ -388,7 +341,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   font-size:15.5px!important;
   font-weight:730!important;
   letter-spacing:-.018em;
-  line-height:1.23;
 }
 #root[data-pi-motion="expressive"] .wpb-program .wpb-day-meta{
   font-size:12px!important;
@@ -401,9 +353,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root[data-pi-motion="expressive"] .wpb-progress>.wpb-page-header{
   padding-top:19px!important;
-}
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs{
-  margin-top:10px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs>button{
   font-size:13.5px!important;
@@ -421,9 +370,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-label{
   font-size:10.5px!important;
   font-weight:700!important;
-  letter-spacing:.015em!important;
-  margin-top:5px!important;
-  line-height:1.3!important;
 }
 
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session{
@@ -437,16 +383,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   padding-bottom:4px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-title{
-  font-size:12.5px!important;
-  font-weight:740!important;
-  letter-spacing:.012em!important;
   text-transform:none!important;
-  margin:15px 4px 7px!important;
   color:inherit!important;
-  line-height:1.3!important;
 }
 #root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-row{
-  min-height:44px;
   padding:12px 13px!important;
   gap:10px!important;
 }
@@ -471,15 +411,11 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   gap:6px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-profile .wpb-profile-strength-cell{
-  border-radius:12px!important;
   padding:9px 5px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-profile .wpb-profile-strength-cell>.mono{
   font-size:clamp(16px,4vw,18px)!important;
   letter-spacing:-.025em;
-}
-#root[data-pi-motion="expressive"] .wpb-profile .wpb-profile-section{
-  border-radius:16px!important;
 }
 #root[data-pi-motion="expressive"] .wpb :is(.wpb-history-session-detail,.wpb-advanced-body){
   /* Only newly mounted/expanded content moves. Never animate row height or saved state. */
@@ -492,9 +428,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 @media(max-width:350px){
   #root[data-pi-motion="expressive"] .wpb-progress [data-progress-glance]{
     gap:5px!important;
-  }
-  #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item{
-    padding:9px 6px!important;
   }
   #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-label{
     font-size:10px!important;
@@ -613,9 +546,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    around scroll containers, no max-height override and no new drag gesture. */
 #root[data-pi-motion="expressive"] .wpb .wpb-backdrop>[data-sheet-drag]{
   border-radius:26px 26px 0 0!important;
-  border-top:1px solid var(--pi-m3-overlay-stroke)!important;
-  box-shadow:0 -10px 35px rgba(0,0,0,.16)!important;
-  background-image:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb [data-sheet-drag]::before{
   width:36px!important;
@@ -627,7 +557,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 /* Real close controls are comfortably tappable but don't inflate the
    sheet header or change the layout of toolbars and dense workout rows. */
 #root[data-pi-motion="expressive"] .wpb .wpb-sheet-close{
-  border-radius:12px!important;
   transition:background-color 140ms var(--pi-ease),
              border-color 140ms var(--pi-ease)!important;
 }
@@ -661,7 +590,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb .wpb-context-menu-item{
   min-height:44px!important;
   width:100%;
-  border-radius:12px!important;
   gap:10px!important;
   padding:10px 11px!important;
   line-height:1.26!important;
@@ -723,7 +651,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-mark{
   margin-bottom:17px!important;
   border-radius:15px!important;
-  box-shadow:0 7px 24px color-mix(in srgb,currentColor 9%,transparent)!important;
 }
 #root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-title{
   font-size:clamp(27px,7.5vw,32px)!important;
@@ -734,11 +661,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   line-height:1.46!important;
   max-width:44ch;
 }
-#root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-features{
-  margin-top:20px!important;
-}
 #root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-feature{
-  padding:12px 0!important;
   gap:11px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-footer{
@@ -772,17 +695,12 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   gap:7px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-option{
-  border-radius:var(--pi-m3-secondary-radius)!important;
   padding:11px 12px!important;
-  background-image:none!important;
   transition:border-color 160ms var(--pi-ease), background-color 160ms var(--pi-ease),
              box-shadow 160ms var(--pi-ease)!important;
 }
 #root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-option[aria-pressed="true"]{
   box-shadow:inset 3px 0 0 currentColor,0 1px 9px color-mix(in srgb,currentColor 6%,transparent)!important;
-}
-#root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-option-icon{
-  border-radius:11px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-progress{
   margin-top:10px!important;
@@ -824,12 +742,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   outline:2px solid color-mix(in srgb,currentColor 35%,transparent)!important;
   outline-offset:2px!important;
 }
-#root[data-pi-motion="expressive"] .wpb-library .wpb-filter-chip{
-  min-height:36px!important;
-  border-radius:12px!important;
-}
 #root[data-pi-motion="expressive"] .wpb-library .wpb-library-flag-filter{
-  border-radius:14px!important;
   padding:3px!important;
   gap:2px!important;
   margin-top:4px!important;
@@ -837,8 +750,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root[data-pi-motion="expressive"] .wpb-library .wpb-library-flag{
   min-width:0!important;
-  min-height:39px!important;
-  border-radius:11px!important;
   padding:7px 3px!important;
   gap:4px!important;
   white-space:normal!important;
@@ -911,10 +822,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 /* PI M3 HISTORY + CHARTS — metadata-led presentation with original data,
    points and set layouts preserved. A horizontal metric strip remains scrollable;
    only the fixed-width chart range and history group selectors use moving tracks. */
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-filters{
-  margin-bottom:12px!important;
-  padding-bottom:12px!important;
-}
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-filters input,
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-filters select{
   min-height:44px!important;
@@ -929,17 +836,13 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-filter-help{
   margin-top:5px;
-  max-width:53ch;
-  line-height:1.42!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-disclosure{
   margin-bottom:13px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-disclosure>summary{
-  min-height:44px!important;
   position:relative;
   padding-right:26px!important;
-  line-height:1.28;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-disclosure>summary::after{
   content:"";
@@ -963,14 +866,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-radius:10px;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-grouping{
-  border-radius:13px!important;
-  padding:3px!important;
-  gap:2px!important;
   isolation:isolate;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-grouping>button{
-  min-height:38px!important;
-  border-radius:10px!important;
   min-width:0;
   line-height:1.22;
 }
@@ -984,7 +882,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   outline-offset:-2px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-group-header{
-  gap:8px!important;
   padding-top:11px!important;
   padding-bottom:8px!important;
 }
@@ -993,11 +890,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   overflow-wrap:anywhere;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-group-header>div:last-child{
-  text-align:right;
   font-variant-numeric:tabular-nums;
-}
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session-detail{
-  background-image:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-exercise-metric-tabs{
   overflow-x:auto!important;
@@ -1042,11 +935,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb .wpb-exercise-window-tabs>button:focus-visible{
   outline:2px solid currentColor!important;
   outline-offset:-2px!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-exercise-chart-surface{
-  min-width:0;
-  max-width:100%;
-  padding:10px 0 4px!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-chart-wrap{
   min-width:0;
@@ -1103,7 +991,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    The shared scrim fade only belongs to sheets/dialogs. Fading an entire
    navigated detail page exposes the underlying Library text through it. */
 #root[data-pi-motion="expressive"] .wpb .wpb-exercise-detail.wpb-backdrop{
-  opacity:1!important;
   background-clip:border-box;
 }
 /* PI M3 EXERCISE DETAIL — denser information hierarchy, not denser taps.
@@ -1260,13 +1147,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   touch-action:pan-y;
   -webkit-tap-highlight-color:transparent;
 }
-#root[data-pi-motion="expressive"] .wpb .wpb-chart [data-chart-scrubber]:focus-visible{
-  outline:none!important;
-  stroke:currentColor;
-  stroke-width:1.5px;
-  stroke-opacity:.55;
-  stroke-dasharray:3 3;
-}
 #root[data-pi-motion="expressive"] .wpb .wpb-chart-scrub-hint{
   margin:5px 0 2px;
   padding:0 5px;
@@ -1304,8 +1184,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   width:var(--pi-m3-track-width,0px);
   height:var(--pi-m3-track-height,30px);
   translate:var(--pi-m3-track-x,0px) var(--pi-m3-track-y,0px);
-  background:var(--pi-m3-track-fill,transparent);
-  border-radius:999px;
   pointer-events:none;
   will-change:translate,width;
 }
@@ -1489,8 +1367,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    The focused start action reads as part of the hero, not another tile. */
 
 #root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero .wpb-primary-action{
-  border-radius:20px!important;
-  min-height:50px!important;
   font-weight:770!important;
   letter-spacing:-.025em!important;
 }
@@ -1503,8 +1379,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb-home .wpb-action-grid{
   display:grid!important;
   grid-template-columns:repeat(2,minmax(0,1fr))!important;
-  gap:7px!important;
-  margin-bottom:15px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-home .wpb-action-tile{
   width:100%;
@@ -1516,20 +1390,11 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root[data-pi-motion="expressive"] .wpb-home .wpb-action-tile:first-child{
   grid-column:1/-1;
-  min-height:58px!important;
-  border-radius:24px 24px 16px 24px!important;
   padding:10px 14px!important;
-  background-image:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb-home .wpb-action-tile:first-child>div:first-child{
   border-radius:15px!important;
   width:36px!important;height:36px!important;
-}
-#root[data-pi-motion="expressive"] .wpb-home .wpb-action-tile:nth-child(2){
-  border-radius:19px 11px 19px 19px!important;
-}
-#root[data-pi-motion="expressive"] .wpb-home .wpb-action-tile:nth-child(3){
-  border-radius:11px 19px 19px 19px!important;
 }
 /* Plan next-up and active disclosures visibly differ from the rest.
    Radii are supplied by the same interruptible spring used in R1. */
@@ -1539,10 +1404,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     calc(var(--pi-disclosure-radius,16px) + 7px)
     calc(var(--pi-disclosure-radius,16px) - 3px)
     calc(var(--pi-disclosure-radius,16px) + 5px)!important;
-}
-#root[data-pi-motion="expressive"] .wpb-program .wpb-day-card[data-next="true"]{
-  border-color:var(--pi-r2-outline)!important;
-  background-image:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb-program .wpb-day-index{
   border-radius:12px 12px 8px 12px!important;
@@ -1555,15 +1416,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 /* A glanceable first statistic is larger, but all three stats stay on one
    row at narrow phone widths and retain their original labels. */
-
-
-
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item:nth-child(2){
-  border-radius:20px 12px 20px 20px!important;
-}
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item:nth-child(3){
-  border-radius:12px 20px 20px 20px!important;
-}
 /* Strength summary is a different family from the Plan cards: small
    connected instrument tiles and large, readable primary number. */
 #root[data-pi-motion="expressive"] .wpb-profile .wpb-profile-strength-cell{
@@ -1582,10 +1434,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 /* Settings rows remain grouped, but group containers now feel different
    from controls and hero cards. Do not turn the toggles into large tiles. */
-
-#root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-jump-control{
-  border-radius:16px 16px 12px 16px!important;
-}
 /* Creation flow: actual option containers change shape between selection
    states. The shared spring controls selected and pressed corner deltas. */
 #root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-option{
@@ -1609,14 +1457,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-radius:19px!important;
 }
 /* Filter chips belong to the full-pill family; Library rows remain tight. */
-#root[data-pi-motion="expressive"] .wpb-library .wpb-filter-chip{
-  border-radius:999px!important;
-}
 #root[data-pi-motion="expressive"] .wpb-library .wpb-library-flag-filter{
   border-radius:18px!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-context-menu{
-  border-radius:22px 22px 15px 22px!important;
 }
 #root[data-pi-motion="expressive"] .wpb [data-sheet-drag]{
   border-radius:29px 29px 0 0!important;
@@ -1624,9 +1466,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 /* Reframe the bottom navigation's moving selection as an expressive container:
    a slightly wider active region and a spring-scale icon, with no bar height
    increase or labels hidden when the workout dock is present. */
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar[data-pi-m3-track]::before{
-  border-radius:19px 19px 15px 19px!important;
-}
 #root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab[aria-current="page"] svg{
   stroke-width:2.35px;
 }
@@ -1773,8 +1612,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   margin-bottom:11px!important;
   border-radius:37px 18px 37px 37px!important;
   border:1px solid var(--pi-r4-line)!important;
-  background-image:none!important;
-  box-shadow:0 7px 27px color-mix(in srgb,currentColor 7%,transparent)!important;
   padding:17px 16px 15px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero .wpb-primary-action{
@@ -1840,24 +1677,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 /* Progress: a compact, expressive title region and connected tab control,
    not an extra floating strip. The chart contents stay unchanged. */
-#root[data-pi-motion="expressive"] .wpb-progress>.wpb-page-header{
-  padding:20px 15px 14px!important;
-  border-radius:0 0 27px 27px!important;
-}
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-title{
   font-size:31px!important;
-  line-height:1.06!important;
-  margin-bottom:8px!important;
-}
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs{
-  margin-top:7px!important;
-  border-radius:21px!important;
-  border:1px solid var(--pi-layout-border)!important;
-  background:color-mix(in srgb,currentColor 4%,transparent)!important;
-}
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs>button{
-  min-height:44px!important;
-  border-radius:18px!important;
 }
 
 /* Plan: week navigation becomes a continuous "rail", without making an
@@ -1866,14 +1687,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   scroll-snap-type:x proximity;
   scroll-padding:12px;
   padding:5px 3px 9px!important;
-  gap:9px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-program .wpb-week-rail>button{
   scroll-snap-align:center;
-  border-radius:18px!important;
   padding:10px 15px!important;
-  min-height:51px!important;
-  background-image:none!important;
   transition:border-color 180ms var(--pi-ease),background-color 180ms var(--pi-ease)!important;
 }
 #root[data-pi-motion="expressive"] .wpb-program .wpb-week-rail>button:focus-visible{
@@ -1881,7 +1698,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root[data-pi-motion="expressive"] .wpb-program .wpb-day-card[data-next="true"]{
   background-image:none!important;
-  border-color:var(--pi-r4-line)!important;
 }
 #root[data-pi-motion="expressive"] .wpb-program .wpb-day-card[data-next="true"]::before{
   width:4px!important;
@@ -1894,11 +1710,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-card{
   border-radius:26px 26px 17px 26px!important;
-}
-#root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-title{
-  margin:17px 5px 8px!important;
-  font-size:12px!important;
-  letter-spacing:.03em!important;
 }
 /* Adaptive scroll state — surfaces remain fully readable; only chrome
    reduces, so no sticky overlays can obscure interactive controls. */
@@ -1997,22 +1808,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-head{
   background-image:none!important;
   border-bottom:1px solid var(--pi-layout-border)!important;
-  border-radius:0 0 34px 19px!important;
-  padding:20px 17px 17px!important;
-  margin-bottom:12px!important;
 }
 
 #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-identity{
-  border-radius:29px 17px 29px 29px!important;
-  border:1px solid var(--pi-r5-stroke)!important;
   background-image:none!important;
-  padding:15px!important;
-}
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength-grid{
-  display:grid!important;
-  grid-template-columns:repeat(2,minmax(0,1fr))!important;
-  align-items:stretch;
-  gap:9px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength-cell{
   min-width:0;
@@ -2025,7 +1824,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   grid-column:1 / -1;
   border-radius:30px 30px 16px 30px!important;
   background-image:none!important;
-  border-color:var(--pi-r5-stroke)!important;
 }
 #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile :is(.wpb-profile-section,.wpb-profile-achievement-board){
   border-radius:27px 27px 17px 27px!important;
@@ -2036,32 +1834,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 /* Library: make the search the prominent instrument, distinct from a
    segmented filter and genuinely tactile but still dense exercise results. */
-#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-header{
-  padding:17px 15px 15px!important;
-  border-radius:0 0 29px 17px!important;
-  border-bottom:1px solid var(--pi-layout-border)!important;
-  background-image:none!important;
-}
 #root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-search{
-  border:1px solid var(--pi-r5-stroke)!important;
-  background-image:none!important;
-  border-radius:22px 22px 14px 22px!important;
-  min-height:49px!important;
   transition:border-radius 260ms var(--pi-r4-spring-ease),border-color 150ms var(--pi-ease)!important;
-}
-#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-search:focus-within{
-  border-radius:16px 24px 24px 24px!important;
-  border-color:var(--wpb-focus,currentColor)!important;
-}
-#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-flag-filter{
-  border:1px solid var(--pi-layout-border)!important;
-  padding:4px!important;
-  min-height:49px!important;
-  border-radius:22px!important;
-  background-image:none!important;
-}
-#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-results{
-  padding:6px 10px 14px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-row{
   min-height:61px!important;
@@ -2081,15 +1855,12 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 /* Creation: a continuous guided flow with an expressive choice surface.
    Preserve actual form state, available choices and footer dimensions. */
 #root[data-pi-motion="expressive"] .wpb-wizard.wpb-wizard.wpb-wizard .wpb-wizard-header{
-  border-radius:0 0 25px 17px!important;
   background-image:none!important;
   border-bottom:1px solid var(--pi-layout-border)!important;
 }
 #root[data-pi-motion="expressive"] .wpb-wizard.wpb-wizard.wpb-wizard .wpb-wizard-heading-title{
   font-size:clamp(28px,7.2vw,35px)!important;
-  line-height:1.05!important;
   font-weight:810!important;
-  letter-spacing:-.052em!important;
   text-wrap:balance;
 }
 #root[data-pi-motion="expressive"] .wpb-wizard.wpb-wizard.wpb-wizard .wpb-wizard-progress{
@@ -2098,10 +1869,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   height:7px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-wizard.wpb-wizard.wpb-wizard .wpb-wizard-option{
-  min-height:67px!important;
-  border-radius:24px 24px 14px 24px!important;
   border-color:var(--pi-layout-border)!important;
-  padding:12px 14px!important;
   transition:border-radius 290ms var(--pi-r4-spring-ease),background-color 170ms var(--pi-ease),
     border-color 170ms var(--pi-ease),transform 180ms var(--pi-r4-spring-ease)!important;
 }
@@ -2128,11 +1896,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-radius:13px 23px 23px 23px!important;
   background-color:var(--pi-r5-soft)!important;
 }
-#root[data-pi-motion="expressive"] .wpb .wpb-context-menu{
-  border:1px solid var(--pi-r5-stroke)!important;
-  border-radius:25px 25px 17px 25px!important;
-  box-shadow:var(--pi-r5-shadow)!important;
-}
 #root[data-pi-motion="expressive"] .wpb .wpb-context-menu-item{
   border-radius:14px!important;
   min-height:45px;
@@ -2142,22 +1905,11 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-radius:8px 17px 17px 17px!important;
   background:var(--pi-r5-soft)!important;
 }
-#root[data-pi-motion="expressive"] .wpb .wpb-dialog{
-  border-radius:31px 31px 21px 31px!important;
-  border:1px solid var(--pi-r5-stroke)!important;
-  background-image:none!important;
-}
-#root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail .wpb-exercise-detail-header{
-  border-radius:0 0 24px 15px!important;
-  background-image:none!important;
-}
 #root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail .wpb-exercise-figure-wrap{
-  border-radius:29px 19px 29px 29px!important;
   overflow:hidden;
 }
 @media(max-width:350px){
   #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength-cell{padding:11px!important}
-  #root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-results{padding-inline:7px!important}
   #root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-row{padding-inline:10px!important}
   #root[data-pi-motion="expressive"] .wpb-wizard.wpb-wizard.wpb-wizard .wpb-wizard-option{padding-inline:11px!important}
 }
@@ -2177,7 +1929,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   /* Position the true program title beside its day-of-rotation dial instead
      of adding a meaningless decorative number or separate hero row. */
   width:calc(100% - 94px)!important;
-  min-height:120px;
   margin:0!important;
   padding:0!important;
 }
@@ -2238,24 +1989,17 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   from{stroke-dashoffset:100;opacity:.5}
   to{stroke-dashoffset:0;opacity:1}
 }
-#root[data-pi-motion="expressive"] .wpb-home .wpb-m3-session-preview{
-  border-radius:19px 19px 13px 19px!important;
-  padding:12px 13px!important;
-  background-image:none!important;
-}
 #root[data-pi-motion="expressive"] .wpb-home .wpb-m3-preview-heading{
   font-size:10px;
   font-weight:800;
   letter-spacing:.095em;
   opacity:.7;
-  margin:1px 0 6px;
   line-height:1.35;
 }
 #root[data-pi-motion="expressive"] .wpb-home .wpb-m3-session-preview>div:not(.wpb-m3-preview-heading){
   min-width:0;
 }
 #root[data-pi-motion="expressive"] .wpb-home .wpb-m3-session-preview>button[aria-expanded]{
-  min-height:38px;
   border-radius:13px!important;
 }
 
@@ -2272,9 +2016,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-view>.wpb-plan-title{
   font-size:clamp(27px,6.7vw,33px)!important;
   font-weight:800!important;
-  line-height:1.07!important;
   letter-spacing:-.045em!important;
-  margin:11px 0 13px!important;
   text-wrap:balance;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-view .wpb-plan-glance{
@@ -2288,19 +2030,13 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-glance-tile{
   flex:initial!important;
-  min-width:0;
-  min-height:79px;
   padding:12px 10px!important;
-  border-radius:20px 20px 12px 20px!important;
-  background-image:none!important;
-  border:1px solid color-mix(in srgb,currentColor 11%,transparent);
   display:flex;
   flex-direction:column;
   justify-content:space-between;
   gap:4px;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-glance-tile[data-featured="true"]{
-  border-radius:28px 28px 15px 28px!important;
   background-image:none!important;
   border-color:color-mix(in srgb,currentColor 21%,transparent);
 }
@@ -2331,10 +2067,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-up-next{
   min-height:76px;
-  border-radius:24px 24px 15px 24px!important;
   padding:14px 15px!important;
   border-color:color-mix(in srgb,currentColor 19%,transparent)!important;
-  background-image:none!important;
   transition:border-color 180ms var(--pi-ease),
     background-color 180ms var(--pi-ease)!important;
 }
@@ -2351,9 +2085,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   display:flex!important;
   gap:4px!important;
   padding:4px!important;
-  min-height:50px;
-  border-radius:21px!important;
-  background-image:none!important;
   isolation:isolate;
   position:relative;
 }
@@ -2361,7 +2092,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   flex:var(--pi-choice-grow,1) 1 0%!important;
   min-width:0!important;
   position:relative;z-index:1;
-  border-radius:17px!important;
   gap:2px!important;
   line-height:1.17;
   padding:7px 2px!important;
@@ -2377,7 +2107,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   width:var(--pi-m3-track-width,0px);
   height:var(--pi-m3-track-height,0px);
   translate:var(--pi-m3-track-x,0px) var(--pi-m3-track-y,0px);
-  border-radius:17px 17px 12px 17px;
   background:var(--pi-m3-track-fill,transparent);
   will-change:translate,width;
 }
@@ -2385,14 +2114,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    supporting facts, not three interchangeable badges. */
 #root[data-pi-motion="expressive"] .wpb-progress [data-progress-glance]{
   grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr)!important;
-  grid-template-rows:repeat(2,minmax(0,1fr));
-  gap:7px!important;
-  margin:5px 0 16px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item{
-  padding:11px 12px!important;
   min-height:59px;
-  border-radius:19px 19px 12px 19px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item:first-child{
   grid-column:1;grid-row:1 / span 2;
@@ -2470,18 +2194,11 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 /* Navigation is one grounded surface; active destination is indicated by the
    already-measured spring pill, not by a background glow on the entire bar. */
 #root[data-pi-motion="expressive"] .wpb .wpb-tabbar{
-  background-image:none!important;
   background-color:var(--pi-m3e-surface-container-low)!important;
   border-top:1px solid var(--pi-m3e-outline-variant)!important;
 }
 /* A flat primary container creates an obvious task hierarchy. The action
    retains its existing filled theme color, never a translucent gradient. */
-#root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero{
-  background-image:none!important;
-  background-color:var(--pi-m3e-primary-container)!important;
-  border-color:color-mix(in srgb,var(--pi-m3e-primary) 28%,transparent)!important;
-  box-shadow:none!important;
-}
 #root[data-pi-motion="expressive"] .wpb-home .wpb-m3-session-preview,
 #root[data-pi-motion="expressive"] .wpb-home .wpb-action-tile,
 #root[data-pi-motion="expressive"] .wpb-home .wpb-metric-strip>.wpb-metric{
@@ -2585,11 +2302,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    rounded opening and closing edge. Every row retains its original hit target,
    semantics, ordering, filtered content and scroll position. */
 #root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-results>.wpb-library-row{
-  min-height:61px!important;
   max-width:100%;
-  margin-bottom:var(--pi-m3e-list-gap)!important;
-  border-radius:var(--pi-m3e-list-corner)!important;
-  background-color:var(--pi-m3e-surface-container-low)!important;
   border-color:var(--pi-m3e-outline-variant)!important;
   transition:border-radius 265ms var(--pi-m3e-content-ease),
     border-color 165ms var(--pi-m3e-content-ease),
@@ -2624,18 +2337,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 /* A Settings section is a single contiguous group, while each real action
    remains an individually focusable control. Avoid expanding dense options. */
-#root[data-pi-motion="expressive"] .wpb-settings.wpb-settings .wpb-settings-card{
-  overflow:visible;
-  border:1px solid var(--pi-m3e-outline-variant)!important;
-  border-radius:25px!important;
-  background-color:var(--pi-m3e-surface-container-low)!important;
-}
 #root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-row{
   min-height:48px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-settings.wpb-settings .wpb-settings-card>:is(button,.wpb-settings-row){
-  min-width:0;
-  min-height:44px;
   border-radius:var(--pi-m3e-list-compressed)!important;
   transition:border-radius 230ms var(--pi-m3e-content-ease),
     background-color 170ms var(--pi-m3e-content-ease)!important;
@@ -2660,9 +2365,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    reveals the relationship among actions. Compact rows keep the old 44px
    minimum, dock avoidance and keyboard navigation with native focus return. */
 #root[data-pi-motion="expressive"] .wpb .wpb-context-menu{
-  border-radius:27px!important;
-  padding:5px!important;
-  background-color:var(--pi-m3e-surface-container-high)!important;
   border-color:var(--pi-m3e-outline-variant)!important;
   overflow-y:auto;
   overscroll-behavior:contain;
@@ -2785,7 +2487,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    tappable, but reads as an outlined secondary action while a program exists.
    Do not reserve new height, move the bottom dock, or hide navigation. */
 #root[data-pi-motion="expressive"] .wpb .wpb-home-create{
-  background-image:none!important;
   background-color:light-dark(var(--pi-m3e-primary),var(--pi-m3e-dark-support))!important;
   color:light-dark(var(--boot-on-accent,#17101b),var(--pi-m3e-on-dark-accent))!important;
   border:1px solid light-dark(transparent,var(--pi-m3e-dark-outline))!important;
@@ -2871,19 +2572,13 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    colors, chart scales, tracking periods or recorded lifts are modified. */
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item{
   background-image:none!important;
-  background-color:var(--pi-r11-quiet)!important;
-  border-color:var(--pi-r11-edge)!important;
-  box-shadow:none!important;
 }
 
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session{
-  background-image:none!important;
   background-color:var(--pi-r11-quiet)!important;
   border-color:var(--pi-r11-edge)!important;
-  box-shadow:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress>.wpb-page-header{
-  background-image:none!important;
   background-color:var(--pi-r11-quiet)!important;
 }
 /* PROFILE. Strength summary leads through measured size and its distinctive
@@ -2898,10 +2593,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-color:var(--pi-r11-edge)!important;
   box-shadow:none!important;
 }
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength-cell:first-child{
-  background-color:var(--pi-r11-hero)!important;
-  border-color:var(--pi-r11-accent-stroke)!important;
-}
 /* LIBRARY. Search is the primary tool, filters are one connected set, and
    exercise rows are low-emphasis contiguous list items until focus/selection.
    Existing spring press/shape and accessible per-row targets remain active. */
@@ -2910,12 +2601,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-results>.wpb-library-row{
   background-image:none!important;
   background-color:var(--pi-r11-quiet)!important;
-  box-shadow:none!important;
-}
-#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-search{
-  background-image:none!important;
-  background-color:var(--pi-r11-raised)!important;
-  border-color:var(--pi-r11-edge)!important;
   box-shadow:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-results>.wpb-library-row[aria-selected="true"],
@@ -3054,16 +2739,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    as an opaque surface. Mix with the *live* theme background published by
    applyTheme(), so dark, light and custom themes all yield alpha=1. */
 #root[data-pi-motion="expressive"] .wpb-home .wpb-home-compose-bar{
-  background-color:color-mix(in srgb,var(--wpb-focus-bg,var(--boot-bg,#110c15)) 94%,currentColor 6%)!important;
-  background-image:none!important;
-  border-top:1px solid var(--pi-m3e-outline-variant)!important;
-  box-shadow:none!important;
   pointer-events:auto!important; /* no ghost taps on covered Strength Score */
 }
 #root[data-pi-motion="expressive"] .wpb-home .wpb-home-compose-bar .wpb-home-quick{
-  background-color:color-mix(in srgb,var(--wpb-focus-bg,var(--boot-bg,#110c15)) 83%,currentColor 17%)!important;
-  background-image:none!important;
-  border-color:var(--pi-m3e-outline-variant)!important;
   color:inherit!important;
   border-radius:18px!important;
   box-shadow:none!important;
@@ -3096,9 +2774,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-head{
   display:flex;
   align-items:center!important;
-  min-height:64px;
   padding:7px 0 9px!important;
-  margin-bottom:8px!important;
   border:0!important;
   border-radius:0!important;
   background:transparent!important;
@@ -3124,14 +2800,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   background:transparent!important;
   box-shadow:none!important;
   font-size:12.5px!important;
-  line-height:1.35!important;
 }
 #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-edit{
-  min-height:44px!important;
-  min-width:44px!important;
   padding:0 14px!important;
   border:1px solid var(--pi-r11-edge)!important;
-  border-radius:16px!important;
   background-color:var(--pi-r11-quiet)!important;
   box-shadow:none!important;
 }
@@ -3149,17 +2821,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-radius:17px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-stat-grid{
-  grid-template-columns:repeat(3,minmax(0,1fr))!important;
-  gap:6px!important;
   margin-bottom:10px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-stat{
-  min-width:0;
   min-height:66px;
-  padding:10px 5px!important;
-  background-color:var(--pi-r11-quiet)!important;
-  border-radius:16px!important;
-  box-shadow:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-stat .mono{
   min-width:0;
@@ -3168,18 +2833,11 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   row-gap:0;
 }
 #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength{
-  padding:15px 13px 13px!important;
-  margin-bottom:10px!important;
   background-color:var(--pi-r11-quiet)!important;
   border:1px solid var(--pi-r11-edge)!important;
-  border-radius:25px!important;
-  box-shadow:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile
   .wpb-profile-strength button[aria-label="Share Strength Score"]{
-  width:44px!important;
-  height:44px!important;
-  min-width:44px!important;
   border-radius:15px!important;
   background-color:var(--pi-r11-raised)!important;
   border-color:var(--pi-r11-edge)!important;
@@ -3215,10 +2873,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   letter-spacing:-.025em!important;
 }
 #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-next-strength{
-  padding:10px 11px!important;
   margin-bottom:3px;
-  background-color:var(--pi-r11-raised)!important;
-  border-radius:14px!important;
   line-height:1.4!important;
 }
 #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-achievements,
@@ -3253,12 +2908,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    read without truncation. All changes are layout/paint; existing tracks,
    control callbacks, data and scrolling remain authoritative. */
 #root[data-pi-motion="expressive"] .wpb-progress [data-progress-glance]{
-  display:grid!important;
-  grid-template-columns:repeat(3,minmax(0,1fr))!important;
   grid-template-rows:auto!important;
-  gap:7px!important;
   align-items:stretch!important;
-  margin:4px 0 12px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item,
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item:first-child,
@@ -3279,10 +2930,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   background-color:var(--pi-r11-quiet)!important;
   box-shadow:none!important;
 }
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item:first-child{
-  background-color:var(--pi-r11-hero)!important;
-  border-color:var(--pi-r11-accent-stroke)!important;
-}
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item>.mono,
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item:first-child>.mono{
   font-size:clamp(22px,5.7vw,27px)!important;
@@ -3292,15 +2939,11 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-label{
   font-size:10px!important;
-  line-height:1.2!important;
-  letter-spacing:.025em!important;
-  margin-top:5px!important;
   white-space:normal!important;
   overflow-wrap:anywhere;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item>div:last-child{
   font-size:10px!important;
-  line-height:1.2!important;
   white-space:normal!important;
   overflow-wrap:anywhere;
 }
@@ -3317,25 +2960,11 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   line-height:1.1!important;
   letter-spacing:-.045em!important;
 }
-#root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-jump{
-  padding:6px 16px 9px!important;
-}
 #root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-jump-control{
-  min-height:48px!important;
   padding:0 12px!important;
-  border:1px solid var(--pi-r11-edge)!important;
-  border-radius:17px!important;
-  background-color:var(--pi-r11-raised)!important;
-  box-shadow:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-jump-control select{
   min-height:44px!important;
-}
-#root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-title{
-  margin:13px 4px 7px!important;
-  font-size:12px!important;
-  font-weight:800!important;
-  line-height:1.35!important;
 }
 /* Plan's next workout may be a long user-authored name. Do not erase it
    under an ellipsis; allow two lines naturally while keeping Open accessible. */
@@ -3379,9 +3008,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    all selections, keyboard inputs, filtering, form state and routed motion. */
 #root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-header{
   padding:11px 14px 10px!important;
-  border-radius:0 0 22px 22px!important;
-  background-color:var(--pi-r11-quiet)!important;
-  box-shadow:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb-library .wpb-library-header>div:first-child{
   gap:8px!important;
@@ -3393,12 +3019,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-radius:15px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-search{
-  min-height:48px!important;
   margin-bottom:7px!important;
   border:1px solid var(--pi-r11-edge)!important;
   border-radius:18px!important;
-  background-color:var(--pi-r11-raised)!important;
-  box-shadow:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-search input{
   min-height:46px!important;
@@ -3418,26 +3041,20 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   background-image:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-flag-filter{
-  min-height:48px!important;
   margin-top:3px!important;
   padding:3px!important;
   border-radius:18px!important;
-  background-color:var(--pi-r11-raised)!important;
 }
 #root[data-pi-motion="expressive"] .wpb-library .wpb-library-flag{
-  min-height:44px!important;
   border-radius:15px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-results{
   padding:8px 12px 16px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-results>.wpb-library-row{
-  min-height:65px!important;
   padding:10px 12px!important;
   gap:10px!important;
   border-radius:18px!important;
-  background-color:var(--pi-r11-quiet)!important;
-  box-shadow:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb-library .wpb-library-row>div:nth-child(2){
   min-width:0!important;
@@ -3575,11 +3192,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail
   .wpb-exercise-detail-header>button:first-child{
-  width:44px!important;
-  height:44px!important;
-  min-width:44px!important;
-  min-height:44px!important;
-  flex:0 0 44px!important;
   border-radius:15px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail
@@ -3636,10 +3248,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    Lift only real dismiss buttons to 44px; the radio/select rows retain
    their existing React-owned interactions and gesture/draggable detents. */
 #root[data-pi-motion="expressive"] .wpb .wpb-sheet-close{
-  width:44px!important;
-  height:44px!important;
-  min-width:44px!important;
-  min-height:44px!important;
   padding:0!important;
   border-radius:15px!important;
   border:1px solid var(--pi-r11-edge)!important;
@@ -3659,7 +3267,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-radius:27px 27px 0 0!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-gym-done{
-  min-height:44px!important;
   padding:10px 16px!important;
   border-radius:15px!important;
   box-shadow:none!important;
@@ -3981,17 +3588,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    button ownership, rest countdown, targets, logged values or workout footer. */
 #root[data-pi-motion="expressive"] .wpb-workout .wpb-workout-tools{
   min-width:0;
-  gap:5px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-workout .wpb-workout-tool{
   box-sizing:border-box;
   min-width:44px;
-  min-height:44px!important;
-  border:1px solid var(--pi-r11-edge)!important;
-  border-radius:15px!important;
-  background-color:var(--pi-r11-quiet)!important;
-  background-image:none!important;
-  box-shadow:none!important;
   transition:background-color 165ms var(--pi-ease),border-color 165ms var(--pi-ease),color 165ms var(--pi-ease)!important;
 }
 #root[data-pi-motion="expressive"] .wpb-workout .wpb-workout-tool:focus-visible,
@@ -4059,11 +3659,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session{
   box-sizing:border-box;
   min-width:0;
-  border-radius:20px!important;
-  border:1px solid var(--pi-r11-edge)!important;
   background-color:var(--pi-r11-quiet)!important;
-  background-image:none!important;
-  box-shadow:none!important;
   overflow-wrap:anywhere;
   transition:border-radius 200ms var(--pi-ease),border-color 160ms var(--pi-ease),background-color 160ms var(--pi-ease)!important;
 }
@@ -4074,25 +3670,13 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session-detail{
   box-sizing:border-box;
   min-width:0;
-  border-top:1px solid var(--pi-r11-edge)!important;
   background-color:var(--pi-r11-raised)!important;
-  background-image:none!important;
-  border-radius:0 0 19px 19px;
   overflow-wrap:anywhere;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-actions{
   min-width:0;
   display:flex;
   flex-wrap:wrap;
-  gap:6px!important;
-}
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-actions>button{
-  box-sizing:border-box;
-  min-width:44px!important;
-  min-height:44px!important;
-  border-radius:14px!important;
-  background-image:none!important;
-  box-shadow:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-actions>button:focus-visible,
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session :is(button,summary):focus-visible{
@@ -4100,9 +3684,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   outline-offset:2px;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-filters{
-  min-width:0;
   flex-wrap:wrap;
-  gap:7px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-group-header{
   min-width:0;
@@ -4289,12 +3871,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   flex-shrink:1;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab>span{
-  box-sizing:border-box;
-  max-width:100%;
   min-width:0;
-  text-align:center;
-  white-space:normal!important;
-  overflow-wrap:anywhere;
   line-height:1.2;
 }
 #root[data-pi-motion="expressive"] .wpb :is(
@@ -4349,7 +3926,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab:focus-visible{
   outline:2px solid currentColor!important;
-  outline-offset:-2px!important;
 }
 #root[data-pi-motion="expressive"] .wpb :is(
   .wpb-home-create,.wpb-home .wpb-home-hero .wpb-primary-action,
@@ -4361,7 +3937,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 @media(forced-colors:active){
   #root[data-pi-motion="expressive"] .wpb .wpb-tabbar[data-pi-m3-track]::before{
     outline:2px solid Highlight!important;
-    background-color:Canvas!important;
   }
 }
 
@@ -4494,11 +4069,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    remains paint-only, measured by ui-motion.js from these real bounds. */
 #root[data-pi-motion="expressive"] .wpb .wpb-tabbar{
   background-color:var(--pi-r38-nav-surface)!important;
-  background-image:none!important;
   padding-top:5px!important;
   padding-bottom:calc(5px + env(safe-area-inset-bottom))!important;
-  border-top-color:var(--pi-r11-edge)!important;
-  box-shadow:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab{
   box-sizing:border-box;
@@ -4507,9 +4079,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   justify-content:flex-start!important;
   align-items:center!important;
   gap:0!important;
-  height:56px!important;
   min-height:56px!important;
-  padding:5px 1px 4px!important;
   border-radius:14px!important;
   background:transparent!important;
 }
@@ -4528,14 +4098,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   flex:none;
   margin:9px 0 0!important;
   padding:0!important;
-  min-height:15px;
   line-height:15px!important;
   font-size:clamp(10.5px,2.75vw,12px)!important;
   font-weight:550;
   letter-spacing:0!important;
-  text-align:center;
-  white-space:nowrap!important;
-  overflow-wrap:normal!important;
   text-overflow:clip!important;
 }
 /* The theme's saved ink color remains accessible. The active pill now has
@@ -4544,41 +4110,12 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb .wpb-tabbar[data-pi-m3-track]::before{
   border-radius:16px!important;
   background-color:var(--pi-r38-nav-indicator-fill)!important;
-  background-image:none!important;
-  box-shadow:none!important;
 }
 /* Unify Home surfaces without recoloring training status, progress values,
    the user-selected accent, or the important Start Workout foreground. */
-#root[data-pi-motion="expressive"] .wpb-home .wpb-home-header,
-#root[data-pi-motion="expressive"] .wpb-home>.wpb-page-header{
-  background-color:light-dark(var(--pi-m3e-surface-container-low),var(--pi-r38-surface-1))!important;
-  background-image:none!important;
-  border-bottom-color:var(--pi-r11-edge)!important;
-  box-shadow:none!important;
-}
-#root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero{
-  background-color:light-dark(var(--pi-m3e-primary-container),var(--pi-r38-surface-hero))!important;
-  border-color:var(--pi-r11-edge)!important;
-  box-shadow:none!important;
-}
-#root[data-pi-motion="expressive"] .wpb-home .wpb-m3-session-preview{
-  background-color:light-dark(var(--pi-m3e-surface-container-high),var(--pi-r38-surface-2))!important;
-  background-image:none!important;
-  border-color:var(--pi-r11-edge)!important;
-}
 #root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero>.wpb-primary-action{
   background-color:light-dark(var(--pi-m3e-primary),
     color-mix(in srgb,var(--pi-m3e-primary) 69%,var(--pi-r38-carbon) 31%))!important;
-  background-image:none!important;
-}
-#root[data-pi-motion="expressive"] .wpb-home .wpb-home-compose-bar{
-  background-color:light-dark(var(--pi-m3e-surface-container-low),var(--pi-r38-surface-1))!important;
-  background-image:none!important;
-  border-top-color:var(--pi-r11-edge)!important;
-}
-#root[data-pi-motion="expressive"] .wpb-home .wpb-home-compose-bar .wpb-home-quick{
-  background-color:light-dark(var(--pi-m3e-surface-container-high),var(--pi-r38-surface-2))!important;
-  border-color:var(--pi-r11-edge)!important;
   background-image:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-home-create{
@@ -4722,29 +4259,19 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 /* Progress: compact, readable data first, controls next. Keep every actual
    metric and its time window visible rather than hiding secondary labels. */
 #root[data-pi-motion="expressive"] .wpb-progress>.wpb-page-header{
-  padding:14px 16px 12px!important;
-  border-radius:0 0 23px 23px!important;
   background-color:var(--pi-r11-quiet)!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-title{
   font-size:clamp(27px,6.7vw,32px)!important;
   line-height:1.1!important;
-  margin-bottom:8px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs{
   min-width:0;
   margin-top:7px!important;
-  padding:4px!important;
-  border-radius:19px!important;
   background-color:var(--pi-r11-raised)!important;
-  background-image:none!important;
-  border:1px solid var(--pi-r11-edge)!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs>button{
   min-width:0!important;
-  min-height:44px!important;
-  padding-inline:6px!important;
-  border-radius:15px!important;
   line-height:1.15!important;
   text-align:center;
 }
@@ -4759,23 +4286,15 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   min-height:80px!important;
   padding:11px 9px!important;
   border-radius:17px!important;
-  background-color:var(--pi-r11-quiet)!important;
-  border-color:var(--pi-r11-edge)!important;
   box-shadow:none!important;
-}
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item:first-child{
-  background-color:var(--pi-r11-hero)!important;
-  border-color:var(--pi-r11-accent-stroke)!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-label{
   font-size:11.5px!important;
-  line-height:1.28!important;
   letter-spacing:0!important;
   margin-top:4px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item>div:last-child{
   font-size:10.5px!important;
-  line-height:1.3!important;
 }
 /* Related history tools share one clear rhythm without amplifying empty
    periods with giant, decorative cards. Semantic search/filters untouched. */
@@ -4795,7 +4314,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-filter-help{
   font-size:11.5px!important;
-  line-height:1.42!important;
   max-width:52ch;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-disclosure>summary{
@@ -4806,18 +4324,12 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-grouping{
   background-color:var(--pi-r11-quiet)!important;
-  background-image:none!important;
-  border:1px solid var(--pi-r11-edge)!important;
-  border-radius:15px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-grouping>button{
-  min-height:44px!important;
   padding-inline:12px!important;
-  border-radius:12px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session{
   background-color:var(--pi-r11-quiet)!important;
-  border-radius:20px!important;
 }
 @media(max-width:359px){
   #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-inner{
@@ -5017,7 +4529,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-tabbar{
   background-color:light-dark(var(--pi-m3e-surface-container-low),var(--pi-r41-surface-1))!important;
-  border-top-color:var(--pi-r11-edge)!important;
   box-shadow:none!important;
 }
 /* Progress's primary navigation owns one expressive track. Everything else
@@ -5038,7 +4549,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs{
   background-color:light-dark(var(--pi-m3e-surface-container),var(--pi-r41-surface-2))!important;
-  background-image:none!important;
   border:1px solid var(--pi-r11-edge)!important;
   border-radius:18px!important;
   box-shadow:none!important;
@@ -5240,8 +4750,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   box-shadow:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb-settings .wpb-segmented>button{
-  min-height:40px!important;
-  min-width:0;
   border-radius:11px!important;
 }
 @media(max-width:359px){
@@ -5548,7 +5056,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb-home .wpb-m3-session-preview{
   background-color:var(--pi-r11-raised)!important;
   background-image:none!important;
-  border-color:var(--pi-r11-edge)!important;
   box-shadow:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb-home :is(
@@ -5721,7 +5228,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    truncating preference names; retain 48px minimum hits and the animated
    selection track's measured width. This is NOT the workout set logger. */
 #root[data-pi-motion="expressive"] .wpb-settings .wpb-segmented>button{
-  min-width:0!important;
+  min-width:48px!important;
   max-width:100%;
   height:auto!important;
   min-height:48px!important;
@@ -5790,11 +5297,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 /* Different header generations still coexist in Home / Progress.
    Same neutral page + low surface from R41 on both: no purple header slab. */
 #root[data-pi-motion="expressive"] .wpb .wpb-progress.wpb-progress>.wpb-page-header{
-  background:var(--pi-r48-quiet)!important;
   background-image:none!important;
-  border-bottom:1px solid var(--pi-r48-divider)!important;
-  border-radius:0 0 22px 22px!important;
-  box-shadow:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs{
   background:var(--pi-r48-raised)!important;
@@ -5813,18 +5316,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   box-shadow:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-program.wpb-program .wpb-day-card[data-next="true"]{
-  background:var(--pi-r11-hero)!important;
-  background-image:none!important;
   border-color:var(--pi-r11-accent-stroke)!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-program.wpb-program .wpb-week-rail{
   gap:6px!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-program.wpb-program .wpb-week-rail>button:not(
-  [aria-pressed="true"]):not([aria-current="page"]):not([data-active="true"]){
-  background:var(--pi-r48-quiet)!important;
-  background-image:none!important;
-  border-color:var(--pi-r48-divider)!important;
 }
 /* Profile is a dashboard, not an award-card wall. Carry shared neutral
    edges into score subcards and keep the strength score as the single accent. */
@@ -6078,16 +5573,34 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-color:var(--pi-color-divider)!important;
   box-shadow:none!important;
 }
-/* The Experience control is a 4-column GRID, not a flex row.
-   Give "Intermediate" a meaningfully wider column at regular phone widths
-   without shrinking text; tiny screens can still wrap naturally at 125%. */
+/* Keep whole preference names readable. The actual scroll pane supplies
+   an inline-size container so larger rem-based text gets room automatically. */
+#root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-page-scroll{
+  container-type:inline-size;
+  container-name:pi-settings-body;
+}
 #root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-experience-segmented{
   display:grid!important;
-  grid-template-columns:minmax(0,.85fr) minmax(0,1fr) minmax(0,1.5fr) minmax(0,1fr)!important;
+  grid-template-columns:48px minmax(0,1fr) minmax(0,1.45fr) minmax(0,1.1fr)!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-experience-segmented>button{
   min-width:0;
+  padding-inline:3px!important;
+  font-size:.875rem!important;
+  white-space:nowrap!important;
+  overflow-wrap:normal!important;
+  word-break:normal!important;
   letter-spacing:-.01em!important;
+}
+@container pi-settings-body (max-width:22rem){
+  #root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-experience-segmented{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+}
+@container pi-settings-body (max-width:16rem){
+  #root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-experience-segmented{
+    grid-template-columns:minmax(0,1fr)!important;
+  }
 }
 /* Preserve the R41 primary/secondary hierarchy: By cycle/By month is
    visibly quieter than the main Progress destination tabs. */
@@ -6276,7 +5789,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   box-shadow:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-program.wpb-program .wpb-day-card[data-next="true"]{
-  background:var(--pi-color-feature)!important;
   background-image:none!important;
   border-color:var(--pi-r11-accent-stroke)!important;
 }
@@ -6467,7 +5979,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 
 /* R56 — Home's compact masthead is a layout state, not just hidden greeting.
    The title expands with the real scroll pane; once collapsed, return useful
-   screen height while keeping all three tools >=44dp and fully accessible. */
+   screen height while keeping all three tools >=48px and fully accessible. */
 #root[data-pi-motion="expressive"] .wpb .wpb-home .wpb-home-topline{
   min-width:0;
   gap:12px;
@@ -6504,7 +6016,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   box-shadow:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-home[data-home-compact="1"] .wpb-home-topline{
-  min-height:44px;
+  min-height:48px;
   padding-bottom:0!important;
   gap:10px;
 }
@@ -6532,12 +6044,12 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-radius:13px!important;
   flex-shrink:0;
 }
-#root[data-pi-motion="expressive"] .wpb .wpb-home[data-home-compact="1"] .wpb-home-tools>button{
+#root[data-pi-motion="expressive"] .wpb .wpb-home .wpb-home-tools>button{
   box-sizing:border-box;
-  min-width:44px!important;
-  min-height:44px!important;
-  width:44px!important;
-  height:44px!important;
+  min-width:48px!important;
+  min-height:48px!important;
+  width:48px!important;
+  height:48px!important;
   padding:0!important;
   background:transparent!important;
   color:var(--pi-color-on-control)!important;
@@ -6580,14 +6092,14 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   --pi-r57-on-support:var(--pi-color-on-muted);
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-view .wpb-plan-heading-row{
-  min-height:44px;
+  min-height:48px;
   gap:8px!important;
   padding:2px 0 0!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-view .wpb-plan-heading-row>button[aria-label="Back"]{
   box-sizing:border-box;
-  width:44px!important;
-  height:44px!important;
+  width:48px!important;
+  height:48px!important;
   padding:0!important;
   display:grid!important;
   place-items:center!important;
@@ -6650,14 +6162,14 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   background:var(--pi-color-canvas)!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-settings.wpb-settings .wpb-settings-jump-control{
-  min-height:48px!important;
+  min-height:52px!important;
   background:var(--pi-color-control)!important;
   border:1px solid var(--pi-color-divider)!important;
   border-radius:13px!important;
   color:var(--pi-color-on-control)!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-settings.wpb-settings .wpb-settings-jump-control select{
-  min-height:44px!important;
+  min-height:48px!important;
   color:var(--pi-color-on-control)!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-inner{
@@ -6690,7 +6202,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-edit{
   box-sizing:border-box!important;
-  min-height:44px!important;
+  min-height:48px!important;
   min-width:62px!important;
   padding:0 11px!important;
   border:1px solid var(--pi-color-divider)!important;

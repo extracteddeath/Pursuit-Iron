@@ -674,3 +674,37 @@ The existing b831 mobile-browser contract checks both 320px and 430px chart
 keyboard focus, bounds, input/RIR persistence, rest tools, sheet close actions
 and Back. M219 additionally checks real Light-theme Gym Done and workout
 toolbar hit geometry. No training state or storage is changed.
+
+## R38 — Screenshot-driven navigation and tonal-home evolution
+
+The October 11 Android capture exposed a crowded selected bottom-navigation
+pill (the outlined capsule visually touches the "Home" label) and mixed
+maroon/plum/gray surfaces across the header, Next Workout and supporting
+score card. This is a *design-system* fix, not a change to exercise data.
+
+- Bottom tabs retain their five native buttons, stateful routes, touch
+  feedback, keyboard navigation and interruptible selected indicator. Each
+  button has a 56px icon-plus-label stack, 22px icon, and an explicit 9px
+  label offset. The track is a measured 27px icon-only pill, 6px above
+  the label in its resting geometry. Neither pill nor icon may collide with
+  text at Android 320px/430px widths.
+- The moving pill uses an opaque, theme-derived tonal fill instead of a
+  translucent, nearly-empty capsule. Label and non-text selected-state
+  contrasts are still tested across all 20 saved themes. No fixed brand
+  hue is added to the bottom shell.
+- The neutral-rich dark surfaces are derived from the user's chosen theme
+  base, mixed with a small amount of charcoal, rather than competing
+  pink-purple overlays. Home app bar, next-session hero, session outline,
+  score context and anchored Create/Quick actions follow a consistent
+  tonal elevation ladder. Only the meaningful status and Start Workout CTA
+  carry stronger accent. Light themes keep their existing design roles.
+- R38 changes only paint, navigation measurement and the associated browser
+  contracts. Protected set rows, numeric inputs and steppers, RIR, Target/
+  Previous, workout data, program generation and History are unchanged.
+- CI checks the actual indicator-to-label and icon-to-label gaps, rendered
+  opaque selection, 4.5:1 selected text and 3:1 selected-state perimeter,
+  five destinations, and Home dock-vs-navigation clearance across themes.
+  Reduced motion and forced-colors remain functional.
+
+The screenshot is a product review reference; physical Android tap and
+TalkBack inspection still require a device after deployment.

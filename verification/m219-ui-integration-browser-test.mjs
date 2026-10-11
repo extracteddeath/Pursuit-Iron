@@ -132,6 +132,16 @@ try {
                 };
                 const navStyle=getComputedStyle(nav),selectedStyle=getComputedStyle(selected);
                 const ringStyle=getComputedStyle(nav,'::before');
+                const selectedIcon=selected.querySelector('svg');
+                const selectedLabel=selected.querySelector('span');
+                const labelTop=selectedLabel?.getBoundingClientRect().top??0;
+                const iconBottom=selectedIcon?.getBoundingClientRect().bottom??0;
+                const indicatorBottom=selected.getBoundingClientRect().top+
+                    (parseFloat(nav.style.getPropertyValue('--pi-m3-track-y'))-selected.offsetTop)+
+                    parseFloat(ringStyle.height);
+                const compose=tab==='home' ? document.querySelector('.wpb-home-compose-bar') : null;
+                const dockClearance=compose&&compose.getClientRects().length ?
+                    nav.getBoundingClientRect().top-compose.getBoundingClientRect().bottom : null;
                 const labels=[...nav.querySelectorAll('button[data-tab]')].map(button=>{
                     const box=button.getBoundingClientRect(),label=button.querySelector('span');
                     return {tab:button.dataset.tab,w:box.width,h:box.height,
@@ -139,6 +149,11 @@ try {
                 });
                 return {
                     labels,
+                    indicatorLabelGap:labelTop-indicatorBottom,
+                    iconLabelGap:labelTop-iconBottom,
+                    indicatorHeight:parseFloat(ringStyle.height),
+                    indicatorAlpha:channels(ringStyle.backgroundColor)[3],
+                    dockClearance,
                     navLabelRatio:ratio(selectedStyle.color,navStyle.backgroundColor),
                     navOutlineRatio:ratio(ringStyle.outlineColor,navStyle.backgroundColor),
                     primaryRatio:primary ? ratio(getComputedStyle(primary).color,getComputedStyle(primary).backgroundColor) : null,
@@ -152,6 +167,11 @@ try {
             assert.ok(accessibility.navLabelRatio>=4.5 &&
                 accessibility.navOutlineRatio>=3 && accessibility.outlineWidth>=2,
                 `R35 ${theme}/${tab} semantic navigation contrast: ${JSON.stringify(accessibility)}`);
+            assert.ok(accessibility.indicatorHeight>=26 && accessibility.indicatorHeight<=28 &&
+                accessibility.indicatorAlpha===255 &&
+                accessibility.indicatorLabelGap>=4.5 && accessibility.iconLabelGap>=7 &&
+                (accessibility.dockClearance===null || accessibility.dockClearance>=-1),
+                `R38 ${theme}/${tab} icon and selected indicator never collide with labels or dock: ${JSON.stringify(accessibility)}`);
             if(tab==='home') assert.ok(accessibility.primaryRatio>=4.5 && accessibility.primaryHeight>=44,
                 `R35 ${theme} filled primary action must have 4.5:1 text contrast: ${JSON.stringify(accessibility)}`);
         }

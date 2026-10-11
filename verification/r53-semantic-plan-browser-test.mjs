@@ -96,7 +96,7 @@ try{
       }
       if(tab==='settings'){
         const legibility=await page.evaluate(()=>{
-          const selected=['Intermediate','Advanced'].map(label=>{
+          const selected=['New','Beginner','Intermediate','Advanced'].map(label=>{
             const el=[...document.querySelectorAll('.wpb-experience-segmented>button')].find(b=>b.textContent.trim()===label);
             if(!el)return {label,missing:true};
             const range=document.createRange();range.selectNodeContents(el);

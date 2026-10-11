@@ -2395,15 +2395,45 @@ try {
                             style:cs.outlineStyle,width:cs.outlineWidth,
                             offset:parseFloat(cs.outlineOffset),
                             height:el.getBoundingClientRect().height,
-                            layoutHeight:el.offsetHeight};
+                            layoutHeight:el.offsetHeight,
+                            textClipped:el.scrollWidth>el.clientWidth+1,
+                            touchAction:cs.touchAction};
                     });
                     assert.ok(focusR46.focusVisible&&focusR46.style==='solid'&&
                         parseFloat(focusR46.width)>=2&&focusR46.offset===-2&&
-                        focusR46.layoutHeight>=44&&focusR46.height>=43.5,
-                        'R46 real segmented focus has a 44px layout target even during route-scale arrival: '+
+                        focusR46.layoutHeight>=48&&focusR46.height>0&&
+                        !focusR46.textClipped&&focusR46.touchAction==='manipulation',
+                        'R47 segmented focus retains real >=48px layout target independent of spring scale: '+
                         JSON.stringify(focusR46));
                 }
             }
+        }
+        // R47: larger selection-rail targets must not steal space from
+        // labels in 320/393/430 phone layouts. Sample real CSS layout boxes
+        // rather than transform-scaled rectangles during page entrance.
+        for(const tab of ['plan','progress','settings']){
+            await page.click('[data-tab="'+tab+'"]');
+            await page.waitForSelector('[data-view-frame="'+tab+'"]');
+            const r47=await page.evaluate(tab=>{
+                const selectors=tab==='plan'?['.wpb-plan-panes']:
+                    tab==='progress'?['.wpb-premium-tabs','.wpb-progress-grouping']:
+                        ['.wpb-settings .wpb-segmented'];
+                const tracks=selectors.flatMap(selector=>[...document.querySelectorAll(selector)]
+                    .filter(x=>x.getClientRects().length));
+                return {tab,items:tracks.map(track=>({
+                    height:track.offsetHeight,
+                    controls:[...track.querySelectorAll(':scope > button')].map(el=>({
+                        height:el.offsetHeight,
+                        clipped:el.scrollWidth>el.clientWidth+1,
+                        touch:getComputedStyle(el).touchAction
+                    }))
+                })),overflow:document.querySelector('.wpb').scrollWidth>innerWidth+1};
+            },tab);
+            assert.ok(r47.items.length>=1&&!r47.overflow&&r47.items.every(x=>
+                x.height>=56&&x.controls.length>0&&x.controls.every(b=>
+                    b.height>=48&&!b.clipped&&b.touch==='manipulation')),
+                'R47 primary app mode controls use 48px real targets, not decorative-only rails: '+
+                JSON.stringify(r47));
         }
         await page.evaluate(()=>{document.documentElement.style.fontSize='';});
         assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),initial.saved,

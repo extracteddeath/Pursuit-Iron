@@ -1,3 +1,9 @@
+## Build 835 — M3 Expressive R56 Home header density
+
+- Collapsed Home now reduces its actual chrome height, instead of merely hiding the greeting while leaving the full branding/toolbar row.
+- Restores a compact Iron identity, neutral toolbar surface, and three 44dp controls, with responsive 320dp layout and safe theme-aware on-colors.
+- Enlarges browser coverage to test scroll-down/scroll-back header behavior, light/dark palettes, narrow-phone overflow, and live Exercise Library navigation.
+
 ## Build 834 — M3 Expressive R55 expanded Program hierarchy
 
 - Removed the mismatched gray day/plum exercise surfaces, replacing them with shared theme-derived neutral elevations.

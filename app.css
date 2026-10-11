@@ -6681,8 +6681,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   letter-spacing:-.04em!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-identity{
-  font-size:12px!important;
-  line-height:1.35!important;
+  /* Font size and line height stay owned by the earlier rem-based Android
+     text-scaling contract; never lock Profile metadata to a 12px value. */
   color:var(--pi-r57-on-support)!important;
   background:transparent!important;
   padding:0!important;

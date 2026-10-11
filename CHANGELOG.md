@@ -1,3 +1,11 @@
+## Build 846 — Editable barbell and Smith bar weights
+
+- Add independent empty-bar mass settings for barbells and Smith machines in each gym. Smith bars can be 0 when counterbalanced. Changing units converts actual values instead of reinterpreting numbers.
+- Plate Calculator, focused workout plate breakdowns, inline load readouts and bar selection labels use the active gym's bar mass. Logged set weights remain total load, including the bar; existing workout history is unchanged.
+- Import/export and persisted gyms retain custom masses; gyms with no overrides continue using the established barbell (45 lb) and Smith (35 lb) defaults.
+- Introduce node and real-browser regression contracts for separate gyms, zero-mass Smith, lb/kg switching, defaults, saving and mobile/desktop editor controls.
+- No gym migration, change to progression algorithms, or unrelated theme color changes.
+
 ## Build 845 — Curl weight stepping and Dynamic Double progression
 
 - Incline dumbbell curl steppers follow the gym's available dumbbell rack, including loads below 25 lb. Without a rack list, a coarse legacy exercise increment cannot skip from 25 lb straight to zero; light dumbbells step down by normal 5 lb / 2 kg increments.

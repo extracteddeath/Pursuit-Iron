@@ -63,7 +63,7 @@ assert.match(audit, /github\.ref == 'refs\/heads\/main' \|\| github\.event_name 
 assert.equal(registry.contractCount, Object.values(contractGroups).flat().length);
 assert.equal(registry.browserCount, Object.values(browserShards).flat().length);
 assert.equal(registry.releaseCount, releaseTests.length);
-assert.equal(registry.browserCount, 18, 'R65 adds one paired light/dark adaptive-shell contract without dropping the existing 17 browser gates');
+assert.equal(registry.browserCount, 19, 'R65 adds one paired light/dark adaptive-shell contract without dropping the existing 17 browser gates');
 assert.ok(browserShards.integration.includes('b831-expressive-motion-browser-test.mjs'),
     'app-wide expressive interaction coverage must run in the integration shard');
 assert.equal(registry.releaseCount, 1, 'release-only semantics should remain narrow');

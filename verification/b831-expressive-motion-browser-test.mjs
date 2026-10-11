@@ -2029,6 +2029,50 @@ try {
         await page.reload({waitUntil:'networkidle0'});
         assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),initial.saved,
             'R21 switcher test restores the source program unchanged');
+        // R40: simulate Android's enlarged reading scale in a real phone
+        // viewport. Unlike zooming the entire page, rem changes allow native
+        // touch targets to stay in physical CSS pixels while text is larger.
+        await page.evaluate(()=>{document.documentElement.style.fontSize='20px';});
+        for(const tab of ['home','progress','profile','plan','settings']){
+            await page.click('[data-tab="'+tab+'"]');
+            await page.waitForSelector('[data-view-frame="'+tab+'"]');
+            const r40=await page.evaluate(tab=>{
+                const bar=document.querySelector('.wpb-tabbar');
+                const active=bar?.querySelector('[aria-current="page"]');
+                const label=active?.querySelector('span');
+                const icon=active?.querySelector('svg');
+                const screen=document.querySelector('.wpb');
+                const rect=x=>x?.getBoundingClientRect();
+                const labels=bar?[...bar.querySelectorAll('.wpb-tab>span')]:[];
+                const text=selector=>{
+                    const el=document.querySelector(selector);
+                    return el?{px:parseFloat(getComputedStyle(el).fontSize),
+                        overflow:el.scrollWidth>el.clientWidth+1}:null;
+                };
+                return {tab,screenOverflow:screen?.scrollWidth>innerWidth+1,
+                    navOverflow:bar?.scrollWidth>bar.clientWidth+1,
+                    selectedHeight:rect(active)?.height||0,
+                    labelInside:!!label&&rect(label).bottom<=rect(active).bottom+1,
+                    labelGap:label&&icon?rect(label).top-rect(icon).bottom:null,
+                    truncatedLabels:labels.filter(el=>el.scrollWidth>el.clientWidth+1).map(el=>el.textContent),
+                    profileIdentity:text('.wpb-profile-identity'),
+                    progressLabel:text('.wpb-progress-glance-label'),
+                    planLabel:text('.wpb-plan-glance-tile>div:first-child')};
+            },tab);
+            assert.ok(!r40.screenOverflow&&!r40.navOverflow&&
+                r40.selectedHeight>=56&&r40.labelInside&&r40.labelGap>=7&&
+                r40.truncatedLabels.length===0,
+                'R40 enlarged text keeps all five bottom destinations visible at '+width+'px: '+JSON.stringify(r40));
+            if(tab==='profile')assert.ok(r40.profileIdentity?.px>=16&&!r40.profileIdentity.overflow,
+                'R40 Profile identity scales for Android large text: '+JSON.stringify(r40));
+            if(tab==='progress')assert.ok(r40.progressLabel?.px>=14&&!r40.progressLabel.overflow,
+                'R40 Progress summary scales without clipping: '+JSON.stringify(r40));
+            if(tab==='plan')assert.ok(r40.planLabel?.px>=14&&!r40.planLabel.overflow,
+                'R40 Plan summary scales without clipping: '+JSON.stringify(r40));
+        }
+        await page.evaluate(()=>{document.documentElement.style.fontSize='';});
+        assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),initial.saved,
+            'R40 text scaling changes presentation only, never training data');
         assert.deepEqual(errors, []);
         await page.close();
         await context.close();
@@ -2073,6 +2117,24 @@ try {
                 startR25.secondaryTouch==='manipulation')) &&
             !startR25.overflow,
             'R25 cold-start welcome is solid and touch-safe: '+JSON.stringify(startR25));
+        // R40 first-run/empty-program path remains usable with enlarged text.
+        await welcome.evaluate(()=>{document.documentElement.style.fontSize='20px';});
+        const r40Welcome=await welcome.$eval('.wpb-onboarding',el=>{
+            const primary=el.querySelector('.wpb-onboarding-primary');
+            const secondary=el.querySelector('.wpb-onboarding-secondary');
+            const buttons=[primary,secondary].filter(x=>x&&x.getClientRects().length);
+            const features=[...el.querySelectorAll('.wpb-onboarding-feature')];
+            return {scrollOverflow:el.scrollWidth>el.clientWidth+1,
+                buttons:buttons.map(x=>({h:x.getBoundingClientRect().height,
+                    textOverflow:x.scrollWidth>x.clientWidth+1})),
+                featureOverflows:features.filter(x=>x.scrollWidth>x.clientWidth+1).length};
+        });
+        assert.ok(!r40Welcome.scrollOverflow &&
+            r40Welcome.buttons.length>=1 &&
+            r40Welcome.buttons.every(x=>x.h>=50&&!x.textOverflow) &&
+            r40Welcome.featureOverflows===0,
+            'R40 cold-start content survives enlarged Android text: '+JSON.stringify(r40Welcome));
+        await welcome.evaluate(()=>{document.documentElement.style.fontSize='';});
         if(width===430) await welcome.screenshot({path:path.join(root,'verification/b831-m3-onboarding-phone.png')});
         assert.deepEqual(welcomeErrors,[]);
         await cleanContext.close();

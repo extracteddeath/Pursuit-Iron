@@ -183,6 +183,63 @@ try {
             'R30 coalesced ResizeObserver still tracks final selected button geometry: '+
                 JSON.stringify(trackResizeR30));
 
+        // R31: interruption must preserve the newest animation and ownership.
+        // Use a detached-from-React but connected fixture to exercise the
+        // same exported sheet/dialog transition helpers as the application.
+        const interruptR31=await page.evaluate(async()=>{
+            const {spring,exitMotion,resumeMotion,setMotionValue}=await import('/modules/ui-motion.js');
+            const host=document.createElement('div');
+            const dialog=document.createElement('section');
+            dialog.className='wpb-dialog';
+            const backdrop=document.createElement('div');
+            backdrop.className='wpb-backdrop';
+            host.append(dialog,backdrop);
+            document.body.append(host);
+            const move=(el,key)=>v=>el.style.setProperty(key,String(v));
+            let retargetFinished=0,firstExit=0,secondExit=0;
+            try{
+                // A disposer for the first (no-callback) animation must not
+                // stop the second spring even though both have null complete.
+                const test=document.createElement('div');
+                host.append(test);
+                const oldStop=spring(test,'--r31-interrupt',80,{
+                    from:0,write:move(test,'--r31-interrupt'),stiffness:1700
+                });
+                spring(test,'--r31-interrupt',20,{
+                    write:move(test,'--r31-interrupt'),stiffness:1000,damping:1,
+                    precision:.02,complete:()=>retargetFinished++
+                });
+                oldStop();
+                // A direct drag value is also a new owner of the property.
+                const dragStop=spring(test,'--r31-drag',75,{
+                    from:0,write:move(test,'--r31-drag'),stiffness:1500
+                });
+                setMotionValue(test,'--r31-drag',13,move(test,'--r31-drag'));
+                dragStop();
+                const dragPreserved=Number.parseFloat(
+                    test.style.getPropertyValue('--r31-drag'))===13;
+                const firstStop=exitMotion(host,()=>firstExit++);
+                resumeMotion(host);
+                firstStop(); // previous disposer after direction reversal
+                await new Promise(resolve=>setTimeout(resolve,100));
+                exitMotion(host,()=>secondExit++);
+                firstStop(); // stale close must never stop a new close
+                await new Promise(resolve=>setTimeout(resolve,850));
+                const retarget=Number.parseFloat(test.style.getPropertyValue('--r31-interrupt'));
+                const y=Number.parseFloat(dialog.style.getPropertyValue('--pi-surface-y'));
+                const opacity=Number.parseFloat(dialog.style.getPropertyValue('--pi-surface-opacity'));
+                return {retargetFinished,retarget,dragPreserved,firstExit,secondExit,y,opacity};
+            } finally{host.remove();}
+        });
+        assert.ok(interruptR31.retargetFinished===1 &&
+            Math.abs(interruptR31.retarget-20)<.1 &&
+            interruptR31.dragPreserved &&
+            interruptR31.firstExit===0 && interruptR31.secondExit===1 &&
+            interruptR31.y>=7.8 && interruptR31.opacity<.05,
+            'R31 interrupted and resumed transitions retain only current ownership: '+
+                JSON.stringify(interruptR31));
+
+
 
 
         // R16: a named solid surface must not be a 3%-alpha color wash.

@@ -4392,3 +4392,65 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     color:CanvasText!important;
   }
 }
+
+/* M3 EXPRESSIVE R37 — ANDROID TOUCH AND VISIBLE CHART FOCUS
+   Expand *standalone* targets to the Android-recommended 48dp, not the
+   protected weight/reps steppers or compact set grid. Preserve icon glyph
+   sizes, card density, motion ownership and all React callbacks. */
+#root[data-pi-motion="expressive"] .wpb .wpb-sheet-close{
+  width:48px!important;
+  height:48px!important;
+  min-width:48px!important;
+  min-height:48px!important;
+  flex-shrink:0;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-gym-done{
+  min-height:48px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail
+  .wpb-exercise-detail-header>button:first-child{
+  width:48px!important;
+  height:48px!important;
+  min-width:48px!important;
+  min-height:48px!important;
+  flex:0 0 48px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-workout .wpb-workout-tool,
+#root[data-pi-motion="expressive"] .wpb-workout .wpb-rest-actions>button,
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-actions>button{
+  box-sizing:border-box;
+  min-width:48px!important;
+  min-height:48px!important;
+}
+#root[data-pi-motion="expressive"] .wpb :is(
+  .wpb-sheet-close,.wpb-gym-done,
+  .wpb-exercise-detail-header>button:first-child,
+  .wpb-workout-tool,.wpb-rest-actions>button,
+  .wpb-history-actions>button):focus-visible{
+  outline:2px solid currentColor!important;
+  outline-offset:2px!important;
+}
+/* The existing keyboard-accessible chart slider previously used a 55%-opaque
+   focus stroke. Keep the dashed shape but make it an unmistakable 2.5px,
+   full-opacity ring. The graph axes/points and track do not move. */
+#root[data-pi-motion="expressive"] .wpb .wpb-chart [data-chart-scrubber]:focus-visible{
+  outline:none!important;
+  stroke:currentColor!important;
+  stroke-width:2.5px!important;
+  stroke-opacity:1!important;
+  stroke-dasharray:4 3!important;
+}
+@media(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb .wpb-chart [data-chart-scrubber]:focus-visible{
+    stroke:Highlight!important;
+    stroke-width:3px!important;
+    stroke-opacity:1!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb :is(
+    .wpb-sheet-close,.wpb-gym-done,
+    .wpb-exercise-detail-header>button:first-child,
+    .wpb-workout-tool,.wpb-rest-actions>button,
+    .wpb-history-actions>button):focus-visible{
+    outline-color:Highlight!important;
+  }
+}

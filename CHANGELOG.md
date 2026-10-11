@@ -1,3 +1,13 @@
+## Build 840 — R61 foundations pilot
+
+- Plan session labels and shared runtime surfaces follow the live saved theme on cold start, warm start and in-app theme changes.
+- Profile distinguishes missing bodyweight from missing scored lift data, and retains the existing Strength Score when evidence is available.
+- Pilot shared headers, primary/secondary/icon actions, selected choices and static guidance on Home and Plan; keep native button semantics and existing navigation/motion owners.
+- Give Start workout primary emphasis and Create Program secondary emphasis when a session is ready; preserve all creation and freestyle entry points.
+- Keep full-size hit targets, allow Plan session names to wrap, and pair tonal selected choices with a readable foreground.
+- Extend the existing phone gate with actual label contrast, stale startup cache, warm theme changes, Profile states and pointer access.
+- Expand the companion UI/UX Master Plan with Material tablet/laptop navigation, pane layouts, content constraints, input behavior and resize/zoom acceptance criteria. Those adaptive layouts are planned future slices.
+
 ## Build 839 — R60 browsing context
 
 - Exercise Library retains search, muscle, equipment and Recent/Goals/Banned filters when returning from Compare.

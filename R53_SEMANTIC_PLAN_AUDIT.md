@@ -29,3 +29,5 @@ Screenshots are GitHub Actions artifacts named `r53-*-phone.png`, owned by the *
 Check both contrast ratios and visual results. A passing computed-style test does not imply every hierarchy decision is subjectively perfect. The design baseline should be evaluated visually before extending the system to other small legacy panels. Do not change exercise history, prescription engine logic, sessions, gestures, steppers, or rest behavior. Any failure in verification or the offline PWA release signature blocks merging.
 
 R53 increments UI build to 832 and regenerates the PWA shell cache revision by the canonical finalizer. All CI workflows already in the repo remain as designed; use and remove a one-shot finalizer only for release fingerprint calculation.
+
+Certification workflow is temporary and must be deleted before PR merge.

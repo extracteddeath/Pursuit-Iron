@@ -2029,6 +2029,50 @@ try {
         await page.reload({waitUntil:'networkidle0'});
         assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),initial.saved,
             'R21 switcher test restores the source program unchanged');
+        // R40: simulate Android's enlarged reading scale in a real phone
+        // viewport. Unlike zooming the entire page, rem changes allow native
+        // touch targets to stay in physical CSS pixels while text is larger.
+        await page.evaluate(()=>{document.documentElement.style.fontSize='20px';});
+        for(const tab of ['home','progress','profile','plan','settings']){
+            await page.click('[data-tab="'+tab+'"]');
+            await page.waitForSelector('[data-view-frame="'+tab+'"]');
+            const r40=await page.evaluate(tab=>{
+                const bar=document.querySelector('.wpb-tabbar');
+                const active=bar?.querySelector('[aria-current="page"]');
+                const label=active?.querySelector('span');
+                const icon=active?.querySelector('svg');
+                const screen=document.querySelector('.wpb');
+                const rect=x=>x?.getBoundingClientRect();
+                const labels=bar?[...bar.querySelectorAll('.wpb-tab>span')]:[];
+                const text=selector=>{
+                    const el=document.querySelector(selector);
+                    return el?{px:parseFloat(getComputedStyle(el).fontSize),
+                        overflow:el.scrollWidth>el.clientWidth+1}:null;
+                };
+                return {tab,screenOverflow:screen?.scrollWidth>innerWidth+1,
+                    navOverflow:bar?.scrollWidth>bar.clientWidth+1,
+                    selectedHeight:rect(active)?.height||0,
+                    labelInside:!!label&&rect(label).bottom<=rect(active).bottom+1,
+                    labelGap:label&&icon?rect(label).top-rect(icon).bottom:null,
+                    truncatedLabels:labels.filter(el=>el.scrollWidth>el.clientWidth+1).map(el=>el.textContent),
+                    profileIdentity:text('.wpb-profile-identity'),
+                    progressLabel:text('.wpb-progress-glance-label'),
+                    planLabel:text('.wpb-plan-glance-tile>div:first-child')};
+            },tab);
+            assert.ok(!r40.screenOverflow&&!r40.navOverflow&&
+                r40.selectedHeight>=56&&r40.labelInside&&r40.labelGap>=7&&
+                r40.truncatedLabels.length===0,
+                'R40 enlarged text keeps all five bottom destinations visible at '+width+'px: '+JSON.stringify(r40));
+            if(tab==='profile')assert.ok(r40.profileIdentity?.px>=16&&!r40.profileIdentity.overflow,
+                'R40 Profile identity scales for Android large text: '+JSON.stringify(r40));
+            if(tab==='progress')assert.ok(r40.progressLabel?.px>=14&&!r40.progressLabel.overflow,
+                'R40 Progress summary scales without clipping: '+JSON.stringify(r40));
+            if(tab==='plan')assert.ok(r40.planLabel?.px>=14&&!r40.planLabel.overflow,
+                'R40 Plan summary scales without clipping: '+JSON.stringify(r40));
+        }
+        await page.evaluate(()=>{document.documentElement.style.fontSize='';});
+        assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),initial.saved,
+            'R40 text scaling changes presentation only, never training data');
         assert.deepEqual(errors, []);
         await page.close();
         await context.close();

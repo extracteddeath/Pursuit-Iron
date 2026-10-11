@@ -5642,3 +5642,31 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   background:var(--pi-r11-quiet)!important;
   background-image:none!important;
 }
+
+/* M3 EXPRESSIVE R46 — PHONE CERTIFICATION / FOCUS PAINT
+   R45 used an outward 2px ring on every major control. Inside the
+   M3 moving-indicator rails, the outline can fall outside a rounded track
+   and fight the adjacent button. Keep stand-alone focus outlines outward,
+   but draw segmented-button focus *inside* the actual tap surface. */
+#root[data-pi-motion="expressive"] .wpb :is(
+  .wpb-plan-panes,.wpb-premium-tabs,.wpb-progress-grouping,
+  .wpb-library-flag-filter,.wpb-exercise-tabs,.wpb-exercise-window-tabs,
+  .wpb-settings .wpb-segmented
+)>button:focus-visible{
+  outline:2px solid var(--pi-r45-keyboard-ring)!important;
+  outline-offset:-2px!important;
+  position:relative;
+  z-index:2;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab:focus-visible{
+  outline-offset:-2px!important;
+}
+@media(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb :is(
+    .wpb-plan-panes,.wpb-premium-tabs,.wpb-progress-grouping,
+    .wpb-library-flag-filter,.wpb-exercise-tabs,.wpb-exercise-window-tabs,
+    .wpb-settings .wpb-segmented
+  )>button:focus-visible{
+    outline-color:Highlight!important;
+  }
+}

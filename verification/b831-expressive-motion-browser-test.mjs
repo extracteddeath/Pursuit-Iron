@@ -367,37 +367,34 @@ try {
             await page.click(`[data-tab="${tab}"]`);
             await page.waitForSelector(`[data-view-frame="${tab}"][data-pi-surface]`);
 
-            /* Temporary R52 DOM material diagnostics (removed after inspecting
-               actual component ancestry and computed backgrounds). */
-            if (tab === 'settings' || tab === 'plan') {
-                const r52Styles = await page.evaluate(tab => {
-                    const selector = tab === 'settings' ? '.wpb-settings' : '.wpb-plan-view';
-                    const root = document.querySelector(selector);
-                    const css = el => {
-                        const c=getComputedStyle(el);
-                        return {tag:el.tagName.toLowerCase(),class:String(el.className).slice(0,90),
-                            bg:c.backgroundColor,img:c.backgroundImage,color:c.color,bd:c.borderColor,
-                            w:Math.round(el.getBoundingClientRect().width),
-                            h:Math.round(el.getBoundingClientRect().height)};
+            if (tab === 'settings') {
+                const r52=await page.evaluate(()=>{
+                    const root=document.querySelector('.wpb-settings');
+                    const picker=root.querySelector('.wpb-theme-picker');
+                    const card=root.querySelector('.wpb-settings-card');
+                    const units=[...root.querySelectorAll('.wpb-settings-row')]
+                        .find(el=>el.textContent.includes('Weight unit'))?.parentElement;
+                    const seg=root.querySelector('.wpb-experience-segmented[data-pi-m3-track]');
+                    const color=e=>getComputedStyle(e).backgroundColor;
+                    const painted=(el,pseudo)=>getComputedStyle(el,pseudo).backgroundColor;
+                    const pix=c=>{
+                        const can=document.createElement('canvas');can.width=1;can.height=1;
+                        const ctx=can.getContext('2d');ctx.fillStyle=c;ctx.fillRect(0,0,1,1);
+                        return [...ctx.getImageData(0,0,1,1).data].slice(0,3);
                     };
-                    const labels=tab==='settings'
-                        ? ['Theme','Weight unit','Training experience','Advanced','RIR','Smallest jump','Your gyms']
-                        : ['Motion check','Schedule','Volume','Progression'];
-                    const matches=labels.map(label=>{
-                        const a=[...root.querySelectorAll('*')].filter(e=>e.children.length===0 && (e.textContent||'').trim()===label);
-                        const el=a[0];
-                        const ancestors=[];
-                        for(let x=el,depth=0;x&&depth<6;x=x.parentElement,depth++)ancestors.push(css(x));
-                        return {label,matched:!!el,ancestors};
-                    });
-                    const surfaces=[...root.querySelectorAll('section,article,header,button,[class*="settings"],[class*="card"]')]
-                        .filter(e=>e.getClientRects().length && getComputedStyle(e).backgroundColor!=='rgba(0, 0, 0, 0)')
-                        .slice(0,42).map(css);
-                    return {tab,matches,surfaces};
-                },tab);
-                console.log('R52 STYLE DIAGNOSTIC '+JSON.stringify(r52Styles));
+                    const luma=rgb=>rgb.map(n=>{const v=n/255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4;})
+                        .reduce((sum,v,i)=>sum+v*[.2126,.7152,.0722][i],0);
+                    const contrast=(a,b)=>{const x=luma(pix(a)),y=luma(pix(b));return (Math.max(x,y)+.05)/(Math.min(x,y)+.05);};
+                    return {card:card&&color(card),picker:picker&&color(picker),
+                        units:units&&color(units),rail:seg&&color(seg),
+                        selected:seg&&painted(seg,'::before'),
+                        contrast:seg?contrast(color(seg),painted(seg,'::before')):0};
+                });
+                assert.ok(r52.card && r52.card===r52.picker && r52.card===r52.units &&
+                    r52.rail!==r52.selected && r52.contrast>=3,
+                    'R52 real Settings Theme/Units/Gyms share neutral card and distinct active choice: '+JSON.stringify(r52));
+                if(width===430)await page.screenshot({path:path.join(root,'verification/r52-settings-phone.png')});
             }
-
             // The mounted destination receives a linked entrance sourced from
             // the actual tapped navigation control. No duplicate views, no
             // animation on workout rows, and no change to navigation state.
@@ -1567,21 +1564,18 @@ try {
         await page.click('.hp-open');
         await page.waitForSelector('.wpb-program');
 
-        const r52ProgramStyles=await page.$eval('.wpb-program',root=>{
-            const css=el=>{const s=getComputedStyle(el);return {tag:el.tagName,class:String(el.className).slice(0,100),bg:s.backgroundColor,color:s.color,border:s.borderTopColor,ring:s.boxShadow,width:Math.round(el.getBoundingClientRect().width)}};
-            const labels=['Week 1','Week 2','Week 3','Hypertrophy'];
-            const nodes=labels.map(label=>{
-                const e=[...root.querySelectorAll('*')].find(e=>e.children.length===0 && e.textContent.trim()===label);
-                const chain=[];for(let p=e,i=0;p&&i<5;p=p.parentElement,i++)chain.push(css(p));
-                return {label,chain};
-            });
-            const weeks=[...root.querySelectorAll('.wpb-week-rail>button')].slice(0,6).map(css);
-            const dayCards=[...root.querySelectorAll('.wpb-day-card')].slice(0,4).map(css);
-            const hpCards=[...root.querySelectorAll('.hp-card')].slice(0,4).map(css);
-            return {nodes,weeks,dayCards,hpCards};
+        const r52Program=await page.$eval('.wpb-program',root=>{
+            const cards=[...root.querySelectorAll('.wpb-day-card:not([data-next="true"])')];
+            const parent=root;
+            const page=getComputedStyle(parent).backgroundColor;
+            return {page,card:cards[0]?getComputedStyle(cards[0]).backgroundColor:null,
+                color:getComputedStyle(root.querySelector('.wpb-week-rail>button')).backgroundColor,
+                overflow:root.scrollWidth>root.clientWidth+1};
         });
-        console.log('R52 PROGRAM DIAGNOSTIC '+JSON.stringify(r52ProgramStyles));
-
+        assert.ok(r52Program.page && (r52Program.card===null ||
+            r52Program.card!==r52Program.page) && !r52Program.overflow,
+            'R52 neutral Program day card retains visible elevation and fits phone: '+JSON.stringify(r52Program));
+        if(width===430)await page.screenshot({path:path.join(root,'verification/r52-program-phone.png')});
         // Info sections preserve content while closing and survive an immediate reopen.
         const card = await page.$('[data-infocard][data-collapsible="1"]');
         if (card) {

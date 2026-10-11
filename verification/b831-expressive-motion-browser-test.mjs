@@ -343,14 +343,16 @@ try {
                 const linked = await page.$eval(`[data-view-frame="${tab}"]`, el => {
                     const lead = el.querySelector('[data-pi-connected="source"]');
                     return { count:el.querySelectorAll('[data-pi-connected="source"]').length,
+                        quick:el.dataset.piNavQuick==='1',
                         x:lead?.style.getPropertyValue('--pi-connected-x'),
                         y:lead?.style.getPropertyValue('--pi-connected-y') };
                 });
-                assert.ok(linked.count === 1 && Number.isFinite(parseFloat(linked.x)) &&
+                assert.ok(linked.quick ? linked.count===0 :
+                    linked.count===1 && Number.isFinite(parseFloat(linked.x)) &&
                     Number.isFinite(parseFloat(linked.y)) &&
                     Math.abs(parseFloat(linked.x)) <= 24.01 &&
                     Math.abs(parseFloat(linked.y)) <= 18.01,
-                    'R9 connected route bounds one actual lead card: '+JSON.stringify(linked));
+                    'R9/R33 deliberate transitions connect once; quick ones omit card jumps: '+JSON.stringify(linked));
             }
             await page.waitForFunction(tab => document.querySelector(`[data-view-frame="${tab}"]`)?.style.getPropertyValue('--pi-surface-opacity') === '1', {}, tab);
             assert.equal(await page.$eval(`[data-tab="${tab}"]`, b => b.getAttribute('aria-current')), 'page');

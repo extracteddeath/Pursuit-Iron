@@ -6413,3 +6413,72 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     border-color:Highlight!important;
   }
 }
+
+
+/* R64 — unified theme-native discovery and contextual controls.
+   These surfaces follow the selected palette rather than introducing gray.
+   Keep focus/input ownership, selected filters, measured menu placement,
+   spring morphing, and 48px clear/touch targets exactly where they are. */
+#root[data-pi-motion="expressive"] .wpb .wpb-library.wpb-library.wpb-library .wpb-library-search,
+#root[data-pi-motion="expressive"] .wpb .wpb-switcher-search,
+#root[data-pi-motion="expressive"] .wpb .wpb-progress .wpb-history-filters :is(input,select){
+  background:var(--pi-color-control)!important;
+  background-image:none!important;
+  color:var(--pi-color-on-control)!important;
+  border-color:var(--pi-color-divider)!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-library.wpb-library.wpb-library .wpb-library-search input{
+  background:transparent!important;
+  color:var(--pi-color-on-control)!important;
+  caret-color:var(--pi-m3e-primary);
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-library.wpb-library.wpb-library .wpb-library-search:focus-within,
+#root[data-pi-motion="expressive"] .wpb .wpb-switcher-search:focus-within,
+#root[data-pi-motion="expressive"] .wpb .wpb-progress .wpb-history-filters :is(input,select):focus-visible{
+  border-color:var(--pi-m3e-primary)!important;
+  box-shadow:0 0 0 2px color-mix(in srgb,var(--pi-m3e-primary) 17%,transparent)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-library .wpb-library-search-clear{
+  min-width:48px!important;
+  min-height:48px!important;
+  background:transparent!important;
+  color:var(--pi-color-on-control)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-library .wpb-library-search-clear:focus-visible{
+  outline:2px solid var(--pi-m3e-primary)!important;
+  outline-offset:-3px!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-context-menu{
+  background:var(--pi-color-card)!important;
+  background-image:none!important;
+  color:var(--pi-color-on-control)!important;
+  border-color:var(--pi-color-divider)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-context-menu>.wpb-context-menu-item{
+  color:var(--pi-color-on-control)!important;
+  background:transparent!important;
+  background-image:none!important;
+}
+@media(hover:hover) and (pointer:fine){
+  #root[data-pi-motion="expressive"] .wpb .wpb-context-menu>.wpb-context-menu-item:hover{
+    background:var(--pi-color-control)!important;
+  }
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-context-menu>.wpb-context-menu-item:is(:active,:focus-visible){
+  background:var(--pi-color-active)!important;
+  color:var(--pi-color-on-active)!important;
+}
+@media(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb :is(.wpb-library-search,.wpb-switcher-search,.wpb-context-menu),
+  #root[data-pi-motion="expressive"] .wpb .wpb-progress .wpb-history-filters :is(input,select){
+    background:Canvas!important;
+    color:CanvasText!important;
+    border-color:CanvasText!important;
+    box-shadow:none!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-context-menu>.wpb-context-menu-item:is(:active,:focus-visible){
+    background:Highlight!important;
+    color:HighlightText!important;
+  }
+}

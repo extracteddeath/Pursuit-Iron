@@ -605,3 +605,16 @@ opacity, chart tabs, content navigation, reduced-motion, and Back target.
 Run the full 20-theme browser, release integrity, offline, engine and
 custom-program tests. No changes to the strength engine, logging controls,
 program construction, persistence, rest timer or RIR.
+
+## R33 — Keyboard-consistent top navigation and calm quick-switch arrivals
+
+- The five native bottom navigation buttons now accept ArrowLeft/ArrowRight with wraparound,
+  plus Home/End to jump to the first/last destination. Focus follows the selected
+  button and React performs the actual route update; indicators are paint-only.
+- Rapid consecutive destination changes keep the directional page transition,
+  but suppress the first-card origin translation as well as staggered card reveals.
+  This prevents repeated content jumps from the bottom bar on fast taps.
+- The browser contract checks actual keyboard activation, semantic route state,
+  one mounted main view, focus retention and zero program mutations at 320/430px.
+- Reduced motion, workout logging, set layout, timers, sheet gestures, library
+  contents, training engine and offline support are unchanged.

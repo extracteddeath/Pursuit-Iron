@@ -2,7 +2,7 @@
   "schemaVersion": 3,
   "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": 847,
+  "build": 848,
   "engineVersion": "0.65.6",
   "candidateStatus": "verification_enforced_by_ci",
   "runtimeAggregate": "a2836b25284edc18ea308f1ec2c37491a5dc220d5c1aad2760f2c49285d92577",
@@ -108,16 +108,16 @@
   },
   "uiFiles": {
     "modules/App.js": "eac36ba2eb5f1f8c29291d2ba2b0ce96d5ce94e62e3bb9b6780b8b1f353b8ff4",
-    "index.html": "2de2487d6077d8370644cf3d91274c4783e86033bfec453c2b021954b0678b67",
-    "sw.js": "305ccb08f32c1214c669a805ea749afed4e138a8a1f73dec6a03d35b906804e4",
-    "BUILD_PROFILE.json": "c5353f74e3c60bc399fbcac2c877ae1557aff52cf5f14174baaef30e306ce378",
-    "CHANGELOG.md": "5a9c0b6e4d3676636dc5f335f7a5d55f4236406c1ea9cc1aa1b40d637ed6fe2b",
-    "app.css": "9a722fcd82713b01f62602bba0e5e58c0eb079c7e6ae258f43348e1be21ef259",
+    "index.html": "93f27b65d8434da287173d57afeba191633508b687f4640aa8f8ce9fec49efdc",
+    "sw.js": "f238dd81cf174967781a9a053e75a69dffa9a95259477dadc54d41e4b364adcb",
+    "BUILD_PROFILE.json": "28c67cfe10c745d336a0f8b3fb7a7f0e355756c7c7df4ca91192226365f5c971",
+    "CHANGELOG.md": "c706d4d1bd7d7e4c43c38d62d5ecf6a4abafb6ff4fed4d563d3cd9069ec39710",
+    "app.css": "8fcf8faca7233805439736a786dc505ab51dbf4252b57cada5711af71648d2d6",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b847-r5ca57ef14c9306f2",
-  "uiMilestone": "Build 847 · R67 adaptive tablet/desktop sheets and Plan reading width"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b848-r68d5f3a1b97042c9",
+  "uiMilestone": "Build 848 · R68 Plan supporting pane on large windows"
 }

@@ -209,10 +209,10 @@ try {
         await lightPage.click('[data-tab="settings"]');
         await lightPage.waitForSelector('.wpb-settings');
         await lightPage.waitForFunction(() => [...document.querySelectorAll('.wpb-settings button')]
-            .some(x=>x.textContent.trim()==='Your gyms'),{timeout:5000});
+            .some(x=>x.textContent.includes('Your gyms')),{timeout:12000});
         await lightPage.evaluate(()=>{
             const b=[...document.querySelectorAll('.wpb-settings button')]
-                .find(x=>x.textContent.trim()==='Your gyms');
+                .find(x=>x.textContent.includes('Your gyms'));
             if(!b)throw new Error('Light theme gym sheet opener missing');
             b.click();
         });

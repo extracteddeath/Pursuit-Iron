@@ -8397,7 +8397,7 @@ function IconPickerSheet({ open, current, currentColor, onPick, onPickColor, onC
    answering it with an ordinal. `meta` is optional so every other caller renders exactly as before. */
 function WeekPill({ label, active, onClick, deload, dim, meta }) {
     const tone = dim ? C.faint : active ? (deload ? C.danger : C.accent) : C.muted;
-    return (_jsxs("button", { onClick: onClick, className: "pressable", style: {
+    return (_jsxs("button", { onClick: onClick, className: "pressable wpb-program-week-chip", "aria-pressed": !!active, "data-deload": deload ? "true" : "false", style: {
             flexShrink: 0, padding: meta ? "6px 12px" : "7px 14px", borderRadius: meta ? 12 : 99, fontSize: 14, fontWeight: 650, cursor: "pointer",
             border: `1.5px solid ${active ? (deload ? C.danger : C.accent) : C.border}`,
             background: active ? (deload ? C.dangerDim : C.accentDim) : "transparent",

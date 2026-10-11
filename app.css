@@ -6480,3 +6480,95 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     color:HighlightText!important;
   }
 }
+
+
+/* R65 — expanded window layout. Mobile, landscape phones and the live logger
+   retain the proven narrow layout. A large primary destination may use a rail
+   and reading-width content without cloning route state or React controls. */
+@media (min-width:840px) and (min-height:560px){
+  #root[data-pi-motion="expressive"] .wpb>div:has(>.wpb-tabbar){
+    width:100%!important;
+    max-width:1280px!important;
+    flex-direction:row!important;
+    align-items:stretch!important;
+    border-inline:1px solid var(--pi-color-divider)!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb>div:has(>.wpb-tabbar)>div:first-child{
+    min-width:0;
+    flex:1 1 0;
+    order:0;
+    overflow:hidden;
+  }
+  #root[data-pi-motion="expressive"] .wpb>div:has(>.wpb-tabbar)>.wpb-tabbar{
+    box-sizing:border-box;
+    order:-1;
+    flex:0 0 100px!important;
+    width:100px!important;
+    height:100%;
+    min-height:0;
+    display:flex!important;
+    flex-direction:column!important;
+    justify-content:flex-start!important;
+    align-items:stretch!important;
+    gap:7px!important;
+    padding:14px 9px 12px!important;
+    border-top:0!important;
+    border-right:1px solid var(--pi-color-divider)!important;
+    box-shadow:none!important;
+    overflow-y:auto;
+    overflow-x:hidden;
+    scrollbar-width:thin;
+    overscroll-behavior:contain;
+  }
+  #root[data-pi-motion="expressive"] .wpb>div:has(>.wpb-tabbar)>.wpb-tabbar>.wpb-tab{
+    box-sizing:border-box;
+    flex:0 0 64px!important;
+    width:100%;
+    min-height:64px!important;
+    padding:9px 3px 5px!important;
+    border-radius:15px!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb>div:has(>.wpb-tabbar)>.wpb-tabbar>.wpb-tab>span{
+    font-size:11.5px!important;
+    line-height:15px!important;
+    margin-top:9px!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb>div:has(>.wpb-tabbar) .wpb-view-frame{
+    min-width:0;
+    max-width:100%;
+  }
+  #root[data-pi-motion="expressive"] .wpb>div:has(>.wpb-tabbar) :is(.wpb-home,.wpb-settings,.wpb-progress,.wpb-plan-view,.wpb-profile) .wpb-page-scroll{
+    box-sizing:border-box;
+    width:100%;
+    max-width:940px!important;
+    margin-inline:auto;
+  }
+  #root[data-pi-motion="expressive"] .wpb>div:has(>.wpb-tabbar) .wpb-live-dock{
+    left:calc(100px + 20px)!important;
+    right:20px!important;
+    bottom:calc(12px + env(safe-area-inset-bottom))!important;
+    max-width:680px;
+    margin-inline:auto;
+  }
+  #root[data-pi-motion="expressive"] .wpb>div:has(>.wpb-tabbar) .wpb-toast{
+    right:20px!important;
+    left:auto!important;
+    width:min(400px,calc(100% - 140px));
+  }
+}
+@media (min-width:1180px) and (min-height:560px){
+  #root[data-pi-motion="expressive"] .wpb>div:has(>.wpb-tabbar)>.wpb-tabbar{
+    flex-basis:112px!important;
+    width:112px!important;
+    padding-inline:14px!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb>div:has(>.wpb-tabbar) .wpb-live-dock{
+    left:calc(112px + 24px)!important;
+  }
+}
+@media (forced-colors:active) and (min-width:840px) and (min-height:560px){
+  #root[data-pi-motion="expressive"] .wpb>div:has(>.wpb-tabbar)>.wpb-tabbar{
+    background:Canvas!important;
+    border-right-color:CanvasText!important;
+  }
+}

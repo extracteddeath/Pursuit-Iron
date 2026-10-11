@@ -77,6 +77,44 @@ for (const style of ['double','dynamic','ladder','linear','wave','e1rm']) {
   assert.equal(owned.suggestedLoad, 190);
 }
 
+// B845 user report: Dynamic Double earns a load *per completed set position*.
+// 25x12 at the top earns 30 next time even if the other two sets only got 10/11.
+// Neither a merely-in-range set nor a hard overshoot earns a weight increase.
+const dumbbellContext = {
+  loadingInventory: { unit:'lb', dumbbells:{availablePerHand:[5,10,15,20,25,30,35]} },
+  equipmentAvailable: ['dumbbell']
+};
+const curl = {
+  exerciseId:'db_curl', name:'Incline Dumbbell Curl', role:'isolation',
+  progressionStyle:'dynamic', sets:3, prescription:{reps:[8,12],rir:[2,2]}
+};
+const evaluateCurl=(sets,overrides={})=>evaluateWorkoutProgression({exercises:[curl]},
+  sets.map((x,i)=>({exerciseId:'db_curl',setIndex:i,...x})),
+  {...dumbbellContext,...overrides})[0];
+const earnedCurl=evaluateCurl([
+  {load:25,reps:12,rir:2},{load:25,reps:10,rir:2},{load:20,reps:11,rir:2}
+]);
+assert.equal(earnedCurl.action,'increase_load');
+assert.equal(earnedCurl.perSet,true);
+assert.equal(earnedCurl.advancedSets,1);
+assert.deepEqual(earnedCurl.setTargets,[
+  {weight:30,reps:8,advanced:true},{weight:25,reps:11,advanced:false},
+  {weight:20,reps:12,advanced:false}
+], 'The successful curl set increases alone; other rows build toward the ceiling');
+const notCeiling=evaluateCurl([
+  {load:25,reps:11,rir:2},{load:25,reps:10,rir:2},{load:20,reps:11,rir:2}
+]);
+assert.notEqual(notCeiling.action,'increase_load',
+  'Reaching an interim rep target is not reaching the top of the actual range');
+const hardCurl=evaluateCurl([
+  {load:25,reps:12,rir:0},{load:25,reps:10,rir:2},{load:20,reps:11,rir:2}
+]);
+assert.notEqual(hardCurl.action,'increase_load','Exceeded effort target blocks heavier load');
+const incompleteCurl=evaluateCurl([
+  {load:25,reps:12,rir:2},{load:25,reps:10,rir:2}
+]);
+assert.notEqual(incompleteCurl.action,'increase_load','Missing prescribed sets still block unsafe progression');
+
 // The old linear/e1RM branch referenced an undefined clearOvershoot variable. These cases prove both paths return safely.
 for (const style of ['linear','e1rm']) {
   const controlled = decide({ style, sets:[

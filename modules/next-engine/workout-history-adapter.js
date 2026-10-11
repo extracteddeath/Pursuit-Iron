@@ -332,6 +332,7 @@ export function nextWorkoutSuggestionForShell(program, history, legacyExercises,
         reps,
         target: decision.suggestedReps,
         setTargets: decision.setTargets,
+        perSet: decision.perSet === true,
         last, lastUnit: lastEntry?.unit || program.config?.unit,
         action: decision.action,
         confidence: decision.confidence
@@ -404,6 +405,7 @@ export function nextWorkoutSuggestionFromPerformedShell(program, legacyExercises
         reps: String(cell?.reps ?? cell?.range ?? ''),
         target: decision.suggestedReps,
         setTargets: decision.setTargets?.map(t => ({ ...t, weight: convert(t.weight) })),
+        perSet: decision.perSet === true,
         last,
         action: decision.action,
         confidence: decision.confidence

@@ -5261,3 +5261,134 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     border-color:CanvasText!important;
   }
 }
+
+/* M3 EXPRESSIVE R43 — PLAN + PROGRAM INFORMATION HIERARCHY
+   Complete R41's neutral/raised/hero surface ladder across both planning
+   levels. A glance is not three competing accents; a choice is not another
+   floating card. Preserve week/day state, content disclosure springs, and
+   the separate live workout logger's measurements and data entry geometry. */
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-view>.wpb-plan-title{
+  margin:12px 0 14px!important;
+  line-height:1.1!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-glance{
+  gap:8px!important;
+  margin-bottom:12px!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-glance-tile{
+  box-sizing:border-box;
+  min-width:0;
+  min-height:80px!important;
+  border:1px solid var(--pi-r11-edge)!important;
+  border-radius:20px!important;
+  background-color:var(--pi-r11-quiet)!important;
+  background-image:none!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-glance-tile[data-featured="true"]{
+  border:1px solid var(--pi-r11-accent-stroke)!important;
+  border-radius:27px!important;
+  background-color:var(--pi-r11-hero)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-up-next{
+  box-sizing:border-box;
+  min-width:0;
+  border-radius:22px!important;
+  border:1px solid var(--pi-r11-accent-stroke)!important;
+  background-color:var(--pi-r11-hero)!important;
+  background-image:none!important;
+  /* One restrained marker is enough to connect the active workout. */
+  box-shadow:inset 3px 0 0 color-mix(in srgb,var(--pi-m3e-primary) 36%,transparent)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-panes{
+  box-sizing:border-box;
+  min-height:52px!important;
+  border-radius:17px!important;
+  border:1px solid var(--pi-r11-edge)!important;
+  background-color:var(--pi-r11-raised)!important;
+  background-image:none!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-panes>button{
+  min-height:44px!important;
+  min-width:0;
+  border-radius:13px!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-panes[data-pi-m3-track]::before{
+  border-radius:13px!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-program{
+  background-color:light-dark(var(--pi-m3e-base),var(--pi-r41-page))!important;
+  background-image:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-week-rail{
+  gap:8px!important;
+  scroll-padding-inline:12px;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-week-rail>button{
+  box-sizing:border-box;
+  min-height:51px!important;
+  border:1px solid var(--pi-r11-edge)!important;
+  border-radius:16px!important;
+  background-color:var(--pi-r11-quiet)!important;
+  background-image:none!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-week-rail>button:is(
+  [aria-pressed="true"],[aria-current="true"],[aria-current="page"],[data-active="true"]){
+  border-color:var(--pi-r11-accent-stroke)!important;
+  background-color:var(--pi-r11-selected)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-day-card{
+  border:1px solid var(--pi-r11-edge)!important;
+  background-color:var(--pi-r11-quiet)!important;
+  background-image:none!important;
+  box-shadow:none!important;
+  /* Keep the JS-owned disclosure radius spring and its open/closed states. */
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-day-card[data-next="true"]{
+  border-color:var(--pi-r11-accent-stroke)!important;
+  background-color:var(--pi-r11-hero)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-day-card[data-pi-disclosure="open"]:not([data-next="true"]){
+  background-color:var(--pi-r11-raised)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-day-card>.wpb-expand{
+  background-color:transparent!important;
+  background-image:none!important;
+  box-shadow:none!important;
+  border-top:1px solid var(--pi-r11-edge)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-day-title{
+  min-width:0;
+  overflow-wrap:anywhere;
+  line-height:1.3!important;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-day-toggle{
+  min-width:0;
+  min-height:68px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-day-start{
+  min-height:48px!important;
+}
+@media(max-width:359px){
+  #root[data-pi-motion="expressive"] .wpb .wpb-plan-glance{
+    gap:5px!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-plan-glance-tile{
+    padding-inline:7px!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-plan-panes>button{
+    padding-inline:2px!important;
+  }
+}
+@media(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb :is(
+    .wpb-plan-glance-tile,.wpb-plan-up-next,.wpb-plan-panes,
+    .wpb-week-rail>button,.wpb-day-card,.wpb-day-card>.wpb-expand){
+    color:CanvasText!important;
+    background-color:Canvas!important;
+    border-color:CanvasText!important;
+  }
+}

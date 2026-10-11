@@ -2,7 +2,7 @@
   "schemaVersion": 3,
   "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": 845,
+  "build": 846,
   "engineVersion": "0.65.6",
   "candidateStatus": "verification_enforced_by_ci",
   "runtimeAggregate": "18bd25e0083549842b2e99c904b57f5114b19439ce96712710aad15fa952ba54",
@@ -118,6 +118,6 @@
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b845-rbe0d89bf704301ed",
-  "uiMilestone": "Build 845 · incline dumbbell stepper and independent Dynamic Double"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b846-rbe0d89bf704301ed",
+  "uiMilestone": "Build 846 · independent barbell and Smith bar masses per gym"
 }

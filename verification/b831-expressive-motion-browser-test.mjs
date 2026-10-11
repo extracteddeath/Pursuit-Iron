@@ -366,6 +366,42 @@ try {
         for (const tab of ['plan','progress','profile','settings','home']) {
             await page.click(`[data-tab="${tab}"]`);
             await page.waitForSelector(`[data-view-frame="${tab}"][data-pi-surface]`);
+
+            if (tab === 'settings') {
+                const r52=await page.evaluate(()=>{
+                    const root=document.querySelector('.wpb-settings');
+                    const picker=root.querySelector('.wpb-theme-picker');
+                    const card=root.querySelector('.wpb-settings-card');
+                    const units=[...root.querySelectorAll('.wpb-settings-row')]
+                        .find(el=>el.textContent.includes('Weight unit'))?.parentElement;
+                    const seg=root.querySelector('.wpb-experience-segmented[data-pi-m3-track]');
+                    const color=e=>getComputedStyle(e).backgroundColor;
+                    const painted=(el,pseudo)=>getComputedStyle(el,pseudo).backgroundColor;
+                    const pix=c=>{
+                        const can=document.createElement('canvas');can.width=1;can.height=1;
+                        const ctx=can.getContext('2d');ctx.fillStyle=c;ctx.fillRect(0,0,1,1);
+                        return [...ctx.getImageData(0,0,1,1).data].slice(0,3);
+                    };
+                    const luma=rgb=>rgb.map(n=>{const v=n/255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4;})
+                        .reduce((sum,v,i)=>sum+v*[.2126,.7152,.0722][i],0);
+                    const contrast=(a,b)=>{const x=luma(pix(a)),y=luma(pix(b));return (Math.max(x,y)+.05)/(Math.min(x,y)+.05);};
+                    const intermediate=[...seg.querySelectorAll('button')].find(b=>b.textContent.trim()==='Intermediate');
+                    const range=document.createRange();range.selectNodeContents(intermediate);
+                    const textLines=[...range.getClientRects()].filter(r=>r.width>0&&r.height>0);
+                    return {intermediateLines:textLines.length,
+                        intermediateWidth:Math.round(intermediate.getBoundingClientRect().width),
+                        card:card&&color(card),picker:picker&&color(picker),
+                        units:units&&color(units),rail:seg&&color(seg),
+                        selected:seg&&painted(seg,'::before'),
+                        contrast:seg?contrast(color(seg),painted(seg,'::before')):0};
+                });
+                assert.ok(r52.card && r52.card===r52.picker && r52.card===r52.units &&
+                    r52.rail!==r52.selected && r52.contrast>=3,
+                    'R52 real Settings Theme/Units/Gyms share neutral card and distinct active choice: '+JSON.stringify(r52));
+                if(width===430)assert.ok(r52.intermediateLines===1,
+                    'R52 Intermediate label fits as one word at regular width: '+JSON.stringify(r52));
+                if(width===430)await page.screenshot({path:path.join(root,'verification/r52-settings-phone.png')});
+            }
             // The mounted destination receives a linked entrance sourced from
             // the actual tapped navigation control. No duplicate views, no
             // animation on workout rows, and no change to navigation state.
@@ -1534,6 +1570,19 @@ try {
             'menu dismiss preserves the program card and its original action');
         await page.click('.hp-open');
         await page.waitForSelector('.wpb-program');
+
+        const r52Program=await page.$eval('.wpb-program',root=>{
+            const cards=[...root.querySelectorAll('.wpb-day-card:not([data-next="true"])')];
+            const parent=root;
+            const page=getComputedStyle(parent).backgroundColor;
+            return {page,card:cards[0]?getComputedStyle(cards[0]).backgroundColor:null,
+                color:getComputedStyle(root.querySelector('.wpb-week-rail>button')).backgroundColor,
+                overflow:root.scrollWidth>root.clientWidth+1};
+        });
+        assert.ok(r52Program.page && (r52Program.card===null ||
+            r52Program.card!==r52Program.page) && !r52Program.overflow,
+            'R52 neutral Program day card retains visible elevation and fits phone: '+JSON.stringify(r52Program));
+        if(width===430)await page.screenshot({path:path.join(root,'verification/r52-program-phone.png')});
         // Info sections preserve content while closing and survive an immediate reopen.
         const card = await page.$('[data-infocard][data-collapsible="1"]');
         if (card) {

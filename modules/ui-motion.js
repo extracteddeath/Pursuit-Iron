@@ -10,7 +10,12 @@ export function motionValue(el, key, fallback = 0) {
 }
 export function stopMotion(el, key) {
     const state = states.get(el)?.get(key);
-    if (state) { active.delete(state); state.complete = null; }
+    if (state) {
+        // Invalidate every previously returned disposer, including when a
+        // drag or user gesture replaces this spring via setMotionValue.
+        state.run = (state.run || 0) + 1;
+        active.delete(state); state.complete = null;
+    }
 }
 export function setMotionValue(el, key, value, write) {
     stopMotion(el, key);

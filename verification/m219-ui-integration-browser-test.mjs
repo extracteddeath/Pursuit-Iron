@@ -64,6 +64,52 @@ try {
             await page.click('[data-tab="' + tab + '"]'); await settled();
             const bounds = await page.$eval('.wpb', n => ({ width: n.getBoundingClientRect().width, scroll: n.scrollWidth }));
             assert.ok(bounds.width <= 321 && bounds.scroll <= 321, JSON.stringify({ theme, tab, bounds }));
+            // R34/R35: verify actual responsive tab targets and rendered color
+            // roles under each of the 20 saved themes, not just source tokens.
+            const accessibility = await page.evaluate(tab => {
+                const nav=document.querySelector('.wpb-tabbar[data-pi-m3-track]');
+                const selected=nav?.querySelector('button[aria-current="page"]');
+                const primary=tab==='home' ? document.querySelector('.wpb-home .wpb-home-hero .wpb-primary-action') : null;
+                const ctx=document.createElement('canvas').getContext('2d',{willReadFrequently:true});
+                const channels=value=>{
+                    ctx.clearRect(0,0,1,1);
+                    ctx.fillStyle='#000';ctx.fillStyle=value;
+                    ctx.fillRect(0,0,1,1);
+                    return [...ctx.getImageData(0,0,1,1).data];
+                };
+                const lum=value=>{
+                    const rgb=channels(value).slice(0,3).map(x=>x/255);
+                    const l=rgb.map(x=>x<=.04045?x/12.92:((x+.055)/1.055)**2.4);
+                    return .2126*l[0]+.7152*l[1]+.0722*l[2];
+                };
+                const ratio=(a,b)=>{
+                    const x=lum(a),y=lum(b);
+                    return (Math.max(x,y)+.05)/(Math.min(x,y)+.05);
+                };
+                const navStyle=getComputedStyle(nav),selectedStyle=getComputedStyle(selected);
+                const ringStyle=getComputedStyle(nav,'::before');
+                const labels=[...nav.querySelectorAll('button[data-tab]')].map(button=>{
+                    const box=button.getBoundingClientRect(),label=button.querySelector('span');
+                    return {tab:button.dataset.tab,w:box.width,h:box.height,
+                        labelOverflows:!!label&&label.scrollWidth>label.clientWidth+1};
+                });
+                return {
+                    labels,
+                    navLabelRatio:ratio(selectedStyle.color,navStyle.backgroundColor),
+                    navOutlineRatio:ratio(ringStyle.outlineColor,navStyle.backgroundColor),
+                    primaryRatio:primary ? ratio(getComputedStyle(primary).color,getComputedStyle(primary).backgroundColor) : null,
+                    primaryHeight:primary?.getBoundingClientRect().height ?? null,
+                    outlineWidth:parseFloat(ringStyle.outlineWidth)
+                };
+            }, tab);
+            assert.ok(accessibility.labels.length===5 &&
+                accessibility.labels.every(b=>b.w>=44 && b.h>=44 && !b.labelOverflows),
+                `R34 ${theme}/${tab} bottom navigation remains touch-safe and legible: ${JSON.stringify(accessibility)}`);
+            assert.ok(accessibility.navLabelRatio>=4.5 &&
+                accessibility.navOutlineRatio>=3 && accessibility.outlineWidth>=2,
+                `R35 ${theme}/${tab} semantic navigation contrast: ${JSON.stringify(accessibility)}`);
+            if(tab==='home') assert.ok(accessibility.primaryRatio>=4.5 && accessibility.primaryHeight>=44,
+                `R35 ${theme} filled primary action must have 4.5:1 text contrast: ${JSON.stringify(accessibility)}`);
         }
         const contrast = await page.$$eval('.wpb-settings .wpb-segmented>button[aria-pressed="true"]', buttons => {
             const luminance = color => {

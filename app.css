@@ -5670,3 +5670,48 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     outline-color:Highlight!important;
   }
 }
+
+/* MATERIAL 3 EXPRESSIVE R47 — PREMIUM TOUCH TARGET & CONTROL RHYTHM
+   The page-level polish (R41–R46) is complete. Google's Android minimum
+   comfortable target is 48dp. Primary selection instruments must therefore
+   have real 48px button boxes, rather than visually large 52px rails with
+   only 40/44px interactive interiors. Scope to navigation/filters/details
+   and avoid the dense logging grid, rest tools, target/previous and steppers.
+   Use containment and shape to express hierarchy, not extra gradients. */
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-panes,
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs,
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-grouping,
+#root[data-pi-motion="expressive"] .wpb-settings .wpb-segmented,
+#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-flag-filter,
+#root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail .wpb-exercise-tabs,
+#root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail .wpb-exercise-window-tabs{
+  min-height:56px!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-panes>button,
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs>button,
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-grouping>button,
+#root[data-pi-motion="expressive"] .wpb-settings .wpb-segmented>button,
+#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-flag,
+#root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail .wpb-exercise-tabs>button,
+#root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail .wpb-exercise-window-tabs>button{
+  box-sizing:border-box;
+  min-height:48px!important;
+  touch-action:manipulation;
+}
+/* Use numeric rhythm for dashboard measures so digit changes don't visually
+   shift adjoining units, labels or real values; no font size coercion. */
+#root[data-pi-motion="expressive"] .wpb :is(
+  .wpb-plan-glance-tile,.wpb-progress-glance-item,.wpb-profile-stat,
+  .wpb-profile-strength-cell,.wpb-exercise-records
+){
+  font-variant-numeric:tabular-nums;
+}
+@media(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb :is(
+    .wpb-plan-panes,.wpb-premium-tabs,.wpb-progress-grouping,
+    .wpb-segmented,.wpb-library-flag-filter,
+    .wpb-exercise-tabs,.wpb-exercise-window-tabs
+  )>button:focus-visible{
+    outline-color:Highlight!important;
+  }
+}

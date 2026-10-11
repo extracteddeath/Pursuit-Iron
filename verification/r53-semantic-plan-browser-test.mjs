@@ -130,9 +130,9 @@ try{
       // fabricated contrast failures (and could fabricate false passes).
       const rgb=value=>{
         const v=String(value).trim();
-        const srgb=v.match(/^color\\(srgb\\s+([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)/i);
+        const srgb=v.match(/^color\(srgb\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)/i);
         if(srgb)return srgb.slice(1,4).map(n=>Number(n)*255);
-        const legacy=v.match(/^rgba?\\(\\s*([\\d.]+)[,\\s]+([\\d.]+)[,\\s]+([\\d.]+)/i);
+        const legacy=v.match(/^rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)/i);
         if(legacy)return legacy.slice(1,4).map(Number);
         throw new Error('Unsupported computed contrast color: '+v);
       };

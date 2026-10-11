@@ -477,7 +477,7 @@ try {
                 });
                 if(historyR24) assert.ok(historyR24.image==='none' &&
                     historyR24.w>0 && !historyR24.overflows &&
-                    historyR24.buttons.every(b=>b.w>=44&&b.h>=44),
+                    historyR24.buttons.every(b=>b.w>=48&&b.h>=48),
                     'R24 history surfaces and real actions fit the phone: '+JSON.stringify(historyR24));
             }
             if (tab === 'profile') {

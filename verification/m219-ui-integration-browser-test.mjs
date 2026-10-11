@@ -208,6 +208,9 @@ try {
         await lightPage.waitForSelector('.wpb-tabbar');
         await lightPage.click('[data-tab="settings"]');
         await lightPage.waitForSelector('.wpb-settings');
+        console.log('R36 LIGHT SETTINGS ACTIONS '+JSON.stringify(
+            await lightPage.evaluate(() => [...document.querySelectorAll('.wpb-settings button')]
+                .map(x=>x.textContent.trim().slice(0,65)))));
         await lightPage.waitForFunction(() => [...document.querySelectorAll('.wpb-settings button')]
             .some(x=>x.textContent.includes('Your gyms')),{timeout:12000});
         await lightPage.evaluate(()=>{

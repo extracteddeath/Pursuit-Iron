@@ -2422,11 +2422,23 @@ try {
                     .filter(x=>x.getClientRects().length));
                 return {tab,items:tracks.map(track=>({
                     height:track.offsetHeight,
-                    controls:[...track.querySelectorAll(':scope > button')].map(el=>({
-                        height:el.offsetHeight,
-                        clipped:el.scrollWidth>el.clientWidth+1,
-                        touch:getComputedStyle(el).touchAction
-                    }))
+                    controls:[...track.querySelectorAll(':scope > button')].map(el=>{
+                        // A moving M3 ink layer/pseudo-element may extend
+                        // scrollWidth without clipping the real label. Measure
+                        // actual text fragment bounds instead of decoration.
+                        const range=document.createRange();
+                        range.selectNodeContents(el);
+                        const bounds=el.getBoundingClientRect();
+                        const fragments=[...range.getClientRects()].filter(r=>r.width>1&&r.height>1);
+                        const clipped=fragments.some(r=>
+                            r.left<bounds.left-1||r.right>bounds.right+1||
+                            r.top<bounds.top-1||r.bottom>bounds.bottom+1);
+                        return {height:el.offsetHeight,clipped,
+                            text:el.textContent.trim().slice(0,70),
+                            scrollWidth:el.scrollWidth,clientWidth:el.clientWidth,
+                            fragments:fragments.length,
+                            touch:getComputedStyle(el).touchAction};
+                    })
                 })),overflow:document.querySelector('.wpb').scrollWidth>innerWidth+1};
             },tab);
             assert.ok(r47.items.length>=1&&!r47.overflow&&r47.items.every(x=>

@@ -648,3 +648,29 @@ computed solid background and foreground fall below 4.5:1; it preserves the
 saved theme's own on-color otherwise. This explicitly repairs the Lime primary
 action pairing found by the 20-theme regression without hardcoding a Lime-only
 color, adding an online dependency, or touching workout logs.
+
+## R37 — Standalone Android targets and chart focus clarity
+
+Android's accessibility guidance recommends 48dp targets for interactive
+controls and at least 3:1 contrast for non-text indicators. The previous
+Expressive surface pass retained a few 44px standalone targets; this pass
+expands only those that can grow without stealing space from exercise
+weight/reps entry:
+- Sheet close actions and Gym Done have at least 48px dimensions.
+- Full-screen exercise detail Back has an explicit 48px square hit area,
+  without enlarging its icon glyph or title.
+- Workout tool actions, rest controls, and Progress history actions
+  have 48px minimum targets; rest actions already wrap at 320px.
+- **Do not resize** the compact logger steppers, set completion row, Target/
+  Previous controls, RIR selectors, live exercise navigation, or graph points.
+- The keyboard-controlled SVG history-chart scrubber retains its
+  accessible slider semantics, Home/End/Arrow keys and pan-y touch scrolling,
+  but renders a clearly visible 2.5px full-opacity dashed focus stroke.
+  Windows forced-colors/high-contrast uses Highlight instead.
+- Standalone icon buttons use a currentColor focus ring rather than an
+  accent that may have insufficient contrast in a light theme.
+
+The existing b831 mobile-browser contract checks both 320px and 430px chart
+keyboard focus, bounds, input/RIR persistence, rest tools, sheet close actions
+and Back. M219 additionally checks real Light-theme Gym Done and workout
+toolbar hit geometry. No training state or storage is changed.

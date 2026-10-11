@@ -729,15 +729,30 @@ function sessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, history
        (conservative). Rounding an increase down erased it: the engine said "Increase from 140 lb to 145 lb", the 10 lb machine stack
        snapped it back to 140, and the lift could never progress (found by m158-adaptive-loop-check's simulated lifter). */
     const current = convertHistoryLoad(s.last?.weight, s.lastUnit || program.config?.unit, unit) || 0;
+    const perSetIncrease = Array.isArray(s.setTargets) && s.setTargets.some(t => t.earnedLoadIncrease === true);
     let w = loadableAtOrBelow(ex, eng, unit);
-    if (s.action === "increase_load" && w <= current)
+    // Classic progression is a single session weight. Dynamic double is NOT:
+    // preserve the individual earned bump, never increase every row (or a
+    // heavier but non-qualifying row) just because one other set succeeded.
+    if (!perSetIncrease && s.action === "increase_load" && w <= current)
         w = loadableAbove(ex, current, unit) ?? w;
     const cell = computeCell(program, day, ex.id, slot, weekIndex);
     const floor = cellRepRange(cell, program, ex, slot === day.primaryIndex)[0];
     const setTargets = s.setTargets?.map(target => {
+        if (perSetIncrease) {
+            const previous = convertHistoryLoad(target.previousLoad, program.config?.unit, unit);
+            let weight = loadableAtOrBelow(ex, target.weight, unit);
+            if (target.earnedLoadIncrease && previous > 0 && weight <= previous)
+                weight = loadableAbove(ex, previous, unit) ?? previous;
+            if (!target.earnedLoadIncrease && previous > 0 && weight < previous)
+                weight = loadableAtOrBelow(ex, previous, unit);
+            return { ...target, weight, reps: weight < target.weight ? floor : target.reps };
+        }
         const weight = s.action === "increase_load" ? w : loadableAtOrBelow(ex, target.weight, unit);
         return { ...target, weight, reps: weight < target.weight ? floor : target.reps };
     });
+    if (perSetIncrease && setTargets?.length)
+        w = Math.max(...setTargets.map(target => target.weight).filter(Number.isFinite));
     const reason = typeof s.reason === "string" ? s.reason.replace(new RegExp(`\\bto ${eng}( ?${unit})`), `to ${w}$1`) : s.reason;
     return { ...s, weight: w, setTargets, reason, target: w < eng ? floor : s.target,
         dir: current && w > current ? "up" : current && w < current ? "down" : s.dir };

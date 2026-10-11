@@ -842,9 +842,9 @@ try {
             const group = document.querySelector('.wpb-progress .wpb-premium-tabs');
             const selected = group?.querySelector('[aria-selected="true"]');
             return selected?.textContent?.trim() === 'Lifts' &&
-                Math.abs(Number.parseFloat(group.style.getPropertyValue('--pi-m3-track-x')) - selected.offsetLeft) < .3 &&
-                Math.abs(Number.parseFloat(group.style.getPropertyValue('--pi-m3-track-width')) - selected.offsetWidth) < .12 &&
-                Number.parseFloat(selected.style.getPropertyValue('--pi-choice-grow')) > 1.18;
+                Math.abs(Number.parseFloat(group.style.getPropertyValue('--pi-m3-track-x')) - selected.offsetLeft) < .08 &&
+                Math.abs(Number.parseFloat(group.style.getPropertyValue('--pi-m3-track-width')) - selected.offsetWidth) < .08 &&
+                Number.parseFloat(selected.style.getPropertyValue('--pi-choice-grow')) > 1.199;
         }, { timeout: 5000 });
         const afterTrack = await page.$eval('.wpb-progress .wpb-premium-tabs', el => {
             const selected = el.querySelector('[aria-selected="true"]');
@@ -855,7 +855,8 @@ try {
                 activeBackground: getComputedStyle(selected).backgroundColor };
         });
         assert.ok(afterTrack.x > beforeTrack.x && Math.abs(afterTrack.w - afterTrack.targetW) < .15,
-            'shared M3 selection slides and resizes to the exact chosen segment');
+            'shared M3 selection slides and resizes to the exact chosen segment: '+
+                JSON.stringify({beforeTrack,afterTrack}));
         assert.ok(afterTrack.w > beforeTrack.widths[1] + 4,
             'selected Progress segment physically expands while adjacent segments yield');
         assert.equal(afterTrack.childCount, beforeTrack.children,

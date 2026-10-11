@@ -744,6 +744,31 @@ function sessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, history
 
 }
 
+/** Nudge through the gym's actual load inventory when known. With a coarse
+ * user-selected step, a low dumbbell load still needs normal small increments
+ * rather than jumping directly from 25 lb to zero. */
+function nudgeWorkoutLoad(ex, unit, rawWeight, direction) {
+    const current = Number.parseFloat(rawWeight) || 0;
+    const dir = direction < 0 ? -1 : 1;
+    const assisted = isAssistedEx(ex);
+    const rack = !assisted ? gymRackFor(ex, unit) : null;
+    if (rack?.length) {
+        const next = dir < 0 ? rack.filter(weight => weight < current - 1e-9).at(-1)
+            : rack.find(weight => weight > current + 1e-9);
+        return next ?? (dir < 0 ? 0 : current);
+    }
+    let step = loadStep(ex, unit);
+    const equipment = ex?.equip || [];
+    if (dir < 0 && !assisted && equipment.includes('dumbbell') &&
+        current <= step && step > (unit === 'lb' ? 5 : 2))
+        step = unit === 'lb' ? 5 : 2;
+    if (!(step > 0) || !Number.isFinite(step)) return current;
+    const onGrid = Math.abs(current - roundTo(current, step)) < 1e-6;
+    const next = onGrid ? current + dir * step
+        : dir > 0 ? Math.ceil(current / step) * step : Math.floor(current / step) * step;
+    return Math.round(clamp(next, assisted ? -2000 : 0, 2000) * 1000) / 1000;
+}
+
 function loadableAbove(ex, w, unit) {
     if (!ex || !(w > 0))
         return null;
@@ -1137,4 +1162,4 @@ function setGymLimits(gym) {
     GYM_LIMITS = gym ? { limits: gym.limits || {}, inventory: gym.inventory || {}, unit: gym.limitUnit || gym.unit || "kg" } : null;
 }
 
-export { setGymLimits, ASSUMED_RIR, BASE_SET_COST, E1RM_HOLD, EFFORT_MAX_BIAS, EFFORT_MIN_PAIRS, EFFORT_REP_CAP, GYM_LIMITS, GZ_T1_STAGES, GZ_T2_STAGES, INVENTORY_KEYS, PART_LABEL, STALL_ENGAGE, STALL_WINDOW, __recovFitMemo, __recoveryMemo, anchorPerfFor, autoStyleDetail, autoStyleFor, customExerciseHistory, customExerciseReferenceHistory, customProgramSuggestion, dayPerfFor, effortCalibration, engineWeekOneStyles, gymRackFor, gzPlanFor, gzTierOf, gzWorkWeight, lastDayPerf, linearStalled, loadableAbove, loadableAtOrBelow, loggedExercisePerformance, loggedWorkoutPerformance, muscleRecovery, muscleRecoveryUncached, nextEngineStyleFor, parseRIRNum, pctSetsFor, percentagePlanFor, personalRecoveryHours, plateauSessions, prescribeSets, prescribedRIRof, progressionHistoryForProgram, representativeCustomLoad, resolveStyle, sessionSuggestion, setsOf, stallCountFor, styleFor, styleOverride, summarizeSets, tierOf, toUnit, trainingMaxForUnit, withTrainingMax };
+export { setGymLimits, ASSUMED_RIR, BASE_SET_COST, E1RM_HOLD, EFFORT_MAX_BIAS, EFFORT_MIN_PAIRS, EFFORT_REP_CAP, GYM_LIMITS, GZ_T1_STAGES, GZ_T2_STAGES, INVENTORY_KEYS, PART_LABEL, STALL_ENGAGE, STALL_WINDOW, __recovFitMemo, __recoveryMemo, anchorPerfFor, autoStyleDetail, autoStyleFor, customExerciseHistory, customExerciseReferenceHistory, customProgramSuggestion, dayPerfFor, effortCalibration, engineWeekOneStyles, gymRackFor, gzPlanFor, gzTierOf, gzWorkWeight, lastDayPerf, linearStalled, loadableAbove, loadableAtOrBelow, nudgeWorkoutLoad, loggedExercisePerformance, loggedWorkoutPerformance, muscleRecovery, muscleRecoveryUncached, nextEngineStyleFor, parseRIRNum, pctSetsFor, percentagePlanFor, personalRecoveryHours, plateauSessions, prescribeSets, prescribedRIRof, progressionHistoryForProgram, representativeCustomLoad, resolveStyle, sessionSuggestion, setsOf, stallCountFor, styleFor, styleOverride, summarizeSets, tierOf, toUnit, trainingMaxForUnit, withTrainingMax };

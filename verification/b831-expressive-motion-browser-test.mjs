@@ -818,6 +818,17 @@ try {
         // is theme-derived, and changes paint only (not target geometry or DOM children).
         await page.click('[data-tab="progress"]');
         await page.waitForSelector('.wpb-progress .wpb-premium-tabs[data-pi-m3-track]');
+        // Explicitly establish the starting selection: previous navigation
+        // may preserve the Lifts pane, so a second tap need not travel right.
+        await page.click('.wpb-progress .wpb-premium-tabs>button:nth-child(1)');
+        await page.waitForFunction(() => {
+            const group=document.querySelector('.wpb-progress .wpb-premium-tabs');
+            const first=group?.querySelector(':scope > button:nth-child(1)');
+            return first?.getAttribute('aria-selected')==='true' &&
+                Math.abs(parseFloat(group.style.getPropertyValue('--pi-m3-track-x'))-first.offsetLeft)<.12 &&
+                Math.abs(parseFloat(group.style.getPropertyValue('--pi-m3-track-width'))-first.offsetWidth)<.12 &&
+                parseFloat(first.style.getPropertyValue('--pi-choice-grow'))>1.18;
+        },{timeout:5000});
         const beforeTrack = await page.$eval('.wpb-progress .wpb-premium-tabs', el => ({
             x: Number.parseFloat(el.style.getPropertyValue('--pi-m3-track-x')),
             fill: el.style.getPropertyValue('--pi-m3-track-fill'),
@@ -832,7 +843,7 @@ try {
             const selected = group?.querySelector('[aria-selected="true"]');
             return selected?.textContent?.trim() === 'Lifts' &&
                 Math.abs(Number.parseFloat(group.style.getPropertyValue('--pi-m3-track-x')) - selected.offsetLeft) < .3 &&
-                Math.abs(Number.parseFloat(group.style.getPropertyValue('--pi-m3-track-width')) - selected.offsetWidth) < .3 &&
+                Math.abs(Number.parseFloat(group.style.getPropertyValue('--pi-m3-track-width')) - selected.offsetWidth) < .12 &&
                 Number.parseFloat(selected.style.getPropertyValue('--pi-choice-grow')) > 1.18;
         }, { timeout: 5000 });
         const afterTrack = await page.$eval('.wpb-progress .wpb-premium-tabs', el => {

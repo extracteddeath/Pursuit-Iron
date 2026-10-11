@@ -2394,12 +2394,14 @@ try {
                         return {focusVisible:el.matches(':focus-visible'),
                             style:cs.outlineStyle,width:cs.outlineWidth,
                             offset:parseFloat(cs.outlineOffset),
-                            height:el.getBoundingClientRect().height};
+                            height:el.getBoundingClientRect().height,
+                            layoutHeight:el.offsetHeight};
                     });
                     assert.ok(focusR46.focusVisible&&focusR46.style==='solid'&&
                         parseFloat(focusR46.width)>=2&&focusR46.offset===-2&&
-                        focusR46.height>=44,
-                        'R46 real segmented keyboard focus stays inside the hit area: '+JSON.stringify(focusR46));
+                        focusR46.layoutHeight>=44&&focusR46.height>=43.5,
+                        'R46 real segmented focus has a 44px layout target even during route-scale arrival: '+
+                        JSON.stringify(focusR46));
                 }
             }
         }

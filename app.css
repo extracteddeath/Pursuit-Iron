@@ -4466,6 +4466,11 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   --pi-r38-surface-1:color-mix(in srgb,var(--pi-r38-carbon) 94%,var(--boot-fg,#f4eff4) 6%);
   --pi-r38-surface-2:color-mix(in srgb,var(--pi-r38-carbon) 87%,var(--boot-fg,#f4eff4) 13%);
   --pi-r38-surface-hero:color-mix(in srgb,var(--pi-r38-surface-2) 92%,var(--pi-m3e-primary) 8%);
+  /* The dark accent kicker must remain AA against the new neutral Plan
+     hero. Rose and Patrol previously dipped to 4.44:1 and 3.9:1. */
+  --pi-r36-accent-label:light-dark(
+    color-mix(in srgb,var(--pi-m3e-primary) 80%,#000000 20%),
+    color-mix(in srgb,var(--pi-m3e-primary) 74%,var(--boot-fg,#f7eff4) 26%));
   --pi-r38-nav-surface:light-dark(var(--pi-m3e-surface-container-low),var(--pi-r38-surface-1));
   --pi-r38-nav-indicator-fill:light-dark(
     color-mix(in srgb,var(--pi-m3e-base) 70%,var(--pi-m3e-primary) 30%),

@@ -230,7 +230,7 @@ try {
         await lightPage.waitForSelector('.wpb-gym-sheet',{hidden:true});
         await lightPage.click('.wpb-live-dock button[aria-label="Resume workout"]');
         await lightPage.waitForSelector('[data-testid="set-0-0"] input[aria-label="weight"]');
-        const r37ToolSize=await lightPage.$eval('.wpb-workout-tools .wpb-workout-tool',items=>items.filter(x=>x.getClientRects().length).map(x=>({w:x.getBoundingClientRect().width,h:x.getBoundingClientRect().height})));
+        const r37ToolSize=await lightPage.evaluate(()=>[...document.querySelectorAll('.wpb-workout-tools .wpb-workout-tool')].filter(x=>x.getClientRects().length).map(x=>({w:x.getBoundingClientRect().width,h:x.getBoundingClientRect().height})));
         assert.ok(r37ToolSize.length>0&&r37ToolSize.every(x=>x.w>=48&&x.h>=48),'R37 light workout tools have Android 48dp targets: '+JSON.stringify(r37ToolSize));
         const lightFields = await lightPage.evaluate(()=>{
             const context=document.createElement('canvas').getContext('2d',{willReadFrequently:true});

@@ -110,6 +110,7 @@ export const browserShards = Object.freeze({
         'r53-semantic-plan-browser-test.mjs',
         'r54-cross-screen-browser-test.mjs',
         'r65-adaptive-shell-browser-test.mjs',
+        'b846-gym-bar-weights-browser-test.mjs',
         'm265-worker-generation-browser-test.mjs',
         'm219-ui-integration-browser-test.mjs',
         'm222-custom-program-parity-browser-test.mjs',

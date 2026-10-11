@@ -119,5 +119,5 @@
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
   "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b833-r23c4bc29862123b7",
-  "uiMilestone": "Build 833 · M3 Expressive R54 Cross-screen Consistency"
+  "uiMilestone": "Build 834 · M3 Expressive R55 Expanded Program Material Hierarchy"
 }

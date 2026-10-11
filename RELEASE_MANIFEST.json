@@ -5,7 +5,7 @@
   "build": 844,
   "engineVersion": "0.65.6",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "a4b790fc05526542d040ea5d6322a704c4ceed23ea55ab8106c257a386202a1c",
+  "runtimeAggregate": "b9f654f94066b85c0c8eed01d1299b84ded05350b3f6b31e9a838383b38dab1d",
   "runtimeFiles": {
     "modules/engine-api.js": "40d3253be40bd5390001f16d63b74aae90d0e045df6a015b1764a1bc2404bd56",
     "modules/engine-shell.js": "73645bf4d914423074c0e90b992b58a6c57f7fbb726621d417803e906d140675",
@@ -91,7 +91,7 @@
     "modules/training-domain/prescriptions.js": "7927d0f1a4343d0ca25ba0deb8b1da616da05372a0a3214a3285d35581055d5f",
     "modules/training-domain/programs.js": "27ade346bc7b2bdd94c51564f1292ec126c2fd2bbbbc8d440ee04b4455d5c11b",
     "modules/training-domain/records.js": "b07d5d53e75b522542f30ad6a78975379841b285ce8c1356d7afcb6923350928",
-    "modules/ui-motion.js": "93003265930a97e50d2395ed3daec094933ed8ce134edcea3c6c1f4869f5e699",
+    "modules/ui-motion.js": "83d0f1f1aa8befaae3564454ce6007d04b3efbe326def86e5628c20f18a0bd4a",
     "modules/wizard-stability.js": "a62b2bed8a1f5ab880bfeab036a83ec630c93048b8a352652fe00ae75374a3d1",
     "vendor/lucide-react.js": "f84db748249b6e57e1d5187e876da806c1733523a1fa1501224bf740519b2cf4",
     "vendor/react-dom-client.js": "e3d8fd1d433e1bee9110bcaa5f8e9547e64f2754806bed0dd4fc546d890baab5",
@@ -107,17 +107,17 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "5ee47639ee127c83e59b92adb4382438cbe588fa3646edd50be23d3a7eb85562",
-    "index.html": "88d99b180f1b2804139c08935a0e7c9b7c356ca6428e3c155fb7cfe9faa9e12f",
-    "sw.js": "05ba9f8a2a307e60571437a37f5b1bc180ddac7416c8f1e4dc5d0f8b03cc9287",
-    "BUILD_PROFILE.json": "c0ba3cc987b59dd84a6d9745c496e2ea95ad27b0e2aae5590611417c137fe20f",
-    "CHANGELOG.md": "0a54276cde8583cf3f64b028dccf63ae244feb16b3db01806cdea3d6cf695e6f",
-    "app.css": "0b64cd83739a596e0d29439199044177716fe3a8a8b6fcf9e8e82660d6959edc",
+    "modules/App.js": "203dff05ba499a12b8182600307440c30030e3b0b1d5fe8cc31970ae4c590a8a",
+    "index.html": "4b681e5920a786752d4e79a54169685cbc167838e2bc8a9a792a3dfa86aa2f68",
+    "sw.js": "658d3470e5ffc3cdc8fe631609adb2602ef7d3c9bce2fb1281626f6d29496429",
+    "BUILD_PROFILE.json": "5d7328ba1efef891028530814d72c5ce3743c29694619e2c8821f027b1b855fb",
+    "CHANGELOG.md": "bf2e3f60ad8f9ab8b7863beb6ac14e082867eab8806d95e67e019935384e8e0b",
+    "app.css": "b3def23c9a1d35f1731af85e2a711427200b6ccc1530fa91f1946ba4c5367c47",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b844-rd1abc718a884151c",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b844-rd18a90142d0a278b",
   "uiMilestone": "Build 844 · R65 adaptive tablet/desktop shell and navigation rail"
 }

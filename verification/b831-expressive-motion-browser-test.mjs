@@ -1117,7 +1117,7 @@ try {
                 overflow:sheet.scrollWidth>sheet.clientWidth+1};
         });
         assert.ok(gymR20.alpha===255 && gymR20.image==='none' &&
-            gymR20.doneHeight>=44 && gymR20.doneWidth>=44 &&
+            gymR20.doneHeight>=48 && gymR20.doneWidth>=44 &&
             gymR20.cardCount>=1 && gymR20.cardRadius>=18 && !gymR20.overflow,
             'R20 solid gym sheet preserves selection cards and full-size Done: '+JSON.stringify(gymR20));
         if (width === 430)
@@ -1329,7 +1329,7 @@ try {
         });
         assert.ok(optionsR22.alpha===255 && optionsR22.image==='none' &&
             optionsR22.titleWrap==='normal' && optionsR22.titleOverflow!=='hidden' &&
-            optionsR22.closeHeight>=44 && optionsR22.actions>=4 &&
+            optionsR22.closeHeight>=48 && optionsR22.actions>=4 &&
             optionsR22.minActionHeight>=54 && optionsR22.descriptionWrap==='normal' &&
             !optionsR22.overflow,
             'R22 exercise options maintain readable names/descriptions and touch targets: '+JSON.stringify(optionsR22));
@@ -1367,7 +1367,7 @@ try {
                 return {w:r.width,h:r.height,image:s.backgroundImage,touch:s.touchAction};
             }));
         assert.ok(liveToolsR23.length>0 && liveToolsR23.every(x=>
-            x.w>=44 && x.h>=44 && x.image==='none' && x.touch==='manipulation'),
+            x.w>=48 && x.h>=48 && x.image==='none' && x.touch==='manipulation'),
             'R23 live tool controls use stable 44px opaque tonal targets: '+JSON.stringify(liveToolsR23));
         const row = '[data-testid="set-0-0"]';
         const workoutContrastR36=await contrastAuditR36([
@@ -1414,7 +1414,7 @@ try {
                 overflow:card.scrollWidth>card.clientWidth+1};
         });
         if(restR23) assert.ok(restR23.alpha===255 && restR23.image==='none' &&
-            !restR23.overflow && restR23.controls.every(x=>x.w>=44 && x.h>=44),
+            !restR23.overflow && restR23.controls.every(x=>x.w>=48 && x.h>=48),
             'R23 rest controls fit within a solid accessible container: '+JSON.stringify(restR23));
         const groupWidth = await page.$eval(`${row} .wpb-effort-scale`, el => el.offsetWidth);
         await page.click(`${row} button[aria-label="3 reps left"]`);
@@ -1879,9 +1879,27 @@ try {
         assert.equal(Number(await page.$eval('[data-chart-scrubber]',x=>x.getAttribute('aria-valuenow'))),denseSummary.n);
         await page.keyboard.press('ArrowLeft');
         assert.equal(Number(await page.$eval('[data-chart-scrubber]',x=>x.getAttribute('aria-valuenow'))),denseSummary.n-1);
+        const r37Focus = await page.$eval('[data-chart-scrubber]',el => {
+            const s=getComputedStyle(el);
+            return {focused:document.activeElement===el,
+                focusVisible:el.matches(':focus-visible'),
+                opacity:parseFloat(s.strokeOpacity),
+                strokeWidth:parseFloat(s.strokeWidth),dash:s.strokeDasharray,
+                touch:s.touchAction};
+        });
+        assert.ok(r37Focus.focused && r37Focus.focusVisible &&
+            r37Focus.opacity===1 && r37Focus.strokeWidth>=2.5 &&
+            r37Focus.dash!=='none' && r37Focus.touch==='pan-y',
+            'R37 chart slider gives keyboard users visible opaque focus without breaking touch scroll: '+JSON.stringify(r37Focus));
         assert.ok(await page.$eval('.wpb-chart-axis',x=>x.textContent.includes('24')&&x.textContent.includes('25')),
             'date labels distinguish multiple years');
         if(width===430)await page.screenshot({path:path.join(root,'verification/b831-m3-dense-chart-phone.png')});
+        const r37Back=await page.$eval('.wpb-exercise-detail-header button[aria-label="Back to library"]',el=>{
+            const r=el.getBoundingClientRect();
+            return {width:r.width,height:r.height,visible:getComputedStyle(el).visibility};
+        });
+        assert.ok(r37Back.width>=48 && r37Back.height>=48 &&
+            r37Back.visible==='visible','R37 exercise detail navigation meets Android 48dp target: '+JSON.stringify(r37Back));
         await page.click('.wpb-exercise-detail-header button[aria-label="Back to library"]');
         await page.waitForSelector('[data-exercisedetail]',{hidden:true});
         assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),initial.saved,

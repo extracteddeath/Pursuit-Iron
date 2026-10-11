@@ -1,3 +1,9 @@
+## Build 834 — M3 Expressive R55 expanded Program hierarchy
+
+- Removed the mismatched gray day/plum exercise surfaces, replacing them with shared theme-derived neutral elevations.
+- Improved contrast for muscle chips, metadata, and progression controls; exercise titles now wrap instead of being cut off by badges.
+- Added visual verification of the *expanded* Program to the two-theme phone screenshot/contrast audit while preserving R54 manual-week selection and exercise controls.
+
 # Build 832 · R53 Material 3 Expressive Plan surface architecture
 
 - Give Plan phase, week, week-picker, and session rows named, reusable semantic component classes rather than anonymous inline color blocks.

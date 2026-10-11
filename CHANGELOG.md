@@ -1,3 +1,9 @@
+## Build 836 — R57 cross-screen header and spacing consistency
+
+- Tightened Plan, Progress, Profile and Settings header rhythm against one set of inset/spacing tokens rather than conflicting legacy paddings.
+- Kept Back, Edit, section tabs and Settings Jump controls accessible at >=44dp, with subdued semantic surfaces and untruncated content.
+- Added paired Rose light/dark phone geometry checks at 393dp and narrow 320dp widths, preserving Home's verified 56dp collapsed header.
+
 ## Build 835 — M3 Expressive R56 Home header density
 
 - Collapsed Home now reduces its actual chrome height, instead of merely hiding the greeting while leaving the full branding/toolbar row.

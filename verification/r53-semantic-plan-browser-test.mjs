@@ -87,6 +87,77 @@ try{
           'Plan has real semantic week cards with exactly one current week: '+JSON.stringify(basic));
         assert.ok(basic.nested&&basic.chipSelected,'Plan nested row and active week are accessible: '+JSON.stringify(basic));
       }
+      // R57: the other four destinations have distinct content structures,
+      // but share density, ≥44dp secondary controls, and no clipping.
+      if(tab!=='home'){
+        const measure=()=>page.evaluate(which=>{
+          const el=s=>document.querySelector(s);
+          const box=s=>{const n=el(s);if(!n)return null;const r=n.getBoundingClientRect();
+            return {top:r.top,bottom:r.bottom,height:r.height,width:r.width,left:r.left,right:r.right};};
+          const root=el('.wpb');
+          const out={overflow:root.scrollWidth>root.clientWidth+1,viewport:innerWidth};
+          if(which==='plan'){
+            out.row=box('.wpb-plan-heading-row');
+            out.back=box('.wpb-plan-heading-row button[aria-label="Back"]');
+            out.title=box('.wpb-plan-title');
+            out.titleSize=parseFloat(getComputedStyle(el('.wpb-plan-title')).fontSize);
+          }else if(which==='progress'){
+            out.header=box('.wpb-progress>.wpb-page-header');
+            out.titleSize=parseFloat(getComputedStyle(el('.wpb-progress-title')).fontSize);
+            out.tabs=[...document.querySelectorAll('.wpb-progress .wpb-premium-tabs>button')]
+              .map(b=>{const r=b.getBoundingClientRect();return {width:r.width,height:r.height}});
+          }else if(which==='settings'){
+            out.header=box('.wpb-settings>.wpb-page-header');
+            out.jump=box('.wpb-settings>.wpb-settings-jump');
+            out.picker=box('.wpb-settings-jump-control');
+            out.titleSize=parseFloat(getComputedStyle(el('.wpb-settings>.wpb-page-header h1')).fontSize);
+            out.select=box('.wpb-settings-jump select');
+          }else if(which==='profile'){
+            out.topPadding=parseFloat(getComputedStyle(el('.wpb-profile-inner')).paddingTop);
+            out.head=box('.wpb-profile-head');
+            out.titleSize=parseFloat(getComputedStyle(el('.wpb-profile-title')).fontSize);
+            out.edit=box('.wpb-profile-edit');
+            out.hero=box('.wpb-profile-hero');
+            out.stats=[...document.querySelectorAll('.wpb-profile-stat')].map(b=>b.getBoundingClientRect().width);
+          }
+          return out;
+        },tab);
+        const density=await measure();
+        assert.ok(!density.overflow,'R57 destination must not overflow: '+JSON.stringify({tab,density}));
+        if(tab==='plan'){
+          assert.ok(density.row&&density.back&&density.title&&density.back.height>=44&&density.back.width>=44,
+            'Plan Back has an actual 44dp target: '+JSON.stringify(density));
+          assert.ok(density.titleSize>=27&&density.titleSize<=28&&density.title.bottom-density.row.top<=118,
+            'Plan header has compact hierarchy without hiding title: '+JSON.stringify(density));
+        }else if(tab==='progress'){
+          assert.ok(density.header&&density.header.height<=155&&density.titleSize>=26&&density.tabs.length===4&&density.tabs.every(x=>x.height>=48),
+            'Progress title and four 44dp tabs fit its header: '+JSON.stringify(density));
+        }else if(tab==='settings'){
+          assert.ok(density.header&&density.jump&&density.picker&&density.picker.height>=48&&density.titleSize>=27&&density.select&&density.select.height>=44
+            &&density.jump.bottom-density.header.top<=128,
+            'Settings title and Jump control use a compact, accessible header: '+JSON.stringify(density));
+        }else if(tab==='profile'){
+          assert.ok(density.head&&density.edit&&density.hero&&density.titleSize>=27&&density.topPadding<=16
+            &&density.edit.width>=44&&density.edit.height>=44,
+            'Profile identity/edit start promptly with full-size edit action: '+JSON.stringify(density));
+          assert.ok(density.hero.top-density.head.bottom<=16&&density.stats.length===3
+            &&density.stats.every(w=>w>=68),'Profile cards follow a consistent density: '+JSON.stringify(density));
+        }
+        basic.density=density;
+        if(tab==='plan'||tab==='profile'||tab==='settings'){
+          await page.setViewport({width:320,height:700,deviceScaleFactor:1,isMobile:true,hasTouch:true});
+          const small=await measure();
+          assert.ok(!small.overflow,'320dp '+tab+' must not overflow: '+JSON.stringify(small));
+          if(tab==='plan')assert.ok(small.back.width>=44&&small.title.bottom-small.row.top<=136,
+            'Plan still fits at 320dp: '+JSON.stringify(small));
+          if(tab==='profile')assert.ok(small.edit.height>=44&&small.stats.every(w=>w>=64),
+            'Profile edit/stats remain usable at 320dp: '+JSON.stringify(small));
+          if(tab==='settings')assert.ok(small.select.height>=44&&small.jump.bottom-small.header.top<=136,
+            'Settings Jump remains usable at 320dp: '+JSON.stringify(small));
+          basic.smallDensity=small;
+          await page.setViewport({width:393,height:852,deviceScaleFactor:1,isMobile:true,hasTouch:true});
+        }
+      }
       captures[theme][tab]=Buffer.from(await page.screenshot({type:'png'}));
       surfaces[tab]=basic;
       if(tab==='home'){
@@ -239,7 +310,7 @@ try{
     fs.writeFileSync(path.join(root,'verification/r53-'+tab+'-phone.png'),Buffer.from(result,'base64'));
   }
   await canvasPage.close();
-  console.log('PASS R56: 7 paired Rose dark/Rosewater light screenshots; compact Home height/44dp actions, 320dp fit, real Library navigation and existing R53 Plan/Program roles; '+JSON.stringify(measurements));
+  console.log('PASS R57: 7 paired Rose dark/Rosewater light screens, shared Plan/Progress/Profile/Settings density, 320dp overflow and 44dp controls, R56 compact Home and prior Plan/Program color checks; '+JSON.stringify(measurements));
 }finally{
   if(browser)await browser.close();
   await new Promise(resolve=>server.close(resolve));

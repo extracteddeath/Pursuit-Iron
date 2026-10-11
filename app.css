@@ -4273,3 +4273,91 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     outline-color:Highlight!important;
   }
 }
+
+/* M3 EXPRESSIVE R34 — ADAPTIVE NAVIGATION AND CROSS-SCREEN COMPOSITION
+   Keep one canonical responsive shell. These rules only resolve crowding;
+   controls retain real React layout, touch dimensions and semantic actions. */
+#root[data-pi-motion="expressive"] .wpb .wpb-tabbar{
+  padding-left:max(6px,env(safe-area-inset-left))!important;
+  padding-right:max(6px,env(safe-area-inset-right))!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab{
+  min-width:0!important;
+  flex-shrink:1;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab>span{
+  box-sizing:border-box;
+  max-width:100%;
+  min-width:0;
+  text-align:center;
+  white-space:normal!important;
+  overflow-wrap:anywhere;
+  line-height:1.2;
+}
+#root[data-pi-motion="expressive"] .wpb :is(
+  .wpb-home-hero,.wpb-action-tile,.wpb-plan-up-next,
+  .wpb-plan-glance-tile,.wpb-progress-glance-item,
+  .wpb-profile-hero,.wpb-profile-stat,.wpb-profile-strength-cell,
+  .wpb-settings-card,.wpb-settings-row){
+  min-width:0;
+}
+#root[data-pi-motion="expressive"] .wpb :is(
+  .wpb-home-hero,.wpb-plan-up-next,.wpb-profile-strength-cell,
+  .wpb-progress-glance-item) :is(h1,h2,h3,.mono){
+  overflow-wrap:anywhere;
+}
+@media(max-width:359px){
+  #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength-cell>.mono{
+    font-size:clamp(18px,5.9vw,21px)!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb-progress [data-progress-glance]{
+    gap:5px!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb-home .wpb-action-grid{
+    gap:6px!important;
+  }
+}
+@media(max-height:620px) and (orientation:landscape){
+  #root[data-pi-motion="expressive"] .wpb :is(.wpb-home,.wpb-progress,.wpb-settings)>.wpb-page-header{
+    padding-top:6px!important;
+    padding-bottom:6px!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero{
+    margin-top:7px!important;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  #root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab{
+    transition:none!important;
+  }
+}
+
+/* M3 EXPRESSIVE R35 — LEGIBLE PAIRINGS, LIGHT AND DARK
+   Contrasts follow actual foreground / surface roles. The selected nav pill
+   keeps its existing theme-native fill; its defined high-contrast perimeter
+   supplies the required non-text state distinction without brightening the
+   whole navigation bar or dimming any workout values. */
+#root[data-pi-motion="expressive"] .wpb{
+  --pi-r35-control-outline:color-mix(in srgb,currentColor 62%,transparent);
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-tabbar[data-pi-m3-track]::before{
+  outline:2px solid var(--pi-r35-control-outline);
+  outline-offset:-2px;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab:focus-visible{
+  outline:2px solid currentColor!important;
+  outline-offset:-2px!important;
+}
+#root[data-pi-motion="expressive"] .wpb :is(
+  .wpb-home-create,.wpb-home .wpb-home-hero .wpb-primary-action,
+  .wpb-onboarding-primary,.wpb-onboarding-secondary,
+  .wpb-wizard-next-action,.wpb-wizard-back-action):focus-visible{
+  outline:2px solid currentColor!important;
+  outline-offset:2px!important;
+}
+@media(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb .wpb-tabbar[data-pi-m3-track]::before{
+    outline:2px solid Highlight!important;
+    background-color:Canvas!important;
+  }
+}

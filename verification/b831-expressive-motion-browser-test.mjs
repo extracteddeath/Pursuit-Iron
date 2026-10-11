@@ -396,6 +396,40 @@ try {
             assert.ok(navDir.scale>=.98 && navDir.scale<=1.001 && navDir.opacity>.95,
                 'connected navigation settles to fully interactive page geometry');
             assert.ok(await page.$eval('.wpb', el => el.scrollWidth <= innerWidth + 1), `${tab} fits at ${width}px`);
+            // R45: verify the actual page-and-navigation shell at each of
+            // the five destinations, not just a CSS variable declaration.
+            // No ghosted translucent chrome or overflow on narrow Android.
+            const shellR45=await page.evaluate(tab=>{
+                const root=document.querySelector('.wpb');
+                const page=root.querySelector('.wpb-'+tab);
+                const nav=root.querySelector('.wpb-tabbar');
+                const selected=nav.querySelector('[aria-current="page"]');
+                const ink=getComputedStyle(nav,'::before');
+                const cs=el=>el?getComputedStyle(el):null;
+                const rgba=el=>{
+                    const ctx=document.createElement('canvas').getContext('2d',{willReadFrequently:true});
+                    ctx.fillStyle=cs(el).backgroundColor;ctx.fillRect(0,0,1,1);
+                    return ctx.getImageData(0,0,1,1).data[3];
+                };
+                return {tab,pageBackground:cs(page)?.backgroundColor,
+                    pageImage:cs(page)?.backgroundImage,
+                    navBackground:cs(nav)?.backgroundColor,
+                    navImage:cs(nav)?.backgroundImage,
+                    pageOpaque:page?rgba(page)===255:false,
+                    navOpaque:rgba(nav)===255,
+                    indicator:ink.backgroundColor,
+                    indicatorImage:ink.backgroundImage,
+                    selectedTab:selected?.dataset.tab,
+                    hitHeight:selected?.getBoundingClientRect().height||0,
+                    overflow:root.scrollWidth>root.clientWidth+1};
+            },tab);
+            assert.ok(shellR45.pageOpaque&&shellR45.navOpaque&&
+                shellR45.pageImage==='none'&&shellR45.navImage==='none'&&
+                shellR45.indicatorImage==='none'&&
+                shellR45.selectedTab===tab&&shellR45.hitHeight>=52&&
+                !shellR45.overflow,
+                'R45 app destinations use opaque non-gradient chrome and a separate selected icon pill: '+
+                JSON.stringify(shellR45));
             // page.click produces a real touch ripple. Check idle icon styling only AFTER
             // animationend clears the transient layer, not while the active ::after paints.
             await page.waitForFunction(tab => !document.querySelector(`[data-tab="${tab}"]`)?.hasAttribute('data-pi-ink'),
@@ -611,6 +645,42 @@ try {
                 // In the active-workout fixture, the optional Create Program
                 // dock is hidden by the resumed-workout bar. Only assert what
                 // actually exists; the no-live scenario below checks both.
+                // R45: Home must resolve the SAME theme-derived quiet,
+                // raised and hero roles as the other screens, including
+                // low-saturation dark charcoal; do not alter CTA ink.
+                const homeTonesR45=await page.$eval('.wpb-home',home=>{
+                    const cs=x=>x?getComputedStyle(x):null;
+                    const bg=x=>cs(x)?.backgroundColor;
+                    const probe=document.createElement('div');
+                    probe.style.cssText='position:absolute;visibility:hidden;pointer-events:none;width:1px;height:1px';
+                    home.append(probe);
+                    const role=token=>{probe.style.backgroundColor='var('+token+')';return bg(probe);};
+                    const quiet=role('--pi-r11-quiet');
+                    const raised=role('--pi-r11-raised');
+                    const hero=role('--pi-r11-hero');
+                    probe.remove();
+                    const header=home.querySelector('.wpb-home-header');
+                    const feature=home.querySelector('.wpb-home-hero');
+                    const metric=home.querySelector('.wpb-metric-strip>.wpb-metric');
+                    const preview=home.querySelector('.wpb-m3-session-preview');
+                    return {quiet,raised,hero,
+                        header:bg(header),feature:bg(feature),metric:bg(metric),
+                        preview:bg(preview),headerImage:cs(header)?.backgroundImage,
+                        heroImage:cs(feature)?.backgroundImage,
+                        metricImage:cs(metric)?.backgroundImage,
+                        overflow:home.scrollWidth>home.clientWidth+1};
+                });
+                assert.ok(homeTonesR45.header===homeTonesR45.quiet&&
+                    homeTonesR45.metric===homeTonesR45.quiet&&
+                    homeTonesR45.feature===homeTonesR45.hero&&
+                    (!homeTonesR45.preview||homeTonesR45.preview===homeTonesR45.raised)&&
+                    homeTonesR45.headerImage==='none'&&
+                    homeTonesR45.heroImage==='none'&&
+                    homeTonesR45.metricImage==='none'&&
+                    homeTonesR45.hero!==homeTonesR45.quiet&&
+                    !homeTonesR45.overflow,
+                    'R45 Home resolves the common quiet/raised/hero roles: '+
+                    JSON.stringify(homeTonesR45));
                 const homeAccent = await homePalette();
                 assert.ok(homeAccent.primary && homeAccent.primary.height >= 44,
                     'R10 Start Workout retains its accessible 44px+ target: '+JSON.stringify(homeAccent));

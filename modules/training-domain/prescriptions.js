@@ -220,9 +220,7 @@ function withTrainingMax(program, exerciseId, value, unit) {
 
 function pctSetsFor(scheme, tm, weekIndex, weeksTotal, unit, ex, dayType, tier = "t1") {
     return percentageProtocolFor({ scheme, tm, weekIndex, weeksTotal, dayType, tier,
-        // The evaluator already used its declared loading inventory for each
-        // Dynamic Double set; re-snapping here can erase one earned 5 lb increase.
-        snapLoad: value => sug?.perSet ? value : loadableAtOrBelow(ex, value, unit) });
+        snapLoad: value => loadableAtOrBelow(ex, value, unit) });
 }
 
 function percentagePlanFor(program, day, ex, slot, weekIndex, unit, history = []) {
@@ -1016,7 +1014,9 @@ function prescribeSets(program, day, ex, slot, weekIndex, unit, sug, dayPerf, pe
         includeWarmups: !!withWarm,
         loadingInventory: request?.equipment?.loading,
         equipmentAvailable: request?.equipment?.available,
-        snapLoad: value => loadableAtOrBelow(ex, value, unit)
+        // Keep evaluator-owned Dynamic Double set targets. Generic equipment
+        // rounding can otherwise erase an earned one-step per-hand increase.
+        snapLoad: value => sug?.perSet ? value : loadableAtOrBelow(ex, value, unit)
     });
     const range = cellRepRange(cell, program, ex, slot === day.primaryIndex);
     const rangeText = range[0] === range[1] ? String(range[0]) : `${range[0]}-${range[1]}`;

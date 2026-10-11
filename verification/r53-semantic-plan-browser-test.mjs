@@ -140,7 +140,7 @@ try{
         assert.notEqual(restored.long,'none','Full masthead returns on scroll-to-top');
         await page.click('.wpb-home-tools button[aria-label="Exercise library"]');
         await page.waitForSelector('.wpb-library');
-        await page.click('[data-tab="home"]');
+        await page.click('.wpb-library-header button[aria-label="Back"]');
         await page.waitForSelector('.wpb-home');
         surfaces[tab].header={expanded:expanded.header.h,compact:compact.header.h,
           compactButtons:compact.buttons.length,smallHeader:small.header.h};

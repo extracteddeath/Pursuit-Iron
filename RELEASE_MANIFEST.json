@@ -2,7 +2,7 @@
   "schemaVersion": 3,
   "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": 832,
+  "build": 833,
   "engineVersion": "0.65.6",
   "candidateStatus": "verification_enforced_by_ci",
   "runtimeAggregate": "a4b790fc05526542d040ea5d6322a704c4ceed23ea55ab8106c257a386202a1c",
@@ -107,10 +107,10 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "1eb8472c8b74f8f0efde0c2c0ffbc341ab3429d63cc453be802b3b35aed7b7b9",
-    "index.html": "f7c1f4e8c139e1e3f70ddfece68669f779b0bf38924e635e836c1df363b11dc1",
-    "sw.js": "2c102a6fccd6ea1f16608fa6cfaeab3ea77a753f7b1a1a5f147ace2dc6b25a44",
-    "BUILD_PROFILE.json": "aacf19e8aec055dd0eb5cfe3fec6988d9a340fe57095eaa355a960a4f7b47eab",
+    "modules/App.js": "2aac6778a1903e058205c37577f391bc270a6812da81e1bc8ab295052986cea8",
+    "index.html": "f3105ecbd99d46fe9617dda8d796b7fb49961019210b3f01bf55d794785b99f3",
+    "sw.js": "cb267e7d5fc08ebee87ea2e68417a6f1fc6254c0c1fb1e1dbbe1c00d4bd6c247",
+    "BUILD_PROFILE.json": "9f584d75d4f0abf967150f173986b5851e87613d09e68820adba8fb0ccc133be",
     "CHANGELOG.md": "a61bf40084942423bcad8ca31b70b94dfcf772c45a85365feb94daf89a782a5d",
     "app.css": "71954ad5fdd54d77ae7bfec40ef64389c7b8d24147b46d6f658acb073af0405a",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
@@ -118,6 +118,6 @@
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b832-rd9e67413705f73d1",
-  "uiMilestone": "Build 832 · M3 Expressive R53 Plan Semantic Architecture"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b833-r23c4bc29862123b7",
+  "uiMilestone": "Build 833 · M3 Expressive R54 Cross-screen Consistency"
 }

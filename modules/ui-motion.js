@@ -359,8 +359,14 @@ function stagePage(el, initial = false) {
         item.dataset.piReveal = '1';
     });
 }
-const navSurface = button =>
-    `color-mix(in srgb, ${getComputedStyle(button).color} 14%, transparent)`;
+const navSurface = button => {
+    // R38: the selected destination inherits its real opaque tonal fill
+    // from the saved theme. The old 14%-alpha color produced an almost
+    // invisible interior, leaving a hollow ring crowding the label.
+    const style = getComputedStyle(button);
+    return style.getPropertyValue('--pi-r38-nav-indicator-fill').trim() ||
+        `color-mix(in srgb, ${style.color} 14%, transparent)`;
+};
 
 /* Shared disclosure orchestration.
    The content is still mounted/removed by React: this layer observes actual
@@ -483,7 +489,7 @@ function disclosure(el, initial = false) {
             '--pi-m3-track-x': button.offsetLeft + (nav ? (button.offsetWidth - width) / 2 : 0),
             '--pi-m3-track-y': button.offsetTop + (nav ? 3 : 0),
             '--pi-m3-track-width': width,
-            '--pi-m3-track-height': nav ? 33 : button.offsetHeight
+            '--pi-m3-track-height': nav ? 27 : button.offsetHeight
         };
         for (const [key, value] of Object.entries(target)) {
             // ResizeObserver may fire for a parent resize with no change in

@@ -4045,10 +4045,11 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    retaining the user's chosen accent only on semantically important elements.
    Light-theme roles remain theme-native. No gradients and no engine changes. */
 #root[data-pi-motion="expressive"] .wpb{
-  --pi-r38-carbon:color-mix(in srgb,var(--pi-m3e-base) 72%,#1a1b21 28%);
-  --pi-r38-surface-1:color-mix(in srgb,var(--pi-r38-carbon) 94%,var(--wpb-theme-text,#f4eff4) 6%);
-  --pi-r38-surface-2:color-mix(in srgb,var(--pi-r38-carbon) 87%,var(--wpb-theme-text,#f4eff4) 13%);
-  --pi-r38-surface-hero:color-mix(in srgb,var(--pi-r38-surface-2) 92%,var(--pi-m3e-primary) 8%);
+  /* R63: legacy consumers resolve the same palette-owned materials. */
+  --pi-r38-carbon:var(--pi-color-canvas);
+  --pi-r38-surface-1:var(--pi-color-card);
+  --pi-r38-surface-2:var(--pi-color-control);
+  --pi-r38-surface-hero:var(--pi-color-feature);
   /* The dark accent kicker must remain AA against the new neutral Plan
      hero. Rose and Patrol previously dipped to 4.44:1 and 3.9:1. */
   --pi-r36-accent-label:light-dark(
@@ -4510,10 +4511,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   --pi-r41-gap-4:16px;
   --pi-r41-gap-5:20px;
   --pi-r41-gap-6:24px;
-  --pi-r41-page:color-mix(in srgb,#111317 91%,var(--pi-m3e-base) 9%);
-  --pi-r41-surface-1:color-mix(in srgb,#1a1d22 90%,var(--pi-m3e-base) 10%);
-  --pi-r41-surface-2:color-mix(in srgb,#24272d 90%,var(--pi-m3e-base) 10%);
-  --pi-r41-surface-3:color-mix(in srgb,#2c3037 90%,var(--pi-m3e-base) 10%);
+  --pi-r41-page:var(--pi-color-canvas);
+  --pi-r41-surface-1:var(--pi-color-card);
+  --pi-r41-surface-2:var(--pi-color-control);
+  --pi-r41-surface-3:var(--pi-color-inset);
   --pi-r41-separator:color-mix(in srgb,var(--wpb-theme-text,#f5f0f5) 10%,transparent);
   --pi-r11-quiet:light-dark(var(--pi-m3e-surface-container-low),var(--pi-r41-surface-1));
   --pi-r11-raised:light-dark(var(--pi-m3e-surface-container),var(--pi-r41-surface-2));
@@ -5382,24 +5383,32 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb-workout .wpb-workout-scroll{
   padding-top:9px!important;
 }
-/* Coach summary is a compact disclosure, not a competing colored notice;
-   preserve its semantic Expand action and access to all detailed guidance. */
+/* A transformed scrolling ancestor captures fixed sheets at its scrolled
+   origin. Keep workout overlays attached to the screen during their full
+   open/close lifetime; the sheet retains its own motion and drag owner. */
+#root[data-pi-motion="expressive"] .wpb-workout .wpb-workout-scroll:has(.wpb-backdrop){
+  animation:none!important;
+  transform:none!important;
+  translate:none!important;
+  scale:none!important;
+}
+/* Coach stays a compact theme-tinted disclosure with quiet supporting text. */
 #root[data-pi-motion="expressive"] .wpb-workout .wpb-workout-scroll>
   button[aria-label="Expand Coach guidance"]{
   box-sizing:border-box;
   min-height:40px!important;
   margin-bottom:8px!important;
   padding:7px 10px!important;
-  background-color:var(--pi-r11-quiet)!important;
+  background-color:var(--pi-color-card)!important;
   background-image:none!important;
-  border:1px solid var(--pi-r11-edge)!important;
+  border:1px solid color-mix(in srgb,var(--pi-m3e-primary) 20%,transparent)!important;
   border-radius:14px!important;
   box-shadow:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb-workout .wpb-workout-scroll>.wpb-coach-card{
-  background-color:var(--pi-r11-quiet)!important;
+  background-color:var(--pi-color-card)!important;
   background-image:none!important;
-  border:1px solid var(--pi-r11-edge)!important;
+  border:1px solid color-mix(in srgb,var(--pi-m3e-primary) 20%,transparent)!important;
   border-radius:16px!important;
   box-shadow:none!important;
   margin-bottom:10px!important;
@@ -5416,24 +5425,23 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root[data-pi-motion="expressive"] .wpb-workout .wpb-workout-tool{
   min-height:48px!important;
-  padding:9px 11px!important;
-  border:1px solid var(--pi-r11-edge)!important;
-  border-radius:15px!important;
-  background-color:var(--pi-r11-quiet)!important;
+  padding:7px 9px!important;
+  border:1px solid transparent!important;
+  border-radius:8px!important;
+  background-color:transparent!important;
   background-image:none!important;
   box-shadow:none!important;
 }
-/* User-saved rack/seat/tempo setup is helpful, but shouldn't look more
-   important than the working-set inputs. Retain its Edit action and text. */
+/* Saved setup uses the chosen theme's restrained feature tint. */
 #root[data-pi-motion="expressive"] .wpb-workout .wpb-workout-scroll>
   button[aria-label^="Edit pinned note for "]{
   box-sizing:border-box;
   min-height:44px!important;
   margin-bottom:7px!important;
   padding:8px 10px!important;
-  border:1px solid var(--pi-r11-edge)!important;
+  border:1px solid color-mix(in srgb,var(--pi-m3e-primary) 24%,transparent)!important;
   border-radius:14px!important;
-  background-color:var(--pi-r11-quiet)!important;
+  background-color:var(--pi-color-feature)!important;
   background-image:none!important;
   box-shadow:none!important;
 }
@@ -5482,35 +5490,29 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 
 
-/* R52 — SEMANTIC SURFACE AND ACCENT STATE DESIGN SYSTEM
-   Evidence: owner Rose/Dark Settings and SekuFit program screenshots.
-   Replaces R51's blunt gray selection and repairs Settings wrappers which
-   do not own .wpb-settings-card. One coherent surface ladder; saved accent
-   only inside intentional active states and main actions. No JS or logger. */
+/* R52/R63 — SEMANTIC SURFACES FOLLOW THE SAVED THEME
+   Owner preference: keep the original tinted workout and menu materials.
+   The live palette owns dark canvas/card/control roles; retain the existing
+   light tonal ladder. No universal gray is mixed into dark materials. */
 #root[data-pi-motion="expressive"] .wpb{
-  /* Tonal neutrals follow the saved palette, not a universal blue-gray.
-     Elevation increases inward: canvas < card < control < inset. */
-  --pi-color-canvas:light-dark(var(--pi-m3e-base),color-mix(in srgb,var(--wpb-theme-bg,#110c18) 55%,#15171c 45%));
-  --pi-color-card:light-dark(var(--pi-m3e-surface-container-low),color-mix(in srgb,var(--wpb-theme-bg,#110c18) 30%,#202126 70%));
-  --pi-color-control:light-dark(var(--pi-m3e-surface-container),color-mix(in srgb,var(--wpb-theme-bg,#110c18) 24%,#2c2c33 76%));
-  --pi-color-inset:light-dark(var(--pi-m3e-surface-container-high),color-mix(in srgb,var(--wpb-theme-bg,#110c18) 18%,#37353d 82%));
-  --pi-color-on-control:light-dark(#38323f,#e3dce8);
-  --pi-color-on-muted:light-dark(#5d5265,#c6bdcc);
+  --pi-color-canvas:var(--wpb-theme-bg);
+  --pi-color-card:light-dark(var(--pi-m3e-surface-container-low),var(--wpb-theme-card));
+  --pi-color-control:light-dark(var(--pi-m3e-surface-container),var(--wpb-theme-card-high));
+  --pi-color-inset:light-dark(var(--pi-m3e-surface-container-high),
+    color-mix(in srgb,var(--wpb-theme-card-high) 94%,var(--wpb-theme-text) 6%));
+  --pi-color-on-control:var(--wpb-theme-text);
+  --pi-color-on-muted:light-dark(#5d5265,var(--wpb-theme-muted));
   --pi-color-divider:light-dark(var(--pi-m3e-outline-variant),color-mix(in srgb,var(--wpb-theme-text,#f0eaf3) 18%,transparent));
-  /* Selection belongs to the theme; an accessible *tonal* accent, not a
-     loud saturated primary CTA or a universal slate-gray slab. */
-  --pi-color-active:light-dark(
-    color-mix(in srgb,var(--pi-m3e-primary) 22%,#373943 78%),
-    color-mix(in srgb,var(--pi-m3e-primary) 35%,#c0c4cd 65%));
-  --pi-color-on-active:light-dark(#fff,#17191d);
+  /* Use the palette's already-paired selection fill and foreground. */
+  --pi-color-active:var(--wpb-theme-accent);
+  --pi-color-on-active:var(--wpb-theme-on-accent);
   --pi-color-feature:light-dark(var(--pi-m3e-primary-container),color-mix(in srgb,var(--pi-color-card) 88%,var(--pi-m3e-primary) 12%));
   --pi-color-on-feature:var(--pi-color-on-control);
-  /* Compatibility with older components still reading R11/R51 surface roles.
-     Keep the same charcoal values already in R51 for the workout logger. */
+  /* Older component families share the same live tinted surface roles. */
   --pi-r11-quiet:var(--pi-color-card);
   --pi-r11-raised:var(--pi-color-control);
   --pi-r11-hero:var(--pi-color-feature);
-  --pi-r11-selected:light-dark(var(--pi-m3e-primary-container),#2c3039);
+  --pi-r11-selected:var(--pi-color-feature);
   --pi-r11-edge:var(--pi-color-divider);
   --pi-r51-page:var(--pi-color-canvas);
   --pi-r51-surface:var(--pi-color-card);

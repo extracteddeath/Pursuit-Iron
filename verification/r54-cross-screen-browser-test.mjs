@@ -18,6 +18,7 @@ const store=theme=>({
   v:13,savedAt:1,saved:[program],cycles:[],history:[],perf:{},drafts:{},tombs:{},
   seenIntro:999,seenWhatsNew:999,pinnedId:program.id,theme,unit:'lb',
   unitChosen:true,experience:'intermediate',bodyweight:185,
+  warmupCard:false,exNotes:{'bb-bench':'J-hooks 9.5'},
   installDismissedAt:Date.now(),lastBackup:Date.now()
 });
 const snapshot={
@@ -409,6 +410,7 @@ try{
     const detail=await audit('.wpb-exercise-detail');
     assert.ok(!detail.overflow&&detail.width>300,
       'Exercise detail fits and retains semantic overlay: '+JSON.stringify(detail));
+    assert.equal(detail.background,library.background,'Exercise detail retains the Library theme canvas');
     await page.screenshot({path:path.join(root,'verification/r54-detail-'+theme+'-phone.png')});
 
     // The manual progression program uses the week picker too. Earlier R53
@@ -451,8 +453,51 @@ try{
       'The resumed logger remains readable without horizontal overflow: '+
       JSON.stringify({workout,inputs}));
     await page.screenshot({path:path.join(root,'verification/r54-workout-'+theme+'-phone.png')});
+    // R63: the utility row remains quiet while notes retain the chosen tint.
+    // Exercise the note editor and info overlay with a live user-owned set.
+    const beforeInputs=await page.$$eval('[data-testid="set-0-0"] input',els=>els.map(el=>el.value));
+    const surrounding=await page.evaluate(()=>{
+      const root=document.querySelector('.wpb-workout');
+      const note=root.querySelector('button[aria-label^="Edit pinned note for "]');
+      const coach=root.querySelector('button[aria-label="Expand Coach guidance"]');
+      const tools=[...root.querySelectorAll('.wpb-workout-tool')];
+      return {note:note&&{height:note.offsetHeight,background:getComputedStyle(note).backgroundColor},
+        coach:coach&&{height:coach.offsetHeight,background:getComputedStyle(coach).backgroundColor},
+        tools:tools.map(el=>({height:el.offsetHeight,background:getComputedStyle(el).backgroundColor,
+          border:getComputedStyle(el).borderTopColor}))};
+    });
+    assert.ok(surrounding.note?.height>=44&&surrounding.coach?.height>=40&&surrounding.coach.height<=48&&
+      surrounding.note.background!==surrounding.coach.background&&surrounding.tools.length>=3&&
+      surrounding.tools.every(x=>x.height>=48&&x.background==='rgba(0, 0, 0, 0)'&&x.border==='rgba(0, 0, 0, 0)'),
+      'Theme-tinted note and compact Coach coexist with unfilled full-size tool targets: '+JSON.stringify(surrounding));
+    await page.click('button[aria-label^="Edit pinned note for "]');
+    await page.waitForSelector('.wpb-workout-scroll textarea');
+    await page.$eval('.wpb-workout-scroll textarea',el=>el.select());
+    await page.keyboard.type('J-hooks 10');
+    await page.$$eval('.wpb-workout-scroll button',buttons=>buttons.find(b=>b.textContent.trim()==='Save note').click());
+    await page.waitForFunction(()=>document.querySelector('button[aria-label^="Edit pinned note for "]')?.textContent.includes('J-hooks 10'));
+    await page.click('button[aria-label^="Exercise info for "]');
+    await page.waitForSelector('.wpb-backdrop [data-sheet-drag][data-pi-surface]');
+    await page.waitForFunction(()=>document.querySelector('.wpb-backdrop [data-sheet-drag]')?.style.getPropertyValue('--pi-surface-y')==='0px');
+    for(const width of [320,393]){
+      await page.setViewport({width,height:852,deviceScaleFactor:1,isMobile:true,hasTouch:true});
+      const close=await page.$eval('.wpb-backdrop button[aria-label="Close"]',button=>{
+        const r=button.getBoundingClientRect(),hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
+        return {height:r.height,top:r.top,bottom:r.bottom,hit:button.contains(hit)};
+      });
+      assert.ok(close.height>=48&&close.top>=0&&close.bottom<=852&&close.hit,
+        'Info sheet Close is visible and tappable after editing a scrolled note: '+JSON.stringify({width,close}));
+    }
+    await page.screenshot({path:path.join(root,'verification/r63-workout-info-'+theme+'-phone.png')});
+    await page.click('.wpb-backdrop button[aria-label="Close"]');
+    await page.waitForSelector('.wpb-backdrop',{hidden:true});
+    assert.deepEqual(await page.$$eval('[data-testid="set-0-0"] input',els=>els.map(el=>el.value)),beforeInputs,
+      'Note editing and info menus preserve live weight/reps');
+    assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),[program],
+      'Supporting controls do not rewrite the program');
+    diagnostics[theme]={surrounding};
     assert.equal(errors.length,0,'No route errors in '+theme+': '+errors.join('; '));
-    diagnostics[theme]={library,detail,weeks,workout,inputs};
+    diagnostics[theme]={...diagnostics[theme],library,detail,weeks,workout,inputs};
     await context.close();
   }
   const flows=[];

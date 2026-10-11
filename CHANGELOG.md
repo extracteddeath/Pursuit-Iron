@@ -1,3 +1,11 @@
+## Build 842 — R63 themed materials and quiet workout tools
+
+- Restore each dark preset's own background, card and control colors across the main screens and shared controls; use the saved accent/foreground pair for selected choices.
+- Restore a restrained theme tint to pinned workout notes and subtle theme boundaries to compact coaching.
+- Return Warm-up, Superset, Swap and Plates to unfilled icon/text controls with their existing 48px touch targets.
+- Keep exercise-info sheets and their Close action on screen after scrolling or editing a note; preserve the sheet's own motion and drag behavior.
+- Extend the existing browser checks with all 20 live theme choices and note-editor/info-menu journeys that preserve entered set values and program prescriptions.
+
 ## Build 841 — R62 Home and Plan task hierarchy
 
 - Put Home's Start workout action before the exercise outline and saved programs before creation discovery.

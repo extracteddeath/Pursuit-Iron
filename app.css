@@ -6635,3 +6635,51 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     animation:none!important;
   }
 }
+
+
+/* R68 — Plan schedule / supporting-pane reflow.
+   The same PlanView, week-picker, Up Next and overview own the state at
+   every width. CSS Grid only repositions the original DOM nodes. On
+   phones, split-screen and short landscape, the original flow survives. */
+@media (min-width:1060px) and (min-height:700px){
+  #root[data-pi-motion="expressive"] .wpb .wpb-plan-view{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) minmax(250px,296px);
+    column-gap:clamp(18px,2.5vw,32px);
+    row-gap:0;
+    align-content:start;
+    align-items:start;
+    max-width:1120px!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-plan-view>*{
+    min-width:0;
+    grid-column:1;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-plan-view>:is(.wpb-plan-heading-row,.wpb-plan-title){
+    grid-column:1 / -1;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-plan-view>.wpb-plan-panes{
+    grid-column:1;
+    grid-row:3;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-plan-view>.wpb-plan-up-next{
+    grid-column:2;
+    grid-row:3;
+    align-self:start;
+    margin-bottom:10px!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-plan-view>.wpb-plan-overview{
+    grid-column:2;
+    grid-row:4;
+    align-self:start;
+    margin:0!important;
+    padding:12px 0 0 18px!important;
+    border-top:0!important;
+    border-left:1px solid var(--pi-color-divider)!important;
+  }
+}
+@media (forced-colors:active) and (min-width:1060px) and (min-height:700px){
+  #root[data-pi-motion="expressive"] .wpb .wpb-plan-view>.wpb-plan-overview{
+    border-left-color:CanvasText!important;
+  }
+}

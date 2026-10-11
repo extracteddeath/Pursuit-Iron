@@ -118,6 +118,6 @@
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b842-rd1abc718a884151c",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b843-rd1abc718a884151c",
   "uiMilestone": "Build 843 · R64 unified theme-native search and menus"
 }

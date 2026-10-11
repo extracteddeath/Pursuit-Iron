@@ -413,8 +413,9 @@ try {
                 const icon=selected.querySelector('svg'),label=selected.querySelector('span');
                 const labelTop=label?.getBoundingClientRect().top??0;
                 const iconBottom=icon?.getBoundingClientRect().bottom??0;
-                const indicatorBottom=el.getBoundingClientRect().top+
-                    parseFloat(el.style.getPropertyValue('--pi-m3-track-y'))+parseFloat(indicator.height);
+                const indicatorBottom=selected.getBoundingClientRect().top+
+                    (parseFloat(el.style.getPropertyValue('--pi-m3-track-y'))-selected.offsetTop)+
+                    parseFloat(indicator.height);
                 return {height:parseFloat(indicator.height),radius:indicator.borderRadius,
                     width:parseFloat(indicator.width),expectedWidth:width,
                     x:parseFloat(el.style.getPropertyValue('--pi-m3-track-x')),

@@ -732,6 +732,56 @@ try {
             'visible profile components are coordinated by the page-level motion system');
         assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),initial.saved,
             'global navigation motion never modifies saved program data');
+
+        // R32: rapid consecutive real tab activations preserve direction but
+        // stop replaying the staggered card cascade. Exercise/workout controls
+        // remain owned by React; no simulated program changes or log writes.
+        const rapidNavR32 = await page.evaluate(async () => {
+            const activate = async key => {
+                document.querySelector(`[data-tab="${key}"]`)?.click();
+                await new Promise(resolve=>requestAnimationFrame(resolve));
+                await new Promise(resolve=>requestAnimationFrame(resolve));
+                const view=document.querySelector(`[data-view-frame="${key}"]`);
+                return {
+                    active:document.querySelector(`[data-tab="${key}"]`)?.getAttribute('aria-current'),
+                    direction:view?.dataset.piNavDirection,
+                    quick:view?.dataset.piNavQuick,
+                    cascade:view?.dataset.piCascade,
+                    travel:view?.style.getPropertyValue('--pi-page-reveal-x'),
+                    reveal:view?.querySelectorAll('[data-pi-reveal]').length,
+                    connected:view?.querySelectorAll('[data-pi-connected="source"]').length
+                };
+            };
+            const plan=await activate('plan');
+            const progress=await activate('progress');
+            const home=await activate('home');
+            return {plan,progress,home,
+                visibleViews:document.querySelectorAll('[data-view-frame]').length,
+                workoutLogged:document.querySelectorAll('.wpb-set-complete[data-completed="true"]').length};
+        });
+        assert.ok(rapidNavR32.plan.direction==='back' &&
+            rapidNavR32.progress.direction==='forward' &&
+            rapidNavR32.home.direction==='back' &&
+            rapidNavR32.progress.quick==='1' &&
+            rapidNavR32.home.quick==='1' &&
+            !rapidNavR32.progress.cascade && !rapidNavR32.home.cascade &&
+            rapidNavR32.progress.reveal===0 && rapidNavR32.home.reveal===0 &&
+            rapidNavR32.progress.travel==='6px' &&
+            rapidNavR32.home.travel==='-6px' &&
+            rapidNavR32.home.active==='page' && rapidNavR32.visibleViews===1,
+            'R32 rapid tabs preserve direction and suppress repeated entrance cascades: '+
+                JSON.stringify(rapidNavR32));
+        await page.waitForFunction(() => {
+            const bar=document.querySelector('.wpb-tabbar[data-pi-m3-track]');
+            const selected=bar?.querySelector('button[aria-current="page"]');
+            if (!selected || selected.dataset.tab!=='home') return false;
+            const w=Math.min(60,selected.offsetWidth*.78);
+            const target=selected.offsetLeft+(selected.offsetWidth-w)/2;
+            return Math.abs(parseFloat(bar.style.getPropertyValue('--pi-m3-track-x'))-target)<.8;
+        },{timeout:5000});
+        assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),initial.saved,
+            'R32 quick navigation never mutates program state');
+
         // R24: test the finish-sheet CSS even though this fixture deliberately
         // keeps its unfinished workout alive. Do not finish or mutate the log.
         const finishThemeR24=await page.evaluate(() => {

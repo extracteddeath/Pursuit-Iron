@@ -1,0 +1,43 @@
+name: Temporary R69 adaptive Library certification
+on:
+  push:
+    branches: [ui/r69-library-list-detail-849]
+    paths:
+      - .github/workflows/r69-release-finalize.yml
+      - app.css
+      - verification/r65-adaptive-shell-browser-test.mjs
+
+permissions:
+  contents: write
+
+concurrency:
+  group: r69-finalize-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  certify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+      - name: Finalize B849 and certify adaptive Library journeys
+        env:
+          CHROME_BIN: /usr/bin/google-chrome
+        run: |
+          node scripts/finalize-release.mjs
+          node --no-warnings --experimental-loader ./verification/import-loader.mjs verification/m173-pwa-resilience-test.mjs
+          npm ci --ignore-scripts --no-audit --no-fund
+          node verification/r65-adaptive-shell-browser-test.mjs
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add modules/App.js index.html sw.js RELEASE_MANIFEST.json BUILD_PROFILE.json
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: certify Build 849 release cache and hashes"
+            git push origin HEAD:ui/r69-library-list-detail-849
+          fi

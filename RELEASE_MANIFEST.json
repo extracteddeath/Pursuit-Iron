@@ -107,17 +107,17 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "f63e32a263f88f231013bd4e05426e9d518a3e093f6ff69b82e8916559ac422a",
-    "index.html": "14833177459c0efebb08c3eb9c7c7dcdda76d85e5db343884b2d07a81ebacb0e",
-    "sw.js": "7c04b35eb35be090228b9f874a1cab1f9760747985da2cb3d6440a72aea2fdb9",
-    "BUILD_PROFILE.json": "cdf263f232b05c1afd79af98490e410698d7c8d5d32795321f14b642dea6bcea",
-    "CHANGELOG.md": "9359131bf11403b91a27f1c8ed8234d58a03a1260526eeef0c736eb0110ae3aa",
-    "app.css": "d4a55593dbf68d9a32da787bfe076f7da8e0e48c699d3aafeae5d55d2ac04cc8",
+    "modules/App.js": "6de0f33686f1645c7faf3935ab31d30d8ddb3f781d7670bed727fd04cca4b02d",
+    "index.html": "52fe8931669fd1bb9239905b2ce411a88776263b8bc5a72e77cdd2d480c0c9c5",
+    "sw.js": "27ba7085212aef5cae3f1edb1fa16f5f568d05cec3b9c86df41449e3940f2262",
+    "BUILD_PROFILE.json": "6425301e56e56166a810695a1ac09e3ce94d0b07d1dbaefbf8d78a7668b447cc",
+    "CHANGELOG.md": "8b3dd33b937c08e81b3446269c3f8bdfe9fbe024e068ce118534d7c6e73dd85d",
+    "app.css": "56c9d91bdfc878cac6d31d10a1f6816f0c01b510f43ff02a4a07daa2e57364bd",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b854-r5ce5ab192d5f41a4",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b854-r21020ba9cc906d2e",
   "uiMilestone": "Build 854 · R73 real-palette contrast audit and themed pointer states"
 }

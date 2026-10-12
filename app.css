@@ -7055,13 +7055,13 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 @media (min-width:1120px) and (min-height:720px){
   /* Unlike the primary tab destinations, Workout is a secondary full-screen
      route whose previous 460px frame would otherwise defeat a second pane. */
-  #root[data-pi-motion="expressive"] .wpb:has([data-view-frame="workout"])>div{
+  #root[data-pi-motion="expressive"] .wpb:has([data-view-frame="session"])>div{
     box-sizing:border-box;
     width:100%!important;
     max-width:1160px!important;
     min-width:0;
   }
-  #root[data-pi-motion="expressive"] .wpb [data-view-frame="workout"],
+  #root[data-pi-motion="expressive"] .wpb [data-view-frame="session"],
   #root[data-pi-motion="expressive"] .wpb .wpb-workout{
     box-sizing:border-box;
     width:100%!important;

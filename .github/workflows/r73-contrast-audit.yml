@@ -3,23 +3,40 @@ on:
   push:
     branches: [ui/r73-contrast-states-854]
 permissions:
-  contents: read
+  contents: write
 concurrency:
   group: r73-contrast-854
   cancel-in-progress: true
 jobs:
   audit:
     runs-on: ubuntu-24.04
-    timeout-minutes: 12
+    timeout-minutes: 18
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          persist-credentials: false
+          persist-credentials: true
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '22'
-      - run: npm ci --ignore-scripts --no-audit --no-fund
-      - name: Measure real rendered Plan and Progress states in 20 themes
+      - name: Install locked browser harness
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Check browser contracts are parseable
+        run: |
+          node --check verification/m219-ui-integration-browser-test.mjs
+          node --check verification/r65-adaptive-shell-browser-test.mjs
+      - name: Audit 20-theme rendered contrast and responsive pointer states
         env:
           CHROME_BIN: /usr/bin/google-chrome
-        run: node verification/m219-ui-integration-browser-test.mjs
+        run: |
+          node verification/m219-ui-integration-browser-test.mjs
+          node verification/r65-adaptive-shell-browser-test.mjs
+      - name: Finalize Build 854 offline cache and release hashes
+        run: node scripts/finalize-release.mjs
+      - name: Remove temporary workflow and checkpoint release candidate
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm -- .github/workflows/r73-contrast-audit.yml
+          git add -- modules/App.js index.html sw.js BUILD_PROFILE.json RELEASE_MANIFEST.json
+          git commit -m "Build 854: finalize R73 palette and pointer-state candidate"
+          git push origin HEAD:ui/r73-contrast-states-854

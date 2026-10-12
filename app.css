@@ -7210,3 +7210,38 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     animation:none!important;
   }
 }
+
+/* R73 / Build 853 — one small, reversible expressive state-motion layer.
+   The new expanded Library/Workout list panes should signal selection with the
+   same themed active surface and stroke, not jarring gray or moving geometry.
+   Keep the current logger/set rows, navigation spring owner, sheet callbacks
+   and input editing untouched. Never animate width/height or delay clicks. */
+#root[data-pi-motion="expressive"] .wpb{
+  --pi-r73-state-duration:160ms;
+  --pi-r73-state-ease:cubic-bezier(.2,.8,.2,1);
+  --pi-r73-focus-ring:var(--pi-r45-keyboard-ring,var(--pi-m3e-primary));
+}
+#root[data-pi-motion="expressive"] .wpb :is(
+  .wpb-library-row,.wpb-workout-side-item){
+  transition:background-color var(--pi-r73-state-duration) var(--pi-r73-state-ease),
+             border-color var(--pi-r73-state-duration) var(--pi-r73-state-ease),
+             color var(--pi-r73-state-duration) var(--pi-r73-state-ease);
+}
+#root[data-pi-motion="expressive"] .wpb :is(
+  .wpb-library-row,.wpb-workout-side-item):focus-visible{
+  outline:2px solid var(--pi-r73-focus-ring)!important;
+  outline-offset:2px!important;
+}
+@media (forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb :is(
+    .wpb-library-row,.wpb-workout-side-item):focus-visible{
+    outline-color:Highlight!important;
+  }
+}
+@media (prefers-reduced-motion:reduce){
+  #root[data-pi-motion="expressive"] .wpb :is(
+    .wpb-library-row,.wpb-workout-side-item){
+    transition:none!important;
+    animation:none!important;
+  }
+}

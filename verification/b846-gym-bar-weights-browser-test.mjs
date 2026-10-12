@@ -53,10 +53,20 @@ try{
         if(!sheet)return false;
         const r=sheet.getBoundingClientRect();
         if(r.x<-1||r.right>width+1)return false;
-        return width>=840
+        const valid=width>=840
           ? r.width<=742&&r.width>=520&&Math.abs(r.x+r.width/2-width/2)<4&&r.y>8&&r.bottom<height-8
           : r.width>width-5&&r.bottom>=height-2;
-      },{timeout:5000},{width,height});
+        if(!valid)return false;
+        // Require 150ms of settled geometry. The entrance effect may briefly
+        // reach the bottom before the final layout frame has committed.
+        const signature=[r.x,r.y,r.width,r.height].map(n=>Math.round(n*10)/10).join(':');
+        const prior=window.__b846StableBounds;
+        if(!prior||prior.signature!==signature){
+          window.__b846StableBounds={signature,at:performance.now()};
+          return false;
+        }
+        return performance.now()-prior.at>=150;
+      },{timeout:6500,polling:50},{width,height});
       const sheetBounds = await page.$eval('.wpb-gym-sheet', element => {
         const r=element.getBoundingClientRect();
         return { x:r.x,y:r.y,width:r.width,height:r.height,right:r.right,bottom:r.bottom };
@@ -72,7 +82,7 @@ try{
           'expanded gym editor is centered vertically and scrollable');
       }else{
         assert.ok(sheetBounds.width>width-5&&sheetBounds.bottom>=height-2,
-          'compact gym editor retains original full-width bottom-sheet behavior');
+          'compact gym editor retains original full-width bottom-sheet behavior: '+JSON.stringify({width,height,sheetBounds}));
       }
       await page.$$eval('.wpb-gym-card button',buttons=>{
         const gym=buttons.find(b=>b.textContent.includes('Test Garage'));

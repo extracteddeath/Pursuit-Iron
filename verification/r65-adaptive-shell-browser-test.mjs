@@ -146,7 +146,11 @@ try{
               await new Promise(resolve=>setTimeout(resolve,220));
               const hovered=await page.$eval(selector+':nth-of-type('+hover.index+')',
                 node=>({paint:getComputedStyle(node).backgroundColor,
-                  state:node.matches(':hover'),
+                  state:node.matches(':hover'),disabled:node.disabled,
+                  rootMotion:document.querySelector('#root')?.getAttribute('data-pi-motion'),
+                  fine:matchMedia('(pointer:fine)').matches,
+                  hoverCapable:matchMedia('(hover:hover)').matches,
+                  forcedOff:matchMedia('(forced-colors:none)').matches,
                   selected:node.getAttribute('aria-selected')==='true' ||
                     node.getAttribute('aria-pressed')==='true' ||
                     node.getAttribute('aria-current')==='page'}));

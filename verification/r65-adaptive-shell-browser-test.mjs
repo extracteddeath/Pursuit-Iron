@@ -154,9 +154,33 @@ try{
                   selected:node.getAttribute('aria-selected')==='true' ||
                     node.getAttribute('aria-pressed')==='true' ||
                     node.getAttribute('aria-current')==='page'}));
-              assert.ok(hovered.state&&!hovered.selected&&hovered.paint===hover.expected,
-                'Theme-native '+route+' hover resolves to feature fill: '+JSON.stringify({hover,hovered}));
+              assert.ok(hovered.state&&!hovered.selected,
+                'Idle '+route+' hover never changes the selected tab');
+              if(hovered.fine&&hovered.hoverCapable){
+                assert.equal(hovered.paint,hover.expected,
+                  'Fine-pointer hover resolves to saved-theme feature fill: '+JSON.stringify({hover,hovered}));
+              }else{
+                // Headless CI reports no fine hover device; honor that media
+                // condition rather than pretending a synthesized pointer is one.
+                assert.notEqual(hovered.paint,hover.expected,
+                  'Non-hover browser should not paint a desktop-only hover layer');
+              }
+              await page.mouse.down();
+              await new Promise(resolve=>setTimeout(resolve,220));
+              const pressed=await page.$eval(selector+':nth-of-type('+hover.index+')',
+                node=>{
+                  const probe=document.createElement('i');
+                  probe.style.backgroundColor='var(--pi-color-inset)';
+                  document.querySelector('.wpb').append(probe);
+                  const expected=getComputedStyle(probe).backgroundColor;
+                  probe.remove();
+                  return {active:node.matches(':active'),
+                    paint:getComputedStyle(node).backgroundColor,expected};
+                });
+              assert.ok(pressed.active&&pressed.paint===pressed.expected,
+                'Idle '+route+' press resolves to theme inset tint: '+JSON.stringify(pressed));
               await page.mouse.move(2,2);
+              await page.mouse.up();
             }
             await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
           }

@@ -228,6 +228,21 @@ export function installAppMotion(root) {
     const pressed = new Map(), controls = new WeakMap(), choiceStates = new WeakMap(), referenceKeys = new WeakMap();
     const media = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)');
     let menuOpener = null;
+    // R74: Back and Escape both return keyboard users to the selected Library
+    // row *after* React has removed the detail pane. Never fork detail state.
+    let libraryReturnFocus = null;
+    const rememberLibraryReturn = event => {
+        if (!event.target.closest?.('.wpb-exercise-detail button[aria-label="Back to library"]')) return;
+        libraryReturnFocus = root.querySelector('.wpb-library-results .wpb-library-row[aria-current="true"]') ||
+            root.querySelector('.wpb-library-results .wpb-library-row');
+    };
+    const returnLibraryFocusAfterExit = () => {
+        if (!libraryReturnFocus || root.querySelector('.wpb-exercise-detail')) return;
+        const target = libraryReturnFocus;
+        libraryReturnFocus = null;
+        if (target.isConnected && !target.disabled)
+            target.focus({ preventScroll: true });
+    };
     // Anchored program menus must clear the live workout dock as well as the
     // bottom tab bar. The old viewport-only flip can hide Delete underneath
     // a resumed-workout dock even though the menu fits within window.innerHeight.
@@ -581,6 +596,21 @@ function disclosure(el, initial = false) {
     const up = e => release(e.pointerId);
     const move = e => { const h = pressed.get(e.pointerId); if (h && Math.hypot(e.clientX - h.x, e.clientY - h.y) > 12) release(e.pointerId); };
     const keydown = e => {
+        // R74: Library detail has a native Back owner. Escape activates that
+        // *existing* action rather than mutating React routes or overlays.
+        // Nested dialogs/menus retain priority and inputs are never rewritten.
+        if (e.key === 'Escape' && !e.defaultPrevented && !e.altKey &&
+            !e.ctrlKey && !e.metaKey && !e.isComposing) {
+            const detail = e.target.closest?.('.wpb-exercise-detail');
+            const nested = e.target.closest?.('.wpb-context-menu,.wpb-pop,.wpb-dialog,[data-sheet-drag]');
+            const back = detail?.querySelector('button[aria-label="Back to library"]');
+            if (back && !nested && !disabled(back) &&
+                !root.querySelector('.wpb-context-menu,.wpb-pop,.wpb-dialog,.wpb-backdrop')) {
+                e.preventDefault(); e.stopPropagation();
+                back.click();
+                return;
+            }
+        }
         // Contextual program actions are a real role=menu. Keep keyboard focus
         // within its existing items for arrows/Home/End; Escape delegates to the
         // original React dismissal layer and returns to the initiating control.
@@ -880,6 +910,7 @@ function disclosure(el, initial = false) {
         });
         groups.forEach(group => selection(group));
         disclosures.forEach(el => disclosure(el));
+        returnLibraryFocusAfterExit();
     });
     observer.observe(root, { subtree: true, childList: true, attributes: true,
         attributeFilter: ['data-view-frame','data-motion-key','aria-pressed','aria-selected','aria-current','aria-checked','aria-expanded','open'] });
@@ -896,6 +927,7 @@ function disclosure(el, initial = false) {
     document.addEventListener('pointercancel', up, { passive: true });
     document.addEventListener('pointermove', move, { passive: true });
     root.addEventListener('click', rememberConnectedOrigin, true);
+    root.addEventListener('click', rememberLibraryReturn, true);
     root.addEventListener('click', themeSelection);
     root.addEventListener('keydown', keydown); document.addEventListener('keyup', keyup);
     document.addEventListener('visibilitychange', visibility);
@@ -916,6 +948,8 @@ function disclosure(el, initial = false) {
         root.removeEventListener('pointerdown', down); document.removeEventListener('pointerup', up);
         document.removeEventListener('pointercancel', up); document.removeEventListener('pointermove', move);
         root.removeEventListener('click', rememberConnectedOrigin, true);
+        root.removeEventListener('click', rememberLibraryReturn, true);
+        libraryReturnFocus = null;
         root.removeEventListener('click', themeSelection);
         root.removeEventListener('keydown', keydown); document.removeEventListener('keyup', keyup);
         document.removeEventListener('visibilitychange', visibility);

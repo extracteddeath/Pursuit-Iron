@@ -1,3 +1,10 @@
+## Build 856 — R74 Library Escape, focus restoration and 200% zoom verification (candidate)
+
+- Escape inside an open exercise Library detail invokes the actual React-owned Back action, except when a nested menu/dialog/sheet owns the keyboard. Back and Escape return keyboard focus to the selected Library row after the detail unmounts; no duplicate route or state model.
+- Extend real paired-theme, four-viewport browser journeys with Escape and Back focus restoration and browser-zoom-equivalent 200% reflow on expanded layouts (half the CSS viewport and double the pixel density); assert Plan, Progress, Settings and Home remain navigable without document-wide horizontal overflow and with labeled 44px navigation targets.
+- Preserve saved workout prescriptions, compact logger, motion indicator, theme contrast, offline behavior and engine. R74 is not complete until additional sheet Escape/focus, text-only zoom, safe areas and virtual keyboard checks; R75 complete device certification remains pending.
+- Publish only after real browser preflight, exact release asset hashes, four permanent premerge/postmerge CI checks and Pages confirmation.
+
 ## Build 855 — R74 keyboard focus and forced-colors selection (candidate)
 
 - Preserve visible keyboard focus on the existing Library/detail Back controls, search input and program/cycle Wizard inputs. Use the saved-theme focus role and the Windows high-contrast Highlight system color without changing hitboxes, field values or the M3 animated selection track.

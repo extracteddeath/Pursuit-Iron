@@ -231,24 +231,29 @@ export function installAppMotion(root) {
     // R74: Back and Escape both return keyboard users to the selected Library
     // row *after* React has removed the detail pane. Never fork detail state.
     let libraryReturnFocus = null;
+    const libraryRows = () => [...root.querySelectorAll('.wpb-library-results .wpb-library-row')];
+    const libraryRowLabel = row => row?.textContent?.replace(/\\s+/g, ' ').trim() || '';
     const rememberLibraryReturn = event => {
         if (!event.target.closest?.('.wpb-exercise-detail button[aria-label="Back to library"]')) return;
-        libraryReturnFocus = root.querySelector('.wpb-library-results .wpb-library-row[aria-current="true"]') ||
-            root.querySelector('.wpb-library-results .wpb-library-row');
+        const rows = libraryRows();
+        const origin = rows.find(row => row.getAttribute('aria-current') === 'true') ||
+            rows.find(row => row.contains(document.activeElement)) || rows[0];
+        // Keep *identity* across responsive unmount/remount, not just a stale
+        // DOM node. Otherwise the fallback first row steals keyboard focus.
+        libraryReturnFocus = origin ? {
+            node: origin, label: libraryRowLabel(origin), index: rows.indexOf(origin)
+        } : null;
     };
     const returnLibraryFocusAfterExit = () => {
         if (!libraryReturnFocus || root.querySelector('.wpb-exercise-detail')) return;
-        // A responsive list can remount the selected row while the React exit
-        // commits. Wait until the committed frame, then resolve the current row
-        // if the original DOM node is no longer connected.
         const original = libraryReturnFocus;
         libraryReturnFocus = null;
         requestAnimationFrame(() => {
-            const target = original.isConnected ? original :
-                root.querySelector('.wpb-library-results .wpb-library-row[aria-current="true"]') ||
-                root.querySelector('.wpb-library-results .wpb-library-row');
-            if (target?.isConnected && !target.disabled &&
-                !root.querySelector('.wpb-exercise-detail'))
+            if (root.querySelector('.wpb-exercise-detail')) return;
+            const rows = libraryRows();
+            const target = rows.find(row => libraryRowLabel(row) === original.label) ||
+                rows[original.index] || (original.node.isConnected ? original.node : null);
+            if (target?.isConnected && !target.disabled)
                 target.focus({ preventScroll: true });
         });
     };

@@ -1,3 +1,10 @@
+## Build 850 — R70 Progress responsive hierarchy
+
+- On expanded tall windows, keep the existing Sessions, Lifts, Volume and Body state owners while arranging training consistency and its calendar alongside the actual filtered workout history. The weekly summary stretches across both reading lanes.
+- Give load/recovery insights paired chart columns when space permits. Keep the exercise list, Body logging, and phone/short-window layouts intentionally familiar and readable.
+- Constrain charts, text and history filter rows to avoid horizontal clipping. Extend the permanent R65 light/dark real-browser matrix to test populated history geometry and Body panel bounds.
+- No changes to workout logging, progression algorithms, prescriptions, weights, or data persistence.
+
 ## Build 849 — R69 adaptive Exercise Library
 
 - On wide, tall windows, place the existing filtered Library list beside its selected exercise detail, preserving one selected exercise, history, notes, attachments and variant actions. Compact/medium screens retain full-screen detail.

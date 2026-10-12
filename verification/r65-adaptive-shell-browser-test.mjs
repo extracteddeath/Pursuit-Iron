@@ -15,7 +15,15 @@ const program={
   overrides:{'upper:0':{sets:4,reps:'6-8',rir:'2'},'upper:1':{sets:3,reps:'10-15',rir:'2'}}
 };
 const store=theme=>({
-  v:13,savedAt:1,saved:[program],cycles:[],history:[],perf:{},drafts:{},tombs:{},
+  v:13,savedAt:1,saved:[program],cycles:[],history:[{
+    id:'r70-progress-fixture',programId:program.id,programName:program.name,
+    dayId:'upper',dayLabel:'Upper',weekIndex:1,date:Date.now()-86400000,
+    unit:'lb',duration:2400,totalSets:2,tonnage:1320,
+    perf:{'bb-bench':{weight:185,reps:6,
+      sets:[{w:185,r:6,done:true,rir:2,rirReported:true}]},
+      'inc-curl':{weight:30,reps:12,
+      sets:[{w:30,r:12,done:true,rir:2,rirReported:true}]}}
+  }],perf:{},drafts:{},tombs:{},
   seenIntro:999,seenWhatsNew:999,pinnedId:program.id,theme,unit:'lb',
   unitChosen:true,experience:'intermediate',bodyweight:185,
   installDismissedAt:Date.now(),lastBackup:Date.now()
@@ -115,6 +123,45 @@ try{
               assert.ok(layout.overview.y>=layout.panes.bottom-2,
                 'Phone, medium and short windows retain vertical Plan reading order');
             }
+          }
+          if(route==='progress'){
+            await page.click('.wpb-progress .wpb-premium-tabs button:first-child');
+            await page.waitForSelector('.wpb-consistency-card');
+            const progress=await page.evaluate(()=>{
+              const main=document.querySelector('.wpb-progress [data-scroll-key="sessions"]');
+              const consistency=main.querySelector('.wpb-consistency-card').getBoundingClientRect();
+              const filters=main.querySelector('.wpb-history-filters').getBoundingClientRect();
+              const glance=main.querySelector('[data-progress-glance]').getBoundingClientRect();
+              return {grid:getComputedStyle(main).display==='grid',
+                consistency:{x:consistency.x,right:consistency.right,bottom:consistency.bottom},
+                filters:{x:filters.x,y:filters.y},
+                glance:{width:glance.width},
+                viewportOverflow:document.documentElement.scrollWidth>innerWidth+2,
+                historyRows:main.querySelectorAll('.wpb-history-session').length};
+            });
+            const expandedProgress=width>=1120&&height>=720;
+            assert.equal(progress.grid,expandedProgress,
+              'R70 history layout follows available window size');
+            assert.ok(progress.historyRows>=1,'R70 fixture renders actual workout history');
+            assert.equal(progress.viewportOverflow,false,'Progress has no horizontal overflow');
+            if(expandedProgress){
+              assert.ok(progress.filters.x>=progress.consistency.right-2,
+                'Real history filters appear beside consistency, not below it');
+              assert.ok(progress.glance.width>600,
+                'Summary extends across the expanded Progress surface');
+            }else{
+              assert.ok(progress.filters.y>=progress.consistency.bottom-2,
+                'Compact/medium Progress retains its original reading order');
+            }
+            await page.click('.wpb-progress .wpb-premium-tabs button:nth-child(4)');
+            await page.waitForSelector('.wpb-progress-panel');
+            const body=await page.evaluate(()=>{
+              const panel=document.querySelector('.wpb-progress-panel');
+              const r=panel.getBoundingClientRect();
+              return {width:r.width,right:r.right,viewport:innerWidth};
+            });
+            assert.ok(body.width>180&&body.right<=body.viewport+2,
+              'Body chart and summary stay inside the current window');
           }
           const state=await geometry();
           assert.equal(state.direction,initial.direction,

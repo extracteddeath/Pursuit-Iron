@@ -232,7 +232,7 @@ export function installAppMotion(root) {
     // row *after* React has removed the detail pane. Never fork detail state.
     let libraryReturnFocus = null;
     const libraryRows = () => [...root.querySelectorAll('.wpb-library-results .wpb-library-row')];
-    const libraryRowLabel = row => row?.textContent?.replace(/\\s+/g, ' ').trim() || '';
+    const libraryRowLabel = row => row?.textContent?.replace(/\s+/g, ' ').trim() || '';
     const rememberLibraryReturn = event => {
         if (!event.target.closest?.('.wpb-exercise-detail button[aria-label="Back to library"]')) return;
         const rows = libraryRows();

@@ -50,6 +50,15 @@ try{
     for(const [width,height,wide] of [[393,852,false],[900,480,false],[900,1000,true],[1280,850,true]]){
       const context=await browser.createBrowserContext();
       const page=await context.newPage();
+      // Puppeteer's media helper rejects forced-colors, but Chrome CDP supports
+      // it directly. Keep a distinct per-context session for real OS-mode CSS.
+      const cdp=await page.createCDPSession();
+      const forcedMedia=active=>cdp.send('Emulation.setEmulatedMedia',{
+        features:[
+          {name:'prefers-reduced-motion',value:'reduce'},
+          {name:'forced-colors',value:active?'active':'none'}
+        ]
+      });
       const errors=[];page.on('pageerror',e=>errors.push(e.message));
       try{
         await page.setViewport({width,height,deviceScaleFactor:1,isMobile:!wide,hasTouch:!wide});
@@ -112,10 +121,7 @@ try{
             // R74: exercise actual Windows forced-colors rendering, not just
             // matching the CSS declaration. Semantic selection must remain
             // distinguishable even if the moving rail or theme fill vanishes.
-            await page.emulateMediaFeatures([
-              {name:'prefers-reduced-motion',value:'reduce'},
-              {name:'forced-colors',value:'active'}
-            ]);
+            await forcedMedia(true);
             const forced=await page.evaluate(sel=>{
               const controls=[...document.querySelectorAll(sel)];
               const selected=controls.find(el=>el.getAttribute('aria-selected')==='true' ||
@@ -132,10 +138,7 @@ try{
             assert.ok(forced.active&&forced.selected?.includes('underline')&&
               !forced.idle?.includes('underline')&&!forced.overflow,
               'R74 system contrast retains a non-color selected indication: '+JSON.stringify({route,forced}));
-            await page.emulateMediaFeatures([
-              {name:'prefers-reduced-motion',value:'reduce'},
-              {name:'forced-colors',value:'none'}
-            ]);
+            await forcedMedia(false);
             assert.ok(reduced.transitions.every(v=>v.split(',').every(d=>parseFloat(d)===0)),
               'Reduced motion disables '+route+' selection transitions');
             assert.equal(reduced.overflow,false,route+' controls do not overflow');
@@ -351,20 +354,14 @@ try{
             style:getComputedStyle(el).outlineStyle}));
         assert.ok(backRing.focused&&backRing.visible&&backRing.width>=2&&
           backRing.style==='solid','R74 Library back has visible keyboard focus: '+JSON.stringify(backRing));
-        await page.emulateMediaFeatures([
-          {name:'prefers-reduced-motion',value:'reduce'},
-          {name:'forced-colors',value:'active'}
-        ]);
+        await forcedMedia(true);
         const forcedBack=await page.$eval('.wpb-exercise-detail button[aria-label="Back to library"]',
           el=>({visible:el.matches(':focus-visible'),width:parseFloat(getComputedStyle(el).outlineWidth),
             style:getComputedStyle(el).outlineStyle,
             color:getComputedStyle(el).outlineColor}));
         assert.ok(forcedBack.visible&&forcedBack.width>=2&&forcedBack.style==='solid',
           'R74 Library back ring survives Windows high contrast: '+JSON.stringify(forcedBack));
-        await page.emulateMediaFeatures([
-          {name:'prefers-reduced-motion',value:'reduce'},
-          {name:'forced-colors',value:'none'}
-        ]);
+        await forcedMedia(false);
         await page.click('.wpb-exercise-detail button[aria-label="Back to library"]');
         await page.waitForFunction(()=>!document.querySelector('.wpb-exercise-detail'));
         await page.click('.wpb-library-header button[aria-label="Back"]');

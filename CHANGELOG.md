@@ -1,3 +1,10 @@
+## Build 852 — R72 adaptive live Workout Experience (candidate)
+
+- Expanded tall workout windows provide a theme-native session lineup beside the existing set logger. The lineup uses the live session's current exercise, working sets and original goEx navigation handler rather than a second workout state owner.
+- Phone, medium, short-landscape and focused logging retain the proven editable weight/reps grid, steppers, completion fade, effort, rest, plate breakdown and original keyboard behavior.
+- Permanent R72 paired-theme real-browser contract exercises compact and expanded layouts, exercise navigation, breakpoint resize, focused mode, overflow and saved-program preservation.
+- Draft PR #135 must pass all four permanent workflows on the final released SHA before merge and Pages validation. No engine or progression modifications in this slice.
+
 ## Build 851 — R71 responsive Program and Cycle creation
 
 - Expanded tall windows show the same working Wizard form beside a read-only, theme-native live setup overview. This overview reflects real selected format, cycle template and blocks, goal, days, split, capacity, equipment, focus and workout rules; it does not generate or save an alternate program.

@@ -98,6 +98,29 @@ try{
           state.weight.right<=state.reps.x+2 && state.reps.right<=state.complete.x+2,
           'Original input and completion controls remain distinct: '+JSON.stringify({theme,width,height,state}));
         if(expanded){
+
+          // R73: the selected companion item must be distinguishable by real
+          // themed fill/stroke, while reducing motion removes only animation.
+          const tones=await page.evaluate(()=>{
+            const items=document.querySelectorAll('.wpb-workout-side-item');
+            const selected=getComputedStyle(items[0]),idle=getComputedStyle(items[1]);
+            return {selectedFill:selected.backgroundColor,idleFill:idle.backgroundColor,
+              selectedStroke:selected.borderColor,idleStroke:idle.borderColor,
+              reducedTransition:selected.transitionDuration};
+          });
+          assert.notEqual(tones.selectedFill,tones.idleFill,
+            'Selected companion has a distinct theme-native fill');
+          assert.notEqual(tones.selectedStroke,tones.idleStroke,
+            'Selected companion has a distinct theme-native border');
+          assert.ok(tones.reducedTransition.split(',').every(v=>parseFloat(v)===0),
+            'Reduced motion suppresses selection animation');
+          await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'no-preference'}]);
+          const motion=await page.$eval('.wpb-workout-side-item',
+            node=>getComputedStyle(node).transitionDuration.split(',')
+              .map(v=>parseFloat(v)));
+          assert.ok(motion.some(v=>v>0&&v<=.3),
+            'Standard motion adds a bounded color-only transition');
+          await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
           assert.ok(state.scroll.width>780,'Secondary workout route grows past phone width');
           assert.ok(state.side.x>=state.row.right-2,
             'Lineup is beside the original set editor, not on top of it');

@@ -93,6 +93,36 @@ try{
         for(const route of ['plan','progress','profile','settings','home']){
           await page.click('[data-tab="'+route+'"]');
           await page.waitForSelector('[data-view-frame="'+route+'"]');
+          // R73 semantic tabs: the same motion contract applies on Plan and
+          // Progress in both palettes and across all existing viewports.
+          if(route==='plan'||route==='progress'){
+            const selector=route==='plan'?'.wpb-plan-panes>button':'.wpb-premium-tabs>button';
+            await page.waitForSelector(selector);
+            const reduced=await page.evaluate(selector=>{
+              const nodes=[...document.querySelectorAll(selector)];
+              return {
+                count:nodes.length,
+                transitions:nodes.map(n=>getComputedStyle(n).transitionDuration),
+                overflow:document.documentElement.scrollWidth>innerWidth+2
+              };
+            },selector);
+            assert.ok(reduced.count>=2,'Real '+route+' choices are present');
+            assert.ok(reduced.transitions.every(v=>v.split(',').every(d=>parseFloat(d)===0)),
+              'Reduced motion disables '+route+' selection transitions');
+            assert.equal(reduced.overflow,false,route+' controls do not overflow');
+            await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'no-preference'}]);
+            const regular=await page.$eval(selector,button=>{
+              const s=getComputedStyle(button);
+              return {properties:s.transitionProperty.split(',').map(v=>v.trim()),
+                durations:s.transitionDuration.split(',').map(v=>parseFloat(v))};
+            });
+            assert.ok(regular.properties.includes('color') &&
+              regular.durations.some(v=>v>0&&v<=.3),
+              route+' uses the shared, non-geometric color transition');
+            assert.ok(regular.properties.every(v=>v==='color'),
+              route+' must not animate width, position or text input geometry: '+JSON.stringify(regular));
+            await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
+          }
           if(route==='plan'){
             await page.waitForSelector('.wpb-plan-view .wpb-plan-panes');
             await page.waitForSelector('.wpb-plan-view .wpb-plan-overview');

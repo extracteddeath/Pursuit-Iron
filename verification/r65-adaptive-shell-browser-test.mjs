@@ -370,8 +370,10 @@ try{
           el=>el.textContent.trim());
         await page.keyboard.press('Escape');
         await page.waitForFunction(()=>!document.querySelector('.wpb-exercise-detail'));
-        await page.waitForFunction(()=>document.activeElement?.matches(
-          '.wpb-library-results .wpb-library-row'),{timeout:5000});
+        await page.waitForFunction(expected=>
+          document.activeElement?.matches('.wpb-library-results .wpb-library-row') &&
+          document.activeElement.textContent.trim()===expected,
+          {timeout:5000},originRowText);
         const escapedFocus=await page.evaluate(()=>({
           text:document.activeElement?.textContent?.trim(),
           row:document.activeElement?.matches('.wpb-library-results .wpb-library-row')
@@ -384,8 +386,10 @@ try{
         await page.waitForSelector('.wpb-exercise-detail button[aria-label="Back to library"]');
         await page.click('.wpb-exercise-detail button[aria-label="Back to library"]');
         await page.waitForFunction(()=>!document.querySelector('.wpb-exercise-detail'));
-        await page.waitForFunction(()=>document.activeElement?.matches(
-          '.wpb-library-results .wpb-library-row'),{timeout:5000});
+        await page.waitForFunction(expected=>
+          document.activeElement?.matches('.wpb-library-results .wpb-library-row') &&
+          document.activeElement.textContent.trim()===expected,
+          {timeout:5000},originRowText);
         const backFocus=await page.evaluate(()=>document.activeElement?.textContent?.trim());
         assert.equal(backFocus,originRowText,
           'Back returns focus to the same Library origin');

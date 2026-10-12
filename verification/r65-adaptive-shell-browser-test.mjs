@@ -121,6 +121,61 @@ try{
             'Navigation position stays stable when switching to '+route);
           assert.equal(state.overflow,false,'No document overflow on '+route);
         }
+        // R69: use the real Home→Library→Detail path. Wide screens reflow
+        // the existing detail into a pane; compact and medium retain overlay.
+        await page.click('button[aria-label="Exercise library"]');
+        await page.waitForSelector('.wpb-library-row');
+        await page.click('.wpb-library-row');
+        await page.waitForSelector('.wpb-exercise-detail');
+        const libraryGeometry=()=>page.evaluate(()=>{
+          const library=document.querySelector('.wpb-library');
+          const portal=library.querySelector(':scope > .wpb-portal');
+          const detail=portal?.querySelector('.wpb-exercise-detail');
+          const results=library.querySelector('.wpb-library-results');
+          const bounds=el=>{const r=el.getBoundingClientRect();
+            return {x:r.x,y:r.y,right:r.right,bottom:r.bottom,width:r.width,height:r.height};};
+          return {pane:getComputedStyle(library).display==='grid',
+            positioning:getComputedStyle(detail).position,
+            detail:bounds(detail),results:bounds(results),
+            library:bounds(library),portal:bounds(portal),
+            portalPosition:getComputedStyle(portal).position,
+            portalGridColumn:getComputedStyle(portal).gridColumn,
+            portalGridRow:getComputedStyle(portal).gridRow,
+            portalTransform:getComputedStyle(portal).transform,
+            detailTransform:getComputedStyle(detail).transform,
+            detailLeft:getComputedStyle(detail).left,
+            ancestor:detail.parentElement?.className,
+            selected:library.querySelectorAll('.wpb-library-row[aria-current="true"]').length,
+            title:detail.querySelector('.wpb-exercise-detail-header').textContent,
+            overflow:document.documentElement.scrollWidth>innerWidth+2};
+        });
+        let libraryLayout=await libraryGeometry();
+        const twoPane=width>=1120&&height>=720;
+        assert.equal(libraryLayout.pane,twoPane,'Library uses a list/detail pane only on expanded tall windows');
+        assert.equal(libraryLayout.overflow,false,'Library/detail must not cause document overflow');
+        assert.equal(libraryLayout.selected,1,'Exactly one selected Library row is exposed');
+        if(twoPane){
+          assert.ok(libraryLayout.detail.x>=libraryLayout.results.right-2,
+            'Detail pane sits beside the usable filtered Library results: '+JSON.stringify(libraryLayout));
+          const title=libraryLayout.title;
+          await page.click('.wpb-library-results > .wpb-library-row:nth-child(2)');
+          libraryLayout=await libraryGeometry();
+          assert.notEqual(libraryLayout.title,title,
+            'Switching selected Library exercise updates the existing detail pane');
+          await page.setViewport({width:900,height:1000,deviceScaleFactor:1,isMobile:false,hasTouch:false});
+          const collapsed=await libraryGeometry();
+          assert.equal(collapsed.pane,false,'Resizing to medium restores full-screen detail');
+          assert.equal(collapsed.title,libraryLayout.title,
+            'Responsive resize preserves the selected exercise and details');
+          await page.setViewport({width,height,deviceScaleFactor:1,isMobile:!wide,hasTouch:!wide});
+          assert.equal((await libraryGeometry()).pane,true,'Re-expanding restores the supporting pane');
+        }else{
+          assert.equal(libraryLayout.positioning,'fixed','Compact detail stays full-screen');
+        }
+        await page.click('.wpb-exercise-detail button[aria-label="Back to library"]');
+        await page.waitForFunction(()=>!document.querySelector('.wpb-exercise-detail'));
+        await page.click('.wpb-library-header button[aria-label="Back"]');
+        await page.waitForSelector('[data-view-frame="home"]');
         if(wide){
           await page.focus('[data-tab="plan"]');
           await page.keyboard.press('ArrowDown');

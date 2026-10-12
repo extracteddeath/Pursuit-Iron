@@ -1,3 +1,10 @@
+## Build 851 — R71 responsive Program and Cycle creation
+
+- Expanded tall windows show the same working Wizard form beside a read-only, theme-native live setup overview. This overview reflects real selected format, cycle template and blocks, goal, days, split, capacity, equipment, focus and workout rules; it does not generate or save an alternate program.
+- Medium, phone and short landscape windows retain the original focused setup flow, actions and keyboard behavior. Resizing preserves the same entered answers.
+- Extend the permanent R65 paired-theme real-browser matrix with the actual Home→Program/Cycle Wizard flow, live input reflection, responsive geometry and no-overflow assertions.
+- Preserve existing workout logging, independent Dynamic Double set progression, gym bar masses, program-generation safeguards and offline data.
+
 ## Build 850 — R70 Progress responsive hierarchy
 
 - On expanded tall windows, keep the existing Sessions, Lifts, Volume and Body state owners while arranging training consistency and its calendar alongside the actual filtered workout history. The weekly summary stretches across both reading lanes.

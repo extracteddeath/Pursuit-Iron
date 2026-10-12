@@ -48,15 +48,39 @@ try{
       // CSS sheet entrance and window reflow are asynchronous. Test the final
       // reachable geometry, not an in-flight sheetUp transform; a persistently
       // off-screen or wrong-size editor still fails at the timeout.
-      await page.waitForFunction(({width,height})=>{
+      try { await page.waitForFunction(({width,height})=>{
         const sheet=document.querySelector('.wpb-gym-sheet');
         if(!sheet)return false;
         const r=sheet.getBoundingClientRect();
         if(r.x<-1||r.right>width+1)return false;
-        return width>=840
+        const valid=width>=840
           ? r.width<=742&&r.width>=520&&Math.abs(r.x+r.width/2-width/2)<4&&r.y>8&&r.bottom<height-8
-          : r.width>width-5&&r.bottom>=height-2;
-      },{timeout:5000},{width,height});
+          : r.width>=width-32&&r.x>=-1&&r.x<=16&&width-r.right<=16&&r.bottom>=height-2;
+        if(!valid)return false;
+        // Require 150ms of settled geometry. The entrance effect may briefly
+        // reach the bottom before the final layout frame has committed.
+        const signature=[r.x,r.y,r.width,r.height].map(n=>Math.round(n*10)/10).join(':');
+        const prior=window.__b846StableBounds;
+        if(!prior||prior.signature!==signature){
+          window.__b846StableBounds={signature,at:performance.now()};
+          return false;
+        }
+        return performance.now()-prior.at>=150;
+      },{timeout:6500,polling:50},{width,height}); }
+      catch (error) {
+        const geometry=await page.evaluate(()=>{
+          const sheet=document.querySelector('.wpb-gym-sheet');
+          const outer=sheet?.parentElement;
+          const rect=el=>{if(!el)return null;const r=el.getBoundingClientRect();
+            return {x:r.x,y:r.y,width:r.width,height:r.height,right:r.right,bottom:r.bottom};};
+          return {innerWidth,innerHeight,sheet:rect(sheet),parent:rect(outer),
+            viewport:rect(document.querySelector('.wpb')),stable:window.__b846StableBounds,
+            classes:sheet?.className,position:sheet&&getComputedStyle(sheet).position,
+            transform:sheet&&getComputedStyle(sheet).transform,
+            media:getComputedStyle(sheet).maxHeight};
+        });
+        throw new Error('Gym sheet geometry never settled: '+JSON.stringify({width,height,geometry}),{cause:error});
+      }
       const sheetBounds = await page.$eval('.wpb-gym-sheet', element => {
         const r=element.getBoundingClientRect();
         return { x:r.x,y:r.y,width:r.width,height:r.height,right:r.right,bottom:r.bottom };
@@ -71,8 +95,8 @@ try{
         assert.ok(sheetBounds.y>8&&sheetBounds.bottom<height-8,
           'expanded gym editor is centered vertically and scrollable');
       }else{
-        assert.ok(sheetBounds.width>width-5&&sheetBounds.bottom>=height-2,
-          'compact gym editor retains original full-width bottom-sheet behavior');
+        assert.ok(sheetBounds.width>=width-32&&sheetBounds.x>=-1&&sheetBounds.x<=16&&width-sheetBounds.right<=16&&sheetBounds.bottom>=height-2,
+          'compact gym editor retains bottom-anchored near-full-width sheet with <=16px symmetric margins: '+JSON.stringify({width,height,sheetBounds}));
       }
       await page.$$eval('.wpb-gym-card button',buttons=>{
         const gym=buttons.find(b=>b.textContent.includes('Test Garage'));

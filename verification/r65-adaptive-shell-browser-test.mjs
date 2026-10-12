@@ -98,11 +98,14 @@ try{
           if(route==='plan'||route==='progress'){
             const selector=route==='plan'?'.wpb-plan-panes>button':'.wpb-premium-tabs>button';
             await page.waitForSelector(selector);
-            const reduced=await page.$eval(selector,nodes=>({
-              count:nodes.length,
-              transitions:nodes.map(n=>getComputedStyle(n).transitionDuration),
-              overflow:document.documentElement.scrollWidth>innerWidth+2
-            }));
+            const reduced=await page.evaluate(selector=>{
+              const nodes=[...document.querySelectorAll(selector)];
+              return {
+                count:nodes.length,
+                transitions:nodes.map(n=>getComputedStyle(n).transitionDuration),
+                overflow:document.documentElement.scrollWidth>innerWidth+2
+              };
+            },selector);
             assert.ok(reduced.count>=2,'Real '+route+' choices are present');
             assert.ok(reduced.transitions.every(v=>v.split(',').every(d=>parseFloat(d)===0)),
               'Reduced motion disables '+route+' selection transitions');

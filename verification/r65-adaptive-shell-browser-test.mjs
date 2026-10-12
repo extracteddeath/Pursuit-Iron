@@ -148,7 +148,7 @@ try{
         assert.equal(libraryLayout.selected,1,'Exactly one selected Library row is exposed');
         if(twoPane){
           assert.ok(libraryLayout.detail.x>=libraryLayout.results.right-2,
-            'Detail pane sits beside the usable filtered Library results');
+            'Detail pane sits beside the usable filtered Library results: '+JSON.stringify(libraryLayout));
           const title=libraryLayout.title;
           await page.click('.wpb-library-results > .wpb-library-row:nth-child(2)');
           libraryLayout=await libraryGeometry();

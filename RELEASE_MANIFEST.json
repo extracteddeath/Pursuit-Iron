@@ -107,17 +107,17 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "8a48cb55e0656595ea62d807cdac3693bc463c5e51927bf3a6f88a55f3bd105e",
-    "index.html": "5f8390213f136d072244e33e77b52808b3a06b26081cb6e132f5a1b22935e32a",
-    "sw.js": "c8313be1bc97fffe3e16cede80f9dcb61ec1a0abf04732354c813bbde3ef94d9",
-    "BUILD_PROFILE.json": "ec0af668565f806271b806267e5191f9a592e0b20b4a51e171342df013c971c2",
-    "CHANGELOG.md": "d23f1c34e35d27be7c7fea70ff95112f872bf5ac4576c5fba778f17de400adcb",
-    "app.css": "d9cd1851c918b1995fd43abe4f9a1ad05697e96d72b0134f9b46c5902f6cb85d",
+    "modules/App.js": "638a593ddf9ec763c4da5f680849f8eb707b43456f8ebca54e2ded945ccbdb16",
+    "index.html": "58d4eef5acac86c0ffa58a635ba039c5c8f5a1deea90120a8108bebd2c0b01e5",
+    "sw.js": "047a3b594f2ce8e1a4e1c8b610d97926343b89bb4f221ebb61fd108eab98e60c",
+    "BUILD_PROFILE.json": "16f34b91f4ba5a0f69ea19a191129d1c2c4c5bce94f86a7fad9b789bcba36257",
+    "CHANGELOG.md": "a0cb21f6b7ed70d30ef8ca06f72995baede526fc3339ca7392246e4152f50a69",
+    "app.css": "af1f8c299a6572878e5234571f71efff9c728ae5ecaf7470eb69a7d706e935a5",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b852",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b852-re9fd4008c85fb251",
   "uiMilestone": "Build 852 · R72 expanded Workout Experience"
 }

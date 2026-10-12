@@ -1,3 +1,11 @@
+## Build 853 — R73 theme-native states and motion (first release slice)
+
+- Unify the visible selected, idle and focus states of the adaptive Library and live Workout exercise companion; use the saved theme's tinted surfaces, accent stroke and keyboard focus color, never generic gray.
+- Apply the same 160 ms color-only motion role to existing Plan, Progress, Settings, Library and Exercise detail segmented controls. Keep the shared active-indicator position logic and all input/control dimensions untouched.
+- Disable these decorative transitions for reduced-motion preferences and use system Highlight for forced-colors keyboard focus. Do not change generation, progressions, sets, rep entry, workout state or offline history.
+- Extend paired-theme real-browser coverage on Plan, Progress and expanded Workout with reduced-motion, selected/idle and resize checks. This is one incremental R73 release; app-wide token auditing and R74/R75 accessibility/device certification still remain.
+- Gate any publication on the exact finalized candidate SHA passing the four permanent workflows, then verify Pages and post-merge checks.
+
 ## Build 852 — R72 adaptive live Workout Experience (candidate)
 
 - Expanded tall workout windows provide a theme-native session lineup beside the existing set logger. The lineup uses the live session's current exercise, working sets and original goEx navigation handler rather than a second workout state owner.

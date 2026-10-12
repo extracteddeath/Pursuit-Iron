@@ -6715,6 +6715,14 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    reflow without forking navigation. Compact windows keep the full-screen
    detail route. Don't broaden these rules to active workout swap sheets. */
 @media (min-width:1120px) and (min-height:720px){
+  /* Library is a secondary route without a persistent tab bar. R65 only
+     expands the tabbed shell, so the 460px route frame must grow too. */
+  #root[data-pi-motion="expressive"] .wpb:has([data-view-frame="library"])>div{
+    box-sizing:border-box;
+    width:100%!important;
+    max-width:1180px!important;
+    min-width:0;
+  }
   #root[data-pi-motion="expressive"] .wpb .wpb-library:has(>.wpb-portal>.wpb-exercise-detail){
     box-sizing:border-box;
     display:grid!important;

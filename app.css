@@ -7265,3 +7265,15 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     transition:none!important;
   }
 }
+
+/* Progress has a legacy high-specificity tab style. Keep the same R73 color
+   contract on the real Progress destination rather than allowing its older
+   transition shorthand to reintroduce animated layout properties. */
+#root[data-pi-motion="expressive"] .wpb .wpb-progress.wpb-progress .wpb-premium-tabs>button{
+  transition:color var(--pi-r73-state-duration) var(--pi-r73-state-ease)!important;
+}
+@media (prefers-reduced-motion:reduce){
+  #root[data-pi-motion="expressive"] .wpb .wpb-progress.wpb-progress .wpb-premium-tabs>button{
+    transition:none!important;
+  }
+}

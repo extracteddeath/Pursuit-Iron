@@ -7332,3 +7332,51 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     transition:none!important;
   }
 }
+
+
+/* R74 / Build 855 — keyboard and system high-contrast accessibility.
+   Focus is keyboard-only, painted within the existing controls without
+   increasing their hitbox or mutating the R73 moving-selection indicator. */
+#root[data-pi-motion="expressive"] .wpb :is(
+  .wpb-library-header button[aria-label="Back"],
+  .wpb-exercise-detail button[aria-label="Back to library"],
+  .wpb-wizard-header button[aria-label="Back"],
+  .wpb-library-search input,
+  .wpb-wizard-step input,
+  .wpb-wizard-step select,
+  .wpb-wizard-step textarea
+):focus-visible{
+  outline:2px solid var(--pi-r45-keyboard-ring,var(--pi-m3e-primary))!important;
+  outline-offset:2px!important;
+}
+/* In Windows forced-colors themes the animated rail may be drawn in a system
+   color indistinguishable from adjacent items. Add a non-color indicator to
+   every semantic selected tab; a real underline survives disabled shadows
+   and background-image suppression without changing element geometry. */
+@media (forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb :is(
+    .wpb-plan-panes,.wpb-premium-tabs,.wpb-progress-grouping,
+    .wpb-library-flag-filter,.wpb-exercise-tabs,.wpb-exercise-window-tabs,
+    .wpb-settings .wpb-segmented
+  )>button:is([aria-selected="true"],[aria-pressed="true"],[aria-current="page"]){
+    text-decoration:underline!important;
+    text-decoration-thickness:2px!important;
+    text-underline-offset:.17em!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab[aria-current="page"]>span{
+    text-decoration:underline!important;
+    text-decoration-thickness:2px!important;
+    text-underline-offset:.15em!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb :is(
+    .wpb-library-header button[aria-label="Back"],
+    .wpb-exercise-detail button[aria-label="Back to library"],
+    .wpb-wizard-header button[aria-label="Back"],
+    .wpb-library-search input,
+    .wpb-wizard-step input,
+    .wpb-wizard-step select,
+    .wpb-wizard-step textarea
+  ):focus-visible{
+    outline-color:Highlight!important;
+  }
+}

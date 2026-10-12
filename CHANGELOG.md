@@ -1,3 +1,10 @@
+## Build 855 — R74 keyboard focus and forced-colors selection (candidate)
+
+- Preserve visible keyboard focus on the existing Library/detail Back controls, search input and program/cycle Wizard inputs. Use the saved-theme focus role and the Windows high-contrast Highlight system color without changing hitboxes, field values or the M3 animated selection track.
+- Give semantically selected navigation and segmented tabs a non-color underline when Windows forced-colors is active; no paint changes under ordinary light/dark themes. Selection still originates from aria-pressed/aria-selected/aria-current on the same controls.
+- Extend the real R65 browser contract to verify named >=44px navigation targets, Plan/Progress selected state in actual forced-colors emulation and Library detail visible keyboard focus in ordinary and high-contrast modes, paired themes and four viewport classes. Full R74 form/sheet Escape, 200% text and virtual-keyboard certification remains pending; R75 full device certification is separate.
+- Keep compact workout logger, typed stepper values, double progression, configured bar weights, offline state and existing release gates unchanged. Publish only after finalizer hashes, all permanent premerge checks and Pages/postmerge verification.
+
 ## Build 854 — R73 rendered palette contrast and pointer-state parity (candidate)
 
 - Extend the existing 20-theme/5-screen audit to verify the actual selected and idle text contrast (at least 4.5:1), selected indicator distinction (at least 3:1) and nongradient control surface on both real Plan and Progress tab groups; do not trust token declarations alone.

@@ -2,7 +2,7 @@
   "schemaVersion": 3,
   "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": 854,
+  "build": 855,
   "engineVersion": "0.65.6",
   "candidateStatus": "verification_enforced_by_ci",
   "runtimeAggregate": "a2836b25284edc18ea308f1ec2c37491a5dc220d5c1aad2760f2c49285d92577",
@@ -107,17 +107,17 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "6de0f33686f1645c7faf3935ab31d30d8ddb3f781d7670bed727fd04cca4b02d",
-    "index.html": "52fe8931669fd1bb9239905b2ce411a88776263b8bc5a72e77cdd2d480c0c9c5",
-    "sw.js": "88bc45d53fcfd9f412a78885696a9c4e0a4f03076476f5ed022f926b55e9c305",
-    "BUILD_PROFILE.json": "1ad1c7eaad28671ea1878153a2eb1eb1583b08b0801355589df71fd58c0df965",
-    "CHANGELOG.md": "42787f4323854bf4ba3a60c52b5f5dd5bef93e55089ff624ed57f754e311c2e5",
-    "app.css": "08060f5d8a3c999ccfecd96518e37e52dca7a012d2217b231a058ef00a918e00",
+    "modules/App.js": "621124049a21c7453de73eb18b5f13eb98fc64f8bb88fff75bde6ea8646cc4e9",
+    "index.html": "8b257bdc6673b1a0e753d7c0a759a652184ee41a64a67e76057addf53d37d676",
+    "sw.js": "e7c5fcb020839226e574a2324634decf2f375458ea094858709039c69c9573d8",
+    "BUILD_PROFILE.json": "42e901192ec8dc41a910e4562adefc758653bfe78dedafef9bb884f91a43db5b",
+    "CHANGELOG.md": "2f96540f6bd06e1576d9fafd88ca58c93e9ea18cc5d33a378a735a5a7fd89f8c",
+    "app.css": "53fb4505776a4ce9d7e9da32ab307916ef416604da168cb50e20043232728dd7",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b854-r2cc69d1c53bce31d",
-  "uiMilestone": "Build 854 · R73 real-palette contrast audit and themed pointer states"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b855-r7b58eeba57773041",
+  "uiMilestone": "Build 855 · R74 keyboard focus and forced-colors selection"
 }

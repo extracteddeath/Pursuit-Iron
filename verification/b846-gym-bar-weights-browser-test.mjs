@@ -55,7 +55,7 @@ try{
         if(r.x<-1||r.right>width+1)return false;
         const valid=width>=840
           ? r.width<=742&&r.width>=520&&Math.abs(r.x+r.width/2-width/2)<4&&r.y>8&&r.bottom<height-8
-          : r.width>width-5&&r.bottom>=height-2;
+          : r.width>=width-32&&r.x>=-1&&r.x<=16&&width-r.right<=16&&r.bottom>=height-2;
         if(!valid)return false;
         // Require 150ms of settled geometry. The entrance effect may briefly
         // reach the bottom before the final layout frame has committed.
@@ -95,8 +95,8 @@ try{
         assert.ok(sheetBounds.y>8&&sheetBounds.bottom<height-8,
           'expanded gym editor is centered vertically and scrollable');
       }else{
-        assert.ok(sheetBounds.width>width-5&&sheetBounds.bottom>=height-2,
-          'compact gym editor retains original full-width bottom-sheet behavior: '+JSON.stringify({width,height,sheetBounds}));
+        assert.ok(sheetBounds.width>=width-32&&sheetBounds.x>=-1&&sheetBounds.x<=16&&width-sheetBounds.right<=16&&sheetBounds.bottom>=height-2,
+          'compact gym editor retains bottom-anchored near-full-width sheet with <=16px symmetric margins: '+JSON.stringify({width,height,sheetBounds}));
       }
       await page.$$eval('.wpb-gym-card button',buttons=>{
         const gym=buttons.find(b=>b.textContent.includes('Test Garage'));

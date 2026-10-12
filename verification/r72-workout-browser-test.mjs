@@ -76,10 +76,14 @@ try{
             return {x:r.x,right:r.right,y:r.y,bottom:r.bottom,width:r.width,height:r.height};};
           const row=document.querySelector('[data-testid^="set-"][data-done="0"]');
           const controls=row?.querySelector('.wpb-set-controls');
+          const weight=row?.querySelector('input[aria-label="weight"]');
+          const reps=row?.querySelector('input[aria-label="reps"]');
+          const complete=row?.querySelector('.wpb-set-actions>button');
           return {grid:getComputedStyle(scroll).display==='grid',
             sideVisible:getComputedStyle(side).display!=='none',
             scroll:rect(scroll),side:rect(side),row:rect(row),
-            controls:rect(controls),sideItems:side.querySelectorAll('button').length,
+            controls:rect(controls),weight:rect(weight),reps:rect(reps),
+            complete:rect(complete),sideItems:side.querySelectorAll('button').length,
             current:side.querySelectorAll('[aria-current="step"]').length,
             overflow:document.documentElement.scrollWidth>innerWidth+2};
         });
@@ -90,7 +94,9 @@ try{
         assert.equal(state.overflow,false,'Workout must not cause document overflow');
         assert.equal(state.sideItems,2,'Lineup reflects both real session exercises');
         assert.equal(state.current,1,'Lineup identifies exactly one active exercise');
-        assert.ok(state.controls.width>100,'Logging controls remain usable');
+        assert.ok(state.weight.width>=20 && state.reps.width>=20 && state.complete.width>=20 &&
+          state.weight.right<=state.reps.x+2 && state.reps.right<=state.complete.x+2,
+          'Original input and completion controls remain distinct: '+JSON.stringify({theme,width,height,state}));
         if(expanded){
           assert.ok(state.scroll.width>780,'Secondary workout route grows past phone width');
           assert.ok(state.side.x>=state.row.right-2,

@@ -223,6 +223,71 @@ try{
         await page.waitForFunction(()=>!document.querySelector('.wpb-exercise-detail'));
         await page.click('.wpb-library-header button[aria-label="Back"]');
         await page.waitForSelector('[data-view-frame="home"]');
+        // R71: exercise the real Home→Wizard path. The right-hand overview
+        // reads the ONE active form; resizing never remounts or copies the draft.
+        await page.click('.wpb-home-create');
+        await page.waitForSelector('.wpb-wizard .wpb-wizard-step');
+        const creationMode=theme==='rose'?'Training cycle':'Single program';
+        const chosen=await page.evaluate(label=>{
+          const control=[...document.querySelectorAll('.wpb-wizard-step button')]
+            .find(el=>el.textContent.includes(label));
+          if(!control)return false;
+          control.click();return true;
+        },creationMode);
+        assert.equal(chosen,true,'Program/cycle mode is offered from the same Wizard');
+        await page.click('.wpb-wizard-next-action');
+        if(creationMode==='Training cycle'){
+          await page.waitForFunction(()=>document.querySelector('.wpb-wizard-review-title')
+            ?.textContent==='Cycle overview');
+          await page.click('.wpb-wizard-next-action');
+        }
+        await page.waitForSelector('.wpb-wizard-step input');
+        await page.type('.wpb-wizard-step input','R71 responsive '+theme);
+        const reviewLayout=()=>page.evaluate(()=>{
+          const wizard=document.querySelector('.wpb-wizard');
+          const layout=wizard.querySelector('.wpb-wizard-layout');
+          const form=layout.querySelector('.wpb-wizard-step');
+          const review=layout.querySelector('.wpb-wizard-review');
+          const a=form.getBoundingClientRect(),b=review.getBoundingClientRect();
+          return {grid:getComputedStyle(layout).display==='grid',
+            visible:getComputedStyle(review).display!=='none',
+            wizardWidth:wizard.getBoundingClientRect().width,
+            formRight:a.right,reviewX:b.x,
+            text:review.textContent,
+            input:form.querySelector('input')?.value,
+            overflow:document.documentElement.scrollWidth>innerWidth+2};
+        });
+        const initialReview=await reviewLayout();
+        const expandedWizard=width>=1120&&height>=720;
+        assert.equal(initialReview.grid,expandedWizard,'Builder pane follows available window');
+        assert.equal(initialReview.visible,expandedWizard,'Builder review is optional on compact screens');
+        assert.equal(initialReview.overflow,false,'Builder never creates horizontal document overflow');
+        if(expandedWizard){
+          assert.ok(initialReview.wizardWidth>800,'Wizard expands beyond the old phone-only route');
+          assert.ok(initialReview.reviewX>=initialReview.formRight-2,
+            'The LIVE setup review sits beside the SAME form');
+          assert.ok(initialReview.text.includes('R71 responsive '+theme),
+            'Review updates immediately from the name field');
+          assert.ok(initialReview.text.includes('Session capacity') &&
+            initialReview.text.includes('Supersets'),'Review includes real configuration constraints');
+          if(creationMode==='Training cycle')assert.ok(
+            initialReview.text.includes('Phases') &&
+            initialReview.text.includes('Phase exercise changes'),
+            'Cycle preview uses the selected live cycle template');
+          await page.setViewport({width:900,height:1000,deviceScaleFactor:1,isMobile:false,hasTouch:false});
+          const mediumReview=await reviewLayout();
+          assert.equal(mediumReview.visible,false,'Medium windows return to focused single form');
+          assert.equal(mediumReview.input,initialReview.input,
+            'Resizing the Wizard preserves the current input');
+          await page.setViewport({width,height,deviceScaleFactor:1,isMobile:!wide,hasTouch:!wide});
+          assert.equal((await reviewLayout()).text,initialReview.text,
+            'Re-expanding restores the same live preview without reinitializing state');
+        }
+        await page.click('.wpb-wizard-header button[aria-label="Back"]');
+        if(creationMode==='Training cycle')
+          await page.click('.wpb-wizard-header button[aria-label="Back"]');
+        await page.click('.wpb-wizard-header button[aria-label="Back"]');
+        await page.waitForSelector('[data-view-frame="home"]');
         if(wide){
           await page.focus('[data-tab="plan"]');
           await page.keyboard.press('ArrowDown');

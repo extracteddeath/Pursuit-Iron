@@ -48,7 +48,7 @@ try{
       // CSS sheet entrance and window reflow are asynchronous. Test the final
       // reachable geometry, not an in-flight sheetUp transform; a persistently
       // off-screen or wrong-size editor still fails at the timeout.
-      await page.waitForFunction(({width,height})=>{
+      try { await page.waitForFunction(({width,height})=>{
         const sheet=document.querySelector('.wpb-gym-sheet');
         if(!sheet)return false;
         const r=sheet.getBoundingClientRect();
@@ -66,7 +66,21 @@ try{
           return false;
         }
         return performance.now()-prior.at>=150;
-      },{timeout:6500,polling:50},{width,height});
+      },{timeout:6500,polling:50},{width,height}); }
+      catch (error) {
+        const geometry=await page.evaluate(()=>{
+          const sheet=document.querySelector('.wpb-gym-sheet');
+          const outer=sheet?.parentElement;
+          const rect=el=>{if(!el)return null;const r=el.getBoundingClientRect();
+            return {x:r.x,y:r.y,width:r.width,height:r.height,right:r.right,bottom:r.bottom};};
+          return {innerWidth,innerHeight,sheet:rect(sheet),parent:rect(outer),
+            viewport:rect(document.querySelector('.wpb')),stable:window.__b846StableBounds,
+            classes:sheet?.className,position:sheet&&getComputedStyle(sheet).position,
+            transform:sheet&&getComputedStyle(sheet).transform,
+            media:getComputedStyle(sheet).maxHeight};
+        });
+        throw new Error('Gym sheet geometry never settled: '+JSON.stringify({width,height,geometry}),{cause:error});
+      }
       const sheetBounds = await page.$eval('.wpb-gym-sheet', element => {
         const r=element.getBoundingClientRect();
         return { x:r.x,y:r.y,width:r.width,height:r.height,right:r.right,bottom:r.bottom };

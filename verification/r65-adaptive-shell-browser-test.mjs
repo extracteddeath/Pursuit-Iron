@@ -120,7 +120,7 @@ try{
               regular.durations.some(v=>v>0&&v<=.3),
               route+' uses the shared, non-geometric color transition');
             assert.ok(regular.properties.every(v=>v==='color'),
-              route+' must not animate width, position or text input geometry');
+              route+' must not animate width, position or text input geometry: '+JSON.stringify(regular));
             await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
           }
           if(route==='plan'){

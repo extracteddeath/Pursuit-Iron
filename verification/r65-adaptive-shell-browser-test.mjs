@@ -363,20 +363,32 @@ try{
           'R74 Library back ring survives Windows high contrast: '+JSON.stringify(forcedBack));
         await forcedMedia(false);
         // R74/B856: Escape invokes the existing Back route and returns keyboard
-        // focus to the actual selected row, not the document body.
+        // focus to the *origin* row. Closing detail may clear aria-current;
+        // use the row's accessible text, not a stale selected-state attribute.
+        const originRowText=await page.$eval(
+          '.wpb-library-results .wpb-library-row[aria-current="true"]',
+          el=>el.textContent.trim());
         await page.keyboard.press('Escape');
         await page.waitForFunction(()=>!document.querySelector('.wpb-exercise-detail'));
         await page.waitForFunction(()=>document.activeElement?.matches(
-          '.wpb-library-results .wpb-library-row[aria-current="true"]'));
-        assert.ok(await page.$eval('.wpb-library-results .wpb-library-row[aria-current="true"]',
-          el=>document.activeElement===el),'Escape returns focus to the selected Library row');
-        // The ordinary Back button must restore the same focus origin.
+          '.wpb-library-results .wpb-library-row'),{timeout:5000});
+        const escapedFocus=await page.evaluate(()=>({
+          text:document.activeElement?.textContent?.trim(),
+          row:document.activeElement?.matches('.wpb-library-results .wpb-library-row')
+        }));
+        assert.ok(escapedFocus.row&&escapedFocus.text===originRowText,
+          'Escape returns focus to its source Library row: '+
+          JSON.stringify({originRowText,escapedFocus}));
+        // The ordinary Back button must restore the same keyboard origin.
         await page.keyboard.press('Enter');
         await page.waitForSelector('.wpb-exercise-detail button[aria-label="Back to library"]');
         await page.click('.wpb-exercise-detail button[aria-label="Back to library"]');
         await page.waitForFunction(()=>!document.querySelector('.wpb-exercise-detail'));
-        assert.ok(await page.$eval('.wpb-library-results .wpb-library-row[aria-current="true"]',
-          el=>document.activeElement===el),'Back returns focus to selected Library row');
+        await page.waitForFunction(()=>document.activeElement?.matches(
+          '.wpb-library-results .wpb-library-row'),{timeout:5000});
+        const backFocus=await page.evaluate(()=>document.activeElement?.textContent?.trim());
+        assert.equal(backFocus,originRowText,
+          'Back returns focus to the same Library origin');
         await page.click('.wpb-library-header button[aria-label="Back"]');
         await page.waitForSelector('[data-view-frame="home"]');
         // R71: exercise the real Home→Wizard path. The right-hand overview

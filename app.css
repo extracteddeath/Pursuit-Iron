@@ -6708,3 +6708,75 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     border-left-color:CanvasText!important;
   }
 }
+
+
+/* R69 — real Library list/detail pane using one existing detail owner.
+   The same Exercise Library search, filters, rows, detail tabs and notes
+   reflow without forking navigation. Compact windows keep the full-screen
+   detail route. Don't broaden these rules to active workout swap sheets. */
+@media (min-width:1120px) and (min-height:720px){
+  #root[data-pi-motion="expressive"] .wpb .wpb-library:has(>.wpb-portal>.wpb-exercise-detail){
+    box-sizing:border-box;
+    display:grid!important;
+    grid-template-columns:minmax(330px,0.95fr) minmax(0,1.05fr);
+    grid-template-rows:auto minmax(0,1fr);
+    align-items:stretch;
+    column-gap:clamp(14px,1.7vw,24px);
+    min-height:0!important;
+    overflow:hidden!important;
+    padding:0 clamp(10px,1.6vw,22px) 0!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-library:has(>.wpb-portal>.wpb-exercise-detail)>.wpb-library-header{
+    box-sizing:border-box;
+    grid-column:1;grid-row:1;
+    position:relative!important;top:auto!important;
+    margin-top:14px;
+    border:1px solid var(--pi-color-divider)!important;
+    border-radius:20px 20px 0 0!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-library:has(>.wpb-portal>.wpb-exercise-detail)>.wpb-library-results{
+    box-sizing:border-box;
+    grid-column:1;grid-row:2;
+    min-height:0;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    overscroll-behavior:contain;
+    padding-inline:0!important;
+    padding-bottom:18px!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-library:has(>.wpb-portal>.wpb-exercise-detail)>.wpb-portal{
+    box-sizing:border-box;
+    grid-column:2;grid-row:1 / span 2;
+    position:relative!important;
+    min-width:0;min-height:0;
+    align-self:stretch;
+    overflow:hidden;
+    margin-block:14px;
+    border:1px solid var(--pi-color-divider);
+    border-radius:22px;
+    isolation:isolate;
+    background:var(--pi-r11-quiet);
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-library>.wpb-portal>.wpb-exercise-detail{
+    box-sizing:border-box;
+    position:absolute!important;
+    inset:0!important;
+    width:100%!important;height:100%!important;
+    max-height:none!important;
+    z-index:1!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-library>.wpb-portal>.wpb-exercise-detail .wpb-exercise-detail-body{
+    max-width:620px!important;
+    min-height:0;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-library .wpb-library-row[aria-current="true"]{
+    border-color:var(--pi-r11-accent-stroke)!important;
+    background-color:var(--pi-r11-selected)!important;
+    opacity:1!important;
+  }
+}
+@media (forced-colors:active) and (min-width:1120px) and (min-height:720px){
+  #root[data-pi-motion="expressive"] .wpb .wpb-library>.wpb-portal{
+    border-color:CanvasText!important;
+  }
+}

@@ -6894,3 +6894,152 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     border-color:CanvasText;
   }
 }
+
+/* R71 / Build 851 — responsive Program and Cycle setup.
+   One Wizard, one form state, one final-generation action. The review pane
+   reads that state; it never invokes the engine or owns a separate draft. */
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard-layout{
+  min-width:0;
+  width:100%;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard-layout>.wpb-wizard-step{
+  min-width:0;
+  width:100%;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard-review{
+  display:none;
+}
+@media (min-width:1120px) and (min-height:720px){
+  /* Wizards use the secondary route frame; unlike the primary navigation
+     shell it was fixed at phone width even in an expanded browser window. */
+  #root[data-pi-motion="expressive"] .wpb:has(:is([data-view-frame="wizard"],[data-view-frame="cycleWizard"]))>div{
+    box-sizing:border-box;
+    width:100%!important;
+    max-width:1200px!important;
+    min-width:0;
+  }
+  #root[data-pi-motion="expressive"] .wpb :is([data-view-frame="wizard"],[data-view-frame="cycleWizard"]){
+    min-width:0;
+    width:100%;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-wizard{
+    box-sizing:border-box;
+    width:100%!important;
+    max-width:none!important;
+    min-width:0;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-wizard>.wpb-wizard-header{
+    padding-inline:clamp(24px,3vw,38px)!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-wizard>.wpb-page-scroll{
+    box-sizing:border-box;
+    max-width:none!important;
+    width:100%!important;
+    padding:clamp(18px,2.3vw,30px) clamp(24px,3vw,38px) 30px!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-wizard-layout{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(270px,320px);
+    gap:clamp(18px,2.6vw,34px);
+    align-items:start;
+    max-width:1070px;
+    margin:0 auto;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-wizard-layout>.wpb-wizard-step{
+    max-width:690px!important;
+    margin:0!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-wizard-review{
+    display:block;
+    box-sizing:border-box;
+    position:sticky;
+    top:10px;
+    align-self:start;
+    min-width:0;
+    max-height:calc(100dvh - 185px);
+    overflow:auto;
+    scrollbar-width:thin;
+    overscroll-behavior:contain;
+    border:1px solid var(--pi-color-divider);
+    border-radius:22px;
+    padding:21px 20px;
+    background:var(--pi-r11-quiet);
+    color:inherit;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-wizard-footer>div:last-child{
+    width:100%;
+    max-width:690px;
+    margin-inline:auto;
+  }
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard-review-kicker{
+  color:var(--pi-m3e-primary);
+  font-size:11px;
+  font-weight:800;
+  line-height:1.4;
+  letter-spacing:.09em;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard-review-title{
+  margin-top:5px;
+  font-size:21px;
+  line-height:1.25;
+  font-weight:750;
+  letter-spacing:-.025em;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard-review-caption{
+  margin-top:5px;
+  font-size:13px;
+  line-height:1.45;
+  opacity:.8;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard-review-list{
+  margin:18px 0 0;
+  padding:0;
+  display:grid;
+  gap:0;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard-review-row{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  column-gap:12px;
+  row-gap:3px;
+  min-width:0;
+  padding:9px 0;
+  border-top:1px solid var(--pi-color-divider);
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard-review-row dt{
+  min-width:0;
+  font-size:12px;
+  line-height:1.35;
+  opacity:.75;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard-review-row dd{
+  min-width:0;
+  max-width:100%;
+  margin:0;
+  font-size:13px;
+  line-height:1.45;
+  font-weight:700;
+  text-align:right;
+  overflow-wrap:anywhere;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard-review-footnote{
+  margin:14px 0 0;
+  padding-top:13px;
+  border-top:1px solid var(--pi-color-divider);
+  font-size:12px;
+  line-height:1.5;
+  opacity:.8;
+}
+@media (forced-colors:active) and (min-width:1120px) and (min-height:720px){
+  #root[data-pi-motion="expressive"] .wpb .wpb-wizard-review{
+    background:Canvas;
+    color:CanvasText;
+    border-color:CanvasText;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-wizard-review-row{
+    border-top-color:CanvasText;
+  }
+}

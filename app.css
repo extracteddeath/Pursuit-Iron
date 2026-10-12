@@ -7043,3 +7043,169 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     border-top-color:CanvasText;
   }
 }
+
+/* R72 / Build 852 — live workout adaptive companion.
+   Only one live WorkoutSession owns logging, rest, focus, progression and
+   exercise selection. The lineup reads its existing state and calls goEx;
+   no mirrored set editors, timers, load algorithms, or storage writes.
+   Compact/medium/short-landscape keep the R49 phone logger exactly. */
+#root[data-pi-motion="expressive"] .wpb .wpb-workout-side{
+  display:none;
+}
+@media (min-width:1120px) and (min-height:720px){
+  /* Unlike the primary tab destinations, Workout is a secondary full-screen
+     route whose previous 460px frame would otherwise defeat a second pane. */
+  #root[data-pi-motion="expressive"] .wpb:has([data-view-frame="workout"])>div{
+    box-sizing:border-box;
+    width:100%!important;
+    max-width:1160px!important;
+    min-width:0;
+  }
+  #root[data-pi-motion="expressive"] .wpb [data-view-frame="workout"],
+  #root[data-pi-motion="expressive"] .wpb .wpb-workout{
+    box-sizing:border-box;
+    width:100%!important;
+    max-width:none!important;
+    min-width:0;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-workout-scroll:has(>.wpb-workout-side){
+    box-sizing:border-box;
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) minmax(245px,290px);
+    grid-auto-rows:min-content;
+    column-gap:clamp(20px,2.8vw,34px);
+    align-content:start;
+    width:100%!important;
+    max-width:1120px!important;
+    margin-inline:auto!important;
+    padding-inline:clamp(18px,2.5vw,30px)!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-workout-scroll:has(>.wpb-workout-side)>:not(.wpb-workout-side){
+    box-sizing:border-box;
+    grid-column:1;
+    min-width:0;
+    max-width:100%;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-workout-scroll>.wpb-workout-side{
+    box-sizing:border-box;
+    display:block;
+    grid-column:2;
+    grid-row:1 / span 50;
+    position:sticky;
+    top:12px;
+    align-self:start;
+    min-width:0;
+    max-height:min(650px,calc(100dvh - 235px));
+    overflow-y:auto;
+    overscroll-behavior:contain;
+    scrollbar-width:thin;
+    border:1px solid var(--pi-color-divider);
+    border-radius:20px;
+    padding:15px 12px;
+    background:var(--pi-r11-quiet);
+    color:var(--wpb-theme-text);
+  }
+  #root[data-pi-motion="expressive"] .wpb-workout-side-heading{
+    display:flex;
+    align-items:baseline;
+    gap:8px;
+    justify-content:space-between;
+    padding:2px 6px 13px;
+    font-size:14px;
+    font-weight:760;
+    line-height:1.25;
+  }
+  #root[data-pi-motion="expressive"] .wpb-workout-side-total{
+    font-size:11px;
+    font-weight:650;
+    color:var(--pi-m3e-primary);
+    white-space:nowrap;
+  }
+  #root[data-pi-motion="expressive"] .wpb-workout-side-list{
+    display:grid;
+    gap:4px;
+    min-width:0;
+  }
+  #root[data-pi-motion="expressive"] .wpb-workout-side-item{
+    appearance:none;
+    box-sizing:border-box;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    width:100%;
+    min-width:0;
+    min-height:51px;
+    padding:7px 8px;
+    text-align:left;
+    border:1px solid transparent;
+    border-radius:13px;
+    color:var(--wpb-theme-text);
+    background:transparent;
+    cursor:pointer;
+  }
+  #root[data-pi-motion="expressive"] .wpb-workout-side-item[aria-current="step"]{
+    background:var(--pi-r11-selected);
+    border-color:var(--pi-r11-accent-stroke);
+  }
+  #root[data-pi-motion="expressive"] .wpb-workout-side-item:hover:not([aria-current="step"]){
+    background:var(--pi-color-card);
+  }
+  #root[data-pi-motion="expressive"] .wpb-workout-side-item:focus-visible{
+    outline:2px solid var(--pi-m3e-primary);
+    outline-offset:2px;
+  }
+  #root[data-pi-motion="expressive"] .wpb-workout-side-index{
+    box-sizing:border-box;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex:0 0 30px;
+    height:30px;
+    border-radius:10px;
+    font-size:12px;
+    font-weight:800;
+    border:1px solid var(--pi-color-divider);
+    color:var(--pi-m3e-primary);
+  }
+  #root[data-pi-motion="expressive"] .wpb-workout-side-item[aria-current="step"] .wpb-workout-side-index{
+    background:var(--pi-m3e-primary);
+    color:var(--pi-color-on-primary);
+    border-color:transparent;
+  }
+  #root[data-pi-motion="expressive"] .wpb-workout-side-copy{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+    flex:1 1 0;
+    min-width:0;
+  }
+  #root[data-pi-motion="expressive"] .wpb-workout-side-name{
+    font-size:12.5px;
+    font-weight:690;
+    line-height:1.3;
+    overflow-wrap:anywhere;
+  }
+  #root[data-pi-motion="expressive"] .wpb-workout-side-count{
+    font-size:11px;
+    color:var(--wpb-theme-muted);
+    line-height:1.25;
+  }
+}
+@media (forced-colors:active) and (min-width:1120px) and (min-height:720px){
+  #root[data-pi-motion="expressive"] .wpb .wpb-workout-side,
+  #root[data-pi-motion="expressive"] .wpb-workout-side-item[aria-current="step"],
+  #root[data-pi-motion="expressive"] .wpb-workout-side-index{
+    background:Canvas!important;
+    color:CanvasText!important;
+    border-color:CanvasText!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb-workout-side-item:focus-visible{
+    outline-color:Highlight!important;
+  }
+}
+@media (prefers-reduced-motion:reduce){
+  #root[data-pi-motion="expressive"] .wpb-workout-side-item{
+    transition:none!important;
+    animation:none!important;
+  }
+}

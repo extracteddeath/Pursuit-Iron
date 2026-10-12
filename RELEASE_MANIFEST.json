@@ -107,17 +107,17 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "139c61365395c27fb5b1971601bc9cab22e307e0f5c152079f56bfe870859b31",
-    "index.html": "8cd6e848d4033dc311b21cf91c1f371498dc92b547dc74c5ea3bcc38d762bc21",
-    "sw.js": "32094451c5880c6c2deb82c3a84225a6266eafca05369fdd6818c217ea9233e8",
-    "BUILD_PROFILE.json": "9724e4643a97cf0c3530a6a93ba62582c38e06d7b32579ec3c8c44f0b45e93c3",
-    "CHANGELOG.md": "0935470b261918f4802922c9560d5307f60a350982f2839ee6cf1e05310ecc70",
-    "app.css": "4cd78eba496b3e36f57ff28fa3801bfaf514d5866c0a6b81f9be73fd79d0200c",
+    "modules/App.js": "8a48cb55e0656595ea62d807cdac3693bc463c5e51927bf3a6f88a55f3bd105e",
+    "index.html": "5f8390213f136d072244e33e77b52808b3a06b26081cb6e132f5a1b22935e32a",
+    "sw.js": "c8313be1bc97fffe3e16cede80f9dcb61ec1a0abf04732354c813bbde3ef94d9",
+    "BUILD_PROFILE.json": "ec0af668565f806271b806267e5191f9a592e0b20b4a51e171342df013c971c2",
+    "CHANGELOG.md": "d23f1c34e35d27be7c7fea70ff95112f872bf5ac4576c5fba778f17de400adcb",
+    "app.css": "d9cd1851c918b1995fd43abe4f9a1ad05697e96d72b0134f9b46c5902f6cb85d",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b851-r0000000000000000",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b851-r8928171298196e04",
   "uiMilestone": "Build 851 · R71 responsive Program and Cycle setup"
 }

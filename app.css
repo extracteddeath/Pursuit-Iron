@@ -6795,3 +6795,102 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     border-color:CanvasText!important;
   }
 }
+
+/* R70 / Build 850 — Progress respects available window space.
+   Use its existing Sessions, Lifts, Volume and Body tab owners: no duplicated
+   history data, chart models, filters or navigation state. The phone log stays
+   untouched; large windows give the activity overview a supporting column. */
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-page-scroll{
+  min-width:0;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-panel,
+#root[data-pi-motion="expressive"] .wpb-progress :is(.wpb-chart,.wpb-history-session,.wpb-history-filters,.wpb-progress-measure-row){
+  min-width:0;
+  max-width:100%;
+}
+#root[data-pi-motion="expressive"] .wpb-progress :is(.wpb-progress-panel,.wpb-chart) svg{
+  max-width:100%;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-filter-meta,
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-group-header{
+  min-width:0;
+}
+@media (min-width:1120px) and (min-height:720px){
+  /* The same glance, consistency, filter, calendar and session cards become
+     two connected reading lanes; their onclick and expansion owners do not move. */
+  #root[data-pi-motion="expressive"] .wpb .wpb-progress .wpb-page-scroll[data-scroll-key="sessions"]:has(>.wpb-consistency-card){
+    display:grid!important;
+    grid-template-columns:minmax(260px,.79fr) minmax(0,1.21fr);
+    column-gap:clamp(18px,2.2vw,30px);
+    row-gap:12px;
+    align-content:start;
+    align-items:start;
+    grid-auto-rows:min-content;
+    max-width:1080px!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb-progress .wpb-page-scroll[data-scroll-key="sessions"]>[data-progress-glance]{
+    grid-column:1/-1;
+    margin-bottom:4px!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb-progress .wpb-page-scroll[data-scroll-key="sessions"]>.wpb-consistency-card{
+    grid-column:1;
+    grid-row:2;
+    margin-bottom:0!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb-progress .wpb-page-scroll[data-scroll-key="sessions"]>.wpb-history-filters{
+    grid-column:2;
+    grid-row:2;
+    margin-bottom:0!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb-progress .wpb-page-scroll[data-scroll-key="sessions"]>.wpb-progress-disclosure{
+    grid-column:1;
+    grid-row:3;
+    margin-bottom:0!important;
+    min-width:0;
+  }
+  #root[data-pi-motion="expressive"] .wpb-progress .wpb-page-scroll[data-scroll-key="sessions"]>.wpb-progress-grouping{
+    grid-column:2;
+    grid-row:3;
+    margin-bottom:0!important;
+    max-width:100%;
+  }
+  #root[data-pi-motion="expressive"] .wpb-progress .wpb-page-scroll[data-scroll-key="sessions"]>div:has(>.wpb-history-group-header),
+  #root[data-pi-motion="expressive"] .wpb-progress .wpb-page-scroll[data-scroll-key="sessions"]>button{
+    grid-column:2;
+    min-width:0;
+  }
+  /* Record/load/recovery insight cards may share the wider surface.
+     The exercise browser deliberately remains a full-width list. */
+  #root[data-pi-motion="expressive"] .wpb .wpb-progress .wpb-page-scroll:is(
+      [data-scroll-key="lifts/load"],[data-scroll-key="lifts/recovery"]){
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    column-gap:16px;
+    align-content:start;
+    align-items:start;
+  }
+  #root[data-pi-motion="expressive"] .wpb-progress .wpb-page-scroll:is(
+      [data-scroll-key="lifts/load"],[data-scroll-key="lifts/recovery"])>:first-child{
+    grid-column:1/-1;
+  }
+  #root[data-pi-motion="expressive"] .wpb-progress .wpb-page-scroll:is(
+      [data-scroll-key="lifts/load"],[data-scroll-key="lifts/recovery"])>*{
+    min-width:0;
+    max-width:100%;
+  }
+}
+@media (max-width:599px){
+  /* Long units, dates, large text and dynamic chart labels must wrap within
+     the original phone surfaces rather than widening the PWA viewport. */
+  #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item{
+    overflow-wrap:anywhere;
+  }
+  #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-panel{
+    overflow:hidden;
+  }
+}
+@media (forced-colors:active) and (min-width:1120px) and (min-height:720px){
+  #root[data-pi-motion="expressive"] .wpb-progress .wpb-page-scroll[data-scroll-key="sessions"]>.wpb-progress-disclosure{
+    border-color:CanvasText;
+  }
+}

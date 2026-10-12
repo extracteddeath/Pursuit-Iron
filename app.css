@@ -7169,7 +7169,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   }
   #root[data-pi-motion="expressive"] .wpb-workout-side-item[aria-current="step"] .wpb-workout-side-index{
     background:var(--pi-m3e-primary);
-    color:var(--pi-color-on-primary);
+    color:var(--pi-color-on-active);
     border-color:transparent;
   }
   #root[data-pi-motion="expressive"] .wpb-workout-side-copy{
@@ -7187,7 +7187,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   }
   #root[data-pi-motion="expressive"] .wpb-workout-side-count{
     font-size:11px;
-    color:var(--wpb-theme-muted);
+    color:var(--wpb-theme-text);
+    opacity:.68;
     line-height:1.25;
   }
 }

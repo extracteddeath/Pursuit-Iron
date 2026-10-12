@@ -1,0 +1,40 @@
+name: R74 one-time candidate preparation
+on:
+  push:
+    branches: [ui/r74-accessibility-855]
+permissions:
+  contents: write
+concurrency:
+  group: r74-prepare-b855
+  cancel-in-progress: true
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+      - name: Install locked browser harness
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Preflight syntax and real accessibility/browser journeys
+        env:
+          CHROME_BIN: /usr/bin/google-chrome
+        run: |
+          node --check verification/r65-adaptive-shell-browser-test.mjs
+          node --check verification/r72-workout-browser-test.mjs
+          node scripts/verify-browser-contracts.mjs integration
+          node scripts/verify-browser-contracts.mjs workout
+      - name: Finalize offline cache and exact release hashes
+        run: node scripts/finalize-release.mjs
+      - name: Remove temporary workflow and commit finalized release
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm -- .github/workflows/r74-once-prepare.yml
+          git add -- modules/App.js index.html sw.js BUILD_PROFILE.json RELEASE_MANIFEST.json
+          git commit -m "Build 855: finalize accessibility candidate and remove temporary verifier"
+          git push origin HEAD:ui/r74-accessibility-855

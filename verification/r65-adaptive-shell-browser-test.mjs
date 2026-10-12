@@ -76,6 +76,8 @@ try{
         const initial=await geometry();
         assert.equal(initial.tabs.length,5,'All five actual navigation controls exist');
         assert.ok(initial.tabs.every(tab=>tab.hit),'Nav targets remain clickable: '+JSON.stringify(initial));
+        assert.ok(initial.tabs.every(tab=>tab.width>=44&&tab.height>=44&&tab.label),
+          'R74 navigation exposes named 44px keyboard/touch targets: '+JSON.stringify(initial.tabs));
         assert.equal(initial.overflow,false,'No horizontal viewport overflow: '+JSON.stringify(initial));
         if(wide){
           assert.equal(initial.direction,'column','Expanded screen must use an actual navigation rail');
@@ -107,6 +109,33 @@ try{
               };
             },selector);
             assert.ok(reduced.count>=2,'Real '+route+' choices are present');
+            // R74: exercise actual Windows forced-colors rendering, not just
+            // matching the CSS declaration. Semantic selection must remain
+            // distinguishable even if the moving rail or theme fill vanishes.
+            await page.emulateMediaFeatures([
+              {name:'prefers-reduced-motion',value:'reduce'},
+              {name:'forced-colors',value:'active'}
+            ]);
+            const forced=await page.evaluate(sel=>{
+              const controls=[...document.querySelectorAll(sel)];
+              const selected=controls.find(el=>el.getAttribute('aria-selected')==='true' ||
+                el.getAttribute('aria-pressed')==='true' ||
+                el.getAttribute('aria-current')==='page');
+              const idle=controls.find(el=>el!==selected);
+              return {
+                active:matchMedia('(forced-colors:active)').matches,
+                selected: selected&&getComputedStyle(selected).textDecorationLine,
+                idle:idle&&getComputedStyle(idle).textDecorationLine,
+                overflow:document.documentElement.scrollWidth>innerWidth+2
+              };
+            },selector);
+            assert.ok(forced.active&&forced.selected?.includes('underline')&&
+              !forced.idle?.includes('underline')&&!forced.overflow,
+              'R74 system contrast retains a non-color selected indication: '+JSON.stringify({route,forced}));
+            await page.emulateMediaFeatures([
+              {name:'prefers-reduced-motion',value:'reduce'},
+              {name:'forced-colors',value:'none'}
+            ]);
             assert.ok(reduced.transitions.every(v=>v.split(',').every(d=>parseFloat(d)===0)),
               'Reduced motion disables '+route+' selection transitions');
             assert.equal(reduced.overflow,false,route+' controls do not overflow');
@@ -310,6 +339,32 @@ try{
         }else{
           assert.equal(libraryLayout.positioning,'fixed','Compact detail stays full-screen');
         }
+        // R74: the real Library detail back action needs a focus treatment even
+        // on light palettes. Keyboard modality should activate :focus-visible.
+        await page.keyboard.press('Tab');
+        await page.focus('.wpb-exercise-detail button[aria-label="Back to library"]');
+        const backRing=await page.$eval('.wpb-exercise-detail button[aria-label="Back to library"]',
+          el=>({focused:document.activeElement===el,
+            visible:el.matches(':focus-visible'),
+            width:parseFloat(getComputedStyle(el).outlineWidth),
+            color:getComputedStyle(el).outlineColor,
+            style:getComputedStyle(el).outlineStyle}));
+        assert.ok(backRing.focused&&backRing.visible&&backRing.width>=2&&
+          backRing.style==='solid','R74 Library back has visible keyboard focus: '+JSON.stringify(backRing));
+        await page.emulateMediaFeatures([
+          {name:'prefers-reduced-motion',value:'reduce'},
+          {name:'forced-colors',value:'active'}
+        ]);
+        const forcedBack=await page.$eval('.wpb-exercise-detail button[aria-label="Back to library"]',
+          el=>({visible:el.matches(':focus-visible'),width:parseFloat(getComputedStyle(el).outlineWidth),
+            style:getComputedStyle(el).outlineStyle,
+            color:getComputedStyle(el).outlineColor}));
+        assert.ok(forcedBack.visible&&forcedBack.width>=2&&forcedBack.style==='solid',
+          'R74 Library back ring survives Windows high contrast: '+JSON.stringify(forcedBack));
+        await page.emulateMediaFeatures([
+          {name:'prefers-reduced-motion',value:'reduce'},
+          {name:'forced-colors',value:'none'}
+        ]);
         await page.click('.wpb-exercise-detail button[aria-label="Back to library"]');
         await page.waitForFunction(()=>!document.querySelector('.wpb-exercise-detail'));
         await page.click('.wpb-library-header button[aria-label="Back"]');

@@ -1,3 +1,11 @@
+## Build 854 — R73 rendered palette contrast and pointer-state parity (candidate)
+
+- Extend the existing 20-theme/5-screen audit to verify the actual selected and idle text contrast (at least 4.5:1), selected indicator distinction (at least 3:1) and nongradient control surface on both real Plan and Progress tab groups; do not trust token declarations alone.
+- Bring theme-derived feature tint to nonselected segmented tabs on pointer hover and inset tint on press, covering Plan, Progress, Settings, Library and exercise-detail choices. The selected moving indicator and native click behavior remain owned by the existing UI.
+- Add 160 ms background-color and color-only transitions in regular motion; suppress both on reduced-motion. No movement, width, or height transition, no grey replacement, and no visual changes to the phone set logger.
+- Expand R65 paired-theme real-browser tests with actual desktop hover color-role matching and preserved selected tab; preserve R65 mobile, landscape and tablet geometry checks.
+- This is R73 slice 2. The app-wide color/interaction system continues into further focused inspections before R74 accessibility and R75 full certification. Release requires exact final-SHA permanent CI and postmerge Pages verification.
+
 ## Build 853 — R73 theme-native states and motion (first release slice)
 
 - Unify the visible selected, idle and focus states of the adaptive Library and live Workout exercise companion; use the saved theme's tinted surfaces, accent stroke and keyboard focus color, never generic gray.

@@ -238,10 +238,19 @@ export function installAppMotion(root) {
     };
     const returnLibraryFocusAfterExit = () => {
         if (!libraryReturnFocus || root.querySelector('.wpb-exercise-detail')) return;
-        const target = libraryReturnFocus;
+        // A responsive list can remount the selected row while the React exit
+        // commits. Wait until the committed frame, then resolve the current row
+        // if the original DOM node is no longer connected.
+        const original = libraryReturnFocus;
         libraryReturnFocus = null;
-        if (target.isConnected && !target.disabled)
-            target.focus({ preventScroll: true });
+        requestAnimationFrame(() => {
+            const target = original.isConnected ? original :
+                root.querySelector('.wpb-library-results .wpb-library-row[aria-current="true"]') ||
+                root.querySelector('.wpb-library-results .wpb-library-row');
+            if (target?.isConnected && !target.disabled &&
+                !root.querySelector('.wpb-exercise-detail'))
+                target.focus({ preventScroll: true });
+        });
     };
     // Anchored program menus must clear the live workout dock as well as the
     // bottom tab bar. The old viewport-only flip can hide Delete underneath

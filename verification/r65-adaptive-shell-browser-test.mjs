@@ -119,8 +119,69 @@ try{
             assert.ok(regular.properties.includes('color') &&
               regular.durations.some(v=>v>0&&v<=.3),
               route+' uses the shared, non-geometric color transition');
-            assert.ok(regular.properties.every(v=>v==='color'),
+            assert.ok(regular.properties.every(v=>v==='color'||v==='background-color'),
               route+' must not animate width, position or text input geometry: '+JSON.stringify(regular));
+            // R73/B854: desktop pointer feedback resolves from the same saved
+            // theme role on idle choices. Selected moving indicators are not
+            // overridden, and no view selection changes on mere hover.
+            if(wide){
+              const hover=await page.evaluate(sel=>{
+                const list=[...document.querySelectorAll(sel)];
+                const index=list.findIndex(n=>n.getAttribute('aria-pressed')!=='true' &&
+                  n.getAttribute('aria-selected')!=='true' &&
+                  n.getAttribute('aria-current')!=='page');
+                if(index<0)throw new Error('No idle '+sel+' button');
+                const probe=document.createElement('i');
+                probe.style.backgroundColor='var(--pi-color-feature)';
+                document.querySelector('.wpb').append(probe);
+                const expected=getComputedStyle(probe).backgroundColor;
+                probe.remove();
+                return {index:index+1,expected,
+                  selected:list.filter(n=>n.getAttribute('aria-pressed')==='true' ||
+                    n.getAttribute('aria-selected')==='true' ||
+                    n.getAttribute('aria-current')==='page').length};
+              },selector);
+              assert.equal(hover.selected,1,'Exactly one semantic '+route+' tab is active');
+              await page.hover(selector+':nth-of-type('+hover.index+')');
+              await new Promise(resolve=>setTimeout(resolve,220));
+              const hovered=await page.$eval(selector+':nth-of-type('+hover.index+')',
+                node=>({paint:getComputedStyle(node).backgroundColor,
+                  state:node.matches(':hover'),disabled:node.disabled,
+                  rootMotion:document.querySelector('#root')?.getAttribute('data-pi-motion'),
+                  fine:matchMedia('(pointer:fine)').matches,
+                  hoverCapable:matchMedia('(hover:hover)').matches,
+                  forcedOff:matchMedia('(forced-colors:none)').matches,
+                  selected:node.getAttribute('aria-selected')==='true' ||
+                    node.getAttribute('aria-pressed')==='true' ||
+                    node.getAttribute('aria-current')==='page'}));
+              assert.ok(hovered.state&&!hovered.selected,
+                'Idle '+route+' hover never changes the selected tab');
+              if(hovered.fine&&hovered.hoverCapable){
+                assert.equal(hovered.paint,hover.expected,
+                  'Fine-pointer hover resolves to saved-theme feature fill: '+JSON.stringify({hover,hovered}));
+              }else{
+                // Headless CI reports no fine hover device; honor that media
+                // condition rather than pretending a synthesized pointer is one.
+                assert.notEqual(hovered.paint,hover.expected,
+                  'Non-hover browser should not paint a desktop-only hover layer');
+              }
+              await page.mouse.down();
+              await new Promise(resolve=>setTimeout(resolve,220));
+              const pressed=await page.$eval(selector+':nth-of-type('+hover.index+')',
+                node=>{
+                  const probe=document.createElement('i');
+                  probe.style.backgroundColor='var(--pi-color-inset)';
+                  document.querySelector('.wpb').append(probe);
+                  const expected=getComputedStyle(probe).backgroundColor;
+                  probe.remove();
+                  return {active:node.matches(':active'),
+                    paint:getComputedStyle(node).backgroundColor,expected};
+                });
+              assert.ok(pressed.active&&pressed.paint===pressed.expected,
+                'Idle '+route+' press resolves to theme inset tint: '+JSON.stringify(pressed));
+              await page.mouse.move(2,2);
+              await page.mouse.up();
+            }
             await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
           }
           if(route==='plan'){

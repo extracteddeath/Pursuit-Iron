@@ -77,3 +77,11 @@ Each slice ships only if: the four permanent GitHub workflows pass at the *final
 - **CSS cascade debt:** app.css has multiple generation-era overrides. Introduce narrowly scoped end-of-file rules in each slice and consolidate only after structural tests pass.
 - **Functional drift:** screen changes must not modify weight, reps, effort, time or saved history. Use fixture comparisons before/after.
 - **Parallel development:** do not merge another branch targeting outdated Build 844/845 state over this sequence; rebase or cherry-pick after reviewing every changed file.
+
+## Delivery ledger — October 11, 2026
+- Build 845: corrected dumbbell decrement bounds and independent Dynamic Double set progression; merged.
+- Build 846: independent barbell and Smith empty-bar masses per gym, including counterbalanced zero; merged and Pages deployed.
+- Build 847 / R67: expanded-window dialog containment and bounded Plan reading width; merged and Pages deployed. Preserves compact phone logging and includes workout overlay viewport anchoring.
+- Build 848 / R68 (this branch): existing Plan tabs and schedule remain the single primary column, with the *same* Up Next and program overview DOM nodes in a supporting column at >=1060 x 700 available window size. One navigation/data owner; compact, short-landscape and medium windows retain their vertical stack.
+- Acceptance before shipping R68: browser geometry across four window sizes and two themes, preserved selected-week and program data, no overflow or blank picker gap, all four permanent workflows green, followed by successful Pages and post-merge workflows.
+- Next UI slices after R68: R69 Library list/detail adaptive surfaces, R70 Program/Wizard connected panes, R71 Progress and Profile graphs/typography, R72 Settings density and forms, R73 workout tablet supporting details, R74 motion/a11y parity, R75 full responsive certification. Preserve theme-color, non-gradient and compact workout standards throughout.

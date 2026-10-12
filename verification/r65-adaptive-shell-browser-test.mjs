@@ -85,6 +85,37 @@ try{
         for(const route of ['plan','progress','profile','settings','home']){
           await page.click('[data-tab="'+route+'"]');
           await page.waitForSelector('[data-view-frame="'+route+'"]');
+          if(route==='plan'){
+            await page.waitForSelector('.wpb-plan-view .wpb-plan-panes');
+            await page.waitForSelector('.wpb-plan-view .wpb-plan-overview');
+            const layout=await page.evaluate(()=>{
+              const parent=document.querySelector('.wpb-plan-view');
+              const rect=el=>{if(!el)return null;const r=el.getBoundingClientRect();
+                return {x:r.x,y:r.y,right:r.right,bottom:r.bottom,width:r.width};};
+              return {grid:getComputedStyle(parent).display==='grid',
+                panes:rect(parent.querySelector('.wpb-plan-panes')),
+                upNext:rect(parent.querySelector('.wpb-plan-up-next')),
+                overview:rect(parent.querySelector('.wpb-plan-overview')),
+                weekPicker:rect(parent.querySelector('.wpb-plan-week-picker')),
+                weekIntent:rect(parent.querySelector('[data-week-intent]')),
+                overflow:document.documentElement.scrollWidth>innerWidth+2};
+            });
+            const supporting=width>=1060&&height>=700;
+            assert.equal(layout.grid,supporting,'Plan supporting pane follows available window');
+            assert.equal(layout.overflow,false,'Plan has no horizontal overflow');
+            if(supporting){
+              assert.ok(layout.overview.x>=layout.panes.right-2,
+                'Program overview is the supporting pane beside schedule');
+              if(layout.upNext)assert.ok(layout.upNext.x>=layout.panes.right-2,
+                'Same Up Next card moves beside schedule without cloning state');
+              if(layout.weekPicker&&layout.weekIntent)assert.ok(
+                layout.weekIntent.y-layout.weekPicker.bottom<70,
+                'Supporting-pane height does not create a gap between picker and week content');
+            }else{
+              assert.ok(layout.overview.y>=layout.panes.bottom-2,
+                'Phone, medium and short windows retain vertical Plan reading order');
+            }
+          }
           const state=await geometry();
           assert.equal(state.direction,initial.direction,
             'Navigation position stays stable when switching to '+route);

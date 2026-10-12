@@ -6726,6 +6726,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   #root[data-pi-motion="expressive"] .wpb .wpb-library:has(>.wpb-portal>.wpb-exercise-detail){
     box-sizing:border-box;
     display:grid!important;
+    /* The historical Library max-width was 720px, too small for two panes. */
+    width:100%!important;
+    max-width:none!important;
     grid-template-columns:minmax(330px,0.95fr) minmax(0,1.05fr);
     grid-template-rows:auto minmax(0,1fr);
     align-items:stretch;
@@ -6755,6 +6758,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   #root[data-pi-motion="expressive"] .wpb .wpb-library:has(>.wpb-portal>.wpb-exercise-detail)>.wpb-portal{
     box-sizing:border-box;
     grid-column:2;grid-row:1 / span 2;
+    /* Shared Exit portals are display:contents by default. A real grid
+       item is essential here; otherwise the detail anchors to the page. */
+    display:block!important;
+    width:100%!important;
     position:relative!important;
     min-width:0;min-height:0;
     align-self:stretch;

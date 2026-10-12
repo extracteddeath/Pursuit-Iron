@@ -7255,8 +7255,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   .wpb-settings .wpb-segmented,.wpb-plan-panes,.wpb-premium-tabs,
   .wpb-progress-grouping,.wpb-library-flag-filter,
   .wpb-exercise-tabs,.wpb-exercise-window-tabs)>button{
-  transition:color var(--pi-r73-state-duration) var(--pi-r73-state-ease),
-             background-color var(--pi-r73-state-duration) var(--pi-r73-state-ease)!important;
+  transition:color var(--pi-r73-state-duration) var(--pi-r73-state-ease)!important;
 }
 @media (prefers-reduced-motion:reduce){
   #root[data-pi-motion="expressive"] .wpb :is(
@@ -7271,8 +7270,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    contract on the real Progress destination rather than allowing its older
    transition shorthand to reintroduce animated layout properties. */
 #root[data-pi-motion="expressive"] .wpb .wpb-progress.wpb-progress .wpb-premium-tabs>button{
-  transition:color var(--pi-r73-state-duration) var(--pi-r73-state-ease),
-             background-color var(--pi-r73-state-duration) var(--pi-r73-state-ease)!important;
+  transition:color var(--pi-r73-state-duration) var(--pi-r73-state-ease)!important;
 }
 @media (prefers-reduced-motion:reduce){
   #root[data-pi-motion="expressive"] .wpb .wpb-progress.wpb-progress .wpb-premium-tabs>button{
@@ -7302,5 +7300,35 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     >button:not([aria-pressed="true"]):not([aria-selected="true"]):not([aria-current="page"]):not(:disabled):active{
     background-color:var(--pi-color-inset)!important;
     background-image:none!important;
+  }
+}
+
+/* R73 / B854 regression fix: do not interpolate the selected button's
+   background when an idle button becomes selected. The expressive moving
+   ::before indicator alone paints active selection; a transient old pressed
+   fill on the button made the indicator look doubled during fast navigation.
+   Animate hover tint only while the button is still idle. */
+#root[data-pi-motion="expressive"] .wpb :is(
+  .wpb-settings .wpb-segmented,.wpb-plan-panes,.wpb-premium-tabs,
+  .wpb-progress-grouping,.wpb-library-flag-filter,
+  .wpb-exercise-tabs,.wpb-exercise-window-tabs)
+  >button:not([aria-pressed="true"]):not([aria-selected="true"]):not([aria-current="page"]){
+  transition:color var(--pi-r73-state-duration) var(--pi-r73-state-ease),
+             background-color var(--pi-r73-state-duration) var(--pi-r73-state-ease)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-progress.wpb-progress .wpb-premium-tabs
+  >button:not([aria-selected="true"]){
+  transition:color var(--pi-r73-state-duration) var(--pi-r73-state-ease),
+             background-color var(--pi-r73-state-duration) var(--pi-r73-state-ease)!important;
+}
+@media (prefers-reduced-motion:reduce){
+  #root[data-pi-motion="expressive"] .wpb :is(
+    .wpb-settings .wpb-segmented,.wpb-plan-panes,.wpb-premium-tabs,
+    .wpb-progress-grouping,.wpb-library-flag-filter,
+    .wpb-exercise-tabs,.wpb-exercise-window-tabs)
+    >button:not([aria-pressed="true"]):not([aria-selected="true"]):not([aria-current="page"]),
+  #root[data-pi-motion="expressive"] .wpb .wpb-progress.wpb-progress .wpb-premium-tabs
+    >button:not([aria-selected="true"]){
+    transition:none!important;
   }
 }

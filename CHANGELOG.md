@@ -1,3 +1,9 @@
+## Build 849 — R69 adaptive Exercise Library
+
+- On wide, tall windows, place the existing filtered Library list beside its selected exercise detail, preserving one selected exercise, history, notes, attachments and variant actions. Compact/medium screens retain full-screen detail.
+- Identify the selected exercise accessibly and verify real click-through, theme pairing, resize reflow and persistence with the existing R65 browser contract.
+- No engine, workout logger, saved workout or progression behavior changes. Preserve the material surface tokens and no-gradient rule.
+
 ## Build 848 — R68 responsive Plan supporting pane
 
 - On suitably wide, tall windows, the existing Plan schedule and tabs become the primary reading column; the existing Up Next and program overview move into a supporting column using CSS Grid. No duplicate week selection, router, or prescription state.

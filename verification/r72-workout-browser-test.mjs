@@ -116,10 +116,14 @@ try{
           assert.equal(state.sideVisible,true,'Re-expansion restores the same lineup');
           await page.click('button[aria-label="Focused mode"]');
           await page.waitForFunction(()=>!document.querySelector('.wpb-workout-side'));
-          assert.ok(await page.$('[data-testid="set-1-0"]'),
-            'Focused mode keeps the selected set and omits optional navigation');
+          assert.ok(await page.$('.wpb-focus-hero .wpb-focus-value-input'),
+            'Focused mode retains its dedicated editable set fields');
+          assert.ok(await page.$eval('.wpb-exercise-heading',n=>n.textContent.toLowerCase().includes('curl')),
+            'Focused mode retains the selected second exercise');
           await page.click('button[aria-label="Exit focused mode"]');
           await page.waitForSelector('.wpb-workout-side');
+          assert.ok(await page.$('[data-testid="set-1-0"]'),
+            'Returning from focus restores the original second-exercise set rows');
         }
         assert.equal((await page.$eval('[data-testid^="set-"] input[aria-label="weight"]',
           input=>input.value)).length>0,true,'Editable weight remains present');

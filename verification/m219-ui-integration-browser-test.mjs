@@ -110,6 +110,49 @@ try {
             r36Observations.push({theme,tab,nestedContrast});
             // R34/R35: verify actual responsive tab targets and rendered color
             // roles under each of the 20 saved themes, not just source tokens.
+            // R73 / B854: audit actual *rendered* selected and idle tab roles
+            // for all 20 saved themes, not just token declarations. The moving
+            // track (::before) owns selection paint; individual button backgrounds
+            // do not represent the visible selected surface.
+            if(tab==='plan'||tab==='progress'){
+                const tone=await page.evaluate(tab=>{
+                    const selector=tab==='plan'?'.wpb-plan-panes':'.wpb-premium-tabs';
+                    const track=document.querySelector(selector);
+                    if(!track)throw new Error('Missing semantic tab group '+selector);
+                    const buttons=[...track.querySelectorAll(':scope > button')];
+                    const selected=buttons.find(b=>b.getAttribute('aria-pressed')==='true' ||
+                        b.getAttribute('aria-selected')==='true' || b.getAttribute('aria-current')==='page');
+                    if(!selected)throw new Error('Missing selected '+tab+' tab: '+
+                        buttons.map(b=>b.outerHTML.slice(0,200)).join(' / '));
+                    const idle=buttons.find(b=>b!==selected);
+                    const ctx=document.createElement('canvas').getContext('2d',{willReadFrequently:true});
+                    const channels=c=>{ctx.clearRect(0,0,1,1);ctx.fillStyle='#000';ctx.fillStyle=c;
+                        ctx.fillRect(0,0,1,1);return [...ctx.getImageData(0,0,1,1).data]};
+                    const lum=color=>{const c=channels(color).slice(0,3).map(n=>{
+                        const x=n/255;return x<=.04045?x/12.92:((x+.055)/1.055)**2.4});
+                        return .2126*c[0]+.7152*c[1]+.0722*c[2]};
+                    const contrast=(a,b)=>{const x=lum(a),y=lum(b);
+                        return (Math.max(x,y)+.05)/(Math.min(x,y)+.05)};
+                    const moving=track.hasAttribute('data-pi-m3-track');
+                    const surface=moving?getComputedStyle(track,'::before').backgroundColor:
+                        getComputedStyle(selected).backgroundColor;
+                    const rail=getComputedStyle(track).backgroundColor;
+                    const selectedInk=getComputedStyle(selected).color;
+                    const idleInk=getComputedStyle(idle).color;
+                    const rect=selected.getBoundingClientRect();
+                    return {tab,moving,selected: selected.textContent.trim(),
+                        selectedRatio:+contrast(selectedInk,surface).toFixed(2),
+                        idleRatio:+contrast(idleInk,rail).toFixed(2),
+                        stateRatio:+contrast(surface,rail).toFixed(2),
+                        fill:surface,rail,ink:selectedInk,idleInk,
+                        gradient:getComputedStyle(track).backgroundImage,
+                        width:rect.width,height:rect.height,
+                        overflow:document.documentElement.scrollWidth>innerWidth+2};
+                },tab);
+                assert.ok(tone.selectedRatio>=4.5 && tone.idleRatio>=4.5 &&
+                    tone.stateRatio>=3 && tone.gradient==='none' && !tone.overflow,
+                    'R73 '+theme+'/'+tab+' selection and idle roles must remain visible: '+JSON.stringify(tone));
+            }
             const accessibility = await page.evaluate(tab => {
                 const nav=document.querySelector('.wpb-tabbar[data-pi-m3-track]');
                 const selected=nav?.querySelector('button[aria-current="page"]');

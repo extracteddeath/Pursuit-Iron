@@ -7255,7 +7255,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   .wpb-settings .wpb-segmented,.wpb-plan-panes,.wpb-premium-tabs,
   .wpb-progress-grouping,.wpb-library-flag-filter,
   .wpb-exercise-tabs,.wpb-exercise-window-tabs)>button{
-  transition:color var(--pi-r73-state-duration) var(--pi-r73-state-ease)!important;
+  transition:color var(--pi-r73-state-duration) var(--pi-r73-state-ease),
+             background-color var(--pi-r73-state-duration) var(--pi-r73-state-ease)!important;
 }
 @media (prefers-reduced-motion:reduce){
   #root[data-pi-motion="expressive"] .wpb :is(
@@ -7270,10 +7271,38 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    contract on the real Progress destination rather than allowing its older
    transition shorthand to reintroduce animated layout properties. */
 #root[data-pi-motion="expressive"] .wpb .wpb-progress.wpb-progress .wpb-premium-tabs>button{
-  transition:color var(--pi-r73-state-duration) var(--pi-r73-state-ease)!important;
+  transition:color var(--pi-r73-state-duration) var(--pi-r73-state-ease),
+             background-color var(--pi-r73-state-duration) var(--pi-r73-state-ease)!important;
 }
 @media (prefers-reduced-motion:reduce){
   #root[data-pi-motion="expressive"] .wpb .wpb-progress.wpb-progress .wpb-premium-tabs>button{
     transition:none!important;
+  }
+}
+
+/* R73 / B854 — actual pointer states for existing segmented controls.
+   Nonselected choices now get the same saved-theme feature tint rather than
+   an unstyled transparent hover against an almost identical surrounding rail.
+   The selected moving-indicator paint and tap ownership remain untouched. */
+@media (hover:hover) and (pointer:fine) and (forced-colors:none){
+  #root[data-pi-motion="expressive"] .wpb :is(
+    .wpb-settings .wpb-segmented,.wpb-plan-panes,.wpb-premium-tabs,
+    .wpb-progress-grouping,.wpb-library-flag-filter,
+    .wpb-exercise-tabs,.wpb-exercise-window-tabs)
+    >button:not([aria-pressed="true"]):not([aria-selected="true"])
+    :not([aria-current="page"]):not(:disabled):hover{
+    background-color:var(--pi-color-feature)!important;
+    background-image:none!important;
+  }
+}
+@media (forced-colors:none){
+  #root[data-pi-motion="expressive"] .wpb :is(
+    .wpb-settings .wpb-segmented,.wpb-plan-panes,.wpb-premium-tabs,
+    .wpb-progress-grouping,.wpb-library-flag-filter,
+    .wpb-exercise-tabs,.wpb-exercise-window-tabs)
+    >button:not([aria-pressed="true"]):not([aria-selected="true"])
+    :not([aria-current="page"]):not(:disabled):active{
+    background-color:var(--pi-color-inset)!important;
+    background-image:none!important;
   }
 }

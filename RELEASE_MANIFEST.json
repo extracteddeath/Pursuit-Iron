@@ -107,17 +107,17 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "638a593ddf9ec763c4da5f680849f8eb707b43456f8ebca54e2ded945ccbdb16",
-    "index.html": "58d4eef5acac86c0ffa58a635ba039c5c8f5a1deea90120a8108bebd2c0b01e5",
-    "sw.js": "34d6af32df3ea60b21fc55996f7a73dad2988edad72974da2020753feab81ae0",
-    "BUILD_PROFILE.json": "a239c54b412c4f2b77089aaf569cc58ba4d979a22ef969b9c003ad725627017b",
-    "CHANGELOG.md": "a0cb21f6b7ed70d30ef8ca06f72995baede526fc3339ca7392246e4152f50a69",
-    "app.css": "9e3aececa09ba78cbcc5a06414032c01e2ebb42581a5ca84b0bab3439f4fcbb3",
+    "modules/App.js": "f63e32a263f88f231013bd4e05426e9d518a3e093f6ff69b82e8916559ac422a",
+    "index.html": "14833177459c0efebb08c3eb9c7c7dcdda76d85e5db343884b2d07a81ebacb0e",
+    "sw.js": "7c04b35eb35be090228b9f874a1cab1f9760747985da2cb3d6440a72aea2fdb9",
+    "BUILD_PROFILE.json": "cdf263f232b05c1afd79af98490e410698d7c8d5d32795321f14b642dea6bcea",
+    "CHANGELOG.md": "9359131bf11403b91a27f1c8ed8234d58a03a1260526eeef0c736eb0110ae3aa",
+    "app.css": "d4a55593dbf68d9a32da787bfe076f7da8e0e48c699d3aafeae5d55d2ac04cc8",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b853-ra4ffab36f390227a",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b853-r5ce5ab192d5f41a4",
   "uiMilestone": "Build 853 · R73 theme-native state and navigation motion (slice 1)"
 }

@@ -7245,3 +7245,23 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     animation:none!important;
   }
 }
+
+/* R73 / Build 853 — semantic selection motion for the app's existing
+   Settings, Plan, Progress, Library and Exercise detail tab groups.
+   The shared moving active indicator keeps ownership of its position; only
+   foreground color changes on the actual buttons. No geometric animation,
+   pseudo-element overlay, delayed click, or new theme-specific gray. */
+#root[data-pi-motion="expressive"] .wpb :is(
+  .wpb-settings .wpb-segmented,.wpb-plan-panes,.wpb-premium-tabs,
+  .wpb-progress-grouping,.wpb-library-flag-filter,
+  .wpb-exercise-tabs,.wpb-exercise-window-tabs)>button{
+  transition:color var(--pi-r73-state-duration) var(--pi-r73-state-ease)!important;
+}
+@media (prefers-reduced-motion:reduce){
+  #root[data-pi-motion="expressive"] .wpb :is(
+    .wpb-settings .wpb-segmented,.wpb-plan-panes,.wpb-premium-tabs,
+    .wpb-progress-grouping,.wpb-library-flag-filter,
+    .wpb-exercise-tabs,.wpb-exercise-window-tabs)>button{
+    transition:none!important;
+  }
+}

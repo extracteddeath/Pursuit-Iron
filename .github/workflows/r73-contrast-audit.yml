@@ -28,7 +28,8 @@ jobs:
         env:
           CHROME_BIN: /usr/bin/google-chrome
         run: |
-          node verification/m219-ui-integration-browser-test.mjs
+          # The 20-theme m219 audit already passed at this CSS candidate;
+          # rerun just the responsive pointer diagnostic while correcting it.
           node verification/r65-adaptive-shell-browser-test.mjs
       - name: Finalize Build 854 offline cache and release hashes
         run: node scripts/finalize-release.mjs

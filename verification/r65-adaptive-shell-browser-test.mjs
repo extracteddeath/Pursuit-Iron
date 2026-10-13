@@ -362,8 +362,37 @@ try{
         assert.ok(forcedBack.visible&&forcedBack.width>=2&&forcedBack.style==='solid',
           'R74 Library back ring survives Windows high contrast: '+JSON.stringify(forcedBack));
         await forcedMedia(false);
+        // R74/B856: Escape invokes the existing Back route and returns keyboard
+        // focus to the *origin* row. Closing detail may clear aria-current;
+        // use the row's accessible text, not a stale selected-state attribute.
+        const originRowText=await page.$eval(
+          '.wpb-library-results .wpb-library-row[aria-current="true"]',
+          el=>el.textContent.trim());
+        await page.keyboard.press('Escape');
+        await page.waitForFunction(()=>!document.querySelector('.wpb-exercise-detail'));
+        await page.waitForFunction(expected=>
+          document.activeElement?.matches('.wpb-library-results .wpb-library-row') &&
+          document.activeElement.textContent.trim()===expected,
+          {timeout:5000},originRowText);
+        const escapedFocus=await page.evaluate(()=>({
+          text:document.activeElement?.textContent?.trim(),
+          row:document.activeElement?.matches('.wpb-library-results .wpb-library-row')
+        }));
+        assert.ok(escapedFocus.row&&escapedFocus.text===originRowText,
+          'Escape returns focus to its source Library row: '+
+          JSON.stringify({originRowText,escapedFocus}));
+        // The ordinary Back button must restore the same keyboard origin.
+        await page.keyboard.press('Enter');
+        await page.waitForSelector('.wpb-exercise-detail button[aria-label="Back to library"]');
         await page.click('.wpb-exercise-detail button[aria-label="Back to library"]');
         await page.waitForFunction(()=>!document.querySelector('.wpb-exercise-detail'));
+        await page.waitForFunction(expected=>
+          document.activeElement?.matches('.wpb-library-results .wpb-library-row') &&
+          document.activeElement.textContent.trim()===expected,
+          {timeout:5000},originRowText);
+        const backFocus=await page.evaluate(()=>document.activeElement?.textContent?.trim());
+        assert.equal(backFocus,originRowText,
+          'Back returns focus to the same Library origin');
         await page.click('.wpb-library-header button[aria-label="Back"]');
         await page.waitForSelector('[data-view-frame="home"]');
         // R71: exercise the real Home→Wizard path. The right-hand overview
@@ -385,6 +414,9 @@ try{
           await page.click('.wpb-wizard-next-action');
         }
         await page.waitForSelector('.wpb-wizard-step input');
+        assert.equal(await page.$eval('.wpb-wizard-step input',el=>el.getAttribute('aria-label')),
+          creationMode==='Training cycle'?'Cycle name':'Program name',
+          'Creation name field has a stable accessible label in both modes');
         await page.type('.wpb-wizard-step input','R71 responsive '+theme);
         const reviewLayout=()=>page.evaluate(()=>{
           const wizard=document.querySelector('.wpb-wizard');
@@ -431,6 +463,39 @@ try{
           await page.click('.wpb-wizard-header button[aria-label="Back"]');
         await page.click('.wpb-wizard-header button[aria-label="Back"]');
         await page.waitForSelector('[data-view-frame="home"]');
+        // R74/B856: browser 200% zoom halves CSS viewport dimensions while
+        // doubling physical-pixel density. Exercise the original routes at the
+        // zoomed layout viewport, not a fake CSS transform or font-size proxy.
+        if(wide && height>=720){
+          const zoomWidth=Math.round(width/2),zoomHeight=Math.round(height/2);
+          await page.setViewport({width:zoomWidth,height:zoomHeight,
+            deviceScaleFactor:2,isMobile:false,hasTouch:false});
+          for(const route of ['plan','progress','settings','home']){
+            await page.click('[data-tab="'+route+'"]');
+            await page.waitForSelector('[data-view-frame="'+route+'"]');
+            const zoom=await page.evaluate(()=>{
+              const nav=[...document.querySelectorAll('.wpb-tabbar button[data-tab]')];
+              const labels=nav.map(el=>({
+                name:el.getAttribute('aria-label'),
+                width:el.getBoundingClientRect().width,
+                height:el.getBoundingClientRect().height
+              }));
+              return {
+                overflow:document.documentElement.scrollWidth>innerWidth+2,
+                nav:labels,viewport:innerWidth
+              };
+            });
+            assert.equal(zoom.overflow,false,
+              '200% zoom must preserve reflow without horizontal page overflow: '+
+              JSON.stringify({route,theme,width,zoom}));
+            assert.ok(zoom.nav.every(item=>item.width>=44&&item.height>=44&&item.name),
+              '200% zoom retains named practical navigation targets: '+
+              JSON.stringify({route,theme,width,zoom}));
+          }
+          await page.setViewport({width,height,deviceScaleFactor:1,
+            isMobile:!wide,hasTouch:!wide});
+          await page.waitForSelector('[data-view-frame="home"]');
+        }
         if(wide){
           await page.focus('[data-tab="plan"]');
           await page.keyboard.press('ArrowDown');

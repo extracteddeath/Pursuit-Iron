@@ -228,6 +228,35 @@ export function installAppMotion(root) {
     const pressed = new Map(), controls = new WeakMap(), choiceStates = new WeakMap(), referenceKeys = new WeakMap();
     const media = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)');
     let menuOpener = null;
+    // R74: Back and Escape both return keyboard users to the selected Library
+    // row *after* React has removed the detail pane. Never fork detail state.
+    let libraryReturnFocus = null;
+    const libraryRows = () => [...root.querySelectorAll('.wpb-library-results .wpb-library-row')];
+    const libraryRowLabel = row => row?.textContent?.replace(/\s+/g, ' ').trim() || '';
+    const rememberLibraryReturn = event => {
+        if (!event.target.closest?.('.wpb-exercise-detail button[aria-label="Back to library"]')) return;
+        const rows = libraryRows();
+        const origin = rows.find(row => row.getAttribute('aria-current') === 'true') ||
+            rows.find(row => row.contains(document.activeElement)) || rows[0];
+        // Keep *identity* across responsive unmount/remount, not just a stale
+        // DOM node. Otherwise the fallback first row steals keyboard focus.
+        libraryReturnFocus = origin ? {
+            node: origin, label: libraryRowLabel(origin), index: rows.indexOf(origin)
+        } : null;
+    };
+    const returnLibraryFocusAfterExit = () => {
+        if (!libraryReturnFocus || root.querySelector('.wpb-exercise-detail')) return;
+        const original = libraryReturnFocus;
+        libraryReturnFocus = null;
+        requestAnimationFrame(() => {
+            if (root.querySelector('.wpb-exercise-detail')) return;
+            const rows = libraryRows();
+            const target = rows.find(row => libraryRowLabel(row) === original.label) ||
+                rows[original.index] || (original.node.isConnected ? original.node : null);
+            if (target?.isConnected && !target.disabled)
+                target.focus({ preventScroll: true });
+        });
+    };
     // Anchored program menus must clear the live workout dock as well as the
     // bottom tab bar. The old viewport-only flip can hide Delete underneath
     // a resumed-workout dock even though the menu fits within window.innerHeight.
@@ -880,6 +909,7 @@ function disclosure(el, initial = false) {
         });
         groups.forEach(group => selection(group));
         disclosures.forEach(el => disclosure(el));
+        returnLibraryFocusAfterExit();
     });
     observer.observe(root, { subtree: true, childList: true, attributes: true,
         attributeFilter: ['data-view-frame','data-motion-key','aria-pressed','aria-selected','aria-current','aria-checked','aria-expanded','open'] });
@@ -896,6 +926,7 @@ function disclosure(el, initial = false) {
     document.addEventListener('pointercancel', up, { passive: true });
     document.addEventListener('pointermove', move, { passive: true });
     root.addEventListener('click', rememberConnectedOrigin, true);
+    root.addEventListener('click', rememberLibraryReturn, true);
     root.addEventListener('click', themeSelection);
     root.addEventListener('keydown', keydown); document.addEventListener('keyup', keyup);
     document.addEventListener('visibilitychange', visibility);
@@ -916,6 +947,8 @@ function disclosure(el, initial = false) {
         root.removeEventListener('pointerdown', down); document.removeEventListener('pointerup', up);
         document.removeEventListener('pointercancel', up); document.removeEventListener('pointermove', move);
         root.removeEventListener('click', rememberConnectedOrigin, true);
+        root.removeEventListener('click', rememberLibraryReturn, true);
+        libraryReturnFocus = null;
         root.removeEventListener('click', themeSelection);
         root.removeEventListener('keydown', keydown); document.removeEventListener('keyup', keyup);
         document.removeEventListener('visibilitychange', visibility);

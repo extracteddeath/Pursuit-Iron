@@ -5506,7 +5506,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   /* Use the palette's already-paired selection fill and foreground. */
   --pi-color-active:var(--wpb-theme-accent);
   --pi-color-on-active:var(--wpb-theme-on-accent);
-  --pi-color-feature:light-dark(var(--pi-m3e-primary-container),var(--wpb-theme-feature));
+  --pi-color-feature:light-dark(var(--pi-m3e-primary-container),color-mix(in srgb,var(--wpb-theme-card) 84%,var(--wpb-theme-accent) 16%));
   --pi-color-on-feature:var(--pi-color-on-control);
   /* Older component families share the same live tinted surface roles. */
   --pi-r11-quiet:var(--pi-color-card);
@@ -7668,5 +7668,43 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   #root[data-pi-motion="expressive"] .wpb .wpb-progress.wpb-progress .wpb-premium-tabs{
     grid-auto-flow:row!important;
     grid-auto-columns:auto!important;
+  }
+}
+
+/* Build 862 · R78 — quiet theme materials and attached last-set techniques.
+   One theme-derived color ladder; no independent wine/red amplifier component.
+   This intentionally excludes live workout logging controls and their sizing. */
+#root[data-pi-motion="expressive"] .wpb-program .wpb-program-exercise-slot{min-width:0;}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-program-amplifier{
+  box-sizing:border-box;
+  width:100%;
+  margin:2px 0 10px!important;
+  padding:8px 10px!important;
+  background:var(--pi-color-card)!important;
+  color:var(--pi-color-on-control)!important;
+  border:1px solid var(--pi-color-divider)!important;
+  border-radius:14px!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-program-amplifier>button{
+  min-height:50px;
+  max-width:100%;
+  background:var(--pi-color-control)!important;
+  border:1px solid var(--pi-color-divider)!important;
+  color:var(--pi-color-on-control)!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-program-amplifier>.wpb-expand{
+  background:transparent!important;
+  color:var(--pi-color-on-control)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-program-amplifier>button:focus-visible{
+  outline:2px solid var(--pi-color-active)!important;
+  outline-offset:2px!important;
+}
+@media(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb-program .wpb-program-amplifier,
+  #root[data-pi-motion="expressive"] .wpb-program .wpb-program-amplifier>button{
+    color:CanvasText!important;background:Canvas!important;border-color:CanvasText!important;
   }
 }

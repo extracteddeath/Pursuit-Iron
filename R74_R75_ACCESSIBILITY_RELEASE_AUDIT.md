@@ -75,3 +75,16 @@ The fixture mounts the exported production Wizard after the ordinary app loads i
 Local verification uses Node 24 and Chromium 153 in this environment. Permanent release CI uses its existing Node 22 / Google Chrome setup. The original 76 source contracts and all 93 non-App runtime hashes remain unchanged; canonical engine 0.65.6, export/application parity and independent semantic suites retain their existing gates. Release finalization certifies all 102 required offline entries, and deployed verification must cover the same 106 manifest/runtime/UI assets as Build 857.
 
 Publication remains gated on the four permanent workflows at the final candidate head, then Pages, the four post-merge workflows and deployed byte identity. The current Wizard browser review does not certify physical Android keyboard/TalkBack/safe areas, touch/trackpad feel, other app forms/targets, final app-wide visual/usability review or stylesheet consolidation. The historical Home/Plan duration item is closed by R50/M219 and is not a new remaining defect.
+
+
+## Build 858 publication
+
+PR #142 final head `c753d4b236edf185a0daf5bab3b6e067b9e57d81` passed all four permanent workflows and all ten jobs. It merged as `2e2489a2c2c249f14b9c226230e0b08a1d6d9149`. Pages and all four post-merge workflows passed. All 106 deployed offline/runtime/UI/release files are byte-identical to the merge. Build 858 is published.
+
+## Build 859 — Settings field purpose and enlarged text
+
+Browser inspection reproduced numeric placeholder names instead of field purposes, a filled export field without a name, experience labels escaping fixed columns at 200% text, and Reset wording escaping its button at 320px. Repairs stay with existing field and responsive owners: six explicit purpose names, text-relative container thresholds and a wrapping Reset label. The existing toggle hit-area pseudo-element is preserved.
+
+The R74 gate checks the real accessibility tree, export read-only behavior, unsaved import text and cancellation without invoking a restore/program import, exact saved-program equality and whole experience/reset labels at 200%. Existing R53 whole-label/48px/four-two-one-column checks remain unchanged. Final candidate CI, post-merge and deployed identity evidence must still pass before declaring Build 859 published; this slice does not close physical-device or whole-roadmap acceptance.
+
+Build 859 local validation: all 14 paired-theme/seven-window R74 scenarios passed, including the existing 392 Wizard step visits; R53 20-theme and normal/125% Settings assertions, R65 adaptive/draft retention, the original B825 compact logger, all 33 integration source contracts and release integrity passed. All 93 non-App runtime hashes match published Build 858. Permanent final-head CI remains the release gate.

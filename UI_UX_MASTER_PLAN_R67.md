@@ -1,6 +1,6 @@
 # Pursuit Iron — UI/UX Master Plan (R67 onward)
 
-Updated: 2026-10-13. Release train through Build 858 (candidate). The confirmed publication baseline is Build 857 / PR #141 at `91941890a4da4ad787f3d8723420870fc7cf561b`; final-head and deployment status are recorded in Actions. This document governs the next app-wide UX iteration; each slice is independently testable and reversible.
+Updated: 2026-10-13. Build 858 is published through PR #142 at `2e2489a2c2c249f14b9c226230e0b08a1d6d9149`; all four final-head workflows, Pages, four post-merge workflows and 106 deployed asset hashes passed. Build 859 continues the Settings form review. Each slice remains independently testable and reversible.
 
 ## Non-negotiable product behavior
 1. Keep the training engine, progression logic, performance history, offline/live workout state and storage trustworthy. A UI release must not secretly rewrite prescriptions.
@@ -127,3 +127,12 @@ Acceptance for this slice: 15 Program and 13 Cycle steps at seven windows in Ros
 Engine 0.65.6 and all 93 non-App runtime hashes stay unchanged. Candidate publication still requires all four final-head workflows, Pages, all four post-merge workflows and deployed byte identity.
 
 Remaining roadmap acceptance: physical Android keyboard/TalkBack/safe-area and touch/trackpad evidence; app-wide forms and targets beyond the checked Library, Gym/Goal and Wizard surfaces; final app-wide visual/usability review and stylesheet consolidation. The Wizard browser matrix does not close these separate items or certify the whole roadmap.
+
+
+## Build 859 — Settings form continuation
+
+The form review reproduced three numeric fields announced by placeholders (bodyweight as “—”, calculator inputs as “100” and “5”), unnamed filled export text, clipped 200% experience labels and a clipped narrow-screen Reset label. Give six fields stable purpose names, including units for weight; tie the existing experience container queries to their own text size and let the Reset label wrap. Keep its two-tap action unchanged.
+
+The R74 continuation reads the browser accessibility tree, checks populated/read-only export and unsaved restore/program fields, preserves restore draft on text reflow and checks whole experience/reset labels at every seven-window paired-theme scenario. The earlier R53 normal/125% four/two/one-column assertions remain unchanged. Original switch tracks already have independent 44px pseudo-element hit areas; the compact track is retained.
+
+Release acceptance still requires all four final-head workflows, Pages, all four post-merge workflows and deployed byte identity. Physical Android/TalkBack/input evidence, remaining app-wide forms, final visual/usability review and stylesheet consolidation remain separate acceptance items.

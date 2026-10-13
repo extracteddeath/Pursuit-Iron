@@ -5589,7 +5589,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-experience-segmented{
   display:grid!important;
-  grid-template-columns:48px minmax(0,1fr) minmax(0,1.45fr) minmax(0,1.1fr)!important;
+  grid-template-columns:max(48px,3em) minmax(0,1fr) minmax(0,1.45fr) minmax(0,1.1fr)!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-experience-segmented>button{
   min-width:0;
@@ -5600,12 +5600,13 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   word-break:normal!important;
   letter-spacing:-.01em!important;
 }
-@container pi-settings-body (max-width:22rem){
+/* Container em follows text-only enlargement as well as root text scaling. */
+@container pi-settings-body (max-width:22em){
   #root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-experience-segmented{
     grid-template-columns:repeat(2,minmax(0,1fr))!important;
   }
 }
-@container pi-settings-body (max-width:16rem){
+@container pi-settings-body (max-width:16em){
   #root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-experience-segmented{
     grid-template-columns:minmax(0,1fr)!important;
   }

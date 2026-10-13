@@ -185,7 +185,9 @@ try {
     // Standalone conversion keeps the exact first block and adds audited future blocks.
     {
         const { page, context } = await open(storeFor(), 390);
-        await page.click(`button[aria-label="More options for ${program.name}"]`);
+        // Home can still be laying out its library card after hydration. The locator waits
+        // for a stable, visible hit target before clicking, rather than using stale coordinates.
+        await page.locator(`button[aria-label="More options for ${program.name}"]`).click();
         // The menu mounts on React's next commit; click only after its real action exists.
         // Preserve the original conversion button and all saved-block/history assertions.
         await page.waitForFunction(() => [...document.querySelectorAll('button[role="menuitem"]')]

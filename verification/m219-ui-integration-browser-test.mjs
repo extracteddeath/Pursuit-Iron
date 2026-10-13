@@ -9,7 +9,10 @@ const program = { id: 'm219-ui', name: 'UI integration', custom: true, weeks: 4,
     config: { name: 'UI integration', goal: 'both', experience: 'intermediate', progression: 'manual', split: 'custom', weeks: 4, days: 1, session: 's60', unit: 'lb', deload: false },
     days: [{ id: 'm219-upper', label: 'Upper', primaryIndex: 0, exercises: ['bb-bench', 'inc-curl'] }],
     overrides: { 'm219-upper:0': { sets: 4, reps: '6-8', rir: '2' }, 'm219-upper:1': { sets: 3, reps: '10-15', rir: '2' } } };
-const initial = { v: 13, savedAt: 1, saved: [program], cycles: [], history: [{ id: 'past', programId: 'other', date: '2026-09-25', unit: 'lb', exercises: [{ id: 'bb-bench', sets: [{ weight: 100, reps: 8, done: true }] }] }], perf: {}, drafts: {}, tombs: {},
+const initial = { v: 13, savedAt: 1, saved: [program], cycles: [], history: [{ id: 'past', programId: 'other', date: Date.UTC(2026, 8, 25), unit: 'lb', perf: {
+    'bb-bench': { weight: 100, reps: 8, sets: [{ w: 100, r: 8, done: true }] },
+    'inc-curl': { weight: 20, reps: 12, sets: [{ w: 20, r: 12, done: true }] }
+} }], perf: {}, drafts: {}, tombs: {},
     seenIntro: 999, seenWhatsNew: 999, pinnedId: program.id, theme: 'amethyst', restScale: 1, restAutoStart: false, warmupCard: false, unit: 'lb', unitChosen: true, experience: 'intermediate', bodyweight: 185, sex: 'male', age: 30,
     installDismissedAt: Date.now(), lastBackup: Date.now() };
 const live = { schemaVersion: 2, programId: program.id, dayId: program.days[0].id, weekIndex: 1, dayExSig: 'bb-bench|inc-curl', exIdx: 0, readiness: { label: 'Normal', factor: 1 }, elapsedMs: 120000, restPaused: true, restRemain: 47, restMax: 90, runPaused: true,

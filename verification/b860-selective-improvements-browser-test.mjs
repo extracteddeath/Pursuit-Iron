@@ -39,7 +39,7 @@ try {
    await page.screenshot({path:path.join(root,`verification/b860-preview-${theme}-${width}-phone.png`)});
    // Text-only enlargement keeps identity, prescriptions and complete exercise names accessible.
    await page.evaluate(()=>{window.__b860Text=[...document.querySelectorAll('.wpb-next-workout-view,.wpb-next-workout-view *')].map(el=>({el,value:el.style.getPropertyValue('font-size'),priority:el.style.getPropertyPriority('font-size')}));window.__b860Text.forEach(({el})=>{const px=parseFloat(getComputedStyle(el).fontSize);el.dataset.b860Px=px;});window.__b860Text.forEach(({el})=>el.style.setProperty('font-size',Number(el.dataset.b860Px)*2+'px','important'));});
-   assert.equal(await page.$$eval('[data-nextex]',rows=>rows.map(el=>el.textContent)),prescriptions);
+   assert.deepEqual(await page.$$eval('[data-nextex]',rows=>rows.map(el=>el.textContent)),prescriptions);
    assert.ok(await page.$eval('.wpb-next-workout-view',el=>el.scrollWidth<=el.clientWidth+2),'200% preview stays within its scroller');
    await page.evaluate(()=>window.__b860Text.forEach(({el,value,priority})=>value?el.style.setProperty('font-size',value,priority):el.style.removeProperty('font-size')));
    await page.click('.wpb-next-workout-view button[aria-label="Back"]');await page.waitForSelector('.wpb-plan-session-link');

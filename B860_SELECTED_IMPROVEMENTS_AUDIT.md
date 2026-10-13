@@ -29,3 +29,9 @@ No additional global gesture/ripple controller, blanket inventory replacement or
 `b860-selective-improvements-browser-test.mjs` checks preview headings/full accessible names, actual prescriptions and counts, theme feature paint, 200% reflow, Back and saved-prescription equality in Rose, Rosewater and Amethyst at 320, 393, 900 and 1280px. All 21 previous browser gates remain registered. CI is the required real-browser gate because this local execution environment cannot launch Chromium's socket-dependent process.
 
 Source shards, release integrity, canonical export/application parity and all 36 independent semantic suites must pass. Final-head workflows, Pages, post-merge workflows and all deployed asset hashes remain publication requirements. Physical Android/TalkBack/safe-area/touch acceptance and the rest of the master plan remain open.
+
+## Release validation continuation
+
+The first final-head CI passed Release integrity, all four Core contract groups, Independent engine audit and three browser shards. Integration exposed a strict-reference comparison of equal preview arrays and PR-audio fixture data outside the persisted history schema; it also timed out opening the cycle menu. Repair the array assertion with deep equality, seed numeric-dated canonical working-set records for both PR tones, and use Puppeteer's stable-hit-target locator for the cycle menu. All saved-block, history, worker, audio-context and preview invariants remain required.
+
+The complete preview matrix (12 theme/window journeys), M219 integration/20-theme/native PR-audio test and M265 generation/cycle/offline-worker test passed locally in Chromium. These are test-harness corrections; the tested production files remain byte-identical to the initial Build 860 candidate. Permanent final-head CI and deployment verification still determine publication acceptance.

@@ -54,6 +54,12 @@ try{
         await page.click('[data-tab="'+route+'"]');
         await page.waitForSelector(selector);
         await settle(page);
+        if(width<=393 && (route==='profile'||route==='progress')){
+          const normalColumns=await page.$eval(route==='profile'?'.wpb-profile-stat-grid':'.wpb-premium-tabs',
+            el=>getComputedStyle(el).gridTemplateColumns.trim().split(/\s+/).length);
+          assert.equal(normalColumns,route==='profile'?3:4,
+            route+' retains its compact ordinary-text layout before enlargement');
+        }
         const before=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved);
         // Use the computed initial text size, then modify ONLY typography.
         // Restore every exact inline declaration (including priority) later.
@@ -77,13 +83,19 @@ try{
               width:r.width,height:r.height,rects:el.getClientRects().length,
               disabled:el.disabled};
           });
+          const summary=area.querySelector('.wpb-profile-stat-grid, .wpb-premium-tabs');
+          const columns=summary?getComputedStyle(summary).gridTemplateColumns.trim().split(/\s+/).length:null;
           return {pageOverflow:document.documentElement.scrollWidth>innerWidth+2,
             areaOverflow:area.scrollWidth>area.clientWidth+2,
-            width:rect.width,
+            width:rect.width,columns,
             actionGroups:actions.map(measure)};
         },{sel:selector,actions});
         assert.equal(geometry.pageOverflow,false,route+' has no document horizontal overflow at 200%: '+JSON.stringify(geometry));
         assert.equal(geometry.areaOverflow,false,route+' has no panel horizontal overflow at 200%: '+JSON.stringify(geometry));
+        if(width<=393&&route==='profile')
+          assert.equal(geometry.columns,1,'200% Profile readouts use whole-word rows instead of three cramped columns');
+        if(width<=393&&route==='progress')
+          assert.equal(geometry.columns,2,'200% Progress tabs use two readable columns instead of four split words');
         assert.ok(geometry.actionGroups.every(group=>group.length>0),
           route+' has its real action controls: '+JSON.stringify(geometry));
         for(const group of geometry.actionGroups) for(const target of group){

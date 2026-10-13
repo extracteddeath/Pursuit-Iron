@@ -6,6 +6,6 @@
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 70,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b860-r50f74da68b35e00e",
-  "uiMilestone": "Build 860 · Selected design and correctness improvements"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b860-r9c303bdf5f88db43",
+  "uiMilestone": "Build 860 · R76 responsive large-text readability"
 }

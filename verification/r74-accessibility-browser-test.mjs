@@ -3,10 +3,13 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import puppeteer from 'puppeteer-core';
+import { wizardAccessibilityHtml, verifyWizardSteps } from './r74-wizard-fixture.mjs';
 
 // Real dismissible forms and reading surfaces, using the ordinary persisted
 // store. Enlarged text is measured independently from whole-page zoom.
 const root=path.resolve(new URL('../',import.meta.url).pathname);
+const importMap=fs.readFileSync(path.join(root,'index.html'),'utf8')
+  .match(/<script type="importmap">[\s\S]*?<\/script>/)[0];
 const program={id:'r74-accessibility',name:'Accessibility Fixture',custom:true,weeks:4,
   config:{name:'Accessibility Fixture',goal:'both',experience:'intermediate',
     progression:'manual',split:'custom',weeks:4,days:1,session:'s60',unit:'lb',deload:false},
@@ -26,6 +29,9 @@ const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html',
   '.json':'application/json','.png':'image/png','.svg':'image/svg+xml'};
 const server=http.createServer((req,res)=>{
   const name=new URL(req.url,'http://localhost').pathname;
+  if(name==='/r74-wizard.html'){
+    res.setHeader('Content-Type','text/html');res.end(wizardAccessibilityHtml(importMap));return;
+  }
   const file=path.resolve(root,'.'+(name==='/'?'/index.html':name));
   if(!file.startsWith(root+path.sep)||!fs.existsSync(file)||!fs.statSync(file).isFile()){
     res.writeHead(404);res.end();return;
@@ -408,7 +414,9 @@ try{
           await page.setViewport({width,height,deviceScaleFactor:1,isMobile:width<600,hasTouch:width<600});
           await settle();
         }
-        results.push({theme,width,height,stops});
+        const wizardSteps=await verifyWizardSteps(page,{theme,width,height,root,
+          url:'http://127.0.0.1:8800/r74-wizard.html'});
+        results.push({theme,width,height,stops,wizardSteps});
         assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),[program],
           'Accessibility interactions preserve saved prescriptions');
         assert.deepEqual(errors,[],'No runtime errors');

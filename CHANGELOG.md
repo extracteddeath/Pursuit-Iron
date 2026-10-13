@@ -1,3 +1,11 @@
+## Build 858 — Readable Program and Cycle setup
+
+- Reflow Program/Cycle options at 200% text so split names remain whole and cycle duration labels stay inside their cards. Units and workout constraints adapt to the available text space.
+- Give setup choices, muscle-focus controls and optional generation a real 44px minimum target. Focus labels and totals reflow with larger text. The live workout's compact weight/reps steppers keep their existing geometry.
+- Name each setup group by its current question and expose the bodyweight toggle's selected state to assistive technology.
+- Extend the existing R74 gate through every first-use Program and Cycle step at all seven windows in Rose/Rosewater, normal and 200% text, Back/Next answer retention, keyboard focus selection and desktop zoom-equivalent resize. Reuse the actual exported Wizard, palette, CSS and motion owners; the inspection fixture does not generate or save plans.
+- Preserve engine 0.65.6, all 93 non-App runtime files, progression, gym bar weights and workout persistence. Physical Android/TalkBack, other app forms, the final visual review and stylesheet consolidation remain open. Publication requires all permanent final-head and post-merge workflows, Pages and deployed asset identity.
+
 ## Build 857 — R74 Library focus and enlarged-text controls
 
 - Keep the expanded Library detail nonmodal so the existing focus/scroll owner leaves its visible search and exercise list usable. Responsive resize updates that same owner; compact detail retains its modal semantics and native Back/Escape action.

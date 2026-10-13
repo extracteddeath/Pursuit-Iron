@@ -1,6 +1,6 @@
 # Pursuit Iron — UI/UX Master Plan (R67 onward)
 
-Updated: 2026-10-13. Release train through Build 857. The confirmed publication baseline used to prepare this R74 slice is Build 856 (PR #140); final-SHA and deployment status are recorded in Actions. This document governs the next app-wide UX iteration; each slice is independently testable and reversible.
+Updated: 2026-10-13. Release train through Build 858 (candidate). The confirmed publication baseline is Build 857 / PR #141 at `91941890a4da4ad787f3d8723420870fc7cf561b`; final-head and deployment status are recorded in Actions. This document governs the next app-wide UX iteration; each slice is independently testable and reversible.
 
 ## Non-negotiable product behavior
 1. Keep the training engine, progression logic, performance history, offline/live workout state and storage trustworthy. A UI release must not secretly rewrite prescriptions.
@@ -114,3 +114,16 @@ Each slice ships only if: the four permanent GitHub workflows pass at the *final
 - Remaining after the Build 857 slice: physical Android keyboard/TalkBack/safe areas/touch/trackpad; 200% text across every Wizard step and further app-wide forms/controls; final visual review and stylesheet consolidation; the separate Home/Plan duration discrepancy. Initial name-entry, Library list/detail and measured targets are covered, not every control in the app. No whole-roadmap completion claim is made.
 
 - Build 857 final local gates: all 21 browser gates have passing runs, all 76 source contracts passed on Node 22, exact canonical export/application parity and 36 independent semantic suites passed, and release integrity passed. The existing R44 browser gate caught the custom-action height rule also matching result rows; the rule was narrowed to the custom action, and R44 passed with its original assertion. No release gate or tolerance was relaxed. Next required step: four permanent workflows at the final PR SHA, merge, Pages/post-merge checks and deployed byte verification.
+
+
+## October 13 continuation — Build 858
+
+Build 857 is published through PR #141 as `91941890a4da4ad787f3d8723420870fc7cf561b`. Its four permanent final-head workflows, Pages, all four post-merge workflows and all 106 deployed asset hashes passed. The Library/name-entry slice is closed. The historical Home/Plan duration item is also closed by the existing R50 / M219 calibrated-estimate source and browser contracts; it is not a new remaining task.
+
+Build 858 extends the current R74 gate through all first-use Program/Cycle steps. Reproduced defects: long split names clip within the inline option columns at 200% text; cycle duration metadata crowds long names; units and constraint labels exceed their fixed columns; muscle-focus buttons are 34px and the optional finish action lacks a 44px minimum. The repair keeps labels whole, reflows choices by available text space, grows setup targets, and names each setup group. Bodyweight preference exposes its selected state. Compact live logging retains its existing controls.
+
+Acceptance for this slice: 15 Program and 13 Cycle steps at seven windows in Rose/Rosewater (392 step visits), normal and 200% text, whole option words, 44px named controls, keyboard muscle-focus/bodyweight selection, Back/Next retention, and enlarged desktop zoom-equivalent layout viewports. The exported production Wizard is mounted to include Units/Experience/Equipment, which established profiles skip; the ordinary app loads its theme first. The component fixture never generates or saves a plan. Original app-route, Library, form focus, workout and offline gates remain required.
+
+Engine 0.65.6 and all 93 non-App runtime hashes stay unchanged. Candidate publication still requires all four final-head workflows, Pages, all four post-merge workflows and deployed byte identity.
+
+Remaining roadmap acceptance: physical Android keyboard/TalkBack/safe-area and touch/trackpad evidence; app-wide forms and targets beyond the checked Library, Gym/Goal and Wizard surfaces; final app-wide visual/usability review and stylesheet consolidation. The Wizard browser matrix does not close these separate items or certify the whole roadmap.

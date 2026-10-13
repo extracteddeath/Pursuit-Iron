@@ -88,6 +88,15 @@ for (const theme of Object.values(THEMES).filter(t => t.base === 'dark')) for (c
     assert.ok((Math.max(a,b)+.05)/(Math.min(a,b)+.05) >= 4.5, theme.name+' '+ink+' feature contrast');
 }
 const app = fs.readFileSync(new URL('../modules/App.js', import.meta.url), 'utf8');
+const themeCss = fs.readFileSync(new URL('../app.css', import.meta.url), 'utf8');
+assert.match(themeCss, /--pi-color-feature:light-dark\(var\(--pi-m3e-primary-container\),color-mix\(in srgb,var\(--wpb-theme-card\) 84%,var\(--wpb-theme-accent\) 16%\)\)/,
+    'R78 derives strong containers from the selected card and accent instead of the legacy saturated feature');
+assert.match(app, /className: "wpb-program-amplifier", style: \{ margin: "2px 0 10px"/,
+    'R78 amplifier attaches to exercise slot without the old 34px horizontal offset');
+assert.doesNotMatch(app, /margin: "-3px 8px 8px 34px"/,
+    'the legacy amplifier stagger must not return');
+assert.match(themeCss, /\.wpb-program-amplifier>button:focus-visible/,
+    'amplifier disclosure keeps a visible focus ring');
 assert.match(app, /prBaseline\[e.id\] > 0 && est > prBaseline\[e.id\]/);
 assert.match(app, /const prior = priorBests\[e.id\]\?\.e1rm \?\? null/);
 assert.match(app, /const nextHistory = history\.map[\s\S]{0,160}\.sort/);

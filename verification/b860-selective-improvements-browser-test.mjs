@@ -25,8 +25,8 @@ try {
    await page.goto('http://127.0.0.1:8806/',{waitUntil:'networkidle0'});
    await page.waitForSelector('.wpb-tabbar');
    if(theme!=='rosewater') assert.equal(await page.$eval('.wpb-home-hero',el=>getComputedStyle(el).backgroundColor),await page.evaluate(()=>{
-     const c=document.createElement('div');c.style.background='var(--wpb-theme-feature)';document.body.append(c);const value=getComputedStyle(c).backgroundColor;c.remove();return value;
-   }),'Home uses the selected dark feature role');
+     const home=document.querySelector('.wpb-home');const c=document.createElement('div');c.style.background='var(--pi-color-feature)';home.append(c);const value=getComputedStyle(c).backgroundColor;c.remove();return value;
+   }),'Home uses the subdued derived feature role without a separate red treatment');
    await page.click('[data-tab="plan"]');await page.waitForSelector('.wpb-plan-session-link');
    const first=await page.$('.wpb-plan-session-link');await first.evaluate(el=>el.scrollIntoView({block:'center'}));await first.click();
    await page.waitForSelector('.wpb-next-workout-view');

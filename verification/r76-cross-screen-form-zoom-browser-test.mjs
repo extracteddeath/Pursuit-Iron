@@ -82,6 +82,21 @@ try{
             width:rect.width,
             actionGroups:actions.map(measure)};
         },{sel:selector,actions});
+        // R77 fixes a failure R76's overflow-only check could not see:
+        // labels were visually chopped into individual letters without overflow.
+        // Inspect the real rendered responsive grid after enlarged typography.
+        if(width===320 && route==='profile'){
+          const columns=await page.evaluate(()=>getComputedStyle(
+            document.querySelector('.wpb-profile-stat-grid')).gridTemplateColumns
+              .trim().split(/\\s+/).length);
+          assert.equal(columns,1,'Profile metrics reflow to one readable column at 200%');
+        }
+        if(width===320 && route==='progress'){
+          const columns=await page.evaluate(()=>getComputedStyle(
+            document.querySelector('.wpb-progress .wpb-premium-tabs')).gridTemplateColumns
+              .trim().split(/\\s+/).length);
+          assert.equal(columns,2,'Progress destination tabs reflow to two readable columns at 200%');
+        }
         assert.equal(geometry.pageOverflow,false,route+' has no document horizontal overflow at 200%: '+JSON.stringify(geometry));
         assert.equal(geometry.areaOverflow,false,route+' has no panel horizontal overflow at 200%: '+JSON.stringify(geometry));
         assert.ok(geometry.actionGroups.every(group=>group.length>0),

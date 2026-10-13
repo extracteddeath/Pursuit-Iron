@@ -7662,3 +7662,11 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     word-break:normal!important;
   }
 }
+
+/* Explicitly defeat the legacy four-column auto-placement when reflowed. */
+@container pi-r77-progress (max-width:18em){
+  #root[data-pi-motion="expressive"] .wpb .wpb-progress.wpb-progress .wpb-premium-tabs{
+    grid-auto-flow:row!important;
+    grid-auto-columns:auto!important;
+  }
+}

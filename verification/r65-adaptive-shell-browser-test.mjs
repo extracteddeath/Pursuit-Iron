@@ -269,6 +269,19 @@ try{
             // R78: calendar is open, exact workout dates are labeled and tappable;
             // milestone content remains collapsed until the lifter chooses it.
             assert.ok(await page.$('.wpb-training-calendar'),'Training calendar is immediately available');
+            assert.deepEqual(await page.$eval('.wpb-calendar-weekdays abbr',
+              items=>items.map(item=>[item.textContent,item.title])),
+              [['Sun','Sunday'],['Mon','Monday'],['Tue','Tuesday'],['Wed','Wednesday'],
+                ['Thu','Thursday'],['Fri','Friday'],['Sat','Saturday']],
+              'Weekday headings are distinct and expose their full names');
+            const monthFacts=await page.$eval('.wpb-calendar-month-stats',
+              el=>el.textContent);
+            assert.match(monthFacts,/Training days this month/,
+              'Calendar measures actual training days, not consecutive-day activity');
+            assert.match(monthFacts,/Workouts this month/,
+              'Calendar distinguishes workouts from distinct training days');
+            assert.doesNotMatch(monthFacts,/Current streak|Longest/,
+              'Calendar avoids irrelevant daily-streak pressure');
             assert.ok(await page.$$eval('.wpb-calendar-week',rows=>rows.length>0&&rows.every(row=>row.children.length===7)),
               'Calendar weeks contain exactly seven dates, no unlabeled total column');
             assert.equal(await page.$eval('.wpb-milestones-disclosure',el=>el.open),false,
@@ -534,6 +547,45 @@ try{
           rail:initial.bar.width,targets:initial.tabs.length});
       }finally{await context.close();}
     }
+  }
+
+  // R79: a legacy date-only history entry is a local workout day, NOT UTC.
+  // This previously showed Tuesday's workout under Monday west of Greenwich.
+  // Use the actual America/New_York browser timezone, independently of CI TZ.
+  {
+    const context=await browser.createBrowserContext();
+    const page=await context.newPage();
+    try{
+      await page.setViewport({width:393,height:852,deviceScaleFactor:1,isMobile:true,hasTouch:true});
+      await page.emulateTimezone('America/New_York');
+      const dateOnly=await page.evaluate(()=>{
+        const now=new Date();
+        return [now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),
+          String(now.getDate()).padStart(2,'0')].join('-');
+      });
+      const [year,month,day]=dateOnly.split('-').map(Number);
+      const seed=store('rose');
+      seed.history[0].date=dateOnly;
+      await page.evaluateOnNewDocument(data=>localStorage.setItem('wpb:v1',JSON.stringify(data)),seed);
+      await page.goto('http://127.0.0.1:8798/',{waitUntil:'networkidle0'});
+      await page.waitForSelector('.wpb-tabbar');
+      await page.click('[data-tab="progress"]');
+      await page.waitForSelector('.wpb-training-calendar');
+      const actual=await page.$eval('.wpb-calendar-date[data-workouts]',el=>({
+        key:el.getAttribute('data-day'),label:el.getAttribute('aria-label')
+      }));
+      assert.equal(actual.key,year+'-'+(month-1)+'-'+day,
+        'Date-only imported workout stays on its local date in New York');
+      assert.match(actual.label,/1 workout/,'Imported session remains a clickable real date');
+      assert.deepEqual(await page.$eval('.wpb-calendar-month-stats>div .mono',
+        els=>els.map(el=>el.textContent.trim())),['1','1'],
+        'Monthly training days and sessions both include the correct imported date');
+      assert.equal(await page.$eval('.wpb-milestones-disclosure',el=>el.open),false,
+        'Milestones remain collapsed for legacy date history');
+      await page.click('.wpb-calendar-date[data-workouts]');
+      assert.match(await page.$eval('.wpb-calendar-day-detail',el=>el.textContent),/Upper/,
+        'Imported date opens its actual session details');
+    }finally{await context.close();}
   }
   console.log('PASS R65 adaptive shell, directional keyboard navigation, route preservation: '+JSON.stringify(results));
 }finally{

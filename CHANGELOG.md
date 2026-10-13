@@ -1,3 +1,11 @@
+## Build 856 — R74 form continuity and R75 responsive workout certification
+
+- Let navigation labels grow with enlarged text so wrapped words remain inside their real controls. Make the expanded Plan supporting row grow to fit Up Next before Program overview begins. Keep the selected icon indicator and theme colors.
+- Keep the gym form and focused empty-bar weight above the phone keyboard using the existing visual viewport signal. Give gym fields and the Gym/Goal forms explicit accessible names.
+- Restore focus to the actual activating control when closing an autofocus dialog, including a goal form inside Exercise Info. Escape closes the top layer and releases its scroll lock through the existing dismissal owner.
+- Add a permanently registered accessibility browser gate across seven window sizes and paired light/dark themes; cover real Tab/Shift-Tab, IME Escape, nested focus return, text enlargement and emulated keyboard clearance. Expand the workout gate to the same seven sizes in Rose, Rosewater and Violet, with typed values, Complete/Undo, reported effort, plates, navigation, minimize/resume and durable completion.
+- Preserve all 93 non-App runtime hashes, engine 0.65.6, progression, saved programs and existing verification gates. Browser evidence is separate from physical Android keyboard, TalkBack and device validation; broader screen/control accessibility remains on the roadmap.
+
 ## Build 855 — R74 keyboard focus and forced-colors selection (candidate)
 
 - Preserve visible keyboard focus on the existing Library/detail Back controls, search input and program/cycle Wizard inputs. Use the saved-theme focus role and the Windows high-contrast Highlight system color without changing hitboxes, field values or the M3 animated selection track.

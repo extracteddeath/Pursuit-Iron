@@ -261,7 +261,8 @@ async function verifyBrowseMemory(browser,theme,width){
     const before=await training();
     const scroll=()=>page.$eval('[data-view-frame] .wpb-page-scroll',node=>node.scrollTop);
     const setScroll=async value=>{await page.$eval('[data-view-frame] .wpb-page-scroll',(node,value)=>{node.scrollTop=value;},value);await settle();return scroll();};
-    const assertScroll=async(expected,label)=>{await settle();assert.ok(Math.abs(await scroll()-expected)<=2,label);};
+    const assertScroll=async(expected,label)=>{await settle();const actual=await scroll();
+      assert.ok(Math.abs(actual-expected)<=2,label+' '+JSON.stringify({theme,width,expected,actual}));};
 
     await page.click('button[aria-label="Exercise library"]');await page.waitForSelector('.wpb-library');
     const libraryScroll=await setScroll(180);assert.ok(libraryScroll>50,'Library has a real browsing position');

@@ -7615,7 +7615,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   .wpb-next-workout-view .wpb-preview-prescription{margin-inline-start:28px;text-align:left!important;}
 }
 
-
 /* R76 — preserve readable whole words when the user enlarges text.
    At ordinary phone scale the compact three-value strip and four-way
    Progress selector stay unchanged. Container queries respond to the

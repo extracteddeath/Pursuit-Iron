@@ -269,7 +269,7 @@ try{
             // R78: calendar is open, exact workout dates are labeled and tappable;
             // milestone content remains collapsed until the lifter chooses it.
             assert.ok(await page.$('.wpb-training-calendar'),'Training calendar is immediately available');
-            assert.deepEqual(await page.$eval('.wpb-calendar-weekdays abbr',
+            assert.deepEqual(await page.$$eval('.wpb-calendar-weekdays abbr',
               items=>items.map(item=>[item.textContent,item.title])),
               [['Sun','Sunday'],['Mon','Monday'],['Tue','Tuesday'],['Wed','Wednesday'],
                 ['Thu','Thursday'],['Fri','Friday'],['Sat','Saturday']],

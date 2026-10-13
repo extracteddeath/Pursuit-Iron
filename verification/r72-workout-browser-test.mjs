@@ -27,10 +27,10 @@ const live={
   readiness:{label:'Normal',factor:1},restPaused:false,restRemain:0,
   restMax:0,runPaused:true,
   data:[
-    {id:'bb-bench',slot:0,sets:Array.from({length:3},
+    {id:'bb-bench',slot:0,note:'',sets:Array.from({length:3},
       ()=>({weight:'185',reps:'6',done:false,auto:false,valueOwner:'user',
         target:{w:'185',reps:'6-8',rir:'2'}}))},
-    {id:'inc-curl',slot:1,sets:Array.from({length:2},
+    {id:'inc-curl',slot:1,note:'',sets:Array.from({length:2},
       ()=>({weight:'30',reps:'10',done:false,auto:false,valueOwner:'user',
         target:{w:'30',reps:'10-15',rir:'2'}}))}
   ]
@@ -53,11 +53,13 @@ try{
   browser=await puppeteer.launch({executablePath:process.env.CHROME_BIN||'/usr/bin/google-chrome',
     headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
   const results=[];
-  for(const theme of ['rose','rosewater']){
-    for(const [width,height] of [[393,852],[900,480],[900,1000],[1280,850]]){
+  for(const theme of ['rose','rosewater','violet']){
+    for(const [width,height] of [[320,740],[393,852],[600,800],[900,480],[900,1000],[1280,850],[1600,900]]
+      .filter(([w,h])=>!process.argv[2]||process.argv[2]===w+'x'+h)){
       const context=await browser.createBrowserContext();
       const page=await context.newPage();const errors=[];
       page.on('pageerror',e=>errors.push(e.message));
+      page.on('console',msg=>{if(msg.type()==='error')console.log('R75 browser error: '+msg.text());});
       try{
         await page.setViewport({width,height,deviceScaleFactor:1,isMobile:width<600,hasTouch:width<600});
         await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
@@ -151,14 +153,106 @@ try{
         assert.equal((await page.$eval('[data-testid^="set-"] input[aria-label="weight"]',
           input=>input.value)).length>0,true,'Editable weight remains present');
         assert.equal((await layout()).overflow,false,'No overflow after interaction and resize');
+        // R75: exercise the original logger through a complete real session
+        // journey at every supported size. A pane screenshot alone cannot
+        // certify typed values, effort, undo or durable completion.
+        if(expanded)await page.click('.wpb-workout-side-item:first-child');
+        await page.waitForSelector('[data-testid="set-0-0"] input[aria-label="weight"]');
+        const fill=async(selector,value)=>{
+          await page.click(selector);
+          await page.$eval(selector,input=>input.select());
+          await page.keyboard.type(value);
+          await page.keyboard.press('Tab');
+        };
+        const clickEffort=async(value)=>{
+          const selector='[data-testid="set-0-0"] button[aria-label="'+value+' reps left"]';
+          await page.waitForFunction(sel=>{
+            const el=document.querySelector(sel);if(!el||el.closest('[inert],[aria-hidden="true"]'))return false;
+            const r=el.getBoundingClientRect();
+            return r.height>0&&el.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));
+          },{},selector);
+          await page.click(selector);
+        };
+        await fill('[data-testid="set-0-0"] input[aria-label="weight"]','205');
+        await fill('[data-testid="set-0-0"] input[aria-label="reps"]','8');
+        await page.click('[data-testid="set-0-0"] button[aria-label="Mark set done"]');
+        await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+        await clickEffort(3);
+        await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:live'))?.data[0].sets[0].actualRIR===3);
+        await page.click('[data-testid="set-0-0"] button[aria-label="Mark set not done"]');
+        assert.deepEqual(await page.$$eval('[data-testid="set-0-0"] input',els=>els.map(el=>el.value)),
+          ['205','8'],'Undo retains both authored values');
+        await page.click('[data-testid="set-0-0"] button[aria-label="Mark set done"]');
+        await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+        await clickEffort(2);
+        const plateButton=(await page.$$('.wpb-workout-tool'));
+        let platesOpened=false;
+        for(const button of plateButton){
+          if(await button.evaluate(el=>el.textContent.trim()==='Plates')){
+            await button.click();platesOpened=true;break;
+          }
+        }
+        assert.equal(platesOpened,true,'Plate calculator remains reachable');
+        await page.waitForSelector('.wpb-backdrop [data-sheet-drag]');
+        assert.ok(await page.$eval('.wpb-backdrop',el=>el.textContent.includes('Calculators')&&
+          el.textContent.includes('Barbell')&&!!el.querySelector('input')),
+          'Plates opens the actual calculation sheet');
+        await page.keyboard.press('Escape');
+        await page.waitForSelector('.wpb-backdrop',{hidden:true});
+        await page.click('.wpb-workout-footer button[aria-label="Next exercise"]');
+        await page.waitForSelector('[data-testid="set-1-0"]');
+        await fill('[data-testid="set-1-0"] input[aria-label="weight"]','20');
+        await fill('[data-testid="set-1-0"] input[aria-label="reps"]','12');
+        await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:live'))?.data[1].sets[0].weight==='20');
+        const beforeResume=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:live')));
+        await page.evaluate(()=>history.back());
+        await page.waitForSelector('.wpb-live-dock button[aria-label="Resume workout"]');
+        await page.click('.wpb-live-dock button[aria-label="Resume workout"]');
+        await page.waitForSelector('[data-testid="set-1-0"]');
+        const afterResume=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:live')));
+        assert.equal(afterResume.sessionId,beforeResume.sessionId,'Resume retains the same session identity');
+        assert.deepEqual(afterResume.data,beforeResume.data,'Resume retains every typed/logged set and effort');
+        await page.click('button[aria-label="Finish workout"]');
+        const save=await page.evaluateHandle(()=>[...document.querySelectorAll('.wpb-backdrop button')]
+          .find(el=>el.textContent.trim()==='Save & finish'));
+        assert.ok(save.asElement(),'Partial-session review offers Save & finish');
+        await save.asElement().click();
+        try{
+          await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:v1')).history.length===1&&
+            localStorage.getItem('wpb:live')===null);
+        }catch(error){
+          console.log('R75 completion diagnostic '+JSON.stringify(await page.evaluate(()=>({
+            history:JSON.parse(localStorage.getItem('wpb:v1')).history,
+            live:JSON.parse(localStorage.getItem('wpb:live')),
+            dialog:[...document.querySelectorAll('.wpb-backdrop')].map(el=>el.textContent),
+            workout:!!document.querySelector('.wpb-workout')}))));
+          await page.screenshot({path:path.join(root,'verification/r75-completion-failure-phone.png')});
+          throw error;
+        }
+        const record=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).history[0]);
+        assert.equal(record.id,beforeResume.sessionId,'Completion stores the resumed identity exactly once');
+        assert.ok(record.perf['bb-bench'].sets.some(set=>set.w===205&&set.r===8&&set.rir===2&&set.rirReported),
+          'History retains the entered weight, reps and reported effort');
         assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),
           [program],'Adaptive presentation never mutates the saved program');
         assert.deepEqual(errors,[],'Workout has no page exceptions: '+errors.join('; '));
         results.push({theme,width,height,expanded});
+        console.log('PASS R75 workout journey '+theme+' '+width+'x'+height);
+      }catch(error){
+        console.log('R75 failed case '+JSON.stringify({theme,width,height,
+          state:await page.evaluate(()=>({live:JSON.parse(localStorage.getItem('wpb:live')),
+            effort:[...document.querySelectorAll('[data-effort-picker] button')].map(el=>{
+              const r=el.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);
+              return {label:el.getAttribute('aria-label'),y:r.y,bottom:r.bottom,height:r.height,
+                hit:el.contains(hit),hitClass:hit?.className};
+            })}))}));
+        await page.screenshot({path:path.join(root,'verification/r75-workflow-failure-'+theme+'-'+width+'-phone.png')});
+        throw error;
       }finally{await context.close();}
     }
   }
-  console.log('PASS R72 responsive live workout: '+JSON.stringify(results));
+  assert.equal(results.length,process.argv[2]?3:21,'Every requested R75 scenario ran');
+  console.log('PASS R72/R75 responsive live workout and durable logging: '+JSON.stringify(results));
 }finally{
   if(browser)await browser.close();
   await new Promise(resolve=>server.close(resolve));

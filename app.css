@@ -7380,3 +7380,46 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     outline-color:Highlight!important;
   }
 }
+
+/* R74 / B856 — text-only enlargement must grow the label's line box.
+   Fixed 15px leading clipped wrapped navigation labels at 200% text size.
+   Ordinary labels retain their 15px line box and the existing icon track. */
+#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab>span{
+  line-height:max(15px,1.25em)!important;
+}
+@media (min-width:840px) and (min-height:640px){
+  #root[data-pi-motion="expressive"] .wpb>div:has(>.wpb-tabbar)>.wpb-tabbar>.wpb-tab{
+    flex:0 0 auto!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb>div:has(>.wpb-tabbar)>.wpb-tabbar>.wpb-tab>span{
+    line-height:max(15px,1.25em)!important;
+  }
+}
+
+/* The layout viewport stays tall when an Android keyboard overlays the page.
+   Bound the existing form backdrop by the already-owned visual viewport so
+   its bottom-attached sheet and focused fields remain in the visible area. */
+#root[data-pi-motion="expressive"] .wpb .wpb-backdrop:has(>.wpb-gym-sheet){
+  max-height:var(--visual-h,var(--app-h,100dvh))!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-backdrop>.wpb-gym-sheet{
+  max-height:calc(var(--visual-h,var(--app-h,100dvh)) - 20px)!important;
+  scroll-padding-block:16px;
+}
+@media (min-width:840px) and (min-height:640px){
+  #root[data-pi-motion="expressive"] .wpb .wpb-backdrop>.wpb-gym-sheet{
+    max-height:min(86dvh,850px,calc(var(--visual-h,var(--app-h,100dvh)) - 64px))!important;
+  }
+}
+
+/* The expanded Plan's supporting action can wrap much taller than its tabs.
+   Its intrinsic content height must own the shared grid row at enlarged text
+   sizes, before the program overview begins in the following row. */
+@media (min-width:1060px) and (min-height:700px){
+  #root[data-pi-motion="expressive"] .wpb .wpb-plan-view{
+    grid-template-rows:auto auto max-content;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-plan-view>.wpb-plan-up-next.wpb-ui-action.wpb-ui-action[data-action]{
+    min-height:max-content!important;
+  }
+}

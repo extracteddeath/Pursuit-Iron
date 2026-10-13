@@ -108,13 +108,13 @@ export const browserShards = Object.freeze({
         'm220-day-progression-browser-test.mjs'
     ]),
     integration: Object.freeze([
+        'r76-cross-screen-form-zoom-browser-test.mjs',
         'b860-selective-improvements-browser-test.mjs',
         'b831-expressive-motion-browser-test.mjs',
         'r53-semantic-plan-browser-test.mjs',
         'r54-cross-screen-browser-test.mjs',
         'r65-adaptive-shell-browser-test.mjs',
         'r74-accessibility-browser-test.mjs',
-        'r76-cross-screen-form-zoom-browser-test.mjs',
         'b846-gym-bar-weights-browser-test.mjs',
         'm265-worker-generation-browser-test.mjs',
         'm219-ui-integration-browser-test.mjs',

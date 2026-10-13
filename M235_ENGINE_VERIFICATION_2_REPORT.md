@@ -29,3 +29,8 @@ The historical differential line is Build 816 / Engine 0.64.16 and the current v
 ## Promotion rule
 
 M235 is complete only when the permanent engine-contract runner, release integrity, phone/offline integrity, and independent engine audit pass on the finalized M235 head. `main` remains unchanged until the verified engineering candidate is deliberately promoted.
+
+
+## Build 860 corrected baseline — Engine 0.65.7
+
+Version assertions move to 0.65.7 and last-five compatibility 0.65.3–0.65.7 for the documented loading, dose and transition corrections. All original M235 property, golden-projection, deterministic, finite-tree and module-graph gates remain. No golden fixtures are regenerated. Only the separately identified redundant-family M230 fragment fingerprint changes, with a new adversarial conservation check. See `B860_SELECTED_IMPROVEMENTS_AUDIT.md`.

@@ -25,7 +25,7 @@ export function chooseAdvancedTechnique(exercise, planned, experience, priority,
     const note = type === 'myo_reps'
         ? 'On the final set only, use a brief myo-rep extension after the prescribed hard set; stop when rep quality or target effort deteriorates.'
         : type === 'drop_set'
-            ? 'On the final set only, reduce load once and continue with controlled reps near the prescribed effort; do not repeat additional drops.'
+            ? 'On the final set only, drop the load to about 80% and continue with controlled reps, then to about 60% and continue once more; stop early if rep quality or target effort breaks down.'
             : 'On the final set only, after full-ROM reps are complete, add a small number of controlled partials in the lengthened portion while technique remains stable.';
     return { type, appliesTo: 'last_set', note };
 }

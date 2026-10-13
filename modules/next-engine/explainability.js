@@ -73,7 +73,7 @@ export function buildProgramExplainability(program, request, extra = []) {
     for (const [lift, priority] of lifts) {
         const exposures = program.sessions.flatMap(s => s.exercises).filter(ex => {
             const def = exerciseMap.get(ex.exerciseId);
-            return (def?.liftSpecificity?.[lift] ?? 0) >= .45;
+            return (def?.liftSpecificity?.[lift] ?? 0) > .45;
         });
         decisions.push({ category: 'strength', subject: lift.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), outcome: `${exposures.length} specific weekly exposure${exposures.length === 1 ? '' : 's'}`, why: `${priority} lift priority protects specific practice before optional accessory dose is added.`, metrics: { exposures: exposures.length, priority: String(priority) } });
     }

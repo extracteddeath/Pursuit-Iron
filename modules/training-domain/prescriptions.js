@@ -1,3 +1,4 @@
+import { loadingInventoryInUnit } from '../next-engine/loading.js';
 // Canonical prescriptions domain. Maintained production source; independent of React and browser APIs.
 import { EXERCISE_MAP as NEXT_EXERCISE_MAP } from "../next-engine/exercise-db.js";
 import { nextExerciseIdForShellExercise, resolveNextShellExerciseId, snapshotNextShellPrescription } from "../next-engine/app-shell-adapter.js";
@@ -712,8 +713,8 @@ function sessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, history
     void dayPerf;
     if (program?.custom === true && program?.engineSource !== "pursuit-next")
         return customProgramSuggestion(program, day, slot, unit, weekIndex, history);
-    const original = nextWorkoutSuggestionForShell(program, history || [], EXERCISES, day, slot, weekIndex);
-    const convert = value => convertHistoryLoad(value, program.config?.unit, unit);
+    const original = nextWorkoutSuggestionForShell(program, history || [], EXERCISES, day, slot, weekIndex, unit);
+    const convert = value => convertHistoryLoad(value, original?.unit ?? program.config?.unit, unit);
     const s = original ? { ...original, weight: convert(original.weight),
         last: original.last,
         setTargets: original.setTargets?.map(t => ({ ...t, weight: convert(t.weight) })),
@@ -1034,7 +1035,7 @@ function prescribeSets(program, day, ex, slot, weekIndex, unit, sug, dayPerf, pe
         suggestedReps: sug?.target ?? null,
         setTargets: sug?.setTargets,
         includeWarmups: !!withWarm,
-        loadingInventory: request?.equipment?.loading,
+        loadingInventory: loadingInventoryInUnit(request?.equipment?.loading, unit, { nativeDefaults: !program.config?.loadingInventory }),
         equipmentAvailable: request?.equipment?.available,
         snapLoad: value => loadableAtOrBelow(ex, value, unit)
     });

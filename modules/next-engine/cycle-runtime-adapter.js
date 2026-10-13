@@ -376,7 +376,8 @@ export function convertProgramToNextCycleForShell(options) {
             next = transitionProgramPhase(previous, normalized, spec.phase, {
                 successfulExerciseIds: ids,
                 protectedExerciseIds: protectedIds,
-                nextBlockWeeks: spec.weeks
+                nextBlockWeeks: spec.weeks,
+                capacityConfig: baseConfig
             }).program;
         }
         else {
@@ -472,7 +473,8 @@ function buildAdaptedBlock(current, cycle, target, weeks, label, analysis, legac
             techniqueLimitedExerciseIds: analysis.techniqueLimitedExerciseIds,
             fatigueLimitedExerciseIds: analysis.fatigueLimitedExerciseIds,
             progressionEvidenceByExercise: analysis.progressionEvidenceByExercise,
-            nextBlockWeeks: weeks
+            nextBlockWeeks: weeks,
+            capacityConfig: cycle?.nextEngineCycle?.baseConfig ?? current.config
         }).program;
     }
     else {

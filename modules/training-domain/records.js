@@ -1194,3 +1194,13 @@ function setLoadInc(v, unit) { LOAD_INC = { v: v || 0, unit: unit || null }; }
 function setExLoadInc(map) { EX_LOAD_INC = map || {}; }
 
 export { setExLoadInc, setLoadInc, BAR_EQUIP, BW_LOG_CAP, COMPOSITE_HEADS, EXP_BAND, EX_LOAD_INC, GYM_PRESETS, HISTORY_BYTES, HISTORY_BYTE_CHECK_FROM, HISTORY_CAP, LANDMARKS, LEGACY_EQUIP_IMPLIES, LOAD_INC, LOWER_PARTS, MACHINE_EQUIP, MRV_GRAIN, MYO_PARTS, SECONDARY, STORE_MIGRATIONS, STORE_VERSION, STRETCH_PARTIAL_PARTS, SUB_LANDMARKS, TOTAL_WEEKS, UNIFORM_LANDMARK, baseSetsFor, birthFromAge, blockPhase, capHistory, capWeeklyVolume, cellRepRange, clamp, compositeMrv, computeCell, customAuthoredSetCount, customLastSetTechnique, effortBounds, goalForDay, isBarLike, isMachineLike, landmarkFor, landmarkForLegacy, lastSetTech, legacyCustomSetCount, loadStep, mergeStores, migrateStore, movePattern, normalizeCycleLinks, normalizeEditedHistoryEntry, normalizeHistoryDayIds, parseStoredData, perfAfterHistoryReplace, roundTo, secondaryOf, squatHamCredit, summarizeHistoryLoggedSets, uniformLandmarkFor, weeksOf };
+
+// Presentation only: saved/custom day labels retain their exact identity.
+export function displayDayName(label, program) {
+    const name = String(label || '').trim(), at = name.indexOf(' — ');
+    if (at < 1 || at + 3 >= name.length) return name;
+    const prefix = name.slice(0, at).trim(), title = name.slice(at + 3).trim();
+    const days = program?.days || [];
+    const shared = days.length > 1 && days.every(day => String(day.label || '').startsWith(prefix + ' — '));
+    return shared || title.toLowerCase().includes(prefix.toLowerCase()) ? title : name;
+}

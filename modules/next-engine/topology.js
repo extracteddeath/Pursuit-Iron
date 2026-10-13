@@ -379,8 +379,7 @@ function topologyEquipmentEligible(def, day, request) {
     const setups = [def.equipment, ...(def.equipmentAlternatives ?? [])];
     return setups.some((setup) => setup.every(item => item === 'bodyweight' ? request.equipment.bodyweight !== 'exclude' : available.includes(item)));
 }
-function daySupportsLift(day, lift, request) {
-    const defs = createExerciseMap(request.customExercises);
+function daySupportsLift(day, lift, request, defs = createExerciseMap(request.customExercises)) {
     const maxBarbell = day.maxBarbellMovements ?? request.restrictions.maxBarbellMovementsPerDay;
     return [...defs.values()].some(def => (def.liftSpecificity?.[lift] ?? 0) > .45 && (!def.flags.barbell || maxBarbell >= 1) && topologyEquipmentEligible(def, day, request));
 }
@@ -416,6 +415,8 @@ function optimizeSeedDayContracts(seed, request, allocations) {
             list.push(alloc);
             liftClaims.set(alloc.lift, list);
         }
+    const defs = createExerciseMap(request.customExercises);
+    const support = new Map([...liftClaims.keys()].map(lift => [lift, days.map(day => daySupportsLift(day, lift, request, defs))]));
     let best = identity, bestPenalty = Number.POSITIVE_INFINITY, bestMove = Number.POSITIVE_INFINITY;
     eachIndexPermutation(identity, candidate => {
         let penalty = 0;
@@ -423,7 +424,7 @@ function optimizeSeedDayContracts(seed, request, allocations) {
             let supported = 0;
             for (let intentIndex = 0; intentIndex < seed.intents.length; intentIndex++) {
                 const day = days[candidate[intentIndex]];
-                if (liftPreferredIntent(lift).includes(seed.intents[intentIndex]) && daySupportsLift(day, lift, request))
+                if (liftPreferredIntent(lift).includes(seed.intents[intentIndex]) && support.get(lift)[candidate[intentIndex]])
                     supported++;
             }
             const missing = Math.max(0, claims.length - supported);

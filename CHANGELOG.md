@@ -1,3 +1,12 @@
+## Build 860 — Clearer previews and trustworthy progression
+
+- Correct metric-template load suggestions and warm-ups, preserve configured equipment, and carry units consistently through creation and Settings changes.
+- Compare real working-set PRs in one unit across live training, finish, recap, goals, Library and share cards. Keep corrected history dates in order.
+- Preserve dose when consolidating overlapping accessory families; charge moved sets to their destination time budget and honor session capacity when adapting blocks.
+- Match drop-set guidance to its two logged drops, and align strength exposure explanations with the audit.
+- Show useful day headings, actual working-set totals and the deload-inclusive week count in the existing preview. Reflow longer names and larger text.
+- Use restrained theme-colored feature containers while retaining the compact workout logger and existing motion/selection owners.
+
 ## Build 859 — Clear Settings fields and enlarged-text choices
 
 - Give bodyweight, the 1RM calculator, backup copy/restore and shared-program text stable screen-reader names, including the selected weight unit where relevant.

@@ -16,7 +16,7 @@ for (const record of fixture.records) {
     assert.equal(source.split(begin).length, 2, `One preserved authority for ${record.key}`);
     const text = source.split(begin)[1].split(end)[0];
     assert.ok(source.includes(end), `Missing fragment boundary: ${record.key}`);
-    assert.equal(crypto.createHash('sha256').update(text).digest('hex'), record.sha256, `M229 expression/order changed: ${record.key}`);
+    assert.equal(crypto.createHash('sha256').update(text).digest('hex'), record.sha256, `Preserved/corrected expression changed: ${record.key}`);
 }
 assert.equal(realizer.realizeStrengthAnchors, strength.realizeStrengthAnchors);
 assert.equal(realizer.estimateSessionMinutes, time.estimateSessionMinutes);
@@ -33,4 +33,4 @@ for (const [name, source] of [['recovery', recoveryRepair], ['functional', funct
 assert.doesNotMatch(recoveryRepair, /function primaryMuscle\(/, 'recovery repair must not own a second primary-muscle rule');
 assert.ok(coordinator.split('\n').length < 400, 'Coordinator must remain smaller than the former 1,975-line realization function');
 assert.deepEqual(moduleCycles(engineModuleGraph()), []);
-console.log(`PASS M230: ${fixture.records.length} byte-preserved M229 expressions/stages, canonical facade identity, shared repair eligibility ownership, compact coordinator and acyclic stage graph.`);
+console.log(`PASS M230: ${fixture.records.length} pinned expressions/stages (66 original M229 and one Build 860 consolidation correction), canonical facade identity, shared repair eligibility ownership, compact coordinator and acyclic stage graph.`);

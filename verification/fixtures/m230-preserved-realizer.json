@@ -274,7 +274,8 @@
     {
       "key": "helper.consolidateRedundantAccessoryFamilies",
       "file": "modules/next-engine/realizer-fragment-repair.js",
-      "sha256": "86b011742e32e738214aeeffb6f38a51e1348331bd1d6c03a851ee086f27c45f"
+      "sha256": "fe04342a3308f3050a1bd0bf3532d1552d45f2e45706de07bd134e37e8f0f0b6",
+      "revision": "Build 860: rebuild family indexes after each mutation; covered by b860-selective-improvements-test."
     },
     {
       "key": "stage.fitPreferredDosage",

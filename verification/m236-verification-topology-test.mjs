@@ -63,7 +63,7 @@ assert.match(audit, /github\.ref == 'refs\/heads\/main' \|\| github\.event_name 
 assert.equal(registry.contractCount, Object.values(contractGroups).flat().length);
 assert.equal(registry.browserCount, Object.values(browserShards).flat().length);
 assert.equal(registry.releaseCount, releaseTests.length);
-assert.equal(registry.browserCount, 21, 'R74 adds form accessibility coverage while retaining the 20 established browser gates');
+assert.equal(registry.browserCount, 22, 'B860 adds preview/theme reflow while retaining all 21 established browser gates');
 assert.ok(browserShards.integration.includes('r74-accessibility-browser-test.mjs'),
     'form focus, text enlargement and keyboard viewport coverage must run in the integration shard');
 assert.ok(browserShards.integration.includes('b831-expressive-motion-browser-test.mjs'),

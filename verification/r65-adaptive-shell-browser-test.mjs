@@ -266,6 +266,27 @@ try{
             assert.equal(progress.grid,expandedProgress,
               'R70 history layout follows available window size');
             assert.ok(progress.historyRows>=1,'R70 fixture renders actual workout history');
+            // R78: calendar is open, exact workout dates are labeled and tappable;
+            // milestone content remains collapsed until the lifter chooses it.
+            assert.ok(await page.$('.wpb-training-calendar'),'Training calendar is immediately available');
+            assert.ok(await page.$$eval('.wpb-calendar-week',rows=>rows.length>0&&rows.every(row=>row.children.length===7)),
+              'Calendar weeks contain exactly seven dates, no unlabeled total column');
+            assert.equal(await page.$eval('.wpb-milestones-disclosure',el=>el.open),false,
+              'Milestones are collapsed by default independently of the calendar');
+            assert.equal(await page.$('.wpb-consistency-card [role="img"]'),null,
+              'The ambiguous 28-square consistency chart has been retired');
+            const trainingDates=await page.$$eval('.wpb-calendar-date[data-workouts]',els=>els.map(el=>({
+              date:el.dataset.day,count:Number(el.dataset.workouts),label:el.getAttribute('aria-label'),disabled:el.disabled
+            })));
+            assert.equal(trainingDates.length,1,'Calendar shows the exact recorded lift day from fixture');
+            assert.ok(trainingDates[0].count===1&&!trainingDates[0].disabled&&/1 workout/.test(trainingDates[0].label),
+              'Recorded lift day has clear accessible date and session count');
+            await page.click('.wpb-calendar-date[data-workouts]');
+            await page.waitForSelector('.wpb-calendar-day-detail');
+            assert.match(await page.$eval('.wpb-calendar-day-detail',el=>el.textContent),/Upper/,
+              'Tapping the exact date shows the recorded workout, not aggregate consistency');
+            assert.equal(await page.$eval('.wpb-milestones-disclosure',el=>el.open),false,
+              'Selecting calendar history does not expand milestones');
             assert.equal(progress.viewportOverflow,false,'Progress has no horizontal overflow');
             if(expandedProgress){
               assert.ok(progress.filters.x>=progress.consistency.right-2,

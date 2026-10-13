@@ -95,6 +95,14 @@ assert.match(app, /className: "wpb-program-amplifier", style: \{ margin: "2px 0 
     'R78 amplifier attaches to exercise slot without the old 34px horizontal offset');
 assert.doesNotMatch(app, /margin: "-3px 8px 8px 34px"/,
     'the legacy amplifier stagger must not return');
+assert.match(app, /className: "wpb-training-calendar"/,
+    'R78 calendar remains an explicit always-visible history surface');
+assert.match(app, /className: "wpb-progress-disclosure wpb-milestones-disclosure"/,
+    'R78 milestones own their independent native collapsed disclosure');
+assert.doesNotMatch(app, /children: "Training calendar and milestones"/,
+    'R78 must not fold the exact-date calendar into achievements');
+assert.doesNotMatch(app, /title: "Workouts this week"/,
+    'R78 removes the unexplained extra calendar column');
 assert.match(themeCss, /\.wpb-program-amplifier>button:focus-visible/,
     'amplifier disclosure keeps a visible focus ring');
 assert.match(app, /prBaseline\[e.id\] > 0 && est > prBaseline\[e.id\]/);

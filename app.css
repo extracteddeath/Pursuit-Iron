@@ -6843,7 +6843,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     grid-row:2;
     margin-bottom:0!important;
   }
-  #root[data-pi-motion="expressive"] .wpb-progress .wpb-page-scroll[data-scroll-key="sessions"]>.wpb-progress-disclosure{
+  #root[data-pi-motion="expressive"] .wpb-progress .wpb-page-scroll[data-scroll-key="sessions"]>.wpb-training-history{
     grid-column:1;
     grid-row:3;
     margin-bottom:0!important;
@@ -6891,7 +6891,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   }
 }
 @media (forced-colors:active) and (min-width:1120px) and (min-height:720px){
-  #root[data-pi-motion="expressive"] .wpb-progress .wpb-page-scroll[data-scroll-key="sessions"]>.wpb-progress-disclosure{
+  #root[data-pi-motion="expressive"] .wpb-progress .wpb-page-scroll[data-scroll-key="sessions"]>.wpb-training-history{
     border-color:CanvasText;
   }
 }
@@ -7705,6 +7705,45 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 @media(forced-colors:active){
   #root[data-pi-motion="expressive"] .wpb-program .wpb-program-amplifier,
   #root[data-pi-motion="expressive"] .wpb-program .wpb-program-amplifier>button{
+    color:CanvasText!important;background:Canvas!important;border-color:CanvasText!important;
+  }
+}
+
+/* Build 863 · R78 slice 2 — readable exact-date training history. */
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-consistency-facts>div{
+  min-width:0;
+  padding:8px 10px;
+  border-radius:13px;
+  background:var(--pi-color-card);
+  border:1px solid var(--pi-color-divider);
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-training-history{min-width:0;}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-training-calendar{
+  border:1px solid var(--pi-color-divider);
+  background:var(--pi-color-card)!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-training-calendar .wpb-calendar-date{
+  min-width:0;
+  min-height:38px;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-training-calendar .wpb-calendar-date:focus-visible{
+  outline:2px solid var(--pi-color-active)!important;
+  outline-offset:-2px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-milestones-disclosure>summary{
+  display:list-item;min-height:48px;
+  color:var(--pi-color-on-control);
+  border-block:1px solid var(--pi-color-divider);
+  padding:12px 8px!important;
+}
+@media (min-width:1120px) and (min-height:720px){
+  #root[data-pi-motion="expressive"] .wpb-progress .wpb-page-scroll[data-scroll-key="sessions"]>.wpb-training-history{
+    grid-column:1;grid-row:3;min-width:0;margin-bottom:0!important;
+  }
+}
+@media (forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb-progress :is(.wpb-training-calendar,.wpb-milestones-disclosure),
+  #root[data-pi-motion="expressive"] .wpb-progress .wpb-consistency-facts>div{
     color:CanvasText!important;background:Canvas!important;border-color:CanvasText!important;
   }
 }

@@ -5140,7 +5140,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   background-image:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-home.wpb-home.wpb-home .wpb-home-hero{
-  background:var(--pi-r11-hero)!important;
+  background:var(--pi-color-feature)!important;
   background-image:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-home.wpb-home.wpb-home .wpb-m3-session-preview{
@@ -5506,7 +5506,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   /* Use the palette's already-paired selection fill and foreground. */
   --pi-color-active:var(--wpb-theme-accent);
   --pi-color-on-active:var(--wpb-theme-on-accent);
-  --pi-color-feature:light-dark(var(--pi-m3e-primary-container),color-mix(in srgb,var(--pi-color-card) 88%,var(--pi-m3e-primary) 12%));
+  --pi-color-feature:light-dark(var(--pi-m3e-primary-container),var(--wpb-theme-feature));
   --pi-color-on-feature:var(--pi-color-on-control);
   /* Older component families share the same live tinted surface roles. */
   --pi-r11-quiet:var(--pi-color-card);
@@ -7606,4 +7606,11 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     grid-column:2;
     grid-row:1;
   }
+}
+
+/* Preview owns its reflow; the compact live logger keeps its existing geometry. */
+.wpb-next-workout-view{container-type:inline-size;container-name:pi-preview;}
+@container pi-preview (max-width:20em){
+  .wpb-next-workout-view [data-nextex]{flex-wrap:wrap;}
+  .wpb-next-workout-view .wpb-preview-prescription{margin-inline-start:28px;text-align:left!important;}
 }

@@ -23,9 +23,9 @@ const golden = JSON.parse(read('verification/fixtures/engine-816-golden.json'));
 
 assert.equal(manifest.milestone, 'M234', 'M235 verifies M234 rather than inventing a behaviorless release bump');
 assert.ok(Number.isSafeInteger(manifest.build) && manifest.build >= 816, 'app release identity can advance independently while the engine retains its verified baseline');
-assert.equal(manifest.engineVersion, '0.65.6');
-assert.equal(ENGINE_VERSION, '0.65.6', 'a new engine line must create an explicit M235 successor baseline');
-assert.deepEqual(ENGINE_COMPATIBLE_VERSIONS, ['0.65.2', '0.65.3', '0.65.4', '0.65.5', '0.65.6']);
+assert.equal(manifest.engineVersion, '0.65.7');
+assert.equal(ENGINE_VERSION, '0.65.7', 'Build 860 explicitly versions the unit/dose corrections while retaining M235 property and golden gates');
+assert.deepEqual(ENGINE_COMPATIBLE_VERSIONS, ['0.65.3', '0.65.4', '0.65.5', '0.65.6', '0.65.7']);
 assert.equal(profile.nextRuntimeModules, 70);
 assert.equal(Object.keys(manifest.runtimeFiles).filter(path => path.startsWith('modules/next-engine/')).length, 70);
 assert.ok(manifest.runtimeFiles['modules/next-engine/candidate-optimization.js']);

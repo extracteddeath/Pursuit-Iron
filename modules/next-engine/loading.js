@@ -8,27 +8,54 @@ const limit = (value, fallback) => value === undefined ? fallback : Number.isFin
 const exactLoads = value => value === undefined ? undefined : clean(value);
 export const DEFAULT_LOADING_INVENTORY = {
     unit: 'lb',
-    barbell: {
-        barWeight: 45,
-        platePairs: [
-            { weight: 2.5, pairs: 2 },
-            { weight: 5, pairs: 2 },
-            { weight: 10, pairs: 2 },
-            { weight: 25, pairs: 2 },
-            { weight: 45, pairs: 10 }
-        ]
-    },
+    barbell: { barWeight: 45, platePairs: [2.5, 5, 10, 25, 45].map(weight => ({ weight, pairs: weight >= 45 ? 10 : 4 })) },
     dumbbells: { availablePerHand: Array.from({ length: 20 }, (_, i) => (i + 1) * 5) },
-    machine: { minimum: 10, increment: 10, maximum: 500 },
+    machine: { minimum: 5, increment: 5, maximum: 500 },
     cable: { minimum: 5, increment: 5, maximum: 300 },
     smith: { minimum: 5, increment: 5, maximum: 500 },
     exerciseOverrides: {}
 };
+export const DEFAULT_KG_LOADING_INVENTORY = {
+    unit: 'kg',
+    barbell: { barWeight: 20, platePairs: [1.25, 2.5, 5, 10, 15, 20, 25].map(weight => ({ weight, pairs: weight >= 20 ? 10 : 4 })) },
+    dumbbells: { availablePerHand: Array.from({ length: 20 }, (_, i) => (i + 1) * 2.5) },
+    machine: { minimum: 2.5, increment: 2.5, maximum: 250 },
+    cable: { minimum: 2.5, increment: 2.5, maximum: 150 },
+    smith: { minimum: 2.5, increment: 2.5, maximum: 250 },
+    exerciseOverrides: {}
+};
+export function defaultLoadingInventoryFor(unit) {
+    return structuredClone(String(unit).trim().toLowerCase() === 'kg' ? DEFAULT_KG_LOADING_INVENTORY : DEFAULT_LOADING_INVENTORY);
+}
+// Default gym stock follows the selected unit; user-specified stock is converted, never replaced.
+// This also repairs old unit-less templates saved with lb defaults for a kg lifter, at read time.
+export function loadingInventoryInUnit(input, unit, { nativeDefaults = false } = {}) {
+    if (!['lb', 'kg'].includes(unit)) return input;
+    if (!input) return defaultLoadingInventoryFor(unit);
+    const inventory = normalizeLoadingInventory(input);
+    if (inventory.unit === unit) return inventory;
+    const sourceDefault = normalizeLoadingInventory(defaultLoadingInventoryFor(inventory.unit));
+    const stockKeys = ['barbell', 'dumbbells', 'machine', 'cable', 'smith'];
+    const defaultStock = nativeDefaults && stockKeys.every(key => JSON.stringify(inventory[key]) === JSON.stringify(sourceDefault[key]));
+    const k = unit === 'kg' ? 1 / 2.2046226218 : 2.2046226218;
+    const convert = value => Number.isFinite(value) ? round(value * k) : value;
+    const profile = p => ({ ...p, minimum: convert(p.minimum), increment: convert(p.increment), maximum: convert(p.maximum),
+        ...(p.availableLoads !== undefined ? { availableLoads: p.availableLoads.map(convert) } : {}) });
+    const converted = defaultStock ? defaultLoadingInventoryFor(unit) : {
+        unit,
+        barbell: { barWeight: convert(inventory.barbell.barWeight), platePairs: inventory.barbell.platePairs.map(p => ({ ...p, weight: convert(p.weight) })) },
+        dumbbells: { availablePerHand: inventory.dumbbells.availablePerHand.map(convert) },
+        machine: profile(inventory.machine), cable: profile(inventory.cable), smith: profile(inventory.smith)
+    };
+    converted.exerciseOverrides = Object.fromEntries(Object.entries(inventory.exerciseOverrides).map(([id, p]) => [id, profile(p)]));
+    return converted;
+}
 export function normalizeLoadingInventory(input) {
     if (!input)
-        return structuredClone(DEFAULT_LOADING_INVENTORY);
+        return defaultLoadingInventoryFor('lb');
     input = record(input);
-    const rawPlates = input.barbell?.platePairs === undefined ? DEFAULT_LOADING_INVENTORY.barbell.platePairs : input.barbell?.platePairs;
+    const defaults = defaultLoadingInventoryFor(input.unit);
+    const rawPlates = input.barbell?.platePairs === undefined ? defaults.barbell.platePairs : input.barbell?.platePairs;
     const platePairs = (Array.isArray(rawPlates) ? rawPlates : [])
         .filter(p => p && Number.isFinite(p.weight) && p.weight > 0 && Number.isFinite(p.pairs) && p.pairs > 0)
         .map(p => ({ weight: round(p.weight), pairs: Math.max(1, Math.floor(p.pairs)) }))
@@ -49,11 +76,11 @@ export function normalizeLoadingInventory(input) {
     const unitToken = typeof input.unit === 'string' ? input.unit.trim().toLowerCase() : '';
     return {
         unit: unitToken === 'kg' ? 'kg' : 'lb',
-        barbell: { barWeight: limit(input.barbell?.barWeight, 45), platePairs },
-        dumbbells: { availablePerHand: clean(input.dumbbells?.availablePerHand === undefined ? DEFAULT_LOADING_INVENTORY.dumbbells.availablePerHand : input.dumbbells.availablePerHand) },
-        machine: normalizeIncrement(input.machine, DEFAULT_LOADING_INVENTORY.machine),
-        cable: normalizeIncrement(input.cable, DEFAULT_LOADING_INVENTORY.cable),
-        smith: normalizeIncrement(input.smith, DEFAULT_LOADING_INVENTORY.smith),
+        barbell: { barWeight: limit(input.barbell?.barWeight, defaults.barbell.barWeight), platePairs },
+        dumbbells: { availablePerHand: clean(input.dumbbells?.availablePerHand === undefined ? defaults.dumbbells.availablePerHand : input.dumbbells.availablePerHand) },
+        machine: normalizeIncrement(input.machine, defaults.machine),
+        cable: normalizeIncrement(input.cable, defaults.cable),
+        smith: normalizeIncrement(input.smith, defaults.smith),
         exerciseOverrides
     };
 }

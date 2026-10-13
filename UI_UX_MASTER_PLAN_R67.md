@@ -136,3 +136,12 @@ The form review reproduced three numeric fields announced by placeholders (bodyw
 The R74 continuation reads the browser accessibility tree, checks populated/read-only export and unsaved restore/program fields, preserves restore draft on text reflow and checks whole experience/reset labels at every seven-window paired-theme scenario. The earlier R53 normal/125% four/two/one-column assertions remain unchanged. Original switch tracks already have independent 44px pseudo-element hit areas; the compact track is retained.
 
 Release acceptance still requires all four final-head workflows, Pages, all four post-merge workflows and deployed byte identity. Physical Android/TalkBack/input evidence, remaining app-wide forms, final visual/usability review and stylesheet consolidation remain separate acceptance items.
+
+
+## Build 860 — Selective alternative integration
+
+The owner authorized implementing selected improvements from the reviewed Claude archive. Adapt units/PR/history correctness, dose/time accounting, transition capacity, cue/exposure consistency and generation-scoped feasibility into the current owners. Add clearer day headings, working-set/week preview facts, enlarged-text preview reflow and a restrained dark feature role. Keep the existing logger, user-selected menu colors, responsive/motion owners and inventory safeguards.
+
+The preview was already present in Build 859; this release improves it without another route. The legacy M230 consolidation stage is deliberately corrected with an adversarial dose-conservation gate; other historical stage fingerprints stay unchanged. Engine 0.65.7 retains the existing property/golden/standalone verification and last-five compatibility.
+
+See `B860_SELECTED_IMPROVEMENTS_AUDIT.md` for scope and validation. Publication requires final-head CI, Pages, post-merge checks and deployed identity. Remaining physical-device and whole-roadmap acceptance stays open.

@@ -7,7 +7,7 @@ import { deriveAthleteResponse, requestWithAthleteResponse } from './athlete-res
 import { createSemanticExerciseGraph, transferExerciseStartingReference } from './semantic-exercise-graph.js';
 import { EXERCISE_MAP } from './exercise-db.js';
 import { estimate1RM } from './history.js';
-import { availableLoadAtOrBelow } from './loading.js';
+import { availableLoadAtOrBelow, loadingInventoryInUnit } from './loading.js';
 import { normalizeRequest } from './prescription.js';
 import { transitionProgramPhase } from './phase-transition.js';
 import { nextProgramToShellProgram, getNextShellCell, resolveNextShellExerciseId, NextShellAdapterError } from './app-shell-adapter.js';
@@ -40,8 +40,14 @@ function rangeOf(value, fallback) {
 function legacyExerciseById(legacyExercises) {
     return new Map(legacyExercises.map(ex => [ex.id, ex]));
 }
-function sourceSnapshot(program) {
-    const request = program?.nextEngine?.request;
+function programUnit(program, unit, loggedUnit) {
+    return [program?.config?.unit, unit, loggedUnit].find(v => v === 'kg' || v === 'lb') ?? 'lb';
+}
+function sourceSnapshot(program, unit) {
+    const stored = program?.nextEngine?.request;
+    const loading = unit ? loadingInventoryInUnit(stored?.equipment?.loading, unit,
+        { nativeDefaults: !program?.config?.loadingInventory }) : stored?.equipment?.loading;
+    const request = loading === stored?.equipment?.loading ? stored : { ...stored, equipment: { ...stored?.equipment, loading } };
     const next = program?.nextEngine?.program;
     if (!request || !next || !Array.isArray(next.sessions))
         return null;
@@ -100,7 +106,7 @@ function historicalShellCell(program, day, slot, week, perf, exerciseId) {
             && saved.setTargets.every(t => numberOf(t.reps) > 0 && numberOf(t.weight) >= 0)
             ? saved.setTargets : undefined };
 }
-function plannedSessionForEntry(program, entry, legacyExercises) {
+function plannedSessionForEntry(program, entry, legacyExercises, unit) {
     const snap = sourceSnapshot(program);
     if (!snap)
         return null;
@@ -138,7 +144,7 @@ function plannedSessionForEntry(program, entry, legacyExercises) {
             prescription: {
                 reps: rangeOf(cell.reps, sourceEx?.prescription.reps ?? [8, 12]),
                 rir: rangeOf(cell.rir, sourceEx?.prescription.rir ?? [1, 3]),
-                ...(cell.setTargets ? { setTargets: cell.setTargets.map(t => ({ ...t, weight: convertLoad(t.weight, t.unit || entry.unit, program.config?.unit) })) } : {}),
+                ...(cell.setTargets ? { setTargets: cell.setTargets.map(t => ({ ...t, weight: convertLoad(t.weight, t.unit || entry.unit, programUnit(program, unit, entry.unit)) })) } : {}),
                 restSeconds: cell.rest != null && cell.rest !== '' && Number.isFinite(Number(cell.rest)) && Number(cell.rest) >= 0
                     ? Math.round(Number(cell.rest)) : sourceEx?.prescription.restSeconds ?? 90
             },
@@ -152,15 +158,15 @@ function plannedSessionForEntry(program, entry, legacyExercises) {
         return null;
     return { session: { ...sourceSession, id: String(day.id), name: String(day.label || sourceSession.name), intent: String(day.focus || day.type || sourceSession.intent), exercises }, legacyIds };
 }
-function workoutFromEntry(program, entry, legacyExercises) {
+function workoutFromEntry(program, entry, legacyExercises, unit) {
     if (!validHistoryDate(entry)) return null;
-    const planned = plannedSessionForEntry(program, entry, legacyExercises);
+    const targetUnit = programUnit(program, unit, entry.unit);
+    const planned = plannedSessionForEntry(program, entry, legacyExercises, targetUnit);
     if (!planned)
         return null;
     const found = resolveDay(program, entry);
     if (!found)
         return null;
-    const targetUnit = String(program?.config?.unit || entry.unit || 'lb');
     const performed = [];
     const ignored = [];
     planned.legacyIds.forEach((legacyId, slot) => {
@@ -184,7 +190,7 @@ function workoutFromEntry(program, entry, legacyExercises) {
     for (const legacyId of Object.keys(entry.perf ?? {}))
         if (!planned.legacyIds.includes(legacyId))
             ignored.push(legacyId);
-    const source = sourceSnapshot(program);
+    const source = sourceSnapshot(program, targetUnit);
     const progression = evaluateWorkoutProgression(planned.session, performed, { ...historyExposureContext(entry), percentageLoading: !!program.config?.percentScheme, loadingInventory: source?.request.equipment.loading, equipmentAvailable: source?.request.equipment.available });
     return {
         programId: String(program.id), unit: targetUnit,
@@ -254,10 +260,12 @@ export function deriveLongitudinalExerciseEvidence(diagnoses, latestDecisions = 
 }
 
 /** Runtime bridge only: asks Pursuit Engine's own performance evaluator what the next exposure should do. */
-export function nextWorkoutSuggestionForShell(program, history, legacyExercises, day, slot, weekIndex) {
+export function nextWorkoutSuggestionForShell(program, history, legacyExercises, day, slot, weekIndex, unit) {
     if (program?.engineSource !== 'pursuit-next')
         return null;
-    const snap = sourceSnapshot(program);
+    const normalizedHistory = normalizeHistoryEntries(history, program.id);
+    const evaluationUnit = programUnit(program, unit, normalizedHistory.entries.at(-1)?.unit);
+    const snap = sourceSnapshot(program, evaluationUnit);
     if (!snap)
         return null;
     const dayIndex = (program?.days ?? []).findIndex((d) => d?.id === day?.id);
@@ -274,22 +282,21 @@ export function nextWorkoutSuggestionForShell(program, history, legacyExercises,
         return null;
     const cell = getNextShellCell(program, day, slot, weekIndex);
     const reps = String(cell?.reps ?? cell?.range ?? '');
-    const normalizedHistory = normalizeHistoryEntries(history, program.id);
     const latest = latestShellEntries(history, program, legacyId, day, normalizedHistory);
     const lastEntry = latest.comparable;
     const referenceEntry = lastEntry ?? latest.reference;
     const rawLast = lastEntry?.perf?.[legacyId] ?? null;
     const last = rawLast;
-    const lastLoad = convertLoad(representativeShellLoad(last), lastEntry?.unit, program.config?.unit);
+    const lastLoad = convertLoad(representativeShellLoad(last), lastEntry?.unit, evaluationUnit);
     let analysis;
     try {
-        analysis = analyzeShellHistoryForNextEngine(program, history, legacyExercises, { normalizedHistory });
+        analysis = analyzeShellHistoryForNextEngine(program, history, legacyExercises, { normalizedHistory, unit: evaluationUnit });
     }
     catch {
-        if (last) return { weight: lastLoad, dir: 'hold', reason: 'Hold the last logged load until the new engine has comparable completed-set evidence.', reps, last, lastUnit: lastEntry?.unit || program.config?.unit, action: 'initial' };
+        if (last) return { unit: evaluationUnit, weight: lastLoad, dir: 'hold', reason: 'Hold the last logged load until the new engine has comparable completed-set evidence.', reps, last, lastUnit: lastEntry?.unit || evaluationUnit, action: 'initial' };
         const reference = referenceEntry?.perf?.[legacyId] ?? null;
-        const referenceLoad = convertLoad(representativeShellLoad(reference), referenceEntry?.unit, program.config?.unit);
-        return reference && referenceLoad !== null ? { weight: referenceLoad, dir: 'hold', reason: 'Use the other day only as a starting reference. This program day has no comparable completed history yet.', reps, last: reference, lastUnit: referenceEntry?.unit || program.config?.unit, action: 'initial', referenceOnly: true } : null;
+        const referenceLoad = convertLoad(representativeShellLoad(reference), referenceEntry?.unit, evaluationUnit);
+        return reference && referenceLoad !== null ? { weight: referenceLoad, dir: 'hold', reason: 'Use the other day only as a starting reference. This program day has no comparable completed history yet.', reps, last: reference, lastUnit: referenceEntry?.unit || evaluationUnit, action: 'initial', referenceOnly: true } : null;
     }
     let decision;
     for (let i = analysis.workouts.length - 1; i >= 0 && !decision; i--) {
@@ -299,13 +306,13 @@ export function nextWorkoutSuggestionForShell(program, history, legacyExercises,
         decision = workout.progression.find(d => d.exerciseId === nextId);
     }
     if (!decision) {
-        if (last) return { weight: lastLoad, dir: 'hold', reason: 'Hold the last logged load until the new engine has comparable completed-set evidence.', reps, last, lastUnit: lastEntry?.unit || program.config?.unit, action: 'initial' };
+        if (last) return { unit: evaluationUnit, weight: lastLoad, dir: 'hold', reason: 'Hold the last logged load until the new engine has comparable completed-set evidence.', reps, last, lastUnit: lastEntry?.unit || evaluationUnit, action: 'initial' };
         const reference = referenceEntry?.perf?.[legacyId] ?? null;
-        const referenceLoad = convertLoad(representativeShellLoad(reference), referenceEntry?.unit, program.config?.unit);
-        if (reference && referenceLoad !== null) return { weight: referenceLoad, dir: 'hold',
+        const referenceLoad = convertLoad(representativeShellLoad(reference), referenceEntry?.unit, evaluationUnit);
+        if (reference && referenceLoad !== null) return { unit: evaluationUnit, weight: referenceLoad, dir: 'hold',
             reason: 'Use the other day only as a starting reference. This program day has no comparable completed history yet.',
-            reps, last: reference, lastUnit: referenceEntry?.unit || program.config?.unit, action: 'initial', referenceOnly: true };
-        return semanticStartingReferenceForShell(program, history, day, nextId, cell, { normalizedHistory });
+            reps, last: reference, lastUnit: referenceEntry?.unit || evaluationUnit, action: 'initial', referenceOnly: true };
+        return semanticStartingReferenceForShell(program, history, day, nextId, cell, { normalizedHistory, unit: evaluationUnit });
     }
     const current = decision.currentLoad ?? lastLoad;
     /* ⚠ SUGGEST FOR THIS WEEK, NOT FOR THE WEEK THE LAST WORKOUT WAS LOGGED IN. `decision` was made when the last workout was
@@ -319,20 +326,20 @@ export function nextWorkoutSuggestionForShell(program, history, legacyExercises,
         lastEntry?.perf?.[legacyId], nextId);
     const changed = !!cell && !!lastCell && (String(cell.reps) !== String(lastCell.reps) || String(cell.rir) !== String(lastCell.rir) || cell.progressionStyle !== lastCell.progressionStyle);
     if (changed && !['unobserved', 'non_comparable', 'context_limited', 'interrupted', 'incomplete'].includes(decision.outcome)) {
-        const shifted = represcribeForWeek(nextId, cell, lastCell, rawLast, snap?.request, lastEntry?.unit, program.config?.unit);
+        const shifted = represcribeForWeek(nextId, cell, lastCell, rawLast, snap?.request, lastEntry?.unit, evaluationUnit);
         if (shifted)
-            return { weight: shifted.weight, dir: current != null && shifted.weight > current ? 'up' : current != null && shifted.weight < current ? 'down' : 'hold',
-                reason: shifted.reason, reps, target: shifted.target, last, lastUnit: lastEntry?.unit || program.config?.unit, action: 'represcribe', confidence: decision.confidence };
+            return { unit: evaluationUnit, weight: shifted.weight, dir: current != null && shifted.weight > current ? 'up' : current != null && shifted.weight < current ? 'down' : 'hold',
+                reason: shifted.reason, reps, target: shifted.target, last, lastUnit: lastEntry?.unit || evaluationUnit, action: 'represcribe', confidence: decision.confidence };
     }
     const weight = decision.suggestedLoad ?? current ?? null;
     return {
-        weight,
+        unit: evaluationUnit, weight,
         dir: decision.action === 'increase_load' ? 'up' : decision.action === 'decrease_load' ? 'down' : (decision.suggestedLoad != null && current != null && decision.suggestedLoad < current ? 'down' : 'hold'),
         reason: decision.reason,
         reps,
         target: decision.suggestedReps,
         setTargets: decision.setTargets,
-        last, lastUnit: lastEntry?.unit || program.config?.unit,
+        last, lastUnit: lastEntry?.unit || evaluationUnit,
         action: decision.action,
         confidence: decision.confidence
     };
@@ -376,10 +383,11 @@ export function nextWorkoutSuggestionFromPerformedShell(program, legacyExercises
     const legacyId = String(day?.exercises?.[slot] ?? '');
     if (!legacyId)
         return null;
-    const workout = workoutFromEntry(program, { programId: String(program.id), dayId: String(day.id), weekIndex, date: Date.now(), unit, perf }, legacyExercises);
+    const evaluationUnit = programUnit(program, unit);
+    const workout = workoutFromEntry(program, { programId: String(program.id), dayId: String(day.id), weekIndex, date: Date.now(), unit, perf }, legacyExercises, evaluationUnit);
     if (!workout)
         return null;
-    const snap = sourceSnapshot(program);
+    const snap = sourceSnapshot(program, evaluationUnit);
     if (!snap)
         return null;
     const dayIndex = (program?.days ?? []).findIndex((d) => d?.id === day?.id);
@@ -396,7 +404,7 @@ export function nextWorkoutSuggestionFromPerformedShell(program, legacyExercises
         return null;
     const last = perf?.[legacyId] ?? null;
     const cell = getNextShellCell(program, day, slot, weekIndex);
-    const convert = value => convertLoad(value, program.config?.unit, unit);
+    const convert = value => convertLoad(value, evaluationUnit, unit);
     return {
         weight: convert(decision.suggestedLoad ?? decision.currentLoad) ?? representativeShellLoad(last),
         dir: decision.action === 'increase_load' ? 'up' : decision.action === 'decrease_load' ? 'down' : (decision.suggestedLoad != null && decision.currentLoad != null && decision.suggestedLoad < decision.currentLoad ? 'down' : 'hold'),
@@ -410,7 +418,8 @@ export function nextWorkoutSuggestionFromPerformedShell(program, legacyExercises
     };
 }
 export function semanticStartingReferenceForShell(program, history, day, nextId, cell, options = {}) {
-    const request = program?.nextEngine?.request;
+    const targetUnit = programUnit(program, options.unit, program?.nextEngine?.request?.equipment?.loading?.unit);
+    const request = sourceSnapshot(program, targetUnit)?.request;
     if (!request || program.config?.percentScheme) return null;
     const asOf = options.asOf ?? Date.now();
     const targetIndex = (program?.days ?? []).findIndex(candidate => candidate?.id === day?.id);
@@ -419,7 +428,7 @@ export function semanticStartingReferenceForShell(program, history, day, nextId,
         && Number(entry.date) <= asOf && asOf - Number(entry.date) <= 90 * 86400000
         && Object.values(entry.perf ?? {}).some(perf => perf?.prescription?.exerciseId && perf.prescription.exerciseId !== nextId));
     if (!entries.length) return null;
-    const graph = createSemanticExerciseGraph(request.customExercises), targetUnit = program.config?.unit ?? request.equipment.loading?.unit ?? 'lb';
+    const graph = createSemanticExerciseGraph(request.customExercises);
     const scheduledDay = program.nextEngine.program.sessions[program.days.findIndex(d => d.id === day.id)]?.day;
     const available = request.schedule.days.find(d => d.day === scheduledDay)?.equipmentOverride ?? request.equipment.available;
     for (const entry of [...entries].reverse()) for (const perf of Object.values(entry.perf ?? {})) {
@@ -434,7 +443,7 @@ export function semanticStartingReferenceForShell(program, history, day, nextId,
                 role: cell?.role, request, day: scheduledDay },
             snapLoad: load => { const inventoryUnit = request.equipment.loading?.unit ?? targetUnit;
                 return convertLoad(availableLoadAtOrBelow(nextId, convertLoad(load, targetUnit, inventoryUnit), request.equipment.loading, available), inventoryUnit, targetUnit); } });
-        if (transfer.load !== null) return { weight: transfer.load, dir: 'hold', reps: String(cell?.reps ?? ''), action: 'initial', referenceOnly: true,
+        if (transfer.load !== null) return { unit: targetUnit, weight: transfer.load, dir: 'hold', reps: String(cell?.reps ?? ''), action: 'initial', referenceOnly: true,
             confidence: 'low', reason: `Conservative starting reference from ${graph.node(fromId).name}. This is not earned progression for the new exercise.`, transfer };
     }
     return null;
@@ -486,12 +495,13 @@ export function deriveProgressionSelectionEvidence(workouts = []) {
 }
 
 export function analyzeShellHistoryForNextEngine(program, history, legacyExercises, options = {}) {
-    const snap = sourceSnapshot(program);
+    const normalized = options.normalizedHistory ?? normalizeHistoryEntries(history, program.id);
+    const evaluationUnit = programUnit(program, options.unit, normalized.entries.at(-1)?.unit);
+    const snap = sourceSnapshot(program, evaluationUnit);
     if (!snap)
         throw new NextShellAdapterError('NEXT_HISTORY_SNAPSHOT_MISSING', 'This saved program lacks the engine snapshot required for history adaptation. Rebuild it before adapting the next block.');
-    const normalized = options.normalizedHistory ?? normalizeHistoryEntries(history, program.id);
     const { entries } = normalized;
-    const workouts = entries.map(entry => ({ entry, workout: workoutFromEntry(program, entry, legacyExercises) }))
+    const workouts = entries.map(entry => ({ entry, workout: workoutFromEntry(program, entry, legacyExercises, evaluationUnit) }))
         .filter(({ entry, workout }) => {
             if (workout && workout.performedSets.length) return true;
             normalized.excluded.push({ id: workout?.historyId ?? entry?.id ?? null,
@@ -625,7 +635,8 @@ export function generateNextBlockFromShellHistory(options) {
         techniqueLimitedExerciseIds: analysis.techniqueLimitedExerciseIds,
         fatigueLimitedExerciseIds: analysis.fatigueLimitedExerciseIds,
         progressionEvidenceByExercise: analysis.progressionEvidenceByExercise,
-        nextBlockWeeks
+        nextBlockWeeks,
+        capacityConfig: current.config
     });
     if (transitioned.program.audit.result !== 'pass')
         throw new NextShellAdapterError('NEXT_BLOCK_REJECTED', `Pursuit Engine ${transitioned.program.engineVersion} could not produce a safe adapted ${phase} block.`);

@@ -1,3 +1,4 @@
+import { defaultLoadingInventoryFor, loadingInventoryInUnit } from './loading.js';
 import { validateEngineProgram } from './domain-contracts.js';
 import { EXPLICIT_EXERCISE_ALIASES, NextShellAdapterError, SHELL_PRESCRIPTION_FIELDS, canonicalShellSetCount, clearUserPrescriptionOverride, cloneNextDayPrescriptions, getNextShellCell, hasOwn, immutableEngineSetCount, markUserPrescriptionOverride, nextExerciseIdForShellExercise, norm, overrideKeyForField, primaryPart, range, remapNextShellRoster, removeNextSlotPrescription, resolveLegacyExercise, resolveLegacyExerciseByIdentity, resolveNextShellExerciseId, shellPrescriptionFieldOwner, shellPrescriptionOwners, shellRange, snapshotNextShellPrescription, swapNextSlotPrescriptions } from './shell-projection.js';
 import { firstPassingCapacityProgram } from './capacity-generation.js';
@@ -100,29 +101,9 @@ function liftPriorities(config) {
 }
 function loadingInventoryOf(config) {
     const explicit = config.loadingInventory;
-    if (explicit && explicit.barbell && explicit.dumbbells && explicit.machine && explicit.cable && explicit.smith)
-        return explicit;
-    const metric = String(config.unit || 'lb').toLowerCase() === 'kg';
-    if (metric) {
-        return {
-            unit: 'kg',
-            barbell: { barWeight: 20, platePairs: [1.25, 2.5, 5, 10, 15, 20, 25].map(weight => ({ weight, pairs: weight >= 20 ? 10 : 4 })) },
-            dumbbells: { availablePerHand: Array.from({ length: 20 }, (_, i) => (i + 1) * 2.5) },
-            machine: { minimum: 2.5, increment: 2.5, maximum: 250 },
-            cable: { minimum: 2.5, increment: 2.5, maximum: 150 },
-            smith: { minimum: 2.5, increment: 2.5, maximum: 250 },
-            exerciseOverrides: {}
-        };
-    }
-    return {
-        unit: 'lb',
-        barbell: { barWeight: 45, platePairs: [2.5, 5, 10, 25, 45].map(weight => ({ weight, pairs: weight >= 45 ? 10 : 4 })) },
-        dumbbells: { availablePerHand: Array.from({ length: 20 }, (_, i) => (i + 1) * 5) },
-        machine: { minimum: 5, increment: 5, maximum: 500 },
-        cable: { minimum: 5, increment: 5, maximum: 300 },
-        smith: { minimum: 5, increment: 5, maximum: 500 },
-        exerciseOverrides: {}
-    };
+    if (explicit)
+        return loadingInventoryInUnit(explicit, config.unit || explicit.unit || 'lb');
+    return defaultLoadingInventoryFor(config.unit);
 }
 function equipmentOf(config) {
     const set = new Set((config.equipment ?? []).filter(Boolean));

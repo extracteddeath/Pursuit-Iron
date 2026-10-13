@@ -20,3 +20,5 @@ export * from './next-engine/domain-contracts.js';
 export * from './next-engine/athlete-response.js';
 export * from './next-engine/live-autoregulation.js';
 export * from './next-engine/semantic-exercise-graph.js';
+
+export { defaultLoadingInventoryFor, loadingInventoryInUnit } from './next-engine/loading.js';

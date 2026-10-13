@@ -163,7 +163,7 @@ function repairOneSetFragmentation(sessions, exerciseMap, phase) {
 
                 const score = (merge ? 100 : 0) + slackAfter + (candidate.exercise.role === 'hypertrophy_isolation' ? 2 : 0);
                 if (!best || score > best.score + EPS) {
-                    best = { candidate, sourceIndex, destinationIndex, sourceProposal, destinationProposal, merge, score };
+                    best = { candidate, sourceIndex, destinationIndex, sourceProposal, destinationProposal, merge, score, extraMinutes };
                 }
             }
         }
@@ -175,6 +175,7 @@ function repairOneSetFragmentation(sessions, exerciseMap, phase) {
         const destinationSession = sessions[best.destinationIndex];
         sourceSession.exercises = best.sourceProposal;
         destinationSession.exercises = best.destinationProposal;
+        destinationSession.estimatedMinutes = (destinationSession.estimatedMinutes ?? 0) + best.extraMinutes;
         repairs.push({
             exerciseId: best.candidate.exercise.exerciseId,
             exercise: best.candidate.exercise.name,

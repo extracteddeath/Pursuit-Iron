@@ -273,6 +273,12 @@ return (
 /* M230:PRESERVE:helper.consolidateRedundantAccessoryFamilies:BEGIN */
 () => {
         for (const session of realized) {
+            // `index` is a position in session.exercises, so a change made for one family invalidates every other family's
+            // indexes. The groups used to be built once per session: with two redundant families in one session, the second
+            // removed whatever now sat at its stale positions (the wrong exercise, or nothing while the keeper still absorbed
+            // the duplicate's sets — dose lost or counted twice). Rebuild after every change; each family is still handled once.
+            const handled = new Set();
+            for (let guard = 0; guard < 16; guard++) {
             const groups = new Map();
             for (const [index, exercise] of session.exercises.entries()) {
                 if (exercise.role === 'primary_strength' || exercise.role === 'secondary_strength' || exercise.role === 'strength_support')
@@ -289,7 +295,11 @@ return (
                 list.push({ exercise, index, def, muscle });
                 groups.set(key, list);
             }
-            for (const entries of groups.values()) {
+            let changed = false;
+            for (const [key, entries] of groups) {
+                if (handled.has(key))
+                    continue;
+                handled.add(key);
                 if (entries.length < 2)
                     continue;
                 const muscles = new Set(entries.map(x => x.muscle).filter(Boolean));
@@ -311,12 +321,13 @@ return (
                     const remove = new Set(entries.filter(x => x !== keeper).map(x => x.index));
                     session.exercises = session.exercises.filter((_, index) => !remove.has(index));
                     // Filtering changes indexes before the keeper when a duplicate happened to precede it, so
-                    // resolve by stable exercise id after removal.
-                    const kept = session.exercises.findIndex(ex => ex.exerciseId === keeper.exercise.exerciseId);
+                    // resolve by the keeper's own entry after removal.
+                    const kept = session.exercises.indexOf(keeper.exercise);
                     if (kept >= 0)
                         session.exercises[kept] = { ...session.exercises[kept], sets: combined };
                     session.estimatedMinutes = estimateMinutes(session.exercises);
-                    continue;
+                    changed = true;
+                    break;
                 }
                 // If one useful movement cannot hold the full normal-priority dose, move one whole duplicate
                 // to another compatible weekly exposure instead of leaving two interchangeable variants in
@@ -342,6 +353,11 @@ return (
                 session.estimatedMinutes = estimateMinutes(session.exercises);
                 destination.target.exercises = destination.optimized.exercises;
                 destination.target.estimatedMinutes = destination.optimized.estimatedMinutes;
+                changed = true;
+                break;
+            }
+            if (!changed)
+                break;
             }
         }
     }

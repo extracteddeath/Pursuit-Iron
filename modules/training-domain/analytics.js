@@ -1342,8 +1342,31 @@ function patternCues(ex) {
     return ["Slow eccentric, full range of motion", "Squeeze the target muscle at peak", "Keep tension — avoid using momentum"];
 }
 
+function liftBests(history, unit, include = () => true) {
+    const entries = normalizeHistoryRevisions(history).entries;
+    const targetUnit = unit === 'kg' || unit === 'lb' ? unit : entries.at(-1)?.unit || 'lb';
+    const out = {};
+    for (const h of entries) {
+        if (!include(h)) continue;
+        for (const [id, perf] of Object.entries(h.perf || {})) {
+            const rows = Array.isArray(perf?.sets) && perf.sets.length ? completedHistorySets(perf)
+                : perf && perf.weight > 0 && perf.reps > 0 ? [{ w: perf.weight, r: perf.reps }] : [];
+            for (const row of rows) {
+                const w = convertHistoryLoad(historyNumber(row.w), h.unit || targetUnit, targetUnit);
+                const r = historyNumber(row.r);
+                if (!(w > 0 && r > 0)) continue;
+                const best = out[id] || (out[id] = { w: 0, e1rm: 0 });
+                best.w = Math.max(best.w, w);
+                best.e1rm = Math.max(best.e1rm, e1rm(w, r));
+            }
+        }
+    }
+    return out;
+}
+
 function weeklyRecap(history, unit) {
     history = normalizeHistoryRevisions(history).entries;
+    unit = unit || history.at(-1)?.unit || 'lb';
     const now = Date.now(), wk = 7 * 86400000;
     const inWin = (h, a, b) => h.date > now - a && h.date <= now - b;
     const thisW = history.filter(h => h.date > now - wk);
@@ -1356,21 +1379,10 @@ function weeklyRecap(history, unit) {
     thisW.forEach(h => Object.entries(h.perf || {}).forEach(([id, p]) => { const ex = EX_BY_ID[id]; if (!ex || !p.sets)
         return; muscle[ex.part] = (muscle[ex.part] || 0) + setsOf(p).filter(isWorkSet).length; }));
     const topMuscle = Object.entries(muscle).sort((a, b) => b[1] - a[1])[0] || null;
-    const byId = {};
-    history.forEach(h => Object.entries(h.perf || {}).forEach(([id, p]) => {
-        if (!(p && p.weight > 0))
-            return;
-        const ss = setsOf(p);
-        const best = ss.length ? Math.max(...ss.map(s => e1rm(convertHistoryLoad(s.w, h.unit, unit), s.r || 1))) : e1rm(convertHistoryLoad(p.weight, h.unit, unit), p.reps || 1);
-        (byId[id] = byId[id] || []).push({ date: h.date, best });
-    }));
-    let prs = 0;
-    Object.values(byId).forEach(arr => {
-        const prior = arr.filter(x => x.date <= now - wk).map(x => x.best);
-        const cur = arr.filter(x => x.date > now - wk).map(x => x.best);
-        if (cur.length && prior.length && Math.max(...cur) > Math.max(...prior))
-            prs++;
-    });
+    const prUnit = unit || history.at(-1)?.unit || 'lb';
+    const prior = liftBests(history, prUnit, h => h.date <= now - wk);
+    const current = liftBests(history, prUnit, h => h.date > now - wk);
+    const prs = Object.entries(current).filter(([id, best]) => prior[id] && best.e1rm > prior[id].e1rm + 1e-9).length;
     return { count: thisW.length, sets: sets(thisW), vol: Math.round(vol(thisW)), prevCount: prevW.length, prevSets: sets(prevW), prevVol: Math.round(vol(prevW)), topMuscle, prs };
 }
 
@@ -5171,3 +5183,5 @@ function isRuntimeProgram(p) {
     return !!p && (p.engineSource === "pursuit-next" || p.artifactType === "freestyle" || p.custom === true);
 }
 export { ALL_PLATES, ASSIST_IDS, AVAIL_PLATES, BARS, BAR_LABEL, BIG_THREE, BIRTH_RE, COVERED_MUSCLES, DELT_HEAD, EQUIP_CATS, EX_ABBREV, EX_FAMILY, EX_METRICS, EX_METRIC_BY_ID, EX_SPECIFIC, EX_WINDOWS, FOCUS_CAVEAT, GAP_FRACTION, GENERATION_ROUTE, GYM_LIMIT_KEYS, INTENT_FROM_CAT, LEGACY_EX_TYPICAL_KEYS, LEVEL_TITLES, MACHINE_SETUP, MILESTONE_XP, MIN_DAY_SESSIONS, MOBILITY, MUSCLE_SYNONYM, MYO_MAX_SETS, MYO_MINI_REPS, MYO_MINI_SETS, MYO_MIN_REPS, MYO_TARGET_REPS, NOVICE_INELIGIBLE_SPLITS, PATTERNS, PATTERN_GROUPS, PATTERN_MIN_SETS, PHASES, PHASE_ROT, PLANNED_ROOM_RIR, PLATES, PROG_POLICIES, PROG_STYLES, PV_PAD_TOP, PV_ROW_GAP, RACK_PRESETS, REDUCE_FRACTION, REFERENCES, REGION_MOVEMENT, REGION_REQUIRED, RELEASE_DIAG_CAP, RELEASE_DIAG_FIELDS, RELEASE_DIAG_KEY, REST_SCALE, SCORE_BANDS, SCORE_EQUIV, SCORE_PATTERN, SCORE_PATTERN_LABEL, SELF_TEST_FRAME_BUDGET_MS, SELF_TEST_HISTORY_LIMIT, SELF_TEST_SUPPORTED_ENGINES, SESSION_BOUNDS, SESSION_EX_TYPICAL, SETUP_FIELD_ORDER, SETUP_LABELS, SET_ROW_BLEED, SEX_FACTOR, STANDARDS, STD_LEVELS, STRENGTH_CLUB_LIFTS, STRENGTH_CLUB_TIERS_LB, STRETCH_FOCUS_E2, STRETCH_FOCUS_E3, SUBMUSCLE_LABEL, TECHNICAL_LIFTS, TEMPLATE_CATS, VIEW_DEPTH, WARMUP_PYRAMIDS, WARMUP_SET_SEC, WEIGHTED_SWAP, __doseMemo, __slopeMemo, __volKey, __weeklyVolMemo, _dstCache, _lmCache, _planOverviewMemo, addedMinutes, addedSeconds, ageFactor, ageFrom, applyCustomProgramSettings, asLengthUnit, assertExerciseData, auditProgramWeek, auditSets, availableFor, backupRecordImpact, barFor, barWeightFor, betterTopSet, birthParts, blockChangeSummary, blockPlanFor, blockRetro, blockReview, budgetIncludesTransitions, buildLifterModel, calibrateDayPerf, calibratedAnchorPerf, canUndoProgramSave, classifyPlateau, clearSetup, coachFacts, completionRate, computeLevel, computeMilestones, constantLoadDecay, coverageGaps, coverageRelief, cuesFor, cycleProgress, dayMuscleBreakdown, dayMuscleVolume, dayScopedTrends, daySeconds, daysInWeek, decodeGallery, deloadAdvice, distributeVolBias, effectiveRest, effortLabel, effortValueLabel, estimateMinutes, estimateMinutesFor, exMatches, exRecords, exWindow, exerciseAt, exerciseProfile, exerciseSeries, exerciseSlotSec, exerciseTrends, explainPrescription, feedbackDelta, filterWorkoutHistory, fmtSets, formatSetup, groupPctSets, groupSessionsByCycle, groupSessionsByMonth, growMyoSets, gymById, gymCapFor, historyForProgram, historyVolumeIn, homeProgramGroups, isAssistedEx, isRuntimeProgram, isStretchFocus, isWorkSet, landmarkOf, lastSetEffort, lastTopSet, lengthUnitFor, lifterModelKey, linearInc, liveCoachForContext, logWindow, loggedSubVolume, loggedVolume, lowerBodyLift, makeMyoMini, mavFor, mergeSessionData, mergedSetCount, newGymId, nextTMEvidence, normalizeBwLog, normalizeGyms, normalizeMeasureLog, overreachSignal, paceFactor, patternCues, patternTrainable, perWeekOf, perfAfterDelete, personalMav, personalRepSlope, phaseFor, phaseKind, pickActiveProgram, pickTopSet, planOverview, planOverviewMemo, plannedWeek, plateauOf, plateauOfLift, plateauSplitByDay, platesPerSide, poolOf, preferenceFloor, prescribedRIRofAny, programChangeLabels, projectNextTM, rankSwapAlts, readinessBand, recommendedSplit, regionGapFix, regionGapsFor, repRange, repsLow, restSec, rirTrend, rmAt, rotationOf, sanitizeInventory, sanitizeLimits, sanitizeRepsInput, sanitizeWeightInput, scoreAttribution, scoreCompose, scoreContin, scoreEquivalent, scoreEquivalentInverse, scoreLevelIdx, scoreLevelLabel, scoreMatur, scorePatternFor, scoreTargetFor, scoreTo100, sessionE1RM, sessionExercisePlan, sessionSnapshotStatus, setAvailPlates, setGymBarWeights, setRestScaleGlobal, setupFieldsFor, setupFieldsWithStored, setupLabel, simulateAndAudit, starvedRegions, strengthClubSnapshot, strengthLevel, strengthScore, strengthScoreHistory, strengthSnapshot, stretchTable, subRegionOf, swapOverlapNames, syncSubSets, techExplain, techSetTag, templateConfig, templateIntent, tempoFor, toLength, todayISO, uid, underRecoveredWeekly, userOwnsRuntimeSet, volumeAudit, volumeLedger, volumeResponse, volumeVerdicts, warmupCount, warmupPlan, warmupRoutine, warmupSets, weekIntent, weekKeyOf, weekMuscleBreakdown, weeklyBodyweightTrend, weeklyRecap, weeklySubVolume, weeklyVolume, workoutPlanCoachFact };
+
+export { liftBests };

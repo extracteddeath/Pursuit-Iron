@@ -54,11 +54,14 @@ try{
         await page.click('[data-tab="'+route+'"]');
         await page.waitForSelector(selector);
         await settle(page);
-        if(width<=393 && (route==='profile'||route==='progress')){
-          const normalColumns=await page.$eval(route==='profile'?'.wpb-profile-stat-grid':'.wpb-premium-tabs',
+        if(width<=393&&route==='profile'){
+          const columns=await page.$eval('.wpb-profile-stat-grid',
             el=>getComputedStyle(el).gridTemplateColumns.trim().split(/\s+/).length);
-          assert.equal(normalColumns,route==='profile'?3:4,
-            route+' retains its compact ordinary-text layout before enlargement');
+          assert.equal(columns,3,'Profile keeps its compact three-stat layout at ordinary text size');
+        }
+        if(width<=393&&route==='progress'){
+          const display=await page.$eval('.wpb-premium-tabs',el=>getComputedStyle(el).display);
+          assert.equal(display,'flex','Progress retains its original flex segmented track at ordinary text size');
         }
         const before=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved);
         // Use the computed initial text size, then modify ONLY typography.

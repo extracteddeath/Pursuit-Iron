@@ -44,6 +44,46 @@ try{
       .filter(([w,h])=>!process.argv[2]||process.argv[2]===w+'x'+h)){
       const context=await browser.createBrowserContext(),page=await context.newPage();
       const errors=[];page.on('pageerror',e=>errors.push(e.message));
+      const settle=()=>page.evaluate(()=>new Promise(resolve=>
+        requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+      const textSize=async enlarged=>{
+        await page.evaluate(enlarged=>{
+          if(enlarged){
+            window.__r74Text=[...document.querySelectorAll('.wpb *')]
+              .filter(el=>el instanceof HTMLElement&&el.tagName!=='STYLE')
+              .map(el=>({el,size:parseFloat(getComputedStyle(el).fontSize),
+                value:el.style.getPropertyValue('font-size'),priority:el.style.getPropertyPriority('font-size')}));
+            window.__r74Text.forEach(({el,size})=>el.style.setProperty('font-size',size*2+'px','important'));
+          }else{
+            window.__r74Text.forEach(({el,value,priority})=>value?
+              el.style.setProperty('font-size',value,priority):el.style.removeProperty('font-size'));
+            delete window.__r74Text;
+          }
+        },enlarged);
+        await settle();
+      };
+      const surface=selector=>page.$eval(selector,el=>{
+        const bounds=el=>{const r=el.getBoundingClientRect();return {x:r.x,y:r.y,
+          right:r.right,bottom:r.bottom,width:r.width,height:r.height};};
+        const textGeometry=el=>{
+          const box=el.getBoundingClientRect(),walker=document.createTreeWalker(el,NodeFilter.SHOW_TEXT),rects=[];
+          while(walker.nextNode()){
+            const node=walker.currentNode;
+            if(!node.textContent.trim()||node.parentElement.closest('svg'))continue;
+            const range=document.createRange();range.selectNodeContents(node);
+            rects.push(...[...range.getClientRects()].filter(r=>r.width&&r.height));
+          }
+          return {textFits:rects.every(r=>r.x>=box.x-1&&r.right<=box.right+1&&
+            r.y>=box.y-1&&r.bottom<=box.bottom+1),lines:new Set(rects.map(r=>Math.round(r.y))).size};
+        };
+        return {box:bounds(el),overflow:document.documentElement.scrollWidth>innerWidth+2,
+          controls:[...el.querySelectorAll('button,input,select,textarea')]
+            .filter(el=>el.getClientRects().length&&getComputedStyle(el).visibility!=='hidden')
+            .map(el=>{const box=bounds(el);return {
+              label:el.getAttribute('aria-label')||el.textContent.trim(),classes:el.className,...box,
+              inViewport:box.bottom>0&&box.y<innerHeight&&box.right>0&&box.x<innerWidth,
+              ...textGeometry(el)};})};
+      });
       try{
         await page.setViewport({width,height,deviceScaleFactor:1,isMobile:width<600,hasTouch:width<600});
         await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
@@ -163,6 +203,11 @@ try{
           await page.waitForSelector('.wpb-backdrop',{hidden:true});
           await page.evaluate(()=>history.back());
           await page.waitForSelector('.wpb-tabbar');
+          // End the isolated Goal fixture. Home intentionally offers Resume
+          // during a live workout; creation is checked with the ordinary store.
+          await page.evaluate(()=>localStorage.removeItem('wpb:live'));
+          await page.reload({waitUntil:'networkidle0'});
+          await page.waitForSelector('.wpb-tabbar');
         }
         // Read actual text at twice its rendered size, including px-based
         // legacy labels. This is text enlargement, not a pinch-zoom claim.
@@ -212,11 +257,166 @@ try{
           });
           await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
         }
+        // R74/B857: enlarge the actual Library list, selected detail and live
+        // creation form. Search, exercise identity and typed draft survive.
+        await page.focus('[data-tab="home"]');
+        await page.keyboard.press('Enter');
+        await page.waitForSelector('button[aria-label="Exercise library"]');
+        await page.click('button[aria-label="Exercise library"]');
+        await page.waitForSelector('.wpb-library-search input');
+        await page.type('.wpb-library-search input','bench');
+        await page.waitForFunction(()=>document.querySelectorAll('.wpb-library-row').length>1);
+        const libraryTargets=await surface('.wpb-library');
+        assert.ok(libraryTargets.controls.every(c=>c.label&&c.width>=44&&c.height>=44),
+          'Library exposes named 44px controls at ordinary text: '+JSON.stringify({theme,width,
+            failures:libraryTargets.controls.filter(c=>!c.label||c.width<44||c.height<44)}));
+        await textSize(true);
+        const enlargedLibrary=await surface('.wpb-library');
+        assert.equal(enlargedLibrary.overflow,false,'200% Library text reflows: '+
+          JSON.stringify({theme,width,enlargedLibrary}));
+        assert.equal(await page.$eval('.wpb-library-search input',el=>el.value),'bench',
+          'Enlarged Library preserves the search');
+        assert.ok(enlargedLibrary.controls.every(c=>!c.inViewport||c.textFits),
+          'Enlarged Library labels stay inside their own controls: '+JSON.stringify({theme,width,
+            failures:enlargedLibrary.controls.filter(c=>c.inViewport&&!c.textFits)}));
+        // Rows use content-visibility:auto. Native scrolling must render each
+        // row before checking its text against the real box, not its deferred
+        // offscreen placeholder. Inspect every filtered result in turn.
+        for(const row of await page.$$('.wpb-library-row')){
+          await row.evaluate(el=>el.scrollIntoView({block:'center'}));
+          await settle();
+          const rendered=await surface('.wpb-library');
+          assert.ok(rendered.controls.every(c=>!c.inViewport||c.textFits),
+            'Rendered enlarged Library labels fit after scrolling: '+JSON.stringify({theme,width,
+              failures:rendered.controls.filter(c=>c.inViewport&&!c.textFits)}));
+        }
+        await page.$eval('.wpb-library',el=>el.scrollTop=0);
+        await settle();
+        if(width===320||width===1280)
+          await page.screenshot({path:path.join(root,'verification/r74-'+theme+'-'+width+'-library-phone.png')});
+        await textSize(false);
+        await page.evaluate(()=>{
+          const row=document.querySelectorAll('.wpb-library-row')[1];
+          row.dataset.r74LibraryOrigin='1';row.scrollIntoView({block:'center'});row.focus();
+        });
+        const origin=await page.$eval('[data-r74-library-origin]',el=>el.textContent.trim());
+        await page.keyboard.press('Enter');
+        await page.waitForSelector('.wpb-exercise-detail');
+        if(width<1120||height<720){
+          await page.waitForFunction(()=>document.querySelector('.wpb-exercise-detail')
+            ?.contains(document.activeElement));
+          assert.equal(await page.$eval('.wpb-exercise-detail',el=>el.getAttribute('aria-modal')),'true',
+            'Full-screen Library detail keeps the existing modal focus owner');
+          await page.keyboard.press('Tab');
+          assert.equal(await page.evaluate(()=>document.activeElement?.getAttribute('aria-label')),'Back to library',
+            'Back is the first keyboard action inside full-screen detail');
+        }else{
+          await page.waitForFunction(expected=>document.activeElement?.matches('.wpb-library-row')&&
+            document.activeElement.textContent.trim()===expected,{timeout:5000},origin);
+          assert.equal(await page.evaluate(()=>document.activeElement?.textContent.trim()),origin,
+            'Wide list/detail selection retains keyboard focus in the visible list');
+          assert.equal(await page.$eval('.wpb-exercise-detail',el=>el.hasAttribute('aria-modal')),false,
+            'The supporting Library pane is nonmodal');
+          await page.focus('.wpb-library-search input');
+          assert.equal(await page.evaluate(()=>document.activeElement?.getAttribute('aria-label')),'Search exercises',
+            'Wide detail does not trap focus away from its visible search/list');
+        }
+        await page.evaluate(()=>document.activeElement.dispatchEvent(new KeyboardEvent('keydown',
+          {key:'Escape',isComposing:true,bubbles:true,cancelable:true})));
+        assert.ok(await page.$('.wpb-exercise-detail'),'Library detail preserves IME Escape ownership');
+        await textSize(true);
+        const enlargedDetail=await surface('.wpb-exercise-detail');
+        assert.equal(enlargedDetail.overflow,false,'200% detail text reflows: '+
+          JSON.stringify({theme,width,enlargedDetail}));
+        const detailTabs=await surface('.wpb-exercise-tabs');
+        assert.ok(detailTabs.controls.length===4&&detailTabs.controls.every(c=>
+          c.label&&c.width>=44&&c.height>=44&&c.textFits&&c.lines===1),
+          '200% detail tabs keep whole, non-overlapping labels: '+JSON.stringify({theme,width,detailTabs}));
+        if(width===320||width===1280)
+          await page.screenshot({path:path.join(root,'verification/r74-'+theme+'-'+width+'-detail-phone.png')});
+        await textSize(false);
+        if(width>=900&&height>=700){
+          await page.setViewport({width:Math.round(width/2),height:Math.round(height/2),
+            deviceScaleFactor:2,isMobile:false,hasTouch:false});
+          await settle();
+          assert.equal((await surface('.wpb-exercise-detail')).overflow,false,
+            'Library detail reflows at a 200% zoom-equivalent layout viewport');
+          await page.waitForFunction(()=>document.querySelector('.wpb-exercise-detail')?.getAttribute('aria-modal')==='true');
+          assert.equal(await page.$eval('.wpb-library-search input',el=>el.value),'bench',
+            'Zoom-equivalent Library resize preserves the search');
+          await page.setViewport({width,height,deviceScaleFactor:1,isMobile:width<600,hasTouch:width<600});
+          await settle();
+          if(width>=1120&&height>=720){
+            await page.waitForFunction(()=>!document.querySelector('.wpb-exercise-detail')?.hasAttribute('aria-modal'));
+            assert.equal(await page.$$eval('[data-wpb-lock]',els=>els.length),0,
+              'Re-expanding Library releases the modal scroll lock');
+          }
+        }
+        await page.focus('.wpb-exercise-detail button[aria-label="Back to library"]');
+        await page.keyboard.press('Escape');
+        await page.waitForFunction(expected=>!document.querySelector('.wpb-exercise-detail')&&
+          document.activeElement?.matches('.wpb-library-row')&&document.activeElement.textContent.trim()===expected,
+          {timeout:5000},origin);
+        assert.equal(await page.$eval('.wpb-library-search input',el=>el.value),'bench',
+          'Escape preserves the filtered Library list');
+        await page.click('.wpb-library-header button[aria-label="Back"]');
+        await page.waitForSelector('.wpb-home-create');
+        await page.click('.wpb-home-create');
+        await page.waitForSelector('.wpb-wizard-step button');
+        await page.evaluate(()=>{
+          const mode=[...document.querySelectorAll('.wpb-wizard-step button')]
+            .find(el=>el.textContent.includes('Single program'));
+          if(!mode)throw new Error('Single program mode missing');mode.click();
+        });
+        await page.click('.wpb-wizard-next-action');
+        await page.waitForSelector('.wpb-wizard-step input');
+        await page.type('.wpb-wizard-step input','R74 enlarged '+theme);
+        const draft=await page.$eval('.wpb-wizard-step input',el=>el.value);
+        await textSize(true);
+        const enlargedWizard=await surface('.wpb-wizard');
+        assert.equal(enlargedWizard.overflow,false,'200% Wizard text reflows: '+
+          JSON.stringify({theme,width,enlargedWizard}));
+        assert.equal(await page.$eval('.wpb-wizard-step input',el=>el.value),draft,
+          'Enlarged creation form preserves the typed draft');
+        assert.ok(enlargedWizard.controls.every(c=>c.label&&c.width>=44&&c.height>=44&&c.textFits),
+          'Enlarged Wizard exposes named usable controls: '+JSON.stringify({theme,width,enlargedWizard}));
+        const wizardTitle=await page.$eval('.wpb-wizard-header>div:first-child>div:not(.mono)',el=>{
+          const box=el.getBoundingClientRect(),node=el.firstChild;
+          return [...node.textContent.matchAll(/\S+/g)].map(match=>{
+            const range=document.createRange();range.setStart(node,match.index);
+            range.setEnd(node,match.index+match[0].length);
+            const rects=[...range.getClientRects()];
+            return {word:match[0],lines:rects.length,
+              fits:rects.every(r=>r.x>=box.x-1&&r.right<=box.right+1)};
+          });
+        });
+        assert.ok(wizardTitle.every(word=>word.lines===1&&word.fits),
+          '200% Wizard title wraps between whole words: '+JSON.stringify({theme,width,wizardTitle}));
+        if(width===320||width===1280)
+          await page.screenshot({path:path.join(root,'verification/r74-'+theme+'-'+width+'-wizard-phone.png')});
+        await textSize(false);
+        if(width>=900&&height>=700){
+          await page.setViewport({width:Math.round(width/2),height:Math.round(height/2),
+            deviceScaleFactor:2,isMobile:false,hasTouch:false});
+          await settle();
+          const zoomWizard=await surface('.wpb-wizard');
+          assert.equal(zoomWizard.overflow,false,'Wizard reflows at a 200% zoom-equivalent viewport');
+          assert.equal(await page.$eval('.wpb-wizard-step input',el=>el.value),draft,
+            'Zoom-equivalent Wizard resize preserves the current draft');
+          assert.ok(zoomWizard.controls.every(c=>c.label&&c.width>=44&&c.height>=44&&c.textFits),
+            'Zoom-equivalent Wizard retains usable named controls: '+JSON.stringify(zoomWizard));
+          await page.setViewport({width,height,deviceScaleFactor:1,isMobile:width<600,hasTouch:width<600});
+          await settle();
+        }
         results.push({theme,width,height,stops});
         assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),[program],
           'Accessibility interactions preserve saved prescriptions');
         assert.deepEqual(errors,[],'No runtime errors');
         console.log('PASS R74 '+theme+' '+width+'x'+height);
+      }catch(error){
+        console.error('FAIL R74 '+theme+' '+width+'x'+height);
+        await page.screenshot({path:path.join(root,'verification/r74-failure-phone.png')});
+        throw error;
       }finally{await context.close();}
     }
   }

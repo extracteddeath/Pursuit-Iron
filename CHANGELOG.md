@@ -1,3 +1,11 @@
+## Build 857 — R74 Library focus and enlarged-text controls
+
+- Keep the expanded Library detail nonmodal so the existing focus/scroll owner leaves its visible search and exercise list usable. Responsive resize updates that same owner; compact detail retains its modal semantics and native Back/Escape action.
+- Restore keyboard focus to the selected Library exercise after Back or Escape, including responsive unmount/remount. Preserve filtered search, exercise identity and nested/IME dismissal priority.
+- Reflow Library status filters and exercise-detail tabs into additional rows as text grows, keeping whole labels within their controls. Give Library filters and custom-exercise creation 44px targets. Let the header and creation progress fraction grow with text; label Program/Cycle name explicitly. Hide the duplicate Demo link only when the fallback already supplies the real video link.
+- Extend the existing R74 paired-theme/seven-window journeys through filtered Library rows, keyboard entry/exit, 200% text, usable control geometry, nonmodal/modal resize, and draft/search retention at 200% zoom-equivalent layout viewports. Preserve the checked Library/zoom work from PR #139 on the published Build 856 baseline.
+- Keep engine 0.65.6, all 70 canonical engine modules and the other 92 non-App runtime hashes unchanged. The only non-App runtime change is UI focus-return code. Full Wizard-step and app-wide target review, physical Android/TalkBack and final stylesheet consolidation remain open. Require all permanent final-SHA workflows, Pages and post-merge checks before publication.
+
 ## Build 856 — R74 form continuity and R75 responsive workout certification
 
 - Let navigation labels grow with enlarged text so wrapped words remain inside their real controls. Make the expanded Plan supporting row grow to fit Up Next before Program overview begins. Keep the selected icon indicator and theme colors.

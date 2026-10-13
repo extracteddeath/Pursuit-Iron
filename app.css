@@ -7423,3 +7423,103 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     min-height:max-content!important;
   }
 }
+
+/* R74 / B857 — let enlarged Library labels choose usable rows. Keep the
+   existing controls and moving selection track; never squeeze words into
+   overlapping fixed-width cells. em sizing follows text-only enlargement. */
+#root[data-pi-motion="expressive"] .wpb .wpb-library.wpb-library.wpb-library
+  .wpb-library-header>div:first-child{
+  flex-wrap:wrap!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-library.wpb-library.wpb-library
+  .wpb-library-header>div:first-child>div{
+  flex:1 1 5em!important;
+  min-width:0;
+  overflow-wrap:anywhere;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-library.wpb-library.wpb-library
+  .wpb-library-header>div:first-child>button{
+  flex-shrink:0;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-library.wpb-library.wpb-library
+  .wpb-library-header>div:first-child>button:not([aria-label="Back"]){
+  width:max-content!important;
+  height:auto!important;
+  max-width:100%;
+  white-space:nowrap;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-library.wpb-library.wpb-library
+  .wpb-library-header>div:first-child>span{
+  margin-left:0!important;
+  flex-shrink:0;
+  white-space:nowrap;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-library.wpb-library.wpb-library
+  :is(.wpb-filter-chip,.wpb-library-flag){
+  min-height:44px!important;
+  min-width:44px!important;
+  line-height:1.25!important;
+  white-space:nowrap!important;
+  overflow-wrap:normal!important;
+  word-break:normal!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-library.wpb-library.wpb-library
+  .wpb-library-flag-filter{
+  display:grid!important;
+  grid-auto-flow:row!important;
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,4.25em),1fr))!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-library.wpb-library.wpb-library
+  .wpb-library-results>button:not(.wpb-library-row){
+  min-height:44px!important;
+  min-width:44px!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-library.wpb-library.wpb-library
+  .wpb-library-row-icon{
+  width:max(38px,2em)!important;
+  height:max(38px,2em)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-library.wpb-library.wpb-library
+  .wpb-library-row-icon span{
+  white-space:nowrap!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail
+  .wpb-exercise-tabs{
+  display:grid!important;
+  grid-auto-flow:row!important;
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,3.7em),1fr))!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail
+  .wpb-exercise-tabs>button{
+  white-space:nowrap!important;
+  overflow-wrap:normal!important;
+  word-break:normal!important;
+}
+
+/* Wizard chrome grows with text and keeps its progress fraction visible. */
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard.wpb-wizard.wpb-wizard
+  .wpb-wizard-header>div:first-child{
+  height:auto!important;
+  min-height:34px;
+  flex-wrap:wrap!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard.wpb-wizard.wpb-wizard
+  .wpb-wizard-header>div:first-child>div:not(.mono){
+  flex:1 1 6em!important;
+  white-space:normal!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  overflow-wrap:anywhere;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard.wpb-wizard.wpb-wizard
+  .wpb-wizard-header>div:first-child>.mono{
+  width:max(36px,3em)!important;
+  margin-left:auto!important;
+}
+
+/* The fallback already is a real video link; a second floating Demo link
+   otherwise covers its enlarged heading. Photo illustrations keep Demo. */
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-figure-wrap:has([data-testid="form-video-link"])
+  >a:not([data-testid="form-video-link"]){
+  display:none!important;
+}

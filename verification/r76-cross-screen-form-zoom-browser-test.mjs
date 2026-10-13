@@ -88,13 +88,13 @@ try{
         if(width===320 && route==='profile'){
           const columns=await page.evaluate(()=>getComputedStyle(
             document.querySelector('.wpb-profile-stat-grid')).gridTemplateColumns
-              .trim().split(/\\s+/).length);
+              .trim().split(/\s+/).length);
           assert.equal(columns,1,'Profile metrics reflow to one readable column at 200%');
         }
         if(width===320 && route==='progress'){
           const columns=await page.evaluate(()=>getComputedStyle(
             document.querySelector('.wpb-progress .wpb-premium-tabs')).gridTemplateColumns
-              .trim().split(/\\s+/).length);
+              .trim().split(/\s+/).length);
           assert.equal(columns,2,'Progress destination tabs reflow to two readable columns at 200%');
         }
         assert.equal(geometry.pageOverflow,false,route+' has no document horizontal overflow at 200%: '+JSON.stringify(geometry));

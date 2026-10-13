@@ -7523,3 +7523,86 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   >a:not([data-testid="form-video-link"]){
   display:none!important;
 }
+
+/* R74 / B858 — creation choices reflow with the available text space.
+   These setup targets are separate from the compact live-workout steppers. */
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard-layout{
+  container:pi-wizard-step / inline-size;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard-step button{
+  min-width:44px;
+  min-height:44px;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard-option-copy{
+  overflow-wrap:anywhere;
+}
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-wizard-unit-choices,.wpb-wizard-superset-choices){
+  display:grid!important;
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,9em),1fr));
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard-barbell-choices{
+  display:grid!important;
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,4em),1fr));
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard-choice{
+  line-height:1.3;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard-cycle-heading{
+  flex-wrap:wrap;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard-cycle-name{
+  flex:1 1 12ch!important;
+  min-width:0;
+  overflow-wrap:anywhere;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard-cycle-duration{
+  flex:0 1 auto;
+  min-width:0;
+  max-width:100%;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard-focus-row{
+  flex-wrap:wrap;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard-focus-summary{
+  flex-wrap:wrap;
+  gap:8px;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard-focus-label{
+  flex:1 1 8em!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard .wpb-setup-stepper{
+  flex:0 0 auto;
+  gap:8px!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard .wpb-setup-stepper button{
+  width:44px!important;
+  height:44px!important;
+  flex-shrink:0;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard .wpb-setup-stepper .mono{
+  width:auto!important;
+  min-width:1.5em;
+  line-height:1.25;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard-finish-action{
+  min-height:44px;
+  line-height:1.3;
+}
+@container pi-wizard-step (max-width:16em){
+  #root[data-pi-motion="expressive"] .wpb .wpb-wizard-option{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) auto;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-wizard-option-icon{
+    grid-column:1;
+    grid-row:1;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-wizard-option-copy{
+    grid-column:1 / -1;
+    grid-row:2;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-wizard-option>div:last-child:not(.wpb-wizard-option-copy){
+    grid-column:2;
+    grid-row:1;
+  }
+}

@@ -55,3 +55,23 @@ The existing R65 program/cycle journeys cover both accessible name labels and Li
 Final candidate gate results and publication are tracked in PR/main Actions; all four final-SHA workflows, Pages and deployed byte identity must pass before marking Build 857 published. Physical Android/TalkBack/safe-area/touch/trackpad evidence, full Wizard-step/app-wide target coverage and final stylesheet/visual consolidation remain open, together with the separate duration discrepancy.
 
 Final Build 857 local evidence: all 21 browser gates have passing runs (integration nine plus the corrected R44/B831 rerun, workout five, program three, lifecycle three); all 76 source contracts passed on Node 22, with the unchanged M199 500-check budget passing at 272.3ms. Exact canonical export/application parity, source identity and 36 independent semantic suites passed, alongside release integrity. The broad gate caught an over-broad custom-action minimum-height selector affecting Library result rows; it was restricted to the custom action and the original R44 row-height assertion passed. No tolerance or acceptance assertion was lowered.
+
+## Build 858 — Program/Cycle creation continuation
+
+Baseline: published Build 857 / PR #141, main `91941890a4da4ad787f3d8723420870fc7cf561b`.
+
+| Reproduced defect | Repair |
+| --- | --- |
+| Enlarged split names extend beyond the option's narrow text column | The existing setup layout owns a text-relative container query; option icons/status sit above full-width text when space is limited. Titles wrap between whole words. |
+| Long cycle names and duration metadata crowd each other | The title/duration row wraps into another line within the same option. |
+| Units and Superset/Barbell choices retain columns too narrow for enlarged words | Auto-fit grids use the available text space; the same selection handlers and values remain. |
+| Muscle-focus controls are 34px and optional generation lacks a 44px minimum | Setup-only 44px targets, readable values and wrapping muscle labels/totals. Live workout steppers keep their existing owner and dimensions. |
+| The bodyweight toggle exposes paint without its selected state | The same native button now carries `aria-pressed`; each fieldset is named by its current question. |
+
+The permanently registered R74 gate now includes all 15 first-use Program and 13 first-use Cycle steps, including profile questions skipped for returning users. Seven windows in Rose/Rosewater produce 392 step visits at normal and 200% text. Each visit measures actual control rectangles, names, complete control text, readable choice/review regions and whole option words. It uses real keyboard selection for focus and bodyweight preferences, then Back/Next to verify retained answers. The six expanded/tall theme/window scenarios additionally halve their CSS layout viewport and double pixel density, retaining each step's answers. This is zoom-equivalent layout evidence, separate from physical browser zoom.
+
+The fixture mounts the exported production Wizard after the ordinary app loads its saved theme; it uses the original CSS, palette, motion and configuration owners. Its completion callback only observes configuration, and inspection never invokes that callback or writes a plan. Existing real Home/creation routes and all logging, progress, bar-weight, history, worker-generation and offline checks remain required.
+
+Local verification uses Node 24 and Chromium 153 in this environment. Permanent release CI uses its existing Node 22 / Google Chrome setup. The original 76 source contracts and all 93 non-App runtime hashes remain unchanged; canonical engine 0.65.6, export/application parity and independent semantic suites retain their existing gates. Release finalization certifies all 102 required offline entries, and deployed verification must cover the same 106 manifest/runtime/UI assets as Build 857.
+
+Publication remains gated on the four permanent workflows at the final candidate head, then Pages, the four post-merge workflows and deployed byte identity. The current Wizard browser review does not certify physical Android keyboard/TalkBack/safe areas, touch/trackpad feel, other app forms/targets, final app-wide visual/usability review or stylesheet consolidation. The historical Home/Plan duration item is closed by R50/M219 and is not a new remaining defect.

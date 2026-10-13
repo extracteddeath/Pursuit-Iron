@@ -63,7 +63,9 @@ assert.match(audit, /github\.ref == 'refs\/heads\/main' \|\| github\.event_name 
 assert.equal(registry.contractCount, Object.values(contractGroups).flat().length);
 assert.equal(registry.browserCount, Object.values(browserShards).flat().length);
 assert.equal(registry.releaseCount, releaseTests.length);
-assert.equal(registry.browserCount, 22, 'B860 adds preview/theme reflow while retaining all 21 established browser gates');
+assert.equal(registry.browserCount, 23, 'R76 adds Profile/Progress/Settings 200% and target coverage without dropping any of the 22 Build 860 gates');
+assert.ok(browserShards.integration.includes('r76-cross-screen-form-zoom-browser-test.mjs'),
+    'Profile, Progress and Settings 200% responsive coverage must run in the integration shard');
 assert.ok(browserShards.integration.includes('r74-accessibility-browser-test.mjs'),
     'form focus, text enlargement and keyboard viewport coverage must run in the integration shard');
 assert.ok(browserShards.integration.includes('b831-expressive-motion-browser-test.mjs'),

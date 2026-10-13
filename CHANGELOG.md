@@ -1,3 +1,10 @@
+## Build 859 — Clear Settings fields and enlarged-text choices
+
+- Give bodyweight, the 1RM calculator, backup copy/restore and shared-program text stable screen-reader names, including the selected weight unit where relevant.
+- Make Training experience respond to text-only enlargement as well as root text scaling. Preserve the existing four/two/one-column layout at ordinary reading sizes and keep whole labels at 200% text.
+- Allow Reset everything and its confirmation wording to wrap inside the same button; preserve the existing two-tap confirmation and timeout.
+- Extend the permanent R74 browser gate with actual accessibility-tree names, read-only export, unsaved import cancellation/draft retention and enlarged Settings control geometry. Saved prescriptions, training state and all 93 non-App runtime files remain unchanged.
+
 ## Build 858 — Readable Program and Cycle setup
 
 - Reflow Program/Cycle options at 200% text so split names remain whole and cycle duration labels stay inside their cards. Units and workout constraints adapt to the available text space.

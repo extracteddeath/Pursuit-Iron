@@ -97,6 +97,58 @@ try{
         await page.goto('http://127.0.0.1:8800/',{waitUntil:'networkidle0'});
         await page.click('[data-tab="settings"]');
         await page.waitForSelector('.wpb-settings');
+        // Read the browser's actual accessibility names, including filled
+        // fields: visual row captions and numeric placeholders are not names.
+        const fieldName=async selector=>{
+          const client=await page.createCDPSession();
+          try{
+            const {root}=await client.send('DOM.getDocument');
+            const {nodeId}=await client.send('DOM.querySelector',{nodeId:root.nodeId,selector});
+            assert.ok(nodeId,'Settings field exists: '+selector);
+            const {nodes}=await client.send('Accessibility.getPartialAXTree',{nodeId,fetchRelatives:false});
+            return nodes.find(node=>!node.ignored)?.name?.value;
+          }finally{await client.detach();}
+        };
+        for(const label of ['Bodyweight (lb)','Estimated 1RM weight (lb)','Estimated 1RM reps'])
+          assert.equal(await fieldName('.wpb-settings input[aria-label="'+label+'"]'),label,
+            'Settings exposes the actual field purpose to assistive technology');
+        const action=async (scope,label)=>{
+          const handle=await page.evaluateHandle(({scope,label})=>
+            [...document.querySelectorAll(scope+' button')].find(el=>el.textContent.trim().startsWith(label)),
+            {scope,label});
+          const control=handle.asElement();
+          assert.ok(control,'Settings action exists: '+label);
+          await control.evaluate(el=>el.scrollIntoView({block:'center'}));
+          await control.click();await handle.dispose();await settle();
+        };
+        await action('.wpb-settings','Save backup');
+        const exportField='.wpb-settings textarea[aria-label="Backup or CSV text to copy"]';
+        await page.waitForSelector(exportField);
+        assert.equal(await fieldName(exportField),'Backup or CSV text to copy',
+          'Filled export text has a stable accessible name');
+        assert.equal(await page.$eval(exportField,el=>el.readOnly),true,
+          'Naming export text keeps the existing read-only backup');
+        await action('.wpb-settings','Done');
+        await action('.wpb-settings','Restore backup');
+        const restoreField='.wpb-settings textarea[aria-label="Backup text to restore"]';
+        await page.waitForSelector(restoreField);
+        assert.equal(await fieldName(restoreField),'Backup text to restore');
+        const restoreDraft='R74 unsaved backup draft';
+        await page.type(restoreField,restoreDraft);
+        await textSize(true);
+        assert.equal(await page.$eval(restoreField,el=>el.value),restoreDraft,
+          'Text enlargement preserves the restore draft');
+        await textSize(false);
+        await action('.wpb-settings','Cancel');
+        await action('.wpb-settings','Add a shared program');
+        const programField='textarea[aria-label="Program code or text"]';
+        await page.waitForSelector(programField);
+        assert.equal(await fieldName(programField),'Program code or text');
+        await page.type(programField,'R74 unsaved program draft');
+        await page.keyboard.press('Escape');
+        await page.waitForSelector(programField,{hidden:true});
+        assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),[program],
+          'Inspecting import fields never restores or creates a program');
         await page.evaluate(()=>{
           const opener=[...document.querySelectorAll('.wpb-settings button')]
             .find(el=>el.textContent.includes('Your gyms'));
@@ -255,6 +307,23 @@ try{
           if(route==='plan'&&width>=1060&&height>=700){
             assert.ok(enlarged.plan.nextBottom<=enlarged.plan.overviewTop+1,
               'Enlarged Plan supporting cards stay in separate rows: '+JSON.stringify(enlarged.plan));
+          }
+          if(route==='settings'){
+            const experience=await surface('.wpb-experience-segmented');
+            assert.ok(experience.controls.length===4&&experience.controls.every(c=>
+              c.width>=44&&c.height>=44&&c.textFits&&c.lines===1),
+              '200% Settings choices keep complete labels: '+JSON.stringify({theme,width,experience}));
+            await page.evaluate(()=>{
+              const reset=[...document.querySelectorAll('.wpb-settings button')]
+                .find(el=>el.textContent.trim()==='Reset everything');
+              reset.dataset.r74Reset='1';
+            });
+            const resetFits=await page.$eval('[data-r74-reset="1"]',el=>{
+              const box=el.getBoundingClientRect(),range=document.createRange();range.selectNodeContents(el);
+              return [...range.getClientRects()].every(r=>r.x>=box.x-1&&r.right<=box.right+1&&
+                r.y>=box.y-1&&r.bottom<=box.bottom+1);
+            });
+            assert.ok(resetFits,'200% Settings reset label stays in its own button without activating reset');
           }
           await page.evaluate(()=>{
             window.__r74Text.forEach(({el,value,priority})=>value?

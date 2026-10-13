@@ -2,7 +2,7 @@
   "schemaVersion": 3,
   "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": 862,
+  "build": 863,
   "engineVersion": "0.65.7",
   "candidateStatus": "verification_enforced_by_ci",
   "runtimeAggregate": "abe181d03bf9c98843f680d593eb9222fb58420d35b3481bacc7a543d62480b0",
@@ -107,17 +107,17 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228\u2013M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "e2b4754ad16d283951fb11d06026916443e06f265f8fe86195dd179c235fcfcc",
-    "index.html": "353baed095d7bc2f47038e28cca224786d393e25dea46b54b8a01a71007e524d",
-    "sw.js": "1c12f206232591d65af1f10a6fea880811d27b6602d543f66f74ccd325d0b9a1",
-    "BUILD_PROFILE.json": "9b0dfbe339eb798252c4fe061f7d8a6748b742101764948e925bc49f5c0c73da",
+    "modules/App.js": "cc8f4deac3d578cb5a2e1379f11d6760c4407e0aa62a2c40762c8d8295dd544c",
+    "index.html": "c75f30bb62f9b465c9d5f012b66158c4e0dc0487c6361641bc6f75d7eaae3b17",
+    "sw.js": "aadae64420538e1ae4b8dde69da4d8b86dbb8da8e285531f27460fedccc35265",
+    "BUILD_PROFILE.json": "248fd7cb82f5246cad23fd4405fd15a520c02d0bc78501aa14ebd98c6fc43732",
     "CHANGELOG.md": "82aa4d4983350fb9407682a98fc7e0518818666e272a9c492bed44b44e034dc6",
-    "app.css": "7cbcddb7d7d0f24ce35708f8226c2087d72b90a6fd43ec21155820450f278381",
+    "app.css": "9d3baa05e2e1dba784d2450477946d120ce47a39cf6b90432ae18c69954d4c66",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b862-re82876eab08c0d24",
-  "uiMilestone": "Build 862 \u00b7 R78 quiet theme / amplifier alignment"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b863-r69204f31d923264e",
+  "uiMilestone": "Build 863 \u00b7 R78 clear consistency/calendar and collapsed milestones"
 }

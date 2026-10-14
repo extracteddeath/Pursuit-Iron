@@ -108,17 +108,17 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "d3f9650d215b951fdb7e1eddcd13c9fff87052dc96c4c06f7e872644e0947e14",
-    "index.html": "26934c7222b90c1d5ee70fd285bf2498b12a71e74dbe6ce2e75fd37c29a64656",
-    "sw.js": "bd1c265ae3544f2c185cd55491a4fd7dea78d4c7a3dc1ad0f781c477dddb2f14",
-    "BUILD_PROFILE.json": "92d9f7e712b93049b7708fe644f076ac08858514bf4499601ade4f8b3a395359",
-    "CHANGELOG.md": "6360f0736a7ea173797d6df0ea381d42f9d644921bb6976183f056688991db08",
-    "app.css": "f95f6827a63a5732659f59cece54e1f3f67842f19145990a10b6efb18f609fac",
+    "modules/App.js": "f3d7df8eff1c37656867410e91b9bdfdbb9985cdbe085607f2667ea69b2c6e5e",
+    "index.html": "838e6c8c2d59b760fc1adc1543e7fe60b09b6daaa85c690f16a41475cf6271f2",
+    "sw.js": "12481ef7816f8b58527624df2963c024863dd4e2851ead1f0d2e2856580a600e",
+    "BUILD_PROFILE.json": "049409a8772130b542f8b233b2fb7b5debc04341083448b921d0dac1bb138bb0",
+    "CHANGELOG.md": "487479468b330aba1c7e9c28fb03f7d200391e661fe94a10f7215ad77c0dae09",
+    "app.css": "6a16f749138e3fa13da8bbac7efe9346ae280f4f3f2b715c243d16b63cfbe9c5",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b877-r6442a9a59d680048",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b877-rb90a63a347ae618e",
   "uiMilestone": "Build 877 · Responsive tablet dock and complete Focus tools"
 }

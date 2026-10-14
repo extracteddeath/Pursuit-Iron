@@ -6,6 +6,6 @@
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 70,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b863-r69204f31d923264e",
-  "uiMilestone": "Build 863 \u00b7 R78 clear consistency/calendar and collapsed milestones"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b864-rff58d3cb475a2259",
+  "uiMilestone": "Build 864 · R79 exact training dates and readable calendar"
 }

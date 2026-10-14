@@ -2,7 +2,7 @@ import { liftBests, displayDayName, loadingInventoryInUnit } from './engine-api.
 import { ALL_EQUIP_IDS, ALL_PLATES, ASSIST_IDS, ASSUMED_RIR, AVAIL_PLATES, AXIAL_ADJACENT_COST, BARS, BAR_EQUIP, BAR_LABEL, BASE_SET_COST, BIG_THREE, BIRTH_RE, BW_LOG_CAP, CODE_ALPHA, CODE_ASSIST, CODE_CARRIED_KEYS, CODE_EQUIP, CODE_EXERCISES, CODE_EXP, CODE_GOALS, CODE_IGNORED_KEYS, CODE_PROG, CODE_SCHEMES, CODE_SESSION, CODE_SPLITS, COMPOSITE_HEADS, COVERED_MUSCLES, DELT_HEAD, E1RM_HOLD, E1RM_REP_CAP, EFFORT_MAX_BIAS, EFFORT_MIN_PAIRS, EFFORT_REP_CAP, ENGINES, ENGINE_RULES, ENGINE_V, EPLEY_SLOPE, EQUIPMENT, EQUIP_CATS, EQUIP_IMPLIES, EXERCISES, EXP, EXP_BAND, EX_ABBREV, EX_BY_ID, EX_FAMILY, EX_LOAD_INC, EX_METRICS, EX_METRIC_BY_ID, EX_SPECIFIC, EX_WINDOWS, FOCUS_CAVEAT, GAP_FRACTION, GENERATION_ROUTE, GYM_LIMITS, GYM_LIMIT_KEYS, GYM_PRESETS, GZ_T1_STAGES, GZ_T2_STAGES, HISTORY_BYTES, HISTORY_BYTE_CHECK_FROM, HISTORY_CAP, IDEAL_SLOTS, INTENT_FROM_CAT, INVENTORY_KEYS, LANDMARKS, LEGACY_EQUIP_IMPLIES, LEGACY_EX_TYPICAL_KEYS, LEVEL_TITLES, LOAD_INC, LOWER_PARTS, MACHINE_EQUIP, MACHINE_SETUP, MILESTONE_XP, MIN_DAY_SESSIONS, MOBILITY, MRV_GRAIN, MUSCLE_SYNONYM, MYO_MAX_SETS, MYO_MINI_REPS, MYO_MINI_SETS, MYO_MIN_REPS, MYO_PARTS, MYO_TARGET_REPS, NOVICE_INELIGIBLE_SPLITS, PART_LABEL, PART_ORDER, PATTERNS, PATTERN_BY_ID, PATTERN_GROUPS, PATTERN_MIN_SETS, PHASES, PHASE_ROT, PLANNED_ROOM_RIR, PLATES, PROG_POLICIES, PROG_STYLES, PV_PAD_TOP, PV_ROW_GAP, RACK_PRESETS, RAW, REDUCE_FRACTION, REFERENCES, REGION_MOVEMENT, REGION_REQUIRED, RELEASE_DIAG_CAP, RELEASE_DIAG_FIELDS, RELEASE_DIAG_KEY, REST_SCALE, SCORE_BANDS, SCORE_EQUIV, SCORE_PATTERN, SCORE_PATTERN_LABEL, SECONDARY, SELF_TEST_FRAME_BUDGET_MS, SELF_TEST_HISTORY_LIMIT, SELF_TEST_SUPPORTED_ENGINES, SESSIONS, SESSION_BOUNDS, SESSION_EX_TYPICAL, SETUP_FIELD_ORDER, SETUP_LABELS, SET_ROW_BLEED, SEX_FACTOR, SPLITS, STALL_ENGAGE, STALL_WINDOW, STANDARDS, STD_LEVELS, STORE_MIGRATIONS, STORE_VERSION, STRENGTH_CLUB_LIFTS, STRENGTH_CLUB_TIERS_LB, STRETCH_FOCUS_E2, STRETCH_FOCUS_E3, STRETCH_PARTIAL_PARTS, SUBMUSCLE_LABEL, SUB_LANDMARKS, TECHNICAL_LIFTS, TEMPLATES, TEMPLATE_CATS, TOTAL_WEEKS, UNIFORM_LANDMARK, VIEW_DEPTH, WARMUP_PYRAMIDS, WARMUP_SET_SEC, WEIGHTED_SWAP, __doseMemo, __recovFitMemo, __recoveryMemo, __slopeMemo, __volKey, __weeklyVolMemo, _dstCache, _lmCache, _planOverviewMemo, addedMinutes, addedSeconds, advanceLegacyFirstCycleBlock, ageFactor, ageFrom, anchorPerfFor, applyCustomProgramSettings, asLengthUnit, assertExerciseData, auditProgramWeek, auditSets, autoStyleDetail, autoStyleFor, availableFor, axialCost, backupRecordImpact, barFor, barWeightFor, baseSetsFor, betterTopSet, birthFromAge, birthParts, bitsToCode, blockChangeSummary, blockPhase, blockPlanFor, blockRetro, blockReview, budgetIncludesTransitions, buildLifterModel, buildWeekPlan, calibrateDayPerf, calibratedAnchorPerf, canUndoProgramSave, capHistory, capWeeklyVolume, cellRepRange, clamp, classifyPlateau, clearSetup, coachFacts, codeToBits, completionRate, compositeMrv, computeCell, computeLevel, computeMilestones, constantLoadDecay, coverageGaps, coverageRelief, cuesFor, customAuthoredSetCount, customExerciseHistory, customExerciseReferenceHistory, customLastSetTechnique, customProgramSuggestion, cycleConfigForStandaloneProgram, cycleProgress, dayMuscleBreakdown, dayMuscleLoad, dayMuscleVolume, dayOverlap, dayPerfFor, dayScopedTrends, daySeconds, daysInWeek, decodeGallery, decodeProgramCode, deloadAdvice, distributeVolBias, e1rm, e1rmRIR, effectiveRest, effortBounds, effortCalibration, effortLabel, effortValueLabel, encodeProgramCode, endlessStalled, engHas, engLacks, engineInfo, engineWeekOneStyles, estimateMinutes, estimateMinutesFor, exMatches, exRecords, exWindow, exerciseAt, exerciseProfile, exerciseSeries, exerciseSlotSec, exerciseTrends, expandEquipment, expandLegacyEquipment, explainPrescription, feedbackDelta, filterWorkoutHistory, fmtSets, formatSetup, galleryIssueBody, gallerySubmission, getBits, goalForDay, groupPctSets, groupSessionsByCycle, groupSessionsByMonth, growMyoSets, gymById, gymCapFor, gymRackFor, gzPlanFor, gzTierOf, gzWorkWeight, historyDayIndex, historyForProgram, historyVolumeIn, homeProgramGroups, isAssistedEx, isAxialLoad, isBarLike, isMachineLike, isRuntimeProgram, isStretchFocus, isWorkSet, landmarkFor, landmarkForLegacy, landmarkOf, lastDayPerf, lastSetEffort, lastSetTech, lastTopSet, legacyCustomSetCount, lengthUnitFor, lifterModelKey, linearInc, linearStalled, liveCoachForContext, loadStep, loadableAbove, loadableAtOrBelow, nudgeWorkoutLoad, logWindow, loggedExercisePerformance, loggedSubVolume, loggedVolume, loggedWorkoutPerformance, lowerBodyLift, makeMyoMini, mavFor, mergeSessionData, mergeStandaloneIntoGeneratedCycle, mergeStores, mergedSetCount, migrateStore, movePattern, muscleRecovery, muscleRecoveryUncached, newGymId, nextDueDayId, nextEngineStyleFor, nextScheduledIndex, nextSessionCursor, nextTMEvidence, normalizeBwLog, normalizeCycleLinks, normalizeEditedHistoryEntry, normalizeGyms, normalizeHistoryDayIds, normalizeMeasureLog, overreachSignal, paceFactor, parseRIRNum, parseStoredData, patternCues, patternTrainable, pctSetsFor, perWeekOf, percentagePlanFor, perfAfterDelete, perfAfterHistoryReplace, personalMav, personalRecoveryHours, personalRepSlope, phaseFor, phaseKind, pickActiveProgram, pickTopSet, planOverview, planOverviewMemo, plannedWeek, plateauOf, plateauOfLift, plateauSessions, plateauSplitByDay, platesPerSide, poolOf, preferenceFloor, prescribeSets, prescribedRIRof, prescribedRIRofAny, programChangeLabels, programFingerprint, programSavePlan, progressionHistoryForProgram, projectNextTM, propagateCycleEditsPure, putBits, rankSwapAlts, readinessBand, recommendedSplit, regionGapFix, regionGapsFor, repRange, representativeCustomLoad, repsLow, resolveStyle, restSec, rirTrend, rmAt, rotationOf, roundTo, ruleEngine, sameProgramContent, sanitizeInventory, sanitizeLimits, sanitizeRepsInput, sanitizeWeightInput, scoreAttribution, scoreCompose, scoreContin, scoreEquivalent, scoreEquivalentInverse, scoreLevelIdx, scoreLevelLabel, scoreMatur, scorePatternFor, scoreTargetFor, scoreTo100, secondaryOf, sessionE1RM, sessionExercisePlan, sessionSnapshotStatus, sessionSuggestion, setAvailPlates, setGymBarWeights, setExLoadInc, setGymLimits, setLoadInc, setRestScaleGlobal, setsOf, setupFieldsFor, setupFieldsWithStored, setupLabel, simulateAndAudit, squatHamCredit, stallCountFor, starvedRegions, strengthClubSnapshot, strengthLevel, strengthScore, strengthScoreHistory, strengthSnapshot, stretchTable, styleFor, styleOverride, subRegionOf, summarizeHistoryLoggedSets, summarizeSets, swapOverlapNames, syncSubSets, techExplain, techSetTag, templateConfig, templateIntent, tempoFor, tierOf, toLength, toUnit, todayISO, trainingMaxForUnit, uid, underRecoveredWeekly, uniformLandmarkFor, userOwnsRuntimeSet, volumeAudit, volumeLedger, volumeResponse, volumeVerdicts, warmupCount, warmupPlan, warmupRoutine, warmupSets, weekIntent, weekKeyOf, weekMuscleBreakdown, weeklyBodyweightTrend, weeklyRecap, weeklySubVolume, weeklyVolume, weeksOf, withTrainingMax, workoutPlanCoachFact } from './engine-api.js';
 import { PCT_SCHEMES, percentageProtocolFor, adaptPercentageSetBudget, deriveTieredLinearState } from './engine-api.js';
 import { historyNumber, convertHistoryLoad, observedHistoryRIR, completedHistorySets, previousWorkoutSet, historyExposureContext, progressionExposureContext, normalizeHistoryEntries, validHistoryDate, historyLoadReason } from './engine-api.js';
-const __APP_VERSION__='4.0.0'; const __BUILD__='863';
+const __APP_VERSION__='4.0.0'; const __BUILD__='864';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { holdWorkoutScreenAwake, restoreWorkoutClock, workoutElapsedMs } from "./mobile-lifecycle.js";
@@ -14242,54 +14242,46 @@ function RecoveryTrendCard({ history }) {
     const dot = v => v > 0 ? EFFORT_EASY : v < 0 ? EFFORT_HARD : C.muted;
     return (_jsxs("div", { style: { background: C.card, borderRadius: 16, padding: 16, marginBottom: 16 }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }, children: [_jsx(Activity, { size: 16, color: C.accentInk }), _jsx("span", { style: { fontSize: 15, fontWeight: 700 }, children: "Recovery & feedback" })] }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginBottom: 12 }, children: "Freshness now, plus how each muscle has felt recently" }), rows.map(r => (_jsxs("div", { style: { marginBottom: 12 }, children: [_jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4 }, children: [_jsx("span", { style: { fontSize: 13, fontWeight: 500 }, children: PART_LABEL[r.part] }), _jsxs("span", { className: "mono", style: { fontSize: 11, fontWeight: 600, color: color(r.status) }, children: [r.readiness, "%"] })] }), _jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8 }, children: [_jsx("div", { style: { flex: 1, height: 5, borderRadius: 999, background: C.bg2, overflow: "hidden" }, children: _jsx("div", { style: { width: `${r.readiness}%`, height: "100%", background: color(r.status), borderRadius: 999 } }) }), fb[r.part] && _jsx("div", { style: { display: "flex", gap: 2 }, children: fb[r.part].map((v, i) => (_jsx("span", { title: v > 0 ? "Easy" : v < 0 ? "Smashed" : "Good", style: { width: 7, height: 7, borderRadius: 999, background: dot(v) } }, i))) })] })] }, r.part))), _jsx("div", { style: { fontSize: 11, color: C.faint, marginTop: 4, display: "flex", gap: 12, justifyContent: "flex-end" }, children: [["easy", EFFORT_EASY], ["good", C.muted], ["smashed", EFFORT_HARD]].map(([l, c]) => (_jsxs("span", { style: { display: "flex", alignItems: "center", gap: 4 }, children: [_jsx("span", { style: { width: 7, height: 7, borderRadius: 999, background: c } }), l] }, l))) })] }));
 }
+// Display-only conversion: a date-only history value is a local calendar day,
+ // not a UTC midnight instant. Never rewrite the canonical stored history.
+function trainingCalendarDate(value) {
+    if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        const [year, month, day] = value.split("-").map(Number);
+        const local = new Date(year, month - 1, day);
+        return local.getFullYear() === year && local.getMonth() === month - 1
+            && local.getDate() === day ? local : null;
+    }
+    if (value == null || value === "")
+        return null;
+    const date = new Date(value);
+    return Number.isFinite(date.getTime()) ? date : null;
+}
 function TrainingHeatmap({ history }) {
     const today = useMemo(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }, []);
     const [viewMonth, setViewMonth] = useState(() => ({ y: today.getFullYear(), m: today.getMonth() }));
     const [selDay, setSelDay] = useState(null); // {key, date, sessions}
     const key = (d) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
     // Index history by day so a tapped cell can show what was trained.
-    const { byDay, streaks } = useMemo(() => {
-        const byDay = {};
+    const byDay = useMemo(() => {
+        const days = {};
         (history || []).forEach(h => {
-            if (!h.date)
+            const d = trainingCalendarDate(h?.date);
+            if (!d)
                 return;
-            const d = new Date(h.date);
             d.setHours(0, 0, 0, 0);
             const k = key(d);
-            (byDay[k] = byDay[k] || []).push(h);
+            (days[k] = days[k] || []).push(h);
         });
-        const daySet = new Set(Object.keys(byDay));
-        let cur = 0;
-        for (let i = 0; i < 400; i++) {
-            const d = new Date(today);
-            d.setDate(today.getDate() - i);
-            if (daySet.has(key(d)))
-                cur++;
-            else if (i > 0)
-                break;
-        }
-        // longest streak across all history
-        const allDays = Object.keys(byDay).map(k => { const [y, m, dd] = k.split("-").map(Number); return new Date(y, m, dd).getTime(); }).sort((a, b) => a - b);
-        let longest = 0, run = 0, prev = null;
-        // Consecutive-day check by ROUNDED day count, not exact millisecond equality — a calendar "day"
-        // is 23 or 25 hours (not exactly 86400000ms) on the two DST-transition days each year in any
-        // DST-observing timezone, which made a genuine consecutive-day streak silently break right on
-        // those two days. Rounding is safe: two real calendar-adjacent local-midnights are always within
-        // ~1 hour of exactly one day apart, nowhere near rounding to 2.
-        allDays.forEach(t => { if (prev != null && Math.round((t - prev) / 86400000) === 1)
-            run++;
-        else
-            run = 1; longest = Math.max(longest, run); prev = t; });
-        return { byDay, streaks: { cur, longest } };
-    }, [history, today]);
+        return days;
+    }, [history]);
     // Build the month grid (rows = weeks, Sun-first), plus per-week session counts.
-    const { weeks, monthCount, label } = useMemo(() => {
+    const { weeks, monthCount, trainingDays, label } = useMemo(() => {
         const first = new Date(viewMonth.y, viewMonth.m, 1);
         const startPad = first.getDay(); // 0=Sun
         const gridStart = new Date(first);
         gridStart.setDate(1 - startPad);
         const weeks = [];
-        let monthCount = 0;
+        let monthCount = 0, trainingDays = 0;
         for (let w = 0; w < 6; w++) {
             const row = [];
             let wkCount = 0;
@@ -14301,6 +14293,7 @@ function TrainingHeatmap({ history }) {
                 const inMonth = d.getMonth() === viewMonth.m;
                 if (sessions.length && inMonth) {
                     monthCount += sessions.length;
+                    trainingDays++;
                     wkCount += sessions.length;
                 }
                 row.push({ date: d, sessions, inMonth, future: d > today, isToday: d.getTime() === today.getTime() });
@@ -14311,12 +14304,12 @@ function TrainingHeatmap({ history }) {
             weeks.push({ row, wkCount });
         }
         const label = first.toLocaleDateString(undefined, { month: "long", year: "numeric" });
-        return { weeks, monthCount, label };
+        return { weeks, monthCount, trainingDays, label };
     }, [viewMonth, byDay, today]);
     const atCurrentMonth = viewMonth.y === today.getFullYear() && viewMonth.m === today.getMonth();
     const shiftMonth = (delta) => { setSelDay(null); setViewMonth(v => { const d = new Date(v.y, v.m + delta, 1); return { y: d.getFullYear(), m: d.getMonth() }; }); };
-    const DOW = ["S", "M", "T", "W", "T", "F", "S"];
-    return (_jsxs("div", { className: "wpb-training-calendar", style: { background: C.card, borderRadius: 16, padding: 16, marginBottom: 12 }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }, children: [_jsx(Calendar, { size: 16, color: C.accentInk }), _jsx("span", { style: { fontSize: 15, fontWeight: 700 }, children: "Training calendar" })] }), _jsxs("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }, children: [_jsx("button", { onClick: () => shiftMonth(-1), "aria-label": "Previous month", className: "pressable hit", style: { background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 10, width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: C.text }, children: _jsx(ChevronLeft, { size: 17 }) }), _jsx("div", { style: { fontSize: 15, fontWeight: 700, color: C.text }, children: label }), _jsx("button", { onClick: () => shiftMonth(1), disabled: atCurrentMonth, "aria-label": "Next month", className: "pressable hit", style: { background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 10, width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", cursor: atCurrentMonth ? "default" : "pointer", color: atCurrentMonth ? C.faint : C.text, opacity: atCurrentMonth ? 0.4 : 1 }, children: _jsx(ChevronRight, { size: 17 }) })] }), _jsxs("div", { className: "wpb-calendar-weekdays", style: { display: "grid", gridTemplateColumns: "repeat(7,minmax(0,1fr))", gap: 4, marginBottom: 6 }, children: [DOW.map((d, i) => _jsx("div", { style: { textAlign: "center", fontSize: 11, fontWeight: 700, color: C.faint }, children: d }, i))] }), weeks.map((wk, wi) => (_jsxs("div", { className: "wpb-calendar-week", style: { display: "grid", gridTemplateColumns: "repeat(7,minmax(0,1fr))", gap: 4, marginBottom: 4 }, children: [wk.row.map((cell, ci) => {
+    const DOW = [["Sun", "Sunday"], ["Mon", "Monday"], ["Tue", "Tuesday"], ["Wed", "Wednesday"], ["Thu", "Thursday"], ["Fri", "Friday"], ["Sat", "Saturday"]];
+    return (_jsxs("div", { className: "wpb-training-calendar", style: { background: C.card, borderRadius: 16, padding: 16, marginBottom: 12 }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }, children: [_jsx(Calendar, { size: 16, color: C.accentInk }), _jsx("span", { style: { fontSize: 15, fontWeight: 700 }, children: "Training calendar" })] }), _jsxs("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }, children: [_jsx("button", { onClick: () => shiftMonth(-1), "aria-label": "Previous month", className: "pressable hit", style: { background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 10, width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: C.text }, children: _jsx(ChevronLeft, { size: 17 }) }), _jsx("div", { style: { fontSize: 15, fontWeight: 700, color: C.text }, children: label }), _jsx("button", { onClick: () => shiftMonth(1), disabled: atCurrentMonth, "aria-label": "Next month", className: "pressable hit", style: { background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 10, width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", cursor: atCurrentMonth ? "default" : "pointer", color: atCurrentMonth ? C.faint : C.text, opacity: atCurrentMonth ? 0.4 : 1 }, children: _jsx(ChevronRight, { size: 17 }) })] }), _jsxs("div", { className: "wpb-calendar-weekdays", style: { display: "grid", gridTemplateColumns: "repeat(7,minmax(0,1fr))", gap: 4, marginBottom: 6 }, children: [DOW.map((d, i) => _jsx("abbr", { title: d[1], style: { textAlign: "center", textDecoration: "none", fontSize: 11, fontWeight: 700, color: C.faint }, children: d[0] }, i))] }), weeks.map((wk, wi) => (_jsxs("div", { className: "wpb-calendar-week", style: { display: "grid", gridTemplateColumns: "repeat(7,minmax(0,1fr))", gap: 4, marginBottom: 4 }, children: [wk.row.map((cell, ci) => {
                         const has = cell.sessions.length > 0;
                         const isSel = selDay && selDay.key === key(cell.date);
                         return (_jsxs("button", { "data-day": key(cell.date), "data-workouts": has ? String(cell.sessions.length) : undefined, "aria-label": `${cell.date.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" })}: ${cell.sessions.length} workout${cell.sessions.length === 1 ? "" : "s"}`, "aria-pressed": Boolean(isSel), disabled: !cell.inMonth || !has, onClick: () => setSelDay(cur => (has && !(cur && cur.key === key(cell.date))) ? { key: key(cell.date), date: cell.date, sessions: cell.sessions } : null), className: "pressable wpb-calendar-date", style: {
@@ -14329,13 +14322,13 @@ function TrainingHeatmap({ history }) {
                     })] }, wi))), selDay && (_jsxs("div", { className: "wpb-calendar-day-detail", role: "region", "aria-label": `Workouts on ${selDay.date.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}`, style: { marginTop: 12, background: C.bg2, borderRadius: 12, padding: "11px 13px" }, children: [_jsx("div", { style: { fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 6 }, children: selDay.date.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" }) }), selDay.sessions.map((h, i) => {
                         const hUnit = h.unit || "";
                         const exers = Object.entries(h.perf || {}).map(([id, p]) => ({ id, ex: EX_BY_ID[id], p })).filter(x => x.ex);
-                        return (_jsxs("div", { style: { padding: "6px 0", borderTop: i ? `1px solid ${C.borderSoft}` : "none" }, children: [_jsxs("div", { style: { display: "flex", alignItems: "baseline", gap: 8 }, children: [_jsx("span", { style: { fontSize: 13, fontWeight: 700, color: C.text, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: h.dayLabel || h.programName || "Workout" }), _jsxs("span", { className: "mono", style: { fontSize: 11, color: C.muted, flexShrink: 0 }, children: [h.setsDone || 0, " sets \u00B7 ", (h.volume || 0).toLocaleString(), " ", hUnit, h.durationMin ? ` · ${h.durationMin}m` : ""] })] }), exers.length > 0 && (_jsx("div", { style: { marginTop: 4 }, children: exers.map(({ id, ex, p }) => {
+                        return (_jsxs("div", { style: { padding: "6px 0", borderTop: i ? `1px solid ${C.borderSoft}` : "none" }, children: [_jsxs("div", { style: { display: "flex", alignItems: "baseline", gap: 8 }, children: [_jsx("span", { style: { fontSize: 13, fontWeight: 700, color: C.text, flex: 1, minWidth: 0, overflowWrap: "anywhere", whiteSpace: "normal" }, children: h.dayLabel || h.programName || "Workout" }), _jsxs("span", { className: "mono", style: { fontSize: 11, color: C.muted, flexShrink: 0 }, children: [h.setsDone || 0, " sets \u00B7 ", (h.volume || 0).toLocaleString(), " ", hUnit, h.durationMin ? ` · ${h.durationMin}m` : ""] })] }), exers.length > 0 && (_jsx("div", { style: { marginTop: 4 }, children: exers.map(({ id, ex, p }) => {
                                         const sets = (p.sets && p.sets.length) ? p.sets : (p.weight != null ? [{ w: p.weight, r: p.reps }] : []);
                                         if (!sets.length)
                                             return null;
-                                        return (_jsxs("div", { style: { display: "flex", alignItems: "baseline", gap: 8, marginTop: 4 }, children: [_jsx("span", { style: { fontSize: 11, color: C.muted, flexShrink: 0, width: 92, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: ex.name }), _jsx("span", { className: "mono", style: { fontSize: 11, color: C.text, fontWeight: 600, flex: 1, lineHeight: 1.5 }, children: sets.map(s => (Number(s.w) > 0 ? Number(s.w) : "BW") + (s.r != null && s.r !== "" ? "×" + s.r : "")).join("   ") })] }, id));
+                                        return (_jsxs("div", { style: { display: "flex", alignItems: "baseline", gap: 8, marginTop: 4 }, children: [_jsx("span", { style: { fontSize: 11, color: C.muted, flex: "0 1 42%", minWidth: 0, overflowWrap: "anywhere", whiteSpace: "normal" }, children: ex.name }), _jsx("span", { className: "mono", style: { fontSize: 11, color: C.text, fontWeight: 600, flex: 1, lineHeight: 1.5 }, children: sets.map(s => (Number(s.w) > 0 ? Number(s.w) : "BW") + (s.r != null && s.r !== "" ? "×" + s.r : "")).join("   ") })] }, id));
                                     }) }))] }, i));
-                    })] })), _jsx("div", { style: { display: "flex", gap: 8, marginTop: 12 }, children: [["Current streak", `${streaks.cur}d`], ["Longest", `${streaks.longest}d`], ["Workouts this month", `${monthCount}`]].map(([k, v]) => (_jsxs("div", { style: { flex: 1, textAlign: "center" }, children: [_jsx("div", { className: "mono", style: { fontSize: 15, fontWeight: 700, color: C.accentInk }, children: v }), _jsx("div", { style: { fontSize: 11, color: C.muted, marginTop: 2 }, children: k })] }, k))) })] }));
+                    })] })), _jsx("div", { className: "wpb-calendar-month-stats", style: { display: "flex", gap: 8, marginTop: 12 }, children: [["Training days this month", `${trainingDays}`], ["Workouts this month", `${monthCount}`]].map(([k, v]) => (_jsxs("div", { style: { flex: 1, textAlign: "center" }, children: [_jsx("div", { className: "mono", style: { fontSize: 15, fontWeight: 700, color: C.accentInk }, children: v }), _jsx("div", { style: { fontSize: 11, color: C.muted, marginTop: 2 }, children: k })] }, k))) })] }));
 }
 // Achievements / milestones — borrowed from Pursuit's gamification (First Step, On a Roll, Iron Habit…)
 /* Achievements. Three things they must not do: reward what the lifter can't control, punish a break,
@@ -14616,20 +14609,21 @@ function HistoryView({ history, onBack, onClear, onDeleteEntry, onEditEntry, emb
     const weekSubVol = useMemo(() => loggedSubVolume(history, 7), [history]);
     const progressGlance = useMemo(() => {
         const now = Date.now(), day = 86400000, weekAgo = now - 7 * day, prCutoff = now - 21 * day;
-        const sessions7 = history.filter(h => h?.date && h.date >= weekAgo).length;
+        const sessions7 = history.filter(h => (trainingCalendarDate(h?.date)?.getTime() || 0) >= weekAgo).length;
         const sets7 = Math.round(Object.values(weekVol || {}).reduce((n, v) => n + (Number(v) || 0), 0));
         const recentPrs = trends.filter(t => t?.sessionsCount >= 2 && t?.last?.date >= prCutoff && t.last.best >= t.prBest - 0.01).length;
-        const activeDays = new Set((history || []).filter(h => h?.date).map(h => { const d = new Date(h.date); return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`; }));
+        const activeDays = new Set((history || []).map(h => { const d = trainingCalendarDate(h?.date); return d ? `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}` : null; }).filter(Boolean));
         const activity28 = Array.from({ length: 28 }, (_, i) => {
-            const d = new Date(now - (27 - i) * day);
+            const d = new Date(now);
+            d.setDate(d.getDate() - (27 - i));
             const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
             return { on: activeDays.has(key), label: d.toLocaleDateString(undefined, { month: "short", day: "numeric" }) };
         });
-        const hasWeek = (offset) => (history || []).some(h => h?.date > now - (offset + 7) * day && h.date <= now - offset * day);
+        const hasWeek = (offset) => (history || []).some(h => { const t = trainingCalendarDate(h?.date)?.getTime(); return t != null && t > now - (offset + 7) * day && t <= now - offset * day; });
         let streak = 0;
         for (let w = 0; w < 200 && hasWeek(w * 7); w++)
             streak++;
-        const lastDate = (history || []).reduce((m, h) => h?.date > m ? h.date : m, 0);
+        const lastDate = (history || []).reduce((m, h) => { const t = trainingCalendarDate(h?.date)?.getTime(); return t != null && t > m ? t : m; }, 0);
         return { sessions7, sets7, recentPrs, activity28, streak, lastDate };
     }, [history, weekVol, trends]);
     const inRangeTrend = useMemo(() => {

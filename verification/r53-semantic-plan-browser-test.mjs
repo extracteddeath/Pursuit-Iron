@@ -132,7 +132,11 @@ async function verifyFoundationStates(browser){
         assert.ok((await controlStyle(page,'.wpb-plan-session-name')).contrast>=4.5,'Warm launch keeps readable session names');
         await page.click('[data-tab="home"]');await page.waitForSelector('.wpb-home');
         const start=await controlStyle(page,'.wpb-home .wpb-ui-action[data-action="primary"]');
+        // Deferred actions are intentionally below the first viewport; bring
+        // each into the live scroll viewport before checking pointer hits.
+        await page.$eval('.wpb-home-new-program',el=>el.scrollIntoView({block:'center'}));
         const create=await controlStyle(page,'.wpb-home-new-program');
+        await page.$eval('.wpb-home-freestyle',el=>el.scrollIntoView({block:'center'}));
         const freestyle=await controlStyle(page,'.wpb-home-freestyle');
         if(state==='scored'){
           const pulse=await page.evaluate(()=>{

@@ -12,6 +12,6 @@ Recorded workout dates in Progress use the existing restrained pointer-origin in
 
 ## Regression and rollout
 
-The existing permanent B831 motion browser contract now samples the actual imported production spring module under synthetic **60 Hz and 15 Hz** callback cadences over the same 200 ms window. It requires nearly equivalent progress and tests an actual recorded calendar button for named class targeting, press-feedback data attribute and unchanged 44px-plus hit width. Previous R28–R31 lifecycle/interrupt, route, theme, phone and reduced-motion checks remain intact.
+The existing permanent B831 motion browser contract now samples the actual imported production spring module under synthetic **60 Hz and 15 Hz** callback cadences over the same 200 ms window. It requires nearly equivalent progress and tests an actual recorded calendar button for named class targeting, press-feedback data attribute and unchanged pre-/post-press layout width and height (the temporary pressed visual scale is intentionally separate). Previous R28–R31 lifecycle/interrupt, route, theme, phone and reduced-motion checks remain intact.
 
 No CSS/React layout, data model, storage, third-party library or engine changes. Production JS runtime hash, offline cache revision and release manifest must exactly match this Build 867 candidate before merging. Merge only after all four CI workflows and all four phone-browser shards pass, then verify GitHub Pages and main post-merge CI. A physical Android frame-time/TalkBack acceptance pass is still required for final polish.

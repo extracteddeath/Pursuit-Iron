@@ -597,8 +597,8 @@ try{
     }finally{await context.close();}
   }
   // R81: Two actual sessions on one calendar date are two workouts but only
-  // one training day. A prescribed-only session must not manufacture completed
-  // sets, volume or duration; a modern recorded session must keep its own facts.
+  // one training day. A legacy session with 8 *prescribed* sets but only one
+  // completed set must report one; unknown volume/duration must stay omitted.
   {
     const context=await browser.createBrowserContext();
     const page=await context.newPage();
@@ -612,10 +612,10 @@ try{
       });
       const seed=store('rose');
       seed.history=[
-        {id:'r81-planned-only',programId:program.id,programName:program.name,
-          dayId:'upper',dayLabel:'Morning Planned Only',weekIndex:1,
+        {id:'r81-partially-logged',programId:program.id,programName:program.name,
+          dayId:'upper',dayLabel:'Morning Legacy Logged',weekIndex:1,
           date:dateOnly,unit:'lb',totalSets:8,
-          perf:{'bb-bench':{sets:[{w:185,r:6,done:false}]}}},
+          perf:{'bb-bench':{sets:[{w:185,r:6,done:true}]}}},
         {id:'r81-modern-completed',programId:program.id,programName:program.name,
           dayId:'upper',dayLabel:'Evening Completed',weekIndex:1,
           date:dateOnly,unit:'lb',totalSets:10,setsDone:3,volume:2250,
@@ -638,13 +638,13 @@ try{
       await page.click('.wpb-calendar-date[data-workouts]');
       await page.waitForSelector('.wpb-calendar-day-detail');
       const detail=await page.$eval('.wpb-calendar-day-detail',el=>el.textContent);
-      assert.match(detail,/Morning Planned Only/,'The morning session is visible');
+      assert.match(detail,/Morning Legacy Logged/,'The morning session is visible');
       assert.match(detail,/Evening Completed/,'The evening session is visible');
       const summaries=await page.$eval(
         '.wpb-calendar-day-detail .wpb-calendar-session-summary',
         els=>els.map(el=>el.textContent.trim()).sort());
-      assert.deepEqual(summaries,['3 sets · 2,250 lb · 55m','Summary not recorded'].sort(),
-        'Each workout retains truthful facts; prescribed sets are never treated as completed');
+      assert.deepEqual(summaries,['1 set','3 sets · 2,250 lb · 55m'].sort(),
+        'Each workout reports only recorded facts; eight prescribed sets cannot become eight completed');
       assert.equal(await page.$eval('.wpb-milestones-disclosure',el=>el.open),false,
         'Viewing multiple workouts does not unexpectedly expand milestones');
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+2),

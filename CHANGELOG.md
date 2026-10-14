@@ -1,3 +1,10 @@
+## Build 877 — Tablet workspace dock and full Focus workout controls
+
+- Open the set-aware dock by default on expanded tablet/foldable workspaces, while preserving the uncluttered phone logger and allowing a manual workspace toggle.
+- Replace compact destructive set-count minus with a labeled, explicit review/confirmation flow that protects completed sets and keeps the existing session-only set adjustment.
+- Give Focus mode pinned exercise-note editing and session notes, a plate-calculator launch for the exact focused set load, and full prescribed amplifier technique details.
+- Reuse the existing wall-clock rest controls, progression, plate arithmetic, saved exercise notes, live logger, themes and Material motion; no engine or saved-program mutation.
+
 ## Build 876 — See the upcoming exercises on Home
 
 - Open the session outline by default so the session name is followed by all actual exercise names, prescribed working sets and rep ranges before starting.

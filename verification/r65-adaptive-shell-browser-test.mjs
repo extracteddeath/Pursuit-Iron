@@ -577,7 +577,7 @@ try{
       assert.equal(actual.key,year+'-'+(month-1)+'-'+day,
         'Date-only imported workout stays on its local date in New York');
       assert.match(actual.label,/1 workout/,'Imported session remains a clickable real date');
-      assert.deepEqual(await page.$eval('.wpb-calendar-month-stats>div .mono',
+      assert.deepEqual(await page.$$eval('.wpb-calendar-month-stats>div .mono',
         els=>els.map(el=>el.textContent.trim())),['1','1'],
         'Monthly training days and sessions both include the correct imported date');
       assert.equal(await page.$eval('.wpb-milestones-disclosure',el=>el.open),false,

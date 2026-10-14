@@ -1,3 +1,9 @@
+## Build 867 — smoother motion under interrupted rendering
+
+- Improve shared spring integration at 60/120 Hz and during dropped frames with bounded, adaptive numerical substeps. Transitions keep momentum without the sluggish slow-motion caused by discarding elapsed time.
+- Add restrained theme-aware fingertip feedback for calendar dates with recorded workouts. Keep the calendar's existing date controls and the workout set logger untouched.
+- Extend permanent browser motion contracts for 60 Hz vs 15 Hz equivalent settling, recorded-day ink, and unchanged interaction hit targets. Existing interrupted sheet/navigation, reduced motion, offline and engine gates stay mandatory.
+
 ## Build 866 — Settings organization and direct navigation
 
 - Rename the misleading Units collection to **Training preferences**; it includes weight unit, training experience, effort scale, load increments, and available plates.

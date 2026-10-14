@@ -104,6 +104,30 @@ try{
         for(const route of ['plan','progress','profile','settings','home']){
           await page.click('[data-tab="'+route+'"]');
           await page.waitForSelector('[data-view-frame="'+route+'"]');
+          // R88: desktop-only Plan week scanning. Inspect actual geometry, not
+          // just the media query. Open weeks must span both columns; phone,
+          // short-landscape and 900px windows must retain one-column flow.
+          if(route==='plan'){
+            const planLayout=await page.evaluate(()=>{
+              const plan=document.querySelector('.wpb-plan-view');
+              const group=plan?.querySelector('.wpb-plan-phase-group');
+              const cards=[...(group?.querySelectorAll(':scope > .wpb-plan-week-card')||[])];
+              const bounds=el=>{const r=el.getBoundingClientRect();return {x:r.x,width:r.width,right:r.right};};
+              return {plan:plan?bounds(plan):null,group:group?bounds(group):null,
+                columns:group?getComputedStyle(group).gridTemplateColumns.split(' ').length:0,
+                cards:cards.map(el=>({...bounds(el),expanded:!!el.querySelector(':scope > .wpb-plan-session-list')})),
+                overflow:document.documentElement.scrollWidth>innerWidth+2};
+            });
+            assert.equal(planLayout.overflow,false,'R88 Plan never overflows viewport: '+JSON.stringify(planLayout));
+            if(width>=1120&&height>=720){
+              assert.equal(planLayout.columns,2,'R88 wide Plan uses two columns: '+JSON.stringify(planLayout));
+              assert.ok(planLayout.plan.width>720,'R88 uses expanded reading width: '+JSON.stringify(planLayout));
+              assert.ok(planLayout.cards.every(c=>c.width>0&&(!c.expanded||c.width>planLayout.group.width*.9)),
+                'R88 expanded week owns full row: '+JSON.stringify(planLayout));
+            }else{
+              assert.ok(planLayout.columns<=1,'R88 compact Plan remains single column: '+JSON.stringify(planLayout));
+            }
+          }
           // R73 semantic tabs: the same motion contract applies on Plan and
           // Progress in both palettes and across all existing viewports.
           if(route==='plan'||route==='progress'){

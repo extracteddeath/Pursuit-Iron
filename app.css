@@ -7757,3 +7757,27 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     color:CanvasText!important;background:Canvas!important;border-color:CanvasText!important;
   }
 }
+
+/* Build 869 · R86 — accessible, readable progression explanations.
+   Only the existing Plan Info rationale drawer is changed. Never touch logged
+   set rows, prescription values, theme tokens, or any training-engine inputs. */
+#root[data-pi-motion="expressive"] .wpb [data-progression-selection] details > summary{
+  box-sizing:border-box;
+  min-height:48px;
+  padding:12px 6px;
+}
+#root[data-pi-motion="expressive"] .wpb [data-progression-reason] > div:first-child{
+  flex-wrap:wrap;
+  align-items:flex-start!important;
+}
+#root[data-pi-motion="expressive"] .wpb [data-progression-reason] > div:first-child > span{
+  min-width:0;
+  max-width:100%;
+  white-space:normal!important;
+  overflow-wrap:anywhere;
+  text-overflow:clip!important;
+}
+#root[data-pi-motion="expressive"] .wpb [data-progression-selection] details > summary:focus-visible{
+  outline:2px solid var(--pi-color-active);
+  outline-offset:2px;
+}

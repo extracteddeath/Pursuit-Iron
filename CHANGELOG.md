@@ -1,3 +1,9 @@
+## Build 869 — readable progression rationale on phones
+
+- Plan Info → Lift progression → Why these methods? now has a full-size native disclosure tap target and displays complete, wrapping exercise and method names rather than truncating them to one line.
+- Keep the current theme colors, existing engine-owned reasons and changed/kept flags, keyboard disclosure semantics, saved plans, logged sets and workout controls exactly as before.
+- Add phone-browser regression checks for tap size, long-name wrapping, horizontal overflow and native expand/collapse; no new solver, optimizer, sound or haptics layer.
+
 ## Build 868 — Responsive touch feedback without forced layout
 
 - Repeated taps on primary navigation, selections and recorded workout dates restart the same subtle theme-native ripple by alternating identical CSS animation names. Removed forced synchronous layout read from repeated tap feedback.

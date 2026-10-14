@@ -503,6 +503,68 @@ try{
           await page.click('.wpb-wizard-header button[aria-label="Back"]');
         await page.click('.wpb-wizard-header button[aria-label="Back"]');
         await page.waitForSelector('[data-view-frame="home"]');
+        // R84: diagnose (do not retry or conceal) any missed primary-nav tap
+        // after a rail-to-compact viewport switch. Report actual pointer hit,
+        // navigation state, overlays and click delivery before blaming timing.
+        const zoomNavState=route=>page.evaluate(target=>{
+          const button=document.querySelector('.wpb-tabbar button[data-tab="'+target+'"]');
+          const r=button?.getBoundingClientRect();
+          const x=r?Math.max(0,Math.min(innerWidth-1,r.left+r.width/2)):0;
+          const y=r?Math.max(0,Math.min(innerHeight-1,r.top+r.height/2)):0;
+          const top=document.elementFromPoint(x,y);
+          const stack=document.elementsFromPoint(x,y).slice(0,6).map(el=>({
+            tag:el.tagName,cls:typeof el.className==='string'?el.className.slice(0,85):'',
+            role:el.getAttribute('role')
+          }));
+          const frame=document.querySelector('[data-view-frame]');
+          const active=document.querySelector('.wpb-tabbar button[aria-current="page"]');
+          const overlay=[...document.querySelectorAll('.wpb-backdrop,.wpb-dismiss-layer,.wpb-closing')]
+            .filter(el=>{const cs=getComputedStyle(el),b=el.getBoundingClientRect();
+              return b.width>0&&b.height>0&&cs.display!=='none'&&cs.visibility!=='hidden';})
+            .map(el=>el.className).slice(0,5);
+          return {target,frame:frame?.dataset.viewFrame,active:active?.dataset.tab,
+            width:innerWidth,height:innerHeight,scale:devicePixelRatio,
+            navBox:r?{x:r.x,y:r.y,width:r.width,height:r.height}:null,
+            navHit:!!button&&!!r&&r.width>=44&&r.height>=44&&
+              button.contains(top),pointerStack:stack,overlay,
+            delivered:window.__r84NavClicks||[],pageErrors:window.__r84PageErrors||[]};
+        },route);
+        const zoomNavClick=async(route,theme,width)=>{
+          await page.waitForFunction(target=>{
+            const el=document.querySelector('.wpb-tabbar button[data-tab="'+target+'"]');
+            const rect=el?.getBoundingClientRect();
+            const point=rect&&document.elementFromPoint(
+              rect.left+rect.width/2,rect.top+rect.height/2);
+            return !!rect&&rect.width>=44&&rect.height>=44&&
+              el.contains(point);
+          },{polling:'raf',timeout:6000},route).catch(async e=>{
+            const state=await zoomNavState(route);
+            throw new Error('R84 zoom nav is not hittable before click: '+
+              JSON.stringify({theme,width,state,cause:e.message}));
+          });
+          await page.evaluate(target=>{
+            window.__r84NavClicks=[];
+            const el=document.querySelector('.wpb-tabbar button[data-tab="'+target+'"]');
+            el.addEventListener('click',event=>window.__r84NavClicks.push({
+              target,eventTrusted:event.isTrusted,activeBefore:
+                document.querySelector('.wpb-tabbar [aria-current="page"]')?.dataset.tab
+            }),{capture:true,once:true});
+          },route);
+          await page.click('[data-tab="'+route+'"]');
+          try{
+            await page.waitForFunction(target=>{
+              const frame=document.querySelector('[data-view-frame]');
+              const current=document.querySelector('.wpb-tabbar [aria-current="page"]');
+              return frame?.dataset.viewFrame===target&&current?.dataset.tab===target;
+            },{polling:'raf',timeout:6000},route);
+          }catch(e){
+            const state=await zoomNavState(route);
+            await page.screenshot({path:path.join(root,
+              'verification/r84-nav-'+theme+'-'+width+'-'+route+'-failure-phone.png')});
+            throw new Error('R84 delivered navigation did not activate: '+
+              JSON.stringify({theme,width,state,cause:e.message}));
+          }
+        };
         // R74/B856: browser 200% zoom halves CSS viewport dimensions while
         // doubling physical-pixel density. Exercise the original routes at the
         // zoomed layout viewport, not a fake CSS transform or font-size proxy.
@@ -510,9 +572,12 @@ try{
           const zoomWidth=Math.round(width/2),zoomHeight=Math.round(height/2);
           await page.setViewport({width:zoomWidth,height:zoomHeight,
             deviceScaleFactor:2,isMobile:false,hasTouch:false});
+          // Let the native resized shell complete layout before evaluating
+          // the *actual* tap geometry; do not add an arbitrary sleep.
+          await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(
+            ()=>requestAnimationFrame(resolve))));
           for(const route of ['plan','progress','settings','home']){
-            await page.click('[data-tab="'+route+'"]');
-            await page.waitForSelector('[data-view-frame="'+route+'"]');
+            await zoomNavClick(route,theme,width);
             const zoom=await page.evaluate(()=>{
               const nav=[...document.querySelectorAll('.wpb-tabbar button[data-tab]')];
               const labels=nav.map(el=>({

@@ -478,7 +478,8 @@ try{
         await page.waitForSelector('[data-view-frame="home"]');
         // R71: exercise the real Home→Wizard path. The right-hand overview
         // reads the ONE active form; resizing never remounts or copies the draft.
-        await page.click('.wpb-home-create');
+        await page.$eval('.wpb-home-new-program',el=>el.scrollIntoView({block:'center'}));
+        await page.click('.wpb-home-new-program');
         await page.waitForSelector('.wpb-wizard .wpb-wizard-step');
         const creationMode=theme==='rose'?'Training cycle':'Single program';
         const chosen=await page.evaluate(label=>{

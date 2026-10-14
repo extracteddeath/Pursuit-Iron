@@ -435,8 +435,9 @@ try{
         assert.equal(await page.$eval('.wpb-library-search input',el=>el.value),'bench',
           'Escape preserves the filtered Library list');
         await page.click('.wpb-library-header button[aria-label="Back"]');
-        await page.waitForSelector('.wpb-home-create');
-        await page.click('.wpb-home-create');
+        await page.waitForSelector('.wpb-home-new-program');
+        await page.$eval('.wpb-home-new-program',el=>el.scrollIntoView({block:'center'}));
+        await page.click('.wpb-home-new-program');
         await page.waitForSelector('.wpb-wizard-step button');
         await page.evaluate(()=>{
           const mode=[...document.querySelectorAll('.wpb-wizard-step button')]

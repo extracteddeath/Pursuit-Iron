@@ -57,7 +57,7 @@ try{
         // R82: Settings navigation uses honest, findable category names.
         // It must reach the existing controls without changing their values.
         if(route==='settings'){
-          const destinations=await page.$eval('.wpb-settings-jump-control select option',
+          const destinations=await page.$$eval('.wpb-settings-jump-control select option',
             options=>options.map(el=>[el.value,el.textContent.trim()]));
           assert.ok(destinations.some(([id,label])=>id==='training'&&label==='Gyms & equipment'),
             'Settings directs equipment lookup to the actual gym section');
@@ -69,7 +69,7 @@ try{
             headings.includes('Training experience')&&headings.includes('Effort scale')&&
             headings.includes('Smallest jump')&&headings.includes('Weight unit'),
             'Related training controls remain together and readable');
-          assert.equal(await page.$eval('.wpb-settings [data-settings-anchor="preferences"]',
+          assert.equal(await page.$$eval('.wpb-settings [data-settings-anchor="preferences"]',
             anchors=>anchors.length),1,'Exactly one destination owns training preferences');
           await page.select('.wpb-settings-jump-control select','preferences');
           await page.waitForFunction(()=>document.querySelector('.wpb-settings .wpb-page-scroll')?.scrollTop>10);

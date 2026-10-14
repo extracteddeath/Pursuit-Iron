@@ -298,6 +298,12 @@ try{
             await page.waitForSelector('.wpb-calendar-day-detail');
             assert.match(await page.$eval('.wpb-calendar-day-detail',el=>el.textContent),/Upper/,
               'Tapping the exact date shows the recorded workout, not aggregate consistency');
+            const legacyFacts=await page.$eval('.wpb-calendar-day-detail .wpb-calendar-session-summary',
+              el=>el.textContent.trim());
+            assert.equal(legacyFacts,'2 sets · 1,320 lb · 40m',
+              'Legacy history detail uses completed working sets, tonnage and elapsed seconds');
+            assert.doesNotMatch(legacyFacts,/0 sets|0 lb|0m/,
+              'Missing modern fields must not become fabricated zero-valued history');
             assert.equal(await page.$eval('.wpb-milestones-disclosure',el=>el.open),false,
               'Selecting calendar history does not expand milestones');
             assert.equal(progress.viewportOverflow,false,'Progress has no horizontal overflow');
@@ -585,6 +591,9 @@ try{
       await page.click('.wpb-calendar-date[data-workouts]');
       assert.match(await page.$eval('.wpb-calendar-day-detail',el=>el.textContent),/Upper/,
         'Imported date opens its actual session details');
+      assert.equal(await page.$eval('.wpb-calendar-day-detail .wpb-calendar-session-summary',
+        el=>el.textContent.trim()),'2 sets · 1,320 lb · 40m',
+        'Date-only imports preserve legacy session facts after calendar-day correction');
     }finally{await context.close();}
   }
   console.log('PASS R65 adaptive shell, directional keyboard navigation, route preservation: '+JSON.stringify(results));

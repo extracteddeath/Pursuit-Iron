@@ -54,6 +54,28 @@ try{
         await page.click('[data-tab="'+route+'"]');
         await page.waitForSelector(selector);
         await settle(page);
+        // R82: Settings navigation uses honest, findable category names.
+        // It must reach the existing controls without changing their values.
+        if(route==='settings'){
+          const destinations=await page.$$eval('.wpb-settings-jump-control select option',
+            options=>options.map(el=>[el.value,el.textContent.trim()]));
+          assert.ok(destinations.some(([id,label])=>id==='training'&&label==='Gyms & equipment'),
+            'Settings directs equipment lookup to the actual gym section');
+          assert.ok(destinations.some(([id,label])=>id==='preferences'&&label==='Training preferences'),
+            'Settings exposes training options without hiding them under Units');
+          const headings=await page.$eval('.wpb-settings .wpb-page-scroll',
+            pane=>pane.textContent);
+          assert.ok(headings.includes('Training preferences')&&
+            headings.includes('Training experience')&&headings.includes('Effort scale')&&
+            headings.includes('Smallest jump')&&headings.includes('Weight unit'),
+            'Related training controls remain together and readable');
+          assert.equal(await page.$$eval('.wpb-settings [data-settings-anchor="preferences"]',
+            anchors=>anchors.length),1,'Exactly one destination owns training preferences');
+          await page.select('.wpb-settings-jump-control select','preferences');
+          await page.waitForFunction(()=>document.querySelector('.wpb-settings .wpb-page-scroll')?.scrollTop>10);
+          assert.equal(await page.$eval('.wpb-settings-jump-control select',el=>el.value),'',
+            'Settings jump resets for the next deliberate navigation');
+        }
         const before=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved);
         // Use the computed initial text size, then modify ONLY typography.
         // Restore every exact inline declaration (including priority) later.

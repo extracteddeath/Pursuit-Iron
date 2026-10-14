@@ -7884,13 +7884,38 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   height:44px;border:0;border-radius:12px;background:var(--pi-color-active);
   color:var(--pi-color-on-active);display:grid;place-items:center;cursor:pointer;
 }
-#root .wpb-dock-set-count{display:flex;gap:6px;align-items:center;color:var(--pi-color-on-muted);font-size:12px;}
-#root .wpb-dock-set-count>span{flex:1;}
+#root .wpb-dock-set-count{
+  display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+  color:var(--pi-color-on-muted);font-size:12px;
+}
+#root .wpb-dock-set-count>span{flex:1 0 100%;font-weight:600;}
 #root .wpb-dock-set-count>button{
-  width:44px;height:44px;border-radius:10px;border:1px solid var(--pi-layout-border);
-  background:transparent;color:inherit;display:grid;place-items:center;cursor:pointer;
+  min-height:44px;min-width:44px;padding:8px 12px;flex:1 1 auto;
+  border-radius:12px;border:1px solid var(--pi-layout-border);
+  background:transparent;color:inherit;display:flex;align-items:center;
+  justify-content:center;gap:6px;cursor:pointer;
 }
 #root .wpb-dock-set-count>button:disabled{opacity:.35;cursor:default;}
+#root .wpb-dock-remove-confirm{
+  display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;
+  padding:10px;border:1px solid var(--pi-layout-border);border-radius:14px;
+  background:var(--pi-color-surface-low,transparent);box-sizing:border-box;
+}
+#root .wpb-dock-remove-confirm>span{
+  grid-column:1/-1;line-height:1.45;color:var(--pi-color-on-muted);
+}
+#root .wpb-dock-remove-confirm>button{
+  min-height:44px;border:1px solid var(--pi-layout-border);border-radius:10px;
+  background:transparent;color:inherit;font:inherit;font-weight:700;cursor:pointer;
+}
+#root .wpb-dock-remove-confirm>button:last-child{
+  border-color:var(--pi-color-active);color:var(--pi-color-active);
+}
+#root .wpb-focus-plates:focus-visible,
+#root .wpb-focus-add-note:focus-visible,
+#root .wpb-dock-remove-confirm>button:focus-visible{
+  outline:2px solid var(--pi-color-active);outline-offset:2px;
+}
 #root .wpb-dock-rest-controls .wpb-rest-actions{justify-content:center;flex-wrap:wrap;}
 #root .wpb-workout[data-keyboard-open="true"] .wpb-set-dock-prototype{
   max-height:calc(100% - var(--pi-set-dock-footer,94px) - 70px)!important;

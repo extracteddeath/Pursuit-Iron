@@ -2118,14 +2118,28 @@ try {
         assert.ok(barDiagram.label?.includes('One side of the barbell'),JSON.stringify(barDiagram));
         await page.click('.wpb-backdrop button[aria-label="Close"]');
         await page.waitForFunction(()=>!document.querySelector('.wpb-visual-plate-bar'));
-        // The dock is an opt-in test of one contextual surface: it cannot
-        // replace the real set rows or rest clock until interaction research.
+        // B877 keeps the dock optional on phones and default on expanded screens.
+        // Exercise the real toggle in either state without hiding the tested dock.
+        const dockWasVisible=!!(await page.$('[data-set-dock-preview]'));
         await page.click('button[aria-label="Workout options"]');
         await page.evaluate(()=>{
-          const option=[...document.querySelectorAll('button')].find(b=>b.textContent.includes('Preview set-aware dock'));
-          if(!option) throw new Error('Missing prototype entry'); option.click();
+          const buttons=[...document.querySelectorAll('button')];
+          const option=buttons.find(b=>b.textContent.includes('Hide workout dock') || b.textContent.includes('Show workout dock'));
+          if(!option) throw new Error('Missing dock visibility option');
+          option.click();
         });
+        if(dockWasVisible) {
+          await page.waitForFunction(()=>!document.querySelector('[data-set-dock-preview]'));
+          await page.click('button[aria-label="Workout options"]');
+          await page.evaluate(()=>{
+            const show=[...document.querySelectorAll('button')].find(b=>b.textContent.includes('Show workout dock'));
+            if(!show) throw new Error('Missing Show workout dock option after hiding it');
+            show.click();
+          });
+        }
         await page.waitForSelector('[data-set-dock-preview]');
+        assert.equal(!!(await page.$('[data-set-dock-preview]')),true,
+          'dock remains available whether enabled manually or by expanded layout');
         const dock=await page.$eval('[data-set-dock-preview]',el=>{
           const mode=el.dataset.mode,body=el.textContent;
           return {mode,hasPlateAction:!!el.querySelector('.wpb-set-dock-plates'),

@@ -56,7 +56,22 @@ try {
             const button = await page.waitForSelector(`xpath/.//button[contains(., '${label}')]`);
             await button.click();
         };
-        await option('Preview set-aware dock');
+        // B877: dock is automatically available on expanded tablet/unfolded workspaces.
+        // Phones use the existing logger until the lifter explicitly enables the dock.
+        if (width >= 700) {
+            await page.waitForSelector('[data-set-dock-preview]');
+            await page.click('button[aria-label="Workout options"]');
+            const hideDock = await page.waitForSelector('xpath/.//button[contains(., "Hide workout dock")]');
+            assert.ok(hideDock,'expanded workspace must expose a way to hide its default dock');
+            await hideDock.click();
+            await page.waitForFunction(()=>!document.querySelector('[data-set-dock-preview]'));
+            await option('Show workout dock');
+            await page.waitForSelector('[data-set-dock-preview]');
+        } else {
+            assert.equal(await page.$('[data-set-dock-preview]'), null,
+                'phone defaults to uncluttered full logger');
+            await option('Show workout dock');
+        }
         const clickStable = async selector => {
             await page.waitForFunction(async selector => {
                 const el=document.querySelector(selector); if(!el)return false;
@@ -124,7 +139,14 @@ try {
         await clickStable(`${dock} button[aria-label="Adjust dock sets"]`);
         await clickStable(`${dock} button[aria-label="Add working set"]`);
         await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:live')).data[0].sets.filter(s=>!s.warm&&!s.sub).length===3);
-        await clickStable(`${dock} button[aria-label="Remove pending working set"]`);
+        await clickStable(`${dock} button[aria-label="Review removal of last unlogged working set"]`);
+        assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:live')).data[0].sets.filter(s=>!s.warm&&!s.sub).length),3,
+            'opening the removal decision does not discard any work');
+        await clickStable(`${dock} .wpb-dock-remove-confirm button:first-of-type`);
+        assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:live')).data[0].sets.filter(s=>!s.warm&&!s.sub).length),3,
+            'cancel preserves the current prescription');
+        await clickStable(`${dock} button[aria-label="Review removal of last unlogged working set"]`);
+        await clickStable(`${dock} .wpb-dock-remove-confirm button:last-of-type`);
         await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:live')).data[0].sets.filter(s=>!s.warm&&!s.sub).length===2);
         await clickStable(`${dock} button[aria-label="Adjust dock sets"]`);
         await page.waitForFunction(() => {

@@ -1558,6 +1558,66 @@ try {
         assert.ok(ink.animation.includes('piInkBurst') && ink.rippleVisible,
             'touch feedback is painted and transient even on the selected navigation tab');
         await page.waitForFunction(() => !document.querySelector('[data-tab="settings"]')?.hasAttribute('data-pi-ink'));
+        // R90: Android can cancel a pointer on system-gesture takeover or when
+        // a finger begins scrolling. The navigation spring must settle without
+        // dispatching an accidental route change or leaving an ink state behind.
+        const interruptTab='[data-tab="settings"]';
+        const pointerDownR90=async pointerId=>page.$eval(interruptTab,(el,id)=>{
+            const r=el.getBoundingClientRect();
+            const x=r.left+r.width/2,y=r.top+r.height/2;
+            el.dispatchEvent(new PointerEvent('pointerdown',{
+                bubbles:true,button:0,pointerId:id,clientX:x,clientY:y
+            }));
+            return {x,y};
+        },pointerId);
+        await pointerDownR90(990);
+        await page.waitForFunction(()=>Number.parseFloat(
+            document.querySelector('[data-tab="settings"]').style.getPropertyValue('--pi-control-scale'))<.999);
+        await page.evaluate(()=>document.dispatchEvent(new PointerEvent('pointercancel',{
+            bubbles:true,button:0,pointerId:990
+        })));
+        await page.waitForFunction(()=>document.querySelector('[data-tab="settings"]')
+            ?.style.getPropertyValue('--pi-control-scale')==='1');
+        await page.waitForFunction(()=>!document.querySelector('[data-tab="settings"]')
+            ?.hasAttribute('data-pi-ink'));
+        const startR90=await pointerDownR90(991);
+        await page.waitForFunction(()=>Number.parseFloat(
+            document.querySelector('[data-tab="settings"]').style.getPropertyValue('--pi-control-scale'))<.999);
+        await page.evaluate(({x,y})=>document.dispatchEvent(new PointerEvent('pointermove',{
+            bubbles:true,button:0,pointerId:991,clientX:x+24,clientY:y+24
+        })),startR90);
+        await page.waitForFunction(()=>document.querySelector('[data-tab="settings"]')
+            ?.style.getPropertyValue('--pi-control-scale')==='1');
+        await page.evaluate(()=>document.dispatchEvent(new PointerEvent('pointerup',{
+            bubbles:true,button:0,pointerId:991
+        })));
+        const cancelR90=await page.evaluate(()=>{
+            const current=document.querySelector('.wpb-tabbar [aria-current="page"]');
+            const tabs=[...document.querySelectorAll('.wpb-tabbar button[data-tab]')];
+            const chosen=current?.getBoundingClientRect();
+            return {selected:current?.dataset.tab,activeViews:
+                document.querySelectorAll('[data-view-frame="settings"]').length,
+                unchangedTargets:tabs.every(tab=>tab.offsetHeight>=56),
+                hit:!!current&&current.contains(document.elementFromPoint(
+                    chosen.left+chosen.width/2,chosen.top+chosen.height/2))};
+        });
+        assert.ok(cancelR90.selected==='settings'&&cancelR90.activeViews===1&&
+            cancelR90.unchangedTargets&&cancelR90.hit,
+            'R90 cancelled or scrolling touches preserve the original live destination and hit targets: '+
+                JSON.stringify(cancelR90));
+        // A hardware/Chromebook Space press interrupted by application blur
+        // likewise settles; it must not leave the selected nav shrunk.
+        await page.focus(interruptTab);
+        await page.keyboard.down(' ');
+        await page.waitForFunction(()=>Number.parseFloat(
+            document.querySelector('[data-tab="settings"]').style.getPropertyValue('--pi-control-scale'))<.999);
+        await page.evaluate(()=>window.dispatchEvent(new Event('blur')));
+        await page.waitForFunction(()=>document.querySelector('[data-tab="settings"]')
+            ?.style.getPropertyValue('--pi-control-scale')==='1');
+        await page.keyboard.up(' ');
+        assert.equal(await page.$eval('.wpb-tabbar [aria-current="page"]',el=>el.dataset.tab),
+            'settings','R90 interrupted keyboard press never changes route');
+
         // Losing window focus cancels a held button instead of leaving a scaled control.
         await page.$eval('[data-tab="settings"]', el => {
             const r = el.getBoundingClientRect();

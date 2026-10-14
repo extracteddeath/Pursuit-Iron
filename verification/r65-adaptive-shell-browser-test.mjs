@@ -596,6 +596,61 @@ try{
         'Date-only imports preserve legacy session facts after calendar-day correction');
     }finally{await context.close();}
   }
+  // R81: Two actual sessions on one calendar date are two workouts but only
+  // one training day. A prescribed-only session must not manufacture completed
+  // sets, volume or duration; a modern recorded session must keep its own facts.
+  {
+    const context=await browser.createBrowserContext();
+    const page=await context.newPage();
+    try{
+      await page.setViewport({width:393,height:852,deviceScaleFactor:1,isMobile:true,hasTouch:true});
+      await page.emulateTimezone('America/New_York');
+      const dateOnly=await page.evaluate(()=>{
+        const now=new Date();
+        return [now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),
+          String(now.getDate()).padStart(2,'0')].join('-');
+      });
+      const seed=store('rose');
+      seed.history=[
+        {id:'r81-planned-only',programId:program.id,programName:program.name,
+          dayId:'upper',dayLabel:'Morning Planned Only',weekIndex:1,
+          date:dateOnly,unit:'lb',totalSets:8,
+          perf:{'bb-bench':{sets:[{w:185,r:6,done:false}]}}},
+        {id:'r81-modern-completed',programId:program.id,programName:program.name,
+          dayId:'upper',dayLabel:'Evening Completed',weekIndex:1,
+          date:dateOnly,unit:'lb',totalSets:10,setsDone:3,volume:2250,
+          durationMin:55,perf:{'inc-curl':{sets:[{w:30,r:12,done:true}]}}}
+      ];
+      await page.evaluateOnNewDocument(data=>localStorage.setItem('wpb:v1',JSON.stringify(data)),seed);
+      await page.goto('http://127.0.0.1:8798/',{waitUntil:'networkidle0'});
+      await page.waitForSelector('.wpb-tabbar');
+      await page.click('[data-tab="progress"]');
+      await page.waitForSelector('.wpb-training-calendar');
+      assert.deepEqual(await page.$eval('.wpb-calendar-month-stats>div .mono',
+        els=>els.map(el=>el.textContent.trim())),['1','2'],
+        'Two workouts on one local date count as one training day and two workouts');
+      const dates=await page.$eval('.wpb-calendar-date[data-workouts]',
+        els=>els.map(el=>({count:el.dataset.workouts,label:el.getAttribute('aria-label')})));
+      assert.equal(dates.length,1,'Both sessions share one interactive training date');
+      assert.equal(dates[0].count,'2','The calendar cell shows the session count');
+      assert.match(dates[0].label,/2 workouts/,
+        'Screen readers receive the exact number of workouts on the selected date');
+      await page.click('.wpb-calendar-date[data-workouts]');
+      await page.waitForSelector('.wpb-calendar-day-detail');
+      const detail=await page.$eval('.wpb-calendar-day-detail',el=>el.textContent);
+      assert.match(detail,/Morning Planned Only/,'The morning session is visible');
+      assert.match(detail,/Evening Completed/,'The evening session is visible');
+      const summaries=await page.$eval(
+        '.wpb-calendar-day-detail .wpb-calendar-session-summary',
+        els=>els.map(el=>el.textContent.trim()).sort());
+      assert.deepEqual(summaries,['3 sets · 2,250 lb · 55m','Summary not recorded'].sort(),
+        'Each workout retains truthful facts; prescribed sets are never treated as completed');
+      assert.equal(await page.$eval('.wpb-milestones-disclosure',el=>el.open),false,
+        'Viewing multiple workouts does not unexpectedly expand milestones');
+      assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+2),
+        false,'Multiple workout details fit a narrow phone without horizontal overflow');
+    }finally{await context.close();}
+  }
   console.log('PASS R65 adaptive shell, directional keyboard navigation, route preservation: '+JSON.stringify(results));
 }finally{
   if(browser)await browser.close();

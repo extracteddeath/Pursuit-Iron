@@ -1,3 +1,9 @@
+## Build 870 — Workout weight Next / reps Done keyboard flow
+
+- Honor the existing mobile keyboard labels: pressing Next/Enter in an editable workout weight field moves to and selects the reps input **in the same set**. Done/Enter on reps releases keyboard focus but never completes the set.
+- Respect IME composition and readonly completed values; leave numeric input data, Target/Last, compact set grid, stepper long-press, rest timers, RIR, history, themes and training engine 0.65.7 unchanged.
+- Certify the flow across five phone viewport widths in the existing B825 browser contract. No new sound, haptic, modal or second set-row design.
+
 ## Build 869 — readable progression rationale on phones
 
 - Plan Info → Lift progression → Why these methods? now has a full-size native disclosure tap target and displays complete, wrapping exercise and method names rather than truncating them to one line.

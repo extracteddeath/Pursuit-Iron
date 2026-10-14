@@ -349,7 +349,12 @@ try{
         if(width===768&&theme==='rose'){
           await page.click('[data-tab="plan"]');
           await page.waitForSelector('.wpb-plan-view [data-plan-week="2"]');
-          await page.click('.wpb-plan-view [data-plan-week="2"] > button');
+          // The seeded history can make week 2 the current/default-open week.
+          // Clicking an already-expanded week would close it, so establish
+          // the desired state without depending on initial scheduling.
+          const weekTwoOpen=await page.$eval('.wpb-plan-view [data-plan-week="2"] > button',
+            el=>el.getAttribute('aria-expanded')==='true');
+          if(!weekTwoOpen) await page.click('.wpb-plan-view [data-plan-week="2"] > button');
           await page.waitForFunction(()=>document.querySelector(
             '.wpb-plan-view [data-plan-week="2"] > button')?.getAttribute('aria-expanded')==='true');
           await page.setViewport({width:393,height:852,deviceScaleFactor:1,isMobile:true,hasTouch:true});

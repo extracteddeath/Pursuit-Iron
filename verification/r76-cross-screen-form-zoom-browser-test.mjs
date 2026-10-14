@@ -64,10 +64,10 @@ try{
           assert.ok(destinations.some(([id,label])=>id==='preferences'&&label==='Training preferences'),
             'Settings exposes training options without hiding them under Units');
           const headings=await page.$eval('.wpb-settings .wpb-page-scroll',
-            panes=>panes.map(pane=>pane.textContent));
-          assert.ok(headings.some(body=>body.includes('Training preferences')&&
-            body.includes('Training experience')&&body.includes('Effort scale')&&
-            body.includes('Smallest jump')&&body.includes('Weight unit')),
+            pane=>pane.textContent);
+          assert.ok(headings.includes('Training preferences')&&
+            headings.includes('Training experience')&&headings.includes('Effort scale')&&
+            headings.includes('Smallest jump')&&headings.includes('Weight unit'),
             'Related training controls remain together and readable');
           assert.equal(await page.$eval('.wpb-settings [data-settings-anchor="preferences"]',
             anchors=>anchors.length),1,'Exactly one destination owns training preferences');

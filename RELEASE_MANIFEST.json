@@ -2,7 +2,7 @@
   "schemaVersion": 3,
   "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": 865,
+  "build": 866,
   "engineVersion": "0.65.7",
   "candidateStatus": "verification_enforced_by_ci",
   "runtimeAggregate": "abe181d03bf9c98843f680d593eb9222fb58420d35b3481bacc7a543d62480b0",
@@ -107,17 +107,17 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "f41a6d63ecbb4189a8ec2f43a37ac0fde7e2b1b7f137e386946a574902aa43a8",
-    "index.html": "ac9259d3be0bd665a3a6bf2180b90fc902f85d522b94d1cb1a72022d95248433",
-    "sw.js": "f4d78054c0fd837c69d4ad756d5f973f37466c87ffceaa18f04e6bae994dd4e4",
-    "BUILD_PROFILE.json": "fbf937570dadea7bde22eeb95aea5c9ddf4848aeaf9d3c188571212d917d1fff",
-    "CHANGELOG.md": "82aa4d4983350fb9407682a98fc7e0518818666e272a9c492bed44b44e034dc6",
+    "modules/App.js": "7453272647772f46520ac9e63a301e72abcf907a47ecd702078fa0ead85447dc",
+    "index.html": "374ab5470f93b054b0f3561149074f18c37c24ab508c52085e568fb0f8aad111",
+    "sw.js": "7884c0db55b27ee76ed211e4c085a7253e53a83ecbd6bf96501a983b840ea0a9",
+    "BUILD_PROFILE.json": "2f4029d8fe338eb93e6a24984295fee38dfb1ca89d59e82663968caff5ad6a9e",
+    "CHANGELOG.md": "cbc60fd8bdccbb40ce39e0108c7dfc06a08d647db601e11a95011d4c70febde0",
     "app.css": "9d3baa05e2e1dba784d2450477946d120ce47a39cf6b90432ae18c69954d4c66",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b865-r5a9578fe4310758e",
-  "uiMilestone": "Build 865 · R80 truthful legacy calendar session summaries"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b866-r4244835ab26d6d1d",
+  "uiMilestone": "Build 866 · R82 findable Settings training preferences"
 }

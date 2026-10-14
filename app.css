@@ -6677,7 +6677,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    The same PlanView, week-picker, Up Next and overview own the state at
    every width. CSS Grid only repositions the original DOM nodes. On
    phones, split-screen and short landscape, the original flow survives. */
-@media (min-width:1060px) and (min-height:700px){
+@media (min-width:980px) and (min-height:700px){
   #root[data-pi-motion="expressive"] .wpb .wpb-plan-view{
     display:grid!important;
     grid-template-columns:minmax(0,1fr) minmax(250px,296px);
@@ -6714,7 +6714,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     border-left:1px solid var(--pi-color-divider)!important;
   }
 }
-@media (forced-colors:active) and (min-width:1060px) and (min-height:700px){
+@media (forced-colors:active) and (min-width:980px) and (min-height:700px){
   #root[data-pi-motion="expressive"] .wpb .wpb-plan-view>.wpb-plan-overview{
     border-left-color:CanvasText!important;
   }

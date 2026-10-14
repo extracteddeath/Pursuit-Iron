@@ -11332,6 +11332,8 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
        already finished — and once every set was done the card vanished entirely, which is what "there
        still needs to be a way to view the last set" was about. */
     const [focusPin, setFocusPin] = useState(liveStatus === "resume" ? liveMatch?.focusPin || {} : {});
+    const [focusRemoveConfirm, setFocusRemoveConfirm] = useState(null);
+    useEffect(() => { setFocusRemoveConfirm(null); }, [exIdx]);
     useEffect(() => { try {
         localStorage.setItem("wpb:focus", focus ? "1" : "0");
     }
@@ -12586,7 +12588,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
                                                             ["MEV floor", `${tr.mev}`],
                                                             [tr.mavPersonal ? "your MAV" : "MAV (typical)", `${tr.mav}`],
                                                         ].filter(Boolean).map(([k, v]) => (_jsxs("span", { style: { fontSize: 11, fontWeight: 600, color: C.muted, background: C.bg2, borderRadius: 8, padding: "2px 7px" }, children: [_jsxs("span", { style: { color: C.faint }, children: [k, ":"] }), " ", v] }, k))) }))] }));
-                                        })()] }), _jsxs("div", { style: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, flexShrink: 0 }, children: [isPrimary && _jsx("span", { style: { fontSize: 11, fontWeight: 700, color: C.accentInk, background: C.accentDim, padding: "3px 7px", borderRadius: 8 }, children: "KEY LIFT" }), !focus && _jsxs("div", { className: "wpb-exercise-head-actions", style: { display: "flex", gap: 8 }, children: [_jsx("button", { "aria-label": `Exercise info for ${ex.name}`, onClick: () => setInfo(true), title: "Exercise info", className: "pressable hit", style: { width: 36, height: 36, borderRadius: 8, border: "none", background: "none", color: C.muted, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }, children: _jsx(Info, { size: 16 }) }), _jsx("button", { "aria-label": `History for ${ex.name}`, onClick: () => setHistSheet(true), title: "Exercise history", className: "pressable hit", style: { width: 36, height: 36, borderRadius: 8, border: "none", background: "none", color: C.muted, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }, children: _jsx(History, { size: 16 }) }), confirmRemoveEx === ei ? (_jsxs("button", { onClick: () => removeExerciseFromSession(ei), title: "Tap again to skip for today", className: "pressable hit", style: { height: 36, padding: "0 11px", borderRadius: 10, border: `1px solid ${C.warn}`, background: C.warn, color: C.warnText, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontSize: 13, fontWeight: 700, whiteSpace: "nowrap" }, children: [_jsx(SkipForward, { size: 14 }), " Skip?"] })) : (_jsx("button", { "aria-label": "Skip this exercise for today", onClick: () => setConfirmRemoveEx(ei), title: "Skip this exercise for today (stays in your program)", className: "pressable hit", style: { width: 36, height: 36, borderRadius: 8, border: "none", background: "none", color: C.muted, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }, children: _jsx(SkipForward, { size: 15 }) }))] })] })] }), !focus && _jsx("div", { "data-noswipe": true, className: "wpb-hscroll wpb-workout-tools", style: { display: "flex", gap: 8, overflowX: "auto", overflowY: "hidden", touchAction: "pan-x pan-y", margin: "11px 0 7px", paddingBottom: 2 }, children: [
+                                        })()] }), _jsxs("div", { style: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, flexShrink: 0 }, children: [isPrimary && _jsx("span", { style: { fontSize: 11, fontWeight: 700, color: C.accentInk, background: C.accentDim, padding: "3px 7px", borderRadius: 8 }, children: "KEY LIFT" }), _jsxs("div", { className: "wpb-exercise-head-actions", style: { display: "flex", gap: 8 }, children: [_jsx("button", { "aria-label": `Exercise info for ${ex.name}`, onClick: () => setInfo(true), title: "Exercise info", className: "pressable hit", style: { width: 36, height: 36, borderRadius: 8, border: "none", background: "none", color: C.muted, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }, children: _jsx(Info, { size: 16 }) }), _jsx("button", { "aria-label": `History for ${ex.name}`, onClick: () => setHistSheet(true), title: "Exercise history", className: "pressable hit", style: { width: 36, height: 36, borderRadius: 8, border: "none", background: "none", color: C.muted, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }, children: _jsx(History, { size: 16 }) }), confirmRemoveEx === ei ? (_jsxs("button", { onClick: () => removeExerciseFromSession(ei), title: "Tap again to skip for today", className: "pressable hit", style: { height: 36, padding: "0 11px", borderRadius: 10, border: `1px solid ${C.warn}`, background: C.warn, color: C.warnText, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontSize: 13, fontWeight: 700, whiteSpace: "nowrap" }, children: [_jsx(SkipForward, { size: 14 }), " Skip?"] })) : (_jsx("button", { "aria-label": "Skip this exercise for today", onClick: () => setConfirmRemoveEx(ei), title: "Skip this exercise for today (stays in your program)", className: "pressable hit", style: { width: 36, height: 36, borderRadius: 8, border: "none", background: "none", color: C.muted, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }, children: _jsx(SkipForward, { size: 15 }) }))] })] })] }), _jsx("div", { "data-noswipe": true, className: "wpb-hscroll wpb-workout-tools", style: { display: "flex", gap: 8, overflowX: "auto", overflowY: "hidden", touchAction: "pan-x pan-y", margin: "11px 0 7px", paddingBottom: 2 }, children: [
                                 { k: "warm", label: e.sets.some(s => s.warm) ? "Remove warm-up" : "Warm-up", icon: Flame, on: () => toggleWarmups(ei) },
                                 { k: "ss", hidden: !!program.config?.noSupersets, label: e.superset ? "Unlink superset" : "Superset", icon: Layers, on: () => e.superset ? toggleSuperset(ei) : setSupersetPick(true) },
                                 { k: "swap", label: "Swap", icon: Repeat, on: () => setSwap(true) },
@@ -12723,7 +12725,57 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
                                                             background: os.actualRIR === r ? C.accent : C.bg2,
                                                             color: os.actualRIR === r ? C.accentText : C.text, fontSize: 15, fontWeight: 700, cursor: "pointer" }, children: r === 4 ? "4+" : r }, r))) })] }));
                                     })()] }));
-                        })(), !focus && e.sets.map((s, si) => {
+                        })(), focus && _jsxs("div", { className: "wpb-focus-session-actions",
+                            "data-focus-session-actions": true, style: { display: "flex", gap: 8,
+                                flexWrap: "wrap", marginTop: 10, padding: "0 2px" },
+                            children: [
+                                _jsx("button", { type: "button", className: "pressable hit",
+                                    onClick: () => { setFocusRemoveConfirm(null); addSetRow(ei); },
+                                    style: { flex: "1 1 120px", minHeight: 44, borderRadius: 12,
+                                        border: `1px solid ${C.border}`, background: C.card, color: C.text,
+                                        cursor: "pointer", fontSize: 13, fontWeight: 650 },
+                                    children: "+ Add set" }),
+                                _jsx("button", { type: "button", className: "pressable hit",
+                                    "aria-label": "Review removal of last unlogged working set in Focus",
+                                    disabled: workOnly(e).length <= 1 || !e.sets.some(x => isWorkSet(x) && !x.done),
+                                    onClick: () => setFocusRemoveConfirm(e.id),
+                                    style: { flex: "1 1 120px", minHeight: 44, borderRadius: 12,
+                                        border: `1px solid ${C.border}`, background: "none", color: C.muted,
+                                        cursor: "pointer", fontSize: 13, fontWeight: 650 },
+                                    children: "Remove a set…" }),
+                                focusRemoveConfirm === e.id && _jsxs("div", { role: "group",
+                                    "aria-label": "Confirm Focus set removal",
+                                    style: { display: "flex", flexWrap: "wrap", gap: 8, width: "100%", padding: 10,
+                                        border: `1px solid ${C.border}`, borderRadius: 14, background: C.bg2 },
+                                    children: [
+                                        _jsx("span", { style: { width: "100%", fontSize: 12, color: C.muted, lineHeight: 1.45 },
+                                            children: "Remove the last unlogged working set from this session? Logged sets remain." }),
+                                        _jsx("button", { className: "pressable hit", onClick: () => setFocusRemoveConfirm(null),
+                                            style: { minHeight: 44, flex: 1, borderRadius: 10, color: C.text,
+                                                border: `1px solid ${C.border}`, background: C.card },
+                                            children: "Cancel" }),
+                                        _jsx("button", { className: "pressable hit", onClick: () => {
+                                                setFocusRemoveConfirm(null);
+                                                setData(rows => rows.map((row, i) => i === ei ? removePendingWorkingSet(row) : row));
+                                            }, style: { minHeight: 44, flex: 1, borderRadius: 10, color: C.accentInk,
+                                                border: `1px solid ${C.accent}`, background: C.accentDim },
+                                            children: "Remove pending set" })
+                                    ] }),
+                                !(ex.type === "compound" && isBarLike(ex.equip)) &&
+                                    _jsx("button", { type: "button", className: "pressable hit",
+                                        onClick: () => addAdvanced(ei, "drop"),
+                                        style: { minHeight: 44, padding: "0 12px", borderRadius: 12,
+                                            border: `1px solid ${C.border}`, background: C.card,
+                                            color: C.text, fontSize: 12, fontWeight: 650 },
+                                        children: e.sets.some(x => x.sub && x.kind === "drop") ? "✓ Drop set" : "+ Drop set" }),
+                                !(ex.type === "compound" && isBarLike(ex.equip)) &&
+                                    _jsx("button", { type: "button", className: "pressable hit",
+                                        onClick: () => addAdvanced(ei, "myo"),
+                                        style: { minHeight: 44, padding: "0 12px", borderRadius: 12,
+                                            border: `1px solid ${C.border}`, background: C.card,
+                                            color: C.text, fontSize: 12, fontWeight: 650 },
+                                        children: e.sets.some(x => x.sub && x.kind === "myo") ? "✓ Myo-reps" : "+ Myo-reps" })
+                            ] }), !focus && e.sets.map((s, si) => {
                             /* THE SET YOU ARE ON: the first one not yet logged. Everything else — logged already, or
                                still ahead — is dimmed, and this one keeps full contrast plus a left accent rule.
                                Before this, five rows shared one visual weight and finding your place meant reading
@@ -12929,7 +12981,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
     " bar +", _jsx("span", { className: "mono", style: { color: C.accentInk, fontWeight: 600, flex: 1 }, children: pl.plates.join(" · ") }),
     _jsxs("span", { children: ["/side", pl.leftover > 0 ? ` · ${pl.leftover} over` : ""] }),
     _jsx(ChevronRight, { size: 14, "aria-hidden": "true" })
-  ] })), (!focus || focusView(e)?.last) && (_jsxs("div", { style: { display: "flex", gap: 6, marginTop: focus ? 10 : 6 }, children: [_jsxs("button", { onClick: () => addSetRow(ei), className: "pressable", style: { flex: 1, background: "none", border: `1px dashed ${C.border}`, borderRadius: 12, color: C.muted, cursor: "pointer", fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, padding: "10px" }, children: [_jsx(Plus, { size: 14 }), " Add set"] }), (() => {
+  ] })), !focus && (_jsxs("div", { style: { display: "flex", gap: 6, marginTop: focus ? 10 : 6 }, children: [_jsxs("button", { onClick: () => addSetRow(ei), className: "pressable", style: { flex: 1, background: "none", border: `1px dashed ${C.border}`, borderRadius: 12, color: C.muted, cursor: "pointer", fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, padding: "10px" }, children: [_jsx(Plus, { size: 14 }), " Add set"] }), (() => {
                                     const hasDrop = e.sets.some(s => s.sub && s.kind === "drop");
                                     const hasMyo = e.sets.some(s => s.sub && s.kind === "myo");
                                     // Drop sets and myo-reps suit isolations and machine/cable/dumbbell work, where you

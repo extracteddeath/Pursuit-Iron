@@ -1,3 +1,11 @@
+## Build 872 — Home task-first hierarchy
+
+- Keep the actual next workout and its Start button as the dominant Home task. The headline now describes the task consistently rather than choosing a random phrase on unscheduled days.
+- When training is active, bring the compact **This week / Streak** summary immediately below the next workout; the previous lifetime total no longer distracts from recent consistency.
+- Preserve the selected program library and management controls after that training summary. Recovery comes before Strength Score among deeper insights; installation prompts and release news move below training content into discovery.
+- Stop pinning **Create Program** beside the bottom navigation when a session is already ready. New program and freestyle remain available as readable action rows after training content. The no-active-program creation dock remains unchanged.
+- Preserve the workout logger, Plan / Progress navigation, every theme, engine 0.65.7, saved programs/history, offline loading, and session launch semantics. Extend the R53 real-browser hierarchy/contrast checks to verify active-workout vs creation priority, secondary-action reachability and recent metrics.
+
 ## Build 871 — Adaptive medium Plan workspace
 
 - The existing 600–839px medium-window tab shell now uses up to 760px of available width on sufficiently tall windows, instead of remaining a 460px phone mockup. All five primary tabs share the same shell; bottom navigation remains the original owner.

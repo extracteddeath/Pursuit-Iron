@@ -66,11 +66,18 @@ function settle(state) {
     const complete = state.complete; state.complete = null; complete?.();
 }
 function tick(now) {
-    const dt = Math.min(Math.max(0, (now - previousAt) / 1000), .032) / 3;
+    // A fixed three-way split at 60Hz feels fine, but at 30Hz it silently
+    // discards half the elapsed time when frames exceed the old 32ms cap.
+    // Preserve bounded wall-clock progress after a dropped frame without
+    // giving a high-stiffness spring an unstable single integration step.
+    // At 60/120Hz this remains about 3/2 small steps per paint.
+    const elapsed = Math.min(Math.max(0, (now - previousAt) / 1000), .064);
+    const steps = Math.max(1, Math.ceil(elapsed / .008));
+    const dt = elapsed / steps;
     previousAt = now;
     active.forEach(state => {
         if (!state.el.isConnected) { active.delete(state); state.complete = null; return; }
-        for (let step = 0; step < 3; step++) {
+        for (let step = 0; step < steps; step++) {
             state.velocity += (state.stiffness * (state.target - state.value)
                 - 2 * state.damping * Math.sqrt(state.stiffness) * state.velocity) * dt;
             state.value += state.velocity * dt;
@@ -536,7 +543,7 @@ function disclosure(el, initial = false) {
     }
     // A brief touch-origin state layer on navigation and choices, not the dense workout set grid.
     // It never inserts a DOM child, changes a hit target, or consumes a click.
-    const inkTargets = '.wpb-tab, .wpb-segmented > button, .wpb-premium-tabs > button, .wpb-exercise-tabs > button, .wpb-exercise-window-tabs > button, .wpb-exercise-metric-tabs > button, .wpb-progress-grouping > button, .wpb-plan-panes > button, .wpb-wizard-option, .wpb-wizard-choice, .wpb-wizard-preset, .wpb-filter-chip, .wpb-library-flag, .wpb-onboarding-primary, .wpb-onboarding-secondary, .wpb-home-create, .wpb-home .wpb-action-tile, [role="tablist"] > button, button.wpb-toggle, .wpb-context-menu-item, .wpb-sheet-close';
+    const inkTargets = '.wpb-tab, .wpb-segmented > button, .wpb-premium-tabs > button, .wpb-exercise-tabs > button, .wpb-exercise-window-tabs > button, .wpb-exercise-metric-tabs > button, .wpb-progress-grouping > button, .wpb-plan-panes > button, .wpb-wizard-option, .wpb-wizard-choice, .wpb-wizard-preset, .wpb-filter-chip, .wpb-library-flag, .wpb-onboarding-primary, .wpb-onboarding-secondary, .wpb-home-create, .wpb-home .wpb-action-tile, .wpb-calendar-date[data-workouts], [role="tablist"] > button, button.wpb-toggle, .wpb-context-menu-item, .wpb-sheet-close';
     function ink(el, x, y) {
         if (reduced() || !el.matches(inkTargets)) return;
         const r = el.getBoundingClientRect();

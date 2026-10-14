@@ -106,6 +106,32 @@ try {
             await page.keyboard.type(replacement);
             assert.equal(await page.$eval(selector, input => input.value), replacement, 'typing replaces the value without Select All');
         }
+        // R87: the visible IME Next / Done hints must actually navigate the set
+        // without completing it, changing a value, or moving to another set.
+        await page.focus(weightField);
+        await page.keyboard.press('Enter');
+        assert.deepEqual(await page.evaluate(() => ({
+            field: document.activeElement?.getAttribute('aria-label'),
+            row: document.activeElement?.closest('[data-testid^="set-"]')?.getAttribute('data-testid')
+        })), {field: 'reps',row: 'set-0-0'}, 'weight Enter advances to reps in the same set');
+        assert.deepEqual(await selected(repsField), [0, 1],
+            'Next selects the existing reps so they can be replaced');
+        const composition=await page.$eval(repsField, input => {
+            const event=new KeyboardEvent('keydown',{bubbles:true,cancelable:true,key:'Enter',isComposing:true});
+            input.dispatchEvent(event);
+            return {prevented:event.defaultPrevented,focused:document.activeElement===input};
+        });
+        assert.deepEqual(composition,{prevented:false,focused:true},
+            'IME composition Enter is browser-owned and never closes the reps field');
+        await page.keyboard.press('Enter');
+        assert.equal(await page.evaluate(() => document.activeElement?.matches('input[aria-label="reps"]')),false,
+            'reps Done releases focus without completing the set');
+        assert.equal(await page.$eval(weightField, n=>n.value),'205.5',
+            'IME navigation leaves the typed decimal unchanged');
+        assert.equal(await page.$eval(repsField, n=>n.value),'6',
+            'IME navigation leaves the typed reps unchanged');
+        assert.equal(await page.$eval('[data-testid="set-0-0"]', n=>n.dataset.done),'0',
+            'IME Done does not log or complete the set');
         await page.click('[data-testid="set-0-0"] button[aria-label="weight up"]');
         assert.ok(Number(await page.$eval(weightField, input => input.value)) > 205.5, 'steppers continue from the typed decimal');
         await page.focus('[data-testid="set-0-0"] button[aria-label="weight down"]');

@@ -6595,11 +6595,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     width:100%!important;
     max-width:760px!important;
   }
-  #root[data-pi-motion="expressive"] .wpb .wpb-plan-view{
-    box-sizing:border-box;
-    min-width:0;
-    padding-inline:clamp(20px,3vw,28px)!important;
-  }
 }
 
 /* R67 — tablet and desktop adaptive sheet surfaces.

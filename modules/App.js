@@ -10925,6 +10925,92 @@ function suggestionLoadLabel(suggestion) {
  * targets, falling short, and repeating the same numbers for weeks (which is what a stall looks like
  * and what the plateau and style-override branches key on). */
 
+
+/* B874 opt-in Material set-dock prototype. It reads the live set and existing
+   timer only; it never owns progression, rest timing, or logging state. */
+function SetAwareDockPrototype({ data, exIdx, lastPerf, program, day, weekIndex, unit, loadMode,
+    rest, paused, onPlate, onClose }) {
+    const row = data[exIdx];
+    const ex = row && EX_BY_ID[row.id];
+    if (!row || !ex) return null;
+    const work = row.sets.filter(s => !s.warm && !s.sub);
+    const set = work.find(s => !s.done) || work[work.length - 1];
+    const setIndex = Math.max(0, work.indexOf(set));
+    const last = previousWorkoutSet(lastPerf[row.id], setIndex);
+    const target = set?.target || {};
+    const suggested = set?.suggested;
+    const cell = computeCell(program, day, row.id, row.slot, weekIndex);
+    const isRest = rest > 0;
+    const bar = barFor(ex);
+    const tech = cell?.tech;
+    const line = (title, value, subtitle, action) => _jsxs("div", {
+        className: "wpb-set-dock-fact", style: { display: "flex", flexDirection: "column", gap: 3,
+          flex: 1, minWidth: 0, padding: "9px 11px", borderRadius: 15,
+          background: C.card, border: `1px solid ${C.borderSoft}` },
+        children: [
+          _jsx("span", { style: { fontSize: 10, fontWeight: 800, letterSpacing: .8, color: C.muted }, children: title }),
+          _jsx("span", { className: "mono", style: { fontSize: 18, fontWeight: 750, color: C.text,
+            overflowWrap: "anywhere" }, children: value }),
+          subtitle && _jsx("span", { style: { fontSize: 11, color: C.muted, lineHeight: 1.2 }, children: subtitle }),
+          action && _jsx("span", { style: { fontSize: 11, color: C.accentInk }, children: action })
+        ] });
+    return _jsxs("aside", { className: "wpb-set-dock-prototype", "data-set-dock-preview": true,
+      "data-mode": isRest ? "rest" : "set", "aria-label": "Experimental set-aware dock",
+      style: { position: "absolute", zIndex: 47, left: 12, right: 12, bottom: 94,
+        maxWidth: 540, marginInline: "auto", padding: "12px",
+        color: C.text, display: "flex", flexDirection: "column", gap: 8 },
+      children: [
+        _jsxs("div", { style: { display: "flex", alignItems: "center", gap: 10, minHeight: 34 },
+          children: [
+            _jsx("div", { style: { width: 33, height: 33, borderRadius: 12,
+              background: C.accentDim, color: C.accentInk, display: "grid", placeItems: "center" },
+              children: isRest ? _jsx(Timer, { size: 18 }) : _jsx(Target, { size: 18 }) }),
+            _jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [
+              _jsx("div", { style: { fontSize: 10, color: C.muted, fontWeight: 750,
+                letterSpacing: .6 }, children: "SET DOCK · EXPERIMENTAL" }),
+              _jsx("div", { style: { fontSize: 13, fontWeight: 700, color: C.text },
+                children: isRest ? (paused ? "Rest paused" : "Rest in progress")
+                    : `Set ${setIndex + 1} of ${work.length} · ${ex.name}` })
+            ] }),
+            _jsx("button", { type: "button", onClick: onClose,
+              className: "pressable hit", "aria-label": "Close set dock prototype",
+              style: { ...iconBtn(), width: 38, height: 38, border: "none",
+                background: C.card, borderRadius: 13 },
+              children: _jsx(X, { size: 17 }) })
+          ] }),
+        isRest
+          ? _jsxs("div", { style: { textAlign: "center", padding: "2px 4px 6px" },
+              children: [
+                _jsx("div", { className: "mono", style: { fontWeight: 800, fontSize: 36,
+                  color: C.accentInk, lineHeight: 1.12 }, children: fmtTime(rest) }),
+                _jsx("div", { style: { fontSize: 12, color: C.muted, marginTop: 5 },
+                  children: `Up next · ${set?.weight || target.w || "—"} ${unit} × ${set?.reps || target.reps || "—"} reps` })
+              ] })
+          : _jsxs("div", { style: { display: "flex", gap: 6 },
+              children: [
+                line("LAST TIME", last?.w ? `${last.w}×${last.r || "—"}` : "—",
+                  last?.rir != null ? effortLabel(last.rir, loadMode) : "No matching logged set"),
+                line("SUGGESTED", suggested?.weight ? `${suggested.weight}×${suggested.reps || "—"}`
+                  : `${target.w || "—"}×${target.reps || "—"}`,
+                  `Target ${target.reps || "—"} reps`,
+                  target.rir != null ? effortLabel(target.rir, loadMode) : null)
+              ] }),
+        !isRest && tech && _jsxs("div", { style: { padding: "7px 10px", borderRadius: 12,
+          background: C.accentDim, color: C.accentInk, fontSize: 12, lineHeight: 1.35 },
+          children: [_jsx("strong", { children: "Final-set amplifier · " }), String(tech)] }),
+        bar && _jsxs("button", { type: "button", className: "pressable wpb-set-dock-plates",
+          onClick: () => onPlate(bar, set?.weight || target.w || ""),
+          style: { minHeight: 44, display: "flex", alignItems: "center", gap: 8,
+            border: `1px solid ${C.border}`, borderRadius: 13, background: C.card,
+            color: C.text, padding: "8px 11px", textAlign: "left", fontSize: 13, fontWeight: 650 },
+          children: [
+            _jsx(Dumbbell, { size: 17, color: C.accentInk }),
+            _jsx("span", { style: { flex: 1 }, children: "Visual plate calculator" }),
+            _jsx(ChevronRight, { size: 16, "aria-hidden": "true" })
+          ] })
+      ] });
+}
+
 function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipment = null, day: rawDay, weekIndex, unit, perf, onExit, onFinish, onSaveRoutine, onBan, banned = [], history = [], loadMode = "rir", onEditHistory, goals = {}, onSetGoal, restAutoStart = true, restScale = 1, exNotes = {}, onSetExNote, exSetup = {}, onSetExSetup, onSetExLoadInc, onUpdateProgramExercise, onSetRest }) {
     // Resilient to a removed/unknown exercise id lingering in a saved program: drop it cleanly.
     const day = useMemo(() => (rawDay.exercises.every(id => EX_BY_ID[id]) ? rawDay : { ...rawDay, exercises: rawDay.exercises.filter(id => EX_BY_ID[id]) }), [rawDay]);
@@ -11197,6 +11283,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
     const [confirmExit, setConfirmExit] = useState(false);
     const [sessionMenu, setSessionMenu] = useState(false); // workout options sheet (timer / add lift / finish / discard)
     const [calc, setCalc] = useState(false);
+    const [setDockPreview, setSetDockPreview] = useState(false);
     const [injuryOpen, setInjuryOpen] = useState(false);
     const [injuryPart, setInjuryPart] = useState("");
     const [injuryReports, setInjuryReports] = useState(() => liveMatch?.injuryReports || []);
@@ -13145,7 +13232,10 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
                                                         onSaveRoutine(data.map(x => x.id), routineName.trim());
                                                         finish();
                                                     } }, disabled: !routineName.trim(), className: "pressable", style: { flex: 1, padding: "12px", borderRadius: 12, border: "none", background: routineName.trim() ? C.accent : C.card, color: routineName.trim() ? C.accentText : C.faint, fontSize: 15, fontWeight: 700, cursor: routineName.trim() ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }, children: [_jsx(Save, { size: 14 }), " Save & finish"] }), _jsx("button", { onClick: () => setRoutineName(null), className: "pressable", style: { padding: "12px 14px", borderRadius: 12, border: `1px solid ${C.border}`, background: "none", color: C.muted, fontSize: 15, fontWeight: 600, cursor: "pointer" }, children: "Cancel" })] })] }))), _jsx("button", { onClick: () => { if (finishingRef.current) return; setFinishing(false); setFinishFeedbackOpen(false); }, className: "pressable", style: { width: "100%", padding: "12px", marginTop: 8, borderRadius: 13, border: `1px solid ${C.border}`, background: "none", color: C.muted, fontSize: 15, fontWeight: 600, cursor: "pointer" }, children: "Keep training" })] }) }));
-                })() }), _jsx(Exit, { when: !!calc, children: calc && _jsx(PlateCalcSheet, { unit: unit, initialBar: calc.bar, initialWeight: calc.weight, onClose: () => setCalc(false) }) }), _jsx(Exit, { when: goalEdit, children: goalEdit && (_jsx("div", { onClick: () => setGoalEdit(null), className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.65)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 70, animation: "fadeIn .2s both", padding: 24 }, children: _jsxs("div", { onClick: e => e.stopPropagation(), className: "wpb-dialog", style: { width: "100%", maxWidth: 320, background: C.bg2, borderRadius: 16, padding: 20, border: `1px solid ${C.border}` }, children: [_jsxs("div", { "data-dialog-title": true, style: { fontSize: 15, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }, children: [_jsx(Target, { size: 17, color: C.accentInk }), " Goal weight"] }), _jsxs("div", { style: { fontSize: 13, color: C.muted, marginTop: 2, marginBottom: 16 }, children: [EX_BY_ID[goalEdit.exId]?.name, " \u2014 the top-set weight you're working toward."] }), _jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }, children: [_jsx("input", { "aria-label": "Goal weight", inputMode: "decimal", onFocus: selectNumericInput, onClick: selectNumericInput, value: goalEdit.w, autoFocus: true, onChange: e => setGoalEdit(g => ({ ...g, w: e.target.value })), className: "mono", style: { flex: 1, padding: "12px 14px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: 18, fontWeight: 600, textAlign: "center" } }), _jsx("span", { style: { fontSize: 15, color: C.muted, fontWeight: 600 }, children: unit })] }), _jsx("button", { onClick: () => { onSetGoal?.(goalEdit.exId, parseFloat(goalEdit.w) || 0); setGoalEdit(null); }, className: "pressable", style: { width: "100%", padding: "13px", borderRadius: 12, border: "none", background: C.accent, color: C.accentText, fontSize: 15, fontWeight: 700, cursor: "pointer" }, children: "Save goal" }), _jsxs("div", { style: { display: "flex", gap: 8, marginTop: 8 }, children: [goals[goalEdit.exId] && _jsx("button", { onClick: () => { onSetGoal?.(goalEdit.exId, 0); setGoalEdit(null); }, className: "pressable", style: { flex: 1, padding: "11px", borderRadius: 12, border: `1px solid ${C.dangerDim}`, background: "none", color: C.danger, fontSize: 15, fontWeight: 600, cursor: "pointer" }, children: "Clear" }), _jsx("button", { onClick: () => setGoalEdit(null), className: "pressable", style: { flex: 1, padding: "11px", borderRadius: 12, border: `1px solid ${C.border}`, background: "none", color: C.muted, fontSize: 15, fontWeight: 600, cursor: "pointer" }, children: "Cancel" })] })] }) })) }), _jsx(Exit, { when: histEdit, children: histEdit && (_jsx("div", { onClick: () => setHistEdit(null), className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.65)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 70, animation: "fadeIn .2s both", padding: 24 }, children: _jsxs("div", { onClick: e => e.stopPropagation(), className: "wpb-dialog", style: { width: "100%", maxWidth: 340, background: C.bg2, borderRadius: 16, padding: 20, border: `1px solid ${C.border}` }, children: [_jsx("div", { style: { fontSize: 15, fontWeight: 700 }, children: "Edit logged set" }), _jsxs("div", { style: { fontSize: 13, color: C.muted, marginTop: 2, marginBottom: 16 }, children: [EX_BY_ID[histEdit.exId]?.name, " \u00B7 top set"] }), _jsxs("div", { style: { display: "flex", gap: 8, marginBottom: 16 }, children: [_jsxs("div", { style: { flex: 1 }, children: [_jsxs("div", { style: { fontSize: 11, fontWeight: 600, color: C.muted, marginBottom: 4 }, children: ["WEIGHT (", unit, ")"] }), _jsx("input", { "aria-label": "Weight lifted", inputMode: "decimal", onFocus: selectNumericInput, onClick: selectNumericInput, value: histEdit.w, onChange: e => setHistEdit(h => ({ ...h, w: e.target.value })), className: "mono", style: { width: "100%", padding: "11px 12px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: 15, fontWeight: 600, textAlign: "center" } })] }), _jsxs("div", { style: { flex: 1 }, children: [_jsx("div", { style: { fontSize: 11, fontWeight: 600, color: C.muted, marginBottom: 4 }, children: "REPS" }), _jsx("input", { "aria-label": "Reps completed", inputMode: "numeric", onFocus: selectNumericInput, onClick: selectNumericInput, value: histEdit.r, onChange: e => setHistEdit(h => ({ ...h, r: e.target.value })), className: "mono", style: { width: "100%", padding: "11px 12px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: 15, fontWeight: 600, textAlign: "center" } })] })] }), _jsx("button", { onClick: () => { const w = parseFloat(histEdit.w), r = parseInt(histEdit.r); if (w > 0 && r > 0)
+                })() }), setDockPreview && _jsx(SetAwareDockPrototype, { data, exIdx, lastPerf, program, day, weekIndex,
+                     unit, loadMode, rest, paused, onPlate: (bar, weight) => setCalc({ bar, weight }),
+                     onClose: () => setSetDockPreview(false) }),
+                 _jsx(Exit, { when: !!calc, children: calc && _jsx(PlateCalcSheet, { unit: unit, initialBar: calc.bar, initialWeight: calc.weight, onClose: () => setCalc(false) }) }), _jsx(Exit, { when: goalEdit, children: goalEdit && (_jsx("div", { onClick: () => setGoalEdit(null), className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.65)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 70, animation: "fadeIn .2s both", padding: 24 }, children: _jsxs("div", { onClick: e => e.stopPropagation(), className: "wpb-dialog", style: { width: "100%", maxWidth: 320, background: C.bg2, borderRadius: 16, padding: 20, border: `1px solid ${C.border}` }, children: [_jsxs("div", { "data-dialog-title": true, style: { fontSize: 15, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }, children: [_jsx(Target, { size: 17, color: C.accentInk }), " Goal weight"] }), _jsxs("div", { style: { fontSize: 13, color: C.muted, marginTop: 2, marginBottom: 16 }, children: [EX_BY_ID[goalEdit.exId]?.name, " \u2014 the top-set weight you're working toward."] }), _jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }, children: [_jsx("input", { "aria-label": "Goal weight", inputMode: "decimal", onFocus: selectNumericInput, onClick: selectNumericInput, value: goalEdit.w, autoFocus: true, onChange: e => setGoalEdit(g => ({ ...g, w: e.target.value })), className: "mono", style: { flex: 1, padding: "12px 14px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: 18, fontWeight: 600, textAlign: "center" } }), _jsx("span", { style: { fontSize: 15, color: C.muted, fontWeight: 600 }, children: unit })] }), _jsx("button", { onClick: () => { onSetGoal?.(goalEdit.exId, parseFloat(goalEdit.w) || 0); setGoalEdit(null); }, className: "pressable", style: { width: "100%", padding: "13px", borderRadius: 12, border: "none", background: C.accent, color: C.accentText, fontSize: 15, fontWeight: 700, cursor: "pointer" }, children: "Save goal" }), _jsxs("div", { style: { display: "flex", gap: 8, marginTop: 8 }, children: [goals[goalEdit.exId] && _jsx("button", { onClick: () => { onSetGoal?.(goalEdit.exId, 0); setGoalEdit(null); }, className: "pressable", style: { flex: 1, padding: "11px", borderRadius: 12, border: `1px solid ${C.dangerDim}`, background: "none", color: C.danger, fontSize: 15, fontWeight: 600, cursor: "pointer" }, children: "Clear" }), _jsx("button", { onClick: () => setGoalEdit(null), className: "pressable", style: { flex: 1, padding: "11px", borderRadius: 12, border: `1px solid ${C.border}`, background: "none", color: C.muted, fontSize: 15, fontWeight: 600, cursor: "pointer" }, children: "Cancel" })] })] }) })) }), _jsx(Exit, { when: histEdit, children: histEdit && (_jsx("div", { onClick: () => setHistEdit(null), className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.65)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 70, animation: "fadeIn .2s both", padding: 24 }, children: _jsxs("div", { onClick: e => e.stopPropagation(), className: "wpb-dialog", style: { width: "100%", maxWidth: 340, background: C.bg2, borderRadius: 16, padding: 20, border: `1px solid ${C.border}` }, children: [_jsx("div", { style: { fontSize: 15, fontWeight: 700 }, children: "Edit logged set" }), _jsxs("div", { style: { fontSize: 13, color: C.muted, marginTop: 2, marginBottom: 16 }, children: [EX_BY_ID[histEdit.exId]?.name, " \u00B7 top set"] }), _jsxs("div", { style: { display: "flex", gap: 8, marginBottom: 16 }, children: [_jsxs("div", { style: { flex: 1 }, children: [_jsxs("div", { style: { fontSize: 11, fontWeight: 600, color: C.muted, marginBottom: 4 }, children: ["WEIGHT (", unit, ")"] }), _jsx("input", { "aria-label": "Weight lifted", inputMode: "decimal", onFocus: selectNumericInput, onClick: selectNumericInput, value: histEdit.w, onChange: e => setHistEdit(h => ({ ...h, w: e.target.value })), className: "mono", style: { width: "100%", padding: "11px 12px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: 15, fontWeight: 600, textAlign: "center" } })] }), _jsxs("div", { style: { flex: 1 }, children: [_jsx("div", { style: { fontSize: 11, fontWeight: 600, color: C.muted, marginBottom: 4 }, children: "REPS" }), _jsx("input", { "aria-label": "Reps completed", inputMode: "numeric", onFocus: selectNumericInput, onClick: selectNumericInput, value: histEdit.r, onChange: e => setHistEdit(h => ({ ...h, r: e.target.value })), className: "mono", style: { width: "100%", padding: "11px 12px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: 15, fontWeight: 600, textAlign: "center" } })] })] }), _jsx("button", { onClick: () => { const w = parseFloat(histEdit.w), r = parseInt(histEdit.r); if (w > 0 && r > 0)
                                     onEditHistory?.(histEdit.histId, histEdit.exId, { weight: w, reps: r }); setHistEdit(null); }, className: "pressable", style: { width: "100%", padding: "14px", borderRadius: 12, border: "none", background: C.accent, color: C.accentText, fontSize: 15, fontWeight: 700, cursor: "pointer" }, children: "Save" }), _jsxs("div", { style: { display: "flex", gap: 8, marginTop: 8 }, children: [_jsx("button", { onClick: () => { onEditHistory?.(histEdit.histId, histEdit.exId, null); setHistEdit(null); }, className: "pressable", style: { flex: 1, padding: "12px", borderRadius: 12, border: `1px solid ${C.dangerDim}`, background: "none", color: C.danger, fontSize: 15, fontWeight: 600, cursor: "pointer" }, children: "Delete entry" }), _jsx("button", { onClick: () => setHistEdit(null), className: "pressable", style: { flex: 1, padding: "12px", borderRadius: 12, border: `1px solid ${C.border}`, background: "none", color: C.muted, fontSize: 15, fontWeight: 600, cursor: "pointer" }, children: "Cancel" })] })] }) })) }), _jsx(Exit, { when: !!why, children: why && (() => {
                     /* The readiness context comes from buildLifterModel — the SAME model bandForExercise uses to
                        decide whether to trim a set — rather than from a number lying around in this component.
@@ -13188,6 +13278,9 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
                                 { icon: RefreshCw, label: "Reset timer", sub: "Set elapsed workout time back to zero", on: () => { setSessionMenu(false); onResetClick(); } },
                                 { icon: Plus, label: "Add exercise", sub: "Add another lift to this workout", on: () => { setSessionMenu(false); setAddEx(true); } },
                                 { icon: AlertTriangle, label: "Report an injury", sub: "Review and skip or reduce affected work for today", on: openInjury },
+                                { icon: Target, label: "Preview set-aware dock", sub: "Test a contextual card that becomes the rest timer", on: () => {
+                                    setSessionMenu(false); setSetDockPreview(true);
+                                } },
                             ].map((o, i) => (_jsxs("button", { onClick: o.on, className: "pressable", style: { width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "13px 8px", background: "none", border: "none", borderBottom: `1px solid ${C.borderSoft}`, cursor: "pointer", textAlign: "left" }, children: [_jsx("div", { style: { width: 38, height: 38, borderRadius: 12, background: o.accent ? C.accent : C.card, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: _jsx(o.icon, { size: 18, color: o.accent ? C.accentText : C.text }) }), _jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { style: { fontSize: 15, fontWeight: 600, color: C.text }, children: o.label }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginTop: 1 }, children: o.sub })] })] }, i))), _jsxs("button", { onClick: () => { setSessionMenu(false); setConfirmExit(true); }, className: "pressable", style: { width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "13px 8px", background: "none", border: "none", cursor: "pointer", textAlign: "left", marginTop: 2 }, children: [_jsx("div", { style: { width: 38, height: 38, borderRadius: 12, background: C.dangerDim, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: _jsx(Trash2, { size: 17, color: C.danger }) }), _jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { style: { fontSize: 15, fontWeight: 600, color: C.danger }, children: "Discard workout" }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginTop: 1 }, children: "Leave without saving this session" })] })] })] }) })) }), _jsx(Exit, { when: confirmExit, children: confirmExit && (_jsx("div", { onClick: () => setConfirmExit(false), className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 90, padding: 24, animation: "fadeIn .2s both" }, children: _jsxs("div", { onClick: e => e.stopPropagation(), className: "wpb-pop wpb-workout-confirm", style: { width: "100%", maxWidth: 320, background: C.bg2, borderRadius: 16, padding: 20, border: `1px solid ${C.border}` }, children: [_jsx("div", { style: { fontSize: 18, fontWeight: 700, marginBottom: 6 }, children: "Leave this workout?" }), _jsx("div", { style: { fontSize: 15, color: C.muted, marginBottom: 16 }, children: doneSets > 0 ? `You've logged ${doneSets} set${doneSets === 1 ? "" : "s"}. You can save them now or discard them.` : "You haven't logged any sets yet. Nothing will be saved." }), doneSets > 0 && _jsxs("button", { onClick: () => { setConfirmExit(false); setFinishing(true); }, className: "pressable", style: { width: "100%", padding: "13px", borderRadius: 12, border: "none", background: C.accent, color: C.accentText, fontWeight: 700, cursor: "pointer", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }, children: [_jsx(Check, { size: 16 }), " Review & save"] }), _jsx("button", { onClick: () => { finishingRef.current = true; try {
                                     localStorage.removeItem(LIVE_KEY);
                                 }

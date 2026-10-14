@@ -1,3 +1,14 @@
+## Build 874 — Workout safety and set-context pilot
+
+- Add **Report an injury** under Workout Options. Select a muscle; the app identifies today's exercises using their primary and secondary muscle involvement. Review individual matches; skip remaining sets or reduce uncompleted work about half. Previously logged sets remain intact, Undo restores the prior session, and changes are scoped to the current day, not the saved training program.
+- Include injury adjustment records in the live workout snapshot and completed workout metadata.
+- Convert small plate counts and the set-aware loading strip into accessible buttons that open the plate calculator with the **current set's** weight. The exercise toolbar's Plates action also follows the current set rather than set 1.
+- Add a themed visual barbell diagram showing plates on **both sides**, correctly derived from existing plate denominations and selectable bar weight.
+- Prevent Android long-press copy-menu interruptions on noneditable set chrome without breaking editable weight/reps inputs or their text-selection behavior.
+- Separate the compact **Last** load × reps reading from the reported RIR label.
+- Add an opt-in **Preview set-aware dock** in Workout Options. It reads actual Last/Suggested/Target and the prescribed final-set amplifier, offers visual plate calculation, and morphs into an elapsed-rest view driven by the existing timer. The dock is explicitly experimental and does **not** take over the logger, prediction engine or timer state.
+- Keep the existing workout route, themes, training engine 0.65.7, saved program prescription, baseline logger controls, and offline resume contract.
+
 ## Build 873 — Compact Home session outline
 
 - Home's Start workout stays the dominant control. The session exercise list now starts as a single labeled, accessible 48px disclosure row. Expand it to inspect **all** prescribed exercises, sets and rep ranges; collapse it again without leaving Home.

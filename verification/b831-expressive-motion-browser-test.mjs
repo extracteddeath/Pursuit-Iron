@@ -2096,6 +2096,73 @@ try {
         await page.click(`${row} button[aria-label="Mark set not done"]`);
         assert.equal(await page.$eval(`${row} input[aria-label="weight"]`, el => el.value), '195.5', 'Undo preserves the logged load');
         assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('wpb:v1')).saved), initial.saved, 'motion cannot change program prescriptions');
+        // B874: tap the active set's inline plate numbers, and verify the
+        // calculator draws actual plate objects on a symmetric bar. Loading
+        // must follow the set's current typed weight, not the first plan set.
+        await page.$eval('[data-testid="set-0-0"] input[aria-label="weight"]', el=>{
+          el.scrollIntoView({block:'center'});
+        });
+        const plateButton=await page.$('[data-testid="set-0-0"] .wpb-workout-inline-plates');
+        assert.ok(plateButton,'B874 active set exposes an interactive loading shorthand');
+        await page.click('[data-testid="set-0-0"] .wpb-workout-inline-plates');
+        await page.waitForSelector('.wpb-visual-plate-bar');
+        const barDiagram=await page.$eval('.wpb-visual-plate-bar',el=>{
+          const sides=[...el.querySelectorAll('.wpb-visual-plate')];
+          return {label:el.getAttribute('aria-label'),count:sides.length,
+            equal:sides.length%2===0 &&
+              sides.slice(0,sides.length/2).map(x=>x.dataset.plate).reverse().join(',')===
+              sides.slice(sides.length/2).map(x=>x.dataset.plate).join(',')};
+        });
+        assert.ok(barDiagram.count>0&&barDiagram.equal&&barDiagram.label?.includes('plates on each side'),
+          'B874 plate sheet shows a symmetric visual barbell with accurate per-side plate labels: '+JSON.stringify(barDiagram));
+        await page.click('.wpb-backdrop button[aria-label="Close"]');
+        await page.waitForFunction(()=>!document.querySelector('.wpb-visual-plate-bar'));
+        // The dock is an opt-in test of one contextual surface: it cannot
+        // replace the real set rows or rest clock until interaction research.
+        await page.click('button[aria-label="Workout options"]');
+        await page.evaluate(()=>{
+          const option=[...document.querySelectorAll('button')].find(b=>b.textContent.includes('Preview set-aware dock'));
+          if(!option) throw new Error('Missing prototype entry'); option.click();
+        });
+        await page.waitForSelector('[data-set-dock-preview]');
+        const dock=await page.$eval('[data-set-dock-preview]',el=>{
+          const mode=el.dataset.mode,body=el.textContent;
+          return {mode,hasPlateAction:!!el.querySelector('.wpb-set-dock-plates'),
+            correctContext:mode==='rest'
+              ? body.includes('Rest') && /[0-9]+:[0-9]{2}/.test(body)
+              : mode==='set' && body.includes('LAST TIME') && body.includes('SUGGESTED')};
+        });
+        assert.ok(dock.hasPlateAction&&dock.correctContext,
+          'B874 set dock responds to current workout state: timer during active rest, Last/Suggested otherwise: '+JSON.stringify(dock));
+        await page.click('button[aria-label="Close set dock prototype"]');
+        await page.waitForFunction(()=>!document.querySelector('[data-set-dock-preview]'));
+        // Injury decisions are explicit, session scoped, and use primary plus
+        // secondary muscles rather than silently mutating a saved program.
+        const originalSets=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:live')).data[0].sets.length);
+        await page.click('button[aria-label="Workout options"]');
+        await page.evaluate(()=>{
+          const option=[...document.querySelectorAll('button')].find(b=>b.textContent.includes('Report an injury'));
+          if(!option)throw new Error('Missing injury entry');option.click();
+        });
+        await page.waitForSelector('[data-injury-sheet] #wpb-injury-muscle');
+        const injuryReview=await page.$eval('[data-injury-sheet]',el=>({
+          labels:[...el.querySelectorAll('input[type="checkbox"]')].map(n=>n.closest('label')?.textContent),
+          defaultSelected:[...el.querySelectorAll('input[type="checkbox"]')].filter(n=>n.checked).length
+        }));
+        assert.ok(injuryReview.defaultSelected>=1&&injuryReview.labels.some(t=>t?.includes('Squat')),
+          'B874 injured muscle shows affected exercises for review: '+JSON.stringify(injuryReview));
+        await page.click('.wpb-injury-reduce');
+        await page.waitForFunction(()=>!document.querySelector('[data-injury-sheet]'));
+        await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:live'))?.injuryReports?.length>=1);
+        const reduced=await page.evaluate(()=>{
+          const s=JSON.parse(localStorage.getItem('wpb:live'));
+          return {length:s.data[0]?.sets?.length,injury:s.injuryReports?.[0],
+            active:s.data[0]?.id};
+        });
+        assert.ok(reduced.length<=originalSets&&reduced.injury?.action==='reduce'&&
+          reduced.injury.part==='quads',
+          'B874 injury adjustment reduces remaining sets without changing the permanent program: '+JSON.stringify(reduced));
+
         assert.deepEqual(errors, []);
         await page.screenshot({ path: path.join(root, `verification/b831-motion-${width}-phone.png`) });
         // Continue into real program-authoring and exercise-library screens,

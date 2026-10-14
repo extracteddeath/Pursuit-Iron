@@ -91,7 +91,7 @@ try {
         await page.click('button[aria-label="Show previous workout values"]'); await settle();
         await usableRows(`LAST at ${width}px`);
         assert.match(await page.$eval('[data-testid="set-0-0"]', n => n.innerText), /205×3/);
-        assert.match(await page.$eval('[data-testid="set-0-0"] button[aria-label="Use last time\'s 205 by 3"]', n => n.innerText), /Last time\s+205×3/);
+        assert.match(await page.$eval('[data-testid="set-0-0"] button[aria-label="Use last time\'s 205 by 3"]', n => n.innerText), /Last\s+205×3/);
         assert.match(await page.$eval('[data-testid="set-0-3"]', n => n.innerText), /new/);
         await page.click('button[aria-label="Show prescribed targets"]'); await settle();
         await usableRows(`back to TARGET at ${width}px`);

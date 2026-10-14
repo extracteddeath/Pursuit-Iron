@@ -71,6 +71,20 @@ try{
         await page.waitForSelector('.wpb-live-dock button[aria-label="Resume workout"]');
         await page.click('.wpb-live-dock button[aria-label="Resume workout"]');
         await page.waitForSelector('[data-testid="set-0-0"] input[aria-label="weight"]');
+        const clickSettled = async selector => {
+          // Resizing can move the toolbar between pointer coordinates and
+          // delivery. Require a stable, unobscured target for the native click.
+          await page.waitForFunction(async selector => {
+            const button = document.querySelector(selector); if (!button) return false;
+            const before = button.getBoundingClientRect();
+            await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+            const after = button.getBoundingClientRect();
+            const hit = document.elementFromPoint(after.left + after.width / 2, after.top + after.height / 2);
+            return after.width > 0 && after.height > 0 && Math.abs(after.left - before.left) < .1
+              && Math.abs(after.top - before.top) < .1 && (hit === button || button.contains(hit));
+          }, {}, selector);
+          await page.click(selector);
+        };
         const layout=()=>page.evaluate(()=>{
           const scroll=document.querySelector('.wpb-workout-scroll');
           const side=scroll.querySelector(':scope > .wpb-workout-side');
@@ -139,13 +153,13 @@ try{
           await page.setViewport({width,height,deviceScaleFactor:1});
           state=await layout();
           assert.equal(state.sideVisible,true,'Re-expansion restores the same lineup');
-          await page.click('button[aria-label="Focused mode"]');
+          await clickSettled('button[aria-label="Focused mode"]');
           await page.waitForFunction(()=>!document.querySelector('.wpb-workout-side'));
           assert.ok(await page.$('.wpb-focus-hero .wpb-focus-value-input'),
             'Focused mode retains its dedicated editable set fields');
           assert.ok(await page.$eval('.wpb-exercise-heading',n=>n.textContent.toLowerCase().includes('curl')),
             'Focused mode retains the selected second exercise');
-          await page.click('button[aria-label="Exit focused mode"]');
+          await clickSettled('button[aria-label="Exit focused mode"]');
           await page.waitForSelector('.wpb-workout-side');
           assert.ok(await page.$('[data-testid="set-1-0"]'),
             'Returning from focus restores the original second-exercise set rows');

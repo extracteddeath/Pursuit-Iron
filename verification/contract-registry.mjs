@@ -52,6 +52,7 @@ export const contractGroups = Object.freeze({
         'm188-production-torture-test.mjs'
     ]),
     integration: Object.freeze([
+        'b875-workout-context-test.mjs',
         'b860-selective-improvements-test.mjs',
         'm265-worker-generation-test.mjs',
         'm237-ci-supply-chain-test.mjs',
@@ -108,6 +109,7 @@ export const browserShards = Object.freeze({
         'm220-day-progression-browser-test.mjs'
     ]),
     integration: Object.freeze([
+        'b875-contextual-dock-browser-test.mjs',
         'b860-selective-improvements-browser-test.mjs',
         'b831-expressive-motion-browser-test.mjs',
         'r53-semantic-plan-browser-test.mjs',

@@ -6,6 +6,6 @@
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 70,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b874-ra31328ebc837ab3f",
-  "uiMilestone": "Build 874 · Injury adjustments, visual plates, set-aware dock prototype"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b875-r020490a83c103e18",
+  "uiMilestone": "Build 875 · Compact actionable set dock, exact reps and shared rest controls"
 }

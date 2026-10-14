@@ -246,6 +246,72 @@ try {
 
 
 
+        // R83: a dropped frame must not make a spring run in slow motion.
+        // Simulate identical elapsed time with 60Hz and a visibly janky 15Hz
+        // cadence. This uses isolated copies of the real production module,
+        // not a forked physics formula or a static CSS timing test.
+        const cadenceR83=await page.evaluate(async()=>{
+            const sample=async hz=>{
+                const module=await import('/modules/ui-motion.js?r83-cadence-'+hz);
+                const node=document.createElement('div');
+                document.body.append(node);
+                const original=window.requestAnimationFrame;
+                const pending=[];
+                let value=0;
+                try{
+                    window.requestAnimationFrame=cb=>{pending.push(cb);return pending.length;};
+                    module.spring(node,'--r83-cadence',1,{
+                        from:0,stiffness:700,damping:.88,precision:.00001,
+                        write:v=>{value=v;node.style.setProperty('--r83-cadence',String(v));}
+                    });
+                    const base=performance.now(),step=1000/hz;
+                    for(let i=1;i<=Math.round(hz*.2);i++){
+                        const callback=pending.shift();
+                        if(!callback)break;
+                        callback(base+i*step);
+                    }
+                    return {value,finite:Number.isFinite(value)};
+                }finally{
+                    module.stopMotion(node,'--r83-cadence');
+                    window.requestAnimationFrame=original;
+                    node.remove();
+                }
+            };
+            return {smooth:await sample(60),janky:await sample(15)};
+        });
+        assert.ok(cadenceR83.smooth.finite && cadenceR83.janky.finite &&
+            cadenceR83.smooth.value>.94 && cadenceR83.janky.value>.90 &&
+            Math.abs(cadenceR83.smooth.value-cadenceR83.janky.value)<.08,
+            'R83 spring progress follows wall-clock time even with dropped frames: '+
+                JSON.stringify(cadenceR83));
+        // Workouts use protected utilitarian feedback. The calendar is a
+        // review surface: dates with logged workouts now get the same quiet
+        // touch-origin ink as other navigation controls.
+        const calendarTouchR83=await page.evaluate(()=>{
+            const host=document.querySelector('#root[data-pi-motion="expressive"] .wpb');
+            const cell=document.createElement('button');
+            cell.className='wpb-calendar-date';
+            cell.dataset.workouts='2';cell.type='button';
+            cell.style.cssText='width:46px;height:46px;border-radius:12px;';
+            cell.textContent='13';host.append(cell);
+            try{
+                cell.dispatchEvent(new PointerEvent('pointerdown',{
+                    bubbles:true,button:0,pointerId:983,clientX:20,clientY:20
+                }));
+                const pressed=cell.dataset.piInk==='1' &&
+                    cell.dataset.piControl==='1';
+                document.dispatchEvent(new PointerEvent('pointerup',{
+                    bubbles:true,button:0,pointerId:983
+                }));
+                return {pressed,marked:cell.dataset.workouts,
+                    touchTarget:cell.getBoundingClientRect().width>=44};
+            }finally{cell.remove();}
+        });
+        assert.ok(calendarTouchR83.pressed && calendarTouchR83.marked==='2' &&
+            calendarTouchR83.touchTarget,
+            'R83 recorded workout dates receive restrained tactile feedback without changing their hit targets: '+
+                JSON.stringify(calendarTouchR83));
+
         // R16: a named solid surface must not be a 3%-alpha color wash.
         // Probe all five theme-derived roles in both browser color schemes
         // without touching saved theme state or exercise/workout data.

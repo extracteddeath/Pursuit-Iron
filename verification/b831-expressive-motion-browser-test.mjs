@@ -2126,9 +2126,17 @@ try {
           const buttons=[...document.querySelectorAll('button')];
           const option=buttons.find(b=>b.textContent.includes('Hide workout dock') || b.textContent.includes('Show workout dock'));
           if(!option) throw new Error('Missing dock visibility option');
-          if(option.textContent.includes('Show workout dock')) option.click();
-          else document.querySelector('button[aria-label="Workout options"]').click();
+          option.click();
         });
+        if(dockWasVisible) {
+          await page.waitForFunction(()=>!document.querySelector('[data-set-dock-preview]'));
+          await page.click('button[aria-label="Workout options"]');
+          await page.evaluate(()=>{
+            const show=[...document.querySelectorAll('button')].find(b=>b.textContent.includes('Show workout dock'));
+            if(!show) throw new Error('Missing Show workout dock option after hiding it');
+            show.click();
+          });
+        }
         await page.waitForSelector('[data-set-dock-preview]');
         assert.equal(!!(await page.$('[data-set-dock-preview]')),true,
           'dock remains available whether enabled manually or by expanded layout');

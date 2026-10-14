@@ -2,7 +2,7 @@
   "schemaVersion": 3,
   "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": 875,
+  "build": 876,
   "engineVersion": "0.65.7",
   "candidateStatus": "verification_enforced_by_ci",
   "runtimeAggregate": "90bf4b0b0fd5e5576ca6afec9f62118a9389f94a8db9c57a3997c434f5688fad",
@@ -108,17 +108,17 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "0292c7918988c09db20b52fdecb609c8c986263a8f1da21817a00821945cc1b7",
-    "index.html": "1d5539ff22b6bfa43c2f9f339d097f9f6a15ce84b8e53d4fd43fb82f936b3d1c",
-    "sw.js": "9d976376f00c706ee9ea58639ecfd122a0b182e6b1c4c64ff213b7e7e7c1fe91",
-    "BUILD_PROFILE.json": "ca08486ab054d692a10f299fc96f906086e59be0724faf29a766caab0ceb443d",
-    "CHANGELOG.md": "ec4223c832c28ab55e932b824691eb7dc4dc89157b404a6911d2b3a6efe628e8",
+    "modules/App.js": "d3f9650d215b951fdb7e1eddcd13c9fff87052dc96c4c06f7e872644e0947e14",
+    "index.html": "26934c7222b90c1d5ee70fd285bf2498b12a71e74dbe6ce2e75fd37c29a64656",
+    "sw.js": "bd1c265ae3544f2c185cd55491a4fd7dea78d4c7a3dc1ad0f781c477dddb2f14",
+    "BUILD_PROFILE.json": "92d9f7e712b93049b7708fe644f076ac08858514bf4499601ade4f8b3a395359",
+    "CHANGELOG.md": "6360f0736a7ea173797d6df0ea381d42f9d644921bb6976183f056688991db08",
     "app.css": "f95f6827a63a5732659f59cece54e1f3f67842f19145990a10b6efb18f609fac",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b875-r020490a83c103e18",
-  "uiMilestone": "Build 875 · Compact actionable set dock, exact reps and shared rest controls"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b876-r6442a9a59d680048",
+  "uiMilestone": "Build 876 · Home session exercises visible by default"
 }

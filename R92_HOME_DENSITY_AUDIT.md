@@ -1,4 +1,10 @@
-# R92 / Build 873 — Home disclosure and first-screen density
+# R92 — Home session outline
+
+**Current behavior, Build 876:** The user wants the actual workout visible before starting; a split label such as “Push” alone is insufficient. The outline now starts expanded and opens for each new program/day/week, showing every real exercise and its prescribed sets/reps. The existing 48px disclosure can still collapse the list, and resizing retains that choice. Start/Resume stays ahead of the outline.
+
+R53 now verifies default-visible exercise names and dose, explicit collapse/reopen, and responsive persistence across the existing dark/light window matrix. The older collapsed-default requirement below is superseded.
+
+## Build 873 historical density change
 
 ## Diagnosis
 Build 872 corrected content order, but a second visual problem remained. The Start Workout hero eagerly displayed three exercise rows, an extra “+N more” button and multiple large nested containers beneath a full-height top summary/orbit. On phone widths, supporting progress could require unnecessary scrolling. A scheduled program with two exercises had no disclosure at all. The Home summary already shows its day, estimated minutes and exercise count, so default row details repeated context that is more valuable during a deliberate preview.

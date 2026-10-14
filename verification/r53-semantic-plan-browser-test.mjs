@@ -132,12 +132,18 @@ async function verifyFoundationStates(browser){
         assert.ok((await controlStyle(page,'.wpb-plan-session-name')).contrast>=4.5,'Warm launch keeps readable session names');
         await page.click('[data-tab="home"]');await page.waitForSelector('.wpb-home');
         const start=await controlStyle(page,'.wpb-home .wpb-ui-action[data-action="primary"]');
-        const create=await controlStyle(page,'.wpb-home-create');
-        assert.equal(create.action,'secondary','Ready workout gives Create secondary emphasis');
-        assert.ok(start.contrast>=4.5&&create.contrast>=4.5&&start.height>=52&&create.height>=48,
-          'Primary/secondary Home actions have readable labels and full targets: '+JSON.stringify({start,create}));
-        assert.notEqual(start.background,create.background,'Ready workout retains one stronger action');
-        assert.ok(start.hit&&create.hit,'Home actions are reachable by real pointer hits');
+        const create=await controlStyle(page,'.wpb-home-new-program');
+        const freestyle=await controlStyle(page,'.wpb-home-freestyle');
+        assert.equal(await page.$('.wpb-home-compose-bar'),null,
+          'Ready workout never competes with an anchored Create Program action');
+        assert.ok(start.contrast>=4.5&&create.contrast>=4.5&&freestyle.contrast>=4.5&&
+          start.height>=52&&create.height>=44&&freestyle.height>=44,
+          'R91 primary session and supporting discovery have readable, reachable targets: '+
+            JSON.stringify({start,create,freestyle}));
+        assert.notEqual(start.background,create.background,
+          'Starting training retains stronger emphasis than program creation');
+        assert.ok(start.hit&&create.hit&&freestyle.hit,
+          'The next workout and deferred creation/freestyle actions remain reachable');
       }
       assert.equal(errors.length,0,'Foundation states have no runtime errors: '+errors.join('; '));
     }finally{await context.close();}
@@ -168,13 +174,16 @@ async function verifyTaskHierarchy(browser){
       const homeOrder=await page.evaluate(()=>{
         const el=s=>document.querySelector(s),before=(a,b)=>!!(el(a).compareDocumentPosition(el(b))&Node.DOCUMENT_POSITION_FOLLOWING);
         const start=el('.wpb-home-hero>.wpb-primary-action').getBoundingClientRect();
-        const dock=el('.wpb-home-compose-bar').getBoundingClientRect();
+        const dock=el('.wpb-home-compose-bar');
         return {summaryFirst:before('.wpb-home-session-summary','.wpb-home-hero>.wpb-primary-action'),
           startFirst:before('.wpb-home-hero>.wpb-primary-action','.wpb-m3-session-preview'),
-          programsFirst:before('.wpb-home-programs','.wpb-action-grid'),startBottom:start.bottom,dockTop:dock.top};
+          programsFirst:before('.wpb-home-programs','.wpb-action-grid'),
+          dockPresent:!!dock,createDeferred:before('.wpb-home-programs','.wpb-home-new-program'),
+          startHeight:start.height};
       });
-      assert.ok(homeOrder.summaryFirst&&homeOrder.startFirst&&homeOrder.programsFirst&&homeOrder.startBottom<=homeOrder.dockTop,
-        'Next action and saved programs precede supporting/creation content: '+JSON.stringify(homeOrder));
+      assert.ok(homeOrder.summaryFirst&&homeOrder.startFirst&&homeOrder.programsFirst&&
+        homeOrder.createDeferred&&!homeOrder.dockPresent&&homeOrder.startHeight>=52,
+        'R91 workout leads; program creation follows training content in DOM and focus order: '+JSON.stringify(homeOrder));
       await page.click('.wpb-m3-session-preview button[aria-expanded="false"]');
       const geometry=async selector=>page.$eval(selector,node=>{
         const box=node.getBoundingClientRect(),css=getComputedStyle(node);

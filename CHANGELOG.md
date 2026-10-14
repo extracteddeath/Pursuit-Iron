@@ -1,3 +1,10 @@
+## Build 868 — Responsive touch feedback without forced layout
+
+- Repeated taps on primary navigation, selections and recorded workout dates restart the same subtle theme-native ripple by alternating identical CSS animation names. Removed forced synchronous layout read from repeated tap feedback.
+- Animation completion checks the current ripple owner, preventing a cancelled older pulse from clearing a newer tap. Native clicks, button bounds, color themes, reduced-motion settings and compact workout set controls are unchanged.
+- Extend the real-browser motion contract for two rapid taps, zero layout-width reads, event-owner correctness and the existing Build 867 calendar feedback.
+- R84 200% zoom-navigation diagnostics remain in the integration contract; no extra router or global click handler added.
+
 ## Build 867 — smoother motion under interrupted rendering
 
 - Improve shared spring integration at 60/120 Hz and during dropped frames with bounded, adaptive numerical substeps. Transitions keep momentum without the sluggish slow-motion caused by discarding elapsed time.

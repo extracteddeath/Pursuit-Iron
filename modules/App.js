@@ -11426,7 +11426,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
     // app reload would incorrectly re-show the check-in prompt the user already dismissed.
     useLayoutEffect(() => {
         persistLive();
-    }, [data, program.id, day.id, weekIndex, readiness, exIdx, focusPin, fbPump, fbSore, runPaused, restMax, paused, restEndRef.current, paused ? rest : 0]);
+    }, [data, program.id, day.id, weekIndex, readiness, injuryReports, exIdx, focusPin, fbPump, fbSore, runPaused, restMax, paused, restEndRef.current, paused ? rest : 0]);
     // Belt-and-suspenders against losing an in-progress workout to a browser update+reboot, an OS
     // killing a backgrounded tab, or the user switching apps: those can tear the page down with NO
     // further React renders, so the on-change autosave above could miss the latest timer tick or a

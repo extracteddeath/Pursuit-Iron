@@ -7814,3 +7814,36 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     transition:none!important;
   }
 }
+
+/* B874 — Workouts: Android long-press is a tap, not text-selection.
+   Keep editable weight/reps inputs fully selectable for keyboard replacement. */
+#root .wpb-workout :is(.wpb-set-controls,.wpb-set-head,.wpb-set-actions,
+  .wpb-workout-tools,.wpb-workout-plate-strip,.wpb-workout-inline-plates,
+  .wpb-exercise-heading,.wpb-workout-plate-strip *){
+  -webkit-touch-callout:none;
+  -webkit-user-select:none;
+  user-select:none;
+}
+#root .wpb-workout input,
+#root .wpb-workout textarea,
+#root .wpb-workout [contenteditable="true"]{
+  -webkit-user-select:text!important;
+  user-select:text!important;
+  -webkit-touch-callout:default!important;
+}
+#root .wpb-workout .wpb-workout-plate-strip,
+#root .wpb-workout .wpb-workout-inline-plates{
+  touch-action:manipulation;
+}
+#root .wpb-workout .wpb-set-dock-prototype{
+  box-sizing:border-box;
+  border-radius:24px;
+  background:var(--pi-m3e-surface-container-high,var(--pi-r11-raised));
+  border:1px solid var(--pi-layout-border,var(--pi-r48-divider));
+  box-shadow:0 8px 30px color-mix(in srgb,currentColor 10%,transparent);
+  transition:border-radius 280ms cubic-bezier(.2,.8,.2,1),background-color 220ms ease;
+}
+#root .wpb-workout .wpb-set-dock-prototype[data-mode="rest"]{border-radius:30px;}
+@media(prefers-reduced-motion:reduce){
+  #root .wpb-workout .wpb-set-dock-prototype{transition:none!important;}
+}

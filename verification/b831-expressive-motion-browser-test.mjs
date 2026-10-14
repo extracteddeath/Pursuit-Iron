@@ -2124,10 +2124,16 @@ try {
           const option=[...document.querySelectorAll('button')].find(b=>b.textContent.includes('Preview set-aware dock'));
           if(!option) throw new Error('Missing prototype entry'); option.click();
         });
-        await page.waitForSelector('[data-set-dock-preview][data-mode="set"]');
-        assert.ok(await page.$eval('[data-set-dock-preview]',el=>el.textContent.includes('LAST TIME')&&
-          el.textContent.includes('SUGGESTED')&&el.textContent.includes('Visual plate calculator')),
-          'B874 opt-in dock exposes prior, suggested, and plate actions without altering typed set values');
+        await page.waitForSelector('[data-set-dock-preview]');
+        const dock=await page.$eval('[data-set-dock-preview]',el=>{
+          const mode=el.dataset.mode,body=el.textContent;
+          return {mode,hasPlateAction:!!el.querySelector('.wpb-set-dock-plates'),
+            correctContext:mode==='rest'
+              ? body.includes('Rest') && /[0-9]+:[0-9]{2}/.test(body)
+              : mode==='set' && body.includes('LAST TIME') && body.includes('SUGGESTED')};
+        });
+        assert.ok(dock.hasPlateAction&&dock.correctContext,
+          'B874 set dock responds to current workout state: timer during active rest, Last/Suggested otherwise: '+JSON.stringify(dock));
         await page.click('button[aria-label="Close set dock prototype"]');
         await page.waitForFunction(()=>!document.querySelector('[data-set-dock-preview]'));
         // Injury decisions are explicit, session scoped, and use primary plus

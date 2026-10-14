@@ -1,3 +1,13 @@
+## Build 875 — Accurate set context and measured floating dock
+
+- The opt-in dock now follows the first unfinished warm-up, working, drop or myo set. Completed exercises show completion rather than suggesting the final set again.
+- Show the engine-owned exact prefilled reps alongside the prescribed range and load unit. Preserve typed values; plate calculation uses the actual active row.
+- Show a prescribed amplifier only on its final working set, with the existing technique explanation.
+- Morph height, corner shape and content through the shared interruptible spring owner; retain the existing rest clock and controls. Respect reduced motion.
+- Measure the actual footer/panel, reserve scroll space, and step aside for the keyboard and Focus mode. Keep the dock opt-in.
+- Injury reduction preserves completed sets and manual loads, halves remaining ordinary working sets, and removes pending drop/myo extensions. Suppress prescribed amplifiers on affected session rows, including after resume. Undo and future programs retain their existing owners.
+- Add source and real-browser regression coverage for set states, exact reps, rest morph, hit targets, responsive layout, keyboard interruption, injury Undo/resume and unchanged saved prescriptions.
+
 ## Build 874 — Workout safety and set-context pilot
 
 - Add **Report an injury** under Workout Options. Select a muscle; the app identifies today's exercises using their primary and secondary muscle involvement. Review individual matches; skip remaining sets or reduce uncompleted work about half. Previously logged sets remain intact, Undo restores the prior session, and changes are scoped to the current day, not the saved training program.

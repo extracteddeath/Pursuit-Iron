@@ -12761,14 +12761,14 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
                                                 border: `1px solid ${C.accent}`, background: C.accentDim },
                                             children: "Remove pending set" })
                                     ] }),
-                                !(ex.type === "compound" && isBarLike(ex.equip)) &&
+                                (e.sets.some(x => x.sub && x.kind === "drop") || !(ex.type === "compound" && isBarLike(ex.equip))) &&
                                     _jsx("button", { type: "button", className: "pressable hit",
                                         onClick: () => addAdvanced(ei, "drop"),
                                         style: { minHeight: 44, padding: "0 12px", borderRadius: 12,
                                             border: `1px solid ${C.border}`, background: C.card,
                                             color: C.text, fontSize: 12, fontWeight: 650 },
                                         children: e.sets.some(x => x.sub && x.kind === "drop") ? "✓ Drop set" : "+ Drop set" }),
-                                !(ex.type === "compound" && isBarLike(ex.equip)) &&
+                                (e.sets.some(x => x.sub && x.kind === "myo") || !(ex.type === "compound" && isBarLike(ex.equip))) &&
                                     _jsx("button", { type: "button", className: "pressable hit",
                                         onClick: () => addAdvanced(ei, "myo"),
                                         style: { minHeight: 44, padding: "0 12px", borderRadius: 12,

@@ -1,3 +1,11 @@
+## Build 873 — Compact Home session outline
+
+- Home's Start workout stays the dominant control. The session exercise list now starts as a single labeled, accessible 48px disclosure row. Expand it to inspect **all** prescribed exercises, sets and rep ranges; collapse it again without leaving Home.
+- The disclosure is semantically linked to its controlled list, receives full keyboard/touch targets, honors reduced-motion preferences, and retains the app's original neutral/theme roles.
+- Reset an expanded outline when the active program, day or week changes; do not carry the old session's open details into the next prescription.
+- Change the recent-training metric label from “This week” to **Last 7 days**, matching its existing rolling seven-day calculation.
+- Keep the actual prescribed values, program list, workout logger, shortcuts, history, engine 0.65.7, offline behavior, themes and screen navigation unchanged. Extend permanent R53 mobile/desktop/zoom regression coverage.
+
 ## Build 872 — Home task-first hierarchy
 
 - Keep the actual next workout and its Start button as the dominant Home task. The headline now describes the task consistently rather than choosing a random phrase on unscheduled days.

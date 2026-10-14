@@ -35,17 +35,34 @@ function referenceFromSet(set, sourceUnit, targetUnit, exercise) {
         approximate: converted, unit: to };
 }
 
-export function programLastPerformance(history, fallbackPerf, exerciseId, unit, exercise) {
-    // Revision-aware, newest first. An edited or deleted session must not leave
-    // an obsolete cache value on the Program card.
+/**
+ * Resolve all visible references in a single history pass. Program cards can be
+ * numerous; normalizing and scanning the full history once per card would create
+ * unnecessary jank while the program list expands or collapses.
+ */
+export function programLastPerformances(history, fallbackPerf = {}, unit, exerciseById = {}) {
+    const found = {};
     const entries = normalizeHistoryRevisions(history).entries;
     for (let i = entries.length - 1; i >= 0; i--) {
         const entry = entries[i];
-        const top = lastTopSet(entry?.perf?.[exerciseId]);
-        if (!top) continue;
-        const observed = referenceFromSet(top, entry.unit || unit, unit, exercise);
-        if (observed) return observed;
+        for (const [id, perf] of Object.entries(entry?.perf || {})) {
+            if (found[id]) continue;
+            const top = lastTopSet(perf);
+            if (!top) continue;
+            const observed = referenceFromSet(top, entry.unit || unit, unit, exerciseById[id]);
+            if (observed) found[id] = observed;
+        }
     }
-    const top = lastTopSet(fallbackPerf);
-    return top ? referenceFromSet(top, unit, unit, exercise) : null;
+    for (const [id, perf] of Object.entries(fallbackPerf || {})) {
+        if (found[id]) continue;
+        const top = lastTopSet(perf);
+        if (!top) continue;
+        const observed = referenceFromSet(top, unit, unit, exerciseById[id]);
+        if (observed) found[id] = observed;
+    }
+    return found;
+}
+
+export function programLastPerformance(history, fallbackPerf, exerciseId, unit, exercise) {
+    return programLastPerformances(history, { [exerciseId]: fallbackPerf }, unit, { [exerciseId]: exercise })[exerciseId] || null;
 }

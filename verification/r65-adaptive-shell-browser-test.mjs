@@ -47,7 +47,7 @@ try{
     headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
   const results=[];
   for(const theme of ['rose','rosewater']){
-    for(const [width,height,wide] of [[393,852,false],[900,480,false],[900,1000,true],[1280,850,true]]){
+    for(const [width,height,wide] of [[393,852,false],[900,480,false],[900,1000,true],[1000,850,true],[1280,850,true]]){
       const context=await browser.createBrowserContext();
       const page=await context.newPage();
       // Puppeteer's media helper rejects forced-colors, but Chrome CDP supports
@@ -231,7 +231,7 @@ try{
                 weekIntent:rect(parent.querySelector('[data-week-intent]')),
                 overflow:document.documentElement.scrollWidth>innerWidth+2};
             });
-            const supporting=width>=1060&&height>=700;
+            const supporting=width>=980&&height>=700;
             assert.equal(layout.grid,supporting,'Plan supporting pane follows available window');
             assert.equal(layout.overflow,false,'Plan has no horizontal overflow');
             if(supporting){

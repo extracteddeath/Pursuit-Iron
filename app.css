@@ -7794,3 +7794,23 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   outline:2px solid var(--pi-color-active);
   outline-offset:2px;
 }
+
+/* R92 — Home disclosure: one compact affordance with details on demand.
+   Preserve the existing theme's neutral surface and all native touch targets. */
+#root[data-pi-motion="expressive"] .wpb-home .wpb-m3-session-preview>.wpb-m3-outline-toggle{
+  min-height:48px!important;
+  border-radius:13px!important;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-m3-outline-exercises:not([hidden]){
+  border-top:1px solid var(--pi-color-divider);
+  padding-top:6px;
+  margin-top:3px;
+}
+#root[data-pi-motion="expressive"] .wpb-home .wpb-m3-outline-row+.wpb-m3-outline-row{
+  border-top:1px solid var(--pi-color-divider);
+}
+@media(prefers-reduced-motion:reduce){
+  #root[data-pi-motion="expressive"] .wpb-home .wpb-m3-outline-toggle svg{
+    transition:none!important;
+  }
+}

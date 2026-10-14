@@ -1,0 +1,26 @@
+name: R92 temporary release finalizer
+
+on:
+  push:
+    branches: [improvement/b873-r92-home-outline-density]
+permissions:
+  contents: write
+jobs:
+  finalize:
+    if: ${{ contains(github.event.head_commit.message, '[finalize-r92]') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+      - name: Finalize exact release hashes
+        run: |
+          node scripts/finalize-release.mjs
+          node scripts/verify-release.mjs
+          git add modules/App.js index.html sw.js BUILD_PROFILE.json RELEASE_MANIFEST.json
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "chore(R92): finalize Build 873 source and cache hashes"
+          git push origin HEAD:improvement/b873-r92-home-outline-density

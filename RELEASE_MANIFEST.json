@@ -2,7 +2,7 @@
   "schemaVersion": 3,
   "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": 872,
+  "build": 873,
   "engineVersion": "0.65.7",
   "candidateStatus": "verification_enforced_by_ci",
   "runtimeAggregate": "b54a0ce0f05c283fc9c1dc4e80ec69db8b215a530b56f53bd049fea1e281bf4c",
@@ -107,17 +107,17 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "c191a6ca387e41ad0a43a4f83f34acab66b23fc25bde52f998db5a0f05792810",
-    "index.html": "af3e1e63648e125480d09301a7add4e63ccd6be1ee95dafe17b8cbc400815b4a",
-    "sw.js": "3a73adca1463f00511c35f05383051fff08369200031e0627ef4b834959e6773",
-    "BUILD_PROFILE.json": "d6013e089c5c3a6d2b07416c3702ca01af095f01499737769b3e8dbdc307b85f",
-    "CHANGELOG.md": "edfdac5cbc8dc1afe99bc2143ddd83617ebd90000a03f7837188462f0fc0d7fb",
-    "app.css": "0b83de152b6549782e4f2a08627dbea82ee2db1094eac2ac79ab835524480cc5",
+    "modules/App.js": "dfea621165448be7e08f47d50d80e4b9a91540d0d4fa8d0c9d153487ff0d5779",
+    "index.html": "997477393343b31cea614888aceea504825feb4155b3276141abb32c48b5c8fb",
+    "sw.js": "1a0abbe2aae79c700a98c0542ac49085b29826b238074974ba3b61922f32b91c",
+    "BUILD_PROFILE.json": "7a88123db7275d2652ac3a901c07aae156380aa70d919e32877561b2d0ca4b99",
+    "CHANGELOG.md": "229d51b554cbe7bc64ce90575b220f197cce7a15a8c0726a6aee63dad9a91d3a",
+    "app.css": "b15c985a63099f0025f130c6d23e32fc81a6ef2645261a4e7c6f5222ce5fbb84",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b872-r3a60a0c0fc698de4",
-  "uiMilestone": "Build 872 · R91 Home task-first hierarchy"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b873-r438f5e7730e9393e",
+  "uiMilestone": "Build 873 · R92 compact Home session outline"
 }

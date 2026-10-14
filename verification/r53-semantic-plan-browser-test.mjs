@@ -146,7 +146,7 @@ async function verifyFoundationStates(browser){
               ahead:!!metrics&&!!programList&&!!(metrics.compareDocumentPosition(programList)&
                 Node.DOCUMENT_POSITION_FOLLOWING)};
           });
-          assert.ok(pulse.exists&&pulse.ahead&&pulse.labels.includes('This week')&&
+          assert.ok(pulse.exists&&pulse.ahead&&pulse.labels.includes('Last 7 days')&&
             pulse.labels.includes('Streak')&&!pulse.labels.includes('Total'),
             'R91 recent training belongs directly after the workout, before library management: '+
               JSON.stringify(pulse));
@@ -201,7 +201,33 @@ async function verifyTaskHierarchy(browser){
       assert.ok(homeOrder.summaryFirst&&homeOrder.startFirst&&homeOrder.programsFirst&&
         homeOrder.createDeferred&&!homeOrder.dockPresent&&homeOrder.startHeight>=52,
         'R91 workout leads; program creation follows training content in DOM and focus order: '+JSON.stringify(homeOrder));
+      const outlineClosed=await page.$eval('.wpb-m3-session-preview',panel=>{
+        const button=panel.querySelector('button[aria-expanded]');
+        const content=document.getElementById('wpb-home-outline-exercises');
+        const frame=panel.getBoundingClientRect();
+        return {button:!!button,label:button?.getAttribute('aria-label'),controls:button?.getAttribute('aria-controls'),
+          expanded:button?.getAttribute('aria-expanded'),buttonHeight:button?.getBoundingClientRect().height,
+          rows:content?.querySelectorAll('.wpb-m3-outline-row').length||0,
+          hidden:content?.hidden,previewHeight:frame.height};
+      });
+      assert.ok(outlineClosed.button&&outlineClosed.expanded==='false'&&
+        outlineClosed.controls==='wpb-home-outline-exercises'&&
+        outlineClosed.label?.includes('Show all 4 session exercises')&&
+        outlineClosed.buttonHeight>=44&&outlineClosed.hidden&&outlineClosed.rows===0&&
+        outlineClosed.previewHeight<95,
+        'R92 session outline starts compact and is accessible without rendering hidden exercise details: '+
+          JSON.stringify(outlineClosed));
       await page.click('.wpb-m3-session-preview button[aria-expanded="false"]');
+      const outlineOpen=await page.$eval('.wpb-m3-session-preview',panel=>{
+        const content=panel.querySelector('#wpb-home-outline-exercises');
+        return {expanded:panel.querySelector('button[aria-expanded]')?.getAttribute('aria-expanded'),
+          rows:content?.querySelectorAll('.wpb-m3-outline-row').length,
+          hidden:content?.hidden,overflow:panel.scrollWidth>panel.clientWidth+1};
+      });
+      assert.ok(outlineOpen.expanded==='true'&&outlineOpen.rows===4&&
+        !outlineOpen.hidden&&!outlineOpen.overflow,
+        'R92 disclosure reveals every prescribed exercise without clipping or route navigation: '+
+          JSON.stringify(outlineOpen));
       const geometry=async selector=>page.$eval(selector,node=>{
         const box=node.getBoundingClientRect(),css=getComputedStyle(node);
         const nav=document.querySelector('.wpb-tabbar'),tab=nav.querySelector('[aria-current="page"]');

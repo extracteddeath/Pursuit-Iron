@@ -72,11 +72,27 @@ try {
         await page.waitForSelector(`${dock}[data-mode="rest"]`);
         const identity = await page.$eval(dock, el => { el.dataset.testIdentity='same'; return el.textContent; });
         assert.match(identity, /0:47/);
-        await page.waitForFunction(()=>{const b=document.querySelector('button[aria-label="Skip rest"]');const r=b.getBoundingClientRect();const hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return hit===b||b.contains(hit);});
-        await clickStable('button[aria-label="Skip rest"]');
+        const restText = () => page.$eval(dock, el => el.textContent);
+        const persistedRest = seconds => page.waitForFunction(seconds => JSON.parse(localStorage.getItem('wpb:live')).restRemain === seconds, {}, seconds);
+        assert.equal(await page.$$eval('button[aria-label="Skip rest"]',els=>els.length),1,'dock replaces the visible regular rest controls');
+        await clickStable(`${dock} button[aria-label="Add 15 seconds to rest"]`); await persistedRest(62);
+        assert.match(await restText(),/1:02/);
+        await clickStable(`${dock} button[aria-label="Reduce rest by 15 seconds"]`); await persistedRest(47);
+        await clickStable(`${dock} button[aria-label="Restart rest"]`); await persistedRest(90);
+        assert.match(await restText(),/1:30/);
+        await clickStable(`${dock} button[aria-label="Resume rest"]`);
+        await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:live')).restPaused===false);
+        await clickStable(`${dock} button[aria-label="Pause rest"]`);
+        await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:live')).restPaused===true);
+        await clickStable(`${dock} button[aria-label="Skip rest"]`);
         await page.waitForSelector(`${dock}[data-mode="set"][data-set-kind="warmup"]`);
         assert.equal(await page.$eval(dock, el => el.dataset.testIdentity), 'same', 'timer morph reuses the same container');
         assert.doesNotMatch(await page.$eval(dock, el => el.textContent), /LAST TIME|This set/);
+        await page.waitForFunction(()=>{
+            const el=document.querySelector('[data-set-dock-preview]');
+            const scroll=el?.closest('.wpb-workout')?.querySelector('.wpb-workout-scroll');
+            return el && scroll && parseFloat(getComputedStyle(scroll).paddingBottom)>=el.offsetHeight;
+        });
         const geometry = await page.$eval(dock, el => {
             const root=el.closest('.wpb-workout'), scroll=root.querySelector('.wpb-workout-scroll'), footer=root.querySelector('.wpb-workout-footer');
             return { bottom:el.getBoundingClientRect().bottom, footer:footer.getBoundingClientRect().top,
@@ -95,11 +111,58 @@ try {
         await page.waitForSelector(`${dock}[data-set-kind="work"]`);
         assert.match(await page.$eval(dock,el=>el.textContent), /195 lb × 6/);
         assert.doesNotMatch(await page.$eval(dock,el=>el.textContent), /This set/);
+        assert.doesNotMatch(await page.$eval(dock,el=>el.textContent),/5[-–]8|Target .*reps/,'the dock shows a concrete suggestion, no rep range');
+        assert.equal(await page.$eval(`${dock} input[aria-label="Dock reps"]`,el=>el.value),'5','entered reps stay separate from progression suggestion 6');
+        await clickStable(`${dock} button[aria-label="Dock reps up"]`);
+        await page.waitForFunction(()=>document.querySelector('[data-testid="set-0-1"] input[aria-label="reps"]').value==='6');
+        await clickStable(`${dock} button[aria-label="Dock reps down"]`);
+        await clickStable(`${dock} button[aria-label="Dock weight up"]`);
+        await page.waitForFunction(()=>document.querySelector('[data-testid="set-0-1"] input[aria-label="weight"]').value!=='190');
+        await clickStable(`${dock} button[aria-label="Dock weight down"]`);
+        await page.waitForFunction(()=>document.querySelector('[data-testid="set-0-1"] input[aria-label="weight"]').value==='190');
+        // Count controls are secondary; open them without inflating the default dock.
+        await clickStable(`${dock} button[aria-label="Adjust dock sets"]`);
+        await clickStable(`${dock} button[aria-label="Add working set"]`);
+        await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:live')).data[0].sets.filter(s=>!s.warm&&!s.sub).length===3);
+        await clickStable(`${dock} button[aria-label="Remove pending working set"]`);
+        await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:live')).data[0].sets.filter(s=>!s.warm&&!s.sub).length===2);
+        await clickStable(`${dock} button[aria-label="Adjust dock sets"]`);
+        await page.waitForFunction(() => {
+            const dock = document.querySelector('[data-set-dock-preview]');
+            const content = dock?.querySelector('.wpb-set-dock-content');
+            return content && Math.abs(content.parentElement.clientHeight-content.offsetHeight)<.5
+                && Number(getComputedStyle(content).opacity)>=.99 && dock.offsetHeight<=205;
+        });
+        const compactHeight = await page.$eval(dock, el => el.offsetHeight);
+        assert.ok(compactHeight <= 205, `default actionable dock stays compact: ${compactHeight}px`);
+        console.log(`Compact logging dock: ${compactHeight}px at ${width}px`);
+        await clickStable(`${dock} button[aria-label="Minimize set dock"]`);
+        await page.waitForFunction(() => document.querySelector('[data-set-dock-preview]').offsetHeight <= 72);
+        assert.equal(await page.$(`${dock} input[aria-label="Dock weight"]`), null);
+        await clickStable(`${dock} button[aria-label="Expand set dock"]`);
+        await page.waitForSelector(`${dock} input[aria-label="Dock weight"]`);
+        assert.equal(await page.$eval(`${dock} input[aria-label="Dock weight"]`,el=>el.value),'190','minimize/expand retains manual entry');
+        // Typing in the dock uses the same data owner and stays mounted above the keyboard.
+        await page.$eval(`${dock} input[aria-label="Dock weight"]`,el=>el.focus());
+        await page.keyboard.type('225');
+        await page.evaluate(()=>{Object.defineProperty(window.visualViewport,'height',{configurable:true,get:()=>400});window.visualViewport.dispatchEvent(new Event('resize'));});
+        await page.waitForFunction(()=>document.querySelector('.wpb-workout').dataset.keyboardOpen==='true');
+        assert.equal(await page.$eval(`${dock} input[aria-label="Dock weight"]`,el=>el.value),'225');
+        assert.equal(await page.$eval('[data-testid="set-0-1"] input[aria-label="weight"]',el=>el.value),'225');
+        await page.keyboard.press('Enter');
+        assert.equal(await page.evaluate(()=>document.activeElement.getAttribute('aria-label')),'Dock reps');
+        await page.keyboard.press('Enter');
+        await page.evaluate(()=>{delete window.visualViewport.height;window.visualViewport.dispatchEvent(new Event('resize'));});
+        await page.waitForSelector(dock);
+        await page.$eval(`${dock} input[aria-label="Dock weight"]`,el=>{el.focus();el.select();});
+        await page.keyboard.type('190');await page.keyboard.press('Enter');await page.keyboard.press('Enter');
+
         await clickStable(`${dock} .wpb-set-dock-plates`);
         await page.waitForSelector('.wpb-backdrop input[placeholder="Target weight (lb)"]');
         assert.equal(await page.$eval('.wpb-backdrop input[placeholder="Target weight (lb)"]', el=>el.value), '190', 'plate action uses actual typed set, not suggested load');
         await page.click('.wpb-backdrop button[aria-label="Close"]');
-        await log(1);
+        await clickStable(`${dock} button[aria-label="Log dock set"]`);
+        await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:live')).data[0].sets[1].done===true);
         await page.waitForFunction(()=>document.querySelector('[data-set-dock-preview]')?.textContent.includes('This set'));
         await page.waitForFunction(()=>{
             const button=document.querySelector('[data-testid="set-0-2"] button[aria-label="Mark set done"]');
@@ -108,6 +171,16 @@ try {
             const panel=document.querySelector('[data-set-dock-preview]').getBoundingClientRect();
             return (hit===button||button.contains(hit)) && controls.bottom<=panel.top-8;
         });
+        await page.waitForFunction(() => {
+            const content = document.querySelector('.wpb-set-dock-content');
+            return content && Number(getComputedStyle(content).opacity) >= .99;
+        });
+        const loadFits = await page.$eval(`${dock} input[aria-label="Dock weight"]`, input => {
+            const style = getComputedStyle(input), canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d'); context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+            return context.measureText(input.value).width + parseFloat(style.paddingLeft) + parseFloat(style.paddingRight) <= input.clientWidth;
+        });
+        assert.ok(loadFits, 'actual decimal load remains fully readable in the compact dock');
         await page.screenshot({path:path.join(root,`verification/b875-dock-${width}-phone.png`)});
         // Preview must step aside for the existing keyboard/Focus owners.
         await page.$eval('[data-testid="set-0-2"] input[aria-label="weight"]',el=>el.focus());

@@ -10,6 +10,32 @@ export function activeSetContext(row) {
         finalWork: kind === 'work' && workIndex === work.length - 1 && !row.injuryAdjusted };
 }
 
+// A range is an allowed prescription, not a concrete progression suggestion.
+// Prefer the engine's exact prefill; legacy/manual rows can retain their entered
+// count. Never manufacture a new target from the bottom of a range.
+export function dockRepSuggestion(set) {
+    const exact = value => /^\d+$/.test(String(value ?? '').trim());
+    for (const value of [set?.suggested?.reps, set?.target?.prefillReps, set?.target?.reps]) {
+        if (exact(value)) return String(value).trim();
+    }
+    const protocol = String(set?.target?.reps ?? '');
+    if (/amrap|failure/i.test(protocol)) return /amrap/i.test(protocol) ? 'AMRAP' : 'To failure';
+    return exact(set?.reps) ? String(set.reps).trim() : '—';
+}
+
+export function removePendingWorkingSet(row) {
+    const work = row.sets.filter(set => !set.warm && !set.sub);
+    if (work.length <= 1) return row;
+    const pending = work.filter(set => !set.done);
+    const last = pending.at(-1);
+    if (!last) return row;
+    const index = row.sets.indexOf(last);
+    // Extensions after the removed activation set cannot remain pending alone.
+    // Logged work and extensions are immutable evidence.
+    return { ...row, sets: row.sets.filter((set, i) => set !== last &&
+        !(i > index && set.sub && !set.done)) };
+}
+
 export function adjustInjuredExercises(data, selectedIds, part, action) {
     const selected = new Set(selectedIds);
     return data.flatMap(row => {

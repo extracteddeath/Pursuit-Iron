@@ -2097,7 +2097,7 @@ try {
         assert.equal(await page.$eval(`${row} input[aria-label="weight"]`, el => el.value), '195.5', 'Undo preserves the logged load');
         assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('wpb:v1')).saved), initial.saved, 'motion cannot change program prescriptions');
         // B874: tap the active set's inline plate numbers, and verify the
-        // calculator draws actual plate objects on a symmetric bar. Loading
+        // calculator draws actual plate objects on one side of the bar. Loading
         // must follow the set's current typed weight, not the first plan set.
         await page.$eval('[data-testid="set-0-0"] input[aria-label="weight"]', el=>{
           el.scrollIntoView({block:'center'});
@@ -2106,15 +2106,16 @@ try {
         assert.ok(plateButton,'B874 active set exposes an interactive loading shorthand');
         await page.click('[data-testid="set-0-0"] .wpb-workout-inline-plates');
         await page.waitForSelector('.wpb-visual-plate-bar');
-        const barDiagram=await page.$eval('.wpb-visual-plate-bar',el=>{
-          const sides=[...el.querySelectorAll('.wpb-visual-plate')];
-          return {label:el.getAttribute('aria-label'),count:sides.length,
-            equal:sides.length%2===0 &&
-              sides.slice(0,sides.length/2).map(x=>x.dataset.plate).reverse().join(',')===
-              sides.slice(sides.length/2).map(x=>x.dataset.plate).join(',')};
+        const barDiagram=await page.$eval('.wpb-visual-plate-bar', async el=>{
+          const { platesPerSide } = await import('/modules/engine-api.js');
+          const weight=document.querySelector('.wpb-backdrop input[placeholder="Target weight (lb)"]').value;
+          const expected=platesPerSide(Number(weight),'barbell','lb').plates;
+          const plates=[...el.querySelectorAll('.wpb-visual-plate')].map(x=>Number(x.dataset.plate));
+          return {label:el.getAttribute('aria-label'),side:el.dataset.plateSide,plates,expected};
         });
-        assert.ok(barDiagram.count>0&&barDiagram.equal&&barDiagram.label?.includes('plates on each side'),
-          'B874 plate sheet shows a symmetric visual barbell with accurate per-side plate labels: '+JSON.stringify(barDiagram));
+        assert.equal(barDiagram.side,'one');
+        assert.deepEqual(barDiagram.plates,barDiagram.expected,'one sleeve shows each per-side denomination once, inner to outer');
+        assert.ok(barDiagram.label?.includes('One side of the barbell'),JSON.stringify(barDiagram));
         await page.click('.wpb-backdrop button[aria-label="Close"]');
         await page.waitForFunction(()=>!document.querySelector('.wpb-visual-plate-bar'));
         // The dock is an opt-in test of one contextual surface: it cannot
@@ -2130,7 +2131,7 @@ try {
           return {mode,hasPlateAction:!!el.querySelector('.wpb-set-dock-plates'),
             correctContext:mode==='rest'
               ? body.includes('Rest') && /[0-9]+:[0-9]{2}/.test(body)
-              : mode==='set' && body.includes('LAST TIME') && body.includes('SUGGESTED')};
+              : mode==='set' && body.includes('LAST TIME') && /suggested/i.test(body)};
         });
         assert.ok(dock.hasPlateAction&&dock.correctContext,
           'B874 set dock responds to current workout state: timer during active rest, Last/Suggested otherwise: '+JSON.stringify(dock));

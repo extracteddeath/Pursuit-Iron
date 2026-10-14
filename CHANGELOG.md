@@ -1,10 +1,13 @@
-## Build 875 — Accurate set context and measured floating dock
+## Build 875 — Compact, actionable set dock and workout safety
 
 - The opt-in dock now follows the first unfinished warm-up, working, drop or myo set. Completed exercises show completion rather than suggesting the final set again.
-- Show the engine-owned exact prefilled reps alongside the prescribed range and load unit. Preserve typed values; plate calculation uses the actual active row.
+- Show one progression-owned rep suggestion without a range. Keep editable weight/reps distinct from the recommendation, and use the actual active row for plate calculation.
 - Show a prescribed amplifier only on its final working set, with the existing technique explanation.
-- Morph height, corner shape and content through the shared interruptible spring owner; retain the existing rest clock and controls. Respect reduced motion.
-- Measure the actual footer/panel, reserve scroll space, and step aside for the keyboard and Focus mode. Keep the dock opt-in.
+- Morph height, corner shape and content through the shared interruptible spring owner. The dock uses the same −15/+15, restart, pause/resume and skip controls as the existing rest bar, with one visible timer surface. Respect reduced motion.
+- Replace the large reference cards and full-width plate button with a compact suggestion/last-set reference and labeled plate shortcut. Tap the set heading for set-count options; minimize the dock to a small strip without losing entries or rest state.
+- Add compact dock weight/reps steppers, direct numeric entry, Log, and session-only working-set count controls. Completed work cannot be removed. Dock fields stay mounted above the numeric keyboard; ordinary-row entry and Focus mode retain priority. Keep the dock opt-in.
+- Show one sleeve of the barbell, with each per-side plate once in inner-to-outer order and readable labels. Keep the exact bar/Smith arithmetic and per-side loading explanation.
+- Update the measured scroll reserve synchronously during dock transitions, including reduced motion.
 - Injury reduction preserves completed sets and manual loads, halves remaining ordinary working sets, and removes pending drop/myo extensions. Suppress prescribed amplifiers on affected session rows, including after resume. Undo and future programs retain their existing owners.
 - Add source and real-browser regression coverage for set states, exact reps, rest morph, hit targets, responsive layout, keyboard interruption, injury Undo/resume and unchanged saved prescriptions.
 

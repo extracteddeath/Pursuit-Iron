@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { activeSetContext, adjustInjuredExercises } from '../modules/workout-context.js';
+import { activeSetContext, adjustInjuredExercises, dockRepSuggestion, removePendingWorkingSet } from '../modules/workout-context.js';
 
 const row = { id: 'press', sets: [
     { warm: true, done: false, weight: '45' },
@@ -43,3 +43,18 @@ assert.deepEqual(adjustInjuredExercises([{id:'curl',sets:[{done:false}]}], ['cur
 const volume = { id: 'press', sets: Array.from({ length: 5 }, (_, i) => ({ done: false, weight: String(100-i) })) };
 assert.equal(adjustInjuredExercises([volume], ['press'], 'chest', 'reduce')[0].sets.length, 3, 'odd remaining ordinary set count rounds to a real usable number');
 console.log('B875: actual warm-up/work/extension/completion context and injury reduction preservation pass.');
+
+assert.equal(dockRepSuggestion({reps:'5',target:{reps:'5-8',prefillReps:'7'}}),'7');
+assert.equal(dockRepSuggestion({reps:'5',suggested:{reps:'5-8'},target:{prefillReps:'6'}}),'6');
+assert.equal(dockRepSuggestion({reps:'9',target:{reps:'8-12'}}),'9');
+assert.equal(dockRepSuggestion({target:{reps:'8-12'}}),'—');
+assert.equal(dockRepSuggestion({reps:'8',target:{reps:'AMRAP'}}),'AMRAP');
+assert.equal(dockRepSuggestion({reps:'8',target:{reps:'to failure'}}),'To failure');
+const countRow={sets:[{warm:true,done:true},{done:true,weight:'200',actualRIR:2},{done:false,weight:'195'},
+    {sub:true,kind:'drop',done:false},{sub:true,kind:'myo',done:true}]};
+const countBefore=structuredClone(countRow);
+const fewer=removePendingWorkingSet(countRow);
+assert.deepEqual(fewer.sets,[countRow.sets[0],countRow.sets[1],countRow.sets[4]],'remove pending work and its unlogged extensions, preserve all logged evidence');
+assert.equal(removePendingWorkingSet(fewer),fewer,'cannot remove last or logged working set');
+assert.deepEqual(countRow,countBefore,'set-count edit preserves the original row');
+console.log('Dock exact rep suggestions and safe session-only set-count reduction pass.');

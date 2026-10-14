@@ -5,7 +5,7 @@
   "build": 875,
   "engineVersion": "0.65.7",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "54f23c0e4a68041ce6ab9325ad6a1a0d1bb6e22df666450465955577e79379a8",
+  "runtimeAggregate": "90bf4b0b0fd5e5576ca6afec9f62118a9389f94a8db9c57a3997c434f5688fad",
   "runtimeFiles": {
     "modules/engine-api.js": "f73e58356475b057acfb4fd2177b1f37fface1d88e68c293d979c9aa1e680378",
     "modules/engine-shell.js": "73645bf4d914423074c0e90b992b58a6c57f7fbb726621d417803e906d140675",
@@ -93,7 +93,7 @@
     "modules/training-domain/records.js": "08770c7023413dbb40e2bc4bfd3f55e195d7eacdac87a0fe74684ed224cf2c06",
     "modules/ui-motion.js": "d5193540a49ee6eb9cd34e94de40c33712ff209b9ff21f98fee7f2f122c518ae",
     "modules/wizard-stability.js": "a62b2bed8a1f5ab880bfeab036a83ec630c93048b8a352652fe00ae75374a3d1",
-    "modules/workout-context.js": "564088b2a1b16bc64f0ebc200fab0f89faeabf77d8ca9b2c16f184710406371c",
+    "modules/workout-context.js": "2d2ec92c214d25da30d86ec028b0cb71eab351f58b3014ad94e6bd313f498eac",
     "vendor/lucide-react.js": "f84db748249b6e57e1d5187e876da806c1733523a1fa1501224bf740519b2cf4",
     "vendor/react-dom-client.js": "e3d8fd1d433e1bee9110bcaa5f8e9547e64f2754806bed0dd4fc546d890baab5",
     "vendor/react-dom.js": "9eeba0ea6d8354cd75cbf1381afcdf898711d0c38a8020458d1bd33cdc4b3240",
@@ -108,17 +108,17 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "52eed5da29b9fc1164ee1ec5047edf8aabb0d8ef7136c1c0e7fc34a96b8d93da",
+    "modules/App.js": "0292c7918988c09db20b52fdecb609c8c986263a8f1da21817a00821945cc1b7",
     "index.html": "1d5539ff22b6bfa43c2f9f339d097f9f6a15ce84b8e53d4fd43fb82f936b3d1c",
-    "sw.js": "75989cba547fa0e4a3a18296f57c2bc313b8f82d2a25290f5f9a31464f50bd85",
-    "BUILD_PROFILE.json": "a2399692a24400fe2ec93501f5441660713cd4ac071a5fbcf59b56f800698f09",
-    "CHANGELOG.md": "81ca815b667e1183a8d3954a18da02df580c51a9911acef01b21fde996f530ad",
-    "app.css": "fd26440bd6a391ae85854cd01755a3ab6ccb4c1425815733626a924edd052fe2",
+    "sw.js": "9d976376f00c706ee9ea58639ecfd122a0b182e6b1c4c64ff213b7e7e7c1fe91",
+    "BUILD_PROFILE.json": "ca08486ab054d692a10f299fc96f906086e59be0724faf29a766caab0ceb443d",
+    "CHANGELOG.md": "ec4223c832c28ab55e932b824691eb7dc4dc89157b404a6911d2b3a6efe628e8",
+    "app.css": "f95f6827a63a5732659f59cece54e1f3f67842f19145990a10b6efb18f609fac",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b875-rc948f931bf64d6fd",
-  "uiMilestone": "Build 875 · Accurate set-aware dock and injury technique safeguards"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b875-r020490a83c103e18",
+  "uiMilestone": "Build 875 · Compact actionable set dock, exact reps and shared rest controls"
 }

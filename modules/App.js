@@ -11197,6 +11197,10 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
     const [confirmExit, setConfirmExit] = useState(false);
     const [sessionMenu, setSessionMenu] = useState(false); // workout options sheet (timer / add lift / finish / discard)
     const [calc, setCalc] = useState(false);
+    const [injuryOpen, setInjuryOpen] = useState(false);
+    const [injuryPart, setInjuryPart] = useState("");
+    const [injuryReports, setInjuryReports] = useState(() => liveMatch?.injuryReports || []);
+    const [injurySelected, setInjurySelected] = useState([]);
     const [, forceTick] = useState(0);
     // Resume the workout clock from the ACTUAL training time logged in the snapshot, not the wall
     // clock since the workout first started. A session minimized at 9am and resumed at 9pm should
@@ -11231,7 +11235,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
         if (finishingRef.current)
             return false;
         try {
-            localStorage.setItem(LIVE_KEY, JSON.stringify({ schemaVersion: 2, programId: program.id, dayId: day.id, weekIndex, dayExSig, startedAt: startRef.current, elapsedMs: runElapsedMs(), savedAt: Date.now(), data, readiness, exIdx, focusPin, fbPump, fbSore, runPaused, restEndMs: restEndRef.current, restMax, restPaused: paused, restRemain: paused ? rest : 0, sessionId: sessionIdRef.current }));
+            localStorage.setItem(LIVE_KEY, JSON.stringify({ schemaVersion: 2, programId: program.id, dayId: day.id, weekIndex, dayExSig, startedAt: startRef.current, elapsedMs: runElapsedMs(), savedAt: Date.now(), data, readiness, injuryReports, exIdx, focusPin, fbPump, fbSore, runPaused, restEndMs: restEndRef.current, restMax, restPaused: paused, restRemain: paused ? rest : 0, sessionId: sessionIdRef.current }));
             setSaveError(false);
             return true;
         }
@@ -11581,6 +11585,57 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
         setData(d => [...d, { id, slot, sets: freestyleSets, note: "", superset: false, added: true, freestyle: true }]);
         setExIdx(slot);
         setAddEx(false);
+    };
+    // Session-only injury intervention: use actual primary + secondary muscle involvement,
+    // show a reviewable list, and never delete a set already logged.
+    const affectedByPart = part => data.map((row, index) => ({ row, index,
+        ex: EX_BY_ID[row.id] })).filter(({ ex }) => ex &&
+            (ex.part === part || secondaryOf(ex).some(([p]) => p === part)));
+    const openInjury = () => {
+        const active = data[exIdx] && EX_BY_ID[data[exIdx].id];
+        const part = active?.part || PART_ORDER[0];
+        setInjuryPart(part);
+        setInjurySelected(affectedByPart(part).map(item => item.row.id));
+        setInjuryOpen(true);
+        setSessionMenu(false);
+    };
+    const changeInjuryPart = part => {
+        setInjuryPart(part);
+        setInjurySelected(affectedByPart(part).map(item => item.row.id));
+    };
+    const applyInjury = action => {
+        const affected = data.filter(row => injurySelected.includes(row.id));
+        if (!affected.length) return;
+        const originals = data, previousIndex = exIdx, previousReports = injuryReports;
+        const selected = new Set(affected.map(row => row.id));
+        let next = data.flatMap(row => {
+            if (!selected.has(row.id)) return [row];
+            const logged = row.sets.filter(set => set.done);
+            const pending = row.sets.filter(set => !set.done && !set.warm);
+            if (action === "skip") {
+                // If exercise already has completed work, keep the logged sets and
+                // remove all pending work. Never erase performance or reported effort.
+                return logged.length ? [{ ...row, sets: logged, injuryAdjusted: injuryPart }] : [];
+            }
+            // Reduce remaining sets ~50%, keeping completed sets intact and their
+            // original order. Do not rewrite a manually selected load or future program.
+            const keep = Math.max(0, Math.ceil(pending.length / 2));
+            let remaining = 0;
+            return [{ ...row, injuryAdjusted: injuryPart, sets: row.sets.filter(set => {
+                if (set.done) return true;
+                if (set.warm) return false;
+                return remaining++ < keep;
+            }) }];
+        });
+        if (!next.length) next = [];
+        const report = { part: injuryPart, action, exercises: [...selected], at: Date.now() };
+        setData(next);
+        setExIdx(Math.max(0, Math.min(previousIndex, next.length - 1)));
+        setInjuryReports(prev => [...prev, report]);
+        setInjuryOpen(false);
+        setSnack({ msg: action === "skip" ? "Affected exercises skipped for today" : "Remaining affected sets reduced for today",
+            undo: () => { setData(originals); setExIdx(previousIndex);
+                setInjuryReports(previousReports); setSnack(null); } });
     };
     const removeExerciseFromSession = (ei) => {
         const snap = data, snapIdx = exIdx, nm = EX_BY_ID[data[ei]?.id]?.name || "exercise";
@@ -12170,6 +12225,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
                 } })(),
                 perf: perfOut,
                 feedback,
+                injuryReports: injuryReports.length ? injuryReports : undefined,
                 feedbackRaw: (() => { const r = {}; new Set([...Object.keys(fbPump), ...Object.keys(fbSore)]).forEach(p => { r[p] = { pump: fbPump[p], sore: fbSore[p] }; }); return Object.keys(r).length ? r : undefined; })()
             });
             if (committed === false)
@@ -12805,7 +12861,65 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
                                 else
                                     setSwap(false); }, onClose: () => setSwap(false) }));
                         })()] }, ei));
-            })(), _jsx(Exit, { when: exList, children: exList && _jsx(SessionExerciseListSheet, { data: data, exIdx: exIdx, onJump: goEx, onMove: moveExerciseInSession, onSkip: removeExerciseFromSession, onReorderStart: beginReorder, onReorderEnd: endReorder, onAdd: () => { setExList(false); setAddEx(true); }, onClose: () => setExList(false) }) }), _jsx(Exit, { when: !!addEx, children: addEx && _jsx(ExercisePickerSheet, { onPick: addExerciseToSession, onClose: () => setAddEx(false), banned: banned, title: "Add exercise" }) }), prFlash && (_jsx("div", { onClick: () => setPrFlash(null), style: { position: "absolute", top: "calc(env(safe-area-inset-top) + 14px)", left: 0, right: 0, display: "flex", justifyContent: "center", zIndex: 50, pointerEvents: "auto", padding: "0 16px" }, children: _jsxs("div", { style: { display: "flex", alignItems: "center", gap: 12, maxWidth: 360, padding: "12px 16px", borderRadius: 16, background: C.warn, color: C.warnText, boxShadow: "0 12px 30px rgba(0,0,0,.4)", animation: "fadeUp .35s cubic-bezier(.2,.8,.3,1) backwards" }, children: [_jsx(Trophy, { size: 22, color: C.warnText, style: { flexShrink: 0 } }), _jsxs("div", { style: { minWidth: 0 }, children: [_jsxs("div", { style: { fontSize: 15, fontWeight: 800, letterSpacing: .2 }, children: ["New PR \u2014 ", prFlash.name] }), _jsxs("div", { className: "mono", style: { fontSize: 13, fontWeight: 600, opacity: .85, marginTop: 1 }, children: ["est ", prFlash.est, " ", unit, " \u00B7 ", prFlash.w, unit, "\u00D7", prFlash.r] })] })] }) })), snack && (_jsx("div", { style: { position: "absolute", left: 0, right: 0, bottom: "calc(env(safe-area-inset-bottom) + 92px)", display: "flex", justifyContent: "center", zIndex: 48, pointerEvents: "none", padding: "0 18px" }, children: _jsxs("div", { style: { display: "flex", alignItems: "center", gap: 12, background: C.text, color: C.bg, fontSize: 13, fontWeight: 600, padding: "11px 16px", borderRadius: 12, maxWidth: "100%", boxShadow: "0 8px 24px rgba(0,0,0,.35)", animation: "fadeUp .2s backwards", pointerEvents: "auto" }, children: [_jsx("span", { style: { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: snack.msg }), snack.undo && _jsx("button", { onClick: snack.undo, className: "pressable", style: { background: "none", border: "none", color: C.bg, fontSize: 13, fontWeight: 800, textDecoration: "underline", textUnderlineOffset: 2, cursor: "pointer", flexShrink: 0, padding: "0 2px" }, children: "Undo" })] }) })), _jsx(Exit, { when: !readiness, children: !readiness && (_jsx("div", { className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.66)", display: "flex", alignItems: "flex-end", zIndex: 80, animation: "fadeIn .2s both" }, children: _jsxs("div", { ref: sheetDragRef, style: { width: "100%", background: C.bg2, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: "10px 18px calc(env(safe-area-inset-bottom) + 26px)", animation: "sheetUp .28s cubic-bezier(.2,.7,.3,1) both", borderTop: `1px solid ${C.border}` }, children: [_jsx("div", { style: { fontSize: 22, fontWeight: 700 }, children: "How are you feeling?" }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginTop: 2, marginBottom: 16 }, children: "Today's loads will be adjusted to match your readiness." }), [
+            })(), _jsx(Exit, { when: injuryOpen, children: injuryOpen && _jsx("div", {
+                className: "wpb-backdrop", onClick: () => setInjuryOpen(false),
+                style: { position: "fixed", inset: 0, zIndex: 90, background: "rgba(0,0,0,.65)",
+                  display: "flex", alignItems: "flex-end" },
+                children: _jsxs("section", { role: "dialog", "aria-modal": "true",
+                  "aria-label": "Adjust workout for an injury", "data-injury-sheet": true,
+                  onClick: ev => ev.stopPropagation(),
+                  style: { width: "100%", maxHeight: "88dvh", overflowY: "auto",
+                    background: C.bg2, borderRadius: "26px 26px 0 0", padding: "18px 16px calc(24px + env(safe-area-inset-bottom))",
+                    boxSizing: "border-box", border: `1px solid ${C.border}` },
+                  children: [
+                    _jsxs("div", { style: { display: "flex", alignItems: "center", gap: 10, marginBottom: 8 },
+                      children: [_jsx(AlertTriangle, { size: 20, color: C.warn }),
+                        _jsx("h2", { style: { margin: 0, fontSize: 20, flex: 1 }, children: "Injury during workout" }),
+                        _jsx("button", { type: "button", onClick: () => setInjuryOpen(false),
+                          "aria-label": "Close injury adjustments", className: "pressable hit",
+                          style: { ...iconBtn(), border: "none", background: C.card }, children: _jsx(X, { size: 19 }) })
+                      ] }),
+                    _jsx("p", { style: { fontSize: 13, lineHeight: 1.5, color: C.muted, margin: "0 0 12px" },
+                      children: "Stop movements that provoke pain. Select the affected muscle and review exercises before changing today's workout. This doesn't edit your future plan." }),
+                    _jsx("label", { htmlFor: "wpb-injury-muscle", style: { fontSize: 12, fontWeight: 700, color: C.muted }, children: "Affected muscle" }),
+                    _jsx("select", { id: "wpb-injury-muscle", value: injuryPart, onChange: ev => changeInjuryPart(ev.target.value),
+                      style: { width: "100%", minHeight: 48, padding: "10px", borderRadius: 12,
+                        border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: 15, margin: "6px 0 12px" },
+                      children: PART_ORDER.map(part => _jsx("option", { value: part, children: PART_LABEL[part] || part }, part)) }),
+                    _jsx("p", { style: { fontSize: 12, color: C.muted, margin: "0 0 8px" },
+                      children: "Primary and supporting muscle involvement are included. Uncheck any exercise you know is unaffected." }),
+                    affectedByPart(injuryPart).length ? _jsx("div", {
+                      style: { display: "flex", flexDirection: "column", gap: 5, marginBottom: 12 },
+                      children: affectedByPart(injuryPart).map(({ row, ex }) =>
+                        _jsxs("label", { style: { display: "flex", alignItems: "center", gap: 10,
+                          minHeight: 48, background: C.card, borderRadius: 12, padding: "8px 12px",
+                          fontSize: 14, fontWeight: 600 },
+                          children: [
+                            _jsx("input", { type: "checkbox", checked: injurySelected.includes(row.id),
+                              onChange: ev => setInjurySelected(prev => ev.target.checked
+                                ? [...prev, row.id] : prev.filter(id => id !== row.id)),
+                              style: { width: 19, height: 19, accentColor: C.accent } }),
+                            _jsx("span", { style: { flex: 1 }, children: ex.name }),
+                            _jsx("span", { style: { fontSize: 11, color: C.muted },
+                              children: `${row.sets.filter(set => set.done).length} logged` })
+                          ] }, row.id))
+                    }) : _jsx("p", { style: { color: C.muted, fontSize: 13 }, children: "No exercises match this muscle in the current session." }),
+                    _jsxs("div", { style: { display: "grid", gap: 8 }, children: [
+                      _jsx("button", { type: "button", onClick: () => applyInjury("skip"),
+                        disabled: !injurySelected.length, className: "pressable wpb-injury-skip",
+                        style: { minHeight: 50, borderRadius: 14, border: "none", background: C.accent,
+                          color: C.accentText, fontSize: 14, fontWeight: 700, opacity: injurySelected.length ? 1 : .45 },
+                        children: "Skip selected remaining exercises" }),
+                      _jsx("button", { type: "button", onClick: () => applyInjury("reduce"),
+                        disabled: !injurySelected.length, className: "pressable wpb-injury-reduce",
+                        style: { minHeight: 48, borderRadius: 14, border: `1px solid ${C.border}`,
+                          background: C.card, color: C.text, fontSize: 14, fontWeight: 650 },
+                        children: "Reduce remaining sets by about half" })
+                    ] }),
+                    _jsx("p", { style: { margin: "12px 2px 0", fontSize: 12, color: C.muted, lineHeight: 1.4 },
+                      children: "Completed sets are retained. You can undo this adjustment. If there is acute pain, inability to bear weight, or worsening symptoms, stop the workout and seek medical care." })
+                  ] })
+              }) }), _jsx(Exit, { when: exList, children: exList && _jsx(SessionExerciseListSheet, { data: data, exIdx: exIdx, onJump: goEx, onMove: moveExerciseInSession, onSkip: removeExerciseFromSession, onReorderStart: beginReorder, onReorderEnd: endReorder, onAdd: () => { setExList(false); setAddEx(true); }, onClose: () => setExList(false) }) }), _jsx(Exit, { when: !!addEx, children: addEx && _jsx(ExercisePickerSheet, { onPick: addExerciseToSession, onClose: () => setAddEx(false), banned: banned, title: "Add exercise" }) }), prFlash && (_jsx("div", { onClick: () => setPrFlash(null), style: { position: "absolute", top: "calc(env(safe-area-inset-top) + 14px)", left: 0, right: 0, display: "flex", justifyContent: "center", zIndex: 50, pointerEvents: "auto", padding: "0 16px" }, children: _jsxs("div", { style: { display: "flex", alignItems: "center", gap: 12, maxWidth: 360, padding: "12px 16px", borderRadius: 16, background: C.warn, color: C.warnText, boxShadow: "0 12px 30px rgba(0,0,0,.4)", animation: "fadeUp .35s cubic-bezier(.2,.8,.3,1) backwards" }, children: [_jsx(Trophy, { size: 22, color: C.warnText, style: { flexShrink: 0 } }), _jsxs("div", { style: { minWidth: 0 }, children: [_jsxs("div", { style: { fontSize: 15, fontWeight: 800, letterSpacing: .2 }, children: ["New PR \u2014 ", prFlash.name] }), _jsxs("div", { className: "mono", style: { fontSize: 13, fontWeight: 600, opacity: .85, marginTop: 1 }, children: ["est ", prFlash.est, " ", unit, " \u00B7 ", prFlash.w, unit, "\u00D7", prFlash.r] })] })] }) })), snack && (_jsx("div", { style: { position: "absolute", left: 0, right: 0, bottom: "calc(env(safe-area-inset-bottom) + 92px)", display: "flex", justifyContent: "center", zIndex: 48, pointerEvents: "none", padding: "0 18px" }, children: _jsxs("div", { style: { display: "flex", alignItems: "center", gap: 12, background: C.text, color: C.bg, fontSize: 13, fontWeight: 600, padding: "11px 16px", borderRadius: 12, maxWidth: "100%", boxShadow: "0 8px 24px rgba(0,0,0,.35)", animation: "fadeUp .2s backwards", pointerEvents: "auto" }, children: [_jsx("span", { style: { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: snack.msg }), snack.undo && _jsx("button", { onClick: snack.undo, className: "pressable", style: { background: "none", border: "none", color: C.bg, fontSize: 13, fontWeight: 800, textDecoration: "underline", textUnderlineOffset: 2, cursor: "pointer", flexShrink: 0, padding: "0 2px" }, children: "Undo" })] }) })), _jsx(Exit, { when: !readiness, children: !readiness && (_jsx("div", { className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.66)", display: "flex", alignItems: "flex-end", zIndex: 80, animation: "fadeIn .2s both" }, children: _jsxs("div", { ref: sheetDragRef, style: { width: "100%", background: C.bg2, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: "10px 18px calc(env(safe-area-inset-bottom) + 26px)", animation: "sheetUp .28s cubic-bezier(.2,.7,.3,1) both", borderTop: `1px solid ${C.border}` }, children: [_jsx("div", { style: { fontSize: 22, fontWeight: 700 }, children: "How are you feeling?" }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginTop: 2, marginBottom: 16 }, children: "Today's loads will be adjusted to match your readiness." }), [
                                 { label: "Feeling strong", sub: "Hit the prescribed loads", factor: 1, icon: Flame },
                                 { label: "A little off", sub: "Trim loads ~5%", factor: 0.95, icon: Battery },
                                 { label: "Run down", sub: "Back off ~12%, focus on quality", factor: 0.88, icon: Battery },
@@ -13073,6 +13187,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
                                 { icon: Minimize2, label: "Minimize workout", sub: "Keep it running and return to your previous screen", on: minimizeWorkout },
                                 { icon: RefreshCw, label: "Reset timer", sub: "Set elapsed workout time back to zero", on: () => { setSessionMenu(false); onResetClick(); } },
                                 { icon: Plus, label: "Add exercise", sub: "Add another lift to this workout", on: () => { setSessionMenu(false); setAddEx(true); } },
+                                { icon: AlertTriangle, label: "Report an injury", sub: "Review and skip or reduce affected work for today", on: openInjury },
                             ].map((o, i) => (_jsxs("button", { onClick: o.on, className: "pressable", style: { width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "13px 8px", background: "none", border: "none", borderBottom: `1px solid ${C.borderSoft}`, cursor: "pointer", textAlign: "left" }, children: [_jsx("div", { style: { width: 38, height: 38, borderRadius: 12, background: o.accent ? C.accent : C.card, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: _jsx(o.icon, { size: 18, color: o.accent ? C.accentText : C.text }) }), _jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { style: { fontSize: 15, fontWeight: 600, color: C.text }, children: o.label }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginTop: 1 }, children: o.sub })] })] }, i))), _jsxs("button", { onClick: () => { setSessionMenu(false); setConfirmExit(true); }, className: "pressable", style: { width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "13px 8px", background: "none", border: "none", cursor: "pointer", textAlign: "left", marginTop: 2 }, children: [_jsx("div", { style: { width: 38, height: 38, borderRadius: 12, background: C.dangerDim, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: _jsx(Trash2, { size: 17, color: C.danger }) }), _jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { style: { fontSize: 15, fontWeight: 600, color: C.danger }, children: "Discard workout" }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginTop: 1 }, children: "Leave without saving this session" })] })] })] }) })) }), _jsx(Exit, { when: confirmExit, children: confirmExit && (_jsx("div", { onClick: () => setConfirmExit(false), className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 90, padding: 24, animation: "fadeIn .2s both" }, children: _jsxs("div", { onClick: e => e.stopPropagation(), className: "wpb-pop wpb-workout-confirm", style: { width: "100%", maxWidth: 320, background: C.bg2, borderRadius: 16, padding: 20, border: `1px solid ${C.border}` }, children: [_jsx("div", { style: { fontSize: 18, fontWeight: 700, marginBottom: 6 }, children: "Leave this workout?" }), _jsx("div", { style: { fontSize: 15, color: C.muted, marginBottom: 16 }, children: doneSets > 0 ? `You've logged ${doneSets} set${doneSets === 1 ? "" : "s"}. You can save them now or discard them.` : "You haven't logged any sets yet. Nothing will be saved." }), doneSets > 0 && _jsxs("button", { onClick: () => { setConfirmExit(false); setFinishing(true); }, className: "pressable", style: { width: "100%", padding: "13px", borderRadius: 12, border: "none", background: C.accent, color: C.accentText, fontWeight: 700, cursor: "pointer", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }, children: [_jsx(Check, { size: 16 }), " Review & save"] }), _jsx("button", { onClick: () => { finishingRef.current = true; try {
                                     localStorage.removeItem(LIVE_KEY);
                                 }

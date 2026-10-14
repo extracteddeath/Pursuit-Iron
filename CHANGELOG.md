@@ -1,3 +1,9 @@
+## Build 871 — Adaptive medium Plan workspace
+
+- The existing 600–839px medium-window tab shell now uses up to 760px of available width on sufficiently tall windows, instead of remaining a 460px phone mockup. All five primary tabs share the same shell; bottom navigation remains the original owner.
+- Plan keeps the same selected-week, Up Next, schedule, supporting Program overview, and open-day actions. Medium padding is fluid and the reading surface stays bounded at 720px; the R68 desktop two-column layout and compact/short-landscape layouts are untouched.
+- Extend real light/dark browser layout checks with medium windows, all five routes, and live week-selection retention while resizing compact → medium, with no overflow or saved-data changes. The workout logger, 20 themes, motion and engine 0.65.7 are unchanged.
+
 ## Build 870 — Workout weight Next / reps Done keyboard flow
 
 - Honor the existing mobile keyboard labels: pressing Next/Enter in an editable workout weight field moves to and selects the reps input **in the same set**. Done/Enter on reps releases keyboard focus but never completes the set.

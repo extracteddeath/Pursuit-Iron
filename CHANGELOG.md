@@ -1,3 +1,9 @@
+## Build 866 — Settings organization and direct navigation
+
+- Rename the misleading Units collection to **Training preferences**; it includes weight unit, training experience, effort scale, load increments, and available plates.
+- Clarify **Gyms & equipment** as the first Settings section, and add a direct Training preferences choice to the Settings Jump to control.
+- Preserve all existing persisted values, program prescriptions, logger controls, theme colors and engine 0.65.7. Add R82 real-browser contract coverage for category and jump-to-section behavior.
+
 ## Build 860 — Clearer previews and trustworthy progression
 
 - Correct metric-template load suggestions and warm-ups, preserve configured equipment, and carry units consistently through creation and Settings changes.

@@ -6584,6 +6584,19 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   }
 }
 
+/* R88 / Build 871 — medium-width workspace, not a stretched phone mockup.
+   Keep one stable bottom-navigation shell across the five primary tabs.
+   Compact phones (<600px), short landscape (<640px tall), and the existing
+   >=840px rail remain unchanged. The workout/non-tab route keeps its proven
+   compact geometry; do not expand its logging controls or add a second owner. */
+@media (min-width:600px) and (max-width:839px) and (min-height:640px){
+  #root[data-pi-motion="expressive"] .wpb>div:has(>.wpb-tabbar){
+    box-sizing:border-box;
+    width:100%!important;
+    max-width:760px!important;
+  }
+}
+
 /* R67 — tablet and desktop adaptive sheet surfaces.
    A large window does not warrant a full-width bottom drawer. Change
    placement only at sufficiently tall expanded sizes; preserve compact

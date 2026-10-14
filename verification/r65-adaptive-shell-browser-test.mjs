@@ -47,7 +47,7 @@ try{
     headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
   const results=[];
   for(const theme of ['rose','rosewater']){
-    for(const [width,height,wide] of [[393,852,false],[900,480,false],[900,1000,true],[1280,850,true]]){
+    for(const [width,height,wide] of [[393,852,false],[600,800,false],[768,900,false],[900,480,false],[900,1000,true],[1280,850,true]]){
       const context=await browser.createBrowserContext();
       const page=await context.newPage();
       // Puppeteer's media helper rejects forced-colors, but Chrome CDP supports
@@ -96,10 +96,19 @@ try{
           assert.ok(initial.bar.right<=initial.content.x+3,
             'Rail occupies its own column without covering content');
         }else{
-          assert.equal(initial.direction,'row','Phones/short landscape retain bottom navigation');
-          assert.ok(initial.frame.width<=462,'Phone shell remains its existing maximum');
+          assert.equal(initial.direction,'row','Compact/medium windows retain bottom navigation');
+          const medium=width>=600&&width<840&&height>=640;
+          if(medium){
+            assert.ok(initial.frame.width>=Math.min(width,760)-3,
+              'Medium windows use the available reading width: '+JSON.stringify(initial));
+            assert.ok(initial.frame.width<=760,
+              'Medium tab shell remains bounded for readability');
+          }else{
+            assert.ok(initial.frame.width<=462,
+              'Compact and short-landscape windows retain the proven phone-width frame');
+          }
           assert.ok(initial.bar.y>initial.content.y+initial.content.height-10,
-            'Phone navigation stays below content');
+            'Bottom navigation stays below content');
         }
         for(const route of ['plan','progress','profile','settings','home']){
           await page.click('[data-tab="'+route+'"]');
@@ -224,6 +233,7 @@ try{
               const rect=el=>{if(!el)return null;const r=el.getBoundingClientRect();
                 return {x:r.x,y:r.y,right:r.right,bottom:r.bottom,width:r.width};};
               return {grid:getComputedStyle(parent).display==='grid',
+                planWidth:rect(parent)?.width,
                 panes:rect(parent.querySelector('.wpb-plan-panes')),
                 upNext:rect(parent.querySelector('.wpb-plan-up-next')),
                 overview:rect(parent.querySelector('.wpb-plan-overview')),
@@ -234,6 +244,9 @@ try{
             const supporting=width>=1060&&height>=700;
             assert.equal(layout.grid,supporting,'Plan supporting pane follows available window');
             assert.equal(layout.overflow,false,'Plan has no horizontal overflow');
+            if(width>=600&&width<840&&height>=640)
+              assert.ok(layout.planWidth>=Math.min(width,720)-4,
+                'Plan uses a readable medium-width workspace, not the 460px phone frame: '+JSON.stringify(layout));
             if(supporting){
               assert.ok(layout.overview.x>=layout.panes.right-2,
                 'Program overview is the supporting pane beside schedule');
@@ -330,6 +343,34 @@ try{
           assert.equal(state.direction,initial.direction,
             'Navigation position stays stable when switching to '+route);
           assert.equal(state.overflow,false,'No document overflow on '+route);
+        }
+        // R88: resizing within the same Plan must not reset week selection or
+        // create a second navigation/data owner. Exercise the actual live DOM.
+        if(width===768&&theme==='rose'){
+          await page.click('[data-tab="plan"]');
+          await page.waitForSelector('.wpb-plan-view [data-plan-week="2"]');
+          // The seeded history can make week 2 the current/default-open week.
+          // Clicking an already-expanded week would close it, so establish
+          // the desired state without depending on initial scheduling.
+          const weekTwoOpen=await page.$eval('.wpb-plan-view [data-plan-week="2"] > button',
+            el=>el.getAttribute('aria-expanded')==='true');
+          if(!weekTwoOpen) await page.click('.wpb-plan-view [data-plan-week="2"] > button');
+          await page.waitForFunction(()=>document.querySelector(
+            '.wpb-plan-view [data-plan-week="2"] > button')?.getAttribute('aria-expanded')==='true');
+          await page.setViewport({width:393,height:852,deviceScaleFactor:1,isMobile:true,hasTouch:true});
+          await page.waitForFunction(()=>document.querySelector('.wpb-plan-view')?.getBoundingClientRect().width<=462);
+          assert.equal(await page.$eval('.wpb-plan-view [data-plan-week="2"] > button',
+            el=>el.getAttribute('aria-expanded')),'true',
+            'Selected Plan week survives compact reflow');
+          await page.setViewport({width:768,height:900,deviceScaleFactor:1,isMobile:true,hasTouch:true});
+          await page.waitForFunction(()=>document.querySelector('.wpb-plan-view')?.getBoundingClientRect().width>=715);
+          assert.equal(await page.$eval('.wpb-plan-view [data-plan-week="2"] > button',
+            el=>el.getAttribute('aria-expanded')),'true',
+            'Selected Plan week survives medium reflow');
+          assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+2),false,
+            'Medium Plan reflow never causes horizontal overflow');
+          await page.click('[data-tab="home"]');
+          await page.waitForSelector('[data-view-frame="home"]');
         }
         // R69: use the real Home→Library→Detail path. Wide screens reflow
         // the existing detail into a pane; compact and medium retain overlay.

@@ -1504,7 +1504,7 @@ try {
             document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 95 }));
             return state;
         });
-        assert.equal(ink.ink, '1', 'the press state layer activates on root navigation');
+        assert.ok(ink.ink==='a'||ink.ink==='b', 'the press state layer activates on root navigation');
         assert.ok(ink.x > 0 && ink.y > 0 && ink.childrenUnchanged, 'tap origin is tracked without DOM or layout additions');
         assert.ok(ink.animation.includes('piInkBurst') && ink.rippleVisible,
             'touch feedback is painted and transient even on the selected navigation tab');

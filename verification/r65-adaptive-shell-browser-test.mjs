@@ -626,10 +626,10 @@ try{
       await page.waitForSelector('.wpb-tabbar');
       await page.click('[data-tab="progress"]');
       await page.waitForSelector('.wpb-training-calendar');
-      assert.deepEqual(await page.$eval('.wpb-calendar-month-stats>div .mono',
+      assert.deepEqual(await page.$$eval('.wpb-calendar-month-stats>div .mono',
         els=>els.map(el=>el.textContent.trim())),['1','2'],
         'Two workouts on one local date count as one training day and two workouts');
-      const dates=await page.$eval('.wpb-calendar-date[data-workouts]',
+      const dates=await page.$$eval('.wpb-calendar-date[data-workouts]',
         els=>els.map(el=>({count:el.dataset.workouts,label:el.getAttribute('aria-label')})));
       assert.equal(dates.length,1,'Both sessions share one interactive training date');
       assert.equal(dates[0].count,'2','The calendar cell shows the session count');
@@ -640,7 +640,7 @@ try{
       const detail=await page.$eval('.wpb-calendar-day-detail',el=>el.textContent);
       assert.match(detail,/Morning Legacy Logged/,'The morning session is visible');
       assert.match(detail,/Evening Completed/,'The evening session is visible');
-      const summaries=await page.$eval(
+      const summaries=await page.$$eval(
         '.wpb-calendar-day-detail .wpb-calendar-session-summary',
         els=>els.map(el=>el.textContent.trim()).sort());
       assert.deepEqual(summaries,['1 set','3 sets · 2,250 lb · 55m'].sort(),

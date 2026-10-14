@@ -2,7 +2,7 @@
   "schemaVersion": 3,
   "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": 871,
+  "build": 872,
   "engineVersion": "0.65.7",
   "candidateStatus": "verification_enforced_by_ci",
   "runtimeAggregate": "b54a0ce0f05c283fc9c1dc4e80ec69db8b215a530b56f53bd049fea1e281bf4c",
@@ -118,6 +118,6 @@
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b871-r3fc16e2b05d87046",
-  "uiMilestone": "Build 871 · R88 adaptive medium Plan workspace"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b872-r3fc16e2b05d87046",
+  "uiMilestone": "Build 872 · R91 Home task-first hierarchy"
 }

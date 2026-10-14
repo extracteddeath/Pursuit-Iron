@@ -7781,3 +7781,32 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   outline:2px solid var(--pi-color-active);
   outline-offset:2px;
 }
+
+/* R88 pilot — wide Plan schedule, without new React owners or training state.
+   Keep the familiar single column at phone/tablet sizes. At genuinely wide,
+   tall windows, scan collapsed weeks in two columns; expanding a week gives
+   its sessions the full reading width so names and actions never compress. */
+@media (min-width:1120px) and (min-height:720px){
+  #root[data-pi-motion="expressive"] .wpb .wpb-plan-view{
+    box-sizing:border-box;
+    max-width:940px!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-plan-phase-group{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:8px 12px;
+    align-items:start;
+    min-width:0;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-plan-phase-group>.wpb-plan-phase-header{
+    grid-column:1/-1;
+    min-width:0;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-plan-phase-group>.wpb-plan-week-card{
+    min-width:0;
+    margin-bottom:0!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-plan-phase-group>.wpb-plan-week-card:has(>.wpb-plan-session-list){
+    grid-column:1/-1;
+  }
+}

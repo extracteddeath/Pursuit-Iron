@@ -7,7 +7,7 @@ The proposed "add a two-column Plan" was already implemented in R68 at >=1060x70
 ## Scoped change
 
 - On available windows 600–839px wide and at least 640px tall, the existing five-primary-tab shell grows to at most 760px, with bottom navigation retained. Every primary destination uses that same frame width, so switching tabs cannot cause a Plan-only width jump.
-- The existing Plan scroll container retains its 720px reading limit and gains fluid medium-window page gutters. Week picker, Up Next, Plan section buttons, selected week and Program overview stay in the same mobile reading order, using the same React nodes.
+- The existing Plan scroll container retains its 720px reading limit and retains the established 24px medium-window page gutters. Week picker, Up Next, Plan section buttons, selected week and Program overview stay in the same mobile reading order, using the same React nodes.
 - At compact widths below 600px, short landscapes below 640px high, and expanded widths >=840px, all established navigation and Plan geometry remains unchanged. R68's real desktop supporting column remains the only two-pane Plan owner.
 - The live workout, detail/preview routes, set logger, numerical inputs, all themes, motion, storage and engine 0.65.7 are not changed. No new viewport state, second controller, duplicate program card, or extra overlay.
 

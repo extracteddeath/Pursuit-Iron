@@ -302,8 +302,8 @@ try{
               el=>el.textContent.trim());
             assert.equal(legacyFacts,'2 sets · 1,320 lb · 40m',
               'Legacy history detail uses completed working sets, tonnage and elapsed seconds');
-            assert.doesNotMatch(legacyFacts,/0 sets|0 lb|0m/,
-              'Missing modern fields must not become fabricated zero-valued history');
+            assert.ok(!legacyFacts.startsWith('0 sets'),
+              'Legacy completed records cannot display a false zero-set total');
             assert.equal(await page.$eval('.wpb-milestones-disclosure',el=>el.open),false,
               'Selecting calendar history does not expand milestones');
             assert.equal(progress.viewportOverflow,false,'Progress has no horizontal overflow');

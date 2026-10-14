@@ -134,6 +134,19 @@ async function verifyFoundationStates(browser){
         const start=await controlStyle(page,'.wpb-home .wpb-ui-action[data-action="primary"]');
         const create=await controlStyle(page,'.wpb-home-new-program');
         const freestyle=await controlStyle(page,'.wpb-home-freestyle');
+        if(state==='scored'){
+          const pulse=await page.evaluate(()=>{
+            const metrics=document.querySelector('.wpb-metric-strip');
+            const programList=document.querySelector('.wpb-home-programs');
+            return {exists:!!metrics,labels:metrics?.textContent||'',
+              ahead:!!metrics&&!!programList&&!!(metrics.compareDocumentPosition(programList)&
+                Node.DOCUMENT_POSITION_FOLLOWING)};
+          });
+          assert.ok(pulse.exists&&pulse.ahead&&pulse.labels.includes('This week')&&
+            pulse.labels.includes('Streak')&&!pulse.labels.includes('Total'),
+            'R91 recent training belongs directly after the workout, before library management: '+
+              JSON.stringify(pulse));
+        }
         assert.equal(await page.$('.wpb-home-compose-bar'),null,
           'Ready workout never competes with an anchored Create Program action');
         assert.ok(start.contrast>=4.5&&create.contrast>=4.5&&freestyle.contrast>=4.5&&

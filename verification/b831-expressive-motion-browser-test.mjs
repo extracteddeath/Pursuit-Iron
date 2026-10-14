@@ -478,7 +478,7 @@ try {
             };
             return { scheme:getComputedStyle(document.documentElement).colorScheme,
                 primary:paint(document.querySelector('.wpb-home .wpb-home-hero .wpb-primary-action')),
-                secondary:paint(document.querySelector('.wpb-home-create')),
+                secondary:paint(document.querySelector('.wpb-home-new-program')),
                 hero:paint(document.querySelector('.wpb-home-hero')) };
         });
         // Read real resting containers, not source hex colors. The 20-theme
@@ -2121,9 +2121,9 @@ try {
             localStorage.setItem('wpb:v1', JSON.stringify(store));
         }, initial);
         await page.goto('http://127.0.0.1:8794/', { waitUntil: 'networkidle0' });
-        await page.waitForSelector('#root[data-pi-motion="expressive"] .wpb-home-create');
-        // The separate no-live Home fixture displays both screenshot CTAs.
-        // Require differentiated emphasis, text contrast and unchanged targets.
+        await page.waitForSelector('#root[data-pi-motion="expressive"] .wpb-home-new-program');
+        // A saved active program exposes Start above the fold and the quiet New
+        // program action in discovery. Verify both distinct priorities.
         const homeWithoutDock = await homePalette();
         assert.ok(homeWithoutDock.primary && homeWithoutDock.secondary &&
             homeWithoutDock.primary.height >= 44 &&
@@ -2163,7 +2163,20 @@ try {
         // R15: background-color can be rgba(...,.03) and still pass a
         // "not transparent" check. Measure the rendered alpha channel for
         // both surfaces; reject anything less than fully opaque on phones.
-        const dockPaint = await page.$eval('.wpb-home-compose-bar', bar => {
+        // The no-active-program creation dock is a separate navigation state.
+        // Test its original opacity/hit contract without re-introducing it
+        // as a competing sticky CTA when the program is ready.
+        const dockContext=await browser.createBrowserContext();
+        const dockPage=await dockContext.newPage();
+        await dockPage.setViewport({width,height:844,deviceScaleFactor:1,isMobile:true,hasTouch:true});
+        await dockPage.evaluateOnNewDocument(seed=>{
+            localStorage.setItem('wpb:v1',JSON.stringify({
+                ...seed,saved:[],cycles:[],pinnedId:null,history:[],perf:{},drafts:{}
+            }));
+        },initial);
+        await dockPage.goto('http://127.0.0.1:8794/',{waitUntil:'networkidle0'});
+        await dockPage.waitForSelector('.wpb-home-compose-bar');
+        const dockPaint = await dockPage.$eval('.wpb-home-compose-bar', bar => {
             const c = getComputedStyle(bar);
             const quickEl = bar.querySelector('.wpb-home-quick');
             const primary = bar.querySelector('.wpb-home-create')?.getBoundingClientRect();
@@ -2192,8 +2205,10 @@ try {
             dockPaint.pointerEvents === 'auto' && dockPaint.opacity === '1' &&
             dockPaint.primaryHeight >= 44 && dockPaint.quickHeight >= 44 &&
             dockPaint.primaryWidth >= dockPaint.quickWidth && dockPaint.separated,
-            'R15 home dock and Quick are truly opaque and intercept underlying taps: ' + JSON.stringify(dockPaint));
-        await page.click('.wpb-home-create');
+            'R15 no-active-plan Home dock and Quick are opaque and remain accessible: ' + JSON.stringify(dockPaint));
+        await dockContext.close();
+        await page.$eval('.wpb-home-new-program',el=>el.scrollIntoView({block:'center'}));
+        await page.click('.wpb-home-new-program');
         await page.waitForSelector('.wpb-wizard .wpb-wizard-progress');
         const optionShapes = await page.$$eval('.wpb-wizard .wpb-wizard-option, .wpb-wizard .wpb-wizard-step>div>button[aria-pressed]', controls =>
             controls.map(el => ({radius:parseFloat(getComputedStyle(el).borderTopLeftRadius),
@@ -2245,7 +2260,7 @@ try {
             'R5 wizard retains a large guided headline and slim responsive progress track: '+JSON.stringify(wizardR5));
         if (width === 430) await page.screenshot({ path: path.join(root, 'verification/b831-m3-wizard-phone.png') });
         await page.click('.wpb-wizard-header button[aria-label="Back"]');
-        await page.waitForSelector('.wpb-home-create');
+        await page.waitForSelector('.wpb-home-new-program');
         await page.click('[data-tab="settings"]');
         await page.waitForSelector('.wpb-settings');
         await clickText('Exercise library');

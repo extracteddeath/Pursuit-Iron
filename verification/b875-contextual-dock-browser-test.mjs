@@ -61,9 +61,12 @@ try {
         if (width >= 700) {
             await page.waitForSelector('[data-set-dock-preview]');
             await page.click('button[aria-label="Workout options"]');
-            assert.ok(await page.$('xpath/.//button[contains(., "Hide workout dock")]'),
-                'expanded workspace must expose a way to hide its default dock');
-            await page.click('button[aria-label="Workout options"]');
+            const hideDock = await page.waitForSelector('xpath/.//button[contains(., "Hide workout dock")]');
+            assert.ok(hideDock,'expanded workspace must expose a way to hide its default dock');
+            await hideDock.click();
+            await page.waitForFunction(()=>!document.querySelector('[data-set-dock-preview]'));
+            await option('Show workout dock');
+            await page.waitForSelector('[data-set-dock-preview]');
         } else {
             assert.equal(await page.$('[data-set-dock-preview]'), null,
                 'phone defaults to uncluttered full logger');

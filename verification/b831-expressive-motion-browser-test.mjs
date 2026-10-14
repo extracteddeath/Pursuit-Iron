@@ -2689,14 +2689,21 @@ try {
                     const item=bar.querySelector('[aria-current="page"]');
                     const icon=item?.querySelector('svg'),label=item?.querySelector('span');
                     const b=el=>el?.getBoundingClientRect();
-                    return {tab,navHeight:b(item)?.height,
+                    // Layout size is stable while a pressed tab's visual scale springs.
+                    // The rendered pointer target must remain >=44px even mid-animation.
+                    const rect=b(item);
+                    const center=rect?document.elementFromPoint(rect.x+rect.width/2,rect.y+rect.height/2):null;
+                    return {tab,navHeight:rect?.height,layoutHeight:item?.offsetHeight,
+                        hit:!!item&&item.contains(center),
+                        scale:item?getComputedStyle(item).scale:null,
                         labelGap:label&&icon?b(label).top-b(icon).bottom:0,
                         labelFits:!!label&&b(label).bottom<=b(item).bottom+1,
                         selected:item?.dataset.tab,
                         overflow:root.scrollWidth>root.clientWidth+1,
                         clipped:[...bar.querySelectorAll('.wpb-tab>span')].some(el=>el.scrollWidth>el.clientWidth+1)};
                 },tab);
-                assert.ok(phoneR46.navHeight>=56&&phoneR46.labelGap>=7&&
+                assert.ok(phoneR46.layoutHeight>=56&&phoneR46.navHeight>=44&&
+                    phoneR46.hit&&phoneR46.labelGap>=7&&
                     phoneR46.labelFits&&phoneR46.selected===tab&&
                     !phoneR46.overflow&&!phoneR46.clipped,
                     'R46 393px mid-phone layout stays navigable at '+px+'px text: '+JSON.stringify(phoneR46));

@@ -1,3 +1,9 @@
+## Build 871 — adaptive wide Plan week scanning
+
+- On tall desktop windows of at least 1120px width, show collapsed weeks in a two-column Plan schedule while preserving full-width session buttons for expanded weeks and full-width phase headers.
+- Bound the Plan reading area at 940px without changing the existing navigation rail, phone layouts, week memory, scroll/back behavior, workout logger, theme palette, or engine 0.65.7.
+- Extend the existing R65 real-browser shell contract to measure columns, expanded-card width and overflow; preserve the 393px and 900px layouts. Treat this as a guarded responsive-layout pilot, not a full two-pane rewrite.
+
 ## Build 870 — Workout weight Next / reps Done keyboard flow
 
 - Honor the existing mobile keyboard labels: pressing Next/Enter in an editable workout weight field moves to and selects the reps input **in the same set**. Done/Enter on reps releases keyboard focus but never completes the set.

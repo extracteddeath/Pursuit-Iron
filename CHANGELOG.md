@@ -1,3 +1,9 @@
+## Build 876 — See the upcoming exercises on Home
+
+- Open the session outline by default so the session name is followed by all actual exercise names, prescribed working sets and rep ranges before starting.
+- Keep the optional collapse control and preserve the current choice during resizing. A new program/day/week opens its own outline.
+- Retain the primary Start/Resume position, existing prescription reads, workout routing and saved data.
+
 ## Build 875 — Compact, actionable set dock and workout safety
 
 - The opt-in dock now follows the first unfinished warm-up, working, drop or myo set. Completed exercises show completion rather than suggesting the final set again.

@@ -201,33 +201,29 @@ async function verifyTaskHierarchy(browser){
       assert.ok(homeOrder.summaryFirst&&homeOrder.startFirst&&homeOrder.programsFirst&&
         homeOrder.createDeferred&&!homeOrder.dockPresent&&homeOrder.startHeight>=52,
         'R91 workout leads; program creation follows training content in DOM and focus order: '+JSON.stringify(homeOrder));
-      const outlineClosed=await page.$eval('.wpb-m3-session-preview',panel=>{
+      const outlineState=()=>page.$eval('.wpb-m3-session-preview',panel=>{
         const button=panel.querySelector('button[aria-expanded]');
-        const content=document.getElementById('wpb-home-outline-exercises');
-        const frame=panel.getBoundingClientRect();
+        const content=panel.querySelector('#wpb-home-outline-exercises');
         return {button:!!button,label:button?.getAttribute('aria-label'),controls:button?.getAttribute('aria-controls'),
           expanded:button?.getAttribute('aria-expanded'),buttonHeight:button?.getBoundingClientRect().height,
-          rows:content?.querySelectorAll('.wpb-m3-outline-row').length||0,
-          hidden:content?.hidden,previewHeight:frame.height};
+          rows:content?.querySelectorAll('.wpb-m3-outline-row').length||0,hidden:content?.hidden,
+          text:content?.textContent||'',overflow:panel.scrollWidth>panel.clientWidth+1};
       });
-      assert.ok(outlineClosed.button&&outlineClosed.expanded==='false'&&
-        outlineClosed.controls==='wpb-home-outline-exercises'&&
-        outlineClosed.label?.includes('Show all 4 session exercises')&&
-        outlineClosed.buttonHeight>=44&&outlineClosed.hidden&&outlineClosed.rows===0&&
-        outlineClosed.previewHeight<95,
-        'R92 session outline starts compact and is accessible without rendering hidden exercise details: '+
-          JSON.stringify(outlineClosed));
+      const outlineOpen=await outlineState();
+      assert.ok(outlineOpen.button&&outlineOpen.expanded==='true'&&
+        outlineOpen.controls==='wpb-home-outline-exercises'&&
+        outlineOpen.label?.includes('Hide all 4 session exercises')&&
+        outlineOpen.buttonHeight>=44&&!outlineOpen.hidden&&outlineOpen.rows===4&&!outlineOpen.overflow,
+        'B876 Home shows every session exercise by default, with accessible optional collapse: '+JSON.stringify(outlineOpen));
+      assert.match(outlineOpen.text,/Bench/i,'The session shows a real lift, not only the split label');
+      assert.match(outlineOpen.text,/4×6[-–]8/,'The actual prescribed sets and reps are visible before tapping');
+      await page.click('.wpb-m3-session-preview button[aria-expanded="true"]');
+      const outlineClosed=await outlineState();
+      assert.ok(outlineClosed.expanded==='false'&&outlineClosed.hidden&&outlineClosed.rows===0&&
+        outlineClosed.label?.includes('Show all 4 session exercises'),
+        'Explicit collapse still works without navigation or hidden focusable exercise content');
       await page.click('.wpb-m3-session-preview button[aria-expanded="false"]');
-      const outlineOpen=await page.$eval('.wpb-m3-session-preview',panel=>{
-        const content=panel.querySelector('#wpb-home-outline-exercises');
-        return {expanded:panel.querySelector('button[aria-expanded]')?.getAttribute('aria-expanded'),
-          rows:content?.querySelectorAll('.wpb-m3-outline-row').length,
-          hidden:content?.hidden,overflow:panel.scrollWidth>panel.clientWidth+1};
-      });
-      assert.ok(outlineOpen.expanded==='true'&&outlineOpen.rows===4&&
-        !outlineOpen.hidden&&!outlineOpen.overflow,
-        'R92 disclosure reveals every prescribed exercise without clipping or route navigation: '+
-          JSON.stringify(outlineOpen));
+      assert.deepEqual(await outlineState(),outlineOpen,'Reopening restores the same actual session outline');
       const geometry=async selector=>page.$eval(selector,node=>{
         const box=node.getBoundingClientRect(),css=getComputedStyle(node);
         const nav=document.querySelector('.wpb-tabbar'),tab=nav.querySelector('[aria-current="page"]');

@@ -6,6 +6,6 @@
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 70,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b877-rdbaf3daa17d32ae4",
-  "uiMilestone": "Build 877 · Responsive tablet dock and complete Focus tools"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b878-rd623eec5732f4cac",
+  "uiMilestone": "Build 878 · Program history loads respect logged units"
 }

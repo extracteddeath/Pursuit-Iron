@@ -299,7 +299,7 @@ try {
                 cell.dispatchEvent(new PointerEvent('pointerdown',{
                     bubbles:true,button:0,pointerId:983,clientX:20,clientY:20
                 }));
-                const pressed=cell.dataset.piInk==='1' &&
+                const pressed=['a','b'].includes(cell.dataset.piInk) &&
                     cell.dataset.piControl==='1';
                 document.dispatchEvent(new PointerEvent('pointerup',{
                     bubbles:true,button:0,pointerId:983
@@ -315,6 +315,52 @@ try {
             calendarTouchR83.layoutPreserved,
             'R83 recorded workout dates receive restrained tactile feedback without changing their layout geometry: '+
                 JSON.stringify(calendarTouchR83));
+
+        // R85: fast repeated touch ripples must not synchronously force
+        // layout. Two identical keyframes alternate; completion from the
+        // cancelled first pulse cannot clear a newer second pulse.
+        const repeatedInkR85=await page.evaluate(()=>{
+            const host=document.querySelector('#root[data-pi-motion="expressive"] .wpb');
+            const cell=document.createElement('button');
+            cell.type='button';cell.className='wpb-calendar-date';
+            cell.dataset.workouts='2';
+            cell.style.cssText='width:48px;height:48px;border-radius:12px;';
+            cell.textContent='13';host.append(cell);
+            let layoutReads=0;
+            Object.defineProperty(cell,'offsetWidth',{configurable:true,
+                get(){layoutReads++;return 48;}});
+            const press=id=>{
+                cell.dispatchEvent(new PointerEvent('pointerdown',{
+                    bubbles:true,button:0,pointerId:id,clientX:20,clientY:20
+                }));
+                const result={phase:cell.dataset.piInk,
+                    name:getComputedStyle(cell,'::after').animationName};
+                document.dispatchEvent(new PointerEvent('pointerup',{
+                    bubbles:true,button:0,pointerId:id
+                }));
+                return result;
+            };
+            try{
+                const first=press(985),second=press(986);
+                cell.dispatchEvent(new AnimationEvent('animationend',{
+                    bubbles:true,animationName:'piInkBurstA'
+                }));
+                const latestSurvived=cell.dataset.piInk==='b';
+                cell.dispatchEvent(new AnimationEvent('animationend',{
+                    bubbles:true,animationName:'piInkBurstB'
+                }));
+                return {first,second,layoutReads,latestSurvived,
+                    cleaned:!cell.hasAttribute('data-pi-ink')};
+            }finally{cell.remove();}
+        });
+        assert.ok(repeatedInkR85.first.phase==='a' &&
+            repeatedInkR85.second.phase==='b' &&
+            repeatedInkR85.first.name==='piInkBurstA' &&
+            repeatedInkR85.second.name==='piInkBurstB' &&
+            repeatedInkR85.layoutReads===0 &&
+            repeatedInkR85.latestSurvived && repeatedInkR85.cleaned,
+            'R85 repeated calendar taps use paint-only ripple restart and latest-event ownership: '+
+                JSON.stringify(repeatedInkR85));
 
         // R16: a named solid surface must not be a 3%-alpha color wash.
         // Probe all five theme-derived roles in both browser color schemes
@@ -1458,7 +1504,7 @@ try {
             document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 95 }));
             return state;
         });
-        assert.equal(ink.ink, '1', 'the press state layer activates on root navigation');
+        assert.ok(ink.ink==='a'||ink.ink==='b', 'the press state layer activates on root navigation');
         assert.ok(ink.x > 0 && ink.y > 0 && ink.childrenUnchanged, 'tap origin is tracked without DOM or layout additions');
         assert.ok(ink.animation.includes('piInkBurst') && ink.rippleVisible,
             'touch feedback is painted and transient even on the selected navigation tab');

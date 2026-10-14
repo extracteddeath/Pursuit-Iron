@@ -552,14 +552,18 @@ function disclosure(el, initial = false) {
         const py = Number.isFinite(y) ? Math.max(0, Math.min(r.height, y - r.top)) : r.height / 2;
         el.style.setProperty('--pi-ink-x', `${px}px`);
         el.style.setProperty('--pi-ink-y', `${py}px`);
-        if (el.hasAttribute('data-pi-ink')) {
-            delete el.dataset.piInk;
-            void el.offsetWidth; // restart a repeated tap without replacing a React-owned element
-        }
-        el.dataset.piInk = '1';
+        // Alternate identical CSS keyframes on successive taps to restart
+        // the state layer without a forced synchronous layout read. This
+        // keeps fast repeated press feedback snappy on low-end phones.
+        el.dataset.piInk = el.dataset.piInk === 'a' ? 'b' : 'a';
     }
     const inkEnd = e => {
-        if (e.animationName === 'piInkBurst' && e.target?.dataset) delete e.target.dataset.piInk;
+        // A cancelled first ripple can be followed by a newer press on
+        // the same button. Its stale event must never clear the new one.
+        if (e.target?.dataset && (
+            (e.animationName === 'piInkBurstA' && e.target.dataset.piInk === 'a') ||
+            (e.animationName === 'piInkBurstB' && e.target.dataset.piInk === 'b')
+        )) delete e.target.dataset.piInk;
         if (e.animationName === 'piContentCascade' && e.target?.dataset) delete e.target.dataset.piReveal;
         if (e.animationName === 'piDisclosureContent' && e.target?.dataset) delete e.target.dataset.piExpandEnter;
         if (e.animationName === 'piExpressiveStepIn' && e.target?.dataset) delete e.target.dataset.piStepEnter;

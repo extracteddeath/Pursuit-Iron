@@ -111,9 +111,19 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-radius:inherit;
   pointer-events:none;
   background:radial-gradient(circle at var(--pi-ink-x,50%) var(--pi-ink-y,50%),color-mix(in srgb,currentColor 23%,transparent),transparent 74%);
-  animation:piInkBurst 360ms cubic-bezier(.2,.8,.2,1) both;
+  animation:piInkBurstA 360ms cubic-bezier(.2,.8,.2,1) both;
 }
-@keyframes piInkBurst{
+/* Each successive tap swaps the animation name, restarting the same ripple
+   without reading layout or injecting a child into a React-owned button. */
+#root[data-pi-motion="expressive"] .wpb button[data-pi-ink="b"]::after{
+  animation-name:piInkBurstB;
+}
+@keyframes piInkBurstA{
+  0%{opacity:0;transform:scale(.72)}
+  18%{opacity:.60}
+  100%{opacity:0;transform:scale(1)}
+}
+@keyframes piInkBurstB{
   0%{opacity:0;transform:scale(.72)}
   18%{opacity:.60}
   100%{opacity:0;transform:scale(1)}

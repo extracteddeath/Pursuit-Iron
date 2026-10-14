@@ -362,6 +362,55 @@ try {
             'R85 repeated calendar taps use paint-only ripple restart and latest-event ownership: '+
                 JSON.stringify(repeatedInkR85));
 
+        // R86: the real Plan Info progression drawer keeps long lift names
+        // legible at phone widths and offers a finger-sized native disclosure.
+        // Probe the production styles on an isolated matching DOM fragment;
+        // no training or progression data is changed by this view test.
+        const rationaleR86=await page.evaluate(()=>{
+            const host=document.querySelector('#root[data-pi-motion="expressive"] .wpb');
+            const fixture=document.createElement('section');
+            fixture.dataset.progressionSelection='true';
+            fixture.style.cssText='width:min(280px,calc(100vw - 32px));box-sizing:border-box;';
+            const details=document.createElement('details');
+            const summary=document.createElement('summary');
+            summary.textContent='Why these methods?';
+            summary.style.cssText='font-size:12px;list-style-position:inside;cursor:pointer;';
+            details.append(summary);
+            const reason=document.createElement('div');
+            reason.setAttribute('data-progression-reason','true');
+            const row=document.createElement('div');
+            row.style.cssText='display:flex;align-items:baseline;gap:8px;';
+            const name=document.createElement('span');
+            const title='Single Arm Incline Dumbbell Curl With Long-Lift Detail';
+            name.textContent=title;
+            name.style.cssText='flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+            const method=document.createElement('span');
+            method.textContent='Dynamic double progression';
+            method.style.cssText='flex-shrink:0;font-size:11px;font-weight:700;';
+            row.append(name,method);reason.append(row);details.append(reason);
+            fixture.append(details);host.append(fixture);
+            try{
+                const summaryHeight=summary.getBoundingClientRect().height;
+                const style=getComputedStyle(name);
+                const wrap=style.whiteSpace==='normal'&&
+                    getComputedStyle(row).flexWrap==='wrap';
+                const nameHeight=name.getBoundingClientRect().height;
+                const fontHeight=parseFloat(style.lineHeight)||parseFloat(style.fontSize)*1.2;
+                const completeName=name.textContent===title&&nameHeight>fontHeight*1.3;
+                const noOverflow=fixture.scrollWidth<=fixture.clientWidth+1;
+                summary.click();
+                const nativeOpen=details.open;
+                summary.click();
+                return {summaryHeight,wrap,completeName,noOverflow,nativeOpen,
+                    closed:!details.open};
+            }finally{fixture.remove();}
+        });
+        assert.ok(rationaleR86.summaryHeight>=44 && rationaleR86.wrap &&
+            rationaleR86.completeName && rationaleR86.noOverflow &&
+            rationaleR86.nativeOpen && rationaleR86.closed,
+            'R86 progression details remain readable and accessible on the phone: '+
+                JSON.stringify(rationaleR86));
+
         // R16: a named solid surface must not be a 3%-alpha color wash.
         // Probe all five theme-derived roles in both browser color schemes
         // without touching saved theme state or exercise/workout data.

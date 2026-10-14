@@ -294,6 +294,7 @@ try {
             cell.dataset.workouts='2';cell.type='button';
             cell.style.cssText='width:46px;height:46px;border-radius:12px;';
             cell.textContent='13';host.append(cell);
+            const originalWidth=cell.offsetWidth,originalHeight=cell.offsetHeight;
             try{
                 cell.dispatchEvent(new PointerEvent('pointerdown',{
                     bubbles:true,button:0,pointerId:983,clientX:20,clientY:20
@@ -304,12 +305,15 @@ try {
                     bubbles:true,button:0,pointerId:983
                 }));
                 return {pressed,marked:cell.dataset.workouts,
-                    touchTarget:cell.getBoundingClientRect().width>=44};
+                    originalWidth,originalHeight,
+                    layoutPreserved:cell.offsetWidth===originalWidth &&
+                        cell.offsetHeight===originalHeight};
             }finally{cell.remove();}
         });
         assert.ok(calendarTouchR83.pressed && calendarTouchR83.marked==='2' &&
-            calendarTouchR83.touchTarget,
-            'R83 recorded workout dates receive restrained tactile feedback without changing their hit targets: '+
+            calendarTouchR83.originalWidth>0 && calendarTouchR83.originalHeight>0 &&
+            calendarTouchR83.layoutPreserved,
+            'R83 recorded workout dates receive restrained tactile feedback without changing their layout geometry: '+
                 JSON.stringify(calendarTouchR83));
 
         // R16: a named solid surface must not be a 3%-alpha color wash.

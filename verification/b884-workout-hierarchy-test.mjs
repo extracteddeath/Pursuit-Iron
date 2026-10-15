@@ -1,0 +1,36 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+
+// Keep the B884 screen pass honest without coupling to pixel-specific CSS.
+// Runtime behavior is separately covered by phone/workout browser gates.
+const app = fs.readFileSync('modules/App.js','utf8');
+const css = fs.readFileSync('app.css','utf8');
+const workout = app.slice(app.indexOf('function WorkoutSession('), app.indexOf('function WorkoutSession(')+275000);
+assert.ok(workout.startsWith('function WorkoutSession('), 'WorkoutSession source must exist');
+const exercise = workout.indexOf('className: "wpb-exercise-heading"');
+const toolbar = workout.indexOf('className: "wpb-hscroll wpb-workout-tools"');
+const list = workout.indexOf('data-testid": `set-${ei}-${si}`');
+const add = workout.indexOf('className: "pressable wpb-add-set"');
+const coaching = workout.indexOf('"aria-label": "Expand Coach guidance"');
+assert.ok(exercise > -1 && toolbar > exercise && list > toolbar && add > list && coaching > add,
+  'Exercise identity, tools, editable set list and add-set must precede optional coaching');
+assert.ok(!workout.includes('First time logging this'),
+  'No first-time assertion when the previous set may be available');
+assert.ok(workout.includes('previousWorkoutSet(lastPerf[e.id], 0)'),
+  'Suggestion absence must not override actual previous-workout evidence');
+assert.ok(workout.includes('children: tgtW ?? "Set load"'),
+  'Missing target loads should get an understandable label, not a fake number');
+assert.ok(workout.includes('children: "Use last"'),
+  'Previous session load must remain an explicit one-tap action');
+assert.ok(workout.includes('"data-focus-mode": focus ? "true" : "false"'),
+  'Normal logging layout styling must be able to isolate Focus mode');
+for (const stable of ['"aria-label": "weight"','"aria-label": "reps"','"data-haptic-manual": "1"',
+  'onClick: () => addSetRow(ei)','onClick: () => completeRemaining(ei)',
+  'onClick: () => toggleDone(ei, si)', 'className: "wpb-workout-side"']){
+  assert.ok(workout.includes(stable), `Set-entry functionality is preserved: ${stable}`);
+}
+assert.ok(css.includes('R93 / B884 — Workout is a set logger'), 'Style pass is present');
+assert.ok(css.includes('data-focus-mode="false"'), 'Focus and normal screen styling isolated');
+assert.ok(css.includes('prefers-reduced-motion:reduce') && css.includes('forced-colors:active'),
+  'Motion and accessibility overrides remain supported');
+console.log('PASS B884 workout hierarchy: active-set-first layout, preserved input ownership and honest previous-load cues.');

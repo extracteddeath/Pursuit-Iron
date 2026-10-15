@@ -7927,3 +7927,238 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 @media(prefers-reduced-motion:reduce){
   #root .wpb-workout .wpb-set-dock-prototype{transition:none!important;}
 }
+
+/* R93 / B884 — Workout is a set logger, not a dashboard.
+   The phone viewport prioritizes the active set. Theme surfaces remain the
+   sole color source; there is no second gray/purple/cyan design vocabulary.
+   All controls, callbacks, focus-mode and large-viewport workspace remain.
+   Selectors are scoped to the live logger to protect plan/program views. */
+#root .wpb-workout .wpb-workout-header{
+  padding:7px 12px 7px!important;
+  box-shadow:none!important;
+}
+#root .wpb-workout .wpb-workout-summary{
+  margin-top:6px!important;
+  font-size:12px!important;
+  line-height:1.45!important;
+  letter-spacing:0!important;
+}
+#root .wpb-workout .wpb-workout-summary button{
+  text-underline-offset:3px;
+}
+#root .wpb-workout .wpb-ex-nav{
+  gap:6px!important;
+  margin-top:7px!important;
+  padding-bottom:2px!important;
+  scroll-padding-inline:4px;
+}
+#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step{
+  width:40px!important;
+  min-width:40px!important;
+  height:40px!important;
+  min-height:40px!important;
+  border-radius:13px!important;
+  font-size:13px!important;
+  box-shadow:none!important;
+}
+#root .wpb-workout[data-focus-mode="false"] .wpb-workout-scroll{
+  padding:10px 14px 14px!important;
+  scroll-padding-block:16px!important;
+}
+#root .wpb-workout .wpb-workout-scroll>.wpb-coach-card,
+#root .wpb-workout .wpb-workout-scroll>button[aria-label="Expand Coach guidance"]{
+  min-height:42px!important;
+  border-radius:13px!important;
+  margin-bottom:10px!important;
+  padding:8px 11px!important;
+  background:var(--pi-m3e-primary-container)!important;
+  border-color:color-mix(in srgb,var(--pi-m3e-primary) 22%,transparent)!important;
+  box-shadow:none!important;
+}
+#root .wpb-workout .wpb-exercise-heading{
+  gap:10px!important;
+  padding:1px 0 0!important;
+  align-items:flex-start!important;
+}
+#root .wpb-workout .wpb-exercise-heading>div:first-child>div:first-child{
+  font-size:20px!important;
+  font-weight:780!important;
+  line-height:1.16!important;
+  letter-spacing:-.5px;
+  text-wrap:balance;
+}
+#root .wpb-workout .wpb-exercise-heading .wpb-progression-label{
+  margin-top:4px!important;
+  font-size:11px!important;
+}
+#root .wpb-workout .wpb-exercise-head-actions{
+  gap:1px!important;
+}
+#root .wpb-workout .wpb-key-lift{
+  font-size:10px!important;
+  letter-spacing:.25px!important;
+  padding:4px 7px!important;
+  border:1px solid color-mix(in srgb,var(--pi-m3e-primary) 20%,transparent);
+  border-radius:8px!important;
+}
+#root .wpb-workout .wpb-exercise-head-actions>button{
+  width:40px!important;
+  min-width:40px!important;
+  height:40px!important;
+  min-height:40px!important;
+}
+#root .wpb-workout .wpb-workout-tools{
+  gap:3px!important;
+  margin:7px 0 8px!important;
+  padding:0 0 5px!important;
+  border-bottom:1px solid var(--pi-r11-edge)!important;
+}
+#root .wpb-workout .wpb-workout-tool{
+  min-height:42px!important;
+  padding:7px 10px!important;
+  font-weight:650!important;
+  border:1px solid transparent!important;
+  border-radius:12px!important;
+  background:transparent!important;
+}
+#root .wpb-workout .wpb-workout-tool:focus-visible,
+#root .wpb-workout .wpb-target-toggle:focus-visible,
+#root .wpb-workout .wpb-ex-nav-step:focus-visible{
+  outline:2px solid var(--pi-m3e-primary)!important;
+  outline-offset:2px!important;
+}
+#root .wpb-workout .wpb-workout-scroll>button[aria-label^="Edit pinned note for "]{
+  min-height:44px!important;
+  margin-bottom:9px!important;
+  padding:8px 11px!important;
+  border-radius:12px!important;
+  background:var(--pi-m3e-primary-container)!important;
+  border-color:color-mix(in srgb,var(--pi-m3e-primary) 22%,transparent)!important;
+}
+#root .wpb-workout .wpb-workout-starting-hint{
+  line-height:1.45;
+}
+#root .wpb-workout .wpb-set-head{
+  padding:9px 2px 7px!important;
+  border-bottom:1px solid var(--pi-r11-edge);
+  color:var(--pi-color-on-muted)!important;
+  letter-spacing:.25px!important;
+}
+#root .wpb-workout .wpb-target-toggle{
+  font-size:11px!important;
+  font-weight:750!important;
+}
+#root .wpb-workout [data-testid^="set-"]{
+  min-width:0;
+  border-bottom:1px solid var(--pi-r11-edge)!important;
+}
+#root .wpb-workout [data-testid^="set-"][data-active="1"]{
+  background:var(--pi-m3e-primary-container)!important;
+  box-shadow:inset 2px 0 0 var(--pi-m3e-primary)!important;
+}
+#root .wpb-workout [data-testid^="set-"][data-done="1"]{
+  background:transparent!important;
+}
+#root .wpb-workout .wpb-set-controls{
+  align-items:flex-start!important;
+  padding-block:6px!important;
+}
+#root .wpb-workout .wpb-set-reference{
+  font-size:12px!important;
+  font-weight:650!important;
+  line-height:1.4!important;
+}
+#root .wpb-workout .wpb-set-reference .wpb-target-reps{
+  font-weight:600!important;
+}
+#root .wpb-workout .wpb-set-controls .wpb-set-stepper{
+  height:44px!important;
+  min-height:44px!important;
+  border-radius:10px!important;
+  background:var(--pi-color-card)!important;
+}
+#root .wpb-workout .wpb-set-controls .wpb-num-input{
+  min-height:44px!important;
+  box-sizing:border-box!important;
+  border-radius:10px!important;
+  font-size:16px!important;
+  font-weight:750!important;
+  background:var(--pi-color-control)!important;
+}
+#root .wpb-workout [data-active="1"] .wpb-set-controls .wpb-num-input{
+  border-color:color-mix(in srgb,var(--pi-m3e-primary) 42%,var(--pi-r11-edge))!important;
+}
+#root .wpb-workout .wpb-set-controls .wpb-num-input:focus-visible{
+  outline:2px solid var(--pi-m3e-primary)!important;
+  outline-offset:1px!important;
+}
+#root .wpb-workout .wpb-set-complete{
+  min-width:36px!important;
+  width:36px!important;
+  height:44px!important;
+  border-radius:12px!important;
+}
+#root .wpb-workout [data-active="1"] .wpb-set-complete:not([aria-pressed="true"]){
+  color:var(--pi-m3e-primary)!important;
+  border-color:color-mix(in srgb,var(--pi-m3e-primary) 35%,var(--pi-r11-edge))!important;
+}
+#root .wpb-workout .wpb-add-set{
+  min-height:44px!important;
+  border-radius:12px!important;
+  padding:8px 12px!important;
+}
+#root .wpb-workout .wpb-complete-remaining{
+  width:auto!important;
+  min-height:40px!important;
+  margin:4px 0 5px auto!important;
+  padding:7px 8px!important;
+  border-color:transparent!important;
+  font-size:12px!important;
+  font-weight:550!important;
+}
+#root .wpb-workout .wpb-workout-footer{
+  padding-top:8px!important;
+  padding-bottom:max(10px,env(safe-area-inset-bottom))!important;
+}
+#root .wpb-workout .wpb-workout-footer-primary{
+  min-height:52px!important;
+  border-radius:14px!important;
+}
+@media (max-width:420px){
+  #root .wpb-workout[data-focus-mode="false"] .wpb-workout-scroll{
+    padding-inline:12px!important;
+  }
+  #root .wpb-workout .wpb-set-controls{
+    gap:4px!important;
+  }
+  #root .wpb-workout .wpb-set-controls .wpb-set-stepper{
+    width:26px!important;
+    min-width:26px!important;
+  }
+  #root .wpb-workout .wpb-set-controls .wpb-set-complete{
+    width:34px!important;
+    min-width:34px!important;
+  }
+}
+@media (min-width:700px){
+  /* Tablet / foldable workspace keeps its independent dock + Focus surfaces. */
+  #root .wpb-workout[data-focus-mode="false"] .wpb-workout-scroll{
+    padding-inline:18px!important;
+  }
+}
+@media (prefers-reduced-motion:reduce){
+  #root .wpb-workout [data-testid^="set-"],
+  #root .wpb-workout .wpb-ex-nav-step{transition:none!important;}
+}
+@media (forced-colors:active){
+  #root .wpb-workout [data-active="1"]{
+    outline:2px solid Highlight!important;
+    outline-offset:-2px!important;
+  }
+  #root .wpb-workout .wpb-num-input,
+  #root .wpb-workout .wpb-set-stepper{
+    border-color:ButtonText!important;
+    background:Field!important;
+    color:FieldText!important;
+  }
+}

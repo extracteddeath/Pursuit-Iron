@@ -8426,7 +8426,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb-exercise-tags{display:flex;gap:5px;flex-wrap:wrap;margin:7px 0 3px}
 .wpb-exercise-tags>span{font-size:11px;font-weight:650;padding:4px 8px;border-radius:8px;background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink)}
 .wpb-session-dialog-backdrop{position:fixed;inset:0;z-index:110;background:rgba(0,0,0,.65);display:flex;align-items:flex-end;justify-content:center}
-.wpb-session-dialog{width:100%;max-width:560px;max-height:88dvh;overflow-y:auto;box-sizing:border-box;padding:18px 18px calc(24px + env(safe-area-inset-bottom));border-radius:26px 26px 0 0;background:var(--wpb-theme-bg-tint);color:var(--wpb-theme-text);border:1px solid var(--wpb-theme-border)}
+.wpb-session-dialog{width:100%;max-width:560px;max-height:88dvh;overflow-y:auto;box-sizing:border-box;padding:18px 18px calc(24px + env(safe-area-inset-bottom));border-radius:26px 26px 0 0;background:var(--wpb-theme-bg);color:var(--wpb-theme-text);border:1px solid var(--wpb-theme-border)}
 .wpb-session-dialog-heading{display:flex;align-items:center;gap:12px;margin-bottom:12px}
 .wpb-session-dialog h2{font-size:21px;letter-spacing:-.3px;flex:1;margin:0}
 .wpb-session-dialog-heading button{width:44px;height:44px;border:0;border-radius:50%;background:var(--wpb-theme-card);color:var(--wpb-theme-text);display:grid;place-items:center}

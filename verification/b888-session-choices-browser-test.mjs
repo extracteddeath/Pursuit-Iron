@@ -72,6 +72,21 @@ try {
  await page.waitForSelector('.wpb-home .wpb-primary-action');await page.click('.wpb-home .wpb-primary-action');await page.waitForSelector('.wpb-workout');await clickText('Skip');
  await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:live'))?.sessionNote==='');snap=await getLive();
  assert.equal(snap.data[0].note,'','exercise reminder expires after one repetition');
+ await page.close();
+ for (const width of [320,900]) {
+  const light=await browser.newPage();light.on('pageerror',e=>errors.push(e.message));
+  await light.setViewport({width,height:850,isMobile:width<600,hasTouch:width<600});
+  await light.evaluateOnNewDocument((store,live)=>{localStorage.setItem('wpb:v1',JSON.stringify({...store,theme:'rosewater'}));localStorage.setItem('wpb:live',JSON.stringify(live));},store,live);
+  await light.goto('http://127.0.0.1:8798/index.html',{waitUntil:'networkidle0'});
+  await light.waitForSelector('.wpb-live-dock button[aria-label="Resume workout"]');await light.click('.wpb-live-dock button[aria-label="Resume workout"]');
+  await light.waitForSelector('.wpb-workout');if(await light.$('[aria-label="Focused mode"]'))await light.click('[aria-label="Focused mode"]');
+  await light.evaluate(()=>document.querySelector('.wpb-session-context button').click());await light.waitForSelector('[aria-label="Session notes"]');
+  const box=await light.$eval('.wpb-session-dialog',el=>({w:el.clientWidth,scroll:el.scrollWidth,bg:getComputedStyle(el).backgroundColor}));
+  assert.ok(box.scroll<=box.w+1,'note sheet fits '+width);
+  assert.ok(/^rgb\(/.test(box.bg)||/,[ ]*1\)$/.test(box.bg),'note sheet must be opaque: '+box.bg);
+  assert.equal(await light.$$eval('.wpb-session-note-editor',els=>els.length),2,'session and exercise editors in Focus mode');
+  await light.close();
+ }
  assert.deepEqual(errors,[],'no runtime errors');
  console.log('PASS B888 browser: Home injury persistence, tags, progression isolation, protected sets, note recovery, durable post-save program choice');
 } finally {if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}

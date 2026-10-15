@@ -1,3 +1,18 @@
+## Build 885 — Consistent set rows and one reference action
+
+- Remove the duplicate active-set “Use last”/suggested chip row. TARGET/LAST is now the sole per-set application surface: switch the header to compare, then tap the matching reference directly. No shifting row heights when one lift has history and another does not.
+- Tap LAST to reuse the matching previous **load only**, leaving today's reps and effort untouched. TARGET applies the prescribed load; a precise set-specific progression suggestion can also provide its suggested reps. Neither reference can mutate an already-completed set.
+- Give weight and reps equal space, separate the four +/- touch tracks and numeric inputs, and use a two-tier row on narrow phones so values are not reduced to unusable text slots. No sideways overflow or overlapping stepper hit areas.
+- Preserve long-press steppers, direct keyboard entry, timers, plate breakdown, added sets, Focus mode, tablet dock and previous-value comparison.
+
+## Build 884 — Workout first, chrome second (R93)
+
+- Bring the active exercise and working-set rows to the top of the normal workout screen. Keep Coach guidance fully functional, but move it after the set-entry and set-management actions instead of before the lift title.
+- Rebalance phone hierarchy using the existing theme: tighter progress/navigation, larger exercise identity, coherent setup/action affordances, quieter work-set utilities, an actual upcoming exercise name in Next, and stronger active-row and numeric-entry contrast.
+- Correct misleading first-time coaching when historical sets are present but a progression-owned suggestion is absent. For a genuinely new lift, explain that the lifter must choose the starting load.
+- In the TARGET column, say “Set load” when the engine has not prescribed a weight instead of displaying a cryptic dash. Make the existing tap-to-reuse previous set button explicitly say “Use last.” Do not auto-overwrite typed values or invent loads.
+- Keep injury actions, warm-up, superset, swap, plates, dynamic progression, add/complete remaining sets, inline notes, RIR logging, timers, Focus and tablet dock intact. Keep Focus padding and stepper geometry isolated from normal-mode layout changes, with reduced-motion and forced-color fallbacks.
+
 ## Build 883 — Native load steps after unit switching
 
 - Repair the equipment-inventory boundary responsible for suggestions such as 159.5 lb after a 155 lb machine set. Factory 2.5 kg pin steps become the native 5 lb defaults when the athlete trains in pounds, rather than a converted 5.51 lb phantom machine increment.

@@ -1,6 +1,9 @@
 // Canonical records domain. Maintained production source; independent of React and browser APIs.
 import { programWorkingWeeks } from "../program-duration.js";
 import { getNextShellCell, canonicalShellSetCount } from "../next-engine/app-shell-adapter.js";
+import { effortForSimulationWeek } from "../next-engine/simulation.js";
+import { rirForPhase } from "../next-engine/realizer-prescriptions.js";
+import { phasePolicyFor, initialPhaseForGoal, SUPPORTED_PHASES } from "../next-engine/phase-policy.js";
 import { freestyleCellForRepRange } from "../next-engine/workout-runtime.js";
 import { shellVolumeTargets } from "../next-engine/volume-repair.js";
 import { emptyRetiredTrialData, preserveRetiredTrialData, emptyRetiredRolloutData } from "../legacy-research-data.js";
@@ -253,6 +256,25 @@ function customLastSetTechnique(program, day, ex, slotIndex, weekIndex) {
     return lastSetTech(ex, goalForDay(program, day) === 'strength', focused, blockPhase(program, weekIndex, 0), weeks);
 }
 
+// Explicit slot targets and Manual remain authored targets. Converted Auto blocks get the same
+// effort policy as generated blocks, including the novice compound floor and recovery week.
+function customCycleEffort(program, day, ex, slot, week) {
+    if (!program.config?.cyclePeriodization || program.config?.progression === 'manual'
+        || (program.progStyle?.[`${day?.id}:${slot}`] ?? program.progStyle?.[ex.id] ?? program.overrides?.[`${day?.id}:${slot}`]?.progressionStyle) === 'manual') return null;
+    const label = String(program.blockLabel || '').toLowerCase();
+    const phase = program.config?.deload && week > weeksOf(program) ? 'recovery'
+        : SUPPORTED_PHASES.includes(program.config?.phase) ? program.config.phase
+        : /hypertrophy/.test(label) ? 'hypertrophy_accumulation'
+        : /peak/.test(label) ? 'peak' : /strength/.test(label) ? 'strength_accumulation'
+        : initialPhaseForGoal(program.config?.goal);
+    const strength = phase === 'strength_accumulation' || phase === 'intensification' || phase === 'peak'
+        || (phase === 'recovery' && program.config?.goal === 'strength');
+    const role = ex.type === 'compound' ? (strength ? (slot === day?.primaryIndex ? 'primary_strength' : 'secondary_strength') : 'hypertrophy_compound') : 'hypertrophy_isolation';
+    return effortForSimulationWeek(rirForPhase(role, phasePolicyFor(phase)), role, phase,
+        phase === 'recovery' ? 1 : Math.max(1, Math.min(weeksOf(program), week)),
+        phase === 'recovery' ? 1 : weeksOf(program), program.config?.experience);
+}
+
 function computeCell(program, day, id, slotIndex, weekIndex) {
     const ex = EX_BY_ID[id];
     if (!ex)
@@ -262,7 +284,7 @@ function computeCell(program, day, id, slotIndex, weekIndex) {
     if (program?.artifactType === "freestyle" || program?.quick)
         return freestyleCellForRepRange(ex.rep);
     /* A CUSTOM program (Build your own, custom: true) is the lifter's own: their per-slot settings (sets, reps, reps-in-reserve,
-       rest, technique) win, and anything they did not set gets the same neutral defaults a Quick workout uses — never the removed
+       rest, technique) win, and standalone unedited targets get the neutral defaults a Quick workout uses; converted cycle effort follows its block — never the removed
        v661 rules. Without this it fell through to "This older plan is archived — rebuild it" with 0 sets. */
     if (program?.custom === true && program?.engineSource !== "pursuit-next") {
         const base = freestyleCellForRepRange(ex.rep), o = program.overrides?.[`${day?.id}:${slotIndex}`] || {};
@@ -272,7 +294,7 @@ function computeCell(program, day, id, slotIndex, weekIndex) {
            the *bottom* of a 10-15 range as the top, which could award a load increase at 10 reps. */
         const repPair = cellRepRange({ range: o.reps ?? base.reps }, program, ex, slotIndex === day?.primaryIndex);
         const reps = repPair[0] === repPair[1] ? String(repPair[0]) : `${repPair[0]}-${repPair[1]}`;
-        const effort = effortBounds(o.rir ?? base.rir);
+        const effort = effortBounds(o.rir ?? customCycleEffort(program, day, ex, slotIndex, weekIndex) ?? base.rir);
         const rir = effort ? (effort[0] === effort[1] ? String(effort[0]) : `${effort[0]}-${effort[1]}`) : (o.rir ?? base.rir);
         return { sets: legacyCustomSetCount(program, day, ex, slotIndex, weekIndex, o.sets, base.sets), reps, range: reps, rir, rest: o.rest ?? base.rest, tech: customLastSetTechnique(program, day, ex, slotIndex, weekIndex),
             role: base.role, progressionStyle: program.progStyle?.[id] ?? o.progressionStyle ?? "auto", note: "Your program", custom: true };

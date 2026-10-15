@@ -1,0 +1,56 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';import http from 'node:http';import path from 'node:path';import puppeteer from 'puppeteer-core';
+import { EXERCISES, mergeStandaloneIntoGeneratedCycle } from '../modules/App.js';
+import { generateNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
+import { currentProgram } from './m215-cycle-duration-fixture.mjs';
+const root=path.resolve(new URL('../',import.meta.url).pathname);
+const cfg=JSON.parse(fs.readFileSync(path.join(root,'verification/m205-generation-parity-results.json'))).rows[3].config;
+let n=0;
+const generated=generateNextCycleForShell({templateId:'powerbuilding',config:cfg,legacyExercises:EXERCISES,seed:890,makeId:()=>`b890-${++n}`,adaptBetweenBlocks:true});
+const merged=mergeStandaloneIntoGeneratedCycle({...currentProgram,name:'SekuFit',config:{...currentProgram.config}},generated);
+const cycle={...merged.cycle,name:'SekuFit Cycle'},saved=merged.allBlocks;
+const store={v:13,savedAt:1,saved,cycles:[cycle],history:[],perf:{},drafts:{},tombs:{},seenIntro:999,seenWhatsNew:999,pinnedId:saved[0].id,
+ theme:'amethyst',unit:'lb',unitChosen:true,experience:'intermediate',bodyweight:185,installDismissedAt:Date.now(),lastBackup:Date.now()};
+const mime={'.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.html':'text/html','.json':'application/json','.png':'image/png','.svg':'image/svg+xml'};
+const server=http.createServer((req,res)=>{const file=path.resolve(root,'.'+new URL(req.url,'http://localhost').pathname);if(!file.startsWith(root+path.sep)||!fs.existsSync(file)||!fs.statSync(file).isFile()){res.writeHead(404);res.end();return;}res.setHeader('Content-Type',mime[path.extname(file)]||'application/octet-stream');res.end(fs.readFileSync(file));});
+await new Promise(resolve=>server.listen(8790,'127.0.0.1',resolve));let browser;
+try{
+ browser=await puppeteer.launch({executablePath:process.env.CHROME_BIN||'/usr/bin/google-chrome',headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
+ const errors=[];
+ for(const width of [320,390,900]){
+  const page=await browser.newPage();page.on('pageerror',e=>errors.push(e.message));await page.setViewport({width,height:844,isMobile:width<600,hasTouch:width<600});
+  await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
+  await page.evaluateOnNewDocument(store=>{if(!sessionStorage.getItem('b890-seeded')){localStorage.setItem('wpb:v1',JSON.stringify(store));sessionStorage.setItem('b890-seeded','1');}},store);
+  await page.goto('http://127.0.0.1:8790/index.html',{waitUntil:'networkidle0'});await page.waitForSelector('.wpb-home');
+  const click=async text=>{assert.ok(await page.evaluate(t=>{const b=[...document.querySelectorAll('button')].find(b=>b.textContent.trim()===t);b?.click();return !!b;},text),text);};
+  await page.click('.wpb-tabbar [aria-label="Plan"]');await page.waitForSelector('.wpb-plan-block-nav');
+  assert.equal(await page.$$eval('.wpb-plan-block-nav button',ns=>ns.length),3);
+  await page.$$eval('.wpb-plan-block-nav button',ns=>ns[1].click());await page.waitForSelector('.wpb-plan-preview-notice');
+  assert.equal(await page.$('.wpb-plan-up-next'),null);
+  assert.equal(await page.$$eval('.wpb-plan-week-chip',ns=>ns.length),saved[1].config.weeks+(saved[1].config.deload?1:0));
+  await page.click('.wpb-plan-session-link');await page.waitForSelector('.wpb-cycle-block-preview');
+  assert.match(await page.$eval('.wpb-cycle-block-preview',n=>n.innerText),/sets · .* reps · .* RIR/);
+  assert.equal(await page.$$eval('.wpb-cycle-block-preview button',ns=>ns.some(n=>/start/i.test(n.textContent))),false);
+  await page.select('[aria-label="Preview week"]',String(saved[1].config.weeks));
+  assert.equal(await page.$eval('[aria-label="Preview week"]',n=>n.value),String(saved[1].config.weeks));
+  await page.keyboard.press('Escape');await page.waitForFunction(()=>!document.querySelector('.wpb-cycle-block-preview'));
+  await page.$$eval('.wpb-plan-block-nav button',ns=>ns[2].click());await page.waitForFunction(()=>document.querySelector('.wpb-plan-title')?.textContent.includes('Peak'));
+  await page.$$eval('.wpb-plan-block-nav button',ns=>ns[0].click());await page.waitForFunction(()=>!document.querySelector('.wpb-plan-preview-notice'));
+  assert.ok(await page.$('.wpb-plan-up-next'));
+  await page.click('.wpb-tabbar [aria-label="Home"]');await page.waitForSelector('.wpb-home');
+  await page.click('[aria-label="Open cycle SekuFit Cycle"]');await page.waitForSelector('.wpb-cycle-detail');
+  const rows=await page.$$eval('.wpb-cycle-detail .wpb-cycle-block-row',ns=>ns.map(n=>({disabled:n.disabled,opacity:getComputedStyle(n).opacity,h:n.getBoundingClientRect().height,text:n.innerText})));
+  assert.equal(rows.length,3);assert.ok(rows.every(r=>!r.disabled&&r.opacity==='1'&&r.h>=44));
+  assert.ok(rows[2].text.includes('Peak'));assert.equal(await page.$$eval('.wpb-cycle-actions button',ns=>ns.length),1);
+  assert.doesNotMatch(await page.$eval('.wpb-cycle-detail',n=>n.innerText),/kept exactly|Available after/);
+  assert.equal(await page.$eval('.wpb-cycle-detail',n=>n.scrollWidth<=n.clientWidth+1),true);
+  await page.screenshot({path:`/tmp/b890-cycle-detail-${width}.png`});
+  await page.$$eval('.wpb-cycle-detail .wpb-cycle-block-row',ns=>ns[2].click());await page.waitForSelector('.wpb-cycle-block-preview');
+  await click('View in Plan');await page.waitForSelector('.wpb-plan-preview-notice');assert.match(await page.$eval('.wpb-plan-title',n=>n.textContent),/Peak/);
+  const stored=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')));
+  assert.equal(stored.pinnedId,saved[0].id);assert.equal(stored.cycles[0].activeBlock,0);assert.deepEqual(stored.history,[]);
+  assert.deepEqual(stored.saved,saved,'browsing never edits saved blocks');
+  await page.close();
+ }
+ assert.deepEqual(errors,[]);console.log('PASS B890 browser: real converted cycle, all blocks and weeks in Plan, read-only exercise previews, return to current and unchanged active state at 320/390/900px.');
+}finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}

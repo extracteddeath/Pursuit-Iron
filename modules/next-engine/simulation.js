@@ -576,6 +576,13 @@ function allocateWeekSets(exercises, factors) {
     }
     return out;
 }
+// Shared by generated prescriptions and converted custom blocks; computing a target never mutates either.
+export function effortForSimulationWeek(base, role, phase, week, totalWeeks, experience = 'intermediate') {
+    const shift = weekModifier(phase, week, totalWeeks, role).rirShift;
+    const shifted = base.map(value => Math.max(0, Math.min(6, value + shift)));
+    shifted[1] = Math.max(shifted[0], shifted[1]);
+    return applyExperienceRirFloor(shifted, role, experience);
+}
 export function prescriptionForSimulationWeek(session, phase, week, totalWeeks, options = {}) {
     const experience = options.experience ?? 'intermediate';
     const modifiers = session.exercises.map(ex => weekModifier(phase, week, totalWeeks, ex.role));
@@ -584,13 +591,7 @@ export function prescriptionForSimulationWeek(session, phase, week, totalWeeks, 
         const modifier = modifiers[idx];
         const sets = weekSets[idx];
         const reps = clampRange(ex.prescription.reps, modifier.repShift);
-        const shifted = [
-            Math.max(0, Math.min(6, ex.prescription.rir[0] + modifier.rirShift)),
-            Math.max(0, Math.min(6, ex.prescription.rir[1] + modifier.rirShift))
-        ];
-        if (shifted[1] < shifted[0])
-            shifted[1] = shifted[0];
-        const rir = applyExperienceRirFloor(shifted, ex.role, experience);
+        const rir = effortForSimulationWeek(ex.prescription.rir, ex.role, phase, week, totalWeeks, experience);
         const progressionStyle = weeklyProgressionStyle(ex, phase, week, totalWeeks);
         const progression = progressionStyle && progressionStyle !== ex.progressionStyle && progressionStyle !== 'auto' ? progressionInstruction(progressionStyle) : ex.progression;
         return { ...ex, sets, prescription: { ...ex.prescription, reps, rir }, progressionStyle, progression };

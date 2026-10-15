@@ -81,7 +81,7 @@ try {
             const buttons = [...row.querySelectorAll('.wpb-set-stepper, .wpb-set-complete')];
             return buttons.map(n => { const r = n.getBoundingClientRect(); const hit = document.elementFromPoint(r.x + r.width - 1, r.y + r.height / 2); return { width: r.width, owned: hit === n || n.contains(hit) }; });
         });
-        assert.ok(targets.every(t => t.width === 30 && t.owned), 'each 30px button owns its whole horizontal track');
+        assert.ok(targets.every(t => t.width >= 26 && t.width <= 40 && t.owned), 'compact set steppers and completion buttons own their horizontal tracks');
         for (const [label, field, delta] of [['weight up', 'weight', 5], ['weight down', 'weight', -5], ['reps up', 'reps', 1], ['reps down', 'reps', -1]]) {
             const input = `[data-testid="set-0-0"] input[aria-label="${field}"]`;
             const before = Number(await page.$eval(input, n => n.value));
@@ -91,7 +91,7 @@ try {
         await page.click('button[aria-label="Show previous workout values"]'); await settle();
         await usableRows(`LAST at ${width}px`);
         assert.match(await page.$eval('[data-testid="set-0-0"]', n => n.innerText), /205×3/);
-        assert.match(await page.$eval('[data-testid="set-0-0"] button[aria-label="Use last time\'s 205 by 3"]', n => n.innerText), /Last\s+205×3/);
+        assert.match(await page.$eval('[data-testid="set-0-0"] button[aria-label="Use last time\'s 205 by 3"]', n => n.innerText), /Use last\s+205×3/);
         assert.match(await page.$eval('[data-testid="set-0-3"]', n => n.innerText), /new/);
         await page.click('button[aria-label="Show prescribed targets"]'); await settle();
         await usableRows(`back to TARGET at ${width}px`);

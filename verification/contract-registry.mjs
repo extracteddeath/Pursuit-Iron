@@ -146,6 +146,7 @@ export const browserShards = Object.freeze({
 });
 
 export const releaseTests = Object.freeze([
+    'b891-chart-favorites-test.mjs',
     'm223-icon-update-test.mjs'
 ]);
 

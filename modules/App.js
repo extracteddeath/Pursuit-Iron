@@ -11165,7 +11165,7 @@ function SessionChoiceDialog({ title, onClose, children, dismissible = true, cla
         children: _jsxs("section", { ref: dialogRef, tabIndex: -1, role: "dialog", "aria-modal": "true", "aria-label": title,
             className: "wpb-session-dialog wpb-scroll " + className, onClick: ev => ev.stopPropagation(),
             onKeyDown: ev => { if (ev.key === 'Escape' && dismissible) onClose();
-                if (ev.key === 'Tab') { const items = [...dialogRef.current.querySelectorAll('button:not(:disabled),select,textarea,input')].filter(el => el.getClientRects().length);
+                if (ev.key === 'Tab') { const items = [...dialogRef.current.querySelectorAll('button:not(:disabled),select,textarea,input,summary,a[href]')].filter(el => el.getClientRects().length && (el.tagName === 'SUMMARY' || !el.closest('details:not([open])')));
                     const first = items[0], last = items.at(-1);
                     if (ev.shiftKey && (document.activeElement === first || document.activeElement === dialogRef.current)) { ev.preventDefault(); last?.focus(); }
                     else if (!ev.shiftKey && (document.activeElement === last || document.activeElement === dialogRef.current)) { ev.preventDefault(); first?.focus(); } } },
@@ -13551,13 +13551,13 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                     _jsxs("div", { style: { display: "grid", gap: 8 }, children: [
                       _jsx("button", { type: "button", onClick: () => applyInjury("skip"),
                         disabled: !injurySelected.length, className: "pressable wpb-injury-skip",
-                        style: { minHeight: 50, borderRadius: 14, border: "none", background: C.accent,
-                          color: C.accentText, fontSize: 14, fontWeight: 700, opacity: injurySelected.length ? 1 : .45 },
+                        style: { minHeight: 50, borderRadius: 14, border: `1px solid ${C.border}`, background: injurySource?.impact === "reduce" ? C.card : C.accent,
+                          color: injurySource?.impact === "reduce" ? C.text : C.accentText, fontSize: 14, fontWeight: 700, opacity: injurySelected.length ? 1 : .45 },
                         children: "Skip selected remaining exercises" }),
                       _jsx("button", { type: "button", onClick: () => applyInjury("reduce"),
                         disabled: !injurySelected.length, className: "pressable wpb-injury-reduce",
                         style: { minHeight: 48, borderRadius: 14, border: `1px solid ${C.border}`,
-                          background: C.card, color: C.text, fontSize: 14, fontWeight: 650 },
+                          background: injurySource?.impact === "reduce" ? C.accent : C.card, color: injurySource?.impact === "reduce" ? C.accentText : C.text, fontSize: 14, fontWeight: 650 },
                         children: "Reduce remaining sets by about half" })
                     ] }),
                     _jsx("p", { style: { margin: "12px 2px 0", fontSize: 12, color: C.muted, lineHeight: 1.4 },

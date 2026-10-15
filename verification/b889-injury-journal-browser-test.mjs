@@ -38,12 +38,13 @@ try {
  await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:v1')).injuryLog[0].side==='right');
  entry=(await getStore()).injuryLog[0];assert.equal(entry.id,id);assert.equal(entry.at,created);assert.equal(entry.impact,'reduce');assert.equal((await getStore()).injuryLog.length,1);
  await page.waitForFunction(()=>[...document.querySelectorAll('.wpb-injury-record-actions button')].some(b=>b.textContent==='Mark resolved'));await clickText('Mark resolved');await page.waitForFunction(()=>!!JSON.parse(localStorage.getItem('wpb:v1')).injuryLog[0].resolvedAt);
- await page.waitForSelector('.wpb-injury-resolved summary');await page.click('.wpb-injury-resolved summary');await clickText('Mark active');await page.waitForFunction(()=>!JSON.parse(localStorage.getItem('wpb:v1')).injuryLog[0].resolvedAt);
+ await page.waitForSelector('.wpb-injury-resolved summary');await page.focus('.wpb-injury-resolved summary');await page.keyboard.press('Tab');assert.equal(await page.evaluate(()=>!!document.activeElement.closest('.wpb-injury-journal')),true,'keyboard focus stays inside the journal');await page.click('.wpb-injury-resolved summary');await clickText('Mark active');await page.waitForFunction(()=>!JSON.parse(localStorage.getItem('wpb:v1')).injuryLog[0].resolvedAt);
  await page.click('[aria-label="Close Injury log"]');assert.ok(await page.$eval('.wpb-home-health',el=>el.textContent.includes('Right elbow')));
  await page.reload({waitUntil:'networkidle0'});await page.waitForSelector('.wpb-live-dock button[aria-label="Resume workout"]');await page.click('.wpb-live-dock button[aria-label="Resume workout"]');
  await page.waitForSelector('.wpb-workout');await page.evaluate(()=>[...document.querySelectorAll('.wpb-session-context button')].find(b=>b.textContent.includes('active injury')).click());
  await page.waitForSelector('[data-injury-sheet]');assert.equal(await page.$eval('[aria-label="Choose logged injury"]',el=>el.value),id);
  assert.equal(await page.$$eval('[data-injury-sheet] input[type="checkbox"]',els=>els.length),2);
+ assert.notEqual(await page.$eval('.wpb-injury-reduce',el=>getComputedStyle(el).backgroundColor),await page.$eval('.wpb-injury-skip',el=>getComputedStyle(el).backgroundColor),'preferred reduction has a distinct primary action');
  await page.click('[data-injury-sheet] input[type="checkbox"]');await page.click('.wpb-injury-reduce');
  await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:live')).injuryReports?.length===1);
  const snap=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:live')));assert.equal(snap.injuryReports[0].injuryId,id);

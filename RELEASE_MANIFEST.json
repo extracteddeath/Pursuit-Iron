@@ -2,7 +2,7 @@
   "schemaVersion": 3,
   "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": "885",
+  "build": 885,
   "engineVersion": "0.65.8",
   "candidateStatus": "verification_enforced_by_ci",
   "runtimeAggregate": "544f5ef7ba89e7a1ab9bd603c0aa0354f7db0a52226014ea1fdc955e0fe205f1",

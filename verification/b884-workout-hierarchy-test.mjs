@@ -31,6 +31,7 @@ for (const stable of ['"aria-label": "weight"','"aria-label": "reps"','"data-hap
 }
 assert.ok(css.includes('R93 / B884 — Workout is a set logger'), 'Style pass is present');
 assert.ok(css.includes('data-focus-mode="false"'), 'Focus and normal screen styling isolated');
+assert.ok(css.includes('data-focus-mode="false"][data-set-dock-visible="true"]') && css.includes('padding-bottom:calc(16px + var(--pi-set-dock-height,0px))!important;'), 'Dock scroll reserve must survive the B884 normal-mode padding shorthand');
 assert.ok(css.includes('prefers-reduced-motion:reduce') && css.includes('forced-colors:active'),
   'Motion and accessibility overrides remain supported');
 console.log('PASS B884 workout hierarchy: active-set-first layout, preserved input ownership and honest previous-load cues.');

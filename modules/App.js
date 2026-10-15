@@ -18039,7 +18039,7 @@ function ProfileView({ history, bodyweight, sex, age, unit, onSettings }) {
 })[id], i === 0 && _jsxs("div", { className: "wpb-profile-toolbar", children: [
     _jsx("button", { type: "button", className: "pressable", "aria-expanded": showProfileCustomize, onClick: () => setShowProfileCustomize(x => !x), children: [_jsx(Pencil, {size:15}), " Customize"] }),
     _jsx("button", { type: "button", className: "pressable wpb-profile-share-action", onClick: () => shareCustomProfileCard({ history, unit, score:sscore, level:lvl, milestones:ms, prefs:profilePrefs, theme:C }), children: [_jsx(Share2, {size:15}), " Share profile"] })
-] }), showProfileCustomize && _jsx(ProfileCustomization, { prefs: profilePrefs, onChange: saveProfilePrefs, onClose: () => setShowProfileCustomize(false) }) ] }, id))] }), _jsx(AchievementDetailSheet, { m: detail, onClose: () => setDetail(null) })] }));
+] }), i === 0 && showProfileCustomize && _jsx(ProfileCustomization, { prefs: profilePrefs, onChange: saveProfilePrefs, onClose: () => setShowProfileCustomize(false) }) ] }, id))] }), _jsx(AchievementDetailSheet, { m: detail, onClose: () => setDetail(null) })] }));
 }
 // The app shell (index.html, modules/main.js, modules/App.js, app.css) is served cache-first by the service worker for
 // instant loads and full offline support — which also means a shipped code fix can sit on the

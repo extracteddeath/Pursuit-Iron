@@ -1,5 +1,6 @@
 import { createExerciseMap } from './exercise-db.js';
 import { publicSplitName } from './method-policy.js';
+import { NOVICE_FULL_BODY_PATTERN_EXPOSURES } from './config.js';
 export const INTENT_MUSCLES = {
     upper: ['chest', 'back', 'side_delts', 'rear_delts', 'biceps', 'triceps', 'front_delts', 'traps', 'forearms', 'neck'],
     lower: ['quads', 'hamstrings', 'glutes', 'calves', 'core', 'adductors', 'abductors', 'lower_back'],
@@ -479,9 +480,12 @@ function buildCandidate(seed, request, allocations) {
         const dayCount = sessions.length;
         const desiredSlots = sessions.reduce((sum, s) => sum + (s.targetExercises ?? 3), 0);
         const mandatory = new Set(['chest', 'back']);
+        const novicePatterns = request.athlete?.experience === 'novice' ? NOVICE_FULL_BODY_PATTERN_EXPOSURES : {};
         for (const alloc of muscleAllocations) {
             if (alloc.muscle && mandatory.has(alloc.muscle))
                 fullBodyExposurePlan.set(alloc.id, dayCount);
+            else if (alloc.muscle && novicePatterns[alloc.muscle])
+                fullBodyExposurePlan.set(alloc.id, Math.min(dayCount, novicePatterns[alloc.muscle]));
             else
                 fullBodyExposurePlan.set(alloc.id, 1);
         }

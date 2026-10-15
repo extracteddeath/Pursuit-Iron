@@ -5,6 +5,7 @@ import { firstPassingCapacityProgram } from './capacity-generation.js';
 import { EXERCISE_MAP } from './exercise-db.js';
 import { buildGenerationRecoveryPlan } from './generation-recovery.js';
 import { prescriptionForSimulationWeek } from './simulation.js';
+import { applyExperienceRirFloor } from './realizer-prescriptions.js';
 import { createInitialCycleState } from './cycles.js';
 import { filterFeasibleLiftPriorities } from './prescription.js';
 import { finalizeGeneratedShellVolume } from './volume-repair.js';
@@ -331,6 +332,7 @@ export function nextProgramToShellProgram(nextProgram, config, legacyExercises, 
     const ss = {};
     const nextWeekPrescriptions = {};
     const totalWeeks = Math.max(1, Math.round(Number(config.weeks) || 4));
+    const projection = { experience: experienceOf(config.experience) };
     const days = nextProgram.sessions.map((session, dayIndex) => {
         const id = `next-${dayIndex + 1}-${session.day}`;
         const mapped = session.exercises.map((exercise, slot) => {
@@ -351,12 +353,12 @@ export function nextProgramToShellProgram(nextProgram, config, legacyExercises, 
             // values from week 1; auto mode stores metadata only so later weeks use the generated cells.
             if (config.progression === 'manual')
                 Object.assign(overrides[key], {
-                    sets: canonicalShellSetCount(exercise.sets), reps: range(exercise.prescription.reps), rir: range(exercise.prescription.rir), rest: exercise.prescription.restSeconds,
+                    sets: canonicalShellSetCount(exercise.sets), reps: range(exercise.prescription.reps), rir: range(applyExperienceRirFloor(exercise.prescription.rir, exercise.role, projection.experience)), rest: exercise.prescription.restSeconds,
                     prescriptionOwners: { sets: 'user', reps: 'user', rir: 'user', rest: 'user' }
                 });
             nextWeekPrescriptions[key] = {};
             for (let week = 1; week <= totalWeeks; week++) {
-                const weekly = prescriptionForSimulationWeek(session, nextProgram.phase, week, totalWeeks).exercises[slot];
+                const weekly = prescriptionForSimulationWeek(session, nextProgram.phase, week, totalWeeks, projection).exercises[slot];
                 nextWeekPrescriptions[key][week] = { sets: canonicalShellSetCount(weekly.sets), reps: range(weekly.prescription.reps), rir: range(weekly.prescription.rir), rest: weekly.prescription.restSeconds,
                     role: weekly.role, progressionStyle: schemeStyle(config, weekly.role, weekly.progressionStyle ?? 'auto'), tech: techniqueCue(weekly.advancedTechnique?.type, weekly.advancedTechnique?.note) };
             }
@@ -364,7 +366,7 @@ export function nextProgramToShellProgram(nextProgram, config, legacyExercises, 
             // M60 omitted this cell entirely, causing every deload slot to become an engine-missing/bad-sets
             // failure. Materialize an engine-owned recovery prescription and suppress intensity techniques.
             if (config.deload) {
-                const deload = prescriptionForSimulationWeek(session, 'recovery', 1, 1).exercises[slot];
+                const deload = prescriptionForSimulationWeek(session, 'recovery', 1, 1, projection).exercises[slot];
                 nextWeekPrescriptions[key][totalWeeks + 1] = { sets: canonicalShellSetCount(deload.sets), reps: range(deload.prescription.reps), rir: range(deload.prescription.rir), rest: deload.prescription.restSeconds,
                     role: deload.role, progressionStyle: schemeStyle(config, deload.role, deload.progressionStyle ?? 'auto'), tech: null };
             }

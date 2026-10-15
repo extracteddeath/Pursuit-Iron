@@ -169,7 +169,8 @@
     {
       "key": "stage.realizeMajorMuscles",
       "file": "modules/next-engine/realizer-hypertrophy.js",
-      "sha256": "8be7d714ad879c557a57c0a11ef86d9eb912c9d9cf10c1a4f2f4d5daa9425c01"
+      "sha256": "3f4385c3e9fbcbfb202f391f7b17f7fc8348a00ae0e86c1c42c66718b7a908ef",
+      "revision": "Build 879: novice full-body squat/hinge exposures (2/week, 2-set blocks on uncovered days); covered by b879-experience-tier-test."
     },
     {
       "key": "stage.realizeDirectIsolations",
@@ -254,7 +255,8 @@
     {
       "key": "helper.finalStructureValid",
       "file": "modules/next-engine/realizer-structure-repair.js",
-      "sha256": "eadf1acd8b4ab49ccd0c14096e1588726ef9881a63b661145ee64181eae17972"
+      "sha256": "95bccf78d52e486790fddc061e69d04684d2278c572b47353911f45a4f7344dc",
+      "revision": "Build 879: full-body structure also refuses a proposal that drops novice squat/hinge exposures below target; covered by b879-experience-tier-test."
     },
     {
       "key": "helper.consolidateOneSetDuplicates",

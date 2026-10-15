@@ -4,6 +4,7 @@ import { assignAccessorySupersets } from './realizer-pairing.js';
 import { makePlanned } from './realizer-prescriptions.js';
 import { equipmentEligible, maxBarbells, muscleCandidate, primaryMuscle } from './realizer-ranking.js';
 import { estimateMinutes } from './realizer-time-budget.js';
+import { NOVICE_FULL_BODY_PATTERN_EXPOSURES } from './config.js';
 
 export function repairFullBodyStructure(context, ...args) {
 const { capacityPrescriptions, currentDirect, currentFractional, directTotalsWithSessionProposal, exerciseCatalog, exerciseMap, fitProposalBySafeDosage, policy, prescriptionMap, realized, request, totalsWithSessionProposal, trackExerciseUse, weeklyMovementUse } = context;
@@ -243,7 +244,7 @@ return (
         const pull = defs.some(def => ['horizontal_pull', 'vertical_pull', 'shoulder_extension'].includes(def.movementFamily));
         const lower = defs.some(def => ['squat', 'leg_press', 'knee_extension', 'hip_hinge', 'hip_extension', 'knee_flexion'].includes(def.movementFamily));
         if (session.intent === 'full' || session.intent === 'strength_full')
-            return push && pull && lower;
+            return push && pull && lower && novicePatternFrequencyKept(context, session, exercises);
         if (session.intent === 'upper')
             return push && pull;
         if (session.intent === 'lower' || session.intent === 'legs' || session.intent === 'glute')
@@ -256,6 +257,27 @@ return (
     }
 /* M230:PRESERVE:helper.finalStructureValid:END */
 )(...args);
+}
+
+/**
+ * Week-level half of the full-body structure contract for novices: a proposal for one session may not
+ * reduce the number of days that train the squat/hinge muscles directly below the novice pattern
+ * target. A week already below target is never blocked by this rule (only made no worse), so repair
+ * passes that cannot reach the target keep working exactly as before.
+ */
+function novicePatternFrequencyKept(context, session, exercises) {
+    const { exerciseMap, request, realized } = context;
+    if (request?.athlete?.experience !== 'novice' || !Array.isArray(realized))
+        return true;
+    const covers = (list, muscle) => list.some(ex => (exerciseMap.get(ex.exerciseId)?.muscles?.[muscle]?.credit ?? 0) >= 1);
+    for (const [muscle, wanted] of Object.entries(NOVICE_FULL_BODY_PATTERN_EXPOSURES)) {
+        const target = Math.min(realized.length, wanted);
+        const before = realized.filter(s => covers(s.exercises, muscle)).length;
+        const after = realized.filter(s => covers(s.id === session.id ? exercises : s.exercises, muscle)).length;
+        if (after < before && after < target)
+            return false;
+    }
+    return true;
 }
 
 export function redistributeUpperAccessories(context) {

@@ -27,25 +27,52 @@ export const DEFAULT_KG_LOADING_INVENTORY = {
 export function defaultLoadingInventoryFor(unit) {
     return structuredClone(String(unit).trim().toLowerCase() === 'kg' ? DEFAULT_KG_LOADING_INVENTORY : DEFAULT_LOADING_INVENTORY);
 }
-// Default gym stock follows the selected unit; user-specified stock is converted, never replaced.
-// This also repairs old unit-less templates saved with lb defaults for a kg lifter, at read time.
+// Stock left at the source unit's factory defaults must use the DESTINATION unit's
+// factory loads, even when it has been serialized into a saved program. Converting
+// 2.5 kg pin increments literally yields 5.51 lb increments, which in turn makes
+// a 155 lb completed set advance to an invented ~159.5 lb machine setting.
+// Compare each stock family independently: if the user customized *only* their
+// dumbbells, their untouched machine must still advance in native 5 lb notches.
+// Genuinely customized lists, increments, plate inventories and exercise overrides
+// retain their physical conversions rather than being silently replaced.
 export function loadingInventoryInUnit(input, unit, { nativeDefaults = false } = {}) {
+    void nativeDefaults; // Legacy callers can keep passing this; saved factory stock is factory stock.
     if (!['lb', 'kg'].includes(unit)) return input;
     if (!input) return defaultLoadingInventoryFor(unit);
     const inventory = normalizeLoadingInventory(input);
-    if (inventory.unit === unit) return inventory;
-    const sourceDefault = normalizeLoadingInventory(defaultLoadingInventoryFor(inventory.unit));
-    const stockKeys = ['barbell', 'dumbbells', 'machine', 'cable', 'smith'];
-    const defaultStock = nativeDefaults && stockKeys.every(key => JSON.stringify(inventory[key]) === JSON.stringify(sourceDefault[key]));
+    const targetDefault = defaultLoadingInventoryFor(unit);
     const k = unit === 'kg' ? 1 / 2.2046226218 : 2.2046226218;
     const convert = value => Number.isFinite(value) ? round(value * k) : value;
     const profile = p => ({ ...p, minimum: convert(p.minimum), increment: convert(p.increment), maximum: convert(p.maximum),
         ...(p.availableLoads !== undefined ? { availableLoads: p.availableLoads.map(convert) } : {}) });
-    const converted = defaultStock ? defaultLoadingInventoryFor(unit) : {
+    const convertedBarbell = b => ({ barWeight: convert(b.barWeight), platePairs: b.platePairs.map(p => ({ ...p, weight: convert(p.weight) })) });
+    const convertedDumbbells = d => ({ availablePerHand: d.availablePerHand.map(convert) });
+    const keys = ['barbell', 'dumbbells', 'machine', 'cable', 'smith'];
+    // Repair persisted unit switches made by earlier builds. Those switches stamped a fully
+    // converted foreign-unit *factory* profile into the destination unit (e.g. 5.51 lb machine
+    // steps). On subsequent reads the two unit tokens match, so merely fixing conversion below
+    // would leave the user's already-saved bogus prescription unchanged.
+    if (inventory.unit === unit) {
+        const foreign = normalizeLoadingInventory(defaultLoadingInventoryFor(unit === 'lb' ? 'kg' : 'lb'));
+        const oldFactory = {
+            barbell: convertedBarbell(foreign.barbell), dumbbells: convertedDumbbells(foreign.dumbbells),
+            machine: profile(foreign.machine), cable: profile(foreign.cable), smith: profile(foreign.smith)
+        };
+        const repaired = Object.fromEntries(keys.filter(key => JSON.stringify(inventory[key]) === JSON.stringify(oldFactory[key]))
+            .map(key => [key, targetDefault[key]]));
+        return Object.keys(repaired).length ? { ...inventory, ...repaired } : inventory;
+    }
+    const sourceDefault = normalizeLoadingInventory(defaultLoadingInventoryFor(inventory.unit));
+    const factory = key => JSON.stringify(inventory[key]) === JSON.stringify(sourceDefault[key]);
+    const converted = {
         unit,
-        barbell: { barWeight: convert(inventory.barbell.barWeight), platePairs: inventory.barbell.platePairs.map(p => ({ ...p, weight: convert(p.weight) })) },
-        dumbbells: { availablePerHand: inventory.dumbbells.availablePerHand.map(convert) },
-        machine: profile(inventory.machine), cable: profile(inventory.cable), smith: profile(inventory.smith)
+        barbell: factory('barbell') ? targetDefault.barbell
+            : convertedBarbell(inventory.barbell),
+        dumbbells: factory('dumbbells') ? targetDefault.dumbbells
+            : convertedDumbbells(inventory.dumbbells),
+        machine: factory('machine') ? targetDefault.machine : profile(inventory.machine),
+        cable: factory('cable') ? targetDefault.cable : profile(inventory.cable),
+        smith: factory('smith') ? targetDefault.smith : profile(inventory.smith)
     };
     converted.exerciseOverrides = Object.fromEntries(Object.entries(inventory.exerciseOverrides).map(([id, p]) => [id, profile(p)]));
     return converted;

@@ -52,6 +52,10 @@ export const contractGroups = Object.freeze({
         'm188-production-torture-test.mjs'
     ]),
     integration: Object.freeze([
+        'b883-native-loading-step-test.mjs',
+        'b881-history-import-test.mjs',
+        'b880-play-foundation-test.mjs',
+        'b879-experience-tier-test.mjs',
         'b878-program-number-display-test.mjs',
         'b875-workout-context-test.mjs',
         'b860-selective-improvements-test.mjs',
@@ -102,7 +106,9 @@ export const browserShards = Object.freeze({
         'r72-workout-browser-test.mjs',
         'm201-workout-prescription-browser-test.mjs',
         'm214-executable-prescription-sync-browser-test.mjs',
-        'm232-live-autoregulation-browser-test.mjs'
+        'm232-live-autoregulation-browser-test.mjs',
+        'b880-wake-lock-browser-test.mjs',
+        'b882-workout-reason-browser-test.mjs'
     ]),
     program: Object.freeze([
         'm199-volume-repair-browser-test.mjs',
@@ -110,6 +116,7 @@ export const browserShards = Object.freeze({
         'm220-day-progression-browser-test.mjs'
     ]),
     integration: Object.freeze([
+        'b881-history-import-browser-test.mjs',
         'b875-contextual-dock-browser-test.mjs',
         'b860-selective-improvements-browser-test.mjs',
         'b831-expressive-motion-browser-test.mjs',

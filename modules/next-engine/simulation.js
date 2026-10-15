@@ -7,6 +7,7 @@ import { createTrainingSetEvents } from './events.js';
 import { deriveMuscleLedger } from './ledgers.js';
 import { auditProgram } from './arbiter.js';
 import { estimateSessionMinutes, repsForPhase, rirForPhase, restForExercise } from './realizer.js';
+import { applyExperienceRirFloor } from './realizer-prescriptions.js';
 import { transitionProgramPhase } from './phase-transition.js';
 import { evaluateWorkoutProgression } from './performance.js';
 import { resolveLoadingMode } from './loading.js';
@@ -575,19 +576,21 @@ function allocateWeekSets(exercises, factors) {
     }
     return out;
 }
-export function prescriptionForSimulationWeek(session, phase, week, totalWeeks) {
+export function prescriptionForSimulationWeek(session, phase, week, totalWeeks, options = {}) {
+    const experience = options.experience ?? 'intermediate';
     const modifiers = session.exercises.map(ex => weekModifier(phase, week, totalWeeks, ex.role));
     const weekSets = allocateWeekSets(session.exercises, modifiers.map(m => m.setFactor));
     const exercises = session.exercises.map((ex, idx) => {
         const modifier = modifiers[idx];
         const sets = weekSets[idx];
         const reps = clampRange(ex.prescription.reps, modifier.repShift);
-        const rir = [
+        const shifted = [
             Math.max(0, Math.min(6, ex.prescription.rir[0] + modifier.rirShift)),
             Math.max(0, Math.min(6, ex.prescription.rir[1] + modifier.rirShift))
         ];
-        if (rir[1] < rir[0])
-            rir[1] = rir[0];
+        if (shifted[1] < shifted[0])
+            shifted[1] = shifted[0];
+        const rir = applyExperienceRirFloor(shifted, ex.role, experience);
         const progressionStyle = weeklyProgressionStyle(ex, phase, week, totalWeeks);
         const progression = progressionStyle && progressionStyle !== ex.progressionStyle && progressionStyle !== 'auto' ? progressionInstruction(progressionStyle) : ex.progression;
         return { ...ex, sets, prescription: { ...ex.prescription, reps, rir }, progressionStyle, progression };
@@ -614,7 +617,7 @@ function simulateBlock(index, spec, program, request, profile, states) {
     for (let week = 1; week <= spec.weeks; week++) {
         const workouts = [];
         const weekActions = actionCounter();
-        const weeklySessions = program.sessions.map(baseSession => prescriptionForSimulationWeek(baseSession, spec.phase, week, spec.weeks));
+        const weeklySessions = program.sessions.map(baseSession => prescriptionForSimulationWeek(baseSession, spec.phase, week, spec.weeks, { experience: request.athlete.experience }));
         for (let sessionIndex = 0; sessionIndex < weeklySessions.length; sessionIndex++) {
             const session = weeklySessions[sessionIndex];
             const decisions = simulateSession(session, request, states, profile, forcedStalls);

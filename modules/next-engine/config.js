@@ -1,7 +1,7 @@
-export const ENGINE_VERSION = '0.65.7';
+export const ENGINE_VERSION = '0.65.8';
 // Current release plus the four preceding prescription engines. Older plans stay readable;
 // phone diagnostics must inspect current saved plans rather than silently skipping them.
-export const ENGINE_COMPATIBLE_VERSIONS = Object.freeze(['0.65.3', '0.65.4', '0.65.5', '0.65.6', ENGINE_VERSION]);
+export const ENGINE_COMPATIBLE_VERSIONS = Object.freeze(['0.65.4', '0.65.5', '0.65.6', '0.65.7', ENGINE_VERSION]);
 export const MUSCLE_DOSE_PRIOR = {
     novice: { minimum: 4, preferred: 6, upper: 10 },
     intermediate: { minimum: 6, preferred: 9, upper: 14 },
@@ -36,3 +36,11 @@ export const CORE_MUSCLES = ['chest', 'back', 'side_delts', 'rear_delts', 'front
  */
 export const OPTIONAL_MUSCLES = ['traps', 'forearms', 'adductors', 'abductors', 'neck', 'lower_back'];
 export const ALL_MUSCLES = [...CORE_MUSCLES, ...OPTIONAL_MUSCLES];
+/**
+ * Novice full-body pattern frequency (Training Variables by Lifter Experience, 2026). A novice's early
+ * gains are motor learning, so the squat and hinge patterns are practised at least twice a week on a
+ * full-body split, alongside the chest/back exposures every full-body day already carries. Two is the
+ * low end of the 2–3x range: it fits the shortest session bands without displacing pressing/pulling.
+ * Shared by topology (where exposures are planned) and realization (where sets must actually land).
+ */
+export const NOVICE_FULL_BODY_PATTERN_EXPOSURES = Object.freeze({ quads: 2, hamstrings: 2 });

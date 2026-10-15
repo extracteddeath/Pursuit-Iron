@@ -8352,3 +8352,69 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   #root .wpb-set-option-sheet{animation:none!important;}
   #root .wpb-set-option-backdrop{animation:none!important;}
 }
+
+
+/* B887 — Home header follows the scroll gesture without a terminal layout snap.
+   Both expanded and compact states use ONE stable top row, full app identity and
+   48dp actions. The greeting is the only element whose height is driven by JS.
+   These rules intentionally outrank R4's data-scrolled typography/padding and
+   R56's 95%-progress fixed-height substitution. */
+#root[data-pi-motion="expressive"] .wpb .wpb-home.wpb-home.wpb-home>.wpb-home-header,
+#root[data-pi-motion="expressive"] .wpb .wpb-home.wpb-home.wpb-home[data-scrolled="1"]>.wpb-home-header,
+#root[data-pi-motion="expressive"] .wpb .wpb-home.wpb-home.wpb-home[data-home-compact="1"]>.wpb-home-header{
+  box-sizing:border-box!important;
+  height:auto!important;min-height:56px!important;max-height:none!important;
+  overflow:visible!important;
+  padding:4px 12px!important;
+  border-bottom:1px solid var(--pi-r11-edge)!important;
+  border-radius:0 0 28px 28px!important;
+  background:var(--pi-r11-quiet)!important;
+  box-shadow:none!important;
+  transition:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-home .wpb-home-topline,
+#root[data-pi-motion="expressive"] .wpb .wpb-home[data-scrolled="1"] .wpb-home-topline,
+#root[data-pi-motion="expressive"] .wpb .wpb-home[data-home-compact="1"] .wpb-home-topline{
+  box-sizing:border-box;min-height:48px;gap:8px!important;
+  padding-bottom:0!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-home .wpb-home-brand,
+#root[data-pi-motion="expressive"] .wpb .wpb-home[data-home-compact="1"] .wpb-home-brand{
+  gap:7px!important;flex:0 1 auto!important;min-width:0;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-home .wpb-home-brand-name{
+  font-size:14px!important;font-weight:740!important;letter-spacing:-.02em!important;
+  min-width:0;overflow:hidden;text-overflow:ellipsis;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-home .wpb-home-brand-long,
+#root[data-pi-motion="expressive"] .wpb .wpb-home[data-home-compact="1"] .wpb-home-brand-long{display:inline!important;}
+#root[data-pi-motion="expressive"] .wpb .wpb-home .wpb-home-brand-mark,
+#root[data-pi-motion="expressive"] .wpb .wpb-home[data-home-compact="1"] .wpb-home-brand-mark{
+  width:25px!important;height:25px!important;border-radius:9px!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-home .wpb-home-tools,
+#root[data-pi-motion="expressive"] .wpb .wpb-home[data-home-compact="1"] .wpb-home-tools{
+  flex-shrink:0!important;padding:1px!important;gap:1px!important;
+  border-radius:13px!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-home .wpb-home-header h1,
+#root[data-pi-motion="expressive"] .wpb .wpb-home[data-scrolled="1"] .wpb-home-header h1{
+  font-size:clamp(30px,7.4vw,36px)!important;
+  line-height:1.02!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-home .wpb-home-header>div:last-child{
+  transform:none!important;
+}
+@media(max-width:359px){
+  #root[data-pi-motion="expressive"] .wpb .wpb-home.wpb-home.wpb-home>.wpb-home-header,
+  #root[data-pi-motion="expressive"] .wpb .wpb-home.wpb-home.wpb-home[data-home-compact="1"]>.wpb-home-header,
+  #root[data-pi-motion="expressive"] .wpb .wpb-home.wpb-home.wpb-home[data-scrolled="1"]>.wpb-home-header{
+    padding-inline:8px!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-home .wpb-home-brand-name{font-size:13px!important;}
+}
+@media(prefers-reduced-motion:reduce){
+  #root[data-pi-motion="expressive"] .wpb .wpb-home .wpb-home-header>div:last-child{
+    transition:none!important;
+  }
+}

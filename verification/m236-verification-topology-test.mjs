@@ -63,7 +63,7 @@ assert.match(audit, /github\.ref == 'refs\/heads\/main' \|\| github\.event_name 
 assert.equal(registry.contractCount, Object.values(contractGroups).flat().length);
 assert.equal(registry.browserCount, Object.values(browserShards).flat().length);
 assert.equal(registry.releaseCount, releaseTests.length);
-assert.ok(registry.browserCount >= 28, 'B886 adds per-set options browser coverage without dropping prior gates');
+assert.ok(registry.browserCount >= 29, 'B887 adds Home masthead motion browser coverage without dropping prior gates');
 assert.ok(browserShards.integration.includes('r76-cross-screen-form-zoom-browser-test.mjs'),
     'Profile, Progress and Settings 200% responsive coverage must run in the integration shard');
 assert.ok(browserShards.integration.includes('r74-accessibility-browser-test.mjs'),

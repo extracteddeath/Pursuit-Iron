@@ -486,7 +486,7 @@ try{
             header:rect(head),brand:rect(brand),tools:rect(tools),
             buttons:buttons.map(b=>({label:b.getAttribute('aria-label'),...rect(b)})),
             long:getComputedStyle(home.querySelector('.wpb-home-brand-long')).display,
-            short:getComputedStyle(home.querySelector('.wpb-home-brand-short')).display,
+            short:home.querySelector('.wpb-home-brand-short') && getComputedStyle(home.querySelector('.wpb-home-brand-short')).display,
             maxScroll:sc.scrollHeight-sc.clientHeight,
             overflow:home.scrollWidth>home.clientWidth+1,
             scrollTop:sc.scrollTop};
@@ -499,8 +499,8 @@ try{
         const compact=await measure();
         assert.ok(compact.header.h<=64&&expanded.header.h-compact.header.h>=24,
           'Scrolled Home returns real vertical space, not only hidden text: '+JSON.stringify({expanded,compact}));
-        assert.equal(compact.long,'none','Long brand no longer occupies scrolled header');
-        assert.notEqual(compact.short,'none','Short brand preserves location context');
+        assert.notEqual(compact.long,'none','Full Pursuit Iron brand stays visible while scrolled');
+        assert.equal(compact.short,null,'Home no longer substitutes the incorrect Iron-only label');
         assert.ok(compact.buttons.length===3&&compact.buttons.every(b=>b.w>=48&&b.h>=48),
           'All Home tools remain accessible 48px touch targets: '+JSON.stringify(compact));
         assert.ok(compact.brand.right+8<=compact.tools.x&&!compact.overflow,

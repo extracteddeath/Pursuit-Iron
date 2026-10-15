@@ -8513,3 +8513,27 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   .wpb-chart-favorite-row{gap:4px}
   .wpb-chart-favorite-action{flex-basis:32px;min-width:32px}
 }
+
+/* B892 · Profile customization follows the active M3 theme tokens. */
+.wpb-profile-toolbar{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-start;margin:0 0 14px;min-width:0}
+.wpb-profile-toolbar button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:44px;padding:8px 14px;border-radius:12px;border:1px solid var(--pi-outline,var(--outline,rgba(128,128,128,.35)));background:var(--pi-surface-container,transparent);color:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.wpb-profile-toolbar button:focus-visible,.wpb-profile-customize button:focus-visible{outline:3px solid var(--pi-focus, currentColor);outline-offset:2px}
+.wpb-profile-customize{padding:15px;margin:0 0 16px;border-radius:16px;background:var(--pi-surface-container,rgba(128,128,128,.08));border:1px solid var(--pi-outline,rgba(128,128,128,.22));color:inherit}
+.wpb-profile-customize-header{display:flex;align-items:flex-start;gap:12px;justify-content:space-between}
+.wpb-profile-customize-header strong{font-size:16px;font-weight:750}
+.wpb-profile-customize-header p{font-size:12.5px;line-height:1.45;margin:5px 0 0;opacity:.75}
+.wpb-profile-customize-header>button{display:grid;place-items:center;flex-shrink:0;width:42px;height:42px;border-radius:12px;border:1px solid currentColor;background:transparent;color:inherit;opacity:.8;cursor:pointer}
+.wpb-profile-customize-label{margin:18px 0 9px;font-size:12px;font-weight:800;letter-spacing:.03em}
+.wpb-profile-customize-list{display:grid;gap:6px}
+.wpb-profile-customize-row{display:flex;align-items:center;gap:5px;min-width:0;padding:5px 6px 5px 10px;border:1px solid var(--pi-outline,rgba(128,128,128,.18));border-radius:12px}
+.wpb-profile-customize-row>span{flex:1;min-width:0;font-size:13px;font-weight:650;overflow-wrap:anywhere}
+.wpb-profile-customize-row button{min-width:38px;min-height:42px;border:0;border-radius:9px;background:transparent;color:inherit;display:grid;place-items:center;cursor:pointer}
+.wpb-profile-customize-row button:disabled,.wpb-profile-share-toggles button:disabled{opacity:.28;cursor:default}
+.wpb-profile-customize-row .wpb-profile-visibility{min-width:70px;font-size:12px;font-weight:700;background:var(--pi-surface-container-high,rgba(128,128,128,.12))}
+.wpb-profile-customize-row .wpb-profile-visibility[aria-pressed="false"]{opacity:.75}
+.wpb-profile-share-toggles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.wpb-profile-share-toggles button{min-height:44px;min-width:0;display:flex;gap:8px;align-items:center;text-align:left;padding:8px 10px;border-radius:11px;border:1px solid var(--pi-outline,rgba(128,128,128,.2));background:transparent;color:inherit;font-size:12px;font-weight:650;cursor:pointer}
+.wpb-profile-share-toggles button[aria-pressed="true"]{border-color:var(--pi-primary,var(--pi-accent,currentColor));background:var(--pi-primary-container,rgba(128,128,128,.15))}
+.wpb-profile-share-toggles button span{display:grid;place-items:center;width:19px;height:19px;flex-shrink:0;border-radius:6px;background:var(--pi-surface-container-high,rgba(128,128,128,.14))}
+.wpb-profile-reset{margin-top:12px;padding:8px 10px;min-height:42px;border:0;background:transparent;color:inherit;opacity:.8;font-size:12px;font-weight:700}
+@media(max-width:350px){.wpb-profile-customize{padding:11px}.wpb-profile-customize-row{padding-left:7px;gap:2px}.wpb-profile-customize-row button{min-width:34px}.wpb-profile-customize-row .wpb-profile-visibility{min-width:58px}}

@@ -1108,7 +1108,7 @@ function loggedExercisePerformance(program, day, e, weekIndex, unit, perf, histo
         && !x.warm && !x.sub && parseInt(x.reps) === 0 && parseFloat(x.weight) > 0) : [];
     const s = summarizeSets(e.sets, EX_BY_ID[e.id], unit) || (failedRows.length
         ? { weight: Math.max(...failedRows.map(x => parseFloat(x.weight))), reps: 0 } : null);
-    const note = e.note.trim() || (perf[e.id] && perf[e.id].note) || undefined;
+    const note = (e.note || "").trim() || undefined;
     if (s) {
         const doneWork = e.sets.filter(x => x.done && !x.warm && (parseInt(x.reps) > 0 || (failedRows.includes(x))));
         const hasPos = doneWork.some(x => parseFloat(x.weight) > 0);
@@ -1152,7 +1152,7 @@ function loggedExercisePerformance(program, day, e, weekIndex, unit, perf, histo
             reps: Number.parseInt(t.reps), weight: t.weight, unit, amrap: !!t.amrap,
             rir: t.amrap ? 0 : parseRIRNum(prescription.rir)
         }));
-        return { ...historyExposureContext(e), weight: s.weight, reps: s.reps, date: Date.now(), sets: logged, note,
+        return { ...historyExposureContext(e), weight: s.weight, reps: s.reps, date: Date.now(), sets: logged, note, noteRepeat: e.noteRepeat || "none",
             ...(prescription ? { prescription } : {}) };
     }
     return null;

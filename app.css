@@ -8418,3 +8418,25 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     transition:none!important;
   }
 }
+
+
+/* B888: compact session choices and readable note editors share theme surfaces. */
+.wpb-session-context{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;flex-shrink:0}
+.wpb-session-context>button{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-height:40px;padding:8px 12px;border-radius:14px;background:var(--wpb-theme-card);color:var(--wpb-theme-text);border:1px solid var(--wpb-theme-border);text-align:left}
+.wpb-exercise-tags{display:flex;gap:5px;flex-wrap:wrap;margin:7px 0 3px}
+.wpb-exercise-tags>span{font-size:11px;font-weight:650;padding:4px 8px;border-radius:8px;background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink)}
+.wpb-session-dialog-backdrop{position:fixed;inset:0;z-index:110;background:rgba(0,0,0,.65);display:flex;align-items:flex-end;justify-content:center}
+.wpb-session-dialog{width:100%;max-width:560px;max-height:88dvh;overflow-y:auto;box-sizing:border-box;padding:18px 18px calc(24px + env(safe-area-inset-bottom));border-radius:26px 26px 0 0;background:var(--wpb-theme-bg);color:var(--wpb-theme-text);border:1px solid var(--wpb-theme-border)}
+.wpb-session-dialog-heading{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.wpb-session-dialog h2{font-size:21px;letter-spacing:-.3px;flex:1;margin:0}
+.wpb-session-dialog-heading button{width:44px;height:44px;border:0;border-radius:50%;background:var(--wpb-theme-card);color:var(--wpb-theme-text);display:grid;place-items:center}
+.wpb-session-dialog p{font-size:13px;line-height:1.55;color:var(--wpb-theme-muted);overflow-wrap:anywhere}
+.wpb-session-dialog label{display:grid;gap:8px;font-size:13px;font-weight:650;margin:12px 0}
+.wpb-session-dialog textarea,.wpb-session-dialog select{box-sizing:border-box;width:100%;font:inherit;padding:12px;min-height:48px;border-radius:12px;border:1px solid var(--wpb-theme-border);background:var(--wpb-theme-card);color:var(--wpb-theme-text)}
+.wpb-session-dialog textarea{resize:vertical;line-height:1.5}
+.wpb-session-choice{display:grid;gap:4px;min-height:48px;width:100%;text-align:left;padding:12px;margin:7px 0;border-radius:14px;border:1px solid var(--wpb-theme-border);background:var(--wpb-theme-card);color:var(--wpb-theme-text);font:inherit;cursor:pointer}
+.wpb-session-choice>span{font-size:12px;color:var(--wpb-theme-muted)}
+.wpb-session-choice[aria-pressed=true]{border-color:var(--wpb-theme-accent);background:var(--wpb-theme-accent-dim)}
+.wpb-session-note-editor+.wpb-session-note-editor,.wpb-injury-entry{border-top:1px solid var(--wpb-theme-border);padding-top:12px;margin-top:14px}
+.wpb-injury-entry>span{display:block;font-size:12px;color:var(--wpb-theme-muted);margin-top:4px}
+.wpb-home-health{margin:10px 0 18px}.wpb-home-health>span{font-size:12px;color:var(--wpb-theme-muted)}

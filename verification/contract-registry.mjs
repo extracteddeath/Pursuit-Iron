@@ -45,6 +45,7 @@ export const contractGroups = Object.freeze({
         'm215-cycle-duration-test.mjs'
     ]),
     quality: Object.freeze([
+        'b888-session-choices-test.mjs',
         'm180-coach-quality-oracle-test.mjs',
         'm180-coach-quality-matrix.mjs',
         'm187-premium-ux-test.mjs',
@@ -121,6 +122,7 @@ export const browserShards = Object.freeze({
         'm220-day-progression-browser-test.mjs'
     ]),
     integration: Object.freeze([
+        'b888-session-choices-browser-test.mjs',
         'b887-home-masthead-motion-browser-test.mjs',
         'b881-history-import-browser-test.mjs',
         'b875-contextual-dock-browser-test.mjs',
@@ -181,3 +183,4 @@ export function verifyContractRegistry(root = process.cwd()) {
         releaseCount: releaseTests.length
     });
 }
+

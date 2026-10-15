@@ -1,3 +1,11 @@
+## Build 889 — Injury journal and workout review
+
+- Choose a joint/body area or specific muscle, side, onset date and training preference. Preview related lifts before saving.
+- Edit existing injuries, mark them resolved or active again, and keep resolved records separate from active restrictions.
+- Protect unsaved edits and duplicate saves; preserve earlier injuries and backup imports.
+- Review any active injury during a workout. Adjustments retain completed/manual set values and link back to the original injury instead of creating duplicates.
+- Improve the Home injury card, form hierarchy, themed surfaces and phone/tablet layouts.
+
 ## Build 888 — Session choices and notes
 
 - Change an exercise's progression during a workout, then choose whether to update the program after saving. Completed and manually edited sets are preserved.

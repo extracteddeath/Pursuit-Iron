@@ -53,6 +53,7 @@ export const contractGroups = Object.freeze({
         'm188-production-torture-test.mjs'
     ]),
     integration: Object.freeze([
+        'b889-injury-journal-test.mjs',
         'b887-home-masthead-motion-test.mjs',
         'b886-set-number-options-test.mjs',
         'b885-stable-workout-rows-test.mjs',
@@ -107,6 +108,7 @@ export const browserShards = Object.freeze({
         'm218-phone-polish-browser-test.mjs'
     ]),
     workout: Object.freeze([
+        'b889-injury-journal-browser-test.mjs',
         'b886-set-number-options-browser-test.mjs',
         'b825-logging-layout-browser-test.mjs',
         'r72-workout-browser-test.mjs',

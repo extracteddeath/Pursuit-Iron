@@ -49,11 +49,11 @@ try {
         assert.deepEqual(setWeights,['190','190','190','190']);assert.deepEqual(setReps,['5','5','5','5']);
         for(const warm of await page.$$('[data-testid^="set-0-"][data-warm="1"] button[aria-label="Mark set done"]'))await warm.click();
         const first=workRows[0];
-        const shortcut=await page.$(`${first} button[aria-label="Use last time's 205 by 3"]`);
-        assert.ok(shortcut,'Last time shortcut uses latest 205 x 3, never older 200 x 3');
+        await page.click('button[aria-label="Show previous workout values"]');
+        const shortcut=await page.$(`${first} [data-reference-action="last"]`);
+        assert.ok(shortcut,'LAST reference uses latest 205 x 3, never older 200 x 3');
         const shortcutText=await shortcut.evaluate(n=>n.innerText);
         assert.match(shortcutText,/205×3/);assert.doesNotMatch(shortcutText,/@/,'planned effort must not be presented as reported');
-        await page.click('button[aria-label="Show previous workout values"]');
         for(const [index,text] of [[0,'205×3'],[1,'210×2'],[2,'215×3'],[3,'— new']])
             assert.ok((await page.$eval(workRows[index],n=>n.innerText)).includes(text),`LAST set ${index+1} matches the latest raw workout`);
         await page.click('button[aria-label="Focused mode"]');
@@ -61,11 +61,11 @@ try {
         assert.match(focusText,/last 205\s*×\s*3/);assert.doesNotMatch(focusText,/last 200/);
         await page.click('button[aria-label="Exit focused mode"]');
         await page.screenshot({path:path.join(root,'verification/m220-squat-phone.png')});
-        await page.click(`${first} button[aria-label="Use last time's 205 by 3"]`);
+        await page.click(`${first} [data-reference-action="last"]`);
         assert.equal(await page.$eval(`${first} input[aria-label="weight"]`,n=>n.value),'205');
-        assert.equal(await page.$eval(`${first} input[aria-label="reps"]`,n=>n.value),'3');
+        assert.equal(await page.$eval(`${first} input[aria-label="reps"]`,n=>n.value),'5', 'applying previous load must not overwrite the current rep target');
         for(const row of workRows.slice(0,3))await page.click(`${row} button[aria-label="Mark set done"]`);
-        assert.equal(await page.$(`${workRows[3]} button[aria-label^="Use last time's"]`),null,'the new fourth row has no invented prior set shortcut');
+        assert.equal(await page.$(`${workRows[3]} [data-reference-action="last"]`),null,'the new fourth row has no invented prior set reference');
     }
     for(const variant of ['?squat&resume','?squat&resume&custom']){
         await open(variant);

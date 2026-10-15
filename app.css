@@ -8171,3 +8171,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb-workout [data-testid^="set-"][data-done="1"] .wpb-set-controls .wpb-num-input{
   min-height:34px!important;
 }
+/* A normal-mode padding shorthand must never overwrite the adaptive dock's
+   measured scroll reserve. The dock stays clear during rest → set morphs. */
+#root .wpb-workout[data-focus-mode="false"][data-set-dock-visible="true"] .wpb-workout-scroll{
+  padding-bottom:calc(16px + var(--pi-set-dock-height,0px))!important;
+  scroll-padding-block-end:calc(16px + var(--pi-set-dock-height,0px))!important;
+}

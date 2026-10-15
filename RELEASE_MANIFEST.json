@@ -2,10 +2,10 @@
   "schemaVersion": 3,
   "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": 892,
+  "build": 893,
   "engineVersion": "0.65.8",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "33e251f12ae7b0db0cb0815c7a385d089e0e211ee751daaddcbe2fbe0bb9a960",
+  "runtimeAggregate": "1bdb7cfbd0a9867f855b337e1120f1d517ae951a8f1751e74f4c75d919ea110f",
   "runtimeFiles": {
     "modules/engine-api.js": "f73e58356475b057acfb4fd2177b1f37fface1d88e68c293d979c9aa1e680378",
     "modules/engine-shell.js": "73645bf4d914423074c0e90b992b58a6c57f7fbb726621d417803e906d140675",
@@ -25,7 +25,7 @@
     "modules/next-engine/capacity-policy.js": "7679d6f487a968d6e3d2144385cb33ac0c788d7565c2b132b9187b5e2693825b",
     "modules/next-engine/coach-regression.js": "f4bf6719070076f2ec8eab6d76ba5f29386ea2e638b106556caad35df6c00e1b",
     "modules/next-engine/config.js": "45c9131a9672c3c95445d19b1f81df7ad2ffd4b99de37a5014e878e750ba6ab6",
-    "modules/next-engine/cycle-runtime-adapter.js": "0b122326abcf6d5dedcdb51ef722c0e8db27d48a724742586491a5960e4349ad",
+    "modules/next-engine/cycle-runtime-adapter.js": "4cf805e4979ed059151f70cef43370c4697fe07f24c1ce94906e9ffdc27c5a38",
     "modules/next-engine/cycles.js": "3b949f73ecef2543e4aa3aa6910fe43a3d3526805fcbcd111424e5df2d6efc79",
     "modules/next-engine/domain-contracts.js": "fc35224050b1c20769cc38f727852a180f6ac50e990dc6ddeb213f9e30ec755f",
     "modules/next-engine/dose-reconciliation.js": "122c4eab4052b540d163b4cca0ecb6b00c16adb32d1e703ff32dd3e449a5f65b",
@@ -112,17 +112,17 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "64410eec24f276a0dcf488a333500841d289d28561db778167e115c5bc610902",
-    "index.html": "4952375f0a33fc7fff07003e49eeed768b0528bf15aa92e1629adda3fcf93af0",
-    "sw.js": "acab91dec48e048be0a1668ce278d792a5f2a3abafcc74a597ea0536289f1ed9",
-    "BUILD_PROFILE.json": "21d221e3a398f8404b3f676b9390083ff77fac29f6019922aa2d06520f8b3bc6",
-    "CHANGELOG.md": "971ac8a69bf94060606015002406d640e27b1238ffe5a0330666176f5fba8af9",
-    "app.css": "49f307271bca98c544f39c796804a05fbd2abccae1301b5e8c79323c0078be6e",
+    "modules/App.js": "ca65c0067650f0a7c6355e241127fe910e84728b5835133354c86a8c0bf02639",
+    "index.html": "31b583487c0ba475ca35582dba577388124486eb3cc37f0a66d4938dacc7f78c",
+    "sw.js": "7068ea286085b7e11f90d0789fad0d9f9dc2d5f22e9bee1a976d443d9609ab87",
+    "BUILD_PROFILE.json": "45b405e02db8497a634342363d83c2c2f9f0b423ce214c0d747e9400572209b0",
+    "CHANGELOG.md": "7c552d03fa38bf983f5a4f0cc019f2aa13704e47fdb69519292e7d024f58eab5",
+    "app.css": "b11773770b277c68fb2a5b4c03b021e99db0c9145df003514eed2bf0a5d8f1c2",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b892-r6aa7f9a75e27f416",
-  "uiMilestone": "Build 892 · Customizable Profile and share card"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b893-r311a1b0c8f230e62",
+  "uiMilestone": "Build 893 · Custom training cycle builder"
 }

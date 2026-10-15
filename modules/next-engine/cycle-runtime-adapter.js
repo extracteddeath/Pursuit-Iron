@@ -192,13 +192,45 @@ export function nextCycleTemplatesForShell() {
         blocks: t.blocks.map(b => ({ label: b.label, weeks: b.weeks, phase: b.phase, note: `${phaseLabel(b.phase)} · ${b.weeks} weeks` }))
     }));
 }
+/* B893: Custom cycles are real, independently realized phase blocks, not a renamed preset.
+   Keep the permitted phase keys narrow, ordered and validated before ANY generation or state write. */
+export const CUSTOM_CYCLE_PHASES = Object.freeze([
+    { phase: 'hypertrophy_accumulation', label: 'Hypertrophy' },
+    { phase: 'strength_accumulation', label: 'Strength' },
+    { phase: 'mixed_accumulation', label: 'Powerbuilding' },
+    { phase: 'intensification', label: 'Intensification' },
+    { phase: 'peak', label: 'Peak' },
+    { phase: 'foundation', label: 'Foundation' }
+]);
+export function customCycleSpecs(blocks) {
+    if (!Array.isArray(blocks) || blocks.length < 2 || blocks.length > 8)
+        throw new NextShellAdapterError('NEXT_CYCLE_CUSTOM_BLOCK_COUNT', 'Choose between 2 and 8 cycle blocks.');
+    const valid = new Set(CUSTOM_CYCLE_PHASES.map(x => x.phase));
+    const planned = blocks.map((block, i) => {
+        const phase = typeof block?.phase === 'string' ? block.phase : '';
+        const weeks = Number(block?.weeks);
+        if (!valid.has(phase))
+            throw new NextShellAdapterError('NEXT_CYCLE_CUSTOM_PHASE_INVALID', `Block ${i + 1} has an unsupported training phase.`);
+        if (!Number.isSafeInteger(weeks) || weeks < 1 || weeks > 24)
+            throw new NextShellAdapterError('NEXT_CYCLE_CUSTOM_WEEKS_INVALID', `Block ${i + 1} must run 1–24 whole weeks.`);
+        const phaseName = CUSTOM_CYCLE_PHASES.find(x => x.phase === phase).label;
+        const label = typeof block?.label === 'string' && block.label.trim() ? block.label.trim().slice(0, 40) : phaseName;
+        return { phase, weeks, label };
+    });
+    if (planned.reduce((sum, block) => sum + block.weeks, 0) > 104)
+        throw new NextShellAdapterError('NEXT_CYCLE_CUSTOM_LENGTH_INVALID', 'A custom cycle must be at most 104 weeks.');
+    return planned;
+}
 export function generateNextCycleForShell(options) {
     const templateId = options.templateId;
-    const template = cycleTemplates().find(t => t.id === templateId);
+    const isCustom = templateId === 'custom';
+    const template = isCustom ? { id: 'custom', name: 'Custom cycle' } : cycleTemplates().find(t => t.id === templateId);
     if (!template)
         throw new NextShellAdapterError('NEXT_CYCLE_TEMPLATE_INVALID', 'Choose a supported training cycle before building.');
-    const specs = blocksForCycleTemplate(templateId);
-    const goal = goalForCycleTemplate(templateId);
+    const specs = isCustom ? customCycleSpecs(options.blocks) : blocksForCycleTemplate(templateId);
+    const goal = isCustom
+        ? (options.config?.goal === 'strength' ? 'strength' : options.config?.goal === 'hypertrophy' ? 'hypertrophy' : 'mixed')
+        : goalForCycleTemplate(templateId);
     const seed = (options.seed ?? Math.max(1, Math.floor(Date.now() % 2147483647))) >>> 0;
     const cid = (options.makeId ?? (() => `next-cycle-${Math.random().toString(36).slice(2, 10)}`))();
     let baseRequest = shellConfigToNextRequest({ ...options.config, goal: goal === 'mixed' ? 'both' : goal }, options.banned ?? [], options.legacyExercises, seed);

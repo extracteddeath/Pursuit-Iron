@@ -262,17 +262,17 @@ function customCycleEffort(program, day, ex, slot, week) {
     if (!program.config?.cyclePeriodization || program.config?.progression === 'manual'
         || (program.progStyle?.[`${day?.id}:${slot}`] ?? program.progStyle?.[ex.id] ?? program.overrides?.[`${day?.id}:${slot}`]?.progressionStyle) === 'manual') return null;
     const label = String(program.blockLabel || '').toLowerCase();
-    const phase = program.config?.deload && week > weeksOf(program) ? 'recovery'
-        : SUPPORTED_PHASES.includes(program.config?.phase) ? program.config.phase
+    const phase = SUPPORTED_PHASES.includes(program.config?.phase) ? program.config.phase
         : /hypertrophy/.test(label) ? 'hypertrophy_accumulation'
         : /peak/.test(label) ? 'peak' : /strength/.test(label) ? 'strength_accumulation'
         : initialPhaseForGoal(program.config?.goal);
+    const recovery = program.config?.deload && week > weeksOf(program);
     const strength = phase === 'strength_accumulation' || phase === 'intensification' || phase === 'peak'
         || (phase === 'recovery' && program.config?.goal === 'strength');
     const role = ex.type === 'compound' ? (strength ? (slot === day?.primaryIndex ? 'primary_strength' : 'secondary_strength') : 'hypertrophy_compound') : 'hypertrophy_isolation';
-    return effortForSimulationWeek(rirForPhase(role, phasePolicyFor(phase)), role, phase,
-        phase === 'recovery' ? 1 : Math.max(1, Math.min(weeksOf(program), week)),
-        phase === 'recovery' ? 1 : weeksOf(program), program.config?.experience);
+    return effortForSimulationWeek(rirForPhase(role, phasePolicyFor(phase)), role, recovery ? 'recovery' : phase,
+        recovery ? 1 : Math.max(1, Math.min(weeksOf(program), week)),
+        recovery ? 1 : weeksOf(program), program.config?.experience);
 }
 
 function computeCell(program, day, id, slotIndex, weekIndex) {

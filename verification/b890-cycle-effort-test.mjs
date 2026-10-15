@@ -12,7 +12,11 @@ assert.equal(cell(p,0,3).rir,'1-2');
 assert.equal(cell(p,0,10).rir,'1-2');
 assert.equal(cell(p,1,1).rir,'1-3');
 assert.equal(cell(p,1,3).rir,'0-2');
-assert.equal(cell(p,0,11).rir,'5-6','deload recovers effort using canonical recovery policy');
+assert.equal(cell(p,0,11).rir,'3-4','deload adds recovery reserve to the parent block base, like generated shell cells');
+assert.equal(cell(p,1,11).rir,'2-4');
+const recoveryEx={exerciseId:'bb-bench',role:'hypertrophy_compound',sets:3,prescription:{reps:[6,10],rir:rirForPhase('hypertrophy_compound',phasePolicyFor('hypertrophy_accumulation')),restSeconds:120}};
+const generatedDeload=prescriptionForSimulationWeek({exercises:[recoveryEx]},'recovery',1,1).exercises[0].prescription.rir;
+assert.equal(cell(p,0,11).rir,generatedDeload.join('-'),'converted deload matches actual generated-shell materialization');
 for (const rir of [0,2,'2-3',[1,2]]) {
  const edited={...p,overrides:{[day.id+':0']:{rir}}};
  assert.equal(cell(edited,0,1).rir,cell(edited,0,10).rir,'explicit target stays fixed');

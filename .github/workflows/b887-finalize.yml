@@ -1,0 +1,87 @@
+name: Finalize B887 Header Release
+on:
+  push:
+    branches:
+      - release/b887-smooth-home-masthead
+permissions:
+  contents: write
+jobs:
+  finalize:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+      - name: Apply resize-safe greeting measurement and certify release
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import json,hashlib,re
+          root=Path('.')
+          p=root/'modules/App.js'
+          s=p.read_text()
+          old='''        head.style.height = "auto";
+                  let full = Math.max(1, head.scrollHeight), raf = 0;'''
+          new='''        // Measure the natural greeting height independently from the clipped
+                  // animated height. scrollHeight can contract once the greeting is clipped;
+                  // never use that contracted value as the new scroll distance on resize.
+                  const measureFull = () => {
+                      const clippedHeight = head.style.height;
+                      head.style.height = "auto";
+                      const natural = Math.max(1, head.scrollHeight);
+                      head.style.height = clippedHeight;
+                      return natural;
+                  };
+                  let full = measureFull(), raf = 0;'''
+          assert s.count(old)==1,'B887 layout-effect source mismatch'
+          s=s.replace(old,new)
+          old='''            // scrollHeight includes clipped descendants, so measurement never
+                      // temporarily expands the already-collapsed header on orientation change.
+                      full = Math.max(1, head.scrollHeight);
+                      apply();'''
+          new='''            // Remeasure natural content before recalculating scroll progress.
+                      // The temporary measurement is synchronous, so it never paints as
+                      // a fully expanded frame during orientation or window changes.
+                      full = measureFull();
+                      apply();'''
+          assert s.count(old)==1,'B887 resize source mismatch'
+          p.write_text(s)
+          manifest_file=root/'RELEASE_MANIFEST.json'
+          mf=json.loads(manifest_file.read_text())
+          mf['runtimeFiles']['modules/App.js']=hashlib.sha256(p.read_bytes()).hexdigest()
+          agg=''.join(f'{f}:{sha}\n' for f,sha in sorted(mf['runtimeFiles'].items()))
+          mf['runtimeAggregate']=hashlib.sha256(agg.encode()).hexdigest()
+          sw=root/'sw.js'
+          txt=sw.read_text()
+          shell=re.search(r'const SHELL=\[(.*?)\];',txt,re.S).group(1)
+          files=re.findall(r'"(\./[^"]+)"',shell)
+          blob=''.join(f'{f}:{hashlib.sha256((root/f[2:]).read_bytes()).hexdigest()}\n' for f in sorted(files))
+          rev=hashlib.sha256(blob.encode()).hexdigest()[:16]
+          cache='pursuit-iron-production-v4-0-0-m234-candidate-selection-b887-r'+rev
+          oldcache=json.loads((root/'BUILD_PROFILE.json').read_text())['cache']
+          assert oldcache!=cache and txt.count(oldcache)==1
+          sw.write_text(txt.replace(oldcache,cache))
+          profile=root/'BUILD_PROFILE.json'
+          pr=json.loads(profile.read_text())
+          pr['cache']=cache
+          profile.write_text(json.dumps(pr,indent=2)+'\n')
+          mf['cache']=cache
+          for f in ['app.css','index.html','sw.js','BUILD_PROFILE.json','modules/App.js']:
+              mf['uiFiles'][f]=hashlib.sha256((root/f).read_bytes()).hexdigest()
+          manifest_file.write_text(json.dumps(mf,indent=2)+'\n')
+          assert cache=='pursuit-iron-production-v4-0-0-m234-candidate-selection-b887-rf22f8567766af77a',cache
+          print('B887 certified cache:',cache)
+          PY
+          node scripts/verify-release.mjs
+          node verification/b887-home-masthead-motion-test.mjs
+      - name: Remove diagnostic workflows and commit certified B887
+        run: |
+          rm -f .github/workflows/b887-focused-home-motion.yml .github/workflows/b887-finalize.yml
+          git add -A
+          git -c user.name="Pursuit Iron Release" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "Build 887: resize-safe smooth Home masthead and stable full brand"
+          git push origin HEAD:refs/heads/release/b887-smooth-home-masthead

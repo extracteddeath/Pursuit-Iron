@@ -1,3 +1,10 @@
+## Build 893 — Custom training cycle builder
+
+- Design training cycles with any order of supported phases, including repeated phases and individual 1–24 week block lengths.
+- Move, add or remove blocks in the accessible wizard. Validate 2–8 blocks and an overall 104-week limit before generation.
+- Pass the exact phase and duration sequence into the canonical engine, retaining per-block progression, recovery, preview, history and ownership safeguards.
+- Include B893 generation and UI wiring regression checks; retain all Build 892 Profile and share-card improvements.
+
 ## Build 892 — Customizable Profile and share card
 
 - Reorder or hide Profile sections without changing workout history, training data or scores.

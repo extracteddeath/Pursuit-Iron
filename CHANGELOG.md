@@ -1,3 +1,10 @@
+## Build 892 — Customizable Profile and share card
+
+- Reorder or hide Profile sections without changing workout history, training data or scores.
+- Customize which achievements, level, strength score, Thousand Pound Club and personal record statistics appear on a shareable image.
+- Persist the layout and share-card selections across launches; include accessible controls and narrow-phone layout.
+- Add B892 preference normalization and share-layout regression checks.
+
 ## Build 891 — Favorite lift chart order and history spacing
 
 - Pin favorite logged exercises to the top of the lift charts and arrange their display order with accessible move-up and move-down controls. Search for additional lifts in the organizer.

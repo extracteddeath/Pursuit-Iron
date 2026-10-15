@@ -1,3 +1,10 @@
+## Build 891 — Favorite lift chart order and history spacing
+
+- Pin favorite logged exercises to the top of the lift charts and arrange their display order with accessible move-up and move-down controls. Search for additional lifts in the organizer.
+- Persist chart favorites across app restarts without changing exercise prescriptions, performance history or PR calculations; missing exercise IDs are ignored until those lifts appear in the log again.
+- Improve dense cycle-history rows, narrow-screen week/session labels and expanded workout-history set/action spacing.
+- Register B891 release coverage for favorites, ordering, storage and responsive layout.
+
 ## Build 890 — Cycle effort and block browsing
 
 - Converted custom Auto programs use the cycle's weekly effort policy instead of neutral 2-RIR defaults. Preserve explicit RIR targets, Manual progression, exercise selection, sets, reps, rest and history; retain the novice compound effort floor.

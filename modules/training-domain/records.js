@@ -993,6 +993,7 @@ function mergeStores(local, incoming) {
         perf: mergedPerf,
         exNotes: mapMerge("exNotes"),
         exSetup: mapMerge("exSetup"),
+        injuryLog: byId(A.injuryLog, B.injuryLog).sort((a,b) => (b.at || 0) - (a.at || 0)),
         goals: mapMerge("goals"),
         // Research evidence is append-only. Merge trials by trial id so restoring a backup can never
         // erase a completed control/treatment observation from the other device. The newer blob owns

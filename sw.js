@@ -1,5 +1,5 @@
 /* Pursuit Iron 4.0 — M234 production release. */
-const CACHE="pursuit-iron-production-v4-0-0-m234-candidate-selection-b887-r55d870f87a03f104";
+const CACHE="pursuit-iron-production-v4-0-0-m234-candidate-selection-b888-r10ed1f95a9830b2f";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
   "./app.css",
@@ -90,6 +90,7 @@ const SHELL=[
   "./modules/next-engine/workout-runtime.js",
   "./modules/program-duration.js",
   "./modules/program-last-performance.js",
+  "./modules/session-tools.js",
   "./modules/training-domain.js",
   "./modules/training-domain/analytics.js",
   "./modules/training-domain/catalog.js",
@@ -121,3 +122,4 @@ if(requestUrl.origin===manifestUrl.origin&&requestUrl.pathname===manifestUrl.pat
   e.respondWith((async()=>{const c=await caches.open(CACHE);try{const res=await fetch(new Request(r,{cache:'no-cache'}));if(res.ok){await c.put(manifestUrl.href,res.clone()).catch(()=>{});return res;}}catch{}const saved=await c.match(manifestUrl.href);return saved||new Response('Manifest unavailable',{status:503});})());return;
 }
 if(r.mode==='navigate'){e.respondWith(caches.open(CACHE).then(c=>c.match('./index.html')).then(x=>x||fetch(r)).catch(()=>caches.open(CACHE).then(c=>c.match('./index.html'))));return;}e.respondWith(caches.open(CACHE).then(c=>c.match(r,{ignoreSearch:true}).then(x=>x||fetch(r).then(res=>{if(res&&res.status===200&&res.type==='basic')c.put(r,res.clone()).catch(()=>{});return res;}))));});
+

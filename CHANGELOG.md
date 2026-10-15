@@ -1,3 +1,10 @@
+## Build 888 — Session choices and notes
+
+- Change an exercise's progression during a workout, then choose whether to update the program after saving. Completed and manually edited sets are preserved.
+- Log and resolve injuries from Home. Active injuries link to affected-lift review in workouts; workout injury reports join the journal.
+- Key, supporting, accessory and added lifts have clear role tags in both workout modes.
+- Session and exercise notes have this-session, repeat-once and keep-repeating options. Notes recover with an interrupted workout and remain in history.
+
 ## Build 887 — Smooth Home header and consistent app identity
 
 - Keep **Pursuit Iron** visible in the Home masthead while scrolling; remove the unrelated "Iron"-only abbreviation.
@@ -1844,3 +1851,4 @@ _Generated from the app's own changelog data — do not edit by hand._
 - **Plateau warnings that mean it** — A stall is now judged per training day, so the same lift on push day and leg day is never mixed into one misleading line. And working through a rep range set by set counts as progress, because it is.
 - **Share a session** — Any workout in Progress becomes a clean card — your lifts, top sets, volume and time.
 - **History where you need it** — Open any exercise in a program to see every session you've logged for it on that day, with your best marked.
+

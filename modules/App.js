@@ -16954,8 +16954,17 @@ function Home({ legacySaved = [], onRebuildLegacy, onRemoveLegacy, gyms = [], ac
         const sc = scRef.current, head = headRef.current;
         if (!sc || !head) return;
         const home = sc.closest(".wpb-home");
-        head.style.height = "auto";
-        let full = Math.max(1, head.scrollHeight), raf = 0;
+        // Measure the natural greeting height independently from the clipped
+        // animated height. scrollHeight can contract once the greeting is clipped;
+        // never use that contracted value as the new scroll distance on resize.
+        const measureFull = () => {
+            const clippedHeight = head.style.height;
+            head.style.height = "auto";
+            const natural = Math.max(1, head.scrollHeight);
+            head.style.height = clippedHeight;
+            return natural;
+        };
+        let full = measureFull(), raf = 0;
         const apply = () => {
             raf = 0;
             const progress = Math.min(1, Math.max(0, sc.scrollTop / full));

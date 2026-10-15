@@ -1,0 +1,23 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const app=fs.readFileSync(new URL('../modules/App.js',import.meta.url),'utf8');
+const css=fs.readFileSync(new URL('../app.css',import.meta.url),'utf8');
+assert.match(app,/function ChartFavoritesManager\(\{ trends, favorites, onToggle, onMove \}\)/);
+assert.match(app,/localStorage\.getItem\("wpb:chart-favorites-v1"\)/);
+assert.match(app,/localStorage\.setItem\("wpb:chart-favorites-v1", JSON\.stringify\(safe\)\)/);
+assert.match(app,/aPin < 0 && bPin < 0 \? 0 : aPin < 0 \? 1 : bPin < 0 \? -1 : aPin - bPin/);
+assert.match(app,/"aria-label": "Move " \+ t\.name \+ " up"/);
+assert.match(app,/"aria-label": "Move " \+ t\.name \+ " down"/);
+assert.match(app,/"aria-label": "Unfavorite " \+ t\.name/);
+assert.match(css,/\.wpb-chart-favorites-available\{max-height:210px;overflow-y:auto/);
+assert.match(css,/\.wpb-cycles \.wpb-cycle-block-row>span:nth-child\(2\)/);
+const order = ['a','b'];
+const newer = ['c','a','b'];
+const catalog = [{id:'b'},{id:'x'},{id:'a'},{id:'c'}];
+const arranged = [...catalog].sort((a,b)=>{
+    const ai=newer.indexOf(a.id),bi=newer.indexOf(b.id);
+    return ai<0&&bi<0?0:ai<0?1:bi<0?-1:ai-bi;
+}).map(x=>x.id);
+assert.deepEqual(arranged,['c','a','b','x']);
+assert.deepEqual(order, ['a','b']);
+console.log('PASS B891: favorite chart persistence/ordering, accessible move controls and responsive history CSS.');

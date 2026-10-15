@@ -8407,7 +8407,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 @media(max-width:359px){
   #root[data-pi-motion="expressive"] .wpb .wpb-home.wpb-home.wpb-home>.wpb-home-header,
-  #root[data-pi-motion="expressive"] .wpb .wpb-home.wpb-home.wpb-home[data-home-compact="1"]>.wpb-home-header{
+  #root[data-pi-motion="expressive"] .wpb .wpb-home.wpb-home.wpb-home[data-home-compact="1"]>.wpb-home-header,
+  #root[data-pi-motion="expressive"] .wpb .wpb-home.wpb-home.wpb-home[data-scrolled="1"]>.wpb-home-header{
     padding-inline:8px!important;
   }
   #root[data-pi-motion="expressive"] .wpb .wpb-home .wpb-home-brand-name{font-size:13px!important;}

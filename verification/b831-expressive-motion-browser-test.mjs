@@ -1224,7 +1224,7 @@ try {
             await page.waitForFunction(() => document.querySelector('.wpb-home')?.dataset.scrolled==='1');
             await page.waitForFunction(() => {
                 const header=document.querySelector('.wpb-home .wpb-home-header');
-                return header && parseFloat(getComputedStyle(header).borderBottomLeftRadius)<=17;
+                return header && parseFloat(getComputedStyle(header).borderBottomLeftRadius)>=26;
             }, { timeout: 5000 });
             assert.equal(await page.$eval('.wpb-home', el => el.dataset.scrolled), '1',
                 'adaptive M3 app bar compresses after real content scroll');

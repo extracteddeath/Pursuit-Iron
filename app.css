@@ -8282,6 +8282,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   #root .wpb-workout[data-focus-mode="false"] .wpb-set-controls>div:nth-child(3)>div:first-child,
   #root .wpb-workout[data-focus-mode="false"] .wpb-set-controls>div:nth-child(4)>div:first-child{gap:4px!important;}
 }
+
 /* B885 completion geometry: on narrow phones completed sets have no +/- buttons.
    Put the locked values back on ONE row. This keeps the recorded RIR tag below
    reps while preventing the two-tier editable layout from wasting 116px per

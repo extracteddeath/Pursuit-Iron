@@ -26,10 +26,11 @@ assert.ok(!workout.includes('children: "Use last"'), 'Do not duplicate the LAST-
 assert.ok(workout.includes('"data-focus-mode": focus ? "true" : "false"'),
   'Normal logging layout styling must be able to isolate Focus mode');
 for (const stable of ['"aria-label": "weight"','"aria-label": "reps"','"data-haptic-manual": "1"',
-  'onClick: () => addSetRow(ei)','onClick: () => completeRemaining(ei)',
+  'onClick: () => addSetRow(ei)',
   'onClick: () => toggleDone(ei, si)', 'className: "wpb-workout-side"']){
   assert.ok(workout.includes(stable), `Set-entry functionality is preserved: ${stable}`);
 }
+assert.ok(!workout.includes('Complete remaining sets'), 'Each set must be completed intentionally; no bulk-complete action');
 assert.ok(css.includes('R93 / B884 — Workout is a set logger'), 'Style pass is present');
 assert.ok(css.includes('data-focus-mode="false"'), 'Focus and normal screen styling isolated');
 assert.ok(css.includes('data-focus-mode="false"][data-set-dock-visible="true"]') && css.includes('padding-bottom:calc(16px + var(--pi-set-dock-height,0px))!important;'), 'Dock scroll reserve must survive the B884 normal-mode padding shorthand');

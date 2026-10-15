@@ -2,7 +2,7 @@ import { liftBests, displayDayName, loadingInventoryInUnit } from './engine-api.
 import { ALL_EQUIP_IDS, ALL_PLATES, ASSIST_IDS, ASSUMED_RIR, AVAIL_PLATES, AXIAL_ADJACENT_COST, BARS, BAR_EQUIP, BAR_LABEL, BASE_SET_COST, BIG_THREE, BIRTH_RE, BW_LOG_CAP, CODE_ALPHA, CODE_ASSIST, CODE_CARRIED_KEYS, CODE_EQUIP, CODE_EXERCISES, CODE_EXP, CODE_GOALS, CODE_IGNORED_KEYS, CODE_PROG, CODE_SCHEMES, CODE_SESSION, CODE_SPLITS, COMPOSITE_HEADS, COVERED_MUSCLES, DELT_HEAD, E1RM_HOLD, E1RM_REP_CAP, EFFORT_MAX_BIAS, EFFORT_MIN_PAIRS, EFFORT_REP_CAP, ENGINES, ENGINE_RULES, ENGINE_V, EPLEY_SLOPE, EQUIPMENT, EQUIP_CATS, EQUIP_IMPLIES, EXERCISES, EXP, EXP_BAND, EX_ABBREV, EX_BY_ID, EX_FAMILY, EX_LOAD_INC, EX_METRICS, EX_METRIC_BY_ID, EX_SPECIFIC, EX_WINDOWS, FOCUS_CAVEAT, GAP_FRACTION, GENERATION_ROUTE, GYM_LIMITS, GYM_LIMIT_KEYS, GYM_PRESETS, GZ_T1_STAGES, GZ_T2_STAGES, HISTORY_BYTES, HISTORY_BYTE_CHECK_FROM, HISTORY_CAP, IDEAL_SLOTS, INTENT_FROM_CAT, INVENTORY_KEYS, LANDMARKS, LEGACY_EQUIP_IMPLIES, LEGACY_EX_TYPICAL_KEYS, LEVEL_TITLES, LOAD_INC, LOWER_PARTS, MACHINE_EQUIP, MACHINE_SETUP, MILESTONE_XP, MIN_DAY_SESSIONS, MOBILITY, MRV_GRAIN, MUSCLE_SYNONYM, MYO_MAX_SETS, MYO_MINI_REPS, MYO_MINI_SETS, MYO_MIN_REPS, MYO_PARTS, MYO_TARGET_REPS, NOVICE_INELIGIBLE_SPLITS, PART_LABEL, PART_ORDER, PATTERNS, PATTERN_BY_ID, PATTERN_GROUPS, PATTERN_MIN_SETS, PHASES, PHASE_ROT, PLANNED_ROOM_RIR, PLATES, PROG_POLICIES, PROG_STYLES, PV_PAD_TOP, PV_ROW_GAP, RACK_PRESETS, RAW, REDUCE_FRACTION, REFERENCES, REGION_MOVEMENT, REGION_REQUIRED, RELEASE_DIAG_CAP, RELEASE_DIAG_FIELDS, RELEASE_DIAG_KEY, REST_SCALE, SCORE_BANDS, SCORE_EQUIV, SCORE_PATTERN, SCORE_PATTERN_LABEL, SECONDARY, SELF_TEST_FRAME_BUDGET_MS, SELF_TEST_HISTORY_LIMIT, SELF_TEST_SUPPORTED_ENGINES, SESSIONS, SESSION_BOUNDS, SESSION_EX_TYPICAL, SETUP_FIELD_ORDER, SETUP_LABELS, SET_ROW_BLEED, SEX_FACTOR, SPLITS, STALL_ENGAGE, STALL_WINDOW, STANDARDS, STD_LEVELS, STORE_MIGRATIONS, STORE_VERSION, STRENGTH_CLUB_LIFTS, STRENGTH_CLUB_TIERS_LB, STRETCH_FOCUS_E2, STRETCH_FOCUS_E3, STRETCH_PARTIAL_PARTS, SUBMUSCLE_LABEL, SUB_LANDMARKS, TECHNICAL_LIFTS, TEMPLATES, TEMPLATE_CATS, TOTAL_WEEKS, UNIFORM_LANDMARK, VIEW_DEPTH, WARMUP_PYRAMIDS, WARMUP_SET_SEC, WEIGHTED_SWAP, __doseMemo, __recovFitMemo, __recoveryMemo, __slopeMemo, __volKey, __weeklyVolMemo, _dstCache, _lmCache, _planOverviewMemo, addedMinutes, addedSeconds, advanceLegacyFirstCycleBlock, ageFactor, ageFrom, anchorPerfFor, applyCustomProgramSettings, asLengthUnit, assertExerciseData, auditProgramWeek, auditSets, autoStyleDetail, autoStyleFor, availableFor, axialCost, backupRecordImpact, barFor, barWeightFor, baseSetsFor, betterTopSet, birthFromAge, birthParts, bitsToCode, blockChangeSummary, blockPhase, blockPlanFor, blockRetro, blockReview, budgetIncludesTransitions, buildLifterModel, buildWeekPlan, calibrateDayPerf, calibratedAnchorPerf, canUndoProgramSave, capHistory, capWeeklyVolume, cellRepRange, clamp, classifyPlateau, clearSetup, coachFacts, codeToBits, completionRate, compositeMrv, computeCell, computeLevel, computeMilestones, constantLoadDecay, coverageGaps, coverageRelief, cuesFor, customAuthoredSetCount, customExerciseHistory, customExerciseReferenceHistory, customLastSetTechnique, customProgramSuggestion, cycleConfigForStandaloneProgram, cycleProgress, dayMuscleBreakdown, dayMuscleLoad, dayMuscleVolume, dayOverlap, dayPerfFor, dayScopedTrends, daySeconds, daysInWeek, decodeGallery, decodeProgramCode, deloadAdvice, distributeVolBias, e1rm, e1rmRIR, effectiveRest, effortBounds, effortCalibration, effortLabel, effortValueLabel, encodeProgramCode, endlessStalled, engHas, engLacks, engineInfo, engineWeekOneStyles, estimateMinutes, estimateMinutesFor, exMatches, exRecords, exWindow, exerciseAt, exerciseProfile, exerciseSeries, exerciseSlotSec, exerciseTrends, expandEquipment, expandLegacyEquipment, explainPrescription, feedbackDelta, filterWorkoutHistory, fmtSets, formatSetup, galleryIssueBody, gallerySubmission, getBits, goalForDay, groupPctSets, groupSessionsByCycle, groupSessionsByMonth, growMyoSets, gymById, gymCapFor, gymRackFor, gzPlanFor, gzTierOf, gzWorkWeight, historyDayIndex, historyForProgram, historyVolumeIn, homeProgramGroups, isAssistedEx, isAxialLoad, isBarLike, isMachineLike, isRuntimeProgram, isStretchFocus, isWorkSet, landmarkFor, landmarkForLegacy, landmarkOf, lastDayPerf, lastSetEffort, lastSetTech, lastTopSet, legacyCustomSetCount, lengthUnitFor, lifterModelKey, linearInc, linearStalled, liveCoachForContext, loadStep, loadableAbove, loadableAtOrBelow, nudgeWorkoutLoad, logWindow, loggedExercisePerformance, loggedSubVolume, loggedVolume, loggedWorkoutPerformance, lowerBodyLift, makeMyoMini, mavFor, mergeSessionData, mergeStandaloneIntoGeneratedCycle, mergeStores, mergedSetCount, migrateStore, movePattern, muscleRecovery, muscleRecoveryUncached, newGymId, nextDueDayId, nextEngineStyleFor, nextScheduledIndex, nextSessionCursor, nextTMEvidence, normalizeBwLog, normalizeCycleLinks, normalizeEditedHistoryEntry, normalizeGyms, normalizeHistoryDayIds, normalizeMeasureLog, overreachSignal, paceFactor, parseRIRNum, parseStoredData, patternCues, patternTrainable, pctSetsFor, perWeekOf, percentagePlanFor, perfAfterDelete, perfAfterHistoryReplace, personalMav, personalRecoveryHours, personalRepSlope, phaseFor, phaseKind, pickActiveProgram, pickTopSet, planOverview, planOverviewMemo, plannedWeek, plateauOf, plateauOfLift, plateauSessions, plateauSplitByDay, platesPerSide, poolOf, preferenceFloor, prescribeSets, prescribedRIRof, prescribedRIRofAny, programChangeLabels, programFingerprint, programSavePlan, progressionHistoryForProgram, projectNextTM, propagateCycleEditsPure, putBits, rankSwapAlts, readinessBand, recommendedSplit, regionGapFix, regionGapsFor, repRange, representativeCustomLoad, repsLow, resolveStyle, restSec, rirTrend, rmAt, rotationOf, roundTo, ruleEngine, sameProgramContent, sanitizeInventory, sanitizeLimits, sanitizeRepsInput, sanitizeWeightInput, scoreAttribution, scoreCompose, scoreContin, scoreEquivalent, scoreEquivalentInverse, scoreLevelIdx, scoreLevelLabel, scoreMatur, scorePatternFor, scoreTargetFor, scoreTo100, secondaryOf, sessionE1RM, sessionExercisePlan, sessionSnapshotStatus, sessionSuggestion, setAvailPlates, setGymBarWeights, setExLoadInc, setGymLimits, setLoadInc, setRestScaleGlobal, setsOf, setupFieldsFor, setupFieldsWithStored, setupLabel, simulateAndAudit, squatHamCredit, stallCountFor, starvedRegions, strengthClubSnapshot, strengthLevel, strengthScore, strengthScoreHistory, strengthSnapshot, stretchTable, styleFor, styleOverride, subRegionOf, summarizeHistoryLoggedSets, summarizeSets, swapOverlapNames, syncSubSets, techExplain, techSetTag, templateConfig, templateIntent, tempoFor, tierOf, toLength, toUnit, todayISO, trainingMaxForUnit, uid, underRecoveredWeekly, uniformLandmarkFor, userOwnsRuntimeSet, volumeAudit, volumeLedger, volumeResponse, volumeVerdicts, warmupCount, warmupPlan, warmupRoutine, warmupSets, weekIntent, weekKeyOf, weekMuscleBreakdown, weeklyBodyweightTrend, weeklyRecap, weeklySubVolume, weeklyVolume, weeksOf, withTrainingMax, workoutPlanCoachFact , detectWorkoutCsv, workoutCsvToStore } from './engine-api.js';
 import { PCT_SCHEMES, percentageProtocolFor, adaptPercentageSetBudget, deriveTieredLinearState } from './engine-api.js';
 import { historyNumber, convertHistoryLoad, observedHistoryRIR, completedHistorySets, previousWorkoutSet, historyExposureContext, progressionExposureContext, normalizeHistoryEntries, validHistoryDate, historyLoadReason } from './engine-api.js';
-const __APP_VERSION__='4.0.0'; const __BUILD__='885';
+const __APP_VERSION__='4.0.0'; const __BUILD__='886';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { holdWorkoutScreenAwake, restoreWorkoutClock, workoutElapsedMs } from "./mobile-lifecycle.js";
@@ -718,8 +718,8 @@ function StyleTag({ theme } = {}) {
         .wpb-set-head>span{display:none;}
         .wpb-set-head>button{width:auto!important;min-height:28px;}
         .wpb-set-controls{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 30px;gap:6px!important;padding-bottom:10px!important;}
-        .wpb-set-controls>span:first-child{grid-column:1;grid-row:1;width:auto!important;padding-top:6px!important;}
-        .wpb-set-controls>span:first-child::before{content:"Set ";font-size:11px;}
+        .wpb-set-controls>.wpb-set-index{grid-column:1;grid-row:1;width:auto!important;padding-top:6px!important;}
+        .wpb-set-controls>.wpb-set-index::before{content:"Set ";font-size:11px;}
         .wpb-set-controls>div:nth-child(2){grid-column:2/4;grid-row:1;width:auto!important;text-align:right;}
         .wpb-set-controls>div:nth-child(3){grid-column:1;grid-row:2;}
         .wpb-set-controls>div:nth-child(4){grid-column:2;grid-row:2;position:relative;padding-top:18px;}
@@ -1832,10 +1832,10 @@ function StyleTag({ theme } = {}) {
       @media(max-width:380px){
         /* Locked values need no steppers, so completed sets fit the original single grid row. */
         .wpb-workout [data-done="1"] .wpb-set-controls{display:flex!important;padding-bottom:2px!important;}
-        .wpb-workout [data-done="1"] .wpb-set-controls>span:first-child{width:24px!important;padding-top:8px!important;}
+        .wpb-workout [data-done="1"] .wpb-set-controls>.wpb-set-index{width:24px!important;padding-top:8px!important;}
         .wpb-workout [data-done="1"] .wpb-set-controls>div:nth-child(2){width:60px!important;text-align:left;}
         .wpb-workout [data-done="1"] .wpb-set-controls>div:nth-child(4){padding-top:0;}
-        .wpb-workout [data-done="1"] .wpb-set-controls>span:first-child::before,
+        .wpb-workout [data-done="1"] .wpb-set-controls>.wpb-set-index::before,
         .wpb-workout [data-done="1"] .wpb-set-controls>div:nth-child(3)::before,
         .wpb-workout [data-done="1"] .wpb-set-controls>div:nth-child(4)::before{content:none;}
         .wpb-workout [data-done="1"] .wpb-set-controls>.wpb-set-actions{margin-top:0;}
@@ -11391,6 +11391,11 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
  // "ei:si" → a logged set whose effort picker was reopened by hand
     const [warmOpen, setWarmOpen] = useState({}); // exercise id → warm-up rows forced open after they're done
     const [targetMode, setTargetMode] = useState("target"); // "target" prescription | "last" previous session
+    // B886: actions live behind the set number, not in the numeric entry controls.
+    // Only the current workout is modified; program prescriptions are unchanged.
+    const [setOptions, setSetOptions] = useState(null); // {ei, si}
+    const [setRemoveConfirm, setSetRemoveConfirm] = useState(false);
+    useEffect(() => { setSetOptions(null); setSetRemoveConfirm(false); }, [exIdx]);
     const [copiedRecap, setCopiedRecap] = useState(false);
     const [readiness, setReadiness] = useState(liveMatch?.readiness ?? null); // {label,factor}; restored on resume so the check-in doesn't re-show
     // Was this session RESUMED from an autosave, or started fresh? Captured once at mount: liveMatch is
@@ -12080,14 +12085,41 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
         const seed = work[work.length - 1] || (suggestions[ei] ? { weight: String(suggestions[ei].weight), reps: repsLow(suggestions[ei].reps) } : { weight: "", reps: "" });
         return { ...e, sets: [...e.sets, { weight: seed.weight ?? "", reps: seed.reps ?? "", warm: false, done: false, auto: true, valueOwner: "prescription", added: true, hint: undefined }] };
     }));
-    // mark every remaining set of the current exercise done (using its prefilled targets)
-    const completeRemaining = (ei) => setData(d => d.map((e, i) => i !== ei ? e :
-        { ...e, sets: e.sets.map(s => {
-                if (s.done)
-                    return s;
-                const reps = s.reps && parseInt(s.reps) > 0 ? s.reps : repsLow(s.target?.reps || s.reps || "");
-                return { ...s, done: true, hint: undefined, reps: reps || s.reps };
-            }) }));
+    // Set type is a *session-local* choice. Preserve the prior prescription so
+    // switching the type back restores target/effort metadata without touching
+    // weight, reps, logged sets or the saved program. Drops and myo extensions
+    // retain their existing dedicated owner and are not silently converted.
+    const changeSessionSetType = (ei, si, kind) => {
+        setData(d => d.map((e, i) => i !== ei ? e : {
+            ...e, sets: e.sets.map((s, j) => {
+                if (j !== si || s.done || s.sub || !["standard", "warmup", "failure"].includes(kind)) return s;
+                const original = s.typeOriginal || { target: s.target, suggested: s.suggested, autoTuned: s.autoTuned };
+                const target = kind === "warmup"
+                    ? { ...original.target, rir: null, failure: false }
+                    : kind === "failure"
+                        ? { ...original.target, rir: 0, failure: true }
+                        : original.target;
+                return { ...s, warm: kind === "warmup", target,
+                    suggested: kind === "warmup" ? undefined : original.suggested,
+                    autoTuned: kind === "warmup" ? false : original.autoTuned,
+                    typeOriginal: original, typeOverride: kind };
+            })
+        }));
+        setSetOptions(null);
+        setSetRemoveConfirm(false);
+    };
+    // B886: explicitly user-added, unfinished rows may be removed only after a
+    // two-step confirmation in their set-number menu, never from an adjacent X.
+    const removeSessionAddedSet = (ei, si) => {
+        setData(d => d.map((e, i) => {
+            if (i !== ei) return e;
+            const row = e.sets[si];
+            if (!row || row.done || !(row.added || (row.sub && !row.prescribed))) return e;
+            return { ...e, sets: e.sets.filter((_, j) => j !== si) };
+        }));
+        setSetOptions(null);
+        setSetRemoveConfirm(false);
+    };
     // Level all working sets to the heaviest working weight. This is for the "I pyramided up to find
     // my weight" case: an exploratory ramp (185→195→205…) makes per-set progression scatter next week,
     // because each set slot progresses its own number. Flattening to the top working set gives the
@@ -12163,8 +12195,6 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
             .sort((a, b) => (KIND_RANK[a.kind] ?? 9) - (KIND_RANK[b.kind] ?? 9)); // stable within a kind
         return { ...e, sets: [...head, ...subs] };
     }));
-    // remove a single sub-set (drop/myo) by index
-    const removeSubSet = (ei, si) => setData(d => d.map((e, i) => i === ei ? { ...e, sets: e.sets.filter((s, j) => j !== si) } : e));
     const toggleSuperset = (ei) => setData(d => d.map((e, i) => i === ei && ei < d.length - 1 ? { ...e, superset: !e.superset } : e));
     // readiness check-in: scale the day's suggested loads up/down before training
     const applyReadiness = (label, factor) => {
@@ -12546,7 +12576,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
                             if (!moves)
                                 return null;
                             return (_jsxs("div", { "data-noswipe": true, className: "wpb-workout-card", style: { margin: "0 0 16px", background: C.card, borderRadius: 16, padding: "14px 16px" }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }, children: [_jsx(Flame, { size: 15, color: C.accentInk }), _jsx("span", { style: { fontSize: 15, fontWeight: 700 }, children: "Warm-up & mobility" }), _jsx("button", { onClick: () => { setShowWarmup(false); onSetWarmupCard?.(false); setSnack({ msg: "Warm-up card hidden — Settings can bring it back", undo: () => { onSetWarmupCard?.(true); setSnack(null); } }); }, "aria-label": "Hide the warm-up card from now on", className: "pressable hit", style: { marginLeft: "auto", fontSize: 13, fontWeight: 600, color: C.muted, background: "none", border: "none", cursor: "pointer" }, children: "Hide" })] }), moves.map((m, i) => (_jsxs("div", { style: { display: "flex", gap: 8, alignItems: "flex-start", marginBottom: i < moves.length - 1 ? 7 : 0 }, children: [_jsx("span", { style: { flexShrink: 0, width: 18, height: 18, borderRadius: 8, background: C.accentDim, color: C.accentInk, fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", marginTop: 1 }, children: i + 1 }), _jsx("span", { style: { fontSize: 13, color: C.text, lineHeight: 1.45 }, children: m })] }, i))), _jsx("button", { onClick: () => setShowWarmup(false), className: "pressable", style: { width: "100%", marginTop: 12, padding: "10px", borderRadius: 12, border: "none", background: C.accent, color: C.accentText, fontSize: 15, fontWeight: 700, cursor: "pointer" }, children: "Warmed up \u2014 let\u2019s train" })] }));
-                        })(), _jsxs("div", { className: "wpb-exercise-heading", style: { display: "flex", alignItems: "flex-start", gap: 8 }, children: [_jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { style: { fontSize: 16, fontWeight: 700, letterSpacing: -0.4, lineHeight: 1.15 }, children: ex.name }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginTop: 2 }, children: focus ? PART_LABEL[ex.part] : `${(e.superset || (ei > 0 && data[ei - 1].superset)) ? "Round" : "Set"} ${Math.min(wDone + 1, wTotal)} of ${wTotal} · ${PART_LABEL[ex.part]}` }), !program.config?.percentScheme && (() => {
+                        })(), _jsxs("div", { className: "wpb-exercise-heading", style: { display: "flex", alignItems: "flex-start", gap: 8 }, children: [_jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { className: "wpb-exercise-name", style: { fontSize: 22, fontWeight: 780, letterSpacing: -0.55, lineHeight: 1.16, overflowWrap: "anywhere" }, children: ex.name }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginTop: 2 }, children: focus ? PART_LABEL[ex.part] : `${(e.superset || (ei > 0 && data[ei - 1].superset)) ? "Round" : "Set"} ${Math.min(wDone + 1, wTotal)} of ${wTotal} · ${PART_LABEL[ex.part]}` }), !program.config?.percentScheme && (() => {
                                             // name the progression style for EVERY exercise (not just dynamic double), so it's
                                             // always clear how this lift advances week to week.
                                             /* ⚠ ONE OWNER: THE LABEL NAMES THE METHOD THAT SETS THE LOADS. For a Pursuit Next program the loads come
@@ -12872,7 +12902,16 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
                                     borderLeft: `4px solid ${isActive ? C.accent : isEffort ? `${C.accent}55` : "transparent"}`,
                                     background: isActive ? C.accentDim : "transparent",
                                     transition: "opacity .18s, background .18s"
-                                }, children: [_jsxs("div", { className: "wpb-set-controls", style: { display: "flex", alignItems: "flex-start", flexWrap: "nowrap", gap: narrowSet ? 7 : 8, paddingTop: 2, paddingBottom: 2, paddingRight: 2, paddingLeft: s.sub ? 8 : 2, opacity: (s.warm || s.sub) && !s.done ? 0.85 : 1, borderLeft: s.sub ? `2px solid ${C.accentDim}` : "none" }, children: [_jsx("span", { className: "mono", style: { width: narrowSet ? 24 : (s.sub ? 20 : 24), flexShrink: 0, paddingTop: 8, fontSize: s.warm || s.sub ? 11 : 14, fontWeight: 600, color: C.muted }, children: label }), _jsx("div", { "data-pi-reference": true, "data-motion-key": targetMode, style: { width: narrowSet ? 60 : (s.sub ? 70 : 80), flex: "0 0 auto", paddingTop: 6, lineHeight: 1.2, overflow: "hidden" }, children: (() => {
+                                }, children: [_jsxs("div", { className: "wpb-set-controls", style: { display: "flex", alignItems: "flex-start", flexWrap: "nowrap", gap: narrowSet ? 7 : 8, paddingTop: 2, paddingBottom: 2, paddingRight: 2, paddingLeft: s.sub ? 8 : 2, opacity: (s.warm || s.sub) && !s.done ? 0.85 : 1, borderLeft: s.sub ? `2px solid ${C.accentDim}` : "none" }, children: [_jsxs("button", { type: "button", "data-set-options-trigger": true, "data-noswipe": true,
+                                            onClick: () => { setSetOptions({ ei, si }); setSetRemoveConfirm(false); },
+                                            "aria-haspopup": "dialog", "aria-expanded": setOptions?.ei === ei && setOptions?.si === si,
+                                            "aria-label": `Options for ${s.warm ? "warm-up" : s.sub ? s.kind : "working"} set ${label}`,
+                                            title: "Set options", className: "pressable mono wpb-set-index",
+                                            style: { width: narrowSet ? 28 : 30, flexShrink: 0, minHeight: 40, alignSelf: "flex-start",
+                                                display: "flex", alignItems: "center", justifyContent: "center", gap: 1,
+                                                padding: "0 1px", border: "none", borderRadius: 8, background: "transparent",
+                                                color: C.muted, fontSize: s.warm || s.sub ? 12 : 14, fontWeight: 700, cursor: "pointer" },
+                                            children: [label, _jsx(ChevronDown, { size: 10, strokeWidth: 2.5, "aria-hidden": "true" })] }), _jsx("div", { "data-pi-reference": true, "data-motion-key": targetMode, style: { width: narrowSet ? 60 : (s.sub ? 70 : 80), flex: "0 0 auto", paddingTop: 6, lineHeight: 1.2, overflow: "hidden" }, children: (() => {
                                                     // ── Shared TARGET / LAST column ──────────────────────────────
                                                     // LAST mode: show previous session's matching set as a tap-to-fill button.
                                                     if (targetMode === "last" && !s.warm && !s.sub) {
@@ -12923,8 +12962,12 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
                                                         if (hasSuggested) editSet(ei, si, "reps", String(s.suggested.reps));
                                                     };
                                                     // Priority-ordered status tag — only the highest-priority one shows
-                                                    const statusTag = s.target?.failure
-                                                        ? { label: "to failure", color: C.warn }
+                                                    const statusTag = s.warm
+                                                        ? { label: "warm-up", color: C.faint }
+                                                        : s.sub
+                                                            ? { label: s.kind === "drop" ? "drop" : "myo", color: C.faint }
+                                                            : s.target?.failure
+                                                                ? { label: "to failure", color: C.warn }
                                                         : s.target?.pct != null
                                                             ? { label: `${s.target.pct}%${s.target.amrap ? " AMRAP" : s.bbb ? " BBB" : ""}`, color: s.target.amrap ? C.warn : C.accentInk }
                                                             : s.ceiling && !s.done
@@ -13005,7 +13048,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
                                                 })] }), _jsxs("div", { className: "wpb-set-actions", style: { width: 30, flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }, children: [_jsx("button", { onClick: () => toggleDone(ei, si), "aria-label": s.done ? "Mark set not done" : "Mark set done", "aria-pressed": s.done, "data-haptic-manual": "1", className: "pressable wpb-set-complete", style: {
                                                     width: 30, height: 34, borderRadius: 8, border: `1px solid ${C.border}`, cursor: "pointer", flexShrink: 0,
                                                     background: s.done ? C.cardHi : "transparent", color: s.done ? C.muted : C.faint, display: "flex", alignItems: "center", justifyContent: "center"
-                                                }, children: _jsx(Check, { size: 17, strokeWidth: 3 }) }), ((s.sub && !s.prescribed) || s.added) && (_jsx("button", { "aria-label": "Remove this set", onClick: () => removeSubSet(ei, si), title: s.sub ? `Remove this ${s.kind === "drop" ? "drop" : "myo-rep"} set` : "Remove this set", className: "pressable hit", style: { width: 28, height: 34, borderRadius: 8, border: "none", background: "none", color: C.faint, cursor: "pointer", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }, children: _jsx(X, { size: 15 }) }))] })] }), (() => {
+                                                }, children: _jsx(Check, { size: 17, strokeWidth: 3 }) })] })] }), (() => {
                                         // Only the latest unanswered set or a deliberately reopened set shows a picker.
                                         // The compact edit control stays directly under logged reps in the control grid.
                                         const loggable = s.done && !s.warm && !s.sub && parseFloat(s.weight) > 0;
@@ -13039,7 +13082,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
                                     if (!showAdvanced)
                                         return null;
                                     return (_jsxs(_Fragment, { children: [_jsx("button", { onClick: () => addAdvanced(ei, "drop"), className: "pressable", title: hasDrop ? "Remove drop set" : "Drop set", style: { background: hasDrop ? C.accentDim : "none", border: `1px ${hasDrop ? "solid" : "dashed"} ${hasDrop ? C.accent + "66" : C.border}`, borderRadius: 12, color: hasDrop ? C.accentInk : C.muted, cursor: "pointer", fontSize: 13, fontWeight: 600, padding: "10px 12px", whiteSpace: "nowrap" }, children: hasDrop ? "✓ Drop" : "+ Drop" }), _jsx("button", { onClick: () => addAdvanced(ei, "myo"), className: "pressable", title: hasMyo ? "Remove myo-reps" : "Myo-reps", style: { background: hasMyo ? C.accentDim : "none", border: `1px ${hasMyo ? "solid" : "dashed"} ${hasMyo ? C.accent + "66" : C.border}`, borderRadius: 12, color: hasMyo ? C.accentInk : C.muted, cursor: "pointer", fontSize: 13, fontWeight: 600, padding: "10px 12px", whiteSpace: "nowrap" }, children: hasMyo ? "✓ Myo" : "+ Myo" })] }));
-                                })()] })), !focus && e.sets.some(s => !s.done && !s.warm) && (_jsxs("button", { onClick: () => completeRemaining(ei), className: "pressable wpb-complete-remaining", style: { width: "100%", marginTop: 6, background: "none", border: `1px solid ${C.border}`, borderRadius: 10, color: C.muted, cursor: "pointer", fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "10px" }, children: [_jsx(Check, { size: 14 }), " Complete remaining sets"] })), (() => {
+                                })()] })), (() => {
                             // Show "Level sets" only when the working sets actually ramp upward (a pyramid) AND
                             // they aren't already all the same weight — i.e. exactly the exploratory-ramp case this
                             // solves. Needs ≥2 distinct working weights that strictly ascend across the entries.
@@ -13073,7 +13116,70 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program, gymEquipm
                             }
                             const nx = EX_BY_ID[data[nextIdx].id];
                             return (_jsxs("button", { onClick: () => goEx(nextIdx), className: "pressable", style: { width: "100%", marginTop: 12, background: C.card, border: `1px solid ${C.accent}55`, borderRadius: 16, cursor: "pointer", display: "flex", alignItems: "center", gap: 12, padding: "13px 15px", textAlign: "left" }, children: [_jsx("div", { style: { width: 34, height: 34, borderRadius: 12, background: C.accentDim, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: _jsx(Check, { size: 16, color: C.accentInk, strokeWidth: 3 }) }), _jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { style: { ...eyebrow() }, children: "Done \u00B7 next up" }), _jsx("div", { style: { fontSize: 15, fontWeight: 700, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: nx.name })] }), _jsx(ChevronRight, { size: 20, color: C.accentInk, style: { flexShrink: 0 } })] }));
-                        })(), _jsx(Exit, { when: info, children: info && (_jsx("div", { onClick: () => setInfo(false), className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "flex-end", zIndex: 55, animation: "fadeIn .2s both" }, children: _jsxs("div", { ref: sheetDragRef, onClick: ev => ev.stopPropagation(), className: "wpb-scroll", style: { width: "100%", maxHeight: "90%", overflowY: "auto", background: C.bg2, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: "8px 18px calc(env(safe-area-inset-bottom) + 26px)", animation: "sheetUp .28s cubic-bezier(.2,.7,.3,1) both", borderTop: `1px solid ${C.border}` }, children: [_jsxs("div", { style: { display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }, children: [_jsx("div", { style: { fontSize: 18, fontWeight: 700, flex: 1, minWidth: 0 }, children: ex.name }), _jsx("button", { onClick: () => setInfo(false), "aria-label": "Close", className: "pressable hit wpb-sheet-close", style: { flexShrink: 0, width: 44, height: 44, borderRadius: 14, border: `1px solid ${C.border}`, background: C.card, color: C.muted, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }, children: _jsx(X, { size: 18 }) })] }), _jsxs("div", { style: { fontSize: 13, color: C.muted, marginTop: 2, marginBottom: 12 }, children: [PART_LABEL[ex.part], " \u00B7 ", ex.type, ex.equip.length ? " · " + ex.equip.map(q => EQUIPMENT.find(x => x.id === q)?.label || q).join(", ") : " · bodyweight"] }), isStretchFocus(ex.id, 3) && _jsx(StretchFocusNote, {}), _jsx("div", { style: { display: "flex", gap: 8, marginBottom: 12 }, children: (() => {
+                        })(), _jsx(Exit, { when: !!setOptions, children: setOptions && (() => {
+                            const selected = data[setOptions.ei]?.sets?.[setOptions.si];
+                            if (!selected) return null;
+                            const ei = setOptions.ei, si = setOptions.si;
+                            const setLabel = selected.warm ? `Warm-up ${data[ei].sets.slice(0, si + 1).filter(x => x.warm).length}`
+                                : selected.sub ? (selected.kind === "drop" ? "Drop set" : "Myo set")
+                                : `Set ${data[ei].sets.slice(0, si + 1).filter(x => !x.warm && !x.sub).length}`;
+                            const currentType = selected.sub ? selected.kind : selected.warm ? "warmup" : selected.target?.failure ? "failure" : "standard";
+                            const canRemove = !selected.done && (selected.added || (selected.sub && !selected.prescribed));
+                            const close = () => { setSetOptions(null); setSetRemoveConfirm(false); };
+                            const kindRows = [
+                                { id: "standard", title: "Working set", detail: "Normal prescribed set with today's progression target" },
+                                { id: "warmup", title: "Warm-up set", detail: "Preparation work, excluded from working-set progression" },
+                                { id: "failure", title: "To-failure set", detail: "Working set with a target of 0 reps in reserve" }
+                            ];
+                            return _jsx("div", { onClick: close, className: "wpb-backdrop wpb-set-option-backdrop",
+                                style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.65)", display: "flex", alignItems: "flex-end", zIndex: 65, animation: "fadeIn .2s both" },
+                                children: _jsxs("section", { onClick: ev => ev.stopPropagation(), onKeyDown: ev => { if (ev.key === "Escape") close(); },
+                                    "role": "dialog", "aria-modal": "true", "aria-label": `${setLabel} options`, "data-testid": "workout-set-options",
+                                    className: "wpb-scroll wpb-set-option-sheet", style: { width: "100%", maxHeight: "min(78dvh, 680px)", overflowY: "auto",
+                                        padding: "10px 18px calc(env(safe-area-inset-bottom) + 20px)",
+                                        background: C.bg2, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+                                        borderTop: `1px solid ${C.border}`, animation: "sheetUp .24s cubic-bezier(.2,.7,.3,1) both" },
+                                    children: [
+                                        _jsxs("div", { style: { display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }, children: [
+                                            _jsxs("div", { style: { minWidth: 0, flex: 1 }, children: [
+                                                _jsx("div", { style: { fontSize: 21, fontWeight: 800, color: C.text }, children: `${setLabel} options` }),
+                                                _jsx("div", { style: { fontSize: 12, color: C.muted, marginTop: 3 }, children: "Changes apply to this workout only" })
+                                            ] }),
+                                            _jsx("button", { type: "button", onClick: close, "aria-label": "Close set options", className: "pressable hit wpb-sheet-close",
+                                                style: { width: 44, height: 44, display: "grid", placeItems: "center", flexShrink: 0,
+                                                    borderRadius: 14, border: `1px solid ${C.border}`, color: C.text, background: C.card, cursor: "pointer" },
+                                                children: _jsx(X, { size: 18 }) })
+                                        ] }),
+                                        selected.done || selected.sub
+                                            ? _jsx("div", { style: { borderRadius: 14, padding: "14px 12px", background: C.card,
+                                                color: C.muted, fontSize: 13, lineHeight: 1.5 },
+                                                children: selected.done ? "This set is logged. Uncheck it in the workout before changing its type."
+                                                    : `${selected.kind === "drop" ? "Drop" : "Myo"} extensions retain their programmed structure. Use the controls below the set list to adjust them.` })
+                                            : _jsxs("div", { style: { display: "grid", gap: 7 }, children: [
+                                                _jsx("div", { style: { ...eyebrow(), padding: "2px 4px 3px" }, children: "SET TYPE" }),
+                                                ...kindRows.map(opt => _jsxs("button", { type: "button", onClick: () => changeSessionSetType(ei, si, opt.id),
+                                                    "aria-pressed": currentType === opt.id, "data-set-type": opt.id,
+                                                    className: "pressable wpb-set-option-row", style: { width: "100%", display: "flex", alignItems: "center", gap: 12,
+                                                        padding: "13px 12px", textAlign: "left", borderRadius: 14, cursor: "pointer",
+                                                        background: currentType === opt.id ? C.accentDim : C.card,
+                                                        color: C.text, border: `1px solid ${currentType === opt.id ? C.accent : C.border}` },
+                                                    children: [ _jsxs("span", { style: { flex: 1, minWidth: 0 }, children: [
+                                                        _jsx("span", { style: { display: "block", fontSize: 15, fontWeight: 700 }, children: opt.title }),
+                                                        _jsx("span", { style: { display: "block", color: C.muted, fontSize: 12, marginTop: 3, lineHeight: 1.4 }, children: opt.detail })
+                                                    ] }), _jsx(CheckCircle2, { size: 21,
+                                                        color: currentType === opt.id ? C.accentInk : C.faint, "aria-hidden": "true" }) ]
+                                                }, opt.id)) ,
+                                                _jsx("div", { style: { fontSize: 12, color: C.faint, padding: "8px 4px 0", lineHeight: 1.5 },
+                                                    children: "Changing set type keeps its weight and reps. Adjust the load manually if needed. Drop and myo extensions remain exercise-level options." })
+                                            ] }),
+                                        canRemove && _jsx("button", { type: "button", "data-set-remove": true,
+                                            onClick: () => setRemoveConfirm ? removeSessionAddedSet(ei, si) : setSetRemoveConfirm(true),
+                                            className: "pressable", style: { width: "100%", marginTop: 14, minHeight: 48,
+                                                background: setRemoveConfirm ? C.danger : "transparent", color: setRemoveConfirm ? C.dangerText : C.danger,
+                                                border: `1px solid ${C.danger}`, borderRadius: 14, fontWeight: 700, cursor: "pointer" },
+                                            children: setRemoveConfirm ? "Confirm remove this set" : "Remove added set" })
+                                    ] }) });
+                        })() }), _jsx(Exit, { when: info, children: info && (_jsx("div", { onClick: () => setInfo(false), className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "flex-end", zIndex: 55, animation: "fadeIn .2s both" }, children: _jsxs("div", { ref: sheetDragRef, onClick: ev => ev.stopPropagation(), className: "wpb-scroll", style: { width: "100%", maxHeight: "90%", overflowY: "auto", background: C.bg2, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: "8px 18px calc(env(safe-area-inset-bottom) + 26px)", animation: "sheetUp .28s cubic-bezier(.2,.7,.3,1) both", borderTop: `1px solid ${C.border}` }, children: [_jsxs("div", { style: { display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }, children: [_jsx("div", { style: { fontSize: 18, fontWeight: 700, flex: 1, minWidth: 0 }, children: ex.name }), _jsx("button", { onClick: () => setInfo(false), "aria-label": "Close", className: "pressable hit wpb-sheet-close", style: { flexShrink: 0, width: 44, height: 44, borderRadius: 14, border: `1px solid ${C.border}`, background: C.card, color: C.muted, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }, children: _jsx(X, { size: 18 }) })] }), _jsxs("div", { style: { fontSize: 13, color: C.muted, marginTop: 2, marginBottom: 12 }, children: [PART_LABEL[ex.part], " \u00B7 ", ex.type, ex.equip.length ? " · " + ex.equip.map(q => EQUIPMENT.find(x => x.id === q)?.label || q).join(", ") : " · bodyweight"] }), isStretchFocus(ex.id, 3) && _jsx(StretchFocusNote, {}), _jsx("div", { style: { display: "flex", gap: 8, marginBottom: 12 }, children: (() => {
                                                 const restNow = effectiveRest(goalForDay(program, day), ex, e.slot === day.primaryIndex, e.restCustom, restScale);
                                                 const fmt = r => r >= 60 ? `${Math.floor(r / 60)}:${String(r % 60).padStart(2, "0")}` : `${r}s`;
                                                 return [["Reps", cell.range], ["Effort", effortLabel(cell.rir, loadMode)], ["Sets", String(wTotal)], ["Rest", fmt(restNow)]].map(([k, v]) => (_jsxs("div", { style: { flex: 1, background: C.card, borderRadius: 12, padding: "11px 4px", textAlign: "center" }, children: [_jsx("div", { className: "mono", style: { fontSize: 15, fontWeight: 600, color: C.accentInk }, children: v }), _jsx("div", { style: { fontSize: 11, color: C.muted, marginTop: 2 }, children: k })] }, k)));

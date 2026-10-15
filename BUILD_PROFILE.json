@@ -6,6 +6,6 @@
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 70,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b885-r5331f8ada9a98252",
-  "uiMilestone": "Build 885 · Balanced set rows with one reference action"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b886-r05c7af1275a0b801",
+  "uiMilestone": "Build 886 · Per-set options and clearer workout hierarchy"
 }

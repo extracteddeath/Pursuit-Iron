@@ -248,7 +248,7 @@ try {
         const completed = await page.$$eval('[data-testid^="set-0-"][data-done="1"]', rows => rows.map(row => {
             const weight = row.querySelector('input[aria-label="weight"]');
             const reps = row.querySelector('input[aria-label="reps"]');
-            const number = row.querySelector('.wpb-set-controls>span')?.textContent;
+            const number = row.querySelector('.wpb-set-index')?.textContent?.trim();
             const controls = row.querySelector('.wpb-set-controls');
             return { number, weight: weight?.value, reps: reps?.value,
                 readonly: weight?.readOnly && reps?.readOnly,

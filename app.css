@@ -8162,7 +8162,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     color:FieldText!important;
   }
 }
-
 /* Completed rows remain compact even when their actual-effort tag appears
    under reps. B884 active inputs are taller, but logged history should never
    grow into a second card or hide the next editable set. */

@@ -6240,7 +6240,7 @@ function CustomCycleComposer({ blocks, onChange }) {
                 _jsxs("label", { children: [_jsx("span",{children:"Training phase"}), _jsx("select", { "aria-label": `Block ${i+1} training phase`, value: b.phase, onChange: e => patch(i, { phase: e.target.value }), children: CUSTOM_CYCLE_PHASES.map(o=>_jsx("option",{value:o.phase,children:o.label},o.phase)) })] }),
                 _jsxs("label", { children: [_jsx("span",{children:"Weeks"}), _jsx("input", { "aria-label": `Block ${i+1} weeks`, type: "number", min: 1,max:24,step:1, inputMode:"numeric", value: b.weeks, onChange: e => patch(i,{weeks:e.target.value}), "aria-invalid": !(String(b.weeks).trim() !== "" && Number.isSafeInteger(Number(b.weeks)) && Number(b.weeks)>=1 && Number(b.weeks)<=24) })] })
             ] })
-        ] },i)) }),
+        ] },i))) }),
         _jsx("button", { type:"button", className:"wpb-custom-cycle-add pressable", disabled: blocks.length >= 8, onClick: () => onChange([...blocks,{phase:blocks[blocks.length-1]?.phase || "hypertrophy_accumulation",weeks:4}]), children: [_jsx(Plus,{size:16})," Add block"] }),
         !valid && _jsx("div",{role:"status",className:"wpb-custom-cycle-error",children:"Choose 2–8 blocks, each lasting 1–24 whole weeks."}),
         total>104 && _jsx("div",{role:"status",className:"wpb-custom-cycle-error",children:"A training cycle can run at most 104 weeks."})

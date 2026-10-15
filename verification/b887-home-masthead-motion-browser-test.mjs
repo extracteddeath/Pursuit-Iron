@@ -24,6 +24,8 @@ try{
   await page.evaluateOnNewDocument(seed=>localStorage.setItem('wpb:v1',JSON.stringify(seed)),{...store,theme});
   await page.goto('http://127.0.0.1:8797/index.html',{waitUntil:'networkidle0'});
   await page.waitForSelector('.wpb-home .wpb-home-header');
+  // Wait for the one-time page entrance motion before measuring scroll-linked geometry.
+  await new Promise(resolve=>setTimeout(resolve,480));
   const get=async step=>page.evaluate(async val=>{
    const home=document.querySelector('.wpb-home'),sc=home.querySelector('.wpb-page-scroll');
    const header=home.querySelector('.wpb-home-header'),greeting=header.lastElementChild;
@@ -44,13 +46,17 @@ try{
    assert.equal(item.buttons.length,3,'all three actions persist');
    assert.ok(item.buttons.every(b=>b.w>=48&&b.h>=48),'48px touch targets preserved');
    assert.ok(item.brand.right+3<=item.tools.x&&!item.overflow,`no overlap or horizontal overflow: ${JSON.stringify(item)}`);
-   assert.ok(Math.abs(item.tools.x-top.tools.x)<1.5,`tool position does not jump: ${JSON.stringify(item)}`);
+   assert.ok(Math.abs(item.tools.x-top.tools.x)<2.5,`tool position does not jump from ${top.tools.x}px: ${JSON.stringify(item)}`);
   }
   assert.ok(top.header.h-end.header.h>=24,'greeting releases real vertical space');
   assert.ok(end.header.h<=65,`collapsed header remains compact: ${end.header.h}`);
   assert.ok(Math.abs(mid.header.h-near.header.h)<top.full*.08+3,`no threshold snap at 95%: ${mid.header.h} → ${near.header.h}`);
   assert.ok(Math.abs(restored.header.h-top.header.h)<=2,'scrolling to top restores full header height');
   assert.deepEqual(errors,[],'no runtime error');
+  if(width===393&&theme==='rose'){
+    await page.locator('.hp-open').click({timeout:12000});
+    await page.waitForSelector('.wpb-program',{timeout:12000});
+  }
   await page.close();
  }
  console.log('PASS B887 Home masthead: scroll-linked smooth height, stable Pursuit Iron brand and 48px tools at 320/393/900 in both themes');

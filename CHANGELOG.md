@@ -1,3 +1,10 @@
+## Build 887 — Smooth Home header and consistent app identity
+
+- Keep **Pursuit Iron** visible in the Home masthead while scrolling; remove the unrelated "Iron"-only abbreviation.
+- Eliminate the sudden 95%-scroll fixed-height swap, padding/color change, action shift and heading font-size change. Only the greeting/title block now contracts proportionally with the real Home scroller.
+- Preserve the compact 56px action row, 48px touch targets, full scroll-back expansion, reduced-motion preferences and small-screen behavior.
+- Add focused source and real-browser geometry regression checks covering 320/393/900px and both light and dark color themes.
+
 ## Build 886 — Set-number actions and clear workout hierarchy
 
 - Tap any set number to open a Material-style bottom sheet of safe, session-local set options. Working, warm-up, and to-failure classifications are selectable for unfinished normal sets without changing the entered weight/reps or saved program prescription. Previous targets are retained for switching back. Logged and specialized drop/myo rows are protected against reclassification.

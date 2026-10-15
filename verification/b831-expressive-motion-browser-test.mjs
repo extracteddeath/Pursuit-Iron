@@ -1126,11 +1126,9 @@ try {
                         logoHeight: logo.getBoundingClientRect().height,
                         scrolled: el.closest('.wpb-home')?.dataset.scrolled==='1' };
                 });
-                const expectedSize=homeType.scrolled
-                    ? homeType.size>=20 && homeType.size<=25
-                    : homeType.size>=29 && homeType.size<=37;
+                const expectedSize=homeType.size>=29 && homeType.size<=37;
                 assert.ok(expectedSize && homeType.weight >= 700,
-                    'Home title follows expanded/compact expressive type scale: '+JSON.stringify(homeType));
+                    'Home title keeps a stable expressive type scale while clipping smoothly: '+JSON.stringify(homeType));
                 assert.ok(homeType.logoHeight >= 24, 'Home header spacing does not collapse its logo');
             }
             if (tab === 'progress') {

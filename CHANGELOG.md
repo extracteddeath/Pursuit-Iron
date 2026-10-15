@@ -1,3 +1,43 @@
+## Build 883 — Native load steps after unit switching
+
+- Repair the equipment-inventory boundary responsible for suggestions such as 159.5 lb after a 155 lb machine set. Factory 2.5 kg pin steps become the native 5 lb defaults when the athlete trains in pounds, rather than a converted 5.51 lb phantom machine increment.
+- Repair legacy profiles already saved with a converted factory inventory *at read time*, without requiring users to switch units again or rewriting workout history.
+- Detect unchanged factory stock separately per equipment family. Truly customized increments, explicit fractional increments, dumbbell selections, per-lift loading overrides and saved workout observations still retain their intended values.
+- Add an engine regression reproducing four dynamic-double sets: 155×12 / 155×12 / 155×8 / 155×8 progresses to 160×8 / 160×8 / 155×9 / 155×9 when the equipment has 5 lb notches.
+- Retain Build 882's progression rationale, Build 881's CSV import, Build 880's Play foundations and Build 879's novice programming.
+
+## Build 882 — One honest reason beside the target
+
+- For Pursuit Next programs the method line now names the style that actually sets the loads: the week cell's style, with a lifter's explicit choice already folded in by `getNextShellCell`. It previously ran v661's fatigue/plateau overrides through `resolveStyle`. The load path (`sessionSuggestion` → `nextWorkoutSuggestionForShell`, `prescribeSets`) never applies those overrides, so a just-trained lift read "e1RM autoregulation · temporary — take a little weight off" over dynamic double progression at last session's load, with the reference card naming the other method. Custom programs still resolve through `resolveStyle`, their real load owner.
+- Coach's muscle-recovery note no longer says "Today's target is already reduced". Nothing lowers a generated target for recovery alone; only the session check-in does. `readinessBand` has no runtime caller.
+- The explanation sheet existed but nothing opened it (`setWhy` was only ever called with `null`). A **Why** button beside the target now opens it.
+- New browser gate `b882-workout-reason-browser-test` logs a real session through the UI, repeats it immediately, and checks that the method line, reference card, Coach and explanation sheet agree. It fails on the pre-882 tree with "e1RM autoregulation · temporary"; restoring only the old Coach copy fails check 2.
+
+## Build 881 — Import history from Strong and Hevy
+
+- New `training-domain/history-import.js` converts a Strong (comma or semicolon, with or without a unit column) or Hevy CSV into a backup-shaped store. It then takes the existing restore path: `mergeStores`, the add/update/remove preview and Undo. There is no second history writer.
+- Ids are derived from the source rows, so re-importing is a no-op and a later correction survives a re-import. Warm-ups are left out, as in logged workouts. Drop sets become extensions, failure sets are 0 RIR, RPE becomes RIR, and absent effort stays unreported. Loads are converted to the app unit; when a Strong file has no unit, the preview asks.
+- 92 of 104 common Strong/Hevy names map to the catalog; the rest are cardio, Olympic lifts and bodyweight drills. A lift the catalog lacks becomes a custom exercise when its muscle can be inferred from the name; otherwise it is skipped and named in the preview.
+- The CSV preview lists only Workouts and Exercises, because the restore path's gym normalisation could otherwise report gym "updates" for an import that adds workouts.
+- Gates: `b881-history-import-test` (7) and `b881-history-import-browser-test` (real panel at 360/1280 px: pick, review, choose unit, import, Undo).
+
+## Build 880 — Play Store and accounts foundation
+
+- `privacy.html`, linked from Settings → About. Every factual claim is checked against the code: no cross-origin fetch, no telemetry or backend SDK, the real contact address and reset control.
+- `play/`: Digital Asset Links template and release notes. Asset links must live in the `extracteddeath.github.io` user-site repo, because a project site cannot serve the domain-root `/.well-known/` path. The notes also cover the Play account-deletion requirement for when accounts ship.
+- `syncStoreOnce(local, provider)` in `records.js`: the single merge-then-publish loop a future Firebase provider plugs into. It retries on a revision conflict and skips a no-op write. A reference in-memory provider states the contract.
+- Keep screen on switch, a per-device preference outside the synced store. It gates the existing `holdWorkoutScreenAwake` owner rather than adding a second wake lock.
+- Gates: `b880-play-foundation-test` (8; the control fails on the pre-880 tree and a no-retry mutant fails check 2) and `b880-wake-lock-browser-test` (5).
+
+## Build 879 — Novice effort and full-body frequency (engine 0.65.8)
+
+Two corrections from the experience-tier research review. Intermediate and advanced programs are byte-identical to Build 878 across 810 generated configurations.
+
+- **Novice multi-joint lifts stay at 2–3 RIR in every working week (3–4 on deload).** Previously every experience level received the same effort ramp, taking novice compounds to 1–2 RIR from week 3 (1,300 of 3,756 novice compound cells). Isolation work keeps its normal target, so occasional 0-RIR calibration on stable single-joint lifts remains. The floor is applied by the executable week projection — the single source for week cells, the deload week, volume repair and the simulator — and by manual-plan seeding.
+- **Novices on a 2- or 3-day full-body split train quads and hamstrings directly on at least two days a week.** Previously a novice 3-day full body trained quads once a week in 12 of 27 configurations — fewer exposures than intermediates received. Topology plans the exposures, realization gives each missing exposure a real 2-set block on a day that does not already train the muscle, and the full-body structure check refuses any later repair that would drop it. A strength-goal week keeps one deadlift exposure for the hinge: the anchor already meets the hamstring dose, so no separate hamstring work is allocated.
+- No new refusals and no session over its time limit across 810 novice configurations; four previously refused 20-minute dumbbell/home full-body requests now generate. Novice weekly sets +0.4%.
+- New gate `b879-experience-tier-test` (10 checks), each verified against an isolating control. Two hash-pinned realizer stages are recorded as Build 879 revisions in the M230 fixture.
+
 ## Build 877 — Tablet workspace dock and full Focus workout controls
 
 - Open the set-aware dock by default on expanded tablet/foldable workspaces, while preserving the uncluttered phone logger and allowing a manual workspace toggle.

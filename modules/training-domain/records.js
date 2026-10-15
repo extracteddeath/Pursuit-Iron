@@ -1189,11 +1189,95 @@ function capHistory(list) {
     }
     return out;
 }
+/* ============================== SYNC SEAM ==============================
+ * Accounts and cloud sync are not built yet, but the hard part already exists: mergeStores is pure,
+ * total, commutative and idempotent, with per-record clocks and deletion tombstones. Sync is therefore
+ * "merge, then publish", repeated until the publish lands. This is the one place that loop lives, so a
+ * future Firebase (or any other) backend only has to move bytes; it can never become a second merge.
+ *
+ * Provider contract (every method may be async):
+ *   pull()                         -> null (nothing stored yet) | { data, revision }
+ *   push(data, { baseRevision })   -> { ok: true, revision } | { ok: false, conflict: true }
+ * `revision` is opaque to this code. push MUST refuse (conflict) when the remote revision is no longer
+ * `baseRevision` — a Firestore transaction or a generation-matched write gives exactly that. On a
+ * conflict the loop re-pulls and merges again; because merging is commutative and idempotent, this
+ * converges and can never drop either device's records.
+ *
+ * Backend note for later: HISTORY_BYTES allows ~1.6 MB of history, above Firestore's 1 MiB document
+ * limit, so a Firestore provider must split the store (e.g. one document per history record plus a
+ * settings document, or a Cloud Storage object). That is the provider's concern; this loop is not.
+ */
+function validateSyncProvider(provider) {
+    if (!provider || typeof provider.pull !== "function" || typeof provider.push !== "function")
+        throw new TypeError("A sync provider needs pull() and push(data, { baseRevision }).");
+    return provider;
+}
+const syncComparable = (data) => {
+    if (!data || typeof data !== "object")
+        return JSON.stringify(data ?? null);
+    const { savedAt, exportedAt, ...rest } = data;
+    return JSON.stringify(rest);
+};
+async function syncStoreOnce(local, provider, { maxAttempts = 4 } = {}) {
+    validateSyncProvider(provider);
+    let base = local;
+    let stats = null;
+    for (let attempt = 1; attempt <= Math.max(1, maxAttempts); attempt++) {
+        const remote = await provider.pull();
+        if (remote != null && (typeof remote !== "object" || !("data" in remote)))
+            throw new TypeError("Sync provider pull() must return null or { data, revision }.");
+        const merged = remote?.data ? mergeStores(base, remote.data) : { data: base ? migrateStore(base) : base, stats: null };
+        stats = merged.stats ?? stats;
+        if (!merged.data)
+            return { status: "empty", data: null, stats, revision: remote?.revision ?? null, attempts: attempt, pushed: false };
+        // Nothing new for the remote: skip the write (saves quota and avoids waking other devices).
+        if (remote?.data && syncComparable(merged.data) === syncComparable(migrateStore(remote.data)))
+            return { status: "synced", data: merged.data, stats, revision: remote.revision ?? null, attempts: attempt, pushed: false,
+                localChanged: syncComparable(merged.data) !== syncComparable(local) };
+        const result = await provider.push(merged.data, { baseRevision: remote?.revision ?? null });
+        if (result && result.ok)
+            return { status: "synced", data: merged.data, stats, revision: result.revision ?? null, attempts: attempt, pushed: true,
+                localChanged: syncComparable(merged.data) !== syncComparable(local) };
+        if (!(result && result.conflict))
+            throw new Error("Sync provider push() failed without reporting a conflict.");
+        base = merged.data; // another device published first: merge against its version and try again
+    }
+    return { status: "retry_exhausted", data: base, stats, revision: null, attempts: maxAttempts, pushed: false,
+        localChanged: syncComparable(base) !== syncComparable(local) };
+}
+/* Reference provider: an in-memory remote with revision checks. Used by the verification gate and as
+ * the executable statement of the contract a real backend must honour. `beforePush` lets a test
+ * simulate another device publishing between this device's pull and push. */
+function createMemorySyncProvider(initial = null, { beforePush } = {}) {
+    let stored = initial == null ? null : JSON.parse(JSON.stringify(initial));
+    let revision = initial == null ? 0 : 1;
+    const provider = {
+        pushes: 0,
+        conflicts: 0,
+        snapshot: () => (stored == null ? null : JSON.parse(JSON.stringify(stored))),
+        revision: () => revision,
+        publish(data) { stored = JSON.parse(JSON.stringify(data)); revision++; },
+        async pull() { return stored == null ? null : { data: JSON.parse(JSON.stringify(stored)), revision }; },
+        async push(data, { baseRevision } = {}) {
+            if (beforePush)
+                await beforePush(provider);
+            if ((baseRevision ?? 0) !== revision) {
+                provider.conflicts++;
+                return { ok: false, conflict: true };
+            }
+            stored = JSON.parse(JSON.stringify(data));
+            revision++;
+            provider.pushes++;
+            return { ok: true, revision };
+        }
+    };
+    return provider;
+}
 function setLoadInc(v, unit) { LOAD_INC = { v: v || 0, unit: unit || null }; }
 
 function setExLoadInc(map) { EX_LOAD_INC = map || {}; }
 
-export { setExLoadInc, setLoadInc, BAR_EQUIP, BW_LOG_CAP, COMPOSITE_HEADS, EXP_BAND, EX_LOAD_INC, GYM_PRESETS, HISTORY_BYTES, HISTORY_BYTE_CHECK_FROM, HISTORY_CAP, LANDMARKS, LEGACY_EQUIP_IMPLIES, LOAD_INC, LOWER_PARTS, MACHINE_EQUIP, MRV_GRAIN, MYO_PARTS, SECONDARY, STORE_MIGRATIONS, STORE_VERSION, STRETCH_PARTIAL_PARTS, SUB_LANDMARKS, TOTAL_WEEKS, UNIFORM_LANDMARK, baseSetsFor, birthFromAge, blockPhase, capHistory, capWeeklyVolume, cellRepRange, clamp, compositeMrv, computeCell, customAuthoredSetCount, customLastSetTechnique, effortBounds, goalForDay, isBarLike, isMachineLike, landmarkFor, landmarkForLegacy, lastSetTech, legacyCustomSetCount, loadStep, mergeStores, migrateStore, movePattern, normalizeCycleLinks, normalizeEditedHistoryEntry, normalizeHistoryDayIds, parseStoredData, perfAfterHistoryReplace, roundTo, secondaryOf, squatHamCredit, summarizeHistoryLoggedSets, uniformLandmarkFor, weeksOf };
+export { setExLoadInc, setLoadInc, syncStoreOnce, createMemorySyncProvider, validateSyncProvider, BAR_EQUIP, BW_LOG_CAP, COMPOSITE_HEADS, EXP_BAND, EX_LOAD_INC, GYM_PRESETS, HISTORY_BYTES, HISTORY_BYTE_CHECK_FROM, HISTORY_CAP, LANDMARKS, LEGACY_EQUIP_IMPLIES, LOAD_INC, LOWER_PARTS, MACHINE_EQUIP, MRV_GRAIN, MYO_PARTS, SECONDARY, STORE_MIGRATIONS, STORE_VERSION, STRETCH_PARTIAL_PARTS, SUB_LANDMARKS, TOTAL_WEEKS, UNIFORM_LANDMARK, baseSetsFor, birthFromAge, blockPhase, capHistory, capWeeklyVolume, cellRepRange, clamp, compositeMrv, computeCell, customAuthoredSetCount, customLastSetTechnique, effortBounds, goalForDay, isBarLike, isMachineLike, landmarkFor, landmarkForLegacy, lastSetTech, legacyCustomSetCount, loadStep, mergeStores, migrateStore, movePattern, normalizeCycleLinks, normalizeEditedHistoryEntry, normalizeHistoryDayIds, parseStoredData, perfAfterHistoryReplace, roundTo, secondaryOf, squatHamCredit, summarizeHistoryLoggedSets, uniformLandmarkFor, weeksOf };
 
 // Presentation only: saved/custom day labels retain their exact identity.
 export function displayDayName(label, program) {

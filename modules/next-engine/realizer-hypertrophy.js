@@ -1,6 +1,7 @@
 // M230 canonical hypertrophy stage. Stage context is local to one realization.
 import { desiredDirect, integerSetPlan } from './realizer-math.js';
 import { LARGE, SMALL, muscleCandidate } from './realizer-ranking.js';
+import { NOVICE_FULL_BODY_PATTERN_EXPOSURES } from './config.js';
 
 export function realizeMajorMuscles(context) {
 const { add, exerciseCatalog, ledger, plans, request, sessions, targetDose, weeklyMovementUse } = context;
@@ -13,16 +14,28 @@ for (const muscle of LARGE) {
             continue;
         const fullBodyCapacityContract = plans.every(p => p.intent === 'full') && (plans.some(p => p.targetExercises !== undefined) || request.preferences.lockedSplit === 'full_body');
         const mandatoryFullBodyMuscle = fullBodyCapacityContract && ['chest', 'back'].includes(muscle);
-        const entries = mandatoryFullBodyMuscle
-            ? allEntries.filter(entry => !entry.session.defs.some(def => (def.muscles[muscle]?.credit ?? 0) >= 1))
-            : allEntries;
+        const directlyCovers = s => s.defs.some(def => (def.muscles[muscle]?.credit ?? 0) >= 1);
+        const uncoveredEntries = allEntries.filter(entry => !directlyCovers(entry.session));
+        // A novice's squat/hinge frequency on full body is an EXPOSURE count, not a set count. A day whose
+        // strength anchor already trains the muscle directly counts as one; each missing exposure gets a
+        // real 2-set block on a distinct uncovered day. Two sets, not one: a one-set accessory is exactly
+        // what the fragment passes consolidate away, which silently turns the exposure back into none.
+        const novicePatternTarget = fullBodyCapacityContract && request.athlete.experience === 'novice'
+            ? Math.min(sessions.length, NOVICE_FULL_BODY_PATTERN_EXPOSURES[muscle] ?? 0) : 0;
+        const novicePatternEntries = novicePatternTarget
+            ? uncoveredEntries.filter((entry, i, list) => list.findIndex(e => e.session === entry.session) === i)
+                .slice(0, Math.max(0, novicePatternTarget - sessions.filter(directlyCovers).length))
+            : [];
+        const entries = mandatoryFullBodyMuscle ? uncoveredEntries : novicePatternEntries.length ? novicePatternEntries : allEntries;
         const activeEntries = entries.length ? entries : allEntries;
         const modeledTarget = targetDose[muscle] ?? allEntries.reduce((sum, e) => sum + e.allocation.dose, 0);
         const perUncoveredSession = request.athlete.experience === 'novice' ? 1 : 2;
         const current = ledger.fractional[muscle] ?? 0;
         const target = mandatoryFullBodyMuscle
             ? Math.max(modeledTarget, current + perUncoveredSession * activeEntries.length)
-            : modeledTarget;
+            : novicePatternEntries.length
+                ? Math.max(modeledTarget, current + 2 * novicePatternEntries.length)
+                : modeledTarget;
         const residual = Math.max(0, Math.round(target - current));
         if (residual <= 0)
             continue;

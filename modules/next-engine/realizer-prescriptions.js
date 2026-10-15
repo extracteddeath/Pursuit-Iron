@@ -37,6 +37,23 @@ function rirForPhase(role, policy) {
 }
 /* M230:PRESERVE:top.rirForPhase:END */
 
+/**
+ * Novice effort floor (Training Variables by Lifter Experience, 2026): novices misjudge proximity to
+ * failure and lack technical stability under fatigue, so multi-joint lifts stay at 2–3 RIR. Isolation
+ * work keeps its normal target — occasional 0 RIR on a stable single-joint lift is how a novice
+ * calibrates effort. Applied by the executable week projection, which is the one place every week
+ * cell, the deload week and the simulator read; the role base from `rirForPhase` is unchanged so
+ * intermediate and advanced prescriptions cannot move.
+ */
+export const NOVICE_COMPOUND_RIR_FLOOR = 2;
+const COMPOUND_ROLES = new Set(['hypertrophy_compound', 'primary_strength', 'secondary_strength']);
+export function applyExperienceRirFloor(rir, role, experience) {
+    if (experience !== 'novice' || !COMPOUND_ROLES.has(role))
+        return rir;
+    const low = Math.max(NOVICE_COMPOUND_RIR_FLOOR, rir[0]);
+    return [low, Math.max(low + 1, rir[1])];
+}
+
 export /* M230:PRESERVE:top.restForExercise:BEGIN */
 function restForExercise(role, ex) { return role === 'primary_strength' ? 240 : role === 'secondary_strength' ? 180 : ex.flags.compound ? 150 : 90; }
 /* M230:PRESERVE:top.restForExercise:END */

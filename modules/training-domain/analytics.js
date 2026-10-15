@@ -2827,9 +2827,12 @@ function coachFacts(lm, day, history) {
             key: `readiness:${t.part}`,
             part: t.part,
             priority: 92,
-            short: `${label}: use the lighter target`,
-            title: `Give ${label.toLowerCase()} a little more recovery`,
-            text: "Today's target is already reduced. Follow it as written and don't add the weight back just because the first set feels easy.",
+            /* Muscle recovery does not lower a generated target by itself — only the session check-in's
+               "A little off" / "Run down" does. This used to say "Today's target is already reduced" over a
+               load identical to last session's. Say what is true and what the lifter can do about it. */
+            short: `${label}: still recovering`,
+            title: `Recovery is still low for ${label.toLowerCase()}`,
+            text: "Recovery alone does not change the listed load. Keep the reps clean, and take a small reduction if the warm-up feels heavier than usual.",
             evidence: `${label} recovery ${t.r}%`
         });
     }

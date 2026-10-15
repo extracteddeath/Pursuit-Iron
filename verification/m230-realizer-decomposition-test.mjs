@@ -33,4 +33,4 @@ for (const [name, source] of [['recovery', recoveryRepair], ['functional', funct
 assert.doesNotMatch(recoveryRepair, /function primaryMuscle\(/, 'recovery repair must not own a second primary-muscle rule');
 assert.ok(coordinator.split('\n').length < 400, 'Coordinator must remain smaller than the former 1,975-line realization function');
 assert.deepEqual(moduleCycles(engineModuleGraph()), []);
-console.log(`PASS M230: ${fixture.records.length} pinned expressions/stages (66 original M229 and one Build 860 consolidation correction), canonical facade identity, shared repair eligibility ownership, compact coordinator and acyclic stage graph.`);
+console.log(`PASS M230: ${fixture.records.length} pinned expressions/stages (66 original M229, one Build 860 consolidation correction and two Build 879 novice-frequency corrections), canonical facade identity, shared repair eligibility ownership, compact coordinator and acyclic stage graph.`);

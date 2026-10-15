@@ -280,7 +280,7 @@ function rebuild(program, changes, legacyExercises, addition = null, options = {
             const cells = { ...next.nextWeekPrescriptions[key] };
             for (let w = 1; w <= workWeeks(next) + (next.config.deload ? 1 : 0); w++) {
                 const deload = w > workWeeks(next);
-                const generated = prescriptionForSimulationWeek(session, deload ? 'recovery' : phaseOf(next), deload ? 1 : w, deload ? 1 : workWeeks(next)).exercises[slot];
+                const generated = prescriptionForSimulationWeek(session, deload ? 'recovery' : phaseOf(next), deload ? 1 : w, deload ? 1 : workWeeks(next), { experience: request.athlete.experience }).exercises[slot];
                 const prior = cells[w];
                 cells[w] = { ...prior, sets: generated.sets,
                     ...(prior ? {} : { reps: generated.prescription.reps.join('-'), rir: generated.prescription.rir.join('-'),

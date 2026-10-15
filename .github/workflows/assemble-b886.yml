@@ -1,0 +1,32 @@
+name: Assemble B886 set-number release
+on:
+  push:
+    branches:
+      - release/b886-set-number-options
+permissions:
+  contents: write
+jobs:
+  assemble:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+      - name: Verify exact source package
+        run: echo "c7317f860b7e5fae2ef65512f4f4c6360ff874b06d91a5125aa96c0d7595d84b  .release-import/b886-changes.tar.gz" | sha256sum -c -
+      - name: Install B886 source and verify release
+        run: |
+          tar -xzf .release-import/b886-changes.tar.gz -C .
+          node scripts/verify-release.mjs
+          node verification/b886-set-number-options-test.mjs
+      - name: Replace transfer carrier with signed source
+        run: |
+          rm -f .release-import/b886-changes.tar.gz .github/workflows/assemble-b886.yml
+          git add -A
+          git -c user.name="Pursuit Iron Release" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "Build 886: set-number options, larger heading and protected set actions"
+          git push origin HEAD:refs/heads/release/b886-set-number-options

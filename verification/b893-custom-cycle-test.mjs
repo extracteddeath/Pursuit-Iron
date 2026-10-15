@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { CUSTOM_CYCLE_PHASES, customCycleSpecs } from '../modules/next-engine/cycle-runtime-adapter.js';
+import { EXERCISES } from '../modules/App.js';
+import { CUSTOM_CYCLE_PHASES, customCycleSpecs, generateNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
 const app=fs.readFileSync(new URL('../modules/App.js',import.meta.url),'utf8');
 const css=fs.readFileSync(new URL('../app.css',import.meta.url),'utf8');
 const phases=new Set(CUSTOM_CYCLE_PHASES.map(x=>x.phase));
@@ -29,3 +30,18 @@ assert.match(app,/cycleTemplate === "custom"[\s\S]*?\["cycletype", "goal", \.\.\
 assert.match(css,/\.wpb-custom-cycle-block/);
 assert.match(css,/@media\(max-width:345px\)/);
 console.log('PASS B893: engine custom-phase order, lengths, invalid-input gates and complete wizard→worker wiring.');
+
+// Exercise generated prescriptions, not only the authoring validator.
+const config=JSON.parse(fs.readFileSync(new URL('./m205-generation-parity-results.json',import.meta.url))).rows[3].config;
+const blocks=[{phase:'peak',weeks:1},{phase:'hypertrophy_accumulation',weeks:7},{phase:'hypertrophy_accumulation',weeks:3},{phase:'foundation',weeks:2}];
+for(const adaptBetweenBlocks of [false,true]){
+ let id=0;
+ const before=JSON.stringify({config,blocks});
+ const built=generateNextCycleForShell({templateId:'custom',blocks,config,legacyExercises:EXERCISES,seed:893,makeId:()=>`b893-${++id}`,adaptBetweenBlocks});
+ assert.equal(JSON.stringify({config,blocks}),before,'Cycle generation preserves caller data');
+ assert.deepEqual(built.cycle.blockMeta.map(b=>({phase:b.phase,weeks:b.weeks})),blocks);
+ assert.deepEqual(built.blocks.map(b=>({phase:b.nextEngine.program.phase,weeks:b.config.weeks})),blocks);
+ assert.deepEqual(built.cycle.blockIds,built.blocks.map(b=>b.id));
+ assert.ok(built.blocks.every((b,i)=>b.cycleId===built.cycle.id&&b.nextEngine.program.audit.result==='pass'&&b.weeks===blocks[i].weeks));
+}
+console.log('PASS B893 generated cycles: exact unusual phase order, repeats, 1/7/3/2-week blocks, ownership, audit and input preservation in static/adaptive modes.');

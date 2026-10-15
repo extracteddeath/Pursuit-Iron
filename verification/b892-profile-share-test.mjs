@@ -29,7 +29,7 @@ assert.match(app,/\bliftBests\(history \|\| \[\], unit\)/);
 assert.match(app,/\.\.\.profilePrefs\.order\.filter\(id => !profilePrefs\.hidden\.includes\(id\)\)/);
 assert.match(app,/showProfileCustomize && _jsx\(ProfileCustomization/);
 assert.match(app,/"aria-pressed": selected/);
-assert.match(app,/"Share profile"/);
+assert.match(app,/Share profile/);
 assert.match(css,/\.wpb-profile-toolbar/);
 assert.match(css,/\.wpb-profile-customize-row/);
 assert.match(css,/@media\(max-width:350px\)/);

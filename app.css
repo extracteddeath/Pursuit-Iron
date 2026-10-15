@@ -8478,3 +8478,38 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb-injury-journal .wpb-session-dialog-heading{position:static;flex-shrink:0}
 .wpb-injury-journal-body{overflow-y:auto;min-height:0;overscroll-behavior:contain;padding:0 2px}
 .wpb-injury-journal .wpb-injury-save-bar{position:static;flex-shrink:0;margin-top:10px;padding:12px 0 0}
+
+
+/* B891 — favorite chart ordering and dense training-history readability. */
+.wpb-chart-favorites{margin:0 0 10px;border:1px solid var(--pi-color-divider);border-radius:14px;background:var(--pi-color-card);color:inherit;overflow:hidden}
+.wpb-chart-favorites>summary{display:flex;align-items:center;gap:9px;min-height:48px;padding:10px 14px;cursor:pointer;font-size:14px;font-weight:720;list-style-position:inside}
+.wpb-chart-favorites>summary>span:nth-child(2){flex:1;min-width:0}
+.wpb-chart-favorites-count{font-size:12px;font-weight:650;opacity:.8}
+.wpb-chart-favorites-content{padding:2px 12px 14px;display:grid;gap:10px;min-width:0}
+.wpb-chart-favorites-content p{margin:0;font-size:12px;line-height:1.5;opacity:.8}
+.wpb-chart-favorites-pinned,.wpb-chart-favorites-available{display:grid;gap:5px;min-width:0}
+.wpb-chart-favorites-available{max-height:210px;overflow-y:auto;overscroll-behavior:contain}
+.wpb-chart-favorite-row{display:flex;align-items:center;gap:7px;min-width:0;padding:6px 7px;border-radius:10px;background:var(--pi-color-control)}
+.wpb-chart-favorite-name{flex:1;min-width:0;overflow-wrap:anywhere;font-size:13px;font-weight:680}
+.wpb-chart-favorite-action{flex:0 0 34px;min-width:34px;min-height:34px;display:grid;place-items:center;border:1px solid var(--pi-color-divider);background:var(--pi-color-card);color:inherit;border-radius:9px;cursor:pointer}
+.wpb-chart-favorite-action:disabled{opacity:.3;cursor:default}
+.wpb-chart-favorites-search{display:grid;gap:5px;font-size:12px;font-weight:700}
+.wpb-chart-favorites-search input{width:100%;min-width:0;min-height:44px;padding:10px 12px;border-radius:10px;background:var(--pi-color-control);color:inherit;border:1px solid var(--pi-color-divider);font:inherit;font-size:14px}
+.wpb-chart-favorite-add{display:flex;align-items:center;gap:10px;width:100%;min-height:42px;padding:9px 10px;border:1px solid var(--pi-color-divider);border-radius:10px;background:var(--pi-color-control);color:inherit;font-size:13px;font-weight:650;text-align:left;cursor:pointer}
+.wpb-chart-favorite-add>span{flex:1;min-width:0;overflow-wrap:anywhere}
+.wpb-cycles .wpb-cycle-list-card,.wpb-cycles .wpb-cycle-block-list,.wpb-cycles .wpb-cycle-block-row{min-width:0;max-width:100%;box-sizing:border-box}
+.wpb-cycles .wpb-cycle-list-card>button>span{min-width:0}
+.wpb-cycles .wpb-cycle-block-row>span:nth-child(2){min-width:0;overflow-wrap:anywhere}
+.wpb-cycles .wpb-cycle-block-row>span:nth-child(2)>span{min-width:0;white-space:normal;overflow-wrap:anywhere}
+.wpb-cycles .wpb-cycle-list-progress>div:last-child{display:flex;flex-wrap:wrap;gap:4px 12px;line-height:1.5}
+.wpb-cycles .wpb-cycle-list-progress>div:last-child>span{min-width:0;white-space:normal}
+.wpb-history-session .wpb-history-detail-head{flex-wrap:wrap;row-gap:10px}
+.wpb-history-session .wpb-history-detail-head .wpb-history-actions{margin-left:auto}
+.wpb-history-session .wpb-history-set{display:inline-flex;align-items:center;max-width:100%;overflow-wrap:anywhere}
+@media(max-width:380px){
+  .wpb-cycles .wpb-cycle-block-row{gap:8px!important;padding:12px 10px!important}
+  .wpb-cycles .wpb-cycle-list-card{padding:12px!important}
+  .wpb-chart-favorites-content{padding-inline:9px}
+  .wpb-chart-favorite-row{gap:4px}
+  .wpb-chart-favorite-action{flex-basis:32px;min-width:32px}
+}

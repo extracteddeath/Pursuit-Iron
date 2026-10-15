@@ -123,6 +123,7 @@ export const browserShards = Object.freeze({
         'b882-workout-reason-browser-test.mjs'
     ]),
     program: Object.freeze([
+        'b893-custom-cycle-browser-test.mjs',
         'b890-cycle-browsing-browser-test.mjs',
         'm199-volume-repair-browser-test.mjs',
         'm215-cycle-duration-browser-test.mjs',

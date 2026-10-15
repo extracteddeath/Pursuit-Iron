@@ -1,3 +1,10 @@
+## Build 890 — Cycle effort and block browsing
+
+- Converted custom Auto programs use the cycle's weekly effort policy instead of neutral 2-RIR defaults. Preserve explicit RIR targets, Manual progression, exercise selection, sets, reps, rest and history; retain the novice compound effort floor.
+- Browse every cycle block from Plan, with each block's weeks, volume and progression. Planned and completed blocks open read-only exercise previews without changing the active training block.
+- Simplify cycle details to a compact summary, one readable block list and one workout action. Collapse extra schedule information and move cycle management into Options.
+- Make the cycle list compact, with expandable block rows and usable previews at phone and desktop widths.
+
 ## Build 889 — Injury journal and workout review
 
 - Choose a joint/body area or specific muscle, side, onset date and training preference. Preview related lifts before saving.

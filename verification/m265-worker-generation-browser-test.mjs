@@ -172,7 +172,8 @@ try {
         await plan(page); const beforeHistory = (await readStore(page)).history;
         await textButton(page, 'Open full program'); await page.waitForSelector('.wpb-program');
         await page.click('button[aria-label^="Part of cycle"]'); await page.waitForSelector('.wpb-cycle-detail');
-        await page.$eval('.wpb-cycle-detail details', n => { n.open = true; });
+        await page.click('button[aria-label="Cycle options"]');
+        await page.waitForSelector('[role="dialog"][aria-label="Cycle options"]');
         await textButton(page, 'Complete block · advance', true); await textButton(page, 'Complete block');
         await page.waitForSelector('[data-generation-busy]'); await done(page);
         await page.waitForFunction(id => JSON.parse(localStorage.getItem('wpb:v1')).cycles.find(c => c.id === id)?.activeBlock === 1, {}, cycle.id);
@@ -212,9 +213,14 @@ try {
         cycle.activeBlock = blocks.length - 1; cycle.onComplete = 'loop';
         const { page, context } = await open(storeFor(blocks, [cycle], completedHistory(blocks.at(-1))), 390);
         await plan(page); const beforeHistory = (await readStore(page)).history;
+        // This imported fixture pins an earlier block. Browse to the cycle's current block
+        // instead of editing a completed block through the old Plan route.
+        await page.$$eval('.wpb-plan-block-nav button', buttons => buttons.at(-1).click());
+        await page.waitForFunction(() => !document.querySelector('.wpb-plan-preview-notice'));
         await textButton(page, 'Open full program'); await page.waitForSelector('.wpb-program');
         await page.click('button[aria-label^="Part of cycle"]'); await page.waitForSelector('.wpb-cycle-detail');
-        await page.$eval('.wpb-cycle-detail details', n => { n.open = true; });
+        await page.click('button[aria-label="Cycle options"]');
+        await page.waitForSelector('[role="dialog"][aria-label="Cycle options"]');
         await textButton(page, 'Complete final block'); await textButton(page, 'Roll new cycle');
         await page.waitForSelector('[data-generation-busy]'); await done(page);
         await page.waitForFunction(() => JSON.parse(localStorage.getItem('wpb:v1')).cycles.length === 2);

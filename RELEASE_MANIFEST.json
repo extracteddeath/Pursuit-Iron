@@ -2,10 +2,10 @@
   "schemaVersion": 3,
   "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": 889,
+  "build": 890,
   "engineVersion": "0.65.8",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "1b141475545e80e51052f0035e1805c63eb32f23860090ba866da2514925beed",
+  "runtimeAggregate": "33e251f12ae7b0db0cb0815c7a385d089e0e211ee751daaddcbe2fbe0bb9a960",
   "runtimeFiles": {
     "modules/engine-api.js": "f73e58356475b057acfb4fd2177b1f37fface1d88e68c293d979c9aa1e680378",
     "modules/engine-shell.js": "73645bf4d914423074c0e90b992b58a6c57f7fbb726621d417803e906d140675",
@@ -78,7 +78,7 @@
     "modules/next-engine/setup-economy.js": "d2f3f9838fa854eacd01f68577d1f44612de8da8c7215ece80c2d9159e0b8bd2",
     "modules/next-engine/shell-equipment.js": "9c7481b10101d5ac2fc6e9fea46633755a5a524a062bedc68c5f295eb9e5f30e",
     "modules/next-engine/shell-projection.js": "5e5162ef07b3247959fbc250b018e019f6b87751f0f63a08aa380d1e081e04c1",
-    "modules/next-engine/simulation.js": "5e5bb7a6ceb9bd8137941e2f06002f74ad1834098809a8ad3a709f56e824e730",
+    "modules/next-engine/simulation.js": "afcb7214056aaa6a6f76a2d4782d583047fe9be0ef380365a239f9ebf7fe328c",
     "modules/next-engine/techniques.js": "d306f2464e625e70eb42245080e3aa1fb406e425a57634712c97c8c56ad1871a",
     "modules/next-engine/topology.js": "6423ec1ac65f6d20b9624e2bcee621f54f295cd645373c22832eddfc7f35f84f",
     "modules/next-engine/volume-repair.js": "7b997f228021acafc97806a0beedecbe4578a0b24168f99a62f8b0dac42bc4fd",
@@ -94,7 +94,7 @@
     "modules/training-domain/history-import.js": "b32ea0d3c2766cbf6a2c6f22763e8e3f36a19c89d8305c686d052dd7b51fb42e",
     "modules/training-domain/prescriptions.js": "68c2ba930642e94f36f5cadc52da7e784698edbbd96d6e678c647bd45c6bdefd",
     "modules/training-domain/programs.js": "27ade346bc7b2bdd94c51564f1292ec126c2fd2bbbbc8d440ee04b4455d5c11b",
-    "modules/training-domain/records.js": "72fed1eb692c3c0f490fc74f84f4880f9eb213224b5b577363684e2a07bd77c8",
+    "modules/training-domain/records.js": "118c450cc4593d3300a3b9c5ae077f211f2cb37724db9d9752a12c171f62e162",
     "modules/ui-motion.js": "d5193540a49ee6eb9cd34e94de40c33712ff209b9ff21f98fee7f2f122c518ae",
     "modules/wizard-stability.js": "a62b2bed8a1f5ab880bfeab036a83ec630c93048b8a352652fe00ae75374a3d1",
     "modules/workout-context.js": "2d2ec92c214d25da30d86ec028b0cb71eab351f58b3014ad94e6bd313f498eac",
@@ -112,17 +112,17 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "4518f756310d3d2af85700f14b2de160da478fd639b447ffe7d12f810e7e16dd",
-    "index.html": "c48f6559cd3752322d81822aa1012892982e3e44685b979fa28180f6dc722ef1",
-    "sw.js": "5c6cab7f9e486cd42a7b45cf74ee0b87e1ec29c13f9c655f1bda7c73884eead2",
-    "BUILD_PROFILE.json": "682f09e0159ce2887db125528b9b44b4bc8ddd056e10612a1002c9eb3dda5668",
-    "CHANGELOG.md": "9d814bb3b60851e2dcb2b8c2625230f9a6447ae3eb35bb3af643a474b315a87a",
+    "modules/App.js": "bbe85ef6dca9b5fbcfb3c7bff9b807de7b514ae16d91f2b25cd42130d17348e7",
+    "index.html": "bfe7c99307764268a0cf789487304d92f7610aec8e6741718fd1734d7ffd5999",
+    "sw.js": "c732337f6b46fb6ff3da16a2934575dcd7c0ff4cef1b28e3d90e23b652ce16ab",
+    "BUILD_PROFILE.json": "df625aa4a554e99737a75989bef6c38db18e261ea628cc66ca5e383c4e4bfd2a",
+    "CHANGELOG.md": "c1729f35176bd6391823a6cb957b6a961c49484c50d0c8bca8e3402f46c2a0a5",
     "app.css": "069baf3b10eeefc046b6688c2431a2640a286f9162426a2ed53825bc4d60c3da",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b889-r7bec155e0a1cb37b",
-  "uiMilestone": "Build 889 · Injury journal and workout review"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b890-r5d2c786523d779d7",
+  "uiMilestone": "Build 890 · Cycle effort and block browsing"
 }

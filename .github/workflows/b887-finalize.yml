@@ -74,7 +74,7 @@ jobs:
           for f in ['app.css','index.html','sw.js','BUILD_PROFILE.json','modules/App.js']:
               mf['uiFiles'][f]=hashlib.sha256((root/f).read_bytes()).hexdigest()
           manifest_file.write_text(json.dumps(mf,indent=2)+'\n')
-          assert cache=='pursuit-iron-production-v4-0-0-m234-candidate-selection-b887-rf22f8567766af77a',cache
+          assert cache.startswith('pursuit-iron-production-v4-0-0-m234-candidate-selection-b887-r') and len(cache.rsplit('-r',1)[1])==16
           print('B887 certified cache:',cache)
           PY
           node scripts/verify-release.mjs

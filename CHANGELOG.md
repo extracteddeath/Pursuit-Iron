@@ -1,3 +1,11 @@
+## Build 886 — Set-number actions and clear workout hierarchy
+
+- Tap any set number to open a Material-style bottom sheet of safe, session-local set options. Working, warm-up, and to-failure classifications are selectable for unfinished normal sets without changing the entered weight/reps or saved program prescription. Previous targets are retained for switching back. Logged and specialized drop/myo rows are protected against reclassification.
+- Remove the dangerous inline X on user-added and drop/myo-extension rows. Removing an unfinished added row now takes two explicit actions inside its set-number sheet. Prescribed or logged sets cannot be removed through the sheet.
+- Remove the entire "Complete remaining sets" control, preventing accidental bulk logging while keeping each set's individual checkmark and the separate normal finish-workout action.
+- Enlarge and rebalance the exercise name as the main workout heading. Update narrow-phone set grid selectors to keep the numbered options button in its own accessible touch area, without disturbing the symmetric weight/reps steppers and single TARGET/LAST reference.
+- Add B886 source and real-browser regression gates for type changes, logged-set protection, two-step removal, readable heading and continued row integrity.
+
 ## Build 885 — Consistent set rows and one reference action
 
 - Remove the duplicate active-set “Use last”/suggested chip row. TARGET/LAST is now the sole per-set application surface: switch the header to compare, then tap the matching reference directly. No shifting row heights when one lift has history and another does not.

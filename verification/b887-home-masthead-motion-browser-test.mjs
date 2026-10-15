@@ -26,18 +26,19 @@ try{
   await page.waitForSelector('.wpb-home .wpb-home-header');
   // Wait for the one-time page entrance motion before measuring scroll-linked geometry.
   await new Promise(resolve=>setTimeout(resolve,480));
-  const get=async step=>page.evaluate(async val=>{
+  const get=async (step,baseline)=>page.evaluate(async ({val,baseline})=>{
    const home=document.querySelector('.wpb-home'),sc=home.querySelector('.wpb-page-scroll');
    const header=home.querySelector('.wpb-home-header'),greeting=header.lastElementChild;
-   const full=greeting.scrollHeight;
+   // The scroll gesture uses the immutable expanded height, never the clipped size.
+   const full=baseline??greeting.scrollHeight;
    sc.scrollTop=val*full;
    await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
    const box=e=>{const r=e.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height,right:r.right};};
    const brand=home.querySelector('.wpb-home-brand'),tools=home.querySelector('.wpb-home-tools');
    return {full,scroll:sc.scrollTop,maxScroll:sc.scrollHeight-sc.clientHeight,header:box(header),greeting:box(greeting),brand:box(brand),tools:box(tools),brandText:brand.textContent.trim(),shortExists:!!brand.querySelector('.wpb-home-brand-short'),compact:home.dataset.homeCompact,buttons:[...tools.querySelectorAll('button')].map(box),overflow:home.scrollWidth>home.clientWidth+1};
-  },step);
-  const samples=[];
-  for(const step of [0,.3,.7,.93,.96,.99,1,1.15,.96,.93,.7,.3,0])samples.push(await get(step));
+  },{val:step,baseline});
+  const samples=[await get(0)];
+  for(const step of [.3,.7,.93,.96,.99,1,1.15,.96,.93,.7,.3,0])samples.push(await get(step,samples[0].full));
   const top=samples[0],mid=samples[3],near=samples[4],end=samples[6],restored=samples.at(-1);
   assert.ok(top.maxScroll>top.full*1.3,'Home scroll region extends beyond one masthead');
   for(const item of samples){
@@ -49,7 +50,8 @@ try{
    assert.ok(Math.abs(item.tools.x-top.tools.x)<2.5,`tool position does not jump from ${top.tools.x}px: ${JSON.stringify(item)}`);
   }
   assert.ok(top.header.h-end.header.h>=24,'greeting releases real vertical space');
-  assert.ok(end.header.h<=65,`collapsed header remains compact: ${JSON.stringify({top,mid,near,end,restored,samples:samples.map(x=>({full:x.full,scroll:x.scroll,maxScroll:x.maxScroll,headerHeight:x.header.h,greetingHeight:x.greeting.h,compact:x.compact}))})}`);
+  assert.ok(end.header.h<=65,`collapsed header remains compact: ${end.header.h}`);
+  assert.ok(end.scroll>=top.full-2,'collapse uses the full expanded greeting distance');
   assert.ok(Math.abs(mid.header.h-near.header.h)<top.full*.08+3,`no threshold snap at 95%: ${mid.header.h} → ${near.header.h}`);
   assert.ok(Math.abs(restored.header.h-top.header.h)<=2,'scrolling to top restores full header height');
   assert.deepEqual(errors,[],'no runtime error');

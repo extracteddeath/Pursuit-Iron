@@ -8282,3 +8282,31 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   #root .wpb-workout[data-focus-mode="false"] .wpb-set-controls>div:nth-child(3)>div:first-child,
   #root .wpb-workout[data-focus-mode="false"] .wpb-set-controls>div:nth-child(4)>div:first-child{gap:4px!important;}
 }
+/* B885 completion geometry: on narrow phones completed sets have no +/- buttons.
+   Put the locked values back on ONE row. This keeps the recorded RIR tag below
+   reps while preventing the two-tier editable layout from wasting 116px per
+   completed set. The pending/editable rows keep their wide safe hit tracks. */
+@media(max-width:420px){
+  #root .wpb-workout[data-focus-mode="false"] [data-testid^="set-"][data-done="1"] .wpb-set-controls{
+    display:flex!important;align-items:flex-start!important;gap:6px!important;
+    padding:2px!important;
+  }
+  #root .wpb-workout[data-focus-mode="false"] [data-done="1"] .wpb-set-controls>span:first-child{
+    width:24px!important;flex:0 0 24px!important;padding-top:7px!important;
+  }
+  #root .wpb-workout[data-focus-mode="false"] [data-done="1"] .wpb-set-controls>div:nth-child(2){
+    display:block!important;width:60px!important;flex:0 0 60px!important;
+    text-align:left!important;padding-top:4px!important;
+  }
+  #root .wpb-workout[data-focus-mode="false"] [data-done="1"] .wpb-set-controls>div:nth-child(3),
+  #root .wpb-workout[data-focus-mode="false"] [data-done="1"] .wpb-set-controls>div:nth-child(4){
+    flex:1 1 0!important;min-width:0!important;padding-top:0!important;
+  }
+  #root .wpb-workout[data-focus-mode="false"] [data-done="1"] .wpb-set-controls>div:nth-child(3)::before,
+  #root .wpb-workout[data-focus-mode="false"] [data-done="1"] .wpb-set-controls>div:nth-child(4)::before{
+    content:none!important;display:none!important;
+  }
+  #root .wpb-workout[data-focus-mode="false"] [data-done="1"] .wpb-set-controls>.wpb-set-actions{
+    margin-top:0!important;width:36px!important;flex:0 0 36px!important;
+  }
+}

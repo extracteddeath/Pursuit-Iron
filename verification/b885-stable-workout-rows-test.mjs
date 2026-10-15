@@ -16,4 +16,5 @@ assert.ok(css.includes('B885 — Stable, thumb-safe set rows') && css.includes('
   css.includes('gap:5px!important;'), 'Set tracks and steppers have deliberate touch separation');
 assert.ok(css.includes('@media(max-width:380px)') && css.includes('width:auto!important;'), 'Compact stacked row fallback preserved');
 assert.ok(css.includes('grid-template-columns:minmax(0,1fr) minmax(0,1fr) 36px!important') && css.includes('content:"REPS"'), 'Small-screen fields are balanced and labelled');
+assert.ok(css.includes('[data-testid^="set-"][data-done="1"] .wpb-set-controls') && css.includes('display:flex!important;align-items:flex-start!important;gap:6px!important;'), 'Logged rows remain compact on narrow phones');
 console.log('PASS B885 stable set-row contract: one reference, even fields, separated controls.');

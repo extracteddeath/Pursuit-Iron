@@ -172,7 +172,8 @@ try {
         await plan(page); const beforeHistory = (await readStore(page)).history;
         await textButton(page, 'Open full program'); await page.waitForSelector('.wpb-program');
         await page.click('button[aria-label^="Part of cycle"]'); await page.waitForSelector('.wpb-cycle-detail');
-        await page.$eval('.wpb-cycle-detail details', n => { n.open = true; });
+        await page.click('button[aria-label="Cycle options"]');
+        await page.waitForSelector('[role="dialog"][aria-label="Cycle options"]');
         await textButton(page, 'Complete block · advance', true); await textButton(page, 'Complete block');
         await page.waitForSelector('[data-generation-busy]'); await done(page);
         await page.waitForFunction(id => JSON.parse(localStorage.getItem('wpb:v1')).cycles.find(c => c.id === id)?.activeBlock === 1, {}, cycle.id);

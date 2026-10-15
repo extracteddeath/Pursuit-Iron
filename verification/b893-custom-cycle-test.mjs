@@ -25,6 +25,7 @@ assert.match(app,/function CustomCycleComposer\(\{ blocks, onChange \}\)/);
 assert.match(app,/customCycleBlocks\.map\(b => \(\{ phase: b\.phase, weeks: Number\(b\.weeks\) \}\)\)/);
 assert.match(app,/templateId: tmplId, blocks: tmplId === "custom" \? config\.cycleBlocks : undefined/);
 assert.match(app,/cycleTemplate !== "custom" \|\| customCycleValid/);
+assert.match(app,/cycleTemplate === "custom"[\s\S]*?\["cycletype", "goal", \.\.\.CYCLE_STEP_KEYS\.slice\(1\)\]/, 'A custom cycle must ask for its goal rather than defaulting every cycle to hypertrophy');
 assert.match(css,/\.wpb-custom-cycle-block/);
 assert.match(css,/@media\(max-width:345px\)/);
 console.log('PASS B893: engine custom-phase order, lengths, invalid-input gates and complete wizard→worker wiring.');

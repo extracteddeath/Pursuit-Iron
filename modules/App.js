@@ -5962,9 +5962,14 @@ function Wizard({ initialEquipment, initialExperience, initialUnit = "kg", skipU
     // Steps depend on `config` (endless mode drops the manual deload step), so this must come AFTER the
     // config declaration above — computing it earlier hits a temporal-dead-zone on `config`.
     const dropDeload = (keys) => config.endless ? keys.filter(k => k !== "deload") : keys;
+    // Preset cycles own a fixed goal; custom cycles must ask instead of silently
+    // inheriting the wizard's hypertrophy default for strength-first phase plans.
+    const cycleStepKeys = cycleTemplate === "custom"
+        ? ["cycletype", "goal", ...CYCLE_STEP_KEYS.slice(1)]
+        : CYCLE_STEP_KEYS;
     const STEPS = (allowModeChoice && !choseMode)
         ? ["mode"]
-        : dropDeload(dropEquipment(dropExperience(dropUnits(cycleMode ? CYCLE_STEP_KEYS : STEP_KEYS))));
+        : dropDeload(dropEquipment(dropExperience(dropUnits(cycleMode ? cycleStepKeys : STEP_KEYS))));
     const scrollRef = useRef(null);
     const key = STEPS[step];
     /* ⚠ AFTER `key`. This effect sat above `const key = STEPS[step]`; a hook's dependency list is evaluated DURING render, so

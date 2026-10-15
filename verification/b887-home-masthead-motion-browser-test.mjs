@@ -49,7 +49,7 @@ try{
    assert.ok(Math.abs(item.tools.x-top.tools.x)<2.5,`tool position does not jump from ${top.tools.x}px: ${JSON.stringify(item)}`);
   }
   assert.ok(top.header.h-end.header.h>=24,'greeting releases real vertical space');
-  assert.ok(end.header.h<=65,`collapsed header remains compact: ${end.header.h}`);
+  assert.ok(end.header.h<=65,`collapsed header remains compact: ${JSON.stringify({top,mid,near,end,restored,samples:samples.map(x=>({full:x.full,scroll:x.scroll,maxScroll:x.maxScroll,headerHeight:x.header.h,greetingHeight:x.greeting.h,compact:x.compact}))})}`);
   assert.ok(Math.abs(mid.header.h-near.header.h)<top.full*.08+3,`no threshold snap at 95%: ${mid.header.h} → ${near.header.h}`);
   assert.ok(Math.abs(restored.header.h-top.header.h)<=2,'scrolling to top restores full header height');
   assert.deepEqual(errors,[],'no runtime error');

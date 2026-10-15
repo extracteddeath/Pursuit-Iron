@@ -2,15 +2,16 @@
   "schemaVersion": 3,
   "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": 888,
+  "build": 889,
   "engineVersion": "0.65.8",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "0e484adbe298484dd3aa6e48188bc9acab000ac29186f1c515a1ca82f9571323",
+  "runtimeAggregate": "1b141475545e80e51052f0035e1805c63eb32f23860090ba866da2514925beed",
   "runtimeFiles": {
     "modules/engine-api.js": "f73e58356475b057acfb4fd2177b1f37fface1d88e68c293d979c9aa1e680378",
     "modules/engine-shell.js": "73645bf4d914423074c0e90b992b58a6c57f7fbb726621d417803e906d140675",
     "modules/generation-runtime.js": "a8375d92b33d226ef25fce6a2efddb3b84cfbb93e7327a92a4d749ca3071fb76",
     "modules/generation-worker.js": "0afe425752a2a64510b1625778934de64ae78d729b96b32a21f1c5e62b067c03",
+    "modules/injury-tools.js": "6003238cf90a17de11ad47fdabe76db73b6438f866656ced83b6e3b7e0e17475",
     "modules/legacy-research-data.js": "8b09be67d7c80da7602bb168726d7f7bc3f6ddb9a43b29293acdd18e208ba206",
     "modules/main.js": "bf4ed58df6ff5303d5dac0a6db5a30b190ea2242bc3853fd8e1e158ddbcba180",
     "modules/mobile-lifecycle.js": "52f6db9f34b21a7fec3fd6b3e70c50a31d4f38864b6754b40477843807155cc7",
@@ -111,17 +112,17 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "a42dbfe5a03fb6eb5741c41701f0c996fe5004e9b256b45ede3c686e7b2a997b",
-    "index.html": "9ae979b221ebeeced050a326cfd86adf37bf3c24beab78f2afdbd7cf12924236",
-    "sw.js": "6e79508a64e28447097f4c79febe8dfaa553c5f71f33f7d13cf56b5c24330e4a",
-    "BUILD_PROFILE.json": "0d15c1731bbe710f958de6c9587cedd429a03fb8d82b0dd3f734af5ce3ba630c",
-    "CHANGELOG.md": "ae0e811f4c9386e3aaddf3f38eca64e3067d54ba05f53d4f45165e298432a59b",
-    "app.css": "4dcb99c58bac2f774e3f227596ba081396f6820930f0fc53cec578c7a72d9f04",
+    "modules/App.js": "4518f756310d3d2af85700f14b2de160da478fd639b447ffe7d12f810e7e16dd",
+    "index.html": "c48f6559cd3752322d81822aa1012892982e3e44685b979fa28180f6dc722ef1",
+    "sw.js": "5c6cab7f9e486cd42a7b45cf74ee0b87e1ec29c13f9c655f1bda7c73884eead2",
+    "BUILD_PROFILE.json": "682f09e0159ce2887db125528b9b44b4bc8ddd056e10612a1002c9eb3dda5668",
+    "CHANGELOG.md": "9d814bb3b60851e2dcb2b8c2625230f9a6447ae3eb35bb3af643a474b315a87a",
+    "app.css": "069baf3b10eeefc046b6688c2431a2640a286f9162426a2ed53825bc4d60c3da",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b888-rf17d8048bc6d4382",
-  "uiMilestone": "Build 888 · Session progression choices, injury journal and repeatable notes"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b889-r7bec155e0a1cb37b",
+  "uiMilestone": "Build 889 · Injury journal and workout review"
 }

@@ -8440,3 +8440,41 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb-session-note-editor+.wpb-session-note-editor,.wpb-injury-entry{border-top:1px solid var(--wpb-theme-border);padding-top:12px;margin-top:14px}
 .wpb-injury-entry>span{display:block;font-size:12px;color:var(--wpb-theme-muted);margin-top:4px}
 .wpb-home-health{margin:10px 0 18px}.wpb-home-health>span{font-size:12px;color:var(--wpb-theme-muted)}
+
+/* B889: injury journal, explicit training preferences and editable records. */
+.wpb-injury-journal .wpb-session-dialog-heading{position:sticky;top:-18px;z-index:2;background:var(--wpb-theme-bg);padding:12px 0 8px;margin-top:-12px}
+.wpb-injury-journal h3{margin:0;font-size:17px;letter-spacing:-.25px}
+.wpb-injury-intro{margin-bottom:18px}.wpb-injury-intro p{margin:5px 0}
+.wpb-injury-field-title{font-size:13px;font-weight:750;margin:18px 0 8px}
+.wpb-injury-tabs,.wpb-injury-side{display:flex;gap:5px;padding:4px;border:1px solid var(--wpb-theme-border);border-radius:16px;background:var(--wpb-theme-card)}
+.wpb-injury-tabs button,.wpb-injury-side button{flex:1;min-width:0;min-height:44px;border:0;border-radius:12px;padding:8px 4px;background:transparent;color:var(--wpb-theme-muted);font:inherit;font-size:12px;font-weight:650;cursor:pointer}
+.wpb-injury-tabs button[aria-pressed=true],.wpb-injury-side button[aria-pressed=true]{background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink)}
+.wpb-injury-area-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:9px 0 12px}
+.wpb-injury-area-grid button{min-height:58px;border:1px solid var(--wpb-theme-border);border-radius:15px;padding:9px 6px;background:var(--wpb-theme-card);color:var(--wpb-theme-text);font:inherit;font-size:13px;font-weight:650;cursor:pointer}
+.wpb-injury-area-grid button[aria-pressed=true]{background:var(--wpb-theme-accent-dim);border-color:var(--wpb-theme-accent);color:var(--wpb-theme-accent-ink)}
+.wpb-injury-selection{font-size:12px;font-weight:700;color:var(--wpb-theme-accent-ink);margin:-3px 0 12px}
+.wpb-injury-journal input[type=date]{width:100%;min-width:0;min-height:48px;padding:10px 12px;border-radius:12px;border:1px solid var(--wpb-theme-border);background:var(--wpb-theme-card);color:var(--wpb-theme-text);font:inherit;box-sizing:border-box}
+.wpb-injury-impact{display:grid;gap:8px}.wpb-injury-impact button{display:grid;gap:5px;min-height:65px;padding:12px;text-align:left;border:1px solid var(--wpb-theme-border);border-radius:15px;background:var(--wpb-theme-card);color:var(--wpb-theme-text);font:inherit;cursor:pointer}
+.wpb-injury-impact strong{font-size:13px}.wpb-injury-impact span{font-size:12px;line-height:1.45;color:var(--wpb-theme-muted)}
+.wpb-injury-impact button[aria-pressed=true]{border-color:var(--wpb-theme-accent);background:var(--wpb-theme-accent-dim)}
+.wpb-injury-preview{margin:14px 0;padding:12px;border:1px solid var(--wpb-theme-border);border-radius:15px;background:var(--wpb-theme-card);font-size:13px}
+.wpb-injury-preview p{margin:6px 0}.wpb-injury-preview ul{margin:8px 0;padding-left:20px;line-height:1.7}
+.wpb-injury-save-bar{position:sticky;bottom:-25px;display:flex;gap:8px;padding:12px 0 20px;margin-top:16px;background:var(--wpb-theme-bg);border-top:1px solid var(--wpb-theme-border)}
+.wpb-injury-save-bar button,.wpb-injury-record-actions button,.wpb-injury-list-heading button{min-height:46px;padding:10px 14px;border-radius:13px;border:1px solid var(--wpb-theme-border);background:var(--wpb-theme-card);color:var(--wpb-theme-text);font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.wpb-injury-save-bar .wpb-injury-save{flex:1;background:var(--wpb-theme-accent);color:var(--wpb-theme-on-accent);border-color:var(--wpb-theme-accent)}
+.wpb-injury-feedback,.wpb-injury-discard{padding:12px;border-radius:13px;background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-text);font-size:13px;line-height:1.5;margin:8px 0 14px}
+.wpb-injury-list-heading,.wpb-injury-record-title{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.wpb-injury-list-heading{margin:8px 0 15px}.wpb-injury-record{padding:14px;margin:10px 0;border:1px solid var(--wpb-theme-border);border-radius:18px;background:var(--wpb-theme-card)}
+.wpb-injury-record-title strong{font-size:16px;overflow-wrap:anywhere}.wpb-injury-status{font-size:11px;font-weight:700;color:var(--wpb-theme-accent-ink);background:var(--wpb-theme-accent-dim);padding:4px 8px;border-radius:8px;flex-shrink:0}
+.wpb-injury-record-meta{font-size:12px;color:var(--wpb-theme-muted);margin-top:6px;line-height:1.5}.wpb-injury-record-note{white-space:pre-wrap}.wpb-injury-record-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.wpb-injury-record-actions button{flex:1}
+.wpb-injury-resolved{margin:20px 0}.wpb-injury-resolved summary{font-size:13px;font-weight:700;color:var(--wpb-theme-muted);cursor:pointer;min-height:44px;padding:12px 0}
+.wpb-home-health{display:flex;align-items:center;gap:11px;padding:13px;border:1px solid var(--wpb-theme-border);border-radius:18px;background:var(--wpb-theme-card);margin:12px 0 18px}
+.wpb-home-health-icon{display:grid;place-items:center;flex-shrink:0;width:36px;height:36px;border-radius:12px;background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink)}
+.wpb-home-health-copy{display:grid;gap:4px;flex:1;min-width:0}.wpb-home-health-copy strong{font-size:13px}.wpb-home-health-copy span{font-size:12px;line-height:1.4;color:var(--wpb-theme-muted);overflow-wrap:anywhere}
+.wpb-home-health>button{min-height:44px;padding:8px 10px;border:0;border-radius:12px;background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink);font-size:12px;font-weight:750;cursor:pointer;max-width:100px}
+@media(min-width:700px){.wpb-injury-journal{max-width:600px}.wpb-injury-area-grid{gap:10px}}
+
+.wpb-injury-journal{display:flex;flex-direction:column;overflow:hidden}
+.wpb-injury-journal .wpb-session-dialog-heading{position:static;flex-shrink:0}
+.wpb-injury-journal-body{overflow-y:auto;min-height:0;overscroll-behavior:contain;padding:0 2px}
+.wpb-injury-journal .wpb-injury-save-bar{position:static;flex-shrink:0;margin-top:10px;padding:12px 0 0}

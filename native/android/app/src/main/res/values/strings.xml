@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Pursuit Iron</string>
+    <string name="rest_channel">Rest timer</string>
+    <string name="rest_channel_desc">Shows the rest countdown while you\'re out of the app</string>
+</resources>

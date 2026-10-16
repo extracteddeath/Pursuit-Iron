@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Move to the Pursuit Iron app</title>
+<!--
+  Pursuit Iron: hand the web app's data to the native Android app.
+
+  WHERE THIS FILE LIVES: https://extracteddeath.github.io/pi-transfer.html, the root of the user-site
+  repository extracteddeath/extracteddeath.github.io. It must NOT be inside /Pursuit-Iron/: the web
+  app's service worker answers every page load in that folder with the cached index.html, so a page
+  there never loads for anyone who has used the app. The site root is the same origin, so this page
+  reads the same localStorage the web app writes ("wpb:v1" and "wpb:live").
+
+  Nothing is uploaded. The data goes straight to the app on this phone:
+    small stores → one tap, as a pursuitiron://handoff link carrying the compressed data;
+    larger ones  → the Android share sheet (pick Pursuit Iron), or a downloaded backup file.
+-->
+<style>
+  :root { --bg:#FFF8F6; --card:#FFF1ED; --ink:#231917; --muted:#53433F; --pri:#8F4C38; --onpri:#FFFFFF; --tonal:#FFDBD1; --ontonal:#723523; --line:#D8C2BC; color-scheme: light; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#1A110F; --card:#231917; --ink:#F1DFDA; --muted:#D8C2BC; --pri:#FFB5A0; --onpri:#561F0F; --tonal:#723523; --ontonal:#FFDBD1; --line:#53433F; color-scheme: dark; } }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 "Roboto Flex", system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 520px; margin: 0 auto; padding: max(28px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) 40px max(20px, env(safe-area-inset-left)); display: flex; flex-direction: column; gap: 16px; }
+  h1 { font-size: 32px; line-height: 1.15; margin: 8px 0 0; letter-spacing: -0.5px; font-weight: 800; }
+  p { margin: 0; color: var(--muted); }
+  .card { background: var(--card); border-radius: 28px; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+  .num { font-size: 40px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+  .row { display: flex; gap: 24px; }
+  .lbl { font-size: 13px; color: var(--muted); }
+  button { font: inherit; font-weight: 700; border: 0; border-radius: 999px; min-height: 56px; padding: 0 24px; cursor: pointer; }
+  .primary { background: var(--pri); color: var(--onpri); font-size: 17px; }
+  .tonal { background: var(--tonal); color: var(--ontonal); }
+  button:focus-visible { outline: 3px solid var(--pri); outline-offset: 3px; }
+  .status { min-height: 1.5em; font-weight: 600; color: var(--ink); }
+  .small { font-size: 13px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Move to the new app</h1>
+  <p>Your workouts are saved in this browser. Send them to the Pursuit Iron app on this phone. Nothing is uploaded, and a copy stays here.</p>
+
+  <section class="card" id="found" hidden>
+    <div class="row">
+      <div><div class="num" id="n-sessions">0</div><div class="lbl">workouts</div></div>
+      <div><div class="num" id="n-programs">0</div><div class="lbl">programs</div></div>
+    </div>
+    <p class="small" id="live-note" hidden>Your workout in progress comes too.</p>
+    <button class="primary" id="send">Send to the app</button>
+    <button class="tonal" id="share">Share as a file</button>
+    <button class="tonal" id="download">Download a backup file</button>
+    <p class="status" id="status" role="status" aria-live="polite"></p>
+  </section>
+
+  <section class="card" id="empty" hidden>
+    <p><strong>No Pursuit Iron data in this browser.</strong></p>
+    <p>If you used the web app in a different browser, open this page there. You can also export a backup from the web app's Settings and open the file with the new app.</p>
+  </section>
+
+  <p class="small">The app imports by merging: nothing on the phone is deleted, and if a workout exists in both places the newer copy wins.</p>
+</main>
+<script>
+(function () {
+  var params = new URLSearchParams(location.search);
+  var appId = (params.get('app') || '').replace(/[^A-Za-z0-9._]/g, '');
+  var store = null, live = null;
+  try { store = localStorage.getItem('wpb:v1'); live = localStorage.getItem('wpb:live'); } catch (e) { store = null; }
+  var parsed = null;
+  try { parsed = store ? JSON.parse(store) : null; } catch (e) { parsed = null; }
+  var sessions = parsed && Array.isArray(parsed.history) ? parsed.history.length : 0;
+  var programs = parsed && Array.isArray(parsed.saved) ? parsed.saved.length : 0;
+  var status = document.getElementById('status');
+  if (!parsed || (!sessions && !programs)) { document.getElementById('empty').hidden = false; return; }
+  document.getElementById('found').hidden = false;
+  document.getElementById('n-sessions').textContent = String(sessions);
+  document.getElementById('n-programs').textContent = String(programs);
+  if (live) document.getElementById('live-note').hidden = false;
+
+  var envelope = JSON.stringify({ kind: 'pi-handoff', v: 1, exportedAt: Date.now(), store: store, live: live || null });
+  var fileName = 'pursuit-iron-transfer-' + new Date().toISOString().slice(0, 10) + '.json';
+  function file() { return new File([envelope], fileName, { type: 'application/json' }); }
+
+  // A link can carry roughly half a megabyte before Android's intent limit; past that, use a file.
+  var LINK_LIMIT = 450000;
+
+  async function packed() {
+    if (typeof CompressionStream === 'undefined') return null;
+    var cs = new Blob([envelope]).stream().pipeThrough(new CompressionStream('deflate-raw'));
+    var buf = new Uint8Array(await new Response(cs).arrayBuffer());
+    var bin = '', CH = 0x8000;
+    for (var i = 0; i < buf.length; i += CH) bin += String.fromCharCode.apply(null, buf.subarray(i, i + CH));
+    return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  async function shareFile() {
+    var f = file();
+    if (navigator.canShare && navigator.canShare({ files: [f] })) {
+      try { await navigator.share({ files: [f], title: 'Pursuit Iron data' }); status.textContent = 'In the share sheet, pick Pursuit Iron.'; return true; }
+      catch (e) { if (e && e.name === 'AbortError') { status.textContent = 'Cancelled.'; return true; } }
+    }
+    return false;
+  }
+
+  function download() {
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(file()); a.download = fileName;
+    document.body.appendChild(a); a.click(); a.remove();
+    status.textContent = 'Saved to Downloads. In the app: You → Settings → Import a backup.';
+  }
+
+  document.getElementById('send').addEventListener('click', async function () {
+    status.textContent = 'Preparing…';
+    var d = null;
+    try { d = await packed(); } catch (e) { d = null; }
+    if (d && d.length <= LINK_LIMIT) {
+      status.textContent = 'Opening the app…';
+      location.href = appId
+        ? 'intent://handoff?d=' + d + '#Intent;scheme=pursuitiron;package=' + appId + ';end'
+        : 'pursuitiron://handoff?d=' + d;
+      return;
+    }
+    if (await shareFile()) return;
+    download();
+  });
+  document.getElementById('share').addEventListener('click', async function () { if (!(await shareFile())) download(); });
+  document.getElementById('download').addEventListener('click', download);
+})();
+</script>
+</body>
+</html>

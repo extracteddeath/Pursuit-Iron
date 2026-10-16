@@ -464,6 +464,16 @@ function summaryPRs(entry, H) {
 
 export function discardSession() { S.live = null; markLive(); return { ok: true }; }
 
+/* A workout in progress handed over from the web app: same rules as init (never resume a session
+   that is already logged, never one whose program is missing), and never over a live workout here. */
+export function adoptLive({ live }) {
+    if (S.live) return { ok: false, reason: 'busy' };
+    let l = null; try { l = JSON.parse(String(live || '')); } catch { l = null; }
+    if (!l || !l.sessionId || history().some((h) => h.id === l.sessionId) || !programById(l.programId)) return { ok: false, reason: 'invalid' };
+    S.live = l; markLive();
+    return { ok: true };
+}
+
 /* ------------------------------------------------------------------ history */
 function historyRow(h) {
     return { id: h.id, date: h.date, programName: h.programName || '', dayLabel: h.dayLabel || 'Workout', setsDone: h.setsDone ?? null,
@@ -550,11 +560,18 @@ export function setupOptions() {
         goals: ['strength', 'hypertrophy', 'both'], experience: Object.keys(E.EXP || { novice: 1, intermediate: 1, advanced: 1 }),
         injuryAreas: INJURY_AREAS, injuryImpacts: INJURY_IMPACTS };
 }
+/* The same defaults createProgram uses, so the recommendation describes the program that gets built. */
+function programConfig(config) {
+    return { unit: unit(), weeks: 6, progression: 'auto', deload: false, focus: {}, reduce: [], barbellCap: 3, noBodyweight: false, noSupersets: false, ...config };
+}
+/* App.js nextRecommendedSplit: the engine picks among its automatic split families. */
 export function recommend({ config }) {
-    try { return E.recommendNextSplitForShell(config, S.store.banned || [], E.shell.EXERCISES); } catch (err) { return { error: String(err?.message || err) }; }
+    const cfg = programConfig(config);
+    let next = null; try { next = E.recommendNextSplitForShell(cfg, [], EXERCISES, 63063); } catch { next = null; }
+    try { const rec = E.recommendedSplit(cfg, next); return rec && E.SPLITS[rec]?.days.includes(cfg.days) ? rec : null; } catch { return null; }
 }
 export function createProgram({ config, seed }) {
-    const cfg = { unit: unit(), weeks: 6, progression: 'auto', deload: false, focus: {}, reduce: [], barbellCap: 3, noBodyweight: false, noSupersets: false, ...config };
+    const cfg = programConfig(config);
     let r;
     try { r = E.generateNextProgramForShell({ config: cfg, legacyExercises: E.shell.EXERCISES, seed: Number.isFinite(seed) ? seed : Math.floor(Math.random() * 1e6), makeId: () => 'p-' + E.uid() }); }
     catch (err) { return { ok: false, error: String(err?.message || err) }; }

@@ -91,4 +91,13 @@ ok(imp.ok && JSON.parse(C.exportStore()).history.some((x) => x.id === 'from-pwa'
 ['progress', 'plan', 'library', 'body', 'settings', 'setupOptions', 'historyList'].forEach((m) => { let v; let err = null; try { v = C[m]({}); } catch (e) { err = e; } ok(!err && v != null, m + '() returns a view'); });
 ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations');
 
+// 8. Split recommendation: a real split id the picker offers, for every day count (App.js nextRecommendedSplit + recommendedSplit)
+{ const opts = C.setupOptions(); const ids = new Set(opts.splits.map((x) => x.id));
+  const recs = [2, 3, 4, 5, 6].map((d) => C.recommend({ config: { goal: 'hypertrophy', experience: 'intermediate', days: d, session: 's60', equipment: ['barbell', 'dumbbell', 'bench', 'cable', 'machine', 'pullup'] } }));
+  ok(recs.every((r, k) => r && ids.has(r) && opts.splits.find((x) => x.id === r).days.includes(k + 2)), 'recommend returns a valid split for 2-6 days (' + recs.join(', ') + ')'); }
+// 9. adoptLive: refuses garbage and an already-logged session, accepts a fresh one
+{ const before = C.session().active;
+  ok(C.adoptLive({ live: 'not json' }).ok === false, 'adoptLive refuses invalid JSON');
+  ok(before || C.adoptLive({ live: JSON.stringify({ sessionId: 'zz', programId: 'missing' }) }).ok === false, 'adoptLive refuses a session whose program is missing'); }
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);
+

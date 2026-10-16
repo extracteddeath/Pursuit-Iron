@@ -108,6 +108,7 @@ fun YouScreen(vm: AppViewModel) {
             }
             else -> {
                 item { SettingsCard(vm) }
+                item { TrainingPrefsCard(vm) }
                 item { GymsCard(vm) { gymsOpen = true } }
                 item { LoadingCard(vm) }
                 item { ToolsCard { toolsOpen = true } }
@@ -115,6 +116,8 @@ fun YouScreen(vm: AppViewModel) {
                 item { CustomExercisesCard(vm) }
                 item { ProfileFieldsCard(vm) }
                 item { DataCard(vm) }
+                item { ManageDataCard(vm) }
+                item { HelpCard(vm) }
                 item { AboutCard(vm) }
             }
         }

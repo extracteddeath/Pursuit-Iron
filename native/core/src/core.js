@@ -451,7 +451,7 @@ function setView(s, i, ex, prBase, prev = null) {
     return {
         i, warm: !!s.warm, sub: !!s.sub, kind: s.kind || (s.warm ? 'warm' : s.sub ? 'sub' : 'work'), done: !!s.done,
         weight: s.weight ?? '', reps: s.reps ?? '', rir: s.actualRIR ?? null, added: !!s.added,
-        target: s.target ? { w: s.target.w ?? null, reps: s.target.reps ?? null, rir: s.target.rir ?? null } : null,
+        target: s.target ? { w: s.target.w ?? null, reps: s.target.reps ?? null, rir: s.target.rir ?? null, effort: s.target.rir != null ? E.effortLabel(s.target.rir, S.store.loadMode === 'rpe' ? 'rpe' : 'rir') : null } : null,
         hint: typeof s.hint === 'string' ? s.hint : null,
         userOwned: !!E.userOwnsRuntimeSet?.(s),
         pr: !!(e1 && prBase > 0 && e1 > prBase),
@@ -527,6 +527,7 @@ export function session() {
                 cues: (() => { try { return E.cuesFor(ex) || []; } catch { return []; } })(), setup,
                 progression: { style: E.styleFor(ctx.program, e.id), changed: !!l.sessionProgressions?.[e.id], locked: !!ctx.program.config?.percentScheme } };
         }),
+        loadMode: S.store.loadMode === 'rpe' ? 'rpe' : 'rir',
         quick: !!ctx.program.quick, readinessDone: !!l.readiness, readinessLabel: l.readiness?.label || null,
         sessionNote: l.sessionNote || '', sessionNoteRepeat: l.sessionNoteRepeat || 'none',
         progressionStyles: Object.entries(E.PROG_STYLES || {}).map(([id, label]) => ({ id, label })),
@@ -1036,6 +1037,7 @@ export function createProgram({ config, seed }) {
     p.generationRoute = E.GENERATION_ROUTE;
     S.store.equipDefault = cfg.equipment;
     adoptConfigUnit(cfg.unit);
+    if (cfg.experience) S.store.experience = cfg.experience; // App.js rememberExperience
     setList('saved', [...saved(), p]); S.store.pinnedId = p.id;
     markStore();
     return { ok: true, programId: p.id, name: p.name, days: p.days.length };
@@ -1215,10 +1217,14 @@ export function settings() {
     const st = S.store;
     return { unit: unit(), restScale: Number(st.restScale) || 1, restAutoStart: st.restAutoStart !== false, haptics: st.haptics !== false,
         theme: st.theme || null, warmupCard: st.warmupCard !== false, lastBackup: st.lastBackup || null, sessions: history().length, programs: saved().length,
-        reminders: reminders(), customCount: Array.isArray(st.custom) ? st.custom.length : 0 };
+        reminders: reminders(), customCount: Array.isArray(st.custom) ? st.custom.length : 0,
+        loadMode: st.loadMode === 'rpe' ? 'rpe' : 'rir', experience: st.experience || null,
+        banned: (st.banned || []).map((id) => ({ id, name: exName(id) })) };
 }
 export function updateSettings(patch = {}) {
-    const allowed = ['restScale', 'restAutoStart', 'haptics', 'theme', 'warmupCard'];
+    const allowed = ['restScale', 'restAutoStart', 'haptics', 'theme', 'warmupCard', 'loadMode', 'experience'];
+    if ('loadMode' in patch && !['rir', 'rpe'].includes(patch.loadMode)) delete patch.loadMode;
+    if ('experience' in patch && !['novice', 'beginner', 'intermediate', 'advanced', ...Object.keys(E.EXP || {})].includes(patch.experience)) delete patch.experience;
     Object.entries(patch).forEach(([k, v]) => { if (allowed.includes(k)) S.store[k] = v; });
     if (patch.unit && patch.unit !== unit()) { const r = switchUnit({ to: patch.unit }); if (!r.ok) return r; }
     applyGlobals(); markStore();
@@ -1990,4 +1996,53 @@ export function swapInProgram({ ei, newId }) {
         return changed ? { ...x, days, edited: true } : x;
     }));
     return { ok: true, program: true };
+}
+
+
+/* ------------------------------------------------------------------ Settings → Data (App.js onClearBanned / onClearHistory / resetAll) */
+export function clearBanned() {
+    const prev = S.store.banned || []; if (!prev.length) return { ok: false };
+    S.undo = { banned: prev }; S.store.banned = []; markStore();
+    return { ok: true, count: prev.length };
+}
+export function clearHistory() {
+    const prev = history(); if (!prev.length) return { ok: false };
+    S.undo = { history: prev }; setList('history', []);
+    return { ok: true, count: prev.length };
+}
+/* "Erase all data" means it; device preferences (theme, unit, plates, haptics) stay, as on the web app. */
+export function resetAll() {
+    S.live = null; markLive();
+    setList('saved', []); setList('cycles', []); setList('history', []);
+    Object.assign(S.store, { drafts: {}, banned: [], perf: {}, custom: [], bwLog: [], measurements: {}, goals: {}, exNotes: {}, injuryLog: [], exSetup: {},
+        pinnedId: null, bodyweight: '', birth: '', birthEst: false, sex: 'male', minInc: { v: 0, unit: null }, reminders: { enabled: false, time: '18:00', days: [1, 2, 3, 4, 5] } });
+    S.undo = null; syncCustomRegistry(); markStore();
+    return { ok: true };
+}
+export function storageStatus() {
+    let bytes = 0; try { bytes = JSON.stringify(S.store).length; } catch { bytes = 0; }
+    return { bytes, workouts: history().length, programs: saved().length, lastBackup: S.store.lastBackup || null };
+}
+export function references() { return (E.REFERENCES || []).map(([name, detail]) => ({ name, detail })); }
+
+/* ------------------------------------------------------------------ weekly schedule (App.js WeeklyScheduleSheet + cycleSchedule) */
+export function schedule({ programId }) {
+    const p = programById(programId); if (!p) return null;
+    const sched = p.schedule || {};
+    return { programId, days: p.days.map((d) => ({ id: d.id, label: d.label })),
+        week: [1, 2, 3, 4, 5, 6, 0].map((wd) => ({ weekday: wd, dayId: sched[wd] || null, label: sched[wd] ? (p.days.find((d) => d.id === sched[wd])?.label || null) : null })),
+        trainingDays: [1, 2, 3, 4, 5, 6, 0].filter((wd) => sched[wd]).length };
+}
+export function cycleSchedule({ programId, weekday }) {
+    const p = programById(programId); if (!p) return null;
+    const sched = { ...(p.schedule || {}) }, ids = p.days.map((d) => d.id);
+    const cur = sched[weekday] ?? null, nextIdx = (cur === null ? -1 : ids.indexOf(cur)) + 1;
+    if (nextIdx >= ids.length) delete sched[weekday]; else sched[weekday] = ids[nextIdx];
+    setList('saved', saved().map((x) => (x.id === programId ? { ...x, schedule: sched, scheduleEdited: true } : x)));
+    return schedule({ programId });
+}
+export function clearSchedule({ programId }) {
+    if (!programById(programId)) return null;
+    setList('saved', saved().map((x) => (x.id === programId ? { ...x, schedule: {}, scheduleEdited: true } : x)));
+    return schedule({ programId });
 }

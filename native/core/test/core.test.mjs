@@ -411,5 +411,34 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   ok(C.undo().ok && Object.keys(JSON.parse(C.exportStore()).history.find((x) => x.id === H0.id).perf).length === Object.keys(H0.perf).length, 'correction can be undone');
   const sc = C.shareCard({ id: H0.id });
   ok(sc && sc.tops.length > 0 && sc.label && sc.mainE1rm, 'share card data: ' + sc.tops.length + ' lifts, PRs ' + sc.prs.length); }
+
+// 23. Settings parity: effort scale, experience, banned list, schedule, clear/reset, storage, references
+{ C.init({}); const eq = ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'];
+  const mk = C.createProgram({ config: { name: 'S', unit: 'kg', goal: 'both', experience: 'advanced', split: 'upper_lower', days: 4, session: 's60', equipment: eq }, seed: 3 });
+  ok(C.settings().experience === 'advanced', 'building a program remembers training experience');
+  C.updateSettings({ loadMode: 'rpe', experience: 'novice' });
+  ok(C.settings().loadMode === 'rpe' && C.settings().experience === 'novice', 'effort scale and experience saved');
+  ok(C.updateSettings({ loadMode: 'bogus' }).ok && C.settings().loadMode === 'rpe', 'unknown effort scale ignored');
+  const s = C.startSession({});
+  const tgt = s.exercises[0].sets.find((x) => !x.warm && x.target && x.target.rir != null);
+  ok(s.loadMode === 'rpe' && (!tgt || /^RPE/.test(tgt.target.effort)), 'targets read as RPE: ' + (tgt && tgt.target.effort));
+  C.discardSession(); C.updateSettings({ loadMode: 'rir' });
+  const lib = C.library({ q: 'curl' }); C.setBan({ id: lib[0].id, banned: true }); C.setBan({ id: lib[1].id, banned: true });
+  ok(C.settings().banned.length === 2 && C.settings().banned[0].name, 'banned list with names');
+  ok(C.clearBanned().count === 2 && C.settings().banned.length === 0, 'unban all');
+  ok(C.undo().ok && C.settings().banned.length === 2, 'unban all can be undone');
+  const sc = C.schedule({ programId: mk.programId });
+  ok(sc.week.length === 7 && sc.days.length === 4, 'weekly schedule lists 7 weekdays');
+  C.clearSchedule({ programId: mk.programId });
+  let s2 = C.cycleSchedule({ programId: mk.programId, weekday: 1 }); s2 = C.cycleSchedule({ programId: mk.programId, weekday: 1 });
+  ok(s2.week[0].dayId === sc.days[1].id && s2.trainingDays === 1, 'tapping Monday cycles rest → day 1 → day 2');
+  ok(C.clearSchedule({ programId: mk.programId }).trainingDays === 0, 'schedule cleared');
+  C.startSession({}); const ss = C.session(); ss.exercises[0].sets.filter((x) => !x.warm).forEach((x) => { C.act({ type: 'edit', ei: 0, si: x.i, field: 'weight', value: '20' }); C.act({ type: 'toggle', ei: 0, si: x.i }); }); C.finishSession();
+  ok(C.clearHistory().count === 1 && C.settings().sessions === 0, 'clear history');
+  ok(C.undo().ok && C.settings().sessions === 1, 'clear history can be undone');
+  const st = C.storageStatus(); ok(st.bytes > 1000 && st.workouts === 1, 'storage status (' + st.bytes + ' bytes)');
+  ok(C.references().length > 3 && C.references()[0].name, 'references listed');
+  C.updateSettings({ theme: 'x' });
+  ok(C.resetAll().ok && C.settings().programs === 0 && C.settings().sessions === 0 && C.settings().banned.length === 0 && C.settings().theme === 'x' && !C.session().active, 'reset everything keeps device preferences only'); }
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);
 

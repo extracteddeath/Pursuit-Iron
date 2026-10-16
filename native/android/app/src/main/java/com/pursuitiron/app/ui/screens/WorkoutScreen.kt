@@ -360,7 +360,7 @@ private fun SetRow(vm: AppViewModel, s: JSONObject, ei: Int, si: Int, set: JSONO
     val sub = when {
         warm -> "Warm-up"; set.b("sub") -> if (set.s("kind") == "drop") "Drop set" else "Myo mini"
         target != null && set.s("type") == "failure" -> "${target.s("reps")} to failure"
-        target != null && !target.isNull("rir") -> "${target.s("reps")} @ ${target.s("rir")} RIR"
+        target != null && !target.isNull("rir") -> "${target.s("reps")} @ ${target.s("effort").ifBlank { target.s("rir") + " RIR" }}"
         target != null -> "${target.s("reps")} reps"; else -> ""
     }
     val prev = set.o("prev")
@@ -503,7 +503,7 @@ private fun SetEditor(vm: AppViewModel, s: JSONObject, ei: Int, si: Int, onClose
             if (!set.b("done") && !set.b("sub")) com.pursuitiron.app.ui.common.Segmented(
                 listOf("standard" to "Standard", "warmup" to "Warm-up", "failure" to "To failure"),
                 if (set.b("warm")) "warmup" else set.s("type", "standard"), { k -> vm.act("setType", "ei" to ei, "si" to si, "kind" to k) }, height = 40.dp)
-            set.o("target")?.let { t -> Text("Target: ${t.s("reps")} reps at ${t.s("rir")} RIR", color = cs.onSurfaceVariant) }
+            set.o("target")?.let { t -> Text("Target: ${t.s("reps")} reps" + (if (!t.isNull("rir")) " at ${t.s("effort").ifBlank { t.s("rir") + " RIR" }}" else ""), color = cs.onSurfaceVariant) }
             Stepper("Weight (${s.s("unit")})", w, KeyboardType.Decimal, onText = { w = it }, onCommit = { vm.act("edit", "ei" to ei, "si" to si, "field" to "weight", "value" to w) },
                 onMinus = { vm.act("bumpWeight", "ei" to ei, "si" to si, "dir" to -1) }, onPlus = { vm.act("bumpWeight", "ei" to ei, "si" to si, "dir" to 1) })
             Stepper("Reps", r, KeyboardType.Number, onText = { r = it }, onCommit = { vm.act("edit", "ei" to ei, "si" to si, "field" to "reps", "value" to r) },

@@ -119,7 +119,9 @@ fun PlanScreen(vm: AppViewModel) {
     var openCycle by remember { mutableStateOf<String?>(null) }
     var confirmNext by remember { mutableStateOf(false) }
     var compareOpen by remember { mutableStateOf(false) }
+    var scheduleOpen by remember { mutableStateOf(false) }
     if (compareOpen) CompareSheet(vm) { compareOpen = false }
+    if (scheduleOpen) WeeklyScheduleSheet(vm, p.s("programId")) { scheduleOpen = false }
     openCycle?.let { id -> CycleSheet(vm, id) { openCycle = null } }
     if (confirmNext) AlertDialog(onDismissRequest = { confirmNext = false },
         title = { Text("Build the next block?") },
@@ -135,8 +137,9 @@ fun PlanScreen(vm: AppViewModel) {
             Column(Modifier.padding(top = 20.dp, start = 4.dp)) {
                 Text("Plan", style = MaterialTheme.typography.displayMedium)
                 Text("${p.s("name")} · week $wk of $weeks" + (if (p.i("current") > 0) " · you're on week ${p.i("current")}" else ""), style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
-                Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                androidx.compose.foundation.layout.FlowRow(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilledTonalButton(onClick = { vm.openEditor(p.s("programId")) }) { Icon(PiIcons.List, null, modifier = Modifier.size(18.dp)); Text("  Edit program") }
+                    FilledTonalButton(onClick = { scheduleOpen = true }) { Icon(PiIcons.Calendar, null, modifier = Modifier.size(18.dp)); Text("  Schedule") }
                     if (p.b("percent")) FilledTonalButton(onClick = { vm.tmFor = p.s("programId") }) { Text("Training maxes") }
                 }
             }

@@ -434,7 +434,29 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /* ---------------------------------------------------------------- library */
     fun searchLibrary(q: String, part: String?) { libQuery = q; libPart = part; launchCore { library = arr(call("library", jsonOf("q" to q, "part" to part))) } }
     suspend fun exercise(id: String): JSONObject? = obj("exercise", jsonOf("id" to id))
-    fun setBan(id: String, banned: Boolean) = launchCore { call("setBan", jsonOf("id" to id, "banned" to banned)); library = arr(call("library", jsonOf("q" to libQuery, "part" to libPart))); toast(if (banned) "Banned. It won't be picked again." else "Unbanned") }
+    fun setBan(id: String, banned: Boolean) = launchCore { call("setBan", jsonOf("id" to id, "banned" to banned)); library = arr(call("library", jsonOf("q" to libQuery, "part" to libPart))); settings = obj("settings"); toast(if (banned) "Banned. It won't be picked again." else "Unbanned") }
+
+    /* Settings → Data (App.js onClearBanned / onClearHistory / resetAll), schedule, references. */
+    suspend fun storageStatus(): JSONObject? = obj("storageStatus")
+    suspend fun references(): List<JSONObject> = arr(call("references"))
+    fun clearBanned() = launchCore {
+        val r = obj("clearBanned") ?: return@launchCore
+        settings = obj("settings")
+        if (r.b("ok")) toast("Cleared ${r.i("count")} banned exercise${if (r.i("count") == 1) "" else "s"}") { launchCore { call("undo"); settings = obj("settings") } }
+    }
+    fun clearHistory() = launchCore {
+        val r = obj("clearHistory") ?: return@launchCore
+        refreshHomeSide()
+        if (r.b("ok")) toast("Cleared ${r.i("count")} logged workout${if (r.i("count") == 1) "" else "s"}") { launchCore { call("undo"); refreshHomeSide() } }
+    }
+    fun resetAll() = launchCore {
+        call("resetAll"); rest.cancel(); session = obj("session"); refreshAll(); publishWidget()
+        com.pursuitiron.app.data.Reminders.save(getApplication(), settings?.o("reminders"))
+        screen = Screen.Tabs; tab = Tab.Today; toast("All data erased")
+    }
+    suspend fun schedule(programId: String): JSONObject? = obj("schedule", jsonOf("programId" to programId))
+    suspend fun cycleSchedule(programId: String, weekday: Int): JSONObject? = obj("cycleSchedule", jsonOf("programId" to programId, "weekday" to weekday)).also { refreshHomeSide() }
+    suspend fun clearSchedule(programId: String): JSONObject? = obj("clearSchedule", jsonOf("programId" to programId)).also { refreshHomeSide() }
     fun setExNote(id: String, text: String) = launchCore { call("setExNote", jsonOf("id" to id, "text" to text)) }
 
     /* ---------------------------------------------------------------- history */

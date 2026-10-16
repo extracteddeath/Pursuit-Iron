@@ -289,6 +289,20 @@ if scroll_to(r"Plates and 1RM"):
     back()
     if find(r"One-rep max", timeout=2):
         back()
+# 7b. Settings parity: training preferences, data management, help
+tap(r"^\|You$|^You\|")
+tap(r"^\|Settings$")
+if scroll_to(r"^\|Effort scale$", tries=8):
+    tap(r"^\|RPE$", "settings-rpe")
+    tap(r"^\|RIR$")
+if scroll_to(r"^\|Manage data$", tries=10):
+    shot("settings-manage-data")
+    if tap(r"Review Banned exercises", required=False):
+        shot("banned-sheet"); back()
+if scroll_to(r"References & methodology", tries=6):
+    shot("settings-help")
+    tap(r"References & methodology", "references")
+    back()
 tap(r"^\|Today$|^Today\|", "today-lb")
 
 # 8. Training cycle: build one, open it, try to advance
@@ -313,6 +327,9 @@ tap(r"^\|Today$|^Today\|", "today-cycle")
 # 9. Program editor: move a lift, save this block only
 tap(r"^\|Plan$|^Plan\|")
 adb("shell", "input", "swipe", "540", "700", "540", "1900", "200")
+if tap(r"^\|  Schedule$|Schedule$", "schedule-sheet", required=False):
+    tap(r"^Mon", "schedule-monday")
+    back()
 if tap(r"Edit program", "editor"):
     if tap(r"\. Edit\|", "editor-slot"):
         tap(r"Move later")

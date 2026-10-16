@@ -55,7 +55,7 @@ fun SetupScreen(vm: AppViewModel) {
     val opts = vm.setup
     val cs = MaterialTheme.colorScheme
     var goal by remember { mutableStateOf("both") }
-    var exp by remember { mutableStateOf("intermediate") }
+    var exp by remember { mutableStateOf(vm.settings.s("experience").let { if (it == "novice") "none" else it }.ifBlank { "intermediate" }) }
     var days by remember { mutableStateOf(4) }
     var session by remember { mutableStateOf("s60") }
     var equip by remember { mutableStateOf(PRESETS[0].second.toSet()) }

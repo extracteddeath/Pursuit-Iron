@@ -8,6 +8,7 @@ import { prescriptionForSimulationWeek } from './simulation.js';
 import { applyExperienceRirFloor } from './realizer-prescriptions.js';
 import { createInitialCycleState } from './cycles.js';
 import { filterFeasibleLiftPriorities } from './prescription.js';
+import { generateProgram } from './generate.js';
 import { finalizeGeneratedShellVolume } from './volume-repair.js';
 import { shellExercisePerformableFor as performableFor } from './shell-equipment.js';
 export { setShellEquipmentExpander } from './shell-equipment.js';

@@ -98,11 +98,11 @@ def tap(pattern, name=None, timeout=12, required=True):
     return True
 
 
-def scroll_to(pattern, tries=6):
+def scroll_to(pattern, tries=6, step=900):
     for _ in range(tries):
         if find(pattern, timeout=2):
             return True
-        adb("shell", "input", "swipe", "540", "1800", "540", "900", "300")
+        adb("shell", "input", "swipe", "540", "1800", "540", str(1800 - step), "300")
         time.sleep(0.8)
     return bool(find(pattern, timeout=2))
 
@@ -310,13 +310,15 @@ if scroll_to(r"Plates and 1RM"):
         back()
 # 7b. Settings parity: training preferences, data management, help
 tap(r"^\|You$|^You\|")
-for _ in range(6):
+for _ in range(14):
+    if find(r"^\|Settings$", timeout=1):
+        break
     adb("shell", "input", "swipe", "540", "700", "540", "1900", "150")
 tap(r"^\|Settings$")
-if scroll_to(r"^\|Effort scale$", tries=8):
+if scroll_to(r"(?i)^\|Effort scale$", tries=8):
     tap(r"^\|RPE$", "settings-rpe")
     tap(r"^\|RIR$")
-if scroll_to(r"^\|Manage data$", tries=10):
+if scroll_to(r"^\|Manage data$", tries=10, step=600):
     shot("settings-manage-data")
     if tap(r"Review Banned exercises", required=False):
         shot("banned-sheet"); back()

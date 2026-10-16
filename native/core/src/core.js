@@ -87,7 +87,7 @@ export function init({ store = null, live = null } = {}) {
         try {
             const l = JSON.parse(live);
             // App.js: an already-logged session must never resume (liveMatchRef / sessionSnapshotStatus).
-            if (l && l.sessionId && !history().some((h) => h.id === l.sessionId) && programById(l.programId)) S.live = l;
+            if (l && l.sessionId && !history().some((h) => h.id === l.sessionId) && liveProgram(l)) S.live = normalizeLive(l);
         } catch { S.live = null; }
     }
     applyGlobals();
@@ -108,6 +108,22 @@ function repairNativeLogs() {
         S.store.measurements = Object.fromEntries(Object.entries(m).map(([k, arr]) => [k, Array.isArray(arr) ? arr.map((e) => (e ? { ...e, date: ms(e.date) } : e)).sort((a, b) => a.date - b.date) : arr]));
         markStore();
     }
+}
+
+/* The program a live session belongs to: the library's, or the quick workout's own copy. */
+function liveProgram(l) { return programById(l?.programId) || (l?.quickProgram && l.quickProgram.id === l.programId ? l.quickProgram : null); }
+/* The web app's live snapshot keeps the rest clock as restEndMs/restMax and the recovery ratings as
+   fbPump/fbSore; builds before this one kept `rest` and `feedback`. Normalise to the web app's names. */
+function normalizeLive(l) {
+    if (!l || typeof l !== 'object') return l;
+    if (l.feedback && !l.fbPump && !l.fbSore) {
+        l.fbPump = {}; l.fbSore = {};
+        Object.entries(l.feedback).forEach(([part, v]) => { if (v?.pump) l.fbPump[part] = v.pump; if (v?.sore) l.fbSore[part] = v.sore; });
+    }
+    delete l.feedback;
+    if (!l.rest && Number(l.restEndMs) > now() && Number(l.restMax) > 0) l.rest = { seconds: Number(l.restMax), startedAt: Number(l.restEndMs) - Number(l.restMax) * 1000, kind: 'rest' };
+    l.fbPump = l.fbPump || {}; l.fbSore = l.fbSore || {};
+    return l;
 }
 
 /* App.js persistAppStore: savedAt stamps the copy for merges; tombstones older than 180 days drop. */
@@ -207,8 +223,10 @@ export function home() {
 
 /* ------------------------------------------------------------------ workout session */
 function sessionContext(l) {
-    const source = programById(l.programId);
+    // A quick (freestyle) workout's program is not in the library; it travels with the live session.
+    const source = liveProgram(l);
     if (!source) return null;
+    E.setExLoadInc(source.exLoadInc || {}); // App.js: per-machine increments come from the open program
     const program = withProgressionChoices(source, l.sessionProgressions || {});
     const rawDay = program.days.find((d) => d.id === l.dayId);
     if (!rawDay) return null;
@@ -252,7 +270,7 @@ export function startSession({ programId, dayId, weekIndex } = {}) {
     const pid = programId || nx?.program.id, did = dayId || nx?.day.id, wk = weekIndex || (programId ? 1 : nx?.weekIndex) || 1;
     if (!pid || !did) return { error: 'No program yet. Build one first.' };
     const l = { schemaVersion: 2, sessionId: E.uid(), programId: pid, dayId: did, weekIndex: wk, startedAt: now(), elapsedMs: 0, exIdx: 0,
-        readiness: null, injuryReports: [], sessionProgressions: {}, sessionNote: '', sessionNoteRepeat: 'none', feedback: {}, rest: null };
+        readiness: null, injuryReports: [], sessionProgressions: {}, sessionNote: '', sessionNoteRepeat: 'none', fbPump: {}, fbSore: {}, rest: null };
     S.live = l;
     const ctx = sessionContext(l);
     if (!ctx) { S.live = null; return { error: 'That workout day no longer exists.' }; }
@@ -263,12 +281,12 @@ export function startSession({ programId, dayId, weekIndex } = {}) {
 }
 
 function liveSummary() {
-    const l = S.live, p = programById(l.programId), day = p?.days.find((d) => d.id === l.dayId);
+    const l = S.live, p = liveProgram(l), day = p?.days.find((d) => d.id === l.dayId);
     const work = (l.data || []).flatMap((e) => e.sets.filter(isWork));
     return { programName: p?.name || '', dayLabel: day?.label || '', done: work.filter((s) => s.done).length, total: work.length, startedAt: l.startedAt };
 }
 
-function setView(s, i, ex, prBase) {
+function setView(s, i, ex, prBase, prev = null) {
     const w = parseFloat(s.weight), r = parseInt(s.reps);
     let e1 = null; if (s.done && w > 0 && r > 0 && isWork(s)) e1 = E.e1rm(w, r);
     return {
@@ -277,8 +295,42 @@ function setView(s, i, ex, prBase) {
         target: s.target ? { w: s.target.w ?? null, reps: s.target.reps ?? null, rir: s.target.rir ?? null } : null,
         hint: typeof s.hint === 'string' ? s.hint : null,
         userOwned: !!E.userOwnsRuntimeSet?.(s),
-        pr: !!(e1 && prBase > 0 && e1 > prBase)
+        pr: !!(e1 && prBase > 0 && e1 > prBase),
+        type: s.typeOverride || (s.target?.failure ? 'failure' : 'standard'),
+        prev: prev ? { w: prev.w, r: prev.r ?? null } : null
     };
+}
+
+/* App.js supersetSuggestionMeta + supersetSuggestions: low-interference partners for the current lift. */
+function supersetMeta(a, b) {
+    if (!a || !b || a.part === b.part) return null;
+    const push = new Set(['chest', 'shoulders', 'triceps']), pull = new Set(['lats', 'upper_back', 'biceps', 'traps']);
+    const post = new Set(['hamstrings', 'glutes', 'lower_back']), small = new Set(['calves', 'abs', 'forearms', 'neck', 'abductors', 'adductors']);
+    let score = 0, reason = 'Different muscle groups';
+    if ((push.has(a.part) && pull.has(b.part)) || (pull.has(a.part) && push.has(b.part))) { score = 100; reason = 'Push + pull · low interference'; }
+    else if ((a.part === 'quads' && post.has(b.part)) || (b.part === 'quads' && post.has(a.part))) { score = 96; reason = 'Quads + posterior chain'; }
+    else if (small.has(a.part) || small.has(b.part)) { score = 78; reason = 'Accessory pairing · low interference'; }
+    else score = 58;
+    const aS = new Set(E.secondaryOf(a).map(([p]) => p)), bS = new Set(E.secondaryOf(b).map(([p]) => p));
+    if (aS.has(b.part) || bS.has(a.part)) score -= 24;
+    if (a.type === 'compound' && b.type === 'compound') score -= 12;
+    return score >= 42 ? { score, reason } : null;
+}
+function supersetSuggestions(ctx, data, exIdx) {
+    const curRow = data[exIdx], cur = EX_BY_ID[curRow?.id];
+    if (!curRow || !cur) return [];
+    const workOnly = (e) => e.sets.filter((x) => !x.warm && !x.sub);
+    const protectedTo = Math.max(ctx.day.primaryIndex ?? -1, ctx.day.t2Index != null ? ctx.day.t2Index : -1);
+    if (curRow.slot <= protectedTo) return [];
+    const curSets = workOnly(curRow).length;
+    return data.map((row, i) => {
+        if (i === exIdx || row.slot <= protectedTo) return null;
+        if (row.superset || (i > 0 && data[i - 1]?.superset) || workOnly(row).some((x) => x.done)) return null;
+        const mate = EX_BY_ID[row.id], meta = supersetMeta(cur, mate); if (!meta) return null;
+        const gap = Math.abs(curSets - workOnly(row).length);
+        const score = meta.score + (gap === 0 ? 9 : gap === 1 ? 4 : 0) + (i > exIdx ? 3 : 0) - Math.min(8, Math.abs(i - exIdx));
+        return { ei: i, name: mate.name, score, reason: meta.reason, sets: workOnly(row).length };
+    }).filter(Boolean).sort((a, b) => b.score - a.score).slice(0, 4);
 }
 
 export function session() {
@@ -288,6 +340,7 @@ export function session() {
     if (!ctx) return { active: false, error: 'That workout day no longer exists.' };
     const u = unit(), bests = (() => { try { return E.liftBests(ctx.H, u) || {}; } catch { return {}; } })();
     const data = l.data || [];
+    let lastPerf = {}; try { lastPerf = E.lastDayPerf(ctx.day, ctx.P, ctx.H, ctx.program) || {}; } catch { lastPerf = {}; }
     const work = (e) => e.sets.filter(isWork);
     const totalSets = data.reduce((s, e) => s + work(e).length, 0);
     const doneSets = data.reduce((s, e) => s + work(e).filter((x) => x.done).length, 0);
@@ -300,10 +353,25 @@ export function session() {
         exercises: data.map((e, ei) => {
             const ex = EX_BY_ID[e.id] || {};
             const best = Number(bests?.[e.id]?.e1rm ?? bests?.[e.id]?.best ?? 0) || 0;
-            return { ei, id: e.id, name: ex.name || e.id, part: ex.part || '', equip: ex.equip || null, slot: e.slot, primary: e.slot === ctx.day.primaryIndex,
-                superset: !!e.superset, note: e.note || '', injuryAdjusted: e.injuryAdjusted || null,
-                done: work(e).length > 0 && work(e).every((s) => s.done), sets: e.sets.map((s, i) => setView(s, i, ex, best)) };
+            // App.js "last" column: the previous workout's set at the same working-set position.
+            let workIdx = -1;
+            const sets = e.sets.map((s, i) => { const isW = !s.warm && !s.sub; if (isW) workIdx++; return setView(s, i, ex, best, isW ? E.previousWorkoutSet(lastPerf[e.id], workIdx) : null); });
+            let restDefault = null; try { restDefault = E.effectiveRest(E.goalForDay(ctx.program, ctx.day), ex, e.slot === ctx.day.primaryIndex, 0, Number(S.store.restScale) || 1); } catch { restDefault = null; }
+            const inc = ctx.program.exLoadInc?.[e.id];
+            let setup = []; try { setup = E.setupFieldsWithStored(ex, S.store.exSetup?.[e.id]).map((f) => ({ key: f.key, label: f.label, value: S.store.exSetup?.[e.id]?.[f.key] || '' })); } catch { setup = []; }
+            return { ei, id: e.id, name: ex.name || e.id, part: ex.part || '', partLabel: E.PART_LABEL?.[ex.part] || ex.part || '', equip: ex.equip || null, slot: e.slot, primary: e.slot === ctx.day.primaryIndex,
+                superset: !!e.superset, note: e.note || '', lastNote: ctx.P[e.id]?.note || '', injuryAdjusted: e.injuryAdjusted || null, freestyle: !!e.freestyle,
+                done: work(e).length > 0 && work(e).every((s) => s.done), sets,
+                hasWarm: e.sets.some((s) => s.warm), hasDrop: e.sets.some((s) => s.sub && s.kind === 'drop'), hasMyo: e.sets.some((s) => s.sub && s.kind === 'myo'),
+                restCustom: e.restCustom || 0, restDefault, goal: Number(S.store.goals?.[e.id]) || null,
+                step: inc && inc.unit === u ? inc.v : null, stepChoices: u === 'lb' ? [5, 10, 15, 20, 25, 50] : [2.5, 5, 10, 15, 20],
+                cues: (() => { try { return E.cuesFor(ex) || []; } catch { return []; } })(), setup,
+                progression: { style: E.styleFor(ctx.program, e.id), changed: !!l.sessionProgressions?.[e.id], locked: !!ctx.program.config?.percentScheme } };
         }),
+        quick: !!ctx.program.quick, readinessDone: !!l.readiness, readinessLabel: l.readiness?.label || null,
+        sessionNote: l.sessionNote || '', sessionNoteRepeat: l.sessionNoteRepeat || 'none',
+        progressionStyles: Object.entries(E.PROG_STYLES || {}).map(([id, label]) => ({ id, label })),
+        supersetSuggestions: supersetSuggestions(ctx, data, Math.max(0, Math.min(data.length - 1, l.exIdx || 0))),
         rest: l.rest || null,
         injuries: injuries().filter((i) => !i.resolvedAt).map((i) => ({ id: i.id, title: injuryTitle(i, E.PART_LABEL), impact: i.impact,
             exercises: data.filter((e) => injuryMatchesExercise(i, EX_BY_ID[e.id], E.secondaryOf(EX_BY_ID[e.id] || {}))).map((e) => e.id) }))
@@ -348,8 +416,23 @@ const ACTIONS = {
             if (W > 0 && R > 0) sets = nextPrefill(ctx, sets, si, ex, e.slot);
         }
         const out = d.map((x, i) => (i === ei ? { ...x, sets } : x));
-        const pendingAnywhere = out.some((x) => x.sets.some((s) => !s.done));
-        if (!wasDone && pendingAnywhere && S.store.restAutoStart !== false) {
+        // App.js toggleDone superset round: a working set inside a superset moves on to the partner
+        // without a rest; the rest comes after the round. Groups are runs of `superset` flags.
+        let gStart = ei, gEnd = ei;
+        while (gStart > 0 && d[gStart - 1].superset) gStart--;
+        while (gEnd < d.length - 1 && d[gEnd].superset) gEnd++;
+        const inGroup = gEnd > gStart, isWorking = !set.warm && !set.sub;
+        const memberUndone = (m) => d[m].sets.some((x, j) => !x.warm && !x.sub && !(x.done || (m === ei && j === si)));
+        let advanceTo = -1, midRound = false;
+        if (!wasDone && inGroup && isWorking) {
+            for (let j = ei + 1; j <= gEnd; j++) if (memberUndone(j)) { advanceTo = j; midRound = true; break; }
+            if (advanceTo < 0) for (let j = gStart; j <= gEnd; j++) if (memberUndone(j)) { advanceTo = j; break; }
+        }
+        // App.js: "is there anything left to rest for" includes the myo mini this tick is about to earn.
+        const grows = !wasDone && E.growMyoSets(e.sets.map((x, j) => (j === si ? { ...x, done: true } : x))).length > e.sets.length;
+        const pendingAnywhere = d.some((x, i) => x.sets.some((y, j) => !((i === ei && j === si) || y.done))) || grows;
+        if (advanceTo >= 0 && advanceTo !== ei) S.live.exIdx = advanceTo;
+        if (!wasDone && pendingAnywhere && S.store.restAutoStart !== false && !midRound) {
             const nextPending = e.sets.slice(si + 1).find((x) => !x.done);
             S.live.rest = { seconds: restFor(ctx, e, set, nextPending), startedAt: now(), kind: nextPending?.sub ? 'mini' : set.warm ? 'warm' : 'rest' };
         }
@@ -426,19 +509,148 @@ const ACTIONS = {
         if (impact === 'monitor' || !hit.length) return d;
         return adjustInjuredExercises(d, hit, area.parts[0], impact === 'skip' ? 'skip' : 'reduce');
     },
-    readiness({ value }, ctx, d) { S.live.readiness = value || null; return d; },
     sessionNote({ text, repeat }, ctx, d) { S.live.sessionNote = String(text || ''); S.live.sessionNoteRepeat = repeat || 'none'; return d; },
     restDone(_, ctx, d) { S.live.rest = null; return d; },
     restAdjust({ delta }, ctx, d) { if (S.live.rest) S.live.rest = { ...S.live.rest, seconds: Math.max(0, S.live.rest.seconds + delta) }; return d; },
     tick({ elapsedMs }, ctx, d) { S.live.elapsedMs = Math.max(0, Number(elapsedMs) || 0); return d; },
-    feedback({ part, pump, sore }, ctx, d) { S.live.feedback = { ...(S.live.feedback || {}), [part]: { pump, sore } }; return d; }
+    // App.js fbPump / fbSore: part -> "flat"|"good"|"huge" and "sore"|"ontime"|"fresh"; tapping the same value clears it.
+    feedback({ part, pump, sore }, ctx, d) {
+        if (pump !== undefined) { const m = { ...(S.live.fbPump || {}) }; if (!pump || m[part] === pump) delete m[part]; else m[part] = pump; S.live.fbPump = m; }
+        if (sore !== undefined) { const m = { ...(S.live.fbSore || {}) }; if (!sore || m[part] === sore) delete m[part]; else m[part] = sore; S.live.fbSore = m; }
+        return d;
+    },
+    // App.js applyReadiness: scale today's unlogged, app-owned loads; down-scaling always lands lower.
+    readiness({ label = '—', factor = 1 }, ctx, d) {
+        S.live.readiness = { label, factor };
+        if (factor === 1) return d;
+        const u = unit();
+        return d.map((e) => {
+            const step = E.loadStep(EX_BY_ID[e.id], u);
+            return { ...e, sets: e.sets.map((x) => {
+                if (x.done || E.userOwnsRuntimeSet(x) || !(parseFloat(x.weight) > 0)) return x;
+                const cur = parseFloat(x.weight);
+                let nw = factor < 1 ? Math.floor((cur * factor) / step) * step : E.roundTo(cur * factor, step);
+                if (factor < 1 && nw >= cur) nw = cur - step;
+                nw = Math.max(step, nw);
+                const w = String(nw);
+                return { ...x, weight: w, target: { ...x.target, w } };
+            }) };
+        });
+    },
+    // App.js toggleWarmups: add the warm-up ramp for this lift, or take it away.
+    warmups({ ei }, ctx, d, sug) {
+        return d.map((e, i) => {
+            if (i !== ei) return e;
+            if (e.sets.some((x) => x.warm)) return { ...e, sets: e.sets.filter((x) => !x.warm) };
+            const work = parseFloat(e.sets.filter((x) => !x.warm && !x.sub)[0]?.weight) || (sug?.[ei] ? sug[ei].weight : null);
+            const warm = work && work > 0 ? E.warmupSets(EX_BY_ID[e.id], e.slot === ctx.day.primaryIndex, work, unit()) : [];
+            return warm.length ? { ...e, sets: [...warm, ...e.sets] } : e;
+        });
+    },
+    // App.js removeExerciseFromSession: skip a lift for today (logged sets go with it, as on the web app).
+    skipExercise({ ei }, ctx, d) {
+        if (!d[ei]) return d;
+        const out = d.filter((_, i) => i !== ei);
+        S.live.exIdx = Math.max(0, (S.live.exIdx || 0) >= ei && (S.live.exIdx || 0) > 0 ? S.live.exIdx - 1 : (S.live.exIdx || 0));
+        return out;
+    },
+    // App.js addExerciseToSession: three user-owned rows at the bottom of the lift's rep range.
+    addExercise({ id }, ctx, d) {
+        const ex = EX_BY_ID[id]; if (!ex || d.some((x) => x.id === id)) return d;
+        const slot = d.length;
+        const [lo, hi] = Array.isArray(ex.rep) ? ex.rep : [8, 12];
+        const rows = Array.from({ length: 3 }, () => ({ weight: '', reps: String(lo || 8), warm: false, done: false, auto: false, valueOwner: 'user', added: true, target: { w: '—', reps: `${lo || 8}-${hi || 12}`, rir: null, freestyle: true } }));
+        S.live.exIdx = slot;
+        return [...d, { id, slot, sets: rows, note: '', superset: false, added: true, freestyle: true }];
+    },
+    // App.js changeSessionSetType: standard / warm-up / to failure, this session only, reversible.
+    setType({ ei, si, kind }, ctx, d) {
+        return d.map((e, i) => (i !== ei ? e : { ...e, sets: e.sets.map((x, j) => {
+            if (j !== si || x.done || x.sub || !['standard', 'warmup', 'failure'].includes(kind)) return x;
+            const original = x.typeOriginal || { target: x.target, suggested: x.suggested, autoTuned: x.autoTuned };
+            const target = kind === 'warmup' ? { ...original.target, rir: null, failure: false } : kind === 'failure' ? { ...original.target, rir: 0, failure: true } : original.target;
+            return { ...x, warm: kind === 'warmup', target, suggested: kind === 'warmup' ? undefined : original.suggested, autoTuned: kind === 'warmup' ? false : original.autoTuned, typeOriginal: original, typeOverride: kind };
+        }) }));
+    },
+    // App.js addAdvanced: drop sets (80%, 60%) or myo-reps after the last working set; tapping again removes them.
+    advanced({ ei, kind }, ctx, d, sug) {
+        if (kind !== 'drop' && kind !== 'myo') return d;
+        return d.map((e, i) => {
+            if (i !== ei) return e;
+            if (e.sets.some((x) => x.sub && x.kind === kind)) return { ...e, sets: e.sets.filter((x) => !(x.sub && x.kind === kind)) };
+            const ex = EX_BY_ID[e.id];
+            const work = e.sets.filter((x) => !x.warm && !x.sub);
+            const baseW = parseFloat(work[work.length - 1]?.weight) || (sug?.[ei] ? sug[ei].weight : 0);
+            const step = E.loadStep(ex, unit());
+            const extra = kind === 'drop'
+                ? [0.8, 0.6].map((f) => { const w = baseW ? E.roundTo(baseW * f, step) : null; return { weight: w != null ? String(w) : '', reps: '', warm: false, sub: true, kind: 'drop', dropF: f, done: false, target: { w: w != null ? String(w) : '—', reps: 'to failure' } }; })
+                : Array.from({ length: E.MYO_MINI_SETS }, () => ({ ...E.makeMyoMini(baseW || '', false), warm: false }));
+            const RANK = { drop: 0, myo: 1 };
+            const merged = [...e.sets, ...extra];
+            return { ...e, sets: [...merged.filter((x) => !x.sub), ...merged.filter((x) => x.sub).sort((a, b) => (RANK[a.kind] ?? 9) - (RANK[b.kind] ?? 9))] };
+        });
+    },
+    // App.js levelSetsToAvg: flatten the remaining working sets to the average working load and reps.
+    level({ ei }, ctx, d) {
+        return d.map((e, i) => {
+            if (i !== ei) return e;
+            const work = e.sets.filter((x) => !x.warm && !x.sub && parseFloat(x.weight) > 0); if (!work.length) return e;
+            const step = E.loadStep(EX_BY_ID[e.id], unit());
+            const avg = E.roundTo(work.reduce((a, x) => a + parseFloat(x.weight), 0) / work.length, step);
+            const avgReps = Math.round(work.reduce((a, x) => a + (parseInt(x.reps) || 0), 0) / work.length);
+            const tw = String(avg), tr = avgReps > 0 ? String(avgReps) : null;
+            return { ...e, sets: e.sets.map((x) => (x.warm || x.sub || x.done || !(parseFloat(x.weight) > 0) ? x
+                : { ...x, weight: tw, reps: tr != null ? tr : x.reps, auto: false, valueOwner: 'user', hint: undefined, suggested: undefined, autoTuned: false, levelled: true, target: { ...x.target, w: tw } })) };
+        });
+    },
+    // App.js setRestCustom (+ setProgramRest: a program lift keeps the choice for next time).
+    restFor({ ei, sec }, ctx, d) {
+        const v = Number(sec) > 0 ? Math.round(Number(sec)) : 0;
+        const e = d[ei]; if (!e) return d;
+        if (!ctx.program.quick && programById(ctx.program.id)) {
+            const key = `${ctx.day.id}:${e.slot}`;
+            setList('saved', saved().map((p) => {
+                if (p.id !== ctx.program.id) return p;
+                const overrides = { ...(p.overrides || {}) }; const cur = { ...(overrides[key] || {}) };
+                const next = v > 0 ? E.markUserPrescriptionOverride(cur, 'rest', v) : E.clearUserPrescriptionOverride(cur, 'rest');
+                if (next && Object.keys(next).length) overrides[key] = next; else delete overrides[key];
+                return { ...p, overrides, edited: true };
+            }));
+        }
+        return d.map((x, i) => (i === ei ? { ...x, restCustom: v } : x));
+    },
+    // Superset with the next lift (App.js toggleSuperset), or pull a suggested partner next to this one (applySuggestedSuperset).
+    superset({ ei }, ctx, d) { return d.map((e, i) => (i === ei && ei < d.length - 1 ? { ...e, superset: !e.superset } : e)); },
+    pairWith({ ei, partner }, ctx, d) {
+        if (partner === ei || !d[partner] || !d[ei]) return d;
+        const next = [...d]; const [mate] = next.splice(partner, 1);
+        const cur = partner < ei ? ei - 1 : ei;
+        next.splice(cur + 1, 0, mate); next[cur] = { ...next[cur], superset: true };
+        S.live.exIdx = cur;
+        return next;
+    },
+    // App.js changeProgression: this session's sets re-prescribed under another progression style.
+    progression({ ei, style }, ctx, d) {
+        const row = d[ei], ex = EX_BY_ID[row?.id];
+        if (!ex || ctx.program.config?.percentScheme) return d;
+        const source = programById(ctx.program.id) || S.live.quickProgram;
+        const choices = { ...(S.live.sessionProgressions || {}), [row.id]: style };
+        if (style === E.styleFor(source, row.id)) delete choices[row.id];
+        const nextProgram = withProgressionChoices(source, choices);
+        const anchors = E.calibratedAnchorPerf(nextProgram, ctx.day, ctx.P, ctx.H, ctx.wk, ctx.lifterModel.effort);
+        const suggestion = E.sessionSuggestion(nextProgram, ctx.day, row.slot, anchors, unit(), ctx.wk, ctx.H);
+        const prescribed = E.prescribeSets(nextProgram, ctx.day, ex, row.slot, ctx.wk, unit(), suggestion, anchors, ctx.P, ctx.H, true);
+        S.live.sessionProgressions = choices;
+        return d.map((item) => (item.id !== row.id ? item : { ...item, sets: refreshProgressionSets(item.sets, prescribed, E.userOwnsRuntimeSet) }));
+    },
+    resetTimer(_, ctx, d) { S.live.startedAt = now(); S.live.elapsedMs = 0; return d; }
 };
 
 export function act({ type, ...args } = {}) {
     const l = S.live; if (!l) return { active: false };
     const fn = ACTIONS[type]; if (!fn) return { ...session(), error: 'Unknown action ' + type };
     const ctx = sessionContext(l); if (!ctx) return { active: false };
-    const sug = type === 'addSet' ? ctx.day.exercises.map((_id, slot) => E.sessionSuggestion(ctx.program, ctx.day, slot, ctx.dayPerf, unit(), ctx.wk, ctx.H)) : null;
+    const sug = ['addSet', 'warmups', 'advanced'].includes(type) ? ctx.day.exercises.map((_id, slot) => E.sessionSuggestion(ctx.program, ctx.day, slot, ctx.dayPerf, unit(), ctx.wk, ctx.H)) : null;
     l.data = normalizeData(ctx, fn(args, ctx, l.data || [], sug));
     l.savedAt = now();
     markLive();
@@ -475,16 +687,21 @@ export function finishSession() {
     const perfOut = E.loggedWorkoutPerformance(program, day, data, wk, u, P, H);
     const elapsed = Math.max(Number(l.elapsedMs) || 0, now() - (l.startedAt || now()));
     let estMin; try { estMin = E.estimateMinutes(program, day, wk); } catch { estMin = undefined; }
-    const fb = l.feedback || {};
+    const fb = {};
+    new Set([...Object.keys(l.fbPump || {}), ...Object.keys(l.fbSore || {})]).forEach((part) => { fb[part] = { pump: l.fbPump?.[part], sore: l.fbSore?.[part] }; });
+    const fbDelta = {};
+    Object.entries(fb).forEach(([part, v]) => { const dd = E.feedbackDelta(v.pump, v.sore); if (dd != null) fbDelta[part] = dd; });
+    const progChanges = Object.keys(l.sessionProgressions || {}).length ? l.sessionProgressions : undefined;
     const log = {
         id: l.sessionId, programId: program.id, programName: program.name, dayLabel: day.label, dayId: day.id,
         engineV: program.engineV || 1, weekIndex: wk, setsDone: doneSets, totalSets, volume: Math.round(volume), unit: u,
         readiness: l.readiness, readinessStatus: l.readiness?.factor < 1 ? 'low' : 'normal', badDay: l.readiness?.factor < 1,
         substitutionOccurred: data.some((e) => e.id !== E.exerciseAt(program, day, e.slot, wk)),
         durationMin: Math.max(1, Math.round(elapsed / 60000)), estMin, perf: perfOut,
-        feedback: Object.fromEntries(Object.entries(fb).map(([k, v]) => [k, E.feedbackDelta ? E.feedbackDelta(v.pump, v.sore) : 0])),
+        feedback: fbDelta,
         injuryReports: l.injuryReports?.length ? l.injuryReports : undefined,
         sessionNote: (l.sessionNote || '').trim() || undefined, sessionNoteRepeat: l.sessionNoteRepeat,
+        progressionChanges: progChanges, programUpdateStatus: progChanges && !program.quick ? 'pending' : undefined,
         feedbackRaw: Object.keys(fb).length ? fb : undefined
     };
     const t = now();
@@ -535,8 +752,8 @@ export function discardSession() { S.live = null; markLive(); return { ok: true 
 export function adoptLive({ live }) {
     if (S.live) return { ok: false, reason: 'busy' };
     let l = null; try { l = JSON.parse(String(live || '')); } catch { l = null; }
-    if (!l || !l.sessionId || history().some((h) => h.id === l.sessionId) || !programById(l.programId)) return { ok: false, reason: 'invalid' };
-    S.live = l; markLive();
+    if (!l || !l.sessionId || history().some((h) => h.id === l.sessionId) || !liveProgram(l)) return { ok: false, reason: 'invalid' };
+    S.live = normalizeLive(l); markLive();
     return { ok: true };
 }
 
@@ -1474,4 +1691,144 @@ export function toggleInjuryResolved({ id }) {
     S.store.injuryLog = clean.map((x) => (x.id === id ? { ...x, resolvedAt: x.resolvedAt ? undefined : now(), updatedAt: now() } : x));
     markStore();
     return { ok: true, resolved: !e.resolvedAt };
+}
+
+/* ------------------------------------------------------------------ the finish sheet (App.js "finishing" review before onFinish) */
+export function finishPreview() {
+    const l = S.live; if (!l) return null;
+    const ctx = sessionContext(l); if (!ctx) return null;
+    const { program, day, wk } = ctx, u = unit(), data = l.data || [];
+    const isW = (x) => x.done && E.isWorkSet(x);
+    let priorBests = {}; try { priorBests = E.liftBests(history(), u, (h) => h.id !== l.sessionId) || {}; } catch { priorBests = {}; }
+    const prs = data.map((e) => {
+        const w = e.sets.filter((x) => isW(x) && parseFloat(x.weight) > 0 && parseInt(x.reps) > 0); if (!w.length) return null;
+        const best = Math.max(...w.map((x) => E.e1rm(parseFloat(x.weight), parseInt(x.reps))));
+        const prior = priorBests[e.id]?.e1rm ?? null;
+        return prior != null && best > prior ? { name: EX_BY_ID[e.id]?.name || e.id, gain: Math.round((best - prior) * 10) / 10 } : null;
+    }).filter(Boolean);
+    const trained = [...new Set(data.filter((e) => e.sets.some((x) => x.done && !x.warm)).map((e) => EX_BY_ID[e.id]?.part).filter(Boolean))];
+    const goals = S.store.goals || {};
+    const goalsHit = data.map((e) => {
+        const g = Number(goals[e.id]); if (!(g > 0)) return null;
+        const w = e.sets.filter((x) => isW(x) && parseFloat(x.weight) > 0); if (!w.length) return null;
+        const bestNow = Math.max(...w.map((x) => parseFloat(x.weight)));
+        return bestNow >= g && (priorBests[e.id]?.w || 0) < g ? { name: EX_BY_ID[e.id]?.name, goal: g } : null;
+    }).filter(Boolean);
+    const mainE1rm = (() => {
+        const mainId = day.exercises[day.primaryIndex], e = data.find((x) => x.id === mainId); if (!e) return null;
+        const w = e.sets.filter((x) => isW(x) && !x.bbb && parseFloat(x.weight) > 0 && parseInt(x.reps) > 0); if (!w.length) return null;
+        const top = w.reduce((a, b) => (E.e1rm(parseFloat(b.weight), parseInt(b.reps)) > E.e1rm(parseFloat(a.weight), parseInt(a.reps)) ? b : a));
+        return { name: EX_BY_ID[mainId]?.name, weight: parseFloat(top.weight), reps: parseInt(top.reps), est: Math.round(E.e1rm(parseFloat(top.weight), parseInt(top.reps))), prev: Math.round(priorBests[mainId]?.e1rm || 0) };
+    })();
+    const nextPlan = data.map((e) => {
+        const ex = EX_BY_ID[e.id]; if (!ex) return null;
+        let sm = null; try { sm = E.summarizeSets(e.sets, ex, u); } catch { sm = null; }
+        if (!sm || !(sm.weight > 0)) return null;
+        const logged = e.sets.filter((x) => x.done && !x.warm && !x.sub && parseFloat(x.weight) > 0 && parseInt(x.reps) > 0)
+            .map((x) => ({ w: parseFloat(x.weight), r: parseInt(x.reps), ...(x.actualRIR != null ? { rir: x.actualRIR } : {}), ...(E.prescribedRIRof(x) != null ? { tr: E.prescribedRIRof(x) } : {}) }));
+        if (!logged.length) return null;
+        let sug = null; try { sug = E.nextWorkoutSuggestionFromPerformedShell(program, EXERCISES, day, e.slot, wk, { [e.id]: { weight: sm.weight, reps: sm.reps, sets: logged } }, u); } catch { sug = null; }
+        if (!sug) return null;
+        return { name: ex.name, dir: sug.dir, delta: sug.weight != null ? Math.round((sug.weight - sm.weight) * 100) / 100 : 0, weight: sug.weight, from: sm.weight, reason: sug.reason || "" };
+    }).filter(Boolean);
+    const work = (e) => e.sets.filter(isWork);
+    return { unit: u, quick: !!program.quick, doneSets: data.reduce((n, e) => n + work(e).filter((x) => x.done).length, 0), totalSets: data.reduce((n, e) => n + work(e).length, 0),
+        prs, goalsHit, mainE1rm: program.quick ? null : mainE1rm, nextPlan: program.quick ? [] : nextPlan,
+        parts: trained.map((p) => ({ part: p, label: E.PART_LABEL?.[p] || p, pump: l.fbPump?.[p] || null, sore: l.fbSore?.[p] || null })),
+        pumpChoices: [['flat', 'Flat'], ['good', 'Good'], ['huge', 'Huge']], soreChoices: [['sore', 'Sore'], ['ontime', 'On time'], ['fresh', 'Fresh']],
+        sessionNote: l.sessionNote || '', routineIds: program.quick ? data.map((x) => x.id) : [] };
+}
+
+/* ------------------------------------------------------------------ quick workout, repeat, routines (App.js startQuickWorkout / repeatWorkout / saveRoutine) */
+const QUICK_EQUIP = ['barbell', 'dumbbell', 'bench', 'cable', 'machine', 'smith', 'ezbar', 'pullup', 'dip', 'kettlebell', 'bands'];
+function quickConfig(name) {
+    return { name, goal: 'both', progression: 'manual', split: null, days: 1, session: 's60', experience: 'intermediate', weeks: 1, equipment: QUICK_EQUIP, focus: {}, reduce: [], barbellCap: null, noBodyweight: false, deload: false, percentScheme: null };
+}
+function startWith(program, day) {
+    const l = { schemaVersion: 2, sessionId: E.uid(), programId: program.id, dayId: day.id, weekIndex: 1, startedAt: now(), elapsedMs: 0, exIdx: 0,
+        readiness: null, injuryReports: [], sessionProgressions: {}, sessionNote: '', sessionNoteRepeat: 'none', fbPump: {}, fbSore: {}, rest: null,
+        ...(programById(program.id) ? {} : { quickProgram: program }) };
+    S.live = l;
+    const ctx = sessionContext(l); if (!ctx) { S.live = null; return { error: 'That workout could not be started.' }; }
+    l.data = freshData(ctx).data; l.dayExSig = ctx.day.exercises.join('|');
+    markLive();
+    return session();
+}
+export function startQuick() {
+    if (S.live) return session();
+    const day = { id: E.uid(), label: 'Quick workout', exercises: [], primaryIndex: 0 };
+    return startWith({ id: E.uid(), name: 'Quick workout', quick: true, artifactType: 'freestyle', engineV: E.ENGINE_V, createdAt: now(), config: quickConfig('Quick workout'), days: [day], overrides: {} }, day);
+}
+export function repeatWorkout({ historyId }) {
+    if (S.live) return { error: 'Finish or discard the workout in progress first.' };
+    const h = history().find((x) => x.id === historyId); if (!h) return { error: 'That workout is no longer in your history.' };
+    const prog = programById(h.programId), day = prog?.days.find((d) => d.id === h.dayId);
+    if (prog && day) return startWith(prog, day);
+    const ids = Object.keys(h.perf || {}).filter((id) => EX_BY_ID[id]);
+    if (!ids.length) return { error: 'Nothing in that workout can be repeated.' };
+    const pi = ids.findIndex((id) => EX_BY_ID[id]?.type === 'compound');
+    const d = { id: E.uid(), label: h.dayLabel || 'Workout', exercises: ids, primaryIndex: pi < 0 ? 0 : pi };
+    return startWith({ id: E.uid(), name: h.programName || 'Workout', quick: true, artifactType: 'freestyle', engineV: E.ENGINE_V, createdAt: now(), config: quickConfig(h.dayLabel || 'Workout'), days: [d], overrides: {} }, d);
+}
+export function saveRoutine({ ids, name }) {
+    const valid = (ids || []).filter((id) => EX_BY_ID[id]); if (!valid.length) return { ok: false };
+    const pi = valid.findIndex((id) => EX_BY_ID[id]?.type === 'compound');
+    const nm = (name && String(name).trim()) || 'My routine';
+    const d = { id: E.uid(), label: nm, exercises: valid, primaryIndex: pi < 0 ? 0 : pi };
+    setList('saved', [...saved(), { id: E.uid(), name: nm, quick: true, artifactType: 'freestyle', engineV: E.ENGINE_V, createdAt: now(), config: quickConfig(nm), days: [d], overrides: {} }]);
+    return { ok: true, name: nm };
+}
+
+/* ------------------------------------------------------------------ progression choices after a workout (App.js pendingProgramUpdate) */
+export function pendingProgramUpdate() {
+    const h = history().find((x) => x.programUpdateStatus === 'pending' && x.progressionChanges); if (!h) return null;
+    return { historyId: h.id, programName: h.programName || '', changes: Object.entries(h.progressionChanges).map(([id, style]) => ({ name: exName(id), style: E.PROG_STYLES?.[style] || style })) };
+}
+export function completeProgramUpdate({ apply }) {
+    const h = history().find((x) => x.programUpdateStatus === 'pending' && x.progressionChanges); if (!h) return { ok: false };
+    const target = programById(h.programId);
+    if (apply && !target) return { ok: false, error: 'This program is no longer saved. Keep this change for the completed session only.' };
+    if (apply) {
+        const updated = { ...withProgressionChoices(target, h.progressionChanges), edited: true };
+        setList('saved', saved().map((p) => (p.id === updated.id ? updated : p)));
+        if (S.store.drafts?.[updated.id]) S.store.drafts = { ...S.store.drafts, [updated.id]: withProgressionChoices(S.store.drafts[updated.id], h.progressionChanges) };
+    }
+    setList('history', history().map((x) => (x.id === h.id ? { ...x, programUpdateStatus: apply ? 'applied' : 'session-only' } : x)));
+    return { ok: true, applied: !!apply };
+}
+
+/* ------------------------------------------------------------------ per-exercise settings (App.js goals / exSetup / setProgramExLoadInc) */
+export function setGoal({ id, weight }) {
+    const g = { ...(S.store.goals || {}) }, w = Number(weight);
+    if (w > 0) g[id] = w; else delete g[id];
+    S.store.goals = g; markStore(); return { ok: true };
+}
+export function setExSetup({ id, key, value }) {
+    const all = { ...(S.store.exSetup || {}) }, cur = { ...(all[id] || {}) }, v = String(value || '').trim();
+    if (v) cur[key] = v; else delete cur[key];
+    if (Object.keys(cur).length) all[id] = cur; else delete all[id];
+    S.store.exSetup = all; markStore(); return { ok: true };
+}
+/* A machine's weight step belongs to the equipment, so it applies to every block of the program's cycle. */
+export function setExLoadStep({ programId, id, value }) {
+    const p = liveProgram(S.live) && S.live?.programId === programId ? liveProgram(S.live) : programById(programId); if (!p) return { ok: false };
+    const u = unit(), v = Number(value);
+    const apply = (x) => { const map = { ...(x.exLoadInc || {}) }; if (v > 0) map[id] = { v, unit: u }; else delete map[id]; return { ...x, exLoadInc: Object.keys(map).length ? map : undefined }; };
+    if (programById(programId)) setList('saved', saved().map((x) => (x.id === programId || (p.cycleId && x.cycleId === p.cycleId) ? apply(x) : x)));
+    else if (S.live?.quickProgram?.id === programId) { S.live.quickProgram = apply(S.live.quickProgram); markLive(); }
+    return { ok: true };
+}
+/* App.js doSwap with scope "program": the swap also replaces the lift in the saved program day. */
+export function swapInProgram({ ei, newId }) {
+    const l = S.live; if (!l) return { ok: false };
+    const oldId = l.data?.[ei]?.id; if (!oldId) return { ok: false };
+    act({ type: 'swap', ei, newId });
+    const p = programById(l.programId); if (!p) return { ok: true, program: false };
+    setList('saved', saved().map((x) => {
+        if (x.id !== p.id) return x;
+        let changed = false;
+        const days = x.days.map((d) => { if (d.id !== l.dayId) return d; const i = d.exercises.indexOf(oldId); if (i < 0 || d.exercises.includes(newId)) return d; changed = true; const ex = [...d.exercises]; ex[i] = newId; return { ...d, exercises: ex }; });
+        return changed ? { ...x, days, edited: true } : x;
+    }));
+    return { ok: true, program: true };
 }

@@ -312,5 +312,67 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   const r = C.toggleInjuryResolved({ id: s1.id });
   ok(r.resolved && C.injuryLog().resolved.length === 1 && C.home().injuries.length === 0, 'mark resolved clears it from Today and keeps the record');
   ok(C.toggleInjuryResolved({ id: s1.id }).resolved === false && C.home().injuries.length === 1, 'mark active again'); }
+
+// 21. Workout screen parity: readiness, feedback, warm-ups, skip, set types, rest, progression, finish preview, quick + routine
+{ C.init({}); const eq = ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'];
+  const mk = C.createProgram({ config: { name: 'WS', unit: 'kg', goal: 'both', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: eq }, seed: 5 });
+  const pg = JSON.parse(C.exportStore()).saved[0];
+  let s = C.startSession({ programId: pg.id, dayId: pg.days[0].id, weekIndex: 1 });
+  s.exercises.forEach((e, ei) => e.sets.forEach((x) => { if (!x.warm && !x.sub) { C.act({ type: 'edit', ei, si: x.i, field: 'weight', value: '40' }); C.act({ type: 'edit', ei, si: x.i, field: 'reps', value: '8' }); C.act({ type: 'toggle', ei, si: x.i }); } }));
+  C.finishSession();
+  s = C.startSession({ programId: pg.id, dayId: pg.days[0].id, weekIndex: 1 });
+  const w0 = Number(s.exercises[0].sets.find((x) => !x.warm && !x.sub).weight);
+  s = C.act({ type: 'readiness', label: 'Run down', factor: 0.88 });
+  const w1 = Number(s.exercises[0].sets.find((x) => !x.warm && !x.sub).weight);
+  ok(s.readinessDone && s.readinessLabel === 'Run down' && (w0 === 0 || w1 < w0), 'readiness scales loads down (' + w0 + ' -> ' + w1 + ')');
+  const hadWarm = s.exercises[0].hasWarm;
+  s = C.act({ type: 'warmups', ei: 0 });
+  ok(s.exercises[0].hasWarm === !hadWarm, 'warm-ups toggle on the first lift');
+  const nSets = s.exercises[1].sets.length;
+  s = C.act({ type: 'setType', ei: 1, si: s.exercises[1].sets.find((x) => !x.warm).i, kind: 'failure' });
+  ok(s.exercises[1].sets.some((x) => x.type === 'failure'), 'a set can be marked to failure');
+  s = C.act({ type: 'advanced', ei: 1, kind: 'drop' });
+  ok(s.exercises[1].hasDrop && s.exercises[1].sets.length > nSets, 'drop sets added');
+  s = C.act({ type: 'advanced', ei: 1, kind: 'drop' });
+  ok(!s.exercises[1].hasDrop, 'drop sets removed again');
+  s = C.act({ type: 'restFor', ei: 1, sec: 150 });
+  ok(s.exercises[1].restCustom === 150 && JSON.parse(C.exportStore()).saved[0].overrides, 'per-lift rest saved to the program');
+  C.setGoal({ id: s.exercises[0].id, weight: 1 }); C.setExSetup({ id: s.exercises[0].id, key: 'seat', value: '4' });
+  s = C.session();
+  ok(s.exercises[0].goal === 1, 'goal weight shows on the lift');
+  const style = Object.keys(s.progressionStyles).find((k) => k !== s.exercises[0].progression?.style);
+  if (!s.exercises[0].progression?.locked) { s = C.act({ type: 'progression', ei: 0, style }); ok(s.exercises[0].progression.changed, 'progression changed for this session'); }
+  const part = s.exercises[0].part;
+  C.act({ type: 'feedback', part, pump: 'good' }); C.act({ type: 'feedback', part, sore: 'fresh' });
+  s.exercises.forEach((e, ei) => e.sets.forEach((x) => { if (!x.done && !x.warm) C.act({ type: 'toggle', ei, si: x.i }); }));
+  s = C.act({ type: 'skipExercise', ei: s.exercises.length - 1 });
+  const pv = C.finishPreview();
+  ok(pv && pv.doneSets > 0 && pv.parts.some((p) => p.part === part && p.pump === 'good' && p.sore === 'fresh'), 'finish preview carries sets and feedback');
+  ok(pv.nextPlan.length > 0 && pv.mainE1rm && pv.mainE1rm.prev > 0, 'next-session plan and main-lift e1RM vs the last workout (' + pv.nextPlan.length + ')');
+  const fin = C.finishSession();
+  const h = JSON.parse(C.exportStore()).history[0];
+  ok(h.feedbackRaw && h.feedbackRaw[part].pump === 'good' && typeof h.feedback[part] === 'number', 'feedback stored on the workout');
+  if (h.progressionChanges) {
+    const pu = C.pendingProgramUpdate();
+    ok(pu && pu.changes.length > 0, 'a progression change asks to update the program');
+    ok(C.completeProgramUpdate({ apply: true }).applied && JSON.parse(C.exportStore()).history[0].programUpdateStatus === 'applied' && C.pendingProgramUpdate() === null, 'applying it settles the prompt');
+  }
+  // Quick workout -> routine
+  let q = C.startQuick();
+  ok(q && q.quick && q.exercises.length === 0, 'quick workout starts empty');
+  const lib = C.library({ q: 'curl' });
+  q = C.act({ type: 'addExercise', id: lib[0].id }); q = C.act({ type: 'addExercise', id: C.library({ q: 'press' })[0].id });
+  ok(q.exercises.length === 2 && q.exercises[0].freestyle, 'lifts added to the quick workout');
+  q = C.act({ type: 'edit', ei: 0, si: q.exercises[0].sets[0].i, field: 'weight', value: '12' });
+  q = C.act({ type: 'toggle', ei: 0, si: q.exercises[0].sets[0].i });
+  const qp = C.finishPreview();
+  ok(qp.quick && qp.routineIds.length === 2, 'quick finish offers to save as a routine');
+  C.finishSession();
+  const before = JSON.parse(C.exportStore()).saved.length;
+  ok(C.saveRoutine({ ids: qp.routineIds, name: 'Arms' }).ok && JSON.parse(C.exportStore()).saved.length === before + 1, 'routine saved to the library');
+  const qh = JSON.parse(C.exportStore()).history[0];
+  const rp = C.repeatWorkout({ historyId: qh.id });
+  ok(rp && rp.exercises && rp.exercises.length >= 1, 'a past workout can be repeated');
+  C.discardSession && C.discardSession(); }
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);
 

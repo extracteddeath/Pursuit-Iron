@@ -1069,29 +1069,36 @@ function cycleConfigForStandaloneProgram(program, name) {
     return cfg;
 }
 
-function mergeStandaloneIntoGeneratedCycle(program, generated) {
-    if (!program?.id || !generated?.cycle || !Array.isArray(generated.blocks) || generated.blocks.length < 2)
+function mergeStandaloneIntoGeneratedCycle(program, generated, { appendAll = false } = {}) {
+    if (!program?.id || !generated?.cycle || !Array.isArray(generated.blocks) || generated.blocks.length < (appendAll ? 1 : 2))
         throw new Error('A standalone conversion needs the current program plus at least one future engine block.');
-    const generatedFuture = generated.blocks.slice(1);
+    const generatedFuture = generated.blocks.slice(appendAll ? 0 : 1).map(block => JSON.parse(JSON.stringify(block)));
     const cycle = { ...generated.cycle };
-    const sourceMeta = Array.isArray(cycle.blockMeta) ? cycle.blockMeta : [];
+    const originalMeta = Array.isArray(cycle.blockMeta) ? cycle.blockMeta : [];
+    const sourceMeta = appendAll ? [{ label: 'Current program', weeks: weeksOf(program), phase: program.config?.goal === 'strength' ? 'strength_accumulation' : program.config?.goal === 'hypertrophy' ? 'hypertrophy_accumulation' : 'mixed_accumulation', plannedIndex: 0 }, ...originalMeta] : originalMeta;
     const current = JSON.parse(JSON.stringify(program));
     current.cycleId = cycle.id;
     current.cycleIndex = 0;
     current.blockLabel = sourceMeta[0]?.label || current.blockLabel || 'Current program';
     current.blockNote = 'Existing standalone program kept exactly as cycle Block 1';
     current.config = { ...(current.config || {}), endless: false, cyclePeriodization: true };
-    generatedFuture.forEach((block, i) => { block.cycleId = cycle.id; block.cycleIndex = i + 1; });
+    generatedFuture.forEach((block, i) => {
+        block.cycleId = cycle.id; block.cycleIndex = i + 1;
+        if (appendAll && block.nextEngine?.cycleTemplate)
+            block.nextEngine.cycleTemplate = { ...block.nextEngine.cycleTemplate, plannedIndex: i + 1, blockIndex: i + 1, preview: true };
+    });
     cycle.blockIds = [current.id, ...generatedFuture.map(b => b.id)];
     cycle.blockMeta = cycle.blockIds.map((id, i) => i === 0
         ? { ...(sourceMeta[0] || {}), id, label: current.blockLabel, note: current.blockNote, preview: false, legacyCurrent: true }
-        : { ...(sourceMeta[i] || {}), id, preview: true });
+        : { ...(sourceMeta[i] || {}), id, ...(appendAll ? { plannedIndex: i } : {}), preview: true });
     cycle.blockMeta = cycleBlockMetadata(cycle, [current, ...generatedFuture]);
     cycle.activeBlock = 0;
     cycle.startedAt = cycle.startedAt || Date.now();
     cycle.nextEngineCycle = { ...(cycle.nextEngineCycle || {}), legacyFirstBlockId: current.id, legacyFirstBlock: true,
         ...(Array.isArray(cycle.nextEngineCycle?.plannedBlocks) ? {
-            plannedBlocks: cycle.nextEngineCycle.plannedBlocks.map((block, i) => i === 0 ? { ...block, weeks: weeksOf(current) } : block)
+            plannedBlocks: appendAll
+                ? [{ label: current.blockLabel, weeks: weeksOf(current), phase: sourceMeta[0]?.phase || 'mixed_accumulation' }, ...cycle.nextEngineCycle.plannedBlocks]
+                : cycle.nextEngineCycle.plannedBlocks.map((block, i) => i === 0 ? { ...block, weeks: weeksOf(current) } : block)
         } : {}) };
     return { cycle, currentProgram: current, blocks: generatedFuture, allBlocks: [current, ...generatedFuture], baseRequest: generated.baseRequest };
 }

@@ -8549,7 +8549,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb-custom-cycle-block-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px}
 .wpb-custom-cycle-block-head strong{font-size:13px;font-weight:760}
 .wpb-custom-cycle-block-head>div{display:flex;align-items:center;gap:2px}
-.wpb-custom-cycle-block-head button{display:grid;place-items:center;min-width:42px;min-height:42px;border:0;border-radius:10px;background:var(--pi-surface-container-high,rgba(128,128,128,.1));color:inherit;cursor:pointer}
+.wpb-custom-cycle-block-head button{display:grid;place-items:center;min-width:44px;min-height:44px;border:0;border-radius:10px;background:var(--pi-surface-container-high,rgba(128,128,128,.1));color:inherit;cursor:pointer}
 .wpb-custom-cycle-block-head button:disabled{opacity:.28;cursor:default}
 .wpb-custom-cycle-fields{display:grid;grid-template-columns:minmax(0,2fr) minmax(84px,1fr);gap:10px}
 .wpb-custom-cycle-fields label{display:grid;min-width:0;gap:6px}
@@ -8560,4 +8560,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb-custom-cycle-add:disabled{opacity:.45}
 .wpb-custom-cycle-error{font-size:12px;margin-top:8px;line-height:1.4}
 .wpb-custom-cycle button:focus-visible,.wpb-custom-cycle select:focus-visible,.wpb-custom-cycle input:focus-visible{outline:3px solid var(--pi-focus,currentColor);outline-offset:2px}
-@media(max-width:345px){.wpb-custom-cycle{padding:11px}.wpb-custom-cycle-block{padding:9px}.wpb-custom-cycle-fields{grid-template-columns:minmax(0,1fr) 74px;gap:7px}.wpb-custom-cycle-block-head button{min-width:38px}}
+@media(max-width:345px){.wpb-custom-cycle{padding:11px}.wpb-custom-cycle-block{padding:9px}.wpb-custom-cycle-fields{grid-template-columns:minmax(0,1fr) 74px;gap:7px}.wpb-custom-cycle-block-head button{min-width:44px}}
+
+/* Conversion controls retain full touch targets inside the compact sheet. */
+.wpb .wpb-custom-cycle-block-head button{min-height:44px!important;min-width:44px!important}

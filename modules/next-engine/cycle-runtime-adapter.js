@@ -202,9 +202,9 @@ export const CUSTOM_CYCLE_PHASES = Object.freeze([
     { phase: 'peak', label: 'Peak' },
     { phase: 'foundation', label: 'Foundation' }
 ]);
-export function customCycleSpecs(blocks) {
-    if (!Array.isArray(blocks) || blocks.length < 2 || blocks.length > 8)
-        throw new NextShellAdapterError('NEXT_CYCLE_CUSTOM_BLOCK_COUNT', 'Choose between 2 and 8 cycle blocks.');
+export function customCycleSpecs(blocks, { minBlocks = 2, maxBlocks = 8, maxWeeks = 104 } = {}) {
+    if (!Array.isArray(blocks) || blocks.length < minBlocks || blocks.length > maxBlocks)
+        throw new NextShellAdapterError('NEXT_CYCLE_CUSTOM_BLOCK_COUNT', `Choose between ${minBlocks} and ${maxBlocks} cycle blocks.`);
     const valid = new Set(CUSTOM_CYCLE_PHASES.map(x => x.phase));
     const planned = blocks.map((block, i) => {
         const phase = typeof block?.phase === 'string' ? block.phase : '';
@@ -217,9 +217,14 @@ export function customCycleSpecs(blocks) {
         const label = typeof block?.label === 'string' && block.label.trim() ? block.label.trim().slice(0, 40) : phaseName;
         return { phase, weeks, label };
     });
-    if (planned.reduce((sum, block) => sum + block.weeks, 0) > 104)
-        throw new NextShellAdapterError('NEXT_CYCLE_CUSTOM_LENGTH_INVALID', 'A custom cycle must be at most 104 weeks.');
+    if (planned.reduce((sum, block) => sum + block.weeks, 0) > maxWeeks)
+        throw new NextShellAdapterError('NEXT_CYCLE_CUSTOM_LENGTH_INVALID', `These blocks must total at most ${maxWeeks} weeks; the whole cycle can run at most 104 weeks.`);
     return planned;
+}
+export function customFutureCycleSpecs(blocks, currentWeeks) {
+    if (!Number.isSafeInteger(currentWeeks) || currentWeeks < 1 || currentWeeks >= 104)
+        throw new NextShellAdapterError('NEXT_CYCLE_CUSTOM_LENGTH_INVALID', 'The existing block needs a valid fixed duration within the 104-week cycle limit.');
+    return customCycleSpecs(blocks, { minBlocks: 1, maxBlocks: 7, maxWeeks: 104 - currentWeeks });
 }
 export function generateNextCycleForShell(options) {
     const templateId = options.templateId;
@@ -227,7 +232,11 @@ export function generateNextCycleForShell(options) {
     const template = isCustom ? { id: 'custom', name: 'Custom cycle' } : cycleTemplates().find(t => t.id === templateId);
     if (!template)
         throw new NextShellAdapterError('NEXT_CYCLE_TEMPLATE_INVALID', 'Choose a supported training cycle before building.');
-    const specs = isCustom ? customCycleSpecs(options.blocks) : blocksForCycleTemplate(templateId);
+    // Legacy conversions generate only their future blocks; the shell then prepends the
+    // untouched existing program. No disposable generated block stands in for that program.
+    const specs = isCustom
+        ? (options.existingBlockWeeks != null ? customFutureCycleSpecs(options.blocks, options.existingBlockWeeks) : customCycleSpecs(options.blocks))
+        : blocksForCycleTemplate(templateId);
     const goal = isCustom
         ? (options.config?.goal === 'strength' ? 'strength' : options.config?.goal === 'hypertrophy' ? 'hypertrophy' : 'mixed')
         : goalForCycleTemplate(templateId);
@@ -339,17 +348,18 @@ export function convertProgramToNextCycleForShell(options) {
     if (!source || !sourceRequest)
         throw new NextShellAdapterError('NEXT_CYCLE_CONVERSION_SOURCE_MISSING', 'This program is missing the engine snapshot needed to build future cycle blocks safely.');
     const templateId = options.templateId;
-    const template = cycleTemplates().find(t => t.id === templateId);
+    const isCustom = templateId === 'custom';
+    const template = isCustom ? { id: 'custom', name: 'Custom cycle' } : cycleTemplates().find(t => t.id === templateId);
     if (!template)
         throw new NextShellAdapterError('NEXT_CYCLE_TEMPLATE_INVALID', 'Choose a supported training cycle before converting this program.');
-    const specs = blocksForCycleTemplate(templateId);
-    const goal = goalForCycleTemplate(templateId);
-    const sourceIndex = specs.findIndex(spec => spec.phase === source.phase);
     const currentWeeks = Math.max(1, Math.round(Number(current.config?.weeks || current.weeks) || 4));
-    const currentSpec = sourceIndex >= 0
+    const specs = isCustom ? customFutureCycleSpecs(options.blocks, currentWeeks) : blocksForCycleTemplate(templateId);
+    const goal = isCustom ? sourceRequest.goal.type : goalForCycleTemplate(templateId);
+    const sourceIndex = specs.findIndex(spec => spec.phase === source.phase);
+    const currentSpec = !isCustom && sourceIndex >= 0
         ? { ...specs[sourceIndex], weeks: currentWeeks }
         : { label: current.blockLabel || phaseLabel(source.phase) || 'Current block', weeks: currentWeeks, phase: source.phase };
-    const futureSpecs = sourceIndex >= 0 ? specs.slice(sourceIndex + 1) : specs;
+    const futureSpecs = !isCustom && sourceIndex >= 0 ? specs.slice(sourceIndex + 1) : specs;
     if (!futureSpecs.length)
         throw new NextShellAdapterError('NEXT_CYCLE_CONVERSION_NO_FUTURE_BLOCKS', 'That cycle path has no later phase after the current program. Choose a different cycle path.');
     const planned = [currentSpec, ...futureSpecs];

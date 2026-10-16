@@ -477,6 +477,12 @@ try{
     await page.keyboard.type('J-hooks 10');
     await page.$$eval('.wpb-workout-scroll button',buttons=>buttons.find(b=>b.textContent.trim()==='Save note').click());
     await page.waitForFunction(()=>document.querySelector('button[aria-label^="Edit pinned note for "]')?.textContent.includes('J-hooks 10'));
+    // Keep a composited, scrolled workout layer while opening the overlay.
+    // A sheet must remain anchored to the screen even while its opener animates.
+    await page.$eval('.wpb-workout-scroll',el=>{
+      el.style.setProperty('transform','translateZ(0)','important');
+      el.scrollTop=el.scrollHeight;
+    });
     await page.click('button[aria-label^="Exercise info for "]');
     await page.waitForSelector('.wpb-backdrop [data-sheet-drag][data-pi-surface]');
     await page.waitForFunction(()=>document.querySelector('.wpb-backdrop [data-sheet-drag]')?.style.getPropertyValue('--pi-surface-y')==='0px');

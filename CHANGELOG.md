@@ -1,3 +1,12 @@
+## Build 894 — Custom cycle conversion and setup recovery
+
+- Turn an existing generated or manually built program into a custom cycle. Keep the current program as Block 1 and choose 1–7 future blocks with any supported phase order, repeats and individual 1–24 week lengths.
+- Retain the existing block's exercises, authored edits, identity and workout history. Validate the 104-week limit including its current duration; preserve the existing automatic-effort policy and future-block ownership.
+- Recover unfinished cycle creation and conversion setups after closing or reloading, including incomplete inputs. Setup drafts stay on this device, separate from training records, and clear after successful creation or deliberate discard; failed/cancelled generation retains the draft.
+- Keep creation-sheet actions visible, prevent edits while generating, and retain 44px block controls on narrow phones.
+- Keep the workout exercise-info sheet anchored to the screen while its scrolled opener animates; preserve Close, dismissal motion and entered set values.
+- Add actual generated/authored conversion, draft-isolation and full-app browser coverage at 320/390/900px, plus wizard reload/failure/retry/discard checks.
+
 ## Build 893 — Custom training cycle builder
 
 - Design training cycles with any order of supported phases, including repeated phases and individual 1–24 week block lengths.

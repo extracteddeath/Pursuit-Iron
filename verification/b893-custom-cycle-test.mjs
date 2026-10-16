@@ -22,7 +22,7 @@ assert.throws(()=>customCycleSpecs([{phase:'peak',weeks:0},{phase:'peak',weeks:3
 assert.throws(()=>customCycleSpecs([{phase:'peak',weeks:1.5},{phase:'peak',weeks:2}]),/1–24/);
 assert.throws(()=>customCycleSpecs([{phase:'unsupported',weeks:4},{phase:'peak',weeks:2}]),/unsupported/);
 assert.throws(()=>customCycleSpecs(Array.from({length:8},()=>({phase:'peak',weeks:24}))),/104/);
-assert.match(app,/function CustomCycleComposer\(\{ blocks, onChange \}\)/);
+assert.match(app,/function CustomCycleComposer\(\{ blocks, onChange/);
 assert.match(app,/customCycleBlocks\.map\(b => \(\{ phase: b\.phase, weeks: Number\(b\.weeks\) \}\)\)/);
 assert.match(app,/templateId: tmplId, blocks: tmplId === "custom" \? config\.cycleBlocks : undefined/);
 assert.match(app,/cycleTemplate !== "custom" \|\| customCycleValid/);

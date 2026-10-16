@@ -56,12 +56,32 @@ function cycles() { return Array.isArray(S.store.cycles) ? S.store.cycles : []; 
 function injuries() { return normalizeInjuryLog(S.store.injuryLog); }
 function programById(id) { return saved().find((p) => p.id === id) || null; }
 
+/* App.js registerCustomEx / syncCustomRegistry: custom exercises join the live pool so every screen,
+   swap and prescription can use them; ones no longer in the store leave it. */
+function syncCustomRegistry() {
+    const next = (Array.isArray(S.store.custom) ? S.store.custom : []).filter((ex) => ex && ex.id != null);
+    const ids = new Set(next.map((ex) => ex.id));
+    (S.customIds || []).forEach((id) => {
+        if (!ids.has(id) && (EX_BY_ID[id]?.custom || String(id).startsWith('custom-'))) {
+            delete EX_BY_ID[id]; const i = EXERCISES.findIndex((x) => x.id === id); if (i >= 0) EXERCISES.splice(i, 1);
+        }
+    });
+    next.forEach((ex) => {
+        const normalized = { ...ex, equip: Array.isArray(ex.equip) ? ex.equip : [] };
+        const prior = EX_BY_ID[ex.id];
+        if (!prior) { EX_BY_ID[ex.id] = normalized; EXERCISES.push(normalized); }
+        else if (prior.custom || String(ex.id).startsWith('custom-')) { EX_BY_ID[ex.id] = normalized; const i = EXERCISES.findIndex((x) => x.id === ex.id); if (i >= 0) EXERCISES[i] = normalized; }
+    });
+    S.customIds = [...ids];
+}
+
 /* ------------------------------------------------------------------ init / persistence */
 export function init({ store = null, live = null } = {}) {
     let parsed = null;
     try { parsed = store ? E.parseStoredData(store) : null; } catch { parsed = null; }
     S.store = parsed || E.parseStoredData('{}') || { v: E.STORE_VERSION, saved: [], history: [], perf: {} };
     repairNativeLogs();
+    syncCustomRegistry();
     S.live = null;
     if (live) {
         try {
@@ -102,20 +122,32 @@ export function exportLive() { S.dirty.live = false; return S.live ? JSON.string
 export function dirty() { return { ...S.dirty }; }
 
 /* Import a backup (or the PWA handoff) with the app's own never-lose-a-workout merge. */
-export function importStore({ text, mode = 'merge' }) {
-    const incoming = E.parseStoredData(String(text || ''));
+export function importStore({ text, mode = 'merge', csvWeightUnit = null, preview = false }) {
+    const raw = String(text || '');
+    if (raw.length > 20 * 1024 * 1024) return { ok: false, error: 'Backup exceeds the 20 MB restore limit.' };
+    let incoming = null, csv = null;
+    // App.js importData: a Strong or Hevy CSV becomes a history-only store and takes the same merge.
+    if (mode !== 'replace' && E.detectWorkoutCsv(raw)) {
+        const catalog = [...new Map(EXERCISES.map((ex) => [ex.id, ex])).values()];
+        const converted = E.workoutCsvToStore(raw, { catalog, unit: unit(), weightUnit: csvWeightUnit });
+        if (!converted.ok) return { ok: false, error: converted.msg };
+        incoming = converted.store; csv = converted.summary;
+        if (preview) return { ok: true, preview: true, csv };
+    } else {
+        try { incoming = E.parseStoredData(raw); } catch { incoming = null; }
+    }
     if (!incoming) return { ok: false, error: 'That file is not a Pursuit Iron backup.' };
     const before = { sessions: history().length, programs: saved().length };
     if (!Array.isArray(incoming.saved) && !Array.isArray(incoming.history)) return { ok: false, error: 'No recognizable backup found.' };
     let stats = null;
-    if (mode === 'replace' || (before.sessions === 0 && before.programs === 0)) S.store = incoming;
+    if (mode === 'replace' || (before.sessions === 0 && before.programs === 0 && !csv)) S.store = incoming;
     else {
         // App.js import: MERGE, never replace; the live copy is the local side and is newer.
         const merged = E.mergeStores({ ...S.store, savedAt: now() }, { ...incoming, savedAt: incoming.savedAt || incoming.exportedAt || 0 });
         S.store = merged.data; stats = merged.stats;
     }
-    applyGlobals(); markStore();
-    return { ok: true, sessions: history().length, programs: saved().length, stats, added: { sessions: history().length - before.sessions, programs: saved().length - before.programs } };
+    syncCustomRegistry(); applyGlobals(); markStore();
+    return { ok: true, csv, sessions: history().length, programs: saved().length, stats, added: { sessions: history().length - before.sessions, programs: saved().length - before.programs } };
 }
 
 /* ------------------------------------------------------------------ helpers */
@@ -596,7 +628,8 @@ export function setupOptions() {
         sessions: (E.SESSIONS || []).map((s) => (typeof s === 'string' ? { id: s, label: s } : { id: s.id, label: s.label || s.id })),
         equipment: (E.EQUIPMENT || []).map((e) => ({ id: e.id, label: e.label || e.name || e.id })),
         goals: ['strength', 'hypertrophy', 'both'], experience: Object.keys(E.EXP || { novice: 1, intermediate: 1, advanced: 1 }),
-        injuryAreas: INJURY_AREAS, injuryImpacts: INJURY_IMPACTS };
+        injuryAreas: INJURY_AREAS, injuryImpacts: INJURY_IMPACTS,
+        parts: (E.PART_ORDER || []).filter((p) => E.PART_LABEL?.[p]).map((p) => ({ id: p, label: E.PART_LABEL[p] })) };
 }
 /* The same defaults createProgram uses, so the recommendation describes the program that gets built. */
 function programConfig(config) {
@@ -803,7 +836,8 @@ export function logMeasurement({ key, value }) {
 export function settings() {
     const st = S.store;
     return { unit: unit(), restScale: Number(st.restScale) || 1, restAutoStart: st.restAutoStart !== false, haptics: st.haptics !== false,
-        theme: st.theme || null, warmupCard: st.warmupCard !== false, lastBackup: st.lastBackup || null, sessions: history().length, programs: saved().length };
+        theme: st.theme || null, warmupCard: st.warmupCard !== false, lastBackup: st.lastBackup || null, sessions: history().length, programs: saved().length,
+        reminders: reminders(), customCount: Array.isArray(st.custom) ? st.custom.length : 0 };
 }
 export function updateSettings(patch = {}) {
     const allowed = ['restScale', 'restAutoStart', 'haptics', 'theme', 'warmupCard'];
@@ -1198,4 +1232,65 @@ export function duplicateProgram({ id }) {
     }
     setList('saved', [...saved(), copy]);
     return { ok: true, id: copy.id, name: copy.name, detached: !!p.cycleId };
+}
+
+/* ------------------------------------------------------------------ custom exercises (App.js AddSheet create + createCustom) */
+export function createCustomExercise({ name, part, type = 'compound', equip = [], lo = 8, hi = 12, programId = null, dayId = null } = {}) {
+    const n = String(name || '').trim().slice(0, 60), L = Math.round(Number(lo)), H = Math.round(Number(hi));
+    if (!n || !(L > 0) || !(H >= L) || !E.PART_LABEL?.[part]) return { ok: false, error: 'Give it a name, a muscle and a rep range.' };
+    if (!['compound', 'isolation'].includes(type)) type = 'compound';
+    const ex = { id: `custom-${E.uid()}`, pri: 9000, custom: true, name: n, part, type, equip: (Array.isArray(equip) ? equip : []).filter((e) => E.ALL_EQUIP_IDS.includes(e)), rep: [L, H] };
+    setList('custom', [...(Array.isArray(S.store.custom) ? S.store.custom : []), ex]);
+    syncCustomRegistry();
+    if (programId && dayId) editAct({ programId, type: 'add', dayId, exId: ex.id });
+    return { ok: true, id: ex.id, name: ex.name };
+}
+export function customExercises() {
+    const used = new Set(saved().flatMap((p) => p.days.flatMap((d) => d.exercises)));
+    return (Array.isArray(S.store.custom) ? S.store.custom : []).map((x) => ({ id: x.id, name: x.name, part: x.part, partLabel: E.PART_LABEL?.[x.part] || x.part, type: x.type, rep: x.rep, equip: x.equip || [], inUse: used.has(x.id) }));
+}
+/* A custom lift a program still uses is kept: deleting it would orphan those slots. */
+export function deleteCustomExercise({ id }) {
+    const list = Array.isArray(S.store.custom) ? S.store.custom : [];
+    if (!list.some((x) => x.id === id)) return { ok: false };
+    if (saved().some((p) => p.days.some((d) => d.exercises.includes(id)))) return { ok: false, error: 'A program still uses it. Swap it out first.' };
+    setList('custom', list.filter((x) => x.id !== id)); syncCustomRegistry();
+    return { ok: true };
+}
+
+/* ------------------------------------------------------------------ CSV export (App.js exportCSV / exportBodyCSV) */
+const isoLocal = (t) => { const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+const csvEsc = (c) => { const v = String(c ?? ''); return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v; };
+export function exportCsv({ kind = 'workouts' } = {}) {
+    const u = unit();
+    if (kind === 'body') {
+        const rows = [['Date', 'Metric', 'Value', 'Unit']], lu = E.lengthUnitFor(u);
+        E.normalizeBwLog(S.store.bwLog || [], u).forEach((e) => rows.push([isoLocal(e.date), 'Bodyweight', e.w, e.unit]));
+        Object.entries(S.store.measurements || {}).forEach(([k, arr]) => E.normalizeMeasureLog(arr, lu, u).forEach((e) => rows.push([isoLocal(e.date), k.charAt(0).toUpperCase() + k.slice(1), e.v, e.unit])));
+        return rows.map((r) => r.map(csvEsc).join(',')).join('\n');
+    }
+    const rows = [['Date', 'Program', 'Day', 'Exercise', 'Muscle', 'Top weight', 'Top reps', 'Sets', 'Volume', 'Unit', 'Duration (min)']];
+    [...history()].sort((a, b) => a.date - b.date).forEach((h) => {
+        const d = isoLocal(h.date), entries = Object.entries(h.perf || {});
+        if (!entries.length) rows.push([d, h.programName, h.dayLabel, '', '', '', '', 0, 0, h.unit || u, h.durationMin || '']);
+        entries.forEach(([id, p]) => {
+            const ex = EX_BY_ID[id];
+            const vol = Math.round((p.sets || []).reduce((a, x) => a + (x.w || 0) * (x.r || 0), 0));
+            rows.push([d, h.programName, h.dayLabel, ex ? ex.name : id, ex ? E.PART_LABEL[ex.part] : '', p.weight ?? '', p.reps ?? '', (p.sets || []).length, vol, h.unit || u, h.durationMin || '']);
+        });
+    });
+    return rows.map((r) => r.map(csvEsc).join(',')).join('\n');
+}
+
+/* ------------------------------------------------------------------ training reminders (App.js reminders: days 0 = Sunday) */
+export function reminders() {
+    const r = S.store.reminders || {};
+    return { enabled: !!r.enabled, time: /^\d{1,2}:\d{2}$/.test(String(r.time || '')) ? r.time : '18:00', days: Array.isArray(r.days) ? r.days.filter((d) => Number.isInteger(d) && d >= 0 && d <= 6) : [1, 2, 3, 4, 5] };
+}
+export function setReminders({ enabled, time, days } = {}) {
+    const cur = reminders();
+    const next = { enabled: enabled ?? cur.enabled, time: /^\d{1,2}:\d{2}$/.test(String(time || '')) ? time : cur.time,
+        days: Array.isArray(days) ? [...new Set(days.filter((d) => Number.isInteger(d) && d >= 0 && d <= 6))].sort() : cur.days };
+    S.store.reminders = next; markStore();
+    return { ok: true, reminders: next };
 }

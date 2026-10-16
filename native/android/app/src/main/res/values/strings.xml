@@ -9,4 +9,8 @@
     <string name="rest_over_body">Next set when you\'re ready</string>
     <string name="widget_name">Next workout</string>
     <string name="widget_desc">Your next session, or the one in progress, one tap from the home screen</string>
+    <string name="reminder_channel">Training reminders</string>
+    <string name="reminder_channel_desc">On the days and time you choose</string>
+    <string name="reminder_title">Time to train</string>
+    <string name="reminder_body">Your next Pursuit Iron session is waiting.</string>
 </resources>

@@ -227,5 +227,33 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   const ids = JSON.parse(C.exportStore()).cycles[0].blockIds; C.deleteCycle({ id: cy.cycleId, alsoBlocks: true });
   const st3 = JSON.parse(C.exportStore());
   ok(st3.tombs[cy.cycleId] > 0 && ids.every((id) => st3.tombs[id] > 0), 'deleting a cycle with its blocks tombstones all of them'); }
+
+// 17. Custom exercises, CSV in and out, reminders
+{ C.init({}); const mk = C.createProgram({ config: { name: 'Customs', goal: 'both', experience: 'intermediate', split: 'full_body', days: 3, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 4 });
+  const ed = C.editor({ programId: mk.programId }); const day = ed.days[0];
+  ok(C.createCustomExercise({ name: '', part: 'chest' }).ok === false, 'a custom exercise needs a name');
+  const cx = C.createCustomExercise({ name: 'Landmine Press (mine)', part: 'shoulders', type: 'compound', equip: ['barbell', 'bogus'], lo: 6, hi: 10, programId: mk.programId, dayId: day.id });
+  const ed2 = C.editor({ programId: mk.programId });
+  ok(cx.ok && ed2.days[0].exercises.some((e) => e.id === cx.id && e.name === 'Landmine Press (mine)' && e.sets > 0), 'a custom lift is created and added to the day with a prescription');
+  C.saveEdits({ programId: mk.programId });
+  const store = C.exportStore();
+  C.init({ store });
+  ok(C.library({ q: 'Landmine Press (mine)' }).length === 1 && C.editor({ programId: mk.programId }).days[0].exercises.some((e) => e.name === 'Landmine Press (mine)'), 'custom lifts are registered again after a restart');
+  ok(C.deleteCustomExercise({ id: cx.id }).ok === false, 'a custom lift a program uses cannot be deleted');
+  const strong = ['Date,Workout Name,Duration,Exercise Name,Set Order,Weight,Reps,Distance,Seconds,Notes,Workout Notes,RPE',
+    '2026-03-02 07:10:00,Upper A,1h 5m,Bench Press (Barbell),W,60,10,0,0,,,', '2026-03-02 07:10:00,Upper A,1h 5m,Bench Press (Barbell),1,100,5,0,0,,,8',
+    '2026-03-02 07:10:00,Upper A,1h 5m,Lat Pulldown (Cable),1,70,10,0,0,,,', '2026-03-04 07:00:00,Lower A,58m,Deadlift (Barbell),1,180,3,0,0,,,',
+    '2026-03-04 07:00:00,Lower A,58m,Mystery Machine Thing,1,40,12,0,0,,,'].join('\n');
+  const pv = C.importStore({ text: strong, preview: true });
+  ok(pv.ok && pv.preview && pv.csv.workouts === 2 && pv.csv.label, 'a Strong CSV previews as ' + (pv.csv && pv.csv.workouts) + ' workouts from ' + (pv.csv && pv.csv.label));
+  const before = (JSON.parse(C.exportStore()).history || []).length;
+  const imp = C.importStore({ text: strong, csvWeightUnit: 'kg' });
+  ok(imp.ok && imp.csv && JSON.parse(C.exportStore()).history.length === before + 2, 'importing the CSV merges two workouts into history');
+  const csv = C.exportCsv({}); const lines = csv.split('\n');
+  ok(lines[0].startsWith('Date,Program,Day,Exercise') && lines.some((l) => l.includes('Bench Press')), 'workout CSV export has the header and the imported lifts');
+  C.logBodyweight({ value: 80 }); ok(C.exportCsv({ kind: 'body' }).split('\n')[1].includes('Bodyweight'), 'body CSV export');
+  ok(C.reminders().enabled === false && C.reminders().days.join() === '1,2,3,4,5', 'reminders default off, weekdays');
+  C.setReminders({ enabled: true, time: '07:30', days: [6, 0, 0, 9] });
+  ok(C.settings().reminders.enabled && C.reminders().time === '07:30' && C.reminders().days.join() === '0,6', 'reminders saved and cleaned'); }
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);
 

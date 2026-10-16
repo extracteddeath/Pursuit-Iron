@@ -123,6 +123,7 @@ private fun Shell(vm: AppViewModel, wide: Boolean) {
         }
         SnackHost(vm, Modifier.align(Alignment.BottomCenter))
         ImportDialog(vm)
+        com.pursuitiron.app.ui.screens.CsvImportDialog(vm)
         vm.busy?.let { BusyScrim(it) }
     }
     BackHandler(enabled = vm.screen == Screen.Workout) { vm.minimise() }

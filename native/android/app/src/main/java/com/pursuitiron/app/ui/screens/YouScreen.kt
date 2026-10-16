@@ -111,6 +111,8 @@ fun YouScreen(vm: AppViewModel) {
                 item { GymsCard(vm) { gymsOpen = true } }
                 item { LoadingCard(vm) }
                 item { ToolsCard { toolsOpen = true } }
+                item { RemindersCard(vm) }
+                item { CustomExercisesCard(vm) }
                 item { ProfileFieldsCard(vm) }
                 item { DataCard(vm) }
                 item { AboutCard(vm) }
@@ -252,8 +254,15 @@ private fun DataCard(vm: AppViewModel) {
         }
     }
     val open = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) runCatching { Transfer.readUri(ctx, uri)?.let { Transfer.parse(it, "backup") } }.getOrNull()
-            ?.let { vm.importOffer = it } ?: run { if (uri != null) vm.toast("That file isn't a Pursuit Iron backup") }
+        if (uri != null) runCatching { Transfer.readUri(ctx, uri) }.getOrNull()?.let { vm.offerFile(it) } ?: run { if (uri != null) vm.toast("That file couldn't be read") }
+    }
+    var csvKind by remember { mutableStateOf("workouts") }
+    val saveCsv = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
+        if (uri != null) scope.launch {
+            val text = vm.exportCsv(csvKind) ?: return@launch
+            runCatching { ctx.contentResolver.openOutputStream(uri)?.use { it.write(text.toByteArray(Charsets.UTF_8)) } }
+                .onSuccess { vm.toast("CSV saved") }.onFailure { vm.toast("Couldn't save the CSV") }
+        }
     }
     val last = vm.settings?.optLong("lastBackup") ?: 0L
     PiCard(radius = 28.dp) {
@@ -264,8 +273,14 @@ private fun DataCard(vm: AppViewModel) {
             MenuRow(PiIcons.Download, "Save a backup", "A file you can keep anywhere", MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.onPrimaryContainer) {
                 save.launch("pursuit-iron-backup-${SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())}.json")
             }
-            MenuRow(PiIcons.Upload, "Import a backup", "Merges with what's here; nothing is deleted", MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.colorScheme.onSecondaryContainer) {
-                open.launch(arrayOf("application/json", "text/plain", "application/octet-stream"))
+            MenuRow(PiIcons.Upload, "Import a backup or CSV", "A Pursuit Iron backup, or a Strong or Hevy export. Merges; nothing is deleted", MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.colorScheme.onSecondaryContainer) {
+                open.launch(arrayOf("application/json", "text/plain", "text/csv", "text/comma-separated-values", "application/csv", "application/octet-stream"))
+            }
+            MenuRow(PiIcons.Download, "Export workouts as CSV", "One row per lift per session, for a spreadsheet", MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.colorScheme.onSecondaryContainer) {
+                csvKind = "workouts"; saveCsv.launch("pursuit-iron-workouts-${SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())}.csv")
+            }
+            MenuRow(PiIcons.Download, "Export body data as CSV", "Bodyweight and measurements", MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.colorScheme.onSecondaryContainer) {
+                csvKind = "body"; saveCsv.launch("pursuit-iron-body-${SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())}.csv")
             }
             MenuRow(PiIcons.Redo, "Bring data from the web app", "Opens it in your browser, where your history lives", MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.colorScheme.onSecondaryContainer) {
                 Transfer.openTransferPage(ctx)

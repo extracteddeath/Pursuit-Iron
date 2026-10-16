@@ -192,6 +192,8 @@ tap(r": \d+ workouts?\|", "calendar-day")
 tap(r"^\|Settings$", "settings")
 if tap(r"^\|lb$", "unit-confirm"):
     tap(r"^\|Switch$", "unit-switched")
+if scroll_to(r"^Training reminders\|"):
+    tap(r"^Training reminders\|", "reminders-on")
 if scroll_to(r"^\|Gyms$"):
     tap(r"^\|Edit$", "gyms-sheet")
     back()
@@ -243,6 +245,15 @@ if tap(r"Edit program", "editor"):
     if tap(r"\. Edit\|"):
         tap(r"Swap exercise", "editor-swap")
         back()
+    if tap(r"Add exercise"):
+        if tap(r"Create a custom exercise", "custom-create"):
+            tap(r"Exercise name")
+            adb("shell", "input", "text", "Landmine%sPress")
+            back()
+            if scroll_to(r"^\|Create and add$"):
+                tap(r"^\|Create and add$")
+                time.sleep(1.5)
+                shot("custom-added")
     if tap(r"^\|Save$", "editor-scope"):
         tap(r"^\|This block$", "editor-saved")
     back()

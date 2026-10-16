@@ -227,6 +227,8 @@ private fun EditSwapSheet(vm: AppViewModel, dayId: String, slot: Int, onClose: (
 
 @Composable
 private fun AddExerciseSheet(vm: AppViewModel, dayId: String, onClose: () -> Unit) {
+    var creating by remember { mutableStateOf(false) }
+    if (creating) { CreateExerciseSheet(vm, dayId) { creating = false; onClose() }; return }
     var q by remember { mutableStateOf("") }
     var part by remember { mutableStateOf<String?>(null) }
     var res by remember { mutableStateOf<JSONObject?>(null) }
@@ -242,6 +244,7 @@ private fun AddExerciseSheet(vm: AppViewModel, dayId: String, onClose: () -> Uni
             }
             val items = res.list("items")
             if (res != null && items.isEmpty()) Text("Nothing left to add for that with your equipment.", color = cs.onSurfaceVariant)
+            TextButton(onClick = { creating = true }) { Icon(PiIcons.Plus, null, modifier = Modifier.size(18.dp)); Text("  Create a custom exercise") }
             LazyColumn(Modifier.clip(RoundedCornerShape(22.dp)).heightIn(max = 460.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 items(items) { x ->
                     Row(Modifier.fillMaxWidth().background(cs.surfaceContainerHigh).clickable { vm.edit("add", "dayId" to dayId, "exId" to x.s("id")); vm.toast("Added ${x.s("name")}"); onClose() }.padding(16.dp),

@@ -83,6 +83,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 if (session?.b("active") == true) screen = Screen.Workout
                 ready = true
                 publishWidget()
+                com.pursuitiron.app.data.Reminders.save(app, settings?.o("reminders"))
                 if (pendingWidgetStart) { pendingWidgetStart = false; fromWidget() }
             } catch (e: Throwable) {
                 startupError = e.message ?: e.toString()
@@ -348,6 +349,47 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (!r.b("ok")) toast(r.s("error", "Couldn't change that"))
         settings = obj("settings"); haptics.enabled = settings?.b("haptics", true) != false
         if (key == "unit" && r.b("ok")) { refreshAll(); toast("Switched to ${value} and converted your weights") }
+    }
+
+    /* ---------------------------------------------------------------- reminders, CSV, custom exercises */
+    fun setReminders(enabled: Boolean? = null, time: String? = null, days: List<Int>? = null) = launchCore {
+        val a = JSONObject(); if (enabled != null) a.put("enabled", enabled); if (time != null) a.put("time", time); if (days != null) a.put("days", JSONArray(days))
+        val r = obj("setReminders", a) ?: return@launchCore
+        com.pursuitiron.app.data.Reminders.save(getApplication(), r.o("reminders"))
+        settings = obj("settings")
+    }
+    data class CsvOffer(val text: String, val summary: JSONObject)
+    var csvOffer by mutableStateOf<CsvOffer?>(null)
+    /** A file the user picked: a backup goes through the import dialog, a Strong/Hevy CSV through its own preview. */
+    fun offerFile(text: String) = launchCore {
+        val backup = runCatching { com.pursuitiron.app.data.Transfer.parse(text, "backup") }.getOrNull()
+        if (backup != null) { importOffer = backup; return@launchCore }
+        val r = obj("importStore", jsonOf("text" to text, "preview" to true))
+        if (r != null && r.b("ok") && r.o("csv") != null) csvOffer = CsvOffer(text, r.o("csv")!!)
+        else toast(r?.s("error", "That file isn't a Pursuit Iron backup or a Strong/Hevy export") ?: "That file couldn't be read")
+    }
+    fun acceptCsv(weightUnit: String?) = launchCore {
+        val o = csvOffer ?: return@launchCore
+        csvOffer = null
+        val r = working("Importing workouts") { obj("importStore", jsonOf("text" to o.text, "csvWeightUnit" to weightUnit)) } ?: return@launchCore
+        if (!r.b("ok")) { toast(r.s("error", "That file couldn't be imported")); return@launchCore }
+        refreshAll(); hap(Hap.Done)
+        toast("Imported ${plural(r.o("csv").i("workouts"), "workout")} from ${r.o("csv").s("label")}")
+    }
+    suspend fun exportCsv(kind: String): String? = call("exportCsv", jsonOf("kind" to kind)) as? String
+    var customs by mutableStateOf<List<JSONObject>>(emptyList()); private set
+    fun loadCustoms() = launchCore { customs = arr(call("customExercises")) }
+    fun createCustom(name: String, part: String, type: String, equip: List<String>, lo: Int, hi: Int, dayId: String?) = launchCore {
+        val r = obj("createCustomExercise", jsonOf("name" to name, "part" to part, "type" to type, "equip" to JSONArray(equip), "lo" to lo, "hi" to hi,
+            "programId" to (if (dayId != null) editor?.s("programId") else null), "dayId" to dayId)) ?: return@launchCore
+        if (!r.b("ok")) { toast(r.s("error", "Couldn't create that")); return@launchCore }
+        hap(Hap.Done); customs = arr(call("customExercises")); library = arr(call("library", jsonOf("q" to libQuery, "part" to libPart)))
+        if (dayId != null) reloadEditor()
+        toast(if (dayId != null) "Created and added ${r.s("name")}" else "Created ${r.s("name")}")
+    }
+    fun deleteCustom(id: String) = launchCore {
+        val r = obj("deleteCustomExercise", jsonOf("id" to id)) ?: return@launchCore
+        if (!r.b("ok")) toast(r.s("error", "Couldn't delete that")) else { customs = arr(call("customExercises")); library = arr(call("library", jsonOf("q" to libQuery, "part" to libPart))) }
     }
 
     /* ---------------------------------------------------------------- profile, tools, gyms */

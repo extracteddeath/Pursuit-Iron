@@ -6,6 +6,8 @@
     <!-- Rest ends on the second with the phone locked. Granted by default up to Android 13; from 14 the
          user can allow it in Settings, and without it the alert uses an inexact alarm. -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <!-- Training reminders are alarms, which a reboot clears; this re-arms them. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:allowBackup="true"
@@ -53,6 +55,15 @@
             </intent-filter>
         </activity>
         <receiver android:name=".data.RestDoneReceiver" android:exported="false" />
+        <receiver android:name=".data.ReminderReceiver" android:exported="false" />
+        <receiver android:name=".data.ReminderBootReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+        </receiver>
         <receiver android:name=".widget.NextWorkoutWidgetReceiver" android:exported="true" android:label="@string/widget_name">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />

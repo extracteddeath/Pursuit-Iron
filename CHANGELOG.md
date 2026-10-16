@@ -1,3 +1,9 @@
+## Build 895 — Session notes placement
+
+- Move Session notes from above the exercise name to Workout options in both full and Focus modes.
+- Remove the empty context row when no injury or Focus action is present. Keep the existing session/exercise note editors, repeat-once behavior and saved-workout recovery.
+- Keep Workout options scrollable on shorter screens, including landscape layouts.
+
 ## Build 894 — Custom cycle conversion and setup recovery
 
 - Turn an existing generated or manually built program into a custom cycle. Keep the current program as Block 1 and choose 1–7 future blocks with any supported phase order, repeats and individual 1–24 week lengths.

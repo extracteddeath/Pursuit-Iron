@@ -37,7 +37,8 @@ try {
  await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:live')).sessionProgressions?.['bb-bench']==='dynamic');
  let snap=await getLive();assert.equal(snap.data[0].sets[0].weight,'170');assert.equal(snap.data[0].sets[0].done,true);
  assert.equal(snap.data[0].sets[1].weight,'175');assert.equal(snap.data[0].sets[1].reps,'7');assert.equal((await getStore()).saved[0].progStyle,undefined);
- await clickText('Session notes');await page.waitForSelector('[aria-label="Whole session note repetition"]');
+ assert.equal(await page.$$eval('.wpb-workout-scroll .wpb-session-context button',els=>els.some(b=>b.textContent.includes('Session notes'))),false,'session notes does not precede the exercise heading');
+ await page.click('[aria-label="Workout options"]');await page.click('[aria-label="Session notes"]');await page.waitForSelector('[aria-label="Whole session note repetition"]');
  await page.type('.wpb-session-note-editor:nth-child(1) textarea','Try an earlier session');
  await page.select('[aria-label="Whole session note repetition"]','once');
  await page.type('.wpb-session-note-editor:nth-child(2) textarea','Pause on chest');
@@ -75,12 +76,17 @@ try {
  await page.close();
  for (const width of [320,900]) {
   const light=await browser.newPage();light.on('pageerror',e=>errors.push(e.message));
-  await light.setViewport({width,height:850,isMobile:width<600,hasTouch:width<600});
+  await light.setViewport({width,height:width===900?480:850,isMobile:width<600,hasTouch:width<600});
   await light.evaluateOnNewDocument((store,live)=>{localStorage.setItem('wpb:v1',JSON.stringify({...store,theme:'rosewater'}));localStorage.setItem('wpb:live',JSON.stringify(live));},store,live);
   await light.goto('http://127.0.0.1:8798/index.html',{waitUntil:'networkidle0'});
   await light.waitForSelector('.wpb-live-dock button[aria-label="Resume workout"]');await light.click('.wpb-live-dock button[aria-label="Resume workout"]');
   await light.waitForSelector('.wpb-workout');if(await light.$('[aria-label="Focused mode"]'))await light.click('[aria-label="Focused mode"]');
-  await light.evaluate(()=>document.querySelector('.wpb-session-context button').click());await light.waitForSelector('[aria-label="Session notes"]');
+  assert.equal(await light.$$eval('.wpb-session-context button',els=>els.some(b=>b.textContent.includes('Session notes'))),false,'Focus keeps session notes out of the exercise heading');
+  await light.click('[aria-label="Workout options"]');
+  await light.waitForSelector('.wpb-workout-options-sheet');
+  const menu=await light.$eval('.wpb-workout-options-sheet',el=>({height:el.getBoundingClientRect().height,viewport:innerHeight,overflow:getComputedStyle(el).overflowY}));
+  assert.ok(menu.height<=menu.viewport&&menu.overflow==='auto','workout options scroll within the viewport');
+  await light.click('[aria-label="Session notes"]');await light.waitForSelector('[aria-label="Session notes"].wpb-session-dialog');
   const box=await light.$eval('.wpb-session-dialog',el=>({w:el.clientWidth,scroll:el.scrollWidth,bg:getComputedStyle(el).backgroundColor}));
   assert.ok(box.scroll<=box.w+1,'note sheet fits '+width);
   assert.ok(/^rgb\(/.test(box.bg)||/,[ ]*1\)$/.test(box.bg),'note sheet must be opaque: '+box.bg);

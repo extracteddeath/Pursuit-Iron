@@ -1,0 +1,370 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+
+package com.pursuitiron.app.ui.screens
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import com.pursuitiron.app.AppViewModel
+import com.pursuitiron.app.ui.common.Badge
+import com.pursuitiron.app.ui.common.Kicker
+import com.pursuitiron.app.ui.common.MorphChip
+import com.pursuitiron.app.ui.common.PiCard
+import com.pursuitiron.app.ui.common.PiIcons
+import com.pursuitiron.app.ui.common.Segmented
+import com.pursuitiron.app.ui.common.b
+import com.pursuitiron.app.ui.common.d
+import com.pursuitiron.app.ui.common.fmtNum
+import com.pursuitiron.app.ui.common.i
+import com.pursuitiron.app.ui.common.list
+import com.pursuitiron.app.ui.common.o
+import com.pursuitiron.app.ui.common.s
+import org.json.JSONArray
+import org.json.JSONObject
+
+/* App.js readiness check-in: shown once when a workout opens; it scales today's loads. */
+private val READINESS = listOf(
+    Triple("Feeling strong", "Hit the prescribed loads", 1.0),
+    Triple("A little off", "Trim loads ~5%", 0.95),
+    Triple("Run down", "Back off ~12%, focus on quality", 0.88),
+)
+
+@Composable
+fun ReadinessCheckSheet(vm: AppViewModel) {
+    val cs = MaterialTheme.colorScheme
+    val pick = { label: String, factor: Double -> vm.act("readiness", "label" to label, "factor" to factor) }
+    ModalBottomSheet(onDismissRequest = { pick("—", 1.0) }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("How are you feeling?", style = MaterialTheme.typography.headlineSmall)
+            Text("Today's loads adjust to match. Logged sets never change.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+            READINESS.forEachIndexed { k, (label, sub, factor) ->
+                Surface(onClick = { pick(label, factor) }, color = cs.surfaceContainerHigh, shape = RoundedCornerShape(20.dp),
+                    modifier = Modifier.fillMaxWidth().semantics { role = Role.Button }) {
+                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        Icon(if (k == 0) PiIcons.Flame else PiIcons.Timer, null, tint = cs.primary)
+                        Column(Modifier.weight(1f)) {
+                            Text(label, style = MaterialTheme.typography.titleSmall)
+                            Text(sub, style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                        }
+                        Icon(PiIcons.ChevronRight, null, tint = cs.onSurfaceVariant)
+                    }
+                }
+            }
+            TextButton(onClick = { pick("—", 1.0) }, modifier = Modifier.fillMaxWidth()) { Text("Skip") }
+        }
+    }
+}
+
+/* App.js finish sheet: what the workout earned, then pump/soreness per muscle before it is saved. */
+@Composable
+fun FinishSheet(vm: AppViewModel, onClose: () -> Unit) {
+    var p by remember { mutableStateOf<JSONObject?>(null) }
+    var reload by remember { mutableStateOf(0) }
+    LaunchedEffect(reload) { p = vm.finishPreview() }
+    var routine by remember { mutableStateOf("") }
+    var saveAsRoutine by remember { mutableStateOf(false) }
+    val cs = MaterialTheme.colorScheme
+    ModalBottomSheet(onDismissRequest = onClose, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            val x = p ?: run { Text("Loading…"); return@Column }
+            val u = x.s("unit")
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Icon(PiIcons.Trophy, null, tint = cs.primary)
+                Text("Workout complete", style = MaterialTheme.typography.headlineSmall)
+            }
+            Text("${x.i("doneSets")} of ${x.i("totalSets")} sets logged", color = cs.onSurfaceVariant)
+            val prs = x.list("prs")
+            if (prs.isNotEmpty()) PiCard(color = cs.primaryContainer, radius = 22.dp, padding = 14.dp) {
+                Text("${prs.size} estimated-1RM PR${if (prs.size == 1) "" else "s"}!", style = MaterialTheme.typography.titleSmall, color = cs.onPrimaryContainer)
+                prs.forEach { r -> Row { Text(r.s("name"), Modifier.weight(1f), color = cs.onPrimaryContainer); Text("+${fmtNum(r.d("gain"))} $u", color = cs.onPrimaryContainer) } }
+            }
+            x.o("mainE1rm")?.let { m ->
+                PiCard(color = cs.surfaceContainerHigh, radius = 22.dp, padding = 14.dp) {
+                    Kicker("Estimated 1RM · ${m.s("name")}")
+                    Text("${m.i("est")} $u", style = MaterialTheme.typography.headlineMedium, color = cs.primary)
+                    Text("from your top set of ${fmtNum(m.d("weight"))} $u × ${m.i("reps")}" + (if (m.i("prev") > 0) " · previous best ${m.i("prev")} $u" else ""),
+                        style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                }
+            }
+            val goals = x.list("goalsHit")
+            if (goals.isNotEmpty()) PiCard(color = cs.primaryContainer, radius = 22.dp, padding = 14.dp) {
+                Text("${goals.size} goal${if (goals.size == 1) "" else "s"} reached", style = MaterialTheme.typography.titleSmall, color = cs.onPrimaryContainer)
+                goals.forEach { g -> Row { Text(g.s("name"), Modifier.weight(1f), color = cs.onPrimaryContainer); Text("${fmtNum(g.d("goal"))} $u ✓", color = cs.onPrimaryContainer) } }
+            }
+            val next = x.list("nextPlan")
+            if (next.isNotEmpty()) PiCard(color = cs.surfaceContainerHigh, radius = 22.dp, padding = 14.dp) {
+                Text("Next session", style = MaterialTheme.typography.titleSmall)
+                next.forEach { n ->
+                    val delta = n.d("delta")
+                    val what = when {
+                        delta > 0 -> "+${fmtNum(delta)} $u → ${fmtNum(n.d("weight"))}"
+                        delta < 0 -> "${fmtNum(delta)} $u → ${fmtNum(n.d("weight"))}"
+                        else -> "Hold ${fmtNum(n.d("from"))}, build reps"
+                    }
+                    Row { Text(n.s("name"), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium); Text(what, style = MaterialTheme.typography.labelLarge, color = if (delta > 0) cs.primary else cs.onSurfaceVariant) }
+                }
+            }
+            val parts = x.list("parts")
+            if (parts.isNotEmpty()) {
+                Kicker("How did each muscle feel?")
+                Text("Pump today and soreness since last time tune next week's volume.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                parts.forEach { pt ->
+                    PiCard(color = cs.surfaceContainer, radius = 20.dp, padding = 12.dp) {
+                        Text(pt.s("label").replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.titleSmall)
+                        FeedbackRow("Pump", x.optJSONArray("pumpChoices"), pt.s("pump")) { v -> vm.act("feedback", "part" to pt.s("part"), "pump" to v); reload++ }
+                        FeedbackRow("Recovered", x.optJSONArray("soreChoices"), pt.s("sore")) { v -> vm.act("feedback", "part" to pt.s("part"), "sore" to v); reload++ }
+                    }
+                }
+            }
+            val ids = (0 until (x.optJSONArray("routineIds")?.length() ?: 0)).map { x.getJSONArray("routineIds").optString(it) }
+            if (x.b("quick") && ids.isNotEmpty()) {
+                Row(Modifier.fillMaxWidth().toggleable(saveAsRoutine, role = Role.Switch) { saveAsRoutine = it }.padding(vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Text("Save as a routine", Modifier.weight(1f), style = MaterialTheme.typography.titleSmall)
+                    androidx.compose.material3.Switch(saveAsRoutine, null)
+                }
+                if (saveAsRoutine) OutlinedTextField(routine, { routine = it.take(40) }, Modifier.fillMaxWidth(), singleLine = true, label = { Text("Name this routine") })
+            }
+            Button(onClick = { onClose(); vm.finish(if (saveAsRoutine) routine.ifBlank { "My routine" } else null, ids) }, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Save workout") }
+            TextButton(onClick = onClose, modifier = Modifier.fillMaxWidth()) { Text("Keep going") }
+        }
+    }
+}
+
+@Composable
+private fun FeedbackRow(label: String, choices: JSONArray?, current: String, onPick: (String) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(76.dp))
+        (0 until (choices?.length() ?: 0)).forEach { k ->
+            val c = choices!!.getJSONArray(k); val id = c.optString(0)
+            MorphChip(c.optString(1), current == id, { onPick(id) }, height = 36.dp)
+        }
+    }
+}
+
+/* App.js pendingProgramUpdate prompt: keep a mid-workout progression change in the program, or not. */
+@Composable
+fun PendingUpdateDialog(vm: AppViewModel) {
+    val p = vm.pendingUpdate ?: return
+    AlertDialog(
+        onDismissRequest = {},
+        title = { Text("Update ${p.s("programName").ifBlank { "the program" }}?") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("You changed how these lifts progress during the workout:")
+                p.list("changes").forEach { c -> Text("• ${c.s("name")}: ${c.s("style")}", style = MaterialTheme.typography.bodyMedium) }
+            }
+        },
+        confirmButton = { Button(onClick = { vm.completeProgramUpdate(true) }) { Text("Update program") } },
+        dismissButton = { TextButton(onClick = { vm.completeProgramUpdate(false) }) { Text("This workout only") } },
+    )
+}
+
+/* App.js add-exercise sheet (quick workout, or extra work in any session). */
+@Composable
+fun AddLiftSheet(vm: AppViewModel, onClose: () -> Unit) {
+    var q by remember { mutableStateOf("") }
+    var results by remember { mutableStateOf<List<JSONObject>>(emptyList()) }
+    LaunchedEffect(q) { results = vm.searchExercises(q).take(40) }
+    val cs = MaterialTheme.colorScheme
+    val have = vm.session?.list("exercises")?.map { it.s("id") }?.toSet().orEmpty()
+    ModalBottomSheet(onDismissRequest = onClose, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Add a lift", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(horizontal = 4.dp))
+            OutlinedTextField(q, { q = it }, Modifier.fillMaxWidth(), singleLine = true, label = { Text("Search exercises") })
+            androidx.compose.foundation.lazy.LazyColumn(Modifier.height(420.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                items(results.size) { k ->
+                    val x = results[k]; val added = x.s("id") in have
+                    Surface(onClick = { if (!added) { vm.act("addExercise", "id" to x.s("id")); vm.toast("Added ${x.s("name")}"); onClose() } },
+                        color = cs.surfaceContainerHigh, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth()) {
+                        Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text(x.s("name"), style = MaterialTheme.typography.titleSmall)
+                                Text(x.s("partLabel", x.s("part")).replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                            }
+                            if (added) Badge("In workout") else Icon(PiIcons.Plus, null)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/* Per-lift rest (App.js restCustom): saved to the program so next time uses it too. */
+@Composable
+fun RestTimeSheet(vm: AppViewModel, ex: JSONObject, onClose: () -> Unit) {
+    val cur = ex.i("restCustom"); val def = ex.i("restDefault")
+    val opts = listOf(60, 90, 120, 150, 180, 240, 300)
+    ModalBottomSheet(onDismissRequest = onClose) {
+        Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Kicker(ex.s("name"))
+            Text("Rest between sets", style = MaterialTheme.typography.headlineSmall)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                MorphChip("Default${if (def > 0) " (${restLabel(def)})" else ""}", cur == 0, { vm.act("restFor", "ei" to ex.i("ei"), "sec" to 0); onClose() }, height = 44.dp)
+                opts.forEach { sec -> MorphChip(restLabel(sec), cur == sec, { vm.act("restFor", "ei" to ex.i("ei"), "sec" to sec); onClose() }, height = 44.dp) }
+            }
+            if (!(vm.session?.b("quick") ?: false)) Text("Saved for this lift in the program.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+fun restLabel(sec: Int) = if (sec % 60 == 0) "${sec / 60} min" else "${sec / 60}:${(sec % 60).toString().padStart(2, '0')}"
+
+/* App.js progression picker for one lift: this workout first, the program on finish. */
+@Composable
+fun ProgressionSheet(vm: AppViewModel, s: JSONObject, ex: JSONObject, onClose: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val cur = ex.o("progression")?.s("style")
+    ModalBottomSheet(onDismissRequest = onClose) {
+        Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Kicker(ex.s("name"))
+            Text("Progression", style = MaterialTheme.typography.headlineSmall)
+            Text("Applies to today's remaining sets. When you finish, you choose whether the program keeps it.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+            s.list("progressionStyles").forEach { st ->
+                val on = st.s("id") == cur
+                Surface(onClick = { vm.act("progression", "ei" to ex.i("ei"), "style" to st.s("id")); onClose() },
+                    color = if (on) cs.primaryContainer else cs.surfaceContainerHigh, shape = RoundedCornerShape(if (on) 14.dp else 20.dp),
+                    modifier = Modifier.fillMaxWidth().semantics { role = Role.RadioButton; selected = on }) {
+                    Text(st.s("label"), Modifier.padding(16.dp), style = MaterialTheme.typography.titleSmall)
+                }
+            }
+        }
+    }
+}
+
+/* Goal weight, machine weight step and setup notes: the lift's settings that outlive the workout. */
+@Composable
+fun LiftSettingsSheet(vm: AppViewModel, s: JSONObject, ex: JSONObject, onClose: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val u = s.s("unit")
+    val id = ex.s("id")
+    var goal by remember { mutableStateOf(if (ex.d("goal") > 0) fmtNum(ex.d("goal")) else "") }
+    ModalBottomSheet(onDismissRequest = onClose, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Kicker(ex.s("name"))
+            Text("Lift settings", style = MaterialTheme.typography.headlineSmall)
+            Text("Goal weight", style = MaterialTheme.typography.titleSmall)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(goal, { goal = it.filter { c -> c.isDigit() || c == '.' }.take(6) }, Modifier.weight(1f), singleLine = true,
+                    label = { Text("Target ($u)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+                Button(onClick = { vm.setGoal(id, goal.toDoubleOrNull()); vm.toast(if (goal.isBlank()) "Goal cleared" else "Goal set") }, modifier = Modifier.height(56.dp)) { Text("Set") }
+            }
+            Text("Weight step", style = MaterialTheme.typography.titleSmall)
+            Text("For machines and stacks that jump in bigger steps. Applies to every block of this program.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+            val step = ex.d("step")
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                MorphChip("Default", step <= 0, { vm.setExLoadStep(id, null) }, height = 40.dp)
+                val choices = ex.optJSONArray("stepChoices")
+                (0 until (choices?.length() ?: 0)).forEach { k -> val v = choices!!.optDouble(k); MorphChip("${fmtNum(v)} $u", step == v, { vm.setExLoadStep(id, v) }, height = 40.dp) }
+            }
+            val setup = ex.list("setup")
+            if (setup.isNotEmpty()) {
+                Text("Setup", style = MaterialTheme.typography.titleSmall)
+                setup.forEach { f ->
+                    var v by remember(f.s("key")) { mutableStateOf(f.s("value")) }
+                    OutlinedTextField(v, { v = it.take(40); vm.setExSetup(id, f.s("key"), v) }, Modifier.fillMaxWidth(), singleLine = true, label = { Text(f.s("label")) })
+                }
+            }
+            Button(onClick = onClose, modifier = Modifier.fillMaxWidth()) { Text("Done") }
+        }
+    }
+}
+
+/* App.js suggested supersets: pair this lift with one that doesn't compete for the same muscles. */
+@Composable
+fun SupersetSheet(vm: AppViewModel, s: JSONObject, onClose: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val ei = s.i("exIdx")
+    val ex = s.list("exercises").getOrNull(ei) ?: run { onClose(); return }
+    ModalBottomSheet(onDismissRequest = onClose) {
+        Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Kicker(ex.s("name"))
+            Text(if (ex.b("superset")) "In a superset" else "Superset with…", style = MaterialTheme.typography.headlineSmall)
+            if (ex.b("superset")) {
+                Text("Sets alternate between the paired lifts, resting after each round.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                OutlinedButton(onClick = { vm.act("superset", "ei" to ei); onClose() }, modifier = Modifier.fillMaxWidth()) { Text("Unpair") }
+                return@Column
+            }
+            val sug = s.list("supersetSuggestions")
+            if (sug.isEmpty()) Text("No good partner among the remaining lifts.", color = cs.onSurfaceVariant)
+            sug.forEach { x ->
+                Surface(onClick = { vm.act("pairWith", "ei" to ei, "partner" to x.i("ei")); vm.toast("Paired with ${x.s("name")}"); onClose() },
+                    color = cs.surfaceContainerHigh, shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(14.dp)) {
+                        Text(x.s("name"), style = MaterialTheme.typography.titleSmall)
+                        if (x.s("reason").isNotBlank()) Text(x.s("reason"), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/* App.js session note: one line about today, optionally shown again next time. */
+@Composable
+fun SessionNoteSheet(vm: AppViewModel, s: JSONObject, onClose: () -> Unit) {
+    var text by remember { mutableStateOf(s.s("sessionNote")) }
+    var repeat by remember { mutableStateOf(s.s("sessionNoteRepeat", "none")) }
+    ModalBottomSheet(onDismissRequest = onClose) {
+        Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("Workout note", style = MaterialTheme.typography.headlineSmall)
+            OutlinedTextField(text, { text = it.take(300) }, Modifier.fillMaxWidth(), minLines = 2, placeholder = { Text("Slept badly, gym was busy…") })
+            Kicker("Show it again")
+            Segmented(listOf("none" to "Just today", "once" to "Next time", "always" to "Every time"), repeat, { repeat = it })
+            Button(onClick = { vm.act("sessionNote", "text" to text, "repeat" to repeat); onClose() }, modifier = Modifier.align(Alignment.End)) { Text("Save") }
+        }
+    }
+}
+
+/* The workout's overflow: things about the session rather than one lift. */
+@Composable
+fun SessionMenu(vm: AppViewModel, s: JSONObject, onNote: () -> Unit, onAdd: () -> Unit, onSuperset: () -> Unit, onClose: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    ModalBottomSheet(onDismissRequest = onClose) {
+        Column(Modifier.padding(horizontal = 12.dp).padding(bottom = 28.dp)) {
+            Text("Workout", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp))
+            Column(Modifier.padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                MenuRow(PiIcons.Plus, "Add a lift", "Extra work for today", cs.primaryContainer, cs.onPrimaryContainer, onAdd)
+                MenuRow(PiIcons.List, "Workout note", s.s("sessionNote").ifBlank { "Anything about today" }, cs.secondaryContainer, cs.onSecondaryContainer, onNote)
+                if (s.list("exercises").size > 1) MenuRow(PiIcons.Swap, "Superset", "Pair the current lift with another", cs.secondaryContainer, cs.onSecondaryContainer, onSuperset)
+                MenuRow(PiIcons.Timer, "Reset workout timer", "Start the clock from now", cs.secondaryContainer, cs.onSecondaryContainer) { vm.act("resetTimer"); vm.toast("Timer reset"); onClose() }
+            }
+        }
+    }
+}

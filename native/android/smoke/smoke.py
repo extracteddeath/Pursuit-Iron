@@ -134,6 +134,9 @@ shot("today")
 tap(r"Start workout")
 time.sleep(3)
 grant_notifications()
+shot("readiness")
+tap(r"^\|A little off$")
+grant_notifications()
 shot("workout")
 if tap(r"Weight not set, edit", "set-editor"):
     tap(r"^\|Weight \(")  # the field's label, not the "Less Weight (kg)" button
@@ -150,10 +153,28 @@ tap(r"^2 reps left", "set-rated")
 tap(r"Why .* kg\?|No suggestion yet", "why-sheet")
 adb("shell", "input", "keyevent", "4")
 time.sleep(1)
+if tap(r"Weight 60(\.0)?, edit", "edit-logged-set"):
+    back()
 tap(r"Exercise actions", "exercise-menu")
+tap(r"Add warm-ups", "warmups-added")
+tap(r"Exercise actions")
+if scroll_to(r"^\|Rest time$", tries=3):
+    tap(r"^\|Rest time$", "rest-sheet")
+    tap(r"^\|3 min$", "rest-set")
+tap(r"Exercise actions")
+if scroll_to(r"Goal, weight step, setup", tries=3):
+    tap(r"Goal, weight step, setup", "lift-settings")
+    back()
+tap(r"Exercise actions")
 tap(r"Something hurt", "hurt-sheet")
 adb("shell", "input", "keyevent", "4")
 time.sleep(1)
+tap(r"Workout options", "workout-menu")
+tap(r"^\|Workout note$", "session-note")
+adb("shell", "input", "text", "Busy%sgym")
+adb("shell", "input", "keyevent", "111")
+time.sleep(0.6)
+tap(r"^\|Save$")
 
 # 3. Minimise and resume through the mini bar
 tap(r"Minimise workout", "minimised")
@@ -161,10 +182,48 @@ tap(r"Resume workout", "resumed")
 
 # 4. Finish
 tap(r"^\|Finish$|^Finish$")
-tap(r"^\|Finish$|^Finish$", "summary", timeout=5, required=False)
+tap(r"^\|Finish$|^Finish$", timeout=5, required=False)  # "N sets not logged" confirm
 time.sleep(1)
+shot("finish-sheet")
+tap(r"^\|Good$", "finish-feedback", required=False)
+scroll_to(r"^\|Save workout$", tries=4)
+tap(r"^\|Save workout$")
+time.sleep(2)
 shot("summary")
 tap(r"^\|Done$|Done$")
+
+# 4b. Quick workout, saved as a routine
+if scroll_to(r"Quick workout", tries=3):
+    tap(r"Quick workout")
+    time.sleep(2)
+    tap(r"^\|Skip$")
+    shot("quick-empty")
+    tap(r"Add a lift", "add-lift")
+    tap(r"^\|Search exercises$")
+    adb("shell", "input", "text", "curl")
+    adb("shell", "input", "keyevent", "111")
+    time.sleep(1.5)
+    tap(r"^\|[A-Za-z -]*Curl[A-Za-z -]*$", "quick-added")
+    if tap(r"Weight not set, edit"):
+        tap(r"^\|Weight \(")
+        adb("shell", "input", "text", "12")
+        adb("shell", "input", "keyevent", "111")
+        time.sleep(0.6)
+        tap(r"^\|Done$|Done$")
+    tap(r"^Set 1:", "quick-logged")
+    tap(r"^\|Finish$|^Finish$")
+    tap(r"^\|Finish$|^Finish$", timeout=5, required=False)
+    time.sleep(1)
+    scroll_to(r"Save as a routine", tries=4)
+    tap(r"Save as a routine")
+    shot("quick-finish")
+    scroll_to(r"^\|Save workout$", tries=4)
+    tap(r"^\|Save workout$")
+    time.sleep(2)
+    shot("quick-summary")
+    tap(r"^\|Done$|Done$")
+else:
+    FAILS.append("no Quick workout entry on Today")
 
 # 5. Tabs
 for t in ["Plan", "Progress", "Exercises", "You"]:
@@ -327,6 +386,7 @@ time.sleep(3)
 shot("tablet-today")
 tap(r"Start workout|Resume workout", required=False)  # a workout in progress reopens on its own
 time.sleep(3)
+tap(r"^\|Skip$", required=False)  # readiness check
 shot("tablet-workout")
 if find(r"Minimise workout", timeout=4) is None:
     FAILS.append("tablet did not show the workout")

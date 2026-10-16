@@ -129,6 +129,19 @@ fun TodayScreen(vm: AppViewModel) {
         if (h.optInt("needsTrainingMax", 0) > 0) item(span = full) { TrainingMaxPrompt(vm) }
         if (next != null) item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { Hero(vm, next, h) }
 
+        if (h.o("live") == null) item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) {
+            PiCard(color = cs.surfaceContainer, radius = 24.dp, padding = 16.dp, onClick = { vm.startQuick() }) {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(PiIcons.Flame, null, tint = cs.primary)
+                    Column(Modifier.weight(1f)) {
+                        Text("Quick workout", style = MaterialTheme.typography.titleSmall)
+                        Text("Off-plan session: add lifts as you go", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                    }
+                    Icon(PiIcons.ChevronRight, null, tint = cs.onSurfaceVariant)
+                }
+            }
+        }
+
         if (next != null) item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 val wk = h.o("week")
@@ -263,6 +276,7 @@ fun HistorySheet(vm: AppViewModel, id: String, onClose: () -> Unit) {
                         style = MaterialTheme.typography.bodyMedium)
                 }
             }
+            if (vm.session?.b("active") != true) Button(onClick = { onClose(); vm.repeatWorkout(id) }, modifier = Modifier.fillMaxWidth()) { Text("Repeat this workout") }
             TextButton(onClick = { vm.deleteHistory(id); onClose() }) {
                 Icon(PiIcons.Trash, null, modifier = Modifier.size(18.dp)); Text("  Delete this workout")
             }

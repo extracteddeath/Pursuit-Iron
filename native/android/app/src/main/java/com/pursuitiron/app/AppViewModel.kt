@@ -226,16 +226,50 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         refreshHomeSide(); toast("Workout discarded")
     }
 
-    fun finish() = launchCore {
+    /** App.js finish sheet: PRs, goals, next-session plan and per-muscle feedback before saving. */
+    suspend fun finishPreview(): JSONObject? = obj("finishPreview")
+
+    fun finish(routineName: String? = null, routineIds: List<String> = emptyList()) = launchCore {
         val r = obj("finishSession") ?: return@launchCore
         if (!r.b("ok")) { toast(r.s("error", "Couldn't save the workout")); return@launchCore }
         rest.cancel()
         hap(Hap.Done)
         summary = r
         session = obj("session")
+        if (routineName != null && routineIds.isNotEmpty()) {
+            val sr = obj("saveRoutine", jsonOf("ids" to JSONArray(routineIds), "name" to routineName))
+            if (sr?.b("ok") == true) toast("Saved \"${sr.s("name")}\" to your library")
+        }
         refreshHomeSide()
+        pendingUpdate = obj("pendingProgramUpdate")
         screen = Screen.Summary
     }
+
+    /* App.js pendingProgramUpdate: a progression changed mid-workout asks whether the program keeps it. */
+    var pendingUpdate by mutableStateOf<JSONObject?>(null); private set
+    fun completeProgramUpdate(apply: Boolean) = launchCore {
+        val r = obj("completeProgramUpdate", jsonOf("apply" to apply))
+        pendingUpdate = null
+        if (r?.b("ok") == true) { toast(if (apply) "Program updated" else "Kept for that workout only"); refreshHomeSide() }
+        else toast(r?.s("error", "Couldn't update the program") ?: "Couldn't update the program")
+    }
+
+    fun startQuick() = launchCore {
+        val s = obj("startQuick") ?: return@launchCore
+        if (!s.b("active")) { toast(s.s("error", "Couldn't start a quick workout")); return@launchCore }
+        session = s; screen = Screen.Workout; publishWidget()
+    }
+    fun repeatWorkout(historyId: String) = launchCore {
+        val s = obj("repeatWorkout", jsonOf("historyId" to historyId)) ?: return@launchCore
+        if (!s.b("active")) { toast(s.s("error", "Couldn't repeat that workout")); return@launchCore }
+        session = s; screen = Screen.Workout; publishWidget()
+    }
+    fun setGoal(id: String, weight: Double?) = launchCore { call("setGoal", jsonOf("id" to id, "weight" to (weight ?: 0.0))); session = obj("session") }
+    fun setExSetup(id: String, key: String, value: String) = launchCore { call("setExSetup", jsonOf("id" to id, "key" to key, "value" to value)); session = obj("session") }
+    fun setExLoadStep(id: String, value: Double?) = launchCore {
+        call("setExLoadStep", jsonOf("programId" to session?.s("programId"), "id" to id, "value" to (value ?: 0.0))); session = obj("session")
+    }
+    fun swapInProgram(ei: Int, newId: String) = launchCore { call("swapInProgram", jsonOf("ei" to ei, "newId" to newId)); session = obj("session"); refreshHomeSide() }
 
     fun closeSummary() { summary = null; screen = Screen.Tabs; tab = Tab.Today }
 

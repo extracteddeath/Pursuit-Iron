@@ -57,8 +57,25 @@ def find(pattern, timeout=12):
     return None
 
 
+def dismiss_system_dialogs():
+    """A cold emulator sometimes shows "<app> isn't responding" for the launcher; it is not ours. Wait it out."""
+    hit = False
+    for _ in range(3):
+        anr = find(r"isn't responding", timeout=1)
+        if not anr:
+            break
+        w = find(r"^\|Wait$", timeout=1)
+        if w:
+            adb("shell", "input", "tap", str(w[0]), str(w[1]))
+            hit = True
+            time.sleep(2)
+    return hit
+
+
 def tap(pattern, name=None, timeout=12, required=True):
     p = find(pattern, timeout)
+    if not p and dismiss_system_dialogs():
+        p = find(pattern, timeout)
     if not p:
         msg = f"not found: {pattern}"
         print("FAIL", msg, flush=True)
@@ -91,6 +108,7 @@ def launch():
     adb("shell", "am", "force-stop", PKG)
     adb("shell", "am", "start", "-W", "-n", f"{PKG}/com.pursuitiron.app.MainActivity")
     time.sleep(6)
+    dismiss_system_dialogs()
 
 
 def grant_notifications():

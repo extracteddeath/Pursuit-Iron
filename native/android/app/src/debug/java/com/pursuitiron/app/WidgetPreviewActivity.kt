@@ -40,6 +40,9 @@ class WidgetPreviewActivity : Activity() {
             }
             mgr.updateAppWidgetOptions(id, opts)
             val view = host.createView(this, id, info)
+            // Launchers tell the host view its size; on Android 12+ that picks which of Glance's
+            // responsive layouts it shows. Without this the view falls back to the smallest one.
+            if (android.os.Build.VERSION.SDK_INT >= 31) view.updateAppWidgetSize(Bundle(), listOf(android.util.SizeF(w.toFloat(), h.toFloat())))
             col.addView(view, LinearLayout.LayoutParams(dp(w), dp(h)).apply { bottomMargin = dp(24) })
         }
         setContentView(FrameLayout(this).apply { addView(col) })

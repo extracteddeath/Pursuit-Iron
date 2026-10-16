@@ -256,6 +256,14 @@ if tap(r"Edit program", "editor"):
                 shot("custom-added")
     if tap(r"^\|Save$", "editor-scope"):
         tap(r"^\|This block$", "editor-saved")
+    if tap(r"^Program settings\|", "program-settings"):
+        back()
+    back()
+
+# Compare
+tap(r"^\|Plan$|^Plan\|")
+if scroll_to(r"Compare programs or exercises"):
+    tap(r"Compare programs or exercises", "compare")
     back()
 
 # 10. Home-screen widget: rendered by a real AppWidgetHost, then its Start button's intent

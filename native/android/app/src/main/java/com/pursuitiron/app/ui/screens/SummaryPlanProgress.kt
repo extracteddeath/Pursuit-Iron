@@ -116,6 +116,8 @@ fun PlanScreen(vm: AppViewModel) {
     val wk = p.i("weekIndex"); val weeks = p.i("weeksTotal").coerceAtLeast(1)
     var openCycle by remember { mutableStateOf<String?>(null) }
     var confirmNext by remember { mutableStateOf(false) }
+    var compareOpen by remember { mutableStateOf(false) }
+    if (compareOpen) CompareSheet(vm) { compareOpen = false }
     openCycle?.let { id -> CycleSheet(vm, id) { openCycle = null } }
     if (confirmNext) AlertDialog(onDismissRequest = { confirmNext = false },
         title = { Text("Build the next block?") },
@@ -188,6 +190,9 @@ fun PlanScreen(vm: AppViewModel) {
                 }
                 Row(Modifier.fillMaxWidth().background(cs.surfaceContainerLow).clickable { vm.openSetup() }.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(PiIcons.Plus, null, tint = cs.primary); Text("  New program", style = MaterialTheme.typography.titleSmall, color = cs.primary)
+                }
+                Row(Modifier.fillMaxWidth().background(cs.surfaceContainerLow).clickable { compareOpen = true }.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(PiIcons.Swap, null, tint = cs.primary); Text("  Compare programs or exercises", style = MaterialTheme.typography.titleSmall, color = cs.primary)
                 }
             }
         }

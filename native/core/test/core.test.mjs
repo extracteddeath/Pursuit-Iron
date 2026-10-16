@@ -255,5 +255,31 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   ok(C.reminders().enabled === false && C.reminders().days.join() === '1,2,3,4,5', 'reminders default off, weekdays');
   C.setReminders({ enabled: true, time: '07:30', days: [6, 0, 0, 9] });
   ok(C.settings().reminders.enabled && C.reminders().time === '07:30' && C.reminders().days.join() === '0,6', 'reminders saved and cleaned'); }
+
+// 18. Program settings rebuild, shuffle and restore, compare
+{ C.init({}); const eq = ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'];
+  const mk = C.createProgram({ config: { name: 'Settings', goal: 'both', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: eq }, seed: 21 });
+  const ps = C.programSettings({ programId: mk.programId });
+  ok(ps && ps.weeks > 0 && ps.sessions.length > 3, 'program settings read back');
+  const first = JSON.parse(C.exportStore()).saved[0];
+  const rb = C.applyProgramSettings({ programId: mk.programId, settings: { weeks: ps.weeks === 6 ? 5 : 6, goal: 'strength' } });
+  const after = JSON.parse(C.exportStore()).saved[0];
+  ok(rb.ok && rb.rebuilt && after.id === first.id && after.name === first.name && after.config.goal === 'strength' && C.programSettings({ programId: mk.programId }).weeks === (ps.weeks === 6 ? 5 : 6), 'a goal/length change rebuilds the same program in place');
+  ok(after.rolls && after.rolls[0].seed === first.seed, 'the previous roll is remembered');
+  const meta = C.applyProgramSettings({ programId: mk.programId, settings: { description: 'Off-season' } });
+  ok(meta.ok && !meta.rebuilt && JSON.parse(C.exportStore()).saved[0].description === 'Off-season', 'description is a plain edit');
+  const sh = C.applyProgramSettings({ programId: mk.programId, shuffle: true });
+  const shuffled = JSON.parse(C.exportStore()).saved[0];
+  ok(sh.ok && shuffled.seed !== after.seed, 'shuffle rolls a new layout');
+  const back = C.applyProgramSettings({ programId: mk.programId, seed: after.seed });
+  ok(back.ok && JSON.parse(C.exportStore()).saved[0].seed === after.seed, 'a previous roll can be restored');
+  const two = C.createProgram({ config: { name: 'Other', goal: 'hypertrophy', experience: 'intermediate', split: 'full_body', days: 3, session: 's60', equipment: eq }, seed: 8 });
+  const cmp = C.comparePrograms({ a: mk.programId, b: two.programId });
+  ok(cmp && cmp.a.days === 4 && cmp.b.days === 3 && cmp.muscles.length > 4 && cmp.a.totalSets > 0, 'compare two programs: days, sets, muscles');
+  const lib = C.library({ q: 'bench' });
+  const cx = C.compareExercises({ a: lib[0].id, b: lib[1].id });
+  ok(cx && cx.a.rep.length === 2 && cx.muscles.length > 0, 'compare two exercises');
+  const cy = C.createCycle({ config: { name: 'C', goal: 'both', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: eq }, templateId: 'powerbuilding' });
+  ok(C.applyProgramSettings({ programId: JSON.parse(C.exportStore()).cycles[0].blockIds[0], settings: { weeks: 3 } }).ok === false, 'a cycle block cannot be rebuilt from its settings'); }
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);
 

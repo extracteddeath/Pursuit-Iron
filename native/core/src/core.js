@@ -1294,3 +1294,110 @@ export function setReminders({ enabled, time, days } = {}) {
     S.store.reminders = next; markStore();
     return { ok: true, reminders: next };
 }
+
+/* ------------------------------------------------------------------ program settings + rebuild (App.js applyCfgDraft / handleRegenerate) */
+export function programSettings({ programId }) {
+    const p = draftOf(programId); if (!p) return null;
+    const c = p.config || {};
+    const owner = p.cycleId ? cycles().find((x) => x.id === p.cycleId) : null;
+    return { programId: p.id, engine: p.engineSource || null, cycleOwned: !!owner, custom: p.custom === true,
+        goal: c.goal || 'both', weeks: E.weeksOf(p), session: c.session || 's60', progression: c.progression === 'manual' ? 'manual' : 'auto',
+        barbellCap: c.barbellCap ?? null, noBodyweight: !!c.noBodyweight, noSupersets: !!c.noSupersets, volumeApproach: c.volumeApproach || 'standard',
+        folder: p.folder || '', description: p.description || '', seed: p.seed ?? null,
+        rolls: (p.rolls || []).map((r) => ({ seed: r.seed, at: r.at, lifts: r.lifts || [] })),
+        sessions: (E.SESSIONS || []).map((s) => (typeof s === 'string' ? { id: s, label: s } : { id: s.id, label: s.label || s.id })) };
+}
+/* App.js handleRegenerate: rebuilt from the same seed (or a new one to shuffle) by the current engine,
+   keeping id, name, cycle links and the lifts the user added; the roll walked away from is remembered. */
+function regenerateProgram(program, { seed, configPatch = null, metaPatch = null }) {
+    const cfg = configPatch ? { ...program.config, ...configPatch } : program.config;
+    const p = E.generateNextProgramForShell({ config: cfg, banned: S.store.banned || [], legacyExercises: EXERCISES, ...(seed != null ? { seed } : {}), makeId: E.uid }).program;
+    p.generationRoute = E.GENERATION_ROUTE;
+    Object.assign(p, { id: program.id, name: program.name, createdAt: program.createdAt, cycleId: program.cycleId, cycleIndex: program.cycleIndex, blockLabel: program.blockLabel });
+    p.folder = metaPatch && Object.prototype.hasOwnProperty.call(metaPatch, 'folder') ? (metaPatch.folder || undefined) : program.folder;
+    p.description = metaPatch && Object.prototype.hasOwnProperty.call(metaPatch, 'description') ? (metaPatch.description || undefined) : program.description;
+    const prevRoll = { seed: program.seed, at: now(), lifts: (program.days || []).map((d) => EX_BY_ID[d.exercises[d.primaryIndex != null ? d.primaryIndex : 0]]?.name).filter(Boolean).slice(0, 3) };
+    p.rolls = [prevRoll, ...(program.rolls || []).filter((r) => r.seed !== program.seed && r.seed !== p.seed)].slice(0, 5);
+    const carried = [];
+    (program.days || []).forEach((od) => (od.exercises || []).forEach((id, slot) => { if (program.overrides?.[`${od.id}:${slot}`]?.added) carried.push({ type: od.type, id }); }));
+    if (carried.length) {
+        const ov = { ...(p.overrides || {}) };
+        carried.forEach(({ type, id }) => {
+            const nd = p.days.find((d) => d.type === type) || p.days[0];
+            if (!nd || nd.exercises.includes(id)) return;
+            nd.exercises = [...nd.exercises, id];
+            ov[`${nd.id}:${nd.exercises.length - 1}`] = { ...(ov[`${nd.id}:${nd.exercises.length - 1}`] || {}), added: true };
+        });
+        p.overrides = ov;
+    }
+    return p;
+}
+/* App.js applyCfgDraft for an engine-built program: settings that change the generation contract
+   rebuild it once; folder and description are plain edits. Cycle blocks are owned by their cycle. */
+export function applyProgramSettings({ programId, settings = {}, shuffle = false, seed = undefined }) {
+    const program = programById(programId); if (!program) return { ok: false, error: 'That program no longer exists.' };
+    const owner = program.cycleId ? cycles().find((c) => c.id === program.cycleId) : null;
+    const c = program.config || {}, d = settings;
+    const patch = {};
+    if (d.goal != null && d.goal !== c.goal) patch.goal = d.goal;
+    if (d.weeks != null && d.weeks !== E.weeksOf(program)) patch.weeks = d.weeks;
+    if (d.session != null && d.session !== (c.session || 's60')) patch.session = d.session;
+    if (d.progression != null && d.progression !== (c.progression === 'manual' ? 'manual' : 'auto')) patch.progression = d.progression;
+    if (d.barbellCap !== undefined && (d.barbellCap ?? null) !== (c.barbellCap ?? null)) patch.barbellCap = d.barbellCap ?? null;
+    if (d.noBodyweight != null && !!d.noBodyweight !== !!c.noBodyweight) patch.noBodyweight = !!d.noBodyweight;
+    if (d.noSupersets != null && !!d.noSupersets !== !!c.noSupersets) patch.noSupersets = !!d.noSupersets;
+    if (d.volumeApproach != null && d.volumeApproach !== (c.volumeApproach || 'standard')) patch.volumeApproach = d.volumeApproach;
+    const meta = {};
+    if (d.folder != null && d.folder !== (program.folder || '')) meta.folder = String(d.folder).trim() || undefined;
+    if (d.description != null && d.description !== (program.description || '')) meta.description = String(d.description) || undefined;
+    const rebuild = shuffle || seed !== undefined || Object.keys(patch).length > 0;
+    if (rebuild && owner) return { ok: false, error: 'This block belongs to a cycle, which decides how it is built. Duplicate it for a standalone copy you can rebuild.' };
+    if (S.live?.programId === programId && rebuild) return { ok: false, error: 'Finish or discard the workout in progress first.' };
+    if (!rebuild) {
+        if (!Object.keys(meta).length) return { ok: true, rebuilt: false, changed: false };
+        setList('saved', saved().map((p) => (p.id === programId ? { ...p, ...meta } : p)));
+        return { ok: true, rebuilt: false, changed: true };
+    }
+    let np;
+    try { np = regenerateProgram(program, { seed: shuffle ? undefined : (seed !== undefined ? seed : program.seed), configPatch: Object.keys(patch).length ? patch : null, metaPatch: Object.keys(meta).length ? meta : null }); }
+    catch (err) { return cycleFail(err, 'This program could not be rebuilt safely. Your current program was left unchanged.'); }
+    setList('saved', saved().map((p) => (p.id === programId ? np : p)));
+    dropDraft(programId);
+    return { ok: true, rebuilt: true, changed: true };
+}
+
+/* ------------------------------------------------------------------ compare (App.js CompareView + summarizeProgram) */
+const GOAL_LABEL = { hypertrophy: 'Hypertrophy', strength: 'Strength', both: 'Strength & Size' };
+function summarizeProgram(p) {
+    const wk = E.weeksOf(p), vol = E.weeklyVolume(p, wk);
+    let totalSets = 0, comp = 0, iso = 0, exCount = 0, mins = 0; const exIds = [], seen = new Set();
+    (p.days || []).forEach((day) => {
+        try { mins += E.estimateMinutes(p, day, wk); } catch { /* ignore */ }
+        (day.exercises || []).forEach((id, slot) => {
+            const ex = EX_BY_ID[id]; if (!ex) return;
+            exCount++; if (!seen.has(id)) { seen.add(id); exIds.push(id); }
+            if (ex.type === 'compound') comp++; else iso++;
+            totalSets += Number(E.computeCell(p, day, id, slot, wk).sets) || 0;
+        });
+    });
+    return { goal: GOAL_LABEL[p.config?.goal] || p.config?.goal || '—', split: E.SPLITS[p.config?.split]?.name || 'Custom', days: (p.days || []).length, weeks: wk,
+        totalSets: Math.round(totalSets), weeklyMin: Math.round(mins), exercises: exCount, comp, iso, vol, exIds };
+}
+export function comparePrograms({ a, b }) {
+    const A = programById(a), B = programById(b); if (!A || !B) return null;
+    const sa = summarizeProgram(A), sb = summarizeProgram(B);
+    const parts = (E.PART_ORDER || []).filter((p) => (sa.vol[p] || 0) > 0.05 || (sb.vol[p] || 0) > 0.05);
+    const setB = new Set(sb.exIds), setA = new Set(sa.exIds);
+    const strip = ({ vol, exIds, ...rest }) => rest;
+    return { a: { id: A.id, name: A.name, ...strip(sa) }, b: { id: B.id, name: B.name, ...strip(sb) },
+        muscles: parts.map((p) => ({ part: p, label: E.PART_LABEL?.[p] || p, a: Math.round((sa.vol[p] || 0) * 10) / 10, b: Math.round((sb.vol[p] || 0) * 10) / 10 })),
+        shared: sa.exIds.filter((id) => setB.has(id)).map(exName), onlyA: sa.exIds.filter((id) => !setB.has(id)).map(exName), onlyB: sb.exIds.filter((id) => !setA.has(id)).map(exName),
+        programs: saved().map((p) => ({ id: p.id, name: p.name })) };
+}
+export function compareExercises({ a, b }) {
+    const A = EX_BY_ID[a], B = EX_BY_ID[b]; if (!A || !B) return null;
+    const pa = E.exerciseProfile(A), pb = E.exerciseProfile(B);
+    const parts = (E.PART_ORDER || []).filter((p) => (pa.muscles[p] || 0) > 0.02 || (pb.muscles[p] || 0) > 0.02);
+    const view = (x, pr) => ({ id: x.id, name: x.name, part: E.PART_LABEL?.[pr.part] || pr.part, type: pr.type, equip: pr.equip, rep: pr.rep, pattern: pr.pattern, tempo: pr.tempo, axial: !!pr.axial, cue: pr.cue || '' });
+    return { a: view(A, pa), b: view(B, pb), muscles: parts.map((p) => ({ part: p, label: E.PART_LABEL?.[p] || p, a: pa.muscles[p] || 0, b: pb.muscles[p] || 0 })) };
+}

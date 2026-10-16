@@ -312,6 +312,21 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val n = r.i("changes")
         if (n == 0) toast("Nothing changed") else toast(if (n == 1) "Saved" else "Saved $n cycle blocks") { launchCore { val u = obj("undoSave", jsonOf("programId" to id)); if (u?.b("ok") == true) { reloadEditor(); refreshHomeSide(); plan = obj("plan"); toast("Save undone") } else toast(u?.s("error", "Couldn't undo") ?: "Couldn't undo") } }
     }
+    suspend fun programSettings(): JSONObject? = obj("programSettings", jsonOf("programId" to editor?.s("programId")))
+    fun applyProgramSettings(settings: JSONObject?, shuffle: Boolean = false, seed: Long? = null, after: () -> Unit = {}) = launchCore {
+        val id = editor?.s("programId") ?: return@launchCore
+        val a = jsonOf("programId" to id, "settings" to (settings ?: JSONObject()), "shuffle" to shuffle); if (seed != null) a.put("seed", seed)
+        val rebuilding = shuffle || seed != null
+        val r = (if (rebuilding || settings != null) working("Rebuilding your program") { obj("applyProgramSettings", a) } else obj("applyProgramSettings", a)) ?: return@launchCore
+        if (!r.b("ok")) { toast(r.s("error", "Couldn't change that")); return@launchCore }
+        if (r.b("changed")) { hap(Hap.Done); reloadEditor(); refreshHomeSide(); plan = obj("plan") }
+        toast(when { r.b("rebuilt") -> "Program rebuilt"; r.b("changed") -> "Program settings saved"; else -> "No changes" })
+        after()
+    }
+    suspend fun comparePrograms(a: String, b: String): JSONObject? = obj("comparePrograms", jsonOf("a" to a, "b" to b))
+    suspend fun compareExercises(a: String, b: String): JSONObject? = obj("compareExercises", jsonOf("a" to a, "b" to b))
+    suspend fun searchExercises(q: String): List<JSONObject> = arr(call("library", jsonOf("q" to q)))
+
     fun discardEdits() = launchCore { val id = editor?.s("programId") ?: return@launchCore; call("discardEdits", jsonOf("programId" to id)); reloadEditor(); toast("Changes discarded") }
     fun closeEditor() { screen = Screen.Tabs; editor = null }
     fun deleteProgram(id: String) = launchCore {

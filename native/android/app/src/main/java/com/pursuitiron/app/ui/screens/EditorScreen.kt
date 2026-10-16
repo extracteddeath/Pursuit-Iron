@@ -79,6 +79,8 @@ fun ProgramEditorScreen(vm: AppViewModel) {
     var sheet by remember { mutableStateOf<ESheet?>(null) }
     var leaving by remember { mutableStateOf(false) }
     var scopeAsk by remember { mutableStateOf(false) }
+    var settingsOpen by remember { mutableStateOf(false) }
+    if (settingsOpen) ProgramSettingsSheet(vm) { settingsOpen = false }
     val dirty = e.b("dirty")
     BackHandler { if (dirty) leaving = true else vm.closeEditor() }
     fun save() { if (e.s("cycleId").isNotBlank()) scopeAsk = true else vm.saveEdits("program") }
@@ -90,6 +92,7 @@ fun ProgramEditorScreen(vm: AppViewModel) {
                 Kicker(if (dirty) "Editing · unsaved" else "Editing")
                 Text(e.s("name"), style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
+            IconButton(onClick = { settingsOpen = true }) { Icon(PiIcons.Sparkle, "Program settings") }
             if (dirty) TextButton(onClick = { vm.discardEdits() }) { Text("Discard") }
             Button(onClick = { save() }, enabled = dirty) { Text("Save") }
         }

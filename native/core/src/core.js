@@ -217,8 +217,165 @@ export function home() {
         needsTrainingMax: nx && nx.program.config?.percentScheme ? mainLifts(nx.program).filter((id) => !(E.trainingMaxForUnit(nx.program, id, unit()) > 0)).length : 0,
         cycle: (() => { const ci = liveCycleInfo(); return ci ? { id: ci.cycle.id, name: ci.cycle.name || 'Training cycle', blockIdx: ci.blockIdx, blocks: (ci.cycle.blockMeta || []).map((b) => b.label || 'Block'),
             weekIndex: ci.weekIndex, weeksTotal: ci.weeksTotal, isDeload: ci.isDeload, dayIndex: ci.dayIndex, daysPerWeek: ci.daysPerWeek } : null; })(),
-        recent: H.slice(0, 7).map(historyRow)
+        recent: H.slice(0, 7).map(historyRow),
+        ...todayInsights(nx, H)
     };
+}
+
+/* App.js upNext freshness + alt, DeloadAdviceCard, MuscleRecoveryCard rest advice, homeCardPlan, WeeklyRecapCard. */
+const MAJOR_PARTS = ['chest', 'lats', 'upper_back', 'shoulders', 'quads', 'hamstrings', 'glutes', 'biceps', 'triceps'];
+function freshnessFor(program, cursorIdx, lastIdx, H) {
+    let rec = []; try { rec = E.muscleRecovery(H) || []; } catch { rec = []; }
+    const readyByPart = Object.fromEntries(rec.map((r) => [r.part, r.readiness]));
+    const dayScore = (day) => {
+        let sum = 0, wsum = 0;
+        day.exercises.forEach((id) => {
+            const ex = EX_BY_ID[id]; if (!ex) return;
+            sum += (readyByPart[ex.part] ?? 100); wsum += 1;
+            E.secondaryOf(ex).forEach(([pp, f]) => { sum += (readyByPart[pp] ?? 100) * f * 0.5; wsum += f * 0.5; });
+        });
+        return wsum ? sum / wsum : 100;
+    };
+    const schedScore = dayScore(program.days[cursorIdx]);
+    let alt = null, best = schedScore + 12;
+    program.days.forEach((d, i) => { if (i === cursorIdx || i === lastIdx) return; const sc = dayScore(d); if (sc > best) { best = sc; alt = { day: d, dayIndex: i, score: Math.round(sc) }; } });
+    return { freshness: Math.round(schedScore), alt, rec };
+}
+function todayInsights(nx, H) {
+    const u = unit();
+    let cur = null; if (nx) { try { cur = E.nextSessionCursor(nx.program, H); } catch { cur = null; } }
+    const fr = nx ? freshnessFor(nx.program, nx.dayIndex, cur?.lastIdx, H) : { freshness: null, alt: null, rec: (() => { try { return E.muscleRecovery(H) || []; } catch { return []; } })() };
+    const majorTrained = fr.rec.filter((r) => MAJOR_PARTS.includes(r.part) && r.daysSince != null);
+    const avgReady = majorTrained.length ? majorTrained.reduce((x, r) => x + r.readiness, 0) / majorTrained.length : 100;
+    const fatigued = majorTrained.filter((r) => r.readiness < 50).length;
+    const restAdvised = majorTrained.length >= 3 && (avgReady < 50 || fatigued >= Math.ceil(majorTrained.length * 0.6));
+    let recap = null; try { recap = H.length ? E.weeklyRecap(H, u) : null; } catch { recap = null; }
+    let deload = null; try { deload = H.length ? E.deloadAdvice(H) : null; } catch { deload = null; }
+    const needsBw = !(parseFloat(S.store.bodyweight) > 0);
+    const insights = [];
+    if (H.length) {
+        const ranked = [['recovery', restAdvised], ['strength', (recap?.prs || 0) > 0 || needsBw], ['recap', (recap?.count || 0) > 0], ['recovery', Date.now() - H[0].date < 2 * 86400000]];
+        for (const [id, news] of ranked) { if (!news || insights.includes(id)) continue; if (insights.length >= 2) break; insights.push(id); }
+    }
+    const ready = fr.rec.filter((r) => r.readiness >= 85 && MAJOR_PARTS.includes(r.part)).map((r) => E.PART_LABEL[r.part]).slice(0, 4);
+    return {
+        freshness: fr.freshness,
+        alt: fr.alt ? { dayId: fr.alt.day.id, dayLabel: fr.alt.day.label, score: fr.alt.score } : null,
+        deload: deload ? { reasons: (deload.reasons || []).map(String) } : null,
+        canDeload: !!nx && !S.live, canLight: !!nx && !S.live,
+        recovery: { restAdvised, ready, parts: fr.rec.filter((r) => r.daysSince != null).sort((a, b) => a.readiness - b.readiness).slice(0, 8)
+            .map((r) => ({ part: r.part, label: E.PART_LABEL[r.part] || r.part, readiness: Math.round(r.readiness), status: r.status || null, daysSince: r.daysSince })) },
+        recap: recap && recap.count ? { count: recap.count, sets: recap.sets, vol: recap.vol, prevCount: recap.prevCount, prevSets: recap.prevSets, prevVol: recap.prevVol, prs: recap.prs,
+            topMuscle: recap.topMuscle ? { part: recap.topMuscle[0], label: E.PART_LABEL[recap.topMuscle[0]] || recap.topMuscle[0], sets: recap.topMuscle[1] } : null } : null,
+        insights, needsBodyweight: needsBw
+    };
+}
+function startProgramDay(program, day, weekIndex, extra = {}) {
+    if (S.live) return { error: 'Finish or discard the workout in progress first.' };
+    const l = { schemaVersion: 2, sessionId: E.uid(), programId: program.id, dayId: day.id, weekIndex, startedAt: now(), elapsedMs: 0, exIdx: 0,
+        readiness: null, injuryReports: [], sessionProgressions: {}, sessionNote: '', sessionNoteRepeat: 'none', fbPump: {}, fbSore: {}, rest: null, ...extra };
+    S.live = l;
+    const ctx = sessionContext(l);
+    if (!ctx) { S.live = null; return { error: 'That workout day no longer exists.' }; }
+    l.data = freshData(ctx).data; l.dayExSig = ctx.day.exercises.join('|');
+    markLive();
+    return session();
+}
+/* App.js startUpNextAlt: the fresher day, same week. */
+export function startAlt() {
+    const nx = upNext(); if (!nx) return { error: 'No program yet.' };
+    let cur = null; try { cur = E.nextSessionCursor(nx.program, history()); } catch { cur = null; }
+    const fr = freshnessFor(nx.program, nx.dayIndex, cur?.lastIdx, history());
+    if (!fr.alt) return { error: 'No fresher day right now.' };
+    return startProgramDay(nx.program, fr.alt.day, nx.weekIndex);
+}
+/* App.js startDeload: this week's day at deload intensity (the week after the block). */
+export function startDeload() {
+    const nx = upNext(); if (!nx) return { error: 'No program yet.' };
+    return startProgramDay(nx.program, nx.day, E.weeksOf(nx.program) + 1, nx.program.config?.deload ? {} : { forceDeload: true });
+}
+/* App.js startLight: the freshest day at deload intensity. */
+export function startLight() {
+    const nx = upNext(); if (!nx) return { error: 'No program yet.' };
+    let cur = null; try { cur = E.nextSessionCursor(nx.program, history()); } catch { cur = null; }
+    const fr = freshnessFor(nx.program, nx.dayIndex, cur?.lastIdx, history());
+    return startProgramDay(nx.program, fr.alt?.day || nx.day, E.weeksOf({ ...nx.program, config: { ...nx.program.config, deload: true } }) + 1, { forceDeload: true });
+}
+
+/* ------------------------------------------------------------------ Progress: one lift (App.js lift detail + StrengthComparisonCard) */
+export function liftDetail({ id }) {
+    const ex = EX_BY_ID[id]; if (!ex) return null;
+    const H = history(), u = unit();
+    let t = null; try { t = (E.exerciseTrends(H) || []).find((x) => x.id === id) || null; } catch { t = null; }
+    const bw = parseFloat(S.store.bodyweight), sex = S.store.sex || null, a = age();
+    let lvl = null; try { lvl = t && bw > 0 && sex ? E.strengthLevel(id, t.prBest, t.unit, bw, u, sex, a) : null; } catch { lvl = null; }
+    const conv = (v, from) => (from && from !== u ? (u === 'lb' ? v * 2.20462 : v / 2.20462) : v);
+    return {
+        id, name: ex.name, part: ex.part, partLabel: E.PART_LABEL[ex.part] || ex.part, unit: u, goal: Number(S.store.goals?.[id]) || null,
+        sessions: t ? t.sessionsCount : 0,
+        best: t ? { e1rm: Math.round(conv(t.prBest, t.unit) * 10) / 10, topWeight: Math.round(conv(t.prTopW, t.unit) * 10) / 10 } : null,
+        delta: t ? Math.round(conv(t.delta, t.unit) * 10) / 10 : 0,
+        points: t ? t.sessions.map((x) => ({ date: x.date, e1rm: Math.round(conv(x.best, x.unit) * 10) / 10, top: x.top ? `${fmtW(conv(x.top.w, x.unit))}×${x.top.r ?? ''}` : '' })) : [],
+        recent: t ? t.sessions.slice(-8).reverse().map((x) => ({ date: x.date, sets: x.sets.map((st) => `${fmtW(conv(st.w, x.unit))}×${st.r ?? ''}`) })) : [],
+        level: lvl ? { level: lvl.level, idx: lvl.idx, within: Math.round(lvl.within * 100) / 100, next: lvl.idx < E.STD_LEVELS.length - 1 ? E.STD_LEVELS[lvl.idx + 1] : null,
+            add: lvl.idx < lvl.thresh.length ? Math.max(0, Math.round((lvl.thresh[lvl.idx] - t.prBest) * 10) / 10) : 0 } : null,
+        levels: E.STD_LEVELS
+    };
+}
+export function strengthStandards() {
+    const H = history(), u = unit(), bw = parseFloat(S.store.bodyweight), sex = S.store.sex || null, a = age();
+    const ready = bw > 0 && !!sex;
+    let trends = []; try { trends = E.exerciseTrends(H) || []; } catch { trends = []; }
+    const rows = !ready ? [] : trends.map((t) => { let l = null; try { l = E.strengthLevel(t.id, t.prBest, t.unit, bw, u, sex, a); } catch { l = null; } return l ? { t, l } : null; })
+        .filter(Boolean).sort((x, y) => (y.l.idx - x.l.idx) || (y.l.within - x.l.within))
+        .map(({ t, l }) => ({ id: t.id, name: t.name, level: l.level, idx: l.idx, within: Math.round(l.within * 100) / 100,
+            next: l.idx < E.STD_LEVELS.length - 1 ? E.STD_LEVELS[l.idx + 1] : null, add: l.idx < l.thresh.length ? Math.max(0, Math.round((l.thresh[l.idx] - t.prBest) * 10) / 10) : 0, unit: t.unit }));
+    return { ready, missing: !(bw > 0) ? 'bodyweight' : !sex ? 'sex' : null, cohort: ready ? `${sex === 'female' ? 'women' : 'men'}${a > 0 ? `, age ${a}` : ''}, ${Math.round(bw)}${u}` : '',
+        rows, levels: E.STD_LEVELS };
+}
+
+/* ------------------------------------------------------------------ correct a logged workout (App.js HistoryEditSheet + commitHistoryCorrection) */
+export function historyEditDraft({ id }) {
+    const h = history().find((x) => x.id === id); if (!h) return null;
+    return { id, dayLabel: h.dayLabel || 'Workout', date: h.date, durationMin: h.durationMin ?? null, unit: h.unit || unit(),
+        lifts: Object.entries(h.perf || {}).map(([eid, p]) => ({ id: eid, name: exName(eid),
+            sets: (Array.isArray(p?.sets) && p.sets.length ? p.sets : (p?.reps != null ? [{ w: p.weight ?? 0, r: p.reps }] : [])).map((st) => ({ w: st.w ?? '', r: st.r ?? '', rir: st.rir ?? '', sub: !!st.sub })) })) };
+}
+export function editHistory({ id, date, durationMin, lifts }) {
+    const H = history(), original = H.find((x) => x.id === id); if (!original || !Array.isArray(lifts)) return { ok: false };
+    const perfOut = {};
+    lifts.forEach((lf) => {
+        const p = original.perf?.[lf.id]; if (!p || !Array.isArray(lf.sets) || !lf.sets.length) return;
+        const srcSets = Array.isArray(p.sets) && p.sets.length ? p.sets : [];
+        perfOut[lf.id] = { ...p, sets: lf.sets.map((st, i) => ({ ...(srcSets[i] || {}), w: st.w === '' ? '' : String(st.w), r: st.r === '' ? '' : String(st.r), rir: st.rir === '' || st.rir == null ? '' : String(st.rir), ...(st.sub ? { sub: true } : {}) })) };
+    });
+    const draft = { ...original, perf: perfOut, ...(Number.isFinite(Number(date)) && Number(date) > 0 ? { date: Number(date) } : {}), ...(durationMin != null ? { durationMin: String(durationMin) } : {}) };
+    const clean = E.normalizeEditedHistoryEntry(original, draft);
+    S.undo = { history: H, perf: perf() };
+    S.store.perf = E.perfAfterHistoryReplace(H, perf(), id, clean);
+    setList('history', H.map((x) => (x.id === id ? clean : x)).sort((a, b) => (Number(b?.date) || 0) - (Number(a?.date) || 0)));
+    return { ok: true, label: clean.dayLabel || 'workout' };
+}
+
+/* ------------------------------------------------------------------ share card data (App.js shareSession → drawRecapCard) */
+export function shareCard({ id }) {
+    const H = history(), entry = H.find((x) => x.id === id); if (!entry) return null;
+    const u = entry.unit || 'kg';
+    const e1 = (b) => Object.fromEntries(Object.entries(b || {}).map(([k, v]) => [k, v.e1rm]));
+    const nowBest = e1(E.liftBests([entry], u));
+    const t0 = new Date(entry.date).getTime();
+    const prior = e1(E.liftBests(H, u, (h) => h !== entry && new Date(h.date).getTime() < t0));
+    const prs = Object.entries(nowBest).filter(([k, v]) => prior[k] != null && v > prior[k] + 1e-9 && EX_BY_ID[k]).sort((a, b) => b[1] - a[1]).map(([k]) => EX_BY_ID[k].name);
+    const mainId = Object.keys(nowBest).sort((a, b) => nowBest[b] - nowBest[a])[0];
+    const tops = Object.entries(entry.perf || {}).map(([k, p]) => {
+        const ex = EX_BY_ID[k]; if (!ex) return null;
+        const done = E.setsOf(p).filter((x) => x.w != null && x.r > 0); if (!done.length) return null;
+        const top = E.pickTopSet(done, (x) => x.w, (x) => x.r) || done[0];
+        return { name: ex.name, set: `${top.w}${u}×${top.r}` };
+    }).filter(Boolean);
+    return { label: String(entry.dayLabel || 'Workout'), programName: entry.programName || '', date: entry.date, durMin: Number(entry.durationMin) || 0,
+        doneSets: entry.setsDone ?? 0, volume: Number(entry.volume || 0), unit: u,
+        mainE1rm: mainId && EX_BY_ID[mainId] ? { name: EX_BY_ID[mainId].name, est: Math.round(nowBest[mainId]) } : null, prs, tops };
 }
 
 /* ------------------------------------------------------------------ workout session */
@@ -227,7 +384,9 @@ function sessionContext(l) {
     const source = liveProgram(l);
     if (!source) return null;
     E.setExLoadInc(source.exLoadInc || {}); // App.js: per-machine increments come from the open program
-    const program = withProgressionChoices(source, l.sessionProgressions || {});
+    // App.js startDeload / startLight run the program with deload switched on (a synthesized copy).
+    const base = l.forceDeload ? { ...source, config: { ...source.config, deload: true } } : source;
+    const program = withProgressionChoices(base, l.sessionProgressions || {});
     const rawDay = program.days.find((d) => d.id === l.dayId);
     if (!rawDay) return null;
     const day = rawDay.exercises.every((id) => EX_BY_ID[id]) ? rawDay : { ...rawDay, exercises: rawDay.exercises.filter((id) => EX_BY_ID[id]) };
@@ -796,7 +955,7 @@ export function progress() {
     let recap = null; try { recap = E.weeklyRecap(H, u); } catch { recap = null; }
     return {
         unit: u, sessions: H.length,
-        lifts: trends.slice(0, 24).map((t) => ({ id: t.id, name: exName(t.id), points: (t.points || t.series || []).slice(-12).map((p) => ({ date: p.date ?? p.t ?? null, e1rm: Math.round((p.e1rm ?? p.v ?? p.y ?? 0) * 10) / 10 })), change: t.change ?? t.delta ?? null })),
+        lifts: trends.slice(0, 24).map((t) => ({ id: t.id, name: exName(t.id), points: (t.sessions || []).slice(-12).map((p) => ({ date: p.date ?? null, e1rm: Math.round((p.best ?? 0) * 10) / 10 })), change: t.change ?? t.delta ?? null })),
         records: Object.entries(bests).map(([id, b]) => ({ id, name: exName(id), e1rm: Math.round((b.e1rm ?? b.best ?? 0) * 10) / 10, weight: b.weight ?? b.w ?? null, reps: b.reps ?? b.r ?? null, date: b.date ?? null })).sort((a, b) => b.e1rm - a.e1rm).slice(0, 30),
         recap,
         readiness: readiness()

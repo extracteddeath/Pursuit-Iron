@@ -374,5 +374,42 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   const rp = C.repeatWorkout({ historyId: qh.id });
   ok(rp && rp.exercises && rp.exercises.length >= 1, 'a past workout can be repeated');
   C.discardSession && C.discardSession(); }
+
+// 22. Today and Progress parity: fresher day, deload/light sessions, recap, lift detail, standards, correct a workout, share card
+{ C.init({}); const eq = ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'];
+  C.createProgram({ config: { name: 'TP', unit: 'kg', goal: 'both', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: eq }, seed: 9 });
+  const logAll = (w) => { const s = C.session(); s.exercises.forEach((e, ei) => e.sets.forEach((x) => { if (!x.warm && !x.sub) { C.act({ type: 'edit', ei, si: x.i, field: 'weight', value: String(w) }); C.act({ type: 'edit', ei, si: x.i, field: 'reps', value: '8' }); C.act({ type: 'toggle', ei, si: x.i }); } })); return C.finishSession(); };
+  C.startSession({}); logAll(40); C.startSession({}); logAll(45);
+  const h = C.home();
+  ok(typeof h.freshness === 'number' && 'alt' in h && h.recap && h.recap.count === 2 && Array.isArray(h.insights), 'Today: freshness, recap (' + h.recap.count + ' this week), insights ' + JSON.stringify(h.insights));
+  ok(h.recovery && Array.isArray(h.recovery.parts) && h.recovery.parts.length > 0, 'muscle recovery rows');
+  const dl = C.startDeload();
+  const st = JSON.parse(C.exportLive());
+  ok(dl.active && st.forceDeload && dl.weekIndex === dl.weeksTotal + 1, 'deload now: the deload week of this day (wk ' + dl.weekIndex + ')');
+  C.discardSession();
+  const lt = C.startLight();
+  ok(lt.active && JSON.parse(C.exportLive()).forceDeload, 'lighter session starts at deload intensity');
+  C.discardSession();
+  if (h.alt) { const a = C.startAlt(); ok(a.active && a.dayId === h.alt.dayId, 'fresher day starts'); C.discardSession(); }
+  else ok(C.startAlt().error, 'no fresher day: refused');
+  const pr = C.progress();
+  ok(pr.lifts.length > 0 && pr.lifts[0].points.length === 1 || pr.lifts.some((l) => l.points.length >= 1), 'progress sparklines have points');
+  const lid = pr.lifts[0].id;
+  const ld = C.liftDetail({ id: lid });
+  ok(ld && ld.points.length >= 1 && ld.best && ld.best.e1rm > 0 && ld.recent.length >= 1, 'lift detail: series, best and recent sets');
+  ok(C.strengthStandards().ready === false && C.strengthStandards().missing === 'bodyweight', 'standards ask for bodyweight first');
+  C.setProfile({ sex: 'male', birth: '1990-01-01' }); C.logBodyweight({ value: 80 });
+  const ss = C.strengthStandards();
+  ok(ss.ready && ss.cohort.includes('men'), 'standards cohort: ' + ss.cohort + ' (' + ss.rows.length + ' lifts)');
+  const H0 = JSON.parse(C.exportStore()).history[0];
+  const dr = C.historyEditDraft({ id: H0.id });
+  ok(dr && dr.lifts.length > 0 && dr.lifts[0].sets.length > 0, 'edit draft lists lifts and sets');
+  dr.lifts[0].sets[0].w = '50'; dr.lifts = dr.lifts.slice(0, -1);
+  const ed = C.editHistory({ id: H0.id, date: H0.date, durationMin: 42, lifts: dr.lifts });
+  const H1 = JSON.parse(C.exportStore()).history.find((x) => x.id === H0.id);
+  ok(ed.ok && Object.keys(H1.perf).length === Object.keys(H0.perf).length - 1 && String(H1.perf[dr.lifts[0].id].sets[0].w) === '50' && Number(H1.durationMin) === 42, 'corrected workout saved: set, removed lift, minutes');
+  ok(C.undo().ok && Object.keys(JSON.parse(C.exportStore()).history.find((x) => x.id === H0.id).perf).length === Object.keys(H0.perf).length, 'correction can be undone');
+  const sc = C.shareCard({ id: H0.id });
+  ok(sc && sc.tops.length > 0 && sc.label && sc.mainE1rm, 'share card data: ' + sc.tops.length + ' lifts, PRs ' + sc.prs.length); }
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);
 

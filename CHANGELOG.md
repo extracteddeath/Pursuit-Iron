@@ -1,3 +1,8 @@
+## Build 895 — Session note placement
+
+- Place session notes below the exercise heading in regular and Focus workouts so the exercise name leads the screen.
+- Keep note editing, repetition and workout recovery available in the same flow.
+
 ## Build 894 — Custom cycle conversion and setup recovery
 
 - Turn an existing generated or manually built program into a custom cycle. Keep the current program as Block 1 and choose 1–7 future blocks with any supported phase order, repeats and individual 1–24 week lengths.

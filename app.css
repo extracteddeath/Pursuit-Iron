@@ -8421,7 +8421,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 
 
 /* B888: compact session choices and readable note editors share theme surfaces. */
-.wpb-session-context{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;flex-shrink:0}
+.wpb-session-context{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 0;flex-shrink:0}
 .wpb-session-context>button{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-height:40px;padding:8px 12px;border-radius:14px;background:var(--wpb-theme-card);color:var(--wpb-theme-text);border:1px solid var(--wpb-theme-border);text-align:left}
 .wpb-exercise-tags{display:flex;gap:5px;flex-wrap:wrap;margin:7px 0 3px}
 .wpb-exercise-tags>span{font-size:11px;font-weight:650;padding:4px 8px;border-radius:8px;background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink)}

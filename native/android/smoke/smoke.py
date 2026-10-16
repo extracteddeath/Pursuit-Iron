@@ -350,7 +350,7 @@ tap(r"^\|Plan$|^Plan\|")
 adb("shell", "input", "swipe", "540", "700", "540", "1900", "200")
 if tap(r"^\|  Schedule$|Schedule$", "schedule-sheet", required=False):
     tap(r"^Mon", "schedule-monday")
-    back()
+    tap(r"^\|Done$")
 if tap(r"Edit program", "editor"):
     if tap(r"\. Edit\|", "editor-slot"):
         tap(r"Move later")
@@ -425,6 +425,7 @@ shot("widget")
 adb("shell", "am", "start", "-W", "-a", "com.pursuitiron.app.action.START_WORKOUT", "-n", f"{PKG}/com.pursuitiron.app.MainActivity")
 time.sleep(4)
 shot("widget-start")
+tap(r"^\|Skip$", required=False)  # the readiness check-in opens over a new workout
 if find(r"Minimise workout", timeout=4) is None:
     FAILS.append("widget Start did not open the workout")
 adb("shell", "am", "start", "-W", "-n", f"{PKG}/com.pursuitiron.app.WidgetPreviewActivity")

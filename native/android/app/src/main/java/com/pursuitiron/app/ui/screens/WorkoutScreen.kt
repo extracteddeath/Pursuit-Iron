@@ -410,10 +410,12 @@ private fun SetRow(vm: AppViewModel, s: JSONObject, ei: Int, si: Int, set: JSONO
                 Text(set.s("reps").ifBlank { "—" }, style = if (grip) MaterialTheme.typography.titleLarge else MaterialTheme.typography.titleMedium)
             }
             Spacer(Modifier.width(4.dp))
-            val r by animateDpAsState(if (done) 14.dp else 999.dp, Motion.spring(), label = "check")
+            // Animate between the two real radii: a spring from a 999 dp "circle" overshoots past zero, and a
+            // negative corner size throws while drawing.
+            val r by animateDpAsState(if (done) 14.dp else cellH / 2, Motion.spring(), label = "check")
             val checkW = if (grip) 68.dp else 44.dp
             Box(
-                Modifier.width(checkW).height(cellH).clip(RoundedCornerShape(r.coerceAtMost(cellH / 2)))
+                Modifier.width(checkW).height(cellH).clip(RoundedCornerShape(r.coerceIn(0.dp, cellH / 2)))
                     .background(if (done) cs.primary else Color.Transparent)
                     .then(if (done) Modifier else Modifier.background(Color.Transparent))
                     .clickable { vm.act("toggle", "ei" to ei, "si" to si) }

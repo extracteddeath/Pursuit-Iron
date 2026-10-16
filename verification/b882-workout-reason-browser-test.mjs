@@ -54,16 +54,27 @@ assert.doesNotMatch(label, /temporary/i, 'the method line must not announce an o
 assert.match(label, /Dynamic double/, 'the method line names the style that set these loads: ' + label);
 assert.match(cardText, /Dynamic double progression/, 'the reference card and the method line agree');
 const disclosure = await page.waitForSelector('.wpb-load-explanation');
-assert.equal(await disclosure.evaluate(el => el.open), false, 'target reason starts compact');
+assert.equal(await disclosure.evaluate(el => el.open), true, 'target coaching is visible by default');
+await page.click('.wpb-load-explanation summary');
+assert.equal(await disclosure.evaluate(el => el.open), false, 'target coaching can still be collapsed deliberately');
 await page.click('.wpb-load-explanation summary');
 assert.equal(await disclosure.evaluate(el => el.open), true, 'target reason expands without changing the prescription');
 console.log('PASS 1 method line and reference card name the same, load-owning method.');
-const coachBtn = await page.$('button[aria-label="Expand Coach guidance"]');
-if (coachBtn) { await coachBtn.click(); await new Promise(r => setTimeout(r, 300)); }
+assert.ok(await page.$('.wpb-coach-card'), 'Coach guidance is expanded by default for the current lift');
+await page.locator('button[aria-label="Collapse Coach guidance"]').click();
+await page.waitForSelector('button[aria-label="Expand Coach guidance"]');
+await page.locator('button[aria-label="Expand Coach guidance"]').click();
+await page.waitForSelector('.wpb-coach-card');
 const coachText = await page.evaluate(() => document.querySelector('.wpb-workout').textContent);
 assert.doesNotMatch(coachText, /already reduced|use the lighter target/i, 'Coach must not claim a reduction recovery did not cause');
 assert.match(coachText, /still recovering|Recovery is still low/i, 'Coach still flags the unrecovered muscle');
 console.log('PASS 2 Coach flags recovery without claiming a load reduction that did not happen.');
+if (process.env.B882_SCREENSHOTS) {
+    await page.$eval('.wpb-workout-scroll', el => el.scrollTop = 0);
+    await page.screenshot({ path: `${process.env.B882_SCREENSHOTS}/b898-target-phone.png` });
+    await page.$eval('.wpb-coach-card', el => el.scrollIntoView({ block: 'center' }));
+    await page.screenshot({ path: `${process.env.B882_SCREENSHOTS}/b898-coach-phone.png` });
+}
 await page.click('[data-why-target]');
 const sheet = await page.waitForSelector('xpath/.//div[contains(@class,"wpb-backdrop")][.//*[contains(., "Why this prescription?")]]');
 const sheetText = await sheet.evaluate(el => el.textContent);

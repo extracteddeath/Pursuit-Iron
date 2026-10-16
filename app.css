@@ -8447,8 +8447,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb-ex-nav-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;font-weight:700}
 .wpb-ex-nav-count{flex-shrink:0;font-size:11px;font-weight:600}
 #root .wpb-workout .wpb-exercise-heading .wpb-progression-label{
-  background:var(--wpb-theme-accent-dim)!important;border-radius:10px;
-  padding:6px 9px!important;min-height:40px!important;
+  background:transparent!important;border-radius:6px;
+  padding:4px 0!important;min-height:28px!important;
+  margin-top:1px!important;max-width:100%;text-align:left;
+  font-size:11px!important;font-weight:600!important;line-height:1.35;
 }
 .wpb-load-explanation summary{cursor:pointer;min-height:36px;align-content:center;line-height:1.4}
 .wpb-load-caption{color:var(--wpb-theme-muted);font-size:12px;font-weight:600}

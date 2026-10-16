@@ -135,6 +135,7 @@ fun PlanScreen(vm: AppViewModel) {
                 Text("${p.s("name")} · week $wk of $weeks" + (if (p.i("current") > 0) " · you're on week ${p.i("current")}" else ""), style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                 Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilledTonalButton(onClick = { vm.openEditor(p.s("programId")) }) { Icon(PiIcons.List, null, modifier = Modifier.size(18.dp)); Text("  Edit program") }
+                    if (p.b("percent")) FilledTonalButton(onClick = { vm.tmFor = p.s("programId") }) { Text("Training maxes") }
                 }
             }
         }

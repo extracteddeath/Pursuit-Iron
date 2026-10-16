@@ -62,6 +62,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var profile by mutableStateOf<JSONObject?>(null); private set
     var gyms by mutableStateOf<JSONObject?>(null); private set
     var cycles by mutableStateOf<JSONObject?>(null); private set
+    var templates by mutableStateOf<JSONObject?>(null); private set
+    /** The program whose training maxes the sheet is open for, or null. */
+    var tmFor by mutableStateOf<String?>(null)
     /** A long engine job in flight (building a cycle, advancing a block): the screen shows this and blocks input. */
     var busy by mutableStateOf<String?>(null); private set
 
@@ -146,6 +149,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         profile = obj("profile")
         gyms = obj("gyms")
         cycles = obj("cyclesView")
+        if (templates == null) templates = obj("templates")
     }
     private suspend fun refreshHomeSide() {
         home = obj("home"); plan = obj("plan"); progress = obj("progress"); history = arr(call("historyList")); settings = obj("settings")
@@ -254,6 +258,22 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         refreshHomeSide()
         screen = Screen.Tabs; tab = Tab.Today
         toast("${r.s("name")} is ready: ${r.i("days")} days a week")
+    }
+
+    /* ---------------------------------------------------------------- templates + training maxes */
+    fun createFromTemplate(id: String) = launchCore {
+        val r = working("Building your program") { obj("createFromTemplate", jsonOf("id" to id)) } ?: return@launchCore
+        if (!r.b("ok")) { toast(r.s("error", "The engine couldn't build that template")); return@launchCore }
+        hap(Hap.Done); refreshHomeSide(); plan = obj("plan")
+        screen = Screen.Tabs; tab = Tab.Today
+        toast("${r.s("name")} is ready")
+        if (r.b("percent")) tmFor = r.s("programId")
+    }
+    suspend fun trainingMaxes(programId: String): JSONObject? = obj("trainingMaxes", jsonOf("programId" to programId))
+    suspend fun setTrainingMax(programId: String, exId: String, value: Double?, fromOneRm: Boolean): JSONObject? {
+        val r = obj("setTrainingMax", jsonOf("programId" to programId, "exId" to exId, "value" to value, "fromOneRm" to fromOneRm))
+        home = obj("home"); plan = obj("plan"); publishWidget()
+        return r
     }
 
     /* ---------------------------------------------------------------- cycles */

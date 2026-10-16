@@ -260,6 +260,24 @@ if tap(r"Edit program", "editor"):
         back()
     back()
 
+# Template with percentages: build, then set training maxes
+tap(r"^\|Plan$|^Plan\|")
+if scroll_to(r"New program"):
+    tap(r"New program")
+    if tap(r"^\|Template$", "templates"):
+        tap(r"^\|Strength$")
+        if tap(r"% of max", "template-picked"):
+            time.sleep(6)
+            shot("training-max-sheet")
+            tap(r"From a 1RM")
+            if tap(r"\(1RM, "):
+                adb("shell", "input", "text", "140")
+                adb("shell", "input", "keyevent", "111")
+                tap(r"^\|Set$")
+                time.sleep(1.5)
+                shot("training-max-set")
+            back(); back()
+
 # Compare
 tap(r"^\|Plan$|^Plan\|")
 if scroll_to(r"Compare programs or exercises"):

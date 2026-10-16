@@ -126,6 +126,7 @@ fun TodayScreen(vm: AppViewModel) {
             }
         }
 
+        if (h.optInt("needsTrainingMax", 0) > 0) item(span = full) { TrainingMaxPrompt(vm) }
         if (next != null) item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { Hero(vm, next, h) }
 
         if (next != null) item {

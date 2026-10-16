@@ -46,9 +46,12 @@ class WidgetPreviewActivity : Activity() {
             col.addView(view, LinearLayout.LayoutParams(dp(w), dp(h)).apply { bottomMargin = dp(24) })
         }
         setContentView(FrameLayout(this).apply { addView(col) })
-        // Ask the widget to draw now (a launcher does this when a widget is placed).
-        sendBroadcast(android.content.Intent(AppWidgetManager.ACTION_APPWIDGET_UPDATE).setComponent(provider)
-            .putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids.toIntArray()))
+        // Ask the widget to draw now (a launcher does this when a widget is placed), and again once the
+        // host views have been laid out, so the responsive layout is chosen for their real size.
+        val update = android.content.Intent(AppWidgetManager.ACTION_APPWIDGET_UPDATE).setComponent(provider)
+            .putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids.toIntArray())
+        sendBroadcast(update)
+        col.postDelayed({ sendBroadcast(update) }, 1500)
     }
 
     override fun onStart() { super.onStart(); host.startListening() }

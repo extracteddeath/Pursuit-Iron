@@ -100,6 +100,7 @@ fun ProgramSettingsSheet(vm: AppViewModel, onClose: () -> Unit) {
             if (p.b("cycleOwned")) Text("This block's goal, length and volume are set by its training cycle. Duplicate it for a standalone copy you can rebuild.",
                 style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
             val locked = p.b("cycleOwned")
+            if (!locked) {
             Kicker("Training goal")
             Segmented(listOf("strength" to "Strength", "hypertrophy" to "Size", "both" to "Both"), goal, { if (!locked) goal = it })
             Kicker("Block length")
@@ -123,6 +124,7 @@ fun ProgramSettingsSheet(vm: AppViewModel, onClose: () -> Unit) {
             Column(Modifier.clip(RoundedCornerShape(20.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 ToggleRow("Skip bodyweight exercises", "Replace them with loaded ones", noBw) { if (!locked) noBw = it }
                 ToggleRow("No supersets", "Budget the workout as straight sets only", noSs) { if (!locked) noSs = it }
+            }
             }
             OutlinedTextField(folder, { folder = it.take(40) }, Modifier.fillMaxWidth(), singleLine = true, label = { Text("Folder") }, placeholder = { Text("e.g. Bulk 2026") })
             OutlinedTextField(desc, { desc = it.take(500) }, Modifier.fillMaxWidth(), label = { Text("Description") }, minLines = 2)
@@ -243,8 +245,8 @@ private fun hm(m: Int) = if (m >= 60) "${m / 60}h ${m % 60}m" else "${m}m"
 private fun Header(a: String, b: String, colA: Color, colB: Color) {
     Row(Modifier.padding(top = 6.dp)) {
         Box(Modifier.weight(1f))
-        Text(a, color = colA, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.width(110.dp), textAlign = TextAlign.End)
-        Text(b, color = colB, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.width(110.dp), textAlign = TextAlign.End)
+        Text(a, color = colA, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 10.dp).width(104.dp), textAlign = TextAlign.End)
+        Text(b, color = colB, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 10.dp).width(104.dp), textAlign = TextAlign.End)
     }
 }
 
@@ -254,8 +256,8 @@ private fun CompareRow(label: String, a: String, b: String, an: Int? = null, bn:
     val aWin = an != null && bn != null && an > bn; val bWin = an != null && bn != null && bn > an
     Row(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(label, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant, modifier = Modifier.weight(1f))
-        Text(a, style = MaterialTheme.typography.titleSmall, fontWeight = if (aWin) FontWeight.ExtraBold else null, color = if (aWin) colA else cs.onSurface, modifier = Modifier.width(110.dp), textAlign = TextAlign.End, maxLines = 2)
-        Text(b, style = MaterialTheme.typography.titleSmall, fontWeight = if (bWin) FontWeight.ExtraBold else null, color = if (bWin) colB else cs.onSurface, modifier = Modifier.width(110.dp), textAlign = TextAlign.End, maxLines = 2)
+        Text(a, style = MaterialTheme.typography.titleSmall, fontWeight = if (aWin) FontWeight.ExtraBold else null, color = if (aWin) colA else cs.onSurface, modifier = Modifier.padding(start = 10.dp).width(104.dp), textAlign = TextAlign.End, maxLines = 2)
+        Text(b, style = MaterialTheme.typography.titleSmall, fontWeight = if (bWin) FontWeight.ExtraBold else null, color = if (bWin) colB else cs.onSurface, modifier = Modifier.padding(start = 10.dp).width(104.dp), textAlign = TextAlign.End, maxLines = 2)
     }
 }
 

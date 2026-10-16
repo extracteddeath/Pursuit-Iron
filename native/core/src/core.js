@@ -198,6 +198,7 @@ export function home() {
         readiness: { today: todayReady, parts: rd },
         injuries: injuries().filter((i) => !i.resolvedAt).map((i) => ({ id: i.id, title: injuryTitle(i, E.PART_LABEL), impact: i.impact })),
         live: S.live ? liveSummary() : null,
+        needsTrainingMax: nx && nx.program.config?.percentScheme ? mainLifts(nx.program).filter((id) => !(E.trainingMaxForUnit(nx.program, id, unit()) > 0)).length : 0,
         cycle: (() => { const ci = liveCycleInfo(); return ci ? { id: ci.cycle.id, name: ci.cycle.name || 'Training cycle', blockIdx: ci.blockIdx, blocks: (ci.cycle.blockMeta || []).map((b) => b.label || 'Block'),
             weekIndex: ci.weekIndex, weeksTotal: ci.weeksTotal, isDeload: ci.isDeload, dayIndex: ci.dayIndex, daysPerWeek: ci.daysPerWeek } : null; })(),
         recent: H.slice(0, 7).map(historyRow)
@@ -594,6 +595,7 @@ export function plan({ programId, weekIndex } = {}) {
     return { programId: p.id, name: p.name, weekIndex: wk, weeksTotal: E.weeksOf(p), current: nx?.program.id === p.id ? nx.weekIndex : null,
         nextDayId: nx?.program.id === p.id ? nx.day.id : null, split: p.config?.split || null, goal: p.config?.goal || null,
         days: p.days.map((d) => { let m = null; try { m = E.estimateMinutes(p, d, wk); } catch { m = null; } return { id: d.id, label: d.label, minutes: m, exercises: dayPreview(p, d, wk) }; }),
+        percent: !!p.config?.percentScheme,
         cycleId: (p.cycleId && cycles().some((c) => c.id === p.cycleId)) ? p.cycleId : null, canNextBlock: !p.cycleId || !cycles().some((c) => c.id === p.cycleId),
         // Cycle blocks are reached through their cycle, as on the web app's Home, so the list stays one row per plan.
         programs: saved().filter((x) => !(x.cycleId && cycles().some((c) => c.id === x.cycleId))).map((x) => ({ id: x.id, name: x.name, days: x.days.length, active: x.id === nx?.program.id })) };
@@ -1400,4 +1402,40 @@ export function compareExercises({ a, b }) {
     const parts = (E.PART_ORDER || []).filter((p) => (pa.muscles[p] || 0) > 0.02 || (pb.muscles[p] || 0) > 0.02);
     const view = (x, pr) => ({ id: x.id, name: x.name, part: E.PART_LABEL?.[pr.part] || pr.part, type: pr.type, equip: pr.equip, rep: pr.rep, pattern: pr.pattern, tempo: pr.tempo, axial: !!pr.axial, cue: pr.cue || '' });
     return { a: view(A, pa), b: view(B, pb), muscles: parts.map((p) => ({ part: p, label: E.PART_LABEL?.[p] || p, a: pa.muscles[p] || 0, b: pb.muscles[p] || 0 })) };
+}
+
+/* ------------------------------------------------------------------ templates (App.js Home "Start from a template" + startTemplate) */
+export function templates() {
+    return { categories: [...new Set(E.TEMPLATES.map((t) => t.cat))],
+        items: E.TEMPLATES.map((t) => ({ id: t.id, name: t.name, cat: t.cat, tag: t.tag || '', desc: t.desc || '', featured: !!t.featured, rank: t.featuredRank ?? 50, percent: !!t.cfg?.percentScheme, days: t.cfg?.days || null })) };
+}
+/* The active gym decides what a template is built from; a template that pins its own kit still wins. */
+export function createFromTemplate({ id }) {
+    const t = E.TEMPLATES.find((x) => x.id === id); if (!t) return { ok: false, error: 'That template no longer exists.' };
+    const g = E.normalizeGyms(S.store.gyms, S.store.activeGymId), gym = E.gymById(g.gyms, g.activeGymId);
+    const equipment = gym?.equipment?.length ? gym.equipment : (S.store.activeGymId ? [] : E.ALL_EQUIP_IDS);
+    const r = createProgram({ config: E.templateConfig(t, equipment) });
+    return r.ok ? { ...r, percent: !!t.cfg?.percentScheme } : r;
+}
+
+/* ------------------------------------------------------------------ training maxes for percentage programs (App.js tmSheet + "Set from 1RM") */
+function mainLifts(p) { const ids = []; (p.days || []).forEach((d) => { const id = d.exercises[d.primaryIndex]; if (id && !ids.includes(id) && EX_BY_ID[id]) ids.push(id); }); return ids; }
+export function trainingMaxes({ programId }) {
+    const p = programById(programId); if (!p) return null;
+    const u = unit(), percent = !!p.config?.percentScheme;
+    return { programId: p.id, percent, unit: u,
+        lifts: percent ? mainLifts(p).map((id) => {
+            const ex = EX_BY_ID[id], tm = E.trainingMaxForUnit(p, id, u) || 0;
+            const day = p.days.find((d) => d.exercises.includes(id));
+            let wk = null; try { wk = tm > 0 && day ? E.percentagePlanFor(p, day, ex, day.exercises.indexOf(id), 1, u) : null; } catch { wk = null; }
+            return { id, name: ex.name, tm, week1: wk ? { label: wk.label, sets: wk.sets.map((x) => `${x.weight}×${x.reps}`) } : null };
+        }) : [] };
+}
+/* A training max typed directly, or 90% of a one-rep max rounded to the lift's step. */
+export function setTrainingMax({ programId, exId, value, fromOneRm = false }) {
+    const p = programById(programId), ex = EX_BY_ID[exId]; if (!p || !ex) return { ok: false };
+    const n = Number(value), u = unit();
+    const tm = !(n > 0) ? 0 : fromOneRm ? E.roundTo(n * 0.9, E.loadStep(ex, u)) : n;
+    setList('saved', saved().map((x) => (x.id === programId ? E.withTrainingMax(x, exId, tm, u) : x)));
+    return { ok: true, tm };
 }

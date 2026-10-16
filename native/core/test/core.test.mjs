@@ -281,5 +281,22 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   ok(cx && cx.a.rep.length === 2 && cx.muscles.length > 0, 'compare two exercises');
   const cy = C.createCycle({ config: { name: 'C', goal: 'both', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: eq }, templateId: 'powerbuilding' });
   ok(C.applyProgramSettings({ programId: JSON.parse(C.exportStore()).cycles[0].blockIds[0], settings: { weeks: 3 } }).ok === false, 'a cycle block cannot be rebuilt from its settings'); }
+
+// 19. Templates and training maxes
+{ C.init({}); const tl = C.templates();
+  ok(tl.items.length > 30 && tl.categories.length > 4, 'templates listed (' + tl.items.length + ')');
+  const pct = tl.items.find((t) => t.percent);
+  const made = C.createFromTemplate({ id: pct.id });
+  ok(made.ok && made.percent, 'a percentage template builds: ' + (made.error || pct.name));
+  const h0 = C.home();
+  const tms = C.trainingMaxes({ programId: made.programId });
+  ok(tms.percent && tms.lifts.length > 0 && h0.needsTrainingMax === tms.lifts.length, 'its main lifts need training maxes (' + tms.lifts.length + ')');
+  C.setTrainingMax({ programId: made.programId, exId: tms.lifts[0].id, value: 100, fromOneRm: true });
+  const t1 = C.trainingMaxes({ programId: made.programId }).lifts[0];
+  ok(t1.tm > 0 && t1.tm <= 90 && t1.week1 && t1.week1.sets.length > 0, '90% of a 100 kg 1RM sets the TM (' + t1.tm + ') and week 1 shows ' + (t1.week1 && t1.week1.sets.join(' ')));
+  tms.lifts.forEach((l) => C.setTrainingMax({ programId: made.programId, exId: l.id, value: 80 }));
+  ok(C.home().needsTrainingMax === 0, 'all set: the prompt clears');
+  const plain = C.createFromTemplate({ id: tl.items.find((t) => !t.percent).id });
+  ok(plain.ok && C.trainingMaxes({ programId: plain.programId }).percent === false, 'a regular template builds without training maxes'); }
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);
 

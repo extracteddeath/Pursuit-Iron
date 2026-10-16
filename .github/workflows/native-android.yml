@@ -109,6 +109,8 @@ jobs:
     needs: android
     runs-on: ubuntu-24.04
     timeout-minutes: 40
+    permissions:
+      contents: write   # only to force-push screenshots to the scratch branch native-smoke
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -142,6 +144,16 @@ jobs:
         run: |
           [ -f smoke-out/result.txt ] && while IFS= read -r l; do echo "::notice title=Smoke::$l"; done < smoke-out/result.txt || echo "::warning title=Smoke::no result file"
           [ -s smoke-out/logcat-errors.txt ] && head -8 smoke-out/logcat-errors.txt | while IFS= read -r l; do echo "::error title=logcat::$l"; done || true
+      - name: Screens to the native-smoke branch
+        if: always()
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          [ -d smoke-out ] || exit 0
+          cd smoke-out
+          git init -q && git checkout -q -b native-smoke
+          git add -A && git -c user.name=pi-ci -c user.email=pi-ci@users.noreply.github.com commit -qm "Smoke screens, run ${{ github.run_number }}"
+          git push -qf "https://x-access-token:${TOKEN}@github.com/${{ github.repository }}.git" native-smoke
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:

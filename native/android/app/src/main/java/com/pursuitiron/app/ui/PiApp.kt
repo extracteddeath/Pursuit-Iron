@@ -68,6 +68,7 @@ import com.pursuitiron.app.ui.common.o
 import com.pursuitiron.app.ui.common.s
 import com.pursuitiron.app.ui.screens.LibraryScreen
 import com.pursuitiron.app.ui.screens.PlanScreen
+import com.pursuitiron.app.ui.screens.ProgramEditorScreen
 import com.pursuitiron.app.ui.screens.ProgressScreen
 import com.pursuitiron.app.ui.screens.SetupScreen
 import com.pursuitiron.app.ui.screens.SummaryScreen
@@ -106,7 +107,7 @@ private fun Shell(vm: AppViewModel, wide: Boolean) {
             targetState = vm.screen,
             transitionSpec = {
                 when (targetState) {
-                    Screen.Workout, Screen.Setup -> (fadeIn(tween(220)) + scaleIn(initialScale = 0.94f)) togetherWith fadeOut(tween(160))
+                    Screen.Workout, Screen.Setup, Screen.Editor -> (fadeIn(tween(220)) + scaleIn(initialScale = 0.94f)) togetherWith fadeOut(tween(160))
                     else -> fadeIn(tween(220)) togetherWith fadeOut(tween(160))
                 }
             },
@@ -117,6 +118,7 @@ private fun Shell(vm: AppViewModel, wide: Boolean) {
                 Screen.Workout -> WorkoutScreen(vm)
                 Screen.Summary -> SummaryScreen(vm)
                 Screen.Setup -> SetupScreen(vm)
+                Screen.Editor -> ProgramEditorScreen(vm)
             }
         }
         SnackHost(vm, Modifier.align(Alignment.BottomCenter))

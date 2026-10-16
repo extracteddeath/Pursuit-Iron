@@ -190,6 +190,8 @@ if scroll_to(r"Plates and 1RM"):
     time.sleep(1)
     shot("one-rm")
     back()
+    if find(r"One-rep max", timeout=2):
+        back()
 tap(r"^\|Today$|^Today\|", "today-lb")
 
 # 8. Training cycle: build one, open it, try to advance
@@ -211,10 +213,25 @@ if scroll_to(r"New training cycle"):
         back()
 tap(r"^\|Today$|^Today\|", "today-cycle")
 
-# 9. Tablet
+# 9. Program editor: move a lift, save this block only
+tap(r"^\|Plan$|^Plan\|")
+adb("shell", "input", "swipe", "540", "700", "540", "1900", "200")
+if tap(r"Edit program", "editor"):
+    if tap(r"\. Edit\|", "editor-slot"):
+        if tap(r"Swap exercise", "editor-swap"):
+            back()
+        tap(r"Move later")
+    shot("editor-moved")
+    if tap(r"^\|Save$", "editor-scope"):
+        tap(r"^\|This block$", "editor-saved")
+    back()
+
+# 10. Tablet
 adb("shell", "wm", "size", "2560x1600")
 adb("shell", "wm", "density", "320")
+time.sleep(3)
 launch()
+time.sleep(3)
 shot("tablet-today")
 tap(r"Start workout|Resume workout")
 time.sleep(3)

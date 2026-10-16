@@ -186,5 +186,46 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   const nb = C.nextBlock({ programId: mk.programId });
   ok(!nb.ok && nb.error && JSON.parse(C.exportStore()).saved.length === before, 'next block with no logged workouts is refused and saves nothing: ' + nb.error.slice(0, 60));
   ok(JSON.parse(C.exportStore()).saved[0].generationRoute === E.GENERATION_ROUTE, 'programs carry the generation route'); }
+
+// 16. Program editing (App.js ProgramView ops + save review) and record stamping
+{ C.init({}); const mk = C.createProgram({ config: { name: 'Edit me', goal: 'both', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 5 });
+  const pid = mk.programId; let ed = C.editor({ programId: pid });
+  const d0 = ed.days[0], prim = d0.exercises.find((e) => e.primary);
+  ok(ed && !ed.dirty && d0.exercises.length > 2, 'editor opens the saved program, clean');
+  const alts = C.editSwapOptions({ programId: pid, dayId: d0.id, slot: 1 });
+  ok(alts.length > 0 && alts.every((a) => a.id !== d0.exercises[1].id), 'swap options exclude the current lift');
+  C.editAct({ programId: pid, type: 'replace', dayId: d0.id, slot: 1, newId: alts[0].id });
+  ed = C.editor({ programId: pid });
+  ok(ed.dirty && ed.days[0].exercises[1].id === alts[0].id && JSON.parse(C.exportStore()).saved[0].days[0].exercises[1] === d0.exercises[1].id, 'a swap lands in the draft, not the saved program');
+  ok(ed.days[0].exercises.find((e) => e.primary).id === prim.id, 'swapping another slot leaves the primary lift alone');
+  C.editAct({ programId: pid, type: 'move', dayId: d0.id, slot: prim.slot, dir: 1 });
+  ed = C.editor({ programId: pid });
+  ok(ed.days[0].exercises[prim.slot + 1].id === prim.id && ed.days[0].exercises[prim.slot + 1].primary, 'moving the primary lift keeps it primary');
+  const n0 = ed.days[0].exercises.length;
+  C.editAct({ programId: pid, type: 'remove', dayId: d0.id, slot: n0 - 1 });
+  const add = C.editAddOptions({ programId: pid, dayId: d0.id, part: ed.days[0].exercises[0].part });
+  ok(add.parts.length > 0 && add.items.length > 0, 'add options list muscles and lifts available at the gym');
+  C.editAct({ programId: pid, type: 'add', dayId: d0.id, exId: add.items[0].id });
+  ed = C.editor({ programId: pid });
+  ok(ed.days[0].exercises.length === n0 && ed.days[0].exercises[n0 - 1].added && ed.days[0].exercises[n0 - 1].sets > 0, 'an added lift is owned and gets a prescription');
+  C.editAct({ programId: pid, type: 'renameDay', dayId: d0.id, label: 'Push heavy' });
+  C.editAct({ programId: pid, type: 'copyDay', dayId: d0.id });
+  ed = C.editor({ programId: pid });
+  ok(ed.days.length === 5 && ed.days[1].label === 'Push heavy (copy)', 'rename and duplicate a day');
+  const beforeSave = JSON.parse(C.exportStore()).saved[0].updatedAt || 0;
+  const sv = C.saveEdits({ programId: pid });
+  const st = JSON.parse(C.exportStore());
+  ok(sv.ok && sv.changes === 1 && st.saved[0].days.length === 5 && !(st.drafts || {})[pid] && st.saved[0].updatedAt >= beforeSave, 'save applies the draft, clears it and stamps updatedAt');
+  ok(C.editor({ programId: pid }).canUndoSave && C.undoSave({ programId: pid }).ok && JSON.parse(C.exportStore()).saved[0].days.length === 4, 'undo the save restores the previous version');
+  C.editAct({ programId: pid, type: 'deleteDay', dayId: d0.id }); ok(C.discardEdits({ programId: pid }).ok && !C.editor({ programId: pid }).dirty, 'discard drops the draft');
+  const dup = C.duplicateProgram({ id: pid }); ok(dup.ok && dup.name === 'Edit me (copy)', 'duplicate a program');
+  const del = C.deleteProgram({ id: dup.id }); const st2 = JSON.parse(C.exportStore());
+  ok(del.ok && !st2.saved.some((p) => p.id === dup.id) && st2.tombs[dup.id] > 0, 'delete removes and tombstones the program');
+  ok(C.undo().ok && JSON.parse(C.exportStore()).saved.some((p) => p.id === dup.id), 'undo brings it back');
+  const cy = C.createCycle({ config: { name: 'Blocks', goal: 'both', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, templateId: 'powerbuilding' });
+  ok(C.deleteProgram({ id: JSON.parse(C.exportStore()).cycles[0].blockIds[0] }).ok === false, 'a cycle block cannot be deleted on its own');
+  const ids = JSON.parse(C.exportStore()).cycles[0].blockIds; C.deleteCycle({ id: cy.cycleId, alsoBlocks: true });
+  const st3 = JSON.parse(C.exportStore());
+  ok(st3.tombs[cy.cycleId] > 0 && ids.every((id) => st3.tombs[id] > 0), 'deleting a cycle with its blocks tombstones all of them'); }
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);
 

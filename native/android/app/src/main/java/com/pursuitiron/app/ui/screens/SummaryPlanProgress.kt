@@ -27,6 +27,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.getValue
@@ -81,7 +84,7 @@ fun SummaryScreen(vm: AppViewModel) {
         Text("Your next session is already planned from these sets.", style = MaterialTheme.typography.bodyLarge, color = cs.onPrimaryContainer, textAlign = TextAlign.Center)
         Row(Modifier.widthIn(max = 520.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             StatTile("Sets", "${r.i("setsDone")}", "/ ${r.i("totalSets")}", Modifier.weight(1f), color = cs.surface)
-            StatTile("Volume", fmtNum(r.i("volume") / 1000.0), "t", Modifier.weight(1f), color = cs.surface)
+            StatTile("Volume", com.pursuitiron.app.ui.common.fmt1(r.i("volume") / 1000.0), com.pursuitiron.app.ui.common.volUnit(r.s("unit", "kg")), Modifier.weight(1f), color = cs.surface)
             StatTile("Time", "${r.i("durationMin")}", "min", Modifier.weight(1f), color = cs.surface)
         }
         val prs = r.list("prs")
@@ -128,6 +131,9 @@ fun PlanScreen(vm: AppViewModel) {
             Column(Modifier.padding(top = 20.dp, start = 4.dp)) {
                 Text("Plan", style = MaterialTheme.typography.displayMedium)
                 Text("${p.s("name")} · week $wk of $weeks" + (if (p.i("current") > 0) " · you're on week ${p.i("current")}" else ""), style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
+                Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilledTonalButton(onClick = { vm.openEditor(p.s("programId")) }) { Icon(PiIcons.List, null, modifier = Modifier.size(18.dp)); Text("  Edit program") }
+                }
             }
         }
         if (p.s("cycleId").isNotBlank()) item(span = full) { CycleBanner(vm, p.s("cycleId")) { openCycle = p.s("cycleId") } }
@@ -177,6 +183,7 @@ fun PlanScreen(vm: AppViewModel) {
                             Text("${pr.i("days")} days a week" + if (pr.b("active")) " · training now" else "", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                         }
                         if (!pr.b("active")) FilledTonalButton(onClick = { vm.loadPlan(pr.s("id"), null); vm.pin(pr.s("id")) }) { Text("Train this") }
+                        ProgramMenu(vm, pr.s("id"), pr.s("name"))
                     }
                 }
                 Row(Modifier.fillMaxWidth().background(cs.surfaceContainerLow).clickable { vm.openSetup() }.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -257,4 +264,22 @@ fun ProgressScreen(vm: AppViewModel) {
             }
         }
     }
+}
+
+@Composable
+private fun ProgramMenu(vm: AppViewModel, id: String, name: String) {
+    var open by remember { mutableStateOf(false) }
+    var confirm by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { open = true }) { Icon(PiIcons.More, "$name options") }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            DropdownMenuItem(text = { Text("Edit") }, onClick = { open = false; vm.openEditor(id) })
+            DropdownMenuItem(text = { Text("Duplicate") }, onClick = { open = false; vm.duplicateProgram(id) })
+            DropdownMenuItem(text = { Text("Delete") }, onClick = { open = false; confirm = true })
+        }
+    }
+    if (confirm) AlertDialog(onDismissRequest = { confirm = false }, title = { Text("Delete $name?") },
+        text = { Text("Your logged workouts stay in your history. You can undo this for a few seconds.") },
+        confirmButton = { Button(onClick = { confirm = false; vm.deleteProgram(id) }) { Text("Delete") } },
+        dismissButton = { TextButton(onClick = { confirm = false }) { Text("Cancel") } })
 }

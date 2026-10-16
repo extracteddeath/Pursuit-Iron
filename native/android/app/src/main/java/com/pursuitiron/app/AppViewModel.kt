@@ -26,7 +26,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 enum class Tab { Today, Plan, Progress, Library, You }
-enum class Screen { Tabs, Workout, Summary, Setup }
+enum class Screen { Tabs, Workout, Summary, Setup, Editor }
 
 data class Snack(val text: String, val undo: (() -> Unit)? = null, val id: Long = System.nanoTime())
 
@@ -258,6 +258,45 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (!r.b("ok")) { toast(r.s("error", "The next block couldn't be created. Your program is unchanged.")); return@launchCore }
         hap(Hap.Done); refreshHomeSide(); plan = obj("plan")
         toast("${r.s("name")} is ready, built from your completed workouts")
+    }
+
+    /* ---------------------------------------------------------------- program editor */
+    var editor by mutableStateOf<JSONObject?>(null); private set
+    private var editWeek = 1
+    fun openEditor(programId: String) = launchCore {
+        editWeek = 1
+        editor = obj("editor", jsonOf("programId" to programId, "weekIndex" to 1)) ?: return@launchCore
+        screen = Screen.Editor
+    }
+    private suspend fun reloadEditor() { val id = editor?.s("programId") ?: return; editor = obj("editor", jsonOf("programId" to id, "weekIndex" to editWeek)) }
+    fun editWeek(w: Int) = launchCore { editWeek = w; reloadEditor() }
+    fun edit(type: String, vararg args: Pair<String, Any?>) = launchCore {
+        val id = editor?.s("programId") ?: return@launchCore
+        val r = obj("editAct", jsonOf("programId" to id, "type" to type, *args)) ?: return@launchCore
+        if (r.b("changed")) hap(Hap.Tick)
+        reloadEditor()
+    }
+    suspend fun editSwapOptions(dayId: String, slot: Int): List<JSONObject> = arr(call("editSwapOptions", jsonOf("programId" to editor?.s("programId"), "dayId" to dayId, "slot" to slot)))
+    suspend fun editAddOptions(dayId: String, q: String, part: String?): JSONObject? = obj("editAddOptions", jsonOf("programId" to editor?.s("programId"), "dayId" to dayId, "q" to q, "part" to part))
+    fun saveEdits(scope: String) = launchCore {
+        val id = editor?.s("programId") ?: return@launchCore
+        val r = obj("saveEdits", jsonOf("programId" to id, "scope" to scope)) ?: return@launchCore
+        if (!r.b("ok")) { toast(r.s("error", "Couldn't save")); return@launchCore }
+        hap(Hap.Done); reloadEditor(); refreshHomeSide(); plan = obj("plan")
+        val n = r.i("changes")
+        if (n == 0) toast("Nothing changed") else toast(if (n == 1) "Saved" else "Saved $n cycle blocks") { launchCore { val u = obj("undoSave", jsonOf("programId" to id)); if (u?.b("ok") == true) { reloadEditor(); refreshHomeSide(); plan = obj("plan"); toast("Save undone") } else toast(u?.s("error", "Couldn't undo") ?: "Couldn't undo") } }
+    }
+    fun discardEdits() = launchCore { val id = editor?.s("programId") ?: return@launchCore; call("discardEdits", jsonOf("programId" to id)); reloadEditor(); toast("Changes discarded") }
+    fun closeEditor() { screen = Screen.Tabs; editor = null }
+    fun deleteProgram(id: String) = launchCore {
+        val r = obj("deleteProgram", jsonOf("id" to id)) ?: return@launchCore
+        if (!r.b("ok")) { toast(r.s("error", "Couldn't delete that")); return@launchCore }
+        hap(Hap.Undo); refreshHomeSide(); plan = obj("plan")
+        toast("Deleted ${r.s("name")}") { launchCore { call("undo"); refreshHomeSide(); plan = obj("plan"); toast("Restored") } }
+    }
+    fun duplicateProgram(id: String) = launchCore {
+        val r = obj("duplicateProgram", jsonOf("id" to id)) ?: return@launchCore
+        if (r.b("ok")) { refreshHomeSide(); plan = obj("plan"); toast("Duplicated as ${r.s("name")}" + if (r.b("detached")) " · detached from its cycle" else "") }
     }
 
     /* ---------------------------------------------------------------- library */

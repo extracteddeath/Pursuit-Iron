@@ -133,10 +133,10 @@ private fun BodyweightCard(vm: AppViewModel) {
     PiCard(radius = 28.dp) {
         Row { Text("Bodyweight", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
             if (vals.size >= 8) { val a = vals.takeLast(7).average(); val p = vals.dropLast(7).takeLast(7).average(); val ch = a - p
-                Text((if (ch <= 0) "−" else "+") + fmtNum(kotlin.math.abs(ch)) + " $unit vs prior week", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant) } }
+                Text((if (ch <= 0) "−" else "+") + fmtNum(Math.round(kotlin.math.abs(ch) * 10) / 10.0) + " $unit vs prior week", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant) } }
         Row(verticalAlignment = Alignment.Bottom) {
             Text(b.s("bodyweight").ifBlank { "—" }, style = MaterialTheme.typography.displaySmall)
-            Text("  $unit" + if (vals.size >= 7) " · 7-day average ${fmtNum(vals.takeLast(7).average())}" else "", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
+            Text("  $unit" + if (vals.size >= 7) " · 7-day average ${fmtNum(Math.round(vals.takeLast(7).average() * 10) / 10.0)}" else "", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
         }
         if (vals.size >= 2) {
             val smooth = vals.indices.map { i -> vals.subList((i - 6).coerceAtLeast(0), i + 1).average() }

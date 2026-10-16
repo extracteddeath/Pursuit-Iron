@@ -132,7 +132,7 @@ fun TodayScreen(vm: AppViewModel) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 val wk = h.o("week")
                 StatTile("Sessions", "${wk.i("sessions")}", "/ ${wk.i("planned")}", Modifier.weight(1f))
-                StatTile("Volume", fmtNum(wk.i("volume") / 1000.0), "t", Modifier.weight(1f))
+                StatTile("Volume", com.pursuitiron.app.ui.common.fmt1(wk.i("volume") / 1000.0), com.pursuitiron.app.ui.common.volUnit(h.s("unit", "kg")), Modifier.weight(1f))
                 StatTile("Readiness", "${h.o("readiness").i("today", 100)}", "%", Modifier.weight(1f), color = cs.tertiaryContainer, onClick = { readinessOpen = true })
             }
         }
@@ -214,7 +214,7 @@ fun HistoryRow(r: JSONObject, onClick: () -> Unit) {
                 Text(listOfNotNull(
                     if (date > 0) SimpleDateFormat("MMM d", Locale.getDefault()).format(Date(date)) else null,
                     r.i("setsDone").takeIf { it > 0 }?.let { "$it sets" },
-                    r.i("volume").takeIf { it > 0 }?.let { "${fmtNum(it / 1000.0)} t" },
+                    r.i("volume").takeIf { it > 0 }?.let { "${com.pursuitiron.app.ui.common.fmt1(it / 1000.0)} ${com.pursuitiron.app.ui.common.volUnit(r.s("unit", "kg"))}" },
                     r.i("durationMin").takeIf { it > 0 }?.let { "$it min" },
                 ).joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
             }
@@ -253,7 +253,7 @@ fun HistorySheet(vm: AppViewModel, id: String, onClose: () -> Unit) {
             Kicker(d.s("programName"))
             Text(d.s("dayLabel"), style = MaterialTheme.typography.headlineSmall)
             Text(listOfNotNull(d.i("setsDone").takeIf { it > 0 }?.let { "$it sets" }, d.i("durationMin").takeIf { it > 0 }?.let { "$it min" },
-                d.i("volume").takeIf { it > 0 }?.let { "${fmtNum(it / 1000.0)} t" }).joinToString(" · "), color = cs.onSurfaceVariant)
+                d.i("volume").takeIf { it > 0 }?.let { "${com.pursuitiron.app.ui.common.fmt1(it / 1000.0)} ${com.pursuitiron.app.ui.common.volUnit(d.s("unit", "kg"))}" }).joinToString(" · "), color = cs.onSurfaceVariant)
             if (d.s("note").isNotBlank()) PiCard(color = cs.surfaceContainerHigh, radius = 18.dp, padding = 12.dp) { Text(d.s("note")) }
             d.list("lifts").forEach { l ->
                 PiCard(color = cs.surfaceContainerHigh, radius = 18.dp, padding = 12.dp) {

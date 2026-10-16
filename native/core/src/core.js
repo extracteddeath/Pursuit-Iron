@@ -21,6 +21,19 @@ const now = () => Date.now();
 const S = { store: null, live: null, undo: null, dirty: { store: false, live: false } };
 
 function markStore() { S.dirty.store = true; }
+
+/* App.js stampedSetter: every write to a syncable list stamps the records it changed with updatedAt
+   and tombstones the ids it removed, so a later merge (backup import, the web app) keeps the newer
+   copy and does not resurrect deletions. A record restored by undo is a new write and wins over its
+   own tombstone, exactly as on the web app. */
+function setList(key, next) {
+    const prev = Array.isArray(S.store[key]) ? S.store[key] : [];
+    const t = now(), before = new Map(prev.map((r) => [r && r.id, r])), gone = new Set(prev.map((r) => r && r.id));
+    next.forEach((r) => { if (r) gone.delete(r.id); });
+    if (gone.size) { const tombs = { ...(S.store.tombs || {}) }; gone.forEach((id) => { if (id != null) tombs[id] = t; }); S.store.tombs = tombs; }
+    S.store[key] = next.map((r) => (r && r.id != null && before.get(r.id) !== r ? { ...r, updatedAt: t } : r));
+    markStore();
+}
 function markLive() { S.dirty.live = true; }
 
 /* App.js applies these on every render; the engine reads them as module-level configuration. */
@@ -464,9 +477,10 @@ export function finishSession() {
         const before = new Set(E.computeMilestones(H, msOpts).filter((m) => m.done).map((m) => m.id));
         fresh = E.computeMilestones([entry, ...H], msOpts).filter((m) => m.done && !before.has(m.id));
     } catch { fresh = []; }
-    Object.assign(S.store, { history: nextHistory, perf: nextPerf, tombs, injuryLog, saved: nextSaved });
+    Object.assign(S.store, { perf: nextPerf, tombs, injuryLog });
+    setList('history', nextHistory); setList('saved', nextSaved);
     S.live = null; markStore(); markLive();
-    return { ok: true, entryId: entry.id, setsDone: doneSets, totalSets, volume: Math.round(volume), durationMin: log.durationMin,
+    return { ok: true, entryId: entry.id, unit: u, setsDone: doneSets, totalSets, volume: Math.round(volume), durationMin: log.durationMin,
         achievements: fresh.map((m) => ({ id: m.id, label: m.label })), prs: summaryPRs(entry, H) };
 }
 
@@ -510,14 +524,17 @@ export function deleteHistory({ id }) {
     const H = history(), gone = H.find((h) => h.id === id); if (!gone) return { ok: false };
     S.undo = { history: H, perf: perf(), tombs: { ...(S.store.tombs || {}) } };
     S.store.perf = E.perfAfterDelete(H, perf(), id);
-    S.store.history = H.filter((h) => h.id !== id);
+    setList('history', H.filter((h) => h.id !== id));
     S.store.tombs = { ...(S.store.tombs || {}), [id]: now() };
     markStore();
     return { ok: true, label: gone.dayLabel || 'Workout' };
 }
 export function undo() {
     if (!S.undo) return { ok: false };
-    Object.assign(S.store, S.undo); S.undo = null; markStore();
+    const { history: h, saved: sv, cycles: cy, ...rest } = S.undo;
+    Object.assign(S.store, rest);
+    if (h) setList('history', h); if (sv) setList('saved', sv); if (cy) setList('cycles', cy);
+    S.undo = null; markStore();
     return { ok: true };
 }
 
@@ -608,7 +625,7 @@ export function createProgram({ config, seed }) {
     p.generationRoute = E.GENERATION_ROUTE;
     S.store.equipDefault = cfg.equipment;
     adoptConfigUnit(cfg.unit);
-    S.store.saved = [...saved(), p]; S.store.pinnedId = p.id;
+    setList('saved', [...saved(), p]); S.store.pinnedId = p.id;
     markStore();
     return { ok: true, programId: p.id, name: p.name, days: p.days.length };
 }
@@ -676,7 +693,7 @@ export function createCycle({ config, templateId, blocks, adapt = false } = {}) 
         S.store.equipDefault = cfg.equipment;
         adoptConfigUnit(cfg.unit);
         cycle.startedAt = now();
-        S.store.saved = [...saved(), ...progs]; S.store.cycles = [...cycles(), cycle]; S.store.pinnedId = progs[0].id;
+        setList('saved', [...saved(), ...progs]); setList('cycles', [...cycles(), cycle]); S.store.pinnedId = progs[0].id;
         markStore();
         return { ok: true, cycleId: cycle.id, name: cycle.name, blocks: meta.length, first: meta[0]?.label || 'first block' };
     } catch (err) { return cycleFail(err, 'The cycle builder hit an unexpected error. Nothing was saved.'); }
@@ -690,7 +707,7 @@ export function advanceCycle({ id }) {
             const bridged = E.advanceLegacyFirstCycleBlock(cycle, saved());
             if (!bridged) throw new CycleError('The legacy first-block bridge could not resolve the next block.');
             requireCompleteCycleShell(bridged.cycle, saved(), { expectedCycleId: cycle.id });
-            S.store.cycles = cycles().map((c) => (c.id === cycle.id ? bridged.cycle : c)); S.store.pinnedId = bridged.nextProgram.id; markStore();
+            setList('cycles', cycles().map((c) => (c.id === cycle.id ? bridged.cycle : c))); S.store.pinnedId = bridged.nextProgram.id; markStore();
             return { ok: true, message: `Advanced to ${bridged.cycle.blockMeta[1]?.label || 'next block'}. Your original plan stayed intact as Block 1.` };
         } catch { return { ok: false, error: 'The next cycle block was incomplete, so nothing changed.' }; }
     }
@@ -711,13 +728,13 @@ export function advanceCycle({ id }) {
                 throw new E.NextShellAdapterError('NEXT_CYCLE_INCOMPLETE', 'The new cycle could not be assembled safely.');
             rolled.cycle.onComplete = 'loop'; rolled.cycle.continuedFrom = cycle.id; rolled.cycle.generationRoute = E.GENERATION_ROUTE;
             rolled.blocks.forEach((b) => { b.generationRoute = E.GENERATION_ROUTE; });
-            S.store.saved = [...saved(), ...rolled.blocks];
-            S.store.cycles = [...cycles().map((c) => (c.id === cycle.id ? nextCycle : c)), rolled.cycle];
+            setList('saved', [...saved(), ...rolled.blocks]);
+            setList('cycles', [...cycles().map((c) => (c.id === cycle.id ? nextCycle : c)), rolled.cycle]);
             S.store.pinnedId = rolled.blocks[0].id; markStore();
             return { ok: true, message: 'New training cycle ready. Your completed cycle and workout history are saved.' };
         }
-        if (advanced.nextProgram) { advanced.nextProgram.generationRoute = E.GENERATION_ROUTE; S.store.saved = nextSaved; S.store.pinnedId = advanced.nextProgram.id; }
-        S.store.cycles = cycles().map((c) => (c.id === cycle.id ? nextCycle : c)); markStore();
+        if (advanced.nextProgram) { advanced.nextProgram.generationRoute = E.GENERATION_ROUTE; setList('saved', nextSaved); S.store.pinnedId = advanced.nextProgram.id; }
+        setList('cycles', cycles().map((c) => (c.id === cycle.id ? nextCycle : c))); markStore();
         return { ok: true, done: !!advanced.done, message: advanced.done ? 'Training cycle complete. Your programs and workout history are saved.'
             : advanced.insertedRecovery ? 'Recovery block added from your completed workouts.' : `Advanced to ${advanced.nextProgram.blockLabel || 'your next block'}` };
     } catch (err) { return cycleFail(err, 'The next block could not be prepared safely. Nothing changed.'); }
@@ -727,9 +744,9 @@ export function deleteCycle({ id, alsoBlocks = false }) {
     const c = cycles().find((x) => x.id === id); if (!c) return { ok: false };
     S.undo = { cycles: cycles(), saved: saved(), pinnedId: S.store.pinnedId };
     const rest = cycles().filter((x) => x.id !== id);
-    S.store.cycles = rest;
-    if (alsoBlocks) S.store.saved = saved().filter((p) => !c.blockIds.includes(p.id));
-    else S.store.saved = E.normalizeCycleLinks(saved(), rest);
+    setList('cycles', rest);
+    if (alsoBlocks) setList('saved', saved().filter((p) => !c.blockIds.includes(p.id)));
+    else setList('saved', E.normalizeCycleLinks(saved(), rest));
     markStore();
     return { ok: true, name: c.name };
 }
@@ -752,7 +769,7 @@ export function nextBlock({ programId }) {
         const m = (p.name || '').match(/^(.*?)\s*·\s*Block\s*(\d+)\s*$/);
         np.name = m ? `${m[1]} · Block ${Number(m[2]) + 1}` : `${p.name} · Block 2`;
         np.folder = p.folder; np.description = p.description; np.generationRoute = E.GENERATION_ROUTE;
-        S.store.saved = [...saved(), np]; S.store.pinnedId = np.id; markStore();
+        setList('saved', [...saved(), np]); S.store.pinnedId = np.id; markStore();
         return { ok: true, programId: np.id, name: np.name };
     } catch (err) { return cycleFail(err, 'The next block could not be created safely. Your current program is unchanged.'); }
 }
@@ -981,7 +998,7 @@ export function switchUnit({ to }) {
     };
     const st = S.store;
     st.perf = convPerf(st.perf);
-    st.saved = saved().map(convProgram);
+    setList('saved', saved().map(convProgram));
     if (st.goals) { const o = {}; for (const id in st.goals) { const n = parseFloat(st.goals[id]); o[id] = n > 0 ? Math.round(n * k * 2) / 2 : st.goals[id]; } st.goals = o; }
     { const n = parseFloat(st.bodyweight); if (n > 0) st.bodyweight = String(Math.round(n * k * 2) / 2); }
     if (Array.isArray(st.bwLog)) st.bwLog = st.bwLog.map((e) => ({ ...e, w: conv(e.w), unit: to }));
@@ -989,4 +1006,196 @@ export function switchUnit({ to }) {
     st.unit = to; st.unitChosen = true;
     applyGlobals(); markStore();
     return { ok: true, converted: true };
+}
+
+/* ------------------------------------------------------------------ program editing (App.js ProgramView + save review) */
+/* Edits go to a draft (the store's `drafts`, as on the web app) and reach the program only on save,
+   through the same programSavePlan, so a cycle block can carry its edit to its sibling blocks. */
+function draftOf(id) { return S.store.drafts?.[id] || programById(id); }
+function putDraft(p) { S.store.drafts = { ...(S.store.drafts || {}), [p.id]: p }; markStore(); }
+function dropDraft(id) { if (S.store.drafts && id in S.store.drafts) { const { [id]: _drop, ...rest } = S.store.drafts; S.store.drafts = rest; markStore(); } }
+function gymKit(p) {
+    const g = E.normalizeGyms(S.store.gyms, S.store.activeGymId), gym = E.gymById(g.gyms, g.activeGymId);
+    return E.expandEquipment(gym?.equipment?.length ? gym.equipment : p.config?.equipment || []);
+}
+function reindexSlotMap(map, dayId, fn) {
+    if (!map) return map; const out = {};
+    Object.entries(map).forEach(([k, v]) => { const [d, sStr] = k.split(':'); if (d !== dayId) { out[k] = v; return; } const s = fn(+sStr); if (s != null) out[`${d}:${s}`] = v; });
+    return out;
+}
+function clearDayKeys(map, dayId) { if (!map) return map; const out = {}; Object.keys(map).forEach((k) => { if (!k.startsWith(dayId + ':')) out[k] = map[k]; }); return out; }
+function addSlot(p, dayId, ex) {
+    const day = p.days.find((d) => d.id === dayId); if (!day || !ex || day.exercises.includes(ex.id)) return p;
+    const newSlot = day.exercises.length, key = `${dayId}:${newSlot}`;
+    const days = p.days.map((d) => (d.id !== dayId ? d : { ...d, exercises: [...d.exercises, ex.id], primaryIndex: d.primaryIndex ?? 0 }));
+    const nextExerciseId = E.nextExerciseIdForShellExercise(ex);
+    const overrides = { ...(p.overrides || {}), [key]: { ...(p.overrides?.[key] || {}), added: true, nextEngine: true, legacyExerciseId: ex.id, ...(nextExerciseId ? { nextExerciseId } : {}) } };
+    const nextWeekPrescriptions = { ...(p.nextWeekPrescriptions || {}), [key]: E.buildUserAddedSlotPrescriptions({ repRange: ex.rep, weeks: E.weeksOf(p), compound: ex.type === 'compound' }) };
+    return { ...p, days, overrides, nextWeekPrescriptions, edited: true };
+}
+const EDITS = {
+    // App.js replaceSlot: the primary lift only moves when the slot that was primary is replaced.
+    replace(p, { dayId, slot, newId }) {
+        const ex = EX_BY_ID[newId]; if (!ex) return p;
+        const days = p.days.map((d) => {
+            if (d.id !== dayId) return d;
+            const exercises = [...d.exercises]; exercises[slot] = newId;
+            let pi = d.primaryIndex;
+            if (slot === d.primaryIndex || pi == null || pi < 0 || pi >= exercises.length || EX_BY_ID[exercises[pi]]?.type !== 'compound') { pi = exercises.findIndex((id) => EX_BY_ID[id]?.type === 'compound'); if (pi < 0) pi = 0; }
+            return { ...d, exercises, primaryIndex: pi };
+        });
+        const key = `${dayId}:${slot}`, nextExerciseId = E.nextExerciseIdForShellExercise(ex);
+        const overrides = { ...(p.overrides || {}), [key]: { ...(p.overrides?.[key] || {}), nextEngine: true, legacyExerciseId: newId, ...(nextExerciseId ? { nextExerciseId } : {}) } };
+        return { ...p, days, overrides, edited: true };
+    },
+    // App.js removeSlot: keeps one exercise; later slots, overrides and set bias shift down with their lifts.
+    remove(p, { dayId, slot }) {
+        const d0 = p.days.find((d) => d.id === dayId); if (!d0 || d0.exercises.length <= 1) return p;
+        const days = p.days.map((d) => {
+            if (d.id !== dayId) return d;
+            const exercises = d.exercises.filter((_, i) => i !== slot);
+            let pi = d.primaryIndex;
+            if (slot === d.primaryIndex) { pi = exercises.findIndex((id) => EX_BY_ID[id]?.type === 'compound'); if (pi < 0) pi = 0; } else if (slot < d.primaryIndex) pi = d.primaryIndex - 1;
+            return { ...d, exercises, primaryIndex: pi };
+        });
+        const shift = (s) => (s === slot ? null : s > slot ? s - 1 : s);
+        return { ...p, days, overrides: reindexSlotMap(p.overrides || {}, dayId, shift), slotBias: reindexSlotMap(p.slotBias, dayId, shift),
+            nextWeekPrescriptions: E.removeNextSlotPrescription(p.nextWeekPrescriptions, dayId, slot), ss: clearDayKeys(p.ss, dayId), rounds: clearDayKeys(p.rounds, dayId), edited: true };
+    },
+    // App.js moveSlot: the primary lift travels with its exercise.
+    move(p, { dayId, slot, dir }) {
+        const d0 = p.days.find((d) => d.id === dayId), target = slot + dir;
+        if (!d0 || target < 0 || target >= d0.exercises.length) return p;
+        const days = p.days.map((d) => {
+            if (d.id !== dayId) return d;
+            const exercises = [...d.exercises]; [exercises[slot], exercises[target]] = [exercises[target], exercises[slot]];
+            let pi = d.primaryIndex; if (pi === slot) pi = target; else if (pi === target) pi = slot;
+            if (pi == null || pi < 0 || pi >= exercises.length) { pi = exercises.findIndex((id) => EX_BY_ID[id]?.type === 'compound'); if (pi < 0) pi = 0; }
+            return { ...d, exercises, primaryIndex: pi };
+        });
+        const swap = (s) => (s === slot ? target : s === target ? slot : s);
+        return { ...p, days, overrides: reindexSlotMap(p.overrides || {}, dayId, swap), slotBias: reindexSlotMap(p.slotBias, dayId, swap),
+            nextWeekPrescriptions: E.swapNextSlotPrescriptions(p.nextWeekPrescriptions, dayId, slot, target), ss: clearDayKeys(p.ss, dayId), rounds: clearDayKeys(p.rounds, dayId), edited: true };
+    },
+    // App.js addSpecific: an added slot is owned by the lifter in every progression mode.
+    add(p, { dayId, exId }) { return addSlot(p, dayId, EX_BY_ID[exId]); },
+    // App.js toggleSS: pairs this slot with the next; clears the day's rounds.
+    superset(p, { dayId, slot }) { const ss = { ...(p.ss || {}) }, key = `${dayId}:${slot}`; if (ss[key]) delete ss[key]; else ss[key] = true; return { ...p, ss, rounds: clearDayKeys(p.rounds, dayId) }; },
+    // App.js editOverride, manual-progression sets/reps only (auto mode prescribes them).
+    override(p, { dayId, slot, field, value }) {
+        if (!['sets', 'reps'].includes(field)) return p;
+        const k = `${dayId}:${slot}`, cur = p.overrides?.[k] || {};
+        const val = field === 'sets' ? E.clamp(parseInt(value) || 1, 1, 20) : String(value || '').slice(0, 9);
+        return { ...p, overrides: { ...(p.overrides || {}), [k]: E.markUserPrescriptionOverride(cur, field, val) } };
+    },
+    renameDay(p, { dayId, label }) { return { ...p, days: p.days.map((d) => (d.id === dayId ? { ...d, label: String(label || '').trim() || d.label } : d)) }; },
+    dayNote(p, { dayId, note }) { return { ...p, days: p.days.map((d) => (d.id === dayId ? { ...d, note: String(note || '').trim() || undefined } : d)) }; },
+    addDay(p) { return { ...p, days: [...p.days, { id: E.uid(), label: `Day ${p.days.length + 1}`, type: 'custom', exercises: [], primaryIndex: 0 }] }; },
+    deleteDay(p, { dayId }) { return p.days.length <= 1 ? p : { ...p, days: p.days.filter((d) => d.id !== dayId) }; },
+    moveDay(p, { dayId, dir }) { const i = p.days.findIndex((d) => d.id === dayId), j = i + dir; if (i < 0 || j < 0 || j >= p.days.length) return p; const days = [...p.days]; [days[i], days[j]] = [days[j], days[i]]; return { ...p, days }; },
+    // App.js copyDay: overrides, supersets, rounds and the engine's week prescriptions copy with it.
+    copyDay(p, { dayId }) {
+        const src = p.days.find((d) => d.id === dayId); if (!src) return p;
+        const nid = E.uid(), newDay = { ...src, id: nid, label: `${src.label} (copy)`, exercises: [...src.exercises] };
+        const dup = (m) => { const o = { ...(m || {}) }; Object.entries(m || {}).forEach(([k, v]) => { const [d, s] = k.split(':'); if (d === dayId) o[`${nid}:${s}`] = typeof v === 'object' && v ? { ...v } : v; }); return o; };
+        const idx = p.days.findIndex((d) => d.id === dayId);
+        const days = [...p.days.slice(0, idx + 1), newDay, ...p.days.slice(idx + 1)];
+        return { ...p, days, overrides: dup(p.overrides), ss: dup(p.ss), rounds: dup(p.rounds), nextWeekPrescriptions: E.cloneNextDayPrescriptions(p.nextWeekPrescriptions, dayId, nid), config: { ...p.config, days: days.length }, edited: true };
+    },
+    rename(p, { name }) { const n = String(name || '').trim().slice(0, 60); return n ? { ...p, name: n } : p; }
+};
+export function editor({ programId, weekIndex = 1 } = {}) {
+    const p = draftOf(programId); if (!p) return null;
+    const stored = programById(programId), wk = Math.max(1, Math.min(E.weeksOf(p), Number(weekIndex) || 1));
+    const manual = p.config?.progression === 'manual';
+    return { programId: p.id, name: p.name, weekIndex: wk, weeksTotal: E.weeksOf(p), manual, cycleId: p.cycleId || null,
+        dirty: !!(stored && S.store.drafts?.[programId] && !E.sameProgramContent(stored, p)),
+        canUndoSave: !!(S.saveUndo && S.saveUndo.id === programId),
+        days: p.days.map((d, di) => {
+            let mins = null; try { mins = E.estimateMinutes(p, d, wk); } catch { mins = null; }
+            return { id: d.id, index: di, label: d.label, note: d.note || '', minutes: mins,
+                exercises: d.exercises.map((_id, slot) => {
+                    const id = d.exercises[slot]; const ex = EX_BY_ID[id];
+                    let cell = null; try { cell = E.computeCell(p, d, id, slot, wk); } catch { cell = null; }
+                    const ov = p.overrides?.[`${d.id}:${slot}`] || {};
+                    return { slot, id, name: ex?.name || id, part: ex?.part || '', partLabel: E.PART_LABEL?.[ex?.part] || ex?.part || '', primary: slot === d.primaryIndex,
+                        superset: !!p.ss?.[`${d.id}:${slot}`], added: !!ov.added, sets: ov.sets ?? cell?.sets ?? null, reps: ov.reps ?? cell?.reps ?? null, rir: cell?.rir ?? null };
+                }) };
+        }) };
+}
+export function editAct({ programId, type, ...args } = {}) {
+    const p = draftOf(programId), fn = EDITS[type];
+    if (!p || !fn) return { ok: false };
+    const next = fn(p, args);
+    if (next !== p) putDraft(next);
+    return { ok: true, changed: next !== p };
+}
+export function editSwapOptions({ programId, dayId, slot }) {
+    const p = draftOf(programId), day = p?.days.find((d) => d.id === dayId); if (!day) return [];
+    const curId = day.exercises[slot], cur = EX_BY_ID[curId]; if (!cur) return [];
+    const used = new Set(day.exercises.filter((_, i) => i !== slot));
+    const pool = E.availableFor(cur.part, gymKit(p), S.store.banned || [], !!p.config?.noBodyweight).filter((e) => e.id !== curId && !used.has(e.id));
+    let ranked = pool; try { ranked = E.rankSwapAlts(cur, pool, E.starvedRegions(p), [...used].map((id) => EX_BY_ID[id]), p, day) || pool; } catch { ranked = pool; }
+    return ranked.slice(0, 16).map((x) => ({ id: x.id, name: x.name, equip: x.equip, part: x.part }));
+}
+export function editAddOptions({ programId, dayId, q = '', part = null }) {
+    const p = draftOf(programId), day = p?.days.find((d) => d.id === dayId); if (!day) return { parts: [], items: [] };
+    const kit = gymKit(p), used = new Set(day.exercises), banned = new Set(S.store.banned || []), needle = String(q).trim().toLowerCase();
+    const parts = (E.PART_ORDER || [...new Set(EXERCISES.map((x) => x.part))]).filter((pt) => E.availableFor(pt, kit, [...banned], !!p.config?.noBodyweight).some((e) => !used.has(e.id)))
+        .map((pt) => ({ id: pt, label: E.PART_LABEL?.[pt] || pt }));
+    const pool = part ? E.availableFor(part, kit, [...banned], !!p.config?.noBodyweight) : EXERCISES.filter((x) => !banned.has(x.id) && E.availableFor(x.part, kit, [...banned], !!p.config?.noBodyweight).some((e) => e.id === x.id));
+    const items = pool.filter((x) => !used.has(x.id) && (!needle || x.name.toLowerCase().includes(needle)))
+        .sort((a, b) => (a.type === 'compound' ? 0 : 1) - (b.type === 'compound' ? 0 : 1)).slice(0, 60).map((x) => ({ id: x.id, name: x.name, part: x.part, equip: x.equip }));
+    return { parts, items };
+}
+/* App.js handleSave + confirmProgramSave: scope "cycle" carries the edit to the sibling blocks. */
+export function saveEdits({ programId, scope = 'program' }) {
+    const edited = S.store.drafts?.[programId]; if (!edited) return { ok: true, changes: 0 };
+    const changes = E.programSavePlan(edited, saved(), cycles(), scope);
+    if (!changes.length) { dropDraft(programId); return { ok: true, changes: 0 }; }
+    const conflicts = changes.filter(({ after }) => after.id !== programId && S.store.drafts?.[after.id] && !E.sameProgramContent(S.store.drafts[after.id], programById(after.id)));
+    if (conflicts.length) return { ok: false, error: `${conflicts.length === 1 ? 'Another block has' : `${conflicts.length} other blocks have`} unsaved edits. Save or discard ${conflicts.length === 1 ? 'it' : 'them'} first.` };
+    const byId = new Map(changes.map((c) => [c.after.id, c.after]));
+    setList('saved', saved().map((p) => byId.get(p.id) || p));
+    dropDraft(programId);
+    S.saveUndo = { id: programId, changes };
+    return { ok: true, changes: changes.length };
+}
+export function discardEdits({ programId }) { dropDraft(programId); return { ok: true }; }
+/* App.js undoProgramSave: only while nothing has been edited since. */
+export function undoSave({ programId }) {
+    const u = S.saveUndo; if (!u || u.id !== programId) return { ok: false };
+    if (!E.canUndoProgramSave(u, saved(), S.store.drafts || {}, programById(programId))) { S.saveUndo = null; return { ok: false, error: 'Something changed since that save, so it can\'t be undone.' }; }
+    const before = new Map(u.changes.map((c) => [c.before.id, c.before]));
+    setList('saved', saved().map((p) => before.get(p.id) || p)); S.saveUndo = null;
+    return { ok: true };
+}
+/* App.js handleDelete / doDeleteProgram (cycle blocks stay with their cycle). */
+export function deleteProgram({ id }) {
+    const removed = programById(id); if (!removed) return { ok: false };
+    const owner = cycles().find((c) => c.blockIds.includes(id));
+    if (owner?.engineSource === 'pursuit-next') return { ok: false, error: 'Cycle blocks stay with their cycle. Delete the cycle instead, or duplicate this block as a standalone program.' };
+    if (S.live?.programId === id) return { ok: false, error: 'Finish or discard the workout in progress first.' };
+    S.undo = { saved: saved(), cycles: cycles(), pinnedId: S.store.pinnedId };
+    setList('saved', saved().filter((p) => p.id !== id));
+    if (S.store.pinnedId === id) S.store.pinnedId = null;
+    setList('cycles', cycles().map((c) => {
+        if (!c.blockIds.includes(id)) return c;
+        const ri = c.blockIds.indexOf(id), blockIds = c.blockIds.filter((b) => b !== id), blockMeta = (c.blockMeta || []).filter((m) => m.id !== id), was = c.activeBlock || 0;
+        return { ...c, blockIds, blockMeta, activeBlock: Math.max(0, Math.min(blockIds.length - 1, ri < was ? was - 1 : was)) };
+    }).filter((c) => c.blockIds.length));
+    dropDraft(id);
+    return { ok: true, name: removed.name };
+}
+/* App.js handleDuplicate: a copied cycle block becomes standalone. */
+export function duplicateProgram({ id }) {
+    const p = programById(id); if (!p) return { ok: false };
+    const copy = { ...p, id: E.uid(), name: `${p.name} (copy)`, createdAt: now() };
+    if (copy.cycleId) {
+        const detached = copy.nextEngine?.cycleTemplate ? { ...copy.nextEngine.cycleTemplate } : null;
+        delete copy.cycleId; delete copy.cycleIndex; delete copy.blockLabel;
+        if (copy.nextEngine?.cycleTemplate) { const { cycleTemplate, ...rest } = copy.nextEngine; copy.nextEngine = { ...rest, detachedFromCycle: detached }; }
+    }
+    setList('saved', [...saved(), copy]);
+    return { ok: true, id: copy.id, name: copy.name, detached: !!p.cycleId };
 }

@@ -19,8 +19,13 @@ fun JSONObject?.strings(key: String): List<String> {
     return (0 until a.length()).map { a.optString(it) }
 }
 fun jsonOf(vararg pairs: Pair<String, Any?>): JSONObject = JSONObject().apply { pairs.forEach { (k, v) -> put(k, v ?: JSONObject.NULL) } }
-fun fmtNum(v: Double): String = if (v == Math.floor(v)) v.toLong().toString() else ((Math.round(v * 10) / 10.0)).toString()
+/** Whole numbers bare, otherwise up to two decimals with trailing zeros dropped (1.25 kg plates stay 1.25). */
+fun fmtNum(v: Double): String = if (v == Math.floor(v)) v.toLong().toString() else java.math.BigDecimal(Math.round(v * 100) / 100.0).setScale(2, java.math.RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()
 fun mmss(sec: Long): String { val s = if (sec < 0) 0 else sec; return "${s / 60}:${(s % 60).toString().padStart(2, '0')}" }
 
 /** "1 workout", "3 workouts". */
 fun plural(n: Int, word: String) = "$n $word" + if (n == 1) "" else "s"
+/** One decimal, for averages and totals. */
+fun fmt1(v: Double): String = fmtNum(Math.round(v * 10) / 10.0)
+/** Volume in thousands: tonnes for kg, "k lb" for lb (a tonne of pounds is not a unit). */
+fun volUnit(unit: String): String = if (unit == "lb") "k lb" else "t"

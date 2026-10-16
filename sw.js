@@ -1,5 +1,5 @@
 /* Pursuit Iron 4.0 — M234 production release. */
-const CACHE="pursuit-iron-production-v4-0-0-m234-candidate-selection-b896-reafcabe6acb1bce7";
+const CACHE="pursuit-iron-production-v4-0-0-m234-candidate-selection-b897-r103cc4c382b2aac8";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
   "./app.css",
@@ -113,7 +113,7 @@ const SHELL=[
 ];
 const RESCUE_CACHE='pursuit-iron-production-m100';
 self.addEventListener('install',e=>{e.waitUntil((async()=>{const c=await caches.open(CACHE);await c.addAll(SHELL.map(u=>new Request(u,{cache:'reload'})));const keys=await caches.keys();if(keys.includes(RESCUE_CACHE))await self.skipWaiting();})());});
-self.addEventListener('message',e=>{if(e.data&&e.data.type==='SKIP_WAITING')self.skipWaiting();});
+self.addEventListener('message',e=>{if(e.data&&e.data.type==='SKIP_WAITING')e.waitUntil(self.skipWaiting());});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE&&(PURSUIT_CACHE.test(k)||/^wpb-shell-/.test(k))).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
 self.addEventListener('fetch',e=>{const r=e.request;if(r.method!=='GET')return;
 // Android checks this stable manifest URL independently of our in-app update prompt.

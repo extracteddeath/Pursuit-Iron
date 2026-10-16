@@ -179,7 +179,10 @@ try {
     // Explicit update restarts must wait for the current store writer and stop on failed saves.
     await page.evaluate(() => {
         window.__m217SentUpdate = null;
-        window.dispatchEvent(new CustomEvent('wpb:update-ready', { detail: { waiting: { postMessage: msg => { window.__m217SentUpdate = msg; } } } }));
+        const waiting = { state: 'installed', postMessage: msg => { window.__m217SentUpdate = msg; } };
+        navigator.serviceWorker.getRegistration = async () => ({ waiting });
+        const stale = { postMessage: () => { window.__m217UsedStaleUpdate = true; } };
+        window.dispatchEvent(new CustomEvent('wpb:update-ready', { detail: { waiting: stale } }));
         window.__m217FailKeys = ['wpb:v1'];
     });
     await page.waitForFunction(() => [...document.querySelectorAll('button')].some(b => /Update ready.*Restart/.test(b.textContent)));
@@ -191,9 +194,21 @@ try {
     await page.$$eval('button', buttons => buttons.find(b => /Update ready.*Restart/.test(b.textContent)).click());
     await page.waitForFunction(() => !!window.__m217SentUpdate);
     assert.deepEqual(await page.evaluate(() => window.__m217SentUpdate), { type: 'SKIP_WAITING' });
+    assert.equal(await page.evaluate(() => !!window.__m217UsedStaleUpdate), false, 'Restart re-resolves the waiting worker instead of messaging the stale hint');
+    assert.equal(await page.$eval('button.wpb-notice-in', b => b.disabled && b.getAttribute('aria-busy')==='true'), true);
+    await page.waitForFunction(() => document.body.textContent.includes('Restart did not finish'), {timeout:12000});
+    assert.equal(await page.$eval('button.wpb-notice-in', b => b.disabled), false, 'a stalled update restores an actionable retry');
+    assert.equal(await page.evaluate(() => !!window.__pursuitUpdateRequested), false, 'a timed-out attempt cannot reload later without consent');
+    await page.evaluate(() => {
+        window.__m217SentUpdate = null;
+        navigator.serviceWorker.getRegistration = async () => ({waiting:{postMessage: msg => {window.__m217SentUpdate={...msg,retry:true};}}});
+    });
+    await page.locator('button.wpb-notice-in').click();
+    await page.waitForFunction(() => window.__m217SentUpdate?.retry);
+
     assert.equal((await training(page)).history.length, 1);
     assert.deepEqual(errors, []);
-    console.log('PASS M217 production Android browser: numeric entry, nested Back, failed-save retention, stable workout id, paused timers, compact/landscape geometry, renderer-crash offline restore, atomic history and interrupted cleanup, and save-before-update.');
+    console.log('PASS M217 production Android browser: numeric entry, nested Back, failed-save retention, stable workout id, paused timers, compact/landscape geometry, renderer-crash offline restore, atomic history and interrupted cleanup, and save-before-update with fresh-worker resolution, stalled-activation feedback and retry.');
 }
 finally {
     if (browser?.connected) await browser.close();

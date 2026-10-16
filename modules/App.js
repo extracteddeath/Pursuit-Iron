@@ -8,6 +8,7 @@ import { historyNumber, convertHistoryLoad, observedHistoryRIR, completedHistory
 const __APP_VERSION__='4.0.0'; const __BUILD__='894';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
+import { createPortal } from "../vendor/react-dom.js";
 import { holdWorkoutScreenAwake, restoreWorkoutClock, workoutElapsedMs } from "./mobile-lifecycle.js";
 import { activeSetContext, adjustInjuredExercises, dockRepSuggestion, removePendingWorkingSet } from "./workout-context.js";
 import { programLastPerformances } from "./program-last-performance.js";
@@ -6538,7 +6539,7 @@ function programToText(program, loadMode = "rir", unit = "kg") {
  * The remembered element is deliberately stale: a picture of the sheet as it was when you dismissed
  * it, which is precisely what should be sliding away.
  */
-function Exit({ when, children, ms = 260 }) {
+function Exit({ when, children, ms = 260, portalTarget }) {
     const [alive, setAlive] = useState(!!when);
     const last = useRef(null);
     const portal = useRef(null);
@@ -6560,7 +6561,8 @@ function Exit({ when, children, ms = 260 }) {
     }, [when, alive, ms]);
     if (!when && !alive)
         return null;
-    return _jsx("div", { ref: portal, className: when ? "wpb-portal" : "wpb-portal wpb-closing", "aria-hidden": when ? undefined : true, children: when ? children : last.current });
+    const content = _jsx("div", { ref: portal, className: when ? "wpb-portal" : "wpb-portal wpb-closing", "aria-hidden": when ? undefined : true, children: when ? children : last.current });
+    return portalTarget ? createPortal(content, portalTarget) : content;
 }
 /* ─────────────────────────────────────────────────────────────────────────────
    NEXT WORKOUT — the minimal view.
@@ -13424,7 +13426,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                                                 border: `1px solid ${C.danger}`, borderRadius: 14, fontWeight: 700, cursor: "pointer" },
                                             children: setRemoveConfirm ? "Confirm remove this set" : "Remove added set" })
                                     ] }) });
-                        })() }), _jsx(Exit, { when: info, children: info && (_jsx("div", { onClick: () => setInfo(false), className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "flex-end", zIndex: 55, animation: "fadeIn .2s both" }, children: _jsxs("div", { ref: sheetDragRef, onClick: ev => ev.stopPropagation(), className: "wpb-scroll", style: { width: "100%", maxHeight: "90%", overflowY: "auto", background: C.bg2, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: "8px 18px calc(env(safe-area-inset-bottom) + 26px)", animation: "sheetUp .28s cubic-bezier(.2,.7,.3,1) both", borderTop: `1px solid ${C.border}` }, children: [_jsxs("div", { style: { display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }, children: [_jsx("div", { style: { fontSize: 18, fontWeight: 700, flex: 1, minWidth: 0 }, children: ex.name }), _jsx("button", { onClick: () => setInfo(false), "aria-label": "Close", className: "pressable hit wpb-sheet-close", style: { flexShrink: 0, width: 44, height: 44, borderRadius: 14, border: `1px solid ${C.border}`, background: C.card, color: C.muted, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }, children: _jsx(X, { size: 18 }) })] }), _jsxs("div", { style: { fontSize: 13, color: C.muted, marginTop: 2, marginBottom: 12 }, children: [PART_LABEL[ex.part], " \u00B7 ", ex.type, ex.equip.length ? " · " + ex.equip.map(q => EQUIPMENT.find(x => x.id === q)?.label || q).join(", ") : " · bodyweight"] }), isStretchFocus(ex.id, 3) && _jsx(StretchFocusNote, {}), _jsx("div", { style: { display: "flex", gap: 8, marginBottom: 12 }, children: (() => {
+                        })() }), _jsx(Exit, { when: info, portalTarget: workoutRoot.current, children: info && (_jsx("div", { onClick: () => setInfo(false), className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "flex-end", zIndex: 55, animation: "fadeIn .2s both" }, children: _jsxs("div", { ref: sheetDragRef, onClick: ev => ev.stopPropagation(), className: "wpb-scroll", style: { width: "100%", maxHeight: "90%", overflowY: "auto", background: C.bg2, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: "8px 18px calc(env(safe-area-inset-bottom) + 26px)", animation: "sheetUp .28s cubic-bezier(.2,.7,.3,1) both", borderTop: `1px solid ${C.border}` }, children: [_jsxs("div", { style: { display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }, children: [_jsx("div", { style: { fontSize: 18, fontWeight: 700, flex: 1, minWidth: 0 }, children: ex.name }), _jsx("button", { onClick: () => setInfo(false), "aria-label": "Close", className: "pressable hit wpb-sheet-close", style: { flexShrink: 0, width: 44, height: 44, borderRadius: 14, border: `1px solid ${C.border}`, background: C.card, color: C.muted, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }, children: _jsx(X, { size: 18 }) })] }), _jsxs("div", { style: { fontSize: 13, color: C.muted, marginTop: 2, marginBottom: 12 }, children: [PART_LABEL[ex.part], " \u00B7 ", ex.type, ex.equip.length ? " · " + ex.equip.map(q => EQUIPMENT.find(x => x.id === q)?.label || q).join(", ") : " · bodyweight"] }), isStretchFocus(ex.id, 3) && _jsx(StretchFocusNote, {}), _jsx("div", { style: { display: "flex", gap: 8, marginBottom: 12 }, children: (() => {
                                                 const restNow = effectiveRest(goalForDay(program, day), ex, e.slot === day.primaryIndex, e.restCustom, restScale);
                                                 const fmt = r => r >= 60 ? `${Math.floor(r / 60)}:${String(r % 60).padStart(2, "0")}` : `${r}s`;
                                                 return [["Reps", cell.range], ["Effort", effortLabel(cell.rir, loadMode)], ["Sets", String(wTotal)], ["Rest", fmt(restNow)]].map(([k, v]) => (_jsxs("div", { style: { flex: 1, background: C.card, borderRadius: 12, padding: "11px 4px", textAlign: "center" }, children: [_jsx("div", { className: "mono", style: { fontSize: 15, fontWeight: 600, color: C.accentInk }, children: v }), _jsx("div", { style: { fontSize: 11, color: C.muted, marginTop: 2 }, children: k })] }, k)));

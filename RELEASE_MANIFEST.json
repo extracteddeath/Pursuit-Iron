@@ -2,7 +2,7 @@
   "schemaVersion": 3,
   "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": 894,
+  "build": 895,
   "engineVersion": "0.65.8",
   "candidateStatus": "verification_enforced_by_ci",
   "runtimeAggregate": "3a0d995a3bd399a8d5237006ba18274cb1537899086d81371bf1af7359d76eaf",
@@ -113,17 +113,17 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "c967a5ba6286d15b8e28e87110b8ac922e186d5dff61ffcff2118e9ddf08493e",
-    "index.html": "cd58f4692611dd426fa53833fab5ffd17b9f00306f1c8cbb222aa219f01a6b38",
-    "sw.js": "352f3f74ff1c87c1110f400d6c1bcadd8ffd937d61ecdfc53ffc86face5750c7",
-    "BUILD_PROFILE.json": "d628408d6e4fc47d3a978b0ed608473f0ec8c3d6cd931bb52cdf0fc012771594",
-    "CHANGELOG.md": "78b751b6def6bcba3beecd490e72cd6dc89af58bcc94099c2c125fc1ecffce79",
+    "modules/App.js": "6a940b107b4d517d2c10e3d4a0bdfc9c6d1265571cd912e30190c0cc77be7e69",
+    "index.html": "34c28e2fded7bafdae94eb87753dff3667f64b74bde076a26228294180ee8327",
+    "sw.js": "ee76e404f55de73b10d4dff8eee2cd37e49fb2571f792c3ae695e5b1d09c1911",
+    "BUILD_PROFILE.json": "bd0594f21abd517e9a860d5770a9c11690302d753026781448ebb65460bdef69",
+    "CHANGELOG.md": "324fe56646e2d87f682a8f04a061d4b2a01285554fc864c5318fd4a3e97a0f35",
     "app.css": "2065fccc2d7275e664c4f10f4098d194d85b8f3e5269712ac8069c33b098c5d0",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b894-r1370a5b7f254b8c9",
-  "uiMilestone": "Build 894 · Custom cycle conversion and setup recovery"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b895-ra03c68adafaffd88",
+  "uiMilestone": "Build 895 · Session notes in Workout options"
 }

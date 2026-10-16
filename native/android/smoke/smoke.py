@@ -218,15 +218,30 @@ tap(r"^\|Plan$|^Plan\|")
 adb("shell", "input", "swipe", "540", "700", "540", "1900", "200")
 if tap(r"Edit program", "editor"):
     if tap(r"\. Edit\|", "editor-slot"):
-        if tap(r"Swap exercise", "editor-swap"):
-            back()
         tap(r"Move later")
     shot("editor-moved")
+    if tap(r"\. Edit\|"):
+        tap(r"Swap exercise", "editor-swap")
+        back()
     if tap(r"^\|Save$", "editor-scope"):
         tap(r"^\|This block$", "editor-saved")
     back()
 
-# 10. Tablet
+# 10. Home-screen widget: rendered by a real AppWidgetHost, then its Start button's intent
+adb("shell", "appwidget", "grantbind", "--package", PKG)
+adb("shell", "am", "start", "-W", "-n", f"{PKG}/com.pursuitiron.app.WidgetPreviewActivity")
+time.sleep(5)
+shot("widget")
+adb("shell", "am", "start", "-W", "-a", "com.pursuitiron.app.action.START_WORKOUT", "-n", f"{PKG}/com.pursuitiron.app.MainActivity")
+time.sleep(4)
+shot("widget-start")
+if find(r"Minimise workout", timeout=4) is None:
+    FAILS.append("widget Start did not open the workout")
+adb("shell", "am", "start", "-W", "-n", f"{PKG}/com.pursuitiron.app.WidgetPreviewActivity")
+time.sleep(4)
+shot("widget-live")
+
+# 11. Tablet
 adb("shell", "wm", "size", "2560x1600")
 adb("shell", "wm", "density", "320")
 time.sleep(3)

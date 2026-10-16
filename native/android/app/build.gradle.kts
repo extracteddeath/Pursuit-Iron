@@ -75,6 +75,8 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")
     implementation("androidx.core:core-ktx:1.19.1")
     implementation("androidx.javascriptengine:javascriptengine:1.1.1")
+    implementation("androidx.glance:glance-appwidget:1.1.1")
+    implementation("androidx.glance:glance-material3:1.1.1")
     implementation("androidx.concurrent:concurrent-futures-ktx:1.3.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
     implementation("androidx.compose.ui:ui-tooling-preview")

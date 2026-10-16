@@ -109,7 +109,9 @@ fun MorphChip(label: String, selected: Boolean, onClick: () -> Unit, modifier: M
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text(label, style = MaterialTheme.typography.labelLarge, color = fg, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+        // No weight here: inside a LazyRow the chip is measured with unbounded width, where a weighted
+        // child gets no space at all and the label vanished. maxLines + ellipsis still bound it in a FlowRow.
+        Text(label, style = MaterialTheme.typography.labelLarge, color = fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
         if (trailing != null) Text(trailing, style = MaterialTheme.typography.labelMedium, color = fg.copy(alpha = 0.8f))
     }
 }

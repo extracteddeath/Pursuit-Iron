@@ -7,4 +7,6 @@
     <string name="rest_done_channel_desc">Sounds when a rest ends while you\'re out of the app</string>
     <string name="rest_over">Rest over</string>
     <string name="rest_over_body">Next set when you\'re ready</string>
+    <string name="widget_name">Next workout</string>
+    <string name="widget_desc">Your next session, or the one in progress, one tap from the home screen</string>
 </resources>

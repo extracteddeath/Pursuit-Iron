@@ -31,6 +31,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handle(intent: Intent?) {
+        if (intent?.action == com.pursuitiron.app.widget.ACTION_WIDGET_START) { vm.fromWidget(); return }
         Transfer.fromIntent(this, intent)?.let { vm.importOffer = it }
     }
 

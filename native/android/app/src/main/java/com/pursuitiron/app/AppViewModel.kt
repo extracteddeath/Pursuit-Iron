@@ -82,6 +82,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 refreshAll()
                 if (session?.b("active") == true) screen = Screen.Workout
                 ready = true
+                publishWidget()
+                if (pendingWidgetStart) { pendingWidgetStart = false; fromWidget() }
             } catch (e: Throwable) {
                 startupError = e.message ?: e.toString()
             }
@@ -108,6 +110,26 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun toast(text: String, undo: (() -> Unit)? = null) { snack = Snack(text, undo) }
     fun clearSnack() { snack = null }
 
+    /* ---------------------------------------------------------------- home-screen widget */
+    private fun publishWidget() {
+        val ctx = getApplication<Application>()
+        val s = session; val h = home
+        val snap = when {
+            s?.b("active") == true -> com.pursuitiron.app.widget.WidgetSnapshot("live", s.s("dayLabel"), s.s("programName"), s.i("doneSets"), s.i("totalSets"),
+                s.o("rest")?.let { it.optLong("startedAt") + it.optLong("seconds") * 1000 } ?: 0L)
+            h?.o("next") != null -> h.o("next")!!.let { n -> com.pursuitiron.app.widget.WidgetSnapshot("next", n.s("dayLabel"),
+                listOfNotNull(n.s("programName").ifBlank { null }, "${n.list("exercises").size} exercises", n.i("minutes").takeIf { it > 0 }?.let { "about $it min" }).joinToString(" · ")) }
+            else -> com.pursuitiron.app.widget.WidgetSnapshot()
+        }
+        viewModelScope.launch { com.pursuitiron.app.widget.WidgetSnapshot.publish(ctx, snap) }
+    }
+    private var pendingWidgetStart = false
+    /** The widget's Start/Resume button: resume a workout in progress, otherwise start the next one. */
+    fun fromWidget() {
+        if (!ready) { pendingWidgetStart = true; return }
+        if (session?.b("active") == true) resume() else start()
+    }
+
     private suspend fun refreshAll() {
         settings = obj("settings")
         haptics.enabled = settings?.b("haptics", true) != false
@@ -127,6 +149,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private suspend fun refreshHomeSide() {
         home = obj("home"); plan = obj("plan"); progress = obj("progress"); history = arr(call("historyList")); settings = obj("settings")
         profile = obj("profile"); body = obj("body"); cycles = obj("cyclesView")
+        publishWidget()
     }
 
     private suspend fun <T> working(label: String, block: suspend () -> T): T {
@@ -155,6 +178,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (s == null || s.has("error") && !s.b("active")) { toast(s?.s("error") ?: "Couldn't start the workout"); return@launchCore }
         session = s
         screen = Screen.Workout
+        publishWidget()
     }
 
     fun act(type: String, vararg args: Pair<String, Any?>) = launchCore {
@@ -162,7 +186,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val payload = jsonOf("type" to type, *args)
         val s = obj("act", payload) ?: return@launchCore
         session = s
-        if (type == "toggle") onToggled(before, s, payload)
+        if (type == "toggle") { onToggled(before, s, payload); publishWidget() }
+        if (type == "restDone" || type == "restAdjust") publishWidget()
         if (type == "injury") { hap(Hap.Warn); home = obj("home") }
     }
 
@@ -192,7 +217,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun restEndsAt(): Long? = session?.o("rest")?.let { it.optLong("startedAt") + it.optLong("seconds") * 1000 }
 
     fun discard() = launchCore {
-        call("discardSession"); session = obj("session"); screen = Screen.Tabs; rest.cancel()
+        call("discardSession"); session = obj("session"); screen = Screen.Tabs; rest.cancel(); publishWidget()
         refreshHomeSide(); toast("Workout discarded")
     }
 

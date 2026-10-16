@@ -60,6 +60,12 @@ def find(pattern, timeout=12):
 def dismiss_system_dialogs():
     """A cold emulator sometimes shows "<app> isn't responding" for the launcher; it is not ours. Wait it out."""
     hit = False
+    # The dialog can stall uiautomator itself, so look in the window list first and close it from the shell.
+    if "Application Not Responding" in adb("shell", "dumpsys", "window", "windows", timeout=30) or "isn't responding" in adb("shell", "dumpsys", "window", "windows", timeout=30):
+        adb("shell", "am", "broadcast", "-a", "android.intent.action.CLOSE_SYSTEM_DIALOGS")
+        adb("shell", "input", "keyevent", "4")
+        time.sleep(2)
+        hit = True
     for _ in range(3):
         anr = find(r"isn't responding", timeout=1)
         if not anr:
@@ -118,6 +124,7 @@ def grant_notifications():
 adb("logcat", "-c")
 # Background ANR dialogs (a slow emulator launcher) are system noise; hide them like CI images usually do.
 adb("shell", "settings", "put", "secure", "anr_show_background", "0")
+adb("shell", "settings", "put", "global", "hide_error_dialogs", "1")
 adb("shell", "settings", "put", "global", "window_animation_scale", "0.5")
 adb("shell", "pm", "grant", PKG, "android.permission.POST_NOTIFICATIONS")
 

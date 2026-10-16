@@ -6,3 +6,5 @@ native/android/.gradle/
 native/android/build/
 native/android/app/build/
 native/android/local.properties
+native/android/app/src/main/assets/pi-core.js
+native/android/app/src/main/assets/pi-core.json

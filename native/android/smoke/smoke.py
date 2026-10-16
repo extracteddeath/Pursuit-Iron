@@ -116,6 +116,8 @@ def grant_notifications():
 
 
 adb("logcat", "-c")
+# Background ANR dialogs (a slow emulator launcher) are system noise; hide them like CI images usually do.
+adb("shell", "settings", "put", "secure", "anr_show_background", "0")
 adb("shell", "settings", "put", "global", "window_animation_scale", "0.5")
 adb("shell", "pm", "grant", PKG, "android.permission.POST_NOTIFICATIONS")
 
@@ -273,6 +275,18 @@ if find(r"Minimise workout", timeout=4) is None:
     FAILS.append("tablet did not show the workout")
 adb("shell", "wm", "size", "reset")
 adb("shell", "wm", "density", "reset")
+
+# Any ANR during the run, whoever it belonged to, with its reason, so ours can never hide behind the launcher's.
+full = adb("logcat", "-d", "-b", "main", "-b", "system", "-b", "crash", timeout=120)
+anr = []
+lines = full.splitlines()
+for i, l in enumerate(lines):
+    if "ANR in" in l:
+        anr.extend(lines[i:i + 12]); anr.append("----")
+with open(os.path.join(OUT, "anr.txt"), "w") as f:
+    f.write("\n".join(anr))
+if any(("ANR in " + PKG) in l for l in anr):
+    FAILS.append("ANR in the app")
 
 # Crashes or engine errors anywhere in the run
 log = adb("logcat", "-d", "-b", "crash", "-b", "main", timeout=120)

@@ -83,10 +83,15 @@ keep-screen-on, haptic patterns, light/dark and three palettes.
 Every list the web app syncs (programs, cycles, history) is stamped and tombstoned the same way it does, so a backup
 moved either direction merges cleanly.
 
-Not native yet: comparing two programs side by side, program settings that regenerate the plan (goal, length,
-session time, equipment constraints), percentage-scheme training maxes, training reminders, custom exercises, CSV
-import/export, and Wear OS (a separate watch app; the design is in the prototype). The web app's program gallery is not
-ported because the web app itself no longer imports gallery codes.
+Also native: templates (all 75, by category, built for the active gym) with training maxes for the percentage
+programs, program settings that rebuild the plan (goal, length, session time, set/rep mode, volume approach,
+barbell limit, bodyweight and superset options) plus shuffle and restore of earlier layouts, comparing programs or
+exercises side by side, custom exercises, training reminders (weekday notifications that survive a reboot), the
+injury log outside a workout, Strong and Hevy CSV import, and workout and body CSV export.
+
+Not native yet: Wear OS (a separate watch app that needs Google Play services on the phone for the data link; the
+design is in the prototype). The web app's program gallery is not ported because the web app itself no longer
+imports gallery codes.
 
 ## Keeping the two apps in step
 

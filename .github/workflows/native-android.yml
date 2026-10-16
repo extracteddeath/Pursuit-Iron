@@ -31,8 +31,8 @@ jobs:
         working-directory: native/core
         run: |
           npm ci --no-audit --no-fund
-          npm test
           node build.mjs
+          npm test
 
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:

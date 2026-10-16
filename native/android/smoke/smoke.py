@@ -60,11 +60,13 @@ def find(pattern, timeout=12):
 def dismiss_system_dialogs():
     """A cold emulator sometimes shows "<app> isn't responding" for the launcher; it is not ours. Wait it out."""
     hit = False
-    # The dialog can stall uiautomator itself, so look in the window list first and close it from the shell.
-    if "Application Not Responding" in adb("shell", "dumpsys", "window", "windows", timeout=30) or "isn't responding" in adb("shell", "dumpsys", "window", "windows", timeout=30):
-        adb("shell", "am", "broadcast", "-a", "android.intent.action.CLOSE_SYSTEM_DIALOGS")
-        adb("shell", "input", "keyevent", "4")
-        time.sleep(2)
+    # The dialog can stall uiautomator itself: close system dialogs from the shell (never a key press, which
+    # would land on our app when no dialog is up), then make sure our app is the one in front.
+    adb("shell", "am", "broadcast", "-a", "android.intent.action.CLOSE_SYSTEM_DIALOGS")
+    resumed = [l for l in adb("shell", "dumpsys", "activity", "activities", timeout=30).splitlines() if "ResumedActivity" in l]
+    if resumed and not any(PKG in l for l in resumed):
+        adb("shell", "am", "start", "-n", f"{PKG}/com.pursuitiron.app.MainActivity")
+        time.sleep(3)
         hit = True
     for _ in range(3):
         anr = find(r"isn't responding", timeout=1)
@@ -260,6 +262,7 @@ if scroll_to(r"^\|Recent$", tries=6):
     adb("shell", "input", "swipe", "540", "1500", "540", "1000", "300")
     time.sleep(0.8)
     if tap(r"^\|[A-Z][a-z]{2} \d+ · ", "history-sheet", required=False):
+        scroll_to(r"^\|Correct log$", tries=3)
         if tap(r"^\|Correct log$", "history-correct"):
             back()
         else:
@@ -307,6 +310,8 @@ if scroll_to(r"Plates and 1RM"):
         back()
 # 7b. Settings parity: training preferences, data management, help
 tap(r"^\|You$|^You\|")
+for _ in range(6):
+    adb("shell", "input", "swipe", "540", "700", "540", "1900", "150")
 tap(r"^\|Settings$")
 if scroll_to(r"^\|Effort scale$", tries=8):
     tap(r"^\|RPE$", "settings-rpe")

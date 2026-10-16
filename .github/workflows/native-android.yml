@@ -73,7 +73,7 @@ jobs:
         if: failure()
         run: |
           L="$RUNNER_TEMP/build.log"; [ -f "$L" ] || exit 0
-          { grep -E '^e: ' "$L"; grep -A3 -E '^\* What went wrong' "$L" | grep -vE '^\* What went wrong|^--$'; grep -E 'AAPT: error|error: ' "$L"; } \
+          { grep -E '^e: ' "$L"; grep -E '^ *[0-9]+\. +Dependency|requires|minCompileSdk|AAPT: error|error: |Lint found' "$L"; grep -A3 -E '^\* What went wrong' "$L" | grep -vE '^\* What went wrong|^--$'; } \
             | awk '!seen[$0]++' > "$RUNNER_TEMP/errors.txt" || true
           wc -l < "$RUNNER_TEMP/errors.txt" | xargs -I{} echo "::notice title=Error count::{}"
           sed -n '1,10p' "$RUNNER_TEMP/errors.txt" | sed -E 's#file:///home/runner/work/[^/]+/[^/]+/##' | while IFS= read -r l; do echo "::error::$l"; done

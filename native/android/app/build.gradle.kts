@@ -12,7 +12,7 @@ val keystorePath = System.getenv("PI_KEYSTORE_PATH")
 
 android {
     namespace = "com.pursuitiron.app"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = appId

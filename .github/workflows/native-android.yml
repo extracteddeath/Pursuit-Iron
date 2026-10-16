@@ -1,0 +1,42 @@
+name: Native Android
+on:
+  push:
+    branches: [native-app]
+    paths: ['native/**', 'modules/**', '.github/workflows/native-android.yml']
+  workflow_dispatch:
+
+concurrency:
+  group: native-android-${{ github.ref_name }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Latest versions of the Android libraries this build pins
+        run: |
+          meta() { curl -fsSL "$1" | grep -oE '<(latest|release)>[^<]+' | head -2 | tr '\n' ' '; echo " <- $1"; }
+          G=https://dl.google.com/dl/android/maven2
+          M=https://repo1.maven.org/maven2
+          meta $G/com/android/tools/build/gradle/maven-metadata.xml
+          meta $G/androidx/compose/compose-bom/maven-metadata.xml
+          meta $G/androidx/compose/material3/material3/maven-metadata.xml
+          meta $G/androidx/javascriptengine/javascriptengine/maven-metadata.xml
+          meta $G/androidx/activity/activity-compose/maven-metadata.xml
+          meta $G/androidx/lifecycle/lifecycle-viewmodel-compose/maven-metadata.xml
+          meta $G/androidx/core/core-ktx/maven-metadata.xml
+          meta $G/androidx/core/core-splashscreen/maven-metadata.xml
+          meta $G/androidx/webkit/webkit/maven-metadata.xml
+          meta $M/org/jetbrains/kotlin/kotlin-gradle-plugin/maven-metadata.xml
+          meta $M/org/jetbrains/kotlinx/kotlinx-coroutines-android/maven-metadata.xml
+          meta $M/org/jetbrains/kotlinx/kotlinx-serialization-json/maven-metadata.xml
+          meta $G/androidx/concurrent/concurrent-futures-ktx/maven-metadata.xml
+          echo "Material3 versions:"; curl -fsSL $G/androidx/compose/material3/material3/maven-metadata.xml | grep -oE '<version>[^<]+' | tail -12 | tr '\n' ' '; echo
+          echo "javascriptengine versions:"; curl -fsSL $G/androidx/javascriptengine/javascriptengine/maven-metadata.xml | grep -oE '<version>[^<]+' | tr '\n' ' '; echo
+          echo "Gradle:"; curl -fsSL https://services.gradle.org/versions/current | grep -oE '"version" *: *"[^"]+"'
+          echo "Preinstalled SDK:"; ls "$ANDROID_HOME/platforms" "$ANDROID_HOME/build-tools" 2>/dev/null | tr '\n' ' '; echo
+          java -version 2>&1 | head -1

@@ -1,0 +1,12 @@
+{
+  "name": "pursuit-iron-native-core",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node test/polyfill.test.mjs && node test/core.test.mjs && node test/bundle.test.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.24.2"
+  }
+}

@@ -1,0 +1,94 @@
+// End-to-end checks of the native core against the canonical engine.
+import * as C from '../src/core.js';
+import * as E from '../../../modules/engine-api.js';
+let fails = 0;
+const ok = (cond, msg) => { console.log((cond ? 'PASS ' : 'FAIL ') + msg); if (!cond) fails++; };
+
+// 0. Empty start, unknown fields survive a round trip
+C.init({ store: JSON.stringify({ unit: 'kg', zzFuture: { keep: [1, 2, 3] }, theme: 'ember' }) });
+let h = C.home();
+ok(h.empty === true && h.next === null, 'empty store reads as empty with no next session');
+const rt = JSON.parse(C.exportStore());
+ok(JSON.stringify(rt.zzFuture) === JSON.stringify({ keep: [1, 2, 3] }), 'unknown store fields pass through untouched');
+
+// 1. Create a program with the real generator
+const cfg = { name: 'Native test', unit: 'kg', goal: 'both', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60',
+  equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] };
+const made = C.createProgram({ config: cfg, seed: 11 });
+ok(made.ok && made.days === 4, 'createProgram builds a 4-day program (' + (made.error || made.name) + ')');
+h = C.home();
+ok(h.next && h.next.exercises.length > 0 && h.next.weekIndex === 1, 'home shows the next session at week 1 with exercises');
+
+// 2. Start a session and log every working set
+let s = C.startSession({});
+ok(s.active && s.exercises.length === h.next.exercises.length, 'session opens with the same exercises as the preview');
+const firstEx = s.exercises[0];
+const startW = 60;
+s.exercises.forEach((e) => e.sets.forEach((st) => {
+  if (st.warm || st.sub) return;
+  s = C.act({ type: 'edit', ei: e.ei, si: st.i, field: 'weight', value: String(startW) });
+  s = C.act({ type: 'edit', ei: e.ei, si: st.i, field: 'reps', value: '8' });
+}));
+const r0 = C.act({ type: 'toggle', ei: 0, si: firstEx.sets.find((x) => !x.warm && !x.sub).i });
+ok(r0.exercises[0].sets.some((x) => x.done), 'toggle logs a set');
+ok(r0.rest && r0.rest.seconds > 0, 'logging a working set starts a rest of ' + (r0.rest && r0.rest.seconds) + 's');
+const undoT = C.act({ type: 'toggle', ei: 0, si: firstEx.sets.find((x) => !x.warm && !x.sub).i });
+ok(!undoT.exercises[0].sets.some((x) => x.done) && !undoT.rest, 'toggling again unlogs it and clears rest');
+s = C.session();
+s.exercises.forEach((e) => e.sets.forEach((st) => { if (!st.warm && !st.sub && !st.done) { s = C.act({ type: 'toggle', ei: e.ei, si: st.i }); s = C.act({ type: 'rir', ei: e.ei, si: st.i, rir: 1 }); } }));
+ok(s.doneSets === s.totalSets && s.totalSets > 0, 'all ' + s.totalSets + ' working sets logged');
+const editDone = C.act({ type: 'edit', ei: 0, si: s.exercises[0].sets.find((x) => x.done).i, field: 'weight', value: '999' });
+ok(!editDone.exercises[0].sets.some((x) => x.weight === '999'), 'a logged set cannot be edited (App.js editSet rule)');
+
+// 3. Finish: history, perf, live cleared
+const fin = C.finishSession();
+ok(fin.ok && fin.setsDone === s.totalSets, 'finish records ' + fin.setsDone + ' sets');
+const st1 = JSON.parse(C.exportStore());
+ok(st1.history.length === 1 && Object.keys(st1.perf).length >= 1, 'history has the session and perf is updated');
+ok(C.session().active === false && C.exportLive() === '', 'live session cleared after finish');
+const parsedBack = E.parseStoredData(JSON.stringify(st1));
+ok(parsedBack && parsedBack.history.length === 1, 'the PWA parser reads the native store');
+
+// 4. Next session advances the rotation
+h = C.home();
+ok(h.next && h.next.dayId !== made.programId && h.next.dayLabel, 'next session is a different day: ' + h.next.dayLabel);
+
+// 5. Same day again later: progression reads the logged session
+C.init({ store: JSON.stringify(st1) });
+const day0 = st1.saved[0].days[0].id;
+const s2 = C.startSession({ programId: st1.saved[0].id, dayId: day0, weekIndex: 1 });
+const w2 = s2.exercises[0].sets.filter((x) => !x.warm && !x.sub).map((x) => Number(x.weight));
+ok(w2.every((w) => w > 0), 'repeating the day prescribes loads from history: ' + w2.join('/'));
+C.discardSession();
+
+// 6. Delete + undo
+const del = C.deleteHistory({ id: st1.history[0].id });
+ok(del.ok && JSON.parse(C.exportStore()).history.length === 0, 'delete removes the session');
+ok(Object.keys(JSON.parse(C.exportStore()).perf).length === 0, 'delete recomputes perf (perfAfterDelete): no orphan anchor');
+C.undo();
+ok(JSON.parse(C.exportStore()).history.length === 1, 'undo restores it');
+
+// 7. Pain flag through the PWA injury model
+C.startSession({});
+let sp = C.session();
+const before = sp.exercises.reduce((n, e) => n + e.sets.filter((x) => !x.warm && !x.sub).length, 0);
+const AREAS = C.setupOptions().injuryAreas; const parts = new Set(sp.exercises.map((e) => e.part));
+const area = AREAS.find((a) => a.parts.some((p) => parts.has(p)));
+sp = C.act({ type: 'injury', region: area.id, impact: 'reduce' });
+const after = sp.exercises.reduce((n, e) => n + e.sets.filter((x) => !x.warm && !x.sub).length, 0);
+ok(sp.injuries.length === 1 && after < before, area.label + ': reduce impact logs the injury and trims affected work (' + before + ' → ' + after + ')');
+const fin2 = C.finishSession();
+const st2 = JSON.parse(C.exportStore());
+ok(fin2.ok && Array.isArray(st2.injuryLog) && st2.injuryLog.length === 1, 'injury log persists with the session');
+
+// 8. Import merge never loses a workout
+C.init({ store: JSON.stringify(st2) });
+const other = JSON.parse(JSON.stringify(st1)); other.history = [{ ...st1.history[0], id: 'from-pwa', date: Date.now() - 86400000 * 3 }];
+const imp = C.importStore({ text: JSON.stringify(other) });
+ok(imp.ok && JSON.parse(C.exportStore()).history.some((x) => x.id === 'from-pwa') && JSON.parse(C.exportStore()).history.length >= 3, 'import merges a PWA store without dropping sessions');
+
+// 9. Views do not throw
+['progress', 'plan', 'library', 'body', 'settings', 'setupOptions', 'historyList'].forEach((m) => { let v; let err = null; try { v = C[m]({}); } catch (e) { err = e; } ok(!err && v != null, m + '() returns a view'); });
+ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations');
+
+console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);

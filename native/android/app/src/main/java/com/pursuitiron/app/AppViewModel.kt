@@ -167,8 +167,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /* ---------------------------------------------------------------- navigation */
     fun goTab(t: Tab) { tab = t; screen = Screen.Tabs }
     /** Opens program setup; with [cycle], in training-cycle mode. */
-    var setupCycle by mutableStateOf(false); private set
-    fun openSetup(cycle: Boolean = false) { setupCycle = cycle; screen = Screen.Setup }
+    var setupMode by mutableStateOf("program"); private set
+    fun openSetup(cycle: Boolean = false) { setupMode = if (cycle) "cycle" else "program"; screen = Screen.Setup }
+    fun openSetupMode(mode: String) { setupMode = mode; screen = Screen.Setup }
     fun closeSetup() { screen = Screen.Tabs }
     fun minimise() { screen = Screen.Tabs; launchCore { home = obj("home") } }
     fun resume() { if (session?.b("active") == true) screen = Screen.Workout }
@@ -253,6 +254,29 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (r?.b("ok") == true) { toast(if (apply) "Program updated" else "Kept for that workout only"); refreshHomeSide() }
         else toast(r?.s("error", "Couldn't update the program") ?: "Couldn't update the program")
     }
+
+    /* Today's alternatives to the scheduled session (App.js startUpNextAlt / startDeload / startLight). */
+    fun startAlt() = startVia("startAlt")
+    fun startDeload() = startVia("startDeload")
+    fun startLight() = startVia("startLight")
+    private fun startVia(method: String) = launchCore {
+        val s = obj(method) ?: return@launchCore
+        if (!s.b("active")) { toast(s.s("error", "Couldn't start the workout")); return@launchCore }
+        session = s; screen = Screen.Workout; publishWidget()
+    }
+
+    /* Progress: one lift, strength standards, correcting and sharing a logged workout. */
+    suspend fun liftDetail(id: String): JSONObject? = obj("liftDetail", jsonOf("id" to id))
+    suspend fun strengthStandards(): JSONObject? = obj("strengthStandards")
+    suspend fun historyEditDraft(id: String): JSONObject? = obj("historyEditDraft", jsonOf("id" to id))
+    fun editHistory(id: String, date: Long, minutes: Int?, lifts: JSONArray) = launchCore {
+        val r = obj("editHistory", jsonOf("id" to id, "date" to date, "durationMin" to minutes, "lifts" to lifts))
+        if (r?.b("ok") == true) {
+            refreshHomeSide()
+            toast("Corrected ${r.s("label")} history") { launchCore { call("undo"); refreshHomeSide() } }
+        } else toast("Couldn't save the correction")
+    }
+    suspend fun shareCard(id: String): JSONObject? = obj("shareCard", jsonOf("id" to id))
 
     fun startQuick() = launchCore {
         val s = obj("startQuick") ?: return@launchCore

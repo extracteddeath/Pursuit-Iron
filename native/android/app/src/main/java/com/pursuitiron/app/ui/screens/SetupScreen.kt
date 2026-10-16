@@ -62,7 +62,7 @@ fun SetupScreen(vm: AppViewModel) {
     var split by remember { mutableStateOf<String?>(null) }
     var name by remember { mutableStateOf("") }
     var pick by remember { mutableStateOf<String?>(null) }
-    var mode by remember { mutableStateOf(if (vm.setupCycle) "cycle" else "program") }
+    var mode by remember { mutableStateOf(vm.setupMode) }
     val cycleMode = mode == "cycle"
     var template by remember { mutableStateOf(vm.cycles.list("templates").firstOrNull()?.s("id") ?: "powerbuilding") }
     val custom = remember { mutableStateListOf(CustomBlock("hypertrophy_accumulation", 4), CustomBlock("strength_accumulation", 4)) }

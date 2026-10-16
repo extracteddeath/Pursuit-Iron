@@ -124,8 +124,7 @@ adb("shell", "pm", "grant", PKG, "android.permission.POST_NOTIFICATIONS")
 # 1. First run
 launch()
 shot("first-run")
-tap(r"I'm new")
-tap(r"Build my program", "setup")
+tap(r"^\|Build my program$", "setup")  # the welcome screen opens the builder
 tap(r"Build my program", "today-with-program", timeout=8)
 time.sleep(3)
 shot("today")
@@ -239,6 +238,23 @@ tap(r"Bring it over", "imported")
 time.sleep(2)
 tap(r"^\|Today$|^Today\|")
 shot("today-after-import")
+if scroll_to(r"Fresher today|A deload looks due|Muscle recovery|This week|Strength score", tries=4):
+    shot("today-insights")
+if scroll_to(r"^\|Recent$", tries=6):
+    adb("shell", "input", "swipe", "540", "1500", "540", "1000", "300")
+    time.sleep(0.8)
+    if tap(r"^\|[A-Z][a-z]{2} \d+ · ", "history-sheet", required=False):
+        if tap(r"^\|Correct log$", "history-correct"):
+            back()
+        else:
+            back()
+
+# 6b. Progress: a lift's chart, strength standards
+tap(r"^\|Progress$|^Progress\|", "progress-after-import")
+if tap(r"Estimated 1RM · last", "lift-detail", required=False):
+    back()
+if scroll_to(r"Strength standards", tries=5):
+    shot("strength-standards")
 
 # 7. Profile, calendar, settings, gyms, tools, unit switch
 tap(r"^\|You$|^You\|")

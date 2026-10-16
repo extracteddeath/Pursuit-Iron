@@ -2,6 +2,8 @@
 
 package com.pursuitiron.app.ui.screens
 
+import com.pursuitiron.app.ui.common.o
+import org.json.JSONObject
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -207,6 +209,8 @@ fun ProgressScreen(vm: AppViewModel) {
     val wide = LocalWide.current
     val cs = MaterialTheme.colorScheme
     val full = StaggeredGridItemSpan.FullLine
+    var liftId by remember { mutableStateOf<String?>(null) }
+    liftId?.let { id -> LiftDetailSheet(vm, id) { liftId = null } }
     LazyVerticalStaggeredGrid(
         columns = StaggeredGridCells.Fixed(if (wide) 2 else 1),
         contentPadding = PaddingValues(start = if (wide) 32.dp else 16.dp, end = if (wide) 32.dp else 16.dp, bottom = 24.dp),
@@ -224,10 +228,11 @@ fun ProgressScreen(vm: AppViewModel) {
                 StatTile("Records", "${p.list("records").size}", modifier = Modifier.weight(1f))
             }
         }
+        p.o("recap")?.takeIf { it.i("count") > 0 }?.let { r -> item(span = full) { RecapCard(JSONObject().put("recap", r).put("unit", p.s("unit"))) } }
         p.list("lifts").filter { it.list("points").size >= 2 }.take(8).forEach { l ->
             item {
                 val pts = l.list("points").map { it.d("e1rm") }
-                PiCard(radius = 28.dp) {
+                PiCard(radius = 28.dp, onClick = { liftId = l.s("id") }) {
                     Row {
                         Text(l.s("name"), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                         val ch = pts.last() - pts.first()
@@ -244,10 +249,25 @@ fun ProgressScreen(vm: AppViewModel) {
             item(span = full) {
                 Column(Modifier.clip(RoundedCornerShape(24.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     recs.take(15).forEach { r ->
-                        Row(Modifier.fillMaxWidth().background(cs.surfaceContainerLow).padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Row(Modifier.fillMaxWidth().background(cs.surfaceContainerLow).clickable { liftId = r.s("id") }.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                             Text(r.s("name"), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                             if (r.s("weight").isNotBlank()) Text("${r.s("weight")}×${r.s("reps")}  ", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
                             Text(fmtNum(r.d("e1rm")), style = MaterialTheme.typography.titleSmall)
+                        }
+                    }
+                }
+            }
+        }
+        item(span = full) { StrengthStandardsCard(vm) { liftId = it } }
+        val others = p.list("lifts").filter { it.list("points").size < 2 }
+        if (others.isNotEmpty()) {
+            item(span = full) { SectionTitle("All lifts") }
+            item(span = full) {
+                Column(Modifier.clip(RoundedCornerShape(24.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    others.forEach { l ->
+                        Row(Modifier.fillMaxWidth().background(cs.surfaceContainerLow).clickable { liftId = l.s("id") }.padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text(l.s("name"), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                            Icon(PiIcons.ChevronRight, null, tint = cs.onSurfaceVariant)
                         }
                     }
                 }

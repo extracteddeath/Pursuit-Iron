@@ -114,7 +114,7 @@ private fun Shell(vm: AppViewModel, wide: Boolean) {
             label = "screen",
         ) { screen ->
             when (screen) {
-                Screen.Tabs -> Tabs(vm, wide)
+                Screen.Tabs -> if (vm.home?.b("empty") == true && vm.prefs.seenIntro < com.pursuitiron.app.ui.screens.INTRO_VERSION) com.pursuitiron.app.ui.screens.IntroScreen(vm) else Tabs(vm, wide)
                 Screen.Workout -> WorkoutScreen(vm)
                 Screen.Summary -> SummaryScreen(vm)
                 Screen.Setup -> SetupScreen(vm)

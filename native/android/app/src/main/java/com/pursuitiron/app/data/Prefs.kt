@@ -26,11 +26,18 @@ class Prefs(context: Context) {
         private set
     var askedNotifications by mutableStateOf(sp.getBoolean("askedNotifications", false))
         private set
+    /** App.js seenIntroV / seenWhatsNew: the welcome screen and the release card, shown once per version. */
+    var seenIntro by mutableStateOf(sp.getInt("seenIntro", 0))
+        private set
+    var seenWhatsNew by mutableStateOf(sp.getInt("seenWhatsNew", 0))
+        private set
 
     fun changeSeed(v: Seed) { seed = v; sp.edit().putString("seed", v.name).apply() }
     fun changeDark(v: Boolean?) { dark = v; sp.edit().apply { if (v == null) remove("dark") else putBoolean("dark", v) }.apply() }
     fun changeGrip(v: Boolean) { grip = v; sp.edit().putBoolean("grip", v).apply() }
     fun changeKeepAwake(v: Boolean) { keepAwake = v; sp.edit().putBoolean("keepAwake", v).apply() }
     fun dismissTransfer() { transferDismissed = true; sp.edit().putBoolean("transferDismissed", true).apply() }
+    fun markIntro(v: Int) { seenIntro = v; sp.edit().putInt("seenIntro", v).apply() }
+    fun markWhatsNew(v: Int) { seenWhatsNew = v; sp.edit().putInt("seenWhatsNew", v).apply() }
     fun markAskedNotifications() { askedNotifications = true; sp.edit().putBoolean("askedNotifications", true).apply() }
 }

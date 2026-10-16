@@ -31,6 +31,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -58,7 +59,9 @@ import com.pursuitiron.app.ui.common.i
 import com.pursuitiron.app.ui.common.list
 import com.pursuitiron.app.ui.common.o
 import com.pursuitiron.app.ui.common.s
+import com.pursuitiron.app.ui.common.strings
 import org.json.JSONObject
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -126,8 +129,15 @@ fun TodayScreen(vm: AppViewModel) {
             }
         }
 
+        if (!h.b("empty") && vm.prefs.seenWhatsNew < WHATS_NEW_VERSION) item(span = full) { WhatsNewCard(vm) }
         if (h.optInt("needsTrainingMax", 0) > 0) item(span = full) { TrainingMaxPrompt(vm) }
         if (next != null) item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { Hero(vm, next, h) }
+
+        if (h.o("deload") != null) item { DeloadCard(vm, h) }
+        val insights = h.strings("insights")
+        if ("recovery" in insights) item { RecoveryCard(vm, h) }
+        if ("strength" in insights) item { StrengthTeaser(vm, h) }
+        if ("recap" in insights) item { RecapCard(h) }
 
         if (h.o("live") == null) item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) {
             PiCard(color = cs.surfaceContainer, radius = 24.dp, padding = 16.dp, onClick = { vm.startQuick() }) {
@@ -209,6 +219,10 @@ private fun Hero(vm: AppViewModel, next: JSONObject, h: JSONObject) {
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = cs.primary, contentColor = cs.onPrimary),
                 ) { Text(if (live != null) "Resume workout" else "Start workout", style = MaterialTheme.typography.titleSmall) }
+                val alt = h.o("alt")
+                if (live == null && alt != null) OutlinedButton(onClick = { vm.startAlt() }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Fresher today: ${alt.s("dayLabel")} (${alt.i("score")}%)")
+                }
             }
         }
     }
@@ -258,6 +272,8 @@ private fun ReadinessSheet(h: JSONObject) {
 @Composable
 fun HistorySheet(vm: AppViewModel, id: String, onClose: () -> Unit) {
     var detail by remember(id) { mutableStateOf<JSONObject?>(null) }
+    var editing by remember(id) { mutableStateOf(false) }
+    if (editing) { HistoryEditSheet(vm, id) { editing = false; onClose() }; return }
     androidx.compose.runtime.LaunchedEffect(id) { detail = vm.historyDetail(id) }
     val cs = MaterialTheme.colorScheme
     ModalBottomSheet(onDismissRequest = onClose) {
@@ -277,6 +293,12 @@ fun HistorySheet(vm: AppViewModel, id: String, onClose: () -> Unit) {
                 }
             }
             if (vm.session?.b("active") != true) Button(onClick = { onClose(); vm.repeatWorkout(id) }, modifier = Modifier.fillMaxWidth()) { Text("Repeat this workout") }
+            val shareCtx = LocalContext.current
+            val scope = androidx.compose.runtime.rememberCoroutineScope()
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = { editing = true }, modifier = Modifier.weight(1f)) { Text("Correct log") }
+                OutlinedButton(onClick = { scope.launch { vm.shareCard(id)?.let { c -> runCatching { shareWorkoutImage(shareCtx, c, cs) }.onFailure { vm.toast("Couldn't share the image") } } } }, modifier = Modifier.weight(1f)) { Text("Share image") }
+            }
             TextButton(onClick = { vm.deleteHistory(id); onClose() }) {
                 Icon(PiIcons.Trash, null, modifier = Modifier.size(18.dp)); Text("  Delete this workout")
             }

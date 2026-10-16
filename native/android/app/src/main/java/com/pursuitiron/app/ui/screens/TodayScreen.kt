@@ -167,7 +167,12 @@ private fun Hero(vm: AppViewModel, next: JSONObject, h: JSONObject) {
                         style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
                 }
                 Text(next.s("dayLabel"), style = MaterialTheme.typography.displaySmall)
-                Text("${next.s("programName")} · week ${next.i("weekIndex")} of ${next.i("weeksTotal")}", style = MaterialTheme.typography.bodyMedium)
+                val cyc = h.o("cycle")
+                if (cyc != null) {
+                    val blocks = cyc.optJSONArray("blocks")
+                    Text("${blocks?.optString(cyc.i("blockIdx")) ?: "Block"} block ${cyc.i("blockIdx") + 1} of ${blocks?.length() ?: 1} · " +
+                        (if (cyc.b("isDeload")) "deload week" else "week ${cyc.i("weekIndex")} of ${cyc.i("weeksTotal")}") + " · ${cyc.s("name")}", style = MaterialTheme.typography.bodyMedium)
+                } else Text("${next.s("programName")} · week ${next.i("weekIndex")} of ${next.i("weeksTotal")}", style = MaterialTheme.typography.bodyMedium)
                 Text("${ex.size} exercises · ${ex.sumOf { it.i("sets") }} working sets" + (next.i("minutes").takeIf { it > 0 }?.let { " · about $it min" } ?: ""),
                     style = MaterialTheme.typography.bodyMedium)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {

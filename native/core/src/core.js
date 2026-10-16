@@ -153,6 +153,8 @@ export function home() {
         readiness: { today: todayReady, parts: rd },
         injuries: injuries().filter((i) => !i.resolvedAt).map((i) => ({ id: i.id, title: injuryTitle(i, E.PART_LABEL), impact: i.impact })),
         live: S.live ? liveSummary() : null,
+        cycle: (() => { const ci = liveCycleInfo(); return ci ? { id: ci.cycle.id, name: ci.cycle.name || 'Training cycle', blockIdx: ci.blockIdx, blocks: (ci.cycle.blockMeta || []).map((b) => b.label || 'Block'),
+            weekIndex: ci.weekIndex, weeksTotal: ci.weeksTotal, isDeload: ci.isDeload, dayIndex: ci.dayIndex, daysPerWeek: ci.daysPerWeek } : null; })(),
         recent: H.slice(0, 7).map(historyRow)
     };
 }
@@ -543,7 +545,9 @@ export function plan({ programId, weekIndex } = {}) {
     return { programId: p.id, name: p.name, weekIndex: wk, weeksTotal: E.weeksOf(p), current: nx?.program.id === p.id ? nx.weekIndex : null,
         nextDayId: nx?.program.id === p.id ? nx.day.id : null, split: p.config?.split || null, goal: p.config?.goal || null,
         days: p.days.map((d) => { let m = null; try { m = E.estimateMinutes(p, d, wk); } catch { m = null; } return { id: d.id, label: d.label, minutes: m, exercises: dayPreview(p, d, wk) }; }),
-        programs: saved().map((x) => ({ id: x.id, name: x.name, days: x.days.length, active: x.id === nx?.program.id })) };
+        cycleId: (p.cycleId && cycles().some((c) => c.id === p.cycleId)) ? p.cycleId : null, canNextBlock: !p.cycleId || !cycles().some((c) => c.id === p.cycleId),
+        // Cycle blocks are reached through their cycle, as on the web app's Home, so the list stays one row per plan.
+        programs: saved().filter((x) => !(x.cycleId && cycles().some((c) => c.id === x.cycleId))).map((x) => ({ id: x.id, name: x.name, days: x.days.length, active: x.id === nx?.program.id })) };
 }
 export function pinProgram({ id }) { if (!programById(id)) return { ok: false }; S.store.pinnedId = id; markStore(); return { ok: true }; }
 
@@ -587,16 +591,170 @@ export function recommend({ config }) {
     let next = null; try { next = E.recommendNextSplitForShell(cfg, [], EXERCISES, 63063); } catch { next = null; }
     try { const rec = E.recommendedSplit(cfg, next); return rec && E.SPLITS[rec]?.days.includes(cfg.days) ? rec : null; } catch { return null; }
 }
+/* App.js handleGenerate: banned lifts honoured, the route stamped, the equipment remembered, and a
+   unit picked here goes through switchUnit once a unit has been chosen (so loads convert). */
+function adoptConfigUnit(cfgUnit) {
+    if (cfgUnit && cfgUnit !== unit()) {
+        if (S.store.unitChosen && !S.live) switchUnit({ to: cfgUnit }); else S.store.unit = cfgUnit;
+    }
+    S.store.unitChosen = true;
+}
 export function createProgram({ config, seed }) {
     const cfg = programConfig(config);
     let r;
-    try { r = E.generateNextProgramForShell({ config: cfg, legacyExercises: E.shell.EXERCISES, seed: Number.isFinite(seed) ? seed : Math.floor(Math.random() * 1e6), makeId: () => 'p-' + E.uid() }); }
+    try { r = E.generateNextProgramForShell({ config: cfg, banned: S.store.banned || [], legacyExercises: EXERCISES, ...(Number.isFinite(seed) ? { seed } : {}), makeId: () => 'p-' + E.uid() }); }
     catch (err) { return { ok: false, error: String(err?.message || err) }; }
     const p = r?.program; if (!p) return { ok: false, error: 'The engine could not build that program.' };
+    p.generationRoute = E.GENERATION_ROUTE;
+    S.store.equipDefault = cfg.equipment;
+    adoptConfigUnit(cfg.unit);
     S.store.saved = [...saved(), p]; S.store.pinnedId = p.id;
-    if (!S.store.unitChosen && cfg.unit) { S.store.unit = cfg.unit; S.store.unitChosen = true; }
     markStore();
     return { ok: true, programId: p.id, name: p.name, days: p.days.length };
+}
+
+/* ------------------------------------------------------------------ training cycles (App.js "Cycles" section) */
+class CycleError extends Error { constructor(message, code = 'NEXT_CYCLE_INCOMPLETE') { super(message); this.code = code; } }
+/* App.js requireCompleteCycleShell: nothing reaches the store until the cross-record invariants agree. */
+function requireCompleteCycleShell(cycle, programs, { allowDone = false, expectedCycleId = null } = {}) {
+    const blocks = Array.isArray(programs) ? programs : [];
+    const ids = Array.isArray(cycle?.blockIds) ? cycle.blockIds : [];
+    const meta = Array.isArray(cycle?.blockMeta) ? cycle.blockMeta : [];
+    if (!cycle?.id) throw new CycleError('The cycle is missing its id.');
+    if (expectedCycleId && cycle.id !== expectedCycleId) throw new CycleError('The cycle id changed unexpectedly during the transition.', 'NEXT_CYCLE_ID_MISMATCH');
+    if (!ids.length || meta.length !== ids.length) throw new CycleError('The cycle block index is incomplete.');
+    const badActive = cycle.activeBlock == null || cycle.activeBlock < 0 || cycle.activeBlock >= ids.length;
+    if ((!allowDone && badActive) || (allowDone && !cycle.done && badActive)) throw new CycleError('The active cycle block is invalid.', 'NEXT_CYCLE_ACTIVE_BLOCK_INVALID');
+    const byId = new Map(blocks.filter(Boolean).map((b) => [b.id, b]));
+    for (let i = 0; i < ids.length; i++) {
+        if (!ids[i] || meta[i]?.id !== ids[i]) throw new CycleError('Cycle block metadata no longer matches the block order.', 'NEXT_CYCLE_BLOCK_INDEX_MISMATCH');
+        const block = byId.get(ids[i]);
+        if (block && (!block.config || (block.cycleId && block.cycleId !== cycle.id))) throw new CycleError('A cycle block has inconsistent ownership metadata.', 'NEXT_CYCLE_BLOCK_OWNER_MISMATCH');
+    }
+    return { cycle, ids, meta, byId };
+}
+const cycleFail = (err, fallback) => ({ ok: false, code: err?.code || 'NEXT_ENGINE_ERROR', error: err instanceof E.NextShellAdapterError || err instanceof CycleError ? String(err.message || err.code) : fallback });
+
+/* App.js liveCycleInfo: where the cycle is right now. */
+function liveCycleInfo() {
+    const nx = upNext(); const pid = nx?.program?.id; if (!pid) return null;
+    const c = cycles().find((x) => !x.done && Array.isArray(x.blockIds) && x.blockIds.includes(pid)); if (!c) return null;
+    const i = c.blockIds.indexOf(pid), wk = nx.weekIndex, wkTotal = E.weeksOf(nx.program);
+    return { cycle: c, blockIdx: i, weekIndex: wk, weeksTotal: wkTotal, isDeload: wk > wkTotal, dayIndex: nx.dayIndex, dayLabel: nx.day?.label, daysPerWeek: nx.program.days.length };
+}
+function cycleCard(c, info) {
+    let P = null; try { P = E.cycleProgress(c, saved(), history(), info && info.cycle.id === c.id ? info : null); } catch { P = null; }
+    return { id: c.id, name: c.name || 'Training cycle', done: !!c.done, activeBlock: c.activeBlock || 0, templateId: c.templateId || null, onComplete: c.onComplete || null,
+        pct: P?.pct ?? 0, curWeek: P?.curWeek ?? null, totalWeeks: P?.totalWeeks ?? null, weeksLeft: P?.weeksLeft ?? null, sessions: P?.sessions ?? 0, startMs: P?.startMs ?? null, endMs: P?.endMs ?? null,
+        blocks: (P?.blocks || []).map((b) => ({ index: b.index, id: b.id, label: b.label || `Block ${b.index + 1}`, note: b.note || '', phase: b.phase || null, weeks: b.weeks || 0, deload: !!b.deload, total: b.total, weeksIn: b.weeksIn,
+            state: b.state, sessions: b.sessions, exists: b.exists, days: b.days, split: b.split, range: b.range, dates: b.dates })),
+        live: info && info.cycle.id === c.id ? { blockIdx: info.blockIdx, weekIndex: info.weekIndex, weeksTotal: info.weeksTotal, isDeload: info.isDeload, dayIndex: info.dayIndex, dayLabel: info.dayLabel, daysPerWeek: info.daysPerWeek } : null };
+}
+export function cyclesView() {
+    const info = liveCycleInfo();
+    return { templates: E.nextCycleTemplatesForShell(), phases: E.CUSTOM_CYCLE_PHASES, cycles: cycles().map((c) => cycleCard(c, info)).reverse(), liveId: info?.cycle.id || null };
+}
+export function cycleDetail({ id }) {
+    const c = cycles().find((x) => x.id === id); if (!c) return null;
+    const info = liveCycleInfo(), card = cycleCard(c, info), active = c.activeBlock || 0;
+    const current = programById(c.blockIds[active]), next = programById(c.blockIds[active + 1]);
+    let changes = null; try { changes = current && next ? E.blockChangeSummary(current, next) : null; } catch { changes = null; }
+    return { ...card, adapts: !!c.nextEngineCycle?.adaptBetweenBlocks, engine: c.engineSource || null, changes,
+        nextLabel: next ? (next.blockLabel || next.name) : null, final: !c.done && active >= c.blockIds.length - 1,
+        currentProgramId: current?.id || null };
+}
+/* App.js buildCycle. */
+export function createCycle({ config, templateId, blocks, adapt = false } = {}) {
+    const cfg = programConfig(config);
+    const tmplId = templateId || E.nextCycleTemplatesForShell()[0]?.id || 'powerbuilding';
+    try {
+        const built = E.generateNextCycleForShell({ templateId: tmplId, blocks: tmplId === 'custom' ? blocks : undefined, config: cfg, banned: S.store.banned || [], legacyExercises: EXERCISES, adaptBetweenBlocks: !!adapt, makeId: E.uid });
+        const cycle = built?.cycle; const progs = Array.isArray(built?.blocks) ? built.blocks : [];
+        const { meta, ids } = requireCompleteCycleShell(cycle, progs);
+        if (progs.length !== ids.length || progs.some((b, i) => !b?.id || ids[i] !== b.id)) throw new CycleError('The cycle builder returned an incomplete cycle. Nothing was saved.');
+        cycle.generationRoute = E.GENERATION_ROUTE; progs.forEach((b) => { b.generationRoute = E.GENERATION_ROUTE; });
+        S.store.equipDefault = cfg.equipment;
+        adoptConfigUnit(cfg.unit);
+        cycle.startedAt = now();
+        S.store.saved = [...saved(), ...progs]; S.store.cycles = [...cycles(), cycle]; S.store.pinnedId = progs[0].id;
+        markStore();
+        return { ok: true, cycleId: cycle.id, name: cycle.name, blocks: meta.length, first: meta[0]?.label || 'first block' };
+    } catch (err) { return cycleFail(err, 'The cycle builder hit an unexpected error. Nothing was saved.'); }
+}
+/* App.js doCompleteCycleBlock: legacy first-block bridge, history-driven advance, and looping. */
+export function advanceCycle({ id }) {
+    const cycle = cycles().find((c) => c.id === id); if (!cycle) return { ok: false, error: 'That cycle no longer exists.' };
+    if (S.live) return { ok: false, error: 'Finish or discard the workout in progress first.' };
+    if (cycle.engineSource === 'pursuit-next' && cycle.nextEngineCycle?.legacyFirstBlockId && Number(cycle.activeBlock || 0) === 0) {
+        try {
+            const bridged = E.advanceLegacyFirstCycleBlock(cycle, saved());
+            if (!bridged) throw new CycleError('The legacy first-block bridge could not resolve the next block.');
+            requireCompleteCycleShell(bridged.cycle, saved(), { expectedCycleId: cycle.id });
+            S.store.cycles = cycles().map((c) => (c.id === cycle.id ? bridged.cycle : c)); S.store.pinnedId = bridged.nextProgram.id; markStore();
+            return { ok: true, message: `Advanced to ${bridged.cycle.blockMeta[1]?.label || 'next block'}. Your original plan stayed intact as Block 1.` };
+        } catch { return { ok: false, error: 'The next cycle block was incomplete, so nothing changed.' }; }
+    }
+    if (cycle.engineSource !== 'pursuit-next') return { ok: false, error: 'This older cycle needs to be rebuilt before it can continue.' };
+    const activeProgram = programById(cycle.blockIds[cycle.activeBlock]);
+    if (!activeProgram) return { ok: false, error: 'The active cycle block could not be found. Nothing changed.' };
+    try {
+        const advanced = E.advanceNextCycleForShell({ cycle, activeProgram, history: history(), legacyExercises: EXERCISES, makeId: E.uid });
+        const nextCycle = advanced.cycle;
+        const nextSaved = advanced.nextProgram ? [...saved().filter((p) => p.id !== advanced.nextProgram.id), advanced.nextProgram] : saved();
+        requireCompleteCycleShell(nextCycle, nextSaved, { allowDone: true, expectedCycleId: cycle.id });
+        if (!advanced.done && !advanced.nextProgram) throw new E.NextShellAdapterError('NEXT_CYCLE_INCOMPLETE', 'The next block is missing.');
+        if (advanced.done && cycle.onComplete === 'loop') {
+            const rolled = E.generateNextCycleForShell({ templateId: cycle.templateId, config: { ...(cycle.nextEngineCycle?.baseConfig || activeProgram.config), name: cycle.name },
+                banned: S.store.banned || [], legacyExercises: EXERCISES, adaptBetweenBlocks: !!cycle.nextEngineCycle?.adaptBetweenBlocks, makeId: E.uid });
+            const { ids } = requireCompleteCycleShell(rolled.cycle, rolled.blocks);
+            if (rolled.blocks.length !== ids.length || rolled.cycle.id === cycle.id || rolled.blocks.some((b) => saved().some((p) => p.id === b.id)))
+                throw new E.NextShellAdapterError('NEXT_CYCLE_INCOMPLETE', 'The new cycle could not be assembled safely.');
+            rolled.cycle.onComplete = 'loop'; rolled.cycle.continuedFrom = cycle.id; rolled.cycle.generationRoute = E.GENERATION_ROUTE;
+            rolled.blocks.forEach((b) => { b.generationRoute = E.GENERATION_ROUTE; });
+            S.store.saved = [...saved(), ...rolled.blocks];
+            S.store.cycles = [...cycles().map((c) => (c.id === cycle.id ? nextCycle : c)), rolled.cycle];
+            S.store.pinnedId = rolled.blocks[0].id; markStore();
+            return { ok: true, message: 'New training cycle ready. Your completed cycle and workout history are saved.' };
+        }
+        if (advanced.nextProgram) { advanced.nextProgram.generationRoute = E.GENERATION_ROUTE; S.store.saved = nextSaved; S.store.pinnedId = advanced.nextProgram.id; }
+        S.store.cycles = cycles().map((c) => (c.id === cycle.id ? nextCycle : c)); markStore();
+        return { ok: true, done: !!advanced.done, message: advanced.done ? 'Training cycle complete. Your programs and workout history are saved.'
+            : advanced.insertedRecovery ? 'Recovery block added from your completed workouts.' : `Advanced to ${advanced.nextProgram.blockLabel || 'your next block'}` };
+    } catch (err) { return cycleFail(err, 'The next block could not be prepared safely. Nothing changed.'); }
+}
+/* App.js doDeleteCycle: kept blocks become standalone programs (normalizeCycleLinks), undo restores. */
+export function deleteCycle({ id, alsoBlocks = false }) {
+    const c = cycles().find((x) => x.id === id); if (!c) return { ok: false };
+    S.undo = { cycles: cycles(), saved: saved(), pinnedId: S.store.pinnedId };
+    const rest = cycles().filter((x) => x.id !== id);
+    S.store.cycles = rest;
+    if (alsoBlocks) S.store.saved = saved().filter((p) => !c.blockIds.includes(p.id));
+    else S.store.saved = E.normalizeCycleLinks(saved(), rest);
+    markStore();
+    return { ok: true, name: c.name };
+}
+/* App.js BlockReviewView. */
+export function reviewBlock({ id, index }) {
+    const c = cycles().find((x) => x.id === id); if (!c) return null;
+    let r = null; try { r = E.blockReview(history(), c, index); } catch { r = null; }
+    if (!r) return null;
+    return { ...r, cycleName: c.name, label: r.block?.label || `Block ${index + 1}`, note: r.block?.note || '' };
+}
+/* App.js startNextBlock for a standalone program (cycle blocks advance through their cycle). */
+export function nextBlock({ programId }) {
+    const p = programById(programId); if (!p) return { ok: false, error: 'That program no longer exists.' };
+    const owner = p.cycleId ? cycles().find((c) => c.id === p.cycleId) : null;
+    if (owner) return { ok: false, error: owner.engineSource === 'pursuit-next' ? 'This program is part of a cycle. Complete the block from the cycle so the next phase is rebuilt from this block\'s workouts.' : 'This archived cycle can\'t continue here. Start a new cycle instead.' };
+    try {
+        let np;
+        if (p.engineSource === 'pursuit-next') np = E.generateNextBlockFromShellHistory({ program: p, history: history(), legacyExercises: EXERCISES, makeId: E.uid }).program;
+        else np = E.generateNextProgramForShell({ config: p.config, banned: S.store.banned || [], legacyExercises: EXERCISES, makeId: E.uid }).program;
+        const m = (p.name || '').match(/^(.*?)\s*·\s*Block\s*(\d+)\s*$/);
+        np.name = m ? `${m[1]} · Block ${Number(m[2]) + 1}` : `${p.name} · Block 2`;
+        np.folder = p.folder; np.description = p.description; np.generationRoute = E.GENERATION_ROUTE;
+        S.store.saved = [...saved(), np]; S.store.pinnedId = np.id; markStore();
+        return { ok: true, programId: np.id, name: np.name };
+    } catch (err) { return cycleFail(err, 'The next block could not be created safely. Your current program is unchanged.'); }
 }
 
 /* ------------------------------------------------------------------ body + settings */

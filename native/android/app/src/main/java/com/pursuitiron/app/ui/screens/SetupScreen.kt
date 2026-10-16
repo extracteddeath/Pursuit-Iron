@@ -26,6 +26,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -61,6 +62,10 @@ fun SetupScreen(vm: AppViewModel) {
     var split by remember { mutableStateOf<String?>(null) }
     var name by remember { mutableStateOf("") }
     var pick by remember { mutableStateOf<String?>(null) }
+    var cycleMode by remember { mutableStateOf(vm.setupCycle) }
+    var template by remember { mutableStateOf(vm.cycles.list("templates").firstOrNull()?.s("id") ?: "powerbuilding") }
+    val custom = remember { mutableStateListOf(CustomBlock("hypertrophy_accumulation", 4), CustomBlock("strength_accumulation", 4)) }
+    var adapt by remember { mutableStateOf(false) }
 
     fun config(withSplit: Boolean): JSONObject = JSONObject()
         .put("goal", goal).put("experience", exp).put("days", days).put("session", session)
@@ -76,12 +81,15 @@ fun SetupScreen(vm: AppViewModel) {
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
         Row(Modifier.padding(start = 4.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { vm.closeSetup() }) { Icon(PiIcons.Close, "Close") }
-            Text("New program", style = MaterialTheme.typography.titleLarge)
+            Text(if (cycleMode) "New training cycle" else "New program", style = MaterialTheme.typography.titleLarge)
         }
         Column(
             Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).widthIn(max = 760.dp).align(Alignment.CenterHorizontally),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
+            Segmented(listOf("program" to "One program", "cycle" to "Training cycle"), if (cycleMode) "cycle" else "program", { cycleMode = it == "cycle" })
+            if (cycleMode) Text("A cycle runs several blocks in a row, each with its own job, and moves you to the next when you finish one.",
+                style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
             Kicker("Goal")
             Segmented(listOf("strength" to "Strength", "hypertrophy" to "Size", "both" to "Both"), goal, { goal = it })
             Kicker("Experience")
@@ -119,12 +127,16 @@ fun SetupScreen(vm: AppViewModel) {
                     }
                 }
             }
+            if (cycleMode) CycleTemplatePicker(vm, template, { template = it }, custom, adapt, { adapt = it })
             OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), singleLine = true, label = { Text("Name (optional)") })
         }
         Button(
-            onClick = { vm.createProgram(config(false).put("split", chosen)) },
+            onClick = {
+                if (cycleMode) vm.createCycle(config(false).put("split", chosen), template, if (template == "custom") customBlocksJson(custom) else null, adapt)
+                else vm.createProgram(config(false).put("split", chosen))
+            },
             enabled = equip.isNotEmpty() && chosen != null,
             modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp).height(56.dp),
-        ) { Text("Build my program", style = MaterialTheme.typography.titleSmall) }
+        ) { Text(if (cycleMode) "Build my cycle" else "Build my program", style = MaterialTheme.typography.titleSmall) }
     }
 }

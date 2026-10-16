@@ -47,11 +47,13 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -119,6 +121,7 @@ private fun Shell(vm: AppViewModel, wide: Boolean) {
         }
         SnackHost(vm, Modifier.align(Alignment.BottomCenter))
         ImportDialog(vm)
+        vm.busy?.let { BusyScrim(it) }
     }
     BackHandler(enabled = vm.screen == Screen.Workout) { vm.minimise() }
     BackHandler(enabled = vm.screen == Screen.Setup) { vm.closeSetup() }
@@ -225,6 +228,22 @@ private fun ImportDialog(vm: AppViewModel) {
         confirmButton = { Button(onClick = { vm.acceptImport() }) { Text("Bring it over") } },
         dismissButton = { TextButton(onClick = { vm.importOffer = null }) { Text("Not now") } },
     )
+}
+
+/** A long engine job: dims the app, swallows taps, and says what is happening. */
+@Composable
+private fun BusyScrim(label: String) {
+    val cs = MaterialTheme.colorScheme
+    Box(Modifier.fillMaxSize().background(cs.scrim.copy(alpha = 0.45f))
+        .clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) {},
+        contentAlignment = Alignment.Center) {
+        Row(Modifier.padding(32.dp).clip(RoundedCornerShape(28.dp)).background(cs.surfaceContainerHigh).padding(horizontal = 24.dp, vertical = 20.dp)
+            .semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite; contentDescription = "$label, please wait" },
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            CircularProgressIndicator(Modifier.size(28.dp), strokeWidth = 3.dp)
+            Text("$label…", style = MaterialTheme.typography.titleSmall)
+        }
+    }
 }
 
 @Composable

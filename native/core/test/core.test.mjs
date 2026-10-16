@@ -151,5 +151,40 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   ok(Math.abs(parseFloat(after.bodyweight) - Math.round(parseFloat(before.bodyweight) * 2.2046226 * 2) / 2) < 1e-9, 'bodyweight converted');
   C.startSession({}); ok(C.switchUnit({ to: 'kg' }).ok === false, 'switching is refused with a workout open'); C.discardSession();
   ok(C.switchUnit({ to: 'kg' }).ok && JSON.parse(C.exportStore()).unit === 'kg', 'switch back to kg'); }
+
+// 14. Training cycles (App.js buildCycle / doCompleteCycleBlock / doDeleteCycle / BlockReviewView)
+{ C.init({});
+  const v = C.cyclesView();
+  ok(v.templates.length >= 3 && v.phases.length >= 4, 'cycle templates and custom phases listed');
+  const ccfg = { name: 'Cycle test', goal: 'both', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] };
+  const made = C.createCycle({ config: ccfg, templateId: v.templates[0].id });
+  ok(made.ok && made.blocks === v.templates[0].blocks.length, 'createCycle builds every block (' + (made.error || made.blocks) + ')');
+  const st = JSON.parse(C.exportStore());
+  ok(st.cycles.length === 1 && st.cycles[0].blockIds.every((id) => st.saved.some((p) => p.id === id)) && st.pinnedId === st.cycles[0].blockIds[0], 'cycle blocks saved and the first one is up next');
+  const d = C.cycleDetail({ id: made.cycleId });
+  ok(d.blocks[0].state === 'active' && d.live && d.live.blockIdx === 0 && C.home().cycle && C.home().cycle.blockIdx === 0, 'detail and Today place the lifter in block 1');
+  ok(C.nextBlock({ programId: st.cycles[0].blockIds[0] }).ok === false, 'a cycle block cannot be forked with Build next block');
+  for (let k = 0; k < 3; k++) { C.startSession({}); for (const e of C.session().exercises) for (const x of e.sets) { if (x.warm || x.sub) continue; C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'weight', value: String(50 + 2.5 * k) }); C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'reps', value: '8' }); C.act({ type: 'toggle', ei: e.ei, si: x.i }); } C.finishSession(); }
+  const rv = C.reviewBlock({ id: made.cycleId, index: 0 });
+  ok(rv && rv.ok && typeof rv.headline === 'string' && Array.isArray(rv.lifts), 'block review summarises the logged block');
+  C.startSession({}); ok(C.advanceCycle({ id: made.cycleId }).ok === false, 'advancing is refused with a workout open'); C.discardSession();
+  const adv = C.advanceCycle({ id: made.cycleId });
+  const d2 = C.cycleDetail({ id: made.cycleId });
+  ok(adv.ok && d2.activeBlock === 1 && d2.blocks[0].state === 'done' && C.home().cycle.blockIdx === 1, 'advance moves to block 2: ' + (adv.message || adv.error));
+  const del = C.deleteCycle({ id: made.cycleId });
+  const st2 = JSON.parse(C.exportStore());
+  ok(del.ok && st2.cycles.length === 0 && st2.saved.length > 0 && st2.saved.every((p) => !p.cycleId), 'deleting a cycle keeps its blocks as standalone programs');
+  ok(C.undo().ok && JSON.parse(C.exportStore()).cycles.length === 1, 'undo restores the cycle');
+  const custom = C.createCycle({ config: ccfg, templateId: 'custom', blocks: [{ phase: 'hypertrophy_accumulation', weeks: 3 }, { phase: 'strength_accumulation', weeks: 2 }] });
+  ok(custom.ok && custom.blocks === 2, 'a custom two-block cycle builds (' + (custom.error || custom.blocks) + ')');
+  const bad = C.createCycle({ config: ccfg, templateId: 'custom', blocks: [{ phase: 'nonsense', weeks: 3 }, { phase: 'peak', weeks: 2 }] });
+  ok(!bad.ok && JSON.parse(C.exportStore()).cycles.length === 2, 'an invalid custom cycle saves nothing'); }
+
+// 15. Standalone program: next block from its history (App.js startNextBlock)
+{ C.init({}); const mk = C.createProgram({ config: { name: 'Solo', goal: 'both', experience: 'intermediate', split: 'full_body', days: 3, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] } });
+  const before = JSON.parse(C.exportStore()).saved.length;
+  const nb = C.nextBlock({ programId: mk.programId });
+  ok(!nb.ok && nb.error && JSON.parse(C.exportStore()).saved.length === before, 'next block with no logged workouts is refused and saves nothing: ' + nb.error.slice(0, 60));
+  ok(JSON.parse(C.exportStore()).saved[0].generationRoute === E.GENERATION_ROUTE, 'programs carry the generation route'); }
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);
 

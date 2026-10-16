@@ -26,6 +26,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -104,6 +111,14 @@ fun PlanScreen(vm: AppViewModel) {
         return
     }
     val wk = p.i("weekIndex"); val weeks = p.i("weeksTotal").coerceAtLeast(1)
+    var openCycle by remember { mutableStateOf<String?>(null) }
+    var confirmNext by remember { mutableStateOf(false) }
+    openCycle?.let { id -> CycleSheet(vm, id) { openCycle = null } }
+    if (confirmNext) AlertDialog(onDismissRequest = { confirmNext = false },
+        title = { Text("Build the next block?") },
+        text = { Text("Finish this block first. The next one is built from its logged workouts and the effort you reported. This program and your history stay saved.") },
+        confirmButton = { Button(onClick = { confirmNext = false; vm.nextBlock(p.s("programId")) }) { Text("Build next block") } },
+        dismissButton = { TextButton(onClick = { confirmNext = false }) { Text("Cancel") } })
     LazyVerticalStaggeredGrid(
         columns = StaggeredGridCells.Fixed(if (wide) 2 else 1),
         contentPadding = PaddingValues(start = if (wide) 32.dp else 16.dp, end = if (wide) 32.dp else 16.dp, bottom = 24.dp),
@@ -115,6 +130,7 @@ fun PlanScreen(vm: AppViewModel) {
                 Text("${p.s("name")} · week $wk of $weeks" + (if (p.i("current") > 0) " · you're on week ${p.i("current")}" else ""), style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
             }
         }
+        if (p.s("cycleId").isNotBlank()) item(span = full) { CycleBanner(vm, p.s("cycleId")) { openCycle = p.s("cycleId") } }
         item(span = full) {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 items(weeks) { w ->
@@ -145,7 +161,12 @@ fun PlanScreen(vm: AppViewModel) {
                 }
             }
         }
+        if (p.b("canNextBlock")) item(span = full) {
+            OutlinedButton(onClick = { confirmNext = true }, modifier = Modifier.fillMaxWidth()) { Icon(PiIcons.Redo, null, modifier = Modifier.size(18.dp)); Text("  Build next block") }
+        }
         val progs = p.list("programs")
+        item(span = full) { SectionTitle("Training cycles") }
+        item(span = full) { CyclesList(vm) { openCycle = it } }
         item(span = full) { SectionTitle("Programs") }
         item(span = full) {
             Column(Modifier.clip(RoundedCornerShape(24.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {

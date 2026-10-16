@@ -61,6 +61,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var setup by mutableStateOf<JSONObject?>(null); private set
     var profile by mutableStateOf<JSONObject?>(null); private set
     var gyms by mutableStateOf<JSONObject?>(null); private set
+    var cycles by mutableStateOf<JSONObject?>(null); private set
+    /** A long engine job in flight (building a cycle, advancing a block): the screen shows this and blocks input. */
+    var busy by mutableStateOf<String?>(null); private set
 
     var snack by mutableStateOf<Snack?>(null); private set
     var importOffer by mutableStateOf<ImportOffer?>(null)
@@ -119,17 +122,25 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         setup = obj("setupOptions")
         profile = obj("profile")
         gyms = obj("gyms")
+        cycles = obj("cyclesView")
     }
     private suspend fun refreshHomeSide() {
         home = obj("home"); plan = obj("plan"); progress = obj("progress"); history = arr(call("historyList")); settings = obj("settings")
-        profile = obj("profile"); body = obj("body")
+        profile = obj("profile"); body = obj("body"); cycles = obj("cyclesView")
+    }
+
+    private suspend fun <T> working(label: String, block: suspend () -> T): T {
+        busy = label
+        try { return block() } finally { busy = null }
     }
 
     fun hap(h: Hap) { haptics.strong = prefs.grip; haptics.play(h) }
 
     /* ---------------------------------------------------------------- navigation */
     fun goTab(t: Tab) { tab = t; screen = Screen.Tabs }
-    fun openSetup() { screen = Screen.Setup }
+    /** Opens program setup; with [cycle], in training-cycle mode. */
+    var setupCycle by mutableStateOf(false); private set
+    fun openSetup(cycle: Boolean = false) { setupCycle = cycle; screen = Screen.Setup }
     fun closeSetup() { screen = Screen.Tabs }
     fun minimise() { screen = Screen.Tabs; launchCore { home = obj("home") } }
     fun resume() { if (session?.b("active") == true) screen = Screen.Workout }
@@ -211,12 +222,42 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     suspend fun recommend(config: JSONObject): String? = call("recommend", jsonOf("config" to config)) as? String
 
     fun createProgram(config: JSONObject) = launchCore {
-        val r = obj("createProgram", jsonOf("config" to config)) ?: return@launchCore
+        val r = working("Building your program") { obj("createProgram", jsonOf("config" to config)) } ?: return@launchCore
         if (!r.b("ok")) { toast(r.s("error", "The engine couldn't build that program")); return@launchCore }
         hap(Hap.Done)
         refreshHomeSide()
         screen = Screen.Tabs; tab = Tab.Today
         toast("${r.s("name")} is ready: ${r.i("days")} days a week")
+    }
+
+    /* ---------------------------------------------------------------- cycles */
+    fun createCycle(config: JSONObject, templateId: String, blocks: JSONArray?, adapt: Boolean) = launchCore {
+        val r = working("Building your training cycle") { obj("createCycle", jsonOf("config" to config, "templateId" to templateId, "blocks" to blocks, "adapt" to adapt)) } ?: return@launchCore
+        if (!r.b("ok")) { toast(r.s("error", "The cycle couldn't be built. Nothing was saved.")); return@launchCore }
+        hap(Hap.Done)
+        refreshHomeSide(); plan = obj("plan")
+        screen = Screen.Tabs; tab = Tab.Plan
+        toast("Cycle started: ${r.i("blocks")} blocks, beginning with ${r.s("first")}")
+    }
+    suspend fun cycleDetail(id: String): JSONObject? = obj("cycleDetail", jsonOf("id" to id))
+    suspend fun reviewBlock(id: String, index: Int): JSONObject? = obj("reviewBlock", jsonOf("id" to id, "index" to index))
+    fun advanceCycle(id: String, after: () -> Unit = {}) = launchCore {
+        val r = working("Preparing your next block") { obj("advanceCycle", jsonOf("id" to id)) } ?: return@launchCore
+        if (!r.b("ok")) { toast(r.s("error", "The next block couldn't be prepared. Nothing changed.")); return@launchCore }
+        hap(Hap.Done); refreshHomeSide(); plan = obj("plan"); after()
+        toast(r.s("message", "Advanced to the next block"))
+    }
+    fun deleteCycle(id: String, alsoBlocks: Boolean) = launchCore {
+        val r = obj("deleteCycle", jsonOf("id" to id, "alsoBlocks" to alsoBlocks)) ?: return@launchCore
+        if (!r.b("ok")) return@launchCore
+        hap(Hap.Undo); refreshHomeSide(); plan = obj("plan")
+        toast("Removed ${r.s("name")}" + if (alsoBlocks) " and its blocks" else "") { launchCore { call("undo"); refreshHomeSide(); plan = obj("plan"); toast("Restored") } }
+    }
+    fun nextBlock(programId: String) = launchCore {
+        val r = working("Preparing your next block") { obj("nextBlock", jsonOf("programId" to programId)) } ?: return@launchCore
+        if (!r.b("ok")) { toast(r.s("error", "The next block couldn't be created. Your program is unchanged.")); return@launchCore }
+        hap(Hap.Done); refreshHomeSide(); plan = obj("plan")
+        toast("${r.s("name")} is ready, built from your completed workouts")
     }
 
     /* ---------------------------------------------------------------- library */

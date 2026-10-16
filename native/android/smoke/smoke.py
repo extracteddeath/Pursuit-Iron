@@ -168,8 +168,10 @@ scroll_to(r"Achievements")
 shot("profile-achievements")
 adb("shell", "input", "swipe", "540", "700", "540", "1900", "300")
 tap(r"^\|History$", "history-calendar")
-tap(r": \d+ workouts?$", "calendar-day")
+tap(r": \d+ workouts?\|", "calendar-day")
 tap(r"^\|Settings$", "settings")
+if tap(r"^\|lb$", "unit-confirm"):
+    tap(r"^\|Switch$", "unit-switched")
 if scroll_to(r"^\|Gyms$"):
     tap(r"^\|Edit$", "gyms-sheet")
     back()
@@ -188,14 +190,28 @@ if scroll_to(r"Plates and 1RM"):
     time.sleep(1)
     shot("one-rm")
     back()
-adb("shell", "input", "swipe", "540", "700", "540", "1900", "200")
-adb("shell", "input", "swipe", "540", "700", "540", "1900", "200")
-if scroll_to(r"^\|lb$"):
-    tap(r"^\|lb$", "unit-confirm")
-    tap(r"^\|Switch$", "unit-switched")
 tap(r"^\|Today$|^Today\|", "today-lb")
 
-# 8. Tablet
+# 8. Training cycle: build one, open it, try to advance
+tap(r"^\|Plan$|^Plan\|")
+if scroll_to(r"New training cycle"):
+    tap(r"New training cycle", "cycle-setup")
+    scroll_to(r"Adapt between blocks")
+    shot("cycle-templates")
+    tap(r"^\|Build my cycle$")
+    time.sleep(8)
+    shot("cycle-built")
+    adb("shell", "input", "swipe", "540", "700", "540", "1900", "200")
+    if tap(r"Open cycle", "cycle-sheet"):
+        if scroll_to(r"Complete block"):
+            tap(r"Complete block", "cycle-advance-confirm")
+            tap(r"^\|Advance$")
+            time.sleep(6)
+            shot("cycle-advanced")
+        back()
+tap(r"^\|Today$|^Today\|", "today-cycle")
+
+# 9. Tablet
 adb("shell", "wm", "size", "2560x1600")
 adb("shell", "wm", "density", "320")
 launch()

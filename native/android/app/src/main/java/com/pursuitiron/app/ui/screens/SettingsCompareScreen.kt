@@ -226,7 +226,7 @@ fun CompareSheet(vm: AppViewModel, onClose: () -> Unit) {
                 CompareRow("Primary muscle", ra.s("part"), rb.s("part"))
                 CompareRow("Type", ra.s("type").replaceFirstChar { it.uppercase() }, rb.s("type").replaceFirstChar { it.uppercase() })
                 CompareRow("Equipment", ra.strings("equip").joinToString(", ").ifBlank { "Bodyweight" }, rb.strings("equip").joinToString(", ").ifBlank { "Bodyweight" })
-                CompareRow("Rep range", ra.optJSONArray("rep")?.let { "${it.optInt(0)}–${it.optInt(1)}" } ?: "—", rb.optJSONArray("rep")?.let { "${it.optInt(0)}–${it.optInt(1)}" } ?: "—")
+                CompareRow("Rep range", ra?.optJSONArray("rep")?.let { "${it.optInt(0)}–${it.optInt(1)}" } ?: "—", rb?.optJSONArray("rep")?.let { "${it.optInt(0)}–${it.optInt(1)}" } ?: "—")
                 CompareRow("Pattern", ra.s("pattern").replaceFirstChar { it.uppercase() }, rb.s("pattern").replaceFirstChar { it.uppercase() })
                 CompareRow("Tempo", ra.s("tempo"), rb.s("tempo"))
                 CompareRow("Axial / systemic", if (ra.b("axial")) "Yes" else "No", if (rb.b("axial")) "Yes" else "No")

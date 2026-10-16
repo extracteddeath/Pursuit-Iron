@@ -18,6 +18,7 @@ import com.pursuitiron.app.ui.common.i
 import com.pursuitiron.app.ui.common.jsonOf
 import com.pursuitiron.app.ui.common.list
 import com.pursuitiron.app.ui.common.o
+import com.pursuitiron.app.ui.common.plural
 import com.pursuitiron.app.ui.common.s
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -251,7 +252,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         refreshAll()
         hap(Hap.Done)
         val added = r.o("added")
-        toast("Brought over ${added.i("sessions")} workouts and ${added.i("programs")} programs")
+        toast("Brought over ${plural(added.i("sessions"), "workout")} and ${plural(added.i("programs"), "program")}")
         if (session?.b("active") == true) screen = Screen.Workout
     }
 

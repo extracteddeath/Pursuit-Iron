@@ -102,7 +102,7 @@ time.sleep(3)
 grant_notifications()
 shot("workout")
 if tap(r"Weight not set, edit", "set-editor"):
-    tap(r"Weight \(")
+    tap(r"^\|Weight \(")  # the field's label, not the "Less Weight (kg)" button
     adb("shell", "input", "text", "60")
     time.sleep(0.6)
     shot("set-editor-typed")

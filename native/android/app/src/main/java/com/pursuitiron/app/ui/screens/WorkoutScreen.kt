@@ -112,7 +112,9 @@ private sealed interface WSheet {
 @Composable
 fun WorkoutScreen(vm: AppViewModel) {
     val s = vm.session
-    if (s == null || !s.b("active")) { LaunchedEffect(Unit) { vm.minimise() }; return }
+    // During the exit transition this screen still composes after the session has ended; only
+    // leave if it is still the current screen, or it would jump past the summary.
+    if (s == null || !s.b("active")) { LaunchedEffect(Unit) { if (vm.screen == com.pursuitiron.app.Screen.Workout) vm.minimise() }; return }
     val wide = LocalWide.current
     val cs = MaterialTheme.colorScheme
     var sheet by remember { mutableStateOf<WSheet?>(null) }

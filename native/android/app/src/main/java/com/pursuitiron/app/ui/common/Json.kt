@@ -21,3 +21,6 @@ fun JSONObject?.strings(key: String): List<String> {
 fun jsonOf(vararg pairs: Pair<String, Any?>): JSONObject = JSONObject().apply { pairs.forEach { (k, v) -> put(k, v ?: JSONObject.NULL) } }
 fun fmtNum(v: Double): String = if (v == Math.floor(v)) v.toLong().toString() else ((Math.round(v * 10) / 10.0)).toString()
 fun mmss(sec: Long): String { val s = if (sec < 0) 0 else sec; return "${s / 60}:${(s % 60).toString().padStart(2, '0')}" }
+
+/** "1 workout", "3 workouts". */
+fun plural(n: Int, word: String) = "$n $word" + if (n == 1) "" else "s"

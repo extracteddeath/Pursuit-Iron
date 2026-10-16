@@ -86,7 +86,7 @@ fun YouScreen(vm: AppViewModel) {
                 Column {
                     Text("You", style = MaterialTheme.typography.displayMedium)
                     val st = vm.settings
-                    Text("${st.i("sessions")} workouts · ${st.i("programs")} programs", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("${com.pursuitiron.app.ui.common.plural(st.i("sessions"), "workout")} · ${com.pursuitiron.app.ui.common.plural(st.i("programs"), "program")}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }

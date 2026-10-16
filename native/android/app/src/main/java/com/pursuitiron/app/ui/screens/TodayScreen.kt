@@ -113,7 +113,7 @@ fun TodayScreen(vm: AppViewModel) {
 
         h.list("injuries").forEach { inj ->
             item {
-                PiCard(color = cs.tertiaryContainer, radius = 24.dp, padding = 16.dp) {
+                PiCard(color = cs.tertiaryContainer, radius = 24.dp, padding = 16.dp, onClick = { vm.injuryLogOpen = true }) {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(PiIcons.Shield, null, tint = cs.onTertiaryContainer)
                         Column(Modifier.weight(1f)) {

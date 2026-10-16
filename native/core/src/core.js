@@ -1439,3 +1439,39 @@ export function setTrainingMax({ programId, exId, value, fromOneRm = false }) {
     setList('saved', saved().map((x) => (x.id === programId ? E.withTrainingMax(x, exId, tm, u) : x)));
     return { ok: true, tm };
 }
+
+/* ------------------------------------------------------------------ injury log (App.js HomeInjuryJournal) */
+export function injuryLog() {
+    const nx = upNext();
+    const preview = (entry) => {
+        if (!nx?.day) return [];
+        return nx.day.exercises.map((_id, slot) => EX_BY_ID[E.exerciseAt(nx.program, nx.day, slot, nx.weekIndex)])
+            .filter((ex) => ex && injuryMatchesExercise(entry, ex, E.secondaryOf(ex))).map((ex) => ex.name);
+    };
+    const rows = injuries().map((e) => ({ id: e.id, title: injuryTitle(e, E.PART_LABEL), region: e.region || '', part: e.part, side: e.side, impact: e.impact,
+        onset: e.onset || null, note: e.note || '', at: e.at || e.createdAt || null, resolvedAt: e.resolvedAt || null, nextWorkout: e.resolvedAt ? [] : preview(e) }));
+    return { active: rows.filter((r) => !r.resolvedAt), resolved: rows.filter((r) => r.resolvedAt), areas: INJURY_AREAS, impacts: INJURY_IMPACTS,
+        parts: (E.PART_ORDER || []).filter((p) => E.PART_LABEL?.[p]).map((p) => ({ id: p, label: E.PART_LABEL[p] })), nextDay: nx?.day?.label || null };
+}
+/* Log or edit one entry: an area (or a single muscle), side, how to handle related lifts, onset, note. */
+export function saveInjury({ id = null, region = '', part = '', side = 'unspecified', impact = 'monitor', onset = null, note = '' } = {}) {
+    const area = INJURY_AREAS.find((a) => a.id === region);
+    const p = part || area?.parts?.[0] || '';
+    if (!p) return { ok: false, error: 'Choose an affected area or muscle.' };
+    const today = isoLocal(now());
+    const on = onset || today;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(on) || on > today) return { ok: false, error: 'Choose today or an earlier onset date.' };
+    const clean = injuries(), previous = clean.find((x) => x.id === id), t = now();
+    const entry = { ...previous, region: area ? region : '', part: p, side: ['left', 'right', 'both'].includes(side) ? side : 'unspecified',
+        impact: ['monitor', 'reduce', 'skip'].includes(impact) ? impact : 'monitor', onset: on, note: String(note || '').trim(),
+        id: previous?.id || E.uid(), at: previous?.at || t, updatedAt: t };
+    S.store.injuryLog = previous ? clean.map((x) => (x.id === entry.id ? entry : x)) : [entry, ...clean];
+    markStore();
+    return { ok: true, id: entry.id, updated: !!previous };
+}
+export function toggleInjuryResolved({ id }) {
+    const clean = injuries(), e = clean.find((x) => x.id === id); if (!e) return { ok: false };
+    S.store.injuryLog = clean.map((x) => (x.id === id ? { ...x, resolvedAt: x.resolvedAt ? undefined : now(), updatedAt: now() } : x));
+    markStore();
+    return { ok: true, resolved: !e.resolvedAt };
+}

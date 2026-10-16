@@ -125,6 +125,7 @@ private fun Shell(vm: AppViewModel, wide: Boolean) {
         ImportDialog(vm)
         com.pursuitiron.app.ui.screens.CsvImportDialog(vm)
         com.pursuitiron.app.ui.screens.TrainingMaxSheet(vm)
+        com.pursuitiron.app.ui.screens.InjuryJournalSheet(vm)
         vm.busy?.let { BusyScrim(it) }
     }
     BackHandler(enabled = vm.screen == Screen.Workout) { vm.minimise() }

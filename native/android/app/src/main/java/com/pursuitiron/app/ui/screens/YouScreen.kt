@@ -100,7 +100,7 @@ fun YouScreen(vm: AppViewModel) {
                 item { ClubCard(vm) }
                 item(span = full) { AchievementsCard(vm) }
             }
-            "body" -> { item { BodyweightCard(vm) }; item { MeasurementsCard(vm) } }
+            "body" -> { item { BodyweightCard(vm) }; item { MeasurementsCard(vm) }; item { InjuriesCard(vm) } }
             "history" -> {
                 item(span = full) { CalendarCard(vm) { historyId = it } }
                 if (vm.history.isEmpty()) item(span = full) { Text("No workouts yet.", color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(8.dp)) }
@@ -297,5 +297,18 @@ private fun AboutCard(vm: AppViewModel) {
         Text("Training engine runs on this phone (${vm.runtime}). The same engine as the web app, so every number matches.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         SectionTitle("Not medical advice", Modifier.padding(start = 0.dp))
         Text("Pursuit Iron plans training load. It is not a medical device.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun InjuriesCard(vm: AppViewModel) {
+    val n = vm.home.list("injuries").size
+    PiCard(radius = 28.dp) {
+        Text("Injuries", style = MaterialTheme.typography.titleMedium)
+        Text(if (n == 0) "Nothing active. Log one and the plan protects that area." else "$n active. Related lifts are adjusted until you mark it resolved.",
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Column(Modifier.clip(RoundedCornerShape(20.dp))) {
+            MenuRow(PiIcons.Shield, "Injury log", "Log, edit or resolve", MaterialTheme.colorScheme.tertiaryContainer, MaterialTheme.colorScheme.onTertiaryContainer) { vm.injuryLogOpen = true }
+        }
     }
 }

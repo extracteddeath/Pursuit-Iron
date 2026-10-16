@@ -260,6 +260,19 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         toast("${r.s("name")} is ready: ${r.i("days")} days a week")
     }
 
+    /* ---------------------------------------------------------------- injury log */
+    var injuryLogOpen by mutableStateOf(false)
+    suspend fun injuryLog(): JSONObject? = obj("injuryLog")
+    suspend fun saveInjury(entry: JSONObject): JSONObject? {
+        val r = obj("saveInjury", entry)
+        if (r?.b("ok") == true) { hap(Hap.Log); home = obj("home"); toast(if (r.b("updated")) "Injury updated" else "Injury logged. The plan protects that area.") }
+        return r
+    }
+    suspend fun toggleInjury(id: String) {
+        val r = obj("toggleInjuryResolved", jsonOf("id" to id)) ?: return
+        home = obj("home"); toast(if (r.b("resolved")) "Marked resolved" else "Marked active")
+    }
+
     /* ---------------------------------------------------------------- templates + training maxes */
     fun createFromTemplate(id: String) = launchCore {
         val r = working("Building your program") { obj("createFromTemplate", jsonOf("id" to id)) } ?: return@launchCore

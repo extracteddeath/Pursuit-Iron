@@ -298,5 +298,19 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   ok(C.home().needsTrainingMax === 0, 'all set: the prompt clears');
   const plain = C.createFromTemplate({ id: tl.items.find((t) => !t.percent).id });
   ok(plain.ok && C.trainingMaxes({ programId: plain.programId }).percent === false, 'a regular template builds without training maxes'); }
+
+// 20. Injury journal outside a workout
+{ C.init({}); C.createProgram({ config: { name: 'Inj', goal: 'both', experience: 'intermediate', split: 'full_body', days: 3, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 2 });
+  ok(C.saveInjury({ region: '' }).ok === false, 'an injury needs an area');
+  ok(C.saveInjury({ region: 'knee', onset: '2999-01-01' }).ok === false, 'onset cannot be in the future');
+  const s1 = C.saveInjury({ region: 'shoulder', side: 'left', impact: 'reduce', note: 'pinch overhead' });
+  const log = C.injuryLog();
+  ok(s1.ok && log.active.length === 1 && log.active[0].side === 'left' && C.home().injuries.length === 1, 'logged from Today: active and shown');
+  ok(Array.isArray(log.active[0].nextWorkout), 'lists the next workout lifts it touches (' + log.active[0].nextWorkout.join(', ') + ')');
+  C.saveInjury({ id: s1.id, region: 'shoulder', side: 'both', impact: 'skip' });
+  ok(C.injuryLog().active[0].impact === 'skip' && C.injuryLog().active.length === 1, 'editing keeps one entry');
+  const r = C.toggleInjuryResolved({ id: s1.id });
+  ok(r.resolved && C.injuryLog().resolved.length === 1 && C.home().injuries.length === 0, 'mark resolved clears it from Today and keeps the record');
+  ok(C.toggleInjuryResolved({ id: s1.id }).resolved === false && C.home().injuries.length === 1, 'mark active again'); }
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);
 

@@ -79,7 +79,9 @@ data class WidgetSnapshot(
 const val ACTION_WIDGET_START = "com.pursuitiron.app.action.START_WORKOUT"
 
 class NextWorkoutWidget : GlanceAppWidget() {
-    override val sizeMode = SizeMode.Responsive(setOf(DpSize(110.dp, 110.dp), DpSize(250.dp, 110.dp), DpSize(250.dp, 180.dp)))
+    // Buckets sized for what a host actually leaves after its own padding: a 3x2 placement on a phone
+    // is roughly 230x150 dp inside the frame, so a 250 dp bucket would never be chosen.
+    override val sizeMode = SizeMode.Responsive(setOf(DpSize(110.dp, 110.dp), DpSize(180.dp, 110.dp), DpSize(180.dp, 150.dp)))
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val snap = WidgetSnapshot.read(context)
@@ -93,8 +95,8 @@ class NextWorkoutWidget : GlanceAppWidget() {
     private fun Content(context: Context, s: WidgetSnapshot) {
         val c = GlanceTheme.colors
         val size = LocalSize.current
-        val roomy = size.height >= 160.dp
-        val narrow = size.width < 200.dp
+        val roomy = size.height >= 150.dp
+        val narrow = size.width < 180.dp
         val open = Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
         val start = Intent(context, MainActivity::class.java).setAction(ACTION_WIDGET_START).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
         val kicker = when (s.kind) { "live" -> "IN PROGRESS"; "next" -> "UP NEXT"; else -> "PURSUIT IRON" }

@@ -260,12 +260,30 @@ if tap(r"Edit program", "editor"):
         back()
     back()
 
+# Injury log from outside a workout
+tap(r"^\|You$|^You\|")
+tap(r"^\|Body$")
+if scroll_to(r"^\|Injury log$"):
+    tap(r"^\|Injury log$", "injury-log")
+    if find(r"^\|Log an injury$", timeout=2):
+        tap(r"^\|Log an injury$")
+    tap(r"^\|Lower body$")
+    tap(r"^\|Knee$")
+    if scroll_to(r"Save injury"):
+        tap(r"Save injury")
+        time.sleep(1.5)
+        shot("injury-saved")
+    back()
+
 # Template with percentages: build, then set training maxes
 tap(r"^\|Plan$|^Plan\|")
 if scroll_to(r"New program"):
     tap(r"New program")
     if tap(r"^\|Template$", "templates"):
-        tap(r"^\|Strength$")
+        tap(r"Search 75 templates|Search \d+ templates")
+        adb("shell", "input", "text", "Main-Lift")
+        adb("shell", "input", "keyevent", "111")
+        time.sleep(1)
         if tap(r"% of max", "template-picked"):
             time.sleep(6)
             shot("training-max-sheet")
@@ -276,6 +294,8 @@ if scroll_to(r"New program"):
                 tap(r"^\|Set$")
                 time.sleep(1.5)
                 shot("training-max-set")
+            back(); back()
+        else:
             back(); back()
 
 # Compare

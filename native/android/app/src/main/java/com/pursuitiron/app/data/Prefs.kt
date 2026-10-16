@@ -27,10 +27,10 @@ class Prefs(context: Context) {
     var askedNotifications by mutableStateOf(sp.getBoolean("askedNotifications", false))
         private set
 
-    fun setSeed(v: Seed) { seed = v; sp.edit().putString("seed", v.name).apply() }
-    fun setDark(v: Boolean?) { dark = v; sp.edit().apply { if (v == null) remove("dark") else putBoolean("dark", v) }.apply() }
-    fun setGrip(v: Boolean) { grip = v; sp.edit().putBoolean("grip", v).apply() }
-    fun setKeepAwake(v: Boolean) { keepAwake = v; sp.edit().putBoolean("keepAwake", v).apply() }
+    fun changeSeed(v: Seed) { seed = v; sp.edit().putString("seed", v.name).apply() }
+    fun changeDark(v: Boolean?) { dark = v; sp.edit().apply { if (v == null) remove("dark") else putBoolean("dark", v) }.apply() }
+    fun changeGrip(v: Boolean) { grip = v; sp.edit().putBoolean("grip", v).apply() }
+    fun changeKeepAwake(v: Boolean) { keepAwake = v; sp.edit().putBoolean("keepAwake", v).apply() }
     fun dismissTransfer() { transferDismissed = true; sp.edit().putBoolean("transferDismissed", true).apply() }
     fun markAskedNotifications() { askedNotifications = true; sp.edit().putBoolean("askedNotifications", true).apply() }
 }

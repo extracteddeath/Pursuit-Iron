@@ -500,7 +500,7 @@ private fun ExerciseMenu(vm: AppViewModel, s: JSONObject, ei: Int, onPick: (WShe
                 MenuRow(PiIcons.List, "Note", if (ex.s("note").isBlank()) "Seat height, grip, anything to remember" else ex.s("note"), cs.secondaryContainer, cs.onSecondaryContainer) { onPick(WSheet.Note(ei)) }
                 if (ei > 0) MenuRow(PiIcons.ChevronLeft, "Move earlier", "Logged sets move with it", cs.secondaryContainer, cs.onSecondaryContainer) { vm.act("move", "from" to ei, "to" to ei - 1); onPick(null) }
                 if (ei < count - 1) MenuRow(PiIcons.ChevronRight, "Move later", "Logged sets move with it", cs.secondaryContainer, cs.onSecondaryContainer) { vm.act("move", "from" to ei, "to" to ei + 1); onPick(null) }
-                MenuRow(PiIcons.Sparkle, if (vm.prefs.grip) "Grip mode: on" else "Grip mode", "Bigger controls and stronger taps", cs.secondaryContainer, cs.onSecondaryContainer) { vm.prefs.setGrip(!vm.prefs.grip); onPick(null) }
+                MenuRow(PiIcons.Sparkle, if (vm.prefs.grip) "Grip mode: on" else "Grip mode", "Bigger controls and stronger taps", cs.secondaryContainer, cs.onSecondaryContainer) { vm.prefs.changeGrip(!vm.prefs.grip); onPick(null) }
             }
         }
     }

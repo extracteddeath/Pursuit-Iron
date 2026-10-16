@@ -185,13 +185,13 @@ private fun SettingsCard(vm: AppViewModel) {
         Column(Modifier.clip(RoundedCornerShape(20.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             SettingRow("Start rest automatically", "After each logged set", st.b("restAutoStart", true)) { vm.updateSetting("restAutoStart", it) }
             SettingRow("Haptics", "A distinct tap for logged sets, records and rest ending", st.b("haptics", true)) { vm.updateSetting("haptics", it) }
-            SettingRow("Keep screen on", "While a workout is open", vm.prefs.keepAwake) { vm.prefs.setKeepAwake(it) }
-            SettingRow("Grip mode", "Bigger set controls for sweaty hands", vm.prefs.grip) { vm.prefs.setGrip(it) }
+            SettingRow("Keep screen on", "While a workout is open", vm.prefs.keepAwake) { vm.prefs.changeKeepAwake(it) }
+            SettingRow("Grip mode", "Bigger set controls for sweaty hands", vm.prefs.grip) { vm.prefs.changeGrip(it) }
         }
         Text("Looks", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
-        Segmented(Seed.entries.map { it.name to it.name }, vm.prefs.seed.name, { vm.prefs.setSeed(Seed.valueOf(it)) })
+        Segmented(Seed.entries.map { it.name to it.name }, vm.prefs.seed.name, { vm.prefs.changeSeed(Seed.valueOf(it)) })
         Segmented(listOf("system" to "System", "light" to "Light", "dark" to "Dark"), when (vm.prefs.dark) { null -> "system"; true -> "dark"; false -> "light" },
-            { vm.prefs.setDark(when (it) { "dark" -> true; "light" -> false; else -> null }) })
+            { vm.prefs.changeDark(when (it) { "dark" -> true; "light" -> false; else -> null }) })
     }
 }
 

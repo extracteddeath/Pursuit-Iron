@@ -48,6 +48,7 @@ export function init({ store = null, live = null } = {}) {
     let parsed = null;
     try { parsed = store ? E.parseStoredData(store) : null; } catch { parsed = null; }
     S.store = parsed || E.parseStoredData('{}') || { v: E.STORE_VERSION, saved: [], history: [], perf: {} };
+    repairNativeLogs();
     S.live = null;
     if (live) {
         try {
@@ -58,6 +59,22 @@ export function init({ store = null, live = null } = {}) {
     }
     applyGlobals();
     return { ok: true, empty: saved().length === 0 && history().length === 0, engine: E.ENGINE_VERSION, storeVersion: S.store.v };
+}
+
+/* Builds before this one wrote bodyweight as { date: 'YYYY-MM-DD', v } and measurements with ISO
+   dates. The web app reads { date: ms, w }, so those rows were invisible to it; rewrite them once. */
+function repairNativeLogs() {
+    const ms = (d) => (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d) ? new Date(d + 'T12:00:00').getTime() : d);
+    if (Array.isArray(S.store.bwLog) && S.store.bwLog.some((e) => e && e.w == null && e.v != null || typeof e?.date === 'string')) {
+        S.store.bwLog = S.store.bwLog.map((e) => (e && e.w == null && e.v != null ? (({ v, ...rest }) => ({ ...rest, w: v }))(e) : e))
+            .map((e) => (e ? { ...e, date: ms(e.date) } : e)).sort((a, b) => a.date - b.date);
+        markStore();
+    }
+    const m = S.store.measurements;
+    if (m && typeof m === 'object' && Object.values(m).some((arr) => Array.isArray(arr) && arr.some((e) => typeof e?.date === 'string'))) {
+        S.store.measurements = Object.fromEntries(Object.entries(m).map(([k, arr]) => [k, Array.isArray(arr) ? arr.map((e) => (e ? { ...e, date: ms(e.date) } : e)).sort((a, b) => a.date - b.date) : arr]));
+        markStore();
+    }
 }
 
 /* App.js persistAppStore: savedAt stamps the copy for merges; tombstones older than 180 days drop. */
@@ -585,22 +602,27 @@ export function createProgram({ config, seed }) {
 /* ------------------------------------------------------------------ body + settings */
 export function body() {
     const u = unit();
-    let log = []; try { log = E.normalizeBwLog(S.store.bwLog || [], u) || []; } catch { log = S.store.bwLog || []; }
-    return { unit: u, bodyweight: S.store.bodyweight || '', log: log.slice(-120), measurements: S.store.measurements || {} };
+    let log = []; try { log = E.normalizeBwLog(S.store.bwLog || [], u) || []; } catch { log = []; }
+    const lu = E.lengthUnitFor(u), raw = S.store.measurements || {}, measurements = {};
+    Object.keys(raw).forEach((k) => { try { measurements[k] = E.normalizeMeasureLog(raw[k], lu, u); } catch { measurements[k] = []; } });
+    return { unit: u, lengthUnit: lu, bodyweight: S.store.bodyweight || '', log: log.slice(-120).map((e) => ({ date: e.date, w: e.w })), measurements };
 }
+/* App.js logBodyweight: { date: ms, w, unit }, one entry per local day, sorted, capped. */
 export function logBodyweight({ value }) {
     const v = Number(value); if (!(v > 0)) return { ok: false };
-    const today = E.todayISO();
-    const rows = (S.store.bwLog || []).filter((r) => r.date !== today);
-    S.store.bwLog = [...rows, { date: today, v, unit: unit() }].slice(-(E.BW_LOG_CAP || 2000));
+    const today = new Date().toDateString();
+    const rows = (S.store.bwLog || []).filter((e) => new Date(e.date).toDateString() !== today);
+    S.store.bwLog = [...rows, { date: now(), w: v, unit: unit() }].sort((a, b) => a.date - b.date).slice(-(E.BW_LOG_CAP || 2000));
     S.store.bodyweight = String(v); markStore();
     return { ok: true };
 }
+/* App.js logMeasurement: { date: ms, v, unit: length unit }. */
 export function logMeasurement({ key, value }) {
     const v = Number(value); if (!key || !(v > 0)) return { ok: false };
-    const lu = E.lengthUnitFor ? E.lengthUnitFor(unit()) : (unit() === 'lb' ? 'in' : 'cm');
+    const today = new Date().toDateString();
     const m = { ...(S.store.measurements || {}) };
-    m[key] = [...(m[key] || []).filter((r) => r.date !== E.todayISO()), { date: E.todayISO(), v, unit: lu }];
+    m[key] = [...(m[key] || []).filter((e) => new Date(e.date).toDateString() !== today), { date: now(), v, unit: E.lengthUnitFor(unit()) }]
+        .sort((a, b) => a.date - b.date).slice(-(E.BW_LOG_CAP || 2000));
     S.store.measurements = m; markStore(); return { ok: true };
 }
 export function settings() {
@@ -608,16 +630,205 @@ export function settings() {
     return { unit: unit(), restScale: Number(st.restScale) || 1, restAutoStart: st.restAutoStart !== false, haptics: st.haptics !== false,
         theme: st.theme || null, warmupCard: st.warmupCard !== false, lastBackup: st.lastBackup || null, sessions: history().length, programs: saved().length };
 }
-/* Unit switching converts stored numbers in the PWA (switchUnit); until that is ported it is only
-   allowed on a store with no logged history, where there is nothing to convert. */
 export function updateSettings(patch = {}) {
     const allowed = ['restScale', 'restAutoStart', 'haptics', 'theme', 'warmupCard'];
     Object.entries(patch).forEach(([k, v]) => { if (allowed.includes(k)) S.store[k] = v; });
-    if (patch.unit && patch.unit !== unit()) {
-        if (history().length) return { ok: false, error: 'Switching units with logged history is not available in this build yet.' };
-        S.store.unit = patch.unit; S.store.unitChosen = true;
-    }
+    if (patch.unit && patch.unit !== unit()) { const r = switchUnit({ to: patch.unit }); if (!r.ok) return r; }
     applyGlobals(); markStore();
     return { ok: true, settings: settings() };
 }
 export function markBackup() { S.store.lastBackup = now(); markStore(); return { ok: true }; }
+
+/* ------------------------------------------------------------------ calendar (App.js TrainingHeatmap) */
+function calendarDate(value) {
+    if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        const [y, m, d] = value.split('-').map(Number); const local = new Date(y, m - 1, d);
+        return local.getFullYear() === y && local.getMonth() === m - 1 && local.getDate() === d ? local : null;
+    }
+    if (value == null || value === '') return null;
+    const date = new Date(value); return Number.isFinite(date.getTime()) ? date : null;
+}
+/* App.js calendarSessionSummary: display-only, never invents a zero for missing legacy fields. */
+function calendarSummary(h) {
+    const valid = (v) => v !== undefined && v !== null && v !== '' && Number.isFinite(Number(v)) && Number(v) >= 0;
+    const observed = Object.values(h?.perf || {}).reduce((n, p) => n + (Array.isArray(p?.sets) ? p.sets.filter((s) => s?.done === true).length : 0), 0);
+    const sets = valid(h?.setsDone) ? Number(h.setsDone) : observed || null;
+    const volume = valid(h?.volume) ? Number(h.volume) : valid(h?.tonnage) ? Number(h.tonnage) : null;
+    const minutes = valid(h?.durationMin) && Number(h.durationMin) > 0 ? Math.round(Number(h.durationMin))
+        : valid(h?.duration) && Number(h.duration) > 0 ? Math.max(1, Math.round(Number(h.duration) / 60)) : null;
+    const facts = [sets !== null ? `${sets} ${sets === 1 ? 'set' : 'sets'}` : null, volume !== null && h?.unit ? `${volume.toLocaleString()} ${h.unit}` : null, minutes !== null ? `${minutes}m` : null].filter(Boolean);
+    return facts.length ? facts.join(' · ') : 'Summary not recorded';
+}
+export function calendar({ year, month } = {}) {
+    const t = new Date(); const y = Number.isInteger(year) ? year : t.getFullYear(), m = Number.isInteger(month) ? month : t.getMonth();
+    const days = {};
+    history().forEach((h) => {
+        const d = calendarDate(h?.date); if (!d || d.getFullYear() !== y || d.getMonth() !== m) return;
+        (days[d.getDate()] = days[d.getDate()] || []).push({
+            id: h.id, label: h.dayLabel || h.programName || 'Workout', summary: calendarSummary(h),
+            lifts: Object.entries(h.perf || {}).filter(([id]) => EX_BY_ID[id]).map(([id, p]) => {
+                const sets = p.sets && p.sets.length ? p.sets : (p.weight != null ? [{ w: p.weight, r: p.reps }] : []);
+                return { name: exName(id), sets: sets.filter((s) => !s.warm).map((s) => (Number(s.w) > 0 ? fmtW(s.w) : 'BW') + (s.r != null ? '×' + s.r : '')).join(', ') };
+            }).filter((l) => l.sets)
+        });
+    });
+    const list = Object.entries(days).map(([d, sessions]) => ({ day: Number(d), sessions }));
+    return { year: y, month: m, firstDow: new Date(y, m, 1).getDay(), daysInMonth: new Date(y, m + 1, 0).getDate(),
+        days: list, trainingDays: list.length, workouts: list.reduce((n, d) => n + d.sessions.length, 0),
+        earliest: (() => { const ds = history().map((h) => calendarDate(h?.date)).filter(Boolean); return ds.length ? Math.min(...ds.map((d) => d.getTime())) : null; })() };
+}
+
+/* ------------------------------------------------------------------ profile (App.js ProfileView, StrengthSnapshotCard, ProfileStrengthClub) */
+function age() { const a = E.ageFrom(S.store.birth); return a !== '' ? a : (Number(S.store.age) > 0 ? Number(S.store.age) : ''); }
+export function profile() {
+    const H = history(), u = unit(), bw = parseFloat(S.store.bodyweight), sex = S.store.sex || 'male', a = age();
+    let ms = []; try { ms = E.computeMilestones(H, { unit: u, bodyweight: S.store.bodyweight }) || []; } catch { ms = []; }
+    let lvl = null; try { lvl = E.computeLevel(H, ms); } catch { lvl = null; }
+    let score = null; try { score = bw > 0 ? E.strengthScore(H, bw, u, sex, a) : null; } catch { score = null; }
+    let trend = null; try { trend = bw > 0 ? E.strengthScoreHistory(H, bw, u, sex, a) : null; } catch { trend = null; }
+    let trends = []; try { trends = E.exerciseTrends(H) || []; } catch { trends = []; }
+    const scorable = !(bw > 0) && trends.some((t) => E.scoreTargetFor(t.id) && t.prBest > 0);
+    const club = (mode) => {
+        let c = null; try { c = E.strengthClubSnapshot(trends, u, mode); } catch { c = null; }
+        if (!c || !c.hasAny) return null;
+        const r1 = (v) => (u === 'lb' ? Math.round(v) : Math.round(v * 2) / 2);
+        return { mode, complete: c.complete, allLogged: c.allLogged, total: r1(c.total), inThousand: c.inThousand, maxedOut: c.maxedOut,
+            current: c.current ? c.current.name : null, next: c.next ? c.next.name : null, remaining: r1(c.remaining), pct: Math.round(c.pct),
+            thousandRemaining: r1(c.thousandRemaining), thousandPct: Math.round(c.thousandPct),
+            rows: c.rows.map((r) => ({ label: r.label, value: r1(r.val), has: r.has, actual: r.actual })) };
+    };
+    const tPoints = (() => { const pts = trend?.overall || trend?.points || trend?.series || []; return Array.isArray(pts) ? pts.slice(-40).map((p) => (typeof p === 'number' ? p : Number(p?.score ?? p?.v ?? p?.y ?? p?.overall ?? 0))) : []; })();
+    const val = (id) => ms.find((m) => m.id === id)?.value || 0;
+    const next = ms.filter((m) => !m.done).sort((x, y) => (y.progress - x.progress) || (x.target - y.target))[0] || null;
+    return {
+        unit: u, bodyweight: S.store.bodyweight || '', sex, birth: S.store.birth || '', age: a,
+        level: lvl ? { level: lvl.level, title: lvl.title || null, xp: Math.round(lvl.xp || 0), into: Math.round(lvl.xpIntoLevel || 0), span: Math.round(lvl.xpForLevel || 0) } : null,
+        summary: { workouts: val('first'), bestStreak: val('streak3'), volume: Math.round(val('vol1')) },
+        score: score ? { overall: Math.round(score.overall), level: score.level, levelIdx: score.levelIdx, estimated: !!score.estimated, liftCount: score.liftCount,
+            subs: (score.subs || []).map((x) => ({ label: x.label, score: Math.round(x.score), lift: x.lift ? { name: x.lift.name, level: x.lift.lvl?.level || null, est: !!x.lift.est } : null })),
+            next: score.nextMilestone ? { name: score.nextMilestone.name, pattern: score.nextMilestone.pattern, current: score.nextMilestone.current, target: score.nextMilestone.target, unit: score.nextMilestone.unit, level: score.nextMilestone.level } : null,
+            trend: tPoints } : null,
+        scoreLocked: scorable,
+        clubLifted: club('lifted'), clubE1rm: club('e1rm'),
+        achievements: ms.map((m) => ({ id: m.id, label: m.label, desc: m.desc || m.description || '', cat: m.cat || '', done: !!m.done, progress: Math.max(0, Math.min(1, Number(m.progress) || 0)), value: m.value ?? null, target: m.target ?? null })),
+        nextAchievement: next ? { label: next.label, progress: Math.max(0, Math.min(1, Number(next.progress) || 0)) } : null,
+        levels: E.STD_LEVELS
+    };
+}
+/* App.js Settings → Profile: sex adjusts the standards; birth (YYYY-MM-DD) gives the age factor. */
+export function setProfile({ sex, birth } = {}) {
+    if (sex === 'male' || sex === 'female') S.store.sex = sex;
+    if (birth !== undefined) {
+        if (birth === '' || birth === null) { S.store.birth = ''; S.store.birthEst = false; }
+        else if (E.birthParts(birth)) { S.store.birth = birth; S.store.birthEst = false; S.store.age = E.ageFrom(birth); }
+        else return { ok: false, error: 'Use a real date, like 1994-06-21.' };
+    }
+    markStore(); return { ok: true };
+}
+
+/* ------------------------------------------------------------------ tools (App.js PlateCalcSheet, OneRepMaxCalc) */
+export function plateCalc({ total, bar = 'barbell' } = {}) {
+    const u = unit(), t = Number(total);
+    const bars = Object.keys(E.BARS).map((k) => ({ id: k, label: E.BAR_LABEL?.[k] || k, weight: E.barWeightFor(k, u) }));
+    if (!(t > 0)) return { unit: u, bars, bar, result: null };
+    const r = E.platesPerSide(t, E.BARS[bar] ? bar : 'barbell', u);
+    const achievable = r.barW + r.plates.reduce((s, p) => s + p, 0) * 2;
+    return { unit: u, bars, bar, result: { barWeight: r.barW, plates: r.plates, achievable: Math.round(achievable * 100) / 100, exact: Math.abs(achievable - t) < 1e-6 } };
+}
+export function oneRm({ weight, reps } = {}) {
+    const W = Number(weight), R = parseInt(reps), u = unit();
+    if (!(W > 0 && R > 0 && R <= 20)) return { unit: u, e1rm: null };
+    const orm = E.e1rm(W, R), inc = u === 'lb' ? 5 : 2.5, down = (v) => Math.floor(v / inc) * inc;
+    return { unit: u, e1rm: Math.round(orm * 10) / 10,
+        percents: [100, 95, 90, 85, 80, 75, 70, 65, 60].map((p) => ({ pct: p, load: down(orm * p / 100) })),
+        reps: [1, 2, 3, 5, 8, 10, 12, 15].map((n) => ({ reps: n, load: down(E.rmAt(orm, n)) })) };
+}
+
+/* ------------------------------------------------------------------ gyms + loading (App.js GymsSheet, Settings plates / increments) */
+export function gyms() {
+    const g = E.normalizeGyms(S.store.gyms, S.store.activeGymId), u = unit();
+    const cats = [...new Set(E.EQUIPMENT.map((e) => e.cat || 'Free Weights'))];
+    return {
+        unit: u, activeGymId: g.activeGymId,
+        gyms: g.gyms.map((x) => ({ ...x, limitKeys: E.GYM_LIMIT_KEYS.filter((k) => k.match(x.equipment)).map((k) => ({ key: k.key, label: k.label, sub: k.sub })),
+            inventoryKeys: E.INVENTORY_KEYS.filter((k) => k.match(x.equipment)).map((k) => ({ key: k.key, label: k.label, sub: k.sub })),
+            barDefaults: { barbell: E.BARS.barbell[x.barWeights?.unit === 'kg' ? 'kg' : 'lb'], smith: E.BARS.smith[x.barWeights?.unit === 'kg' ? 'kg' : 'lb'] } })),
+        presets: E.GYM_PRESETS.map((p) => ({ key: p.key, name: p.name, equipment: p.equipment })),
+        equipment: cats.map((c) => ({ cat: c, items: E.EQUIPMENT.filter((e) => (e.cat || 'Free Weights') === c).map((e) => ({ id: e.id, label: e.label })).sort((a, b) => a.label.localeCompare(b.label)) })),
+        plates: { all: E.ALL_PLATES[u], on: (S.store.plates?.[u] || E.PLATES[u]) },
+        minInc: S.store.minInc || { v: 0, unit: null },
+        minIncChoices: u === 'kg' ? [[0, 'Std'], [2.5, '2.5'], [1, '1']] : [[0, 'Std'], [1, '1'], [0.5, '0.5']]
+    };
+}
+/* App.js GymsSheet commit + onSave: normalized, timestamped, deletions tombstoned, equipDefault follows. */
+export function saveGyms({ gyms: list, activeGymId, removed = [] } = {}) {
+    const t = now();
+    const prev = new Map((Array.isArray(S.store.gyms) ? S.store.gyms : []).map((g) => [g.id, g]));
+    const stamped = (Array.isArray(list) ? list : []).map((g) => {
+        const before = prev.get(g.id); const same = before && JSON.stringify({ ...before, updatedAt: 0 }) === JSON.stringify({ ...g, updatedAt: 0 });
+        return { ...g, updatedAt: same ? before.updatedAt : t };
+    });
+    const n = E.normalizeGyms(stamped, activeGymId);
+    const keep = new Map(stamped.map((g) => [g.id, g.updatedAt]));
+    S.store.gyms = n.gyms.map((g) => ({ ...g, updatedAt: keep.get(g.id) || t }));
+    S.store.activeGymId = n.activeGymId;
+    const a = E.gymById(n.gyms, n.activeGymId); if (a) S.store.equipDefault = a.equipment;
+    if (removed.length) S.store.tombs = { ...(S.store.tombs || {}), ...Object.fromEntries(removed.map((id) => [id, t])) };
+    applyGlobals(); markStore();
+    return { ok: true };
+}
+export function newGym({ preset } = {}) {
+    const p = E.GYM_PRESETS.find((x) => x.key === preset) || E.GYM_PRESETS[0];
+    const existing = E.normalizeGyms(S.store.gyms, S.store.activeGymId).gyms;
+    let name = p.name, k = 2; while (existing.some((g) => g.name === name)) name = `${p.name} ${k++}`;
+    return { id: E.newGymId(), name, equipment: [...p.equipment] };
+}
+export function setPlates({ plates }) {
+    const u = unit(), all = E.ALL_PLATES[u];
+    const v = [...new Set((plates || []).map(Number).filter((p) => all.includes(p)))].sort((a, b) => b - a);
+    S.store.plates = { ...(S.store.plates || { kg: [...E.PLATES.kg], lb: [...E.PLATES.lb] }), [u]: v };
+    applyGlobals(); markStore(); return { ok: true };
+}
+export function setMinInc({ v }) {
+    const n = Number(v) || 0; S.store.minInc = { v: n, unit: n ? unit() : null };
+    applyGlobals(); markStore(); return { ok: true };
+}
+
+/* ------------------------------------------------------------------ unit switching (App.js switchUnit) */
+/* Converts every stored load (programs, training maxes, increments, perf, goals, bodyweight, logs);
+   history keeps the unit each session was logged in. */
+export function switchUnit({ to }) {
+    const from = unit();
+    if (to !== 'kg' && to !== 'lb') return { ok: false };
+    if (to === from) { S.store.unitChosen = true; markStore(); return { ok: true, converted: false }; }
+    // An open workout holds typed loads in the old unit; the web app only offers this from Settings,
+    // outside a workout, so the same order applies here.
+    if (S.live) return { ok: false, error: 'Finish or discard the workout in progress first.' };
+    const k = to === 'lb' ? 2.2046226 : 1 / 2.2046226;
+    const conv = (v) => { const n = parseFloat(v); return n > 0 ? Math.round(n * k * 2) / 2 : v; };
+    const convMap = (m) => { if (!m) return m; const o = {}; for (const key in m) o[key] = conv(m[key]); return o; };
+    const convPerf = (pf) => {
+        if (!pf) return pf; const o = {};
+        for (const id in pf) { const p = pf[id]; if (!p) continue; o[id] = { ...p, weight: conv(p.weight), sets: Array.isArray(p.sets) ? p.sets.map((s) => ({ ...s, w: conv(s.w) })) : p.sets }; }
+        return o;
+    };
+    const convProgram = (p) => {
+        if (!p) return p;
+        const np = { ...p, config: { ...p.config, unit: to, ...(p.config?.loadingInventory ? { loadingInventory: E.loadingInventoryInUnit(p.config.loadingInventory, to) } : {}) },
+            ...(p.trainingMax ? { trainingMaxUnit: to } : {}) };
+        if (np.trainingMax) np.trainingMax = convMap(np.trainingMax);
+        if (np.gz) { const g = {}; for (const id in np.gz) g[id] = { ...np.gz[id], ...(np.gz[id]?.t2w != null ? { t2w: conv(np.gz[id].t2w) } : {}) }; np.gz = g; }
+        if (np.exLoadInc) { const e = {}; for (const id in np.exLoadInc) { const v = np.exLoadInc[id]; e[id] = (v && v.v != null) ? { ...v, v: conv(v.v), unit: to } : v; } np.exLoadInc = e; }
+        return np;
+    };
+    const st = S.store;
+    st.perf = convPerf(st.perf);
+    st.saved = saved().map(convProgram);
+    if (st.goals) { const o = {}; for (const id in st.goals) { const n = parseFloat(st.goals[id]); o[id] = n > 0 ? Math.round(n * k * 2) / 2 : st.goals[id]; } st.goals = o; }
+    { const n = parseFloat(st.bodyweight); if (n > 0) st.bodyweight = String(Math.round(n * k * 2) / 2); }
+    if (Array.isArray(st.bwLog)) st.bwLog = st.bwLog.map((e) => ({ ...e, w: conv(e.w), unit: to }));
+    if (st.measurements && typeof st.measurements === 'object') { const lu = E.lengthUnitFor(to), o = {}; for (const key in st.measurements) o[key] = E.normalizeMeasureLog(st.measurements[key], lu, from); st.measurements = o; }
+    st.unit = to; st.unitChosen = true;
+    applyGlobals(); markStore();
+    return { ok: true, converted: true };
+}

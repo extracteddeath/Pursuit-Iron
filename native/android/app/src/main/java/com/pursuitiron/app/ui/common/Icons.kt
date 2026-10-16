@@ -42,4 +42,9 @@ object PiIcons {
     val Sparkle = icon("sparkle", "M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z")
     val Redo = icon("redo", "M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5")
     val Focus = icon("focus", "M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z")
+    val Trophy = icon("trophy", "M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3")
+    val Calendar = icon("calendar", "M4 5h16v16H4zM4 9h16M9 3v4M15 3v4M8 13h.01M12 13h.01M16 13h.01M8 17h.01M12 17h.01")
+    val Plates = icon("plates", "M2 12h3M19 12h3M5 7v10M8 5v14M16 5v14M19 7v10M8 12h8")
+    val Gym = icon("gym", "M3 21V9l9-6 9 6v12M7 21v-6h10v6M7 13h10")
+    val Calc = icon("calc", "M6 3h12a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM8 7h8M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01")
 }

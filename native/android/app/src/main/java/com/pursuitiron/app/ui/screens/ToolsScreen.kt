@@ -1,0 +1,278 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+
+package com.pursuitiron.app.ui.screens
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import com.pursuitiron.app.AppViewModel
+import com.pursuitiron.app.ui.common.Kicker
+import com.pursuitiron.app.ui.common.MorphChip
+import com.pursuitiron.app.ui.common.PiCard
+import com.pursuitiron.app.ui.common.PiIcons
+import com.pursuitiron.app.ui.common.Segmented
+import com.pursuitiron.app.ui.common.b
+import com.pursuitiron.app.ui.common.d
+import com.pursuitiron.app.ui.common.fmtNum
+import com.pursuitiron.app.ui.common.list
+import com.pursuitiron.app.ui.common.o
+import com.pursuitiron.app.ui.common.s
+import com.pursuitiron.app.ui.common.strings
+import kotlinx.coroutines.launch
+import org.json.JSONArray
+import org.json.JSONObject
+
+/** The bar a lift loads, for the plate calculator's default (App.js PlateCalcSheet initialBar). */
+fun barFor(equip: List<String>): String? = when {
+    "smith" in equip -> "smith"
+    "ezbar" in equip -> "ezbar"
+    "trapbar" in equip -> "trap"
+    "safetybar" in equip -> "ssb"
+    "barbell" in equip -> "barbell"
+    else -> null
+}
+
+/* ------------------------------------------------------------------ plates + 1RM (App.js PlateCalcSheet) */
+@Composable
+fun ToolsSheet(vm: AppViewModel, initialTab: String = "plates", initialWeight: String = "", initialBar: String = "barbell", onClose: () -> Unit) {
+    var tab by remember { mutableStateOf(initialTab) }
+    ModalBottomSheet(onDismissRequest = onClose, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Segmented(listOf("plates" to "Plates", "orm" to "1RM"), tab, { tab = it })
+            if (tab == "plates") PlatesTool(vm, initialWeight, initialBar) else OneRmTool(vm)
+        }
+    }
+}
+
+@Composable
+private fun PlatesTool(vm: AppViewModel, initialWeight: String, initialBar: String) {
+    var w by remember { mutableStateOf(initialWeight) }
+    var bar by remember { mutableStateOf(initialBar) }
+    var res by remember { mutableStateOf<JSONObject?>(null) }
+    LaunchedEffect(w, bar) { res = vm.plateCalc(w.replace(',', '.').toDoubleOrNull(), bar) }
+    val cs = MaterialTheme.colorScheme
+    val r = res
+    val u = r.s("unit", "kg")
+    Text("Plate calculator", style = MaterialTheme.typography.headlineSmall)
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        r.list("bars").forEach { b -> MorphChip(b.s("label"), bar == b.s("id"), { bar = b.s("id") }, trailing = "${fmtNum(b.d("weight"))} $u") }
+    }
+    OutlinedTextField(w, { w = it }, Modifier.fillMaxWidth(), singleLine = true, label = { Text("Total weight ($u)") },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), textStyle = MaterialTheme.typography.headlineSmall.copy(textAlign = TextAlign.Center))
+    val out = r.o("result") ?: return
+    val plates = out.optJSONArray("plates")?.let { a -> (0 until a.length()).map { a.optDouble(it) } } ?: emptyList()
+    if (plates.isEmpty()) { Text("That's the empty bar (${fmtNum(out.d("barWeight"))} $u), or lighter.", color = cs.onSurfaceVariant); return }
+    // One side of the bar, inner plate first, sized by weight like the web app's drawing.
+    val maxP = plates.max()
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.surfaceContainer).horizontalScroll(rememberScrollState()).padding(vertical = 14.dp, horizontal = 10.dp)
+        .semantics { contentDescription = "One side of the bar: ${plates.joinToString(", ") { fmtNum(it) }} $u plates, inner to outer. ${fmtNum(out.d("barWeight"))} $u bar." },
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+        Box(Modifier.width(40.dp).height(12.dp).clip(RoundedCornerShape(4.dp)).background(cs.outline))
+        plates.forEachIndexed { i, p ->
+            Box(Modifier.width(30.dp).height((36 + 56 * (p / maxP)).dp).clip(RoundedCornerShape(6.dp)).background(if (i % 2 == 0) cs.primary else cs.primaryContainer), contentAlignment = Alignment.Center) {
+                Text(fmtNum(p), style = MaterialTheme.typography.labelSmall, color = if (i % 2 == 0) cs.onPrimary else cs.onPrimaryContainer)
+            }
+        }
+        Box(Modifier.size(14.dp).clip(RoundedCornerShape(3.dp)).background(cs.outline))
+    }
+    Text("Each side: ${plates.joinToString(" + ") { fmtNum(it) }}", style = MaterialTheme.typography.titleMedium)
+    Text("${fmtNum(out.d("barWeight"))} $u bar + ${plates.size} plate${if (plates.size == 1) "" else "s"} per side" +
+        if (!out.b("exact")) ". Closest you can load: ${fmtNum(out.d("achievable"))} $u." else "", color = cs.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+}
+
+@Composable
+private fun OneRmTool(vm: AppViewModel) {
+    var w by remember { mutableStateOf("") }
+    var reps by remember { mutableStateOf("5") }
+    var res by remember { mutableStateOf<JSONObject?>(null) }
+    LaunchedEffect(w, reps) { res = vm.oneRm(w.replace(',', '.').toDoubleOrNull(), reps.toIntOrNull()) }
+    val cs = MaterialTheme.colorScheme
+    val u = res.s("unit", "kg")
+    Text("One-rep max", style = MaterialTheme.typography.headlineSmall)
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedTextField(w, { w = it }, Modifier.weight(1f), singleLine = true, label = { Text("Weight ($u)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+        OutlinedTextField(reps, { reps = it.filter(Char::isDigit).take(2) }, Modifier.weight(1f), singleLine = true, label = { Text("Reps (1-20)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+    }
+    val r = res ?: return
+    if (r.isNull("e1rm")) { Text("Enter a set you did to estimate your max.", color = cs.onSurfaceVariant); return }
+    Text("${fmtNum(r.d("e1rm"))} $u", style = MaterialTheme.typography.displaySmall, color = cs.primary)
+    Text("Loads are rounded down, never past what the estimate supports.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(Modifier.weight(1f)) {
+            Kicker("% of 1RM")
+            r.list("percents").forEach { x -> Row { Text("${x.optInt("pct")}%", color = cs.onSurfaceVariant, modifier = Modifier.weight(1f)); Text(fmtNum(x.d("load")), style = MaterialTheme.typography.titleSmall) } }
+        }
+        Column(Modifier.weight(1f)) {
+            Kicker("Reps")
+            r.list("reps").forEach { x -> Row { Text("${x.optInt("reps")} rep${if (x.optInt("reps") == 1) "" else "s"}", color = cs.onSurfaceVariant, modifier = Modifier.weight(1f)); Text(fmtNum(x.d("load")), style = MaterialTheme.typography.titleSmall) } }
+        }
+    }
+}
+
+/* ------------------------------------------------------------------ plates owned + smallest jump (App.js Settings) */
+@Composable
+fun LoadingCard(vm: AppViewModel) {
+    val g = vm.gyms ?: return
+    val u = g.s("unit", "kg")
+    val all = g.o("plates")?.optJSONArray("all")?.let { a -> (0 until a.length()).map { a.optDouble(it) } } ?: emptyList()
+    val on = g.o("plates")?.optJSONArray("on")?.let { a -> (0 until a.length()).map { a.optDouble(it) } } ?: emptyList()
+    val cs = MaterialTheme.colorScheme
+    PiCard(radius = 28.dp) {
+        Text("Plates and jumps", style = MaterialTheme.typography.titleMedium)
+        Text("The plates you have (per side). Plate math and suggested loads use only these.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            all.forEach { p -> val sel = on.any { kotlin.math.abs(it - p) < 1e-9 }
+                MorphChip(fmtNum(p), sel, { vm.setPlates(if (sel) on.filter { kotlin.math.abs(it - p) > 1e-9 } else on + p) }) }
+        }
+        Kicker("Smallest load jump")
+        val mi = g.o("minInc")
+        val choices = g.optJSONArray("minIncChoices")?.let { a -> (0 until a.length()).mapNotNull { a.optJSONArray(it) }.map { it.optDouble(0) to it.optString(1) } } ?: emptyList()
+        val cur = mi.d("v").takeIf { it > 0 && mi.s("unit") == u } ?: 0.0
+        Segmented(choices.map { (v, l) -> fmtNum(v) to (if (v == 0.0) "Standard" else "$l $u") }, fmtNum(cur), { vm.setMinInc(it.toDouble()) })
+    }
+}
+
+/* ------------------------------------------------------------------ gyms (App.js GymsSheet) */
+@Composable
+fun GymsCard(vm: AppViewModel, onEdit: () -> Unit) {
+    val g = vm.gyms ?: return
+    val active = g.list("gyms").firstOrNull { it.s("id") == g.s("activeGymId") }
+    val cs = MaterialTheme.colorScheme
+    PiCard(radius = 28.dp) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Gyms", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            TextButton(onClick = onEdit) { Text("Edit") }
+        }
+        Text("Swaps and loads use the equipment at the gym you're in.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            g.list("gyms").forEach { x -> MorphChip(x.s("name"), x.s("id") == active?.s("id"), { vm.setActiveGym(x.s("id")) }) }
+        }
+        active?.let { Text("${it.strings("equipment").size} kinds of equipment at ${it.s("name")}", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant) }
+    }
+}
+
+private fun cleanGym(x: JSONObject): JSONObject = JSONObject(x.toString()).apply { remove("limitKeys"); remove("inventoryKeys"); remove("barDefaults") }
+
+@Composable
+fun GymsSheet(vm: AppViewModel, onClose: () -> Unit) {
+    val g = vm.gyms ?: return
+    val list = remember { mutableStateListOf<JSONObject>().apply { addAll(g.list("gyms").map(::cleanGym)) } }
+    var active by remember { mutableStateOf(g.s("activeGymId")) }
+    var open by remember { mutableStateOf<String?>(active) }
+    val removed = remember { mutableStateListOf<String>() }
+    val scope = rememberCoroutineScope()
+    val cs = MaterialTheme.colorScheme
+    val equipment = g.list("equipment")
+    fun patch(id: String, f: (JSONObject) -> Unit) { val i = list.indexOfFirst { it.s("id") == id }; if (i >= 0) list[i] = JSONObject(list[i].toString()).also(f) }
+    ModalBottomSheet(onDismissRequest = onClose, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Gyms", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
+                Button(onClick = { vm.saveGyms(JSONArray(list.map { it }), active, removed.toList()); onClose() }) { Text("Save") }
+            }
+            list.forEach { gym ->
+                val id = gym.s("id"); val eq = gym.strings("equipment").toSet(); val isOpen = open == id
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(cs.surfaceContainerHigh)) {
+                    Row(Modifier.fillMaxWidth().clickable { open = if (isOpen) null else id }.padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(selected = active == id, onClick = { active = id }, modifier = Modifier.semantics { contentDescription = "Train at ${gym.s("name")}" })
+                        Column(Modifier.weight(1f)) {
+                            Text(gym.s("name"), style = MaterialTheme.typography.titleSmall)
+                            Text("${eq.size} kinds of equipment", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                        }
+                        Icon(if (isOpen) PiIcons.ChevronDown else PiIcons.ChevronRight, if (isOpen) "Collapse" else "Edit ${gym.s("name")}", modifier = Modifier.size(20.dp))
+                    }
+                    if (isOpen) Column(Modifier.padding(horizontal = 14.dp).padding(bottom = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(gym.s("name"), { v -> patch(id) { it.put("name", v.take(40)) } }, Modifier.fillMaxWidth(), singleLine = true, label = { Text("Name") })
+                        equipment.forEach { cat ->
+                            val items = cat.list("items")
+                            val allOn = items.all { it.s("id") in eq }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Kicker(cat.s("cat"), modifier = Modifier.weight(1f))
+                                TextButton(onClick = { patch(id) { o -> val cur = o.strings("equipment").toMutableSet(); if (allOn) cur.removeAll(items.map { it.s("id") }.toSet()) else cur.addAll(items.map { it.s("id") }); o.put("equipment", JSONArray(cur.toList())) } }) {
+                                    Text(if (allOn) "Clear all" else "Select all")
+                                }
+                            }
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                items.forEach { e -> val has = e.s("id") in eq
+                                    MorphChip(e.s("label"), has, { patch(id) { o -> val cur = o.strings("equipment").toMutableList(); if (has) cur.remove(e.s("id")) else cur.add(e.s("id")); o.put("equipment", JSONArray(cur)) } }, height = 36.dp)
+                                }
+                            }
+                        }
+                        // Heaviest available, typed in the unit shown (App.js stores limits with limitUnit).
+                        val lu = gym.s("limitUnit", "kg")
+                        val limitKeys = g.list("gyms").firstOrNull { it.s("id") == id }?.list("limitKeys") ?: emptyList()
+                        if (limitKeys.isNotEmpty()) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Kicker("Heaviest available", modifier = Modifier.weight(1f))
+                                TextButton(onClick = { patch(id) { it.put("limitUnit", if (lu == "kg") "lb" else "kg") } }) { Text("Use ${if (lu == "kg") "lb" else "kg"}") }
+                            }
+                            limitKeys.forEach { k ->
+                                val cur = gym.optJSONObject("limits")?.let { l -> if (l.isNull(k.s("key"))) "" else fmtNum(l.optDouble(k.s("key"))) } ?: ""
+                                OutlinedTextField(cur, { v -> val clean = v.filter { c -> c.isDigit() || c == '.' }
+                                    patch(id) { o -> val l = o.optJSONObject("limits") ?: JSONObject(); if (clean.isBlank()) l.remove(k.s("key")) else clean.toDoubleOrNull()?.let { l.put(k.s("key"), it) }; o.put("limits", l); o.put("limitUnit", lu) } },
+                                    Modifier.fillMaxWidth(), singleLine = true, label = { Text("${k.s("label")}, ${k.s("sub")} ($lu)") }, placeholder = { Text("No limit") },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+                            }
+                        }
+                        if (list.size > 1) OutlinedButton(onClick = {
+                            removed.add(id); list.removeAll { it.s("id") == id }
+                            if (active == id) active = list.first().s("id"); open = null
+                        }) { Text("Remove ${gym.s("name")}") }
+                    }
+                }
+            }
+            Kicker("Add a gym", modifier = Modifier.padding(top = 8.dp))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                g.list("presets").forEach { pr ->
+                    MorphChip("+ ${pr.s("name")}", false, { scope.launch { vm.newGym(pr.s("key"))?.let { ng ->
+                        var name = ng.s("name"); var k = 2
+                        while (list.any { it.s("name") == name }) name = "${pr.s("name")} ${k++}"
+                        ng.put("name", name); list.add(ng); open = ng.s("id")
+                    } } })
+                }
+            }
+            Box(Modifier.heightIn(min = 8.dp))
+        }
+    }
+}

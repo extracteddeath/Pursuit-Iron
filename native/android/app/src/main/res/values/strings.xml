@@ -3,4 +3,8 @@
     <string name="app_name">Pursuit Iron</string>
     <string name="rest_channel">Rest timer</string>
     <string name="rest_channel_desc">Shows the rest countdown while you\'re out of the app</string>
+    <string name="rest_done_channel">Rest over</string>
+    <string name="rest_done_channel_desc">Sounds when a rest ends while you\'re out of the app</string>
+    <string name="rest_over">Rest over</string>
+    <string name="rest_over_body">Next set when you\'re ready</string>
 </resources>

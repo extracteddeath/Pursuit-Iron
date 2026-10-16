@@ -73,6 +73,20 @@ def tap(pattern, name=None, timeout=12, required=True):
     return True
 
 
+def scroll_to(pattern, tries=6):
+    for _ in range(tries):
+        if find(pattern, timeout=2):
+            return True
+        adb("shell", "input", "swipe", "540", "1800", "540", "900", "300")
+        time.sleep(0.8)
+    return bool(find(pattern, timeout=2))
+
+
+def back():
+    adb("shell", "input", "keyevent", "4")
+    time.sleep(1.2)
+
+
 def launch():
     adb("shell", "am", "force-stop", PKG)
     adb("shell", "am", "start", "-W", "-n", f"{PKG}/com.pursuitiron.app.MainActivity")
@@ -106,6 +120,10 @@ if tap(r"Weight not set, edit", "set-editor"):
     adb("shell", "input", "text", "60")
     time.sleep(0.6)
     shot("set-editor-typed")
+    adb("shell", "input", "keyevent", "111")  # hide the keyboard
+    time.sleep(0.6)
+    if tap(r"Plates$", "set-plates"):
+        back()
     tap(r"^\|Done$|Done$")
 tap(r"^Set 1:", "set-logged")
 tap(r"^2 reps left", "set-rated")
@@ -143,7 +161,41 @@ time.sleep(2)
 tap(r"^\|Today$|^Today\|")
 shot("today-after-import")
 
-# 7. Tablet
+# 7. Profile, calendar, settings, gyms, tools, unit switch
+tap(r"^\|You$|^You\|")
+tap(r"^\|Profile$", "profile")
+scroll_to(r"Achievements")
+shot("profile-achievements")
+adb("shell", "input", "swipe", "540", "700", "540", "1900", "300")
+tap(r"^\|History$", "history-calendar")
+tap(r": \d+ workouts?$", "calendar-day")
+tap(r"^\|Settings$", "settings")
+if scroll_to(r"^\|Gyms$"):
+    tap(r"^\|Edit$", "gyms-sheet")
+    back()
+if scroll_to(r"Plates and 1RM"):
+    tap(r"Plates and 1RM")
+    tap(r"Total weight")
+    adb("shell", "input", "text", "100")
+    time.sleep(1)
+    adb("shell", "input", "keyevent", "111")
+    time.sleep(0.8)
+    shot("plate-calc")
+    tap(r"^\|1RM$")
+    tap(r"Weight \(")
+    adb("shell", "input", "text", "100")
+    adb("shell", "input", "keyevent", "111")
+    time.sleep(1)
+    shot("one-rm")
+    back()
+adb("shell", "input", "swipe", "540", "700", "540", "1900", "200")
+adb("shell", "input", "swipe", "540", "700", "540", "1900", "200")
+if scroll_to(r"^\|lb$"):
+    tap(r"^\|lb$", "unit-confirm")
+    tap(r"^\|Switch$", "unit-switched")
+tap(r"^\|Today$|^Today\|", "today-lb")
+
+# 8. Tablet
 adb("shell", "wm", "size", "2560x1600")
 adb("shell", "wm", "density", "320")
 launch()

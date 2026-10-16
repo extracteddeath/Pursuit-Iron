@@ -69,8 +69,10 @@ import java.util.Locale
 @Composable
 fun YouScreen(vm: AppViewModel) {
     val wide = LocalWide.current
-    var section by remember { mutableStateOf("body") }
+    var section by remember { mutableStateOf("profile") }
     var historyId by remember { mutableStateOf<String?>(null) }
+    var gymsOpen by remember { mutableStateOf(false) }
+    var toolsOpen by remember { mutableStateOf(false) }
     val full = StaggeredGridItemSpan.FullLine
     LazyVerticalStaggeredGrid(
         columns = StaggeredGridCells.Fixed(if (wide) 2 else 1),
@@ -90,17 +92,34 @@ fun YouScreen(vm: AppViewModel) {
                 }
             }
         }
-        item(span = full) { Segmented(listOf("body" to "Body", "history" to "History", "settings" to "Settings"), section, { section = it }) }
+        item(span = full) { Segmented(listOf("profile" to "Profile", "body" to "Body", "history" to "History", "settings" to "Settings"), section, { section = it }) }
         when (section) {
+            "profile" -> {
+                item { LevelCard(vm) }
+                item { StrengthScoreCard(vm) { section = "body" } }
+                item { ClubCard(vm) }
+                item(span = full) { AchievementsCard(vm) }
+            }
             "body" -> { item { BodyweightCard(vm) }; item { MeasurementsCard(vm) } }
             "history" -> {
+                item(span = full) { CalendarCard(vm) { historyId = it } }
                 if (vm.history.isEmpty()) item(span = full) { Text("No workouts yet.", color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(8.dp)) }
                 vm.history.forEach { r -> item { Column(Modifier.clip(RoundedCornerShape(18.dp))) { HistoryRow(r) { historyId = r.s("id") } } } }
             }
-            else -> { item { SettingsCard(vm) }; item { DataCard(vm) }; item { AboutCard(vm) } }
+            else -> {
+                item { SettingsCard(vm) }
+                item { GymsCard(vm) { gymsOpen = true } }
+                item { LoadingCard(vm) }
+                item { ToolsCard { toolsOpen = true } }
+                item { ProfileFieldsCard(vm) }
+                item { DataCard(vm) }
+                item { AboutCard(vm) }
+            }
         }
     }
     historyId?.let { id -> HistorySheet(vm, id) { historyId = null } }
+    if (gymsOpen) GymsSheet(vm) { gymsOpen = false }
+    if (toolsOpen) ToolsSheet(vm) { toolsOpen = false }
 }
 
 @Composable
@@ -108,7 +127,7 @@ private fun BodyweightCard(vm: AppViewModel) {
     val b = vm.body
     val unit = b.s("unit", "kg")
     val log = b.list("log")
-    val vals = log.map { it.d("v") }.filter { it > 0 }
+    val vals = log.map { it.d("w") }.filter { it > 0 }
     var entry by remember { mutableStateOf(b.s("bodyweight")) }
     val cs = MaterialTheme.colorScheme
     PiCard(radius = 28.dp) {
@@ -135,7 +154,7 @@ private val MEASURES = listOf("waist", "chest", "arm", "thigh", "hips", "neck")
 @Composable
 private fun MeasurementsCard(vm: AppViewModel) {
     val m = vm.body.o("measurements")
-    val lu = if (vm.body.s("unit") == "lb") "in" else "cm"
+    val lu = vm.body.s("lengthUnit", if (vm.body.s("unit") == "lb") "in" else "cm")
     var key by remember { mutableStateOf("waist") }
     var v by remember { mutableStateOf("") }
     val cs = MaterialTheme.colorScheme
@@ -173,12 +192,23 @@ private fun SettingRow(label: String, sub: String, checked: Boolean, onChange: (
 }
 
 @Composable
+private fun ToolsCard(onOpen: () -> Unit) {
+    PiCard(radius = 28.dp) {
+        Text("Tools", style = MaterialTheme.typography.titleMedium)
+        Column(Modifier.clip(RoundedCornerShape(20.dp))) {
+            MenuRow(PiIcons.Plates, "Plates and 1RM", "What to load on each side, and your estimated max", MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.colorScheme.onSecondaryContainer, onOpen)
+        }
+    }
+}
+
+@Composable
 private fun SettingsCard(vm: AppViewModel) {
     val st = vm.settings
+    var confirmUnit by remember { mutableStateOf<String?>(null) }
     PiCard(radius = 28.dp) {
         Text("Training", style = MaterialTheme.typography.titleMedium)
         Kicker("Units")
-        Segmented(listOf("kg" to "kg", "lb" to "lb"), st.s("unit", "kg"), { vm.updateSetting("unit", it) })
+        Segmented(listOf("kg" to "kg", "lb" to "lb"), st.s("unit", "kg"), { if (it != st.s("unit", "kg")) confirmUnit = it })
         Kicker("Rest length")
         Segmented(listOf("0.75" to "Shorter", "1.0" to "Standard", "1.25" to "Longer"), when { st.d("restScale", 1.0) < 0.9 -> "0.75"; st.d("restScale", 1.0) > 1.1 -> "1.25"; else -> "1.0" },
             { vm.updateSetting("restScale", it.toDouble()) })
@@ -192,6 +222,21 @@ private fun SettingsCard(vm: AppViewModel) {
         Segmented(Seed.entries.map { it.name to it.name }, vm.prefs.seed.name, { vm.prefs.changeSeed(Seed.valueOf(it)) })
         Segmented(listOf("system" to "System", "light" to "Light", "dark" to "Dark"), when (vm.prefs.dark) { null -> "system"; true -> "dark"; false -> "light" },
             { vm.prefs.changeDark(when (it) { "dark" -> true; "light" -> false; else -> null }) })
+        if (!vm.rest.exactAllowed()) {
+            val ctx = LocalContext.current
+            Column(Modifier.clip(RoundedCornerShape(20.dp))) {
+                MenuRow(PiIcons.Timer, "Rest alert on the second", "Let Pursuit Iron use exact alarms so the rest-over alert isn't late with the screen off", MaterialTheme.colorScheme.tertiaryContainer, MaterialTheme.colorScheme.onTertiaryContainer) {
+                    if (android.os.Build.VERSION.SDK_INT >= 31) runCatching { ctx.startActivity(Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:" + ctx.packageName))) }
+                }
+            }
+        }
+    }
+    confirmUnit?.let { to ->
+        androidx.compose.material3.AlertDialog(onDismissRequest = { confirmUnit = null },
+            title = { Text("Switch to $to?") },
+            text = { Text("Your programs, training maxes, bodyweight and measurements convert to $to. Past workouts keep the unit they were logged in.") },
+            confirmButton = { androidx.compose.material3.TextButton(onClick = { vm.updateSetting("unit", to); confirmUnit = null }) { Text("Switch") } },
+            dismissButton = { androidx.compose.material3.TextButton(onClick = { confirmUnit = null }) { Text("Cancel") } })
     }
 }
 

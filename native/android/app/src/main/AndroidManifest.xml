@@ -3,6 +3,9 @@
 
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Rest ends on the second with the phone locked. Granted by default up to Android 13; from 14 the
+         user can allow it in Settings, and without it the alert uses an inexact alarm. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
     <application
         android:allowBackup="true"
@@ -49,5 +52,6 @@
                 <data android:mimeType="application/json" />
             </intent-filter>
         </activity>
+        <receiver android:name=".data.RestDoneReceiver" android:exported="false" />
     </application>
 </manifest>

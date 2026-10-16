@@ -96,6 +96,7 @@ import com.pursuitiron.app.ui.common.list
 import com.pursuitiron.app.ui.common.mmss
 import com.pursuitiron.app.ui.common.o
 import com.pursuitiron.app.ui.common.s
+import com.pursuitiron.app.ui.common.strings
 import com.pursuitiron.app.ui.theme.Motion
 import org.json.JSONObject
 
@@ -447,6 +448,9 @@ private fun SetEditor(vm: AppViewModel, s: JSONObject, ei: Int, si: Int, onClose
     var r by remember(si, ei) { mutableStateOf(set.s("reps")) }
     LaunchedEffect(set.s("weight")) { w = set.s("weight") }
     LaunchedEffect(set.s("reps")) { r = set.s("reps") }
+    var plates by remember { mutableStateOf(false) }
+    val bar = barFor(ex.strings("equip"))
+    if (plates) { ToolsSheet(vm, "plates", w, bar ?: "barbell") { plates = false }; return }
     ModalBottomSheet(onDismissRequest = onClose) {
         Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Kicker(ex.s("name"))
@@ -458,6 +462,7 @@ private fun SetEditor(vm: AppViewModel, s: JSONObject, ei: Int, si: Int, onClose
                 onMinus = { vm.act("bumpReps", "ei" to ei, "si" to si, "delta" to -1) }, onPlus = { vm.act("bumpReps", "ei" to ei, "si" to si, "delta" to 1) })
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (set.b("added")) TextButton(onClick = { vm.act("removeSet", "ei" to ei, "si" to si); onClose() }) { Text("Remove set") }
+                if (bar != null) TextButton(onClick = { plates = true }) { Icon(PiIcons.Plates, null, modifier = Modifier.size(18.dp)); Text("  Plates") }
                 Spacer(Modifier.weight(1f))
                 Button(onClick = {
                     if (w != set.s("weight")) vm.act("edit", "ei" to ei, "si" to si, "field" to "weight", "value" to w)

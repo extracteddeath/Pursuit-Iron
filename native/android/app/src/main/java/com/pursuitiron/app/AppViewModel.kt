@@ -39,6 +39,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val prefs = Prefs(app)
     val haptics = Haptics(app)
     val rest = RestNotifier(app)
+    private val beep = com.pursuitiron.app.ui.common.Beep(app)
     private var core: Core? = null
 
     var ready by mutableStateOf(false); private set
@@ -58,6 +59,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var body by mutableStateOf<JSONObject?>(null); private set
     var history by mutableStateOf<List<JSONObject>>(emptyList()); private set
     var setup by mutableStateOf<JSONObject?>(null); private set
+    var profile by mutableStateOf<JSONObject?>(null); private set
+    var gyms by mutableStateOf<JSONObject?>(null); private set
 
     var snack by mutableStateOf<Snack?>(null); private set
     var importOffer by mutableStateOf<ImportOffer?>(null)
@@ -114,9 +117,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         history = arr(call("historyList"))
         library = arr(call("library", jsonOf("q" to libQuery, "part" to libPart)))
         setup = obj("setupOptions")
+        profile = obj("profile")
+        gyms = obj("gyms")
     }
     private suspend fun refreshHomeSide() {
         home = obj("home"); plan = obj("plan"); progress = obj("progress"); history = arr(call("historyList")); settings = obj("settings")
+        profile = obj("profile"); body = obj("body")
     }
 
     fun hap(h: Hap) { haptics.strong = prefs.grip; haptics.play(h) }
@@ -166,6 +172,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (!restFired && now >= end) {
             restFired = true
             hap(Hap.Rest)
+            if (inForeground) beep.play()
             act("restDone")
             if (inForeground) toast("Rest over. Next set when you're ready.")
         }
@@ -229,14 +236,36 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /* ---------------------------------------------------------------- body + settings */
-    fun logBodyweight(v: Double) = launchCore { call("logBodyweight", jsonOf("value" to v)); body = obj("body"); hap(Hap.Log); toast("Bodyweight logged") }
+    fun logBodyweight(v: Double) = launchCore { call("logBodyweight", jsonOf("value" to v)); body = obj("body"); profile = obj("profile"); hap(Hap.Log); toast("Bodyweight logged") }
     fun logMeasurement(key: String, v: Double) = launchCore { call("logMeasurement", jsonOf("key" to key, "value" to v)); body = obj("body") }
     fun updateSetting(key: String, value: Any?) = launchCore {
         val r = obj("updateSettings", jsonOf(key to value)) ?: return@launchCore
         if (!r.b("ok")) toast(r.s("error", "Couldn't change that"))
         settings = obj("settings"); haptics.enabled = settings?.b("haptics", true) != false
-        if (key == "unit") refreshAll()
+        if (key == "unit" && r.b("ok")) { refreshAll(); toast("Switched to ${value} and converted your weights") }
     }
+
+    /* ---------------------------------------------------------------- profile, tools, gyms */
+    fun setProfile(sex: String? = null, birth: String? = null) = launchCore {
+        val a = JSONObject(); if (sex != null) a.put("sex", sex); if (birth != null) a.put("birth", birth)
+        val r = obj("setProfile", a) ?: return@launchCore
+        if (!r.b("ok")) toast(r.s("error", "Couldn't save that")) else profile = obj("profile")
+    }
+    suspend fun calendar(year: Int, month: Int): JSONObject? = obj("calendar", jsonOf("year" to year, "month" to month))
+    suspend fun plateCalc(total: Double?, bar: String): JSONObject? = obj("plateCalc", jsonOf("total" to total, "bar" to bar))
+    suspend fun oneRm(weight: Double?, reps: Int?): JSONObject? = obj("oneRm", jsonOf("weight" to weight, "reps" to reps))
+    suspend fun newGym(preset: String): JSONObject? = obj("newGym", jsonOf("preset" to preset))
+    fun saveGyms(list: JSONArray, activeId: String, removed: List<String>) = launchCore {
+        val r = obj("saveGyms", jsonOf("gyms" to list, "activeGymId" to activeId, "removed" to JSONArray(removed))) ?: return@launchCore
+        if (r.b("ok")) { gyms = obj("gyms"); home = obj("home"); toast("Gyms saved") }
+    }
+    fun setActiveGym(id: String) = launchCore {
+        val g = gyms ?: return@launchCore
+        val list = JSONArray(); g.list("gyms").forEach { x -> list.put(JSONObject(x.toString()).apply { remove("limitKeys"); remove("inventoryKeys"); remove("barDefaults") }) }
+        call("saveGyms", jsonOf("gyms" to list, "activeGymId" to id)); gyms = obj("gyms"); home = obj("home")
+    }
+    fun setPlates(plates: List<Double>) = launchCore { call("setPlates", jsonOf("plates" to JSONArray(plates))); gyms = obj("gyms") }
+    fun setMinInc(v: Double) = launchCore { call("setMinInc", jsonOf("v" to v)); gyms = obj("gyms") }
 
     /* ---------------------------------------------------------------- data in and out */
     suspend fun exportText(): String? = core?.exportStoreText()

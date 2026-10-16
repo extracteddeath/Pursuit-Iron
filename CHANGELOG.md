@@ -1,3 +1,10 @@
+## Build 897 — Reliable update restart
+
+- Resolve the current service-worker registration when Restart is tapped. If another window already activated the update, reload its installed version instead of sending a message to a stale worker and waiting forever.
+- Show Restarting while the request is in progress, ignore repeated taps, and restore a retry with feedback if activation stalls. Preserve the save-before-restart gate and hide the update action during active or minimized workouts.
+- Keep the service-worker message alive until its activation request resolves.
+- Extend real-browser coverage to actual Restart taps, activation by another window, stale-worker replacement, failed saves, stalled activation and retry. Preserve saved training and workout recovery.
+
 ## Build 896 — Selected Expressive workout refinements
 
 - Workout confirmations let taps reach the set fields beneath them; Undo remains interactive.

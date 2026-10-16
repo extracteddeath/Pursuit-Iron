@@ -44,6 +44,22 @@ try {
   assert.ok(await page.$('.wpb-workout-plate-strip'),'plate calculator retained');
   assert.ok(await page.$('.wpb-target-toggle'),'Target/Last retained');
   assert.ok(await page.$('.wpb-set-index'),'per-set options retained');
+  const hierarchy=await page.$eval('.wpb-progression-label',button=>{
+   const name=document.querySelector('.wpb-exercise-name'),b=getComputedStyle(button),n=getComputedStyle(name);
+   return {height:button.getBoundingClientRect().height,font:parseFloat(b.fontSize),nameFont:parseFloat(n.fontSize),background:b.backgroundColor};
+  });
+  assert.ok(hierarchy.height<=32,'progression control stays compact at '+width);
+  assert.ok(hierarchy.font<hierarchy.nameFont,'exercise name leads progression');
+  assert.equal(hierarchy.background,'rgba(0, 0, 0, 0)','progression is a quiet text action');
+  await page.locator('.wpb-progression-label').click();
+  await page.waitForSelector('[aria-label="Exercise progression"]');
+  await page.locator('[aria-label="Close Exercise progression"]').click();
+  assert.equal(await page.$eval('[data-testid="set-0-1"] input[aria-label="weight"]',el=>el.value),'175','opening progression preserves entered load');
+  if(process.env.B896_SCREENSHOTS) {
+   await page.$eval('.wpb-workout-scroll',el=>el.scrollTop=0);
+   await page.screenshot({path:`${process.env.B896_SCREENSHOTS}/b898-heading-${width}-${theme}.png`});
+  }
+
   // Finish the final accessory set through the real log action: chip counts are live.
   await navigate(1);await page.waitForSelector('[data-testid="set-1-0"]');
   await page.evaluate(()=>document.querySelector('[data-testid="set-1-0"] [aria-label="Mark set done"]').click());

@@ -1,3 +1,9 @@
+## Build 898 — Visible coaching and compact progression
+
+- Show the workout target explanation and Coach guidance by default. Keep manual hide/show controls and show fresh guidance when moving between exercises or coaching contexts.
+- Replace the filled progression badge with a compact text action beneath the exercise details, while retaining the progression editor and protected set entries.
+- Check default coaching visibility, manual disclosure controls, progression sizing and editor access across phone/tablet widths and light/dark themes.
+
 ## Build 897 — Reliable update restart
 
 - Resolve the current service-worker registration when Restart is tapped. If another window already activated the update, reload its installed version instead of sending a message to a stale worker and waiting forever.

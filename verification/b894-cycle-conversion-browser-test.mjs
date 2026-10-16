@@ -35,7 +35,7 @@ try{
   assert.equal(await page.$$eval('.wpb-custom-cycle-block',ns=>ns.length),1);
   const bounds=await page.$$eval('.wpb-custom-cycle input,.wpb-custom-cycle select,.wpb-custom-cycle-block-head button',ns=>ns.every(n=>{const r=n.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&r.height>=44;}));assert.equal(bounds,true,kind+' controls fit '+width);
   assert.equal(await page.$eval(dialog,n=>{const r=n.getBoundingClientRect();const create=[...n.querySelectorAll('button')].find(b=>b.textContent==='Create training cycle').getBoundingClientRect();const close=n.querySelector('[aria-label="Close"]').getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight+1&&create.bottom<=innerHeight&&close.top>=0;}),true,'header and creation action remain within viewport');
-  if(kind==='native'&&width===320)await page.screenshot({path:'/workspace/scratch/b53f5e372703/b894-conversion-phone.png'});
+  if(kind==='native'&&width===320)await page.screenshot({path:path.join(root,'verification/b894-conversion-phone.png')});
   const baseline=await page.evaluate(()=>{const s=JSON.parse(localStorage.getItem('wpb:v1'));return {saved:s.saved,history:s.history};});
   assert.deepEqual(baseline.saved,[program]);
   await page.$eval(dialog,n=>[...n.querySelectorAll('button')].find(b=>b.textContent==='Create training cycle').click());

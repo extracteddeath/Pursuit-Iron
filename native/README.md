@@ -89,6 +89,19 @@ barbell limit, bodyweight and superset options) plus shuffle and restore of earl
 exercises side by side, custom exercises, training reminders (weekday notifications that survive a reboot), the
 injury log outside a workout, Strong and Hevy CSV import, and workout and body CSV export.
 
+The workout matches the web app: readiness check-in that scales loads, warm-up ramps, drop sets and myo-reps,
+standard / warm-up / to-failure set types, editing logged sets, the previous workout's set beside each row, last
+time's note, per-lift rest saved to the program, suggested supersets with round-based rest, a per-lift progression
+change that asks at the end whether the program keeps it, goal weight, machine weight step and setup notes, form cues
+and a demo link, a workout note, reset timer, skip a lift, swap into the program, and the finish sheet (PRs, goals
+reached, main-lift e1RM, next-session plan, pump and soreness per muscle). Quick workouts log off-plan and can be
+saved as a routine; any past workout can be repeated. Today adds the welcome screen, what's new, the fresher-day
+option, deload advice with "deload now", a lighter session when recovery is low, and the recovery, strength and
+weekly recap cards. Progress adds a chart and records for every lift, strength standards, correcting a logged
+workout and a share image. Settings adds the effort scale (RIR or RPE), training experience, the banned list,
+clearing history, resetting everything, device storage, bug reports, Ko-fi, the privacy policy and references; Plan
+has the weekly schedule.
+
 Not native yet: Wear OS (a separate watch app that needs Google Play services on the phone for the data link; the
 design is in the prototype). The web app's program gallery is not ported because the web app itself no longer
 imports gallery codes.

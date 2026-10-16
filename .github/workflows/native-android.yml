@@ -17,25 +17,16 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - name: Latest versions of the Android libraries this build pins
+      - name: Latest stable versions (part 1)
         run: |
-          meta() { v=$(curl -fsSL "$1" | grep -oE '<(latest|release)>[^<]+' | head -2 | tr '\n' ' '); n=$(echo "$1" | sed 's#.*/maven2/##; s#/maven-metadata.xml##'); echo "::notice title=$n::$v"; }
-          G=https://dl.google.com/dl/android/maven2
-          M=https://repo1.maven.org/maven2
-          meta $G/com/android/tools/build/gradle/maven-metadata.xml
-          meta $G/androidx/compose/compose-bom/maven-metadata.xml
-          meta $G/androidx/compose/material3/material3/maven-metadata.xml
-          meta $G/androidx/javascriptengine/javascriptengine/maven-metadata.xml
-          meta $G/androidx/activity/activity-compose/maven-metadata.xml
-          meta $G/androidx/lifecycle/lifecycle-viewmodel-compose/maven-metadata.xml
-          meta $G/androidx/core/core-ktx/maven-metadata.xml
-          meta $G/androidx/core/core-splashscreen/maven-metadata.xml
-          meta $G/androidx/webkit/webkit/maven-metadata.xml
-          meta $M/org/jetbrains/kotlin/kotlin-gradle-plugin/maven-metadata.xml
-          meta $M/org/jetbrains/kotlinx/kotlinx-coroutines-android/maven-metadata.xml
-          meta $M/org/jetbrains/kotlinx/kotlinx-serialization-json/maven-metadata.xml
-          meta $G/androidx/concurrent/concurrent-futures-ktx/maven-metadata.xml
-          echo "::notice title=material3 all::$(curl -fsSL $G/androidx/compose/material3/material3/maven-metadata.xml | grep -oE '<version>[^<]+' | tail -12 | tr '\n' ' ')"
-          echo "::notice title=javascriptengine all::$(curl -fsSL $G/androidx/javascriptengine/javascriptengine/maven-metadata.xml | grep -oE '<version>[^<]+' | tr '\n' ' ')"
+          stable() { curl -fsSL "$1/maven-metadata.xml" | grep -oE '<version>[^<]+' | sed 's/<version>//' | grep -E '^[0-9]+(\.[0-9]+)*$' | sort -V | tail -1; }
+          G=https://dl.google.com/dl/android/maven2; M=https://repo1.maven.org/maven2
+          for a in com/android/tools/build/gradle androidx/compose/compose-bom androidx/compose/material3/material3 androidx/javascriptengine/javascriptengine androidx/activity/activity-compose androidx/lifecycle/lifecycle-viewmodel-compose androidx/core/core-ktx androidx/webkit/webkit androidx/concurrent/concurrent-futures-ktx; do echo "::notice title=$a::$(stable $G/$a)"; done
+      - name: Latest stable versions (part 2)
+        run: |
+          stable() { curl -fsSL "$1/maven-metadata.xml" | grep -oE '<version>[^<]+' | sed 's/<version>//' | grep -E '^[0-9]+(\.[0-9]+)*$' | sort -V | tail -1; }
+          G=https://dl.google.com/dl/android/maven2; M=https://repo1.maven.org/maven2
+          for a in org/jetbrains/kotlin/kotlin-gradle-plugin org/jetbrains/kotlinx/kotlinx-coroutines-android org/jetbrains/kotlinx/kotlinx-serialization-json; do echo "::notice title=$a::$(stable $M/$a)"; done
+          echo "::notice title=material3 recent::$(curl -fsSL $G/androidx/compose/material3/material3/maven-metadata.xml | grep -oE '<version>[^<]+' | sed 's/<version>//' | tail -8 | tr '\n' ' ')"
           echo "::notice title=gradle::$(curl -fsSL https://services.gradle.org/versions/current | grep -oE '"version" *: *"[^"]+"')"
-          echo "::notice title=sdk::$(ls "$ANDROID_HOME/platforms" "$ANDROID_HOME/build-tools" 2>/dev/null | tr '\n' ' ') java=$(java -version 2>&1 | head -1) jh17=${JAVA_HOME_17_X64:-none} jh21=${JAVA_HOME_21_X64:-none}"
+          echo "::notice title=sdk::$(ls "$ANDROID_HOME/platforms" "$ANDROID_HOME/build-tools" 2>/dev/null | tr '\n' ' ') jh17=${JAVA_HOME_17_X64:-none} jh21=${JAVA_HOME_21_X64:-none}"

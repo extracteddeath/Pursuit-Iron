@@ -352,6 +352,7 @@ tap(r"^\|Plan$|^Plan\|")
 adb("shell", "input", "swipe", "540", "700", "540", "1900", "200")
 if tap(r"^\|  Schedule$|Schedule$", "schedule-sheet", required=False):
     tap(r"^Mon", "schedule-monday")
+    scroll_to(r"^\|Done$", tries=3)
     tap(r"^\|Done$")
 if tap(r"Edit program", "editor"):
     if tap(r"\. Edit\|", "editor-slot"):

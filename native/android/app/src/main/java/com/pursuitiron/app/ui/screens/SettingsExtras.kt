@@ -1,4 +1,4 @@
-@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 
 package com.pursuitiron.app.ui.screens
 
@@ -67,7 +67,11 @@ fun TrainingPrefsCard(vm: AppViewModel) {
         Kicker("Training experience")
         Text("Sets your weekly volume range", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         val exp = st.s("experience").let { if (it == "novice") "none" else it }
-        Segmented(listOf("none" to "New", "beginner" to "Beginner", "intermediate" to "Intermediate", "advanced" to "Advanced"), exp.ifBlank { null }, { vm.updateSetting("experience", it) }, height = 40.dp)
+        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            listOf("none" to "New", "beginner" to "Beginner", "intermediate" to "Intermediate", "advanced" to "Advanced").forEach { (id, l) ->
+                com.pursuitiron.app.ui.common.MorphChip(l, exp == id, { vm.updateSetting("experience", id) }, height = 40.dp)
+            }
+        }
         Kicker("Effort scale")
         Text("Targets read as reps in reserve, or as RPE", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Segmented(listOf("rir" to "RIR", "rpe" to "RPE"), st.s("loadMode", "rir"), { vm.updateSetting("loadMode", it) })
@@ -198,8 +202,8 @@ fun WeeklyScheduleSheet(vm: AppViewModel, programId: String, onClose: () -> Unit
     val cs = MaterialTheme.colorScheme
     val names = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
     val today = (java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_WEEK) - 1) // 0 = Sunday
-    ModalBottomSheet(onDismissRequest = onClose) {
-        Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    ModalBottomSheet(onDismissRequest = onClose, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Weekly schedule", style = MaterialTheme.typography.headlineSmall)
             val x = sc ?: run { Text("Loading…"); return@Column }
             Text("Tap a day to assign a workout. ${x.i("trainingDays")} training day${if (x.i("trainingDays") == 1) "" else "s"} a week.",

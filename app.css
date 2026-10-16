@@ -8423,6 +8423,62 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 /* B888: compact session choices and readable note editors share theme surfaces. */
 .wpb-session-context{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;flex-shrink:0}
 .wpb-session-context>button{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-height:40px;padding:8px 12px;border-radius:14px;background:var(--wpb-theme-card);color:var(--wpb-theme-text);border:1px solid var(--wpb-theme-border);text-align:left}
+/* B896 — Selected Expressive workout details, using Pursuit's existing palette,
+   row geometry, motion settings and session owners. */
+#root .wpb-workout .wpb-ex-nav{
+  display:flex;overflow-x:auto;overflow-y:hidden;touch-action:pan-x pan-y;
+  padding:2px 3px 4px!important;overscroll-behavior-x:contain;
+}
+#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step{
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  flex:0 0 auto;width:auto!important;min-width:92px!important;max-width:208px;
+  height:44px!important;min-height:44px!important;padding:0 12px!important;
+  border:1px solid var(--wpb-theme-border);border-radius:22px!important;
+  background:var(--wpb-theme-card);color:var(--wpb-theme-muted);cursor:pointer;
+  transition:background-color 160ms var(--e-out),border-radius 180ms var(--e-out);
+}
+#root .wpb-workout .wpb-ex-nav-step[data-active="1"]{
+  background:var(--wpb-theme-accent);color:var(--wpb-theme-on-accent);
+  border-color:var(--wpb-theme-accent);border-radius:13px!important;
+}
+#root .wpb-workout .wpb-ex-nav-step[data-complete="1"]:not([data-active="1"]){
+  background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink);
+}
+.wpb-ex-nav-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;font-weight:700}
+.wpb-ex-nav-count{flex-shrink:0;font-size:11px;font-weight:600}
+#root .wpb-workout .wpb-exercise-heading .wpb-progression-label{
+  background:var(--wpb-theme-accent-dim)!important;border-radius:10px;
+  padding:6px 9px!important;min-height:40px!important;
+}
+.wpb-load-explanation summary{cursor:pointer;min-height:36px;align-content:center;line-height:1.4}
+.wpb-load-caption{color:var(--wpb-theme-muted);font-size:12px;font-weight:600}
+.wpb-load-explanation[open]>div{padding:4px 0 5px;line-height:1.45}
+.wpb-rest-ring{position:relative;display:grid;place-items:center;width:36px;height:36px;flex-shrink:0}
+.wpb-rest-ring>svg:first-child{position:absolute;inset:0;width:36px;height:36px;transform:rotate(-90deg)}
+.wpb-rest-ring-track{stroke:var(--wpb-theme-border)}
+#root .wpb-workout .wpb-rest-card{container:pi-rest / inline-size;}
+#root .wpb-workout[data-keyboard-open="false"] .wpb-rest-card{max-height:180px;}
+@container pi-rest (max-width:440px){
+  #root .wpb-workout .wpb-rest-top{display:grid!important;grid-template-columns:36px minmax(0,1fr);gap:8px!important;}
+  #root .wpb-workout .wpb-rest-top>.wpb-rest-actions{grid-column:1 / -1;justify-content:space-between;width:100%;}
+}
+#root .wpb-workout .wpb-effort-scale{
+  border-radius:20px;padding:3px;background:var(--wpb-theme-accent-dim);
+}
+#root .wpb-workout .wpb-effort-scale>button{
+  border-radius:18px!important;background:transparent!important;
+  color:var(--wpb-theme-accent-ink)!important;border-color:transparent!important;
+}
+#root .wpb-workout .wpb-effort-scale>button[aria-pressed="true"]{
+  border-radius:10px!important;background:var(--wpb-theme-card)!important;
+  color:var(--wpb-theme-text)!important;border-color:var(--wpb-theme-accent-ink)!important;
+}
+@media(prefers-reduced-motion:reduce){
+  #root .wpb-workout .wpb-ex-nav-step{transition:none!important;}
+}
+@media(forced-colors:active){
+  #root .wpb-workout .wpb-ex-nav-step[aria-current="step"]{outline:2px solid Highlight;outline-offset:-3px;}
+}
 .wpb-exercise-tags{display:flex;gap:5px;flex-wrap:wrap;margin:7px 0 3px}
 .wpb-exercise-tags>span{font-size:11px;font-weight:650;padding:4px 8px;border-radius:8px;background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink)}
 .wpb-session-dialog-backdrop{position:fixed;inset:0;z-index:110;background:rgba(0,0,0,.65);display:flex;align-items:flex-end;justify-content:center}

@@ -113,6 +113,7 @@ export const browserShards = Object.freeze({
         'm218-phone-polish-browser-test.mjs'
     ]),
     workout: Object.freeze([
+        'b896-expressive-workout-browser-test.mjs',
         'b889-injury-journal-browser-test.mjs',
         'b886-set-number-options-browser-test.mjs',
         'b825-logging-layout-browser-test.mjs',

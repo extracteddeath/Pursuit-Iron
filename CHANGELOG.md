@@ -1,3 +1,13 @@
+## Build 896 — Selected Expressive workout refinements
+
+- Workout confirmations let taps reach the set fields beneath them; Undo remains interactive.
+
+- Give exercise navigation named chips with live completed/total working-set counts and distinct current/completed shapes. Reveal the selected chip when moving between lifts without scrolling the workout or changing set values.
+- Put the existing progression method in a small themed badge and collapse suggestion details behind a native Target disclosure. Keep the existing engine-owned Why sheet and all prescription evidence.
+- Add a remaining-time ring and pause icon to the existing rest timer. Keep all five rest controls and exercise navigation; stack timer controls inside narrow cards so the countdown stays readable.
+- Group the existing optional effort choices into a tonal strip with a distinct selected shape. Preserve set steppers, Target/Last, manual-entry ownership, set-number actions, plate calculator, techniques, injury flow, session notes and Focus mode.
+- Add phone/tablet browser coverage for chip progress, navigation, manual entries, rest values/controls and timer overlap in light and dark themes. No engine, storage schema or program changes.
+
 ## Build 895 — Session notes placement
 
 - Move Session notes from above the exercise name to Workout options in both full and Focus modes.

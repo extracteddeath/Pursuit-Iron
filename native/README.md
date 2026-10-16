@@ -64,19 +64,29 @@ counts and a **Send to the app** button:
 The app asks before importing and merges with the web app's own `mergeStores`, so nothing on the phone is
 deleted and importing twice adds nothing. A workout in progress comes across too.
 
-## What's in this first release
+## What's in this release
 
-Native: Today (readiness, injuries, next session, recent), the full workout (enter and adjust loads, log and rate
-sets, autoregulated next-set prefill, rest with lock-screen countdown, swap, why-this-weight, pain flag, notes,
-reorder, add/remove sets), summary with PRs and milestones, Plan (weeks, days, switch program, start any day),
-Progress (e1RM trends, records, readiness), Exercises (search, cues, history, ban, notes), You (bodyweight and
-measurements, history with delete and undo, settings, backup and import), program setup with the engine's split
-pick, phone and tablet layouts, grip mode, keep-screen-on, haptic patterns, light/dark and three palettes.
+Native: Today (readiness, injuries, next session, cycle position, recent), the full workout (enter and adjust loads,
+log and rate sets, autoregulated next-set prefill, rest with lock-screen countdown and an audible "rest over" alert in
+the background, swap, why-this-weight, pain flag, notes, reorder, add/remove sets, plate calculator), summary with PRs
+and milestones, Plan (weeks, days, switch program, start any day, build next block), training cycles (preset and custom
+templates, adapt between blocks, detail, complete block, block review, delete with undo), the program editor (swap,
+move, add, remove, supersets, rename/duplicate/move/delete days, manual sets and reps, drafts, save to one block or the
+whole cycle, undo save), duplicate and delete programs, Progress (e1RM trends, records, readiness), Exercises (search,
+cues, history, ban, notes), You: profile (level and XP, Strength Score with trend and next milestone, strength club,
+achievements), body (bodyweight and measurements), history with a training calendar, settings (unit switching that
+converts every stored load, gyms with equipment and heaviest-available limits, plates owned, smallest load jump, sex
+and birth date for the standards, plate and 1RM tools, backup and import), program setup with the engine's split pick,
+a home-screen widget (next workout or the one in progress, Start/Resume), phone and tablet layouts, grip mode,
+keep-screen-on, haptic patterns, light/dark and three palettes.
 
-Not yet native (still in the web app): cycles and block review, the custom program editor, gyms and plate
-inventory, the calendar, strength score, the self-test, the gallery, switching units once history exists, the
-home-screen widget, Wear OS, and an audible alert when rest ends with the app in the background (the countdown
-shows on the lock screen; the alert plays when the app is open).
+Every list the web app syncs (programs, cycles, history) is stamped and tombstoned the same way it does, so a backup
+moved either direction merges cleanly.
+
+Not native yet: comparing two programs side by side, program settings that regenerate the plan (goal, length,
+session time, equipment constraints), percentage-scheme training maxes, training reminders, custom exercises, CSV
+import/export, and Wear OS (a separate watch app; the design is in the prototype). The web app's program gallery is not
+ported because the web app itself no longer imports gallery codes.
 
 ## Keeping the two apps in step
 

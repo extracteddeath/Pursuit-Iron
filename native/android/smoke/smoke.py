@@ -248,9 +248,11 @@ time.sleep(3)
 launch()
 time.sleep(3)
 shot("tablet-today")
-tap(r"Start workout|Resume workout")
+tap(r"Start workout|Resume workout", required=False)  # a workout in progress reopens on its own
 time.sleep(3)
 shot("tablet-workout")
+if find(r"Minimise workout", timeout=4) is None:
+    FAILS.append("tablet did not show the workout")
 adb("shell", "wm", "size", "reset")
 adb("shell", "wm", "density", "reset")
 

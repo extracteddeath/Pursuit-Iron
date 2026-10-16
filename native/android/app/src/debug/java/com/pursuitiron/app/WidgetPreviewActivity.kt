@@ -35,6 +35,8 @@ class WidgetPreviewActivity : Activity() {
             val opts = Bundle().apply {
                 putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, w); putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, w)
                 putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, h); putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, h)
+                // Launchers on Android 12+ report the exact size list; Glance's responsive layout reads it.
+                if (android.os.Build.VERSION.SDK_INT >= 31) putParcelableArrayList(AppWidgetManager.OPTION_APPWIDGET_SIZES, arrayListOf(android.util.SizeF(w.toFloat(), h.toFloat())))
             }
             mgr.updateAppWidgetOptions(id, opts)
             val view = host.createView(this, id, info)

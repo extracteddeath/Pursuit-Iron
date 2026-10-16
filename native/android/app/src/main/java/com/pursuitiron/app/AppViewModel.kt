@@ -192,8 +192,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val payload = jsonOf("type" to type, *args)
         val s = obj("act", payload) ?: return@launchCore
         session = s
-        if (type == "toggle") { onToggled(before, s, payload); publishWidget() }
-        if (type == "restDone" || type == "restAdjust") publishWidget()
+        if (type == "toggle") onToggled(before, s, payload)
+        publishWidget() // set counts change with adding, skipping and removing work too; publish only writes on change
         if (type == "injury") { hap(Hap.Warn); home = obj("home") }
     }
 

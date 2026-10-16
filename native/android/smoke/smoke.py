@@ -105,6 +105,14 @@ def scroll_to(pattern, tries=6):
     return bool(find(pattern, timeout=2))
 
 
+def hide_keyboard():
+    """Back closes the keyboard and nothing else, but only when the keyboard is actually up."""
+    time.sleep(0.4)
+    if "mInputShown=true" in adb("shell", "dumpsys", "input_method", timeout=30):
+        adb("shell", "input", "keyevent", "4")
+        time.sleep(0.8)
+
+
 def back():
     adb("shell", "input", "keyevent", "4")
     time.sleep(1.2)
@@ -149,7 +157,7 @@ if tap(r"Weight not set, edit", "set-editor"):
     adb("shell", "input", "text", "60")
     time.sleep(0.6)
     shot("set-editor-typed")
-    adb("shell", "input", "keyevent", "111")  # hide the keyboard
+    hide_keyboard()
     time.sleep(0.6)
     if tap(r"Plates$", "set-plates"):
         back()
@@ -177,8 +185,9 @@ adb("shell", "input", "keyevent", "4")
 time.sleep(1)
 tap(r"Workout options", "workout-menu")
 tap(r"^\|Workout note$", "session-note")
+tap(r"Slept badly")
 adb("shell", "input", "text", "Busy%sgym")
-adb("shell", "input", "keyevent", "111")
+hide_keyboard()
 time.sleep(0.6)
 tap(r"^\|Save$")
 
@@ -207,13 +216,13 @@ if scroll_to(r"Quick workout", tries=3):
     tap(r"Add a lift", "add-lift")
     tap(r"^\|Search exercises$")
     adb("shell", "input", "text", "curl")
-    adb("shell", "input", "keyevent", "111")
+    hide_keyboard()
     time.sleep(1.5)
     tap(r"^\|[A-Za-z -]*Curl[A-Za-z -]*$", "quick-added")
     if tap(r"Weight not set, edit"):
         tap(r"^\|Weight \(")
         adb("shell", "input", "text", "12")
-        adb("shell", "input", "keyevent", "111")
+        hide_keyboard()
         time.sleep(0.6)
         tap(r"^\|Done$|Done$")
     tap(r"^Set 1:", "quick-logged")
@@ -284,13 +293,13 @@ if scroll_to(r"Plates and 1RM"):
     tap(r"Total weight")
     adb("shell", "input", "text", "100")
     time.sleep(1)
-    adb("shell", "input", "keyevent", "111")
+    hide_keyboard()
     time.sleep(0.8)
     shot("plate-calc")
     tap(r"^\|1RM$")
     tap(r"Weight \(")
     adb("shell", "input", "text", "100")
-    adb("shell", "input", "keyevent", "111")
+    hide_keyboard()
     time.sleep(1)
     shot("one-rm")
     back()
@@ -381,7 +390,7 @@ if scroll_to(r"New program"):
     if tap(r"^\|Template$", "templates"):
         tap(r"Search 75 templates|Search \d+ templates")
         adb("shell", "input", "text", "Main-Lift")
-        adb("shell", "input", "keyevent", "111")
+        hide_keyboard()
         time.sleep(1)
         if tap(r"% of max", "template-picked"):
             time.sleep(6)
@@ -389,7 +398,7 @@ if scroll_to(r"New program"):
             tap(r"From a 1RM")
             if tap(r"\(1RM, "):
                 adb("shell", "input", "text", "140")
-                adb("shell", "input", "keyevent", "111")
+                hide_keyboard()
                 tap(r"^\|Set$")
                 time.sleep(1.5)
                 shot("training-max-set")

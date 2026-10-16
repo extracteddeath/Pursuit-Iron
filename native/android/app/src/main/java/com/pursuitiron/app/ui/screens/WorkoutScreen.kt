@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -497,7 +498,7 @@ private fun SetEditor(vm: AppViewModel, s: JSONObject, ei: Int, si: Int, onClose
     val bar = barFor(ex.strings("equip"))
     if (plates) { ToolsSheet(vm, "plates", w, bar ?: "barbell") { plates = false }; return }
     ModalBottomSheet(onDismissRequest = onClose) {
-        Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()).imePadding().padding(horizontal = 20.dp).padding(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Kicker(ex.s("name"))
             Text(when { set.b("done") -> "Edit logged set"; set.b("warm") -> "Warm-up"; else -> "Set ${si + 1}" }, style = MaterialTheme.typography.headlineSmall)
             if (!set.b("done") && !set.b("sub")) com.pursuitiron.app.ui.common.Segmented(

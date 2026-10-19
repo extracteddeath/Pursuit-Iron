@@ -276,6 +276,15 @@ function customCycleEffort(program, day, ex, slot, week) {
 }
 
 function computeCell(program, day, id, slotIndex, weekIndex) {
+    const cell = baseComputeCell(program, day, id, slotIndex, weekIndex);
+    const plan = day?.sessionLengthPlan, cut = plan?.slots?.[slotIndex];
+    if (plan?.schemaVersion !== 1 || plan.programId !== program?.id || plan.dayId !== day?.id
+        || plan.weekIndex !== weekIndex || cut?.exerciseId !== id || cell.missing
+        || !Number.isInteger(cut.sets) || cut.sets < 0 || cut.sets > cell.sets) return cell;
+    return { ...cell, sets: cut.sets, tech: cut.tech == null ? null : cell.tech,
+        ...(Array.isArray(cell.setTargets) ? { setTargets: cell.setTargets.slice(0, cut.sets) } : {}) };
+}
+function baseComputeCell(program, day, id, slotIndex, weekIndex) {
     const ex = EX_BY_ID[id];
     if (!ex)
         return { sets: 0, reps: "—", note: "Exercise unavailable", range: null, rir: null, tech: null, missing: true };

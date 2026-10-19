@@ -46,7 +46,7 @@ export function historyExposureContext(value) {
     const keys = ['readinessStatus', 'readiness', 'badDay', 'readinessDisrupted', 'recoveryLimited',
         'interrupted', 'sessionInterrupted', 'workoutInterrupted', 'prescriptionEdited', 'exerciseEdited',
         'substitutionOccurred', 'exerciseSubstituted', 'manualPrescriptionOverride',
-        'substituted', 'wasEdited', 'manualOverride'];
+        'substituted', 'wasEdited', 'manualOverride', 'timeLimited'];
     return Object.fromEntries(keys.filter(k => value?.[k] !== undefined).map(k => [k, value[k]]));
 }
 // Flags are additive across session, exercise and set provenance. A false flag at
@@ -61,7 +61,7 @@ export function progressionExposureContext(actual = [], context = {}) {
     const readiness = readinessValues.find(value => limited.includes(value)) || readinessValues.find(Boolean) || '';
     return {
         nonComparable: anyFlag(['prescriptionEdited', 'exerciseEdited', 'substitutionOccurred',
-            'exerciseSubstituted', 'manualPrescriptionOverride', 'substituted', 'wasEdited', 'manualOverride']),
+            'exerciseSubstituted', 'manualPrescriptionOverride', 'substituted', 'wasEdited', 'manualOverride', 'timeLimited']),
         interrupted: anyFlag(['interrupted', 'sessionInterrupted', 'workoutInterrupted']),
         badDay: anyFlag(['badDay', 'readinessDisrupted', 'recoveryLimited']) || limited.includes(readiness),
         readiness

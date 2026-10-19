@@ -1,3 +1,27 @@
+## Build 898 — Engine-guided shorter sessions
+
+- Session preview offers Full, 45, 30 and 20 minutes for today only, with a review of cuts.
+- Preserve key/complementary lifts, warmups, rest, rep/RIR targets and complete strength/percentage protocols. Cut optional amplifiers, extra sets, then optional movements.
+- Block a shorter start when protected work exceeds the time limit. Include setup, warmups, rest, technique extensions and slower personal pace in the estimate.
+- Carry the session-only plan through minimize/reload and save the actual reduced prescription. Time-limited work is neutral progression evidence; omitted work is not a failed set. Saved programs remain unchanged.
+
+## Build 897 — Reliable update restart
+
+- Resolve the current service-worker registration when Restart is tapped. If another window already activated the update, reload its installed version instead of sending a message to a stale worker and waiting forever.
+- Show Restarting while the request is in progress, ignore repeated taps, and restore a retry with feedback if activation stalls. Preserve the save-before-restart gate and hide the update action during active or minimized workouts.
+- Keep the service-worker message alive until its activation request resolves.
+- Extend real-browser coverage to actual Restart taps, activation by another window, stale-worker replacement, failed saves, stalled activation and retry. Preserve saved training and workout recovery.
+
+## Build 896 — Selected Expressive workout refinements
+
+- Workout confirmations let taps reach the set fields beneath them; Undo remains interactive.
+
+- Give exercise navigation named chips with live completed/total working-set counts and distinct current/completed shapes. Reveal the selected chip when moving between lifts without scrolling the workout or changing set values.
+- Put the existing progression method in a small themed badge and collapse suggestion details behind a native Target disclosure. Keep the existing engine-owned Why sheet and all prescription evidence.
+- Add a remaining-time ring and pause icon to the existing rest timer. Keep all five rest controls and exercise navigation; stack timer controls inside narrow cards so the countdown stays readable.
+- Group the existing optional effort choices into a tonal strip with a distinct selected shape. Preserve set steppers, Target/Last, manual-entry ownership, set-number actions, plate calculator, techniques, injury flow, session notes and Focus mode.
+- Add phone/tablet browser coverage for chip progress, navigation, manual entries, rest values/controls and timer overlap in light and dark themes. No engine, storage schema or program changes.
+
 ## Build 895 — Session notes placement
 
 - Move Session notes from above the exercise name to Workout options in both full and Focus modes.

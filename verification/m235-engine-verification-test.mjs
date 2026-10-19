@@ -26,8 +26,8 @@ assert.ok(Number.isSafeInteger(manifest.build) && manifest.build >= 816, 'app re
 assert.equal(manifest.engineVersion, '0.65.8');
 assert.equal(ENGINE_VERSION, '0.65.8', 'Build 860 versioned the unit/dose corrections (0.65.7); Build 879 versions the novice effort/frequency corrections (0.65.8) while retaining M235 property and golden gates');
 assert.deepEqual(ENGINE_COMPATIBLE_VERSIONS, ['0.65.4', '0.65.5', '0.65.6', '0.65.7', '0.65.8']);
-assert.equal(profile.nextRuntimeModules, 70);
-assert.equal(Object.keys(manifest.runtimeFiles).filter(path => path.startsWith('modules/next-engine/')).length, 70);
+assert.equal(profile.nextRuntimeModules, 71);
+assert.equal(Object.keys(manifest.runtimeFiles).filter(path => path.startsWith('modules/next-engine/')).length, 71);
 assert.ok(manifest.runtimeFiles['modules/next-engine/candidate-optimization.js']);
 assert.match(sw, /modules\/next-engine\/candidate-optimization\.js/);
 assert.equal(DEFAULT_CANDIDATE_EVALUATION_LIMIT, 512);

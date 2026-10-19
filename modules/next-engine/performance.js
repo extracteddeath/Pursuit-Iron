@@ -119,7 +119,7 @@ function evaluateProgression(session, performedSets, context = {}) {
         // A user edit/substitution changes the question being measured. Never translate that exposure into
         // an automatic load prescription for the original exercise; collect one comparable exposure first.
         if (exposure.nonComparable) {
-            return decision(ex, { outcome: 'non_comparable', reasonCode: 'non_comparable_exposure', action: 'review', confidence: 'high', reason: 'This exposure included an exercise or prescription edit/substitution, so it is not comparable enough to drive automatic progression. Keep the current reference load until a comparable exposure is logged.', currentLoad, suggestedLoad: currentLoad, estimated1RM });
+            return decision(ex, { outcome: 'non_comparable', reasonCode: context.timeLimited ? 'time_limited_session' : 'non_comparable_exposure', action: context.timeLimited ? 'hold' : 'review', confidence: 'high', reason: context.timeLimited ? 'This session was intentionally shortened. Keep the current reference load; the planned cuts do not count as failed sets or a stall.' : 'This exposure included an exercise or prescription edit/substitution, so it is not comparable enough to drive automatic progression. Keep the current reference load until a comparable exposure is logged.', currentLoad, suggestedLoad: currentLoad, estimated1RM });
         }
         // Explicit bad-day/readiness context should prevent one anomalous session from becoming a permanent
         // progression decision. This is intentionally checked before load-failure correction.

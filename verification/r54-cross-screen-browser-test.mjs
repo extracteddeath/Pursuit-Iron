@@ -173,7 +173,11 @@ async function verifyNavigationFlow(browser,theme,width){
     await page.$eval('.wpb-plan-open-program',button=>button.click());await page.waitForSelector('.wpb-program');
     assert.equal(await page.$eval('.wpb-program .wpb-week-rail>button[aria-pressed="true"]',node=>node.textContent.trim().startsWith('Week 3')),true,
       'Plan full-program action retains the selected week');
-    await page.$eval('.wpb-program button[title="Start workout"]',button=>button.click());await page.waitForSelector('.wpb-workout');
+    await page.$eval('.wpb-program button[title="Start workout"]',button=>button.click());
+    await page.waitForSelector('[data-testid="session-length-control"]');
+    assert.equal(await page.$eval('[aria-label="Session length"] button[aria-pressed="true"]',node=>node.textContent),'Full',
+      'Program-day starts offer a one-session time choice, defaulting to the complete prescription');
+    await clickText('Start workout');await page.waitForSelector('.wpb-workout');
     const secondCheckIn=await page.$('.wpb-backdrop button[data-wpb-system-back]');
     if(secondCheckIn){await secondCheckIn.click();await page.waitForSelector('.wpb-backdrop',{hidden:true});}
     await page.evaluate(()=>history.back());await page.waitForSelector('.wpb-workout',{hidden:true});await page.waitForSelector('.wpb-program');

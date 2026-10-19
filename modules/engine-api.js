@@ -22,3 +22,5 @@ export * from './next-engine/live-autoregulation.js';
 export * from './next-engine/semantic-exercise-graph.js';
 
 export { defaultLoadingInventoryFor, loadingInventoryInUnit } from './next-engine/loading.js';
+
+export { planShorterSession, SESSION_LENGTH_OPTIONS } from './next-engine/session-shortening.js';

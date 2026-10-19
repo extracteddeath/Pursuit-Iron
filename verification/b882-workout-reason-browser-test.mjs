@@ -53,6 +53,10 @@ const cardText = await page.evaluate(() => [...document.querySelectorAll('.wpb-w
 assert.doesNotMatch(label, /temporary/i, 'the method line must not announce an override the load engine does not apply: ' + label);
 assert.match(label, /Dynamic double/, 'the method line names the style that set these loads: ' + label);
 assert.match(cardText, /Dynamic double progression/, 'the reference card and the method line agree');
+const disclosure = await page.waitForSelector('.wpb-load-explanation');
+assert.equal(await disclosure.evaluate(el => el.open), false, 'target reason starts compact');
+await page.click('.wpb-load-explanation summary');
+assert.equal(await disclosure.evaluate(el => el.open), true, 'target reason expands without changing the prescription');
 console.log('PASS 1 method line and reference card name the same, load-owning method.');
 const coachBtn = await page.$('button[aria-label="Expand Coach guidance"]');
 if (coachBtn) { await coachBtn.click(); await new Promise(r => setTimeout(r, 300)); }

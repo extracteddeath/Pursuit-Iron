@@ -286,7 +286,9 @@ private fun ExercisePane(vm: AppViewModel, s: JSONObject, ex: JSONObject?, wide:
     val sets = ex.list("sets")
     val injury = s.list("injuries").firstOrNull { inj -> inj.optJSONArray("exercises")?.let { a -> (0 until a.length()).any { a.optString(it) == ex.s("id") } } == true }
     val lastDoneWork = sets.indexOfLast { it.b("done") && !it.b("warm") && !it.b("sub") }
-    var workNo = 0
+    // Working-set numbers come from the data, not a counter: a counter outside the lazy item kept
+    // counting each time the item recomposed (sets read 5–8 after the warm-up card was hidden).
+    val setLabels = run { var n = 0; sets.map { st -> when { st.b("warm") -> "W"; st.b("sub") -> if (st.s("kind") == "drop") "D" else "M"; else -> { n++; "$n" } } } }
     var warmHidden by androidx.compose.runtime.saveable.rememberSaveable(s.s("sessionId")) { mutableStateOf(false) }
     LazyColumn(modifier.fillMaxSize(), contentPadding = PaddingValues(start = if (wide) 16.dp else 16.dp, end = if (wide) 32.dp else 16.dp, top = 8.dp, bottom = 190.dp)) {
         val warm = s.o("warmup")
@@ -368,7 +370,7 @@ private fun ExercisePane(vm: AppViewModel, s: JSONObject, ex: JSONObject?, wide:
                     Spacer(Modifier.width(if (vm.prefs.grip) 72.dp else 52.dp))
                 }
                 sets.forEachIndexed { si, set ->
-                    val label = when { set.b("warm") -> "W"; set.b("sub") -> if (set.s("kind") == "drop") "D" else "M"; else -> { workNo++; "$workNo" } }
+                    val label = setLabels[si]
                     val showRating = si == lastDoneWork && set.b("done") && set.isNull("rir")
                     SetRow(vm, s, ei, si, set, label, showRating, onEdit = { open(WSheet.Edit(ei, si)) })
                 }

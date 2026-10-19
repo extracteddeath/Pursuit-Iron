@@ -133,7 +133,7 @@ fun YouScreen(vm: AppViewModel) {
                     }
                 }
             }
-            "body" -> { item { BodyweightCard(vm) }; item { MeasurementsCard(vm) }; item { InjuriesCard(vm) } }
+            "body" -> { item { BodyweightCard(vm) }; item { MeasurementsCard(vm) }; item(span = full) { ProgressPhotosCard(vm) }; item { InjuriesCard(vm) } }
             "history" -> {
                 item(span = full) { CalendarCard(vm) { historyId = it } }
                 if (vm.history.isEmpty()) item(span = full) { Text("No workouts yet.", color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(8.dp)) }

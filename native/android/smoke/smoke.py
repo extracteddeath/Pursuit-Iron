@@ -545,6 +545,10 @@ if tap(r"Edit program", "editor"):
 # Injury log from outside a workout
 tap(r"^\|You$|^You\|")
 tap(r"^\|Body$")
+if scroll_to(r"^\|Progress photos$", tries=5):
+    shot("progress-photos")
+else:
+    FAILS.append("progress photos missing on Body")
 if scroll_to(r"^\|Injury log$"):
     tap(r"^\|Injury log$", "injury-log")
     if find(r"^\|Log an injury$", timeout=2):

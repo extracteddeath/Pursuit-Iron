@@ -6,5 +6,7 @@
     <device-transfer>
         <include domain="file" path="pursuit/store.json" />
         <include domain="file" path="pursuit/live.json" />
+        <!-- Progress photos move with a phone-to-phone transfer, never to cloud backup. -->
+        <include domain="file" path="photos/" />
     </device-transfer>
 </data-extraction-rules>

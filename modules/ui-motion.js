@@ -103,6 +103,7 @@ function enterSurface(el, initial = false) {
     if (surfaceOwners.get(el) === key) return;
     const first = !surfaceOwners.has(el);
     surfaceOwners.set(el, key); el.dataset.piSurface = '1';
+    const viewport = el.matches('[data-view-frame], [data-pi-workout-page]');
     const sheet = el.matches('[data-sheet-drag]');
     const dialog = el.matches('.wpb-pop,.wpb-dialog');
     // Top-level navigation is a connected motion system: neighboring pages
@@ -128,6 +129,16 @@ function enterSurface(el, initial = false) {
         const reveal = rapid ? 6 : 13;
         el.style.setProperty('--pi-page-reveal-x', navTravel > 0 ? reveal + 'px' : navTravel < 0 ? -reveal + 'px' : '0px');
     }
+    // The page is the opaque canvas and containing block for fixed controls.
+    // Fading/scaling it stacks with child entrances and exposes the shell as a flash.
+    // Keep route direction metadata; only bounded content entrances carry that motion.
+    if (viewport) {
+        setMotionValue(el, '--pi-surface-x', 0, pixels(el, '--pi-surface-x'));
+        setMotionValue(el, '--pi-surface-y', 0, pixels(el, '--pi-surface-y'));
+        setMotionValue(el, '--pi-surface-opacity', 1, v => el.style.setProperty('--pi-surface-opacity', String(v)));
+        setMotionValue(el, '--pi-surface-scale', 1, v => el.style.setProperty('--pi-surface-scale', String(v)));
+        return;
+    }
     const dir = el.matches('.wpb-slideR') || el.getAttribute('data-motion-direction') === 'r'
         ? -1 : el.matches('.wpb-slideL') || el.getAttribute('data-motion-direction') === 'l'
         ? 1 : navTravel;
@@ -143,8 +154,8 @@ function enterSurface(el, initial = false) {
     spring(el, '--pi-surface-y', 0, { from: quiet ? 0 : y,
         restart: restart('--pi-surface-y', y), write: pixels(el, '--pi-surface-y'),
         damping: sheet ? .94 : 1 });
-    spring(el, '--pi-surface-opacity', 1, { from: quiet ? 1 : route >= 0 ? .78 : .55,
-        restart: restart('--pi-surface-opacity', route >= 0 ? .78 : .55),
+    spring(el, '--pi-surface-opacity', 1, { from: quiet || !(sheet || dialog) ? 1 : .55,
+        restart: restart('--pi-surface-opacity', sheet || dialog ? .55 : 1),
         stiffness: 1200, damping: 1, precision: .001 });
     if (dialog || route >= 0)
         spring(el, '--pi-surface-scale', 1, {
@@ -828,7 +839,7 @@ function disclosure(el, initial = false) {
         el.dataset.piSurface = '1';
         const moving = active.has(states.get(el)?.get('--pi-surface-y'));
         spring(el, '--pi-surface-y', 0, { restart: moving ? undefined : key === 'last' ? 5 : -5, write: pixels(el, '--pi-surface-y'), damping: 1, stiffness: 900 });
-        spring(el, '--pi-surface-opacity', 1, { restart: active.has(states.get(el)?.get('--pi-surface-opacity')) ? undefined : .55, stiffness: 1200, damping: 1, precision: .001 });
+        setMotionValue(el, '--pi-surface-opacity', 1, v => el.style.setProperty('--pi-surface-opacity', String(v)));
     }
     function toggle(el, initial = false) {
         const thumb = el.firstElementChild;

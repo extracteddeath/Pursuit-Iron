@@ -1215,7 +1215,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     var(--pi-reveal-delay,0ms) both;
 }
 @keyframes piContentCascade{
-  0%{opacity:.78;translate:0 6px}
+  0%{opacity:1;translate:0 6px}
   72%{opacity:1;translate:0 -1px}
   100%{opacity:1;translate:0 0}
 }
@@ -1512,8 +1512,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   transform-origin:50% 0;
 }
 @keyframes piExpressiveStepIn{
-  0%{opacity:.67;translate:0 12px;scale:.981}
-  66%{opacity:1;translate:0 -1.5px;scale:1.004}
+  0%{opacity:1;translate:0 12px;scale:1}
+  66%{opacity:1;translate:0 -1.5px;scale:1}
   100%{opacity:1;translate:0 0;scale:1}
 }
 /* Existing navigator, dialog, and button accessibility overrides still win
@@ -1771,8 +1771,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     var(--pi-reveal-delay,0ms) both!important;
 }
 @keyframes piR4ConnectedEntrance{
-  0%{opacity:.68;translate:var(--pi-page-reveal-x,0px) 7px;scale:.984}
-  68%{opacity:1;translate:0 -1px;scale:1.005}
+  0%{opacity:1;translate:var(--pi-page-reveal-x,0px) 7px;scale:1}
+  68%{opacity:1;translate:0 -1px;scale:1}
   100%{opacity:1;translate:0 0;scale:1}
 }
 /* The sheet handle and leading corners carry the spatial cue as the panel
@@ -2444,11 +2444,11 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 @keyframes piR9ConnectedArrival{
   0%{
-    opacity:.66;
+    opacity:1;
     translate:var(--pi-connected-x,0px) var(--pi-connected-y,0px);
-    scale:.977;
+    scale:1;
   }
-  70%{opacity:1;translate:0 -1px;scale:1.003}
+  70%{opacity:1;translate:0 -1px;scale:1}
   100%{opacity:1;translate:0 0;scale:1}
 }
 /* Indicator stretch is paint-only. Its logical button bounds are measured by
@@ -2658,12 +2658,12 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   animation:piR12DetailFigureArrival 345ms cubic-bezier(.18,.82,.2,1) both;
 }
 @keyframes piR12DetailTitleArrival{
-  0%{opacity:.70;translate:var(--pi-detail-arrive-x,0px) var(--pi-detail-arrive-y,0px)}
+  0%{opacity:1;translate:var(--pi-detail-arrive-x,0px) var(--pi-detail-arrive-y,0px)}
   73%{opacity:1;translate:0 -1px}
   100%{opacity:1;translate:0 0}
 }
 @keyframes piR12DetailFigureArrival{
-  0%{opacity:.80;translate:calc(var(--pi-detail-arrive-x,0px) * .55) 8px}
+  0%{opacity:1;translate:calc(var(--pi-detail-arrive-x,0px) * .55) 8px}
   74%{opacity:1;translate:0 -1px}
   100%{opacity:1;translate:0 0}
 }
@@ -8620,3 +8620,21 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 
 /* Conversion controls retain full touch targets inside the compact sheet. */
 .wpb .wpb-custom-cycle-block-head button{min-height:44px!important;min-width:44px!important}
+
+/* B899 — Stable page canvases. Apply before the motion observer/first paint too.
+   Inline edge-swipe transforms/opacity still follow the user's finger. Sheets,
+   buttons, selection indicators and content translation keep their own motion. */
+#root .wpb [data-view-frame],
+#root .wpb [data-pi-workout-page]{
+  animation:none!important;
+  opacity:1;
+  scale:none!important;
+  translate:none!important;
+  transform:none;
+}
+#root .wpb :is(.wpb-page-shell,.wpb-exercise-detail){
+  animation:none!important;
+}
+#root .wpb .wpb-wizard-step{
+  opacity:1;
+}

@@ -1,3 +1,10 @@
+## Build 899 — Steady screens and program creation
+
+- Keep route canvases fully opaque and stationary. Remove stacked page/card scale and luminance pulses while preserving directional content motion, interactive gestures, controls and sheets.
+- Creation steps stay opaque from their first paint; selecting, typing and asynchronous feasibility updates do not replay a page fade.
+- Program/cycle builds show progress and Cancel in the existing creation footer. Other generation operations retain immediate busy/cancel behavior without dimming the entire app. Cancelling preserves setup answers and is not reported as a capacity failure.
+- Preserve existing muscle-focus controls and all training prescriptions.
+
 ## Build 898 — Engine-guided shorter sessions
 
 - Session preview offers Full, 45, 30 and 20 minutes for today only, with a review of cuts.

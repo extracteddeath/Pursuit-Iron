@@ -125,6 +125,7 @@ private fun Shell(vm: AppViewModel, wide: Boolean) {
         ImportDialog(vm)
         com.pursuitiron.app.ui.screens.CsvImportDialog(vm)
         com.pursuitiron.app.ui.screens.TrainingMaxSheet(vm)
+        vm.preview?.let { t -> com.pursuitiron.app.ui.screens.SessionPreviewSheet(vm, t) { vm.preview = null } }
         com.pursuitiron.app.ui.screens.PendingUpdateDialog(vm)
         com.pursuitiron.app.ui.screens.InjuryJournalSheet(vm)
         vm.busy?.let { BusyScrim(it) }

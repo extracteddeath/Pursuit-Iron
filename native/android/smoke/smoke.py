@@ -129,6 +129,16 @@ def scroll_up_to(pattern, tries=8):
     return bool(find(pattern, timeout=2))
 
 
+def start_from_preview(name=None):
+    """Build 898: Start opens the session preview (Time available); start the full session from it."""
+    if not find(r"^\|Time available$|^\|TIME AVAILABLE$|(?i)time available", timeout=6):
+        return False
+    if name:
+        shot(name)
+    tap(r"^Full,", required=False)
+    return tap(r"Start workout$")
+
+
 def close_sheet(pattern, tries=3):
     """Back until a sheet's own text is gone: a back press while the sheet is still animating in is ignored."""
     for _ in range(tries):
@@ -175,6 +185,15 @@ scroll_up_to(r"Start workout|^\|?Train .+ now", tries=8)
 
 # 2. Workout: enter a weight, log, rate, rest
 tap(r"Start workout|^\|?Train .+ now")
+# Build 898 session preview: try a shorter limit, then start the full session
+if find(r"(?i)time available", timeout=6):
+    shot("session-preview")
+    if tap(r"^30 minutes,", "preview-30", required=False):
+        if not find(r"working sets", timeout=3):
+            FAILS.append("preview lost its summary after a limit")
+    start_from_preview()
+else:
+    FAILS.append("Start did not open the session preview")
 time.sleep(3)
 grant_notifications()
 shot("readiness")
@@ -600,7 +619,8 @@ time.sleep(3)
 launch()
 time.sleep(3)
 shot("tablet-today")
-tap(r"Start workout|Resume workout|^\|?Train .+ now", required=False)  # a workout in progress reopens on its own
+if tap(r"Start workout|Resume workout|^\|?Train .+ now", required=False):  # a workout in progress reopens on its own
+    start_from_preview()
 time.sleep(3)
 tap(r"^\|Skip$", required=False)  # readiness check
 shot("tablet-workout")

@@ -642,5 +642,26 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   const st = JSON.parse(C.exportStore()); st.saved.forEach((p) => { p.createdAt = Date.now() - 20 * 86400000; }); C.init({ store: JSON.stringify(st) });
   ok(C.home().backup && C.home().backup.lastBackup === null, 'three weeks in and never backed up: nudge');
   C.markBackup(); ok(C.home().backup === null, 'a fresh backup clears it'); }
+// Build 898 shorter sessions: preview, start, log, and the saved program untouched
+{ C.init({ store: JSON.stringify({ unit: 'kg' }) });
+  C.createProgram({ config: { name: 'S', unit: 'kg', goal: 'hypertrophy', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's90', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 6 });
+  const before = JSON.stringify(JSON.parse(C.exportStore()).saved);
+  const pv = C.sessionPreview({});
+  ok(pv && pv.options.length === 4 && pv.options[0].label === 'Full' && pv.options[0].fits, 'preview offers Full / 45 / 30 / 20');
+  const opt = pv.options.slice(1).find((o) => o.fits && o.changed);
+  ok(!!opt, 'a shorter option fits and changes the session: ' + pv.options.map((o) => o.label + (o.fits ? '' : '✗') + ' ' + o.estimatedMinutes).join(', '));
+  const sp = C.sessionPreview({ minutes: opt.minutes });
+  ok(sp.workingSets < pv.workingSets && sp.estimatedMinutes <= opt.minutes, 'the plan has fewer working sets (' + pv.workingSets + ' → ' + sp.workingSets + ') and fits ' + opt.minutes + ' min');
+  const ss = C.startSession({ minutes: opt.minutes });
+  const rows = ss.exercises.reduce((a, e) => a + e.sets.filter((x) => !x.warm && !x.sub).length, 0);
+  ok(ss.active && ss.timeLimit && ss.timeLimit.minutes === opt.minutes && rows === sp.workingSets, 'the workout runs the plan: ' + rows + ' working sets');
+  for (const e of ss.exercises) for (const x of e.sets) { if (x.warm || x.sub) continue; C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'weight', value: '40' }); C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'reps', value: '10' }); C.act({ type: 'toggle', ei: e.ei, si: x.i }); }
+  C.finishSession();
+  const st = JSON.parse(C.exportStore()), h = st.history[0];
+  ok(h.timeLimited === true && h.prescriptionEdited === true && h.sessionLengthPlan && h.sessionLengthPlan.minutes === opt.minutes, 'history records the time limit and marks the exposure neutral');
+  ok(JSON.stringify(st.saved.map((x) => x.days)) === JSON.stringify(JSON.parse(before).map((x) => x.days)), 'the saved program is unchanged');
+  const tooShort = C.sessionPreview({ minutes: 20 });
+  if (!tooShort.fits) ok(!!C.startSession({ minutes: 20 }).error, '20 min refused when the protected work does not fit');
+  else { const s2 = C.startSession({ minutes: 20 }); ok(s2.active, '20 min fits and starts'); C.discardSession(); } }
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);
 

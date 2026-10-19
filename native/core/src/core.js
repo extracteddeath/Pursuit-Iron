@@ -518,8 +518,10 @@ function sessionContext(l) {
     // App.js startDeload / startLight run the program with deload switched on (a synthesized copy).
     const base = l.forceDeload ? { ...source, config: { ...source.config, deload: true } } : source;
     const program = withProgressionChoices(base, l.sessionProgressions || {});
-    const rawDay = program.days.find((d) => d.id === l.dayId);
-    if (!rawDay) return null;
+    const rawDay0 = program.days.find((d) => d.id === l.dayId);
+    if (!rawDay0) return null;
+    // Build 898: a time-limited session carries its engine plan on the day (computeCell reads it).
+    const rawDay = l.sessionLengthPlan ? { ...rawDay0, sessionLengthPlan: l.sessionLengthPlan } : rawDay0;
     const day = rawDay.exercises.every((id) => EX_BY_ID[id]) ? rawDay : { ...rawDay, exercises: rawDay.exercises.filter((id) => EX_BY_ID[id]) };
     const wk = l.weekIndex;
     const H = history(), P = perf();
@@ -535,12 +537,14 @@ function freshData(ctx) {
     const ids = day.exercises.map((_id, slot) => E.exerciseAt(program, day, slot, wk));
     const fresh = day.exercises.map((_id, slot) => {
         const id = ids[slot];
+        // A slot the shorter-session plan omitted has no sets today (App.js filters it from the rows).
+        if (day.sessionLengthPlan && !(E.computeCell(program, day, id, slot, wk).sets > 0)) return null;
         const last = H.find((h) => h.programId === program.id && h.dayId === day.id && h.perf?.[id]);
         const n = repeatedNote(last?.perf?.[id]?.note, last?.perf?.[id]?.noteRepeat);
         return { id, slot, sets: E.prescribeSets(program, day, EX_BY_ID[id], slot, wk, u, suggestions[slot], dayPerf, P, H, true),
             note: n.text, noteRepeat: n.repeat, superset: !program.config?.noSupersets && !!program.ss?.[`${day.id}:${slot}`],
             restCustom: program.overrides?.[`${day.id}:${slot}`]?.rest || 0 };
-    });
+    }).filter(Boolean);
     return { data: fresh.map((e) => ({ ...e, sets: E.syncSubSets(E.reconcilePendingRepTargets(e.sets, E.computeCell(program, day, e.id, e.slot, wk)), EX_BY_ID[e.id], u) })), suggestions };
 }
 
@@ -554,13 +558,57 @@ function normalizeData(ctx, data) {
     });
 }
 
-export function startSession({ programId, dayId, weekIndex } = {}) {
+/* Build 898 (App.js NextWorkoutView "Time available"): the engine's planShorterSession for Full / 45 /
+   30 / 20 minutes. Today only — the saved program never changes. The engine decides every cut. */
+function shorterPlan(programId, dayId, weekIndex, minutes) {
+    const p = programById(programId), day = p?.days.find((d) => d.id === dayId);
+    if (!p || !day) return { error: 'That workout day no longer exists.' };
+    let pace = null; try { pace = E.paceFactor(history(), saved()); } catch { pace = null; }
+    try { return E.planShorterSession(p, day, weekIndex, minutes, { restScale: Number(S.store.restScale) || 1, history: history(), paceFactor: pace?.factor }); }
+    catch (err) { return { error: String(err?.message || err) }; }
+}
+export function sessionPreview({ programId, dayId, weekIndex, minutes = null } = {}) {
+    const nx = upNext();
+    const pid = programId || nx?.program.id, did = dayId || nx?.day.id, wk = weekIndex || (programId ? (nx?.program.id === programId ? nx.weekIndex : 1) : nx?.weekIndex) || 1;
+    const p = programById(pid), src = p?.days.find((d) => d.id === did); if (!p || !src) return null;
+    const plans = (E.SESSION_LENGTH_OPTIONS || [null, 45, 30, 20]).map((m) => (m == null ? null : shorterPlan(pid, did, wk, m)));
+    const chosen = minutes == null ? null : plans[(E.SESSION_LENGTH_OPTIONS || [null, 45, 30, 20]).indexOf(minutes)];
+    const day = chosen && !chosen.error ? { ...src, sessionLengthPlan: chosen } : src;
+    // As App.js: Full is the day's usual estimate; a limit shows the planner's estimate for the cut session.
+    let full = null; try { full = E.estimateMinutes(p, src, wk); } catch { full = null; }
+    let est = null; try { est = E.estimateMinutes(p, day, wk); } catch { est = null; }
+    const exercises = day.exercises.map((_id, slot) => {
+        const id = E.exerciseAt(p, day, slot, wk), ex = EX_BY_ID[id]; if (!ex) return null;
+        let cell = null; try { cell = E.computeCell(p, day, id, slot, wk); } catch { cell = null; }
+        if (!cell || !(cell.sets > 0)) return null;
+        const cut = chosen?.cuts?.find((c) => c.slot === slot);
+        return { slot, id, name: ex.name, sets: cell.sets, reps: cell.reps ?? cell.range ?? null, rir: cell.rir ?? null, primary: slot === day.primaryIndex, cutFrom: cut ? cut.fromSets : null, amplifierOff: !!cut?.amplifierRemoved };
+    }).filter(Boolean);
+    return { programId: pid, dayId: did, dayLabel: src.label, weekIndex: wk, minutes,
+        fullMinutes: full, estimatedMinutes: chosen && !chosen.error ? chosen.estimatedMinutes : est, fits: chosen ? !!chosen.fits && !chosen.error : true,
+        workingSets: exercises.reduce((a, e) => a + (Number(e.sets) || 0), 0), exercises,
+        skipped: (chosen?.cuts || []).filter((c) => c.toSets === 0).map((c) => c.name),
+        options: (E.SESSION_LENGTH_OPTIONS || [null, 45, 30, 20]).map((m, i) => {
+            const pl = plans[i];
+            return { minutes: m, label: m == null ? 'Full' : m + 'm', fits: m == null ? true : !!pl && !pl.error && !!pl.fits,
+                estimatedMinutes: m == null ? full : pl?.estimatedMinutes ?? null, changed: m == null ? false : !!pl?.changed,
+                cutSets: m == null || !pl?.cuts ? 0 : pl.cuts.reduce((a, c) => a + (c.fromSets - c.toSets), 0) };
+        }) };
+}
+
+export function startSession({ programId, dayId, weekIndex, minutes = null } = {}) {
     if (S.live && (!programId || (S.live.programId === programId && S.live.dayId === dayId))) return session();
     const nx = upNext();
     const pid = programId || nx?.program.id, did = dayId || nx?.day.id, wk = weekIndex || (programId ? 1 : nx?.weekIndex) || 1;
     if (!pid || !did) return { error: 'No program yet. Build one first.' };
     const l = { schemaVersion: 2, sessionId: E.uid(), programId: pid, dayId: did, weekIndex: wk, startedAt: now(), elapsedMs: 0, exIdx: 0,
         readiness: null, injuryReports: [], sessionProgressions: {}, sessionNote: '', sessionNoteRepeat: 'none', fbPump: {}, fbSore: {}, rest: null };
+    if (minutes != null) {
+        const pl = shorterPlan(pid, did, wk, minutes);
+        if (pl?.error) return { error: pl.error };
+        if (pl && !pl.fits) return { error: `The protected work needs about ${pl.estimatedMinutes} min. Choose a longer option or Full.` };
+        if (pl) l.sessionLengthPlan = pl;
+    }
     S.live = l;
     const ctx = sessionContext(l);
     if (!ctx) { S.live = null; return { error: 'That workout day no longer exists.' }; }
@@ -669,6 +717,7 @@ export function session() {
         warmup: doneSets === 0 ? (() => { try { const m = E.warmupRoutine(ctx.day); if (!m) return null;
             const parts = [...new Set([ctx.day.exercises[ctx.day.primaryIndex], ...ctx.day.exercises].map((id) => EX_BY_ID[id]?.part).filter(Boolean))].slice(0, 3);
             return { moves: m, parts: parts.map((p) => E.PART_LABEL?.[p] || p) }; } catch { return null; } })() : null,
+        timeLimit: l.sessionLengthPlan ? { minutes: l.sessionLengthPlan.minutes, estimatedMinutes: l.sessionLengthPlan.estimatedMinutes, changed: !!l.sessionLengthPlan.changed } : null,
         quick: !!ctx.program.quick, readinessDone: !!l.readiness, readinessLabel: l.readiness?.label || null, reentry: l.reentry || null,
         sessionNote: l.sessionNote || '', sessionNoteRepeat: l.sessionNoteRepeat || 'none',
         progressionStyles: Object.entries(E.PROG_STYLES || {}).map(([id, label]) => ({ id, label })),
@@ -1003,6 +1052,8 @@ export function finishSession() {
         injuryReports: l.injuryReports?.length ? l.injuryReports : undefined,
         sessionNote: (l.sessionNote || '').trim() || undefined, sessionNoteRepeat: l.sessionNoteRepeat,
         progressionChanges: progChanges, programUpdateStatus: progChanges && !program.quick ? 'pending' : undefined,
+        // Build 898: the reduced dose and its plan; a changed exposure is neutral for progression.
+        sessionLengthPlan: day.sessionLengthPlan, timeLimited: day.sessionLengthPlan?.changed || undefined, prescriptionEdited: day.sessionLengthPlan?.changed || undefined,
         feedbackRaw: Object.keys(fb).length ? fb : undefined
     };
     const t = now();

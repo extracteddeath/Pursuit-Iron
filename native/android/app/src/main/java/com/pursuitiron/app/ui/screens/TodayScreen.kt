@@ -244,7 +244,7 @@ private fun Hero(vm: AppViewModel, next: JSONObject, h: JSONObject) {
                     }
                 }
                 Button(
-                    onClick = { if (live != null) vm.resume() else vm.start() },
+                    onClick = { if (live != null) vm.resume() else vm.openPreview() },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = cs.primary, contentColor = cs.onPrimary),
                 ) { Text(if (live != null) "Resume workout" else "Start workout", style = MaterialTheme.typography.titleSmall) }

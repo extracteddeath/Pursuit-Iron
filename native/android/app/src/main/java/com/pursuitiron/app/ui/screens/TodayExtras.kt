@@ -276,7 +276,7 @@ fun RestDayHero(vm: AppViewModel, r: JSONObject) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { Text("•"); Text(tip, style = MaterialTheme.typography.bodyMedium) }
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { vm.start() }, modifier = Modifier.height(48.dp),
+                Button(onClick = { vm.openPreview() }, modifier = Modifier.height(48.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = cs.onSecondaryContainer, contentColor = cs.secondaryContainer)) {
                     Text("Train ${r.s("nextLabel")} now", maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                 }

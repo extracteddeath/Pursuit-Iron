@@ -195,11 +195,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun resume() { if (session?.b("active") == true) screen = Screen.Workout }
 
     /* ---------------------------------------------------------------- workout */
-    fun start(programId: String? = null, dayId: String? = null, weekIndex: Int? = null) = launchCore {
+    /** App.js NextWorkoutView: Start opens the session preview (with Time available) before the workout. */
+    data class PreviewTarget(val programId: String?, val dayId: String?, val weekIndex: Int?)
+    var preview by mutableStateOf<PreviewTarget?>(null)
+    fun openPreview(programId: String? = null, dayId: String? = null, weekIndex: Int? = null) { preview = PreviewTarget(programId, dayId, weekIndex) }
+    suspend fun sessionPreview(t: PreviewTarget, minutes: Int?) = obj("sessionPreview", jsonOf("programId" to t.programId, "dayId" to t.dayId, "weekIndex" to t.weekIndex, "minutes" to minutes))
+
+    fun start(programId: String? = null, dayId: String? = null, weekIndex: Int? = null, minutes: Int? = null) = launchCore {
         val args = JSONObject()
         if (programId != null) args.put("programId", programId)
         if (dayId != null) args.put("dayId", dayId)
         if (weekIndex != null) args.put("weekIndex", weekIndex)
+        if (minutes != null) args.put("minutes", minutes)
         val s = obj("startSession", args)
         if (s == null || s.has("error") && !s.b("active")) { toast(s?.s("error") ?: "Couldn't start the workout"); return@launchCore }
         session = s

@@ -341,14 +341,14 @@ tap(r"^\|Profile$", "profile")
 scroll_to(r"Achievements")
 shot("profile-achievements")
 # App.js ProfileCustomization: reorder and hide profile sections
-if scroll_to(r"Customize profile", tries=4):
+if scroll_to(r"Customize profile", tries=12):
     tap(r"Customize profile", "profile-customize")
     if not find(r"sections shown", timeout=4):
         FAILS.append("profile customise sheet missing")
     close_sheet(r"sections shown")
-    scroll_up_to(r"^\|History$")
 else:
     FAILS.append("Customize profile button missing")
+scroll_up_to(r"^\|History$", tries=14)
 adb("shell", "input", "swipe", "540", "700", "540", "1900", "300")
 tap(r"^\|History$", "history-calendar")
 tap(r": \d+ workouts?\|", "calendar-day")

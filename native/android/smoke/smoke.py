@@ -246,6 +246,17 @@ else:
 for t in ["Plan", "Progress", "Exercises", "You"]:
     tap(rf"^\|{t}$|^{t}\|", t.lower())
 
+# 5b. Plan: volume wave and the week-by-week lift table
+tap(r"^\|Plan$|^Plan\|")
+if scroll_to(r"Every lift, week by week", tries=4):
+    shot("volume-wave")
+    tap(r"Every lift, week by week", "week-by-week")
+    if not find(r"^\|Week by week$", timeout=6):
+        FAILS.append("week-by-week sheet did not open")
+    back()
+else:
+    FAILS.append("no week-by-week entry on Plan")
+
 # 6. Transfer link from the web app
 with open(LINK) as f:
     link = f.read().strip()
@@ -286,6 +297,17 @@ tap(r": \d+ workouts?\|", "calendar-day")
 tap(r"^\|Settings$", "settings")
 if tap(r"^\|lb$", "unit-confirm"):
     tap(r"^\|Switch$", "unit-switched")
+# 7a. Looks: pick a colour theme and dark mode, then put Ember and System back
+if scroll_to(r"^Lime theme", tries=8, step=600):
+    tap(r"^Lime theme", "theme-lime")
+    tap(r"^\|Dark$", "theme-dark")
+    if not find(r"^\|Pure black$", timeout=4):
+        FAILS.append("pure black row missing in dark mode")
+    tap(r"^\|System$")
+    scroll_to(r"^Ember theme", tries=3, step=400)
+    tap(r"^Ember theme")
+else:
+    FAILS.append("no colour themes in settings")
 if scroll_to(r"^Training reminders\|"):
     tap(r"^Training reminders\|", "reminders-on")
 if scroll_to(r"^\|Gyms$"):

@@ -440,5 +440,24 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   ok(C.references().length > 3 && C.references()[0].name, 'references listed');
   C.updateSettings({ theme: 'x' });
   ok(C.resetAll().ok && C.settings().programs === 0 && C.settings().sessions === 0 && C.settings().banned.length === 0 && C.settings().theme === 'x' && !C.session().active, 'reset everything keeps device preferences only'); }
+// Week-by-week table and volume wave read the engine's weeks 1…n (+ deload), never week 0
+{ C.init({ store: JSON.stringify({ unit: 'kg' }) });
+  const mk = C.createProgram({ config: { name: 'Wk', unit: 'kg', goal: 'hypertrophy', experience: 'intermediate', split: 'ppl', days: 3, session: 's60', deload: true,
+    equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 7 });
+  const wb = C.weekByWeek({});
+  ok(wb && wb.rows.length > 5 && wb.weeks >= 4, 'week-by-week lists ' + (wb && wb.rows.length) + ' lifts over ' + (wb && wb.weeks) + ' weeks');
+  ok(wb.deloadWeek === wb.weeks + 1 && wb.rows.every((r) => r.cells.length === wb.weeks + 1 && r.cells[wb.weeks].deload), 'deload week is the last column');
+  ok(wb.rows.every((r) => r.cells.every((c) => c.sets > 0)), 'every cell prescribes sets (no week-0 "missing" cell)');
+  const p0 = JSON.parse(C.exportStore()).saved.find((x) => x.id === wb.programId), d0 = p0.days[0];
+  const cc = E.computeCell(p0, d0, d0.exercises[0], 0, 1), first = wb.rows.find((r) => r.dayLabel === d0.label && r.exId === d0.exercises[0]);
+  ok(first.cells[0].sets === Number(cc.sets) && first.cells[0].range === String(cc.range), 'week 1 cell equals computeCell(week 1): ' + cc.sets + ' × ' + cc.range);
+  ok(wb.rows.some((r) => r.primary) && wb.rows.some((r) => r.upper) && wb.rows.some((r) => !r.upper), 'rows carry main/upper/lower for the filters');
+  const vw = C.volumeWave({});
+  ok(vw.weeks.length === wb.weeks + 1 && vw.weeks.every((w) => w.sets > 0) && vw.weeks[wb.weeks].deload, 'volume wave has every week plus the deload');
+  const wSum = wb.rows.reduce((a, r) => a + r.cells[1].sets, 0);
+  ok(vw.weeks[1].sets === wSum, 'wave week 2 total (' + vw.weeks[1].sets + ') equals the table column sum (' + wSum + ')');
+  const st = C.exercise({ id: 'cable-fly' }), nb = C.exercise({ id: wb.rows[0].exId });
+  ok(st && st.stretchFocus === true, 'cable fly is a stretch-focus lift');
+  ok(nb && typeof nb.stretchFocus === 'boolean', 'exercise detail always says whether it is stretch focus'); }
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);
 

@@ -13,7 +13,11 @@ import com.pursuitiron.app.ui.theme.Seed
 class Prefs(context: Context) {
     private val sp = context.getSharedPreferences("pi-native", Context.MODE_PRIVATE)
 
-    var seed by mutableStateOf(runCatching { Seed.valueOf(sp.getString("seed", null) ?: "Ember") }.getOrDefault(Seed.Ember))
+    /** Older builds stored Teal and Violet; Seed.from maps retired names onto the theme that replaced them. */
+    var seed by mutableStateOf(Seed.from(sp.getString("seed", null)))
+        private set
+    /** Pure black surfaces in dark mode. */
+    var black by mutableStateOf(sp.getBoolean("black", false))
         private set
     /** null follows the system. */
     var dark by mutableStateOf(if (sp.contains("dark")) sp.getBoolean("dark", false) else null)
@@ -33,6 +37,7 @@ class Prefs(context: Context) {
         private set
 
     fun changeSeed(v: Seed) { seed = v; sp.edit().putString("seed", v.name).apply() }
+    fun changeBlack(v: Boolean) { black = v; sp.edit().putBoolean("black", v).apply() }
     fun changeDark(v: Boolean?) { dark = v; sp.edit().apply { if (v == null) remove("dark") else putBoolean("dark", v) }.apply() }
     fun changeGrip(v: Boolean) { grip = v; sp.edit().putBoolean("grip", v).apply() }
     fun changeKeepAwake(v: Boolean) { keepAwake = v; sp.edit().putBoolean("keepAwake", v).apply() }

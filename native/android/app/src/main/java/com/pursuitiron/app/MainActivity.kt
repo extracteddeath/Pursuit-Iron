@@ -19,7 +19,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         if (savedInstanceState == null) handle(intent)
         setContent {
-            PiTheme(seed = vm.prefs.seed, dark = vm.prefs.dark ?: isSystemInDarkTheme()) {
+            PiTheme(seed = vm.prefs.seed, dark = vm.prefs.dark ?: isSystemInDarkTheme(), black = vm.prefs.black) {
                 PiApp(vm)
             }
         }

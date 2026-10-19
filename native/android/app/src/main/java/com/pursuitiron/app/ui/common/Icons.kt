@@ -46,5 +46,8 @@ object PiIcons {
     val Calendar = icon("calendar", "M4 5h16v16H4zM4 9h16M9 3v4M15 3v4M8 13h.01M12 13h.01M16 13h.01M8 17h.01M12 17h.01")
     val Plates = icon("plates", "M2 12h3M19 12h3M5 7v10M8 5v14M16 5v14M19 7v10M8 12h8")
     val Gym = icon("gym", "M3 21V9l9-6 9 6v12M7 21v-6h10v6M7 13h10")
+    val Stretch = icon("stretch", "M4 12h16M7 9l-3 3 3 3M17 9l3 3-3 3")
+    val Wave = icon("wave", "M4 19V9M9 19V7M14 19V11M19 19V5")
+    val Grid = icon("grid", "M4 5h16M4 12h16M4 19h16M10 5v14")
     val Calc = icon("calc", "M6 3h12a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM8 7h8M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01")
 }

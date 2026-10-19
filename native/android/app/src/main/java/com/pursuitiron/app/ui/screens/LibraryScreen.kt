@@ -47,6 +47,7 @@ import com.pursuitiron.app.ui.common.Kicker
 import com.pursuitiron.app.ui.common.MorphChip
 import com.pursuitiron.app.ui.common.PiCard
 import com.pursuitiron.app.ui.common.PiIcons
+import com.pursuitiron.app.ui.common.StretchFocusNote
 import com.pursuitiron.app.ui.common.b
 import com.pursuitiron.app.ui.common.d
 import com.pursuitiron.app.ui.common.list
@@ -114,6 +115,7 @@ fun ExerciseSheet(vm: AppViewModel, id: String, onClose: () -> Unit) {
             Text(e.s("name"), style = MaterialTheme.typography.headlineMedium)
             Text(e.strings("equip").joinToString(", ").replaceFirstChar { it.uppercase() }, color = cs.onSurfaceVariant)
             val sec = e.list("secondary")
+            if (e.b("stretchFocus")) StretchFocusNote()
             if (sec.isNotEmpty()) Text("Also works " + sec.joinToString(", ") { "${it.s("label")} (${(it.d("share") * 100).toInt()}%)" }, style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
             val cues = e.strings("cues")
             if (cues.isNotEmpty()) PiCard(color = cs.surfaceContainerHigh, radius = 20.dp, padding = 14.dp) {

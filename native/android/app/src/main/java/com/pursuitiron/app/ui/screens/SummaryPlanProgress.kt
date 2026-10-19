@@ -120,6 +120,8 @@ fun PlanScreen(vm: AppViewModel) {
     var confirmNext by remember { mutableStateOf(false) }
     var compareOpen by remember { mutableStateOf(false) }
     var scheduleOpen by remember { mutableStateOf(false) }
+    var matrixOpen by remember { mutableStateOf(false) }
+    if (matrixOpen) WeekByWeekSheet(vm, p.s("programId")) { matrixOpen = false }
     if (compareOpen) CompareSheet(vm) { compareOpen = false }
     if (scheduleOpen) WeeklyScheduleSheet(vm, p.s("programId")) { scheduleOpen = false }
     openCycle?.let { id -> CycleSheet(vm, id) { openCycle = null } }
@@ -136,7 +138,7 @@ fun PlanScreen(vm: AppViewModel) {
         item(span = full) {
             Column(Modifier.padding(top = 20.dp, start = 4.dp)) {
                 Text("Plan", style = MaterialTheme.typography.displayMedium)
-                Text("${p.s("name")} · week $wk of $weeks" + (if (p.i("current") > 0) " · you're on week ${p.i("current")}" else ""), style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
+                Text("${p.s("name")} · " + (if (wk > weeks) "deload week" else "week $wk of $weeks") + (if (p.i("current") > 0) " · you're on week ${p.i("current")}" else ""), style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                 androidx.compose.foundation.layout.FlowRow(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilledTonalButton(onClick = { vm.openEditor(p.s("programId")) }) { Icon(PiIcons.List, null, modifier = Modifier.size(18.dp)); Text("  Edit program") }
                     FilledTonalButton(onClick = { scheduleOpen = true }) { Icon(PiIcons.Calendar, null, modifier = Modifier.size(18.dp)); Text("  Schedule") }
@@ -153,6 +155,7 @@ fun PlanScreen(vm: AppViewModel) {
                 }
             }
         }
+        item(span = full) { VolumeWaveCard(vm, p.s("programId"), wk, { vm.loadPlan(p.s("programId"), it) }, { matrixOpen = true }) }
         p.list("days").forEach { d ->
             item {
                 val isNext = d.s("id") == p.s("nextDayId") && wk == p.i("current")

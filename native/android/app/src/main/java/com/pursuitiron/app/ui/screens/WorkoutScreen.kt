@@ -149,7 +149,7 @@ fun WorkoutScreen(vm: AppViewModel) {
     val ei = s.i("exIdx").coerceIn(0, (exs.size - 1).coerceAtLeast(0))
     val ex = exs.getOrNull(ei)
     val done = s.i("doneSets"); val total = s.i("totalSets")
-    val tryFinish = { if (done < total) confirmFinish = true else sheet = WSheet.Finish }
+    val tryFinish = { if (done == 0 || done < total) confirmFinish = true else sheet = WSheet.Finish }
 
     Box(Modifier.fillMaxSize().background(cs.surface)) {
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
@@ -216,7 +216,15 @@ fun WorkoutScreen(vm: AppViewModel) {
         confirmButton = { TextButton(onClick = { confirmDiscard = false; vm.discard() }) { Text("Discard") } },
         dismissButton = { TextButton(onClick = { confirmDiscard = false }) { Text("Keep going") } },
     )
-    if (confirmFinish) AlertDialog(
+    /* Nothing logged: there is nothing to save, so the choice is to keep going or discard (the design's empty-finish guard). */
+    if (confirmFinish && done == 0) AlertDialog(
+        onDismissRequest = { confirmFinish = false },
+        title = { Text("Nothing logged yet") },
+        text = { Text("A workout with no logged sets has nothing to save or progress from. Log a set, or discard this one.") },
+        confirmButton = { TextButton(onClick = { confirmFinish = false; vm.discard() }) { Text("Discard workout") } },
+        dismissButton = { Button(onClick = { confirmFinish = false }) { Text("Keep going") } },
+    )
+    else if (confirmFinish) AlertDialog(
         onDismissRequest = { confirmFinish = false },
         title = { Text("Finish with ${total - done} sets not logged?") },
         text = { Text("Only logged sets count. The engine plans your next session from what you actually did.") },
@@ -325,6 +333,7 @@ private fun ExercisePane(vm: AppViewModel, s: JSONObject, ex: JSONObject?, wide:
                     TextButton(onClick = { runCatching { uri.openUri("https://www.youtube.com/results?search_query=" + java.net.URLEncoder.encode("${ex.s("name")} proper form", "UTF-8")) } }) { Text("Watch a demo") }
                 }
                 if (cuesOpen) cues.forEach { c -> Text("•  $c", style = MaterialTheme.typography.bodyMedium) }
+                if (cuesOpen && ex.b("stretchFocus")) com.pursuitiron.app.ui.common.StretchFocusNote()
 
                 Row(Modifier.padding(horizontal = 4.dp)) {
                     Text("Set", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant, modifier = Modifier.width(32.dp), textAlign = TextAlign.Center)

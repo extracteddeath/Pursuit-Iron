@@ -525,6 +525,7 @@ export function session() {
                 restCustom: e.restCustom || 0, restDefault, goal: Number(S.store.goals?.[e.id]) || null,
                 step: inc && inc.unit === u ? inc.v : null, stepChoices: u === 'lb' ? [5, 10, 15, 20, 25, 50] : [2.5, 5, 10, 15, 20],
                 cues: (() => { try { return E.cuesFor(ex) || []; } catch { return []; } })(), setup,
+                stretchFocus: (() => { try { return !!E.isStretchFocus(e.id, 3); } catch { return false; } })(),
                 progression: { style: E.styleFor(ctx.program, e.id), changed: !!l.sessionProgressions?.[e.id], locked: !!ctx.program.config?.percentScheme } };
         }),
         loadMode: S.store.loadMode === 'rpe' ? 'rpe' : 'rir',
@@ -977,6 +978,41 @@ export function plan({ programId, weekIndex } = {}) {
         // Cycle blocks are reached through their cycle, as on the web app's Home, so the list stays one row per plan.
         programs: saved().filter((x) => !(x.cycleId && cycles().some((c) => c.id === x.cycleId))).map((x) => ({ id: x.id, name: x.name, days: x.days.length, active: x.id === nx?.program.id })) };
 }
+/* App.js ProgressionCard ("Lift progression"): every lift for every week of the block, each cell from
+   computeCell, the same call the workout prescribes from. App.js samples computeCell at weeks 0…n-1 and
+   labels them Wk 1…n; week 0 has no prescription (it reads "Prescription data is missing", 0 sets) and
+   every later column is one week early. This reads 1…n and the deload week, the indexing every other
+   computeCell/plannedWeek caller uses. */
+const UPPER_PARTS = new Set(['chest', 'lats', 'upper_back', 'shoulders', 'biceps', 'triceps', 'forearms', 'traps', 'neck']);
+function blockWeeks(p) {
+    const weeks = E.weeksOf(p), deloadWeek = p.config?.deload ? weeks + 1 : null;
+    return { weeks, deloadWeek, list: Array.from({ length: weeks }, (_, i) => i + 1).concat(deloadWeek ? [deloadWeek] : []) };
+}
+export function weekByWeek({ programId } = {}) {
+    const nx = upNext();
+    const p = programId ? programById(programId) : nx?.program;
+    if (!p) return null;
+    const B = blockWeeks(p), rows = [];
+    p.days.forEach((d) => (d.exercises || []).forEach((exId, slot) => {
+        const ex = EX_BY_ID[exId]; if (!ex) return;
+        rows.push({ exId, name: ex.name, part: ex.part, upper: UPPER_PARTS.has(ex.part), dayLabel: d.label, primary: slot === d.primaryIndex,
+            cells: B.list.map((w) => {
+                const c = E.computeCell(p, d, exId, slot, w);
+                const rir = c.rir != null ? c.rir : (c.targetRIR != null ? c.targetRIR : null);
+                return { w, sets: Number(c.sets) || 0, range: String(c.range ?? c.reps ?? ''), rir: rir == null ? null : String(rir), tech: c.tech ? String(c.tech) : null, deload: w === B.deloadWeek };
+            }) });
+    }));
+    return { programId: p.id, name: p.name, weeks: B.weeks, deloadWeek: B.deloadWeek, current: nx?.program.id === p.id ? nx.weekIndex : null, percent: !!p.config?.percentScheme, rows };
+}
+/* App.js LoadWaveCard: planned working sets per week, deload included as the program's own fact. */
+export function volumeWave({ programId } = {}) {
+    const nx = upNext();
+    const p = programId ? programById(programId) : nx?.program;
+    if (!p) return null;
+    const B = blockWeeks(p);
+    const weeks = B.list.map((w) => ({ w, deload: w === B.deloadWeek, ...E.plannedWeek(p, w) }));
+    return { programId: p.id, weeks, current: nx?.program.id === p.id ? nx.weekIndex : null };
+}
 export function pinProgram({ id }) { if (!programById(id)) return { ok: false }; S.store.pinnedId = id; markStore(); return { ok: true }; }
 
 /* ------------------------------------------------------------------ library */
@@ -993,6 +1029,8 @@ export function exercise({ id }) {
     return { id, name: x.name, part: x.part, partLabel: E.PART_LABEL?.[x.part] || x.part, equip: x.equip, type: x.type, cues,
         secondary: (E.secondaryOf(x) || []).map(([p, f]) => ({ part: p, label: E.PART_LABEL?.[p] || p, share: f })),
         note: S.store.exNotes?.[id] || '', banned: (S.store.banned || []).includes(id),
+        // App.js exercise info sheet: isStretchFocus(ex.id, 3) shows the StretchFocusNote.
+        stretchFocus: (() => { try { return !!E.isStretchFocus(id, 3); } catch { return false; } })(),
         history: H.map((h) => ({ date: h.date, sets: (h.perf[id].sets || []).filter((s) => !s.warm).map((s) => ({ w: s.w ?? null, r: s.r ?? null })) })) };
 }
 export function setBan({ id, banned }) {

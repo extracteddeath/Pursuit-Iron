@@ -78,7 +78,7 @@ achievements), body (bodyweight and measurements), history with a training calen
 converts every stored load, gyms with equipment and heaviest-available limits, plates owned, smallest load jump, sex
 and birth date for the standards, plate and 1RM tools, backup and import), program setup with the engine's split pick,
 a home-screen widget (next workout or the one in progress, Start/Resume), phone and tablet layouts, grip mode,
-keep-screen-on, haptic patterns, light/dark and three palettes.
+keep-screen-on, haptic patterns, and the design's twelve colour themes (light, dark or following the phone, pure black, and Wallpaper colours on Android 12+). Plan shows the volume wave by week and every lift week by week.
 
 Every list the web app syncs (programs, cycles, history) is stamped and tombstoned the same way it does, so a backup
 moved either direction merges cleanly.

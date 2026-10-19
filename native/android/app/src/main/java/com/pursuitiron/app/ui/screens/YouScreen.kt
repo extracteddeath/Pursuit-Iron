@@ -53,6 +53,7 @@ import com.pursuitiron.app.ui.common.PiIcons
 import com.pursuitiron.app.ui.common.Segmented
 import com.pursuitiron.app.ui.common.SectionTitle
 import com.pursuitiron.app.ui.common.Sparkline
+import com.pursuitiron.app.ui.common.ThemePicker
 import com.pursuitiron.app.ui.common.b
 import com.pursuitiron.app.ui.common.d
 import com.pursuitiron.app.ui.common.fmtNum
@@ -224,9 +225,19 @@ private fun SettingsCard(vm: AppViewModel) {
             SettingRow("Grip mode", "Bigger set controls for sweaty hands", vm.prefs.grip) { vm.prefs.changeGrip(it) }
         }
         Text("Looks", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
-        Segmented(Seed.entries.map { it.name to it.name }, vm.prefs.seed.name, { vm.prefs.changeSeed(Seed.valueOf(it)) })
+        val darkNow = vm.prefs.dark ?: androidx.compose.foundation.isSystemInDarkTheme()
+        Kicker("Theme")
         Segmented(listOf("system" to "System", "light" to "Light", "dark" to "Dark"), when (vm.prefs.dark) { null -> "system"; true -> "dark"; false -> "light" },
             { vm.prefs.changeDark(when (it) { "dark" -> true; "light" -> false; else -> null }) })
+        Text(when (vm.prefs.dark) { null -> "Follows your phone · " + (if (darkNow) "dark" else "light") + " right now"; true -> "Always dark"; false -> "Always light" },
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (darkNow) Column(Modifier.clip(RoundedCornerShape(20.dp))) {
+            SettingRow("Pure black", "True black behind everything. Easier on OLED screens and the battery", vm.prefs.black) { vm.prefs.changeBlack(it) }
+        }
+        Kicker("Color")
+        ThemePicker(vm.prefs.seed, darkNow, { vm.prefs.changeSeed(it) }, { vm.toast(it) })
+        Text(if (vm.prefs.seed.isDynamic) "Wallpaper · matches your wallpaper on Android 12 and up" else vm.prefs.seed.label + " · every theme works light and dark",
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         if (!vm.rest.exactAllowed()) {
             val ctx = LocalContext.current
             Column(Modifier.clip(RoundedCornerShape(20.dp))) {

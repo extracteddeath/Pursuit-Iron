@@ -87,7 +87,7 @@ class NextWorkoutWidget : GlanceAppWidget() {
         val snap = WidgetSnapshot.read(context)
         val seed = Prefs(context).seed
         provideContent {
-            GlanceTheme(colors = ColorProviders(light = schemeFor(seed, false), dark = schemeFor(seed, true))) { Content(context, snap) }
+            GlanceTheme(colors = ColorProviders(light = schemeFor(seed, false, context = context), dark = schemeFor(seed, true, context = context))) { Content(context, snap) }
         }
     }
 

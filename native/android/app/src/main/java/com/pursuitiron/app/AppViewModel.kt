@@ -434,6 +434,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /* ---------------------------------------------------------------- library */
     fun searchLibrary(q: String, part: String?) { libQuery = q; libPart = part; launchCore { library = arr(call("library", jsonOf("q" to q, "part" to part))) } }
     suspend fun exercise(id: String): JSONObject? = obj("exercise", jsonOf("id" to id))
+    /** App.js ProgressionCard and LoadWaveCard: every lift by week, and planned sets by week, deload included. */
+    suspend fun weekByWeek(programId: String?): JSONObject? = obj("weekByWeek", jsonOf("programId" to programId))
+    suspend fun volumeWave(programId: String?): JSONObject? = obj("volumeWave", jsonOf("programId" to programId))
     fun setBan(id: String, banned: Boolean) = launchCore { call("setBan", jsonOf("id" to id, "banned" to banned)); library = arr(call("library", jsonOf("q" to libQuery, "part" to libPart))); settings = obj("settings"); toast(if (banned) "Banned. It won't be picked again." else "Unbanned") }
 
     /* Settings → Data (App.js onClearBanned / onClearHistory / resetAll), schedule, references. */

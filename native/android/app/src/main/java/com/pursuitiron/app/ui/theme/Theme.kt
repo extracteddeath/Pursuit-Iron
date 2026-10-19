@@ -8,6 +8,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -67,6 +68,7 @@ object Motion {
 }
 
 @Composable
-fun PiTheme(seed: Seed = Seed.Ember, dark: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = schemeFor(seed, dark), typography = PiTypography, shapes = PiShapes, content = content)
+fun PiTheme(seed: Seed = Seed.Ember, dark: Boolean = isSystemInDarkTheme(), black: Boolean = false, content: @Composable () -> Unit) {
+    val context = LocalContext.current
+    MaterialTheme(colorScheme = schemeFor(seed, dark, black, context), typography = PiTypography, shapes = PiShapes, content = content)
 }

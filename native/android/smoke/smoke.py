@@ -296,6 +296,15 @@ if scroll_to(r"^Lift progression|\|Lift progression", tries=4):
     close_sheet(r"Pursuit chose per exercise|re-checked|locked by your choices")
 else:
     FAILS.append("no lift progression card on Plan")
+# Why this lift: a Plan day row opens the engine's reasoning for that slot
+if scroll_to(r"^Why .+\?", tries=4):
+    tap(r"^Why .+\?", "why-this-lift")
+    pat = r"Main strength lift|Compound for size|Isolation for size|You added this lift|You changed this slot"
+    if not find(pat, timeout=5):
+        FAILS.append("why-this-lift sheet missing its reason")
+    close_sheet(pat)
+else:
+    FAILS.append("no why-this-lift rows on Plan")
 
 # 6. Transfer link from the web app
 with open(LINK) as f:
@@ -492,6 +501,15 @@ if scroll_to(r"New program"):
                 tap(r"^\|Set$")
                 time.sleep(1.5)
                 shot("training-max-set")
+            # Method: switch an existing program to another percentage method
+            scroll_up_to(r"Change method", tries=4)
+            if tap(r"Change method", "methods-open"):
+                if tap(r"Texas Method", "method-confirm", required=False):
+                    if tap(r"^\|Switch$", "method-switched"):
+                        if not find(r"Texas Method", timeout=6):
+                            FAILS.append("method switch did not show the new method")
+                else:
+                    FAILS.append("percentage methods not listed")
             back(); back()
         else:
             back(); back()

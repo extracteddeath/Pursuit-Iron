@@ -454,6 +454,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun searchLibrary(q: String, part: String?) { libQuery = q; libPart = part; launchCore { library = arr(call("library", jsonOf("q" to q, "part" to part))) } }
     suspend fun exercise(id: String): JSONObject? = obj("exercise", jsonOf("id" to id))
     /** App.js ProgressionCard and LoadWaveCard: every lift by week, and planned sets by week, deload included. */
+    suspend fun percentMethods(programId: String) = obj("percentMethods", jsonOf("programId" to programId))
+    suspend fun changePercentMethod(programId: String, templateId: String): Boolean {
+        val r = obj("changePercentMethod", jsonOf("programId" to programId, "templateId" to templateId)) ?: return false
+        if (!r.b("ok")) { toast(r.s("error", "Couldn't change the method")); return false }
+        hap(Hap.Done); toast(r.s("message")); refreshHomeSide(); return true
+    }
+    suspend fun whyLift(programId: String, dayId: String, slot: Int, week: Int) = obj("whyLift", jsonOf("programId" to programId, "dayId" to dayId, "slot" to slot, "weekIndex" to week))
     suspend fun liftProgression(programId: String) = obj("liftProgression", jsonOf("programId" to programId))
     /** Returns the refreshed list, or toasts the reason it was refused. */
     suspend fun setLiftProgression(programId: String, exId: String, style: String): JSONObject? {

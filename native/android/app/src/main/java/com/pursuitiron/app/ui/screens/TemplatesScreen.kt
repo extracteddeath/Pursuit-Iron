@@ -30,6 +30,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.selected
+import androidx.compose.material3.Icon
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.material3.IconButton
 import androidx.compose.ui.semantics.Role
@@ -110,6 +115,10 @@ fun TrainingMaxSheet(vm: AppViewModel) {
     var data by remember(pid) { mutableStateOf<JSONObject?>(null) }
     val scope = rememberCoroutineScope()
     LaunchedEffect(pid, week) { data = vm.trainingMaxes(pid, week) }
+    var methodsOpen by remember(pid) { mutableStateOf(false) }
+    var methods by remember(pid) { mutableStateOf<JSONObject?>(null) }
+    var pickMethod by remember(pid) { mutableStateOf<JSONObject?>(null) }
+    LaunchedEffect(pid, methodsOpen) { if (methodsOpen && methods == null) methods = vm.percentMethods(pid) }
     val cs = MaterialTheme.colorScheme
     ModalBottomSheet(onDismissRequest = { vm.tmFor = null }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -117,13 +126,44 @@ fun TrainingMaxSheet(vm: AppViewModel) {
             val d = data ?: run { Text("Loading…"); return@Column }
             val u = d.s("unit", "kg")
             d.o("method")?.let { m ->
-                Surface(color = cs.surfaceContainerHigh, shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Kicker("Method")
-                        Text(m.s("name"), style = MaterialTheme.typography.titleMedium)
-                        Text("${d.s("name")} works from your ${m.s("basis").substringBefore(" (").lowercase()}.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                Surface(onClick = { methodsOpen = !methodsOpen }, color = cs.surfaceContainerHigh, shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
+                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Kicker("Method")
+                            Text(m.s("name"), style = MaterialTheme.typography.titleMedium)
+                            Text("${d.s("name")} works from your ${m.s("basis").substringBefore(" (").lowercase()}.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                        }
+                        Icon(if (methodsOpen) com.pursuitiron.app.ui.common.PiIcons.ChevronUp else com.pursuitiron.app.ui.common.PiIcons.ChevronDown, if (methodsOpen) "Hide methods" else "Change method")
                     }
                 }
+                if (methodsOpen) {
+                    val ms = methods
+                    if (ms == null) Text("Loading…", color = cs.onSurfaceVariant)
+                    else Column(Modifier.clip(RoundedCornerShape(20.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        ms.list("methods").forEach { x ->
+                            val on = x.b("current")
+                            Row(
+                                Modifier.fillMaxWidth().background(if (on) cs.secondaryContainer else cs.surfaceContainerLow)
+                                    .clickable(enabled = !on) { pickMethod = x }.padding(horizontal = 14.dp, vertical = 12.dp)
+                                    .semantics(mergeDescendants = true) { role = Role.RadioButton; selected = on },
+                                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                androidx.compose.material3.RadioButton(selected = on, onClick = null)
+                                Column(Modifier.weight(1f)) {
+                                    Text(x.s("name"), style = MaterialTheme.typography.titleSmall)
+                                    Text(x.s("method") + (x.s("tag").takeIf { it.isNotBlank() }?.let { " · $it" } ?: ""), style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            pickMethod?.let { x ->
+                androidx.compose.material3.AlertDialog(onDismissRequest = { pickMethod = null },
+                    title = { Text("Switch to ${x.s("name")}?") },
+                    text = { Text("The program is rebuilt on this method with your equipment. Your history stays, and the plan starts again at day 1. Training maxes carry over when the method works from the same kind of max; otherwise you'll set them again.") },
+                    confirmButton = { Button(onClick = { val t = x.s("templateId"); pickMethod = null; scope.launch { if (vm.changePercentMethod(pid, t)) { methodsOpen = false; methods = vm.percentMethods(pid); week = null; data = vm.trainingMaxes(pid, null) } } }) { Text("Switch") } },
+                    dismissButton = { androidx.compose.material3.TextButton(onClick = { pickMethod = null }) { Text("Cancel") } })
             }
             val weeks = d.list("weeks")
             if (weeks.size > 1) LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.semantics { contentDescription = "Week" }) {

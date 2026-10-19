@@ -52,6 +52,8 @@ import com.pursuitiron.app.ui.common.b
 import com.pursuitiron.app.ui.common.i
 import com.pursuitiron.app.ui.common.list
 import com.pursuitiron.app.ui.common.s
+import com.pursuitiron.app.ui.common.strings
+import com.pursuitiron.app.ui.common.o
 import com.pursuitiron.app.ui.theme.Motion
 import org.json.JSONObject
 import kotlinx.coroutines.launch
@@ -336,6 +338,52 @@ private fun LiftProgressionSheet(vm: AppViewModel, programId: String, d: JSONObj
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+/* The design's "Why this lift": what the engine recorded for this slot, never a re-derived score. */
+@Composable
+fun WhyLiftSheet(vm: AppViewModel, programId: String, dayId: String, slot: Int, week: Int, onClose: () -> Unit) {
+    var d by remember(programId, dayId, slot, week) { mutableStateOf<JSONObject?>(null) }
+    LaunchedEffect(programId, dayId, slot, week) { d = vm.whyLift(programId, dayId, slot, week) }
+    val cs = MaterialTheme.colorScheme
+    ModalBottomSheet(onDismissRequest = onClose) {
+        Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            val x = d ?: run { Text("Loading…", color = cs.onSurfaceVariant); return@Column }
+            Kicker("${x.s("dayLabel")} · slot ${x.i("slot")}")
+            Text("Why ${x.s("name")}?", style = MaterialTheme.typography.headlineSmall)
+            x.o("rx")?.let { r ->
+                Text("Week ${x.i("week")}: ${r.i("sets")} × ${r.s("range")}" + (r.s("rir").takeIf { it.isNotBlank() }?.let { " @ $it RIR" } ?: ""), style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
+            }
+            com.pursuitiron.app.ui.common.MuscleChips(x.strings("muscles").firstOrNull()?.replaceFirstChar { it.uppercase() } ?: x.s("part"), x.strings("muscles").drop(1).map { it.replaceFirstChar { c -> c.uppercase() } })
+            when (x.s("source")) {
+                "added" -> Text("You added this lift. The engine prescribes its sets and progression, but it didn't choose it.", style = MaterialTheme.typography.bodyMedium)
+                "edited" -> Text("You changed this slot, so the engine's original reasoning no longer applies to it.", style = MaterialTheme.typography.bodyMedium)
+            }
+            x.o("role")?.let { r ->
+                PiCard(color = cs.primaryContainer, radius = 22.dp, padding = 16.dp) {
+                    Text(r.s("label"), style = MaterialTheme.typography.titleMedium, color = cs.onPrimaryContainer)
+                    if (r.s("text").isNotBlank()) Text(r.s("text"), style = MaterialTheme.typography.bodyMedium, color = cs.onPrimaryContainer)
+                }
+            }
+            x.o("progression")?.let { pr ->
+                PiCard(color = cs.surfaceContainerHigh, radius = 22.dp, padding = 16.dp) {
+                    Text((if (pr.b("locked")) "Your choice: " else "Progression: ") + pr.s("label"), style = MaterialTheme.typography.titleSmall)
+                    pr.s("reason").takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant) }
+                }
+            }
+            x.list("dose").forEach { ds ->
+                PiCard(color = cs.surfaceContainerHigh, radius = 22.dp, padding = 16.dp) {
+                    Text("${ds.s("subject")}: ${ds.s("outcome")}", style = MaterialTheme.typography.titleSmall)
+                    Text(ds.s("why"), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                }
+            }
+            val sum = x.strings("summary")
+            if (sum.isNotEmpty()) {
+                Kicker("How the plan was built")
+                sum.forEach { line -> Row { Text("•  "); Text(line, style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant) } }
             }
         }
     }

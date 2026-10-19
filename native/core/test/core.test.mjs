@@ -556,6 +556,25 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   const ss = C.startSession({}); const e = ss.exercises.find((x) => x.id === l0.id);
   ok(!e || e.progression.style === other, 'the workout runs the chosen style'); C.discardSession();
   const r2 = C.setLiftProgression({ programId: mk.programId, exId: l0.id, style: 'auto' });
-  ok(r2.ok && !r2.lifts.find((l) => l.id === l0.id).locked, 'Auto hands the lift back to the engine'); }
+  ok(r2.ok && !r2.lifts.find((l) => l.id === l0.id).locked, 'Auto hands the lift back to the engine');
+  const pl = C.plan({ programId: mk.programId }), d0 = pl.days[0];
+  const w = C.whyLift({ programId: mk.programId, dayId: d0.id, slot: 0, weekIndex: 1 });
+  ok(w && w.source === 'engine' && w.role && w.role.label === 'Main strength lift' && w.rx && w.rx.sets > 0, "why this lift: the engine's role and prescription for the main lift");
+  const w2 = C.whyLift({ programId: mk.programId, dayId: d0.id, slot: d0.exercises.length - 1, weekIndex: 1 });
+  ok(w2 && w2.role && w2.progression.label && w2.muscles.length >= 1, 'why this lift for an accessory: ' + (w2 && w2.role && w2.role.label) + ' · dose lines ' + (w2 && w2.dose.length)); }
+// Percentage method change on an existing program
+{ C.init({ store: JSON.stringify({ unit: 'kg' }) });
+  const made = C.createFromTemplate({ id: 'p531' }); const tms = C.trainingMaxes({ programId: made.programId });
+  tms.lifts.forEach((l) => C.setTrainingMax({ programId: made.programId, exId: l.id, value: 100 }));
+  const pm = C.percentMethods({ programId: made.programId });
+  ok(pm && pm.methods.length >= 9 && pm.methods.filter((m) => m.current).length === 1, 'every percentage method listed, the current one marked');
+  const nsuns = C.changePercentMethod({ programId: made.programId, templateId: 'nsuns' });
+  const after = C.trainingMaxes({ programId: made.programId });
+  ok(nsuns.ok && after.method.id === 'nsuns' && C.percentMethods({ programId: made.programId }).methods.find((m) => m.current).scheme === 'nsuns', 'switching rebuilds on the new method: ' + nsuns.message);
+  ok(nsuns.carried > 0 && after.lifts.some((l) => l.tm === 100), 'same basis: training maxes carry over');
+  const tx = C.changePercentMethod({ programId: made.programId, templateId: 'texas' });
+  ok(tx.ok && tx.carried === 0 && tx.needsTrainingMax > 0, 'a different basis asks for maxes again');
+  { const sv = JSON.parse(C.exportStore()).saved; ok(sv.length === 1 && sv[0].id === made.programId, 'still one program, same id'); }
+  C.startSession({}); ok(C.changePercentMethod({ programId: made.programId, templateId: 'p531' }).ok === false, 'refused with a workout open'); C.discardSession(); }
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);
 

@@ -46,6 +46,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -121,6 +123,8 @@ fun PlanScreen(vm: AppViewModel) {
     var confirmNext by remember { mutableStateOf(false) }
     var compareOpen by remember { mutableStateOf(false) }
     var scheduleOpen by remember { mutableStateOf(false) }
+    var whyFor by remember { mutableStateOf<Triple<String, String, Int>?>(null) }
+    whyFor?.let { (pid, did, k) -> WhyLiftSheet(vm, pid, did, k, vm.plan?.i("weekIndex") ?: 1) { whyFor = null } }
     var matrixOpen by remember { mutableStateOf(false) }
     if (matrixOpen) WeekByWeekSheet(vm, p.s("programId")) { matrixOpen = false }
     if (compareOpen) CompareSheet(vm) { compareOpen = false }
@@ -171,11 +175,17 @@ fun PlanScreen(vm: AppViewModel) {
                         }
                         FilledTonalButton(onClick = { vm.start(p.s("programId"), d.s("id"), wk) }) { Text("Start") }
                     }
-                    d.list("exercises").forEach { e ->
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                    d.list("exercises").forEachIndexed { k, e ->
+                        val rx = listOfNotNull(e.i("sets").takeIf { it > 0 }?.let { "$it ×" }, e.s("reps").takeIf { it.isNotBlank() }, e.s("rir").takeIf { it.isNotBlank() }?.let { "@ $it" }).joinToString(" ")
+                        // The design's day row ⓘ: tap a lift for why it is in this slot.
+                        Row(
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { whyFor = Triple(p.s("programId"), d.s("id"), k) }
+                                .semantics(mergeDescendants = true) { contentDescription = "Why ${e.s("name")}? $rx" }.padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
                             Text(e.s("name"), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(listOfNotNull(e.i("sets").takeIf { it > 0 }?.let { "$it ×" }, e.s("reps").takeIf { it.isNotBlank() }, e.s("rir").takeIf { it.isNotBlank() }?.let { "@ $it" }).joinToString(" "),
-                                style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
+                            Text(rx, style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
+                            Icon(PiIcons.Info, null, Modifier.padding(start = 6.dp).size(16.dp), tint = cs.onSurfaceVariant)
                         }
                     }
                 }

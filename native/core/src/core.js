@@ -1992,6 +1992,44 @@ export function templates() {
     return { categories: [...new Set(E.TEMPLATES.map((t) => t.cat))],
         items: E.TEMPLATES.map((t) => ({ id: t.id, name: t.name, cat: t.cat, tag: t.tag || '', desc: t.desc || '', featured: !!t.featured, rank: t.featuredRank ?? 50, percent: !!t.cfg?.percentScheme, days: t.cfg?.days || null })) };
 }
+/* The design's Percentage program → Method. A method is tied to its own split (Texas has volume,
+   recovery and intensity days; tiered methods have a T2 slot), so changing it rebuilds the program
+   from that method's template with this program's equipment, keeping its id, name, notes, history
+   link and pin. Training maxes carry over only between methods that share a basis (a 5/3/1 TM is not
+   a Texas 5RM); otherwise Today asks for them again. */
+export function percentMethods({ programId }) {
+    const p = programById(programId); if (!p?.config?.percentScheme) return null;
+    const cur = p.config.percentScheme, curBbb = p.config.assistance === 'bbb';
+    return { programId: p.id, current: cur, methods: E.TEMPLATES.filter((t) => t.cfg?.percentScheme).map((t) => {
+        const S2 = E.PCT_SCHEMES[t.cfg.percentScheme] || {};
+        return { templateId: t.id, scheme: t.cfg.percentScheme, name: t.name, method: S2.name || t.cfg.percentScheme, basis: S2.basis || '', desc: t.desc || '', tag: t.tag || '',
+            days: t.cfg.days || null, weeks: t.cfg.weeks || null, current: t.cfg.percentScheme === cur && (t.cfg.assistance === 'bbb') === curBbb };
+    }) };
+}
+export function changePercentMethod({ programId, templateId }) {
+    const p = programById(programId), t = E.TEMPLATES.find((x) => x.id === templateId);
+    if (!p || !t?.cfg?.percentScheme) return { ok: false, error: 'That method is not available.' };
+    if (p.cycleId && cycles().some((c) => c.id === p.cycleId)) return { ok: false, error: 'This block belongs to a cycle, which decides how it is built.' };
+    if (S.live?.programId === programId) return { ok: false, error: 'Finish or discard the workout in progress first.' };
+    const cfg = programConfig({ ...E.templateConfig(t, p.config?.equipment?.length ? p.config.equipment : E.ALL_EQUIP_IDS), name: p.name, unit: p.config?.unit || unit() });
+    let np;
+    try { np = E.generateNextProgramForShell({ config: cfg, banned: S.store.banned || [], legacyExercises: EXERCISES, makeId: E.uid }).program; }
+    catch (err) { return { ok: false, error: 'This method could not be built for your equipment. Your program was left unchanged.' }; }
+    if (!np) return { ok: false, error: 'The engine could not build that method.' };
+    np.generationRoute = E.GENERATION_ROUTE;
+    Object.assign(np, { id: p.id, name: p.name, createdAt: p.createdAt, folder: p.folder, description: p.description, edited: true });
+    const oldBasis = E.PCT_SCHEMES[p.config.percentScheme]?.basis, newBasis = E.PCT_SCHEMES[t.cfg.percentScheme]?.basis;
+    let carried = 0;
+    if (oldBasis && oldBasis === newBasis && p.trainingMax) {
+        const u = unit();
+        mainLifts(np).forEach((id) => { const tm = E.trainingMaxForUnit(p, id, u); if (tm > 0) { Object.assign(np, E.withTrainingMax(np, id, tm, u)); carried++; } });
+    }
+    setList('saved', saved().map((x) => (x.id === programId ? np : x)));
+    dropDraft(programId);
+    const need = mainLifts(np).filter((id) => !(E.trainingMaxForUnit(np, id, unit()) > 0)).length;
+    return { ok: true, method: E.PCT_SCHEMES[t.cfg.percentScheme]?.name, carried, needsTrainingMax: need,
+        message: `Now running ${E.PCT_SCHEMES[t.cfg.percentScheme]?.name}` + (need ? ` · set ${need} training max${need === 1 ? '' : 'es'}` : carried ? ' · training maxes kept' : '') };
+}
 /* The active gym decides what a template is built from; a template that pins its own kit still wins. */
 export function createFromTemplate({ id }) {
     const t = E.TEMPLATES.find((x) => x.id === id); if (!t) return { ok: false, error: 'That template no longer exists.' };
@@ -2224,6 +2262,39 @@ export function completeProgramUpdate({ apply }) {
     }
     setList('history', history().map((x) => (x.id === h.id ? { ...x, programUpdateStatus: apply ? 'applied' : 'session-only' } : x)));
     return { ok: true, applied: !!apply };
+}
+
+/* The design's Plan → day row ⓘ ("Why this lift"), from what the engine recorded when it built the
+   program: the slot's role and prescription, its progression choice and reason, and the plan-level
+   decisions about that muscle (program.nextEngine). The design's per-term selection score is not
+   stored by the engine, so it is not shown; nothing here is re-derived or invented. Lifts the user
+   added or swapped in say so instead. */
+const ROLE_TEXT = {
+    primary_strength: ['Main strength lift', 'Placed first in the day and trained heavy with long rests. The engine reserves these before any optional muscle work.'],
+    hypertrophy_compound: ['Compound for size', 'A multi-joint lift chosen for the muscles this day still needed, scored on stimulus against fatigue and what the week already covers.'],
+    hypertrophy_isolation: ['Isolation for size', "Single-joint work to finish a muscle's weekly dose without adding much fatigue, chosen to cover a function the week was missing where it could."],
+};
+export function whyLift({ programId, dayId, slot, weekIndex }) {
+    const p = programById(programId); if (!p) return null;
+    const di = p.days.findIndex((d) => d.id === dayId), day = p.days[di]; if (!day) return null;
+    const k = Number(slot), id = E.exerciseAt(p, day, k, weekIndex || 1), ex = EX_BY_ID[id]; if (!ex) return null;
+    const ne = p.nextEngine || {}, sess = ne.program?.sessions?.[di], eng = sess?.exercises?.[k];
+    const added = !!p.overrides?.[`${day.id}:${k}`]?.added;
+    const same = !!eng && !added && (eng.name || '').toLowerCase() === (ex.name || '').toLowerCase();
+    let cell = null; try { cell = E.computeCell(p, day, id, k, weekIndex || 1); } catch { cell = null; }
+    let style = null; try { style = E.styleFor(p, id); } catch { style = null; }
+    const part = E.PART_LABEL?.[ex.part] || ex.part;
+    const names = [part].concat((E.secondaryOf(ex) || []).map(([pp]) => E.PART_LABEL?.[pp] || pp)).map((x) => String(x).toLowerCase());
+    const dose = (ne.explainability?.decisions || []).filter((x) => (x.category === 'dose' || x.category === 'coverage') && names.includes(String(x.subject || '').toLowerCase()))
+        .map((x) => ({ subject: x.subject, outcome: x.outcome, why: x.why }));
+    const role = same ? (ROLE_TEXT[eng.role] || [String(eng.role || '').replace(/_/g, ' '), '']) : null;
+    return { programId, dayLabel: day.label, slot: k + 1, name: ex.name, part, primary: k === day.primaryIndex,
+        source: added ? 'added' : same ? 'engine' : 'edited',
+        role: role ? { label: role[0], text: role[1] } : null,
+        week: weekIndex || 1, rx: cell ? { sets: cell.sets ?? null, range: cell.range || null, rir: cell.rir ?? null } : null,
+        progression: { style: style || 'auto', label: STYLE_LABEL[style] || style || 'Auto', reason: (same && eng.progressionSelection?.reason) || null, locked: !!p.progStyleLifter?.[id] },
+        muscles: [part].concat((E.secondaryOf(ex) || []).slice().sort((a, b) => b[1] - a[1]).map(([pp]) => E.PART_LABEL?.[pp] || pp)),
+        dose, summary: Array.isArray(ne.explainability?.summary) ? ne.explainability.summary : [] };
 }
 
 /* App.js ProgressionCard selection overview + the design's Program settings → Lift progression: every

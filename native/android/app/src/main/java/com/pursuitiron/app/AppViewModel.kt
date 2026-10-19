@@ -460,6 +460,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (!r.b("ok")) { toast(r.s("error", "Couldn't change the method")); return false }
         hap(Hap.Done); toast(r.s("message")); refreshHomeSide(); return true
     }
+    suspend fun profileBoard() = obj("profileBoard")
     suspend fun progressCharts() = obj("progressCharts")
     suspend fun whyLift(programId: String, dayId: String, slot: Int, week: Int) = obj("whyLift", jsonOf("programId" to programId, "dayId" to dayId, "slot" to slot, "weekIndex" to week))
     suspend fun liftProgression(programId: String) = obj("liftProgression", jsonOf("programId" to programId))

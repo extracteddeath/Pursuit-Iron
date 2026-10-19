@@ -240,10 +240,15 @@ export function home() {
    days a program builds in never break it), the block's progress, a Monday-first week strip, this
    week's days with their status, and the coach's notes for the next session (App.js coachFacts +
    workoutPlanCoachFact, the facts the web workout shows). */
-function todayDesign(nx, H, weekStart) {
+function weekStreak(H) {
     const now = Date.now(), DAY = 86400000;
     const has = (a, b) => H.some((h) => Number(h.date) > now - b * DAY && Number(h.date) <= now - a * DAY);
-    let streak = 0; for (let w = 0; w < 200 && has(w * 7, (w + 1) * 7); w++) streak++;
+    let n = 0; for (let w = 0; w < 200 && has(w * 7, (w + 1) * 7); w++) n++;
+    return n;
+}
+function todayDesign(nx, H, weekStart) {
+    const DAY = 86400000;
+    const streak = weekStreak(H);
     const sched = nx?.program.schedule || {};
     const today0 = new Date(); today0.setHours(0, 0, 0, 0);
     const strip = Array.from({ length: 7 }, (_, i) => {
@@ -1146,6 +1151,44 @@ export function progressCharts() {
     return { unit: u, weeks, intensity: { reps: [{ label: 'Strength', sub: '1–5 reps', sets: reps[0] }, { label: 'Hypertrophy', sub: '6–12 reps', sets: reps[1] }, { label: 'Endurance', sub: '13+ reps', sets: reps[2] }],
         effort: [{ label: 'To failure', sub: '0 RIR', sets: eff[0] }, { label: 'Hard', sub: '1 RIR', sets: eff[1] }, { label: 'Productive', sub: '2 RIR', sets: eff[2] }, { label: 'Easy', sub: '3+ RIR', sets: eff[3] }], unrated },
         feedback };
+}
+
+/* The design's You → Profile, from logged history: lifetime totals, the big three against bodyweight,
+   a PR board (estimated 1RM or heaviest set, each with the session that set it), and the last 30 days'
+   working sets per muscle with the push : pull balance. */
+const PUSH_PARTS = ['chest', 'shoulders', 'triceps'], PULL_PARTS = ['lats', 'upper_back', 'biceps', 'traps'];
+export function profileBoard() {
+    const H = history(), u = unit(), DAY = 86400000, bw = parseFloat(S.store.bodyweight);
+    const conv = (v, from) => (from && from !== u ? (u === 'lb' ? v * 2.20462 : v / 2.20462) : v);
+    const r1 = (v) => Math.round(v * 10) / 10;
+    let trends = []; try { trends = E.exerciseTrends(H) || []; } catch { trends = []; }
+    let lifted = 0; H.forEach((h) => { try { lifted += E.historyVolumeIn(h, u) || 0; } catch { /* unreadable entry */ } });
+    const recOf = (t, key) => (t.sessions || []).reduce((m, x) => {
+        const v = key === 'e1rm' ? conv(x.best ?? 0, x.unit || t.unit) : conv(x.top?.w ?? 0, x.unit || t.unit);
+        return !m || v > m.v ? { v, x } : m;
+    }, null);
+    const board = (key) => trends.map((t) => { const r = recOf(t, key); return r && r.v > 0 ? { id: t.id, name: exName(t.id), value: r1(r.v), date: r.x.date ?? null, reps: key === 'heaviest' ? (r.x.top?.r ?? null) : null } : null; })
+        .filter(Boolean).sort((a, b) => b.value - a.value).slice(0, 10);
+    const since30 = Date.now() - 30 * DAY;
+    const prs30 = trends.filter((t) => { const r = recOf(t, 'e1rm'); return r && Number(r.x.date) >= since30 && (t.sessions || []).length > 1; }).length;
+    const big = Object.entries(E.BIG_THREE || {}).map(([k, id]) => {
+        const t = trends.find((x) => x.id === id), e = t ? r1(conv(t.prBest ?? 0, t.unit)) : 0;
+        return { key: k, id, name: k.charAt(0).toUpperCase() + k.slice(1), e1rm: e, ratio: bw > 0 && e > 0 ? Math.round(e / bw * 100) / 100 : null };
+    });
+    const total = r1(big.reduce((a, b) => a + b.e1rm, 0));
+    const sets = {};
+    H.filter((h) => Number(h.date) >= since30).forEach((h) => Object.entries(h.perf || {}).forEach(([id, pf]) => {
+        const part = EX_BY_ID[id]?.part; if (!part) return;
+        let rows = []; try { rows = E.completedHistorySets(pf) || []; } catch { rows = []; }
+        const n = rows.filter((x) => !x.warm && !x.sub && Number(x.r) > 0).length; if (n) sets[part] = (sets[part] || 0) + n;
+    }));
+    const push = PUSH_PARTS.reduce((a, p) => a + (sets[p] || 0), 0), pull = PULL_PARTS.reduce((a, p) => a + (sets[p] || 0), 0);
+    return { unit: u, bodyweight: bw > 0 ? bw : null,
+        lifetime: { sessions: H.length, lifted: Math.round(lifted), streakWeeks: weekStreak(H), prs30 },
+        big3: { lifts: big, total, ratio: bw > 0 && total > 0 ? Math.round(total / bw * 10) / 10 : null, logged: big.filter((b) => b.e1rm > 0).length },
+        prBoard: { e1rm: board('e1rm'), heaviest: board('heaviest') },
+        balance: { parts: Object.entries(sets).map(([part, n]) => ({ part, label: E.PART_LABEL?.[part] || part, sets: n })).sort((a, b) => b.sets - a.sets),
+            push, pull, ratio: push > 0 && pull > 0 ? Math.round(push / pull * 10) / 10 : null } };
 }
 
 /* ------------------------------------------------------------------ plan */

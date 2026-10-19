@@ -362,6 +362,10 @@ if scroll_to(r"Strength standards", tries=5):
 # 7. Profile, calendar, settings, gyms, tools, unit switch
 tap(r"^\|You$|^You\|")
 tap(r"^\|Profile$", "profile")
+if scroll_to(r"^\|PR board$", tries=6):
+    shot("pr-board")
+else:
+    FAILS.append("PR board missing on the profile")
 scroll_to(r"Achievements")
 shot("profile-achievements")
 # App.js ProfileCustomization: reorder and hide profile sections

@@ -44,6 +44,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.Modifier
+import org.json.JSONObject
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
@@ -82,6 +84,8 @@ fun YouScreen(vm: AppViewModel) {
     var gymsOpen by remember { mutableStateOf(false) }
     var toolsOpen by remember { mutableStateOf(false) }
     var customizeOpen by remember { mutableStateOf(false) }
+    var board by remember { mutableStateOf<JSONObject?>(null) }
+    LaunchedEffect(vm.progress, vm.profile) { board = vm.profileBoard() }
     val full = StaggeredGridItemSpan.FullLine
     LazyVerticalStaggeredGrid(
         columns = StaggeredGridCells.Fixed(if (wide) 2 else 1),
@@ -101,6 +105,7 @@ fun YouScreen(vm: AppViewModel) {
                 }
             }
         }
+        board?.o("lifetime")?.takeIf { it.i("sessions") > 0 }?.let { lt -> item(span = full) { LifetimeTiles(lt, board.s("unit", "kg")) } }
         item(span = full) { Segmented(listOf("profile" to "Profile", "body" to "Body", "history" to "History", "settings" to "Settings"), section, { section = it }) }
         when (section) {
             "profile" -> {
@@ -111,6 +116,9 @@ fun YouScreen(vm: AppViewModel) {
                         "strength" -> item { StrengthScoreCard(vm) { section = "body" } }
                         "club" -> item { ClubCard(vm) }
                         "achievements" -> item(span = full) { AchievementsCard(vm) }
+                        "big3" -> board?.let { b -> item { Big3Card(b) } }
+                        "prs" -> board?.let { b -> item { PrBoardCard(vm, b) } }
+                        "balance" -> board?.let { b -> item { MuscleBalanceCard(b) } }
                     }
                 }
                 item(span = full) {

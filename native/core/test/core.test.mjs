@@ -609,5 +609,15 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   ok(total === n && g.intensity.reps[1].sets === n, 'every working set counted once, all 8 reps in 6–12');
   ok(rated + g.intensity.unrated === n && g.intensity.effort[2].sets === Math.ceil(n / 2), 'effort only from reported RIR; the rest counted as unrated');
   ok(g.feedback.some((f) => f.part === 'chest' && f.answers[0] === 'Too much'), 'soreness answers per muscle'); }
+// You → Profile board: lifetime, big three, PR board, muscle balance
+{ C.init({ store: JSON.stringify({ unit: 'kg', bodyweight: '80' }) });
+  C.createProgram({ config: { name: 'B', unit: 'kg', goal: 'both', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 2 });
+  C.startSession({}); for (const e of C.session().exercises) for (const x of e.sets) { if (x.warm || x.sub) continue; C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'weight', value: '100' }); C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'reps', value: '5' }); C.act({ type: 'toggle', ei: e.ei, si: x.i }); }
+  C.finishSession();
+  const b = C.profileBoard();
+  ok(b.lifetime.sessions === 1 && b.lifetime.lifted > 0 && b.lifetime.streakWeeks === 1, 'lifetime totals');
+  ok(b.prBoard.e1rm.length > 0 && b.prBoard.heaviest[0].value === 100 && b.prBoard.heaviest[0].reps === 5, 'PR board: heaviest set with its reps');
+  ok(b.big3.lifts.length === 3 && b.big3.lifts.some((l) => l.e1rm > 0 && l.ratio > 1), 'big three against bodyweight: ' + b.big3.lifts.map((l) => l.name + ' ' + l.e1rm + (l.ratio ? ' (' + l.ratio + '×)' : '')).join(', '));
+  ok(b.balance.parts.length > 0 && b.balance.parts.reduce((a, p) => a + p.sets, 0) > 0, 'muscle balance counts working sets per muscle'); }
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);
 

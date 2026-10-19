@@ -220,6 +220,7 @@ export function home() {
         recent: H.slice(0, 7).map(historyRow),
         reentry: nx && !S.live ? reentryOffer(H) : null,
         restDay: nx && !S.live ? restDayView(nx, H, rd) : null,
+        ...todayDesign(nx, H, weekStart),
         ...todayInsights(nx, H)
     };
 }
@@ -227,6 +228,45 @@ export function home() {
    one easier session before the plan resumes — two working sets per lift at 90% of today's loads.
    It is today's own prescription scaled down, the same path as the readiness check, so nothing about
    the program changes and the next session prescribes from what was logged, as usual. */
+/* The design's Today: the week streak (App.js: consecutive 7-day windows with a workout, so rest
+   days a program builds in never break it), the block's progress, a Monday-first week strip, this
+   week's days with their status, and the coach's notes for the next session (App.js coachFacts +
+   workoutPlanCoachFact, the facts the web workout shows). */
+function todayDesign(nx, H, weekStart) {
+    const now = Date.now(), DAY = 86400000;
+    const has = (a, b) => H.some((h) => Number(h.date) > now - b * DAY && Number(h.date) <= now - a * DAY);
+    let streak = 0; for (let w = 0; w < 200 && has(w * 7, (w + 1) * 7); w++) streak++;
+    const sched = nx?.program.schedule || {};
+    const today0 = new Date(); today0.setHours(0, 0, 0, 0);
+    const strip = Array.from({ length: 7 }, (_, i) => {
+        const t = weekStart + i * DAY, d = new Date(t), end = t + DAY;
+        const done = H.some((h) => Number(h.date) >= t && Number(h.date) < end);
+        return { dow: 'MTWTFSS'[i], date: d.getDate(), done, today: t === today0.getTime(), past: t < today0.getTime(), scheduled: !!sched[d.getDay()] };
+    });
+    let block = null, days = [], coach = [];
+    if (nx) {
+        const p = nx.program, weeks = E.weeksOf(p);
+        block = { weekIndex: nx.weekIndex, weeksTotal: weeks, deload: !!p.config?.deload, endless: !!p.config?.endless, inDeload: nx.weekIndex > weeks,
+            goal: GOAL_LABEL[p.config?.goal] || null, phase: (() => { try { return String(E.phaseFor(p, nx.weekIndex) || '').replace(/_/g, ' ') || null; } catch { return null; } })() };
+        const doneIds = new Set(H.filter((h) => h.programId === p.id && Number(h.date) >= weekStart).map((h) => h.dayId));
+        const wdOf = (id) => { const k = Object.keys(sched).find((x) => sched[x] === id); return k == null ? null : Number(k); };
+        days = p.days.map((d) => {
+            let sets = 0; try { sets = dayPreview(p, d, nx.weekIndex).reduce((a, e) => a + (Number(e.sets) || 0), 0); } catch { sets = 0; }
+            const wd = wdOf(d.id);
+            return { id: d.id, label: d.label, exercises: d.exercises.length, sets, weekday: wd == null ? null : ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][wd],
+                status: doneIds.has(d.id) ? 'done' : d.id === nx.day.id ? 'today' : 'planned' };
+        });
+        try {
+            const lm = E.buildLifterModel(H, perf(), p);
+            const facts = E.coachFacts(lm, nx.day, H) || [];
+            const plan = E.workoutPlanCoachFact(p, nx.day, nx.weekIndex);
+            coach = (plan ? [...facts, { ...plan, key: 'session-plan', priority: 20 }] : facts)
+                .slice().sort((a, b) => (b.priority || 0) - (a.priority || 0))
+                .map((f) => ({ key: f.key || f.title, icon: f.icon || 'plan', title: f.title || f.short || '', text: f.text || '', evidence: f.evidence || null }));
+        } catch { coach = []; }
+    }
+    return { streakWeeks: streak, weekStrip: strip, block, weekDays: days, coach };
+}
 /* The design's rest day: a program with a weekly schedule has nothing on today's weekday, and nothing
    was logged today. Today then leads with recovery and when the next session is, instead of a start
    button for a day the lifter planned to rest. Training anyway stays one tap away. */

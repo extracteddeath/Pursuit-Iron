@@ -39,6 +39,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
@@ -129,7 +132,12 @@ fun TodayScreen(vm: AppViewModel) {
             }
         }
 
+        if (next != null && h.o("live") == null) {
+            item(span = full) { StreakLine(h) }
+            item(span = full) { BlockProgressCard(vm, h) }
+        }
         if (!h.b("empty") && vm.prefs.seenWhatsNew < WHATS_NEW_VERSION) item(span = full) { WhatsNewCard(vm) }
+        if (next != null) item(span = full) { WeekStrip(h) }
         if (h.optInt("needsTrainingMax", 0) > 0) item(span = full) { TrainingMaxPrompt(vm) }
         h.o("reentry")?.takeIf { next != null && h.o("live") == null && it.optLong("lastDate") != vm.prefs.reentrySkippedFor }?.let { r ->
             item(span = full) { WelcomeBackCard(vm, r) }
@@ -139,6 +147,7 @@ fun TodayScreen(vm: AppViewModel) {
             if (rest != null) RestDayHero(vm, rest) else Hero(vm, next, h)
         }
 
+        if (next != null && h.o("restDay") == null) item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { CoachCard(h) }
         if (h.o("deload") != null) item { DeloadCard(vm, h) }
         val insights = h.strings("insights")
         if ("recovery" in insights) item { RecoveryCard(vm, h) }
@@ -167,6 +176,7 @@ fun TodayScreen(vm: AppViewModel) {
             }
         }
 
+        if (next != null) item(span = full) { ThisWeekList(vm, h) }
         val recent = h.list("recent")
         if (recent.isNotEmpty()) {
             item(span = full) { SectionTitle("Recent") }
@@ -188,15 +198,29 @@ private fun Hero(vm: AppViewModel, next: JSONObject, h: JSONObject) {
     val ready = h.o("readiness").i("today", 100)
     val ex = next.list("exercises")
     val live = h.o("live")
-    Surface(color = cs.primaryContainer, contentColor = cs.onPrimaryContainer, shape = RoundedCornerShape(36.dp), modifier = Modifier.fillMaxWidth()) {
+    Surface(color = cs.primaryContainer, contentColor = cs.onPrimaryContainer, shape = RoundedCornerShape(topStart = 36.dp, topEnd = 36.dp, bottomEnd = 36.dp, bottomStart = 12.dp), modifier = Modifier.fillMaxWidth()) {
         Box {
             Cookie(cs.primary, Modifier.size(180.dp).align(Alignment.TopEnd).offset(x = 50.dp, y = (-40).dp), alpha = 0.16f)
+            // The design's week ring: sessions done this week against the plan.
+            val wkDays = h.list("weekDays")
+            if (wkDays.size > 1) {
+                val done = wkDays.count { it.s("status") == "done" }
+                Box(Modifier.align(Alignment.TopEnd).padding(16.dp).size(60.dp).semantics(mergeDescendants = true) { contentDescription = "$done of ${wkDays.size} sessions this week" },
+                    contentAlignment = Alignment.Center) {
+                    androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
+                        val st = 6.dp.toPx()
+                        drawArc(cs.onPrimaryContainer.copy(alpha = 0.15f), 0f, 360f, false, style = androidx.compose.ui.graphics.drawscope.Stroke(st))
+                        drawArc(cs.primary, -90f, 360f * done / wkDays.size, false, style = androidx.compose.ui.graphics.drawscope.Stroke(st, cap = androidx.compose.ui.graphics.StrokeCap.Round))
+                    }
+                    Text("$done/${wkDays.size}", style = MaterialTheme.typography.labelLarge)
+                }
+            }
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Surface(color = cs.primary, contentColor = cs.onPrimary, shape = CircleShape) {
                     Text("READINESS $ready% · " + when { ready >= 85 -> "GOOD TO GO"; ready >= 70 -> "TRAIN AS PLANNED"; else -> "SOME SETS TRIMMED" },
                         style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
                 }
-                Text(next.s("dayLabel"), style = MaterialTheme.typography.displaySmall)
+                Text(next.s("dayLabel"), style = MaterialTheme.typography.displaySmall, modifier = Modifier.padding(end = if (h.list("weekDays").size > 1) 64.dp else 0.dp))
                 val cyc = h.o("cycle")
                 if (cyc != null) {
                     val blocks = cyc.optJSONArray("blocks")
@@ -213,14 +237,6 @@ private fun Hero(vm: AppViewModel, next: JSONObject, h: JSONObject) {
                     ex.map { it.s("part") }.distinct().filter { it.isNotEmpty() }.forEach { p ->
                         Surface(color = cs.surface, contentColor = cs.onSurface, shape = RoundedCornerShape(10.dp)) {
                             Text(p.replace('_', ' ').replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp))
-                        }
-                    }
-                }
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    ex.take(6).forEach { e ->
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(e.s("name"), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text("${e.i("sets")} × ${e.s("reps")}", style = MaterialTheme.typography.labelMedium)
                         }
                     }
                 }

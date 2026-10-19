@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -29,6 +30,14 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.pursuitiron.app.ui.common.SectionTitle
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.ui.semantics.semantics
@@ -271,6 +280,132 @@ fun RestDayHero(vm: AppViewModel, r: JSONObject) {
                     Text("Train ${r.s("nextLabel")} now", maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                 }
                 OutlinedButton(onClick = { vm.startQuick() }, modifier = Modifier.height(48.dp)) { Text("Quick workout", color = cs.onSecondaryContainer) }
+            }
+        }
+    }
+}
+
+/* ---------------------------------------------------------------- the design's Today pieces */
+
+/** "6-week streak": consecutive 7-day windows with a workout (App.js), so planned rest never breaks it. */
+@Composable
+fun StreakLine(h: JSONObject) {
+    val n = h.i("streakWeeks"); if (n <= 0) return
+    val cs = MaterialTheme.colorScheme
+    Row(Modifier.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Icon(PiIcons.Flame, null, Modifier.size(18.dp), tint = cs.primary)
+        Text("$n-week streak", style = MaterialTheme.typography.titleSmall)
+        Text("· a week counts with one workout in it", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+    }
+}
+
+/** Block progress: one segment per week, the current one part-filled, the deload week marked. */
+@Composable
+fun BlockProgressCard(vm: AppViewModel, h: JSONObject) {
+    val b = h.o("block") ?: return
+    val cs = MaterialTheme.colorScheme
+    val wk = b.i("weekIndex"); val total = b.i("weeksTotal").coerceAtLeast(1)
+    val segs = if (b.b("endless")) 0 else total + if (b.b("deload")) 1 else 0
+    val days = h.list("weekDays"); val doneFrac = if (days.isEmpty()) 0f else days.count { it.s("status") == "done" } / days.size.toFloat()
+    val title = when {
+        b.b("endless") -> if (b.b("inDeload")) "Continuous · deload" else "Continuous · week $wk"
+        b.b("inDeload") -> "Deload week"
+        else -> "Week $wk of $total" + (b.s("goal").takeIf { it.isNotBlank() }?.let { " · $it block" } ?: "")
+    }
+    PiCard(radius = 24.dp, padding = 16.dp, onClick = { vm.goTab(com.pursuitiron.app.Tab.Plan) }) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(title, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+            Text("Plan", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
+            Icon(PiIcons.ChevronRight, null, Modifier.size(16.dp), tint = cs.onSurfaceVariant)
+        }
+        if (segs > 0) Row(Modifier.fillMaxWidth().height(10.dp).semantics { contentDescription = "$title, ${Math.round(doneFrac * 100)} percent of this week done" },
+            horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            (1..segs).forEach { w ->
+                val dl = b.b("deload") && w == segs
+                val fill = when { w < wk -> 1f; w == wk -> doneFrac.coerceAtLeast(0.08f); else -> 0f }
+                Box(Modifier.weight(1f).fillMaxSize().clip(RoundedCornerShape(999.dp)).background(if (dl) cs.tertiaryContainer else cs.surfaceContainerHighest)) {
+                    if (fill > 0f) Box(Modifier.fillMaxWidth(fill).fillMaxHeight().clip(RoundedCornerShape(999.dp)).background(cs.primary))
+                }
+            }
+        }
+    }
+}
+
+/** Monday-first week strip: workouts logged (check), today (ring), scheduled days (dot). */
+@Composable
+fun WeekStrip(h: JSONObject) {
+    val strip = h.list("weekStrip"); if (strip.size != 7) return
+    val cs = MaterialTheme.colorScheme
+    PiCard(radius = 24.dp, padding = 14.dp) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            strip.forEach { d ->
+                val done = d.b("done"); val today = d.b("today")
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.semantics(mergeDescendants = true) {
+                        contentDescription = "${d.s("dow")} ${d.i("date")}" + (if (today) ", today" else "") + (if (done) ", trained" else if (d.b("scheduled")) ", scheduled" else "")
+                    }) {
+                    Text(d.s("dow"), style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
+                    Box(Modifier.size(40.dp).clip(if (done) RoundedCornerShape(12.dp) else CircleShape)
+                        .background(if (done) cs.primary else cs.surfaceContainerLow)
+                        .then(if (today && !done) Modifier.border(2.dp, cs.primary, CircleShape) else Modifier), contentAlignment = Alignment.Center) {
+                        if (done) Icon(PiIcons.Check, null, Modifier.size(18.dp), tint = cs.onPrimary)
+                        else Text("${d.i("date")}", style = MaterialTheme.typography.labelLarge, color = if (today) cs.primary else if (d.b("past")) cs.onSurfaceVariant else cs.onSurface)
+                    }
+                    Box(Modifier.size(5.dp).clip(CircleShape).background(if (d.b("scheduled") && !done) cs.tertiary else androidx.compose.ui.graphics.Color.Transparent))
+                }
+            }
+        }
+    }
+}
+
+/** The design's "Today's game plan": the coach notes for the next session (App.js coachFacts). */
+@Composable
+fun CoachCard(h: JSONObject) {
+    val notes = h.list("coach"); if (notes.isEmpty()) return
+    val cs = MaterialTheme.colorScheme
+    var all by remember { mutableStateOf(false) }
+    PiCard(radius = 28.dp) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Icon(PiIcons.Progress, null, Modifier.size(20.dp), tint = cs.primary)
+            Text("Today's game plan", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            if (notes.size > 1) Text("${notes.size} notes", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
+        }
+        (if (all) notes else notes.take(3)).forEach { f ->
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                val icon = when (f.s("icon")) { "deload", "fatigue" -> PiIcons.Shield; "recal", "cal" -> PiIcons.Redo; "pr" -> PiIcons.Trophy; else -> PiIcons.Sparkle }
+                Box(Modifier.size(32.dp).clip(RoundedCornerShape(10.dp)).background(cs.primary), contentAlignment = Alignment.Center) { Icon(icon, null, Modifier.size(16.dp), tint = cs.onPrimary) }
+                Column(Modifier.weight(1f)) {
+                    Text(f.s("title"), style = MaterialTheme.typography.titleSmall)
+                    Text(f.s("text"), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                    f.s("evidence").takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant) }
+                }
+            }
+        }
+        if (notes.size > 3) TextButton(onClick = { all = !all }) { Text(if (all) "Show fewer" else "Show all ${notes.size}") }
+    }
+}
+
+/** "This week": the program's days with their status, the next one highlighted. */
+@Composable
+fun ThisWeekList(vm: AppViewModel, h: JSONObject) {
+    val days = h.list("weekDays"); if (days.isEmpty()) return
+    val cs = MaterialTheme.colorScheme
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionTitle("This week")
+        Column(Modifier.clip(RoundedCornerShape(24.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            days.forEach { d ->
+                val st = d.s("status"); val today = st == "today"; val done = st == "done"
+                Row(Modifier.fillMaxWidth().background(if (today) cs.primaryContainer else cs.surfaceContainerLow).padding(horizontal = 14.dp, vertical = 12.dp)
+                    .semantics(mergeDescendants = true) {}, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Box(Modifier.size(44.dp).clip(if (done) RoundedCornerShape(14.dp) else CircleShape).background(if (done || today) cs.primary else cs.secondaryContainer), contentAlignment = Alignment.Center) {
+                        Text(d.s("weekday").ifBlank { "D${days.indexOf(d) + 1}" }, style = MaterialTheme.typography.labelMedium, color = if (done || today) cs.onPrimary else cs.onSecondaryContainer)
+                    }
+                    Column(Modifier.weight(1f)) {
+                        Text(d.s("label"), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text("${d.i("exercises")} exercises · ${d.i("sets")} sets", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                    }
+                    Text(when (st) { "done" -> "Done"; "today" -> "Up next"; else -> "Planned" }, style = MaterialTheme.typography.labelMedium, color = if (today) cs.onPrimaryContainer else cs.onSurfaceVariant)
+                }
             }
         }
     }

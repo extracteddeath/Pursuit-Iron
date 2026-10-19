@@ -164,6 +164,14 @@ tap(r"^\|Build my program$", "setup")  # the welcome screen opens the builder
 tap(r"Build my program", "today-with-program", timeout=8)
 time.sleep(3)
 shot("today")
+# The design's Today: week strip, the coach's game plan and this week's days
+if not find(r"Today's game plan", timeout=3) and not scroll_to(r"Today's game plan", tries=4):
+    FAILS.append("no game plan on Today")
+else:
+    shot("today-game-plan")
+if not scroll_to(r"^\|This week$", tries=4):
+    FAILS.append("no This week list on Today")
+scroll_up_to(r"Start workout|^\|?Train .+ now", tries=8)
 
 # 2. Workout: enter a weight, log, rate, rest
 tap(r"Start workout|^\|?Train .+ now")

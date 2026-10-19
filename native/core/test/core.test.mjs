@@ -587,5 +587,15 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   q = C.act({ type: 'bumpWeight', ei: e.ei, si, dir: 1 });
   ok(parseFloat(q.exercises[e.ei].sets[si].weight) > -40, 'plus takes help off (' + q.exercises[e.ei].sets[si].weight + ')');
   C.discardSession(); }
+// The design's Today: streak, week strip, block, this week's days, coach notes
+{ C.init({ store: JSON.stringify({ unit: 'kg' }) });
+  C.createProgram({ config: { name: 'T', unit: 'kg', goal: 'both', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 2 });
+  let h = C.home();
+  ok(h.streakWeeks === 0 && h.weekStrip.length === 7 && h.weekStrip.filter((d) => d.today).length === 1, 'no streak yet, a 7-day strip with today marked');
+  ok(h.block && h.block.weekIndex === 1 && h.weekDays.length === 4 && h.weekDays.filter((d) => d.status === 'today').length === 1, 'block and this week\'s days, one up next');
+  ok(h.coach.length >= 1 && h.coach.every((f) => f.title && f.text), 'coach notes for the next session: ' + h.coach.map((f) => f.title).join(' | '));
+  C.startSession({}); for (const e of C.session().exercises) for (const x of e.sets) { if (x.warm || x.sub) continue; C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'weight', value: '50' }); C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'reps', value: '8' }); C.act({ type: 'toggle', ei: e.ei, si: x.i }); }
+  C.finishSession(); h = C.home();
+  ok(h.streakWeeks === 1 && h.weekStrip.some((d) => d.today && d.done) && h.weekDays.filter((d) => d.status === 'done').length === 1, 'a workout today: streak 1, today checked, its day done'); }
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);
 

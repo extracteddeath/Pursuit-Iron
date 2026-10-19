@@ -357,6 +357,8 @@ if tap(r"^Manage pinned lifts", "pins-sheet"):
     close_sheet(r"of 6 pinned")
 else:
     FAILS.append("pinned lifts section missing on Progress")
+if find(r"coroutine scope|Something went wrong", timeout=1):
+    FAILS.append("an error snackbar showed on Progress")
 if scroll_to(r"Intensity distribution", tries=6):
     shot("intensity")
 else:

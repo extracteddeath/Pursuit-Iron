@@ -952,6 +952,8 @@ function addedSeconds(program, day, weekIndex, withTransitions) {
 function addedMinutes(program, day, weekIndex) { return Math.round(addedSeconds(program, day, weekIndex, true) / 60); }
 
 function daySeconds(program, day, weekIndex, withTransitions) {
+    if (day?.sessionLengthPlan?.programId === program?.id && day.sessionLengthPlan.weekIndex === weekIndex)
+        return day.sessionLengthPlan.estimatedMinutes * 60;
     let sec = 0;
     (day.exercises || []).forEach((_id, slot) => {
         const id = exerciseAt(program, day, slot, weekIndex);
@@ -972,7 +974,7 @@ function daySeconds(program, day, weekIndex, withTransitions) {
 const budgetIncludesTransitions = (program) => engHas(program.engineV || 1, "honestBudget");
 
 function estimateMinutesFor(program, day, weekIndex, pace) {
-    return Math.round((daySeconds(program, day, weekIndex, true) / 60) * ((pace && pace.factor) || 1));
+    return Math.round((daySeconds(program, day, weekIndex, true) / 60) * (day?.sessionLengthPlan ? 1 : ((pace && pace.factor) || 1)));
 }
 
 function estimateMinutes(program, day, weekIndex) {

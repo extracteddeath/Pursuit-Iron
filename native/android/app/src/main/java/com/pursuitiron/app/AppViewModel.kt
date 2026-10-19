@@ -593,7 +593,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /* ---------------------------------------------------------------- data in and out */
     suspend fun exportText(): String? = core?.exportStoreText()
-    fun markBackup() = launchCore { call("markBackup"); settings = obj("settings") }
+    fun markBackup() = launchCore { call("markBackup"); settings = obj("settings"); home = obj("home") }
 
     fun acceptImport() = launchCore {
         val offer = importOffer ?: return@launchCore

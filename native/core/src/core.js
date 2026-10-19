@@ -228,6 +228,7 @@ export function home() {
         recent: H.slice(0, 7).map(historyRow),
         reentry: nx && !S.live ? reentryOffer(H) : null,
         restDay: nx && !S.live ? restDayView(nx, H, rd) : null,
+        backup: S.live ? null : backupNudge(H),
         ...todayDesign(nx, H, weekStart),
         ...todayInsights(nx, H)
     };
@@ -236,6 +237,17 @@ export function home() {
    one easier session before the plan resumes — two working sets per lift at 90% of today's loads.
    It is today's own prescription scaled down, the same path as the readiness check, so nothing about
    the program changes and the next session prescribes from what was logged, as usual. */
+/* App.js needsBackup: something worth keeping and no backup file for two weeks. Never backed up
+   counts from when training started, not from 1970 — App.js nudged the moment a first program was
+   built, before there was anything a backup would save that the program builder couldn't redo. */
+function backupNudge(H) {
+    if (!(saved().length > 0 || H.length >= 3)) return null;
+    const last = Number(S.store.lastBackup) || 0;
+    const start = Math.min(...[...saved().map((p) => Number(p.createdAt) || Infinity), ...H.map((h) => Number(h.date) || Infinity)]);
+    const since = last || (Number.isFinite(start) ? start : Date.now());
+    if (Date.now() - since <= 14 * 86400000) return null;
+    return { lastBackup: last || null, sessionsSince: H.filter((h) => Number(h.date) > last).length };
+}
 /* The design's Today: the week streak (App.js: consecutive 7-day windows with a workout, so rest
    days a program builds in never break it), the block's progress, a Monday-first week strip, this
    week's days with their status, and the coach's notes for the next session (App.js coachFacts +

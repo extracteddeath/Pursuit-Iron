@@ -57,6 +57,10 @@ class Prefs(context: Context) {
     var profileLayout by mutableStateOf(ProfileLayout.parse(sp.getString("profileLayout", null)))
         private set
     fun changeProfileLayout(v: ProfileLayout) { profileLayout = v.normalized(); sp.edit().putString("profileLayout", profileLayout.json()).apply() }
+    /** The backup nudge's X: quiet for a week, then it may come back if there is still no backup. */
+    var backupNudgeHiddenAt by mutableStateOf(sp.getLong("backupNudgeHiddenAt", 0L))
+        private set
+    fun hideBackupNudge() { backupNudgeHiddenAt = System.currentTimeMillis(); sp.edit().putLong("backupNudgeHiddenAt", backupNudgeHiddenAt).apply() }
     fun changePins(v: List<String>) { pins = v; sp.edit().putString("pins", org.json.JSONArray(v).toString()).apply() }
     fun markAskedNotifications() { askedNotifications = true; sp.edit().putBoolean("askedNotifications", true).apply() }
 }

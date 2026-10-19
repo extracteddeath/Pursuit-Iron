@@ -60,6 +60,7 @@ import com.pursuitiron.app.ui.common.s
 import com.pursuitiron.app.ui.common.strings
 import com.pursuitiron.app.ui.common.volUnit
 import org.json.JSONObject
+import kotlinx.coroutines.launch
 
 /* App.js INTRO_VERSION: bump when the welcome content changes so returning users see it once more. */
 const val INTRO_VERSION = 1
@@ -407,6 +408,37 @@ fun ThisWeekList(vm: AppViewModel, h: JSONObject) {
                     Text(when (st) { "done" -> "Done"; "today" -> "Up next"; else -> "Planned" }, style = MaterialTheme.typography.labelMedium, color = if (today) cs.onPrimaryContainer else cs.onSurfaceVariant)
                 }
             }
+        }
+    }
+}
+
+/** App.js needsBackup as the design's banner: back up straight from Today, or hide it for a week. */
+@Composable
+fun BackupBanner(vm: AppViewModel, b: JSONObject) {
+    val cs = MaterialTheme.colorScheme
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val save = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri != null) scope.launch {
+            val text = vm.exportText() ?: return@launch
+            runCatching { ctx.contentResolver.openOutputStream(uri)?.use { it.write(text.toByteArray(Charsets.UTF_8)) } }
+                .onSuccess { vm.markBackup(); vm.toast("Backup saved") }.onFailure { vm.toast("Couldn't save the backup") }
+        }
+    }
+    val last = b.optLong("lastBackup").takeIf { it > 0 }
+    val days = last?.let { ((System.currentTimeMillis() - it) / 86_400_000L).toInt() }
+    val n = b.i("sessionsSince")
+    androidx.compose.material3.Surface(color = cs.tertiaryContainer, contentColor = cs.onTertiaryContainer, shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth()) {
+        Row(Modifier.padding(start = 16.dp, end = 4.dp, top = 12.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Icon(PiIcons.Download, null)
+            Column(Modifier.weight(1f)) {
+                Text("Backup recommended", style = MaterialTheme.typography.titleSmall)
+                Text((if (days != null) "Last backup $days days ago" else "No backup yet") + (if (n > 0) " · $n session${if (n == 1) "" else "s"} since" else ""),
+                    style = MaterialTheme.typography.bodySmall)
+            }
+            Button(onClick = { save.launch("pursuit-iron-backup-${java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())}.json") },
+                colors = ButtonDefaults.buttonColors(containerColor = cs.onTertiaryContainer, contentColor = cs.tertiaryContainer)) { Text("Back up") }
+            androidx.compose.material3.IconButton(onClick = { vm.prefs.hideBackupNudge() }) { Icon(PiIcons.Close, "Hide for a week", Modifier.size(18.dp)) }
         }
     }
 }

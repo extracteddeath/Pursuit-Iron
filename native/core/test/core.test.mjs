@@ -634,5 +634,13 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   ok(bb.length > 5 && bb.every((x) => x.equipLabel === 'Barbell') && bw.length > 3 && bw.every((x) => x.equipLabel === 'Bodyweight'), 'equipment filter: ' + bb.length + ' barbell, ' + bw.length + ' bodyweight');
   ok(all.filter((x) => x.today).length === C.home().next.exercises.length, 'TODAY tags the next session\'s lifts');
   ok(C.library({ part: 'chest', equip: 'dumbbell' }).every((x) => x.part === 'chest' && x.equipLabel === 'Dumbbell'), 'filters combine'); }
+// Backup nudge (App.js needsBackup): a program and no backup in two weeks
+{ C.init({ store: JSON.stringify({ unit: 'kg' }) });
+  ok(C.home().backup === null, 'nothing to back up yet');
+  C.createProgram({ config: { name: 'K', unit: 'kg', goal: 'both', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 2 });
+  ok(C.home().backup === null, 'a program built today: no nudge yet');
+  const st = JSON.parse(C.exportStore()); st.saved.forEach((p) => { p.createdAt = Date.now() - 20 * 86400000; }); C.init({ store: JSON.stringify(st) });
+  ok(C.home().backup && C.home().backup.lastBackup === null, 'three weeks in and never backed up: nudge');
+  C.markBackup(); ok(C.home().backup === null, 'a fresh backup clears it'); }
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);
 

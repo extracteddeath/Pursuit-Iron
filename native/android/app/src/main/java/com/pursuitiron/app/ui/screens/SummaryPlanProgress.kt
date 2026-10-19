@@ -158,6 +158,7 @@ fun PlanScreen(vm: AppViewModel) {
         }
         item(span = full) { VolumeWaveCard(vm, p.s("programId"), wk, { vm.loadPlan(p.s("programId"), it) }, { matrixOpen = true }) }
         item(span = full) { WeekVolumeCard(vm, p.s("programId"), wk) }
+        item(span = full) { LiftProgressionCard(vm, p.s("programId")) }
         p.list("days").forEach { d ->
             item {
                 val isNext = d.s("id") == p.s("nextDayId") && wk == p.i("current")

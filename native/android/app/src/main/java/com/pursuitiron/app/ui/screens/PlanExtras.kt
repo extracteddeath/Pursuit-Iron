@@ -54,6 +54,7 @@ import com.pursuitiron.app.ui.common.list
 import com.pursuitiron.app.ui.common.s
 import com.pursuitiron.app.ui.theme.Motion
 import org.json.JSONObject
+import kotlinx.coroutines.launch
 
 /**
  * App.js LoadWaveCard: planned working sets per week, the deload included as the program's own fact.
@@ -259,6 +260,82 @@ fun WeekVolumeCard(vm: AppViewModel, programId: String, week: Int) {
                     "over" -> "planned at $n sets, above the ${v.s("lo")}–${v.s("hi")} that has driven your fastest gains. More sets haven't bought you more progress."
                     else -> "planned at $n sets, below the ${v.s("lo")}–${v.s("hi")} that has driven your fastest gains."
                 } + " (${v.s("weeks")} weeks compared)", style = MaterialTheme.typography.bodySmall, color = if (st == "in") cs.onSurface else cs.error)
+            }
+        }
+    }
+}
+
+/* App.js ProgressionCard overview, as the design's Lift progression: the methods this block runs,
+   tap for every lift with why the engine picked its style, and change or lock it. */
+@Composable
+fun LiftProgressionCard(vm: AppViewModel, programId: String) {
+    var data by remember(programId) { mutableStateOf<JSONObject?>(null) }
+    var open by remember { mutableStateOf(false) }
+    LaunchedEffect(programId, vm.plan) { data = vm.liftProgression(programId) }
+    val d = data ?: return
+    if (d.b("percent") || d.list("lifts").isEmpty()) return
+    val cs = MaterialTheme.colorScheme
+    PiCard(radius = 28.dp, onClick = { open = true }) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Icon(PiIcons.Sparkle, null, tint = cs.primary)
+            Column(Modifier.weight(1f)) {
+                Text("Lift progression", style = MaterialTheme.typography.titleMedium)
+                Text(d.s("heading"), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+            }
+            Icon(PiIcons.ChevronRight, null, tint = cs.onSurfaceVariant)
+        }
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            d.list("groups").forEach { g ->
+                androidx.compose.material3.Surface(color = cs.secondaryContainer, contentColor = cs.onSecondaryContainer, shape = RoundedCornerShape(10.dp)) {
+                    Text("${g.s("label")} · ${g.i("count")}", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp))
+                }
+            }
+        }
+    }
+    if (open) LiftProgressionSheet(vm, programId, d, { data = it }) { open = false }
+}
+
+@Composable
+private fun LiftProgressionSheet(vm: AppViewModel, programId: String, d: JSONObject, onData: (JSONObject) -> Unit, onClose: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    var editing by remember { mutableStateOf<String?>(null) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    ModalBottomSheet(onDismissRequest = onClose, sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("Lift progression", style = MaterialTheme.typography.headlineSmall)
+            Text(d.s("note"), style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
+            Column(Modifier.clip(RoundedCornerShape(22.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                d.list("lifts").forEach { l ->
+                    val id = l.s("id"); val isOpen = editing == id
+                    Column(
+                        Modifier.fillMaxWidth().background(if (isOpen) cs.surfaceContainerHighest else cs.surfaceContainerHigh)
+                            .clickable { editing = if (isOpen) null else id }.padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Column(Modifier.weight(1f)) {
+                                Text(l.s("name"), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(l.s("dayLabel"), style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                            androidx.compose.material3.Surface(color = if (l.b("locked")) cs.primary else cs.tertiaryContainer,
+                                contentColor = if (l.b("locked")) cs.onPrimary else cs.onTertiaryContainer, shape = RoundedCornerShape(10.dp)) {
+                                Text((if (l.b("locked")) "Locked · " else "") + l.s("label"), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp))
+                            }
+                        }
+                        if (l.b("changed") && l.s("previous").isNotBlank()) Text("Changed: ${l.s("previous")} → ${l.s("label")}", style = MaterialTheme.typography.labelMedium, color = cs.primary)
+                        if (isOpen) {
+                            Text(l.s("reason"), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 4.dp)) {
+                                d.list("styles").forEach { st ->
+                                    val sel = if (st.s("id") == "auto") !l.b("locked") else l.b("locked") && l.s("style") == st.s("id")
+                                    MorphChip(st.s("label"), sel, {
+                                        scope.launch { vm.setLiftProgression(programId, id, st.s("id"))?.let(onData) }
+                                    }, height = 36.dp)
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }

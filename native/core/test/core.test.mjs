@@ -543,5 +543,19 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   const r2 = C.applyProgramSettings({ programId: mk2.programId, settings: { endless: false, deload: false } });
   const ps2 = C.programSettings({ programId: mk2.programId });
   ok(r2.ok && ps2.endless === false && ps2.deload === false, 'and back to a fixed block without a deload'); }
+// Program-wide lift progression: styles, reasons, locks
+{ C.init({ store: JSON.stringify({ unit: 'kg' }) });
+  const mk = C.createProgram({ config: { name: 'L', unit: 'kg', goal: 'both', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 4 });
+  const lp = C.liftProgression({ programId: mk.programId });
+  ok(lp.lifts.length > 5 && lp.lifts.every((l) => l.style && l.label && l.reason && !l.locked), 'every lift has a style and a reason, none locked');
+  ok(lp.groups.reduce((a, g) => a + g.count, 0) === lp.lifts.length, 'groups count every lift');
+  const l0 = lp.lifts[0], other = lp.styles.find((x) => x.id !== 'auto' && x.id !== l0.style).id;
+  const r = C.setLiftProgression({ programId: mk.programId, exId: l0.id, style: other });
+  const l1 = r.lifts.find((l) => l.id === l0.id);
+  ok(r.ok && l1.style === other && l1.locked, 'choosing a style locks it: ' + other);
+  const ss = C.startSession({}); const e = ss.exercises.find((x) => x.id === l0.id);
+  ok(!e || e.progression.style === other, 'the workout runs the chosen style'); C.discardSession();
+  const r2 = C.setLiftProgression({ programId: mk.programId, exId: l0.id, style: 'auto' });
+  ok(r2.ok && !r2.lifts.find((l) => l.id === l0.id).locked, 'Auto hands the lift back to the engine'); }
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);
 

@@ -2226,6 +2226,44 @@ export function completeProgramUpdate({ apply }) {
     return { ok: true, applied: !!apply };
 }
 
+/* App.js ProgressionCard selection overview + the design's Program settings → Lift progression: every
+   lift of the program with the style it runs, why the engine picked it (program.nextEngine
+   .progressionPlan — read, never re-derived), and a lock when the lifter chose it. Choosing a style
+   writes progStyle + progStyleLifter, the same record "keep in program" writes after a workout;
+   choosing Auto hands the lift back to the engine. */
+const STYLE_LABEL = { double: 'Double progression', dynamic: 'Dynamic double progression', ladder: 'Rep ladder', linear: 'Linear progression', wave: 'Wave loading', e1rm: 'e1RM autoregulation', auto: 'Auto' };
+export function liftProgression({ programId }) {
+    const p = programById(programId); if (!p) return null;
+    const plan = Array.isArray(p.nextEngine?.progressionPlan) ? p.nextEngine.progressionPlan : [];
+    const byEx = Object.fromEntries(plan.filter((x) => x?.exerciseId).map((x) => [x.exerciseId, x]));
+    const seen = new Set(), lifts = [];
+    (p.days || []).forEach((d) => (d.exercises || []).forEach((id, slot) => {
+        if (seen.has(id) || !EX_BY_ID[id]) return; seen.add(id);
+        let style = null; try { style = E.styleFor(p, id); } catch { style = null; }
+        const sel = byEx[id], locked = !!p.progStyleLifter?.[id];
+        lifts.push({ id, name: exName(id), dayLabel: d.label, primary: slot === d.primaryIndex, style: style || 'auto', label: STYLE_LABEL[style] || style || 'Auto', locked,
+            reason: locked ? 'You chose this. Auto will not replace it at block review.' : (sel?.reason || 'Auto picked the progression that best fits this lift and block.'),
+            changed: !!sel?.changed, previous: sel?.previousStyle ? (STYLE_LABEL[sel.previousStyle] || sel.previousStyle) : null });
+    }));
+    const groups = []; lifts.forEach((l) => { const g = groups.find((x) => x.style === l.style); if (g) g.count++; else groups.push({ style: l.style, label: l.label, count: 1 }); });
+    const adaptive = plan.filter((x) => x?.source === 'adaptive' || x?.source === 'adaptive_hold').length, changed = plan.filter((x) => x?.changed).length;
+    const allMine = lifts.length > 0 && lifts.every((l) => l.locked);
+    return { programId: p.id, percent: !!p.config?.percentScheme,
+        heading: allMine ? 'Your progression choices' : adaptive ? 'Progression re-checked from your training' : 'Auto progression for this block',
+        note: allMine ? 'These methods are locked by your choices. Auto will not replace them at block review.'
+            : adaptive ? `Auto used comparable workout history before keeping or changing each method: ${changed} changed, ${Math.max(0, adaptive - changed)} kept. One unusual workout is not enough to switch it.`
+            : 'Pursuit chose per exercise from the lift, rep target, loading setup, your experience, phase and block length. It re-checks between blocks once there is enough comparable training.',
+        groups, lifts, styles: [{ id: 'auto', label: 'Auto (recommended)' }].concat(Object.keys(E.PROG_STYLES || {}).filter((k) => k !== 'auto').map((k) => ({ id: k, label: STYLE_LABEL[k] || E.PROG_STYLES[k] }))) };
+}
+export function setLiftProgression({ programId, exId, style }) {
+    const p = programById(programId); if (!p || !EX_BY_ID[exId]) return { ok: false, error: 'That lift is not in this program.' };
+    if (p.config?.percentScheme) return { ok: false, error: 'Percentage programs set their main lifts by the method.' };
+    const next = { ...withProgressionChoices(p, { [exId]: style }), edited: true };
+    setList('saved', saved().map((x) => (x.id === programId ? next : x)));
+    if (S.store.drafts?.[programId]) S.store.drafts = { ...S.store.drafts, [programId]: withProgressionChoices(S.store.drafts[programId], { [exId]: style }) };
+    return { ok: true, ...liftProgression({ programId }) };
+}
+
 /* ------------------------------------------------------------------ per-exercise settings (App.js goals / exSetup / setProgramExLoadInc) */
 export function setGoal({ id, weight }) {
     const g = { ...(S.store.goals || {}) }, w = Number(weight);

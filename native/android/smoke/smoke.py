@@ -288,6 +288,14 @@ if scroll_to(r"Every lift, week by week", tries=4):
     close_sheet(r"^\|Week by week$")
 else:
     FAILS.append("no week-by-week entry on Plan")
+# Lift progression: the block's methods, each lift's reason, change or lock it
+if scroll_to(r"^Lift progression|\|Lift progression", tries=4):
+    tap(r"^Lift progression|\|Lift progression", "lift-progression")
+    if not find(r"Pursuit chose per exercise|re-checked|locked by your choices", timeout=5):
+        FAILS.append("lift progression sheet missing its note")
+    close_sheet(r"Pursuit chose per exercise|re-checked|locked by your choices")
+else:
+    FAILS.append("no lift progression card on Plan")
 
 # 6. Transfer link from the web app
 with open(LINK) as f:

@@ -247,7 +247,7 @@ fun ProgressScreen(vm: AppViewModel) {
                     recs.take(15).forEach { r ->
                         Row(Modifier.fillMaxWidth().background(cs.surfaceContainerLow).clickable { liftId = r.s("id") }.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                             Text(r.s("name"), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            if (r.s("weight").isNotBlank()) Text("${r.s("weight")}×${r.s("reps")}  ", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
+                            if (r.s("weight").isNotBlank()) Text(r.s("weight") + (r.s("reps").takeIf { it.isNotBlank() }?.let { "×$it" } ?: "") + "  ", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
                             Text(fmtNum(r.d("e1rm")), style = MaterialTheme.typography.titleSmall)
                         }
                     }

@@ -1050,7 +1050,15 @@ export function progress({ pinned = null } = {}) {
         lifts: trends.slice(0, 24).map((t) => ({ id: t.id, name: exName(t.id), points: pts(t), change: t.change ?? t.delta ?? null, pinned: ids.includes(t.id) })),
         pins: { auto, max: PIN_MAX, lifts: ids.map((id) => pinView(byId[id])),
             options: trends.filter((t) => !ids.includes(t.id)).map((t) => ({ id: t.id, name: exName(t.id) })).sort((a, b) => a.name.localeCompare(b.name)) },
-        records: Object.entries(bests).map(([id, b]) => ({ id, name: exName(id), e1rm: Math.round((b.e1rm ?? b.best ?? 0) * 10) / 10, weight: b.weight ?? b.w ?? null, reps: b.reps ?? b.r ?? null, date: b.date ?? null })).sort((a, b) => b.e1rm - a.e1rm).slice(0, 30),
+        // liftBests carries the best e1RM and heaviest load but no reps; the set shown beside a record is
+        // the one from the session that set it, as on the pinned cards.
+        records: Object.entries(bests).map(([id, b]) => {
+            const t = byId[id], bestOf = (x) => conv(x.best ?? 0, x.unit || t?.unit);
+            const rec = t ? (t.sessions || []).reduce((m, x) => (!m || bestOf(x) > bestOf(m) ? x : m), null) : null;
+            const top = rec?.top?.w > 0 ? rec.top : null;
+            return { id, name: exName(id), e1rm: r1(b.e1rm ?? b.best ?? 0), weight: top ? fmtW(conv(top.w, rec.unit || t?.unit)) : (fmtW(b.weight ?? b.w) || null),
+                reps: top ? (top.r ?? null) : (b.reps ?? b.r ?? null), date: rec?.date ?? b.date ?? null };
+        }).sort((a, b) => b.e1rm - a.e1rm).slice(0, 30),
         recap,
         readiness: readiness()
     };

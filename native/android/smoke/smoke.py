@@ -120,6 +120,15 @@ def back():
     time.sleep(1.2)
 
 
+def scroll_up_to(pattern, tries=8):
+    for _ in range(tries):
+        if find(pattern, timeout=2):
+            return True
+        adb("shell", "input", "swipe", "540", "600", "540", "1900", "200")
+        time.sleep(0.6)
+    return bool(find(pattern, timeout=2))
+
+
 def close_sheet(pattern, tries=3):
     """Back until a sheet's own text is gone: a back press while the sheet is still animating in is ignored."""
     for _ in range(tries):
@@ -329,8 +338,7 @@ if scroll_to(r"Customize profile", tries=4):
     if not find(r"sections shown", timeout=4):
         FAILS.append("profile customise sheet missing")
     close_sheet(r"sections shown")
-    adb("shell", "input", "swipe", "540", "700", "540", "1900", "300")
-    time.sleep(0.6)
+    scroll_up_to(r"^\|History$")
 else:
     FAILS.append("Customize profile button missing")
 adb("shell", "input", "swipe", "540", "700", "540", "1900", "300")
@@ -467,8 +475,10 @@ if scroll_to(r"New program"):
         if tap(r"% of max", "template-picked"):
             time.sleep(6)
             shot("training-max-sheet")
+            if not find(r"^\|Percentage program$", timeout=4):
+                FAILS.append("percentage program panel missing")
             tap(r"From a 1RM")
-            if tap(r"\(1RM, "):
+            if tap(r"1RM \((kg|lb)\)"):
                 adb("shell", "input", "text", "140")
                 hide_keyboard()
                 tap(r"^\|Set$")

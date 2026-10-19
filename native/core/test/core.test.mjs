@@ -410,6 +410,7 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   ok(pp.pins.lifts.every((l) => l.e1rm > 0 && (l.heavy === null || / × /.test(l.heavy))), 'pinned cards carry the record e1RM and set');
   ok(C.progress({ pinned: ids.concat(ids) }).pins.lifts.length === Math.min(6, new Set(ids).size), 'six pins at most');
   ok(C.progress({ pinned: [] }).pins.lifts.length === 0, 'unpinning everything stays empty');
+  ok(pr.records.length > 0 && pr.records.every((r) => r.weight && r.reps > 0), 'records show the set that made them: ' + pr.records.slice(0, 2).map((r) => r.weight + '×' + r.reps).join(', '));
   const ld = C.liftDetail({ id: lid });
   ok(ld && ld.points.length >= 1 && ld.best && ld.best.e1rm > 0 && ld.recent.length >= 1, 'lift detail: series, best and recent sets');
   ok(C.strengthStandards().ready === false && C.strengthStandards().missing === 'bodyweight', 'standards ask for bodyweight first');

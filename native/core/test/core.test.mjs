@@ -597,5 +597,17 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   C.startSession({}); for (const e of C.session().exercises) for (const x of e.sets) { if (x.warm || x.sub) continue; C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'weight', value: '50' }); C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'reps', value: '8' }); C.act({ type: 'toggle', ei: e.ei, si: x.i }); }
   C.finishSession(); h = C.home();
   ok(h.streakWeeks === 1 && h.weekStrip.some((d) => d.today && d.done) && h.weekDays.filter((d) => d.status === 'done').length === 1, 'a workout today: streak 1, today checked, its day done'); }
+// Progress charts: weekly volume, intensity distribution, recovery & feedback — from logged history
+{ C.init({ store: JSON.stringify({ unit: 'kg' }) });
+  C.createProgram({ config: { name: 'G', unit: 'kg', goal: 'both', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 2 });
+  C.startSession({}); let n = 0;
+  for (const e of C.session().exercises) for (const x of e.sets) { if (x.warm || x.sub) continue; C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'weight', value: '50' }); C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'reps', value: '8' }); C.act({ type: 'toggle', ei: e.ei, si: x.i }); if (n++ % 2 === 0) C.act({ type: 'rir', ei: e.ei, si: x.i, rir: 2 }); }
+  C.act({ type: 'feedback', part: 'chest', sore: 'sore' }); C.finishSession();
+  const g = C.progressCharts();
+  ok(g.weeks.length === 8 && g.weeks[7].now && g.weeks[7].sessions === 1 && g.weeks[7].volume > 0, 'eight weeks of volume, this week logged: ' + g.weeks[7].volume + ' kg');
+  const total = g.intensity.reps.reduce((a, z) => a + z.sets, 0), rated = g.intensity.effort.reduce((a, z) => a + z.sets, 0);
+  ok(total === n && g.intensity.reps[1].sets === n, 'every working set counted once, all 8 reps in 6–12');
+  ok(rated + g.intensity.unrated === n && g.intensity.effort[2].sets === Math.ceil(n / 2), 'effort only from reported RIR; the rest counted as unrated');
+  ok(g.feedback.some((f) => f.part === 'chest' && f.answers[0] === 'Too much'), 'soreness answers per muscle'); }
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);
 

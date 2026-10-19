@@ -186,11 +186,19 @@ function readiness() {
     return rows.map((r) => ({ part: r.part, label: E.PART_LABEL?.[r.part] || r.part, readiness: Math.round(r.readiness ?? 100) }));
 }
 
+/* The design's row subtitle: movement pattern · main equipment ("Horizontal push · Barbell"). */
+const EQUIP_LABEL = { ...Object.fromEntries((E.EQUIPMENT || []).map((x) => [x.id, x.label])), barbell: 'Barbell', dumbbell: 'Dumbbell', cable: 'Cable', machine: 'Machine', kettlebell: 'Kettlebell', band: 'Band', pullup: 'Bodyweight', bodyweight: 'Bodyweight' };
+function exSub(ex) {
+    if (!ex) return '';
+    const pat = ex.pattern ? ex.pattern.replace(/[-_]/g, ' ').replace(/^./, (c) => c.toUpperCase()) : (E.PART_LABEL?.[ex.part] || '');
+    const eq = (ex.equip || []).find((x) => !['bench', 'rack'].includes(x)) || (ex.equip || [])[0];
+    return [pat, eq ? (EQUIP_LABEL[eq] || eq) : 'Bodyweight'].filter(Boolean).join(' · ');
+}
 function dayPreview(program, day, weekIndex) {
     return day.exercises.map((_id, slot) => {
         const id = E.exerciseAt(program, day, slot, weekIndex);
         let cell = null; try { cell = E.computeCell(program, day, id, slot, weekIndex); } catch { cell = null; }
-        return { id, name: exName(id), part: EX_BY_ID[id]?.part || '', primary: slot === day.primaryIndex, sets: cell?.sets ?? null, reps: cell?.reps ?? null, rir: cell?.rir ?? null };
+        return { id, name: exName(id), part: EX_BY_ID[id]?.part || '', primary: slot === day.primaryIndex, sets: cell?.sets ?? null, reps: cell?.reps ?? null, rir: cell?.rir ?? null, sub: exSub(EX_BY_ID[id]) };
     });
 }
 
@@ -1106,6 +1114,40 @@ export function progress({ pinned = null } = {}) {
     };
 }
 
+/* The design's Progress charts, from logged history only:
+   - weekly volume and sessions for the last eight Monday-first weeks (historyVolumeIn, in the lifter's unit);
+   - intensity distribution of working sets over the last four weeks, by reps (1–5 / 6–12 / 13+) and by the
+     effort the lifter reported (0 / 1 / 2 / 3+ RIR; unreported sets are counted separately, never guessed);
+   - recovery & feedback per muscle: the last three soreness answers (fbSore) beside its readiness. */
+const SORE_LABEL = { sore: 'Too much', ontime: 'About right', fresh: 'Too easy' };
+function isoWeek(t) { const d = new Date(t); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7)); const w1 = new Date(d.getFullYear(), 0, 4); return 1 + Math.round(((d - w1) / 86400000 - 3 + ((w1.getDay() + 6) % 7)) / 7); }
+export function progressCharts() {
+    const H = history(), u = unit(), DAY = 86400000;
+    const ws = (() => { const d = new Date(); const day = (d.getDay() + 6) % 7; d.setHours(0, 0, 0, 0); return d.getTime() - day * DAY; })();
+    const weeks = Array.from({ length: 8 }, (_, k) => {
+        const start = ws - (7 - k) * 7 * DAY, end = start + 7 * DAY, hs = H.filter((h) => Number(h.date) >= start && Number(h.date) < end);
+        let vol = 0; hs.forEach((h) => { try { vol += E.historyVolumeIn(h, u) || 0; } catch { /* unreadable entry */ } });
+        return { label: 'W' + isoWeek(start), start, now: k === 7, volume: Math.round(vol), sessions: hs.length };
+    });
+    const since = Date.now() - 28 * DAY, reps = [0, 0, 0], eff = [0, 0, 0, 0]; let unrated = 0;
+    H.filter((h) => Number(h.date) >= since).forEach((h) => Object.values(h.perf || {}).forEach((pf) => {
+        let rows = []; try { rows = E.completedHistorySets(pf) || []; } catch { rows = []; }
+        rows.filter((x) => !x.warm && !x.sub).forEach((x) => {
+            const r = Number(x.r); if (!(r > 0)) return;
+            reps[r <= 5 ? 0 : r <= 12 ? 1 : 2]++;
+            const rir = Number(x.rir);
+            if (x.rirReported === false || x.rir == null || !Number.isFinite(rir)) unrated++; else eff[rir <= 0 ? 0 : rir < 2 ? 1 : rir < 3 ? 2 : 3]++;
+        });
+    }));
+    const rd = readiness(), fb = {};
+    H.forEach((h) => Object.entries(h.feedbackRaw || {}).forEach(([part, v]) => { if (v?.sore && SORE_LABEL[v.sore]) (fb[part] = fb[part] || []).length < 3 && fb[part].push(SORE_LABEL[v.sore]); }));
+    const feedback = Object.entries(fb).map(([part, answers]) => ({ part, label: E.PART_LABEL?.[part] || part, readiness: rd.find((r) => r.part === part)?.readiness ?? null, answers }))
+        .sort((a, b) => (a.readiness ?? 100) - (b.readiness ?? 100));
+    return { unit: u, weeks, intensity: { reps: [{ label: 'Strength', sub: '1–5 reps', sets: reps[0] }, { label: 'Hypertrophy', sub: '6–12 reps', sets: reps[1] }, { label: 'Endurance', sub: '13+ reps', sets: reps[2] }],
+        effort: [{ label: 'To failure', sub: '0 RIR', sets: eff[0] }, { label: 'Hard', sub: '1 RIR', sets: eff[1] }, { label: 'Productive', sub: '2 RIR', sets: eff[2] }, { label: 'Easy', sub: '3+ RIR', sets: eff[3] }], unrated },
+        feedback };
+}
+
 /* ------------------------------------------------------------------ plan */
 export function plan({ programId, weekIndex } = {}) {
     const nx = upNext();
@@ -1114,7 +1156,20 @@ export function plan({ programId, weekIndex } = {}) {
     const wk = weekIndex || (nx && nx.program.id === p.id ? nx.weekIndex : 1);
     return { programId: p.id, name: p.name, weekIndex: wk, weeksTotal: E.weeksOf(p), current: nx?.program.id === p.id ? nx.weekIndex : null,
         nextDayId: nx?.program.id === p.id ? nx.day.id : null, split: p.config?.split || null, goal: p.config?.goal || null, endless: !!p.config?.endless,
-        days: p.days.map((d) => { let m = null; try { m = E.estimateMinutes(p, d, wk); } catch { m = null; } return { id: d.id, label: d.label, minutes: m, exercises: dayPreview(p, d, wk) }; }),
+        deload: !!p.config?.deload,
+        days: (() => {
+            // The design's day cards: weekday badge from the schedule, and this week's status when the week shown is the current one.
+            const sched = p.schedule || {}, isCur = nx?.program.id === p.id && wk === nx.weekIndex;
+            const ws = (() => { const d = new Date(); const day = (d.getDay() + 6) % 7; d.setHours(0, 0, 0, 0); return d.getTime() - day * 86400000; })();
+            const done = new Set(isCur ? history().filter((h) => h.programId === p.id && Number(h.date) >= ws).map((h) => h.dayId) : []);
+            return p.days.map((d) => {
+                let m = null; try { m = E.estimateMinutes(p, d, wk); } catch { m = null; }
+                const ex = dayPreview(p, d, wk), wd = Object.keys(sched).find((k) => sched[k] === d.id);
+                return { id: d.id, label: d.label, minutes: m, exercises: ex, sets: ex.reduce((a, e) => a + (Number(e.sets) || 0), 0),
+                    weekday: wd == null ? null : ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][Number(wd)],
+                    status: !isCur ? null : done.has(d.id) ? 'done' : d.id === nx.day.id ? 'today' : 'planned' };
+            });
+        })(),
         percent: !!p.config?.percentScheme,
         cycleId: (p.cycleId && cycles().some((c) => c.id === p.cycleId)) ? p.cycleId : null, canNextBlock: !p.cycleId || !cycles().some((c) => c.id === p.cycleId),
         // Cycle blocks are reached through their cycle, as on the web app's Home, so the list stays one row per plan.

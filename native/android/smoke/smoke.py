@@ -338,7 +338,10 @@ if scroll_to(r"^\|Recent$", tries=6):
 
 # 6b. Progress: a lift's chart, strength standards
 tap(r"^\|Progress$|^Progress\|", "progress-after-import")
-# Pinned lifts (web chart favourites): the cards lead the page, Manage opens the panel
+if not find(r"vs last week|^\|Volume$", timeout=3):
+    FAILS.append("weekly volume chart missing on Progress")
+# Pinned lifts (web chart favourites): Manage opens the panel
+scroll_to(r"Open lift history|^Manage pinned lifts", tries=3, step=500)
 if tap(r"Open lift history", "lift-detail", required=False):
     if not find(r"Pin(ned)? to Progress", timeout=4):
         FAILS.append("lift detail has no pin toggle")
@@ -349,6 +352,10 @@ if tap(r"^Manage pinned lifts", "pins-sheet"):
     close_sheet(r"of 6 pinned")
 else:
     FAILS.append("pinned lifts section missing on Progress")
+if scroll_to(r"Intensity distribution", tries=6):
+    shot("intensity")
+else:
+    FAILS.append("intensity distribution missing on Progress")
 if scroll_to(r"Strength standards", tries=5):
     shot("strength-standards")
 

@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
@@ -46,6 +47,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.semantics.selected
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.draw.clip
@@ -153,43 +157,17 @@ fun PlanScreen(vm: AppViewModel) {
         }
         if (p.s("cycleId").isNotBlank()) item(span = full) { CycleBanner(vm, p.s("cycleId")) { openCycle = p.s("cycleId") } }
         item(span = full) {
+            // The design's week chips: W1 … with DONE / NOW, and the deload week as its own chip.
+            val cur = p.i("current"); val list = (1..weeks).toList() + if (p.b("deload")) listOf(weeks + 1) else emptyList()
             LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                items(weeks) { w ->
-                    val n = w + 1
-                    MorphChip(if (n == p.i("current")) "Week $n · now" else "Week $n", n == wk, { vm.loadPlan(p.s("programId"), n) })
-                }
+                items(list) { n -> PlanWeekChip(n, n > weeks, n == wk, cur, { vm.loadPlan(p.s("programId"), n) }) }
             }
         }
         item(span = full) { VolumeWaveCard(vm, p.s("programId"), wk, { vm.loadPlan(p.s("programId"), it) }, { matrixOpen = true }) }
         item(span = full) { WeekVolumeCard(vm, p.s("programId"), wk) }
         item(span = full) { LiftProgressionCard(vm, p.s("programId")) }
         p.list("days").forEach { d ->
-            item {
-                val isNext = d.s("id") == p.s("nextDayId") && wk == p.i("current")
-                PiCard(color = if (isNext) cs.primaryContainer else cs.surfaceContainerLow, radius = 28.dp) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            if (isNext) Kicker("Up next", cs.onPrimaryContainer)
-                            Text(d.s("label"), style = MaterialTheme.typography.titleLarge)
-                            d.i("minutes").takeIf { it > 0 }?.let { Text("About $it min", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant) }
-                        }
-                        FilledTonalButton(onClick = { vm.start(p.s("programId"), d.s("id"), wk) }) { Text("Start") }
-                    }
-                    d.list("exercises").forEachIndexed { k, e ->
-                        val rx = listOfNotNull(e.i("sets").takeIf { it > 0 }?.let { "$it ×" }, e.s("reps").takeIf { it.isNotBlank() }, e.s("rir").takeIf { it.isNotBlank() }?.let { "@ $it" }).joinToString(" ")
-                        // The design's day row ⓘ: tap a lift for why it is in this slot.
-                        Row(
-                            Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { whyFor = Triple(p.s("programId"), d.s("id"), k) }
-                                .semantics(mergeDescendants = true) { contentDescription = "Why ${e.s("name")}? $rx" }.padding(vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(e.s("name"), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(rx, style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
-                            Icon(PiIcons.Info, null, Modifier.padding(start = 6.dp).size(16.dp), tint = cs.onSurfaceVariant)
-                        }
-                    }
-                }
-            }
+            item { PlanDayCard(vm, p, d, wk) { k -> whyFor = Triple(p.s("programId"), d.s("id"), k) } }
         }
         if (p.b("canNextBlock")) item(span = full) {
             OutlinedButton(onClick = { confirmNext = true }, modifier = Modifier.fillMaxWidth()) { Icon(PiIcons.Redo, null, modifier = Modifier.size(18.dp)); Text("  Build next block") }
@@ -230,6 +208,7 @@ fun ProgressScreen(vm: AppViewModel) {
     val full = StaggeredGridItemSpan.FullLine
     var liftId by remember { mutableStateOf<String?>(null) }
     var pinsOpen by remember { mutableStateOf(false) }
+    val charts = rememberProgressCharts(vm)
     liftId?.let { id -> LiftDetailSheet(vm, id) { liftId = null } }
     if (pinsOpen) PinsSheet(vm) { pinsOpen = false }
     LazyVerticalStaggeredGrid(
@@ -250,9 +229,14 @@ fun ProgressScreen(vm: AppViewModel) {
             }
         }
         p.o("recap")?.takeIf { it.i("count") > 0 }?.let { r -> item(span = full) { RecapCard(JSONObject().put("recap", r).put("unit", p.s("unit"))) } }
+        charts?.let { g -> item(span = full) { VolumeChartCard(g) } }
         item(span = full) { PinnedLiftsSection(vm, onOpen = { liftId = it }, onManage = { pinsOpen = true }) }
         // Web VolumeCard: this week's sets per muscle against the landmarks, for the program being trained.
         vm.home?.o("next")?.let { nx -> item(span = full) { WeekVolumeCard(vm, nx.s("programId"), nx.i("weekIndex")) } }
+        charts?.let { g ->
+            item(span = full) { FeedbackCard(g) }
+            item(span = full) { IntensityCard(g) }
+        }
         val recs = p.list("records")
         if (recs.isNotEmpty()) {
             item(span = full) { SectionTitle("Personal records") }
@@ -337,4 +321,64 @@ private fun ProgramMenu(vm: AppViewModel, id: String, name: String) {
         text = { Text("Your logged workouts stay in your history. You can undo this for a few seconds.") },
         confirmButton = { Button(onClick = { confirm = false; vm.deleteProgram(id) }) { Text("Delete") } },
         dismissButton = { TextButton(onClick = { confirm = false }) { Text("Cancel") } })
+}
+
+/* The design's week chip: a 52dp pill, W1 with DONE / NOW / DELOAD underneath; the chosen week morphs to a rounded square. */
+@Composable
+private fun PlanWeekChip(n: Int, deload: Boolean, selected: Boolean, current: Int, onClick: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val r by androidx.compose.animation.core.animateDpAsState(if (selected) 16.dp else 26.dp, com.pursuitiron.app.ui.theme.Motion.spring(), label = "weekChip")
+    val tag = when { deload -> "DELOAD"; current > 0 && n < current -> "DONE"; n == current -> "NOW"; else -> "" }
+    val bg = when { selected -> cs.primary; deload -> cs.tertiaryContainer; else -> cs.surfaceContainerHigh }
+    val fg = when { selected -> cs.onPrimary; deload -> cs.onTertiaryContainer; else -> cs.onSurface }
+    androidx.compose.material3.Surface(onClick = onClick, shape = RoundedCornerShape(r), color = bg, contentColor = fg,
+        modifier = Modifier.height(52.dp).widthIn(min = 56.dp).semantics { contentDescription = (if (deload) "Deload week" else "Week $n") + (if (tag == "NOW") ", current" else if (tag == "DONE") ", done" else ""); this.selected = selected }) {
+        Column(Modifier.padding(horizontal = 14.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            Text(if (deload) "DL" else "W$n", style = MaterialTheme.typography.titleSmall)
+            if (tag.isNotEmpty()) Text(tag, style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, letterSpacing = 0.4.sp))
+        }
+    }
+}
+
+/* The design's day card: weekday badge, sets and minutes, a status pill, the lifts on an inner surface with
+   their pattern and equipment, ⓘ for why each one is there, and Start on the one that's up next. */
+@Composable
+private fun PlanDayCard(vm: AppViewModel, p: JSONObject, d: JSONObject, wk: Int, onWhy: (Int) -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val st = d.s("status"); val today = st == "today"; val done = st == "done"
+    PiCard(color = if (today) cs.primaryContainer else cs.surfaceContainerLow, radius = 28.dp, padding = 14.dp) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(start = 2.dp)) {
+            Box(Modifier.size(48.dp).clip(if (done) RoundedCornerShape(16.dp) else CircleShape).background(if (done || today) cs.primary else cs.secondaryContainer), contentAlignment = Alignment.Center) {
+                Text(d.s("weekday").ifBlank { "D${p.list("days").indexOfFirst { it.s("id") == d.s("id") } + 1}" }, style = MaterialTheme.typography.labelMedium, color = if (done || today) cs.onPrimary else cs.onSecondaryContainer)
+            }
+            Column(Modifier.weight(1f)) {
+                Text(d.s("label"), style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(listOfNotNull("${d.list("exercises").size} exercises", d.i("sets").takeIf { it > 0 }?.let { "$it sets" }, d.i("minutes").takeIf { it > 0 }?.let { "~$it min" }).joinToString(" · "),
+                    style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+            }
+            when {
+                today -> androidx.compose.material3.Button(onClick = { vm.start(p.s("programId"), d.s("id"), wk) }, contentPadding = PaddingValues(horizontal = 14.dp)) { Text("Start") }
+                done -> Badge("Done", cs.surfaceContainerHighest, cs.onSurfaceVariant)
+                else -> FilledTonalButton(onClick = { vm.start(p.s("programId"), d.s("id"), wk) }, contentPadding = PaddingValues(horizontal = 14.dp)) { Text("Start") }
+            }
+        }
+        Column(Modifier.clip(RoundedCornerShape(20.dp)).background(cs.surface), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+            d.list("exercises").forEachIndexed { k, e ->
+                val rx = listOfNotNull(e.i("sets").takeIf { it > 0 }?.let { "$it ×" }, e.s("reps").takeIf { it.isNotBlank() }, e.s("rir").takeIf { it.isNotBlank() }?.let { "@$it" }).joinToString(" ")
+                // The design's day row ⓘ: tap a lift for why it is in this slot.
+                Row(
+                    Modifier.fillMaxWidth().clickable { onWhy(k) }.semantics(mergeDescendants = true) { contentDescription = "Why ${e.s("name")}? $rx" }
+                        .padding(horizontal = 12.dp, vertical = 9.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(e.s("name"), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        if (e.s("sub").isNotBlank()) Text(e.s("sub"), style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    Text(rx, style = MaterialTheme.typography.labelMedium)
+                    Icon(PiIcons.Help, null, Modifier.size(16.dp), tint = cs.onSurfaceVariant)
+                }
+            }
+        }
+    }
 }

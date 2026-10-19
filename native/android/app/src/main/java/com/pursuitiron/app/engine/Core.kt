@@ -3,6 +3,7 @@ package com.pursuitiron.app.engine
 import android.content.Context
 import com.pursuitiron.app.data.StoreFiles
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -17,7 +18,9 @@ class Core private constructor(private val engine: JsEngine, private val files: 
     private val mutex = Mutex()
     val runtime: String get() = engine.name
 
-    suspend fun call(method: String, args: JSONObject = JSONObject()): Any? = mutex.withLock {
+    /* Non-cancellable once started: a screen that closes mid-call (a sheet's scope, a restarted effect)
+       must not cut off the write that follows a change the engine already made in memory. */
+    suspend fun call(method: String, args: JSONObject = JSONObject()): Any? = mutex.withLock { withContext(NonCancellable) {
         val res = invoke(method, args.toString())
         val dirty = res.optJSONObject("dirty")
         if (dirty?.optBoolean("store") == true) {
@@ -27,7 +30,7 @@ class Core private constructor(private val engine: JsEngine, private val files: 
             files.writeLive(invoke("exportLive", "").optString("value", ""))
         }
         res.opt("value").takeUnless { it == JSONObject.NULL }
-    }
+    } }
 
     suspend fun obj(method: String, args: JSONObject = JSONObject()): JSONObject? = call(method, args) as? JSONObject
 

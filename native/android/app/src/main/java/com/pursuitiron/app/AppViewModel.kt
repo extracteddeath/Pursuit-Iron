@@ -104,7 +104,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /* ---------------------------------------------------------------- plumbing */
     private suspend fun call(method: String, args: JSONObject = JSONObject()): Any? {
         val c = core ?: return null
-        return try { c.call(method, args) } catch (e: Exception) { toast(e.message ?: "Something went wrong"); null }
+        // A screen that leaves (or restarts its effect) cancels its own read; that is not an error to show.
+        return try { c.call(method, args) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { toast(e.message ?: "Something went wrong"); null }
     }
     private suspend fun obj(method: String, args: JSONObject = JSONObject()) = call(method, args) as? JSONObject
     private fun arr(v: Any?): List<JSONObject> = (v as? JSONArray)?.let { a -> (0 until a.length()).mapNotNull { a.optJSONObject(it) } } ?: emptyList()

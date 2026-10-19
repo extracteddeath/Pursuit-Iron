@@ -36,6 +36,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
@@ -61,40 +62,72 @@ import java.util.Locale
 private val PARTS = listOf(null to "All", "chest" to "Chest", "lats" to "Lats", "upper_back" to "Upper back", "shoulders" to "Shoulders", "biceps" to "Biceps",
     "triceps" to "Triceps", "quads" to "Quads", "hamstrings" to "Hamstrings", "glutes" to "Glutes", "calves" to "Calves", "abs" to "Abs", "forearms" to "Forearms")
 
+private val EQUIPS = listOf(null to "Any equipment", "barbell" to "Barbell", "dumbbell" to "Dumbbell", "cable" to "Cable", "machine" to "Machine",
+    "bodyweight" to "Bodyweight", "kettlebell" to "Kettlebell", "band" to "Band")
+private val LOWER = setOf("quads", "hamstrings", "glutes", "calves", "adductors", "abductors", "lower_back")
+
+/* The design's Exercises: compare and + New in the header, muscle and equipment chips, a count, and rows
+   with an initial badge, "Muscle · Equipment", and TODAY / BANNED tags. */
 @Composable
 fun LibraryScreen(vm: AppViewModel) {
     val wide = LocalWide.current
     val cs = MaterialTheme.colorScheme
     var q by remember { mutableStateOf("") }
     var part by remember { mutableStateOf<String?>(null) }
+    var equip by remember { mutableStateOf<String?>(null) }
     var open by remember { mutableStateOf<String?>(null) }
+    var creating by remember { mutableStateOf(false) }
+    var comparing by remember { mutableStateOf(false) }
+    if (creating) CreateExerciseSheet(vm, null) { creating = false }
+    if (comparing) CompareSheet(vm) { comparing = false }
     LazyVerticalGrid(
         columns = GridCells.Fixed(if (wide) 2 else 1),
         contentPadding = PaddingValues(start = if (wide) 32.dp else 16.dp, end = if (wide) 32.dp else 16.dp, bottom = 24.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.statusBarsPadding(),
     ) {
-        item(span = { GridItemSpan(maxLineSpan) }) { Text("Exercises", style = MaterialTheme.typography.displayMedium, modifier = Modifier.padding(top = 20.dp, start = 4.dp, bottom = 12.dp)) }
         item(span = { GridItemSpan(maxLineSpan) }) {
-            OutlinedTextField(q, { q = it; vm.searchLibrary(it, part) }, Modifier.fillMaxWidth().padding(bottom = 10.dp), singleLine = true,
-                placeholder = { Text("Search exercises") }, shape = CircleShape,
+            Row(Modifier.padding(top = 20.dp, start = 4.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Exercises", style = MaterialTheme.typography.displayMedium, modifier = Modifier.weight(1f))
+                androidx.compose.material3.FilledTonalIconButton(onClick = { comparing = true }) { Icon(PiIcons.Progress, "Compare exercises") }
+                androidx.compose.material3.FilledTonalButton(onClick = { creating = true }) { Icon(PiIcons.Plus, null, Modifier.size(18.dp)); Text(" New") }
+            }
+        }
+        item(span = { GridItemSpan(maxLineSpan) }) {
+            OutlinedTextField(q, { q = it; vm.searchLibrary(it, part, equip) }, Modifier.fillMaxWidth().padding(bottom = 10.dp), singleLine = true,
+                placeholder = { Text("Search exercises") }, shape = CircleShape, leadingIcon = { Icon(PiIcons.Focus, null) },
                 colors = TextFieldDefaults.colors(focusedContainerColor = cs.surfaceContainerHigh, unfocusedContainerColor = cs.surfaceContainerHigh, unfocusedIndicatorColor = Color.Transparent))
         }
         item(span = { GridItemSpan(maxLineSpan) }) {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(bottom = 10.dp)) {
-                items(PARTS) { (id, label) -> MorphChip(label, part == id, { part = id; vm.searchLibrary(q, id) }) }
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(bottom = 6.dp)) {
+                items(PARTS) { (id, label) -> MorphChip(label, part == id, { part = id; vm.searchLibrary(q, id, equip) }) }
             }
         }
+        item(span = { GridItemSpan(maxLineSpan) }) {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(bottom = 6.dp)) {
+                items(EQUIPS) { (id, label) -> MorphChip(label, equip == id, { equip = id; vm.searchLibrary(q, part, id) }, height = 36.dp) }
+            }
+        }
+        item(span = { GridItemSpan(maxLineSpan) }) {
+            Text(if (vm.library.size >= 400) "400+ exercises" else "${vm.library.size} exercise${if (vm.library.size == 1) "" else "s"}",
+                style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant, modifier = Modifier.padding(start = 4.dp, bottom = 8.dp))
+        }
         if (vm.library.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }) {
-            Text("No exercises match. Try a shorter search.", color = cs.onSurfaceVariant, modifier = Modifier.padding(16.dp))
+            Text("No exercises match. Try a shorter search or another filter.", color = cs.onSurfaceVariant, modifier = Modifier.padding(16.dp))
         }
         items(vm.library, key = { it.s("id") }) { x ->
-            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(cs.surfaceContainerLow).clickable { open = x.s("id") }.padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically) {
+            val lower = x.s("part") in LOWER
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.surfaceContainerLow).clickable { open = x.s("id") }.padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Box(Modifier.size(40.dp).clip(CircleShape).background(if (lower) cs.tertiaryContainer else cs.primaryContainer), contentAlignment = Alignment.Center) {
+                    Text(x.s("name").firstOrNull()?.uppercase() ?: "?", style = MaterialTheme.typography.titleSmall, color = if (lower) cs.onTertiaryContainer else cs.onPrimaryContainer)
+                }
                 Column(Modifier.weight(1f)) {
                     Text(x.s("name"), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(x.s("partLabel") + " · " + x.strings("equip").joinToString(", "), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(x.s("partLabel").replaceFirstChar { it.uppercase() } + " · " + x.s("equipLabel"), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                if (x.b("banned")) Badge("Banned")
+                if (x.b("today")) Badge("TODAY", cs.primaryContainer, cs.onPrimaryContainer)
+                if (x.b("banned")) Badge("BANNED", cs.surfaceContainerHighest, cs.onSurfaceVariant)
+                Icon(PiIcons.ChevronRight, null, tint = cs.onSurfaceVariant)
             }
         }
     }

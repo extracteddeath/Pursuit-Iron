@@ -44,6 +44,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.role
+import androidx.compose.foundation.verticalScroll
 import org.json.JSONObject
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.draw.clip
@@ -84,6 +86,7 @@ fun YouScreen(vm: AppViewModel) {
     var gymsOpen by remember { mutableStateOf(false) }
     var toolsOpen by remember { mutableStateOf(false) }
     var customizeOpen by remember { mutableStateOf(false) }
+    var settingsSheet by remember { mutableStateOf<String?>(null) }
     var board by remember { mutableStateOf<JSONObject?>(null) }
     LaunchedEffect(vm.progress, vm.profile) { board = vm.profileBoard() }
     val full = StaggeredGridItemSpan.FullLine
@@ -136,18 +139,10 @@ fun YouScreen(vm: AppViewModel) {
                 vm.history.forEach { r -> item { Column(Modifier.clip(RoundedCornerShape(18.dp))) { HistoryRow(r) { historyId = r.s("id") } } } }
             }
             else -> {
+                // The design's Settings: the everyday controls inline, everything else one row away in a sheet.
                 item { SettingsCard(vm) }
-                item { TrainingPrefsCard(vm) }
                 item { GymsCard(vm) { gymsOpen = true } }
-                item { LoadingCard(vm) }
-                item { ToolsCard { toolsOpen = true } }
-                item { RemindersCard(vm) }
-                item { CustomExercisesCard(vm) }
-                item { ProfileFieldsCard(vm) }
-                item { DataCard(vm) }
-                item { ManageDataCard(vm) }
-                item { HelpCard(vm) }
-                item { AboutCard(vm) }
+                item(span = full) { SettingsNav(vm, onTools = { toolsOpen = true }) { settingsSheet = it } }
             }
         }
     }
@@ -155,6 +150,7 @@ fun YouScreen(vm: AppViewModel) {
     if (gymsOpen) GymsSheet(vm) { gymsOpen = false }
     if (toolsOpen) ToolsSheet(vm) { toolsOpen = false }
     if (customizeOpen) ProfileCustomizeSheet(vm) { customizeOpen = false }
+    settingsSheet?.let { k -> SettingsPageSheet(vm, k) { settingsSheet = null } }
 }
 
 /* App.js ProfileCustomization, as the design's panel: reorder the profile and hide what you don't use. */
@@ -254,16 +250,6 @@ private fun SettingRow(label: String, sub: String, checked: Boolean, onChange: (
             Text(sub, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Switch(checked = checked, onCheckedChange = onChange)
-    }
-}
-
-@Composable
-private fun ToolsCard(onOpen: () -> Unit) {
-    PiCard(radius = 28.dp) {
-        Text("Tools", style = MaterialTheme.typography.titleMedium)
-        Column(Modifier.clip(RoundedCornerShape(20.dp))) {
-            MenuRow(PiIcons.Plates, "Plates and 1RM", "What to load on each side, and your estimated max", MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.colorScheme.onSecondaryContainer, onOpen)
-        }
     }
 }
 
@@ -383,6 +369,62 @@ private fun InjuriesCard(vm: AppViewModel) {
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Column(Modifier.clip(RoundedCornerShape(20.dp))) {
             MenuRow(PiIcons.Shield, "Injury log", "Log, edit or resolve", MaterialTheme.colorScheme.tertiaryContainer, MaterialTheme.colorScheme.onTertiaryContainer) { vm.injuryLogOpen = true }
+        }
+    }
+}
+
+/* ------------------------------------------------------------------ the design's settings rows */
+private data class NavRow(val key: String, val icon: androidx.compose.ui.graphics.vector.ImageVector, val title: String, val sub: String)
+
+@Composable
+private fun SettingsNav(vm: AppViewModel, onTools: () -> Unit, onOpen: (String) -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val rows = listOf(
+        NavRow("training", PiIcons.Flame, "Training preferences", "Experience, effort scale, set and rest defaults"),
+        NavRow("tools", PiIcons.Plates, "Plates and 1RM", "What to load on each side, and your estimated max"),
+        NavRow("loading", PiIcons.Gym, "Plates & bars", "The plates you own and your bars"),
+        NavRow("reminders", PiIcons.Calendar, "Reminders", "Training day reminders that survive a reboot"),
+        NavRow("exercises", PiIcons.Plus, "Your exercises", if (vm.customs.isEmpty()) "Create lifts that work everywhere" else "${vm.customs.size} custom lift${if (vm.customs.size == 1) "" else "s"}"),
+        NavRow("profile", PiIcons.You, "Profile details", "Bodyweight, sex and age for standards"),
+        NavRow("backup", PiIcons.Download, "Backup & restore", "Save everything to a file, or bring it back"),
+        NavRow("data", PiIcons.Shield, "Data & storage", "Import, export, banned exercises, clear or reset"),
+        NavRow("help", PiIcons.Help, "Help & about", "Report a bug, privacy, the research behind it"),
+    )
+    Column(Modifier.clip(RoundedCornerShape(24.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        rows.forEach { r ->
+            Row(
+                Modifier.fillMaxWidth().background(cs.surfaceContainerLow).clickable { if (r.key == "tools") onTools() else onOpen(r.key) }
+                    .semantics(mergeDescendants = true) { role = androidx.compose.ui.semantics.Role.Button }.padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                Box(Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(cs.secondaryContainer), contentAlignment = Alignment.Center) {
+                    Icon(r.icon, null, Modifier.size(20.dp), tint = cs.onSecondaryContainer)
+                }
+                Column(Modifier.weight(1f)) {
+                    Text(r.title, style = MaterialTheme.typography.titleSmall)
+                    Text(r.sub, style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, maxLines = 2)
+                }
+                Icon(PiIcons.ChevronRight, null, tint = cs.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+/** One settings page as a sheet: the same card the page used to show inline. */
+@Composable
+private fun SettingsPageSheet(vm: AppViewModel, key: String, onClose: () -> Unit) {
+    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onClose, sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(horizontal = 12.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            when (key) {
+                "training" -> TrainingPrefsCard(vm)
+                "loading" -> LoadingCard(vm)
+                "reminders" -> RemindersCard(vm)
+                "exercises" -> CustomExercisesCard(vm)
+                "profile" -> ProfileFieldsCard(vm)
+                "backup" -> DataCard(vm)
+                "data" -> ManageDataCard(vm)
+                "help" -> { HelpCard(vm); AboutCard(vm) }
+            }
         }
     }
 }

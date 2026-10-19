@@ -1320,11 +1320,23 @@ export function volumeWave({ programId } = {}) {
 export function pinProgram({ id }) { if (!programById(id)) return { ok: false }; S.store.pinnedId = id; markStore(); return { ok: true }; }
 
 /* ------------------------------------------------------------------ library */
-export function library({ q = '', part = null } = {}) {
+/* The design's Exercises: muscle and equipment filters, a count, and a TODAY tag on lifts in the next session. */
+const LIB_EQUIP = { barbell: ['barbell', 'ezbar', 'trapbar'], dumbbell: ['dumbbell'], cable: ['cable'], machine: ['machine', 'smith', 'plate_loaded', 'legpress'], kettlebell: ['kettlebell'], band: ['band'] };
+const BW_ONLY = new Set(['pullup', 'bench', 'dip', 'box', 'rings', 'floor', 'mat', 'rack']);
+function libEquipOf(x) {
+    const eq = x.equip || [];
+    if (!eq.length || eq.every((e) => BW_ONLY.has(e))) return 'bodyweight';
+    return Object.keys(LIB_EQUIP).find((k) => eq.some((e) => LIB_EQUIP[k].includes(e))) || 'other';
+}
+export function library({ q = '', part = null, equip = null } = {}) {
     const needle = String(q).trim().toLowerCase();
     const banned = new Set(S.store.banned || []);
-    return EXERCISES.filter((x) => (!part || x.part === part) && (!needle || x.name.toLowerCase().includes(needle)))
-        .slice(0, 400).map((x) => ({ id: x.id, name: x.name, part: x.part, partLabel: E.PART_LABEL?.[x.part] || x.part, equip: x.equip, type: x.type, banned: banned.has(x.id) }));
+    const nx = upNext();
+    const today = new Set(nx ? nx.day.exercises.map((_id, slot) => E.exerciseAt(nx.program, nx.day, slot, nx.weekIndex)) : []);
+    return EXERCISES.filter((x) => (!part || x.part === part) && (!equip || libEquipOf(x) === equip) && (!needle || x.name.toLowerCase().includes(needle)))
+        .slice(0, 400).map((x) => ({ id: x.id, name: x.name, part: x.part, partLabel: E.PART_LABEL?.[x.part] || x.part, equip: x.equip, type: x.type,
+            equipLabel: { barbell: 'Barbell', dumbbell: 'Dumbbell', cable: 'Cable', machine: 'Machine', kettlebell: 'Kettlebell', band: 'Band', bodyweight: 'Bodyweight' }[libEquipOf(x)] || EQUIP_LABEL[(x.equip || [])[0]] || 'Other',
+            banned: banned.has(x.id), today: today.has(x.id), custom: !!x.custom }));
 }
 export function exercise({ id }) {
     const x = EX_BY_ID[id]; if (!x) return null;

@@ -627,5 +627,12 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   const e = ss.exercises[0], si = e.sets.findIndex((x) => !x.warm && !x.sub);
   C.act({ type: 'edit', ei: 0, si, field: 'weight', value: '50' }); C.act({ type: 'edit', ei: 0, si, field: 'reps', value: '5' }); ss = C.act({ type: 'toggle', ei: 0, si });
   ok(!ss.warmup, 'gone once a set is logged'); C.discardSession(); }
+// Exercises: equipment filter and TODAY tags
+{ C.init({ store: JSON.stringify({ unit: 'kg' }) });
+  C.createProgram({ config: { name: 'L', unit: 'kg', goal: 'both', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 2 });
+  const all = C.library({}), bb = C.library({ equip: 'barbell' }), bw = C.library({ equip: 'bodyweight' });
+  ok(bb.length > 5 && bb.every((x) => x.equipLabel === 'Barbell') && bw.length > 3 && bw.every((x) => x.equipLabel === 'Bodyweight'), 'equipment filter: ' + bb.length + ' barbell, ' + bw.length + ' bodyweight');
+  ok(all.filter((x) => x.today).length === C.home().next.exercises.length, 'TODAY tags the next session\'s lifts');
+  ok(C.library({ part: 'chest', equip: 'dumbbell' }).every((x) => x.part === 'chest' && x.equipLabel === 'Dumbbell'), 'filters combine'); }
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);
 

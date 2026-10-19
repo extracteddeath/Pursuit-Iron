@@ -291,6 +291,15 @@ else:
 for t in ["Plan", "Progress", "Exercises", "You"]:
     tap(rf"^\|{t}$|^{t}\|", t.lower())
 
+# 5a. Exercises: equipment filter and the count
+tap(r"^\|Exercises$|^Exercises\|")
+if tap(r"^\|Barbell$", "library-barbell"):
+    if not find(r"^\|\d+\+? exercises?$", timeout=4):
+        FAILS.append("exercise count missing")
+    tap(r"^\|Any equipment$")
+else:
+    FAILS.append("no equipment filter on Exercises")
+
 # 5b. Plan: volume wave and the week-by-week lift table
 tap(r"^\|Plan$|^Plan\|")
 if scroll_to(r"Every lift, week by week", tries=4):
@@ -401,13 +410,19 @@ if scroll_to(r"^Lime theme", tries=8, step=600):
     tap(r"^Ember theme")
 else:
     FAILS.append("no colour themes in settings")
-if scroll_to(r"^Training reminders\|"):
-    tap(r"^Training reminders\|", "reminders-on")
+if scroll_to(r"^\|Reminders$", tries=8):
+    tap(r"^\|Reminders$", "reminders-sheet")
+    if tap(r"^Training reminders\|", "reminders-on", required=False):
+        close_sheet(r"^Training reminders\|")
+    else:
+        FAILS.append("reminders sheet missing its switch"); back()
+else:
+    FAILS.append("no Reminders row in settings")
 if scroll_to(r"^\|Gyms$"):
     tap(r"^\|Edit$", "gyms-sheet")
     back()
-if scroll_to(r"Plates and 1RM"):
-    tap(r"Plates and 1RM")
+if scroll_to(r"\|Plates and 1RM"):
+    tap(r"\|Plates and 1RM")
     tap(r"Total weight")
     adb("shell", "input", "text", "100")
     time.sleep(1)
@@ -430,17 +445,34 @@ for _ in range(14):
         break
     adb("shell", "input", "swipe", "540", "700", "540", "1900", "150")
 tap(r"^\|Settings$")
-if scroll_to(r"(?i)^\|Effort scale$", tries=8) and scroll_to(r"^\|RPE$", tries=3, step=400):
-    tap(r"^\|RPE$", "settings-rpe")
-    tap(r"^\|RIR$")
-if scroll_to(r"^\|Manage data$", tries=10, step=600):
-    shot("settings-manage-data")
+# Settings pages open as sheets from the settings rows
+if scroll_to(r"^\|Training preferences$", tries=8):
+    tap(r"^\|Training preferences$", "settings-training")
+    if scroll_to(r"^\|RPE$", tries=4, step=400):
+        tap(r"^\|RPE$", "settings-rpe")
+        tap(r"^\|RIR$")
+    else:
+        FAILS.append("effort scale missing from training preferences")
+    back()
+else:
+    FAILS.append("no Training preferences row")
+if scroll_to(r"^\|Data & storage$", tries=6):
+    tap(r"^\|Data & storage$", "settings-manage-data")
     if tap(r"Review Banned exercises", required=False):
         shot("banned-sheet"); back()
-if scroll_to(r"References & methodology", tries=6):
-    shot("settings-help")
-    tap(r"References & methodology", "references")
     back()
+else:
+    FAILS.append("no Data & storage row")
+if scroll_to(r"^\|Help & about$", tries=6):
+    tap(r"^\|Help & about$", "settings-help")
+    if scroll_to(r"References & methodology", tries=4, step=500):
+        tap(r"References & methodology", "references")
+        back()
+    else:
+        FAILS.append("references missing from Help & about")
+    back()
+else:
+    FAILS.append("no Help & about row")
 tap(r"^\|Today$|^Today\|", "today-lb")
 
 # 8. Training cycle: build one, open it, try to advance

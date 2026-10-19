@@ -74,6 +74,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private var libQuery = ""
     private var libPart: String? = null
+    private var libEquip: String? = null
     private var inForeground = true
 
     init {
@@ -145,7 +146,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         progress = obj("progress", progressArgs())
         body = obj("body")
         history = arr(call("historyList"))
-        library = arr(call("library", jsonOf("q" to libQuery, "part" to libPart)))
+        library = arr(call("library", jsonOf("q" to libQuery, "part" to libPart, "equip" to libEquip)))
         setup = obj("setupOptions")
         profile = obj("profile")
         gyms = obj("gyms")
@@ -452,7 +453,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /* ---------------------------------------------------------------- library */
-    fun searchLibrary(q: String, part: String?) { libQuery = q; libPart = part; launchCore { library = arr(call("library", jsonOf("q" to q, "part" to part))) } }
+    fun searchLibrary(q: String, part: String?, equip: String? = libEquip) { libQuery = q; libPart = part; libEquip = equip; launchCore { library = arr(call("library", jsonOf("q" to q, "part" to part, "equip" to equip))) } }
     suspend fun exercise(id: String): JSONObject? = obj("exercise", jsonOf("id" to id))
     /** App.js ProgressionCard and LoadWaveCard: every lift by week, and planned sets by week, deload included. */
     suspend fun percentMethods(programId: String) = obj("percentMethods", jsonOf("programId" to programId))
@@ -482,7 +483,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         refreshHomeSide()
         toast(r.s("message", "Volume checked"), if (changed) ({ launchCore { call("undo"); refreshHomeSide() } }) else null)
     }
-    fun setBan(id: String, banned: Boolean) = launchCore { call("setBan", jsonOf("id" to id, "banned" to banned)); library = arr(call("library", jsonOf("q" to libQuery, "part" to libPart))); settings = obj("settings"); toast(if (banned) "Banned. It won't be picked again." else "Unbanned") }
+    fun setBan(id: String, banned: Boolean) = launchCore { call("setBan", jsonOf("id" to id, "banned" to banned)); library = arr(call("library", jsonOf("q" to libQuery, "part" to libPart, "equip" to libEquip))); settings = obj("settings"); toast(if (banned) "Banned. It won't be picked again." else "Unbanned") }
 
     /* Settings → Data (App.js onClearBanned / onClearHistory / resetAll), schedule, references. */
     suspend fun storageStatus(): JSONObject? = obj("storageStatus")
@@ -559,13 +560,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val r = obj("createCustomExercise", jsonOf("name" to name, "part" to part, "type" to type, "equip" to JSONArray(equip), "lo" to lo, "hi" to hi,
             "programId" to (if (dayId != null) editor?.s("programId") else null), "dayId" to dayId)) ?: return@launchCore
         if (!r.b("ok")) { toast(r.s("error", "Couldn't create that")); return@launchCore }
-        hap(Hap.Done); customs = arr(call("customExercises")); library = arr(call("library", jsonOf("q" to libQuery, "part" to libPart)))
+        hap(Hap.Done); customs = arr(call("customExercises")); library = arr(call("library", jsonOf("q" to libQuery, "part" to libPart, "equip" to libEquip)))
         if (dayId != null) reloadEditor()
         toast(if (dayId != null) "Created and added ${r.s("name")}" else "Created ${r.s("name")}")
     }
     fun deleteCustom(id: String) = launchCore {
         val r = obj("deleteCustomExercise", jsonOf("id" to id)) ?: return@launchCore
-        if (!r.b("ok")) toast(r.s("error", "Couldn't delete that")) else { customs = arr(call("customExercises")); library = arr(call("library", jsonOf("q" to libQuery, "part" to libPart))) }
+        if (!r.b("ok")) toast(r.s("error", "Couldn't delete that")) else { customs = arr(call("customExercises")); library = arr(call("library", jsonOf("q" to libQuery, "part" to libPart, "equip" to libEquip))) }
     }
 
     /* ---------------------------------------------------------------- profile, tools, gyms */

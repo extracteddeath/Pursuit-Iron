@@ -296,6 +296,13 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   ok(t1.tm > 0 && t1.tm <= 90 && t1.week1 && t1.week1.sets.length > 0, '90% of a 100 kg 1RM sets the TM (' + t1.tm + ') and week 1 shows ' + (t1.week1 && t1.week1.sets.join(' ')));
   tms.lifts.forEach((l) => C.setTrainingMax({ programId: made.programId, exId: l.id, value: 80 }));
   ok(C.home().needsTrainingMax === 0, 'all set: the prompt clears');
+  { const all = C.trainingMaxes({ programId: made.programId });
+    ok(all.method && all.method.name && all.weeks.length >= 1 && all.weeks.every((w) => w.w >= 1), 'percentage panel names the method and lists weeks (' + all.method.name + ', ' + all.weeks.map((w) => w.label || w.w).join('/') + ')');
+    const last = all.weeks[all.weeks.length - 1].w, dl = C.trainingMaxes({ programId: made.programId, weekIndex: last });
+    ok(dl.weekIndex === last && dl.lifts.every((l) => l.week && l.week.sets.length > 0), 'every lift shows the chosen week\'s sets');
+    ok(!all.deloadWeek || all.weeks.some((w) => w.deload), 'the deload week has a chip when the block has one');
+    // The panel's week equals what the workout prescribes from
+    const day = all.lifts[0]; ok(day.week.sets.every((x) => /×/.test(x.text)), 'sets read weight × reps'); }
   const plain = C.createFromTemplate({ id: tl.items.find((t) => !t.percent).id });
   ok(plain.ok && C.trainingMaxes({ programId: plain.programId }).percent === false, 'a regular template builds without training maxes'); }
 
@@ -395,6 +402,14 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   const pr = C.progress();
   ok(pr.lifts.length > 0 && pr.lifts[0].points.length === 1 || pr.lifts.some((l) => l.points.length >= 1), 'progress sparklines have points');
   const lid = pr.lifts[0].id;
+  ok(pr.pins.auto && pr.pins.lifts.every((l) => l.points.length >= 2), 'never pinned: auto pins only lifts with a trend');
+  const ids = pr.lifts.map((l) => l.id), want = [ids[ids.length - 1], 'no-such-lift', ids[0]];
+  const pp = C.progress({ pinned: want });
+  ok(!pp.pins.auto && pp.pins.lifts.map((l) => l.id).join() === [ids[ids.length - 1], ids[0]].filter((v, i, a) => a.indexOf(v) === i).join(), 'pins keep their order and drop unknown lifts');
+  ok(pp.pins.lifts.every((l) => !pp.pins.options.some((o) => o.id === l.id)) && ids.every((id) => pp.pins.lifts.some((l) => l.id === id) || pp.pins.options.some((o) => o.id === id)), 'options are every other trended lift');
+  ok(pp.pins.lifts.every((l) => l.e1rm > 0 && (l.heavy === null || / × /.test(l.heavy))), 'pinned cards carry the record e1RM and set');
+  ok(C.progress({ pinned: ids.concat(ids) }).pins.lifts.length === Math.min(6, new Set(ids).size), 'six pins at most');
+  ok(C.progress({ pinned: [] }).pins.lifts.length === 0, 'unpinning everything stays empty');
   const ld = C.liftDetail({ id: lid });
   ok(ld && ld.points.length >= 1 && ld.best && ld.best.e1rm > 0 && ld.recent.length >= 1, 'lift detail: series, best and recent sets');
   ok(C.strengthStandards().ready === false && C.strengthStandards().missing === 'bodyweight', 'standards ask for bodyweight first');
@@ -459,5 +474,56 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   const st = C.exercise({ id: 'cable-fly' }), nb = C.exercise({ id: wb.rows[0].exId });
   ok(st && st.stretchFocus === true, 'cable fly is a stretch-focus lift');
   ok(nb && typeof nb.stretchFocus === 'boolean', 'exercise detail always says whether it is stretch focus'); }
+// Progression sheet: every engine style with what it does; Auto names its current pick, Linear its jump
+{ C.init({ store: JSON.stringify({ unit: 'kg' }) });
+  C.createProgram({ config: { name: 'P', unit: 'kg', goal: 'both', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60',
+    equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 11 });
+  const ss = C.startSession({}), o = ss.exercises[0].progression.options;
+  ok(o.length === Object.keys(E.PROG_STYLES).length && o.every((x) => x.label && x.detail), 'progression options cover every engine style with a description');
+  ok(/currently [a-z]/.test(o[0].detail) && ss.exercises[0].progression.auto.length > 3, 'Auto names the style it picks now: ' + o[0].detail);
+  ok(/fixed \d+(\.\d+)?kg/.test(o.find((x) => x.id === 'linear').detail), 'Linear names this lift\'s jump');
+  C.discardSession(); }
+// Weekly volume per muscle against the landmarks, and the engine's repair
+{ C.init({ store: JSON.stringify({ unit: 'kg' }) });
+  C.createProgram({ config: { name: 'V', unit: 'kg', goal: 'hypertrophy', experience: 'intermediate', split: 'ppl', days: 3, session: 's40',
+    equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 7 });
+  const v = C.weeklyVolumeView({});
+  ok(v.rows.length > 5 && v.rows.every((r) => r.mev >= 0 && r.mrv > r.mev && ['below MEV', 'productive', 'high', 'over MRV', 'a head over MRV'].includes(r.zone)), 'volume rows carry landmarks and a zone');
+  const sum = Math.round(v.rows.reduce((a, r) => a + r.sets, 0));
+  ok(Math.abs(sum - v.total) <= 1, 'rows add up to the total (' + sum + ' vs ' + v.total + ')');
+  ok(v.rows.every((r) => (r.sets < r.mev) === (r.zone === 'below MEV')), 'below MEV exactly when sets are under MEV');
+  const rp = C.repairVolume({});
+  ok(rp.ok && typeof rp.message === 'string' && rp.message.length > 5, 'repair answers with the engine message: ' + rp.message); }
+// Welcome back: after ten days off, one easier session (2 working sets at 90%) before the plan resumes
+{ C.init({ store: JSON.stringify({ unit: 'kg' }) });
+  C.createProgram({ config: { name: 'R', unit: 'kg', goal: 'both', experience: 'intermediate', split: 'full_body', days: 3, session: 's60',
+    equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 5 });
+  for (let k = 0; k < 2; k++) { C.startSession({}); for (const e of C.session().exercises) for (const x of e.sets) { if (x.warm || x.sub) continue; C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'weight', value: '60' }); C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'reps', value: '8' }); C.act({ type: 'toggle', ei: e.ei, si: x.i }); } C.finishSession(); }
+  ok(C.home().reentry === null, 'no welcome back right after training');
+  const st = JSON.parse(C.exportStore()); st.history.forEach((h) => { h.date -= 14 * 86400000; });
+  C.init({ store: JSON.stringify(st) });
+  const hr = C.home().reentry;
+  ok(hr && hr.daysOff >= 14 && hr.sets === 2 && hr.factor === 0.9, 'fourteen days off offers re-entry');
+  const plain = C.startSession({}); const full = plain.exercises.map((e) => ({ n: e.sets.filter((x) => !x.warm && !x.sub).length, w: e.sets.filter((x) => !x.warm && !x.sub).map((x) => parseFloat(x.weight) || 0) }));
+  C.discardSession();
+  const re = C.startReentry();
+  ok(re.active && re.reentry && re.reentry.daysOff >= 14 && re.readinessDone, 're-entry starts, flagged, with readiness answered');
+  ok(re.exercises.every((e, i) => e.sets.filter((x) => !x.warm && !x.sub).length === Math.min(2, full[i].n)), 'two working sets per lift');
+  ok(re.exercises.every((e, i) => e.sets.filter((x) => !x.warm && !x.sub).every((x, j) => !(full[i].w[j] > 0) || parseFloat(x.weight) < full[i].w[j])), 'every loaded set is lighter than the plan');
+  ok(C.home().reentry === null && C.startReentry().error, 'no second offer with a workout open');
+  C.discardSession(); }
+// Rest day: a scheduled program with nothing on today's weekday
+{ C.init({ store: JSON.stringify({ unit: 'kg' }) });
+  const mk = C.createProgram({ config: { name: 'S', unit: 'kg', goal: 'both', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60',
+    equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 3 });
+  const pid = mk.programId || C.home().next.programId, today = new Date().getDay();
+  C.clearSchedule({ programId: pid });
+  ok(C.home().restDay === null, 'no schedule, no rest day');
+  C.cycleSchedule({ programId: pid, weekday: (today + 2) % 7 });
+  const rdv = C.home().restDay;
+  ok(rdv && rdv.inDays === 2 && /^on [A-Z]/.test(rdv.when) && rdv.nextLabel, 'unscheduled today: rest day, next session ' + (rdv && rdv.when));
+  ok(Array.isArray(rdv.rows) && rdv.rows.length <= 6, 'rest day lists recovery rows');
+  C.cycleSchedule({ programId: pid, weekday: today });
+  ok(C.home().restDay === null, 'scheduled today: a training day'); }
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);
 

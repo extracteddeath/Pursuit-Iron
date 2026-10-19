@@ -141,7 +141,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         home = obj("home")
         session = obj("session")
         plan = obj("plan")
-        progress = obj("progress")
+        progress = obj("progress", progressArgs())
         body = obj("body")
         history = arr(call("historyList"))
         library = arr(call("library", jsonOf("q" to libQuery, "part" to libPart)))
@@ -151,8 +151,26 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         cycles = obj("cyclesView")
         if (templates == null) templates = obj("templates")
     }
+    private fun progressArgs() = jsonOf("pinned" to prefs.pins?.let { JSONArray(it) })
+
+    /* App.js chart favourites: pin, unpin and reorder lifts on Progress. Six at most, as in the design. */
+    private fun putPins(ids: List<String>) = launchCore { prefs.changePins(ids); progress = obj("progress", progressArgs()) }
+    private fun currentPins() = progress?.o("pins")?.list("lifts")?.map { it.s("id") } ?: emptyList()
+    fun pinLift(id: String) {
+        val cur = currentPins(); if (id in cur) return
+        if (cur.size >= (progress?.o("pins")?.i("max")?.takeIf { it > 0 } ?: 6)) { toast("Six pinned at most · unpin one first"); return }
+        hap(Hap.Tick); putPins(cur + id)
+    }
+    fun unpinLift(id: String) { val cur = currentPins(); putPins(cur - id); toast("Unpinned", undo = { putPins(cur) }) }
+    fun movePin(id: String, by: Int) {
+        val cur = currentPins().toMutableList(); val i = cur.indexOf(id); val j = i + by
+        if (i < 0 || j !in cur.indices) return
+        cur.add(j, cur.removeAt(i)); hap(Hap.Tick); putPins(cur)
+    }
+    fun isPinned(id: String) = id in currentPins()
+
     private suspend fun refreshHomeSide() {
-        home = obj("home"); plan = obj("plan"); progress = obj("progress"); history = arr(call("historyList")); settings = obj("settings")
+        home = obj("home"); plan = obj("plan"); progress = obj("progress", progressArgs()); history = arr(call("historyList")); settings = obj("settings")
         profile = obj("profile"); body = obj("body"); cycles = obj("cyclesView")
         publishWidget()
     }
@@ -259,6 +277,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun startAlt() = startVia("startAlt")
     fun startDeload() = startVia("startDeload")
     fun startLight() = startVia("startLight")
+    fun startReentry() = startVia("startReentry")
     private fun startVia(method: String) = launchCore {
         val s = obj(method) ?: return@launchCore
         if (!s.b("active")) { toast(s.s("error", "Couldn't start the workout")); return@launchCore }
@@ -340,7 +359,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         toast("${r.s("name")} is ready")
         if (r.b("percent")) tmFor = r.s("programId")
     }
-    suspend fun trainingMaxes(programId: String): JSONObject? = obj("trainingMaxes", jsonOf("programId" to programId))
+    suspend fun trainingMaxes(programId: String, week: Int? = null): JSONObject? = obj("trainingMaxes", jsonOf("programId" to programId, "weekIndex" to week))
     suspend fun setTrainingMax(programId: String, exId: String, value: Double?, fromOneRm: Boolean): JSONObject? {
         val r = obj("setTrainingMax", jsonOf("programId" to programId, "exId" to exId, "value" to value, "fromOneRm" to fromOneRm))
         home = obj("home"); plan = obj("plan"); publishWidget()
@@ -437,6 +456,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** App.js ProgressionCard and LoadWaveCard: every lift by week, and planned sets by week, deload included. */
     suspend fun weekByWeek(programId: String?): JSONObject? = obj("weekByWeek", jsonOf("programId" to programId))
     suspend fun volumeWave(programId: String?): JSONObject? = obj("volumeWave", jsonOf("programId" to programId))
+    suspend fun weeklyVolume(programId: String?, week: Int?): JSONObject? = obj("weeklyVolumeView", jsonOf("programId" to programId, "weekIndex" to week))
+    /** App.js applyVolumeFix: the engine repairs the plan; its message says what changed. Undoable. */
+    fun repairVolume(programId: String?) = launchCore {
+        val r = obj("repairVolume", jsonOf("programId" to programId)) ?: return@launchCore
+        val changed = r.b("changed")
+        refreshHomeSide()
+        toast(r.s("message", "Volume checked"), if (changed) ({ launchCore { call("undo"); refreshHomeSide() } }) else null)
+    }
     fun setBan(id: String, banned: Boolean) = launchCore { call("setBan", jsonOf("id" to id, "banned" to banned)); library = arr(call("library", jsonOf("q" to libQuery, "part" to libPart))); settings = obj("settings"); toast(if (banned) "Banned. It won't be picked again." else "Unbanned") }
 
     /* Settings → Data (App.js onClearBanned / onClearHistory / resetAll), schedule, references. */

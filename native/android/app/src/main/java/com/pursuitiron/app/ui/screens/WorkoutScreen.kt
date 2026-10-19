@@ -114,6 +114,7 @@ private sealed interface WSheet {
     data class Rest(val ei: Int) : WSheet
     data class Progression(val ei: Int) : WSheet
     data class LiftSettings(val ei: Int) : WSheet
+    data class AddSet(val ei: Int) : WSheet
     data object Superset : WSheet
     data object SessionNote : WSheet
     data object SessionMenu : WSheet
@@ -202,6 +203,7 @@ fun WorkoutScreen(vm: AppViewModel) {
         is WSheet.Rest -> exs.getOrNull(sh.ei)?.let { RestTimeSheet(vm, it) { sheet = null } } ?: run { sheet = null }
         is WSheet.Progression -> exs.getOrNull(sh.ei)?.let { ProgressionSheet(vm, s, it) { sheet = null } } ?: run { sheet = null }
         is WSheet.LiftSettings -> exs.getOrNull(sh.ei)?.let { LiftSettingsSheet(vm, s, it) { sheet = null } } ?: run { sheet = null }
+        is WSheet.AddSet -> exs.getOrNull(sh.ei)?.let { AddSetSheet(vm, it) { sheet = null } } ?: run { sheet = null }
         WSheet.Superset -> SupersetSheet(vm, s) { sheet = null }
         WSheet.SessionNote -> SessionNoteSheet(vm, s) { sheet = null }
         WSheet.SessionMenu -> SessionMenu(vm, s, onNote = { sheet = WSheet.SessionNote }, onAdd = { sheet = WSheet.AddLift }, onSuperset = { sheet = WSheet.Superset }) { sheet = null }
@@ -295,14 +297,32 @@ private fun ExercisePane(vm: AppViewModel, s: JSONObject, ex: JSONObject?, wide:
                             if (ex.b("superset")) Badge("Superset", cs.secondaryContainer, cs.onSecondaryContainer)
                             if (ex.d("goal") > 0) Badge("Goal ${com.pursuitiron.app.ui.common.fmtNum(ex.d("goal"))} ${s.s("unit")}", cs.primaryContainer, cs.onPrimaryContainer)
                             if (ex.o("progression")?.b("changed") == true) Badge("Progression changed", cs.secondaryContainer, cs.onSecondaryContainer)
-                            Text(ex.s("part").replace('_', ' ').replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                         }
+                        com.pursuitiron.app.ui.common.MuscleChips(
+                            ex.s("partLabel").ifBlank { ex.s("part").replace('_', ' ') }.replaceFirstChar { it.uppercase() },
+                            ex.list("secondary").map { it.s("label").replaceFirstChar { c -> c.uppercase() } }, Modifier.padding(top = 8.dp), max = 3,
+                        )
                     }
                     Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(cs.secondaryContainer).clickable { open(WSheet.Menu(ei)) }
                         .semantics { contentDescription = "Exercise actions"; role = Role.Button }, contentAlignment = Alignment.Center) {
                         Icon(PiIcons.More, null, tint = cs.onSecondaryContainer)
                     }
                 }
+                // The design: the lift's progression is a tag on the card; tapping it opens the progression sheet.
+                val prog = ex.o("progression")
+                if (prog != null && !prog.b("locked") && !s.b("quick")) {
+                    val st = prog.s("style", "auto")
+                    val name = if (st == "auto") "Auto · " + prog.s("auto").replaceFirstChar { it.uppercase() }
+                        else prog.list("options").firstOrNull { it.s("id") == st }?.s("label") ?: st
+                    Surface(onClick = { open(WSheet.Progression(ei)) }, color = cs.tertiaryContainer, contentColor = cs.onTertiaryContainer, shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.semantics { contentDescription = "Progression: $name. Change how this lift progresses"; role = Role.Button }) {
+                        Row(Modifier.padding(start = 10.dp, end = 6.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(name, style = MaterialTheme.typography.labelLarge)
+                            Icon(PiIcons.ChevronDown, null, modifier = Modifier.size(16.dp))
+                        }
+                    }
+                }
+                s.o("reentry")?.let { r -> ReentryBanner(r) }
                 Surface(onClick = { open(WSheet.Why(ei)) }, color = cs.surfaceContainerHigh, shape = CircleShape) {
                     Row(Modifier.padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Icon(PiIcons.Help, null, modifier = Modifier.size(16.dp))
@@ -348,7 +368,7 @@ private fun ExercisePane(vm: AppViewModel, s: JSONObject, ex: JSONObject?, wide:
                     SetRow(vm, s, ei, si, set, label, showRating, onEdit = { open(WSheet.Edit(ei, si)) })
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilledTonalButton(onClick = { vm.act("addSet", "ei" to ei) }, modifier = Modifier.weight(1f).height(48.dp)) {
+                    FilledTonalButton(onClick = { open(WSheet.AddSet(ei)) }, modifier = Modifier.weight(1f).height(48.dp)) {
                         Icon(PiIcons.Plus, null, modifier = Modifier.size(18.dp)); Text("  Add set")
                     }
                     if (s.b("quick")) OutlinedButton(onClick = { open(WSheet.AddLift) }, modifier = Modifier.weight(1f).height(48.dp)) { Text("Add a lift") }
@@ -560,24 +580,16 @@ private fun ExerciseMenu(vm: AppViewModel, s: JSONObject, ei: Int, onPick: (WShe
                 Text(ex.s("name"), style = MaterialTheme.typography.headlineSmall)
             }
             Column(Modifier.clip(RoundedCornerShape(22.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                MenuRow(PiIcons.Info, "Exercise info", "Form cues and your history", cs.secondaryContainer, cs.onSecondaryContainer) { onPick(WSheet.Info(ex.s("id"))) }
                 MenuRow(PiIcons.Swap, "Swap exercise", "Alternatives at your gym", cs.secondaryContainer, cs.onSecondaryContainer) { onPick(WSheet.Swap(ei)) }
                 MenuRow(PiIcons.Shield, "Something hurt", "Flag it and the plan protects that area", cs.tertiaryContainer, cs.onTertiaryContainer) { onPick(WSheet.Hurt(ei)) }
-                MenuRow(PiIcons.Plus, "Add a set", "One more working set", cs.primaryContainer, cs.onPrimaryContainer) { vm.act("addSet", "ei" to ei); onPick(null) }
-                MenuRow(PiIcons.Flame, if (ex.b("hasWarm")) "Remove warm-ups" else "Add warm-ups", "A ramp up to your first working weight", cs.secondaryContainer, cs.onSecondaryContainer) { vm.act("warmups", "ei" to ei); onPick(null) }
-                MenuRow(PiIcons.Redo, if (ex.b("hasDrop")) "Remove drop sets" else "Add drop sets", "Two quick drops after the last set", cs.secondaryContainer, cs.onSecondaryContainer) { vm.act("advanced", "ei" to ei, "kind" to "drop"); onPick(null) }
-                MenuRow(PiIcons.Sparkle, if (ex.b("hasMyo")) "Remove myo-reps" else "Add myo-reps", "Short-rest mini sets after the last set", cs.secondaryContainer, cs.onSecondaryContainer) { vm.act("advanced", "ei" to ei, "kind" to "myo"); onPick(null) }
                 MenuRow(PiIcons.List, "Same weight for all sets", "Set every unlogged set to the average", cs.secondaryContainer, cs.onSecondaryContainer) { vm.act("level", "ei" to ei); onPick(null) }
                 MenuRow(PiIcons.Timer, "Rest time", if (ex.i("restCustom") > 0) restLabel(ex.i("restCustom")) else "Default" + (if (ex.i("restDefault") > 0) " · ${restLabel(ex.i("restDefault"))}" else ""), cs.secondaryContainer, cs.onSecondaryContainer) { onPick(WSheet.Rest(ei)) }
                 if (count > 1) MenuRow(PiIcons.Swap, if (ex.b("superset")) "Superset: on" else "Superset", "Alternate sets with another lift", cs.secondaryContainer, cs.onSecondaryContainer) { vm.act("select", "ei" to ei); onPick(WSheet.Superset) }
-                val prog = ex.o("progression")
-                if (prog != null && !prog.b("locked") && !s.b("quick")) MenuRow(PiIcons.Focus, "Progression", s.list("progressionStyles").firstOrNull { it.s("id") == prog.s("style") }?.s("label") ?: "How this lift moves up", cs.secondaryContainer, cs.onSecondaryContainer) { onPick(WSheet.Progression(ei)) }
                 MenuRow(PiIcons.Gym, "Goal, weight step, setup", "Settings kept for this lift", cs.secondaryContainer, cs.onSecondaryContainer) { onPick(WSheet.LiftSettings(ei)) }
                 MenuRow(PiIcons.Close, "Skip exercise", "Drop it from today's workout", cs.tertiaryContainer, cs.onTertiaryContainer) { vm.act("skipExercise", "ei" to ei); vm.toast("Skipped ${ex.s("name")}"); onPick(null) }
                 MenuRow(PiIcons.List, "Note", if (ex.s("note").isBlank()) "Seat height, grip, anything to remember" else ex.s("note"), cs.secondaryContainer, cs.onSecondaryContainer) { onPick(WSheet.Note(ei)) }
                 if (ei > 0) MenuRow(PiIcons.ChevronLeft, "Move earlier", "Logged sets move with it", cs.secondaryContainer, cs.onSecondaryContainer) { vm.act("move", "from" to ei, "to" to ei - 1); onPick(null) }
                 if (ei < count - 1) MenuRow(PiIcons.ChevronRight, "Move later", "Logged sets move with it", cs.secondaryContainer, cs.onSecondaryContainer) { vm.act("move", "from" to ei, "to" to ei + 1); onPick(null) }
-                MenuRow(PiIcons.Sparkle, if (vm.prefs.grip) "Grip mode: on" else "Grip mode", "Bigger controls and stronger taps", cs.secondaryContainer, cs.onSecondaryContainer) { vm.prefs.changeGrip(!vm.prefs.grip); onPick(null) }
             }
         }
     }
@@ -643,6 +655,10 @@ private fun WhySheet(vm: AppViewModel, ei: Int, onClose: () -> Unit) {
             Kicker(lift.s("name"))
             Text(load?.let { l -> if (l.isNull("weight")) "No weight yet" else "${l.s("weight")} ${vm.session?.s("unit").orEmpty()}" } ?: "This set", style = MaterialTheme.typography.headlineMedium)
             load?.s("reason")?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodyLarge) }
+            vm.session?.o("reentry")?.let { r ->
+                Text("Re-entry after ${r.i("daysOff")} days off: ${Math.round(r.d("factor") * 100)}% of the planned load, ${r.i("sets")} working sets. Strength comes back fast; this keeps the first session from leaving you wrecked for the next one.",
+                    style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
+            }
             val range = dec?.optJSONArray("repRange")
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (range != null && range.length() == 2) Badge("${range.optInt(0)}–${range.optInt(1)} reps", cs.surfaceContainerHigh, cs.onSurface)
@@ -716,6 +732,19 @@ private fun NoteSheet(vm: AppViewModel, s: JSONObject, ei: Int, onClose: () -> U
             Kicker("Show it again")
             com.pursuitiron.app.ui.common.Segmented(listOf("none" to "Just today", "once" to "Next time", "always" to "Every time"), repeat, { repeat = it })
             Button(onClick = { vm.act("note", "ei" to ei, "text" to text, "repeat" to repeat); onClose() }, modifier = Modifier.align(Alignment.End)) { Text("Save") }
+        }
+    }
+}
+
+/* The design's re-entry chip on the exercise card. */
+@Composable
+private fun ReentryBanner(r: JSONObject) {
+    val cs = MaterialTheme.colorScheme
+    Surface(color = cs.primaryContainer, contentColor = cs.onPrimaryContainer, shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
+        Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(PiIcons.Redo, null, Modifier.size(20.dp))
+            Text("Re-entry session. ${r.i("sets")} working sets per lift at ${Math.round(r.d("factor") * 100)}% of the plan. Your full plan resumes next session.",
+                style = MaterialTheme.typography.bodySmall)
         }
     }
 }

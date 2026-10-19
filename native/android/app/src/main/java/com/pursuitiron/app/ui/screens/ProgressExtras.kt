@@ -108,6 +108,7 @@ fun LiftDetailSheet(vm: AppViewModel, id: String, onClose: () -> Unit) {
             val u = x.s("unit")
             Kicker(x.s("partLabel").replaceFirstChar { it.uppercase() })
             Text(x.s("name"), style = MaterialTheme.typography.headlineSmall)
+            PinToggle(vm, id)
             val best = x.o("best")
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 com.pursuitiron.app.ui.common.StatTile("Best e1RM", best?.let { fmtNum(it.d("e1rm")) } ?: "—", u, Modifier.weight(1f))

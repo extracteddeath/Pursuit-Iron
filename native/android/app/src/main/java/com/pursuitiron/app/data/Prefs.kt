@@ -35,6 +35,11 @@ class Prefs(context: Context) {
         private set
     var seenWhatsNew by mutableStateOf(sp.getInt("seenWhatsNew", 0))
         private set
+    /** App.js chart favourites: lift ids shown first on Progress, in this order. null = never chosen (the engine picks). */
+    var pins by mutableStateOf(sp.getString("pins", null)?.let { raw ->
+        runCatching { org.json.JSONArray(raw).let { a -> (0 until a.length()).map { a.getString(it) } } }.getOrNull()
+    })
+        private set
 
     fun changeSeed(v: Seed) { seed = v; sp.edit().putString("seed", v.name).apply() }
     fun changeBlack(v: Boolean) { black = v; sp.edit().putBoolean("black", v).apply() }
@@ -44,5 +49,38 @@ class Prefs(context: Context) {
     fun dismissTransfer() { transferDismissed = true; sp.edit().putBoolean("transferDismissed", true).apply() }
     fun markIntro(v: Int) { seenIntro = v; sp.edit().putInt("seenIntro", v).apply() }
     fun markWhatsNew(v: Int) { seenWhatsNew = v; sp.edit().putInt("seenWhatsNew", v).apply() }
+    /** The design's "Train as planned": the welcome-back offer stays dismissed for this break (keyed by the last session's date). */
+    var reentrySkippedFor by mutableStateOf(sp.getLong("reentrySkippedFor", 0L))
+        private set
+    fun skipReentry(lastDate: Long) { reentrySkippedFor = lastDate; sp.edit().putLong("reentrySkippedFor", lastDate).apply() }
+    /** App.js ProfileCustomization ("wpb:profile-layout-v1"): profile section order and the ones hidden. */
+    var profileLayout by mutableStateOf(ProfileLayout.parse(sp.getString("profileLayout", null)))
+        private set
+    fun changeProfileLayout(v: ProfileLayout) { profileLayout = v.normalized(); sp.edit().putString("profileLayout", profileLayout.json()).apply() }
+    fun changePins(v: List<String>) { pins = v; sp.edit().putString("pins", org.json.JSONArray(v).toString()).apply() }
     fun markAskedNotifications() { askedNotifications = true; sp.edit().putBoolean("askedNotifications", true).apply() }
+}
+
+/** App.js normalizeProfilePrefs: every known section appears once, in order; at least one stays shown. */
+data class ProfileLayout(val order: List<String>, val hidden: Set<String>) {
+    fun normalized(): ProfileLayout {
+        val o = (order.filter { it in IDS }.distinct() + IDS.filter { it !in order })
+        var h = hidden.filter { it in IDS }.toSet()
+        if (h.size >= IDS.size) h = h - o.first()
+        return ProfileLayout(o, h)
+    }
+    fun visible() = order.filter { it !in hidden }
+    fun json(): String = org.json.JSONObject().put("order", org.json.JSONArray(order)).put("hidden", org.json.JSONArray(hidden.toList())).toString()
+    companion object {
+        /** Native profile sections, in the default order. */
+        val SECTIONS = listOf("level" to "Level and XP", "strength" to "Strength Score", "club" to "Thousand Pound Club", "achievements" to "Achievements")
+        val IDS = SECTIONS.map { it.first }
+        val DEFAULT = ProfileLayout(IDS, emptySet())
+        fun label(id: String) = SECTIONS.firstOrNull { it.first == id }?.second ?: id
+        fun parse(raw: String?): ProfileLayout = runCatching {
+            val o = org.json.JSONObject(raw ?: return DEFAULT)
+            val list = { k: String -> o.optJSONArray(k)?.let { a -> (0 until a.length()).map { a.optString(it) } } ?: emptyList() }
+            ProfileLayout(list("order"), list("hidden").toSet()).normalized()
+        }.getOrDefault(DEFAULT)
+    }
 }

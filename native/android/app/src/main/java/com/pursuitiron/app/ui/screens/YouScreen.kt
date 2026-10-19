@@ -36,6 +36,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.draw.alpha
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
@@ -74,6 +81,7 @@ fun YouScreen(vm: AppViewModel) {
     var historyId by remember { mutableStateOf<String?>(null) }
     var gymsOpen by remember { mutableStateOf(false) }
     var toolsOpen by remember { mutableStateOf(false) }
+    var customizeOpen by remember { mutableStateOf(false) }
     val full = StaggeredGridItemSpan.FullLine
     LazyVerticalStaggeredGrid(
         columns = StaggeredGridCells.Fixed(if (wide) 2 else 1),
@@ -96,10 +104,22 @@ fun YouScreen(vm: AppViewModel) {
         item(span = full) { Segmented(listOf("profile" to "Profile", "body" to "Body", "history" to "History", "settings" to "Settings"), section, { section = it }) }
         when (section) {
             "profile" -> {
-                item { LevelCard(vm) }
-                item { StrengthScoreCard(vm) { section = "body" } }
-                item { ClubCard(vm) }
-                item(span = full) { AchievementsCard(vm) }
+                // App.js ProfileCustomization: the lifter's own order, hidden sections left out.
+                vm.prefs.profileLayout.visible().forEach { id ->
+                    when (id) {
+                        "level" -> item { LevelCard(vm) }
+                        "strength" -> item { StrengthScoreCard(vm) { section = "body" } }
+                        "club" -> item { ClubCard(vm) }
+                        "achievements" -> item(span = full) { AchievementsCard(vm) }
+                    }
+                }
+                item(span = full) {
+                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        FilledTonalButton(onClick = { customizeOpen = true }) {
+                            Icon(PiIcons.List, null, Modifier.size(18.dp)); Text("  Customize profile")
+                        }
+                    }
+                }
             }
             "body" -> { item { BodyweightCard(vm) }; item { MeasurementsCard(vm) }; item { InjuriesCard(vm) } }
             "history" -> {
@@ -126,6 +146,38 @@ fun YouScreen(vm: AppViewModel) {
     historyId?.let { id -> HistorySheet(vm, id) { historyId = null } }
     if (gymsOpen) GymsSheet(vm) { gymsOpen = false }
     if (toolsOpen) ToolsSheet(vm) { toolsOpen = false }
+    if (customizeOpen) ProfileCustomizeSheet(vm) { customizeOpen = false }
+}
+
+/* App.js ProfileCustomization, as the design's panel: reorder the profile and hide what you don't use. */
+@Composable
+private fun ProfileCustomizeSheet(vm: AppViewModel, onClose: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val lay = vm.prefs.profileLayout
+    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onClose) {
+        Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("Customize profile", style = MaterialTheme.typography.headlineSmall)
+            Text("Reorder your profile and hide what you don't use. ${lay.visible().size} of ${lay.order.size} sections shown.", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
+            Column(Modifier.clip(RoundedCornerShape(22.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                lay.order.forEachIndexed { k, id ->
+                    val name = com.pursuitiron.app.data.ProfileLayout.label(id)
+                    val shown = id !in lay.hidden
+                    val lastShown = shown && lay.visible().size == 1
+                    Row(Modifier.fillMaxWidth().background(cs.surfaceContainerHigh).padding(start = 16.dp, end = 12.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(name, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f).alpha(if (shown) 1f else 0.6f))
+                        IconButton(onClick = { val o = lay.order.toMutableList(); o.add(k - 1, o.removeAt(k)); vm.prefs.changeProfileLayout(lay.copy(order = o)) }, enabled = k > 0) { Icon(PiIcons.ChevronUp, "Move $name up") }
+                        IconButton(onClick = { val o = lay.order.toMutableList(); o.add(k + 1, o.removeAt(k)); vm.prefs.changeProfileLayout(lay.copy(order = o)) }, enabled = k < lay.order.size - 1) { Icon(PiIcons.ChevronDown, "Move $name down") }
+                        androidx.compose.material3.Switch(
+                            checked = shown, enabled = !lastShown,
+                            onCheckedChange = { on -> vm.prefs.changeProfileLayout(lay.copy(hidden = if (on) lay.hidden - id else lay.hidden + id)) },
+                            modifier = Modifier.semantics { contentDescription = "Show $name" },
+                        )
+                    }
+                }
+            }
+            OutlinedButton(onClick = { vm.prefs.changeProfileLayout(com.pursuitiron.app.data.ProfileLayout.DEFAULT) }, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text("Restore the default layout") }
+        }
+    }
 }
 
 @Composable

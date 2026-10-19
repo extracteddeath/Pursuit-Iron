@@ -156,6 +156,7 @@ fun PlanScreen(vm: AppViewModel) {
             }
         }
         item(span = full) { VolumeWaveCard(vm, p.s("programId"), wk, { vm.loadPlan(p.s("programId"), it) }, { matrixOpen = true }) }
+        item(span = full) { WeekVolumeCard(vm, p.s("programId"), wk) }
         p.list("days").forEach { d ->
             item {
                 val isNext = d.s("id") == p.s("nextDayId") && wk == p.i("current")
@@ -216,7 +217,9 @@ fun ProgressScreen(vm: AppViewModel) {
     val cs = MaterialTheme.colorScheme
     val full = StaggeredGridItemSpan.FullLine
     var liftId by remember { mutableStateOf<String?>(null) }
+    var pinsOpen by remember { mutableStateOf(false) }
     liftId?.let { id -> LiftDetailSheet(vm, id) { liftId = null } }
+    if (pinsOpen) PinsSheet(vm) { pinsOpen = false }
     LazyVerticalStaggeredGrid(
         columns = StaggeredGridCells.Fixed(if (wide) 2 else 1),
         contentPadding = PaddingValues(start = if (wide) 32.dp else 16.dp, end = if (wide) 32.dp else 16.dp, bottom = 24.dp),
@@ -235,20 +238,7 @@ fun ProgressScreen(vm: AppViewModel) {
             }
         }
         p.o("recap")?.takeIf { it.i("count") > 0 }?.let { r -> item(span = full) { RecapCard(JSONObject().put("recap", r).put("unit", p.s("unit"))) } }
-        p.list("lifts").filter { it.list("points").size >= 2 }.take(8).forEach { l ->
-            item {
-                val pts = l.list("points").map { it.d("e1rm") }
-                PiCard(radius = 28.dp, onClick = { liftId = l.s("id") }) {
-                    Row {
-                        Text(l.s("name"), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        val ch = pts.last() - pts.first()
-                        Text((if (ch >= 0) "+" else "−") + fmtNum(kotlin.math.abs(ch)) + " ${p.s("unit")}", style = MaterialTheme.typography.labelLarge, color = if (ch >= 0) cs.primary else cs.onSurfaceVariant)
-                    }
-                    Sparkline(pts, Modifier.fillMaxWidth().height(72.dp), description = "${l.s("name")} estimated 1RM from ${fmtNum(pts.first())} to ${fmtNum(pts.last())}")
-                    Text("Estimated 1RM · last ${pts.size} sessions", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
-                }
-            }
-        }
+        item(span = full) { PinnedLiftsSection(vm, onOpen = { liftId = it }, onManage = { pinsOpen = true }) }
         val recs = p.list("records")
         if (recs.isNotEmpty()) {
             item(span = full) { SectionTitle("Personal records") }
@@ -265,14 +255,21 @@ fun ProgressScreen(vm: AppViewModel) {
             }
         }
         item(span = full) { StrengthStandardsCard(vm) { liftId = it } }
-        val others = p.list("lifts").filter { it.list("points").size < 2 }
+        // Every lift with history, trend or not; pinned ones already lead the page as cards.
+        val others = p.list("lifts").filter { !it.b("pinned") }
         if (others.isNotEmpty()) {
             item(span = full) { SectionTitle("All lifts") }
             item(span = full) {
                 Column(Modifier.clip(RoundedCornerShape(24.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     others.forEach { l ->
                         Row(Modifier.fillMaxWidth().background(cs.surfaceContainerLow).clickable { liftId = l.s("id") }.padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text(l.s("name"), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                            val pts = l.list("points").map { it.d("e1rm") }
+                            Text(l.s("name"), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            if (pts.size >= 2) {
+                                Sparkline(pts, Modifier.width(56.dp).height(20.dp), color = cs.onSurfaceVariant)
+                                val ch = pts.last() - pts.first()
+                                Text("  " + (if (ch >= 0) "+" else "−") + fmtNum(kotlin.math.abs(ch)) + " ${p.s("unit")}", style = MaterialTheme.typography.labelMedium, color = if (ch > 0) cs.primary else cs.onSurfaceVariant)
+                            } else Text("1 session", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
                             Icon(PiIcons.ChevronRight, null, tint = cs.onSurfaceVariant)
                         }
                     }

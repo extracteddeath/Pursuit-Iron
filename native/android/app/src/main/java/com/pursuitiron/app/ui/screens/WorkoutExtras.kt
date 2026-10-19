@@ -2,11 +2,16 @@
 
 package com.pursuitiron.app.ui.screens
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -256,12 +261,24 @@ fun ProgressionSheet(vm: AppViewModel, s: JSONObject, ex: JSONObject, onClose: (
             Kicker(ex.s("name"))
             Text("Progression", style = MaterialTheme.typography.headlineSmall)
             Text("Applies to today's remaining sets. When you finish, you choose whether the program keeps it.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
-            s.list("progressionStyles").forEach { st ->
-                val on = st.s("id") == cur
-                Surface(onClick = { vm.act("progression", "ei" to ex.i("ei"), "style" to st.s("id")); onClose() },
-                    color = if (on) cs.primaryContainer else cs.surfaceContainerHigh, shape = RoundedCornerShape(if (on) 14.dp else 20.dp),
-                    modifier = Modifier.fillMaxWidth().semantics { role = Role.RadioButton; selected = on }) {
-                    Text(st.s("label"), Modifier.padding(16.dp), style = MaterialTheme.typography.titleSmall)
+            // Each style says what it does; Auto names what it would pick for this lift right now.
+            val opts = ex.o("progression").list("options").ifEmpty { s.list("progressionStyles") }
+            Column(Modifier.clip(RoundedCornerShape(22.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                opts.forEach { st ->
+                    val on = st.s("id") == cur
+                    val ring by androidx.compose.animation.core.animateDpAsState(if (on) 6.dp else 2.dp, com.pursuitiron.app.ui.theme.Motion.spring(), label = "radio")
+                    val fg = if (on) cs.onSecondaryContainer else cs.onSurface
+                    Row(Modifier.fillMaxWidth().background(if (on) cs.secondaryContainer else cs.surfaceContainerHigh)
+                        .clickable { if (!on) vm.act("progression", "ei" to ex.i("ei"), "style" to st.s("id")); onClose() }
+                        .semantics(mergeDescendants = true) { role = Role.RadioButton; selected = on }
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        androidx.compose.foundation.layout.Box(Modifier.size(20.dp).border(ring, fg, androidx.compose.foundation.shape.CircleShape))
+                        Column(Modifier.weight(1f)) {
+                            Text(st.s("label"), style = MaterialTheme.typography.titleSmall, color = fg)
+                            st.s("detail").takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = fg.copy(alpha = 0.8f)) }
+                        }
+                    }
                 }
             }
         }
@@ -365,6 +382,46 @@ fun SessionMenu(vm: AppViewModel, s: JSONObject, onNote: () -> Unit, onAdd: () -
                 if (s.list("exercises").size > 1) MenuRow(PiIcons.Swap, "Superset", "Pair the current lift with another", cs.secondaryContainer, cs.onSecondaryContainer, onSuperset)
                 MenuRow(PiIcons.Timer, "Reset workout timer", "Start the clock from now", cs.secondaryContainer, cs.onSecondaryContainer) { vm.act("resetTimer"); vm.toast("Timer reset"); onClose() }
             }
+        }
+    }
+}
+
+/* The design's Add set sheet: a standard set, a drop set, myo-reps or the warm-up ramp, all from the one
+   button under the sets (they used to be four rows of the exercise menu). The extensions toggle off again. */
+@Composable
+fun AddSetSheet(vm: AppViewModel, ex: JSONObject, onClose: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val ei = ex.i("ei")
+    val work = ex.list("sets").filter { !it.b("warm") && !it.b("sub") }
+    val last = work.lastOrNull()
+    val lastLabel = last?.let { l -> listOfNotNull(l.s("weight").takeIf { it.isNotBlank() }, l.s("reps").takeIf { it.isNotBlank() }).joinToString(" × ") }.orEmpty()
+    data class Tile(val label: String, val sub: String, val icon: androidx.compose.ui.graphics.vector.ImageVector, val tone: Boolean, val run: () -> Unit)
+    val tiles = listOf(
+        Tile("Standard set", if (lastLabel.isNotBlank()) "Another $lastLabel" else "One more working set", PiIcons.Plus, false) { vm.act("addSet", "ei" to ei) },
+        Tile(if (ex.b("hasDrop")) "Remove drop sets" else "Drop set", if (ex.b("hasDrop")) "Take the drops off this lift" else "80% then 60% straight after your last set", PiIcons.Redo, true) { vm.act("advanced", "ei" to ei, "kind" to "drop") },
+        Tile(if (ex.b("hasMyo")) "Remove myo-reps" else "Myo-reps", if (ex.b("hasMyo")) "Take the minis off this lift" else "Short-rest mini sets after your last set", PiIcons.Sparkle, true) { vm.act("advanced", "ei" to ei, "kind" to "myo") },
+        Tile(if (ex.b("hasWarm")) "Remove warm-ups" else "Warm-up ramp", if (ex.b("hasWarm")) "Drop the ramp for this lift today" else "A ramp up to your first working weight", PiIcons.Flame, false) { vm.act("warmups", "ei" to ei) },
+    )
+    ModalBottomSheet(onDismissRequest = onClose) {
+        Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Kicker(ex.s("name"))
+            Text("Add a set", style = MaterialTheme.typography.headlineSmall)
+            tiles.chunked(2).forEach { pair ->
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    pair.forEach { t ->
+                        val bg = if (t.tone) cs.tertiaryContainer else cs.secondaryContainer
+                        val fg = if (t.tone) cs.onTertiaryContainer else cs.onSecondaryContainer
+                        Column(Modifier.weight(1f).heightIn(min = 112.dp).clip(RoundedCornerShape(22.dp)).background(bg)
+                            .clickable { t.run(); onClose() }.semantics(mergeDescendants = true) { role = Role.Button }.padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Icon(t.icon, null, tint = fg, modifier = Modifier.size(22.dp))
+                            Text(t.label, style = MaterialTheme.typography.titleSmall, color = fg)
+                            Text(t.sub, style = MaterialTheme.typography.bodySmall, color = fg.copy(alpha = 0.85f))
+                        }
+                    }
+                }
+            }
+            Text("Drop sets and myo-reps never set the next load. Warm-ups don't count toward volume.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
         }
     }
 }

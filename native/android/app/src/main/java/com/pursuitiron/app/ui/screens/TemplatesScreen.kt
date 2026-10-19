@@ -30,6 +30,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.material3.IconButton
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
@@ -44,6 +46,7 @@ import com.pursuitiron.app.ui.common.Segmented
 import com.pursuitiron.app.ui.common.b
 import com.pursuitiron.app.ui.common.d
 import com.pursuitiron.app.ui.common.fmtNum
+import com.pursuitiron.app.ui.common.i
 import com.pursuitiron.app.ui.common.list
 import com.pursuitiron.app.ui.common.o
 import com.pursuitiron.app.ui.common.s
@@ -97,36 +100,74 @@ fun TrainingMaxPrompt(vm: AppViewModel) {
     }
 }
 
-/* App.js tmSheet: one field per main lift, typed as a training max or as a 1RM (90% of it is used). */
+/* App.js tmSheet as the design's percentage program panel: the method, a chip per week of the block
+   (deload included), and each main lift's training max with that week's sets. Maxes are typed (or
+   entered as a 1RM, 90% of it is used) and nudged a step at a time. */
 @Composable
 fun TrainingMaxSheet(vm: AppViewModel) {
     val pid = vm.tmFor ?: return
+    var week by remember(pid) { mutableStateOf<Int?>(null) }
     var data by remember(pid) { mutableStateOf<JSONObject?>(null) }
     val scope = rememberCoroutineScope()
-    LaunchedEffect(pid) { data = vm.trainingMaxes(pid) }
+    LaunchedEffect(pid, week) { data = vm.trainingMaxes(pid, week) }
     val cs = MaterialTheme.colorScheme
     ModalBottomSheet(onDismissRequest = { vm.tmFor = null }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Training maxes", style = MaterialTheme.typography.headlineSmall)
+            Text("Percentage program", style = MaterialTheme.typography.headlineSmall)
             val d = data ?: run { Text("Loading…"); return@Column }
             val u = d.s("unit", "kg")
+            d.o("method")?.let { m ->
+                Surface(color = cs.surfaceContainerHigh, shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Kicker("Method")
+                        Text(m.s("name"), style = MaterialTheme.typography.titleMedium)
+                        Text("${d.s("name")} works from your ${m.s("basis").substringBefore(" (").lowercase()}.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                    }
+                }
+            }
+            val weeks = d.list("weeks")
+            if (weeks.size > 1) LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.semantics { contentDescription = "Week" }) {
+                items(weeks) { w ->
+                    val n = w.i("w")
+                    MorphChip(
+                        if (n == d.i("deloadWeek")) "DL" else "W$n", selected = n == d.i("weekIndex"), onClick = { week = n },
+                        trailing = when { w.b("now") -> "now"; w.b("deload") && n != d.i("deloadWeek") -> "deload"; else -> null },
+                    )
+                }
+            }
             var mode by remember { mutableStateOf("tm") }
             Segmented(listOf("tm" to "Training max", "orm" to "From a 1RM"), mode, { mode = it })
             Text(if (mode == "tm") "Usually about 90% of your true one-rep max." else "Enter a recent one-rep max; 90% of it, rounded to the lift's step, becomes the training max.",
                 style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
             d.list("lifts").forEach { l ->
-                var v by remember(l.s("id"), mode) { mutableStateOf(if (mode == "tm" && l.d("tm") > 0) fmtNum(l.d("tm")) else "") }
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(v, { v = it.filter { c -> c.isDigit() || c == '.' }.take(6) }, Modifier.weight(1f), singleLine = true,
-                            label = { Text("${l.s("name")} (${if (mode == "tm") "TM" else "1RM"}, $u)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
-                        Button(onClick = { scope.launch { vm.setTrainingMax(pid, l.s("id"), v.toDoubleOrNull(), mode == "orm"); data = vm.trainingMaxes(pid) } }, modifier = Modifier.height(56.dp)) { Text("Set") }
+                val tm = l.d("tm"); val step = l.d("step").takeIf { it > 0 } ?: if (u == "lb") 5.0 else 2.5
+                var v by remember(l.s("id"), mode, tm) { mutableStateOf(if (mode == "tm" && tm > 0) fmtNum(tm) else "") }
+                val set = { value: Double?, orm: Boolean -> scope.launch { vm.setTrainingMax(pid, l.s("id"), value, orm); data = vm.trainingMaxes(pid, week) }; Unit }
+                Surface(color = cs.surfaceContainerLow, shape = RoundedCornerShape(22.dp), modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(l.s("name"), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                            if (tm > 0 && mode == "tm") {
+                                IconButton(onClick = { set((tm - step).coerceAtLeast(step), false) }) { Text("−", style = MaterialTheme.typography.titleLarge) }
+                                Text("${fmtNum(tm)} $u", style = MaterialTheme.typography.titleMedium)
+                                IconButton(onClick = { set(tm + step, false) }) { Text("+", style = MaterialTheme.typography.titleLarge) }
+                            }
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedTextField(v, { v = it.filter { c -> c.isDigit() || c == '.' }.take(6) }, Modifier.weight(1f), singleLine = true,
+                                label = { Text("${if (mode == "tm") "Training max" else "1RM"} ($u)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+                            Button(onClick = { set(v.toDoubleOrNull(), mode == "orm") }, modifier = Modifier.height(56.dp)) { Text("Set") }
+                        }
+                        val wk = l.o("week")
+                        if (wk != null) {
+                            Text(wk.s("label"), style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
+                            Text(wk.list("sets").joinToString("  ·  ") { x -> x.s("text") + (x.optDouble("pct").takeIf { !it.isNaN() }?.let { " @${fmtNum(it)}%" } ?: "") },
+                                style = MaterialTheme.typography.bodyMedium)
+                        } else if (tm <= 0) Text("Set a training max to see this week's sets.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                     }
-                    if (l.d("tm") > 0) Text("TM ${fmtNum(l.d("tm"))} $u" + (l.o("week1")?.let { w -> " · week 1 (${w.s("label")}): ${w.strings("sets").joinToString("  ")}" } ?: ""),
-                        style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
                 }
             }
-            Button(onClick = { vm.tmFor = null }, modifier = Modifier.fillMaxWidth()) { Text("Done") }
+            Button(onClick = { vm.tmFor = null }, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Done") }
         }
     }
 }

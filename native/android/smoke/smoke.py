@@ -120,6 +120,16 @@ def back():
     time.sleep(1.2)
 
 
+def close_sheet(pattern, tries=3):
+    """Back until a sheet's own text is gone: a back press while the sheet is still animating in is ignored."""
+    for _ in range(tries):
+        back()
+        if not find(pattern, timeout=2):
+            return True
+    FAILS.append("sheet did not close: " + pattern)
+    return False
+
+
 def launch():
     adb("shell", "am", "force-stop", PKG)
     adb("shell", "am", "start", "-W", "-n", f"{PKG}/com.pursuitiron.app.MainActivity")
@@ -147,7 +157,7 @@ time.sleep(3)
 shot("today")
 
 # 2. Workout: enter a weight, log, rate, rest
-tap(r"Start workout")
+tap(r"Start workout|^\|?Train .+ now")
 time.sleep(3)
 grant_notifications()
 shot("readiness")
@@ -172,7 +182,20 @@ time.sleep(1)
 if tap(r"Weight 60(\.0)?, edit", "edit-logged-set"):
     back()
 tap(r"Exercise actions", "exercise-menu")
-tap(r"Add warm-ups", "warmups-added")
+back()
+# The progression tag on the card opens the progression sheet (it is no longer in the menu)
+if tap(r"^Progression: ", "progression-sheet"):
+    if not find(r"Auto \(recommended\)", timeout=4):
+        FAILS.append("progression sheet has no Auto option")
+    back()
+# Add set opens the sheet with standard, drop, myo and warm-up
+if scroll_to(r"\|\s*Add set$", tries=4, step=500):
+    tap(r"\|\s*Add set$", "add-set-sheet")
+    tap(r"Warm-up ramp", "warmups-added")
+else:
+    FAILS.append("no Add set button under the sets")
+for _ in range(3):
+    adb("shell", "input", "swipe", "540", "700", "540", "1900", "200")
 tap(r"Exercise actions")
 if scroll_to(r"^\|Rest time$", tries=3):
     tap(r"^\|Rest time$", "rest-sheet")
@@ -253,7 +276,7 @@ if scroll_to(r"Every lift, week by week", tries=4):
     tap(r"Every lift, week by week", "week-by-week")
     if not find(r"^\|Week by week$", timeout=6):
         FAILS.append("week-by-week sheet did not open")
-    back()
+    close_sheet(r"^\|Week by week$")
 else:
     FAILS.append("no week-by-week entry on Plan")
 
@@ -281,8 +304,17 @@ if scroll_to(r"^\|Recent$", tries=6):
 
 # 6b. Progress: a lift's chart, strength standards
 tap(r"^\|Progress$|^Progress\|", "progress-after-import")
-if tap(r"Estimated 1RM · last", "lift-detail", required=False):
-    back()
+# Pinned lifts (web chart favourites): the cards lead the page, Manage opens the panel
+if tap(r"Open lift history", "lift-detail", required=False):
+    if not find(r"Pin(ned)? to Progress", timeout=4):
+        FAILS.append("lift detail has no pin toggle")
+    close_sheet(r"Pin(ned)? to Progress")
+if tap(r"^Manage pinned lifts", "pins-sheet"):
+    if not find(r"of 6 pinned", timeout=4):
+        FAILS.append("pins sheet missing its count")
+    close_sheet(r"of 6 pinned")
+else:
+    FAILS.append("pinned lifts section missing on Progress")
 if scroll_to(r"Strength standards", tries=5):
     shot("strength-standards")
 
@@ -291,6 +323,16 @@ tap(r"^\|You$|^You\|")
 tap(r"^\|Profile$", "profile")
 scroll_to(r"Achievements")
 shot("profile-achievements")
+# App.js ProfileCustomization: reorder and hide profile sections
+if scroll_to(r"Customize profile", tries=4):
+    tap(r"Customize profile", "profile-customize")
+    if not find(r"sections shown", timeout=4):
+        FAILS.append("profile customise sheet missing")
+    close_sheet(r"sections shown")
+    adb("shell", "input", "swipe", "540", "700", "540", "1900", "300")
+    time.sleep(0.6)
+else:
+    FAILS.append("Customize profile button missing")
 adb("shell", "input", "swipe", "540", "700", "540", "1900", "300")
 tap(r"^\|History$", "history-calendar")
 tap(r": \d+ workouts?\|", "calendar-day")
@@ -464,7 +506,7 @@ time.sleep(3)
 launch()
 time.sleep(3)
 shot("tablet-today")
-tap(r"Start workout|Resume workout", required=False)  # a workout in progress reopens on its own
+tap(r"Start workout|Resume workout|^\|?Train .+ now", required=False)  # a workout in progress reopens on its own
 time.sleep(3)
 tap(r"^\|Skip$", required=False)  # readiness check
 shot("tablet-workout")

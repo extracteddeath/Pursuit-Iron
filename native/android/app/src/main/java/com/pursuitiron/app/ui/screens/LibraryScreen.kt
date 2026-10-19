@@ -116,7 +116,7 @@ fun ExerciseSheet(vm: AppViewModel, id: String, onClose: () -> Unit) {
             Text(e.strings("equip").joinToString(", ").replaceFirstChar { it.uppercase() }, color = cs.onSurfaceVariant)
             val sec = e.list("secondary")
             if (e.b("stretchFocus")) StretchFocusNote()
-            if (sec.isNotEmpty()) Text("Also works " + sec.joinToString(", ") { "${it.s("label")} (${(it.d("share") * 100).toInt()}%)" }, style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+            com.pursuitiron.app.ui.common.MuscleChips(e.s("partLabel").replaceFirstChar { it.uppercase() }, sec.sortedByDescending { it.d("share") }.map { it.s("label").replaceFirstChar { c -> c.uppercase() } }, max = 6)
             val cues = e.strings("cues")
             if (cues.isNotEmpty()) PiCard(color = cs.surfaceContainerHigh, radius = 20.dp, padding = 14.dp) {
                 Text("Form cues", style = MaterialTheme.typography.titleSmall)

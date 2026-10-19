@@ -131,7 +131,13 @@ fun TodayScreen(vm: AppViewModel) {
 
         if (!h.b("empty") && vm.prefs.seenWhatsNew < WHATS_NEW_VERSION) item(span = full) { WhatsNewCard(vm) }
         if (h.optInt("needsTrainingMax", 0) > 0) item(span = full) { TrainingMaxPrompt(vm) }
-        if (next != null) item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { Hero(vm, next, h) }
+        h.o("reentry")?.takeIf { next != null && h.o("live") == null && it.optLong("lastDate") != vm.prefs.reentrySkippedFor }?.let { r ->
+            item(span = full) { WelcomeBackCard(vm, r) }
+        }
+        if (next != null) item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) {
+            val rest = h.o("restDay")
+            if (rest != null) RestDayHero(vm, rest) else Hero(vm, next, h)
+        }
 
         if (h.o("deload") != null) item { DeloadCard(vm, h) }
         val insights = h.strings("insights")

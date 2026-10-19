@@ -29,6 +29,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.pursuitiron.app.AppViewModel
@@ -200,5 +205,73 @@ fun StrengthTeaser(vm: AppViewModel, h: JSONObject) {
             Text(score.s("level"), style = MaterialTheme.typography.bodyMedium)
         } else Text(if (h.b("needsBodyweight")) "Add your bodyweight on your profile to unlock your score and strength standards." else "Log a main lift to get scored.",
             style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+    }
+}
+
+/* The design's welcome back: after a break, one easier session (two working sets per lift at 90%)
+   before the plan resumes. "Train as planned" hides it until the next break. */
+@Composable
+fun WelcomeBackCard(vm: AppViewModel, r: JSONObject) {
+    val cs = MaterialTheme.colorScheme
+    val days = r.i("daysOff"); val pct = Math.round(r.d("factor") * 100); val sets = r.i("sets")
+    PiCard(color = cs.primaryContainer, radius = 28.dp, padding = 20.dp) {
+        Kicker("Welcome back", cs.onPrimaryContainer)
+        Text("$days days off", style = MaterialTheme.typography.headlineSmall, color = cs.onPrimaryContainer)
+        Text("Ease back in with a re-entry session: $sets working sets per lift at $pct% of today's loads. Your full plan resumes next session.",
+            style = MaterialTheme.typography.bodyMedium, color = cs.onPrimaryContainer)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { vm.startReentry() }, modifier = Modifier.height(48.dp)) { Text("Start re-entry") }
+            TextButton(onClick = { vm.prefs.skipReentry(r.optLong("lastDate")); vm.toast("Full plan it is. Ease off if anything feels off.") }, modifier = Modifier.height(48.dp)) {
+                Text("Train as planned", color = cs.onPrimaryContainer)
+            }
+        }
+    }
+}
+
+/* The design's rest day hero: the schedule has nothing today, so Today leads with recovery and when
+   the next session is. Training anyway, or an off-plan quick workout, stays one tap away. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun RestDayHero(vm: AppViewModel, r: JSONObject) {
+    val cs = MaterialTheme.colorScheme
+    androidx.compose.material3.Surface(color = cs.secondaryContainer, contentColor = cs.onSecondaryContainer,
+        shape = RoundedCornerShape(topStart = 36.dp, topEnd = 36.dp, bottomEnd = 36.dp, bottomStart = 12.dp), modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            androidx.compose.material3.Surface(color = cs.onSecondaryContainer, contentColor = cs.secondaryContainer, shape = RoundedCornerShape(999.dp)) {
+                Text("REST DAY", style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("Recover today", style = MaterialTheme.typography.displaySmall)
+                val sore = r.strings("recovering")
+                Text(listOfNotNull(
+                    r.s("when").takeIf { it.isNotBlank() }?.let { "${r.s("nextLabel")} is $it." },
+                    if (sore.isNotEmpty()) sore.take(3).joinToString(", ") + (if (sore.size == 1) " is" else " are") + " still recovering." else null,
+                ).joinToString(" "), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.alpha(0.85f))
+            }
+            val rows = r.list("rows")
+            if (rows.isNotEmpty()) androidx.compose.material3.Surface(color = cs.surface, contentColor = cs.onSurface, shape = RoundedCornerShape(22.dp)) {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    rows.forEach { m ->
+                        val v = m.i("readiness")
+                        Row(Modifier.semantics(mergeDescendants = true) { contentDescription = "${m.s("label")} $v percent recovered" },
+                            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text(m.s("label"), style = MaterialTheme.typography.labelLarge, modifier = Modifier.width(96.dp), maxLines = 1)
+                            ProgressBar(v / 100f, Modifier.weight(1f), height = 8.dp, color = if (v < 70) cs.tertiary else cs.primary)
+                            Text("$v%", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant, modifier = Modifier.width(40.dp))
+                        }
+                    }
+                }
+            }
+            listOf("A 20–30 minute walk speeds recovery more than lying still.", "Sleep is when the training turns into strength. Aim for seven hours or more.").forEach { tip ->
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { Text("•"); Text(tip, style = MaterialTheme.typography.bodyMedium) }
+            }
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = { vm.start() }, modifier = Modifier.height(48.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = cs.onSecondaryContainer, contentColor = cs.secondaryContainer)) {
+                    Text("Train ${r.s("nextLabel")} now", maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                }
+                OutlinedButton(onClick = { vm.startQuick() }, modifier = Modifier.height(48.dp)) { Text("Quick workout", color = cs.onSecondaryContainer) }
+            }
+        }
     }
 }

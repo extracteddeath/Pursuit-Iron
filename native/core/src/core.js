@@ -218,8 +218,55 @@ export function home() {
         cycle: (() => { const ci = liveCycleInfo(); return ci ? { id: ci.cycle.id, name: ci.cycle.name || 'Training cycle', blockIdx: ci.blockIdx, blocks: (ci.cycle.blockMeta || []).map((b) => b.label || 'Block'),
             weekIndex: ci.weekIndex, weeksTotal: ci.weeksTotal, isDeload: ci.isDeload, dayIndex: ci.dayIndex, daysPerWeek: ci.daysPerWeek } : null; })(),
         recent: H.slice(0, 7).map(historyRow),
+        reentry: nx && !S.live ? reentryOffer(H) : null,
+        restDay: nx && !S.live ? restDayView(nx, H, rd) : null,
         ...todayInsights(nx, H)
     };
+}
+/* The design's welcome back (scenario "Back after a break"): after REENTRY_DAYS without training, offer
+   one easier session before the plan resumes — two working sets per lift at 90% of today's loads.
+   It is today's own prescription scaled down, the same path as the readiness check, so nothing about
+   the program changes and the next session prescribes from what was logged, as usual. */
+/* The design's rest day: a program with a weekly schedule has nothing on today's weekday, and nothing
+   was logged today. Today then leads with recovery and when the next session is, instead of a start
+   button for a day the lifter planned to rest. Training anyway stays one tap away. */
+const WEEKDAY = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+function restDayView(nx, H, rd, at = new Date()) {
+    const sched = nx.program.schedule || {};
+    if (!Object.values(sched).some(Boolean)) return null;
+    const wd = at.getDay(); if (sched[wd]) return null;
+    const midnight = new Date(at); midnight.setHours(0, 0, 0, 0);
+    if (H.some((h) => Number(h.date) >= midnight.getTime())) return null;
+    let inDays = null; for (let k = 1; k <= 7; k++) if (sched[(wd + k) % 7]) { inDays = k; break; }
+    const nextWd = inDays == null ? null : (wd + inDays) % 7;
+    const trained = rd.filter((r) => MAJOR_PARTS.includes(r.part) || r.readiness < 100);
+    const rows = [...trained].sort((a, b) => a.readiness - b.readiness).slice(0, 6);
+    const sore = rows.filter((r) => r.readiness < 70).map((r) => r.label);
+    return { nextLabel: nx.day.label, inDays, nextWeekday: nextWd == null ? null : WEEKDAY[nextWd],
+        when: inDays === 1 ? 'tomorrow' : inDays == null ? null : 'on ' + WEEKDAY[nextWd], recovering: sore, rows };
+}
+export const REENTRY_DAYS = 10, REENTRY_FACTOR = 0.9, REENTRY_SETS = 2;
+function reentryOffer(H) {
+    const last = H.length ? Number(H[0].date) : 0;
+    if (!(last > 0)) return null;
+    const daysOff = Math.floor((Date.now() - last) / 86400000);
+    return daysOff >= REENTRY_DAYS ? { daysOff, lastDate: last, factor: REENTRY_FACTOR, sets: REENTRY_SETS } : null;
+}
+export function startReentry() {
+    const nx = upNext(); if (!nx) return { error: 'No program yet.' };
+    const offer = reentryOffer(history()); if (!offer) return { error: 'No break to come back from.' };
+    const v = startProgramDay(nx.program, nx.day, nx.weekIndex, { reentry: { daysOff: offer.daysOff, factor: REENTRY_FACTOR, sets: REENTRY_SETS } });
+    if (v.error) return v;
+    const l = S.live, ctx = sessionContext(l);
+    // Keep the warm-ups and the first REENTRY_SETS working sets (with any drop or myo minis hanging off them).
+    const trimmed = (l.data || []).map((e) => {
+        let w = 0; const sets = [];
+        for (const x of e.sets) { if (isWork(x)) w++; if (w <= REENTRY_SETS || x.warm) sets.push(x); }
+        return { ...e, sets };
+    });
+    l.data = normalizeData(ctx, ACTIONS.readiness({ label: 'Re-entry', factor: REENTRY_FACTOR }, ctx, trimmed));
+    markLive();
+    return session();
 }
 
 /* App.js upNext freshness + alt, DeloadAdviceCard, MuscleRecoveryCard rest advice, homeCardPlan, WeeklyRecapCard. */
@@ -379,6 +426,25 @@ export function shareCard({ id }) {
 }
 
 /* ------------------------------------------------------------------ workout session */
+/* App.js styleEdit sheet: each style with what it does, Auto naming the style it picks for this lift now
+   (resolveStyle with the lift's own choice removed), Linear naming this lift's jump (linearInc). */
+function progressionOptions(ctx, e, ex, u) {
+    let auto = '';
+    try {
+        const id = E.resolveStyle({ ...ctx.program, progStyle: undefined }, ex, e.slot === ctx.day.primaryIndex, ctx.wk, ctx.P, ctx.H, ctx.day.id);
+        auto = (E.PROG_STYLES?.[id] || 'double progression');
+    } catch { auto = 'double progression'; }
+    let inc = ''; try { inc = E.linearInc(ex, u) + u; } catch { inc = ''; }
+    return { auto, options: [
+        { id: 'auto', label: 'Auto (recommended)', detail: 'Picks the best style for this lift — currently ' + auto.toLowerCase() + '.' },
+        { id: 'dynamic', label: 'Dynamic double', detail: 'True per-set DDP — each set advances independently. Top the rep ceiling on set 1 and its weight goes up next session even if set 2 didn\'t. Fastest per-set progression.' },
+        { id: 'double', label: 'Double progression', detail: 'Build reps anywhere in the range, then add load when you top it. Simple and effective for most lifts.' },
+        { id: 'ladder', label: 'Rep ladder', detail: 'One shared rep target that climbs each session (e.g. 10 → 12 → 15), then the load jumps and the target resets. A structured double-progression hybrid with a crisp weekly goal.' },
+        { id: 'wave', label: 'Wave loading', detail: 'Rotates heavy / medium / light sessions (lo→mid→hi reps) within the range, then the load jumps. Classic strength periodization.' },
+        { id: 'linear', label: 'Linear LP', detail: 'Add a fixed ' + (inc || 'jump') + ' every session you hit the bottom of the range. Best for beginners on big compounds.' },
+        { id: 'e1rm', label: 'e1RM autoregulation', detail: 'Sets load each session from your estimated 1RM to land at the target RIR. Smoothest day-to-day adjustment.' },
+    ].filter((o) => E.PROG_STYLES ? o.id in E.PROG_STYLES : true) };
+}
 function sessionContext(l) {
     // A quick (freestyle) workout's program is not in the library; it travels with the live session.
     const source = liveProgram(l);
@@ -526,10 +592,13 @@ export function session() {
                 step: inc && inc.unit === u ? inc.v : null, stepChoices: u === 'lb' ? [5, 10, 15, 20, 25, 50] : [2.5, 5, 10, 15, 20],
                 cues: (() => { try { return E.cuesFor(ex) || []; } catch { return []; } })(), setup,
                 stretchFocus: (() => { try { return !!E.isStretchFocus(e.id, 3); } catch { return false; } })(),
-                progression: { style: E.styleFor(ctx.program, e.id), changed: !!l.sessionProgressions?.[e.id], locked: !!ctx.program.config?.percentScheme } };
+                // The design's muscles worked: the engine's own part and secondary shares, biggest first.
+                secondary: (() => { try { return (E.secondaryOf(ex) || []).slice().sort((a, b) => b[1] - a[1]).map(([p, f]) => ({ part: p, label: E.PART_LABEL?.[p] || p, share: f })); } catch { return []; } })(),
+                progression: { style: E.styleFor(ctx.program, e.id), changed: !!l.sessionProgressions?.[e.id], locked: !!ctx.program.config?.percentScheme,
+                    ...progressionOptions(ctx, e, ex, u) } };
         }),
         loadMode: S.store.loadMode === 'rpe' ? 'rpe' : 'rir',
-        quick: !!ctx.program.quick, readinessDone: !!l.readiness, readinessLabel: l.readiness?.label || null,
+        quick: !!ctx.program.quick, readinessDone: !!l.readiness, readinessLabel: l.readiness?.label || null, reentry: l.reentry || null,
         sessionNote: l.sessionNote || '', sessionNoteRepeat: l.sessionNoteRepeat || 'none',
         progressionStyles: Object.entries(E.PROG_STYLES || {}).map(([id, label]) => ({ id, label })),
         supersetSuggestions: supersetSuggestions(ctx, data, Math.max(0, Math.min(data.length - 1, l.exIdx || 0))),
@@ -950,14 +1019,37 @@ export function undo() {
 }
 
 /* ------------------------------------------------------------------ progress */
-export function progress() {
+/* App.js chart favourites ("wpb:chart-favorites-v1", kept on the phone): pinned lifts show first on
+   Progress, in pin order. The design caps them at six. Never pinned (null) shows the four most-trained
+   lifts with a trend, the way the design seeds the main lifts. */
+export const PIN_MAX = 6;
+export function progress({ pinned = null } = {}) {
     const H = history(), u = unit();
     let trends = []; try { trends = E.exerciseTrends(H) || []; } catch { trends = []; }
     let bests = {}; try { bests = E.liftBests(H, u) || {}; } catch { bests = {}; }
     let recap = null; try { recap = E.weeklyRecap(H, u); } catch { recap = null; }
+    const conv = (v, from) => (from && from !== u ? (u === 'lb' ? v * 2.20462 : v / 2.20462) : v);
+    const r1 = (v) => Math.round(v * 10) / 10;
+    const pts = (t) => (t.sessions || []).slice(-12).map((p) => ({ date: p.date ?? null, e1rm: r1(conv(p.best ?? 0, p.unit || t.unit)) }));
+    const byId = Object.fromEntries(trends.map((t) => [t.id, t]));
+    const auto = !Array.isArray(pinned);
+    const ids = auto
+        ? trends.filter((t) => (t.sessions || []).length >= 2).sort((a, b) => (b.sessionsCount || 0) - (a.sessionsCount || 0)).slice(0, 4).map((t) => t.id)
+        : [...new Set(pinned.filter((id) => typeof id === 'string' && byId[id]))].slice(0, PIN_MAX);
+    const pinView = (t) => {
+        const ps = pts(t), first = ps[0]?.e1rm || 0, last = ps[ps.length - 1]?.e1rm || 0;
+        // The card is remembered by its record session: the set behind the best e1RM, and when it was.
+        const bestOf = (x) => conv(x.best ?? 0, x.unit || t.unit);
+        const rec = (t.sessions || []).reduce((m, x) => (!m || bestOf(x) > bestOf(m) ? x : m), null);
+        return { id: t.id, name: exName(t.id), points: ps, e1rm: rec ? r1(bestOf(rec)) : last,
+            heavy: rec?.top?.w > 0 ? `${fmtW(conv(rec.top.w, rec.unit || t.unit))} ${u} × ${rec.top.r ?? ''}` : null,
+            date: rec?.date ?? null, changePct: ps.length >= 2 && first > 0 ? Math.round((last / first - 1) * 1000) / 10 : null };
+    };
     return {
         unit: u, sessions: H.length,
-        lifts: trends.slice(0, 24).map((t) => ({ id: t.id, name: exName(t.id), points: (t.sessions || []).slice(-12).map((p) => ({ date: p.date ?? null, e1rm: Math.round((p.best ?? 0) * 10) / 10 })), change: t.change ?? t.delta ?? null })),
+        lifts: trends.slice(0, 24).map((t) => ({ id: t.id, name: exName(t.id), points: pts(t), change: t.change ?? t.delta ?? null, pinned: ids.includes(t.id) })),
+        pins: { auto, max: PIN_MAX, lifts: ids.map((id) => pinView(byId[id])),
+            options: trends.filter((t) => !ids.includes(t.id)).map((t) => ({ id: t.id, name: exName(t.id) })).sort((a, b) => a.name.localeCompare(b.name)) },
         records: Object.entries(bests).map(([id, b]) => ({ id, name: exName(id), e1rm: Math.round((b.e1rm ?? b.best ?? 0) * 10) / 10, weight: b.weight ?? b.w ?? null, reps: b.reps ?? b.r ?? null, date: b.date ?? null })).sort((a, b) => b.e1rm - a.e1rm).slice(0, 30),
         recap,
         readiness: readiness()
@@ -1003,6 +1095,66 @@ export function weekByWeek({ programId } = {}) {
             }) });
     }));
     return { programId: p.id, name: p.name, weeks: B.weeks, deloadWeek: B.deloadWeek, current: nx?.program.id === p.id ? nx.weekIndex : null, percent: !!p.config?.percentScheme, rows };
+}
+/* App.js volumeZone / partZone: four bands (below MEV, productive to MAV, high to MRV + grain, over MRV);
+   composites (the deltoid) only read "over" when a head past its own ceiling. Wording kept from App.js. */
+function volumeZoneOf(part, sets, program) {
+    const { mev, mrv } = E.landmarkFor(part, program?.config?.experience || 'intermediate', program);
+    const mav = E.mavFor(part, program);
+    if (sets < mev) return { label: 'below MEV', sub: 'under the volume that reliably drives growth', tone: 'muted' };
+    if (sets <= mav) return { label: 'productive', sub: 'inside the range this app plans for', tone: 'good' };
+    if (sets <= mrv + E.MRV_GRAIN) return { label: 'high', sub: 'near the top of the planned range', tone: 'good' };
+    return { label: 'over MRV', sub: 'past what this app budgets to recover from', tone: 'warn' };
+}
+function partZoneOf(part, sets, sub, program) {
+    if (program?.engineSource === 'pursuit-next') return volumeZoneOf(part, sets, program);
+    const heads = E.COMPOSITE_HEADS?.[part];
+    if (!heads || !sub) return volumeZoneOf(part, sets);
+    const { mev } = E.landmarkFor(part);
+    if (sets < mev) return { label: 'below MEV', sub: 'under the volume that reliably drives growth', tone: 'muted' };
+    const over = heads.some((h) => { const lm = E.SUB_LANDMARKS?.[h]; return lm && lm.mev !== 0 && (sub[h] || 0) > (lm.mrv != null ? lm.mrv + E.MRV_GRAIN : Infinity); });
+    if (over) return { label: 'a head over MRV', sub: 'one deltoid head is past its own ceiling', tone: 'warn' };
+    return sets <= E.mavFor(part) ? { label: 'productive', sub: 'inside the range this app plans for', tone: 'good' } : { label: 'high', sub: 'near the top of the planned range', tone: 'good' };
+}
+/* App.js VolumeCard for a program week: sets per muscle against MEV/MAV/MRV, the volume check (every
+   training week), and what your own history says about each muscle's productive range. */
+export function weeklyVolumeView({ programId, weekIndex } = {}) {
+    const nx = upNext();
+    const p = programId ? programById(programId) : nx?.program;
+    if (!p) return null;
+    const wk = weekIndex || (nx && nx.program.id === p.id ? nx.weekIndex : 1);
+    const volume = E.weeklyVolume(p, wk) || {}, sub = E.weeklySubVolume(p, wk) || {};
+    const parts = (E.PART_ORDER || Object.keys(volume)).filter((x) => (volume[x] || 0) > 0.05);
+    const r1 = (v) => Math.round((Number(v) || 0) * 10) / 10;
+    let verdicts = []; try { verdicts = E.volumeVerdicts(history(), volume, parts) || []; } catch { verdicts = []; }
+    let audit = { issues: [], volBias: {} }; try { audit = E.volumeAudit(p) || audit; } catch { audit = { issues: [], volBias: {} }; }
+    const rows = parts.map((part) => {
+        const lm = E.landmarkFor(part, p.config?.experience || 'intermediate', p), z = partZoneOf(part, volume[part], sub, p);
+        return { part, label: E.PART_LABEL?.[part] || part, sets: r1(volume[part]), mev: lm.mev, mav: E.mavFor(part, p), mrv: lm.mrv, zone: z.label, zoneSub: z.sub, tone: z.tone };
+    });
+    return { programId: p.id, weekIndex: wk, total: r1(parts.reduce((a, x) => a + volume[x], 0)), rows,
+        issues: (audit.issues || []).map((i) => ({ part: i.part, label: i.label || E.PART_LABEL?.[i.part] || i.part, status: i.status, sets: r1(i.v), mev: i.mev ?? null, mrv: i.mrv ?? null, fix: i.fix || '' })),
+        canRepair: p.engineSource === 'pursuit-next' ? (audit.issues || []).length > 0 : Object.keys(audit.volBias || {}).length > 0,
+        verdicts: verdicts.map((v) => ({ part: v.part, label: E.PART_LABEL?.[v.part] || v.part, status: v.status, planned: r1(v.planned), lo: v.lo, hi: v.hi, weeks: v.weeks })) };
+}
+/* App.js applyVolumeFix: engine programs are repaired by repairShellVolume; the result message is the engine's. */
+export function repairVolume({ programId } = {}) {
+    const p = programId ? programById(programId) : upNext()?.program;
+    if (!p) return { ok: false, message: 'No program to repair.' };
+    if (p.engineSource !== 'pursuit-next') {
+        const volBias = (() => { try { return E.volumeAudit(p).volBias || {}; } catch { return {}; } })();
+        if (!Object.keys(volBias).length) return { ok: true, changed: false, status: 'unchanged', message: 'Nothing the auto-fix can change.' };
+        const next = { ...p, slotBias: { ...(p.slotBias || {}) }, config: { ...p.config } };
+        E.distributeVolBias(next, volBias);
+        S.undo = { saved: saved(), pinnedId: S.store.pinnedId };
+        setList('saved', saved().map((x) => (x.id === p.id ? next : x)));
+        return { ok: true, changed: true, status: 'repaired', message: 'Weekly volume adjusted.' };
+    }
+    let result;
+    try { result = E.repairShellVolume(p, EXERCISES); }
+    catch { return { ok: false, status: 'unable', message: 'Couldn’t safely repair this plan. Your sets have been kept; try a longer session or swap redundant work.' }; }
+    if (result.changed) { S.undo = { saved: saved(), pinnedId: S.store.pinnedId }; setList('saved', saved().map((x) => (x.id === p.id ? result.program : x))); }
+    return { ok: true, changed: !!result.changed, status: result.status, message: result.message };
 }
 /* App.js LoadWaveCard: planned working sets per week, deload included as the program's own fact. */
 export function volumeWave({ programId } = {}) {
@@ -1840,15 +1992,36 @@ export function createFromTemplate({ id }) {
 
 /* ------------------------------------------------------------------ training maxes for percentage programs (App.js tmSheet + "Set from 1RM") */
 function mainLifts(p) { const ids = []; (p.days || []).forEach((d) => { const id = d.exercises[d.primaryIndex]; if (id && !ids.includes(id) && EX_BY_ID[id]) ids.push(id); }); return ids; }
-export function trainingMaxes({ programId }) {
+/* App.js tmSheet + the design's percentage program panel: the method, a chip per week of the block
+   (deload included), and for each main lift its training max and that week's sets from the engine's
+   own percentagePlanFor — the same call the workout prescribes from. */
+export function trainingMaxes({ programId, weekIndex = null }) {
     const p = programById(programId); if (!p) return null;
-    const u = unit(), percent = !!p.config?.percentScheme;
-    return { programId: p.id, percent, unit: u,
+    const u = unit(), percent = !!p.config?.percentScheme, scheme = p.config?.percentScheme || null;
+    const S = scheme ? E.PCT_SCHEMES?.[scheme] : null;
+    const nx = upNext(), current = nx?.program.id === p.id ? nx.weekIndex : null;
+    const bw = blockWeeks(p);
+    const wk = Math.max(1, Math.min(bw.list[bw.list.length - 1] || 1, Number(weekIndex) || current || 1));
+    const firstMain = mainLifts(p)[0];
+    const planOf = (id, w) => {
+        const ex = EX_BY_ID[id], day = p.days.find((d) => d.exercises[d.primaryIndex] === id) || p.days.find((d) => d.exercises.includes(id));
+        if (!ex || !day) return null;
+        try { return E.percentagePlanFor(p, day, ex, day.exercises.indexOf(id), w, u, history()); } catch { return null; }
+    };
+    const setTxt = (x) => `${fmtW(x.weight) || '—'}×${x.reps}`;
+    return { programId: p.id, name: p.name, percent, unit: u,
+        method: S ? { id: scheme, name: S.name, basis: S.basis } : null,
+        weekIndex: wk, current, deloadWeek: bw.deloadWeek,
+        weeks: percent ? bw.list.map((w) => {
+            const pl = firstMain && (E.trainingMaxForUnit(p, firstMain, u) || 0) > 0 ? planOf(firstMain, w) : null;
+            return { w, deload: w === bw.deloadWeek || /deload/i.test(pl?.label || ''), label: pl?.label || null, now: w === current };
+        }) : [],
         lifts: percent ? mainLifts(p).map((id) => {
             const ex = EX_BY_ID[id], tm = E.trainingMaxForUnit(p, id, u) || 0;
-            const day = p.days.find((d) => d.exercises.includes(id));
-            let wk = null; try { wk = tm > 0 && day ? E.percentagePlanFor(p, day, ex, day.exercises.indexOf(id), 1, u) : null; } catch { wk = null; }
-            return { id, name: ex.name, tm, week1: wk ? { label: wk.label, sets: wk.sets.map((x) => `${x.weight}×${x.reps}`) } : null };
+            const w1 = tm > 0 ? planOf(id, 1) : null, wn = tm > 0 ? planOf(id, wk) : null;
+            return { id, name: ex.name, tm, step: E.loadStep(ex, u),
+                week1: w1 ? { label: w1.label, sets: w1.sets.map(setTxt) } : null,
+                week: wn ? { label: wn.label, sets: wn.sets.map((x) => ({ text: setTxt(x), pct: x.pct != null ? Math.round(x.pct * 1000) / 10 : null, amrap: !!x.amrap })) } : null };
         }) : [] };
 }
 /* A training max typed directly, or 90% of a one-rep max rounded to the lift's step. */

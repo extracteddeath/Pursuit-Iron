@@ -183,3 +183,83 @@ fun WeekByWeekSheet(vm: AppViewModel, programId: String, onClose: () -> Unit) {
         }
     }
 }
+
+/**
+ * App.js VolumeCard for the week on screen: working sets per muscle drawn against its own MEV–MRV band
+ * (MAV marked), the four-band verdict in App.js's wording, the volume check across all training weeks
+ * with the engine's repair, and what your own history says about each muscle's productive range.
+ */
+@Composable
+fun WeekVolumeCard(vm: AppViewModel, programId: String, week: Int) {
+    var data by remember(programId, week) { mutableStateOf<JSONObject?>(null) }
+    LaunchedEffect(programId, week, vm.plan) { data = vm.weeklyVolume(programId, week) }
+    val d = data ?: return
+    val rows = d.list("rows")
+    if (rows.isEmpty()) return
+    val cs = MaterialTheme.colorScheme
+    var open by remember { mutableStateOf(false) }
+    val flagged = rows.count { it.s("tone") != "good" }
+    PiCard(radius = 28.dp) {
+        Row(Modifier.fillMaxWidth().clickable { open = !open }.semantics(mergeDescendants = true) { contentDescription = "Week $week volume. " + if (open) "Collapse" else "Expand" },
+            verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Week $week volume", style = MaterialTheme.typography.titleMedium)
+                Text("${com.pursuitiron.app.ui.common.fmtNum(d.optDouble("total"))} sets · ${rows.size} muscles" + if (flagged > 0) " · $flagged outside MEV–MRV" else " · all in range",
+                    style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+            }
+            Icon(if (open) PiIcons.ChevronDown else PiIcons.ChevronRight, null, tint = cs.onSurfaceVariant)
+        }
+        if (!open) return@PiCard
+        val issues = d.list("issues")
+        if (issues.isNotEmpty()) Column(Modifier.clip(RoundedCornerShape(18.dp)).background(cs.surfaceContainerHigh).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Volume check · all training weeks", style = MaterialTheme.typography.titleSmall)
+            issues.forEach { i ->
+                val under = i.s("status") == "under"
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(if (under) "LOW" else "HIGH", style = MaterialTheme.typography.labelSmall, color = if (under) cs.onSurfaceVariant else cs.error, modifier = Modifier.width(36.dp).padding(top = 2.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("${i.s("label")} · ${com.pursuitiron.app.ui.common.fmtNum(i.optDouble("sets"))} sets (" + (if (under) "MEV ${i.s("mev")}" else "MRV ${i.s("mrv")}") + ")", style = MaterialTheme.typography.bodyMedium)
+                        if (i.s("fix").isNotBlank()) Text(i.s("fix"), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                    }
+                }
+            }
+            if (d.b("canRepair")) FilledTonalButton(onClick = { vm.repairVolume(programId) }, modifier = Modifier.fillMaxWidth()) { Icon(PiIcons.Sparkle, null, Modifier.size(16.dp)); Text("  Fix weekly volume") }
+            else Text("These need an exercise added or a longer session; the auto-fix can't resolve them without changing your day structure.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+        }
+        rows.forEach { r ->
+            val sets = r.optDouble("sets"); val mev = r.optDouble("mev"); val mav = r.optDouble("mav"); val mrv = r.optDouble("mrv")
+            val tone = r.s("tone")
+            val fill = when (tone) { "warn" -> cs.error; "muted" -> cs.onSurfaceVariant; else -> cs.primary }
+            Column(Modifier.semantics(mergeDescendants = true) { contentDescription = "${r.s("label")}: ${com.pursuitiron.app.ui.common.fmtNum(sets)} sets, ${r.s("zone")}. MEV ${com.pursuitiron.app.ui.common.fmtNum(mev)}, MRV ${com.pursuitiron.app.ui.common.fmtNum(mrv)}" },
+                verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(r.s("label"), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                    Text("${com.pursuitiron.app.ui.common.fmtNum(sets)} · ${r.s("zone")}", style = MaterialTheme.typography.labelMedium, color = if (tone == "warn") cs.error else cs.onSurfaceVariant)
+                }
+                val track = cs.surfaceContainerHighest; val band = cs.secondaryContainer; val tick = cs.onSecondaryContainer
+                androidx.compose.foundation.Canvas(Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(5.dp))) {
+                    val top = maxOf(mrv * 1.15, sets * 1.05, 1.0).toFloat()
+                    fun x(v: Double) = (v.toFloat() / top).coerceIn(0f, 1f) * size.width
+                    drawRect(track)
+                    drawRect(band, topLeft = androidx.compose.ui.geometry.Offset(x(mev), 0f), size = androidx.compose.ui.geometry.Size(x(mrv) - x(mev), size.height))
+                    drawRect(fill, size = androidx.compose.ui.geometry.Size(x(sets), size.height * 0.5f), topLeft = androidx.compose.ui.geometry.Offset(0f, size.height * 0.25f))
+                    drawRect(tick, topLeft = androidx.compose.ui.geometry.Offset(x(mav) - 1f, 0f), size = androidx.compose.ui.geometry.Size(2f, size.height))
+                }
+            }
+        }
+        Text("Band: MEV to MRV for your experience; the tick is MAV. Sets include partial credit from lifts that also train the muscle.",
+            style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+        val verdicts = d.list("verdicts")
+        if (verdicts.isNotEmpty()) Column(Modifier.clip(RoundedCornerShape(18.dp)).background(cs.surfaceContainerHigh).padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("From your training · your response, not averages", style = MaterialTheme.typography.titleSmall)
+            verdicts.forEach { v ->
+                val st = v.s("status"); val n = com.pursuitiron.app.ui.common.fmtNum(v.optDouble("planned"))
+                Text("${v.s("label")}: " + when (st) {
+                    "in" -> "planned at $n sets — inside the ${v.s("lo")}–${v.s("hi")} range that has driven your fastest gains."
+                    "over" -> "planned at $n sets, above the ${v.s("lo")}–${v.s("hi")} that has driven your fastest gains. More sets haven't bought you more progress."
+                    else -> "planned at $n sets, below the ${v.s("lo")}–${v.s("hi")} that has driven your fastest gains."
+                } + " (${v.s("weeks")} weeks compared)", style = MaterialTheme.typography.bodySmall, color = if (st == "in") cs.onSurface else cs.error)
+            }
+        }
+    }
+}

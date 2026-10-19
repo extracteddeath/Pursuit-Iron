@@ -619,5 +619,13 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   ok(b.prBoard.e1rm.length > 0 && b.prBoard.heaviest[0].value === 100 && b.prBoard.heaviest[0].reps === 5, 'PR board: heaviest set with its reps');
   ok(b.big3.lifts.length === 3 && b.big3.lifts.some((l) => l.e1rm > 0 && l.ratio > 1), 'big three against bodyweight: ' + b.big3.lifts.map((l) => l.name + ' ' + l.e1rm + (l.ratio ? ' (' + l.ratio + '×)' : '')).join(', '));
   ok(b.balance.parts.length > 0 && b.balance.parts.reduce((a, p) => a + p.sets, 0) > 0, 'muscle balance counts working sets per muscle'); }
+// Warm-up & mobility on the first lift until a set is logged (App.js warmupRoutine)
+{ C.init({ store: JSON.stringify({ unit: 'kg' }) });
+  C.createProgram({ config: { name: 'W', unit: 'kg', goal: 'both', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 2 });
+  let ss = C.startSession({});
+  ok(ss.warmup && ss.warmup.moves.length >= 3 && ss.warmup.parts.length >= 1, 'warm-up routine before the first set: ' + ss.warmup.parts.join(', '));
+  const e = ss.exercises[0], si = e.sets.findIndex((x) => !x.warm && !x.sub);
+  C.act({ type: 'edit', ei: 0, si, field: 'weight', value: '50' }); C.act({ type: 'edit', ei: 0, si, field: 'reps', value: '5' }); ss = C.act({ type: 'toggle', ei: 0, si });
+  ok(!ss.warmup, 'gone once a set is logged'); C.discardSession(); }
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);
 

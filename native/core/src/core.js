@@ -653,6 +653,10 @@ export function session() {
                     ...progressionOptions(ctx, e, ex, u) } };
         }),
         loadMode: S.store.loadMode === 'rpe' ? 'rpe' : 'rir',
+        // App.js warmupRoutine: shown on the first lift until a set is logged.
+        warmup: doneSets === 0 ? (() => { try { const m = E.warmupRoutine(ctx.day); if (!m) return null;
+            const parts = [...new Set([ctx.day.exercises[ctx.day.primaryIndex], ...ctx.day.exercises].map((id) => EX_BY_ID[id]?.part).filter(Boolean))].slice(0, 3);
+            return { moves: m, parts: parts.map((p) => E.PART_LABEL?.[p] || p) }; } catch { return null; } })() : null,
         quick: !!ctx.program.quick, readinessDone: !!l.readiness, readinessLabel: l.readiness?.label || null, reentry: l.reentry || null,
         sessionNote: l.sessionNote || '', sessionNoteRepeat: l.sessionNoteRepeat || 'none',
         progressionStyles: Object.entries(E.PROG_STYLES || {}).map(([id, label]) => ({ id, label })),

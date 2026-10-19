@@ -181,6 +181,11 @@ shot("readiness")
 tap(r"^\|A little off$")
 grant_notifications()
 shot("workout")
+# App.js warmupRoutine: the warm-up & mobility card leads the first lift until a set is logged
+if find(r"Warm-up & mobility", timeout=3):
+    tap(r"Warmed up", "warmup-done")
+else:
+    FAILS.append("no warm-up card on the first lift")
 if tap(r"Weight not set, edit", "set-editor"):
     tap(r"^\|Weight \(")  # the field's label, not the "Less Weight (kg)" button
     adb("shell", "input", "text", "60")

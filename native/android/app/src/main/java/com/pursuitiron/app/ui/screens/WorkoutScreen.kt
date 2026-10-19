@@ -67,6 +67,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.border
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -286,7 +287,10 @@ private fun ExercisePane(vm: AppViewModel, s: JSONObject, ex: JSONObject?, wide:
     val injury = s.list("injuries").firstOrNull { inj -> inj.optJSONArray("exercises")?.let { a -> (0 until a.length()).any { a.optString(it) == ex.s("id") } } == true }
     val lastDoneWork = sets.indexOfLast { it.b("done") && !it.b("warm") && !it.b("sub") }
     var workNo = 0
+    var warmHidden by androidx.compose.runtime.saveable.rememberSaveable(s.s("sessionId")) { mutableStateOf(false) }
     LazyColumn(modifier.fillMaxSize(), contentPadding = PaddingValues(start = if (wide) 16.dp else 16.dp, end = if (wide) 32.dp else 16.dp, top = 8.dp, bottom = 190.dp)) {
+        val warm = s.o("warmup")
+        if (ei == 0 && warm != null && !warmHidden) item { WarmupCard(warm) { warmHidden = true } }
         item {
             PiCard(Modifier.widthIn(max = 780.dp), radius = 32.dp, padding = 20.dp) {
                 Row(verticalAlignment = Alignment.Top) {
@@ -765,3 +769,38 @@ private fun ReentryBanner(r: JSONObject) {
 private fun assistAbs(v: String): String = v.trim().removePrefix("-").removePrefix("−")
 private fun assistShown(v: String): String = assistAbs(v).let { a -> if (a.isBlank()) "—" else if (a.toDoubleOrNull() == 0.0) "0" else "−$a" }
 private fun assistStored(typed: String): String = typed.trim().let { t -> if (t.isBlank() || t.toDoubleOrNull() == 0.0) t else "-$t" }
+
+/* App.js warmupRoutine as the design's "Warm-up & mobility" card: a checklist for the day's first muscles,
+   shown on the first lift until a set is logged. Ticks are only for you; nothing is recorded. */
+@Composable
+private fun WarmupCard(w: JSONObject, onDone: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val moves = w.strings("moves")
+    val ticked = remember(moves) { androidx.compose.runtime.mutableStateListOf<Int>() }
+    PiCard(Modifier.widthIn(max = 780.dp).padding(bottom = 12.dp), color = cs.primaryContainer, radius = 28.dp, padding = 16.dp) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Icon(PiIcons.Flame, null, tint = cs.onPrimaryContainer)
+            Column(Modifier.weight(1f)) {
+                Text("Warm-up & mobility", style = MaterialTheme.typography.titleMedium, color = cs.onPrimaryContainer)
+                Text("For ${w.strings("parts").joinToString(", ") { it.lowercase() }} · ${ticked.size} of ${moves.size}", style = MaterialTheme.typography.bodySmall, color = cs.onPrimaryContainer)
+            }
+            TextButton(onClick = onDone) { Text("Hide") }
+        }
+        Column(Modifier.clip(RoundedCornerShape(20.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            moves.forEachIndexed { k, m ->
+                val on = k in ticked
+                Row(Modifier.fillMaxWidth().background(cs.surface).clickable { if (on) ticked.remove(k) else ticked.add(k) }
+                    .semantics(mergeDescendants = true) { role = Role.Checkbox; stateDescription = if (on) "Done" else "Not done" }
+                    .padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Box(Modifier.size(24.dp).clip(CircleShape).background(if (on) cs.primary else cs.surface).border(2.dp, if (on) cs.primary else cs.outlineVariant, CircleShape), contentAlignment = Alignment.Center) {
+                        if (on) Icon(PiIcons.Check, null, Modifier.size(14.dp), tint = cs.onPrimary)
+                    }
+                    Text(m, style = MaterialTheme.typography.bodyMedium, color = if (on) cs.onSurfaceVariant else cs.onSurface)
+                }
+            }
+        }
+        Button(onClick = onDone, modifier = Modifier.fillMaxWidth().height(48.dp), colors = ButtonDefaults.buttonColors(containerColor = cs.onPrimaryContainer, contentColor = cs.primaryContainer)) {
+            Text("Warmed up — let's train")
+        }
+    }
+}

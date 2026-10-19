@@ -79,6 +79,8 @@ fun ProgramSettingsSheet(vm: AppViewModel, onClose: () -> Unit) {
     var weeks by remember(p) { mutableIntStateOf(p.i("weeks", 6)) }
     var session by remember(p) { mutableStateOf(p.s("session", "s60")) }
     var progression by remember(p) { mutableStateOf(p.s("progression", "auto")) }
+    var endless by remember(p) { mutableStateOf(p.b("endless")) }
+    var deload by remember(p) { mutableStateOf(p.b("deload")) }
     var cap by remember(p) { mutableStateOf(if (p == null || p.isNull("barbellCap")) "none" else p.i("barbellCap").toString()) }
     var noBw by remember(p) { mutableStateOf(p.b("noBodyweight")) }
     var noSs by remember(p) { mutableStateOf(p.b("noSupersets")) }
@@ -88,9 +90,10 @@ fun ProgramSettingsSheet(vm: AppViewModel, onClose: () -> Unit) {
     var confirm by remember { mutableStateOf<(() -> Unit)?>(null) }
     val draftOpen = vm.editor.b("dirty")
     fun settings() = JSONObject().put("goal", goal).put("weeks", weeks).put("session", session).put("progression", progression)
+        .put("endless", endless).put("deload", deload)
         .put("barbellCap", if (cap == "none") JSONObject.NULL else cap.toInt()).put("noBodyweight", noBw).put("noSupersets", noSs)
         .put("volumeApproach", vol).put("folder", folder).put("description", desc)
-    val rebuilds = p != null && (goal != p.s("goal") || weeks != p.i("weeks") || session != p.s("session") || progression != p.s("progression") ||
+    val rebuilds = p != null && (goal != p.s("goal") || weeks != p.i("weeks") || session != p.s("session") || progression != p.s("progression") || endless != p.b("endless") || deload != p.b("deload") ||
         cap != (if (p.isNull("barbellCap")) "none" else p.i("barbellCap").toString()) || noBw != p.b("noBodyweight") || noSs != p.b("noSupersets") || vol != p.s("volumeApproach"))
     fun guarded(action: () -> Unit) { if (draftOpen) confirm = action else action() }
     ModalBottomSheet(onDismissRequest = onClose, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
@@ -104,7 +107,11 @@ fun ProgramSettingsSheet(vm: AppViewModel, onClose: () -> Unit) {
             Kicker("Training goal")
             Segmented(listOf("strength" to "Strength", "hypertrophy" to "Size", "both" to "Both"), goal, { if (!locked) goal = it })
             Kicker("Block length")
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.clip(RoundedCornerShape(20.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                ToggleRow("Continuous", "No fixed end: load and volume keep progressing, with automatic deloads", endless) { if (!locked) endless = it }
+                if (!endless) ToggleRow("Deload week", "A lighter week ${weeks + 1} after the block", deload) { if (!locked) deload = it }
+            }
+            if (!endless) Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = { if (!locked && weeks > 1) weeks-- }) { Icon(PiIcons.Minus, "Decrease block length") }
                 Text("$weeks weeks", style = MaterialTheme.typography.titleMedium, modifier = Modifier.width(96.dp), textAlign = TextAlign.Center)
                 IconButton(onClick = { if (!locked && weeks < 16) weeks++ }) { Icon(PiIcons.Plus, "Increase block length") }

@@ -208,7 +208,7 @@ export function home() {
         unit: unit(), empty: !saved().length,
         next: nx ? {
             programId: nx.program.id, programName: nx.program.name, dayId: nx.day.id, dayLabel: nx.day.label,
-            weekIndex: nx.weekIndex, weeksTotal: E.weeksOf(nx.program), minutes: est, exercises: dayPreview(nx.program, nx.day, nx.weekIndex)
+            weekIndex: nx.weekIndex, weeksTotal: E.weeksOf(nx.program), endless: !!nx.program.config?.endless, deloadWeek: nx.weekIndex > E.weeksOf(nx.program), minutes: est, exercises: dayPreview(nx.program, nx.day, nx.weekIndex)
         } : null,
         week: { sessions: thisWeek.length, planned: nx ? nx.program.days.length : 0, volume: Math.round(thisWeek.reduce((s, h) => s + (Number(h.volume) || 0), 0)) },
         readiness: { today: todayReady, parts: rd },
@@ -1071,7 +1071,7 @@ export function plan({ programId, weekIndex } = {}) {
     if (!p) return null;
     const wk = weekIndex || (nx && nx.program.id === p.id ? nx.weekIndex : 1);
     return { programId: p.id, name: p.name, weekIndex: wk, weeksTotal: E.weeksOf(p), current: nx?.program.id === p.id ? nx.weekIndex : null,
-        nextDayId: nx?.program.id === p.id ? nx.day.id : null, split: p.config?.split || null, goal: p.config?.goal || null,
+        nextDayId: nx?.program.id === p.id ? nx.day.id : null, split: p.config?.split || null, goal: p.config?.goal || null, endless: !!p.config?.endless,
         days: p.days.map((d) => { let m = null; try { m = E.estimateMinutes(p, d, wk); } catch { m = null; } return { id: d.id, label: d.label, minutes: m, exercises: dayPreview(p, d, wk) }; }),
         percent: !!p.config?.percentScheme,
         cycleId: (p.cycleId && cycles().some((c) => c.id === p.cycleId)) ? p.cycleId : null, canNextBlock: !p.cycleId || !cycles().some((c) => c.id === p.cycleId),
@@ -1883,7 +1883,7 @@ export function programSettings({ programId }) {
     const c = p.config || {};
     const owner = p.cycleId ? cycles().find((x) => x.id === p.cycleId) : null;
     return { programId: p.id, engine: p.engineSource || null, cycleOwned: !!owner, custom: p.custom === true,
-        goal: c.goal || 'both', weeks: E.weeksOf(p), session: c.session || 's60', progression: c.progression === 'manual' ? 'manual' : 'auto',
+        goal: c.goal || 'both', weeks: E.weeksOf(p), endless: !!c.endless, deload: !!c.deload, session: c.session || 's60', progression: c.progression === 'manual' ? 'manual' : 'auto',
         barbellCap: c.barbellCap ?? null, noBodyweight: !!c.noBodyweight, noSupersets: !!c.noSupersets, volumeApproach: c.volumeApproach || 'standard',
         folder: p.folder || '', description: p.description || '', seed: p.seed ?? null,
         rolls: (p.rolls || []).map((r) => ({ seed: r.seed, at: r.at, lifts: r.lifts || [] })),
@@ -1923,6 +1923,9 @@ export function applyProgramSettings({ programId, settings = {}, shuffle = false
     const patch = {};
     if (d.goal != null && d.goal !== c.goal) patch.goal = d.goal;
     if (d.weeks != null && d.weeks !== E.weeksOf(program)) patch.weeks = d.weeks;
+    if (d.deload != null && !!d.deload !== !!c.deload) patch.deload = !!d.deload;
+    // App.js builder "Endless — continuous": a 5-week accumulation wave with its own deload, Auto progression.
+    if (d.endless != null && !!d.endless !== !!c.endless) Object.assign(patch, d.endless ? { endless: true, weeks: 5, deload: true, progression: 'auto' } : { endless: false });
     if (d.session != null && d.session !== (c.session || 's60')) patch.session = d.session;
     if (d.progression != null && d.progression !== (c.progression === 'manual' ? 'manual' : 'auto')) patch.progression = d.progression;
     if (d.barbellCap !== undefined && (d.barbellCap ?? null) !== (c.barbellCap ?? null)) patch.barbellCap = d.barbellCap ?? null;
@@ -2031,6 +2034,48 @@ export function trainingMaxes({ programId, weekIndex = null }) {
                 week1: w1 ? { label: w1.label, sets: w1.sets.map(setTxt) } : null,
                 week: wn ? { label: wn.label, sets: wn.sets.map((x) => ({ text: setTxt(x), pct: x.pct != null ? Math.round(x.pct * 1000) / 10 : null, amrap: !!x.amrap })) } : null };
         }) : [] };
+}
+/* App.js programToText ("Share program"): the plan as plain text. Two departures, both fixes: the goal
+   line reads GOALS[...].label (App.js reads .name, which GOALS doesn't have, so the goal never
+   printed), and percentage main lifts print from percentagePlanFor in the lifter's unit, the same
+   numbers the workout uses, instead of re-deriving them from the stored max. */
+export function programText({ programId }) {
+    const p = programById(programId); if (!p) return null;
+    const cfg = p.config || {}, u = unit(), mode = S.store.loadMode === 'rpe' ? 'rpe' : 'rir';
+    const scheme = cfg.percentScheme, PS = scheme ? E.PCT_SCHEMES?.[scheme] : null, wk = E.weeksOf(p);
+    const L = [p.name || 'My Program'];
+    L.push(`${E.SPLITS?.[cfg.split]?.name || cfg.split || 'Custom'} · ${p.days.length} days/week${GOAL_LABEL[cfg.goal] ? " · " + GOAL_LABEL[cfg.goal] : ''} · ${wk}-week block`);
+    if ((p.description || '').trim()) L.push(p.description.trim());
+    if (PS) L.push(`Main lifts use ${PS.name} percentages of ${PS.basis}.`);
+    L.push('');
+    p.days.forEach((day) => {
+        L.push(day.label || 'Day');
+        if (day.note) L.push(`  — ${day.note}`);
+        day.exercises.forEach((id, slot) => {
+            const ex = EX_BY_ID[id]; if (!ex) return;
+            const grouped = p.ss?.[`${day.id}:${slot}`] || (slot > 0 && p.ss?.[`${day.id}:${slot - 1}`]);
+            const bullet = grouped ? '   ↳' : `  ${slot + 1}.`;
+            if (PS && slot === day.primaryIndex) {
+                const tm = E.trainingMaxForUnit(p, id, u) || 0;
+                L.push(`${bullet} ${ex.name} — ${PS.name} main lift${tm > 0 ? ` · TM ${fmtW(tm)} ${u}` : ''}`);
+                for (let w = 1; w <= Math.min(wk, 4); w++) {
+                    let pl = null;
+                    try { pl = tm > 0 ? E.percentagePlanFor(p, day, ex, slot, w, u, history()) : E.percentageProtocolFor({ scheme, tm: 100, weekIndex: w, weeksTotal: wk, dayType: day.type, tier: 't1' }); } catch { pl = null; }
+                    if (!pl?.sets?.length) continue;
+                    const parts = pl.sets.map((x) => (tm > 0 ? `${fmtW(x.weight)}×${x.reps}` : `${Math.round(x.pct * 100)}%×${x.reps}`));
+                    L.push(`       W${w}${pl.label ? ` (${pl.label})` : ''}: ${parts.join(' · ')}`);
+                }
+                return;
+            }
+            let cell = null; try { cell = E.computeCell(p, day, id, slot, 1); } catch { cell = null; }
+            if (!cell) { L.push(`${bullet} ${ex.name}`); return; }
+            const eff = cell.rir != null ? ` @ ${E.effortLabel(cell.rir, mode)}` : (cell.range ? ' to failure' : '');
+            L.push(`${bullet} ${ex.name} — ${cell.sets} × ${cell.range}${eff}`);
+        });
+        L.push('');
+    });
+    L.push('Made with Pursuit Iron — Strength Coach');
+    return { text: L.join('\n'), name: p.name || 'My Program' };
 }
 /* A training max typed directly, or 90% of a one-rep max rounded to the lift's step. */
 export function setTrainingMax({ programId, exId, value, fromOneRm = false }) {

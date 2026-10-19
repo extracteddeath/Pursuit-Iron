@@ -303,6 +303,9 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
     ok(!all.deloadWeek || all.weeks.some((w) => w.deload), 'the deload week has a chip when the block has one');
     // The panel's week equals what the workout prescribes from
     const day = all.lifts[0]; ok(day.week.sets.every((x) => /×/.test(x.text)), 'sets read weight × reps'); }
+  { const t = C.programText({ programId: made.programId }).text;
+    ok(/Main-Lift|percentages of/.test(t) && /W1 \(/.test(t) && /Made with Pursuit Iron/.test(t), 'share text prints the method and the main-lift waves');
+    const pt = C.programText({ programId: made.programId }); ok(pt && pt.text.split('\n').length > 6, 'share text for a plain program'); }
   const plain = C.createFromTemplate({ id: tl.items.find((t) => !t.percent).id });
   ok(plain.ok && C.trainingMaxes({ programId: plain.programId }).percent === false, 'a regular template builds without training maxes'); }
 
@@ -526,5 +529,19 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   ok(Array.isArray(rdv.rows) && rdv.rows.length <= 6, 'rest day lists recovery rows');
   C.cycleSchedule({ programId: pid, weekday: today });
   ok(C.home().restDay === null, 'scheduled today: a training day'); }
+// Block length: endless (continuous) and the deload week, from the builder and from program settings
+{ C.init({ store: JSON.stringify({ unit: 'kg' }) });
+  const eq = ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'];
+  const mk = C.createProgram({ config: { name: 'E', unit: 'kg', goal: 'both', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: eq, endless: true, weeks: 5, deload: true, progression: 'auto' }, seed: 9 });
+  ok(mk.ok && C.home().next.endless === true && C.plan({}).endless === true, 'an endless program says so on Today and Plan');
+  const mk2 = C.createProgram({ config: { name: 'F', unit: 'kg', goal: 'both', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: eq, weeks: 8, deload: true }, seed: 9 });
+  ok(C.weekByWeek({ programId: mk2.programId }).deloadWeek === 9, 'an 8-week block with a deload has week 9 as its deload');
+  const ps = C.programSettings({ programId: mk2.programId });
+  ok(ps && ps.weeks === 8 && ps.deload === true && ps.endless === false, 'settings read length, deload and continuous');
+  const r = C.applyProgramSettings({ programId: mk2.programId, settings: { endless: true } });
+  ok(r.ok && r.rebuilt && C.programSettings({ programId: mk2.programId }).endless === true, 'switching to continuous rebuilds the program');
+  const r2 = C.applyProgramSettings({ programId: mk2.programId, settings: { endless: false, deload: false } });
+  const ps2 = C.programSettings({ programId: mk2.programId });
+  ok(r2.ok && ps2.endless === false && ps2.deload === false, 'and back to a fixed block without a deload'); }
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);
 

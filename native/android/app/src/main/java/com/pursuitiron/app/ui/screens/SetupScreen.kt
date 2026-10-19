@@ -27,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -67,12 +68,23 @@ fun SetupScreen(vm: AppViewModel) {
     var template by remember { mutableStateOf(vm.cycles.list("templates").firstOrNull()?.s("id") ?: "powerbuilding") }
     val custom = remember { mutableStateListOf(CustomBlock("hypertrophy_accumulation", 4), CustomBlock("strength_accumulation", 4)) }
     var adapt by remember { mutableStateOf(false) }
+    // App.js builder steps "length", "deload" and "progression"; Endless runs a 5-week wave with its own deloads.
+    var weeks by remember { mutableIntStateOf(6) }
+    var endless by remember { mutableStateOf(false) }
+    var deload by remember { mutableStateOf(false) }
+    var progression by remember { mutableStateOf("auto") }
 
     fun config(withSplit: Boolean): JSONObject = JSONObject()
         .put("goal", goal).put("experience", exp).put("days", days).put("session", session)
         .put("equipment", JSONArray(equip.toList()))
         .apply { if (withSplit && split != null) put("split", split) }
         .apply { if (name.isNotBlank()) put("name", name.trim()) }
+        .apply {
+            if (!cycleMode) {
+                if (endless) put("endless", true).put("weeks", 5).put("deload", true).put("progression", "auto")
+                else put("weeks", weeks).put("deload", deload).put("progression", progression)
+            }
+        }
 
     LaunchedEffect(goal, exp, days, session, equip) { pick = vm.recommend(config(false)) }
 
@@ -127,6 +139,24 @@ fun SetupScreen(vm: AppViewModel) {
                         Text(sp.s("name"), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
                         if (id == pick) Text("Engine's pick", style = MaterialTheme.typography.labelMedium)
                     }
+                }
+            }
+            if (!cycleMode) {
+                Kicker("Block length")
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(4, 6, 8, 10).forEach { w -> MorphChip("$w weeks", !endless && weeks == w, { weeks = w; endless = false }, height = 44.dp) }
+                    MorphChip("Endless", endless, { endless = true }, height = 44.dp)
+                }
+                Text(
+                    if (endless) "No fixed end. Load and volume progress every session; a light deload drops in when you plateau or fatigue builds."
+                    else when (weeks) { 4 -> "Short block: Auto avoids methods that need a longer runway."; 6 -> "Balanced block: room for advanced progression when it fits."; 8 -> "Long block: a gradual ramp."; else -> "Extended accumulation for advanced lifters." },
+                    style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant,
+                )
+                if (!endless) {
+                    Kicker("Deload week")
+                    Segmented(listOf("yes" to "Add week ${weeks + 1}", "no" to "No deload"), if (deload) "yes" else "no", { deload = it == "yes" })
+                    Kicker("Progression")
+                    Segmented(listOf("auto" to "Auto per exercise", "manual" to "Manual targets"), progression, { progression = it })
                 }
             }
             if (cycleMode) CycleTemplatePicker(vm, template, { template = it }, custom, adapt, { adapt = it })

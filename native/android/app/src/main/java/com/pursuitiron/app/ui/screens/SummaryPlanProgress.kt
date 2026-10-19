@@ -4,6 +4,7 @@ package com.pursuitiron.app.ui.screens
 
 import com.pursuitiron.app.ui.common.o
 import org.json.JSONObject
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -138,7 +139,7 @@ fun PlanScreen(vm: AppViewModel) {
         item(span = full) {
             Column(Modifier.padding(top = 20.dp, start = 4.dp)) {
                 Text("Plan", style = MaterialTheme.typography.displayMedium)
-                Text("${p.s("name")} · " + (if (wk > weeks) "deload week" else "week $wk of $weeks") + (if (p.i("current") > 0) " · you're on week ${p.i("current")}" else ""), style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
+                Text("${p.s("name")} · " + (if (p.b("endless")) (if (wk > weeks) "continuous · deload" else "continuous · week $wk of the wave") else if (wk > weeks) "deload week" else "week $wk of $weeks") + (if (p.i("current") > 0) " · you're on week ${p.i("current")}" else ""), style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                 androidx.compose.foundation.layout.FlowRow(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilledTonalButton(onClick = { vm.openEditor(p.s("programId")) }) { Icon(PiIcons.List, null, modifier = Modifier.size(18.dp)); Text("  Edit program") }
                     FilledTonalButton(onClick = { scheduleOpen = true }) { Icon(PiIcons.Calendar, null, modifier = Modifier.size(18.dp)); Text("  Schedule") }
@@ -239,6 +240,8 @@ fun ProgressScreen(vm: AppViewModel) {
         }
         p.o("recap")?.takeIf { it.i("count") > 0 }?.let { r -> item(span = full) { RecapCard(JSONObject().put("recap", r).put("unit", p.s("unit"))) } }
         item(span = full) { PinnedLiftsSection(vm, onOpen = { liftId = it }, onManage = { pinsOpen = true }) }
+        // Web VolumeCard: this week's sets per muscle against the landmarks, for the program being trained.
+        vm.home?.o("next")?.let { nx -> item(span = full) { WeekVolumeCard(vm, nx.s("programId"), nx.i("weekIndex")) } }
         val recs = p.list("records")
         if (recs.isNotEmpty()) {
             item(span = full) { SectionTitle("Personal records") }
@@ -299,11 +302,23 @@ fun ProgressScreen(vm: AppViewModel) {
 private fun ProgramMenu(vm: AppViewModel, id: String, name: String) {
     var open by remember { mutableStateOf(false) }
     var confirm by remember { mutableStateOf(false) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val ctx = androidx.compose.ui.platform.LocalContext.current
     Box {
         IconButton(onClick = { open = true }) { Icon(PiIcons.More, "$name options") }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             DropdownMenuItem(text = { Text("Edit") }, onClick = { open = false; vm.openEditor(id) })
             DropdownMenuItem(text = { Text("Duplicate") }, onClick = { open = false; vm.duplicateProgram(id) })
+            // App.js programToText: share the plan as plain text.
+            DropdownMenuItem(text = { Text("Share as text") }, onClick = {
+                open = false
+                scope.launch {
+                    val t = vm.programText(id) ?: return@launch
+                    val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain")
+                        .putExtra(android.content.Intent.EXTRA_SUBJECT, t.s("name")).putExtra(android.content.Intent.EXTRA_TEXT, t.s("text"))
+                    runCatching { ctx.startActivity(android.content.Intent.createChooser(send, "Share ${t.s("name")}")) }.onFailure { vm.toast("No app to share with") }
+                }
+            })
             DropdownMenuItem(text = { Text("Delete") }, onClick = { open = false; confirm = true })
         }
     }

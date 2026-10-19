@@ -454,6 +454,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun searchLibrary(q: String, part: String?) { libQuery = q; libPart = part; launchCore { library = arr(call("library", jsonOf("q" to q, "part" to part))) } }
     suspend fun exercise(id: String): JSONObject? = obj("exercise", jsonOf("id" to id))
     /** App.js ProgressionCard and LoadWaveCard: every lift by week, and planned sets by week, deload included. */
+    suspend fun programText(programId: String) = obj("programText", jsonOf("programId" to programId))
     suspend fun weekByWeek(programId: String?): JSONObject? = obj("weekByWeek", jsonOf("programId" to programId))
     suspend fun volumeWave(programId: String?): JSONObject? = obj("volumeWave", jsonOf("programId" to programId))
     suspend fun weeklyVolume(programId: String?, week: Int?): JSONObject? = obj("weeklyVolumeView", jsonOf("programId" to programId, "weekIndex" to week))

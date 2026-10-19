@@ -428,7 +428,7 @@ for _ in range(14):
         break
     adb("shell", "input", "swipe", "540", "700", "540", "1900", "150")
 tap(r"^\|Settings$")
-if scroll_to(r"(?i)^\|Effort scale$", tries=8):
+if scroll_to(r"(?i)^\|Effort scale$", tries=8) and scroll_to(r"^\|RPE$", tries=3, step=400):
     tap(r"^\|RPE$", "settings-rpe")
     tap(r"^\|RIR$")
 if scroll_to(r"^\|Manage data$", tries=10, step=600):

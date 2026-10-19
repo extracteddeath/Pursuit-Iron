@@ -1,5 +1,5 @@
 /* Pursuit Iron 4.0 — M234 production release. */
-const CACHE="pursuit-iron-production-v4-0-0-m234-candidate-selection-b897-r103cc4c382b2aac8";
+const CACHE="pursuit-iron-production-v4-0-0-m234-candidate-selection-b898-rb9edc8a47927ce15";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
   "./app.css",
@@ -80,6 +80,7 @@ const SHELL=[
   "./modules/next-engine/recovery.js",
   "./modules/next-engine/response.js",
   "./modules/next-engine/semantic-exercise-graph.js",
+  "./modules/next-engine/session-shortening.js",
   "./modules/next-engine/setup-economy.js",
   "./modules/next-engine/shell-equipment.js",
   "./modules/next-engine/shell-projection.js",

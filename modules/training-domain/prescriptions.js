@@ -1145,6 +1145,10 @@ function loggedExercisePerformance(program, day, e, weekIndex, unit, perf, histo
         });
         const prescription = snapshotNextShellPrescription(program, day, e.slot, EX_BY_ID[e.id], weekIndex)
             || { schemaVersion: 1, exerciseId: e.id, ...computeCell(program, day, e.id, e.slot, weekIndex) };
+        if (day.sessionLengthPlan) {
+            const cell = computeCell(program, day, e.id, e.slot, weekIndex);
+            Object.assign(prescription, { sets: cell.sets, tech: cell.tech });
+        }
         const percentage = percentagePlanFor(program, day, EX_BY_ID[e.id], e.slot, weekIndex, unit, history);
         if (percentage) prescription.protocol = { scheme: program.config.percentScheme,
             ...(percentage.tier ? { tier: percentage.tier, stage: percentage.stage } : {}) };
@@ -1152,7 +1156,7 @@ function loggedExercisePerformance(program, day, e, weekIndex, unit, perf, histo
             reps: Number.parseInt(t.reps), weight: t.weight, unit, amrap: !!t.amrap,
             rir: t.amrap ? 0 : parseRIRNum(prescription.rir)
         }));
-        return { ...historyExposureContext(e), weight: s.weight, reps: s.reps, date: Date.now(), sets: logged, note, noteRepeat: e.noteRepeat || "none",
+        return { ...historyExposureContext(e), ...(day.sessionLengthPlan?.changed ? { prescriptionEdited: true } : {}), weight: s.weight, reps: s.reps, date: Date.now(), sets: logged, note, noteRepeat: e.noteRepeat || "none",
             ...(prescription ? { prescription } : {}) };
     }
     return null;

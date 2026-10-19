@@ -123,6 +123,9 @@ function plannedSessionForEntry(program, entry, legacyExercises, unit) {
     const week = Math.max(1, Math.round(Number(entry.weekIndex) || 1));
     for (let slot = 0; slot < (day.exercises ?? []).length; slot++) {
         const legacyId = String(day.exercises[slot] ?? '');
+        if (entry.sessionLengthPlan?.programId === program.id && entry.sessionLengthPlan.dayId === day.id
+            && entry.sessionLengthPlan.weekIndex === week && entry.sessionLengthPlan.slots?.[slot]?.sets === 0
+            && !entry.perf?.[legacyId]) continue;
         if (!legacyId)
             continue;
         const nextId = resolveNextExerciseId(program, day, slot, sourceSession, legacyMap);

@@ -1,3 +1,10 @@
+## Build 898 — Engine-guided shorter sessions
+
+- Session preview offers Full, 45, 30 and 20 minutes for today only, with a review of cuts.
+- Preserve key/complementary lifts, warmups, rest, rep/RIR targets and complete strength/percentage protocols. Cut optional amplifiers, extra sets, then optional movements.
+- Block a shorter start when protected work exceeds the time limit. Include setup, warmups, rest, technique extensions and slower personal pace in the estimate.
+- Carry the session-only plan through minimize/reload and save the actual reduced prescription. Time-limited work is neutral progression evidence; omitted work is not a failed set. Saved programs remain unchanged.
+
 ## Build 897 — Reliable update restart
 
 - Resolve the current service-worker registration when Restart is tapped. If another window already activated the update, reload its installed version instead of sending a message to a stale worker and waiting forever.

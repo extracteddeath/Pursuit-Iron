@@ -576,5 +576,16 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   ok(tx.ok && tx.carried === 0 && tx.needsTrainingMax > 0, 'a different basis asks for maxes again');
   { const sv = JSON.parse(C.exportStore()).saved; ok(sv.length === 1 && sv[0].id === made.programId, 'still one program, same id'); }
   C.startSession({}); ok(C.changePercentMethod({ programId: made.programId, templateId: 'p531' }).ok === false, 'refused with a workout open'); C.discardSession(); }
+// Assisted lifts: help is a negative load, and taking help off is the "more" direction
+{ C.init({ store: JSON.stringify({ unit: 'kg' }) });
+  C.startQuick(); let q = C.act({ type: 'addExercise', id: 'assisted-pullup' });
+  const e = q.exercises.find((x) => x.id === 'assisted-pullup');
+  ok(e && e.assisted === true && q.exercises.filter((x) => x.assisted).length === 1, 'assisted lifts are flagged for the workout');
+  const si = e.sets.findIndex((x) => !x.warm && !x.sub);
+  q = C.act({ type: 'edit', ei: e.ei, si, field: 'weight', value: '-40' });
+  ok(q.exercises[e.ei].sets[si].weight === '-40', 'help is stored as a negative load');
+  q = C.act({ type: 'bumpWeight', ei: e.ei, si, dir: 1 });
+  ok(parseFloat(q.exercises[e.ei].sets[si].weight) > -40, 'plus takes help off (' + q.exercises[e.ei].sets[si].weight + ')');
+  C.discardSession(); }
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);
 

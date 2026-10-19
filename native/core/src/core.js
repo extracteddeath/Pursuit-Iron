@@ -592,6 +592,8 @@ export function session() {
                 step: inc && inc.unit === u ? inc.v : null, stepChoices: u === 'lb' ? [5, 10, 15, 20, 25, 50] : [2.5, 5, 10, 15, 20],
                 cues: (() => { try { return E.cuesFor(ex) || []; } catch { return []; } })(), setup,
                 stretchFocus: (() => { try { return !!E.isStretchFocus(e.id, 3); } catch { return false; } })(),
+                // App.js: assisted lifts carry help as a NEGATIVE load; progress is less help.
+                assisted: (() => { try { return !!E.isAssistedEx(ex); } catch { return false; } })(),
                 // The design's muscles worked: the engine's own part and secondary shares, biggest first.
                 secondary: (() => { try { return (E.secondaryOf(ex) || []).slice().sort((a, b) => b[1] - a[1]).map(([p, f]) => ({ part: p, label: E.PART_LABEL?.[p] || p, share: f })); } catch { return []; } })(),
                 progression: { style: E.styleFor(ctx.program, e.id), changed: !!l.sessionProgressions?.[e.id], locked: !!ctx.program.config?.percentScheme,

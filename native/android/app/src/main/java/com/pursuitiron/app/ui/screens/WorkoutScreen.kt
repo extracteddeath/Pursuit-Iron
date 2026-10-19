@@ -295,6 +295,7 @@ private fun ExercisePane(vm: AppViewModel, s: JSONObject, ex: JSONObject?, wide:
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 6.dp)) {
                             if (ex.b("primary")) Badge("Primary")
                             if (ex.b("superset")) Badge("Superset", cs.secondaryContainer, cs.onSecondaryContainer)
+                            if (ex.b("assisted")) Badge("Assisted · less help is progress", cs.tertiaryContainer, cs.onTertiaryContainer)
                             if (ex.d("goal") > 0) Badge("Goal ${com.pursuitiron.app.ui.common.fmtNum(ex.d("goal"))} ${s.s("unit")}", cs.primaryContainer, cs.onPrimaryContainer)
                             if (ex.o("progression")?.b("changed") == true) Badge("Progression changed", cs.secondaryContainer, cs.onSecondaryContainer)
                         }
@@ -327,7 +328,7 @@ private fun ExercisePane(vm: AppViewModel, s: JSONObject, ex: JSONObject?, wide:
                     Row(Modifier.padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Icon(PiIcons.Help, null, modifier = Modifier.size(16.dp))
                         val firstLoad = sets.firstOrNull { !it.b("warm") && it.s("weight").isNotBlank() }?.s("weight")
-                        Text(if (firstLoad != null) "Why $firstLoad ${s.s("unit")}?" else "No suggestion yet: why?", style = MaterialTheme.typography.labelLarge)
+                        Text(if (firstLoad != null) (if (ex.b("assisted")) "Why ${assistAbs(firstLoad)} ${s.s("unit")} of help?" else "Why $firstLoad ${s.s("unit")}?") else "No suggestion yet: why?", style = MaterialTheme.typography.labelLarge)
                     }
                 }
                 if (injury != null || ex.has("injuryAdjusted") && !ex.isNull("injuryAdjusted")) {
@@ -358,7 +359,7 @@ private fun ExercisePane(vm: AppViewModel, s: JSONObject, ex: JSONObject?, wide:
                 Row(Modifier.padding(horizontal = 4.dp)) {
                     Text("Set", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant, modifier = Modifier.width(32.dp), textAlign = TextAlign.Center)
                     Text("Target", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant, modifier = Modifier.weight(1f).padding(start = 8.dp))
-                    Text(s.s("unit").uppercase(), style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant, modifier = Modifier.width(if (vm.prefs.grip) 76.dp else 72.dp), textAlign = TextAlign.Center)
+                    Text(if (ex.b("assisted")) "ASSIST" else s.s("unit").uppercase(), style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant, modifier = Modifier.width(if (vm.prefs.grip) 76.dp else 72.dp), textAlign = TextAlign.Center)
                     Text("Reps", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant, modifier = Modifier.width(if (vm.prefs.grip) 62.dp else 58.dp), textAlign = TextAlign.Center)
                     Spacer(Modifier.width(if (vm.prefs.grip) 72.dp else 52.dp))
                 }
@@ -381,6 +382,7 @@ private fun ExercisePane(vm: AppViewModel, s: JSONObject, ex: JSONObject?, wide:
 
 @Composable
 private fun SetRow(vm: AppViewModel, s: JSONObject, ei: Int, si: Int, set: JSONObject, label: String, showRating: Boolean, onEdit: () -> Unit) {
+    val assisted = s.list("exercises").getOrNull(ei)?.b("assisted") == true
     val cs = MaterialTheme.colorScheme
     val done = set.b("done"); val warm = set.b("warm")
     val grip = vm.prefs.grip
@@ -428,9 +430,9 @@ private fun SetRow(vm: AppViewModel, s: JSONObject, ei: Int, si: Int, set: JSONO
             }
             val cellBg = if (done) Color.Transparent else cs.surfaceContainerHigh
             Box(Modifier.width(if (grip) 72.dp else 68.dp).height(cellH).clip(RoundedCornerShape(12.dp)).background(cellBg)
-                .clickable(onClick = onEdit).semantics { contentDescription = "Weight ${set.s("weight").ifBlank { "not set" }}, edit" },
+                .clickable(onClick = onEdit).semantics { contentDescription = if (assisted) "${assistAbs(set.s("weight")).ifBlank { "No" }} ${s.s("unit")} of assistance, edit" else "Weight ${set.s("weight").ifBlank { "not set" }}, edit" },
                 contentAlignment = Alignment.Center) {
-                Text(set.s("weight").ifBlank { "—" }, style = if (grip) MaterialTheme.typography.titleLarge else MaterialTheme.typography.titleMedium)
+                Text(if (assisted) assistShown(set.s("weight")) else set.s("weight").ifBlank { "—" }, style = if (grip) MaterialTheme.typography.titleLarge else MaterialTheme.typography.titleMedium)
             }
             Spacer(Modifier.width(4.dp))
             Box(Modifier.width(if (grip) 58.dp else 54.dp).height(cellH).clip(RoundedCornerShape(12.dp)).background(cellBg)
@@ -521,9 +523,11 @@ private fun SetEditor(vm: AppViewModel, s: JSONObject, ei: Int, si: Int, onClose
     val ex = s.list("exercises").getOrNull(ei); val set = ex?.list("sets")?.getOrNull(si)
     if (ex == null || set == null) { onClose(); return }
     val cs = MaterialTheme.colorScheme
-    var w by remember(si, ei) { mutableStateOf(set.s("weight")) }
+    val assisted = ex.b("assisted")
+    val shownW = { v: String -> if (assisted) assistAbs(v) else v }
+    var w by remember(si, ei) { mutableStateOf(shownW(set.s("weight"))) }
     var r by remember(si, ei) { mutableStateOf(set.s("reps")) }
-    LaunchedEffect(set.s("weight")) { w = set.s("weight") }
+    LaunchedEffect(set.s("weight")) { w = shownW(set.s("weight")) }
     LaunchedEffect(set.s("reps")) { r = set.s("reps") }
     var plates by remember { mutableStateOf(false) }
     val bar = barFor(ex.strings("equip"))
@@ -536,16 +540,23 @@ private fun SetEditor(vm: AppViewModel, s: JSONObject, ei: Int, si: Int, onClose
                 listOf("standard" to "Standard", "warmup" to "Warm-up", "failure" to "To failure"),
                 if (set.b("warm")) "warmup" else set.s("type", "standard"), { k -> vm.act("setType", "ei" to ei, "si" to si, "kind" to k) }, height = 40.dp)
             set.o("target")?.let { t -> Text("Target: ${t.s("reps")} reps" + (if (!t.isNull("rir")) " at ${t.s("effort").ifBlank { t.s("rir") + " RIR" }}" else ""), color = cs.onSurfaceVariant) }
-            Stepper("Weight (${s.s("unit")})", w, KeyboardType.Decimal, onText = { w = it }, onCommit = { vm.act("edit", "ei" to ei, "si" to si, "field" to "weight", "value" to w) },
+            if (assisted) {
+                // App.js: help is a negative load. Typed and shown as the amount of help; minus adds help, plus takes it off.
+                Text("Assisted: less help is progress. The help comes off once every set tops the range.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                Stepper("Assistance (${s.s("unit")})", w, KeyboardType.Decimal, onText = { w = it.filter { c -> c.isDigit() || c == '.' } },
+                    onCommit = { vm.act("edit", "ei" to ei, "si" to si, "field" to "weight", "value" to assistStored(w)) },
+                    onMinus = { vm.act("bumpWeight", "ei" to ei, "si" to si, "dir" to -1) }, onPlus = { vm.act("bumpWeight", "ei" to ei, "si" to si, "dir" to 1) },
+                    minusLabel = "More assistance", plusLabel = "Less assistance")
+            } else Stepper("Weight (${s.s("unit")})", w, KeyboardType.Decimal, onText = { w = it }, onCommit = { vm.act("edit", "ei" to ei, "si" to si, "field" to "weight", "value" to w) },
                 onMinus = { vm.act("bumpWeight", "ei" to ei, "si" to si, "dir" to -1) }, onPlus = { vm.act("bumpWeight", "ei" to ei, "si" to si, "dir" to 1) })
             Stepper("Reps", r, KeyboardType.Number, onText = { r = it }, onCommit = { vm.act("edit", "ei" to ei, "si" to si, "field" to "reps", "value" to r) },
                 onMinus = { vm.act("bumpReps", "ei" to ei, "si" to si, "delta" to -1) }, onPlus = { vm.act("bumpReps", "ei" to ei, "si" to si, "delta" to 1) })
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (set.b("added")) TextButton(onClick = { vm.act("removeSet", "ei" to ei, "si" to si); onClose() }) { Text("Remove set") }
-                if (bar != null) TextButton(onClick = { plates = true }) { Icon(PiIcons.Plates, null, modifier = Modifier.size(18.dp)); Text("  Plates") }
+                if (bar != null && !assisted) TextButton(onClick = { plates = true }) { Icon(PiIcons.Plates, null, modifier = Modifier.size(18.dp)); Text("  Plates") }
                 Spacer(Modifier.weight(1f))
                 Button(onClick = {
-                    if (w != set.s("weight")) vm.act("edit", "ei" to ei, "si" to si, "field" to "weight", "value" to w)
+                    if (w != shownW(set.s("weight"))) vm.act("edit", "ei" to ei, "si" to si, "field" to "weight", "value" to if (assisted) assistStored(w) else w)
                     if (r != set.s("reps")) vm.act("edit", "ei" to ei, "si" to si, "field" to "reps", "value" to r)
                     onClose()
                 }) { Text("Done") }
@@ -555,16 +566,17 @@ private fun SetEditor(vm: AppViewModel, s: JSONObject, ei: Int, si: Int, onClose
 }
 
 @Composable
-private fun Stepper(label: String, value: String, kb: KeyboardType, onText: (String) -> Unit, onCommit: () -> Unit, onMinus: () -> Unit, onPlus: () -> Unit) {
+private fun Stepper(label: String, value: String, kb: KeyboardType, onText: (String) -> Unit, onCommit: () -> Unit, onMinus: () -> Unit, onPlus: () -> Unit,
+                    minusLabel: String = "Less $label", plusLabel: String = "More $label") {
     val cs = MaterialTheme.colorScheme
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Box(Modifier.size(52.dp).clip(RoundedCornerShape(16.dp)).background(cs.surfaceContainerHigh).clickable { onMinus() }
-            .semantics { contentDescription = "Less $label"; role = Role.Button }, contentAlignment = Alignment.Center) { Icon(PiIcons.Minus, null) }
+            .semantics { contentDescription = minusLabel; role = Role.Button }, contentAlignment = Alignment.Center) { Icon(PiIcons.Minus, null) }
         OutlinedTextField(value = value, onValueChange = onText, label = { Text(label) }, singleLine = true, modifier = Modifier.weight(1f),
             keyboardOptions = KeyboardOptions(keyboardType = kb, imeAction = ImeAction.Done), keyboardActions = KeyboardActions(onDone = { onCommit() }),
             textStyle = MaterialTheme.typography.titleLarge.copy(textAlign = TextAlign.Center))
         Box(Modifier.size(52.dp).clip(CircleShape).background(cs.primary).clickable { onPlus() }
-            .semantics { contentDescription = "More $label"; role = Role.Button }, contentAlignment = Alignment.Center) { Icon(PiIcons.Plus, null, tint = cs.onPrimary) }
+            .semantics { contentDescription = plusLabel; role = Role.Button }, contentAlignment = Alignment.Center) { Icon(PiIcons.Plus, null, tint = cs.onPrimary) }
     }
 }
 
@@ -748,3 +760,8 @@ private fun ReentryBanner(r: JSONObject) {
         }
     }
 }
+
+/* Assisted lifts store help as a negative load (App.js). Shown as the help with a minus sign, typed as the help. */
+private fun assistAbs(v: String): String = v.trim().removePrefix("-").removePrefix("−")
+private fun assistShown(v: String): String = assistAbs(v).let { a -> if (a.isBlank()) "—" else if (a.toDoubleOrNull() == 0.0) "0" else "−$a" }
+private fun assistStored(typed: String): String = typed.trim().let { t -> if (t.isBlank() || t.toDoubleOrNull() == 0.0) t else "-$t" }

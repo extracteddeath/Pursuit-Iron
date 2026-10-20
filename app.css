@@ -8808,3 +8808,99 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     outline-color:Highlight;
   }
 }
+
+
+/* B908 / UI polish pass 03 — Cycle reading order and contained motion.
+   Keep all blocks browseable: never collapse the plan or animate page geometry.
+   State changes animate only paint properties and respect reduced-motion. */
+#root .wpb-cycle-detail .wpb-page-scroll>h2{
+  color:var(--wpb-theme-text)!important;
+  font-size:15px!important;
+  font-weight:750!important;
+  line-height:1.45;
+  letter-spacing:-.12px;
+  margin:2px 0 10px!important;
+}
+#root .wpb-cycle-detail .wpb-cycle-block-list{
+  gap:9px!important;
+}
+#root .wpb-cycle-detail .wpb-cycle-block-row,
+#root .wpb-cycles .wpb-cycle-list-block{
+  position:relative;
+  min-height:64px;
+  overflow:visible;
+  transition:background-color 180ms cubic-bezier(.2,0,0,1),border-color 180ms cubic-bezier(.2,0,0,1),box-shadow 180ms cubic-bezier(.2,0,0,1);
+}
+#root .wpb-cycle-detail .wpb-cycle-block-row[data-state="active"],
+#root .wpb-cycles .wpb-cycle-list-block[data-state="active"]{
+  background:var(--wpb-theme-accent-dim)!important;
+  border-color:color-mix(in srgb,var(--wpb-theme-accent-ink) 45%,var(--wpb-theme-border))!important;
+  box-shadow:inset 4px 0 var(--wpb-theme-accent-ink);
+}
+#root .wpb-cycle-detail .wpb-cycle-block-row[data-state="active"] strong,
+#root .wpb-cycles .wpb-cycle-list-block[data-state="active"] strong{
+  color:var(--wpb-theme-text);
+  font-weight:780;
+}
+#root .wpb-cycle-detail .wpb-cycle-block-row[data-state="done"],
+#root .wpb-cycles .wpb-cycle-list-block[data-state="done"]{
+  background:var(--wpb-theme-card)!important;
+  border-color:var(--wpb-theme-border)!important;
+  box-shadow:inset 2px 0 var(--wpb-theme-border);
+}
+#root .wpb-cycle-detail .wpb-cycle-block-row[data-state="planned"],
+#root .wpb-cycles .wpb-cycle-list-block[data-state="planned"]{
+  opacity:1!important;
+  box-shadow:none;
+}
+#root .wpb-cycle-detail .wpb-cycle-block-row[data-state="planned"] .wpb-cycle-block-status,
+#root .wpb-cycles .wpb-cycle-list-block[data-state="planned"] .wpb-cycle-block-status{
+  color:var(--wpb-theme-muted);
+}
+#root .wpb-cycle-detail .wpb-cycle-block-row:focus-visible,
+#root .wpb-cycles .wpb-cycle-list-block:focus-visible{
+  outline:3px solid var(--wpb-theme-accent-ink);
+  outline-offset:3px;
+}
+#root .wpb-cycle-detail .wpb-cycle-info-grid{
+  gap:10px;
+  margin-top:16px;
+}
+#root .wpb-cycle-detail .wpb-cycle-change-preview{
+  border-color:color-mix(in srgb,var(--wpb-theme-accent-ink) 25%,var(--wpb-theme-border))!important;
+}
+#root .wpb-cycle-detail .wpb-cycle-schedule{
+  background:var(--wpb-theme-bg)!important;
+}
+#root .wpb-cycle-detail .wpb-cycle-info-card h2{
+  margin:5px 0 9px;
+  line-height:1.35;
+}
+@media(hover:hover) and (pointer:fine){
+  #root .wpb-cycle-detail .wpb-cycle-block-row:not(:disabled):hover,
+  #root .wpb-cycles .wpb-cycle-list-block:not(:disabled):hover{
+    border-color:var(--wpb-theme-accent-ink)!important;
+    box-shadow:inset 4px 0 var(--wpb-theme-accent-ink),0 2px 10px rgba(0,0,0,.06);
+  }
+}
+@media(max-width:359px){
+  #root .wpb-cycle-detail .wpb-cycle-block-row{gap:9px!important;padding:14px 10px!important;}
+  #root .wpb-cycle-detail .wpb-cycle-info-card{padding:15px!important;}
+  #root .wpb-cycle-detail .wpb-cycle-block-status{max-width:100%;}
+}
+@media(prefers-reduced-motion:reduce){
+  #root .wpb-cycle-detail .wpb-cycle-block-row,
+  #root .wpb-cycles .wpb-cycle-list-block{transition:none!important;}
+}
+@media(forced-colors:active){
+  #root .wpb-cycle-detail .wpb-cycle-block-row[data-state="active"],
+  #root .wpb-cycles .wpb-cycle-list-block[data-state="active"]{
+    border-color:Highlight!important;
+    box-shadow:inset 4px 0 Highlight;
+  }
+  #root .wpb-cycle-detail .wpb-cycle-block-row:focus-visible,
+  #root .wpb-cycles .wpb-cycle-list-block:focus-visible{
+    outline-color:Highlight;
+  }
+  #root .wpb-cycle-detail .wpb-cycle-change-preview{border-color:CanvasText!important;}
+}

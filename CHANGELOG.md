@@ -1,3 +1,12 @@
+## Build 904 — Plan changes and today's game plan
+
+- Review changed load/rep recommendations from Home and the session preview, including their engine reasons, previous completed sets and proposed targets. Group identical sets and retain individual dynamic-double differences.
+- Undo or restore each exercise's upcoming recommendation. Persist the choice across reload and apply it through the same prescription boundary used by Workout, including warm-ups and technique extensions. Preserve history, progression methods, other exercises, and current set/effort/technique targets.
+- Scope undo to the exact exercise, day, week, unit/loading context and recommendation. New performance or changed prescriptions expire stale choices; sync revision timestamps alone do not. Keep authored percentage and deload protocols intact.
+- Turn Home's existing session outline into today's game plan, with actual suggested loads/reps, target effort, progression reasons and last-set technique instructions. Show the same game plan in Preview, including shortened-session prescriptions. Share amplifier rest timing with the logger and honor the rest setting.
+- Show conditional rep-record and estimated-1RM opportunities using completed working sets and the same record calculation as Progress. Target RIR never becomes extra completed reps, and missing history, assisted lifts and high-rep estimates do not create false e1RM claims.
+- Verify custom/generated prescription parity, positional undo, reload/resume recovery, source and unit isolation, record semantics, and responsive dark/light layouts.
+
 ## Build 903 — Editable set counts and complete cycle overview
 
 - Keep three working sets as the default for an exercise added during a workout. Add an explicit set-count control in standard and Focus logging; reductions preserve completed work.

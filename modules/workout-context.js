@@ -76,3 +76,8 @@ export function resizeWorkingSets(row, requested) {
     }))] };
     return next;
 }
+
+// The short timer between technique extensions, shared by the game plan and logger.
+export function workoutTechniqueRest(set, restScale = 1) {
+    return Math.max(8, Math.round((set.kind === 'drop' ? 10 : 15) * (restScale || 1)));
+}

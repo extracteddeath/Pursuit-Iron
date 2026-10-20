@@ -8665,3 +8665,39 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb-workout .wpb-progression-label:focus-visible{
   outline:2px solid var(--wpb-theme-accent-ink);outline-offset:1px;
 }
+
+/* Build 903: reviewable set counts and a full cycle overview. */
+.wpb-working-set-control{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin:14px 0;font-size:13px;color:var(--wpb-theme-muted)}
+.wpb-working-set-control>span:first-child{flex:1 1 140px;overflow-wrap:anywhere}
+.wpb-working-set-stepper{display:flex;align-items:center;gap:6px;padding:4px;border:1px solid var(--wpb-theme-border);border-radius:15px;background:var(--wpb-theme-card)}
+.wpb-working-set-stepper button,.wpb-working-set-stepper input{width:48px;height:48px;min-width:0;border:0;border-radius:11px;background:var(--wpb-theme-bg);color:var(--wpb-theme-text);font:inherit;text-align:center;font-size:20px;font-weight:700;box-sizing:border-box}
+.wpb-working-set-stepper input{width:56px;background:transparent;appearance:textfield;-moz-appearance:textfield}
+.wpb-working-set-stepper input::-webkit-inner-spin-button{appearance:none}
+.wpb-working-set-stepper button{cursor:pointer}.wpb-working-set-stepper button:disabled{opacity:.4;cursor:default}
+.wpb-working-set-stepper :focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
+.wpb-program-set-review{padding:14px;margin:12px 0;border:1px solid var(--wpb-theme-border);border-radius:17px;background:var(--wpb-theme-card)}
+.wpb-program-set-review>strong{font-size:15px}.wpb-program-set-review>p{font-size:12px;color:var(--wpb-theme-muted);margin:5px 0}
+.wpb-program-set-review .wpb-working-set-control{margin-bottom:0}
+#root .wpb-exercise-meta .wpb-adjust-sets{min-height:44px;padding:5px 10px;font-size:12px;width:auto;margin:0;background:var(--wpb-theme-card);border:1px solid var(--wpb-theme-border)}
+#root .wpb-cycle-detail .wpb-page-scroll{padding-top:10px!important}
+#root .wpb-cycle-title-icon{display:grid;place-items:center;width:44px;height:44px;flex-shrink:0;border-radius:15px;background:var(--wpb-theme-accent-dim)}
+#root .wpb-cycle-detail .wpb-cycle-overview{padding:20px!important;margin-bottom:24px!important;border:1px solid var(--wpb-theme-border)!important;border-radius:22px!important;background:var(--wpb-theme-card)!important}
+#root .wpb-cycle-week-heading{font-size:21px;font-weight:750;letter-spacing:-.5px}
+#root .wpb-cycle-current-label{margin:7px 0 18px;color:var(--wpb-theme-muted);font-size:13px;line-height:1.5}
+#root .wpb-cycle-detail .wpb-cycle-stats{gap:8px 18px!important;flex-wrap:wrap;margin-top:16px!important;font-size:12px}
+#root .wpb-cycle-block-list{display:grid;gap:10px!important;border:0!important}
+#root .wpb-cycle-block-row{margin:0!important;padding:16px 12px!important;border-radius:18px!important;border:1px solid var(--wpb-theme-border)!important;background:var(--wpb-theme-card)!important}
+#root .wpb-cycle-block-row[data-state="active"]{background:var(--wpb-theme-accent-dim)!important;border-color:color-mix(in srgb,var(--wpb-theme-accent-ink) 45%,var(--wpb-theme-border))!important}
+#root .wpb-cycle-block-number{display:grid;place-items:center;width:32px!important;height:38px;border-radius:12px;background:var(--wpb-theme-bg);font-size:15px}
+#root .wpb-cycle-block-status{padding:4px 7px;border-radius:7px;background:var(--wpb-theme-bg);font-size:10px!important;line-height:1.3}
+#root .wpb-cycle-block-row[data-state="active"] .wpb-cycle-block-status{background:var(--wpb-theme-card);color:var(--wpb-theme-accent-ink)}
+#root .wpb-cycle-info-grid{display:grid;gap:12px;margin-top:20px;border-radius:0!important}
+#root .wpb-cycle-detail .wpb-cycle-info-card{margin:0!important;padding:18px!important;border:1px solid var(--wpb-theme-border)!important;border-radius:20px!important;background:var(--wpb-theme-card)!important;font-size:13px;line-height:1.5;color:var(--wpb-theme-muted);min-width:0}
+.wpb-cycle-card-eyebrow{color:var(--wpb-theme-accent-ink);font-size:11px;font-weight:750;letter-spacing:.7px;text-transform:uppercase}
+#root .wpb-cycle-info-card h2{font-size:17px;letter-spacing:-.25px;line-height:1.4;color:var(--wpb-theme-text);margin:5px 0 12px}
+.wpb-cycle-info-card p{margin:8px 0}.wpb-cycle-card-note{font-size:12px}
+.wpb-cycle-facts{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin:15px 0}
+.wpb-cycle-facts dt{color:var(--wpb-theme-muted)}.wpb-cycle-facts dd{margin:0;text-align:right;color:var(--wpb-theme-text);font-weight:650;overflow-wrap:anywhere}
+#root .wpb-cycle-detail .wpb-cycle-actions>button{min-height:48px!important;border-radius:15px!important}
+#root .wpb-cycles .wpb-cycle-list-card{padding:16px!important;border-radius:22px!important;background:var(--wpb-theme-card)!important}
+@media(min-width:760px){#root .wpb-cycle-info-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}

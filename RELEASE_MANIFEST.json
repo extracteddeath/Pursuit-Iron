@@ -2,10 +2,10 @@
   "schemaVersion": 3,
   "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": 902,
+  "build": 903,
   "engineVersion": "0.65.9",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "943379c1d3032c9c865c68987eb7ae006186124e190e3cba22caf5eb9a39873f",
+  "runtimeAggregate": "be171e4803b394c036ca18088bcaac2e0df259126f991ac60ff405b81428fa76",
   "runtimeFiles": {
     "modules/cycle-setup-drafts.js": "b1d7fdb80eec689fbe419e2f8a3fb4bc97141b80cfff5d94718916abb4be8395",
     "modules/engine-api.js": "b5a0cad7dddaf4e0b3c59100c06c07dc6a06d10340e2d04b9e0c3a18ee6fa2a8",
@@ -89,7 +89,7 @@
     "modules/next-engine/workout-runtime.js": "e55ae9863410c1119fafbe9652322f9e0dedf08fd263389f4baee94bf7b02d68",
     "modules/program-duration.js": "52bffd0e7798f16f1217ba455de75c63c917ba9b7c6aa61dcd795b10dc665d95",
     "modules/program-last-performance.js": "61ffec6cde222c2731becdc4b048a7da8b53f044816cf149104b168e3fca7ee3",
-    "modules/session-tools.js": "f0683f12fcca38ae0d467520f6735ccfcaf1d46b1c1dff03e6ed9f642d143bb7",
+    "modules/session-tools.js": "6fffc49254cbfba4bf31496c24302defb40e851d45d5dfe8f1715e5ef394b103",
     "modules/training-domain.js": "a7ce0e26ac1a653d267d486128b5eac0cfaed3569f7fdeae77d4a7d11aec804f",
     "modules/training-domain/analytics.js": "0de9eed25a51f130df8db6508acf85964592e03b3fe1722cd490936dd4eee929",
     "modules/training-domain/catalog.js": "d4ddf437e28b301362bca51ccd4400d052b86c36d4807516ece9945d61f5afc0",
@@ -99,7 +99,7 @@
     "modules/training-domain/records.js": "0a18e3bcbd1e0700f3907fb219eb5eee798970c103ece76fc53d9e2e59c03432",
     "modules/ui-motion.js": "421474c40e4f790cf353502dd3af9968e2e40eb603c09fb1403c41faf07f3118",
     "modules/wizard-stability.js": "a62b2bed8a1f5ab880bfeab036a83ec630c93048b8a352652fe00ae75374a3d1",
-    "modules/workout-context.js": "2d2ec92c214d25da30d86ec028b0cb71eab351f58b3014ad94e6bd313f498eac",
+    "modules/workout-context.js": "e5cba1ea7389751a3401dbfbb348876664fd2fdd2f83f5cd2eefe0f990b5d62b",
     "vendor/lucide-react.js": "f84db748249b6e57e1d5187e876da806c1733523a1fa1501224bf740519b2cf4",
     "vendor/react-dom-client.js": "e3d8fd1d433e1bee9110bcaa5f8e9547e64f2754806bed0dd4fc546d890baab5",
     "vendor/react-dom.js": "9eeba0ea6d8354cd75cbf1381afcdf898711d0c38a8020458d1bd33cdc4b3240",
@@ -114,17 +114,17 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "abe73848a067a8deb39e1415e9767020f6a466a1ecf565dee4b45e85929a6a7e",
-    "index.html": "8db4bb46d403895c777dfadd2b16953a259edd0a2319c868d328fcb9c7a64c83",
-    "sw.js": "3c95ec2f3ba8e7a8aebf9154b764ecb3b7852b6e19ec05775180c121e9fdc518",
-    "BUILD_PROFILE.json": "eb012e3097691bcdb604291c38791d2b2a9eda9990b1c93bdab787bb21c46525",
-    "CHANGELOG.md": "1ff46580c91f0006eea8d4e5e103aa9b45f8b6944b71493603cd35fbaf8af475",
-    "app.css": "695c281bc9de28283777383c666a91a8040ecd2558017e080ab4b10b39b05ebf",
+    "modules/App.js": "875326749c713ba689ab82aecc84239d05a3811cf792508929a5dd1977010dd3",
+    "index.html": "73101f3fd61b2f634494d643826e52a1ef178c682164529c4671a5be98fd5670",
+    "sw.js": "50cea29060f0f29151e070b4cefe956e344b93e715ec9cc6db51b77d778b9968",
+    "BUILD_PROFILE.json": "49c736ca007b05ad6e781b954c2366309bb9bad0d9cfa5cf4328987bbc6a818d",
+    "CHANGELOG.md": "32258d55dadb05a4ad1040d1e80dd82e533b09ccb434fc525018872759f8d893",
+    "app.css": "ec8668502ac45fce9c72961afe956fccfaa9a72a4bcba9b8dca315cfe1f5fdba",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b902-r41517cd0bb2814f7",
-  "uiMilestone": "Build 902 · Reverse EZ-Bar Curl in the exercise library"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b903-r189cd8a1f22cdebc",
+  "uiMilestone": "Build 903 · Editable workout set counts and complete cycle overview"
 }

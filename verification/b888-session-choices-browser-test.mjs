@@ -93,6 +93,49 @@ try {
   assert.equal(await light.$$eval('.wpb-session-note-editor',els=>els.length),2,'session and exercise editors in Focus mode');
   await light.close();
  }
+ // Exercise added through the real picker: session count and future count are independent.
+ for (const apply of [true,false]) {
+  const added=await browser.newPage();added.on('pageerror',e=>errors.push(e.message));
+  await added.setViewport({width:320,height:850,isMobile:true,hasTouch:true});
+  await added.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
+  await added.evaluateOnNewDocument((store,live)=>{if(!sessionStorage.getItem('b903-seeded')){localStorage.setItem('wpb:v1',JSON.stringify(store));localStorage.setItem('wpb:live',JSON.stringify(live));sessionStorage.setItem('b903-seeded','1');}},store,live);
+  const click=async text=>assert.ok(await added.evaluate(t=>{const b=[...document.querySelectorAll('button')].find(b=>b.textContent.trim()===t);b?.click();return !!b;},text),text);
+  await added.goto('http://127.0.0.1:8798/index.html',{waitUntil:'networkidle0'});
+  await added.click('.wpb-live-dock button[aria-label="Resume workout"]');await added.waitForSelector('.wpb-workout');
+  await added.click('[aria-label="Workout options"]');await added.waitForSelector('.wpb-workout-options-sheet');await added.evaluate(()=>[...document.querySelectorAll('.wpb-workout-options-sheet button')].find(b=>b.textContent.includes('Add exercise')).click());
+  await added.type('input[placeholder^="Search "]','Reverse EZ bar curl');
+  await added.waitForFunction(()=>[...document.querySelectorAll('button')].some(b=>b.textContent.includes('Reverse EZ-Bar Curl')));
+  await added.evaluate(()=>[...document.querySelectorAll('button')].find(b=>b.textContent.includes('Reverse EZ-Bar Curl')).click());
+  await added.waitForSelector('[aria-label="Adjust working sets for Reverse EZ-Bar Curl"]');
+  await added.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:live')).data.at(-1)?.sets.length===3);
+  await added.click('[aria-label="Adjust working sets for Reverse EZ-Bar Curl"]');await added.waitForSelector('[aria-label="Working sets"]');
+  await added.click('[aria-label="Decrease Working sets"]');await click('Apply set count');
+  await added.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:live')).data.at(-1)?.sets.length===2);
+  await added.reload({waitUntil:'networkidle0'});await added.click('.wpb-live-dock button[aria-label="Resume workout"]');await added.waitForSelector('.wpb-workout');
+  assert.equal(await added.evaluate(()=>JSON.parse(localStorage.getItem('wpb:live')).data.at(-1).sets.length),2);
+  await added.click('[aria-label="Finish workout"]');await added.waitForFunction(()=>[...document.querySelectorAll('button')].some(b=>b.textContent==='Save & finish'));await click('Save & finish');
+  await added.waitForSelector('[aria-label="Update program?"]');
+  const input='[aria-label="Future sets for Reverse EZ-Bar Curl"]';
+  assert.equal(await added.$eval(input,n=>n.value),'2');
+  await added.click('[aria-label="Increase Future sets for Reverse EZ-Bar Curl"]');await added.click('[aria-label="Increase Future sets for Reverse EZ-Bar Curl"]');
+  await added.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:v1')).history[0].programExerciseChanges?.[0].sets===4);
+  await added.reload({waitUntil:'networkidle0'});await added.waitForSelector('[aria-label="Update program?"]');assert.equal(await added.$eval(input,n=>n.value),'4');
+  assert.ok(await added.$eval('.wpb-session-dialog',n=>n.scrollWidth<=n.clientWidth+1));
+  await added.screenshot({path:'/tmp/b903-program-set-review.png'});
+  const before=await added.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).history[0].perf);
+  await click(apply?'Update program':'Keep this session only');
+  await added.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:v1')).history[0].programUpdateStatus!=='pending');
+  const after=await added.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')));
+  assert.deepEqual(after.history[0].perf,before,'review never rewrites logged performance');
+  assert.equal(after.saved[0].days[0].exercises.includes('reverse-curl'),apply);
+  if(apply){
+   assert.equal(after.saved[0].overrides['test:2'].sets,4);
+   await added.waitForSelector('.wpb-home .wpb-primary-action');await added.click('.wpb-home .wpb-primary-action');await added.waitForSelector('.wpb-workout');await click('Skip');
+   await added.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:live'))?.data.some(r=>r.id==='reverse-curl'));
+   assert.equal(await added.evaluate(()=>JSON.parse(localStorage.getItem('wpb:live')).data.find(r=>r.id==='reverse-curl').sets.filter(s=>!s.warm&&!s.sub).length),4);
+  }else assert.deepEqual(after.saved,[program]);
+  await added.close();
+ }
  assert.deepEqual(errors,[],'no runtime errors');
  console.log('PASS B888 browser: Home injury persistence, tags, progression isolation, protected sets, note recovery, durable post-save program choice');
 } finally {if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}

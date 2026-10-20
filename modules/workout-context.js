@@ -52,3 +52,27 @@ export function adjustInjuredExercises(data, selectedIds, part, action) {
             set.done || (!set.warm && !set.sub && count++ < keep)) }];
     });
 }
+
+
+// Set-count edits are session-local. Logged work and warmups are never erased.
+export function resizeWorkingSets(row, requested) {
+    if (!row || !Array.isArray(row.sets)) return row;
+    const work = row.sets.filter(set => !set.warm && !set.sub);
+    const minimum = Math.max(1, work.filter(set => set.done).length);
+    const count = Number(requested);
+    if (!Number.isInteger(count) || count < minimum || count > 20 || count === work.length) return row;
+    let next = row;
+    while (next.sets.filter(set => !set.warm && !set.sub).length > count) {
+        const reduced = removePendingWorkingSet(next);
+        if (reduced === next) break;
+        next = reduced;
+    }
+    const seed = work.at(-1) || {};
+    const missing = count - next.sets.filter(set => !set.warm && !set.sub).length;
+    if (missing > 0) next = { ...next, sets: [...next.sets, ...Array.from({ length: missing }, () => ({
+        weight: seed.weight ?? '', reps: seed.reps ?? '', warm: false, done: false,
+        auto: false, valueOwner: 'user', added: true,
+        ...(seed.target ? { target: { ...seed.target } } : {})
+    }))] };
+    return next;
+}

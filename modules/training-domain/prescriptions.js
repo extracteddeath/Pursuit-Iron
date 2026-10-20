@@ -1,3 +1,4 @@
+import { sessionPlanChange } from '../session-plan.js';
 import { loadingInventoryInUnit } from '../next-engine/loading.js';
 // Canonical prescriptions domain. Maintained production source; independent of React and browser APIs.
 import { EXERCISE_MAP as NEXT_EXERCISE_MAP } from "../next-engine/exercise-db.js";
@@ -709,7 +710,7 @@ function dayPerfFor(day, perf, history, program = null) {
     return out;
 }
 
-function sessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, history) {
+function engineSessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, history) {
     void dayPerf;
     if (program?.custom === true && program?.engineSource !== "pursuit-next")
         return customProgramSuggestion(program, day, slot, unit, weekIndex, history);
@@ -758,6 +759,25 @@ function sessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, history
     return { ...s, weight: w, setTargets, reason, target: w < eng ? floor : s.target,
         dir: current && w > current ? "up" : current && w < current ? "down" : s.dir };
 
+}
+
+// Review and Workout consume this same boundary. A user can decline one upcoming
+// load/rep recommendation without changing the progression method or stored history.
+function sessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, history, applyReviewChoice = true) {
+    const suggestion = engineSessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, history);
+    if (!suggestion || !applyReviewChoice || !program.sessionPlanChoices || !Object.keys(program.sessionPlanChoices).length) return suggestion;
+    const id = day.exercises[slot], ex = EX_BY_ID[id];
+    if (!ex) return suggestion;
+    const cell = computeCell(program, day, id, slot, weekIndex);
+    if (!cell || cell.missing) return suggestion;
+    const change = sessionPlanChange({ program, day, ex, slot, weekIndex, unit, cell,
+        range: cellRepRange(cell, program, ex, slot === day.primaryIndex), suggestion, history,
+        snapLoad: value => loadableAtOrBelow(ex, value, unit) });
+    if (!change.undone) return suggestion;
+    return { ...suggestion, weight: change.undoTargets[0]?.weight ?? suggestion.weight,
+        target: change.undoTargets[0]?.reps ?? suggestion.target, setTargets: change.undoTargets,
+        action: 'user_hold', dir: 'hold',
+        reason: 'You kept the previous load and reps on matching sets for this exposure. The current set count, target effort and technique still apply.' };
 }
 
 /** Nudge through the gym's actual load inventory when known. With a coarse
@@ -1048,7 +1068,8 @@ function prescribeSets(program, day, ex, slot, weekIndex, unit, sug, dayPerf, pe
         warm: t.kind === "warmup",
         done: false,
         auto: true,
-        valueOwner: "prescription",
+        valueOwner: sug?.action === "user_hold" && t.kind !== "warmup" ? "user" : "prescription",
+        ...(sug?.action === "user_hold" && t.kind !== "warmup" ? { planReviewHeld: true } : {}),
         target: t.kind === "warmup"
             ? { w: t.weight == null ? "—" : String(t.weight), reps: String(t.reps), rir: null }
             : { w: t.weight == null ? "—" : String(t.weight), reps: rangeText, rir: rirText, nextAction: sug?.action || "initial", confidence: sug?.confidence || null, prefillReps: String(t.reps) }

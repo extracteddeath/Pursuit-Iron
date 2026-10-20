@@ -1,3 +1,10 @@
+import { sessionPlanChange } from './session-plan.js';
+import { completedHistorySets, convertHistoryLoad, normalizeHistoryRevisions } from './next-engine/history-contract.js';
+import { sessionSuggestion, prescribeSets, loadableAtOrBelow, resolveStyle } from './training-domain/prescriptions.js';
+import { computeCell, cellRepRange } from './training-domain/records.js';
+import { e1rm, E1RM_REP_CAP } from './training-domain/programs.js';
+import { exerciseAt, isAssistedEx, exRecords } from './training-domain/analytics.js';
+import { techniqueProtocolFromCell } from './next-engine/workout-runtime.js';
 import { EX_BY_ID } from './training-domain/catalog.js';
 import { programWorkingWeeks } from './program-duration.js';
 import { buildUserAddedSlotPrescriptions } from './next-engine/workout-runtime.js';
@@ -76,4 +83,54 @@ export function withWorkoutProgramChanges(program, dayId, changes = []) {
     }
     return { ...program, days: program.days.map(row => row.id === dayId ? { ...row, exercises, primaryIndex: row.primaryIndex ?? 0 } : row),
         overrides, nextWeekPrescriptions, edited: true };
+}
+
+// Home, Preview and the change review are projections of the actual Workout prescription.
+export function buildSessionReview(program, day, weekIndex, unit, history = [], perf = {}) {
+    const records = normalizeHistoryRevisions(history).entries;
+    const exercises = (day?.exercises || []).flatMap((_, slot) => {
+        const id = exerciseAt(program, day, slot, weekIndex), ex = EX_BY_ID[id];
+        if (!ex) return [];
+        const cell = computeCell(program, day, id, slot, weekIndex);
+        if (!cell || cell.missing || !(cell.sets > 0)) return [];
+        const range = cellRepRange(cell, program, ex, slot === day.primaryIndex);
+        const proposedSuggestion = sessionSuggestion(program, day, slot, perf, unit, weekIndex, history, false);
+        const suggestion = sessionSuggestion(program, day, slot, perf, unit, weekIndex, history);
+        const proposed = prescribeSets(program, day, ex, slot, weekIndex, unit, proposedSuggestion, perf, perf, history, false).filter(set => !set.warm && !set.sub);
+        const effective = prescribeSets(program, day, ex, slot, weekIndex, unit, suggestion, perf, perf, history, false).filter(set => !set.warm && !set.sub);
+        const change = sessionPlanChange({ program, day, ex, slot, weekIndex, unit, cell, range,
+            suggestion: proposedSuggestion, history, snapLoad: value => loadableAtOrBelow(ex, value, unit) });
+        // Records use the same actual-load/actual-reps e1RM as Progress. Target RIR is not extra reps.
+        const observed = records.flatMap(entry => completedHistorySets(entry.perf?.[id]).map(set => ({
+            weight: convertHistoryLoad(set.w, entry.unit, unit), reps: Number(set.r) })))
+            .filter(set => set.weight > 0 && set.reps > 0);
+        const record = exRecords(records, id, unit).maxE1rm;
+        const best = record ? Math.round(convertHistoryLoad(record.v, record.unit, unit) * 100) / 100 : null;
+        let opportunity = null;
+        if (!isAssistedEx(ex) && best > 0 && observed.length && !program.quick && !/deload/i.test(String(cell.note || ''))) {
+            for (const set of effective) {
+                const weight = Number(set.weight), reps = Number(set.reps);
+                if (!(weight > 0 && reps > 0)) continue;
+                const estimated = reps <= E1RM_REP_CAP ? e1rm(weight, reps) : null;
+                if (estimated > best + .01 && (!opportunity || opportunity.type !== 'e1rm' || estimated > opportunity.estimated))
+                    opportunity = { type: 'e1rm', weight, reps, estimated, best };
+                const sameLoad = observed.filter(row => Math.abs(row.weight - weight) < .001);
+                const bestReps = sameLoad.length ? Math.max(...sameLoad.map(row => row.reps)) : null;
+                if (!opportunity && bestReps != null && reps > bestReps)
+                    opportunity = { type: 'reps', weight, reps, bestReps };
+            }
+        }
+        const reason = proposed.some(set => set.target?.nextAction === 'percentage')
+            ? 'This lift follows the saved percentage program and training max for this week. Its programmed weights and reps stay together.'
+            : suggestion?.reason || `Choose a starting load for ${range[0]}–${range[1]} reps at the planned effort. This exposure will establish a reference for future progression.`;
+        const action = proposedSuggestion?.action;
+        const category = action === 'increase_load' || action === 'add_reps' ? 'Progression'
+            : action === 'decrease_load' ? 'Load adjustment' : program.config?.percentScheme ? 'Programmed targets' : 'Rep target';
+        return [{ id, name: ex.name, slot, cell, range, suggestion, proposed, effective, reason,
+            style: resolveStyle(program, ex, slot === day.primaryIndex, weekIndex, perf, history, day.id),
+            protocol: techniqueProtocolFromCell(cell), change, category, opportunity }];
+    });
+    return { programId: program.id, dayId: day.id, weekIndex, unit, sessionLengthPlan: day.sessionLengthPlan || null, exercises,
+        changes: exercises.filter(row => row.change.changed),
+        sourceDate: Math.max(0, ...exercises.map(row => Number(row.change.source?.date) || 0)) || null };
 }

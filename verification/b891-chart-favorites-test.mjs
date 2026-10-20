@@ -23,8 +23,11 @@ assert.deepEqual(order, ['a','b']);
 
 const b911=css.slice(css.lastIndexOf('/* B911 / UI polish pass 05'));
 assert.ok(b911.startsWith('/* B911 / UI polish pass 05'),'polish styles are present');
-assert.match(b911,/\.wpb-chart-favorite-action\{[\s\S]*?min-width:48px;[\s\S]*?min-height:48px;/,'all reorder/remove actions offer 48px');
-assert.match(b911,/\.wpb-chart-favorite-add\{[\s\S]*?min-height:48px;/,'add action offers 48px');
+const chartOwner=css.slice(css.indexOf('/* B891 —'),css.indexOf('/* B892 /'));
+assert.ok(chartOwner.includes('flex:0 0 var(--pi-control-touch);width:var(--pi-control-touch);min-width:var(--pi-control-touch);height:var(--pi-control-touch);min-height:var(--pi-control-touch)'), '48px controls have one geometry owner');
+assert.ok(chartOwner.includes('min-height:var(--pi-control-touch)'), 'add action has same 48px geometry owner');
+assert.ok(!b911.includes('min-height:48px;')&&!b911.includes('min-width:48px;'),'later polish no longer duplicates touch geometry');
+assert.ok(css.includes('--pi-shape-card:20px;')&&css.includes('--pi-shape-action:14px;')&&css.includes('--pi-motion-paint:160ms;'),'cross-screen shape and motion vocabulary is centralized');
 assert.match(b911,/\.wpb-chart-favorite-name\{[\s\S]*?overflow-wrap:anywhere/,'long chart labels wrap');
 assert.ok(b911.includes(':focus-visible')&&b911.includes('prefers-reduced-motion:reduce')&&b911.includes('forced-colors:active'));
 assert.ok(!/transition:[^;]*(width|height|margin|padding|transform)/.test(b911),'no geometry-affecting control motion');

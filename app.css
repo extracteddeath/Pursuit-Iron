@@ -4621,7 +4621,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session{
   margin:0 0 12px!important;
   border:1px solid var(--pi-r11-edge)!important;
-  border-radius:22px!important;
+  border-radius:var(--pi-shape-card)!important;
   background-color:light-dark(var(--pi-m3e-surface-container-low),var(--pi-r41-surface-1))!important;
   background-image:none!important;
   box-shadow:none!important;
@@ -4662,7 +4662,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb :is(
   .wpb-plan-glance-tile,.wpb-plan-up-next,
   .wpb-profile-section,.wpb-settings-card,.wpb-progress-glance-item){
-  border-radius:20px!important;
+  border-radius:var(--pi-shape-card)!important;
   box-shadow:none!important;
   background-image:none!important;
 }
@@ -5518,6 +5518,15 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   --pi-color-on-active:var(--wpb-theme-on-accent);
   --pi-color-feature:light-dark(var(--pi-m3e-primary-container),color-mix(in srgb,var(--wpb-theme-card) 84%,var(--wpb-theme-accent) 16%));
   --pi-color-on-feature:var(--pi-color-on-control);
+  /* One shared geometry and paint vocabulary. Use within existing component
+     selectors rather than appending screen-specific !important overrides.
+     The hero, normal surface and controls remain deliberately distinct. */
+  --pi-shape-feature:24px;
+  --pi-shape-card:20px;
+  --pi-shape-action:14px;
+  --pi-motion-paint:160ms;
+  --pi-control-touch:48px;
+  --pi-section-gap:14px;
   /* Older component families share the same live tinted surface roles. */
   --pi-r11-quiet:var(--pi-color-card);
   --pi-r11-raised:var(--pi-color-control);
@@ -8549,11 +8558,11 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb-chart-favorites-available{max-height:210px;overflow-y:auto;overscroll-behavior:contain}
 .wpb-chart-favorite-row{display:flex;align-items:center;gap:7px;min-width:0;padding:6px 7px;border-radius:10px;background:var(--pi-color-control)}
 .wpb-chart-favorite-name{flex:1;min-width:0;overflow-wrap:anywhere;font-size:13px;font-weight:680}
-.wpb-chart-favorite-action{flex:0 0 34px;min-width:34px;min-height:34px;display:grid;place-items:center;border:1px solid var(--pi-color-divider);background:var(--pi-color-card);color:inherit;border-radius:9px;cursor:pointer}
+.wpb-chart-favorite-action{flex:0 0 var(--pi-control-touch);width:var(--pi-control-touch);min-width:var(--pi-control-touch);height:var(--pi-control-touch);min-height:var(--pi-control-touch);display:grid;place-items:center;border:1px solid var(--pi-color-divider);background:var(--pi-color-card);color:inherit;border-radius:var(--pi-shape-action);cursor:pointer}
 .wpb-chart-favorite-action:disabled{opacity:.3;cursor:default}
 .wpb-chart-favorites-search{display:grid;gap:5px;font-size:12px;font-weight:700}
 .wpb-chart-favorites-search input{width:100%;min-width:0;min-height:44px;padding:10px 12px;border-radius:10px;background:var(--pi-color-control);color:inherit;border:1px solid var(--pi-color-divider);font:inherit;font-size:14px}
-.wpb-chart-favorite-add{display:flex;align-items:center;gap:10px;width:100%;min-height:42px;padding:9px 10px;border:1px solid var(--pi-color-divider);border-radius:10px;background:var(--pi-color-control);color:inherit;font-size:13px;font-weight:650;text-align:left;cursor:pointer}
+.wpb-chart-favorite-add{display:flex;align-items:center;gap:10px;width:100%;min-height:var(--pi-control-touch);padding:9px 10px;border:1px solid var(--pi-color-divider);border-radius:var(--pi-shape-action);background:var(--pi-color-control);color:inherit;font-size:13px;font-weight:650;text-align:left;cursor:pointer}
 .wpb-chart-favorite-add>span{flex:1;min-width:0;overflow-wrap:anywhere}
 .wpb-cycles .wpb-cycle-list-card,.wpb-cycles .wpb-cycle-block-list,.wpb-cycles .wpb-cycle-block-row{min-width:0;max-width:100%;box-sizing:border-box}
 .wpb-cycles .wpb-cycle-list-card>button>span{min-width:0}
@@ -8569,7 +8578,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   .wpb-cycles .wpb-cycle-list-card{padding:12px!important}
   .wpb-chart-favorites-content{padding-inline:9px}
   .wpb-chart-favorite-row{gap:4px}
-  .wpb-chart-favorite-action{flex-basis:32px;min-width:32px}
+  /* Chart favorites keep their 48px owner on narrow phones. */
 }
 
 /* B892 / UI polish pass 02 — Profile controls share Material-inspired tonal states.
@@ -8707,7 +8716,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb-cycle-facts{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin:15px 0}
 .wpb-cycle-facts dt{color:var(--wpb-theme-muted)}.wpb-cycle-facts dd{margin:0;text-align:right;color:var(--wpb-theme-text);font-weight:650;overflow-wrap:anywhere}
 #root .wpb-cycle-detail .wpb-cycle-actions>button{min-height:48px!important;border-radius:15px!important}
-#root .wpb-cycles .wpb-cycle-list-card{padding:16px!important;border-radius:22px!important;background:var(--wpb-theme-card)!important}
+#root .wpb-cycles .wpb-cycle-list-card{padding:16px!important;border-radius:var(--pi-shape-card)!important;background:var(--wpb-theme-card)!important}
 @media(min-width:760px){#root .wpb-cycle-info-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
 /* Build 904: one session game plan and reviewable progression decisions. */
@@ -8908,7 +8917,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 /* B909 — Prototype-aligned Home coaching: short insight card outside workout hero. */
 #root .wpb .wpb-plan-change-banner{
   min-height:64px;margin:4px 0 14px;padding:11px 14px;
-  border-radius:18px;background:var(--wpb-theme-accent-dim);
+  border-radius:var(--pi-shape-card);background:var(--wpb-theme-accent-dim);
 }
 #root .wpb .wpb-plan-change-banner .wpb-session-plan-icon{width:36px;height:36px;border-radius:12px}
 #root .wpb .wpb-plan-change-banner strong{font-size:14px}
@@ -9026,7 +9035,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   min-width:0;
   gap:6px;
   padding:7px 8px;
-  border-radius:13px;
+  border-radius:var(--pi-shape-action);
   border:1px solid var(--pi-color-divider,var(--wpb-theme-border));
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-progress .wpb-chart-favorite-name{
@@ -9037,25 +9046,17 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-progress .wpb-chart-favorite-action{
   box-sizing:border-box;
-  flex:0 0 48px;
-  width:48px;
-  min-width:48px;
-  height:48px;
-  min-height:48px;
-  border-radius:13px;
   touch-action:manipulation;
-  transition:background-color 160ms var(--pi-ease,ease-out),
-    border-color 160ms var(--pi-ease,ease-out),
-    color 160ms var(--pi-ease,ease-out)!important;
+  transition:background-color var(--pi-motion-paint) var(--pi-ease,ease-out),
+    border-color var(--pi-motion-paint) var(--pi-ease,ease-out),
+    color var(--pi-motion-paint) var(--pi-ease,ease-out)!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-progress .wpb-chart-favorite-add{
   box-sizing:border-box;
-  min-height:48px;
-  border-radius:13px;
   touch-action:manipulation;
-  transition:background-color 160ms var(--pi-ease,ease-out),
-    border-color 160ms var(--pi-ease,ease-out),
-    color 160ms var(--pi-ease,ease-out)!important;
+  transition:background-color var(--pi-motion-paint) var(--pi-ease,ease-out),
+    border-color var(--pi-motion-paint) var(--pi-ease,ease-out),
+    color var(--pi-motion-paint) var(--pi-ease,ease-out)!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-progress
   :is(.wpb-chart-favorite-action,.wpb-chart-favorite-add):hover:not(:disabled){

@@ -8969,3 +8969,51 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 @media(forced-colors:active){.wpb-game-plan-highlight-icon{border:1px solid CanvasText}
  #root .wpb .wpb-home-game-plan{border:1px solid CanvasText}}
 #root .wpb .wpb-game-plan-highlight-copy>p{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+
+
+/* B910 / UI polish pass 04 — Settings and creation motion consistency.
+   The creation header formerly put a 44px Back target in a 34px-high row.
+   Keep header and progress geometry steady across all wizard questions;
+   move just the question content a few pixels, with no opacity flash or
+   spring overshoot. No workout, program or preference state changes. */
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard>.wpb-wizard-header>div:first-child{
+  box-sizing:border-box;
+  height:48px!important;
+  min-height:48px;
+  gap:8px;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard>.wpb-wizard-header button[aria-label="Back"]{
+  box-sizing:border-box;
+  width:48px!important;
+  min-width:48px!important;
+  height:48px!important;
+  min-height:48px!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard>.wpb-wizard-header .wpb-wizard-progress{
+  margin-top:8px!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard-step[data-pi-step-enter="1"]{
+  animation:piB910QuestionEnter 170ms cubic-bezier(.2,.8,.2,1) both!important;
+}
+@keyframes piB910QuestionEnter{
+  from{opacity:1;translate:0 4px;scale:1}
+  to{opacity:1;translate:0 0;scale:1}
+}
+/* Only paint properties animate on selections: never width, height,
+   padding, position or row geometry. The shared selection indicator remains
+   responsible for Settings' animated selected pill. */
+#root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-segmented>button{
+  transition:background-color 160ms var(--pi-ease),color 160ms var(--pi-ease),border-color 160ms var(--pi-ease)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard :is(.wpb-wizard-option,.wpb-wizard-choice,.wpb-wizard-preset){
+  transition:background-color 160ms var(--pi-ease),border-color 160ms var(--pi-ease),color 160ms var(--pi-ease),box-shadow 160ms var(--pi-ease)!important;
+}
+@media(prefers-reduced-motion:reduce),(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb .wpb-wizard-step[data-pi-step-enter="1"]{
+    animation:none!important;translate:none!important;scale:1!important;opacity:1!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-segmented>button,
+  #root[data-pi-motion="expressive"] .wpb .wpb-wizard :is(.wpb-wizard-option,.wpb-wizard-choice,.wpb-wizard-preset){
+    transition:none!important;
+  }
+}

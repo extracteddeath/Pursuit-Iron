@@ -105,9 +105,14 @@ workout and a share image. Settings adds the effort scale (RIR or RPE), training
 clearing history, resetting everything, device storage, bug reports, Ko-fi, the privacy policy and references; Plan
 has the weekly schedule.
 
+Also from the design: shared programs (the web's gallery.json, decoded with decodeProgramCode, imported without
+switching), the lift page (Charts with six metrics and ranges, History, Records with the goal and rep maxes), history
+search / time and program filters / grouping by cycle or month, library status filters, measurements in cm or
+inches, and gym bars (empty weight) and available weights with rack presets.
+
 Not native yet: Wear OS (a separate watch app that needs Google Play services on the phone for the data link; the
-design is in the prototype). The web app's program gallery is not ported because the web app itself no longer
-imports gallery codes.
+design is in the prototype). The design's fixed EZ bars and per-gym plate counts need engine support first (the
+engine keeps one plate set and barbell / Smith bar weights per gym).
 
 ## Keeping the two apps in step
 

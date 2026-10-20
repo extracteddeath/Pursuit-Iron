@@ -10,6 +10,7 @@
  * one of these flows, change the mirror in the same release (native/core/test pins the behaviour).
  */
 import * as E from '../../../modules/engine-api.js';
+import GALLERY from '../../../gallery.json' with { type: 'json' };
 import { withProgressionChoices, repeatedNote, refreshProgressionSets } from '../../../modules/session-tools.js';
 import { INJURY_AREAS, INJURY_IMPACTS, injuryParts, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from '../../../modules/injury-tools.js';
 import { adjustInjuredExercises } from '../../../modules/workout-context.js';
@@ -1548,6 +1549,38 @@ function adoptConfigUnit(cfgUnit) {
         if (S.store.unitChosen && !S.live) switchUnit({ to: cfgUnit }); else S.store.unit = cfgUnit;
     }
     S.store.unitChosen = true;
+}
+/* The design's shared programs (the web's gallery.json, decoded with the web's own decodeProgramCode):
+   filter by split, days and goal; import builds the program on the generator with your gym's kit when the
+   code was made for any equipment. Nothing changes until you switch to it. */
+function activeKit() { try { const g = E.normalizeGyms(S.store.gyms, S.store.activeGymId); return E.gymById(g.gyms, g.activeGymId)?.equipment || null; } catch { return null; } }
+export function galleryList() {
+    let rows = []; try { rows = E.decodeGallery(GALLERY); } catch { rows = []; }
+    const added = S.store.galleryAdded || {}, ids = new Set(saved().map((p) => p.id));
+    const eqLabel = Object.fromEntries((E.EQUIPMENT || []).map((q) => [q.id, q.label]));
+    return rows.map((e) => {
+        let d = null; try { d = E.decodeProgramCode(e.code); } catch { d = null; }
+        const c = d?.ok ? d.config : {};
+        const all = !c.equipment || (E.ALL_EQUIP_IDS || []).every((q) => c.equipment.includes(q));
+        return { code: e.code, title: e.title, note: e.note || '', author: e.author || 'pursuit', tags: (e.tags || []).filter((t) => t !== 'coached'), coached: !!e.coached,
+            split: e.split || c.split, splitName: E.SPLITS?.[e.split || c.split]?.name || e.split, days: e.days || c.days, goal: e.goal || c.goal, session: c.session || null,
+            experience: c.experience || null, weeks: c.weeks || null, equipment: all ? null : (c.equipment || []).map((q) => eqLabel[q] || q), ok: !!d?.ok,
+            added: !!(added[e.code] && ids.has(added[e.code])) };
+    });
+}
+export function importGallery({ code }) {
+    const e = (E.decodeGallery(GALLERY) || []).find((x) => x.code === code);
+    const d = E.decodeProgramCode(code);
+    if (!e || !d?.ok) return { ok: false, error: d?.reason || 'That program code could not be read.' };
+    const all = !d.config.equipment || (E.ALL_EQUIP_IDS || []).every((q) => d.config.equipment.includes(q));
+    const config = { ...d.config, name: e.title, equipment: all ? (activeKit() || d.config.equipment) : d.config.equipment };
+    const keep = { pinnedId: S.store.pinnedId, equipDefault: S.store.equipDefault, experience: S.store.experience, unit: S.store.unit };
+    const r = createProgram({ config: { ...config, unit: unit() }, seed: d.seed });
+    // An import sits in your programs; the one you train stays the one you train.
+    Object.entries(keep).forEach(([k, v]) => { if (v === undefined) delete S.store[k]; else S.store[k] = v; });
+    if (!r.ok) return { ok: false, error: 'This program couldn’t be built for your gym. Nothing was added.' };
+    S.store.galleryAdded = { ...(S.store.galleryAdded || {}), [code]: r.programId }; markStore();
+    return { ...r, title: e.title };
 }
 export function createProgram({ config, seed }) {
     const cfg = programConfig(config);

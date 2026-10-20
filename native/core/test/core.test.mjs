@@ -733,5 +733,13 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   ok(m.groups.length > 0 && m.groups.reduce((a, x) => a + x.count, 0) === m.total, 'and by month');
   ok(none.filtered && none.shown === 0, 'a search with no match is filtered and empty');
 }
+{ // The design's shared programs.
+  const G = C.galleryList(), pin0 = JSON.parse(C.exportStore()).pinnedId, n0 = JSON.parse(C.exportStore()).saved.length;
+  ok(G.length >= 10 && G.every((g) => g.ok && g.days > 0 && g.title), 'gallery lists ' + G.length + ' decodable shared programs');
+  const pick = G.find((g) => !g.equipment) || G[0];
+  const r = C.importGallery({ code: pick.code }), st = JSON.parse(C.exportStore());
+  ok(r.ok && st.saved.length === n0 + 1 && st.pinnedId === pin0, 'importing adds the program without switching to it (' + (r.error || r.name) + ')');
+  ok(C.galleryList().find((g) => g.code === pick.code).added, 'the shared program shows as added');
+}
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);
 

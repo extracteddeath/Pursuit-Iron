@@ -335,7 +335,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val a = JSONObject(); if (programId != null) a.put("programId", programId); if (week != null) a.put("weekIndex", week)
         plan = obj("plan", a)
     }
-    fun pin(programId: String) = launchCore { call("pinProgram", jsonOf("id" to programId)); refreshHomeSide(); toast("Now training: ${plan?.s("name").orEmpty()}") }
+    /** The design's shared programs (web gallery.json). */
+    suspend fun galleryList(): List<JSONObject> = arr(call("galleryList"))
+    fun importGallery(code: String, done: () -> Unit) = launchCore {
+        val r = obj("importGallery", jsonOf("code" to code))
+        if (r?.b("ok") == true) { hap(Hap.Log); refreshHomeSide(); toast("Added to your programs · nothing changes until you switch") } else toast(r?.s("error") ?: "Nothing was added")
+        done()
+    }
+        fun pin(programId: String) = launchCore { call("pinProgram", jsonOf("id" to programId)); refreshHomeSide(); toast("Now training: ${plan?.s("name").orEmpty()}") }
 
     suspend fun recommend(config: JSONObject): String? = call("recommend", jsonOf("config" to config)) as? String
 

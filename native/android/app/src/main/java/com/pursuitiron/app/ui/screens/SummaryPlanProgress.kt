@@ -126,12 +126,14 @@ fun PlanScreen(vm: AppViewModel) {
     var openCycle by remember { mutableStateOf<String?>(null) }
     var confirmNext by remember { mutableStateOf(false) }
     var compareOpen by remember { mutableStateOf(false) }
+    var galleryOpen by remember { mutableStateOf(false) }
     var scheduleOpen by remember { mutableStateOf(false) }
     var whyFor by remember { mutableStateOf<Triple<String, String, Int>?>(null) }
     whyFor?.let { (pid, did, k) -> WhyLiftSheet(vm, pid, did, k, vm.plan?.i("weekIndex") ?: 1) { whyFor = null } }
     var matrixOpen by remember { mutableStateOf(false) }
     if (matrixOpen) WeekByWeekSheet(vm, p.s("programId")) { matrixOpen = false }
     if (compareOpen) CompareSheet(vm) { compareOpen = false }
+    if (galleryOpen) GallerySheet(vm) { galleryOpen = false }
     if (scheduleOpen) WeeklyScheduleSheet(vm, p.s("programId")) { scheduleOpen = false }
     openCycle?.let { id -> CycleSheet(vm, id) { openCycle = null } }
     if (confirmNext) AlertDialog(onDismissRequest = { confirmNext = false },
@@ -190,6 +192,9 @@ fun PlanScreen(vm: AppViewModel) {
                 }
                 Row(Modifier.fillMaxWidth().background(cs.surfaceContainerLow).clickable { vm.openSetup() }.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(PiIcons.Plus, null, tint = cs.primary); Text("  New program", style = MaterialTheme.typography.titleSmall, color = cs.primary)
+                }
+                Row(Modifier.fillMaxWidth().background(cs.surfaceContainerLow).clickable { galleryOpen = true }.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(PiIcons.List, null, tint = cs.primary); Text("  Browse shared programs", style = MaterialTheme.typography.titleSmall, color = cs.primary)
                 }
                 Row(Modifier.fillMaxWidth().background(cs.surfaceContainerLow).clickable { compareOpen = true }.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(PiIcons.Swap, null, tint = cs.primary); Text("  Compare programs or exercises", style = MaterialTheme.typography.titleSmall, color = cs.primary)

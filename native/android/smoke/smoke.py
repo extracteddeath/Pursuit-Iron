@@ -364,6 +364,18 @@ if scroll_to(r"Every lift, week by week", tries=4):
     close_sheet(r"^\|Week by week$")
 else:
     FAILS.append("no week-by-week entry on Plan")
+# The design's shared programs: browse, import one (it is added without switching)
+if scroll_to(r"Browse shared programs", tries=8):
+    tap(r"Browse shared programs", "gallery")
+    if tap(r"^Import ", "gallery-import", required=False):
+        if not find(r"is in your programs|Added to your programs", timeout=20):
+            FAILS.append("gallery import did not add the program")
+        shot("gallery-added")
+    close_sheet(r"^\|Shared programs$")
+    for _ in range(4):
+        adb("shell", "input", "swipe", "540", "700", "540", "1900", "200")
+else:
+    FAILS.append("no shared programs entry on Plan")
 # Lift progression: the block's methods, each lift's reason, change or lock it
 if scroll_to(r"^Lift progression|\|Lift progression", tries=4):
     tap(r"^Lift progression|\|Lift progression", "lift-progression")

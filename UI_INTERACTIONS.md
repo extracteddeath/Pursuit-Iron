@@ -768,3 +768,13 @@ become tiny or clipped even though the viewport itself remains the same.
 This is targeted accessibility coverage, not a claim of complete TalkBack
 or Android OS font-scaling certification. Native font scaling, TalkBack,
 keyboard-inset and physical-device touch behavior still need manual review.
+
+## Cohesive design-system cleanup (October 20, 2026)
+
+The phone and tablet prototypes are **direction**, not a parity target. Home, Plan, Progress, Profile, Cycle, Settings, Library and Workout must feel authored by the same designer. The live theme palette, existing navigation and workout logging remain authoritative.
+
+**Surface hierarchy:** one primary action per task; feature surfaces use `--pi-shape-feature`, regular panels `--pi-shape-card`, and buttons/rows `--pi-shape-action`. `--pi-color-card`, `--pi-color-control`, `--pi-color-feature`, `--pi-color-divider` and the saved theme's accent own color; do not introduce another purple/gray/red subsystem. Use `--pi-control-touch` for non-logger touch targets and `--pi-motion-paint` for paint-only micro-interactions. Different workflows may intentionally use different arrangements of these shared roles.
+
+**CSS ownership:** Prefer editing the original rule and its shared token over appending later competing selectors. The first consolidation moves chart-favorite sizing to the B891 owner (including 320px) instead of fighting B891's 34px base and 32px narrow override from B911. Repeated `!important` declarations frequently override inline styles and cannot be deleted blindly. For each subsequent screen, identify the actual inline/layout owner, remove superseded selectors only after real-browser computed-style checks, and do not change the logging engine, data, user-selected themes or accessibility state.
+
+**Full-app verification order:** Home and Plan task hierarchy; Profile, Progress and History; Cycle and Program creation; Settings and Library; live Workout/Focus (specialized compact controls); then dark/light/20-theme, text-zoom, keyboard/reduced-motion and physical Android/TalkBack certification. Preserve the current permanent test gates; no weakening tests to accommodate visual changes.

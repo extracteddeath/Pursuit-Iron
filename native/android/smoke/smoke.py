@@ -120,6 +120,24 @@ def tap(pattern, name=None, timeout=12, required=True):
     return True
 
 
+def tour(name, max_pages=9):
+    """Full-length screens for the design comparison: a page at a time, top to bottom, into tour/."""
+    d = os.path.join(OUT, "tour"); os.makedirs(d, exist_ok=True)
+    last = None
+    for k in range(max_pages):
+        png = subprocess.run(["adb", "exec-out", "screencap", "-p"], capture_output=True, timeout=60).stdout
+        if png == last:
+            break
+        with open(os.path.join(d, f"{name}_{k}.png"), "wb") as f:
+            f.write(png)
+        last = png
+        adb("shell", "input", "swipe", "540", "1900", "540", "700", "600")
+        time.sleep(1.2)
+    for _ in range(max_pages):
+        adb("shell", "input", "swipe", "540", "600", "540", "2000", "150")
+    time.sleep(0.8)
+
+
 def scroll_to(pattern, tries=6, step=900):
     for _ in range(tries):
         if find(pattern, timeout=2):
@@ -404,6 +422,22 @@ tap(r"Bring it over", "imported")
 time.sleep(2)
 tap(r"^\|Today$|^Today\|")
 shot("today-after-import")
+# The design comparison tour: every main screen, full length, with the imported history
+tour("today")
+for tab_name in ["Plan", "Progress", "Exercises"]:
+    tap(rf"^\|{tab_name}$|^{tab_name}\|")
+    time.sleep(1.5)
+    tour(tab_name.lower())
+tap(r"^\|You$|^You\|")
+time.sleep(1.5)
+tour("you")
+for sub in ["Body", "History", "Settings"]:
+    if tap(rf"^\|{sub}$|^{sub}\|", required=False):
+        time.sleep(1.2)
+        tour("you-" + sub.lower())
+tap(r"^\|Profile$|^Profile\|", required=False)
+tap(r"^\|Today$|^Today\|")
+time.sleep(1.5)
 if scroll_to(r"Fresher today|A deload looks due|Muscle recovery|This week|Strength score", tries=4):
     shot("today-insights")
 if scroll_to(r"^\|Recent$", tries=6):

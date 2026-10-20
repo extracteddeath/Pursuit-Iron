@@ -422,9 +422,13 @@ try{
     // ignored its active week and left all four buttons visually and semantically off.
     await page.evaluate(()=>localStorage.removeItem('wpb:live'));
     await page.reload({waitUntil:'networkidle0'});
-    await page.waitForSelector('.hp-open');
-    await page.click('.hp-open');
-    await page.waitForSelector('.wpb-program .wpb-week-rail');
+    // A reload can restore the previous detail route. Open Home explicitly rather
+    // than clicking a background program card that is still mounted but obscured.
+    await page.waitForSelector('[data-tab="home"]');
+    await page.click('[data-tab="home"]');
+    await page.waitForSelector('[data-view-frame="home"] .hp-open[aria-label="Open R54 Manual"]', {visible:true});
+    await page.click('[data-view-frame="home"] .hp-open[aria-label="Open R54 Manual"]');
+    await page.waitForSelector('.wpb-program .wpb-week-rail', {visible:true});
     const weeks=await page.evaluate(()=>{
       const buttons=[...document.querySelectorAll('.wpb-program .wpb-week-rail>button')];
       return buttons.map(b=>({name:b.textContent.trim().split('\n')[0],

@@ -111,22 +111,22 @@
     "vendor/react.js": "24b2d220a5b2637cf3fb78fe0d961f227ea0a4b960485dbfb03c9d276e72147c"
   },
   "localCandidate": {
-    "name": "Pursuit Iron 4.0 · M234 Candidate Selection Hardening",
+    "name": "Pursuit Iron 4.0 \u00b7 M234 Candidate Selection Hardening",
     "base": "M233 / app 4.0.0 build 822 / Engine 0.65.5",
-    "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
+    "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228\u2013M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "e84619808501d35a7cb37f7c6aece27f6086bdcb6a3ee2619d93ff6e2c7d5cd3",
+    "modules/App.js": "1dd9e14bfa9937d5efb9fccf9d5d54ab5b6e3319bb01d26d66eb3c8a5ba0042d",
     "index.html": "54fd7f97b0a2d9d8b76694380158b4a23699a3f1c1cbea697c5e33b7c705b7ed",
-    "sw.js": "c3438871a23d17f445ae8d639089ab5b13c62128eeba8d7ed2a081df563e7b04",
-    "BUILD_PROFILE.json": "b0fe1082cb58969ada802425c9dd99ad30f3550e3b08bbe77a340c1c724834f6",
+    "sw.js": "7f9a7249b48c84255ec0dddbee00e42c60b1d7ef8dfa8b27b4babfd493d397ae",
+    "BUILD_PROFILE.json": "21defc6a5e1126cba03074a086598cf3bf978044285aa72b64710d2a7c32607f",
     "CHANGELOG.md": "eb44e416e03ad3c447bafc6cdb5f8c9c559c525be0a12396d4023c811c2c73d6",
-    "app.css": "a481cc360fc599b719a1d578835a41f5ebb7dd7bbb1732e8413228f10be429e7",
+    "app.css": "e4b9383aca21481cbb3807b5a0e11ed254724208a64329c12d091ed8dd0721bf",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b905-r8c8c1e08595e34be",
-  "uiMilestone": "Build 905 · Cycle polish 03"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b905-r8e7ba43e01631d5e",
+  "uiMilestone": "Build 905 \u00b7 Concise Changes and standalone Game Plan"
 }

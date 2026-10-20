@@ -17,7 +17,18 @@ try{
   await page.goto('http://127.0.0.1:8804/index.html',{waitUntil:'networkidle0'});await page.waitForSelector('.wpb-home');
   await page.waitForSelector('[aria-label="Review plan changes"]');
   const before=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')));
-  assert.match(await page.$eval('.wpb-plan-change-banner',n=>n.innerText),/2 changes/);
+  assert.match(await page.$eval('.wpb-plan-change-banner',n=>n.innerText),/2 plan changes/);
+  const homeCoach=await page.evaluate(()=>{
+   const hero=document.querySelector('.wpb-home-hero'),game=document.querySelector('.wpb-home-game-plan');
+   const outline=hero?.querySelector('.wpb-home-session-outline');
+   const rows=[...document.querySelectorAll('.wpb-home-game-plan [data-game-plan-exercise]')];
+   return {separate:!!game&&!hero.contains(game)&&!!(hero.compareDocumentPosition(game)&Node.DOCUMENT_POSITION_FOLLOWING),
+    outline:!!outline&&!!outline.querySelector('.wpb-home-outline-list'),count:rows.length,
+    isShort:!game?.querySelector('.wpb-game-plan-target,.wpb-game-plan-method,.wpb-game-plan-technique'),
+    overflow:document.querySelector('.wpb-home').scrollWidth>document.querySelector('.wpb-home').clientWidth+1};
+  });
+  assert.ok(homeCoach.separate&&homeCoach.outline&&homeCoach.count>0&&homeCoach.count<=3&&homeCoach.isShort&&!homeCoach.overflow,
+   'Home has its own concise coaching card, not a second workout outline: '+JSON.stringify(homeCoach));
   assert.match(await page.$eval('[data-game-plan-exercise="bb-bench"]',n=>n.innerText),/82.5 kg × 6/);
   assert.match(await page.$eval('[data-game-plan-exercise="bb-row"]',n=>n.innerText),/90 kg × 9/);
   if(width===900)assert.match(await page.$eval('[data-game-plan-exercise="bb-row"]',n=>n.innerText),/23-second rests/,'game plan honors the logger rest scale');
@@ -27,6 +38,8 @@ try{
   await page.click('[aria-label="Review plan changes"]');await page.waitForSelector('[aria-label="Plan changes"]');
   assert.match(await page.$eval('[data-plan-change="bb-bench"]',n=>n.innerText),/80 kg × 8/);
   assert.match(await page.$eval('[data-plan-change="bb-bench"]',n=>n.innerText),/top of the rep range/);
+  assert.equal(await page.$eval('[data-plan-change="bb-bench"]',n=>!!n.querySelector('.wpb-game-plan-method,.wpb-plan-held-target')),false,
+   'Changes does not repeat target RIR/sets or a second held prescription');
   await page.click('[aria-label="Undo change for Barbell Bench Press"]');
   await page.waitForSelector('[aria-label="Restore recommendation for Barbell Bench Press"]');
   assert.match(await page.$eval('[data-plan-change="bb-bench"]',n=>n.innerText),/undone/i);

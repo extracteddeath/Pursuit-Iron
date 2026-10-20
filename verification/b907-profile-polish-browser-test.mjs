@@ -27,13 +27,13 @@ try{
     const rect=s=>document.querySelector(s)?.getBoundingClientRect().toJSON();
     const strength=document.querySelector('.wpb-profile-strength-grid');
     return {toolbarOrder:getComputedStyle(document.querySelector('.wpb-profile-toolbar')).order,
-      toolbar:rect('.wpb-profile-toolbar'),summary:rect('.wpb-profile-stat-grid'),
+      toolbar:rect('.wpb-profile-toolbar'),summary:rect('.wpb-profile-stat-grid'),hero:rect('.wpb-profile-hero'),
       gridColumns:strength?getComputedStyle(strength).gridTemplateColumns.split(' ').length:null,
       strengthRows:strength?[...strength.children].map(c=>c.getBoundingClientRect().height):[],
       overflow:document.documentElement.scrollWidth>innerWidth+1};
   });
-  assert.equal(hierarchy.toolbarOrder,'80','Customize/Share remain available after content');
-  if(hierarchy.summary)assert.ok(hierarchy.toolbar.top>=hierarchy.summary.bottom-1,'secondary actions follow lifetime summary');
+  assert.equal(hierarchy.toolbarOrder,'0','secondary actions retain DOM and keyboard reading order');
+  if(hierarchy.hero)assert.ok(hierarchy.toolbar.top>=hierarchy.hero.bottom-1,'secondary actions follow the identity section');
   if(hierarchy.gridColumns!=null){
     assert.equal(hierarchy.gridColumns,1,'no four-card strength grid');
     assert.ok(hierarchy.strengthRows.every(h=>h>=42&&h<=100),'compact strength rows');

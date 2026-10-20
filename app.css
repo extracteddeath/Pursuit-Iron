@@ -9088,7 +9088,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 /* B912 — Prototype-informed Profile hierarchy; presentation only.
    Keep current metric owners, customizable section order and share actions. */
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-inner{
-  display:flex!important;flex-direction:column;max-width:680px;width:100%;margin-inline:auto;
+  max-width:680px;width:100%;margin-inline:auto;
   padding:16px clamp(12px,3.8vw,24px) calc(34px + env(safe-area-inset-bottom))!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-head{
@@ -9096,7 +9096,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   padding:0 0 12px!important;margin:0 0 5px!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-title{
-  font-size:clamp(25px,6vw,30px)!important;letter-spacing:-.04em!important;
+  font-size:clamp(28px,6vw,30px)!important;letter-spacing:-.04em!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-edit{
   min-width:48px!important;min-height:48px!important;border:0!important;
@@ -9116,17 +9116,20 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-level-mark .mono{
   font-size:29px!important;line-height:1!important;
 }
-/* Lightweight facts instead of one strongly outlined, three-column slab. */
+/* One quiet grouped surface and three values, not three competing bordered cards. */
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-stat-grid{
-  gap:8px!important;margin:0 0 13px!important;padding:0!important;
-  border:0!important;border-radius:0!important;background:transparent!important;overflow:visible!important;
+  gap:0!important;margin:0 0 13px!important;padding:0!important;
+  border:1px solid var(--pi-color-divider)!important;border-radius:20px!important;
+  background:var(--pi-color-card)!important;overflow:hidden!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-stat{
   min-width:0!important;min-height:74px!important;padding:12px 6px!important;
-  border:0!important;border-radius:19px!important;background:var(--pi-color-card)!important;
+  border:0!important;border-radius:0!important;background:transparent!important;
   box-shadow:none!important;
 }
-#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-stat:not(:last-child){border:0!important}
+#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-stat:not(:last-child){
+  border-right:1px solid var(--pi-color-divider)!important;
+}
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-stat .mono{
   font-variant-numeric:tabular-nums;line-height:1.15!important;
 }
@@ -9179,10 +9182,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   width:48px!important;height:48px!important;border:0!important;border-radius:16px!important;
   background:var(--pi-color-control)!important;color:var(--pi-color-on-control)!important;
 }
-/* Customization stays functional but no longer interrupts the primary reading flow.
-   Flex order only affects the toolbar, never any user-reordered profile section. */
+/* Secondary actions use quiet controls and retain correct accessible reading order.
+   No flex order: screen-reader and keyboard navigation match the visible flow. */
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-toolbar{
-  order:80;display:flex!important;gap:8px!important;margin:6px 0 16px!important;
+  display:flex!important;gap:8px!important;margin:4px 0 15px!important;
   flex-wrap:wrap;justify-content:flex-start!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-toolbar>button{
@@ -9195,7 +9198,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   background:var(--wpb-theme-accent-dim)!important;color:var(--wpb-theme-accent-ink)!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-customize{
-  order:81;border-radius:23px!important;background:var(--pi-color-card)!important;
+  border-radius:23px!important;background:var(--pi-color-card)!important;
   border:1px solid var(--pi-color-divider)!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile
@@ -9205,7 +9208,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 @media(max-width:360px){
   #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-hero{padding:12px!important}
   #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-strength{padding:14px!important}
-  #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-stat-grid{gap:5px!important}
+  #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-stat-grid{gap:0!important}
   #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-stat{padding-inline:3px!important}
 }
 @media(prefers-reduced-motion:reduce),(forced-colors:active){
@@ -9226,5 +9229,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     min-height:58px!important;flex-direction:row!important;align-items:center!important;
     justify-content:space-between!important;gap:12px!important;
     padding:10px 15px!important;text-align:left!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-stat:not(:last-child){
+    border-right:0!important;border-bottom:1px solid var(--pi-color-divider)!important;
   }
 }

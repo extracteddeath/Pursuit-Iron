@@ -19,8 +19,8 @@ assert.doesNotMatch(region,/@keyframes|animation:/,'no competing row transition 
 const b912=css.slice(css.lastIndexOf('/* B912 — Prototype-informed Profile hierarchy'));
 assert.ok(b912.startsWith('/* B912 — Prototype-informed Profile hierarchy'),'scoped visual pass is present');
 assert.match(b912,/\.wpb-profile-strength-grid\{[\s\S]*?grid-template-columns:minmax\(0,1fr\)!important/,'strength compares actual patterns in compact rows');
-assert.match(b912,/\.wpb-profile-toolbar\{[\s\S]*?order:80/,'secondary actions move after profile content');
-assert.ok(b912.includes('.wpb-profile-customize')&&b912.includes('order:81'),'customization remains accessible below actions');
+assert.match(b912,/\.wpb-profile-toolbar\{[\s\S]*?display:flex!important/,'secondary actions retain compact shared row');
+assert.ok(b912.includes('.wpb-profile-customize')&&!b912.includes('order:80')&&!b912.includes('order:81'),'no visual and keyboard order mismatch');
 assert.ok(b912.includes('@container pi-r77-profile')&&b912.includes('max-width:360px'),'narrow/large-text layout handled');
 assert.ok(b912.includes('prefers-reduced-motion:reduce')&&b912.includes('forced-colors:active'),'motion and forced-colors');
 assert.doesNotMatch(b912,/@keyframes|animation:/,'no second animation system');

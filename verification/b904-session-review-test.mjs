@@ -83,3 +83,9 @@ for(const row of buildSessionReview(program,day,2,'lb',history).exercises.filter
  assert.equal(row.opportunity.best,Math.round(row.opportunity.best*100)/100,'mixed-unit record display is stable');
  assert.ok(row.opportunity.estimated>row.opportunity.best+.01);
 }
+
+const { workoutTechniqueRest } = await import('../modules/workout-context.js');
+assert.equal(workoutTechniqueRest({kind:'myo'}),15);
+assert.equal(workoutTechniqueRest({kind:'drop'}),10);
+assert.equal(workoutTechniqueRest({kind:'myo'},1.5),23);
+assert.equal(workoutTechniqueRest({kind:'drop'},1.5),15);

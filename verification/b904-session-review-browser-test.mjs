@@ -13,13 +13,14 @@ try{
  for(const width of [320,393,900]){
   const context=await browser.createBrowserContext(),page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
   await page.setViewport({width,height:850,isMobile:width<600,hasTouch:width<600});await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
-  await page.evaluateOnNewDocument(store=>{if(!sessionStorage.getItem('review-seed')){localStorage.setItem('wpb:v1',JSON.stringify(store));sessionStorage.setItem('review-seed','1');}},{...store,theme:width===900?'rosewater':'amethyst'});
+  await page.evaluateOnNewDocument(store=>{if(!sessionStorage.getItem('review-seed')){localStorage.setItem('wpb:v1',JSON.stringify(store));sessionStorage.setItem('review-seed','1');}},{...store,theme:width===900?'rosewater':'amethyst',restScale:width===900?1.5:1,saved:[width===900?{...program,overrides:{...program.overrides,'upper:1':{...program.overrides['upper:1'],techOverride:'Last set: myo-reps'}}}:program]});
   await page.goto('http://127.0.0.1:8804/index.html',{waitUntil:'networkidle0'});await page.waitForSelector('.wpb-home');
   await page.waitForSelector('[aria-label="Review plan changes"]');
   const before=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')));
   assert.match(await page.$eval('.wpb-plan-change-banner',n=>n.innerText),/2 changes/);
   assert.match(await page.$eval('[data-game-plan-exercise="bb-bench"]',n=>n.innerText),/82.5 kg × 6/);
   assert.match(await page.$eval('[data-game-plan-exercise="bb-row"]',n=>n.innerText),/90 kg × 9/);
+  if(width===900)assert.match(await page.$eval('[data-game-plan-exercise="bb-row"]',n=>n.innerText),/23-second rests/,'game plan honors the logger rest scale');
   assert.ok(await page.$('[data-pr-exercise="bb-row"]'));assert.equal(await page.$('[data-pr-exercise="bb-bench"]'),null,'no fabricated RIR-adjusted PR');
   assert.equal(await page.$eval('.wpb-home',n=>n.scrollWidth<=n.clientWidth+1),true);
   await page.screenshot({path:`/tmp/b904-home-${width}.png`});
@@ -37,7 +38,7 @@ try{
   await page.keyboard.press('Escape');await page.waitForFunction(()=>!document.querySelector('[aria-label="Plan changes"]'));
   assert.match(await page.$eval('[data-game-plan-exercise="bb-bench"]',n=>n.innerText),/80 kg × 8/);
   const held=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')));
-  assert.deepEqual(held.history,before.history);assert.deepEqual(held.perf,before.perf);assert.deepEqual(held.saved[0].progStyle,program.progStyle);assert.deepEqual(held.saved[0].overrides,program.overrides);
+  assert.deepEqual(held.history,before.history);assert.deepEqual(held.perf,before.perf);assert.deepEqual(held.saved[0].progStyle,program.progStyle);assert.deepEqual(held.saved[0].overrides,before.saved[0].overrides);
   await page.reload({waitUntil:'networkidle0'});await page.waitForSelector('[data-game-plan-exercise="bb-bench"]');
   assert.match(await page.$eval('[data-game-plan-exercise="bb-bench"]',n=>n.innerText),/80 kg × 8/);
   const clickText=async text=>assert.ok(await page.evaluate(text=>{const b=[...document.querySelectorAll('button')].find(b=>b.textContent.trim()===text);b?.click();return !!b;},text),text);

@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const css=fs.readFileSync('app.css','utf8');
+const app=fs.readFileSync('modules/App.js','utf8');
+const i=css.indexOf('/* B908 / UI polish pass 03');
+assert.ok(i>0,'isolated Cycle polish styles exist');
+const patch=css.slice(i);
+assert.ok(patch.includes('.wpb-cycle-block-row[data-state="active"]'),'active block hierarchy');
+assert.ok(patch.includes('box-shadow:inset 4px 0 var(--wpb-theme-accent-ink)'),'active rail is theme-bound');
+assert.ok(patch.includes('opacity:1!important'),'planned blocks remain legible');
+assert.ok(patch.includes('@media(hover:hover) and (pointer:fine)'),'hover effects do not affect touch');
+assert.ok(patch.includes('@media(prefers-reduced-motion:reduce)')&&patch.includes('transition:none!important'),'motion respects reduced-motion');
+assert.ok(patch.includes('@media(forced-colors:active)')&&patch.includes('Highlight'),'forced-colors remains visible');
+assert.ok(!patch.includes('animation:')&&!patch.includes('transform:')&&!patch.includes('height 180ms'),'no page/row geometry animation');
+assert.ok(app.includes('function CycleBlockRows(')&&app.includes('disabled: !p')&&app.includes('data-state'), 'Cycle state and all previews remain owned by existing component');
+console.log('PASS B908 Cycle UI: hierarchy, semantic states, local paint-only motion and a11y.');

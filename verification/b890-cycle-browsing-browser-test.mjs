@@ -41,6 +41,28 @@ try{
   await page.click('[aria-label="Open cycle SekuFit Cycle"]');await page.waitForSelector('.wpb-cycle-detail');
   const rows=await page.$$eval('.wpb-cycle-detail .wpb-cycle-block-row',ns=>ns.map(n=>({disabled:n.disabled,opacity:getComputedStyle(n).opacity,h:n.getBoundingClientRect().height,text:n.innerText})));
   assert.equal(rows.length,3);assert.ok(rows.every(r=>!r.disabled&&r.opacity==='1'&&r.h>=44));
+  // B908: visual hierarchy is state-specific, and local-only motion is reversible.
+  const cycleLook=await page.evaluate(()=>{
+    const root=document.querySelector('.wpb-cycle-detail');
+    const blocks=[...root.querySelectorAll('.wpb-cycle-block-row')];
+    const active=getComputedStyle(blocks[0]),planned=getComputedStyle(blocks[2]);
+    const next=root.querySelector('.wpb-cycle-change-preview');
+    const schedule=root.querySelector('.wpb-cycle-schedule');
+    return {activeShadow:active.boxShadow,activeBg:active.backgroundColor,plannedBg:planned.backgroundColor,
+      activeTransition:active.transitionDuration,plannedOpacity:planned.opacity,
+      nextBorder:next?getComputedStyle(next).borderColor:null,
+      scheduleBg:getComputedStyle(schedule).backgroundColor,
+      noOverflow:root.scrollWidth<=root.clientWidth+1};
+  });
+  assert.ok(cycleLook.activeShadow.includes('inset'),'current block keeps visible accent rail');
+  assert.notEqual(cycleLook.activeBg,cycleLook.plannedBg,'current block is visually distinct from planned');
+  assert.equal(cycleLook.plannedOpacity,'1','future blocks stay readable');
+  assert.ok(cycleLook.noOverflow,'cycle hierarchy must not overflow');
+  assert.ok(cycleLook.nextBorder&&cycleLook.scheduleBg,'cycle facts remain present');
+  assert.equal(cycleLook.activeTransition,'0s','reduced motion must suppress state transitions');
+  await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'no-preference'}]);
+  assert.notEqual(await page.$eval('.wpb-cycle-block-row[data-state="active"]',n=>getComputedStyle(n).transitionDuration),'0s','non-reduced motion uses local transitions');
+  await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
   assert.ok(rows[2].text.includes('Peak'));assert.equal(await page.$$eval('.wpb-cycle-actions button',ns=>ns.length),1);
   assert.doesNotMatch(await page.$eval('.wpb-cycle-detail',n=>n.innerText),/kept exactly|Available after/);
   assert.equal(await page.$eval('.wpb-cycle-detail',n=>n.scrollWidth<=n.clientWidth+1),true);

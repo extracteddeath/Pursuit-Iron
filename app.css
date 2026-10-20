@@ -9161,6 +9161,14 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
  .wpb-profile-strength-grid>.wpb-profile-strength-cell:not(:last-child){
   border-bottom:1px solid var(--pi-color-divider)!important;
 }
+/* Retain the existing tonal featured-score signal with a quiet first row.
+   The inactive rows remain a single flat comparison surface. */
+#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile
+ .wpb-profile-strength-grid>.wpb-profile-strength-cell:first-child{
+  background:var(--wpb-theme-accent-dim)!important;
+  border-radius:12px!important;
+  padding-inline:10px!important;
+}
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile
  .wpb-profile-strength-grid>.wpb-profile-strength-cell>.mono{
   grid-column:2;grid-row:1;font-size:18px!important;line-height:1.2!important;

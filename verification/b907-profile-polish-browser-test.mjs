@@ -27,13 +27,13 @@ try{
     const rect=s=>document.querySelector(s)?.getBoundingClientRect().toJSON();
     const strength=document.querySelector('.wpb-profile-strength-grid');
     return {toolbarOrder:getComputedStyle(document.querySelector('.wpb-profile-toolbar')).order,
-      toolbar:rect('.wpb-profile-toolbar'),summary:rect('.wpb-profile-stat-grid'),hero:rect('.wpb-profile-hero'),
+      toolbar:rect('.wpb-profile-toolbar'),previousSectionBottom:document.querySelector('.wpb-profile-toolbar')?.previousElementSibling?.getBoundingClientRect().bottom??null,summary:rect('.wpb-profile-stat-grid'),
       gridColumns:strength?getComputedStyle(strength).gridTemplateColumns.split(' ').length:null,
       strengthRows:strength?[...strength.children].map(c=>c.getBoundingClientRect().height):[],
       overflow:document.documentElement.scrollWidth>innerWidth+1};
   });
   assert.equal(hierarchy.toolbarOrder,'0','secondary actions retain DOM and keyboard reading order');
-  if(hierarchy.hero)assert.ok(hierarchy.toolbar.top>=hierarchy.hero.bottom-1,'secondary actions follow the identity section');
+  if(hierarchy.previousSectionBottom!=null)assert.ok(hierarchy.toolbar.top>=hierarchy.previousSectionBottom-1,'secondary actions follow the first user-selected profile section without overlapping');
   if(hierarchy.gridColumns!=null){
     assert.equal(hierarchy.gridColumns,1,'no four-card strength grid');
     assert.ok(hierarchy.strengthRows.every(h=>h>=42&&h<=100),'compact strength rows');

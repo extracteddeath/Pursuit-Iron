@@ -142,7 +142,7 @@ const PATTERNS = [
 
 const EX_ABBREV = {
     rdl: "romanian deadlift", ohp: "overhead press", bss: "bulgarian split squat", sldl: "stiff leg deadlift",
-    db: "dumbbell", bb: "barbell", ez: "ez bar", cgbp: "close grip bench", gm: "good morning",
+    db: "dumbbell", bb: "barbell", ez: "ez bar", ezbar: "ez bar", cgbp: "close grip bench", gm: "good morning",
     ghr: "glute ham raise", rfess: "rear foot elevated split squat", jm: "jm press", bor: "bent over row",
     pjr: "pull", hspu: "handstand push", ohs: "overhead squat", sldf: "stiff leg deadlift"
 };
@@ -1303,6 +1303,8 @@ function cuesFor(ex) {
 
 function patternCues(ex) {
     const n = ex.id, has = (...k) => k.some(s => n.includes(s));
+    if (n === "reverse-curl")
+        return ["Use an overhand grip on the EZ bar's angled sections", "Keep elbows still and wrists neutral as you curl", "Lower under control without swinging"];
     if (ex.part === "chest" && has("fly", "pec"))
         return ["Soft, fixed elbow angle throughout", "Stretch wide, squeeze hands toward each other", "Slow eccentric — no bouncing at the bottom"];
     if (ex.part === "chest" || (ex.part === "triceps" && has("cgbp", "dip", "pushup")))

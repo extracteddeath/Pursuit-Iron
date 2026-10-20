@@ -13,8 +13,30 @@ STEP = [0]
 FAILS = []
 
 
+def _report_crash(kind, value, tb):
+    """A crash anywhere still leaves a result: the traceback and the last step reached."""
+    import traceback
+    msg = "smoke crashed after step %d: %s" % (STEP[0], "".join(traceback.format_exception_only(kind, value)).strip())
+    traceback.print_exception(kind, value, tb)
+    try:
+        with open(os.path.join(OUT, "result.txt"), "w") as f:
+            f.write("\n".join(FAILS + [msg]))
+    finally:
+        sys.exit(1)
+
+
+sys.excepthook = _report_crash
+
+
 def adb(*a, check=False, timeout=60):
-    r = subprocess.run(["adb", *a], capture_output=True, text=True, timeout=timeout)
+    try:
+        r = subprocess.run(["adb", *a], capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        # uiautomator dump waits for the UI to go idle; a screen that never idles must fail the step, not the run.
+        print("adb timed out:", " ".join(a), flush=True)
+        if check:
+            raise
+        return ""
     if check and r.returncode:
         raise RuntimeError(f"adb {' '.join(a)}: {r.stderr}")
     return r.stdout
@@ -229,9 +251,21 @@ if tap(r"^Progression: ", "progression-sheet"):
     if not find(r"Auto \(recommended\)", timeout=4):
         FAILS.append("progression sheet has no Auto option")
     back()
-# Add set opens the sheet with standard, drop, myo and warm-up
-if scroll_to(r"\|\s*Add set$", tries=4, step=500):
-    tap(r"\|\s*Add set$", "add-set-sheet")
+# The design's set options: the set number opens type, skip and (for added sets) remove
+if tap(r"^Options for set 2", "set-options"):
+    if not find(r"Skip this set", timeout=4):
+        FAILS.append("set options has no Skip this set")
+    close_sheet(r"Skip this set")
+# The design's plate bar under the sets opens the plate calculator (barbell lifts with a load)
+if find(r"^Open the plate calculator", timeout=3):
+    tap(r"^Open the plate calculator", "plate-bar-calc")
+    close_sheet(r"Plate calculator")
+# The design's add row: + Add set adds one straight away; the ⋯ beside it opens the panel with warm-ups
+if scroll_to(r"^Add set", tries=4, step=500):
+    tap(r"^Add set", "set-added")
+    if not find(r"^Options for set \d+.*", timeout=3):
+        FAILS.append("set numbers are not set-option buttons")
+    tap(r"^More set options", "add-set-sheet")
     tap(r"Warm-up ramp", "warmups-added")
 else:
     FAILS.append("no Add set button under the sets")

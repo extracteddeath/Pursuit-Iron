@@ -3,6 +3,11 @@
 package com.pursuitiron.app.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -75,18 +80,20 @@ fun barFor(equip: List<String>): String? = when {
 
 /* ------------------------------------------------------------------ plates + 1RM (App.js PlateCalcSheet) */
 @Composable
-fun ToolsSheet(vm: AppViewModel, initialTab: String = "plates", initialWeight: String = "", initialBar: String = "barbell", onClose: () -> Unit) {
+fun ToolsSheet(vm: AppViewModel, initialTab: String = "plates", initialWeight: String = "", initialBar: String = "barbell", onUse: ((String) -> Unit)? = null, onClose: () -> Unit) {
     var tab by remember { mutableStateOf(initialTab) }
     ModalBottomSheet(onDismissRequest = onClose, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Segmented(listOf("plates" to "Plates", "orm" to "1RM"), tab, { tab = it })
-            if (tab == "plates") PlatesTool(vm, initialWeight, initialBar) else OneRmTool(vm)
+            // From a set, the sheet is just the calculator (the design's plate bar); from Tools it also has 1RM.
+            if (onUse == null) Segmented(listOf("plates" to "Plates", "orm" to "1RM"), tab, { tab = it })
+            if (tab == "plates") PlatesTool(vm, initialWeight, initialBar, onUse?.let { u -> { v: String -> u(v); onClose() } }) else OneRmTool(vm)
+            TextButton(onClick = onClose, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text("Done") }
         }
     }
 }
 
 @Composable
-private fun PlatesTool(vm: AppViewModel, initialWeight: String, initialBar: String) {
+private fun PlatesTool(vm: AppViewModel, initialWeight: String, initialBar: String, onUse: ((String) -> Unit)?) {
     var w by remember { mutableStateOf(initialWeight) }
     var bar by remember { mutableStateOf(initialBar) }
     var res by remember { mutableStateOf<JSONObject?>(null) }
@@ -94,31 +101,69 @@ private fun PlatesTool(vm: AppViewModel, initialWeight: String, initialBar: Stri
     val cs = MaterialTheme.colorScheme
     val r = res
     val u = r.s("unit", "kg")
+    val step = r.d("step").takeIf { it > 0 } ?: if (u == "lb") 5.0 else 2.5
+    val barW = r.list("bars").firstOrNull { it.s("id") == bar }?.d("weight") ?: 0.0
+    val total = w.replace(',', '.').toDoubleOrNull()
+    val setTo = { v: Double -> w = fmtNum(kotlin.math.round(v * 100) / 100) }
     Text("Plate calculator", style = MaterialTheme.typography.headlineSmall)
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        r.list("bars").forEach { b -> MorphChip(b.s("label"), bar == b.s("id"), { bar = b.s("id") }, trailing = "${fmtNum(b.d("weight"))} $u") }
+    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        r.list("bars").forEach { b -> MorphChip("${b.s("label")} · ${fmtNum(b.d("weight"))}", bar == b.s("id"), { bar = b.s("id") }) }
     }
-    OutlinedTextField(w, { w = it }, Modifier.fillMaxWidth(), singleLine = true, label = { Text("Total weight ($u)") },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), textStyle = MaterialTheme.typography.headlineSmall.copy(textAlign = TextAlign.Center))
-    val out = r.o("result") ?: return
-    val plates = out.optJSONArray("plates")?.let { a -> (0 until a.length()).map { a.optDouble(it) } } ?: emptyList()
-    if (plates.isEmpty()) { Text("That's the empty bar (${fmtNum(out.d("barWeight"))} $u), or lighter.", color = cs.onSurfaceVariant); return }
-    // One side of the bar, inner plate first, sized by weight like the web app's drawing.
-    val maxP = plates.max()
-    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.surfaceContainer).horizontalScroll(rememberScrollState()).padding(vertical = 14.dp, horizontal = 10.dp)
-        .semantics { contentDescription = "One side of the bar: ${plates.joinToString(", ") { fmtNum(it) }} $u plates, inner to outer. ${fmtNum(out.d("barWeight"))} $u bar." },
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-        Box(Modifier.width(40.dp).height(12.dp).clip(RoundedCornerShape(4.dp)).background(cs.outline))
-        plates.forEachIndexed { i, p ->
-            Box(Modifier.width(30.dp).height((36 + 56 * (p / maxP)).dp).clip(RoundedCornerShape(6.dp)).background(if (i % 2 == 0) cs.primary else cs.primaryContainer), contentAlignment = Alignment.Center) {
-                Text(fmtNum(p), style = MaterialTheme.typography.labelSmall, color = if (i % 2 == 0) cs.onPrimary else cs.onPrimaryContainer)
-            }
+    // The design's total: big, with −/+ by the smallest pair of plates you own. Tap it to type.
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Box(Modifier.size(52.dp).clip(CircleShape).background(cs.surfaceContainerHigh).clickable { setTo(((total ?: barW) - step).coerceAtLeast(barW)) }
+            .semantics { contentDescription = "${fmtNum(step)} $u lighter"; role = Role.Button }, contentAlignment = Alignment.Center) { Icon(PiIcons.Minus, null) }
+        Row(Modifier.weight(1f), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.Center) {
+            androidx.compose.foundation.text.BasicTextField(w, { v -> w = v.filter { it.isDigit() || it == '.' || it == ',' }.take(7) }, singleLine = true,
+                textStyle = MaterialTheme.typography.displayMedium.copy(color = cs.onSurface, textAlign = TextAlign.End),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                cursorBrush = androidx.compose.ui.graphics.SolidColor(cs.primary),
+                modifier = Modifier.width(IntrinsicSize.Min).widthIn(min = 48.dp).semantics { contentDescription = "Total weight, $u" },
+                decorationBox = { inner -> Box(contentAlignment = Alignment.CenterEnd) { if (w.isEmpty()) Text("0", style = MaterialTheme.typography.displayMedium, color = cs.onSurfaceVariant); inner() } })
+            Text(" $u", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 8.dp))
         }
-        Box(Modifier.size(14.dp).clip(RoundedCornerShape(3.dp)).background(cs.outline))
+        Box(Modifier.size(52.dp).clip(CircleShape).background(cs.surfaceContainerHigh).clickable { setTo((total ?: barW) + step) }
+            .semantics { contentDescription = "${fmtNum(step)} $u heavier"; role = Role.Button }, contentAlignment = Alignment.Center) { Icon(PiIcons.Plus, null) }
     }
-    Text("Each side: ${plates.joinToString(" + ") { fmtNum(it) }}", style = MaterialTheme.typography.titleMedium)
-    Text("${fmtNum(out.d("barWeight"))} $u bar + ${plates.size} plate${if (plates.size == 1) "" else "s"} per side" +
-        if (!out.b("exact")) ". Closest you can load: ${fmtNum(out.d("achievable"))} $u." else "", color = cs.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+    val out = r.o("result")
+    val plates = out?.optJSONArray("plates")?.let { a -> (0 until a.length()).map { a.optDouble(it) } } ?: emptyList()
+    val under = out?.b("under") == true
+    val per = when { out == null -> "Enter a total, bar included"; under -> "Lighter than the ${fmtNum(barW)} $u bar"; plates.isEmpty() -> "Just the bar"; else -> "Per side: ${plates.joinToString(" · ") { fmtNum(it) }} $u" }
+    // Both sides of the bar, inner plate at the collar, sized by weight (the design's drawing).
+    val big = if (u == "lb") 45.0 else 25.0
+    val sizes = plates.distinct().sortedDescending()
+    val tones = listOf(cs.primary, cs.tertiary, cs.onSecondaryContainer, cs.onSurfaceVariant)
+    @Composable fun Disc(p: Double) {
+        Box(Modifier.width(if (p >= big * 0.5) 13.dp else if (p >= big * 0.2) 10.dp else 7.dp).height((26 + kotlin.math.sqrt(p / big) * 74).dp)
+            .clip(RoundedCornerShape(4.dp)).background(tones[sizes.indexOf(p).coerceIn(0, 3)]))
+    }
+    Row(Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(22.dp)).background(cs.surface).semantics { contentDescription = per },
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+        Row(horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) { plates.reversed().forEach { Disc(it) } }
+        Box(Modifier.width(8.dp).height(16.dp).clip(RoundedCornerShape(2.dp)).background(cs.outline))
+        Box(Modifier.weight(1f, fill = false).widthIn(min = 40.dp, max = 120.dp).fillMaxWidth().height(8.dp).clip(RoundedCornerShape(2.dp)).background(cs.outline))
+        Box(Modifier.width(8.dp).height(16.dp).clip(RoundedCornerShape(2.dp)).background(cs.outline))
+        Row(horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) { plates.forEach { Disc(it) } }
+    }
+    Text(per, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+    if (out != null) {
+        val exact = out.b("exact") && !under
+        val below = out.d("below").takeIf { !out.isNull("below") && it > 0 }
+        val above = out.d("above").takeIf { !out.isNull("above") && it > 0 }
+        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(cs.surfaceContainerHigh).padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            if (exact) Icon(PiIcons.Check, null, tint = cs.primary, modifier = Modifier.size(18.dp))
+            Text(when { under -> "Pick a weight at or above the bar."; exact -> "Exact with the plates you have."
+                else -> "Can't make ${fmtNum(total ?: 0.0)} $u exactly with your plates — closest: ${below?.let { fmtNum(it) } ?: "—"}${above?.let { " or ${fmtNum(it)}" } ?: ""} $u." },
+                style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+            if (!exact && !under && below != null) androidx.compose.material3.FilledTonalButton(onClick = { setTo(below) }, modifier = Modifier.height(36.dp),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp)) { Text("Use ${fmtNum(below)} $u", style = MaterialTheme.typography.labelLarge) }
+        }
+    }
+    Text("Uses the bars and plates saved for your active gym. Log the total, bar included.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+    if (onUse != null && total != null && total > 0 && !under) Button(onClick = { onUse(fmtNum(total)) }, modifier = Modifier.fillMaxWidth().height(52.dp)) {
+        Text("Use ${fmtNum(total)} $u for this set", style = MaterialTheme.typography.titleSmall)
+    }
 }
 
 @Composable

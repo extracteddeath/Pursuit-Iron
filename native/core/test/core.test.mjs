@@ -345,6 +345,47 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   ok(s.exercises[1].hasDrop && s.exercises[1].sets.length > nSets, 'drop sets added');
   s = C.act({ type: 'advanced', ei: 1, kind: 'drop' });
   ok(!s.exercises[1].hasDrop, 'drop sets removed again');
+  { // The design's live-set additions: current-set plates, direct + Drop / + Myo, skip a set, BW / Band tag.
+    const bi = s.exercises.findIndex((e) => e.bar === 'barbell');
+    if (bi >= 0) {
+      const bx = s.exercises[bi], si0 = bx.cur;
+      C.act({ type: 'edit', ei: bi, si: si0, field: 'weight', value: s.unit === 'lb' ? '225' : '100' });
+      const pb = C.session().exercises[bi].plates;
+      ok(pb && pb.exact && pb.text === (s.unit === 'lb' ? '2×45/side' : '25 · 15/side') && pb.barLabel === 'barbell', 'the current set shows its plates per side (' + (pb && pb.text) + ')');
+      ok(C.session().exercises[bi].addRules.drop.show === false, 'no drop sets on a barbell lift');
+    }
+    const di = s.exercises.findIndex((e, i) => i !== bi && e.addRules.drop.show && !e.assisted && e.sets.some((x) => !x.warm && !x.sub));
+    if (di >= 0) {
+      let e = C.session().exercises[di];
+      ok(e.addRules.drop.why === 'Log a working set first', 'drop waits for a logged working set');
+      const w = e.sets.filter((x) => !x.warm && !x.sub);
+      w.forEach((x) => { C.act({ type: 'edit', ei: di, si: x.i, field: 'weight', value: '40' }); C.act({ type: 'edit', ei: di, si: x.i, field: 'reps', value: '10' }); });
+      const last = w[w.length - 1];
+      C.act({ type: 'toggle', ei: di, si: last.i });
+      let s2 = C.act({ type: 'addOne', ei: di, kind: 'drop' });
+      const d1 = s2.exercises[di].sets.filter((x) => x.sub && x.kind === 'drop');
+      ok(d1.length === 1 && Number(d1[0].weight) < 40 && Number(d1[0].weight) >= 25, 'one drop added at about −25% (' + (d1[0] && d1[0].weight) + ')');
+      ok(s2.exercises[di].addRules.drop.why === 'Finish the extension you added first', 'one pending extension at a time');
+      C.act({ type: 'toggle', ei: di, si: d1[0].i });
+      s2 = C.act({ type: 'addOne', ei: di, kind: 'drop' });
+      ok(s2.exercises[di].sets.filter((x) => x.sub && x.kind === 'drop').length === 2, 'a second drop after the first is logged');
+      s2 = C.act({ type: 'toggle', ei: di, si: s2.exercises[di].sets.filter((x) => x.sub && x.kind === 'drop')[1].i });
+      ok(s2.exercises[di].addRules.drop.why === 'Two drops is the limit', 'two drops is the limit');
+      const t0 = s2.totalSets, first = s2.exercises[di].sets.find((x) => !x.warm && !x.sub && !x.done);
+      if (first) {
+        s2 = C.act({ type: 'skipSet', ei: di, si: first.i });
+        ok(s2.totalSets === t0 - 1 && s2.exercises[di].sets[first.i].skipped, 'a skipped set stops counting');
+        ok(s2.exercises[di].cur !== first.i, 'the current set moves past a skipped one');
+        s2 = C.act({ type: 'skipSet', ei: di, si: first.i, skip: false });
+        ok(s2.totalSets === t0 && !s2.exercises[di].sets[first.i].skipped, 'a skipped set can be restored');
+      }
+      const rmv = s2.exercises[di].sets.filter((x) => x.sub && x.kind === 'drop').map((x) => x.i);
+      rmv.forEach((i) => C.act({ type: 'toggle', ei: di, si: i }));
+      rmv.slice().reverse().forEach((i) => C.act({ type: 'removeSet', ei: di, si: i }));
+      ok(!C.session().exercises[di].hasDrop, 'unlogged drops can be removed');
+      C.act({ type: 'toggle', ei: di, si: last.i });
+    }
+  }
   s = C.act({ type: 'restFor', ei: 1, sec: 150 });
   ok(s.exercises[1].restCustom === 150 && JSON.parse(C.exportStore()).saved[0].overrides, 'per-lift rest saved to the program');
   C.setGoal({ id: s.exercises[0].id, weight: 1 }); C.setExSetup({ id: s.exercises[0].id, key: 'seat', value: '4' });
@@ -663,5 +704,9 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   const tooShort = C.sessionPreview({ minutes: 20 });
   if (!tooShort.fits) ok(!!C.startSession({ minutes: 20 }).error, '20 min refused when the protected work does not fit');
   else { const s2 = C.startSession({ minutes: 20 }); ok(s2.active, '20 min fits and starts'); C.discardSession(); } }
+{ // BW / Band tags come from the lift's equipment.
+  const tags = C.session().active ? C.session().exercises.map((e) => [e.id, e.loadTag]) : [];
+  ok(tags.every(([id, t]) => t !== 'Band' || /band/.test(id)), 'only band lifts carry the Band tag');
+}
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);
 

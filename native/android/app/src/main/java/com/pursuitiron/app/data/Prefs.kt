@@ -26,6 +26,9 @@ class Prefs(context: Context) {
         private set
     var keepAwake by mutableStateOf(sp.getBoolean("keepAwake", true))
         private set
+    /** The design's optional inline −/+ beside each set's weight and reps; off by default. */
+    var steppers by mutableStateOf(sp.getBoolean("steppers", false))
+        private set
     var transferDismissed by mutableStateOf(sp.getBoolean("transferDismissed", false))
         private set
     var askedNotifications by mutableStateOf(sp.getBoolean("askedNotifications", false))
@@ -45,6 +48,7 @@ class Prefs(context: Context) {
     fun changeBlack(v: Boolean) { black = v; sp.edit().putBoolean("black", v).apply() }
     fun changeDark(v: Boolean?) { dark = v; sp.edit().apply { if (v == null) remove("dark") else putBoolean("dark", v) }.apply() }
     fun changeGrip(v: Boolean) { grip = v; sp.edit().putBoolean("grip", v).apply() }
+    fun changeSteppers(v: Boolean) { steppers = v; sp.edit().putBoolean("steppers", v).apply() }
     fun changeKeepAwake(v: Boolean) { keepAwake = v; sp.edit().putBoolean("keepAwake", v).apply() }
     fun dismissTransfer() { transferDismissed = true; sp.edit().putBoolean("transferDismissed", true).apply() }
     fun markIntro(v: Int) { seenIntro = v; sp.edit().putInt("seenIntro", v).apply() }

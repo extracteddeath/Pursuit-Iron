@@ -68,7 +68,10 @@ deleted and importing twice adds nothing. A workout in progress comes across too
 
 Native: Today (readiness, injuries, next session, cycle position, recent), the full workout (enter and adjust loads,
 log and rate sets, autoregulated next-set prefill, rest with lock-screen countdown and an audible "rest over" alert in
-the background, swap, why-this-weight, pain flag, notes, reorder, add/remove sets, plate calculator), summary with PRs
+the background, swap, why-this-weight, pain flag, notes, reorder, add/remove sets, the current set's plates per side
+and the plate bar, a visual plate calculator that writes back to the set, direct + Drop / + Myo with the design's rules,
+set-number options (type, mark not done, skip / restore, remove an added set), optional hold-to-repeat −/+ steppers,
+BW / Band in place of a zero load), summary with PRs
 and milestones, Plan (weeks, days, switch program, start any day, build next block), training cycles (preset and custom
 templates, adapt between blocks, detail, complete block, block review, delete with undo), the program editor (swap,
 move, add, remove, supersets, rename/duplicate/move/delete days, manual sets and reps, drafts, save to one block or the

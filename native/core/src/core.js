@@ -629,7 +629,7 @@ function setView(s, i, ex, prBase, prev = null) {
     let e1 = null; if (s.done && w > 0 && r > 0 && isWork(s)) e1 = E.e1rm(w, r);
     return {
         i, warm: !!s.warm, sub: !!s.sub, kind: s.kind || (s.warm ? 'warm' : s.sub ? 'sub' : 'work'), done: !!s.done,
-        weight: s.weight ?? '', reps: s.reps ?? '', rir: s.actualRIR ?? null, added: !!s.added,
+        weight: s.weight ?? '', reps: s.reps ?? '', rir: s.actualRIR ?? null, added: !!s.added, skipped: !!s.skipped, prescribed: !!s.prescribed,
         target: s.target ? { w: s.target.w ?? null, reps: s.target.reps ?? null, rir: s.target.rir ?? null, effort: s.target.rir != null ? E.effortLabel(s.target.rir, S.store.loadMode === 'rpe' ? 'rpe' : 'rir') : null } : null,
         hint: typeof s.hint === 'string' ? s.hint : null,
         userOwned: !!E.userOwnsRuntimeSet?.(s),
@@ -671,6 +671,41 @@ function supersetSuggestions(ctx, data, exIdx) {
     }).filter(Boolean).sort((a, b) => b.score - a.score).slice(0, 4);
 }
 
+
+/* The design's live-set helpers (prototype extras23/24/26): the current set's plates, the direct
+   + Drop / + Myo rules, and the BW / Band tag for lifts that carry no load. */
+function currentSetIndex(sets) { return sets.findIndex((s) => !s.done && !s.skipped); }
+const fmtP = (v) => String(Math.round(Number(v) * 100) / 100);
+function platesFor(total, bar, u) {
+    const t = Number(total); if (!bar || !(t > 0)) return null;
+    const r = E.platesPerSide(t, bar, u), barW = r.barW;
+    const per = r.plates || [], loaded = barW + per.reduce((a, p) => a + p, 0) * 2;
+    const short = Math.max(0, Math.round((t - loaded) * 100) / 100);
+    const under = t < barW - 1e-6;
+    const g = []; per.forEach((p) => { const l = g[g.length - 1]; if (l && l[0] === p) l[1]++; else g.push([p, 1]); });
+    const grouped = g.map((x) => (x[1] > 1 ? x[1] + '×' : '') + fmtP(x[0])).join(' · ');
+    const text = under ? `Under the ${fmtP(barW)} ${u} bar` : !per.length && !short ? 'Empty bar' : grouped + '/side' + (short > 0.001 ? ` (+${fmtP(short)} short)` : '');
+    const list = per.length ? per.map(fmtW).join(' · ') : 'no plates';
+    return { bar, barLabel: (E.BAR_LABEL?.[bar] || bar).toLowerCase(), barW, perSide: per, short, under, exact: !under && short <= 0.001, loaded: Math.round(loaded * 100) / 100,
+        text, bandText: under ? 'Lighter than the bar' : list + (short > 0.001 ? ` · ${fmtP(short)} ${u} short` : '') };
+}
+function loadTag(ex) {
+    const eq = ex?.equip || [];
+    if (eq.includes('bands') && !eq.some((x) => ['barbell', 'dumbbell', 'kettlebell', 'cable', 'machine', 'smith', 'ezbar'].includes(x))) return 'Band';
+    if (!eq.length || eq.every((x) => ['pullup', 'dip', 'bench', 'rings', 'box', 'floor', 'none', 'bodyweight', 'parallettes'].includes(x))) return 'BW';
+    return null;
+}
+function addRules(e, ex, style) {
+    const sets = e.sets, work = sets.filter((x) => isWork(x) && !x.skipped), last = work[work.length - 1];
+    const lastDone = !!last?.done, pending = sets.some((x) => x.sub && !x.done && !x.skipped);
+    const nDrop = sets.filter((x) => x.sub && x.kind === 'drop').length, hasMyo = sets.some((x) => x.sub && x.kind === 'myo');
+    const barbell = E.barFor(ex || { equip: [] }) === 'barbell';
+    return {
+        drop: { show: !barbell, why: !lastDone ? 'Log a working set first' : pending ? 'Finish the extension you added first' : nDrop >= 2 ? 'Two drops is the limit' : '' },
+        myo: { show: style !== 'myo', why: hasMyo ? 'Already added to this lift' : !lastDone ? 'Log a working set first' : pending ? 'Finish the extension you added first' : '' }
+    };
+}
+
 export function session() {
     const l = S.live;
     if (!l) return { active: false };
@@ -679,7 +714,7 @@ export function session() {
     const u = unit(), bests = (() => { try { return E.liftBests(ctx.H, u) || {}; } catch { return {}; } })();
     const data = l.data || [];
     let lastPerf = {}; try { lastPerf = E.lastDayPerf(ctx.day, ctx.P, ctx.H, ctx.program) || {}; } catch { lastPerf = {}; }
-    const work = (e) => e.sets.filter(isWork);
+    const work = (e) => e.sets.filter((x) => isWork(x) && !x.skipped);
     const totalSets = data.reduce((s, e) => s + work(e).length, 0);
     const doneSets = data.reduce((s, e) => s + work(e).filter((x) => x.done).length, 0);
     const volume = data.reduce((sum, e) => sum + e.sets.reduce((s, x) => s + (x.done && !x.warm ? (parseFloat(x.weight) || 0) * (parseInt(x.reps) || 0) : 0), 0), 0);
@@ -697,7 +732,13 @@ export function session() {
             let restDefault = null; try { restDefault = E.effectiveRest(E.goalForDay(ctx.program, ctx.day), ex, e.slot === ctx.day.primaryIndex, 0, Number(S.store.restScale) || 1); } catch { restDefault = null; }
             const inc = ctx.program.exLoadInc?.[e.id];
             let setup = []; try { setup = E.setupFieldsWithStored(ex, S.store.exSetup?.[e.id]).map((f) => ({ key: f.key, label: f.label, value: S.store.exSetup?.[e.id]?.[f.key] || '' })); } catch { setup = []; }
-            return { ei, id: e.id, name: ex.name || e.id, part: ex.part || '', partLabel: E.PART_LABEL?.[ex.part] || ex.part || '', equip: ex.equip || null, slot: e.slot, primary: e.slot === ctx.day.primaryIndex,
+            const bar = (() => { try { return E.barFor(ex.equip ? ex : { equip: [] }); } catch { return null; } })();
+            const cur = currentSetIndex(e.sets), curSet = cur >= 0 ? e.sets[cur] : null;
+            const plateRef = curSet && !curSet.sub ? curSet : e.sets.filter((x) => isWork(x) && !x.skipped).slice(-1)[0];
+            let style = null; try { style = E.styleFor(ctx.program, e.id); } catch { style = null; }
+            return { ei, id: e.id, name: ex.name || e.id, bar, cur, loadTag: loadTag(ex),
+                plates: (() => { try { return plateRef ? platesFor(parseFloat(plateRef.weight), bar, u) : null; } catch { return null; } })(),
+                platesFor: plateRef ? e.sets.indexOf(plateRef) : -1, addRules: addRules(e, ex, style), part: ex.part || '', partLabel: E.PART_LABEL?.[ex.part] || ex.part || '', equip: ex.equip || null, slot: e.slot, primary: e.slot === ctx.day.primaryIndex,
                 superset: !!e.superset, note: e.note || '', lastNote: ctx.P[e.id]?.note || '', injuryAdjusted: e.injuryAdjusted || null, freestyle: !!e.freestyle,
                 done: work(e).length > 0 && work(e).every((s) => s.done), sets,
                 hasWarm: e.sets.some((s) => s.warm), hasDrop: e.sets.some((s) => s.sub && s.kind === 'drop'), hasMyo: e.sets.some((s) => s.sub && s.kind === 'myo'),
@@ -753,7 +794,7 @@ const ACTIONS = {
     toggle({ ei, si }, ctx, d) {
         const e = d[ei], set = e?.sets[si]; if (!set) return d;
         const wasDone = !!set.done, ex = EX_BY_ID[e.id];
-        let sets = e.sets.map((s, j) => (j === si ? { ...s, done: !wasDone, hint: undefined, ...(wasDone ? { actualRIR: null } : {}) } : s));
+        let sets = e.sets.map((s, j) => (j === si ? { ...s, done: !wasDone, skipped: false, hint: undefined, ...(wasDone ? { actualRIR: null } : {}) } : s));
         if (wasDone) {
             sets = E.rollbackLiveAutoregulation(sets, si);
             sets = sets.map((s) => {
@@ -819,6 +860,30 @@ const ACTIONS = {
             const work = e.sets.filter(isWork);
             const seed = work[work.length - 1] || (sug?.[ei] ? { weight: String(sug[ei].weight), reps: E.repsLow(sug[ei].reps) } : { weight: '', reps: '' });
             return { ...e, sets: [...e.sets, { weight: seed.weight ?? '', reps: seed.reps ?? '', warm: false, done: false, auto: true, valueOwner: 'prescription', added: true, hint: undefined }] };
+        });
+    },
+    // The design's set options: skip an unlogged set (it stops counting), or restore it.
+    skipSet({ ei, si, skip = true }, ctx, d) {
+        return d.map((e, i) => (i !== ei ? e : { ...e, sets: e.sets.map((x, j) => (j !== si || x.done || x.sub ? x : { ...x, skipped: !!skip })) }));
+    },
+    // The design's direct + Drop / + Myo: one drop at a time (−25% off the set before it, two at most), or
+    // the myo minis once — only after a logged working set, one pending extension at a time.
+    addOne({ ei, kind }, ctx, d, sug) {
+        if (kind !== 'drop' && kind !== 'myo') return d;
+        return d.map((e, i) => {
+            if (i !== ei) return e;
+            const ex = EX_BY_ID[e.id]; let style = null; try { style = E.styleFor(ctx.program, e.id); } catch { style = null; }
+            const rule = addRules(e, ex, style)[kind]; if (!rule.show || rule.why) return e;
+            const work = e.sets.filter((x) => isWork(x) && !x.skipped), top = parseFloat(work[work.length - 1]?.weight) || 0;
+            const step = E.loadStep(ex, unit());
+            let extra;
+            if (kind === 'drop') {
+                const f = Math.round(Math.pow(0.75, e.sets.filter((x) => x.sub && x.kind === 'drop').length + 1) * 10000) / 10000;
+                const w = top ? Math.max(step, E.roundTo(top * f, step)) : null;
+                extra = [{ weight: w != null ? String(w) : '', reps: '', warm: false, sub: true, kind: 'drop', dropF: f, done: false, target: { w: w != null ? String(w) : '—', reps: 'to failure' } }];
+            } else extra = Array.from({ length: E.MYO_MINI_SETS }, () => ({ ...E.makeMyoMini(top || '', false), warm: false }));
+            const RANK = { drop: 0, myo: 1 }, merged = [...e.sets, ...extra];
+            return { ...e, sets: [...merged.filter((x) => !x.sub), ...merged.filter((x) => x.sub).sort((a, b) => (RANK[a.kind] ?? 9) - (RANK[b.kind] ?? 9))] };
         });
     },
     // App.js removeSessionAddedSet.
@@ -1030,7 +1095,7 @@ export function finishSession() {
     const l = S.live; if (!l) return { ok: false, error: 'No workout in progress.' };
     const ctx = sessionContext(l); if (!ctx) return { ok: false, error: 'That workout day no longer exists.' };
     const { program, day, wk, H, P } = ctx, u = unit(), data = l.data || [];
-    const work = (e) => e.sets.filter(isWork);
+    const work = (e) => e.sets.filter((x) => isWork(x) && !x.skipped);
     const totalSets = data.reduce((s, e) => s + work(e).length, 0);
     const doneSets = data.reduce((s, e) => s + work(e).filter((x) => x.done).length, 0);
     const volume = data.reduce((sum, e) => sum + e.sets.reduce((s, x) => s + (x.done && !x.warm ? (parseFloat(x.weight) || 0) * (parseInt(x.reps) || 0) : 0), 0), 0);
@@ -1739,11 +1804,25 @@ export function setProfile({ sex, birth } = {}) {
 /* ------------------------------------------------------------------ tools (App.js PlateCalcSheet, OneRepMaxCalc) */
 export function plateCalc({ total, bar = 'barbell' } = {}) {
     const u = unit(), t = Number(total);
-    const bars = Object.keys(E.BARS).map((k) => ({ id: k, label: E.BAR_LABEL?.[k] || k, weight: E.barWeightFor(k, u) }));
-    if (!(t > 0)) return { unit: u, bars, bar, result: null };
-    const r = E.platesPerSide(t, E.BARS[bar] ? bar : 'barbell', u);
+    // The design's calculator offers the bars the active gym has (the asked-for bar always stays).
+    const BAR_KIT = { barbell: 'barbell', women: 'barbell', ezbar: 'ezbar', smith: 'smith', trap: 'trapbar', ssb: 'safetybar' };
+    let kit = null; try { const g = E.normalizeGyms(S.store.gyms, S.store.activeGymId); kit = E.gymById(g.gyms, g.activeGymId)?.equipment || null; } catch { kit = null; }
+    const bars = Object.keys(E.BARS).filter((k) => k === bar || !kit || kit.includes(BAR_KIT[k] || k)).map((k) => ({ id: k, label: E.BAR_LABEL?.[k] || k, weight: E.barWeightFor(k, u) }));
+    const own = ((S.store.plates?.[u]?.length ? S.store.plates[u] : E.PLATES[u]) || []).map(Number).filter((p) => p > 0);
+    const step = own.length ? Math.min(...own) * 2 : (u === 'lb' ? 5 : 2.5);
+    if (!(t > 0)) return { unit: u, bars, bar, step, result: null };
+    const b = E.BARS[bar] ? bar : 'barbell';
+    const r = E.platesPerSide(t, b, u);
+    const loaded = (x) => { const q = E.platesPerSide(x, b, u); return Math.round((q.barW + q.plates.reduce((a, p) => a + p, 0) * 2) * 100) / 100; };
     const achievable = r.barW + r.plates.reduce((s, p) => s + p, 0) * 2;
-    return { unit: u, bars, bar, result: { barWeight: r.barW, plates: r.plates, achievable: Math.round(achievable * 100) / 100, exact: Math.abs(achievable - t) < 1e-6 } };
+    const exact = Math.abs(achievable - t) < 1e-6, under = t < r.barW - 1e-6;
+    // The design's "closest: X or Y" — the nearest totals the owned plates make, either side.
+    let below = null, above = null;
+    if (!exact && !under) {
+        below = Math.round(achievable * 100) / 100;
+        for (let x = t + 0.25; x <= t + step * 4 + 0.25; x += 0.25) { if (Math.abs(loaded(x) - x) < 1e-6) { above = Math.round(x * 100) / 100; break; } }
+    }
+    return { unit: u, bars, bar: b, step, result: { barWeight: r.barW, plates: r.plates, achievable: Math.round(achievable * 100) / 100, exact, under, below, above } };
 }
 export function oneRm({ weight, reps } = {}) {
     const W = Number(weight), R = parseInt(reps), u = unit();

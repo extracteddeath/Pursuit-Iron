@@ -270,6 +270,7 @@ private fun SettingsCard(vm: AppViewModel) {
             SettingRow("Haptics", "A distinct tap for logged sets, records and rest ending", st.b("haptics", true)) { vm.updateSetting("haptics", it) }
             SettingRow("Keep screen on", "While a workout is open", vm.prefs.keepAwake) { vm.prefs.changeKeepAwake(it) }
             SettingRow("Grip mode", "Bigger set controls for sweaty hands", vm.prefs.grip) { vm.prefs.changeGrip(it) }
+            SettingRow("Weight & reps steppers", if (vm.prefs.steppers) "−/+ beside each value · hold to run it up" else "Tap a value to edit it · turn on for −/+ beside each value", vm.prefs.steppers) { vm.prefs.changeSteppers(it) }
         }
         Text("Looks", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
         val darkNow = vm.prefs.dark ?: androidx.compose.foundation.isSystemInDarkTheme()

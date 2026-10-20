@@ -39,6 +39,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
@@ -386,22 +390,28 @@ fun SessionMenu(vm: AppViewModel, s: JSONObject, onNote: () -> Unit, onAdd: () -
     }
 }
 
-/* The design's Add set sheet: a standard set, a drop set, myo-reps or the warm-up ramp, all from the one
-   button under the sets (they used to be four rows of the exercise menu). The extensions toggle off again. */
+/* The design's add panel (the ⋯ beside + Add set): a standard set, a drop set, myo-reps or the warm-up ramp,
+   with the same rules as the direct buttons, and removing the set you added. Prescribed sets are skipped
+   from their set options, never removed. */
 @Composable
 fun AddSetSheet(vm: AppViewModel, ex: JSONObject, onClose: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     val ei = ex.i("ei")
-    val work = ex.list("sets").filter { !it.b("warm") && !it.b("sub") }
+    val sets = ex.list("sets")
+    val work = sets.filter { !it.b("warm") && !it.b("sub") && !it.b("skipped") }
     val last = work.lastOrNull()
-    val lastLabel = last?.let { l -> listOfNotNull(l.s("weight").takeIf { it.isNotBlank() }, l.s("reps").takeIf { it.isNotBlank() }).joinToString(" × ") }.orEmpty()
-    data class Tile(val label: String, val sub: String, val icon: androidx.compose.ui.graphics.vector.ImageVector, val tone: Boolean, val run: () -> Unit)
-    val tiles = listOf(
-        Tile("Standard set", if (lastLabel.isNotBlank()) "Another $lastLabel" else "One more working set", PiIcons.Plus, false) { vm.act("addSet", "ei" to ei) },
-        Tile(if (ex.b("hasDrop")) "Remove drop sets" else "Drop set", if (ex.b("hasDrop")) "Take the drops off this lift" else "80% then 60% straight after your last set", PiIcons.Redo, true) { vm.act("advanced", "ei" to ei, "kind" to "drop") },
-        Tile(if (ex.b("hasMyo")) "Remove myo-reps" else "Myo-reps", if (ex.b("hasMyo")) "Take the minis off this lift" else "Short-rest mini sets after your last set", PiIcons.Sparkle, true) { vm.act("advanced", "ei" to ei, "kind" to "myo") },
-        Tile(if (ex.b("hasWarm")) "Remove warm-ups" else "Warm-up ramp", if (ex.b("hasWarm")) "Drop the ramp for this lift today" else "A ramp up to your first working weight", PiIcons.Flame, false) { vm.act("warmups", "ei" to ei) },
-    )
+    val u = vm.session.s("unit")
+    val lastLabel = last?.let { l -> listOfNotNull(l.s("weight").takeIf { it.isNotBlank() }?.let { "$it $u" }, l.s("reps").takeIf { it.isNotBlank() }).joinToString(" × ") }.orEmpty()
+    val rules = ex.o("addRules")
+    data class Tile(val label: String, val sub: String, val why: String, val icon: androidx.compose.ui.graphics.vector.ImageVector, val tone: Boolean, val run: () -> Unit)
+    val tiles = buildList {
+        add(Tile("Standard set", if (lastLabel.isNotBlank()) "Another $lastLabel" else "One more working set", "", PiIcons.Plus, false) { vm.act("addSet", "ei" to ei) })
+        rules?.o("drop")?.takeIf { it.b("show") }?.let { r -> add(Tile("Drop set", "−25% straight after your last set, to failure", r.s("why"), PiIcons.Redo, true) { vm.act("addOne", "ei" to ei, "kind" to "drop") }) }
+        rules?.o("myo")?.takeIf { it.b("show") }?.let { r -> add(Tile("Myo-reps", "Short-rest minis after your last set", r.s("why"), PiIcons.Sparkle, true) { vm.act("addOne", "ei" to ei, "kind" to "myo") }) }
+        add(Tile(if (ex.b("hasWarm")) "Remove warm-ups" else "Warm-up ramp", if (ex.b("hasWarm")) "Drop the ramp for this lift today" else "A ramp up to your first working weight", "", PiIcons.Flame, false) { vm.act("warmups", "ei" to ei) })
+    }
+    val lastAdded = sets.lastOrNull { !it.b("warm") && !it.b("sub") && !it.b("done") && it.b("added") }
+    var confirm by remember { mutableStateOf(false) }
     ModalBottomSheet(onDismissRequest = onClose) {
         Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Kicker(ex.s("name"))
@@ -411,17 +421,30 @@ fun AddSetSheet(vm: AppViewModel, ex: JSONObject, onClose: () -> Unit) {
                     pair.forEach { t ->
                         val bg = if (t.tone) cs.tertiaryContainer else cs.secondaryContainer
                         val fg = if (t.tone) cs.onTertiaryContainer else cs.onSecondaryContainer
-                        Column(Modifier.weight(1f).heightIn(min = 112.dp).clip(RoundedCornerShape(22.dp)).background(bg)
-                            .clickable { t.run(); onClose() }.semantics(mergeDescendants = true) { role = Role.Button }.padding(14.dp),
+                        val off = t.why.isNotBlank()
+                        Column(Modifier.weight(1f).heightIn(min = 112.dp).clip(RoundedCornerShape(22.dp)).background(bg).alpha(if (off) 0.5f else 1f)
+                            .clickable { if (off) vm.toast(t.why) else { t.run(); onClose() } }
+                            .semantics(mergeDescendants = true) { role = Role.Button; if (off) contentDescription = "${t.label}, unavailable: ${t.why}" }.padding(14.dp),
                             verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Icon(t.icon, null, tint = fg, modifier = Modifier.size(22.dp))
                             Text(t.label, style = MaterialTheme.typography.titleSmall, color = fg)
-                            Text(t.sub, style = MaterialTheme.typography.bodySmall, color = fg.copy(alpha = 0.85f))
+                            Text(if (off) t.why else t.sub, style = MaterialTheme.typography.bodySmall, color = fg.copy(alpha = 0.85f))
                         }
                     }
+                    if (pair.size == 1) Spacer(Modifier.weight(1f))
                 }
             }
             Text("Drop sets and myo-reps never set the next load. Warm-ups don't count toward volume.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+            if (lastAdded != null) {
+                if (!confirm) TextButton(onClick = { confirm = true }) { Text("Remove the set you added…", color = cs.tertiary) }
+                else Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.surface).padding(start = 12.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Remove the last set you added? Logged sets are kept.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                    TextButton(onClick = { confirm = false }) { Text("Cancel") }
+                    Button(onClick = { vm.act("removeSet", "ei" to ei, "si" to lastAdded.i("i")); vm.toast("Removed the set you added · logged sets stay"); onClose() },
+                        colors = ButtonDefaults.buttonColors(containerColor = cs.tertiary, contentColor = cs.surface)) { Text("Remove") }
+                }
+            }
         }
     }
 }

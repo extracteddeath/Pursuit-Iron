@@ -68,6 +68,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.border
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -116,6 +117,8 @@ private sealed interface WSheet {
     data class Progression(val ei: Int) : WSheet
     data class LiftSettings(val ei: Int) : WSheet
     data class AddSet(val ei: Int) : WSheet
+    data class SetOptions(val ei: Int, val si: Int) : WSheet
+    data class Plates(val ei: Int, val si: Int) : WSheet
     data object Superset : WSheet
     data object SessionNote : WSheet
     data object SessionMenu : WSheet
@@ -205,6 +208,12 @@ fun WorkoutScreen(vm: AppViewModel) {
         is WSheet.Progression -> exs.getOrNull(sh.ei)?.let { ProgressionSheet(vm, s, it) { sheet = null } } ?: run { sheet = null }
         is WSheet.LiftSettings -> exs.getOrNull(sh.ei)?.let { LiftSettingsSheet(vm, s, it) { sheet = null } } ?: run { sheet = null }
         is WSheet.AddSet -> exs.getOrNull(sh.ei)?.let { AddSetSheet(vm, it) { sheet = null } } ?: run { sheet = null }
+        is WSheet.SetOptions -> SetOptionsSheet(vm, s, sh.ei, sh.si) { sheet = null }
+        is WSheet.Plates -> exs.getOrNull(sh.ei)?.let { e ->
+            val set = e.list("sets").getOrNull(sh.si)
+            ToolsSheet(vm, "plates", set?.s("weight").orEmpty(), e.s("bar").ifBlank { "barbell" },
+                onUse = if (set != null && !set.b("done")) { v -> vm.act("edit", "ei" to sh.ei, "si" to sh.si, "field" to "weight", "value" to v); vm.toast("${setLabelOf(e, sh.si)} → $v ${s.s("unit")}") } else null) { sheet = null }
+        } ?: run { sheet = null }
         WSheet.Superset -> SupersetSheet(vm, s) { sheet = null }
         WSheet.SessionNote -> SessionNoteSheet(vm, s) { sheet = null }
         WSheet.SessionMenu -> SessionMenu(vm, s, onNote = { sheet = WSheet.SessionNote }, onAdd = { sheet = WSheet.AddLift }, onSuperset = { sheet = WSheet.Superset }) { sheet = null }
@@ -372,23 +381,30 @@ private fun ExercisePane(vm: AppViewModel, s: JSONObject, ex: JSONObject?, wide:
                 sets.forEachIndexed { si, set ->
                     val label = setLabels[si]
                     val showRating = si == lastDoneWork && set.b("done") && set.isNull("rir")
-                    SetRow(vm, s, ei, si, set, label, showRating, onEdit = { open(WSheet.Edit(ei, si)) })
+                    SetRow(vm, s, ex, ei, si, set, label, showRating, onEdit = { open(WSheet.Edit(ei, si)) }, onOptions = { open(WSheet.SetOptions(ei, si)) })
                 }
+                // The design: skip the remaining warm-ups in one tap (tap ✓ on one to bring it back).
+                val warmLeft = sets.filter { it.b("warm") && !it.b("done") && !it.b("skipped") }
+                if (warmLeft.isNotEmpty()) TextButton(onClick = {
+                    warmLeft.forEach { w -> vm.act("skipSet", "ei" to ei, "si" to w.i("i")) }; vm.toast("Warm-ups skipped · tap ✓ on one to bring it back")
+                }) { Text("Skip ${warmLeft.size} warm-up set${if (warmLeft.size == 1) "" else "s"} →") }
+                PlateBar(ex, s.s("unit")) { open(WSheet.Plates(ei, ex.i("platesFor"))) }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilledTonalButton(onClick = { open(WSheet.AddSet(ei)) }, modifier = Modifier.weight(1f).height(48.dp)) {
-                        Icon(PiIcons.Plus, null, modifier = Modifier.size(18.dp)); Text("  Add set")
-                    }
-                    if (s.b("quick")) OutlinedButton(onClick = { open(WSheet.AddLift) }, modifier = Modifier.weight(1f).height(48.dp)) { Text("Add a lift") }
-                    else if (wide && ei < s.list("exercises").size - 1) OutlinedButton(onClick = { vm.act("select", "ei" to ei + 1) }, modifier = Modifier.weight(1f).height(48.dp)) { Text("Next exercise") }
+                    AddRow(vm, ex, Modifier.weight(1f)) { open(WSheet.AddSet(ei)) }
+                    if (wide && !s.b("quick") && ei < s.list("exercises").size - 1) OutlinedButton(onClick = { vm.act("select", "ei" to ei + 1) }, modifier = Modifier.height(48.dp)) { Text("Next exercise") }
                 }
+                if (s.b("quick")) OutlinedButton(onClick = { open(WSheet.AddLift) }, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text("Add a lift") }
             }
         }
     }
 }
 
 @Composable
-private fun SetRow(vm: AppViewModel, s: JSONObject, ei: Int, si: Int, set: JSONObject, label: String, showRating: Boolean, onEdit: () -> Unit) {
-    val assisted = s.list("exercises").getOrNull(ei)?.b("assisted") == true
+private fun SetRow(vm: AppViewModel, s: JSONObject, ex: JSONObject, ei: Int, si: Int, set: JSONObject, label: String, showRating: Boolean, onEdit: () -> Unit, onOptions: () -> Unit) {
+    val assisted = ex.b("assisted")
+    val skipped = set.b("skipped")
+    val tag = showsTag(ex, set)
+    val isCur = si == ex.i("cur") && !set.b("done")
     val cs = MaterialTheme.colorScheme
     val done = set.b("done"); val warm = set.b("warm")
     val grip = vm.prefs.grip
@@ -403,6 +419,7 @@ private fun SetRow(vm: AppViewModel, s: JSONObject, ei: Int, si: Int, set: JSONO
     }
     val prev = set.o("prev")
     val sub2 = when {
+        skipped -> "Skipped · not counted"
         set.b("pr") -> "New best"
         set.has("hint") && !set.isNull("hint") -> set.s("hint")
         done && !set.isNull("rir") -> "Rated ${set.i("rir").let { if (it >= 4) "4+" else "$it" }} RIR"
@@ -410,10 +427,17 @@ private fun SetRow(vm: AppViewModel, s: JSONObject, ei: Int, si: Int, set: JSONO
         set.b("added") -> "Added set"
         else -> ""
     }
-    Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(bg).padding(vertical = 6.dp, horizontal = 4.dp)) {
+    // The set number opens the design's set options.
+    val labelCell = @Composable {
+        Box(Modifier.width(32.dp).height(40.dp).clip(RoundedCornerShape(12.dp)).clickable(onClick = onOptions)
+            .semantics { contentDescription = "Options for ${if (warm) "warm-up" else "set"} $label"; role = Role.Button }, contentAlignment = Alignment.Center) {
+            Text(label, style = MaterialTheme.typography.titleSmall, textAlign = TextAlign.Center)
+        }
+    }
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(bg).alpha(if (skipped) 0.55f else 1f).padding(vertical = 6.dp, horizontal = 4.dp)) {
         if (showRating) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(label, style = MaterialTheme.typography.titleSmall, modifier = Modifier.width(32.dp), textAlign = TextAlign.Center)
+                labelCell()
                 Row(Modifier.weight(1f).clip(CircleShape).background(cs.primary).padding(4.dp), verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text("Reps left?", style = MaterialTheme.typography.labelMedium, color = cs.onPrimary, modifier = Modifier.padding(start = 8.dp).weight(1f))
@@ -428,7 +452,7 @@ private fun SetRow(vm: AppViewModel, s: JSONObject, ei: Int, si: Int, set: JSONO
                 }
             }
         } else Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(label, style = MaterialTheme.typography.titleSmall, modifier = Modifier.width(32.dp), textAlign = TextAlign.Center)
+            labelCell()
             Column(Modifier.weight(1f).padding(start = 8.dp)) {
                 Text(sub, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (sub2.isNotEmpty()) Text(sub2, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -436,9 +460,9 @@ private fun SetRow(vm: AppViewModel, s: JSONObject, ei: Int, si: Int, set: JSONO
             }
             val cellBg = if (done) Color.Transparent else cs.surfaceContainerHigh
             Box(Modifier.width(if (grip) 72.dp else 68.dp).height(cellH).clip(RoundedCornerShape(12.dp)).background(cellBg)
-                .clickable(onClick = onEdit).semantics { contentDescription = if (assisted) "${assistAbs(set.s("weight")).ifBlank { "No" }} ${s.s("unit")} of assistance, edit" else "Weight ${set.s("weight").ifBlank { "not set" }}, edit" },
+                .clickable(onClick = onEdit).semantics { contentDescription = if (tag) "${if (ex.s("loadTag") == "Band") "Band" else "Bodyweight"}, edit" else if (assisted) "${assistAbs(set.s("weight")).ifBlank { "No" }} ${s.s("unit")} of assistance, edit" else "Weight ${set.s("weight").ifBlank { "not set" }}, edit" },
                 contentAlignment = Alignment.Center) {
-                Text(if (assisted) assistShown(set.s("weight")) else set.s("weight").ifBlank { "—" }, style = if (grip) MaterialTheme.typography.titleLarge else MaterialTheme.typography.titleMedium)
+                Text(if (tag) ex.s("loadTag") else if (assisted) assistShown(set.s("weight")) else set.s("weight").ifBlank { "—" }, style = if (grip) MaterialTheme.typography.titleLarge else MaterialTheme.typography.titleMedium)
             }
             Spacer(Modifier.width(4.dp))
             Box(Modifier.width(if (grip) 58.dp else 54.dp).height(cellH).clip(RoundedCornerShape(12.dp)).background(cellBg)
@@ -463,6 +487,12 @@ private fun SetRow(vm: AppViewModel, s: JSONObject, ei: Int, si: Int, set: JSONO
                 Icon(PiIcons.Check, null, tint = if (done) cs.onPrimary else cs.onSurfaceVariant.copy(alpha = 0.55f), modifier = Modifier.size(22.dp))
             }
         }
+        // The design: the current set's plates, right under its weight.
+        val pl = ex.o("plates")
+        if (!showRating && isCur && !skipped && !tag && pl != null && ex.i("platesFor") == si && (set.s("weight").toDoubleOrNull() ?: 0.0) > 0)
+            Text(pl.s("text"), style = MaterialTheme.typography.labelMedium, color = cs.primary, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.fillMaxWidth().padding(start = 40.dp, end = if (grip) 72.dp else 48.dp, top = 2.dp), textAlign = TextAlign.End)
+        if (!showRating && vm.prefs.steppers && !done && !skipped) SetSteppers(vm, s, ex, ei, si, set)
     }
 }
 
@@ -537,7 +567,7 @@ private fun SetEditor(vm: AppViewModel, s: JSONObject, ei: Int, si: Int, onClose
     LaunchedEffect(set.s("reps")) { r = set.s("reps") }
     var plates by remember { mutableStateOf(false) }
     val bar = barFor(ex.strings("equip"))
-    if (plates) { ToolsSheet(vm, "plates", w, bar ?: "barbell") { plates = false }; return }
+    if (plates) { ToolsSheet(vm, "plates", w, ex.s("bar").ifBlank { bar ?: "barbell" }, onUse = { v -> w = v; vm.act("edit", "ei" to ei, "si" to si, "field" to "weight", "value" to v) }) { plates = false }; return }
     ModalBottomSheet(onDismissRequest = onClose) {
         Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()).imePadding().padding(horizontal = 20.dp).padding(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Kicker(ex.s("name"))

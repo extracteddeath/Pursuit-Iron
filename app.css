@@ -9172,7 +9172,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile
  .wpb-profile-strength-grid>.wpb-profile-strength-cell>.mono{
   grid-column:2;grid-row:1;font-size:18px!important;line-height:1.2!important;
-  color:var(--wpb-theme-accent-ink)!important;text-align:right;
+  color:var(--pi-color-on-control)!important;text-align:right;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile
  .wpb-profile-strength-grid>.wpb-profile-strength-cell>div:not(.mono){

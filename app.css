@@ -8447,8 +8447,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb-ex-nav-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;font-weight:700}
 .wpb-ex-nav-count{flex-shrink:0;font-size:11px;font-weight:600}
 #root .wpb-workout .wpb-exercise-heading .wpb-progression-label{
-  background:var(--wpb-theme-accent-dim)!important;border-radius:10px;
-  padding:6px 9px!important;min-height:40px!important;
+  background:transparent!important;border-radius:8px;
+  padding:0 4px!important;min-height:44px!important;
+  margin:0!important;font-size:11px!important;font-weight:600!important;
+  max-width:100%;white-space:normal;text-align:left;
 }
 .wpb-load-explanation summary{cursor:pointer;min-height:36px;align-content:center;line-height:1.4}
 .wpb-load-caption{color:var(--wpb-theme-muted);font-size:12px;font-weight:600}
@@ -8637,4 +8639,29 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root .wpb .wpb-wizard-step{
   opacity:1;
+}
+
+/* B900 — Full-width exercise details and visible, wrapping workout tools. */
+#root .wpb-workout .wpb-exercise-title-row{
+  display:flex;align-items:flex-start;gap:8px;min-width:0;
+}
+#root .wpb-workout .wpb-exercise-title-row .wpb-exercise-name{
+  flex:1;min-width:0;align-self:center;
+}
+#root .wpb-workout .wpb-exercise-meta{
+  display:flex;align-items:center;flex-wrap:wrap;column-gap:12px;row-gap:0;
+  margin-top:2px;min-width:0;
+}
+#root .wpb-workout .wpb-progression-explanation{flex-basis:100%;}
+#root .wpb-workout .wpb-workout-tools{
+  flex-wrap:wrap;overflow:visible!important;touch-action:pan-y!important;
+  column-gap:8px!important;row-gap:2px!important;
+  margin:10px 0 12px!important;padding:2px 0 10px!important;
+}
+#root .wpb-workout .wpb-workout-tools .wpb-workout-tool{
+  min-height:44px!important;max-width:100%;padding:6px 8px!important;
+  line-height:1.35;text-align:left;
+}
+#root .wpb-workout .wpb-progression-label:focus-visible{
+  outline:2px solid var(--wpb-theme-accent-ink);outline-offset:1px;
 }

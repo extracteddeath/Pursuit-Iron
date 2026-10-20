@@ -295,6 +295,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /* Progress: one lift, strength standards, correcting and sharing a logged workout. */
     suspend fun liftDetail(id: String): JSONObject? = obj("liftDetail", jsonOf("id" to id))
+    suspend fun historyGroups(q: String, days: String, programId: String, by: String): JSONObject? =
+        obj("historyGroups", jsonOf("q" to q, "days" to days, "programId" to programId, "by" to by))
     suspend fun strengthStandards(): JSONObject? = obj("strengthStandards")
     suspend fun historyEditDraft(id: String): JSONObject? = obj("historyEditDraft", jsonOf("id" to id))
     fun editHistory(id: String, date: Long, minutes: Int?, lifts: JSONArray) = launchCore {
@@ -528,6 +530,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /* ---------------------------------------------------------------- body + settings */
     fun logBodyweight(v: Double) = launchCore { call("logBodyweight", jsonOf("value" to v)); body = obj("body"); profile = obj("profile"); hap(Hap.Log); toast("Bodyweight logged") }
     fun logMeasurement(key: String, v: Double) = launchCore { call("logMeasurement", jsonOf("key" to key, "value" to v)); body = obj("body") }
+    /** The design's cm / in for measurements, independent of kg / lb. */
+    fun setLengthUnit(u: String) = launchCore { call("setLengthUnit", jsonOf("unit" to u)); body = obj("body") }
     fun updateSetting(key: String, value: Any?) = launchCore {
         val r = obj("updateSettings", jsonOf(key to value)) ?: return@launchCore
         if (!r.b("ok")) toast(r.s("error", "Couldn't change that"))

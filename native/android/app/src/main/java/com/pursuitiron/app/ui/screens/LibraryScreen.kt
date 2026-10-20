@@ -78,6 +78,11 @@ fun LibraryScreen(vm: AppViewModel) {
     var open by remember { mutableStateOf<String?>(null) }
     var creating by remember { mutableStateOf(false) }
     var comparing by remember { mutableStateOf(false) }
+    // The design's status filters: All · Recent · Goals · Banned, counted over the current search.
+    var st by remember { mutableStateOf("all") }
+    val keyOf = mapOf("recent" to "recent", "goals" to "goal", "banned" to "banned")
+    val counts = keyOf.mapValues { (_, k) -> vm.library.count { it.b(k) } }
+    val shown = if (st == "all") vm.library else vm.library.filter { it.b(keyOf.getValue(st)) }
     if (creating) CreateExerciseSheet(vm, null) { creating = false }
     if (comparing) CompareSheet(vm) { comparing = false }
     LazyVerticalGrid(
@@ -99,6 +104,13 @@ fun LibraryScreen(vm: AppViewModel) {
         }
         item(span = { GridItemSpan(maxLineSpan) }) {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(bottom = 6.dp)) {
+                items(listOf("all" to "All", "recent" to "Recent", "goals" to "Goals", "banned" to "Banned")) { (id, label) ->
+                    MorphChip(if (id == "all") label else "$label · ${counts[id] ?: 0}", st == id, { st = id }, height = 36.dp)
+                }
+            }
+        }
+        item(span = { GridItemSpan(maxLineSpan) }) {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(bottom = 6.dp)) {
                 items(PARTS) { (id, label) -> MorphChip(label, part == id, { part = id; vm.searchLibrary(q, id, equip) }) }
             }
         }
@@ -108,13 +120,22 @@ fun LibraryScreen(vm: AppViewModel) {
             }
         }
         item(span = { GridItemSpan(maxLineSpan) }) {
-            Text(if (vm.library.size >= 400) "400+ exercises" else "${vm.library.size} exercise${if (vm.library.size == 1) "" else "s"}",
+            Text((if (shown.size >= 400) "400+ exercises" else "${shown.size} exercise${if (shown.size == 1) "" else "s"}") +
+                when (st) { "recent" -> " · trained recently"; "goals" -> " · with a goal"; "banned" -> " · banned"; else -> "" },
                 style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant, modifier = Modifier.padding(start = 4.dp, bottom = 8.dp))
         }
-        if (vm.library.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }) {
-            Text("No exercises match. Try a shorter search or another filter.", color = cs.onSurfaceVariant, modifier = Modifier.padding(16.dp))
+        if (shown.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(when {
+                    vm.library.isNotEmpty() && st == "goals" -> "No goals yet — set one from any lift's Records tab."
+                    vm.library.isNotEmpty() && st == "banned" -> "Nothing banned. Ban a lift from its detail sheet to keep it out of every program."
+                    vm.library.isNotEmpty() && st == "recent" -> "Nothing logged yet — finish a session and its lifts show up here."
+                    else -> "No exercises match. Try a shorter search or another filter."
+                }, color = cs.onSurfaceVariant)
+                if (st != "all") androidx.compose.material3.TextButton(onClick = { st = "all" }) { Text("Show all lifts") }
+            }
         }
-        items(vm.library, key = { it.s("id") }) { x ->
+        items(shown, key = { it.s("id") }) { x ->
             val lower = x.s("part") in LOWER
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.surfaceContainerLow).clickable { open = x.s("id") }.padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {

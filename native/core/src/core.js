@@ -431,8 +431,30 @@ export function liftDetail({ id }) {
         recent: t ? t.sessions.slice(-8).reverse().map((x) => ({ date: x.date, sets: x.sets.map((st) => `${fmtW(conv(st.w, x.unit))}×${st.r ?? ''}`) })) : [],
         level: lvl ? { level: lvl.level, idx: lvl.idx, within: Math.round(lvl.within * 100) / 100, next: lvl.idx < E.STD_LEVELS.length - 1 ? E.STD_LEVELS[lvl.idx + 1] : null,
             add: lvl.idx < lvl.thresh.length ? Math.max(0, Math.round((lvl.thresh[lvl.idx] - t.prBest) * 10) / 10) : 0 } : null,
-        levels: E.STD_LEVELS
+        levels: E.STD_LEVELS,
+        // The design's lift page (web ExerciseCharts + records): every session with its working sets, the records,
+        // and the rep maxes — best weight at each rep count, a heavier set at more reps marking the lighter one redundant.
+        ...liftLog(t, conv)
     };
+}
+function liftLog(t, conv) {
+    if (!t) return { log: [], records: null, repMax: [] };
+    const r1 = (v) => Math.round(v * 100) / 100;
+    const log = t.sessions.map((x) => {
+        const sets = x.sets.map((st) => ({ w: r1(conv(st.w, x.unit)), r: st.r ?? null }));
+        const heavy = sets.reduce((a, st) => (st.w > a.w || (st.w === a.w && (st.r || 0) > (a.r || 0)) ? st : a), sets[0]);
+        const vol = Math.round(sets.reduce((a, st) => a + st.w * (st.r || 0), 0));
+        return { date: x.date, e1: Math.round(conv(x.best, x.unit) * 10) / 10, heavy, sets, vol, n: sets.length };
+    });
+    if (!log.length) return { log, records: null, repMax: [] };
+    const hv = log.reduce((a, x) => (x.heavy.w > a.heavy.w || (x.heavy.w === a.heavy.w && (x.heavy.r || 0) > (a.heavy.r || 0)) ? x : a), log[0]);
+    const be = log.reduce((a, x) => (x.e1 > a.e1 ? x : a), log[0]);
+    let tv = null; log.forEach((x) => x.sets.forEach((st) => { const v = st.w * (st.r || 0); if (!tv || v > tv.v) tv = { v, w: st.w, r: st.r, date: x.date }; }));
+    const per = {}; log.forEach((x) => x.sets.forEach((st) => { if (!(st.r > 0)) return; const c = per[st.r]; if (!c || st.w > c.w || (st.w === c.w && x.date > c.date)) per[st.r] = { w: st.w, date: x.date }; }));
+    const reps = Object.keys(per).map(Number).sort((a, b) => a - b);
+    return { log,
+        records: { heaviest: { w: hv.heavy.w, r: hv.heavy.r, date: hv.date }, bestE1: { v: be.e1, date: be.date }, topVolume: tv ? { v: Math.round(tv.v), w: tv.w, r: tv.r, date: tv.date } : null },
+        repMax: reps.map((r) => ({ reps: r, w: per[r].w, date: per[r].date, beaten: reps.some((q) => q > r && per[q].w >= per[r].w) })) };
 }
 export function strengthStandards() {
     const H = history(), u = unit(), bw = parseFloat(S.store.bodyweight), sex = S.store.sex || null, a = age();
@@ -1181,6 +1203,19 @@ function historyRow(h) {
         exercises: Object.keys(h.perf || {}).map(exName) };
 }
 export function historyList({ limit = 200 } = {}) { return history().slice(0, limit).map(historyRow); }
+/* The design's history list (web): find a workout, filter by time and program, group by cycle or month,
+   each group with its count and volume. Filters change this list only. */
+export function historyGroups({ q = '', days = 'all', programId = 'all', by = 'cycle' } = {}) {
+    const H = history(), u = unit();
+    const period = ['30', '90', '365'].includes(String(days)) ? String(days) : 'all';
+    let kept = []; try { kept = E.filterWorkoutHistory(H, saved(), String(q || ''), String(programId || 'all'), period); } catch { kept = H; }
+    let groups = [];
+    try { groups = by === 'month' ? E.groupSessionsByMonth(kept, u) : E.groupSessionsByCycle(kept, cycles(), saved(), u); } catch { groups = [{ key: 'all', label: 'All sessions', items: kept, count: kept.length, volume: 0 }]; }
+    const seen = new Map(); H.forEach((h) => { const id = String(h.programId || 'none'); if (!seen.has(id)) seen.set(id, programById(h.programId)?.name || h.programName || 'Other'); });
+    return { unit: u, total: H.length, shown: kept.length, filtered: !!String(q).trim() || period !== 'all' || programId !== 'all',
+        programs: [...seen.entries()].map(([id, name]) => ({ id, name })),
+        groups: groups.map((g) => ({ key: g.key, label: g.label, count: g.count, volume: Math.round(g.volume || 0), items: g.items.map(historyRow) })) };
+}
 export function historyDetail({ id }) {
     const h = history().find((x) => x.id === id); if (!h) return null;
     return { ...historyRow(h), note: h.sessionNote || '', lifts: Object.entries(h.perf || {}).map(([eid, p]) => ({ id: eid, name: exName(eid),
@@ -1461,10 +1496,14 @@ export function library({ q = '', part = null, equip = null } = {}) {
     const banned = new Set(S.store.banned || []);
     const nx = upNext();
     const today = new Set(nx ? nx.day.exercises.map((_id, slot) => E.exerciseAt(nx.program, nx.day, slot, nx.weekIndex)) : []);
+    // The design's status filters (All · Recent · Goals · Banned): trained in a saved session or today, or with a goal.
+    const recent = new Set(); history().forEach((h) => Object.keys(h.perf || {}).forEach((id) => recent.add(id)));
+    (S.live?.data || []).forEach((e) => { if (e.sets.some((x) => x.done)) recent.add(e.id); });
+    const goals = S.store.goals || {};
     return EXERCISES.filter((x) => (!part || x.part === part) && (!equip || libEquipOf(x) === equip) && (!needle || x.name.toLowerCase().includes(needle)))
         .slice(0, 400).map((x) => ({ id: x.id, name: x.name, part: x.part, partLabel: E.PART_LABEL?.[x.part] || x.part, equip: x.equip, type: x.type,
             equipLabel: { barbell: 'Barbell', dumbbell: 'Dumbbell', cable: 'Cable', machine: 'Machine', kettlebell: 'Kettlebell', band: 'Band', bodyweight: 'Bodyweight' }[libEquipOf(x)] || EQUIP_LABEL[(x.equip || [])[0]] || 'Other',
-            banned: banned.has(x.id), today: today.has(x.id), custom: !!x.custom }));
+            banned: banned.has(x.id), today: today.has(x.id), custom: !!x.custom, recent: recent.has(x.id), goal: Number(goals[x.id]) > 0 }));
 }
 export function exercise({ id }) {
     const x = EX_BY_ID[id]; if (!x) return null;
@@ -1670,10 +1709,17 @@ export function nextBlock({ programId }) {
 }
 
 /* ------------------------------------------------------------------ body + settings */
+/* The design's measurement unit: cm or inches, chosen on the card; it follows kg / lb until chosen. Entries keep
+   their own unit tag, so switching never rewrites history (App.js normalizeMeasureLog converts on read). */
+function lenUnit() { const v = S.store.lengthUnit; return v === 'cm' || v === 'in' ? v : E.lengthUnitFor(unit()); }
+export function setLengthUnit({ unit: lu } = {}) {
+    if (lu !== 'cm' && lu !== 'in') return { ok: false };
+    S.store.lengthUnit = lu; markStore(); return { ok: true, lengthUnit: lu };
+}
 export function body() {
     const u = unit();
     let log = []; try { log = E.normalizeBwLog(S.store.bwLog || [], u) || []; } catch { log = []; }
-    const lu = E.lengthUnitFor(u), raw = S.store.measurements || {}, measurements = {};
+    const lu = lenUnit(), raw = S.store.measurements || {}, measurements = {};
     Object.keys(raw).forEach((k) => { try { measurements[k] = E.normalizeMeasureLog(raw[k], lu, u); } catch { measurements[k] = []; } });
     return { unit: u, lengthUnit: lu, bodyweight: S.store.bodyweight || '', log: log.slice(-120).map((e) => ({ date: e.date, w: e.w })), measurements };
 }
@@ -1691,7 +1737,7 @@ export function logMeasurement({ key, value }) {
     const v = Number(value); if (!key || !(v > 0)) return { ok: false };
     const today = new Date().toDateString();
     const m = { ...(S.store.measurements || {}) };
-    m[key] = [...(m[key] || []).filter((e) => new Date(e.date).toDateString() !== today), { date: now(), v, unit: E.lengthUnitFor(unit()) }]
+    m[key] = [...(m[key] || []).filter((e) => new Date(e.date).toDateString() !== today), { date: now(), v, unit: lenUnit() }]
         .sort((a, b) => a.date - b.date).slice(-(E.BW_LOG_CAP || 2000));
     S.store.measurements = m; markStore(); return { ok: true };
 }
@@ -1843,6 +1889,8 @@ export function gyms() {
             inventoryKeys: E.INVENTORY_KEYS.filter((k) => k.match(x.equipment)).map((k) => ({ key: k.key, label: k.label, sub: k.sub })),
             barDefaults: { barbell: E.BARS.barbell[x.barWeights?.unit === 'kg' ? 'kg' : 'lb'], smith: E.BARS.smith[x.barWeights?.unit === 'kg' ? 'kg' : 'lb'] } })),
         presets: E.GYM_PRESETS.map((p) => ({ key: p.key, name: p.name, equipment: p.equipment })),
+        // The design's available-weights presets (App.js RACK_PRESETS), each tagged with the unit it was made in.
+        rackPresets: E.RACK_PRESETS || {},
         equipment: cats.map((c) => ({ cat: c, items: E.EQUIPMENT.filter((e) => (e.cat || 'Free Weights') === c).map((e) => ({ id: e.id, label: e.label })).sort((a, b) => a.label.localeCompare(b.label)) })),
         plates: { all: E.ALL_PLATES[u], on: (S.store.plates?.[u] || E.PLATES[u]) },
         minInc: S.store.minInc || { v: 0, unit: null },
@@ -2144,7 +2192,7 @@ const csvEsc = (c) => { const v = String(c ?? ''); return /[",\n]/.test(v) ? `"$
 export function exportCsv({ kind = 'workouts' } = {}) {
     const u = unit();
     if (kind === 'body') {
-        const rows = [['Date', 'Metric', 'Value', 'Unit']], lu = E.lengthUnitFor(u);
+        const rows = [['Date', 'Metric', 'Value', 'Unit']], lu = lenUnit();
         E.normalizeBwLog(S.store.bwLog || [], u).forEach((e) => rows.push([isoLocal(e.date), 'Bodyweight', e.w, e.unit]));
         Object.entries(S.store.measurements || {}).forEach(([k, arr]) => E.normalizeMeasureLog(arr, lu, u).forEach((e) => rows.push([isoLocal(e.date), k.charAt(0).toUpperCase() + k.slice(1), e.v, e.unit])));
         return rows.map((r) => r.map(csvEsc).join(',')).join('\n');

@@ -233,7 +233,7 @@ fun GymsCard(vm: AppViewModel, onEdit: () -> Unit) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             g.list("gyms").forEach { x -> MorphChip(x.s("name"), x.s("id") == active?.s("id"), { vm.setActiveGym(x.s("id")) }) }
         }
-        active?.let { Text("${it.strings("equipment").size} kinds of equipment at ${it.s("name")}", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant) }
+        active?.let { Text(gymMeta(it), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant) }
     }
 }
 
@@ -263,7 +263,7 @@ fun GymsSheet(vm: AppViewModel, onClose: () -> Unit) {
                         RadioButton(selected = active == id, onClick = { active = id }, modifier = Modifier.semantics { contentDescription = "Train at ${gym.s("name")}" })
                         Column(Modifier.weight(1f)) {
                             Text(gym.s("name"), style = MaterialTheme.typography.titleSmall)
-                            Text("${eq.size} kinds of equipment", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                            Text(gymMeta(gym), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, maxLines = 1)
                         }
                         Icon(if (isOpen) PiIcons.ChevronDown else PiIcons.ChevronRight, if (isOpen) "Collapse" else "Edit ${gym.s("name")}", modifier = Modifier.size(20.dp))
                     }
@@ -284,6 +284,7 @@ fun GymsSheet(vm: AppViewModel, onClose: () -> Unit) {
                                 }
                             }
                         }
+                        GymBarsAndWeights(g, gym, id) { f -> patch(id, f) }
                         // Heaviest available, typed in the unit shown (App.js stores limits with limitUnit).
                         val lu = gym.s("limitUnit", "kg")
                         val limitKeys = g.list("gyms").firstOrNull { it.s("id") == id }?.list("limitKeys") ?: emptyList()
@@ -320,4 +321,115 @@ fun GymsSheet(vm: AppViewModel, onClose: () -> Unit) {
             Box(Modifier.heightIn(min = 8.dp))
         }
     }
+}
+
+
+/* The design's gym editor: BARS · EMPTY WEIGHT (barbell and Smith, typed in the unit shown — App.js
+   barWeights) and AVAILABLE WEIGHTS (dumbbells, kettlebells, stack notches — App.js inventory, kept in the
+   gym's limitUnit), with the rack presets. Loads snap to these lists. */
+@Composable
+private fun GymBarsAndWeights(g: JSONObject, gym: JSONObject, id: String, patch: ((JSONObject) -> Unit) -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val eq = gym.strings("equipment").toSet()
+    val bars = listOf("barbell" to "Barbell", "smith" to "Smith machine").filter { it.first in eq }
+    if (bars.isNotEmpty()) {
+        val bw = gym.optJSONObject("barWeights")
+        val bu = bw?.optString("unit")?.takeIf { it == "kg" || it == "lb" } ?: g.s("unit", "kg")
+        val defaults = mapOf("barbell" to (if (bu == "kg") 20.0 else 45.0), "smith" to (if (bu == "kg") 15.0 else 35.0))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Kicker("Bars · empty weight", modifier = Modifier.weight(1f))
+            TextButton(onClick = { patch { o ->
+                val cur = o.optJSONObject("barWeights") ?: JSONObject().put("unit", bu)
+                val to = if (bu == "kg") "lb" else "kg"; val f = if (to == "lb") 2.2046226218487757 else 1 / 2.2046226218487757
+                val nb = JSONObject().put("unit", to)
+                listOf("barbell", "smith").forEach { k -> if (cur.has(k) && !cur.isNull(k)) nb.put(k, Math.round(cur.optDouble(k) * f * 2) / 2.0) }
+                o.put("barWeights", nb)
+            } }) { Text("Use ${if (bu == "kg") "lb" else "kg"}") }
+        }
+        bars.forEach { (k, label) ->
+            val v = bw?.takeIf { it.has(k) && !it.isNull(k) }?.optDouble(k) ?: defaults.getValue(k)
+            val step = if (bu == "kg") 0.5 else 1.0
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(cs.surfaceContainer).padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(Modifier.weight(1f)) {
+                    Text(label, style = MaterialTheme.typography.titleSmall)
+                    if (v != defaults.getValue(k)) Text("Standard is ${fmtNum(defaults.getValue(k))} $bu", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                }
+                val put = { nv: Double -> patch { o -> val cur = o.optJSONObject("barWeights") ?: JSONObject().put("unit", bu); cur.put("unit", bu); cur.put(k, nv.coerceIn(0.0, 500.0)); o.put("barWeights", cur) } }
+                HoldStep(PiIcons.Minus, "$label bar ${fmtNum(step)} $bu lighter", 40.dp, false) { put(v - step) }
+                Text("${fmtNum(v)} $bu", style = MaterialTheme.typography.titleSmall, modifier = Modifier.widthIn(min = 64.dp), textAlign = TextAlign.Center)
+                HoldStep(PiIcons.Plus, "$label bar ${fmtNum(step)} $bu heavier", 40.dp, false) { put(v + step) }
+            }
+        }
+    }
+    val invKeys = g.list("gyms").firstOrNull { it.s("id") == id }?.list("inventoryKeys") ?: emptyList()
+    if (invKeys.isEmpty()) return
+    var open by remember(id) { mutableStateOf(false) }
+    val lu = gym.s("limitUnit", "kg")
+    val inv = gym.optJSONObject("inventory")
+    val count = invKeys.sumOf { k -> inv?.optJSONArray(k.s("key"))?.length() ?: 0 }
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).clickable { open = !open }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Kicker("Available weights")
+            Text(if (count == 0) "Any weight — tell it what you actually have" else "$count weights listed · loads snap to these", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+        }
+        Icon(if (open) PiIcons.ChevronDown else PiIcons.ChevronRight, if (open) "Collapse available weights" else "Edit available weights", modifier = Modifier.size(20.dp))
+    }
+    if (!open) return
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text("Weights in $lu", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, modifier = Modifier.weight(1f))
+        TextButton(onClick = { patch { o ->
+            val to = if (lu == "kg") "lb" else "kg"; val f = if (to == "lb") 2.2046226218487757 else 1 / 2.2046226218487757
+            val cur = o.optJSONObject("inventory") ?: JSONObject(); val ni = JSONObject()
+            cur.keys().forEach { key -> val a = cur.optJSONArray(key) ?: return@forEach; ni.put(key, JSONArray((0 until a.length()).map { Math.round(a.optDouble(it) * f * 2) / 2.0 }.distinct().sorted())) }
+            o.put("inventory", ni); o.put("limitUnit", to)
+            o.optJSONObject("limits")?.let { l -> val nl = JSONObject(); l.keys().forEach { key -> nl.put(key, Math.round(l.optDouble(key) * f * 2) / 2.0) }; o.put("limits", nl) }
+        } }) { Text("Use ${if (lu == "kg") "lb" else "kg"}") }
+    }
+    val presets = g.o("rackPresets")
+    invKeys.forEach { k ->
+        val key = k.s("key")
+        val vals = inv?.optJSONArray(key)?.let { a -> (0 until a.length()).map { a.optDouble(it) } } ?: emptyList()
+        val setVals = { nv: List<Double> -> patch { o -> val cur = o.optJSONObject("inventory") ?: JSONObject(); if (nv.isEmpty()) cur.remove(key) else cur.put(key, JSONArray(nv.distinct().sorted())); o.put("inventory", cur); o.put("limitUnit", lu) } }
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(cs.surfaceContainer).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(k.s("label"), style = MaterialTheme.typography.titleSmall)
+                    Text(if (vals.isEmpty()) "${k.s("sub")} · any weight" else "${k.s("sub")} · ${fmtNum(vals.first())}–${fmtNum(vals.last())} $lu", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                }
+                if (vals.isNotEmpty()) TextButton(onClick = { setVals(emptyList()) }) { Text("Clear") }
+            }
+            presets?.optJSONArray(key)?.let { arr ->
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    (0 until arr.length()).map { arr.getJSONObject(it) }.forEach { pr ->
+                        val pu = pr.s("unit", "kg"); val f = if (pu == lu) 1.0 else if (lu == "lb") 2.2046226218487757 else 1 / 2.2046226218487757
+                        val pv = pr.optJSONArray("v")?.let { a -> (0 until a.length()).map { Math.round(a.optDouble(it) * f * 2) / 2.0 } } ?: emptyList()
+                        MorphChip(pr.s("name"), pv == vals, { setVals(pv) }, height = 34.dp)
+                    }
+                }
+            }
+            if (vals.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                vals.forEach { v -> MorphChip("${fmtNum(v)} ✕", true, { setVals(vals - v) }, height = 32.dp, modifier = Modifier.semantics { contentDescription = "Remove ${fmtNum(v)} $lu" }) }
+            }
+            var add by remember(id, key) { mutableStateOf("") }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(add, { add = it.filter { c -> c.isDigit() || c == '.' || c == ',' }.take(6) }, Modifier.weight(1f), singleLine = true,
+                    label = { Text("Add a weight ($lu)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+                OutlinedButton(onClick = { add.replace(',', '.').toDoubleOrNull()?.takeIf { it > 0 }?.let { setVals(vals + it); add = "" } }, modifier = Modifier.height(52.dp)) { Text("Add") }
+            }
+        }
+    }
+}
+
+
+/** The design's short gym line: "23 items · dumbbells to 24 kg · 3 machine settings". */
+fun gymMeta(gym: JSONObject): String {
+    val lu = gym.s("limitUnit", "kg")
+    val inv = gym.optJSONObject("inventory")
+    val parts = mutableListOf("${gym.strings("equipment").size} items")
+    fun last(k: String) = inv?.optJSONArray(k)?.let { a -> if (a.length() > 0) a.optDouble(a.length() - 1) else null }
+    (last("dumbbell") ?: gym.optJSONObject("limits")?.takeIf { it.has("dumbbell") }?.optDouble("dumbbell"))?.let { parts += "dumbbells to ${fmtNum(it)} $lu" }
+    (last("kettlebell") ?: gym.optJSONObject("limits")?.takeIf { it.has("kettlebell") }?.optDouble("kettlebell"))?.let { parts += "bells to ${fmtNum(it)} $lu" }
+    inv?.optJSONArray("machine")?.length()?.takeIf { it > 0 }?.let { parts += "$it machine setting${if (it == 1) "" else "s"}" }
+    return parts.joinToString(" · ")
 }

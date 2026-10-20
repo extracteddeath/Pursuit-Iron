@@ -708,5 +708,30 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   const tags = C.session().active ? C.session().exercises.map((e) => [e.id, e.loadTag]) : [];
   ok(tags.every(([id, t]) => t !== 'Band' || /band/.test(id)), 'only band lifts carry the Band tag');
 }
+{ // The design's measurements in cm or inches, independent of kg / lb.
+  const u0 = C.body().unit;
+  C.setLengthUnit({ unit: 'cm' }); C.logMeasurement({ key: 'waist', value: 84 });
+  C.setLengthUnit({ unit: 'in' });
+  const b = C.body(), w = b.measurements.waist;
+  ok(b.lengthUnit === 'in' && b.unit === u0 && Math.abs(w[w.length - 1].v - 33.1) < 0.05, 'measurements read in inches without changing kg / lb (' + (w.length && w[w.length - 1].v) + ' in)');
+  C.setLengthUnit({ unit: 'cm' });
+  ok(Math.abs(C.body().measurements.waist.slice(-1)[0].v - 84) < 0.05, 'and back in cm unchanged');
+}
+{ // The design's library status filters.
+  const L = C.library({});
+  ok(L.some((x) => x.recent) && L.filter((x) => x.recent).every((x) => typeof x.goal === 'boolean'), 'library rows say which lifts were trained (' + L.filter((x) => x.recent).length + ')');
+}
+{ // The design's lift page: sessions, records, rep maxes.
+  const id = JSON.parse(C.exportStore()).history[0] && Object.keys(JSON.parse(C.exportStore()).history[0].perf || {})[0];
+  const d = id ? C.liftDetail({ id }) : null;
+  ok(d && d.log.length > 0 && d.log[0].sets.length > 0 && d.records && d.records.heaviest.w > 0 && d.repMax.length > 0, 'lift page has sessions, records and rep maxes (' + (d && d.log.length) + ' sessions)');
+  ok(d && d.repMax.every((x, i, a) => i === 0 || x.reps > a[i - 1].reps), 'rep maxes run from fewest reps up');
+}
+{ // The design's history list: groups, filters, programs.
+  const g = C.historyGroups({}), m = C.historyGroups({ by: 'month' }), none = C.historyGroups({ q: 'zzzz-nothing' });
+  ok(g.groups.length > 0 && g.groups.reduce((a, x) => a + x.items.length, 0) === g.total && g.programs.length > 0, 'history groups by cycle cover every session (' + g.total + ')');
+  ok(m.groups.length > 0 && m.groups.reduce((a, x) => a + x.count, 0) === m.total, 'and by month');
+  ok(none.filtered && none.shown === 0, 'a search with no match is filtered and empty');
+}
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);
 

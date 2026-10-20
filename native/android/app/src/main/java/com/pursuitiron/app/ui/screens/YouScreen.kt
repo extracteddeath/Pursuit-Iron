@@ -137,7 +137,7 @@ fun YouScreen(vm: AppViewModel) {
             "history" -> {
                 item(span = full) { CalendarCard(vm) { historyId = it } }
                 if (vm.history.isEmpty()) item(span = full) { Text("No workouts yet.", color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(8.dp)) }
-                vm.history.forEach { r -> item { Column(Modifier.clip(RoundedCornerShape(18.dp))) { HistoryRow(r) { historyId = r.s("id") } } } }
+                else item(span = full) { HistoryList(vm) { historyId = it } }
             }
             else -> {
                 // The design's Settings: the everyday controls inline, everything else one row away in a sheet.
@@ -222,7 +222,10 @@ private fun MeasurementsCard(vm: AppViewModel) {
     var v by remember { mutableStateOf("") }
     val cs = MaterialTheme.colorScheme
     PiCard(radius = 28.dp) {
-        Text("Measurements", style = MaterialTheme.typography.titleMedium)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Measurements", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            Segmented(listOf("cm" to "cm", "in" to "in"), lu, { if (it != lu) vm.setLengthUnit(it) }, modifier = Modifier.width(120.dp), height = 36.dp)
+        }
         MEASURES.forEach { k ->
             val rows = m.list(k)
             if (rows.isNotEmpty()) Row {
@@ -262,6 +265,9 @@ private fun SettingsCard(vm: AppViewModel) {
         Text("Training", style = MaterialTheme.typography.titleMedium)
         Kicker("Units")
         Segmented(listOf("kg" to "kg", "lb" to "lb"), st.s("unit", "kg"), { if (it != st.s("unit", "kg")) confirmUnit = it })
+        Kicker("Measurements")
+        val lu = vm.body.s("lengthUnit", if (st.s("unit") == "lb") "in" else "cm")
+        Segmented(listOf("cm" to "Centimetres", "in" to "Inches"), lu, { if (it != lu) vm.setLengthUnit(it) })
         Kicker("Rest length")
         Segmented(listOf("0.75" to "Shorter", "1.0" to "Standard", "1.25" to "Longer"), when { st.d("restScale", 1.0) < 0.9 -> "0.75"; st.d("restScale", 1.0) > 1.1 -> "1.25"; else -> "1.0" },
             { vm.updateSetting("restScale", it.toDouble()) })

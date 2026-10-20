@@ -63,6 +63,7 @@ import com.pursuitiron.app.ui.common.o
 import com.pursuitiron.app.ui.common.s
 import com.pursuitiron.app.ui.common.strings
 import org.json.JSONArray
+import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.io.File
 import java.text.DateFormat
@@ -101,44 +102,15 @@ fun E1rmChart(points: List<JSONObject>, unit: String, goal: Double?, modifier: M
 fun LiftDetailSheet(vm: AppViewModel, id: String, onClose: () -> Unit) {
     var d by remember(id) { mutableStateOf<JSONObject?>(null) }
     LaunchedEffect(id) { d = vm.liftDetail(id) }
-    val cs = MaterialTheme.colorScheme
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
     ModalBottomSheet(onDismissRequest = onClose, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             val x = d ?: run { Text("Loading…"); return@Column }
-            val u = x.s("unit")
             Kicker(x.s("partLabel").replaceFirstChar { it.uppercase() })
             Text(x.s("name"), style = MaterialTheme.typography.headlineSmall)
             PinToggle(vm, id)
-            val best = x.o("best")
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                com.pursuitiron.app.ui.common.StatTile("Best e1RM", best?.let { fmtNum(it.d("e1rm")) } ?: "—", u, Modifier.weight(1f))
-                com.pursuitiron.app.ui.common.StatTile("Heaviest", best?.let { fmtNum(it.d("topWeight")) } ?: "—", u, Modifier.weight(1f))
-                com.pursuitiron.app.ui.common.StatTile("Sessions", "${x.i("sessions")}", modifier = Modifier.weight(1f))
-            }
-            val pts = x.list("points")
-            if (pts.size >= 2) {
-                E1rmChart(pts, u, x.d("goal").takeIf { it > 0 })
-                val dl = x.d("delta")
-                Text((if (dl >= 0) "+" else "−") + fmtNum(kotlin.math.abs(dl)) + " $u since your first session" + (if (x.d("goal") > 0) " · goal ${fmtNum(x.d("goal"))} $u" else ""),
-                    style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
-            } else Text("Log this lift in another session to see its trend.", color = cs.onSurfaceVariant)
-            x.o("level")?.let { l ->
-                PiCard(color = cs.surfaceContainerHigh, radius = 20.dp, padding = 14.dp) {
-                    Text("Strength standard: ${l.s("level")}", style = MaterialTheme.typography.titleSmall)
-                    ProgressBar(l.d("within").toFloat(), Modifier.fillMaxWidth(), height = 8.dp)
-                    l.s("next").takeIf { it.isNotBlank() }?.let { nx -> Text(if (l.d("add") > 0.5) "+${fmtNum(l.d("add"))} $u e1RM → $nx" else "On the cusp of $nx", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant) }
-                }
-            }
-            val recent = x.list("recent")
-            if (recent.isNotEmpty()) {
-                Kicker("Recent sessions")
-                recent.forEach { r ->
-                    Row {
-                        Text(DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(r.optLong("date"))), style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant, modifier = Modifier.width(110.dp))
-                        Text(r.strings("sets").joinToString("  "), style = MaterialTheme.typography.bodyMedium)
-                    }
-                }
-            }
+            LiftPage(vm, id, x) { scope.launch { kotlinx.coroutines.delay(200); d = vm.liftDetail(id) } }
+
         }
     }
 }

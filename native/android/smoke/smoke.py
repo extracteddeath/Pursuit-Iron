@@ -153,7 +153,7 @@ def scroll_up_to(pattern, tries=8):
 
 def start_from_preview(name=None):
     """Build 898: Start opens the session preview (Time available); start the full session from it."""
-    if not find(r"^\|Time available$|^\|TIME AVAILABLE$|(?i)time available", timeout=6):
+    if not find(r"(?i)time available", timeout=6):
         return False
     if name:
         shot(name)
@@ -197,7 +197,8 @@ tap(r"Build my program", "today-with-program", timeout=8)
 time.sleep(3)
 shot("today")
 # The design's Today: week strip, the coach's game plan and this week's days
-if not find(r"Today's game plan", timeout=3) and not scroll_to(r"Today's game plan", tries=4):
+# (a rest day shows recovery instead — the run's date decides which, so only a training day must have it)
+if not find(r"Today's game plan", timeout=3) and not scroll_to(r"Today's game plan", tries=4) and not find(r"Recover today", timeout=2):
     FAILS.append("no game plan on Today")
 else:
     shot("today-game-plan")

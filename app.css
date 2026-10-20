@@ -8904,3 +8904,68 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   }
   #root .wpb-cycle-detail .wpb-cycle-change-preview{border-color:CanvasText!important;}
 }
+
+/* B909 — Prototype-aligned Home coaching: short insight card outside workout hero. */
+#root .wpb .wpb-plan-change-banner{
+  min-height:64px;margin:4px 0 14px;padding:11px 14px;
+  border-radius:18px;background:var(--wpb-theme-accent-dim);
+}
+#root .wpb .wpb-plan-change-banner .wpb-session-plan-icon{width:36px;height:36px;border-radius:12px}
+#root .wpb .wpb-plan-change-banner strong{font-size:14px}
+#root .wpb .wpb-plan-change-banner>span:nth-child(2)>span{margin-top:2px;line-height:1.35}
+#root .wpb .wpb-home-session-outline{
+  margin-top:14px;border-top:1px solid var(--wpb-theme-border);
+  padding-top:6px;min-width:0;
+}
+#root .wpb .wpb-home-outline-toggle{
+  display:flex;align-items:center;gap:8px;width:100%;min-height:48px;
+  padding:6px 0;border:0;background:transparent;text-align:left;
+  color:var(--wpb-theme-text);font:inherit;cursor:pointer;
+}
+.wpb-home-outline-toggle>strong{flex:1;font-size:13px;font-weight:750}
+.wpb-home-outline-toggle>span{font-size:12px;color:var(--wpb-theme-muted)}
+.wpb-home-outline-toggle>svg{color:var(--wpb-theme-muted);flex-shrink:0;transition:transform 180ms ease}
+#root .wpb .wpb-home-outline-list{list-style:none;margin:0;padding:0 0 6px}
+.wpb-home-outline-list li{display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+  padding:8px 0;color:var(--wpb-theme-text);font-size:13px;line-height:1.4}
+.wpb-home-outline-list li+li{border-top:1px solid var(--wpb-theme-border)}
+.wpb-home-outline-list li>span{min-width:0;overflow-wrap:anywhere}
+.wpb-home-outline-list li>strong{color:var(--wpb-theme-muted);font-size:12px;white-space:nowrap;flex-shrink:0}
+#root .wpb .wpb-session-game-plan{
+  padding:15px 16px;margin:14px 0;border-radius:20px;
+  background:var(--wpb-theme-card);border:1px solid var(--wpb-theme-border);
+}
+#root .wpb .wpb-home-game-plan{margin:0 0 20px;min-width:0}
+#root .wpb .wpb-game-plan-heading{min-height:32px;margin:0 0 6px;font-size:16px;gap:8px}
+.wpb-game-plan-count{margin-left:auto;font-size:12px;color:var(--wpb-theme-muted);font-weight:700}
+#root .wpb .wpb-session-game-plan .wpb-game-plan-exercise{
+  display:flex!important;align-items:flex-start;gap:11px;padding:11px 0!important;
+  margin:0!important;border-top:0!important;background:none!important;
+}
+.wpb-game-plan-exercise+.wpb-game-plan-exercise{border-top:1px solid var(--wpb-theme-border)!important}
+.wpb-game-plan-highlight-icon{display:grid;place-items:center;width:32px;height:32px;
+  flex:none;border-radius:11px;background:var(--wpb-theme-accent-dim);
+  color:var(--wpb-theme-accent-ink)}
+.wpb-game-plan-highlight-copy{min-width:0;flex:1}
+.wpb-game-plan-highlight-copy>strong{display:block;font-size:13px;line-height:1.4;overflow-wrap:anywhere}
+#root .wpb .wpb-game-plan-highlight-copy>p{margin:3px 0 0;font-size:12px;line-height:1.5;
+  color:var(--wpb-theme-muted);overflow-wrap:anywhere}
+/* The review keeps the prior/suggested values and the why, but no longer repeats
+   the logger's set/RIR/technique prescription on every card. */
+#root .wpb .wpb-plan-review-intro{margin:0 0 12px;font-size:12px;line-height:1.5}
+#root .wpb .wpb-plan-change-card{margin:0 0 10px;padding:14px;border-radius:17px}
+#root .wpb .wpb-plan-change-title h3{font-size:14px}
+#root .wpb .wpb-plan-target-diff{margin:9px 0 6px}
+#root .wpb .wpb-plan-target-diff li{padding:3px 0;border:0;grid-template-columns:minmax(0,1fr) 16px minmax(0,1fr);gap:6px;font-size:12px}
+#root .wpb .wpb-plan-target-diff li>span:first-child:not(.wpb-change-set-name){grid-column:auto;font-size:12px;color:var(--wpb-theme-muted)}
+#root .wpb .wpb-plan-target-diff li>.wpb-change-set-name{grid-column:1/-1;color:var(--wpb-theme-muted);font-size:11px}
+#root .wpb .wpb-plan-change-card .wpb-plan-change-reason{font-size:12px;line-height:1.45;margin:6px 0}
+#root .wpb .wpb-plan-undo{min-height:44px;margin-top:10px;padding:8px 14px;border-radius:999px}
+#root .wpb .wpb-plan-change-more>summary{font-size:12px;color:var(--wpb-theme-accent-ink);cursor:pointer;min-height:40px;display:flex;align-items:center}
+#root .wpb .wpb-plan-change-more .wpb-plan-target-diff{margin:0 0 8px;padding-left:10px}
+#root .wpb .wpb-home-outline-toggle:focus-visible,
+#root .wpb .wpb-plan-change-more>summary:focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px;border-radius:8px}
+@media(prefers-reduced-motion:reduce){.wpb-home-outline-toggle>svg{transition:none!important}}
+@media(forced-colors:active){.wpb-game-plan-highlight-icon{border:1px solid CanvasText}
+ #root .wpb .wpb-home-game-plan{border:1px solid CanvasText}}
+#root .wpb .wpb-game-plan-highlight-copy>p{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}

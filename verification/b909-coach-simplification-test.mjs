@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const app=fs.readFileSync('modules/App.js','utf8');
+const css=fs.readFileSync('app.css','utf8');
+const home=app.slice(app.indexOf('function Home({'),app.indexOf('function Home({')+300000);
+const coach=app.slice(app.indexOf('function SessionGamePlan({'),app.indexOf('function PlanChangesDialog('));
+const review=app.slice(app.indexOf('function PlanChangesDialog('),app.indexOf('function NextWorkoutView('));
+assert.ok(home.includes('HomeSessionOutline')&&home.includes('wpb-m3-session-preview'),'Home hero retains separate complete exercise outline');
+assert.ok(home.includes('!sessionActive && upNext && _jsx(SessionGamePlan, { review: sessionReview, restScale, home: true })'),'Coach is an independent Home section');
+assert.ok(coach.includes('.slice(0, 3)'),'Game plan shows at most three prioritized insights');
+assert.ok(!coach.includes('wpb-game-plan-method')&&!coach.includes('wpb-game-plan-target'),'No noisy parallel prescriptions or method list');
+assert.ok(coach.includes('row.opportunity')&&coach.includes('sessionTargetsText(row.effective'),'Actual PR chances and effective targets remain truthful');
+assert.ok(review.includes('row.proposedReason')&&review.includes('row.change.canUndo')&&review.includes('row.change.undone'),'Reason and reversible decision are preserved');
+assert.ok(review.includes('wpb-plan-change-more')&&review.includes('row.proposed.slice(0, 1)'),'Complex multiple-set diffs are available on demand');
+assert.ok(!review.includes('wpb-game-plan-method')&&!review.includes('wpb-plan-held-target'),'No repeated logger targets in Changes');
+assert.ok(css.includes('B909 — Prototype-aligned Home coaching')&&css.includes('wpb-home-game-plan'),'Standalone coach has its own compact styles');
+assert.ok(css.includes('prefers-reduced-motion:reduce'),'Reduced motion respected');
+console.log('PASS B909: compact separated coaching, accessible outline, truthful PR and reversible changes.');

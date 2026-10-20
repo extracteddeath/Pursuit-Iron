@@ -59,6 +59,7 @@ export const contractGroups = Object.freeze({
         'shorter-session-test.mjs',
         'b894-cycle-conversion-test.mjs',
         'b893-custom-cycle-test.mjs',
+        'b907-profile-polish-test.mjs',
         'b892-profile-share-test.mjs',
         'b891-chart-favorites-test.mjs',
         'b890-cycle-effort-test.mjs',
@@ -138,6 +139,7 @@ export const browserShards = Object.freeze({
         'm220-day-progression-browser-test.mjs'
     ]),
     integration: Object.freeze([
+        'b907-profile-polish-browser-test.mjs',
         'b905-prototype-transfer-browser-test.mjs',
         'b904-session-review-browser-test.mjs',
         'b899-stable-screen-browser-test.mjs',

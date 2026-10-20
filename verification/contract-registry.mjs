@@ -142,6 +142,7 @@ export const browserShards = Object.freeze({
         'm220-day-progression-browser-test.mjs'
     ]),
     integration: Object.freeze([
+        'b911-chart-favorites-polish-browser-test.mjs',
         'b907-profile-polish-browser-test.mjs',
         'b905-prototype-transfer-browser-test.mjs',
         'b904-session-review-browser-test.mjs',

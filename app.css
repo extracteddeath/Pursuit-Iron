@@ -9017,3 +9017,70 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     transition:none!important;
   }
 }
+
+/* B911 / UI polish pass 05 — chart-favorites touch ergonomics.
+   Match Profile's accessible touch targets; keep pinned-order/storage logic
+   unchanged. Only locally selected paint responds: no row/screen animation. */
+#root[data-pi-motion="expressive"] .wpb .wpb-progress .wpb-chart-favorite-row{
+  box-sizing:border-box;
+  min-width:0;
+  gap:6px;
+  padding:7px 8px;
+  border-radius:13px;
+  border:1px solid var(--pi-color-divider,var(--wpb-theme-border));
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-progress .wpb-chart-favorite-name{
+  min-width:0;
+  flex:1 1 0;
+  line-height:1.45;
+  overflow-wrap:anywhere;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-progress .wpb-chart-favorite-action{
+  box-sizing:border-box;
+  flex:0 0 48px;
+  width:48px;
+  min-width:48px;
+  height:48px;
+  min-height:48px;
+  border-radius:13px;
+  touch-action:manipulation;
+  transition:background-color 160ms var(--pi-ease,ease-out),
+    border-color 160ms var(--pi-ease,ease-out),
+    color 160ms var(--pi-ease,ease-out)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-progress .wpb-chart-favorite-add{
+  box-sizing:border-box;
+  min-height:48px;
+  border-radius:13px;
+  touch-action:manipulation;
+  transition:background-color 160ms var(--pi-ease,ease-out),
+    border-color 160ms var(--pi-ease,ease-out),
+    color 160ms var(--pi-ease,ease-out)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-progress
+  :is(.wpb-chart-favorite-action,.wpb-chart-favorite-add):hover:not(:disabled){
+  background-color:var(--wpb-theme-accent-dim)!important;
+  border-color:var(--wpb-theme-accent-ink)!important;
+  color:var(--wpb-theme-accent-ink)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-progress
+  :is(.wpb-chart-favorite-action,.wpb-chart-favorite-add):focus-visible{
+  outline:2px solid var(--wpb-theme-accent-ink)!important;
+  outline-offset:2px;
+}
+@media(max-width:360px){
+  #root[data-pi-motion="expressive"] .wpb .wpb-progress .wpb-chart-favorite-row{
+    gap:4px;
+    padding-inline:6px;
+  }
+}
+@media(prefers-reduced-motion:reduce),(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb .wpb-progress
+    :is(.wpb-chart-favorite-action,.wpb-chart-favorite-add){transition:none!important;}
+}
+@media(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb .wpb-progress
+    :is(.wpb-chart-favorite-action,.wpb-chart-favorite-add):focus-visible{
+    outline-color:Highlight!important;
+  }
+}

@@ -20,4 +20,13 @@ const arranged = [...catalog].sort((a,b)=>{
 }).map(x=>x.id);
 assert.deepEqual(arranged,['c','a','b','x']);
 assert.deepEqual(order, ['a','b']);
+
+const b911=css.slice(css.lastIndexOf('/* B911 / UI polish pass 05'));
+assert.ok(b911.startsWith('/* B911 / UI polish pass 05'),'polish styles are present');
+assert.match(b911,/\.wpb-chart-favorite-action\{[\s\S]*?min-width:48px;[\s\S]*?min-height:48px;/,'all reorder/remove actions offer 48px');
+assert.match(b911,/\.wpb-chart-favorite-add\{[\s\S]*?min-height:48px;/,'add action offers 48px');
+assert.match(b911,/\.wpb-chart-favorite-name\{[\s\S]*?overflow-wrap:anywhere/,'long chart labels wrap');
+assert.ok(b911.includes(':focus-visible')&&b911.includes('prefers-reduced-motion:reduce')&&b911.includes('forced-colors:active'));
+assert.ok(!/transition:[^;]*(width|height|margin|padding|transform)/.test(b911),'no geometry-affecting control motion');
+
 console.log('PASS B891: favorite chart persistence/ordering, accessible move controls and responsive history CSS.');

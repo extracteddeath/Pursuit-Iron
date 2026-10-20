@@ -70,7 +70,7 @@ fun GallerySheet(vm: AppViewModel, onClose: () -> Unit) {
             val shown = all.filter { (split == "all" || it.s("split") == split) && (days == "all" || "${it.i("days")}" == days) && (goal == "all" || it.s("goal") == goal) }
             if (shown.isEmpty()) Text("No shared program matches. Clear a filter.", color = cs.onSurfaceVariant)
             shown.forEach { e ->
-                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(cs.surfaceContainerLow).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(cs.surfaceContainer).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(e.s("title"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
                         if (e.b("coached")) Badge("Coached", cs.tertiaryContainer, cs.onTertiaryContainer)

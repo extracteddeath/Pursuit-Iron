@@ -1,3 +1,11 @@
+## Build 903 — Editable set counts and complete cycle overview
+
+- Keep three working sets as the default for an exercise added during a workout. Add an explicit set-count control in standard and Focus logging; reductions preserve completed work.
+- Review added exercises and changed set counts after saving a workout. Edit the future set count, apply it to the workout day, or keep changes session-only. Pending reviews survive reload; completed workout records stay unchanged.
+- Use stable exercise IDs and explicit prescription ownership for custom and generated programs. Skip injury and session-length reductions when proposing permanent program edits.
+- Restyle cycle progress, blocks, schedule and next-block changes as themed cards. Show useful overview details directly and expand the cycle list's blocks by default.
+- Verify custom/generated set persistence, protected logged sets, review recovery, apply/skip behavior, and phone/wide cycle layouts.
+
 ## Build 902 — Reverse EZ-Bar Curl
 
 - Clearly name the existing EZ-bar reverse curl in both the app and canonical catalog. Keep its stable exercise ID, saved programs, history, brachialis emphasis, EZ-bar loading and 10–15 rep defaults.

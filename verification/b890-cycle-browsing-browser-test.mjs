@@ -20,7 +20,7 @@ try{
  for(const width of [320,390,900]){
   const page=await browser.newPage();page.on('pageerror',e=>errors.push(e.message));await page.setViewport({width,height:844,isMobile:width<600,hasTouch:width<600});
   await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
-  await page.evaluateOnNewDocument(store=>{if(!sessionStorage.getItem('b890-seeded')){localStorage.setItem('wpb:v1',JSON.stringify(store));sessionStorage.setItem('b890-seeded','1');}},store);
+  await page.evaluateOnNewDocument(store=>{if(!sessionStorage.getItem('b890-seeded')){localStorage.setItem('wpb:v1',JSON.stringify(store));sessionStorage.setItem('b890-seeded','1');}},{...store,theme:width===900?'rosewater':'amethyst'});
   await page.goto('http://127.0.0.1:8790/index.html',{waitUntil:'networkidle0'});await page.waitForSelector('.wpb-home');
   const click=async text=>{assert.ok(await page.evaluate(t=>{const b=[...document.querySelectorAll('button')].find(b=>b.textContent.trim()===t);b?.click();return !!b;},text),text);};
   await page.click('.wpb-tabbar [aria-label="Plan"]');await page.waitForSelector('.wpb-plan-block-nav');
@@ -44,7 +44,12 @@ try{
   assert.ok(rows[2].text.includes('Peak'));assert.equal(await page.$$eval('.wpb-cycle-actions button',ns=>ns.length),1);
   assert.doesNotMatch(await page.$eval('.wpb-cycle-detail',n=>n.innerText),/kept exactly|Available after/);
   assert.equal(await page.$eval('.wpb-cycle-detail',n=>n.scrollWidth<=n.clientWidth+1),true);
+  assert.equal(await page.$$eval('.wpb-cycle-detail details',ns=>ns.length),0,'overview facts are never collapsed');
+  await page.waitForSelector('[aria-label="Next block changes"]');await page.waitForSelector('[aria-label="Cycle schedule"]');
+  assert.equal(await page.$eval('.wpb-cycle-overview',n=>parseFloat(getComputedStyle(n).borderRadius)>=18),true);
   await page.screenshot({path:`/tmp/b890-cycle-detail-${width}.png`});
+  await page.$eval('.wpb-cycle-schedule',n=>n.scrollIntoView({block:'end'}));
+  await page.screenshot({path:`/tmp/b903-cycle-facts-${width}.png`});
   await page.$$eval('.wpb-cycle-detail .wpb-cycle-block-row',ns=>ns[2].click());await page.waitForSelector('.wpb-cycle-block-preview');
   await click('View in Plan');await page.waitForSelector('.wpb-plan-preview-notice');assert.match(await page.$eval('.wpb-plan-title',n=>n.textContent),/Peak/);
   const stored=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')));

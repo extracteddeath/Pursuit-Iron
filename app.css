@@ -8659,7 +8659,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   margin:10px 0 12px!important;padding:2px 0 10px!important;
 }
 #root .wpb-workout .wpb-workout-tools .wpb-workout-tool{
-  min-height:44px!important;max-width:100%;padding:6px 8px!important;
+  min-height:48px!important;max-width:100%;padding:6px 8px!important;
   line-height:1.35;text-align:left;
 }
 #root .wpb-workout .wpb-progression-label:focus-visible{

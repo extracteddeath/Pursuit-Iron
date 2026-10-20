@@ -8572,29 +8572,37 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   .wpb-chart-favorite-action{flex-basis:32px;min-width:32px}
 }
 
-/* B892 · Profile customization follows the active M3 theme tokens. */
+/* B892 / UI polish pass 02 — Profile controls share Material-inspired tonal states.
+   Preserve Profile preference logic and DOM order. Only local micro-interactions
+   animate; no page or row geometry transitions that might cause flashing. */
 .wpb-profile-toolbar{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-start;margin:0 0 14px;min-width:0}
-.wpb-profile-toolbar button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:44px;padding:8px 14px;border-radius:12px;border:1px solid var(--pi-outline,var(--outline,rgba(128,128,128,.35)));background:var(--pi-surface-container,transparent);color:inherit;font-size:13px;font-weight:700;cursor:pointer}
-.wpb-profile-toolbar button:focus-visible,.wpb-profile-customize button:focus-visible{outline:3px solid var(--pi-focus, currentColor);outline-offset:2px}
-.wpb-profile-customize{padding:15px;margin:0 0 16px;border-radius:16px;background:var(--pi-surface-container,rgba(128,128,128,.08));border:1px solid var(--pi-outline,rgba(128,128,128,.22));color:inherit}
+.wpb-profile-toolbar button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:48px;padding:10px 14px;border-radius:14px;border:1px solid var(--pi-outline,var(--outline,rgba(128,128,128,.35)));background:var(--pi-surface-container-high,rgba(128,128,128,.12));color:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.wpb-profile-toolbar button:focus-visible,.wpb-profile-customize button:focus-visible,.wpb-profile .wpb-profile-edit:focus-visible,.wpb-profile-strength button[aria-label="Share Strength Score"]:focus-visible{outline:3px solid var(--pi-focus,var(--wpb-theme-accent-ink,currentColor));outline-offset:2px}
+.wpb-profile .wpb-profile-edit{min-height:48px!important;min-width:48px!important;border-radius:14px!important}
+.wpb-profile-strength button[aria-label="Share Strength Score"]{width:48px!important;height:48px!important;min-width:48px!important;min-height:48px!important;border-radius:14px!important}
+.wpb-profile-customize{padding:15px;margin:0 0 16px;border-radius:20px;background:var(--pi-surface-container,rgba(128,128,128,.08));border:1px solid var(--pi-outline,rgba(128,128,128,.22));color:inherit}
 .wpb-profile-customize-header{display:flex;align-items:flex-start;gap:12px;justify-content:space-between}
 .wpb-profile-customize-header strong{font-size:16px;font-weight:750}
-.wpb-profile-customize-header p{font-size:12.5px;line-height:1.45;margin:5px 0 0;opacity:.75}
-.wpb-profile-customize-header>button{display:grid;place-items:center;flex-shrink:0;width:42px;height:42px;border-radius:12px;border:1px solid currentColor;background:transparent;color:inherit;opacity:.8;cursor:pointer}
+.wpb-profile-customize-header p{font-size:13px;line-height:1.5;margin:5px 0 0;opacity:.85}
+.wpb-profile-customize-header>button{display:grid;place-items:center;flex-shrink:0;width:48px;height:48px;border-radius:14px;border:1px solid var(--pi-outline,rgba(128,128,128,.2));background:var(--pi-surface-container-high,rgba(128,128,128,.12));color:inherit;cursor:pointer}
 .wpb-profile-customize-label{margin:18px 0 9px;font-size:12px;font-weight:800;letter-spacing:.03em}
-.wpb-profile-customize-list{display:grid;gap:6px}
-.wpb-profile-customize-row{display:flex;align-items:center;gap:5px;min-width:0;padding:5px 6px 5px 10px;border:1px solid var(--pi-outline,rgba(128,128,128,.18));border-radius:12px}
-.wpb-profile-customize-row>span{flex:1;min-width:0;font-size:13px;font-weight:650;overflow-wrap:anywhere}
-.wpb-profile-customize-row button{min-width:38px;min-height:42px;border:0;border-radius:9px;background:transparent;color:inherit;display:grid;place-items:center;cursor:pointer}
-.wpb-profile-customize-row button:disabled,.wpb-profile-share-toggles button:disabled{opacity:.28;cursor:default}
-.wpb-profile-customize-row .wpb-profile-visibility{min-width:70px;font-size:12px;font-weight:700;background:var(--pi-surface-container-high,rgba(128,128,128,.12))}
-.wpb-profile-customize-row .wpb-profile-visibility[aria-pressed="false"]{opacity:.75}
+.wpb-profile-customize-list{display:grid;gap:8px}
+.wpb-profile-customize-row{display:grid;grid-template-columns:minmax(0,1fr) 48px 48px minmax(74px,auto);align-items:center;gap:6px;min-width:0;min-height:60px;padding:6px 8px 6px 12px;border:1px solid var(--pi-outline,rgba(128,128,128,.18));border-radius:16px;background:var(--pi-surface-container-low,rgba(128,128,128,.05))}
+.wpb-profile-customize-row>span{min-width:0;font-size:13px;line-height:1.35;font-weight:680;overflow-wrap:anywhere}
+.wpb-profile-customize-row button{min-width:48px;min-height:48px;border:0;border-radius:12px;background:var(--pi-surface-container-high,rgba(128,128,128,.12));color:inherit;display:grid;place-items:center;cursor:pointer}
+.wpb-profile-customize-row button:disabled,.wpb-profile-share-toggles button:disabled{opacity:.38;cursor:default}
+.wpb-profile-customize-row .wpb-profile-visibility{min-width:74px;padding-inline:7px;font-size:12px;font-weight:750;background:var(--pi-primary-container,rgba(128,128,128,.15));color:var(--pi-on-primary-container,inherit)}
+.wpb-profile-customize-row .wpb-profile-visibility[aria-pressed="false"]{background:var(--pi-surface-container-high,rgba(128,128,128,.12));color:inherit}
 .wpb-profile-share-toggles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.wpb-profile-share-toggles button{min-height:44px;min-width:0;display:flex;gap:8px;align-items:center;text-align:left;padding:8px 10px;border-radius:11px;border:1px solid var(--pi-outline,rgba(128,128,128,.2));background:transparent;color:inherit;font-size:12px;font-weight:650;cursor:pointer}
-.wpb-profile-share-toggles button[aria-pressed="true"]{border-color:var(--pi-primary,var(--pi-accent,currentColor));background:var(--pi-primary-container,rgba(128,128,128,.15))}
-.wpb-profile-share-toggles button span{display:grid;place-items:center;width:19px;height:19px;flex-shrink:0;border-radius:6px;background:var(--pi-surface-container-high,rgba(128,128,128,.14))}
-.wpb-profile-reset{margin-top:12px;padding:8px 10px;min-height:42px;border:0;background:transparent;color:inherit;opacity:.8;font-size:12px;font-weight:700}
-@media(max-width:350px){.wpb-profile-customize{padding:11px}.wpb-profile-customize-row{padding-left:7px;gap:2px}.wpb-profile-customize-row button{min-width:34px}.wpb-profile-customize-row .wpb-profile-visibility{min-width:58px}}
+.wpb-profile-share-toggles button{min-height:48px;min-width:0;display:flex;gap:8px;align-items:center;text-align:left;padding:10px 12px;border-radius:14px;border:1px solid var(--pi-outline,rgba(128,128,128,.2));background:var(--pi-surface-container-high,rgba(128,128,128,.1));color:inherit;font-size:13px;font-weight:680;cursor:pointer}
+.wpb-profile-share-toggles button[aria-pressed="true"]{border-color:var(--pi-primary,var(--pi-accent,currentColor));background:var(--pi-primary-container,rgba(128,128,128,.15));color:var(--pi-on-primary-container,inherit)}
+.wpb-profile-share-toggles button span{display:grid;place-items:center;width:22px;height:22px;flex-shrink:0;border-radius:7px;background:var(--pi-surface-container-high,rgba(128,128,128,.14))}
+.wpb-profile-share-toggles button[aria-pressed="true"] span{background:var(--pi-surface-container,rgba(128,128,128,.18))}
+.wpb-profile-reset{margin-top:12px;padding:10px 12px;min-height:48px;border:0;border-radius:12px;background:var(--pi-surface-container-high,rgba(128,128,128,.1));color:inherit;font-size:13px;font-weight:700;cursor:pointer}
+@media(hover:hover) and (pointer:fine){.wpb-profile-toolbar button:not(:disabled):hover,.wpb-profile-customize button:not(:disabled):hover{background:var(--pi-primary-container,rgba(128,128,128,.15))}}
+@media(prefers-reduced-motion:no-preference){.wpb-profile-toolbar button,.wpb-profile-customize button{transition:background-color 160ms ease,border-color 160ms ease,transform 140ms ease}.wpb-profile-toolbar button:not(:disabled):active,.wpb-profile-customize button:not(:disabled):active{transform:scale(.97)}}
+@media(max-width:380px){.wpb-profile-customize{padding:12px}.wpb-profile-customize-row{grid-template-columns:48px 48px minmax(74px,1fr);gap:6px;padding:10px}.wpb-profile-customize-row>span{grid-column:1/-1;min-height:20px}.wpb-profile-share-toggles button{padding-inline:10px;font-size:12.5px}}
+@media(forced-colors:active){.wpb-profile-toolbar button,.wpb-profile-customize button{forced-color-adjust:auto;border:1px solid ButtonText}.wpb-profile-share-toggles button[aria-pressed="true"],.wpb-profile-visibility[aria-pressed="true"]{outline:2px solid Highlight;outline-offset:-3px}}
 
 /* B893 · Custom-cycle composer, responsive and theme-aware. */
 .wpb-custom-cycle{margin:12px 0;padding:15px;border-radius:17px;background:var(--pi-surface-container,rgba(128,128,128,.08));border:1px solid var(--pi-outline,rgba(128,128,128,.22));color:inherit}

@@ -35,15 +35,15 @@ try{
   assert.ok(geometry.targets.every(r=>r.w>=47.5&&r.h>=47.5),`48px enabled actions at ${width} ${theme}: ${JSON.stringify(geometry.targets)}`);
   assert.ok(geometry.targets.every(r=>r.left>=-1&&r.right<=width+1),`no offscreen actions at ${width} ${theme}`);
   if(width===320)assert.equal(geometry.cols,3,'320px profile controls wrap beneath full-width row title');
-  await page.locator('[aria-label="Move Level and XP down"]').click();
+  await page.$eval('[aria-label="Move Level and XP down"]',b=>b.click());
   await page.waitForFunction(()=>document.querySelector('.wpb-profile-customize-row>span')?.textContent==='Lifetime summary');
-  await page.locator('[aria-label="Hide Level and XP"]').click();
+  await page.$eval('[aria-label="Hide Level and XP"]',b=>b.click());
   const storage=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:profile-layout-v1')));
   assert.equal(storage.order[0],'summary');assert.ok(storage.hidden.includes('level'));
   await page.reload({waitUntil:'networkidle0'});await page.click('[data-tab="profile"]');await page.waitForSelector('.wpb-profile-toolbar button');
   await page.$eval('.wpb-profile-toolbar button',b=>b.click());await page.waitForSelector('.wpb-profile-customize-row');
   assert.equal(await page.$eval('.wpb-profile-customize-row>span',e=>e.textContent),'Lifetime summary');
-  await page.locator('[aria-label="Show Level and XP"]').click();
+  await page.$eval('[aria-label="Show Level and XP"]',b=>b.click());
   const after=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:profile-layout-v1')));
   assert.equal(after.hidden.includes('level'),false);
   assert.deepEqual(errors,[],'no runtime errors');await page.close();

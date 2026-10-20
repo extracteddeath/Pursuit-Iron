@@ -2,10 +2,10 @@
   "schemaVersion": 3,
   "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": 904,
+  "build": 905,
   "engineVersion": "0.65.9",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "d5c2dde34820e2e85ce91b377966397f9e35bbffd50764f9bca28f9802d921c3",
+  "runtimeAggregate": "6a0b166580f54cfeb18cec56369c2696fd4858b344f78050a3eb8642d2bc2add",
   "runtimeFiles": {
     "modules/cycle-setup-drafts.js": "b1d7fdb80eec689fbe419e2f8a3fb4bc97141b80cfff5d94718916abb4be8395",
     "modules/engine-api.js": "b5a0cad7dddaf4e0b3c59100c06c07dc6a06d10340e2d04b9e0c3a18ee6fa2a8",
@@ -89,6 +89,7 @@
     "modules/next-engine/workout-runtime.js": "e55ae9863410c1119fafbe9652322f9e0dedf08fd263389f4baee94bf7b02d68",
     "modules/program-duration.js": "52bffd0e7798f16f1217ba455de75c63c917ba9b7c6aa61dcd795b10dc665d95",
     "modules/program-last-performance.js": "61ffec6cde222c2731becdc4b048a7da8b53f044816cf149104b168e3fca7ee3",
+    "modules/program-review.js": "394e326abe226725d1dd5933420e91cc2e9e79dd5ba9a5a7cb856f4bc8970d51",
     "modules/session-plan.js": "d0fd1828feb947892b82cb08e2a0ac1761b18a0083f9bb779caa0c2e3c854023",
     "modules/session-tools.js": "3e94c824e241eecc0485ea2ee802cbace0a89b78ceb5b5911fada3622eb23228",
     "modules/training-domain.js": "a7ce0e26ac1a653d267d486128b5eac0cfaed3569f7fdeae77d4a7d11aec804f",
@@ -100,7 +101,7 @@
     "modules/training-domain/records.js": "0a18e3bcbd1e0700f3907fb219eb5eee798970c103ece76fc53d9e2e59c03432",
     "modules/ui-motion.js": "421474c40e4f790cf353502dd3af9968e2e40eb603c09fb1403c41faf07f3118",
     "modules/wizard-stability.js": "a62b2bed8a1f5ab880bfeab036a83ec630c93048b8a352652fe00ae75374a3d1",
-    "modules/workout-context.js": "6cd06a6dc90c1002a37941ed1bcd8cf5183a0db077c685c87368b37d29eb9aa4",
+    "modules/workout-context.js": "e59546ed86f16f08b398960e4753495185026d4c53770384b7f96a96f4cd8afa",
     "vendor/lucide-react.js": "f84db748249b6e57e1d5187e876da806c1733523a1fa1501224bf740519b2cf4",
     "vendor/react-dom-client.js": "e3d8fd1d433e1bee9110bcaa5f8e9547e64f2754806bed0dd4fc546d890baab5",
     "vendor/react-dom.js": "9eeba0ea6d8354cd75cbf1381afcdf898711d0c38a8020458d1bd33cdc4b3240",
@@ -115,17 +116,17 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "95c006a5709e3a0b658255f39741f1ef19c94f1a520eb0bfe861fbf467f2fb99",
-    "index.html": "ec592b2b4a6668b66eedb69f7e632a3e6bf3941d4fa91eddc8186fd09020a8cb",
-    "sw.js": "74cb5a443a9a6c2fde080bc48d4b39efb45874f925e092a52e26152ab87304a4",
-    "BUILD_PROFILE.json": "b3ecd9cb6061a4dcadcce04b37c7d378f1e06703b5b7493284c66c397fcf27a2",
-    "CHANGELOG.md": "e0eac07df78a224e9b47407e415f97661b83f2d6312922db3c4b0972fe00af60",
-    "app.css": "4e20e54a1eda593aeca121f59653ba0a490801447ff1a01e31ebf8e095e0a0a0",
+    "modules/App.js": "e84619808501d35a7cb37f7c6aece27f6086bdcb6a3ee2619d93ff6e2c7d5cd3",
+    "index.html": "54fd7f97b0a2d9d8b76694380158b4a23699a3f1c1cbea697c5e33b7c705b7ed",
+    "sw.js": "972f5ed96ad348f4786e2ca84018d830e322381da36be61452160bf46e68ed24",
+    "BUILD_PROFILE.json": "f1d517913633d639e4f64e6d4ac4aaa1eb83fae73f41f33e3bd2ae9b33a4bda3",
+    "CHANGELOG.md": "eb44e416e03ad3c447bafc6cdb5f8c9c559c525be0a12396d4023c811c2c73d6",
+    "app.css": "b46c2fde84c69afa3d2fa5e881229abb262e5329f5bc2b595acf611098ed98cd",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b904-r3762dceb2783aa7e",
-  "uiMilestone": "Build 904 · Plan changes with undo and today's game plan"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b905-rec5f3cdf4b2c3b64",
+  "uiMilestone": "Build 905 · Reviewed program changes, exact layouts and portrait tablets"
 }

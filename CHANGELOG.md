@@ -1,3 +1,11 @@
+## Build 905 — Remaining prototype features
+
+- Stage actual generated rebuilds and canonical volume repairs for review before committing. Show changed settings, exercise additions/removals/order, all weeks of set/rep/RIR/rest/technique/progression targets, and first-week duration estimates. Apply the reviewed artifact without generating again.
+- Preserve exact prior layouts, including edited prescriptions, schedule, notes and settings. Restore through the same preview; retain up to three nonrecursive snapshots within a size budget. Reject stale previews and program changes during an active workout.
+- Extend the existing live session lineup to portrait tablets from 800px wide and 720px tall. Preserve the original logger, Focus, active exercise, rest state and saved workout across resizing.
+- Add explicit plateau choices grounded in the existing program/day-scoped detector. Reuse progression and swap controls; optionally lower only automatic remaining targets for this session, including pending warmups, rounding to available loads. Keep completed/manual work and injury/percentage prescriptions protected, remove pending technique extensions on the lighter day, and offer Undo.
+- Retain existing plan-change undo, game plan, equipment inventory, quick routines, history correction, shorter-session engine and superset suggestions.
+
 ## Build 904 — Plan changes and today's game plan
 
 - Review changed load/rep recommendations from Home and the session preview, including their engine reasons, previous completed sets and proposed targets. Group identical sets and retain individual dynamic-double differences.

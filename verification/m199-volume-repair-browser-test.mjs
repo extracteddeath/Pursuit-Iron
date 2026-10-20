@@ -83,6 +83,9 @@ try {
     });
     await page.locator('[data-volume-auto-fix]').click();
     await page.waitForFunction(() => window.__m199AutoFixClicked === true);
+    await page.waitForSelector('[data-program-review]');
+    assert.equal(await page.evaluate(id => JSON.parse(localStorage.getItem('wpb:v1')).saved.find(p => p.id === id)?.nextEngine?.volumeRepair?.status === 'success', fixture.id), false, 'preview must not apply a repair');
+    await page.locator('[data-apply-program-review]').click();
     await page.waitForSelector('[data-volume-repair-status]', { timeout: 30000 });
     const feedback = await page.$eval('[data-volume-repair-status]', e => ({ status: e.getAttribute('data-volume-repair-status'), text: e.textContent }));
     assert.equal(feedback.status, 'success', feedback.text);

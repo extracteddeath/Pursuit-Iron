@@ -7072,11 +7072,11 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    Only one live WorkoutSession owns logging, rest, focus, progression and
    exercise selection. The lineup reads its existing state and calls goEx;
    no mirrored set editors, timers, load algorithms, or storage writes.
-   Compact/medium/short-landscape keep the R49 phone logger exactly. */
+   Portrait tablets now share the companion; compact/short-landscape keep the phone logger. */
 #root[data-pi-motion="expressive"] .wpb .wpb-workout-side{
   display:none;
 }
-@media (min-width:1120px) and (min-height:720px){
+@media (min-width:800px) and (min-height:720px){
   /* Unlike the primary tab destinations, Workout is a secondary full-screen
      route whose previous 460px frame would otherwise defeat a second pane. */
   #root[data-pi-motion="expressive"] .wpb:has([data-view-frame="session"])>div{
@@ -8724,3 +8724,28 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb-plan-changes-dialog .wpb-plan-undo{min-height:48px!important;font-size:13px!important;line-height:1.4!important;padding:10px 14px!important;border-radius:14px!important}
 .wpb-plan-change-card[data-undone="true"] .wpb-plan-target-diff strong{color:var(--wpb-theme-muted)}
 #root .wpb-plan-held-target{color:var(--wpb-theme-accent-ink);font-weight:750}
+
+/* Build 905 — review transactions in the existing themed dialog. */
+.wpb-program-revision p,.wpb-program-layout-history p{font-size:13px;line-height:1.5;color:var(--wpb-theme-muted);overflow-wrap:anywhere}
+.wpb-program-revision h3,.wpb-program-layout-history h3{font-size:15px;margin:0 0 8px}
+.wpb-program-revision h4{font-size:12px;margin:0 0 6px;color:var(--wpb-theme-muted)}
+.wpb-program-review-status{padding:10px 12px;border-radius:14px;background:var(--wpb-theme-accent-dim)}
+.wpb-program-review-setting{display:grid;gap:5px;padding:12px 0;border-bottom:1px solid var(--pi-color-divider);font-size:13px;overflow-wrap:anywhere}
+.wpb-program-review-day,.wpb-program-review-audit,.wpb-program-layout-history{margin:16px 0;padding:14px;border:1px solid var(--pi-color-divider);border-radius:18px;background:var(--wpb-theme-card)}
+.wpb-program-review-row{padding:12px 0;border-top:1px solid var(--pi-color-divider);overflow-wrap:anywhere}
+.wpb-program-review-row>strong{display:block;font-size:14px}
+.wpb-program-review-row>small{display:block;margin:4px 0 10px;color:var(--wpb-theme-muted)}
+.wpb-program-review-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.wpb-program-review-columns p{margin:0 0 8px}
+.wpb-program-revision-footer{position:sticky;bottom:-1px;display:flex;gap:8px;padding:12px 0 2px;background:var(--wpb-theme-bg)}
+.wpb-program-revision-footer>button{flex:1;min-width:0;text-align:center;justify-content:center}
+.wpb-program-revision-footer>button[data-apply-program-review]{background:var(--wpb-theme-accent);color:var(--wpb-theme-on-accent)}
+@media(max-width:479px){.wpb-program-review-columns{grid-template-columns:minmax(0,1fr);gap:8px}.wpb-program-revision-footer{flex-direction:column}}
+@media(min-width:800px) and (max-width:1119px) and (min-height:720px){
+ #root[data-pi-motion="expressive"] .wpb .wpb-workout-scroll:has(>.wpb-workout-side){grid-template-columns:minmax(0,1fr) 200px;column-gap:18px;padding-inline:16px!important}
+ #root[data-pi-motion="expressive"] .wpb .wpb-workout-scroll>.wpb-workout-side{padding:12px 8px}
+ #root[data-pi-motion="expressive"] .wpb-workout-side-heading{flex-wrap:wrap}
+}
+
+.wpb-session-dialog.wpb-program-revision{padding-bottom:0}
+.wpb-program-revision-footer{bottom:0;padding-bottom:calc(24px + env(safe-area-inset-bottom))}

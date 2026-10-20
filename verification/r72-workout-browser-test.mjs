@@ -54,7 +54,7 @@ try{
     headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
   const results=[];
   for(const theme of ['rose','rosewater','violet']){
-    for(const [width,height] of [[320,740],[393,852],[600,800],[900,480],[900,1000],[1280,850],[1600,900]]
+    for(const [width,height] of [[320,740],[393,852],[600,800],[834,1194],[900,480],[900,1000],[1280,850],[1600,900]]
       .filter(([w,h])=>!process.argv[2]||process.argv[2]===w+'x'+h)){
       const context=await browser.createBrowserContext();
       const page=await context.newPage();const errors=[];
@@ -104,7 +104,7 @@ try{
             overflow:document.documentElement.scrollWidth>innerWidth+2};
         });
         let state=await layout();
-        const expanded=width>=1120&&height>=720;
+        const expanded=width>=800&&height>=720;
         assert.equal(state.grid,expanded,'Workout pane follows available window size');
         assert.equal(state.sideVisible,expanded,'Support lineup is hidden on compact windows');
         assert.equal(state.overflow,false,'Workout must not cause document overflow');
@@ -137,7 +137,7 @@ try{
           assert.ok(motion.some(v=>v>0&&v<=.3),
             'Standard motion adds a bounded color-only transition');
           await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
-          assert.ok(state.scroll.width>780,'Secondary workout route grows past phone width');
+          assert.ok(state.scroll.width>700,'Secondary workout route grows past phone width');
           assert.ok(state.side.x>=state.row.right-2,
             'Lineup is beside the original set editor, not on top of it');
           await page.click('.wpb-workout-side-item:nth-child(2)');
@@ -145,7 +145,7 @@ try{
           assert.ok(await page.$eval('.wpb-workout-side-item:nth-child(2)',
             n=>n.getAttribute('aria-current')==='step'),
             'Lineup uses original goEx navigation and current selection');
-          await page.setViewport({width:900,height:1000,deviceScaleFactor:1});
+          await page.setViewport({width:700,height:1000,deviceScaleFactor:1});
           state=await layout();
           assert.equal(state.sideVisible,false,'Medium layout hides the support pane');
           assert.ok(await page.$('[data-testid="set-1-0"]'),
@@ -265,7 +265,7 @@ try{
       }finally{await context.close();}
     }
   }
-  assert.equal(results.length,process.argv[2]?3:21,'Every requested R75 scenario ran');
+  assert.equal(results.length,process.argv[2]?3:24,'Every requested R75 scenario ran');
   console.log('PASS R72/R75 responsive live workout and durable logging: '+JSON.stringify(results));
 }finally{
   if(browser)await browser.close();

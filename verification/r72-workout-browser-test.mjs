@@ -265,7 +265,7 @@ try{
       }finally{await context.close();}
     }
   }
-  assert.equal(results.length,process.argv[2]?3:21,'Every requested R75 scenario ran');
+  assert.equal(results.length,process.argv[2]?3:24,'Every requested R75 scenario ran');
   console.log('PASS R72/R75 responsive live workout and durable logging: '+JSON.stringify(results));
 }finally{
   if(browser)await browser.close();

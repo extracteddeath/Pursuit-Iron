@@ -89,7 +89,7 @@ function tick(now) {
     frame = active.size ? requestAnimationFrame(tick) : 0;
 }
 const pixels = (el, name) => v => el.style.setProperty(name, `${v}px`);
-const surfaceSelector = '[data-view-frame], [data-pi-workout-page], [data-sheet-drag], .wpb-pop, .wpb-dialog, .wpb-slideL, .wpb-slideR, .wpb-state-enter, .wpb-float-in, .wpb-notice-in';
+const surfaceSelector = '[data-view-frame], [data-pi-workout-page], [data-sheet-drag], .wpb-pop, .wpb-dialog, .wpb-session-dialog, .wpb-slideL, .wpb-slideR, .wpb-state-enter, .wpb-float-in, .wpb-notice-in';
 const groupSelector = '.wpb-segmented, .wpb-premium-tabs, .wpb-exercise-tabs, .wpb-library-flag-filter, .wpb-progress-grouping, .wpb-plan-panes, .wpb-exercise-window-tabs, .wpb-exercise-metric-tabs, .wpb-effort-scale, .wpb-tabbar, [role="tablist"]';
 const surfaceOwners = new WeakMap();
 const exitOwners = new WeakMap();
@@ -105,7 +105,7 @@ function enterSurface(el, initial = false) {
     surfaceOwners.set(el, key); el.dataset.piSurface = '1';
     const viewport = el.matches('[data-view-frame], [data-pi-workout-page]');
     const sheet = el.matches('[data-sheet-drag]');
-    const dialog = el.matches('.wpb-pop,.wpb-dialog');
+    const dialog = el.matches('.wpb-pop,.wpb-dialog,.wpb-session-dialog');
     // Top-level navigation is a connected motion system: neighboring pages
     // arrive from their actual relative tab direction. Deep-link, exercise,
     // full-screen log and sheet transitions keep their own existing semantics.
@@ -174,7 +174,7 @@ export function exitMotion(wrapper, complete) {
     // cannot remove a newly reopened React-owned sheet.
     exitOwners.get(wrapper)?.cancel();
     let cancelled = false;
-    const panels = [...wrapper.querySelectorAll('[data-sheet-drag],.wpb-pop,.wpb-dialog')];
+    const panels = [...wrapper.querySelectorAll('[data-sheet-drag],.wpb-pop,.wpb-dialog,.wpb-session-dialog')];
     const backs = [...wrapper.querySelectorAll('.wpb-backdrop')];
     let pending = panels.length + backs.length;
     const stops = [];
@@ -213,7 +213,7 @@ export function resumeMotion(wrapper) {
     if (!wrapper) return;
     // Cancel the pending close before starting the reverse springs.
     exitOwners.get(wrapper)?.cancel();
-    wrapper.querySelectorAll('[data-sheet-drag],.wpb-pop,.wpb-dialog').forEach(el => {
+    wrapper.querySelectorAll('[data-sheet-drag],.wpb-pop,.wpb-dialog,.wpb-session-dialog').forEach(el => {
         if (!surfaceOwners.has(el)) { enterSurface(el); return; }
         spring(el, '--pi-surface-y', 0, { write: pixels(el, '--pi-surface-y'), damping: .94 });
         spring(el, '--pi-surface-opacity', 1, { stiffness: 1200, damping: 1, precision: .001 });

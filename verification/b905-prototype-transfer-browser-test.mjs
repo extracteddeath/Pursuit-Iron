@@ -27,6 +27,18 @@ try{
   await openPlan();
   const rebuild=async()=>{await page.locator('[aria-label="Program settings"]').click();await page.waitForSelector('[aria-label="Decrease block length"]');await page.locator('[aria-label="Decrease block length"]').click();await page.waitForFunction(()=>document.querySelector('[aria-label="Save program settings"]')?.disabled===false);await page.locator('[aria-label="Save program settings"]').click();await page.waitForSelector('[data-program-review]',{timeout:20000}).catch(async error=>{console.error(await page.evaluate(()=>({text:document.body.innerText.slice(-2200),saved:JSON.parse(localStorage.getItem("wpb:v1")).saved.map(p=>({id:p.id,weeks:p.weeks,configWeeks:p.config?.weeks})),inputs:[...document.querySelectorAll("input")].map(n=>({label:n.getAttribute("aria-label"),value:n.value}))})));throw error;});};
   await rebuild();assert.deepEqual((await store()).saved[0],before,'generation is staged until Apply');
+  const modal=await page.$eval('.wpb-program-revision',el=>{
+   const rect=el.getBoundingClientRect(),backdrop=el.closest('.wpb-session-dialog-backdrop');
+   return {motion:el.dataset.piSurface,backdropMotion:backdrop?.dataset.piBackdrop,
+    width:rect.width,left:rect.left,bottom:rect.bottom,viewport:innerWidth,viewportHeight:innerHeight,
+    radius:parseFloat(getComputedStyle(el).borderTopLeftRadius),bg:getComputedStyle(el).backgroundColor,
+    overflow:el.scrollWidth>el.clientWidth+1};
+  });
+  assert.equal(modal.motion,'1','session review participates in shared surface springs');
+  assert.equal(modal.backdropMotion,'1','session review scrim participates in shared backdrop springs');
+  assert.ok(modal.radius>=25&&!modal.overflow&&modal.width<=modal.viewport,'modal stays rounded and scroll-contained');
+  if(width===834)assert.ok(modal.left>30&&modal.bottom<modal.viewportHeight-20,'portrait tablet review is centered');
+  else assert.ok(Math.abs(modal.bottom-modal.viewportHeight)<3,'phone review stays bottom attached');
   assert.equal(await page.$eval('.wpb-program-revision',n=>n.scrollWidth<=n.clientWidth+1),true);
   assert.match(await page.$eval('[data-program-review]',n=>n.textContent),/Block length/);
   await page.screenshot({path:`/tmp/b905-review-${width}.png`});

@@ -1,4 +1,30 @@
+import { plateauSessions, exerciseTrends, plateauOf } from './engine-api.js';
+
 // UI/session operations only. Prescription and progression remain engine-owned.
+export function workoutPlateau(program, day, exerciseId, history) {
+    const entries = plateauSessions(history, exerciseId, day.id, 8, program);
+    const trend = exerciseTrends(entries).find(t => t.id === exerciseId);
+    return plateauOf(trend);
+}
+
+// An explicit, session-only load reduction, never a second progression policy. Completed work,
+// warmups already performed, manually entered values and prescribed percentage stages are protected.
+export function lighterPendingWorkout(row, loadAtOrBelow, protectedSet) {
+    if (!row || row.injuryAdjusted) return row;
+    let changed = false;
+    const sets = row.sets.map(set => {
+        if (set.done || set.sub || protectedSet(set) || !(Number(set.weight) > 0)) return set;
+        const next = loadAtOrBelow(Number(set.weight) * .9);
+        if (!(next > 0 && next < Number(set.weight))) return set;
+        if (!set.warm) changed = true;
+        const weight = String(next);
+        return { ...set, weight, auto: false, valueOwner: 'user', suggested: undefined,
+            hint: undefined, autoTuned: false, target: { ...set.target, w: weight } };
+    });
+    if (!changed) return row;
+    // A lighter day does not leave pending failure-technique extensions attached.
+    return { ...row, sets: sets.filter(set => !set.sub || set.done) };
+}
 export function activeSetContext(row) {
     const sets = row?.sets || [];
     const index = sets.findIndex(set => !set.done);

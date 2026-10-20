@@ -6837,7 +6837,7 @@ function PlanChangesDialog({ review, dayLabel, loadMode, busy, onChoice, onClose
             _jsx("ol", { className: "wpb-plan-target-diff", children: (uniform ? row.proposed.slice(0, 1) : row.proposed).map((set, i) => _jsxs("li", { children: [
                 _jsx("span", { children: uniform ? `All ${row.proposed.length} sets` : `Set ${i + 1}` }), _jsx("span", { className: "wpb-plan-before", children: row.change.previous[i] ? sessionLoadText(row.change.previous[i], review.unit) : 'New set' }),
                 _jsx(ChevronRight, { size: 15, "aria-label": "to" }), _jsx("strong", { children: sessionLoadText(set, review.unit) })] }, i)) }),
-            _jsx("p", { children: row.reason }),
+            _jsx("p", { children: row.proposedReason }),
             row.change.undone && _jsx("p", { role: "status", className: "wpb-plan-held-target", children: "Using " + sessionTargetsText(row.effective, review.unit) }),
             _jsx("div", { className: "wpb-game-plan-method", children: `Target ${effortLabel(row.cell.rir, loadMode)} · ${row.cell.sets} working sets` }),
             row.change.canUndo ? _jsx("button", { type: "button", className: "wpb-plan-undo pressable", disabled: busy, "aria-label": `${row.change.undone ? 'Restore recommendation for' : 'Undo change for'} ${row.name}`,

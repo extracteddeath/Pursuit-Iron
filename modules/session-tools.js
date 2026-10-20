@@ -120,13 +120,14 @@ export function buildSessionReview(program, day, weekIndex, unit, history = [], 
                     opportunity = { type: 'reps', weight, reps, bestReps };
             }
         }
-        const reason = proposed.some(set => set.target?.nextAction === 'percentage')
+        const proposedReason = proposed.some(set => set.target?.nextAction === 'percentage')
             ? 'This lift follows the saved percentage program and training max for this week. Its programmed weights and reps stay together.'
-            : suggestion?.reason || `Choose a starting load for ${range[0]}–${range[1]} reps at the planned effort. This exposure will establish a reference for future progression.`;
+            : proposedSuggestion?.reason || `Choose a starting load for ${range[0]}–${range[1]} reps at the planned effort. This exposure will establish a reference for future progression.`;
+        const reason = change.undone ? suggestion.reason : proposedReason;
         const action = proposedSuggestion?.action;
         const category = action === 'increase_load' || action === 'add_reps' ? 'Progression'
             : action === 'decrease_load' ? 'Load adjustment' : program.config?.percentScheme ? 'Programmed targets' : 'Rep target';
-        return [{ id, name: ex.name, slot, cell, range, suggestion, proposed, effective, reason,
+        return [{ id, name: ex.name, slot, cell, range, suggestion, proposed, effective, reason, proposedReason,
             style: resolveStyle(program, ex, slot === day.primaryIndex, weekIndex, perf, history, day.id),
             protocol: techniqueProtocolFromCell(cell), change, category, opportunity }];
     });

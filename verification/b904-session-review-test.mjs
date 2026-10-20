@@ -20,6 +20,7 @@ assert.equal(review.exercises[1].opportunity.type,'e1rm');assert.equal(review.ex
 const held=JSON.parse(JSON.stringify(withSessionPlanChoice(program,bench.change,true)));
 const rereview=buildSessionReview(held,day,2,'kg',history);
 assert.equal(rereview.exercises[0].change.undone,true);
+assert.equal(rereview.exercises[0].proposedReason,bench.reason,'undo retains the original reason in the audit');
 assert.equal(buildSessionReview(held,day,2,'kg',history.map(h=>({...h,updatedAt:Date.now()}))).exercises[0].change.undone,true,'sync revision metadata does not consume undo');
 assert.equal(rereview.exercises[0].effective[0].weight,'80');assert.equal(rereview.exercises[0].effective[0].reps,'8');
 assert.equal(rereview.exercises[0].effective[0].valueOwner,'user');
@@ -44,7 +45,9 @@ assert.ok(dd.proposed[0].weight>90);assert.equal(dd.proposed[1].weight,'90');
 const heldDD=buildSessionReview(withSessionPlanChoice(program,dd.change,true),day,2,'kg',partial).exercises[1];
 assert.deepEqual(heldDD.effective.map(s=>[Number(s.weight),Number(s.reps)]),[[90,12],[90,8],[87.5,8]],'positional dynamic-double undo');
 const percentage={...program,config:{...program.config,percentScheme:'531'},tm:{'bb-bench':100}};
-assert.ok(buildSessionReview(percentage,day,2,'kg',history).exercises.every(row=>!row.change.canUndo),'authored percentage protocol remains owned');
+const percentReview=buildSessionReview(percentage,day,2,'kg',history);
+assert.equal(percentReview.exercises[0].change.canUndo,false,'authored percentage lift remains owned');
+assert.equal(percentReview.exercises[1].change.canUndo,true,'independently progressing accessories still support undo');
 const deload={...program,weeks:1};assert.ok(buildSessionReview(deload,day,2,'kg',history).exercises.every(row=>!row.change.canUndo));
 const short=planShorterSession(program,day,2,20,{history});const shortDay={...day,sessionLengthPlan:short};
 const shortReview=buildSessionReview(program,shortDay,2,'kg',history);

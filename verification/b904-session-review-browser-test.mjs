@@ -29,6 +29,7 @@ try{
   await page.click('[aria-label="Undo change for Barbell Bench Press"]');
   await page.waitForSelector('[aria-label="Restore recommendation for Barbell Bench Press"]');
   assert.match(await page.$eval('[data-plan-change="bb-bench"]',n=>n.innerText),/undone/i);
+  assert.match(await page.$eval('[data-plan-change="bb-bench"]',n=>n.innerText),/top of the rep range/,'the original engine reason remains visible after undo');
   assert.equal(await page.$eval('.wpb-session-dialog',n=>n.scrollWidth<=n.clientWidth+1),true);
   await page.waitForFunction(()=>document.querySelector('.wpb-plan-undo')?.getBoundingClientRect().height>=44);
   assert.ok(await page.$eval('.wpb-plan-undo',n=>parseFloat(getComputedStyle(n).minHeight)>=48));

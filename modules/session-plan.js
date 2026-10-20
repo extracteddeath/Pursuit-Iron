@@ -24,7 +24,7 @@ export function sessionPlanChange({ program, day, ex, slot, weekIndex, unit, cel
     const different = (a, b) => a && b && (Math.abs(Number(a.weight) - Number(b.weight)) > .001 || Number(a.reps) !== Number(b.reps));
     const changed = targets.some((target, i) => previous[i]?.weight > 0 && target.weight > 0 && different(target, previous[i]));
     const eligible = !!source && day.exercises[slot] === ex.id && !program.quick && !suggestion?.referenceOnly && suggestion?.action !== 'initial'
-        && !program.config?.percentScheme && !/deload/i.test(String(cell.note || ''))
+        && !(program.config?.percentScheme && (slot === day.primaryIndex || slot === day.t2Index)) && !/deload/i.test(String(cell.note || ''))
         && !(weekIndex > Number(program.weeks ?? program.config?.weeks ?? Infinity));
     const canUndo = changed && eligible && undoTargets.some((target, i) => different(target, targets[i]));
     const key = JSON.stringify([program.id, day.id, slot, ex.id, weekIndex, unit,

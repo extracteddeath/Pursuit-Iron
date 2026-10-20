@@ -1,3 +1,9 @@
+## Build 900 — Compact progression and clearer exercise controls
+
+- Make the progression method a small themed text control beside set/muscle details, with a full tap target. Remove the duplicate full-view progression action.
+- Keep exercise info, history and skip beside the name so tags, notes and progression can use the full content width.
+- Wrap workout actions into visible rows with space above the target/set area. Keep all actions and their existing behavior, including Focus and percentage-program progression access.
+
 ## Build 899 — Steady screens and program creation
 
 - Keep route canvases fully opaque and stationary. Remove stacked page/card scale and luminance pulses while preserving directional content motion, interactive gestures, controls and sheets.

@@ -8,7 +8,7 @@ const importMap = fs.readFileSync(path.join(root, 'index.html'), 'utf8').match(/
 const program = { id: 'm232-phone', custom: true, weeks: 6, config: { unit: 'lb', goal: 'hypertrophy', experience: 'intermediate', progression: 'double', equipment: ['cable'] },
     days: [{ id: 'push', label: 'Accessory', primaryIndex: -1, exercises: ['cable-fly'] }], overrides: { 'push:0': { sets: 3, reps: '8-12', rir: '1-2', progressionStyle: 'double' } } };
 const history = [{ id: 'prior', programId: program.id, dayId: 'push', date: 1, unit: 'lb', perf: { 'cable-fly': { weight: 100, reps: 8,
-    sets: Array.from({ length: 3 }, () => ({ w: 100, r: 8, rir: 2, rirReported: true, done: true })) } } }];
+    sets: [8, 10, 8].map(r => ({ w: 100, r, rir: 2, rirReported: true, done: true })) } } }];
 const html = `<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/app.css">${importMap}</head><body><div id="root"></div><script type="module">
 import React from '/vendor/react.js';import {createRoot} from '/vendor/react-dom-client.js';import {WorkoutSession,StyleTag} from '/modules/App.js';
 const program=${JSON.stringify(program)},history=${JSON.stringify(history)};
@@ -31,6 +31,47 @@ try {
     const check = await page.$('.wpb-backdrop button[data-wpb-system-back]'); if (check) await check.click();
     const values = () => page.evaluate(() => JSON.parse(localStorage.getItem('wpb:live')).data[0].sets.map(s => s.weight));
     assert.deepEqual(await values(), ['100', '100', '100']);
+    const rows = () => page.evaluate(() => JSON.parse(localStorage.getItem('wpb:live')).data[0].sets);
+    const typeReps = async (index, value) => {
+        const input=await page.$(`[data-testid="set-0-${index}"] input[aria-label="reps"]`);
+        await input.click();await page.keyboard.down('Control');await page.keyboard.press('KeyA');await page.keyboard.up('Control');await input.type(String(value));
+    };
+    assert.deepEqual((await rows()).map(s=>s.reps), ['9','11','9'], 'positional history produces independent rep targets');
+    await typeReps(0,8);
+    await page.click('[data-testid="set-0-0"] button[aria-label="Mark set done"]');
+    await page.waitForSelector('[data-testid="set-0-0"] [data-effort-picker] button[aria-label="2 reps left"]');
+    const targetColors=await page.evaluate(()=>[0,1].map(i=>{
+        const el=document.querySelector(`[data-testid="set-0-${i}"] [data-target-effort]`);
+        return {text:el.textContent,color:getComputedStyle(el).color,visible:el.getBoundingClientRect().height>0};
+    }));
+    assert.ok(targetColors.every(t=>t.visible&&/1–2 RIR/.test(t.text)));
+    assert.notEqual(targetColors[0].color,targetColors[1].color,'previous target remains visible but loses active theme color');
+    assert.match(await page.$eval('[data-testid="set-0-0"] [data-effort-feedback]',el=>el.textContent),/guides suggestions/);
+    await page.click('[data-testid="set-0-0"] button[aria-label="2 reps left"]');
+    await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:live')).data[0].sets[1].reps==='8');
+    assert.equal((await rows())[0].actualRIR,2);
+    assert.match(await page.$eval('[data-testid="set-0-0"] [data-target-effort]',el=>el.textContent),/1–2 RIR/);
+    assert.match(await page.$eval('[data-testid="set-0-0"] [data-effort-tag]',el=>el.textContent),/2 RIR/);
+    await page.click('[data-testid="set-0-0"] [data-effort-tag]');
+    await page.waitForSelector('[data-testid="set-0-0"] [data-effort-feedback]');
+    assert.match(await page.$eval('[data-testid="set-0-0"] [data-effort-feedback]',el=>el.textContent),/Next set reps adjusted/);
+    if (process.env.B901_SCREENSHOT) await page.screenshot({path:process.env.B901_SCREENSHOT});
+    await page.reload({waitUntil:'networkidle0'});await page.waitForSelector('[data-testid="set-0-2"]');
+    assert.equal((await rows())[1].reps,'8','rep cap survives component recovery');
+    await page.click('[data-testid="set-0-0"] [data-effort-tag]');
+    await page.click('[data-testid="set-0-0"] button[aria-label="3 reps left"]');
+    await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:live')).data[0].sets[1].reps==='9');
+    await page.click('[data-testid="set-0-0"] [data-effort-tag]');
+    await page.click('[data-testid="set-0-0"] button[aria-label="3 reps left"]');
+    await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:live')).data[0].sets[1].reps==='11');
+    await page.click('[aria-label="Focused mode"]');
+    await page.waitForSelector('[data-focus-effort-target]');
+    assert.match(await page.$eval('[data-focus-effort-target]',el=>el.textContent),/Target 1–2 RIR/,'Focus retains the owed set target');
+    assert.match(await page.$eval('[data-focus-hero]',el=>el.textContent),/1–2 RIR/,'Focus header uses target.rir');
+    await page.click('[aria-label="Exit focused mode"]');
+    await page.click('[data-testid="set-0-0"] button[aria-label="Mark set not done"]');
+    assert.equal((await rows())[1].reps,'11');
+    console.log('PASS B901 phone: 9/11/9 → log 8 @ 2 → next 8, muted retained target vs actual, truthful copy, reload/rerate/clear/undo and Focus target parity.');
     for (let i = 0; i < 2; i++) {
         const row = `[data-testid="set-0-${i}"]`, reps = await page.$(row + ' input[aria-label="reps"]');
         await reps.click(); await page.keyboard.down('Control'); await page.keyboard.press('KeyA'); await page.keyboard.up('Control'); await page.keyboard.press('Backspace'); await reps.type('6');

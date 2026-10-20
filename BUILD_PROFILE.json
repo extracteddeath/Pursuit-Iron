@@ -2,10 +2,10 @@
   "profile": "portable-browser-esm-canonical-engine",
   "milestone": "M234",
   "source": "Canonical engine with milestone contract verification",
-  "engine": "0.65.8; Novice compound effort floor and full-body squat/hinge frequency",
+  "engine": "0.65.9; Observed-effort live rep guard and retained target RIR",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 71,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b900-r44748cea7f030eea",
-  "uiMilestone": "Build 900 · Compact progression and open workout actions"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b901-r2f7bf8673090d565",
+  "uiMilestone": "Build 901 · Observed-effort suggestions and retained target RIR"
 }

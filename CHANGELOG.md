@@ -1,3 +1,11 @@
+## Build 901 — Suggestions respect logged reps and effort
+
+- Keep the programmed effort visible in TARGET after completing and rating a set; use muted text for every non-current row. Focus shows the owed set's target and reads target RIR from its prescription.
+- Engine 0.65.9 caps the next untouched same-weight rep prefill from explicitly logged reps and RIR. A history-derived 11-rep target no longer survives logging 8 at 2 RIR when the next target is 1–2 RIR. This session-only guard never raises reps/load, extrapolates to another weight, or overwrites manual/completed work or authored protocols.
+- Preserve two-observed-miss accessory load reductions, source-aware undo, rerating, and reload recovery. Keep weekly progression independent and retain the current plus four preceding engine versions.
+- Replace “tunes the next set” with factual feedback: reps adjusted, load eased, target unchanged, or saved for future workouts.
+- Audit custom/generated suggestion ownership, historical positional targets, RIR provenance, load rounding, live adjustment and recovery. Extend the existing engine and real-browser regressions with the reported sequence.
+
 ## Build 900 — Compact progression and clearer exercise controls
 
 - Make the progression method a small themed text control beside set/muscle details, with a full tap target. Remove the duplicate full-view progression action.

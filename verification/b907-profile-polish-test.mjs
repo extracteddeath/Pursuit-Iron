@@ -15,4 +15,14 @@ assert.match(region,/Share Strength Score"\]\{width:48px!important/,'inline stre
 assert.match(app,/function ProfileCustomization\(\{ prefs, onChange, onClose \}\)/,'same Profile state owner');
 assert.match(app,/localStorage\.setItem\(PROFILE_PREFERENCE_KEY, JSON\.stringify\(safe\)\)/,'same persisted preferences');
 assert.doesNotMatch(region,/@keyframes|animation:/,'no competing row transition or screen animation');
+
+const b912=css.slice(css.lastIndexOf('/* B912 — Prototype-informed Profile hierarchy'));
+assert.ok(b912.startsWith('/* B912 — Prototype-informed Profile hierarchy'),'scoped visual pass is present');
+assert.match(b912,/\.wpb-profile-strength-grid\{[\s\S]*?grid-template-columns:minmax\(0,1fr\)!important/,'strength compares actual patterns in compact rows');
+assert.match(b912,/\.wpb-profile-toolbar\{[\s\S]*?order:80/,'secondary actions move after profile content');
+assert.ok(b912.includes('.wpb-profile-customize')&&b912.includes('order:81'),'customization remains accessible below actions');
+assert.ok(b912.includes('@container pi-r77-profile')&&b912.includes('max-width:360px'),'narrow/large-text layout handled');
+assert.ok(b912.includes('prefers-reduced-motion:reduce')&&b912.includes('forced-colors:active'),'motion and forced-colors');
+assert.doesNotMatch(b912,/@keyframes|animation:/,'no second animation system');
+
 console.log('PASS B907 Profile: tactile spacing, tonal selection, reduced-motion/high-contrast, persistent preferences.');

@@ -133,6 +133,7 @@ const ALIASES = {
     'lat pulldown cable': 'lat-pulldown', 'lat pulldown machine': 'lat-pulldown', 'lat pulldown': 'lat-pulldown', 'lat pulldown close grip cable': 'close-pulldown', 'lat pulldown wide grip cable': 'wide-pulldown',
     'seated row cable': 'seated-row', 'seated cable row v grip cable': 'seated-row', 'seated row machine': 'machine-row', 'cable row': 'seated-row',
     'bicep curl dumbbell': 'db-curl', 'biceps curl dumbbell': 'db-curl', 'bicep curl barbell': 'bb-curl', 'bicep curl cable': 'cable-curl', 'bicep curl ez bar': 'ez-curl', 'ez bar biceps curl': 'ez-curl', 'bicep curl machine': 'machine-curl',
+    'reverse curl': 'reverse-curl', 'reverse ez bar curl': 'reverse-curl', 'reverse ezbar curl': 'reverse-curl', 'ez bar reverse curl': 'reverse-curl', 'reverse curl ez bar': 'reverse-curl',
     'hammer curl dumbbell': 'hammer', 'hammer curl cable': 'rope-hammer-curl', 'preacher curl barbell': 'preacher', 'preacher curl ez bar': 'preacher', 'preacher curl dumbbell': 'preacher', 'concentration curl dumbbell': 'concentration-curl',
     'triceps pushdown cable straight bar': 'straight-bar-pushdown', 'triceps pushdown cable rope': 'rope-pushdown', 'triceps pushdown': 'pushdown', 'triceps pushdown cable': 'pushdown', 'triceps rope pushdown': 'rope-pushdown',
     'triceps extension cable': 'oh-cable-ext', 'overhead triceps extension cable': 'oh-cable-ext', 'triceps extension dumbbell': 'db-oh-ext', 'skullcrusher barbell': 'skullcrusher', 'skullcrusher ez bar': 'skullcrusher', 'skullcrusher dumbbell': 'lying-db-ext',

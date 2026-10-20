@@ -1,3 +1,9 @@
+## Build 902 — Reverse EZ-Bar Curl
+
+- Clearly name the existing EZ-bar reverse curl in both the app and canonical catalog. Keep its stable exercise ID, saved programs, history, brachialis emphasis, EZ-bar loading and 10–15 rep defaults.
+- Support searches for reverse EZ bar / EZBar curl and preserve old/new CSV import names. Keep the straight-bar reverse curl separate.
+- Correct the app's movement tag to elbow flexion and give the lift overhand-grip curl cues instead of generic reverse-fly instructions.
+
 ## Build 901 — Suggestions respect logged reps and effort
 
 - Keep the programmed effort visible in TARGET after completing and rating a set; use muted text for every non-current row. Focus shows the owed set's target and reads target RIR from its prescription.

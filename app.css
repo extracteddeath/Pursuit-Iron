@@ -8749,3 +8749,54 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 
 .wpb-session-dialog.wpb-program-revision{padding-bottom:0}
 .wpb-program-revision-footer{bottom:0;padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+
+
+/* UI polish pass 01: SessionChoiceDialog joins the existing interruptible
+   expressive spring family. No CSS keyframe, transform or opacity transition
+   competes with data-pi-surface/data-pi-backdrop motion ownership. Keep the
+   phone bottom detent and use a contained, centered dialog on portrait tablets. */
+#root[data-pi-motion="expressive"] .wpb .wpb-session-dialog-backdrop{
+  box-sizing:border-box;
+  overscroll-behavior:contain;
+  background:rgba(0,0,0,.58);
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-session-dialog{
+  min-width:0;
+  max-width:min(620px,100%);
+  max-height:88dvh;
+  border-radius:28px 28px 0 0;
+  border-color:var(--wpb-theme-border);
+  box-shadow:0 -12px 36px rgba(0,0,0,.22);
+  background:var(--wpb-theme-bg);
+  overscroll-behavior-y:contain;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-session-dialog-heading>button:focus-visible,
+#root[data-pi-motion="expressive"] .wpb .wpb-session-dialog .wpb-session-choice:focus-visible{
+  outline:2px solid var(--wpb-theme-accent-ink);
+  outline-offset:2px;
+}
+@media(min-width:800px) and (min-height:640px){
+  #root[data-pi-motion="expressive"] .wpb .wpb-session-dialog-backdrop{
+    align-items:center;
+    padding:clamp(16px,3vw,32px);
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-session-dialog{
+    width:min(620px,100%);
+    max-height:min(86dvh,850px);
+    margin:0;
+    border-radius:28px;
+    box-shadow:0 20px 52px rgba(0,0,0,.20);
+  }
+}
+@media(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb .wpb-session-dialog{
+    background:Canvas;
+    color:CanvasText;
+    border-color:CanvasText;
+    box-shadow:none;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-session-dialog-heading>button:focus-visible,
+  #root[data-pi-motion="expressive"] .wpb .wpb-session-dialog .wpb-session-choice:focus-visible{
+    outline-color:Highlight;
+  }
+}

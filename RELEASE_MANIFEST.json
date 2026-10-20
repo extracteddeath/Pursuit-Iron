@@ -5,7 +5,7 @@
   "build": 905,
   "engineVersion": "0.65.9",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "6a0b166580f54cfeb18cec56369c2696fd4858b344f78050a3eb8642d2bc2add",
+  "runtimeAggregate": "733cca6ab1065286d22bae0e0a84eb14653068284e0704c774f4c56fb7ad3ee6",
   "runtimeFiles": {
     "modules/cycle-setup-drafts.js": "b1d7fdb80eec689fbe419e2f8a3fb4bc97141b80cfff5d94718916abb4be8395",
     "modules/engine-api.js": "b5a0cad7dddaf4e0b3c59100c06c07dc6a06d10340e2d04b9e0c3a18ee6fa2a8",
@@ -99,7 +99,7 @@
     "modules/training-domain/prescriptions.js": "d9b3c2c96dd426daf809beddf083101b5db7990b4782c79c467505fd7c527dfc",
     "modules/training-domain/programs.js": "4bdab30bd864c0a81799e868a4d004688ca95cf981ece5d0c5ebdee9fee3e8ac",
     "modules/training-domain/records.js": "0a18e3bcbd1e0700f3907fb219eb5eee798970c103ece76fc53d9e2e59c03432",
-    "modules/ui-motion.js": "421474c40e4f790cf353502dd3af9968e2e40eb603c09fb1403c41faf07f3118",
+    "modules/ui-motion.js": "c522bdc1cd4538858412547cb1ff9cbf97acd7502168cdb015fbf9ffa0a9b356",
     "modules/wizard-stability.js": "a62b2bed8a1f5ab880bfeab036a83ec630c93048b8a352652fe00ae75374a3d1",
     "modules/workout-context.js": "e59546ed86f16f08b398960e4753495185026d4c53770384b7f96a96f4cd8afa",
     "vendor/lucide-react.js": "f84db748249b6e57e1d5187e876da806c1733523a1fa1501224bf740519b2cf4",
@@ -111,22 +111,22 @@
     "vendor/react.js": "24b2d220a5b2637cf3fb78fe0d961f227ea0a4b960485dbfb03c9d276e72147c"
   },
   "localCandidate": {
-    "name": "Pursuit Iron 4.0 · M234 Candidate Selection Hardening",
+    "name": "Pursuit Iron 4.0 \u00b7 M234 Candidate Selection Hardening",
     "base": "M233 / app 4.0.0 build 822 / Engine 0.65.5",
-    "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
+    "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228\u2013M234 permanent engine contracts."
   },
   "uiFiles": {
     "modules/App.js": "e84619808501d35a7cb37f7c6aece27f6086bdcb6a3ee2619d93ff6e2c7d5cd3",
     "index.html": "54fd7f97b0a2d9d8b76694380158b4a23699a3f1c1cbea697c5e33b7c705b7ed",
-    "sw.js": "972f5ed96ad348f4786e2ca84018d830e322381da36be61452160bf46e68ed24",
-    "BUILD_PROFILE.json": "f1d517913633d639e4f64e6d4ac4aaa1eb83fae73f41f33e3bd2ae9b33a4bda3",
+    "sw.js": "93f06c59d4abb27de1111ecdcbde3f1b68e8c67e548951d2bea15aaeb8f96848",
+    "BUILD_PROFILE.json": "ed7fd345ce417120132527614d39a389a428b84878ace80a9367f9c214885451",
     "CHANGELOG.md": "eb44e416e03ad3c447bafc6cdb5f8c9c559c525be0a12396d4023c811c2c73d6",
-    "app.css": "b46c2fde84c69afa3d2fa5e881229abb262e5329f5bc2b595acf611098ed98cd",
+    "app.css": "14061b8d82598dd622f6e18bb57a974173ffd6808e41cd21ffdc3dbeaf50849b",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b905-rec5f3cdf4b2c3b64",
-  "uiMilestone": "Build 905 · Reviewed program changes, exact layouts and portrait tablets"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b905-r705a1b02eb728136",
+  "uiMilestone": "Build 905 \u00b7 Expressive modal polish 01"
 }

@@ -198,7 +198,7 @@ time.sleep(3)
 shot("today")
 # The design's Today: week strip, the coach's game plan and this week's days
 # (a rest day shows recovery instead — the run's date decides which, so only a training day must have it)
-if not find(r"Today's game plan", timeout=3) and not scroll_to(r"Today's game plan", tries=4) and not find(r"Recover today", timeout=2):
+if not find(r"Recover today", timeout=2) and not find(r"Today's game plan", timeout=3) and not scroll_to(r"Today's game plan", tries=4):
     FAILS.append("no game plan on Today")
 else:
     shot("today-game-plan")

@@ -118,8 +118,8 @@ private fun PlatesTool(vm: AppViewModel, initialWeight: String, initialBar: Stri
                 textStyle = MaterialTheme.typography.displayMedium.copy(color = cs.onSurface, textAlign = TextAlign.End),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 cursorBrush = androidx.compose.ui.graphics.SolidColor(cs.primary),
-                modifier = Modifier.width(IntrinsicSize.Min).widthIn(min = 48.dp).semantics { contentDescription = "Total weight, $u" },
-                decorationBox = { inner -> Box(contentAlignment = Alignment.CenterEnd) { if (w.isEmpty()) Text("0", style = MaterialTheme.typography.displayMedium, color = cs.onSurfaceVariant); inner() } })
+                modifier = Modifier.width(150.dp).semantics { contentDescription = "Total weight, $u" },
+                decorationBox = { inner -> Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) { if (w.isEmpty()) Text("0", style = MaterialTheme.typography.displayMedium, color = cs.onSurfaceVariant); inner() } })
             Text(" $u", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 8.dp))
         }
         Box(Modifier.size(52.dp).clip(CircleShape).background(cs.surfaceContainerHigh).clickable { setTo((total ?: barW) + step) }

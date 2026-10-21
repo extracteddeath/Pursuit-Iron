@@ -8695,7 +8695,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 @container pi-r77-profile (max-width:18rem) or (max-width:18em){
   .wpb-profile-share-toggles{grid-template-columns:minmax(0,1fr)}
 }
-.wpb-profile-share-toggles button{text-align:left}
+.wpb-profile-share-toggles button{text-align:left;min-width:0;white-space:normal;overflow-wrap:anywhere;flex-wrap:wrap}
 .wpb-profile-share-toggles button span{display:grid;place-items:center;width:22px;height:22px;flex-shrink:0;border-radius:7px;background:var(--pi-color-control,var(--wpb-theme-card-high))}
 .wpb-profile-reset{margin-top:12px}
 @media(hover:hover) and (pointer:fine){.wpb-profile-toolbar button:not(:disabled):hover,.wpb-profile-customize button:not(:disabled):hover{background:var(--wpb-theme-accent-dim)}}

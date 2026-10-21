@@ -6,6 +6,6 @@
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 71,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b905-rd03547580e70dce2",
-  "uiMilestone": "Build 905 · Cohesion 09 UI ownership guardrails"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b905-rdae396e5f76fcf8b",
+  "uiMilestone": "Build 905 · Cohesion 10 Home hierarchy and shared discovery"
 }

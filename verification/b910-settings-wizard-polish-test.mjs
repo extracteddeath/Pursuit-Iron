@@ -12,3 +12,17 @@ for(const s of ['.wpb-settings .wpb-segmented>button','.wpb-wizard-option','.wpb
 assert.ok(block.includes('prefers-reduced-motion:reduce')&&block.includes('forced-colors:active')&&block.includes('transition:none!important'));
 assert.ok(app.includes('className: "wpb-wizard-progress"')&&app.includes('className: "wpb-segmented"'),'Underlying progress and settings choice DOM remain');
 console.log('PASS B910: stable wizard header, bounded non-flashing question motion and settings selection feedback.');
+
+/* Cohesion 08: one semantic switch owner and independently named reminder choices. */
+const settings=app.slice(app.indexOf('function SettingsView('),app.indexOf('\nfunction ',app.indexOf('function SettingsView(')+20));
+assert.ok(app.includes('function SettingsSwitch({ className = ""'), 'Shared Settings switch exists');
+assert.equal((settings.match(/_jsx\(SettingsSwitch, \{/g)||[]).length,5,'All five switches share one control');
+assert.ok(!settings.includes('className: "pressable hit wpb-toggle"'),'No legacy inline toggle geometry');
+for(const callback of ['setKeepAwake','setWarmupCard','setRestAutoStart','setHaptics','setReminders'])
+ assert.ok(settings.includes(callback),'Preserves '+callback+' callback');
+assert.ok(settings.includes('role: "group", "aria-label": "Reminder days"'),'Reminder choices are grouped');
+assert.ok(settings.includes('"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"'),'Seven unique day labels');
+assert.ok(settings.includes('selected: on, "aria-label": day'),'Day chips expose selection state and names');
+for(const key of ['wpb-settings-switch-track','wpb-settings-switch-thumb','wpb-reminder-days','wpb-reminder-day'])
+ assert.ok(css.includes('.'+key),'Shared style owner '+key);
+console.log('PASS cohesion 08: Settings toggles and reminder day semantics.');

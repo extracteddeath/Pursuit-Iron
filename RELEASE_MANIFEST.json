@@ -116,12 +116,12 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "2dfe01fd0a2dc00466143be77552dc94b50e128c7a5cbafc4c69236bd680bc15",
+    "modules/App.js": "8c76951545bbe2df620c3ea7404e72af2371b7abea13db845eba043d983e1fca",
     "index.html": "54fd7f97b0a2d9d8b76694380158b4a23699a3f1c1cbea697c5e33b7c705b7ed",
     "sw.js": "38ecae35345620c3f821053c88b6f1d7ffd9878926586961553ea144cb1b9110",
     "BUILD_PROFILE.json": "eaa48fb74b0647c2abf0a428cf21c557034ca27bce51281477d3ec7085c5f719",
     "CHANGELOG.md": "af075f829cd660bffaf7fd98d6a7590ddae458c4f4c788c1a0ef41d0515adc8f",
-    "app.css": "7e39a3bf7409b3096241ca23ab8335eb835d2b191efa145d5ffea5092f9adc1c",
+    "app.css": "5459bbf6aeabdfea2cbe234baaedcf29388e59a57df01d1b87834ac0600f6868",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",

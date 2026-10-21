@@ -74,6 +74,32 @@ try{
   }else{
    assert.ok(await page.$('.wpb-home-hero'), 'Existing program retains Next Workout hero');
    assert.ok(await page.$('.wpb-m3-session-preview'), 'Current session outline remains visible');
+   const outline=await page.$('.wpb-home-outline-toggle');
+   assert.ok(outline,'Populated Home retains the expand/collapse session outline');
+   // The shipped Home intentionally defaults to expanded. Do not toggle an open
+   // list closed and then wait for its rows; only expand when it is collapsed.
+   const initiallyExpanded=await page.$eval('.wpb-home-outline-toggle',
+     el=>el.getAttribute('aria-expanded')==='true');
+   if(!initiallyExpanded) await page.click('.wpb-home-outline-toggle');
+   await page.waitForFunction(()=>{
+     const toggle=document.querySelector('.wpb-home-outline-toggle');
+     const first=document.querySelector('.wpb-home-outline-list>li');
+     return toggle?.getAttribute('aria-expanded')==='true' &&
+       !!first && first.getBoundingClientRect().height>0;
+   });
+   const gap=await page.evaluate(()=>{
+    const section=document.querySelector('.wpb-home-session-outline'),
+      toggle=section.querySelector('.wpb-home-outline-toggle'),
+      first=section.querySelector('.wpb-home-outline-list>li');
+    return {margin:parseFloat(getComputedStyle(section).marginTop),
+      padding:parseFloat(getComputedStyle(section).paddingTop),
+      listGap:first.getBoundingClientRect().top-toggle.getBoundingClientRect().bottom,
+      overflow:document.documentElement.scrollWidth>innerWidth+1};
+   });
+   assert.ok(gap.margin<=8&&gap.padding===0&&gap.listGap<=6,
+    'No oversized gap above Home exercise list: '+JSON.stringify(gap));
+   assert.equal(gap.overflow,false,'Expanded session outline never overflows phone width');
+
    assert.ok(await page.$('.wpb-home-game-plan') || await page.$('.wpb-home-health'),
     'Supporting Home sections remain reachable without cloning the hero');
   }

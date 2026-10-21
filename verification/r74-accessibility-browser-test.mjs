@@ -285,7 +285,12 @@ try{
             const tabs=[...document.querySelectorAll('.wpb-tabbar button')].map(button=>{
               const label=button.querySelector('span'),range=document.createRange();
               range.selectNodeContents(label);const text=range.getBoundingClientRect(),box=button.getBoundingClientRect();
-              return {label:button.getAttribute('aria-label'),text:{x:text.x,right:text.right,y:text.y,bottom:text.bottom},
+              const rects=[...range.getClientRects()].filter(r=>r.width>0&&r.height>0);
+              const visibleName=[...button.querySelectorAll('.wpb-tab-label-full,.wpb-tab-label-compact')]
+                .filter(el=>getComputedStyle(el).display!=='none').map(el=>el.textContent).join('');
+              return {label:button.getAttribute('aria-label'),visibleName,
+                lines:new Set(rects.map(r=>Math.round(r.y))).size,
+                text:{x:text.x,right:text.right,y:text.y,bottom:text.bottom},
                 box:{x:box.x,right:box.right,y:box.y,bottom:box.bottom},
                 hit:button.contains(document.elementFromPoint(box.x+box.width/2,box.y+box.height/2))};
             });
@@ -301,7 +306,7 @@ try{
           if(width===320||width===1280)
             await page.screenshot({path:path.join(root,'verification/r74-'+theme+'-'+width+'-'+route+'-phone.png')});
           assert.equal(enlarged.overflow,false,'200% '+route+' text keeps document width: '+JSON.stringify({theme,width,enlarged}));
-          assert.ok(enlarged.tabs.every(t=>t.hit&&t.text.x>=t.box.x-1&&t.text.right<=t.box.right+1&&
+          assert.ok(enlarged.tabs.every(t=>t.hit&&t.lines===1&&t.text.x>=t.box.x-1&&t.text.right<=t.box.right+1&&
             t.text.y>=t.box.y-1&&t.text.bottom<=t.box.bottom+1),
             '200% '+route+' navigation labels fit their real controls: '+JSON.stringify({theme,width,enlarged}));
           if(route==='plan'&&width>=1060&&height>=700){

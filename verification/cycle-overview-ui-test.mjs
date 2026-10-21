@@ -1,5 +1,6 @@
 import { productionSource } from './production-source.mjs';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 const app=productionSource();
 const rows=app.slice(app.indexOf('function CycleBlockRows('),app.indexOf('function CycleBlockNav('));
 assert.ok(rows.includes('children: b.label'),'phase identity comes from block labels, including Peak');
@@ -11,5 +12,6 @@ assert.ok(detail.includes('children: `${P.sessions} sessions logged`'));
 assert.ok(detail.includes('Cycle options'));
 assert.equal((detail.match(/className: "wpb-cycle-actions"/g)||[]).length,1);
 assert.ok(!detail.includes('wpb-cycle-goal-arc'),'block list provides the phase path once');
-assert.ok(app.includes('.wpb-cycle-block-row[data-state="planned"]{opacity:1!important;}'));
+assert.ok(!rows.includes('style: {'),'Block row presentation has one CSS owner');
+assert.ok(fs.readFileSync('app.css','utf8').match(/#root \.wpb-cycle-block-row\{[^}]*opacity:1;/),'All block states remain fully readable');
 console.log('Cycle overview UI integrity OK: one block path, readable previews, compact summary and options.');

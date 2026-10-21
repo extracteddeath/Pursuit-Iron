@@ -9238,3 +9238,53 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 
 @container pi-r77-profile (max-width:22em){.wpb-profile-card-metrics{grid-template-columns:minmax(0,1fr)}}
 .wpb-profile-share-toggles button[aria-pressed="true"] span{background:var(--pi-color-card,var(--wpb-theme-card))}
+
+/* Cohesion 08: one Settings control owner; Workout/Focus geometry is unchanged. */
+#root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-settings-switch {
+  box-sizing:border-box;display:inline-grid;place-items:center;
+  width:48px;min-width:48px;height:48px;min-height:48px;padding:0;
+  border:0;border-radius:var(--pi-shape-action,14px);background:transparent;
+  cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-settings-switch-track {
+  box-sizing:border-box;display:block;position:relative;width:44px;height:26px;
+  border:1px solid var(--pi-color-divider);border-radius:99px;background:var(--pi-color-control);
+  transition:background-color 160ms var(--pi-ease),border-color 160ms var(--pi-ease);
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-settings-switch-thumb {
+  display:block;position:absolute;top:2px;left:2px;width:20px;height:20px;
+  border-radius:50%;background:var(--pi-color-on-control);box-shadow:0 1px 2px rgba(0,0,0,.18);
+  transition:transform 160ms var(--pi-ease),background-color 160ms var(--pi-ease);
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-settings-switch[aria-checked="true"] .wpb-settings-switch-track {
+  background:var(--pi-color-active);border-color:var(--pi-color-active);
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-settings-switch[aria-checked="true"] .wpb-settings-switch-thumb {
+  background:var(--pi-color-on-active);transform:translateX(18px);
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-settings-switch:disabled {opacity:.55;cursor:not-allowed;}
+#root[data-pi-motion="expressive"] .wpb .wpb-settings :is(.wpb-settings-switch,.wpb-reminder-day):focus-visible {
+  outline:2px solid var(--pi-m3e-primary);outline-offset:2px;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-reminder-days {
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(48px,1fr));gap:6px;min-width:0;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-reminder-day.wpb-ui-choice {
+  box-sizing:border-box;display:grid;place-items:center;min-width:48px;min-height:48px;
+  padding:6px 4px;border:1px solid var(--pi-color-divider);border-radius:var(--pi-shape-action,14px);
+  background:var(--pi-color-control);color:var(--pi-color-on-control);font-size:13px;font-weight:700;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-reminder-day.wpb-ui-choice[aria-pressed="true"] {
+  background:var(--pi-color-active);color:var(--pi-color-on-active);border-color:var(--pi-color-active);
+}
+@media(prefers-reduced-motion:reduce){
+  #root[data-pi-motion="expressive"] .wpb .wpb-settings :is(.wpb-settings-switch-track,.wpb-settings-switch-thumb){transition:none;}
+}
+@media(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-settings-switch-track {border-color:ButtonText;background:ButtonFace;}
+  #root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-settings-switch-thumb {background:ButtonText;}
+  #root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-settings-switch[aria-checked="true"] .wpb-settings-switch-track {border-color:Highlight;background:Highlight;}
+  #root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-settings-switch[aria-checked="true"] .wpb-settings-switch-thumb {background:HighlightText;}
+  #root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-reminder-day.wpb-ui-choice {border-color:ButtonText;background:ButtonFace;color:ButtonText;}
+  #root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-reminder-day.wpb-ui-choice[aria-pressed="true"] {background:Highlight;color:HighlightText;border-color:Highlight;}
+}

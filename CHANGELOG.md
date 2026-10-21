@@ -1,3 +1,11 @@
+## Reliable shared data controls — October 21, 2026
+
+- Settings now delegates backup, restore preview and Undo to one stable component. All twelve backup actions reuse UiAction and existing semantic theme roles; wrapping rows preserve labels at narrow widths and 200% text without adding CSS priority overrides.
+- Failed clipboard/download actions and cancelled sharing have visible outcomes. Concurrent transfer attempts are blocked. CSV copy no longer marks a full backup as saved; download messaging asks users to verify the actual file.
+- Selecting an oversized or unreadable restore file clears any prior executable preview. Earlier file reads cannot replace newer selections or typed text, or reappear after closing the panel. Undo feedback stays available until explicitly closed.
+- Storage protection reports denial/error, reads usage and persistence independently and no longer promises installation guarantees protection. Privacy/deletion copy describes browser storage and exported-file retention accurately.
+- Updated the single launch plan and engine baseline documentation to build 905 / engine 0.65.9, plus the Play kit's current API 36 requirement, signing/domain association and final-package/device checks. No training-policy or Workout/Focus changes.
+
 ## Shared editor controls and cascade cleanup — October 20, 2026
 
 - Profile layout/card editors and favorite-chart editing now reuse the existing UiAction component with one tonal button style, a shared 48px touch minimum, icon sizing and selected states. Screen-specific rules retain layout only; native labels, disabled states, callbacks and saved preferences are preserved.

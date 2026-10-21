@@ -1,8 +1,10 @@
 # Pursuit Iron — UI/UX Master Plan (R67 onward)
 
-Updated: 2026-10-20. Build 858 is published through PR #142 at `2e2489a2c2c249f14b9c226230e0b08a1d6d9149`; all four final-head workflows, Pages, four post-merge workflows and 106 deployed asset hashes passed. Build 859 continues the Settings form review. Each slice remains independently testable and reversible.
+Updated: 2026-10-21. Current baseline is app 4.0.0 build 905 / engine 0.65.9, with the release manifest authoritative for shipped content. The whole-app launch queue is `NEXT_APP_UPDATE_PLAN.md`. Each slice remains independently testable and reversible.
 
 ## Current design cohesion work
+
+Cohesion 07 gives Settings backup/restore a stable component owner and reuses existing shared actions for all twelve transfer/restore controls. Scoped CSS owns wrapping layout and readable fields, with no new priority overrides. Transfer failure/cancellation and storage-protection denial are visible; CSV export cannot count as a full backup. File reads are invalidated by newer selections, typed input, closing or unmounting. The existing B881 browser gate now exercises these paths at 320/393/834px in light/dark themes and enlarged text, alongside real Strong import/Undo at phone/desktop widths. Physical Android and final-wrapper certification remain open.
 
 Cohesion 06 continues the merged share-card pass (#211). Profile and chart editors reuse UiAction's shared tonal variant; scoped layout stays with the screen. Removed 86 actual important declarations, 3,103 to 3,017, without changing the workout or engine owners. Dead-rule removal was checked in the same mounted DOM across 24 phone/tablet light/dark scenarios (5,718 elements, zero computed-value changes). Shared buttons intentionally standardize editor borders, typography and state colors, with 48px targets, enlarged-text choice reflow and existing motion/focus/forced-colors handling. Broader cascade cleanup remains ongoing; legitimate accessibility overrides are retained.
 

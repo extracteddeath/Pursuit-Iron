@@ -193,7 +193,7 @@ async function verifyTaskHierarchy(browser){
         const start=el('.wpb-home-hero>.wpb-primary-action').getBoundingClientRect();
         const dock=el('.wpb-home-compose-bar');
         return {summaryFirst:before('.wpb-home-session-summary','.wpb-home-hero>.wpb-primary-action'),
-          startFirst:before('.wpb-home-hero>.wpb-primary-action','.wpb-m3-session-preview'),
+          startFirst:before('.wpb-home-hero>.wpb-primary-action','.wpb-home-session-preview'),
           programsFirst:before('.wpb-home-programs','.wpb-action-grid'),
           dockPresent:!!dock,createDeferred:before('.wpb-home-programs','.wpb-home-new-program'),
           startHeight:start.height};
@@ -201,7 +201,7 @@ async function verifyTaskHierarchy(browser){
       assert.ok(homeOrder.summaryFirst&&homeOrder.startFirst&&homeOrder.programsFirst&&
         homeOrder.createDeferred&&!homeOrder.dockPresent&&homeOrder.startHeight>=52,
         'R91 workout leads; program creation follows training content in DOM and focus order: '+JSON.stringify(homeOrder));
-      const outlineState=()=>page.$eval('.wpb-m3-session-preview',panel=>{
+      const outlineState=()=>page.$eval('.wpb-home-session-preview',panel=>{
         const button=panel.querySelector('button[aria-expanded]');
         const content=panel.querySelector('#wpb-home-outline-exercises');
         return {button:!!button,label:button?.getAttribute('aria-label'),controls:button?.getAttribute('aria-controls'),
@@ -217,12 +217,12 @@ async function verifyTaskHierarchy(browser){
         'B876 Home shows every session exercise by default, with accessible optional collapse: '+JSON.stringify(outlineOpen));
       assert.match(outlineOpen.text,/Bench/i,'The session shows a real lift, not only the split label');
       assert.match(outlineOpen.text,/4×6[-–]8/,'The actual prescribed sets and reps are visible before tapping');
-      await page.click('.wpb-m3-session-preview button[aria-expanded="true"]');
+      await page.click('.wpb-home-session-preview button[aria-expanded="true"]');
       const outlineClosed=await outlineState();
       assert.ok(outlineClosed.expanded==='false'&&outlineClosed.hidden&&outlineClosed.rows===0&&
         outlineClosed.label?.includes('Show all 4 session exercises'),
         'Explicit collapse still works without navigation or hidden focusable exercise content');
-      await page.click('.wpb-m3-session-preview button[aria-expanded="false"]');
+      await page.click('.wpb-home-session-preview button[aria-expanded="false"]');
       assert.deepEqual(await outlineState(),outlineOpen,'Reopening restores the same actual session outline');
       const geometry=async selector=>page.$eval(selector,node=>{
         const box=node.getBoundingClientRect(),css=getComputedStyle(node);
@@ -244,7 +244,7 @@ async function verifyTaskHierarchy(browser){
         assert.equal(home.padding,width<360?12:width<600?16:24,'Home window inset follows available width');
         assert.ok(home.navTrackAligned,'Selected navigation indicator stays with its tab after resize: '+JSON.stringify({width,home}));
         assert.ok(home.footerClear,'Home scroll viewport ends above the persistent actions: '+JSON.stringify({width,home}));
-        assert.equal(await page.$eval('.wpb-m3-session-preview button',b=>b.getAttribute('aria-expanded')),'true',
+        assert.equal(await page.$eval('.wpb-home-session-preview button',b=>b.getAttribute('aria-expanded')),'true',
           'Resize preserves expanded session outline');
         if([768,1366].includes(width))await page.screenshot({path:path.join(root,`verification/r62-home-${theme}-${width}.png`)});
       }

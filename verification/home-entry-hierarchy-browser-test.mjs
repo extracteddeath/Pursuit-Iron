@@ -73,7 +73,7 @@ try{
    await page.waitForSelector('.wpb-wizard-step');
   }else{
    assert.ok(await page.$('.wpb-home-hero'), 'Existing program retains Next Workout hero');
-   assert.ok(await page.$('.wpb-m3-session-preview'), 'Current session outline remains visible');
+   assert.ok(await page.$('.wpb-home-session-preview'), 'Current session outline remains visible');
    const outline=await page.$('.wpb-home-outline-toggle');
    assert.ok(outline,'Populated Home retains the expand/collapse session outline');
    // The shipped Home intentionally defaults to expanded. Do not toggle an open
@@ -88,15 +88,18 @@ try{
        !!first && first.getBoundingClientRect().height>0;
    });
    const gap=await page.evaluate(()=>{
-    const section=document.querySelector('.wpb-home-session-outline'),
+    const preview=document.querySelector('.wpb-home-session-preview'),
+      section=document.querySelector('.wpb-home-session-outline'),
       toggle=section.querySelector('.wpb-home-outline-toggle'),
       first=section.querySelector('.wpb-home-outline-list>li');
-    return {margin:parseFloat(getComputedStyle(section).marginTop),
+    return {outerInset:toggle.getBoundingClientRect().top-preview.getBoundingClientRect().top,
+      previewGap:preview.getBoundingClientRect().top-document.querySelector('.wpb-home-preview-action').getBoundingClientRect().bottom,
+      margin:parseFloat(getComputedStyle(section).marginTop),
       padding:parseFloat(getComputedStyle(section).paddingTop),
       listGap:first.getBoundingClientRect().top-toggle.getBoundingClientRect().bottom,
       overflow:document.documentElement.scrollWidth>innerWidth+1};
    });
-   assert.ok(gap.margin<=8&&gap.padding===0&&gap.listGap<=6,
+   assert.ok(gap.outerInset===0&&gap.previewGap<=8&&gap.margin===0&&gap.padding===0&&gap.listGap<=6,
     'No oversized gap above Home exercise list: '+JSON.stringify(gap));
    assert.equal(gap.overflow,false,'Expanded session outline never overflows phone width');
 

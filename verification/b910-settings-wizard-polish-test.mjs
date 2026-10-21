@@ -26,3 +26,6 @@ assert.ok(settings.includes('selected: on, "aria-label": day'),'Day chips expose
 for(const key of ['wpb-settings-switch-track','wpb-settings-switch-thumb','wpb-reminder-days','wpb-reminder-day'])
  assert.ok(css.includes('.'+key),'Shared style owner '+key);
 console.log('PASS cohesion 08: Settings toggles and reminder day semantics.');
+
+const switchOwner=app.slice(app.indexOf('function SettingsSwitch('),app.indexOf('function SettingsView('));
+assert.ok(!switchOwner.includes('wpb-toggle'),'Nested Settings switch tracks must never inherit legacy direct-thumb sizing');

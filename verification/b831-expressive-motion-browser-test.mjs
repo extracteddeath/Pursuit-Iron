@@ -858,13 +858,14 @@ try {
                     const role=token=>{probe.style.backgroundColor='var('+token+')';return bg(probe);};
                     const quiet=role('--pi-r11-quiet');
                     const raised=role('--pi-r11-raised');
+                    const control=role('--pi-color-control');
                     const hero=role('--pi-r11-hero');
                     probe.remove();
                     const header=home.querySelector('.wpb-home-header');
                     const feature=home.querySelector('.wpb-home-hero');
                     const metric=home.querySelector('.wpb-metric-strip>.wpb-metric');
-                    const preview=home.querySelector('.wpb-m3-session-preview');
-                    return {quiet,raised,hero,
+                    const preview=home.querySelector('.wpb-home-session-preview');
+                    return {quiet,raised,hero,control,
                         header:bg(header),feature:bg(feature),metric:bg(metric),
                         preview:bg(preview),headerImage:cs(header)?.backgroundImage,
                         heroImage:cs(feature)?.backgroundImage,
@@ -874,7 +875,7 @@ try {
                 assert.ok(homeTonesR45.header===homeTonesR45.quiet&&
                     homeTonesR45.metric===homeTonesR45.quiet&&
                     homeTonesR45.feature===homeTonesR45.hero&&
-                    (!homeTonesR45.preview||homeTonesR45.preview===homeTonesR45.raised)&&
+                    (!homeTonesR45.preview||homeTonesR45.preview===homeTonesR45.control)&&
                     homeTonesR45.headerImage==='none'&&
                     homeTonesR45.heroImage==='none'&&
                     homeTonesR45.metricImage==='none'&&
@@ -887,7 +888,7 @@ try {
                 const r48Home=await page.$eval('.wpb-home',shell=>{
                     const el=sel=>shell.querySelector(sel),style=x=>x&&getComputedStyle(x);
                     const card=el('.wpb-home-hero'),summary=el('.wpb-home-hero>button:first-child');
-                    const preview=el('.wpb-m3-session-preview');
+                    const preview=el('.wpb-home-session-preview');
                     const open=preview?.querySelector('button[aria-expanded]');
                     const start=el('.wpb-home-hero>.wpb-primary-action');
                     return {summaryHeight:summary?.offsetHeight||0,

@@ -258,6 +258,15 @@ async function verifyTaskHierarchy(browser){
             height:b.getBoundingClientRect().height,radius:parseFloat(getComputedStyle(b).borderTopLeftRadius),
             gap:parseFloat(getComputedStyle(b).marginTop)}))};
       });
+      const choices=await page.evaluate(()=>[...document.querySelectorAll('.wpb-plan-panes>button')].map(b=>({
+        pane:b.dataset.planPane,pressed:b.getAttribute('aria-pressed'),height:b.getBoundingClientRect().height
+      })));
+      assert.deepEqual(choices.map(b=>b.pane),['schedule','volume','progression','blueprint'],'Plan keeps four panes');
+      assert.ok(choices.every(b=>b.height>=44)&&choices.filter(b=>b.pressed==='true').length===1,'One active 44px+ pane');
+      await page.click('[data-plan-pane="volume"]');
+      assert.equal(await page.$eval('[data-plan-pane="volume"]',b=>b.getAttribute('aria-pressed')),'true');
+      await page.click('[data-plan-pane="schedule"]');
+      assert.equal(await page.$eval('[data-plan-pane="schedule"]',b=>b.getAttribute('aria-pressed')),'true');
       assert.ok(planOrder.nextFirst&&planOrder.pickerFirst&&planOrder.sessionsFirst,
         'Plan puts next session, location and sessions before aggregate metrics: '+JSON.stringify(planOrder));
       assert.ok(planOrder.rows.length===2&&planOrder.rows.every(r=>r.height>=48&&r.radius===0&&r.gap===0),

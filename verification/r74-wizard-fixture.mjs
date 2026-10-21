@@ -130,6 +130,85 @@ export async function verifyWizardSteps(page, { width, height, theme, root, url 
         !document.querySelector('.wpb-wizard-next-action').disabled&&
         !document.querySelector('.wpb-wizard-step').textContent.includes('Checking'),{timeout:90000});
       const label=theme+' '+width+'x'+height+' '+(cycle?'Cycle':'Program')+' '+key;
+      if(key==='cycletype'){
+        const cards=await page.$$('.wpb-wizard-cycle-option');
+        assert.ok(cards.length>1,'Cycle creation offers template choices');
+        for(const card of cards){
+          await card.evaluate(el=>{el.scrollIntoView({block:'center'});el.focus();});
+          await page.keyboard.press('Enter');await settle();
+          assert.equal(await card.evaluate(el=>el.getAttribute('aria-pressed')),'true',
+            'Keyboard selects each template through the canonical Wizard state');
+          assert.equal(await page.$$eval('.wpb-wizard-cycle-option[aria-pressed="true"]',els=>els.length),1,
+            'Exactly one template is selected');
+        }
+        // Custom blocks retain authored values through template changes.
+        const custom=await page.evaluateHandle(()=>[...document.querySelectorAll('.wpb-wizard-cycle-option')]
+          .find(el=>el.textContent.includes('Custom')));
+        assert.ok(custom.asElement(),'Custom cycle choice exists');
+        await custom.asElement().evaluate(el=>{el.scrollIntoView({block:'center'});el.focus();});
+        await page.keyboard.press('Enter');await settle();
+        const weeks='.wpb-custom-cycle input[aria-label="Block 1 weeks"]';
+        await page.waitForSelector(weeks);
+        await page.$eval(weeks,el=>{el.focus();el.select();});
+        await page.keyboard.type('7');await settle();
+        await activate('.wpb-wizard-cycle-option');
+        await custom.asElement().evaluate(el=>{el.scrollIntoView({block:'center'});el.focus();});
+        await page.keyboard.press('Enter');await settle();
+        assert.equal(await page.$eval(weeks,el=>el.value),'7','Template changes preserve custom block weeks');
+        const adapt='.wpb-wizard-cycle-adapt';
+        const before=await page.$eval(adapt,el=>el.getAttribute('aria-checked'));
+        await activate(adapt);
+        assert.notEqual(await page.$eval(adapt,el=>el.getAttribute('aria-checked')),before,
+          'Keyboard adaptation changes the canonical checkbox value');
+        await activate(adapt);
+        assert.equal(await page.$eval(adapt,el=>el.getAttribute('aria-checked')),before,
+          'Adaptation can be restored without changing custom blocks');
+        await assertGeometry(label+' custom blocks 100% text');
+        await textSize(true);
+        await assertGeometry(label+' custom blocks 200% text');
+        await textSize(false);
+        // Continue the existing preset-cycle journey: custom inserts its own
+        // Goal step, while the original sequence deliberately tests presets.
+        await activate('.wpb-wizard-cycle-option');
+        await custom.dispose();
+      }
+
+      if(key==='equipment'){
+        const presets=await page.$$('.wpb-wizard-preset');
+        for(const preset of presets){
+          await preset.evaluate(el=>{el.scrollIntoView({block:'center',inline:'center'});el.focus();});
+          await page.keyboard.press('Enter');await settle();
+          assert.equal(await preset.evaluate(el=>el.getAttribute('aria-pressed')),'true',
+            'Keyboard equipment preset updates its canonical selected state');
+          assert.equal(await page.$$eval('.wpb-wizard-preset[aria-pressed="true"]',els=>els.length),1,
+            'Only the exact equipment preset is selected');
+        }
+        // Restore a full gym so the shared rack restriction is available.
+        await activate('.wpb-wizard-preset');
+        const rack='[data-testid="no-rack-toggle"]';
+        await activate(rack);
+        assert.equal(await page.$eval(rack,el=>el.getAttribute('aria-pressed')),'true','No-rack exclusion is selectable');
+        await activate(rack);
+        assert.equal(await page.$eval(rack,el=>el.getAttribute('aria-pressed')),'false','No-rack exclusion is reversible');
+        assert.equal(await page.$eval('.wpb-wizard-preset',el=>el.getAttribute('aria-pressed')),'true',
+          'Removing the no-rack exclusion restores the full-gym equipment set');
+        for(const preset of presets)await preset.dispose();
+      }
+      if(key==='constraints'){
+        for(const group of ['.wpb-wizard-superset-choices','.wpb-wizard-barbell-choices']){
+          const choices=await page.$$(group+' button');
+          for(const choice of choices){
+            await choice.evaluate(el=>{el.scrollIntoView({block:'center'});el.focus();});
+            await page.keyboard.press('Enter');await settle();
+            assert.equal(await choice.evaluate(el=>el.getAttribute('aria-pressed')),'true',
+              'Keyboard constraint selection updates the existing configuration');
+            assert.equal(await page.$$eval(group+' [aria-pressed="true"]',els=>els.length),1,
+              'Constraint group has exactly one selected value');
+          }
+          await activate(group+' button');
+          for(const choice of choices)await choice.dispose();
+        }
+      }
       await assertGeometry(label+' 100% text');
       await textSize(true);
       await assertGeometry(label+' 200% text');

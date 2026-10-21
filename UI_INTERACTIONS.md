@@ -803,3 +803,14 @@ Plan weeks, Program weeks and cycle block navigation use `UiChoice`'s `summary` 
 ### Cohesion 14 — one Cycle presentation owner
 
 Cycle list/detail and read-only block previews share the scoped Cycle CSS family. State/prescription/percentage values remain with their canonical projections; progress fill width stays data-driven. `UiHeader` and `UiAction` retain header and action behavior. Empty Cycle fallback offers one Create action; populated lists retain New, and the detail footer uses the shared primary variant. Expanded schedule and next-block facts remain expanded. The block path stays readable for active/planned/completed/missing states; missing records cannot open previews. Relative type and a narrow-card container query make enlarged labels readable without changing normal-text row layout. Native details/select/button behavior, visible keyboard focus, high-contrast state and paint-only/reduced motion remain required. B890 exercises real routes plus the exported empty/completed fallback and preserves the original no-advance/no-write assertions.
+
+
+### Cohesion 17 — cycle creation
+
+Template cards and adaptation use the shared card surface and Wizard text roles. Canonical Wizard state supplies `aria-pressed` and `aria-checked`; CSS owns their paint. The adaptation mark is decorative; its named checkbox button remains keyboard operable. Custom block drafts survive template changes. Cycle name/duration wrapping lives beside template styles, with no second responsive priority owner. R74 checks keyboard template/adaptation changes, custom week retention, normal/enlarged text and all step navigation; generation and saved programs remain untouched.
+
+### Cohesion 18 — setup equipment and constraints
+
+- Equipment presets and superset/barbell choices use shared tonal actions and their actual `aria-pressed` state. Constraint groups are independently named.
+- Rack and bodyweight exclusions share one presentation component. No-rack still changes only the existing equipment flag and stays hidden without a barbell, in setup and the gym editor.
+- Keep keyboard selection, reversible exclusions, controlled configuration, saved drafts, enlarged-text reflow and horizontal preset scrolling. These changes do not alter generation constraints or the workout logger.

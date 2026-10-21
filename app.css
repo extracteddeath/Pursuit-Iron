@@ -1869,11 +1869,16 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    The R4 adaptive header and R5 creation/library/profile styles remain the
    authoritative visual system. These additions use real program data. */
 #root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero>button:first-child{
-  /* Position the true program title beside its day-of-rotation dial instead
-     of adding a meaningless decorative number or separate hero row. */
-  width:calc(100% - 94px)!important;
+  /* Narrow phones use the complete heading width. The dial becomes optional
+     decoration there; the accessible Up Next week/day label remains present. */
+  width:100%;
   margin:0!important;
   padding:0!important;
+}
+@media(min-width:360px){
+  #root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero>button:first-child{
+    width:calc(100% - 94px)!important;
+  }
 }
 #root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero>button:first-child>div:first-child{
   font-size:10.5px!important;
@@ -1894,6 +1899,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   pointer-events:none;
   z-index:2;
   contain:layout style;
+}
+/* This override must follow the orbit's base display:grid declaration. */
+@media(max-width:359px){
+  #root[data-pi-motion="expressive"] .wpb-home .wpb-m3-day-orbit{display:none;}
 }
 #root[data-pi-motion="expressive"] .wpb-home .wpb-m3-day-orbit>svg{
   grid-area:1/1;
@@ -4165,6 +4174,21 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     color:CanvasText!important;
     border-color:CanvasText!important;
   }
+}
+
+/* Cohesion 22 — one navigation label owner. Compact aliases appear only
+   when a tab becomes narrow relative to its actual font size (including
+   Android enlarged text and the tablet rail). The original accessible
+   aria-label is kept on the button. No clipping or forced midword breaks. */
+#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab{
+  container-type:inline-size;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab .wpb-tab-label-compact{
+  display:none;
+}
+@container (max-width:4.5em){
+  #root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab .wpb-tab-label-full{display:none;}
+  #root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab .wpb-tab-label-compact{display:inline;}
 }
 
 /* M3 EXPRESSIVE R40 — ADAPTIVE READING AND HONEST EMPTY STATES
@@ -8672,7 +8696,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 @container pi-r77-profile (max-width:18rem) or (max-width:18em){
   .wpb-profile-share-toggles{grid-template-columns:minmax(0,1fr)}
 }
-.wpb-profile-share-toggles button{text-align:left}
+.wpb-profile-share-toggles button{text-align:left;min-width:0;white-space:normal;overflow-wrap:anywhere;flex-wrap:wrap}
 .wpb-profile-share-toggles button span{display:grid;place-items:center;width:22px;height:22px;flex-shrink:0;border-radius:7px;background:var(--pi-color-control,var(--wpb-theme-card-high))}
 .wpb-profile-reset{margin-top:12px}
 @media(hover:hover) and (pointer:fine){.wpb-profile-toolbar button:not(:disabled):hover,.wpb-profile-customize button:not(:disabled):hover{background:var(--wpb-theme-accent-dim)}}

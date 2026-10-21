@@ -17746,6 +17746,9 @@ function ConfirmButton({ label, confirmLabel, onConfirm, style, ariaLabel }) {
 }
 function TabBar({ view, onNav }) {
     const tabs = [["home", "Home", HomeIcon], ["plan", "Plan", Calendar], ["progress", "Progress", TrendingUp], ["profile", "Profile", Medal], ["settings", "Settings", Settings2]];
+    // Present shorter visual names only when a button cannot fit its full label.
+    // The real page name and assistive-technology label stay unchanged.
+    const compactLabels = { home: "Go", progress: "Log", profile: "Me", settings: "Set" };
     return (_jsx("div", { className: "wpb-tabbar", role: "navigation", "aria-label": "Primary", children: tabs.map(([id, label, Icon]) => {
             const on = view === id;
             return (
@@ -17754,7 +17757,7 @@ function TabBar({ view, onNav }) {
                the visible word — which also appears on sheet tabs elsewhere ("Plan" exists in both the
                nav and the plan-info sheet). aria-current marks the active one properly rather than
                leaving it as colour alone. */
-            _jsxs("button", { className: "pressable wpb-tab", onClick: () => onNav(id), "aria-label": label, "data-tab": id, "aria-current": on ? "page" : undefined, style: { flex: 1, padding: "8px 0 7px", background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2 }, children: [_jsx(Icon, { size: 21, strokeWidth: on ? 2.6 : 2 }), _jsx("span", { style: { fontSize: 11, fontWeight: on ? 800 : 600 }, children: label })] }, id));
+            _jsxs("button", { className: "pressable wpb-tab", onClick: () => onNav(id), "aria-label": label, "data-tab": id, "aria-current": on ? "page" : undefined, style: { flex: 1, padding: "8px 0 7px", background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2 }, children: [_jsx(Icon, { size: 21, strokeWidth: on ? 2.6 : 2 }), _jsxs("span", { style: { fontSize: 11, fontWeight: on ? 800 : 600 }, children: [_jsx("span", { className: "wpb-tab-label-full", children: label }), _jsx("span", { className: "wpb-tab-label-compact", children: compactLabels[id] || label })] })] }, id));
         }) }));
 }
 function OneRepMaxCalc({ unit }) {

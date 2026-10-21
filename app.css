@@ -8547,6 +8547,41 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb-injury-journal .wpb-injury-save-bar{position:static;flex-shrink:0;margin-top:10px;padding:12px 0 0}
 
 
+
+/* B914 / Cohesion 04 — Progress and History presentation ownership.
+   Persistent records, date grouping and live theme colors remain untouched.
+   Responsive/Expressive variants refine these common base roles. */
+.wpb-progress-glance-item{
+  min-width:0;
+  padding:11px 10px;
+  border-radius:var(--pi-shape-action,14px);
+}
+.wpb-progress-glance-label{
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:.7px;
+  margin-top:6px;
+}
+.wpb-progress-panel{
+  border-radius:var(--pi-shape-card,16px);
+  padding:16px;
+  margin-bottom:12px;
+}
+.wpb-progress-entry-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:12px 14px;
+  border-radius:var(--pi-shape-action,12px);
+  margin-bottom:8px;
+}
+.wpb-history-filters{margin-bottom:14px}
+.wpb-history-session{
+  border-radius:var(--pi-shape-card,16px);
+  margin-bottom:8px;
+  overflow:hidden;
+}
+
 /* B891 — favorite chart ordering and dense training-history readability. */
 .wpb-chart-favorites{margin:0 0 10px;border:1px solid var(--pi-color-divider);border-radius:14px;background:var(--pi-color-card);color:inherit;overflow:hidden}
 .wpb-chart-favorites>summary{display:flex;align-items:center;gap:9px;min-height:48px;padding:10px 14px;cursor:pointer;font-size:14px;font-weight:720;list-style-position:inside}

@@ -77,7 +77,7 @@ export async function verifyWizardSteps(page, { width, height, theme, root, url 
       .map(el=>({label:el.getAttribute('aria-label')||el.textContent.trim(),
         ...bounds(el),bad:textFits(el,true)}));
     const reading=[...el.querySelectorAll('.wpb-wizard-heading,.wpb-wizard-option-copy,'+
-      '.wpb-wizard-cycle-heading,.wpb-wizard-focus-row,.wpb-wizard-focus-summary,.wpb-wizard-review-row')]
+      '.wpb-wizard-cycle-heading,.wpb-wizard-focus-row,.wpb-wizard-focus-summary,.wpb-wizard-review-row,.wpb-wizard-title,.wpb-wizard-guidance')]
       .filter(el=>el.getClientRects().length).map(el=>({text:el.textContent,bad:textFits(el)}));
     const step=el.querySelector('fieldset');
     const splitWords=[...el.querySelectorAll('.wpb-wizard-option-label')].flatMap(el=>{
@@ -207,6 +207,32 @@ export async function verifyWizardSteps(page, { width, height, theme, root, url 
           }
           await activate(group+' button');
           for(const choice of choices)await choice.dispose();
+        }
+      }
+      if(key==='focus'){
+        await page.$$eval('.wpb-setup-stepper button[aria-label^="Increase"]',els=>
+          els.forEach((el,i)=>el.dataset.r74FocusPlus=String(i)));
+        await page.$$eval('.wpb-setup-stepper button[aria-label^="Decrease"]',els=>
+          els.forEach((el,i)=>el.dataset.r74FocusMinus=String(i)));
+        for(const i of [0,0,1,1,2])await activate('[data-r74-focus-plus="'+i+'"]');
+        assert.equal(await page.$eval('.wpb-wizard-focus-total',el=>el.textContent),'5 / 5',
+          'Shared steppers retain the five-point focus limit');
+        assert.ok(await page.$$eval('[data-r74-focus-plus]',els=>els.every(el=>el.disabled)),
+          'Every increase is disabled at the global focus limit');
+        assert.equal(await page.$eval('.wpb-wizard-focus-summary',el=>el.dataset.atLimit),'true',
+          'Focus emphasis follows the actual total');
+        await activate('[data-r74-focus-minus="2"]');
+        assert.equal(await page.$eval('[data-r74-focus-plus="0"]',el=>el.disabled),true,
+          'A muscle at two points stays capped when global capacity returns');
+        assert.equal(await page.$eval('[data-r74-focus-plus="2"]',el=>el.disabled),false,
+          'Reducing focus restores available capacity');
+        for(const i of [0,1,2])while(!await page.$eval('[data-r74-focus-minus="'+i+'"]',el=>el.disabled))
+          await activate('[data-r74-focus-minus="'+i+'"]');
+        assert.equal(await page.$eval('.wpb-wizard-focus-total',el=>el.textContent),'0 / 5',
+          'Focus steppers can restore the original settings');
+        if(width===320&&theme==='rose'){
+          await page.$eval('.wpb-wizard-focus-summary',el=>el.scrollIntoView({block:'start'}));
+          await page.screenshot({path:path.join(root,'verification/r74-'+(cycle?'cycle':'program')+'-focus-normal-phone.png')});
         }
       }
       await assertGeometry(label+' 100% text');

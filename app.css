@@ -675,13 +675,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-secondary{
   margin-top:6px!important;
 }
-#root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-header{
-  padding-top:10px!important;
-  padding-bottom:10px!important;
-}
-#root[data-pi-motion="expressive"] .wpb-wizard .wpb-page-scroll{
-  padding:15px 16px 20px!important;
-}
+
+
 #root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-heading{
   margin-bottom:13px!important;
 }
@@ -707,23 +702,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-option[aria-pressed="true"]{
   box-shadow:inset 3px 0 0 currentColor,0 1px 9px color-mix(in srgb,currentColor 6%,transparent)!important;
 }
-#root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-progress{
-  margin-top:10px!important;
-  height:4px!important;
-  border-radius:999px!important;
-  overflow:hidden;
-}
-#root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-progress>.wpb-bar{
-  transition:transform 260ms cubic-bezier(.2,.8,.25,1);
-}
-#root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-footer{
-  padding-top:9px!important;
-  padding-bottom:calc(env(safe-area-inset-bottom) + 8px)!important;
-}
-#root[data-pi-motion="expressive"] .wpb-wizard :is(.wpb-wizard-back-action,.wpb-wizard-next-action){
-  min-height:48px!important;
-  border-radius:14px!important;
-}
+
+
+
+
 #root[data-pi-motion="expressive"] .wpb-wizard :is(.wpb-wizard-option,.wpb-wizard-choice,.wpb-wizard-preset):focus-visible{
   outline:2px solid currentColor!important;
   outline-offset:2px!important;
@@ -797,9 +779,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   #root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-scroll{
     padding-inline:17px!important;
   }
-  #root[data-pi-motion="expressive"] .wpb-wizard .wpb-page-scroll{
-    padding-inline:14px!important;
-  }
+
   #root[data-pi-motion="expressive"] .wpb-library .wpb-library-flag{
     font-size:12px!important;
   }
@@ -1488,7 +1468,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-option-icon{
   border-radius:14px!important;
 }
-#root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-next-action,
 #root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-primary{
   border-radius:19px!important;
 }
@@ -1868,23 +1847,15 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   transform:scale(.988);
   border-radius:13px 23px 23px 23px!important;
   border-color:var(--pi-r5-stroke)!important;
-}
-/* Creation: a continuous guided flow with an expressive choice surface.
+}/* Creation: a continuous guided flow with an expressive choice surface.
    Preserve actual form state, available choices and footer dimensions. */
-#root[data-pi-motion="expressive"] .wpb-wizard.wpb-wizard.wpb-wizard .wpb-wizard-header{
-  background-image:none!important;
-  border-bottom:1px solid var(--pi-layout-border)!important;
-}
+
 #root[data-pi-motion="expressive"] .wpb-wizard.wpb-wizard.wpb-wizard .wpb-wizard-heading-title{
   font-size:clamp(28px,7.2vw,35px)!important;
   font-weight:810!important;
   text-wrap:balance;
 }
-#root[data-pi-motion="expressive"] .wpb-wizard.wpb-wizard.wpb-wizard .wpb-wizard-progress{
-  border-radius:999px!important;
-  overflow:hidden;
-  height:7px!important;
-}
+
 #root[data-pi-motion="expressive"] .wpb-wizard.wpb-wizard.wpb-wizard .wpb-wizard-option{
   border-color:var(--pi-layout-border)!important;
   transition:border-radius 290ms var(--pi-r4-spring-ease),background-color 170ms var(--pi-ease),
@@ -1901,10 +1872,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb-wizard.wpb-wizard.wpb-wizard .wpb-wizard-option-icon{
   border-radius:17px 17px 10px 17px!important;
 }
-#root[data-pi-motion="expressive"] .wpb-wizard.wpb-wizard.wpb-wizard .wpb-wizard-next-action{
-  min-height:52px!important;
-  border-radius:22px 14px 22px 22px!important;
-}
+
 /* Contextual utilities retain their dimensions and popover positioning. */
 #root[data-pi-motion="expressive"] .wpb-settings.wpb-settings.wpb-settings .wpb-settings-row{
   transition:background-color 170ms var(--pi-ease),border-radius 240ms var(--pi-r4-spring-ease)!important;
@@ -2222,7 +2190,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb :is(.wpb-home,.wpb-progress,.wpb-settings)>.wpb-page-header,
 #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-head,
 #root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-header,
-#root[data-pi-motion="expressive"] .wpb-wizard.wpb-wizard.wpb-wizard .wpb-wizard-header,
 #root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail .wpb-exercise-detail-header{
   background-image:none!important;
   background-color:var(--pi-m3e-surface-container)!important;
@@ -3067,21 +3034,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   height:38px!important;
   border-radius:13px!important;
   flex-shrink:0;
-}
-/* The program-creation question leads, but should not crowd choices or
+}/* The program-creation question leads, but should not crowd choices or
    create extra scroll on a 320px phone. The bottom controls remain 48px+. */
-#root[data-pi-motion="expressive"] .wpb-wizard.wpb-wizard.wpb-wizard .wpb-wizard-header{
-  padding:10px 16px 9px!important;
-  border-radius:0 0 21px 21px!important;
-  background-color:var(--pi-r11-quiet)!important;
-  box-shadow:none!important;
-}
-#root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-header button[aria-label="Back"]{
-  min-height:44px!important;
-  min-width:44px!important;
-  justify-content:center!important;
-  border-radius:15px!important;
-}
+
+
 #root[data-pi-motion="expressive"] .wpb-wizard.wpb-wizard.wpb-wizard .wpb-wizard-heading-title{
   font-size:clamp(28px,6.8vw,31px)!important;
   line-height:1.12!important;
@@ -3102,22 +3058,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-radius:19px 25px 25px 25px!important;
   box-shadow:inset 3px 0 0 var(--pi-m3e-primary)!important;
 }
-#root[data-pi-motion="expressive"] .wpb-wizard.wpb-wizard.wpb-wizard .wpb-wizard-footer{
-  background-color:var(--wpb-focus-bg,#110c15)!important;
-  background-image:none!important;
-  border-top:1px solid var(--pi-r11-edge)!important;
-  box-shadow:none!important;
-  padding:9px 16px calc(env(safe-area-inset-bottom) + 10px)!important;
-}
-#root[data-pi-motion="expressive"] .wpb-wizard.wpb-wizard.wpb-wizard
-  :is(.wpb-wizard-next-action,.wpb-wizard-back-action){
-  min-height:50px!important;
-  border-radius:17px!important;
-}
-#root[data-pi-motion="expressive"] .wpb-wizard.wpb-wizard.wpb-wizard .wpb-wizard-next-action{
-  font-size:15.5px!important;
-  font-weight:760!important;
-}
+
+
+
 @media(max-width:350px){
   #root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-header{
     padding-inline:11px!important;
@@ -3125,9 +3068,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   #root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-results{
     padding-inline:9px!important;
   }
-  #root[data-pi-motion="expressive"] .wpb-wizard.wpb-wizard.wpb-wizard .wpb-wizard-footer{
-    padding-inline:12px!important;
-  }
+
 }
 @media(prefers-reduced-motion:reduce){
   #root[data-pi-motion="expressive"] .wpb-library .wpb-library-row,
@@ -6948,15 +6889,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     max-width:none!important;
     min-width:0;
   }
-  #root[data-pi-motion="expressive"] .wpb .wpb-wizard>.wpb-wizard-header{
-    padding-inline:clamp(24px,3vw,38px)!important;
-  }
-  #root[data-pi-motion="expressive"] .wpb .wpb-wizard>.wpb-page-scroll{
-    box-sizing:border-box;
-    max-width:none!important;
-    width:100%!important;
-    padding:clamp(18px,2.3vw,30px) clamp(24px,3vw,38px) 30px!important;
-  }
+
+
   #root[data-pi-motion="expressive"] .wpb .wpb-wizard-layout{
     display:grid;
     grid-template-columns:minmax(0,1fr) minmax(270px,320px);
@@ -6966,8 +6900,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     margin:0 auto;
   }
   #root[data-pi-motion="expressive"] .wpb .wpb-wizard-layout>.wpb-wizard-step{
-    max-width:690px!important;
-    margin:0!important;
+    max-width:690px;
+    margin:0;
   }
   #root[data-pi-motion="expressive"] .wpb .wpb-wizard-review{
     display:block;
@@ -6986,11 +6920,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     background:var(--pi-r11-quiet);
     color:inherit;
   }
-  #root[data-pi-motion="expressive"] .wpb .wpb-wizard-footer>div:last-child{
-    width:100%;
-    max-width:690px;
-    margin-inline:auto;
-  }
+
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-wizard-review-kicker{
   color:var(--pi-m3e-primary);
@@ -7516,34 +7446,68 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   white-space:nowrap!important;
   overflow-wrap:normal!important;
   word-break:normal!important;
-}
+}/* Wizard chrome grows with text and keeps its progress fraction visible. */
 
-/* Wizard chrome grows with text and keeps its progress fraction visible. */
-#root[data-pi-motion="expressive"] .wpb .wpb-wizard.wpb-wizard.wpb-wizard
-  .wpb-wizard-header>div:first-child{
-  height:auto!important;
-  min-height:34px;
-  flex-wrap:wrap!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-wizard.wpb-wizard.wpb-wizard
-  .wpb-wizard-header>div:first-child>div:not(.mono){
-  flex:1 1 6em!important;
-  white-space:normal!important;
-  overflow:visible!important;
-  text-overflow:clip!important;
-  overflow-wrap:anywhere;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-wizard.wpb-wizard.wpb-wizard
-  .wpb-wizard-header>div:first-child>.mono{
-  width:max(36px,3em)!important;
-  margin-left:auto!important;
-}
+
+
 
 /* The fallback already is a real video link; a second floating Demo link
    otherwise covers its enlarged heading. Photo illustrations keep Demo. */
 #root[data-pi-motion="expressive"] .wpb .wpb-exercise-figure-wrap:has([data-testid="form-video-link"])
   >a:not([data-testid="form-video-link"]){
   display:none!important;
+}
+
+/* Cohesion 19 — Wizard chrome and focus rows use shared tokens and actions.
+   Behavior, generation, drafts and progress fraction remain owned by Wizard. */
+.wpb .wpb-wizard{--pi-wizard-inset:var(--pi-space-4);}
+.wpb .wpb-wizard-header{
+  display:block;flex-shrink:0;box-sizing:border-box;padding:var(--pi-space-3) var(--pi-wizard-inset) var(--pi-space-2);
+  background:var(--pi-color-card);color:var(--pi-color-on-control);
+  border-bottom:1px solid var(--pi-color-divider);border-radius:0 0 var(--pi-shape-card) var(--pi-shape-card);
+}
+.wpb .wpb-wizard-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:var(--pi-space-2);min-height:var(--pi-control-min);}
+.wpb .wpb-wizard-title{flex:1 1 5em;min-width:0;text-align:center;font-size:var(--pi-type-section);font-weight:600;line-height:1.25;overflow-wrap:anywhere;}
+.wpb .wpb-wizard-step-count{flex-shrink:0;width:max(36px,3em);margin-left:auto;text-align:right;font-size:var(--pi-type-caption);font-weight:600;color:var(--pi-color-on-muted);}
+.wpb .wpb-wizard-progress{height:var(--pi-space-2);margin-top:var(--pi-space-2);border-radius:var(--pi-space-8);overflow:hidden;background:var(--pi-color-divider);}
+.wpb .wpb-wizard-progress>.wpb-bar{background:var(--pi-color-active);transition:transform 260ms cubic-bezier(.2,.8,.25,1);}
+.wpb .wpb-wizard>.wpb-page-scroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:var(--pi-space-4) var(--pi-wizard-inset) var(--pi-space-6);}
+.wpb .wpb-wizard-step{border:0;padding:0;margin:0 auto;min-width:0;max-width:620px;}
+.wpb .wpb-wizard-footer{
+  flex-shrink:0;z-index:3;box-sizing:border-box;padding:var(--pi-space-2) var(--pi-wizard-inset) calc(env(safe-area-inset-bottom) + var(--pi-space-3));
+  background:var(--pi-color-canvas);color:var(--pi-color-on-control);border-top:1px solid var(--pi-color-divider);
+}
+.wpb .wpb-cycle-draft-status{font-size:var(--pi-type-caption);color:var(--pi-color-on-muted);padding-bottom:var(--pi-space-2);line-height:1.4;}
+.wpb .wpb-wizard-discard-action{padding:var(--pi-space-1) 0;font-size:var(--pi-type-label);font-weight:400;}
+.wpb .wpb-wizard-footer .wpb-build-status{display:flex;align-items:center;flex-wrap:wrap;gap:var(--pi-space-3);padding:var(--pi-space-2) 0;}
+.wpb .wpb-wizard-build-copy{flex:1;min-width:8em;}
+.wpb .wpb-wizard-build-title{font-size:var(--pi-type-support);font-weight:var(--pi-weight-action);}
+.wpb .wpb-wizard-build-description{margin-top:var(--pi-space-1);font-size:var(--pi-type-label);line-height:1.4;color:var(--pi-color-on-muted);}
+.wpb .wpb-wizard-cancel-build{flex-shrink:0;}
+.wpb .wpb-wizard-build-alert{font-size:var(--pi-type-support);line-height:1.45;color:var(--wpb-theme-danger);}
+.wpb .wpb-wizard-actions{display:flex;align-items:stretch;gap:var(--pi-space-2);}
+#root .wpb .wpb-wizard-actions>.wpb-ui-action{--pi-control-min:var(--pi-primary-min);display:inline-flex;align-items:center;justify-content:center;gap:var(--pi-space-2);min-width:0;padding:var(--pi-space-3);font-size:var(--pi-type-body);font-weight:var(--pi-weight-action);}
+#root .wpb .wpb-wizard-actions>.wpb-wizard-back-action{flex:0 0 32%;min-width:max-content;}
+.wpb .wpb-wizard-actions[data-initial-step="true"]>.wpb-wizard-back-action{flex:0 0 auto;}
+.wpb .wpb-wizard-next-action{flex:1;}
+.wpb .wpb-wizard-finish-action{width:100%;margin-top:var(--pi-space-2);padding:var(--pi-space-2);font-size:var(--pi-type-support);line-height:1.4;}
+.wpb .wpb-wizard-guidance{margin:0 0 var(--pi-space-3);font-size:var(--pi-type-support);line-height:1.5;color:var(--pi-color-on-muted);}
+.wpb .wpb-wizard-focus-summary{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--pi-space-2);margin-bottom:var(--pi-space-3);padding:var(--pi-space-3) var(--pi-space-4);font-size:var(--pi-type-body);color:var(--pi-color-on-muted);}
+.wpb .wpb-wizard-focus-total{font-weight:600;color:var(--pi-color-on-control);}
+.wpb .wpb-wizard-focus-summary[data-at-limit="true"] .wpb-wizard-focus-total{color:var(--wpb-theme-accent-ink);}
+.wpb .wpb-wizard-focus-row{display:flex;align-items:center;flex-wrap:wrap;gap:var(--pi-space-3);padding:var(--pi-space-3) var(--pi-space-4);}
+.wpb .wpb-wizard-focus-row[data-focused="true"]{background:var(--pi-color-control);}
+.wpb .wpb-wizard-focus-label{flex:1 1 7em;min-width:0;}
+.wpb .wpb-wizard-focus-name{font-size:var(--pi-type-body);font-weight:600;}
+.wpb .wpb-wizard-focus-caveat{margin-top:var(--pi-space-1);font-size:var(--pi-type-label);color:var(--pi-color-on-muted);}
+.wpb .wpb-setup-stepper{display:flex;align-items:center;gap:var(--pi-space-2);flex:0 0 auto;}
+.wpb .wpb-setup-stepper-count{min-width:1.5em;text-align:center;font-weight:600;line-height:1.25;color:var(--pi-color-on-muted);}
+.wpb .wpb-setup-stepper[data-has-value="true"] .wpb-setup-stepper-count{color:var(--wpb-theme-accent-ink);}
+@media(max-width:359px){.wpb .wpb-wizard{--pi-wizard-inset:var(--pi-space-3);}}
+@media(min-width:1120px) and (min-height:720px){
+  .wpb .wpb-wizard{--pi-wizard-inset:var(--pi-space-6);}
+  .wpb .wpb-wizard>.wpb-page-scroll{max-width:none;width:100%;padding-block:var(--pi-space-6) var(--pi-space-8);}
+  .wpb .wpb-wizard-actions{max-width:690px;margin-inline:auto;width:100%;}
 }
 
 /* Cohesion 16 — Creation controls have one static presentation owner.
@@ -7774,34 +7738,13 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb .wpb-wizard-choice{
   line-height:1.3;
 }
-#root[data-pi-motion="expressive"] .wpb .wpb-wizard-focus-row{
-  flex-wrap:wrap;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-wizard-focus-summary{
-  flex-wrap:wrap;
-  gap:8px;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-wizard-focus-label{
-  flex:1 1 8em!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-wizard .wpb-setup-stepper{
-  flex:0 0 auto;
-  gap:8px!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-wizard .wpb-setup-stepper button{
-  width:44px!important;
-  height:44px!important;
-  flex-shrink:0;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-wizard .wpb-setup-stepper .mono{
-  width:auto!important;
-  min-width:1.5em;
-  line-height:1.25;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-wizard-finish-action{
-  min-height:44px;
-  line-height:1.3;
-}
+
+
+
+
+
+
+
 @container pi-wizard-step (max-width:16em){
   #root[data-pi-motion="expressive"] .wpb .wpb-wizard-option{
     display:grid!important;
@@ -9237,30 +9180,14 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 @media(prefers-reduced-motion:reduce){.wpb-home-outline-toggle>svg{transition:none!important}}
 @media(forced-colors:active){.wpb-game-plan-highlight-icon{border:1px solid CanvasText}
  #root .wpb .wpb-home-game-plan{border:1px solid CanvasText}}
-#root .wpb .wpb-game-plan-highlight-copy>p{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
-
-
-/* B910 / UI polish pass 04 — Settings and creation motion consistency.
+#root .wpb .wpb-game-plan-highlight-copy>p{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}/* B910 / UI polish pass 04 — Settings and creation motion consistency.
    The creation header formerly put a 44px Back target in a 34px-high row.
    Keep header and progress geometry steady across all wizard questions;
    move just the question content a few pixels, with no opacity flash or
    spring overshoot. No workout, program or preference state changes. */
-#root[data-pi-motion="expressive"] .wpb .wpb-wizard>.wpb-wizard-header>div:first-child{
-  box-sizing:border-box;
-  height:48px!important;
-  min-height:48px;
-  gap:8px;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-wizard>.wpb-wizard-header button[aria-label="Back"]{
-  box-sizing:border-box;
-  width:48px!important;
-  min-width:48px!important;
-  height:48px!important;
-  min-height:48px!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-wizard>.wpb-wizard-header .wpb-wizard-progress{
-  margin-top:8px!important;
-}
+
+
+
 #root[data-pi-motion="expressive"] .wpb .wpb-wizard-step[data-pi-step-enter="1"]{
   animation:piB910QuestionEnter 170ms cubic-bezier(.2,.8,.2,1) both!important;
 }

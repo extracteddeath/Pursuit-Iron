@@ -1004,15 +1004,9 @@ function StyleTag({ theme } = {}) {
       .wpb-home .wpb-metric-strip{gap:6px!important;}
       .wpb-home .wpb-metric{padding-top:10px!important;padding-bottom:10px!important;}
 
-      .wpb-wizard-header{padding-left:16px!important;padding-right:16px!important;padding-top:12px!important;border-bottom:1px solid ${C.borderSoft};}
-      .wpb-wizard-header [role="progressbar"]{height:3px!important;margin-top:11px!important;background:${C.bg2}!important;}
-      .wpb-wizard .wpb-page-scroll{padding-left:16px!important;padding-right:16px!important;padding-top:18px!important;}
-      .wpb-wizard-step{max-width:620px;width:100%;margin:0 auto!important;}
       .wpb-wizard .opt{border-radius:12px!important;border-color:${C.borderSoft}!important;background:${C.card}!important;}
       .wpb-wizard .opt[aria-pressed="true"],.wpb-wizard .opt[data-selected="true"]{border-color:color-mix(in srgb,${C.accent} 52%,${C.border})!important;background:${C.accentDim}!important;}
-      .wpb-wizard-footer{margin-left:-16px!important;margin-right:-16px!important;padding-left:16px!important;padding-right:16px!important;border-top:1px solid color-mix(in srgb,${C.borderSoft} 72%,transparent);}
-      .wpb-wizard-footer>div>button:first-child{min-height:48px!important;border-radius:10px!important;background:${C.bg2}!important;}
-      .wpb-wizard-footer .wpb-primary-action{min-height:48px!important;}
+
 
       /* M93 NON-WORKOUT PRODUCT POLISH — calmer hierarchy and one coherent surface language.
          The workout screen is intentionally excluded from this block. */
@@ -1770,8 +1764,8 @@ function StyleTag({ theme } = {}) {
       @media (max-width:380px){
         .wpb-workout-header>div:first-child{gap:6px!important;}
         .wpb-workout-timer{min-width:86px!important;padding-left:6px!important;padding-right:6px!important;}
-        .wpb-home .wpb-page-scroll,.wpb-settings .wpb-page-scroll,.wpb-wizard .wpb-page-scroll{padding-left:12px!important;padding-right:12px!important;}
-        .wpb-wizard-footer{margin-left:-12px!important;margin-right:-12px!important;padding-left:12px!important;padding-right:12px!important;}
+        .wpb-home .wpb-page-scroll,.wpb-settings .wpb-page-scroll{padding-left:12px!important;padding-right:12px!important;}
+
         .wpb-settings-jump{padding-left:12px!important;padding-right:12px!important;}
         .wpb-workout .wpb-workout-scroll{padding-left:12px!important;padding-right:12px!important;}
       }
@@ -2123,11 +2117,9 @@ function StyleTag({ theme } = {}) {
       .wpb-wizard-option-label{font-size:15px!important;font-weight:650!important;letter-spacing:-.08px;}
       .wpb-wizard-option-sub{font-size:12.5px!important;line-height:1.4!important;color:${C.muted}!important;}
       .wpb-wizard-option-note{font-size:12px!important;line-height:1.4!important;margin-top:4px!important;color:${C.muted}!important;}
-      .wpb-wizard-progress{height:3px!important;margin-top:12px!important;background:${C.bg2}!important;}
-      .wpb-wizard-footer{padding-top:8px!important;}
-      .wpb-wizard-back-action,.wpb-wizard-next-action{min-height:48px!important;padding:12px 14px!important;border-radius:12px!important;}
-      .wpb-wizard-next-action{font-size:15px!important;font-weight:700!important;}
-      .wpb-wizard-back-action{font-size:14px!important;font-weight:650!important;background:${C.card}!important;}
+
+
+
       .wpb-wizard-summary{
         padding:9px 2px!important;border-radius:0!important;border-left:0!important;border-right:0!important;
         border-color:var(--section-rule)!important;background:transparent!important;
@@ -2303,7 +2295,6 @@ function StyleTag({ theme } = {}) {
       /* M129 DATA / ONBOARDING CORRECTION PASS — wizard and intro action bars are now real flex
          siblings rather than sticky overlays. Override the older scroller-era negative margins and
          gradients so neither footer can cover or bleed into the answer list on a phone. */
-      .wpb-wizard>.wpb-wizard-footer{margin-left:0!important;margin-right:0!important;padding-left:20px!important;padding-right:20px!important;background:${C.bg}!important;}
       .wpb-onboarding>.wpb-onboarding-footer{margin-left:0!important;margin-right:0!important;padding-left:22px!important;padding-right:22px!important;background:${C.bg}!important;}
       .wpb-history-detail-head{min-height:50px;}
       .wpb-history-actions>button,.wpb-history-actions>span>button{min-width:40px!important;min-height:40px!important;}
@@ -2402,7 +2393,7 @@ function StyleTag({ theme } = {}) {
       /* M149 REAL-DEVICE RESILIENCE — width-only breakpoints miss phone landscape, split screen and
          accessibility zoom. Keep the existing visual language, but make vertical chrome yield before
          content and guarantee that modal actions remain reachable inside the visible viewport. */
-      .wpb :is(.wpb-primary-action,.wpb-secondary-action,.wpb-danger-action,.wpb-onboarding-primary,.wpb-onboarding-secondary,.wpb-wizard-back-action,.wpb-wizard-next-action){
+      .wpb :is(.wpb-primary-action,.wpb-secondary-action,.wpb-danger-action,.wpb-onboarding-primary,.wpb-onboarding-secondary){
         height:auto!important;max-width:100%;min-width:0;white-space:normal!important;line-height:1.2!important;text-wrap:pretty;
       }
       .wpb :is(.wpb-premium-tabs,.wpb-settings .wpb-segmented)>button{
@@ -2452,7 +2443,7 @@ function StyleTag({ theme } = {}) {
         .wpb-onboarding-feature{margin-bottom:9px!important;}
         .wpb-onboarding-footer{padding-top:7px!important;padding-bottom:calc(env(safe-area-inset-bottom) + 8px)!important;}
         .wpb-wizard-heading{margin-bottom:10px!important;}
-        .wpb-wizard-footer{padding-top:7px!important;padding-bottom:calc(env(safe-area-inset-bottom) + 8px)!important;}
+
         .wpb [data-sheet-drag]{max-height:calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 4px)!important;}
       }
 
@@ -6209,18 +6200,60 @@ function Wizard({ buildTask = null, onCancelBuild, initialEquipment, initialExpe
     // The mode-choice screen is its own one-item flow (STEPS = ["mode"]), which used to make the
     // progress bar read 100% on the very first screen, then snap back — show a sliver instead.
     const progress = key === "mode" ? 0.06 : (step + 1) / STEPS.length;
-    return (_jsxs("div", { className: "wpb-page-shell wpb-wizard", children: [_jsxs("div", { className: "wpb-page-header wpb-program-header wpb-wizard-header", style: { padding: "14px 20px 0" }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 6, height: 34 }, children: [_jsx("button", { onClick: back, disabled: building, "aria-label": "Back", className: "pressable hit", style: { flexShrink: 0, width: 36, display: "flex", alignItems: "center", background: "none", border: "none", color: C.text, cursor: "pointer", padding: 4 }, children: _jsx(ChevronLeft, { size: 28 }) }), _jsx("div", { style: { flex: 1, minWidth: 0, textAlign: "center", fontSize: 18, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: key === "mode" ? "Create" : cycleMode ? "Create Cycle" : "Create Program" }), _jsx("div", { className: "mono", style: { flexShrink: 0, width: 36, textAlign: "right", fontSize: 11, fontWeight: 600, color: C.faint, letterSpacing: .4 }, children: key === "mode" ? "" : `${step + 1}/${STEPS.length}` })] }), _jsx("div", { className: "wpb-wizard-progress", role: "progressbar", "aria-label": "Setup progress", "aria-valuemin": 0, "aria-valuemax": STEPS.length, "aria-valuenow": key === "mode" ? 0 : step + 1, style: { height: 4, background: C.border, borderRadius: 999, marginTop: 16, overflow: "hidden" }, children: _jsx("div", { className: "wpb-bar", style: { background: C.accent, transform: `translateX(-${(1 - progress) * 100}%)` } }) })] }), _jsx("div", { ref: scrollRef, className: "wpb-scroll wpb-page-scroll", style: { flex: 1, minHeight: 0, overflowY: "auto", padding: "22px 20px 28px", overscrollBehavior: "contain" }, children: _jsxs("div", { className: "wpb-wizard-layout", children: [_jsx("fieldset", { className: "wpb-wizard-step", "data-step-key": key, "aria-labelledby": "wpb-wizard-question", disabled: building, "aria-busy": building, style: { border: 0, padding: 0, margin: 0, minWidth: 0 }, children: _jsx(StepBody, { stepKey: key, config: { ...config, goal: effectiveGoal }, set: set, buildable: buildable.__key === buildKey ? buildable : {}, autoLength: autoLength, compatibleSplits: compatibleSplits, focusTotal: focusTotal, cycleTemplate: cycleTemplate, setCycleTemplate: setCycleTemplate, cycleChoices: cycleChoices, customCycleBlocks: customCycleBlocks, setCustomCycleBlocks: setCustomCycleBlocks, cycleAdapt: cycleAdapt, setCycleAdapt: setCycleAdapt, cycleMode: cycleMode, setCycleMode: setCycleMode, nextRecommendedSplit: nextRecommendedSplit }, key) }, step), _jsx(WizardReviewPane, { config: config, cycleMode: cycleMode, modeChosen: choseMode, selectedCycle: selectedCycle, cycleAdapt: cycleAdapt, step: step, stepCount: STEPS.length, stepKey: key })] }) }), _jsxs("div", { className: "wpb-wizard-footer", style: { flexShrink: 0, zIndex: 3, padding: "10px 20px calc(env(safe-area-inset-bottom) + 14px)", background: C.bg, borderTop: `1px solid ${C.borderSoft}`, boxShadow: "0 -12px 26px rgba(0,0,0,.10)" }, children: [cycleMode && _jsx("div", { className: "wpb-cycle-draft-status", role: "status", style: {fontSize:11,color:C.muted,paddingBottom:7}, children: draftSaved ? (setupDraft ? "Resumed your saved cycle setup · changes save on this device" : "Cycle setup saves on this device as you go") : "Setup could not be saved on this device. Keep this setup open." }), cycleMode && _jsx("button", {type:"button", disabled:building, onClick:()=>{clearCycleSetupDraft(draftId);onCancel();}, className:"pressable", style:{border:0,background:"transparent",color:C.muted,fontSize:12,minHeight:48,padding:"4px 0"}, children:"Discard setup and close"}), building && (_jsxs("div", { role: "status", "aria-live": "polite", className: "wpb-build-status", "data-generation-busy": buildTask ? true : undefined, style: { padding: "8px 0", display: "flex", alignItems: "center", gap: 10 }, children: [_jsx("span", { className: "wpb-inline-spinner", "aria-hidden": "true" }), _jsxs("div", { style: { minWidth: 0 }, children: [_jsxs("div", { style: { fontSize: 13, fontWeight: 700, color: C.text }, children: ["Building your ", cycleMode ? "cycle" : "program", "\u2026"] }), _jsx("div", { style: { marginTop: 2, fontSize: 12, lineHeight: 1.35, color: C.muted }, children: "Balancing exercises, volume, recovery, and session time." })] }), buildTask && onCancelBuild && _jsx("button", { type: "button", onClick: onCancelBuild, "data-cancel-generation": true, className: "pressable", style: { flexShrink: 0, minHeight: 44, padding: "8px 12px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.text, fontWeight: 600 }, children: "Cancel build" })] })), buildError && _jsx("div", { role: "alert", className: "wpb-build-alert", style: { padding: "8px 0", fontSize: 13, lineHeight: 1.45, color: C.danger }, children: buildError }), _jsxs("div", { style: { display: "flex", gap: 8 }, children: [_jsxs("button", { onClick: back, disabled: building, className: "pressable wpb-wizard-back-action", style: {
-                                    flex: step === 0 ? "0 0 auto" : "0 0 32%", minHeight: 50, padding: "12px 14px", borderRadius: 13, border: `1px solid ${C.border}`, cursor: "pointer",
-                                    fontSize: 15, fontWeight: 700, background: C.card, color: C.text,
-                                    display: "flex", alignItems: "center", justifyContent: "center", gap: 6
-                                }, children: [_jsx(ChevronLeft, { size: 18 }), " ", step === 0 && (!allowModeChoice || !choseMode) ? "Cancel" : "Back"] }), _jsx("button", { onClick: next, disabled: !canNext || building, className: "pressable wpb-primary-action wpb-wizard-next-action", style: {
-                                    flex: 1, minHeight: 50, padding: "12px 16px", borderRadius: 13, border: "none", cursor: canNext ? "pointer" : "default",
-                                    fontSize: 16, fontWeight: 750, background: canNext ? C.accent : C.card, color: canNext ? C.accentText : C.faint
-                                }, children: building ? "Building…" : key === "mode" ? "Continue" : step === STEPS.length - 1 ? (cycleMode ? "Build Cycle" : "Generate Program") : "Next" })] }), canFinishEarly && (_jsxs("button", { onClick: finish, disabled: building, className: "pressable wpb-wizard-finish-action", style: {
-                            width: "100%", marginTop: 7, padding: "7px 8px 2px", borderRadius: 10, border: "none", background: "none",
-                            cursor: "pointer", fontSize: 13, lineHeight: 1.3, fontWeight: 650, color: C.accentInk
-                        }, children: [cycleMode ? "Build with these settings" : "Generate with these settings", " \u00B7 ", STEPS.length - 1 - step, " optional ", STEPS.length - 1 - step === 1 ? "step" : "steps", " left"] }))] })] }));
+    return (_jsxs("div", { className: "wpb-page-shell wpb-wizard", children: [
+        _jsxs(UiHeader, { className: "wpb-wizard-header", children: [
+            _jsxs("div", { className: "wpb-wizard-toolbar", children: [
+                _jsx(UiAction, { variant: "icon", onClick: back, disabled: building, "aria-label": "Back",
+                    children: _jsx(ChevronLeft, { size: 28 }) }),
+                _jsx("div", { className: "wpb-wizard-title", children: key === "mode" ? "Create" : cycleMode ? "Create Cycle" : "Create Program" }),
+                _jsx("div", { className: "mono wpb-wizard-step-count", children: key === "mode" ? "" : `${step + 1}/${STEPS.length}` })
+            ] }),
+            _jsx("div", { className: "wpb-wizard-progress", role: "progressbar", "aria-label": "Setup progress",
+                "aria-valuemin": 0, "aria-valuemax": STEPS.length, "aria-valuenow": key === "mode" ? 0 : step + 1,
+                children: _jsx("div", { className: "wpb-bar", style: { transform: `translateX(-${(1 - progress) * 100}%)` } }) })
+        ] }),
+        _jsx("div", { ref: scrollRef, className: "wpb-scroll wpb-page-scroll", children:
+            _jsxs("div", { className: "wpb-wizard-layout", children: [
+                _jsx("fieldset", { className: "wpb-wizard-step", "data-step-key": key,
+                    "aria-labelledby": "wpb-wizard-question", disabled: building, "aria-busy": building,
+                    children: _jsx(StepBody, { stepKey: key, config: { ...config, goal: effectiveGoal }, set,
+                        buildable: buildable.__key === buildKey ? buildable : {}, autoLength, compatibleSplits,
+                        focusTotal, cycleTemplate, setCycleTemplate, cycleChoices, customCycleBlocks,
+                        setCustomCycleBlocks, cycleAdapt, setCycleAdapt, cycleMode, setCycleMode, nextRecommendedSplit }, key) }, step),
+                _jsx(WizardReviewPane, { config, cycleMode, modeChosen: choseMode, selectedCycle,
+                    cycleAdapt, step, stepCount: STEPS.length, stepKey: key })
+            ] }) }),
+        _jsxs("div", { className: "wpb-wizard-footer", children: [
+            cycleMode && _jsx("div", { className: "wpb-cycle-draft-status", role: "status",
+                children: draftSaved ? (setupDraft ? "Resumed your saved cycle setup · changes save on this device" : "Cycle setup saves on this device as you go") : "Setup could not be saved on this device. Keep this setup open." }),
+            cycleMode && _jsx(UiAction, { variant: "text", disabled: building,
+                onClick: () => { clearCycleSetupDraft(draftId); onCancel(); }, className: "wpb-wizard-discard-action",
+                children: "Discard setup and close" }),
+            building && _jsxs("div", { role: "status", "aria-live": "polite", className: "wpb-build-status",
+                "data-generation-busy": buildTask ? true : undefined, children: [
+                    _jsx("span", { className: "wpb-inline-spinner", "aria-hidden": "true" }),
+                    _jsxs("div", { className: "wpb-wizard-build-copy", children: [
+                        _jsxs("div", { className: "wpb-wizard-build-title", children: ["Building your ", cycleMode ? "cycle" : "program", "\u2026"] }),
+                        _jsx("div", { className: "wpb-wizard-build-description", children: "Balancing exercises, volume, recovery, and session time." })
+                    ] }),
+                    buildTask && onCancelBuild && _jsx(UiAction, { variant: "tonal", onClick: onCancelBuild,
+                        "data-cancel-generation": true, className: "wpb-wizard-cancel-build", children: "Cancel build" })
+                ] }),
+            buildError && _jsx("div", { role: "alert", className: "wpb-build-alert wpb-wizard-build-alert", children: buildError }),
+            _jsxs("div", { className: "wpb-wizard-actions", "data-initial-step": step === 0 ? "true" : "false", children: [
+                _jsxs(UiAction, { variant: "tonal", onClick: back, disabled: building,
+                    className: "wpb-wizard-back-action", children: [_jsx(ChevronLeft, { size: 18 }), " ",
+                        step === 0 && (!allowModeChoice || !choseMode) ? "Cancel" : "Back"] }),
+                _jsx(UiAction, { variant: "primary", onClick: next, disabled: !canNext || building,
+                    className: "wpb-wizard-next-action", children: building ? "Building…" : key === "mode" ? "Continue" : step === STEPS.length - 1 ? (cycleMode ? "Build Cycle" : "Generate Program") : "Next" })
+            ] }),
+            canFinishEarly && _jsxs(UiAction, { variant: "text", onClick: finish, disabled: building,
+                className: "wpb-wizard-finish-action", children: [cycleMode ? "Build with these settings" : "Generate with these settings",
+                    " \u00B7 ", STEPS.length - 1 - step, " optional ", STEPS.length - 1 - step === 1 ? "step" : "steps", " left"] })
+        ] })
+    ] }));
 }
+
 function Heading({ children, sub }) {
     return (_jsxs("div", { className: "wpb-wizard-heading", children: [
         _jsx("h1", { id: "wpb-wizard-question", className: "wpb-wizard-heading-title", children }),
@@ -6357,7 +6390,7 @@ function StepBody({ stepKey, config, set, buildable = {}, autoLength = null, com
         const ordered = withV.sort((a, b) => (a[2].length > 0) - (b[2].length > 0) || (a[0] === rec ? -1 : b[0] === rec ? 1 : 0));
         const blockedEq = ordered.filter(x => x[3] && x[3].ok === false && x[3].kind !== "design").length;
         const blockedDesign = ordered.filter(x => x[3] && x[3].ok === false && x[3].kind === "design").length;
-        return (_jsxs(_Fragment, { children: [_jsx(Heading, { sub: `Choose how to spread ${config.days} training days across the week.`, children: "Pick your split" }), _jsx("div", { role: "status", style: { fontSize: 13, color: C.muted, marginBottom: 12 }, children: ordered.some(x => !x[3]) ? "Checking your equipment and available session lengths…" : "Availability checked. Choose an available split to continue." }), blockedEq > 0 && (_jsxs("div", { role: "note", "data-testid": "split-equipment-note", style: { fontSize: 13, color: C.muted, lineHeight: 1.5, margin: "0 2px 12px" }, children: [blockedEq === 1 ? "One program can't" : `${blockedEq} programs can't`, " be built with your current equipment, so ", blockedEq === 1 ? "it's" : "they're", " marked below. Add equipment in your gym settings to open ", blockedEq === 1 ? "it" : "them", " up."] })), blockedDesign > 0 && (_jsxs("div", { role: "note", "data-testid": "split-design-note", style: { fontSize: 13, color: C.muted, lineHeight: 1.5, margin: "0 2px 12px" }, children: [blockedDesign === 1 ? "One program doesn't" : `${blockedDesign} programs don't`, " come out balanced at ", config.days, " days, so ", blockedDesign === 1 ? "it's" : "they're", " marked below \u2014 a different number of days usually fixes it."] })), _jsx(Col, { children: ordered.map(([k, sp, , v]) => {
+        return (_jsxs(_Fragment, { children: [_jsx(Heading, { sub: `Choose how to spread ${config.days} training days across the week.`, children: "Pick your split" }), _jsx("div", { role: "status", className: "wpb-wizard-guidance", children: ordered.some(x => !x[3]) ? "Checking your equipment and available session lengths…" : "Availability checked. Choose an available split to continue." }), blockedEq > 0 && (_jsxs("div", { role: "note", "data-testid": "split-equipment-note", className: "wpb-wizard-guidance", children: [blockedEq === 1 ? "One program can't" : `${blockedEq} programs can't`, " be built with your current equipment, so ", blockedEq === 1 ? "it's" : "they're", " marked below. Add equipment in your gym settings to open ", blockedEq === 1 ? "it" : "them", " up."] })), blockedDesign > 0 && (_jsxs("div", { role: "note", "data-testid": "split-design-note", className: "wpb-wizard-guidance", children: [blockedDesign === 1 ? "One program doesn't" : `${blockedDesign} programs don't`, " come out balanced at ", config.days, " days, so ", blockedDesign === 1 ? "it's" : "they're", " marked below \u2014 a different number of days usually fixes it."] })), _jsx(Col, { children: ordered.map(([k, sp, , v]) => {
                         const off = !!(v && v.ok === false);
                         return (_jsx(OptionCard, { icon: Repeat, label: k === rec && !off ? `${sp.name} · Recommended` : sp.name, sub: sp.blurb, selected: config.split === k && !off, disabled: off, note: noteOf(v), onClick: () => set({ split: k }) }, k));
                     }) })] }));
@@ -6385,7 +6418,7 @@ function StepBody({ stepKey, config, set, buildable = {}, autoLength = null, com
             set({ session: minS });
         return (_jsxs(_Fragment, { children: [_jsx(Heading, { sub: minS
                         ? `${SPLITS[config.split].name} needs at least ${SESSIONS.find(s => s.id === minS)?.label.toLowerCase()} to run as written.`
-                        : "Choose a capacity band, not a quota. Pursuit uses the time when another set is worth its fatigue cost and can finish early when it is not.", children: "How much time per session?" }), autoLength && autoLength.split === config.split && autoLength.to === config.session && (_jsxs("div", { role: "status", "data-testid": "session-auto-note", style: { fontSize: 13, color: C.muted, lineHeight: 1.5, margin: "0 2px 12px" }, children: [(SESSIONS.find(x => x.id === autoLength.from)?.label || "That length"), " can't build ", SPLITS[config.split]?.name || "this program", " with your setup, so ", (SESSIONS.find(x => x.id === autoLength.to)?.label || "another length").toLowerCase(), " is selected."] })), _jsx(Col, { children: choices.map(s => (
+                        : "Choose a capacity band, not a quota. Pursuit uses the time when another set is worth its fatigue cost and can finish early when it is not.", children: "How much time per session?" }), autoLength && autoLength.split === config.split && autoLength.to === config.session && (_jsxs("div", { role: "status", "data-testid": "session-auto-note", className: "wpb-wizard-guidance", children: [(SESSIONS.find(x => x.id === autoLength.from)?.label || "That length"), " can't build ", SPLITS[config.split]?.name || "this program", " with your setup, so ", (SESSIONS.find(x => x.id === autoLength.to)?.label || "another length").toLowerCase(), " is selected."] })), _jsx(Col, { children: choices.map(s => (
                     /* The count SHOWN is the count the generator will aim at, from one shared function.
                        This printed SESSIONS[].count — a constant that said "~6 exercises" beside a card
                        labelled "90 to 120 minutes", which is about an hour of work. It also could not vary
@@ -6454,10 +6487,24 @@ function StepBody({ stepKey, config, set, buildable = {}, autoLength = null, com
                 delete f[p];
             set({ focus: f });
         };
-        return (_jsxs(_Fragment, { children: [_jsx(Heading, { sub: "Prioritise these muscles within your time and equipment limits. One point raises priority; two points marks a stronger specialization target.", children: "Focus on any muscles?" }), _jsxs("div", { className: "wpb-wizard-focus-summary", style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, padding: "10px 16px", background: C.card, borderRadius: 12 }, children: [_jsx("span", { style: { color: C.muted, fontSize: 15 }, children: "Focus points used" }), _jsxs("span", { className: "mono", style: { fontWeight: 600, color: focusTotal >= 5 ? C.accentInk : C.text }, children: [focusTotal, " / 5"] })] }), _jsx(Col, { children: PART_ORDER.map(p => {
-                        const v = config.focus[p] || 0;
-                        return (_jsxs("div", { className: "wpb-wizard-focus-row", style: { display: "flex", alignItems: "center", gap: 12, background: v ? C.cardHi : C.card, borderRadius: 16, padding: "12px 16px" }, children: [_jsxs("div", { className: "wpb-wizard-focus-label", style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { style: { fontWeight: 600, fontSize: 15 }, children: PART_LABEL[p] }), FOCUS_CAVEAT[p] && _jsx("div", { style: { fontSize: 12, color: C.muted, marginTop: 2 }, children: FOCUS_CAVEAT[p] })] }), _jsx(Stepper, { value: v, onMinus: () => bump(p, -1), onPlus: () => bump(p, 1), plusDisabled: v >= 2 || focusTotal >= 5, label: `${PART_LABEL[p]} focus` })] }, p));
-                    }) })] }));
+        return (_jsxs(_Fragment, { children: [
+            _jsx(Heading, { sub: "Prioritise these muscles within your time and equipment limits. One point raises priority; two points marks a stronger specialization target.", children: "Focus on any muscles?" }),
+            _jsxs("div", { className: "wpb-ui-card wpb-wizard-focus-summary", "data-at-limit": focusTotal >= 5 ? "true" : "false", children: [
+                _jsx("span", { children: "Focus points used" }),
+                _jsxs("span", { className: "mono wpb-wizard-focus-total", children: [focusTotal, " / 5"] })
+            ] }),
+            _jsx(Col, { children: PART_ORDER.map(p => {
+                const v = config.focus[p] || 0;
+                return (_jsxs("div", { className: "wpb-ui-card wpb-wizard-focus-row", "data-focused": v > 0 ? "true" : "false", children: [
+                    _jsxs("div", { className: "wpb-wizard-focus-label", children: [
+                        _jsx("div", { className: "wpb-wizard-focus-name", children: PART_LABEL[p] }),
+                        FOCUS_CAVEAT[p] && _jsx("div", { className: "wpb-wizard-focus-caveat", children: FOCUS_CAVEAT[p] })
+                    ] }),
+                    _jsx(Stepper, { value: v, onMinus: () => bump(p, -1), onPlus: () => bump(p, 1),
+                        plusDisabled: v >= 2 || focusTotal >= 5, label: `${PART_LABEL[p]} focus` })
+                ] }, p));
+            }) })
+        ] }));
     }
     if (stepKey === "reduce") {
         const toggle = (p) => set({ reduce: config.reduce.includes(p) ? config.reduce.filter(x => x !== p) : [...config.reduce, p] });
@@ -6496,12 +6543,13 @@ function SetupFieldsDisplay({ ex, value }) {
     return (_jsx("div", { style: { display: "flex", flexWrap: "wrap", gap: 6, marginBottom: value && Object.keys(value).length ? 6 : 0 }, children: fields.map(f => (_jsxs("span", { style: { fontSize: 11, fontWeight: 700, color: C.accentInk, background: C.accentDim, borderRadius: 8, padding: "3px 8px" }, children: [f.label, " ", value[f.key]] }, f.key))) }));
 }
 function Stepper({ value, onMinus, onPlus, plusDisabled, label = "value" }) {
-    const btn = (disabled) => ({
-        width: 34, height: 34, borderRadius: 12, border: `1.5px solid ${C.border}`,
-        background: disabled ? C.bg2 : C.bg2, color: disabled ? C.faint : C.text,
-        display: "flex", alignItems: "center", justifyContent: "center", cursor: disabled ? "default" : "pointer"
-    });
-    return (_jsxs("div", { className: "wpb-setup-stepper", style: { display: "flex", alignItems: "center", gap: 12 }, children: [_jsx("button", { className: "pressable", onClick: onMinus, disabled: value === 0, "aria-label": `Decrease ${label}`, style: btn(value === 0), children: _jsx(Minus, { size: 16 }) }), _jsx("span", { className: "mono", style: { width: 16, textAlign: "center", fontWeight: 600, color: value ? C.accentInk : C.muted }, children: value }), _jsx("button", { className: "pressable", onClick: onPlus, disabled: plusDisabled, "aria-label": `Increase ${label}`, style: btn(plusDisabled), children: _jsx(Plus, { size: 16 }) })] }));
+    return (_jsxs("div", { className: "wpb-setup-stepper", "data-has-value": value ? "true" : "false", children: [
+        _jsx(UiAction, { variant: "tonal", "data-icon-only": "true", onClick: onMinus, disabled: value === 0,
+            "aria-label": `Decrease ${label}`, children: _jsx(Minus, { size: 16 }) }),
+        _jsx("span", { className: "mono wpb-setup-stepper-count", children: value }),
+        _jsx(UiAction, { variant: "tonal", "data-icon-only": "true", onClick: onPlus, disabled: plusDisabled,
+            "aria-label": `Increase ${label}`, children: _jsx(Plus, { size: 16 }) })
+    ] }));
 }
 // Training-phase narrative — borrowed from Pursuit (Foundation → Development → Peak framing).
 // Maps each week of a non-percentage block to a phase with a one-line "why".

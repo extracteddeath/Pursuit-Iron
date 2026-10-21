@@ -4,7 +4,7 @@ const css=fs.readFileSync('app.css','utf8');
 const app=fs.readFileSync('modules/App.js','utf8');
 const block=css.slice(css.lastIndexOf('/* B910 / UI polish pass 04'));
 assert.ok(block.startsWith('/* B910 / UI polish pass 04'));
-assert.ok(block.includes('height:48px!important;')&&block.includes('min-width:48px!important;'),'48px real creation-header Back target and steady header');
+assert.ok(css.includes('.wpb .wpb-wizard-toolbar{')&&css.includes('min-height:var(--pi-control-min);')&&app.includes('variant: "icon", onClick: back, disabled: building'), 'Creation header uses the shared 48px icon action and growing toolbar');
 assert.ok(block.includes('piB910QuestionEnter 170ms')&&block.includes('translate:0 4px'),'Short bounded question motion');
 assert.ok(!block.includes('translate:0 -')&&!block.includes('opacity:0'),'No spring overshoot or opacity flash');
 for(const s of ['.wpb-settings .wpb-segmented>button','.wpb-wizard-option','.wpb-wizard-choice','.wpb-wizard-preset'])

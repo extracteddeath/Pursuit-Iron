@@ -5,10 +5,10 @@ import fs from 'node:fs';
 // Decrease alongside a verified cleanup; never raise to permit a cosmetic override.
 const css = fs.readFileSync('app.css', 'utf8');
 const app = fs.readFileSync('modules/App.js', 'utf8');
-const MAX_IMPORTANT = 2918;
-const MAX_APP_IMPORTANT = 1417; // Prevent embedded StyleTag patches bypassing the CSS budget.
+const MAX_IMPORTANT = 2858;
+const MAX_APP_IMPORTANT = 1376; // Prevent embedded StyleTag patches bypassing the CSS budget.
 const MAX_REPEAT_IMPORTANT = 30;
-const MAX_INLINE_STYLE_OBJECTS = 3266; // Cohesion 18: equipment and constraint presentation migrated
+const MAX_INLINE_STYLE_OBJECTS = 3233; // Cohesion 19: Wizard shell, focus rows and guidance migrated
 const allowedDebtKeys = new Set([
   "\t#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step\tborder-radius",
   "\t#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step\theight",
@@ -150,6 +150,21 @@ for(const selector of [
 ])assert.ok(css.includes(selector),'Missing reusable Wizard CSS owner '+selector);
 assert.ok(css.includes('.wpb .wpb-wizard-name-input[data-has-value="true"]'),
   'Controlled name input has its own selected border');
+// The complete creation presentation now has no static JSX styles.
+const wizardShell=app.slice(app.indexOf('function Wizard({'),app.indexOf('function Heading('));
+const wizardBody=app.slice(app.indexOf('function StepBody('),app.indexOf('// Editable row'));
+const setupStepper=app.slice(app.indexOf('function Stepper('),app.indexOf('// Training-phase narrative'));
+assert.equal((wizardShell.match(/style: \{/g)||[]).length,1,'Only computed progress transform remains inline in Wizard');
+assert.ok(wizardShell.includes('style: { transform: `translateX('),'Wizard retains calculated progress transform');
+for(const [owner,source] of [['All setup questions',wizardBody],['Setup stepper',setupStepper]])
+  assert.ok(source.length>100&&!source.includes('style:'),'Static inline presentation returned to '+owner);
+assert.ok(wizardShell.includes('_jsxs(UiHeader,')&&wizardShell.includes('_jsx(UiAction,'),
+  'Wizard chrome consumes shared header/actions');
+assert.ok(wizardShell.includes('"data-initial-step": step === 0')&&
+  wizardBody.includes('"data-at-limit": focusTotal >= 5')&&wizardBody.includes('"data-focused": v > 0'),
+  'Real setup state owns layout and focus emphasis');
+assert.ok(setupStepper.includes('disabled: value === 0')&&setupStepper.includes('disabled: plusDisabled'),
+  'Shared stepper retains native limit semantics');
 const plan=app.slice(app.indexOf('function PlanView('),app.indexOf('function sessionLoadText('));
 assert.ok(plan.includes('className: "wpb-plan-eyebrow"'),'Plan eyebrow must be class-owned');
 assert.ok(!plan.includes('style: { fontSize: 26, fontWeight: 740, color: C.text'),

@@ -1724,18 +1724,11 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 /* Plan: week navigation becomes a continuous "rail", without making an
    occupied lower-screen workout dock taller. */
 #root[data-pi-motion="expressive"] .wpb-program .wpb-week-rail{
+  margin:12px 0 10px;
   scroll-snap-type:x proximity;
-  scroll-padding:12px;
-  padding:5px 3px 9px!important;
 }
-#root[data-pi-motion="expressive"] .wpb-program .wpb-week-rail>button{
-  scroll-snap-align:center;
-  padding:10px 15px!important;
-  transition:border-color 180ms var(--pi-ease),background-color 180ms var(--pi-ease)!important;
-}
-#root[data-pi-motion="expressive"] .wpb-program .wpb-week-rail>button:focus-visible{
-  outline:2px solid currentColor!important;outline-offset:2px!important;
-}
+#root[data-pi-motion="expressive"] .wpb-program .wpb-week-rail>button{scroll-snap-align:center;}
+
 #root[data-pi-motion="expressive"] .wpb-program .wpb-day-card[data-next="true"]{
   background-image:none!important;
 }
@@ -2558,8 +2551,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    upcoming-day accordion retain exactly their measured hit geometry. */
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-glance-tile,
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-panes,
-#root[data-pi-motion="expressive"] .wpb-program .wpb-day-card,
-#root[data-pi-motion="expressive"] .wpb-program .wpb-week-rail>button{
+#root[data-pi-motion="expressive"] .wpb-program .wpb-day-card{
   background-image:none!important;
   background-color:var(--pi-r11-quiet)!important;
   box-shadow:none!important;
@@ -4806,24 +4798,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   background-color:light-dark(var(--pi-m3e-base),var(--pi-r41-page))!important;
   background-image:none!important;
 }
-#root[data-pi-motion="expressive"] .wpb-program .wpb-week-rail{
-  gap:8px!important;
-  scroll-padding-inline:12px;
-}
-#root[data-pi-motion="expressive"] .wpb-program .wpb-week-rail>button{
-  box-sizing:border-box;
-  min-height:51px!important;
-  border:1px solid var(--pi-r11-edge)!important;
-  border-radius:16px!important;
-  background-color:var(--pi-r11-quiet)!important;
-  background-image:none!important;
-  box-shadow:none!important;
-}
-#root[data-pi-motion="expressive"] .wpb-program .wpb-week-rail>button:is(
-  [aria-pressed="true"],[aria-current="true"],[aria-current="page"],[data-active="true"]){
-  border-color:var(--pi-r11-accent-stroke)!important;
-  background-color:var(--pi-r11-selected)!important;
-}
+
 #root[data-pi-motion="expressive"] .wpb-program .wpb-day-card{
   border:1px solid var(--pi-r11-edge)!important;
   background-color:var(--pi-r11-quiet)!important;
@@ -5291,9 +5266,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-color:var(--pi-r48-divider)!important;
   box-shadow:none!important;
 }
-#root[data-pi-motion="expressive"] .wpb .wpb-program.wpb-program .wpb-week-rail{
-  gap:6px!important;
-}
+
 /* Profile is a dashboard, not an award-card wall. Carry shared neutral
    edges into score subcards and keep the strength score as the single accent. */
 #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength-cell:not(:first-child){
@@ -5686,27 +5659,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   background:var(--pi-color-canvas)!important;
   background-image:none!important;
 }
-#root[data-pi-motion="expressive"] .wpb .wpb-plan-week-picker>.wpb-plan-week-chip{
-  background:var(--pi-color-card)!important;
-  color:var(--pi-color-on-control)!important;
-  border-color:var(--pi-color-divider)!important;
-  border-radius:15px!important;
-  box-shadow:none!important;
-  min-height:48px!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-plan-week-picker>.wpb-plan-week-chip[aria-pressed="true"]{
-  background:var(--pi-color-feature)!important;
-  color:var(--wpb-theme-text)!important;
-  border-color:var(--pi-m3e-primary)!important;
-  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--pi-m3e-primary) 25%,transparent)!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-plan-week-picker>.wpb-plan-week-chip[aria-pressed="true"]>div{
-  color:var(--pi-m3e-primary)!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-plan-week-picker>.wpb-plan-week-chip:focus-visible{
-  outline:2px solid var(--pi-m3e-primary)!important;
-  outline-offset:2px!important;
-}
+
+
 /* R62: sessions belong to one connected list within the selected week.
    Keep each native button's full target, with an inset focus outline. */
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-session-list{
@@ -5760,16 +5714,13 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 @media(forced-colors:active){
   #root[data-pi-motion="expressive"] .wpb .wpb-plan-view :is(
-    .wpb-plan-week-card,.wpb-plan-session-link,.wpb-plan-week-chip,.wpb-plan-open-program),
+    .wpb-plan-week-card,.wpb-plan-session-link,.wpb-plan-open-program),
   #root[data-pi-motion="expressive"] .wpb .wpb-program .wpb-phase-block>div>div{
     background:Canvas!important;
     color:CanvasText!important;
     border-color:CanvasText!important;
   }
-  #root[data-pi-motion="expressive"] .wpb .wpb-plan-week-picker>.wpb-plan-week-chip[aria-pressed="true"]{
-    background:Highlight!important;
-    color:HighlightText!important;
-  }
+
 }
 
 /* Program schedule cards currently inherit scattered old purple inline
@@ -5785,13 +5736,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   background-image:none!important;
   border-color:var(--pi-r11-accent-stroke)!important;
 }
-#root[data-pi-motion="expressive"] .wpb .wpb-program.wpb-program .wpb-week-rail>button:not(
-  [aria-pressed="true"]):not([aria-current="page"]):not([data-active="true"]){
-  background:var(--pi-color-card)!important;
-  background-image:none!important;
-  border-color:var(--pi-color-divider)!important;
-  box-shadow:none!important;
-}
+
 
 /* R54 — shared design roles in the *expanded* full Program. The live workout
    logger is excluded. Next is signalled by an accent edge, not a gray slab. */
@@ -6299,6 +6244,29 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   font-weight:700;
   box-shadow:none!important;
 }
+/* Cohesion 13 — one two-line choice variant for Plan, Program and cycle blocks. */
+#root .wpb .wpb-ui-choice[data-choice-kind="summary"]{
+  --pi-control-min:51px;
+  --pi-radius-control:15px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  flex-shrink:0;
+  min-width:0;
+  max-width:min(18rem,calc(100vw - 48px));
+  padding:7px 12px;
+  font-size:.8125rem;
+  text-align:center;
+  white-space:normal;
+  overflow-wrap:anywhere;
+  scroll-snap-align:center;
+}
+.wpb-ui-choice-label{font-weight:700;max-width:100%;}
+.wpb-ui-choice-caption{font-size:.6875rem;font-weight:650;margin-top:2px;max-width:100%;color:inherit;}
+.wpb-plan-block-nav{margin-bottom:14px;min-width:0;}
+.wpb-plan-block-title{font-size:12px;color:var(--wpb-theme-muted);margin-bottom:6px;overflow-wrap:anywhere;}
+#root .wpb .wpb-choice-rail{display:flex;align-items:center;gap:6px;padding:5px 4px 9px;scroll-padding:4px;}
 #root[data-pi-motion="expressive"] .wpb .wpb-ui-action.wpb-ui-action[data-action="primary"]{
   min-height:var(--pi-primary-min,52px)!important;
   background:light-dark(var(--pi-ui-primary-fill),var(--pi-m3e-dark-action))!important;
@@ -7253,6 +7221,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    The shared moving active indicator keeps ownership of its position; only
    foreground color changes on the actual buttons. No geometric animation,
    pseudo-element overlay, delayed click, or new theme-specific gray. */
+#root[data-pi-motion="expressive"] .wpb .wpb-ui-choice[data-choice-kind="summary"],
 #root[data-pi-motion="expressive"] .wpb :is(
   .wpb-settings .wpb-segmented,.wpb-plan-panes,.wpb-premium-tabs,
   .wpb-progress-grouping,.wpb-library-flag-filter,
@@ -7260,6 +7229,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   transition:color var(--pi-r73-state-duration) var(--pi-r73-state-ease)!important;
 }
 @media (prefers-reduced-motion:reduce){
+  #root[data-pi-motion="expressive"] .wpb .wpb-ui-choice[data-choice-kind="summary"],
   #root[data-pi-motion="expressive"] .wpb :is(
     .wpb-settings .wpb-segmented,.wpb-plan-panes,.wpb-premium-tabs,
     .wpb-progress-grouping,.wpb-library-flag-filter,
@@ -9322,10 +9292,4 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-panes>.wpb-plan-pane-tab{box-sizing:border-box;display:flex;flex:1 1 0;min-width:0;min-height:44px;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:8px 4px;border:0;border-radius:8px;background:transparent;color:var(--pi-color-on-control,inherit);font-size:11px;font-weight:700;cursor:pointer;}
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-panes>.wpb-plan-pane-tab[aria-pressed="true"]{background:var(--pi-color-card,transparent);color:var(--pi-m3e-primary,var(--wpb-theme-accent,currentColor));font-weight:800;}
 .wpb-plan-pane-label{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.wpb-plan-week-picker{display:flex;gap:6px;padding:6px 0 8px;margin-bottom:2px;position:sticky;top:0;z-index:3;background:var(--pi-color-canvas,var(--wpb-theme-bg,transparent));}
-.wpb-plan-week-chip{box-sizing:border-box;display:flex;flex-shrink:0;min-height:48px;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:7px 12px;border:1.5px solid var(--pi-color-divider,currentColor);border-radius:var(--pi-shape-action,14px);background:var(--pi-color-card,transparent);color:var(--pi-color-on-control,inherit);cursor:pointer;text-align:center;line-height:1.15;}
-.wpb-plan-week-chip[aria-pressed="true"]{border-color:var(--pi-m3e-primary,var(--wpb-theme-accent,currentColor));background:var(--pi-color-feature,var(--wpb-theme-accent-dim,transparent));color:var(--wpb-theme-text,inherit);}
-.wpb-plan-week-label{font-size:13px;font-weight:700;}
-.wpb-plan-week-meta{font-size:11px;font-weight:650;margin-top:2px;color:var(--pi-color-on-control,inherit);}
-.wpb-plan-week-chip[aria-pressed="true"] .wpb-plan-week-meta{color:inherit;}
-@media(forced-colors:active){.wpb-plan-week-chip[aria-pressed="true"]{background:Highlight;color:HighlightText;border-color:Highlight;}}
+.wpb-plan-week-picker{margin-bottom:2px;position:sticky;top:0;z-index:3;background:var(--pi-color-canvas,var(--wpb-theme-bg,transparent));}

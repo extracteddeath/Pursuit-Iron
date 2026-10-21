@@ -793,3 +793,8 @@ When Home has no active program, the persistent Create Program dock is the **onl
 ### Cohesion 12 — Plan selector presentation
 
 Plan retains the same four shared `UiChoice` panes and remembered/collapsible week selection. Tab and week-picker paint/layout live in the Plan CSS family; JSX supplies canonical program data and choice state. Tab typography must beat the global button font reset and preserve full labels at enlarged text sizes. Keep the existing moving indicator, keyboard focus, 48px effective targets, semantic colors and forced-color selection. B831's real text-fragment bounds and R53's pane/week, palette and responsive journeys verify these interactions. Workout/Focus and training policy are unchanged.
+
+
+### Cohesion 13 — weeks and cycle blocks share one choice
+
+Plan weeks, Program weeks and cycle block navigation use `UiChoice`'s `summary` variant and the same horizontal choice rail. The existing screen callbacks and canonical projections still own browsing and training state. Label/caption typography, wrapping, minimum 51px targets and focus clearance are CSS-owned beside the shared primitive; selected/disabled/keyboard/forced-color states use its existing owners. Inactive manual weeks retain full readable contrast and can be selected; deload stays explicit. Missing cycle blocks are disabled and cannot change the active block. Browsing never saves a prescription or advances a cycle. R54 covers Program text scaling, keyboard/deload and data preservation; B890 covers cycle text scaling and missing-block handling; R53/B831 continue to cover palette, geometry, motion and the compact logger.

@@ -5,9 +5,9 @@ import fs from 'node:fs';
 // Decrease alongside a verified cleanup; never raise to permit a cosmetic override.
 const css = fs.readFileSync('app.css', 'utf8');
 const app = fs.readFileSync('modules/App.js', 'utf8');
-const MAX_IMPORTANT = 3017;
+const MAX_IMPORTANT = 2983;
 const MAX_REPEAT_IMPORTANT = 32;
-const MAX_INLINE_STYLE_OBJECTS = 3386; // Cohesion 12 Plan selector migration
+const MAX_INLINE_STYLE_OBJECTS = 3378; // Cohesion 13 shared week/block choices
 const allowedDebtKeys = new Set([
   "\t#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step\tborder-radius",
   "\t#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step\theight",

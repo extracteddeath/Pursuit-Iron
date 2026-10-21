@@ -358,6 +358,63 @@ async function verifyBrowseMemory(browser,theme,width){
     return {theme,width,libraryScroll,sessionsScroll,recordsScroll,clear};
   }finally{await context.close();}
 }
+// Cohesion 13: real manual-program choices retain selection and deload semantics
+// while labels grow with text settings. Inactive weeks remain usable choices.
+async function verifyWeekChoices(browser,theme){
+  const context=await browser.createBrowserContext();
+  const page=await context.newPage(),errors=[];
+  page.on('pageerror',error=>errors.push(error.message));
+  const fixture={...program,config:{...program.config,deload:true}};
+  try{
+    await page.setViewport({width:320,height:1000,deviceScaleFactor:1,isMobile:true,hasTouch:true});
+    await page.evaluateOnNewDocument(value=>localStorage.setItem('wpb:v1',JSON.stringify(value)),
+      {...store(theme),saved:[fixture]});
+    await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
+    await page.goto('http://127.0.0.1:8796/',{waitUntil:'networkidle0'});
+    await page.waitForSelector('.hp-open');await page.click('.hp-open');
+    await page.waitForSelector('.wpb-week-rail');
+    for(const width of [320,393,834,1280])for(const font of [16,32]){
+      await page.setViewport({width,height:1000,deviceScaleFactor:1,isMobile:true,hasTouch:true});
+      await page.evaluate(px=>{document.documentElement.style.fontSize=px+'px';return new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));},font);
+      const geometry=await page.evaluate(()=>{
+        const root=document.querySelector('.wpb-program');
+        const choices=[...root.querySelectorAll('.wpb-week-rail>button')];
+        return {overflow:root.scrollWidth>root.clientWidth+1,choices:choices.map(b=>{
+          const range=document.createRange();range.selectNodeContents(b);
+          const box=b.getBoundingClientRect();
+          return {height:b.offsetHeight,opacity:Number(getComputedStyle(b).opacity),
+            label:parseFloat(getComputedStyle(b.querySelector('.wpb-ui-choice-label')).fontSize),
+            caption:parseFloat(getComputedStyle(b.querySelector('.wpb-ui-choice-caption')).fontSize),
+            clipped:[...range.getClientRects()].some(r=>r.width>1&&r.height>1&&
+              (r.left<box.left-1||r.right>box.right+1||r.top<box.top-1||r.bottom>box.bottom+1))};
+        })};
+      });
+      assert.ok(!geometry.overflow&&geometry.choices.length===5&&geometry.choices.every(b=>
+        b.height>=51&&b.opacity>=.9&&!b.clipped&&b.label>=font*.8125-.1&&b.caption>=font*.6875-.1),
+        'Whole, readable Program choices at '+JSON.stringify({theme,width,font,geometry}));
+      await page.$eval('.wpb-program-week-chip[data-deload="false"]:nth-child(2)',b=>b.click());
+      assert.equal(await page.$eval('.wpb-week-rail>button:nth-child(2)',b=>b.getAttribute('aria-pressed')),'true');
+      await page.$eval('.wpb-program-week-chip[data-deload="true"]',b=>{b.scrollIntoView({block:'nearest',inline:'nearest'});b.focus();});
+      await page.keyboard.press('Enter');
+      assert.equal(await page.$eval('.wpb-program-week-chip[data-deload="true"]',b=>b.getAttribute('aria-pressed')),'true',
+        'Keyboard can select the actual deload week');
+      assert.equal(await page.$$eval('.wpb-week-rail>button[aria-pressed="true"]',bs=>bs.length),1);
+    }
+    const cdp=await page.createCDPSession();
+    await cdp.send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'},{name:'forced-colors',value:'active'}]});
+    const forced=await page.evaluate(()=>{
+      const selected=document.querySelector('.wpb-week-rail>[aria-pressed="true"]'),idle=document.querySelector('.wpb-week-rail>[aria-pressed="false"]');
+      return {active:matchMedia('(forced-colors:active)').matches,selected:getComputedStyle(selected).backgroundColor,idle:getComputedStyle(idle).backgroundColor,
+        outline:parseFloat(getComputedStyle(selected).outlineWidth),transition:getComputedStyle(selected).transitionDuration};
+    });
+    assert.ok(forced.active&&forced.selected!==forced.idle&&forced.outline>=2&&forced.transition.split(',').every(x=>parseFloat(x)===0),
+      'Shared week choice retains forced-color selection, keyboard focus and reduced motion: '+JSON.stringify(forced));
+    assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),[fixture], 'Browsing weeks never edits the program');
+    assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).history),[], 'Browsing weeks never logs a session');
+    assert.deepEqual(errors,[]);
+    console.log('PASS Cohesion 13 Program choices '+theme+': 320/393/834/1280px, 100/200% text, manual/deload keyboard selection, readable inactive weeks, forced colors and unchanged data.');
+  }finally{await context.close();}
+}
 const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html',
   '.json':'application/json','.png':'image/png','.svg':'image/svg+xml',
   '.webmanifest':'application/manifest+json'};
@@ -515,6 +572,7 @@ try{
     diagnostics[theme]={...diagnostics[theme],library,detail,weeks,workout,inputs};
     await context.close();
   }
+  for(const theme of ['rose','rosewater'])await verifyWeekChoices(browser,theme);
   const flows=[];
   const nextSessions=[];
   const browsing=[];

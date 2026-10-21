@@ -61,3 +61,7 @@ R76 checks all Settings row parents, shared card paint, 48px row minimums and fu
 ### Cohesion 21 — switch contrast and Home preview
 
 SettingsSwitch must not use the legacy `.wpb-toggle` direct-thumb selector. The nested track owns its 44×26px geometry inside a 48px action, with paired active colors and a contrasting inactive outline. HomeSessionOutline uses `.wpb-home-session-preview` as its only inset owner. Retire the superseded preview layer instead of stacking more overrides. Preserve the newer Settings group and Profile club owners.
+
+### Cohesion 22 — compact navigation and Home title reflow
+
+The canonical `TabBar` owns full and compact visual labels; its existing `aria-label` remains the unshortened destination name. CSS container queries show compact labels only if button width is narrow relative to its current font size, including enlarged-text testing and the tablet rail. Hidden duplicate visual labels must not become focusable or suppress the route's accessible name. R74 enforces single-line visible labels, no overlap, and accessible hit targets at narrow and wide dimensions. On phones below 360px, the non-interactive day orbit does not consume workout-title width; Up Next still states the week/day. Preserve 393px layouts, user themes, all five navigation routes and untouched Workout/Focus geometry.

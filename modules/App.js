@@ -2651,8 +2651,12 @@ function selectNumericInput(event) {
 function selectFocusNumericInput(event) {
     selectNumericInput(event);
     const input = event.currentTarget;
+    const originalValue = input.value;
     requestAnimationFrame(() => {
-        if (document.activeElement === input && !input.readOnly && !input.disabled)
+        // Never overwrite the user's first keystroke with a late select-all.
+        if (document.activeElement === input && !input.readOnly && !input.disabled &&
+            input.value === originalValue &&
+            (input.selectionStart !== 0 || input.selectionEnd !== input.value.length))
             input.select();
     });
 }

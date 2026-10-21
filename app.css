@@ -7552,6 +7552,105 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   display:none!important;
 }
 
+/* Cohesion 16 — Creation controls have one static presentation owner.
+   Existing selected-state, motion and container-query rules remain in force.
+   No changes to Workout, Focus or their set-input dimensions. */
+.wpb .wpb-wizard-heading{margin-bottom:var(--pi-space-5);}
+.wpb .wpb-wizard-heading-title{margin:0;line-height:1.12;font-weight:700;letter-spacing:-.035em;}
+.wpb .wpb-wizard-heading-sub{
+  margin:var(--pi-space-2) 0 0;color:var(--pi-color-on-muted,var(--wpb-theme-muted));
+  font-size:var(--pi-type-body);line-height:1.45;
+}
+.wpb .wpb-wizard-options{display:flex;flex-direction:column;gap:var(--pi-space-3);}
+.wpb .wpb-wizard-option{
+  box-sizing:border-box;display:flex;width:100%;align-items:center;gap:var(--pi-space-3);
+  padding:var(--pi-space-3);text-align:left;font:inherit;color:var(--pi-color-on-control,var(--wpb-theme-text));
+  background:var(--pi-color-card,var(--wpb-theme-card));
+  border:1px solid var(--pi-color-divider,var(--wpb-theme-border));
+  border-radius:var(--pi-shape-action,14px);cursor:pointer;
+}
+.wpb .wpb-wizard-option:disabled{opacity:.55;cursor:default;}
+.wpb .wpb-wizard-option-icon{
+  display:flex;flex:0 0 36px;width:36px;height:36px;align-items:center;justify-content:center;
+  border-radius:var(--pi-radius-control);background:var(--pi-color-control,var(--wpb-theme-card-high));
+  color:var(--pi-color-on-muted,var(--wpb-theme-muted));
+}
+.wpb .wpb-wizard-option[aria-pressed="true"] .wpb-wizard-option-icon{
+  background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink);
+}
+.wpb .wpb-wizard-option-copy{flex:1;min-width:0;}
+.wpb .wpb-wizard-option-label{font-size:var(--pi-type-control);font-weight:650;}
+.wpb .wpb-wizard-option-sub{
+  margin-top:2px;color:var(--pi-color-on-muted,var(--wpb-theme-muted));
+  font-size:var(--pi-type-support);
+}
+.wpb .wpb-wizard-option-note{
+  margin-top:var(--pi-space-2);color:var(--pi-color-on-control,var(--wpb-theme-text));
+  font-size:var(--pi-type-label);font-weight:600;
+}
+.wpb .wpb-wizard-unit-choices{display:flex;gap:var(--pi-space-3);}
+.wpb .wpb-wizard-unit-option{
+  box-sizing:border-box;display:flex;flex:1;min-width:0;min-height:64px;
+  flex-direction:column;align-items:center;justify-content:center;gap:var(--pi-space-2);
+  padding:var(--pi-space-6) var(--pi-space-3);font:inherit;cursor:pointer;
+  border:2px solid var(--pi-color-divider,var(--wpb-theme-border));
+  border-radius:var(--pi-shape-action,14px);
+  background:var(--pi-color-card,var(--wpb-theme-card));
+  color:var(--pi-color-on-control,var(--wpb-theme-text));
+}
+.wpb .wpb-wizard-unit-option[aria-pressed="true"]{
+  border-color:var(--pi-color-active,var(--wpb-theme-accent));
+  background:var(--wpb-theme-accent-dim);
+}
+.wpb .wpb-wizard-unit-symbol{
+  font-size:1.75rem;font-weight:700;color:var(--pi-color-on-muted,var(--wpb-theme-muted));
+}
+.wpb .wpb-wizard-unit-option[aria-pressed="true"] .wpb-wizard-unit-symbol{
+  color:var(--wpb-theme-accent-ink);
+}
+.wpb .wpb-wizard-unit-label{font-size:var(--pi-type-body);font-weight:600;}
+.wpb .wpb-wizard-mode-choices{display:grid;gap:var(--pi-space-3);}
+.wpb .wpb-wizard-mode-option{
+  box-sizing:border-box;display:flex;align-items:flex-start;gap:var(--pi-space-3);
+  width:100%;min-width:0;min-height:64px;text-align:left;
+  padding:var(--pi-space-4) var(--pi-space-4);font:inherit;cursor:pointer;
+  background:var(--pi-color-card,var(--wpb-theme-card));
+  border:2px solid var(--pi-color-divider,var(--wpb-theme-border));
+  border-radius:var(--pi-shape-action,14px);
+}
+.wpb .wpb-wizard-mode-option[aria-pressed="true"]{
+  border-color:var(--pi-color-active,var(--wpb-theme-accent));
+}
+.wpb .wpb-wizard-mode-icon{
+  display:flex;align-items:center;justify-content:center;flex:0 0 42px;
+  width:42px;height:42px;border-radius:var(--pi-radius-control);
+  background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink);
+}
+.wpb .wpb-wizard-mode-option[aria-pressed="true"] .wpb-wizard-mode-icon{
+  background:var(--pi-color-active,var(--wpb-theme-accent));
+  color:var(--pi-color-on-active,var(--wpb-theme-on-accent));
+}
+.wpb .wpb-wizard-mode-copy{flex:1;min-width:0;}
+.wpb .wpb-wizard-mode-title{color:var(--pi-color-on-control,var(--wpb-theme-text));font-size:var(--pi-type-body);font-weight:700;}
+.wpb .wpb-wizard-mode-sub{
+  margin-top:2px;color:var(--pi-color-on-muted,var(--wpb-theme-muted));
+  font-size:var(--pi-type-support);line-height:1.45;
+}
+.wpb .wpb-wizard-name-input{
+  min-height:56px;padding:var(--pi-space-4);border-width:1.5px;
+  font-size:1.125rem;font-weight:500;border-radius:var(--pi-shape-action,14px);
+}
+.wpb .wpb-wizard-name-input[data-has-value="true"]{border-color:var(--pi-color-active,var(--wpb-theme-accent));}
+.wpb .wpb-wizard-step :is(.wpb-wizard-unit-option,.wpb-wizard-mode-option):focus-visible{
+  outline:2px solid var(--wpb-focus,currentColor);outline-offset:2px;
+}
+@media(forced-colors:active){
+  .wpb .wpb-wizard-step :is(.wpb-wizard-unit-option,.wpb-wizard-mode-option){border-color:ButtonText;}
+  .wpb .wpb-wizard-step :is(.wpb-wizard-unit-option,.wpb-wizard-mode-option)[aria-pressed="true"]{
+    border-color:Highlight;outline:2px solid Highlight;
+  }
+}
+
 /* R74 / B858 — creation choices reflow with the available text space.
    These setup targets are separate from the compact live-workout steppers. */
 #root[data-pi-motion="expressive"] .wpb .wpb-wizard-layout{

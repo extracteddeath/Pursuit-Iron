@@ -5,10 +5,10 @@ import fs from 'node:fs';
 // Decrease alongside a verified cleanup; never raise to permit a cosmetic override.
 const css = fs.readFileSync('app.css', 'utf8');
 const app = fs.readFileSync('modules/App.js', 'utf8');
-const MAX_IMPORTANT = 2922;
+const MAX_IMPORTANT = 2918;
 const MAX_APP_IMPORTANT = 1417; // Prevent embedded StyleTag patches bypassing the CSS budget.
 const MAX_REPEAT_IMPORTANT = 30;
-const MAX_INLINE_STYLE_OBJECTS = 3289; // Cohesion 17: cycle setup presentation migrated
+const MAX_INLINE_STYLE_OBJECTS = 3266; // Cohesion 18: equipment and constraint presentation migrated
 const allowedDebtKeys = new Set([
   "\t#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step\tborder-radius",
   "\t#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step\theight",
@@ -108,6 +108,8 @@ for(const primitive of [
   '.wpb .wpb-ui-card{','.wpb .wpb-ui-field{','.wpb .wpb-ui-control{',
   '.wpb .wpb-ui-stack{','.wpb .wpb-ui-row{'
 ]) assert.ok(css.includes(primitive), 'Missing shared primitive: '+primitive);
+for(const selector of ['input:not([type="range"]):not(.wpb-ui-control)', 'select:not(.wpb-ui-control)', 'textarea:not(.wpb-ui-control)'])
+  assert.ok(app.includes(selector),'Legacy form layer must leave shared controls to their canonical owner: '+selector);
 const action=app.slice(app.indexOf('function UiAction('),app.indexOf('function UiChoice('));
 assert.ok(!action.includes('style: {') && !action.includes('C.accent'),
   'Shared UiAction may not inject presentation overrides at render time');
@@ -125,6 +127,17 @@ for(const [owner,source] of [['OptionCard',wizardOption],['Heading/Col',wizardHe
   assert.ok(source.length>100,'Missing scoped Wizard owner '+owner);
   assert.ok(!source.includes('style: {'),'Static Wizard presentation returned to JSX: '+owner);
 }
+const equipment=app.slice(app.indexOf('    if (stepKey === "equipment")'),app.indexOf('    if (stepKey === "focus")'));
+const restrictions=app.slice(app.indexOf('function NoRackToggle('),app.indexOf('function OptionCard('));
+for(const [owner,source] of [['Equipment and constraints',equipment],['Equipment restrictions',restrictions]]){
+  assert.ok(source.length>100,'Missing migrated owner '+owner);
+  assert.ok(!source.includes('style: {'),'Static presentation returned to '+owner);
+}
+assert.equal((app.match(/function EquipmentRestriction\(/g)||[]).length,1,'Equipment exclusions have one presentation owner');
+assert.ok(restrictions.includes('_jsxs(UiAction,')&&restrictions.includes('"aria-pressed": !!selected'),
+  'Equipment restrictions retain shared action semantics and selection state');
+assert.ok(equipment.includes('role: "group", "aria-label": "Supersets"')&&
+  equipment.includes('role: "group", "aria-label": "Barbell limit"'),'Constraint choices retain named groups');
 assert.ok(wizardOption.includes('aria-pressed')&&wizardOption.includes('disabled')&&wizardOption.includes('kind === "radio"'),
   'Wizard choice accessibility and radio/checkbox behavior preserved');
 assert.ok(wizardName.includes('"data-has-value": config.name ? "true" : "false"'),

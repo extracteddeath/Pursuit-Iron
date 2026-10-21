@@ -808,3 +808,9 @@ Cycle list/detail and read-only block previews share the scoped Cycle CSS family
 ### Cohesion 17 — cycle creation
 
 Template cards and adaptation use the shared card surface and Wizard text roles. Canonical Wizard state supplies `aria-pressed` and `aria-checked`; CSS owns their paint. The adaptation mark is decorative; its named checkbox button remains keyboard operable. Custom block drafts survive template changes. Cycle name/duration wrapping lives beside template styles, with no second responsive priority owner. R74 checks keyboard template/adaptation changes, custom week retention, normal/enlarged text and all step navigation; generation and saved programs remain untouched.
+
+### Cohesion 18 — setup equipment and constraints
+
+- Equipment presets and superset/barbell choices use shared tonal actions and their actual `aria-pressed` state. Constraint groups are independently named.
+- Rack and bodyweight exclusions share one presentation component. No-rack still changes only the existing equipment flag and stays hidden without a barbell, in setup and the gym editor.
+- Keep keyboard selection, reversible exclusions, controlled configuration, saved drafts, enlarged-text reflow and horizontal preset scrolling. These changes do not alter generation constraints or the workout logger.

@@ -724,9 +724,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   min-height:48px!important;
   border-radius:14px!important;
 }
-#root[data-pi-motion="expressive"] .wpb-wizard :is(.wpb-wizard-preset,.wpb-wizard-choice){
-  border-radius:11px!important;
-}
 #root[data-pi-motion="expressive"] .wpb-wizard :is(.wpb-wizard-option,.wpb-wizard-choice,.wpb-wizard-preset):focus-visible{
   outline:2px solid currentColor!important;
   outline-offset:2px!important;
@@ -1490,10 +1487,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-option-icon{
   border-radius:14px!important;
-}
-#root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-choice[aria-pressed="true"],
-#root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-preset[aria-pressed="true"]{
-  border-radius:17px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-wizard .wpb-wizard-next-action,
 #root[data-pi-motion="expressive"] .wpb-onboarding .wpb-onboarding-primary{
@@ -5444,6 +5437,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   --pi-color-on-muted:light-dark(#5d5265,var(--wpb-theme-muted));
   --pi-color-divider:light-dark(var(--pi-m3e-outline-variant),color-mix(in srgb,var(--wpb-theme-text,#f0eaf3) 18%,transparent));
   /* Use the palette's already-paired selection fill and foreground. */
+  --pi-color-warning:var(--wpb-theme-warning);
   --pi-color-active:var(--wpb-theme-accent);
   --pi-color-on-active:var(--wpb-theme-on-accent);
   --pi-ui-primary-fill:var(--pi-color-active);
@@ -7712,6 +7706,51 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   }
 }
 
+/* Cohesion 18 — equipment exclusions share one action and indicator owner. */
+#root .wpb .wpb-ui-action.wpb-equipment-restriction{
+  width:100%;margin-top:var(--pi-space-3);align-items:flex-start;
+  gap:var(--pi-space-3);font-weight:400;
+}
+.wpb .wpb-equipment-restriction-copy{display:grid;flex:1;min-width:0;gap:var(--pi-space-1);}
+.wpb .wpb-equipment-restriction-title{font-size:var(--pi-type-body);font-weight:600;}
+.wpb .wpb-equipment-restriction-sub{font-size:var(--pi-type-support);line-height:1.45;color:var(--pi-color-on-muted);}
+.wpb .wpb-equipment-restriction-check{
+  box-sizing:border-box;display:flex;align-items:center;justify-content:center;
+  flex:0 0 22px;width:22px;height:22px;border-radius:var(--pi-space-2);
+  border:2px solid var(--pi-color-divider);background:transparent;color:var(--pi-color-on-active);
+}
+.wpb .wpb-equipment-restriction[aria-pressed="true"] .wpb-equipment-restriction-check{
+  background:var(--pi-color-active);border-color:var(--pi-color-active);
+}
+.wpb .wpb-wizard-presets{
+  display:flex;gap:var(--pi-space-2);overflow-x:auto;overflow-y:hidden;
+  touch-action:pan-x pan-y;margin-bottom:var(--pi-space-3);padding-bottom:var(--pi-space-1);
+}
+.wpb .wpb-wizard-preset{flex-shrink:0;white-space:nowrap;}
+.wpb :is(.wpb-wizard-superset-choices,.wpb-wizard-barbell-choices){display:grid;gap:var(--pi-space-2);}
+.wpb .wpb-wizard-choice{min-width:0;white-space:normal;}
+.wpb .wpb-wizard-constraint-label{
+  margin:var(--pi-space-6) 0 var(--pi-space-1);font-size:var(--pi-type-label);
+  font-weight:var(--pi-weight-action);color:var(--pi-color-on-muted);
+}
+.wpb .wpb-wizard-constraint-description{
+  margin:0 0 var(--pi-space-3);font-size:var(--pi-type-support);line-height:1.5;color:var(--pi-color-on-muted);
+}
+.wpb .wpb-wizard-constraint-warning{
+  margin-top:var(--pi-space-4);padding:var(--pi-space-3);border-radius:var(--pi-shape-action);
+  background:var(--pi-color-control);border-color:color-mix(in srgb,var(--pi-color-warning) 20%,transparent);
+}
+.wpb .wpb-wizard-warning-title{
+  margin-bottom:var(--pi-space-1);font-size:var(--pi-type-support);font-weight:var(--pi-weight-action);color:var(--pi-color-warning);
+}
+.wpb .wpb-wizard-warning-copy{font-size:var(--pi-type-support);line-height:1.5;color:var(--pi-color-on-muted);}
+@media(forced-colors:active){
+  .wpb .wpb-equipment-restriction[aria-pressed="true"] .wpb-equipment-restriction-check{
+    background:Highlight;color:HighlightText;border-color:Highlight;forced-color-adjust:none;
+  }
+  .wpb .wpb-wizard-constraint-warning{border-color:CanvasText;}
+}
+
 /* R74 / B858 — creation choices reflow with the available text space.
    These setup targets are separate from the compact live-workout steppers. */
 #root[data-pi-motion="expressive"] .wpb .wpb-wizard-layout{
@@ -7725,11 +7764,11 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   overflow-wrap:anywhere;
 }
 #root[data-pi-motion="expressive"] .wpb :is(.wpb-wizard-unit-choices,.wpb-wizard-superset-choices){
-  display:grid!important;
+  display:grid;
   grid-template-columns:repeat(auto-fit,minmax(min(100%,9em),1fr));
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-wizard-barbell-choices{
-  display:grid!important;
+  display:grid;
   grid-template-columns:repeat(auto-fit,minmax(min(100%,4em),1fr));
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-wizard-choice{

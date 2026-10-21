@@ -251,7 +251,7 @@ function applyTheme(id) {
             // React owns the live palette. Startup colors must never remain the foreground of a
             // saved light theme or of a palette selected without reloading the app.
             const paletteRoles = { bg: C.bg, "bg-tint": C.bg2, card: C.card, "card-high": C.cardHi,
-                text: C.text, muted: C.muted, accent: C.accent, "on-accent": C.accentText, "accent-ink": C.accentInk, "accent-dim": C.accentDim, border: C.border, danger: C.danger, feature: C.feature };
+                text: C.text, muted: C.muted, accent: C.accent, "on-accent": C.accentText, "accent-ink": C.accentInk, "accent-dim": C.accentDim, border: C.border, warning: C.warn, danger: C.danger, feature: C.feature };
             for (const [role, value] of Object.entries(paletteRoles))
                 document.documentElement.style.setProperty(`--wpb-theme-${role}`, value);
             // The body and recovery shell also follow the current palette; index.html still seeds
@@ -1137,14 +1137,14 @@ function StyleTag({ theme } = {}) {
       .wpb [data-wpb-dialog]>div:first-child{box-shadow:0 18px 60px rgba(0,0,0,.28);}
       .wpb-backdrop{backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);}
       /* M95 CONTROL CONSISTENCY — non-workout controls share one interaction language. */
-      .wpb-page-shell:not(.wpb-workout) input:not([type="range"]),
-      .wpb-page-shell:not(.wpb-workout) select,
-      .wpb-page-shell:not(.wpb-workout) textarea{
+      .wpb-page-shell:not(.wpb-workout) input:not([type="range"]):not(.wpb-ui-control),
+      .wpb-page-shell:not(.wpb-workout) select:not(.wpb-ui-control),
+      .wpb-page-shell:not(.wpb-workout) textarea:not(.wpb-ui-control){
         min-height:42px;border-radius:10px!important;border-color:${C.borderSoft}!important;background:${C.bg2}!important;box-shadow:none!important;
       }
-      .wpb-page-shell:not(.wpb-workout) input:not([type="range"]):focus,
-      .wpb-page-shell:not(.wpb-workout) select:focus,
-      .wpb-page-shell:not(.wpb-workout) textarea:focus{
+      .wpb-page-shell:not(.wpb-workout) input:not([type="range"]):not(.wpb-ui-control):focus,
+      .wpb-page-shell:not(.wpb-workout) select:not(.wpb-ui-control):focus,
+      .wpb-page-shell:not(.wpb-workout) textarea:not(.wpb-ui-control):focus{
         border-color:color-mix(in srgb,${C.accent} 58%,${C.border})!important;box-shadow:0 0 0 3px ${C.accentDim}!important;
       }
       .wpb-settings .wpb-segmented{padding:3px!important;gap:2px!important;border:1px solid ${C.borderSoft};border-radius:10px!important;background:${C.bg2}!important;}
@@ -1640,17 +1640,17 @@ function StyleTag({ theme } = {}) {
          the classic PWA tell where select/input text is subtly different from the surrounding UI. */
       .wpb input,.wpb select,.wpb textarea,.wpb button{font:inherit;}
       .wpb input::placeholder,.wpb textarea::placeholder{color:${C.faint};opacity:1;}
-      .wpb-page-shell:not(.wpb-workout) input:not([type="range"]),
-      .wpb-page-shell:not(.wpb-workout) select,
-      .wpb-page-shell:not(.wpb-workout) textarea{
+      .wpb-page-shell:not(.wpb-workout) input:not([type="range"]):not(.wpb-ui-control),
+      .wpb-page-shell:not(.wpb-workout) select:not(.wpb-ui-control),
+      .wpb-page-shell:not(.wpb-workout) textarea:not(.wpb-ui-control){
         border-radius:var(--r-control)!important;
         border:1px solid ${C.borderSoft}!important;
         background:${C.bg2}!important;
         color:${C.text}!important;
       }
-      .wpb-page-shell:not(.wpb-workout) input:not([type="range"]):focus,
-      .wpb-page-shell:not(.wpb-workout) select:focus,
-      .wpb-page-shell:not(.wpb-workout) textarea:focus{
+      .wpb-page-shell:not(.wpb-workout) input:not([type="range"]):not(.wpb-ui-control):focus,
+      .wpb-page-shell:not(.wpb-workout) select:not(.wpb-ui-control):focus,
+      .wpb-page-shell:not(.wpb-workout) textarea:not(.wpb-ui-control):focus{
         border-color:color-mix(in srgb,${C.accent} 48%,${C.border})!important;
         box-shadow:0 0 0 3px color-mix(in srgb,${C.accentDim} 76%,transparent)!important;
       }
@@ -5781,8 +5781,25 @@ function NoRackToggle({ equipment = [], onChange }) {
     if (!equipment.includes("barbell"))
         return null;
     const on = equipment.includes("no-rack");
-    return (_jsxs("button", { type: "button", "data-testid": "no-rack-toggle", "aria-pressed": on, onClick: () => onChange(on ? equipment.filter(x => x !== "no-rack") : [...equipment, "no-rack"]), className: "pressable", style: { width: "100%", marginTop: 12, display: "flex", alignItems: "center", gap: 12, padding: "13px 14px", borderRadius: 12, border: `1px solid ${on ? C.accent : C.border}`, background: on ? C.accentDim : C.card, color: C.text, cursor: "pointer", textAlign: "left" }, children: [_jsx("div", { style: { width: 22, height: 22, borderRadius: 8, border: `2px solid ${on ? C.accent : C.border}`, background: on ? C.accent : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: on && _jsx(Check, { size: 14, color: C.accentInk }) }), _jsxs("div", { style: { flex: 1, textAlign: "left" }, children: [_jsx("div", { style: { fontSize: 15, fontWeight: 600 }, children: "No squat rack" }), _jsx("div", { style: { fontSize: 13, color: C.muted }, children: "Skips lifts taken from a rack or safeties \u2014 squats, bench and standing presses. Barbell work from the floor stays." })] })] }));
+    return _jsx(EquipmentRestriction, { "data-testid": "no-rack-toggle", selected: on,
+        onClick: () => onChange(on ? equipment.filter(x => x !== "no-rack") : [...equipment, "no-rack"]),
+        label: "No squat rack",
+        sub: "Skips lifts taken from a rack or safeties \u2014 squats, bench and standing presses. Barbell work from the floor stays." });
 }
+// Shared presentation for equipment exclusions in setup and the gym editor.
+// The caller retains the equipment list and its existing update callback.
+function EquipmentRestriction({ selected, label, sub, ...props }) {
+    return _jsxs(UiAction, { ...props, variant: "tonal", "aria-pressed": !!selected,
+        "data-align": "start", className: "wpb-equipment-restriction", children: [
+            _jsx("span", { className: "wpb-equipment-restriction-check", "aria-hidden": true,
+                children: selected && _jsx(Check, { size: 14 }) }),
+            _jsxs("span", { className: "wpb-equipment-restriction-copy", children: [
+                _jsx("span", { className: "wpb-equipment-restriction-title", children: label }),
+                _jsx("span", { className: "wpb-equipment-restriction-sub", children: sub })
+            ] })
+        ] });
+}
+
 function OptionCard({ icon: Icon, label, sub, selected, onClick, kind = "radio", disabled = false, note = null }) {
     return (_jsxs("button", { className: "opt pressable wpb-wizard-option", "aria-pressed": !!selected,
         "aria-disabled": disabled || undefined, disabled, onClick: disabled ? undefined : onClick,
@@ -6378,25 +6395,52 @@ function StepBody({ stepKey, config, set, buildable = {}, autoLength = null, com
     }
     if (stepKey === "equipment") {
         const toggle = (id) => set({ equipment: config.equipment.includes(id) ? config.equipment.filter(x => x !== id) : [...config.equipment, id] });
-        return (_jsxs(_Fragment, { children: [_jsx(Heading, { sub: "Only exercises you can actually perform get programmed. Bodyweight is available by default and can be excluded below.", children: "What equipment do you have?" }), _jsx("div", { className: "wpb-hscroll", style: { display: "flex", gap: 6, overflowX: "auto", overflowY: "hidden", touchAction: "pan-x pan-y", marginBottom: 12, paddingBottom: 2 }, children: [
-                        ["Full gym", ["barbell", "dumbbell", "bench", "cable", "machine", "smith", "ezbar", "pullup", "dip", "kettlebell", "bands"]],
-                        ["Barbell + rack", ["barbell", "bench", "ezbar", "pullup"]],
-                        ["Dumbbells + bench", ["dumbbell", "bench", "pullup"]],
-                        ["Dumbbells only", ["dumbbell"]],
-                        ["Bodyweight", []],
-                    ].map(([label, eq]) => {
-                        const active = eq.length === config.equipment.length && eq.every(x => config.equipment.includes(x));
-                        return (_jsx("button", { onClick: () => set({ equipment: eq }), "aria-pressed": active, className: "pressable wpb-wizard-preset", style: { flexShrink: 0, padding: "8px 13px", borderRadius: 999, border: `1px solid ${active ? C.accent : C.border}`, background: active ? C.accent : C.card, color: active ? C.accentText : C.muted, fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }, children: label }, label));
-                    }) }), _jsx(Col, { children: EQUIPMENT.map(e => (_jsx(OptionCard, { kind: "check", icon: Dumbbell, label: e.label, selected: config.equipment.includes(e.id), onClick: () => toggle(e.id) }, e.id))) }), _jsx(NoRackToggle, { equipment: config.equipment, onChange: (equipment) => set({ equipment }) }), _jsxs("button", { onClick: () => set({ noBodyweight: !config.noBodyweight }), "aria-pressed": !!config.noBodyweight, className: "pressable", style: { width: "100%", marginTop: 12, display: "flex", alignItems: "center", gap: 12, padding: "13px 14px", borderRadius: 12, border: `1px solid ${config.noBodyweight ? C.accent : C.border}`, background: config.noBodyweight ? C.accentDim : C.card, color: C.text, cursor: "pointer", textAlign: "left" }, children: [_jsx("div", { style: { width: 22, height: 22, borderRadius: 8, border: `2px solid ${config.noBodyweight ? C.accent : C.border}`, background: config.noBodyweight ? C.accent : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: config.noBodyweight && _jsx(Check, { size: 14, color: C.accentText }) }), _jsxs("div", { style: { flex: 1 }, children: [_jsx("div", { style: { fontSize: 15, fontWeight: 600 }, children: "Skip bodyweight exercises" }), _jsx("div", { style: { fontSize: 13, color: C.muted }, children: "No push-ups, planks, bodyweight squats, etc. \u2014 only loaded movements" })] })] })] }));
+        return (_jsxs(_Fragment, { children: [
+            _jsx(Heading, { sub: "Only exercises you can actually perform get programmed. Bodyweight is available by default and can be excluded below.", children: "What equipment do you have?" }),
+            _jsx("div", { className: "wpb-hscroll wpb-wizard-presets", children: [
+                ["Full gym", ["barbell", "dumbbell", "bench", "cable", "machine", "smith", "ezbar", "pullup", "dip", "kettlebell", "bands"]],
+                ["Barbell + rack", ["barbell", "bench", "ezbar", "pullup"]],
+                ["Dumbbells + bench", ["dumbbell", "bench", "pullup"]],
+                ["Dumbbells only", ["dumbbell"]],
+                ["Bodyweight", []],
+            ].map(([label, eq]) => {
+                const active = eq.length === config.equipment.length && eq.every(x => config.equipment.includes(x));
+                return _jsx(UiAction, { variant: "tonal", onClick: () => set({ equipment: eq }),
+                    "aria-pressed": active, className: "wpb-wizard-preset", children: label }, label);
+            }) }),
+            _jsx(Col, { children: EQUIPMENT.map(e => _jsx(OptionCard, { kind: "check", icon: Dumbbell,
+                label: e.label, selected: config.equipment.includes(e.id), onClick: () => toggle(e.id) }, e.id)) }),
+            _jsx(NoRackToggle, { equipment: config.equipment, onChange: (equipment) => set({ equipment }) }),
+            _jsx(EquipmentRestriction, { selected: !!config.noBodyweight,
+                onClick: () => set({ noBodyweight: !config.noBodyweight }), label: "Skip bodyweight exercises",
+                sub: "No push-ups, planks, bodyweight squats, etc. \u2014 only loaded movements" })
+        ] }));
     }
     if (stepKey === "constraints") {
         const hasBarbell = isBarLike(config.equipment);
-        return (_jsxs(_Fragment, { children: [_jsx(Heading, { sub: "Choose how the workout is allowed to use gym space. These are firm generation constraints, not suggestions.", children: "Workout constraints" }), _jsx("div", { style: { ...eyebrow(), margin: "22px 2px 4px" }, children: "Supersets" }), _jsx("div", { style: { fontSize: 13, color: C.muted, margin: "0 2px 12px", lineHeight: 1.5 }, children: "Pairing two exercises with opposing muscles cuts rest time, so more work fits in the same session. It needs both stations free." }), _jsx("div", { className: "wpb-wizard-superset-choices", style: { display: "flex", gap: 8 }, children: [[false, "Use supersets"], [true, "No supersets"]].map(([v, label]) => (_jsx("button", { onClick: () => set({ noSupersets: v }), "aria-pressed": !!config.noSupersets === v, className: "pressable wpb-wizard-choice", style: { flex: 1, padding: "12px 10px", borderRadius: 12, border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer", background: !!config.noSupersets === v ? C.accent : C.bg2, color: !!config.noSupersets === v ? C.accentText : C.text }, children: label }, label))) }), _jsx("div", { style: { ...eyebrow(), margin: "22px 2px 4px" }, children: "Barbell limit" }), _jsxs("div", { style: { fontSize: 13, color: C.muted, margin: "0 2px 12px", lineHeight: 1.5 }, children: ["Cap barbell movements per session so a busy commercial gym (racks, platforms) doesn't bottleneck your workout \u2014 dumbbell, machine & cable lifts are used instead.", !hasBarbell && " Applies once you add a barbell."] }), _jsx("div", { className: "wpb-wizard-barbell-choices", style: { display: "flex", gap: 8 }, children: [[null, "No limit"], [1, "1"], [2, "2"], [3, "3"]].map(([v, label]) => (_jsx("button", { onClick: () => set({ barbellCap: v }), "aria-pressed": (config.barbellCap ?? null) === v, className: "pressable wpb-wizard-choice", style: { flex: 1, padding: "13px 4px", borderRadius: 12, cursor: "pointer", fontSize: 15, fontWeight: 700, border: `1px solid ${(config.barbellCap ?? null) === v ? C.accent : C.border}`, background: (config.barbellCap ?? null) === v ? C.accentDim : C.card, color: (config.barbellCap ?? null) === v ? C.accentInk : C.muted }, children: label }, label))) }), (() => {
-                    const need = SPLITS[config.split]?.minBarbells || 0;
-                    if (!config.barbellCap || !need || config.barbellCap >= need)
-                        return null;
-                    return (_jsxs("div", { style: { marginTop: 16, padding: "10px 12px", borderRadius: 12, background: C.bg2, border: `1px solid ${C.warn}33` }, children: [_jsxs("div", { style: { fontSize: 13, color: C.warn, fontWeight: 700, marginBottom: 2 }, children: ["Most sessions here use ", need, " or more barbell lifts"] }), _jsxs("div", { style: { fontSize: 13, color: C.muted, lineHeight: 1.5 }, children: [SPLITS[config.split].name, " is built around its main barbell lifts, so a limit of ", config.barbellCap, " cannot be met on most days. Raise the limit, or pick a program that leans on machines and dumbbells."] })] }));
-                })()] }));
+        return (_jsxs(_Fragment, { children: [
+            _jsx(Heading, { sub: "Choose how the workout is allowed to use gym space. These are firm generation constraints, not suggestions.", children: "Workout constraints" }),
+            _jsx("div", { className: "wpb-wizard-constraint-label", children: "Supersets" }),
+            _jsx("div", { className: "wpb-wizard-constraint-description", children: "Pairing two exercises with opposing muscles cuts rest time, so more work fits in the same session. It needs both stations free." }),
+            _jsx("div", { className: "wpb-wizard-superset-choices", role: "group", "aria-label": "Supersets",
+                children: [[false, "Use supersets"], [true, "No supersets"]].map(([v, label]) =>
+                    _jsx(UiAction, { variant: "tonal", onClick: () => set({ noSupersets: v }),
+                        "aria-pressed": !!config.noSupersets === v, className: "wpb-wizard-choice", children: label }, label)) }),
+            _jsx("div", { className: "wpb-wizard-constraint-label", children: "Barbell limit" }),
+            _jsxs("div", { className: "wpb-wizard-constraint-description", children: ["Cap barbell movements per session so a busy commercial gym (racks, platforms) doesn't bottleneck your workout \u2014 dumbbell, machine & cable lifts are used instead.", !hasBarbell && " Applies once you add a barbell."] }),
+            _jsx("div", { className: "wpb-wizard-barbell-choices", role: "group", "aria-label": "Barbell limit",
+                children: [[null, "No limit"], [1, "1"], [2, "2"], [3, "3"]].map(([v, label]) =>
+                    _jsx(UiAction, { variant: "tonal", onClick: () => set({ barbellCap: v }),
+                        "aria-pressed": (config.barbellCap ?? null) === v, className: "wpb-wizard-choice", children: label }, label)) }),
+            (() => {
+                const need = SPLITS[config.split]?.minBarbells || 0;
+                if (!config.barbellCap || !need || config.barbellCap >= need) return null;
+                return (_jsxs("div", { className: "wpb-ui-card wpb-wizard-constraint-warning", children: [
+                    _jsxs("div", { className: "wpb-wizard-warning-title", children: ["Most sessions here use ", need, " or more barbell lifts"] }),
+                    _jsxs("div", { className: "wpb-wizard-warning-copy", children: [SPLITS[config.split].name, " is built around its main barbell lifts, so a limit of ", config.barbellCap, " cannot be met on most days. Raise the limit, or pick a program that leans on machines and dumbbells."] })
+                ] }));
+            })()
+        ] }));
     }
     if (stepKey === "focus") {
         const bump = (p, delta) => {

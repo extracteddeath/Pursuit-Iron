@@ -173,6 +173,42 @@ export async function verifyWizardSteps(page, { width, height, theme, root, url 
         await custom.dispose();
       }
 
+      if(key==='equipment'){
+        const presets=await page.$$('.wpb-wizard-preset');
+        for(const preset of presets){
+          await preset.evaluate(el=>{el.scrollIntoView({block:'center',inline:'center'});el.focus();});
+          await page.keyboard.press('Enter');await settle();
+          assert.equal(await preset.evaluate(el=>el.getAttribute('aria-pressed')),'true',
+            'Keyboard equipment preset updates its canonical selected state');
+          assert.equal(await page.$$eval('.wpb-wizard-preset[aria-pressed="true"]',els=>els.length),1,
+            'Only the exact equipment preset is selected');
+        }
+        // Restore a full gym so the shared rack restriction is available.
+        await activate('.wpb-wizard-preset');
+        const rack='[data-testid="no-rack-toggle"]';
+        await activate(rack);
+        assert.equal(await page.$eval(rack,el=>el.getAttribute('aria-pressed')),'true','No-rack exclusion is selectable');
+        await activate(rack);
+        assert.equal(await page.$eval(rack,el=>el.getAttribute('aria-pressed')),'false','No-rack exclusion is reversible');
+        assert.equal(await page.$eval('.wpb-wizard-preset',el=>el.getAttribute('aria-pressed')),'true',
+          'Removing the no-rack exclusion restores the full-gym equipment set');
+        for(const preset of presets)await preset.dispose();
+      }
+      if(key==='constraints'){
+        for(const group of ['.wpb-wizard-superset-choices','.wpb-wizard-barbell-choices']){
+          const choices=await page.$$(group+' button');
+          for(const choice of choices){
+            await choice.evaluate(el=>{el.scrollIntoView({block:'center'});el.focus();});
+            await page.keyboard.press('Enter');await settle();
+            assert.equal(await choice.evaluate(el=>el.getAttribute('aria-pressed')),'true',
+              'Keyboard constraint selection updates the existing configuration');
+            assert.equal(await page.$$eval(group+' [aria-pressed="true"]',els=>els.length),1,
+              'Constraint group has exactly one selected value');
+          }
+          await activate(group+' button');
+          for(const choice of choices)await choice.dispose();
+        }
+      }
       await assertGeometry(label+' 100% text');
       await textSize(true);
       await assertGeometry(label+' 200% text');

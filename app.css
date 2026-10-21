@@ -2496,7 +2496,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    tappable, but reads as an outlined secondary action while a program exists.
    Do not reserve new height, move the bottom dock, or hide navigation. */
 #root[data-pi-motion="expressive"] .wpb .wpb-home-create{
-  background-color:light-dark(var(--pi-m3e-primary),var(--pi-m3e-dark-support))!important;
   color:light-dark(var(--wpb-theme-on-accent,#17101b),var(--pi-m3e-on-dark-accent))!important;
   border:1px solid light-dark(transparent,var(--pi-m3e-dark-outline))!important;
   box-shadow:none!important;

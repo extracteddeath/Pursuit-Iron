@@ -1384,6 +1384,39 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   /* Leave the existing shared spring-controlled radius intact on touch. */
   letter-spacing:-.025em!important;
 }
+/* Cohesion 10 — Home discovery tiles share one presentation owner.
+   The parent action and theme state remain UiAction's responsibility; these
+   declarations own only tile layout and typography, without new overrides. */
+#root .wpb-home .wpb-action-grid{margin-bottom:20px}
+#root .wpb-home .wpb-action-grid .wpb-action-tile{
+  display:flex;align-items:center;gap:12px;min-width:0;
+  padding:13px;text-align:left;cursor:pointer;
+  border:1px solid var(--pi-color-divider);
+  border-radius:var(--pi-shape-action);
+  background:var(--pi-color-card);color:var(--pi-color-on-control);
+}
+#root .wpb-home .wpb-action-tile-icon{
+  width:34px;height:34px;flex:0 0 34px;
+  display:flex;align-items:center;justify-content:center;
+  border-radius:12px;background:var(--pi-color-control);
+  color:var(--pi-color-active);
+}
+#root .wpb-home .wpb-action-tile-featured .wpb-action-tile-icon{
+  background:var(--pi-color-feature);
+}
+#root .wpb-home .wpb-action-tile-copy{min-width:0}
+#root .wpb-home .wpb-action-tile-label{
+  font-size:15px;font-weight:700;overflow:hidden;
+  white-space:nowrap;text-overflow:ellipsis;
+}
+#root .wpb-home .wpb-action-tile-subtitle{
+  font-size:11px;color:var(--pi-color-on-muted);
+  overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+}
+@media(forced-colors:active){
+  #root .wpb-home .wpb-action-tile-icon{background:Canvas;color:CanvasText}
+}
+
 /* Expressive bento: one featured doorway, two related secondary routes.
    Still two rows tall, but no orphaned half-width last action. */
 #root[data-pi-motion="expressive"] .wpb-home .wpb-action-grid{

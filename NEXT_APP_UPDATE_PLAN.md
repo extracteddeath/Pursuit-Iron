@@ -73,6 +73,14 @@ Inventory and verify one canonical request route, exercise ID/catalog, allocatio
 
 **Release definition of done:** each slice has a tiny diff, before/after debt meter, rendered populated/empty scenarios (320, 393, 834, 1280px), light/dark plus impacted saved themes, 200% text, keyboard/disabled/focus, reduced motion and forced colors where relevant, and target browser + all ten exact-head CI jobs green. Do not change test expectations to excuse a mismatch. Review physical Android/TalkBack, notification/keyboard/safe-area, offline interruption, signing, TWA domain association and Play internal testing separately; browser CI is not Android certification.
 
+## Cohesion 10 — Home entry hierarchy (scoped first slice)
+
+**Implemented for review:** the first-run Home no longer offers three parallel creation affordances (large “Build my program” card, empty-state “Build a program” button, and pinned “Create Program”). The pinned Compose dock remains the single primary creation action when no session or next workout is active. Templates, Custom split and Cycles remain available as secondary discovery routes. An existing program still keeps its start/preview/session outline, program switcher, injury entry, separated Game Plan, history and recovery surfaces. No engine, schedule, logging, storage or React navigation owner changed.
+
+Home's discovery tiles now use `UiAction` for behavior and one scoped `app.css` owner for layout, text and semantic theme roles, rather than copying inline layout/color objects per tile. Their keys derive from immutable route IDs rather than an index that shifts with the program state. Measured `App.js` inline style-object occurrences decrease **3,410 → 3,393** (17 removed); the CI ceiling decreases to 3,393. CSS priority/duplicate limits remain 3,018 / 33. Existing Home scroll/masthead and Game Plan tests remain authoritative; the new `home-entry-hierarchy-test.mjs` and real-browser `home-entry-hierarchy-browser-test.mjs` additionally verify empty/populated states, primary-action count, discovery navigation and mobile/medium layout.
+
+**Still open in Home:** dense populated dashboards, cycle progress duplication with Program, responsive disclosure control hierarchy, and initial Home/Plan projection equivalence over resumed and interrupted workouts. Those need individually proven behavior changes, not speculative style overrides. Next isolated pass: Program/Plan week/phase presentation ownership, or remaining Home sections where measured density warrants it. No claim of complete screen certification until the full queue is finished.
+
 ## Subsequent slices
 
 1. Continue cross-screen form/action ownership, prioritizing visible inconsistencies and removing redundant CSS only after computed-style or interaction proof.

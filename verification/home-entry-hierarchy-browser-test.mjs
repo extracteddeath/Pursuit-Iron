@@ -1,0 +1,87 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import http from 'node:http';
+import path from 'node:path';
+import puppeteer from 'puppeteer-core';
+
+// Test the *visible* Home entry hierarchy, not only source string patterns.
+const root=path.resolve(new URL('../',import.meta.url).pathname);
+const program={id:'home-entry',name:'My Program',custom:true,weeks:4,
+ config:{unit:'lb',goal:'both',experience:'intermediate',progression:'double',weeks:4,session:'s60',deload:false},
+ days:[{id:'upper',label:'Upper',primaryIndex:0,exercises:['bb-bench','inc-curl']}],
+ overrides:{'upper:0':{sets:3,reps:'6-8',rir:'2'}}};
+const baseline={v:13,savedAt:1,saved:[],cycles:[],history:[],perf:{},drafts:{},tombs:{},
+ seenIntro:999,seenWhatsNew:999,unit:'lb',unitChosen:true,experience:'intermediate',
+ bodyweight:185,installDismissedAt:Date.now(),lastBackup:Date.now()};
+const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.json':'application/json',
+ '.webmanifest':'application/manifest+json','.png':'image/png','.svg':'image/svg+xml'};
+const server=http.createServer((req,res)=>{
+ const name=new URL(req.url,'http://localhost').pathname;
+ const file=path.resolve(root,'.'+(name==='/'?'/index.html':name));
+ if(!file.startsWith(root+path.sep)||!fs.existsSync(file)||!fs.statSync(file).isFile()){
+   res.writeHead(404);res.end();return;
+ }
+ res.setHeader('Content-Type',mime[path.extname(file)]||'application/octet-stream');
+ res.end(fs.readFileSync(file));
+});
+await new Promise(done=>server.listen(0,'127.0.0.1',done));
+let browser;
+try{
+ browser=await puppeteer.launch({executablePath:process.env.CHROME_BIN||'/usr/bin/google-chrome',
+  headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
+ for(const {width,theme,populated} of [
+  {width:320,theme:'amethyst',populated:false},
+  {width:393,theme:'rosewater',populated:false},
+  {width:834,theme:'amethyst',populated:false},
+  {width:393,theme:'amethyst',populated:true}
+ ]){
+  const ctx=await browser.createBrowserContext(),page=await ctx.newPage(),errors=[];
+  page.on('pageerror',e=>errors.push(e.message));
+  await page.setViewport({width,height:width<600?840:1024,isMobile:width<600,hasTouch:width<600});
+  await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
+  await page.evaluateOnNewDocument(state=>localStorage.setItem('wpb:v1',JSON.stringify(state)),
+    {...baseline,theme,saved:populated?[program]:[],pinnedId:populated?program.id:null});
+  await page.goto('http://127.0.0.1:'+server.address().port+'/',{waitUntil:'networkidle0'});
+  await page.waitForSelector('.wpb-home .wpb-action-tile');
+  if(!populated){
+   const observed=await page.evaluate(()=>{
+    const home=document.querySelector('.wpb-home');
+    const create=[...home.querySelectorAll('button')].filter(b=>b.textContent.trim()==='Create Program');
+    const style=e=>{const r=e.getBoundingClientRect();return {width:r.width,height:r.height};};
+    const links=[...home.querySelectorAll('.wpb-action-tile')].map(b=>({
+      text:b.textContent.trim(),size:style(b),hasLabel:!!b.querySelector('.wpb-action-tile-label'),
+      flex:getComputedStyle(b).display,
+      iconColor:getComputedStyle(b.querySelector('.wpb-action-tile-icon')).color
+    }));
+    return {create:create.length,createSize:create[0]&&style(create[0]),
+      oldCards:!!home.querySelector('.wpb-empty-state'),intro:home.textContent.includes('Build my program'),
+      tiles:links,overflow:document.documentElement.scrollWidth>innerWidth+1};
+   });
+   assert.equal(observed.create,1,'One primary empty-state create action: '+JSON.stringify(observed));
+   assert.ok(observed.createSize.width>=48&&observed.createSize.height>=48,
+    'Persistent create dock must have a usable hit target');
+   assert.equal(observed.oldCards,false,'Do not render duplicate empty-state action card');
+   assert.equal(observed.intro,false,'Do not render another large clickable first-run CTA');
+   assert.ok(observed.tiles.length>=2&&observed.tiles.every(t=>t.size.height>=48&&t.flex==='flex'&&t.hasLabel),
+    'Discovery routes use one CSS-owned reusable tile surface');
+   assert.equal(observed.overflow,false,'Home fits '+width+'px with no horizontal overflow');
+   await page.locator('.wpb-home-templates').click();
+   await page.waitForFunction(()=>[...document.querySelectorAll('*')].some(n=>
+     n.textContent?.trim()==='Program templates' && n.children.length===0));
+   await page.locator('button[aria-label="Close"]').click();
+   await page.locator('.wpb-home-create').click();
+   await page.waitForSelector('.wpb-wizard-step');
+  }else{
+   assert.ok(await page.$('.wpb-home-hero'), 'Existing program retains Next Workout hero');
+   assert.ok(await page.$('.wpb-m3-session-preview'), 'Current session outline remains visible');
+   assert.ok(await page.$('.wpb-home-game-plan') || await page.$('.wpb-home-health'),
+    'Supporting Home sections remain reachable without cloning the hero');
+  }
+  assert.deepEqual(errors,[], 'No Home route/runtime errors '+width+' '+theme);
+  await ctx.close();
+ }
+ console.log('PASS Home visible hierarchy: one creation CTA, usable discovery actions, onboarding and populated session paths at 320/393/834.');
+}finally{
+ if(browser)await browser.close();
+ await new Promise(resolve=>server.close(resolve));
+}

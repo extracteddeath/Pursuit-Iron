@@ -68,4 +68,4 @@ The canonical `TabBar` owns full and compact visual labels; its existing `aria-l
 
 ### Cohesion 23 — Plan reading at enlarged text
 
-The Plan heading's canonical CSS owner allows complete long program names to wrap within the page. The four-mode Plan rail remains a compact horizontal group at normal widths but reflows to two rows via container-aware rules when 200% text or narrow content makes complete labels impossible. Do not shorten tab names, clip labels, create a second control style, or change Plan state, engine prescriptions or Workout/Focus geometry. R74 checks full labels, title containment and keyboard/selected semantics.
+The Plan heading's canonical CSS owner allows complete long program names to wrap within the page. The four-mode Plan rail remains horizontal at comfortable widths, reflows to two columns on narrow screens, and stacks into one column at extreme effective text scale so labels remain whole and legible. Do not shorten tab names, clip labels, create a second control style, or change Plan state, engine prescriptions or Workout/Focus geometry. R74 checks full labels, title containment and keyboard/selected semantics.

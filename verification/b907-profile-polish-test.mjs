@@ -28,4 +28,19 @@ assert.ok(b912.includes('prefers-reduced-motion:reduce')&&b912.includes('forced-
 assert.doesNotMatch(b912,/@keyframes|animation:/,'no second animation system');
 assert.ok(b912.includes('border-radius:var(--pi-shape-feature)!important')&&b912.includes('border-radius:var(--pi-shape-card)!important'),'Profile uses shared feature/card geometry roles');
 
+
+const profileView = app.slice(app.indexOf('function ProfileView('), app.indexOf('\nfunction ',app.indexOf('function ProfileView(')+12));
+assert.ok(profileView.includes('className: "wpb-profile-strength-label"'),'strength pattern label has an explicit style owner');
+for (const [name, marker] of Object.entries({
+  stats:'className: "wpb-profile-stat-grid", "aria-label": "Lifetime training summary", style:',
+  strength:'className: "wpb-profile-strength-grid", style:',
+  cell:'className: "wpb-profile-strength-cell", style: { minWidth:',
+  next:'className: "wpb-profile-next-strength", style: { display:'
+})) assert.ok(!profileView.includes(marker),name+' no longer embeds fixed presentation geometry');
+const styleOwner = css.slice(css.indexOf('/* B913 / Cohesion 03'),css.indexOf('/* B892 / UI polish pass 02'));
+for(const selector of ['.wpb-profile-stat-grid','.wpb-profile-stat','.wpb-profile-strength-grid','.wpb-profile-strength-cell','.wpb-profile-strength-label','.wpb-profile-next-strength']){
+  assert.ok(styleOwner.includes(selector+'{'),selector+' has one CSS base declaration');
+}
+assert.ok(b912.includes('.wpb-profile-strength-cell>.wpb-profile-strength-label'),'Expressive overrides explicitly target the semantic label class');
+
 console.log('PASS B907 Profile: tactile spacing, tonal selection, reduced-motion/high-contrast, persistent preferences.');

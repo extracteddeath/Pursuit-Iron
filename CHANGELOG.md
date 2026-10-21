@@ -1,3 +1,9 @@
+## Consistent Settings groups and strength-club controls — October 21, 2026
+
+- Settings preference, workout, timer, reminder, profile and data rows now share explicit themed cards and one wrapping row layout. Native inputs, switches and existing settings behavior are preserved.
+- The Profile strength-club card uses shared 48px actions and responsive text/value layouts. Lifted totals, estimated totals, earned/projected status and sharing retain their existing data owners.
+- Removed 38 inline style objects and 97 CSS priority declarations. Added browser checks for enlarged Settings rows, keyboard club-measure reversal, complete labels and unchanged history. Workout/Focus and training engine behavior are preserved.
+
 ## Reliable shared data controls — October 21, 2026
 
 - Settings now delegates backup, restore preview and Undo to one stable component. All twelve backup actions reuse UiAction and existing semantic theme roles; wrapping rows preserve labels at narrow widths and 200% text without adding CSS priority overrides.

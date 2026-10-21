@@ -1,3 +1,9 @@
+## Focus touch selection stability — October 21, 2026
+
+- After a touch-click, the native browser caret can move after the first paint. Recheck select-all on the second animation frame for Focus weight and reps inputs.
+- Keep the immediate select-on-focus behavior and value guard: never replace user typing, readonly/composing values, progress, persisted state, timers or workout geometry.
+- The existing B825 real-touch logging test remains strict (1.5s selection deadline); the candidate must pass all ten CI jobs before merge.
+
 ## Adaptive tab labels and narrow-phone Home title — October 21, 2026
 
 - Keep complete tab names for accessible navigation, switching to short visual labels only when the tab is narrow relative to the actual font size.

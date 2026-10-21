@@ -9218,8 +9218,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile
  .wpb-profile-strength-grid>.wpb-profile-strength-cell:first-child{
   background:var(--wpb-theme-accent-dim)!important;
-  border-radius:12px!important;
-  padding-inline:10px!important;
+  border-radius:0!important;
+  padding-inline:2px!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile
  .wpb-profile-strength-grid>.wpb-profile-strength-cell>.mono{
@@ -9294,3 +9294,29 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     border-right:0!important;border-bottom:1px solid var(--pi-color-divider)!important;
   }
 }
+
+
+/* B915: Share-card styling stays on Profile, never Workout. */
+#root[data-pi-motion="expressive"] .wpb .wpb-profile .wpb-share-card{min-width:0;margin:0 0 var(--pi-section-gap,14px);padding:16px;border:0;border-radius:var(--pi-shape-feature,24px);background:var(--pi-color-feature);color:var(--pi-color-on-feature)}
+.wpb-profile .wpb-share-card-heading{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:10px;font-weight:800;letter-spacing:.04em;color:var(--wpb-theme-muted)}
+.wpb-profile .wpb-share-card-heading span:first-child{color:var(--wpb-theme-accent-ink)}
+.wpb-profile .wpb-share-card h2{font-size:clamp(20px,5vw,25px);letter-spacing:-.035em;line-height:1.2;margin:8px 0 0}
+.wpb-profile .wpb-share-card-subtitle{font-size:12px;margin:3px 0 12px;color:var(--wpb-theme-muted)}
+.wpb-profile .wpb-share-card-rows{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.wpb-profile .wpb-share-card-row{display:flex;flex-direction:column;min-width:0;gap:3px;padding:10px 12px;background:var(--pi-color-card);border-radius:var(--pi-shape-action,14px)}
+.wpb-profile .wpb-share-card-row-label{font-size:10px;font-weight:800;letter-spacing:.03em;color:var(--wpb-theme-muted)}
+.wpb-profile .wpb-share-card-row strong{font-size:14px;line-height:1.35;overflow-wrap:anywhere;color:var(--pi-color-on-control)}
+.wpb-profile .wpb-share-card-row small{font-size:11px;line-height:1.3;overflow-wrap:anywhere;color:var(--wpb-theme-muted)}
+.wpb-profile .wpb-share-card-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.wpb-profile .wpb-share-card-actions button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:48px;min-width:48px;padding:8px 14px;border:0;border-radius:var(--pi-shape-action,14px);font-size:13px;font-weight:750;cursor:pointer;background:var(--pi-color-control);color:var(--pi-color-on-control)}
+.wpb-profile .wpb-share-card-actions .wpb-profile-share-action{background:var(--wpb-theme-accent);color:var(--wpb-theme-on-accent)}
+.wpb-profile .wpb-share-card-editor{min-width:0;padding:15px;margin:0 0 var(--pi-section-gap,14px);border:1px solid var(--pi-color-divider);border-radius:var(--pi-shape-card,20px);background:var(--pi-color-card)}
+.wpb-profile .wpb-share-card-editor-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px}
+.wpb-profile .wpb-share-card-editor-head strong{font-size:16px}
+.wpb-profile .wpb-share-card-editor-head p{font-size:12px;line-height:1.4;color:var(--wpb-theme-muted);margin:4px 0 0}
+.wpb-profile .wpb-share-card-editor-head button{display:grid;place-items:center;flex:0 0 48px;width:48px;height:48px;border:0;border-radius:var(--pi-shape-action,14px);background:var(--pi-color-control);color:var(--pi-color-on-control)}
+.wpb-profile .wpb-share-card-field{display:grid;gap:6px;min-width:0;margin-bottom:12px;font-size:13px;font-weight:700}
+.wpb-profile .wpb-share-card-field input{box-sizing:border-box;width:100%;min-width:0;min-height:48px;padding:10px 12px;border:1px solid var(--pi-color-divider);border-radius:var(--pi-shape-action,14px);font:inherit;font-weight:500;background:var(--pi-color-control);color:var(--pi-color-on-control)}
+.wpb-profile .wpb-share-card button:focus-visible,.wpb-profile .wpb-share-card-editor :is(button,input):focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:3px}
+@media(max-width:360px){.wpb-profile .wpb-share-card-rows{grid-template-columns:minmax(0,1fr)}}
+@media(forced-colors:active){.wpb-profile .wpb-share-card,.wpb-profile .wpb-share-card-row,.wpb-profile .wpb-share-card-editor{background:Canvas!important;color:CanvasText!important;border:1px solid CanvasText!important}}

@@ -94,4 +94,4 @@ The Home create action had an early `background-color:light-dark(...--pi-m3e-dar
 
 ## Cohesion 12 — Plan week and pane ownership (staged)
 
-Seven Plan JSX layout/paint objects have been rehomed into one CSS declaration family with theme roles. Preserve four `UiChoice` panes, the week collapse/remembered selection, keyboard focus, and engine data. Extended R53 browser checks assert 44px targets and switch both directions. Inline style budget **3,393 → 3,386**; no new `!important`. Program week pill is the next separately proven pass.
+Four Plan week-picker JSX layout/paint objects have been rehomed into one CSS declaration family with theme roles. The three Plan mode-bar presentation objects remain intact after a real-browser clipping regression; restore them rather than weakening R47 acceptance. Preserve four `UiChoice` panes, the week collapse/remembered selection, keyboard focus, and engine data. Extended R53 browser checks assert 44px targets and switch both directions. Inline style budget **3,393 → 3,389**; no new `!important`. Program week pill is the next separately proven pass.

@@ -7556,7 +7556,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    Existing selected-state, motion and container-query rules remain in force.
    No changes to Workout, Focus or their set-input dimensions. */
 .wpb .wpb-wizard-heading{margin-bottom:var(--pi-space-5);}
-.wpb .wpb-wizard-heading-title{margin:0;line-height:1.12;font-weight:700;letter-spacing:-.035em;}
+.wpb .wpb-wizard-heading-title{margin:0;line-height:1.12;font-size:clamp(1.5rem,6vw,1.75rem);font-weight:700;letter-spacing:-.035em;}
 .wpb .wpb-wizard-heading-sub{
   margin:var(--pi-space-2) 0 0;color:var(--pi-color-on-muted,var(--wpb-theme-muted));
   font-size:var(--pi-type-body);line-height:1.45;
@@ -7568,6 +7568,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   background:var(--pi-color-card,var(--wpb-theme-card));
   border:1px solid var(--pi-color-divider,var(--wpb-theme-border));
   border-radius:var(--pi-shape-action,14px);cursor:pointer;
+}
+.wpb .wpb-wizard-option[aria-pressed="true"]{
+  background:var(--wpb-theme-accent-dim);border-color:var(--pi-color-active,var(--wpb-theme-accent));
 }
 .wpb .wpb-wizard-option:disabled{opacity:.55;cursor:default;}
 .wpb .wpb-wizard-option-icon{

@@ -7460,7 +7460,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 
 /* Cohesion 19 — Wizard chrome and focus rows use shared tokens and actions.
    Behavior, generation, drafts and progress fraction remain owned by Wizard. */
-.wpb .wpb-wizard{--pi-wizard-inset:var(--pi-space-4);}
+.wpb .wpb-wizard{--pi-wizard-inset:var(--pi-space-4);--pi-radius-control:var(--pi-shape-action);}
 .wpb .wpb-wizard-header{
   display:block;flex-shrink:0;box-sizing:border-box;padding:var(--pi-space-3) var(--pi-wizard-inset) var(--pi-space-2);
   background:var(--pi-color-card);color:var(--pi-color-on-control);

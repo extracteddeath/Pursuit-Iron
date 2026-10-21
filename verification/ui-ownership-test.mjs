@@ -5,8 +5,8 @@ import fs from 'node:fs';
 // Decrease alongside a verified cleanup; never raise to permit a cosmetic override.
 const css = fs.readFileSync('app.css', 'utf8');
 const app = fs.readFileSync('modules/App.js', 'utf8');
-const MAX_IMPORTANT = 3018;
-const MAX_REPEAT_IMPORTANT = 33;
+const MAX_IMPORTANT = 3017;
+const MAX_REPEAT_IMPORTANT = 32;
 const MAX_INLINE_STYLE_OBJECTS = 3393; // Cohesion 10 Home tile/empty-state cleanup
 const allowedDebtKeys = new Set([
   "\t#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step\tborder-radius",

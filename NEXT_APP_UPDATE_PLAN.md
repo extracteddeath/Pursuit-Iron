@@ -81,6 +81,10 @@ Home's discovery tiles now use `UiAction` for behavior and one scoped `app.css` 
 
 **Still open in Home:** dense populated dashboards, cycle progress duplication with Program, responsive disclosure control hierarchy, and initial Home/Plan projection equivalence over resumed and interrupted workouts. Those need individually proven behavior changes, not speculative style overrides. Next isolated pass: Program/Plan week/phase presentation ownership, or remaining Home sections where measured density warrants it. No claim of complete screen certification until the full queue is finished.
 
+## Cohesion 11 — remove superseded Home color owner (first cascade pass)
+
+The Home create action had an early `background-color:light-dark(...--pi-m3e-dark-support)` declaration and a later same-selector unconditional `background-color:light-dark(...--pi-r38-surface-1)` declaration, both `!important`. Remove only the earlier losing declaration. This does not touch the later effective declaration, hover/focus styling, layout, JS, state, or engine. Lower CI ceilings to **3,017** important declarations and **32** repeated important properties. This is a narrowly scoped cascade reduction, **not** completion of the Plan/Program screen pass. Continue with Plan/Program state and selector inventory next; avoid speculative layout changes.
+
 ## Subsequent slices
 
 1. Continue cross-screen form/action ownership, prioritizing visible inconsistencies and removing redundant CSS only after computed-style or interaction proof.

@@ -6,6 +6,6 @@
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 71,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b905-rc3d812d669516af9",
-  "uiMilestone": "Build 905 · Cohesion 21 switch contrast and Home preview spacing"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b905-r2318994946ac0693",
+  "uiMilestone": "Build 905 · Cohesion 22 adaptive tab labels and compact Home hierarchy"
 }

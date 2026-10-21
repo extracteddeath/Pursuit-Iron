@@ -814,3 +814,9 @@ Template cards and adaptation use the shared card surface and Wizard text roles.
 - Equipment presets and superset/barbell choices use shared tonal actions and their actual `aria-pressed` state. Constraint groups are independently named.
 - Rack and bodyweight exclusions share one presentation component. No-rack still changes only the existing equipment flag and stays hidden without a barbell, in setup and the gym editor.
 - Keep keyboard selection, reversible exclusions, controlled configuration, saved drafts, enlarged-text reflow and horizontal preset scrolling. These changes do not alter generation constraints or the workout logger.
+
+### Cohesion 19 — Wizard chrome and muscle focus
+
+- Header/footer actions use shared native controls; Back, Next, early finish, draft discard and build cancellation keep the same handlers and disabled guards.
+- Real focus values own highlighted rows and the total. Shared setup steppers preserve a maximum of two points per muscle and five total, and allow reversing every choice.
+- The scrolling form, growing header, opaque footer, keyboard focus and draft indicators remain reachable at narrow widths and enlarged text. The computed progress transform remains runtime-owned; static presentation is CSS-owned.

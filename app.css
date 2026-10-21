@@ -1939,12 +1939,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   opacity:.7;
   line-height:1.35;
 }
-#root[data-pi-motion="expressive"] .wpb-home .wpb-m3-session-preview>div:not(.wpb-m3-preview-heading){
-  min-width:0;
-}
-#root[data-pi-motion="expressive"] .wpb-home .wpb-m3-session-preview>button[aria-expanded]{
-  border-radius:13px!important;
-}
 
 /* Restoring the training-rotation dial from R4 must not animate for readers
    requesting reduced motion; the static progress is always visible. */
@@ -2129,7 +2123,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 /* A flat primary container creates an obvious task hierarchy. The action
    retains its existing filled theme color, never a translucent gradient. */
-#root[data-pi-motion="expressive"] .wpb-home .wpb-m3-session-preview,
 #root[data-pi-motion="expressive"] .wpb-home .wpb-action-tile,
 #root[data-pi-motion="expressive"] .wpb-home .wpb-metric-strip>.wpb-metric{
   background-image:none!important;
@@ -2395,10 +2388,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-color:color-mix(in srgb,var(--pi-m3e-primary) 20%,transparent)!important;
   box-shadow:none!important;
 }
-#root[data-pi-motion="expressive"] .wpb .wpb-home .wpb-m3-session-preview{
-  background-color:var(--pi-m3e-surface-container-high)!important;
-  box-shadow:none!important;
-}
+
 #root[data-pi-motion="expressive"] .wpb .wpb-home .wpb-metric-strip>.wpb-metric,
 #root[data-pi-motion="expressive"] .wpb .wpb-home .wpb-action-tile{
   background-color:var(--pi-m3e-surface-container-low)!important;
@@ -3978,7 +3968,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     outline-color:Highlight!important;
   }
   #root[data-pi-motion="expressive"] .wpb-home :is(
-    .wpb-home-header,.wpb-home-hero,.wpb-m3-session-preview,.wpb-home-compose-bar){
+    .wpb-home-header,.wpb-home-hero,.wpb-home-session-preview,.wpb-home-compose-bar){
     background-color:Canvas!important;
     border-color:CanvasText!important;
   }
@@ -4833,11 +4823,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-color:var(--pi-r11-edge)!important;
   box-shadow:none!important;
 }
-#root[data-pi-motion="expressive"] .wpb-home .wpb-m3-session-preview{
-  background-color:var(--pi-r11-raised)!important;
-  background-image:none!important;
-  box-shadow:none!important;
-}
+
 #root[data-pi-motion="expressive"] .wpb-home :is(
   .wpb-metric-strip>.wpb-metric,.wpb-action-tile){
   background-color:var(--pi-r11-quiet)!important;
@@ -4895,7 +4881,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     outline-color:Highlight!important;
   }
   #root[data-pi-motion="expressive"] .wpb-home :is(
-    .wpb-home-header,.wpb-home-hero,.wpb-m3-session-preview,
+    .wpb-home-header,.wpb-home-hero,.wpb-home-session-preview,
     .wpb-metric-strip>.wpb-metric,.wpb-action-tile,
     .wpb-home-compose-bar,.wpb-home-quick){
     background-color:Canvas!important;
@@ -4917,10 +4903,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   background:var(--pi-color-feature)!important;
   background-image:none!important;
 }
-#root[data-pi-motion="expressive"] .wpb .wpb-home.wpb-home.wpb-home .wpb-m3-session-preview{
-  background:var(--pi-r11-raised)!important;
-  background-image:none!important;
-}
+
 #root[data-pi-motion="expressive"] .wpb .wpb-home.wpb-home.wpb-home
   .wpb-metric-strip>.wpb-metric,
 #root[data-pi-motion="expressive"] .wpb .wpb-home.wpb-home.wpb-home
@@ -5047,26 +5030,19 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-home.wpb-home.wpb-home .wpb-home-hero{
   padding:14px 15px 13px!important;
-  margin-top:10px!important;
-  margin-bottom:9px!important;
+  margin-top:0!important;
+  margin-bottom:var(--pi-space-3)!important;
   border-color:var(--pi-r48-divider)!important;
   box-shadow:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero>button:first-child{
   min-height:102px!important;
 }
-#root[data-pi-motion="expressive"] .wpb-home .wpb-m3-session-preview{
-  padding:10px 12px!important;
-  border-radius:19px!important;
-  margin-block:8px!important;
-  border-color:var(--pi-r48-divider)!important;
-}
+
 #root[data-pi-motion="expressive"] .wpb-home .wpb-m3-preview-heading{
   margin:0 0 4px!important;
 }
-#root[data-pi-motion="expressive"] .wpb-home .wpb-m3-session-preview>button[aria-expanded]{
-  min-height:44px!important;
-}
+
 #root[data-pi-motion="expressive"] .wpb-home .wpb-home-compose-bar{
   padding-block:6px!important;
   border-top-color:var(--pi-r48-divider)!important;
@@ -5112,13 +5088,11 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   #root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero{
     padding-inline:12px!important;
   }
-  #root[data-pi-motion="expressive"] .wpb-home .wpb-m3-session-preview{
-    padding-inline:10px!important;
-  }
+
 }
 @media(forced-colors:active){
   #root[data-pi-motion="expressive"] .wpb :is(
-    .wpb-home-hero,.wpb-m3-session-preview,.wpb-progress>.wpb-page-header,
+    .wpb-home-hero,.wpb-home-session-preview,.wpb-progress>.wpb-page-header,
     .wpb-program .wpb-day-card,.wpb-program .hp-card,
     .wpb-profile-strength,.wpb-profile-strength-cell){
     background-color:Canvas!important;
@@ -7798,12 +7772,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   outline-offset:2px;
 }
 
-/* R92 — Home disclosure: one compact affordance with details on demand.
-   Preserve the existing theme's neutral surface and all native touch targets. */
-#root[data-pi-motion="expressive"] .wpb-home .wpb-m3-session-preview>.wpb-m3-outline-toggle{
-  min-height:48px!important;
-  border-radius:13px!important;
-}
+/* Home exercise-row separators share the common divider role. */
 #root[data-pi-motion="expressive"] .wpb-home .wpb-m3-outline-exercises:not([hidden]){
   border-top:1px solid var(--pi-color-divider);
   padding-top:6px;
@@ -8825,8 +8794,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb-plan-change-banner>span:nth-child(2){flex:1;min-width:0}.wpb-plan-change-banner strong{display:block;font-size:14px;line-height:1.4}.wpb-plan-change-banner>span:nth-child(2)>span{display:block;font-size:12px;line-height:1.5;color:var(--wpb-theme-muted);margin-top:4px}.wpb-plan-change-banner>svg{flex-shrink:0}
 .wpb-session-plan-icon{display:grid;place-items:center;width:38px;height:38px;flex-shrink:0;border-radius:13px;background:var(--wpb-theme-card);color:var(--wpb-theme-accent-ink)}
 #root .wpb-session-game-plan{padding:14px;margin-top:14px;border:1px solid var(--wpb-theme-border);border-radius:21px;background:var(--wpb-theme-card);color:var(--wpb-theme-text)}
-#root .wpb-m3-session-preview{padding:0!important;background:transparent!important;border:0!important}
-#root .wpb-m3-session-preview .wpb-session-game-plan{padding:12px;margin:0;background:var(--wpb-theme-bg)}
+
+
 .wpb-game-plan-heading{display:flex;align-items:center;gap:9px;width:100%;min-height:48px;padding:0;margin:0;border:0;background:transparent;color:var(--wpb-theme-text);text-align:left;font:inherit;font-size:16px;line-height:1.4}.wpb-game-plan-heading>strong{flex:1}.wpb-game-plan-heading>svg{flex-shrink:0;color:var(--wpb-theme-accent-ink)}button.wpb-game-plan-heading{cursor:pointer}
 #root .wpb-game-plan-exercise{display:block!important;padding:14px 0!important;border-top:1px solid var(--wpb-theme-border);color:var(--wpb-theme-text)}
 .wpb-game-plan-exercise-title{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px 10px;justify-content:space-between}.wpb-game-plan-exercise-title>strong{font-size:14px;line-height:1.4;flex:1 1 150px;overflow-wrap:anywhere}.wpb-game-plan-exercise-title>span{color:var(--wpb-theme-accent-ink);font-size:12px;font-weight:700;white-space:nowrap}
@@ -9014,15 +8983,23 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 
 /* B909 — Prototype-aligned Home coaching: short insight card outside workout hero. */
 #root .wpb .wpb-plan-change-banner{
-  min-height:64px;margin:4px 0 14px;padding:11px 14px;
+  min-height:64px;margin:0 0 var(--pi-space-3);padding:var(--pi-space-3) var(--pi-space-4);
   border-radius:var(--pi-shape-card);background:var(--wpb-theme-accent-dim);
 }
 #root .wpb .wpb-plan-change-banner .wpb-session-plan-icon{width:36px;height:36px;border-radius:12px}
 #root .wpb .wpb-plan-change-banner strong{font-size:14px}
 #root .wpb .wpb-plan-change-banner>span:nth-child(2)>span{margin-top:2px;line-height:1.35}
+/* Home outline owns its inset; legacy M3 preview rules no longer stack padding. */
+#root .wpb .wpb-home-session-preview{
+  position:relative;margin:var(--pi-space-2) 0 0;padding:0 var(--pi-space-3) var(--pi-space-2);
+  min-width:0;border-radius:var(--pi-shape-card);background:var(--pi-color-control);
+}
+#root .wpb .wpb-home-preview-action{
+  width:100%;min-height:var(--pi-control-min);margin:0;padding:var(--pi-space-2);
+  font-size:var(--pi-type-support);color:var(--wpb-theme-accent-ink);
+}
 #root .wpb .wpb-home-session-outline{
-  margin-top:6px;border-top:1px solid var(--wpb-theme-border);
-  padding-top:0;min-width:0;
+  margin:0;border:0;padding:0;min-width:0;
 }
 #root .wpb .wpb-home-outline-toggle{
   display:flex;align-items:center;gap:8px;width:100%;min-height:48px;
@@ -9032,6 +9009,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb-home-outline-toggle>strong{flex:1;font-size:13px;font-weight:750}
 .wpb-home-outline-toggle>span{font-size:12px;color:var(--wpb-theme-muted)}
 .wpb-home-outline-toggle>svg{color:var(--wpb-theme-muted);flex-shrink:0;transition:transform 180ms ease}
+.wpb-home-outline-toggle[aria-expanded="true"]>svg{transform:rotate(180deg)}
 #root .wpb .wpb-home-outline-list{list-style:none;margin:0;padding:0 0 6px}
 #root .wpb .wpb-home-outline-list>li:first-child{padding-top:3px}
 .wpb-home-outline-list li{display:flex;justify-content:space-between;align-items:baseline;gap:10px;
@@ -9291,7 +9269,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 @container pi-r77-profile (max-width:22em){.wpb-profile-card-metrics{grid-template-columns:minmax(0,1fr)}}
 .wpb-profile-share-toggles button[aria-pressed="true"] span{background:var(--pi-color-card,var(--wpb-theme-card))}
 
-/* Cohesion 08: one Settings control owner; Workout/Focus geometry is unchanged. */
+/* Cohesion 20: switch tracks have explicit contrast and no legacy thumb geometry.
+   Cohesion 08: one Settings control owner; Workout/Focus geometry is unchanged. */
 #root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-settings-switch {
   box-sizing:border-box;display:inline-grid;place-items:center;
   width:48px;min-width:48px;height:48px;min-height:48px;padding:0;
@@ -9300,11 +9279,11 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-settings-switch-track {
   box-sizing:border-box;display:block;position:relative;width:44px;height:26px;
-  border:1px solid var(--pi-color-divider);border-radius:99px;background:var(--pi-color-control);
+  border:2px solid var(--pi-color-on-muted);border-radius:99px;background:var(--pi-color-control);
   transition:background-color 160ms var(--pi-ease),border-color 160ms var(--pi-ease);
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-settings-switch-thumb {
-  display:block;position:absolute;top:2px;left:2px;width:20px;height:20px;
+  display:block;position:absolute;top:1px;left:1px;width:20px;height:20px;
   border-radius:50%;background:var(--pi-color-on-control);box-shadow:0 1px 2px rgba(0,0,0,.18);
   transition:transform 160ms var(--pi-ease),background-color 160ms var(--pi-ease);
 }

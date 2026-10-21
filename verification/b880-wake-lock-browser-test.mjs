@@ -117,10 +117,23 @@ try {
         const sel = 'button[role="switch"][aria-label="Keep screen on during workouts"]';
         await page.waitForSelector(sel);
         assert.equal(await page.$eval(sel, el => el.getAttribute('aria-checked')), 'true');
+        const switchGeometry=()=>page.$eval(sel,button=>{
+            const track=button.querySelector('.wpb-settings-switch-track').getBoundingClientRect();
+            const thumb=button.querySelector('.wpb-settings-switch-thumb').getBoundingClientRect();
+            return {hit:button.getBoundingClientRect().height,width:track.width,height:track.height,
+                contained:thumb.left>=track.left&&thumb.right<=track.right&&thumb.top>=track.top&&thumb.bottom<=track.bottom};
+        });
+        const assertSwitch=async()=>{
+            const box=await switchGeometry();
+            assert.ok(box.hit>=48&&box.width===44&&box.height===26&&box.contained,
+                'Switch track, thumb and hit target retain independent geometry: '+JSON.stringify(box));
+        };
+        await assertSwitch();
         await page.$eval(sel, el => el.scrollIntoView({ block: 'center' }));
         await page.click(sel);
         await page.waitForFunction(s => document.querySelector(s).getAttribute('aria-checked') === 'false', {}, sel);
         assert.equal(await page.evaluate(() => localStorage.getItem('wpb:keep-awake')), '0');
+        await assertSwitch();
         const stored = await page.evaluate(() => localStorage.getItem('wpb:v1'));
         assert.ok(!/keepAwake|keep-awake/.test(stored), 'device preference stays out of the synced store');
         assert.deepEqual(errors, []);

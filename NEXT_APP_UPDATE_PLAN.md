@@ -156,3 +156,12 @@ Give all eight Settings row groups explicit shared cards. Migrate stable row/tit
 Measured debt: inline objects 3,233 → 3,195; external priorities 2,858 → 2,812; embedded priorities 1,376 → 1,325. Repeated-priority ceiling remains 30 (27 collision keys). Tighten source budgets and add Settings-group and club-progress ownership guards. R76 checks grouped card ownership/paint and 200% copy/control containment; B907 adds keyboard measure reversal, distinct totals, normal/enlarged club targets and preserved history. Require all ten candidate/main checks, image review, Pages and 109-file deployed identity.
 
 Next: remaining Settings choice controls and Profile Strength/Achievements card presentation, followed by Home/Plan and Progress/History. This scoped pass does not close the whole Settings/Profile queue or physical Android/Play certification.
+
+## Cohesion 21 — Screenshot fixes: switch contrast and Home spacing
+
+- Remove SettingsSwitch's legacy `.wpb-toggle` marker: its important direct-child rule shrank the new nested track to thumb size, defeating contrast and the 48px hit target. Restore contained thumb movement and theme-paired active paint; use a readable off-state outline.
+- Home outline uses one CSS-owned wrapper and compact disclosure inset. Remove stacked legacy preview surfaces and the extra divider/margin; align plan-change-to-hero spacing with the shared scale. Preview action and disclosure rotation no longer inject static styles.
+- Debt: external priority declarations 2,858 → 2,839; embedded unchanged at 1,376; inline objects 3,233 → 3,230. Tighten the existing budgets.
+- Verify Home entry/reflow, Settings switch geometry and persistence, cross-screen preview navigation, source integration, release hashes and all ten candidate CI gates before merge. Browser QA does not replace physical Android/Play certification.
+
+Cohesion 21 local verification: all 61 source integration gates, Home entry/reflow at 320/393/834px, R53/R58/R61/R62/R63 cross-screen navigation/theme checks, B880 wake-lock/preference and switch geometry, and release integrity pass. Rose, Amethyst, Rosewater, Ember and Ocean on/off switch edge and thumb contrast exceed 4:1. Publishing is explicitly approved by the user on October 21; combine with the current Settings/Profile changes, then run candidate CI before merging.

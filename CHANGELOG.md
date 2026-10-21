@@ -4,6 +4,12 @@
 - The Profile strength-club card uses shared 48px actions and responsive text/value layouts. Lifted totals, estimated totals, earned/projected status and sharing retain their existing data owners.
 - Removed 38 inline style objects and 97 CSS priority declarations. Added browser checks for enlarged Settings rows, keyboard club-measure reversal, complete labels and unchanged history. Workout/Focus and training engine behavior are preserved.
 
+## Switch contrast and compact Home preview — October 21, 2026
+
+- Settings toggles now retain a full contrasting track, a contained thumb and a 48px touch target in both states. Removed the legacy toggle class that incorrectly resized the nested track.
+- Tightened Home spacing around plan changes, the workout card and session outline. One CSS owner replaces stacked preview styles and the redundant top divider. Preserved exercise disclosure, preview and Start behavior.
+- Removed 19 obsolete CSS priority declarations and three inline presentation objects; tightened ownership budgets and release-cache identity.
+
 ## Reliable shared data controls — October 21, 2026
 
 - Settings now delegates backup, restore preview and Undo to one stable component. All twelve backup actions reuse UiAction and existing semantic theme roles; wrapping rows preserve labels at narrow widths and 200% text without adding CSS priority overrides.

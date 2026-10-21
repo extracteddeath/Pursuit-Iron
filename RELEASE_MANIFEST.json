@@ -116,17 +116,17 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "f7215ce8c9dd65ce5dd8389445c5b3eeb3a48e5cadf50e9f61df9084d65e12e0",
+    "modules/App.js": "bc8f6253747eb3b138c26577650d0741f9318bdf357fb94802da2b3ad3a32359",
     "index.html": "54fd7f97b0a2d9d8b76694380158b4a23699a3f1c1cbea697c5e33b7c705b7ed",
-    "sw.js": "067825fc06ebdf701809906bbc7172c4b1c4e774d0612667fb5fce191206aa01",
-    "BUILD_PROFILE.json": "8dc49744e541fc4b24b5b81b97986e8915e63c25ea1cfdb50ea7a14c7b6aad40",
-    "CHANGELOG.md": "eb44e416e03ad3c447bafc6cdb5f8c9c559c525be0a12396d4023c811c2c73d6",
-    "app.css": "6d5dfa74d4220c974d88492df2e7b77dd7d16dbb2365adbc3caafce699076398",
+    "sw.js": "5606450bb38870d71c8662577668475e2dd02881a24c0caa156efe24932d2fe3",
+    "BUILD_PROFILE.json": "e3b7d1e4142a92aa940089c89a621d3c55cc0db8653bec967646e199d882d839",
+    "CHANGELOG.md": "4da884743cbe53f606d2c7bdd6db15ef2cf0da582c4626828af06867607ee4ab",
+    "app.css": "20915ca44a5475bf7abb9753a90f67fe321266f8572458a0daffd14386dff110",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b905-r654eb42cbf3cbb69",
-  "uiMilestone": "Build 905 · Cohesion 04 Progress/History CSS ownership"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b905-rabb5dadaa5de6129",
+  "uiMilestone": "Build 905 · Cohesion 05 editable Profile share card"
 }

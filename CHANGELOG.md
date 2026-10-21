@@ -1,3 +1,10 @@
+## Profile share card and cohesive styles — October 20, 2026
+
+- Profile opens with an editable share card: a name, chosen strength/streak/level/club/record/achievement metrics and up to three favorite lifts. The live preview and PNG export share one content model; records retain their estimated-1RM labels.
+- Edit card and Arrange Profile are separate. Saved section order/visibility and existing metric selections survive, and resetting section layout preserves the card.
+- Push and the other Strength Score rows have identical label/value insets. Profile controls use the shared themed surfaces, borders and shapes. Progress/History layout ownership was consolidated in the preceding pass.
+- Workout layout, interaction behavior, engine and stored training data are preserved.
+
 ## Build 905 — Remaining prototype features
 
 - Stage actual generated rebuilds and canonical volume repairs for review before committing. Show changed settings, exercise additions/removals/order, all weeks of set/rep/RIR/rest/technique/progression targets, and first-week duration estimates. Apply the reviewed artifact without generating again.

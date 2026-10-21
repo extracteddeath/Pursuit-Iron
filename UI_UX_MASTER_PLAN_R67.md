@@ -1,6 +1,12 @@
 # Pursuit Iron — UI/UX Master Plan (R67 onward)
 
-Updated: 2026-10-13. Build 858 is published through PR #142 at `2e2489a2c2c249f14b9c226230e0b08a1d6d9149`; all four final-head workflows, Pages, four post-merge workflows and 106 deployed asset hashes passed. Build 859 continues the Settings form review. Each slice remains independently testable and reversible.
+Updated: 2026-10-20. Build 858 is published through PR #142 at `2e2489a2c2c249f14b9c226230e0b08a1d6d9149`; all four final-head workflows, Pages, four post-merge workflows and 106 deployed asset hashes passed. Build 859 continues the Settings form review. Each slice remains independently testable and reversible.
+
+## Current design cohesion work
+
+Foundation, Profile hierarchy/style ownership, and Progress/History CSS ownership are merged through PR #209. This pass adds the requested editable share card at the top of Profile, separate from arranging the Profile sections, plus aligned Strength Score insets and shared theme roles for editor controls. The same metric model drives preview and image export. Previously saved section preferences and share selections are preserved.
+
+Validation for this slice covers populated 320/393/834px light/dark Profile layouts, saved name/favorite lifts, preview/export content, section reordering/visibility, equal score alignment and the established compact logger regression. CI remains the release gate. Broader single-owner CSS cleanup is still ongoing; this does not certify every screen or physical Android/TalkBack behavior.
 
 ## Non-negotiable product behavior
 1. Keep the training engine, progression logic, performance history, offline/live workout state and storage trustworthy. A UI release must not secretly rewrite prescriptions.

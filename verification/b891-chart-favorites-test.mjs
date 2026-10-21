@@ -21,7 +21,7 @@ const arranged = [...catalog].sort((a,b)=>{
 assert.deepEqual(arranged,['c','a','b','x']);
 assert.deepEqual(order, ['a','b']);
 
-const b911=css.slice(css.lastIndexOf('/* B911 / UI polish pass 05'));
+const b911=css.slice(css.lastIndexOf('/* B911 / UI polish pass 05'),css.indexOf('/* B912 —'));
 assert.ok(b911.startsWith('/* B911 / UI polish pass 05'),'polish styles are present');
 const chartOwner=css.slice(css.indexOf('/* B891 —'),css.indexOf('/* B892 /'));
 assert.ok(chartOwner.includes('flex:0 0 var(--pi-control-touch);width:var(--pi-control-touch);min-width:var(--pi-control-touch);height:var(--pi-control-touch);min-height:var(--pi-control-touch)'), '48px controls have one geometry owner');

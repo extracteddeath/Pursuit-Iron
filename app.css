@@ -9356,8 +9356,14 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb-plan-pane-label{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 /* Plan modes share one owner: at enlarged text or a narrow pane rail,
    allow two rows of complete labels instead of truncating a chosen mode. */
-@container (max-width:18em){
+@container (max-width:20em){
   #root[data-pi-motion="expressive"] .wpb .wpb-plan-panes>.wpb-plan-pane-tab{flex:1 1 calc(50% - 4px);min-height:48px;}
-  #root[data-pi-motion="expressive"] .wpb .wpb-plan-pane-label{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;text-align:center;}
+  #root[data-pi-motion="expressive"] .wpb .wpb-plan-pane-label{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:normal;word-break:normal;text-align:center;}
+}
+/* If the actual effective type scale makes two columns too narrow,
+   use complete one-line names in a stacked rail rather than broken syllables. */
+@container (max-width:14em){
+  #root[data-pi-motion="expressive"] .wpb .wpb-plan-panes>.wpb-plan-pane-tab{flex:1 1 100%;}
+  #root[data-pi-motion="expressive"] .wpb .wpb-plan-pane-label{white-space:nowrap;}
 }
 .wpb-plan-week-picker{margin-bottom:2px;position:sticky;top:0;z-index:3;background:var(--pi-color-canvas,var(--wpb-theme-bg,transparent));}

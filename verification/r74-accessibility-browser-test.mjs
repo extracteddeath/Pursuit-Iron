@@ -301,7 +301,9 @@ try{
               min:getComputedStyle(next).minHeight,max:getComputedStyle(next).maxHeight,
               transform:getComputedStyle(next).transform,rows:getComputedStyle(next.parentElement).gridTemplateRows,
               overviewRow:getComputedStyle(overview).gridRow}:null;
-            return {overflow:document.documentElement.scrollWidth>innerWidth+2,tabs,plan};
+            const orbit=document.querySelector('.wpb-home .wpb-m3-day-orbit');
+            return {overflow:document.documentElement.scrollWidth>innerWidth+2,tabs,plan,
+              homeOrbitVisible:!!orbit&&getComputedStyle(orbit).display!=='none'};
           });
           if(width===320||width===1280)
             await page.screenshot({path:path.join(root,'verification/r74-'+theme+'-'+width+'-'+route+'-phone.png')});
@@ -309,6 +311,9 @@ try{
           assert.ok(enlarged.tabs.every(t=>t.hit&&t.lines===1&&t.text.x>=t.box.x-1&&t.text.right<=t.box.right+1&&
             t.text.y>=t.box.y-1&&t.text.bottom<=t.box.bottom+1),
             '200% '+route+' navigation labels fit their real controls: '+JSON.stringify({theme,width,enlarged}));
+          if(route==='home'&&width===320)
+            assert.equal(enlarged.homeOrbitVisible,false,
+              '320px Home day orbit must never overlap the workout heading: '+JSON.stringify({theme,width,enlarged}));
           if(route==='plan'&&width>=1060&&height>=700){
             assert.ok(enlarged.plan.nextBottom<=enlarged.plan.overviewTop+1,
               'Enlarged Plan supporting cards stay in separate rows: '+JSON.stringify(enlarged.plan));

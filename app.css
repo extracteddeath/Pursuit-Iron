@@ -1880,9 +1880,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     width:calc(100% - 94px)!important;
   }
 }
-@media(max-width:359px){
-  #root[data-pi-motion="expressive"] .wpb-home .wpb-m3-day-orbit{display:none;}
-}
 #root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero>button:first-child>div:first-child{
   font-size:10.5px!important;
   line-height:1.4!important;
@@ -1902,6 +1899,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   pointer-events:none;
   z-index:2;
   contain:layout style;
+}
+/* This override must follow the orbit's base display:grid declaration. */
+@media(max-width:359px){
+  #root[data-pi-motion="expressive"] .wpb-home .wpb-m3-day-orbit{display:none;}
 }
 #root[data-pi-motion="expressive"] .wpb-home .wpb-m3-day-orbit>svg{
   grid-area:1/1;

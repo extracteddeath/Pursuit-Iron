@@ -5446,6 +5446,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   /* Use the palette's already-paired selection fill and foreground. */
   --pi-color-active:var(--wpb-theme-accent);
   --pi-color-on-active:var(--wpb-theme-on-accent);
+  --pi-ui-primary-fill:var(--pi-color-active);
+  --pi-ui-primary-ink:var(--pi-color-on-active);
   --pi-color-feature:light-dark(var(--pi-m3e-primary-container),color-mix(in srgb,var(--wpb-theme-card) 84%,var(--wpb-theme-accent) 16%));
   --pi-color-on-feature:var(--pi-color-on-control);
   /* One shared geometry and paint vocabulary. Use within existing component
@@ -5706,6 +5708,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   box-shadow:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-open-program{
+  width:100%;margin-top:var(--pi-space-3);
+  padding:var(--pi-space-3) var(--pi-space-4);
+  text-align:center;font-size:var(--pi-type-support);font-weight:var(--pi-weight-action);
   background:var(--pi-color-card)!important;
   background-image:none!important;
   border:1px solid var(--pi-color-divider)!important;
@@ -6045,10 +6050,14 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   color:var(--pi-color-on-control)!important;
   border-radius:12px!important;
 }
-#root[data-pi-motion="expressive"] .wpb .wpb-plan-view .wpb-plan-heading-row>div:last-child{
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-view .wpb-plan-heading-row>.wpb-plan-eyebrow{
   color:var(--pi-r57-on-support)!important;
-  font-size:12px!important;
+  font-size:var(--pi-type-label)!important;
+  font-weight:var(--pi-weight-action);
   letter-spacing:.06em!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-view .wpb-plan-preview-notice{
+  color:var(--pi-color-on-muted);font-size:var(--pi-type-support);line-height:1.5;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-view h1.wpb-plan-title{
   font-size:clamp(27px,6.2vw,28px)!important;
@@ -6161,18 +6170,31 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 /* R62 foundations: spacing and width roles are available to later adaptive
    panes, while only Home/Plan opt into the bounded reading layout here. */
 .wpb{
+  --pi-space-0:0px;
   --pi-space-1:4px;
   --pi-space-2:8px;
   --pi-space-3:12px;
   --pi-space-4:16px;
+  --pi-space-5:20px;
   --pi-space-6:24px;
   --pi-space-8:32px;
-  --pi-type-body:.9375rem;
+  --pi-space-10:40px;
+  --pi-type-caption:.6875rem;
+  --pi-type-label:.75rem;
   --pi-type-support:.8125rem;
+  --pi-type-body:.9375rem;
+  --pi-type-control:1rem;
   --pi-type-section:1rem;
+  --pi-type-heading:1.375rem;
+  --pi-weight-action:700;
   --pi-control-min:48px;
   --pi-primary-min:52px;
+  --pi-control-padding-inline:12px;
   --pi-radius-control:12px;
+  --pi-shadow-card:none;
+  --pi-shadow-overlay:0 12px 32px rgba(0,0,0,.16);
+  --pi-field-label-gap:6px;
+  --pi-card-padding:16px;
   --pi-reading-max:720px;
   --pi-workspace-max:1280px;
   --pi-page-inset:16px;
@@ -6180,17 +6202,50 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 @media(max-width:359px){.wpb{--pi-page-inset:12px}}
 @media(min-width:600px){.wpb{--pi-page-inset:24px}}
 
+/* Cohesion 15 — reusable presentation primitives.
+   Screen components own composition; classes own static surface and control paint. */
+.wpb .wpb-ui-card{
+  box-sizing:border-box;min-width:0;padding:var(--pi-card-padding);
+  border:1px solid var(--pi-color-divider,var(--wpb-theme-border));
+  border-radius:var(--pi-shape-card,20px);
+  background:var(--pi-color-card,var(--wpb-theme-card));
+  color:var(--pi-color-on-control,var(--wpb-theme-text));
+  box-shadow:var(--pi-shadow-card);
+}
+.wpb .wpb-ui-field{
+  display:grid;min-width:0;gap:var(--pi-field-label-gap);
+  font-size:var(--pi-type-support);font-weight:650;
+}
+.wpb .wpb-ui-control{
+  box-sizing:border-box;width:100%;min-width:0;min-height:var(--pi-control-min);
+  padding:var(--pi-space-2) var(--pi-control-padding-inline);
+  border:1px solid var(--pi-color-divider,var(--wpb-theme-border));
+  border-radius:var(--pi-shape-action,14px);
+  background:var(--pi-color-control,var(--wpb-theme-card-high));
+  color:var(--pi-color-on-control,var(--wpb-theme-text));
+  font:inherit;font-size:var(--pi-type-control);
+}
+.wpb .wpb-ui-control:focus-visible{outline:2px solid var(--wpb-focus);outline-offset:2px;}
+.wpb .wpb-ui-control:disabled{opacity:.55;cursor:not-allowed;}
+.wpb .wpb-ui-row{display:flex;align-items:center;flex-wrap:wrap;gap:var(--pi-space-2);}
+.wpb .wpb-ui-stack{display:grid;gap:var(--pi-space-2);}
+@media(forced-colors:active){
+  .wpb .wpb-ui-card,.wpb .wpb-ui-control{border-color:CanvasText;}
+  .wpb .wpb-ui-control:focus-visible{outline-color:Highlight;}
+}
+
 /* Cohesion 06 — Profile and chart editors share the existing UiAction owner.
    Layout stays with each screen. This variant needs no !important overrides;
    the global spring, keyboard focus and forced-colors owners remain shared. */
 #root .wpb .wpb-ui-action[data-action="tonal"]{
   box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;
-  gap:7px;min-width:var(--pi-control-touch,48px);min-height:var(--pi-control-touch,48px);
-  padding:10px 12px;border:1px solid var(--pi-color-divider,var(--wpb-theme-border));
+  gap:var(--pi-space-2);min-width:var(--pi-control-min);min-height:var(--pi-control-min);
+  padding:var(--pi-space-2) var(--pi-control-padding-inline);
+  border:1px solid var(--pi-color-divider,var(--wpb-theme-border));
   border-radius:var(--pi-shape-action,14px);background:var(--pi-color-control,var(--wpb-theme-card-high));
   color:var(--pi-color-on-control,var(--wpb-theme-text));font:inherit;
-  font-size:.8125rem;font-weight:700;line-height:1.4;cursor:pointer;touch-action:manipulation;
-  box-shadow:none;
+  font-size:var(--pi-type-support);font-weight:var(--pi-weight-action);line-height:1.4;
+  cursor:pointer;touch-action:manipulation;box-shadow:var(--pi-shadow-card);
   transition:background-color var(--pi-motion-paint,160ms) var(--pi-ease),
     border-color var(--pi-motion-paint,160ms) var(--pi-ease),color var(--pi-motion-paint,160ms) var(--pi-ease);
 }
@@ -6234,6 +6289,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb .wpb-ui-header{display:flex;align-items:center;min-height:var(--pi-control-min,48px);min-width:0}
 .wpb .wpb-ui-status{font-size:var(--pi-type-support,.8125rem);line-height:1.5;overflow-wrap:anywhere}
 .wpb .wpb-ui-section{min-width:0}
+.wpb .wpb-ui-action:disabled,.wpb .wpb-ui-choice:disabled{opacity:.55;cursor:not-allowed;}
 #root[data-pi-motion="expressive"] .wpb .wpb-ui-action.wpb-ui-action[data-action]:where(:not([data-action="tonal"])),
 #root[data-pi-motion="expressive"] .wpb .wpb-ui-choice.wpb-ui-choice{
   box-sizing:border-box!important;
@@ -8628,12 +8684,12 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 @media(forced-colors:active){.wpb-profile-toolbar button,.wpb-profile-customize button{forced-color-adjust:auto;border:1px solid ButtonText}.wpb-profile-share-toggles button[aria-pressed="true"],.wpb-profile-visibility[aria-pressed="true"]{outline:2px solid Highlight;outline-offset:-3px}}
 
 /* B893 · Custom-cycle composer, responsive and theme-aware. */
-.wpb-custom-cycle{margin:12px 0;padding:15px;border-radius:17px;background:var(--pi-surface-container,rgba(128,128,128,.08));border:1px solid var(--pi-outline,rgba(128,128,128,.22));color:inherit}
+.wpb-custom-cycle{margin:var(--pi-space-3) 0;color:inherit}
 .wpb-custom-cycle-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap}
 .wpb-custom-cycle-head strong{font-size:15px;font-weight:760}
 .wpb-custom-cycle-head>span{font-size:12px;font-weight:700;opacity:.76}
 .wpb-custom-cycle>p{font-size:12.5px;line-height:1.5;opacity:.76;margin:6px 0 14px}
-.wpb-custom-cycle-list{display:grid;gap:9px}
+.wpb-custom-cycle-list{min-width:0}
 .wpb-custom-cycle-block{min-width:0;padding:12px;border-radius:13px;background:var(--pi-surface-container-low,rgba(128,128,128,.08));border:1px solid var(--pi-outline,rgba(128,128,128,.2))}
 .wpb-custom-cycle-block-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px}
 .wpb-custom-cycle-block-head strong{font-size:13px;font-weight:760}
@@ -8641,9 +8697,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb-custom-cycle-block-head button{display:grid;place-items:center;min-width:44px;min-height:44px;border:0;border-radius:10px;background:var(--pi-surface-container-high,rgba(128,128,128,.1));color:inherit;cursor:pointer}
 .wpb-custom-cycle-block-head button:disabled{opacity:.28;cursor:default}
 .wpb-custom-cycle-fields{display:grid;grid-template-columns:minmax(0,2fr) minmax(84px,1fr);gap:10px}
-.wpb-custom-cycle-fields label{display:grid;min-width:0;gap:6px}
+.wpb-custom-cycle-fields label{min-width:0}
 .wpb-custom-cycle-fields label span{font-size:11px;font-weight:700;opacity:.78}
-.wpb-custom-cycle-fields select,.wpb-custom-cycle-fields input{min-width:0;width:100%;min-height:46px;padding:8px 10px;border-radius:10px;border:1px solid var(--pi-outline,rgba(128,128,128,.35));background:var(--pi-surface-container,transparent);color:inherit;font:inherit;font-size:14px}
+/* Cycle form fields use the shared .wpb-ui-control. */
 .wpb-custom-cycle-fields input[aria-invalid="true"]{border-color:var(--pi-error,#c65b60)}
 .wpb-custom-cycle-add{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:46px;margin-top:11px;border-radius:11px;border:1px dashed var(--pi-outline,rgba(128,128,128,.5));background:transparent;color:inherit;font-size:13px;font-weight:750;cursor:pointer}
 .wpb-custom-cycle-add:disabled{opacity:.45}
@@ -9207,12 +9263,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 
 /* Cohesion 05 — share-card components use the same semantic surface, type,
    shape and control roles as Profile, Progress and Settings. No inline layout. */
-.wpb-profile-share-card{
-  min-width:0;margin:0 0 12px;padding:20px;
-  border:1px solid var(--pi-color-divider,var(--wpb-theme-border));
-  border-radius:var(--pi-shape-feature,24px);
-  background:var(--pi-color-card,var(--wpb-theme-card));color:var(--wpb-theme-text);
-}
+.wpb-profile-share-card{margin:0 0 var(--pi-space-3);}
 .wpb-profile-card-brand{display:flex;align-items:center;gap:8px;font-size:.6875rem;font-weight:800;letter-spacing:.1em;color:var(--wpb-theme-accent-ink)}
 .wpb-profile-share-card h2{margin:16px 0 5px;font-size:clamp(1.5rem,5vw,2rem);line-height:1.16;letter-spacing:-.035em;overflow-wrap:anywhere}
 .wpb-profile-card-caption{margin:0;color:var(--wpb-theme-muted);font-size:.8125rem;line-height:1.5}
@@ -9223,9 +9274,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb-profile-card-metrics dd{margin:5px 0;font-size:1rem;font-weight:750;line-height:1.4;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
 .wpb-profile-card-metrics dd>span{display:block}
 .wpb-profile-card-metrics p{margin:0;font-size:.6875rem;line-height:1.5;color:var(--wpb-theme-muted)}
-.wpb-profile-card-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-.wpb-profile-card-field{display:grid;gap:7px;margin:16px 0 0;min-width:0;font-size:.8125rem;font-weight:650}
-.wpb-profile-card-field :is(input,select){box-sizing:border-box;width:100%;min-width:0;min-height:48px;padding:10px 12px;font:inherit;font-size:1rem;border:1px solid var(--pi-color-divider,var(--wpb-theme-border));border-radius:var(--pi-shape-action,14px);background:var(--pi-color-control,var(--wpb-theme-card-high));color:var(--wpb-theme-text)}
+.wpb-profile-card-actions{margin-top:var(--pi-space-2)}
+.wpb-profile-card-field{margin:var(--pi-space-4) 0 0}
+/* Share-card fields use the shared .wpb-ui-control. */
 .wpb-profile-card-favorites>p{margin:16px 0 0;font-size:.8125rem;line-height:1.5;color:var(--wpb-theme-muted)}
 @media(max-width:360px){.wpb-profile-share-card{padding:16px}}
 @media(forced-colors:active){.wpb-profile-share-card,.wpb-profile-card-actions>button{border:1px solid CanvasText}.wpb-profile-card-field :is(input,select){border-color:CanvasText}}

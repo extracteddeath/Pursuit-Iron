@@ -8,7 +8,7 @@ const app = fs.readFileSync('modules/App.js', 'utf8');
 const MAX_IMPORTANT = 2923;
 const MAX_APP_IMPORTANT = 1417; // Prevent embedded StyleTag patches bypassing the CSS budget.
 const MAX_REPEAT_IMPORTANT = 32;
-const MAX_INLINE_STYLE_OBJECTS = 3331; // Cohesion 14 Cycle presentation ownership
+const MAX_INLINE_STYLE_OBJECTS = 3324; // Cohesion 15: static Plan and shared-action styles removed
 const allowedDebtKeys = new Set([
   "\t#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step\tborder-radius",
   "\t#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step\theight",
@@ -97,6 +97,32 @@ for (const token of ['--pi-color-card','--pi-color-control','--pi-color-feature'
     '--pi-shape-card','--pi-shape-action','--pi-shape-feature'])
     assert.ok(css.includes(token), 'Missing semantic theme role: ' + token);
 assert.ok(app.includes('function BackupRestorePanel('), 'Transfers need one canonical panel.');
+// Canonical role vocabulary and primitive owners must survive future polish passes.
+for(const token of [
+  '--pi-color-active','--pi-color-on-active','--pi-ui-primary-fill','--pi-ui-primary-ink',
+  '--pi-space-1','--pi-space-2','--pi-space-3','--pi-space-4','--pi-space-6',
+  '--pi-type-control','--pi-type-support','--pi-shape-card','--pi-shape-action',
+  '--pi-shadow-card','--pi-card-padding'
+]) assert.ok(css.includes(token+':'), 'Missing canonical design token: '+token);
+for(const primitive of [
+  '.wpb .wpb-ui-card{','.wpb .wpb-ui-field{','.wpb .wpb-ui-control{',
+  '.wpb .wpb-ui-stack{','.wpb .wpb-ui-row{'
+]) assert.ok(css.includes(primitive), 'Missing shared primitive: '+primitive);
+const action=app.slice(app.indexOf('function UiAction('),app.indexOf('function UiChoice('));
+assert.ok(!action.includes('style: {') && !action.includes('C.accent'),
+  'Shared UiAction may not inject presentation overrides at render time');
+for(const str of ['wpb-ui-card wpb-profile-share-card','wpb-ui-card wpb-custom-cycle',
+  'wpb-ui-control','wpb-ui-field wpb-profile-card-field','wpb-ui-stack wpb-custom-cycle-list',
+  'wpb-ui-row wpb-profile-card-actions'])
+  assert.ok(app.includes(str),'Migrated screen must continue to use shared primitive: '+str);
+const plan=app.slice(app.indexOf('function PlanView('),app.indexOf('function sessionLoadText('));
+assert.ok(plan.includes('className: "wpb-plan-eyebrow"'),'Plan eyebrow must be class-owned');
+assert.ok(!plan.includes('style: { fontSize: 26, fontWeight: 740, color: C.text'),
+  'Plan title static typography must not return to inline styles');
+assert.ok(!plan.includes('className: "wpb-plan-preview-notice", style:'),
+  'Plan preview typography must not return to inline styles');
+// Existing runtime computed progress widths, animations and positions are permitted.
+// Their removal requires an independently proved behavior-preserving migration.
 console.log('PASS UI ownership: important ' + report.important + '/' + MAX_IMPORTANT +
     ', embedded ' + report.appImportant + '/' + MAX_APP_IMPORTANT + ', repeated ' + report.duplicates + '/' + MAX_REPEAT_IMPORTANT + ' (' + report.legacyOwners +
     ' historical owner collisions), inline styles ' + report.inline + '/' + MAX_INLINE_STYLE_OBJECTS);

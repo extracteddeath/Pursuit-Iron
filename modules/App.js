@@ -6208,18 +6208,18 @@ function CustomCycleComposer({ blocks, onChange, minBlocks = 2, maxBlocks = 8, e
     };
     const total = existingWeeks + blocks.reduce((n, b) => n + (Number(b.weeks) || 0), 0);
     const valid = blocks.length >= minBlocks && blocks.length <= maxBlocks && blocks.every(b => Number.isSafeInteger(Number(b.weeks)) && String(b.weeks).trim() !== "" && Number(b.weeks) >= 1 && Number(b.weeks) <= 24);
-    return (_jsxs("section", { className: "wpb-custom-cycle", "aria-label": existingWeeks ? "Future custom training blocks" : "Custom training blocks", children: [
+    return (_jsxs("section", { className: "wpb-ui-card wpb-custom-cycle", "aria-label": existingWeeks ? "Future custom training blocks" : "Custom training blocks", children: [
         _jsxs("div", { className: "wpb-custom-cycle-head", children: [_jsx("strong", { children: existingWeeks ? "Future blocks after your current program" : "Your block sequence" }), _jsxs("span", { className: "mono", children: [total, " weeks · ", blocks.length + (existingWeeks ? 1 : 0), " blocks"] })] }),
         _jsx("p", { children: "Choose the phase and weeks for every block. Use the arrows to set any order. Every block receives its own workouts, sets, reps and effort targets." }),
-        _jsx("div", { className: "wpb-custom-cycle-list", children: blocks.map((b,i) => (_jsxs("div", { className: "wpb-custom-cycle-block", children: [
+        _jsx("div", { className: "wpb-ui-stack wpb-custom-cycle-list", children: blocks.map((b,i) => (_jsxs("div", { className: "wpb-custom-cycle-block", children: [
             _jsxs("div", { className: "wpb-custom-cycle-block-head", children: [_jsxs("strong", { children: ["Block ",i+1+(existingWeeks ? 1 : 0)] }), _jsxs("div", { children: [
                 _jsx("button", { type: "button", "aria-label": `Move block ${i+1+(existingWeeks ? 1:0)} earlier`, disabled: i === 0, onClick: () => move(i,-1), children: _jsx(ChevronUp,{size:17}) }),
                 _jsx("button", { type: "button", "aria-label": `Move block ${i+1+(existingWeeks ? 1:0)} later`, disabled: i === blocks.length-1, onClick: () => move(i,1), children: _jsx(ChevronDown,{size:17}) }),
                 _jsx("button", { type: "button", "aria-label": `Remove block ${i+1+(existingWeeks ? 1:0)}`, disabled: blocks.length <= minBlocks, onClick: () => onChange(blocks.filter((_,n)=>n!==i)), children: _jsx(X,{size:17}) })
             ] })] }),
             _jsxs("div", { className: "wpb-custom-cycle-fields", children: [
-                _jsxs("label", { children: [_jsx("span",{children:"Training phase"}), _jsx("select", { "aria-label": `Block ${i+1+(existingWeeks ? 1:0)} training phase`, value: b.phase, onChange: e => patch(i, { phase: e.target.value }), children: CUSTOM_CYCLE_PHASES.map(o=>_jsx("option",{value:o.phase,children:o.label},o.phase)) })] }),
-                _jsxs("label", { children: [_jsx("span",{children:"Weeks"}), _jsx("input", { "aria-label": `Block ${i+1+(existingWeeks ? 1:0)} weeks`, type: "number", min: 1,max:24,step:1, inputMode:"numeric", value: b.weeks, onChange: e => patch(i,{weeks:e.target.value}), "aria-invalid": !(String(b.weeks).trim() !== "" && Number.isSafeInteger(Number(b.weeks)) && Number(b.weeks)>=1 && Number(b.weeks)<=24) })] })
+                _jsxs("label", { className:"wpb-ui-field", children: [_jsx("span",{children:"Training phase"}), _jsx("select", { className: "wpb-ui-control", "aria-label": `Block ${i+1+(existingWeeks ? 1:0)} training phase`, value: b.phase, onChange: e => patch(i, { phase: e.target.value }), children: CUSTOM_CYCLE_PHASES.map(o=>_jsx("option",{value:o.phase,children:o.label},o.phase)) })] }),
+                _jsxs("label", { className:"wpb-ui-field", children: [_jsx("span",{children:"Weeks"}), _jsx("input", { className: "wpb-ui-control", "aria-label": `Block ${i+1+(existingWeeks ? 1:0)} weeks`, type: "number", min: 1,max:24,step:1, inputMode:"numeric", value: b.weeks, onChange: e => patch(i,{weeks:e.target.value}), "aria-invalid": !(String(b.weeks).trim() !== "" && Number.isSafeInteger(Number(b.weeks)) && Number(b.weeks)>=1 && Number(b.weeks)<=24) })] })
             ] })
         ] },i))) }),
         _jsx("button", { type:"button", className:"wpb-custom-cycle-add pressable", disabled: blocks.length >= maxBlocks, onClick: () => onChange([...blocks,{phase:blocks[blocks.length-1]?.phase || "hypertrophy_accumulation",weeks:4}]), children: [_jsx(Plus,{size:16})," Add block"] }),
@@ -6606,9 +6606,9 @@ function phaseTone(label, index, accent) {
 function UiHeader({ className = "", ...props }) {
     return _jsx("div", { ...props, className: `wpb-ui-header ${className}` });
 }
-function UiAction({ variant = "secondary", className = "", style = {}, ...props }) {
-    return _jsx("button", { type: "button", ...props, className: `pressable wpb-ui-action ${className}`, "data-action": variant,
-        style: { ...style, "--pi-ui-primary-fill": C.accent, "--pi-ui-primary-ink": C.accentText } });
+function UiAction({ variant = "secondary", className = "", ...props }) {
+    // Components own static visual properties; only runtime-measured styles are forwarded.
+    return _jsx("button", { type: "button", ...props, className: `pressable wpb-ui-action ${className}`, "data-action": variant });
 }
 function UiChoice({ selected, kind = "chip", className = "", label, caption, children, ...props }) {
     return _jsx("button", { type: "button", ...props, className: `pressable wpb-ui-choice ${className}`, "data-choice-kind": kind, "aria-pressed": !!selected,
@@ -6697,7 +6697,7 @@ function PlanView({ program, plan, blockNavigation = null, readOnly = false, nav
         _jsx("div", { style: { fontSize: 12, color: C.muted }, children: label }),
         _jsx("div", { className: "mono", style: { fontSize: 18, fontWeight: 650, color: accent ? C.accentInk : C.text, marginTop: 3, lineHeight: 1.2 }, children: value })
     ] });
-    return (_jsxs("div", { ref: scrollRoot, className: "wpb-scroll wpb-plan-view", style: { height: "100%", width: "100%", maxWidth: 720, margin: "0 auto", overflowY: "auto", padding: "0 16px calc(env(safe-area-inset-bottom) + 96px)" }, children: [_jsxs(UiHeader, { className: "wpb-plan-heading-row", style: { display: "flex", alignItems: "center", gap: 6, padding: "10px 0 0" }, children: [_jsx(UiAction, { variant: "icon", "aria-label": "Back", onClick: onBack, className: "hit", style: { display: "flex" }, children: _jsx(ChevronLeft, { size: 22 }) }), _jsx("div", { style: { fontSize: 11, fontWeight: 700, letterSpacing: 1, color: C.faint }, children: "PLAN" })] }), _jsx("h1", { className: "wpb-plan-title", style: { fontSize: 26, fontWeight: 740, color: C.text, lineHeight: 1.2, letterSpacing: -.5, overflowWrap: "anywhere", margin: "8px 0 8px" }, children: program.name }), blockNavigation, readOnly && _jsx("p", { className: "wpb-plan-preview-notice", style: { color: C.muted, fontSize: 13, lineHeight: 1.5 }, children: "Viewing a block preview. Your current training block is unchanged." }), upNext, _jsx("div", { className: "wpb-plan-panes", children: [["schedule", "Schedule", Calendar], ["volume", "Volume", BarChart3], ["progression", "Progression", TrendingUp], ["blueprint", "Blueprint", Layers]].map(([id, label, Icon]) => {
+    return (_jsxs("div", { ref: scrollRoot, className: "wpb-scroll wpb-plan-view", style: { height: "100%", width: "100%", maxWidth: 720, margin: "0 auto", overflowY: "auto", padding: "0 16px calc(env(safe-area-inset-bottom) + 96px)" }, children: [_jsxs(UiHeader, { className: "wpb-plan-heading-row", children: [_jsx(UiAction, { variant: "icon", "aria-label": "Back", onClick: onBack, className: "hit", children: _jsx(ChevronLeft, { size: 22 }) }), _jsx("div", { className: "wpb-plan-eyebrow", children: "PLAN" })] }), _jsx("h1", { className: "wpb-plan-title", children: program.name }), blockNavigation, readOnly && _jsx("p", { className: "wpb-plan-preview-notice", children: "Viewing a block preview. Your current training block is unchanged." }), upNext, _jsx("div", { className: "wpb-plan-panes", children: [["schedule", "Schedule", Calendar], ["volume", "Volume", BarChart3], ["progression", "Progression", TrendingUp], ["blueprint", "Blueprint", Layers]].map(([id, label, Icon]) => {
                     const on = pane === id;
                     return (_jsxs(UiChoice, { selected: on, kind: "tab", onClick: () => setPane(id), "aria-label": label, "data-plan-pane": id, className: "wpb-plan-pane-tab", children: [_jsx(Icon, { size: 15 }), _jsx("span", { className: "wpb-plan-pane-label", children: label })] }, id));
                 }) }), pane === "schedule" && plan.totalWeeks > 1 && (_jsx("div", { className: "wpb-hscroll wpb-choice-rail wpb-plan-week-picker", "data-plan-week-picker": true, children: plan.weeks.map(w => {
@@ -6736,7 +6736,7 @@ function PlanView({ program, plan, blockNavigation = null, readOnly = false, nav
                 const pw = plannedWeek(program, plan.currentWeek);
                 const days = program.days.length;
                 return (_jsxs(_Fragment, { children: [_jsxs("div", { className: "wpb-plan-glance", style: { display: "flex", gap: 16, marginBottom: 10, paddingBottom: 6, borderBottom: `1px solid ${C.borderSoft}` }, children: [tile(readOnly ? "Viewing week" : "Current week", `${plan.currentWeek} / ${plan.totalWeeks}`, true), tile("Sessions", `${days}/wk`), tile("Week sets", `${pw.sets}`)] }), _jsxs("div", { className: "wpb-plan-completion", style: { marginBottom: 12 }, children: [_jsxs("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 13, color: C.muted, marginBottom: 4 }, children: [_jsxs("span", { children: [plan.sessionsDone, " of ", plan.sessionsTotal, " sessions completed"] }), _jsxs("span", { className: "mono", style: { color: C.accentInk, fontWeight: 700 }, children: [plan.percentDone, "%"] })] }), _jsx("div", { style: { height: 4, borderRadius: 999, background: C.bg2, overflow: "hidden" }, children: _jsx("div", { style: { height: "100%", width: `${Math.max(0, Math.min(100, plan.percentDone))}%`, background: C.accent, borderRadius: 999, transition: "width .3s" } }) })] })] }));
-            })()] }), _jsx(UiAction, { onClick: () => onOpenProgram(openWeek || plan.currentWeek), className: "pressable wpb-plan-open-program", style: { width: "100%", marginTop: 12, padding: "12px 14px", cursor: "pointer", color: C.text, fontSize: 13, fontWeight: 600 }, children: readOnly ? "View block exercises" : "Open full program" })] }));
+            })()] }), _jsx(UiAction, { onClick: () => onOpenProgram(openWeek || plan.currentWeek), className: "pressable wpb-plan-open-program", children: readOnly ? "View block exercises" : "Open full program" })] }));
 }
 function sessionLoadText(set, unit) {
     const w = set?.weight === "" || set?.weight == null ? null : Number(set.weight), reps = Number(set?.reps);
@@ -18224,7 +18224,7 @@ function profileCardRows({ history, unit, score, level, milestones, prefs }) {
     return rows;
 }
 function ProfileShareCard({ prefs, rows, onEdit, onShare, expanded }) {
-    return _jsxs("section", { className: "wpb-profile-share-card", "aria-label": "Your share card", children: [
+    return _jsxs("section", { className: "wpb-ui-card wpb-profile-share-card", "aria-label": "Your share card", children: [
         _jsxs("div", { className: "wpb-profile-card-brand", children: [_jsx(Dumbbell, { size: 17, "aria-hidden": true }), "PURSUIT IRON"] }),
         _jsx("h2", { children: prefs.cardName.trim() || "My training" }),
         _jsx("p", { className: "wpb-profile-card-caption", children: "Built through every workout." }),
@@ -18233,7 +18233,7 @@ function ProfileShareCard({ prefs, rows, onEdit, onShare, expanded }) {
             _jsx("dd", { children: row.lines?.length ? row.lines.map((line,i) => _jsx("span", { children: line }, i)) : row.value }),
             _jsx("p", { children: row.detail })
         ] }, row.id)) }),
-        _jsxs("div", { className: "wpb-profile-card-actions", children: [
+        _jsxs("div", { className: "wpb-ui-row wpb-profile-card-actions", children: [
             _jsxs(UiAction, { variant: "tonal", type: "button", "aria-expanded": expanded, "aria-controls": "profile-card-editor", onClick: onEdit, children: [_jsx(Pencil, { size: 15 }), "Edit card"] }),
             _jsxs(UiAction, { variant: "tonal", type: "button", className: "wpb-profile-share-action", "data-emphasis": "accent", onClick: onShare, children: [_jsx(Share2, { size: 15 }), "Share profile"] })
         ] })
@@ -18253,13 +18253,13 @@ function ProfileCardCustomization({ prefs, onChange, onClose }) {
     };
     return _jsxs("section", { id: "profile-card-editor", className: "wpb-profile-customize wpb-profile-card-editor", "aria-label": "Edit share card", children: [
         _jsxs("div", { className: "wpb-profile-customize-header", children: [_jsxs("div", { children: [_jsx("strong", { children: "Your share card" }), _jsx("p", { children: "Choose what you want to show. Changes save automatically." })] }), _jsx(UiAction, { variant: "tonal", type: "button", "data-icon-only": true, "aria-label": "Close share card editor", onClick: onClose, children: _jsx(X, { size: 18 }) })] }),
-        _jsxs("label", { className: "wpb-profile-card-field", children: ["Name on card", _jsx("input", { type: "text", maxLength: 60, value: prefs.cardName, placeholder: "My training", onChange: e => onChange({ ...prefs, cardName: e.target.value }) })] }),
+        _jsxs("label", { className: "wpb-ui-field wpb-profile-card-field", children: ["Name on card", _jsx("input", { className: "wpb-ui-control", type: "text", maxLength: 60, value: prefs.cardName, placeholder: "My training", onChange: e => onChange({ ...prefs, cardName: e.target.value }) })] }),
         _jsx("div", { className: "wpb-profile-customize-label", children: "Show on card" }),
         _jsx("div", { className: "wpb-profile-share-toggles", children: PROFILE_SHARE_CHOICES.map(c => {
             const selected = prefs.share.includes(c.id);
             return _jsxs(UiAction, { variant: "tonal", type: "button", "data-align": "start", "aria-pressed": selected, disabled: selected && prefs.share.length === 1, onClick: () => toggleShare(c.id), children: [_jsx("span", { "aria-hidden": true, children: selected ? "✓" : "+" }), c.label] }, c.id);
         }) }),
-        prefs.share.includes("favorites") && _jsxs("div", { className: "wpb-profile-card-favorites", children: [_jsx("p", { children: "Pick up to three lifts. Logged records appear with them." }), ...[0,1,2].map(index => _jsxs("label", { className: "wpb-profile-card-field", children: [`Favorite lift ${index + 1}`, _jsxs("select", { value: prefs.favorites[index] || "", onChange: e => favorite(index, e.target.value), children: [_jsx("option", { value: "", children: "Choose a lift" }), ...lifts.filter(lift => !prefs.favorites.includes(lift.id) || prefs.favorites[index] === lift.id).map(lift => _jsx("option", { value: lift.id, children: lift.name }, lift.id))] })] }, index))] }),
+        prefs.share.includes("favorites") && _jsxs("div", { className: "wpb-profile-card-favorites", children: [_jsx("p", { children: "Pick up to three lifts. Logged records appear with them." }), ...[0,1,2].map(index => _jsxs("label", { className: "wpb-ui-field wpb-profile-card-field", children: [`Favorite lift ${index + 1}`, _jsxs("select", { className: "wpb-ui-control", value: prefs.favorites[index] || "", onChange: e => favorite(index, e.target.value), children: [_jsx("option", { value: "", children: "Choose a lift" }), ...lifts.filter(lift => !prefs.favorites.includes(lift.id) || prefs.favorites[index] === lift.id).map(lift => _jsx("option", { value: lift.id, children: lift.name }, lift.id))] })] }, index))] }),
         _jsx(UiAction, { variant: "tonal", type: "button", className: "wpb-profile-reset", onClick: onClose, children: "Done" })
     ] });
 }

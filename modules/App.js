@@ -2646,6 +2646,20 @@ function selectNumericInput(event) {
     if (!input.readOnly && !input.disabled)
         input.select();
 }
+// On touch browsers, the native click action may move the caret after onClick.
+// Focus-mode fields should retain select-all once the browser finishes the tap.
+function selectFocusNumericInput(event) {
+    selectNumericInput(event);
+    const input = event.currentTarget;
+    const originalValue = input.value;
+    requestAnimationFrame(() => {
+        // Never overwrite the user's first keystroke with a late select-all.
+        if (document.activeElement === input && !input.readOnly && !input.disabled &&
+            input.value === originalValue &&
+            (input.selectionStart !== 0 || input.selectionEnd !== input.value.length))
+            input.select();
+    });
+}
 // Keep the logger's existing IME action hints truthful without changing set values.
 // Weight's Next moves to reps in the SAME set; reps' Done dismisses the keyboard.
 // Composition/readonly inputs are left entirely to the browser.
@@ -5770,17 +5784,17 @@ function NoRackToggle({ equipment = [], onChange }) {
     return (_jsxs("button", { type: "button", "data-testid": "no-rack-toggle", "aria-pressed": on, onClick: () => onChange(on ? equipment.filter(x => x !== "no-rack") : [...equipment, "no-rack"]), className: "pressable", style: { width: "100%", marginTop: 12, display: "flex", alignItems: "center", gap: 12, padding: "13px 14px", borderRadius: 12, border: `1px solid ${on ? C.accent : C.border}`, background: on ? C.accentDim : C.card, color: C.text, cursor: "pointer", textAlign: "left" }, children: [_jsx("div", { style: { width: 22, height: 22, borderRadius: 8, border: `2px solid ${on ? C.accent : C.border}`, background: on ? C.accent : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: on && _jsx(Check, { size: 14, color: C.accentInk }) }), _jsxs("div", { style: { flex: 1, textAlign: "left" }, children: [_jsx("div", { style: { fontSize: 15, fontWeight: 600 }, children: "No squat rack" }), _jsx("div", { style: { fontSize: 13, color: C.muted }, children: "Skips lifts taken from a rack or safeties \u2014 squats, bench and standing presses. Barbell work from the floor stays." })] })] }));
 }
 function OptionCard({ icon: Icon, label, sub, selected, onClick, kind = "radio", disabled = false, note = null }) {
-    return (_jsxs("button", { className: "opt pressable wpb-wizard-option", "aria-pressed": !!selected, "aria-disabled": disabled || undefined, disabled: disabled, onClick: disabled ? undefined : onClick, style: {
-            opacity: disabled ? 0.55 : 1,
-            width: "100%", display: "flex", alignItems: "center", gap: 12, textAlign: "left",
-            background: selected ? C.cardHi : C.card,
-            border: `1px solid ${selected ? C.accent : C.borderSoft}`,
-            borderRadius: 12, padding: "14px 14px", cursor: disabled ? "default" : "pointer", color: C.text
-        }, children: [Icon && (_jsx("div", { className: "wpb-wizard-option-icon", style: {
-                    width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-                    background: selected ? C.accentDim : C.bg2,
-                    display: "flex", alignItems: "center", justifyContent: "center"
-                }, children: _jsx(Icon, { size: 19, color: selected ? C.accentInk : C.muted, strokeWidth: 2.2 }) })), _jsxs("div", { className: "wpb-wizard-option-copy", style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { className: "wpb-wizard-option-label", style: { fontSize: 16, fontWeight: 650 }, children: label }), sub && _jsx("div", { className: "wpb-wizard-option-sub", style: { fontSize: 13, color: C.muted, marginTop: 2 }, children: sub }), note && _jsx("div", { className: "wpb-wizard-option-note", style: { fontSize: 12, color: C.text, marginTop: 6, fontWeight: 600 }, children: note })] }), !disabled && (kind === "radio" ? _jsx(Radio, { on: selected }) : _jsx(CheckBox, { on: selected }))] }));
+    return (_jsxs("button", { className: "opt pressable wpb-wizard-option", "aria-pressed": !!selected,
+        "aria-disabled": disabled || undefined, disabled, onClick: disabled ? undefined : onClick,
+        children: [Icon && _jsx("div", { className: "wpb-wizard-option-icon",
+            children: _jsx(Icon, { className: "wpb-wizard-option-glyph", size: 19, strokeWidth: 2.2 }) }),
+            _jsxs("div", { className: "wpb-wizard-option-copy", children: [
+                _jsx("div", { className: "wpb-wizard-option-label", children: label }),
+                sub && _jsx("div", { className: "wpb-wizard-option-sub", children: sub }),
+                note && _jsx("div", { className: "wpb-wizard-option-note", children: note })
+            ] }),
+            !disabled && (kind === "radio" ? _jsx(Radio, { on: selected }) : _jsx(CheckBox, { on: selected }))
+        ] }));
 }
 /* ============================== WIZARD ============================== */
 const STEP_KEYS = ["units", "name", "experience", "goal", "approach", "days", "split", "session", "equipment", "constraints", "focus", "reduce", "progression", "length", "deload"];
@@ -6191,9 +6205,12 @@ function Wizard({ buildTask = null, onCancelBuild, initialEquipment, initialExpe
                         }, children: [cycleMode ? "Build with these settings" : "Generate with these settings", " \u00B7 ", STEPS.length - 1 - step, " optional ", STEPS.length - 1 - step === 1 ? "step" : "steps", " left"] }))] })] }));
 }
 function Heading({ children, sub }) {
-    return (_jsxs("div", { className: "wpb-wizard-heading", style: { marginBottom: 20 }, children: [_jsx("h1", { id: "wpb-wizard-question", className: "wpb-wizard-heading-title", style: { fontSize: 28, lineHeight: 1.12, fontWeight: 700, margin: 0, letterSpacing: -0.5 }, children: children }), sub && _jsx("p", { className: "wpb-wizard-heading-sub", style: { color: C.muted, marginTop: 8, fontSize: 15, lineHeight: 1.45 }, children: sub })] }));
+    return (_jsxs("div", { className: "wpb-wizard-heading", children: [
+        _jsx("h1", { id: "wpb-wizard-question", className: "wpb-wizard-heading-title", children }),
+        sub && _jsx("p", { className: "wpb-wizard-heading-sub", children: sub })
+    ] }));
 }
-const Col = ({ children }) => _jsx("div", { className: "wpb-wizard-options", style: { display: "flex", flexDirection: "column", gap: 12 }, children: children });
+const Col = ({ children }) => _jsx("div", { className: "wpb-wizard-options", children });
 
 /* B893: user-ordered custom cycle builder; every row becomes a real engine phase. */
 function CustomCycleComposer({ blocks, onChange, minBlocks = 2, maxBlocks = 8, existingWeeks = 0 }) {
@@ -6231,9 +6248,9 @@ function CustomCycleComposer({ blocks, onChange, minBlocks = 2, maxBlocks = 8, e
 function StepBody({ stepKey, config, set, buildable = {}, autoLength = null, compatibleSplits, focusTotal, cycleTemplate, setCycleTemplate, cycleChoices, customCycleBlocks, setCustomCycleBlocks, cycleMode, setCycleMode, cycleAdapt, setCycleAdapt, nextRecommendedSplit }) {
     if (stepKey === "units") {
         const opts = [["kg", "Kilograms", "kg"], ["lb", "Pounds", "lb"]];
-        return (_jsxs(_Fragment, { children: [_jsx(Heading, { sub: "Used everywhere \u2014 plates, targets, history. You can change it later in Settings.", children: "Which units do you train in?" }), _jsx("div", { className: "wpb-wizard-unit-choices", style: { display: "flex", gap: 12 }, children: opts.map(([v, label, suf]) => {
+        return (_jsxs(_Fragment, { children: [_jsx(Heading, { sub: "Used everywhere \u2014 plates, targets, history. You can change it later in Settings.", children: "Which units do you train in?" }), _jsx("div", { className: "wpb-wizard-unit-choices", children: opts.map(([v, label, suf]) => {
                         const on = config.unit === v;
-                        return (_jsxs("button", { "aria-pressed": on, onClick: () => set({ unit: v }), className: "pressable", style: { flex: 1, padding: "26px 12px", borderRadius: 16, border: `2px solid ${on ? C.accent : C.border}`, background: on ? C.accentDim : C.card, color: C.text, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }, children: [_jsx("span", { className: "mono", style: { fontSize: 28, fontWeight: 700, color: on ? C.accentInk : C.muted }, children: suf }), _jsx("span", { style: { fontSize: 15, fontWeight: 600 }, children: label })] }, v));
+                        return (_jsxs("button", { "aria-pressed": on, onClick: () => set({ unit: v }), className: "pressable wpb-wizard-unit-option", children: [_jsx("span", { className: "mono wpb-wizard-unit-symbol", children: suf }), _jsx("span", { className: "wpb-wizard-unit-label", children: label })] }, v));
                     }) })] }));
     }
     if (stepKey === "mode") {
@@ -6241,9 +6258,9 @@ function StepBody({ stepKey, config, set, buildable = {}, autoLength = null, com
             { v: false, icon: Dumbbell, title: "Single program", sub: "One training block built around your goal, schedule, and gym." },
             { v: true, icon: Layers, title: "Training cycle", sub: "Multiple blocks that progress from one phase to the next over time." },
         ];
-        return (_jsxs(_Fragment, { children: [_jsx(Heading, { sub: "Both ask the same questions about your training \u2014 a cycle just chains multiple blocks together.", children: "What do you want to build?" }), _jsx("div", { style: { display: "flex", flexDirection: "column", gap: 12 }, children: opts.map(o => {
+        return (_jsxs(_Fragment, { children: [_jsx(Heading, { sub: "Both ask the same questions about your training \u2014 a cycle just chains multiple blocks together.", children: "What do you want to build?" }), _jsx("div", { className: "wpb-wizard-mode-choices", children: opts.map(o => {
                         const on = !!cycleMode === o.v;
-                        return (_jsxs("button", { "aria-pressed": on, onClick: () => setCycleMode(o.v), className: "pressable", style: { textAlign: "left", display: "flex", gap: 12, alignItems: "flex-start", background: C.card, border: `2px solid ${on ? C.accent : C.border}`, borderRadius: 16, padding: "16px 15px", cursor: "pointer" }, children: [_jsx("div", { style: { width: 42, height: 42, borderRadius: 12, background: on ? C.accent : C.accentDim, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: _jsx(o.icon, { size: 20, color: on ? C.accentText : C.accentInk }) }), _jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { style: { fontSize: 15, fontWeight: 700, color: C.text }, children: o.title }), _jsx("div", { style: { fontSize: 13, color: C.muted, lineHeight: 1.45, marginTop: 2 }, children: o.sub })] })] }, o.title));
+                        return (_jsxs("button", { "aria-pressed": on, onClick: () => setCycleMode(o.v), className: "pressable wpb-wizard-mode-option", children: [_jsx("div", { className: "wpb-wizard-mode-icon", children: _jsx(o.icon, { size: 20 }) }), _jsxs("div", { className: "wpb-wizard-mode-copy", children: [_jsx("div", { className: "wpb-wizard-mode-title", children: o.title }), _jsx("div", { className: "wpb-wizard-mode-sub", children: o.sub })] })] }, o.title));
                     }) })] }));
     }
     if (stepKey === "cycletype") {
@@ -6254,10 +6271,8 @@ function StepBody({ stepKey, config, set, buildable = {}, autoLength = null, com
                     }) }), cycleTemplate === "custom" && _jsx(CustomCycleComposer, { blocks: customCycleBlocks, onChange: setCustomCycleBlocks }), _jsxs("button", { onClick: () => setCycleAdapt(v => !v), role: "checkbox", "aria-checked": cycleAdapt, "aria-label": "Adapt exercises to each phase", className: "pressable", style: { width: "100%", textAlign: "left", marginTop: 12, background: C.card, border: `1px solid ${cycleAdapt ? C.accent : C.border}`, borderRadius: 16, padding: 12, display: "flex", alignItems: "flex-start", gap: 12 }, children: [_jsx("div", { style: { flexShrink: 0, marginTop: 1, width: 20, height: 20, borderRadius: 8, border: `2px solid ${cycleAdapt ? C.accent : C.border}`, background: cycleAdapt ? C.accent : "transparent", display: "flex", alignItems: "center", justifyContent: "center" }, children: cycleAdapt && _jsx(Check, { size: 13, color: C.accentText }) }), _jsxs("div", { style: { minWidth: 0 }, children: [_jsx("div", { style: { fontSize: 15, fontWeight: 700, color: C.text }, children: "Adapt exercises to each phase" }), _jsx("div", { style: { fontSize: 13, color: C.muted, lineHeight: 1.45, marginTop: 2 }, children: "Real block history may change compatible exercises at the next phase while protecting successful lifts. Turn this off to keep the same exercise skeleton and only retarget sets, reps, RIR and rest." })] })] })] }));
     }
     if (stepKey === "name") {
-        return (_jsxs(_Fragment, { children: [_jsxs(Heading, { sub: "You can rename it any time after it's built.", children: ["Name your ", cycleMode ? "cycle" : "program"] }), _jsx("input", { "aria-label": cycleMode ? "Cycle name" : "Program name", autoFocus: true, value: config.name, maxLength: 60, onChange: (e) => set({ name: e.target.value }), placeholder: cycleMode ? "e.g. Summer Training Cycle" : "e.g. Summer Hypertrophy Block", style: {
-                        width: "100%", padding: "18px", borderRadius: 16, fontSize: 18, fontWeight: 500,
-                        background: C.card, border: `1.5px solid ${config.name ? C.accent : C.border}`, color: C.text
-                    } })] }));
+        return (_jsxs(_Fragment, { children: [_jsxs(Heading, { sub: "You can rename it any time after it's built.", children: ["Name your ", cycleMode ? "cycle" : "program"] }), _jsx("input", { "aria-label": cycleMode ? "Cycle name" : "Program name", autoFocus: true, value: config.name, maxLength: 60, onChange: (e) => set({ name: e.target.value }), placeholder: cycleMode ? "e.g. Summer Training Cycle" : "e.g. Summer Hypertrophy Block",
+                    className: "wpb-ui-control wpb-wizard-name-input", "data-has-value": config.name ? "true" : "false" })] }));
     }
     if (stepKey === "experience") {
         return (_jsxs(_Fragment, { children: [_jsx(Heading, { sub: "This scales your weekly set volume sensibly.", children: "What's your experience level?" }), _jsx(Col, { children: Object.entries(EXP).map(([k, v]) => (_jsx(OptionCard, { icon: Trophy, label: v.label, sub: v.sub, selected: config.experience === k, onClick: () => set({ experience: k }) }, k))) })] }));
@@ -13144,7 +13159,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                                                 background: f.lead ? C.bg2 : "none", borderWidth: 1, borderStyle: "solid",
                                                 borderColor: f.lead ? C.accentDim : C.border, textAlign: "center",
                                                 display: "flex", flexDirection: "column", justifyContent: "center", minHeight: 150 }, children: [_jsx("div", { style: { fontSize: 11, fontWeight: 700, letterSpacing: 1,
-                                                        color: f.lead ? C.accentInk : C.muted }, children: f.label }), _jsxs("div", { style: { margin: "4px 0 10px" }, children: [_jsx("input", { inputMode: f.key === "w" ? "decimal" : "numeric", onFocus: selectNumericInput, onClick: selectNumericInput, enterKeyHint: f.key === "w" ? "next" : "done", "aria-label": f.aria, value: f.value, readOnly: s.done, placeholder: f.ph, onChange: ev => f.fix(ev.target.value), className: "mono wpb-num-input wpb-focus-value-input", style: { width: "100%", minWidth: 0, textAlign: "center",
+                                                        color: f.lead ? C.accentInk : C.muted }, children: f.label }), _jsxs("div", { style: { margin: "4px 0 10px" }, children: [_jsx("input", { inputMode: f.key === "w" ? "decimal" : "numeric", onFocus: selectNumericInput, onClick: selectFocusNumericInput, enterKeyHint: f.key === "w" ? "next" : "done", "aria-label": f.aria, value: f.value, readOnly: s.done, placeholder: f.ph, onChange: ev => f.fix(ev.target.value), className: "mono wpb-num-input wpb-focus-value-input", style: { width: "100%", minWidth: 0, textAlign: "center",
                                                                 background: "none", borderWidth: 0, padding: 0, outline: "none",
                                                                 fontSize: 34, fontWeight: 700, lineHeight: 1.05,
                                                                 color: f.lead ? C.accentInk : C.text } }), _jsx("div", { style: { fontSize: 11, fontWeight: 600, letterSpacing: .6, color: C.muted, height: 13 }, children: f.suffix || "" })] }), _jsxs("div", { style: { display: "flex", gap: 8, justifyContent: "center" }, children: [_jsx(StepButton, { label: `Decrease ${f.aria}`, glyph: "\u2212", onStep: f.dec, sx: focusStep }), _jsx(StepButton, { label: `Increase ${f.aria}`, glyph: "+", onStep: f.inc, sx: focusStep })] })] }, f.key))) }), focusBar && _jsxs("button", { type: "button", className: "pressable wpb-focus-plates",

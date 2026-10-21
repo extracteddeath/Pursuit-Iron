@@ -8,7 +8,7 @@ const app = fs.readFileSync('modules/App.js', 'utf8');
 const MAX_IMPORTANT = 2923;
 const MAX_APP_IMPORTANT = 1417; // Prevent embedded StyleTag patches bypassing the CSS budget.
 const MAX_REPEAT_IMPORTANT = 32;
-const MAX_INLINE_STYLE_OBJECTS = 3324; // Cohesion 15: static Plan and shared-action styles removed
+const MAX_INLINE_STYLE_OBJECTS = 3303; // Cohesion 16: Wizard choice/heading/name presentation migrated
 const allowedDebtKeys = new Set([
   "\t#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step\tborder-radius",
   "\t#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step\theight",
@@ -115,6 +115,27 @@ for(const str of ['wpb-ui-card wpb-profile-share-card','wpb-ui-card wpb-custom-c
   'wpb-ui-control','wpb-ui-field wpb-profile-card-field','wpb-ui-stack wpb-custom-cycle-list',
   'wpb-ui-row wpb-profile-card-actions'])
   assert.ok(app.includes(str),'Migrated screen must continue to use shared primitive: '+str);
+// Cohesion 16: creation controls may not reinject static geometry or theme paint.
+const wizardOption=app.slice(app.indexOf('function OptionCard('),app.indexOf('/* ============================== WIZARD'));
+const wizardHeading=app.slice(app.indexOf('function Heading('),app.indexOf('/* B893:'));
+const wizardUnitsMode=app.slice(app.indexOf('function StepBody('),app.indexOf('    if (stepKey === "cycletype")'));
+const wizardName=app.slice(app.indexOf('    if (stepKey === "name")'),app.indexOf('    if (stepKey === "experience")'));
+for(const [owner,source] of [['OptionCard',wizardOption],['Heading/Col',wizardHeading],['Units and mode',wizardUnitsMode],['Program name',wizardName]]){
+  assert.ok(source.length>100,'Missing scoped Wizard owner '+owner);
+  assert.ok(!source.includes('style: {'),'Static Wizard presentation returned to JSX: '+owner);
+}
+assert.ok(wizardOption.includes('aria-pressed')&&wizardOption.includes('disabled')&&wizardOption.includes('kind === "radio"'),
+  'Wizard choice accessibility and radio/checkbox behavior preserved');
+assert.ok(wizardName.includes('"data-has-value": config.name ? "true" : "false"'),
+  'Program name displays selected border from the real controlled value');
+for(const selector of [
+  '.wpb .wpb-wizard-option{','.wpb .wpb-wizard-option:disabled{',
+  '.wpb .wpb-wizard-option[aria-pressed="true"]{',
+  '.wpb .wpb-wizard-unit-option{','.wpb .wpb-wizard-mode-option{',
+  '.wpb .wpb-wizard-name-input{','.wpb .wpb-wizard-options{'
+])assert.ok(css.includes(selector),'Missing reusable Wizard CSS owner '+selector);
+assert.ok(css.includes('.wpb .wpb-wizard-name-input[data-has-value="true"]'),
+  'Controlled name input has its own selected border');
 const plan=app.slice(app.indexOf('function PlanView('),app.indexOf('function sessionLoadText('));
 assert.ok(plan.includes('className: "wpb-plan-eyebrow"'),'Plan eyebrow must be class-owned');
 assert.ok(!plan.includes('style: { fontSize: 26, fontWeight: 740, color: C.text'),

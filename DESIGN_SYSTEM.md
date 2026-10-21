@@ -65,3 +65,7 @@ SettingsSwitch must not use the legacy `.wpb-toggle` direct-thumb selector. The 
 ### Cohesion 22 — compact navigation and Home title reflow
 
 The canonical `TabBar` owns full and compact visual labels; its existing `aria-label` remains the unshortened destination name. CSS container queries show compact labels only if button width is narrow relative to its current font size, including enlarged-text testing and the tablet rail. Hidden duplicate visual labels must not become focusable or suppress the route's accessible name. R74 enforces single-line visible labels, no overlap, and accessible hit targets at narrow and wide dimensions. On phones below 360px, the non-interactive day orbit does not consume workout-title width; Up Next still states the week/day. Preserve 393px layouts, user themes, all five navigation routes and untouched Workout/Focus geometry.
+
+### Focus numeric touch-selection timing
+
+Focus weight and reps inputs share the canonical select-on-focus handler. After a real tap, allow one extra animation frame for the native caret to settle, then reselect only when the field remains active, editable and unchanged; do not clobber the first keystroke. Keep B825's real-touch selection contract and preserve the protected Workout/Focus layout.

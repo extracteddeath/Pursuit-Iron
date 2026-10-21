@@ -2603,13 +2603,15 @@ function selectFocusNumericInput(event) {
     selectNumericInput(event);
     const input = event.currentTarget;
     const originalValue = input.value;
-    requestAnimationFrame(() => {
+    // A native touch-click may reposition the caret after the first paint.
+    // Check again on the following frame without delaying or replacing typed input.
+    requestAnimationFrame(() => requestAnimationFrame(() => {
         // Never overwrite the user's first keystroke with a late select-all.
         if (document.activeElement === input && !input.readOnly && !input.disabled &&
             input.value === originalValue &&
             (input.selectionStart !== 0 || input.selectionEnd !== input.value.length))
             input.select();
-    });
+    }));
 }
 // Keep the logger's existing IME action hints truthful without changing set values.
 // Weight's Next moves to reps in the SAME set; reps' Done dismisses the keyboard.

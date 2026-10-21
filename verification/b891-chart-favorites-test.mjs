@@ -32,4 +32,16 @@ assert.match(b911,/\.wpb-chart-favorite-name\{[\s\S]*?overflow-wrap:anywhere/,'l
 assert.ok(b911.includes(':focus-visible')&&b911.includes('prefers-reduced-motion:reduce')&&b911.includes('forced-colors:active'));
 assert.ok(!/transition:[^;]*(width|height|margin|padding|transform)/.test(b911),'no geometry-affecting control motion');
 
+
+const progressSource=app.slice(app.indexOf('function HistoryView('),app.indexOf('\nfunction ',app.indexOf('function HistoryView(')+12));
+assert.ok(progressSource.includes('className: "wpb-progress-glance-item", style: { background: C.card'),'theme-native dynamic data remains');
+for(const x of [
+  'className: "wpb-progress-panel", style: { background: C.card, borderRadius:',
+  'className: "wpb-progress-entry-row", style: { display:',
+  'className: "wpb-history-filters", style:',
+  'className: "wpb-render-auto wpb-history-session", style: { background: C.card, borderRadius:'
+]) assert.ok(!progressSource.includes(x),'Progress presentation is not duplicated in JSX: '+x);
+const progressOwner=css.slice(css.indexOf('/* B914 / Cohesion 04'),css.indexOf('/* B891 — favorite chart ordering'));
+for(const x of ['.wpb-progress-glance-item','.wpb-progress-glance-label','.wpb-progress-panel','.wpb-progress-entry-row','.wpb-history-filters','.wpb-history-session'])assert.ok(progressOwner.includes(x+'{'),x+' owns its static layout in CSS');
+
 console.log('PASS B891: favorite chart persistence/ordering, accessible move controls and responsive history CSS.');

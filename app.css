@@ -9085,3 +9085,161 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     outline-color:Highlight!important;
   }
 }
+
+/* B912 — Prototype-informed Profile hierarchy; presentation only.
+   Keep current metric owners, customizable section order and share actions. */
+#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-inner{
+  max-width:680px;width:100%;margin-inline:auto;
+  padding:16px clamp(12px,3.8vw,24px) calc(34px + env(safe-area-inset-bottom))!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-head{
+  align-items:center!important;gap:12px!important;min-height:54px!important;
+  padding:0 0 12px!important;margin:0 0 5px!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-title{
+  font-size:clamp(28px,6vw,30px)!important;letter-spacing:-.04em!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-edit{
+  min-width:48px!important;min-height:48px!important;border:0!important;
+  border-radius:var(--pi-shape-action)!important;padding:0 13px!important;
+  background:var(--pi-color-control)!important;color:var(--pi-color-on-control)!important;box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-hero{
+  flex-shrink:0;margin:0 0 10px!important;padding:16px!important;border:0!important;
+  border-radius:var(--pi-shape-feature)!important;
+  background:color-mix(in srgb,var(--wpb-theme-accent-dim) 28%,var(--pi-color-card))!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-level-mark{
+  width:64px!important;height:64px!important;border-radius:var(--pi-shape-card)!important;
+  background:var(--wpb-theme-accent-dim)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-level-mark .mono{
+  font-size:29px!important;line-height:1!important;
+}
+/* One quiet grouped surface and three values, not three competing bordered cards. */
+#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-stat-grid{
+  gap:0!important;margin:0 0 13px!important;padding:0!important;
+  border:1px solid var(--pi-color-divider)!important;border-radius:var(--pi-shape-card)!important;
+  background:var(--pi-color-card)!important;overflow:hidden!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-stat{
+  min-width:0!important;min-height:74px!important;padding:12px 6px!important;
+  border:0!important;border-radius:0!important;background:transparent!important;
+  box-shadow:none!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-stat:not(:last-child){
+  border-right:1px solid var(--pi-color-divider)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-stat .mono{
+  font-variant-numeric:tabular-nums;line-height:1.15!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-stat-label{
+  font-size:12px!important;margin-top:5px!important;
+}
+/* Strength retains four actual scores but reads as one comparison, not four competing cards. */
+#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-strength{
+  padding:17px 17px 15px!important;margin:0 0 13px!important;
+  border:0!important;border-radius:var(--pi-shape-card)!important;
+  background:var(--pi-color-card)!important;box-shadow:none!important;min-width:0;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-strength>div:first-child{
+  margin-bottom:10px!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-strength-grid{
+  display:grid!important;grid-template-columns:minmax(0,1fr)!important;
+  gap:0!important;margin-bottom:9px!important;
+  border-top:1px solid var(--pi-color-divider);border-bottom:1px solid var(--pi-color-divider);
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile
+ .wpb-profile-strength-grid>.wpb-profile-strength-cell{
+  display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:center!important;
+  gap:10px!important;min-width:0!important;min-height:43px!important;padding:7px 2px!important;
+  border:0!important;border-radius:0!important;background:transparent!important;
+  box-shadow:none!important;text-align:left!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile
+ .wpb-profile-strength-grid>.wpb-profile-strength-cell:not(:last-child){
+  border-bottom:1px solid var(--pi-color-divider)!important;
+}
+/* Retain the existing tonal featured-score signal with a quiet first row.
+   The inactive rows remain a single flat comparison surface. */
+#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile
+ .wpb-profile-strength-grid>.wpb-profile-strength-cell:first-child{
+  background:var(--wpb-theme-accent-dim)!important;
+  border-radius:12px!important;
+  padding-inline:10px!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile
+ .wpb-profile-strength-grid>.wpb-profile-strength-cell>.mono{
+  grid-column:2;grid-row:1;font-size:18px!important;line-height:1.2!important;
+  color:var(--pi-color-on-control)!important;text-align:right;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile
+ .wpb-profile-strength-grid>.wpb-profile-strength-cell>div:not(.mono){
+  grid-column:1;grid-row:1;min-width:0;margin:0!important;
+  font-size:13px!important;font-weight:650!important;
+  white-space:normal!important;overflow:visible!important;text-overflow:clip!important;
+  color:var(--pi-color-on-control)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-next-strength{
+  min-height:0!important;padding:8px 0!important;margin:0!important;
+  border:0!important;border-radius:0!important;background:transparent!important;line-height:1.45!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile
+ .wpb-profile-strength button[aria-label="Share Strength Score"]{
+  width:48px!important;height:48px!important;border:0!important;border-radius:var(--pi-shape-action)!important;
+  background:var(--pi-color-control)!important;color:var(--pi-color-on-control)!important;
+}
+/* Secondary actions use quiet controls and retain correct accessible reading order.
+   No flex order: screen-reader and keyboard navigation match the visible flow. */
+#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-toolbar{
+  display:flex!important;gap:8px!important;margin:4px 0 15px!important;
+  flex-wrap:wrap;justify-content:flex-start!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-toolbar>button{
+  min-height:48px!important;min-width:0;padding:0 15px!important;border:0!important;
+  border-radius:999px!important;background:var(--pi-color-control)!important;
+  color:var(--pi-color-on-control)!important;font-size:13px!important;box-shadow:none!important;
+  transition:background-color 160ms ease,color 160ms ease!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-toolbar>button:first-child{
+  background:var(--wpb-theme-accent-dim)!important;color:var(--wpb-theme-accent-ink)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-customize{
+  border-radius:var(--pi-shape-card)!important;background:var(--pi-color-card)!important;
+  border:1px solid var(--pi-color-divider)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile
+ :is(.wpb-profile-toolbar>button,.wpb-profile-edit,.wpb-profile-strength button[aria-label="Share Strength Score"]):focus-visible{
+  outline:2px solid var(--wpb-theme-accent-ink)!important;outline-offset:3px!important;
+}
+@media(max-width:360px){
+  #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-hero{padding:12px!important}
+  #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-strength{padding:14px!important}
+  #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-stat-grid{gap:0!important}
+  #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-stat{padding-inline:3px!important}
+}
+@media(prefers-reduced-motion:reduce),(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-toolbar>button{transition:none!important}
+}
+@media(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile
+   :is(.wpb-profile-hero,.wpb-profile-stat,.wpb-profile-strength,.wpb-profile-toolbar>button){
+    border:1px solid CanvasText!important;background:Canvas!important;color:CanvasText!important;
+  }
+}
+/* Preserve R77's large-text single-column facts when the available container shrinks. */
+@container pi-r77-profile (max-width:18em){
+  #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-stat-grid{
+    grid-template-columns:minmax(0,1fr)!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-stat{
+    min-height:58px!important;flex-direction:row!important;align-items:center!important;
+    justify-content:space-between!important;gap:12px!important;
+    padding:10px 15px!important;text-align:left!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-stat:not(:last-child){
+    border-right:0!important;border-bottom:1px solid var(--pi-color-divider)!important;
+  }
+}

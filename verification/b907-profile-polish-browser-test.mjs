@@ -22,6 +22,23 @@ try{
   await page.waitForSelector('.wpb-profile-toolbar button');
   await page.$eval('.wpb-profile-toolbar button',b=>b.click());
   await page.waitForSelector('.wpb-profile-customize-row');
+
+  const hierarchy=await page.evaluate(()=>{
+    const rect=s=>document.querySelector(s)?.getBoundingClientRect().toJSON();
+    const strength=document.querySelector('.wpb-profile-strength-grid');
+    return {toolbarOrder:getComputedStyle(document.querySelector('.wpb-profile-toolbar')).order,
+      toolbar:rect('.wpb-profile-toolbar'),previousSectionBottom:document.querySelector('.wpb-profile-toolbar')?.previousElementSibling?.getBoundingClientRect().bottom??null,summary:rect('.wpb-profile-stat-grid'),
+      gridColumns:strength?getComputedStyle(strength).gridTemplateColumns.split(' ').length:null,
+      strengthRows:strength?[...strength.children].map(c=>c.getBoundingClientRect().height):[],
+      overflow:document.documentElement.scrollWidth>innerWidth+1};
+  });
+  assert.equal(hierarchy.toolbarOrder,'0','secondary actions retain DOM and keyboard reading order');
+  if(hierarchy.previousSectionBottom!=null)assert.ok(hierarchy.toolbar.top>=hierarchy.previousSectionBottom-1,'secondary actions follow the first user-selected profile section without overlapping');
+  if(hierarchy.gridColumns!=null){
+    assert.equal(hierarchy.gridColumns,1,'no four-card strength grid');
+    assert.ok(hierarchy.strengthRows.every(h=>h>=42&&h<=100),'compact strength rows');
+  }
+  assert.equal(hierarchy.overflow,false,'compact Profile has no horizontal overflow');
   const geometry=await page.evaluate(()=>{
    const panel=document.querySelector('.wpb-profile-customize');
    const selectors=['.wpb-profile-edit','.wpb-profile-customize-header>button','.wpb-profile-customize-row button','.wpb-profile-share-toggles button','.wpb-profile-reset'];

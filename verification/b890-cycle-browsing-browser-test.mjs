@@ -26,6 +26,10 @@ try{
   await page.click('.wpb-tabbar [aria-label="Plan"]');await page.waitForSelector('.wpb-plan-block-nav');
   assert.equal(await page.$$eval('.wpb-plan-block-nav button',ns=>ns.length),3);
   await page.evaluate(()=>{document.documentElement.style.fontSize='32px';return new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));});
+  // Measure only after the requested text size has reached the real controls.
+  // A frame count alone does not establish that style recalculation completed.
+  await page.waitForFunction(()=>[...document.querySelectorAll('.wpb-plan-block-nav button')]
+    .every(b=>parseFloat(getComputedStyle(b.querySelector('.wpb-ui-choice-label')).fontSize)>=26),{timeout:5000});
   const controls=await page.$$eval('.wpb-plan-block-nav button',buttons=>buttons.map(b=>{
     const box=b.getBoundingClientRect(),range=document.createRange();range.selectNodeContents(b);
     return {height:b.offsetHeight,label:parseFloat(getComputedStyle(b.querySelector('.wpb-ui-choice-label')).fontSize),

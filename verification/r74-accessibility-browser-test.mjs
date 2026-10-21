@@ -331,7 +331,7 @@ try{
             assert.ok(enlarged.planReading?.titleFits,
               '200% Plan title wraps within the page instead of clipping: '+JSON.stringify({theme,width,enlarged}));
             assert.ok(enlarged.planReading.modes.length===4&&enlarged.planReading.modes.every(
-              mode=>mode.name&&mode.fits&&!mode.truncated&&mode.height>=44)&&
+              mode=>mode.name&&mode.fits&&!mode.truncated&&mode.lines===1&&mode.height>=44)&&
               enlarged.planReading.modes.filter(mode=>mode.pressed).length===1,
               '200% Plan modes have complete labels, one selection and touch-safe targets: '+JSON.stringify({theme,width,enlarged}));
           }

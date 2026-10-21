@@ -32,6 +32,25 @@ try {
   await page.goto(url,{waitUntil:'networkidle0'});
   await page.click('.wpb-live-dock button[aria-label="Resume workout"]');
   await page.waitForSelector('.wpb-workout');
+  // Actual phone/tablet geometry: name + set/progression stay left,
+  // skip/history/info + exercise tags form the right column.
+  const heading=await page.$eval('.wpb-exercise-heading',el=>{
+   const find=sel=>{const node=el.querySelector(sel);if(!node)return null;
+    const r=node.getBoundingClientRect();return {left:r.left,top:r.top,right:r.right,bottom:r.bottom,
+      centerX:(r.left+r.right)/2,display:getComputedStyle(node).display};};
+   return {name:find('.wpb-exercise-name'),actions:find('.wpb-exercise-head-actions'),
+    tags:find('.wpb-exercise-tags'),meta:find('.wpb-exercise-meta'),
+    set:find('.wpb-exercise-set-context'),progression:find('.wpb-progression-label'),
+    title:find('.wpb-exercise-title-row')};
+  });
+  assert.ok(Object.values(heading).every(Boolean),'All exercise heading parts remain present');
+  assert.equal(heading.title.display,'contents','Normal logger owns the compact two-column grid');
+  assert.ok(heading.name.right<=heading.actions.left+2,'Title must not overlap right-side buttons: '+JSON.stringify(heading));
+  assert.ok(heading.tags.top>=heading.actions.bottom-2,'Tags appear beneath Info, History and Skip: '+JSON.stringify(heading));
+  assert.ok(heading.tags.centerX>=heading.actions.left-2,'Tags remain aligned to the right column');
+  assert.ok(heading.meta.left<heading.tags.left,'Working-set context remains under the lift name');
+  assert.ok(heading.progression.top>=heading.set.bottom-2,'Progression action follows working-set count');
+
   const nav=await page.$$eval('.wpb-ex-nav-step',els=>els.map(el=>({name:el.querySelector('.wpb-ex-nav-name')?.textContent,count:el.querySelector('.wpb-ex-nav-count')?.textContent,label:el.getAttribute('aria-label')})));
   assert.equal(nav[0].count,'1/3');assert.equal(nav[1].count,'0/2');assert.ok(nav.every(x=>x.name&&x.label.includes(x.name)));
   const navigate=async i=>page.evaluate(i=>document.querySelectorAll('.wpb-ex-nav-step')[i].click(),i);
@@ -51,7 +70,11 @@ try {
   await page.evaluate(()=>document.querySelector('[data-testid="set-1-1"] [aria-label="Mark set done"]').click());
   await page.waitForFunction(()=>document.querySelector('.wpb-ex-nav-step:nth-child(2)').dataset.complete==='1');
   await navigate(0);await page.waitForSelector('[data-testid="set-0-1"]');
-  if(width>=600) await page.click('[aria-label="Focused mode"]');
+  if(width>=600) {
+   await page.click('[aria-label="Focused mode"]');
+   assert.equal(await page.$eval('.wpb-exercise-title-row',el=>getComputedStyle(el).display),'flex',
+    'Focused mode keeps its prior title layout');
+  }
   const rest=await page.$eval('[data-rest-card]',el=>({label:el.getAttribute('aria-label'),ring:el.querySelector('.wpb-rest-ring circle[pathLength]')?.getAttribute('stroke-dashoffset'),value:el.querySelector('[role="progressbar"]').getAttribute('aria-valuenow')}));
   const fits=await page.$eval('[data-rest-card]',el=>{const time=el.querySelector('.mono'),actions=el.querySelector('.wpb-rest-actions'),t=time.getBoundingClientRect(),a=actions.getBoundingClientRect();return time.scrollWidth<=time.clientWidth+1&&(t.bottom<=a.top+1||t.right<=a.left+1)&&el.scrollHeight<=el.clientHeight+1;});
   assert.ok(fits,'rest countdown and actions fit without overlap or clipping');

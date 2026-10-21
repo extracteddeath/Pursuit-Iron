@@ -1,3 +1,9 @@
+## Shared editor controls and cascade cleanup — October 20, 2026
+
+- Profile layout/card editors and favorite-chart editing now reuse the existing UiAction component with one tonal button style, a shared 48px touch minimum, icon sizing and selected states. Screen-specific rules retain layout only; native labels, disabled states, callbacks and saved preferences are preserved.
+- Removed 67 superseded declarations in Profile, Progress and Settings, including 63 priority overrides, plus 23 priority overrides replaced by the shared controls: 86 fewer CSS `!important` declarations (3,103 → 3,017). Accessibility, forced-colors and motion safeguards remain.
+- The redundant-rule removal produced zero computed-style changes in a same-page comparison of 5,718 elements across 24 populated phone/tablet light/dark scenarios. Actual editor interaction, record preservation, contrast and compact workout regressions remain release gates.
+
 ## Profile share card and cohesive styles — October 20, 2026
 
 - Profile opens with an editable share card: a name, chosen strength/streak/level/club/record/achievement metrics and up to three favorite lifts. The live preview and PNG export share one content model; records retain their estimated-1RM labels.

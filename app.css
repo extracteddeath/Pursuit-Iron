@@ -8581,6 +8581,57 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   /* Chart favorites keep their 48px owner on narrow phones. */
 }
 
+
+/* B913 / Cohesion 03 — Profile presentation belongs to CSS, not inline JSX.
+   Dynamic palette colors remain supplied by the active theme. These fallbacks
+   work without Expressive motion; the shared Expressive tokens specialize them. */
+.wpb-profile .wpb-profile-stat-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:8px;
+  margin-bottom:12px;
+}
+.wpb-profile .wpb-profile-stat{
+  min-width:0;
+  border-radius:var(--pi-shape-card,16px);
+  padding:11px 10px;
+  text-align:center;
+}
+.wpb-profile .wpb-profile-strength-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:6px;
+  margin-bottom:10px;
+}
+.wpb-profile .wpb-profile-strength-cell{
+  min-width:0;
+  padding:9px 6px;
+  border-radius:var(--pi-shape-action,10px);
+  text-align:center;
+}
+.wpb-profile .wpb-profile-strength-cell>.mono{
+  font-size:17px;
+  font-weight:800;
+  color:var(--wpb-theme-text);
+}
+.wpb-profile .wpb-profile-strength-label{
+  font-size:11px;
+  font-weight:650;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  margin-top:2px;
+}
+.wpb-profile .wpb-profile-next-strength{
+  display:flex;
+  align-items:flex-start;
+  gap:8px;
+  font-size:12.5px;
+  padding:9px 10px;
+  border-radius:var(--pi-shape-action,10px);
+  line-height:1.4;
+}
+
 /* B892 / UI polish pass 02 — Profile controls share Material-inspired tonal states.
    Preserve Profile preference logic and DOM order. Only local micro-interactions
    animate; no page or row geometry transitions that might cause flashing. */
@@ -9176,7 +9227,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   color:var(--pi-color-on-control)!important;text-align:right;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile
- .wpb-profile-strength-grid>.wpb-profile-strength-cell>div:not(.mono){
+ .wpb-profile-strength-grid>.wpb-profile-strength-cell>.wpb-profile-strength-label{
   grid-column:1;grid-row:1;min-width:0;margin:0!important;
   font-size:13px!important;font-weight:650!important;
   white-space:normal!important;overflow:visible!important;text-overflow:clip!important;

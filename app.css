@@ -3385,7 +3385,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border:1px solid var(--pi-r11-edge)!important;
   border-radius:22px!important;
   background-color:var(--pi-r11-raised)!important;
-  background-image:none!important;
   box-shadow:0 10px 26px rgba(0,0,0,.18)!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-context-menu .wpb-context-menu-item{
@@ -5259,9 +5258,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   background-image:none!important;
   border-color:var(--pi-r48-divider)!important;
   box-shadow:none!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-program.wpb-program .wpb-day-card[data-next="true"]{
-  border-color:var(--pi-r11-accent-stroke)!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-program.wpb-program .wpb-week-rail{
   gap:6px!important;

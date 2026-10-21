@@ -113,3 +113,7 @@ The audit repairs and independent API guide are in [M224_ENGINE_AUDIT_REPAIR.md]
 `percentage-protocols.js` owns load/rep waves and capacity adaptation. Preview, the training-max editor and Workout call one executable plan builder. Per-set targets and tier/stage provenance are serialized through the pure `loggedWorkoutPerformance` seam and replayed from history. Explicit user rep/effort edits win; percentages never silently introduce a second set-count owner.
 
 Generation now enforces the final executable weekly clock after dose reconciliation. It can trim engine-owned accessory counts while preserving strength work and manual counts; otherwise it returns an actionable capacity refusal. Remaining regional-volume guidance is reported as partial.
+
+## Preventing duplicated engine authority (cohesion 09)
+
+Use `NEXT_APP_UPDATE_PLAN.md` for the screen-by-screen plus engine simplification sequence. `modules/engine-api.js` and the production `next-engine/` + `training-domain/` modules remain the only decision and record authorities. A UI screen must consume projections for week/day, target RIR/load, volume, shorten-session policy, plan changes, strength scores and revision-correct analytics instead of implementing another calculation. A code consolidation is safe only with independently reproducible parity evidence or a diagnosed and regression-tested correction. Never trade correct user-authored sets, revision provenance, logged effort or interrupted-session recovery for fewer functions. UI-only changes must leave engine runtime files untouched.

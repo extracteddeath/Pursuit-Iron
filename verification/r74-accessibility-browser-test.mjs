@@ -302,8 +302,20 @@ try{
               transform:getComputedStyle(next).transform,rows:getComputedStyle(next.parentElement).gridTemplateRows,
               overviewRow:getComputedStyle(overview).gridRow}:null;
             const orbit=document.querySelector('.wpb-home .wpb-m3-day-orbit');
+            const planHeading=document.querySelector('.wpb-plan-view h1.wpb-plan-title');
+            const planModes=[...document.querySelectorAll('.wpb-plan-panes>.wpb-plan-pane-tab')].map(button=>{
+              const label=button.querySelector('.wpb-plan-pane-label');
+              if(!label)return null;
+              const range=document.createRange();range.selectNodeContents(label);
+              const rects=[...range.getClientRects()].filter(r=>r.width>0&&r.height>0);
+              const box=button.getBoundingClientRect();
+              return {name:label.textContent.trim(),lines:new Set(rects.map(r=>Math.round(r.y))).size,
+                fits:rects.length>0&&rects.every(r=>r.x>=box.x-1&&r.right<=box.right+1),
+                truncated:getComputedStyle(label).textOverflow==='ellipsis'&&label.scrollWidth>label.clientWidth+1};
+            }).filter(Boolean);
             return {overflow:document.documentElement.scrollWidth>innerWidth+2,tabs,plan,
-              homeOrbitVisible:!!orbit&&getComputedStyle(orbit).display!=='none'};
+              homeOrbitVisible:!!orbit&&getComputedStyle(orbit).display!=='none',
+              planReading:planHeading?{titleFits:planHeading.scrollWidth<=planHeading.clientWidth+2,modes:planModes}:null};
           });
           if(width===320||width===1280)
             await page.screenshot({path:path.join(root,'verification/r74-'+theme+'-'+width+'-'+route+'-phone.png')});
@@ -314,6 +326,13 @@ try{
           if(route==='home'&&width===320)
             assert.equal(enlarged.homeOrbitVisible,false,
               '320px Home day orbit must never overlap the workout heading: '+JSON.stringify({theme,width,enlarged}));
+          if(route==='plan'&&width===320){
+            assert.ok(enlarged.planReading?.titleFits,
+              '200% Plan title wraps within the page instead of clipping: '+JSON.stringify({theme,width,enlarged}));
+            assert.ok(enlarged.planReading.modes.length===4&&enlarged.planReading.modes.every(
+              mode=>mode.name&&mode.fits&&!mode.truncated),
+              '200% Plan pane labels show complete text in their buttons: '+JSON.stringify({theme,width,enlarged}));
+          }
           if(route==='plan'&&width>=1060&&height>=700){
             assert.ok(enlarged.plan.nextBottom<=enlarged.plan.overviewTop+1,
               'Enlarged Plan supporting cards stay in separate rows: '+JSON.stringify(enlarged.plan));

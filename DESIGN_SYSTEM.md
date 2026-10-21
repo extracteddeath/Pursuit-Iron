@@ -65,3 +65,7 @@ SettingsSwitch must not use the legacy `.wpb-toggle` direct-thumb selector. The 
 ### Cohesion 22 — compact navigation and Home title reflow
 
 The canonical `TabBar` owns full and compact visual labels; its existing `aria-label` remains the unshortened destination name. CSS container queries show compact labels only if button width is narrow relative to its current font size, including enlarged-text testing and the tablet rail. Hidden duplicate visual labels must not become focusable or suppress the route's accessible name. R74 enforces single-line visible labels, no overlap, and accessible hit targets at narrow and wide dimensions. On phones below 360px, the non-interactive day orbit does not consume workout-title width; Up Next still states the week/day. Preserve 393px layouts, user themes, all five navigation routes and untouched Workout/Focus geometry.
+
+### Cohesion 23 — Plan reading at enlarged text
+
+The Plan heading's canonical CSS owner allows complete long program names to wrap within the page. The four-mode Plan rail remains a compact horizontal group at normal widths but reflows to two rows via container-aware rules when 200% text or narrow content makes complete labels impossible. Do not shorten tab names, clip labels, create a second control style, or change Plan state, engine prescriptions or Workout/Focus geometry. R74 checks full labels, title containment and keyboard/selected semantics.

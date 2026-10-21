@@ -5884,6 +5884,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   line-height:1.15!important;
   letter-spacing:-.035em!important;
   margin:2px 0 10px!important;
+  min-width:0;
+  max-width:100%;
+  overflow-wrap:anywhere;
+  hyphens:auto;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-progress.wpb-progress>.wpb-page-header{
   padding:11px var(--pi-r57-inset) 8px!important;
@@ -9346,8 +9350,14 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 
 /* Cohesion 12 — Plan pane and week selection presentation has one CSS owner. */
-.wpb-plan-panes{display:flex;gap:4px;padding:3px;margin-bottom:12px;border-radius:10px;background:var(--pi-color-control,transparent);}
+.wpb-plan-panes{display:flex;flex-wrap:wrap;container-type:inline-size;gap:4px;padding:3px;margin-bottom:12px;border-radius:10px;background:var(--pi-color-control,transparent);}
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-panes>.wpb-plan-pane-tab{box-sizing:border-box;display:flex;flex:1 1 0;min-width:0;min-height:44px;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:8px 4px;border:0;border-radius:8px;background:transparent;color:var(--pi-color-on-control,inherit);font-size:11px;font-weight:700;cursor:pointer;}
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-panes>.wpb-plan-pane-tab[aria-pressed="true"]{background:var(--pi-color-card,transparent);color:var(--pi-m3e-primary,var(--wpb-theme-accent,currentColor));font-weight:800;}
 .wpb-plan-pane-label{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+/* Plan modes share one owner: at enlarged text or a narrow pane rail,
+   allow two rows of complete labels instead of truncating a chosen mode. */
+@container (max-width:18em){
+  #root[data-pi-motion="expressive"] .wpb .wpb-plan-panes>.wpb-plan-pane-tab{flex:1 1 calc(50% - 4px);min-height:48px;}
+  #root[data-pi-motion="expressive"] .wpb .wpb-plan-pane-label{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;text-align:center;}
+}
 .wpb-plan-week-picker{margin-bottom:2px;position:sticky;top:0;z-index:3;background:var(--pi-color-canvas,var(--wpb-theme-bg,transparent));}

@@ -1,3 +1,9 @@
+## Plan heading and mode-label reflow — October 21, 2026
+
+- Allow long Plan titles to wrap inside their available width on narrow screens and enlarged-text settings without shrinking the heading.
+- The four Plan panes adapt to a two-row mode rail when the available width is narrow for the user's actual text scale. Full names, pressed state, keyboard operation and 48px targets remain.
+- Extend R74 browser assertions to check long 320px/200% titles and complete four-mode labels. Do not change prescriptions, Program/Cycle semantics, workout logging or Focus geometry.
+
 ## Adaptive tab labels and narrow-phone Home title — October 21, 2026
 
 - Keep complete tab names for accessible navigation, switching to short visual labels only when the tab is narrow relative to the actual font size.

@@ -92,6 +92,8 @@ The Home create action had an early `background-color:light-dark(...--pi-m3e-dar
 3. Fix reproduced engine or persistence defects against the existing replay/differential baselines. Keep all prescribed and observed effort, authored-day/revision ownership and manual input protections intact.
 4. Complete signed Android packaging, store listing/declarations and physical-device checks before claiming launch readiness.
 
-## Cohesion 12 — Plan week and pane ownership (staged)
+## Cohesion 12 — Plan week and pane ownership (candidate)
 
-Four Plan week-picker JSX layout/paint objects have been rehomed into one CSS declaration family with theme roles. The three Plan mode-bar presentation objects remain intact after a real-browser clipping regression; restore them rather than weakening R47 acceptance. Preserve four `UiChoice` panes, the week collapse/remembered selection, keyboard focus, and engine data. Extended R53 browser checks assert 44px targets and switch both directions. Inline style budget **3,393 → 3,389**; no new `!important`. Program week pill is the next separately proven pass.
+Seven Plan JSX layout/paint objects have been rehomed into one CSS declaration family with theme roles. Preserve four `UiChoice` panes, the week collapse/remembered selection, keyboard focus, and engine data. Extended R53 browser checks assert 44px targets and switch both directions. Inline style budget **3,393 → 3,386**; no new `!important`. Program week pill is the next separately proven pass.
+
+The first CI run caught Plan labels inheriting the page font after removing inline typography: the global `#root button` reset outranked the new unscoped class. Keep the migrated tab rule within the existing expressive Plan owner specificity, so its font size and selected weight survive the reset without adding priority declarations. The unchanged B831 R47 text-fragment/48px target assertion remains the acceptance gate; no test tolerance is relaxed. Local and exact-head CI results are recorded in the PR before merge.

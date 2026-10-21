@@ -788,3 +788,8 @@ Before modifying a screen, name the unique owner of data, layout, motion and acc
 ## Cohesion 10 — Home actions and first-run hierarchy
 
 When Home has no active program, the persistent Create Program dock is the **only** primary create CTA. Templates, Custom split and Cycles are supporting discovery actions, not repeated large creation cards. When a program exists, retain the Next Workout primary action and independent Game Plan and session outline. Home action tiles use shared `UiAction` semantics and a single scoped CSS layout owner; theme selection comes from `--pi-color-*` roles. Action route IDs are stable across state transitions, avoiding remount/reordering artifacts. Do not reintroduce duplicate first-run buttons under a new label, an end-of-file CSS patch, or a second source of next-day/progression truth. Verification owners: `verification/home-entry-hierarchy-test.mjs`, `verification/home-entry-hierarchy-browser-test.mjs`, existing B887 masthead and B909 separated coaching tests.
+
+
+### Cohesion 12 — Plan selector presentation
+
+Plan retains the same four shared `UiChoice` panes and remembered/collapsible week selection. Tab and week-picker paint/layout live in the Plan CSS family; JSX supplies canonical program data and choice state. Tab typography must beat the global button font reset and preserve full labels at enlarged text sizes. Keep the existing moving indicator, keyboard focus, 48px effective targets, semantic colors and forced-color selection. B831's real text-fragment bounds and R53's pane/week, palette and responsive journeys verify these interactions. Workout/Focus and training policy are unchanged.

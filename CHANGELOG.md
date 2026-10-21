@@ -1,3 +1,9 @@
+## Switch contrast and compact Home preview — October 21, 2026
+
+- Reconciled the approved switch and Home fixes with the newer shared Settings/Profile cards.
+- Restored contrasting switch tracks, contained thumbs and 48px touch targets; removed inherited legacy toggle sizing.
+- Home session outline now has one spacing owner and no redundant divider or top inset.
+
 ## Consistent Settings groups and strength-club controls — October 21, 2026
 
 - Settings preference, workout, timer, reminder, profile and data rows now share explicit themed cards and one wrapping row layout. Native inputs, switches and existing settings behavior are preserved.

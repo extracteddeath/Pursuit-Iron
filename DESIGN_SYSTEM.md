@@ -28,7 +28,7 @@ Owner: `app.css` provides semantic theme roles and shared component styles. `mod
 
 ## Migration sequence and acceptance gates
 
-Current baseline after Cohesion 20 is **3,195 inline `style: {` objects** (down from 3,331), **2,812 external CSS priority declarations**, **1,325 embedded CSS priority declarations**, with a historical repeated-priority ceiling of 30. These are legacy-debt caps, **not acceptance of their design quality**. The first slice migrates the shared action's static palette and the Plan header, Profile share-card editors and custom-cycle form controls. Every subsequent slice must lower at least one measured debt metric and leave the affected screen's browser and source contracts green.
+Current baseline after Cohesion 21 is **3,193 inline `style: {` objects**, **2,793 external CSS priority declarations**, **1,325 embedded CSS priority declarations**, with a historical repeated-priority ceiling of 30. These are legacy-debt caps, **not acceptance of their design quality**. The first slice migrates the shared action's static palette and the Plan header, Profile share-card editors and custom-cycle form controls. Every subsequent slice must lower at least one measured debt metric and leave the affected screen's browser and source contracts green.
 
 Sequence: (1) Program/cycle creation controls, (2) Settings and Profile cards, (3) Home and Plan composition, (4) Progress/History, (5) Workout/Focus separately after image-level phone validation, (6) overlays/dialogs and global cleanup, (7) full accessibility, offline, physical Android and Play release certification. Keep related styles near their canonical component owner; do not add a new end-of-file specificity patch.
 
@@ -57,3 +57,7 @@ All eight Settings row groups use explicit shared cards. Stable `SettingsRow` an
 `ProfileStrengthClub` uses the shared card and tonal actions, including 48px measure and share controls. Only the snapshot-derived progress width remains inline. Real earned/projected classes and lift availability own state paint; lifted, estimated, unit, missing-lift and tier calculations are unchanged. The club has its own responsive text/value composition. Generic legacy Profile geometry excludes it with a zero-specificity `:where` condition, preserving the cascade for the other Profile sections. Keep highlighted Strength Score row alignment and share-card preferences.
 
 R76 checks all Settings row parents, shared card paint, 48px row minimums and full enlarged-text copy/control containment. B907 checks native keyboard measure selection/reversal, distinct lifted/estimated totals, normal/200% club targets/labels and unchanged training history; phone captures cover dark and light themes. Settings choice controls, remaining Profile strength/achievement presentation and other screen families remain later passes.
+
+### Cohesion 21 — switch contrast and Home preview
+
+SettingsSwitch must not use the legacy `.wpb-toggle` direct-thumb selector. The nested track owns its 44×26px geometry inside a 48px action, with paired active colors and a contrasting inactive outline. HomeSessionOutline uses `.wpb-home-session-preview` as its only inset owner. Retire the superseded preview layer instead of stacking more overrides. Preserve the newer Settings group and Profile club owners.

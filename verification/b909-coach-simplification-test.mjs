@@ -5,7 +5,7 @@ const css=fs.readFileSync('app.css','utf8');
 const home=app.slice(app.indexOf('function Home({'),app.indexOf('function Home({')+300000);
 const coach=app.slice(app.indexOf('function SessionGamePlan({'),app.indexOf('function PlanChangesDialog('));
 const review=app.slice(app.indexOf('function PlanChangesDialog('),app.indexOf('function NextWorkoutView('));
-assert.ok(home.includes('HomeSessionOutline')&&home.includes('wpb-m3-session-preview'),'Home hero retains separate complete exercise outline');
+assert.ok(home.includes('HomeSessionOutline')&&home.includes('wpb-home-session-preview'),'Home hero retains separate complete exercise outline');
 assert.ok(home.includes('!sessionActive && upNext && _jsx(SessionGamePlan, { review: sessionReview, restScale, home: true })'),'Coach is an independent Home section');
 assert.ok(coach.includes('.slice(0, 3)'),'Game plan shows at most three prioritized insights');
 assert.ok(!coach.includes('wpb-game-plan-method')&&!coach.includes('wpb-game-plan-target'),'No noisy parallel prescriptions or method list');

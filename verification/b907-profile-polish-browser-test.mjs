@@ -22,6 +22,38 @@ try{
   await page.goto('http://127.0.0.1:'+server.address().port+'/index.html',{waitUntil:'networkidle0'});
   await page.waitForSelector('[data-tab="profile"]');await page.click('[data-tab="profile"]');
   await page.waitForSelector('.wpb-profile-toolbar button');
+  // Cohesion 20: the real club card keeps distinct read-only totals and native keyboard controls.
+  const club='.wpb-profile-club';
+  await page.waitForSelector(club);
+  const historyBefore=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).history);
+  const total=await page.$eval(club+' .wpb-profile-club-value',e=>e.textContent);
+  const estimated=await page.$(club+' .wpb-profile-club-mode button:nth-child(2)');
+  await estimated.focus();await page.keyboard.press('Enter');
+  assert.equal(await estimated.evaluate(e=>e.getAttribute('aria-pressed')),'true','keyboard selects estimated measure');
+  assert.notEqual(await page.$eval(club+' .wpb-profile-club-value',e=>e.textContent),total,'estimated total differs from actual lifted weight');
+  assert.match(await page.$eval(club+' .wpb-profile-club-caption',e=>e.textContent),/estimated 1RM/);
+  const lifted=await page.$(club+' .wpb-profile-club-mode button:first-child');
+  await lifted.focus();await page.keyboard.press('Space');
+  assert.equal(await lifted.evaluate(e=>e.getAttribute('aria-pressed')),'true','keyboard restores Lifted');
+  assert.equal(await page.$eval(club+' .wpb-profile-club-value',e=>e.textContent),total);
+  for(const enlarged of [false,true]){
+    await page.evaluate(large=>large?document.documentElement.style.fontSize='200%':document.documentElement.style.removeProperty('font-size'),enlarged);
+    const card=await page.$eval(club,e=>{
+      const box=e.getBoundingClientRect();
+      const controls=[...e.querySelectorAll('button')].map(b=>{
+        const r=b.getBoundingClientRect(),range=document.createRange();range.selectNodeContents(b);
+        return {width:r.width,height:r.height,fits:[...range.getClientRects()].every(t=>t.left>=r.left-1&&t.right<=r.right+1&&t.top>=r.top-1&&t.bottom<=r.bottom+1)};
+      });
+      return {overflow:e.scrollWidth>e.clientWidth+1,controls,
+        values:[...e.querySelectorAll('.wpb-profile-club-lift')].every(l=>{const r=l.getBoundingClientRect();return r.left>=box.left-1&&r.right<=box.right+1})};
+    });
+    assert.ok(!card.overflow&&card.values&&card.controls.every(b=>b.width>=47.5&&b.height>=47.5&&b.fits),
+      'club has complete labels, 48px controls and readable values '+JSON.stringify({width,theme,enlarged,card}));
+    if(width===320)await (await page.$(club)).screenshot({path:root+'/verification/c20-club-'+theme+'-'+(enlarged?'enlarged':'normal')+'-phone.png'});
+  }
+  await page.evaluate(()=>document.documentElement.style.removeProperty('font-size'));
+  assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).history),historyBefore,'club browsing never changes training history');
+
   await page.$eval('.wpb-profile-toolbar button',b=>b.click());
   await page.waitForSelector('.wpb-profile-customize-row');
 

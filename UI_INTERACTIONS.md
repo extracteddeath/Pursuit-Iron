@@ -820,3 +820,7 @@ Template cards and adaptation use the shared card surface and Wizard text roles.
 - Header/footer actions use shared native controls; Back, Next, early finish, draft discard and build cancellation keep the same handlers and disabled guards.
 - Real focus values own highlighted rows and the total. Shared setup steppers preserve a maximum of two points per muscle and five total, and allow reversing every choice.
 - The scrolling form, growing header, opaque footer, keyboard focus and draft indicators remain reachable at narrow widths and enlarged text. The computed progress transform remains runtime-owned; static presentation is CSS-owned.
+
+### Cohesion 20 — Settings card and strength-club continuity
+
+Settings rows stay module-level components so typing retains the same native input and focus. Their copy/control wrappers may wrap with enlarged text; all eight row groups use explicit shared cards. Keep existing option/switch callbacks and category jumps. Profile club measure actions retain native pressed states and keyboard activation; switching between Lifted and Est. 1RM changes only the displayed snapshot, never history or training settings. Earned and projected membership remain distinct. Share uses the current snapshot. Club actions have 48px targets and full labels, with narrow/enlarged text reflow. Other Profile preferences and highlighted Strength Score alignment remain unchanged.

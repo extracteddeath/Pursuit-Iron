@@ -57,6 +57,17 @@ try{
         // R82: Settings navigation uses honest, findable category names.
         // It must reach the existing controls without changing their values.
         if(route==='settings'){
+          const groups=await page.$eval('.wpb-settings',pane=>{
+            const cards=[...pane.querySelectorAll('.wpb-settings-card')];
+            const rows=[...pane.querySelectorAll('.wpb-settings-row')];
+            const paint=e=>getComputedStyle(e).backgroundColor;
+            return {count:cards.length,shared:cards.every(c=>c.classList.contains('wpb-ui-card')),
+              opaque:cards.every(c=>paint(c)===paint(cards[0])&&paint(c)!=='rgba(0, 0, 0, 0)'),
+              owned:rows.every(r=>r.parentElement.classList.contains('wpb-settings-card')),
+              min:Math.min(...rows.map(r=>r.getBoundingClientRect().height))};
+          });
+          assert.ok(groups.count===8&&groups.shared&&groups.opaque&&groups.owned&&groups.min>=48,
+            'Every Settings row belongs to an explicit shared card: '+JSON.stringify(groups));
           const destinations=await page.$$eval('.wpb-settings-jump-control select option',
             options=>options.map(el=>[el.value,el.textContent.trim()]));
           assert.ok(destinations.some(([id,label])=>id==='training'&&label==='Gyms & equipment'),
@@ -104,6 +115,20 @@ try{
             width:rect.width,
             actionGroups:actions.map(measure)};
         },{sel:selector,actions});
+        if(route==='settings'){
+          const rows=await page.$$eval('.wpb-settings-row',els=>els.map(row=>{
+            const box=row.getBoundingClientRect();
+            const children=[...row.children].map(el=>el.getBoundingClientRect());
+            const copy=row.querySelector('.wpb-settings-row-copy');
+            const range=document.createRange();range.selectNodeContents(copy);
+            return {label:copy.textContent.slice(0,45),fits:children.every(r=>r.left>=box.left-1&&r.right<=box.right+1)&&
+              [...range.getClientRects()].every(r=>r.left>=box.left-1&&r.right<=box.right+1)};
+          }));
+          assert.ok(rows.every(r=>r.fits),'200% Settings row text and controls stay inside their card: '+JSON.stringify(rows));
+          await page.select('.wpb-settings-jump-control select','preferences');
+          await settle(page);
+          if(width===320||width===393)await page.screenshot({path:path.join(root,'verification/c20-settings-'+theme+'-'+width+'-enlarged-phone.png')});
+        }
         // R77 fixes a failure R76's overflow-only check could not see:
         // labels were visually chopped into individual letters without overflow.
         // Inspect the real rendered responsive grid after enlarged typography.

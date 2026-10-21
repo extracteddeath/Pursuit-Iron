@@ -148,3 +148,11 @@ Measured debt: 3,266 → 3,233 inline objects; 2,918 → 2,858 external prioriti
 Next: remaining Settings/Profile card owners, followed by Home/Plan and Progress/History. Legacy option-card and global priority cleanup remains tracked; physical Android/Play certification is open.
 
 Cohesion 19 short-window correction: the 200% text / 900×480 cycle-focus gate exposed an oversized footer. The named action region now uses at most 45% of the Wizard height and scrolls natively; R74 requires at least 44px of form space and checks keyboard focus reveals complete primary/early-finish actions. Scoped text-action typography overrides only the generic root button font reset, with no new priority declarations.
+
+## Cohesion 20 — Settings groups and Profile strength club
+
+Give all eight Settings row groups explicit shared cards. Migrate stable row/title and gym-navigation presentation into the Settings owner; remove legacy card/row/title layers and the unnamed parent selector. Preserve fields, settings callbacks, switch ownership and category navigation. Migrate the Profile club to shared cards and 48px tonal actions; retain lifted versus estimated snapshots, tiers, missing-lift guidance, units, share callbacks and progress semantics. Only the computed club progress width remains inline. Preserve all other Profile cascade priorities by using zero-specificity exclusions for the migrated club.
+
+Measured debt: inline objects 3,233 → 3,195; external priorities 2,858 → 2,812; embedded priorities 1,376 → 1,325. Repeated-priority ceiling remains 30 (27 collision keys). Tighten source budgets and add Settings-group and club-progress ownership guards. R76 checks grouped card ownership/paint and 200% copy/control containment; B907 adds keyboard measure reversal, distinct totals, normal/enlarged club targets and preserved history. Require all ten candidate/main checks, image review, Pages and 109-file deployed identity.
+
+Next: remaining Settings choice controls and Profile Strength/Achievements card presentation, followed by Home/Plan and Progress/History. This scoped pass does not close the whole Settings/Profile queue or physical Android/Play certification.

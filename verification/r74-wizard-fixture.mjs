@@ -89,7 +89,9 @@ export async function verifyWizardSteps(page, { width, height, theme, root, url 
         return range.getClientRects().length!==1;
       }).map(match=>match[0]);
     });
+    const footer=el.querySelector('.wpb-wizard-footer');
     return {overflow:document.documentElement.scrollWidth>innerWidth+2,controls,
+      viewportHeight:innerHeight,footer:{height:footer.getBoundingClientRect().height,client:footer.clientHeight,scroll:footer.scrollHeight},
       reading:reading.filter(el=>el.bad.length),
       splitWords,
       named:document.getElementById(step.getAttribute('aria-labelledby'))?.textContent.trim()||'',
@@ -99,7 +101,19 @@ export async function verifyWizardSteps(page, { width, height, theme, root, url 
     const result=await measure();
     assert.equal(result.overflow,false,label+' has no document overflow');
     assert.ok(result.named,label+' names the setup group by its question');
-    assert.ok(result.scrollHeight>=44,label+' retains a usable scrolling form area');
+    assert.ok(result.scrollHeight>=44,label+' retains a usable scrolling form area: '+JSON.stringify(result.footer));
+    assert.ok(result.footer.height<=result.viewportHeight*.45+2,label+' bounds footer height without reducing text');
+    if(result.footer.scroll>result.footer.client+1){
+      const finish=await page.$('.wpb-wizard-finish-action');
+      if(finish){
+        await finish.evaluate(el=>el.focus());await settle();
+        const visible=await finish.evaluate(el=>{const a=el.getBoundingClientRect(),b=el.closest('.wpb-wizard-footer').getBoundingClientRect();return a.y>=b.y-1&&a.bottom<=b.bottom+1;});
+        assert.ok(visible,label+' keyboard focus reveals the complete early-finish action in the scrolling footer');
+        await finish.dispose();
+      }
+      await page.$eval('.wpb-wizard-next-action',el=>el.focus());await settle();
+      assert.ok(await page.$eval('.wpb-wizard-next-action',el=>{const a=el.getBoundingClientRect(),b=el.closest('.wpb-wizard-footer').getBoundingClientRect();return a.y>=b.y-1&&a.bottom<=b.bottom+1;}),label+' keyboard focus reveals the primary action');
+    }
     assert.ok(result.controls.every(c=>c.label&&c.width>=44&&c.height>=44&&!c.bad.length),
       label+' exposes named 44px controls with whole text: '+JSON.stringify(
         result.controls.filter(c=>!c.label||c.width<44||c.height<44||c.bad.length)));

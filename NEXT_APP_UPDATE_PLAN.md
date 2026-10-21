@@ -146,3 +146,5 @@ Cohesion 17–18 merged in PR #226 as `12d6ff7`; all ten candidate/main checks p
 Measured debt: 3,266 → 3,233 inline objects; 2,918 → 2,858 external priorities; 1,417 → 1,376 embedded priorities; repeated-priority ceiling remains 30. Tighten existing budgets and guard the complete StepBody and setup stepper. R74 adds exact five-point/per-muscle limit and reversal checks plus normal/enlarged phone captures. Require all ten candidate/main checks, visual review, Pages and deployed identity before completion.
 
 Next: remaining Settings/Profile card owners, followed by Home/Plan and Progress/History. Legacy option-card and global priority cleanup remains tracked; physical Android/Play certification is open.
+
+Cohesion 19 short-window correction: the 200% text / 900×480 cycle-focus gate exposed an oversized footer. The named action region now uses at most 45% of the Wizard height and scrolls natively; R74 requires at least 44px of form space and checks keyboard focus reveals complete primary/early-finish actions. Scoped text-action typography overrides only the generic root button font reset, with no new priority declarations.

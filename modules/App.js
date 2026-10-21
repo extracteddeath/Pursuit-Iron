@@ -6223,7 +6223,7 @@ function Wizard({ buildTask = null, onCancelBuild, initialEquipment, initialExpe
                 _jsx(WizardReviewPane, { config, cycleMode, modeChosen: choseMode, selectedCycle,
                     cycleAdapt, step, stepCount: STEPS.length, stepKey: key })
             ] }) }),
-        _jsxs("div", { className: "wpb-wizard-footer", children: [
+        _jsxs("div", { className: "wpb-wizard-footer", role: "region", "aria-label": "Setup actions", children: [
             cycleMode && _jsx("div", { className: "wpb-cycle-draft-status", role: "status",
                 children: draftSaved ? (setupDraft ? "Resumed your saved cycle setup · changes save on this device" : "Cycle setup saves on this device as you go") : "Setup could not be saved on this device. Keep this setup open." }),
             cycleMode && _jsx(UiAction, { variant: "text", disabled: building,

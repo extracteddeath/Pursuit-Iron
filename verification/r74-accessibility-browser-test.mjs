@@ -310,6 +310,7 @@ try{
               const rects=[...range.getClientRects()].filter(r=>r.width>0&&r.height>0);
               const box=button.getBoundingClientRect();
               return {name:label.textContent.trim(),lines:new Set(rects.map(r=>Math.round(r.y))).size,
+                pressed:button.getAttribute('aria-pressed')==='true',height:box.height,
                 fits:rects.length>0&&rects.every(r=>r.x>=box.x-1&&r.right<=box.right+1),
                 truncated:getComputedStyle(label).textOverflow==='ellipsis'&&label.scrollWidth>label.clientWidth+1};
             }).filter(Boolean);
@@ -330,8 +331,9 @@ try{
             assert.ok(enlarged.planReading?.titleFits,
               '200% Plan title wraps within the page instead of clipping: '+JSON.stringify({theme,width,enlarged}));
             assert.ok(enlarged.planReading.modes.length===4&&enlarged.planReading.modes.every(
-              mode=>mode.name&&mode.fits&&!mode.truncated),
-              '200% Plan pane labels show complete text in their buttons: '+JSON.stringify({theme,width,enlarged}));
+              mode=>mode.name&&mode.fits&&!mode.truncated&&mode.height>=44)&&
+              enlarged.planReading.modes.filter(mode=>mode.pressed).length===1,
+              '200% Plan modes have complete labels, one selection and touch-safe targets: '+JSON.stringify({theme,width,enlarged}));
           }
           if(route==='plan'&&width>=1060&&height>=700){
             assert.ok(enlarged.plan.nextBottom<=enlarged.plan.overviewTop+1,

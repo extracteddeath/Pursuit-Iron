@@ -2,6 +2,7 @@
 
 - Profile layout/card editors and favorite-chart editing now reuse the existing UiAction component with one tonal button style, a shared 48px touch minimum, icon sizing and selected states. Screen-specific rules retain layout only; native labels, disabled states, callbacks and saved preferences are preserved.
 - Removed 67 superseded declarations in Profile, Progress and Settings, including 63 priority overrides, plus 23 priority overrides replaced by the shared controls: 86 fewer CSS `!important` declarations (3,103 → 3,017). Accessibility, forced-colors and motion safeguards remain.
+- Share-card choices reflow to one column when enlarged text needs more room, preserving whole labels at 200% root text size.
 - The redundant-rule removal produced zero computed-style changes in a same-page comparison of 5,718 elements across 24 populated phone/tablet light/dark scenarios. Actual editor interaction, record preservation, contrast and compact workout regressions remain release gates.
 
 ## Profile share card and cohesive styles — October 20, 2026

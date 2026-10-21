@@ -2646,6 +2646,16 @@ function selectNumericInput(event) {
     if (!input.readOnly && !input.disabled)
         input.select();
 }
+// On touch browsers, the native click action may move the caret after onClick.
+// Focus-mode fields should retain select-all once the browser finishes the tap.
+function selectFocusNumericInput(event) {
+    selectNumericInput(event);
+    const input = event.currentTarget;
+    requestAnimationFrame(() => {
+        if (document.activeElement === input && !input.readOnly && !input.disabled)
+            input.select();
+    });
+}
 // Keep the logger's existing IME action hints truthful without changing set values.
 // Weight's Next moves to reps in the SAME set; reps' Done dismisses the keyboard.
 // Composition/readonly inputs are left entirely to the browser.
@@ -13145,7 +13155,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                                                 background: f.lead ? C.bg2 : "none", borderWidth: 1, borderStyle: "solid",
                                                 borderColor: f.lead ? C.accentDim : C.border, textAlign: "center",
                                                 display: "flex", flexDirection: "column", justifyContent: "center", minHeight: 150 }, children: [_jsx("div", { style: { fontSize: 11, fontWeight: 700, letterSpacing: 1,
-                                                        color: f.lead ? C.accentInk : C.muted }, children: f.label }), _jsxs("div", { style: { margin: "4px 0 10px" }, children: [_jsx("input", { inputMode: f.key === "w" ? "decimal" : "numeric", onFocus: selectNumericInput, onClick: selectNumericInput, enterKeyHint: f.key === "w" ? "next" : "done", "aria-label": f.aria, value: f.value, readOnly: s.done, placeholder: f.ph, onChange: ev => f.fix(ev.target.value), className: "mono wpb-num-input wpb-focus-value-input", style: { width: "100%", minWidth: 0, textAlign: "center",
+                                                        color: f.lead ? C.accentInk : C.muted }, children: f.label }), _jsxs("div", { style: { margin: "4px 0 10px" }, children: [_jsx("input", { inputMode: f.key === "w" ? "decimal" : "numeric", onFocus: selectNumericInput, onClick: selectFocusNumericInput, enterKeyHint: f.key === "w" ? "next" : "done", "aria-label": f.aria, value: f.value, readOnly: s.done, placeholder: f.ph, onChange: ev => f.fix(ev.target.value), className: "mono wpb-num-input wpb-focus-value-input", style: { width: "100%", minWidth: 0, textAlign: "center",
                                                                 background: "none", borderWidth: 0, padding: 0, outline: "none",
                                                                 fontSize: 34, fontWeight: 700, lineHeight: 1.05,
                                                                 color: f.lead ? C.accentInk : C.text } }), _jsx("div", { style: { fontSize: 11, fontWeight: 600, letterSpacing: .6, color: C.muted, height: 13 }, children: f.suffix || "" })] }), _jsxs("div", { style: { display: "flex", gap: 8, justifyContent: "center" }, children: [_jsx(StepButton, { label: `Decrease ${f.aria}`, glyph: "\u2212", onStep: f.dec, sx: focusStep }), _jsx(StepButton, { label: `Increase ${f.aria}`, glyph: "+", onStep: f.inc, sx: focusStep })] })] }, f.key))) }), focusBar && _jsxs("button", { type: "button", className: "pressable wpb-focus-plates",

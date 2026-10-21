@@ -130,6 +130,49 @@ export async function verifyWizardSteps(page, { width, height, theme, root, url 
         !document.querySelector('.wpb-wizard-next-action').disabled&&
         !document.querySelector('.wpb-wizard-step').textContent.includes('Checking'),{timeout:90000});
       const label=theme+' '+width+'x'+height+' '+(cycle?'Cycle':'Program')+' '+key;
+      if(key==='cycletype'){
+        const cards=await page.$$('.wpb-wizard-cycle-option');
+        assert.ok(cards.length>1,'Cycle creation offers template choices');
+        for(const card of cards){
+          await card.evaluate(el=>{el.scrollIntoView({block:'center'});el.focus();});
+          await page.keyboard.press('Enter');await settle();
+          assert.equal(await card.evaluate(el=>el.getAttribute('aria-pressed')),'true',
+            'Keyboard selects each template through the canonical Wizard state');
+          assert.equal(await page.$$eval('.wpb-wizard-cycle-option[aria-pressed="true"]',els=>els.length),1,
+            'Exactly one template is selected');
+        }
+        // Custom blocks retain authored values through template changes.
+        const custom=await page.evaluateHandle(()=>[...document.querySelectorAll('.wpb-wizard-cycle-option')]
+          .find(el=>el.textContent.includes('Custom')));
+        assert.ok(custom.asElement(),'Custom cycle choice exists');
+        await custom.asElement().evaluate(el=>{el.scrollIntoView({block:'center'});el.focus();});
+        await page.keyboard.press('Enter');await settle();
+        const weeks='.wpb-custom-cycle input[aria-label="Block 1 weeks"]';
+        await page.waitForSelector(weeks);
+        await page.$eval(weeks,el=>{el.focus();el.select();});
+        await page.keyboard.type('7');await settle();
+        await activate('.wpb-wizard-cycle-option');
+        await custom.asElement().evaluate(el=>{el.scrollIntoView({block:'center'});el.focus();});
+        await page.keyboard.press('Enter');await settle();
+        assert.equal(await page.$eval(weeks,el=>el.value),'7','Template changes preserve custom block weeks');
+        const adapt='.wpb-wizard-cycle-adapt';
+        const before=await page.$eval(adapt,el=>el.getAttribute('aria-checked'));
+        await activate(adapt);
+        assert.notEqual(await page.$eval(adapt,el=>el.getAttribute('aria-checked')),before,
+          'Keyboard adaptation changes the canonical checkbox value');
+        await activate(adapt);
+        assert.equal(await page.$eval(adapt,el=>el.getAttribute('aria-checked')),before,
+          'Adaptation can be restored without changing custom blocks');
+        await assertGeometry(label+' custom blocks 100% text');
+        await textSize(true);
+        await assertGeometry(label+' custom blocks 200% text');
+        await textSize(false);
+        // Continue the existing preset-cycle journey: custom inserts its own
+        // Goal step, while the original sequence deliberately tests presets.
+        await activate('.wpb-wizard-cycle-option');
+        await custom.dispose();
+      }
+
       await assertGeometry(label+' 100% text');
       await textSize(true);
       await assertGeometry(label+' 200% text');

@@ -6264,11 +6264,36 @@ function StepBody({ stepKey, config, set, buildable = {}, autoLength = null, com
                     }) })] }));
     }
     if (stepKey === "cycletype") {
-        return (_jsxs(_Fragment, { children: [_jsx(Heading, { sub: "Each phase is planned around its goal, then later blocks can adapt from the workouts you actually complete.", children: "Which cycle do you want to run?" }), _jsx("div", { style: { display: "flex", flexDirection: "column", gap: 8 }, children: cycleChoices.map(t => {
-                        const on = t.id === cycleTemplate;
-                        const wk = t.blocks.reduce((a, b) => a + b.weeks, 0);
-                        return (_jsxs("button", { "aria-pressed": on, onClick: () => setCycleTemplate(t.id), className: "pressable wpb-wizard-cycle-option", style: { textAlign: "left", background: C.card, border: `2px solid ${on ? C.accent : C.border}`, borderRadius: 16, padding: "14px 15px", cursor: "pointer" }, children: [_jsxs("div", { className: "wpb-wizard-cycle-heading", style: { display: "flex", alignItems: "center", gap: 8 }, children: [_jsx("div", { className: "wpb-wizard-cycle-name", style: { fontSize: 15, fontWeight: 700, color: C.text, flex: 1 }, children: t.name }), _jsxs("div", { className: "wpb-wizard-cycle-duration", style: { fontSize: 13, fontWeight: 600, color: C.muted }, children: [wk, " wks \u00B7 ", t.blocks.length, " blocks"] })] }), _jsx("div", { style: { fontSize: 13, color: C.accentInk, fontWeight: 600, margin: "3px 0 6px" }, children: t.tag }), _jsx("div", { style: { fontSize: 13, color: C.muted, lineHeight: 1.45 }, children: t.blurb }), _jsx("div", { style: { display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }, children: t.blocks.map((b, i) => (_jsxs("span", { style: { fontSize: 11, fontWeight: 600, color: C.text, background: C.bg2, borderRadius: 8, padding: "4px 8px" }, children: [b.label, " \u00B7 ", b.weeks, "w"] }, i))) })] }, t.id));
-                    }) }), cycleTemplate === "custom" && _jsx(CustomCycleComposer, { blocks: customCycleBlocks, onChange: setCustomCycleBlocks }), _jsxs("button", { onClick: () => setCycleAdapt(v => !v), role: "checkbox", "aria-checked": cycleAdapt, "aria-label": "Adapt exercises to each phase", className: "pressable", style: { width: "100%", textAlign: "left", marginTop: 12, background: C.card, border: `1px solid ${cycleAdapt ? C.accent : C.border}`, borderRadius: 16, padding: 12, display: "flex", alignItems: "flex-start", gap: 12 }, children: [_jsx("div", { style: { flexShrink: 0, marginTop: 1, width: 20, height: 20, borderRadius: 8, border: `2px solid ${cycleAdapt ? C.accent : C.border}`, background: cycleAdapt ? C.accent : "transparent", display: "flex", alignItems: "center", justifyContent: "center" }, children: cycleAdapt && _jsx(Check, { size: 13, color: C.accentText }) }), _jsxs("div", { style: { minWidth: 0 }, children: [_jsx("div", { style: { fontSize: 15, fontWeight: 700, color: C.text }, children: "Adapt exercises to each phase" }), _jsx("div", { style: { fontSize: 13, color: C.muted, lineHeight: 1.45, marginTop: 2 }, children: "Real block history may change compatible exercises at the next phase while protecting successful lifts. Turn this off to keep the same exercise skeleton and only retarget sets, reps, RIR and rest." })] })] })] }));
+        return (_jsxs(_Fragment, { children: [
+            _jsx(Heading, { sub: "Each phase is planned around its goal, then later blocks can adapt from the workouts you actually complete.", children: "Which cycle do you want to run?" }),
+            _jsx("div", { className: "wpb-ui-stack wpb-wizard-cycle-choices", children: cycleChoices.map(t => {
+                const on = t.id === cycleTemplate;
+                const wk = t.blocks.reduce((a, b) => a + b.weeks, 0);
+                return (_jsxs("button", { type: "button", "aria-pressed": on,
+                    onClick: () => setCycleTemplate(t.id), className: "pressable wpb-ui-card wpb-wizard-cycle-option",
+                    children: [
+                        _jsxs("div", { className: "wpb-wizard-cycle-heading", children: [
+                            _jsx("div", { className: "wpb-wizard-cycle-name", children: t.name }),
+                            _jsxs("div", { className: "wpb-wizard-cycle-duration", children: [wk, " wks \u00B7 ", t.blocks.length, " blocks"] })
+                        ] }),
+                        _jsx("div", { className: "wpb-wizard-cycle-tag", children: t.tag }),
+                        _jsx("div", { className: "wpb-wizard-cycle-blurb", children: t.blurb }),
+                        _jsx("div", { className: "wpb-ui-row wpb-wizard-cycle-blocks", children: t.blocks.map((b, i) =>
+                            _jsxs("span", { className: "wpb-wizard-cycle-block", children: [b.label, " \u00B7 ", b.weeks, "w"] }, i)) })
+                    ] }, t.id));
+            }) }),
+            cycleTemplate === "custom" && _jsx(CustomCycleComposer, { blocks: customCycleBlocks, onChange: setCustomCycleBlocks }),
+            _jsxs("button", { type: "button", onClick: () => setCycleAdapt(v => !v), role: "checkbox",
+                "aria-checked": cycleAdapt, "aria-label": "Adapt exercises to each phase",
+                className: "pressable wpb-ui-card wpb-wizard-cycle-adapt", children: [
+                    _jsx("div", { className: "wpb-wizard-cycle-check", "aria-hidden": true,
+                        children: cycleAdapt && _jsx(Check, { size: 13 }) }),
+                    _jsxs("div", { className: "wpb-wizard-mode-copy", children: [
+                        _jsx("div", { className: "wpb-wizard-mode-title", children: "Adapt exercises to each phase" }),
+                        _jsx("div", { className: "wpb-wizard-mode-sub", children: "Real block history may change compatible exercises at the next phase while protecting successful lifts. Turn this off to keep the same exercise skeleton and only retarget sets, reps, RIR and rest." })
+                    ] })
+                ] })
+        ] }));
     }
     if (stepKey === "name") {
         return (_jsxs(_Fragment, { children: [_jsxs(Heading, { sub: "You can rename it any time after it's built.", children: ["Name your ", cycleMode ? "cycle" : "program"] }), _jsx("input", { "aria-label": cycleMode ? "Cycle name" : "Program name", autoFocus: true, value: config.name, maxLength: 60, onChange: (e) => set({ name: e.target.value }), placeholder: cycleMode ? "e.g. Summer Training Cycle" : "e.g. Summer Hypertrophy Block",

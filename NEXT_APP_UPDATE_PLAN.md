@@ -123,3 +123,12 @@ Measured debt: CSS priority declarations **2,983 → 2,931**; App inline style o
 Extend the existing B890 browser gate at 320/390/393/834/900/1280px: real all-cycles and detail navigation, 200% text, read-only prescriptions and week selection, keyboard preview, forced-color focus/state, saved data preservation, plus real exported-component empty/completed/missing-block fallback cases. Source contracts now assert the semantic Cycle content owner instead of the retired positional selector, and distinguish `transform` from `text-transform` when banning geometry animation. Require all ten candidate/main checks, Pages and deployed identity; record final evidence in the PR.
 
 Next: Program/cycle creation controls (`Wizard` and custom block composer), followed by remaining block-review presentation. Whole-app and physical Android/Play certification remain open.
+
+
+## Cohesion 16 and 17 — creation controls
+
+Cohesion 16 (PR #225) merged as `b20ec6d` after all ten candidate checks passed: shared Wizard choices, heading/options layout, units, program/cycle mode and controlled name input are CSS-owned. The candidate also contains the browser-proven deferred Focus tap-selection correction. All unrelated Workout layout and engine behavior are preserved.
+
+Cohesion 17 migrates cycle-template cards and the adaptation checkbox into the existing Wizard family, reusing shared cards/stacks/rows and type/spacing/theme roles. Selection follows the real ARIA state. Move cycle-heading reflow into its single class owner and retire the redundant priority rule. No training, generation, progression, storage or logger changes. Debt: 3,303 → 3,289 inline style objects; 2,923 → 2,922 external priorities; 32 → 30 repeated priority declarations (27 remaining collision keys); embedded priorities stay 1,417. Tighten all affected CI ceilings. R74 now exercises each template by keyboard, custom-week retention across template switches, reversible adaptation, and the existing enlarged text and Back/Next journeys. Candidate publication requires all ten final-head checks, Pages and post-merge evidence.
+
+Next: remaining Wizard equipment/constraint and review presentation, then Settings/Profile cards. Full application migration and physical Android/Play certification remain open.

@@ -5,10 +5,10 @@ import fs from 'node:fs';
 // Decrease alongside a verified cleanup; never raise to permit a cosmetic override.
 const css = fs.readFileSync('app.css', 'utf8');
 const app = fs.readFileSync('modules/App.js', 'utf8');
-const MAX_IMPORTANT = 2923;
+const MAX_IMPORTANT = 2922;
 const MAX_APP_IMPORTANT = 1417; // Prevent embedded StyleTag patches bypassing the CSS budget.
-const MAX_REPEAT_IMPORTANT = 32;
-const MAX_INLINE_STYLE_OBJECTS = 3303; // Cohesion 16: Wizard choice/heading/name presentation migrated
+const MAX_REPEAT_IMPORTANT = 30;
+const MAX_INLINE_STYLE_OBJECTS = 3289; // Cohesion 17: cycle setup presentation migrated
 const allowedDebtKeys = new Set([
   "\t#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step\tborder-radius",
   "\t#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step\theight",
@@ -119,8 +119,9 @@ for(const str of ['wpb-ui-card wpb-profile-share-card','wpb-ui-card wpb-custom-c
 const wizardOption=app.slice(app.indexOf('function OptionCard('),app.indexOf('/* ============================== WIZARD'));
 const wizardHeading=app.slice(app.indexOf('function Heading('),app.indexOf('/* B893:'));
 const wizardUnitsMode=app.slice(app.indexOf('function StepBody('),app.indexOf('    if (stepKey === "cycletype")'));
+const wizardCycle=app.slice(app.indexOf('    if (stepKey === "cycletype")'),app.indexOf('    if (stepKey === "name")'));
 const wizardName=app.slice(app.indexOf('    if (stepKey === "name")'),app.indexOf('    if (stepKey === "experience")'));
-for(const [owner,source] of [['OptionCard',wizardOption],['Heading/Col',wizardHeading],['Units and mode',wizardUnitsMode],['Program name',wizardName]]){
+for(const [owner,source] of [['OptionCard',wizardOption],['Heading/Col',wizardHeading],['Units and mode',wizardUnitsMode],['Program name',wizardName],['Cycle templates and adaptation',wizardCycle]]){
   assert.ok(source.length>100,'Missing scoped Wizard owner '+owner);
   assert.ok(!source.includes('style: {'),'Static Wizard presentation returned to JSX: '+owner);
 }

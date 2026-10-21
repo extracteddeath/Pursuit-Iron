@@ -116,17 +116,17 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "bc8f6253747eb3b138c26577650d0741f9318bdf357fb94802da2b3ad3a32359",
+    "modules/App.js": "dd9e4acc3069dba94400f10e573472cfa020580a244a3fd36ff6b2842d8941fa",
     "index.html": "54fd7f97b0a2d9d8b76694380158b4a23699a3f1c1cbea697c5e33b7c705b7ed",
-    "sw.js": "5606450bb38870d71c8662577668475e2dd02881a24c0caa156efe24932d2fe3",
-    "BUILD_PROFILE.json": "e3b7d1e4142a92aa940089c89a621d3c55cc0db8653bec967646e199d882d839",
-    "CHANGELOG.md": "4da884743cbe53f606d2c7bdd6db15ef2cf0da582c4626828af06867607ee4ab",
-    "app.css": "20915ca44a5475bf7abb9753a90f67fe321266f8572458a0daffd14386dff110",
+    "sw.js": "a02aeb8b288c5da3a7e216053fe80825b8c3ae2fb86d178e88ce2138e334954b",
+    "BUILD_PROFILE.json": "1f6c1db326f343b47e535c50090df9cff258943e9aa8d32dff9f6b1e4a6909d2",
+    "CHANGELOG.md": "af1a416c039883c203acbebb2b3bfc29157b7b676f489baaa3979e2ef66f96c1",
+    "app.css": "8576dbc8d62e16e6c57470e809c17a773a17779d9be5b148d4e9035dd308deb2",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b905-rabb5dadaa5de6129",
-  "uiMilestone": "Build 905 · Cohesion 05 editable Profile share card"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b905-rd6f20e867dc0985a",
+  "uiMilestone": "Build 905 · Cohesion 06 shared editor controls"
 }

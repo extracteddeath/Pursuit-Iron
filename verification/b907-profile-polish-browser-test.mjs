@@ -59,6 +59,15 @@ try{
   assert.ok(geometry.targets.every(r=>r.w>=47.5&&r.h>=47.5),`48px enabled actions at ${width} ${theme}: ${JSON.stringify(geometry.targets)}`);
   assert.ok(geometry.targets.every(r=>r.left>=-1&&r.right<=width+1),`no offscreen actions at ${width} ${theme}`);
   if(width===320)assert.equal(geometry.cols,3,'320px profile controls wrap beneath full-width row title');
+  await page.evaluate(()=>document.documentElement.style.fontSize='200%');
+  const enlarged=await page.$$eval('.wpb-profile .wpb-ui-action[data-action="tonal"]',buttons=>buttons.filter(b=>!b.disabled).map(b=>{
+    const box=b.getBoundingClientRect(),walker=document.createTreeWalker(b,NodeFilter.SHOW_TEXT),rects=[];
+    while(walker.nextNode()){const node=walker.currentNode;if(!node.textContent.trim())continue;const range=document.createRange();range.selectNodeContents(node);rects.push(...range.getClientRects());}
+    return {label:b.textContent.trim(),fits:rects.every(r=>r.left>=box.left-1&&r.right<=box.right+1)};
+  }));
+  assert.ok(enlarged.length>10&&enlarged.every(b=>b.fits),'200% shared editor labels fit: '+JSON.stringify(enlarged));
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false,'200% editors do not cause horizontal overflow');
+  await page.evaluate(()=>document.documentElement.style.removeProperty('font-size'));
   await page.type('.wpb-profile-card-field input','Alex Rivera');
   await page.$$eval('.wpb-profile-share-toggles button',buttons=>buttons.find(b=>b.textContent.includes('Favorite lifts')).click());
   await page.waitForSelector('.wpb-profile-card-favorites select');

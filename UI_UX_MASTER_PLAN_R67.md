@@ -4,6 +4,9 @@ Updated: 2026-10-20. Build 858 is published through PR #142 at `2e2489a2c2c249f1
 
 ## Current design cohesion work
 
+Cohesion 06 continues the merged share-card pass (#211). Profile and chart editors reuse UiAction's shared tonal variant; scoped layout stays with the screen. Removed 86 actual important declarations, 3,103 to 3,017, without changing the workout or engine owners. Dead-rule removal was checked in the same mounted DOM across 24 phone/tablet light/dark scenarios (5,718 elements, zero computed-value changes). Shared buttons intentionally standardize editor borders, typography and state colors, with 48px targets, enlarged-text choice reflow and existing motion/focus/forced-colors handling. Broader cascade cleanup remains ongoing; legitimate accessibility overrides are retained.
+
+
 Foundation, Profile hierarchy/style ownership, and Progress/History CSS ownership are merged through PR #209. This pass adds the requested editable share card at the top of Profile, separate from arranging the Profile sections, plus aligned Strength Score insets and shared theme roles for editor controls. The same metric model drives preview and image export. Previously saved section preferences and share selections are preserved.
 
 Validation for this slice covers populated 320/393/834px light/dark Profile layouts, saved name/favorite lifts, preview/export content, section reordering/visibility, equal score alignment and the established compact logger regression. CI remains the release gate. Broader single-owner CSS cleanup is still ongoing; this does not certify every screen or physical Android/TalkBack behavior.

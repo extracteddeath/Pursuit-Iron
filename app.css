@@ -253,7 +253,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   margin-bottom:11px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-label{
-  font-size:10px!important;
   text-transform:none!important;
 }
 
@@ -372,13 +371,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   font-weight:760!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item>.mono{
-  font-size:clamp(21px,5.5vw,24px)!important;
-  font-weight:770!important;
   letter-spacing:-.04em;
-  line-height:1!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-label{
-  font-size:10.5px!important;
   font-weight:700!important;
 }
 
@@ -1692,9 +1687,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 /* Progress: a compact, expressive title region and connected tab control,
    not an extra floating strip. The chart contents stay unchanged. */
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-title{
-  font-size:31px!important;
-}
 
 /* Plan: week navigation becomes a continuous "rail", without making an
    occupied lower-screen workout dock taller. */
@@ -1821,23 +1813,14 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 /* Profile is a real dashboard, not a uniform stack of setting-sized cards. */
 #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-head{
-  background-image:none!important;
   border-bottom:1px solid var(--pi-layout-border)!important;
-}
-
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-identity{
-  background-image:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength-cell{
   min-width:0;
-  padding:14px!important;
-  border-radius:20px 20px 13px 20px!important;
-  border:1px solid var(--pi-layout-border)!important;
   transition:border-color 180ms var(--pi-r4-spring-ease),border-radius 260ms var(--pi-r4-spring-ease)!important;
 }
 #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength-cell:first-child{
   grid-column:1 / -1;
-  border-radius:30px 30px 16px 30px!important;
   background-image:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile :is(.wpb-profile-section,.wpb-profile-achievement-board){
@@ -2127,15 +2110,11 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 /* Sessions, Sets and recent PRs now read as one substantial statistic and two
    supporting facts, not three interchangeable badges. */
-#root[data-pi-motion="expressive"] .wpb-progress [data-progress-glance]{
-  grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr)!important;
-}
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item{
   min-height:59px;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item:first-child{
   grid-column:1;grid-row:1 / span 2;
-  border-radius:28px 28px 17px 28px!important;
   min-height:126px;
   background-image:none!important;
   display:flex;
@@ -2144,18 +2123,13 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   align-items:flex-start;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item:first-child>.mono{
-  font-size:clamp(37px,9vw,48px)!important;
-  font-weight:820!important;
-  line-height:1!important;
   letter-spacing:-.05em;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item:nth-child(2){
   grid-column:2;grid-row:1;
-  border-radius:19px 24px 14px 19px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item:nth-child(3){
   grid-column:2;grid-row:2;
-  border-radius:14px 19px 24px 19px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item:not(:first-child)>.mono{
   font-size:22px!important;
@@ -2169,9 +2143,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   }
   #root[data-pi-motion="expressive"] .wpb .wpb-plan-glance-tile>div:last-child{font-size:18px!important}
   #root[data-pi-motion="expressive"] .wpb .wpb-plan-panes>button{font-size:11.5px!important}
-  #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item{
-    padding:9px 10px!important;
-  }
 }
 @media(prefers-reduced-motion:reduce),(forced-colors:active){
   #root[data-pi-motion="expressive"] .wpb .wpb-plan-panes[data-pi-m3-track]::before{
@@ -2245,16 +2216,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 
 
 /* One large measured fact per dashboard; companion numbers are secondary. */
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item,
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength-cell,
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-identity{
-  background-image:none!important;
-  background-color:var(--pi-m3e-surface-container-low)!important;
-}
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item:first-child,
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength-cell:first-child{
-  background-color:var(--pi-m3e-primary-container)!important;
-}
 /* Library and program creation use filled/tonal/outlined roles rather than
    gradients, with the existing focus/selection-driven shape morph intact. */
 #root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library :is(.wpb-library-row,.wpb-library-search,.wpb-library-flag-filter),
@@ -2590,11 +2551,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session{
-  background-color:var(--pi-r11-quiet)!important;
   border-color:var(--pi-r11-edge)!important;
-}
-#root[data-pi-motion="expressive"] .wpb-progress>.wpb-page-header{
-  background-color:var(--pi-r11-quiet)!important;
 }
 /* PROFILE. Strength summary leads through measured size and its distinctive
    corner; supporting strength records and the profile identity are quiet. */
@@ -2814,7 +2771,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-radius:0!important;
   background:transparent!important;
   box-shadow:none!important;
-  font-size:12.5px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-edit{
   padding:0 14px!important;
@@ -2953,12 +2909,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   letter-spacing:-.035em!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-label{
-  font-size:10px!important;
   white-space:normal!important;
   overflow-wrap:anywhere;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item>div:last-child{
-  font-size:10px!important;
   white-space:normal!important;
   overflow-wrap:anywhere;
 }
@@ -3674,7 +3628,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session{
   box-sizing:border-box;
   min-width:0;
-  background-color:var(--pi-r11-quiet)!important;
   overflow-wrap:anywhere;
   transition:border-radius 200ms var(--pi-ease),border-color 160ms var(--pi-ease),background-color 160ms var(--pi-ease)!important;
 }
@@ -3685,7 +3638,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session-detail{
   box-sizing:border-box;
   min-width:0;
-  background-color:var(--pi-r11-raised)!important;
   overflow-wrap:anywhere;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-actions{
@@ -3700,9 +3652,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-filters{
   flex-wrap:wrap;
-}
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-group-header{
-  min-width:0;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-finish-sheet{
   box-sizing:border-box;
@@ -4207,7 +4156,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   align-items:center;
   justify-content:center;
   min-width:0!important;
-  min-height:70px!important;
   padding:10px 6px!important;
   margin:0!important;
   border:none!important;
@@ -4223,9 +4171,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   line-height:1.15!important;
   font-variant-numeric:tabular-nums;
   overflow-wrap:normal!important;
-}
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-stat :not(.mono){
-  line-height:1.3!important;
 }
 /* R39 fixes the visible lone Squat tile taking only half of Strength.
    When there is only one real strength pattern, make it a meaningful full
@@ -4274,9 +4219,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 /* Progress: compact, readable data first, controls next. Keep every actual
    metric and its time window visible rather than hiding secondary labels. */
-#root[data-pi-motion="expressive"] .wpb-progress>.wpb-page-header{
-  background-color:var(--pi-r11-quiet)!important;
-}
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-title{
   font-size:clamp(27px,6.7vw,32px)!important;
   line-height:1.1!important;
@@ -4284,7 +4226,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs{
   min-width:0;
   margin-top:7px!important;
-  background-color:var(--pi-r11-raised)!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs>button{
   min-width:0!important;
@@ -4299,18 +4240,13 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item{
   min-width:0!important;
-  min-height:80px!important;
   padding:11px 9px!important;
   border-radius:17px!important;
   box-shadow:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-label{
-  font-size:11.5px!important;
   letter-spacing:0!important;
   margin-top:4px!important;
-}
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item>div:last-child{
-  font-size:10.5px!important;
 }
 /* Related history tools share one clear rhythm without amplifying empty
    periods with giant, decorative cards. Semantic search/filters untouched. */
@@ -4329,7 +4265,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   background-image:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-filter-help{
-  font-size:11.5px!important;
   max-width:52ch;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-disclosure>summary{
@@ -4338,14 +4273,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   align-items:center;
   line-height:1.35!important;
 }
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-grouping{
-  background-color:var(--pi-r11-quiet)!important;
-}
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-grouping>button{
   padding-inline:12px!important;
-}
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session{
-  background-color:var(--pi-r11-quiet)!important;
 }
 @media(max-width:359px){
   #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-inner{
@@ -5547,12 +5476,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   background-color:var(--pi-color-canvas)!important;
   background-image:none!important;
 }
-#root[data-pi-motion="expressive"] .wpb .wpb-settings.wpb-settings>.wpb-page-header,
-#root[data-pi-motion="expressive"] .wpb .wpb-progress.wpb-progress>.wpb-page-header,
-#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-head{
-  background:var(--pi-color-card)!important;
-  box-shadow:none!important;
-}
 #root[data-pi-motion="expressive"] .wpb .wpb-settings.wpb-settings .wpb-settings-card,
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-section,
 #root[data-pi-motion="expressive"] .wpb .wpb-progress.wpb-progress .wpb-history-session{
@@ -6214,25 +6137,17 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   min-height:48px!important;
   color:var(--pi-color-on-control)!important;
 }
-#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-inner{
-  padding:13px var(--pi-r57-inset) 0!important;
-}
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-head{
-  align-items:center!important;
-  gap:10px!important;
   margin-bottom:10px!important;
   min-width:0;
-  padding:0!important;
   border:0!important;
   border-radius:0!important;
   background:transparent!important;
   box-shadow:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-title{
-  font-size:27px!important;
   font-weight:750!important;
   line-height:1.15!important;
-  letter-spacing:-.04em!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-identity{
   /* Font size and line height stay owned by the earlier rem-based Android
@@ -6244,25 +6159,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-edit{
   box-sizing:border-box!important;
-  min-height:48px!important;
-  min-width:62px!important;
-  padding:0 11px!important;
-  border:1px solid var(--pi-color-divider)!important;
-  background:var(--pi-color-control)!important;
-  color:var(--pi-color-on-control)!important;
-  border-radius:12px!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-hero{
-  padding:13px 14px!important;
   margin-bottom:10px!important;
-  border:1px solid var(--pi-color-divider)!important;
-  background:var(--pi-color-card)!important;
-  border-radius:17px!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-level-mark{
-  width:50px!important;
-  height:50px!important;
-  border-radius:15px!important;
 }
 #root[data-pi-motion="expressive"] .wpb :is(
   .wpb-plan-heading-row>button[aria-label="Back"],
@@ -6308,13 +6207,42 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 @media(max-width:359px){.wpb{--pi-page-inset:12px}}
 @media(min-width:600px){.wpb{--pi-page-inset:24px}}
 
+/* Cohesion 06 — Profile and chart editors share the existing UiAction owner.
+   Layout stays with each screen. This variant needs no !important overrides;
+   the global spring, keyboard focus and forced-colors owners remain shared. */
+#root .wpb .wpb-ui-action[data-action="tonal"]{
+  box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;
+  gap:7px;min-width:var(--pi-control-touch,48px);min-height:var(--pi-control-touch,48px);
+  padding:10px 12px;border:1px solid var(--pi-color-divider,var(--wpb-theme-border));
+  border-radius:var(--pi-shape-action,14px);background:var(--pi-color-control,var(--wpb-theme-card-high));
+  color:var(--pi-color-on-control,var(--wpb-theme-text));font:inherit;
+  font-size:.8125rem;font-weight:700;line-height:1.4;cursor:pointer;touch-action:manipulation;
+  box-shadow:none;
+  transition:background-color var(--pi-motion-paint,160ms) var(--pi-ease),
+    border-color var(--pi-motion-paint,160ms) var(--pi-ease),color var(--pi-motion-paint,160ms) var(--pi-ease);
+}
+#root .wpb .wpb-ui-action[data-action="tonal"][data-icon-only="true"]{
+  flex:0 0 var(--pi-control-touch,48px);width:var(--pi-control-touch,48px);
+  min-width:var(--pi-control-touch,48px);height:var(--pi-control-touch,48px);padding:0;
+}
+#root .wpb .wpb-ui-action[data-action="tonal"][data-align="start"]{justify-content:flex-start;text-align:left}
+#root .wpb .wpb-ui-action[data-action="tonal"]:is([aria-pressed="true"],[data-emphasis="accent"]){
+  background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink);
+  border-color:var(--wpb-theme-accent-ink);
+}
+@media(hover:hover) and (pointer:fine){
+  #root .wpb .wpb-ui-action[data-action="tonal"]:hover:not(:disabled){
+    background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink);border-color:var(--wpb-theme-accent-ink);
+  }
+}
+
 /* R61 — shared Home/Plan foundation pilot. These component classes are the
    final presentation owner for migrated controls; legacy screen classes keep
    layout and behavior selectors while actions read the current palette. */
 .wpb .wpb-ui-header{display:flex;align-items:center;min-height:var(--pi-control-min,48px);min-width:0}
 .wpb .wpb-ui-status{font-size:var(--pi-type-support,.8125rem);line-height:1.5;overflow-wrap:anywhere}
 .wpb .wpb-ui-section{min-width:0}
-#root[data-pi-motion="expressive"] .wpb .wpb-ui-action.wpb-ui-action[data-action],
+#root[data-pi-motion="expressive"] .wpb .wpb-ui-action.wpb-ui-action[data-action]:where(:not([data-action="tonal"])),
 #root[data-pi-motion="expressive"] .wpb .wpb-ui-choice.wpb-ui-choice{
   box-sizing:border-box!important;
   min-height:var(--pi-control-min,48px)!important;
@@ -6874,12 +6802,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     grid-column:2;
     grid-row:2;
     margin-bottom:0!important;
-  }
-  #root[data-pi-motion="expressive"] .wpb-progress .wpb-page-scroll[data-scroll-key="sessions"]>.wpb-training-history{
-    grid-column:1;
-    grid-row:3;
-    margin-bottom:0!important;
-    min-width:0;
   }
   #root[data-pi-motion="expressive"] .wpb-progress .wpb-page-scroll[data-scroll-key="sessions"]>.wpb-progress-grouping{
     grid-column:2;
@@ -8593,11 +8515,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb-chart-favorites-available{max-height:210px;overflow-y:auto;overscroll-behavior:contain}
 .wpb-chart-favorite-row{display:flex;align-items:center;gap:7px;min-width:0;padding:6px 7px;border-radius:10px;background:var(--pi-color-control)}
 .wpb-chart-favorite-name{flex:1;min-width:0;overflow-wrap:anywhere;font-size:13px;font-weight:680}
-.wpb-chart-favorite-action{flex:0 0 var(--pi-control-touch);width:var(--pi-control-touch);min-width:var(--pi-control-touch);height:var(--pi-control-touch);min-height:var(--pi-control-touch);display:grid;place-items:center;border:1px solid var(--pi-color-divider);background:var(--pi-color-card);color:inherit;border-radius:var(--pi-shape-action);cursor:pointer}
-.wpb-chart-favorite-action:disabled{opacity:.3;cursor:default}
+.wpb-chart-favorite-action{place-items:center}
 .wpb-chart-favorites-search{display:grid;gap:5px;font-size:12px;font-weight:700}
 .wpb-chart-favorites-search input{width:100%;min-width:0;min-height:44px;padding:10px 12px;border-radius:10px;background:var(--pi-color-control);color:inherit;border:1px solid var(--pi-color-divider);font:inherit;font-size:14px}
-.wpb-chart-favorite-add{display:flex;align-items:center;gap:10px;width:100%;min-height:var(--pi-control-touch);padding:9px 10px;border:1px solid var(--pi-color-divider);border-radius:var(--pi-shape-action);background:var(--pi-color-control);color:inherit;font-size:13px;font-weight:650;text-align:left;cursor:pointer}
+.wpb-chart-favorite-add{text-align:left}
 .wpb-chart-favorite-add>span{flex:1;min-width:0;overflow-wrap:anywhere}
 .wpb-cycles .wpb-cycle-list-card,.wpb-cycles .wpb-cycle-block-list,.wpb-cycles .wpb-cycle-block-row{min-width:0;max-width:100%;box-sizing:border-box}
 .wpb-cycles .wpb-cycle-list-card>button>span{min-width:0}
@@ -8671,7 +8592,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    Preserve Profile preference logic and DOM order. Only local micro-interactions
    animate; no page or row geometry transitions that might cause flashing. */
 .wpb-profile-toolbar{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-start;margin:0 0 14px;min-width:0}
-.wpb-profile-toolbar button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:48px;padding:10px 14px;border-radius:14px;border:1px solid var(--pi-color-divider,var(--wpb-theme-border));background:var(--pi-color-control,var(--wpb-theme-card-high));color:inherit;font-size:13px;font-weight:700;cursor:pointer}
 .wpb-profile-toolbar button:focus-visible,.wpb-profile-customize button:focus-visible,.wpb-profile .wpb-profile-edit:focus-visible,.wpb-profile-strength button[aria-label="Share Strength Score"]:focus-visible{outline:3px solid var(--pi-focus,var(--wpb-theme-accent-ink,currentColor));outline-offset:2px}
 .wpb-profile .wpb-profile-edit{min-height:48px!important;min-width:48px!important;border-radius:14px!important}
 .wpb-profile-strength button[aria-label="Share Strength Score"]{width:48px!important;height:48px!important;min-width:48px!important;min-height:48px!important;border-radius:14px!important}
@@ -8679,24 +8599,23 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb-profile-customize-header{display:flex;align-items:flex-start;gap:12px;justify-content:space-between}
 .wpb-profile-customize-header strong{font-size:16px;font-weight:750}
 .wpb-profile-customize-header p{font-size:13px;line-height:1.5;margin:5px 0 0;opacity:.85}
-.wpb-profile-customize-header>button{display:grid;place-items:center;flex-shrink:0;width:48px;height:48px;border-radius:14px;border:1px solid var(--pi-color-divider,var(--wpb-theme-border));background:var(--pi-color-control,var(--wpb-theme-card-high));color:inherit;cursor:pointer}
+.wpb-profile-customize-header>button{place-items:center;flex-shrink:0}
 .wpb-profile-customize-label{margin:18px 0 9px;font-size:12px;font-weight:800;letter-spacing:.03em}
 .wpb-profile-customize-list{display:grid;gap:8px}
 .wpb-profile-customize-row{display:grid;grid-template-columns:minmax(0,1fr) 48px 48px minmax(74px,auto);align-items:center;gap:6px;min-width:0;min-height:60px;padding:6px 8px 6px 12px;border:1px solid var(--pi-color-divider,var(--wpb-theme-border));border-radius:16px;background:var(--pi-color-canvas,var(--wpb-theme-bg))}
 .wpb-profile-customize-row>span{min-width:0;font-size:13px;line-height:1.35;font-weight:680;overflow-wrap:anywhere}
-.wpb-profile-customize-row button{min-width:48px;min-height:48px;border:0;border-radius:12px;background:var(--pi-color-control,var(--wpb-theme-card-high));color:inherit;display:grid;place-items:center;cursor:pointer}
-.wpb-profile-customize-row button:disabled,.wpb-profile-share-toggles button:disabled{opacity:.38;cursor:default}
-.wpb-profile-customize-row .wpb-profile-visibility{min-width:74px;padding-inline:7px;font-size:12px;font-weight:750;background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink)}
-.wpb-profile-customize-row .wpb-profile-visibility[aria-pressed="false"]{background:var(--pi-color-control,var(--wpb-theme-card-high));color:inherit}
+.wpb-profile-customize-row button{place-items:center}
 .wpb-profile-share-toggles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.wpb-profile-share-toggles button{min-height:48px;min-width:0;display:flex;gap:8px;align-items:center;text-align:left;padding:10px 12px;border-radius:14px;border:1px solid var(--pi-color-divider,var(--wpb-theme-border));background:var(--pi-color-control,var(--wpb-theme-card-high));color:inherit;font-size:13px;font-weight:680;cursor:pointer}
-.wpb-profile-share-toggles button[aria-pressed="true"]{border-color:var(--wpb-theme-accent-ink);background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink)}
+/* Reflow with both root text scaling and Android-style local text enlargement. */
+@container pi-r77-profile (max-width:18rem) or (max-width:18em){
+  .wpb-profile-share-toggles{grid-template-columns:minmax(0,1fr)}
+}
+.wpb-profile-share-toggles button{text-align:left}
 .wpb-profile-share-toggles button span{display:grid;place-items:center;width:22px;height:22px;flex-shrink:0;border-radius:7px;background:var(--pi-color-control,var(--wpb-theme-card-high))}
-.wpb-profile-share-toggles button[aria-pressed="true"] span{background:var(--pi-color-card,var(--wpb-theme-card))}
-.wpb-profile-reset{margin-top:12px;padding:10px 12px;min-height:48px;border:0;border-radius:12px;background:var(--pi-color-control,var(--wpb-theme-card-high));color:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.wpb-profile-reset{margin-top:12px}
 @media(hover:hover) and (pointer:fine){.wpb-profile-toolbar button:not(:disabled):hover,.wpb-profile-customize button:not(:disabled):hover{background:var(--wpb-theme-accent-dim)}}
 @media(prefers-reduced-motion:no-preference){.wpb-profile-toolbar button,.wpb-profile-customize button{transition:background-color 160ms ease,border-color 160ms ease,transform 140ms ease}.wpb-profile-toolbar button:not(:disabled):active,.wpb-profile-customize button:not(:disabled):active{transform:scale(.97)}}
-@media(max-width:380px){.wpb-profile-customize{padding:12px}.wpb-profile-customize-row{grid-template-columns:48px 48px minmax(74px,1fr);gap:6px;padding:10px}.wpb-profile-customize-row>span{grid-column:1/-1;min-height:20px}.wpb-profile-share-toggles button{padding-inline:10px;font-size:12.5px}}
+@media(max-width:380px){.wpb-profile-customize{padding:12px}.wpb-profile-customize-row{grid-template-columns:48px 48px minmax(74px,1fr);gap:6px;padding:10px}.wpb-profile-customize-row>span{grid-column:1/-1;min-height:20px}}
 @media(forced-colors:active){.wpb-profile-toolbar button,.wpb-profile-customize button{forced-color-adjust:auto;border:1px solid ButtonText}.wpb-profile-share-toggles button[aria-pressed="true"],.wpb-profile-visibility[aria-pressed="true"]{outline:2px solid Highlight;outline-offset:-3px}}
 
 /* B893 · Custom-cycle composer, responsive and theme-aware. */
@@ -9130,45 +9049,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   line-height:1.45;
   overflow-wrap:anywhere;
 }
-#root[data-pi-motion="expressive"] .wpb .wpb-progress .wpb-chart-favorite-action{
-  box-sizing:border-box;
-  touch-action:manipulation;
-  transition:background-color var(--pi-motion-paint) var(--pi-ease,ease-out),
-    border-color var(--pi-motion-paint) var(--pi-ease,ease-out),
-    color var(--pi-motion-paint) var(--pi-ease,ease-out)!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-progress .wpb-chart-favorite-add{
-  box-sizing:border-box;
-  touch-action:manipulation;
-  transition:background-color var(--pi-motion-paint) var(--pi-ease,ease-out),
-    border-color var(--pi-motion-paint) var(--pi-ease,ease-out),
-    color var(--pi-motion-paint) var(--pi-ease,ease-out)!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-progress
-  :is(.wpb-chart-favorite-action,.wpb-chart-favorite-add):hover:not(:disabled){
-  background-color:var(--wpb-theme-accent-dim)!important;
-  border-color:var(--wpb-theme-accent-ink)!important;
-  color:var(--wpb-theme-accent-ink)!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-progress
-  :is(.wpb-chart-favorite-action,.wpb-chart-favorite-add):focus-visible{
-  outline:2px solid var(--wpb-theme-accent-ink)!important;
-  outline-offset:2px;
-}
 @media(max-width:360px){
   #root[data-pi-motion="expressive"] .wpb .wpb-progress .wpb-chart-favorite-row{
     gap:4px;
     padding-inline:6px;
-  }
-}
-@media(prefers-reduced-motion:reduce),(forced-colors:active){
-  #root[data-pi-motion="expressive"] .wpb .wpb-progress
-    :is(.wpb-chart-favorite-action,.wpb-chart-favorite-add){transition:none!important;}
-}
-@media(forced-colors:active){
-  #root[data-pi-motion="expressive"] .wpb .wpb-progress
-    :is(.wpb-chart-favorite-action,.wpb-chart-favorite-add):focus-visible{
-    outline-color:Highlight!important;
   }
 }
 
@@ -9282,35 +9166,16 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   display:flex!important;gap:8px!important;margin:4px 0 15px!important;
   flex-wrap:wrap;justify-content:flex-start!important;
 }
-#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-toolbar>button{
-  min-height:48px!important;min-width:0;padding:0 15px!important;border:0!important;
-  border-radius:999px!important;background:var(--pi-color-control)!important;
-  color:var(--pi-color-on-control)!important;font-size:13px!important;box-shadow:none!important;
-  transition:background-color 160ms ease,color 160ms ease!important;
-}
 
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-customize{
   border-radius:var(--pi-shape-card)!important;background:var(--pi-color-card)!important;
   border:1px solid var(--pi-color-divider)!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile
- :is(.wpb-profile-toolbar>button,.wpb-profile-edit,.wpb-profile-strength button[aria-label="Share Strength Score"]):focus-visible{
-  outline:2px solid var(--wpb-theme-accent-ink)!important;outline-offset:3px!important;
 }
 @media(max-width:360px){
   #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-hero{padding:12px!important}
   #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-strength{padding:14px!important}
   #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-stat-grid{gap:0!important}
   #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-stat{padding-inline:3px!important}
-}
-@media(prefers-reduced-motion:reduce),(forced-colors:active){
-  #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-toolbar>button{transition:none!important}
-}
-@media(forced-colors:active){
-  #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile
-   :is(.wpb-profile-hero,.wpb-profile-stat,.wpb-profile-strength,.wpb-profile-toolbar>button){
-    border:1px solid CanvasText!important;background:Canvas!important;color:CanvasText!important;
-  }
 }
 /* Preserve R77's large-text single-column facts when the available container shrinks. */
 @container pi-r77-profile (max-width:18em){
@@ -9346,14 +9211,11 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb-profile-card-metrics dd>span{display:block}
 .wpb-profile-card-metrics p{margin:0;font-size:.6875rem;line-height:1.5;color:var(--wpb-theme-muted)}
 .wpb-profile-card-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-.wpb-profile-card-actions>button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-width:var(--pi-control-touch,48px);min-height:var(--pi-control-touch,48px);padding:10px 15px;border:0;border-radius:var(--pi-shape-action,14px);font:inherit;font-size:.8125rem;font-weight:700;background:var(--pi-color-control,var(--wpb-theme-card-high));color:var(--pi-color-on-control,var(--wpb-theme-text));cursor:pointer;touch-action:manipulation}
-.wpb-profile-card-actions>.wpb-profile-share-action{background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink)}
 .wpb-profile-card-field{display:grid;gap:7px;margin:16px 0 0;min-width:0;font-size:.8125rem;font-weight:650}
 .wpb-profile-card-field :is(input,select){box-sizing:border-box;width:100%;min-width:0;min-height:48px;padding:10px 12px;font:inherit;font-size:1rem;border:1px solid var(--pi-color-divider,var(--wpb-theme-border));border-radius:var(--pi-shape-action,14px);background:var(--pi-color-control,var(--wpb-theme-card-high));color:var(--wpb-theme-text)}
 .wpb-profile-card-favorites>p{margin:16px 0 0;font-size:.8125rem;line-height:1.5;color:var(--wpb-theme-muted)}
-.wpb-profile :is(.wpb-profile-card-actions>button,.wpb-profile-card-field input,.wpb-profile-card-field select):focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:3px}
-@media(prefers-reduced-motion:no-preference){.wpb-profile-card-actions>button{transition:background-color 160ms ease,color 160ms ease}}
-@media(max-width:360px){.wpb-profile-share-card{padding:16px}.wpb-profile-card-actions>button{flex:1 1 auto}}
+@media(max-width:360px){.wpb-profile-share-card{padding:16px}}
 @media(forced-colors:active){.wpb-profile-share-card,.wpb-profile-card-actions>button{border:1px solid CanvasText}.wpb-profile-card-field :is(input,select){border-color:CanvasText}}
 
 @container pi-r77-profile (max-width:22em){.wpb-profile-card-metrics{grid-template-columns:minmax(0,1fr)}}
+.wpb-profile-share-toggles button[aria-pressed="true"] span{background:var(--pi-color-card,var(--wpb-theme-card))}

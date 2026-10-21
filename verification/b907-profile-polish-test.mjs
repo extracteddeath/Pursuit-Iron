@@ -43,4 +43,17 @@ for(const selector of ['.wpb-profile-stat-grid','.wpb-profile-stat','.wpb-profil
 }
 assert.ok(b912.includes('.wpb-profile-strength-cell>.wpb-profile-strength-label'),'Expressive overrides explicitly target the semantic label class');
 
+
+const cardRows=app.slice(app.indexOf('function profileShareRows('),app.indexOf('function ProfileView('));
+const cardScreen=app.slice(app.indexOf('function ProfileView('),app.indexOf('\nfunction ',app.indexOf('function ProfileView(')+12));
+assert.ok(cardRows.includes('const rows = profileShareRows('),'the exported image uses the shared row builder');
+assert.ok(cardScreen.includes('const cardRows = useMemo(()=>profileShareRows('),'the preview uses the same shared row builder');
+assert.ok(cardScreen.indexOf('_jsx(ProfileShareCardPreview') < cardScreen.indexOf('profilePrefs.order.filter'),'editable share card stays above independently customizable page sections');
+assert.ok(app.includes('PROFILE_SHARE_DEFAULTS')&&app.includes('PROFILE_SHARE_MAX = 5'),'bounded share fields and defaults');
+assert.ok(cardRows.includes('prefs.shareName')&&cardRows.includes('prefs.favoriteLifts'),'personal text appears only when selected and entered');
+assert.ok(cardRows.includes('function ProfileShareCardEditor(')&&cardRows.includes('function ProfileShareCardPreview('),'dedicated Profile card editing and preview');
+assert.ok(css.includes('.wpb-share-card-editor')&&css.includes('.wpb-share-card-row'),'card styles are isolated to Profile');
+const firstStrength=css.split('.wpb-profile-strength-grid>.wpb-profile-strength-cell:first-child{')[1]?.split('}')[0];
+assert.ok(firstStrength?.includes('padding-inline:2px!important')&&firstStrength.includes('border-radius:0!important'),'highlighted Push uses same alignment as all score rows');
+
 console.log('PASS B907 Profile: tactile spacing, tonal selection, reduced-motion/high-contrast, persistent preferences.');

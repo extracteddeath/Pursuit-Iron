@@ -23,6 +23,35 @@ try{
   await page.$eval('.wpb-profile-toolbar button',b=>b.click());
   await page.waitForSelector('.wpb-profile-customize-row');
 
+
+  const cardGeometry=await page.evaluate(()=>{
+    const card=document.querySelector('.wpb-share-card'),header=document.querySelector('.wpb-profile-head');
+    const section=document.querySelector('.wpb-profile-hero,.wpb-profile-stat-grid,.wpb-profile-strength');
+    return {exists:!!card,cardTop:card?.getBoundingClientRect().top,headerBottom:header?.getBoundingClientRect().bottom,
+      firstSectionTop:section?.getBoundingClientRect().top,actions:[...card.querySelectorAll('.wpb-share-card-actions button')].map(b=>b.getBoundingClientRect().height)};
+  });
+  assert.ok(cardGeometry.exists&&cardGeometry.cardTop>=cardGeometry.headerBottom-2,'share preview follows header');
+  if(cardGeometry.firstSectionTop!=null)assert.ok(cardGeometry.firstSectionTop>=cardGeometry.cardTop,'share preview precedes page sections');
+  assert.ok(cardGeometry.actions.length===2&&cardGeometry.actions.every(h=>h>=47.5),'share-card actions are thumb safe');
+  await page.$eval('.wpb-share-card-actions>button:first-child',el=>el.click());
+  await page.waitForSelector('.wpb-share-card-editor input');
+  await page.type('.wpb-share-card-field:first-of-type input','Taylor');
+  await page.type('.wpb-share-card-field:last-of-type input','Squat, Bench Press');
+  for(const [name,key] of [['Display name','name'],['Favorite lifts','favorites']]){
+    await page.$eval('.wpb-share-card-editor .wpb-profile-share-toggles',(root,label)=>{
+      const button=[...root.querySelectorAll('button')].find(b=>b.textContent.includes(label));
+      if(!button)throw new Error('No share option '+label);
+      if(button.getAttribute('aria-pressed')==='false')button.click();
+    },name);
+    await page.waitForFunction(k=>JSON.parse(localStorage.getItem('wpb:profile-layout-v1'))?.share?.includes(k),{},key);
+  }
+  const cardPrefs=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:profile-layout-v1')));
+  assert.equal(cardPrefs.shareName,'Taylor');
+  assert.equal(cardPrefs.favoriteLifts,'Squat, Bench Press');
+  const cardText=await page.$eval('.wpb-share-card-rows',el=>el.textContent);
+  assert.ok(cardText.includes('Taylor')&&cardText.includes('Squat · Bench Press'),'editing card immediately updates preview');
+  await page.$eval('[aria-label="Close share card editor"]',el=>el.click());
+
   const hierarchy=await page.evaluate(()=>{
     const rect=s=>document.querySelector(s)?.getBoundingClientRect().toJSON();
     const strength=document.querySelector('.wpb-profile-strength-grid');
@@ -63,6 +92,9 @@ try{
   await page.$eval('[aria-label="Show Level and XP"]',b=>b.click());
   const after=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:profile-layout-v1')));
   assert.equal(after.hidden.includes('level'),false);
+  const persisted=await page.$eval('.wpb-share-card-rows',el=>el.textContent);
+  assert.ok(persisted.includes('Taylor')&&persisted.includes('Squat · Bench Press'),'share card settings persist after reloading while page layout changes');
+
   assert.deepEqual(errors,[],'no runtime errors');await page.close();
  }
  console.log('PASS B907 browser: Profile touch geometry, phone/tablet layout, reordering and visibility persistence, two themes.');

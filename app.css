@@ -6236,6 +6236,25 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   }
 }
 
+/* Cohesion 07 — data controls use the existing action and theme owners.
+   Wrapping rows preserve full labels with enlarged text in narrow app windows. */
+.wpb-backup{min-width:0}
+.wpb-backup-actions{display:flex;flex-wrap:wrap;gap:8px}
+.wpb-backup-actions>.wpb-ui-action{flex:1 1 9rem;min-width:0;overflow-wrap:anywhere;white-space:normal}
+.wpb-backup .wpb-ui-action{font-size:.8125rem;max-width:100%;white-space:normal;overflow-wrap:anywhere}
+.wpb-backup-text{display:block;width:100%;height:120px;box-sizing:border-box;
+  padding:11px 12px;border:1px solid var(--wpb-theme-border);border-radius:12px;
+  background:var(--wpb-theme-card);color:var(--wpb-theme-text);font-size:.8125rem;resize:vertical}
+.wpb-backup-status{margin:8px 0;padding:10px 12px;border:1px solid var(--wpb-theme-border);
+  border-radius:12px;background:var(--wpb-theme-card);color:var(--wpb-theme-text);
+  font-size:.8125rem;line-height:1.5;overflow-wrap:anywhere}
+.wpb-backup-status[data-ok="false"]{color:var(--wpb-theme-danger)}
+.wpb-storage-status{min-width:0;background:var(--wpb-theme-card);border-radius:16px;padding:13px 14px}
+.wpb-storage-heading{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.wpb-storage-title{font-size:.9375rem;font-weight:700;overflow-wrap:anywhere}
+.wpb-storage-usage{font-size:.8125rem;color:var(--wpb-theme-muted);margin-top:2px}
+.wpb-storage-description{font-size:.8125rem;color:var(--wpb-theme-muted);line-height:1.5;margin:8px 0 0}
+
 /* R61 — shared Home/Plan foundation pilot. These component classes are the
    final presentation owner for migrated controls; legacy screen classes keep
    layout and behavior selectors while actions read the current palette. */

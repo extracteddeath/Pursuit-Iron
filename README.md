@@ -35,7 +35,7 @@ FAST TO USE UNDER A BAR
 • Body measurements, bodyweight log, achievements, shareable session cards
 
 YOUR DATA IS YOURS
-No account. No server. No ads. No subscription. Everything stays on your device and works completely offline — a basement gym with no signal changes nothing. Move between your own devices with an export you control, using a merge built so your training history can never be lost.
+No account. No server. No ads. No subscription. Everything stays on your device and works completely offline — a basement gym with no signal changes nothing. Move between your own devices with an export you control, using a merge that preserves existing records and previews changes before you confirm. Keep a separate backup: device loss or cleared browser data can still remove local records.
 
 HONEST BY DESIGN
 Volume advice shows the set counts it rests on. The model that estimates your personal productive volume range stays silent unless your history genuinely contains enough variation to identify one — a group average dressed up as a personal finding would be worse than no answer at all. That restraint is why the coaching is worth reading.

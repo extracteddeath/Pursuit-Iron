@@ -24,6 +24,11 @@ assert.ok(home.includes('}, a.id)))'), 'Action routes have stable keys, not filt
 assert.ok(!home.includes('style: { textAlign: "left", padding: "13px 13px"'),
     'Discovery tiles may not restore duplicated static inline presentation');
 assert.ok(css.includes('Cohesion 10 — Home discovery tiles share one presentation owner'));
+assert.match(css, /#root \.wpb \.wpb-home-session-outline\{\s*margin-top:6px;[^}]*padding-top:0;/,
+  'Session outline must not add a second large blank strip above its exercise list');
+assert.ok(css.includes('#root .wpb .wpb-home-outline-list>li:first-child{padding-top:3px}'),
+  'Expanded list starts close beneath its toggle');
+
 for(const selector of ['.wpb-action-tile-icon','.wpb-action-tile-copy','.wpb-action-tile-label',
     '.wpb-action-tile-subtitle'])assert.ok(css.includes(selector), selector + ' missing');
 console.log('PASS Home ownership: one empty-state primary CTA, stable discovery route keys, shared tile CSS, Game Plan separate, runtime engine unchanged.');

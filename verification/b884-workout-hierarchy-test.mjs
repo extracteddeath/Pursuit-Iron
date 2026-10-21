@@ -33,6 +33,20 @@ for (const stable of ['"aria-label": "weight"','"aria-label": "reps"','"data-hap
 assert.ok(!workout.includes('Complete remaining sets'), 'Each set must be completed intentionally; no bulk-complete action');
 assert.ok(css.includes('R93 / B884 — Workout is a set logger'), 'Style pass is present');
 assert.ok(css.includes('data-focus-mode="false"'), 'Focus and normal screen styling isolated');
+// The exercise header must not drift back into a tall name/tags/set/actions stack.
+for(const selector of [
+  '.wpb-workout[data-focus-mode="false"] .wpb-exercise-heading>div:first-child',
+  '.wpb-workout[data-focus-mode="false"] .wpb-exercise-title-row{display:contents;}',
+  '.wpb-workout[data-focus-mode="false"] .wpb-exercise-heading .wpb-exercise-tags',
+  '.wpb-workout[data-focus-mode="false"] .wpb-exercise-meta'
+]) assert.ok(css.includes(selector), 'Missing compact workout header owner: '+selector);
+assert.match(css, /\.wpb-workout\[data-focus-mode="false"\] \.wpb-exercise-heading \.wpb-exercise-tags\{\s*grid-column:2;grid-row:2;/,
+  'Key lift/type tags belong below the right-hand controls');
+assert.match(css, /\.wpb-workout\[data-focus-mode="false"\] \.wpb-exercise-meta\{\s*grid-column:1;grid-row:2;/,
+  'Set context then progression belong under lift name');
+assert.ok(workout.includes('className: "wpb-exercise-head-actions"') && workout.includes('className: "wpb-exercise-set-context"'),
+  'Skip/history/info and current working-set context retain their actions');
+
 assert.ok(css.includes('data-focus-mode="false"][data-set-dock-visible="true"]') && css.includes('padding-bottom:calc(16px + var(--pi-set-dock-height,0px))!important;'), 'Dock scroll reserve must survive the B884 normal-mode padding shorthand');
 assert.ok(css.includes('prefers-reduced-motion:reduce') && css.includes('forced-colors:active'),
   'Motion and accessibility overrides remain supported');

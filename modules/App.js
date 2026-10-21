@@ -17748,7 +17748,7 @@ function TabBar({ view, onNav }) {
     const tabs = [["home", "Home", HomeIcon], ["plan", "Plan", Calendar], ["progress", "Progress", TrendingUp], ["profile", "Profile", Medal], ["settings", "Settings", Settings2]];
     // Present shorter visual names only when a button cannot fit its full label.
     // The real page name and assistive-technology label stay unchanged.
-    const compactLabels = { progress: "Stats", profile: "Me", settings: "Prefs" };
+    const compactLabels = { home: "Go", progress: "Log", profile: "Me", settings: "Set" };
     return (_jsx("div", { className: "wpb-tabbar", role: "navigation", "aria-label": "Primary", children: tabs.map(([id, label, Icon]) => {
             const on = view === id;
             return (

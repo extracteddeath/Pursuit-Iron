@@ -387,6 +387,8 @@ try{
             out.head=box('.wpb-profile-head');
             out.titleSize=parseFloat(getComputedStyle(el('.wpb-profile-title')).fontSize);
             out.edit=box('.wpb-profile-edit');
+            out.shareCard=box('.wpb-profile-share-card');
+            out.layoutActions=box('.wpb-profile-toolbar');
             out.hero=box('.wpb-profile-hero');
             out.stats=[...document.querySelectorAll('.wpb-profile-stat')].map(b=>b.getBoundingClientRect().width);
           }
@@ -410,8 +412,12 @@ try{
           assert.ok(density.head&&density.edit&&density.hero&&density.titleSize>=27&&density.topPadding<=16
             &&density.edit.width>=48&&density.edit.height>=48,
             'Profile identity/edit start promptly with full-size edit action: '+JSON.stringify(density));
-          assert.ok(density.hero.top-density.head.bottom<=16&&density.stats.length===3
-            &&density.stats.every(w=>w>=68),'Profile cards follow a consistent density: '+JSON.stringify(density));
+          assert.ok(density.shareCard&&density.layoutActions&&density.shareCard.top>=density.head.bottom
+            &&density.shareCard.top-density.head.bottom<=16
+            &&density.layoutActions.top>=density.shareCard.bottom
+            &&density.hero.top>=density.layoutActions.bottom&&density.hero.top-density.layoutActions.bottom<=16
+            &&density.stats.length===3&&density.stats.every(w=>w>=68),
+            'Share card leads the customizable sections, with compact gaps and no overlaps: '+JSON.stringify(density));
         }
         basic.density=density;
         if(tab==='plan'||tab==='profile'||tab==='settings'){
@@ -420,7 +426,8 @@ try{
           assert.ok(!small.overflow,'320dp '+tab+' must not overflow: '+JSON.stringify(small));
           if(tab==='plan')assert.ok(small.back.width>=48&&small.title.bottom-small.row.top<=136,
             'Plan still fits at 320dp: '+JSON.stringify(small));
-          if(tab==='profile')assert.ok(small.edit.height>=48&&small.stats.every(w=>w>=64),
+          if(tab==='profile')assert.ok(small.edit.height>=48&&small.shareCard.width<=320
+            &&small.shareCard.top>=small.head.bottom&&small.stats.every(w=>w>=64),
             'Profile edit/stats remain usable at 320dp: '+JSON.stringify(small));
           if(tab==='settings')assert.ok(small.select.height>=48&&small.jump.bottom-small.header.top<=136,
             'Settings Jump remains usable at 320dp: '+JSON.stringify(small));

@@ -22,6 +22,7 @@ assert.match(b912,/\.wpb-profile-strength-grid\{[\s\S]*?grid-template-columns:mi
 assert.match(b912,/\.wpb-profile-toolbar\{[\s\S]*?display:flex!important/,'secondary actions retain compact shared row');
 const featuredCell = b912.split('.wpb-profile-strength-grid>.wpb-profile-strength-cell:first-child{')[1]?.split('}')[0];
 assert.ok(featuredCell?.includes('background:var(--wpb-theme-accent-dim)!important'), 'one featured score remains tonal');
+assert.ok(!featuredCell.includes('padding'), 'featured score retains the same text inset as every other row');
 assert.ok(b912.includes('.wpb-profile-customize')&&!b912.includes('order:80')&&!b912.includes('order:81'),'no visual and keyboard order mismatch');
 assert.ok(b912.includes('@container pi-r77-profile')&&b912.includes('max-width:360px'),'narrow/large-text layout handled');
 assert.ok(b912.includes('prefers-reduced-motion:reduce')&&b912.includes('forced-colors:active'),'motion and forced-colors');

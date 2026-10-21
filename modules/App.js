@@ -18178,7 +18178,9 @@ const PROFILE_SHARE_CHOICES = Object.freeze([
     { id: "strength", label: "Strength Score" },
     { id: "club", label: "Thousand Pound Club" },
     { id: "prs", label: "Personal records" },
-    { id: "achievements", label: "Achievements" }
+    { id: "achievements", label: "Achievements" },
+    { id: "streak", label: "Best streak" },
+    { id: "favorites", label: "Favorite lifts" }
 ]);
 const PROFILE_PREFERENCE_KEY = "wpb:profile-layout-v1";
 function normalizeProfilePrefs(raw) {
@@ -18188,9 +18190,11 @@ function normalizeProfilePrefs(raw) {
     for (const id of available) if (!order.includes(id)) order.push(id);
     let hidden = [...new Set(Array.isArray(raw?.hidden) ? raw.hidden.filter(x => available.includes(x)) : [])];
     if (hidden.length >= available.length) hidden = hidden.filter(id => id !== available[0]);
-    let share = [...new Set(Array.isArray(raw?.share) ? raw.share.filter(x => shareAvailable.includes(x)) : shareAvailable)];
+    let share = [...new Set(Array.isArray(raw?.share) ? raw.share.filter(x => shareAvailable.includes(x)) : ["strength", "streak"])];
     if (!share.length) share = [shareAvailable[0]];
-    return { order, hidden, share };
+    const cardName = typeof raw?.cardName === "string" ? raw.cardName.slice(0, 60) : "";
+    const favorites = [...new Set(Array.isArray(raw?.favorites) ? raw.favorites.filter(x => typeof x === "string" && x.length <= 100) : [])].slice(0, 3);
+    return { order, hidden, share, cardName, favorites };
 }
 function readProfilePrefs() {
     try { return normalizeProfilePrefs(JSON.parse(localStorage.getItem(PROFILE_PREFERENCE_KEY) || "null")); }
@@ -18208,13 +18212,8 @@ function ProfileCustomization({ prefs, onChange, onClose }) {
         if (visible && prefs.hidden.length >= PROFILE_LAYOUT_CHOICES.length - 1) return;
         onChange({ ...prefs, hidden: visible ? [...prefs.hidden, id] : prefs.hidden.filter(x => x !== id) });
     };
-    const toggleShare = id => {
-        const selected = prefs.share.includes(id);
-        if (selected && prefs.share.length === 1) return;
-        onChange({ ...prefs, share: selected ? prefs.share.filter(x => x !== id) : [...prefs.share, id] });
-    };
-    return (_jsxs("section", { className: "wpb-profile-customize", "aria-label": "Customize Profile and share card", children: [
-        _jsxs("div", { className: "wpb-profile-customize-header", children: [_jsxs("div", { children: [_jsx("strong", { children: "Customize Profile" }), _jsx("p", { children: "Reorder your sections and choose what appears on your share image." })] }), _jsx("button", { type: "button", className: "pressable", "aria-label": "Close Profile customization", onClick: onClose, children: _jsx(X, { size: 18 }) })] }),
+    return (_jsxs("section", { className: "wpb-profile-customize", "aria-label": "Customize Profile sections", children: [
+        _jsxs("div", { className: "wpb-profile-customize-header", children: [_jsxs("div", { children: [_jsx("strong", { children: "Customize Profile" }), _jsx("p", { children: "Reorder or hide the sections below your share card." })] }), _jsx("button", { type: "button", className: "pressable", "aria-label": "Close Profile customization", onClick: onClose, children: _jsx(X, { size: 18 }) })] }),
         _jsx("div", { className: "wpb-profile-customize-label", children: "Profile sections" }),
         _jsx("div", { className: "wpb-profile-customize-list", children: prefs.order.map((id, index) => {
             const choice = PROFILE_LAYOUT_CHOICES.find(x => x.id === id);
@@ -18226,17 +18225,80 @@ function ProfileCustomization({ prefs, onChange, onClose }) {
                 _jsx("button", { type: "button", className: "pressable wpb-profile-visibility", "aria-pressed": visible, disabled: visible && prefs.hidden.length === PROFILE_LAYOUT_CHOICES.length - 1, "aria-label": `${visible ? "Hide" : "Show"} ${choice?.label}`, onClick: () => toggleVisible(id), children: visible ? "Shown" : "Hidden" })
             ] }, id));
         }) }),
-        _jsx("div", { className: "wpb-profile-customize-label", children: "Share card includes" }),
+        _jsx("button", { type: "button", className: "pressable wpb-profile-reset", onClick: () => onChange({ ...prefs, order: normalizeProfilePrefs(null).order, hidden: [] }), children: "Reset section layout" })
+    ] }));
+}
+// One content model supplies both the on-screen card and its exported image.
+function profileCardRows({ history, unit, score, level, milestones, prefs }) {
+    const rows = [];
+    for (const id of prefs.share) {
+        if (id === "level") rows.push({ id, label: "Level", value: `Level ${level.level} · ${level.title}`, detail: "Progress from logged training" });
+        if (id === "strength") rows.push({ id, label: "Strength Score", value: score ? `${score.overall} / 100 · ${score.level}` : "No score yet", detail: score ? (score.estimated ? "Estimated from logged lifts" : "Based on available lift standards") : "Log a supported lift and add bodyweight" });
+        if (id === "club") {
+            const snap = strengthClubSnapshot(exerciseTrends(history), unit, "lifted");
+            const fmt = n => Math.round(Number(n) || 0).toLocaleString();
+            rows.push({ id, label: "Thousand Pound Club", value: snap?.allLogged ? `${fmt(snap.total)} ${unit} lifted total` : "Three-lift total incomplete", detail: snap?.allLogged ? (snap.inThousand ? "Lifted club target achieved" : `${fmt(snap.thousandRemaining)} ${unit} to 1,000 lb Club`) : "Log squat, bench and deadlift" });
+        }
+        if (id === "prs" || id === "favorites") {
+            const best = liftBests(history || [], unit);
+            const ids = id === "favorites" ? prefs.favorites.filter(id => EX_BY_ID[id]) : Object.entries(best || {}).filter(([id,v]) => EX_BY_ID[id] && Number(v?.e1rm) > 0).sort((a,b)=>b[1].e1rm-a[1].e1rm).slice(0,2).map(([id])=>id);
+            const lines = ids.map(id => EX_BY_ID[id].name + (Number(best[id]?.e1rm) > 0 ? ` · ${Math.round(best[id].e1rm)} ${unit}` : ""));
+            rows.push({ id, label: id === "favorites" ? "Favorite lifts" : "Personal records", value: lines.join(" / ") || (id === "favorites" ? "Choose your favorite lifts" : "No logged records yet"), lines, detail: lines.some(x => x.includes(` ${unit}`)) ? "Best estimated 1RM · not a tested max" : "Your selected exercises" });
+        }
+        if (id === "achievements") rows.push({ id, label: "Achievements", value: `${milestones.filter(m=>m.done).length} of ${milestones.length} earned`, detail: "Earned from completed training" });
+        if (id === "streak") {
+            const weeks = milestones.find(m => m.id === "streak3")?.value || 0;
+            rows.push({ id, label: "Best streak", value: `${weeks} ${weeks === 1 ? "week" : "weeks"}`, detail: "Consecutive weeks with logged training" });
+        }
+    }
+    return rows;
+}
+function ProfileShareCard({ prefs, rows, onEdit, onShare, expanded }) {
+    return _jsxs("section", { className: "wpb-profile-share-card", "aria-label": "Your share card", children: [
+        _jsxs("div", { className: "wpb-profile-card-brand", children: [_jsx(Dumbbell, { size: 17, "aria-hidden": true }), "PURSUIT IRON"] }),
+        _jsx("h2", { children: prefs.cardName.trim() || "My training" }),
+        _jsx("p", { className: "wpb-profile-card-caption", children: "Built through every workout." }),
+        _jsx("dl", { className: "wpb-profile-card-metrics", children: rows.map(row => _jsxs("div", { "data-card-metric": row.id, children: [
+            _jsx("dt", { children: row.label }),
+            _jsx("dd", { children: row.lines?.length ? row.lines.map((line,i) => _jsx("span", { children: line }, i)) : row.value }),
+            _jsx("p", { children: row.detail })
+        ] }, row.id)) }),
+        _jsxs("div", { className: "wpb-profile-card-actions", children: [
+            _jsxs("button", { type: "button", className: "pressable", "aria-expanded": expanded, "aria-controls": "profile-card-editor", onClick: onEdit, children: [_jsx(Pencil, { size: 15 }), "Edit card"] }),
+            _jsxs("button", { type: "button", className: "pressable wpb-profile-share-action", onClick: onShare, children: [_jsx(Share2, { size: 15 }), "Share profile"] })
+        ] })
+    ] });
+}
+function ProfileCardCustomization({ prefs, onChange, onClose }) {
+    const toggleShare = id => {
+        const selected = prefs.share.includes(id);
+        if (selected && prefs.share.length === 1) return;
+        onChange({ ...prefs, share: selected ? prefs.share.filter(x => x !== id) : [...prefs.share, id] });
+    };
+    const lifts = Object.values(EX_BY_ID).slice().sort((a,b)=>a.name.localeCompare(b.name));
+    const favorite = (index, id) => {
+        const favorites = prefs.favorites.slice();
+        favorites[index] = id;
+        onChange({ ...prefs, favorites: favorites.filter(Boolean) });
+    };
+    return _jsxs("section", { id: "profile-card-editor", className: "wpb-profile-customize wpb-profile-card-editor", "aria-label": "Edit share card", children: [
+        _jsxs("div", { className: "wpb-profile-customize-header", children: [_jsxs("div", { children: [_jsx("strong", { children: "Your share card" }), _jsx("p", { children: "Choose what you want to show. Changes save automatically." })] }), _jsx("button", { type: "button", className: "pressable", "aria-label": "Close share card editor", onClick: onClose, children: _jsx(X, { size: 18 }) })] }),
+        _jsxs("label", { className: "wpb-profile-card-field", children: ["Name on card", _jsx("input", { type: "text", maxLength: 60, value: prefs.cardName, placeholder: "My training", onChange: e => onChange({ ...prefs, cardName: e.target.value }) })] }),
+        _jsx("div", { className: "wpb-profile-customize-label", children: "Show on card" }),
         _jsx("div", { className: "wpb-profile-share-toggles", children: PROFILE_SHARE_CHOICES.map(c => {
             const selected = prefs.share.includes(c.id);
-            return (_jsxs("button", { type: "button", className: "pressable", "aria-pressed": selected, disabled: selected && prefs.share.length === 1, onClick: () => toggleShare(c.id), children: [_jsx("span", { "aria-hidden": "true", children: selected ? "✓" : "+" }), c.label] }, c.id));
+            return _jsxs("button", { type: "button", className: "pressable", "aria-pressed": selected, disabled: selected && prefs.share.length === 1, onClick: () => toggleShare(c.id), children: [_jsx("span", { "aria-hidden": true, children: selected ? "✓" : "+" }), c.label] }, c.id);
         }) }),
-        _jsx("button", { type: "button", className: "pressable wpb-profile-reset", onClick: () => onChange(normalizeProfilePrefs(null)), children: "Restore defaults" })
-    ] }));
+        prefs.share.includes("favorites") && _jsxs("div", { className: "wpb-profile-card-favorites", children: [_jsx("p", { children: "Pick up to three lifts. Logged records appear with them." }), ...[0,1,2].map(index => _jsxs("label", { className: "wpb-profile-card-field", children: [`Favorite lift ${index + 1}`, _jsxs("select", { value: prefs.favorites[index] || "", onChange: e => favorite(index, e.target.value), children: [_jsx("option", { value: "", children: "Choose a lift" }), ...lifts.filter(lift => !prefs.favorites.includes(lift.id) || prefs.favorites[index] === lift.id).map(lift => _jsx("option", { value: lift.id, children: lift.name }, lift.id))] })] }, index))] }),
+        _jsx("button", { type: "button", className: "pressable wpb-profile-reset", onClick: onClose, children: "Done" })
+    ] });
 }
 function shareCustomProfileCard({ history, unit, score, level, milestones, prefs, theme }) {
     if (typeof document === "undefined") return;
-    const C = theme || {}, W = 1080, H = 1350, pad = 104, inner = W - pad * 2;
+    const rows = profileCardRows({ history, unit, score, level, milestones, prefs });
+    const C = theme || {}, W = 1080, pad = 104, inner = W - pad * 2;
+    const heights = rows.map(row => 142 + Math.max(0, (row.lines?.length || 1) - 1) * 42);
+    const H = Math.max(1000, 400 + heights.reduce((a,b)=>a+b,0) + rows.length * 16 + 140);
     const canvas = document.createElement("canvas");
     canvas.width = W; canvas.height = H;
     const ctx = canvas.getContext("2d");
@@ -18250,37 +18312,19 @@ function shareCustomProfileCard({ history, unit, score, level, milestones, prefs
     ctx.fillStyle = accent; round(56,56,W-112,14,7);
     ctx.textBaseline = "top";
     ctx.fillStyle = C.accentInk || accent; font(800,31); text("PURSUIT IRON",pad,128);
-    ctx.fillStyle = C.text || "#F5F0E8"; font(800,66); text("My Training Profile",pad,183);
-    ctx.fillStyle = C.muted || "#AAA7B0"; font(500,23); text("Built through every workout.",pad,275);
-    const rows = [];
-    for (const id of PROFILE_SHARE_CHOICES.map(x => x.id)) {
-        if (!prefs.share.includes(id)) continue;
-        if (id === "level") rows.push(["LEVEL", `Level ${level.level} · ${level.title}`, "Progress from logged training"]);
-        if (id === "strength") rows.push(["STRENGTH SCORE", score ? `${score.overall} / 100 · ${score.level}` : "Not yet available", score?.estimated ? "Estimated from logged lifts" : "Measured against available lift standards"]);
-        if (id === "club") {
-            const snap = strengthClubSnapshot(exerciseTrends(history), unit, "lifted");
-            const fmt = n => Math.round(Number(n) || 0).toLocaleString();
-            rows.push(["THOUSAND POUND CLUB", snap?.allLogged ? `${fmt(snap.total)} ${unit} lifted total` : "Three-lift total incomplete", snap?.allLogged ? (snap.inThousand ? "Traditional lifted club target achieved" : `${fmt(snap.thousandRemaining)} ${unit} to 1,000 lb Club`) : "Log squat, bench and deadlift"]);
-        }
-        if (id === "prs") {
-            const best = liftBests(history || [], unit);
-            const top = Object.entries(best || {}).filter(([id,v]) => EX_BY_ID[id] && Number.isFinite(Number(v?.e1rm)) && Number(v.e1rm) > 0).sort((a,b)=>b[1].e1rm-a[1].e1rm).slice(0,2);
-            const summary = top.map(([id,v]) => `${EX_BY_ID[id].name} ${Math.round(v.e1rm)} ${unit}`).join(" · ");
-            rows.push(["PERSONAL RECORDS", summary || "No logged records yet", "All-time best estimated 1RM · not a tested max"]);
-        }
-        if (id === "achievements") rows.push(["ACHIEVEMENTS", `${milestones.filter(m=>m.done).length} of ${milestones.length} earned`, "Earned from completed training"]);
-    }
-    const topY = 345, maxH = 855, gap = 14;
-    const h = Math.min(170, Math.floor((maxH - (rows.length - 1) * gap) / rows.length));
-    rows.forEach(([label,value,description],i) => {
-        const y = topY + i * (h + gap);
+    ctx.fillStyle = C.text || "#F5F0E8"; font(800,66); text(prefs.cardName.trim() || "My training",pad,191);
+    ctx.fillStyle = C.muted || "#AAA7B0"; font(500,23); text("Built through every workout.",pad,281);
+    let y = 360;
+    rows.forEach((row,i) => {
+        const h = heights[i];
         ctx.fillStyle = C.bg2 || "#2A2730"; round(pad,y,inner,h,20);
-        ctx.fillStyle = C.accentInk || accent; font(800,20); text(label,pad+28,y+22,inner-56);
-        ctx.fillStyle = C.text || "#F5F0E8"; font(750,32); text(value,pad+28,y+58,inner-56);
-        ctx.fillStyle = C.muted || "#AAA7B0"; font(450,19); text(description,pad+28,y+112,inner-56);
+        ctx.fillStyle = C.accentInk || accent; font(800,20); text(row.label.toUpperCase(),pad+28,y+20,inner-56);
+        ctx.fillStyle = C.text || "#F5F0E8"; font(750,30);
+        (row.lines?.length ? row.lines : [row.value]).forEach((line,j) => text(line,pad+28,y+54+j*42,inner-56));
+        ctx.fillStyle = C.muted || "#AAA7B0"; font(450,19); text(row.detail,pad+28,y+h-34,inner-56);
+        y += h + 16;
     });
-    ctx.fillStyle = C.muted || "#AAA7B0"; font(600,22);
-    text("PURSUIT IRON · STRENGTH COACH",pad,1243);
+    ctx.fillStyle = C.muted || "#AAA7B0"; font(600,22); text("PURSUIT IRON · STRENGTH COACH",pad,H-115);
     const link = document.createElement("a");
     link.href = canvas.toDataURL("image/png");
     link.download = "pursuit-iron-profile.png";
@@ -18297,6 +18341,7 @@ function ProfileView({ history, bodyweight, sex, age, unit, onSettings }) {
     const [showAchievements, setShowAchievements] = useState(false);
     const [profilePrefs, setProfilePrefs] = useState(readProfilePrefs);
     const [showProfileCustomize, setShowProfileCustomize] = useState(false);
+    const [showShareCustomize, setShowShareCustomize] = useState(false);
     const saveProfilePrefs = next => {
         const safe = normalizeProfilePrefs(next);
         setProfilePrefs(safe);
@@ -18317,7 +18362,8 @@ function ProfileView({ history, bodyweight, sex, age, unit, onSettings }) {
     const remainingXp = Math.max(0, Math.round(lvl.xpForLevel - lvl.xpIntoLevel));
     const bodyLabel = bw > 0 ? `${(Math.round(bw * 10) / 10).toString()} ${unit}` : "Bodyweight not set";
     const ageLabel = Number(age) > 0 ? `Age ${Math.round(Number(age))}` : null;
-    return (_jsxs("div", { className: "wpb-profile", children: [_jsxs("div", { className: "wpb-profile-inner", style: { padding: "26px 18px 0" }, children: [_jsxs("div", { className: "wpb-profile-head", style: { display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 14 }, children: [_jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { className: "wpb-profile-title", style: { fontSize: 28, fontWeight: 700, letterSpacing: -0.6 }, children: "Profile" }), _jsxs("div", { className: "wpb-profile-identity", style: { display: "flex", flexWrap: "wrap", gap: "4px 8px", marginTop: 4, fontSize: 12.5, color: C.muted }, children: [_jsx("span", { children: bodyLabel }), ageLabel && _jsxs(_Fragment, { children: [_jsx("span", { "aria-hidden": "true", style: { color: C.faint }, children: "\u00B7" }), _jsx("span", { children: ageLabel })] })] })] }), onSettings && (_jsxs("button", { onClick: onSettings, "aria-label": "Edit profile", className: "pressable wpb-profile-edit", style: { minWidth: 42, minHeight: 42, padding: "0 12px", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: 11, border: `1px solid ${C.borderSoft}`, background: C.bg2, color: C.text, fontSize: 12.5, fontWeight: 700, cursor: "pointer", flexShrink: 0 }, children: [_jsx(Pencil, { size: 14 }), _jsx("span", { children: "Edit" })] }))] }), ...profilePrefs.order.filter(id => !profilePrefs.hidden.includes(id)).map((id, i) => _jsxs(_Fragment, { children: [({
+    const cardRows = profileCardRows({ history, unit, score: sscore, level: lvl, milestones: ms, prefs: profilePrefs });
+    return (_jsxs("div", { className: "wpb-profile", children: [_jsxs("div", { className: "wpb-profile-inner", style: { padding: "26px 18px 0" }, children: [_jsxs("div", { className: "wpb-profile-head", style: { display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 14 }, children: [_jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { className: "wpb-profile-title", style: { fontSize: 28, fontWeight: 700, letterSpacing: -0.6 }, children: "Profile" }), _jsxs("div", { className: "wpb-profile-identity", style: { display: "flex", flexWrap: "wrap", gap: "4px 8px", marginTop: 4, fontSize: 12.5, color: C.muted }, children: [_jsx("span", { children: bodyLabel }), ageLabel && _jsxs(_Fragment, { children: [_jsx("span", { "aria-hidden": "true", style: { color: C.faint }, children: "\u00B7" }), _jsx("span", { children: ageLabel })] })] })] }), onSettings && (_jsxs("button", { onClick: onSettings, "aria-label": "Edit profile", className: "pressable wpb-profile-edit", style: { minWidth: 42, minHeight: 42, padding: "0 12px", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: 11, border: `1px solid ${C.borderSoft}`, background: C.bg2, color: C.text, fontSize: 12.5, fontWeight: 700, cursor: "pointer", flexShrink: 0 }, children: [_jsx(Pencil, { size: 14 }), _jsx("span", { children: "Edit" })] }))] }), _jsx(ProfileShareCard, { prefs: profilePrefs, rows: cardRows, expanded: showShareCustomize, onEdit: () => setShowShareCustomize(x => !x), onShare: () => shareCustomProfileCard({ history, unit, score: sscore, level: lvl, milestones: ms, prefs: profilePrefs, theme: C }) }), showShareCustomize && _jsx(ProfileCardCustomization, { prefs: profilePrefs, onChange: saveProfilePrefs, onClose: () => setShowShareCustomize(false) }), _jsx("div", { className: "wpb-profile-toolbar", children: _jsxs("button", { type: "button", className: "pressable", "aria-expanded": showProfileCustomize, onClick: () => setShowProfileCustomize(x => !x), children: [_jsx(Pencil, {size:15}), " Arrange Profile"] }) }), showProfileCustomize && _jsx(ProfileCustomization, { prefs: profilePrefs, onChange: saveProfilePrefs, onClose: () => setShowProfileCustomize(false) }), ...profilePrefs.order.filter(id => !profilePrefs.hidden.includes(id)).map((id, i) => _jsxs(_Fragment, { children: [({
 "level": _jsx("div", { className: "wpb-profile-hero", style: { background: C.card, border: `1px solid ${C.borderSoft}`, borderRadius: 14, padding: "18px 16px", marginBottom: 12 }, children: _jsxs("div", { style: { display: "flex", alignItems: "center", gap: 14 }, children: [_jsx("div", { className: "wpb-profile-level-mark", style: { width: 58, height: 58, borderRadius: 17, background: C.accentDim, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: _jsx("span", { className: "mono", style: { fontSize: 24, fontWeight: 850, color: C.accentInk }, children: lvl.level }) }), _jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { style: { fontSize: 18, fontWeight: 760, letterSpacing: -.2 }, children: lvl.title }), _jsxs("div", { style: { fontSize: 12.5, color: C.muted, marginTop: 2 }, children: ["Level ", lvl.level, " \u00B7 ", remainingXp ? `${remainingXp} XP to level ${lvl.level + 1}` : `Level ${lvl.level + 1} ready`] }), _jsx("div", { role: "progressbar", "aria-label": `Level ${lvl.level} progress`, "aria-valuemin": "0", "aria-valuemax": "100", "aria-valuenow": Math.round(lvl.progress * 100), style: { height: 6, borderRadius: 999, background: C.bg2, overflow: "hidden", marginTop: 8 }, children: _jsx("div", { style: { width: `${Math.round(lvl.progress * 100)}%`, height: "100%", background: C.accent, borderRadius: 999 } }) })] })] }) }),
 "summary": _jsx("div", { className: "wpb-profile-stat-grid", "aria-label": "Lifetime training summary", children: [["Workouts", totalWorkouts, null], ["Best streak", bestStreak, bestStreak === 1 ? "week" : "weeks"], ["Volume", fmtVol(totalVol), unit]].map(([label, val, sub]) => (_jsxs("div", { className: "wpb-profile-stat", style: { background: C.card }, children: [_jsxs("div", { className: "mono", style: { display: "flex", alignItems: "baseline", justifyContent: "center", gap: sub ? 4 : 0, color: C.text, lineHeight: 1.1 }, children: [_jsx("span", { style: { fontSize: 19, fontWeight: 820 }, children: val }), sub ? _jsx("span", { style: { fontSize: 11, fontWeight: 650, color: C.faint }, children: sub }) : null] }), _jsx("div", { className: "wpb-profile-stat-label", style: { fontSize: 11, fontWeight: 600, color: C.faint, marginTop: 3 }, children: label })] }, label))) }),
 "strength": sscore ? (_jsxs("section", { className: "wpb-profile-section wpb-profile-strength", "aria-labelledby": "profile-strength-title", style: { background: C.card, borderRadius: 16, padding: "14px 16px", marginBottom: 12 }, children: [_jsxs("div", { style: { display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 12 }, children: [_jsxs("div", { children: [_jsxs("div", { id: "profile-strength-title", style: { display: "flex", alignItems: "center", gap: 7, fontSize: 15, fontWeight: 740 }, children: [_jsx(Activity, { size: 15, color: C.accentInk }), " Strength"] }), _jsxs("div", { style: { display: "flex", alignItems: "baseline", gap: 8, marginTop: 7 }, children: [_jsx("span", { className: "mono", style: { fontSize: 31, fontWeight: 850, color: C.accentInk, lineHeight: 1 }, children: sscore.overall }), _jsxs("span", { style: { fontSize: 12.5, color: C.muted }, children: [sscore.level, " \u00B7 ", sscore.liftCount, " lift", sscore.liftCount === 1 ? "" : "s"] })] })] }), _jsxs("div", { style: { display: "flex", alignItems: "center", gap: 7 }, children: [sscore.estimated && _jsx("span", { style: { fontSize: 11, fontWeight: 750, color: C.muted, background: C.bg2, borderRadius: 7, padding: "3px 6px" }, children: "Estimated" }), _jsx("button", { "aria-label": "Share Strength Score", onClick: () => shareStrengthScore(sscore, C), title: "Share Strength Score", className: "pressable hit", style: { width: 38, height: 38, borderRadius: 10, border: `1px solid ${C.borderSoft}`, background: C.bg2, color: C.muted, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }, children: _jsx(Share2, { size: 15 }) })] })] }), _jsx("div", { className: "wpb-profile-strength-grid", children: sscore.subs.map(s => (_jsxs("div", { className: "wpb-profile-strength-cell", style: { background: C.bg2 }, children: [_jsx("div", { className: "mono", children: s.score }), _jsx("div", { className: "wpb-profile-strength-label", style: { color: C.muted }, children: s.label })] }, s.key))) }), sscore.nextMilestone && (_jsxs("div", { className: "wpb-profile-next-strength", style: { color: C.muted, background: C.bg2 }, children: [_jsx(Target, { size: 14, color: C.accentInk, style: { marginTop: 1, flexShrink: 0 } }), _jsxs("div", { children: [_jsx("span", { style: { color: C.text, fontWeight: 700 }, children: sscore.nextMilestone.name }), " to ", _jsxs("span", { className: "mono", style: { fontWeight: 750, color: C.accentInk }, children: [sscore.nextMilestone.target, " ", sscore.nextMilestone.unit] }), " for ", sscore.nextMilestone.level, _jsxs("span", { style: { color: C.faint }, children: [" \u00B7 now ", sscore.nextMilestone.current] })] })] })), _jsx(StrengthScoreTrend, { data: trendData })] })) : (_jsxs("section", { className: "wpb-profile-section wpb-profile-setup", "aria-labelledby": "profile-strength-title", style: { background: C.card, borderRadius: 16, padding: "13px 14px", marginBottom: 12 }, children: [_jsxs("div", { id: "profile-strength-title", style: { display: "flex", alignItems: "center", gap: 7, fontSize: 15, fontWeight: 740, marginBottom: 5 }, children: [_jsx(Activity, { size: 15, color: C.accentInk }), " Strength"] }), _jsxs("div", { style: { display: "flex", alignItems: "center", gap: 12 }, children: [_jsx("div", { style: { flex: 1, fontSize: 12.5, color: C.muted, lineHeight: 1.45 }, children: bw > 0 ? "Log a weighted set for a supported lift, such as bench press or squat, to see your Strength Score." : "Add bodyweight to unlock standards and Strength Score." }), !(bw > 0) && onSettings && _jsx(UiAction, { onClick: onSettings, "aria-label": "Add bodyweight", className: "wpb-primary-action", style: { flexShrink: 0, padding: "8px 12px", borderRadius: 10, border: "none", background: C.accent, color: C.accentText, fontSize: 12.5, fontWeight: 750, cursor: "pointer" }, children: "Add" })] })] })),
@@ -18326,10 +18372,7 @@ function ProfileView({ history, bodyweight, sex, age, unit, onSettings }) {
                                     const gEarned = g.items.filter(m => m.done).length;
                                     return (_jsxs("div", { style: { marginBottom: gi === groups.length - 1 ? 0 : 14 }, children: [_jsxs("div", { style: { display: "flex", justifyContent: "space-between", marginBottom: 7 }, children: [_jsx("span", { style: { ...eyebrow() }, children: g.cat }), _jsxs("span", { className: "mono", style: { fontSize: 11, fontWeight: 600, color: gEarned === g.items.length ? C.accentInk : C.muted }, children: [gEarned, "/", g.items.length] })] }), _jsx("div", { className: "wpb-profile-achievement-grid", style: { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 7 }, children: g.items.map(m => (_jsxs("button", { onClick: () => setDetail(m), className: "pressable", "aria-label": `${m.label}${m.done ? ", earned" : ", locked"}`, style: { background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "center" }, children: [_jsx("div", { style: { width: "100%", aspectRatio: "1", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, background: m.done ? C.accentDim : C.bg2, filter: m.done ? "none" : "grayscale(1)", opacity: m.done ? 1 : 0.5 }, children: m.icon }), _jsx("div", { style: { fontSize: 11, fontWeight: 600, color: m.done ? C.text : C.muted, marginTop: 3, lineHeight: 1.2 }, children: m.label }), !m.done && _jsxs("div", { className: "mono", style: { fontSize: 10, color: C.faint, marginTop: 1 }, children: [fmt(m.value, m.target), "/", fmt(m.target, m.target)] })] }, m.id))) })] }, g.cat));
                                 }) })] })
-})[id], i === 0 && _jsxs("div", { className: "wpb-profile-toolbar", children: [
-    _jsx("button", { type: "button", className: "pressable", "aria-expanded": showProfileCustomize, onClick: () => setShowProfileCustomize(x => !x), children: [_jsx(Pencil, {size:15}), " Customize"] }),
-    _jsx("button", { type: "button", className: "pressable wpb-profile-share-action", onClick: () => shareCustomProfileCard({ history, unit, score:sscore, level:lvl, milestones:ms, prefs:profilePrefs, theme:C }), children: [_jsx(Share2, {size:15}), " Share profile"] })
-] }), i === 0 && showProfileCustomize && _jsx(ProfileCustomization, { prefs: profilePrefs, onChange: saveProfilePrefs, onClose: () => setShowProfileCustomize(false) }) ] }, id))] }), _jsx(AchievementDetailSheet, { m: detail, onClose: () => setDetail(null) })] }));
+})[id] ] }, id))] }), _jsx(AchievementDetailSheet, { m: detail, onClose: () => setDetail(null) })] }));
 }
 // The app shell (index.html, modules/main.js, modules/App.js, app.css) is served cache-first by the service worker for
 // instant loads and full offline support — which also means a shipped code fix can sit on the

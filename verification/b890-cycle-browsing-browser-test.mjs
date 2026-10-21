@@ -25,6 +25,19 @@ try{
   const click=async text=>{assert.ok(await page.evaluate(t=>{const b=[...document.querySelectorAll('button')].find(b=>b.textContent.trim()===t);b?.click();return !!b;},text),text);};
   await page.click('.wpb-tabbar [aria-label="Plan"]');await page.waitForSelector('.wpb-plan-block-nav');
   assert.equal(await page.$$eval('.wpb-plan-block-nav button',ns=>ns.length),3);
+  await page.evaluate(()=>{document.documentElement.style.fontSize='32px';return new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));});
+  // Measure only after the requested text size has reached the real controls.
+  // A frame count alone does not establish that style recalculation completed.
+  await page.waitForFunction(()=>[...document.querySelectorAll('.wpb-plan-block-nav button')]
+    .every(b=>parseFloat(getComputedStyle(b.querySelector('.wpb-ui-choice-label')).fontSize)>=26),{timeout:5000});
+  const controls=await page.$$eval('.wpb-plan-block-nav button',buttons=>buttons.map(b=>{
+    const box=b.getBoundingClientRect(),range=document.createRange();range.selectNodeContents(b);
+    return {height:b.offsetHeight,label:parseFloat(getComputedStyle(b.querySelector('.wpb-ui-choice-label')).fontSize),
+      clipped:[...range.getClientRects()].some(r=>r.width>1&&r.height>1&&(r.left<box.left-1||r.right>box.right+1||r.top<box.top-1||r.bottom>box.bottom+1))};
+  }));
+  assert.ok(controls.every(b=>b.height>=51&&b.label>=26&&!b.clipped),'Cycle block labels stay whole at 200% text: '+JSON.stringify({width,controls}));
+  await page.evaluate(()=>document.documentElement.style.fontSize='');
+
   await page.$$eval('.wpb-plan-block-nav button',ns=>ns[1].click());await page.waitForSelector('.wpb-plan-preview-notice');
   assert.equal(await page.$('.wpb-plan-up-next'),null);
   assert.equal(await page.$$eval('.wpb-plan-week-chip',ns=>ns.length),saved[1].config.weeks+(saved[1].config.deload?1:0));
@@ -77,6 +90,14 @@ try{
   const stored=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')));
   assert.equal(stored.pinnedId,saved[0].id);assert.equal(stored.cycles[0].activeBlock,0);assert.deepEqual(stored.history,[]);
   assert.deepEqual(stored.saved,saved,'browsing never edits saved blocks');
+  if(width===320){
+    await page.evaluate(missing=>{const store=JSON.parse(localStorage.getItem('wpb:v1'));store.saved=store.saved.filter(p=>p.id!==missing);localStorage.setItem('wpb:v1',JSON.stringify(store));},saved[2].id);
+    await page.reload({waitUntil:'networkidle0'});await page.waitForSelector('[data-tab="plan"]');await page.click('[data-tab="plan"]');await page.waitForSelector('.wpb-plan-block-nav');
+    assert.equal(await page.$eval('.wpb-plan-block-nav button:last-child',b=>b.disabled),true,'Missing planned block remains disabled');
+    await page.$eval('.wpb-plan-block-nav button:last-child',b=>b.click());
+    assert.equal(await page.$$eval('.wpb-plan-block-nav button[aria-pressed="true"]',bs=>bs.length),1,'Disabled choice cannot change selection');
+    assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).cycles[0].activeBlock),0,'Missing-block browsing cannot advance the cycle');
+  }
   await page.close();
  }
  assert.deepEqual(errors,[]);console.log('PASS B890 browser: real converted cycle, all blocks and weeks in Plan, read-only exercise previews, return to current and unchanged active state at 320/390/900px.');

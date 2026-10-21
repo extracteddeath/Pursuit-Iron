@@ -6653,8 +6653,12 @@ function UiAction({ variant = "secondary", className = "", style = {}, ...props 
     return _jsx("button", { type: "button", ...props, className: `pressable wpb-ui-action ${className}`, "data-action": variant,
         style: { ...style, "--pi-ui-primary-fill": C.accent, "--pi-ui-primary-ink": C.accentText } });
 }
-function UiChoice({ selected, kind = "chip", className = "", ...props }) {
-    return _jsx("button", { type: "button", ...props, className: `pressable wpb-ui-choice ${className}`, "data-choice-kind": kind, "aria-pressed": !!selected });
+function UiChoice({ selected, kind = "chip", className = "", label, caption, children, ...props }) {
+    return _jsx("button", { type: "button", ...props, className: `pressable wpb-ui-choice ${className}`, "data-choice-kind": kind, "aria-pressed": !!selected,
+        children: kind === "summary" ? _jsxs(_Fragment, { children: [
+            _jsx("span", { className: "wpb-ui-choice-label", children: label }),
+            caption != null && _jsx("span", { className: "mono wpb-ui-choice-caption", children: caption })
+        ] }) : children });
 }
 function UiStatus({ className = "", children, ...props }) {
     // Static guidance is not a live announcement. Dynamic save/failure announcements keep their
@@ -6739,10 +6743,11 @@ function PlanView({ program, plan, blockNavigation = null, readOnly = false, nav
     return (_jsxs("div", { ref: scrollRoot, className: "wpb-scroll wpb-plan-view", style: { height: "100%", width: "100%", maxWidth: 720, margin: "0 auto", overflowY: "auto", padding: "0 16px calc(env(safe-area-inset-bottom) + 96px)" }, children: [_jsxs(UiHeader, { className: "wpb-plan-heading-row", style: { display: "flex", alignItems: "center", gap: 6, padding: "10px 0 0" }, children: [_jsx(UiAction, { variant: "icon", "aria-label": "Back", onClick: onBack, className: "hit", style: { display: "flex" }, children: _jsx(ChevronLeft, { size: 22 }) }), _jsx("div", { style: { fontSize: 11, fontWeight: 700, letterSpacing: 1, color: C.faint }, children: "PLAN" })] }), _jsx("h1", { className: "wpb-plan-title", style: { fontSize: 26, fontWeight: 740, color: C.text, lineHeight: 1.2, letterSpacing: -.5, overflowWrap: "anywhere", margin: "8px 0 8px" }, children: program.name }), blockNavigation, readOnly && _jsx("p", { className: "wpb-plan-preview-notice", style: { color: C.muted, fontSize: 13, lineHeight: 1.5 }, children: "Viewing a block preview. Your current training block is unchanged." }), upNext, _jsx("div", { className: "wpb-plan-panes", children: [["schedule", "Schedule", Calendar], ["volume", "Volume", BarChart3], ["progression", "Progression", TrendingUp], ["blueprint", "Blueprint", Layers]].map(([id, label, Icon]) => {
                     const on = pane === id;
                     return (_jsxs(UiChoice, { selected: on, kind: "tab", onClick: () => setPane(id), "aria-label": label, "data-plan-pane": id, className: "wpb-plan-pane-tab", children: [_jsx(Icon, { size: 15 }), _jsx("span", { className: "wpb-plan-pane-label", children: label })] }, id));
-                }) }), pane === "schedule" && plan.totalWeeks > 1 && (_jsx("div", { className: "wpb-hscroll wpb-plan-week-picker", "data-plan-week-picker": true, children: plan.weeks.map(w => {
+                }) }), pane === "schedule" && plan.totalWeeks > 1 && (_jsx("div", { className: "wpb-hscroll wpb-choice-rail wpb-plan-week-picker", "data-plan-week-picker": true, children: plan.weeks.map(w => {
                     const pw = plannedWeek(program, w.week);
                     const on = openWeek === w.week;
-                    return (_jsxs(UiChoice, { selected: on, onClick: () => pickWeek(w.week), className: "wpb-plan-week-chip", "aria-label": `Week ${w.week}`, children: [_jsxs("div", { className: "wpb-plan-week-label", children: ["Week ", w.week] }), _jsxs("div", { className: "mono wpb-plan-week-meta", children: [pw.sets, " sets \u00B7 ", fmtMin(w.minutes)] })] }, w.week));
+                    return (_jsx(UiChoice, { selected: on, kind: "summary", onClick: () => pickWeek(w.week), className: "wpb-plan-week-chip", "aria-label": `Week ${w.week}`,
+                        label: `Week ${w.week}`, caption: `${pw.sets} sets · ${fmtMin(w.minutes)}` }, w.week));
                 }) })), pane === "schedule" && (() => {
                 const wi = weekIntent(program, openWeek || plan.currentWeek);
                 if (!wi)
@@ -8126,7 +8131,7 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
                             })(), _jsx("div", { style: { fontSize: 11, color: C.faint, lineHeight: 1.45, marginBottom: 8 }, children: "Your logged sets and history are untouched. If you don't like the result, the version you have now will be saved under Earlier layouts in Plan info after you apply the preview." }), _jsxs("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" }, children: [_jsxs("button", { onClick: () => { if (hasEdits)
                                             setConfirmEngine(true);
                                         else
-                                            onRegenerate(program.seed, ENGINE_V); }, "aria-label": "Rebuild with the latest program logic", className: "pressable", style: { display: "inline-flex", alignItems: "center", gap: 6, padding: "9px 14px", borderRadius: 12, background: C.accent, border: "none", color: C.accentText, fontSize: 13, fontWeight: 700, cursor: "pointer" }, children: [_jsx(Zap, { size: 14 }), " Update program"] }), _jsx("button", { onClick: () => (onCommitProgram || setProgram)(p => ({ ...p, engineDeclined: ENGINE_V })), "aria-label": "Keep this program as it is", className: "pressable", style: { display: "inline-flex", alignItems: "center", gap: 6, padding: "9px 14px", borderRadius: 12, background: "none", border: `1px solid ${C.border}`, color: C.text, fontSize: 13, fontWeight: 600, cursor: "pointer" }, children: "Keep it as it is" })] })] })), program.config?.endless && !manual ? (_jsx(ContinuousWave, { weeks: weeks, deloadWeek: deloadWeek, activeWeek: activeWeek, nowWeek: endlessNowWeek, onPick: pickWeek, dim: manual })) : (_jsxs("div", { className: "wpb-hscroll wpb-week-rail", "data-active-week": activeWeek, style: { display: "flex", alignItems: "center", gap: 8, overflowX: "auto", overflowY: "hidden", touchAction: "pan-x pan-y", marginTop: 12, marginBottom: 10, paddingBottom: 3 }, children: [weeks.map(w => (_jsx(WeekPill, { label: `Week ${w}`, meta: (() => { const pw = plannedWeek(program, w); return `${pw.sets}s · ${pw.mins}m`; })(), active: activeWeek === w, onClick: () => pickWeek(w), dim: manual && activeWeek !== w }, w))), deloadWeek && _jsx(WeekPill, { label: "Deload", deload: true, meta: (() => { const pw = plannedWeek(program, deloadWeek); return `${pw.sets}s · ${pw.mins}m`; })(), active: activeWeek === deloadWeek, onClick: () => pickWeek(deloadWeek), dim: manual && activeWeek !== deloadWeek })] })), program.config?.percentScheme === "531" && !manual && (() => {
+                                            onRegenerate(program.seed, ENGINE_V); }, "aria-label": "Rebuild with the latest program logic", className: "pressable", style: { display: "inline-flex", alignItems: "center", gap: 6, padding: "9px 14px", borderRadius: 12, background: C.accent, border: "none", color: C.accentText, fontSize: 13, fontWeight: 700, cursor: "pointer" }, children: [_jsx(Zap, { size: 14 }), " Update program"] }), _jsx("button", { onClick: () => (onCommitProgram || setProgram)(p => ({ ...p, engineDeclined: ENGINE_V })), "aria-label": "Keep this program as it is", className: "pressable", style: { display: "inline-flex", alignItems: "center", gap: 6, padding: "9px 14px", borderRadius: 12, background: "none", border: `1px solid ${C.border}`, color: C.text, fontSize: 13, fontWeight: 600, cursor: "pointer" }, children: "Keep it as it is" })] })] })), program.config?.endless && !manual ? (_jsx(ContinuousWave, { weeks: weeks, deloadWeek: deloadWeek, activeWeek: activeWeek, nowWeek: endlessNowWeek, onPick: pickWeek, dim: manual })) : (_jsxs("div", { className: "wpb-hscroll wpb-choice-rail wpb-week-rail", "data-active-week": activeWeek, children: [weeks.map(w => (_jsx(UiChoice, { kind: "summary", className: "wpb-program-week-chip", label: `Week ${w}`, caption: (() => { const pw = plannedWeek(program, w); return `${pw.sets} sets · ${pw.mins}m`; })(), selected: activeWeek === w, onClick: () => pickWeek(w), "data-deload": "false" }, w))), deloadWeek && _jsx(UiChoice, { kind: "summary", className: "wpb-program-week-chip", label: "Deload", "data-deload": "true", caption: (() => { const pw = plannedWeek(program, deloadWeek); return `${pw.sets} sets · ${pw.mins}m`; })(), selected: activeWeek === deloadWeek, onClick: () => pickWeek(deloadWeek) })] })), program.config?.percentScheme === "531" && !manual && (() => {
                         const total = weeksOf(program);
                         const wave = PCT_SCHEMES["531"].weeks[activeWeek > total ? 3 : (activeWeek - 1) % 4];
                         const pcts = wave.sets.map(s => `${Math.round(s[0] * 100)}%`).join(" · ");
@@ -8737,18 +8742,6 @@ function IconPickerSheet({ open, current, currentColor, onPick, onPickColor, onC
                                         border: `1.5px solid ${sel ? color : C.border}`, background: sel ? `${color}1f` : C.card
                                     }, children: _jsx(Ic, { size: 22, color: sel ? color : C.muted }) }, k));
                             }) })] }, group))), _jsx("button", { onClick: onClose, className: "pressable", style: { width: "100%", padding: 12, marginTop: 4, borderRadius: 12, border: "none", background: C.accent, color: C.accentText, fontSize: 15, fontWeight: 700, cursor: "pointer" }, children: "Done" })] }) }));
-}
-/* A week pill can carry what the week COSTS, not just its number. Picking a week to preview is a
-   question about size — is this the heavy one, is the deload actually lighter — and the strip was
-   answering it with an ordinal. `meta` is optional so every other caller renders exactly as before. */
-function WeekPill({ label, active, onClick, deload, dim, meta }) {
-    const tone = dim ? C.faint : active ? (deload ? C.danger : C.accent) : C.muted;
-    return (_jsxs("button", { onClick: onClick, className: "pressable wpb-program-week-chip", "aria-pressed": !!active, "data-deload": deload ? "true" : "false", style: {
-            flexShrink: 0, padding: meta ? "6px 12px" : "7px 14px", borderRadius: meta ? 12 : 99, fontSize: 14, fontWeight: 650, cursor: "pointer",
-            border: `1.5px solid ${active ? (deload ? C.danger : C.accent) : C.border}`,
-            background: active ? (deload ? C.dangerDim : C.accentDim) : "transparent",
-            color: tone, opacity: dim ? 0.56 : 1, textAlign: "center", lineHeight: 1.15
-        }, children: [_jsx("div", { children: label }), meta && _jsx("div", { className: "mono", style: { fontSize: 10, fontWeight: 650, color: dim ? C.faint : active ? tone : C.faint, marginTop: 2 }, children: meta })] }));
 }
 /* THE DAY, AS A LIST. The session could already add, reorder and skip exercises, but only ever from
    the card of the exercise you were standing on — one at a time, with the up/down buttons moving THAT
@@ -18988,12 +18981,11 @@ function CycleBlockRows({ cycle, progress, saved, cycleInfo, onOpenBlock }) {
     }) });
 }
 function CycleBlockNav({ cycle, saved, selectedId, onSelect }) {
-    return _jsxs("nav", { className: "wpb-plan-block-nav", "aria-label": "Cycle blocks", style: { marginBottom: 14 }, children: [
-        _jsx("div", { style: { fontSize: 12, color: C.muted, marginBottom: 6, overflowWrap: "anywhere" }, children: cycle.name }),
-        _jsx("div", { className: "wpb-hscroll", style: { display: "flex", gap: 6, paddingBottom: 4 }, children: cycleBlockMetadata(cycle, saved).map((b, i) =>
-            _jsxs(UiChoice, { selected: selectedId === b.id, onClick: () => onSelect(b.id), disabled: !saved.some(p => p.id === b.id),
-                style: { flexShrink: 0, minHeight: 44, padding: "8px 12px", borderRadius: 10, border: `1px solid ${selectedId === b.id ? C.accent : C.border}`, background: selectedId === b.id ? C.accentDim : C.card, color: selectedId === b.id ? C.accentInk : C.text },
-                children: [b.label, _jsx("span", { style: { display: "block", fontSize: 11, marginTop: 2, color: C.muted }, children: !cycle.done && i === (cycle.activeBlock || 0) ? "Current" : cycle.done || i < (cycle.activeBlock || 0) ? "Completed" : "Planned" })] }, b.id)) })] });
+    return _jsxs("nav", { className: "wpb-plan-block-nav", "aria-label": "Cycle blocks", children: [
+        _jsx("div", { className: "wpb-plan-block-title", children: cycle.name }),
+        _jsx("div", { className: "wpb-hscroll wpb-choice-rail wpb-plan-block-choices", children: cycleBlockMetadata(cycle, saved).map((b, i) =>
+            _jsx(UiChoice, { kind: "summary", selected: selectedId === b.id, onClick: () => onSelect(b.id), disabled: !saved.some(p => p.id === b.id),
+                label: b.label, caption: !cycle.done && i === (cycle.activeBlock || 0) ? "Current" : cycle.done || i < (cycle.activeBlock || 0) ? "Completed" : "Planned" }, b.id)) })] });
 }
 function CycleBlockPreview({ program, initialWeek = 1, initialDayId = null, onClose, onViewPlan }) {
     const total = weeksOf(program) + (program.config?.deload ? 1 : 0);

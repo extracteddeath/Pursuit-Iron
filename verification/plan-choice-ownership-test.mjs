@@ -7,8 +7,14 @@ assert.ok(plan.includes('className: "wpb-plan-week-chip"')&&plan.includes('onCli
 assert.ok(plan.includes('"aria-label": `Week ${w.week}`'),'accessible week label');
 const choices=plan.slice(plan.indexOf('className: "wpb-plan-panes"'),plan.indexOf('pane === "schedule" && (() =>',plan.indexOf('className: "wpb-plan-panes"')));
 assert.ok(choices.length>1000&&!choices.includes('style: {'),'no per-choice static styling');
-const owner=css.slice(css.indexOf('/* Cohesion 12 —'));
-assert.ok(owner.length>1000,'Cohesion 12 base style block must be present');
-for(const s of ['#root[data-pi-motion="expressive"] .wpb .wpb-plan-panes>.wpb-plan-pane-tab{','.wpb-plan-pane-label{','.wpb-plan-week-picker{','.wpb-plan-week-chip{','.wpb-plan-week-label{','.wpb-plan-week-meta{'])
-  assert.equal(owner.split('\n'+s).length-1,1,'one standalone Cohesion 12 base rule: '+s);
-console.log('PASS Plan selector ownership: one CSS presentation, existing semantics and navigation retained.');
+for(const selector of [
+  '#root[data-pi-motion="expressive"] .wpb .wpb-plan-panes>.wpb-plan-pane-tab{',
+  '.wpb-plan-pane-label{', '.wpb-plan-week-picker{',
+  '#root .wpb .wpb-ui-choice[data-choice-kind="summary"]{',
+  '.wpb-ui-choice-label{', '.wpb-ui-choice-caption{'
+]) assert.equal(css.split('\n'+selector).length-1,1,'one presentation rule: '+selector);
+assert.ok(plan.includes('kind: "summary"'), 'Plan weeks reuse the shared labelled choice');
+const blockNav=app.slice(app.indexOf('function CycleBlockNav('), app.indexOf('function CycleBlockPreview('));
+assert.ok(blockNav.includes('kind: "summary"')&&!blockNav.includes('style: {'), 'cycle navigation reuses the same choice');
+assert.ok(!app.includes('function WeekPill('), 'no private competing week renderer');
+console.log('PASS selector ownership: shared labelled choice, existing pane and week navigation semantics.');

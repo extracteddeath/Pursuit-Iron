@@ -1037,7 +1037,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   outline:2px solid #fff!important;
   outline-offset:-2px!important;
 }
-#root[data-pi-motion="expressive"] .wpb .wpb-exercise-meta{
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-detail .wpb-exercise-meta{
   display:flex;
   align-items:center;
   flex-wrap:wrap;
@@ -1046,7 +1046,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   font-size:12.5px!important;
   line-height:1.38!important;
 }
-#root[data-pi-motion="expressive"] .wpb .wpb-exercise-meta>span:first-child{
+#root[data-pi-motion="expressive"] .wpb .wpb-exercise-detail .wpb-exercise-meta>span:first-child{
   min-width:0;
   overflow-wrap:anywhere;
 }
@@ -8672,9 +8672,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   opacity:1;
 }
 
-/* B900 — Exercise hierarchy: normal logger uses two compact columns.
-   Keep Focus's existing row; tags belong under the right-side actions and
-   working-set context/progression stack under the lift name. One layout owner. */
+/* B900 — Compact exercise header and swipeable single-line workout actions.
+   Focus retains its independent layout. The normal logger has a name/set/
+   progression stack on the left and tags/actions on the right, with no
+   exercise-detail margins or wrapping toolbar stealing vertical space. */
 #root .wpb-workout[data-focus-mode="true"] .wpb-exercise-title-row{
   display:flex;align-items:flex-start;gap:8px;min-width:0;
 }
@@ -8683,7 +8684,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root .wpb-workout[data-focus-mode="false"] .wpb-exercise-heading>div:first-child{
   display:grid;grid-template-columns:minmax(0,1fr) auto;
-  grid-template-rows:auto auto auto;column-gap:8px;row-gap:2px;
+  grid-template-rows:auto auto auto;column-gap:8px;row-gap:0;
   align-items:start;min-width:0;
 }
 #root .wpb-workout[data-focus-mode="false"] .wpb-exercise-title-row{display:contents;}
@@ -8691,15 +8692,15 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   grid-column:1;grid-row:1;min-width:0;align-self:start;
 }
 #root .wpb-workout[data-focus-mode="false"] .wpb-exercise-title-row>div:last-child{
-  grid-column:2;grid-row:1;justify-self:end;min-width:0;
+  grid-column:2;grid-row:2;justify-self:end;align-self:start;min-width:0;
 }
 #root .wpb-workout[data-focus-mode="false"] .wpb-exercise-heading .wpb-exercise-tags{
-  grid-column:2;grid-row:2;justify-self:end;justify-content:flex-end;
+  grid-column:2;grid-row:1;justify-self:end;justify-content:flex-end;
   align-self:start;min-width:0;max-width:160px;margin:0;
 }
 #root .wpb-workout[data-focus-mode="false"] .wpb-exercise-meta{
   grid-column:1;grid-row:2;display:flex;flex-direction:column;
-  align-items:flex-start;flex-wrap:nowrap;row-gap:0;margin-top:0;min-width:0;
+  align-items:flex-start;flex-wrap:nowrap;row-gap:0;margin:0;min-width:0;
 }
 #root .wpb-workout[data-focus-mode="false"] .wpb-exercise-heading>div:first-child>.wpb-session-choice{
   grid-column:1/-1;grid-row:3;justify-self:start;
@@ -8710,12 +8711,13 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root .wpb-workout .wpb-progression-explanation{flex-basis:100%;}
 #root .wpb-workout .wpb-workout-tools{
-  flex-wrap:wrap;overflow:visible!important;touch-action:pan-y!important;
-  column-gap:8px!important;row-gap:2px!important;
-  margin:10px 0 12px!important;padding:2px 0 10px!important;
+  display:flex;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;
+  touch-action:pan-x pan-y;overscroll-behavior-x:contain;
+  -webkit-overflow-scrolling:touch;scrollbar-width:none;
 }
+#root .wpb-workout .wpb-workout-tools::-webkit-scrollbar{display:none;}
 #root .wpb-workout .wpb-workout-tools .wpb-workout-tool{
-  min-height:48px!important;max-width:100%;padding:6px 8px!important;
+  flex:0 0 auto;white-space:nowrap;
   line-height:1.35;text-align:left;
 }
 #root .wpb-workout .wpb-progression-label:focus-visible{

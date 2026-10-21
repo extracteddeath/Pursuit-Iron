@@ -40,8 +40,14 @@ for(const selector of [
   '.wpb-workout[data-focus-mode="false"] .wpb-exercise-heading .wpb-exercise-tags',
   '.wpb-workout[data-focus-mode="false"] .wpb-exercise-meta'
 ]) assert.ok(css.includes(selector), 'Missing compact workout header owner: '+selector);
-assert.match(css, /\.wpb-workout\[data-focus-mode="false"\] \.wpb-exercise-heading \.wpb-exercise-tags\{\s*grid-column:2;grid-row:2;/,
-  'Key lift/type tags belong below the right-hand controls');
+assert.match(css, /\.wpb-workout\[data-focus-mode="false"\] \.wpb-exercise-heading \.wpb-exercise-tags\{\s*grid-column:2;grid-row:1;/,
+  'Key lift/type tags belong above the right-hand controls');
+assert.match(css, /\.wpb-workout\[data-focus-mode="false"\] \.wpb-exercise-title-row>div:last-child\{\s*grid-column:2;grid-row:2;/,
+  'Right-hand actions follow the two exercise tags');
+assert.match(css, /#root \.wpb-workout \.wpb-workout-tools\{\s*display:flex;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;/,
+  'Workout tools must stay on one horizontally scrolling row');
+assert.ok(!css.includes('flex-wrap:wrap;overflow:visible!important;touch-action:pan-y!important;'),
+  'Do not regress workout tools to wrapping rows');
 assert.match(css, /\.wpb-workout\[data-focus-mode="false"\] \.wpb-exercise-meta\{\s*grid-column:1;grid-row:2;/,
   'Set context then progression belong under lift name');
 assert.ok(workout.includes('className: "wpb-exercise-head-actions"') && workout.includes('className: "wpb-exercise-set-context"'),

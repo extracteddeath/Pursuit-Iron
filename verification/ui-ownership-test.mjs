@@ -5,7 +5,7 @@ import fs from 'node:fs';
 // Decrease alongside a verified cleanup; never raise to permit a cosmetic override.
 const css = fs.readFileSync('app.css', 'utf8');
 const app = fs.readFileSync('modules/App.js', 'utf8');
-const MAX_IMPORTANT = 2931;
+const MAX_IMPORTANT = 2923;
 const MAX_APP_IMPORTANT = 1417; // Prevent embedded StyleTag patches bypassing the CSS budget.
 const MAX_REPEAT_IMPORTANT = 32;
 const MAX_INLINE_STYLE_OBJECTS = 3331; // Cohesion 14 Cycle presentation ownership

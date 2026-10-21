@@ -1,3 +1,10 @@
+## Adaptive tab labels and narrow-phone Home title — October 21, 2026
+
+- Keep complete tab names for accessible navigation, switching to short visual labels only when the tab is narrow relative to the actual font size.
+- The current tab and every button retain the same route, focus, semantics and touch target; avoid breaking a single word across multiple nav lines.
+- At 320px, remove the ornamental day orbit so the true workout name has the whole hero width. The actual day and week stay in Up Next.
+- R74 real-browser checks now require single-line visible navigation labels under 200% text in all five tabs; engine, saved plans and Workout/Focus logging remain unchanged.
+
 ## Switch contrast and compact Home preview — October 21, 2026
 
 - Reconciled the approved switch and Home fixes with the newer shared Settings/Profile cards.

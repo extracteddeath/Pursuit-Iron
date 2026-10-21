@@ -5,9 +5,10 @@ import fs from 'node:fs';
 // Decrease alongside a verified cleanup; never raise to permit a cosmetic override.
 const css = fs.readFileSync('app.css', 'utf8');
 const app = fs.readFileSync('modules/App.js', 'utf8');
-const MAX_IMPORTANT = 2983;
+const MAX_IMPORTANT = 2931;
+const MAX_APP_IMPORTANT = 1417; // Prevent embedded StyleTag patches bypassing the CSS budget.
 const MAX_REPEAT_IMPORTANT = 32;
-const MAX_INLINE_STYLE_OBJECTS = 3378; // Cohesion 13 shared week/block choices
+const MAX_INLINE_STYLE_OBJECTS = 3331; // Cohesion 14 Cycle presentation ownership
 const allowedDebtKeys = new Set([
   "\t#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step\tborder-radius",
   "\t#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step\theight",
@@ -74,16 +75,19 @@ function repeatedImportantDeclarations(source) {
 function guard(cssText, appText) {
     const important = (cssText.match(/!important/g) || []).length;
     const inline = (appText.match(/style: \{/g) || []).length;
+    const appImportant = (appText.match(/!important/g) || []).length;
     const duplicates = repeatedImportantDeclarations(cssText);
     assert.ok(important <= MAX_IMPORTANT, 'CSS priority overrides increased: ' + important + ' > ' + MAX_IMPORTANT);
+    assert.ok(appImportant <= MAX_APP_IMPORTANT, 'Embedded stylesheet priority overrides increased: ' + appImportant + ' > ' + MAX_APP_IMPORTANT);
     assert.ok(inline <= MAX_INLINE_STYLE_OBJECTS, 'Inline presentation debt increased: ' + inline + ' > ' + MAX_INLINE_STYLE_OBJECTS);
     assert.ok(duplicates.length <= MAX_REPEAT_IMPORTANT, 'Repeated CSS property owners increased: ' + duplicates.length + ' > ' + MAX_REPEAT_IMPORTANT);
     assert.deepEqual([...new Set(duplicates.filter(k => !allowedDebtKeys.has(k)))], [],
         'New competing selector/property owner. Edit existing shared rule instead.');
-    return { important, inline, duplicates: duplicates.length, legacyOwners: new Set(duplicates).size };
+    return { important, appImportant, inline, duplicates: duplicates.length, legacyOwners: new Set(duplicates).size };
 }
 const report = guard(css, app);
 assert.throws(() => guard(css + '\n.bad-extra{color:red!important;}', app), /CSS priority overrides increased/);
+assert.throws(() => guard(css, app + '\n.bad-embedded{color:red!important;}'), /Embedded stylesheet priority overrides increased/);
 assert.ok(repeatedImportantDeclarations('.duplicate{color:red!important;} .duplicate{color:blue!important;}')
     .includes('\t.duplicate\tcolor'), 'Guard must detect duplicate priority declarations.');
 for (const name of ['UiAction','UiChoice','UiStatus','UiSection','SettingsSwitch'])
@@ -94,5 +98,5 @@ for (const token of ['--pi-color-card','--pi-color-control','--pi-color-feature'
     assert.ok(css.includes(token), 'Missing semantic theme role: ' + token);
 assert.ok(app.includes('function BackupRestorePanel('), 'Transfers need one canonical panel.');
 console.log('PASS UI ownership: important ' + report.important + '/' + MAX_IMPORTANT +
-    ', repeated ' + report.duplicates + '/' + MAX_REPEAT_IMPORTANT + ' (' + report.legacyOwners +
+    ', embedded ' + report.appImportant + '/' + MAX_APP_IMPORTANT + ', repeated ' + report.duplicates + '/' + MAX_REPEAT_IMPORTANT + ' (' + report.legacyOwners +
     ' historical owner collisions), inline styles ' + report.inline + '/' + MAX_INLINE_STYLE_OBJECTS);

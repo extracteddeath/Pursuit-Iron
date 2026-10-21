@@ -889,7 +889,6 @@ function StyleTag({ theme } = {}) {
       .wpb-tabbar .wpb-tab{position:relative;min-height:54px;border-radius:14px!important;color:${C.muted}!important;}
       .wpb-tabbar .wpb-tab[aria-current="page"]{color:${C.accentInk}!important;background:color-mix(in srgb,${C.accent} 10%,transparent)!important;}
       .wpb-tabbar .wpb-tab[aria-current="page"]::before{content:'';position:absolute;top:3px;width:28px;height:3px;border-radius:99px;background:${C.accent};}
-      .wpb-cycle-card{border:1px solid ${C.borderSoft};border-radius:var(--r-lg)!important;background:${C.card};box-shadow:var(--shadow-1);}
       .wpb-recovery-card{width:min(100%,460px);padding:22px!important;}
       .wpb-kicker{font-size:11px;font-weight:800;letter-spacing:.7px;text-transform:uppercase;color:${C.accentInk};}
       .wpb-title{font-size:clamp(24px,6vw,30px);font-weight:760;letter-spacing:-.75px;line-height:1.08;}
@@ -918,7 +917,7 @@ function StyleTag({ theme } = {}) {
       .wpb button{color:inherit;}
       .wpb button:disabled{opacity:.48;cursor:default;}
       .wpb-page-header{background:${C.bg};backdrop-filter:none;-webkit-backdrop-filter:none;}
-      .wpb-surface,.wpb-carousel-card,.wpb-cycle-card,.wpb-settings-card{box-shadow:none!important;border-color:${C.borderSoft}!important;}
+      .wpb-surface,.wpb-carousel-card,.wpb-settings-card{box-shadow:none!important;border-color:${C.borderSoft}!important;}
       .wpb-hero{background:${C.card}!important;border:1px solid ${C.border}!important;box-shadow:none!important;border-radius:var(--r-xl)!important;}
       .wpb-primary-action{
         min-height:48px!important;border-radius:var(--r-md)!important;background:${C.accent}!important;
@@ -1066,8 +1065,6 @@ function StyleTag({ theme } = {}) {
       .wpb-library .wpb-page-header{box-shadow:none!important;}
       .wpb-library .wpb-hscroll button{border-radius:9px!important;}
       .wpb-library .wpb-page-header input{border-radius:10px!important;background:${C.bg2}!important;}
-      .wpb-cycles .wpb-cycle-card{border-radius:12px!important;}
-      .wpb-cycle-detail .wpb-page-scroll>div{border-radius:12px!important;}
       .wpb-empty-state{border-style:solid!important;background:transparent!important;border-radius:12px!important;}
 
       @media (max-width:420px){
@@ -1614,13 +1611,13 @@ function StyleTag({ theme } = {}) {
 
       /* Cards are structure, not decoration. Keep almost everything flat and let only the true hero,
          selected state, and overlays carry stronger depth. */
-      .wpb-surface,.wpb-day-card,.wpb-settings-card,.wpb-cycle-card,.wpb-carousel-card,
+      .wpb-surface,.wpb-day-card,.wpb-settings-card,.wpb-carousel-card,
       .wpb-action-tile,.wpb-workout-card,.wpb-coach-card{
         border-color:var(--hairline)!important;
         box-shadow:none!important;
       }
       .wpb-hero{border-radius:var(--r-hero)!important;box-shadow:none!important;}
-      .wpb-settings-card,.wpb-day-card,.wpb-cycle-card,.wpb-carousel-card,.wpb-state-card{
+      .wpb-settings-card,.wpb-day-card,.wpb-carousel-card,.wpb-state-card{
         border-radius:var(--r-card)!important;
       }
       .wpb-settings-row+.wpb-settings-row{border-top:1px solid var(--hairline)!important;border-bottom:0!important;}
@@ -2147,47 +2144,7 @@ function StyleTag({ theme } = {}) {
       }
       .wpb-wizard-choice[aria-pressed="true"]{background:${C.cardHi}!important;color:${C.text}!important;border-color:color-mix(in srgb,${C.accent} 32%,${C.borderSoft})!important;}
 
-      /* Cycles. The overview is information hierarchy, not another card inside a page. Block lists
-         become ruled rows with one active tint. Dynamic phase colors remain as ink, not pill fills. */
-      .wpb-cycle-overview{
-        margin-bottom:18px!important;padding:8px 0 16px!important;border-radius:0!important;background:transparent!important;
-        border-bottom:1px solid var(--section-rule)!important;
-      }
-      .wpb-cycle-stats{gap:24px!important;margin-top:12px!important;}
-      .wpb-cycle-stats>span{min-width:0;}
-      .wpb-cycle-change-preview{
-        margin-bottom:14px!important;padding:10px 2px!important;border-left:0!important;border-right:0!important;
-        border-radius:0!important;border-color:var(--section-rule)!important;
-      }
-      .wpb-cycle-change-preview>summary{font-size:13px!important;font-weight:650!important;}
-      .wpb-cycle-block-list{gap:0!important;border-top:1px solid var(--section-rule);}
-      .wpb-cycle-block-row{
-        margin:0!important;padding:12px 4px!important;border-radius:0!important;border-left:0!important;border-right:0!important;
-        border-top:0!important;border-bottom:1px solid var(--section-rule)!important;background:transparent!important;
-      }
-      .wpb-cycle-block-row[data-state="active"]{background:color-mix(in srgb,${C.accent} 6%,transparent)!important;}
-      .wpb-cycle-block-row[data-state="planned"]{opacity:1!important;}
-      .wpb-cycle-actions{box-shadow:0 -1px 0 var(--section-rule)!important;gap:6px!important;}
-      .wpb-cycle-actions>button{min-height:46px!important;border-radius:11px!important;}
-
-      .wpb-cycle-list-card{
-        padding:14px 12px!important;border-radius:12px!important;border-color:var(--section-rule)!important;
-        background:${C.card}!important;box-shadow:none!important;
-      }
-      .wpb-cycle-list-card .wpb-cycle-state{
-        text-transform:none!important;letter-spacing:0!important;background:transparent!important;padding:2px 0!important;border-radius:0!important;
-      }
-      .wpb-cycle-list-progress{margin-top:10px!important;padding-bottom:8px;border-bottom:1px solid var(--section-rule);}
-      .wpb-cycle-list-card .wpb-cycle-block-list{border-top:0;}
-      .wpb-cycle-list-block{
-        border-radius:0!important;border-left:0!important;border-right:0!important;border-top:0!important;
-        border-bottom:1px solid var(--section-rule)!important;background:transparent!important;padding:9px 2px!important;
-      }
-      .wpb-cycle-list-block[data-state="active"]{background:color-mix(in srgb,${C.accent} 5%,transparent)!important;}
-      .wpb-cycle-complete-action{
-        margin-top:8px!important;min-height:42px!important;border:0!important;background:transparent!important;
-        color:${C.accentInk}!important;border-radius:9px!important;
-      }
+      /* Cycle presentation is owned by app.css (Cohesion 14). */
 
       /* Exercise detail / analytics. Tabs and chart selectors no longer use bright accent-filled
          pills, while history/record content becomes the same continuous ruled list used elsewhere. */
@@ -18969,15 +18926,15 @@ function CycleBlockRows({ cycle, progress, saved, cycleInfo, onOpenBlock }) {
         const current = !cycle.done && i === (cycle.activeBlock || 0), past = cycle.done || i < (cycle.activeBlock || 0);
         const p = saved.find(p => p.id === b.id);
         return _jsxs("button", { className: "pressable wpb-cycle-block-row wpb-cycle-list-block", "data-state": current ? "active" : past ? "done" : "planned",
-            disabled: !p, onClick: () => onOpenBlock(cycle, i), style: { width: "100%", display: "flex", alignItems: "center", gap: 12, textAlign: "left", padding: "14px 12px", marginTop: 8, borderRadius: 12, border: `1px solid ${current ? C.accent : C.border}`, background: current ? C.accentDim : C.card, color: C.text, cursor: p ? "pointer" : "default", opacity: 1 }, children: [
-            _jsx("span", { className: "wpb-cycle-block-number", style: { flexShrink: 0, color: current ? C.accentInk : C.muted, fontWeight: 700, width: 22, textAlign: "center" }, children: past ? _jsx(Check, { size: 18 }) : i + 1 }),
-            _jsxs("span", { style: { flex: 1, minWidth: 0 }, children: [
-                _jsxs("span", { style: { display: "flex", alignItems: "baseline", justifyContent: "space-between", flexWrap: "wrap", gap: 6 }, children: [
-                    _jsx("strong", { style: { fontSize: 15, overflowWrap: "anywhere" }, children: b.label }),
-                    _jsx("span", { className: "wpb-cycle-block-status", style: { fontSize: 11, fontWeight: 700, color: current ? C.accentInk : C.muted }, children: current ? "Current" : past ? "Completed" : "Preview" })] }),
-                _jsx("span", { style: { display: "block", marginTop: 4, fontSize: 13, color: C.muted }, children: `${b.weeks}w${p?.config?.deload ? ' + deload' : ''} · Weeks ${b.range[0]}–${b.range[1]}` }),
-                current && cycleInfo?.cycle?.id === cycle.id && _jsx("span", { style: { display: "block", marginTop: 5, fontSize: 13, color: C.text }, children: `${cycleInfo.isDeload ? 'Deload' : 'Week ' + cycleInfo.weekIndex}${cycleInfo.dayLabel ? ' · ' + cycleInfo.dayLabel : ''}` })] }),
-            _jsx(ChevronRight, { size: 17, color: C.muted, style: { flexShrink: 0 } })] }, b.id);
+            disabled: !p, onClick: () => onOpenBlock(cycle, i), children: [
+            _jsx("span", { className: "wpb-cycle-block-number", children: past ? _jsx(Check, { size: 18 }) : i + 1 }),
+            _jsxs("span", { className: "wpb-cycle-block-content", children: [
+                _jsxs("span", { className: "wpb-cycle-block-heading", children: [
+                    _jsx("strong", { className: "wpb-cycle-block-title", children: b.label }),
+                    _jsx("span", { className: "wpb-cycle-block-status", children: current ? "Current" : past ? "Completed" : "Preview" })] }),
+                _jsx("span", { className: "wpb-cycle-block-meta", children: `${b.weeks}w${p?.config?.deload ? ' + deload' : ''} · Weeks ${b.range[0]}–${b.range[1]}` }),
+                current && cycleInfo?.cycle?.id === cycle.id && _jsx("span", { className: "wpb-cycle-block-current", children: `${cycleInfo.isDeload ? 'Deload' : 'Week ' + cycleInfo.weekIndex}${cycleInfo.dayLabel ? ' · ' + cycleInfo.dayLabel : ''}` })] }),
+            _jsx(ChevronRight, { size: 17, className: "wpb-cycle-chevron" })] }, b.id);
     }) });
 }
 function CycleBlockNav({ cycle, saved, selectedId, onSelect }) {
@@ -18991,16 +18948,16 @@ function CycleBlockPreview({ program, initialWeek = 1, initialDayId = null, onCl
     const total = weeksOf(program) + (program.config?.deload ? 1 : 0);
     const [week, setWeek] = useState(Math.max(1, Math.min(total, initialWeek)));
     return _jsx(SessionChoiceDialog, { title: program.blockLabel || program.name, onClose, className: "wpb-cycle-block-preview", children: _jsxs("div", { children: [
-        _jsx("p", { style: { color: C.muted, fontSize: 13, lineHeight: 1.5 }, children: "Block preview. Browsing keeps your current training block unchanged. Planned prescriptions may adapt when this block starts." }),
-        _jsxs("label", { style: { display: "flex", gap: 10, alignItems: "center", marginBottom: 12 }, children: ["Week", _jsx("select", { "aria-label": "Preview week", value: week, onChange: e => setWeek(Number(e.target.value)), style: { minHeight: 44, background: C.card, color: C.text, border: `1px solid ${C.border}`, borderRadius: 8, padding: 8 }, children: Array.from({ length: total }, (_, i) => _jsx("option", { value: i + 1, children: i >= weeksOf(program) ? "Deload" : `Week ${i + 1}` }, i)) })] }),
-        program.days.map((day, index) => _jsxs("details", { open: initialDayId ? day.id === initialDayId : index === 0, style: { marginBottom: 10, border: `1px solid ${C.border}`, borderRadius: 10, padding: 10 }, children: [
-            _jsx("summary", { style: { cursor: "pointer", minHeight: 34, fontWeight: 700 }, children: day.label }),
+        _jsx("p", { className: "wpb-cycle-preview-note", children: "Block preview. Browsing keeps your current training block unchanged. Planned prescriptions may adapt when this block starts." }),
+        _jsxs("label", { className: "wpb-cycle-preview-week", children: ["Week", _jsx("select", { "aria-label": "Preview week", value: week, onChange: e => setWeek(Number(e.target.value)), className: "wpb-cycle-preview-select", children: Array.from({ length: total }, (_, i) => _jsx("option", { value: i + 1, children: i >= weeksOf(program) ? "Deload" : `Week ${i + 1}` }, i)) })] }),
+        program.days.map((day, index) => _jsxs("details", { open: initialDayId ? day.id === initialDayId : index === 0, className: "wpb-cycle-preview-day", children: [
+            _jsx("summary", { className: "wpb-cycle-preview-summary", children: day.label }),
             day.exercises.map((_, slot) => { const id = exerciseAt(program, day, slot, week), ex = EX_BY_ID[id], cell = computeCell(program, day, id, slot, week);
-                return _jsxs("div", { style: { padding: "10px 0", borderTop: `1px solid ${C.borderSoft}` }, children: [
-                    _jsx("div", { style: { fontSize: 14, fontWeight: 600 }, children: ex?.name || id }),
-                    _jsx("div", { style: { fontSize: 13, color: C.muted, marginTop: 3 }, children: cell.missing ? cell.note : `${cell.sets} sets · ${cell.reps} reps · ${cell.rir} RIR` })] }, slot);
+                return _jsxs("div", { className: "wpb-cycle-preview-exercise", children: [
+                    _jsx("div", { className: "wpb-cycle-preview-name", children: ex?.name || id }),
+                    _jsx("div", { className: "wpb-cycle-preview-target", children: cell.missing ? cell.note : `${cell.sets} sets · ${cell.reps} reps · ${cell.rir} RIR` })] }, slot);
             })] }, day.id)),
-        onViewPlan && _jsx(UiAction, { onClick: onViewPlan, style: { width: "100%", minHeight: 44, marginTop: 8 }, children: "View in Plan" })] }) });
+        onViewPlan && _jsx(UiAction, { onClick: onViewPlan, className: "wpb-cycle-wide-action", children: "View in Plan" })] }) });
 }
 function CycleDetail({ cycle, saved = [], history = [], cycleInfo = null, onBack, onOpenBlock, onAdvance, onDelete, onSetIcon, onNextWorkout }) {
     const [iconSheet, setIconSheet] = useState(false), [options, setOptions] = useState(false);
@@ -19011,22 +18968,22 @@ function CycleDetail({ cycle, saved = [], history = [], cycleInfo = null, onBack
     const isActive = cycleInfo?.cycle?.id === cycle.id;
     const Ic = iconForCycle(cycle);
     return _jsxs("div", { className: "wpb-page-shell wpb-cycle-detail", children: [
-        _jsxs("div", { className: "wpb-page-header", style: { display: "flex", alignItems: "center", gap: 10, padding: "12px 16px" }, children: [
+        _jsxs(UiHeader, { className: "wpb-page-header wpb-cycle-header", children: [
             _jsx(UiAction, { variant: "icon", "aria-label": "Back", onClick: onBack, children: _jsx(ChevronLeft, { size: 24 }) }),
             _jsx("span", { className: "wpb-cycle-title-icon", children: _jsx(Ic, { size: 24, color: iconColorOf(cycle) }) }),
-            _jsx("h1", { style: { flex: 1, minWidth: 0, margin: 0, fontSize: 20, overflowWrap: "anywhere" }, children: cycle.name }),
+            _jsx("h1", { className: "wpb-cycle-heading", children: cycle.name }),
             _jsx(UiAction, { variant: "icon", "aria-label": "Cycle options", onClick: () => setOptions(true), children: _jsx(MoreHorizontal, { size: 22 }) })] }),
-        _jsxs("div", { className: "wpb-scroll wpb-page-scroll", style: { flex: 1, overflowY: "auto", padding: "4px 16px 24px" }, children: [
-            _jsxs("section", { className: "wpb-cycle-overview", style: { padding: "16px 0 20px" }, children: [
-                _jsxs("div", { style: { display: "flex", justifyContent: "space-between", gap: 8, fontSize: 14, fontWeight: 700 }, children: [
-                    _jsx("span", { className: "wpb-cycle-week-heading", children: cycle.done ? "Cycle complete" : `Week ${P.curWeek} of ${P.totalWeeks}` }), _jsx("span", { style: { color: C.accentInk }, children: `${P.pct}%` })] }),
+        _jsxs("div", { className: "wpb-scroll wpb-page-scroll wpb-cycle-scroll", children: [
+            _jsxs("section", { className: "wpb-cycle-overview", children: [
+                _jsxs("div", { className: "wpb-cycle-overview-heading", children: [
+                    _jsx("span", { className: "wpb-cycle-week-heading", children: cycle.done ? "Cycle complete" : `Week ${P.curWeek} of ${P.totalWeeks}` }), _jsx("span", { className: "wpb-cycle-percent", children: `${P.pct}%` })] }),
                 _jsx("p", { className: "wpb-cycle-current-label", children: cycle.done ? `${P.blocks.length} blocks completed` : `Block ${active + 1} of ${P.blocks.length} · ${P.blocks[active]?.label || current?.name || "Training"}` }),
-                _jsx("div", { role: "progressbar", "aria-label": "Cycle progress", "aria-valuenow": P.pct, "aria-valuemin": 0, "aria-valuemax": 100, style: { marginTop: 10, height: 6, borderRadius: 99, background: C.bg2, overflow: "hidden" }, children: _jsx("div", { style: { width: `${P.pct}%`, height: "100%", background: C.accent } }) }),
-                _jsxs("div", { className: "wpb-cycle-stats", style: { display: "flex", gap: 24, marginTop: 14, color: C.muted, fontSize: 13 }, children: [
+                _jsx("div", { role: "progressbar", "aria-label": "Cycle progress", "aria-valuenow": P.pct, "aria-valuemin": 0, "aria-valuemax": 100, className: "wpb-cycle-progress-track", children: _jsx("div", { className: "wpb-cycle-progress-fill", style: { width: `${P.pct}%` } }) }),
+                _jsxs("div", { className: "wpb-cycle-stats", children: [
                     _jsx("span", { children: `${current?.days?.length || saved.find(p => p.id === cycle.blockIds[0])?.days?.length || '—'} days/wk` }), _jsx("span", { children: `${P.sessions} sessions logged` })] })] }),
-            _jsx("h2", { style: { fontSize: 13, color: C.muted, margin: "0 0 10px" }, children: "Cycle blocks" }),
+            _jsx("h2", { className: "wpb-cycle-section-title", children: "Cycle blocks" }),
             _jsx(CycleBlockRows, { cycle, progress: P, saved, cycleInfo, onOpenBlock }),
-            !cycle.done && _jsx("p", { style: { fontSize: 12, color: C.muted, lineHeight: 1.5, margin: "12px 0 18px" }, children: "Tap any block to explore its weeks and exercises. Future blocks are previews until you advance." }),
+            !cycle.done && _jsx("p", { className: "wpb-cycle-browse-note", children: "Tap any block to explore its weeks and exercises. Future blocks are previews until you advance." }),
             _jsxs("div", { className: "wpb-cycle-info-grid", children: [
                 changes && !cycle.done && _jsxs("section", { className: "wpb-cycle-info-card wpb-cycle-change-preview", "aria-label": "Next block changes", children: [
                     _jsx("div", { className: "wpb-cycle-card-eyebrow", children: "Up next" }),
@@ -19045,9 +19002,9 @@ function CycleDetail({ cycle, saved = [], history = [], cycleInfo = null, onBack
                         !cycle.done && P.endMs && _jsx("dd", { children: new Date(P.endMs).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) }),
                         _jsx("dt", { children: "Blocks" }), _jsx("dd", { children: P.blocks.length })] }),
                     _jsx("p", { className: "wpb-cycle-card-note", children: cycle.adaptExercises ? "Future blocks adapt from your training history." : "Open a block to see its weeks, days and exercises." })] })] })] }),
-        !cycle.done && current && _jsx("div", { className: "wpb-cycle-actions", style: { padding: "10px 16px calc(14px + env(safe-area-inset-bottom))", borderTop: `1px solid ${C.border}`, background: C.bg }, children:
-            _jsx(UiAction, { onClick: isActive && onNextWorkout ? onNextWorkout : () => onOpenBlock(cycle, active), style: { width: "100%", minHeight: 48, background: C.accent, color: C.accentText, border: "none", fontWeight: 700 }, children: isActive && onNextWorkout ? "Review next workout" : "Open current block" }) }),
-        options && _jsx(SessionChoiceDialog, { title: "Cycle options", onClose: () => setOptions(false), children: _jsxs("div", { style: { display: "grid", gap: 10 }, children: [
+        !cycle.done && current && _jsx("div", { className: "wpb-cycle-actions", children:
+            _jsx(UiAction, { variant: "primary", onClick: isActive && onNextWorkout ? onNextWorkout : () => onOpenBlock(cycle, active), className: "wpb-cycle-next-action", children: isActive && onNextWorkout ? "Review next workout" : "Open current block" }) }),
+        options && _jsx(SessionChoiceDialog, { title: "Cycle options", onClose: () => setOptions(false), children: _jsxs("div", { className: "wpb-cycle-option-actions", children: [
             onSetIcon && _jsx(UiAction, { onClick: () => { setOptions(false); setIconSheet(true); }, children: "Change cycle icon" }),
             !cycle.done && _jsx(UiAction, { onClick: () => { setOptions(false); onAdvance(cycle); }, children: next ? `Complete block · advance to ${next.blockLabel || next.name}` : "Complete final block" }),
             _jsx(UiAction, { onClick: () => { setOptions(false); onDelete(cycle.id); }, style: { color: C.danger }, children: "Delete cycle" })] }) }),
@@ -19073,25 +19030,25 @@ function CyclesView({ onBack, cycles = [], saved = [], history = [], cycleInfo =
     const focusRef = useRef(null);
     useEffect(() => { focusRef.current?.scrollIntoView({ block: "nearest" }); }, [focusId]);
     return _jsxs("div", { className: "wpb-page-shell wpb-cycles", children: [
-        _jsxs("div", { className: "wpb-page-header", style: { display: "flex", alignItems: "center", gap: 10, padding: "12px 16px" }, children: [
+        _jsxs(UiHeader, { className: "wpb-page-header wpb-cycle-header", children: [
             _jsx(UiAction, { variant: "icon", "aria-label": "Back", onClick: onBack, children: _jsx(ChevronLeft, { size: 24 }) }),
-            _jsx("h1", { style: { flex: 1, margin: 0, fontSize: 20 }, children: "Training Cycles" }),
-            _jsx(UiAction, { onClick: onNew, children: "+ New" })] }),
-        _jsx("div", { className: "wpb-scroll wpb-page-scroll", style: { flex: 1, overflowY: "auto", padding: "8px 16px 28px" }, children: cycles.length ? cycles.map(c => {
+            _jsx("h1", { className: "wpb-cycle-heading", children: "Training Cycles" }),
+            cycles.length > 0 && _jsx(UiAction, { onClick: onNew, children: "+ New" })] }),
+        _jsx("div", { className: "wpb-scroll wpb-page-scroll wpb-cycle-scroll", children: cycles.length ? cycles.map(c => {
             const P = cycleProgress(c, saved, history, cycleInfo);
             const Ic = iconForCycle(c);
-            return _jsxs("section", { ref: c.id === focusId ? focusRef : null, className: "wpb-cycle-card wpb-cycle-list-card", style: { padding: 14, marginBottom: 14 }, children: [
-                _jsxs("button", { className: "pressable", onClick: () => onOpenCycle?.(c), style: { display: "flex", gap: 10, alignItems: "center", width: "100%", minHeight: 44, padding: 0, border: 0, background: "none", color: C.text, textAlign: "left" }, children: [
-                    _jsx(Ic, { size: 24, color: iconColorOf(c), style: { flexShrink: 0 } }),
-                    _jsxs("span", { style: { flex: 1, minWidth: 0 }, children: [_jsx("strong", { style: { fontSize: 16, overflowWrap: "anywhere" }, children: c.name }), _jsx("span", { style: { display: "block", marginTop: 4, fontSize: 12, color: C.muted }, children: c.done ? "Complete" : `Block ${(c.activeBlock || 0) + 1} of ${P.blocks.length} · ${P.blocks[c.activeBlock || 0]?.label || ''}` })] }),
+            return _jsxs("section", { ref: c.id === focusId ? focusRef : null, className: "wpb-cycle-card wpb-cycle-list-card", children: [
+                _jsxs("button", { className: "pressable wpb-cycle-open", onClick: () => onOpenCycle?.(c), children: [
+                    _jsx(Ic, { size: 24, color: iconColorOf(c), className: "wpb-cycle-list-icon" }),
+                    _jsxs("span", { className: "wpb-cycle-list-title", children: [_jsx("strong", { className: "wpb-cycle-list-name", children: c.name }), _jsx("span", { className: "wpb-cycle-list-meta", children: c.done ? "Complete" : `Block ${(c.activeBlock || 0) + 1} of ${P.blocks.length} · ${P.blocks[c.activeBlock || 0]?.label || ''}` })] }),
                     _jsx(ChevronRight, { size: 18, color: C.muted })] }),
-                _jsxs("div", { className: "wpb-cycle-list-progress", "data-cycleprogress": String(P.pct), style: { marginTop: 12 }, children: [
-                    _jsx("div", { style: { height: 5, background: C.bg2, borderRadius: 99, overflow: "hidden" }, children: _jsx("div", { style: { height: "100%", width: `${P.pct}%`, background: C.accent } }) }),
-                    _jsxs("div", { style: { display: "flex", justifyContent: "space-between", color: C.muted, fontSize: 12, marginTop: 7 }, children: [_jsx("span", { children: c.done ? `${P.totalWeeks} weeks done` : `Week ${P.curWeek} of ${P.totalWeeks}` }), _jsx("span", { children: `${P.sessions} sessions logged` })] })] }),
-                _jsxs("details", { style: { marginTop: 10 }, children: [_jsx("summary", { style: { cursor: "pointer", color: C.text, fontSize: 13, padding: "10px 0", minHeight: 44 }, children: `Blocks · ${P.blocks.map(b => b.weeks + 'w').join(' / ')}` }),
+                _jsxs("div", { className: "wpb-cycle-list-progress", "data-cycleprogress": String(P.pct), children: [
+                    _jsx("div", { className: "wpb-cycle-progress-track", children: _jsx("div", { className: "wpb-cycle-progress-fill", style: { width: `${P.pct}%` } }) }),
+                    _jsxs("div", { className: "wpb-cycle-list-stats", children: [_jsx("span", { children: c.done ? `${P.totalWeeks} weeks done` : `Week ${P.curWeek} of ${P.totalWeeks}` }), _jsx("span", { children: `${P.sessions} sessions logged` })] })] }),
+                _jsxs("details", { className: "wpb-cycle-list-disclosure", children: [_jsx("summary", { className: "wpb-cycle-list-summary", children: `Blocks · ${P.blocks.map(b => b.weeks + 'w').join(' / ')}` }),
                     _jsx(CycleBlockRows, { cycle: c, progress: P, saved, cycleInfo, onOpenBlock }),
-                    onReview && P.blocks.map((b, i) => (c.done || i < (c.activeBlock || 0)) && b.sessions >= 3 ? _jsx(UiAction, { onClick: () => onReview(c, i), style: { width: "100%", marginTop: 8 }, children: `Review ${b.label}` }, b.id) : null)] })] }, c.id);
-        }) : _jsxs("div", { className: "wpb-empty-state", style: { padding: "40px 12px", textAlign: "center", color: C.muted }, children: [_jsx("p", { children: "No training cycles yet." }), _jsx(UiAction, { onClick: onNew, children: "Create a cycle" })] }) })] });
+                    onReview && P.blocks.map((b, i) => (c.done || i < (c.activeBlock || 0)) && b.sessions >= 3 ? _jsx(UiAction, { onClick: () => onReview(c, i), className: "wpb-cycle-wide-action", children: `Review ${b.label}` }, b.id) : null)] })] }, c.id);
+        }) : _jsxs("div", { className: "wpb-empty-state wpb-cycle-empty", children: [_jsx("p", { children: "No training cycles yet." }), _jsx(UiAction, { variant: "primary", onClick: onNew, children: "Create a cycle" })] }) })] });
 }
 /* ============================== LIBRARY VIEW ============================== */
 function LibraryView({ onBack, banned = [], onBan, onSetBan, goals = {}, onSetGoal, unit, history = [], navigationMemory, onCreateCustom, onCompare, exNotes = {}, onSetExNote, exSetup = {}, onSetExSetup }) {

@@ -10,7 +10,7 @@ assert.match(app,/"aria-label": "Move " \+ t\.name \+ " up"/);
 assert.match(app,/"aria-label": "Move " \+ t\.name \+ " down"/);
 assert.match(app,/"aria-label": "Unfavorite " \+ t\.name/);
 assert.match(css,/\.wpb-chart-favorites-available\{max-height:210px;overflow-y:auto/);
-assert.match(css,/\.wpb-cycles \.wpb-cycle-block-row>span:nth-child\(2\)/);
+assert.match(css,/#root \.wpb-cycle-block-content\{[^}]*min-width:0;[^}]*overflow-wrap:anywhere/);
 const order = ['a','b'];
 const newer = ['c','a','b'];
 const catalog = [{id:'b'},{id:'x'},{id:'a'},{id:'c'}];

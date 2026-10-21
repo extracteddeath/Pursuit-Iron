@@ -51,7 +51,7 @@ Cohesion 08 (PR #214) merged five Settings switches and reminder-day selection. 
 
 ### CI anti-regression budget
 
-`verification/ui-ownership-test.mjs` runs in the existing verification integration group. Its measured non-growing ceilings are **2,983** `!important` declarations, **32** repeated important properties at equal selector/at-rule scope (29 remaining collision keys), and **3,378** JSX inline `style: {` objects in `App.js`. It also blocks *new* colliding selector/property owners and duplicate shared component definitions. These are technical debt counters, **not** a verdict that every existing inline/dynamic value or override is incorrect. Lower the ceiling only with verified deletions. Never raise budgets or soften the test just to get a visual patch accepted. New presentation should use the established owner, not a fresh end-of-file specificity layer.
+`verification/ui-ownership-test.mjs` runs in the existing verification integration group. Its measured non-growing ceilings are **2,931** `!important` declarations, **32** repeated important properties at equal selector/at-rule scope (29 remaining collision keys), and **3,331** JSX inline `style: {` objects in `App.js`. It also blocks *new* colliding selector/property owners and duplicate shared component definitions. These are technical debt counters, **not** a verdict that every existing inline/dynamic value or override is incorrect. Lower the ceiling only with verified deletions. Never raise budgets or soften the test just to get a visual patch accepted. New presentation should use the established owner, not a fresh end-of-file specificity layer.
 
 ### Screen passes — follow this order
 
@@ -99,7 +99,7 @@ Seven Plan JSX layout/paint objects have been rehomed into one CSS declaration f
 The first CI run caught Plan labels inheriting the page font after removing inline typography: the global `#root button` reset outranked the new unscoped class. Keep the migrated tab rule within the existing expressive Plan owner specificity, so its font size and selected weight survive the reset without adding priority declarations. The unchanged B831 R47 text-fragment/48px target assertion remains the acceptance gate; no test tolerance is relaxed. PR #219 merged as `decf1f5`; all ten candidate and post-merge checks, Pages, 115 deployed-file hashes and the direct live phone smoke passed.
 
 
-## Cohesion 13 — shared week and cycle-block choices
+## Cohesion 13 — shared week and cycle-block choices (published)
 
 `UiChoice` now owns a labelled/captioned `summary` variant for Plan weeks, Program weeks and cycle block navigation. `WeekPill` is removed. The existing selected state, keyboard/native disabled behavior, semantic theme roles, focus, forced colors and motion remain with the shared primitive. A single `.wpb-choice-rail` owns spacing and focus-ring clearance. Removed obsolete Program/Plan paint and shape overrides instead of adding another priority layer: **3,017 → 2,983** priority declarations and **3,386 → 3,378** inline style objects. Repeated-priority ceiling stays 32; tighten the other CI ceilings to the new actual counts.
 
@@ -108,3 +108,18 @@ State/data owners are unchanged: Plan uses `openWeek`/`pickWeek` and its existin
 Existing R54 coverage now exercises real manual/deload choices at 320/393/834/1280px in dark/light, 100/200% text, keyboard activation, forced-color selection and immutable saved programs/history. B890 adds actual 200% cycle-block labels and missing-block disabled selection without advancement. Keep the original R53 20-theme contrast and B831 motion/logger regressions unchanged. Publication requires all ten exact-head checks, Pages, post-merge checks and deployed-file identity; see the PR for final evidence.
 
 Next: Cycle detail/list action and layout ownership, including expanded facts and read-only previews. This slice does not close the whole Program/Cycle screen queue or physical Android/Play certification.
+
+
+## Cohesion 14 — Cycle list, detail and read-only preview ownership
+
+One scoped Cycle CSS family now owns the list/detail headers, overview, block rows, facts, progress tracks, disclosures and preview content. `UiHeader` and `UiAction` retain shared header/action semantics. Remove the older embedded Cycle stylesheet and the separate later row/card patches; maintain the current card hierarchy and active/current/completed/preview distinctions. Normal-text block-row geometry and computed paint/typography were compared with the published baseline at 320/390/900px and match. The only remaining progress presentation objects supply the canonical percentage width; the pre-existing options Delete tone remains for the shared action-tone track.
+
+The empty Cycle fallback has one creation action. The detail footer now declares the shared primary action instead of supplying ineffective inline accent paint beneath the secondary variant. Existing navigation, icon choice, advancement/deletion confirmations, `cycleProgress`, `cycleBlockMetadata` and `computeCell` retain ownership. Expanded next-block changes and schedule facts remain visible. Browsing/previewing does not advance a block or alter saved programs/history.
+
+Typography uses relative sizes; narrow enlarged-text rows stack their index/chevron above the reading content when the card lacks space. Normal-text card layout stays the same. Headers wrap complete labels, preview controls have 48px targets and day disclosures retain native keyboard behavior. Active/future/completed states, keyboard focus, forced colors and reduced motion remain in the same family, with no new priority rules.
+
+Measured debt: CSS priority declarations **2,983 → 2,931**; App inline style objects **3,378 → 3,331**; repeated-priority ceiling remains **32**. Embedded App CSS also loses 58 priority occurrences (**1,475 → 1,417**); add a non-growing 1,417 App priority ceiling and an executable escalation check so embedded styles cannot bypass the CSS budget. Tighten the executable ceilings to the new actual values. Keep engine/runtime files outside App byte-identical and preserve Workout/Focus.
+
+Extend the existing B890 browser gate at 320/390/393/834/900/1280px: real all-cycles and detail navigation, 200% text, read-only prescriptions and week selection, keyboard preview, forced-color focus/state, saved data preservation, plus real exported-component empty/completed/missing-block fallback cases. Source contracts now assert the semantic Cycle content owner instead of the retired positional selector, and distinguish `transform` from `text-transform` when banning geometry animation. Require all ten candidate/main checks, Pages and deployed identity; record final evidence in the PR.
+
+Next: Program/cycle creation controls (`Wizard` and custom block composer), followed by remaining block-review presentation. Whole-app and physical Android/Play certification remain open.

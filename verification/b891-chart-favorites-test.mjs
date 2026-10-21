@@ -26,7 +26,7 @@ assert.ok(b911.startsWith('/* B911 / UI polish pass 05'),'polish styles are pres
 const chartOwner=css.slice(css.indexOf('/* B891 —'),css.indexOf('/* B892 /'));
 const sharedControl=css.slice(css.indexOf('/* Cohesion 06 —'),css.indexOf('/* R61 — shared Home/Plan'));
 assert.ok(sharedControl.includes('data-icon-only="true"')&&sharedControl.includes('width:var(--pi-control-touch,48px)'),'shared editor owns icon target geometry');
-assert.ok(sharedControl.includes('min-height:var(--pi-control-touch,48px)'),'all shared editor actions have a 48px minimum');
+assert.ok(sharedControl.includes('min-height:var(--pi-control-min)') && css.includes('--pi-control-min:48px;'),'all shared editor actions inherit the canonical 48px minimum');
 assert.ok(!/!important/.test(sharedControl.replace(/\/\*[\s\S]*?\*\//g,'')),'shared editor adds no priority overrides');
 assert.ok(app.slice(app.indexOf('function ChartFavoritesManager('),app.indexOf('function HistoryView(')).includes('variant: "tonal"'),'chart actions reuse UiAction');
 assert.ok(css.includes('--pi-shape-card:20px;')&&css.includes('--pi-shape-action:14px;')&&css.includes('--pi-motion-paint:160ms;'),'cross-screen shape and motion vocabulary is centralized');

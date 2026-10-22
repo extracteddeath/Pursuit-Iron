@@ -864,22 +864,20 @@ try {
                     probe.remove();
                     const header=home.querySelector('.wpb-home-header');
                     const feature=home.querySelector('.wpb-home-hero');
-                    const metric=home.querySelector('.wpb-metric-strip>.wpb-metric');
+                    const redundantStrip=home.querySelector('.wpb-metric-strip');
                     const preview=home.querySelector('.wpb-home-session-preview');
                     return {quiet,raised,hero,control,appBar,
-                        header:bg(header),feature:bg(feature),metric:bg(metric),
+                        header:bg(header),feature:bg(feature),hasRedundantStrip:!!redundantStrip,
                         preview:bg(preview),headerImage:cs(header)?.backgroundImage,
                         heroImage:cs(feature)?.backgroundImage,
-                        metricImage:cs(metric)?.backgroundImage,
                         overflow:home.scrollWidth>home.clientWidth+1};
                 });
                 assert.ok(homeTonesR45.header===homeTonesR45.appBar&&
-                    homeTonesR45.metric===homeTonesR45.quiet&&
+                    !homeTonesR45.hasRedundantStrip&&
                     homeTonesR45.feature===homeTonesR45.hero&&
                     (!homeTonesR45.preview||homeTonesR45.preview===homeTonesR45.control)&&
                     homeTonesR45.headerImage==='none'&&
                     homeTonesR45.heroImage==='none'&&
-                    homeTonesR45.metricImage==='none'&&
                     homeTonesR45.hero!==homeTonesR45.quiet&&
                     !homeTonesR45.overflow,
                     'R45 Home resolves the common quiet/raised/hero roles: '+
@@ -938,19 +936,18 @@ try {
             if (tab === 'home') {
                 const shape = await page.$eval('.wpb-home', shell => {
                     const header=shell.querySelector('.wpb-home-header'), hero=shell.querySelector('.wpb-home-hero');
-                    const stats=[...shell.querySelectorAll('.wpb-metric-strip > .wpb-metric')];
-                    const first=stats[0]?.getBoundingClientRect();
+                    const redundantPulse=shell.querySelector('.wpb-metric-strip');
                     return {radius:parseFloat(getComputedStyle(header).borderBottomLeftRadius),
                         heroRadius:parseFloat(getComputedStyle(hero).borderTopLeftRadius),
                         headerTint:getComputedStyle(header).backgroundImage,
                         headerSurface:getComputedStyle(header).backgroundColor,
-                        statCount:stats.length,statRadius:stats[0]&&parseFloat(getComputedStyle(stats[0]).borderTopLeftRadius),
-                        statWidth:first?.width,scrollWidth:shell.scrollWidth,viewport:innerWidth};
+                        hasRedundantPulse:!!redundantPulse,
+                        scrollWidth:shell.scrollWidth,viewport:innerWidth};
                 });
                 assert.ok(shape.radius===0 && shape.heroRadius>=35 &&
                     shape.headerTint==='none' && shape.headerSurface!=='transparent' &&
-                    shape.headerSurface!=='rgba(0, 0, 0, 0)' && shape.statCount===2 &&
-                    shape.statRadius>=20 && shape.statWidth>80 &&
+                    shape.headerSurface!=='rgba(0, 0, 0, 0)' &&
+                    !shape.hasRedundantPulse &&
                     shape.scrollWidth<=shape.viewport+1,
                     'R4 connected color-tinted dashboard has true tonal hierarchy without overflow: '+JSON.stringify(shape));
             }

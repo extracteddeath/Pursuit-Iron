@@ -40,8 +40,24 @@ try {
   assert.ok(await noticeClearsFooter(),'M270 resume notice clears the actual logger/rest footer');
   // Switch while the same notice is mounted; changed Focus/rest heights must retarget placement.
   await page.click('[aria-label="Focused mode"]');
-  await page.waitForFunction(()=>{const notice=document.querySelector('.wpb-notice'),footer=document.querySelector('.wpb-workout-footer');return notice&&notice.getBoundingClientRect().bottom<=footer.getBoundingClientRect().top-7;});
-  assert.ok(await noticeClearsFooter(),'M270 notice follows the Focus rest/footer geometry');
+  // Wait for final Focus geometry, not only an intermediate footer-clear position:
+  // the notice may be remeasured again when the focused toolbar settles.
+  const focusNotice=await page.waitForFunction(()=>{
+    const notice=document.querySelector('.wpb-notice'),footer=document.querySelector('.wpb-workout-footer');
+    if(!notice||!footer)return false;
+    const n=notice.getBoundingClientRect(),f=footer.getBoundingClientRect();
+    return n.bottom<=f.top-7&&n.top>=-1&&n.width>0;
+  },{timeout:5000}).then(()=>true).catch(()=>false);
+  const focusBoxes=await page.evaluate(()=>{
+    const notice=document.querySelector('.wpb-notice'),footer=document.querySelector('.wpb-workout-footer');
+    const n=notice?.getBoundingClientRect(),f=footer?.getBoundingClientRect();
+    return {notice:n?{top:n.top,bottom:n.bottom,width:n.width,height:n.height}:null,
+      footer:f?{top:f.top,bottom:f.bottom}:null,
+      maxHeight:notice&&getComputedStyle(notice).maxHeight,
+      positioned:notice?.dataset.positioned};
+  });
+  assert.ok(focusNotice&&await noticeClearsFooter(),
+    'M270 notice follows the Focus rest/footer geometry: '+JSON.stringify(focusBoxes));
   await page.click('[aria-label="Exit focused mode"]');
   // Actual phone/tablet geometry: name + set/progression stay left,
   // skip/history/info + exercise tags form the right column.

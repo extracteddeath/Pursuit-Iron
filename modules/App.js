@@ -5814,15 +5814,6 @@ function Wizard({ buildTask = null, onCancelBuild, initialEquipment, initialExpe
     const [cycleTemplate, setCycleTemplate] = useState(() => ["custom", ...nextCycleTemplatesForShell().map(c => c.id)].includes(setupDraft?.templateId) ? setupDraft.templateId : nextCycleTemplatesForShell()[0]?.id || "");
     const selectedCycle = cycleChoices.find(t => t.id === cycleTemplate);
     const [cycleAdapt, setCycleAdapt] = useState(setupDraft?.adapt || false);
-    const customCycleValid = customCycleBlocks.length >= 2 && customCycleBlocks.length <= 8
-        && customCycleBlocks.every(b => CUSTOM_CYCLE_PHASES.some(c => c.phase === b.phase)
-            && String(b.weeks).trim() !== "" && Number.isSafeInteger(Number(b.weeks))
-            && Number(b.weeks) >= 1 && Number(b.weeks) <= 24)
-        && customCycleBlocks.reduce((total,b) => total + Number(b.weeks), 0) <= 104
-        && customCycleBlocks.every(b => (!b.days || (Number.isInteger(Number(b.days)) && Number(b.days) >= 2 && Number(b.days) <= 6))
-            && (!b.priorityLift || (['bench_press','back_squat','deadlift','overhead_press'].includes(b.priorityLift)
-                && Number.isInteger(Number(b.frequency)) && Number(b.frequency) >= 1 && Number(b.frequency) <= 3
-                && Number(b.frequency) <= Number(b.days || config.days))));
     const [config, setConfig] = useState({
         name: "",
         unit: initialUnit,
@@ -5843,6 +5834,15 @@ function Wizard({ buildTask = null, onCancelBuild, initialEquipment, initialExpe
         ...(setupDraft?.config || {}),
         split: SPLITS[setupDraft?.config?.split] ? setupDraft.config.split : null
     });
+    const customCycleValid = customCycleBlocks.length >= 2 && customCycleBlocks.length <= 8
+        && customCycleBlocks.every(b => CUSTOM_CYCLE_PHASES.some(c => c.phase === b.phase)
+            && String(b.weeks).trim() !== "" && Number.isSafeInteger(Number(b.weeks))
+            && Number(b.weeks) >= 1 && Number(b.weeks) <= 24)
+        && customCycleBlocks.reduce((total,b) => total + Number(b.weeks), 0) <= 104
+        && customCycleBlocks.every(b => (!b.days || (Number.isInteger(Number(b.days)) && Number(b.days) >= 2 && Number(b.days) <= 6))
+            && (!b.priorityLift || (['bench_press','back_squat','deadlift','overhead_press'].includes(b.priorityLift)
+                && Number.isInteger(Number(b.frequency)) && Number(b.frequency) >= 1 && Number(b.frequency) <= 3
+                && Number(b.frequency) <= Number(b.days || config.days))));
     // Steps depend on `config` (endless mode drops the manual deload step), so this must come AFTER the
     // config declaration above — computing it earlier hits a temporal-dead-zone on `config`.
     const dropDeload = (keys) => config.endless ? keys.filter(k => k !== "deload") : keys;

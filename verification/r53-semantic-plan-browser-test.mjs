@@ -262,7 +262,25 @@ async function verifyTaskHierarchy(browser){
             height:b.getBoundingClientRect().height,radius:parseFloat(getComputedStyle(b).borderTopLeftRadius),
             gap:parseFloat(getComputedStyle(b).marginTop)}))};
       });
-      const choices=await page.evaluate(()=>[...document.querySelectorAll('.wpb-plan-panes>button')].map(b=>({
+      const planChrome=await page.$eval('.wpb-plan-context',context=>{
+         const header=context.querySelector('.wpb-plan-context-heading');
+         const action=context.querySelector('.wpb-plan-open-program');
+         const title=context.querySelector('.wpb-plan-title');
+         const picker=document.querySelector('.wpb-plan-week-picker');
+         const r=action?.getBoundingClientRect(),h=header?.getBoundingClientRect(),p=getComputedStyle(picker);
+         return {actionCount:document.querySelectorAll('.wpb-plan-open-program').length,
+           named:action?.getAttribute('aria-label'),height:r?.height,top:r?.top,headerBottom:h?.bottom,
+           titleTop:title?.getBoundingClientRect().top,marginBottom:p.marginBottom,
+           sticky:p.position,bg:p.backgroundColor,hasBottomRule:p.boxShadow!=='none'};
+       });
+       assert.ok(planChrome.actionCount===1&&/full program/i.test(planChrome.named)&&
+         planChrome.height>=48&&planChrome.top<=planChrome.headerBottom+1&&
+         planChrome.top>=planChrome.titleTop-2,
+         'Full program action sits beside the Plan program name: '+JSON.stringify(planChrome));
+       assert.ok(planChrome.sticky==='sticky'&&planChrome.marginBottom==='0px'&&
+         planChrome.bg!=='rgba(0, 0, 0, 0)'&&planChrome.hasBottomRule,
+         'Sticky week picker fills its lower edge with an opaque themed surface: '+JSON.stringify(planChrome));
+       const choices=await page.evaluate(()=>[...document.querySelectorAll('.wpb-plan-panes>button')].map(b=>({
         pane:b.dataset.planPane,pressed:b.getAttribute('aria-pressed'),height:b.getBoundingClientRect().height
       })));
       assert.deepEqual(choices.map(b=>b.pane),['schedule','volume','progression','blueprint'],'Plan keeps four panes');

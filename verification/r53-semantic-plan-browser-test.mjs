@@ -269,13 +269,14 @@ async function verifyTaskHierarchy(browser){
          const picker=document.querySelector('.wpb-plan-week-picker');
          const r=action?.getBoundingClientRect(),h=header?.getBoundingClientRect(),p=getComputedStyle(picker);
          return {actionCount:document.querySelectorAll('.wpb-plan-open-program').length,
-           named:action?.getAttribute('aria-label'),height:r?.height,top:r?.top,headerBottom:h?.bottom,
-           titleTop:title?.getBoundingClientRect().top,marginBottom:p.marginBottom,
+           named:action?.getAttribute('aria-label'),height:r?.height,top:r?.top,bottom:r?.bottom,headerTop:h?.top,headerBottom:h?.bottom,
+           titleTop:title?.getBoundingClientRect().top,titleBottom:title?.getBoundingClientRect().bottom,marginBottom:p.marginBottom,
            sticky:p.position,bg:p.backgroundColor,hasBottomRule:p.boxShadow!=='none'};
        });
        assert.ok(planChrome.actionCount===1&&/full program/i.test(planChrome.named)&&
-         planChrome.height>=48&&planChrome.top<=planChrome.headerBottom+1&&
-         planChrome.top>=planChrome.titleTop-2,
+         planChrome.height>=48&&planChrome.top>=planChrome.headerTop-1&&
+         planChrome.bottom<=planChrome.headerBottom+1&&
+         Math.abs((planChrome.top+planChrome.bottom)-(planChrome.titleTop+planChrome.titleBottom))<=4,
          'Full program action sits beside the Plan program name: '+JSON.stringify(planChrome));
        assert.ok(planChrome.sticky==='sticky'&&planChrome.marginBottom==='0px'&&
          planChrome.bg!=='rgba(0, 0, 0, 0)'&&planChrome.hasBottomRule,

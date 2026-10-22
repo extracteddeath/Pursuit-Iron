@@ -43,7 +43,11 @@ async function assertResumeClear(page){
     return {width:box.width,height:box.height,clear:button.contains(top),
       covering:top?.closest('.wpb-toast')?.textContent||top?.getAttribute('aria-label'),
       toastBottom:toast?getComputedStyle(toast).bottom:null,
-      toastTarget:toast?.style.bottom};
+      toastTarget:toast?.style.bottom,
+      notice:toast?.getBoundingClientRect().toJSON(),noticeParent:toast?.offsetParent?.getBoundingClientRect().toJSON(),
+      barriers:[...document.querySelectorAll('.wpb-live-dock,.wpb-tabbar,.wpb-workout-footer')].map(el=>({
+        class:el.className,box:el.getBoundingClientRect().toJSON(),visibility:getComputedStyle(el).visibility,
+        display:getComputedStyle(el).display,transform:getComputedStyle(el).transform}))};
   });
   assert.ok(target.width>=44&&target.height>=44,'Resume retains its real 44px pointer target');
   assert.ok(target.clear,'Resume is immediately tappable when its dock appears: '+JSON.stringify(target));

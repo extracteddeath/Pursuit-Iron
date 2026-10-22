@@ -5,7 +5,7 @@
   "build": 905,
   "engineVersion": "0.65.9",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "fd94357c702bddb3a5679b26137b802eafda9426f91dbbfff2e68b5d691a3a75",
+  "runtimeAggregate": "61db830c00377dd01ac4344d751dbd2b05c6f9e76fc6610a52e6c8c4fa474807",
   "runtimeFiles": {
     "modules/cycle-setup-drafts.js": "b1d7fdb80eec689fbe419e2f8a3fb4bc97141b80cfff5d94718916abb4be8395",
     "modules/engine-api.js": "b5a0cad7dddaf4e0b3c59100c06c07dc6a06d10340e2d04b9e0c3a18ee6fa2a8",
@@ -14,7 +14,7 @@
     "modules/generation-worker.js": "0afe425752a2a64510b1625778934de64ae78d729b96b32a21f1c5e62b067c03",
     "modules/injury-tools.js": "6003238cf90a17de11ad47fdabe76db73b6438f866656ced83b6e3b7e0e17475",
     "modules/legacy-research-data.js": "8b09be67d7c80da7602bb168726d7f7bc3f6ddb9a43b29293acdd18e208ba206",
-    "modules/main.js": "bf4ed58df6ff5303d5dac0a6db5a30b190ea2242bc3853fd8e1e158ddbcba180",
+    "modules/main.js": "0547cb25708ed6a5a4b62a80d306986e694b35789854114f515707845c1ce5fb",
     "modules/mobile-lifecycle.js": "52f6db9f34b21a7fec3fd6b3e70c50a31d4f38864b6754b40477843807155cc7",
     "modules/next-engine/allocator.js": "2b6e9a494c6297fe1cfb5070518d21934efc9e9ae33ca8fcdc34a73e03263e4b",
     "modules/next-engine/app-shell-adapter.js": "64039f4463d02df15908ae7e0d754f10e8481d38fbffb751218ede8a099f331c",
@@ -99,6 +99,7 @@
     "modules/training-domain/prescriptions.js": "0541ac58fcd0f06f9741a865b45150ed3421e3bb0e533842b22c80007cd7a766",
     "modules/training-domain/programs.js": "4bdab30bd864c0a81799e868a4d004688ca95cf981ece5d0c5ebdee9fee3e8ac",
     "modules/training-domain/records.js": "0a18e3bcbd1e0700f3907fb219eb5eee798970c103ece76fc53d9e2e59c03432",
+    "modules/ui-layout.js": "489ffcbbbbbc340947852c1def36a5c955c203acd2f04209da5dbc316a267726",
     "modules/ui-motion.js": "c522bdc1cd4538858412547cb1ff9cbf97acd7502168cdb015fbf9ffa0a9b356",
     "modules/wizard-stability.js": "a62b2bed8a1f5ab880bfeab036a83ec630c93048b8a352652fe00ae75374a3d1",
     "modules/workout-context.js": "e59546ed86f16f08b398960e4753495185026d4c53770384b7f96a96f4cd8afa",
@@ -116,17 +117,17 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "c2e2f1eb4c3f657464f2923df01312a346cab3c8da2503338501eebc8446349a",
+    "modules/App.js": "b8c91a0d31dc49f1f53890ceb378c3968d3fc7573b54381e7f3a7676b1c3c8d1",
     "index.html": "54fd7f97b0a2d9d8b76694380158b4a23699a3f1c1cbea697c5e33b7c705b7ed",
-    "sw.js": "953072b54173aa7778a13fe861f509ca7d8fb6cd85b5192d7380f30fafdf8762",
-    "BUILD_PROFILE.json": "d0c1c1f30fd5b055140f693450fd115c49d2df5b84633c3671de68090359f89b",
-    "CHANGELOG.md": "0136af0feb84d1f3b514732514c4cbe4859dc1b3a7a9b6c45b8a4e31beaaa1b4",
-    "app.css": "83b529958f32aeb6a201827f0f029cfb3f21cb77f625bf358c72ee2ba741d8fc",
+    "sw.js": "71a42029232fb84bbd3bc74b1f636726d415f67d36d35260e9837307059679cc",
+    "BUILD_PROFILE.json": "845aa997a265010387cc96ef766537e32f701d947abec95d0d5156353a8543b4",
+    "CHANGELOG.md": "baff0ffe9b5fe7b250b4e705671703141ab68e73f9e4a6368bb9f11ee8192e83",
+    "app.css": "cdeea1a26b34a99bd8f6b1cd927e51a9a4f71cebfaa5bc5e8a1ffa14cff27992",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b905-r6bafdefd1424665c",
-  "uiMilestone": "Build 905 · Focus touch tap-selection stability"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b905-r780376e26d565557",
+  "uiMilestone": "Build 905 · M270 shared shell typography, navigation and measured notices"
 }

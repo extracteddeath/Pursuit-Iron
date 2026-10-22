@@ -308,7 +308,7 @@ try{
           if(width===320||width===1280)
             await page.screenshot({path:path.join(root,'verification/r74-'+theme+'-'+width+'-'+route+'-phone.png')});
           assert.equal(enlarged.overflow,false,'200% '+route+' text keeps document width: '+JSON.stringify({theme,width,enlarged}));
-          assert.ok(enlarged.tabs.every(t=>t.hit&&t.lines===1&&t.text.x>=t.box.x-1&&t.text.right<=t.box.right+1&&
+          assert.ok(enlarged.tabs.every(t=>t.hit&&t.visibleName===t.label&&t.lines===1&&t.text.x>=t.box.x-1&&t.text.right<=t.box.right+1&&
             t.text.y>=t.box.y-1&&t.text.bottom<=t.box.bottom+1),
             '200% '+route+' navigation labels fit their real controls: '+JSON.stringify({theme,width,enlarged}));
           if(route==='home'&&width===320)

@@ -996,7 +996,7 @@ try {
                         overflow:el.scrollWidth>el.clientWidth+1
                     };
                 });
-                assert.ok(state.count===3 && state.size>=27 && state.firstRadius>=26 &&
+                assert.ok(state.count===3 && state.size===26 && state.firstRadius>=26 &&
                     state.firstSize>=24 && state.buttons===4 && state.selected===1 &&
                     state.trackFill?.length>3 && !state.overflow,
                     'Plan has a real featured week and elastic four-pane navigator: '+JSON.stringify(state));
@@ -1069,7 +1069,7 @@ try {
                         pickerBackground:picker ? getComputedStyle(picker).backgroundImage : '',
                         overflow:el.scrollWidth>el.clientWidth+1 };
                 });
-                assert.ok(heading.titleSize>=27 && heading.pickerHeight>=44 &&
+                assert.ok(heading.titleSize===26 && heading.pickerHeight>=44 &&
                     heading.selectHeight>=44 && heading.headerHeight<115 &&
                     heading.pickerBackground==='none' && !heading.overflow,
                     'R18 Settings keeps a compact header and functional section jump: '+JSON.stringify(heading));
@@ -1127,7 +1127,8 @@ try {
                         logoHeight: logo.getBoundingClientRect().height,
                         scrolled: el.closest('.wpb-home')?.dataset.scrolled==='1' };
                 });
-                const expectedSize=homeType.size>=29 && homeType.size<=37;
+                // M270: the five root titles share the same 1.625rem role.
+                const expectedSize=homeType.size===26;
                 assert.ok(expectedSize && homeType.weight >= 700,
                     'Home title keeps a stable expressive type scale while clipping smoothly: '+JSON.stringify(homeType));
                 assert.ok(homeType.logoHeight >= 24, 'Home header spacing does not collapse its logo');
@@ -1187,7 +1188,7 @@ try {
                         overflow:el.scrollWidth>el.clientWidth+1
                     };
                 });
-                assert.ok(profileR17.title>=27 && profileR17.headerHeight<=112 &&
+                assert.ok(profileR17.title===26 && profileR17.headerHeight<=112 &&
                     profileR17.identityHeight<=40 && profileR17.identityBorder==='0px' &&
                     profileR17.identityBackground==='rgba(0, 0, 0, 0)' &&
                     profileR17.editHeight>=44 && !profileR17.overflow,

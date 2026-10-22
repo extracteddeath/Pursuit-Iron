@@ -5,10 +5,10 @@ import fs from 'node:fs';
 // Decrease alongside a verified cleanup; never raise to permit a cosmetic override.
 const css = fs.readFileSync('app.css', 'utf8');
 const app = fs.readFileSync('modules/App.js', 'utf8');
-const MAX_IMPORTANT = 2793;
-const MAX_APP_IMPORTANT = 1325; // Prevent embedded StyleTag patches bypassing the CSS budget.
-const MAX_REPEAT_IMPORTANT = 30;
-const MAX_INLINE_STYLE_OBJECTS = 3193; // Cohesion 21: switch and Home preview owners
+const MAX_IMPORTANT = 2699;
+const MAX_APP_IMPORTANT = 1313; // Prevent embedded StyleTag patches bypassing the CSS budget.
+const MAX_REPEAT_IMPORTANT = 24;
+const MAX_INLINE_STYLE_OBJECTS = 3171; // M270: shared root typography, navigation and notice owners
 const allowedDebtKeys = new Set([
   "\t#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step\tborder-radius",
   "\t#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step\theight",
@@ -191,3 +191,16 @@ assert.equal((club.match(/variant: "tonal"/g) || []).length, 2, 'Club share and 
 const settingsView = app.slice(app.indexOf('function SettingsView('), app.indexOf('/* ============================== CYCLES VIEW'));
 assert.equal((settingsView.match(/className: "wpb-ui-card wpb-settings-card"/g) || []).length, 8, 'All eight Settings row groups use shared cards');
 assert.ok(!settingsView.includes('style: { background: C.card, borderRadius: 16, overflow: "hidden"'), 'No unnamed legacy row cards remain');
+
+// M270: shared shell roles cannot silently regain per-screen typography or aliases.
+const navigation = app.slice(app.indexOf('function TabBar('), app.indexOf('function OneRepMaxCalc('));
+const notice = app.slice(app.indexOf('function UiNotice('), app.indexOf('function TabBar('));
+assert.ok(!navigation.includes('style:') && !navigation.includes('compactLabels'), 'Navigation has one class-owned full-name layout');
+assert.ok(!notice.includes('style:') && notice.includes('role: "status"'), 'Notices share class-owned accessible presentation');
+for (const owner of ['Home','ProfileView','SettingsView','HistoryView','PlanView']) {
+ const start=app.indexOf('function '+owner+'('), end=app.indexOf('\nfunction ', start+12);
+ assert.ok(app.slice(start,end).includes('wpb-screen-title'), owner+' uses the shared screen title');
+}
+assert.ok(css.includes('--pi-type-screen-title:1.625rem') && css.includes('.wpb-summary-grid'), 'Scalable title and summary roles remain shared');
+const noticeStyle=css.slice(css.indexOf('.wpb .wpb-notice{'),css.indexOf('.wpb .wpb-notice[data-positioned'));
+assert.ok(noticeStyle.includes('transition-property:none'), 'Notice clearance cannot animate through a newly returned Resume control');

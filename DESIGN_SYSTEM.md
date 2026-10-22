@@ -28,7 +28,7 @@ Owner: `app.css` provides semantic theme roles and shared component styles. `mod
 
 ## Migration sequence and acceptance gates
 
-Current baseline after Cohesion 21 is **3,193 inline `style: {` objects**, **2,793 external CSS priority declarations**, **1,325 embedded CSS priority declarations**, with a historical repeated-priority ceiling of 30. These are legacy-debt caps, **not acceptance of their design quality**. The first slice migrates the shared action's static palette and the Plan header, Profile share-card editors and custom-cycle form controls. Every subsequent slice must lower at least one measured debt metric and leave the affected screen's browser and source contracts green.
+Current baseline after M270 is **3,171 inline `style: {` objects**, **2,699 external CSS priority declarations**, **1,313 embedded CSS priority declarations**, with a repeated-priority ceiling of **24**. These are legacy-debt caps, **not acceptance of their design quality**. Every subsequent slice must lower a measured debt metric where migration removes an owner and leave affected browser/source contracts green. The active placement and delivery sequence is maintained in `NEXT_APP_UPDATE_PLAN.md`.
 
 Sequence: (1) Program/cycle creation controls, (2) Settings and Profile cards, (3) Home and Plan composition, (4) Progress/History, (5) Workout/Focus separately after image-level phone validation, (6) overlays/dialogs and global cleanup, (7) full accessibility, offline, physical Android and Play release certification. Keep related styles near their canonical component owner; do not add a new end-of-file specificity patch.
 
@@ -69,3 +69,13 @@ The canonical `TabBar` owns full and compact visual labels; its existing `aria-l
 ### Focus numeric touch-selection timing
 
 Focus weight and reps inputs share the canonical select-on-focus handler. After a real tap, allow one extra animation frame for the native caret to settle, then reselect only when the field remains active, editable and unchanged; do not clobber the first keystroke. Keep B825's real-touch selection contract and preserve the protected Workout/Focus layout.
+
+### M270 — first implementation slice of the full tab audit
+
+All five root destinations consume `.wpb-screen-title` and `--pi-type-screen-title` (1.625rem / 26px at default text size). This replaces their scattered pixel sizes while other heading roles remain unchanged. Empty Plan retains the same title shell and UiAction creation control.
+
+TabBar has one visible full label per destination, matching its accessible name. This supersedes Cohesion 22's visual aliases. The bottom bar reflows without fragmenting labels when text grows; the expanded rail grows with its own text. Do not shrink enlarged text or abbreviate Progress/Settings into unrelated destinations. Existing selection-track and focus semantics remain authoritative.
+
+UiNotice owns app and workout snackbar presentation; `modules/ui-layout.js` measures navigation, live docks and the actual workout footer, including rest/Focus height changes. It never reads/writes training state. It also exposes the measured rail width for the minimized workout dock. There is no guessed toast bottom offset. Production observers are disposed with BootCommit.
+
+Debt ceilings after this slice: **3,171 inline objects**, **2,699 external priority declarations**, **1,313 embedded priority declarations**, and **24 repeated-priority instances**. These remain migration caps. R65 checks shared root titles and full visible names; R74 checks full names under actual text doubling; B896 checks notice/rest/footer clearance in normal and Focus. Phone, text reflow, lifecycle and release checks remain mandatory.

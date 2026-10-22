@@ -1,3 +1,11 @@
+## Shared tab hierarchy foundations — October 22, 2026
+
+- Home, Plan, Progress, Profile and Settings share one scalable title role; empty Plan keeps its title and the shared creation action.
+- Navigation keeps full destination names. At enlarged text sizes, the bottom layout reflows and the tablet rail grows with its labels; the live dock uses the actual rail inset.
+- Progress summaries preserve readable words as text grows. App/workout notices share one component and measure the real navigation, live dock and workout/rest footer before positioning.
+- Retired 86 external and 12 embedded priority declarations, plus 21 inline style objects. Workout/Focus logging geometry and training calculations are preserved.
+- Browser gates check full visible destination names, shared title roles and notice clearance across normal/Focus rest states. The rest of the tab placement audit remains on the roadmap.
+
 ## Focus touch selection stability — October 21, 2026
 
 - After a touch-click, the native browser caret can move after the first paint. Recheck select-all on the second animation frame for Focus weight and reps inputs.

@@ -1,6 +1,6 @@
 # Whole-app launch readiness
 
-Updated October 21, 2026. This is the single current next-update plan. It supersedes the October 8 workout proposal: compact logging, coaching, session choices and program-change previews already exist. Preserve the user's current Workout and Focus experience.
+Updated October 22, 2026. This is the single current next-update plan. It supersedes the October 8 workout proposal: compact logging, coaching, session choices and program-change previews already exist. Preserve the user's current Workout and Focus experience.
 
 ## Current baseline and ownership
 
@@ -10,20 +10,19 @@ App 4.0.0 build 905 / Engine 0.65.9 / M234. `RELEASE_MANIFEST.json` is authorita
 |---|---|---|
 | Shared UI | UiAction, UiChoice and semantic theme roles in `modules/App.js`; `app.css` | Continue migrating existing controls and removing provably superseded declarations. Preserve palette, focus, disabled, motion and forced-colors behavior; never solve conflicts by adding another override layer. |
 | Home, Plan, Profile, Progress | Existing screen components and shared navigation state | Review empty/populated/error states, reading order, action hierarchy and 320px/200% text layouts. Profile and chart editors already share controls. Preserve saved selections and record content. |
-| Settings and transfers | SettingsView preferences; BackupRestorePanel transfers and Undo; StorageStatusCard browser capability state | This slice separates backup ownership, shares action styling, reports transfer outcomes, prevents duplicate transfers and stale file reads, and distinguishes CSV from a full restore copy. Validate real restore/Undo and storage denial/grant. |
+| Settings and transfers | SettingsView preferences; BackupRestorePanel transfers and Undo; StorageStatusCard browser capability state | Backup/restore ownership is consolidated. Continue category placement and shared selection controls while preserving preview, safe merge, Undo and truthful transfer/storage outcomes. |
 | Workout and Focus | Existing shared workout state, runtime and mobile lifecycle | Retain compact rows, direct input, steppers, target/last-time behavior, rest timers, effort provenance and Undo. Verify interruption, keyboard, safe areas and exact-once completion; no visual redesign. |
 | Engine | `modules/engine-api.js`, canonical next-engine and training-domain modules | Continue existing independent, differential and replay gates. Change policy only for a reproduced defect with evidence and a regression. No duplicate engine, adapter or exporter. |
 | Persistence and offline updates | Existing store migration/merge/queue and service worker | Corrupt/future saves must not be overwritten. Preview before restore, preserve drafts, require successful persistence before completing a workout, verify offline cache integrity and cancellation recovery. |
 | Android / Play | `play/README.md`, final TWA package and Play Console | Resolve package identity and signing certificate association at the domain root, build the release bundle, validate actual permissions/SDKs and complete account-specific declarations/testing. Repository/browser checks cannot certify a signed Android package. |
 
-## This slice
+## This slice — M270 shared shell
 
-- A full backup marker changes only for full-backup transfer actions. CSV copy and cancelled/failed transfers do not suppress the backup reminder.
-- Every transfer reports its outcome. Download messaging says a request was made and asks the user to verify the file, without claiming browser delivery proves a saved copy.
-- File selection clears the old executable preview immediately. Oversized/unreadable files cannot leave an old restore ready to confirm; newer selection, typing, closing and unmounting invalidate pending reads.
-- Transfer controls have one shared style owner, a minimum 48px target and wrapping action rows. Backup fields retain accessible names and native text selection.
-- Storage protection displays only what the browser reports. Denial/error is visible, and a failed usage estimate cannot hide a successful persistence check.
-- Undo stays in the restore panel until explicitly closed or Settings is left. No delayed automatic dismissal can close a later operation.
+- Root destinations share one scalable title role and full visible navigation labels. The no-program Plan state retains the same title and shared creation action.
+- Bottom navigation reflows at enlarged text; the expanded rail grows with labels and publishes its measured inset to the minimized workout dock.
+- Progress summary columns depend on the actual text size, preserving whole readable words instead of splitting them into narrow fragments.
+- UiNotice replaces duplicated app/workout snackbar presentation. A shared layout owner measures actual bottom barriers; route and rest/Focus size changes update clearance immediately. Layout transitions cannot carry Undo across a newly returned Resume control.
+- Static presentation moves into named shared CSS owners. Root typography, navigation aliases and old notice offsets are retired instead of covered with new priority layers. Logging geometry, training data and policy are unchanged.
 
 ## Required release evidence
 
@@ -177,3 +176,16 @@ Next: remaining Settings choice controls and Profile Strength/Achievements card 
 **Next isolated, testable passes:** (1) navigation and 320px/200% heading reflow, (2) Plan title/pane and Profile heading ownership, (3) populated Progress/History hierarchy and Settings choice controls, (4) Program overview density; retain the protected Workout/Focus design. A pass is complete only when exact-head ten-job CI, phone/tablet rendered screenshots, browser interactions and cache integrity pass. The Android physical-device checklist remains separate.
 
 Source capture reference: [candidate phone/offline integrity run](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/39685915651) (screenshots including R53/R74/R76); compare against the attached Phone, Tablet portrait and Tablet landscape design handoffs.
+
+## October 22 full tab audit — implementation ledger
+
+The source/rendered-screen audit at main `f1725a3` defines a task-based placement plan: Home prepares today; Plan manages training; Progress reviews history/results; Profile leads with the customizable share card; Settings configures equipment/preferences/data. Preserve all capabilities and the current Workout/Focus geometry.
+
+1. **M270 shared shell — implemented; verification tracked in PR.** One scalable root title, full navigation names, reflowing summaries and measured shared notices. The expanded rail and minimized workout inset grow together. Existing motion stays authoritative.
+2. **Home and preview — next.** Keep session outline visible; keep Game Plan concise/expandable; put time available and exercise inspection ahead of detailed preview coaching; use one safe Start/Resume action region.
+3. **Plan and Program — pending.** Selected/current-week sessions directly below the week control; clear management/edit scope. Reproduce and resolve the audit fixture's phase/duration projection difference before changing labels.
+4. **Progress — pending.** Show recent session records before the full calendar/dashboard; retain explicit grouping, calendar and filters; favorite-ordered Lifts and clear Volume/Body interpretation.
+5. **Profile — pending.** Separate Edit details, Edit card and page layout customization; keep aligned strength/club rows and saved choices.
+6. **Settings/tools — pending.** Categories by purpose, shared controls and clear global/gym/program scopes; retain every existing preference/tool and safe restore/Undo.
+7. **Workout/overlays — pending certification.** Surrounding consistency only; verify keyboard/rest/active-set visibility, notes/plates/amplifiers, completion and recovery without reworking the ledger.
+8. **Whole-app/device sign-off — pending.** Compare populated/empty states together, large text, themes, motion interruption, offline and physical Android. Passing CSS debt budgets alone does not certify deliberate design.

@@ -152,10 +152,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb-page-shell:not(.wpb-workout)>.wpb-page-header{
   border-bottom-color:var(--pi-layout-border);
 }
-#root[data-pi-motion="expressive"] .wpb-page-shell:not(.wpb-workout)>.wpb-page-header :is(h1,.wpb-title,.wpb-progress-title){
-  letter-spacing:-.035em!important;
-  line-height:1.14;
-}
 #root[data-pi-motion="expressive"] .wpb :is(.wpb-primary-action,.wpb-secondary-action,.wpb-danger-action){
   border-radius:14px!important;
   letter-spacing:-.012em;
@@ -169,8 +165,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   isolation:isolate;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab{
-  min-height:52px!important;
-  padding-inline:2px!important;
   overflow:visible;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab::before{
@@ -309,10 +303,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   .wpb-settings>.wpb-page-header h1,
   .wpb-progress .wpb-progress-title,
   .wpb-profile .wpb-profile-title){
-  font-size:var(--pi-title-size)!important;
-  font-weight:750!important;
-  letter-spacing:-.038em!important;
-  line-height:1.1!important;
   overflow-wrap:anywhere;
   text-wrap:balance;
 }
@@ -408,9 +398,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   to{opacity:1;translate:0 0}
 }
 @media(max-width:350px){
-  #root[data-pi-motion="expressive"] .wpb-progress [data-progress-glance]{
-    gap:5px!important;
-  }
   #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-label{
     font-size:10px!important;
   }
@@ -1227,22 +1214,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 /* PI M3 FEEDBACK SYSTEM — clear confirmations and Undo without ever
    stealing space from the active set grid. The existing React toast owns
    its message/action, focus, stacking, rest dock clearance and lifetime. */
-.wpb .wpb-toast{pointer-events:none}
-.wpb .wpb-toast>button{pointer-events:auto}
-#root[data-pi-motion="expressive"] .wpb .wpb-toast{
-  border-radius:16px!important;
-  border:1px solid color-mix(in srgb,currentColor 13%,transparent)!important;
-  background-image:none!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-toast>button{
-  min-height:40px;
-  min-width:36px;
-  border-radius:10px!important;
-  outline-offset:2px;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-toast>button:focus-visible{
-  outline:2px solid currentColor!important;
-}
 /* One product-specific hero moment: a finished session receives a quick
    numerical summary reveal. No count-up, no altering any logged value,
    and no animation on every single completed set. */
@@ -1579,11 +1550,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   padding:14px 17px 16px!important;
   border-radius:0 0 31px 31px!important;
 }
-#root[data-pi-motion="expressive"] .wpb-home .wpb-home-header h1{
-  font-size:clamp(30px,7.4vw,36px)!important;
-  letter-spacing:-.053em!important;
-  line-height:1.02!important;
-}
 #root[data-pi-motion="expressive"] .wpb-home .wpb-home-tools{
   border-radius:18px!important;
   border-color:var(--pi-r4-line)!important;
@@ -1691,12 +1657,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-radius:0 0 15px 15px!important;
   box-shadow:0 5px 18px color-mix(in srgb,currentColor 5%,transparent)!important;
 }
-#root[data-pi-motion="expressive"] .wpb-home[data-scrolled="1"] .wpb-home-header h1{
-  font-size:22px!important;
-  line-height:1.08!important;
-}
 #root[data-pi-motion="expressive"] .wpb-progress[data-scrolled="1"] .wpb-progress-title{
-  font-size:21px!important;
   margin-bottom:1px!important;
 }
 
@@ -1746,21 +1707,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   #root[data-pi-motion="expressive"] .wpb [data-sheet-drag][data-pi-surface]{
     border-radius:29px 29px 0 0!important;
   }
-}
-
-/* R4 precedence correction: the React-mounted legacy typography stylesheet
-   loads after app.css and has equivalent selector specificity. Give the new
-   display headline an unambiguous app-shell selector so the intended 30–36px
-   expanded / 22px collapsed scale reaches the actual painted screen. */
-#root[data-pi-motion="expressive"] .wpb .wpb-home .wpb-home-header h1{
-  font-size:clamp(30px,7.4vw,36px)!important;
-  font-weight:760!important;
-  line-height:1.02!important;
-  letter-spacing:-.053em!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-home[data-scrolled="1"] .wpb-home-header h1{
-  font-size:22px!important;
-  line-height:1.08!important;
 }
 
 /* M3 EXPRESSIVE R5 — SECONDARY FLOWS AS FIRST-CLASS SCREENS
@@ -1960,9 +1906,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    chips. Make the CURRENT week and first historical fact the visual anchors
    while keeping every existing value, action and graph accessible. */
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-view>.wpb-plan-title{
-  font-size:clamp(27px,6.7vw,33px)!important;
-  font-weight:800!important;
-  letter-spacing:-.045em!important;
   text-wrap:balance;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-view .wpb-plan-glance{
@@ -2177,8 +2120,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    overlays. Keep actual modal z-order, detents and keyboard avoidance. */
 #root[data-pi-motion="expressive"] .wpb .wpb-backdrop>[data-sheet-drag],
 #root[data-pi-motion="expressive"] .wpb :is(.wpb-pop,.wpb-dialog),
-#root[data-pi-motion="expressive"] .wpb .wpb-context-menu,
-#root[data-pi-motion="expressive"] .wpb .wpb-toast{
+#root[data-pi-motion="expressive"] .wpb .wpb-context-menu{
   background-image:none!important;
   box-shadow:0 10px 28px rgba(0,0,0,.16)!important;
 }
@@ -2660,12 +2602,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   gap:12px!important;
   box-shadow:none!important;
 }
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-title{
-  font-size:clamp(27px,6.6vw,33px)!important;
-  font-weight:770!important;
-  letter-spacing:-.045em!important;
-  line-height:1.08!important;
-}
 #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-identity{
   display:flex!important;
   flex-wrap:wrap;
@@ -2828,12 +2764,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   padding:14px 16px 10px!important;
   border-radius:0 0 23px 23px!important;
   box-shadow:none!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-settings>.wpb-page-header h1{
-  font-size:clamp(27px,6.7vw,32px)!important;
-  font-weight:770!important;
-  line-height:1.1!important;
-  letter-spacing:-.045em!important;
 }
 #root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-jump-control{
   padding:0 12px!important;
@@ -3698,13 +3628,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   padding-left:max(6px,env(safe-area-inset-left))!important;
   padding-right:max(6px,env(safe-area-inset-right))!important;
 }
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab{
-  min-width:0!important;
-  flex-shrink:1;
-}
 #root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab>span{
   min-width:0;
-  line-height:1.2;
 }
 #root[data-pi-motion="expressive"] .wpb :is(
   .wpb-home-hero,.wpb-action-tile,.wpb-plan-up-next,
@@ -3721,9 +3646,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 @media(max-width:359px){
   #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength-cell>.mono{
     font-size:clamp(18px,5.9vw,21px)!important;
-  }
-  #root[data-pi-motion="expressive"] .wpb-progress [data-progress-glance]{
-    gap:5px!important;
   }
   #root[data-pi-motion="expressive"] .wpb-home .wpb-action-grid{
     gap:6px!important;
@@ -3912,7 +3834,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   justify-content:flex-start!important;
   align-items:center!important;
   gap:0!important;
-  min-height:56px!important;
   border-radius:14px!important;
   background:transparent!important;
 }
@@ -3929,13 +3850,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab>span{
   display:block;
   flex:none;
-  margin:9px 0 0!important;
   padding:0!important;
-  line-height:15px!important;
-  font-size:clamp(10.5px,2.75vw,12px)!important;
-  font-weight:550;
   letter-spacing:0!important;
-  text-overflow:clip!important;
 }
 /* The theme's saved ink color remains accessible. The active pill now has
    a real tonal fill and softly symmetric curvature, not a hollow ring that
@@ -3962,11 +3878,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   background-color:light-dark(var(--pi-m3e-surface-container),var(--pi-r38-surface-1))!important;
   background-image:none!important;
   border-color:var(--pi-r11-edge)!important;
-}
-@media(max-width:359px){
-  #root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab>span{
-    font-size:10.5px!important;
-  }
 }
 @media(forced-colors:active){
   #root[data-pi-motion="expressive"] .wpb .wpb-tabbar{
@@ -4086,10 +3997,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 /* Progress: compact, readable data first, controls next. Keep every actual
    metric and its time window visible rather than hiding secondary labels. */
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-title{
-  font-size:clamp(27px,6.7vw,32px)!important;
-  line-height:1.1!important;
-}
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs{
   min-width:0;
   margin-top:7px!important;
@@ -4100,9 +4007,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   text-align:center;
 }
 #root[data-pi-motion="expressive"] .wpb-progress [data-progress-glance]{
-  display:grid!important;
-  grid-template-columns:repeat(3,minmax(0,1fr))!important;
-  gap:6px!important;
   margin:6px 0 11px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item{
@@ -4176,44 +4080,14 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   }
 }
 
-/* Cohesion 22 — one navigation label owner. Compact aliases appear only
-   when a tab becomes narrow relative to its actual font size (including
-   Android enlarged text and the tablet rail). The original accessible
-   aria-label is kept on the button. No clipping or forced midword breaks. */
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab{
-  container-type:inline-size;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab .wpb-tab-label-compact{
-  display:none;
-}
-@container (max-width:4.5em){
-  #root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab .wpb-tab-label-full{display:none;}
-  #root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab .wpb-tab-label-compact{display:inline;}
-}
-
 /* M3 EXPRESSIVE R40 — ADAPTIVE READING AND HONEST EMPTY STATES
    Android's large-text settings should not force a clipped one-line
    navigation label, hide metadata or cut off Profile/Progress summaries.
    Scale only non-logger presentation through rem-based minimums; let the
    resulting cards grow vertically while preserving five accessible routes.
    The protected workout set/stepper/plate/RIR layout is not modified. */
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab{
-  height:auto!important;
-  min-height:max(56px,3.5rem)!important;
-  padding:5px 1px 4px!important;
-}
 #root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab>span{
   box-sizing:border-box;
-  max-width:100%;
-  width:100%;
-  font-size:clamp(10.5px,.75rem,16px)!important;
-  line-height:max(15px,.92rem)!important;
-  min-height:15px;
-  height:auto;
-  white-space:normal!important;
-  overflow-wrap:anywhere!important;
-  word-break:normal!important;
-  margin-top:9px!important;
   text-align:center;
 }
 #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-identity{
@@ -4298,7 +4172,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     padding-bottom:7px!important;
   }
   #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-title{
-    font-size:clamp(23px,6vw,28px)!important;
     margin-bottom:3px!important;
   }
   #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-head{
@@ -4370,7 +4243,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-title{
   margin-bottom:12px!important;
-  letter-spacing:-.035em!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs{
   background-color:light-dark(var(--pi-m3e-surface-container),var(--pi-r41-surface-2))!important;
@@ -4589,7 +4461,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    the separate live workout logger's measurements and data entry geometry. */
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-view>.wpb-plan-title{
   margin:12px 0 14px!important;
-  line-height:1.1!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-glance{
   gap:8px!important;
@@ -5880,9 +5751,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   color:var(--pi-color-on-muted);font-size:var(--pi-type-support);line-height:1.5;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-view h1.wpb-plan-title{
-  font-size:clamp(27px,6.2vw,28px)!important;
-  line-height:1.15!important;
-  letter-spacing:-.035em!important;
   margin:2px 0 10px!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-progress.wpb-progress>.wpb-page-header{
@@ -5891,12 +5759,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-bottom:1px solid var(--pi-color-divider)!important;
   background:var(--pi-color-card)!important;
   box-shadow:none!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-progress.wpb-progress .wpb-progress-title{
-  font-size:26px!important;
-  font-weight:745!important;
-  line-height:1.12!important;
-  letter-spacing:-.04em!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-progress.wpb-progress .wpb-premium-tabs{
   margin-top:8px!important;
@@ -5916,12 +5778,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-bottom:0!important;
   background:var(--pi-color-canvas)!important;
   box-shadow:none!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-settings.wpb-settings>.wpb-page-header h1{
-  font-size:27px!important;
-  line-height:1.16!important;
-  font-weight:750!important;
-  letter-spacing:-.04em!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-settings.wpb-settings>.wpb-settings-jump{
   padding:0 var(--pi-r57-inset) 9px!important;
@@ -5946,10 +5802,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-radius:0!important;
   background:transparent!important;
   box-shadow:none!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-title{
-  font-weight:750!important;
-  line-height:1.15!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-identity{
   /* Font size and line height stay owned by the earlier rem-based Android
@@ -6021,6 +5873,62 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 @media(max-width:359px){.wpb{--pi-page-inset:12px}}
 @media(min-width:600px){.wpb{--pi-page-inset:24px}}
+
+/* M270 — shared root typography, readable destination names and notices.
+   Root screens share roles; Workout/Focus geometry remains independent. */
+
+.wpb{--pi-type-screen-title:1.625rem;--pi-type-navigation:.75rem;}
+
+#root .wpb .wpb-screen-title{
+  min-width:0;margin:0;font-size:var(--pi-type-screen-title);font-weight:750;
+  line-height:1.22;letter-spacing:-.035em;overflow-wrap:anywhere;text-wrap:balance;
+}
+
+.wpb-progress .wpb-screen-title{flex:1;}
+.wpb-plan-empty{height:100%;overflow:auto;}
+.wpb-plan-empty>.wpb-page-header{padding:var(--pi-space-4) var(--pi-page-inset);}
+.wpb-plan-empty-body{display:grid;justify-items:center;gap:var(--pi-space-3);padding:var(--pi-space-8) var(--pi-page-inset);text-align:center;}
+.wpb-plan-empty-body>h2,.wpb-plan-empty-body>p{margin:0;}
+.wpb-plan-empty-body>svg,.wpb-plan-empty-body>p{color:var(--pi-color-on-muted);}
+
+#root .wpb .wpb-tabbar{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,8ch),1fr));
+  font-size:var(--pi-type-navigation);flex-shrink:0;gap:0;
+}
+
+#root .wpb .wpb-tabbar .wpb-tab{
+  font-size:inherit;min-width:48px;min-height:56px;height:auto;
+  padding:5px 0 4px;border:0;cursor:pointer;
+}
+
+#root .wpb .wpb-tabbar .wpb-tab>span{
+  width:100%;min-width:0;margin:9px 0 0;padding:0;text-align:center;
+  font-size:inherit;font-weight:600;line-height:1.3;white-space:nowrap;
+  overflow-wrap:normal;word-break:normal;
+}
+
+#root .wpb .wpb-summary-grid{
+  display:grid;font-size:var(--pi-type-body);grid-template-columns:repeat(auto-fit,minmax(min(100%,5.5em),1fr));
+  gap:var(--pi-space-2);
+}
+
+.wpb .wpb-notice{
+  position:absolute;left:var(--pi-space-4);right:var(--pi-space-4);
+  bottom:var(--pi-notice-bottom,8px);max-height:var(--pi-notice-max-height,100%);
+  display:flex;align-items:center;flex-wrap:wrap;gap:var(--pi-space-2);
+  padding:var(--pi-space-3) var(--pi-space-4);z-index:48;overflow:auto;
+  border:1px solid var(--pi-color-divider);border-radius:var(--pi-shape-card);
+  background:var(--pi-color-control);color:var(--pi-color-on-control);
+  box-shadow:var(--pi-shadow-overlay);visibility:hidden;pointer-events:none;transition-property:none;
+}
+
+.wpb .wpb-notice[data-positioned="true"]{visibility:visible;}
+
+.wpb .wpb-notice-copy{
+  flex:1 1 10ch;min-width:0;font-size:var(--pi-type-body);line-height:1.4;overflow-wrap:anywhere;
+}
+
+.wpb .wpb-notice>button{pointer-events:auto;flex:0 0 auto;}
 
 /* Cohesion 15 — reusable presentation primitives.
    Screen components own composition; classes own static surface and control paint. */
@@ -6339,8 +6247,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   #root[data-pi-motion="expressive"] .wpb>div:has(>.wpb-tabbar)>.wpb-tabbar{
     box-sizing:border-box;
     order:-1;
-    flex:0 0 100px!important;
-    width:100px!important;
+    flex:0 0 auto!important;
+    width:max(100px,10ch)!important;
     height:100%;
     min-height:0;
     display:flex!important;
@@ -6359,16 +6267,11 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   }
   #root[data-pi-motion="expressive"] .wpb>div:has(>.wpb-tabbar)>.wpb-tabbar>.wpb-tab{
     box-sizing:border-box;
-    flex:0 0 64px!important;
+    flex:0 0 auto!important;
     width:100%;
     min-height:64px!important;
     padding:9px 3px 5px!important;
     border-radius:15px!important;
-  }
-  #root[data-pi-motion="expressive"] .wpb>div:has(>.wpb-tabbar)>.wpb-tabbar>.wpb-tab>span{
-    font-size:11.5px!important;
-    line-height:15px!important;
-    margin-top:9px!important;
   }
   #root[data-pi-motion="expressive"] .wpb>div:has(>.wpb-tabbar) .wpb-view-frame{
     min-width:0;
@@ -6381,26 +6284,21 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     margin-inline:auto;
   }
   #root[data-pi-motion="expressive"] .wpb>div:has(>.wpb-tabbar) .wpb-live-dock{
-    left:calc(100px + 20px)!important;
+    left:calc(var(--pi-navigation-rail-width,100px) + 20px)!important;
     right:20px!important;
     bottom:calc(12px + env(safe-area-inset-bottom))!important;
     max-width:680px;
     margin-inline:auto;
   }
-  #root[data-pi-motion="expressive"] .wpb>div:has(>.wpb-tabbar) .wpb-toast{
-    right:20px!important;
-    left:auto!important;
-    width:min(400px,calc(100% - 140px));
-  }
 }
 @media (min-width:1180px) and (min-height:560px){
   #root[data-pi-motion="expressive"] .wpb>div:has(>.wpb-tabbar)>.wpb-tabbar{
-    flex-basis:112px!important;
-    width:112px!important;
+    flex-basis:auto!important;
+    width:max(112px,10ch)!important;
     padding-inline:14px!important;
   }
   #root[data-pi-motion="expressive"] .wpb>div:has(>.wpb-tabbar) .wpb-live-dock{
-    left:calc(112px + 24px)!important;
+    left:calc(var(--pi-navigation-rail-width,112px) + 24px)!important;
   }
 }
 @media (forced-colors:active) and (min-width:840px) and (min-height:560px){
@@ -7209,21 +7107,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     .wpb-wizard-step textarea
   ):focus-visible{
     outline-color:Highlight!important;
-  }
-}
-
-/* R74 / B856 — text-only enlargement must grow the label's line box.
-   Fixed 15px leading clipped wrapped navigation labels at 200% text size.
-   Ordinary labels retain their 15px line box and the existing icon track. */
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab>span{
-  line-height:max(15px,1.25em)!important;
-}
-@media (min-width:840px) and (min-height:640px){
-  #root[data-pi-motion="expressive"] .wpb>div:has(>.wpb-tabbar)>.wpb-tabbar>.wpb-tab{
-    flex:0 0 auto!important;
-  }
-  #root[data-pi-motion="expressive"] .wpb>div:has(>.wpb-tabbar)>.wpb-tabbar>.wpb-tab>span{
-    line-height:max(15px,1.25em)!important;
   }
 }
 
@@ -8391,11 +8274,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   flex-shrink:0!important;padding:1px!important;gap:1px!important;
   border-radius:13px!important;
 }
-#root[data-pi-motion="expressive"] .wpb .wpb-home .wpb-home-header h1,
-#root[data-pi-motion="expressive"] .wpb .wpb-home[data-scrolled="1"] .wpb-home-header h1{
-  font-size:clamp(30px,7.4vw,36px)!important;
-  line-height:1.02!important;
-}
 #root[data-pi-motion="expressive"] .wpb .wpb-home .wpb-home-header>div:last-child{
   transform:none!important;
 }
@@ -9181,9 +9059,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-head{
   align-items:center!important;gap:12px!important;min-height:54px!important;
   padding:0 0 12px!important;margin:0 0 5px!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-title{
-  font-size:clamp(28px,6vw,30px)!important;letter-spacing:-.04em!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-edit{
   min-width:48px!important;min-height:48px!important;border:0!important;

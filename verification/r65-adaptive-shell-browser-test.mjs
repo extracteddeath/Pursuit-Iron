@@ -113,6 +113,30 @@ try{
         for(const route of ['plan','progress','profile','settings','home']){
           await page.click('[data-tab="'+route+'"]');
           await page.waitForSelector('[data-view-frame="'+route+'"]');
+          const shell=await page.evaluate(()=>({
+            title:[...document.querySelectorAll('.wpb-screen-title')].map(el=>({
+              size:getComputedStyle(el).fontSize,tag:el.tagName})),
+            tabs:[...document.querySelectorAll('[data-tab]')].map(el=>({
+              visible:el.innerText.trim(),name:el.getAttribute('aria-label')}))
+          }));
+          assert.ok(shell.title.length===1&&shell.title[0].size==='26px'&&shell.title[0].tag==='H1',
+            'M270 root titles share one relative typography role: '+JSON.stringify({route,shell}));
+          assert.ok(shell.tabs.every(t=>t.visible===t.name),
+            'M270 visible navigation keeps the full destination names at every width');
+          if(route==='progress'){
+            await page.evaluate(()=>document.documentElement.style.fontSize='200%');
+            const wordsFit=await page.$$eval('.wpb-progress-glance-label',labels=>labels.every(label=>{
+              const text=label.firstChild,box=label.closest('.wpb-progress-glance-item').getBoundingClientRect();
+              if(!text||text.nodeType!==Node.TEXT_NODE)return false;
+              return [...text.textContent.matchAll(/\S+/g)].every(match=>{
+                const range=document.createRange();range.setStart(text,match.index);range.setEnd(text,match.index+match[0].length);
+                const rects=[...range.getClientRects()].filter(r=>r.width>0);
+                return rects.length===1&&rects[0].left>=box.left-1&&rects[0].right<=box.right+1;
+              });
+            }));
+            assert.ok(wordsFit,'M270 populated summaries keep whole readable words at 200% root text');
+            await page.evaluate(()=>document.documentElement.style.removeProperty('font-size'));
+          }
           // R73 semantic tabs: the same motion contract applies on Plan and
           // Progress in both palettes and across all existing viewports.
           if(route==='plan'||route==='progress'){

@@ -176,6 +176,9 @@ function requestForBlock(baseRequest, baseConfig, spec, legacyExercises = []) {
     if (!changesWeek(spec))
         return request;
     const cfg = blockConfigForSpec(baseConfig, spec);
+    if (!splitSupportsTrainingDays(cfg.split, Number(cfg.days)))
+        throw new NextShellAdapterError('NEXT_CYCLE_SPLIT_DAYS_INCOMPATIBLE',
+            `The ${String(cfg.split).replaceAll('_', ' ')} split cannot be scheduled for ${cfg.days} training days. Change this block's split or training-day count.`);
     if (spec.days)
         request.schedule = shellConfigToNextRequest(cfg, [], legacyExercises, request.seed).schedule;
     request.preferences = { ...request.preferences,

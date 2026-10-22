@@ -2603,15 +2603,18 @@ function selectFocusNumericInput(event) {
     selectNumericInput(event);
     const input = event.currentTarget;
     const originalValue = input.value;
-    // A native touch-click may reposition the caret after the first paint.
-    // Check again on the following frame without delaying or replacing typed input.
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-        // Never overwrite the user's first keystroke with a late select-all.
-        if (document.activeElement === input && !input.readOnly && !input.disabled &&
-            input.value === originalValue &&
-            (input.selectionStart !== 0 || input.selectionEnd !== input.value.length))
+    const restoreSelectAll = () => {
+        // A touch may set its native caret AFTER React's focus/click handler.
+        // Never steal selection from a changed value, different field or readonly set.
+        if (document.activeElement !== input || input.readOnly || input.disabled ||
+            input.value !== originalValue) return;
+        if (input.selectionStart !== 0 || input.selectionEnd !== input.value.length)
             input.select();
-    }));
+    };
+    // End-of-click task wins over the browser's native touch caret placement;
+    // paint-frame fallback covers slower Android selection scheduling.
+    setTimeout(restoreSelectAll, 0);
+    requestAnimationFrame(() => requestAnimationFrame(restoreSelectAll));
 }
 // Keep the logger's existing IME action hints truthful without changing set values.
 // Weight's Next moves to reps in the SAME set; reps' Done dismisses the keyboard.
@@ -13238,7 +13241,9 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                                                 background: f.lead ? C.bg2 : "none", borderWidth: 1, borderStyle: "solid",
                                                 borderColor: f.lead ? C.accentDim : C.border, textAlign: "center",
                                                 display: "flex", flexDirection: "column", justifyContent: "center", minHeight: 150 }, children: [_jsx("div", { style: { fontSize: 11, fontWeight: 700, letterSpacing: 1,
-                                                        color: f.lead ? C.accentInk : C.muted }, children: f.label }), _jsxs("div", { style: { margin: "4px 0 10px" }, children: [_jsx("input", { inputMode: f.key === "w" ? "decimal" : "numeric", onFocus: selectNumericInput, onClick: selectFocusNumericInput, enterKeyHint: f.key === "w" ? "next" : "done", "aria-label": f.aria, value: f.value, readOnly: s.done, placeholder: f.ph, onChange: ev => f.fix(ev.target.value), className: "mono wpb-num-input wpb-focus-value-input", style: { width: "100%", minWidth: 0, textAlign: "center",
+                                                        color: f.lead ? C.accentInk : C.muted }, children: f.label }), _jsxs("div", { style: { margin: "4px 0 10px" }, children: [_jsx("input", { inputMode: f.key === "w" ? "decimal" : "numeric", onFocus: selectFocusNumericInput, onClick: selectFocusNumericInput,
+                                                            onPointerUp: event => { if (event.pointerType === "touch") selectFocusNumericInput(event); },
+                                                            enterKeyHint: f.key === "w" ? "next" : "done", "aria-label": f.aria, value: f.value, readOnly: s.done, placeholder: f.ph, onChange: ev => f.fix(ev.target.value), className: "mono wpb-num-input wpb-focus-value-input", style: { width: "100%", minWidth: 0, textAlign: "center",
                                                                 background: "none", borderWidth: 0, padding: 0, outline: "none",
                                                                 fontSize: 34, fontWeight: 700, lineHeight: 1.05,
                                                                 color: f.lead ? C.accentInk : C.text } }), _jsx("div", { style: { fontSize: 11, fontWeight: 600, letterSpacing: .6, color: C.muted, height: 13 }, children: f.suffix || "" })] }), _jsxs("div", { style: { display: "flex", gap: 8, justifyContent: "center" }, children: [_jsx(StepButton, { label: `Decrease ${f.aria}`, glyph: "\u2212", onStep: f.dec, sx: focusStep }), _jsx(StepButton, { label: `Increase ${f.aria}`, glyph: "+", onStep: f.inc, sx: focusStep })] })] }, f.key))) }), focusBar && _jsxs("button", { type: "button", className: "pressable wpb-focus-plates",

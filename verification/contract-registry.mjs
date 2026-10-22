@@ -144,7 +144,7 @@ export const browserShards = Object.freeze({
         'm215-cycle-duration-browser-test.mjs',
         'm220-day-progression-browser-test.mjs'
     ]),
-    integration: Object.freeze([
+    'integration': Object.freeze([
         'home-entry-hierarchy-browser-test.mjs',
         'b911-chart-favorites-polish-browser-test.mjs',
         'b907-profile-polish-browser-test.mjs',
@@ -155,12 +155,18 @@ export const browserShards = Object.freeze({
         'b887-home-masthead-motion-browser-test.mjs',
         'b881-history-import-browser-test.mjs',
         'b875-contextual-dock-browser-test.mjs',
-        'b860-selective-improvements-browser-test.mjs',
+        'b860-selective-improvements-browser-test.mjs'
+    ]),
+    'integration-motion': Object.freeze([
         'b831-expressive-motion-browser-test.mjs',
         'r53-semantic-plan-browser-test.mjs',
         'r54-cross-screen-browser-test.mjs',
-        'r65-adaptive-shell-browser-test.mjs',
-        'r74-accessibility-browser-test.mjs',
+        'r65-adaptive-shell-browser-test.mjs'
+    ]),
+    'integration-accessibility': Object.freeze([
+        'r74-accessibility-browser-test.mjs'
+    ]),
+    'integration-data': Object.freeze([
         'r76-cross-screen-form-zoom-browser-test.mjs',
         'b846-gym-bar-weights-browser-test.mjs',
         'm265-worker-generation-browser-test.mjs',

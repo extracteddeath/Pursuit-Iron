@@ -64,12 +64,14 @@ assert.equal(registry.contractCount, Object.values(contractGroups).flat().length
 assert.equal(registry.browserCount, Object.values(browserShards).flat().length);
 assert.equal(registry.releaseCount, releaseTests.length);
 assert.ok(registry.browserCount >= 29, 'B887 adds Home masthead motion browser coverage without dropping prior gates');
-assert.ok(browserShards.integration.includes('r76-cross-screen-form-zoom-browser-test.mjs'),
-    'Profile, Progress and Settings 200% responsive coverage must run in the integration shard');
-assert.ok(browserShards.integration.includes('r74-accessibility-browser-test.mjs'),
-    'form focus, text enlargement and keyboard viewport coverage must run in the integration shard');
-assert.ok(browserShards.integration.includes('b831-expressive-motion-browser-test.mjs'),
-    'app-wide expressive interaction coverage must run in the integration shard');
+assert.ok(browserShards['integration-data'].includes('r76-cross-screen-form-zoom-browser-test.mjs'),
+    'Profile, Progress and Settings 200% responsive coverage must remain owned by CI');
+assert.ok(browserShards['integration-accessibility'].includes('r74-accessibility-browser-test.mjs'),
+    'keyboard navigation, form focus, and enlarged text must retain dedicated coverage');
+assert.ok(browserShards['integration-motion'].includes('b831-expressive-motion-browser-test.mjs'),
+    'app-wide expressive interaction coverage must retain dedicated coverage');
+assert.equal(Object.values(browserShards).flat().length, 42,
+    'sharding must preserve all 42 independently owned browser gates');
 assert.equal(registry.releaseCount, 1, 'release-only semantics should remain narrow');
 
 console.log(

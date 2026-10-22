@@ -8822,7 +8822,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 
 
 .wpb-game-plan-heading{display:flex;align-items:center;gap:9px;width:100%;min-height:48px;padding:0;margin:0;border:0;background:transparent;color:var(--wpb-theme-text);text-align:left;font:inherit;font-size:16px;line-height:1.4}.wpb-game-plan-heading>strong{flex:1}.wpb-game-plan-heading>svg{flex-shrink:0;color:var(--wpb-theme-accent-ink)}button.wpb-game-plan-heading{cursor:pointer}
-#root .wpb-game-plan-exercise{display:block!important;padding:14px 0!important;border-top:1px solid var(--wpb-theme-border);color:var(--wpb-theme-text)}
+#root .wpb-game-plan-exercise{color:var(--pi-color-on-control)}
 .wpb-game-plan-exercise-title{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px 10px;justify-content:space-between}.wpb-game-plan-exercise-title>strong{font-size:14px;line-height:1.4;flex:1 1 150px;overflow-wrap:anywhere}.wpb-game-plan-exercise-title>span{color:var(--wpb-theme-accent-ink);font-size:12px;font-weight:700;white-space:nowrap}
 .wpb-game-plan-target{font-size:13px;font-weight:700;line-height:1.6;margin-top:5px;overflow-wrap:anywhere}.wpb-game-plan-method{font-size:11px;color:var(--wpb-theme-accent-ink);line-height:1.5;margin:5px 0;font-weight:650}
 .wpb-game-plan-exercise p,.wpb-session-pr-chance p,.wpb-plan-change-card p{font-size:13px;line-height:1.55;color:var(--wpb-theme-muted);margin:7px 0 0;overflow-wrap:anywhere}
@@ -9042,25 +9042,34 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb-home-outline-list li+li{border-top:1px solid var(--wpb-theme-border)}
 .wpb-home-outline-list li>span{min-width:0;overflow-wrap:anywhere}
 .wpb-home-outline-list li>strong{color:var(--wpb-theme-muted);font-size:12px;white-space:nowrap;flex-shrink:0}
+/* Game Plan uses the existing card, spacing and type vocabulary.
+   All coaching copy is readable; it has no clipping or hidden hover-only detail. */
 #root .wpb .wpb-session-game-plan{
-  padding:15px 16px;margin:14px 0;border-radius:20px;
-  background:var(--wpb-theme-card);border:1px solid var(--wpb-theme-border);
+  padding:var(--pi-space-4);margin:var(--pi-space-3) 0;
+  border-radius:var(--pi-shape-card);
+  background:var(--pi-color-card);border:1px solid var(--pi-color-divider);
 }
-#root .wpb .wpb-home-game-plan{margin:0 0 20px;min-width:0}
-#root .wpb .wpb-game-plan-heading{min-height:32px;margin:0 0 6px;font-size:16px;gap:8px}
-.wpb-game-plan-count{margin-left:auto;font-size:12px;color:var(--wpb-theme-muted);font-weight:700}
+#root .wpb .wpb-home-game-plan{margin:0 0 var(--pi-space-5);min-width:0}
+#root .wpb .wpb-game-plan-heading{min-height:32px;margin:0 0 var(--pi-space-2);font-size:var(--pi-type-section);gap:var(--pi-space-2)}
+.wpb-game-plan-count{margin-left:auto;font-size:var(--pi-type-label);color:var(--pi-color-on-muted);font-weight:700}
 #root .wpb .wpb-session-game-plan .wpb-game-plan-exercise{
-  display:flex!important;align-items:flex-start;gap:11px;padding:11px 0!important;
-  margin:0!important;border-top:0!important;background:none!important;
+  display:flex;align-items:flex-start;gap:var(--pi-space-3);padding:var(--pi-space-3) 0;
+  margin:0;border:0;background:transparent;
 }
-.wpb-game-plan-exercise+.wpb-game-plan-exercise{border-top:1px solid var(--wpb-theme-border)!important}
+#root .wpb .wpb-session-game-plan .wpb-game-plan-exercise+.wpb-game-plan-exercise{
+  border-top:1px solid var(--pi-color-divider);
+}
 .wpb-game-plan-highlight-icon{display:grid;place-items:center;width:32px;height:32px;
-  flex:none;border-radius:11px;background:var(--wpb-theme-accent-dim);
+  flex:none;border-radius:var(--pi-shape-action);background:var(--wpb-theme-accent-dim);
   color:var(--wpb-theme-accent-ink)}
 .wpb-game-plan-highlight-copy{min-width:0;flex:1}
-.wpb-game-plan-highlight-copy>strong{display:block;font-size:13px;line-height:1.4;overflow-wrap:anywhere}
-#root .wpb .wpb-game-plan-highlight-copy>p{margin:3px 0 0;font-size:12px;line-height:1.5;
-  color:var(--wpb-theme-muted);overflow-wrap:anywhere}
+.wpb-game-plan-highlight-copy>strong{display:block;font-size:var(--pi-type-support);line-height:1.4;overflow-wrap:anywhere}
+#root .wpb .wpb-game-plan-highlight-copy>p{
+  display:block;margin:var(--pi-space-1) 0 0;
+  font-size:var(--pi-type-support);line-height:1.5;
+  color:var(--pi-color-on-muted);overflow-wrap:anywhere;
+  white-space:normal;max-height:none;overflow:visible;
+}
 /* The review keeps the prior/suggested values and the why, but no longer repeats
    the logger's set/RIR/technique prescription on every card. */
 #root .wpb .wpb-plan-review-intro{margin:0 0 12px;font-size:12px;line-height:1.5}
@@ -9079,7 +9088,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 @media(prefers-reduced-motion:reduce){.wpb-home-outline-toggle>svg{transition:none!important}}
 @media(forced-colors:active){.wpb-game-plan-highlight-icon{border:1px solid CanvasText}
  #root .wpb .wpb-home-game-plan{border:1px solid CanvasText}}
-#root .wpb .wpb-game-plan-highlight-copy>p{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}/* B910 / UI polish pass 04 — Settings and creation motion consistency.
+/* B910 / UI polish pass 04 — Settings and creation motion consistency.
    The creation header formerly put a 44px Back target in a 34px-high row.
    Keep header and progress geometry steady across all wizard questions;
    move just the question content a few pixels, with no opacity flash or

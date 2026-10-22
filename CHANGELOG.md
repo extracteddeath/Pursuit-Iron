@@ -1,3 +1,10 @@
+## M278 — Profile share-card spatial cohesion (October 22, 2026)
+
+- Rebased the Profile share-card heading, label, metric and favorites spacing on the shared 4/8/12/16px scale, replacing disconnected 5/13/18px margins while preserving the metric data and share-card customization.
+- Retired six obsolete priority declarations on Profile strength comparison cells, its first/last row shapes, and the narrow-profile statistics. The actual vertical strength comparison and its themed highlighted first row remain owned by the existing later responsive rules.
+- Preserved the customizable top card, metric ordering, 48px actions, scores, user preferences, accessibility reflow and Workout/Focus composition. Lowered the stylesheet priority ceiling to 2,474 and added regression checks.
+- Same-build release integrity, exact-head browser CI and real-device screenshot review remain required before calling the pass complete.
+
 ## M277 — Progress/History spacing ownership (October 22, 2026)
 
 - Unified the history section/group spacing with the shared 4/8/12/16px token scale; the cycle grouping control and section headings now align to the same system.

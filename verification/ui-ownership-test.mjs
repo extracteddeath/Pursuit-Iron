@@ -5,7 +5,7 @@ import fs from 'node:fs';
 // Decrease alongside a verified cleanup; never raise to permit a cosmetic override.
 const css = fs.readFileSync('app.css', 'utf8');
 const app = fs.readFileSync('modules/App.js', 'utf8');
-const MAX_IMPORTANT = 2480; // M277 retired 3 superseded Progress history priority declarations
+const MAX_IMPORTANT = 2474; // M278 retired 6 shadowed Profile emphasis/geometry declarations
 const MAX_APP_IMPORTANT = 1290; // Prevent embedded StyleTag patches bypassing the CSS budget.
 const MAX_REPEAT_IMPORTANT = 21;
 const MAX_INLINE_STYLE_OBJECTS = 3116; // M276: Program cycle context and edit guidance now use shared CSS
@@ -252,3 +252,18 @@ assert.ok(!css.includes('.wpb-progress .wpb-history-session{\n  margin-bottom:7p
     'Retired history session margin must not fight the effective card gap');
 assert.ok(!css.includes('padding-top:11px!important;\n  padding-bottom:8px!important;'),
     'Retired history header padding must not fight the final sticky surface');
+
+// M278: Profile's active three-score comparison has one responsive owner;
+// the editable share-card uses the same 4/8/12/16px spacing vocabulary.
+assert.ok(css.includes('.wpb-profile-card-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 var(--pi-space-4);margin:var(--pi-space-4) 0 0}'),
+    'Share-card metric groups keep shared spacing instead of one-off margins');
+assert.ok(css.includes('.wpb-profile-card-metrics>div{min-width:0;padding:var(--pi-space-3) 0;'),
+    'Share-card metric rows keep the shared internal rhythm');
+assert.ok(css.includes('.wpb-profile-strength-grid>.wpb-profile-strength-cell{'),
+    'Strength comparison cells still share one explicit active row layout');
+assert.ok(!css.includes('.wpb-profile .wpb-profile-strength-grid{\n  gap:6px!important;'),
+    'The superseded Profile strength gap must not regain priority');
+assert.ok(!css.includes('.wpb-profile .wpb-profile-strength-cell{\n  padding:9px 5px!important;'),
+    'The superseded Profile strength row padding must not regain priority');
+assert.ok(!css.includes('.wpb-profile-stat-grid{gap:0!important}'),
+    'Responsive Profile facts must not duplicate the existing gap owner');

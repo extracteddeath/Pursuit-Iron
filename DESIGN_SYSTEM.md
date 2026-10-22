@@ -103,3 +103,8 @@ In Program, current training context and edit controls come before explanatory r
 ### M277 — Progress/History section and session surfaces
 
 Progress has one effective spatial owner for its By Cycle/By Month grouping, cycle/date sticky section heading and expandable history session: use shared `--pi-space-1/2/3/4` values rather than old per-widget pixel priorities. Header paint remains fully opaque and flush; the outer session card owns clipping, with inner details not imposing a second bottom radius. Keep the existing 48px edit/actions and real history/progress data. The CSS priority budget drops to 2,480; do not restore overwritten history spacing declarations or add a later override to undo this hierarchy.
+
+
+### M278 — Profile share-card spacing and strength comparisons
+
+The user's editable share card is the primary share surface, and its metrics use the same `--pi-space-1/2/3/4` tokens as the surrounding Profile sections. The established single-column strength score comparison (left labels, right values, first row theme tint) is the active design; do not restore overwritten early grid gaps, cell padding or rounded first/last tiles. At 320px and large text, keep value alignment, field labels and customizations readable without changing data order. Six shadowed priority declarations were retired and the CSS priority ceiling is now 2,474.

@@ -335,3 +335,13 @@ assert.ok(css.includes('.wpb .wpb-home>.wpb-page-scroll{')&&
 // before the first history group, leaving a blank right reading lane.
 assert.ok(css.includes('grid-column:1;grid-row:3 / span 3;min-width:0;margin-bottom:0!important;'),
   'Wide history calendar spans the grouping and first-session tracks');
+
+// M286: short wide foldables use the existing medium-width shell rather than a
+// narrow phone letterbox, without creating another high-priority CSS layer.
+const landscapeOwner=css.slice(css.indexOf('/* M286 / R88 — one medium-width workspace'),
+  css.indexOf('/* R67 — tablet and desktop adaptive sheet surfaces'));
+assert.ok(landscapeOwner.includes('(min-width:840px) and (max-height:559px)')&&
+  landscapeOwner.includes('max-width:760px!important;'),
+  'Short wide landscape joins the existing bounded bottom-nav workspace');
+assert.ok(css.includes('@media (min-width:840px) and (min-height:560px){'),
+  'Full-height expanded windows keep the existing vertical navigation rail');

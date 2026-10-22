@@ -418,50 +418,51 @@ export function generateNextCycleForShell(options) {
     // already proves buildability with capacity-aware generation; bypassing it here made valid
     // 60–90 minute Full Body cycles fail even though the equivalent single program passed.
     const entrySpec = specs[0];
-    const entryRequest = requestForBlock(baseRequest, options.config, entrySpec, options.legacyExercises);
-    const entryAttempt = firstPassingCapacityProgram(entryRequest, blockConfigForSpec(options.config, entrySpec), {
-        phase: entrySpec.phase,
-        blockWeeks: entrySpec.weeks,
-        progressionStyle: baseRequest.preferences?.progressionStyle
+    const entrySelection = chooseOptimizedCycleBlock(entrySpec, options.config, !!options.adaptTrainingSplit, candidateSpec => {
+        const request = requestForBlock(baseRequest, options.config, candidateSpec, options.legacyExercises);
+        const attempt = firstPassingCapacityProgram(request, blockConfigForSpec(options.config, candidateSpec), {
+            phase: candidateSpec.phase, blockWeeks: candidateSpec.weeks,
+            progressionStyle: request.preferences?.progressionStyle
+        });
+        checkRequestedPractice(attempt.result.program, candidateSpec, attempt.request);
+        return { next: attempt.result.program, request: attempt.request, previous: null, entryAttempt: attempt };
     });
-    const firstEffectiveRequest = entryAttempt.request;
-    const firstProgram = entryAttempt.result.program;
-    const blocks = [];
+    const entryAttempt = entrySelection.entryAttempt;
+    const blocks = [], selectedSpecs = [], splitDecisions = [];
     let previous;
     for (let i = 0; i < specs.length; i++) {
         const spec = specs[i];
-        const targetRequest = i === 0 ? firstEffectiveRequest : requestForBlock(baseRequest, options.config, spec, options.legacyExercises);
-        const normalized = normalizeRequest(targetRequest);
-        let next;
-        if (!previous) {
-            next = firstProgram;
-        }
-        else if (options.adaptBetweenBlocks || changesWeek(spec)) {
-            const ids = previous.sessions.flatMap(s => s.exercises.map(e => e.exerciseId));
-            const protectedIds = previous.sessions.flatMap(s => s.exercises.filter(e => e.role === 'primary_strength' || e.role === 'secondary_strength').map(e => e.exerciseId));
-            const transitioned = transitionProgramPhase(previous, normalized, spec.phase, {
-                successfulExerciseIds: ids,
-                protectedExerciseIds: protectedIds,
-                nextBlockWeeks: spec.weeks,
-                capacityConfig: blockConfigForSpec(options.config, spec)
-            });
-            next = transitioned.program;
-        }
-        else {
-            next = retargetStatic(previous, targetRequest, spec.phase, spec.weeks);
-        }
-        if (previous) next = protectStrengthEntry(previous, next, spec, targetRequest);
-        checkRequestedPractice(next, spec, targetRequest);
+        const chosen = i === 0 ? entrySelection : chooseOptimizedCycleBlock(spec, options.config, !!options.adaptTrainingSplit, candidateSpec => {
+            const request = requestForBlock(baseRequest, options.config, candidateSpec, options.legacyExercises);
+            const normalized = normalizeRequest(request);
+            let next;
+            if (options.adaptBetweenBlocks || changesWeek(candidateSpec)) {
+                const ids = previous.sessions.flatMap(session => session.exercises.map(ex => ex.exerciseId));
+                const protectedIds = previous.sessions.flatMap(session => session.exercises
+                    .filter(ex => ex.role === 'primary_strength' || ex.role === 'secondary_strength').map(ex => ex.exerciseId));
+                next = transitionProgramPhase(previous, normalized, candidateSpec.phase, {
+                    successfulExerciseIds: ids, protectedExerciseIds: protectedIds,
+                    nextBlockWeeks: candidateSpec.weeks,
+                    capacityConfig: blockConfigForSpec(options.config, candidateSpec)
+                }).program;
+            } else next = retargetStatic(previous, request, candidateSpec.phase, candidateSpec.weeks);
+            next = protectStrengthEntry(previous, next, candidateSpec, request);
+            checkRequestedPractice(next, candidateSpec, request);
+            return { next, request, previous };
+        });
+        const { next, request: targetRequest, spec: selectedSpec, decision } = chosen;
+        selectedSpecs.push(selectedSpec);
+        splitDecisions.push(decision);
         if (next.audit.result !== 'pass')
             throw new NextShellAdapterError('NEXT_CYCLE_BLOCK_REJECTED', `Pursuit Engine ${next.engineVersion} rejected ${spec.label}.`, next.audit);
-        const cfg = legacyBlockConfig(blockConfigForSpec(options.config, spec), spec.phase, spec.weeks, `${options.config.name || cycleTemplates().find(t => t.id === templateId)?.name || 'Training Cycle'} · ${spec.label}`);
+        const cfg = legacyBlockConfig(blockConfigForSpec(options.config, selectedSpec), spec.phase, spec.weeks, `${options.config.name || cycleTemplates().find(t => t.id === templateId)?.name || 'Training Cycle'} · ${spec.label}`);
         let legacy = nextProgramToShellProgram(next, cfg, options.legacyExercises, options.makeId);
         legacy.cycleId = cid;
-        attachBlockContext(legacy, next, targetRequest, baseRequest, { templateId, plannedIndex: i, blockIndex: i, label: spec.label, weeks: spec.weeks, phase: spec.phase, preview: i > 0, adaptBetweenBlocks: !!(options.adaptBetweenBlocks || changesWeek(spec)) });
+        attachBlockContext(legacy, next, targetRequest, baseRequest, { templateId, plannedIndex: i, blockIndex: i, label: spec.label, weeks: spec.weeks, phase: spec.phase, preview: i > 0, adaptBetweenBlocks: !!(options.adaptBetweenBlocks || changesWeek(selectedSpec)), splitDecision: decision });
         // Static cycles lock exercise identity across blocks, but phase retargeting is complete
         // before the shell expands base sets into exact work-week cells. Reconcile those exact public
         // regional doses after materialization without adding, removing, or swapping any movement.
-        if (!options.adaptBetweenBlocks && !changesWeek(spec) && i > 0) {
+        if (!options.adaptBetweenBlocks && !changesWeek(selectedSpec) && i > 0) {
             const rosterBefore = legacy.days.map(day => [...day.exercises]);
             const baseRepair = repairShellVolume(legacy, options.legacyExercises, { preserveRoster: true });
             const weeklyRepair = reconcileLockedCycleWeekOverflows(baseRepair.program, options.legacyExercises);
@@ -488,11 +489,11 @@ export function generateNextCycleForShell(options) {
     }
     const cycle = {
         id: cid, name: options.config.name || template.name, templateId, createdAt: Date.now(), seed, engineV: 33,
-        engineSource: 'pursuit-next', engineSourceVersion: blocks[0]?.engineSourceVersion || '0.62.0', adaptExercises: !!options.adaptBetweenBlocks,
-        blockIds: blocks.map(b => b.id), blockMeta: specs.map((s, i) => ({ label: s.label, note: `${phaseLabel(s.phase)} · ${s.weeks} weeks`, goal: phaseGoal(s.phase), weeks: s.weeks, phase: s.phase, ...(s.split ? { split: s.split } : {}), ...(s.days ? { days: s.days } : {}), ...(s.priorityLift ? { priorityLift: s.priorityLift, frequency: s.frequency } : {}), id: blocks[i].id, plannedIndex: i, preview: i > 0 })),
+        engineSource: 'pursuit-next', engineSourceVersion: blocks[0]?.engineSourceVersion || '0.62.0', adaptExercises: !!options.adaptBetweenBlocks, adaptTrainingSplit: !!options.adaptTrainingSplit,
+        blockIds: blocks.map(b => b.id), blockMeta: specs.map((s, i) => ({ label: s.label, note: `${phaseLabel(s.phase)} · ${s.weeks} weeks`, goal: phaseGoal(s.phase), weeks: s.weeks, phase: s.phase, ...(selectedSpecs[i].split ? { split: selectedSpecs[i].split } : {}), ...(selectedSpecs[i].days ? { days: selectedSpecs[i].days } : {}), ...(s.priorityLift ? { priorityLift: s.priorityLift, frequency: s.frequency } : {}), splitDecision: splitDecisions[i], id: blocks[i].id, plannedIndex: i, preview: i > 0 })),
         activeBlock: 0, advance: 'manual', onComplete: 'end', startedAt: null, done: false,
         nextEngineCycle: {
-            schemaVersion: 1, templateId, goal, adaptBetweenBlocks: !!options.adaptBetweenBlocks,
+            schemaVersion: 1, templateId, goal, adaptBetweenBlocks: !!options.adaptBetweenBlocks, adaptTrainingSplit: !!options.adaptTrainingSplit,
             baseRequest: clone(baseRequest), baseConfig: clone(options.config), plannedBlocks: clone(specs), recoveryInsertions: 0,
             ...(entryAttempt.adjusted ? { capacityAdjustment: {
                 policy: 'soft-capacity-band',

@@ -18,6 +18,12 @@ App 4.0.0 build 905 / Engine 0.65.9 / M234. `RELEASE_MANIFEST.json` is authorita
 
 
 
+## M286 — foldable and short landscape reading width
+
+- Actual 900×480 R65 screenshot showed a 460px centered phone frame with excessive unused width. Extend the existing R88 medium-tab-shell CSS owner to cover short 840px+ landscape windows, retaining bottom nav and a maximum 760px reading surface; do not affect Workout/Focus or taller rail layouts.
+- R65 screenshot/geometry regression checks now expect 750–760px at 900×480, five tappable tabs, no viewport overflow, and continuous root titles across all five destinations. CSS priority count unchanged.
+- Remaining Android launch work requires a real-device short-landscape/foldable inspection, plus continued component/declaration retirement only when a superseded owner is demonstrated. Do not infer physical device parity from browser screenshots alone.
+
 ## M285 — multi-program and multi-month history continuity
 
 - Expanded populated tablet fixtures to two saved programs, 16 sessions and multiple months in both palette families and both 900px/1280px widths. Verify grouping buttons, record completeness, scroll containment and header continuity without modifying history.

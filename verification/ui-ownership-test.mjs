@@ -86,8 +86,11 @@ function guard(cssText, appText) {
     return { important, appImportant, inline, duplicates: duplicates.length, legacyOwners: new Set(duplicates).size };
 }
 const report = guard(css, app);
-assert.throws(() => guard(css + '\n.bad-extra{color:red!important;}', app), /CSS priority overrides increased/);
-assert.throws(() => guard(css, app + '\n.bad-embedded{color:red!important;}'), /Embedded stylesheet priority overrides increased/);
+// Exercise the actual ceilings, even as successful cleanup creates headroom below them.
+const cssOverflow = '.bad-extra{color:red!important;}\n'.repeat(MAX_IMPORTANT - report.important + 1);
+const appOverflow = '.bad-embedded{color:red!important;}\n'.repeat(MAX_APP_IMPORTANT - report.appImportant + 1);
+assert.throws(() => guard(css + '\n' + cssOverflow, app), /CSS priority overrides increased/);
+assert.throws(() => guard(css, app + '\n' + appOverflow), /Embedded stylesheet priority overrides increased/);
 assert.ok(repeatedImportantDeclarations('.duplicate{color:red!important;} .duplicate{color:blue!important;}')
     .includes('\t.duplicate\tcolor'), 'Guard must detect duplicate priority declarations.');
 for (const name of ['UiAction','UiChoice','UiStatus','UiSection','SettingsSwitch'])

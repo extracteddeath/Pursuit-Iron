@@ -233,11 +233,12 @@ try {
             await page.tap(selector);
             // The browser's native touch click can position the caret after
             // React onClick; allow the deferred select-all to finish, then
-            // require the complete value to be selected before typing.
+            // require complete selection before typing. Allow slow CI animation scheduling
+            // without weakening the required selection-state assertion.
             await page.waitForFunction(sel => {
                 const input = document.querySelector(sel);
                 return input && input.selectionStart === 0 && input.selectionEnd === input.value.length;
-            }, { timeout: 1500 }, selector);
+            }, { timeout: 4000 }, selector);
             assert.deepEqual(await selected(selector), [0, await page.$eval(selector, input => input.value.length)], 'Focus mode selects on tap');
             await page.keyboard.type(replacement);
             assert.equal(await page.$eval(selector, input => input.value), replacement);

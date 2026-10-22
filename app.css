@@ -2431,18 +2431,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   height:52px!important;
   border-radius:17px!important;
 }
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-stat-grid{
-  margin-bottom:10px!important;
-}
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-stat{
-  min-height:66px;
-}
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-stat .mono{
-  min-width:0;
-  flex-wrap:wrap;
-  column-gap:3px!important;
-  row-gap:0;
-}
 #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength{
   background-color:var(--pi-r11-quiet)!important;
   border:1px solid var(--pi-r11-edge)!important;
@@ -2495,9 +2483,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 @media(max-width:350px){
   #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength-cell{
     padding-inline:6px!important;
-  }
-  #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-stat{
-    padding-inline:3px!important;
   }
 }
 @media(forced-colors:active){
@@ -3603,43 +3588,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     border-color:CanvasText!important;
   }
 }
-/* These three readings form one metric group, not three unrelated cards.
-   Dividers preserve separation without doubling the number of borders. */
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-stat-grid{
-  display:grid!important;
-  grid-template-columns:repeat(3,minmax(0,1fr))!important;
-  gap:0!important;
-  padding:0!important;
-  margin:0 0 10px!important;
-  overflow:hidden;
-  border:1px solid var(--pi-r11-edge)!important;
-  border-radius:20px!important;
-  background-color:var(--pi-r11-quiet)!important;
-  background-image:none!important;
-}
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-stat{
-  box-sizing:border-box;
-  display:flex!important;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  min-width:0!important;
-  padding:10px 6px!important;
-  margin:0!important;
-  border:none!important;
-  border-radius:0!important;
-  background-color:transparent!important;
-  background-image:none!important;
-  box-shadow:none!important;
-}
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-stat:not(:last-child){
-  border-right:1px solid var(--pi-r11-edge)!important;
-}
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-stat .mono{
-  line-height:1.15!important;
-  font-variant-numeric:tabular-nums;
-  overflow-wrap:normal!important;
-}
 /* R39 fixes the visible lone Squat tile taking only half of Strength.
    When there is only one real strength pattern, make it a meaningful full
    width summary; multiple patterns still retain the two-column comparison. */
@@ -3738,9 +3686,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   padding-inline:12px!important;
 }
 @media(max-width:359px){
-  #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-stat{
-    padding-inline:3px!important;
-  }
   #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item{
     padding-inline:7px!important;
   }
@@ -3771,10 +3716,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab>span{
   box-sizing:border-box;
   text-align:center;
-}
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-stat{
-  height:auto!important;
-  min-height:max(70px,4.38rem)!important;
 }
 #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-stat :not(.mono),
 #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength-cell>div:not(.mono){
@@ -6823,28 +6764,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   .wpb-next-workout-view [data-nextex]{flex-wrap:wrap;}
   .wpb-next-workout-view .wpb-preview-prescription{margin-inline-start:28px;text-align:left!important;}
 }
-@container pi-r77-profile (max-width:18em){
-  #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-stat-grid{
-    grid-template-columns:minmax(0,1fr)!important;
-  }
-  #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-stat{
-    flex-direction:row!important;
-    justify-content:space-between!important;
-    align-items:center!important;
-    gap:12px!important;
-    min-height:58px!important;
-    padding:10px 16px!important;
-    text-align:left!important;
-  }
-  #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-stat:not(:last-child){
-    border-right:0!important;
-    border-bottom:1px solid var(--pi-color-divider)!important;
-  }
-  #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-stat :not(.mono){
-    overflow-wrap:normal!important;
-    word-break:normal!important;
-  }
-}
 #root[data-pi-motion="expressive"] .wpb .wpb-progress.wpb-progress{
   container:pi-r77-progress / inline-size;
 }
@@ -8301,13 +8220,18 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-level-mark .mono{
   font-size:29px!important;line-height:1!important;
 }
-/* One quiet grouped surface and three values, not three competing bordered cards. */
+/* M288 — Lifetime summary has one Expressive owner. Preserve the effective
+   grouped surface, number wrapping and large-text reflow; retire R17/R39/R40
+   and the duplicate R77 rules rather than layering another override. */
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-stat-grid{
+  display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;
   gap:0!important;margin:0 0 13px!important;padding:0!important;
   border:1px solid var(--pi-color-divider)!important;border-radius:var(--pi-shape-card)!important;
   background:var(--pi-color-card)!important;overflow:hidden!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-stat{
+  box-sizing:border-box;display:flex!important;flex-direction:column;
+  align-items:center;justify-content:center;height:auto!important;margin:0!important;
   min-width:0!important;min-height:74px!important;padding:12px 6px!important;
   border:0!important;border-radius:0!important;background:transparent!important;
   box-shadow:none!important;
@@ -8316,7 +8240,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-right:1px solid var(--pi-color-divider)!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-stat .mono{
-  font-variant-numeric:tabular-nums;line-height:1.15!important;
+  min-width:0;flex-wrap:wrap;column-gap:3px!important;row-gap:0;
+  font-variant-numeric:tabular-nums;line-height:1.15!important;overflow-wrap:normal!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-stat-label{
   font-size:12px!important;margin-top:5px!important;
@@ -8402,6 +8327,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   }
   #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-stat:not(:last-child){
     border-right:0!important;border-bottom:1px solid var(--pi-color-divider)!important;
+  }
+  #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-stat :not(.mono){
+    overflow-wrap:normal!important;word-break:normal!important;
   }
 }
 

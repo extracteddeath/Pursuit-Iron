@@ -155,3 +155,9 @@ The five root tabs keep one responsive shell: compact phones stay in the narrow 
 ### M287 — canonical semantic tokens, no versioned aliases
 
 Use the existing --pi-page-inset, --pi-space-* and --pi-color-* tokens as the one source for spacing and surfaces. The earlier R41 gap aliases (1 through 6), unused R41 surface-3, R51 page/surface/rail/selected/on-selected/on-rail/separator and R57 inset/header-gap/on-support declarations are retired. These were not consumed by stylesheet rules, and no replacement visual values are introduced. Static tests prohibit their use in app.css or App.js. Retain the active R41 surface-1/surface-2 references and earlier legacy variables that still feed real styles; do not delete tokens based only on their age.
+
+### M288 — Profile lifetime-summary ownership
+
+The maintained Expressive Profile family owns the effective lifetime-summary grid, metric cells, numeric wrapping, small-phone padding and large-text container reflow. Historical R17/R39/R40 summary rules and duplicate R77 reflow are retired. Keep the base non-Expressive fallbacks and shared forced-colors/typography owners. External priority ceiling is **2,432**; inline and embedded ceilings are unchanged.
+
+The ownership scanner strips comments before reading at-rule contexts. Scoped repeats are **15**, across **14** existing allowed keys; the prior scanner reported 21 because some media/container rules were misclassified as unconditional. This corrects accounting rather than claiming additional CSS deletions. Comments before queries may neither invent cross-scope conflicts nor hide same-scope duplicates.

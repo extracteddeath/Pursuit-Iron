@@ -1,3 +1,10 @@
+## M288 — consolidate Profile lifetime-summary ownership (October 22, 2026)
+
+- Retired the superseded R17/R39/R40 and duplicate R77 summary declarations. The maintained Profile owner now contains the effective grouped surface, number wrapping, phone padding and large-text reflow. External CSS priority declarations decrease from 2,462 to 2,432.
+- Corrected the ownership scanner to strip comments before identifying media/container contexts. The same baseline has 15 actual scoped repeats rather than the old scanner's 21; trimmed the exception list to the 14 existing keys and added adversarial scope checks. This accounting correction does not represent six additional production deletions.
+- Expanded the existing populated Profile browser fixture to eight windows in both palette families, checking complete lifetime values/labels at normal and 200% text along with existing customization, export, keyboard and history-preservation behavior.
+- Same-build offline cache and UI hashes finalized; exact-head CI, screenshot review and post-merge deployment verification remain required.
+
 ## M287 — retire unused design-token aliases (October 22, 2026)
 
 - Removed 17 unused R41/R51/R57 transitional CSS declarations at their original owners, including the extra narrow-screen R57 inset. The live semantic colors, spacing tokens, control dimensions, components and actual UI rules were not replaced.

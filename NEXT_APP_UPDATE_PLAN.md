@@ -18,6 +18,12 @@ App 4.0.0 build 905 / Engine 0.65.9 / M234. `RELEASE_MANIFEST.json` is authorita
 
 
 
+## M287 — prune genuinely unused semantic aliases
+
+- Audit confirmed unused R41 spacing aliases, R41 surface-3, R51 intermediate palette aliases, and R57 inset/header labels in app.css. Remove 17 inert definitions from their original owners; use --pi-page-inset, --pi-space-* and semantic --pi-color-* instead of maintaining alternate token ladders.
+- UI ownership regression guards ensure the retired names do not reappear in CSS or App.js; source layout and interactions are deliberately unchanged. The stylesheet priority ceiling stays at 2,462.
+- Next: continue targeted ownership cleanup only with proven nonconsumers; certify physical Android foldables and tablets separately from browser geometry and motion checks.
+
 ## M286 — foldable and short landscape reading width
 
 - Actual 900×480 R65 screenshot showed a 460px centered phone frame with excessive unused width. Extend the existing R88 medium-tab-shell CSS owner to cover short 840px+ landscape windows, retaining bottom nav and a maximum 760px reading surface; do not affect Workout/Focus or taller rail layouts.

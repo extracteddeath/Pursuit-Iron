@@ -18,6 +18,12 @@ App 4.0.0 build 905 / Engine 0.65.9 / M234. `RELEASE_MANIFEST.json` is authorita
 
 
 
+## M280 — cross-tab root title accessibility
+
+- Browser screenshots revealed a one-word title split (“Profil” / “e”) at 320px and 200% text alongside Profile's Edit action. Fix in the existing shared title owner rather than creating a Profile-specific header.
+- Root destination names now retain whole-word intrinsic width; existing flex-wrap moves action buttons instead of clipping title text. R74's real-browser inspection asserts the entire Profile word and no action overlap at 320px / 200% text.
+- Next audit: 200% text within Settings row descriptions, cross-tab sticky header scroll positioning, phone navigation, and the tablet layout. Keep snapshots/keyboard/motion tests, actual-device evidence and release certification distinct.
+
 ## M279 — Settings control and category hierarchy
 
 - One effective Settings category rail uses shared root alignment, page inset, themed canvas and 48px choice target; 11 superseded high-priority declarations and duplicate narrow viewport overrides have been retired.

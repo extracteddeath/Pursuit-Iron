@@ -2,6 +2,7 @@
 
 - Removed 11 superseded Settings-specific CSS priority declarations: old category bar padding, duplicate narrow-screen insets, raised-input painting and an obsolete 44px select rule. The surviving top rail uses the shared page inset, canvas surface and 48px input target.
 - Settings categories and preference descriptions now share the readable support typography token; the category choice uses the shared action corner shape. No settings values, data transfer, theme settings, switches or navigation callbacks were changed.
+- At phone widths up to 420px, hide the redundant visible “Jump to” phrase so the existing labeled native section selector has more space instead of truncating its prompt; the screen-reader label stays on the select.
 - Added exact-head ownership and live phone/tablet typography/layout assertions, including 320px geometry and 200% text reflow. CSS priority budget decreases from 2,474 to 2,463.
 - Same-build cache/hash finalization, full CI and Android screenshot review are required before merging or declaring launch certification.
 

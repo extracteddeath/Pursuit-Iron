@@ -5,10 +5,10 @@ import fs from 'node:fs';
 // Decrease alongside a verified cleanup; never raise to permit a cosmetic override.
 const css = fs.readFileSync('app.css', 'utf8');
 const app = fs.readFileSync('modules/App.js', 'utf8');
-const MAX_IMPORTANT = 2389; // M289: consolidate Profile Strength comparison ownership
-const MAX_APP_IMPORTANT = 1290; // Prevent embedded StyleTag patches bypassing the CSS budget.
+const MAX_IMPORTANT = 2378; // M290: retire obsolete Profile level-card CSS
+const MAX_APP_IMPORTANT = 1280; // M290: level-card fallback presentation leaves StyleTag.
 const MAX_REPEAT_IMPORTANT = 15; // M288: at-rule comments no longer erase media/container scope.
-const MAX_INLINE_STYLE_OBJECTS = 3116; // M276: Program cycle context and edit guidance now use shared CSS
+const MAX_INLINE_STYLE_OBJECTS = 3108; // M290: level-card presentation belongs to CSS
 const allowedDebtKeys = new Set([
   "\t#root[data-pi-motion=\"expressive\"] .wpb-wizard.wpb-wizard.wpb-wizard .wpb-wizard-heading-title\tfont-size",
   "\t#root[data-pi-motion=\"expressive\"] .wpb .wpb-tabbar\tbackground-color",
@@ -367,3 +367,15 @@ for(const suffix of ['.wpb-profile-strength','.wpb-profile-strength-grid',
     '.wpb-profile-strength-grid>.wpb-profile-strength-cell:only-child','.wpb-profile-next-strength'])
     assert.ok(!css.includes(retiredStrengthPrefix+' '+suffix+'{'),
         'Retired Strength presentation owner cannot return: '+suffix);
+
+// M290: the level card retains only its data-derived XP fill width inline.
+const levelCard=app.slice(app.indexOf('"level": _jsx("div", { className: "wpb-profile-hero"'),app.indexOf('\n"summary":',app.indexOf('function ProfileView(')));
+assert.ok(levelCard.length>500,'The existing Profile level card remains present');
+assert.equal((levelCard.match(/style: \{/g)||[]).length,1,'Only XP progress width remains inline');
+assert.ok(levelCard.includes('style: { width: `${Math.round(lvl.progress * 100)}%` }'),'Canonical level progress supplies the fill width');
+for(const suffix of ['.wpb-profile-hero','.wpb-profile-level-mark'])
+    assert.ok(!css.includes('#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile '+suffix+'{'),
+        'Retired R17 level-card style owner cannot return: '+suffix);
+
+assert.ok(!app.includes('.wpb-profile-level-mark{')&&!app.includes('.wpb-profile-hero{'),
+    'Level geometry cannot return to the embedded stylesheet');

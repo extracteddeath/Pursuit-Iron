@@ -165,3 +165,7 @@ The ownership scanner strips comments before reading at-rule contexts. Scoped re
 ### M289 — Profile Strength comparison ownership
 
 The maintained Expressive Profile family owns the effective Strength section, comparison rows, score typography, single-pattern sizing and next-milestone surface. Retire the historical tile/card and narrow-phone declarations instead of layering another override. Keep the featured row’s label and value aligned with ordinary rows, full-width single-pattern presentation and the 48px share action. Shared focus/forced-color rules and non-Expressive fallbacks retain their existing owners. External CSS priority ceiling is **2,389**, down 43; inline, embedded and repeated-priority budgets are unchanged.
+
+### M290 — Profile level-card ownership
+
+The existing Profile family owns the level card’s layout, level marker, title/meta and progress track/fill paint. Use published live theme roles; only the computed XP width stays inline. Preserve the canonical level/XP projection, progressbar semantics, current modern and fallback appearances and shared forced-color behavior. Embedded level-card rules and the superseded R17/R61 owners must not return. Budgets: **2,378 external priorities**, **1,280 embedded priorities**, **3,108 inline objects**, **15 repeated priorities**.

@@ -38,6 +38,22 @@ try{
   assert.equal(await page.$eval(club+' .wpb-profile-club-value',e=>e.textContent),total);
   for(const enlarged of [false,true]){
     await page.evaluate(large=>large?document.documentElement.style.fontSize='200%':document.documentElement.style.removeProperty('font-size'),enlarged);
+    // M290: XP semantics and actual fill agree, with complete level/next-level
+    // copy at ordinary and enlarged text; presentation migration cannot clip it.
+    const level=await page.$eval('.wpb-profile-hero',hero=>{
+      const box=hero.getBoundingClientRect(),track=hero.querySelector('[role="progressbar"]'),fill=track.firstElementChild;
+      const t=track.getBoundingClientRect(),f=fill.getBoundingClientRect(),value=Number(track.getAttribute('aria-valuenow'));
+      const walker=document.createTreeWalker(hero,NodeFilter.SHOW_TEXT),fragments=[];
+      while(walker.nextNode()){if(!walker.currentNode.textContent.trim())continue;const range=document.createRange();range.selectNodeContents(walker.currentNode);fragments.push(...range.getClientRects());}
+      return {value,roleName:track.getAttribute('aria-label'),fillError:Math.abs(f.width-t.width*value/100),
+        complete:fragments.every(r=>r.left>=box.left-1&&r.right<=box.right+1&&r.top>=box.top-1&&r.bottom<=box.bottom+1),
+        overflow:hero.scrollWidth>hero.clientWidth+1};
+    });
+    assert.ok(Number.isFinite(level.value)&&level.value>=0&&level.value<=100&&level.fillError<1&&
+      /^Level \d+ progress$/.test(level.roleName)&&level.complete&&!level.overflow,
+      'Level copy and canonical XP fill remain complete '+JSON.stringify({width,height,theme,enlarged,level}));
+    if([320,393,1280].includes(width))await (await page.$('.wpb-profile-hero')).screenshot({
+      path:root+'/verification/m290-level-'+theme+'-'+width+'x'+height+'-'+(enlarged?'enlarged':'normal')+'-phone.png'});
     // M288: lifetime totals retain one grouped surface at phone, tablet,
     // short landscape and rail sizes, including actual 200% root text.
     const summary=await page.$eval('.wpb-profile-stat-grid',e=>{

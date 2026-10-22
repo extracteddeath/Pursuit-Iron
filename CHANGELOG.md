@@ -1,3 +1,9 @@
+## M290 — Profile level-card ownership
+
+- Move eight fixed level-card JSX styles and the embedded fallback presentation into the existing Profile stylesheet family; leave only the calculated XP fill width inline.
+- Retire 21 priority declarations across the external/embedded stylesheets while preserving appearance, live palette, canonical level/XP calculations and progress semantics.
+- Extend the existing Profile browser gate with level-copy containment and XP percentage/fill agreement. Same app/engine versions; content-addressed offline cache and release hashes refreshed.
+
 ## M289 — Profile Strength style ownership
 
 - Consolidate Strength’s effective comparison-row, score typography and single-pattern styles; retire 43 CSS priority declarations and preserve the current appearance.

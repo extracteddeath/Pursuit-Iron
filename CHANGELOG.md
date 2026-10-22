@@ -1,3 +1,10 @@
+## M282 — Settings large-text row reading order (October 22, 2026)
+
+- At narrow inline-size containers with enlarged system text, existing Settings rows now place preference explanations above their controls instead of splitting words into isolated letters to fit beside kg/lb selections and switches.
+- Extends the already-maintained 16em Settings container query without adding new `!important`, duplication, or per-option styling. Normal-sized phone layouts keep the original compact rows; the saved settings and user interactions are unchanged.
+- Added full-width copy and control-below assertions to the real-browser 320px/393px, 200%-text test, plus a stylesheet-owner regression. No new engine or Workout/Focus changes.
+- Must pass the exact-head regression suite, cache revision check and visual screenshot verification before merge.
+
 ## M281 — selected bottom-navigation indicator without gray outline (October 22, 2026)
 
 - Removed the permanent R35 2px gray-ish outline around the animated active bottom-nav pill from its original CSS owner. The selected state continues using saved-theme tonal fill, selected-icon paint and the colored destination label.

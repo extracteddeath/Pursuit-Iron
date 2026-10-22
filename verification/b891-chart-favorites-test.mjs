@@ -36,7 +36,8 @@ assert.ok(!/transition:[^;]*(width|height|margin|padding|transform)/.test(b911),
 
 
 const progressSource=app.slice(app.indexOf('function HistoryView('),app.indexOf('\nfunction ',app.indexOf('function HistoryView(')+12));
-assert.ok(progressSource.includes('className: "wpb-progress-glance-item", style: { background: C.card'),'theme-native dynamic data remains');
+assert.ok(progressSource.includes('className: "wpb-progress-glance-item"'),'Progress glance keeps its maintained class owner');
+assert.match(css,/\.wpb-progress-glance-item\{[^}]*background:var\(--wpb-theme-card\);[^}]*border:1px solid var\(--wpb-theme-border-soft\)/,'live theme paint remains class-owned');
 for(const x of [
   'className: "wpb-progress-panel", style: { background: C.card, borderRadius:',
   'className: "wpb-progress-entry-row", style: { display:',

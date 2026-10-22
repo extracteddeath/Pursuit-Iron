@@ -28,7 +28,7 @@ Owner: `app.css` provides semantic theme roles and shared component styles. `mod
 
 ## Migration sequence and acceptance gates
 
-Current M274 baseline is **3,127 inline `style: {` objects** (eight Program title/meta/status instances moved into CSS; previous M273 budget was 3,135) (M273 removed three Plan glance presentation objects from the 3,138-object production starting point; earlier notes listed the initial M271 budget rather than the measured current count), **2,483 external CSS priority declarations**, **1,290 embedded CSS priority declarations**, with a repeated-priority ceiling of **21**. These are legacy-debt caps, **not acceptance of their design quality**. Every subsequent slice must lower a measured debt metric where migration removes an owner and leave affected browser/source contracts green. The active placement and delivery sequence is maintained in `NEXT_APP_UPDATE_PLAN.md`.
+Current enforced debt ceilings live in `verification/ui-ownership-test.mjs`; the milestone figures below are historical measurements. These are migration limits, not acceptance of their design quality. Every subsequent slice must lower a measured debt metric where migration removes an owner and leave affected browser/source contracts green. The active placement and delivery sequence is maintained in `NEXT_APP_UPDATE_PLAN.md`.
 
 Sequence: (1) Program/cycle creation controls, (2) Settings and Profile cards, (3) Home and Plan composition, (4) Progress/History, (5) Workout/Focus separately after image-level phone validation, (6) overlays/dialogs and global cleanup, (7) full accessibility, offline, physical Android and Play release certification. Keep related styles near their canonical component owner; do not add a new end-of-file specificity patch.
 
@@ -169,3 +169,9 @@ The maintained Expressive Profile family owns the effective Strength section, co
 ### M290 — Profile level-card ownership
 
 The existing Profile family owns the level card’s layout, level marker, title/meta and progress track/fill paint. Use published live theme roles; only the computed XP width stays inline. Preserve the canonical level/XP projection, progressbar semantics, current modern and fallback appearances and shared forced-color behavior. Embedded level-card rules and the superseded R17/R61 owners must not return. Budgets: **2,378 external priorities**, **1,280 embedded priorities**, **3,108 inline objects**, **15 repeated priorities**.
+
+### M292 — Progress panes and history presentation
+
+The main `HistoryView` uses the maintained Progress CSS family for fixed presentation. Reuse named card, support/caption, growth/alignment, field, row and history-action owners; do not return paint, spacing or typography to JSX. Native `aria-selected`, `aria-pressed`, `aria-current` and `disabled` state owns control paint. Data attributes describe existing presentation states; they must not become parallel filtering, history, progression or volume calculations. The five remaining inline objects carry only chart widths, range height and data-derived chart ink. Publish consumed palette roles once through `applyTheme`.
+
+Retire a superseded declaration at its original owner. Same-selector declarations may be removed only when a later declaration in the same at-rule scope fully wins; preserve separate media/forced-color states. The existing inline-masked group-header font rule is retired. M292 removes 225 inline objects and ten embedded priorities: ceilings are 2,800 inline, 1,229 embedded, 2,360 external and 15 repeated priorities. Progress helper cards/charts retain their separate existing owners pending later migration.

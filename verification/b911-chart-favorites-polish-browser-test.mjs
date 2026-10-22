@@ -38,12 +38,16 @@ try{
     else assert.ok(x.buttons.every(b=>!b.transition.includes('transform')&&!b.transition.includes('width')),'no geometry animation');
     await page.close();
   }
-  for(const theme of ['rose','rosewater']){
+  for(const theme of ['rose','rosewater'])for(const width of [320,393,834,1280]){
     const context=await browser.createBrowserContext(),page=await context.newPage();
-    await page.setViewport({width:393,height:852,isMobile:true,hasTouch:true});
+    await page.setViewport({width,height:852,isMobile:width<600,hasTouch:width<600});
     await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
-    const history=[{id:'shared-control-fixture',date:Date.now(),updatedAt:Date.now(),unit:'lb',dayLabel:'Full Body',setsDone:2,volume:2000,perf:Object.fromEntries([['bb-bench',185],['back-squat',245]].map(([id,w])=>[id,{weight:w,reps:5,sets:[{w,r:5,done:true}]}]))}];
-    const store={v:13,savedAt:1,saved:[],cycles:[],history,perf:{},drafts:{},tombs:{},seenIntro:999,seenWhatsNew:999,theme,unit:'lb',unitChosen:true,experience:'intermediate',bodyweight:185,installDismissedAt:Date.now(),lastBackup:Date.now()};
+    const now=Date.now(),day=86400000;
+    const lifts=[['bb-bench',185],['back-squat',245],['deadlift',315],['ohp',95],['inc-curl',30],['lat-pulldown',120],['db-row',60]];
+    const history=Array.from({length:24},(_,i)=>({id:'shared-control-fixture-'+i,date:now-i*2*day,updatedAt:now-i*2*day,unit:'lb',dayLabel:'Full Body',sessionNote:i===0?'Retain the complete session note.':undefined,setsDone:21,volume:14000,perf:Object.fromEntries(lifts.map(([id,base])=>{const w=base+Math.max(0,12-i)*(id==='inc-curl'?1:2.5);return[id,{weight:w,reps:8,sets:Array.from({length:3},(_,k)=>({w,r:8-k,done:true,rir:2,tr:2}))}]}))}));
+    const bwLog=[{date:now-10*day,w:184,unit:'lb'},{date:now-3*day,w:185,unit:'lb'}];
+    const measurements={waist:[{date:now-10*day,v:36,unit:'in'},{date:now-3*day,v:35.8,unit:'in'}]};
+    const store={v:13,savedAt:1,saved:[],cycles:[],history,bwLog,measurements,perf:{},drafts:{},tombs:{},seenIntro:999,seenWhatsNew:999,theme,unit:'lb',unitChosen:true,experience:'intermediate',bodyweight:185,installDismissedAt:now,lastBackup:now};
     await page.evaluateOnNewDocument(store=>{if(!sessionStorage.getItem('fixture-seeded')){localStorage.setItem('wpb:v1',JSON.stringify(store));localStorage.setItem('wpb:chart-favorites-v1',JSON.stringify(['bb-bench','back-squat']));sessionStorage.setItem('fixture-seeded','1');}},store);
     const open=async()=>{await page.click('[data-tab="progress"]');await page.waitForSelector('.wpb-premium-tabs button');await page.$$eval('.wpb-premium-tabs button',buttons=>buttons.find(b=>b.textContent.includes('Lifts')).click());await page.waitForSelector('.wpb-chart-favorites');await page.$eval('.wpb-chart-favorites',e=>e.open=true);};
     await page.goto('http://127.0.0.1:'+server.address().port+'/index.html',{waitUntil:'networkidle0'});await open();
@@ -57,12 +61,70 @@ try{
     await page.$$eval('.wpb-chart-favorite-add',buttons=>buttons.find(b=>b.textContent.includes('Squat')).click());
     assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:chart-favorites-v1'))),['bb-bench','back-squat'],'shared Add forwards its callback');
     assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).history),before,'editor callbacks cannot rewrite training records');
+    // M292: exercise the actual Progress panes and native controls after the
+    // fixed presentation migrates to CSS. Only explicit body logs may change data.
+    const chooseTab=async label=>{
+      const index=['Sessions','Lifts','Volume','Body'].indexOf(label)+1;
+      const button=await page.$('.wpb-premium-tabs button:nth-child('+index+')');
+      await button.focus();await page.keyboard.press('Enter');
+      assert.equal(await button.evaluate(b=>b.getAttribute('aria-selected')),'true','native keyboard selects '+label);
+    };
+    const choosePane=async id=>{const button=await page.$('[data-lift-pane="'+id+'"]');await button.focus();await page.keyboard.press('Enter');assert.equal(await button.evaluate(b=>b.getAttribute('aria-current')),'true');};
+    for(const enlarged of [false,true]){
+      await page.evaluate(large=>document.documentElement.style.fontSize=large?'200%':'100%',enlarged);
+      await chooseTab('Sessions');
+      assert.equal(await page.$$eval('.wpb-history-session',rows=>rows.length),history.length,'all logged sessions remain available');
+      const session=await page.$('.wpb-history-session button[aria-expanded]');
+      await session.focus();await page.keyboard.press('Enter');await page.waitForSelector('.wpb-history-session-detail');
+      assert.ok(await page.$eval('.wpb-history-session-detail',e=>e.textContent.includes('Retain the complete session note.')&&e.querySelectorAll('.wpb-history-set').length===21),'expanded history retains notes and every working set');
+      const actions=await page.$$eval('.wpb-history-actions button',bs=>bs.map(b=>({name:b.getAttribute('aria-label'),width:b.getBoundingClientRect().width,height:b.getBoundingClientRect().height})));
+      assert.ok(actions.every(b=>b.name&&b.width>=44&&b.height>=44),'history actions retain named native targets '+JSON.stringify({width,theme,enlarged,actions}));
+      await session.focus();await page.keyboard.press('Enter');await page.waitForFunction(()=>!document.querySelector('.wpb-history-session-detail'));
+      await page.focus('#history-search');await page.keyboard.type('no matching workout');
+      await page.waitForFunction(()=>!document.querySelector('.wpb-history-session'));
+      const clear=await page.$('.wpb-progress-clear-filters');await clear.focus();await page.keyboard.press('Enter');
+      await page.waitForFunction(n=>document.querySelectorAll('.wpb-history-session').length===n,{},history.length);
+      await chooseTab('Lifts');await choosePane('records');
+      assert.ok(await page.$eval('.wpb-progress .wpb-page-scroll',e=>e.textContent.includes('Personal records')),'real lift records remain available');
+      await choosePane('load');
+      assert.ok(await page.$eval('.wpb-progress .wpb-page-scroll',e=>e.textContent.includes('Intensity distribution')),'canonical logged-set distribution remains visible');
+      const range=await page.$eval('.wpb-progress-range-trend',trend=>{
+        const title=trend.querySelector('.wpb-progress-range-title').getBoundingClientRect();
+        const chart=trend.querySelector('.wpb-progress-range-chart').getBoundingClientRect();
+        const labels=[...trend.querySelectorAll('.wpb-progress-range-number')].map(e=>e.getBoundingClientRect());
+        const bars=[...trend.querySelectorAll('.wpb-progress-range-bar')].map(e=>e.getBoundingClientRect());
+        return {titleBottom:title.bottom,chartTop:chart.top,chartBottom:chart.bottom,
+          labelTop:Math.min(...labels.map(r=>r.top)),barBottom:Math.max(...bars.map(r=>r.bottom)),maxBar:Math.max(...bars.map(r=>r.height))};
+      });
+      assert.ok(range.maxBar>=30&&range.labelTop>=range.titleBottom+5&&range.labelTop>=range.chartTop-.5&&range.barBottom<=range.chartBottom+.5,
+        'Full-height range bars and number labels stay inside the chart below its heading '+JSON.stringify({width,theme,enlarged,range}));
+      await choosePane('recovery');await page.waitForSelector('[data-scroll-key="lifts/recovery"]');
+      await chooseTab('Volume');
+      assert.ok(await page.$eval('.wpb-progress .wpb-page-scroll',e=>e.textContent.includes('Volume · last 7 days')),'weekly volume remains in its existing pane');
+      await chooseTab('Body');
+      const weight=await page.$('input[placeholder^="Today"]'),waist=await page.$('input[aria-label="Log Waist in in"]');
+      const bodyLog=await page.$('.wpb-progress-body-log'),measureLog=await page.$('.wpb-progress-measure-row button.wpb-progress-measure-log');
+      assert.ok(await bodyLog.evaluate(b=>b.disabled)&&await measureLog.evaluate(b=>b.disabled),'empty numeric fields keep Log disabled');
+      await weight.focus();await page.keyboard.type(enlarged?'186.6':'186.5');
+      assert.equal(await bodyLog.evaluate(b=>b.disabled),false,'valid bodyweight enables its existing Log');
+      await bodyLog.focus();await page.keyboard.press('Enter');
+      await page.waitForFunction(w=>JSON.parse(localStorage.getItem('wpb:v1')).bwLog.at(-1).w===w,{},enlarged?186.6:186.5);
+      await waist.focus();await page.keyboard.type(enlarged?'35.6':'35.5');
+      assert.equal(await measureLog.evaluate(b=>b.disabled),false,'valid measurement enables its existing Log');
+      await measureLog.focus();await page.keyboard.press('Enter');
+      await page.waitForFunction(v=>JSON.parse(localStorage.getItem('wpb:v1')).measurements.waist.at(-1).v===v,{},enlarged?35.6:35.5);
+      const bodyState=await page.evaluate(()=>{const s=JSON.parse(localStorage.getItem('wpb:v1'));return{weights:s.bwLog,waist:s.measurements.waist,expanded:document.querySelector('.wpb-progress-measure-toggle')?.getAttribute('aria-expanded')};});
+      assert.ok(bodyState.weights.length===3&&bodyState.waist.length===3&&bodyState.weights.at(-1).unit==='lb'&&bodyState.waist.at(-1).unit==='in'&&bodyState.expanded==='true','same-day logging keeps one canonical dated entry and expands the existing chart');
+      assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).history),before,'Progress inspection and explicit body logs never rewrite workout history');
+      if(width===320||width===1280)await page.screenshot({path:root+'/verification/m292-body-'+theme+'-'+width+'-'+(enlarged?'large':'normal')+'-phone.png'});
+    }
     await page.reload({waitUntil:'networkidle0'});await open();
     assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:chart-favorites-v1'))),['bb-bench','back-squat'],'order persists after reload');
     const after=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).history);
     const records=rows=>rows.map(({updatedAt,...record})=>record);
     assert.deepEqual(records(after),records(before),'reload preserves complete training content; sync timestamps remain owned by startup');
+    assert.ok(await page.evaluate(()=>{const s=JSON.parse(localStorage.getItem('wpb:v1'));return s.bwLog.at(-1).w===186.6&&s.measurements.waist.at(-1).v===35.6;}),'explicit body records persist after reload');
     await context.close();
   }
-  console.log('PASS B911 browser: chart favorites 48px controls, wrapping names, no narrow overflow reduced motion, real pin/move/remove callbacks and persistence without history changes.');
+  console.log('PASS B911 browser: chart favorites, native Progress tabs, session search/details, lift/load/recovery/volume panes, body logging, same-day replacement, normal/enlarged text and persistence without history changes.');
 } finally {if(browser)await browser.close();await new Promise(r=>server.close(r));}

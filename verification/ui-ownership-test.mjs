@@ -5,41 +5,25 @@ import fs from 'node:fs';
 // Decrease alongside a verified cleanup; never raise to permit a cosmetic override.
 const css = fs.readFileSync('app.css', 'utf8');
 const app = fs.readFileSync('modules/App.js', 'utf8');
-const MAX_IMPORTANT = 2462; // M283 replaced duplicate left/right pixel priorities with one shared page inset
+const MAX_IMPORTANT = 2432; // M288: retire superseded Profile summary declarations
 const MAX_APP_IMPORTANT = 1290; // Prevent embedded StyleTag patches bypassing the CSS budget.
-const MAX_REPEAT_IMPORTANT = 21;
+const MAX_REPEAT_IMPORTANT = 15; // M288: at-rule comments no longer erase media/container scope.
 const MAX_INLINE_STYLE_OBJECTS = 3116; // M276: Program cycle context and edit guidance now use shared CSS
 const allowedDebtKeys = new Set([
-  "\t#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step\tborder-radius",
+  "\t#root[data-pi-motion=\"expressive\"] .wpb-wizard.wpb-wizard.wpb-wizard .wpb-wizard-heading-title\tfont-size",
+  "\t#root[data-pi-motion=\"expressive\"] .wpb .wpb-tabbar\tbackground-color",
+  "\t#root[data-pi-motion=\"expressive\"] .wpb .wpb-program.wpb-program .wpb-day-card[data-next=\"true\"]\tborder-color",
+  "\t#root[data-pi-motion=\"expressive\"] .wpb .wpb-context-menu\tborder-color",
+  "@media(max-width:420px)\t#root .wpb-workout[data-focus-mode=\"false\"] .wpb-set-controls>.wpb-set-index\twidth",
+  "@media(max-width:420px)\t#root .wpb-workout[data-focus-mode=\"false\"] [data-done=\"1\"] .wpb-set-controls>.wpb-set-index\twidth",
+  "@media(max-width:420px)\t#root .wpb-workout[data-focus-mode=\"false\"] [data-done=\"1\"] .wpb-set-controls>.wpb-set-index\tflex",
+  "\t#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step\twidth",
+  "\t#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step\tmin-width",
   "\t#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step\theight",
   "\t#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step\tmin-height",
-  "\t#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step\tmin-width",
-  "\t#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step\twidth",
+  "\t#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step\tborder-radius",
   "\t#root .wpb-workout .wpb-exercise-heading .wpb-progression-label\tfont-size",
-  "\t#root .wpb-workout .wpb-workout-tools\tmargin",
-  "\t#root .wpb-workout .wpb-workout-tools\tpadding",
-  "\t#root[data-pi-motion=\"expressive\"] .wpb .wpb-context-menu\tborder-color",
-  "\t#root[data-pi-motion=\"expressive\"] .wpb .wpb-home-create\tbackground-color",
-  "\t#root[data-pi-motion=\"expressive\"] .wpb .wpb-plan-view\tmax-width",
-  "\t#root[data-pi-motion=\"expressive\"] .wpb .wpb-profile.wpb-profile .wpb-profile-stat\tmin-height",
-  "\t#root[data-pi-motion=\"expressive\"] .wpb .wpb-profile.wpb-profile .wpb-profile-stat\tpadding",
-  "\t#root[data-pi-motion=\"expressive\"] .wpb .wpb-profile.wpb-profile .wpb-profile-stat:not(:last-child)\tborder-right",
-  "\t#root[data-pi-motion=\"expressive\"] .wpb .wpb-program.wpb-program .wpb-day-card[data-next=\"true\"]\tborder-color",
-  "\t#root[data-pi-motion=\"expressive\"] .wpb .wpb-settings .wpb-experience-segmented\tgrid-template-columns",
-  "\t#root[data-pi-motion=\"expressive\"] .wpb .wpb-tabbar\tbackground-color",
-  "\t#root[data-pi-motion=\"expressive\"] .wpb .wpb-tabbar .wpb-tab\tmin-height",
-  "\t#root[data-pi-motion=\"expressive\"] .wpb .wpb-tabbar .wpb-tab>span\tfont-size",
-  "\t#root[data-pi-motion=\"expressive\"] .wpb .wpb-tabbar .wpb-tab>span\tline-height",
-  "\t#root[data-pi-motion=\"expressive\"] .wpb .wpb-wizard-step[data-pi-step-enter=\"1\"]\tanimation",
-  "\t#root[data-pi-motion=\"expressive\"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail .wpb-exercise-detail-body\tpadding-inline",
-  "\t#root[data-pi-motion=\"expressive\"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-head\tmin-height",
-  "\t#root[data-pi-motion=\"expressive\"] .wpb-progress .wpb-history-actions\tgap",
-  "\t#root[data-pi-motion=\"expressive\"] .wpb-progress .wpb-progress-title\tfont-size",
-  "\t#root[data-pi-motion=\"expressive\"] .wpb-progress .wpb-progress-title\tmargin-bottom",
-  "\t#root[data-pi-motion=\"expressive\"] .wpb-progress>.wpb-page-header\tpadding-top",
-  "\t#root[data-pi-motion=\"expressive\"] .wpb-wizard.wpb-wizard.wpb-wizard .wpb-wizard-heading-title\tfont-size",
-  "\t#root[data-pi-motion=\"expressive\"] .wpb>div:has(>.wpb-tabbar)\tmax-width",
-  "\t#root[data-pi-motion=\"expressive\"] .wpb>div:has(>.wpb-tabbar)\twidth"
+  "\t#root[data-pi-motion=\"expressive\"] .wpb .wpb-wizard-step[data-pi-step-enter=\"1\"]\tanimation"
 ]);
 
 function repeatedImportantDeclarations(source) {
@@ -47,7 +31,7 @@ function repeatedImportantDeclarations(source) {
     let last = 0;
     for (let i = 0; i < source.length; i++) {
         if (source[i] === '{') {
-            frames.push({ pre: source.slice(last, i).trim(), at: i });
+            frames.push({ pre: source.slice(last, i).replace(/\/\*[\s\S]*?\*\//g, '').trim(), at: i });
             last = i + 1;
         } else if (source[i] === '}') {
             const frame = frames.pop();
@@ -93,6 +77,10 @@ assert.throws(() => guard(css + '\n' + cssOverflow, app), /CSS priority override
 assert.throws(() => guard(css, app + '\n' + appOverflow), /Embedded stylesheet priority overrides increased/);
 assert.ok(repeatedImportantDeclarations('.duplicate{color:red!important;} .duplicate{color:blue!important;}')
     .includes('\t.duplicate\tcolor'), 'Guard must detect duplicate priority declarations.');
+assert.deepEqual(repeatedImportantDeclarations('.scoped{color:red!important;} /* reflow */ @media(max-width:420px){.scoped{color:blue!important;}}'), [],
+    'Comments before at-rules cannot erase media scope or invent duplicate owners.');
+assert.deepEqual(repeatedImportantDeclarations('/* narrow */ @media(max-width:420px){.scoped{color:red!important;}} /* same scope */ @media(max-width:420px){.scoped{color:blue!important;}}'),
+    ['@media(max-width:420px)\t.scoped\tcolor'], 'Commented copies in the same media scope still count as competing owners.');
 for (const name of ['UiRootHeader','UiAction','UiChoice','UiStatus','UiSection','SettingsSwitch'])
     assert.equal((app.match(new RegExp('function ' + name + '\\(', 'g')) || []).length, 1,
         'Only one shared ' + name + ' component may exist.');
@@ -363,3 +351,8 @@ for(const token of retiredAliasTokens){
 }
 assert.ok(css.includes('padding-inline:var(--pi-page-inset)!important;'),
   'The maintained shared page inset survives transitional alias retirement');
+
+// M288: the lifetime summary has a single Expressive normal/reflow owner.
+for(const suffix of ['.wpb-profile-stat-grid','.wpb-profile-stat','.wpb-profile-stat .mono','.wpb-profile-stat:not(:last-child)'])
+    assert.ok(!css.includes('#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile '+suffix+'{'),
+        'Retired R17/R39/R40/R77 summary rules cannot return: '+suffix);

@@ -18,6 +18,13 @@ App 4.0.0 build 905 / Engine 0.65.9 / M234. `RELEASE_MANIFEST.json` is authorita
 
 
 
+## M288 — one Profile lifetime-summary style owner
+
+- Move the effective layout and numeric wrapping into the maintained Profile summary family; retire the obsolete R17/R39/R40 normal rules, duplicate small-phone rules and duplicate R77 container reflow. External CSS priority ceiling: 2,432 (30 fewer).
+- Fix comments erasing media/container scope in the existing ownership guard; retain only the 14 actual baseline collision keys, with a scoped repeat cap of 15. This is an accounting correction, not a claim of six further CSS removals.
+- Existing populated Profile browser coverage now includes eight phone/tablet/desktop and short-landscape windows in both palettes, normal/200% text, complete summary labels, share-card customization/export and unchanged history. Require before/after computed-style parity, screenshot review and final-head CI before publication.
+- Next: continue proving and retiring superseded non-Workout presentation owners. Physical Android keyboard/TalkBack/foldable certification remains separate from browser checks.
+
 ## M287 — prune genuinely unused semantic aliases
 
 - Audit confirmed unused R41 spacing aliases, R41 surface-3, R51 intermediate palette aliases, and R57 inset/header labels in app.css. Remove 17 inert definitions from their original owners; use --pi-page-inset, --pi-space-* and semantic --pi-color-* instead of maintaining alternate token ladders.

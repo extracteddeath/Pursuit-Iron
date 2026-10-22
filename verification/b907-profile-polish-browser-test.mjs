@@ -10,10 +10,10 @@ await new Promise(r=>server.listen(0,'127.0.0.1',r));
 let browser;
 try{
  browser=await puppeteer.launch({executablePath:process.env.CHROME_BIN||'/usr/bin/google-chrome',headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
- for(const width of [320,393,834])for(const theme of ['rose','rosewater']){
+ for(const [width,height] of [[320,740],[393,852],[600,800],[834,1100],[900,480],[900,1000],[1280,850],[1600,900]])for(const theme of ['rose','rosewater']){
   const context=await browser.createBrowserContext();
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
-  await page.setViewport({width,height:width===834?1100:850,isMobile:width<600,hasTouch:width<600});
+  await page.setViewport({width,height,isMobile:width<600,hasTouch:width<600});
   await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
   await page.setBypassServiceWorker(true);
   const history=[0,1,2].map(i=>({id:'profile-fixture-'+i,date:Date.now()-i*7*86400000,unit:'lb',dayLabel:'Full Body',setsDone:4,volume:3500,durationMin:45,perf:Object.fromEntries([['bb-bench',185],['back-squat',245],['deadlift',315],['ohp',115]].map(([id,w])=>[id,{weight:w,reps:5,sets:[{w,r:5,done:true}]}]))}));
@@ -38,6 +38,27 @@ try{
   assert.equal(await page.$eval(club+' .wpb-profile-club-value',e=>e.textContent),total);
   for(const enlarged of [false,true]){
     await page.evaluate(large=>large?document.documentElement.style.fontSize='200%':document.documentElement.style.removeProperty('font-size'),enlarged);
+    // M288: lifetime totals retain one grouped surface at phone, tablet,
+    // short landscape and rail sizes, including actual 200% root text.
+    const summary=await page.$eval('.wpb-profile-stat-grid',e=>{
+      const box=e.getBoundingClientRect();
+      return {count:e.children.length,columns:getComputedStyle(e).gridTemplateColumns.split(' ').length,
+        overflow:e.scrollWidth>e.clientWidth+1,
+        cells:[...e.children].map(c=>{
+          const r=c.getBoundingClientRect(),walker=document.createTreeWalker(c,NodeFilter.SHOW_TEXT),text=[];
+          while(walker.nextNode()){
+            if(!walker.currentNode.textContent.trim())continue;
+            const range=document.createRange();range.selectNodeContents(walker.currentNode);text.push(...range.getClientRects());
+          }
+          return {contained:r.left>=box.left-1&&r.right<=box.right+1,
+            textFits:text.every(t=>t.left>=r.left-1&&t.right<=r.right+1&&t.top>=r.top-1&&t.bottom<=r.bottom+1)};
+        })};
+    });
+    assert.ok(summary.count===3&&[1,3].includes(summary.columns)&&!summary.overflow&&
+      summary.cells.every(c=>c.contained&&c.textFits),
+      'Lifetime summary values/labels remain complete '+JSON.stringify({width,height,theme,enlarged,summary}));
+    if([320,393,1280].includes(width))await (await page.$('.wpb-profile-stat-grid')).screenshot({
+      path:root+'/verification/m288-summary-'+theme+'-'+width+'x'+height+'-'+(enlarged?'enlarged':'normal')+'-phone.png'});
     const card=await page.$eval(club,e=>{
       const box=e.getBoundingClientRect();
       const controls=[...e.querySelectorAll('button')].map(b=>{

@@ -103,6 +103,31 @@ try{
     'No oversized gap above Home exercise list: '+JSON.stringify(gap));
    assert.equal(gap.overflow,false,'Expanded session outline never overflows phone width');
 
+   const selector='.wpb-home-game-plan details.wpb-game-plan-highlight-copy';
+   assert.ok(await page.$(selector),'Populated Home provides Game Plan coaching disclosures');
+   const compact=await page.$eval(selector,el=>{
+     const summary=el.querySelector('summary'),preview=el.querySelector('.wpb-game-plan-highlight-preview');
+     return {open:el.open,height:summary.getBoundingClientRect().height,
+       previewVisible:preview.getClientRects().length>0,fullVisible:el.querySelector('p').getClientRects().length>0,
+       named:summary.querySelector('strong')?.textContent?.trim().length>0};
+   });
+   assert.ok(!compact.open&&compact.height>=44&&compact.previewVisible&&!compact.fullVisible&&compact.named,
+     'Collapsed Game Plan is concise, tappable and hides its full explanation: '+JSON.stringify(compact));
+   await page.click(selector+' summary');
+   const expanded=await page.$eval(selector,el=>{
+     const full=el.querySelector('p'),preview=el.querySelector('.wpb-game-plan-highlight-preview');
+     return {open:el.open,visible:full.getClientRects().length>0,
+       fullText:full.textContent.trim(),previewVisible:preview.getClientRects().length>0,
+       overflow:document.documentElement.scrollWidth>innerWidth+1};
+   });
+   assert.ok(expanded.open&&expanded.visible&&expanded.fullText.length>0&&!expanded.previewVisible&&!expanded.overflow,
+     'Expanded Game Plan reveals complete guidance without duplicated preview or horizontal overflow: '+JSON.stringify(expanded));
+   await page.focus(selector+' summary');
+   await page.keyboard.press('Enter');
+   assert.equal(await page.$eval(selector,el=>el.open),false,
+     'Game Plan can be collapsed using the keyboard without changing coaching state');
+   await page.click(selector+' summary');
+   await page.screenshot({path:path.join(root,'verification/m269-game-plan-phone.png')});
    assert.ok(await page.$('.wpb-home-game-plan') || await page.$('.wpb-home-health'),
     'Supporting Home sections remain reachable without cloning the hero');
   }

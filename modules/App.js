@@ -6889,13 +6889,17 @@ function SessionGamePlan({ review, restScale = 1, home = false }) {
             const dose = sessionTargetsText(row.effective, review.unit);
             const why = pr ? (pr.type === 'e1rm' ? `Could raise estimated 1RM to ${pr.estimated} ${review.unit}.`
                 : `Could beat your ${pr.bestReps}-rep best at this load.`) : row.reason;
+            const guidance = `${dose} · ${technique || why}`;
             return _jsxs("div", { className: "wpb-game-plan-exercise", "data-game-plan-exercise": row.id,
                 ...(pr ? { "data-pr-exercise": row.id } : {}), children: [
                 _jsx("span", { className: "wpb-game-plan-highlight-icon", "aria-hidden": true,
                     children: _jsx(pr ? Trophy : row.protocol.type !== 'straight' ? Zap : TrendingUp, { size: 16 }) }),
-                _jsxs("div", { className: "wpb-game-plan-highlight-copy", children: [
-                    _jsx("strong", { children: pr ? `PR chance · ${row.name}` : row.name }),
-                    _jsx("p", { children: `${dose} · ${technique || why}` })] })] }, row.id + ':' + row.slot);
+                _jsxs("details", { className: "wpb-game-plan-highlight-copy", children: [
+                    _jsxs("summary", { children: [
+                        _jsx("strong", { children: pr ? `PR chance · ${row.name}` : row.name }),
+                        _jsx("span", { className: "wpb-game-plan-highlight-preview", children: guidance }),
+                        _jsx(ChevronDown, { size: 16, "aria-hidden": true })] }),
+                    _jsx("p", { children: guidance })] })] }, row.id + ':' + row.slot);
         }) })
     ] });
 }

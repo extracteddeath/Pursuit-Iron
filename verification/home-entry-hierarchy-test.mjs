@@ -28,6 +28,14 @@ assert.match(css, /#root \.wpb \.wpb-home-session-outline\{\s*margin:0;border:0;
   'Session outline must not add a second large blank strip above its exercise list');
 assert.ok(css.includes('#root .wpb .wpb-home-outline-list>li:first-child{padding-top:3px}'),
   'Expanded list starts close beneath its toggle');
+const gamePlan = app.slice(app.indexOf('function SessionGamePlan('), app.indexOf('function PlanChangesDialog('));
+assert.ok(gamePlan.includes('_jsxs("details"') && gamePlan.includes('_jsxs("summary"'),
+  'Game Plan must expose complete coaching guidance via native keyboard-operable disclosures');
+assert.ok(gamePlan.includes('children: guidance') && !gamePlan.includes('style: {'),
+  'Game Plan preview and expanded copy share the one computed explanation, without inline presentation');
+assert.ok(css.includes('#root .wpb .wpb-game-plan-highlight-copy:not([open])>p{display:none}') &&
+  css.includes('.wpb-game-plan-highlight-copy>summary:focus-visible'),
+  'Game Plan guidance is hidden only while collapsed, with an observable keyboard focus target');
 
 for(const selector of ['.wpb-action-tile-icon','.wpb-action-tile-copy','.wpb-action-tile-label',
     '.wpb-action-tile-subtitle'])assert.ok(css.includes(selector), selector + ' missing');

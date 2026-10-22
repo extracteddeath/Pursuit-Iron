@@ -95,6 +95,9 @@ const repeatedDaySuggestion = sessionSuggestion(repeatedDayProgram, repeatedTarg
 assert.equal(repeatedDaySuggestion?.referenceOnly, true);
 assert.equal(repeatedDaySuggestion?.action, 'initial');
 assert.match(repeatedDaySuggestion?.reason || '', /starting reference/i);
+const otherDayKg = sessionSuggestion(repeatedDayProgram, repeatedTargetDay, slot, null, 'kg', 1, otherDayOnly);
+assert.ok(Math.abs(otherDayKg.weight - repeatedDaySuggestion.weight / 2.2046226218487757) < 6,
+    'generated cross-day starting references convert units once');
 const ambiguousReplay = { ...otherDayOnly[0], id: 'ambiguous-replay', dayId: 'retired-day-id',
     dayLabel: repeatedSourceDay.label };
 const ambiguousAnalysis = analyzeShellHistoryForNextEngine(repeatedDayProgram, [ambiguousReplay], EXERCISES);
@@ -137,6 +140,24 @@ const custom = { id: 'custom', custom: true, weeks: 6, config, days: [{ id: 'cus
     overrides: { 'custom-day:0': { sets: 4, reps: '10-15', rir: '2', progressionStyle: 'double' } } };
 const customSuggest = hs => sessionSuggestion(custom, custom.days[0], 0, null, 'lb', 1, hs);
 const customHistory = sets => history(sets).map(h => ({ ...h, programId: custom.id, dayId: 'custom-day' }));
+// Custom programs emit display-unit weights; the shared suggestion adapter must not convert them twice.
+const customKg = sessionSuggestion(custom, custom.days[0], 0, null, 'kg', 1, customHistory(rows(50, 15)));
+const customLb = customSuggest(customHistory(rows(50, 15)));
+assert.ok(customKg && customLb && Math.abs(customKg.weight - customLb.weight / 2.2046226218487757) < 6,
+    'custom-program recommendations must convert from stored loads into display units exactly once');
+assert.ok(customKg.setTargets?.length > 0 && customKg.setTargets.every(t => Number.isFinite(t.weight)),
+    'per-set loads must stay numeric after a display-unit change');
+const foreignReference = { ...customHistory(rows(100, 15))[0], id: 'foreign-reference', dayId: 'other-day',
+    programId: 'different-program', updatedAt: 1700000001000 };
+const staleReference = { ...foreignReference, updatedAt: 1700000000000,
+    perf: { [id]: { weight: 500, reps: 15, sets: rows(500, 15) } } };
+const crossProgramCustomLb = customSuggest([staleReference, foreignReference]);
+const crossProgramCustomKg = sessionSuggestion(custom, custom.days[0], 0, null, 'kg', 1,
+    [staleReference, foreignReference]);
+assert.equal(crossProgramCustomLb.referenceOnly, true, 'cross-program history is a reference, not earned progression');
+assert.ok(crossProgramCustomLb.weight < 200, 'a superseded foreign workout cannot provide the starting load');
+assert.ok(Math.abs(crossProgramCustomKg.weight - crossProgramCustomLb.weight / 2.2046226218487757) < 6,
+    'canonical cross-program references must use the chosen display unit once');
 const unreported = rows(25, 8).map(s => ({ ...s, tr: 2, rirReported: false }));
 assert.deepEqual({ action: customSuggest(customHistory(unreported)).action, weight: customSuggest(customHistory(unreported)).weight },
     { action: suggest(p, history(unreported)).action, weight: suggest(p, history(unreported)).weight });

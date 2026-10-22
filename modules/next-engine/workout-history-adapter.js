@@ -299,7 +299,7 @@ export function nextWorkoutSuggestionForShell(program, history, legacyExercises,
         if (last) return { unit: evaluationUnit, weight: lastLoad, dir: 'hold', reason: 'Hold the last logged load until the new engine has comparable completed-set evidence.', reps, last, lastUnit: lastEntry?.unit || evaluationUnit, action: 'initial' };
         const reference = referenceEntry?.perf?.[legacyId] ?? null;
         const referenceLoad = convertLoad(representativeShellLoad(reference), referenceEntry?.unit, evaluationUnit);
-        return reference && referenceLoad !== null ? { weight: referenceLoad, dir: 'hold', reason: 'Use the other day only as a starting reference. This program day has no comparable completed history yet.', reps, last: reference, lastUnit: referenceEntry?.unit || evaluationUnit, action: 'initial', referenceOnly: true } : null;
+        return reference && referenceLoad !== null ? { unit: evaluationUnit, weight: referenceLoad, dir: 'hold', reason: 'Use the other day only as a starting reference. This program day has no comparable completed history yet.', reps, last: reference, lastUnit: referenceEntry?.unit || evaluationUnit, action: 'initial', referenceOnly: true } : null;
     }
     let decision;
     for (let i = analysis.workouts.length - 1; i >= 0 && !decision; i--) {

@@ -8,7 +8,7 @@ const app = fs.readFileSync('modules/App.js', 'utf8');
 const MAX_IMPORTANT = 2483;
 const MAX_APP_IMPORTANT = 1290; // Prevent embedded StyleTag patches bypassing the CSS budget.
 const MAX_REPEAT_IMPORTANT = 21;
-const MAX_INLINE_STYLE_OBJECTS = 3135; // M273: actual measured ceiling after removing three Plan glance inline objects
+const MAX_INLINE_STYLE_OBJECTS = 3127; // M274: removed eight Program header/identity/status presentation objects
 const allowedDebtKeys = new Set([
   "\t#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step\tborder-radius",
   "\t#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step\theight",
@@ -178,6 +178,13 @@ assert.ok(!plan.includes('className: "wpb-plan-preview-notice", style:'),
   'Plan preview typography must not return to inline styles');
 // Existing runtime computed progress widths, animations and positions are permitted.
 // Their removal requires an independently proved behavior-preserving migration.
+const programOwner = app.slice(app.indexOf('function ProgramView('), app.indexOf('\nfunction ', app.indexOf('function ProgramView(') + 1));
+for (const name of ['wpb-program-title-row','wpb-program-name-column','wpb-program-name-text',
+  'wpb-program-meta-collapse','wpb-program-meta-line','wpb-program-saved-status'])
+  assert.ok(programOwner.includes(name) && css.includes('.' + name + '{'),
+    'Program title/status roles must have one stylesheet owner: ' + name);
+assert.ok(!programOwner.includes('ref: pvTitle, style:') && !programOwner.includes('ref: pvNameCol, style:'),
+  'Program metadata and title must not return to inline layout');
 console.log('PASS UI ownership: important ' + report.important + '/' + MAX_IMPORTANT +
     ', embedded ' + report.appImportant + '/' + MAX_APP_IMPORTANT + ', repeated ' + report.duplicates + '/' + MAX_REPEAT_IMPORTANT + ' (' + report.legacyOwners +
     ' historical owner collisions), inline styles ' + report.inline + '/' + MAX_INLINE_STYLE_OBJECTS);

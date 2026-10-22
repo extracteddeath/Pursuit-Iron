@@ -16,7 +16,13 @@ App 4.0.0 build 905 / Engine 0.65.9 / M234. `RELEASE_MANIFEST.json` is authorita
 | Persistence and offline updates | Existing store migration/merge/queue and service worker | Corrupt/future saves must not be overwritten. Preview before restore, preserve drafts, require successful persistence before completing a workout, verify offline cache integrity and cancellation recovery. |
 | Android / Play | `play/README.md`, final TWA package and Play Console | Resolve package identity and signing certificate association at the domain root, build the release bundle, validate actual permissions/SDKs and complete account-specific declarations/testing. Repository/browser checks cannot certify a signed Android package. |
 
-## This slice — M273 selected-week-first Plan
+## This slice — M274 Program presentation consolidation
+
+- The deep Program header's title row, name, collapsible metadata and saved-state indicator now use CSS classes and shared tokens rather than eight static React layout objects. This retains the custom program rename, save/review states, cycle navigation, motion refs and training data unchanged.
+- The inline-object budget is lowered to 3,127; source gates reject return to per-instance layout owners. Protected Workout and Focus geometry is unchanged.
+- Next priority remains populated Progress/History reading order, Profile share-card edit scopes and Settings category/control consistency.
+
+## Previous slice — M273 selected-week-first Plan
 
 - The selected week's existing session card appears directly under the week picker and week focus; remaining weeks stay in their original phase order. No extra session renderer, per-tab prescription projection or duplicated week data is introduced.
 - Plan's three overview tile presentation objects have been migrated to semantic CSS classes; inline debt decreases from 3,138 to 3,135 in the actual production source, with a lowered non-growing gate. The existing browser suite additionally verifies the selected week has a single card even after navigation.

@@ -1,3 +1,10 @@
+## M285 — mixed-program and short-month history spacing (October 22, 2026)
+
+- Extended the existing populated Progress test to 16 saved sessions across two programs and several months, checking both By program and By month grouping at 900px and 1280px in light/dark themes.
+- A real wide-screen screenshot showed a large blank gap after a short October group before September began. The authoritative wide calendar sidebar now spans the grouping plus two history tracks, not merely the first history track, so shorter month groups can flow without calendar-induced empty space.
+- Added per-group geometry assertions, exported grouped screenshots, and kept recorded sets and all filter behavior unchanged. Retained the existing 900px single-column view and the Workout/Focus and engine.
+- No new CSS priority declarations. Same-build offline cache and hashes must be finalized and exact-head CI plus screenshots must pass before merge.
+
 ## M284 — populated Progress history on tablet and desktop (October 22, 2026)
 
 - Added actual 16-session saved-history browser scenarios at 900px and 1280px, in light and dark palettes, with top and scrolled screenshots. Existing desktop Progress screenshots exercised only empty history and missed a reading-order defect.

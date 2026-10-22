@@ -6,6 +6,6 @@
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 71,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b905-rb659f38759618b68",
-  "uiMilestone": "Build 905 · M284 Populated desktop history cohesion"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b905-r18f7d47c97c73b1b",
+  "uiMilestone": "Build 905 · M285 Mixed History Grouping Continuity"
 }

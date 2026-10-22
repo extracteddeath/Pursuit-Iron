@@ -598,13 +598,14 @@ try{
       await page.setViewport({width,height:850,deviceScaleFactor:1,isMobile:false,hasTouch:false});
       await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
       const entries=Array.from({length:16},(_,i)=>({
-        id:'m284-tablet-'+i,programId:program.id,programName:program.name,
-        dayId:'upper',dayLabel:'Upper',weekIndex:1,date:Date.now()-(i+1)*86400000,
+        id:'m284-tablet-'+i,programId:i%2===0?program.id:'m285-secondary',
+        programName:i%2===0?program.name:'M285 Second Program',
+        dayId:'upper',dayLabel:'Upper',weekIndex:1,date:Date.now()-(i+1)*8*86400000,
         unit:'lb',duration:1800,totalSets:2,tonnage:1470,
         perf:{'bb-bench':{weight:185,reps:6,sets:[{w:185,r:6,done:true,rir:2,rirReported:true}]},
           'inc-curl':{weight:30,reps:12,sets:[{w:30,r:12,done:true,rir:2,rirReported:true}]}}
       }));
-      const state={...store(theme),history:entries};
+      const state={...store(theme),saved:[program,{...program,id:'m285-secondary',name:'M285 Second Program',config:{...program.config,name:'M285 Second Program'}}],history:entries};
       await page.evaluateOnNewDocument(data=>localStorage.setItem('wpb:v1',JSON.stringify(data)),state);
       await page.goto('http://127.0.0.1:8796/',{waitUntil:'networkidle0'});
       await page.waitForSelector('.wpb-tabbar');
@@ -650,6 +651,53 @@ try{
       assert.ok(scrolled>0&&after.scrollTop>0&&after.headerOpaque&&
         Math.abs(after.chrome.y-initial.chrome.y)<1&&!after.overflow,
         'Populated history scrolls below a stable, opaque Progress header: '+JSON.stringify({theme,width,initial,after}));
+      // M285: multi-program and multi-month histories can expose layout
+      // holes that single-program history never exercises. Rotate grouping
+      // views without changing the saved sessions or leaving the route.
+      const grouped={};
+      for(const mode of ['By month','By program']){
+        await page.evaluate(label=>{
+          const button=[...document.querySelectorAll('.wpb-progress-grouping button')]
+            .find(node=>node.textContent.trim()===label);
+          if(!button)throw new Error('Missing Sessions grouping '+label);
+          button.click();
+        },mode);
+        await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+        const layout=await page.$eval('.wpb-progress .wpb-page-scroll[data-scroll-key="sessions"]',pane=>{
+          const p=pane.getBoundingClientRect();
+          const groups=[...pane.querySelectorAll('.wpb-history-group-header')].map(node=>{
+            const r=node.getBoundingClientRect(),parent=node.parentElement?.getBoundingClientRect();
+            return {title:node.textContent.trim().slice(0,80),y:r.y,x:r.x,width:r.width,
+              parentLeft:parent?.left,parentRight:parent?.right,
+              parentTop:parent?.top,parentBottom:parent?.bottom};
+          });
+          const button=[...pane.querySelectorAll('.wpb-progress-grouping button')]
+            .find(node=>node.getAttribute('aria-pressed')==='true');
+          return {groups,selected:button?.textContent.trim(),
+            sessions:pane.querySelectorAll('.wpb-history-session').length,
+            overflow:document.documentElement.scrollWidth>innerWidth+2,
+            pane:{left:p.left,right:p.right},width:innerWidth};
+        });
+        await page.screenshot({path:path.join(root,
+          `verification/m285-history-${theme}-${width}-${mode==='By month'?'month':'program'}-phone.png`)});
+        assert.ok(layout.selected===mode&&layout.sessions===16&&
+          layout.groups.length>=2&&!layout.overflow&&
+          layout.groups.every(g=>g.parentLeft>=layout.pane.left-2&&
+            g.parentRight<=layout.pane.right+2),
+          'Multi-program/month grouping keeps full history in its reading lane: '+
+            JSON.stringify({theme,width,mode,layout}));
+        if(width===1280&&mode==='By month'){
+          const gaps=layout.groups.slice(1).map((g,i)=>g.parentTop-layout.groups[i].parentBottom);
+          assert.ok(gaps.every(gap=>gap>=-1&&gap<=64),
+            'Short month groups must not inherit a tall calendar grid row: '+
+              JSON.stringify({theme,width,gaps,layout}));
+        }
+        grouped[mode]=layout;
+      }
+      if(width===1280)
+        assert.ok(grouped['By month'].groups.length>=3&&
+          grouped['By program'].groups.length===2,
+          'Wide history exposes multiple month groups and two training programs');
       const actualHistory=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).history);
       assert.deepEqual(actualHistory.map(({updatedAt,...record})=>record),entries,
         'Wide history inspection must never modify logged sets (storage may normalize updatedAt)');

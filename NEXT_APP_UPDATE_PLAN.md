@@ -18,6 +18,12 @@ App 4.0.0 build 905 / Engine 0.65.9 / M234. `RELEASE_MANIFEST.json` is authorita
 
 
 
+## M285 — multi-program and multi-month history continuity
+
+- Expanded populated tablet fixtures to two saved programs, 16 sessions and multiple months in both palette families and both 900px/1280px widths. Verify grouping buttons, record completeness, scroll containment and header continuity without modifying history.
+- Found a calendar-induced gap between short month groups in the wide Sessions lane. Keep the calendar as the same shared sidebar but span the grouping and two subsequent record tracks. Guard group-to-group gaps at 64px maximum in a rendered browser.
+- No new `!important` styles, data-engine changes, or Workout/Focus restyling. Follow with actual Android foldable/tablet checks and harder saved-history imports, not speculative redesigns.
+
 ## M284 — populated tablet history certification
 
 - Real 16-session browser fixtures revealed the 1280px Sessions history column began *below* the full calendar because its grid row shared the calendar's intrinsic height. The calendar now spans the grouping and first history row, letting workout records begin beside it. 900px remains a single-column reading layout.

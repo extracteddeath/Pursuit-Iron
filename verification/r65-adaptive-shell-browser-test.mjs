@@ -97,15 +97,18 @@ try{
             'Rail occupies its own column without covering content');
         }else{
           assert.equal(initial.direction,'row','Compact/medium windows retain bottom navigation');
-          const medium=width>=600&&width<840&&height>=640;
+          const medium=(width>=600&&width<840&&height>=640)||(width>=840&&height<560);
           if(medium){
             assert.ok(initial.frame.width>=Math.min(width,760)-3,
-              'Medium windows use the available reading width: '+JSON.stringify(initial));
-            assert.ok(initial.frame.width<=760,
-              'Medium tab shell remains bounded for readability');
+              'Medium and short wide landscapes use available reading width: '+JSON.stringify({width,height,initial}));
+            assert.ok(initial.frame.width<=760.5,
+              'Medium bottom-nav workspace stays bounded for readability');
+            if(width>=840)
+              assert.ok(initial.frame.width>=750&&initial.bar.width>=750,
+                'Short 900px landscape uses a real workspace without switching to a rail');
           }else{
             assert.ok(initial.frame.width<=462,
-              'Compact and short-landscape windows retain the proven phone-width frame');
+              'Compact phones and narrow short-landscape retain the proven phone-width frame');
           }
           assert.ok(initial.bar.y>initial.content.y+initial.content.height-10,
             'Bottom navigation stays below content');

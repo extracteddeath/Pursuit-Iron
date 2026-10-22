@@ -5674,12 +5674,13 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   }
 }
 
-/* R88 / Build 871 — medium-width workspace, not a stretched phone mockup.
-   Keep one stable bottom-navigation shell across the five primary tabs.
-   Compact phones (<600px), short landscape (<640px tall), and the existing
-   >=840px rail remain unchanged. The workout/non-tab route keeps its proven
-   compact geometry; do not expand its logging controls or add a second owner. */
-@media (min-width:600px) and (max-width:839px) and (min-height:640px){
+/* M286 / R88 — one medium-width workspace in tall portrait AND short
+   landscape windows. A 900×480 foldable viewport no longer wastes nearly half
+   its width in a 460px phone column. Keep one bottom-nav shell below 560px
+   height; the >=840px and >=560px-height rail stays unchanged. Never widen
+   non-tab Workout/Focus or create a second navigation owner. */
+@media (min-width:600px) and (max-width:839px) and (min-height:640px),
+       (min-width:840px) and (max-height:559px){
   #root[data-pi-motion="expressive"] .wpb>div:has(>.wpb-tabbar){
     box-sizing:border-box;
     width:100%!important;

@@ -145,3 +145,8 @@ On wide (1120px+ with height 720px+) Progress Sessions, the overview spans both 
 ### M285 — mixed history grouping evidence
 
 Maintain the existing two-lane Sessions layout at 1120px+/720px+ and the 900px single-column mode. Its browser contract now seeds two programs with 16 workouts over several months, switches between By month and By program, and verifies group bounding boxes remain within the right reading lane, month-group vertical gaps do not exceed 64px, and saved sets do not change. Capture both themes for review; do not create a parallel calendar or duplicate history list.
+
+
+### M286 — short landscape / foldable reading width
+
+The five root tabs keep one responsive shell: compact phones stay in the narrow layout; 600–839px wide windows at 640px+ height use the existing bounded 760px bottom-nav workspace; 840px+ wide windows shorter than 560px now **reuse that same bounded workspace** instead of being letterboxed to a 460px phone frame. At 840px+ width and 560px+ height the original navigation rail remains the owner. Do not create a second rail or modify Workout/Focus geometry. R65 measures actual shell and tab bounds, verifies bottom navigation and captures 900×480 in both themes. No additional styling priority declarations.

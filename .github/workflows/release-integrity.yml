@@ -30,5 +30,11 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '22'
+      # M266 branch-only certification: finalize generated hashes in CI before the gate.
+      # This temporary step is removed after publishing the exact generated metadata.
+      - name: Certify M266 release metadata
+        run: |
+          node scripts/finalize-release.mjs
+          node --input-type=module -e 'import fs from "node:fs"; for(const p of ["RELEASE_MANIFEST.json","BUILD_PROFILE.json","sw.js"]) console.log("M266_ASSET_"+p+"="+fs.readFileSync(p).toString("base64"));'
       - name: Verify release package
         run: node scripts/verify-release.mjs

@@ -270,7 +270,7 @@ assert.ok(!css.includes('.wpb-profile-stat-grid{gap:0!important}'),
 
 // M279: Settings has one final category rail owner and one class-owned card family.
 // The page inset handles 320px widths without parallel hardcoded media overrides.
-const jumpOwner=css.slice(css.indexOf('/* R57 — one spacing cadence'),css.indexOf('/* M270 — shared root typography'));
+const jumpOwner=css.slice(css.indexOf('/* M287 — The R57 transitional spacing aliases'),css.indexOf('/* M270 — shared root typography'));
 assert.ok(jumpOwner.includes('.wpb-settings.wpb-settings>.wpb-settings-jump{') &&
   jumpOwner.includes('padding:0 var(--pi-page-inset) var(--pi-space-2)!important;'),
   'Settings category rail is owned by the shared page inset and does not expose sticky gaps');

@@ -1,3 +1,10 @@
+## M273 — Plan schedule hierarchy and shared glance styles (October 22, 2026)
+
+- The selected week now owns the first schedule card immediately beneath the week picker and its focus context. The phase timeline contains only the other weeks, so each planned week is rendered once with the same session-row renderer, target and navigation owner.
+- Preserved the single Up Next action, complete phase schedule, previewed-week memory, existing four Plan panes and program editing routes.
+- Moved Plan overview labels and values into semantic shared token CSS, removing three static inline presentation objects with no new important rules.
+- Extended the existing R53 real-browser gate for selected-week placement, one-per-week ownership and changing the selected week.
+
 ## Shared tab hierarchy foundations — October 22, 2026
 
 ## M271 — unified root app bars

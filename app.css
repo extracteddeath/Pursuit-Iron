@@ -7581,7 +7581,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-progress .wpb-progress-volume-chip-row{display:flex;gap:6px;margin-bottom:6px;}
 #root .wpb .wpb-progress .wpb-progress-range-trend{margin-bottom:var(--pi-space-3);}
 #root .wpb .wpb-progress .wpb-progress-range-title{font-size:11px;font-weight:600;color:var(--wpb-theme-faint);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px;}
-#root .wpb .wpb-progress .wpb-progress-range-chart{display:flex;align-items:flex-end;gap:var(--pi-space-1);height:46px;}
+#root .wpb .wpb-progress .wpb-progress-range-chart{display:flex;align-items:flex-end;gap:var(--pi-space-1);min-height:46px;}
 #root .wpb .wpb-progress .wpb-progress-range-column{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;}
 #root .wpb .wpb-progress .wpb-progress-range-number{font-size:11px;font-weight:600;color:var(--wpb-theme-muted);}
 #root .wpb .wpb-progress .wpb-progress-range-bar{width:100%;border-radius:8px;background:var(--wpb-theme-bg-tint);}

@@ -422,3 +422,5 @@ for(const role of ['"warning-dim": C.warnDim','"warning-note": (C.warn || "#e0a3
     '"accent-faint": C.accent + "66"','"danger-edge": C.danger + "28"'])
     assert.equal(app.split(role).length-1,1,'Consumed Progress palette role has one publisher: '+role);
 assert.ok(!css.includes('font-size:max(11px,.72rem);'),'The masked history group-count font rule may not return');
+assert.match(css,/\.wpb-progress-range-chart\{[^}]*min-height:46px;[^}]*\}/,'Range-chart height fits its labels and data-derived bars');
+assert.ok(!/\.wpb-progress-range-chart\{[^}]*[;{]height:46px;/.test(css),'Range-chart labels cannot be squeezed into a fixed bar-height container');

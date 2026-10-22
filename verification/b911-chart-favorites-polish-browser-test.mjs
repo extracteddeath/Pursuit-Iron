@@ -43,7 +43,8 @@ try{
     await page.setViewport({width,height:852,isMobile:width<600,hasTouch:width<600});
     await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
     const now=Date.now(),day=86400000;
-    const history=Array.from({length:3},(_,i)=>({id:'shared-control-fixture-'+i,date:now-i*7*day,updatedAt:now-i*7*day,unit:'lb',dayLabel:'Full Body',sessionNote:i===0?'Retain the complete session note.':undefined,setsDone:4,volume:4000,perf:Object.fromEntries([['bb-bench',185-i*5],['back-squat',245-i*5]].map(([id,w])=>[id,{weight:w,reps:5,sets:[{w,r:5,done:true,rir:2,tr:2},{w,r:5,done:true,rir:2,tr:2}]}]))}));
+    const lifts=[['bb-bench',185],['back-squat',245],['deadlift',315],['ohp',95],['inc-curl',30],['lat-pulldown',120],['db-row',60]];
+    const history=Array.from({length:24},(_,i)=>({id:'shared-control-fixture-'+i,date:now-i*2*day,updatedAt:now-i*2*day,unit:'lb',dayLabel:'Full Body',sessionNote:i===0?'Retain the complete session note.':undefined,setsDone:21,volume:14000,perf:Object.fromEntries(lifts.map(([id,base])=>{const w=base+Math.max(0,12-i)*(id==='inc-curl'?1:2.5);return[id,{weight:w,reps:8,sets:Array.from({length:3},(_,k)=>({w,r:8-k,done:true,rir:2,tr:2}))}]}))}));
     const bwLog=[{date:now-10*day,w:184,unit:'lb'},{date:now-3*day,w:185,unit:'lb'}];
     const measurements={waist:[{date:now-10*day,v:36,unit:'in'},{date:now-3*day,v:35.8,unit:'in'}]};
     const store={v:13,savedAt:1,saved:[],cycles:[],history,bwLog,measurements,perf:{},drafts:{},tombs:{},seenIntro:999,seenWhatsNew:999,theme,unit:'lb',unitChosen:true,experience:'intermediate',bodyweight:185,installDismissedAt:now,lastBackup:now};
@@ -72,21 +73,31 @@ try{
     for(const enlarged of [false,true]){
       await page.evaluate(large=>document.documentElement.style.fontSize=large?'200%':'100%',enlarged);
       await chooseTab('Sessions');
-      assert.equal(await page.$$eval('.wpb-history-session',rows=>rows.length),3,'all logged sessions remain available');
+      assert.equal(await page.$$eval('.wpb-history-session',rows=>rows.length),history.length,'all logged sessions remain available');
       const session=await page.$('.wpb-history-session button[aria-expanded]');
       await session.focus();await page.keyboard.press('Enter');await page.waitForSelector('.wpb-history-session-detail');
-      assert.ok(await page.$eval('.wpb-history-session-detail',e=>e.textContent.includes('Retain the complete session note.')&&e.querySelectorAll('.wpb-history-set').length===4),'expanded history retains notes and every working set');
+      assert.ok(await page.$eval('.wpb-history-session-detail',e=>e.textContent.includes('Retain the complete session note.')&&e.querySelectorAll('.wpb-history-set').length===21),'expanded history retains notes and every working set');
       const actions=await page.$$eval('.wpb-history-actions button',bs=>bs.map(b=>({name:b.getAttribute('aria-label'),width:b.getBoundingClientRect().width,height:b.getBoundingClientRect().height})));
       assert.ok(actions.every(b=>b.name&&b.width>=44&&b.height>=44),'history actions retain named native targets '+JSON.stringify({width,theme,enlarged,actions}));
       await session.focus();await page.keyboard.press('Enter');await page.waitForFunction(()=>!document.querySelector('.wpb-history-session-detail'));
       await page.focus('#history-search');await page.keyboard.type('no matching workout');
       await page.waitForFunction(()=>!document.querySelector('.wpb-history-session'));
       const clear=await page.$('.wpb-progress-clear-filters');await clear.focus();await page.keyboard.press('Enter');
-      await page.waitForFunction(()=>document.querySelectorAll('.wpb-history-session').length===3);
+      await page.waitForFunction(n=>document.querySelectorAll('.wpb-history-session').length===n,{},history.length);
       await chooseTab('Lifts');await choosePane('records');
       assert.ok(await page.$eval('.wpb-progress .wpb-page-scroll',e=>e.textContent.includes('Personal records')),'real lift records remain available');
       await choosePane('load');
       assert.ok(await page.$eval('.wpb-progress .wpb-page-scroll',e=>e.textContent.includes('Intensity distribution')),'canonical logged-set distribution remains visible');
+      const range=await page.$eval('.wpb-progress-range-trend',trend=>{
+        const title=trend.querySelector('.wpb-progress-range-title').getBoundingClientRect();
+        const chart=trend.querySelector('.wpb-progress-range-chart').getBoundingClientRect();
+        const labels=[...trend.querySelectorAll('.wpb-progress-range-number')].map(e=>e.getBoundingClientRect());
+        const bars=[...trend.querySelectorAll('.wpb-progress-range-bar')].map(e=>e.getBoundingClientRect());
+        return {titleBottom:title.bottom,chartTop:chart.top,chartBottom:chart.bottom,
+          labelTop:Math.min(...labels.map(r=>r.top)),barBottom:Math.max(...bars.map(r=>r.bottom)),maxBar:Math.max(...bars.map(r=>r.height))};
+      });
+      assert.ok(range.maxBar>=30&&range.labelTop>=range.titleBottom+5&&range.labelTop>=range.chartTop-.5&&range.barBottom<=range.chartBottom+.5,
+        'Full-height range bars and number labels stay inside the chart below its heading '+JSON.stringify({width,theme,enlarged,range}));
       await choosePane('recovery');await page.waitForSelector('[data-scroll-key="lifts/recovery"]');
       await chooseTab('Volume');
       assert.ok(await page.$eval('.wpb-progress .wpb-page-scroll',e=>e.textContent.includes('Volume · last 7 days')),'weekly volume remains in its existing pane');

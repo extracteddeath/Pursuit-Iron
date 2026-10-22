@@ -118,10 +118,10 @@
   "uiFiles": {
     "modules/App.js": "9ca1d191cd28b6f1012dd2035c723199758c83eeb896a1dfd72119a7e0827661",
     "index.html": "54fd7f97b0a2d9d8b76694380158b4a23699a3f1c1cbea697c5e33b7c705b7ed",
-    "sw.js": "33d39e6e3a98329b1ddf3c9757b5deaef62ccc4a2c8e5e038450d4eb91fe05fc",
-    "BUILD_PROFILE.json": "08b94fb8b7b0527f886748bfcd843b47b15f6dcd0f7e52aacb7c421855944976",
+    "sw.js": "354ebda3b302c44aa691fdf59fbf68209a41e9407d2720c1a16956220f28b643",
+    "BUILD_PROFILE.json": "b8554ce04fe2473f637bbff2629d1f7612f5d578a4cc0f4895543db23acbf377",
     "CHANGELOG.md": "0136af0feb84d1f3b514732514c4cbe4859dc1b3a7a9b6c45b8a4e31beaaa1b4",
-    "app.css": "280a22d4b9b43d94a11e0317f571b77dd2707b75d06a6d19dfa380363245e7c5",
+    "app.css": "6fa370b8077e9ae28ec9ce355f54ef072c309beb59617767027348102a10630e",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",

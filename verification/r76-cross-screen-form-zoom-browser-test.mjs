@@ -68,7 +68,30 @@ try{
           });
           assert.ok(groups.count===8&&groups.shared&&groups.opaque&&groups.owned&&groups.min>=48,
             'Every Settings row belongs to an explicit shared card: '+JSON.stringify(groups));
-          const destinations=await page.$$eval('.wpb-settings-jump-control select option',
+          // M279: one final category rail, consistent 48px controls and legible section labels.
+          const hierarchy=await page.$eval('.wpb-settings',pane=>{
+            const rail=pane.querySelector('.wpb-settings-jump');
+            const control=pane.querySelector('.wpb-settings-jump-control');
+            const select=control?.querySelector('select');
+            const title=pane.querySelector('.wpb-settings-title');
+            const description=pane.querySelector('.wpb-settings-row-description');
+            const railRect=rail?.getBoundingClientRect();
+            const jumpRect=control?.getBoundingClientRect();
+            return {
+              railBottom:parseFloat(getComputedStyle(rail).paddingBottom),
+              opaque:getComputedStyle(rail).backgroundColor!=='rgba(0, 0, 0, 0)',
+              jumpHeight:jumpRect?.height,selectHeight:select?.getBoundingClientRect().height,
+              jumpRadius:parseFloat(getComputedStyle(control).borderTopLeftRadius),
+              titleSize:parseFloat(getComputedStyle(title).fontSize),
+              descriptionSize:parseFloat(getComputedStyle(description).fontSize),
+              withinViewport:railRect?.left>=-1&&railRect?.right<=innerWidth+1
+            };
+          });
+          assert.ok(hierarchy.opaque&&hierarchy.railBottom>=8&&hierarchy.jumpHeight>=48&&
+            hierarchy.selectHeight>=48&&Math.abs(hierarchy.jumpRadius-14)<1&&
+            hierarchy.titleSize>=13&&hierarchy.descriptionSize>=13&&hierarchy.withinViewport,
+            'Settings category rail and readable controls use shared sizes: '+JSON.stringify(hierarchy));
+          const destinations=await page.$eval('.wpb-settings-jump-control select option',
             options=>options.map(el=>[el.value,el.textContent.trim()]));
           assert.ok(destinations.some(([id,label])=>id==='training'&&label==='Gyms & equipment'),
             'Settings directs equipment lookup to the actual gym section');

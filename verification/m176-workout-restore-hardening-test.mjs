@@ -34,6 +34,36 @@ assert.deepEqual(merged[1].sets,fresh[1].sets,'new/replacement exercise must use
 assert.deepEqual(merged[2].sets,snap.data[0].sets);
 assert.equal(merged[2].note,'keep A');
 
+// Repeated occurrences of the SAME exercise must never inherit one another's numbers.
+// Preserve distinct slot identities, including a newly added third occurrence.
+const repeatedSaved = [
+  {id:a,slot:0,note:'first occurrence',sets:[{w:100,r:8,done:true}]},
+  {id:a,slot:2,note:'second occurrence',sets:[{w:120,r:5,done:true}]}
+];
+const repeatedFresh = [
+  {id:a,slot:0,note:'new 0',sets:[{w:0,r:0}]},
+  {id:a,slot:1,note:'new 1',sets:[{w:0,r:0}]},
+  {id:a,slot:2,note:'new 2',sets:[{w:0,r:0}]}
+];
+const repeatedMerged = mergeSessionData(repeatedSaved,repeatedFresh);
+assert.deepEqual(repeatedMerged.map(e=>e.sets[0].w),[100,0,120],
+  'resume must match each existing occurrence once without cloning earlier sets');
+assert.deepEqual(repeatedMerged.map(e=>e.note),['first occurrence','new 1','second occurrence']);
+assert.deepEqual(mergeSessionData(repeatedSaved,repeatedFresh),repeatedMerged,
+  'duplicate-occurrence restore is deterministic and read-only');
+assert.deepEqual(repeatedSaved.map(e=>e.sets[0].w),[100,120],
+  'restore must not mutate saved history');
+const ambiguousNoSlots = mergeSessionData(
+  [{id:a,sets:[{w:180,r:3}]}],
+  [{id:a,sets:[{w:0,r:0}]},{id:a,sets:[{w:0,r:0}]}]);
+assert.deepEqual(ambiguousNoSlots.map(e=>e.sets[0].w),[0,0],
+  'ambiguous legacy snapshots must not multiply one saved performance into two slots');
+const movedOnly = mergeSessionData([{id:a,slot:1,sets:[{w:170,r:4}]}],
+  [{id:a,slot:3,sets:[{w:0,r:0}]}]);
+assert.equal(movedOnly[0].sets[0].w,170,
+  'unique lift IDs still follow a legitimate program reorder');
+
+
 const src=productionSource();
 for(const marker of [
   'schemaVersion: 2, programId: program.id, dayId: day.id, weekIndex, dayExSig',

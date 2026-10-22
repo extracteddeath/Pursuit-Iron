@@ -138,6 +138,10 @@ function plannedSessionForEntry(program, entry, legacyExercises, unit) {
             continue;
         const sourceEx = sourceSession.exercises.find(ex => ex.exerciseId === nextId) ?? sourceSession.exercises[slot];
         const legacy = legacyMap.get(legacyId);
+        // The persisted map is keyed by exercise ID: repeated planned slots cannot
+        // consume its single performance entry more than once during adaptation.
+        if (legacyIds.includes(legacyId))
+            continue;
         const role = (cell.role ?? sourceEx?.role ?? 'hypertrophy_isolation');
         exercises.push({
             exerciseId: nextId,
@@ -172,6 +176,7 @@ function workoutFromEntry(program, entry, legacyExercises, unit) {
         return null;
     const performed = [];
     const ignored = [];
+    const repeatedIds = new Set((found.day.exercises ?? []).filter((id, index, all) => all.indexOf(id) !== index));
     planned.legacyIds.forEach((legacyId, slot) => {
         const ex = planned.session.exercises[slot];
         const perf = entry.perf?.[legacyId];
@@ -184,7 +189,8 @@ function workoutFromEntry(program, entry, legacyExercises, unit) {
             const exposure = progressionExposureContext([perf, raw]);
             performed.push({
                 ...historyExposureContext(raw), exerciseId: ex.exerciseId, setIndex: setIndex++, load: convertLoad(load0, entry.unit, targetUnit), reps,
-                badDay: exposure.badDay, interrupted: exposure.interrupted, prescriptionEdited: exposure.nonComparable,
+                badDay: exposure.badDay, interrupted: exposure.interrupted,
+                prescriptionEdited: exposure.nonComparable || repeatedIds.has(legacyId),
                 rir: observedRir, painFlag: raw.painFlag === true, techniqueQuality: raw.techniqueQuality,
                 advancedTechnique: ex.advancedTechnique?.type
             });

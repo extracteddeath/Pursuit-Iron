@@ -1185,8 +1185,28 @@ function loggedExercisePerformance(program, day, e, weekIndex, unit, perf, histo
 }
 
 function loggedWorkoutPerformance(program, day, data, weekIndex, unit, perf, history) {
-    return Object.fromEntries(data.map(e => [e.id, loggedExercisePerformance(program, day, e, weekIndex, unit, perf, history)])
-        .filter(([, value]) => value !== null));
+    const out = {};
+    const recordedSlots = new Map();
+    for (const e of data) {
+        const logged = loggedExercisePerformance(program, day, e, weekIndex, unit, perf, history);
+        if (!logged) continue;
+        const previous = out[e.id];
+        if (!previous) {
+            out[e.id] = logged;
+            recordedSlots.set(e.id, [e.slot]);
+            continue;
+        }
+        // A workout can contain the same lift twice, but history has one entry
+        // per exercise ID. Object.fromEntries discarded every earlier occurrence.
+        // Keep each completed set once; separate slot targets are non-comparable
+        // and must not automatically earn another load progression.
+        const slots = [...recordedSlots.get(e.id), e.slot];
+        recordedSlots.set(e.id, slots);
+        out[e.id] = { ...previous, sets: [...previous.sets, ...logged.sets],
+            note: [previous.note, logged.note].filter(Boolean).join('\n') || undefined,
+            prescriptionEdited: true, duplicateExerciseSlots: slots };
+    }
+    return out;
 }
 
 function setsOf(p) {

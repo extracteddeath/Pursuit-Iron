@@ -2329,16 +2329,42 @@ function mergeSessionData(snapData, fresh) {
         return fresh;
     if (!Array.isArray(snapData) || !snapData.length)
         return fresh;
-    const byId = new Map();
-    for (const e of snapData)
-        if (e && e.id != null && !byId.has(e.id))
-            byId.set(e.id, e);
-    return fresh.map(e => {
-        const prev = byId.get(e.id);
-        if (!prev || !Array.isArray(prev.sets) || !prev.sets.length)
-            return e;
-        return { ...e, sets: prev.sets, note: prev.note || e.note };
-    });
+    // Each saved occurrence can be claimed once. Matching only by exercise ID
+    // previously cloned the first saved set array into every duplicate lift slot.
+    const saved = snapData.filter(e => e?.id != null && Array.isArray(e.sets) && e.sets.length);
+    const assigned = new Array(fresh.length).fill(null);
+    const used = new Set();
+    const countFresh = new Map();
+    for (const e of fresh)
+        if (e?.id != null)
+            countFresh.set(e.id, (countFresh.get(e.id) || 0) + 1);
+    for (let i = 0; i < fresh.length; i++) {
+        const e = fresh[i];
+        if (!e || e.id == null || !Number.isInteger(e.slot))
+            continue;
+        const matches = saved.map((row, index) => ({ row, index }))
+            .filter(({ row, index }) => !used.has(index) && row.id === e.id && row.slot === e.slot);
+        if (matches.length === 1) {
+            assigned[i] = matches[0].row;
+            used.add(matches[0].index);
+        }
+    }
+    // Unique IDs may move after a program reorder. Duplicate IDs without an
+    // exact slot match are ambiguous, so their new rows must remain untouched.
+    for (let i = 0; i < fresh.length; i++) {
+        const e = fresh[i];
+        if (assigned[i] || !e || e.id == null || countFresh.get(e.id) !== 1)
+            continue;
+        const matches = saved.map((row, index) => ({ row, index }))
+            .filter(({ row, index }) => !used.has(index) && row.id === e.id);
+        if (matches.length === 1) {
+            assigned[i] = matches[0].row;
+            used.add(matches[0].index);
+        }
+    }
+    return fresh.map((e, i) => assigned[i]
+        ? { ...e, sets: assigned[i].sets, note: assigned[i].note || e.note }
+        : e);
 }
 
 function mergedSetCount(data) {

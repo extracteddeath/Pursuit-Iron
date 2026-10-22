@@ -18,6 +18,12 @@ App 4.0.0 build 905 / Engine 0.65.9 / M234. `RELEASE_MANIFEST.json` is authorita
 
 
 
+## M277 — Progress/History cohesion
+
+- History grouping and section headers now use the shared spacing scale; expanded sessions inherit outer-card clipping rather than creating nested corners. Two redundant high-priority legacy rules were removed. History data, date grouping, chart owners, filters, actions and Workout/Focus remain unchanged.
+- The static CSS priority ceiling is now 2,480. New verification guards reject history spacing regressions; visual device review and exact-head CI remain required before merge.
+- Next cohesion targets: Profile share-card editing scope and section density, then Settings category controls; do not layer additional priority patches onto the completed Program/Cycles or Progress hierarchy.
+
 ## M276 — Program/Cycles reading flow and density
 
 - The Program's first scroll content now prioritizes current cycle context and controls; edit scope is available from Details. Cycle-link presentation moved from static per-element styles to shared semantic roles.

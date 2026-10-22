@@ -5,7 +5,7 @@ import fs from 'node:fs';
 // Decrease alongside a verified cleanup; never raise to permit a cosmetic override.
 const css = fs.readFileSync('app.css', 'utf8');
 const app = fs.readFileSync('modules/App.js', 'utf8');
-const MAX_IMPORTANT = 2483;
+const MAX_IMPORTANT = 2480; // M277 retired 3 superseded Progress history priority declarations
 const MAX_APP_IMPORTANT = 1290; // Prevent embedded StyleTag patches bypassing the CSS budget.
 const MAX_REPEAT_IMPORTANT = 21;
 const MAX_INLINE_STYLE_OBJECTS = 3116; // M276: Program cycle context and edit guidance now use shared CSS
@@ -231,3 +231,22 @@ for (const owner of ['Home','ProfileView','SettingsView','HistoryView','PlanView
 assert.ok(css.includes('--pi-type-screen-title:1.625rem') && css.includes('.wpb-summary-grid'), 'Scalable title and summary roles remain shared');
 const noticeStyle=css.slice(css.indexOf('.wpb .wpb-notice{'),css.indexOf('.wpb .wpb-notice[data-positioned'));
 assert.ok(noticeStyle.includes('transition-property:none'), 'Notice clearance cannot animate through a newly returned Resume control');
+
+
+// M277: the visible History composition has one effective spatial owner.
+// Prevent future sticky-edge gaps, redundant legacy declarations and nested
+// card corner masks while retaining the existing 48px history actions.
+const historySurfaceCss=css.slice(
+    css.indexOf('/* The cycle summary is a section heading, not another pill/card. */'),
+    css.indexOf('/* Rein in the page-level card radius/spacing')
+);
+assert.ok(historySurfaceCss.includes('padding:var(--pi-space-3) var(--pi-space-1) var(--pi-space-2)!important;'),
+    'History group header uses the shared spatial scale without an exposed sticky margin');
+assert.ok(historySurfaceCss.includes('margin:0 0 var(--pi-space-3)!important;'),
+    'History session gap uses the same scale as the section heading');
+assert.ok(historySurfaceCss.includes('border-radius:0!important;'),
+    'Expanded History detail inherits outer clipping instead of drawing a second corner');
+assert.ok(!css.includes('margin-bottom:7px!important;'),
+    'Retired history session margin must not fight the effective card gap');
+assert.ok(!css.includes('padding-top:11px!important;\n  padding-bottom:8px!important;'),
+    'Retired history header padding must not fight the final sticky surface');

@@ -136,6 +136,21 @@ try{
             anchors=>anchors.length),1,'Exactly one destination owns training preferences');
           await page.select('.wpb-settings-jump-control select','preferences');
           await page.waitForFunction(()=>document.querySelector('.wpb-settings .wpb-page-scroll')?.scrollTop>10);
+          await settle(page);
+          if(width<=420){
+            const chrome=await page.$eval('.wpb-settings',pane=>{
+              const header=pane.querySelector('.wpb-root-header');
+              const rail=pane.querySelector('.wpb-settings-jump');
+              const content=pane.querySelector('.wpb-page-scroll');
+              return {offset:content.scrollTop,
+                gap:rail.getBoundingClientRect().top-header.getBoundingClientRect().bottom,
+                headerPaint:getComputedStyle(header).backgroundColor,
+                railPaint:getComputedStyle(rail).backgroundColor};
+            });
+            assert.ok(chrome.offset>10&&Math.abs(chrome.gap)<=1&&
+              chrome.headerPaint!=='rgba(0, 0, 0, 0)'&&chrome.railPaint!=='rgba(0, 0, 0, 0)',
+              'Settings category rail remains directly attached to opaque header after scroll: '+JSON.stringify({width,theme,chrome}));
+          }
           assert.equal(await page.$eval('.wpb-settings-jump-control select',el=>el.value),'',
             'Settings jump resets for the next deliberate navigation');
         }

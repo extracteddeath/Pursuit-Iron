@@ -17,6 +17,13 @@ App 4.0.0 build 905 / Engine 0.65.9 / M234. `RELEASE_MANIFEST.json` is authorita
 | Android / Play | `play/README.md`, final TWA package and Play Console | Resolve package identity and signing certificate association at the domain root, build the release bundle, validate actual permissions/SDKs and complete account-specific declarations/testing. Repository/browser checks cannot certify a signed Android package. |
 
 
+
+## M276 — Program/Cycles reading flow and density
+
+- The Program's first scroll content now prioritizes current cycle context and controls; edit scope is available from Details. Cycle-link presentation moved from static per-element styles to shared semantic roles.
+- Cycles overview, block list, rows, and support cards now share the existing spacing/shape scale without denser touch targets or changed training data. The open sequence is fully accessible, with concise list summaries.
+- Inline debt cap drops from 3,127 to 3,116. The current Workout/Focus composition, the Plan program action, cycle navigation, and offline/storage behavior are preserved. Next verify real device screenshots, then move to Progress/History and Profile hierarchy; full Play certification remains separate.
+
 ## M275 — scrolling chrome and Program/Cycles follow-up
 
 - Plan: the Full program action sits in the program heading, and the old footer action was removed. Selected-week memory, read-only block routing and all four panes remain intact.

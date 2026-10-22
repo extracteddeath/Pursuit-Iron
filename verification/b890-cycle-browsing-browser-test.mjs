@@ -99,6 +99,8 @@ try{
   await page.click('.wpb-cycle-detail .wpb-cycle-header [aria-label="Back"]');await page.waitForSelector('.wpb-home');
   await page.click('.wpb-home-cycles');
   await page.waitForSelector('.wpb-cycles .wpb-cycle-list-summary');
+  assert.match(await page.$eval('.wpb-cycle-list-summary',n=>n.textContent),
+    /Training blocks · 3/, 'Cycle list retains a compact heading before the full block sequence');
   await page.click('.wpb-cycle-list-summary');await page.waitForSelector('.wpb-cycle-list-disclosure[open]');
   await verifyCycleText(page,'.wpb-cycles',width);
   await page.click('.wpb-cycle-open');await page.waitForSelector('.wpb-cycle-detail');
@@ -115,6 +117,9 @@ try{
       activeTransition:active.transitionDuration,plannedOpacity:planned.opacity,
       nextBorder:next?getComputedStyle(next).borderColor:null,
       scheduleBg:getComputedStyle(schedule).backgroundColor,
+      overviewPadding:parseFloat(getComputedStyle(root.querySelector('.wpb-cycle-overview')).paddingTop),
+      overviewMargin:parseFloat(getComputedStyle(root.querySelector('.wpb-cycle-overview')).marginBottom),
+      blockPadding:parseFloat(getComputedStyle(blocks[0]).paddingTop),
       noOverflow:root.scrollWidth<=root.clientWidth+1};
   });
   assert.ok(cycleLook.activeShadow.includes('inset'),'current block keeps visible accent rail');
@@ -122,6 +127,8 @@ try{
   assert.equal(cycleLook.plannedOpacity,'1','future blocks stay readable');
   assert.ok(cycleLook.noOverflow,'cycle hierarchy must not overflow');
   assert.ok(cycleLook.nextBorder&&cycleLook.scheduleBg,'cycle facts remain present');
+  assert.ok(cycleLook.overviewPadding<=16.1&&cycleLook.overviewMargin<=16.1&&cycleLook.blockPadding<=16.1,
+    'Cycle summary and full-size block targets use compact shared spacing: '+JSON.stringify(cycleLook));
   assert.equal(cycleLook.activeTransition,'0s','reduced motion must suppress state transitions');
   await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'no-preference'}]);
   assert.notEqual(await page.$eval('.wpb-cycle-block-row[data-state="active"]',n=>getComputedStyle(n).transitionDuration),'0s','non-reduced motion uses local transitions');

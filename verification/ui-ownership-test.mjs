@@ -8,7 +8,7 @@ const app = fs.readFileSync('modules/App.js', 'utf8');
 const MAX_IMPORTANT = 2483;
 const MAX_APP_IMPORTANT = 1290; // Prevent embedded StyleTag patches bypassing the CSS budget.
 const MAX_REPEAT_IMPORTANT = 21;
-const MAX_INLINE_STYLE_OBJECTS = 3127; // M274: removed eight Program header/identity/status presentation objects
+const MAX_INLINE_STYLE_OBJECTS = 3116; // M276: Program cycle context and edit guidance now use shared CSS
 const allowedDebtKeys = new Set([
   "\t#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step\tborder-radius",
   "\t#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step\theight",
@@ -193,6 +193,14 @@ for (const name of ['wpb-program-title-row','wpb-program-name-column','wpb-progr
   'wpb-program-meta-collapse','wpb-program-meta-line','wpb-program-saved-status'])
   assert.ok(programOwner.includes(name) && css.includes('.' + name + '{'),
     'Program title/status roles must have one stylesheet owner: ' + name);
+const programEditHelp=programOwner.indexOf('Where do my edits apply?');
+const programDetails=programOwner.indexOf('_jsx(Exit, { when: planInfo');
+assert.ok(programEditHelp>programDetails && !programOwner.slice(programOwner.indexOf('wpb-program-scroll'),programOwner.indexOf('ref: pvCycle')).includes('Where do my edits apply?'),
+  'Program edit scope belongs inside Details, not before the week and day plan');
+for(const className of ['wpb-program-cycle-collapse','wpb-program-cycle-inset','wpb-program-cycle-link',
+    'wpb-program-cycle-copy','wpb-program-cycle-name','wpb-program-cycle-meta','wpb-program-edit-scope'])
+  assert.ok(programOwner.includes(className)&&css.includes('.'+className+'{'),
+    'Program contextual cycle route/reference help must keep their single CSS owners: '+className);
 assert.ok(!programOwner.includes('ref: pvTitle, style:') && !programOwner.includes('ref: pvNameCol, style:'),
   'Program metadata and title must not return to inline layout');
 console.log('PASS UI ownership: important ' + report.important + '/' + MAX_IMPORTANT +

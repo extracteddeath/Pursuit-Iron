@@ -284,3 +284,5 @@ assert.ok(!css.includes('.wpb-settings .wpb-settings-jump{\n  padding-bottom:8px
   !css.includes('.wpb-settings .wpb-settings-jump{\n  padding:8px 16px 10px!important;') &&
   !css.includes('.wpb-settings .wpb-settings-jump-control select{\n  min-height:44px!important;'),
   'Old Settings layout and undersized select rules must not return');
+assert.ok(css.includes('.wpb-settings-jump-control>span{display:none;}'),
+  'Compact Settings removes duplicate visible category text while retaining native select semantics');

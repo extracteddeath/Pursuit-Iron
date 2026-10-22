@@ -18,6 +18,14 @@ App 4.0.0 build 905 / Engine 0.65.9 / M234. `RELEASE_MANIFEST.json` is authorita
 
 
 
+## M291 — complete Profile presentation batch
+
+- Move 83 fixed JSX style objects across Profile, achievement details, Strength trends and shared Sparkline into the existing CSS families. Leave only calculated progress widths, empty-chart height and data-derived chart ink inline. Publish the live faint/border-soft palette roles once; preserve existing theme values.
+- Retire all embedded Profile selectors and their superseded external counterparts. External priorities: **2,378 → 2,360**; embedded priorities: **1,280 → 1,239**; inline objects: **3,108 → 3,025**. Repeated-priority ceiling remains 15. No new priority patch layer or increased debt budgets.
+- Create the section element map once per render instead of recreating all sections for each visible section. Preserve saved ordering/visibility, earned status, history, score calculations, share export and Workout/Focus behavior. Name achievement dialogs through the existing backdrop accessibility owner; expose heading/progress semantics and verify keyboard containment, dismissal and restored focus.
+- Require before/after computed-style equality for empty, missing-bodyweight and populated Profile states, collapsed/expanded achievements and locked/earned details across five windows, two palettes, normal/200% text, ordinary/forced colors and Expressive/fallback presentation. Retain the eight-window Profile browser journey, screenshot review, final-head CI and deployed source identity before publication.
+- Next: continue separately proven non-Workout presentation cleanup across the remaining screens and shared controls. Physical Android certification remains open.
+
 ## M290 — class-owned Profile level card
 
 - Move the level card’s eight fixed JSX style objects and embedded fallback rules into the existing Profile CSS family, using live theme roles. Only the calculated XP fill width remains inline; canonical level, XP and history calculations are unchanged.

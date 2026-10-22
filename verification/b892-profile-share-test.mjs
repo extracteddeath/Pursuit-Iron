@@ -26,8 +26,8 @@ assert.match(app,/localStorage\.setItem\(PROFILE_PREFERENCE_KEY, JSON\.stringify
 assert.match(app,/function shareCustomProfileCard\(\{ history, unit, score, level, milestones, prefs, theme \}\)/);
 assert.match(app,/\bstrengthClubSnapshot\(exerciseTrends\(history\), unit, "lifted"\)/);
 assert.match(app,/\bliftBests\(history \|\| \[\], unit\)/);
-assert.match(app,/\.\.\.profilePrefs\.order\.filter\(id => !profilePrefs\.hidden\.includes\(id\)\)/);
-assert.match(app,/showProfileCustomize && _jsx\(ProfileCustomization/);
+assert.match(app,/\.\.\.profilePrefs\.order\s*\.filter\(\(?id\)?\s*=>\s*!profilePrefs\.hidden\.includes\(id\)\)/);
+assert.match(app,/showProfileCustomize\s*&&\s*_jsx\(ProfileCustomization/);
 assert.match(app,/"aria-pressed": selected/);
 assert.match(app,/Share profile/);
 assert.match(css,/\.wpb-profile-toolbar/);

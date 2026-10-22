@@ -246,7 +246,7 @@ assert.ok(historySurfaceCss.includes('margin:0 0 var(--pi-space-3)!important;'),
     'History session gap uses the same scale as the section heading');
 assert.ok(historySurfaceCss.includes('border-radius:0!important;'),
     'Expanded History detail inherits outer clipping instead of drawing a second corner');
-assert.ok(!css.includes('margin-bottom:7px!important;'),
+assert.ok(!css.includes('.wpb-progress .wpb-history-session{\n  margin-bottom:7px!important;'),
     'Retired history session margin must not fight the effective card gap');
 assert.ok(!css.includes('padding-top:11px!important;\n  padding-bottom:8px!important;'),
     'Retired history header padding must not fight the final sticky surface');

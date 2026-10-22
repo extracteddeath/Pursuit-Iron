@@ -5723,7 +5723,7 @@ function afterNextPaint() {
 }
 /* R71 — read-only supporting pane. Shares Wizard's actual config and step owner:
    no forked draft, early generation, hidden navigation or duplicate save path. */
-function WizardReviewPane({ config, cycleMode, modeChosen, selectedCycle, cycleAdapt, step, stepCount, stepKey }) {
+function WizardReviewPane({ config, cycleMode, modeChosen, selectedCycle, cycleAdapt, cycleAdaptSplit, step, stepCount, stepKey }) {
     const goal = cycleMode ? (selectedCycle?.goal || config.goal) : config.goal;
     const count = Array.isArray(config.equipment) ? config.equipment.length : 0;
     const focus = Object.entries(config.focus || {}).filter(([, n]) => n > 0)
@@ -5746,7 +5746,8 @@ function WizardReviewPane({ config, cycleMode, modeChosen, selectedCycle, cycleA
     if (modeChosen && cycleMode && selectedCycle) {
         const weeks = selectedCycle.blocks.reduce((total, block) => total + block.weeks, 0);
         rows.splice(3, 0, ["Cycle", selectedCycle.name], ["Phases", `${selectedCycle.blocks.length} blocks · ${weeks} weeks`],
-            ["Phase exercise changes", cycleAdapt ? "Allowed" : "Keep core lifts"]);
+            ["Phase exercise changes", cycleAdapt ? "Allowed" : "Keep core lifts"],
+            ["Training split changes", cycleAdaptSplit ? "Goal-optimized" : "Manual only"]);
     }
     if (focus) rows.push(["Emphasize", focus]);
     if (reduced) rows.push(["Reduce", reduced]);
@@ -5814,6 +5815,7 @@ function Wizard({ buildTask = null, onCancelBuild, initialEquipment, initialExpe
     const [cycleTemplate, setCycleTemplate] = useState(() => ["custom", ...nextCycleTemplatesForShell().map(c => c.id)].includes(setupDraft?.templateId) ? setupDraft.templateId : nextCycleTemplatesForShell()[0]?.id || "");
     const selectedCycle = cycleChoices.find(t => t.id === cycleTemplate);
     const [cycleAdapt, setCycleAdapt] = useState(setupDraft?.adapt || false);
+    const [cycleAdaptSplit, setCycleAdaptSplit] = useState(setupDraft?.adaptSplit ?? true);
     const [config, setConfig] = useState({
         name: "",
         unit: initialUnit,
@@ -5861,9 +5863,9 @@ function Wizard({ buildTask = null, onCancelBuild, initialEquipment, initialExpe
         if (step >= STEPS.length) setStep(STEPS.length - 1);
     }, [step, STEPS.length]);
     useLayoutEffect(() => {
-        if (cycleMode && (step > 0 || config.name.trim() || cycleTemplate === "custom" || cycleTemplate !== nextCycleTemplatesForShell()[0]?.id || cycleAdapt))
-            setDraftSaved(writeCycleSetupDraft(draftId, draftSignature, { config, step, blocks: customCycleBlocks, templateId: cycleTemplate, adapt: cycleAdapt, cycleMode, choseMode }));
-    }, [config, step, customCycleBlocks, cycleTemplate, cycleAdapt, cycleMode, choseMode, draftId, draftSignature]);
+        if (cycleMode && (step > 0 || config.name.trim() || cycleTemplate === "custom" || cycleTemplate !== nextCycleTemplatesForShell()[0]?.id || cycleAdapt || cycleAdaptSplit))
+            setDraftSaved(writeCycleSetupDraft(draftId, draftSignature, { config, step, blocks: customCycleBlocks, templateId: cycleTemplate, adapt: cycleAdapt, adaptSplit: cycleAdaptSplit, cycleMode, choseMode }));
+    }, [config, step, customCycleBlocks, cycleTemplate, cycleAdapt, cycleAdaptSplit, cycleMode, choseMode, draftId, draftSignature]);
     /* ⚠ AFTER `key`. This effect sat above `const key = STEPS[step]`; a hook's dependency list is evaluated DURING render, so
        `[step, key]` read `key` in its temporal dead zone and EVERY render of the builder threw "Cannot access 'key' before
        initialization" — Build my program and Create a cycle crashed (M158 as delivered). */
@@ -6022,6 +6024,7 @@ function Wizard({ buildTask = null, onCancelBuild, initialEquipment, initialExpe
             if (cycleTemplate === "custom") final.cycleBlocks = customCycleBlocks.map(b => ({ ...b, weeks: Number(b.weeks),
                 ...(b.days ? { days: Number(b.days) } : {}), ...(b.priorityLift ? { frequency: Number(b.frequency) } : {}) }));
             final.cycleAdapt = cycleAdapt;
+            final.cycleAdaptSplit = cycleAdaptSplit;
         }
         try {
             await afterNextPaint();
@@ -6115,9 +6118,9 @@ function Wizard({ buildTask = null, onCancelBuild, initialEquipment, initialExpe
                     children: _jsx(StepBody, { stepKey: key, config: { ...config, goal: effectiveGoal }, set,
                         buildable: buildable.__key === buildKey ? buildable : {}, autoLength, compatibleSplits,
                         focusTotal, cycleTemplate, setCycleTemplate, cycleChoices, customCycleBlocks,
-                        setCustomCycleBlocks, cycleAdapt, setCycleAdapt, cycleMode, setCycleMode, nextRecommendedSplit }, key) }, step),
+                        setCustomCycleBlocks, cycleAdapt, setCycleAdapt, cycleAdaptSplit, setCycleAdaptSplit, cycleMode, setCycleMode, nextRecommendedSplit }, key) }, step),
                 _jsx(WizardReviewPane, { config, cycleMode, modeChosen: choseMode, selectedCycle,
-                    cycleAdapt, step, stepCount: STEPS.length, stepKey: key })
+                    cycleAdapt, cycleAdaptSplit, step, stepCount: STEPS.length, stepKey: key })
             ] }) }),
         _jsxs("div", { className: "wpb-wizard-footer", role: "region", "aria-label": "Setup actions", children: [
             cycleMode && _jsx("div", { className: "wpb-cycle-draft-status", role: "status",
@@ -6218,7 +6221,21 @@ function CustomCycleComposer({ blocks, onChange, minBlocks = 2, maxBlocks = 8, e
     ] }));
 }
 
-function StepBody({ stepKey, config, set, buildable = {}, autoLength = null, compatibleSplits, focusTotal, cycleTemplate, setCycleTemplate, cycleChoices, customCycleBlocks, setCustomCycleBlocks, cycleMode, setCycleMode, cycleAdapt, setCycleAdapt, nextRecommendedSplit }) {
+/* One shared authoring control for the wizard and standalone conversion. */
+function CycleAdaptSplitChoice({ enabled, onChange }) {
+    return (_jsxs("button", { type: "button", role: "checkbox", "aria-checked": enabled,
+        "aria-label": "Adapt training split between cycle blocks", onClick: () => onChange(v => !v),
+        className: "pressable wpb-ui-card wpb-wizard-cycle-adapt", children: [
+            _jsx("div", { className: "wpb-wizard-cycle-check", "aria-hidden": true,
+                children: enabled && _jsx(Check, { size: 13 }) }),
+            _jsxs("div", { className: "wpb-wizard-mode-copy", children: [
+                _jsx("div", { className: "wpb-wizard-mode-title", children: "Adapt training split" }),
+                _jsx("div", { className: "wpb-wizard-mode-sub", children:
+                    "Compare safe weekly structures for each block’s strength, muscle-building or mixed goal. Keep training days and session limits; a split chosen explicitly for a block takes priority." })
+            ] })
+        ] }));
+}
+function StepBody({ stepKey, config, set, buildable = {}, autoLength = null, compatibleSplits, focusTotal, cycleTemplate, setCycleTemplate, cycleChoices, customCycleBlocks, setCustomCycleBlocks, cycleMode, setCycleMode, cycleAdapt, setCycleAdapt, cycleAdaptSplit, setCycleAdaptSplit, nextRecommendedSplit }) {
     if (stepKey === "units") {
         const opts = [["kg", "Kilograms", "kg"], ["lb", "Pounds", "lb"]];
         return (_jsxs(_Fragment, { children: [_jsx(Heading, { sub: "Used everywhere \u2014 plates, targets, history. You can change it later in Settings.", children: "Which units do you train in?" }), _jsx("div", { className: "wpb-wizard-unit-choices", children: opts.map(([v, label, suf]) => {
@@ -6265,7 +6282,8 @@ function StepBody({ stepKey, config, set, buildable = {}, autoLength = null, com
                         _jsx("div", { className: "wpb-wizard-mode-title", children: "Adapt exercises to each phase" }),
                         _jsx("div", { className: "wpb-wizard-mode-sub", children: "Real block history may change compatible exercises at the next phase while protecting successful lifts. Turn this off to preserve the exercise skeleton unless you explicitly change a block's weekly split, training days or priority lift." })
                     ] })
-                ] })
+                ] }),
+            _jsx(CycleAdaptSplitChoice, { enabled: cycleAdaptSplit, onChange: setCycleAdaptSplit })
         ] }));
     }
     if (stepKey === "name") {
@@ -17529,6 +17547,7 @@ function ConvertProgramToCycleSheet({ program, onClose, onConfirm }) {
     const baseName = String(program?.name || "Training").replace(/\s*·\s*Block\s*\d+\s*$/i, "").trim() || "Training";
     const [name, setName] = useState(() => draft?.name || (/cycle$/i.test(baseName) ? baseName : `${baseName} Cycle`));
     const [adapt, setAdapt] = useState(draft ? draft.adapt : true);
+    const [adaptSplit, setAdaptSplit] = useState(draft?.adaptSplit ?? true);
     const [busy, setBusy] = useState(false);
     const [draftSaved, setDraftSaved] = useState(true);
     const [error, setError] = useState("");
@@ -17536,7 +17555,7 @@ function ConvertProgramToCycleSheet({ program, onClose, onConfirm }) {
     const future = futureFor(selected);
     let customValid = true;
     if (templateId === "custom") { try { customFutureCycleSpecs(customBlocks, currentWeeks); } catch { customValid = false; } }
-    useLayoutEffect(() => { setDraftSaved(writeCycleSetupDraft(draftId, draftSignature, { name, templateId, adapt, blocks: customBlocks })); }, [draftId, draftSignature, name, templateId, adapt, customBlocks]);
+    useLayoutEffect(() => { setDraftSaved(writeCycleSetupDraft(draftId, draftSignature, { name, templateId, adapt, adaptSplit, blocks: customBlocks })); }, [draftId, draftSignature, name, templateId, adapt, adaptSplit, customBlocks]);
         const create = async () => {
         if (busy || !selected || !future.length || !customValid)
             return;
@@ -17544,7 +17563,7 @@ function ConvertProgramToCycleSheet({ program, onClose, onConfirm }) {
         setError("");
         await new Promise(resolve => setTimeout(resolve, 30));
         try {
-            const result = await onConfirm?.({ templateId: selected.id, name: name.trim() || `${baseName} Cycle`, adaptBetweenBlocks: adapt, blocks: templateId === "custom" ? customBlocks.map(b => ({ ...b, weeks: Number(b.weeks) })) : undefined });
+            const result = await onConfirm?.({ templateId: selected.id, name: name.trim() || `${baseName} Cycle`, adaptBetweenBlocks: adapt, adaptTrainingSplit: adaptSplit, blocks: templateId === "custom" ? customBlocks.map(b => ({ ...b, weeks: Number(b.weeks) })) : undefined });
             if (result?.ok) clearCycleSetupDraft(draftId);
             if (result && result.ok === false)
                 setError(result.msg || "Could not create the training cycle. Your program was left unchanged.");
@@ -17561,7 +17580,7 @@ function ConvertProgramToCycleSheet({ program, onClose, onConfirm }) {
                             const disabled = !later.length;
                             const selectedChoice = choice.id === selected?.id;
                             return (_jsxs("button", { type: "button", disabled: disabled, onClick: () => setTemplateId(choice.id), className: "pressable", "aria-pressed": selectedChoice, style: { width: "100%", textAlign: "left", padding: "12px 13px", marginBottom: 8, borderRadius: 13, border: `1px solid ${selectedChoice ? C.accent : C.border}`, background: selectedChoice ? C.accentDim : C.card, color: C.text, opacity: disabled ? .46 : 1, cursor: disabled ? "default" : "pointer" }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8 }, children: [_jsx("div", { style: { flex: 1, fontSize: 15, fontWeight: 750 }, children: choice.name }), selectedChoice && _jsx(Check, { size: 17, color: C.accentInk })] }), _jsx("div", { style: { fontSize: 12, color: C.muted, lineHeight: 1.45, marginTop: 3 }, children: disabled ? "No later phase remains after your current program." : choice.blurb }), !disabled && _jsx("div", { style: { display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap", marginTop: 8 }, children: later.map((block, i) => _jsxs("span", { style: { display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 700, color: C.accentInk }, children: [i > 0 && _jsx(ChevronRight, { size: 11, color: C.faint }), block.label, ` · ${block.weeks}w`] }, `${choice.id}:${block.phase}:${i}`)) })] }, choice.id));
-                        }), templateId === "custom" && _jsx(CustomCycleComposer, { blocks: customBlocks, onChange: setCustomBlocks, minBlocks: 1, maxBlocks: 7, existingWeeks: currentWeeks, baseDays: program.config?.days || program.days?.length || 4, baseSplit: program.config?.split }), _jsx("p", { style: {fontSize:12,color:C.muted}, children: draftSaved ? "Your setup is saved on this device until the cycle is created." : "Setup could not be saved on this device. Keep this setup open until you create the cycle." }), _jsxs("button", { type: "button", onClick: () => setAdapt(v => !v), className: "pressable", "aria-pressed": adapt, style: { width: "100%", display: "flex", alignItems: "center", gap: 12, textAlign: "left", padding: "12px 13px", marginTop: 8, borderRadius: 13, border: `1px solid ${adapt ? C.accent : C.border}`, background: adapt ? C.accentDim : C.card, color: C.text, cursor: "pointer" }, children: [_jsx("div", { style: { width: 34, height: 34, borderRadius: 10, background: adapt ? C.accent : C.bg2, color: adapt ? C.accentText : C.muted, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: _jsx(RefreshCw, { size: 16 }) }), _jsxs("div", { style: { flex: 1 }, children: [_jsx("div", { style: { fontSize: 14, fontWeight: 750 }, children: "Adapt exercises between blocks" }), _jsx("div", { style: { fontSize: 12, color: C.muted, lineHeight: 1.4, marginTop: 2 }, children: adapt ? "Future phases can change exercises using completed workout history." : "Keep the exercise roster by default; explicit weekly structure choices still rebuild that phase." })] }), _jsx(CheckBox, { on: adapt })] }), error && _jsx("div", { role: "status", style: { marginTop: 12, padding: "10px 12px", borderRadius: 11, background: C.dangerDim, color: C.text, fontSize: 12, lineHeight: 1.45 }, children: error })] }), _jsxs("div", { style: { flexShrink: 0, display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1.35fr)", gap: 8, padding: "10px 18px calc(10px + env(safe-area-inset-bottom))", borderTop: `1px solid ${C.borderSoft}`, background: C.bg }, children: [_jsx("button", { type: "button", onClick: onClose, disabled: busy, className: "pressable", style: { minHeight: 48, borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: 14, fontWeight: 700 }, children: "Cancel" }), _jsx("button", { type: "button", onClick: create, disabled: busy || !selected || !future.length || !customValid, className: "pressable wpb-primary-action", style: { minHeight: 48, borderRadius: 12, border: 0, background: C.accent, color: C.accentText, fontSize: 14, fontWeight: 800 }, children: busy ? "Building cycle…" : "Create training cycle" })] })] }) }));
+                        }), templateId === "custom" && _jsx(CustomCycleComposer, { blocks: customBlocks, onChange: setCustomBlocks, minBlocks: 1, maxBlocks: 7, existingWeeks: currentWeeks, baseDays: program.config?.days || program.days?.length || 4, baseSplit: program.config?.split }), _jsx("p", { style: {fontSize:12,color:C.muted}, children: draftSaved ? "Your setup is saved on this device until the cycle is created." : "Setup could not be saved on this device. Keep this setup open until you create the cycle." }), _jsxs("button", { type: "button", onClick: () => setAdapt(v => !v), className: "pressable", "aria-pressed": adapt, style: { width: "100%", display: "flex", alignItems: "center", gap: 12, textAlign: "left", padding: "12px 13px", marginTop: 8, borderRadius: 13, border: `1px solid ${adapt ? C.accent : C.border}`, background: adapt ? C.accentDim : C.card, color: C.text, cursor: "pointer" }, children: [_jsx("div", { style: { width: 34, height: 34, borderRadius: 10, background: adapt ? C.accent : C.bg2, color: adapt ? C.accentText : C.muted, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: _jsx(RefreshCw, { size: 16 }) }), _jsxs("div", { style: { flex: 1 }, children: [_jsx("div", { style: { fontSize: 14, fontWeight: 750 }, children: "Adapt exercises between blocks" }), _jsx("div", { style: { fontSize: 12, color: C.muted, lineHeight: 1.4, marginTop: 2 }, children: adapt ? "Future phases can change exercises using completed workout history." : "Keep the exercise roster by default; explicit weekly structure choices still rebuild that phase." })] }), _jsx(CheckBox, { on: adapt })] }), _jsx(CycleAdaptSplitChoice, { enabled: adaptSplit, onChange: setAdaptSplit }), error && _jsx("div", { role: "status", style: { marginTop: 12, padding: "10px 12px", borderRadius: 11, background: C.dangerDim, color: C.text, fontSize: 12, lineHeight: 1.45 }, children: error })] }), _jsxs("div", { style: { flexShrink: 0, display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1.35fr)", gap: 8, padding: "10px 18px calc(10px + env(safe-area-inset-bottom))", borderTop: `1px solid ${C.borderSoft}`, background: C.bg }, children: [_jsx("button", { type: "button", onClick: onClose, disabled: busy, className: "pressable", style: { minHeight: 48, borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: 14, fontWeight: 700 }, children: "Cancel" }), _jsx("button", { type: "button", onClick: create, disabled: busy || !selected || !future.length || !customValid, className: "pressable wpb-primary-action", style: { minHeight: 48, borderRadius: 12, border: 0, background: C.accent, color: C.accentText, fontSize: 14, fontWeight: 800 }, children: busy ? "Building cycle…" : "Create training cycle" })] })] }) }));
 }
 // M161: one visible entry per cycle; phase identity is separate from cycle identity.
 
@@ -22355,7 +22374,7 @@ function App() {
         try {
             const built = await runGeneration('cycle', {
                 templateId: tmplId, blocks: tmplId === "custom" ? config.cycleBlocks : undefined, config, banned, legacyExercises: EXERCISES,
-                adaptBetweenBlocks: !!config.cycleAdapt, makeId: uid
+                adaptBetweenBlocks: !!config.cycleAdapt, adaptTrainingSplit: !!config.cycleAdaptSplit, makeId: uid
             }, 'Building your training cycle');
             // Cycle generation used to leave the try/catch here, then immediately assume every returned
             // field existed. A partial/malformed bridge result could therefore throw on blocks[0].id or
@@ -22414,14 +22433,14 @@ function App() {
         }
         setCycleConvertId(p.id);
     };
-    const confirmCycleConversion = async ({ templateId, name, adaptBetweenBlocks, blocks }) => {
+    const confirmCycleConversion = async ({ templateId, name, adaptBetweenBlocks, adaptTrainingSplit, blocks }) => {
         const p = saved.find(x => x.id === cycleConvertId);
         if (!p)
             return { ok: false, msg: "That program is no longer in your library." };
         try {
             const built = (p.engineSource === "pursuit-next" && p.nextEngine?.program)
                 ? await runGeneration('convert_cycle', {
-                    program: p, templateId, name, blocks, adaptBetweenBlocks, legacyExercises: EXERCISES, makeId: uid
+                    program: p, templateId, name, blocks, adaptBetweenBlocks, adaptTrainingSplit, legacyExercises: EXERCISES, makeId: uid
                 }, 'Building your training cycle')
                 : mergeStandaloneIntoGeneratedCycle(p, await runGeneration('cycle', {
                     templateId,
@@ -22431,6 +22450,7 @@ function App() {
                     banned,
                     legacyExercises: EXERCISES,
                     adaptBetweenBlocks,
+                    adaptTrainingSplit,
                     makeId: uid
                 }, 'Building your training cycle'), { appendAll: templateId === 'custom' });
             requireCompleteCycleShell(built.cycle, built.allBlocks);

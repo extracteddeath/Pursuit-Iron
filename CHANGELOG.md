@@ -1,3 +1,10 @@
+## M276 — Program/Cycles reading order and component density (October 22, 2026)
+
+- Moved the Program's “Where do my edits apply?” explanation from the first scroll row into the existing Program Details sheet, maintaining the full saved-plan, future-session and cycle scope wording, and making its disclosure a 48px accessible target.
+- The existing cycle link in Program remains at the top and continues using the same navigation callback and scroll-collapse ref. Its static colors, spacing, label hierarchy and icon alignment now have shared semantic CSS owners.
+- Consolidated the Cycle list/detail spacing to the shared scale, reduced nonessential padding around overview, block rows and supporting information, and replaced the redundant expanded block-length summary with a concise “Training blocks” count.
+- Kept native cycle expansion, canonical progress/volume, preview/callback behavior, readable 64px+ block rows, theme palette and reduced-motion treatment unchanged. Added regression checks for 320px layouts, Program Details help and responsive Cycle density. Production inline presentation decreases from 3,127 to 3,116 instances without adding CSS priority rules.
+
 ## M275 — flush sticky bars, Plan program action, active Cycle disclosure (October 22, 2026)
 
 - Plan's one existing Full program action now sits alongside the selected program name, above the week selector and work schedule; preview blocks retain their existing route and selected week.

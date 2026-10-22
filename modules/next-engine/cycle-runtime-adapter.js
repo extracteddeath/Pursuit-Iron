@@ -450,7 +450,7 @@ export function generateNextCycleForShell(options) {
             checkRequestedPractice(next, candidateSpec, request);
             return { next, request, previous };
         });
-        const { next, request: targetRequest, spec: selectedSpec, decision } = chosen;
+        let { next, request: targetRequest, spec: selectedSpec, decision } = chosen;
         selectedSpecs.push(selectedSpec);
         splitDecisions.push(decision);
         if (next.audit.result !== 'pass')

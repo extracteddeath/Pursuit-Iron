@@ -261,8 +261,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-radius:var(--pi-layout-radius)!important;
 }
 @media(max-width:420px){
+  /* The scroll pane and UiRootHeader use the same page inset. At 320px this
+     resolves to 12px; at 393px it resolves to 16px, without a 14px exception. */
   #root[data-pi-motion="expressive"] .wpb :is(.wpb-home,.wpb-settings,.wpb-progress)>.wpb-page-scroll{
-    padding-left:14px!important;padding-right:14px!important;
+    padding-inline:var(--pi-page-inset)!important;
   }
   #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-label{font-size:10px!important}
 }

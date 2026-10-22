@@ -1592,11 +1592,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   padding-top:0!important;
 }
 #root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero{
-  margin-top:12px!important;
-  margin-bottom:11px!important;
+  /* R48 owns the actual insets and vertical rhythm; this keeps the hero shape. */
   border-radius:37px 18px 37px 37px!important;
   border:1px solid var(--pi-r4-line)!important;
-  padding:17px 16px 15px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero .wpb-primary-action{
   min-height:52px!important;
@@ -5050,11 +5048,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 /* The 690px Android screenshots show a very tall next-session doorway.
    Reduce dead height in the static summary, not the real exercise rows or
    Start button. Preserve the >=35px featured corner and program-orbit dial. */
-#root[data-pi-motion="expressive"] .wpb .wpb-home.wpb-home.wpb-home>.wpb-home-header{
-  padding:11px var(--pi-page-inset,16px) 13px!important;
-}
 #root[data-pi-motion="expressive"] .wpb .wpb-home.wpb-home.wpb-home .wpb-home-hero{
-  padding:14px 15px 13px!important;
+  padding:var(--pi-space-3) var(--pi-space-3) var(--pi-space-2)!important;
   margin-top:0!important;
   margin-bottom:var(--pi-space-3)!important;
   border-color:var(--pi-r48-divider)!important;
@@ -6227,7 +6222,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   overflow-wrap:anywhere;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-home-hero>.wpb-primary-action{
-  margin-top:var(--pi-space-3)!important;
+  margin-top:var(--pi-space-2)!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-overview{
   margin-block:var(--pi-space-6) var(--pi-space-3);
@@ -9008,15 +9003,17 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 
 /* B909 — Prototype-aligned Home coaching: short insight card outside workout hero. */
 #root .wpb .wpb-plan-change-banner{
-  min-height:64px;margin:0 0 var(--pi-space-3);padding:var(--pi-space-3) var(--pi-space-4);
+  /* Supporting decision history stays distinct, with one compact 48px+ target. */
+  min-height:56px;margin:0 0 var(--pi-space-2);padding:var(--pi-space-2) var(--pi-space-3);
   border-radius:var(--pi-shape-card);background:var(--wpb-theme-accent-dim);
 }
-#root .wpb .wpb-plan-change-banner .wpb-session-plan-icon{width:36px;height:36px;border-radius:12px}
+#root .wpb .wpb-plan-change-banner .wpb-session-plan-icon{width:32px;height:32px;border-radius:var(--pi-shape-action)}
 #root .wpb .wpb-plan-change-banner strong{font-size:14px}
 #root .wpb .wpb-plan-change-banner>span:nth-child(2)>span{margin-top:2px;line-height:1.35}
 /* Home outline owns its inset; legacy M3 preview rules no longer stack padding. */
 #root .wpb .wpb-home-session-preview{
-  position:relative;margin:var(--pi-space-2) 0 0;padding:0 var(--pi-space-3) var(--pi-space-2);
+  /* One inset owner: no secondary gap or deep bottom padding inside the hero. */
+  position:relative;margin:0;padding:0 var(--pi-space-3);
   min-width:0;border-radius:var(--pi-shape-card);background:var(--pi-color-control);
 }
 #root .wpb .wpb-home-preview-action{
@@ -9035,10 +9032,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb-home-outline-toggle>span{font-size:12px;color:var(--wpb-theme-muted)}
 .wpb-home-outline-toggle>svg{color:var(--wpb-theme-muted);flex-shrink:0;transition:transform 180ms ease}
 .wpb-home-outline-toggle[aria-expanded="true"]>svg{transform:rotate(180deg)}
-#root .wpb .wpb-home-outline-list{list-style:none;margin:0;padding:0 0 6px}
-#root .wpb .wpb-home-outline-list>li:first-child{padding-top:3px}
-.wpb-home-outline-list li{display:flex;justify-content:space-between;align-items:baseline;gap:10px;
-  padding:8px 0;color:var(--wpb-theme-text);font-size:13px;line-height:1.4}
+#root .wpb .wpb-home-outline-list{list-style:none;margin:0;padding:0 0 var(--pi-space-1)}
+#root .wpb .wpb-home-outline-list>li:first-child{padding-top:var(--pi-space-1)}
+.wpb-home-outline-list li{display:flex;justify-content:space-between;align-items:baseline;gap:var(--pi-space-2);
+  padding:var(--pi-space-2) 0;color:var(--wpb-theme-text);font-size:var(--pi-type-support);line-height:1.35}
 .wpb-home-outline-list li+li{border-top:1px solid var(--wpb-theme-border)}
 .wpb-home-outline-list li>span{min-width:0;overflow-wrap:anywhere}
 .wpb-home-outline-list li>strong{color:var(--wpb-theme-muted);font-size:12px;white-space:nowrap;flex-shrink:0}

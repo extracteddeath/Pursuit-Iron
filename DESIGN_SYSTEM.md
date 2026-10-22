@@ -69,3 +69,7 @@ The canonical `TabBar` owns full and compact visual labels; its existing `aria-l
 ### Focus numeric touch-selection timing
 
 Focus weight and reps inputs share the canonical select-on-focus handler. After a real tap, allow one extra animation frame for the native caret to settle, then reselect only when the field remains active, editable and unchanged; do not clobber the first keystroke. Keep B825's real-touch selection contract and preserve the protected Workout/Focus layout.
+
+### Cohesion 24 — Home density and shared spacing ownership
+
+The supplied 393px Android screenshot showed over-wide vertical gaps inside the Home next-workout hero, a tall plan-change tile, and redundant space around the expanded seven-exercise outline. The canonical Home CSS owners now use design-system spacing tokens for the hero, plan-change banner, session-preview inset and exercise rows. The session outline stays **expanded by default**; Start/Resume, Preview/Time available, Switch program and change review/undo retain their route and behavior. Each touch action keeps at least its existing 48px contract; tighter static exercise rows are information, not buttons. This pass removes four superseded priority declarations instead of stacking a second late override. Keep the 88px week/day orbit and existing Home-header scroll motion; Workout and Focus remain unchanged. Home source contracts verify the sole preview inset, compact supporting tile and tokenized row rhythm. Use the existing release verifier and R53/R74/R76 browser matrix for actual reflow before merging.

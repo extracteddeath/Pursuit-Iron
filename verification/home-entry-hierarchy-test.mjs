@@ -26,8 +26,16 @@ assert.ok(!home.includes('style: { textAlign: "left", padding: "13px 13px"'),
 assert.ok(css.includes('Cohesion 10 — Home discovery tiles share one presentation owner'));
 assert.match(css, /#root \.wpb \.wpb-home-session-outline\{\s*margin:0;border:0;padding:0;/,
   'Session outline must not add a second large blank strip above its exercise list');
-assert.ok(css.includes('#root .wpb .wpb-home-outline-list>li:first-child{padding-top:3px}'),
+assert.ok(css.includes('#root .wpb .wpb-home-outline-list>li:first-child{padding-top:var(--pi-space-1)}'),
   'Expanded list starts close beneath its toggle');
+assert.match(css, /#root \.wpb \.wpb-home-session-preview\{[^}]*margin:0;padding:0 var\(--pi-space-3\)/,
+  'Home preview has a single owner with no redundant top/bottom gap');
+assert.match(css, /\.wpb-home-outline-list li\{[^}]*padding:var\(--pi-space-2\) 0;/,
+  'Exercise rows use canonical eight-pixel spacing rather than hardcoded paddings');
+assert.match(css, /#root \.wpb \.wpb-plan-change-banner\{[^}]*min-height:56px;margin:0 0 var\(--pi-space-2\)/,
+  'Plan-change history remains compact and subordinate to the workout');
+assert.match(css, /\.wpb-home-hero\{[^}]*padding:var\(--pi-space-3\) var\(--pi-space-3\) var\(--pi-space-2\)!important;/,
+  'Workout hero vertical rhythm has one tokenized CSS owner');
 
 for(const selector of ['.wpb-action-tile-icon','.wpb-action-tile-copy','.wpb-action-tile-label',
     '.wpb-action-tile-subtitle'])assert.ok(css.includes(selector), selector + ' missing');

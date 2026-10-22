@@ -22455,9 +22455,9 @@ function App() {
         }
         catch (err) {
             if (err?.name === 'AbortError') return { ok: false, cancelled: true, msg: 'Build cancelled. Your current program is unchanged.' };
-            const code = err instanceof NextShellAdapterError ? err.code : "NEXT_CYCLE_CONVERSION_ERROR";
+            const code = err?.code || "NEXT_CYCLE_CONVERSION_ERROR";
             recordReleaseDiag("next_cycle_convert_failed", { action: "cycle_convert", engine: ENGINE_VERSION, code, reason: String(err?.message || err) });
-            return { ok: false, msg: err instanceof NextShellAdapterError ? String(err.message || "Could not create the training cycle.") : "The training cycle could not be assembled safely. Your current program was left unchanged." };
+            return { ok: false, msg: (err instanceof NextShellAdapterError || err?.code === "CYCLE_STRENGTH_VOLUME_CLIFF") ? String(err.message || "Could not create the training cycle.") : "The training cycle could not be assembled safely. Your current program was left unchanged." };
         }
     };
     /* Opening a saved program resumes its DRAFT if one exists. Without this the draft would be written

@@ -335,9 +335,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   font-weight:700!important;
 }
 
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session{
-  margin-bottom:7px!important;
-}
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session-detail{
   transform-origin:top center;
 }
@@ -768,10 +765,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-grouping>button:focus-visible{
   outline:2px solid currentColor!important;
   outline-offset:-2px!important;
-}
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-group-header{
-  padding-top:11px!important;
-  padding-bottom:8px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-group-header>div{
   min-width:0;
@@ -3938,10 +3931,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   box-sizing:border-box;
   width:max-content;
   max-width:100%;
-  margin:10px 0 16px!important;
+  margin:var(--pi-space-2) 0 var(--pi-space-4)!important;
   min-height:48px!important;
   padding:3px!important;
-  gap:2px!important;
+  gap:var(--pi-space-1)!important;
   border:1px solid var(--pi-r11-edge)!important;
   border-radius:15px!important;
   background-color:light-dark(var(--pi-m3e-surface-container-low),var(--pi-r41-surface-1))!important;
@@ -3960,9 +3953,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   display:flex;
   align-items:center;
   min-height:48px!important;
-  gap:12px!important;
+  gap:var(--pi-space-3)!important;
   margin:0!important;
-  padding:11px 2px 8px!important;
+  padding:var(--pi-space-3) var(--pi-space-1) var(--pi-space-2)!important;
   background:var(--pi-color-canvas);
   border-bottom:1px solid var(--pi-r11-edge)!important;
 }
@@ -3975,7 +3968,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 /* Expanded sessions are ONE surface: rows are differentiated by subtle
    separators, not another much lighter floating rectangle inside the card. */
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session{
-  margin:0 0 12px!important;
+  margin:0 0 var(--pi-space-3)!important;
   border:1px solid var(--pi-r11-edge)!important;
   border-radius:var(--pi-shape-card)!important;
   background-color:light-dark(var(--pi-m3e-surface-container-low),var(--pi-r41-surface-1))!important;
@@ -3988,10 +3981,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-top:1px solid var(--pi-r11-edge)!important;
   background-image:none!important;
   box-shadow:none!important;
-  border-radius:0 0 21px 21px!important;
+  border-radius:0!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-actions{
-  gap:8px!important;
+  gap:var(--pi-space-2)!important;
   align-items:center;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-actions>button{
@@ -4011,7 +4004,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session-detail hr{
   border:none!important;
   border-top:1px solid var(--pi-r11-edge)!important;
-  margin-block:12px!important;
+  margin-block:var(--pi-space-3)!important;
 }
 /* Rein in the page-level card radius/spacing without touching the logger.
    Shared low cards are 20–22px; selection controls are smaller. */

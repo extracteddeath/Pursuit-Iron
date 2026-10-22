@@ -1,3 +1,10 @@
+## M277 — Progress/History spacing ownership (October 22, 2026)
+
+- Unified the history section/group spacing with the shared 4/8/12/16px token scale; the cycle grouping control and section headings now align to the same system.
+- Removed superseded 7px session margins and duplicate header padding priority declarations, and let expanded session content inherit its card's outer corner clipping instead of drawing a nested corner.
+- Preserved saved history, date grouping, filtering, chart series, keyboard focus and 48px action targets. Lowered the stylesheet priority-declaration budget from 2,483 to 2,480 and added ownership regression checks.
+- Same-build service worker and release hashes are content-addressed; exact-head browser CI and device screenshots remain required for release confidence.
+
 ## M276 — Program/Cycles reading order and component density (October 22, 2026)
 
 - Moved the Program's “Where do my edits apply?” explanation from the first scroll row into the existing Program Details sheet, maintaining the full saved-plan, future-session and cycle scope wording, and making its disclosure a 48px accessible target.

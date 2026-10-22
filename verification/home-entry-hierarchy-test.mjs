@@ -39,4 +39,16 @@ assert.ok(css.includes('#root .wpb .wpb-game-plan-highlight-copy:not([open])>p{d
 
 for(const selector of ['.wpb-action-tile-icon','.wpb-action-tile-copy','.wpb-action-tile-label',
     '.wpb-action-tile-subtitle'])assert.ok(css.includes(selector), selector + ' missing');
+const week = home.indexOf('history.length > 0 && _jsx(WeeklyRecapCard');
+const hero = home.indexOf('className: "wpb-hero wpb-home-hero"');
+const coaching = home.indexOf('!sessionActive && upNext && _jsx(SessionGamePlan');
+const programs = home.indexOf('className: "wpb-home-programs"');
+assert.ok(hero > 0 && week > hero && coaching > week && programs > coaching,
+  'Home hierarchy is session → This week → Game Plan → programs');
+assert.equal((home.match(/_jsx\(WeeklyRecapCard/g) || []).length, 1,
+  'There is one weekly progress card regardless of insight rank');
+assert.ok(!home.includes('trainingPulse') && !home.includes('"Last 7 days"') && !home.includes('["Streak"'),
+  'Remove standalone last-seven-days/streak duplication');
+assert.ok(!app.slice(app.indexOf('function homeCardPlan('), app.indexOf('function DeloadAdviceCard(')).includes('["recap",'),
+  'Weekly card does not consume a discretionary insight slot');
 console.log('PASS Home ownership: one empty-state primary CTA, stable discovery route keys, shared tile CSS, Game Plan separate, runtime engine unchanged.');

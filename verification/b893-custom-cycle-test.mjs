@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { EXERCISES } from '../modules/App.js';
 import { CUSTOM_CYCLE_PHASES, customCycleSpecs, generateNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
+import { createStrengthClaims, normalizeRequest } from '../modules/next-engine/prescription.js';
+import { shellConfigToNextRequest } from '../modules/next-engine/app-shell-adapter.js';
 const app=fs.readFileSync(new URL('../modules/App.js',import.meta.url),'utf8');
 const css=fs.readFileSync(new URL('../app.css',import.meta.url),'utf8');
 const phases=new Set(CUSTOM_CYCLE_PHASES.map(x=>x.phase));
@@ -23,7 +25,7 @@ assert.throws(()=>customCycleSpecs([{phase:'peak',weeks:1.5},{phase:'peak',weeks
 assert.throws(()=>customCycleSpecs([{phase:'unsupported',weeks:4},{phase:'peak',weeks:2}]),/unsupported/);
 assert.throws(()=>customCycleSpecs(Array.from({length:8},()=>({phase:'peak',weeks:24}))),/104/);
 assert.match(app,/function CustomCycleComposer\(\{ blocks, onChange/);
-assert.match(app,/customCycleBlocks\.map\(b => \(\{ phase: b\.phase, weeks: Number\(b\.weeks\) \}\)\)/);
+assert.match(app,/final\.cycleBlocks = customCycleBlocks\.map\(b => \(\{ \.\.\.b, weeks: Number\(b\.weeks\)/);
 assert.match(app,/templateId: tmplId, blocks: tmplId === "custom" \? config\.cycleBlocks : undefined/);
 assert.match(app,/cycleTemplate !== "custom" \|\| customCycleValid/);
 assert.match(app,/cycleTemplate === "custom"[\s\S]*?\["cycletype", "goal", \.\.\.CYCLE_STEP_KEYS\.slice\(1\)\]/, 'A custom cycle must ask for its goal rather than defaulting every cycle to hypertrophy');
@@ -45,3 +47,32 @@ for(const adaptBetweenBlocks of [false,true]){
  assert.ok(built.blocks.every((b,i)=>b.cycleId===built.cycle.id&&b.nextEngine.program.audit.result==='pass'&&b.weeks===blocks[i].weeks));
 }
 console.log('PASS B893 generated cycles: exact unusual phase order, repeats, 1/7/3/2-week blocks, ownership, audit and input preservation in static/adaptive modes.');
+
+const structured=customCycleSpecs([
+ {phase:'hypertrophy_accumulation',weeks:6},
+ {phase:'strength_accumulation',weeks:5,split:'upper_lower',days:5,priorityLift:'bench_press',frequency:2}
+]);
+assert.deepEqual(structured[1],{phase:'strength_accumulation',weeks:5,label:'Strength',split:'upper_lower',days:5,priorityLift:'bench_press',frequency:2});
+assert.throws(()=>customCycleSpecs([{phase:'peak',weeks:2},{phase:'strength_accumulation',weeks:5,split:'unreal_split'}]),/split/);
+assert.throws(()=>customCycleSpecs([{phase:'peak',weeks:2},{phase:'strength_accumulation',weeks:5,days:2,priorityLift:'bench_press',frequency:3}]),/exposures/);
+const req=shellConfigToNextRequest(config,[],EXERCISES,893);
+req.goal={...req.goal,liftPriorities:{bench_press:'primary'},liftFrequency:{bench_press:3}};
+const normalized=normalizeRequest(req);
+assert.equal(normalized.goal.liftFrequency.bench_press,3);
+assert.equal(createStrengthClaims(normalized,'strength_accumulation').filter(c=>c.lift==='bench_press'&&c.required).length,3);
+assert.throws(()=>normalizeRequest({...req,goal:{...req.goal,liftFrequency:{bench_press:6}}}),/frequency/);
+assert.match(app,/Block \$\{i\+1\+\(existingWeeks \? 1:0\)\} weekly split/);
+assert.match(app,/Weekly exposures/);
+let structuredId=0;
+const structuredResult=generateNextCycleForShell({
+ templateId:'custom',blocks:structured,config,legacyExercises:EXERCISES,seed:893,
+ makeId:()=>`b893-structure-${++structuredId}`,adaptBetweenBlocks:false
+});
+assert.equal(structuredResult.blocks[1].config.split,'upper_lower','strength block changes weekly split');
+assert.equal(structuredResult.blocks[1].config.days,5,'strength block owns weekly schedule');
+assert.equal(structuredResult.cycle.nextEngineCycle.plannedBlocks[1].frequency,2);
+const practiceDays=structuredResult.blocks[1].nextEngine.program.sessions.filter(session=>session.exercises.some(ex=>
+ ['primary_strength','secondary_strength'].includes(ex.role)
+ && (ex.exerciseId==='bb-bench' || /bench/i.test(ex.name)))).length;
+assert.ok(practiceDays>=2,'bench receives repeated weekly strength exposures');
+console.log('PASS B893 structure: explicit split/day change, 3-exposure request policy and two-day bench contract.');

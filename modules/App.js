@@ -19832,7 +19832,7 @@ function CycleBlockRows({ cycle, progress, saved, cycleInfo, onOpenBlock }) {
                 _jsxs("span", { className: "wpb-cycle-block-heading", children: [
                     _jsx("strong", { className: "wpb-cycle-block-title", children: b.label }),
                     _jsx("span", { className: "wpb-cycle-block-status", children: current ? "Current" : past ? "Completed" : "Preview" })] }),
-                _jsx("span", { className: "wpb-cycle-block-meta", children: `${b.weeks}w${p?.config?.deload ? ' + deload' : ''} · Weeks ${b.range[0]}–${b.range[1]}` }),
+                _jsx("span", { className: "wpb-cycle-block-meta", children: `${b.weeks}w${p?.config?.deload ? ' + deload' : ''} · Weeks ${b.range[0]}–${b.range[1]}${p?.config?.split ? ' · ' + (SPLITS[p.config.split]?.name || String(p.config.split).replaceAll('_',' ')) : ''}${p?.nextEngine?.cycleTemplate?.splitDecision?.mode === 'goal_optimized' ? ' · Goal-optimized' : ''}` }),
                 current && cycleInfo?.cycle?.id === cycle.id && _jsx("span", { className: "wpb-cycle-block-current", children: `${cycleInfo.isDeload ? 'Deload' : 'Week ' + cycleInfo.weekIndex}${cycleInfo.dayLabel ? ' · ' + cycleInfo.dayLabel : ''}` })] }),
             _jsx(ChevronRight, { size: 17, className: "wpb-cycle-chevron" })] }, b.id);
     }) });
@@ -19849,6 +19849,11 @@ function CycleBlockPreview({ program, initialWeek = 1, initialDayId = null, onCl
     const [week, setWeek] = useState(Math.max(1, Math.min(total, initialWeek)));
     return _jsx(SessionChoiceDialog, { title: program.blockLabel || program.name, onClose, className: "wpb-cycle-block-preview", children: _jsxs("div", { children: [
         _jsx("p", { className: "wpb-cycle-preview-note", children: "Block preview. Browsing keeps your current training block unchanged. Planned prescriptions may adapt when this block starts." }),
+        program.nextEngine?.cycleTemplate?.splitDecision?.mode === 'goal_optimized' && _jsxs("details", { className: "wpb-cycle-preview-day", children: [
+            _jsx("summary", { className: "wpb-cycle-preview-summary", children: `Why ${SPLITS[program.config?.split]?.name || String(program.config?.split || 'this split').replaceAll('_',' ')}?` }),
+            _jsx("p", { className: "wpb-cycle-preview-note", children: program.nextEngine.cycleTemplate.splitDecision.reason }),
+            _jsx("p", { className: "wpb-cycle-preview-note", children: `Modeled muscle-target coverage: ${program.nextEngine.cycleTemplate.splitDecision.muscleTargetCoverage}% · ${program.nextEngine.cycleTemplate.splitDecision.weeklySets} weekly working sets. These are estimates, not a guarantee of the best possible outcome.` })
+        ] }),
         _jsxs("label", { className: "wpb-cycle-preview-week", children: ["Week", _jsx("select", { "aria-label": "Preview week", value: week, onChange: e => setWeek(Number(e.target.value)), className: "wpb-cycle-preview-select", children: Array.from({ length: total }, (_, i) => _jsx("option", { value: i + 1, children: i >= weeksOf(program) ? "Deload" : `Week ${i + 1}` }, i)) })] }),
         program.days.map((day, index) => _jsxs("details", { open: initialDayId ? day.id === initialDayId : index === 0, className: "wpb-cycle-preview-day", children: [
             _jsx("summary", { className: "wpb-cycle-preview-summary", children: day.label }),

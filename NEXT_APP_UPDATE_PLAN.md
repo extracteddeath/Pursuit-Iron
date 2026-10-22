@@ -18,6 +18,12 @@ App 4.0.0 build 905 / Engine 0.65.9 / M234. `RELEASE_MANIFEST.json` is authorita
 
 
 
+## M278 — Profile share-card cohesion
+
+- Share-card heading, metrics and editable favorites use the shared spatial tokens with fewer bespoke gaps; six previously superseded strength/statistics priority declarations are removed without changing the current single-column score comparison.
+- User-chosen card content, saved preferences and share actions remain untouched. The production CSS priority ceiling drops to 2,474. Exact-head browser accessibility, 320px typography and screenshots remain mandatory before merge.
+- Next review Settings category hierarchy and input/control consistency, then a cross-tab device-only regression pass for sticky chrome, typography and scrolling.
+
 ## M277 — Progress/History cohesion
 
 - History grouping and section headers now use the shared spacing scale; expanded sessions inherit outer-card clipping rather than creating nested corners. Two redundant high-priority legacy rules were removed. History data, date grouping, chart owners, filters, actions and Workout/Focus remain unchanged.

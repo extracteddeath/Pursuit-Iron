@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { EXERCISES } from '../modules/App.js';
-import { CUSTOM_CYCLE_PHASES, customCycleSpecs, generateNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
+import { CUSTOM_CYCLE_PHASES, customCycleSpecs, generateNextCycleForShell, cycleSplitCandidates } from '../modules/next-engine/cycle-runtime-adapter.js';
 import { createStrengthClaims, normalizeRequest } from '../modules/next-engine/prescription.js';
 import { shellConfigToNextRequest } from '../modules/next-engine/app-shell-adapter.js';
 const app=fs.readFileSync(new URL('../modules/App.js',import.meta.url),'utf8');
@@ -76,3 +76,33 @@ const practiceDays=structuredResult.blocks[1].nextEngine.program.sessions.filter
  && (ex.exerciseId==='bb-bench' || /bench/i.test(ex.name)))).length;
 assert.ok(practiceDays>=2,'bench receives repeated weekly strength exposures');
 console.log('PASS B893 structure: explicit split/day change, 3-exposure request policy and two-day bench contract.');
+
+const automaticCandidates=cycleSplitCandidates({phase:'strength_accumulation',weeks:4},{split:'ulppl',days:5},true);
+assert.ok(automaticCandidates.length>=2,'automatic split mode considers multiple compatible structures');
+assert.ok(automaticCandidates.every(c=>c.split&&c.phase==='strength_accumulation'),'candidate enumeration preserves the phase');
+assert.deepEqual(cycleSplitCandidates({phase:'strength_accumulation',split:'ulppl',weeks:4},{split:'full_body',days:5},true),
+ [{phase:'strength_accumulation',split:'ulppl',weeks:4}],'manual block split overrides automation');
+assert.deepEqual(cycleSplitCandidates({phase:'strength_accumulation',weeks:4},{split:'ulppl',days:5},false),
+ [{phase:'strength_accumulation',weeks:4}],'disabling split adaptation keeps the original plan');
+assert.match(app,/function CycleAdaptSplitChoice\(/);
+assert.match(app,/cycleAdaptSplit: !!config\.cycleAdaptSplit/);
+assert.match(app,/adaptTrainingSplit: !!config\.cycleAdaptSplit/);
+let optId=0;
+const optimized=generateNextCycleForShell({
+ templateId:'custom',config:{...config,days:5,split:'ulppl'},legacyExercises:EXERCISES,seed:893,
+ blocks:[{phase:'mixed_accumulation',weeks:3},{phase:'strength_accumulation',weeks:4}],
+ adaptTrainingSplit:true,adaptBetweenBlocks:true,makeId:()=>`b893-opt-${++optId}`
+});
+assert.equal(optimized.cycle.adaptTrainingSplit,true);
+assert.equal(optimized.cycle.nextEngineCycle.adaptTrainingSplit,true);
+for(const [index,block] of optimized.blocks.entries()){
+ const decision=optimized.cycle.blockMeta[index].splitDecision;
+ assert.equal(decision.mode,'goal_optimized');
+ assert.ok(decision.candidateCount>=2&&decision.passingCandidates>=1);
+ assert.equal(block.config.split,decision.selectedSplit,'selected split propagates into the executable block');
+ assert.equal(block.nextEngine.program.split.family,decision.selectedSplit,'generator and app display the same structure');
+ assert.equal(block.nextEngine.program.audit.result,'pass','the winning structure passes every hard safety audit');
+ assert.equal(block.nextEngine.cycleTemplate.splitDecision.selectedSplit,decision.selectedSplit);
+ assert.equal(block.config.days,5,'adaptation never changes requested weekly training days');
+}
+console.log('PASS B893 automatic topology: separate split/exercise switches, audited phase-aware structure selection and exact preview metadata.');

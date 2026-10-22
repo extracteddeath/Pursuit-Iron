@@ -13,6 +13,12 @@ const program={id:'home-entry',name:'My Program',custom:true,weeks:4,
 const baseline={v:13,savedAt:1,saved:[],cycles:[],history:[],perf:{},drafts:{},tombs:{},
  seenIntro:999,seenWhatsNew:999,unit:'lb',unitChosen:true,experience:'intermediate',
  bodyweight:185,installDismissedAt:Date.now(),lastBackup:Date.now()};
+// One real recent session makes the weekly card observable in the rendered hierarchy.
+const recentSession={id:'home-entry-recent',programId:program.id,programName:program.name,
+ dayId:'upper',dayLabel:'Upper',weekIndex:1,date:Date.now()-60*60*1000,
+ unit:'lb',duration:1800,totalSets:2,setsDone:2,tonnage:1470,
+ perf:{'bb-bench':{weight:185,reps:6,sets:[{w:185,r:6,done:true,rir:2,rirReported:true}]},
+ 'inc-curl':{weight:30,reps:12,sets:[{w:30,r:12,done:true,rir:2,rirReported:true}]}}};
 const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.json':'application/json',
  '.webmanifest':'application/manifest+json','.png':'image/png','.svg':'image/svg+xml'};
 const server=http.createServer((req,res)=>{
@@ -40,7 +46,8 @@ try{
   await page.setViewport({width,height:width<600?840:1024,isMobile:width<600,hasTouch:width<600});
   await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
   await page.evaluateOnNewDocument(state=>localStorage.setItem('wpb:v1',JSON.stringify(state)),
-    {...baseline,theme,saved:populated?[program]:[],pinnedId:populated?program.id:null});
+    {...baseline,theme,saved:populated?[program]:[],pinnedId:populated?program.id:null,
+     history:populated?[recentSession]:[]});
   await page.goto('http://127.0.0.1:'+server.address().port+'/',{waitUntil:'networkidle0'});
   await page.waitForSelector('.wpb-home .wpb-action-tile');
   if(!populated){
@@ -73,6 +80,23 @@ try{
    await page.waitForSelector('.wpb-wizard-step');
   }else{
    assert.ok(await page.$('.wpb-home-hero'), 'Existing program retains Next Workout hero');
+   const priority=await page.evaluate(()=>{
+     const home=document.querySelector('.wpb-home'),hero=home.querySelector('.wpb-home-hero');
+     const game=home.querySelector('.wpb-home-game-plan');
+     const weekly=[...(hero?.parentElement?.children||[])].find(el=>
+       el!==hero && el.textContent.trim().startsWith('This week') &&
+       el.textContent.includes('Workouts') && el.textContent.includes('Sets'));
+     return {hasWeekly:!!weekly,hasGame:!!game,
+       heroTop:hero?.getBoundingClientRect().top,
+       weeklyTop:weekly?.getBoundingClientRect().top,
+       gameTop:game?.getBoundingClientRect().top,
+       weeklyCount:weekly?.textContent.includes('Workouts'),
+       redundantMetrics:home.textContent.includes('Last 7 days')};
+   });
+   assert.ok(priority.hasWeekly&&priority.hasGame&&priority.weeklyCount&&
+     priority.heroTop<priority.weeklyTop&&priority.weeklyTop<priority.gameTop,
+     'Rendered Home priority must be workout, This week, then Game Plan: '+JSON.stringify(priority));
+   assert.equal(priority.redundantMetrics,false,'Home does not repeat standalone 7-day pulse');
    assert.ok(await page.$('.wpb-home-session-preview'), 'Current session outline remains visible');
    const outline=await page.$('.wpb-home-outline-toggle');
    assert.ok(outline,'Populated Home retains the expand/collapse session outline');

@@ -132,9 +132,12 @@ export function refreshPendingSetTargets(sets, fresh) {
         if (!s || s.warm || s.sub || s.added) return s;
         const target = work[ordinal++];
         if (!target || s.done || s.liveAdjustment || s.valueOwner !== 'prescription' || s.auto !== true
+            || s.target?.prefillReps == null
             || String(s.weight) !== String(s.target?.w)
-            || (s.target?.prefillReps != null && String(s.reps) !== String(s.target.prefillReps))) return s;
-        // Pre-M222 automatic rows only stored the range; auto+ownership are still required.
+            || String(s.reps) !== String(s.target.prefillReps)) return s;
+        // A legacy snapshot with no original rep prefill cannot establish that
+        // its current reps were not typed by the user. Fail closed instead of
+        // regenerating unprovable values during resume.
         if (s.weight === target.weight && s.reps === target.reps
             && s.target?.prefillReps === target.target?.prefillReps) return s;
         changed = true;

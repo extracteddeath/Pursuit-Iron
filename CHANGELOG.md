@@ -1,3 +1,10 @@
+## M286 — full-width reading frame on short wide landscape (October 22, 2026)
+
+- The 900×480 adaptive-shell browser screenshot was still letterboxed to roughly 460px despite a wide viewport. Extend the existing R88 medium-width primary shell breakpoint to short windows at or above 840px wide and below 560px tall, resulting in a bounded 760px workspace with bottom navigation.
+- Continue using the same five root tabs and shared root header; taller wide windows retain their vertical navigation rail. Do not stretch Workout/Focus, change adaptive engine state, move buttons, or introduce per-route width hacks.
+- Update the R65 real-browser geometry contract for short landscape and its actual 900×480 screenshots; add a static single-owner guard. No new high-priority style declarations.
+- Finalize same-build offline cache/manifest and require full exact-head CI plus screenshot inspection before merging.
+
 ## M285 — mixed-program and short-month history spacing (October 22, 2026)
 
 - Extended the existing populated Progress test to 16 saved sessions across two programs and several months, checking both By program and By month grouping at 900px and 1280px in light/dark themes.

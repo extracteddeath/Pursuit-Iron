@@ -330,3 +330,8 @@ assert.ok(!css.includes('padding-left:14px!important;padding-right:14px!importan
 assert.ok(css.includes('.wpb .wpb-home>.wpb-page-scroll{')&&
   css.includes('padding-inline:var(--pi-page-inset)!important;'),
   'Home keeps its canonical shared-inset owner');
+
+// M284: wide populated Sessions must not reserve the full calendar height
+// before the first history group, leaving a blank right reading lane.
+assert.ok(css.includes('grid-column:1;grid-row:3 / span 2;min-width:0;margin-bottom:0!important;'),
+  'Wide history calendar spans the grouping and first-session tracks');

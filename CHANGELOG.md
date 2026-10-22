@@ -3,7 +3,7 @@
 - Unified the history section/group spacing with the shared 4/8/12/16px token scale; the cycle grouping control and section headings now align to the same system.
 - Removed superseded 7px session margins and duplicate header padding priority declarations, and let expanded session content inherit its card's outer corner clipping instead of drawing a nested corner.
 - Preserved saved history, date grouping, filtering, chart series, keyboard focus and 48px action targets. Lowered the stylesheet priority-declaration budget from 2,483 to 2,480 and added ownership regression checks.
-- Offline release manifest and cache revision must be regenerated using `node scripts/finalize-release.mjs` before merging; visual QA and exact-head CI must pass.
+- Same-build service worker and release hashes are content-addressed; exact-head browser CI and device screenshots remain required for release confidence.
 
 ## M276 — Program/Cycles reading order and component density (October 22, 2026)
 

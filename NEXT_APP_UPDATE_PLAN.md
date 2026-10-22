@@ -16,7 +16,13 @@ App 4.0.0 build 905 / Engine 0.65.9 / M234. `RELEASE_MANIFEST.json` is authorita
 | Persistence and offline updates | Existing store migration/merge/queue and service worker | Corrupt/future saves must not be overwritten. Preview before restore, preserve drafts, require successful persistence before completing a workout, verify offline cache integrity and cancellation recovery. |
 | Android / Play | `play/README.md`, final TWA package and Play Console | Resolve package identity and signing certificate association at the domain root, build the release bundle, validate actual permissions/SDKs and complete account-specific declarations/testing. Repository/browser checks cannot certify a signed Android package. |
 
-## This slice — M271 root app-bar hierarchy
+## This slice — M273 selected-week-first Plan
+
+- The selected week's existing session card appears directly under the week picker and week focus; remaining weeks stay in their original phase order. No extra session renderer, per-tab prescription projection or duplicated week data is introduced.
+- Plan's three overview tile presentation objects have been migrated to semantic CSS classes; inline debt decreases from 3,138 to 3,135 in the actual production source, with a lowered non-growing gate. The existing browser suite additionally verifies the selected week has a single card even after navigation.
+- Home/Workout/Focus/training engine behavior stays untouched. Next cohesion priority: Program overview and deep-cycle density, then Progress/History, Profile and Settings.
+
+## Previous slice — M271 root app-bar hierarchy
 
 - All five roots now share UiRootHeader, one actual title origin, semantic h1 destination labels and the same action row/insets. Root Plan has no Back button. The selected program is a subordinate h2 above its block/schedule context.
 - Profile's header/Edit stay outside the scrolling share-card content; metadata and personalization retain their existing data owners. Progress's section navigation is inset below its shared title row. Home keeps its continuous context collapse with a stationary Home title and actions.

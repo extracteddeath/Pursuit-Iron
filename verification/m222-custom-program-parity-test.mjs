@@ -43,10 +43,11 @@ assert.equal(refreshPendingSetTargets(refreshed,fly.rows),refreshed,'repair is i
 const unproven = structuredClone(saved[3]);
 delete unproven.target.prefillReps;
 unproven.reps = '17';
-const legacyRestored = refreshPendingSetTargets([unproven], [fly.rows[3]]);
+const unprovenInput = [unproven];
+const legacyRestored = refreshPendingSetTargets(unprovenInput, [fly.rows[3]]);
 assert.equal(legacyRestored[0],unproven,
     'missing prefill provenance must preserve the exact saved row, including user-typed reps');
-assert.equal(legacyRestored,legacyRestored, 'unprovable restoration should preserve array identity');
+assert.equal(legacyRestored,unprovenInput, 'unprovable restoration should preserve array identity');
 // The same row with a documented prefill is safe only while both saved values match.
 const originalAuto = { ...saved[3], target: { ...saved[3].target } };
 assert.equal(refreshPendingSetTargets([originalAuto],[fly.rows[3]])[0].reps,fly.rows[3].reps,

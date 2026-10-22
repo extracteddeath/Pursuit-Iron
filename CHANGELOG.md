@@ -1,3 +1,10 @@
+## M279 — Settings category rail and control ownership (October 22, 2026)
+
+- Removed 11 superseded Settings-specific CSS priority declarations: old category bar padding, duplicate narrow-screen insets, raised-input painting and an obsolete 44px select rule. The surviving top rail uses the shared page inset, canvas surface and 48px input target.
+- Settings categories and preference descriptions now share the readable support typography token; the category choice uses the shared action corner shape. No settings values, data transfer, theme settings, switches or navigation callbacks were changed.
+- Added exact-head ownership and live phone/tablet typography/layout assertions, including 320px geometry and 200% text reflow. CSS priority budget decreases from 2,474 to 2,463.
+- Same-build cache/hash finalization, full CI and Android screenshot review are required before merging or declaring launch certification.
+
 ## M278 — Profile share-card spatial cohesion (October 22, 2026)
 
 - Rebased the Profile share-card heading, label, metric and favorites spacing on the shared 4/8/12/16px scale, replacing disconnected 5/13/18px margins while preserving the metric data and share-card customization.

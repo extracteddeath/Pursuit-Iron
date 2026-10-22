@@ -50,3 +50,48 @@ assert.equal(readCycleSetupDraft('wizard','gym-a',storage),null);assert.equal(re
 data.set(CYCLE_SETUP_DRAFT_KEY,'{broken');assert.equal(readCycleSetupDraft('wizard','gym-a',storage),null);
 assert.equal(writeCycleSetupDraft('wizard','gym-a',draft,{getItem(){throw Error('blocked')},setItem(){throw Error('blocked')}}),false);
 console.log('PASS B894: generated and authored conversions preserve Block 1, exact future order/duration, ownership, first advancement and isolated recoverable setup drafts.');
+
+let structuralId=0;
+const structural=convertProgramToNextCycleForShell({
+ program:source,templateId:'custom',
+ blocks:[{phase:'strength_accumulation',weeks:5,split:'upper_lower',days:4,priorityLift:'bench_press',frequency:2}],
+ legacyExercises:EXERCISES,seed:894,makeId:()=>`b894-structure-${++structuralId}`,adaptBetweenBlocks:false
+});
+assert.deepEqual(structural.currentProgram.days,source.days,'converted working block and history keep their original week');
+assert.equal(structural.blocks[0].config.split,'upper_lower','the upcoming strength block can restructure the split');
+assert.equal(structural.blocks[0].config.days,4,'the upcoming phase uses its chosen training frequency');
+assert.equal(structural.cycle.nextEngineCycle.plannedBlocks[1].frequency,2,'the future practice target survives in cycle metadata');
+assert.equal(structural.blocks[0].nextEngine.request.goal.liftFrequency.bench_press,2,'the executable future block owns its lift-frequency contract');
+console.log('PASS B894 structure: converted block is immutable; future block can independently rebuild split and bench frequency.');
+
+const oversized=structuredClone(legacy);
+oversized.config={...oversized.config,goal:'hypertrophy'};
+for(const day of oversized.days)for(const [slot] of day.exercises.entries())
+ oversized.overrides[`${day.id}:${slot}`]={sets:6};
+const undersized=structuredClone(generated);
+undersized.blocks[0].nextEngine.program.phase='strength_accumulation';
+for(const session of undersized.blocks[0].nextEngine.program.sessions)for(const ex of session.exercises)ex.sets=1;
+assert.throws(()=>mergeStandaloneIntoGeneratedCycle(oversized,undersized,{appendAll:true}),
+ /drops weekly working sets/,'authored custom working sets must be compared to the first strength block');
+assert.equal(oversized.config.goal,'hypertrophy','a rejected conversion must leave the authored program unchanged');
+console.log('PASS B894 volume: high-volume authored plans cannot silently transition to a drastically underdosed strength accumulation block.');
+
+let optimizeId=0;
+const automaticConversion=convertProgramToNextCycleForShell({
+ program:source,templateId:'custom',seed:894,
+ blocks:[{phase:'strength_accumulation',weeks:4}],
+ legacyExercises:EXERCISES,adaptTrainingSplit:true,adaptBetweenBlocks:true,
+ makeId:()=>`b894-auto-${++optimizeId}`
+});
+assert.deepEqual(automaticConversion.currentProgram.days,source.days,
+ 'split adaptation must not rewrite the converted existing program');
+assert.equal(automaticConversion.cycle.adaptTrainingSplit,true);
+const selected=automaticConversion.cycle.blockMeta[1].splitDecision;
+assert.equal(selected.mode,'goal_optimized');
+assert.ok(selected.passingCandidates>=1,'converted future strength block must choose an audited structure');
+assert.equal(automaticConversion.blocks[0].config.split,selected.selectedSplit);
+assert.equal(automaticConversion.blocks[0].nextEngine.program.audit.result,'pass');
+assert.deepEqual(automaticConversion.cycle.nextEngineCycle.plannedBlocks[1],
+ {phase:'strength_accumulation',weeks:4,label:'Strength'},
+ 'preview optimizer must not rewrite the authored future phase specification');
+console.log('PASS B894 automatic conversion: current program unchanged; future strength block uses goal-optimized split.');

@@ -1,5 +1,5 @@
 import { withSessionPlanChoice } from './session-plan.js';
-import { planShorterSession, SESSION_LENGTH_OPTIONS } from './engine-api.js';
+import { planShorterSession, SESSION_LENGTH_OPTIONS, splitSupportsTrainingDays } from './engine-api.js';
 import { readCycleSetupDraft, writeCycleSetupDraft, clearCycleSetupDraft, CYCLE_SETUP_DRAFT_KEY } from './cycle-setup-drafts.js';
 import { INJURY_AREAS, INJURY_IMPACTS, injuryParts, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
 import { withProgressionChoices, repeatedNote, refreshProgressionSets, exerciseSessionTags, workoutProgramChanges, withWorkoutProgramChanges, buildSessionReview } from './session-tools.js';
@@ -5723,7 +5723,7 @@ function afterNextPaint() {
 }
 /* R71 — read-only supporting pane. Shares Wizard's actual config and step owner:
    no forked draft, early generation, hidden navigation or duplicate save path. */
-function WizardReviewPane({ config, cycleMode, modeChosen, selectedCycle, cycleAdapt, step, stepCount, stepKey }) {
+function WizardReviewPane({ config, cycleMode, modeChosen, selectedCycle, cycleAdapt, cycleAdaptSplit, step, stepCount, stepKey }) {
     const goal = cycleMode ? (selectedCycle?.goal || config.goal) : config.goal;
     const count = Array.isArray(config.equipment) ? config.equipment.length : 0;
     const focus = Object.entries(config.focus || {}).filter(([, n]) => n > 0)
@@ -5746,7 +5746,8 @@ function WizardReviewPane({ config, cycleMode, modeChosen, selectedCycle, cycleA
     if (modeChosen && cycleMode && selectedCycle) {
         const weeks = selectedCycle.blocks.reduce((total, block) => total + block.weeks, 0);
         rows.splice(3, 0, ["Cycle", selectedCycle.name], ["Phases", `${selectedCycle.blocks.length} blocks · ${weeks} weeks`],
-            ["Phase exercise changes", cycleAdapt ? "Allowed" : "Keep core lifts"]);
+            ["Phase exercise changes", cycleAdapt ? "Allowed" : "Keep core lifts"],
+            ["Training split changes", cycleAdaptSplit ? "Goal-optimized" : "Manual only"]);
     }
     if (focus) rows.push(["Emphasize", focus]);
     if (reduced) rows.push(["Reduce", reduced]);
@@ -5814,11 +5815,7 @@ function Wizard({ buildTask = null, onCancelBuild, initialEquipment, initialExpe
     const [cycleTemplate, setCycleTemplate] = useState(() => ["custom", ...nextCycleTemplatesForShell().map(c => c.id)].includes(setupDraft?.templateId) ? setupDraft.templateId : nextCycleTemplatesForShell()[0]?.id || "");
     const selectedCycle = cycleChoices.find(t => t.id === cycleTemplate);
     const [cycleAdapt, setCycleAdapt] = useState(setupDraft?.adapt || false);
-    const customCycleValid = customCycleBlocks.length >= 2 && customCycleBlocks.length <= 8
-        && customCycleBlocks.every(b => CUSTOM_CYCLE_PHASES.some(c => c.phase === b.phase)
-            && String(b.weeks).trim() !== "" && Number.isSafeInteger(Number(b.weeks))
-            && Number(b.weeks) >= 1 && Number(b.weeks) <= 24)
-        && customCycleBlocks.reduce((total,b) => total + Number(b.weeks), 0) <= 104;
+    const [cycleAdaptSplit, setCycleAdaptSplit] = useState(setupDraft?.adaptSplit ?? true);
     const [config, setConfig] = useState({
         name: "",
         unit: initialUnit,
@@ -5839,6 +5836,16 @@ function Wizard({ buildTask = null, onCancelBuild, initialEquipment, initialExpe
         ...(setupDraft?.config || {}),
         split: SPLITS[setupDraft?.config?.split] ? setupDraft.config.split : null
     });
+    const customCycleValid = customCycleBlocks.length >= 2 && customCycleBlocks.length <= 8
+        && customCycleBlocks.every(b => CUSTOM_CYCLE_PHASES.some(c => c.phase === b.phase)
+            && String(b.weeks).trim() !== "" && Number.isSafeInteger(Number(b.weeks))
+            && Number(b.weeks) >= 1 && Number(b.weeks) <= 24)
+        && customCycleBlocks.reduce((total,b) => total + Number(b.weeks), 0) <= 104
+        && customCycleBlocks.every(b => (!b.days || (Number.isInteger(Number(b.days)) && Number(b.days) >= 2 && Number(b.days) <= 6))
+            && (!b.priorityLift || (['bench_press','back_squat','deadlift','overhead_press'].includes(b.priorityLift)
+                && Number.isInteger(Number(b.frequency)) && Number(b.frequency) >= 1 && Number(b.frequency) <= 3
+                && Number(b.frequency) <= Number(b.days || config.days)))
+            && (!b.split || splitSupportsTrainingDays(b.split, Number(b.days || config.days))));
     // Steps depend on `config` (endless mode drops the manual deload step), so this must come AFTER the
     // config declaration above — computing it earlier hits a temporal-dead-zone on `config`.
     const dropDeload = (keys) => config.endless ? keys.filter(k => k !== "deload") : keys;
@@ -5856,9 +5863,9 @@ function Wizard({ buildTask = null, onCancelBuild, initialEquipment, initialExpe
         if (step >= STEPS.length) setStep(STEPS.length - 1);
     }, [step, STEPS.length]);
     useLayoutEffect(() => {
-        if (cycleMode && (step > 0 || config.name.trim() || cycleTemplate === "custom" || cycleTemplate !== nextCycleTemplatesForShell()[0]?.id || cycleAdapt))
-            setDraftSaved(writeCycleSetupDraft(draftId, draftSignature, { config, step, blocks: customCycleBlocks, templateId: cycleTemplate, adapt: cycleAdapt, cycleMode, choseMode }));
-    }, [config, step, customCycleBlocks, cycleTemplate, cycleAdapt, cycleMode, choseMode, draftId, draftSignature]);
+        if (cycleMode && (step > 0 || config.name.trim() || cycleTemplate === "custom" || cycleTemplate !== nextCycleTemplatesForShell()[0]?.id || cycleAdapt || cycleAdaptSplit))
+            setDraftSaved(writeCycleSetupDraft(draftId, draftSignature, { config, step, blocks: customCycleBlocks, templateId: cycleTemplate, adapt: cycleAdapt, adaptSplit: cycleAdaptSplit, cycleMode, choseMode }));
+    }, [config, step, customCycleBlocks, cycleTemplate, cycleAdapt, cycleAdaptSplit, cycleMode, choseMode, draftId, draftSignature]);
     /* ⚠ AFTER `key`. This effect sat above `const key = STEPS[step]`; a hook's dependency list is evaluated DURING render, so
        `[step, key]` read `key` in its temporal dead zone and EVERY render of the builder threw "Cannot access 'key' before
        initialization" — Build my program and Create a cycle crashed (M158 as delivered). */
@@ -6014,8 +6021,10 @@ function Wizard({ buildTask = null, onCancelBuild, initialEquipment, initialExpe
         if (cycleMode) {
             final.progression = "auto";
             final.cycleTemplate = cycleTemplate;
-            if (cycleTemplate === "custom") final.cycleBlocks = customCycleBlocks.map(b => ({ phase: b.phase, weeks: Number(b.weeks) }));
+            if (cycleTemplate === "custom") final.cycleBlocks = customCycleBlocks.map(b => ({ ...b, weeks: Number(b.weeks),
+                ...(b.days ? { days: Number(b.days) } : {}), ...(b.priorityLift ? { frequency: Number(b.frequency) } : {}) }));
             final.cycleAdapt = cycleAdapt;
+            final.cycleAdaptSplit = cycleAdaptSplit;
         }
         try {
             await afterNextPaint();
@@ -6109,9 +6118,9 @@ function Wizard({ buildTask = null, onCancelBuild, initialEquipment, initialExpe
                     children: _jsx(StepBody, { stepKey: key, config: { ...config, goal: effectiveGoal }, set,
                         buildable: buildable.__key === buildKey ? buildable : {}, autoLength, compatibleSplits,
                         focusTotal, cycleTemplate, setCycleTemplate, cycleChoices, customCycleBlocks,
-                        setCustomCycleBlocks, cycleAdapt, setCycleAdapt, cycleMode, setCycleMode, nextRecommendedSplit }, key) }, step),
+                        setCustomCycleBlocks, cycleAdapt, setCycleAdapt, cycleAdaptSplit, setCycleAdaptSplit, cycleMode, setCycleMode, nextRecommendedSplit }, key) }, step),
                 _jsx(WizardReviewPane, { config, cycleMode, modeChosen: choseMode, selectedCycle,
-                    cycleAdapt, step, stepCount: STEPS.length, stepKey: key })
+                    cycleAdapt, cycleAdaptSplit, step, stepCount: STEPS.length, stepKey: key })
             ] }) }),
         _jsxs("div", { className: "wpb-wizard-footer", role: "region", "aria-label": "Setup actions", children: [
             cycleMode && _jsx("div", { className: "wpb-cycle-draft-status", role: "status",
@@ -6153,7 +6162,7 @@ function Heading({ children, sub }) {
 const Col = ({ children }) => _jsx("div", { className: "wpb-wizard-options", children });
 
 /* B893: user-ordered custom cycle builder; every row becomes a real engine phase. */
-function CustomCycleComposer({ blocks, onChange, minBlocks = 2, maxBlocks = 8, existingWeeks = 0 }) {
+function CustomCycleComposer({ blocks, onChange, minBlocks = 2, maxBlocks = 8, existingWeeks = 0, baseDays = 4, baseSplit = null }) {
     const phaseName = phase => CUSTOM_CYCLE_PHASES.find(x => x.phase === phase)?.label || "Block";
     const patch = (i, update) => onChange(blocks.map((block, n) => n === i ? { ...block, ...update } : block));
     const move = (i, delta) => {
@@ -6164,10 +6173,16 @@ function CustomCycleComposer({ blocks, onChange, minBlocks = 2, maxBlocks = 8, e
         onChange(next);
     };
     const total = existingWeeks + blocks.reduce((n, b) => n + (Number(b.weeks) || 0), 0);
-    const valid = blocks.length >= minBlocks && blocks.length <= maxBlocks && blocks.every(b => Number.isSafeInteger(Number(b.weeks)) && String(b.weeks).trim() !== "" && Number(b.weeks) >= 1 && Number(b.weeks) <= 24);
+    const valid = blocks.length >= minBlocks && blocks.length <= maxBlocks && blocks.every(b =>
+        Number.isSafeInteger(Number(b.weeks)) && String(b.weeks).trim() !== "" && Number(b.weeks) >= 1 && Number(b.weeks) <= 24
+        && (!b.days || (Number.isInteger(Number(b.days)) && Number(b.days) >= 2 && Number(b.days) <= 6))
+        && (!b.priorityLift || (['bench_press','back_squat','deadlift','overhead_press'].includes(b.priorityLift)
+            && Number.isInteger(Number(b.frequency)) && Number(b.frequency) >= 1 && Number(b.frequency) <= 3
+            && Number(b.frequency) <= Number(b.days || baseDays)))
+        && (!(b.split || baseSplit) || splitSupportsTrainingDays(b.split || baseSplit, Number(b.days || baseDays))));
     return (_jsxs("section", { className: "wpb-ui-card wpb-custom-cycle", "aria-label": existingWeeks ? "Future custom training blocks" : "Custom training blocks", children: [
         _jsxs("div", { className: "wpb-custom-cycle-head", children: [_jsx("strong", { children: existingWeeks ? "Future blocks after your current program" : "Your block sequence" }), _jsxs("span", { className: "mono", children: [total, " weeks · ", blocks.length + (existingWeeks ? 1 : 0), " blocks"] })] }),
-        _jsx("p", { children: "Choose the phase and weeks for every block. Use the arrows to set any order. Every block receives its own workouts, sets, reps and effort targets." }),
+        _jsx("p", { children: "Choose each phase and duration. Optionally change its weekly split, training days and the frequency of one priority lift. Rebuilding a week is audited against time, equipment and recovery; your existing block is never rewritten." }),
         _jsx("div", { className: "wpb-ui-stack wpb-custom-cycle-list", children: blocks.map((b,i) => (_jsxs("div", { className: "wpb-custom-cycle-block", children: [
             _jsxs("div", { className: "wpb-custom-cycle-block-head", children: [_jsxs("strong", { children: ["Block ",i+1+(existingWeeks ? 1 : 0)] }), _jsxs("div", { children: [
                 _jsx("button", { type: "button", "aria-label": `Move block ${i+1+(existingWeeks ? 1:0)} earlier`, disabled: i === 0, onClick: () => move(i,-1), children: _jsx(ChevronUp,{size:17}) }),
@@ -6177,7 +6192,28 @@ function CustomCycleComposer({ blocks, onChange, minBlocks = 2, maxBlocks = 8, e
             _jsxs("div", { className: "wpb-custom-cycle-fields", children: [
                 _jsxs("label", { className:"wpb-ui-field", children: [_jsx("span",{children:"Training phase"}), _jsx("select", { className: "wpb-ui-control", "aria-label": `Block ${i+1+(existingWeeks ? 1:0)} training phase`, value: b.phase, onChange: e => patch(i, { phase: e.target.value }), children: CUSTOM_CYCLE_PHASES.map(o=>_jsx("option",{value:o.phase,children:o.label},o.phase)) })] }),
                 _jsxs("label", { className:"wpb-ui-field", children: [_jsx("span",{children:"Weeks"}), _jsx("input", { className: "wpb-ui-control", "aria-label": `Block ${i+1+(existingWeeks ? 1:0)} weeks`, type: "number", min: 1,max:24,step:1, inputMode:"numeric", value: b.weeks, onChange: e => patch(i,{weeks:e.target.value}), "aria-invalid": !(String(b.weeks).trim() !== "" && Number.isSafeInteger(Number(b.weeks)) && Number(b.weeks)>=1 && Number(b.weeks)<=24) })] })
-            ] })
+            ] }),
+            _jsxs("div", { className: "wpb-custom-cycle-fields", children: [
+                _jsxs("label", { className: "wpb-ui-field", children: [_jsx("span", { children: "Weekly structure" }),
+                    _jsx("select", { className: "wpb-ui-control", "aria-label": `Block ${i+1+(existingWeeks ? 1:0)} weekly split`, value: b.split || "", onChange: e => patch(i, { split: e.target.value || undefined }), children:
+                        [["","Keep base split"],["full_body","Full Body"],["upper_lower","Upper / Lower"],["ulppl","Upper / Lower / PPL"],["ppl","Push / Pull / Legs"],["phul","Power Hypertrophy UL"],["hybrid","Hybrid"],["strength_fb","Strength Full Body"]].map(([v,n]) => _jsx("option",{ value:v, disabled: !!v && !splitSupportsTrainingDays(v, Number(b.days || baseDays)), children:n },v)) })
+                ] }),
+                _jsxs("label", { className: "wpb-ui-field", children: [_jsx("span", { children: "Days per week" }),
+                    _jsx("select", { className: "wpb-ui-control", "aria-label": `Block ${i+1+(existingWeeks ? 1:0)} training days`, value: b.days || "", onChange: e => patch(i, { days: e.target.value ? Number(e.target.value) : undefined }), children:
+                        [_jsx("option", { value:"", children: `Keep ${baseDays} days` }, "same"), ...[2,3,4,5,6].map(n => _jsx("option", { value:n, children:`${n} days` },n))] })
+                ] })
+            ] }),
+            _jsxs("div", { className: "wpb-custom-cycle-fields", children: [
+                _jsxs("label", { className: "wpb-ui-field", children: [_jsx("span", { children: "Strength-practice focus" }),
+                    _jsx("select", { className: "wpb-ui-control", "aria-label": `Block ${i+1+(existingWeeks ? 1:0)} priority lift`, value: b.priorityLift || "", onChange: e => patch(i, { priorityLift: e.target.value || undefined, frequency: e.target.value ? (b.frequency || 2) : undefined }), children:
+                        [["","Automatic"],["bench_press","Bench press"],["back_squat","Squat"],["deadlift","Deadlift"],["overhead_press","Overhead press"]].map(([v,n]) => _jsx("option", { value:v, children:n },v)) })
+                ] }),
+                b.priorityLift && _jsxs("label", { className: "wpb-ui-field", children: [_jsx("span", { children: "Weekly exposures" }),
+                    _jsx("select", { className: "wpb-ui-control", "aria-label": `Block ${i+1+(existingWeeks ? 1:0)} lift frequency`, value: b.frequency || 2, onChange: e => patch(i, { frequency: Number(e.target.value) }), children:
+                        [1,2,3].filter(n => n <= Number(b.days || baseDays)).map(n => _jsx("option", { value:n, children: `${n}× / week` }, n)) })
+                ] })
+            ] }),
+            b.priorityLift && _jsx("p", { className: "wpb-wizard-cycle-blurb", children: "Practice sessions are spread across the week where the selected split allows. The engine will refuse a frequency it cannot fit rather than invent extra recovery capacity." })
         ] },i))) }),
         _jsx("button", { type:"button", className:"wpb-custom-cycle-add pressable", disabled: blocks.length >= maxBlocks, onClick: () => onChange([...blocks,{phase:blocks[blocks.length-1]?.phase || "hypertrophy_accumulation",weeks:4}]), children: [_jsx(Plus,{size:16})," Add block"] }),
         !valid && _jsx("div",{role:"status",className:"wpb-custom-cycle-error",children:`Choose ${minBlocks}–${maxBlocks} ${existingWeeks ? "future " : ""}blocks, each lasting 1–24 whole weeks.`}),
@@ -6185,7 +6221,21 @@ function CustomCycleComposer({ blocks, onChange, minBlocks = 2, maxBlocks = 8, e
     ] }));
 }
 
-function StepBody({ stepKey, config, set, buildable = {}, autoLength = null, compatibleSplits, focusTotal, cycleTemplate, setCycleTemplate, cycleChoices, customCycleBlocks, setCustomCycleBlocks, cycleMode, setCycleMode, cycleAdapt, setCycleAdapt, nextRecommendedSplit }) {
+/* One shared authoring control for the wizard and standalone conversion. */
+function CycleAdaptSplitChoice({ enabled, onChange }) {
+    return (_jsxs("button", { type: "button", role: "checkbox", "aria-checked": enabled,
+        "aria-label": "Adapt training split between cycle blocks", onClick: () => onChange(v => !v),
+        className: "pressable wpb-ui-card wpb-wizard-cycle-adapt", children: [
+            _jsx("div", { className: "wpb-wizard-cycle-check", "aria-hidden": true,
+                children: enabled && _jsx(Check, { size: 13 }) }),
+            _jsxs("div", { className: "wpb-wizard-mode-copy", children: [
+                _jsx("div", { className: "wpb-wizard-mode-title", children: "Adapt training split" }),
+                _jsx("div", { className: "wpb-wizard-mode-sub", children:
+                    "Compare safe weekly structures for each block’s strength, muscle-building or mixed goal. Keep training days and session limits; a split chosen explicitly for a block takes priority." })
+            ] })
+        ] }));
+}
+function StepBody({ stepKey, config, set, buildable = {}, autoLength = null, compatibleSplits, focusTotal, cycleTemplate, setCycleTemplate, cycleChoices, customCycleBlocks, setCustomCycleBlocks, cycleMode, setCycleMode, cycleAdapt, setCycleAdapt, cycleAdaptSplit, setCycleAdaptSplit, nextRecommendedSplit }) {
     if (stepKey === "units") {
         const opts = [["kg", "Kilograms", "kg"], ["lb", "Pounds", "lb"]];
         return (_jsxs(_Fragment, { children: [_jsx(Heading, { sub: "Used everywhere \u2014 plates, targets, history. You can change it later in Settings.", children: "Which units do you train in?" }), _jsx("div", { className: "wpb-wizard-unit-choices", children: opts.map(([v, label, suf]) => {
@@ -6222,7 +6272,7 @@ function StepBody({ stepKey, config, set, buildable = {}, autoLength = null, com
                             _jsxs("span", { className: "wpb-wizard-cycle-block", children: [b.label, " \u00B7 ", b.weeks, "w"] }, i)) })
                     ] }, t.id));
             }) }),
-            cycleTemplate === "custom" && _jsx(CustomCycleComposer, { blocks: customCycleBlocks, onChange: setCustomCycleBlocks }),
+            cycleTemplate === "custom" && _jsx(CustomCycleComposer, { blocks: customCycleBlocks, onChange: setCustomCycleBlocks, baseDays: config.days, baseSplit: config.split }),
             _jsxs("button", { type: "button", onClick: () => setCycleAdapt(v => !v), role: "checkbox",
                 "aria-checked": cycleAdapt, "aria-label": "Adapt exercises to each phase",
                 className: "pressable wpb-ui-card wpb-wizard-cycle-adapt", children: [
@@ -6230,9 +6280,10 @@ function StepBody({ stepKey, config, set, buildable = {}, autoLength = null, com
                         children: cycleAdapt && _jsx(Check, { size: 13 }) }),
                     _jsxs("div", { className: "wpb-wizard-mode-copy", children: [
                         _jsx("div", { className: "wpb-wizard-mode-title", children: "Adapt exercises to each phase" }),
-                        _jsx("div", { className: "wpb-wizard-mode-sub", children: "Real block history may change compatible exercises at the next phase while protecting successful lifts. Turn this off to keep the same exercise skeleton and only retarget sets, reps, RIR and rest." })
+                        _jsx("div", { className: "wpb-wizard-mode-sub", children: "Real block history may change compatible exercises at the next phase while protecting successful lifts. Turn this off to preserve the exercise skeleton unless you explicitly change a block's weekly split, training days or priority lift." })
                     ] })
-                ] })
+                ] }),
+            _jsx(CycleAdaptSplitChoice, { enabled: cycleAdaptSplit, onChange: setCycleAdaptSplit })
         ] }));
     }
     if (stepKey === "name") {
@@ -17496,6 +17547,7 @@ function ConvertProgramToCycleSheet({ program, onClose, onConfirm }) {
     const baseName = String(program?.name || "Training").replace(/\s*·\s*Block\s*\d+\s*$/i, "").trim() || "Training";
     const [name, setName] = useState(() => draft?.name || (/cycle$/i.test(baseName) ? baseName : `${baseName} Cycle`));
     const [adapt, setAdapt] = useState(draft ? draft.adapt : true);
+    const [adaptSplit, setAdaptSplit] = useState(draft?.adaptSplit ?? true);
     const [busy, setBusy] = useState(false);
     const [draftSaved, setDraftSaved] = useState(true);
     const [error, setError] = useState("");
@@ -17503,7 +17555,7 @@ function ConvertProgramToCycleSheet({ program, onClose, onConfirm }) {
     const future = futureFor(selected);
     let customValid = true;
     if (templateId === "custom") { try { customFutureCycleSpecs(customBlocks, currentWeeks); } catch { customValid = false; } }
-    useLayoutEffect(() => { setDraftSaved(writeCycleSetupDraft(draftId, draftSignature, { name, templateId, adapt, blocks: customBlocks })); }, [draftId, draftSignature, name, templateId, adapt, customBlocks]);
+    useLayoutEffect(() => { setDraftSaved(writeCycleSetupDraft(draftId, draftSignature, { name, templateId, adapt, adaptSplit, blocks: customBlocks })); }, [draftId, draftSignature, name, templateId, adapt, adaptSplit, customBlocks]);
         const create = async () => {
         if (busy || !selected || !future.length || !customValid)
             return;
@@ -17511,7 +17563,7 @@ function ConvertProgramToCycleSheet({ program, onClose, onConfirm }) {
         setError("");
         await new Promise(resolve => setTimeout(resolve, 30));
         try {
-            const result = await onConfirm?.({ templateId: selected.id, name: name.trim() || `${baseName} Cycle`, adaptBetweenBlocks: adapt, blocks: templateId === "custom" ? customBlocks.map(b => ({ phase: b.phase, weeks: Number(b.weeks) })) : undefined });
+            const result = await onConfirm?.({ templateId: selected.id, name: name.trim() || `${baseName} Cycle`, adaptBetweenBlocks: adapt, adaptTrainingSplit: adaptSplit, blocks: templateId === "custom" ? customBlocks.map(b => ({ ...b, weeks: Number(b.weeks) })) : undefined });
             if (result?.ok) clearCycleSetupDraft(draftId);
             if (result && result.ok === false)
                 setError(result.msg || "Could not create the training cycle. Your program was left unchanged.");
@@ -17528,7 +17580,7 @@ function ConvertProgramToCycleSheet({ program, onClose, onConfirm }) {
                             const disabled = !later.length;
                             const selectedChoice = choice.id === selected?.id;
                             return (_jsxs("button", { type: "button", disabled: disabled, onClick: () => setTemplateId(choice.id), className: "pressable", "aria-pressed": selectedChoice, style: { width: "100%", textAlign: "left", padding: "12px 13px", marginBottom: 8, borderRadius: 13, border: `1px solid ${selectedChoice ? C.accent : C.border}`, background: selectedChoice ? C.accentDim : C.card, color: C.text, opacity: disabled ? .46 : 1, cursor: disabled ? "default" : "pointer" }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8 }, children: [_jsx("div", { style: { flex: 1, fontSize: 15, fontWeight: 750 }, children: choice.name }), selectedChoice && _jsx(Check, { size: 17, color: C.accentInk })] }), _jsx("div", { style: { fontSize: 12, color: C.muted, lineHeight: 1.45, marginTop: 3 }, children: disabled ? "No later phase remains after your current program." : choice.blurb }), !disabled && _jsx("div", { style: { display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap", marginTop: 8 }, children: later.map((block, i) => _jsxs("span", { style: { display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 700, color: C.accentInk }, children: [i > 0 && _jsx(ChevronRight, { size: 11, color: C.faint }), block.label, ` · ${block.weeks}w`] }, `${choice.id}:${block.phase}:${i}`)) })] }, choice.id));
-                        }), templateId === "custom" && _jsx(CustomCycleComposer, { blocks: customBlocks, onChange: setCustomBlocks, minBlocks: 1, maxBlocks: 7, existingWeeks: currentWeeks }), _jsx("p", { style: {fontSize:12,color:C.muted}, children: draftSaved ? "Your setup is saved on this device until the cycle is created." : "Setup could not be saved on this device. Keep this setup open until you create the cycle." }), _jsxs("button", { type: "button", onClick: () => setAdapt(v => !v), className: "pressable", "aria-pressed": adapt, style: { width: "100%", display: "flex", alignItems: "center", gap: 12, textAlign: "left", padding: "12px 13px", marginTop: 8, borderRadius: 13, border: `1px solid ${adapt ? C.accent : C.border}`, background: adapt ? C.accentDim : C.card, color: C.text, cursor: "pointer" }, children: [_jsx("div", { style: { width: 34, height: 34, borderRadius: 10, background: adapt ? C.accent : C.bg2, color: adapt ? C.accentText : C.muted, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: _jsx(RefreshCw, { size: 16 }) }), _jsxs("div", { style: { flex: 1 }, children: [_jsx("div", { style: { fontSize: 14, fontWeight: 750 }, children: "Adapt exercises between blocks" }), _jsx("div", { style: { fontSize: 12, color: C.muted, lineHeight: 1.4, marginTop: 2 }, children: adapt ? "Future phases can change exercises using completed workout history." : "Keep the exercise skeleton and change sets, reps, effort, and progression for each phase." })] }), _jsx(CheckBox, { on: adapt })] }), error && _jsx("div", { role: "status", style: { marginTop: 12, padding: "10px 12px", borderRadius: 11, background: C.dangerDim, color: C.text, fontSize: 12, lineHeight: 1.45 }, children: error })] }), _jsxs("div", { style: { flexShrink: 0, display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1.35fr)", gap: 8, padding: "10px 18px calc(10px + env(safe-area-inset-bottom))", borderTop: `1px solid ${C.borderSoft}`, background: C.bg }, children: [_jsx("button", { type: "button", onClick: onClose, disabled: busy, className: "pressable", style: { minHeight: 48, borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: 14, fontWeight: 700 }, children: "Cancel" }), _jsx("button", { type: "button", onClick: create, disabled: busy || !selected || !future.length || !customValid, className: "pressable wpb-primary-action", style: { minHeight: 48, borderRadius: 12, border: 0, background: C.accent, color: C.accentText, fontSize: 14, fontWeight: 800 }, children: busy ? "Building cycle…" : "Create training cycle" })] })] }) }));
+                        }), templateId === "custom" && _jsx(CustomCycleComposer, { blocks: customBlocks, onChange: setCustomBlocks, minBlocks: 1, maxBlocks: 7, existingWeeks: currentWeeks, baseDays: program.config?.days || program.days?.length || 4, baseSplit: program.config?.split }), _jsx("p", { style: {fontSize:12,color:C.muted}, children: draftSaved ? "Your setup is saved on this device until the cycle is created." : "Setup could not be saved on this device. Keep this setup open until you create the cycle." }), _jsxs("button", { type: "button", onClick: () => setAdapt(v => !v), className: "pressable", "aria-pressed": adapt, style: { width: "100%", display: "flex", alignItems: "center", gap: 12, textAlign: "left", padding: "12px 13px", marginTop: 8, borderRadius: 13, border: `1px solid ${adapt ? C.accent : C.border}`, background: adapt ? C.accentDim : C.card, color: C.text, cursor: "pointer" }, children: [_jsx("div", { style: { width: 34, height: 34, borderRadius: 10, background: adapt ? C.accent : C.bg2, color: adapt ? C.accentText : C.muted, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: _jsx(RefreshCw, { size: 16 }) }), _jsxs("div", { style: { flex: 1 }, children: [_jsx("div", { style: { fontSize: 14, fontWeight: 750 }, children: "Adapt exercises between blocks" }), _jsx("div", { style: { fontSize: 12, color: C.muted, lineHeight: 1.4, marginTop: 2 }, children: adapt ? "Future phases can change exercises using completed workout history." : "Keep the exercise roster by default; explicit weekly structure choices still rebuild that phase." })] }), _jsx(CheckBox, { on: adapt })] }), _jsx(CycleAdaptSplitChoice, { enabled: adaptSplit, onChange: setAdaptSplit }), error && _jsx("div", { role: "status", style: { marginTop: 12, padding: "10px 12px", borderRadius: 11, background: C.dangerDim, color: C.text, fontSize: 12, lineHeight: 1.45 }, children: error })] }), _jsxs("div", { style: { flexShrink: 0, display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1.35fr)", gap: 8, padding: "10px 18px calc(10px + env(safe-area-inset-bottom))", borderTop: `1px solid ${C.borderSoft}`, background: C.bg }, children: [_jsx("button", { type: "button", onClick: onClose, disabled: busy, className: "pressable", style: { minHeight: 48, borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: 14, fontWeight: 700 }, children: "Cancel" }), _jsx("button", { type: "button", onClick: create, disabled: busy || !selected || !future.length || !customValid, className: "pressable wpb-primary-action", style: { minHeight: 48, borderRadius: 12, border: 0, background: C.accent, color: C.accentText, fontSize: 14, fontWeight: 800 }, children: busy ? "Building cycle…" : "Create training cycle" })] })] }) }));
 }
 // M161: one visible entry per cycle; phase identity is separate from cycle identity.
 
@@ -19780,7 +19832,7 @@ function CycleBlockRows({ cycle, progress, saved, cycleInfo, onOpenBlock }) {
                 _jsxs("span", { className: "wpb-cycle-block-heading", children: [
                     _jsx("strong", { className: "wpb-cycle-block-title", children: b.label }),
                     _jsx("span", { className: "wpb-cycle-block-status", children: current ? "Current" : past ? "Completed" : "Preview" })] }),
-                _jsx("span", { className: "wpb-cycle-block-meta", children: `${b.weeks}w${p?.config?.deload ? ' + deload' : ''} · Weeks ${b.range[0]}–${b.range[1]}` }),
+                _jsx("span", { className: "wpb-cycle-block-meta", children: `${b.weeks}w${p?.config?.deload ? ' + deload' : ''} · Weeks ${b.range[0]}–${b.range[1]}${p?.config?.split ? ' · ' + (SPLITS[p.config.split]?.name || String(p.config.split).replaceAll('_',' ')) : ''}${p?.nextEngine?.cycleTemplate?.splitDecision?.mode === 'goal_optimized' ? ' · Goal-optimized' : ''}` }),
                 current && cycleInfo?.cycle?.id === cycle.id && _jsx("span", { className: "wpb-cycle-block-current", children: `${cycleInfo.isDeload ? 'Deload' : 'Week ' + cycleInfo.weekIndex}${cycleInfo.dayLabel ? ' · ' + cycleInfo.dayLabel : ''}` })] }),
             _jsx(ChevronRight, { size: 17, className: "wpb-cycle-chevron" })] }, b.id);
     }) });
@@ -19797,6 +19849,11 @@ function CycleBlockPreview({ program, initialWeek = 1, initialDayId = null, onCl
     const [week, setWeek] = useState(Math.max(1, Math.min(total, initialWeek)));
     return _jsx(SessionChoiceDialog, { title: program.blockLabel || program.name, onClose, className: "wpb-cycle-block-preview", children: _jsxs("div", { children: [
         _jsx("p", { className: "wpb-cycle-preview-note", children: "Block preview. Browsing keeps your current training block unchanged. Planned prescriptions may adapt when this block starts." }),
+        program.nextEngine?.cycleTemplate?.splitDecision?.mode === 'goal_optimized' && _jsxs("details", { className: "wpb-cycle-preview-day", children: [
+            _jsx("summary", { className: "wpb-cycle-preview-summary", children: `Why ${SPLITS[program.config?.split]?.name || String(program.config?.split || 'this split').replaceAll('_',' ')}?` }),
+            _jsx("p", { className: "wpb-cycle-preview-note", children: program.nextEngine.cycleTemplate.splitDecision.reason }),
+            _jsx("p", { className: "wpb-cycle-preview-note", children: `Modeled muscle-target coverage: ${program.nextEngine.cycleTemplate.splitDecision.muscleTargetCoverage}% · ${program.nextEngine.cycleTemplate.splitDecision.weeklySets} weekly working sets. These are estimates, not a guarantee of the best possible outcome.` })
+        ] }),
         _jsxs("label", { className: "wpb-cycle-preview-week", children: ["Week", _jsx("select", { "aria-label": "Preview week", value: week, onChange: e => setWeek(Number(e.target.value)), className: "wpb-cycle-preview-select", children: Array.from({ length: total }, (_, i) => _jsx("option", { value: i + 1, children: i >= weeksOf(program) ? "Deload" : `Week ${i + 1}` }, i)) })] }),
         program.days.map((day, index) => _jsxs("details", { open: initialDayId ? day.id === initialDayId : index === 0, className: "wpb-cycle-preview-day", children: [
             _jsx("summary", { className: "wpb-cycle-preview-summary", children: day.label }),
@@ -22322,7 +22379,7 @@ function App() {
         try {
             const built = await runGeneration('cycle', {
                 templateId: tmplId, blocks: tmplId === "custom" ? config.cycleBlocks : undefined, config, banned, legacyExercises: EXERCISES,
-                adaptBetweenBlocks: !!config.cycleAdapt, makeId: uid
+                adaptBetweenBlocks: !!config.cycleAdapt, adaptTrainingSplit: !!config.cycleAdaptSplit, makeId: uid
             }, 'Building your training cycle');
             // Cycle generation used to leave the try/catch here, then immediately assume every returned
             // field existed. A partial/malformed bridge result could therefore throw on blocks[0].id or
@@ -22381,14 +22438,14 @@ function App() {
         }
         setCycleConvertId(p.id);
     };
-    const confirmCycleConversion = async ({ templateId, name, adaptBetweenBlocks, blocks }) => {
+    const confirmCycleConversion = async ({ templateId, name, adaptBetweenBlocks, adaptTrainingSplit, blocks }) => {
         const p = saved.find(x => x.id === cycleConvertId);
         if (!p)
             return { ok: false, msg: "That program is no longer in your library." };
         try {
             const built = (p.engineSource === "pursuit-next" && p.nextEngine?.program)
                 ? await runGeneration('convert_cycle', {
-                    program: p, templateId, name, blocks, adaptBetweenBlocks, legacyExercises: EXERCISES, makeId: uid
+                    program: p, templateId, name, blocks, adaptBetweenBlocks, adaptTrainingSplit, legacyExercises: EXERCISES, makeId: uid
                 }, 'Building your training cycle')
                 : mergeStandaloneIntoGeneratedCycle(p, await runGeneration('cycle', {
                     templateId,
@@ -22398,6 +22455,7 @@ function App() {
                     banned,
                     legacyExercises: EXERCISES,
                     adaptBetweenBlocks,
+                    adaptTrainingSplit,
                     makeId: uid
                 }, 'Building your training cycle'), { appendAll: templateId === 'custom' });
             requireCompleteCycleShell(built.cycle, built.allBlocks);
@@ -22422,9 +22480,9 @@ function App() {
         }
         catch (err) {
             if (err?.name === 'AbortError') return { ok: false, cancelled: true, msg: 'Build cancelled. Your current program is unchanged.' };
-            const code = err instanceof NextShellAdapterError ? err.code : "NEXT_CYCLE_CONVERSION_ERROR";
+            const code = err?.code || "NEXT_CYCLE_CONVERSION_ERROR";
             recordReleaseDiag("next_cycle_convert_failed", { action: "cycle_convert", engine: ENGINE_VERSION, code, reason: String(err?.message || err) });
-            return { ok: false, msg: err instanceof NextShellAdapterError ? String(err.message || "Could not create the training cycle.") : "The training cycle could not be assembled safely. Your current program was left unchanged." };
+            return { ok: false, msg: (err instanceof NextShellAdapterError || err?.code === "CYCLE_STRENGTH_VOLUME_CLIFF") ? String(err.message || "Could not create the training cycle.") : "The training cycle could not be assembled safely. Your current program was left unchanged." };
         }
     };
     /* Opening a saved program resumes its DRAFT if one exists. Without this the draft would be written

@@ -214,6 +214,16 @@ export function normalizeRequest(request) {
 
     const musclePrioritiesInput = priorityMap(request.goal?.musclePriorities, 'Muscle', new Set(ALL_MUSCLES));
     const liftPrioritiesInput = priorityMap(request.goal?.liftPriorities, 'Lift', VALID_LIFTS);
+    // Frequency is a weekly practice contract, not a multiplier on sets in one session.
+    const rawLiftFrequency = request.goal?.liftFrequency ?? {};
+    if (!recordLike(rawLiftFrequency))
+        throw new Error('Lift frequency must be a map of competition lifts to weekly sessions.');
+    const liftFrequency = {};
+    for (const [lift, count] of Object.entries(rawLiftFrequency)) {
+        if (!VALID_LIFTS.has(lift) || !Number.isInteger(count) || count < 1 || count > 3 || count > normalizedDays.length)
+            throw new Error(`Requested ${lift} frequency must be 1–3 exposures and cannot exceed training days.`);
+        liftFrequency[lift] = count;
+    }
     const trainingAgeMonths = request.athlete?.trainingAgeMonths ?? 12;
     if (!Number.isFinite(trainingAgeMonths) || trainingAgeMonths < 0)
         throw new Error('Training age must be a finite non-negative number of months.');
@@ -288,7 +298,7 @@ export function normalizeRequest(request) {
         equipment: { ...request.equipment, available, bodyweight, loading },
         schedule: { days: scheduleDays },
         athlete: { experience, trainingAgeMonths },
-        goal: { ...request.goal, type: goalType, ...goalWeights, musclePriorities, liftPriorities: liftPrioritiesInput },
+        goal: { ...request.goal, type: goalType, ...goalWeights, musclePriorities, liftPriorities: liftPrioritiesInput, liftFrequency },
         restrictions: {
             maxBarbellMovementsPerDay,
             allowSupersets
@@ -436,6 +446,15 @@ export function createStrengthClaims(request, phase = initialPhaseForGoal(reques
         return out;
     }
     for (const [lift, priority] of Object.entries(priorities)) {
+        const frequency = request.goal.liftFrequency?.[lift];
+        if (frequency) {
+            out.push({ id: `${lift}-heavy`, lift, role: 'heavy', importance: 'A', required: true });
+            if (frequency >= 2)
+                out.push({ id: `${lift}-volume`, lift, role: 'volume', importance: 'A', required: true });
+            if (frequency >= 3)
+                out.push({ id: `${lift}-technique`, lift, role: 'volume', importance: 'A', required: true });
+            continue;
+        }
         if (priority === 'primary') {
             out.push({ id: `${lift}-heavy`, lift, role: 'heavy', importance: 'A', required: true });
             out.push({ id: `${lift}-volume`, lift, role: 'volume', importance: 'A', required: true });

@@ -2,7 +2,7 @@
 import { remapNextShellRoster } from "../next-engine/app-shell-adapter.js";
 import { convertHistoryLoad, normalizeHistoryEntries, resolveHistoryDayIndex } from '../next-engine/history-contract.js';
 import { cycleBlockMetadata } from "../program-duration.js";
-import { LEGACY_EQUIP_IMPLIES, baseSetsFor, isBarLike, movePattern, secondaryOf, weeksOf } from './records.js';
+import { LEGACY_EQUIP_IMPLIES, baseSetsFor, computeCell, isBarLike, movePattern, secondaryOf, weeksOf } from './records.js';
 import { ENGINE_V, EQUIPMENT, EXERCISES, EX_BY_ID, SPLITS } from './catalog.js';
 
 const PART_ORDER = ["chest", "lats", "upper_back", "shoulders", "biceps", "triceps", "quads", "hamstrings", "glutes", "lower_back", "adductors", "abductors", "calves", "abs", "traps", "forearms", "neck"];
@@ -1073,6 +1073,26 @@ function mergeStandaloneIntoGeneratedCycle(program, generated, { appendAll = fal
     if (!program?.id || !generated?.cycle || !Array.isArray(generated.blocks) || generated.blocks.length < (appendAll ? 1 : 2))
         throw new Error('A standalone conversion needs the current program plus at least one future engine block.');
     const generatedFuture = generated.blocks.slice(appendAll ? 0 : 1).map(block => JSON.parse(JSON.stringify(block)));
+    // A custom/user-authored first block has no Next engine snapshot to transition from.
+    // Comparing the authored executable cells before merging prevents a 30→11-set
+    // hypertrophy-to-strength cliff from bypassing the normal engine transition guard.
+    const nextEngineProgram = generatedFuture[0]?.nextEngine?.program;
+    if (program.config?.goal !== 'strength' && nextEngineProgram?.phase === 'strength_accumulation') {
+        const midpoint = Math.max(1, Math.ceil(weeksOf(program) / 2));
+        const authoredSets = [1, midpoint].map(week => (program.days || []).reduce((total, day) =>
+            total + (day.exercises || []).reduce((count, exerciseId, slot) => {
+                const cell = computeCell(program, day, exerciseId, slot, week);
+                return count + Math.max(0, Number(cell?.sets) || 0);
+            }, 0), 0));
+        const before = Math.max(...authoredSets);
+        const after = nextEngineProgram.sessions.reduce((total, session) =>
+            total + session.exercises.reduce((count, ex) => count + Math.max(0, Number(ex.sets) || 0), 0), 0);
+        if (before >= 16 && after < Math.ceil(before * .5)) {
+            const error = new Error(`The planned Strength block drops weekly working sets from about ${before} to ${after}. Choose a higher-capacity weekly split or longer sessions; an accumulation block should not silently become a peaking-sized taper.`);
+            error.code = 'CYCLE_STRENGTH_VOLUME_CLIFF';
+            throw error;
+        }
+    }
     const cycle = { ...generated.cycle };
     const originalMeta = Array.isArray(cycle.blockMeta) ? cycle.blockMeta : [];
     const sourceMeta = appendAll ? [{ label: 'Current program', weeks: weeksOf(program), phase: program.config?.goal === 'strength' ? 'strength_accumulation' : program.config?.goal === 'hypertrophy' ? 'hypertrophy_accumulation' : 'mixed_accumulation', plannedIndex: 0 }, ...originalMeta] : originalMeta;

@@ -42,13 +42,24 @@ try {
   await page.click('[aria-label="Focused mode"]');
   // Wait for final Focus geometry, not only an intermediate footer-clear position:
   // the notice may be remeasured again when the focused toolbar settles.
+  // Focus changes the footer and notice in separate layout frames. Wait until the *same*
+  // measured, non-overlapping geometry stays steady, rather than observing a transient
+  // clear frame and immediately asserting against a different frame.
   const focusNotice=await page.waitForFunction(()=>{
     const notice=document.querySelector('.wpb-notice'),footer=document.querySelector('.wpb-workout-footer');
-    if(!notice||!footer)return false;
+    if(!notice||!footer){window.__b896FocusNoticeStable=null;return false;}
     const n=notice.getBoundingClientRect(),f=footer.getBoundingClientRect();
-    return n.bottom<=f.top-7&&n.top>=-1&&n.width>0;
-  },{timeout:5000}).then(()=>true).catch(()=>false);
-  const focusBoxes=await page.evaluate(()=>{
+    const clear=n.bottom<=f.top-7&&n.top>=-1&&n.width>0&&notice.dataset.positioned==='true';
+    if(!clear){window.__b896FocusNoticeStable=null;return false;}
+    const key=[n.bottom,f.top,n.width].map(v=>v.toFixed(1)).join(':');
+    const now=performance.now(),prev=window.__b896FocusNoticeStable;
+    if(!prev||prev.key!==key){window.__b896FocusNoticeStable={key,since:now};return false;}
+    if(now-prev.since<120)return false;
+    return {gap:f.top-n.bottom,notice:{top:n.top,bottom:n.bottom,width:n.width,height:n.height},
+      footer:{top:f.top,bottom:f.bottom},maxHeight:getComputedStyle(notice).maxHeight,
+      positioned:notice.dataset.positioned};
+  },{polling:'raf',timeout:5000}).then(handle=>handle.jsonValue()).catch(()=>null);
+  const focusBoxes=focusNotice||await page.evaluate(()=>{
     const notice=document.querySelector('.wpb-notice'),footer=document.querySelector('.wpb-workout-footer');
     const n=notice?.getBoundingClientRect(),f=footer?.getBoundingClientRect();
     return {notice:n?{top:n.top,bottom:n.bottom,width:n.width,height:n.height}:null,
@@ -56,8 +67,8 @@ try {
       maxHeight:notice&&getComputedStyle(notice).maxHeight,
       positioned:notice?.dataset.positioned};
   });
-  assert.ok(focusNotice&&await noticeClearsFooter(),
-    'M270 notice follows the Focus rest/footer geometry: '+JSON.stringify(focusBoxes));
+  assert.ok(focusNotice&&focusNotice.gap>=7,
+    'M270 notice follows the settled Focus rest/footer geometry: '+JSON.stringify(focusBoxes));
   await page.click('[aria-label="Exit focused mode"]');
   // Actual phone/tablet geometry: name + set/progression stay left,
   // skip/history/info + exercise tags form the right column.

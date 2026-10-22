@@ -50,3 +50,16 @@ assert.equal(readCycleSetupDraft('wizard','gym-a',storage),null);assert.equal(re
 data.set(CYCLE_SETUP_DRAFT_KEY,'{broken');assert.equal(readCycleSetupDraft('wizard','gym-a',storage),null);
 assert.equal(writeCycleSetupDraft('wizard','gym-a',draft,{getItem(){throw Error('blocked')},setItem(){throw Error('blocked')}}),false);
 console.log('PASS B894: generated and authored conversions preserve Block 1, exact future order/duration, ownership, first advancement and isolated recoverable setup drafts.');
+
+let structuralId=0;
+const structural=convertProgramToNextCycleForShell({
+ program:source,templateId:'custom',
+ blocks:[{phase:'strength_accumulation',weeks:5,split:'upper_lower',days:5,priorityLift:'bench_press',frequency:2}],
+ legacyExercises:EXERCISES,seed:894,makeId:()=>`b894-structure-${++structuralId}`,adaptBetweenBlocks:false
+});
+assert.deepEqual(structural.currentProgram.days,source.days,'converted working block and history keep their original week');
+assert.equal(structural.blocks[0].config.split,'upper_lower','the upcoming strength block can restructure the split');
+assert.equal(structural.blocks[0].config.days,5,'the upcoming phase uses its chosen training frequency');
+assert.equal(structural.cycle.nextEngineCycle.plannedBlocks[1].frequency,2,'the future practice target survives in cycle metadata');
+assert.equal(structural.blocks[0].nextEngine.request.goal.liftFrequency.bench_press,2,'the executable future block owns its lift-frequency contract');
+console.log('PASS B894 structure: converted block is immutable; future block can independently rebuild split and bench frequency.');

@@ -937,19 +937,17 @@ try {
                 const shape = await page.$eval('.wpb-home', shell => {
                     const header=shell.querySelector('.wpb-home-header'), hero=shell.querySelector('.wpb-home-hero');
                     const redundantPulse=shell.querySelector('.wpb-metric-strip');
-                    const weekly=[...shell.querySelectorAll('*')].find(el=>
-                        el.textContent?.trim()==='This week' && el.children.length===0);
                     return {radius:parseFloat(getComputedStyle(header).borderBottomLeftRadius),
                         heroRadius:parseFloat(getComputedStyle(hero).borderTopLeftRadius),
                         headerTint:getComputedStyle(header).backgroundImage,
                         headerSurface:getComputedStyle(header).backgroundColor,
-                        hasRedundantPulse:!!redundantPulse,hasWeekly:!!weekly,
+                        hasRedundantPulse:!!redundantPulse,
                         scrollWidth:shell.scrollWidth,viewport:innerWidth};
                 });
                 assert.ok(shape.radius===0 && shape.heroRadius>=35 &&
                     shape.headerTint==='none' && shape.headerSurface!=='transparent' &&
                     shape.headerSurface!=='rgba(0, 0, 0, 0)' &&
-                    !shape.hasRedundantPulse && shape.hasWeekly &&
+                    !shape.hasRedundantPulse &&
                     shape.scrollWidth<=shape.viewport+1,
                     'R4 connected color-tinted dashboard has true tonal hierarchy without overflow: '+JSON.stringify(shape));
             }

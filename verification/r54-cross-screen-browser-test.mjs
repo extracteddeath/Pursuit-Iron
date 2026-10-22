@@ -631,7 +631,7 @@ try{
             return b.left>=p.left-2&&b.right<=p.right+2;})};
       });
       const initial=await sample();
-      await page.screenshot({path:path.join(root,`verification/m284-history-${theme}-${width}-top.png`)});
+      await page.screenshot({path:path.join(root,`verification/m284-history-${theme}-${width}-top-phone.png`)});
       assert.ok(initial.count===16&&!initial.overflow&&initial.headerOpaque&&initial.sessionInPane,
         'Populated Sessions history remains bounded beneath wide header: '+JSON.stringify({theme,width,initial}));
       assert.ok(width===1280?initial.display==='grid':initial.display!=='grid',
@@ -640,12 +640,15 @@ try{
         el.scrollTop=Math.min(280,el.scrollHeight-el.clientHeight);return el.scrollTop;});
       await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
       const after=await sample();
-      await page.screenshot({path:path.join(root,`verification/m284-history-${theme}-${width}-scrolled.png`)});
+      await page.screenshot({path:path.join(root,`verification/m284-history-${theme}-${width}-scrolled-phone.png`)});
       assert.ok(scrolled>0&&after.scrollTop>0&&after.headerOpaque&&
         Math.abs(after.chrome.y-initial.chrome.y)<1&&!after.overflow,
         'Populated history scrolls below a stable, opaque Progress header: '+JSON.stringify({theme,width,initial,after}));
-      assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).history),entries,
-        'Wide history inspection must never modify logged sets');
+      const actualHistory=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).history);
+      assert.deepEqual(actualHistory.map(({updatedAt,...record})=>record),entries,
+        'Wide history inspection must never modify logged sets (storage may normalize updatedAt)');
+      assert.ok(actualHistory.every(record=>Number.isFinite(record.updatedAt)),
+        'Canonical saved history stamps migrated records without changing workout data');
       assert.deepEqual(errors,[],'No wide history render errors');
       wideHistory.push({theme,width,initial,after});
     }finally{await context.close();}

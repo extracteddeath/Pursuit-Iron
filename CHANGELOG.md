@@ -1,3 +1,10 @@
+## M291 — Profile presentation ownership
+
+- Move 83 fixed inline style objects from Profile, achievement details, Strength trends and shared sparklines into maintained CSS owners. Retain calculated progress, chart dimensions and data-derived ink inline; retire every Profile selector from the embedded stylesheet.
+- Remove 59 CSS priority declarations: external 2,378 → 2,360; embedded 1,280 → 1,239. Tighten the inline ceiling from 3,108 to 3,025 and retain the repeated-priority ceiling of 15.
+- Build the Profile section element map once per render, preserving saved order/visibility and canonical history/score calculations. Name achievement dialogs through the existing modal owner and expose section headings and progress semantics without changing their presentation.
+- Extend the existing Profile browser journey with earned/locked badges, keyboard activation, named modal focus containment, dismissal, focus restoration and progress agreement. Same app/engine versions; refresh content-addressed offline cache and release hashes.
+
 ## M290 — Profile level-card ownership
 
 - Move eight fixed level-card JSX styles and the embedded fallback presentation into the existing Profile stylesheet family; leave only the calculated XP fill width inline.

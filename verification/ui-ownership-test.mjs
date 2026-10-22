@@ -5,10 +5,10 @@ import fs from 'node:fs';
 // Decrease alongside a verified cleanup; never raise to permit a cosmetic override.
 const css = fs.readFileSync('app.css', 'utf8');
 const app = fs.readFileSync('modules/App.js', 'utf8');
-const MAX_IMPORTANT = 2378; // M290: retire obsolete Profile level-card CSS
-const MAX_APP_IMPORTANT = 1280; // M290: level-card fallback presentation leaves StyleTag.
+const MAX_IMPORTANT = 2360; // M291: consolidate the remaining Profile style owners
+const MAX_APP_IMPORTANT = 1239; // M291: all Profile presentation leaves StyleTag.
 const MAX_REPEAT_IMPORTANT = 15; // M288: at-rule comments no longer erase media/container scope.
-const MAX_INLINE_STYLE_OBJECTS = 3108; // M290: level-card presentation belongs to CSS
+const MAX_INLINE_STYLE_OBJECTS = 3025; // M291: 83 fixed Profile/chart style objects retired
 const allowedDebtKeys = new Set([
   "\t#root[data-pi-motion=\"expressive\"] .wpb-wizard.wpb-wizard.wpb-wizard .wpb-wizard-heading-title\tfont-size",
   "\t#root[data-pi-motion=\"expressive\"] .wpb .wpb-tabbar\tbackground-color",
@@ -368,14 +368,36 @@ for(const suffix of ['.wpb-profile-strength','.wpb-profile-strength-grid',
     assert.ok(!css.includes(retiredStrengthPrefix+' '+suffix+'{'),
         'Retired Strength presentation owner cannot return: '+suffix);
 
-// M290: the level card retains only its data-derived XP fill width inline.
-const levelCard=app.slice(app.indexOf('"level": _jsx("div", { className: "wpb-profile-hero"'),app.indexOf('\n"summary":',app.indexOf('function ProfileView(')));
-assert.ok(levelCard.length>500,'The existing Profile level card remains present');
-assert.equal((levelCard.match(/style: \{/g)||[]).length,1,'Only XP progress width remains inline');
-assert.ok(levelCard.includes('style: { width: `${Math.round(lvl.progress * 100)}%` }'),'Canonical level progress supplies the fill width');
+// M291: Profile has three data-derived progress widths and no fixed JSX presentation.
+const profilePresentation=app.slice(app.indexOf('function ProfileView('),app.indexOf('// The app shell',app.indexOf('function ProfileView(')));
+assert.ok(profilePresentation.length>500,'The existing Profile view remains present');
+assert.equal((profilePresentation.match(/style:\s*\{/g)||[]).length,3,'Only three calculated Profile progress widths remain inline');
+assert.equal((profilePresentation.match(/style:\s*\{\s*width:\s*`[^`]+%`\s*\}/g)||[]).length,3,'All remaining Profile inline presentation is calculated progress');
 for(const suffix of ['.wpb-profile-hero','.wpb-profile-level-mark'])
     assert.ok(!css.includes('#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile '+suffix+'{'),
         'Retired R17 level-card style owner cannot return: '+suffix);
 
 assert.ok(!app.includes('.wpb-profile-level-mark{')&&!app.includes('.wpb-profile-hero{'),
     'Level geometry cannot return to the embedded stylesheet');
+
+// M291: Profile presentation uses class/state owners. Chart ink and dimensions
+// remain data-derived; generic chart helpers do not embed fixed geometry.
+function presentationFunction(name){const start=app.indexOf('function '+name+'(');return app.slice(start,app.indexOf('\nfunction ',start+12));}
+const achievementDetails=presentationFunction('AchievementDetailSheet');
+assert.equal((achievementDetails.match(/style:\s*\{/g)||[]).length,1,'Only the canonical detail progress width remains inline');
+assert.ok(achievementDetails.includes('data-dialog-title')&&achievementDetails.includes('profile-achievement-detail-title'),
+    'Achievement detail is named through the existing backdrop accessibility owner');
+const strengthTrend=presentationFunction('StrengthScoreTrend');
+assert.equal((strengthTrend.match(/style:\s*\{/g)||[]).length,6,'Trend uses only six data-derived ink properties');
+assert.equal((strengthTrend.match(/"--pi-profile-trend-ink":/g)||[]).length,6,'Trend typography and geometry cannot return to JSX');
+const sparkline=presentationFunction('Sparkline');
+assert.equal((sparkline.match(/style:\s*\{/g)||[]).length,1,'Only data-derived empty-chart height remains inline');
+assert.ok(/style:\s*\{\s*height\s*\}/.test(sparkline),'Shared Sparkline retains only calculated height');
+assert.equal((profilePresentation.match(/const sectionContent =/g)||[]).length,1,'Build the section element map once per Profile render');
+assert.ok(profilePresentation.includes('sectionContent[id]'),'Ordering selects existing section elements');
+for(const role of ['faint: C.faint','"border-soft": C.borderSoft'])
+    assert.equal((app.split(role).length-1),1,'Publish the live Profile palette role exactly once: '+role);
+
+const embeddedProfileStart=app.indexOf('function StyleTag(');
+const embeddedProfileStyles=app.slice(embeddedProfileStart,app.indexOf('\nfunction ',embeddedProfileStart+12));
+assert.ok(!embeddedProfileStyles.includes('.wpb-profile'),'Profile styling may not return to the embedded stylesheet');

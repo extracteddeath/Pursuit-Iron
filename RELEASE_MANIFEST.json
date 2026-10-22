@@ -117,17 +117,17 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "a61453a53d0980a3749681935982899ff84d7aabd79a7eaa54232b863c5fb608",
+    "modules/App.js": "a2b8c9f7cbae900d101ad63e016d18fa9c404d1120bd63a67d8cc0bac04e35be",
     "index.html": "54fd7f97b0a2d9d8b76694380158b4a23699a3f1c1cbea697c5e33b7c705b7ed",
-    "sw.js": "7eff1803a567ba1b044bf64b1ad2b3c47fed1bf1c8afb2c92eb798ce8ed9c7af",
-    "BUILD_PROFILE.json": "34ef08254d5c16b2f42434742b9a4a399c105d0a8b14b5d9914d968b3f3f92e3",
-    "CHANGELOG.md": "28d5e3a6c1dfeb9eb81336b938e23444453693e7f7837a632de8f60ba2d9e64c",
-    "app.css": "38fe02ca63db439051ae2863e00e8348a4ca05e7722d90a88514a49ba9d0bea2",
+    "sw.js": "a22159cce0dbc69cc3fe0b99f641c597029f9bb3b6aa3346b457bc32e6256c67",
+    "BUILD_PROFILE.json": "6bec3dc47463af31ed5e4690f87bf9cbb8e218f01ff6ce510c0872e058a2fd5e",
+    "CHANGELOG.md": "314cc20203d011c0a9c572a1e2f7c5d39f3ee81600e02729e39605c75e5c80a6",
+    "app.css": "36429affb0ec54dbe99c5dae379af35c15c34141155cc6400a118a5f186dbf35",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b905-r0ed210bfd0969854",
-  "uiMilestone": "Build 905 · M290 Profile level card ownership"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b905-r35bca054c1b4181f",
+  "uiMilestone": "Build 905 · M291 Profile presentation ownership"
 }

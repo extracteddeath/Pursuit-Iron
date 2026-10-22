@@ -251,7 +251,7 @@ function applyTheme(id) {
             // React owns the live palette. Startup colors must never remain the foreground of a
             // saved light theme or of a palette selected without reloading the app.
             const paletteRoles = { bg: C.bg, "bg-tint": C.bg2, card: C.card, "card-high": C.cardHi,
-                text: C.text, muted: C.muted, accent: C.accent, "on-accent": C.accentText, "accent-ink": C.accentInk, "accent-dim": C.accentDim, border: C.border, warning: C.warn, danger: C.danger, feature: C.feature };
+                text: C.text, muted: C.muted, faint: C.faint, "border-soft": C.borderSoft, accent: C.accent, "on-accent": C.accentText, "accent-ink": C.accentInk, "accent-dim": C.accentDim, border: C.border, warning: C.warn, danger: C.danger, feature: C.feature };
             for (const [role, value] of Object.entries(paletteRoles))
                 document.documentElement.style.setProperty(`--wpb-theme-${role}`, value);
             // The body and recovery shell also follow the current palette; index.html still seeds
@@ -1042,9 +1042,6 @@ function StyleTag({ theme } = {}) {
       .wpb-progress [data-progress-glance]{gap:6px!important;}
       .wpb-progress [data-progress-glance]>div{padding:10px 8px!important;border-radius:11px!important;}
 
-      .wpb-profile{height:100%;-webkit-overflow-scrolling:touch;background:${C.bg};}
-      .wpb-profile .wpb-profile-stat-grid{gap:6px!important;}
-      .wpb-profile .wpb-profile-stat-grid>div{border:1px solid ${C.borderSoft};border-radius:11px!important;padding:10px 8px!important;background:${C.card}!important;}
 
       .wpb-settings-jump{gap:5px!important;}
       .wpb-settings-chip{min-height:36px!important;padding:6px 10px!important;border-radius:9px!important;font-size:12px!important;background:transparent!important;}
@@ -1069,7 +1066,6 @@ function StyleTag({ theme } = {}) {
       .wpb-program .wpb-day-card{margin-bottom:7px!important;}
       .wpb-program .wpb-day-meta{gap:5px!important;}
       .wpb-progress .wpb-surface{border-radius:12px!important;}
-      .wpb-profile .wpb-profile-stat-grid{margin-bottom:14px!important;}
 
       .wpb-library .wpb-empty-state,.wpb-cycles .wpb-empty-state{max-width:440px;margin-left:auto!important;margin-right:auto!important;}
       @media(max-width:480px){
@@ -1195,15 +1191,11 @@ function StyleTag({ theme } = {}) {
       .wpb-progress [data-progress-glance] .mono{font-size:20px!important;}
       .wpb-progress .wpb-premium-tabs{border-color:${C.borderSoft}!important;background:${C.bg}!important;}
       .wpb-progress .wpb-premium-tabs>button{min-height:36px!important;font-weight:650!important;}
-      .wpb-profile .wpb-profile-stat-grid{gap:0!important;border:1px solid ${C.borderSoft};border-radius:12px!important;overflow:hidden;background:${C.card}!important;}
-      .wpb-profile .wpb-profile-stat-grid>div{border:0!important;border-radius:0!important;padding:9px 6px!important;background:transparent!important;}
-      .wpb-profile .wpb-profile-stat-grid>div+div{border-left:1px solid ${C.borderSoft}!important;}
 
       @media(max-width:420px){
         .wpb-home .wpb-action-tile{min-height:52px!important;}
         .wpb-program .wpb-program-actions{margin-top:8px!important;}
         .wpb-progress [data-progress-glance]>div{padding-left:6px!important;padding-right:6px!important;}
-        .wpb-profile .wpb-profile-stat-grid>div{padding-left:5px!important;padding-right:5px!important;}
       }
 
       /* M121 UI-ONLY PREMIUM PASS — presentation and interaction hierarchy only.
@@ -1711,8 +1703,7 @@ function StyleTag({ theme } = {}) {
       /* Screen-specific de-cardification. These are deliberate exceptions where grouped rows read
          better than separate tiles and reduce the generated-dashboard look. */
       .wpb-home .wpb-metric-strip,
-      .wpb-progress [data-progress-glance],
-      .wpb-profile .wpb-profile-stat-grid{
+      .wpb-progress [data-progress-glance]{
         background:transparent!important;
         border-left:0!important;border-right:0!important;
         border-radius:0!important;
@@ -1720,8 +1711,7 @@ function StyleTag({ theme } = {}) {
       .wpb-home .wpb-action-tile{background:transparent!important;}
       .wpb-home .wpb-action-tile:first-child{background:transparent!important;}
       .wpb-home .wpb-home-hero{border-radius:var(--r-hero)!important;}
-      .wpb-progress [data-progress-glance]>div+div,
-      .wpb-profile .wpb-profile-stat-grid>div+div{border-left-color:var(--hairline)!important;}
+      .wpb-progress [data-progress-glance]>div+div{border-left-color:var(--hairline)!important;}
 
       /* Compact phones: preserve hierarchy before shrinking typography. */
       @media(max-width:420px){
@@ -1928,27 +1918,6 @@ function StyleTag({ theme } = {}) {
 
       /* Profile: the level is the headline, not another card. Quick stats and Strength Score become
          sections of the same page with rules instead of independent dashboard tiles. */
-      .wpb-profile .wpb-profile-stat-grid{
-        margin-bottom:14px!important;border-top:0!important;border-bottom:1px solid var(--section-rule)!important;
-      }
-      .wpb-profile-stat{background:transparent!important;}
-      .wpb-profile-stat-label{
-        text-transform:none!important;letter-spacing:0!important;font-size:11px!important;font-weight:650!important;color:${C.muted}!important;
-      }
-      .wpb-profile-section:not(.wpb-profile-club){
-        padding:14px 0!important;margin-bottom:14px!important;background:transparent!important;
-        border-radius:0!important;border-top:0!important;border-bottom:1px solid var(--section-rule)!important;
-      }
-      .wpb-profile-achievement{border-left:0!important;border-right:0!important;border-top:0!important;}
-      .wpb-profile-achievements{border-left:0!important;border-right:0!important;border-top:0!important;}
-      .wpb-profile-setup .wpb-primary-action{min-height:40px!important;}
-      .wpb-profile-strength-grid{container-type:inline-size;}
-      .wpb-profile-strength-cell{border:1px solid color-mix(in srgb,${C.borderSoft} 76%,transparent);}
-      .wpb-profile-next-strength{border:1px solid color-mix(in srgb,${C.borderSoft} 70%,transparent);}
-      .wpb-profile-achievements{padding-top:2px!important;}
-      .wpb-profile-next-achievement{min-height:58px;}
-      .wpb-profile-achievement-toggle{border-radius:8px;}
-      .wpb-profile-achievement-toggle:active{background:color-mix(in srgb,${C.cardHi} 58%,transparent)!important;}
 
       .wpb-progress .wpb-premium-tabs{margin-top:8px!important;}
       .wpb-progress .wpb-premium-tabs>button{min-height:36px!important;padding-top:7px!important;padding-bottom:7px!important;}
@@ -1966,8 +1935,6 @@ function StyleTag({ theme } = {}) {
       .wpb-progress-disclosure>summary::-webkit-details-marker{display:none;}
       .wpb-progress-grouping{margin-bottom:7px!important;border:1px solid var(--hairline);background:transparent!important;}
       @media(max-width:360px){
-        .wpb-profile-strength-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
-        .wpb-profile-achievement-grid{grid-template-columns:repeat(3,1fr)!important;}
 
       }
 
@@ -14946,15 +14913,44 @@ function Sparkline({ values, width = 140, height = 40, color = C.accent }) {
     // on phones narrower than the design width (this bit us at width=400 call sites: the line ran
     // off the right edge of the card on any device under ~430px).
     if (!values || values.length < 2) {
-        return _jsx("div", { style: { width: "100%", height, display: "flex", alignItems: "center", justifyContent: "center", color: C.faint, fontSize: 11 }, children: "one session so far" });
+        return _jsx("div", {
+            className: "wpb-sparkline-empty",
+            style: { height },
+            children: "one session so far"
+        });
     }
-    const min = Math.min(...values), max = Math.max(...values), range = max - min || 1, pad = 4;
-    const w = width - pad * 2, h = height - pad * 2;
-    const pts = values.map((v, i) => [pad + (i / (values.length - 1)) * w, pad + h - ((v - min) / range) * h]);
+    const min = Math.min(...values),
+        max = Math.max(...values),
+        range = max - min || 1,
+        pad = 4;
+    const w = width - pad * 2,
+        h = height - pad * 2;
+    const pts = values.map((v, i) => [
+        pad + (i / (values.length - 1)) * w,
+        pad + h - ((v - min) / range) * h
+    ]);
     const line = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
     const area = `${line} L${pts[pts.length - 1][0].toFixed(1)},${height - pad} L${pts[0][0].toFixed(1)},${height - pad} Z`;
     const lastPt = pts[pts.length - 1];
-    return (_jsxs("svg", { width: "100%", height: height, viewBox: `0 0 ${width} ${height}`, preserveAspectRatio: "none", style: { display: "block", maxWidth: "100%" }, children: [_jsx("path", { d: area, fill: color, opacity: "0.12" }), _jsx("path", { d: line, fill: "none", stroke: color, strokeWidth: "2", strokeLinejoin: "round", strokeLinecap: "round" }), _jsx("circle", { cx: lastPt[0], cy: lastPt[1], r: "2.8", fill: color })] }));
+    return _jsxs("svg", {
+        className: "wpb-sparkline",
+        width: "100%",
+        height: height,
+        viewBox: `0 0 ${width} ${height}`,
+        preserveAspectRatio: "none",
+        children: [
+            _jsx("path", { d: area, fill: color, opacity: "0.12" }),
+            _jsx("path", {
+                d: line,
+                fill: "none",
+                stroke: color,
+                strokeWidth: "2",
+                strokeLinejoin: "round",
+                strokeLinecap: "round"
+            }),
+            _jsx("circle", { cx: lastPt[0], cy: lastPt[1], r: "2.8", fill: color })
+        ]
+    });
 }
 // Strength Score momentum: a prominent overall-score line on a fixed 0–100 axis, plus a row of
 // small per-pattern sparklines so the lifter sees which movement patterns are climbing or stalling.
@@ -14965,32 +14961,214 @@ function StrengthScoreTrend({ data }) {
        valid `overall` but a missing or partial `byPat` threw inside the render and took the whole
        Strength standards section down into its error boundary. A guard that checks one field of an
        object it then walks four levels into is not a guard. */
-    if (!data || !Array.isArray(data.overall) || data.overall.length < 2)
-        return null;
-    if (!data.byPat || typeof data.byPat !== "object")
-        return null;
-    if (!data.overall.every(p => p && Number.isFinite(p.v)))
-        return null;
-    const W = 300, Hh = 108, pad = 6;
+    if (!data || !Array.isArray(data.overall) || data.overall.length < 2) return null;
+    if (!data.byPat || typeof data.byPat !== "object") return null;
+    if (!data.overall.every((p) => p && Number.isFinite(p.v))) return null;
+    const W = 300,
+        Hh = 108,
+        pad = 6;
     const ov = data.overall;
     const xs = (i, n) => pad + (i / (n - 1)) * (W - pad * 2);
     const ys = (v) => pad + (Hh - pad * 2) - (clamp(v, 0, 100) / 100) * (Hh - pad * 2);
     const lvlOf = scoreLevelIdx; // the one owner — see its header; this used to be a private copy
-    const ovLine = ov.map((p, i) => `${i === 0 ? "M" : "L"}${xs(i, ov.length).toFixed(1)},${ys(p.v).toFixed(1)}`).join(" ");
+    const ovLine = ov
+        .map((p, i) => `${i === 0 ? "M" : "L"}${xs(i, ov.length).toFixed(1)},${ys(p.v).toFixed(1)}`)
+        .join(" ");
     // measure "since you started" from the coverage-fair baseline (when your current lifts were all present)
-    const startIdx = (data.startIdx > 0 && data.startIdx < ov.length - 1) ? data.startIdx : 0;
-    const baseV = ov[startIdx].v, last = ov[ov.length - 1].v, gain = last - baseV;
+    const startIdx = data.startIdx > 0 && data.startIdx < ov.length - 1 ? data.startIdx : 0;
+    const baseV = ov[startIdx].v,
+        last = ov[ov.length - 1].v,
+        gain = last - baseV;
     const lastPt = [xs(ov.length - 1, ov.length), ys(last)];
-    const curLvl = lvlOf(last), startLvl = lvlOf(baseV);
+    const curLvl = lvlOf(last),
+        startLvl = lvlOf(baseV);
     const lineColor = LEVEL_COLORS[curLvl] || C.accent;
     const basePt = startIdx > 0 ? [xs(startIdx, ov.length), ys(baseV)] : null;
-    const pats = Object.keys(PATTERN_COLORS).filter(p => data.byPat[p] && data.byPat[p].length >= 2);
-    return (_jsxs("div", { style: { marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.borderSoft}` }, children: [_jsxs("div", { style: { display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, marginBottom: 4 }, children: [_jsx("span", { style: { fontSize: 13, fontWeight: 700, color: C.text }, children: "Score over time" }), _jsxs("span", { style: { fontSize: 11, fontWeight: 700, color: gain > 0 ? C.accentInk : gain < 0 ? catInk("#e0833b") : C.faint }, children: [gain > 0 ? "+" : "", gain, " ", startIdx > 0 ? "since your full lineup" : "since you started"] })] }), _jsxs("div", { style: { fontSize: 11, fontWeight: 600, marginBottom: 8, display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }, children: [startLvl !== curLvl && _jsxs(_Fragment, { children: [_jsx("span", { style: { color: catInk(LEVEL_COLORS[startLvl]) }, children: STD_LEVELS[startLvl] }), _jsx("span", { style: { color: C.faint }, children: "\u2192" })] }), _jsx("span", { style: { color: lineColor }, children: STD_LEVELS[curLvl] }), _jsxs("span", { style: { color: C.faint, fontWeight: 500 }, children: ["\u00B7 ", last, "/100 now"] })] }), _jsxs("div", { style: { fontSize: 11, color: C.faint, lineHeight: 1.45, marginBottom: 8 }, children: ["Each band is a strength level. Your score (0\u2013100) is how your best estimated 1RMs stack up against strength standards for your bodyweight \u2014 untrained at 0, elite near 100", basePt ? ". The hollow dot marks where you stood once your current lineup of lifts was all in play, so the climb since reflects real progress, not just adding exercises." : "."] }), _jsxs("svg", { viewBox: `0 0 ${W} ${Hh}`, width: "100%", height: Hh, style: { display: "block" }, preserveAspectRatio: "none", children: [[0, 1, 2, 3, 4].map(i => (_jsx("rect", { x: pad, width: W - pad * 2, y: ys((i + 1) * 20), height: Math.max(0, ys(i * 20) - ys((i + 1) * 20)), fill: LEVEL_COLORS[i], opacity: i === curLvl ? 0.22 : 0.08 }, i))), [20, 40, 60, 80].map(g => _jsx("line", { x1: pad, x2: W - pad, y1: ys(g), y2: ys(g), stroke: C.borderSoft, strokeWidth: "1", opacity: "0.56" }, g)), _jsx("path", { d: ovLine, fill: "none", stroke: lineColor, strokeWidth: "2.6", strokeLinejoin: "round", strokeLinecap: "round" }), basePt && _jsx("circle", { cx: basePt[0], cy: basePt[1], r: "3", fill: C.bg, stroke: C.muted, strokeWidth: "1.5" }), _jsx("circle", { cx: lastPt[0], cy: lastPt[1], r: "3.4", fill: lineColor, stroke: C.bg, strokeWidth: "1.5" })] }), pats.length > 0 && (_jsx("div", { style: { display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }, children: pats.map(p => {
-                    const series = data.byPat[p];
-                    const cur = series[series.length - 1].v, st = series[0].v, d = cur - st;
-                    const lvl = lvlOf(cur);
-                    return (_jsxs("div", { style: { flex: "1 1 0", minWidth: 64, padding: "8px 9px", borderRadius: 12, background: C.bg2 }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }, children: [_jsx("span", { style: { fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: .3, color: catInk(PATTERN_COLORS[p]) }, children: SCORE_PATTERN_LABEL[p] }), _jsx("span", { className: "mono", style: { fontSize: 13, fontWeight: 800, color: C.text }, children: cur })] }), _jsx(Sparkline, { values: series.map(s => s.v), width: 92, height: 24, color: PATTERN_COLORS[p] }), _jsxs("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 2 }, children: [_jsx("span", { style: { fontSize: 11, fontWeight: 700, color: catInk(LEVEL_COLORS[lvl]) }, children: STD_LEVELS[lvl] }), d !== 0 && _jsxs("span", { style: { fontSize: 11, fontWeight: 600, color: d > 0 ? catInk(PATTERN_COLORS[p]) : C.faint }, children: [d > 0 ? "+" : "", d] })] })] }, p));
-                }) }))] }));
+    const pats = Object.keys(PATTERN_COLORS).filter((p) => data.byPat[p] && data.byPat[p].length >= 2);
+    return _jsxs("div", {
+        className: "wpb-profile-score-trend",
+        children: [
+            _jsxs("div", {
+                className: "wpb-profile-trend-head",
+                children: [
+                    _jsx("span", { className: "wpb-profile-trend-title", children: "Score over time" }),
+                    _jsxs("span", {
+                        className: "wpb-profile-trend-delta",
+                        style: {
+                            "--pi-profile-trend-ink":
+                                gain > 0 ? C.accentInk : gain < 0 ? catInk("#e0833b") : C.faint
+                        },
+                        children: [
+                            gain > 0 ? "+" : "",
+                            gain,
+                            " ",
+                            startIdx > 0 ? "since your full lineup" : "since you started"
+                        ]
+                    })
+                ]
+            }),
+            _jsxs("div", {
+                className: "wpb-profile-trend-levels",
+                children: [
+                    startLvl !== curLvl &&
+                        _jsxs(_Fragment, {
+                            children: [
+                                _jsx("span", {
+                                    className: "wpb-profile-trend-ink",
+                                    style: { "--pi-profile-trend-ink": catInk(LEVEL_COLORS[startLvl]) },
+                                    children: STD_LEVELS[startLvl]
+                                }),
+                                _jsx("span", { className: "wpb-profile-faint", children: "\u2192" })
+                            ]
+                        }),
+                    _jsx("span", {
+                        className: "wpb-profile-trend-ink",
+                        style: { "--pi-profile-trend-ink": lineColor },
+                        children: STD_LEVELS[curLvl]
+                    }),
+                    _jsxs("span", {
+                        className: "wpb-profile-trend-current",
+                        children: ["\u00B7 ", last, "/100 now"]
+                    })
+                ]
+            }),
+            _jsxs("div", {
+                className: "wpb-profile-trend-description",
+                children: [
+                    "Each band is a strength level. Your score (0\u2013100) is how your best estimated 1RMs stack up against strength standards for your bodyweight \u2014 untrained at 0, elite near 100",
+                    basePt
+                        ? ". The hollow dot marks where you stood once your current lineup of lifts was all in play, so the climb since reflects real progress, not just adding exercises."
+                        : "."
+                ]
+            }),
+            _jsxs("svg", {
+                className: "wpb-profile-trend-chart",
+                viewBox: `0 0 ${W} ${Hh}`,
+                width: "100%",
+                height: Hh,
+                preserveAspectRatio: "none",
+                children: [
+                    [0, 1, 2, 3, 4].map((i) =>
+                        _jsx(
+                            "rect",
+                            {
+                                x: pad,
+                                width: W - pad * 2,
+                                y: ys((i + 1) * 20),
+                                height: Math.max(0, ys(i * 20) - ys((i + 1) * 20)),
+                                fill: LEVEL_COLORS[i],
+                                opacity: i === curLvl ? 0.22 : 0.08
+                            },
+                            i
+                        )
+                    ),
+                    [20, 40, 60, 80].map((g) =>
+                        _jsx(
+                            "line",
+                            {
+                                x1: pad,
+                                x2: W - pad,
+                                y1: ys(g),
+                                y2: ys(g),
+                                stroke: C.borderSoft,
+                                strokeWidth: "1",
+                                opacity: "0.56"
+                            },
+                            g
+                        )
+                    ),
+                    _jsx("path", {
+                        d: ovLine,
+                        fill: "none",
+                        stroke: lineColor,
+                        strokeWidth: "2.6",
+                        strokeLinejoin: "round",
+                        strokeLinecap: "round"
+                    }),
+                    basePt &&
+                        _jsx("circle", {
+                            cx: basePt[0],
+                            cy: basePt[1],
+                            r: "3",
+                            fill: C.bg,
+                            stroke: C.muted,
+                            strokeWidth: "1.5"
+                        }),
+                    _jsx("circle", {
+                        cx: lastPt[0],
+                        cy: lastPt[1],
+                        r: "3.4",
+                        fill: lineColor,
+                        stroke: C.bg,
+                        strokeWidth: "1.5"
+                    })
+                ]
+            }),
+            pats.length > 0 &&
+                _jsx("div", {
+                    className: "wpb-profile-patterns",
+                    children: pats.map((p) => {
+                        const series = data.byPat[p];
+                        const cur = series[series.length - 1].v,
+                            st = series[0].v,
+                            d = cur - st;
+                        const lvl = lvlOf(cur);
+                        return _jsxs(
+                            "div",
+                            {
+                                className: "wpb-profile-pattern",
+                                children: [
+                                    _jsxs("div", {
+                                        className: "wpb-profile-pattern-head",
+                                        children: [
+                                            _jsx("span", {
+                                                className: "wpb-profile-pattern-label",
+                                                style: {
+                                                    "--pi-profile-trend-ink": catInk(PATTERN_COLORS[p])
+                                                },
+                                                children: SCORE_PATTERN_LABEL[p]
+                                            }),
+                                            _jsx("span", {
+                                                className: "mono wpb-profile-pattern-score",
+                                                children: cur
+                                            })
+                                        ]
+                                    }),
+                                    _jsx(Sparkline, {
+                                        values: series.map((s) => s.v),
+                                        width: 92,
+                                        height: 24,
+                                        color: PATTERN_COLORS[p]
+                                    }),
+                                    _jsxs("div", {
+                                        className: "wpb-profile-pattern-foot",
+                                        children: [
+                                            _jsx("span", {
+                                                className: "wpb-profile-pattern-level",
+                                                style: {
+                                                    "--pi-profile-trend-ink": catInk(LEVEL_COLORS[lvl])
+                                                },
+                                                children: STD_LEVELS[lvl]
+                                            }),
+                                            d !== 0 &&
+                                                _jsxs("span", {
+                                                    className: "wpb-profile-pattern-delta",
+                                                    style: {
+                                                        "--pi-profile-trend-ink":
+                                                            d > 0 ? catInk(PATTERN_COLORS[p]) : C.faint
+                                                    },
+                                                    children: [d > 0 ? "+" : "", d]
+                                                })
+                                        ]
+                                    })
+                                ]
+                            },
+                            p
+                        );
+                    })
+                })
+        ]
+    });
 }
 function PlateCalcSheet({ unit, onClose, initialBar = "barbell", initialWeight = "", initialTab = "plates" }) {
     const [tab, setTab] = useState(initialTab);
@@ -18194,10 +18372,89 @@ const SettingsTitle = ({ children }) => _jsx("div", { className: "wpb-settings-t
 // Tap target for an achievement tile — a `title` tooltip is invisible on touch, so this is the only
 // way to actually read a locked badge's description on a phone.
 function AchievementDetailSheet({ m, onClose }) {
-    if (!m)
-        return null;
-    const fmt = (v, target) => target <= 5 ? (Math.round(v * 100) / 100).toFixed(2).replace(/\.?0+$/, "") || "0" : (v >= 1000 ? `${Math.round(v / 1000)}k` : String(Math.round(v)));
-    return (_jsx("div", { onClick: onClose, className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "flex-end", zIndex: 80, animation: "fadeIn .2s both" }, children: _jsxs("div", { ref: sheetDragRef, "data-sheet-drag": true, onClick: e => e.stopPropagation(), className: "wpb-achievement-sheet", style: { width: "100%", background: C.bg, borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: "22px 20px", paddingBottom: "calc(22px + env(safe-area-inset-bottom))" }, children: [_jsxs("div", { style: { display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 16 }, children: [_jsx("div", { className: "wpb-achievement-icon", "data-earned": m.done ? "1" : "0", style: { width: 56, height: 56, borderRadius: 16, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, background: m.done ? C.accentDim : C.bg2, filter: m.done ? "none" : "grayscale(1)", opacity: m.done ? 1 : 0.5 }, children: m.icon }), _jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { style: { ...eyebrow() }, children: m.cat }), _jsx("div", { style: { fontSize: 18, fontWeight: 700, marginTop: 1 }, children: m.label }), _jsx("div", { style: { fontSize: 13, color: C.muted, lineHeight: 1.4, marginTop: 2 }, children: m.desc })] }), _jsx("button", { onClick: onClose, "aria-label": "Close", className: "pressable hit wpb-sheet-close", style: { width: 32, height: 32, borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.muted, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }, children: _jsx(X, { size: 16 }) })] }), m.done ? (_jsxs("div", { className: "wpb-achievement-earned", style: { display: "flex", alignItems: "center", gap: 6, color: C.accentInk, fontSize: 13, fontWeight: 700 }, children: [_jsx(Check, { size: 16, strokeWidth: 3 }), " Earned"] })) : (_jsxs("div", { children: [_jsxs("div", { style: { display: "flex", justifyContent: "space-between", marginBottom: 4 }, children: [_jsx("span", { style: { fontSize: 13, color: C.muted, fontWeight: 600 }, children: "Progress" }), _jsxs("span", { className: "mono", style: { fontSize: 13, color: C.faint }, children: [fmt(m.value, m.target), " / ", fmt(m.target, m.target)] })] }), _jsx("div", { style: { height: 7, borderRadius: 999, background: C.bg2, overflow: "hidden" }, children: _jsx("div", { style: { width: `${Math.round(m.progress * 100)}%`, height: "100%", background: C.accent, borderRadius: 999 } }) })] }))] }) }));
+    if (!m) return null;
+    const fmt = (v, target) =>
+        target <= 5
+            ? (Math.round(v * 100) / 100).toFixed(2).replace(/\.?0+$/, "") || "0"
+            : v >= 1000
+              ? `${Math.round(v / 1000)}k`
+              : String(Math.round(v));
+    return _jsx("div", {
+        onClick: onClose,
+        className: "wpb-backdrop wpb-profile-achievement-backdrop",
+        "aria-labelledby": "profile-achievement-detail-title",
+        children: _jsxs("div", {
+            ref: sheetDragRef,
+            "data-sheet-drag": true,
+            onClick: (e) => e.stopPropagation(),
+            className: "wpb-achievement-sheet",
+            children: [
+                _jsxs("div", {
+                    className: "wpb-profile-detail-head",
+                    children: [
+                        _jsx("div", {
+                            className: "wpb-achievement-icon",
+                            "data-earned": m.done ? "1" : "0",
+                            children: m.icon
+                        }),
+                        _jsxs("div", {
+                            className: "wpb-profile-copy",
+                            children: [
+                                _jsx("div", { className: "wpb-profile-eyebrow", children: m.cat }),
+                                _jsx("div", {
+                                    className: "wpb-profile-detail-title",
+                                    id: "profile-achievement-detail-title",
+                                    "data-dialog-title": true,
+                                    children: m.label
+                                }),
+                                _jsx("div", { className: "wpb-profile-detail-description", children: m.desc })
+                            ]
+                        }),
+                        _jsx("button", {
+                            onClick: onClose,
+                            "aria-label": "Close",
+                            className: "pressable hit wpb-sheet-close wpb-profile-detail-close",
+                            children: _jsx(X, { size: 16 })
+                        })
+                    ]
+                }),
+                m.done
+                    ? _jsxs("div", {
+                          className: "wpb-achievement-earned",
+                          children: [_jsx(Check, { size: 16, strokeWidth: 3 }), " Earned"]
+                      })
+                    : _jsxs("div", {
+                          children: [
+                              _jsxs("div", {
+                                  className: "wpb-profile-detail-progress-head",
+                                  children: [
+                                      _jsx("span", {
+                                          className: "wpb-profile-detail-progress-label",
+                                          children: "Progress"
+                                      }),
+                                      _jsxs("span", {
+                                          className: "mono wpb-profile-detail-progress-value",
+                                          children: [fmt(m.value, m.target), " / ", fmt(m.target, m.target)]
+                                      })
+                                  ]
+                              }),
+                              _jsx("div", {
+                                  className: "wpb-profile-detail-progress-track",
+                                  role: "progressbar",
+                                  "aria-label": `${m.label} progress`,
+                                  "aria-valuemin": 0,
+                                  "aria-valuemax": 100,
+                                  "aria-valuenow": Math.round(m.progress * 100),
+                                  children: _jsx("div", {
+                                      className: "wpb-profile-progress-fill",
+                                      style: { width: `${Math.round(m.progress * 100)}%` }
+                                  })
+                              })
+                          ]
+                      })
+            ]
+        })
+    });
 }
 function ProfileStrengthClub({ history, unit }) {
     const trends = useMemo(() => exerciseTrends(history), [history]);
@@ -18391,59 +18648,550 @@ function ProfileView({ history, bodyweight, sex, age, unit, onSettings }) {
     const bw = parseFloat(bodyweight);
     const ms = useMemo(() => computeMilestones(history, { unit, bodyweight }), [history, unit, bodyweight]);
     const lvl = useMemo(() => computeLevel(history, ms), [history, ms]);
-    const sscore = useMemo(() => (bw > 0 ? strengthScore(history, bw, unit, sex, age) : null), [history, bw, unit, sex, age]);
-    const trendData = useMemo(() => (bw > 0 ? strengthScoreHistory(history, bw, unit, sex, age) : null), [history, bw, unit, sex, age]);
+    const sscore = useMemo(
+        () => (bw > 0 ? strengthScore(history, bw, unit, sex, age) : null),
+        [history, bw, unit, sex, age]
+    );
+    const trendData = useMemo(
+        () => (bw > 0 ? strengthScoreHistory(history, bw, unit, sex, age) : null),
+        [history, bw, unit, sex, age]
+    );
     const [detail, setDetail] = useState(null);
     const [showAchievements, setShowAchievements] = useState(false);
     const [profilePrefs, setProfilePrefs] = useState(readProfilePrefs);
     const [showProfileCustomize, setShowProfileCustomize] = useState(false);
     const [showShareCustomize, setShowShareCustomize] = useState(false);
-    const saveProfilePrefs = next => {
+    const saveProfilePrefs = (next) => {
         const safe = normalizeProfilePrefs(next);
         setProfilePrefs(safe);
-        try { localStorage.setItem(PROFILE_PREFERENCE_KEY, JSON.stringify(safe)); } catch { /* offline storage unavailable */ }
+        try {
+            localStorage.setItem(PROFILE_PREFERENCE_KEY, JSON.stringify(safe));
+        } catch {
+            /* offline storage unavailable */
+        }
     };
-    const earned = ms.filter(m => m.done);
-    const fmt = (v, target) => target <= 5 ? (Math.round(v * 100) / 100).toFixed(2).replace(/\.?0+$/, "") || "0" : (v >= 1000 ? `${Math.round(v / 1000)}k` : String(Math.round(v)));
-    const next = ms.filter(m => !m.done).sort((a, b) => (b.progress - a.progress) || (a.target - b.target))[0];
-    const totalWorkouts = ms.find(m => m.id === "first")?.value || 0;
-    const bestStreak = ms.find(m => m.id === "streak3")?.value || 0;
-    const totalVol = ms.find(m => m.id === "vol1")?.value || 0;
-    const fmtVol = (v) => v >= 1000000 ? `${(v / 1000000).toFixed(1)}M` : v >= 1000 ? `${Math.round(v / 1000)}k` : Math.round(v);
+    const earned = ms.filter((m) => m.done);
+    const fmt = (v, target) =>
+        target <= 5
+            ? (Math.round(v * 100) / 100).toFixed(2).replace(/\.?0+$/, "") || "0"
+            : v >= 1000
+              ? `${Math.round(v / 1000)}k`
+              : String(Math.round(v));
+    const next = ms.filter((m) => !m.done).sort((a, b) => b.progress - a.progress || a.target - b.target)[0];
+    const totalWorkouts = ms.find((m) => m.id === "first")?.value || 0;
+    const bestStreak = ms.find((m) => m.id === "streak3")?.value || 0;
+    const totalVol = ms.find((m) => m.id === "vol1")?.value || 0;
+    const fmtVol = (v) =>
+        v >= 1000000
+            ? `${(v / 1000000).toFixed(1)}M`
+            : v >= 1000
+              ? `${Math.round(v / 1000)}k`
+              : Math.round(v);
     const groups = [];
-    ms.forEach(m => { const g = groups.find(x => x.cat === m.cat); if (g)
-        g.items.push(m);
-    else
-        groups.push({ cat: m.cat, items: [m] }); });
+    ms.forEach((m) => {
+        const g = groups.find((x) => x.cat === m.cat);
+        if (g) g.items.push(m);
+        else groups.push({ cat: m.cat, items: [m] });
+    });
     const remainingXp = Math.max(0, Math.round(lvl.xpForLevel - lvl.xpIntoLevel));
     const bodyLabel = bw > 0 ? `${(Math.round(bw * 10) / 10).toString()} ${unit}` : "Bodyweight not set";
     const ageLabel = Number(age) > 0 ? `Age ${Math.round(Number(age))}` : null;
-    const cardRows = profileCardRows({ history, unit, score: sscore, level: lvl, milestones: ms, prefs: profilePrefs });
-    return (_jsxs("div", { className: "wpb-page-shell wpb-profile", children: [
-        _jsx(UiRootHeader, { title: "Profile", titleClassName: "wpb-profile-title", className: "wpb-profile-head",
-            actions: onSettings && _jsxs(UiAction, { variant: "tonal", onClick: onSettings, "aria-label": "Edit profile", className: "wpb-profile-edit", children: [_jsx(Pencil, { size: 16 }), "Edit"] }) }),
-        _jsxs("div", { className: "wpb-scroll wpb-page-scroll wpb-profile-scroll", children: [
-            _jsxs("div", { className: "wpb-profile-inner", children: [
-                _jsxs("p", { className: "wpb-profile-identity", children: [_jsx("span", { children: bodyLabel }), ageLabel && _jsxs(_Fragment, { children: [_jsx("span", { "aria-hidden": "true", children: " · " }), _jsx("span", { children: ageLabel })] })] }), _jsx(ProfileShareCard, { prefs: profilePrefs, rows: cardRows, expanded: showShareCustomize, onEdit: () => setShowShareCustomize(x => !x), onShare: () => shareCustomProfileCard({ history, unit, score: sscore, level: lvl, milestones: ms, prefs: profilePrefs, theme: C }) }), showShareCustomize && _jsx(ProfileCardCustomization, { prefs: profilePrefs, onChange: saveProfilePrefs, onClose: () => setShowShareCustomize(false) }), _jsx("div", { className: "wpb-profile-toolbar", children: _jsxs(UiAction, { variant: "tonal", "aria-expanded": showProfileCustomize, onClick: () => setShowProfileCustomize(x => !x), children: [_jsx(Pencil, {size:15}), " Arrange Profile"] }) }), showProfileCustomize && _jsx(ProfileCustomization, { prefs: profilePrefs, onChange: saveProfilePrefs, onClose: () => setShowProfileCustomize(false) }), ...profilePrefs.order.filter(id => !profilePrefs.hidden.includes(id)).map((id, i) => _jsxs(_Fragment, { children: [({
-"level": _jsx("div", { className: "wpb-profile-hero", children:
-    _jsxs("div", { className: "wpb-profile-level-row", children: [
-        _jsx("div", { className: "wpb-profile-level-mark", children:
-            _jsx("span", { className: "mono wpb-profile-level-value", children: lvl.level }) }),
-        _jsxs("div", { className: "wpb-profile-level-copy", children: [
-            _jsx("div", { className: "wpb-profile-level-title", children: lvl.title }),
-            _jsxs("div", { className: "wpb-profile-level-meta", children: ["Level ", lvl.level, " \u00B7 ", remainingXp ? `${remainingXp} XP to level ${lvl.level + 1}` : `Level ${lvl.level + 1} ready`] }),
-            _jsx("div", { className: "wpb-profile-level-progress", role: "progressbar", "aria-label": `Level ${lvl.level} progress`, "aria-valuemin": "0", "aria-valuemax": "100", "aria-valuenow": Math.round(lvl.progress * 100), children:
-                _jsx("div", { className: "wpb-profile-level-progress-fill", style: { width: `${Math.round(lvl.progress * 100)}%` } }) })
-        ] })
-    ] }) }),
-"summary": _jsx("div", { className: "wpb-profile-stat-grid", "aria-label": "Lifetime training summary", children: [["Workouts", totalWorkouts, null], ["Best streak", bestStreak, bestStreak === 1 ? "week" : "weeks"], ["Volume", fmtVol(totalVol), unit]].map(([label, val, sub]) => (_jsxs("div", { className: "wpb-profile-stat", style: { background: C.card }, children: [_jsxs("div", { className: "mono", style: { display: "flex", alignItems: "baseline", justifyContent: "center", gap: sub ? 4 : 0, color: C.text, lineHeight: 1.1 }, children: [_jsx("span", { style: { fontSize: 19, fontWeight: 820 }, children: val }), sub ? _jsx("span", { style: { fontSize: 11, fontWeight: 650, color: C.faint }, children: sub }) : null] }), _jsx("div", { className: "wpb-profile-stat-label", style: { fontSize: 11, fontWeight: 600, color: C.faint, marginTop: 3 }, children: label })] }, label))) }),
-"strength": sscore ? (_jsxs("section", { className: "wpb-profile-section wpb-profile-strength", "aria-labelledby": "profile-strength-title", style: { background: C.card, borderRadius: 16, padding: "14px 16px", marginBottom: 12 }, children: [_jsxs("div", { style: { display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 12 }, children: [_jsxs("div", { children: [_jsxs("div", { id: "profile-strength-title", style: { display: "flex", alignItems: "center", gap: 7, fontSize: 15, fontWeight: 740 }, children: [_jsx(Activity, { size: 15, color: C.accentInk }), " Strength"] }), _jsxs("div", { style: { display: "flex", alignItems: "baseline", gap: 8, marginTop: 7 }, children: [_jsx("span", { className: "mono", style: { fontSize: 31, fontWeight: 850, color: C.accentInk, lineHeight: 1 }, children: sscore.overall }), _jsxs("span", { style: { fontSize: 12.5, color: C.muted }, children: [sscore.level, " \u00B7 ", sscore.liftCount, " lift", sscore.liftCount === 1 ? "" : "s"] })] })] }), _jsxs("div", { style: { display: "flex", alignItems: "center", gap: 7 }, children: [sscore.estimated && _jsx("span", { style: { fontSize: 11, fontWeight: 750, color: C.muted, background: C.bg2, borderRadius: 7, padding: "3px 6px" }, children: "Estimated" }), _jsx("button", { "aria-label": "Share Strength Score", onClick: () => shareStrengthScore(sscore, C), title: "Share Strength Score", className: "pressable hit", style: { width: 38, height: 38, borderRadius: 10, border: `1px solid ${C.borderSoft}`, background: C.bg2, color: C.muted, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }, children: _jsx(Share2, { size: 15 }) })] })] }), _jsx("div", { className: "wpb-profile-strength-grid", children: sscore.subs.map(s => (_jsxs("div", { className: "wpb-profile-strength-cell", style: { background: C.bg2 }, children: [_jsx("div", { className: "mono", children: s.score }), _jsx("div", { className: "wpb-profile-strength-label", style: { color: C.muted }, children: s.label })] }, s.key))) }), sscore.nextMilestone && (_jsxs("div", { className: "wpb-profile-next-strength", style: { color: C.muted, background: C.bg2 }, children: [_jsx(Target, { size: 14, color: C.accentInk, style: { marginTop: 1, flexShrink: 0 } }), _jsxs("div", { children: [_jsx("span", { style: { color: C.text, fontWeight: 700 }, children: sscore.nextMilestone.name }), " to ", _jsxs("span", { className: "mono", style: { fontWeight: 750, color: C.accentInk }, children: [sscore.nextMilestone.target, " ", sscore.nextMilestone.unit] }), " for ", sscore.nextMilestone.level, _jsxs("span", { style: { color: C.faint }, children: [" \u00B7 now ", sscore.nextMilestone.current] })] })] })), _jsx(StrengthScoreTrend, { data: trendData })] })) : (_jsxs("section", { className: "wpb-profile-section wpb-profile-setup", "aria-labelledby": "profile-strength-title", style: { background: C.card, borderRadius: 16, padding: "13px 14px", marginBottom: 12 }, children: [_jsxs("div", { id: "profile-strength-title", style: { display: "flex", alignItems: "center", gap: 7, fontSize: 15, fontWeight: 740, marginBottom: 5 }, children: [_jsx(Activity, { size: 15, color: C.accentInk }), " Strength"] }), _jsxs("div", { style: { display: "flex", alignItems: "center", gap: 12 }, children: [_jsx("div", { style: { flex: 1, fontSize: 12.5, color: C.muted, lineHeight: 1.45 }, children: bw > 0 ? "Log a weighted set for a supported lift, such as bench press or squat, to see your Strength Score." : "Add bodyweight to unlock standards and Strength Score." }), !(bw > 0) && onSettings && _jsx(UiAction, { onClick: onSettings, "aria-label": "Add bodyweight", className: "wpb-primary-action", style: { flexShrink: 0, padding: "8px 12px", borderRadius: 10, border: "none", background: C.accent, color: C.accentText, fontSize: 12.5, fontWeight: 750, cursor: "pointer" }, children: "Add" })] })] })),
-"club": _jsx(ProfileStrengthClub, { history: history, unit: unit }),
-"achievements": _jsxs("section", { className: "wpb-profile-section wpb-profile-achievements", "aria-labelledby": "profile-achievements-title", style: { background: C.card, border: `1px solid ${C.borderSoft}`, borderRadius: 14, padding: "13px 14px", marginBottom: 16 }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 10 }, children: [_jsx("div", { style: { width: 34, height: 34, borderRadius: 10, background: C.bg2, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: _jsx(Trophy, { size: 16, color: C.accentInk }) }), _jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsxs("div", { style: { display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }, children: [_jsx("span", { id: "profile-achievements-title", style: { fontSize: 15, fontWeight: 740 }, children: "Achievements" }), _jsxs("span", { className: "mono", style: { fontSize: 12, fontWeight: 700, color: C.muted }, children: [earned.length, "/", ms.length] })] }), _jsx("div", { role: "progressbar", "aria-label": "Achievement progress", "aria-valuemin": "0", "aria-valuemax": ms.length || 1, "aria-valuenow": earned.length, style: { height: 5, borderRadius: 999, background: C.bg2, overflow: "hidden", marginTop: 6 }, children: _jsx("div", { style: { width: `${ms.length ? Math.round(earned.length / ms.length * 100) : 0}%`, height: "100%", background: C.accent, borderRadius: 999 } }) })] })] }), next && (_jsxs("button", { onClick: () => setDetail(next), className: "pressable wpb-profile-next-achievement", style: { width: "100%", display: "flex", alignItems: "center", gap: 10, marginTop: 12, padding: "10px 0", background: "none", border: "none", borderTop: `1px solid ${C.borderSoft}`, color: C.text, cursor: "pointer", textAlign: "left" }, children: [_jsx("div", { style: { width: 36, height: 36, borderRadius: 10, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, background: C.bg2 }, children: next.icon }), _jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { style: { fontSize: 11, color: C.muted, fontWeight: 650 }, children: "Next target" }), _jsxs("div", { style: { display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, marginTop: 1 }, children: [_jsx("span", { style: { fontSize: 13, fontWeight: 720, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: next.label }), _jsxs("span", { className: "mono", style: { fontSize: 11, color: C.faint, flexShrink: 0 }, children: [fmt(next.value, next.target), "/", fmt(next.target, next.target)] })] }), _jsx("div", { style: { height: 4, borderRadius: 999, background: C.bg2, overflow: "hidden", marginTop: 5 }, children: _jsx("div", { style: { width: `${Math.round(next.progress * 100)}%`, height: "100%", background: C.accent, borderRadius: 999 } }) })] }), _jsx(ChevronRight, { size: 15, color: C.faint, style: { flexShrink: 0 } })] })), _jsxs("button", { onClick: () => setShowAchievements(v => !v), className: "pressable wpb-profile-achievement-toggle", "aria-expanded": showAchievements, style: { width: "100%", minHeight: 40, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "none", border: "none", borderTop: `1px solid ${C.borderSoft}`, color: C.muted, cursor: "pointer", padding: "9px 0 0", marginTop: next ? 0 : 10, fontSize: 12.5, fontWeight: 700 }, children: [showAchievements ? "Hide achievements" : `View all ${ms.length}`, " ", _jsx(ChevronDown, { size: 14, style: { transform: showAchievements ? "rotate(180deg)" : "none", transition: "transform .18s ease" } })] }), showAchievements && _jsx("div", { className: "wpb-profile-achievement-board", style: { marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.borderSoft}` }, children: groups.map((g, gi) => {
-                                    const gEarned = g.items.filter(m => m.done).length;
-                                    return (_jsxs("div", { style: { marginBottom: gi === groups.length - 1 ? 0 : 14 }, children: [_jsxs("div", { style: { display: "flex", justifyContent: "space-between", marginBottom: 7 }, children: [_jsx("span", { style: { ...eyebrow() }, children: g.cat }), _jsxs("span", { className: "mono", style: { fontSize: 11, fontWeight: 600, color: gEarned === g.items.length ? C.accentInk : C.muted }, children: [gEarned, "/", g.items.length] })] }), _jsx("div", { className: "wpb-profile-achievement-grid", style: { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 7 }, children: g.items.map(m => (_jsxs("button", { onClick: () => setDetail(m), className: "pressable", "aria-label": `${m.label}${m.done ? ", earned" : ", locked"}`, style: { background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "center" }, children: [_jsx("div", { style: { width: "100%", aspectRatio: "1", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, background: m.done ? C.accentDim : C.bg2, filter: m.done ? "none" : "grayscale(1)", opacity: m.done ? 1 : 0.5 }, children: m.icon }), _jsx("div", { style: { fontSize: 11, fontWeight: 600, color: m.done ? C.text : C.muted, marginTop: 3, lineHeight: 1.2 }, children: m.label }), !m.done && _jsxs("div", { className: "mono", style: { fontSize: 10, color: C.faint, marginTop: 1 }, children: [fmt(m.value, m.target), "/", fmt(m.target, m.target)] })] }, m.id))) })] }, g.cat));
-                                }) })] })
-})[id] ] }, id))] }), _jsx(AchievementDetailSheet, { m: detail, onClose: () => setDetail(null) })] })] }));}
+    const cardRows = profileCardRows({
+        history,
+        unit,
+        score: sscore,
+        level: lvl,
+        milestones: ms,
+        prefs: profilePrefs
+    });
+    // Build each section once per render; ordering/visibility only selects its existing element.
+    const sectionContent = {
+        level: _jsx("div", {
+            className: "wpb-profile-hero",
+            children: _jsxs("div", {
+                className: "wpb-profile-level-row",
+                children: [
+                    _jsx("div", {
+                        className: "wpb-profile-level-mark",
+                        children: _jsx("span", {
+                            className: "mono wpb-profile-level-value",
+                            children: lvl.level
+                        })
+                    }),
+                    _jsxs("div", {
+                        className: "wpb-profile-level-copy",
+                        children: [
+                            _jsx("div", { className: "wpb-profile-level-title", children: lvl.title }),
+                            _jsxs("div", {
+                                className: "wpb-profile-level-meta",
+                                children: [
+                                    "Level ",
+                                    lvl.level,
+                                    " \u00B7 ",
+                                    remainingXp
+                                        ? `${remainingXp} XP to level ${lvl.level + 1}`
+                                        : `Level ${lvl.level + 1} ready`
+                                ]
+                            }),
+                            _jsx("div", {
+                                className: "wpb-profile-level-progress",
+                                role: "progressbar",
+                                "aria-label": `Level ${lvl.level} progress`,
+                                "aria-valuemin": "0",
+                                "aria-valuemax": "100",
+                                "aria-valuenow": Math.round(lvl.progress * 100),
+                                children: _jsx("div", {
+                                    className: "wpb-profile-level-progress-fill",
+                                    style: { width: `${Math.round(lvl.progress * 100)}%` }
+                                })
+                            })
+                        ]
+                    })
+                ]
+            })
+        }),
+        summary: _jsx("div", {
+            className: "wpb-profile-stat-grid",
+            "aria-label": "Lifetime training summary",
+            children: [
+                ["Workouts", totalWorkouts, null],
+                ["Best streak", bestStreak, bestStreak === 1 ? "week" : "weeks"],
+                ["Volume", fmtVol(totalVol), unit]
+            ].map(([label, val, sub]) =>
+                _jsxs(
+                    "div",
+                    {
+                        className: "wpb-profile-stat",
+                        children: [
+                            _jsxs("div", {
+                                "data-has-unit": !!sub,
+                                className: "mono wpb-profile-stat-value",
+                                children: [
+                                    _jsx("span", { className: "wpb-profile-stat-number", children: val }),
+                                    sub
+                                        ? _jsx("span", { className: "wpb-profile-stat-unit", children: sub })
+                                        : null
+                                ]
+                            }),
+                            _jsx("div", { className: "wpb-profile-stat-label", children: label })
+                        ]
+                    },
+                    label
+                )
+            )
+        }),
+        strength: sscore
+            ? _jsxs("section", {
+                  className: "wpb-profile-section wpb-profile-strength",
+                  "aria-labelledby": "profile-strength-title",
+                  children: [
+                      _jsxs("div", {
+                          className: "wpb-profile-section-head",
+                          children: [
+                              _jsxs("div", {
+                                  children: [
+                                      _jsxs("div", {
+                                          className: "wpb-profile-section-title",
+                                          id: "profile-strength-title",
+                                          role: "heading",
+                                          "aria-level": 2,
+                                          children: [
+                                              _jsx(Activity, { size: 15, color: C.accentInk }),
+                                              " Strength"
+                                          ]
+                                      }),
+                                      _jsxs("div", {
+                                          className: "wpb-profile-score-overview",
+                                          children: [
+                                              _jsx("span", {
+                                                  className: "mono wpb-profile-score-total",
+                                                  children: sscore.overall
+                                              }),
+                                              _jsxs("span", {
+                                                  className: "wpb-profile-support",
+                                                  children: [
+                                                      sscore.level,
+                                                      " \u00B7 ",
+                                                      sscore.liftCount,
+                                                      " lift",
+                                                      sscore.liftCount === 1 ? "" : "s"
+                                                  ]
+                                              })
+                                          ]
+                                      })
+                                  ]
+                              }),
+                              _jsxs("div", {
+                                  className: "wpb-profile-section-tools",
+                                  children: [
+                                      sscore.estimated &&
+                                          _jsx("span", {
+                                              className: "wpb-profile-estimate-status",
+                                              children: "Estimated"
+                                          }),
+                                      _jsx("button", {
+                                          "aria-label": "Share Strength Score",
+                                          onClick: () => shareStrengthScore(sscore, C),
+                                          title: "Share Strength Score",
+                                          className: "pressable hit wpb-profile-share-score",
+                                          children: _jsx(Share2, { size: 15 })
+                                      })
+                                  ]
+                              })
+                          ]
+                      }),
+                      _jsx("div", {
+                          className: "wpb-profile-strength-grid",
+                          children: sscore.subs.map((s) =>
+                              _jsxs(
+                                  "div",
+                                  {
+                                      className: "wpb-profile-strength-cell",
+                                      children: [
+                                          _jsx("div", { className: "mono", children: s.score }),
+                                          _jsx("div", {
+                                              className: "wpb-profile-strength-label",
+                                              children: s.label
+                                          })
+                                      ]
+                                  },
+                                  s.key
+                              )
+                          )
+                      }),
+                      sscore.nextMilestone &&
+                          _jsxs("div", {
+                              className: "wpb-profile-next-strength",
+                              children: [
+                                  _jsx(Target, {
+                                      className: "wpb-profile-milestone-icon",
+                                      size: 14,
+                                      color: C.accentInk
+                                  }),
+                                  _jsxs("div", {
+                                      children: [
+                                          _jsx("span", {
+                                              className: "wpb-profile-milestone-name",
+                                              children: sscore.nextMilestone.name
+                                          }),
+                                          " to ",
+                                          _jsxs("span", {
+                                              className: "mono wpb-profile-milestone-target",
+                                              children: [
+                                                  sscore.nextMilestone.target,
+                                                  " ",
+                                                  sscore.nextMilestone.unit
+                                              ]
+                                          }),
+                                          " for ",
+                                          sscore.nextMilestone.level,
+                                          _jsxs("span", {
+                                              className: "wpb-profile-faint",
+                                              children: [" \u00B7 now ", sscore.nextMilestone.current]
+                                          })
+                                      ]
+                                  })
+                              ]
+                          }),
+                      _jsx(StrengthScoreTrend, { data: trendData })
+                  ]
+              })
+            : _jsxs("section", {
+                  className: "wpb-profile-section wpb-profile-setup",
+                  "aria-labelledby": "profile-strength-title",
+                  children: [
+                      _jsxs("div", {
+                          className: "wpb-profile-section-title wpb-profile-setup-title",
+                          id: "profile-strength-title",
+                          role: "heading",
+                          "aria-level": 2,
+                          children: [_jsx(Activity, { size: 15, color: C.accentInk }), " Strength"]
+                      }),
+                      _jsxs("div", {
+                          className: "wpb-profile-setup-row",
+                          children: [
+                              _jsx("div", {
+                                  className: "wpb-profile-setup-copy",
+                                  children:
+                                      bw > 0
+                                          ? "Log a weighted set for a supported lift, such as bench press or squat, to see your Strength Score."
+                                          : "Add bodyweight to unlock standards and Strength Score."
+                              }),
+                              !(bw > 0) &&
+                                  onSettings &&
+                                  _jsx(UiAction, {
+                                      onClick: onSettings,
+                                      "aria-label": "Add bodyweight",
+                                      className: "wpb-primary-action wpb-profile-setup-action",
+                                      children: "Add"
+                                  })
+                          ]
+                      })
+                  ]
+              }),
+        club: _jsx(ProfileStrengthClub, { history: history, unit: unit }),
+        achievements: _jsxs("section", {
+            className: "wpb-profile-section wpb-profile-achievements",
+            "aria-labelledby": "profile-achievements-title",
+            children: [
+                _jsxs("div", {
+                    className: "wpb-profile-achievement-head",
+                    children: [
+                        _jsx("div", {
+                            className: "wpb-profile-achievement-mark",
+                            children: _jsx(Trophy, { size: 16, color: C.accentInk })
+                        }),
+                        _jsxs("div", {
+                            className: "wpb-profile-copy",
+                            children: [
+                                _jsxs("div", {
+                                    className: "wpb-profile-title-row",
+                                    children: [
+                                        _jsx("span", {
+                                            className: "wpb-profile-section-label",
+                                            id: "profile-achievements-title",
+                                            role: "heading",
+                                            "aria-level": 2,
+                                            children: "Achievements"
+                                        }),
+                                        _jsxs("span", {
+                                            className: "mono wpb-profile-achievement-total",
+                                            children: [earned.length, "/", ms.length]
+                                        })
+                                    ]
+                                }),
+                                _jsx("div", {
+                                    className: "wpb-profile-achievement-progress",
+                                    role: "progressbar",
+                                    "aria-label": "Achievement progress",
+                                    "aria-valuemin": "0",
+                                    "aria-valuemax": ms.length || 1,
+                                    "aria-valuenow": earned.length,
+                                    children: _jsx("div", {
+                                        className: "wpb-profile-progress-fill",
+                                        style: {
+                                            width: `${ms.length ? Math.round((earned.length / ms.length) * 100) : 0}%`
+                                        }
+                                    })
+                                })
+                            ]
+                        })
+                    ]
+                }),
+                next &&
+                    _jsxs("button", {
+                        onClick: () => setDetail(next),
+                        className: "pressable wpb-profile-next-achievement",
+                        children: [
+                            _jsx("div", { className: "wpb-profile-next-mark", children: next.icon }),
+                            _jsxs("div", {
+                                className: "wpb-profile-copy",
+                                children: [
+                                    _jsx("div", {
+                                        className: "wpb-profile-target-caption",
+                                        children: "Next target"
+                                    }),
+                                    _jsxs("div", {
+                                        className: "wpb-profile-next-title-row",
+                                        children: [
+                                            _jsx("span", {
+                                                className: "wpb-profile-target-name",
+                                                children: next.label
+                                            }),
+                                            _jsxs("span", {
+                                                className: "mono wpb-profile-target-value",
+                                                children: [
+                                                    fmt(next.value, next.target),
+                                                    "/",
+                                                    fmt(next.target, next.target)
+                                                ]
+                                            })
+                                        ]
+                                    }),
+                                    _jsx("div", {
+                                        className: "wpb-profile-target-progress",
+                                        role: "progressbar",
+                                        "aria-label": `${next.label} progress`,
+                                        "aria-valuemin": 0,
+                                        "aria-valuemax": 100,
+                                        "aria-valuenow": Math.round(next.progress * 100),
+                                        children: _jsx("div", {
+                                            className: "wpb-profile-progress-fill",
+                                            style: { width: `${Math.round(next.progress * 100)}%` }
+                                        })
+                                    })
+                                ]
+                            }),
+                            _jsx(ChevronRight, {
+                                className: "wpb-profile-fixed-icon",
+                                size: 15,
+                                color: C.faint
+                            })
+                        ]
+                    }),
+                _jsxs("button", {
+                    "data-has-next": !!next,
+                    onClick: () => setShowAchievements((v) => !v),
+                    className: "pressable wpb-profile-achievement-toggle",
+                    "aria-expanded": showAchievements,
+                    children: [
+                        showAchievements ? "Hide achievements" : `View all ${ms.length}`,
+                        " ",
+                        _jsx(ChevronDown, { className: "wpb-profile-toggle-chevron", size: 14 })
+                    ]
+                }),
+                showAchievements &&
+                    _jsx("div", {
+                        className: "wpb-profile-achievement-board",
+                        children: groups.map((g) => {
+                            const gEarned = g.items.filter((m) => m.done).length;
+                            return _jsxs(
+                                "div",
+                                {
+                                    className: "wpb-profile-achievement-group",
+                                    children: [
+                                        _jsxs("div", {
+                                            className: "wpb-profile-group-head",
+                                            children: [
+                                                _jsx("span", {
+                                                    className: "wpb-profile-eyebrow",
+                                                    children: g.cat
+                                                }),
+                                                _jsxs("span", {
+                                                    "data-complete": gEarned === g.items.length,
+                                                    className: "mono wpb-profile-group-total",
+                                                    children: [gEarned, "/", g.items.length]
+                                                })
+                                            ]
+                                        }),
+                                        _jsx("div", {
+                                            className: "wpb-profile-achievement-grid",
+                                            children: g.items.map((m) =>
+                                                _jsxs(
+                                                    "button",
+                                                    {
+                                                        "data-earned": m.done ? "1" : "0",
+                                                        onClick: () => setDetail(m),
+                                                        className: "pressable wpb-profile-achievement-tile",
+                                                        "aria-label": `${m.label}${m.done ? ", earned" : ", locked"}`,
+                                                        children: [
+                                                            _jsx("div", {
+                                                                className: "wpb-profile-badge-mark",
+                                                                children: m.icon
+                                                            }),
+                                                            _jsx("div", {
+                                                                className: "wpb-profile-badge-label",
+                                                                children: m.label
+                                                            }),
+                                                            !m.done &&
+                                                                _jsxs("div", {
+                                                                    className:
+                                                                        "mono wpb-profile-badge-progress",
+                                                                    children: [
+                                                                        fmt(m.value, m.target),
+                                                                        "/",
+                                                                        fmt(m.target, m.target)
+                                                                    ]
+                                                                })
+                                                        ]
+                                                    },
+                                                    m.id
+                                                )
+                                            )
+                                        })
+                                    ]
+                                },
+                                g.cat
+                            );
+                        })
+                    })
+            ]
+        })
+    };
+    return _jsxs("div", {
+        className: "wpb-page-shell wpb-profile",
+        children: [
+            _jsx(UiRootHeader, {
+                title: "Profile",
+                titleClassName: "wpb-profile-title",
+                className: "wpb-profile-head",
+                actions:
+                    onSettings &&
+                    _jsxs(UiAction, {
+                        variant: "tonal",
+                        onClick: onSettings,
+                        "aria-label": "Edit profile",
+                        className: "wpb-profile-edit",
+                        children: [_jsx(Pencil, { size: 16 }), "Edit"]
+                    })
+            }),
+            _jsxs("div", {
+                className: "wpb-scroll wpb-page-scroll wpb-profile-scroll",
+                children: [
+                    _jsxs("div", {
+                        className: "wpb-profile-inner",
+                        children: [
+                            _jsxs("p", {
+                                className: "wpb-profile-identity",
+                                children: [
+                                    _jsx("span", { children: bodyLabel }),
+                                    ageLabel &&
+                                        _jsxs(_Fragment, {
+                                            children: [
+                                                _jsx("span", { "aria-hidden": "true", children: " · " }),
+                                                _jsx("span", { children: ageLabel })
+                                            ]
+                                        })
+                                ]
+                            }),
+                            _jsx(ProfileShareCard, {
+                                prefs: profilePrefs,
+                                rows: cardRows,
+                                expanded: showShareCustomize,
+                                onEdit: () => setShowShareCustomize((x) => !x),
+                                onShare: () =>
+                                    shareCustomProfileCard({
+                                        history,
+                                        unit,
+                                        score: sscore,
+                                        level: lvl,
+                                        milestones: ms,
+                                        prefs: profilePrefs,
+                                        theme: C
+                                    })
+                            }),
+                            showShareCustomize &&
+                                _jsx(ProfileCardCustomization, {
+                                    prefs: profilePrefs,
+                                    onChange: saveProfilePrefs,
+                                    onClose: () => setShowShareCustomize(false)
+                                }),
+                            _jsx("div", {
+                                className: "wpb-profile-toolbar",
+                                children: _jsxs(UiAction, {
+                                    variant: "tonal",
+                                    "aria-expanded": showProfileCustomize,
+                                    onClick: () => setShowProfileCustomize((x) => !x),
+                                    children: [_jsx(Pencil, { size: 15 }), " Arrange Profile"]
+                                })
+                            }),
+                            showProfileCustomize &&
+                                _jsx(ProfileCustomization, {
+                                    prefs: profilePrefs,
+                                    onChange: saveProfilePrefs,
+                                    onClose: () => setShowProfileCustomize(false)
+                                }),
+                            ...profilePrefs.order
+                                .filter((id) => !profilePrefs.hidden.includes(id))
+                                .map((id) => _jsxs(_Fragment, { children: [sectionContent[id]] }, id))
+                        ]
+                    }),
+                    _jsx(AchievementDetailSheet, { m: detail, onClose: () => setDetail(null) })
+                ]
+            })
+        ]
+    });
+}
 // The app shell (index.html, modules/main.js, modules/App.js, app.css) is served cache-first by the service worker for
 // instant loads and full offline support — which also means a shipped code fix can sit on the
 // server indefinitely without ever reaching an already-visited device until the normal

@@ -54,6 +54,43 @@ try{
       'Level copy and canonical XP fill remain complete '+JSON.stringify({width,height,theme,enlarged,level}));
     if([320,393,1280].includes(width))await (await page.$('.wpb-profile-hero')).screenshot({
       path:root+'/verification/m290-level-'+theme+'-'+width+'x'+height+'-'+(enlarged?'enlarged':'normal')+'-phone.png'});
+    // M291: headings, badges and detail sheets share the existing modal/focus
+    // owner; browsing never edits history or the earned/locked state.
+    const headingRoles=await page.$$eval('#profile-strength-title,#profile-achievements-title',nodes=>nodes.map(n=>({role:n.getAttribute('role'),level:n.getAttribute('aria-level')})));
+    assert.ok(headingRoles.length===2&&headingRoles.every(h=>h.role==='heading'&&h.level==='2'),'Profile sections expose a coherent heading outline');
+    const toggle=await page.$('.wpb-profile-achievement-toggle');
+    await toggle.focus();await page.keyboard.press('Space');
+    assert.equal(await toggle.evaluate(e=>e.getAttribute('aria-expanded')),'true');
+    await page.waitForSelector('.wpb-profile-achievement-board');
+    const badges=await page.$$eval('.wpb-profile-achievement-tile',nodes=>nodes.map(n=>({label:n.getAttribute('aria-label'),earned:n.getAttribute('data-earned'),width:n.getBoundingClientRect().width,height:n.getBoundingClientRect().height})));
+    assert.ok(badges.length>10&&badges.some(b=>b.earned==='1')&&badges.some(b=>b.earned==='0')&&badges.every(b=>b.width>=44&&b.height>=44),'earned and locked badges retain complete native targets');
+    for(const earned of ['0','1']){
+      const selector='.wpb-profile-achievement-tile[data-earned="'+earned+'"]';
+      const tile=await page.$(selector);await tile.focus();await page.keyboard.press('Enter');
+      await page.waitForSelector('.wpb-achievement-sheet');
+      const dialog=await page.$eval('.wpb-profile-achievement-backdrop',backdrop=>{
+        const sheet=backdrop.querySelector('.wpb-achievement-sheet'),title=document.getElementById(backdrop.getAttribute('aria-labelledby'));
+        const track=sheet.querySelector('[role="progressbar"]');
+        const value=track?Number(track.getAttribute('aria-valuenow')):null;
+        const fillError=track?Math.abs(track.firstElementChild.getBoundingClientRect().width-track.getBoundingClientRect().width*value/100):0;
+        const close=sheet.querySelector('button[aria-label="Close"]').getBoundingClientRect();
+        return {role:backdrop.getAttribute('role'),modal:backdrop.getAttribute('aria-modal'),name:title?.textContent,
+          nested:sheet.querySelectorAll('[role="dialog"]').length+(sheet.getAttribute('role')==='dialog'?1:0),focus:backdrop.contains(document.activeElement),
+          earned:!!sheet.querySelector('.wpb-achievement-earned'),value,fillError,close:{width:close.width,height:close.height}};
+      });
+      assert.ok(dialog.role==='dialog'&&dialog.modal==='true'&&dialog.name&&dialog.nested===0&&dialog.focus&&dialog.close.width>=44&&dialog.close.height>=44,
+        'One named detail dialog owns native focus and Close '+JSON.stringify({width,height,theme,enlarged,dialog}));
+      assert.equal(dialog.earned,earned==='1');
+      if(earned==='0')assert.ok(dialog.value>=0&&dialog.value<=100&&dialog.fillError<1,'Locked detail progress uses its canonical percentage');
+      await page.keyboard.press('Tab');
+      assert.ok(await page.$eval('.wpb-profile-achievement-backdrop',e=>e.contains(document.activeElement)),'Tab stays within the shared modal');
+      if([320,393,1280].includes(width))await (await page.$('.wpb-achievement-sheet')).screenshot({path:root+'/verification/m291-detail-'+earned+'-'+theme+'-'+width+'-'+(enlarged?'enlarged':'normal')+'-phone.png'});
+      await page.keyboard.press('Escape');
+      await page.waitForFunction(()=>!document.querySelector('.wpb-achievement-sheet'));
+      await page.waitForFunction(sel=>document.activeElement===document.querySelector(sel),{},selector);
+    }
+    await toggle.focus();await page.keyboard.press('Enter');
+    await page.waitForFunction(()=>!document.querySelector('.wpb-profile-achievement-board'));
     // M288: lifetime totals retain one grouped surface at phone, tablet,
     // short landscape and rail sizes, including actual 200% root text.
     const summary=await page.$eval('.wpb-profile-stat-grid',e=>{

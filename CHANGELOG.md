@@ -1,3 +1,10 @@
+## M275 — flush sticky bars, Plan program action, active Cycle disclosure (October 22, 2026)
+
+- Plan's one existing Full program action now sits alongside the selected program name, above the week selector and work schedule; preview blocks retain their existing route and selected week.
+- Removed the transparent margin under the sticky Plan week rail and replaced translucent deep-screen header paint with opaque semantic canvas. Progress history's sticky group headings no longer leave external margins as scroll gaps.
+- In Cycles, the active unfinished cycle reveals its actual block list by default; native details remain collapsible. Reuses canonical cycle progress and block navigation, no duplicate data projection.
+- Updated R53 browser and ownership guards. No new CSS priorities, no changes to Workout/Focus logging or engine policy.
+
 ## M274 — Program header presentation ownership (October 22, 2026)
 
 - Consolidated the Program detail title/rename row, animated metadata wrapper and saved status into one token-owned presentation family in app.css, preserving the exact existing handlers and scroll-collapse refs.

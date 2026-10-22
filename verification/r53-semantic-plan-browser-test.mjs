@@ -645,7 +645,7 @@ try{
     captures[theme].program=Buffer.from(await page.screenshot({type:'png'}));
     // M276: reference help belongs in Details, not ahead of workout/week navigation.
     assert.equal(await page.$('.wpb-program-scroll .wpb-program-edit-scope'),null,
-      'Program's first reading surface does not start with edit-scope documentation');
+      'Program reading surface does not start with edit-scope documentation');
     await page.click('.wpb-program button[aria-label^="Program details"]');
     await page.waitForSelector('.wpb-program-edit-scope summary');
     const help=await page.$eval('.wpb-program-edit-scope',el=>({

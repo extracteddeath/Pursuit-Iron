@@ -68,7 +68,7 @@ try{
               headerBottom:header.getBoundingClientRect().bottom,
               railTop:rail?.getBoundingClientRect().top,
               headerOpaque:h.backgroundColor!=='rgba(0, 0, 0, 0)',
-              expected:width<360?12:16};
+              expected:innerWidth<360?12:16};
           });
           assert.ok(alignment.headerLeft===alignment.expected&&
             alignment.headerRight===alignment.expected&&

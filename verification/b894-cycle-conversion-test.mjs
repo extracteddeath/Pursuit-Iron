@@ -63,3 +63,15 @@ assert.equal(structural.blocks[0].config.days,4,'the upcoming phase uses its cho
 assert.equal(structural.cycle.nextEngineCycle.plannedBlocks[1].frequency,2,'the future practice target survives in cycle metadata');
 assert.equal(structural.blocks[0].nextEngine.request.goal.liftFrequency.bench_press,2,'the executable future block owns its lift-frequency contract');
 console.log('PASS B894 structure: converted block is immutable; future block can independently rebuild split and bench frequency.');
+
+const oversized=structuredClone(legacy);
+oversized.config={...oversized.config,goal:'hypertrophy'};
+for(const day of oversized.days)for(const [slot] of day.exercises.entries())
+ oversized.overrides[`${day.id}:${slot}`]={sets:6};
+const undersized=structuredClone(generated);
+undersized.blocks[0].nextEngine.program.phase='strength_accumulation';
+for(const session of undersized.blocks[0].nextEngine.program.sessions)for(const ex of session.exercises)ex.sets=1;
+assert.throws(()=>mergeStandaloneIntoGeneratedCycle(oversized,undersized,{appendAll:true}),
+ /drops weekly working sets/,'authored custom working sets must be compared to the first strength block');
+assert.equal(oversized.config.goal,'hypertrophy','a rejected conversion must leave the authored program unchanged');
+console.log('PASS B894 volume: high-volume authored plans cannot silently transition to a drastically underdosed strength accumulation block.');

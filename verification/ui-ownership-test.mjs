@@ -320,10 +320,8 @@ assert.ok(settingsContainer.includes('@container pi-settings-body (max-width:16e
 
 // M283: Root content and header share the same phone inset, including the
 // explicit 320px/393px responsive tokens. Home retains its separate owner.
-const phoneInsetCss=css.slice(css.indexOf('/* The scroll pane and UiRootHeader use the same page inset.')===-1
-  ?css.indexOf('/* Progress and Settings scroll panes match UiRootHeader:')
-  :css.indexOf('/* The scroll pane and UiRootHeader use the same page inset.'),
-  css.indexOf('/* Workout: coherent header/tools/exercise navigation'));
+const phoneInsetStart=css.indexOf('/* Progress and Settings scroll panes match UiRootHeader:');
+const phoneInsetCss=css.slice(phoneInsetStart,css.indexOf('@media(min-width:760px)',phoneInsetStart));
 assert.ok(phoneInsetCss.includes(':is(.wpb-settings,.wpb-progress)>.wpb-page-scroll{')&&
   phoneInsetCss.includes('padding-inline:var(--pi-page-inset)!important;'),
   'Settings and Progress phone scroll panes share root header insets');

@@ -117,17 +117,17 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "8bf0033a304d613e64aa6c4129fd5d81a952cfda18431745ad80ce1614992033",
+    "modules/App.js": "2a7fb88d485613814343fa95717ad7053eb7c22587f8f334df9227f9290942c8",
     "index.html": "54fd7f97b0a2d9d8b76694380158b4a23699a3f1c1cbea697c5e33b7c705b7ed",
-    "sw.js": "6f8aff5b78d262404d6ea13e715f6d53f7d3bb8a5bddd8019d1c639a4b0e161b",
-    "BUILD_PROFILE.json": "228beb5cd70edf5956329bfe369bad030e312011ceb15807a84edea4079d9bfc",
-    "CHANGELOG.md": "314cc20203d011c0a9c572a1e2f7c5d39f3ee81600e02729e39605c75e5c80a6",
-    "app.css": "36429affb0ec54dbe99c5dae379af35c15c34141155cc6400a118a5f186dbf35",
+    "sw.js": "9d12ba034d7869eaa0bd601ec0a0871942cb02e79b3944379828c1cc5ae4ac4a",
+    "BUILD_PROFILE.json": "303c6a64b93023187ba6d6899ceb552adf6ff61b4ffd5c735343a0817b37642f",
+    "CHANGELOG.md": "ef2255050d1f836ed24bbc605a6f08805d18bdd98b42e9ec40509c0728a4c538",
+    "app.css": "e6527eac3252af765bcccfa834bb96b7597fc52eded27216adaf21ebc2a702a5",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b905-rfb520077d4784e71",
-  "uiMilestone": "Build 905 · M291 Profile presentation ownership"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b905-rb55eee218e1a25ff",
+  "uiMilestone": "Build 905 · M292 Progress presentation ownership"
 }

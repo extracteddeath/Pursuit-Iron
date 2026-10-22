@@ -6,9 +6,9 @@ import fs from 'node:fs';
 const css = fs.readFileSync('app.css', 'utf8');
 const app = fs.readFileSync('modules/App.js', 'utf8');
 const MAX_IMPORTANT = 2360; // M291: consolidate the remaining Profile style owners
-const MAX_APP_IMPORTANT = 1239; // M291: all Profile presentation leaves StyleTag.
+const MAX_APP_IMPORTANT = 1229; // M292: retire ten superseded Progress priority declarations.
 const MAX_REPEAT_IMPORTANT = 15; // M288: at-rule comments no longer erase media/container scope.
-const MAX_INLINE_STYLE_OBJECTS = 3025; // M291: 83 fixed Profile/chart style objects retired
+const MAX_INLINE_STYLE_OBJECTS = 2800; // M292: 225 fixed Progress/History style objects retired
 const allowedDebtKeys = new Set([
   "\t#root[data-pi-motion=\"expressive\"] .wpb-wizard.wpb-wizard.wpb-wizard .wpb-wizard-heading-title\tfont-size",
   "\t#root[data-pi-motion=\"expressive\"] .wpb .wpb-tabbar\tbackground-color",
@@ -401,3 +401,26 @@ for(const role of ['faint: C.faint','"border-soft": C.borderSoft'])
 const embeddedProfileStart=app.indexOf('function StyleTag(');
 const embeddedProfileStyles=app.slice(embeddedProfileStart,app.indexOf('\nfunction ',embeddedProfileStart+12));
 assert.ok(!embeddedProfileStyles.includes('.wpb-profile'),'Profile styling may not return to the embedded stylesheet');
+
+
+// M292: Progress keeps only calculated chart dimensions and data-derived ink inline.
+const progressPresentation=app.slice(app.indexOf('function HistoryView('),app.indexOf('\nfunction ',app.indexOf('function HistoryView(')+12));
+assert.equal((progressPresentation.match(/style:\s*\{/g)||[]).length,5,'Only five data-derived Progress chart objects remain inline');
+assert.equal((progressPresentation.match(/"--pi-progress-chart-ink":/g)||[]).length,3,'Chart ink remains explicitly derived from chart data');
+assert.ok(progressPresentation.includes('height: h')&&progressPresentation.includes('width: `${r.pct}%`'),
+    'Calculated range height and canonical goal width retain their existing owners');
+assert.ok(!progressPresentation.includes('style: { fontSize')&&!progressPresentation.includes('style: { background'),
+    'Fixed Progress typography and paint cannot return to JSX');
+for(const name of ['wpb-progress-tab','wpb-progress-lift-choice','wpb-history-session-toggle','wpb-progress-measure-toggle',
+    'wpb-progress-body-log','wpb-progress-measure-log','wpb-progress-card','wpb-progress-grow'])
+    assert.ok(progressPresentation.includes(name)&&css.includes('.'+name),'Progress presentation has a maintained class owner: '+name);
+for(const state of ['[aria-selected="true"]','[aria-pressed="true"]','[aria-current="true"]',':not(:disabled)'])
+    assert.ok(css.includes(state),'Native selection and disabled state own Progress paint: '+state);
+
+for(const role of ['"warning-dim": C.warnDim','"warning-note": (C.warn || "#e0a31e") + "14"',
+    '"warning-edge": (C.warn || "#e0a31e") + "44"','"accent-edge": C.accent + "55"',
+    '"accent-faint": C.accent + "66"','"danger-edge": C.danger + "28"'])
+    assert.equal(app.split(role).length-1,1,'Consumed Progress palette role has one publisher: '+role);
+assert.ok(!css.includes('font-size:max(11px,.72rem);'),'The masked history group-count font rule may not return');
+assert.match(css,/\.wpb-progress-range-chart\{[^}]*min-height:46px;[^}]*\}/,'Range-chart height fits its labels and data-derived bars');
+assert.ok(!/\.wpb-progress-range-chart\{[^}]*[;{]height:46px;/.test(css),'Range-chart labels cannot be squeezed into a fixed bar-height container');

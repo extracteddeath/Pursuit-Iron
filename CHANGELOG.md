@@ -1,3 +1,12 @@
+## M292 — Progress and History presentation ownership
+
+- Move 225 fixed inline style objects from the four Progress panes into the maintained CSS family. Shared card, caption, field, list-row and history-action classes retain the current appearance; action/field owners also remove 32 repeated CSS declarations. Five chart objects keep only calculated widths/heights and data-derived ink inline.
+- Let existing native selection/disabled state and explicit display-state attributes own paint. Publish the consumed warning/accent/border palette roles once, preserving the user's theme. Remove the masked group-header font declaration rather than adding a priority override.
+- Fix the Load pane's full-height range bars overlapping their heading: the chart now fits both labels and bars while retaining its minimum plot height and existing values. Add a real geometry regression with populated six-week data.
+- Retire 14 fully superseded embedded declarations, including ten priorities. Tighten the embedded priority ceiling to 1,229 and the inline ceiling to 2,800; external/repeated priority ceilings remain 2,360/15.
+- Extend the existing real Progress browser journey across four widths, two palettes and normal/200% text: keyboard tabs, session notes/sets/search, lift/load/recovery/volume panes, bodyweight/measurement logging, same-day replacement and persistence without rewriting workout records.
+- Same app/engine versions; refresh content-addressed offline cache and release hashes.
+
 ## M291 — Profile presentation ownership
 
 - Move 83 fixed inline style objects from Profile, achievement details, Strength trends and shared sparklines into maintained CSS owners. Retain calculated progress, chart dimensions and data-derived ink inline; retire every Profile selector from the embedded stylesheet.

@@ -577,35 +577,35 @@ export function convertProgramToNextCycleForShell(options) {
         }
     );
 
-    const blocks = [currentLegacy];
+    const blocks = [currentLegacy], selectedSpecs = [currentSpec], splitDecisions = [null];
     let previous = source;
     for (let i = 1; i < planned.length; i++) {
         const spec = planned[i];
-        const targetRequest = requestForBlock(baseRequest, baseConfig, spec, options.legacyExercises);
-        const normalized = normalizeRequest(targetRequest);
-        let next;
-        if (options.adaptBetweenBlocks || changesWeek(spec)) {
-            const ids = previous.sessions.flatMap(session => session.exercises.map(ex => ex.exerciseId));
-            const protectedIds = previous.sessions.flatMap(session => session.exercises
-                .filter(ex => ex.role === 'primary_strength' || ex.role === 'secondary_strength')
-                .map(ex => ex.exerciseId));
-            // M193 converted-cycle preview uses the duration of THIS upcoming block.
-            next = transitionProgramPhase(previous, normalized, spec.phase, {
-                successfulExerciseIds: ids,
-                protectedExerciseIds: protectedIds,
-                nextBlockWeeks: spec.weeks,
-                capacityConfig: blockConfigForSpec(baseConfig, spec)
-            }).program;
-        }
-        else {
-            // M193 converted-cycle locked preview also reselects against this block's duration.
-            next = retargetStatic(previous, targetRequest, spec.phase, spec.weeks);
-        }
-        next = protectStrengthEntry(previous, next, spec, targetRequest);
-        checkRequestedPractice(next, spec, targetRequest);
+        const chosen = chooseOptimizedCycleBlock(spec, baseConfig, !!options.adaptTrainingSplit, candidateSpec => {
+            const request = requestForBlock(baseRequest, baseConfig, candidateSpec, options.legacyExercises);
+            const normalized = normalizeRequest(request);
+            let next;
+            if (options.adaptBetweenBlocks || changesWeek(candidateSpec)) {
+                const ids = previous.sessions.flatMap(session => session.exercises.map(ex => ex.exerciseId));
+                const protectedIds = previous.sessions.flatMap(session => session.exercises
+                    .filter(ex => ex.role === 'primary_strength' || ex.role === 'secondary_strength')
+                    .map(ex => ex.exerciseId));
+                next = transitionProgramPhase(previous, normalized, candidateSpec.phase, {
+                    successfulExerciseIds: ids, protectedExerciseIds: protectedIds,
+                    nextBlockWeeks: candidateSpec.weeks,
+                    capacityConfig: blockConfigForSpec(baseConfig, candidateSpec)
+                }).program;
+            } else next = retargetStatic(previous, request, candidateSpec.phase, candidateSpec.weeks);
+            next = protectStrengthEntry(previous, next, candidateSpec, request);
+            checkRequestedPractice(next, candidateSpec, request);
+            return { next, request, previous };
+        });
+        const { next, request: targetRequest, spec: selectedSpec, decision } = chosen;
+        selectedSpecs.push(selectedSpec);
+        splitDecisions.push(decision);
         if (next.audit.result !== 'pass')
             throw new NextShellAdapterError('NEXT_CYCLE_BLOCK_REJECTED', `Pursuit Engine ${next.engineVersion} rejected ${spec.label}.`, next.audit);
-        const cfg = legacyBlockConfig(blockConfigForSpec(baseConfig, spec), spec.phase, spec.weeks, `${cycleName} · ${spec.label}`);
+        const cfg = legacyBlockConfig(blockConfigForSpec(baseConfig, selectedSpec), spec.phase, spec.weeks, `${cycleName} · ${spec.label}`);
         let legacy = nextProgramToShellProgram(next, cfg, options.legacyExercises, makeId);
         legacy.cycleId = cid;
         attachBlockContext(legacy, next, targetRequest, baseRequest, {
@@ -616,7 +616,8 @@ export function convertProgramToNextCycleForShell(options) {
             weeks: spec.weeks,
             phase: spec.phase,
             preview: true,
-            adaptBetweenBlocks: !!(options.adaptBetweenBlocks || changesWeek(spec)),
+            adaptBetweenBlocks: !!(options.adaptBetweenBlocks || changesWeek(selectedSpec)),
+            splitDecision: decision,
             convertedFromStandalone: true
         });
         legacy = finalizeGeneratedShellVolume(legacy, options.legacyExercises);
@@ -634,6 +635,7 @@ export function convertProgramToNextCycleForShell(options) {
         engineSource: 'pursuit-next',
         engineSourceVersion: currentLegacy.engineSourceVersion || source.engineVersion || '0.62.0',
         adaptExercises: !!options.adaptBetweenBlocks,
+        adaptTrainingSplit: !!options.adaptTrainingSplit,
         blockIds: blocks.map(block => block.id),
         blockMeta: planned.map((spec, i) => ({
             label: spec.label,
@@ -641,8 +643,9 @@ export function convertProgramToNextCycleForShell(options) {
             goal: phaseGoal(spec.phase),
             weeks: i === 0 ? currentWeeks : spec.weeks,
             phase: i === 0 ? source.phase : spec.phase,
-            ...(spec.split ? { split: spec.split } : {}), ...(spec.days ? { days: spec.days } : {}),
+            ...(selectedSpecs[i].split ? { split: selectedSpecs[i].split } : {}), ...(selectedSpecs[i].days ? { days: selectedSpecs[i].days } : {}),
             ...(spec.priorityLift ? { priorityLift: spec.priorityLift, frequency: spec.frequency } : {}),
+            splitDecision: splitDecisions[i],
             id: blocks[i].id,
             plannedIndex: i,
             preview: i > 0
@@ -657,6 +660,7 @@ export function convertProgramToNextCycleForShell(options) {
             templateId,
             goal,
             adaptBetweenBlocks: !!options.adaptBetweenBlocks,
+            adaptTrainingSplit: !!options.adaptTrainingSplit,
             baseRequest: clone(baseRequest),
             baseConfig: clone(baseConfig),
             plannedBlocks: clone(planned),

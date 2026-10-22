@@ -2409,19 +2409,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     border-color:ButtonText!important;
   }
 }
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-hero{
-  padding:14px!important;
-  margin:0 0 8px!important;
-  background-color:var(--pi-r11-raised)!important;
-  border:1px solid var(--pi-r11-edge)!important;
-  border-radius:24px!important;
-  box-shadow:none!important;
-}
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-level-mark{
-  width:52px!important;
-  height:52px!important;
-  border-radius:17px!important;
-}
 #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-achievements,
 #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-setup{
   border-radius:24px!important;
@@ -4959,17 +4946,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 @media(max-width:420px){
   #root[data-pi-motion="expressive"] .wpb .wpb-settings.wpb-settings .wpb-settings-jump-control>span{display:none;}
 }
-#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-hero{
-  margin-bottom:10px!important;
-}
 #root[data-pi-motion="expressive"] .wpb :is(.wpb-settings .wpb-settings-jump-control select):focus-visible{
   outline:2px solid var(--pi-m3e-primary)!important;
   outline-offset:2px!important;
-}
-@media(max-width:359px){
-  #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-hero{
-    padding-inline:11px!important;
-  }
 }
 @media(forced-colors:active){
   #root[data-pi-motion="expressive"] .wpb :is(.wpb-settings-jump-control,.wpb-progress .wpb-premium-tabs){
@@ -7545,6 +7524,18 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 /* B913 / Cohesion 03 — Profile presentation belongs to CSS, not inline JSX.
    Dynamic palette colors remain supplied by the active theme. These fallbacks
    work without Expressive motion; the shared Expressive tokens specialize them. */
+/* M290: the existing level card uses live theme roles. Geometry is retained
+   during migration; the calculated XP width is its only inline presentation. */
+.wpb-profile .wpb-profile-hero{padding:6px 0 16px;margin-bottom:14px;background:transparent;border:0;border-bottom:1px solid var(--section-rule);border-radius:0}
+.wpb-profile-level-row{display:flex;align-items:center;gap:14px}
+.wpb-profile-level-mark{width:52px;height:52px;border-radius:13px;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--wpb-theme-accent) 18%,transparent);background:var(--wpb-theme-accent-dim);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.wpb-profile-level-value{font-size:24px;font-weight:850;color:var(--wpb-theme-accent-ink)}
+.wpb-profile-level-copy{flex:1;min-width:0}
+.wpb-profile-level-title{font-size:18px;font-weight:760;letter-spacing:-.2px}
+.wpb-profile-level-meta{font-size:12.5px;color:var(--wpb-theme-muted);margin-top:2px}
+.wpb-profile-level-progress{height:6px;border-radius:999px;background:var(--wpb-theme-bg-tint);overflow:hidden;margin-top:var(--pi-space-2)}
+.wpb-profile-level-progress-fill{height:100%;background:var(--wpb-theme-accent);border-radius:999px}
+@media(max-width:420px){.wpb-profile .wpb-profile-hero{padding-top:2px}}
 .wpb-profile .wpb-profile-stat-grid{
   display:grid;
   grid-template-columns:repeat(3,minmax(0,1fr));

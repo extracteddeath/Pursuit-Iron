@@ -18,6 +18,13 @@ App 4.0.0 build 905 / Engine 0.65.9 / M234. `RELEASE_MANIFEST.json` is authorita
 
 
 
+## M290 — class-owned Profile level card
+
+- Move the level card’s eight fixed JSX style objects and embedded fallback rules into the existing Profile CSS family, using live theme roles. Only the calculated XP fill width remains inline; canonical level, XP and history calculations are unchanged.
+- Retire the superseded R17/R61 card/mark rules. External priorities: **2,389 → 2,378**; embedded priorities: **1,290 → 1,280**; inline objects: **3,116 → 3,108**. Repeated-priority budget remains 15. Keep both the modern and fallback appearances, shared forced colors and current Workout/Focus.
+- Existing Profile browser coverage checks complete level/next-level copy and agreement between accessible XP percentage and actual fill width at all eight windows and both text sizes/palettes, alongside customization/export/history checks. Require before/after computed-style equality, screenshot review, final-head CI and deployed source identity before publication.
+- Next: continue separately proven Profile achievement and remaining cross-screen presentation cleanup. Physical Android certification remains open.
+
 ## M289 — one Profile Strength comparison owner
 
 - Consolidate the effective Strength section, comparison grid, row typography, single-pattern sizing and next-milestone presentation in the maintained Expressive Profile family. Retire the obsolete tile/card/narrow-phone declarations at their original owners. Preserve shared forced-colors, focus and non-Expressive fallbacks.

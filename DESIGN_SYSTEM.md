@@ -69,3 +69,7 @@ The canonical `TabBar` owns full and compact visual labels; its existing `aria-l
 ### Focus numeric touch-selection timing
 
 Focus weight and reps inputs share the canonical select-on-focus handler. After a real tap, allow one extra animation frame for the native caret to settle, then reselect only when the field remains active, editable and unchanged; do not clobber the first keystroke. Keep B825's real-touch selection contract and preserve the protected Workout/Focus layout.
+
+### Cohesion 23 — Home rhythm and secondary actions
+
+The first Home card gets a 12px inset below its collapsing header; the complete exercise outline stays expanded by default but passive rows use 6px rather than 8px vertical padding and the outline wrapper uses 4px top/bottom space. Start and Switch program static presentation now live in the canonical Home CSS region, not nested inline objects. Start retains primary-theme paint and the existing minimum touch area; Switch is a quiet, token-colored 44px secondary action. All callbacks, display order, training/engine logic, workout and Focus styling remain untouched. The Home source contract pins ownership and the global inline-style debt ceiling falls to 3190.

@@ -31,4 +31,16 @@ assert.ok(css.includes('#root .wpb .wpb-home-outline-list>li:first-child{padding
 
 for(const selector of ['.wpb-action-tile-icon','.wpb-action-tile-copy','.wpb-action-tile-label',
     '.wpb-action-tile-subtitle'])assert.ok(css.includes(selector), selector + ' missing');
-console.log('PASS Home ownership: one empty-state primary CTA, stable discovery route keys, shared tile CSS, Game Plan separate, runtime engine unchanged.');
+assert.ok(home.includes('className: "wpb-primary-action", children:'),
+    'Home Start uses CSS-owned geometry rather than a static inline style');
+assert.ok(home.includes('className: "pressable wpb-home-switch-action"'),
+    'Program switch remains reachable through a token-owned action');
+assert.ok(!home.includes('className: "pressable wpb-home-switch-action", "aria-label": "Switch program", style:'),
+    'Program switch must not return to inline static presentation');
+assert.ok(css.includes('#root .wpb .wpb-home-hero>.wpb-home-switch-action{'),
+    'Home switch geometry is class-owned');
+assert.ok(css.includes('padding-top:var(--pi-space-3)!important;'),
+    'Home cards retain their inset below the header');
+assert.ok(css.includes('padding:6px 0;color:var(--wpb-theme-text);font-size:var(--pi-type-support);'),
+    'Expanded passive workout rows preserve the denser token-owned rhythm');
+console.log('PASS Home ownership: one task CTA, token-owned rhythm, full outline, independent Game Plan.');

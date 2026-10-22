@@ -1589,7 +1589,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-color:var(--pi-r4-line)!important;
 }
 #root[data-pi-motion="expressive"] .wpb-home .wpb-page-scroll{
-  padding-top:0!important;
+  /* One inset below the collapsing masthead and before the first card. */
+  padding-top:var(--pi-space-3)!important;
 }
 #root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero{
   margin-top:12px!important;
@@ -9006,6 +9007,30 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   #root .wpb-cycle-change-preview{border-color:CanvasText;}
 }
 
+/* Cohesion 23 — one token-owned Home rhythm; callbacks and order are unchanged. */
+#root .wpb .wpb-home-hero>.wpb-primary-action{
+  display:flex;align-items:center;justify-content:center;gap:var(--pi-space-2);
+  width:100%;min-height:var(--pi-primary-min);margin-top:var(--pi-space-4);
+  padding:var(--pi-space-3) var(--pi-space-4);border:0;
+  font-size:var(--pi-type-body);font-weight:var(--pi-weight-action);cursor:pointer;
+}
+#root .wpb .wpb-home-hero>.wpb-home-switch-action{
+  display:inline-flex;align-items:center;gap:var(--pi-space-2);
+  max-width:100%;min-height:44px;margin-top:var(--pi-space-2);
+  padding:var(--pi-space-2);border:0;border-radius:var(--pi-shape-action);
+  background:transparent;color:var(--wpb-theme-muted);
+  font-size:var(--pi-type-support);font-weight:var(--pi-weight-action);
+  line-height:1.4;text-align:left;cursor:pointer;overflow-wrap:anywhere;
+}
+#root .wpb .wpb-home-hero>.wpb-home-switch-action:focus-visible{
+  outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px;
+}
+@media(forced-colors:active){
+  #root .wpb .wpb-home-hero>.wpb-home-switch-action{
+    color:ButtonText;border:1px solid CanvasText;
+  }
+}
+
 /* B909 — Prototype-aligned Home coaching: short insight card outside workout hero. */
 #root .wpb .wpb-plan-change-banner{
   min-height:64px;margin:0 0 var(--pi-space-3);padding:var(--pi-space-3) var(--pi-space-4);
@@ -9016,7 +9041,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-plan-change-banner>span:nth-child(2)>span{margin-top:2px;line-height:1.35}
 /* Home outline owns its inset; legacy M3 preview rules no longer stack padding. */
 #root .wpb .wpb-home-session-preview{
-  position:relative;margin:var(--pi-space-2) 0 0;padding:0 var(--pi-space-3) var(--pi-space-2);
+  position:relative;margin:var(--pi-space-1) 0 0;padding:0 var(--pi-space-3) var(--pi-space-1);
   min-width:0;border-radius:var(--pi-shape-card);background:var(--pi-color-control);
 }
 #root .wpb .wpb-home-preview-action{
@@ -9038,7 +9063,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-home-outline-list{list-style:none;margin:0;padding:0 0 6px}
 #root .wpb .wpb-home-outline-list>li:first-child{padding-top:3px}
 .wpb-home-outline-list li{display:flex;justify-content:space-between;align-items:baseline;gap:10px;
-  padding:8px 0;color:var(--wpb-theme-text);font-size:13px;line-height:1.4}
+  padding:6px 0;color:var(--wpb-theme-text);font-size:var(--pi-type-support);line-height:1.4}
 .wpb-home-outline-list li+li{border-top:1px solid var(--wpb-theme-border)}
 .wpb-home-outline-list li>span{min-width:0;overflow-wrap:anywhere}
 .wpb-home-outline-list li>strong{color:var(--wpb-theme-muted);font-size:12px;white-space:nowrap;flex-shrink:0}

@@ -79,6 +79,6 @@ assert.match(runtime,/techniqueLimitedExerciseIds: analysis\.techniqueLimitedExe
 assert.match(runtime,/fatigueLimitedExerciseIds: analysis\.fatigueLimitedExerciseIds/,'real cycle advancement must pass fatigue-limited evidence');
 assert.match(runtime,/nextBlockWeeks: weeks/,'real cycle advancement must pass the actual target block duration');
 assert.ok((runtime.match(/nextBlockWeeks: spec\.weeks/g)??[]).length>=2,'both new-cycle and converted-cycle adaptive previews must pass target block duration');
-assert.ok((runtime.match(/retargetStatic\(previous, baseRequest, spec\.phase, spec\.weeks\)/g)??[]).length>=2,'both new-cycle and converted-cycle locked previews must pass target block duration');
+assert.ok((runtime.match(/retargetStatic\(previous, (?:baseRequest|targetRequest), spec\.phase, spec\.weeks\)/g)??[]).length>=2,'both new-cycle and converted-cycle locked previews must pass target block duration');
 
 console.log(`PASS M193: cycle creation built ${adaptive.blocks.length+locked.blocks.length+manual.blocks.length} audited preview blocks with phase/duration-aware progression; adaptive, locked, manual, conversion, and real-advance paths now carry progression context.`);

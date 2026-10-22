@@ -1,3 +1,10 @@
+## M283 — cross-tab phone scroll/header edge alignment (October 22, 2026)
+
+- Eliminated the old 14px mobile scroll pane inset that conflicted with the shared 12px (320px) / 16px (393px) page inset on Settings and Progress. Home already used the canonical inset and is left owned by its existing rule.
+- The responsive selector now uses the same `--pi-page-inset` token as the common root header, with one padding declaration rather than two hardcoded priority declarations. All saved data, navigation and Workout/Focus are untouched.
+- Added real browser geometry checks at 320px and 393px across themes for matching left/right root header and Settings/Progress content insets, opaque headers and contiguous Settings category chrome. Existing Plan sticky week-picker checks remain in the R62 suite.
+- CSS priority ceiling decreases 2,463 to 2,462. Same-build offline cache and UI hash finalization, full exact-head CI and device screenshots remain required before merging.
+
 ## M282 — Settings large-text row reading order (October 22, 2026)
 
 - At narrow inline-size containers with enlarged system text, existing Settings rows now place preference explanations above their controls instead of splitting words into isolated letters to fit beside kg/lb selections and switches.

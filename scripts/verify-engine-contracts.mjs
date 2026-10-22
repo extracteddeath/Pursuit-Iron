@@ -9,13 +9,17 @@ for (const group of groups) {
     const files = contractGroups[group];
     if (!files)
         throw new Error(`Unknown contract group: ${group}`);
-    for (const file of files)
+    for (const file of files) {
+        const started = process.hrtime.bigint();
         execFileSync(process.execPath, [
             '--no-warnings',
             '--experimental-loader',
             './verification/import-loader.mjs',
             `verification/${file}`
         ], { stdio: 'inherit' });
+        const seconds = Math.round(Number(process.hrtime.bigint() - started) / 1e7) / 100;
+        console.log(`CONTRACT_TIMING ${JSON.stringify({ group, file, seconds })}`);
+    }
     console.log(`PASS current contracts: ${group} (${files.length} gates).`);
 }
 

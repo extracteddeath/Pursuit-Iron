@@ -108,3 +108,8 @@ Progress has one effective spatial owner for its By Cycle/By Month grouping, cyc
 ### M278 — Profile share-card spacing and strength comparisons
 
 The user's editable share card is the primary share surface, and its metrics use the same `--pi-space-1/2/3/4` tokens as the surrounding Profile sections. The established single-column strength score comparison (left labels, right values, first row theme tint) is the active design; do not restore overwritten early grid gaps, cell padding or rounded first/last tiles. At 320px and large text, keep value alignment, field labels and customizations readable without changing data order. Six shadowed priority declarations were retired and the CSS priority ceiling is now 2,474.
+
+
+### M279 — Settings category rail and grouped controls
+
+The primary Settings header remains in `UiRootHeader`. Immediately beneath it, `.wpb-settings-jump` is a full-width, opaque category rail with the shared `--pi-page-inset` and `--pi-space-2` bottom padding: the current R57 rule is authoritative, including narrow screens, not older independent pixel margins. The category select is a minimum 48px control with `--pi-shape-action`, and both category labels and preference guidance use `--pi-type-support` for readability. The eight existing `.wpb-settings-card` groups, their 48px rows, and native setting/navigation callbacks are unchanged. Do not reintroduce earlier narrower 44px select heights, duplicated sub-359px overrides, or superseded raised-surface CSS. CSS priority ceiling: 2,463.

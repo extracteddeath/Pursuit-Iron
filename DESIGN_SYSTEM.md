@@ -93,3 +93,8 @@ Debt ceilings: **3,143 inline presentation objects**, **2,483 external priority 
 ### M275 — connected sticky chrome and Program/Cycles information hierarchy
 
 The Plan week picker owns a solid canvas, 0 external margin and a contained bottom rule while pinned. Scrolled deep-page headers never use partially transparent paint; Progress sticky group headings use internal padding, not external margins that expose content beneath. Preserve scrolling areas, focus and theme selection. Plan's single existing full-program action is now in the program-context heading, with a 48px native control and wrap at enlarged text. The current cycle's native block disclosure is open by default, user-collapsible and backed by the existing CycleBlockRows projection. Do not create a duplicate current-block card or a second navigation handler.
+
+
+### M276 — Program/Cycles hierarchy, reference information and density
+
+In Program, current training context and edit controls come before explanatory reference copy. The latter belongs in the existing Program Details sheet via a native, keyboard-accessible disclosure; never hide it behind truncated typography or duplicate it on the main program surface. The linked-cycle route uses the same measured scroll wrapper but class-owned semantic paint and 48px minimum height. Cycles uses the established spatial tokens for overview, block rows, and information cards; block routes retain at least 64px row height and the actual canonical sequence. Avoid parallel progress calculations or a second cycle-renderer owner.

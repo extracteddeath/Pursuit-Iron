@@ -1,3 +1,9 @@
+## M274 — Program header presentation ownership (October 22, 2026)
+
+- Consolidated the Program detail title/rename row, animated metadata wrapper and saved status into one token-owned presentation family in app.css, preserving the exact existing handlers and scroll-collapse refs.
+- Removed eight legacy inline presentation objects and lowered the permanent CI debt cap from 3,135 to 3,127.
+- Added source assertions to protect these class owners against future inline regressions; preserved all Program, Cycles and Workout controls.
+
 ## M273 — Plan schedule hierarchy and shared glance styles (October 22, 2026)
 
 - The selected week now owns the first schedule card immediately beneath the week picker and its focus context. The phase timeline contains only the other weeks, so each planned week is rendered once with the same session-row renderer, target and navigation owner.

@@ -302,7 +302,19 @@ try{
               transform:getComputedStyle(next).transform,rows:getComputedStyle(next.parentElement).gridTemplateRows,
               overviewRow:getComputedStyle(overview).gridRow}:null;
             const orbit=document.querySelector('.wpb-home .wpb-m3-day-orbit');
-            return {overflow:document.documentElement.scrollWidth>innerWidth+2,tabs,plan,
+            const title=document.querySelector('.wpb-root-header .wpb-screen-title');
+            const edit=document.querySelector('.wpb-root-header .wpb-root-actions button');
+            const titleRange=document.createRange();
+            if(title)titleRange.selectNodeContents(title);
+            const titleRects=title?[...titleRange.getClientRects()].filter(r=>r.width>0&&r.height>0):[];
+            const titleBox=title?.getBoundingClientRect(),editBox=edit?.getBoundingClientRect();
+            const rootTitle=title?{
+              text:title.textContent.trim(),
+              lines:new Set(titleRects.map(r=>Math.round(r.y))).size,
+              overlapsAction:!!editBox&&titleBox.left<editBox.right-1&&titleBox.right>editBox.left+1&&
+                titleBox.top<editBox.bottom-1&&titleBox.bottom>editBox.top+1
+            }:null;
+            return {overflow:document.documentElement.scrollWidth>innerWidth+2,tabs,plan,rootTitle,
               homeOrbitVisible:!!orbit&&getComputedStyle(orbit).display!=='none'};
           });
           if(width===320||width===1280)
@@ -311,6 +323,10 @@ try{
           assert.ok(enlarged.tabs.every(t=>t.hit&&t.visibleName===t.label&&t.lines===1&&t.text.x>=t.box.x-1&&t.text.right<=t.box.right+1&&
             t.text.y>=t.box.y-1&&t.text.bottom<=t.box.bottom+1),
             '200% '+route+' navigation labels fit their real controls: '+JSON.stringify({theme,width,enlarged}));
+          if(route==='profile'&&width===320)
+            assert.ok(enlarged.rootTitle?.text==='Profile'&&enlarged.rootTitle.lines===1&&
+              !enlarged.rootTitle.overlapsAction,
+              'Profile root title stays one intact word and Edit remains separate at 200%: '+JSON.stringify({theme,width,title:enlarged.rootTitle}));
           if(route==='home'&&width===320)
             assert.equal(enlarged.homeOrbitVisible,false,
               '320px Home day orbit must never overlap the workout heading: '+JSON.stringify({theme,width,enlarged}));

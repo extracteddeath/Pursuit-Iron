@@ -286,3 +286,12 @@ assert.ok(!css.includes('.wpb-settings .wpb-settings-jump{\n  padding-bottom:8px
   'Old Settings layout and undersized select rules must not return');
 assert.ok(css.includes('.wpb-settings-jump-control>span{display:none;}'),
   'Compact Settings removes duplicate visible category text while retaining native select semantics');
+
+// M280: destination title words remain readable when root actions wrap at 200% text.
+// No separate Profile-only header override; UiRootHeader remains the sole owner.
+const rootTitleOwner=css.slice(css.indexOf('/* Root titles are destination names:'),css.indexOf('/* M271 — one root app bar'));
+assert.ok(rootTitleOwner.includes('min-width:min-content;')&&
+  rootTitleOwner.includes('overflow-wrap:normal;word-break:normal;'),
+  'Root title must not break Profile mid-word beside the Edit action');
+assert.ok(css.includes('.wpb-root-title-row{display:flex;flex-wrap:wrap;'),
+  'Root title actions must be able to flow beneath text without overlap');

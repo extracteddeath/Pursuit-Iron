@@ -115,3 +115,8 @@ The user's editable share card is the primary share surface, and its metrics use
 The primary Settings header remains in `UiRootHeader`. Immediately beneath it, `.wpb-settings-jump` is a full-width, opaque category rail with the shared `--pi-page-inset` and `--pi-space-2` bottom padding: the current R57 rule is authoritative, including narrow screens, not older independent pixel margins. The category select is a minimum 48px control with `--pi-shape-action`, and both category labels and preference guidance use `--pi-type-support` for readability. The eight existing `.wpb-settings-card` groups, their 48px rows, and native setting/navigation callbacks are unchanged. Do not reintroduce earlier narrower 44px select heights, duplicated sub-359px overrides, or superseded raised-surface CSS. CSS priority ceiling: 2,463.
 
 At viewport widths up to 420px, the Settings select's adjacent visible “Jump to” span is suppressed because the native selector already carries `aria-label="Jump to Settings section"`. This protects long option names under enlarged text without duplicating interactive controls or altering focus/selection behavior. Its icon remains visible; above 420px the visible label remains.
+
+
+### M280 — word-safe root title layout
+
+All five destinations continue using the same `UiRootHeader` title row. Its fixed destination names use `min-width:min-content`, normal word breaking and the existing line-height/type token; toolbar actions may wrap to the next row under 200% text, rather than splitting “Profile” mid-word or overlapping Edit. Do not create a separate Profile header or adjust Workout/Focus layout. The R74 browser contract asserts intact Profile title and nonoverlapping actions at 320px / 200% enlargement.

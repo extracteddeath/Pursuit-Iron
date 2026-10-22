@@ -1,3 +1,9 @@
+## M280 — shared root title word integrity (October 22, 2026)
+
+- In the existing `UiRootHeader` title owner, use min-content intrinsic sizing and normal word breaking so fixed destination names stay intact at 320px and 200% text. If a root action does not fit beside a word, the existing flex-wrap puts that action on the next row instead of splitting “Profile.”
+- Added an actual Profile browser assertion for 320px / 200% text that checks a one-line title and no title/Edit overlap. Retained all five root titles, toolbar callbacks, navigation states, theme and reduced-motion behavior; Workout/Focus and the engine are unchanged.
+- Stylesheet priority ceiling remains 2,463. Same-build release cache and UI hashes require finalization and exact-head CI before merge.
+
 ## M279 — Settings category rail and control ownership (October 22, 2026)
 
 - Removed 11 superseded Settings-specific CSS priority declarations: old category bar padding, duplicate narrow-screen insets, raised-input painting and an obsolete 44px select rule. The surviving top rail uses the shared page inset, canvas surface and 48px input target.

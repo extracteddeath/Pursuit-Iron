@@ -85,7 +85,7 @@ assert.deepEqual(cycleSplitCandidates({phase:'strength_accumulation',split:'ulpp
 assert.deepEqual(cycleSplitCandidates({phase:'strength_accumulation',weeks:4},{split:'ulppl',days:5},false),
  [{phase:'strength_accumulation',weeks:4}],'disabling split adaptation keeps the original plan');
 assert.match(app,/function CycleAdaptSplitChoice\(/);
-assert.match(app,/cycleAdaptSplit: !!config\.cycleAdaptSplit/);
+assert.match(app,/final\.cycleAdaptSplit = cycleAdaptSplit/);
 assert.match(app,/adaptTrainingSplit: !!config\.cycleAdaptSplit/);
 let optId=0;
 const optimized=generateNextCycleForShell({

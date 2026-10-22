@@ -18,6 +18,12 @@ App 4.0.0 build 905 / Engine 0.65.9 / M234. `RELEASE_MANIFEST.json` is authorita
 
 
 
+## M284 — populated tablet history certification
+
+- Real 16-session browser fixtures revealed the 1280px Sessions history column began *below* the full calendar because its grid row shared the calendar's intrinsic height. The calendar now spans the grouping and first history row, letting workout records begin beside it. 900px remains a single-column reading layout.
+- Cross-palette, 900/1280px top/scrolled screenshot capture and browser assertions now enforce bounded records, stationary opaque root chrome, the first-record/calendar relationship, and unchanged session data except expected migration timestamps. Keep this test fixture in CI to prevent the empty-state-only coverage gap from reopening.
+- After exact-head CI, continue reviewing long multi-program/month groupings and actual Android tablet/foldable usage; avoid reworking data generation or Workout/Focus.
+
 ## M283 — cross-tab phone scroll insets and header seams
 
 - Settings/Progress scroll bodies had a legacy 14px mobile padding rule, different from the shared header 12px at 320px and 16px at 393px. Replace this with `--pi-page-inset` and keep Home's existing canonical scroll owner. No new CSS layer or navigation changes.

@@ -167,6 +167,13 @@ const BLOCK_LIFTS = new Set(['bench_press', 'back_squat', 'deadlift', 'overhead_
 function changesWeek(spec) {
     return Boolean(spec?.split || spec?.days || spec?.priorityLift);
 }
+function requiresExerciseRebuild(previous, spec, adaptExercises) {
+    if (adaptExercises) return true;
+    if (spec?.priorityLift) return true;
+    if (spec?.split && spec.split !== previous?.split?.family) return true;
+    if (spec?.days && spec.days !== previous?.sessions?.length) return true;
+    return false;
+}
 function blockConfigForSpec(config, spec) {
     return { ...config, ...(spec?.split ? { split: spec.split } : {}),
         ...(spec?.days ? { days: spec.days } : {}) };
@@ -436,7 +443,7 @@ export function generateNextCycleForShell(options) {
             const request = requestForBlock(baseRequest, options.config, candidateSpec, options.legacyExercises);
             const normalized = normalizeRequest(request);
             let next;
-            if (options.adaptBetweenBlocks || changesWeek(candidateSpec)) {
+            if (requiresExerciseRebuild(previous, candidateSpec, !!options.adaptBetweenBlocks)) {
                 const ids = previous.sessions.flatMap(session => session.exercises.map(ex => ex.exerciseId));
                 const protectedIds = previous.sessions.flatMap(session => session.exercises
                     .filter(ex => ex.role === 'primary_strength' || ex.role === 'secondary_strength').map(ex => ex.exerciseId));
@@ -502,7 +509,7 @@ export function generateNextCycleForShell(options) {
                 effectiveTargetExercises: entryAttempt.effectiveTarget,
                 requestedMinimumMinutes: entryAttempt.requestedMinimumMinutes,
                 effectiveMinimumMinutes: entryAttempt.effectiveMinimumMinutes,
-                maxMinutes: firstEffectiveRequest.schedule?.days?.[0]?.maxMinutes
+                maxMinutes: entryAttempt.request.schedule?.days?.[0]?.maxMinutes
             } } : {})
         }
     };
@@ -585,7 +592,7 @@ export function convertProgramToNextCycleForShell(options) {
             const request = requestForBlock(baseRequest, baseConfig, candidateSpec, options.legacyExercises);
             const normalized = normalizeRequest(request);
             let next;
-            if (options.adaptBetweenBlocks || changesWeek(candidateSpec)) {
+            if (requiresExerciseRebuild(previous, candidateSpec, !!options.adaptBetweenBlocks)) {
                 const ids = previous.sessions.flatMap(session => session.exercises.map(ex => ex.exerciseId));
                 const protectedIds = previous.sessions.flatMap(session => session.exercises
                     .filter(ex => ex.role === 'primary_strength' || ex.role === 'secondary_strength')
@@ -695,7 +702,7 @@ function buildAdaptedBlock(current, cycle, target, weeks, label, analysis, legac
         const request = requestForAdvance(cycle, current, target, weeks, analysis, candidateSpec);
         const normalized = normalizeRequest(request);
         let next;
-        if (cycle?.nextEngineCycle?.adaptBetweenBlocks || changesWeek(candidateSpec)) {
+        if (requiresExerciseRebuild(source, candidateSpec, !!cycle?.nextEngineCycle?.adaptBetweenBlocks)) {
             next = transitionProgramPhase(source, normalized, target, {
                 successfulExerciseIds: analysis.successfulExerciseIds,
                 protectedExerciseIds: analysis.protectedExerciseIds,

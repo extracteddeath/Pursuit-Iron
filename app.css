@@ -246,10 +246,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 
 /* Settings: section groups look like one intentional list, without adding row height. */
-#root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-jump{
-  padding-bottom:8px!important;
-}
-
 #root[data-pi-motion="expressive"] .wpb-settings .wpb-segmented{
   gap:2px;
 }
@@ -2557,9 +2553,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-jump-control{
   padding:0 12px!important;
 }
-#root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-jump-control select{
-  min-height:44px!important;
-}
 /* Plan's next workout may be a long user-authored name. Do not erase it
    under an ellipsis; allow two lines naturally while keeping Open accessible. */
 #root[data-pi-motion="expressive"] .wpb-plan-view .wpb-plan-up-next>div:first-child{
@@ -2581,9 +2574,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item>.mono,
   #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item:first-child>.mono{
     font-size:22px!important;
-  }
-  #root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-jump{
-    padding-inline:12px!important;
   }
 }
 @media(forced-colors:active){
@@ -4022,27 +4012,15 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     border-color:CanvasText!important;
   }
 }
-#root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-jump{
-  padding:8px 16px 10px!important;
-}
-#root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-jump-control{
-  box-sizing:border-box;
-  min-height:48px!important;
-  background-color:var(--pi-r11-raised)!important;
-  background-image:none!important;
-  border:1px solid var(--pi-r11-edge)!important;
-  border-radius:16px!important;
-  box-shadow:none!important;
-}
 
 /* Cohesion 20 — Settings groups and stable row composition. */
 .wpb .wpb-settings-card.wpb-ui-card{padding:0;margin:0 0 var(--pi-space-3);overflow:visible;container-type:inline-size;}
-.wpb .wpb-settings-title{margin:var(--pi-space-4) var(--pi-space-1) var(--pi-space-2);font-size:var(--pi-type-label);line-height:1.4;font-weight:750;letter-spacing:.015em;color:var(--pi-color-on-muted);text-transform:none;}
+.wpb .wpb-settings-title{margin:var(--pi-space-4) var(--pi-space-1) var(--pi-space-2);font-size:var(--pi-type-support);line-height:1.4;font-weight:750;letter-spacing:.015em;color:var(--pi-color-on-muted);text-transform:none;}
 .wpb .wpb-settings-row,.wpb .wpb-settings-navigation{box-sizing:border-box;display:flex;align-items:center;gap:var(--pi-space-3);min-width:0;min-height:var(--pi-control-min);padding:var(--pi-space-3);border:0;background:transparent;color:inherit;}
 .wpb .wpb-settings-row{flex-wrap:wrap;}
 .wpb .wpb-settings-row-copy{flex:1 1 8rem;min-width:0;overflow-wrap:anywhere;}
 .wpb .wpb-settings-row-label{font-size:var(--pi-type-body);font-weight:650;line-height:1.3;}
-.wpb .wpb-settings-row-description{font-size:var(--pi-type-label);line-height:1.42;color:var(--pi-color-on-muted);margin-top:var(--pi-space-1);}
+.wpb .wpb-settings-row-description{font-size:var(--pi-type-support);line-height:1.42;color:var(--pi-color-on-muted);margin-top:var(--pi-space-1);}
 .wpb .wpb-settings-row-control{flex:0 1 auto;min-width:0;max-width:100%;}
 .wpb .wpb-settings-row--stack{flex-direction:column;align-items:stretch;}
 .wpb .wpb-settings-row--stack>.wpb-settings-row-copy{flex:none;}
@@ -4071,12 +4049,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root[data-pi-motion="expressive"] .wpb-settings .wpb-segmented>button{
   border-radius:11px!important;
-}
-@media(max-width:359px){
-  #root[data-pi-motion="expressive"] .wpb-settings .wpb-settings-jump{
-    padding-inline:12px!important;
-  }
-
 }
 @media(forced-colors:active){
   #root[data-pi-motion="expressive"] .wpb-settings :is(.wpb-settings-card,.wpb-settings-jump-control,.wpb-segmented){
@@ -5161,12 +5133,17 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   min-height:48px!important;
   background:var(--pi-color-control)!important;
   border:1px solid var(--pi-color-divider)!important;
-  border-radius:13px!important;
+  border-radius:var(--pi-shape-action)!important;
   color:var(--pi-color-on-control)!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-settings.wpb-settings .wpb-settings-jump-control select{
   min-height:48px!important;
   color:var(--pi-color-on-control)!important;
+}
+/* The native select already has an explicit accessible label. On compact phones,
+   suppress its duplicate visible "Jump to" copy to leave room for the section name. */
+@media(max-width:420px){
+  #root[data-pi-motion="expressive"] .wpb .wpb-settings.wpb-settings .wpb-settings-jump-control>span{display:none;}
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-hero{
   margin-bottom:10px!important;

@@ -18,6 +18,12 @@ App 4.0.0 build 905 / Engine 0.65.9 / M234. `RELEASE_MANIFEST.json` is authorita
 
 
 
+## M279 — Settings control and category hierarchy
+
+- One effective Settings category rail uses shared root alignment, page inset, themed canvas and 48px choice target; 11 superseded high-priority declarations and duplicate narrow viewport overrides have been retired.
+- Category headings, explanatory text and selection shape use shared typography/shape tokens; all eight saved Settings groups, toggle behavior, category jump, transfer workflows and preferences remain canonical. For phone widths at or below 420px, hide the redundant visible jump label while preserving the native select's accessible label and section names.
+- Static ownership and 320px, 393px, 900px and 1280px enlarged-text browser assertions now protect the category rail, focus/touch geometry and card layout. Priority ceiling: 2,463. Next work: cross-tab device screenshot review and targeted consolidation of repeated old button/section rules before launch; do not blanket-redesign Workout/Focus.
+
 ## M278 — Profile share-card cohesion
 
 - Share-card heading, metrics and editable favorites use the shared spatial tokens with fewer bespoke gaps; six previously superseded strength/statistics priority declarations are removed without changing the current single-column score comparison.

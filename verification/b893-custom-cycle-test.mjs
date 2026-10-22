@@ -50,9 +50,9 @@ console.log('PASS B893 generated cycles: exact unusual phase order, repeats, 1/7
 
 const structured=customCycleSpecs([
  {phase:'hypertrophy_accumulation',weeks:6},
- {phase:'strength_accumulation',weeks:5,split:'upper_lower',days:5,priorityLift:'bench_press',frequency:2}
+ {phase:'strength_accumulation',weeks:5,split:'upper_lower',days:4,priorityLift:'bench_press',frequency:2}
 ]);
-assert.deepEqual(structured[1],{phase:'strength_accumulation',weeks:5,label:'Strength',split:'upper_lower',days:5,priorityLift:'bench_press',frequency:2});
+assert.deepEqual(structured[1],{phase:'strength_accumulation',weeks:5,label:'Strength',split:'upper_lower',days:4,priorityLift:'bench_press',frequency:2});
 assert.throws(()=>customCycleSpecs([{phase:'peak',weeks:2},{phase:'strength_accumulation',weeks:5,split:'unreal_split'}]),/split/);
 assert.throws(()=>customCycleSpecs([{phase:'peak',weeks:2},{phase:'strength_accumulation',weeks:5,days:2,priorityLift:'bench_press',frequency:3}]),/exposures/);
 const req=shellConfigToNextRequest(config,[],EXERCISES,893);
@@ -69,7 +69,7 @@ const structuredResult=generateNextCycleForShell({
  makeId:()=>`b893-structure-${++structuredId}`,adaptBetweenBlocks:false
 });
 assert.equal(structuredResult.blocks[1].config.split,'upper_lower','strength block changes weekly split');
-assert.equal(structuredResult.blocks[1].config.days,5,'strength block owns weekly schedule');
+assert.equal(structuredResult.blocks[1].config.days,4,'strength block owns weekly schedule');
 assert.equal(structuredResult.cycle.nextEngineCycle.plannedBlocks[1].frequency,2);
 const practiceDays=structuredResult.blocks[1].nextEngine.program.sessions.filter(session=>session.exercises.some(ex=>
  ['primary_strength','secondary_strength'].includes(ex.role)

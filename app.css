@@ -5206,9 +5206,11 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 
 .wpb{--pi-type-screen-title:1.625rem;--pi-type-navigation:.75rem;}
 
+/* Root titles are destination names: keep each word whole. Flex wrapping sends
+   trailing toolbar actions to a new row at 200% text instead of splitting Profile. */
 #root .wpb .wpb-screen-title{
-  min-width:0;margin:0;font-size:var(--pi-type-screen-title);font-weight:750;
-  line-height:1.22;letter-spacing:-.035em;overflow-wrap:anywhere;text-wrap:balance;
+  min-width:min-content;margin:0;font-size:var(--pi-type-screen-title);font-weight:750;
+  line-height:1.22;letter-spacing:-.035em;overflow-wrap:normal;word-break:normal;text-wrap:balance;
 }
 
 /* M271 — one root app bar: same title anchor, inset, action row and scroll fill.

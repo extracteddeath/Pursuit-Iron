@@ -125,3 +125,8 @@ All five destinations continue using the same `UiRootHeader` title row. Its fixe
 ### M281 — selected navigation is a tonal indicator, not an outlined chip
 
 The one moving bottom-nav `[data-pi-m3-track]::before` indicator paints with `--pi-color-active` and never uses a persistent gray perimeter in normal light/dark themes. Remove obsolete R35 custom perimeter tokens at their original owner instead of adding a downstream negative-priority override. Keyboard focus continues to use a `:focus-visible` ring; Windows forced-colors selection continues to use an explicit Highlight-colored perimeter and underline. Keep the saved-theme icon and active-label colors, animated track measurements, and at least 48px tab hit targets unchanged.
+
+
+### M282 — Settings explanations before controls under enlarged text
+
+Use the existing `@container pi-settings-body (max-width:16em)` breakpoint for Settings' 200% enlarged-text cases, not a global viewport-only hack. Within it, the canonical `.wpb-settings-row` becomes a vertical layout; `.wpb-settings-row-copy` may use the full card width before `.wpb-settings-row-control` sits beneath. Its `flex:none` declaration prevents the original row flex basis from creating a huge blank block when the flex axis becomes vertical. Keep compact horizontal rows at ordinary text sizes, 48px control targets, the eight card groups, preference state, and accessible descriptions. No new style priority flags are introduced.

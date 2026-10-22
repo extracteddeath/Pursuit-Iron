@@ -149,10 +149,18 @@ try{
             const children=[...row.children].map(el=>el.getBoundingClientRect());
             const copy=row.querySelector('.wpb-settings-row-copy');
             const range=document.createRange();range.selectNodeContents(copy);
-            return {label:copy.textContent.slice(0,45),fits:children.every(r=>r.left>=box.left-1&&r.right<=box.right+1)&&
-              [...range.getClientRects()].every(r=>r.left>=box.left-1&&r.right<=box.right+1)};
+            const copyBox=copy.getBoundingClientRect(),control=row.querySelector('.wpb-settings-row-control');
+            const controlBox=control?.getBoundingClientRect();
+            return {label:copy.textContent.slice(0,45),stacked:getComputedStyle(row).flexDirection==='column',
+              copyFullWidth:copyBox.width>=box.width-32,
+              controlBelow:!controlBox||controlBox.top>=copyBox.bottom-1,
+              fits:children.every(r=>r.left>=box.left-1&&r.right<=box.right+1)&&
+                [...range.getClientRects()].every(r=>r.left>=box.left-1&&r.right<=box.right+1)};
           }));
           assert.ok(rows.every(r=>r.fits),'200% Settings row text and controls stay inside their card: '+JSON.stringify(rows));
+          if(width===320||width===393)
+            assert.ok(rows.length>0&&rows.every(r=>r.stacked&&r.copyFullWidth&&r.controlBelow),
+              '200% Settings text uses full row before controls rather than splitting words: '+JSON.stringify(rows));
           await page.select('.wpb-settings-jump-control select','preferences');
           await settle(page);
           if(width===320||width===393)await page.screenshot({path:path.join(root,'verification/c20-settings-'+theme+'-'+width+'-enlarged-phone.png')});

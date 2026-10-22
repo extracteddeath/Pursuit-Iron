@@ -119,15 +119,15 @@
   "uiFiles": {
     "modules/App.js": "660fd7d17877290dbc71866513de56892280949cf15d68eaaf2c478a055e43c5",
     "index.html": "54fd7f97b0a2d9d8b76694380158b4a23699a3f1c1cbea697c5e33b7c705b7ed",
-    "sw.js": "28ee7d0bcfe7fed22b4fede2b5dc0a39bcc4e384f5110f20fead8a527ce87725",
-    "BUILD_PROFILE.json": "7d005aa3beedba4d7b235f962af40e5f6079efe5c7b1c2e31e11570dffeed019",
-    "CHANGELOG.md": "ddd2ce78edf07f5bcccfef3829d87bc91e21a6fc9cdcbb68566786da51cc787a",
-    "app.css": "b45a6fe1c872c0b0ecaf3f693e23b6358c8f76beb174798d1d58fbf76222e05c",
+    "sw.js": "dda87be441540012330d5f58cb12c0b8aab6af4b139403d9f84d9e7b8e3df851",
+    "BUILD_PROFILE.json": "aacd5f7a49e96bb967539cabdaefe4c52201c466b1491bec9aaf2dc3838dafed",
+    "CHANGELOG.md": "c1f2d8e5072192c50c2d15c23e800e80d942739cc7b748c96256e9d009b6c9ee",
+    "app.css": "afcfeca482825fc58a9fdf6b7a7eed901ef41e27f1cb486ecb78d41ffdec63e1",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b905-r7fd94f27289d6cbe",
-  "uiMilestone": "Build 905 · M281 Nav indicator outline cleanup"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b905-r448b19cd9998992b",
+  "uiMilestone": "Build 905 · M282 Settings enlarged text reflow"
 }

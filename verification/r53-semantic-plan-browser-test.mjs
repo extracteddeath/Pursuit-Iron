@@ -253,6 +253,10 @@ async function verifyTaskHierarchy(browser){
         const el=s=>document.querySelector(s),before=(a,b)=>!!(el(a).compareDocumentPosition(el(b))&Node.DOCUMENT_POSITION_FOLLOWING);
         return {nextFirst:before('.wpb-plan-up-next','.wpb-plan-panes'),
           pickerFirst:before('.wpb-plan-week-picker','.wpb-plan-overview'),
+          selectedAfterPicker:before('.wpb-plan-week-picker','.wpb-plan-selected-week'),
+          selectedBeforeTimeline:before('.wpb-plan-selected-week','.wpb-plan-phase-group'),
+          selectedCount:document.querySelectorAll('.wpb-plan-selected-week .wpb-plan-week-card').length,
+          uniqueWeekCount:new Set([...document.querySelectorAll('[data-plan-week]')].map(x=>x.dataset.planWeek)).size,
           sessionsFirst:before('.wpb-plan-session-list','.wpb-plan-overview'),
           rows:[...document.querySelectorAll('.wpb-plan-session-list button')].map(b=>({
             height:b.getBoundingClientRect().height,radius:parseFloat(getComputedStyle(b).borderTopLeftRadius),
@@ -267,11 +271,14 @@ async function verifyTaskHierarchy(browser){
       assert.equal(await page.$eval('[data-plan-pane="volume"]',b=>b.getAttribute('aria-pressed')),'true');
       await page.click('[data-plan-pane="schedule"]');
       assert.equal(await page.$eval('[data-plan-pane="schedule"]',b=>b.getAttribute('aria-pressed')),'true');
-      assert.ok(planOrder.nextFirst&&planOrder.pickerFirst&&planOrder.sessionsFirst,
+      assert.ok(planOrder.nextFirst&&planOrder.pickerFirst&&planOrder.sessionsFirst&&
+        planOrder.selectedAfterPicker&&planOrder.selectedBeforeTimeline&&planOrder.selectedCount===1&&planOrder.uniqueWeekCount===4,
         'Plan puts next session, location and sessions before aggregate metrics: '+JSON.stringify(planOrder));
       assert.ok(planOrder.rows.length===2&&planOrder.rows.every(r=>r.height>=48&&r.radius===0&&r.gap===0),
         'Connected rows retain individual full targets');
       await page.click('[data-plan-week-picker] [aria-label="Week 3"]');
+      assert.equal(await page.$eval('.wpb-plan-selected-week [data-plan-week]',e=>e.dataset.planWeek),'3',
+        'Week picker moves the existing session card to the featured position, without duplication');
       for(const width of [...widths,393]){
         await resize(width,width===768?1024:800);
         const plan=await geometry('.wpb-plan-view');

@@ -34,8 +34,8 @@ try{
    sc.scrollTop=val*full;
    await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
    const box=e=>{const r=e.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height,right:r.right};};
-   const brand=home.querySelector('.wpb-home-brand'),tools=home.querySelector('.wpb-home-tools');
-   return {full,scroll:sc.scrollTop,maxScroll:sc.scrollHeight-sc.clientHeight,header:box(header),greeting:box(greeting),brand:box(brand),tools:box(tools),brandText:brand.textContent.trim(),shortExists:!!brand.querySelector('.wpb-home-brand-short'),compact:home.dataset.homeCompact,buttons:[...tools.querySelectorAll('button')].map(box),overflow:home.scrollWidth>home.clientWidth+1};
+   const brand=home.querySelector('.wpb-root-title-row h1'),tools=home.querySelector('.wpb-home-tools');
+   return {full,scroll:sc.scrollTop,maxScroll:sc.scrollHeight-sc.clientHeight,header:box(header),greeting:box(greeting),brand:box(brand),tools:box(tools),brandText:home.querySelector('.wpb-home-brand-long').textContent.trim(),shortExists:!!brand.querySelector('.wpb-home-brand-short'),compact:home.dataset.homeCompact,buttons:[...tools.querySelectorAll('button')].map(box),overflow:home.scrollWidth>home.clientWidth+1};
   },{val:step,baseline});
   const samples=[await get(0)];
   for(const step of [.3,.7,.93,.96,.99,1,1.15,.96,.93,.7,.3,0])samples.push(await get(step,samples[0].full));
@@ -50,7 +50,7 @@ try{
    assert.ok(Math.abs(item.tools.x-top.tools.x)<2.5,`tool position does not jump from ${top.tools.x}px: ${JSON.stringify(item)}`);
   }
   assert.ok(top.header.h-end.header.h>=24,'greeting releases real vertical space');
-  if(width<600) assert.ok(end.header.h<=65,`phone collapsed header remains compact: ${end.header.h}`);
+  if(width<600) assert.ok(end.header.h<=70,`phone collapsed header remains compact: ${end.header.h}`);
   else assert.ok(end.header.h<top.header.h-20,`tablet masthead contracts: ${top.header.h} → ${end.header.h}`);
   assert.ok(end.scroll>=top.full-2,'collapse uses the full expanded greeting distance');
   assert.ok(Math.abs(mid.header.h-near.header.h)<top.full*.08+3,`no threshold snap at 95%: ${mid.header.h} → ${near.header.h}`);

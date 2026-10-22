@@ -375,7 +375,8 @@ async function verifyWeekChoices(browser,theme){
       {...store(theme),saved:[fixture]});
     await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
     await page.goto('http://127.0.0.1:8796/',{waitUntil:'networkidle0'});
-    await page.waitForSelector('.hp-open');await page.click('.hp-open');
+    // Native auto-scroll collapses Home context; wait for the real card target to stop moving.
+    await page.locator('.hp-open').click({timeout:12000});
     await page.waitForSelector('.wpb-week-rail');
     for(const width of [320,393,834,1280])for(const font of [16,32]){
       await page.setViewport({width,height:1000,deviceScaleFactor:1,isMobile:true,hasTouch:true});

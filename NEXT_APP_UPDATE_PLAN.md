@@ -8,7 +8,7 @@ App 4.0.0 build 905 / Engine 0.65.9 / M234. `RELEASE_MANIFEST.json` is authorita
 
 | Area | Maintained owner | Next work and acceptance |
 |---|---|---|
-| Shared UI | UiAction, UiChoice and semantic theme roles in `modules/App.js`; `app.css` | Continue migrating existing controls and removing provably superseded declarations. Preserve palette, focus, disabled, motion and forced-colors behavior; never solve conflicts by adding another override layer. |
+| Shared UI | UiRootHeader, UiAction, UiChoice and semantic theme roles in `modules/App.js`; `app.css` | Continue migrating existing controls and removing provably superseded declarations. Preserve palette, focus, disabled, motion and forced-colors behavior; never solve conflicts by adding another override layer. |
 | Home, Plan, Profile, Progress | Existing screen components and shared navigation state | Review empty/populated/error states, reading order, action hierarchy and 320px/200% text layouts. Profile and chart editors already share controls. Preserve saved selections and record content. |
 | Settings and transfers | SettingsView preferences; BackupRestorePanel transfers and Undo; StorageStatusCard browser capability state | Backup/restore ownership is consolidated. Continue category placement and shared selection controls while preserving preview, safe merge, Undo and truthful transfer/storage outcomes. |
 | Workout and Focus | Existing shared workout state, runtime and mobile lifecycle | Retain compact rows, direct input, steppers, target/last-time behavior, rest timers, effort provenance and Undo. Verify interruption, keyboard, safe areas and exact-once completion; no visual redesign. |
@@ -16,7 +16,15 @@ App 4.0.0 build 905 / Engine 0.65.9 / M234. `RELEASE_MANIFEST.json` is authorita
 | Persistence and offline updates | Existing store migration/merge/queue and service worker | Corrupt/future saves must not be overwritten. Preview before restore, preserve drafts, require successful persistence before completing a workout, verify offline cache integrity and cancellation recovery. |
 | Android / Play | `play/README.md`, final TWA package and Play Console | Resolve package identity and signing certificate association at the domain root, build the release bundle, validate actual permissions/SDKs and complete account-specific declarations/testing. Repository/browser checks cannot certify a signed Android package. |
 
-## This slice — M270 shared shell
+## This slice — M271 root app-bar hierarchy
+
+- All five roots now share UiRootHeader, one actual title origin, semantic h1 destination labels and the same action row/insets. Root Plan has no Back button. The selected program is a subordinate h2 above its block/schedule context.
+- Profile's header/Edit stay outside the scrolling share-card content; metadata and personalization retain their existing data owners. Progress's section navigation is inset below its shared title row. Home keeps its continuous context collapse with a stationary Home title and actions.
+- Retired per-screen header geometry, brand and title overrides from both stylesheets. Reduced-motion CSS uses zero transition duration to avoid stale font/row measurements.
+- Existing R65 now asserts title coordinates as well as typography; R53/B887/B831 follow the new root anatomy while retaining their interaction, touch, reflow and contrast checks. No parallel suite or tracker was added.
+- Remaining placement work: Home/Preview relevance, current-week-first Plan flow, Progress records/filter hierarchy, Profile edit scopes, Settings categories, then overlay/device certification. This root-bar pass does not complete those batches.
+
+## Previous slice — M270 shared shell
 
 - Root destinations share one scalable title role and full visible navigation labels. The no-program Plan state retains the same title and shared creation action.
 - Bottom navigation reflows at enlarged text; the expanded rail grows with labels and publishes its measured inset to the minimized workout dock.
@@ -26,7 +34,7 @@ App 4.0.0 build 905 / Engine 0.65.9 / M234. `RELEASE_MANIFEST.json` is authorita
 
 ## Required release evidence
 
-Use the existing contract registry and four workflows/ten checks on the exact candidate head. Run relevant real-browser cases before publication; verify Pages and deployed hashes after merging. Existing engine generation, adaptation, quality and integration gates remain required even for UI-only work. Record evidence in the PR and existing changelog/design plan, rather than creating competing audit documents.
+Use the existing contract registry and four workflows/thirteen jobs on the exact candidate head. Run relevant real-browser cases before publication; verify Pages and deployed hashes after merging. Existing engine generation, adaptation, quality and integration gates remain required even for UI-only work. Record evidence in the PR and existing changelog/design plan, rather than creating competing audit documents.
 
 Actual Android certification remains open: TalkBack navigation, soft-keyboard resize, gesture Back, safe areas, offline cold start/update, process interruption/recovery, long-session timing, notifications and file sharing through the final signed wrapper. Test the package distributed by Play internal testing; a local upload-key build may use a different signing certificate. Do not describe browser emulation as device certification.
 

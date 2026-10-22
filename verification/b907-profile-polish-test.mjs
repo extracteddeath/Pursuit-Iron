@@ -10,7 +10,7 @@ assert.match(region,/grid-column:1\/-1/,'narrow phone labels get their own row')
 assert.match(region,/@media\(prefers-reduced-motion:no-preference\)/,'micro-motion is opt-in');
 assert.match(region,/@media\(forced-colors:active\)/,'system high contrast is preserved');
 assert.match(region,/button:focus-visible/,'visible keyboard focus');
-assert.match(region,/\.wpb-profile .wpb-profile-edit\{min-height:48px!important/,'inline profile edit sizing corrected');
+assert.ok(css.includes('.wpb-root-actions>.wpb-ui-action{min-width:48px;min-height:48px;'),'Root app bar owns Profile edit target sizing');
 assert.match(region,/Share Strength Score"\]\{width:48px!important/,'inline strength share size corrected');
 assert.match(app,/function ProfileCustomization\(\{ prefs, onChange, onClose \}\)/,'same Profile state owner');
 assert.match(app,/localStorage\.setItem\(PROFILE_PREFERENCE_KEY, JSON\.stringify\(safe\)\)/,'same persisted preferences');

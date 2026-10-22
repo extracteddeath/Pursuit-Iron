@@ -47,7 +47,7 @@ try{
     headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
   const results=[];
   for(const theme of ['rose','rosewater']){
-    for(const [width,height,wide] of [[393,852,false],[600,800,false],[768,900,false],[900,480,false],[900,1000,true],[1280,850,true]]){
+    for(const [width,height,wide] of [[320,740,false],[393,852,false],[600,800,false],[768,900,false],[900,480,false],[900,1000,true],[1280,850,true]]){
       const context=await browser.createBrowserContext();
       const page=await context.newPage();
       // Puppeteer's media helper rejects forced-colors, but Chrome CDP supports
@@ -110,17 +110,50 @@ try{
           assert.ok(initial.bar.y>initial.content.y+initial.content.height-10,
             'Bottom navigation stays below content');
         }
+        let titleAnchor=null,largeTitleAnchor=null;
         for(const route of ['plan','progress','profile','settings','home']){
           await page.click('[data-tab="'+route+'"]');
           await page.waitForSelector('[data-view-frame="'+route+'"]');
           const shell=await page.evaluate(()=>({
             title:[...document.querySelectorAll('.wpb-screen-title')].map(el=>({
-              size:getComputedStyle(el).fontSize,tag:el.tagName})),
+              size:getComputedStyle(el).fontSize,tag:el.tagName,text:el.textContent,
+              x:el.getBoundingClientRect().left,y:el.getBoundingClientRect().top})),
+            headers:document.querySelectorAll('.wpb-root-header').length,
+            back:document.querySelectorAll('.wpb-root-header [aria-label="Back"]').length,
             tabs:[...document.querySelectorAll('[data-tab]')].map(el=>({
               visible:el.innerText.trim(),name:el.getAttribute('aria-label')}))
           }));
           assert.ok(shell.title.length===1&&shell.title[0].size==='26px'&&shell.title[0].tag==='H1',
             'M270 root titles share one relative typography role: '+JSON.stringify({route,shell}));
+          assert.equal(shell.headers,1,'Exactly one shared root app bar');
+          assert.equal(shell.back,0,'Root app bars never imply a parent screen');
+          assert.equal(shell.title[0].text,route[0].toUpperCase()+route.slice(1),'Title identifies the destination');
+          titleAnchor ||= shell.title[0];
+          assert.ok(Math.abs(shell.title[0].x-titleAnchor.x)<1&&Math.abs(shell.title[0].y-titleAnchor.y)<1,
+            'M271 root titles share an exact position: '+JSON.stringify({route,anchor:titleAnchor,title:shell.title[0]}));
+          if(width===320||width===393){
+            await page.screenshot({path:path.join(root,'verification/m271-'+theme+'-'+width+'-'+route+'-phone.png')});
+            await page.evaluate(()=>document.documentElement.style.fontSize='32px');
+            const large=await page.$eval('.wpb-root-header h1',el=>({x:el.getBoundingClientRect().left,y:el.getBoundingClientRect().top,size:getComputedStyle(el).fontSize}));
+            assert.equal(large.size,'52px','Shared root title honors enlarged text');
+            largeTitleAnchor ||= large;
+            assert.ok(Math.abs(large.x-largeTitleAnchor.x)<1&&Math.abs(large.y-largeTitleAnchor.y)<1,
+              'Enlarged root titles keep the same anchor: '+JSON.stringify({route,large,largeTitleAnchor}));
+            await page.evaluate(()=>document.documentElement.style.removeProperty('font-size'));
+          }
+          if(route==='plan'||route==='profile'){
+            const moved=await page.evaluate(()=>{
+              const scroller=document.querySelector('.wpb-plan-view,.wpb-profile-scroll');
+              scroller.scrollTop=Math.min(100,scroller.scrollHeight-scroller.clientHeight);
+              return scroller.scrollTop>0;
+            });
+            if(moved){
+              const fixed=await page.$eval('.wpb-root-header h1',el=>({x:el.getBoundingClientRect().left,y:el.getBoundingClientRect().top}));
+              assert.ok(Math.abs(fixed.x-titleAnchor.x)<1&&Math.abs(fixed.y-titleAnchor.y)<1,
+                'Plan/Profile content scroll never moves the root title: '+JSON.stringify({route,fixed,titleAnchor}));
+              await page.evaluate(()=>{document.querySelector('.wpb-plan-view,.wpb-profile-scroll').scrollTop=0;});
+            }
+          }
           assert.ok(shell.tabs.every(t=>t.visible===t.name),
             'M270 visible navigation keeps the full destination names at every width');
           if(route==='progress'){

@@ -28,7 +28,7 @@ Owner: `app.css` provides semantic theme roles and shared component styles. `mod
 
 ## Migration sequence and acceptance gates
 
-Current baseline after M270 is **3,171 inline `style: {` objects**, **2,699 external CSS priority declarations**, **1,313 embedded CSS priority declarations**, with a repeated-priority ceiling of **24**. These are legacy-debt caps, **not acceptance of their design quality**. Every subsequent slice must lower a measured debt metric where migration removes an owner and leave affected browser/source contracts green. The active placement and delivery sequence is maintained in `NEXT_APP_UPDATE_PLAN.md`.
+Current baseline after M271 is **3,143 inline `style: {` objects**, **2,483 external CSS priority declarations**, **1,290 embedded CSS priority declarations**, with a repeated-priority ceiling of **21**. These are legacy-debt caps, **not acceptance of their design quality**. Every subsequent slice must lower a measured debt metric where migration removes an owner and leave affected browser/source contracts green. The active placement and delivery sequence is maintained in `NEXT_APP_UPDATE_PLAN.md`.
 
 Sequence: (1) Program/cycle creation controls, (2) Settings and Profile cards, (3) Home and Plan composition, (4) Progress/History, (5) Workout/Focus separately after image-level phone validation, (6) overlays/dialogs and global cleanup, (7) full accessibility, offline, physical Android and Play release certification. Keep related styles near their canonical component owner; do not add a new end-of-file specificity patch.
 
@@ -79,3 +79,13 @@ TabBar has one visible full label per destination, matching its accessible name.
 UiNotice owns app and workout snackbar presentation; `modules/ui-layout.js` measures navigation, live docks and the actual workout footer, including rest/Focus height changes. It never reads/writes training state. It also exposes the measured rail width for the minimized workout dock. There is no guessed toast bottom offset. Production observers are disposed with BootCommit.
 
 Debt ceilings after this slice: **3,171 inline objects**, **2,699 external priority declarations**, **1,313 embedded priority declarations**, and **24 repeated-priority instances**. These remain migration caps. R65 checks shared root titles and full visible names; R74 checks full names under actual text doubling; B896 checks notice/rest/footer clearance in normal and Focus. Phone, text reflow, lifecycle and release checks remain mandatory.
+
+### M271 — one root app bar and destination hierarchy
+
+`UiRootHeader` owns the header anatomy of Home, Plan (including empty Plan), Progress, Profile and Settings. It has one 48px title/action row, the same page inset and 12px/8px vertical padding, and one scalable h1 naming the destination. Root destinations have no Back action. Deep screens retain their existing Back semantics. Supplementary navigation and metadata appear below the title row; they never create a separate title origin.
+
+Home keeps its full Pursuit Iron identity and date in a smoothly collapsing context region while its Home title and three actions remain stationary. Plan uses “Plan” as the root heading and a smaller h2 for the selected program; block navigation shares that program context. Profile's persistent app bar owns Edit, while identity metadata, the customizable share card and section arrangement live in the scrolling content. Progress tabs use the same inset as the other supporting controls. Scroll changes app-bar fill using the existing semantic palette.
+
+Retire the old header/brand/title positioning rules in both stylesheets instead of adding priority layers. Reduced-motion transition durations are zero, preventing a transient old font size or collapsing-row height from surviving a text/layout change. The animation system and protected Workout/Focus geometry retain their existing owners.
+
+Debt ceilings: **3,143 inline presentation objects**, **2,483 external priority declarations**, **1,290 embedded priority declarations**, **21 repeated-priority instances**. This removes 28 inline objects and 239 priority declarations from M270. R65 compares actual title coordinates across all five roots at seven window sizes and both themes, including 200% text on phone. R53 and B887 retain compact geometry, full-size targets, contextual navigation and continuous Home collapse checks; other screen and release gates remain required.

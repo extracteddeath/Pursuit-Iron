@@ -120,3 +120,8 @@ At viewport widths up to 420px, the Settings select's adjacent visible “Jump t
 ### M280 — word-safe root title layout
 
 All five destinations continue using the same `UiRootHeader` title row. Its fixed destination names use `min-width:min-content`, normal word breaking and the existing line-height/type token; toolbar actions may wrap to the next row under 200% text, rather than splitting “Profile” mid-word or overlapping Edit. Do not create a separate Profile header or adjust Workout/Focus layout. The R74 browser contract asserts intact Profile title and nonoverlapping actions at 320px / 200% enlargement.
+
+
+### M281 — selected navigation is a tonal indicator, not an outlined chip
+
+The one moving bottom-nav `[data-pi-m3-track]::before` indicator paints with `--pi-color-active` and never uses a persistent gray perimeter in normal light/dark themes. Remove obsolete R35 custom perimeter tokens at their original owner instead of adding a downstream negative-priority override. Keyboard focus continues to use a `:focus-visible` ring; Windows forced-colors selection continues to use an explicit Highlight-colored perimeter and underline. Keep the saved-theme icon and active-label colors, animated track measurements, and at least 48px tab hit targets unchanged.

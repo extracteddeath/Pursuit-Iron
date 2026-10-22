@@ -5,7 +5,7 @@ import fs from 'node:fs';
 // Decrease alongside a verified cleanup; never raise to permit a cosmetic override.
 const css = fs.readFileSync('app.css', 'utf8');
 const app = fs.readFileSync('modules/App.js', 'utf8');
-const MAX_IMPORTANT = 2432; // M288: retire superseded Profile summary declarations
+const MAX_IMPORTANT = 2389; // M289: consolidate Profile Strength comparison ownership
 const MAX_APP_IMPORTANT = 1290; // Prevent embedded StyleTag patches bypassing the CSS budget.
 const MAX_REPEAT_IMPORTANT = 15; // M288: at-rule comments no longer erase media/container scope.
 const MAX_INLINE_STYLE_OBJECTS = 3116; // M276: Program cycle context and edit guidance now use shared CSS
@@ -356,3 +356,14 @@ assert.ok(css.includes('padding-inline:var(--pi-page-inset)!important;'),
 for(const suffix of ['.wpb-profile-stat-grid','.wpb-profile-stat','.wpb-profile-stat .mono','.wpb-profile-stat:not(:last-child)'])
     assert.ok(!css.includes('#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile '+suffix+'{'),
         'Retired R17/R39/R40/R77 summary rules cannot return: '+suffix);
+
+// M289: historical Strength tile/card rules cannot return above the maintained
+// comparison family. Shared forced-colors and non-Expressive fallbacks survive.
+const retiredStrengthPrefix='#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile';
+for(const suffix of ['.wpb-profile-strength','.wpb-profile-strength-grid',
+    '.wpb-profile-strength-cell','.wpb-profile-strength-cell:first-child',
+    '.wpb-profile-strength-cell:not(:first-child)','.wpb-profile-strength-cell>.mono',
+    '.wpb-profile-strength-grid:has(> .wpb-profile-strength-cell:only-child)',
+    '.wpb-profile-strength-grid>.wpb-profile-strength-cell:only-child','.wpb-profile-next-strength'])
+    assert.ok(!css.includes(retiredStrengthPrefix+' '+suffix+'{'),
+        'Retired Strength presentation owner cannot return: '+suffix);

@@ -59,6 +59,26 @@ try{
       'Lifetime summary values/labels remain complete '+JSON.stringify({width,height,theme,enlarged,summary}));
     if([320,393,1280].includes(width))await (await page.$('.wpb-profile-stat-grid')).screenshot({
       path:root+'/verification/m288-summary-'+theme+'-'+width+'x'+height+'-'+(enlarged?'enlarged':'normal')+'-phone.png'});
+    // M289: the featured score shares label/value edges with every other row,
+    // including enlarged text; the share action retains its native 48px target.
+    const strength=await page.$eval('.wpb-profile-strength',section=>{
+      const box=section.getBoundingClientRect();
+      const rows=[...section.querySelectorAll('.wpb-profile-strength-cell')].map(cell=>{
+        const r=cell.getBoundingClientRect(),label=cell.querySelector('.wpb-profile-strength-label'),value=cell.querySelector('.mono');
+        const l=label.getBoundingClientRect(),v=value.getBoundingClientRect();
+        const range=document.createRange();range.selectNodeContents(label);
+        return {left:l.left,right:v.right,contained:r.left>=box.left-1&&r.right<=box.right+1,
+          textFits:[...range.getClientRects()].every(t=>t.left>=r.left-1&&t.right<=r.right+1&&t.top>=r.top-1&&t.bottom<=r.bottom+1)};
+      });
+      const share=section.querySelector('button[aria-label="Share Strength Score"]').getBoundingClientRect();
+      return {rows,share:{width:share.width,height:share.height},overflow:section.scrollWidth>section.clientWidth+1};
+    });
+    assert.ok(strength.rows.length>=2&&!strength.overflow&&
+      strength.rows.every(r=>r.contained&&r.textFits&&Math.abs(r.left-strength.rows[0].left)<1&&Math.abs(r.right-strength.rows[0].right)<1)&&
+      strength.share.width>=48&&strength.share.height>=48,
+      'Strength rows and share control stay aligned and complete '+JSON.stringify({width,height,theme,enlarged,strength}));
+    if([320,393,1280].includes(width))await (await page.$('.wpb-profile-strength')).screenshot({
+      path:root+'/verification/m289-strength-'+theme+'-'+width+'x'+height+'-'+(enlarged?'enlarged':'normal')+'-phone.png'});
     const card=await page.$eval(club,e=>{
       const box=e.getBoundingClientRect();
       const controls=[...e.querySelectorAll('button')].map(b=>{

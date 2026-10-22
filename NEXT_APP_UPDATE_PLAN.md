@@ -18,6 +18,13 @@ App 4.0.0 build 905 / Engine 0.65.9 / M234. `RELEASE_MANIFEST.json` is authorita
 
 
 
+## M289 — one Profile Strength comparison owner
+
+- Consolidate the effective Strength section, comparison grid, row typography, single-pattern sizing and next-milestone presentation in the maintained Expressive Profile family. Retire the obsolete tile/card/narrow-phone declarations at their original owners. Preserve shared forced-colors, focus and non-Expressive fallbacks.
+- External CSS priority ceiling drops from 2,432 to **2,389** (43 fewer). Inline, embedded and repeated-priority budgets are unchanged.
+- Extend the existing populated Profile browser journey to check complete labels, matching featured/ordinary row insets and 48px share controls under normal/200% text at phone, tablet, rail and short-landscape windows. Retain customization, PNG export, saved history and preference persistence checks.
+- Publication requires before/after computed-style equality for empty, single-pattern and populated Profiles in both palettes, ordinary/forced colors and normal/200% text, screenshot review and all final-head CI. Continue with separately proven non-Workout presentation cleanup; physical Android certification remains open.
+
 ## M288 — one Profile lifetime-summary style owner
 
 - Move the effective layout and numeric wrapping into the maintained Profile summary family; retire the obsolete R17/R39/R40 normal rules, duplicate small-phone rules and duplicate R77 container reflow. External CSS priority ceiling: 2,432 (30 fewer).

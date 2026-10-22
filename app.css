@@ -1587,14 +1587,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   --pi-r5-accent:color-mix(in srgb,var(--wpb-focus,currentColor) 20%,transparent);
   --pi-r5-shadow:0 9px 22px color-mix(in srgb,currentColor 5%,transparent);
 }
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength-cell{
-  min-width:0;
-  transition:border-color 180ms var(--pi-r4-spring-ease),border-radius 260ms var(--pi-r4-spring-ease)!important;
-}
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength-cell:first-child{
-  grid-column:1 / -1;
-  background-image:none!important;
-}
 #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile :is(.wpb-profile-section:where(:not(.wpb-profile-club)),.wpb-profile-achievement-board){
   border-radius:27px 27px 17px 27px!important;
 }
@@ -1662,7 +1654,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   overflow:hidden;
 }
 @media(max-width:350px){
-  #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength-cell{padding:11px!important}
   #root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-row{padding-inline:10px!important}
   #root[data-pi-motion="expressive"] .wpb-wizard.wpb-wizard.wpb-wizard .wpb-wizard-option{padding-inline:11px!important}
 }
@@ -2431,59 +2422,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   height:52px!important;
   border-radius:17px!important;
 }
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength{
-  background-color:var(--pi-r11-quiet)!important;
-  border:1px solid var(--pi-r11-edge)!important;
-}
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile
-  .wpb-profile-strength button[aria-label="Share Strength Score"]{
-  border-radius:15px!important;
-  background-color:var(--pi-r11-raised)!important;
-  border-color:var(--pi-r11-edge)!important;
-}
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength-grid{
-  display:grid!important;
-  grid-template-columns:repeat(2,minmax(0,1fr))!important;
-  grid-auto-flow:row!important;
-  align-items:stretch!important;
-  gap:7px!important;
-  margin-bottom:11px!important;
-}
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength-cell,
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength-cell:first-child,
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength-cell:last-child{
-  grid-column:auto!important;
-  grid-row:auto!important;
-  min-width:0!important;
-  min-height:70px!important;
-  padding:12px 8px!important;
-  border:1px solid var(--pi-r11-edge)!important;
-  border-radius:17px!important;
-  box-shadow:none!important;
-}
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength-cell:first-child{
-  border-color:var(--pi-r11-accent-stroke)!important;
-  background-color:var(--pi-r11-hero)!important;
-}
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength-cell>.mono{
-  font-size:21px!important;
-  line-height:1.14!important;
-  font-weight:780!important;
-  letter-spacing:-.025em!important;
-}
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-next-strength{
-  margin-bottom:3px;
-  line-height:1.4!important;
-}
 #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-achievements,
 #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-setup{
   border-radius:24px!important;
   box-shadow:none!important;
-}
-@media(max-width:350px){
-  #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength-cell{
-    padding-inline:6px!important;
-  }
 }
 @media(forced-colors:active){
   #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile
@@ -3367,9 +3309,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   overflow-wrap:anywhere;
 }
 @media(max-width:359px){
-  #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength-cell>.mono{
-    font-size:clamp(18px,5.9vw,21px)!important;
-  }
   #root[data-pi-motion="expressive"] .wpb-home .wpb-action-grid{
     gap:6px!important;
   }
@@ -3588,34 +3527,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     border-color:CanvasText!important;
   }
 }
-/* R39 fixes the visible lone Squat tile taking only half of Strength.
-   When there is only one real strength pattern, make it a meaningful full
-   width summary; multiple patterns still retain the two-column comparison. */
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength-grid:has(> .wpb-profile-strength-cell:only-child){
-  grid-template-columns:minmax(0,1fr)!important;
-}
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength-grid>.wpb-profile-strength-cell:only-child{
-  grid-column:1/-1!important;
-  width:100%!important;
-  min-height:72px!important;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  border-radius:18px!important;
-}
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength{
-  margin-bottom:9px!important;
-  padding:14px!important;
-  border-radius:23px!important;
-}
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-next-strength{
-  min-height:38px;
-  padding:10px 12px!important;
-  border:1px solid var(--pi-r11-edge)!important;
-  border-radius:14px!important;
-  background-color:var(--pi-r11-raised)!important;
-}
 #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-section:where(:not(.wpb-profile-club)){
   box-sizing:border-box;
   min-width:0;
@@ -3625,13 +3536,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   background-image:none!important;
   background-color:var(--pi-r11-quiet)!important;
   overflow-wrap:anywhere;
-}
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile
-  .wpb-profile-strength button[aria-label="Share Strength Score"]{
-  min-width:48px!important;
-  min-height:48px!important;
-  width:48px!important;
-  height:48px!important;
 }
 /* Progress: compact, readable data first, controls next. Keep every actual
    metric and its time window visible rather than hiding secondary labels. */
@@ -3717,14 +3621,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   box-sizing:border-box;
   text-align:center;
 }
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-stat :not(.mono),
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength-cell>div:not(.mono){
+#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-stat :not(.mono){
   overflow-wrap:anywhere;
   line-height:1.35!important;
-}
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength-cell{
-  height:auto!important;
-  min-height:max(70px,4.38rem)!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item{
   height:auto!important;
@@ -4420,18 +4319,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   box-shadow:none!important;
 }
 
-/* Profile is a dashboard, not an award-card wall. Carry shared neutral
-   edges into score subcards and keep the strength score as the single accent. */
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength-cell:not(:first-child){
-  background:var(--pi-r48-quiet)!important;
-  background-image:none!important;
-  border-color:var(--pi-r48-divider)!important;
-  box-shadow:none!important;
-}
-#root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-strength{
-  border-color:var(--pi-r48-divider)!important;
-  box-shadow:none!important;
-}
 @media(max-width:359px){
   #root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero{
     padding-inline:12px!important;
@@ -8246,7 +8133,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-stat-label{
   font-size:12px!important;margin-top:5px!important;
 }
-/* Strength retains four actual scores but reads as one comparison, not four competing cards. */
+/* M289 — Strength has one Expressive normal owner. Preserve the effective
+   comparison rows and single-pattern sizing; retire the old R17/R39/R40/R48
+   tile and card layers. Shared forced-colors and non-Expressive fallbacks remain. */
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-strength{
   padding:17px 17px 15px!important;margin:0 0 13px!important;
   border:0!important;border-radius:var(--pi-shape-card)!important;
@@ -8257,12 +8146,15 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-strength-grid{
   display:grid!important;grid-template-columns:minmax(0,1fr)!important;
+  grid-auto-flow:row!important;align-items:stretch!important;
   gap:0!important;margin-bottom:9px!important;
   border-top:1px solid var(--pi-color-divider);border-bottom:1px solid var(--pi-color-divider);
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile
  .wpb-profile-strength-grid>.wpb-profile-strength-cell{
   display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:center!important;
+  grid-column:auto!important;grid-row:auto!important;height:auto!important;
+  transition:border-color 180ms var(--pi-r4-spring-ease),border-radius 260ms var(--pi-r4-spring-ease)!important;
   gap:10px!important;min-width:0!important;min-height:43px!important;padding:7px 10px!important;
   border:0!important;border-radius:0!important;background:transparent!important;
   box-shadow:none!important;text-align:left!important;
@@ -8270,6 +8162,11 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile
  .wpb-profile-strength-grid>.wpb-profile-strength-cell:not(:last-child){
   border-bottom:1px solid var(--pi-color-divider)!important;
+}
+#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile
+ .wpb-profile-strength-grid>.wpb-profile-strength-cell:only-child{
+  grid-column:1/-1!important;width:100%!important;min-height:72px!important;
+  flex-direction:column;justify-content:center;
 }
 /* Retain the existing tonal featured-score signal with a quiet first row.
    The inactive rows remain a single flat comparison surface. */
@@ -8281,11 +8178,13 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile
  .wpb-profile-strength-grid>.wpb-profile-strength-cell>.mono{
   grid-column:2;grid-row:1;font-size:18px!important;line-height:1.2!important;
+  font-weight:780!important;letter-spacing:-.025em!important;
   color:var(--pi-color-on-control)!important;text-align:right;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile
  .wpb-profile-strength-grid>.wpb-profile-strength-cell>.wpb-profile-strength-label{
   grid-column:1;grid-row:1;min-width:0;margin:0!important;
+  overflow-wrap:anywhere;line-height:1.35!important;
   font-size:13px!important;font-weight:650!important;
   white-space:normal!important;overflow:visible!important;text-overflow:clip!important;
   color:var(--pi-color-on-control)!important;

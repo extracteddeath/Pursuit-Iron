@@ -1,3 +1,9 @@
+## M289 — Profile Strength style ownership
+
+- Consolidate Strength’s effective comparison-row, score typography and single-pattern styles; retire 43 CSS priority declarations and preserve the current appearance.
+- Extend the existing Profile browser journey to check row alignment, complete labels and share targets at normal/enlarged text, alongside customization/export and persisted-history coverage.
+- Same app/engine versions; refreshed content-addressed offline cache and release hashes. Physical Android certification remains open.
+
 ## M288 — consolidate Profile lifetime-summary ownership (October 22, 2026)
 
 - Retired the superseded R17/R39/R40 and duplicate R77 summary declarations. The maintained Profile owner now contains the effective grouped surface, number wrapping, phone padding and large-text reflow. External CSS priority declarations decrease from 2,462 to 2,432.

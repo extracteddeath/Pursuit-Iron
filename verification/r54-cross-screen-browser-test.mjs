@@ -668,7 +668,8 @@ try{
           const groups=[...pane.querySelectorAll('.wpb-history-group-header')].map(node=>{
             const r=node.getBoundingClientRect(),parent=node.parentElement?.getBoundingClientRect();
             return {title:node.textContent.trim().slice(0,80),y:r.y,x:r.x,width:r.width,
-              parentLeft:parent?.left,parentRight:parent?.right};
+              parentLeft:parent?.left,parentRight:parent?.right,
+              parentTop:parent?.top,parentBottom:parent?.bottom};
           });
           const button=[...pane.querySelectorAll('.wpb-progress-grouping button')]
             .find(node=>node.getAttribute('aria-pressed')==='true');
@@ -685,6 +686,12 @@ try{
             g.parentRight<=layout.pane.right+2),
           'Multi-program/month grouping keeps full history in its reading lane: '+
             JSON.stringify({theme,width,mode,layout}));
+        if(width===1280&&mode==='By month'){
+          const gaps=layout.groups.slice(1).map((g,i)=>g.parentTop-layout.groups[i].parentBottom);
+          assert.ok(gaps.every(gap=>gap>=-1&&gap<=64),
+            'Short month groups must not inherit a tall calendar grid row: '+
+              JSON.stringify({theme,width,gaps,layout}));
+        }
         grouped[mode]=layout;
       }
       if(width===1280)

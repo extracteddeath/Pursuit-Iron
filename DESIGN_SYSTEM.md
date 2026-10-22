@@ -150,3 +150,8 @@ Maintain the existing two-lane Sessions layout at 1120px+/720px+ and the 900px s
 ### M286 — short landscape / foldable reading width
 
 The five root tabs keep one responsive shell: compact phones stay in the narrow layout; 600–839px wide windows at 640px+ height use the existing bounded 760px bottom-nav workspace; 840px+ wide windows shorter than 560px now **reuse that same bounded workspace** instead of being letterboxed to a 460px phone frame. At 840px+ width and 560px+ height the original navigation rail remains the owner. Do not create a second rail or modify Workout/Focus geometry. R65 measures actual shell and tab bounds, verifies bottom navigation and captures 900×480 in both themes. No additional styling priority declarations.
+
+
+### M287 — canonical semantic tokens, no versioned aliases
+
+Use the existing --pi-page-inset, --pi-space-* and --pi-color-* tokens as the one source for spacing and surfaces. The earlier R41 gap aliases (1 through 6), unused R41 surface-3, R51 page/surface/rail/selected/on-selected/on-rail/separator and R57 inset/header-gap/on-support declarations are retired. These were not consumed by stylesheet rules, and no replacement visual values are introduced. Static tests prohibit their use in app.css or App.js. Retain the active R41 surface-1/surface-2 references and earlier legacy variables that still feed real styles; do not delete tokens based only on their age.

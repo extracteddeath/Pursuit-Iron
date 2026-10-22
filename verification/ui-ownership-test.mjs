@@ -270,7 +270,7 @@ assert.ok(!css.includes('.wpb-profile-stat-grid{gap:0!important}'),
 
 // M279: Settings has one final category rail owner and one class-owned card family.
 // The page inset handles 320px widths without parallel hardcoded media overrides.
-const jumpOwner=css.slice(css.indexOf('/* R57 — one spacing cadence'),css.indexOf('/* M270 — shared root typography'));
+const jumpOwner=css.slice(css.indexOf('/* M287 — The R57 transitional spacing aliases'),css.indexOf('/* M270 — shared root typography'));
 assert.ok(jumpOwner.includes('.wpb-settings.wpb-settings>.wpb-settings-jump{') &&
   jumpOwner.includes('padding:0 var(--pi-page-inset) var(--pi-space-2)!important;'),
   'Settings category rail is owned by the shared page inset and does not expose sticky gaps');
@@ -345,3 +345,21 @@ assert.ok(landscapeOwner.includes('(min-width:840px) and (max-height:559px)')&&
   'Short wide landscape joins the existing bounded bottom-nav workspace');
 assert.ok(css.includes('@media (min-width:840px) and (min-height:560px){'),
   'Full-height expanded windows keep the existing vertical navigation rail');
+
+
+// M287: legacy R41/R51/R57 aliases had no CSS consumers; the old style
+// declarations must not return as a second semantic spacing/theme palette.
+// Check App.js too, because JS can reference a custom property dynamically.
+const retiredAliasTokens=[
+  ...Array.from({length:6},(_,i)=>'--pi-r41-gap-'+(i+1)),
+  '--pi-r41-surface-3',
+  '--pi-r51-page','--pi-r51-surface','--pi-r51-rail','--pi-r51-selected',
+  '--pi-r51-on-selected','--pi-r51-on-rail','--pi-r51-separator',
+  '--pi-r57-inset','--pi-r57-header-gap','--pi-r57-on-support'
+];
+for(const token of retiredAliasTokens){
+  assert.ok(!css.includes(token)&&!app.includes(token),
+    'No duplicate token owner or runtime consumer is permitted for '+token);
+}
+assert.ok(css.includes('padding-inline:var(--pi-page-inset)!important;'),
+  'The maintained shared page inset survives transitional alias retirement');

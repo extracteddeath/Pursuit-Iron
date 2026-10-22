@@ -3850,16 +3850,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    raised 34–38 RGB levels. User theme accent remains reserved for selection,
    progress and primary actions. Original light theme roles are preserved. */
 #root[data-pi-motion="expressive"] .wpb{
-  --pi-r41-gap-1:4px;
-  --pi-r41-gap-2:8px;
-  --pi-r41-gap-3:12px;
-  --pi-r41-gap-4:16px;
-  --pi-r41-gap-5:20px;
-  --pi-r41-gap-6:24px;
   --pi-r41-page:var(--pi-color-canvas);
   --pi-r41-surface-1:var(--pi-color-card);
   --pi-r41-surface-2:var(--pi-color-control);
-  --pi-r41-surface-3:var(--pi-color-inset);
   --pi-r41-separator:color-mix(in srgb,var(--wpb-theme-text,#f5f0f5) 10%,transparent);
   --pi-r11-quiet:light-dark(var(--pi-m3e-surface-container-low),var(--pi-r41-surface-1));
   --pi-r11-raised:light-dark(var(--pi-m3e-surface-container),var(--pi-r41-surface-2));
@@ -4675,13 +4668,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   --pi-r11-hero:var(--pi-color-feature);
   --pi-r11-selected:var(--pi-color-feature);
   --pi-r11-edge:var(--pi-color-divider);
-  --pi-r51-page:var(--pi-color-canvas);
-  --pi-r51-surface:var(--pi-color-card);
-  --pi-r51-rail:var(--pi-color-control);
-  --pi-r51-selected:var(--pi-color-active);
-  --pi-r51-on-selected:var(--pi-color-on-active);
-  --pi-r51-on-rail:var(--pi-color-on-control);
-  --pi-r51-separator:var(--pi-color-divider);
 }
 #root[data-pi-motion="expressive"] .wpb :is(.wpb-home,.wpb-plan-view,.wpb-progress,.wpb-profile,.wpb-settings,.wpb-library,.wpb-program){
   background-color:var(--pi-color-canvas)!important;
@@ -5106,14 +5092,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   }
 }
 
-/* R57 — one spacing cadence for the four supporting primary destinations.
-   Home's certified 56dp collapsed state and Workout's logger are deliberately
-   excluded. Surfaces read the R55 semantic palette (no extra gray literals). */
-#root[data-pi-motion="expressive"] .wpb{
-  --pi-r57-inset:16px;
-  --pi-r57-header-gap:10px;
-  --pi-r57-on-support:var(--pi-color-on-muted);
-}
+/* M287 — The R57 transitional spacing aliases had no consumers. Primary
+   destination insets are owned by --pi-page-inset and --pi-space-*;
+   preserve the existing final control, card and app-bar rules below. */
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-view .wpb-plan-preview-notice{
   color:var(--pi-color-on-muted);font-size:var(--pi-type-support);line-height:1.5;
 }
@@ -5158,7 +5139,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   outline-offset:2px!important;
 }
 @media(max-width:359px){
-  #root[data-pi-motion="expressive"] .wpb{--pi-r57-inset:12px}
   #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-hero{
     padding-inline:11px!important;
   }

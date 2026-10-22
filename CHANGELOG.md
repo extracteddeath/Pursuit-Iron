@@ -1,3 +1,10 @@
+## M287 — retire unused design-token aliases (October 22, 2026)
+
+- Removed 17 unused R41/R51/R57 transitional CSS declarations at their original owners, including the extra narrow-screen R57 inset. The live semantic colors, spacing tokens, control dimensions, components and actual UI rules were not replaced.
+- These aliases had no reads in app.css. Added a guard against redeclaring them or using them from App.js; the existing --pi-page-inset / --pi-space-* owner remains authoritative.
+- Removed redundant historical token definitions rather than adding more CSS or increasing the existing 2,462 !important ceiling. Training engine, Workout/Focus logic, navigation state and user data untouched.
+- Finalize the same-build offline cache/UI integrity and verify phone/tablet browser, release and accessibility gates before merging.
+
 ## M286 — full-width reading frame on short wide landscape (October 22, 2026)
 
 - The 900×480 adaptive-shell browser screenshot was still letterboxed to roughly 460px despite a wide viewport. Extend the existing R88 medium-width primary shell breakpoint to short windows at or above 840px wide and below 560px tall, resulting in a bounded 760px workspace with bottom navigation.

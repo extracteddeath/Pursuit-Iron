@@ -6958,8 +6958,11 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   padding:12px 8px!important;
 }
 @media (min-width:1120px) and (min-height:720px){
+  /* The calendar is a sidebar, not the height owner for the first history
+     row. Span the grouping+first-list tracks so Sessions can start alongside
+     the calendar instead of below its entire month grid. */
   #root[data-pi-motion="expressive"] .wpb-progress .wpb-page-scroll[data-scroll-key="sessions"]>.wpb-training-history{
-    grid-column:1;grid-row:3;min-width:0;margin-bottom:0!important;
+    grid-column:1;grid-row:3 / span 2;min-width:0;margin-bottom:0!important;
   }
 }
 @media (forced-colors:active){

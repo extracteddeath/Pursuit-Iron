@@ -1,3 +1,10 @@
+## M284 — populated Progress history on tablet and desktop (October 22, 2026)
+
+- Added actual 16-session saved-history browser scenarios at 900px and 1280px, in light and dark palettes, with top and scrolled screenshots. Existing desktop Progress screenshots exercised only empty history and missed a reading-order defect.
+- Corrected the wide Sessions grid: the Training Calendar spans the grouping and first-session row tracks, so the first logged workout starts alongside the calendar rather than being pushed below its full height and leaving a large blank right column.
+- Added assertions for visible first-session position, bounded cards, opaque/stationary Progress header during scroll, and unchanged logged sets. The fixture allows the canonical save migration to populate updatedAt without mistaking it for a user edit.
+- Retains the existing 900px single-column layout, all history filters/sections, independent scroll positions, Workout/Focus, and engine. No new style priorities. Same-build cache/hash finalization and all exact-head CI required.
+
 ## M283 — cross-tab phone scroll/header edge alignment (October 22, 2026)
 
 - Eliminated the old 14px mobile scroll pane inset that conflicted with the shared 12px (320px) / 16px (393px) page inset on Settings and Progress. Home already used the canonical inset and is left owned by its existing rule.

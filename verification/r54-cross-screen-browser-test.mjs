@@ -587,6 +587,78 @@ try{
       nextSessions.push(await verifyNextSessionFlow(browser,theme,width));
       browsing.push(await verifyBrowseMemory(browser,theme,width));
     }
+  // M284: the R76 wide-screen fixtures are empty. Certify the real populated
+  // Sessions grid using the same recorded-set schema as the R60 64-session test.
+  // Screenshots capture both the initial overview and the scrolled history.
+  const wideHistory=[];
+  for(const theme of ['rose','rosewater']) for(const width of [900,1280]){
+    const context=await browser.createBrowserContext(),page=await context.newPage(),errors=[];
+    page.on('pageerror',error=>errors.push(error.message));
+    try{
+      await page.setViewport({width,height:850,deviceScaleFactor:1,isMobile:false,hasTouch:false});
+      await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
+      const entries=Array.from({length:16},(_,i)=>({
+        id:'m284-tablet-'+i,programId:program.id,programName:program.name,
+        dayId:'upper',dayLabel:'Upper',weekIndex:1,date:Date.now()-(i+1)*86400000,
+        unit:'lb',duration:1800,totalSets:2,tonnage:1470,
+        perf:{'bb-bench':{weight:185,reps:6,sets:[{w:185,r:6,done:true,rir:2,rirReported:true}]},
+          'inc-curl':{weight:30,reps:12,sets:[{w:30,r:12,done:true,rir:2,rirReported:true}]}}
+      }));
+      const state={...store(theme),history:entries};
+      await page.evaluateOnNewDocument(data=>localStorage.setItem('wpb:v1',JSON.stringify(data)),state);
+      await page.goto('http://127.0.0.1:8796/',{waitUntil:'networkidle0'});
+      await page.waitForSelector('.wpb-tabbar');
+      await page.click('[data-tab="progress"]');
+      await page.waitForSelector('.wpb-history-session');
+      await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+      const sample=async()=>page.evaluate(()=>{
+        const pane=document.querySelector('.wpb-progress .wpb-page-scroll[data-scroll-key="sessions"]');
+        const chrome=document.querySelector('.wpb-progress-chrome');
+        const history=[...pane.querySelectorAll('.wpb-history-session')];
+        const filters=pane.querySelector('.wpb-history-filters');
+        const grouping=pane.querySelector('.wpb-progress-grouping');
+        const calendar=pane.querySelector('.wpb-training-history');
+        const p=pane.getBoundingClientRect(),ch=chrome.getBoundingClientRect();
+        const rect=el=>{const b=el?.getBoundingClientRect();return b?{x:b.x,y:b.y,right:b.right,bottom:b.bottom,width:b.width,height:b.height}:null;};
+        const css=getComputedStyle(pane);
+        return {viewport:innerWidth,columns:css.gridTemplateColumns,
+          display:css.display,scrollTop:pane.scrollTop,
+          count:history.length,headerOpaque:getComputedStyle(chrome).backgroundColor!=='rgba(0, 0, 0, 0)',
+          overflow:document.documentElement.scrollWidth>innerWidth+2,
+          viewportRect:rect(pane),chrome:rect(chrome),filters:rect(filters),
+          grouping:rect(grouping),calendar:rect(calendar),firstSession:rect(history[0]),
+          sessionInPane:history.every(node=>{const b=node.getBoundingClientRect();
+            return b.left>=p.left-2&&b.right<=p.right+2;})};
+      });
+      const initial=await sample();
+      await page.screenshot({path:path.join(root,`verification/m284-history-${theme}-${width}-top-phone.png`)});
+      assert.ok(initial.count===16&&!initial.overflow&&initial.headerOpaque&&initial.sessionInPane,
+        'Populated Sessions history remains bounded beneath wide header: '+JSON.stringify({theme,width,initial}));
+      assert.ok(width===1280?initial.display==='grid':initial.display!=='grid',
+        'History uses responsive grid only at wide layouts: '+JSON.stringify({theme,width,initial}));
+      if(width===1280)
+        assert.ok(initial.calendar&&initial.firstSession&&initial.grouping&&
+          initial.firstSession.y<initial.calendar.bottom-60&&
+          initial.firstSession.y<initial.viewportRect.bottom,
+          'First logged session begins beside the calendar, not after its full-height grid row: '+
+            JSON.stringify({theme,width,initial}));
+      const scrolled=await page.$eval('.wpb-progress .wpb-page-scroll[data-scroll-key="sessions"]',el=>{
+        el.scrollTop=Math.min(280,el.scrollHeight-el.clientHeight);return el.scrollTop;});
+      await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+      const after=await sample();
+      await page.screenshot({path:path.join(root,`verification/m284-history-${theme}-${width}-scrolled-phone.png`)});
+      assert.ok(scrolled>0&&after.scrollTop>0&&after.headerOpaque&&
+        Math.abs(after.chrome.y-initial.chrome.y)<1&&!after.overflow,
+        'Populated history scrolls below a stable, opaque Progress header: '+JSON.stringify({theme,width,initial,after}));
+      const actualHistory=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).history);
+      assert.deepEqual(actualHistory.map(({updatedAt,...record})=>record),entries,
+        'Wide history inspection must never modify logged sets (storage may normalize updatedAt)');
+      assert.ok(actualHistory.every(record=>Number.isFinite(record.updatedAt)),
+        'Canonical saved history stamps migrated records without changing workout data');
+      assert.deepEqual(errors,[],'No wide history render errors');
+      wideHistory.push({theme,width,initial,after});
+    }finally{await context.close();}
+  }
   console.log('PASS R54/R59/R60: paired Library/Detail/Program/Workout layouts; active Plan, safe workout returns, next due week, retained Library/history/lift filters and independent Progress scroll at 320/393px; '+JSON.stringify({diagnostics,flows,nextSessions,browsing}));
 }finally{
   if(browser)await browser.close();

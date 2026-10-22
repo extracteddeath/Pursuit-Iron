@@ -135,3 +135,8 @@ Use the existing `@container pi-settings-body (max-width:16em)` breakpoint for S
 ### M283 — responsive scroll content aligns to root header
 
 Phone scroll panes should be flush with the same horizontal `--pi-page-inset` as `UiRootHeader`: 12px for widths below 360px, 16px until 599px, and 24px on larger reading layouts where applicable. Settings and Progress use a single token-based phone rule below 420px; Home already owns its token inset in the canonical shared reading-surface rule. Do not reintroduce the retired 14px two-sided hardcoded `!important` override. The Settings jump rail must sit directly under its opaque root header; the Plan sticky week picker continues to own its opaque background, zero margin and bottom border. Real-browser geometry asserts that these seams remain aligned without changing program data, workout geometry, or page scroll interaction.
+
+
+### M284 — populated Sessions sidebar and reading lane
+
+On wide (1120px+ with height 720px+) Progress Sessions, the overview spans both lanes; consistency and calendar form a supporting left lane, while filters, grouping and saved workout records occupy the primary right lane. The Training Calendar spans grid rows 3–4 instead of occupying row 3 alone; otherwise its full month-height row delays the first session below the calendar and produces an empty section under By program. Keep the existing min-content grid rows, scrolling data ownership, 48px actions, and content-aware history rendering. The 900px single-column view is intentionally unchanged. Real-browser tests use 16 persisted records in both palettes and inspect first-session placement relative to the calendar plus the scrolled header seam.

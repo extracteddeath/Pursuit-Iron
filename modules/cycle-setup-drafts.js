@@ -33,6 +33,7 @@ export function normalizeCycleSetupDraft(value, signature) {
         templateId: typeof value.templateId === 'string' ? value.templateId.slice(0, 50) : '',
         name: typeof value.name === 'string' ? value.name.slice(0, 60) : '',
         adapt: typeof value.adapt === 'boolean' ? value.adapt : false,
+        adaptSplit: typeof value.adaptSplit === 'boolean' ? value.adaptSplit : true,
         cycleMode: value.cycleMode === true, choseMode: value.choseMode === true };
 }
 function readAll(storage) {

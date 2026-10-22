@@ -84,12 +84,17 @@ try{
               jumpRadius:parseFloat(getComputedStyle(control).borderTopLeftRadius),
               titleSize:parseFloat(getComputedStyle(title).fontSize),
               descriptionSize:parseFloat(getComputedStyle(description).fontSize),
-              withinViewport:railRect?.left>=-1&&railRect?.right<=innerWidth+1
+              withinViewport:railRect?.left>=-1&&railRect?.right<=innerWidth+1,
+              visibleLabelHidden:getComputedStyle(control.querySelector('span')).display==='none',
+              nativeSelectNamed:select.getAttribute('aria-label')==='Jump to Settings section',
+              selectWidth:select.getBoundingClientRect().width
             };
           });
           assert.ok(hierarchy.opaque&&hierarchy.railBottom>=8&&hierarchy.jumpHeight>=48&&
             hierarchy.selectHeight>=48&&Math.abs(hierarchy.jumpRadius-14)<1&&
-            hierarchy.titleSize>=13&&hierarchy.descriptionSize>=13&&hierarchy.withinViewport,
+            hierarchy.titleSize>=13&&hierarchy.descriptionSize>=13&&hierarchy.withinViewport&&
+            hierarchy.nativeSelectNamed&&hierarchy.selectWidth>=130&&
+            hierarchy.visibleLabelHidden===(width<=420),
             'Settings category rail and readable controls use shared sizes: '+JSON.stringify(hierarchy));
           const destinations=await page.$$eval('.wpb-settings-jump-control select option',
             options=>options.map(el=>[el.value,el.textContent.trim()]));

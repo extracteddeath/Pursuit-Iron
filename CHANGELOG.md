@@ -1,3 +1,18 @@
+## Shared tab hierarchy foundations — October 22, 2026
+
+## M271 — unified root app bars
+
+- Put all five destination titles in one shared header/action row; remove Plan's root Back button and keep the program name as subordinate context.
+- Keep Profile Edit above its scrolling share-card content, inset Progress tabs consistently, and preserve Home's smooth collapse with a stationary destination title.
+- Retire 239 priority declarations and 28 inline style objects across the old independent header owners. Use immediate reduced-motion transitions to avoid stale text/layout frames.
+- Extend existing browser contracts to compare title coordinates across routes, themes, window sizes and enlarged text, retaining deep-screen Back, program/cycle state and protected logging behavior.
+
+- Home, Plan, Progress, Profile and Settings share one scalable title role; empty Plan keeps its title and the shared creation action.
+- Navigation keeps full destination names. At enlarged text sizes, the bottom layout reflows and the tablet rail grows with its labels; the live dock uses the actual rail inset.
+- Progress summaries preserve readable words as text grows. App/workout notices share one component and measure the real navigation, live dock and workout/rest footer before positioning.
+- Retired 86 external and 12 embedded priority declarations, plus 21 inline style objects. Workout/Focus logging geometry and training calculations are preserved.
+- Browser gates check full visible destination names, shared title roles and notice clearance across normal/Focus rest states. The rest of the tab placement audit remains on the roadmap.
+
 ## Focus touch selection stability — October 21, 2026
 
 - After a touch-click, the native browser caret can move after the first paint. Recheck select-all on the second animation frame for Focus weight and reps inputs.

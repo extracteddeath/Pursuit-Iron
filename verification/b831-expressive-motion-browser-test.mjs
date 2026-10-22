@@ -730,7 +730,7 @@ try {
                 // card rather than many competing purple/gray surfaces.
                 const r41=await page.evaluate(()=>{
                     const root=document.querySelector('.wpb-progress');
-                    const header=root?.querySelector(':scope > .wpb-page-header');
+                    const header=root?.querySelector(':scope > .wpb-progress-chrome');
                     const primary=root?.querySelector('.wpb-premium-tabs');
                     const secondary=root?.querySelector('.wpb-progress-grouping');
                     const session=root?.querySelector('.wpb-history-session');
@@ -857,6 +857,7 @@ try {
                     home.append(probe);
                     const role=token=>{probe.style.backgroundColor='var('+token+')';return bg(probe);};
                     const quiet=role('--pi-r11-quiet');
+                    const appBar=role(home.dataset.scrolled==='1'?'--pi-color-card':'--pi-color-canvas');
                     const raised=role('--pi-r11-raised');
                     const control=role('--pi-color-control');
                     const hero=role('--pi-r11-hero');
@@ -865,14 +866,14 @@ try {
                     const feature=home.querySelector('.wpb-home-hero');
                     const metric=home.querySelector('.wpb-metric-strip>.wpb-metric');
                     const preview=home.querySelector('.wpb-home-session-preview');
-                    return {quiet,raised,hero,control,
+                    return {quiet,raised,hero,control,appBar,
                         header:bg(header),feature:bg(feature),metric:bg(metric),
                         preview:bg(preview),headerImage:cs(header)?.backgroundImage,
                         heroImage:cs(feature)?.backgroundImage,
                         metricImage:cs(metric)?.backgroundImage,
                         overflow:home.scrollWidth>home.clientWidth+1};
                 });
-                assert.ok(homeTonesR45.header===homeTonesR45.quiet&&
+                assert.ok(homeTonesR45.header===homeTonesR45.appBar&&
                     homeTonesR45.metric===homeTonesR45.quiet&&
                     homeTonesR45.feature===homeTonesR45.hero&&
                     (!homeTonesR45.preview||homeTonesR45.preview===homeTonesR45.control)&&
@@ -946,7 +947,7 @@ try {
                         statCount:stats.length,statRadius:stats[0]&&parseFloat(getComputedStyle(stats[0]).borderTopLeftRadius),
                         statWidth:first?.width,scrollWidth:shell.scrollWidth,viewport:innerWidth};
                 });
-                assert.ok(shape.radius>=26 && shape.heroRadius>=35 &&
+                assert.ok(shape.radius===0 && shape.heroRadius>=35 &&
                     shape.headerTint==='none' && shape.headerSurface!=='transparent' &&
                     shape.headerSurface!=='rgba(0, 0, 0, 0)' && shape.statCount===2 &&
                     shape.statRadius>=20 && shape.statWidth>80 &&
@@ -955,10 +956,10 @@ try {
             }
             if(tab==='progress'){
                 const r48Progress=await page.$eval('.wpb-progress',screen=>{
-                    const header=screen.querySelector(':scope > .wpb-page-header');
+                    const header=screen.querySelector(':scope > .wpb-progress-chrome');
                     const style=header&&getComputedStyle(header);
                     const probe=document.createElement('div');
-                    probe.style.cssText='position:absolute;visibility:hidden;background:var(--pi-r48-quiet)';
+                    probe.style.cssText='position:absolute;visibility:hidden;background:var('+(screen.dataset.scrolled==='1'?'--pi-color-card':'--pi-color-canvas')+')';
                     screen.append(probe);
                     const role=getComputedStyle(probe).backgroundColor;probe.remove();
                     return {header:style?.backgroundColor,expected:role,
@@ -984,7 +985,7 @@ try {
                     const metrics = [...el.querySelectorAll('.wpb-plan-glance-tile')];
                     const first = metrics[0];
                     const group = el.querySelector('.wpb-plan-panes[data-pi-m3-track]');
-                    const title = el.querySelector('.wpb-plan-title');
+                    const title = el.closest('.wpb-plan').querySelector('.wpb-root-header h1');
                     return {
                         count:metrics.length,
                         size:parseFloat(getComputedStyle(title).fontSize),
@@ -996,7 +997,7 @@ try {
                         overflow:el.scrollWidth>el.clientWidth+1
                     };
                 });
-                assert.ok(state.count===3 && state.size>=27 && state.firstRadius>=26 &&
+                assert.ok(state.count===3 && state.size===26 && state.firstRadius>=26 &&
                     state.firstSize>=24 && state.buttons===4 && state.selected===1 &&
                     state.trackFill?.length>3 && !state.overflow,
                     'Plan has a real featured week and elastic four-pane navigator: '+JSON.stringify(state));
@@ -1058,7 +1059,7 @@ try {
             }
             if (tab === 'settings') {
                 const heading = await page.$eval('.wpb-settings', el => {
-                    const header=el.querySelector(':scope > .wpb-page-header');
+                    const header=el.querySelector(':scope > .wpb-root-header');
                     const picker=el.querySelector('.wpb-settings-jump-control');
                     const select=picker?.querySelector('select');
                     const title=header?.querySelector('h1');
@@ -1069,7 +1070,7 @@ try {
                         pickerBackground:picker ? getComputedStyle(picker).backgroundImage : '',
                         overflow:el.scrollWidth>el.clientWidth+1 };
                 });
-                assert.ok(heading.titleSize>=27 && heading.pickerHeight>=44 &&
+                assert.ok(heading.titleSize===26 && heading.pickerHeight>=44 &&
                     heading.selectHeight>=44 && heading.headerHeight<115 &&
                     heading.pickerBackground==='none' && !heading.overflow,
                     'R18 Settings keeps a compact header and functional section jump: '+JSON.stringify(heading));
@@ -1122,15 +1123,16 @@ try {
             if (tab === 'home') {
                 const homeType = await page.$eval('.wpb-home-header h1', el => {
                     const title = getComputedStyle(el);
-                    const logo = el.closest('.wpb-home-header').querySelector('div[aria-hidden="true"]');
+                    const actions = el.closest('.wpb-home-header').querySelector('.wpb-root-actions');
                     return { size: parseFloat(title.fontSize), weight: Number(title.fontWeight),
-                        logoHeight: logo.getBoundingClientRect().height,
+                        actionHeight: actions.getBoundingClientRect().height,
                         scrolled: el.closest('.wpb-home')?.dataset.scrolled==='1' };
                 });
-                const expectedSize=homeType.size>=29 && homeType.size<=37;
+                // M270: the five root titles share the same 1.625rem role.
+                const expectedSize=homeType.size===26;
                 assert.ok(expectedSize && homeType.weight >= 700,
                     'Home title keeps a stable expressive type scale while clipping smoothly: '+JSON.stringify(homeType));
-                assert.ok(homeType.logoHeight >= 24, 'Home header spacing does not collapse its logo');
+                assert.ok(homeType.actionHeight >= 48, 'Home root actions retain full-size targets');
             }
             if (tab === 'progress') {
                 const progressType = await page.$eval('.wpb-progress', el => {
@@ -1187,7 +1189,7 @@ try {
                         overflow:el.scrollWidth>el.clientWidth+1
                     };
                 });
-                assert.ok(profileR17.title>=27 && profileR17.headerHeight<=112 &&
+                assert.ok(profileR17.title===26 && profileR17.headerHeight<=112 &&
                     profileR17.identityHeight<=40 && profileR17.identityBorder==='0px' &&
                     profileR17.identityBackground==='rgba(0, 0, 0, 0)' &&
                     profileR17.editHeight>=44 && !profileR17.overflow,
@@ -1225,7 +1227,7 @@ try {
             await page.waitForFunction(() => document.querySelector('.wpb-home')?.dataset.scrolled==='1');
             await page.waitForFunction(() => {
                 const header=document.querySelector('.wpb-home .wpb-home-header');
-                return header && parseFloat(getComputedStyle(header).borderBottomLeftRadius)>=26;
+                return header && parseFloat(getComputedStyle(header).borderBottomLeftRadius)===0;
             }, { timeout: 5000 });
             assert.equal(await page.$eval('.wpb-home', el => el.dataset.scrolled), '1',
                 'adaptive M3 app bar compresses after real content scroll');

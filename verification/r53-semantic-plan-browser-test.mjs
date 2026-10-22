@@ -376,24 +376,24 @@ try{
           const root=el('.wpb');
           const out={overflow:root.scrollWidth>root.clientWidth+1,viewport:innerWidth};
           if(which==='plan'){
-            out.row=box('.wpb-plan-heading-row');
-            out.back=box('.wpb-plan-heading-row button[aria-label="Back"]');
-            out.title=box('.wpb-plan-title');
-            out.titleSize=parseFloat(getComputedStyle(el('.wpb-plan-title')).fontSize);
+            out.row=box('.wpb-plan .wpb-root-title-row');
+            out.back=box('.wpb-plan .wpb-root-header button[aria-label="Back"]');
+            out.title=box('.wpb-plan .wpb-root-header h1');
+            out.titleSize=parseFloat(getComputedStyle(el('.wpb-plan .wpb-root-header h1')).fontSize);
           }else if(which==='progress'){
-            out.header=box('.wpb-progress>.wpb-page-header');
+            out.header=box('.wpb-progress>.wpb-progress-chrome');
             out.titleSize=parseFloat(getComputedStyle(el('.wpb-progress-title')).fontSize);
             out.tabs=[...document.querySelectorAll('.wpb-progress .wpb-premium-tabs>button')]
               .map(b=>{const r=b.getBoundingClientRect();return {width:r.width,height:r.height}});
           }else if(which==='settings'){
-            out.header=box('.wpb-settings>.wpb-page-header');
+            out.header=box('.wpb-settings>.wpb-root-header');
             out.jump=box('.wpb-settings>.wpb-settings-jump');
             out.picker=box('.wpb-settings-jump-control');
-            out.titleSize=parseFloat(getComputedStyle(el('.wpb-settings>.wpb-page-header h1')).fontSize);
+            out.titleSize=parseFloat(getComputedStyle(el('.wpb-settings>.wpb-root-header h1')).fontSize);
             out.select=box('.wpb-settings-jump select');
           }else if(which==='profile'){
             out.topPadding=parseFloat(getComputedStyle(el('.wpb-profile-inner')).paddingTop);
-            out.head=box('.wpb-profile-head');
+            out.head=box('.wpb-profile-head');out.identity=box('.wpb-profile-identity');
             out.titleSize=parseFloat(getComputedStyle(el('.wpb-profile-title')).fontSize);
             out.edit=box('.wpb-profile-edit');
             out.shareCard=box('.wpb-profile-share-card');
@@ -405,24 +405,27 @@ try{
         },tab);
         const density=await measure();
         assert.ok(!density.overflow,'R57 destination must not overflow: '+JSON.stringify({tab,density}));
+        // M270 gives every root the same 26px title role; retain each
+        // destination's compact geometry and full-size action checks below.
+        assert.equal(density.titleSize,26,'Root destination uses the shared title size: '+JSON.stringify({tab,density}));
         if(tab==='plan'){
-          assert.ok(density.row&&density.back&&density.title&&density.back.height>=48&&density.back.width>=48,
-            'Plan Back has an actual 48px target: '+JSON.stringify(density));
-          assert.ok(density.titleSize>=27&&density.titleSize<=28&&density.title.bottom-density.row.top<=118,
+          assert.ok(density.row&&!density.back&&density.title&&density.title.top>=density.row.top,
+            'Plan root has no Back action and keeps its title in the shared row: '+JSON.stringify(density));
+          assert.ok(density.title.bottom-density.row.top<=118,
             'Plan header has compact hierarchy without hiding title: '+JSON.stringify(density));
         }else if(tab==='progress'){
-          assert.ok(density.header&&density.header.height<=155&&density.titleSize>=26&&density.tabs.length===4&&density.tabs.every(x=>x.height>=48),
+          assert.ok(density.header&&density.header.height<=155&&density.tabs.length===4&&density.tabs.every(x=>x.height>=48),
             'Progress title and four 48px tabs fit its header: '+JSON.stringify(density));
         }else if(tab==='settings'){
-          assert.ok(density.header&&density.jump&&density.picker&&density.picker.height>=48&&density.titleSize>=27&&density.select&&density.select.height>=48
+          assert.ok(density.header&&density.jump&&density.picker&&density.picker.height>=48&&density.select&&density.select.height>=48
             &&density.jump.bottom-density.header.top<=128,
             'Settings title and Jump control use a compact, accessible header: '+JSON.stringify(density));
         }else if(tab==='profile'){
-          assert.ok(density.head&&density.edit&&density.hero&&density.titleSize>=27&&density.topPadding<=16
+          assert.ok(density.head&&density.edit&&density.hero&&density.topPadding<=16
             &&density.edit.width>=48&&density.edit.height>=48,
             'Profile identity/edit start promptly with full-size edit action: '+JSON.stringify(density));
-          assert.ok(density.shareCard&&density.layoutActions&&density.shareCard.top>=density.head.bottom
-            &&density.shareCard.top-density.head.bottom<=16
+          assert.ok(density.shareCard&&density.layoutActions&&density.shareCard.top>=density.identity.bottom
+            &&density.shareCard.top-density.identity.bottom<=16
             &&density.layoutActions.top>=density.shareCard.bottom
             &&density.hero.top>=density.layoutActions.bottom&&density.hero.top-density.layoutActions.bottom<=16
             &&density.stats.length===3&&density.stats.every(w=>w>=68),
@@ -433,7 +436,7 @@ try{
           await page.setViewport({width:320,height:700,deviceScaleFactor:1,isMobile:true,hasTouch:true});
           const small=await measure();
           assert.ok(!small.overflow,'320dp '+tab+' must not overflow: '+JSON.stringify(small));
-          if(tab==='plan')assert.ok(small.back.width>=48&&small.title.bottom-small.row.top<=136,
+          if(tab==='plan')assert.ok(!small.back&&small.title.bottom-small.row.top<=136,
             'Plan still fits at 320dp: '+JSON.stringify(small));
           if(tab==='profile')assert.ok(small.edit.height>=48&&small.shareCard.width<=320
             &&small.shareCard.top>=small.head.bottom&&small.stats.every(w=>w>=64),
@@ -493,7 +496,7 @@ try{
         const measure=()=>page.evaluate(()=>{
           const home=document.querySelector('.wpb-home');
           const head=home.querySelector('.wpb-home-header');
-          const brand=home.querySelector('.wpb-home-brand');
+          const brand=home.querySelector('.wpb-root-title-row h1');
           const tools=home.querySelector('.wpb-home-tools');
           const sc=home.querySelector('.wpb-page-scroll');
           const rect=x=>{const r=x.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height,right:r.right};};
@@ -513,20 +516,20 @@ try{
         await page.$eval('.wpb-home .wpb-page-scroll',sc=>{sc.scrollTop=sc.scrollHeight;});
         await page.waitForFunction(()=>document.querySelector('.wpb-home')?.dataset.homeCompact==='1');
         const compact=await measure();
-        assert.ok(compact.header.h<=64&&expanded.header.h-compact.header.h>=24,
+        assert.ok(compact.header.h<=70&&expanded.header.h-compact.header.h>=24,
           'Scrolled Home returns real vertical space, not only hidden text: '+JSON.stringify({expanded,compact}));
-        assert.notEqual(compact.long,'none','Full Pursuit Iron brand stays visible while scrolled');
+        assert.notEqual(compact.long,'none','Full Pursuit Iron identity remains in DOM while its context collapses');
         assert.equal(compact.short,null,'Home no longer substitutes the incorrect Iron-only label');
         assert.ok(compact.buttons.length===3&&compact.buttons.every(b=>b.w>=48&&b.h>=48),
           'All Home tools remain accessible 48px touch targets: '+JSON.stringify(compact));
         assert.ok(compact.brand.right+8<=compact.tools.x&&!compact.overflow,
-          'Collapsed Home brand/tools never overlap: '+JSON.stringify(compact));
+          'Collapsed Home title/tools never overlap: '+JSON.stringify(compact));
         captures[theme].homeCompact=Buffer.from(await page.screenshot({type:'png'}));
         await page.setViewport({width:320,height:700,deviceScaleFactor:1,isMobile:true,hasTouch:true});
         await page.$eval('.wpb-home .wpb-page-scroll',sc=>{sc.scrollTop=sc.scrollHeight;});
         await page.waitForFunction(()=>document.querySelector('.wpb-home')?.dataset.homeCompact==='1');
         const small=await measure();
-        assert.ok(small.header.h<=64&&small.brand.right+4<=small.tools.x&&!small.overflow,
+        assert.ok(small.header.h<=70&&small.brand.right+4<=small.tools.x&&!small.overflow,
           '320dp Home compact header has no collision or overflow: '+JSON.stringify(small));
         assert.ok(small.buttons.every(b=>b.w>=48&&b.h>=48),
           'Small-screen actions retain 48px targets: '+JSON.stringify(small));

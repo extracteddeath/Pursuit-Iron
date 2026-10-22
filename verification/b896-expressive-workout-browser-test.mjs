@@ -32,6 +32,17 @@ try {
   await page.goto(url,{waitUntil:'networkidle0'});
   await page.click('.wpb-live-dock button[aria-label="Resume workout"]');
   await page.waitForSelector('.wpb-workout');
+  await page.waitForSelector('.wpb-notice[data-positioned="true"]');
+  const noticeClearsFooter=()=>page.$eval('.wpb-notice',notice=>{
+   const box=notice.getBoundingClientRect(),footer=document.querySelector('.wpb-workout-footer').getBoundingClientRect();
+   return box.bottom<=footer.top-7&&box.top>=-1&&box.width>0;
+  });
+  assert.ok(await noticeClearsFooter(),'M270 resume notice clears the actual logger/rest footer');
+  // Switch while the same notice is mounted; changed Focus/rest heights must retarget placement.
+  await page.click('[aria-label="Focused mode"]');
+  await page.waitForFunction(()=>{const notice=document.querySelector('.wpb-notice'),footer=document.querySelector('.wpb-workout-footer');return notice&&notice.getBoundingClientRect().bottom<=footer.getBoundingClientRect().top-7;});
+  assert.ok(await noticeClearsFooter(),'M270 notice follows the Focus rest/footer geometry');
+  await page.click('[aria-label="Exit focused mode"]');
   // Actual phone/tablet geometry: name + set/progression stay left,
   // skip/history/info + exercise tags form the right column.
   const heading=await page.$eval('.wpb-exercise-heading',el=>{

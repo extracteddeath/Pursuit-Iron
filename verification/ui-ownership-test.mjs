@@ -5,10 +5,10 @@ import fs from 'node:fs';
 // Decrease alongside a verified cleanup; never raise to permit a cosmetic override.
 const css = fs.readFileSync('app.css', 'utf8');
 const app = fs.readFileSync('modules/App.js', 'utf8');
-const MAX_IMPORTANT = 2793;
-const MAX_APP_IMPORTANT = 1325; // Prevent embedded StyleTag patches bypassing the CSS budget.
-const MAX_REPEAT_IMPORTANT = 30;
-const MAX_INLINE_STYLE_OBJECTS = 3193; // Cohesion 21: switch and Home preview owners
+const MAX_IMPORTANT = 2483;
+const MAX_APP_IMPORTANT = 1290; // Prevent embedded StyleTag patches bypassing the CSS budget.
+const MAX_REPEAT_IMPORTANT = 21;
+const MAX_INLINE_STYLE_OBJECTS = 3143; // M271: one root app bar replaces per-screen header presentation
 const allowedDebtKeys = new Set([
   "\t#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step\tborder-radius",
   "\t#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step\theight",
@@ -93,7 +93,7 @@ assert.throws(() => guard(css + '\n' + cssOverflow, app), /CSS priority override
 assert.throws(() => guard(css, app + '\n' + appOverflow), /Embedded stylesheet priority overrides increased/);
 assert.ok(repeatedImportantDeclarations('.duplicate{color:red!important;} .duplicate{color:blue!important;}')
     .includes('\t.duplicate\tcolor'), 'Guard must detect duplicate priority declarations.');
-for (const name of ['UiAction','UiChoice','UiStatus','UiSection','SettingsSwitch'])
+for (const name of ['UiRootHeader','UiAction','UiChoice','UiStatus','UiSection','SettingsSwitch'])
     assert.equal((app.match(new RegExp('function ' + name + '\\(', 'g')) || []).length, 1,
         'Only one shared ' + name + ' component may exist.');
 for (const token of ['--pi-color-card','--pi-color-control','--pi-color-feature','--pi-color-divider',
@@ -169,7 +169,9 @@ assert.ok(wizardShell.includes('"data-initial-step": step === 0')&&
 assert.ok(setupStepper.includes('disabled: value === 0')&&setupStepper.includes('disabled: plusDisabled'),
   'Shared stepper retains native limit semantics');
 const plan=app.slice(app.indexOf('function PlanView('),app.indexOf('function sessionLoadText('));
-assert.ok(plan.includes('className: "wpb-plan-eyebrow"'),'Plan eyebrow must be class-owned');
+assert.ok(plan.includes('_jsx(UiRootHeader, { title: "Plan" })')&&!plan.includes('aria-label": "Back"'),'Plan root uses shared app bar without a Back action');
+const rootHeader=app.slice(app.indexOf('function UiRootHeader('),app.indexOf('function UiAction('));
+assert.ok(!rootHeader.includes('style:'),'Root app bar presentation is class-owned');
 assert.ok(!plan.includes('style: { fontSize: 26, fontWeight: 740, color: C.text'),
   'Plan title static typography must not return to inline styles');
 assert.ok(!plan.includes('className: "wpb-plan-preview-notice", style:'),
@@ -191,3 +193,16 @@ assert.equal((club.match(/variant: "tonal"/g) || []).length, 2, 'Club share and 
 const settingsView = app.slice(app.indexOf('function SettingsView('), app.indexOf('/* ============================== CYCLES VIEW'));
 assert.equal((settingsView.match(/className: "wpb-ui-card wpb-settings-card"/g) || []).length, 8, 'All eight Settings row groups use shared cards');
 assert.ok(!settingsView.includes('style: { background: C.card, borderRadius: 16, overflow: "hidden"'), 'No unnamed legacy row cards remain');
+
+// M270: shared shell roles cannot silently regain per-screen typography or aliases.
+const navigation = app.slice(app.indexOf('function TabBar('), app.indexOf('function OneRepMaxCalc('));
+const notice = app.slice(app.indexOf('function UiNotice('), app.indexOf('function TabBar('));
+assert.ok(!navigation.includes('style:') && !navigation.includes('compactLabels'), 'Navigation has one class-owned full-name layout');
+assert.ok(!notice.includes('style:') && notice.includes('role: "status"'), 'Notices share class-owned accessible presentation');
+for (const owner of ['Home','ProfileView','SettingsView','HistoryView','PlanView']) {
+ const start=app.indexOf('function '+owner+'('), end=app.indexOf('\nfunction ', start+12);
+ assert.ok(app.slice(start,end).includes('UiRootHeader'), owner+' uses the shared root app bar');
+}
+assert.ok(css.includes('--pi-type-screen-title:1.625rem') && css.includes('.wpb-summary-grid'), 'Scalable title and summary roles remain shared');
+const noticeStyle=css.slice(css.indexOf('.wpb .wpb-notice{'),css.indexOf('.wpb .wpb-notice[data-positioned'));
+assert.ok(noticeStyle.includes('transition-property:none'), 'Notice clearance cannot animate through a newly returned Resume control');

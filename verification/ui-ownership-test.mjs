@@ -295,3 +295,15 @@ assert.ok(rootTitleOwner.includes('min-width:min-content;')&&
   'Root title must not break Profile mid-word beside the Edit action');
 assert.ok(css.includes('.wpb-root-title-row{display:flex;flex-wrap:wrap;'),
   'Root title actions must be able to flow beneath text without overlap');
+
+
+// M281: one tonal selected-pill signal, no permanent gray rim.
+// Forced colors retain a visible outline, keyboard-only focus retains its ring.
+assert.ok(!css.includes('--pi-r35-control-outline') &&
+  !css.includes('outline:2px solid var(--pi-r35-control-outline);'),
+  'Nav selection must not regain a normal-theme gray outline');
+assert.ok(css.includes('.wpb-tabbar[data-pi-m3-track]::before{\n  background:var(--pi-color-active)!important;'),
+  'Active nav indicator retains the saved theme tonal fill');
+assert.ok(css.includes('outline:2px solid Highlight!important;') &&
+  css.includes('.wpb .wpb-tabbar .wpb-tab:focus-visible{'),
+  'Forced-colors selection and keyboard focus remain distinctly accessible');

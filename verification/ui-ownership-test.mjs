@@ -240,6 +240,8 @@ const historySurfaceCss=css.slice(
     css.indexOf('/* The cycle summary is a section heading, not another pill/card. */'),
     css.indexOf('/* Rein in the page-level card radius/spacing')
 );
+assert.ok(historySurfaceCss.includes('gap:var(--pi-space-3)!important;'),
+    'History heading and session spacing share one 12px section rhythm');
 assert.ok(historySurfaceCss.includes('padding:var(--pi-space-3) var(--pi-space-1) var(--pi-space-2)!important;'),
     'History group header uses the shared spatial scale without an exposed sticky margin');
 assert.ok(historySurfaceCss.includes('margin:0 0 var(--pi-space-3)!important;'),

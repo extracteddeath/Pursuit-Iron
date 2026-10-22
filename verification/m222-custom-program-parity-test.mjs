@@ -38,6 +38,22 @@ saved[0].done=true;saved[1].auto=false;saved[1].valueOwner='user';saved[2].weigh
 const before=structuredClone(saved),refreshed=refreshPendingSetTargets(saved,fly.rows);
 assert.equal(refreshed[0],saved[0]);assert.equal(refreshed[1],saved[1]);assert.equal(refreshed[2],saved[2]);assert.equal(refreshed[3].weight,'25');assert.equal(refreshed[3].reps,'11');assert.deepEqual(saved,before);
 assert.equal(refreshPendingSetTargets(refreshed,fly.rows),refreshed,'repair is idempotent');
+// A pre-M222 snapshot with ownership/auto flags but no recorded original rep prefill
+// cannot prove whether the current reps are a user entry. No number may be replaced.
+const unproven = structuredClone(saved[3]);
+delete unproven.target.prefillReps;
+unproven.reps = '17';
+const legacyRestored = refreshPendingSetTargets([unproven], [fly.rows[3]]);
+assert.equal(legacyRestored[0],unproven,
+    'missing prefill provenance must preserve the exact saved row, including user-typed reps');
+assert.equal(legacyRestored,legacyRestored, 'unprovable restoration should preserve array identity');
+// The same row with a documented prefill is safe only while both saved values match.
+const originalAuto = { ...saved[3], target: { ...saved[3].target } };
+assert.equal(refreshPendingSetTargets([originalAuto],[fly.rows[3]])[0].reps,fly.rows[3].reps,
+    'proven automatic rows still update to the new prescription');
+const uncertainWeight = { ...originalAuto, weight: '22.5' };
+assert.equal(refreshPendingSetTargets([uncertainWeight],[fly.rows[3]])[0],uncertainWeight,
+    'manually changed weights must not be overwritten even if reps match');
 const tech=structuredClone(program);tech.overrides['push:0'].techOverride='Last set: myo-reps';
 const edited=applyCustomProgramSettings(tech,{...tech.config,weeks:8,session:'s40',noSupersets:true,folder:' Custom ',description:'My plan'});
 assert.equal(edited.days,tech.days);assert.equal(edited.overrides,tech.overrides);assert.equal(edited.config.noSupersets,true);assert.equal(edited.weeks,8);assert.equal(edited.folder,'Custom');

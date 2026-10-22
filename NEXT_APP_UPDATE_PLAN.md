@@ -18,6 +18,12 @@ App 4.0.0 build 905 / Engine 0.65.9 / M234. `RELEASE_MANIFEST.json` is authorita
 
 
 
+## M282 — accessible Settings row descriptions at 200% text
+
+- Real-browser screenshot at 320px/200% text showed narrow Settings copy breaking a single word (“suggestions”) around the inline kg/lb control. The existing Settings body 16em container breakpoint now stacks the copy above its control rather than narrowing the description to one-third of the card.
+- Regression guards inspect 320px/393px text-only enlargement, requiring full-width copy and controls positioned below. No additional `!important`; the normal-size compact row design and saved settings remain untouched.
+- Next verify the real screenshot, bottom-navigation phone/tablet selected state, and sticky chrome after scroll. Do not change Workout/Focus or engine without a reproduced regression.
+
 ## M281 — navigation indicator and shared selected state
 
 - Removed the persistent gray R35 perimeter from the shared moving selected-tab pill. Continue to express selection using the saved-theme tonal fill, icon and label; retain a focus-visible keyboard ring and a distinct forced-colors border.

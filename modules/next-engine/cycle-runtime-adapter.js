@@ -1,4 +1,6 @@
 import { auditProgram } from './arbiter.js';
+import { SUPPORTED_SPLIT_FAMILIES } from './topology.js';
+import { createExerciseMap } from './exercise-db.js';
 import { createInitialCycleState, startPhase } from './cycles.js';
 import { createEngineContext, createTransactionalEvaluator, auditVector, compareCandidateQuality } from './engine-context.js';
 import { createTrainingSetEvents } from './events.js';
@@ -161,6 +163,62 @@ function retargetStatic(previous, request, target, blockWeeks = 6) {
 function blockRequest(baseRequest) {
     return { ...clone(baseRequest), goal: { ...clone(baseRequest.goal), type: baseRequest.goal.type } };
 }
+const BLOCK_LIFTS = new Set(['bench_press', 'back_squat', 'deadlift', 'overhead_press']);
+function changesWeek(spec) {
+    return Boolean(spec?.split || spec?.days || spec?.priorityLift);
+}
+function blockConfigForSpec(config, spec) {
+    return { ...config, ...(spec?.split ? { split: spec.split } : {}),
+        ...(spec?.days ? { days: spec.days } : {}) };
+}
+function requestForBlock(baseRequest, baseConfig, spec, legacyExercises = []) {
+    const request = blockRequest(baseRequest);
+    if (!changesWeek(spec))
+        return request;
+    const cfg = blockConfigForSpec(baseConfig, spec);
+    if (spec.days)
+        request.schedule = shellConfigToNextRequest(cfg, [], legacyExercises, request.seed).schedule;
+    request.preferences = { ...request.preferences,
+        ...(spec.split ? { lockedSplit: spec.split, preferredSplit: spec.split } : {}) };
+    request.goal = { ...request.goal, type: phaseGoal(spec.phase) === 'both' ? 'mixed' : phaseGoal(spec.phase) };
+    if (spec.priorityLift) {
+        request.goal.liftPriorities = { ...(request.goal.liftPriorities ?? {}), [spec.priorityLift]: 'primary' };
+        request.goal.liftFrequency = { [spec.priorityLift]: spec.frequency };
+    } else {
+        // A previous block's frequency must not leak into an unrelated phase.
+        delete request.goal.liftFrequency;
+    }
+    return request;
+}
+function checkRequestedPractice(program, spec, request) {
+    if (!spec?.priorityLift) return;
+    const catalog = createExerciseMap(request.customExercises);
+    const actual = program.sessions.filter(session => session.exercises.some(ex =>
+        ['primary_strength','secondary_strength'].includes(ex.role)
+        && (catalog.get(ex.exerciseId)?.liftSpecificity?.[spec.priorityLift] ?? 0) > .45)).length;
+    if (actual < spec.frequency)
+        throw new NextShellAdapterError('NEXT_CYCLE_LIFT_FREQUENCY_UNMET',
+            `Cannot fit ${spec.frequency} weekly ${spec.priorityLift.replaceAll('_', ' ')} exposures into this block's days, time, split and recovery constraints (planned ${actual}). Choose fewer exposures, more training days or another split.`);
+}
+const totalSets = program => program.sessions.reduce((n, session) =>
+    n + session.exercises.reduce((sets, ex) => sets + (Number(ex.sets) || 0), 0), 0);
+function protectStrengthEntry(previous, next, spec, request) {
+    if (previous?.phase !== 'hypertrophy_accumulation' || spec.phase !== 'strength_accumulation')
+        return next;
+    const before = totalSets(previous), floor = Math.ceil(before * .5);
+    if (before < 16 || totalSets(next) >= floor) return next;
+    // A converted custom roster can be more faithful than a newly generated strength skeleton.
+    // Try the audited same-roster prescription before refusing an extreme volume cliff.
+    if (!changesWeek(spec)) {
+        try {
+            const locked = retargetStatic(previous, request, spec.phase, spec.weeks);
+            if (locked.audit.result === 'pass' && totalSets(locked) >= floor)
+                return locked;
+        } catch { /* The normal refusal below gives a useful adjustment route. */ }
+    }
+    throw new NextShellAdapterError('NEXT_CYCLE_STRENGTH_VOLUME_CLIFF',
+        `Strength would fall from ${before} to ${totalSets(next)} weekly working sets. This is too large a reduction for a normal accumulation block. Change split or session capacity; a taper-sized drop belongs in Peak, not Strength.`);
+}
 function legacyBlockConfig(base, phase, weeks, name) {
     return { ...base, name, goal: phaseGoal(phase), weeks, deload: false, percentScheme: null, cyclePeriodization: true, endless: false };
 }
@@ -215,7 +273,20 @@ export function customCycleSpecs(blocks, { minBlocks = 2, maxBlocks = 8, maxWeek
             throw new NextShellAdapterError('NEXT_CYCLE_CUSTOM_WEEKS_INVALID', `Block ${i + 1} must run 1–24 whole weeks.`);
         const phaseName = CUSTOM_CYCLE_PHASES.find(x => x.phase === phase).label;
         const label = typeof block?.label === 'string' && block.label.trim() ? block.label.trim().slice(0, 40) : phaseName;
-        return { phase, weeks, label };
+        const split = block?.split == null || block.split === '' ? undefined : block.split;
+        if (split !== undefined && !SUPPORTED_SPLIT_FAMILIES.includes(split))
+            throw new NextShellAdapterError('NEXT_CYCLE_CUSTOM_SPLIT_INVALID', `Block ${i + 1} has an unsupported weekly split.`);
+        const days = block?.days == null || block.days === '' ? undefined : Number(block.days);
+        if (days !== undefined && (!Number.isInteger(days) || days < 2 || days > 6))
+            throw new NextShellAdapterError('NEXT_CYCLE_CUSTOM_DAYS_INVALID', `Block ${i + 1} must use 2–6 training days.`);
+        const priorityLift = block?.priorityLift || undefined;
+        if (priorityLift !== undefined && !BLOCK_LIFTS.has(priorityLift))
+            throw new NextShellAdapterError('NEXT_CYCLE_CUSTOM_LIFT_INVALID', `Block ${i + 1} has an unsupported priority lift.`);
+        const frequency = priorityLift ? Number(block.frequency) : undefined;
+        if (priorityLift && (!Number.isInteger(frequency) || frequency < 1 || frequency > 3 || (days && frequency > days)))
+            throw new NextShellAdapterError('NEXT_CYCLE_CUSTOM_FREQUENCY_INVALID', `Block ${i + 1} needs 1–3 lift exposures, no more than its training days.`);
+        return { phase, weeks, label, ...(split ? { split } : {}), ...(days ? { days } : {}),
+            ...(priorityLift ? { priorityLift, frequency } : {}) };
     });
     if (planned.reduce((sum, block) => sum + block.weeks, 0) > maxWeeks)
         throw new NextShellAdapterError('NEXT_CYCLE_CUSTOM_LENGTH_INVALID', `These blocks must total at most ${maxWeeks} weeks; the whole cycle can run at most 104 weeks.`);
@@ -249,46 +320,50 @@ export function generateNextCycleForShell(options) {
     // already proves buildability with capacity-aware generation; bypassing it here made valid
     // 60–90 minute Full Body cycles fail even though the equivalent single program passed.
     const entrySpec = specs[0];
-    const entryAttempt = firstPassingCapacityProgram(baseRequest, options.config, {
+    const entryRequest = requestForBlock(baseRequest, options.config, entrySpec, options.legacyExercises);
+    const entryAttempt = firstPassingCapacityProgram(entryRequest, blockConfigForSpec(options.config, entrySpec), {
         phase: entrySpec.phase,
         blockWeeks: entrySpec.weeks,
         progressionStyle: baseRequest.preferences?.progressionStyle
     });
     baseRequest = entryAttempt.request;
     const firstProgram = entryAttempt.result.program;
-    const normalized = normalizeRequest(baseRequest);
     const blocks = [];
     let previous;
     for (let i = 0; i < specs.length; i++) {
         const spec = specs[i];
+        const targetRequest = i === 0 ? baseRequest : requestForBlock(baseRequest, options.config, spec, options.legacyExercises);
+        const normalized = normalizeRequest(targetRequest);
         let next;
         if (!previous) {
             next = firstProgram;
         }
-        else if (options.adaptBetweenBlocks) {
+        else if (options.adaptBetweenBlocks || changesWeek(spec)) {
             const ids = previous.sessions.flatMap(s => s.exercises.map(e => e.exerciseId));
             const protectedIds = previous.sessions.flatMap(s => s.exercises.filter(e => e.role === 'primary_strength' || e.role === 'secondary_strength').map(e => e.exerciseId));
             const transitioned = transitionProgramPhase(previous, normalized, spec.phase, {
                 successfulExerciseIds: ids,
                 protectedExerciseIds: protectedIds,
                 nextBlockWeeks: spec.weeks,
-                capacityConfig: options.config
+                capacityConfig: blockConfigForSpec(options.config, spec)
             });
             next = transitioned.program;
         }
         else {
-            next = retargetStatic(previous, baseRequest, spec.phase, spec.weeks);
+            next = retargetStatic(previous, targetRequest, spec.phase, spec.weeks);
         }
+        if (previous) next = protectStrengthEntry(previous, next, spec, targetRequest);
+        checkRequestedPractice(next, spec, targetRequest);
         if (next.audit.result !== 'pass')
             throw new NextShellAdapterError('NEXT_CYCLE_BLOCK_REJECTED', `Pursuit Engine ${next.engineVersion} rejected ${spec.label}.`, next.audit);
-        const cfg = legacyBlockConfig(options.config, spec.phase, spec.weeks, `${options.config.name || cycleTemplates().find(t => t.id === templateId)?.name || 'Training Cycle'} · ${spec.label}`);
+        const cfg = legacyBlockConfig(blockConfigForSpec(options.config, spec), spec.phase, spec.weeks, `${options.config.name || cycleTemplates().find(t => t.id === templateId)?.name || 'Training Cycle'} · ${spec.label}`);
         let legacy = nextProgramToShellProgram(next, cfg, options.legacyExercises, options.makeId);
         legacy.cycleId = cid;
-        attachBlockContext(legacy, next, blockRequest(baseRequest, spec.phase), baseRequest, { templateId, plannedIndex: i, blockIndex: i, label: spec.label, weeks: spec.weeks, phase: spec.phase, preview: i > 0, adaptBetweenBlocks: !!options.adaptBetweenBlocks });
+        attachBlockContext(legacy, next, targetRequest, baseRequest, { templateId, plannedIndex: i, blockIndex: i, label: spec.label, weeks: spec.weeks, phase: spec.phase, preview: i > 0, adaptBetweenBlocks: !!(options.adaptBetweenBlocks || changesWeek(spec)) });
         // Static cycles lock exercise identity across blocks, but phase retargeting is complete
         // before the shell expands base sets into exact work-week cells. Reconcile those exact public
         // regional doses after materialization without adding, removing, or swapping any movement.
-        if (!options.adaptBetweenBlocks && i > 0) {
+        if (!options.adaptBetweenBlocks && !changesWeek(spec) && i > 0) {
             const rosterBefore = legacy.days.map(day => [...day.exercises]);
             const baseRepair = repairShellVolume(legacy, options.legacyExercises, { preserveRoster: true });
             const weeklyRepair = reconcileLockedCycleWeekOverflows(baseRepair.program, options.legacyExercises);
@@ -316,7 +391,7 @@ export function generateNextCycleForShell(options) {
     const cycle = {
         id: cid, name: options.config.name || template.name, templateId, createdAt: Date.now(), seed, engineV: 33,
         engineSource: 'pursuit-next', engineSourceVersion: blocks[0]?.engineSourceVersion || '0.62.0', adaptExercises: !!options.adaptBetweenBlocks,
-        blockIds: blocks.map(b => b.id), blockMeta: specs.map((s, i) => ({ label: s.label, note: `${phaseLabel(s.phase)} · ${s.weeks} weeks`, goal: phaseGoal(s.phase), weeks: s.weeks, phase: s.phase, id: blocks[i].id, plannedIndex: i, preview: i > 0 })),
+        blockIds: blocks.map(b => b.id), blockMeta: specs.map((s, i) => ({ label: s.label, note: `${phaseLabel(s.phase)} · ${s.weeks} weeks`, goal: phaseGoal(s.phase), weeks: s.weeks, phase: s.phase, ...(s.split ? { split: s.split } : {}), ...(s.days ? { days: s.days } : {}), ...(s.priorityLift ? { priorityLift: s.priorityLift, frequency: s.frequency } : {}), id: blocks[i].id, plannedIndex: i, preview: i > 0 })),
         activeBlock: 0, advance: 'manual', onComplete: 'end', startedAt: null, done: false,
         nextEngineCycle: {
             schemaVersion: 1, templateId, goal, adaptBetweenBlocks: !!options.adaptBetweenBlocks,

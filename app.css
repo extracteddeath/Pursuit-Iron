@@ -4863,12 +4863,12 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 /* R53 — Plan is a first-class semantic component hierarchy, not a collection
    of anonymous inline plum panels. The JSX gives each role an explicit class.
    All 20 themes reuse exactly these neutral / selected roles; no per-theme hex. */
-#root[data-pi-motion="expressive"] .wpb .wpb-plan-view .wpb-plan-phase-group{
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-view{
   --pi-plan-card:var(--pi-color-card);
   --pi-plan-raised:var(--pi-color-control);
   --pi-plan-line:var(--pi-color-divider);
-  min-width:0;
 }
+#root[data-pi-motion="expressive"] .wpb .wpb-plan-view .wpb-plan-phase-group{min-width:0;}
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-view .wpb-plan-phase-header{
   border-bottom:1px solid var(--pi-plan-line)!important;
 }

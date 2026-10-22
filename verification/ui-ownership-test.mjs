@@ -179,7 +179,7 @@ assert.equal((plan.match(/wpb-plan-open-program/g)||[]).length,1,
 assert.ok(plan.includes('className: "wpb-plan-context-heading"') &&
   plan.indexOf('wpb-plan-open-program')<plan.indexOf('wpb-plan-panes'),
   'Full-program action stays alongside selected program context');
-assert.ok(css.includes('margin:0;padding:var(--pi-space-2) var(--pi-space-1);'),
+assert.ok(css.includes('.wpb-plan-week-picker{\n  position:sticky;top:0;z-index:3;isolation:isolate;\n  margin:0;'),
   'Sticky week rail must not expose a transparent bottom margin');
 const cycles=app.slice(app.indexOf('function CyclesView('),app.indexOf('\nfunction ',app.indexOf('function CyclesView(')+1));
 assert.ok(cycles.includes('defaultOpen: !c.done')&&cycles.includes('wpb-cycle-list-disclosure'),

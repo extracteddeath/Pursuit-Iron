@@ -16,6 +16,14 @@ App 4.0.0 build 905 / Engine 0.65.9 / M234. `RELEASE_MANIFEST.json` is authorita
 | Persistence and offline updates | Existing store migration/merge/queue and service worker | Corrupt/future saves must not be overwritten. Preview before restore, preserve drafts, require successful persistence before completing a workout, verify offline cache integrity and cancellation recovery. |
 | Android / Play | `play/README.md`, final TWA package and Play Console | Resolve package identity and signing certificate association at the domain root, build the release bundle, validate actual permissions/SDKs and complete account-specific declarations/testing. Repository/browser checks cannot certify a signed Android package. |
 
+
+## M275 — scrolling chrome and Program/Cycles follow-up
+
+- Plan: the Full program action sits in the program heading, and the old footer action was removed. Selected-week memory, read-only block routing and all four panes remain intact.
+- Plan's sticky week rail is fully opaque and flush at its bottom edge; deep-screen headers and Progress sticky history rows no longer leave translucent/margin bands while scrolling. No new important CSS declarations.
+- Active Cycles disclose their complete block list by default but remain user-collapsible; the existing canonical cycle data, callbacks, progress and saved state are unchanged.
+- Continue the audit with deeper Program day/action density, Cycles expanded layouts, then Progress/History, Profile and Settings. Require browser certification, release integrity and device screenshots before calling the entire app complete.
+
 ## This slice — M274 Program presentation consolidation
 
 - The deep Program header's title row, name, collapsible metadata and saved-state indicator now use CSS classes and shared tokens rather than eight static React layout objects. This retains the custom program rename, save/review states, cycle navigation, motion refs and training data unchanged.

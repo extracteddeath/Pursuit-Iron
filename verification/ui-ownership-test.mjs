@@ -174,6 +174,16 @@ const rootHeader=app.slice(app.indexOf('function UiRootHeader('),app.indexOf('fu
 assert.ok(!rootHeader.includes('style:'),'Root app bar presentation is class-owned');
 assert.ok(!plan.includes('style: { fontSize: 26, fontWeight: 740, color: C.text'),
   'Plan title static typography must not return to inline styles');
+assert.equal((plan.match(/wpb-plan-open-program/g)||[]).length,1,
+  'One full-program action belongs at the top of Plan, not a duplicate footer');
+assert.ok(plan.includes('className: "wpb-plan-context-heading"') &&
+  plan.indexOf('wpb-plan-open-program')<plan.indexOf('wpb-plan-panes'),
+  'Full-program action stays alongside selected program context');
+assert.ok(css.includes('.wpb-plan-week-picker{\n  position:sticky;top:0;z-index:3;isolation:isolate;\n  margin:0;'),
+  'Sticky week rail must not expose a transparent bottom margin');
+const cycles=app.slice(app.indexOf('function CyclesView('),app.indexOf('\nfunction ',app.indexOf('function CyclesView(')+1));
+assert.ok(cycles.includes('defaultOpen: !c.done')&&cycles.includes('wpb-cycle-list-disclosure'),
+  'Active cycle blocks remain visible by default but user-collapsible');
 assert.ok(!plan.includes('className: "wpb-plan-preview-notice", style:'),
   'Plan preview typography must not return to inline styles');
 // Existing runtime computed progress widths, animations and positions are permitted.

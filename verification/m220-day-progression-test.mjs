@@ -59,11 +59,16 @@ assert.equal(styleOverride(program, EX_BY_ID[id], false, 1, targetPerf, flatLowe
     'same-day flat intermediate history still triggers the intended plateau override');
 console.log('PASS M220: screenshot Lower/Legs regression, separate day loads, set-count qualification, earned progression, scoped fallbacks, shared LAST/advice and immutable history.');
 
-const automatic = { weight: '210', reps: '20', auto: true, done: false, valueOwner: 'prescription', target: { w: '210', reps: '12-20' } };
+const automatic = { weight: '210', reps: '20', auto: true, done: false, valueOwner: 'prescription', target: { w: '210', reps: '12-20', prefillReps: '20' } };
 const pending = [automatic, { ...automatic, done: true }, { ...automatic, valueOwner: 'user', auto: false }, { ...automatic, weight: '212.5' }, { ...automatic, added: true }, { ...automatic, sub: true }];
 const before = structuredClone(pending);
 const refreshed = refreshPendingSetTargets(pending, [{...automatic,weight:'205',target:{...automatic.target,w:'205'}}]);
 assert.equal(refreshed[0].weight, '205'); assert.equal(refreshed[0].target.w, '205');
+const unproven = { ...automatic, target: { w: '210', reps: '12-20' } };
+const missingProof = [unproven];
+assert.equal(refreshPendingSetTargets(missingProof,
+    [{...automatic,weight:'205',target:{...automatic.target,w:'205'}}]),missingProof,
+    'legacy rows without original auto-prefill metadata must not regenerate numbers');
 for (let i = 1; i < pending.length; i++) assert.equal(refreshed[i], pending[i], 'completed, manual, edited, added and sub rows are protected');
 assert.deepEqual(pending, before);
 assert.equal(refreshPendingSetTargets(refreshed, [{...automatic,weight:'205',target:{...automatic.target,w:'205'}}]), refreshed, 'unchanged targets preserve identity');

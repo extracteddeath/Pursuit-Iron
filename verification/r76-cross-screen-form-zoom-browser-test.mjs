@@ -54,6 +54,30 @@ try{
         await page.click('[data-tab="'+route+'"]');
         await page.waitForSelector(selector);
         await settle(page);
+        // M283: scrolling content and the canonical root header must share a
+        // single left/right inset on narrow phones (Plan and Home are covered
+        // separately by the R62 Plan and Home continuity contract).
+        if(width<=420&&(route==='progress'||route==='settings')){
+          const alignment=await page.$eval(selector,pane=>{
+            const header=pane.querySelector('.wpb-root-header');
+            const body=pane.querySelector(':scope > .wpb-page-scroll');
+            const h=getComputedStyle(header),b=getComputedStyle(body);
+            const rail=pane.querySelector(':scope > .wpb-settings-jump');
+            return {headerLeft:parseFloat(h.paddingLeft),headerRight:parseFloat(h.paddingRight),
+              contentLeft:parseFloat(b.paddingLeft),contentRight:parseFloat(b.paddingRight),
+              headerBottom:header.getBoundingClientRect().bottom,
+              railTop:rail?.getBoundingClientRect().top,
+              headerOpaque:h.backgroundColor!=='rgba(0, 0, 0, 0)',
+              expected:innerWidth<360?12:16};
+          });
+          assert.ok(alignment.headerLeft===alignment.expected&&
+            alignment.headerRight===alignment.expected&&
+            alignment.contentLeft===alignment.expected&&
+            alignment.contentRight===alignment.expected&&alignment.headerOpaque&&
+            (route!=='settings'||Math.abs(alignment.railTop-alignment.headerBottom)<=1),
+            'Root header and mobile scroll pane share one inset without a Settings rail gap: '+
+              JSON.stringify({route,theme,width,alignment}));
+        }
         // R82: Settings navigation uses honest, findable category names.
         // It must reach the existing controls without changing their values.
         if(route==='settings'){
@@ -112,6 +136,21 @@ try{
             anchors=>anchors.length),1,'Exactly one destination owns training preferences');
           await page.select('.wpb-settings-jump-control select','preferences');
           await page.waitForFunction(()=>document.querySelector('.wpb-settings .wpb-page-scroll')?.scrollTop>10);
+          await settle(page);
+          if(width<=420){
+            const chrome=await page.$eval('.wpb-settings',pane=>{
+              const header=pane.querySelector('.wpb-root-header');
+              const rail=pane.querySelector('.wpb-settings-jump');
+              const content=pane.querySelector('.wpb-page-scroll');
+              return {offset:content.scrollTop,
+                gap:rail.getBoundingClientRect().top-header.getBoundingClientRect().bottom,
+                headerPaint:getComputedStyle(header).backgroundColor,
+                railPaint:getComputedStyle(rail).backgroundColor};
+            });
+            assert.ok(chrome.offset>10&&Math.abs(chrome.gap)<=1&&
+              chrome.headerPaint!=='rgba(0, 0, 0, 0)'&&chrome.railPaint!=='rgba(0, 0, 0, 0)',
+              'Settings category rail remains directly attached to opaque header after scroll: '+JSON.stringify({width,theme,chrome}));
+          }
           assert.equal(await page.$eval('.wpb-settings-jump-control select',el=>el.value),'',
             'Settings jump resets for the next deliberate navigation');
         }

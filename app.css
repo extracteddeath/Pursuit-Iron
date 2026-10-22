@@ -261,8 +261,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-radius:var(--pi-layout-radius)!important;
 }
 @media(max-width:420px){
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-home,.wpb-settings,.wpb-progress)>.wpb-page-scroll{
-    padding-left:14px!important;padding-right:14px!important;
+  /* Progress and Settings scroll panes match UiRootHeader: 12px at 320px,
+     16px at 393px. Home already has its own shared-inset scroll owner. */
+  #root[data-pi-motion="expressive"] .wpb :is(.wpb-settings,.wpb-progress)>.wpb-page-scroll{
+    padding-inline:var(--pi-page-inset)!important;
   }
   #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-label{font-size:10px!important}
 }

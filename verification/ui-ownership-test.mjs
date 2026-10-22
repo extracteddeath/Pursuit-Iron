@@ -5,7 +5,7 @@ import fs from 'node:fs';
 // Decrease alongside a verified cleanup; never raise to permit a cosmetic override.
 const css = fs.readFileSync('app.css', 'utf8');
 const app = fs.readFileSync('modules/App.js', 'utf8');
-const MAX_IMPORTANT = 2463; // M279 retired 11 superseded Settings header/control priorities
+const MAX_IMPORTANT = 2462; // M283 replaced duplicate left/right pixel priorities with one shared page inset
 const MAX_APP_IMPORTANT = 1290; // Prevent embedded StyleTag patches bypassing the CSS budget.
 const MAX_REPEAT_IMPORTANT = 21;
 const MAX_INLINE_STYLE_OBJECTS = 3116; // M276: Program cycle context and edit guidance now use shared CSS
@@ -317,3 +317,16 @@ assert.ok(settingsContainer.includes('@container pi-settings-body (max-width:16e
   settingsContainer.includes('.wpb .wpb-settings .wpb-settings-row-copy{\n    flex:none;') &&
   settingsContainer.includes('.wpb .wpb-settings .wpb-settings-row-control{\n    align-self:flex-start;'),
   'Enlarged Settings row text has full card width and owns its control below');
+
+// M283: Root content and header share the same phone inset, including the
+// explicit 320px/393px responsive tokens. Home retains its separate owner.
+const phoneInsetStart=css.indexOf('/* Progress and Settings scroll panes match UiRootHeader:');
+const phoneInsetCss=css.slice(phoneInsetStart,css.indexOf('@media(min-width:760px)',phoneInsetStart));
+assert.ok(phoneInsetCss.includes(':is(.wpb-settings,.wpb-progress)>.wpb-page-scroll{')&&
+  phoneInsetCss.includes('padding-inline:var(--pi-page-inset)!important;'),
+  'Settings and Progress phone scroll panes share root header insets');
+assert.ok(!css.includes('padding-left:14px!important;padding-right:14px!important;'),
+  'The old 14px mobile page-scroll exception must not return');
+assert.ok(css.includes('.wpb .wpb-home>.wpb-page-scroll{')&&
+  css.includes('padding-inline:var(--pi-page-inset)!important;'),
+  'Home keeps its canonical shared-inset owner');

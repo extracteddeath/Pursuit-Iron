@@ -18,6 +18,12 @@ App 4.0.0 build 905 / Engine 0.65.9 / M234. `RELEASE_MANIFEST.json` is authorita
 
 
 
+## M283 — cross-tab phone scroll insets and header seams
+
+- Settings/Progress scroll bodies had a legacy 14px mobile padding rule, different from the shared header 12px at 320px and 16px at 393px. Replace this with `--pi-page-inset` and keep Home's existing canonical scroll owner. No new CSS layer or navigation changes.
+- Browser regression checks on both themes verify left/right root header ↔ Settings/Progress scroll inset equality, opaque header chrome, and zero visible gap at the Settings jump rail. Plan's scroll picker stays guarded by its prior R62 sticky/opaque/margin tests.
+- Static style-priority ceiling drops to 2,462. Next: use screenshot evidence to review tablet header/scroll surface transitions and narrow-phone text overflow; fix reproduced issues only, not a blanket redesign.
+
 ## M282 — accessible Settings row descriptions at 200% text
 
 - Real-browser screenshot at 320px/200% text showed narrow Settings copy breaking a single word (“suggestions”) around the inline kg/lb control. The existing Settings body 16em container breakpoint now stacks the copy above its control rather than narrowing the description to one-third of the card.

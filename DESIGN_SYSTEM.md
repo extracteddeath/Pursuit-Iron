@@ -130,3 +130,8 @@ The one moving bottom-nav `[data-pi-m3-track]::before` indicator paints with `--
 ### M282 — Settings explanations before controls under enlarged text
 
 Use the existing `@container pi-settings-body (max-width:16em)` breakpoint for Settings' 200% enlarged-text cases, not a global viewport-only hack. Within it, the canonical `.wpb-settings-row` becomes a vertical layout; `.wpb-settings-row-copy` may use the full card width before `.wpb-settings-row-control` sits beneath. Its `flex:none` declaration prevents the original row flex basis from creating a huge blank block when the flex axis becomes vertical. Keep compact horizontal rows at ordinary text sizes, 48px control targets, the eight card groups, preference state, and accessible descriptions. No new style priority flags are introduced.
+
+
+### M283 — responsive scroll content aligns to root header
+
+Phone scroll panes should be flush with the same horizontal `--pi-page-inset` as `UiRootHeader`: 12px for widths below 360px, 16px until 599px, and 24px on larger reading layouts where applicable. Settings and Progress use a single token-based phone rule below 420px; Home already owns its token inset in the canonical shared reading-surface rule. Do not reintroduce the retired 14px two-sided hardcoded `!important` override. The Settings jump rail must sit directly under its opaque root header; the Plan sticky week picker continues to own its opaque background, zero margin and bottom border. Real-browser geometry asserts that these seams remain aligned without changing program data, workout geometry, or page scroll interaction.

@@ -5140,6 +5140,11 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   min-height:48px!important;
   color:var(--pi-color-on-control)!important;
 }
+/* The native select already has an explicit accessible label. On compact phones,
+   suppress its duplicate visible "Jump to" copy to leave room for the section name. */
+@media(max-width:420px){
+  #root[data-pi-motion="expressive"] .wpb .wpb-settings.wpb-settings .wpb-settings-jump-control>span{display:none;}
+}
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-hero{
   margin-bottom:10px!important;
 }

@@ -117,17 +117,17 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "06088cc23f3f02f13734cfb77b065057ee5ce9c9d527bd760144ca88a0ee5e40",
+    "modules/App.js": "05830881a6246ad5343cdbbb38777d4722ca717defbc34257a1971d99914c815",
     "index.html": "54fd7f97b0a2d9d8b76694380158b4a23699a3f1c1cbea697c5e33b7c705b7ed",
-    "sw.js": "8193326b539d7e63b8a3a561a2679184be023cd2f5b00a6779de0faa5369f847",
-    "BUILD_PROFILE.json": "ecf24cc35d5acd7b312b5cd7b58a1afb943a11fb1097a25f5a5bd4e17f1d31f0",
-    "CHANGELOG.md": "2fcd35c222cc5a71387a7c77f03c3edd3cb6f7f30e305ac660734d18f20a2e3c",
-    "app.css": "8bed6c9e3157267ca93f81cc0837e9f3ef4c741dcf1dc715d9fed99ba640079a",
+    "sw.js": "5dd6876d137606f61c20033821e6237fe671f23a3bd51c9f666efa7fec9b0a87",
+    "BUILD_PROFILE.json": "6744750422e18045fc2003f74c0033137a8f2d4b0235e0ba14f4281ff1e963dc",
+    "CHANGELOG.md": "b1d29501a2fad7b7c1c5e9fa70f412a6ef4f22a66f70ccca636e72c85f443e88",
+    "app.css": "4eeccb659928a8e9b18543e9963909e07bb681665c4e87440fc4609e52d78942",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b905-reb2d5c32471573db",
-  "uiMilestone": "Build 905 · M272 Home weekly hierarchy"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b905-r7b02634482ddfe33",
+  "uiMilestone": "Build 905 · M273 selected-week-first Plan cohesion"
 }

@@ -6,7 +6,7 @@ import { createEngineContext, createTransactionalEvaluator, auditVector, compare
 import { createTrainingSetEvents } from './events.js';
 import { deriveMuscleLedger } from './ledgers.js';
 import { phasePolicyFor, phaseLabel } from './phase-policy.js';
-import { normalizeRequest } from './prescription.js';
+import { normalizeRequest, createMusclePrescriptions } from './prescription.js';
 import { estimateSessionMinutes, repsForPhase, restForExercise, rirForPhase } from './realizer.js';
 import { progressionInstruction, selectProgressionStyle, continuationProgressionStyle } from './progression-style.js';
 import { blocksForCycleTemplate, cycleTemplates, goalForCycleTemplate } from './simulation.js';
@@ -221,6 +221,101 @@ function protectStrengthEntry(previous, next, spec, request) {
     }
     throw new NextShellAdapterError('NEXT_CYCLE_STRENGTH_VOLUME_CLIFF',
         `Strength would fall from ${before} to ${totalSets(next)} weekly working sets. This is too large a reduction for a normal accumulation block. Change split or session capacity; a taper-sized drop belongs in Peak, not Strength.`);
+}
+// Automatic cycle topology is separate from exercise adaptation. Preserve explicit
+// block overrides, training days, session limits, equipment and athlete restrictions.
+// A bounded, deterministic candidate search only compares fully audited programs.
+const PHASE_SPLIT_CANDIDATES = Object.freeze({
+    hypertrophy_accumulation: ['ulppl','pplul','upper_lower','full_body','ppl','full_body_patterns','torso_limbs'],
+    strength_accumulation: ['upper_lower','sbd_power','full_body','ulppl','pplul','strength_fb','full_body_patterns','phul'],
+    intensification: ['upper_lower','sbd_power','full_body','ulppl','strength_fb','phul','full_body_patterns'],
+    peak: ['sbd_power','upper_lower','full_body','strength_fb','full_body_patterns','ulppl'],
+    mixed_accumulation: ['ulppl','pplul','phul','upper_lower','full_body','full_body_patterns','sbd_power'],
+    foundation: ['full_body','upper_lower','ulppl','pplul','full_body_patterns']
+});
+export function cycleSplitCandidates(spec, config, enabled) {
+    const days = Number(spec.days || config.days);
+    if (!enabled || spec.split)
+        return [{ ...spec }];
+    const preferred = [config.split, ...(PHASE_SPLIT_CANDIDATES[spec.phase] || ['full_body','upper_lower'])];
+    const seen = new Set();
+    return preferred.filter(split => split && !seen.has(split) && (seen.add(split), splitSupportsTrainingDays(split, days)))
+        .slice(0, 6).map(split => ({ ...spec, split }));
+}
+function cycleProgramScore(program, request, phase, previous, startingSplit) {
+    const normalized = normalizeRequest(request);
+    const prescriptions = createMusclePrescriptions(normalized, phase);
+    let received = 0, possible = 0;
+    for (const p of prescriptions) {
+        const priority = normalized.goal.musclePriorities[p.muscle];
+        // Upper-body and lower-body muscle priorities count; maintenance muscles must not
+        // displace the important work merely because they are easy to fill.
+        const weight = priority === 'primary' ? 3 : priority === 'specialization' ? 2.6
+            : priority === 'high' ? 1.9 : priority === 'normal' ? 1 : .12;
+        const target = Math.max(.25, Number(p.preferred) || 0);
+        received += weight * Math.min(1, (program.muscleLedger?.[p.muscle]?.fractionalSets || 0) / target);
+        possible += weight;
+    }
+    const catalog = createExerciseMap(normalized.customExercises);
+    const liftFrequencies = {};
+    for (const lift of BLOCK_LIFTS) {
+        liftFrequencies[lift] = program.sessions.filter(session => session.exercises.some(ex =>
+            ['primary_strength','secondary_strength'].includes(ex.role)
+            && (catalog.get(ex.exerciseId)?.liftSpecificity?.[lift] || 0) > .45)).length;
+    }
+    const focusStrength = ['strength_accumulation','intensification','peak','mixed_accumulation'].includes(phase);
+    const targetLifts = Object.entries(normalized.goal.liftPriorities || {})
+        .filter(([,priority]) => priority !== 'maintenance').map(([lift]) => lift);
+    const desiredPractice = phase === 'peak' ? 1 : phase === 'mixed_accumulation' ? 1 : 2;
+    const liftQuality = targetLifts.length
+        ? targetLifts.reduce((n,lift) => n + Math.min(1, (liftFrequencies[lift] || 0) / (normalized.goal.liftFrequency?.[lift] || desiredPractice)), 0) / targetLifts.length
+        : 0;
+    const sets = totalSets(program);
+    const totalMinutes = program.sessions.reduce((n,session)=>n+session.estimatedMinutes,0);
+    const capacity = program.sessions.reduce((n,session)=>n+session.maxMinutes,0) || 1;
+    const usefulDensity = Math.min(1, totalMinutes / (capacity * .72));
+    const continuity = startingSplit && program.split?.family === startingSplit ? 1 : 0;
+    // Muscle and goal coverage dominate. Strength gets specific practice reward;
+    // hypertrophy rewards adequate productive volume, not filling time indiscriminately.
+    const goalScore = 100 * (possible ? received / possible : 0)
+        + (focusStrength ? 22 * liftQuality : 0)
+        + (phase === 'hypertrophy_accumulation' ? 8 * usefulDensity : 3 * usefulDensity)
+        + 2 * continuity;
+    return { score: Math.round(goalScore * 100) / 100, weeklySets: sets,
+        muscleTargetCoverage: Math.round(100 * (possible ? received / possible : 0)),
+        liftFrequencies };
+}
+function chooseOptimizedCycleBlock(spec, config, enabled, buildCandidate) {
+    const candidates = cycleSplitCandidates(spec, config, enabled);
+    let winner = null, firstError = null, passing = 0;
+    for (const candidateSpec of candidates) {
+        try {
+            const output = buildCandidate(candidateSpec);
+            if (output.next?.audit?.result !== 'pass') continue;
+            passing++;
+            const score = cycleProgramScore(output.next, output.request, spec.phase, output.previous, config.split);
+            const value = { ...output, spec: candidateSpec, quality: score };
+            if (!winner || value.quality.score > winner.quality.score + .0001)
+                winner = value;
+        } catch (error) {
+            firstError ||= error;
+        }
+    }
+    if (!winner)
+        throw firstError || new NextShellAdapterError('NEXT_CYCLE_SPLIT_SEARCH_REJECTED',
+            'No safe weekly structure was found for this block. Try more time, fewer lift exposures or another split.');
+    const automatic = enabled && !spec.split;
+    winner.decision = {
+        mode: automatic ? 'goal_optimized' : 'fixed',
+        selectedSplit: winner.next.split.family,
+        candidateCount: candidates.length,
+        passingCandidates: passing,
+        ...winner.quality,
+        reason: automatic
+            ? `Compared ${candidates.length} compatible weekly structures for ${phaseLabel(spec.phase).toLowerCase()}, retained ${passing} audited plans, and selected the highest scoring plan for muscle coverage, relevant lift practice and training capacity.`
+            : 'Kept the selected weekly structure and verified it against the training constraints.'
+    };
+    return winner;
 }
 function legacyBlockConfig(base, phase, weeks, name) {
     return { ...base, name, goal: phaseGoal(phase), weeks, deload: false, percentScheme: null, cyclePeriodization: true, endless: false };

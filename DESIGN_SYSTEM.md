@@ -161,3 +161,7 @@ Use the existing --pi-page-inset, --pi-space-* and --pi-color-* tokens as the on
 The maintained Expressive Profile family owns the effective lifetime-summary grid, metric cells, numeric wrapping, small-phone padding and large-text container reflow. Historical R17/R39/R40 summary rules and duplicate R77 reflow are retired. Keep the base non-Expressive fallbacks and shared forced-colors/typography owners. External priority ceiling is **2,432**; inline and embedded ceilings are unchanged.
 
 The ownership scanner strips comments before reading at-rule contexts. Scoped repeats are **15**, across **14** existing allowed keys; the prior scanner reported 21 because some media/container rules were misclassified as unconditional. This corrects accounting rather than claiming additional CSS deletions. Comments before queries may neither invent cross-scope conflicts nor hide same-scope duplicates.
+
+### M289 — Profile Strength comparison ownership
+
+The maintained Expressive Profile family owns the effective Strength section, comparison rows, score typography, single-pattern sizing and next-milestone surface. Retire the historical tile/card and narrow-phone declarations instead of layering another override. Keep the featured row’s label and value aligned with ordinary rows, full-width single-pattern presentation and the 48px share action. Shared focus/forced-color rules and non-Expressive fallbacks retain their existing owners. External CSS priority ceiling is **2,389**, down 43; inline, embedded and repeated-priority budgets are unchanged.

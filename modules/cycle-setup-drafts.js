@@ -20,7 +20,14 @@ export function normalizeCycleSetupDraft(value, signature) {
         config.focus = Object.fromEntries(Object.entries(value.config.focus).filter(([k,v]) => /^[a-z_]+$/.test(k) && Number.isInteger(v) && v >= 0 && v <= 2));
     const blocks = Array.isArray(value.blocks) && value.blocks.length >= 1 && value.blocks.length <= 8
         && value.blocks.every(b => b && phases.has(b.phase) && ['string','number'].includes(typeof b.weeks) && String(b.weeks).length <= 16)
-        ? value.blocks.map(b => ({ phase: b.phase, weeks: b.weeks })) : null;
+        ? value.blocks.map(b => ({
+            phase: b.phase, weeks: b.weeks,
+            ...(typeof b.split === 'string' && /^[a-z_]{1,40}$/.test(b.split) ? { split: b.split } : {}),
+            ...(Number.isInteger(b.days) && b.days >= 2 && b.days <= 6 ? { days: b.days } : {}),
+            ...(['bench_press','back_squat','deadlift','overhead_press'].includes(b.priorityLift)
+                && Number.isInteger(b.frequency) && b.frequency >= 1 && b.frequency <= 3
+                ? { priorityLift: b.priorityLift, frequency: b.frequency } : {})
+        })) : null;
     return { v: 1, signature, config, blocks,
         step: Number.isInteger(value.step) && value.step >= 0 && value.step < 16 ? value.step : 0,
         templateId: typeof value.templateId === 'string' ? value.templateId.slice(0, 50) : '',

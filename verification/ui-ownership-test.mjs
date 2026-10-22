@@ -280,7 +280,7 @@ assert.ok(jumpOwner.includes('border-radius:var(--pi-shape-action)!important;') 
 assert.ok(css.includes('.wpb .wpb-settings-title{margin:var(--pi-space-4) var(--pi-space-1) var(--pi-space-2);font-size:var(--pi-type-support);') &&
   css.includes('.wpb .wpb-settings-row-description{font-size:var(--pi-type-support);'),
   'Settings headings and descriptions keep a legible shared support type role');
-assert.ok(!css.includes('.wpb-settings .wpb-settings-jump{\\n  padding-bottom:8px!important;') &&
-  !css.includes('.wpb-settings .wpb-settings-jump{\\n  padding:8px 16px 10px!important;') &&
-  !css.includes('.wpb-settings .wpb-settings-jump-control select{\\n  min-height:44px!important;'),
+assert.ok(!css.includes('.wpb-settings .wpb-settings-jump{\n  padding-bottom:8px!important;') &&
+  !css.includes('.wpb-settings .wpb-settings-jump{\n  padding:8px 16px 10px!important;') &&
+  !css.includes('.wpb-settings .wpb-settings-jump-control select{\n  min-height:44px!important;'),
   'Old Settings layout and undersized select rules must not return');

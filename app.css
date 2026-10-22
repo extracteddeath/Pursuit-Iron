@@ -338,14 +338,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-session-detail{
   transform-origin:top center;
 }
-#root[data-pi-motion="expressive"] .wpb-profile .wpb-profile-strength-grid{
-  gap:6px!important;
-}
-#root[data-pi-motion="expressive"] .wpb-profile .wpb-profile-strength-cell{
-  padding:9px 5px!important;
-}
 #root[data-pi-motion="expressive"] .wpb-profile .wpb-profile-strength-cell>.mono{
-  font-size:clamp(16px,4vw,18px)!important;
   letter-spacing:-.025em;
 }
 #root[data-pi-motion="expressive"] .wpb :is(.wpb-history-session-detail,.wpb-advanced-body){
@@ -1315,12 +1308,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   min-width:0!important;
   border-radius:16px 16px 10px 16px!important;
   background-image:none!important;
-}
-#root[data-pi-motion="expressive"] .wpb-profile .wpb-profile-strength-cell:first-child{
-  border-radius:22px 14px 14px 22px!important;
-}
-#root[data-pi-motion="expressive"] .wpb-profile .wpb-profile-strength-cell:last-child{
-  border-radius:14px 22px 22px 14px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-profile .wpb-profile-section:where(:not(.wpb-profile-club)){
   border-radius:24px 24px 17px 24px!important;
@@ -8434,7 +8421,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 @media(max-width:360px){
   #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-hero{padding:12px!important}
   #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-strength{padding:14px!important}
-  #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-stat-grid{gap:0!important}
   #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-stat{padding-inline:3px!important}
 }
 /* Preserve R77's large-text single-column facts when the available container shrinks. */
@@ -8455,20 +8441,20 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 /* Cohesion 05 — share-card components use the same semantic surface, type,
    shape and control roles as Profile, Progress and Settings. No inline layout. */
 .wpb-profile-share-card{margin:0 0 var(--pi-space-3);}
-.wpb-profile-card-brand{display:flex;align-items:center;gap:8px;font-size:.6875rem;font-weight:800;letter-spacing:.1em;color:var(--wpb-theme-accent-ink)}
-.wpb-profile-share-card h2{margin:16px 0 5px;font-size:clamp(1.5rem,5vw,2rem);line-height:1.16;letter-spacing:-.035em;overflow-wrap:anywhere}
+.wpb-profile-card-brand{display:flex;align-items:center;gap:var(--pi-space-2);font-size:.6875rem;font-weight:800;letter-spacing:.1em;color:var(--wpb-theme-accent-ink)}
+.wpb-profile-share-card h2{margin:var(--pi-space-4) 0 var(--pi-space-1);font-size:clamp(1.5rem,5vw,2rem);line-height:1.16;letter-spacing:-.035em;overflow-wrap:anywhere}
 .wpb-profile-card-caption{margin:0;color:var(--wpb-theme-muted);font-size:.8125rem;line-height:1.5}
-.wpb-profile-card-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 16px;margin:18px 0 0}
-.wpb-profile-card-metrics>div{min-width:0;padding:13px 0;border-top:1px solid var(--pi-color-divider,var(--wpb-theme-border))}
+.wpb-profile-card-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 var(--pi-space-4);margin:var(--pi-space-4) 0 0}
+.wpb-profile-card-metrics>div{min-width:0;padding:var(--pi-space-3) 0;border-top:1px solid var(--pi-color-divider,var(--wpb-theme-border))}
 .wpb-profile-card-metrics>[data-card-metric="favorites"],.wpb-profile-card-metrics>[data-card-metric="prs"],.wpb-profile-card-metrics>[data-card-metric="club"]{grid-column:1/-1}
 .wpb-profile-card-metrics dt{font-size:.75rem;font-weight:650;color:var(--wpb-theme-muted)}
-.wpb-profile-card-metrics dd{margin:5px 0;font-size:1rem;font-weight:750;line-height:1.4;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.wpb-profile-card-metrics dd{margin:var(--pi-space-1) 0;font-size:1rem;font-weight:750;line-height:1.4;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
 .wpb-profile-card-metrics dd>span{display:block}
 .wpb-profile-card-metrics p{margin:0;font-size:.6875rem;line-height:1.5;color:var(--wpb-theme-muted)}
 .wpb-profile-card-actions{margin-top:var(--pi-space-2)}
 .wpb-profile-card-field{margin:var(--pi-space-4) 0 0}
 /* Share-card fields use the shared .wpb-ui-control. */
-.wpb-profile-card-favorites>p{margin:16px 0 0;font-size:.8125rem;line-height:1.5;color:var(--wpb-theme-muted)}
+.wpb-profile-card-favorites>p{margin:var(--pi-space-4) 0 0;font-size:.8125rem;line-height:1.5;color:var(--wpb-theme-muted)}
 @media(max-width:360px){.wpb-profile-share-card{padding:16px}}
 @media(forced-colors:active){.wpb-profile-share-card,.wpb-profile-card-actions>button{border:1px solid CanvasText}.wpb-profile-card-field :is(input,select){border-color:CanvasText}}
 

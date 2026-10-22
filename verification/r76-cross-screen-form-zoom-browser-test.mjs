@@ -91,7 +91,7 @@ try{
             hierarchy.selectHeight>=48&&Math.abs(hierarchy.jumpRadius-14)<1&&
             hierarchy.titleSize>=13&&hierarchy.descriptionSize>=13&&hierarchy.withinViewport,
             'Settings category rail and readable controls use shared sizes: '+JSON.stringify(hierarchy));
-          const destinations=await page.$eval('.wpb-settings-jump-control select option',
+          const destinations=await page.$$eval('.wpb-settings-jump-control select option',
             options=>options.map(el=>[el.value,el.textContent.trim()]));
           assert.ok(destinations.some(([id,label])=>id==='training'&&label==='Gyms & equipment'),
             'Settings directs equipment lookup to the actual gym section');

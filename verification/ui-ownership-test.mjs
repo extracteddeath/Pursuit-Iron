@@ -5,7 +5,7 @@ import fs from 'node:fs';
 // Decrease alongside a verified cleanup; never raise to permit a cosmetic override.
 const css = fs.readFileSync('app.css', 'utf8');
 const app = fs.readFileSync('modules/App.js', 'utf8');
-const MAX_IMPORTANT = 2474; // M278 retired 6 shadowed Profile emphasis/geometry declarations
+const MAX_IMPORTANT = 2463; // M279 retired 11 superseded Settings header/control priorities
 const MAX_APP_IMPORTANT = 1290; // Prevent embedded StyleTag patches bypassing the CSS budget.
 const MAX_REPEAT_IMPORTANT = 21;
 const MAX_INLINE_STYLE_OBJECTS = 3116; // M276: Program cycle context and edit guidance now use shared CSS
@@ -267,3 +267,20 @@ assert.ok(!css.includes('.wpb-profile .wpb-profile-strength-cell{\n  padding:9px
     'The superseded Profile strength row padding must not regain priority');
 assert.ok(!css.includes('.wpb-profile-stat-grid{gap:0!important}'),
     'Responsive Profile facts must not duplicate the existing gap owner');
+
+// M279: Settings has one final category rail owner and one class-owned card family.
+// The page inset handles 320px widths without parallel hardcoded media overrides.
+const jumpOwner=css.slice(css.indexOf('/* R57 — one spacing cadence'),css.indexOf('/* M270 — shared root typography'));
+assert.ok(jumpOwner.includes('.wpb-settings.wpb-settings>.wpb-settings-jump{') &&
+  jumpOwner.includes('padding:0 var(--pi-page-inset) var(--pi-space-2)!important;'),
+  'Settings category rail is owned by the shared page inset and does not expose sticky gaps');
+assert.ok(jumpOwner.includes('border-radius:var(--pi-shape-action)!important;') &&
+  jumpOwner.includes('.wpb-settings-jump-control select{'),
+  'Settings category choice shares the action shape and 48px touch owner');
+assert.ok(css.includes('.wpb .wpb-settings-title{margin:var(--pi-space-4) var(--pi-space-1) var(--pi-space-2);font-size:var(--pi-type-support);') &&
+  css.includes('.wpb .wpb-settings-row-description{font-size:var(--pi-type-support);'),
+  'Settings headings and descriptions keep a legible shared support type role');
+assert.ok(!css.includes('.wpb-settings .wpb-settings-jump{\\n  padding-bottom:8px!important;') &&
+  !css.includes('.wpb-settings .wpb-settings-jump{\\n  padding:8px 16px 10px!important;') &&
+  !css.includes('.wpb-settings .wpb-settings-jump-control select{\\n  min-height:44px!important;'),
+  'Old Settings layout and undersized select rules must not return');

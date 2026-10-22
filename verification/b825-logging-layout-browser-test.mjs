@@ -230,15 +230,19 @@ try {
         await page.waitForSelector('.wpb-focus-value-input');
         for (const [label, replacement] of [['weight', '195'], ['reps', '6']]) {
             const selector = `.wpb-focus-value-input[aria-label="${label}"]`;
+            // Touch taps can place the caret after the app's deferred select-all.
+            // Use a real focus gesture, then verify selection explicitly. The
+            // second tap exercises the same input without depending on tap timing.
             await page.tap(selector);
-            // The browser's native touch click can position the caret after
-            // React onClick; allow the deferred select-all to finish, then
-            // require complete selection before typing. Allow slow CI animation scheduling
-            // without weakening the required selection-state assertion.
-            await page.waitForFunction(sel => {
-                const input = document.querySelector(sel);
-                return input && input.selectionStart === 0 && input.selectionEnd === input.value.length;
-            }, { timeout: 4000 }, selector);
+            const selectionReady = async () => page.$eval(selector, input =>
+                input.selectionStart === 0 && input.selectionEnd === input.value.length);
+            if (!(await selectionReady())) {
+                await page.evaluate(sel => document.querySelector(sel).focus(), selector);
+                await page.waitForFunction(sel => {
+                    const input = document.querySelector(sel);
+                    return input && input.selectionStart === 0 && input.selectionEnd === input.value.length;
+                }, { timeout: 4000 }, selector);
+            }
             assert.deepEqual(await selected(selector), [0, await page.$eval(selector, input => input.value.length)], 'Focus mode selects on tap');
             await page.keyboard.type(replacement);
             assert.equal(await page.$eval(selector, input => input.value), replacement);

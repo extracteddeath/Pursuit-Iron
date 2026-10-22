@@ -106,3 +106,16 @@ for(const [index,block] of optimized.blocks.entries()){
  assert.equal(block.config.days,5,'adaptation never changes requested weekly training days');
 }
 console.log('PASS B893 automatic topology: separate split/exercise switches, audited phase-aware structure selection and exact preview metadata.');
+
+let lockedIds=0;
+const retainedRoster=generateNextCycleForShell({
+ templateId:'custom', config:{...config,days:4,split:'upper_lower'},
+ blocks:[{phase:'mixed_accumulation',split:'upper_lower',weeks:2},{phase:'mixed_accumulation',split:'upper_lower',weeks:3}],
+ adaptBetweenBlocks:false, adaptTrainingSplit:true, legacyExercises:EXERCISES,seed:893,
+ makeId:()=>`b893-locked-${++lockedIds}`
+});
+const exerciseOrder=b=>b.nextEngine.program.sessions.map(day=>day.exercises.map(ex=>ex.exerciseId));
+assert.deepEqual(exerciseOrder(retainedRoster.blocks[1]),exerciseOrder(retainedRoster.blocks[0]),
+ 'automatic split adaptation must not replace exercises when the weekly split is explicitly unchanged and exercise adaptation is off');
+assert.ok(retainedRoster.blocks.every(b=>b.nextEngine.program.audit.result==='pass'));
+console.log('PASS B893 independence: disabling exercise adaptation preserves roster across same-split blocks.');

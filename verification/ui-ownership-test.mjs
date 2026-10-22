@@ -8,7 +8,7 @@ const app = fs.readFileSync('modules/App.js', 'utf8');
 const MAX_IMPORTANT = 2483;
 const MAX_APP_IMPORTANT = 1290; // Prevent embedded StyleTag patches bypassing the CSS budget.
 const MAX_REPEAT_IMPORTANT = 21;
-const MAX_INLINE_STYLE_OBJECTS = 3143; // M271: one root app bar replaces per-screen header presentation
+const MAX_INLINE_STYLE_OBJECTS = 3135; // M273: actual measured ceiling after removing three Plan glance inline objects
 const allowedDebtKeys = new Set([
   "\t#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step\tborder-radius",
   "\t#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step\theight",

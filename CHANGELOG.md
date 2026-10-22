@@ -1,3 +1,10 @@
+## M281 — selected bottom-navigation indicator without gray outline (October 22, 2026)
+
+- Removed the permanent R35 2px gray-ish outline around the animated active bottom-nav pill from its original CSS owner. The selected state continues using saved-theme tonal fill, selected-icon paint and the colored destination label.
+- Preserved keyboard-only focus rings and system forced-colors outlines; all five navigation routes, touch targets, pointer feedback, animation, and accessible labels remain unchanged.
+- Added real-browser computed-style checks across root routes, themes and phone/tablet sizes, plus a no-regression stylesheet ownership check. No new `!important` declarations or per-screen overrides; Workout/Focus and engine untouched.
+- Requires same-build offline cache/manifest rehash and exact-head release, motion, accessibility and browser CI before merge.
+
 ## M280 — shared root title word integrity (October 22, 2026)
 
 - In the existing `UiRootHeader` title owner, use min-content intrinsic sizing and normal word breaking so fixed destination names stay intact at 320px and 200% text. If a root action does not fit beside a word, the existing flex-wrap puts that action on the next row instead of splitting “Profile.”

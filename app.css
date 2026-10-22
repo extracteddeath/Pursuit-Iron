@@ -3398,18 +3398,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   }
 }
 
-/* M3 EXPRESSIVE R35 — LEGIBLE PAIRINGS, LIGHT AND DARK
-   Contrasts follow actual foreground / surface roles. The selected nav pill
-   keeps its existing theme-native fill; its defined high-contrast perimeter
-   supplies the required non-text state distinction without brightening the
-   whole navigation bar or dimming any workout values. */
-#root[data-pi-motion="expressive"] .wpb{
-  --pi-r35-control-outline:color-mix(in srgb,currentColor 62%,var(--pi-m3e-base));
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar[data-pi-m3-track]::before{
-  outline:2px solid var(--pi-r35-control-outline);
-  outline-offset:-2px;
-}
+/* M281 — The saved-theme moving nav indicator is a filled tonal pill,
+   not an outlined chip. Retire R35's permanent grey ring at its original
+   owner; keyboard focus and forced-colors indicators remain separate. */
 #root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab:focus-visible{
   outline:2px solid currentColor!important;
 }

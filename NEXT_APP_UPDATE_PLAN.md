@@ -18,6 +18,12 @@ App 4.0.0 build 905 / Engine 0.65.9 / M234. `RELEASE_MANIFEST.json` is authorita
 
 
 
+## M281 — navigation indicator and shared selected state
+
+- Removed the persistent gray R35 perimeter from the shared moving selected-tab pill. Continue to express selection using the saved-theme tonal fill, icon and label; retain a focus-visible keyboard ring and a distinct forced-colors border.
+- Real-browser and static contract tests guard against ordinary-theme pseudo-element outline/border returning across all five primary tabs. No duplicate tab renderer, animated-track change, navigation state change or `!important` increase.
+- Next cross-tab priorities: enlarged-text Settings descriptions and category affordances, scroll/sticky bar compositing at 320/393px, and real-device sampling across light/dark theme and tablet sizes.
+
 ## M280 — cross-tab root title accessibility
 
 - Browser screenshots revealed a one-word title split (“Profil” / “e”) at 320px and 200% text alongside Profile's Edit action. Fix in the existing shared title owner rather than creating a Profile-specific header.

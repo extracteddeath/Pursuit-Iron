@@ -301,6 +301,12 @@ try{
               min:getComputedStyle(next).minHeight,max:getComputedStyle(next).maxHeight,
               transform:getComputedStyle(next).transform,rows:getComputedStyle(next.parentElement).gridTemplateRows,
               overviewRow:getComputedStyle(overview).gridRow}:null;
+            const bar=document.querySelector('.wpb-tabbar');
+            const tabIndicator=bar?.hasAttribute('data-pi-m3-track')?{
+              outline:getComputedStyle(bar,'::before').outlineStyle,
+              border:getComputedStyle(bar,'::before').borderTopStyle,
+              selected:bar.querySelectorAll('.wpb-tab[aria-current="page"]').length
+            }:null;
             const orbit=document.querySelector('.wpb-home .wpb-m3-day-orbit');
             const title=document.querySelector('.wpb-root-header .wpb-screen-title');
             const edit=document.querySelector('.wpb-root-header .wpb-root-actions button');
@@ -314,7 +320,7 @@ try{
               overlapsAction:!!editBox&&titleBox.left<editBox.right-1&&titleBox.right>editBox.left+1&&
                 titleBox.top<editBox.bottom-1&&titleBox.bottom>editBox.top+1
             }:null;
-            return {overflow:document.documentElement.scrollWidth>innerWidth+2,tabs,plan,rootTitle,
+            return {overflow:document.documentElement.scrollWidth>innerWidth+2,tabs,plan,rootTitle,tabIndicator,
               homeOrbitVisible:!!orbit&&getComputedStyle(orbit).display!=='none'};
           });
           if(width===320||width===1280)
@@ -323,6 +329,10 @@ try{
           assert.ok(enlarged.tabs.every(t=>t.hit&&t.visibleName===t.label&&t.lines===1&&t.text.x>=t.box.x-1&&t.text.right<=t.box.right+1&&
             t.text.y>=t.box.y-1&&t.text.bottom<=t.box.bottom+1),
             '200% '+route+' navigation labels fit their real controls: '+JSON.stringify({theme,width,enlarged}));
+          if(enlarged.tabIndicator)
+            assert.ok(enlarged.tabIndicator.outline==='none'&&enlarged.tabIndicator.border==='none'&&
+              enlarged.tabIndicator.selected===1,
+              'Selected navigation uses one filled indicator without a permanent gray rim: '+JSON.stringify({theme,width,route,indicator:enlarged.tabIndicator}));
           if(route==='profile'&&width===320)
             assert.ok(enlarged.rootTitle?.text==='Profile'&&enlarged.rootTitle.lines===1&&
               !enlarged.rootTitle.overlapsAction,

@@ -1,5 +1,5 @@
 import { auditProgram } from './arbiter.js';
-import { SUPPORTED_SPLIT_FAMILIES } from './topology.js';
+import { SUPPORTED_SPLIT_FAMILIES, splitSupportsTrainingDays } from './topology.js';
 import { createExerciseMap } from './exercise-db.js';
 import { createInitialCycleState, startPhase } from './cycles.js';
 import { createEngineContext, createTransactionalEvaluator, auditVector, compareCandidateQuality } from './engine-context.js';

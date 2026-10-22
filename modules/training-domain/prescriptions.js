@@ -718,7 +718,8 @@ function engineSessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, h
     const convert = value => convertHistoryLoad(value, original?.unit ?? program.config?.unit, unit);
     const s = original ? { ...original, weight: convert(original.weight),
         last: original.last,
-        setTargets: original.setTargets?.map(t => ({ ...t, weight: convert(t.weight) })),
+        setTargets: original.setTargets?.map(t => ({ ...t, weight: convert(t.weight),
+            ...(t.previousLoad != null ? { previousLoad: convert(t.previousLoad) } : {}) })),
         reason: historyLoadReason(original.reason, unit) } : null;
     /* ⚠ WHAT IS LOADABLE HAS ONE OWNER: the app's loadStep / gymRackFor — the same rule the workout's "load-not-loadable" check
        uses. The engine rounds against its own loading inventory, which can allow a weight the app's implement cannot make (45 lb on
@@ -742,7 +743,7 @@ function engineSessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, h
     const floor = cellRepRange(cell, program, ex, slot === day.primaryIndex)[0];
     const setTargets = s.setTargets?.map(target => {
         if (perSetIncrease) {
-            const previous = convertHistoryLoad(target.previousLoad, program.config?.unit, unit);
+            const previous = target.previousLoad;
             let weight = loadableAtOrBelow(ex, target.weight, unit);
             if (target.earnedLoadIncrease && previous > 0 && weight <= previous)
                 weight = loadableAbove(ex, previous, unit) ?? previous;
@@ -826,7 +827,7 @@ function customExerciseHistoryRefs(program, day, id, history) {
         return { comparable, reference: own[0] ?? null };
     // Cross-program history is deliberately reference-only and is consulted only when this program
     // has no canonical history for the exercise at all.
-    const entries = (history || []).filter(h => validHistoryDate(h) && h?.perf?.[id]).slice().sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0));
+    const entries = normalizeHistoryRevisions(history).entries.filter(h => h?.perf?.[id]).slice().sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0));
     return { comparable: null, reference: entries[0] || null };
 }
 function customExerciseHistory(program, day, id, history) {
@@ -858,7 +859,7 @@ function customProgramSuggestion(program, day, slot, unit, weekIndex, history) {
         const currentCell = computeCell(program, day, ex.id, slot, weekIndex);
         const [lo] = cellRepRange(currentCell, program, ex, slot === day?.primaryIndex);
         const weight = convertHistoryLoad(rawLoad, reference.unit, unit);
-        return { weight, dir: 'hold', action: 'initial', reps: currentCell?.range ?? currentCell?.reps,
+        return { unit, lastUnit: reference.unit ?? unit, weight, dir: 'hold', action: 'initial', reps: currentCell?.range ?? currentCell?.reps,
             target: lo, last: reference.perf[ex.id], confidence: 'low', referenceOnly: true,
             reason: 'Use the last known load only as a starting reference. This program day has no comparable completed history yet, so reps/load are not progressed from another day or program.' };
     }
@@ -892,7 +893,7 @@ function customProgramSuggestion(program, day, slot, unit, weekIndex, history) {
         prescriptionEdited: exposure.nonComparable
     })[0];
     const weight = result.suggestedLoad ?? result.currentLoad;
-    return { weight, dir: weight > result.currentLoad ? "up" : weight < result.currentLoad ? "down" : "hold",
+    return { unit, lastUnit: last.unit ?? unit, weight, dir: weight > result.currentLoad ? "up" : weight < result.currentLoad ? "down" : "hold",
         action: result.action, reps: cell.range, target: result.suggestedReps ?? lo,
         setTargets: result.setTargets, last: last.perf[ex.id], confidence: result.confidence, reason: result.reason };
 

@@ -18,6 +18,14 @@ App 4.0.0 build 905 / Engine 0.65.9 / M234. `RELEASE_MANIFEST.json` is authorita
 
 
 
+## M292 — one Progress and History presentation family
+
+- Move the main Progress view's 225 fixed inline style objects into maintained class owners, sharing card, caption, field, row and action presentation across Sessions, Lifts, Volume and Body. Action/field families remove 32 repeated fixed CSS declarations. Keep five chart objects for calculated widths/heights and data-derived ink. Spacing values on the existing scale use its canonical tokens.
+- Existing native `aria-selected`, `aria-pressed`, `aria-current` and `disabled` values own selection/control paint. Display-state attributes own expanded/reached/change presentation; publish only consumed live palette roles. Retire the old masked group-header font and 14 exact-selector embedded declarations that are fully superseded in the same CSS scope.
+- Inline ceiling: **3,025 → 2,800**. Embedded priorities: **1,239 → 1,229**. External/repeated ceilings remain **2,360 / 15**. Preserve the canonical filtering, history grouping, charts, body logs, scores, callbacks and Workout/Focus experience; do not add priority patches or raise budgets.
+- The extended B911 browser journey covers 320/393/834/1280px, two palettes, normal/200% text, native keyboard controls, full session notes/sets, filters, all panes, explicit body logs, same-day replacement and reload persistence. Require before/after computed-style equality for empty, single, populated, stalled, rising and flat data across modern/fallback presentation and forced colors, screenshot review, all exact-head CI and deployed-file identity before publication.
+- Next: continue separately proven presentation cleanup in the remaining Progress helper cards/charts and shared overlays; main-view ownership does not imply those helpers are migrated. Physical Android certification remains open.
+
 ## M291 — complete Profile presentation batch
 
 - Move 83 fixed JSX style objects across Profile, achievement details, Strength trends and shared Sparkline into the existing CSS families. Leave only calculated progress widths, empty-chart height and data-derived chart ink inline. Publish the live faint/border-soft palette roles once; preserve existing theme values.

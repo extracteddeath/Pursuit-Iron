@@ -22,7 +22,9 @@ const afterBlock3=carryForwardAvoidedExercises(base,afterBlock2,{replaceExercise
 assert.deepEqual(afterBlock3.preferences.avoidedExercises,['user-ban','poor-fit-block-1','poor-fit-block-2','poor-fit-block-3']);
 
 const cycle=fs.readFileSync(new URL('../modules/next-engine/cycle-runtime-adapter.js',import.meta.url),'utf8');
-assert.ok(cycle.includes("carryForwardAvoidedExercises(clone(base), current?.nextEngine?.request, analysis)"),'adaptive cycle request must inherit accumulated avoidances');
+assert.ok(cycle.includes("carryForwardAvoidedExercises(phaseRequest, current?.nextEngine?.request, analysis)"),'adaptive cycle request must inherit accumulated avoidances after structural phase setup');
+assert.match(cycle,/const phaseRequest = target === 'recovery' \? clone\(base\)/,'recovery requests retain the immutable base');
+assert.match(cycle,/requestForBlock\(base, cycle\?\.nextEngineCycle\?\.baseConfig/,'adapted next-block structure must derive from the immutable request');
 assert.ok(cycle.includes('replaceExerciseIds: analysis.replaceExerciseIds'),'adaptive cycle phase transition must receive explicit poor-fit replacement evidence');
 const history=fs.readFileSync(new URL('../modules/next-engine/workout-history-adapter.js',import.meta.url),'utf8');
 assert.ok(history.includes('requestAdaptedFromHistory(baseRequest, snap.request, analysis)'),'standalone next-block adaptation must inherit accumulated avoidances');

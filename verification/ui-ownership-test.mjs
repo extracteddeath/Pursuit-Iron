@@ -307,3 +307,13 @@ assert.ok(css.includes('.wpb-tabbar[data-pi-m3-track]::before{\n  background:var
 assert.ok(css.includes('outline:2px solid Highlight!important;') &&
   css.includes('.wpb .wpb-tabbar .wpb-tab:focus-visible{'),
   'Forced-colors selection and keyboard focus remain distinctly accessible');
+
+
+// M282: text-only 200% enlargement uses the existing Settings body breakpoint
+// rather than another global row override or inline runtime breakpoint.
+const settingsContainer=css.slice(css.indexOf('/* Container em follows text-only enlargement'),css.indexOf('/* Preserve the R41 primary/secondary hierarchy'));
+assert.ok(settingsContainer.includes('@container pi-settings-body (max-width:16em){') &&
+  settingsContainer.includes('.wpb .wpb-settings .wpb-settings-row{\n    flex-direction:column;') &&
+  settingsContainer.includes('.wpb .wpb-settings .wpb-settings-row-copy{\n    flex:none;') &&
+  settingsContainer.includes('.wpb .wpb-settings .wpb-settings-row-control{\n    align-self:flex-start;'),
+  'Enlarged Settings row text has full card width and owns its control below');

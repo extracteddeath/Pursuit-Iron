@@ -643,6 +643,23 @@ try{
     assert.ok(!nested.overflow,'No horizontal clipping with expanded exercises: '+JSON.stringify(nested));
     detail.nested=nested;
     captures[theme].program=Buffer.from(await page.screenshot({type:'png'}));
+    // M276: reference help belongs in Details, not ahead of workout/week navigation.
+    assert.equal(await page.$('.wpb-program-scroll .wpb-program-edit-scope'),null,
+      'Program's first reading surface does not start with edit-scope documentation');
+    await page.click('.wpb-program button[aria-label^="Program details"]');
+    await page.waitForSelector('.wpb-program-edit-scope summary');
+    const help=await page.$eval('.wpb-program-edit-scope',el=>({
+      summaryHeight:el.querySelector('summary').getBoundingClientRect().height,
+      text:el.querySelector('summary').textContent,
+      before:el.getBoundingClientRect().width<=el.parentElement.getBoundingClientRect().width+1
+    }));
+    assert.ok(help.summaryHeight>=44&&help.before&&/Where do my edits apply/.test(help.text),
+      'Reference help is a readable, reachable Details disclosure: '+JSON.stringify(help));
+    await page.click('.wpb-program-edit-scope summary');
+    assert.match(await page.$eval('.wpb-program-edit-scope',el=>el.innerText),
+      /past workout logs.*Future sessions use|past workout logs.*linked cycle blocks/s,
+      'Details preserves the exact saved-program and cycle editing scope');
+
     assert.equal(errors.length,0,'No runtime errors while checking paired themes: '+errors.join('; '));
     measurements[theme]={...surfaces,program:detail};
     await context.close();

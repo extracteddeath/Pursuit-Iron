@@ -405,20 +405,23 @@ try{
         },tab);
         const density=await measure();
         assert.ok(!density.overflow,'R57 destination must not overflow: '+JSON.stringify({tab,density}));
+        // M270 gives every root the same 26px title role; retain each
+        // destination's compact geometry and full-size action checks below.
+        assert.equal(density.titleSize,26,'Root destination uses the shared title size: '+JSON.stringify({tab,density}));
         if(tab==='plan'){
           assert.ok(density.row&&density.back&&density.title&&density.back.height>=48&&density.back.width>=48,
             'Plan Back has an actual 48px target: '+JSON.stringify(density));
-          assert.ok(density.titleSize>=27&&density.titleSize<=28&&density.title.bottom-density.row.top<=118,
+          assert.ok(density.title.bottom-density.row.top<=118,
             'Plan header has compact hierarchy without hiding title: '+JSON.stringify(density));
         }else if(tab==='progress'){
-          assert.ok(density.header&&density.header.height<=155&&density.titleSize>=26&&density.tabs.length===4&&density.tabs.every(x=>x.height>=48),
+          assert.ok(density.header&&density.header.height<=155&&density.tabs.length===4&&density.tabs.every(x=>x.height>=48),
             'Progress title and four 48px tabs fit its header: '+JSON.stringify(density));
         }else if(tab==='settings'){
-          assert.ok(density.header&&density.jump&&density.picker&&density.picker.height>=48&&density.titleSize>=27&&density.select&&density.select.height>=48
+          assert.ok(density.header&&density.jump&&density.picker&&density.picker.height>=48&&density.select&&density.select.height>=48
             &&density.jump.bottom-density.header.top<=128,
             'Settings title and Jump control use a compact, accessible header: '+JSON.stringify(density));
         }else if(tab==='profile'){
-          assert.ok(density.head&&density.edit&&density.hero&&density.titleSize>=27&&density.topPadding<=16
+          assert.ok(density.head&&density.edit&&density.hero&&density.topPadding<=16
             &&density.edit.width>=48&&density.edit.height>=48,
             'Profile identity/edit start promptly with full-size edit action: '+JSON.stringify(density));
           assert.ok(density.shareCard&&density.layoutActions&&density.shareCard.top>=density.head.bottom

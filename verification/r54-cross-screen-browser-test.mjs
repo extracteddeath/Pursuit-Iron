@@ -636,6 +636,12 @@ try{
         'Populated Sessions history remains bounded beneath wide header: '+JSON.stringify({theme,width,initial}));
       assert.ok(width===1280?initial.display==='grid':initial.display!=='grid',
         'History uses responsive grid only at wide layouts: '+JSON.stringify({theme,width,initial}));
+      if(width===1280)
+        assert.ok(initial.calendar&&initial.firstSession&&initial.grouping&&
+          initial.firstSession.y<initial.calendar.bottom-60&&
+          initial.firstSession.y<initial.viewportRect.bottom,
+          'First logged session begins beside the calendar, not after its full-height grid row: '+
+            JSON.stringify({theme,width,initial}));
       const scrolled=await page.$eval('.wpb-progress .wpb-page-scroll[data-scroll-key="sessions"]',el=>{
         el.scrollTop=Math.min(280,el.scrollHeight-el.clientHeight);return el.scrollTop;});
       await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));

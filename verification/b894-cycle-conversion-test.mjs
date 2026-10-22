@@ -54,12 +54,12 @@ console.log('PASS B894: generated and authored conversions preserve Block 1, exa
 let structuralId=0;
 const structural=convertProgramToNextCycleForShell({
  program:source,templateId:'custom',
- blocks:[{phase:'strength_accumulation',weeks:5,split:'upper_lower',days:5,priorityLift:'bench_press',frequency:2}],
+ blocks:[{phase:'strength_accumulation',weeks:5,split:'upper_lower',days:4,priorityLift:'bench_press',frequency:2}],
  legacyExercises:EXERCISES,seed:894,makeId:()=>`b894-structure-${++structuralId}`,adaptBetweenBlocks:false
 });
 assert.deepEqual(structural.currentProgram.days,source.days,'converted working block and history keep their original week');
 assert.equal(structural.blocks[0].config.split,'upper_lower','the upcoming strength block can restructure the split');
-assert.equal(structural.blocks[0].config.days,5,'the upcoming phase uses its chosen training frequency');
+assert.equal(structural.blocks[0].config.days,4,'the upcoming phase uses its chosen training frequency');
 assert.equal(structural.cycle.nextEngineCycle.plannedBlocks[1].frequency,2,'the future practice target survives in cycle metadata');
 assert.equal(structural.blocks[0].nextEngine.request.goal.liftFrequency.bench_press,2,'the executable future block owns its lift-frequency contract');
 console.log('PASS B894 structure: converted block is immutable; future block can independently rebuild split and bench frequency.');

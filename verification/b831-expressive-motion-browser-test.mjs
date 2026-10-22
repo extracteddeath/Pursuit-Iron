@@ -864,22 +864,20 @@ try {
                     probe.remove();
                     const header=home.querySelector('.wpb-home-header');
                     const feature=home.querySelector('.wpb-home-hero');
-                    const metric=home.querySelector('.wpb-metric-strip>.wpb-metric');
+                    const redundantStrip=home.querySelector('.wpb-metric-strip');
                     const preview=home.querySelector('.wpb-home-session-preview');
                     return {quiet,raised,hero,control,appBar,
-                        header:bg(header),feature:bg(feature),metric:bg(metric),
+                        header:bg(header),feature:bg(feature),hasRedundantStrip:!!redundantStrip,
                         preview:bg(preview),headerImage:cs(header)?.backgroundImage,
                         heroImage:cs(feature)?.backgroundImage,
-                        metricImage:cs(metric)?.backgroundImage,
                         overflow:home.scrollWidth>home.clientWidth+1};
                 });
                 assert.ok(homeTonesR45.header===homeTonesR45.appBar&&
-                    homeTonesR45.metric===homeTonesR45.quiet&&
+                    !homeTonesR45.hasRedundantStrip&&
                     homeTonesR45.feature===homeTonesR45.hero&&
                     (!homeTonesR45.preview||homeTonesR45.preview===homeTonesR45.control)&&
                     homeTonesR45.headerImage==='none'&&
                     homeTonesR45.heroImage==='none'&&
-                    homeTonesR45.metricImage==='none'&&
                     homeTonesR45.hero!==homeTonesR45.quiet&&
                     !homeTonesR45.overflow,
                     'R45 Home resolves the common quiet/raised/hero roles: '+

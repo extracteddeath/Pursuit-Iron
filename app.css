@@ -8206,6 +8206,25 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb-cycle-preview-note{color:var(--wpb-theme-muted);font-size:.8125rem;line-height:1.5;}
 #root .wpb-cycle-preview-facts{display:flex;flex-direction:column;gap:var(--pi-space-1);padding:var(--pi-space-3);margin-bottom:var(--pi-space-3);border-radius:var(--pi-shape-card);background:var(--wpb-theme-accent-dim);font-size:.8125rem;line-height:1.5;overflow-wrap:anywhere}
 #root .wpb-cycle-preview-facts>span{color:var(--wpb-theme-muted)}
+/* M322: shared work-week quality owner. No inline layout or priority overrides. */
+#root .wpb-cycle-week-outlook{display:grid;gap:var(--pi-space-2);min-width:0;margin:var(--pi-space-3) 0;padding:var(--pi-space-3);border:1px solid var(--pi-color-divider);border-radius:var(--pi-shape-card);background:var(--pi-color-card);color:var(--wpb-theme-text);overflow-wrap:anywhere}
+#root .wpb-cycle-week-outlook-head{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:var(--pi-space-1);min-width:0}
+#root .wpb-cycle-week-outlook-head>strong{font-size:var(--pi-type-support);font-weight:750}
+#root .wpb-cycle-week-outlook-head>span{color:var(--wpb-theme-muted);font-size:.75rem}
+#root .wpb-cycle-week-outlook-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--pi-space-2);margin:0;min-width:0}
+#root .wpb-cycle-week-outlook-stats>div{display:flex;flex-direction:column;gap:var(--pi-space-1);padding:var(--pi-space-2);border-radius:var(--pi-shape-control);background:var(--wpb-theme-accent-dim);min-width:0}
+#root .wpb-cycle-week-outlook-stats dt{font-size:.75rem;line-height:1.4;color:var(--wpb-theme-muted)}
+#root .wpb-cycle-week-outlook-stats dd{margin:0;font-size:1.125rem;line-height:1.3;font-variant-numeric:tabular-nums;font-weight:750}
+#root .wpb-cycle-week-outlook-detail{min-width:0;border-top:1px solid var(--pi-color-divider)}
+#root .wpb-cycle-week-outlook-detail summary{display:list-item;cursor:pointer;min-height:44px;padding:var(--pi-space-2) 0;font-size:.8125rem;font-weight:700;line-height:1.5}
+#root .wpb-cycle-week-outlook-detail summary:focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
+#root .wpb-cycle-week-outlook-lifts{display:grid;gap:var(--pi-space-2);margin:0;padding:0}
+#root .wpb-cycle-week-outlook-lifts>div{display:flex;flex-wrap:wrap;gap:var(--pi-space-1) var(--pi-space-2);justify-content:space-between;border-bottom:1px solid var(--pi-color-divider);padding:var(--pi-space-1) 0}
+#root .wpb-cycle-week-outlook-lifts dt{color:var(--wpb-theme-muted);min-width:0}
+#root .wpb-cycle-week-outlook-lifts dd{font-weight:650;margin:0;font-variant-numeric:tabular-nums}
+#root .wpb-cycle-week-outlook-note,#root .wpb-cycle-week-outlook-deload{font-size:.75rem;line-height:1.5;color:var(--wpb-theme-muted);margin:0;overflow-wrap:anywhere}
+#root .wpb-cycle-week-outlook-deload{margin:var(--pi-space-3) 0}
+
 #root .wpb-cycle-preview-week{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px;}
 #root .wpb-cycle-preview-select{min-width:0;max-width:100%;min-height:48px;background:var(--wpb-theme-card);color:var(--wpb-theme-text);border:1px solid var(--wpb-theme-border);border-radius:8px;padding:8px;font-size:.875rem;}
 #root .wpb-cycle-preview-day{margin-bottom:10px;border:1px solid var(--wpb-theme-border);border-radius:10px;padding:10px;min-width:0;}

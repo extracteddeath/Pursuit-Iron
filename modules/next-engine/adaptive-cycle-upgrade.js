@@ -68,7 +68,7 @@ export function refreshAdaptiveCyclePreviews(options) {
     const cycle = upgraded.cycle, active = Number(cycle.activeBlock), ids = cycle.blockIds;
     const current = saved.find(p => p.id === ids[active]);
     const future = ids.slice(active + 1).map(id => saved.find(p => p.id === id));
-    if (!Array.isArray(equipment) || !equipment.length) throw new Error('Choose the gym equipment before refreshing future blocks.');
+    if (!Array.isArray(equipment)) throw new Error('Choose the gym equipment before refreshing future blocks.');
     if (future.some(p => p.edited || Object.values(p.overrides || {}).some(o => ['sets','reps','rir','rest','tech'].some(field => shellPrescriptionFieldOwner(p,o,field) === 'user'))))
         throw new Error('A future block has manual edits. Keep or remove those edits before rebuilding its preview.');
     const specs = future.map((p, offset) => {

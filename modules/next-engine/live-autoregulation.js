@@ -5,6 +5,40 @@ const untouched = row => automatic(row) && !row.done && String(row.weight) === S
     && row.target?.prefillReps !== undefined && String(row.reps) === String(row.target.prefillReps);
 const hold = (sets, reasonCode) => ({ sets, decision: { schemaVersion: 1, action: 'hold', reasonCode, earnedProgression: false } });
 
+const restorePendingAdjustment = row => {
+    const { liveAdjustment, retuneFrom, retuneSrc, autoTuned, hint, recoveryLimited, suggested, ...rest } = row;
+    return { ...rest, weight: retuneFrom.weight, reps: retuneFrom.reps, target: retuneFrom.target,
+        ...(retuneFrom.recoveryLimited !== undefined ? { recoveryLimited: retuneFrom.recoveryLimited } : {}) };
+};
+
+/** A restored session must still contain the observations that authorized a live change.
+ * Missing/unlogged sources cannot justify a lower opening load or rep target. */
+export function reconcileRestoredLiveAdjustments(sets) {
+    if (!Array.isArray(sets)) return sets;
+    let changed = false;
+    const out = sets.map((row, index) => {
+        if (!untouched(row) || !row.retuneFrom || !row.liveAdjustment) return row;
+        const adjustment = row.liveAdjustment;
+        const count = adjustment.action === 'reduce_pending_load' ? 2
+            : adjustment.action === 'cap_pending_reps' ? 1 : null;
+        if (count === null) return row; // Unknown protocols are not ours to rewrite.
+        const sources = adjustment.sourceIndices;
+        const valid = Array.isArray(sources) && sources.length === count && new Set(sources).size === count
+            && sources.every(sourceIndex => {
+                const source = sets[sourceIndex];
+                const reps = historyNumber(source?.reps), effort = historyNumber(source?.actualRIR);
+                return Number.isInteger(sourceIndex) && sourceIndex >= 0 && sourceIndex < index
+                    && source?.done && !source.warm && !source.sub && !source.added
+                    && historyNumber(source.weight) > 0 && Number.isInteger(reps) && reps > 0
+                    && effort !== null && effort >= 0 && effort <= 10;
+            });
+        if (valid) return row;
+        changed = true;
+        return restorePendingAdjustment(row);
+    });
+    return changed ? out : sets;
+}
+
 /** Undo only app-owned pending changes that still equal their adjusted target. */
 export function rollbackLiveAutoregulation(sets, sourceIndex, action) {
     if (!Array.isArray(sets)) return sets;
@@ -13,9 +47,7 @@ export function rollbackLiveAutoregulation(sets, sourceIndex, action) {
         if (!untouched(row) || !row.liveAdjustment?.sourceIndices?.includes(sourceIndex) || !row.retuneFrom
             || action && row.liveAdjustment.action !== action) return row;
         changed = true;
-        const { liveAdjustment, retuneFrom, retuneSrc, autoTuned, hint, recoveryLimited, ...rest } = row;
-        return { ...rest, weight: retuneFrom.weight, reps: retuneFrom.reps, target: retuneFrom.target,
-            ...(retuneFrom.recoveryLimited !== undefined ? { recoveryLimited: retuneFrom.recoveryLimited } : {}) };
+        return restorePendingAdjustment(row);
     });
     return changed ? result : sets;
 }

@@ -1,3 +1,9 @@
+## M296 — Stable opening set loads
+
+- Realize historical recommendations using today's progression method. Ordinary double, linear, ladder, wave and e1RM methods use one working load; only the current dynamic method retains positional load targets. Explicitly held plan changes and percentage protocols retain their own owners.
+- On resume, discard an untouched automatic live reduction or rep cap when its supporting completed observations are absent. Preserve genuine observed adjustments, recorded sets, manual entries and deliberately changed values.
+- Extend existing core and phone-browser regressions for dynamic-to-straight transitions, opening second-set reductions, repeated reloads and protected user values. Retain Build 905 / Engine 0.65.9 and refresh the content-addressed offline release.
+
 ## M295 — Complete cohesion integration and enforce custom load increments
 
 - Finish M294's compact, horizontally accessible exercise tags and top-aligned workout actions. Match numeric headings to the full-bleed row in both the phone flex layout and the tablet companion grid.

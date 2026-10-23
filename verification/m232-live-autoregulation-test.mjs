@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { applyLiveAutoregulation, rollbackLiveAutoregulation, liveEffortFeedback } from '../modules/next-engine/live-autoregulation.js';
+import { applyLiveAutoregulation, rollbackLiveAutoregulation, liveEffortFeedback, reconcileRestoredLiveAdjustments } from '../modules/next-engine/live-autoregulation.js';
 import { loggedWorkoutPerformance, EX_BY_ID, sessionSuggestion } from '../modules/training-domain.js';
 import { progressionExposureContext } from '../modules/next-engine/history-contract.js';
 
@@ -94,3 +94,37 @@ assert.equal(liveEffortFeedback(capped.sets,0),'Next set reps adjusted');
 assert.equal(liveEffortFeedback(repRows(),0),'Saved · next target unchanged');
 assert.equal(liveEffortFeedback([{...pending(),done:true,actualRIR:2}],0),'Saved for future workouts');
 console.log('PASS B901 suggestion audit: observed-effort rep caps, per-row intent, truthful feedback, rerating/undo, manual and protocol protection.');
+
+// M296: an opening snapshot cannot retain a live reduction without its logged sources.
+{
+const adjusted = applyLiveAutoregulation(input).sets;
+assert.equal(adjusted[2].weight, '95');
+assert.equal(reconcileRestoredLiveAdjustments(adjusted), adjusted, 'Real two-miss observations survive a genuine resume');
+for (const change of ['unlogged', 'missing_rir', 'self_source', 'missing_source']) {
+    const saved = structuredClone(adjusted);
+    if (change === 'unlogged') saved[0].done = false;
+    if (change === 'missing_rir') saved[0].actualRIR = null;
+    if (change === 'self_source') saved[2].liveAdjustment.sourceIndices = [0, 2];
+    if (change === 'missing_source') saved[2].liveAdjustment.sourceIndices = [0, 99];
+    const before = structuredClone(saved), fixed = reconcileRestoredLiveAdjustments(saved);
+    assert.equal(fixed[2].weight, '100', change + ': remove orphaned reduction');
+    assert.equal(fixed[2].liveAdjustment, undefined);
+    assert.deepEqual(saved, before);
+    assert.equal(reconcileRestoredLiveAdjustments(fixed), fixed, 'Restore repair is idempotent');
+    for (const protectedRow of [{ done: true }, { auto: false }, { valueOwner: 'user' }, { weight: '92.5' }]) {
+        const manual = structuredClone(saved);Object.assign(manual[2], protectedRow);
+        assert.equal(reconcileRestoredLiveAdjustments(manual), manual, 'Preserve completed/manual/changed rows');
+    }
+}
+const secondSetOrphan = [pending(), { ...adjusted[2], liveAdjustment: { ...adjusted[2].liveAdjustment, pendingIndex: 1, sourceIndices: [0, 1] } }, pending()];
+assert.equal(reconcileRestoredLiveAdjustments(secondSetOrphan)[1].weight, '100', 'Set 2 cannot inherit a two-miss reduction at opening');
+console.log('PASS M296 restore: orphan reductions are removed; genuine adjustments and user/logged data survive.');
+
+}
+
+assert.equal(reconcileRestoredLiveAdjustments(capped.sets), capped.sets, 'Genuine rep caps survive restore');
+const orphanCap = structuredClone(capped.sets);orphanCap[0].done = false;
+orphanCap[1].suggested = { weight: '95', reps: '8' };
+const repairedCap = reconcileRestoredLiveAdjustments(orphanCap);
+assert.equal(repairedCap[1].weight, '100');assert.equal(repairedCap[1].reps, '11');
+assert.equal(repairedCap[1].suggested, undefined, 'Retired tuning cannot leave a lower target in the UI');

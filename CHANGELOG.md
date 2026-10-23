@@ -1,3 +1,10 @@
+## M305 — Explain actual regional dose changes at strength entry
+
+- Distinguish phase-adjusted regional target coverage from absolute productive training dose. A 100% strength-phase target score can coexist with a substantial reduction from the preceding hypertrophy block; do not label that as 100% volume retention.
+- After final executable prescriptions are materialized, compare the previous block's last work week with the next strength block's first week using the canonical shell volume snapshot and public regional dose ledger. Preserve positive fractional set credits, show before/after sets, signed set change, percentage change and total weekly working-set change; a newly trained region has no defined percentage baseline.
+- Persist the exact working-week comparison in both the cycle block's split decision and the generated program's cycle context, including for converted standalone programs and dynamically adapted transitions. It is explanatory metadata only; no extra volume quotas, exercise selection or fatigue override.
+- Expand the existing M304 generation contract with verified actual-week regional accounting, target-versus-dose semantics and program/cycle metadata parity. Retain Build 905 / Engine 0.65.9 and refresh release/offline hashes.
+
 ## M302 — Priority-weighted regional carryover in strength entry
 
 - The cycle split optimizer now compares hypertrophy-to-strength candidates against each region's actual prior productive dose as well as the target strength phase's preferred dose. This closes an objective gap where two fully audited plans could meet the new aggregate targets but one unnecessarily discarded substantially more chest, back, leg, shoulder, or arm work.

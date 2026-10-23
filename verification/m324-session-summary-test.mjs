@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { summarizeSession, sessionPrescriptionRows, computeCell, exerciseAt, EXERCISES, EX_BY_ID,
     planOverview, plannedWeek, estimateMinutes, estimateMinutesFor, dayMuscleBreakdown, paceFactor,
-    generateNextProgramForShell, planShorterSession } from '../modules/engine-api.js';
+    generateNextProgramForShell, planShorterSession, phaseFor, weekIntent } from '../modules/engine-api.js';
+import { phaseLabel } from '../modules/next-engine/phase-policy.js';
 import { captureShellVolumeSnapshot } from '../modules/next-engine/volume-repair.js';
 import { config, ids } from './m265-generation-fixture.mjs';
 
@@ -67,6 +68,11 @@ for (const [days, split] of [[3, 'full_body'], [4, 'upper_lower'], [5, 'ulppl']]
         legacyExercises: EXERCISES, seed: 32400 + days, makeId: ids(`m324-${days}`) }).program;
     const before = JSON.stringify(generated);
     const plan = planOverview(generated, 1, null, paceHistory, [generated]);
+    const label = phaseLabel(generated.nextEngine.program.phase);
+    assert.equal(plan.currentPhase.label, label);
+    assert.equal(phaseFor(generated, 4).label, label, 'Final work week cannot invent a Peak phase');
+    assert.equal(weekIntent(generated, 4).label, label);
+    assert.doesNotMatch(weekIntent(generated, 4).detail, /hardest week|leave it all/i);
     for (const week of [1, 4, 5]) {
         const view = captureShellVolumeSnapshot(generated, week, EXERCISES);
         for (const [index, d] of generated.days.entries()) {

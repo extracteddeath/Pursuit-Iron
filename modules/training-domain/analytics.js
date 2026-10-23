@@ -5,6 +5,7 @@ import { avoidableExerciseOverlap } from "../next-engine/exercise-economy.js";
 import { captureShellVolumeSnapshot, auditShellVolume, shellDayMuscleBreakdown } from "../next-engine/volume-repair.js";
 import { historyNumber, convertHistoryLoad, observedHistoryRIR, completedHistorySets, normalizeHistoryEntries, normalizeHistoryRevisions, validHistoryDate, resolveHistoryDayIndex } from '../next-engine/history-contract.js';
 import { cycleBlockMetadata } from "../program-duration.js";
+import { SUPPORTED_PHASES, phaseLabel } from '../next-engine/phase-policy.js';
 import { nextWorkoutSuggestionForShell } from "../next-engine/workout-history-adapter.js";
 import { ENGINE_COMPATIBLE_VERSIONS } from "../next-engine/config.js";
 import { ALL_EQUIP_IDS, ENGINE_V, EXERCISES, EX_BY_ID, SESSIONS, SPLITS, expandEquipment } from './catalog.js';
@@ -1505,6 +1506,12 @@ function weekIntent(program, weekIndex) {
     const primRir = String(primCell.rir);
     const isoRir = isoCell ? String(isoCell.rir) : null;
     const primRange = String(primCell.range || "").split("-");
+    const savedPhase = program.nextEngine?.program?.phase;
+    if (!isDeload && SUPPORTED_PHASES.includes(savedPhase)) {
+        const detail = `${primary.name}: ${primCell.sets} sets of ${primCell.reps} at ${primRir} RIR`
+            + (isoEx ? ` · ${isoEx.name}: ${isoCell.sets} sets of ${isoCell.reps} at ${isoRir} RIR` : '');
+        return { label: phaseLabel(savedPhase), detail, deload: false };
+    }
     /* The intensity technique is asked for, not assumed — `lastSetTech` owns when it appears, and it
        declines for strength work, for blocks under three weeks, and in the intro and deload weeks. */
     const focusSet = new Set(program.config?.focusList || []);
@@ -2291,6 +2298,14 @@ function phaseFor(program, weekIndex) {
     const weeks = weeksOf(program);
     if (program.config?.deload && weekIndex > weeks)
         return PHASES.deload;
+    const phase = program.nextEngine?.program?.phase;
+    if (SUPPORTED_PHASES.includes(phase)) {
+        const kind = phase === 'recovery' ? 'deload' : phase === 'peak' ? 'peak'
+            : ['strength_accumulation', 'intensification'].includes(phase) ? 'intensification' : 'accumulation';
+        return { ...PHASES[kind], phase, kind, label: phaseLabel(phase),
+            tagline: 'Follow the phase targets',
+            why: 'Use the prescribed sets, reps and effort for this training phase. Its final week does not automatically become a different phase.' };
+    }
     const p = blockPhase(program, weekIndex, 1); // honors cycle-block phaseWindow
     if (p >= 0.8)
         return PHASES.peak;
@@ -2954,9 +2969,9 @@ function workoutPlanCoachFact(program, day, weekIndex) {
         return { icon: "plan", short: "Today: build quality volume", title: "Today: build quality volume", text: "Use the listed reps, rest, and effort. Keep the early sets controlled so you can finish the exercise strong." };
     }
     const ph = phaseFor(program, weekIndex);
-    if (ph === PHASES.peak)
+    if (ph === PHASES.peak || ph.phase === 'peak')
         return { icon: "plan", short: "Today: crisp heavy reps", title: "Today: prioritize crisp heavy reps", text: "Take the full rest, keep technique tight, and stop before reps turn into grinders." };
-    if (ph === PHASES.intensification)
+    if (ph === PHASES.intensification || ['strength_accumulation', 'intensification'].includes(ph.phase))
         return { icon: "plan", short: "Today: heavier, controlled work", title: "Today: push the working sets", text: "Loads are heavier now. Keep form clean and avoid spending extra effort on the early sets." };
     return { icon: "plan", short: "Today: build quality volume", title: "Today: build quality volume", text: "Keep the prescribed reps controlled and leave enough in reserve to maintain quality across the whole session." };
 }
@@ -4894,7 +4909,8 @@ function planOverview(program, weekIndex = 1, cycle = null, history = [], saved 
         }));
     }
     else {
-        phases = [{ key: "accum", label: "Accumulation", goal: program.config?.goal || null, weeks: accum, current: weekIndex <= accum, done: weekIndex > accum, isBlock: false }];
+        const savedPhase = program.nextEngine?.program?.phase;
+        phases = [{ key: "accum", label: SUPPORTED_PHASES.includes(savedPhase) ? phaseLabel(savedPhase) : "Accumulation", goal: program.config?.goal || null, weeks: accum, current: weekIndex <= accum, done: weekIndex > accum, isBlock: false }];
         if (hasDeload)
             phases.push({ key: "deload", label: "Deload", goal: null, weeks: 1, current: weekIndex > accum, done: false, isBlock: false });
     }

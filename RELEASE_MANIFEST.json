@@ -5,7 +5,7 @@
   "build": 906,
   "engineVersion": "0.65.9",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "802f482c322322005bf680246104ecff6007f48a90c666b705cfc34cd36d29db",
+  "runtimeAggregate": "028c3058d5e2e571c979ebcf62da6392a21d575029b800b3ee4219aab4bd7280",
   "runtimeFiles": {
     "modules/cycle-setup-drafts.js": "d3e9e750298afd8820e2bfd543c2cebede65e4f27c136ff26fe383d202b824e9",
     "modules/engine-api.js": "5b1252901101e46c275f312f8982d167897f67d7f069ed687b1235fb3bd57f55",
@@ -94,7 +94,7 @@
     "modules/session-plan.js": "d0fd1828feb947892b82cb08e2a0ac1761b18a0083f9bb779caa0c2e3c854023",
     "modules/session-tools.js": "275bdbb9f1e247fb8dd49290ec24d4a1eb5aea4c3ada49d623f7cbe0ccbec096",
     "modules/training-domain.js": "a7ce0e26ac1a653d267d486128b5eac0cfaed3569f7fdeae77d4a7d11aec804f",
-    "modules/training-domain/analytics.js": "f0938ef1d5a216c2ad687bb4ab24d2a0b01389e767abc3169f2fc1af0cb1d840",
+    "modules/training-domain/analytics.js": "57b63ee61fa034d431f9f517defd08dc866215a16418b10642b92e458c70dc08",
     "modules/training-domain/catalog.js": "d4ddf437e28b301362bca51ccd4400d052b86c36d4807516ece9945d61f5afc0",
     "modules/training-domain/history-import.js": "13a1128e16c886e280feedd45beb7e340cd9a5fac8752741632fe4b08dbc9462",
     "modules/training-domain/prescriptions.js": "7a68bc86129ec547f1953bd3e6138f74bd943eeb8274df586699f2ef9125bf3b",
@@ -120,8 +120,8 @@
   "uiFiles": {
     "modules/App.js": "4a4b47089015e4121284fb60379c5645671c8ae38c014b530513d7ab0d0be7b7",
     "index.html": "bc3985dd0692d91ceb47ad7c7d0e6581bf45684d6388630a0efd1fb9eb6ac262",
-    "sw.js": "03edd52bf989f537e5c4e04806cc3620422c8515bde3dd11e96ea88d4cbc9dc0",
-    "BUILD_PROFILE.json": "dfe88c00c53a89c4e54ecceb41d5ff61586c3959a8395c63fcf508e2b69177d1",
+    "sw.js": "605c288573b691884be86a442a56b04e517d4d828c5cfa4d772ecb0c1af00266",
+    "BUILD_PROFILE.json": "dfa87b7ba08ffdadb89d1515d3b4de22bea02502d9fd1e57a10fc51737c4f86d",
     "CHANGELOG.md": "f26b355bf2c83b93fdf294ce427bbe0b32886ea2fbf4e0421586a5a6b06a34de",
     "app.css": "baef215798a76bbcd06034b21feb0adde5bcbe3d994c7298b34d505769630f6b",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
@@ -129,6 +129,6 @@
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b906-r9a96569f90b9caa8",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b906-rdccc11721c44fe86",
   "uiMilestone": "Build 906 · M320 Adaptive training-cycle release"
 }

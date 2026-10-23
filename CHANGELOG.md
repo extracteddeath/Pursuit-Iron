@@ -1,3 +1,10 @@
+## M309 — Audited focused dose reallocation at strength entry
+
+- Attempt real, bounded **working-set changes** when a prioritized muscle drops below half of the final hypertrophy week's credited dose in the first strength week. Prefer adding an existing focused accessory set within capacity; otherwise try an equal-set same-session transfer from a non-focused, non-strength accessory.
+- Apply moves consistently across each work week, preserve exercise identities, all strength anchors, explicit user edits, progressions and RIR prescriptions. Each proposed result is checked against session time limits, public regional floors/ceilings, prioritized-region no-loss guards, and full weekly engine audits. Reject any move that fails.
+- Keep prior-dose goals capped by useful strength-phase prescriptions: strength does not inherit a hypertrophy quota. Persist a truthful improved/limited explanation when no safe reallocation exists and let existing Cycle dose comparison report the actual executable result.
+- Retain M307 seeded back, delt, chest and posterior-chain regression coverage, including independent width/thickness accounting.
+
 ## M307 — Focused muscle-region continuity at strength entry
 
 - Audit generated 4/5-day hypertrophy-to-strength transitions against the real executable final hypertrophy week and first strength week, separately measuring lats, upper back, side/rear delts, chest, and posterior-chain focus.

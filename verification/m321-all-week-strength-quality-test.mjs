@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { summarizeStrengthWorkWeeks } from '../modules/next-engine/cycle-runtime-adapter.js';
+import { summarizeStrengthWorkWeeks, findStrengthVolumeCliff } from '../modules/next-engine/cycle-runtime-adapter.js';
 
 // M321: the first/final sessions alone cannot protect the actual middle of a
 // strength accumulation block. Fabricate a deliberately uneven five-week
@@ -46,4 +46,17 @@ assert.equal(tied.executableLiftPracticeWeek,1);
 assert.equal(tied.executableWeakestPriorityLiftWeek,1);
 assert.throws(()=>summarizeStrengthWorkWeeks([]),
     error=>error?.code==='NEXT_CYCLE_REALIZED_WEEKS_MISSING');
+
+const volumeRows=[make(1,93,95,95),make(2,91,95,95),make(3,89,95,95),make(4,88,95,95)];
+volumeRows.forEach((row,i)=>{row.weeklySets=[52,50,24,53][i];});
+assert.equal(findStrengthVolumeCliff(60,volumeRows)?.week,3,
+    'A safe entry week must not conceal a later >50% executable set-volume cliff');
+assert.equal(findStrengthVolumeCliff(60,volumeRows)?.weeklySets,24);
+volumeRows[2].weeklySets=30;
+assert.equal(findStrengthVolumeCliff(60,volumeRows),null,
+    'The 50% boundary remains allowed');
+assert.equal(findStrengthVolumeCliff(15,volumeRows),null,
+    'Small prior blocks retain the existing no-floor policy');
+assert.equal(findStrengthVolumeCliff(60,[]),null);
+
 console.log('PASS M321: middle-week strength-practice and muscle-dose shortfalls cannot be hidden by successful endpoints; immutable and stable scoring.');

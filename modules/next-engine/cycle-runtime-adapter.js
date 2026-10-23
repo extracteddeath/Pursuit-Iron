@@ -15,7 +15,7 @@ import { historyDecision, withProgramExplainability } from './explainability.js'
 import { analyzeShellHistoryForNextEngine, carryForwardAvoidedExercises } from './workout-history-adapter.js';
 import { requestWithAthleteResponse } from './athlete-response.js';
 import { shellConfigToNextRequest, nextProgramToShellProgram, NextShellAdapterError } from './app-shell-adapter.js';
-import { repairShellVolume, reconcileLockedCycleWeekOverflows, finalizeGeneratedShellVolume, captureShellBaseProgram, captureShellVolumeSnapshot, rebalanceFocusedStrengthEntry } from './volume-repair.js';
+import { repairShellVolume, reconcileLockedCycleWeekOverflows, finalizeGeneratedShellVolume, captureShellBaseProgram, captureShellVolumeSnapshot, rebalanceFocusedStrengthEntry, preserveStrengthWeekContinuity } from './volume-repair.js';
 import { firstPassingCapacityProgram } from './capacity-generation.js';
 import { PUBLIC_MEV_REGIONS, PUBLIC_REGION_MUSCLE, publicMevLedger } from './public-mev.js';
 const phaseGoal = (phase) => phase === 'hypertrophy_accumulation' ? 'hypertrophy' :
@@ -559,14 +559,21 @@ export function summarizeStrengthWorkWeeks(weeks) {
             [lift, Math.min(...weeks.map(week => week.liftFrequencies[lift] ?? 0))]))
     };
 }
+// Preserve the same transition safety floor throughout strength accumulation,
+// not only at entry. This does not apply to deliberate peak/recovery tapers.
+export function findStrengthVolumeCliff(previousSets, weeks) {
+    return Number.isFinite(previousSets) && previousSets >= 16 && Array.isArray(weeks)
+        ? weeks.find(week => week.weeklySets < Math.ceil(previousSets * .5)) ?? null
+        : null;
+}
 export function scoreRealizedStrengthFinalist(candidate, previousShell, config, legacyExercises = []) {
     const { next, request, spec, quality } = candidate;
     const cfg = legacyBlockConfig(blockConfigForSpec(config, spec),
         next.phase, spec.weeks, 'Candidate strength block');
     const shell = nextProgramToShellProgram(next, cfg, legacyExercises, () => 'm316-evaluation-only');
     shell.nextEngine = { ...shell.nextEngine, program: clone(next), request: clone(request) };
-    const finished = rebalanceFocusedStrengthEntry(previousShell,
-        finalizeGeneratedShellVolume(shell, legacyExercises), legacyExercises);
+    const finished = preserveStrengthWeekContinuity(previousShell, rebalanceFocusedStrengthEntry(previousShell,
+        finalizeGeneratedShellVolume(shell, legacyExercises), legacyExercises), legacyExercises);
     const realized = describeRealizedCycleQuality(finished, legacyExercises, quality);
     if (!realized?.weeks?.length || realized.weeks.some(w => w.overCapacityDays.length))
         throw new NextShellAdapterError('NEXT_CYCLE_REALIZED_CAPACITY',
@@ -585,9 +592,13 @@ export function scoreRealizedStrengthFinalist(candidate, previousShell, config, 
             'The preceding cycle has incomplete executable training history.');
     const previousSets = preceding.sessions.reduce((sum, day) =>
         sum + day.exercises.reduce((n, ex) => n + ex.sets, 0), 0);
-    if (previousSets >= 16 && first.weeklySets < Math.ceil(previousSets * .5))
+    // M322: an apparent safe entry week is not sufficient when subsequent
+    // strength weeks silently halve executable work. Apply the same continuity
+    // floor to every saved work week; recovery/peak phases are not scored here.
+    const cliff = findStrengthVolumeCliff(previousSets, realized.weeks);
+    if (cliff)
         throw new NextShellAdapterError('NEXT_CYCLE_REALIZED_VOLUME_CLIFF',
-            `Finalized strength would fall from ${previousSets} to ${first.weeklySets} weekly sets.`);
+            `Finalized strength week ${cliff.week} would fall from ${previousSets} to ${cliff.weeklySets} weekly sets.`);
     const normalized = normalizeRequest(request);
     const carryover = scoreRegionalCarryover(preceding.regions, first.regionalSets,
         normalized.goal.musclePriorities, createMusclePrescriptions(normalized, next.phase));
@@ -863,6 +874,7 @@ export function generateNextCycleForShell(options) {
         }
         legacy = finalizeGeneratedShellVolume(legacy, options.legacyExercises);
         if (i > 0) legacy = rebalanceFocusedStrengthEntry(blocks[i - 1], legacy, options.legacyExercises);
+        if (decision?.realizedSelection) legacy = preserveStrengthWeekContinuity(blocks[i - 1], legacy, options.legacyExercises);
         if (i > 0) attachWorkingWeekTransition(blocks[i - 1], legacy, decision, options.legacyExercises);
         attachRealizedCycleQuality(legacy, decision, options.legacyExercises);
         blocks.push(legacy);
@@ -1004,6 +1016,7 @@ export function convertProgramToNextCycleForShell(options) {
         });
         legacy = finalizeGeneratedShellVolume(legacy, options.legacyExercises);
         if (i > 0) legacy = rebalanceFocusedStrengthEntry(blocks[i - 1], legacy, options.legacyExercises);
+        if (decision?.realizedSelection) legacy = preserveStrengthWeekContinuity(blocks[i - 1], legacy, options.legacyExercises);
         if (i > 0) attachWorkingWeekTransition(blocks[i - 1], legacy, decision, options.legacyExercises);
         attachRealizedCycleQuality(legacy, decision, options.legacyExercises);
         blocks.push(legacy);
@@ -1111,8 +1124,9 @@ function buildAdaptedBlock(current, cycle, target, weeks, label, analysis, legac
     attachBlockContext(legacy, next, request, cycle.nextEngineCycle.baseRequest, { templateId: cycle.templateId, plannedIndex, blockIndex: cycle.activeBlock + 1, label, weeks, phase: target, preview: false, adaptBetweenBlocks: !!cycle.adaptExercises, splitDecision: decision, adaptedFrom: current.id });
     legacy.nextEngine.priorBlock = { programId: current.id, phase: source.phase, workouts: analysis.workoutCount, classification: analysis.classification, recovery: analysis.recovery.status };
     legacy.nextEngine.historySummary = { positive: analysis.positiveDecisionCount, negative: analysis.negativeDecisionCount, successfulExercises: analysis.successfulExerciseIds.length, ignoredLegacyExerciseIds: analysis.ignoredLegacyExerciseIds };
-    const finalized = rebalanceFocusedStrengthEntry(current,
+    let finalized = rebalanceFocusedStrengthEntry(current,
         finalizeGeneratedShellVolume(legacy, legacyExercises), legacyExercises);
+    if (decision?.realizedSelection) finalized = preserveStrengthWeekContinuity(current, finalized, legacyExercises);
     attachWorkingWeekTransition(current, finalized, decision, legacyExercises);
     attachRealizedCycleQuality(finalized, decision, legacyExercises);
     return finalized;

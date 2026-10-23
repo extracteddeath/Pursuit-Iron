@@ -103,10 +103,12 @@ try{
     assert.equal(outlook.summaryHeight>=44,true,'lift-practice disclosure has a 44px target');
     assert.equal(await page.$eval('.wpb-cycle-block-preview',n=>n.innerText.includes('Modeled muscle-target coverage:')),false,
       'Preview must not repeat stale base-generation coverage');
+    if([320,393,1280].includes(width))await page.screenshot({path:`verification/m322-cycle-outlook-${width}-phone.png`});
   }
   assert.equal(await page.$$eval('.wpb-cycle-block-preview button',ns=>ns.some(n=>/start/i.test(n.textContent))),false);
   await page.evaluate(()=>document.documentElement.style.fontSize='32px');
   await page.waitForFunction(()=>parseFloat(getComputedStyle(document.querySelector('.wpb-cycle-preview-name')).fontSize)>=28);
+  if([320,393,1280].includes(width))await page.screenshot({path:`verification/m322-cycle-outlook-${width}-enlarged-phone.png`});
   const previewZoom=await page.$eval('.wpb-cycle-block-preview',root=>({overflow:root.scrollWidth>root.clientWidth+1,
     select:root.querySelector('select').offsetHeight,summary:root.querySelector('summary').offsetHeight}));
   assert.ok(!previewZoom.overflow&&previewZoom.select>=48&&previewZoom.summary>=44,'Readable read-only preview: '+JSON.stringify({width,previewZoom}));

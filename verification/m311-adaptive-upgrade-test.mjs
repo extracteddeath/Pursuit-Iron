@@ -4,7 +4,7 @@ import { EXERCISES } from '../modules/App.js';
 import { generateNextCycleForShell, convertProgramToNextCycleForShell, advanceNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
 import { analyzeShellHistoryForNextEngine } from '../modules/next-engine/workout-history-adapter.js';
 import { completedHistory, ids } from './m265-generation-fixture.mjs';
-import { captureShellVolumeSnapshot } from '../modules/next-engine/volume-repair.js';
+import { captureShellVolumeSnapshot, preserveStrengthWeekContinuity } from '../modules/next-engine/volume-repair.js';
 import { generateNextProgramForShell } from '../modules/next-engine/app-shell-adapter.js';
 import { upgradeExistingCycleToAdaptive } from '../modules/next-engine/adaptive-cycle-upgrade.js';
 import { repeatCycleOptions } from '../modules/engine-api.js';
@@ -149,6 +149,10 @@ assert.equal(migrated.nextProgram.nextEngine.priorBlock.programId,standalone.id)
 assert.equal(migrated.nextProgram.nextEngine.priorBlock.workouts,convertedHistory.length);
 assert.equal(migrated.nextProgram.nextEngine.program.audit.result,'pass');
 const migratedQuality=migrated.cycle.blockMeta[1].splitDecision.realizedQuality;
+const migratedPreviousSets=weeklySets(captureShellVolumeSnapshot(conversion.currentProgram,conversion.currentProgram.config.weeks,EXERCISES));
+const continuity=migrated.nextProgram.nextEngine.strengthWeekContinuity;
+assert.ok(continuity?.changes.length>0,'The formerly rejected conversion must repair its deficient later week');
+assert.equal(continuity.minimumWeeklySets,Math.ceil(migratedPreviousSets*.5));
 assert.equal(migratedQuality.comparison,'ranked_engine_base_to_saved_executable_weeks');
 assert.equal(migratedQuality.weeks.length,migrated.nextProgram.config.weeks);
 assert.deepEqual(migrated.nextProgram.nextEngine.cycleTemplate.splitDecision.realizedQuality,migratedQuality);
@@ -157,7 +161,30 @@ for(const week of migratedQuality.weeks){
  assert.equal(week.weeklySets,snap.sessions.reduce((n,s)=>
   n+s.exercises.reduce((m,e)=>m+e.sets,0),0));
  assert.deepEqual(week.overCapacityDays,[]);
+ assert.ok(week.weeklySets>=Math.ceil(migratedPreviousSets*.5),
+  'Every saved strength work week must retain the continuity floor, including the formerly failing final week');
 }
+// Removing the repair recreates the actual generation regression. Verify the
+// transaction changes only generated set counts and is deterministic/idempotent.
+const unrepaired=structuredClone(migrated.nextProgram);
+for(const change of continuity.changes)unrepaired.nextWeekPrescriptions[change.key][change.week].sets-=change.delta;
+delete unrepaired.nextEngine.strengthWeekContinuity;
+const frozenBefore=JSON.stringify(unrepaired);
+const repaired=preserveStrengthWeekContinuity(conversion.currentProgram,unrepaired,EXERCISES);
+assert.equal(JSON.stringify(unrepaired),frozenBefore,'Repair must not mutate the saved candidate');
+assert.deepEqual(repaired.nextWeekPrescriptions,migrated.nextProgram.nextWeekPrescriptions);
+assert.equal(preserveStrengthWeekContinuity(conversion.currentProgram,repaired,EXERCISES),repaired,
+ 'Already safe executable weeks must not grow on repeated calls');
+const protectedCandidate=structuredClone(unrepaired);
+for(const day of protectedCandidate.days)for(const slot of day.exercises.keys()){
+ const key=`${day.id}:${slot}`;
+ protectedCandidate.overrides??={};
+ protectedCandidate.overrides[key]={...protectedCandidate.overrides[key],prescriptionOwners:{sets:'user'}};
+}
+assert.equal(preserveStrengthWeekContinuity(conversion.currentProgram,protectedCandidate,EXERCISES),protectedCandidate,
+ 'A continuity target must never overwrite user-owned set counts');
+assert.equal(preserveStrengthWeekContinuity(conversion.currentProgram,{...unrepaired,nextEngine:{...unrepaired.nextEngine,
+ program:{...unrepaired.nextEngine.program,phase:'peak'}}},EXERCISES).nextEngine.program.phase,'peak');
 assert.deepEqual(migrated.cycle.nextEngineCycle.plannedBlocks,conversion.cycle.nextEngineCycle.plannedBlocks);
 assert.equal(JSON.stringify({conversion,convertedHistory}),migratedBefore);
 console.log('PASS M312: saved standalone custom program converts, upgrades, and advances into audited goal-adaptive strength with no history/identity loss.');

@@ -1,0 +1,365 @@
+name: Prepare M298 release
+on:
+  push:
+    branches: [fix/m298-cycle-lifecycle]
+permissions:
+  contents: write
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+      - name: Apply cycle lifecycle fixes and certify release
+        shell: bash
+        run: |
+          cat >/tmp/m298.patch <<'M298_PATCH'
+          diff --git a/CHANGELOG.md b/CHANGELOG.md
+          index 1351816..6204c9e 100644
+          --- a/CHANGELOG.md
+          +++ b/CHANGELOG.md
+          @@ -1,3 +1,11 @@
+          +## M298 — Executable custom cycle transitions and repeat
+          +
+          +- Base cycle review thresholds on each block's actual training days and authored duration. One-week blocks can finish after their prescribed work with favorable evidence; older saved previews receive the same correction when read. Standalone programs and recovery exit criteria retain their existing evidence rules.
+          +- Preserve the active block's schedule and split when inserting recovery after a training-day change. Resume the reserved planned block after recovery without changing its identity or authored phase order.
+          +- Repeat custom cycles from their saved authored block specifications, preserving durations, weekly structure, lift-frequency targets and both independent adaptation choices. Inserted recovery is excluded from the repeated plan; completed cycles and workout history remain saved.
+          +- Show the actual split, training-day count and explicit lift-practice targets in read-only block previews using shared layout tokens.
+          +- Extend existing engine and real-app browser journeys through short-block advancement, schedule changes, stale saved-state repair, fatigue recovery/resumption, worker-driven custom repeat and reload. Retain Build 905 / Engine 0.65.9 and refresh offline release hashes.
+          +
+           ## M297 — First-class Strength and integrated Profile progress
+           
+           - Put Strength directly in the Progress tab bar, with Home and Profile opening that same destination. Keep setup and empty states accessible before the first workout, alongside the existing strength club and canonical score.
+          diff --git a/DESIGN_SYSTEM.md b/DESIGN_SYSTEM.md
+          index 161e3eb..e67cce9 100644
+          --- a/DESIGN_SYSTEM.md
+          +++ b/DESIGN_SYSTEM.md
+          @@ -185,3 +185,7 @@ Home Start and Switch program actions use maintained classes and shared tokens.
+           Strength is a first-class Progress destination. Home and Profile links use the same focus request; do not create another score calculation or move Strength back behind Lifts/Records. The existing trend classes are shared primitives scoped to `.wpb`, because both Progress and Profile consume them. Keep their flex layout, typography and data-derived ink together.
+           
+           The Profile share card owns identity and the existing canonical level/XP presentation. The Level visibility preference still applies, while its position is integrated in the header. Main metrics omit duplicate Level copy and expose explanations through native details; exported profile content retains its original preferences and semantic labels. Summary cards use a shared grid gap rather than zero-gap embedded overrides. Progress tabs retain native selection and the shared moving indicator; minimum content widths and horizontal overflow preserve readable labels at enlarged text.
+          +
+          +### M298 — Inspectable cycle structure
+          +
+          +Read-only block previews show their executable split, actual training-day count and explicit lift-frequency targets before weekly exercise details. Use the shared cycle facts class and spacing/shape/theme tokens. These labels read the existing program/request; do not invent a second schedule or frequency calculation. Preview navigation cannot activate a block or rewrite history. Cycle repeat submits the engine-owned settings projection to the existing generation worker.
+          diff --git a/app.css b/app.css
+          index 4829e8b..beaa23a 100644
+          --- a/app.css
+          +++ b/app.css
+          @@ -8194,6 +8194,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
+           #root .wpb-cycle-empty{padding:40px 12px;text-align:center;color:var(--wpb-theme-muted);font-size:.875rem;}
+           #root .wpb-cycle-empty>.wpb-ui-action{font-size:.875rem;white-space:normal;overflow-wrap:anywhere;}
+           #root .wpb-cycle-preview-note{color:var(--wpb-theme-muted);font-size:.8125rem;line-height:1.5;}
+          +#root .wpb-cycle-preview-facts{display:flex;flex-direction:column;gap:var(--pi-space-1);padding:var(--pi-space-3);margin-bottom:var(--pi-space-3);border-radius:var(--pi-shape-card);background:var(--wpb-theme-accent-dim);font-size:.8125rem;line-height:1.5;overflow-wrap:anywhere}
+          +#root .wpb-cycle-preview-facts>span{color:var(--wpb-theme-muted)}
+           #root .wpb-cycle-preview-week{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px;}
+           #root .wpb-cycle-preview-select{min-width:0;max-width:100%;min-height:48px;background:var(--wpb-theme-card);color:var(--wpb-theme-text);border:1px solid var(--wpb-theme-border);border-radius:8px;padding:8px;font-size:.875rem;}
+           #root .wpb-cycle-preview-day{margin-bottom:10px;border:1px solid var(--wpb-theme-border);border-radius:10px;padding:10px;min-width:0;}
+          diff --git a/modules/App.js b/modules/App.js
+          index 510af24..752aede 100644
+          --- a/modules/App.js
+          +++ b/modules/App.js
+          @@ -1,5 +1,5 @@
+           import { withSessionPlanChoice } from './session-plan.js';
+          -import { planShorterSession, SESSION_LENGTH_OPTIONS, splitSupportsTrainingDays } from './engine-api.js';
+          +import { planShorterSession, SESSION_LENGTH_OPTIONS, splitSupportsTrainingDays, repeatCycleOptions } from './engine-api.js';
+           import { readCycleSetupDraft, writeCycleSetupDraft, clearCycleSetupDraft, CYCLE_SETUP_DRAFT_KEY } from './cycle-setup-drafts.js';
+           import { INJURY_AREAS, INJURY_IMPACTS, injuryParts, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
+           import { withProgressionChoices, repeatedNote, refreshProgressionSets, exerciseSessionTags, workoutProgramChanges, withWorkoutProgramChanges, buildSessionReview } from './session-tools.js';
+          @@ -19827,6 +19827,12 @@ function CycleBlockPreview({ program, initialWeek = 1, initialDayId = null, onCl
+               const [week, setWeek] = useState(Math.max(1, Math.min(total, initialWeek)));
+               return _jsx(SessionChoiceDialog, { title: program.blockLabel || program.name, onClose, className: "wpb-cycle-block-preview", children: _jsxs("div", { children: [
+                   _jsx("p", { className: "wpb-cycle-preview-note", children: "Block preview. Browsing keeps your current training block unchanged. Planned prescriptions may adapt when this block starts." }),
+          +        _jsxs("div", { className: "wpb-cycle-preview-facts", "aria-label": "Block training structure", children: [
+          +            _jsx("strong", { children: SPLITS[program.config?.split]?.name || String(program.config?.split || "Training split").replaceAll('_', ' ') }),
+          +            _jsx("span", { children: `${program.days.length} training days per week` }),
+          +            Object.entries(program.nextEngine?.request?.goal?.liftFrequency || {}).map(([lift, frequency]) =>
+          +                _jsx("span", { children: `${lift.replaceAll('_', ' ').replace(/^./, c => c.toUpperCase())} target · ${frequency} days per week` }, lift))
+          +        ] }),
+                   program.nextEngine?.cycleTemplate?.splitDecision?.mode === 'goal_optimized' && _jsxs("details", { className: "wpb-cycle-preview-day", children: [
+                       _jsx("summary", { className: "wpb-cycle-preview-summary", children: `Why ${SPLITS[program.config?.split]?.name || String(program.config?.split || 'this split').replaceAll('_',' ')}?` }),
+                       _jsx("p", { className: "wpb-cycle-preview-note", children: program.nextEngine.cycleTemplate.splitDecision.reason }),
+          @@ -22527,10 +22533,8 @@ function App() {
+                           if (!advanced.done && !advanced.nextProgram) throw new NextShellAdapterError('NEXT_CYCLE_INCOMPLETE', 'The next block is missing.');
+                           if (advanced.done && cycle.onComplete === 'loop') {
+                               const rolled = await runGeneration('cycle', {
+          -                        templateId: cycle.templateId,
+          -                        config: { ...(cycle.nextEngineCycle?.baseConfig || activeProgram.config), name: cycle.name },
+          -                        banned, legacyExercises: EXERCISES,
+          -                        adaptBetweenBlocks: !!cycle.nextEngineCycle?.adaptBetweenBlocks, makeId: uid
+          +                        ...repeatCycleOptions(cycle),
+          +                        banned, legacyExercises: EXERCISES, makeId: uid
+                               }, 'Building your next training cycle');
+                               const { ids } = requireCompleteCycleShell(rolled.cycle, rolled.blocks);
+                               if (rolled.blocks.length !== ids.length || rolled.cycle.id === cycle.id
+          diff --git a/modules/next-engine/cycle-runtime-adapter.js b/modules/next-engine/cycle-runtime-adapter.js
+          index 81d41e3..3eee108 100644
+          --- a/modules/next-engine/cycle-runtime-adapter.js
+          +++ b/modules/next-engine/cycle-runtime-adapter.js
+          @@ -336,7 +336,7 @@ function attachBlockContext(legacy, next, request, baseRequest, ctx) {
+               legacy.nextEngine = {
+                   ...legacy.nextEngine,
+                   request: clone(request), baseRequest: clone(baseRequest), program: clone(next),
+          -        cycleState: clone(stateForPhase(baseRequest.goal.type, baseRequest.schedule.days.length, next.phase)), historySchemaVersion: 1,
+          +        cycleState: clone(stateForPhase(baseRequest.goal.type, next.sessions.length, next.phase)), historySchemaVersion: 1,
+                   cycleTemplate: clone(ctx)
+               };
+               legacy.blockLabel = ctx.label;
+          @@ -402,6 +402,21 @@ export function customFutureCycleSpecs(blocks, currentWeeks) {
+                   throw new NextShellAdapterError('NEXT_CYCLE_CUSTOM_LENGTH_INVALID', 'The existing block needs a valid fixed duration within the 104-week cycle limit.');
+               return customCycleSpecs(blocks, { minBlocks: 1, maxBlocks: 7, maxWeeks: 104 - currentWeeks });
+           }
+          +// Repeat the authored plan, not the previews (which may include inserted recovery blocks).
+          +// Keep this projection shared by the UI and worker inputs so custom phases and both
+          +// independent adaptation choices survive completion and serialized saves.
+          +export function repeatCycleOptions(cycle) {
+          +    const snapshot = cycle?.nextEngineCycle;
+          +    if (!snapshot?.baseConfig)
+          +        throw new NextShellAdapterError('NEXT_CYCLE_REQUEST_MISSING', 'This cycle is missing the settings needed to repeat it.');
+          +    return {
+          +        templateId: cycle.templateId,
+          +        ...(cycle.templateId === 'custom' ? { blocks: clone(snapshot.plannedBlocks) } : {}),
+          +        config: { ...clone(snapshot.baseConfig), name: cycle.name },
+          +        adaptBetweenBlocks: !!(snapshot.adaptBetweenBlocks ?? cycle.adaptExercises),
+          +        adaptTrainingSplit: !!(snapshot.adaptTrainingSplit ?? cycle.adaptTrainingSplit)
+          +    };
+          +}
+           export function generateNextCycleForShell(options) {
+               const templateId = options.templateId;
+               const isCustom = templateId === 'custom';
+          @@ -682,7 +697,10 @@ function requestForAdvance(cycle, current, target, weeks, analysis, spec) {
+               const base = (cycle?.nextEngineCycle?.baseRequest ?? current?.nextEngine?.baseRequest);
+               if (!base)
+                   throw new NextShellAdapterError('NEXT_CYCLE_REQUEST_MISSING', 'Next cycle is missing its immutable request snapshot.');
+          -    const phaseRequest = target === 'recovery' ? clone(base)
+          +    // Recovery follows the active week, while its training preferences still derive
+          +    // from the immutable baseline rather than compounding the last block's fatigue model.
+          +    const phaseRequest = target === 'recovery'
+          +        ? requestForBlock(base, current.config, { phase: target, split: current.nextEngine.program.split.family, days: current.days.length }, [])
+                   : requestForBlock(base, cycle?.nextEngineCycle?.baseConfig ?? current.config, spec ?? { phase: target }, []);
+               let request = requestWithAthleteResponse(carryForwardAvoidedExercises(phaseRequest, current?.nextEngine?.request, analysis), analysis.athleteResponse);
+               if (target === 'recovery' || analysis.classification === 'fatigue_limited' || analysis.recovery.status === 'deload_recommended') {
+          @@ -696,7 +714,7 @@ function buildAdaptedBlock(current, cycle, target, weeks, label, analysis, legac
+               const source = captureShellBaseProgram(current, legacyExercises);
+               if (!source)
+                   throw new NextShellAdapterError('NEXT_CYCLE_SOURCE_MISSING', 'Current cycle block is missing its engine source snapshot.');
+          -    const baseCfg = cycle?.nextEngineCycle?.baseConfig ?? current.config;
+          +    const baseCfg = target === 'recovery' ? current.config : cycle?.nextEngineCycle?.baseConfig ?? current.config;
+               const chosen = chooseOptimizedCycleBlock(spec ?? { phase: target, weeks }, baseCfg,
+                   target !== 'recovery' && !!cycle?.nextEngineCycle?.adaptTrainingSplit, candidateSpec => {
+                   const request = requestForAdvance(cycle, current, target, weeks, analysis, candidateSpec);
+          diff --git a/modules/next-engine/workout-history-adapter.js b/modules/next-engine/workout-history-adapter.js
+          index 671378f..84d6d85 100644
+          --- a/modules/next-engine/workout-history-adapter.js
+          +++ b/modules/next-engine/workout-history-adapter.js
+          @@ -523,8 +523,14 @@ export function analyzeShellHistoryForNextEngine(program, history, legacyExercis
+               // benefit too; retain minimum exposure and the separate recovery exit rules.
+               const plannedWeeks = Number(program?.nextEngine?.cycleTemplate?.weeks);
+               if (program?.cycleId && cycleState.phase !== 'recovery' && Number.isInteger(plannedWeeks) && plannedWeeks > 0) {
+          -        const plannedWorkouts = plannedWeeks * snap.program.sessions.length;
+          -        cycleState.reviewAfterWorkouts = Math.max(cycleState.minimumWorkouts, Math.min(cycleState.reviewAfterWorkouts, plannedWorkouts));
+          +        const days = snap.program.sessions.length;
+          +        const plannedWorkouts = plannedWeeks * days;
+          +        const phaseState = startPhase(createInitialCycleState(snap.request.goal.type, days), cycleState.phase, snap.request.goal.type, days);
+          +        // Explicit fixed blocks may be one week, or change the number of training days.
+          +        // Re-read their actual schedule so older saved previews receive the correction too.
+          +        // Causal performance/recovery evidence still decides eligibility below.
+          +        cycleState.minimumWorkouts = Math.min(phaseState.minimumWorkouts, plannedWorkouts);
+          +        cycleState.reviewAfterWorkouts = Math.max(cycleState.minimumWorkouts, Math.min(phaseState.reviewAfterWorkouts, plannedWorkouts));
+               }
+               const recent = [];
+               const exposures = new Map();
+          diff --git a/verification/b890-cycle-browsing-browser-test.mjs b/verification/b890-cycle-browsing-browser-test.mjs
+          index 243d37b..f0991db 100644
+          --- a/verification/b890-cycle-browsing-browser-test.mjs
+          +++ b/verification/b890-cycle-browsing-browser-test.mjs
+          @@ -3,6 +3,7 @@ import fs from 'node:fs';import http from 'node:http';import path from 'node:pat
+           import { EXERCISES, mergeStandaloneIntoGeneratedCycle } from '../modules/App.js';
+           import { generateNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
+           import { currentProgram } from './m215-cycle-duration-fixture.mjs';
+          +import { config as lifecycleConfig, completedHistory, ids } from './m265-generation-fixture.mjs';
+           const root=path.resolve(new URL('../',import.meta.url).pathname);
+           const cfg=JSON.parse(fs.readFileSync(path.join(root,'verification/m205-generation-parity-results.json'))).rows[3].config;
+           let n=0;
+          @@ -79,6 +80,7 @@ try{
+             assert.equal(await page.$$eval('.wpb-plan-week-chip',ns=>ns.length),saved[1].config.weeks+(saved[1].config.deload?1:0));
+             await page.click('.wpb-plan-session-link');await page.waitForSelector('.wpb-cycle-block-preview');
+             assert.match(await page.$eval('.wpb-cycle-block-preview',n=>n.innerText),/sets · .* reps · .* RIR/);
+          +  assert.ok(await page.$eval('.wpb-cycle-preview-facts',(n,days)=>n.textContent.includes(`${days} training days per week`),saved[1].days.length),'preview exposes the actual upcoming weekly structure');
+             assert.equal(await page.$$eval('.wpb-cycle-block-preview button',ns=>ns.some(n=>/start/i.test(n.textContent))),false);
+             await page.evaluate(()=>document.documentElement.style.fontSize='32px');
+             await page.waitForFunction(()=>parseFloat(getComputedStyle(document.querySelector('.wpb-cycle-preview-name')).fontSize)>=28);
+          @@ -168,6 +170,54 @@ try{
+             await page.close();
+            }
+           
+          + // M298: exercise the actual app confirmation, worker, persisted transition and repeat.
+          + {
+          +  const live=generateNextCycleForShell({templateId:'custom',config:{...lifecycleConfig,name:'Lifecycle browser'},
+          +   blocks:[{phase:'mixed_accumulation',weeks:1},{phase:'strength_accumulation',weeks:1,split:'upper_lower',days:4,priorityLift:'bench_press',frequency:2}],
+          +   legacyExercises:EXERCISES,seed:298,makeId:ids('b890-live'),adaptTrainingSplit:true,adaptBetweenBlocks:false});
+          +  const liveCycle={...live.cycle,onComplete:'loop'},firstHistory=completedHistory(live.blocks[0]);
+          +  const context=await browser.createBrowserContext(),page=await context.newPage();
+          +  page.on('pageerror',error=>errors.push(error.message));await page.setBypassServiceWorker(true);
+          +  await page.setViewport({width:393,height:852,isMobile:true,hasTouch:true});
+          +  await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
+          +  await page.evaluateOnNewDocument(seed=>{if(!sessionStorage.getItem('b890-lifecycle')){
+          +   localStorage.setItem('wpb:v1',JSON.stringify(seed));sessionStorage.setItem('b890-lifecycle','1');
+          +  }},{...store,saved:live.blocks,cycles:[liveCycle],pinnedId:live.blocks[0].id,history:firstHistory});
+          +  await page.goto('http://127.0.0.1:8790/index.html',{waitUntil:'networkidle0'});
+          +  const complete=async(final=false)=>{
+          +   await page.waitForSelector('[aria-label="Open cycle Lifecycle browser"]');
+          +   await page.click('[aria-label="Open cycle Lifecycle browser"]');
+          +   await page.waitForSelector('[aria-label="Cycle options"]');await page.click('[aria-label="Cycle options"]');
+          +   await page.waitForSelector('.wpb-cycle-option-actions');
+          +   await page.$$eval('.wpb-cycle-option-actions button',bs=>bs.find(b=>b.textContent.startsWith('Complete')).click());
+          +   await page.waitForSelector('.wpb-pop');
+          +   await page.$$eval('.wpb-pop button',(bs,final)=>bs.find(b=>b.textContent.trim()===(final?'Roll new cycle':'Complete block')).click(),final);
+          +  };
+          +  await complete();
+          +  await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:v1')).cycles[0].activeBlock===1,{timeout:60000});
+          +  const entered=await page.evaluate(()=>{const s=JSON.parse(localStorage.getItem('wpb:v1'));return {cycle:s.cycles[0],program:s.saved.find(p=>p.id===s.pinnedId),saved:s.saved};});
+          +  assert.equal(entered.program.id,live.blocks[1].id,'the real app activates its reserved next block');
+          +  assert.deepEqual(entered.saved.find(p=>p.id===live.blocks[0].id),live.blocks[0],'completed blocks stay intact');
+          +  assert.equal(entered.program.nextEngine.request.goal.liftFrequency.bench_press,2);
+          +  const finalHistory=[...firstHistory,...completedHistory(entered.program)];
+          +  await page.evaluate(history=>{const s=JSON.parse(localStorage.getItem('wpb:v1'));s.history=history;localStorage.setItem('wpb:v1',JSON.stringify(s));},finalHistory);
+          +  await page.reload({waitUntil:'networkidle0'});await complete(true);
+          +  await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:v1')).cycles.length===2,{timeout:60000});
+          +  const rolled=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1'))),next=rolled.cycles.find(c=>c.id!==liveCycle.id);
+          +  assert.equal(rolled.cycles.find(c=>c.id===liveCycle.id).done,true);
+          +  assert.equal(next.continuedFrom,liveCycle.id);assert.equal(next.onComplete,'loop');
+          +  assert.equal(next.adaptTrainingSplit,true);assert.equal(next.adaptExercises,false);
+          +  assert.deepEqual(next.nextEngineCycle.plannedBlocks,liveCycle.nextEngineCycle.plannedBlocks,'the real worker repeats authored custom block order, duration and frequency');
+          +  assert.equal(rolled.saved.length,4,'repeat retains the completed blocks and adds distinct programs');
+          +  const records=rows=>rows.map(({updatedAt,...record})=>record);
+          +  assert.deepEqual(records(rolled.history),records(finalHistory),'complete and repeat preserve all training records');
+          +  await page.reload({waitUntil:'networkidle0'});
+          +  await page.waitForSelector('.wpb-home');
+          +  const reloaded=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')));
+          +  assert.equal(reloaded.pinnedId,next.blockIds[0],'new custom cycle remains active after reload');
+          +  assert.equal(reloaded.cycles.length,2);await context.close();
+          + }
+          +
+            for(const [theme,width] of [['amethyst',320],['rosewater',1280]]){
+             const context=await browser.createBrowserContext(),page=await context.newPage();
+             page.on('pageerror',error=>errors.push(error.message));await page.setBypassServiceWorker(true);
+          diff --git a/verification/b893-custom-cycle-browser-test.mjs b/verification/b893-custom-cycle-browser-test.mjs
+          index 50c0e58..c3a227a 100644
+          --- a/verification/b893-custom-cycle-browser-test.mjs
+          +++ b/verification/b893-custom-cycle-browser-test.mjs
+          @@ -10,7 +10,7 @@ const html=`<!doctype html><html><head><meta name="viewport" content="width=devi
+           import React from '/vendor/react.js';import {createRoot} from '/vendor/react-dom-client.js';
+           import {Wizard,StyleTag,EXERCISES} from '/modules/App.js';
+           import {generateNextCycleForShell} from '/modules/next-engine/cycle-runtime-adapter.js';
+          -createRoot(document.getElementById('root')).render(React.createElement('div',{className:'wpb'},React.createElement(StyleTag),React.createElement(Wizard,{initialEquipment:${JSON.stringify(config.equipment)},initialExperience:'intermediate',initialUnit:'lb',skipUnits:true,cycleMode:true,onCancel:()=>{},onDone:cfg=>{if(window.failNextBuild){window.failNextBuild=false;window.failed=true;return null;}window.chosen=cfg;let n=0;window.built=generateNextCycleForShell({templateId:cfg.cycleTemplate,blocks:cfg.cycleBlocks,config:cfg,legacyExercises:EXERCISES,seed:893,makeId:()=> 'b893-'+(++n),adaptBetweenBlocks:cfg.cycleAdapt});}})));
+          +createRoot(document.getElementById('root')).render(React.createElement('div',{className:'wpb'},React.createElement(StyleTag),React.createElement(Wizard,{initialEquipment:${JSON.stringify(config.equipment)},initialExperience:'intermediate',initialUnit:'lb',skipUnits:true,cycleMode:true,onCancel:()=>{},onDone:cfg=>{if(window.failNextBuild){window.failNextBuild=false;window.failed=true;return null;}window.chosen=cfg;let n=0;window.built=generateNextCycleForShell({templateId:cfg.cycleTemplate,blocks:cfg.cycleBlocks,config:cfg,legacyExercises:EXERCISES,seed:893,makeId:()=> 'b893-'+(++n),adaptBetweenBlocks:cfg.cycleAdapt,adaptTrainingSplit:cfg.cycleAdaptSplit});}})));
+           </script></body></html>`;
+           const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.json':'application/json'};
+           const server=http.createServer((req,res)=>{const url=new URL(req.url,'http://localhost');if(url.pathname==='/probe.html'){res.setHeader('Content-Type','text/html');res.end(html);return;}const file=path.resolve(root,'.'+url.pathname);if(!file.startsWith(root+path.sep)||!fs.existsSync(file)||!fs.statSync(file).isFile()){res.writeHead(404);res.end();return;}res.setHeader('Content-Type',mime[path.extname(file)]||'application/octet-stream');res.end(fs.readFileSync(file));});
+          @@ -61,8 +61,10 @@ try{
+             assert.equal(await page.evaluate(()=>!!JSON.parse(localStorage.getItem('wpb:cycle-setup:v1')||'{}')['wizard:cycle']),true,'failed builds keep the recoverable draft');
+             await page.waitForSelector('.wpb-build-alert');await page.click('.wpb-wizard-next-action');await page.waitForFunction(()=>!!window.built,{timeout:60000});
+            }
+          - const actual=await page.evaluate(()=>({goal:window.chosen.goal,selected:window.chosen.cycleBlocks,meta:window.built.cycle.blockMeta.map(b=>({phase:b.phase,weeks:b.weeks})),blocks:window.built.blocks.map(b=>({phase:b.nextEngine.program.phase,weeks:b.config.weeks}))}));
+          + const actual=await page.evaluate(()=>({goal:window.chosen.goal,adaptSplit:window.built.cycle.adaptTrainingSplit,decisions:window.built.cycle.blockMeta.map(b=>b.splitDecision.mode),selected:window.chosen.cycleBlocks,meta:window.built.cycle.blockMeta.map(b=>({phase:b.phase,weeks:b.weeks})),blocks:window.built.blocks.map(b=>({phase:b.nextEngine.program.phase,weeks:b.config.weeks}))}));
+            assert.equal(actual.goal,'strength');
+          + assert.equal(actual.adaptSplit,true,'the wizard hands automatic split adaptation to real cycle generation');
+          + assert.ok(actual.decisions.every(mode=>mode==='goal_optimized'),'every automatic block is actually optimized');
+            assert.deepEqual(actual.selected,[{phase:'peak',weeks:1},{phase:'hypertrophy_accumulation',weeks:7},{phase:'hypertrophy_accumulation',weeks:3}]);
+            assert.deepEqual(actual.meta,actual.selected);assert.deepEqual(actual.blocks,actual.selected);assert.deepEqual(errors,[]);
+            assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:cycle-setup:v1')||'{}')['wizard:cycle']),undefined,'successful creation clears its setup draft');
+          diff --git a/verification/b893-custom-cycle-test.mjs b/verification/b893-custom-cycle-test.mjs
+          index 31ff328..bdfe884 100644
+          --- a/verification/b893-custom-cycle-test.mjs
+          +++ b/verification/b893-custom-cycle-test.mjs
+          @@ -119,3 +119,63 @@ assert.deepEqual(exerciseOrder(retainedRoster.blocks[1]),exerciseOrder(retainedR
+            'automatic split adaptation must not replace exercises when the weekly split is explicitly unchanged and exercise adaptation is off');
+           assert.ok(retainedRoster.blocks.every(b=>b.nextEngine.program.audit.result==='pass'));
+           console.log('PASS B893 independence: disabling exercise adaptation preserves roster across same-split blocks.');
+          +
+          +// M298: creation alone cannot prove a custom cycle is executable. Walk the
+          +// authored short blocks, a schedule change, evidence-driven recovery and repeat.
+          +const { config: lifecycleConfig, completedHistory, ids } = await import('./m265-generation-fixture.mjs');
+          +const { advanceNextCycleForShell, repeatCycleOptions } = await import('../modules/next-engine/cycle-runtime-adapter.js');
+          +const { analyzeShellHistoryForNextEngine } = await import('../modules/next-engine/workout-history-adapter.js');
+          +const lifecycle = generateNextCycleForShell({
+          + templateId:'custom',config:lifecycleConfig,
+          + blocks:[{phase:'mixed_accumulation',weeks:1},
+          +  {phase:'strength_accumulation',weeks:2,split:'full_body',days:3,priorityLift:'bench_press',frequency:2},
+          +  {phase:'peak',weeks:1,split:'full_body',days:3}],
+          + legacyExercises:EXERCISES,seed:298,makeId:ids('b893-lifecycle'),adaptTrainingSplit:true,adaptBetweenBlocks:false
+          +});
+          +const lifecycleBefore=JSON.stringify(lifecycle);
+          +const first=lifecycle.blocks[0],firstHistory=completedHistory(first);
+          +assert.equal(analyzeShellHistoryForNextEngine(first,firstHistory.slice(0,-1),EXERCISES).readyForNextBlock,false,'a partial one-week block cannot skip its required work');
+          +assert.equal(analyzeShellHistoryForNextEngine(first,firstHistory,EXERCISES).readyForNextBlock,true,'a completed one-week custom block can advance with favorable evidence');
+          +const entered=advanceNextCycleForShell({cycle:lifecycle.cycle,activeProgram:first,history:firstHistory,legacyExercises:EXERCISES,makeId:ids('b893-enter')});
+          +assert.equal(entered.nextProgram.id,lifecycle.blocks[1].id,'advancement replaces the reserved preview, not its identity');
+          +assert.equal(entered.nextProgram.days.length,3);
+          +assert.equal(entered.nextProgram.nextEngine.cycleState.minimumWorkouts,6,'review uses the actual three-day block, not the four-day cycle baseline');
+          +assert.equal(entered.nextProgram.nextEngine.request.goal.liftFrequency.bench_press,2);
+          +const secondHistory=completedHistory(entered.nextProgram);
+          +const stale=structuredClone(entered.nextProgram);
+          +stale.nextEngine.cycleState.minimumWorkouts=99;stale.nextEngine.cycleState.reviewAfterWorkouts=99;
+          +assert.equal(analyzeShellHistoryForNextEngine(stale,secondHistory,EXERCISES).readyForNextBlock,true,'existing saved previews receive the schedule correction when read');
+          +const final=advanceNextCycleForShell({cycle:entered.cycle,activeProgram:entered.nextProgram,history:[...firstHistory,...secondHistory],legacyExercises:EXERCISES,makeId:ids('b893-final')});
+          +assert.equal(final.nextProgram.id,lifecycle.blocks[2].id);
+          +const finished=advanceNextCycleForShell({cycle:final.cycle,activeProgram:final.nextProgram,history:[...firstHistory,...secondHistory,...completedHistory(final.nextProgram)],legacyExercises:EXERCISES,makeId:ids('b893-finished')});
+          +assert.equal(finished.done,true,'the complete custom sequence can finish without inventing extra weeks');
+          +const standalone={...first,cycleId:undefined};
+          +assert.equal(analyzeShellHistoryForNextEngine(standalone,firstHistory,EXERCISES).readyForNextBlock,false,'standalone evidence thresholds retain their separate owner');
+          +
+          +const tired=structuredClone(secondHistory);
+          +tired.forEach((entry,i)=>Object.values(entry.perf).forEach(perf=>{
+          + perf.weight=140-i*10;perf.reps=1;
+          + perf.sets.forEach(set=>{set.w=perf.weight;set.r=1;set.rir=0;});
+          +}));
+          +const recovery=advanceNextCycleForShell({cycle:entered.cycle,activeProgram:entered.nextProgram,history:tired,legacyExercises:EXERCISES,makeId:ids('b893-recovery')});
+          +assert.equal(recovery.insertedRecovery,true,'repeated broad failures still insert recovery rather than forcing a planned phase');
+          +assert.equal(recovery.nextProgram.days.length,3);
+          +assert.equal(recovery.nextProgram.config.days,3);
+          +assert.equal(recovery.nextProgram.nextEngine.request.schedule.days.length,3,'recovery preserves the active block schedule rather than reverting to the cycle baseline');
+          +assert.equal(recovery.nextProgram.config.split,'full_body');
+          +assert.equal(recovery.nextProgram.nextEngine.program.audit.result,'pass');
+          +const recoveredHistory=completedHistory(recovery.nextProgram);
+          +assert.equal(analyzeShellHistoryForNextEngine(recovery.nextProgram,recoveredHistory.slice(0,1),EXERCISES).readyForNextBlock,false,'short fixed blocks do not bypass recovery exit evidence');
+          +recoveredHistory.forEach((entry,i)=>Object.values(entry.perf).forEach(perf=>{perf.weight=100+i*5;perf.sets.forEach(set=>set.w=perf.weight);}));
+          +const resumed=advanceNextCycleForShell({cycle:recovery.cycle,activeProgram:recovery.nextProgram,history:[...tired,...recoveredHistory],legacyExercises:EXERCISES,makeId:ids('b893-resumed')});
+          +assert.equal(resumed.nextProgram.id,lifecycle.blocks[2].id,'recovery resumes the correct reserved phase despite its shifted position');
+          +assert.equal(resumed.nextProgram.config.days,3);
+          +const repeatInput=repeatCycleOptions(JSON.parse(JSON.stringify(recovery.cycle)));
+          +const repeated=generateNextCycleForShell({...repeatInput,legacyExercises:EXERCISES,seed:298,makeId:ids('b893-repeated')});
+          +assert.deepEqual(repeated.cycle.nextEngineCycle.plannedBlocks,lifecycle.cycle.nextEngineCycle.plannedBlocks,'repeat retains custom durations, order, split and lift-frequency contracts, excluding inserted recovery');
+          +assert.equal(repeated.cycle.adaptTrainingSplit,true);
+          +assert.equal(repeated.cycle.adaptExercises,false,'repeat retains both independent adaptation choices');
+          +assert.notEqual(repeated.cycle.id,lifecycle.cycle.id);
+          +assert.equal(JSON.stringify(lifecycle),lifecycleBefore,'advancing, recovery and repeat cannot mutate completed or preview training artifacts');
+          +assert.match(app,/\.\.\.repeatCycleOptions\(cycle\)/,'the app loop submits the same tested repeat options to its worker');
+          +console.log('PASS B893 lifecycle: short-block completion, schedule changes, persisted-state repair, recovery insertion/resume, custom repeat and immutable prior records.');
+          diff --git a/verification/m175-longitudinal-adaptation-memory-test.mjs b/verification/m175-longitudinal-adaptation-memory-test.mjs
+          index fa208eb..dde706c 100644
+          --- a/verification/m175-longitudinal-adaptation-memory-test.mjs
+          +++ b/verification/m175-longitudinal-adaptation-memory-test.mjs
+          @@ -23,7 +23,7 @@ assert.deepEqual(afterBlock3.preferences.avoidedExercises,['user-ban','poor-fit-
+           
+           const cycle=fs.readFileSync(new URL('../modules/next-engine/cycle-runtime-adapter.js',import.meta.url),'utf8');
+           assert.ok(cycle.includes("carryForwardAvoidedExercises(phaseRequest, current?.nextEngine?.request, analysis)"),'adaptive cycle request must inherit accumulated avoidances after structural phase setup');
+          -assert.match(cycle,/const phaseRequest = target === 'recovery' \? clone\(base\)/,'recovery requests retain the immutable base');
+          +assert.match(cycle,/target === 'recovery'\s*\? requestForBlock\(base, current\.config/,'recovery changes the active schedule while retaining immutable training preferences');
+           assert.match(cycle,/requestForBlock\(base, cycle\?\.nextEngineCycle\?\.baseConfig/,'adapted next-block structure must derive from the immutable request');
+           assert.ok(cycle.includes('replaceExerciseIds: analysis.replaceExerciseIds'),'adaptive cycle phase transition must receive explicit poor-fit replacement evidence');
+           const history=fs.readFileSync(new URL('../modules/next-engine/workout-history-adapter.js',import.meta.url),'utf8');
+          M298_PATCH
+          git apply --check /tmp/m298.patch
+          git apply /tmp/m298.patch
+          node scripts/finalize-release.mjs
+          node scripts/verify-release.mjs
+          git rm .github/workflows/m298-prepare.yml
+          git config user.name 'extracteddeath'
+          git config user.email '92632906+extracteddeath@users.noreply.github.com'
+          git add CHANGELOG.md DESIGN_SYSTEM.md app.css modules/App.js modules/next-engine/cycle-runtime-adapter.js modules/next-engine/workout-history-adapter.js verification/b890-cycle-browsing-browser-test.mjs verification/b893-custom-cycle-browser-test.mjs verification/b893-custom-cycle-test.mjs verification/m175-longitudinal-adaptation-memory-test.mjs BUILD_PROFILE.json RELEASE_MANIFEST.json sw.js
+          git commit -m 'M298: make custom cycle advancement, recovery and repeat executable'
+          git push origin HEAD:fix/m298-cycle-lifecycle

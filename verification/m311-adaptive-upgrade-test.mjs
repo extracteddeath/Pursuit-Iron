@@ -109,7 +109,7 @@ const conversion=convertProgramToNextCycleForShell({
  program:standalone,templateId:'custom',
  blocks:[{phase:'strength_accumulation',weeks:4}],
  legacyExercises:EXERCISES,seed:31123,makeId:ids('m312-converted'),
- adaptBetweenBlocks:false,adaptTrainingSplit:false
+ adaptBetweenBlocks:true,adaptTrainingSplit:false
 });
 const convertedSaved=conversion.allBlocks;
 const convertedUpgrade=upgradeExistingCycleToAdaptive(conversion.cycle,convertedSaved,[],311240);

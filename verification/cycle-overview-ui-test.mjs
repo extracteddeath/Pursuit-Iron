@@ -28,3 +28,10 @@ assert.ok(css.includes('#root .wpb-cycle-dose-row')&&css.includes('grid-template
     'volume rows have a responsive token-owned layout');
 assert.ok(!explanation.includes('style: {'),'dose panel has no inline styling');
 console.log('PASS M306 Cycle dose UI: actual weekly and regional changes use one read-only disclosed component in Up next and preview.');
+
+assert.ok(explanation.includes('focusedVolumeReductions')&&explanation.includes('Review focus'),
+ 'Executable priority-dose reductions are visible even before expanding the cycle breakdown');
+assert.ok(explanation.includes('not an automatic instruction to add sets'),
+ 'An explicit focus warning does not prescribe unsafe volume');
+console.log('PASS M307 Cycle UI: a large prioritized-volume reduction receives a contextual, non-prescriptive disclosure.');
+

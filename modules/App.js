@@ -19827,12 +19827,15 @@ function CycleBlockNav({ cycle, saved, selectedId, onSelect }) {
 // as a percentage of actual volume retained.
 function CycleDoseTransition({ change }) {
     if (!change || !Array.isArray(change.regions)) return null;
+    const reducedFocus = Array.isArray(change.focusedVolumeReductions) ? change.focusedVolumeReductions : [];
     const showSets = value => Number(value).toFixed(1).replace(/\.0$/, "");
     const showPercent = value => value == null ? "new" : `${value > 0 ? "+" : ""}${value}%`;
     return _jsxs("details", { className: "wpb-cycle-dose-detail", children: [
-        _jsx("summary", { className: "wpb-cycle-dose-summary", children: "Muscle-by-muscle volume change" }),
+        _jsx("summary", { className: "wpb-cycle-dose-summary", children: reducedFocus.length ? "Muscle volume change · Review focus" : "Muscle-by-muscle volume change" }),
         _jsx("p", { className: "wpb-cycle-dose-caption", children:
             `Final week of the previous block → first week of this block. ${change.previousWeeklySets} → ${change.currentWeeklySets} total working sets (${showPercent(change.weeklyPercentChange)}).` }),
+        reducedFocus.length > 0 && _jsx("p", { className: "wpb-cycle-dose-caption", children:
+            `Prioritized muscle volume fell by more than half for ${reducedFocus.map(r => r.replaceAll("_", " ")).join(", ")}. Review this strength-phase tradeoff; it is not an automatic instruction to add sets.` }),
         _jsx("dl", { className: "wpb-cycle-dose-rows", children: change.regions.map(r => _jsxs("div", {
             className: "wpb-cycle-dose-row", children: [
                 _jsx("dt", { children: r.region.replaceAll("_", " ").replace(/^./, c => c.toUpperCase()) }),

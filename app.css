@@ -5932,6 +5932,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     min-width:0;
     max-width:100%;
   }
+  /* Grid items retain the full-bleed row padding inside their border box. */
+  #root .wpb-workout[data-focus-mode="false"] .wpb-workout-scroll:has(>.wpb-workout-side)>.wpb-set-head{
+    width:calc(100% - 36px);
+  }
   #root[data-pi-motion="expressive"] .wpb .wpb-workout-scroll>.wpb-workout-side{
     box-sizing:border-box;
     display:block;
@@ -6972,13 +6976,14 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   color:var(--pi-color-on-muted)!important;
   letter-spacing:.25px!important;
 }
-/* M294: the tablet/foldable logger insets set-row content 4px left and
-   32px right. Align its heading to those measured tracks; phone-sized
-   logger rows use full-width tracks and must retain their own geometry. */
-@media(min-width:700px){
+/* M294: normal logger set rows start after the 4px row border.
+   The heading must share their measured numeric tracks,
+   instead of centering labels across a wider card. Compact phones use
+   the labels attached to their own field tracks below. */
+@media(min-width:421px){
   #root .wpb-workout[data-focus-mode="false"] .wpb-set-head{
     box-sizing:border-box;
-    width:calc(100% - 36px);
+    width:calc(100% - 4px);
     margin-left:4px;
   }
 }
@@ -7993,7 +7998,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root .wpb-workout[data-focus-mode="true"] .wpb-exercise-meta{
   display:flex;align-items:center;flex-wrap:wrap;column-gap:12px;row-gap:0;
-  margin-top:2px;min-width:0;
+  /* Preserve Focus spacing independently of exercise-detail presentation. */
+  margin:6px 0 14px;min-width:0;
 }
 #root .wpb-workout .wpb-progression-explanation{flex-basis:100%;}
 #root .wpb-workout .wpb-workout-tools{

@@ -2048,7 +2048,7 @@ function StyleTag({ theme } = {}) {
       .wpb-exercise-detail-header{padding-left:16px!important;padding-right:16px!important;background:${C.bg}!important;}
       .wpb-exercise-detail-body{padding-left:16px!important;padding-right:16px!important;background:${C.bg}!important;}
       .wpb-exercise-figure-wrap{margin-bottom:10px!important;}
-      .wpb-exercise-meta{margin-top:6px!important;margin-bottom:14px!important;color:${C.muted}!important;}
+      .wpb-exercise-detail .wpb-exercise-meta{margin-top:6px!important;margin-bottom:14px!important;color:${C.muted}!important;}
       .wpb-exercise-tabs{margin-bottom:14px!important;background:${C.bg}!important;border:1px solid var(--section-rule)!important;}
       .wpb-exercise-tabs>button{min-height:36px!important;font-size:12.5px!important;font-weight:650!important;}
       .wpb-exercise-history-session{

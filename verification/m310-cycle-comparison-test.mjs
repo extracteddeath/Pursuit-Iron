@@ -42,11 +42,24 @@ function describe(result){
   assert.equal(d.realizedSelection.lastWeekSets,
     sum(captureShellVolumeSnapshot(s,s.config.weeks,EXERCISES).sessions));
   assert.equal(d.realizedSelection.executableCoverage,
-    Math.min(...[0,d.realizedQuality.weeks.length-1].map(i=>
-      d.realizedQuality.weeks[i].muscleTargetCoveragePercent)));
+    Math.min(...d.realizedQuality.weeks.map(w=>w.muscleTargetCoveragePercent)),
+    'Finalist muscle coverage must include every middle work week');
   assert.equal(d.realizedSelection.executableLiftPractice,
-    Math.min(...[0,d.realizedQuality.weeks.length-1].map(i=>
-      d.realizedQuality.weeks[i].liftPracticePercent)));
+    Math.min(...d.realizedQuality.weeks.map(w=>w.liftPracticePercent)),
+    'Finalist lift practice must include every middle work week');
+  assert.equal(d.realizedSelection.executableWeakestPriorityLift,
+    Math.min(...d.realizedQuality.weeks.map(w=>w.weakestPriorityLiftPracticePercent)));
+  for(const lift of Object.keys(d.realizedSelection.executableLiftFrequencies))
+    assert.equal(d.realizedSelection.executableLiftFrequencies[lift],
+      Math.min(...d.realizedQuality.weeks.map(w=>w.liftFrequencies[lift]??0)),
+      'High-priority lift protection must include minimum session exposure across all work weeks');
+  for(const [metric,key] of [['executableCoverageWeek','muscleTargetCoveragePercent'],
+    ['executableLiftPracticeWeek','liftPracticePercent'],
+    ['executableWeakestPriorityLiftWeek','weakestPriorityLiftPracticePercent']]){
+    const lowest=Math.min(...d.realizedQuality.weeks.map(w=>w[key]));
+    assert.equal(d.realizedQuality.weeks.find(w=>w[key]===lowest).week,d.realizedSelection[metric],
+      'Displayed weakest-week provenance must match the first true occurrence');
+  }
   assert.ok(Number.isFinite(d.realizedSelection.score)
     && Number.isFinite(d.realizedSelection.baseScore));
   assert.deepEqual(s.nextEngine.cycleTemplate.splitDecision.realizedSelection,d.realizedSelection);

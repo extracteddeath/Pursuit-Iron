@@ -71,7 +71,7 @@ try{
  await page.click('.wpb-live-dock button[aria-label="Resume workout"]');
  await page.waitForSelector('[data-testid="set-0-1"]');
  await openSwap();
- await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:v1'))?.saved?.[0]?.days?.[0]?.exercises?.[0]!=='bb-bench');
+ await page.waitForFunction(()=>{const s=JSON.parse(localStorage.getItem('wpb:v1')),live=JSON.parse(localStorage.getItem('wpb:live'));return s.saved?.[0]?.days?.[0]?.exercises?.[0]!=='bb-bench' && live?.data?.[0]?.id===s.saved?.[0]?.days?.[0]?.exercises?.[0];});
  let snap=await read();
  const newId=snap.live.data[0].id;
  assert.notEqual(newId,'bb-bench');
@@ -93,13 +93,16 @@ try{
  await page.waitForSelector('[data-testid="set-0-1"]');
  assert.equal((await read()).live.data[0].id,'bb-bench','Undo persists through resume');
  await openSwap();
- await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:v1'))?.saved?.[0]?.days?.[0]?.exercises?.[0]!=='bb-bench');
+ await page.waitForFunction(()=>{const s=JSON.parse(localStorage.getItem('wpb:v1')),live=JSON.parse(localStorage.getItem('wpb:live'));return s.saved?.[0]?.days?.[0]?.exercises?.[0]!=='bb-bench' && live?.data?.[0]?.id===s.saved?.[0]?.days?.[0]?.exercises?.[0];});
  // Manual set entry after the swap makes rollback unsafe; do not silently
  // delete what the user just typed or roll back a program independently.
  const weight='[data-testid="set-0-0"] input[aria-label="weight"]';
- await page.$eval(weight,input=>{
-     input.value='135';input.dispatchEvent(new Event('input',{bubbles:true}));
- });
+ await page.click(weight);
+ await page.keyboard.down('Control');
+ await page.keyboard.press('KeyA');
+ await page.keyboard.up('Control');
+ await page.keyboard.press('Backspace');
+ await page.type(weight,'135');
  await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:live')).data[0].sets[0].weight==='135');
  await button('Undo');
  snap=await read();

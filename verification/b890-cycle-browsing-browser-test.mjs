@@ -142,7 +142,7 @@ try{
   assert.doesNotMatch(await page.$eval('.wpb-cycle-detail',n=>n.innerText),/kept exactly|Available after/);
   assert.equal(await page.$eval('.wpb-cycle-detail',n=>n.scrollWidth<=n.clientWidth+1),true);
   const expectedDose=saved[1].nextEngine?.cycleTemplate?.splitDecision?.workingWeekVolumeChange;
-  const disclosures=await page.$eval('.wpb-cycle-detail details',ns=>ns.map(n=>({dose:n.classList.contains('wpb-cycle-dose-detail'),open:n.open})));
+  const disclosures=await page.$$eval('.wpb-cycle-detail details',ns=>ns.map(n=>({dose:n.classList.contains('wpb-cycle-dose-detail'),open:n.open})));
   assert.ok(disclosures.every(n=>n.dose&&!n.open),'existing top-level cycle facts stay expanded; dose is opt-in');
   if(expectedDose){
     assert.equal(disclosures.length,1,'Up next shows one compact dose detail');

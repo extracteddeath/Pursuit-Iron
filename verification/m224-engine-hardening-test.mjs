@@ -356,6 +356,9 @@ for (const style of ['double', 'linear', 'ladder', 'wave', 'e1rm', 'dynamic']) {
         assert.deepEqual(openingRows.filter(r => !r.warm && !r.sub).map(r => r.weight),
             style === 'dynamic' ? ['100', '95', '95'] : ['100', '100', '100'],
             style + ': only the current dynamic method may retain positional loads');
+        if (style !== 'dynamic' && s.setTargets?.length)
+            assert.deepEqual(openingRows.filter(r => !r.warm && !r.sub).map(r => r.reps), ['10', '8', '8'],
+                'Do not carry lighter-load rep targets onto heavier straight sets');
         assert.deepEqual(oldHistory, before, 'Opening a workout does not rewrite historical methods or logged performance');
     }
 }

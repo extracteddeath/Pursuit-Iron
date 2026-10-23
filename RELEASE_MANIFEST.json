@@ -5,7 +5,7 @@
   "build": 905,
   "engineVersion": "0.65.9",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "f82f82f63a7cdfd204f9e36b6d8c0775d0bcb280429ad414340bab0155b72c10",
+  "runtimeAggregate": "ea9bbe44a2ec911d21383c1e935205274cbf5fd9672b88613299d6e2c5789274",
   "runtimeFiles": {
     "modules/cycle-setup-drafts.js": "d3e9e750298afd8820e2bfd543c2cebede65e4f27c136ff26fe383d202b824e9",
     "modules/engine-api.js": "5b1252901101e46c275f312f8982d167897f67d7f069ed687b1235fb3bd57f55",
@@ -96,7 +96,7 @@
     "modules/training-domain/analytics.js": "058ec26279a762f36627fc21457fea130e171aa10cc58b5ae5acc055256ad9b3",
     "modules/training-domain/catalog.js": "d4ddf437e28b301362bca51ccd4400d052b86c36d4807516ece9945d61f5afc0",
     "modules/training-domain/history-import.js": "13a1128e16c886e280feedd45beb7e340cd9a5fac8752741632fe4b08dbc9462",
-    "modules/training-domain/prescriptions.js": "ce1a8f63e66e64fbbc91e98d8ffb094b20a5ebe236eb70cadcb30bc69fc7870e",
+    "modules/training-domain/prescriptions.js": "7a68bc86129ec547f1953bd3e6138f74bd943eeb8274df586699f2ef9125bf3b",
     "modules/training-domain/programs.js": "b08bcac89543531b76c5984b1b5d58e7ab7d294378335d4549c2bf6c232c3423",
     "modules/training-domain/records.js": "0a18e3bcbd1e0700f3907fb219eb5eee798970c103ece76fc53d9e2e59c03432",
     "modules/ui-layout.js": "489ffcbbbbbc340947852c1def36a5c955c203acd2f04209da5dbc316a267726",
@@ -119,8 +119,8 @@
   "uiFiles": {
     "modules/App.js": "0ed4fff5a8add1a8bae8a0664107d30037e728df70aaef5e34904dd29eda5df3",
     "index.html": "54fd7f97b0a2d9d8b76694380158b4a23699a3f1c1cbea697c5e33b7c705b7ed",
-    "sw.js": "ca94d57e9d380b39ce0793f3b0c06f8fe579e7eda1bbf065ba3496b9e093692e",
-    "BUILD_PROFILE.json": "1f88fafa9691ffc628426ac3e261f172bd83bf223b0f7a7fb3af8950a2e97d63",
+    "sw.js": "63f0875ca158c875c528df17c222d4e44bf38f73bffd7e3eb3922d120406f4ca",
+    "BUILD_PROFILE.json": "0e222541d8d4b21df8d3586a6c2bf4fc001791ad23d4e025a82c9b1d0a0c7000",
     "CHANGELOG.md": "f07ab842edb173f30c7888b42c7078205bb75006c532bba5e53356d36988b092",
     "app.css": "bb633bb437cb9a7bbda471313104fd3f19f39ebb96b260ce6fe9ae579070a9a7",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
@@ -128,6 +128,6 @@
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b905-rf545f1286e30dbab",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b905-rde2c2e510fd9996d",
   "uiMilestone": "Build 905 · M294 Workout heading and set-column alignment"
 }

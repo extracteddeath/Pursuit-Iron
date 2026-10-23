@@ -760,7 +760,9 @@ function engineSessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, h
             return { ...target, weight, reps: weight < target.weight ? floor : target.reps };
         }
         const weight = !positionalLoads || s.action === "increase_load" ? w : loadableAtOrBelow(ex, target.weight, unit);
-        return { ...target, weight, reps: weight < target.weight ? floor : target.reps };
+        // Reps demonstrated at a lighter positional load are not a target at today's heavier straight-set load.
+        const resetReps = weight < target.weight || (!positionalLoads && Math.abs(weight - target.weight) > 1e-6);
+        return { ...target, weight, reps: resetReps ? floor : target.reps };
     });
     if (perSetIncrease && setTargets?.length)
         w = Math.max(...setTargets.map(target => target.weight).filter(Number.isFinite));

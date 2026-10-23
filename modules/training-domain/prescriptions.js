@@ -1140,6 +1140,11 @@ function prescribeSets(program, day, ex, slot, weekIndex, unit, sug, dayPerf, pe
 }
 
 function loggedExercisePerformance(program, day, e, weekIndex, unit, perf, history) {
+    // A session-only replacement does not represent a comparable exposure for the
+    // programmed slot, but the other lifts in this workout are still comparable.
+    // Derive this from the executable week (alternate-week slots included), not
+    // from the saved base roster or the session-wide substitution flag.
+    const exerciseSubstituted = e.id !== exerciseAt(program, day, e.slot, weekIndex);
     const failedRows = program.config?.percentScheme === 'gzclp' ? e.sets.filter(x => x.done
         && !x.warm && !x.sub && parseInt(x.reps) === 0 && parseFloat(x.weight) > 0) : [];
     const s = summarizeSets(e.sets, EX_BY_ID[e.id], unit) || (failedRows.length
@@ -1192,7 +1197,8 @@ function loggedExercisePerformance(program, day, e, weekIndex, unit, perf, histo
             reps: Number.parseInt(t.reps), weight: t.weight, unit, amrap: !!t.amrap,
             rir: t.amrap ? 0 : parseRIRNum(prescription.rir)
         }));
-        return { ...historyExposureContext(e), ...(day.sessionLengthPlan?.changed ? { prescriptionEdited: true } : {}), weight: s.weight, reps: s.reps, date: Date.now(), sets: logged, note, noteRepeat: e.noteRepeat || "none",
+        return { ...historyExposureContext(e), ...(exerciseSubstituted ? { exerciseSubstituted: true } : {}),
+            ...(day.sessionLengthPlan?.changed ? { prescriptionEdited: true } : {}), weight: s.weight, reps: s.reps, date: Date.now(), sets: logged, note, noteRepeat: e.noteRepeat || "none",
             ...(prescription ? { prescription } : {}) };
     }
     return null;

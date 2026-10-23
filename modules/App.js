@@ -12896,7 +12896,14 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
     };
     // ----- swap the current exercise; scope = "session" (just today) or "program" (persist) -----
     const doSwap = (newId, scope = "session") => {
-        const ei = exIdx, slot = data[ei].slot;
+        const ei = exIdx, current = data[ei];
+        // Replacing a worked lift must never silently erase completed warm-ups or working sets.
+        if (!current || current.sets.some(set => set.done)) {
+            setSwap(false);
+            setSnack({ msg: "This lift has logged sets. Add the replacement as a new exercise to keep your work." });
+            return;
+        }
+        const slot = current.slot;
         if (data.some((x, i) => i !== ei && x.id === newId)) {
             setSwap(false);
             return;
@@ -12942,7 +12949,13 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                 setsDone: doneSets, totalSets, volume: Math.round(volume), unit,
                 readiness, readinessStatus: readiness?.factor < 1 ? 'low' : 'normal',
                 badDay: readiness?.factor < 1,
-                substitutionOccurred: data.some(e => e.id !== exerciseAt(program, day, e.slot, weekIndex)),
+                // Record each changed slot for history without classifying unrelated lifts as
+                // non-comparable. The exercise-level flag is attached by loggedExercisePerformance.
+                substitutions: data.flatMap(e => {
+                    const plannedExerciseId = exerciseAt(program, day, e.slot, weekIndex);
+                    return e.id !== plannedExerciseId
+                        ? [{ slot: e.slot, plannedExerciseId, performedExerciseId: e.id }] : [];
+                }),
                 durationMin: Math.max(1, Math.round(runElapsedMs() / 60000)),
                 /* The estimate this session was SOLD with, stored beside what it actually took. Pace can then
                    be measured even after the program is deleted or edited, which is when the comparison would
@@ -13784,7 +13797,11 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                                this codebase has already paid for once (v516). */
                             const swapEquip = expandEquipment(gymEquipment && gymEquipment.length ? gymEquipment : program.config.equipment);
                             const pool = rankSwapAlts(ex, availableFor(ex.part, swapEquip, banned, !!program.config.noBodyweight).filter(a => a.id !== ex.id && !sessionIds.has(a.id)), starvedRegions(program), [...sessionIds].map(id => EX_BY_ID[id]), program, day);
-                            return (_jsx(SwapSheet, { ex: ex, alts: pool, trend: trendById[ex.id], program: program, day: day, sessionExerciseIds: data.map(item => item.id), onPick: doSwap, onBanCurrent: () => { onBan(ex.id); /* THIRD copy of the same pool, found by the source sweep rather than by looking — and the one that matters most, since it picks the replacement FOR you rather than offering a list. Reuses swapEquip above. */ /* THIRD copy of the same pool, found by the source sweep rather than by looking — and the one that matters most, since it picks the replacement FOR you rather than offering a list. Reuses swapEquip above. */ const alt = availableFor(ex.part, swapEquip, [...banned, ex.id], !!program.config.noBodyweight).find(a => !sessionIds.has(a.id)); if (alt)
+                            return (_jsx(SwapSheet, { ex: ex, alts: pool, trend: trendById[ex.id], program: program, day: day, sessionExerciseIds: data.map(item => item.id), onPick: doSwap, onBanCurrent: () => { if (data[exIdx]?.sets.some(set => set.done)) {
+                                    setSwap(false);
+                                    setSnack({ msg: "This lift has logged sets. Add a replacement to preserve the completed work." });
+                                    return;
+                                } onBan(ex.id); /* THIRD copy of the same pool, found by the source sweep rather than by looking — and the one that matters most, since it picks the replacement FOR you rather than offering a list. Reuses swapEquip above. */ /* THIRD copy of the same pool, found by the source sweep rather than by looking — and the one that matters most, since it picks the replacement FOR you rather than offering a list. Reuses swapEquip above. */ const alt = availableFor(ex.part, swapEquip, [...banned, ex.id], !!program.config.noBodyweight).find(a => !sessionIds.has(a.id)); if (alt)
                                     doSwap(alt.id);
                                 else
                                     setSwap(false); }, onClose: () => setSwap(false) }));

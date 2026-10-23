@@ -535,6 +535,30 @@ function attachWorkingWeekTransition(previousProgram, currentProgram, decision, 
 // use throwaway IDs and never consume the app's makeId sequence or mutate history.
 // Reuse the same shell materializer, capacity/dose reconciliation, and focused
 // region repair that the winner will undergo in the actual program.
+// M321: a finalist is only as strong as its weakest executable work week.
+// Phase progressions can change reps, sets and frequency between the endpoints.
+// Consume M315's already-projected week data; no additional generation or
+// session simulation is necessary.
+export function summarizeStrengthWorkWeeks(weeks) {
+    if (!Array.isArray(weeks) || !weeks.length)
+        throw new NextShellAdapterError('NEXT_CYCLE_REALIZED_WEEKS_MISSING',
+            'The strength candidate has no executable work weeks to compare.');
+    const worst = key => weeks.reduce((chosen, week) =>
+        week[key] < chosen[key] ? week : chosen);
+    const coverage = worst('muscleTargetCoveragePercent');
+    const practice = worst('liftPracticePercent');
+    const priority = worst('weakestPriorityLiftPracticePercent');
+    return {
+        executableCoverage: coverage.muscleTargetCoveragePercent,
+        executableCoverageWeek: coverage.week,
+        executableLiftPractice: practice.liftPracticePercent,
+        executableLiftPracticeWeek: practice.week,
+        executableWeakestPriorityLift: priority.weakestPriorityLiftPracticePercent,
+        executableWeakestPriorityLiftWeek: priority.week,
+        executableLiftFrequencies: Object.fromEntries([...BLOCK_LIFTS].map(lift =>
+            [lift, Math.min(...weeks.map(week => week.liftFrequencies[lift] ?? 0))]))
+    };
+}
 export function scoreRealizedStrengthFinalist(candidate, previousShell, config, legacyExercises = []) {
     const { next, request, spec, quality } = candidate;
     const cfg = legacyBlockConfig(blockConfigForSpec(config, spec),
@@ -548,15 +572,12 @@ export function scoreRealizedStrengthFinalist(candidate, previousShell, config, 
         throw new NextShellAdapterError('NEXT_CYCLE_REALIZED_CAPACITY',
             'The candidate has an incomplete or over-capacity executable week.');
     const first = realized.weeks[0], last = realized.weeks[realized.weeks.length - 1];
-    // Compare the weakest endpoint for coverage and specific lift practice:
-    // an overloaded final week must not be hidden by a strong first week.
-    const coverage = Math.min(first.muscleTargetCoveragePercent, last.muscleTargetCoveragePercent);
-    const practice = Math.min(first.liftPracticePercent, last.liftPracticePercent);
-    const weakestLift = Math.min(first.weakestPriorityLiftPracticePercent,
-        last.weakestPriorityLiftPracticePercent);
-    let delta = coverage - quality.muscleTargetCoverage
-        + .22 * (practice - quality.liftPracticePercent)
-        + .07 * (weakestLift - quality.weakestPriorityLiftPracticePercent);
+    const worst = summarizeStrengthWorkWeeks(realized.weeks);
+    // Evaluate the entire block; a strong first/final week must not conceal a
+    // middle-week muscle-dose or priority-lift practice regression.
+    let delta = worst.executableCoverage - quality.muscleTargetCoverage
+        + .22 * (worst.executableLiftPractice - quality.liftPracticePercent)
+        + .07 * (worst.executableWeakestPriorityLift - quality.weakestPriorityLiftPracticePercent);
     const preceding = captureShellVolumeSnapshot(previousShell,
         Math.max(1, Number(previousShell.config?.weeks ?? previousShell.weeks) || 1), legacyExercises);
     if (!preceding || preceding.missing)
@@ -575,10 +596,7 @@ export function scoreRealizedStrengthFinalist(candidate, previousShell, config, 
         + 5 * (carryover.weakestSupportingPercent - (quality.weakestSupportingRegionCoveragePercent ?? 100)) / 100;
     const finalScore = Math.round((quality.score + delta) * 100) / 100;
     return { score: finalScore, baseScore: quality.score,
-        executableLiftFrequencies: Object.fromEntries([...BLOCK_LIFTS].map(lift =>
-            [lift, Math.min(first.liftFrequencies[lift] ?? 0, last.liftFrequencies[lift] ?? 0)])),
-        executableCoverage: coverage, executableLiftPractice: practice,
-        executableWeakestPriorityLift: weakestLift, executableCarryover: carryover.percent,
+        ...worst, executableCarryover: carryover.percent,
         firstWeekSets: first.weeklySets, lastWeekSets: last.weeklySets };
 }
 function chooseOptimizedCycleBlock(spec, config, enabled, buildCandidate, realizedContext = null) {

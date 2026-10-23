@@ -214,6 +214,16 @@ function checkRequestedPractice(program, spec, request) {
 }
 const totalSets = program => program.sessions.reduce((n, session) =>
     n + session.exercises.reduce((sets, ex) => sets + (Number(ex.sets) || 0), 0), 0);
+// Split search adds a concrete split to every candidate, including the original split.
+// That is not itself a structural change. A roster-locked volume rescue is valid
+// when the executable schedule still matches and no new lift-frequency intent was
+// requested; changes to either must go through the normal generation/audit path.
+export function canRetargetStrengthEntryRoster(previous, request, spec) {
+    if (spec?.priorityLift || !previous?.sessions?.length) return false;
+    const desiredSplit = request?.preferences?.lockedSplit ?? request?.preferences?.preferredSplit;
+    return desiredSplit === previous?.split?.family
+        && request?.schedule?.days?.length === previous.sessions.length;
+}
 function protectStrengthEntry(previous, next, spec, request) {
     if (previous?.phase !== 'hypertrophy_accumulation' || spec.phase !== 'strength_accumulation')
         return next;
@@ -221,7 +231,7 @@ function protectStrengthEntry(previous, next, spec, request) {
     if (before < 16 || totalSets(next) >= floor) return next;
     // A converted custom roster can be more faithful than a newly generated strength skeleton.
     // Try the audited same-roster prescription before refusing an extreme volume cliff.
-    if (!changesWeek(spec)) {
+    if (canRetargetStrengthEntryRoster(previous, request, spec)) {
         try {
             const locked = retargetStatic(previous, request, spec.phase, spec.weeks);
             if (locked.audit.result === 'pass' && totalSets(locked) >= floor)

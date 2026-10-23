@@ -1,3 +1,9 @@
+## M300 — Preserve strength-entry volume rescue with unchanged automatic splits
+
+- Automatic split optimization annotates even an unchanged original split as an explicit selection. Treat that as the same executable weekly topology for the existing audited, locked-roster volume fallback when a hypertrophy block enters strength accumulation with an otherwise unacceptable set cliff.
+- Only use the fallback when split and training-day count really match, and never when a new priority-lift frequency was requested. Changed schedules and strength-practice requests continue through full generation, auditing and feasibility checks.
+- Extend the permanent custom-cycle regression to verify the positive same-split case and rejection of changed split, days or practice. Keep Build 905 / Engine 0.65.9; refresh offline bundle integrity.
+
 ## M299 — Cycle split and schedule ownership after block overrides
 
 - Keep an authored split or training-day override scoped to its own block. The next block without overrides returns to the cycle's baseline topology, rather than silently keeping the preceding block's actual sessions while showing the baseline in settings.

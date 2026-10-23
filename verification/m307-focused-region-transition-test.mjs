@@ -75,16 +75,23 @@ console.log('M307 focused executable region matrix: '+JSON.stringify(matrix,null
  const ordinary=scoreRegionalCarryover(prior,current,{back:'normal'},backPrescription);
  assert.equal(ordinary.percent,100,'Ordinary back volume remains on the original half-prescription scoring path');
  const prioritized=scoreRegionalCarryover(prior,current,{back:'specialization'},backPrescription);
+ assert.equal(prioritized.weakestFocusedPercent,83,
+   'The optimizer cannot average away an under-covered focused lat region behind strong upper-back coverage');
+ assert.ok(prioritized.percent>prioritized.weakestFocusedPercent,
+   'The separate weakest-focus signal is stricter than aggregate regional continuity');
  assert.ok(prioritized.percent<100&&prioritized.atRiskRegions.includes('lats'),
    'Specialized back flags lost lat work independently of retained upper-back work');
  assert.ok(!prioritized.atRiskRegions.includes('upper_back'),'Covered upper back is not falsely flagged');
  const recovered=scoreRegionalCarryover(prior,{lats:6,upper_back:6.3},{back:'specialization'},backPrescription);
  assert.equal(recovered.percent,100,'A modest, feasible focused-width recovery satisfies soft carryover');
+ assert.equal(recovered.weakestFocusedPercent,100,'The weakest-focused signal recovers when lat dose is restored');
  const extreme=scoreRegionalCarryover({lats:100,upper_back:100},{lats:6,upper_back:6},
    {back:'specialization'},backPrescription);
  assert.equal(extreme.percent,100,'A very large hypertrophy prior cannot become a strength-volume quota');
+ assert.equal(extreme.weakestFocusedPercent,100,'Extreme prior dose cannot impose a hidden weakest-region quota');
  const reduced=scoreRegionalCarryover(prior,current,{back:'maintenance'},backPrescription);
  assert.equal(reduced.percent,100,'Explicitly reduced back work is exempt from soft carryover preferences');
+ assert.equal(reduced.weakestFocusedPercent,100,'Reduced muscles never receive a focus continuity penalty');
  assert.deepEqual(prior,{lats:12,upper_back:10},'Scoring preserves the input ledger');
 }
 console.log('PASS M307 prioritized back: independent width/thickness scoring without strength-volume quotas.');

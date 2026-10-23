@@ -1,9 +1,9 @@
 import { sessionPlanChange } from './session-plan.js';
 import { completedHistorySets, convertHistoryLoad, normalizeHistoryRevisions } from './next-engine/history-contract.js';
 import { sessionSuggestion, prescribeSets, loadableAtOrBelow, resolveStyle } from './training-domain/prescriptions.js';
-import { computeCell, cellRepRange } from './training-domain/records.js';
+import { cellRepRange } from './training-domain/records.js';
 import { e1rm, E1RM_REP_CAP } from './training-domain/programs.js';
-import { exerciseAt, isAssistedEx, exRecords } from './training-domain/analytics.js';
+import { sessionPrescriptionRows, isAssistedEx, exRecords } from './training-domain/analytics.js';
 import { techniqueProtocolFromCell } from './next-engine/workout-runtime.js';
 import { EX_BY_ID } from './training-domain/catalog.js';
 import { programWorkingWeeks } from './program-duration.js';
@@ -88,11 +88,7 @@ export function withWorkoutProgramChanges(program, dayId, changes = []) {
 // Home, Preview and the change review are projections of the actual Workout prescription.
 export function buildSessionReview(program, day, weekIndex, unit, history = [], perf = {}) {
     const records = normalizeHistoryRevisions(history).entries;
-    const exercises = (day?.exercises || []).flatMap((_, slot) => {
-        const id = exerciseAt(program, day, slot, weekIndex), ex = EX_BY_ID[id];
-        if (!ex) return [];
-        const cell = computeCell(program, day, id, slot, weekIndex);
-        if (!cell || cell.missing || !(cell.sets > 0)) return [];
+    const exercises = sessionPrescriptionRows(program, day, weekIndex).flatMap(({ id, ex, slot, cell }) => {
         const range = cellRepRange(cell, program, ex, slot === day.primaryIndex);
         const proposedSuggestion = sessionSuggestion(program, day, slot, perf, unit, weekIndex, history, false);
         const suggestion = sessionSuggestion(program, day, slot, perf, unit, weekIndex, history);

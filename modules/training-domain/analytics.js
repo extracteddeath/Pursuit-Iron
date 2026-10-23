@@ -424,6 +424,27 @@ function exerciseAt(program, day, slot, week) {
     return (Math.max(1, week) % 2 === 0) ? alt : day.exercises[slot];
 }
 
+// Lightweight projection of the exact week/slot cells used by Workout. Summary
+// readers share this roster; load suggestions remain in the session runtime.
+function sessionPrescriptionRows(program, day, weekIndex) {
+    return (day?.exercises || []).flatMap((_, slot) => {
+        const id = exerciseAt(program, day, slot, weekIndex), ex = EX_BY_ID[id];
+        if (!ex) return [];
+        const cell = computeCell(program, day, id, slot, weekIndex);
+        return cell && !cell.missing && Number(cell.sets) > 0 ? [{ id, ex, slot, cell }] : [];
+    });
+}
+
+function summarizeSession(program, day, weekIndex, pace = null) {
+    const exercises = sessionPrescriptionRows(program, day, weekIndex);
+    const lead = exercises.find(row => row.slot === day.primaryIndex) || exercises[0];
+    return { exercises, sets: exercises.reduce((n, row) => n + Number(row.cell.sets), 0),
+        exCount: exercises.length, lead: lead?.ex.name ?? null,
+        lifts: exercises.map(row => row.ex.name),
+        minutes: estimateMinutesFor(program, day, weekIndex, pace, exercises),
+        budgetMinutes: estimateMinutes(program, day, weekIndex, exercises) };
+}
+
 function perWeekOf(program) {
     const n = Number(program.config?.days) || program.days.length;
     return Math.max(1, Math.min(n, program.days.length));
@@ -904,7 +925,7 @@ function completionRate(history = []) {
 function paceFactor(history = [], saved = []) {
     const byId = new Map(saved.map(p => [p.id, p]));
     const ratios = [];
-    for (const h of history) {
+    for (const h of normalizeHistoryRevisions(history).entries) {
         const p = byId.get(h.programId);
         const est = h.estMin || (p && p.days ? (() => {
             const d = p.days.find(x => x.id === h.dayId);
@@ -932,14 +953,11 @@ function paceFactor(history = [], saved = []) {
 
 function addedSeconds(program, day, weekIndex, withTransitions) {
     let sec = 0;
-    (day.exercises || []).forEach((id, slot) => {
-        const ex = EX_BY_ID[id];
-        if (!ex)
-            return;
+    sessionPrescriptionRows(program, day, weekIndex).forEach(({ ex, slot, cell }) => {
         if (!program.overrides?.[`${day.id}:${slot}`]?.added)
             return;
         sec += exerciseSlotSec(ex, {
-            sets: Number(computeCell(program, day, id, slot, weekIndex).sets) || 0,
+            sets: Number(cell.sets),
             goal: goalForDay(program, day), isPrimary: slot === day.primaryIndex,
             linked: !program.config?.noSupersets && !!program.ss?.[`${day.id}:${slot}`],
             restCustom: program.overrides?.[`${day.id}:${slot}`]?.rest,
@@ -951,17 +969,20 @@ function addedSeconds(program, day, weekIndex, withTransitions) {
 
 function addedMinutes(program, day, weekIndex) { return Math.round(addedSeconds(program, day, weekIndex, true) / 60); }
 
-function daySeconds(program, day, weekIndex, withTransitions) {
-    if (day?.sessionLengthPlan?.programId === program?.id && day.sessionLengthPlan.weekIndex === weekIndex)
-        return day.sessionLengthPlan.estimatedMinutes * 60;
+function sessionDurationPlan(program, day, weekIndex) {
+    const plan = day?.sessionLengthPlan;
+    return plan?.schemaVersion === 1 && plan.programId === program?.id && plan.dayId === day.id
+        && plan.weekIndex === weekIndex && Number.isFinite(plan.estimatedMinutes) && plan.estimatedMinutes >= 0
+        ? plan : null;
+}
+
+function daySeconds(program, day, weekIndex, withTransitions, rows = null) {
+    const shortened = sessionDurationPlan(program, day, weekIndex);
+    if (shortened) return shortened.estimatedMinutes * 60;
     let sec = 0;
-    (day.exercises || []).forEach((_id, slot) => {
-        const id = exerciseAt(program, day, slot, weekIndex);
-        const ex = EX_BY_ID[id];
-        if (!ex)
-            return;
+    (rows || sessionPrescriptionRows(program, day, weekIndex)).forEach(({ ex, slot, cell }) => {
         sec += exerciseSlotSec(ex, {
-            sets: Number(computeCell(program, day, id, slot, weekIndex).sets) || 0,
+            sets: Number(cell.sets),
             goal: goalForDay(program, day), isPrimary: slot === day.primaryIndex,
             linked: !program.config?.noSupersets && !!program.ss?.[`${day.id}:${slot}`],
             restCustom: program.overrides?.[`${day.id}:${slot}`]?.rest,
@@ -973,12 +994,12 @@ function daySeconds(program, day, weekIndex, withTransitions) {
 
 const budgetIncludesTransitions = (program) => engHas(program.engineV || 1, "honestBudget");
 
-function estimateMinutesFor(program, day, weekIndex, pace) {
-    return Math.round((daySeconds(program, day, weekIndex, true) / 60) * (day?.sessionLengthPlan ? 1 : ((pace && pace.factor) || 1)));
+function estimateMinutesFor(program, day, weekIndex, pace, rows = null) {
+    return Math.round((daySeconds(program, day, weekIndex, true, rows) / 60) * (sessionDurationPlan(program, day, weekIndex) ? 1 : ((pace && pace.factor) || 1)));
 }
 
-function estimateMinutes(program, day, weekIndex) {
-    return Math.round(daySeconds(program, day, weekIndex, budgetIncludesTransitions(program)) / 60);
+function estimateMinutes(program, day, weekIndex, rows = null) {
+    return Math.round(daySeconds(program, day, weekIndex, budgetIncludesTransitions(program), rows) / 60);
 }
 
 const STRETCH_FOCUS_E2 = new Set([
@@ -1455,10 +1476,7 @@ function weekIntent(program, weekIndex) {
        Both come back through the same calls the session screen makes. */
     let primary = null, isoEx = null, isoDay = null, primDay = null, primSlot = -1, isoSlot = -1;
     for (const d of program.days) {
-        (d.exercises || []).forEach((id, i) => {
-            const ex = EX_BY_ID[id];
-            if (!ex)
-                return;
+        sessionPrescriptionRows(program, d, weekIndex).forEach(({ ex, slot: i }) => {
             if (!primary && i === d.primaryIndex) {
                 primary = ex;
                 primDay = d;
@@ -1534,10 +1552,9 @@ function weekIntent(program, weekIndex) {
 function plannedWeek(program, weekIndex) {
     let sets = 0, mins = 0;
     ((program && program.days) || []).forEach(d => {
-        (d.exercises || []).forEach((id, slot) => {
-            sets += Number(computeCell(program, d, id, slot, weekIndex).sets) || 0;
-        });
-        mins += Number(estimateMinutes(program, d, weekIndex)) || 0;
+        const summary = summarizeSession(program, d, weekIndex);
+        sets += summary.sets;
+        mins += summary.budgetMinutes;
     });
     return { sets: Math.round(sets), mins: Math.round(mins) };
 }
@@ -1560,13 +1577,8 @@ function dayMuscleBreakdown(program, day, weekIndex) {
         if (rows) return rows;
     }
     const map = {};
-    ((day && day.exercises) || []).forEach((id, slot) => {
-        const ex = EX_BY_ID[id];
-        if (!ex)
-            return;
-        const sets = Number(computeCell(program, day, id, slot, weekIndex).sets) || 0;
-        if (!(sets > 0))
-            return;
+    sessionPrescriptionRows(program, day, weekIndex).forEach(({ id, ex, slot, cell }) => {
+        const sets = Number(cell.sets);
         const add = (part, contrib, direct, factor) => {
             const e = map[part] || (map[part] = { part, sets: 0, from: [] });
             e.sets += contrib;
@@ -4839,26 +4851,13 @@ function planOverview(program, weekIndex = 1, cycle = null, history = [], saved 
         const status = w === weekIndex ? "now" : w === weekIndex + 1 ? "next" : w < weekIndex ? "past" : "todo";
         const row = { week: w, isDeload, current: w === weekIndex, status, done, total: days.length, days: [], sets: 0, minutes: 0 };
         for (const d of days) {
-            let sets = 0;
-            (d.exercises || []).forEach((id, si) => {
-                const c = computeCell(program, d, id, si, w);
-                sets += Number(c && c.sets) || 0;
-            });
-            const mins = estimateMinutesFor(program, d, w, displayPace) || 0;
-            /* WHAT THE DAY ACTUALLY IS, not just how long it takes. A row reading "Push · Chest · 27 sets
-               · 62m" describes a container; the lifter wants to know what is IN it. The lead lift and the
-               muscles it works are the two things that distinguish one day from another at a glance, and
-               both are already derivable — no new stored state. */
-            const exIds = d.exercises || [];
-            const leadId = exIds[d.primaryIndex] || exIds[0];
-            const leadEx = leadId ? EX_BY_ID[leadId] : null;
+            const summary = summarizeSession(program, d, w, displayPace);
             const focus = dayMuscleVolume(program, d, w).slice(0, 3).map(([part]) => part);
-            row.days.push({ dayId: d.id, label: d.label || "Day", sets, minutes: mins,
-                exCount: exIds.length, lead: leadEx ? leadEx.name : null, focus,
-                lifts: exIds.map(id => (EX_BY_ID[id] ? EX_BY_ID[id].name : null)).filter(Boolean),
+            row.days.push({ dayId: d.id, label: d.label || "Day", sets: summary.sets, minutes: summary.minutes,
+                exCount: summary.exCount, lead: summary.lead, focus, lifts: summary.lifts,
                 done: !!(doneDaysByWeek[w] && doneDaysByWeek[w].has(d.id)) });
-            row.sets += sets;
-            row.minutes += mins;
+            row.sets += summary.sets;
+            row.minutes += summary.minutes;
         }
         weeks.push(row);
     }
@@ -5218,3 +5217,5 @@ function isRuntimeProgram(p) {
 export { ALL_PLATES, ASSIST_IDS, AVAIL_PLATES, BARS, BAR_LABEL, BIG_THREE, BIRTH_RE, COVERED_MUSCLES, DELT_HEAD, EQUIP_CATS, EX_ABBREV, EX_FAMILY, EX_METRICS, EX_METRIC_BY_ID, EX_SPECIFIC, EX_WINDOWS, FOCUS_CAVEAT, GAP_FRACTION, GENERATION_ROUTE, GYM_LIMIT_KEYS, INTENT_FROM_CAT, LEGACY_EX_TYPICAL_KEYS, LEVEL_TITLES, MACHINE_SETUP, MILESTONE_XP, MIN_DAY_SESSIONS, MOBILITY, MUSCLE_SYNONYM, MYO_MAX_SETS, MYO_MINI_REPS, MYO_MINI_SETS, MYO_MIN_REPS, MYO_TARGET_REPS, NOVICE_INELIGIBLE_SPLITS, PATTERNS, PATTERN_GROUPS, PATTERN_MIN_SETS, PHASES, PHASE_ROT, PLANNED_ROOM_RIR, PLATES, PROG_POLICIES, PROG_STYLES, PV_PAD_TOP, PV_ROW_GAP, RACK_PRESETS, REDUCE_FRACTION, REFERENCES, REGION_MOVEMENT, REGION_REQUIRED, RELEASE_DIAG_CAP, RELEASE_DIAG_FIELDS, RELEASE_DIAG_KEY, REST_SCALE, SCORE_BANDS, SCORE_EQUIV, SCORE_PATTERN, SCORE_PATTERN_LABEL, SELF_TEST_FRAME_BUDGET_MS, SELF_TEST_HISTORY_LIMIT, SELF_TEST_SUPPORTED_ENGINES, SESSION_BOUNDS, SESSION_EX_TYPICAL, SETUP_FIELD_ORDER, SETUP_LABELS, SET_ROW_BLEED, SEX_FACTOR, STANDARDS, STD_LEVELS, STRENGTH_CLUB_LIFTS, STRENGTH_CLUB_TIERS_LB, STRETCH_FOCUS_E2, STRETCH_FOCUS_E3, SUBMUSCLE_LABEL, TECHNICAL_LIFTS, TEMPLATE_CATS, VIEW_DEPTH, WARMUP_PYRAMIDS, WARMUP_SET_SEC, WEIGHTED_SWAP, __doseMemo, __slopeMemo, __volKey, __weeklyVolMemo, _dstCache, _lmCache, _planOverviewMemo, addedMinutes, addedSeconds, ageFactor, ageFrom, applyCustomProgramSettings, asLengthUnit, assertExerciseData, auditProgramWeek, auditSets, availableFor, backupRecordImpact, barFor, barWeightFor, betterTopSet, birthParts, blockChangeSummary, blockPlanFor, blockRetro, blockReview, budgetIncludesTransitions, buildLifterModel, calibrateDayPerf, calibratedAnchorPerf, canUndoProgramSave, classifyPlateau, clearSetup, coachFacts, completionRate, computeLevel, computeMilestones, constantLoadDecay, coverageGaps, coverageRelief, cuesFor, cycleProgress, dayMuscleBreakdown, dayMuscleVolume, dayScopedTrends, daySeconds, daysInWeek, decodeGallery, deloadAdvice, distributeVolBias, effectiveRest, effortLabel, effortValueLabel, estimateMinutes, estimateMinutesFor, exMatches, exRecords, exWindow, exerciseAt, exerciseProfile, exerciseSeries, exerciseSlotSec, exerciseTrends, explainPrescription, feedbackDelta, filterWorkoutHistory, fmtSets, formatSetup, groupPctSets, groupSessionsByCycle, groupSessionsByMonth, growMyoSets, gymById, gymCapFor, historyForProgram, historyVolumeIn, homeProgramGroups, isAssistedEx, isRuntimeProgram, isStretchFocus, isWorkSet, landmarkOf, lastSetEffort, lastTopSet, lengthUnitFor, lifterModelKey, linearInc, liveCoachForContext, logWindow, loggedSubVolume, loggedVolume, lowerBodyLift, makeMyoMini, mavFor, mergeSessionData, mergedSetCount, newGymId, nextTMEvidence, normalizeBwLog, normalizeGyms, normalizeMeasureLog, overreachSignal, paceFactor, patternCues, patternTrainable, perWeekOf, perfAfterDelete, personalMav, personalRepSlope, phaseFor, phaseKind, pickActiveProgram, pickTopSet, planOverview, planOverviewMemo, plannedWeek, plateauOf, plateauOfLift, plateauSplitByDay, platesPerSide, poolOf, preferenceFloor, prescribedRIRofAny, programChangeLabels, projectNextTM, rankSwapAlts, readinessBand, recommendedSplit, regionGapFix, regionGapsFor, repRange, repsLow, restSec, rirTrend, rmAt, rotationOf, sanitizeInventory, sanitizeLimits, sanitizeRepsInput, sanitizeWeightInput, scoreAttribution, scoreCompose, scoreContin, scoreEquivalent, scoreEquivalentInverse, scoreLevelIdx, scoreLevelLabel, scoreMatur, scorePatternFor, scoreTargetFor, scoreTo100, sessionE1RM, sessionExercisePlan, sessionSnapshotStatus, setAvailPlates, setGymBarWeights, setRestScaleGlobal, setupFieldsFor, setupFieldsWithStored, setupLabel, simulateAndAudit, starvedRegions, strengthClubSnapshot, strengthLevel, strengthScore, strengthScoreHistory, strengthSnapshot, stretchTable, subRegionOf, swapOverlapNames, syncSubSets, techExplain, techSetTag, templateConfig, templateIntent, tempoFor, toLength, todayISO, uid, underRecoveredWeekly, userOwnsRuntimeSet, volumeAudit, volumeLedger, volumeResponse, volumeVerdicts, warmupCount, warmupPlan, warmupRoutine, warmupSets, weekIntent, weekKeyOf, weekMuscleBreakdown, weeklyBodyweightTrend, weeklyRecap, weeklySubVolume, weeklyVolume, workoutPlanCoachFact };
 
 export { liftBests };
+
+export { sessionPrescriptionRows, summarizeSession };

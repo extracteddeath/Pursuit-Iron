@@ -6972,6 +6972,17 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   color:var(--pi-color-on-muted)!important;
   letter-spacing:.25px!important;
 }
+/* M294: normal logger set rows are inset 4px left and 32px right.
+   The heading must share their measured numeric tracks at tablet widths,
+   instead of centering labels across a wider card. Compact phones use
+   the labels attached to their own field tracks below. */
+@media(min-width:421px){
+  #root .wpb-workout[data-focus-mode="false"] .wpb-set-head{
+    box-sizing:border-box;
+    width:calc(100% - 36px);
+    margin-left:4px;
+  }
+}
 #root .wpb-workout .wpb-target-toggle{
   font-size:11px!important;
   font-weight:750!important;

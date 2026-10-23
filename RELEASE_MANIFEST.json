@@ -5,7 +5,7 @@
   "build": 906,
   "engineVersion": "0.65.9",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "86c96279e6684a144dd753e9c5058247ee946cbddba43f71e7c86e1a67847c76",
+  "runtimeAggregate": "ddf2f1e706b8ac07ff83ea92b0474d8f7180110ae7ba5ebaba40c769b46c9f26",
   "runtimeFiles": {
     "modules/cycle-setup-drafts.js": "d3e9e750298afd8820e2bfd543c2cebede65e4f27c136ff26fe383d202b824e9",
     "modules/engine-api.js": "5b1252901101e46c275f312f8982d167897f67d7f069ed687b1235fb3bd57f55",
@@ -75,7 +75,7 @@
     "modules/next-engine/realizer.js": "b665a1d9513c7b548bb39337b4b203496dc709a76bb6f727e1fd0bce31d20400",
     "modules/next-engine/recovery-realization.js": "958b5b8ab8c9b0ebf8f9b91e0ba07b2877c27a99f9a4ee1ccddb4101b55a87a2",
     "modules/next-engine/recovery.js": "bede88b14aaef043e868a208e33624b06ad1e326f44ca1b13c2007db92de3ff7",
-    "modules/next-engine/response.js": "87f685cf61b8de1c01e7c613b92afc7fead05ebe7ac4b850fba8269301714e4e",
+    "modules/next-engine/response.js": "a0286d48c0526d03107fc641ade98b0291f07ac94015af18bf8f534f483aba75",
     "modules/next-engine/semantic-exercise-graph.js": "5011dac2040b41ad314823b8f04456e3507e55155c836701047489f2d7f69141",
     "modules/next-engine/session-shortening.js": "1815bffdbd2ec10e71d9ed481ca9535b697a9ad1aa6de67caac5c6ad53652bd1",
     "modules/next-engine/setup-economy.js": "d2f3f9838fa854eacd01f68577d1f44612de8da8c7215ece80c2d9159e0b8bd2",
@@ -86,7 +86,7 @@
     "modules/next-engine/topology.js": "76c86cfd3d8d8a9d39c656aa70dc66ab49adb16312333b7eda65617dc935e78d",
     "modules/next-engine/volume-repair.js": "cf14dfbe5fc03115aaaa7cd83f2343f63e49f8f1f7bab061b74b1e0101ea35ae",
     "modules/next-engine/weekly-recovery.js": "92cf14bd6ca28715d1d3f9ddde1cc0f42502892f230d69650f83bf6b921c111c",
-    "modules/next-engine/workout-history-adapter.js": "174bae15d5383a2b2dbd4506498631497cd134f7441274f86406c667f8e683cc",
+    "modules/next-engine/workout-history-adapter.js": "5d2de6e4e371f9e8e61b90063b08f808271015c36eba947ee1b4d854e88371ad",
     "modules/next-engine/workout-runtime.js": "65337f573f288a47cb25c2eb6914ef568762de45498556bc23149da712e3d21c",
     "modules/program-duration.js": "52bffd0e7798f16f1217ba455de75c63c917ba9b7c6aa61dcd795b10dc665d95",
     "modules/program-last-performance.js": "61ffec6cde222c2731becdc4b048a7da8b53f044816cf149104b168e3fca7ee3",
@@ -120,8 +120,8 @@
   "uiFiles": {
     "modules/App.js": "7981e62e4258da35b425e8463153b5dc45cd4038fc55d7d2d6b16ba1d16793f5",
     "index.html": "bc3985dd0692d91ceb47ad7c7d0e6581bf45684d6388630a0efd1fb9eb6ac262",
-    "sw.js": "6808cf2d5513fb0c30397448cb0b00a881f1a43bac12567bed82ec63d8f6066f",
-    "BUILD_PROFILE.json": "b3cdbcf7d4437bd86f6f11ea069f512ff6ac17e0acd590c72ede9d5df1730b45",
+    "sw.js": "f782bff5df5fe39c965a8a701d59de76bf21a11c91dd6e84b49c205d0e146796",
+    "BUILD_PROFILE.json": "1f8741693e87215fbf9503faac140986ff997f1c9db2dc0651d16d6970317ef7",
     "CHANGELOG.md": "f26b355bf2c83b93fdf294ce427bbe0b32886ea2fbf4e0421586a5a6b06a34de",
     "app.css": "baef215798a76bbcd06034b21feb0adde5bcbe3d994c7298b34d505769630f6b",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
@@ -129,6 +129,6 @@
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b906-r3d391ed656d37343",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b906-r3aa4f8eaca7d9d43",
   "uiMilestone": "Build 906 · M320 Adaptive training-cycle release"
 }

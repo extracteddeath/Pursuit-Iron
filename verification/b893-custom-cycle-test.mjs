@@ -264,6 +264,14 @@ console.log('PASS M300: automatic same-split strength-entry rescue is eligible w
    assert.deepEqual(result.schedule,immutable.schedule,'An unchanged block preserves its exact day capacities');
    assert.deepEqual(result.preferences,immutable.preferences,'Goal correction cannot rewrite split preferences');
  }
+ const strengthBase=shellConfigToNextRequest({...initialConfig,goal:'strength'},[],EXERCISES,302);
+ for(const phase of ['mixed_accumulation','foundation']) {
+   const carried=requestForBlock(strengthBase,{...initialConfig,goal:'strength'},{phase,weeks:4},EXERCISES);
+   assert.equal(carried.goal.type,'strength',
+     'A strength-oriented cycle can use mixed-style base training without losing its goal');
+   assert.equal(normalizeRequest(carried).goal.strengthWeight,1,
+     'Mixed-style Strength Peak base keeps strength recovery/capacity weighting');
+ }
  assert.equal(JSON.stringify(immutable),before,'Phase retargeting cannot mutate the original entry request');
  const withTopology=requestForBlock(immutable,initialConfig,
    {phase:'strength_accumulation',weeks:4,split:'upper_lower'},EXERCISES);

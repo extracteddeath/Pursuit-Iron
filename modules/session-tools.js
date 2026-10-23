@@ -175,7 +175,12 @@ export function undoWorkoutProgramSwap(program, saved = [], receipt) {
         return null;
     const restore = (current, entry) => {
         // A later unrelated edit must survive Undo; restore only the swapped slot.
-        if (current === entry.after) return entry.before;
+        // Saved records receive an updatedAt stamp even when this was their
+        // sole mutation. Treat that stamp as equivalent to the applied version,
+        // so Undo can also restore the previous edited state.
+        const withoutStamp = value => ({ ...value, updatedAt: null });
+        if (current === entry.after || JSON.stringify(withoutStamp(current)) === JSON.stringify(withoutStamp(entry.after)))
+            return entry.before;
         return { ...current, days: current.days.map(d => d.id === dayId ? {
             ...d, exercises: d.exercises.map((id, i) => i === entry.slot ? fromId : id)
         } : d) };

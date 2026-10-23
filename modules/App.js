@@ -12934,6 +12934,8 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                 const latest = dataRef.current[ei];
                 // Do not discard logged or edited sets while rolling back program state.
                 if (latest?.id !== newId || latest.slot !== slot
+                    || latest.note !== replacement.note
+                    || latest.noteRepeat !== replacement.noteRepeat
                     || JSON.stringify(latest.sets) !== plannedSets) {
                     setSnack({ msg: "This exercise changed after the swap. Undo cannot discard your work." });
                     return;

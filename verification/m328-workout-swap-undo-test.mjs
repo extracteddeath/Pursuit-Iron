@@ -25,6 +25,12 @@ assert.equal(undo.program, current, 'untouched active program restored exactly')
 assert.equal(undo.saved[0], current, 'saved current program restored too');
 assert.equal(undo.saved[1], sibling, 'cycle sibling program restored too');
 assert.equal(undo.saved[2], unrelated);
+const stamped = tx.saved.map(p => p.id === current.id || p.id === sibling.id
+    ? { ...p, updatedAt: 99999 } : p);
+const stampedUndo = undoWorkoutProgramSwap(tx.program, stamped, tx.receipt);
+assert.equal(stampedUndo.saved[0].edited, current.edited,
+    'Undo restores the edited flag after store timestamps the applied swap');
+assert.equal(stampedUndo.saved[1].edited, sibling.edited);
 
 // No silent partial rollback if a later change replaced the same exercise.
 const collision = { ...tx.saved[1], days: tx.saved[1].days.map(d =>

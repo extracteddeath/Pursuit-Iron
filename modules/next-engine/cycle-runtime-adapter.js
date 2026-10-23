@@ -15,7 +15,7 @@ import { historyDecision, withProgramExplainability } from './explainability.js'
 import { analyzeShellHistoryForNextEngine, carryForwardAvoidedExercises } from './workout-history-adapter.js';
 import { requestWithAthleteResponse } from './athlete-response.js';
 import { shellConfigToNextRequest, nextProgramToShellProgram, NextShellAdapterError } from './app-shell-adapter.js';
-import { repairShellVolume, reconcileLockedCycleWeekOverflows, finalizeGeneratedShellVolume, captureShellBaseProgram } from './volume-repair.js';
+import { repairShellVolume, reconcileLockedCycleWeekOverflows, finalizeGeneratedShellVolume, captureShellBaseProgram, captureShellVolumeSnapshot } from './volume-repair.js';
 import { firstPassingCapacityProgram } from './capacity-generation.js';
 import { PUBLIC_MEV_REGIONS, PUBLIC_REGION_MUSCLE, publicMevLedger } from './public-mev.js';
 const phaseGoal = (phase) => phase === 'hypertrophy_accumulation' ? 'hypertrophy' :
@@ -355,6 +355,41 @@ function cycleProgramScore(program, request, phase, previous, startingSplit) {
         ...(carryover ? { regionalCarryoverPercent: carryover.percent,
             regionalRiskRegions: carryover.atRiskRegions } : {}) };
 }
+// Read the exact executable projection at the boundary of two authored blocks.
+// This is separate from the phase-adjusted regional target coverage score.
+// A strength block may satisfy 100% of its new target while receiving fewer
+// absolute working sets for a given region.
+export function describeRegionalWorkingWeekChange(previousProgram, currentProgram, legacyExercises = []) {
+    const previousWeeks = Math.max(1, Math.round(Number(previousProgram?.config?.weeks ?? previousProgram?.weeks) || 1));
+    const before = captureShellVolumeSnapshot(previousProgram, previousWeeks, legacyExercises);
+    const after = captureShellVolumeSnapshot(currentProgram, 1, legacyExercises);
+    if (!before || !after || before.missing || after.missing) return null;
+    const round = value => Math.round(value * 10) / 10;
+    const percentChange = (oldValue, newValue) => oldValue > 0
+        ? Math.round((newValue - oldValue) / oldValue * 100) : null;
+    const total = view => view.sessions.reduce((n, day) =>
+        n + day.exercises.reduce((sets, ex) => sets + ex.sets, 0), 0);
+    const previousWeeklySets = total(before), currentWeeklySets = total(after);
+    const regions = PUBLIC_MEV_REGIONS.map(region => {
+        const previousSets = round(Math.max(0, Number(before.regions[region]) || 0));
+        const currentSets = round(Math.max(0, Number(after.regions[region]) || 0));
+        return { region, previousSets, currentSets, changeSets: round(currentSets - previousSets),
+            percentChange: percentChange(previousSets, currentSets) };
+    }).filter(region => region.previousSets > 0 || region.currentSets > 0);
+    return { comparison: 'previous_final_week_to_next_first_week', previousWeek: previousWeeks,
+        currentWeek: 1, previousWeeklySets, currentWeeklySets,
+        weeklyPercentChange: percentChange(previousWeeklySets, currentWeeklySets), regions };
+}
+function attachWorkingWeekTransition(previousProgram, currentProgram, decision, legacyExercises) {
+    if (previousProgram?.nextEngine?.program?.phase !== 'hypertrophy_accumulation'
+        || currentProgram?.nextEngine?.program?.phase !== 'strength_accumulation'
+        || !decision) return;
+    const actual = describeRegionalWorkingWeekChange(previousProgram, currentProgram, legacyExercises);
+    if (!actual) return;
+    decision.workingWeekVolumeChange = actual;
+    if (currentProgram.nextEngine?.cycleTemplate)
+        currentProgram.nextEngine.cycleTemplate.splitDecision = { ...decision };
+}
 function chooseOptimizedCycleBlock(spec, config, enabled, buildCandidate) {
     const candidates = cycleSplitCandidates(spec, config, enabled);
     let winner = null, firstError = null, passing = 0;
@@ -569,6 +604,7 @@ export function generateNextCycleForShell(options) {
             };
         }
         legacy = finalizeGeneratedShellVolume(legacy, options.legacyExercises);
+        if (i > 0) attachWorkingWeekTransition(blocks[i - 1], legacy, decision, options.legacyExercises);
         blocks.push(legacy);
         previous = legacy.nextEngine.program;
     }
@@ -706,6 +742,7 @@ export function convertProgramToNextCycleForShell(options) {
             convertedFromStandalone: true
         });
         legacy = finalizeGeneratedShellVolume(legacy, options.legacyExercises);
+        if (i > 0) attachWorkingWeekTransition(blocks[i - 1], legacy, decision, options.legacyExercises);
         blocks.push(legacy);
         previous = legacy.nextEngine.program;
     }
@@ -810,7 +847,9 @@ function buildAdaptedBlock(current, cycle, target, weeks, label, analysis, legac
     attachBlockContext(legacy, next, request, cycle.nextEngineCycle.baseRequest, { templateId: cycle.templateId, plannedIndex, blockIndex: cycle.activeBlock + 1, label, weeks, phase: target, preview: false, adaptBetweenBlocks: !!cycle.adaptExercises, splitDecision: decision, adaptedFrom: current.id });
     legacy.nextEngine.priorBlock = { programId: current.id, phase: source.phase, workouts: analysis.workoutCount, classification: analysis.classification, recovery: analysis.recovery.status };
     legacy.nextEngine.historySummary = { positive: analysis.positiveDecisionCount, negative: analysis.negativeDecisionCount, successfulExercises: analysis.successfulExerciseIds.length, ignoredLegacyExerciseIds: analysis.ignoredLegacyExerciseIds };
-    return finalizeGeneratedShellVolume(legacy, legacyExercises);
+    const finalized = finalizeGeneratedShellVolume(legacy, legacyExercises);
+    attachWorkingWeekTransition(current, finalized, decision, legacyExercises);
+    return finalized;
 }
 export function advanceNextCycleForShell(options) {
     const cycle = options.cycle, current = options.activeProgram;

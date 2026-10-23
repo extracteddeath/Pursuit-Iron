@@ -1,3 +1,10 @@
+## M311 — Upgrade existing custom cycles to adaptive training
+
+- Existing custom cycles now offer **Upgrade future blocks to adaptive** in Cycle options. The saved plan stays active; future exercise selections, strength-specific split optimization and training-frequency targets update at the next legitimate block boundary using real workout history.
+- Preserve every existing session, manually edited set, current exercise, old block, prebuilt preview and user-authored future phase. Never silently overwrite a preview that already has workout history. Older legacy-first conversions retain their mandatory first fixed bridge and then become adaptive.
+- Standalone custom programs retain their existing Turn into Cycle path, now explicitly labeled as an adaptive upgrade with both adaptation switches enabled by default.
+- Add engine invariants and real phone/desktop conversion-to-upgrade browser coverage, plus M310 fixed-vs-adaptive cycle quality contracts.
+
 ## M310 — Real fixed-versus-adaptive training cycle quality matrix
 
 - Deterministic before/after comparison of fixed-split and goal-adaptive cycles with identical seed, athlete, training time, equipment, focus, and week counts for four- and five-day examples.

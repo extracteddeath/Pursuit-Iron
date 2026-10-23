@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { EXERCISES } from '../modules/App.js';
-import { generateNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
+import { generateNextCycleForShell, advanceNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
+import { analyzeShellHistoryForNextEngine } from '../modules/next-engine/workout-history-adapter.js';
+import { completedHistory, ids } from './m265-generation-fixture.mjs';
+import { captureShellVolumeSnapshot } from '../modules/next-engine/volume-repair.js';
 import { upgradeExistingCycleToAdaptive } from '../modules/next-engine/adaptive-cycle-upgrade.js';
 import { repeatCycleOptions } from '../modules/engine-api.js';
 
@@ -43,4 +46,51 @@ assert.throws(()=>upgradeExistingCycleToAdaptive({...cycle,blockIds:[saved[0].id
 const bridged={...cycle,nextEngineCycle:{...cycle.nextEngineCycle,legacyFirstBlockId:saved[0].id}};
 const bridgeUpgrade=upgradeExistingCycleToAdaptive(bridged,saved,training);
 assert.equal(bridgeUpgrade.cycle.adaptiveUpgrade.firstFixedLegacyBridge,true);
+
+// M312: enabling the switches is not enough. Walk the real advancement worker
+// with completed executable workouts, using the saved fixed-split preview as
+// the replacement target. It must generate an audited adaptive block under the
+// same ID without rewriting past logs, active work or author-owned phase specs.
+const fullHistory=completedHistory(saved[0]);
+assert.equal(analyzeShellHistoryForNextEngine(saved[0],fullHistory,EXERCISES).readyForNextBlock,true,
+ 'The completed first block must provide genuine advancement evidence');
+const beforeAdvance=JSON.stringify({result,saved,fullHistory});
+const advanced=advanceNextCycleForShell({
+ cycle:result.cycle,activeProgram:saved[0],history:fullHistory,
+ legacyExercises:EXERCISES,makeId:ids('m312-next')
+});
+assert.equal(advanced.done,false);
+assert.equal(advanced.insertedRecovery,false,'Favorable training evidence must not trigger recovery');
+assert.equal(advanced.replaceProgramId,saved[1].id,'The preview must be replaced in place');
+assert.equal(advanced.nextProgram.id,saved[1].id,'History and Plan references must retain their program ID');
+assert.equal(advanced.nextProgram.nextEngine.program.phase,'strength_accumulation');
+assert.equal(advanced.nextProgram.nextEngine.program.audit.result,'pass');
+assert.equal(advanced.nextProgram.nextEngine.cycleTemplate.preview,false);
+assert.equal(advanced.nextProgram.nextEngine.cycleTemplate.splitDecision.mode,'goal_optimized',
+ 'An upgraded cycle must actually run split optimization at advancement');
+assert.equal(advanced.cycle.blockMeta[1].splitDecision.mode,'goal_optimized');
+assert.equal(advanced.cycle.activeBlock,1);
+assert.equal(advanced.nextProgram.nextEngine.priorBlock.programId,saved[0].id,
+ 'The rebuilt future block must be tied to actual preceding workout history');
+assert.equal(advanced.nextProgram.nextEngine.priorBlock.workouts,fullHistory.length);
+assert.equal(advanced.nextProgram.config.split,advanced.nextProgram.nextEngine.program.split.family);
+assert.equal(advanced.nextProgram.days.length,advanced.nextProgram.nextEngine.program.sessions.length);
+assert.deepEqual(advanced.cycle.nextEngineCycle.plannedBlocks,cycle.nextEngineCycle.plannedBlocks,
+ 'User-authored phases are immutable even after the worker generates a new split');
+assert.equal(JSON.stringify({result,saved,fullHistory}),beforeAdvance,
+ 'Advance must not mutate the upgrade, saved previews, active plan or workout logs');
+const prevWeek=captureShellVolumeSnapshot(saved[0],5,EXERCISES);
+const nextWeek=captureShellVolumeSnapshot(advanced.nextProgram,1,EXERCISES);
+assert.ok(prevWeek&&!prevWeek.missing&&nextWeek&&!nextWeek.missing,
+ 'Evaluate real executable weeks, not merely the base exercise prescriptions');
+const weeklySets=snapshot=>snapshot.sessions.reduce((total,day)=>total+
+ day.exercises.reduce((n,ex)=>n+ex.sets,0),0);
+const actualBefore=weeklySets(prevWeek),actualAfter=weeklySets(nextWeek);
+assert.ok(actualAfter>=Math.ceil(actualBefore*.5),
+ `Adaptive strength entry must not silently cliff from ${actualBefore} to ${actualAfter} executable sets`);
+assert.ok(nextWeek.sessions.every(day=>day.exercises.every(ex=>Number.isInteger(ex.sets)&&ex.sets>=1)));
+assert.ok(nextWeek.sessions.every(day=>day.estimatedMinutes<=day.maxMinutes+.01),
+ 'Every generated training session must fit the actual available time');
+console.log(`PASS M312: genuine upgrade advancement replaced the fixed preview under its original ID, ${actualBefore}→${actualAfter} executable weekly sets, with audited goal-optimized structure and unchanged training history.`);
+
 console.log('PASS M311: existing custom/converted cycles enable adaptation at future boundaries without altering active exercise roster, logged work, authored phase blocks, preview IDs or ownership.');

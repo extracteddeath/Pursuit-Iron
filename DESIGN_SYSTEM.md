@@ -185,3 +185,7 @@ Home Start and Switch program actions use maintained classes and shared tokens. 
 Strength is a first-class Progress destination. Home and Profile links use the same focus request; do not create another score calculation or move Strength back behind Lifts/Records. The existing trend classes are shared primitives scoped to `.wpb`, because both Progress and Profile consume them. Keep their flex layout, typography and data-derived ink together.
 
 The Profile share card owns identity and the existing canonical level/XP presentation. The Level visibility preference still applies, while its position is integrated in the header. Main metrics omit duplicate Level copy and expose explanations through native details; exported profile content retains its original preferences and semantic labels. Summary cards use a shared grid gap rather than zero-gap embedded overrides. Progress tabs retain native selection and the shared moving indicator; minimum content widths and horizontal overflow preserve readable labels at enlarged text.
+
+### M298 — Inspectable cycle structure
+
+Read-only block previews show their executable split, actual training-day count and explicit lift-frequency targets before weekly exercise details. Use the shared cycle facts class and spacing/shape/theme tokens. These labels read the existing program/request; do not invent a second schedule or frequency calculation. Preview navigation cannot activate a block or rewrite history. Cycle repeat submits the engine-owned settings projection to the existing generation worker.

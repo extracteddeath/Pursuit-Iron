@@ -336,7 +336,7 @@ function attachBlockContext(legacy, next, request, baseRequest, ctx) {
     legacy.nextEngine = {
         ...legacy.nextEngine,
         request: clone(request), baseRequest: clone(baseRequest), program: clone(next),
-        cycleState: clone(stateForPhase(baseRequest.goal.type, baseRequest.schedule.days.length, next.phase)), historySchemaVersion: 1,
+        cycleState: clone(stateForPhase(baseRequest.goal.type, next.sessions.length, next.phase)), historySchemaVersion: 1,
         cycleTemplate: clone(ctx)
     };
     legacy.blockLabel = ctx.label;
@@ -401,6 +401,21 @@ export function customFutureCycleSpecs(blocks, currentWeeks) {
     if (!Number.isSafeInteger(currentWeeks) || currentWeeks < 1 || currentWeeks >= 104)
         throw new NextShellAdapterError('NEXT_CYCLE_CUSTOM_LENGTH_INVALID', 'The existing block needs a valid fixed duration within the 104-week cycle limit.');
     return customCycleSpecs(blocks, { minBlocks: 1, maxBlocks: 7, maxWeeks: 104 - currentWeeks });
+}
+// Repeat the authored plan, not the previews (which may include inserted recovery blocks).
+// Keep this projection shared by the UI and worker inputs so custom phases and both
+// independent adaptation choices survive completion and serialized saves.
+export function repeatCycleOptions(cycle) {
+    const snapshot = cycle?.nextEngineCycle;
+    if (!snapshot?.baseConfig)
+        throw new NextShellAdapterError('NEXT_CYCLE_REQUEST_MISSING', 'This cycle is missing the settings needed to repeat it.');
+    return {
+        templateId: cycle.templateId,
+        ...(cycle.templateId === 'custom' ? { blocks: clone(snapshot.plannedBlocks) } : {}),
+        config: { ...clone(snapshot.baseConfig), name: cycle.name },
+        adaptBetweenBlocks: !!(snapshot.adaptBetweenBlocks ?? cycle.adaptExercises),
+        adaptTrainingSplit: !!(snapshot.adaptTrainingSplit ?? cycle.adaptTrainingSplit)
+    };
 }
 export function generateNextCycleForShell(options) {
     const templateId = options.templateId;
@@ -682,7 +697,10 @@ function requestForAdvance(cycle, current, target, weeks, analysis, spec) {
     const base = (cycle?.nextEngineCycle?.baseRequest ?? current?.nextEngine?.baseRequest);
     if (!base)
         throw new NextShellAdapterError('NEXT_CYCLE_REQUEST_MISSING', 'Next cycle is missing its immutable request snapshot.');
-    const phaseRequest = target === 'recovery' ? clone(base)
+    // Recovery follows the active week, while its training preferences still derive
+    // from the immutable baseline rather than compounding the last block's fatigue model.
+    const phaseRequest = target === 'recovery'
+        ? requestForBlock(base, current.config, { phase: target, split: current.nextEngine.program.split.family, days: current.days.length }, [])
         : requestForBlock(base, cycle?.nextEngineCycle?.baseConfig ?? current.config, spec ?? { phase: target }, []);
     let request = requestWithAthleteResponse(carryForwardAvoidedExercises(phaseRequest, current?.nextEngine?.request, analysis), analysis.athleteResponse);
     if (target === 'recovery' || analysis.classification === 'fatigue_limited' || analysis.recovery.status === 'deload_recommended') {
@@ -696,7 +714,7 @@ function buildAdaptedBlock(current, cycle, target, weeks, label, analysis, legac
     const source = captureShellBaseProgram(current, legacyExercises);
     if (!source)
         throw new NextShellAdapterError('NEXT_CYCLE_SOURCE_MISSING', 'Current cycle block is missing its engine source snapshot.');
-    const baseCfg = cycle?.nextEngineCycle?.baseConfig ?? current.config;
+    const baseCfg = target === 'recovery' ? current.config : cycle?.nextEngineCycle?.baseConfig ?? current.config;
     const chosen = chooseOptimizedCycleBlock(spec ?? { phase: target, weeks }, baseCfg,
         target !== 'recovery' && !!cycle?.nextEngineCycle?.adaptTrainingSplit, candidateSpec => {
         const request = requestForAdvance(cycle, current, target, weeks, analysis, candidateSpec);

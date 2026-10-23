@@ -3,6 +3,7 @@ import fs from 'node:fs';import http from 'node:http';import path from 'node:pat
 import { EXERCISES, mergeStandaloneIntoGeneratedCycle } from '../modules/App.js';
 import { generateNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
 import { currentProgram } from './m215-cycle-duration-fixture.mjs';
+import { config as lifecycleConfig, completedHistory, ids } from './m265-generation-fixture.mjs';
 const root=path.resolve(new URL('../',import.meta.url).pathname);
 const cfg=JSON.parse(fs.readFileSync(path.join(root,'verification/m205-generation-parity-results.json'))).rows[3].config;
 let n=0;
@@ -79,6 +80,7 @@ try{
   assert.equal(await page.$$eval('.wpb-plan-week-chip',ns=>ns.length),saved[1].config.weeks+(saved[1].config.deload?1:0));
   await page.click('.wpb-plan-session-link');await page.waitForSelector('.wpb-cycle-block-preview');
   assert.match(await page.$eval('.wpb-cycle-block-preview',n=>n.innerText),/sets · .* reps · .* RIR/);
+  assert.ok(await page.$eval('.wpb-cycle-preview-facts',(n,days)=>n.textContent.includes(`${days} training days per week`),saved[1].days.length),'preview exposes the actual upcoming weekly structure');
   assert.equal(await page.$$eval('.wpb-cycle-block-preview button',ns=>ns.some(n=>/start/i.test(n.textContent))),false);
   await page.evaluate(()=>document.documentElement.style.fontSize='32px');
   await page.waitForFunction(()=>parseFloat(getComputedStyle(document.querySelector('.wpb-cycle-preview-name')).fontSize)>=28);
@@ -166,6 +168,54 @@ try{
     assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).cycles[0].activeBlock),0,'Missing-block browsing cannot advance the cycle');
   }
   await page.close();
+ }
+
+ // M298: exercise the actual app confirmation, worker, persisted transition and repeat.
+ {
+  const live=generateNextCycleForShell({templateId:'custom',config:{...lifecycleConfig,name:'Lifecycle browser'},
+   blocks:[{phase:'mixed_accumulation',weeks:1},{phase:'strength_accumulation',weeks:1,split:'upper_lower',days:4,priorityLift:'bench_press',frequency:2}],
+   legacyExercises:EXERCISES,seed:298,makeId:ids('b890-live'),adaptTrainingSplit:true,adaptBetweenBlocks:false});
+  const liveCycle={...live.cycle,onComplete:'loop'},firstHistory=completedHistory(live.blocks[0]);
+  const context=await browser.createBrowserContext(),page=await context.newPage();
+  page.on('pageerror',error=>errors.push(error.message));await page.setBypassServiceWorker(true);
+  await page.setViewport({width:393,height:852,isMobile:true,hasTouch:true});
+  await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
+  await page.evaluateOnNewDocument(seed=>{if(!sessionStorage.getItem('b890-lifecycle')){
+   localStorage.setItem('wpb:v1',JSON.stringify(seed));sessionStorage.setItem('b890-lifecycle','1');
+  }},{...store,saved:live.blocks,cycles:[liveCycle],pinnedId:live.blocks[0].id,history:firstHistory});
+  await page.goto('http://127.0.0.1:8790/index.html',{waitUntil:'networkidle0'});
+  const complete=async(final=false)=>{
+   await page.waitForSelector('[aria-label="Open cycle Lifecycle browser"]');
+   await page.click('[aria-label="Open cycle Lifecycle browser"]');
+   await page.waitForSelector('[aria-label="Cycle options"]');await page.click('[aria-label="Cycle options"]');
+   await page.waitForSelector('.wpb-cycle-option-actions');
+   await page.$$eval('.wpb-cycle-option-actions button',bs=>bs.find(b=>b.textContent.startsWith('Complete')).click());
+   await page.waitForSelector('.wpb-pop');
+   await page.$$eval('.wpb-pop button',(bs,final)=>bs.find(b=>b.textContent.trim()===(final?'Roll new cycle':'Complete block')).click(),final);
+  };
+  await complete();
+  await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:v1')).cycles[0].activeBlock===1,{timeout:60000});
+  const entered=await page.evaluate(()=>{const s=JSON.parse(localStorage.getItem('wpb:v1'));return {cycle:s.cycles[0],program:s.saved.find(p=>p.id===s.pinnedId),saved:s.saved};});
+  assert.equal(entered.program.id,live.blocks[1].id,'the real app activates its reserved next block');
+  assert.deepEqual(entered.saved.find(p=>p.id===live.blocks[0].id),live.blocks[0],'completed blocks stay intact');
+  assert.equal(entered.program.nextEngine.request.goal.liftFrequency.bench_press,2);
+  const finalHistory=[...firstHistory,...completedHistory(entered.program)];
+  await page.evaluate(history=>{const s=JSON.parse(localStorage.getItem('wpb:v1'));s.history=history;localStorage.setItem('wpb:v1',JSON.stringify(s));},finalHistory);
+  await page.reload({waitUntil:'networkidle0'});await complete(true);
+  await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:v1')).cycles.length===2,{timeout:60000});
+  const rolled=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1'))),next=rolled.cycles.find(c=>c.id!==liveCycle.id);
+  assert.equal(rolled.cycles.find(c=>c.id===liveCycle.id).done,true);
+  assert.equal(next.continuedFrom,liveCycle.id);assert.equal(next.onComplete,'loop');
+  assert.equal(next.adaptTrainingSplit,true);assert.equal(next.adaptExercises,false);
+  assert.deepEqual(next.nextEngineCycle.plannedBlocks,liveCycle.nextEngineCycle.plannedBlocks,'the real worker repeats authored custom block order, duration and frequency');
+  assert.equal(rolled.saved.length,4,'repeat retains the completed blocks and adds distinct programs');
+  const records=rows=>rows.map(({updatedAt,...record})=>record);
+  assert.deepEqual(records(rolled.history),records(finalHistory),'complete and repeat preserve all training records');
+  await page.reload({waitUntil:'networkidle0'});
+  await page.waitForSelector('.wpb-home');
+  const reloaded=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')));
+  assert.equal(reloaded.pinnedId,next.blockIds[0],'new custom cycle remains active after reload');
+  assert.equal(reloaded.cycles.length,2);await context.close();
  }
 
  for(const [theme,width] of [['amethyst',320],['rosewater',1280]]){

@@ -8194,6 +8194,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb-cycle-empty{padding:40px 12px;text-align:center;color:var(--wpb-theme-muted);font-size:.875rem;}
 #root .wpb-cycle-empty>.wpb-ui-action{font-size:.875rem;white-space:normal;overflow-wrap:anywhere;}
 #root .wpb-cycle-preview-note{color:var(--wpb-theme-muted);font-size:.8125rem;line-height:1.5;}
+#root .wpb-cycle-preview-facts{display:flex;flex-direction:column;gap:var(--pi-space-1);padding:var(--pi-space-3);margin-bottom:var(--pi-space-3);border-radius:var(--pi-shape-card);background:var(--wpb-theme-accent-dim);font-size:.8125rem;line-height:1.5;overflow-wrap:anywhere}
+#root .wpb-cycle-preview-facts>span{color:var(--wpb-theme-muted)}
 #root .wpb-cycle-preview-week{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px;}
 #root .wpb-cycle-preview-select{min-width:0;max-width:100%;min-height:48px;background:var(--wpb-theme-card);color:var(--wpb-theme-text);border:1px solid var(--wpb-theme-border);border-radius:8px;padding:8px;font-size:.875rem;}
 #root .wpb-cycle-preview-day{margin-bottom:10px;border:1px solid var(--wpb-theme-border);border-radius:10px;padding:10px;min-width:0;}

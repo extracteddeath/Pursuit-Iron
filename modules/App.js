@@ -1,5 +1,5 @@
 import { withSessionPlanChoice } from './session-plan.js';
-import { planShorterSession, SESSION_LENGTH_OPTIONS, splitSupportsTrainingDays } from './engine-api.js';
+import { planShorterSession, SESSION_LENGTH_OPTIONS, splitSupportsTrainingDays, repeatCycleOptions } from './engine-api.js';
 import { readCycleSetupDraft, writeCycleSetupDraft, clearCycleSetupDraft, CYCLE_SETUP_DRAFT_KEY } from './cycle-setup-drafts.js';
 import { INJURY_AREAS, INJURY_IMPACTS, injuryParts, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
 import { withProgressionChoices, repeatedNote, refreshProgressionSets, exerciseSessionTags, workoutProgramChanges, withWorkoutProgramChanges, buildSessionReview } from './session-tools.js';
@@ -19827,6 +19827,12 @@ function CycleBlockPreview({ program, initialWeek = 1, initialDayId = null, onCl
     const [week, setWeek] = useState(Math.max(1, Math.min(total, initialWeek)));
     return _jsx(SessionChoiceDialog, { title: program.blockLabel || program.name, onClose, className: "wpb-cycle-block-preview", children: _jsxs("div", { children: [
         _jsx("p", { className: "wpb-cycle-preview-note", children: "Block preview. Browsing keeps your current training block unchanged. Planned prescriptions may adapt when this block starts." }),
+        _jsxs("div", { className: "wpb-cycle-preview-facts", "aria-label": "Block training structure", children: [
+            _jsx("strong", { children: SPLITS[program.config?.split]?.name || String(program.config?.split || "Training split").replaceAll('_', ' ') }),
+            _jsx("span", { children: `${program.days.length} training days per week` }),
+            Object.entries(program.nextEngine?.request?.goal?.liftFrequency || {}).map(([lift, frequency]) =>
+                _jsx("span", { children: `${lift.replaceAll('_', ' ').replace(/^./, c => c.toUpperCase())} target · ${frequency} days per week` }, lift))
+        ] }),
         program.nextEngine?.cycleTemplate?.splitDecision?.mode === 'goal_optimized' && _jsxs("details", { className: "wpb-cycle-preview-day", children: [
             _jsx("summary", { className: "wpb-cycle-preview-summary", children: `Why ${SPLITS[program.config?.split]?.name || String(program.config?.split || 'this split').replaceAll('_',' ')}?` }),
             _jsx("p", { className: "wpb-cycle-preview-note", children: program.nextEngine.cycleTemplate.splitDecision.reason }),
@@ -22527,10 +22533,8 @@ function App() {
                 if (!advanced.done && !advanced.nextProgram) throw new NextShellAdapterError('NEXT_CYCLE_INCOMPLETE', 'The next block is missing.');
                 if (advanced.done && cycle.onComplete === 'loop') {
                     const rolled = await runGeneration('cycle', {
-                        templateId: cycle.templateId,
-                        config: { ...(cycle.nextEngineCycle?.baseConfig || activeProgram.config), name: cycle.name },
-                        banned, legacyExercises: EXERCISES,
-                        adaptBetweenBlocks: !!cycle.nextEngineCycle?.adaptBetweenBlocks, makeId: uid
+                        ...repeatCycleOptions(cycle),
+                        banned, legacyExercises: EXERCISES, makeId: uid
                     }, 'Building your next training cycle');
                     const { ids } = requireCompleteCycleShell(rolled.cycle, rolled.blocks);
                     if (rolled.blocks.length !== ids.length || rolled.cycle.id === cycle.id

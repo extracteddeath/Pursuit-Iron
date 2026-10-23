@@ -118,10 +118,10 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "94a06efc6b117c94e9903db3a4dd61aabd80d5959c08af93be3abe4a996add4a",
+    "modules/App.js": "2deb0f7f37ddfec4a0ace3784d0f57cb12e03686f8507b4b4a91b016f1df2b3f",
     "index.html": "54fd7f97b0a2d9d8b76694380158b4a23699a3f1c1cbea697c5e33b7c705b7ed",
-    "sw.js": "9c4cd97bce1da897124a89ecf9d57fd445b0e3bc70c465f813c75761584077ff",
-    "BUILD_PROFILE.json": "c69be2cb069db34b66ce69c41a3bbce86da2805328ea6181e60451f5998b623c",
+    "sw.js": "42c2346a731cf2ff9fed38501901f5f23d319e5e7c8dd2dec1370a58bdfb4ba8",
+    "BUILD_PROFILE.json": "a75b1baa91b682043baa59479e5e74c12f995a4ea0005c60d0e96c12a9e25bf7",
     "CHANGELOG.md": "78cd961180263d1644d9db032f1b7c7cf2af6de484e78f71b200f3720f5e7874",
     "app.css": "d7a57dcd7dd919f59b154acb1794407ddfdd7f2ab72b8c86efd574edc6e285f8",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
@@ -129,6 +129,6 @@
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b905-reaf8eaafd1ccd6bb",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b906-rc67540a0fd5eea7f",
   "uiMilestone": "Build 906 · M320 Adaptive training-cycle release"
 }

@@ -585,9 +585,15 @@ export function scoreRealizedStrengthFinalist(candidate, previousShell, config, 
             'The preceding cycle has incomplete executable training history.');
     const previousSets = preceding.sessions.reduce((sum, day) =>
         sum + day.exercises.reduce((n, ex) => n + ex.sets, 0), 0);
-    if (previousSets >= 16 && first.weeklySets < Math.ceil(previousSets * .5))
+    // M322: an apparent safe entry week is not sufficient when subsequent
+    // strength weeks silently halve executable work. Apply the same continuity
+    // floor to every saved work week; recovery/peak phases are not scored here.
+    const cliff = previousSets >= 16
+        ? realized.weeks.find(week => week.weeklySets < Math.ceil(previousSets * .5))
+        : null;
+    if (cliff)
         throw new NextShellAdapterError('NEXT_CYCLE_REALIZED_VOLUME_CLIFF',
-            `Finalized strength would fall from ${previousSets} to ${first.weeklySets} weekly sets.`);
+            `Finalized strength week ${cliff.week} would fall from ${previousSets} to ${cliff.weeklySets} weekly sets.`);
     const normalized = normalizeRequest(request);
     const carryover = scoreRegionalCarryover(preceding.regions, first.regionalSets,
         normalized.goal.musclePriorities, createMusclePrescriptions(normalized, next.phase));

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';import http from 'node:http';import path from 'node:path';import puppeteer from 'puppeteer-core';
-import { program, history } from './b904-session-review-test.mjs';
+import { program, history, alternate, alternateHistory } from './b904-session-review-test.mjs';
 const root=path.resolve(new URL('../',import.meta.url).pathname);
 const store={v:13,savedAt:1,saved:[program],cycles:[],history,perf:history[0].perf,drafts:{},tombs:{},seenIntro:999,seenWhatsNew:999,pinnedId:program.id,
  theme:'amethyst',unit:'kg',unitChosen:true,restAutoStart:false,warmupCard:false,experience:'intermediate',bodyweight:84,installDismissedAt:Date.now(),lastBackup:Date.now()};
@@ -79,6 +79,61 @@ try{
    await page.reload({waitUntil:'networkidle0'});await page.waitForSelector('[aria-label="Resume workout"]');await page.click('[aria-label="Resume workout"]');await page.waitForSelector('.wpb-workout');
    live=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:live')));assert.ok(live.data[0].sets.filter(s=>!s.warm&&!s.sub).every(s=>s.weight==='80'&&s.reps==='8'),'resume keeps the chosen prescription');
   }
+  await context.close();
+ }
+ // M325: real alternate-week choice survives reload and reaches the workout logger.
+ for(const width of [320,900]){
+  const context=await browser.createBrowserContext(),page=await context.newPage();
+  page.on('pageerror',e=>errors.push(e.message));
+  await page.setViewport({width,height:850,isMobile:width<600,hasTouch:width<600});
+  await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
+  const source=alternateHistory[0];
+  const seededHistory=[{...source,id:'base-first',weekIndex:1,date:source.date-86400000,perf:{'bb-bench':source.perf['bb-bench']}},
+   source,{...source,id:'base-third',weekIndex:3,date:source.date+86400000,perf:{'bb-bench':source.perf['bb-bench']}}];
+  await page.evaluateOnNewDocument(data=>{if(!sessionStorage.getItem('m325-seed')){
+   localStorage.setItem('wpb:v1',JSON.stringify(data));sessionStorage.setItem('m325-seed','1');}},
+   {...store,saved:[alternate],history:seededHistory,perf:{},pinnedId:alternate.id,unit:'lb',theme:width===900?'rosewater':'amethyst'});
+  await page.goto('http://127.0.0.1:8804/index.html',{waitUntil:'networkidle0'});
+  await page.waitForSelector('[data-game-plan-exercise="db-bench"]');
+  const baseline=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')));
+  await page.click('[aria-label="Review plan changes"]');
+  await page.waitForSelector('[aria-label="Undo change for Dumbbell Bench Press"]');
+  assert.match(await page.$eval('.wpb-plan-review-intro',n=>n.innerText),/Week 4.*this workout/);
+  const card=await page.$eval('[data-plan-change="db-bench"]',n=>n.innerText);
+  assert.match(card,/50 lb × 8/);assert.match(card,/55 lb × 6/);assert.match(card,/same program day/);
+  await page.click('[aria-label="Undo change for Dumbbell Bench Press"]');
+  await page.waitForSelector('[aria-label="Restore recommendation for Dumbbell Bench Press"]');
+  assert.equal(await page.$eval('[data-plan-change="db-bench"] .wpb-plan-target-diff strong',n=>n.innerText),'50 lb × 8');
+  assert.equal(await page.$eval('[data-plan-change="db-bench"] .wpb-plan-before',n=>n.innerText),'55 lb × 6');
+  assert.match(await page.$eval('[data-plan-change="db-bench"] .wpb-plan-change-reason',n=>n.innerText),/Original recommendation:/);
+  await page.screenshot({path:path.join(root,`verification/m325-review-${width}-phone.png`)});
+  await page.keyboard.press('Escape');
+  await page.reload({waitUntil:'networkidle0'});
+  await page.waitForSelector('[data-game-plan-exercise="db-bench"]');
+  assert.match(await page.$eval('[data-game-plan-exercise="db-bench"]',n=>n.innerText),/50 lb × 8/);
+  await page.click('[aria-label="Review plan changes"]');
+  await page.click('[aria-label="Restore recommendation for Dumbbell Bench Press"]');
+  await page.waitForSelector('[aria-label="Undo change for Dumbbell Bench Press"]');
+  await page.keyboard.press('Escape');
+  assert.match(await page.$eval('[data-game-plan-exercise="db-bench"]',n=>n.innerText),/55 lb × 6/);
+  await page.click('[aria-label="Review plan changes"]');
+  await page.click('[aria-label="Undo change for Dumbbell Bench Press"]');
+  await page.waitForSelector('[aria-label="Restore recommendation for Dumbbell Bench Press"]');
+  await page.keyboard.press('Escape');
+  await page.evaluate(()=>[...document.querySelectorAll('button')].find(b=>b.textContent.trim()==='Preview · Time available').click());
+  await page.waitForSelector('.wpb-next-workout-view');
+  await page.evaluate(()=>[...document.querySelectorAll('button')].find(b=>b.textContent.trim()==='Start workout').click());
+  await page.waitForSelector('.wpb-workout');
+  await page.evaluate(()=>[...document.querySelectorAll('button')].find(b=>b.textContent.trim()==='Skip').click());
+  await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:live'))?.data?.some(r=>r.id==='db-bench'));
+  const live=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:live')));
+  const sets=live.data.find(r=>r.id==='db-bench').sets.filter(s=>!s.warm&&!s.sub);
+  assert.equal(live.weekIndex,4);assert.equal(sets.length,3);
+  assert.ok(sets.every(s=>s.weight==='50'&&s.reps==='8'&&s.valueOwner==='user'));
+  const after=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')));
+  assert.deepEqual(after.history,baseline.history);assert.deepEqual(after.perf,baseline.perf);
+  assert.deepEqual(after.saved[0].pairs,baseline.saved[0].pairs);
+  assert.deepEqual(after.saved[0].overrides,baseline.saved[0].overrides);
   await context.close();
  }
  assert.deepEqual(errors,[]);console.log('PASS B904 browser: Home review/game plan, truthful PRs, undo/restore, durable reload, preview/logger/resume parity and 320/393/900px themed layouts.');

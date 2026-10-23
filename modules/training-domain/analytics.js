@@ -9,7 +9,7 @@ import { SUPPORTED_PHASES, phaseLabel } from '../next-engine/phase-policy.js';
 import { nextWorkoutSuggestionForShell } from "../next-engine/workout-history-adapter.js";
 import { ENGINE_COMPATIBLE_VERSIONS } from "../next-engine/config.js";
 import { ALL_EQUIP_IDS, ENGINE_V, EXERCISES, EX_BY_ID, SESSIONS, SPLITS, expandEquipment } from './catalog.js';
-import { GYM_PRESETS, LOWER_PARTS, SECONDARY, SUB_LANDMARKS, blockPhase, cellRepRange, clamp, compositeMrv, computeCell, effortBounds, goalForDay, isBarLike, isMachineLike, landmarkFor, lastSetTech, loadStep, movePattern, roundTo, secondaryOf, weeksOf } from './records.js';
+import { GYM_PRESETS, LOWER_PARTS, SECONDARY, SUB_LANDMARKS, blockPhase, exerciseAt, cellRepRange, clamp, compositeMrv, computeCell, effortBounds, goalForDay, isBarLike, isMachineLike, landmarkFor, lastSetTech, loadStep, movePattern, roundTo, secondaryOf, weeksOf } from './records.js';
 import { GYM_LIMITS, INVENTORY_KEYS, PART_LABEL, anchorPerfFor, effortCalibration, gymRackFor, muscleRecovery, parseRIRNum, personalRecoveryHours, prescribeSets, prescribedRIRof, progressionHistoryForProgram, sessionSuggestion, setsOf, toUnit } from './prescriptions.js';
 import { E1RM_REP_CAP, EPLEY_SLOPE, PART_ORDER, decodeProgramCode, e1rm, e1rmRIR, engHas, engLacks, isAxialLoad, sameProgramContent } from './programs.js';
 
@@ -416,13 +416,6 @@ function preferenceFloor(program, part) {
         return 0; // unlandmarked regions have no invented floor
     const parent = ["front_delts", "side_delts", "rear_delts"].includes(part) ? "shoulders" : part;
     return (program.config?.reduce || []).includes(parent) ? Math.ceil(base * REDUCE_FRACTION) : base;
-}
-
-function exerciseAt(program, day, slot, week) {
-    const alt = program.pairs?.[`${day.id}:${slot}`];
-    if (!alt)
-        return day.exercises[slot];
-    return (Math.max(1, week) % 2 === 0) ? alt : day.exercises[slot];
 }
 
 // Lightweight projection of the exact week/slot cells used by Workout. Summary

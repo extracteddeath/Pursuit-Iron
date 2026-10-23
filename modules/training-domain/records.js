@@ -61,6 +61,13 @@ function normalizeCycleLinks(saved, cycles) {
     return touched ? out : saved;
 }
 
+function exerciseAt(program, day, slot, week) {
+    const alt = program.pairs?.[`${day.id}:${slot}`];
+    if (!alt)
+        return day.exercises[slot];
+    return (Math.max(1, week) % 2 === 0) ? alt : day.exercises[slot];
+}
+
 function normalizeHistoryDayIds(history, saved) {
     if (!Array.isArray(history) || !history.length || !Array.isArray(saved) || !saved.length)
         return history || [];
@@ -1309,7 +1316,7 @@ function setLoadInc(v, unit) { LOAD_INC = { v: v || 0, unit: unit || null }; }
 
 function setExLoadInc(map) { EX_LOAD_INC = map || {}; }
 
-export { setExLoadInc, setLoadInc, syncStoreOnce, createMemorySyncProvider, validateSyncProvider, BAR_EQUIP, BW_LOG_CAP, COMPOSITE_HEADS, EXP_BAND, EX_LOAD_INC, GYM_PRESETS, HISTORY_BYTES, HISTORY_BYTE_CHECK_FROM, HISTORY_CAP, LANDMARKS, LEGACY_EQUIP_IMPLIES, LOAD_INC, LOWER_PARTS, MACHINE_EQUIP, MRV_GRAIN, MYO_PARTS, SECONDARY, STORE_MIGRATIONS, STORE_VERSION, STRETCH_PARTIAL_PARTS, SUB_LANDMARKS, TOTAL_WEEKS, UNIFORM_LANDMARK, baseSetsFor, birthFromAge, blockPhase, capHistory, capWeeklyVolume, cellRepRange, clamp, compositeMrv, computeCell, customAuthoredSetCount, customLastSetTechnique, effortBounds, goalForDay, isBarLike, isMachineLike, landmarkFor, landmarkForLegacy, lastSetTech, legacyCustomSetCount, loadStep, mergeStores, migrateStore, movePattern, normalizeCycleLinks, normalizeEditedHistoryEntry, normalizeHistoryDayIds, parseStoredData, perfAfterHistoryReplace, roundTo, secondaryOf, squatHamCredit, summarizeHistoryLoggedSets, uniformLandmarkFor, weeksOf };
+export { exerciseAt, setExLoadInc, setLoadInc, syncStoreOnce, createMemorySyncProvider, validateSyncProvider, BAR_EQUIP, BW_LOG_CAP, COMPOSITE_HEADS, EXP_BAND, EX_LOAD_INC, GYM_PRESETS, HISTORY_BYTES, HISTORY_BYTE_CHECK_FROM, HISTORY_CAP, LANDMARKS, LEGACY_EQUIP_IMPLIES, LOAD_INC, LOWER_PARTS, MACHINE_EQUIP, MRV_GRAIN, MYO_PARTS, SECONDARY, STORE_MIGRATIONS, STORE_VERSION, STRETCH_PARTIAL_PARTS, SUB_LANDMARKS, TOTAL_WEEKS, UNIFORM_LANDMARK, baseSetsFor, birthFromAge, blockPhase, capHistory, capWeeklyVolume, cellRepRange, clamp, compositeMrv, computeCell, customAuthoredSetCount, customLastSetTechnique, effortBounds, goalForDay, isBarLike, isMachineLike, landmarkFor, landmarkForLegacy, lastSetTech, legacyCustomSetCount, loadStep, mergeStores, migrateStore, movePattern, normalizeCycleLinks, normalizeEditedHistoryEntry, normalizeHistoryDayIds, parseStoredData, perfAfterHistoryReplace, roundTo, secondaryOf, squatHamCredit, summarizeHistoryLoggedSets, uniformLandmarkFor, weeksOf };
 
 // Presentation only: saved/custom day labels retain their exact identity.
 export function displayDayName(label, program) {

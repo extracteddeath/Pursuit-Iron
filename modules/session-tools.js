@@ -131,3 +131,63 @@ export function buildSessionReview(program, day, weekIndex, unit, history = [], 
         changes: exercises.filter(row => row.change.changed),
         sourceDate: Math.max(0, ...exercises.map(row => Number(row.change.source?.date) || 0)) || null };
 }
+
+// Program-scope workout swaps are one reversible transaction spanning the open
+// program and its saved cycle siblings. Nothing in React owns a second roster.
+function swapWorkoutDay(p, dayId, fromId, toId) {
+    const day = p?.days?.find(d => d.id === dayId);
+    const slot = day?.exercises?.indexOf(fromId) ?? -1;
+    if (slot < 0 || fromId === toId || day.exercises.includes(toId)) return null;
+    return { slot, before: p, after: {
+        ...p, days: p.days.map(d => d.id === dayId ? { ...d,
+            exercises: d.exercises.map((id, i) => i === slot ? toId : id) } : d),
+        edited: true
+    } };
+}
+export function beginWorkoutProgramSwap(program, saved = [], dayId, fromId, toId) {
+    const active = swapWorkoutDay(program, dayId, fromId, toId);
+    if (!active) return null;
+    const changed = [];
+    const nextSaved = saved.map(p => {
+        if (p.id === program.id) {
+            changed.push({ id: p.id, before: p, after: active.after, slot: active.slot });
+            return active.after;
+        }
+        if (!program.cycleId || p.cycleId !== program.cycleId) return p;
+        const next = swapWorkoutDay(p, dayId, fromId, toId);
+        if (!next) return p;
+        changed.push({ id: p.id, ...next });
+        return next.after;
+    });
+    return { program: active.after, saved: nextSaved,
+        receipt: { dayId, fromId, toId, active: { ...active, id: program.id }, saved: changed } };
+}
+export function undoWorkoutProgramSwap(program, saved = [], receipt) {
+    if (!receipt || program?.id !== receipt.active?.id) return null;
+    const { dayId, fromId, toId } = receipt;
+    const rosterValid = (current, slot) => {
+        const day = current?.days?.find(d => d.id === dayId);
+        return day?.exercises?.[slot] === toId && !day.exercises.includes(fromId);
+    };
+    // Refuse the entire undo if any affected block changed underneath it.
+    if (!rosterValid(program, receipt.active.slot)
+        || receipt.saved.some(item => !rosterValid(saved.find(p => p.id === item.id), item.slot)))
+        return null;
+    const restore = (current, entry) => {
+        // A later unrelated edit must survive Undo; restore only the swapped slot.
+        // Saved records receive an updatedAt stamp even when this was their
+        // sole mutation. Treat that stamp as equivalent to the applied version,
+        // so Undo can also restore the previous edited state.
+        const withoutStamp = value => ({ ...value, updatedAt: null });
+        if (current === entry.after || JSON.stringify(withoutStamp(current)) === JSON.stringify(withoutStamp(entry.after)))
+            return entry.before;
+        return { ...current, days: current.days.map(d => d.id === dayId ? {
+            ...d, exercises: d.exercises.map((id, i) => i === entry.slot ? fromId : id)
+        } : d) };
+    };
+    return { program: restore(program, receipt.active),
+        saved: saved.map(p => {
+            const change = receipt.saved.find(item => item.id === p.id);
+            return change ? restore(p, change) : p;
+        }) };
+}

@@ -50,6 +50,6 @@ assert.ok(app.includes('current.sets.some(set => set.done)'),
     'swap must reject a lift with completed sets');
 assert.ok(app.includes('onBanCurrent: () => { if (data[exIdx]?.sets.some(set => set.done))'),
     'ban-and-replace must protect logged work before changing the ban list');
-assert.ok(app.includes('exerciseSubstituted: true, previousExerciseId:'),
+assert.ok(app.includes('exerciseSubstituted: true,') && app.includes('previousExerciseId: current.previousExerciseId || oldId'),
     'session and persistent swaps must retain their own identity even if the program updates');
 console.log('PASS M327: session swap identity is local, untouched lifts remain comparable, completed sets are protected.');

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { EXERCISES } from '../modules/App.js';
-import { CUSTOM_CYCLE_PHASES, customCycleSpecs, generateNextCycleForShell, cycleSplitCandidates } from '../modules/next-engine/cycle-runtime-adapter.js';
+import { CUSTOM_CYCLE_PHASES, customCycleSpecs, generateNextCycleForShell, cycleSplitCandidates, canRetargetStrengthEntryRoster } from '../modules/next-engine/cycle-runtime-adapter.js';
 import { createStrengthClaims, normalizeRequest } from '../modules/next-engine/prescription.js';
 import { shellConfigToNextRequest } from '../modules/next-engine/app-shell-adapter.js';
 const app=fs.readFileSync(new URL('../modules/App.js',import.meta.url),'utf8');
@@ -210,3 +210,28 @@ console.log('PASS B893 lifecycle: short-block completion, schedule changes, pers
   }
 }
 console.log('PASS M299: per-block topology overrides expire cleanly; config, generated sessions and request agree.');
+
+
+// M300: automatic split optimization explicitly annotates even the unchanged
+// split. Keep the verified same-roster volume fallback eligible in that case,
+// but do not bypass requested lift practice, a different split or different days.
+{
+  const original={phase:'hypertrophy_accumulation',split:{family:'upper_lower'},
+    sessions:Array.from({length:4},(_,i)=>({id:`prior-${i}`,exercises:[]}))};
+  const request={preferences:{lockedSplit:'upper_lower'},
+    schedule:{days:Array.from({length:4},(_,i)=>({id:`day-${i}`}))}};
+  const candidate=cycleSplitCandidates({phase:'strength_accumulation',weeks:6},
+    {split:'upper_lower',days:4},true)[0];
+  assert.equal(candidate.split,'upper_lower','automatic search begins with the original split');
+  assert.equal(canRetargetStrengthEntryRoster(original,request,candidate),true,
+    'an explicit but unchanged automatic split does not disqualify volume rescue');
+  assert.equal(canRetargetStrengthEntryRoster(original,request,{phase:'strength_accumulation',weeks:6}),true,
+    'the normal unchanged path remains eligible');
+  assert.equal(canRetargetStrengthEntryRoster(original,{...request,preferences:{lockedSplit:'full_body'}},candidate),false,
+    'a changed weekly split requires reconstruction, not static volume rescue');
+  assert.equal(canRetargetStrengthEntryRoster(original,{...request,schedule:{days:request.schedule.days.slice(1)}},candidate),false,
+    'different weekly frequency requires rebuilding the schedule');
+  assert.equal(canRetargetStrengthEntryRoster(original,request,{...candidate,priorityLift:'bench_press',frequency:2}),false,
+    'requested new lift practice cannot be rescued by keeping the old roster');
+}
+console.log('PASS M300: automatic same-split strength-entry rescue is eligible without bypassing structural or lift-practice changes.');

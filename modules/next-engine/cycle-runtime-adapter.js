@@ -526,9 +526,61 @@ function attachWorkingWeekTransition(previousProgram, currentProgram, decision, 
     if (currentProgram.nextEngine?.cycleTemplate)
         currentProgram.nextEngine.cycleTemplate.splitDecision = { ...decision };
 }
-function chooseOptimizedCycleBlock(spec, config, enabled, buildCandidate) {
+// M316: choose a strength transition by the *saved* executable weeks rather
+// than trusting only engine-base ledgers. Shortlist at most two audited candidates;
+// use throwaway IDs and never consume the app's makeId sequence or mutate history.
+// Reuse the same shell materializer, capacity/dose reconciliation, and focused
+// region repair that the winner will undergo in the actual program.
+export function scoreRealizedStrengthFinalist(candidate, previousShell, config, legacyExercises = []) {
+    const { next, request, spec, quality } = candidate;
+    const cfg = legacyBlockConfig(blockConfigForSpec(config, spec),
+        next.phase, spec.weeks, 'Candidate strength block');
+    const shell = nextProgramToShellProgram(next, cfg, legacyExercises, () => 'm316-evaluation-only');
+    shell.nextEngine = { ...shell.nextEngine, program: clone(next), request: clone(request) };
+    const finished = rebalanceFocusedStrengthEntry(previousShell,
+        finalizeGeneratedShellVolume(shell, legacyExercises), legacyExercises);
+    const realized = describeRealizedCycleQuality(finished, legacyExercises, quality);
+    if (!realized?.weeks?.length || realized.weeks.some(w => w.overCapacityDays.length))
+        throw new NextShellAdapterError('NEXT_CYCLE_REALIZED_CAPACITY',
+            'The candidate has an incomplete or over-capacity executable week.');
+    const first = realized.weeks[0], last = realized.weeks[realized.weeks.length - 1];
+    // Compare the weakest endpoint for coverage and specific lift practice:
+    // an overloaded final week must not be hidden by a strong first week.
+    const coverage = Math.min(first.muscleTargetCoveragePercent, last.muscleTargetCoveragePercent);
+    const practice = Math.min(first.liftPracticePercent, last.liftPracticePercent);
+    const weakestLift = Math.min(first.weakestPriorityLiftPracticePercent,
+        last.weakestPriorityLiftPracticePercent);
+    let delta = coverage - quality.muscleTargetCoverage
+        + .22 * (practice - quality.liftPracticePercent)
+        + .07 * (weakestLift - quality.weakestPriorityLiftPracticePercent);
+    const preceding = captureShellVolumeSnapshot(previousShell,
+        Math.max(1, Number(previousShell.config?.weeks ?? previousShell.weeks) || 1), legacyExercises);
+    if (!preceding || preceding.missing)
+        throw new NextShellAdapterError('NEXT_CYCLE_REALIZED_PRIOR_MISSING',
+            'The preceding cycle has incomplete executable training history.');
+    const previousSets = preceding.sessions.reduce((sum, day) =>
+        sum + day.exercises.reduce((n, ex) => n + ex.sets, 0), 0);
+    if (previousSets >= 16 && first.weeklySets < Math.ceil(previousSets * .5))
+        throw new NextShellAdapterError('NEXT_CYCLE_REALIZED_VOLUME_CLIFF',
+            `Finalized strength would fall from ${previousSets} to ${first.weeklySets} weekly sets.`);
+    const normalized = normalizeRequest(request);
+    const carryover = scoreRegionalCarryover(preceding.regions, first.regionalSets,
+        normalized.goal.musclePriorities, createMusclePrescriptions(normalized, next.phase));
+    delta += 15 * (carryover.percent - (quality.regionalCarryoverPercent ?? 100)) / 100
+        + 12 * (carryover.weakestFocusedPercent - (quality.weakestFocusedRegionCoveragePercent ?? 100)) / 100
+        + 5 * (carryover.weakestSupportingPercent - (quality.weakestSupportingRegionCoveragePercent ?? 100)) / 100;
+    const finalScore = Math.round((quality.score + delta) * 100) / 100;
+    return { score: finalScore, baseScore: quality.score,
+        executableLiftFrequencies: Object.fromEntries([...BLOCK_LIFTS].map(lift =>
+            [lift, Math.min(first.liftFrequencies[lift] ?? 0, last.liftFrequencies[lift] ?? 0)])),
+        executableCoverage: coverage, executableLiftPractice: practice,
+        executableWeakestPriorityLift: weakestLift, executableCarryover: carryover.percent,
+        firstWeekSets: first.weeklySets, lastWeekSets: last.weeklySets };
+}
+function chooseOptimizedCycleBlock(spec, config, enabled, buildCandidate, realizedContext = null) {
     const candidates = cycleSplitCandidates(spec, config, enabled);
     let winner = null, firstError = null, passing = 0;
+    const ranked = [];
     for (const candidateSpec of candidates) {
         try {
             const output = buildCandidate(candidateSpec);
@@ -536,6 +588,7 @@ function chooseOptimizedCycleBlock(spec, config, enabled, buildCandidate) {
             passing++;
             const score = cycleProgramScore(output.next, output.request, spec.phase, output.previous, config.split);
             const value = { ...output, spec: candidateSpec, quality: score };
+            ranked.push(value);
             if (!winner || value.quality.score > winner.quality.score + .0001)
                 winner = value;
         } catch (error) {
@@ -546,12 +599,56 @@ function chooseOptimizedCycleBlock(spec, config, enabled, buildCandidate) {
         throw firstError || new NextShellAdapterError('NEXT_CYCLE_SPLIT_SEARCH_REJECTED',
             'No safe weekly structure was found for this block. Try more time, fewer lift exposures or another split.');
     const automatic = enabled && !spec.split;
+    let realizedSelection = null;
+    if (automatic && spec.phase === 'strength_accumulation'
+        && realizedContext?.previousShell?.nextEngine?.program?.phase === 'hypertrophy_accumulation') {
+        // Stable tie ordering follows the original candidate order. Bounded to
+        // two finalists to avoid multiplying already-expensive phase generation.
+        const finalists = ranked.map((candidate, index) => ({ candidate, index }))
+            .sort((a, b) => b.candidate.quality.score - a.candidate.quality.score || a.index - b.index)
+            .slice(0, 2);
+        const baseWinner = winner;
+        const evaluated = [];
+        let firstFinalError = null;
+        for (const { candidate } of finalists) {
+            try {
+                const realized = scoreRealizedStrengthFinalist(candidate,
+                    realizedContext.previousShell, config, realizedContext.legacyExercises);
+                evaluated.push({ candidate, realized });
+            } catch (error) {
+                firstFinalError ||= error;
+            }
+        }
+        if (!evaluated.length) throw firstFinalError ||
+            new NextShellAdapterError('NEXT_CYCLE_REALIZED_SEARCH_REJECTED',
+                'No finalist produced a safe executable strength week.');
+        // Do not buy a small dose gain by undoing the original audited winner's
+        // high-priority strength practice. Compare the *actual* first/final
+        // executable weeks, not engine-base exposure labels. If the base winner
+        // itself could not be materialized, safely choose a passing finalist.
+        const baseRealized = evaluated.find(item => item.candidate === baseWinner);
+        const priorityLifts = Object.entries(normalizeRequest(baseWinner.request).goal.liftPriorities)
+            .filter(([, priority]) => ['primary','specialization','high'].includes(priority))
+            .map(([lift]) => lift);
+        const eligible = baseRealized ? evaluated.filter(item => priorityLifts.every(lift =>
+            item.realized.executableLiftFrequencies[lift]
+                >= baseRealized.realized.executableLiftFrequencies[lift])) : evaluated;
+        let best = eligible[0];
+        for (const item of eligible.slice(1))
+            if (item.realized.score > best.realized.score + .0001) best = item;
+        winner = best.candidate;
+        realizedSelection = { mode: 'finalized_strength_top_two',
+            evaluatedFinalists: finalists.length, selectedFromBaseWinner: winner === baseWinner,
+            protectedPriorityLiftFrequencies: priorityLifts,
+            ...best.realized };
+    }
     winner.decision = {
         mode: automatic ? 'goal_optimized' : 'fixed',
         selectedSplit: winner.next.split.family,
         candidateCount: candidates.length,
         passingCandidates: passing,
         ...winner.quality,
+        ...(realizedSelection ? { realizedSelection } : {}),
         reason: automatic
             ? `Compared ${candidates.length} compatible weekly structures for ${phaseLabel(spec.phase).toLowerCase()}, retained ${passing} audited plans, and selected the highest scoring plan for muscle coverage, focused and supporting regional continuity, athlete-weighted lift practice and training capacity.`
             : 'Kept the selected weekly structure and verified it against the training constraints.'
@@ -705,7 +802,8 @@ export function generateNextCycleForShell(options) {
             next = protectStrengthEntry(previous, next, candidateSpec, request);
             checkRequestedPractice(next, candidateSpec, request);
             return { next, request, previous };
-        });
+        }, options.adaptBetweenBlocks ? { previousShell: blocks[i - 1],
+            legacyExercises: options.legacyExercises } : null);
         let { next, request: targetRequest, spec: selectedSpec, decision } = chosen;
         selectedSpecs.push(selectedSpec);
         splitDecisions.push(decision);
@@ -858,7 +956,8 @@ export function convertProgramToNextCycleForShell(options) {
             next = protectStrengthEntry(previous, next, candidateSpec, request);
             checkRequestedPractice(next, candidateSpec, request);
             return { next, request, previous };
-        });
+        }, options.adaptBetweenBlocks ? { previousShell: blocks[i - 1],
+            legacyExercises: options.legacyExercises } : null);
         const { next, request: targetRequest, spec: selectedSpec, decision } = chosen;
         selectedSpecs.push(selectedSpec);
         splitDecisions.push(decision);
@@ -975,7 +1074,8 @@ function buildAdaptedBlock(current, cycle, target, weeks, label, analysis, legac
         if (target !== 'recovery' && spec) next = protectStrengthEntry(source, next, candidateSpec, request);
         checkRequestedPractice(next, candidateSpec, request);
         return { next, request, previous: source };
-    });
+    }, cycle?.nextEngineCycle?.adaptBetweenBlocks
+        ? { previousShell: current, legacyExercises } : null);
     const { request, next, spec: selectedSpec, decision } = chosen;
     if (next.audit.result !== 'pass')
         throw new NextShellAdapterError('NEXT_CYCLE_ADAPT_REJECTED', `Pursuit Engine ${next.engineVersion} could not safely prepare ${label}.`, next.audit);

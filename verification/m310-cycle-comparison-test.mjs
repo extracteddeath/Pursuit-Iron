@@ -33,6 +33,25 @@ function describe(result){
  const a=captureShellVolumeSnapshot(s,1,EXERCISES);
  const end=captureShellVolumeSnapshot(s,5,EXERCISES);
  const d=result.cycle.blockMeta[1].splitDecision;
+ if(d.mode==='goal_optimized'){
+  assert.equal(d.realizedSelection?.mode,'finalized_strength_top_two',
+    'Adaptive strength ranking must compare finalized executable finalists');
+  assert.ok(d.realizedSelection.evaluatedFinalists>=1 && d.realizedSelection.evaluatedFinalists<=2);
+  assert.equal(d.realizedSelection.firstWeekSets,
+    sum(captureShellVolumeSnapshot(s,1,EXERCISES).sessions));
+  assert.equal(d.realizedSelection.lastWeekSets,
+    sum(captureShellVolumeSnapshot(s,s.config.weeks,EXERCISES).sessions));
+  assert.equal(d.realizedSelection.executableCoverage,
+    Math.min(...[0,d.realizedQuality.weeks.length-1].map(i=>
+      d.realizedQuality.weeks[i].muscleTargetCoveragePercent)));
+  assert.equal(d.realizedSelection.executableLiftPractice,
+    Math.min(...[0,d.realizedQuality.weeks.length-1].map(i=>
+      d.realizedQuality.weeks[i].liftPracticePercent)));
+  assert.ok(Number.isFinite(d.realizedSelection.score)
+    && Number.isFinite(d.realizedSelection.baseScore));
+  assert.deepEqual(s.nextEngine.cycleTemplate.splitDecision.realizedSelection,d.realizedSelection);
+ } else assert.equal(d.realizedSelection,undefined,
+   'Fixed split must not execute or display adaptive finalist selection');
  assert.equal(h.nextEngine.program.audit.result,'pass');
  assert.equal(s.nextEngine.program.audit.result,'pass');
  for(const snapshot of [b,a,end]){
@@ -54,6 +73,7 @@ function describe(result){
   liftPractice:d.liftFrequencies,
   focusedDoseStatus:s.nextEngine.focusedStrengthDose?.status??'none',
   focusSetChanges:s.nextEngine.focusedStrengthDose?.changes?.length??0,
+  finalizedSelectionMode:d.realizedSelection?.mode??null,
   strengthDays:a.sessions.map(x=>({day:x.day,
     exercises:x.exercises.slice(0,4).map(e=>({
       name:e.name,sets:e.sets,reps:e.prescription?.reps,
@@ -85,8 +105,10 @@ for(const sample of cases){
    'The five-day goal-optimized seed must test a real training-split change');
  }
  if(sample.label==='5-day ULPPL back focus'){
-  assert.ok(current.focusSetChanges>0&&current.latDose[1]>=current.latDose[0]*.5,
-   'Focused-muscle continuity must retain a proven feasible lat rescue independent of topology switching');
+  assert.ok(current.latDose[1]>=current.latDose[0]*.5,
+   'The chosen executable strength block must preserve at least half the focused lat dose');
+  assert.ok(current.focusSetChanges>0||current.finalizedSelectionMode==='finalized_strength_top_two',
+   'Lat preservation must come from audited set repair or a genuinely finalized split');
  }
  matrix.push({scenario:sample.label,seed:sample.seed,
   oldMode:'fixed-split cycle',newMode:'adaptive-split cycle',old,current});

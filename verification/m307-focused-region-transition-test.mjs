@@ -70,8 +70,13 @@ for(const {label,row,focus,seed} of scenarios){
    // Do not silently regress to M308's 5/11.8 working-set shortfall.
    assert.ok(lats.currentSets>=lats.previousSets*.5,
      'The feasible focused-lat continuity repair must protect at least half the prior productive dose');
-   assert.ok(current.nextEngine.focusedStrengthDose.changes.length>0,
-     'This seeded transition must make a real audited set change, not just alter a ranking score');
+   // M316 may select a better fully materialized split that already carries
+   // the needed lat dose. Do not require an unnecessary set change simply to
+   // satisfy an old seeded intervention count. Verify executable continuity.
+   assert.ok(current.nextEngine.focusedStrengthDose.changes.length>0
+     || (decision.realizedSelection?.mode==='finalized_strength_top_two'
+       && lats.currentSets>=lats.previousSets*.5),
+     'Focused-lat continuity must come from an audited set repair or a genuinely finalized split');
  }
 
  const focused=actual.regions.filter(x=>{

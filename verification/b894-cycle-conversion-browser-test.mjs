@@ -61,6 +61,7 @@ try{
   await page.waitForSelector('.wpb-cycle-detail');
   await page.click('[aria-label="Cycle options"]');
   await page.waitForSelector('.wpb-cycle-option-actions');
+  const immediatelyBeforeUpgrade=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')));
   await page.$eval('.wpb-cycle-option-actions',el=>{
     const b=[...el.querySelectorAll('button')].find(b=>b.textContent.trim()==='Upgrade future blocks to adaptive');
     if(!b)throw new Error('In-place cycle upgrade is missing from Cycle options');
@@ -71,10 +72,10 @@ try{
     return c?.adaptExercises&&c?.adaptTrainingSplit&&c?.nextEngineCycle?.adaptBetweenBlocks&&c?.nextEngineCycle?.adaptTrainingSplit;
   });
   const upgraded=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')));
-  assert.deepEqual(upgraded.history,baseline.history,'Adaptive opt-in preserves every workout log');
-  assert.deepEqual(upgraded.saved,after.store.saved,'Adaptive opt-in cannot rewrite current or preview blocks');
-  assert.deepEqual(upgraded.cycles[0].blockIds,cycle.blockIds,'Adaptation retains cycle block identity and all references');
-  assert.deepEqual(upgraded.cycles[0].nextEngineCycle.plannedBlocks,cycle.nextEngineCycle.plannedBlocks);
+  assert.deepEqual(upgraded.history,immediatelyBeforeUpgrade.history,'Adaptive opt-in preserves every workout log');
+  assert.deepEqual(upgraded.saved,immediatelyBeforeUpgrade.saved,'Adaptive opt-in cannot rewrite current or preview blocks');
+  assert.deepEqual(upgraded.cycles[0].blockIds,immediatelyBeforeUpgrade.cycles[0].blockIds,'Adaptation retains cycle block identity and all references');
+  assert.deepEqual(upgraded.cycles[0].nextEngineCycle.plannedBlocks,immediatelyBeforeUpgrade.cycles[0].nextEngineCycle.plannedBlocks);
   assert.equal(upgraded.cycles[0].activeBlock,0);
   assert.equal(upgraded.cycles[0].adaptiveUpgrade.awaitingBoundary,true);
   await page.reload({waitUntil:'networkidle0'});

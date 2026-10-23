@@ -16,6 +16,57 @@ const view=(p,week)=>{
  assert.ok(snapshot.sessions.every(s=>s.exercises.every(ex=>ex.sets>0&&Number.isInteger(ex.sets))));
  return {weeklySets:total(snapshot.sessions),daySets:snapshot.sessions.map(s=>total([s])),regions:snapshot.regions};
 };
+// M315: use the *saved* week cells, not the engine's ranked base-session
+// ledger, when verifying the optimizer's reported coverage and lift frequency.
+const { createExerciseMap } = await import('../modules/next-engine/exercise-db.js');
+const { normalizeRequest, createMusclePrescriptions } = await import('../modules/next-engine/prescription.js');
+const { PUBLIC_MEV_REGIONS } = await import('../modules/next-engine/public-mev.js');
+const verifyRealized=(program,decision)=>{
+ const report=decision?.realizedQuality;
+ assert.equal(report?.comparison,'ranked_engine_base_to_saved_executable_weeks');
+ assert.equal(report.basis,'creation_or_adaptation_snapshot');
+ assert.equal(report.weeks.length,program.config.weeks);
+ assert.equal(report.rankedBase.weeklySets,decision.weeklySets);
+ assert.equal(report.rankedBase.muscleTargetCoveragePercent,decision.muscleTargetCoverage);
+ assert.deepEqual(report.rankedBase.liftFrequencies,decision.liftFrequencies);
+ assert.equal(report.rankedBase.liftPracticePercent,decision.liftPracticePercent);
+ const request=normalizeRequest(program.nextEngine.request);
+ const prescriptions=createMusclePrescriptions(request,program.nextEngine.program.phase);
+ const catalog=createExerciseMap(request.customExercises);
+ const priorities=request.goal.musclePriorities;
+ const weights={primary:3,specialization:2.6,high:1.9,normal:1,maintenance:.12};
+ for(const [index,realized] of report.weeks.entries()){
+  const snapshot=captureShellVolumeSnapshot(program,index+1,EXERCISES);
+  assert.ok(snapshot&&!snapshot.missing);
+  assert.equal(realized.week,index+1);
+  assert.equal(realized.weeklySets,total(snapshot.sessions));
+  assert.deepEqual(realized.overCapacityDays,[]);
+  assert.deepEqual(Object.keys(realized.regionalSets).sort(),[...PUBLIC_MEV_REGIONS].sort());
+  for(const region of PUBLIC_MEV_REGIONS)
+   assert.equal(realized.regionalSets[region],Math.round((snapshot.regions[region]||0)*10)/10,
+     'Credited regional sets must come from exact workout week');
+  const freq={};
+  for(const lift of ['bench_press','back_squat','deadlift','overhead_press']){
+   freq[lift]=snapshot.sessions.filter(day=>day.exercises.some(ex=>
+     ['primary_strength','secondary_strength'].includes(ex.role)
+     && (catalog.get(ex.exerciseId)?.liftSpecificity?.[lift]||0)>.45)).length;
+  }
+  assert.deepEqual(realized.liftFrequencies,freq,'Lift practice must match exact saved exercise sessions');
+  let earned=0,possible=0;
+  for(const p of prescriptions){
+   const w=weights[priorities[p.muscle]];
+   const target=Math.max(.25,Number(p.preferred)||0);
+   earned+=w*Math.min(1,(snapshot.muscleLedger?.[p.muscle]?.fractionalSets||0)/target);
+   possible+=w;
+  }
+  assert.equal(realized.muscleTargetCoveragePercent,Math.round(100*(possible?earned/possible:0)),
+   'Ranked muscle coverage and saved workout coverage must share target math');
+ }
+ assert.equal(report.firstWeekSetDelta,report.weeks[0].weeklySets-report.rankedBase.weeklySets);
+ assert.equal(report.firstWeekCoverageDelta,
+  report.weeks[0].muscleTargetCoveragePercent-report.rankedBase.muscleTargetCoveragePercent);
+ assert.deepEqual(program.nextEngine.cycleTemplate.splitDecision.realizedQuality,report);
+};
 const decisions=[];
 for(const [row,seed] of [[2,30442],[3,30453]]){
  const config={...fixtures[row].config,name:'M304 exact-week projection',goal:'hypertrophy'};
@@ -36,6 +87,8 @@ for(const [row,seed] of [[2,30442],[3,30453]]){
  // M305: the selected split records executable volume at the *boundary*
  // (last hypertrophy week -> first strength week), not its internal base.
  const decision=created.cycle.blockMeta[1].splitDecision;
+ verifyRealized(before,created.cycle.blockMeta[0].splitDecision);
+ verifyRealized(after,decision);
  const transition=decision.workingWeekVolumeChange;
  assert.ok(transition,'Generated strength entry must explain actual week-to-week volume');
  assert.equal(transition.comparison,'previous_final_week_to_next_first_week');
@@ -84,6 +137,7 @@ for(const [row,seed] of [[2,30442],[3,30453]]){
  const firstH=view(h,1),lastH=view(h,8),firstS=view(s,1),lastS=view(s,5);
  assert.equal(JSON.stringify(source),beforeString,'Conversion cannot mutate the existing program');
 
+ verifyRealized(s,converted.cycle.blockMeta[1].splitDecision);
  const transition=converted.cycle.blockMeta[1].splitDecision.workingWeekVolumeChange;
  assert.ok(transition,'Converted existing program must include exact regional volume-change context');
  assert.equal(transition.previousWeek,8);
@@ -163,4 +217,5 @@ console.log('M304 executable working-week transition matrix: '+JSON.stringify(de
 }
 console.log('PASS M306: 30+ set edited conversion is either audited and transparently retained or rejected without mutation.');
 
+console.log('PASS M315: every saved cycle work-week certifies region sets, weighted muscle coverage and lift practice against executable prescriptions.');
 console.log('PASS M304/M305: executable week prescriptions and phase-target coverage remain separate from actual regional changes.');

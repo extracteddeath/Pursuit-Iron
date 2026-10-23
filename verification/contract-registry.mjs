@@ -167,6 +167,7 @@ export const browserShards = Object.freeze({
         'b904-session-review-browser-test.mjs',
         'b899-stable-screen-browser-test.mjs',
         'b888-session-choices-browser-test.mjs',
+        'm328-workout-swap-undo-browser-test.mjs',
         'b887-home-masthead-motion-browser-test.mjs',
         'b881-history-import-browser-test.mjs',
         'b875-contextual-dock-browser-test.mjs',

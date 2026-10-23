@@ -712,9 +712,11 @@ function dayPerfFor(day, perf, history, program = null) {
 
 function engineSessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, history) {
     void dayPerf;
-    if (program?.custom === true && program?.engineSource !== "pursuit-next")
-        return customProgramSuggestion(program, day, slot, unit, weekIndex, history);
-    const original = nextWorkoutSuggestionForShell(program, history || [], EXERCISES, day, slot, weekIndex, unit);
+    // Custom and generated programs share the same final equipment boundary.
+    // A converted/reference load or held per-set target can otherwise bypass snapping.
+    const original = program?.custom === true && program?.engineSource !== "pursuit-next"
+        ? customProgramSuggestion(program, day, slot, unit, weekIndex, history)
+        : nextWorkoutSuggestionForShell(program, history || [], EXERCISES, day, slot, weekIndex, unit);
     const convert = value => convertHistoryLoad(value, original?.unit ?? program.config?.unit, unit);
     const s = original ? { ...original, weight: convert(original.weight),
         last: original.last,

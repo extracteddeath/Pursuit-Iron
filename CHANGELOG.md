@@ -1,3 +1,10 @@
+## M295 — Complete cohesion integration and enforce custom load increments
+
+- Finish M294's compact, horizontally accessible exercise tags and top-aligned workout actions. Match numeric headings to the full-bleed row in both the phone flex layout and the tablet companion grid.
+- Route custom-program advice through the same equipment boundary as generated programs. Held loads, per-set targets and cross-program/unit-converted references honor the exercise increment or actual rack; earned increases still reach the next selectable load. Logged history is unchanged.
+- Recover remaining Cohesion 23/24 Home action ownership, compact preview/change-history spacing and complete Plan mode labels at enlarged text. Preserve the newer shared app bars, weekly-card hierarchy and sticky-header behavior.
+- Extend the existing custom progression regression with 38.5 lb on 5 lb equipment, converted/reference history, executable set rows, earned increases and explicitly fractional stock. Retain Build 905 / Engine 0.65.9 and refresh release/offline hashes.
+
 ## M292 — Progress and History presentation ownership
 
 - Move 225 fixed inline style objects from the four Progress panes into the maintained CSS family. Shared card, caption, field, list-row and history-action classes retain the current appearance; action/field owners also remove 32 repeated CSS declarations. Five chart objects keep only calculated widths/heights and data-derived ink inline.

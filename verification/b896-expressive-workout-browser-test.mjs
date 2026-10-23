@@ -133,7 +133,7 @@ try {
   assert.ok(toolbar.count>=4,'Preserve exercise actions including warm-up and session notes');
   assert.ok(toolbar.rows.every(y=>Math.abs(y)<=2),'Warm-up/Superset/Swap/Notes/Plates remain in one line: '+JSON.stringify(toolbar));
   assert.equal(toolbar.overflow,'auto','Toolbar must be horizontally scrollable');
-  assert.ok(toolbar.top-heading.progression.bottom<=36,'Remove unused space below progression: '+JSON.stringify({heading,toolbar}));
+  assert.ok(toolbar.top-heading.progression.bottom<=16,'Remove unused space below progression: '+JSON.stringify({heading,toolbar}));
   if(width<=393){
    assert.ok(toolbar.scrollWidth>toolbar.clientWidth+8,'Phone action strip should be wider than viewport and swipeable');
    const scroll=await page.$eval('.wpb-workout-tools',el=>{el.scrollLeft=el.scrollWidth;return el.scrollLeft;});

@@ -1430,11 +1430,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   padding-top:0!important;
 }
 #root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero{
-  margin-top:12px!important;
-  margin-bottom:11px!important;
   border-radius:37px 18px 37px 37px!important;
   border:1px solid var(--pi-r4-line)!important;
-  padding:17px 16px 15px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero .wpb-primary-action{
   min-height:52px!important;
@@ -4237,7 +4234,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   --pi-r48-divider:var(--pi-r11-edge);
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-home.wpb-home.wpb-home .wpb-home-hero{
-  padding:14px 15px 13px!important;
+  padding:var(--pi-space-3) var(--pi-space-3) var(--pi-space-2)!important;
   margin-top:0!important;
   margin-bottom:var(--pi-space-3)!important;
   border-color:var(--pi-r48-divider)!important;
@@ -5257,7 +5254,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   overflow-wrap:anywhere;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-home-hero>.wpb-primary-action{
-  margin-top:var(--pi-space-3)!important;
+  margin-top:var(--pi-space-2)!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-overview{
   margin-block:var(--pi-space-6) var(--pi-space-3);
@@ -5931,6 +5928,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     grid-column:1;
     min-width:0;
     max-width:100%;
+  }
+  /* Grid items retain the full-bleed row padding inside their border box. */
+  #root .wpb-workout[data-focus-mode="false"] .wpb-workout-scroll:has(>.wpb-workout-side)>.wpb-set-head{
+    width:calc(100% - 36px);
   }
   #root[data-pi-motion="expressive"] .wpb .wpb-workout-scroll>.wpb-workout-side{
     box-sizing:border-box;
@@ -6972,13 +6973,14 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   color:var(--pi-color-on-muted)!important;
   letter-spacing:.25px!important;
 }
-/* M294: the tablet/foldable logger insets set-row content 4px left and
-   32px right. Align its heading to those measured tracks; phone-sized
-   logger rows use full-width tracks and must retain their own geometry. */
-@media(min-width:700px){
+/* M294: normal logger set rows start after the 4px row border.
+   The heading must share their measured numeric tracks,
+   instead of centering labels across a wider card. Compact phones use
+   the labels attached to their own field tracks below. */
+@media(min-width:421px){
   #root .wpb-workout[data-focus-mode="false"] .wpb-set-head{
     box-sizing:border-box;
-    width:calc(100% - 36px);
+    width:calc(100% - 4px);
     margin-left:4px;
   }
 }
@@ -7993,7 +7995,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root .wpb-workout[data-focus-mode="true"] .wpb-exercise-meta{
   display:flex;align-items:center;flex-wrap:wrap;column-gap:12px;row-gap:0;
-  margin-top:2px;min-width:0;
+  /* Preserve Focus spacing independently of exercise-detail presentation. */
+  margin:6px 0 14px;min-width:0;
 }
 #root .wpb-workout .wpb-progression-explanation{flex-basis:100%;}
 #root .wpb-workout .wpb-workout-tools{
@@ -8217,17 +8220,41 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   #root .wpb-cycle-change-preview{border-color:CanvasText;}
 }
 
+/* Cohesion 23 — one token-owned Home rhythm; callbacks and order are unchanged. */
+#root .wpb .wpb-home-hero>.wpb-primary-action{
+  display:flex;align-items:center;justify-content:center;gap:var(--pi-space-2);
+  width:100%;min-height:var(--pi-primary-min);margin-top:var(--pi-space-4);
+  padding:var(--pi-space-3) var(--pi-space-4);border:0;
+  font-size:var(--pi-type-body);font-weight:var(--pi-weight-action);cursor:pointer;
+}
+#root .wpb .wpb-home-hero>.wpb-home-switch-action{
+  display:inline-flex;align-items:center;gap:var(--pi-space-2);
+  max-width:100%;min-height:44px;margin-top:var(--pi-space-2);
+  padding:var(--pi-space-2);border:0;border-radius:var(--pi-shape-action);
+  background:transparent;color:var(--wpb-theme-muted);
+  font-size:var(--pi-type-support);font-weight:var(--pi-weight-action);
+  line-height:1.4;text-align:left;cursor:pointer;overflow-wrap:anywhere;
+}
+#root .wpb .wpb-home-hero>.wpb-home-switch-action:focus-visible{
+  outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px;
+}
+@media(forced-colors:active){
+  #root .wpb .wpb-home-hero>.wpb-home-switch-action{
+    color:ButtonText;border:1px solid CanvasText;
+  }
+}
+
 /* B909 — Prototype-aligned Home coaching: short insight card outside workout hero. */
 #root .wpb .wpb-plan-change-banner{
-  min-height:64px;margin:0 0 var(--pi-space-3);padding:var(--pi-space-3) var(--pi-space-4);
+  min-height:56px;margin:0 0 var(--pi-space-2);padding:var(--pi-space-2) var(--pi-space-3);
   border-radius:var(--pi-shape-card);background:var(--wpb-theme-accent-dim);
 }
-#root .wpb .wpb-plan-change-banner .wpb-session-plan-icon{width:36px;height:36px;border-radius:12px}
+#root .wpb .wpb-plan-change-banner .wpb-session-plan-icon{width:32px;height:32px;border-radius:var(--pi-shape-action)}
 #root .wpb .wpb-plan-change-banner strong{font-size:14px}
 #root .wpb .wpb-plan-change-banner>span:nth-child(2)>span{margin-top:2px;line-height:1.35}
 /* Home outline owns its inset; legacy M3 preview rules no longer stack padding. */
 #root .wpb .wpb-home-session-preview{
-  position:relative;margin:var(--pi-space-2) 0 0;padding:0 var(--pi-space-3) var(--pi-space-2);
+  position:relative;margin:0;padding:0 var(--pi-space-3);
   min-width:0;border-radius:var(--pi-shape-card);background:var(--pi-color-control);
 }
 #root .wpb .wpb-home-preview-action{
@@ -8246,10 +8273,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb-home-outline-toggle>span{font-size:12px;color:var(--wpb-theme-muted)}
 .wpb-home-outline-toggle>svg{color:var(--wpb-theme-muted);flex-shrink:0;transition:transform 180ms ease}
 .wpb-home-outline-toggle[aria-expanded="true"]>svg{transform:rotate(180deg)}
-#root .wpb .wpb-home-outline-list{list-style:none;margin:0;padding:0 0 6px}
-#root .wpb .wpb-home-outline-list>li:first-child{padding-top:3px}
-.wpb-home-outline-list li{display:flex;justify-content:space-between;align-items:baseline;gap:10px;
-  padding:8px 0;color:var(--wpb-theme-text);font-size:13px;line-height:1.4}
+#root .wpb .wpb-home-outline-list{list-style:none;margin:0;padding:0 0 var(--pi-space-1)}
+#root .wpb .wpb-home-outline-list>li:first-child{padding-top:var(--pi-space-1)}
+.wpb-home-outline-list li{display:flex;justify-content:space-between;align-items:baseline;gap:var(--pi-space-2);
+  padding:var(--pi-space-2) 0;color:var(--wpb-theme-text);font-size:var(--pi-type-support);line-height:1.35}
 .wpb-home-outline-list li+li{border-top:1px solid var(--wpb-theme-border)}
 .wpb-home-outline-list li>span{min-width:0;overflow-wrap:anywhere}
 .wpb-home-outline-list li>strong{color:var(--wpb-theme-muted);font-size:12px;white-space:nowrap;flex-shrink:0}
@@ -8597,10 +8624,15 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 
 /* Cohesion 12 — Plan pane and week selection presentation has one CSS owner. */
-.wpb-plan-panes{display:flex;gap:4px;padding:3px;margin-bottom:12px;border-radius:10px;background:var(--pi-color-control,transparent);}
+.wpb-plan-panes{display:flex;flex-wrap:wrap;container-type:inline-size;gap:4px;padding:3px;margin-bottom:12px;border-radius:10px;background:var(--pi-color-control,transparent);}
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-panes>.wpb-plan-pane-tab{box-sizing:border-box;display:flex;flex:1 1 0;min-width:0;min-height:44px;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:8px 4px;border:0;border-radius:8px;background:transparent;color:var(--pi-color-on-control,inherit);font-size:11px;font-weight:700;cursor:pointer;}
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-panes>.wpb-plan-pane-tab[aria-pressed="true"]{background:var(--pi-color-card,transparent);color:var(--pi-m3e-primary,var(--wpb-theme-accent,currentColor));font-weight:800;}
 .wpb-plan-pane-label{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+/* Cohesion 23: complete Plan labels on narrow rails and enlarged text. */
+@container (max-width:18em){
+  #root[data-pi-motion="expressive"] .wpb .wpb-plan-panes>.wpb-plan-pane-tab{flex:1 1 calc(50% - 4px);min-height:48px;}
+  #root[data-pi-motion="expressive"] .wpb .wpb-plan-pane-label{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;text-align:center;}
+}
 .wpb-plan-week-picker{
   position:sticky;top:0;z-index:3;isolation:isolate;
   margin:0;

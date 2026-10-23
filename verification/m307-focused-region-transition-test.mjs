@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { EXERCISES } from '../modules/App.js';
-import { generateNextCycleForShell, scoreRegionalCarryover } from '../modules/next-engine/cycle-runtime-adapter.js';
+import { generateNextCycleForShell, scoreRegionalCarryover, scoreLiftPractice } from '../modules/next-engine/cycle-runtime-adapter.js';
 import { PUBLIC_MEV_REGIONS, PUBLIC_REGION_MUSCLE } from '../modules/next-engine/public-mev.js';
 import { shellVolumeTargets } from '../modules/next-engine/volume-repair.js';
 
@@ -35,6 +35,17 @@ for(const {label,row,focus,seed} of scenarios){
  assert.deepEqual(current.nextEngine.focusedStrengthDose.comparison,
    'last_hypertrophy_week_to_first_strength_week');
  assert.ok(actual,'Transition must report exact executable doses');
+ // M314 ranking must disclose the actual requested-priority lift frequencies
+ // and a supporting-region floor distinct from specialized-region continuity.
+ assert.ok(Number.isInteger(decision.liftPracticePercent) && decision.liftPracticePercent>=0
+    && decision.liftPracticePercent<=100);
+ assert.ok(Number.isInteger(decision.weakestPriorityLiftPracticePercent)
+    && decision.weakestPriorityLiftPracticePercent>=0);
+ assert.ok(Number.isInteger(decision.weakestSupportingRegionCoveragePercent)
+    && decision.weakestSupportingRegionCoveragePercent>=0);
+ assert.ok(Array.isArray(decision.liftPracticeShortfalls));
+ assert.ok(Object.entries(decision.liftPracticeTargets).every(([lift,target])=>
+    target>=1 && Number.isInteger(target) && lift in decision.liftFrequencies));
  assert.equal(actual.regions.length>0,true);
  assert.deepEqual(current.nextEngine.cycleTemplate.splitDecision.workingWeekVolumeChange,actual);
  const expectedFocusedReductions=actual.regions.filter(region=>{
@@ -118,5 +129,54 @@ console.log('M307 focused executable region matrix: '+JSON.stringify(matrix,null
  assert.deepEqual(prior,{lats:12,upper_back:10},'Scoring preserves the input ledger');
 }
 console.log('PASS M307 prioritized back: independent width/thickness scoring without strength-volume quotas.');
+
+// M314: athlete priority must matter to the phase's strength-specific ranking.
+{
+ const priorities={bench_press:'primary',back_squat:'high',deadlift:'high',overhead_press:'normal'};
+ const requested={bench_press:3};
+ const full={bench_press:3,back_squat:2,deadlift:2,overhead_press:2};
+ const ideal=scoreLiftPractice(full,priorities,requested,'strength_accumulation');
+ assert.equal(ideal.percent,100);
+ assert.equal(ideal.targets.bench_press,3,'Explicit three-day bench practice cannot be replaced by a generic two-day target');
+ const lostBench=scoreLiftPractice({...full,bench_press:2},priorities,requested,'strength_accumulation');
+ const lostPress=scoreLiftPractice({...full,overhead_press:1},priorities,requested,'strength_accumulation');
+ assert.ok(lostBench.quality<lostPress.quality,
+   'Losing one primary bench practice must cost more than one optional press practice');
+ assert.equal(lostBench.weakestPriorityPercent,67);
+ assert.ok(lostBench.shortfalls.includes('bench_press') && !lostBench.shortfalls.includes('overhead_press'));
+ assert.equal(lostPress.weakestPriorityPercent,100);
+ const reduced=scoreLiftPractice({...full,overhead_press:0},
+   {...priorities,overhead_press:'maintenance'},requested,'strength_accumulation');
+ assert.equal(reduced.percent,100,'User-reduced overhead practice may not be penalized');
+ const peak=scoreLiftPractice({bench_press:1},{bench_press:'primary'}, {},'peak');
+ assert.equal(peak.percent,100,'Peaking uses one exposure by default, not accumulation volume');
+ assert.deepEqual(full,{bench_press:3,back_squat:2,deadlift:2,overhead_press:2});
+}
+{
+ const prescription=[{muscle:'chest',preferred:10},{muscle:'quads',preferred:10},{muscle:'hamstrings',preferred:10}];
+ const before={chest:10,quads:10,hamstrings:10};
+ const neglected=scoreRegionalCarryover(before,{chest:0,quads:10,hamstrings:10},
+   {chest:'normal',quads:'normal',hamstrings:'normal'},prescription);
+ assert.equal(neglected.weakestSupportingPercent,0,
+   'High total dose cannot conceal complete loss of an ordinary productive chest region');
+ assert.equal(neglected.weakestFocusedPercent,100,'Ordinary chest is not an explicit specialization');
+ const recovered=scoreRegionalCarryover(before,{chest:4.5,quads:10,hamstrings:10},
+   {chest:'normal',quads:'normal',hamstrings:'normal'},prescription);
+ assert.equal(recovered.weakestSupportingPercent,100,
+   'Beneath-strength-target retention is rewarded until its phase-bounded useful target');
+ const reduced=scoreRegionalCarryover(before,{chest:0,quads:10,hamstrings:10},
+   {chest:'maintenance',quads:'normal',hamstrings:'normal'},prescription);
+ assert.equal(reduced.weakestSupportingPercent,100,
+   'An explicitly reduced muscle cannot impose a hidden continuity quota');
+ const focused=scoreRegionalCarryover(before,{chest:0,quads:10,hamstrings:10},
+   {chest:'specialization',quads:'normal',hamstrings:'normal'},prescription);
+ assert.equal(focused.weakestFocusedPercent,0);
+ assert.equal(focused.weakestSupportingPercent,100,
+   'Explicit focus is separately protected, not double-counted as ordinary muscle');
+ const tiny=scoreRegionalCarryover({...before,chest:1},{chest:0,quads:10,hamstrings:10},
+   {chest:'normal',quads:'normal',hamstrings:'normal'},prescription);
+ assert.equal(tiny.weakestSupportingPercent,100,'Trivial prior dose cannot become a continuity obligation');
+}
+console.log('PASS M314: weighted primary-lift practice and separately protected ordinary muscle dose remain soft, phase-bounded ranking signals.');
 
 console.log('PASS M307: focused region doses measured independently of target-coverage score.');

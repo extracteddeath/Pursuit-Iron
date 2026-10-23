@@ -281,6 +281,7 @@ export function scoreRegionalCarryover(prior, current, musclePriorities, prescri
     const byMuscle = new Map(prescriptions.map(p => [p.muscle, p]));
     let earned = 0, possible = 0;
     let weakestFocusedQuality = 1;
+    let weakestSupportingQuality = 1;
     const atRiskRegions = [];
     for (const region of PUBLIC_MEV_REGIONS) {
         const muscle = PUBLIC_REGION_MUSCLE[region];
@@ -313,11 +314,44 @@ export function scoreRegionalCarryover(prior, current, musclePriorities, prescri
         // A separate weakest-focus score nudges the optimizer toward a more
         // balanced audited option; its ceiling remains phase-target bounded.
         if (focused) weakestFocusedQuality = Math.min(weakestFocusedQuality, regionalQuality);
+        // Averages can also hide a near-abandoned *ordinary* muscle. This is
+        // softer than explicit focus, but it prevents a candidate that neglects
+        // one supporting region from winning solely on well-covered regions.
+        // Ignore trivial prior doses; all targets are bounded by strength goals.
+        else if (before >= 4) weakestSupportingQuality = Math.min(weakestSupportingQuality, regionalQuality);
         if (actual + .05 < target) atRiskRegions.push(region);
     }
     const quality = possible ? earned / possible : 1;
     return { quality, percent: Math.round(quality * 100), atRiskRegions,
-        weakestFocusedQuality, weakestFocusedPercent: Math.round(weakestFocusedQuality * 100) };
+        weakestFocusedQuality, weakestFocusedPercent: Math.round(weakestFocusedQuality * 100),
+        weakestSupportingQuality, weakestSupportingPercent: Math.round(weakestSupportingQuality * 100) };
+}
+// Rank strength-specific weekly practice by actual athlete priority. Previously
+// four equally weighted lifts could mask a lost primary bench exposure behind
+// optional overhead practice. Frequency remains a hard contract wherever the
+// request explicitly supplies it; this metric only compares audited candidates.
+export function scoreLiftPractice(frequencies, priorities = {}, requestedFrequency = {}, phase = 'strength_accumulation') {
+    const defaultFrequency = phase === 'peak' || phase === 'mixed_accumulation' ? 1 : 2;
+    const weights = { primary: 3, specialization: 2.6, high: 2, normal: .75 };
+    let earned = 0, possible = 0, weakestPriority = 1;
+    const shortfalls = [], targets = {};
+    for (const [lift, priority] of Object.entries(priorities)) {
+        const weight = weights[priority];
+        if (!weight) continue;
+        const target = requestedFrequency[lift] ?? defaultFrequency;
+        const actual = Math.max(0, Number(frequencies[lift]) || 0);
+        const quality = Math.min(1, actual / target);
+        earned += weight * quality;
+        possible += weight;
+        targets[lift] = target;
+        if (priority !== 'normal') weakestPriority = Math.min(weakestPriority, quality);
+        if (actual < target) shortfalls.push(lift);
+    }
+    return { quality: possible ? earned / possible : 0,
+        percent: Math.round((possible ? earned / possible : 0) * 100),
+        weakestPriorityQuality: weakestPriority,
+        weakestPriorityPercent: Math.round(weakestPriority * 100),
+        shortfalls, targets };
 }
 function cycleProgramScore(program, request, phase, previous, startingSplit) {
     const normalized = normalizeRequest(request);
@@ -341,12 +375,8 @@ function cycleProgramScore(program, request, phase, previous, startingSplit) {
             && (catalog.get(ex.exerciseId)?.liftSpecificity?.[lift] || 0) > .45)).length;
     }
     const focusStrength = ['strength_accumulation','intensification','peak','mixed_accumulation'].includes(phase);
-    const targetLifts = Object.entries(normalized.goal.liftPriorities || {})
-        .filter(([,priority]) => priority !== 'maintenance').map(([lift]) => lift);
-    const desiredPractice = phase === 'peak' ? 1 : phase === 'mixed_accumulation' ? 1 : 2;
-    const liftQuality = targetLifts.length
-        ? targetLifts.reduce((n,lift) => n + Math.min(1, (liftFrequencies[lift] || 0) / (normalized.goal.liftFrequency?.[lift] || desiredPractice)), 0) / targetLifts.length
-        : 0;
+    const liftPractice = scoreLiftPractice(liftFrequencies,
+        normalized.goal.liftPriorities, normalized.goal.liftFrequency, phase);
     const sets = totalSets(program);
     const totalMinutes = program.sessions.reduce((n,session)=>n+session.estimatedMinutes,0);
     const capacity = program.sessions.reduce((n,session)=>n+session.maxMinutes,0) || 1;
@@ -360,15 +390,23 @@ function cycleProgramScore(program, request, phase, previous, startingSplit) {
     // Muscle and goal coverage dominate. Strength gets specific practice reward;
     // hypertrophy rewards adequate productive volume, not filling time indiscriminately.
     const goalScore = 100 * (possible ? received / possible : 0)
-        + (focusStrength ? 22 * liftQuality : 0)
+        + (focusStrength ? 22 * liftPractice.quality : 0)
         + (phase === 'hypertrophy_accumulation' ? 8 * usefulDensity : 3 * usefulDensity)
         + 2 * continuity
-        - (carryover ? 15 * (1 - carryover.quality) + 12 * (1 - carryover.weakestFocusedQuality) : 0);
+        - (carryover ? 15 * (1 - carryover.quality)
+            + 12 * (1 - carryover.weakestFocusedQuality)
+            + 5 * (1 - carryover.weakestSupportingQuality) : 0)
+        - (focusStrength ? 7 * (1 - liftPractice.weakestPriorityQuality) : 0);
     return { score: Math.round(goalScore * 100) / 100, weeklySets: sets,
         muscleTargetCoverage: Math.round(100 * (possible ? received / possible : 0)),
         liftFrequencies,
+        liftPracticePercent: liftPractice.percent,
+        weakestPriorityLiftPracticePercent: liftPractice.weakestPriorityPercent,
+        liftPracticeShortfalls: liftPractice.shortfalls,
+        liftPracticeTargets: liftPractice.targets,
         ...(carryover ? { regionalCarryoverPercent: carryover.percent,
             weakestFocusedRegionCoveragePercent: carryover.weakestFocusedPercent,
+            weakestSupportingRegionCoveragePercent: carryover.weakestSupportingPercent,
             regionalRiskRegions: carryover.atRiskRegions } : {}) };
 }
 // Read the exact executable projection at the boundary of two authored blocks.
@@ -442,7 +480,7 @@ function chooseOptimizedCycleBlock(spec, config, enabled, buildCandidate) {
         passingCandidates: passing,
         ...winner.quality,
         reason: automatic
-            ? `Compared ${candidates.length} compatible weekly structures for ${phaseLabel(spec.phase).toLowerCase()}, retained ${passing} audited plans, and selected the highest scoring plan for muscle coverage, prioritized-region continuity, relevant lift practice and training capacity.`
+            ? `Compared ${candidates.length} compatible weekly structures for ${phaseLabel(spec.phase).toLowerCase()}, retained ${passing} audited plans, and selected the highest scoring plan for muscle coverage, focused and supporting regional continuity, athlete-weighted lift practice and training capacity.`
             : 'Kept the selected weekly structure and verified it against the training constraints.'
     };
     return winner;

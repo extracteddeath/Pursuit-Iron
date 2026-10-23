@@ -1,3 +1,9 @@
+## M302 — Priority-weighted regional carryover in strength entry
+
+- The cycle split optimizer now compares hypertrophy-to-strength candidates against each region's actual prior productive dose as well as the target strength phase's preferred dose. This closes an objective gap where two fully audited plans could meet the new aggregate targets but one unnecessarily discarded substantially more chest, back, leg, shoulder, or arm work.
+- Use a bounded continuity penalty (at most 15 score points), weighted toward athlete-prioritized muscles. The comparison caps required preservation at the new phase's productive preferred dose, excludes explicitly reduced/maintenance muscles and does not apply to peak, intensification or recovery tapers. It does not invent hard regional quotas, reallocate sets outside canonical audit, or override lift specificity, session time, equipment or recovery.
+- Store the inspected region-retention percentage and at-risk region identifiers in the selected split decision. Regression coverage verifies focused regions, maintenance, reasonable phase reductions, non-mutation and real hypertrophy-to-strength cycle metadata. Build 905 / Engine 0.65.9 with refreshed offline hashes.
+
 ## M301 — Phase-owned goals in every cycle block
 
 - Always project the block's phase into its request goal, even when the weekly split, days and lift-practice controls are unchanged. An early return previously retained the entry goal across static/locked cycle phases, letting hypertrophy-origin strength blocks inherit hypertrophy-oriented loading, strength claims and regional dose assumptions.

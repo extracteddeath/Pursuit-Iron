@@ -17,6 +17,7 @@ import { requestWithAthleteResponse } from './athlete-response.js';
 import { shellConfigToNextRequest, nextProgramToShellProgram, NextShellAdapterError } from './app-shell-adapter.js';
 import { repairShellVolume, reconcileLockedCycleWeekOverflows, finalizeGeneratedShellVolume, captureShellBaseProgram } from './volume-repair.js';
 import { firstPassingCapacityProgram } from './capacity-generation.js';
+import { PUBLIC_MEV_REGIONS, PUBLIC_REGION_MUSCLE, publicMevLedger } from './public-mev.js';
 const phaseGoal = (phase) => phase === 'hypertrophy_accumulation' ? 'hypertrophy' :
     (phase === 'strength_accumulation' || phase === 'intensification' || phase === 'peak') ? 'strength' : 'both';
 const clone = (value) => JSON.parse(JSON.stringify(value));
@@ -272,6 +273,37 @@ export function cycleSplitCandidates(spec, config, enabled) {
     return preferred.filter(split => split && !seen.has(split) && (seen.add(split), splitSupportsTrainingDays(split, days)))
         .slice(0, 6).map(split => ({ ...spec, split }));
 }
+// A strength-accumulation block should not discard productive regional work
+// merely because its new aggregate dose targets are lower. This is a bounded
+// *ranking* preference, not a hard volume floor: every candidate must still
+// independently pass time, equipment, frequency and weekly recovery audits.
+export function scoreRegionalCarryover(prior, current, musclePriorities, prescriptions) {
+    const byMuscle = new Map(prescriptions.map(p => [p.muscle, p]));
+    let earned = 0, possible = 0;
+    const atRiskRegions = [];
+    for (const region of PUBLIC_MEV_REGIONS) {
+        const muscle = PUBLIC_REGION_MUSCLE[region];
+        const priority = musclePriorities[muscle] ?? 'normal';
+        if (priority === 'maintenance') continue;
+        const before = Number(prior?.[region]) || 0;
+        if (before < 2) continue; // no meaningful prior dose to preserve
+        const focused = ['primary','specialization','high'].includes(priority);
+        const prescription = byMuscle.get(muscle);
+        const preferred = (Number(prescription?.preferred) || 0) * (muscle === 'back' ? .5 : 1);
+        // Compare to *both* the previous dose and the phase's useful target.
+        // Very high hypertrophy volumes must not become an obligation in strength.
+        const target = Math.min(before * (focused ? .6 : .45), preferred);
+        if (target < .25) continue;
+        const weight = priority === 'primary' ? 3 : priority === 'specialization' ? 2.6
+            : priority === 'high' ? 1.9 : 1;
+        const actual = Math.max(0, Number(current?.[region]) || 0);
+        earned += weight * Math.min(1, actual / target);
+        possible += weight;
+        if (actual + .05 < target) atRiskRegions.push(region);
+    }
+    const quality = possible ? earned / possible : 1;
+    return { quality, percent: Math.round(quality * 100), atRiskRegions };
+}
 function cycleProgramScore(program, request, phase, previous, startingSplit) {
     const normalized = normalizeRequest(request);
     const prescriptions = createMusclePrescriptions(normalized, phase);
@@ -305,15 +337,23 @@ function cycleProgramScore(program, request, phase, previous, startingSplit) {
     const capacity = program.sessions.reduce((n,session)=>n+session.maxMinutes,0) || 1;
     const usefulDensity = Math.min(1, totalMinutes / (capacity * .72));
     const continuity = startingSplit && program.split?.family === startingSplit ? 1 : 0;
+    const carryover = previous?.phase === 'hypertrophy_accumulation' && phase === 'strength_accumulation'
+        ? scoreRegionalCarryover(
+            publicMevLedger(previous.sessions, catalog), publicMevLedger(program.sessions, catalog),
+            normalized.goal.musclePriorities, prescriptions)
+        : null;
     // Muscle and goal coverage dominate. Strength gets specific practice reward;
     // hypertrophy rewards adequate productive volume, not filling time indiscriminately.
     const goalScore = 100 * (possible ? received / possible : 0)
         + (focusStrength ? 22 * liftQuality : 0)
         + (phase === 'hypertrophy_accumulation' ? 8 * usefulDensity : 3 * usefulDensity)
-        + 2 * continuity;
+        + 2 * continuity
+        - (carryover ? 15 * (1 - carryover.quality) : 0);
     return { score: Math.round(goalScore * 100) / 100, weeklySets: sets,
         muscleTargetCoverage: Math.round(100 * (possible ? received / possible : 0)),
-        liftFrequencies };
+        liftFrequencies,
+        ...(carryover ? { regionalCarryoverPercent: carryover.percent,
+            regionalRiskRegions: carryover.atRiskRegions } : {}) };
 }
 function chooseOptimizedCycleBlock(spec, config, enabled, buildCandidate) {
     const candidates = cycleSplitCandidates(spec, config, enabled);

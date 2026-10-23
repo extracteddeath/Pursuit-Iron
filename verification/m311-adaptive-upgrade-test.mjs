@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { EXERCISES } from '../modules/App.js';
-import { generateNextCycleForShell, advanceNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
+import { generateNextCycleForShell, convertProgramToNextCycleForShell, advanceNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
 import { analyzeShellHistoryForNextEngine } from '../modules/next-engine/workout-history-adapter.js';
 import { completedHistory, ids } from './m265-generation-fixture.mjs';
 import { captureShellVolumeSnapshot } from '../modules/next-engine/volume-repair.js';
+import { generateNextProgramForShell } from '../modules/next-engine/app-shell-adapter.js';
 import { upgradeExistingCycleToAdaptive } from '../modules/next-engine/adaptive-cycle-upgrade.js';
 import { repeatCycleOptions } from '../modules/engine-api.js';
 
@@ -92,5 +93,50 @@ assert.ok(nextWeek.sessions.every(day=>day.exercises.every(ex=>Number.isInteger(
 assert.ok(nextWeek.sessions.every(day=>day.estimatedMinutes<=day.maxMinutes+.01),
  'Every generated training session must fit the actual available time');
 console.log(`PASS M312: genuine upgrade advancement replaced the fixed preview under its original ID, ${actualBefore}→${actualAfter} executable weekly sets, with audited goal-optimized structure and unchanged training history.`);
+
+
+// Also certify the actual user migration: a saved, current Next standalone
+// custom program becomes a fixed cycle, opts into adaptation, then advances
+// from *its original program* using new workout evidence. This is different
+// from upgrading an already generated multi-block cycle above.
+const standalone=generateNextProgramForShell({
+ config:{...config,name:'M312 converted custom program',goal:'hypertrophy',weeks:4},
+ legacyExercises:EXERCISES,seed:31122,makeId:ids('m312-standalone')
+}).program;
+standalone.custom=true;
+const originalStandalone=JSON.stringify(standalone);
+const conversion=convertProgramToNextCycleForShell({
+ program:standalone,templateId:'custom',
+ blocks:[{phase:'strength_accumulation',weeks:4}],
+ legacyExercises:EXERCISES,seed:31123,makeId:ids('m312-converted'),
+ adaptBetweenBlocks:false,adaptTrainingSplit:false
+});
+const convertedSaved=conversion.allBlocks;
+const convertedUpgrade=upgradeExistingCycleToAdaptive(conversion.cycle,convertedSaved,[],311240);
+assert.equal(convertedUpgrade.changed,true);
+assert.equal(convertedUpgrade.cycle.nextEngineCycle.convertedFromProgramId,standalone.id);
+assert.equal(convertedUpgrade.cycle.adaptiveUpgrade.firstFixedLegacyBridge,false,
+ 'A current Next-engine standalone program is not the old no-snapshot legacy bridge');
+assert.equal(conversion.currentProgram.id,standalone.id);
+assert.equal(JSON.stringify(standalone),originalStandalone);
+const convertedHistory=completedHistory(conversion.currentProgram);
+assert.equal(analyzeShellHistoryForNextEngine(conversion.currentProgram,convertedHistory,EXERCISES).readyForNextBlock,true);
+const migratedBefore=JSON.stringify({conversion,convertedHistory});
+const migrated=advanceNextCycleForShell({
+ cycle:convertedUpgrade.cycle,activeProgram:conversion.currentProgram,history:convertedHistory,
+ legacyExercises:EXERCISES,makeId:ids('m312-migrated')
+});
+assert.equal(migrated.insertedRecovery,false);
+assert.equal(migrated.replaceProgramId,convertedSaved[1].id);
+assert.equal(migrated.nextProgram.id,convertedSaved[1].id);
+assert.equal(migrated.cycle.activeBlock,1);
+assert.equal(migrated.nextProgram.nextEngine.cycleTemplate.splitDecision.mode,'goal_optimized',
+ 'Upgraded standalone programs must engage the adaptive split search on real advancement');
+assert.equal(migrated.nextProgram.nextEngine.priorBlock.programId,standalone.id);
+assert.equal(migrated.nextProgram.nextEngine.priorBlock.workouts,convertedHistory.length);
+assert.equal(migrated.nextProgram.nextEngine.program.audit.result,'pass');
+assert.deepEqual(migrated.cycle.nextEngineCycle.plannedBlocks,conversion.cycle.nextEngineCycle.plannedBlocks);
+assert.equal(JSON.stringify({conversion,convertedHistory}),migratedBefore);
+console.log('PASS M312: saved standalone custom program converts, upgrades, and advances into audited goal-adaptive strength with no history/identity loss.');
 
 console.log('PASS M311: existing custom/converted cycles enable adaptation at future boundaries without altering active exercise roster, logged work, authored phase blocks, preview IDs or ownership.');

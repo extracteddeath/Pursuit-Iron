@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { EXERCISES, EX_BY_ID } from '../modules/training-domain/catalog.js';
-import { generateNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
+import { generateNextCycleForShell, convertProgramToNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
 import { refreshAdaptiveCyclePreviews, authoredCycleExitSnapshot, upgradeExistingCycleToAdaptive } from '../modules/next-engine/adaptive-cycle-upgrade.js';
 import { captureShellVolumeSnapshot } from '../modules/next-engine/volume-repair.js';
 import { shellExercisePerformableFor } from '../modules/next-engine/shell-equipment.js';
@@ -54,3 +54,15 @@ const flagged=upgradeExistingCycleToAdaptive(cycle,saved,history).cycle;
 const repeated=refreshAdaptiveCyclePreviews({...options,cycle:flagged});
 assert.equal(repeated.blocks.length,2,'Already-upgraded cycles can replace stale previews');
 console.log('PASS M326: actual custom exit continuity across all strength weeks, selected-gym previews, saved-ID/phase preservation, safe legacy activation and repeat refresh.');
+
+// Specific machines remain unavailable even when another machine makes the
+// engine's broad machine category available during native custom conversion.
+const native={...built.blocks[0],cycleId:undefined,custom:true};
+const partialGym=[...equipment,'machine','legpress','legcurl'];
+const converted=convertProgramToNextCycleForShell({program:native,templateId:'custom',blocks:[{phase:'strength_accumulation',weeks:4}],
+ equipment:partialGym,legacyExercises:EXERCISES,adaptBetweenBlocks:true,adaptTrainingSplit:true,makeId:id,seed:3261});
+const allowedInPartialGym=shellExercisePerformableFor({equipment:partialGym});
+assert.ok(converted.blocks.flatMap(p=>p.days.flatMap(d=>d.exercises)).every(id=>allowedInPartialGym(EX_BY_ID[id])),
+ 'Specific unavailable machines are filtered during native conversion, not only refresh');
+assert.deepEqual(converted.currentProgram.days,native.days);
+console.log('PASS M326 native conversion: selected gym filters specific unavailable machines while preserving current training.');

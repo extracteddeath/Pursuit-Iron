@@ -939,7 +939,12 @@ export function convertProgramToNextCycleForShell(options) {
     const cid = makeId();
     const cycleName = String(options.name || current.name || template.name || 'Training Cycle').trim() || 'Training Cycle';
     const baseRequest = clone(sourceRequest);
-    if (Array.isArray(options.equipment)) baseRequest.equipment = shellConfigToNextRequest({ ...current.config, equipment: options.equipment }, options.banned ?? [], options.legacyExercises, seed).equipment;
+    if (Array.isArray(options.equipment)) {
+        const gymRequest = shellConfigToNextRequest({ ...current.config, equipment: options.equipment }, options.banned ?? [], options.legacyExercises, seed);
+        baseRequest.equipment = gymRequest.equipment;
+        baseRequest.preferences = { ...baseRequest.preferences,
+            avoidedExercises: [...new Set([...(baseRequest.preferences?.avoidedExercises || []), ...gymRequest.preferences.avoidedExercises])] };
+    }
     baseRequest.goal = { ...(baseRequest.goal ?? {}), type: goal };
     const baseConfig = {
         ...(clone(current.config || {})),

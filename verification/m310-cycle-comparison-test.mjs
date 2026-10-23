@@ -70,6 +70,24 @@ for(const sample of cases){
  assert.equal(old.splits[1],fixtures[sample.row].config.split);
  assert.equal(old.perDaySets.length,fixtures[sample.row].config.days);
  assert.equal(current.perDaySets.length,fixtures[sample.row].config.days);
+ if(sample.label==='4-day Upper/Lower size-to-strength'){
+  assert.ok(current.liftPractice.back_squat>old.liftPractice.back_squat,
+   'A feasible adaptive strength structure should provide additional squat practice for this seeded case');
+  assert.notEqual(current.splits[1],old.splits[1],
+   'The four-day goal-optimized seed must test a real training-split change');
+ }
+ if(sample.label==='5-day ULPPL size-to-strength'){
+  assert.ok(current.latDose[1]>=old.latDose[1]+2,
+   'Adaptive split must protect meaningfully more actual lat work than fixed ULPPL in this case');
+  assert.ok(current.liftPractice.deadlift>old.liftPractice.deadlift,
+   'The five-day strength rotation should offer more deadlift practice');
+  assert.notEqual(current.splits[1],old.splits[1],
+   'The five-day goal-optimized seed must test a real training-split change');
+ }
+ if(sample.label==='5-day ULPPL back focus'){
+  assert.ok(current.focusSetChanges>0&&current.latDose[1]>=current.latDose[0]*.5,
+   'Focused-muscle continuity must retain a proven feasible lat rescue independent of topology switching');
+ }
  matrix.push({scenario:sample.label,seed:sample.seed,
   oldMode:'fixed-split cycle',newMode:'adaptive-split cycle',old,current});
 }

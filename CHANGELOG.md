@@ -1,3 +1,11 @@
+## Build 906 / M320 — Adaptive training-cycle release
+
+- Publish the audited adaptive-cycle work from M311–M319 under a visible new build identity, while retaining app version 4.0.0 and canonical engine version 0.65.9 to avoid inventing an engine migration.
+- Existing standalone custom programs and saved fixed cycles can upgrade future blocks to adaptive exercise and split selection. Keep the original current program, training history, manually owned sets and reserved preview IDs intact.
+- Finalized hypertrophy-to-strength transitions compare audited split finalists using executable weekly prescriptions, athlete-prioritized lift frequency, focused/supporting muscle continuity, and bounded set-volume protection. Refuse infeasible transitions rather than overwriting the saved program.
+- Reduce duplicated weekly simulation and exercise-catalog work (M317/M319). M318's 320px mobile Chromium CPU-throttling benchmark remains in the permanent browser suite; it does not certify a physical Android device.
+- Complete release integrity, independent engine audit, source-generation contracts and the complete phone/offline browser matrix before merging. GitHub Pages deployment follows the repository's existing main-branch Pages configuration. A signed Android App Bundle and Google Play Console submission are separate, **not included in this build**.
+
 ## M311 — Upgrade existing custom cycles to adaptive training
 
 - Existing custom cycles now offer **Upgrade future blocks to adaptive** in Cycle options. The saved plan stays active; future exercise selections, strength-specific split optimization and training-frequency targets update at the next legitimate block boundary using real workout history.

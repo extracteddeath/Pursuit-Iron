@@ -2,7 +2,7 @@
   "schemaVersion": 3,
   "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": 905,
+  "build": 906,
   "engineVersion": "0.65.9",
   "candidateStatus": "verification_enforced_by_ci",
   "runtimeAggregate": "c8e205ef859267b1a6f18964fd22a046661c26c30e9879ff370418f2a504d319",
@@ -118,17 +118,17 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "94a06efc6b117c94e9903db3a4dd61aabd80d5959c08af93be3abe4a996add4a",
-    "index.html": "54fd7f97b0a2d9d8b76694380158b4a23699a3f1c1cbea697c5e33b7c705b7ed",
-    "sw.js": "9c4cd97bce1da897124a89ecf9d57fd445b0e3bc70c465f813c75761584077ff",
-    "BUILD_PROFILE.json": "c69be2cb069db34b66ce69c41a3bbce86da2805328ea6181e60451f5998b623c",
-    "CHANGELOG.md": "78cd961180263d1644d9db032f1b7c7cf2af6de484e78f71b200f3720f5e7874",
+    "modules/App.js": "2deb0f7f37ddfec4a0ace3784d0f57cb12e03686f8507b4b4a91b016f1df2b3f",
+    "index.html": "bc3985dd0692d91ceb47ad7c7d0e6581bf45684d6388630a0efd1fb9eb6ac262",
+    "sw.js": "ef0db0fca53be6989b53004859b4f882424a770defe59aafc817e1428c80546c",
+    "BUILD_PROFILE.json": "091ab062cc70f4fc82f5c89a2f9915058a99612db838047496b664f9d33bc55f",
+    "CHANGELOG.md": "f26b355bf2c83b93fdf294ce427bbe0b32886ea2fbf4e0421586a5a6b06a34de",
     "app.css": "d7a57dcd7dd919f59b154acb1794407ddfdd7f2ab72b8c86efd574edc6e285f8",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b905-reaf8eaafd1ccd6bb",
-  "uiMilestone": "Build 905 · M294 Workout heading and set-column alignment"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b906-rce0f822d683ba581",
+  "uiMilestone": "Build 906 · M320 Adaptive training-cycle release"
 }

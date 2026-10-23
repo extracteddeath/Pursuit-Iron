@@ -82,8 +82,28 @@ try{
   assert.match(await page.$eval('.wpb-cycle-block-preview',n=>n.innerText),/sets · .* reps · .* RIR/);
   assert.ok(await page.$eval('.wpb-cycle-preview-facts',(n,days)=>n.textContent.includes(`${days} training days per week`),saved[1].days.length),'preview exposes the actual upcoming weekly structure');
   const expectedPreviewDose=saved[1].nextEngine?.cycleTemplate?.splitDecision?.workingWeekVolumeChange;
-  assert.equal(await page.$$eval('.wpb-cycle-block-preview .wpb-cycle-dose-detail',ns=>ns.length),
+  assert.equal(await page.evaluate(()=>document.querySelectorAll('.wpb-cycle-block-preview .wpb-cycle-dose-detail').length),
     expectedPreviewDose?1:0,'preview shows saved volume detail only when available');
+  const savedQuality=saved[1].nextEngine?.cycleTemplate?.splitDecision?.realizedQuality;
+  if(savedQuality?.weeks?.length){
+    const first=savedQuality.weeks[0];
+    const outlook=await page.$eval('.wpb-cycle-week-outlook',node=>({
+      title:node.querySelector('.wpb-cycle-week-outlook-head')?.textContent,
+      week:node.dataset.week,
+      facts:[...node.querySelectorAll('.wpb-cycle-week-outlook-stats dd')].map(n=>n.textContent.trim()),
+      width:node.scrollWidth,clientWidth:node.clientWidth,
+      summaryHeight:node.querySelector('summary')?.offsetHeight??0
+    }));
+    assert.equal(outlook.week,'1');
+    assert.deepEqual(outlook.facts,[String(first.weeklySets),first.muscleTargetCoveragePercent+'%']);
+    assert.ok(outlook.width<=outlook.clientWidth+1);
+    await page.click('.wpb-cycle-week-outlook-detail summary');
+    assert.ok(await page.$eval('.wpb-cycle-week-outlook-detail',n=>n.open));
+    assert.match(await page.$eval('.wpb-cycle-week-outlook-note',n=>n.textContent),/not the percentage of your previous block retained/i);
+    assert.equal(outlook.summaryHeight>=44,true,'lift-practice disclosure has a 44px target');
+    assert.equal(await page.$eval('.wpb-cycle-block-preview',n=>n.innerText.includes('Modeled muscle-target coverage:')),false,
+      'Preview must not repeat stale base-generation coverage');
+  }
   assert.equal(await page.$$eval('.wpb-cycle-block-preview button',ns=>ns.some(n=>/start/i.test(n.textContent))),false);
   await page.evaluate(()=>document.documentElement.style.fontSize='32px');
   await page.waitForFunction(()=>parseFloat(getComputedStyle(document.querySelector('.wpb-cycle-preview-name')).fontSize)>=28);
@@ -93,6 +113,13 @@ try{
   await page.evaluate(()=>document.documentElement.style.fontSize='');
   await page.select('[aria-label="Preview week"]',String(saved[1].config.weeks));
   assert.equal(await page.$eval('[aria-label="Preview week"]',n=>n.value),String(saved[1].config.weeks));
+  if(savedQuality?.weeks?.length){
+    const last=savedQuality.weeks.at(-1);
+    await page.waitForFunction(expected=>document.querySelector('.wpb-cycle-week-outlook')?.dataset.week===String(expected),{},last.week);
+    assert.deepEqual(await page.evaluate(()=>[...document.querySelectorAll('.wpb-cycle-week-outlook-stats dd')].map(n=>n.textContent.trim())),
+      [String(last.weeklySets),last.muscleTargetCoveragePercent+'%'],
+      'Switching weeks must update the canonical executable coverage, not just the exercise list');
+  }
   await page.keyboard.press('Escape');await page.waitForFunction(()=>!document.querySelector('.wpb-cycle-block-preview'));
   await page.$$eval('.wpb-plan-block-nav button',ns=>ns[2].click());await page.waitForFunction(()=>document.querySelector('.wpb-plan-title')?.textContent.includes('Peak'));
   await page.$$eval('.wpb-plan-block-nav button',ns=>ns[0].click());await page.waitForFunction(()=>!document.querySelector('.wpb-plan-preview-notice'));

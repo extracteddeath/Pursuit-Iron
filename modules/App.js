@@ -19846,6 +19846,40 @@ function CycleDoseTransition({ change }) {
             "Credited sets include muscle contributions from compound lifts. Changes are not the same as strength-phase target coverage; planned workouts may adapt when the block begins." })
     ] });
 }
+// One source of truth for saved work-week training quality. These numbers
+// describe executable prescriptions at generation time, never completed work.
+function CycleWeekOutlook({ program, week }) {
+    const decision = program?.nextEngine?.cycleTemplate?.splitDecision;
+    const report = decision?.realizedQuality;
+    if (!Array.isArray(report?.weeks) || !report.weeks.length) return null;
+    const current = report.weeks.find(row => row.week === week);
+    if (!current) return _jsx("p", { className: "wpb-cycle-week-outlook-deload", children:
+        "Recovery week. The strength and muscle-coverage estimates describe regular training weeks, not deload work." });
+    const lifts = Object.entries(decision?.liftPracticeTargets || {});
+    const priorities = program?.nextEngine?.request?.goal?.liftPriorities || {};
+    const selected = lifts.filter(([lift]) => ["primary", "specialization", "high"].includes(priorities[lift]));
+    const visible = selected.length ? selected : lifts;
+    const label = lift => lift.replaceAll("_", " ").replace(/^./, c => c.toUpperCase());
+    return _jsxs("section", { className: "wpb-cycle-week-outlook", "aria-label": `Week ${week} planned training quality`, "data-week": week, children: [
+        _jsxs("div", { className: "wpb-cycle-week-outlook-head", children: [
+            _jsx("strong", { children: `Week ${week} plan` }),
+            _jsx("span", { children: "Saved workout projection" })
+        ] }),
+        _jsxs("dl", { className: "wpb-cycle-week-outlook-stats", children: [
+            _jsxs("div", { children: [_jsx("dt", { children: "Working sets" }), _jsx("dd", { children: current.weeklySets })] }),
+            _jsxs("div", { children: [_jsx("dt", { children: "Muscle target coverage" }), _jsx("dd", { children: `${current.muscleTargetCoveragePercent}%` })] })
+        ] }),
+        visible.length > 0 && _jsxs("details", { className: "wpb-cycle-week-outlook-detail", children: [
+            _jsx("summary", { children: "Strength practice by lift" }),
+            _jsx("dl", { className: "wpb-cycle-week-outlook-lifts", children: visible.map(([lift, target]) => _jsxs("div", { children: [
+                _jsx("dt", { children: label(lift) }),
+                _jsx("dd", { children: `${current.liftFrequencies?.[lift] ?? 0} of ${target} target days` })
+            ] }, lift)) })
+        ] }),
+        _jsx("p", { className: "wpb-cycle-week-outlook-note", children:
+            "Coverage compares planned sets with this phase's muscle targets; it is not the percentage of your previous block retained. These saved plans can adapt after your logged workouts or manual changes." })
+    ] });
+}
 function CycleBlockPreview({ program, initialWeek = 1, initialDayId = null, onClose, onViewPlan }) {
     const total = weeksOf(program) + (program.config?.deload ? 1 : 0);
     const [week, setWeek] = useState(Math.max(1, Math.min(total, initialWeek)));
@@ -19857,13 +19891,13 @@ function CycleBlockPreview({ program, initialWeek = 1, initialDayId = null, onCl
             Object.entries(program.nextEngine?.request?.goal?.liftFrequency || {}).map(([lift, frequency]) =>
                 _jsx("span", { children: `${lift.replaceAll('_', ' ').replace(/^./, c => c.toUpperCase())} target · ${frequency} days per week` }, lift))
         ] }),
+        _jsxs("label", { className: "wpb-cycle-preview-week", children: ["Week", _jsx("select", { "aria-label": "Preview week", value: week, onChange: e => setWeek(Number(e.target.value)), className: "wpb-cycle-preview-select", children: Array.from({ length: total }, (_, i) => _jsx("option", { value: i + 1, children: i >= weeksOf(program) ? "Deload" : `Week ${i + 1}` }, i)) })] }),
+        _jsx(CycleWeekOutlook, { program, week }),
         program.nextEngine?.cycleTemplate?.splitDecision?.mode === 'goal_optimized' && _jsxs("details", { className: "wpb-cycle-preview-day", children: [
             _jsx("summary", { className: "wpb-cycle-preview-summary", children: `Why ${SPLITS[program.config?.split]?.name || String(program.config?.split || 'this split').replaceAll('_',' ')}?` }),
-            _jsx("p", { className: "wpb-cycle-preview-note", children: program.nextEngine.cycleTemplate.splitDecision.reason }),
-            _jsx("p", { className: "wpb-cycle-preview-note", children: `Modeled muscle-target coverage: ${program.nextEngine.cycleTemplate.splitDecision.muscleTargetCoverage}% · ${program.nextEngine.cycleTemplate.splitDecision.weeklySets} weekly working sets. These are estimates, not a guarantee of the best possible outcome.` })
+            _jsx("p", { className: "wpb-cycle-preview-note", children: program.nextEngine.cycleTemplate.splitDecision.reason })
         ] }),
         _jsx(CycleDoseTransition, { change: program.nextEngine?.cycleTemplate?.splitDecision?.workingWeekVolumeChange }),
-        _jsxs("label", { className: "wpb-cycle-preview-week", children: ["Week", _jsx("select", { "aria-label": "Preview week", value: week, onChange: e => setWeek(Number(e.target.value)), className: "wpb-cycle-preview-select", children: Array.from({ length: total }, (_, i) => _jsx("option", { value: i + 1, children: i >= weeksOf(program) ? "Deload" : `Week ${i + 1}` }, i)) })] }),
         program.days.map((day, index) => _jsxs("details", { open: initialDayId ? day.id === initialDayId : index === 0, className: "wpb-cycle-preview-day", children: [
             _jsx("summary", { className: "wpb-cycle-preview-summary", children: day.label }),
             day.exercises.map((_, slot) => { const id = exerciseAt(program, day, slot, week), ex = EX_BY_ID[id], cell = computeCell(program, day, id, slot, week);

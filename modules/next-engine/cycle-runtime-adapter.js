@@ -672,7 +672,9 @@ function chooseOptimizedCycleBlock(spec, config, enabled, buildCandidate, realiz
         ...winner.quality,
         ...(realizedSelection ? { realizedSelection } : {}),
         reason: automatic
-            ? `Compared ${candidates.length} compatible weekly structures for ${phaseLabel(spec.phase).toLowerCase()}, retained ${passing} audited plans, and selected the highest scoring plan for muscle coverage, focused and supporting regional continuity, athlete-weighted lift practice and training capacity.`
+            ? realizedSelection
+                ? `Compared ${candidates.length} compatible weekly structures for ${phaseLabel(spec.phase).toLowerCase()}, retained ${passing} audited plans, then compared ${realizedSelection.evaluatedFinalists} finalists using the weakest executable work week. Prioritized strength-lift practice, muscle coverage, regional continuity, training time and the strength-entry volume floor were protected.`
+                : `Compared ${candidates.length} compatible weekly structures for ${phaseLabel(spec.phase).toLowerCase()}, retained ${passing} audited plans, and ranked their initial muscle coverage, relevant lift practice and training capacity. Planned prescriptions can still change at the block transition.`
             : 'Kept the selected weekly structure and verified it against the training constraints.'
     };
     return winner;

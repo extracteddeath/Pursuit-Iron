@@ -14,4 +14,17 @@ assert.equal((detail.match(/className: "wpb-cycle-actions"/g)||[]).length,1);
 assert.ok(!detail.includes('wpb-cycle-goal-arc'),'block list provides the phase path once');
 assert.ok(!rows.includes('style: {'),'Block row presentation has one CSS owner');
 assert.ok(fs.readFileSync('app.css','utf8').match(/#root \.wpb-cycle-block-row\{[^}]*opacity:1;/),'All block states remain fully readable');
-console.log('Cycle overview UI integrity OK: one block path, readable previews, compact summary and options.');
+const explanation=app.slice(app.indexOf('function CycleDoseTransition('),app.indexOf('function CycleBlockPreview('));
+assert.ok(explanation.includes('change.regions.map'),'region breakdown derives from canonical saved transition');
+assert.ok(explanation.includes('previousWeeklySets')&&explanation.includes('currentWeeklySets'),'actual before/after volume visible');
+assert.ok(explanation.includes('different')||explanation.includes('not the same'),'retained target coverage cannot masquerade as actual set retention');
+assert.ok(detail.includes('doseChange = next?.nextEngine?.cycleTemplate?.splitDecision?.workingWeekVolumeChange'),
+    'Up next reads saved transition rather than computing a second volume model');
+assert.ok(detail.includes('_jsx(CycleDoseTransition, { change: doseChange })'),'Up next contains one disclosed muscle-volume explanation');
+const preview=app.slice(app.indexOf('function CycleBlockPreview('),app.indexOf('function CycleDetail('));
+assert.ok(preview.includes('CycleDoseTransition'),'future block previews share the same explanation');
+const css=fs.readFileSync('app.css','utf8');
+assert.ok(css.includes('#root .wpb-cycle-dose-row')&&css.includes('grid-template-columns:minmax(0,.85fr) minmax(0,1.7fr)'),
+    'volume rows have a responsive token-owned layout');
+assert.ok(!explanation.includes('style: {'),'dose panel has no inline styling');
+console.log('PASS M306 Cycle dose UI: actual weekly and regional changes use one read-only disclosed component in Up next and preview.');

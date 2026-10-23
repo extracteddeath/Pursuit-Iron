@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { EXERCISES } from '../modules/App.js';
-import { CUSTOM_CYCLE_PHASES, customCycleSpecs, generateNextCycleForShell, cycleSplitCandidates, canRetargetStrengthEntryRoster } from '../modules/next-engine/cycle-runtime-adapter.js';
+import { CUSTOM_CYCLE_PHASES, customCycleSpecs, generateNextCycleForShell, cycleSplitCandidates, canRetargetStrengthEntryRoster, requestForBlock } from '../modules/next-engine/cycle-runtime-adapter.js';
 import { createStrengthClaims, normalizeRequest } from '../modules/next-engine/prescription.js';
 import { shellConfigToNextRequest } from '../modules/next-engine/app-shell-adapter.js';
 const app=fs.readFileSync(new URL('../modules/App.js',import.meta.url),'utf8');
@@ -43,6 +43,9 @@ for(const adaptBetweenBlocks of [false,true]){
  assert.equal(JSON.stringify({config,blocks}),before,'Cycle generation preserves caller data');
  assert.deepEqual(built.cycle.blockMeta.map(b=>({phase:b.phase,weeks:b.weeks})),blocks);
  assert.deepEqual(built.blocks.map(b=>({phase:b.nextEngine.program.phase,weeks:b.config.weeks})),blocks);
+ assert.deepEqual(built.blocks.map(b=>b.nextEngine.request.goal.type),
+   ['strength','hypertrophy','hypertrophy','mixed'],
+   'Generated fixed-split cycles use each phase\'s own goal context');
  assert.deepEqual(built.cycle.blockIds,built.blocks.map(b=>b.id));
  assert.ok(built.blocks.every((b,i)=>b.cycleId===built.cycle.id&&b.nextEngine.program.audit.result==='pass'&&b.weeks===blocks[i].weeks));
 }
@@ -235,3 +238,35 @@ console.log('PASS M299: per-block topology overrides expire cleanly; config, gen
     'requested new lift practice cannot be rescued by keeping the old roster');
 }
 console.log('PASS M300: automatic same-split strength-entry rescue is eligible without bypassing structural or lift-practice changes.');
+
+
+// M301: the block's phase must drive the normalized training goal even without
+// any split/day/lift override. Previously the early-return branch kept the
+// cycle-entry goal, changing strength-specific work and muscle-dose decisions.
+{
+ const initialConfig={...config,goal:'hypertrophy'};
+ const immutable=shellConfigToNextRequest(initialConfig,[],EXERCISES,301);
+ const before=JSON.stringify(immutable);
+ for(const [phase,type] of [
+   ['hypertrophy_accumulation','hypertrophy'],
+   ['strength_accumulation','strength'],
+   ['intensification','strength'],
+   ['peak','strength'],
+   ['mixed_accumulation','mixed'],
+   ['foundation','mixed']
+ ]) {
+   const result=requestForBlock(immutable,initialConfig,{phase,weeks:4},EXERCISES);
+   const normalized=normalizeRequest(result);
+   assert.equal(result.goal.type,type,`Cycle block ${phase} owns its goal without a weekly change`);
+   assert.equal(normalized.goal.type,type,`Normalized ${phase} goal stays phase-aligned`);
+   assert.equal(normalized.goal.strengthWeight,type==='strength'?1:type==='hypertrophy'?.15:.75,
+     `Strength weighting reflects ${phase}`);
+   assert.deepEqual(result.schedule,immutable.schedule,'An unchanged block preserves its exact day capacities');
+   assert.deepEqual(result.preferences,immutable.preferences,'Goal correction cannot rewrite split preferences');
+ }
+ assert.equal(JSON.stringify(immutable),before,'Phase retargeting cannot mutate the original entry request');
+ const withTopology=requestForBlock(immutable,initialConfig,
+   {phase:'strength_accumulation',weeks:4,split:'upper_lower'},EXERCISES);
+ assert.equal(withTopology.goal.type,'strength','Changed weekly structure uses the same phase-goal owner');
+}
+console.log('PASS M301: every phase owns normalized strength/hypertrophy weighting in fixed and adapted split requests.');

@@ -1,3 +1,9 @@
+## M299 — Cycle split and schedule ownership after block overrides
+
+- Keep an authored split or training-day override scoped to its own block. The next block without overrides returns to the cycle's baseline topology, rather than silently keeping the preceding block's actual sessions while showing the baseline in settings.
+- Compare the target block's effective split and training-day count with its source. Rebuild and audit the executable weekly schedule when either changes, including first-generation, conversion, and history-driven advancement. Preserve locked rosters when the topology is unchanged.
+- Extend the maintained custom-cycle integration contract with a three-block baseline → override → baseline regression checking settings, engine sessions, request days, audited status, and input immutability. Retain Build 905 / Engine 0.65.9 and refresh offline hashes.
+
 ## M298 — Executable custom cycle transitions and repeat
 
 - Base cycle review thresholds on each block's actual training days and authored duration. One-week blocks can finish after their prescribed work with favorable evidence; older saved previews receive the same correction when read. Standalone programs and recovery exit criteria retain their existing evidence rules.

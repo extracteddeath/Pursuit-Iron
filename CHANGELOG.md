@@ -1,3 +1,9 @@
+## M310 — Real fixed-versus-adaptive training cycle quality matrix
+
+- Deterministic before/after comparison of fixed-split and goal-adaptive cycles with identical seed, athlete, training time, equipment, focus, and week counts for four- and five-day examples.
+- Verify executable weekly sets, session clocks, phase transitions, lift-practice counts and exercise-level sets, reps and RIR. Emit real generated workout examples for audit rather than inventing illustrative numbers.
+- This milestone adds verification, not an unvalidated production training rule.
+
 ## M309 — Audited focused dose reallocation at strength entry
 
 - Attempt real, bounded **working-set changes** when a prioritized muscle drops below half of the final hypertrophy week's credited dose in the first strength week. Prefer adding an existing focused accessory set within capacity; otherwise try an equal-set same-session transfer from a non-focused, non-strength accessory.

@@ -40,10 +40,10 @@ for(const selector of [
   '.wpb-workout[data-focus-mode="false"] .wpb-exercise-heading .wpb-exercise-tags',
   '.wpb-workout[data-focus-mode="false"] .wpb-exercise-meta'
 ]) assert.ok(css.includes(selector), 'Missing compact workout header owner: '+selector);
-assert.match(css, /\.wpb-workout\[data-focus-mode="false"\] \.wpb-exercise-heading \.wpb-exercise-tags\{\s*grid-column:2;grid-row:1;/,
-  'Key lift/type tags belong above the right-hand controls');
-assert.match(css, /\.wpb-workout\[data-focus-mode="false"\] \.wpb-exercise-title-row>div:last-child\{\s*grid-column:2;grid-row:2;/,
-  'Right-hand actions follow the two exercise tags');
+assert.match(css, /\.wpb-workout\[data-focus-mode="false"\] \.wpb-exercise-heading \.wpb-exercise-tags\{\s*grid-column:2;grid-row:2;/,
+  'Key lift/type tags belong directly beneath the right-hand controls');
+assert.match(css, /\.wpb-workout\[data-focus-mode="false"\] \.wpb-exercise-title-row>div:last-child\{\s*grid-column:2;grid-row:1;/,
+  'Right-hand actions stay aligned to the top of the exercise name');
 assert.match(css, /#root \.wpb-workout \.wpb-workout-tools\{\s*display:flex;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;/,
   'Workout tools must stay on one horizontally scrolling row');
 assert.ok(!css.includes('flex-wrap:wrap;overflow:visible!important;touch-action:pan-y!important;'),

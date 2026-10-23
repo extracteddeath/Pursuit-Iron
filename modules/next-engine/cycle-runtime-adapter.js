@@ -383,9 +383,18 @@ export function describeRegionalWorkingWeekChange(previousProgram, currentProgra
         return { region, previousSets, currentSets, changeSets: round(currentSets - previousSets),
             percentChange: percentChange(previousSets, currentSets) };
     }).filter(region => region.previousSets > 0 || region.currentSets > 0);
+    // The optimizer's coverage percentage is measured against new phase
+    // targets. Keep a separate, executable-week signal when an *explicitly*
+    // prioritized region loses over half its previous dose. This flags an
+    // intentional strength tradeoff for review without adding unsafe sets.
+    const priorities = currentProgram?.nextEngine?.request?.goal?.musclePriorities ?? {};
+    const focusedVolumeReductions = regions.filter(({ region, previousSets, currentSets }) =>
+        previousSets >= 4 && currentSets < previousSets * .5
+        && ['high', 'specialization', 'primary'].includes(priorities[PUBLIC_REGION_MUSCLE[region]])).map(r => r.region);
     return { comparison: 'previous_final_week_to_next_first_week', previousWeek: previousWeeks,
         currentWeek: 1, previousWeeklySets, currentWeeklySets,
-        weeklyPercentChange: percentChange(previousWeeklySets, currentWeeklySets), regions };
+        weeklyPercentChange: percentChange(previousWeeklySets, currentWeeklySets), regions,
+        focusedVolumeReductions };
 }
 function attachWorkingWeekTransition(previousProgram, currentProgram, decision, legacyExercises) {
     if (previousProgram?.nextEngine?.program?.phase !== 'hypertrophy_accumulation'

@@ -20,7 +20,7 @@ const url = `http://127.0.0.1:${server.address().port}/index.html`;
 let browser;
 try {
  browser=await puppeteer.launch({executablePath:process.env.CHROME_BIN||'/usr/bin/google-chrome',headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
- for (const [width,height,theme] of [[320,740,'amethyst'],[393,850,'amethyst'],[393,850,'rosewater'],[900,1000,'rosewater'],[1280,850,'amethyst']]) {
+ for (const [width,height,theme] of [[320,740,'amethyst'],[393,850,'amethyst'],[393,850,'rosewater'],[430,850,'amethyst'],[520,850,'amethyst'],[600,850,'rosewater'],[900,1000,'rosewater'],[1280,850,'amethyst']]) {
   const context=await browser.createBrowserContext(),page=await context.newPage(),errors=[];
   page.on('pageerror',e=>errors.push(e.message));
   await page.setViewport({width,height,deviceScaleFactor:1,isMobile:width<600,hasTouch:width<600});
@@ -84,11 +84,44 @@ try {
   assert.ok(Object.values(heading).every(Boolean),'All exercise heading parts remain present');
   assert.equal(heading.title.display,'contents','Normal logger owns the compact two-column grid');
   assert.ok(heading.name.right<=heading.actions.left+2,'Title must not overlap right-side buttons: '+JSON.stringify(heading));
-  assert.ok(heading.tags.bottom<=heading.actions.top+2,'Tags must appear above Info, History and Skip: '+JSON.stringify(heading));
+  assert.ok(heading.actions.bottom<=heading.tags.top+2,'Info, History and Skip stay above the tags: '+JSON.stringify(heading));
   assert.ok(heading.tags.centerX>=heading.actions.left-2,'Tags remain aligned to the right column');
+  assert.ok(heading.actions.top<=heading.name.top+4,'Right-side buttons are pinned to the exercise title, not pushed below it: '+JSON.stringify(heading));
+  const badgeLayout=await page.$eval('.wpb-exercise-tags',el=>({height:el.getBoundingClientRect().height,
+    items:[...el.children].map(x=>({height:x.getBoundingClientRect().height,
+      whiteSpace:getComputedStyle(x).whiteSpace,top:x.getBoundingClientRect().top})),
+    scrollWidth:el.scrollWidth,clientWidth:el.clientWidth,overflow:getComputedStyle(el).overflowX}));
+  assert.ok(badgeLayout.height<=30,'Exercise tags never create a second row: '+JSON.stringify(badgeLayout));
+  assert.ok(badgeLayout.items.every(x=>x.whiteSpace==='nowrap'&&Math.abs(x.top-badgeLayout.items[0].top)<=1),'Compound and Key Lift stay on one line: '+JSON.stringify(badgeLayout));
+  assert.equal(badgeLayout.overflow,'auto','Long tag groups remain horizontally accessible');
   assert.ok(heading.meta.left<heading.tags.left,'Working-set context remains under the lift name');
   assert.ok(heading.set.top>=heading.name.bottom-2,'Set count follows the lift name');
   assert.ok(heading.progression.top>=heading.set.bottom-2,'Progression action follows working-set count');
+  const loadRepHeaders=await page.evaluate(()=>{
+    const heading=document.querySelector('.wpb-set-head');
+    const first=document.querySelector('.wpb-set-controls');
+    const trackCenter=el=>{const b=el.getBoundingClientRect();return (b.left+b.right)/2};
+    if(!heading||!first)return null;
+    const labels=[...heading.querySelectorAll(':scope > span')];
+    const fields=[...first.children];
+    if(window.innerWidth<=420)return {compact:true,
+      load:getComputedStyle(fields[2],'::before').textAlign,
+      reps:getComputedStyle(fields[3],'::before').textAlign};
+    return {compact:false,loadOffset:trackCenter(labels[1])-trackCenter(fields[2]),
+      repsOffset:trackCenter(labels[2])-trackCenter(fields[3]),
+      header:{left:heading.getBoundingClientRect().left,width:heading.getBoundingClientRect().width,gap:getComputedStyle(heading).gap},
+      row:{left:first.getBoundingClientRect().left,width:first.getBoundingClientRect().width,gap:getComputedStyle(first).gap},
+      labelRects:labels.map(x=>({left:x.getBoundingClientRect().left,width:x.getBoundingClientRect().width})),
+      fieldRects:fields.map(x=>({left:x.getBoundingClientRect().left,width:x.getBoundingClientRect().width,flex:getComputedStyle(x).flex}))};
+  });
+  assert.ok(loadRepHeaders,'Workout set headings and inputs remain mounted');
+  if(loadRepHeaders.compact){
+    assert.equal(loadRepHeaders.load,'center','Compact LOAD heading centered over load inputs');
+    assert.equal(loadRepHeaders.reps,'center','Compact REPS heading centered over rep inputs');
+  }else{
+    assert.ok(Math.abs(loadRepHeaders.loadOffset)<=3&&Math.abs(loadRepHeaders.repsOffset)<=3,
+      'LB/KG and REPS headings align to their numeric inputs: '+JSON.stringify(loadRepHeaders));
+  }
   const toolbar=await page.$eval('.wpb-workout-tools',el=>{
    const tools=Array.from(el.querySelectorAll('.wpb-workout-tool'));
    const r=el.getBoundingClientRect(),first=tools[0]?.getBoundingClientRect();

@@ -6937,7 +6937,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root .wpb-workout .wpb-workout-tools{
   gap:3px!important;
-  margin:7px 0 8px!important;
+  margin:4px 0 7px!important;
   padding:0 0 5px!important;
   border-bottom:1px solid var(--pi-r11-edge)!important;
 }
@@ -6971,6 +6971,16 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-bottom:1px solid var(--pi-r11-edge);
   color:var(--pi-color-on-muted)!important;
   letter-spacing:.25px!important;
+}
+/* M294: the tablet/foldable logger insets set-row content 4px left and
+   32px right. Align its heading to those measured tracks; phone-sized
+   logger rows use full-width tracks and must retain their own geometry. */
+@media(min-width:700px){
+  #root .wpb-workout[data-focus-mode="false"] .wpb-set-head{
+    box-sizing:border-box;
+    width:calc(100% - 36px);
+    margin-left:4px;
+  }
 }
 #root .wpb-workout .wpb-target-toggle{
   font-size:11px!important;
@@ -7190,7 +7200,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   #root .wpb-workout[data-focus-mode="false"] .wpb-set-controls>div:nth-child(4)::before{
     display:block;position:static;content:"LOAD";height:14px;
     color:var(--pi-color-on-muted);font-size:10px;font-weight:700;
-    line-height:14px;margin-bottom:3px;
+    line-height:14px;margin-bottom:3px;text-align:center;
   }
   #root .wpb-workout[data-focus-mode="false"] .wpb-set-controls>div:nth-child(4)::before{content:"REPS";}
   #root .wpb-workout[data-focus-mode="false"] .wpb-set-controls>.wpb-set-actions{
@@ -7962,11 +7972,17 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   grid-column:1;grid-row:1;min-width:0;align-self:start;
 }
 #root .wpb-workout[data-focus-mode="false"] .wpb-exercise-title-row>div:last-child{
-  grid-column:2;grid-row:2;justify-self:end;align-self:start;min-width:0;
+  grid-column:2;grid-row:1;justify-self:end;align-self:start;min-width:0;
 }
 #root .wpb-workout[data-focus-mode="false"] .wpb-exercise-heading .wpb-exercise-tags{
-  grid-column:2;grid-row:1;justify-self:end;justify-content:flex-end;
-  align-self:start;min-width:0;max-width:160px;margin:0;
+  grid-column:2;grid-row:2;justify-self:end;justify-content:flex-start;
+  align-self:start;min-width:0;max-width:160px;margin:2px 0 0;
+  flex-wrap:nowrap;white-space:nowrap;overflow-x:auto;overflow-y:hidden;
+  touch-action:pan-x;scrollbar-width:none;
+}
+#root .wpb-workout[data-focus-mode="false"] .wpb-exercise-heading .wpb-exercise-tags::-webkit-scrollbar{display:none;}
+#root .wpb-workout[data-focus-mode="false"] .wpb-exercise-heading .wpb-exercise-tags>span{
+  flex:0 0 auto;white-space:nowrap;
 }
 #root .wpb-workout[data-focus-mode="false"] .wpb-exercise-meta{
   grid-column:1;grid-row:2;display:flex;flex-direction:column;

@@ -40,10 +40,15 @@ for(const {label,row,focus,seed} of scenarios){
  assert.deepEqual(actual.focusedVolumeReductions,expectedFocusedReductions,
    'Warnings come only from prioritized executable muscle doses, not modeled phase coverage');
  if(label==='5-day back focus'){
-   assert.ok(actual.focusedVolumeReductions.includes('lats'),
-     'The reduced strength-phase target cannot conceal losing more than half of specialized lat volume');
-   assert.ok(!actual.focusedVolumeReductions.includes('upper_back'),
-     'Upper-back volume preserved above half must not trigger a false focus warning');
+   const lats=actual.regions.find(r=>r.region==='lats');
+   const upperBack=actual.regions.find(r=>r.region==='upper_back');
+   assert.ok(lats&&upperBack,'Back width and thickness retain independent executable dose credit');
+   assert.equal(actual.focusedVolumeReductions.includes('lats'),
+     lats.previousSets>=4&&lats.currentSets<lats.previousSets*.5,
+     'A recovered lat dose must clear its warning; a genuine loss must remain visible');
+   assert.equal(actual.focusedVolumeReductions.includes('upper_back'),
+     upperBack.previousSets>=4&&upperBack.currentSets<upperBack.previousSets*.5,
+     'Upper-back warnings must independently match its measured volume');
  }
 
  const focused=actual.regions.filter(x=>{

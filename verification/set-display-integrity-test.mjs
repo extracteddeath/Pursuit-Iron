@@ -37,7 +37,7 @@ check('SET/LAST header aligns the load and rep tracks to the editable row',()=>{
   assert.ok(app.includes('className: "wpb-set-head"'));
   assert.ok(app.includes('gap: 8 }, children: [_jsx("span", { style: { width: 30, flex: "0 0 30px" }'));
   assert.ok(app.includes('width: narrowSet ? 60 : 80, flex: narrowSet ? "0 0 60px" : "0 0 80px"'));
-  assert.ok(app.includes('style: { width: 36, flex: "0 0 36px" }'));
+  assert.ok(app.includes('style: { width: 30, flex: "0 0 30px" }'));
 });
 const sharedStart=app.indexOf('// ── Shared TARGET / LAST column');
 const sharedEnd=app.indexOf('// TARGET mode:',sharedStart);

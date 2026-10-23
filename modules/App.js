@@ -12913,7 +12913,8 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
         const sug = null; // M46: never invoke the removed legacy load engine for an ad-hoc swap.
         const keepWarm = data[ei].sets.some(s => s.warm);
         const snap = data, snapIdx = exIdx;
-        setData(d => d.map((e, i) => i !== ei ? e : { id: newId, slot, sets: buildSets(newEx, slot, sug, keepWarm), note: "" }));
+        setData(d => d.map((e, i) => i !== ei ? e : { id: newId, slot, sets: buildSets(newEx, slot, sug, keepWarm),
+            exerciseSubstituted: true, previousExerciseId: e.previousExerciseId || oldId, note: "" }));
         setSwap(false);
         if (scope === "program" && onUpdateProgramExercise) {
             onUpdateProgramExercise(day.id, oldId, newId);
@@ -12952,8 +12953,8 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                 // Record each changed slot for history without classifying unrelated lifts as
                 // non-comparable. The exercise-level flag is attached by loggedExercisePerformance.
                 substitutions: data.flatMap(e => {
-                    const plannedExerciseId = exerciseAt(program, day, e.slot, weekIndex);
-                    return e.id !== plannedExerciseId
+                    const plannedExerciseId = e.previousExerciseId || exerciseAt(program, day, e.slot, weekIndex);
+                    return e.exerciseSubstituted || e.id !== plannedExerciseId
                         ? [{ slot: e.slot, plannedExerciseId, performedExerciseId: e.id }] : [];
                 }),
                 durationMin: Math.max(1, Math.round(runElapsedMs() / 60000)),

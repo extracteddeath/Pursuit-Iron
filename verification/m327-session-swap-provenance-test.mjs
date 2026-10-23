@@ -29,14 +29,27 @@ assert.equal(saved[replacement.id]?.prescription?.exerciseId, replacement.id,
     'swapped set must never be recorded as the original planned exercise');
 assert.equal(saved[unaffected.id]?.prescription?.exerciseId, unaffected.id);
 
-// Old session-global flags would falsely hold the whole workout. The saved
-// substitution list is informational; only the touched exercise is gated.
+// A permanent program swap can update the day roster before the session finishes.
+// The explicit session flag still preserves the initial replacement identity.
+const editedDay = { ...day, exercises: [replacement.id, unaffected.id] };
+const editedProgram = { ...program, days: [editedDay] };
+const editedSession = [{ ...work(replacement.id, 0), exerciseSubstituted: true,
+    previousExerciseId: planned.id }, work(unaffected.id, 1)];
+const editedSaved = loggedWorkoutPerformance(editedProgram, editedDay, editedSession, 1, 'lb', {}, []);
+assert.equal(editedSaved[replacement.id]?.exerciseSubstituted, true,
+    'persisted workout substitution identity must survive a program-roster update');
+assert.equal(editedSaved[unaffected.id]?.exerciseSubstituted, undefined);
+
+// The session-global flag used to hold all lifts. Substitution history is
+// informational; the exercise-level exposure flag owns progression comparability.
 const app = fs.readFileSync(new URL('../modules/App.js', import.meta.url), 'utf8');
-assert.doesNotMatch(app, /substitutionOccurred:\\s*data\\.some\\(/,
-    'a single swap must not mark the whole session non-comparable');
-assert.match(app, /substitutions:\\s*data\\.flatMap\\(/);
-assert.match(app, /current\\.sets\\.some\\(set => set\\.done\\)/,
-    'swap must reject a lift with any completed work');
-assert.match(app, /onBanCurrent: \\(\\) => \\{ if \\(data\\[exIdx\\]\\?\\.sets\\.some\\(set => set\\.done\\)\\)/,
-    'ban-and-replace must also protect logged work before changing the program ban list');
+assert.ok(!app.includes('substitutionOccurred: data.some('),
+    'a single swap must not mark the entire session non-comparable');
+assert.ok(app.includes('substitutions: data.flatMap(e => {'));
+assert.ok(app.includes('current.sets.some(set => set.done)'),
+    'swap must reject a lift with completed sets');
+assert.ok(app.includes('onBanCurrent: () => { if (data[exIdx]?.sets.some(set => set.done))'),
+    'ban-and-replace must protect logged work before changing the ban list');
+assert.ok(app.includes('exerciseSubstituted: true, previousExerciseId:'),
+    'session and persistent swaps must retain their own identity even if the program updates');
 console.log('PASS M327: session swap identity is local, untouched lifts remain comparable, completed sets are protected.');

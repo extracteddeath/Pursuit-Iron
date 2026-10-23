@@ -1144,7 +1144,7 @@ function loggedExercisePerformance(program, day, e, weekIndex, unit, perf, histo
     // programmed slot, but the other lifts in this workout are still comparable.
     // Derive this from the executable week (alternate-week slots included), not
     // from the saved base roster or the session-wide substitution flag.
-    const exerciseSubstituted = e.id !== exerciseAt(program, day, e.slot, weekIndex);
+    const exerciseSubstituted = e.exerciseSubstituted === true || e.id !== exerciseAt(program, day, e.slot, weekIndex);
     const failedRows = program.config?.percentScheme === 'gzclp' ? e.sets.filter(x => x.done
         && !x.warm && !x.sub && parseInt(x.reps) === 0 && parseFloat(x.weight) > 0) : [];
     const s = summarizeSets(e.sets, EX_BY_ID[e.id], unit) || (failedRows.length

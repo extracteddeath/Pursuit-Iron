@@ -180,8 +180,12 @@ function blockConfigForSpec(config, spec) {
     return { ...config, ...(spec?.split ? { split: spec.split } : {}),
         ...(spec?.days ? { days: spec.days } : {}) };
 }
-function requestForBlock(baseRequest, baseConfig, spec, legacyExercises = []) {
+export function requestForBlock(baseRequest, baseConfig, spec, legacyExercises = []) {
     const request = blockRequest(baseRequest);
+    // The phase owns its training goal even when the split, days and exercises stay
+    // fixed. Otherwise a strength block can inherit hypertrophy/mixed priorities,
+    // capacity rules and lift claims from the immutable cycle-entry request.
+    request.goal = { ...request.goal, type: phaseGoal(spec.phase) === 'both' ? 'mixed' : phaseGoal(spec.phase) };
     if (!changesWeek(spec))
         return request;
     const cfg = blockConfigForSpec(baseConfig, spec);
@@ -192,7 +196,6 @@ function requestForBlock(baseRequest, baseConfig, spec, legacyExercises = []) {
         request.schedule = shellConfigToNextRequest(cfg, [], legacyExercises, request.seed).schedule;
     request.preferences = { ...request.preferences,
         ...(spec.split ? { lockedSplit: spec.split, preferredSplit: spec.split } : {}) };
-    request.goal = { ...request.goal, type: phaseGoal(spec.phase) === 'both' ? 'mixed' : phaseGoal(spec.phase) };
     if (spec.priorityLift) {
         request.goal.liftPriorities = { ...(request.goal.liftPriorities ?? {}), [spec.priorityLift]: 'primary' };
         request.goal.liftFrequency = { [spec.priorityLift]: spec.frequency };

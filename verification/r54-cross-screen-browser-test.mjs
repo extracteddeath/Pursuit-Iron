@@ -241,9 +241,12 @@ async function verifyBrowseMemory(browser,theme,width){
   page.on('pageerror',error=>errors.push(error.message));
   const entries=Array.from({length:64},(_,i)=>({
     id:'r60-history-'+i,programId:program.id,programName:program.name,dayId:'upper',dayLabel:'Upper',
-    weekIndex:1,date:Date.now()-(i+1)*86400000,unit:'lb',duration:1800,totalSets:2,tonnage:1470,
+    weekIndex:1,date:Date.now()-(i+1)*86400000,unit:'lb',duration:1800,totalSets:5,tonnage:5400,
     perf:{'bb-bench':{weight:185,reps:6,sets:[{w:185,r:6,done:true,rir:2,rirReported:true}]},
-      'inc-curl':{weight:30,reps:12,sets:[{w:30,r:12,done:true,rir:2,rirReported:true}]}}
+      'inc-curl':{weight:30,reps:12,sets:[{w:30,r:12,done:true,rir:2,rirReported:true}]},
+      'back-squat':{weight:245,reps:6,sets:[{w:245,r:6,done:true,rir:2,rirReported:true}]},
+      'deadlift':{weight:315,reps:6,sets:[{w:315,r:6,done:true,rir:2,rirReported:true}]},
+      'ohp':{weight:95,reps:6,sets:[{w:95,r:6,done:true,rir:2,rirReported:true}]}}
   }));
   try{
     await page.setViewport({width,height:852,deviceScaleFactor:1,isMobile:true,hasTouch:true});
@@ -328,9 +331,12 @@ async function verifyBrowseMemory(browser,theme,width){
     assert.equal(await page.$eval('[data-history-id="r60-history-0"]',row=>row.dataset.open),'1','The expanded session is retained');
     assert.equal(await page.$$eval('.wpb-progress button',buttons=>buttons.find(b=>b.textContent==='By month').getAttribute('aria-pressed')),'true');
     await assertScroll(sessionsScroll,'Sessions returns to its own exact scroll position');
+    await clickText('Strength','.wpb-premium-tabs button');
+    await assertScroll(0,'The new Strength section starts at its own top');
+    const strengthScroll=await setScroll(120);assert.ok(strengthScroll>50);
     await clickText('Lifts','.wpb-premium-tabs button');await clickText('Records','[data-lift-pane]');
     await assertScroll(0,'A newly selected Lifts pane starts at its own top');
-    const recordsScroll=await setScroll(120);assert.ok(recordsScroll>50);
+    const recordsScroll=await setScroll(120);assert.ok(recordsScroll>=0); // Records can fit now that Strength has its own section.
     await clickText('Exercises','[data-lift-pane]');await assertScroll(0,'Exercises does not inherit the Records offset');
     await page.type('input[aria-label="Search your lifts"]','curl');
     await page.click('[data-tab="settings"]');await page.click('[data-tab="progress"]');
@@ -339,7 +345,8 @@ async function verifyBrowseMemory(browser,theme,width){
     assert.equal(await page.$eval('input[aria-label="Search your lifts"]',input=>input.value),'curl');
     assert.equal(await page.$$eval('.wpb-progress button.opt',buttons=>buttons.length),1,'The restored lift query retains its matching row');
     await clickText('Records','[data-lift-pane]');await assertScroll(recordsScroll,'Records returns to its own scroll position');
-    await clickText('Body','.wpb-premium-tabs button');await assertScroll(0,'Body does not inherit a long Records offset');
+    await clickText('Strength','.wpb-premium-tabs button');await assertScroll(strengthScroll,'Strength restores its own exact scroll position');
+    await clickText('Body','.wpb-premium-tabs button');await assertScroll(0,'Body does not inherit the Strength offset');
     await clickText('Sessions','.wpb-premium-tabs button');await assertScroll(sessionsScroll,'Switching sections restores Sessions exactly');
     await clickText('Lifts','.wpb-premium-tabs button');
     await page.click('[data-tab="home"]');await page.click('button[aria-label="Workout history"]');

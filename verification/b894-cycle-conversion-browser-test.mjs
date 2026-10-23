@@ -17,7 +17,7 @@ try{
   const history=[{id:'old-history',programId:program.id,date:'2026-10-14',dayId:program.days[0].id,sets:{}}];
   const store={v:13,savedAt:1,saved:[program],cycles:[],history,perf:{},drafts:{},tombs:{},seenIntro:999,seenWhatsNew:999,pinnedId:program.id,theme,unit:'lb',unitChosen:true,experience:'intermediate',bodyweight:185,installDismissedAt:Date.now(),lastBackup:Date.now()};
   await page.evaluateOnNewDocument(store=>{if(!sessionStorage.getItem('b894-seeded')){localStorage.setItem('wpb:v1',JSON.stringify(store));sessionStorage.setItem('b894-seeded','1');}},store);
-  const open=async()=>{await page.goto(`http://127.0.0.1:${server.address().port}/index.html`,{waitUntil:'networkidle0'});await page.waitForSelector('.wpb-home');await page.$eval(`button[aria-label="More options for ${program.name}"]`,n=>n.click());await page.waitForFunction(()=>[...document.querySelectorAll('button')].some(b=>b.textContent.includes('Turn into training cycle')));await page.evaluate(()=>[...document.querySelectorAll('button')].find(b=>b.textContent.includes('Turn into training cycle')).click());await page.waitForSelector('[aria-label="Turn program into training cycle"]');};
+  const open=async()=>{await page.goto(`http://127.0.0.1:${server.address().port}/index.html`,{waitUntil:'networkidle0'});await page.waitForSelector('.wpb-home');await page.$eval(`button[aria-label="More options for ${program.name}"]`,n=>n.click());await page.waitForFunction(()=>[...document.querySelectorAll('button')].some(b=>b.textContent.includes('adaptive training cycle')));await page.evaluate(()=>[...document.querySelectorAll('button')].find(b=>b.textContent.includes('adaptive training cycle')).click());await page.waitForSelector('[aria-label="Turn program into training cycle"]');};
   await open();
   const dialog='[aria-label="Turn program into training cycle"]';
   await page.$eval(dialog,n=>[...n.querySelectorAll('button')].find(b=>b.textContent.includes('Custom cycle')).click());
@@ -45,7 +45,41 @@ try{
   const cycle=after.store.cycles[0],current=after.store.saved.find(p=>p.id===program.id),next=after.store.saved.find(p=>p.id===cycle.blockIds[1]);
   assert.equal(cycle.blockIds.length,2);assert.equal(cycle.blockIds[0],program.id);assert.equal(cycle.blockMeta[0].weeks,10);assert.equal(cycle.blockMeta[1].weeks,2);assert.equal(cycle.blockMeta[1].phase,'peak');
   assert.deepEqual(current.days,program.days);assert.deepEqual(current.overrides,program.overrides);assert.equal(next.nextEngine.cycleTemplate.plannedIndex,1);assert.equal(after.drafts['convert:'+program.id],undefined);
-  await page.reload({waitUntil:'networkidle0'});assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).cycles[0].blockIds[0]),program.id);
+  // Older converted cycles may have the adaptive switches disabled. Their
+  // real Cycle options must offer an in-place upgrade instead of forcing a new
+  // cycle or rewriting training records.
+  await page.evaluate(()=>{
+    const s=JSON.parse(localStorage.getItem('wpb:v1'));
+    const c=s.cycles[0];
+    c.adaptExercises=false;c.adaptTrainingSplit=false;
+    c.nextEngineCycle.adaptBetweenBlocks=false;c.nextEngineCycle.adaptTrainingSplit=false;
+    localStorage.setItem('wpb:v1',JSON.stringify(s));
+  });
+  await page.reload({waitUntil:'networkidle0'});
+  await page.waitForSelector('.wpb-home');
+  await page.click('[aria-label="Open cycle My existing program Cycle"]');
+  await page.waitForSelector('.wpb-cycle-detail');
+  await page.click('[aria-label="Cycle options"]');
+  await page.waitForSelector('.wpb-cycle-option-actions');
+  const immediatelyBeforeUpgrade=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')));
+  await page.$eval('.wpb-cycle-option-actions',el=>{
+    const b=[...el.querySelectorAll('button')].find(b=>b.textContent.trim()==='Upgrade future blocks to adaptive');
+    if(!b)throw new Error('In-place cycle upgrade is missing from Cycle options');
+    b.click();
+  });
+  await page.waitForFunction(()=>{
+    const c=JSON.parse(localStorage.getItem('wpb:v1')||'{}').cycles?.[0];
+    return c?.adaptExercises&&c?.adaptTrainingSplit&&c?.nextEngineCycle?.adaptBetweenBlocks&&c?.nextEngineCycle?.adaptTrainingSplit;
+  });
+  const upgraded=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')));
+  assert.deepEqual(upgraded.history,immediatelyBeforeUpgrade.history,'Adaptive opt-in preserves every workout log');
+  assert.deepEqual(upgraded.saved,immediatelyBeforeUpgrade.saved,'Adaptive opt-in cannot rewrite current or preview blocks');
+  assert.deepEqual(upgraded.cycles[0].blockIds,immediatelyBeforeUpgrade.cycles[0].blockIds,'Adaptation retains cycle block identity and all references');
+  assert.deepEqual(upgraded.cycles[0].nextEngineCycle.plannedBlocks,immediatelyBeforeUpgrade.cycles[0].nextEngineCycle.plannedBlocks);
+  assert.equal(upgraded.cycles[0].activeBlock,0);
+  assert.equal(upgraded.cycles[0].adaptiveUpgrade.awaitingBoundary,true);
+  await page.reload({waitUntil:'networkidle0'});
+  assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).cycles[0].adaptTrainingSplit),true);
   await page.close();
  }
  assert.deepEqual(errors,[]);

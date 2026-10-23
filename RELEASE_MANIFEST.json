@@ -5,7 +5,7 @@
   "build": 905,
   "engineVersion": "0.65.9",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "13e833f65d46ceb9116f4386f499b1d8089b86cfc880b32cd06b90adc377c398",
+  "runtimeAggregate": "c5466130a515dd93df2744b2838ca13a06cd9e9dc78d95084c97e6adf44c3f0b",
   "runtimeFiles": {
     "modules/cycle-setup-drafts.js": "d3e9e750298afd8820e2bfd543c2cebede65e4f27c136ff26fe383d202b824e9",
     "modules/engine-api.js": "5b1252901101e46c275f312f8982d167897f67d7f069ed687b1235fb3bd57f55",
@@ -109,7 +109,8 @@
     "vendor/react-jsx-runtime.js": "bde9f287ac956c2a8873443da27dbb828de7ee82bcec262b703aceab2a745954",
     "vendor/react-shared-JU7Z5GYC.js": "b8893896e31178fb4c8c0ce42cae975bec57bb70596c012d5d5c439cd20717d8",
     "vendor/react-shared-V673FGIV.js": "591c4bd8b0aae646cba73ca7ac17a2c2c950bdbaf288529ea14b691f2a4a9f22",
-    "vendor/react.js": "24b2d220a5b2637cf3fb78fe0d961f227ea0a4b960485dbfb03c9d276e72147c"
+    "vendor/react.js": "24b2d220a5b2637cf3fb78fe0d961f227ea0a4b960485dbfb03c9d276e72147c",
+    "modules/next-engine/adaptive-cycle-upgrade.js": "72a0fb2520f03bbd1f36499c666757af4201516009173c5c9160a90844e90b81"
   },
   "localCandidate": {
     "name": "Pursuit Iron 4.0 · M234 Candidate Selection Hardening",
@@ -117,17 +118,17 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "8240820dbc0f3509c0e9b4900e89f8d73651bae4ad309a4dbc2e6fd1f4a910f8",
+    "modules/App.js": "94a06efc6b117c94e9903db3a4dd61aabd80d5959c08af93be3abe4a996add4a",
     "index.html": "54fd7f97b0a2d9d8b76694380158b4a23699a3f1c1cbea697c5e33b7c705b7ed",
-    "sw.js": "871f95dd9459cf0b6a52cd9b20d2fe904c2718dba1692bc3f510c610ef03af34",
-    "BUILD_PROFILE.json": "89b2798fde99c0c14ff288880d02017aca548c33167ff185db9e3d4ec46df647",
-    "CHANGELOG.md": "9f5f53e9b0663f0d7ad88488512e8ef52b5885b257b91cb10decf862d413a88c",
+    "sw.js": "0799dc929daa4426685911bcd86c1fbfe80192ed0f4fbe8a8f3c95aaa13f1657",
+    "BUILD_PROFILE.json": "97574b3a93c2758d69a3cb907f8acb04b5e8732252fa6eaccb3fa278ecba1586",
+    "CHANGELOG.md": "78cd961180263d1644d9db032f1b7c7cf2af6de484e78f71b200f3720f5e7874",
     "app.css": "d7a57dcd7dd919f59b154acb1794407ddfdd7f2ab72b8c86efd574edc6e285f8",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b905-r7eaedc03aca31ba7",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b905-r7eb7211e0b796079",
   "uiMilestone": "Build 905 · M294 Workout heading and set-column alignment"
 }

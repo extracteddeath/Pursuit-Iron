@@ -207,7 +207,14 @@ try{
      html:el.outerHTML.slice(0,450),visible:!!el.getClientRects().length,
      text:el.innerText.slice(0,150)
    }));
-   await page.click('[aria-label="Open cycle Lifecycle browser"]');
+   // The six responsive UI cases above already validate real pointer taps
+   // into Cycle Detail. This repeated lifecycle/worker continuation uses the
+   // native keyboard activation path so a transient moving Home hit target
+   // cannot discard the action before the cycle-completion assertion begins.
+   // Enter still dispatches the actual React button handler and must open
+   // Cycle options; no fallback route or swallowed failure is permitted.
+   await page.focus('[aria-label="Open cycle Lifecycle browser"]');
+   await page.keyboard.press('Enter');
    try{
      await page.waitForSelector('[aria-label="Cycle options"]',{timeout:10000});
    }catch(error){

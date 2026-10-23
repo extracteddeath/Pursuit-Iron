@@ -1,4 +1,5 @@
 import { withSessionPlanChoice } from './session-plan.js';
+import { upgradeExistingCycleToAdaptive } from './next-engine/adaptive-cycle-upgrade.js';
 import { planShorterSession, SESSION_LENGTH_OPTIONS, splitSupportsTrainingDays, repeatCycleOptions } from './engine-api.js';
 import { readCycleSetupDraft, writeCycleSetupDraft, clearCycleSetupDraft, CYCLE_SETUP_DRAFT_KEY } from './cycle-setup-drafts.js';
 import { INJURY_AREAS, INJURY_IMPACTS, injuryParts, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
@@ -17908,7 +17909,7 @@ function Home({ restScale = 1, loadMode = "rir", perf = {}, onPlanChoice, planCh
                 if (!p)
                     return null;
                 const items = [
-                    ...(!p.config?.endless && !p.cycleId && onConvertCycle ? [{ k: "cycle", icon: _jsx(Layers, { size: 16, color: C.accentInk }), label: "Turn into training cycle", on: () => onConvertCycle(p) }] : []),
+                    ...(!p.config?.endless && !p.cycleId && onConvertCycle ? [{ k: "cycle", icon: _jsx(Layers, { size: 16, color: C.accentInk }), label: p.custom ? "Upgrade to adaptive training cycle" : "Turn into adaptive training cycle", on: () => onConvertCycle(p) }] : []),
                     { k: "dupe", icon: _jsx(Copy, { size: 16, color: C.muted }), label: "Duplicate program", on: () => onDuplicate(p) },
                     { k: "del", icon: _jsx(Trash2, { size: 16, color: C.danger }), label: "Delete program", danger: true, on: () => onDelete(p.id) },
                 ];
@@ -19872,7 +19873,7 @@ function CycleBlockPreview({ program, initialWeek = 1, initialDayId = null, onCl
             })] }, day.id)),
         onViewPlan && _jsx(UiAction, { onClick: onViewPlan, className: "wpb-cycle-wide-action", children: "View in Plan" })] }) });
 }
-function CycleDetail({ cycle, saved = [], history = [], cycleInfo = null, onBack, onOpenBlock, onAdvance, onDelete, onSetIcon, onNextWorkout }) {
+function CycleDetail({ cycle, saved = [], history = [], cycleInfo = null, onBack, onOpenBlock, onAdvance, onDelete, onSetIcon, onNextWorkout, onUpgradeAdaptive }) {
     const [iconSheet, setIconSheet] = useState(false), [options, setOptions] = useState(false);
     const P = cycleProgress(cycle, saved, history, cycleInfo), active = cycle.activeBlock || 0;
     const current = saved.find(p => p.id === cycle.blockIds[active]);
@@ -19918,11 +19919,15 @@ function CycleDetail({ cycle, saved = [], history = [], cycleInfo = null, onBack
                         !cycle.done && P.endMs && _jsx("dt", { children: "Estimated finish" }),
                         !cycle.done && P.endMs && _jsx("dd", { children: new Date(P.endMs).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) }),
                         _jsx("dt", { children: "Blocks" }), _jsx("dd", { children: P.blocks.length })] }),
-                    _jsx("p", { className: "wpb-cycle-card-note", children: cycle.adaptExercises ? "Future blocks adapt from your training history." : "Open a block to see its weeks, days and exercises." })] })] })] }),
+                    _jsx("p", { className: "wpb-cycle-card-note", children: cycle.adaptExercises && cycle.adaptTrainingSplit
+                        ? cycle.adaptiveUpgrade?.awaitingBoundary && active <= cycle.adaptiveUpgrade.activeBlockAtUpgrade + (cycle.adaptiveUpgrade.firstFixedLegacyBridge ? 1 : 0) ? "Adaptive exercises and training splits enabled. Existing previews stay unchanged until your next block is prepared from completed workouts." : "Exercises and training splits can adapt to each phase and your completed workouts."
+                        : cycle.adaptExercises ? "Exercises adapt from your completed workouts; weekly splits stay fixed unless a block specifies a change." : "Open a block to see its weeks, days and exercises." })] })] })] }),
         !cycle.done && current && _jsx("div", { className: "wpb-cycle-actions", children:
             _jsx(UiAction, { variant: "primary", onClick: isActive && onNextWorkout ? onNextWorkout : () => onOpenBlock(cycle, active), className: "wpb-cycle-next-action", children: isActive && onNextWorkout ? "Review next workout" : "Open current block" }) }),
         options && _jsx(SessionChoiceDialog, { title: "Cycle options", onClose: () => setOptions(false), children: _jsxs("div", { className: "wpb-cycle-option-actions", children: [
             onSetIcon && _jsx(UiAction, { onClick: () => { setOptions(false); setIconSheet(true); }, children: "Change cycle icon" }),
+            !cycle.done && cycle.engineSource === "pursuit-next" && !!cycle.nextEngineCycle && (!cycle.adaptExercises || !cycle.adaptTrainingSplit || !cycle.nextEngineCycle.adaptBetweenBlocks || !cycle.nextEngineCycle.adaptTrainingSplit) && onUpgradeAdaptive &&
+                _jsx(UiAction, { onClick: () => { setOptions(false); onUpgradeAdaptive(cycle.id); }, children: "Upgrade future blocks to adaptive" }),
             !cycle.done && _jsx(UiAction, { onClick: () => { setOptions(false); onAdvance(cycle); }, children: next ? `Complete block · advance to ${next.blockLabel || next.name}` : "Complete final block" }),
             _jsx(UiAction, { onClick: () => { setOptions(false); onDelete(cycle.id); }, style: { color: C.danger }, children: "Delete cycle" })] }) }),
         _jsx(IconPickerSheet, { open: iconSheet, current: cycle.icon, currentColor: cycle.iconColor, title: "Cycle icon", onClose: () => setIconSheet(false), onPick: key => onSetIcon(cycle.id, { icon: key }), onPickColor: key => onSetIcon(cycle.id, { iconColor: key }) })] });
@@ -22439,6 +22444,26 @@ function App() {
             return null;
         }
     };
+    // M311: modify only the saved cycle's future-generation policy. The active
+    // program, its manual prescriptions, generated previews and logged sessions
+    // are intentionally immutable; upcoming blocks are rebuilt by the existing
+    // engine at the real completion boundary when workout evidence is available.
+    const upgradeAdaptiveCycle = (id) => {
+        const cycle = cycles.find(c => c.id === id);
+        try {
+            const upgraded = upgradeExistingCycleToAdaptive(cycle, saved, history, Date.now());
+            if (!upgraded.changed) {
+                setAppToast({ msg: "This training cycle already uses adaptive exercises and training splits." });
+                return;
+            }
+            setCycles(prev => prev.map(c => c.id === id ? upgraded.cycle : c));
+            setAppToast({ msg: cycle?.nextEngineCycle?.legacyFirstBlockId && Number(cycle.activeBlock || 0) === 0
+                ? "Adaptive future blocks enabled. Your first converted transition remains unchanged; later blocks adapt after completed workouts."
+                : "Adaptive training enabled for future blocks. Your current program, previews, edits and history are unchanged until the next block transition." });
+        } catch (err) {
+            setAppToast({ msg: String(err?.message || "Unable to upgrade the cycle safely. Nothing was changed.") });
+        }
+    };
     const beginCycleConversion = (p) => {
         if (!p || p.cycleId) {
             setAppToast({ msg: "That program already belongs to a training cycle." });
@@ -23316,7 +23341,7 @@ function App() {
                                     if (!dc)
                                         return _jsx(CyclesView, { onBack: goBack, cycles: cycles, saved: saved, onNew: () => pushView("cycleWizard", "cycles"), onOpenBlock: (c, i) => openCycleBlock(c, i, "cycles"), onCompleteBlock: completeCycleBlock, onDelete: deleteCycle, onOpenCycle: (c) => openCycleDetail(c.id, "cycles") });
                                     const ci = liveCycleInfo;
-                                    return _jsx(CycleDetail, { cycle: dc, saved: saved, history: history, cycleInfo: ci, onBack: goBack, onOpenBlock: (c, i) => openCycleBlock(c, i, "cycleDetail"), onNextWorkout: ci?.cycle.id === dc.id && upNext ? () => { setPreviewTarget({ programId: upNext.program.id, dayId: upNext.day.id, weekIndex: upNext.weekIndex }); openWithDraft(upNext.program); pushView("nextWorkout", "cycleDetail"); } : null, onAdvance: completeCycleBlock, onDelete: deleteCycle, onSetIcon: (cid, patch) => setCycles(prev => prev.map(c => c.id === cid ? { ...c, ...patch } : c)) });
+                                    return _jsx(CycleDetail, { cycle: dc, saved: saved, history: history, cycleInfo: ci, onBack: goBack, onOpenBlock: (c, i) => openCycleBlock(c, i, "cycleDetail"), onNextWorkout: ci?.cycle.id === dc.id && upNext ? () => { setPreviewTarget({ programId: upNext.program.id, dayId: upNext.day.id, weekIndex: upNext.weekIndex }); openWithDraft(upNext.program); pushView("nextWorkout", "cycleDetail"); } : null, onAdvance: completeCycleBlock, onDelete: deleteCycle, onUpgradeAdaptive: upgradeAdaptiveCycle, onSetIcon: (cid, patch) => setCycles(prev => prev.map(c => c.id === cid ? { ...c, ...patch } : c)) });
                                 })())
                                     : view === "blockReview" ? ((() => {
                                         const rc = cycles.find(c => c.id === reviewOf?.cycleId);

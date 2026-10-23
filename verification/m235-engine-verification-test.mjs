@@ -26,8 +26,9 @@ assert.ok(Number.isSafeInteger(manifest.build) && manifest.build >= 816, 'app re
 assert.equal(manifest.engineVersion, '0.65.9');
 assert.equal(ENGINE_VERSION, '0.65.9', 'Build 901 versions the observed-effort live rep guard while retaining M235 property and golden gates');
 assert.deepEqual(ENGINE_COMPATIBLE_VERSIONS, ['0.65.5', '0.65.6', '0.65.7', '0.65.8', '0.65.9']);
-assert.equal(profile.nextRuntimeModules, 71);
-assert.equal(Object.keys(manifest.runtimeFiles).filter(path => path.startsWith('modules/next-engine/')).length, 71);
+const runtimeModuleCount = Object.keys(manifest.runtimeFiles).filter(path => path.startsWith('modules/next-engine/')).length;
+assert.equal(profile.nextRuntimeModules, runtimeModuleCount, 'One release manifest owns the current engine module count');
+assert.ok(runtimeModuleCount >= 71, 'Runtime module count must not silently drop below its certified baseline');
 assert.ok(manifest.runtimeFiles['modules/next-engine/candidate-optimization.js']);
 assert.match(sw, /modules\/next-engine\/candidate-optimization\.js/);
 assert.equal(DEFAULT_CANDIDATE_EVALUATION_LIMIT, 512);

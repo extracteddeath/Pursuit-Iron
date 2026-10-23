@@ -126,6 +126,15 @@ try{
   await page.$$eval('.wpb-plan-block-nav button',ns=>ns[2].click());await page.waitForFunction(()=>document.querySelector('.wpb-plan-title')?.textContent.includes('Peak'));
   await page.$$eval('.wpb-plan-block-nav button',ns=>ns[0].click());await page.waitForFunction(()=>!document.querySelector('.wpb-plan-preview-notice'));
   assert.ok(await page.$('.wpb-plan-up-next'));
+  for(const pane of ['volume','progression','blueprint']){
+   await page.click(`[data-plan-pane="${pane}"]`);
+   for(const index of [1,2,0]){
+    await page.$$eval('.wpb-plan-block-nav button',(ns,index)=>ns[index].click(),index);
+    await page.waitForFunction((pane,index)=>document.querySelector(`[data-plan-pane="${pane}"]`)?.getAttribute('aria-pressed')==='true'
+     && document.querySelectorAll('.wpb-plan-block-nav button')[index]?.getAttribute('aria-pressed')==='true',{},pane,index);
+   }
+  }
+  await page.click('[data-plan-pane="schedule"]');
   await page.click('.wpb-tabbar [aria-label="Home"]');await page.waitForSelector('.wpb-home');
   await page.click('[aria-label="Open cycle SekuFit Cycle"]');await page.waitForSelector('.wpb-cycle-detail');
   await verifyCycleText(page,'.wpb-cycle-detail',width);

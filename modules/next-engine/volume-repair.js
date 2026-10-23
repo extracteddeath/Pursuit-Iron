@@ -511,13 +511,13 @@ export function enforceShellWeekCapacity(program, legacyExercises = []) {
  * edits. Accept moves only when every work-week is capacity-safe, public
  * regional bounds are preserved and complete engine audits do not regress.
  */
-export function rebalanceFocusedStrengthEntry(previous, program, legacyExercises = []) {
-    if (previous?.nextEngine?.program?.phase !== 'hypertrophy_accumulation'
+export function rebalanceFocusedStrengthEntry(previous, program, legacyExercises = [], priorSnapshot = null) {
+    if ((!priorSnapshot && previous?.nextEngine?.program?.phase !== 'hypertrophy_accumulation')
         || program?.nextEngine?.program?.phase !== 'strength_accumulation')
         return program;
     const context = snapshotContext(program, legacyExercises);
     if (context.request.preferences.volumeApproach === 'minimalist') return program;
-    const prior = captureShellVolumeSnapshot(previous, workWeeks(previous), legacyExercises);
+    const prior = priorSnapshot ?? captureShellVolumeSnapshot(previous, workWeeks(previous), legacyExercises);
     if (!prior || prior.missing) return program;
     const targets = shellVolumeTargets(program, context.request);
     const prescriptions = createMusclePrescriptions(context.request, 'strength_accumulation');
@@ -640,10 +640,10 @@ export function rebalanceFocusedStrengthEntry(previous, program, legacyExercises
 // Preserve executable strength-week continuity using spare accessory capacity.
 // Only engine-owned cells are eligible. Each single-set addition must preserve
 // regional/muscle ceilings, session time and the complete engine audit vector.
-export function preserveStrengthWeekContinuity(previous, program, legacyExercises = []) {
-    if (previous?.nextEngine?.program?.phase !== 'hypertrophy_accumulation'
+export function preserveStrengthWeekContinuity(previous, program, legacyExercises = [], priorSnapshot = null) {
+    if ((!priorSnapshot && previous?.nextEngine?.program?.phase !== 'hypertrophy_accumulation')
         || program?.nextEngine?.program?.phase !== 'strength_accumulation') return program;
-    const prior = captureShellVolumeSnapshot(previous, workWeeks(previous), legacyExercises);
+    const prior = priorSnapshot ?? captureShellVolumeSnapshot(previous, workWeeks(previous), legacyExercises);
     if (!prior || prior.missing) return program;
     const count = view => view.sessions.reduce((n, s) => n + s.exercises.reduce((m, e) => m + e.sets, 0), 0);
     const previousSets = count(prior), floor = Math.ceil(previousSets * .5);

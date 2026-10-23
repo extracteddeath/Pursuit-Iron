@@ -1,5 +1,4 @@
 import { withSessionPlanChoice } from './session-plan.js';
-import { upgradeExistingCycleToAdaptive } from './next-engine/adaptive-cycle-upgrade.js';
 import { planShorterSession, SESSION_LENGTH_OPTIONS, splitSupportsTrainingDays, repeatCycleOptions } from './engine-api.js';
 import { readCycleSetupDraft, writeCycleSetupDraft, clearCycleSetupDraft, CYCLE_SETUP_DRAFT_KEY } from './cycle-setup-drafts.js';
 import { INJURY_AREAS, INJURY_IMPACTS, injuryParts, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
@@ -6720,7 +6719,8 @@ function PlanView({ program, plan, blockNavigation = null, readOnly = false, nav
        existed only behind a button on the PROGRAM screen, which is a different destination reached a
        different way, so the tab named Plan could not answer any of them. Schedule stays the default
        because it is the one you open the tab for. */
-    const [pane, setPane] = useState(() => ["schedule", "volume", "progression", "blueprint"].includes(remembered?.pane) ? remembered.pane : "schedule");
+    const rememberedPane = program?.cycleId ? navigationMemory?.cyclePanes?.[program.cycleId] ?? remembered?.pane : remembered?.pane;
+    const [pane, setPane] = useState(() => ["schedule", "volume", "progression", "blueprint"].includes(rememberedPane) ? rememberedPane : "schedule");
     const [volOpen, setVolOpen] = useState(remembered?.volOpen ?? true);
     const [progOpen, setProgOpen] = useState(remembered?.progOpen ?? true);
     const [waveOpen, setWaveOpen] = useState(remembered?.waveOpen ?? true);
@@ -6734,6 +6734,7 @@ function PlanView({ program, plan, blockNavigation = null, readOnly = false, nav
             setOpenWeek(plan.currentWeek);
             onCurrentWeekAdvance?.();
         }
+        if (navigationMemory && program?.cycleId) { navigationMemory.cyclePanes ||= Object.create(null); navigationMemory.cyclePanes[program.cycleId] = pane; }
         if (navigationMemory && program?.id)
             navigationMemory[program.id] = { currentWeek: plan?.currentWeek, openWeek, pane, volOpen, progOpen, waveOpen, blockOpen };
     }, [navigationMemory, program?.id, plan?.currentWeek, onCurrentWeekAdvance, openWeek, pane, volOpen, progOpen, waveOpen, blockOpen]);
@@ -19955,14 +19956,14 @@ function CycleDetail({ cycle, saved = [], history = [], cycleInfo = null, onBack
                         !cycle.done && P.endMs && _jsx("dd", { children: new Date(P.endMs).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) }),
                         _jsx("dt", { children: "Blocks" }), _jsx("dd", { children: P.blocks.length })] }),
                     _jsx("p", { className: "wpb-cycle-card-note", children: cycle.adaptExercises && cycle.adaptTrainingSplit
-                        ? cycle.adaptiveUpgrade?.awaitingBoundary && active <= cycle.adaptiveUpgrade.activeBlockAtUpgrade + (cycle.adaptiveUpgrade.firstFixedLegacyBridge ? 1 : 0) ? "Adaptive exercises and training splits enabled. Existing previews stay unchanged until your next block is prepared from completed workouts." : "Exercises and training splits can adapt to each phase and your completed workouts."
+                        ? cycle.adaptiveUpgrade?.awaitingBoundary && active <= cycle.adaptiveUpgrade.activeBlockAtUpgrade + (cycle.adaptiveUpgrade.firstFixedLegacyBridge ? 1 : 0) ? "Adaptive exercises and training splits enabled. Open a future block to refresh its preview for your selected gym." : "Exercises and training splits can adapt to each phase and your completed workouts."
                         : cycle.adaptExercises ? "Exercises adapt from your completed workouts; weekly splits stay fixed unless a block specifies a change." : "Open a block to see its weeks, days and exercises." })] })] })] }),
         !cycle.done && current && _jsx("div", { className: "wpb-cycle-actions", children:
             _jsx(UiAction, { variant: "primary", onClick: isActive && onNextWorkout ? onNextWorkout : () => onOpenBlock(cycle, active), className: "wpb-cycle-next-action", children: isActive && onNextWorkout ? "Review next workout" : "Open current block" }) }),
         options && _jsx(SessionChoiceDialog, { title: "Cycle options", onClose: () => setOptions(false), children: _jsxs("div", { className: "wpb-cycle-option-actions", children: [
             onSetIcon && _jsx(UiAction, { onClick: () => { setOptions(false); setIconSheet(true); }, children: "Change cycle icon" }),
-            !cycle.done && cycle.engineSource === "pursuit-next" && !!cycle.nextEngineCycle && (!cycle.adaptExercises || !cycle.adaptTrainingSplit || !cycle.nextEngineCycle.adaptBetweenBlocks || !cycle.nextEngineCycle.adaptTrainingSplit) && onUpgradeAdaptive &&
-                _jsx(UiAction, { onClick: () => { setOptions(false); onUpgradeAdaptive(cycle.id); }, children: "Upgrade future blocks to adaptive" }),
+            !cycle.done && active < cycle.blockIds.length - 1 && cycle.engineSource === "pursuit-next" && !!cycle.nextEngineCycle && onUpgradeAdaptive &&
+                _jsx(UiAction, { onClick: () => { setOptions(false); onUpgradeAdaptive(cycle.id); }, children: cycle.adaptExercises && cycle.adaptTrainingSplit ? "Refresh future blocks for this gym" : "Upgrade future blocks to adaptive" }),
             !cycle.done && _jsx(UiAction, { onClick: () => { setOptions(false); onAdvance(cycle); }, children: next ? `Complete block · advance to ${next.blockLabel || next.name}` : "Complete final block" }),
             _jsx(UiAction, { onClick: () => { setOptions(false); onDelete(cycle.id); }, style: { color: C.danger }, children: "Delete cycle" })] }) }),
         _jsx(IconPickerSheet, { open: iconSheet, current: cycle.icon, currentColor: cycle.iconColor, title: "Cycle icon", onClose: () => setIconSheet(false), onPick: key => onSetIcon(cycle.id, { icon: key }), onPickColor: key => onSetIcon(cycle.id, { iconColor: key }) })] });
@@ -22479,24 +22480,23 @@ function App() {
             return null;
         }
     };
-    // M311: modify only the saved cycle's future-generation policy. The active
-    // program, its manual prescriptions, generated previews and logged sessions
-    // are intentionally immutable; upcoming blocks are rebuilt by the existing
-    // engine at the real completion boundary when workout evidence is available.
-    const upgradeAdaptiveCycle = (id) => {
+    const needsCyclePreviewRefresh = cycle => !cycle.done && cycle.adaptExercises && cycle.adaptTrainingSplit
+        && (cycle.nextEngineCycle?.previewRevision !== 1 || JSON.stringify([...(cycle.nextEngineCycle?.baseConfig?.equipment || [])].sort()) !== JSON.stringify([...gymEquipment].sort()));
+    const upgradeAdaptiveCycle = async (id) => {
         const cycle = cycles.find(c => c.id === id);
         try {
-            const upgraded = upgradeExistingCycleToAdaptive(cycle, saved, history, Date.now());
-            if (!upgraded.changed) {
-                setAppToast({ msg: "This training cycle already uses adaptive exercises and training splits." });
-                return;
-            }
-            setCycles(prev => prev.map(c => c.id === id ? upgraded.cycle : c));
-            setAppToast({ msg: cycle?.nextEngineCycle?.legacyFirstBlockId && Number(cycle.activeBlock || 0) === 0
-                ? "Adaptive future blocks enabled. Your first converted transition remains unchanged; later blocks adapt after completed workouts."
-                : "Adaptive training enabled for future blocks. Your current program, previews, edits and history are unchanged until the next block transition." });
+            const futureIds = new Set(cycle?.blockIds?.slice(Number(cycle.activeBlock) + 1));
+            if ([...futureIds].some(id => drafts[id])) throw new Error("Save or discard future-block drafts before refreshing previews.");
+            const refreshed = await runGeneration('refresh_cycle', { cycle, saved, history,
+                equipment: [...gymEquipment], banned, legacyExercises: EXERCISES, makeId: uid }, 'Refreshing future blocks for your gym');
+            const replacements = new Map(refreshed.blocks.map(p => [p.id, p]));
+            const nextSaved = saved.map(p => replacements.get(p.id) || p);
+            const nextCycles = cycles.map(c => c.id === id ? refreshed.cycle : c);
+            if (!await persistAppStore({ saved: nextSaved, cycles: nextCycles })) throw new Error("Could not save the refreshed cycle. Try again.");
+            setSaved(nextSaved); setCycles(nextCycles);
+            setAppToast({ msg: "Future blocks refreshed for your selected gym. Current training and completed workouts are preserved." });
         } catch (err) {
-            setAppToast({ msg: String(err?.message || "Unable to upgrade the cycle safely. Nothing was changed.") });
+            if (err?.name !== 'AbortError') setAppToast({ msg: String(err?.message || "Unable to refresh the cycle. Nothing was changed.") });
         }
     };
     const beginCycleConversion = (p) => {
@@ -22517,13 +22517,14 @@ function App() {
         try {
             const built = (p.engineSource === "pursuit-next" && p.nextEngine?.program)
                 ? await runGeneration('convert_cycle', {
-                    program: p, templateId, name, blocks, adaptBetweenBlocks, adaptTrainingSplit, legacyExercises: EXERCISES, makeId: uid
+                    program: p, templateId, name, blocks, adaptBetweenBlocks, adaptTrainingSplit, equipment: [...gymEquipment], banned, legacyExercises: EXERCISES, makeId: uid
                 }, 'Building your training cycle')
                 : mergeStandaloneIntoGeneratedCycle(p, await runGeneration('cycle', {
                     templateId,
                     blocks,
                     existingBlockWeeks: templateId === 'custom' ? programWorkingWeeks(p) : undefined,
-                    config: cycleConfigForStandaloneProgram(p, name),
+                    config: { ...cycleConfigForStandaloneProgram(p, name), equipment: [...gymEquipment] },
+                    previousShell: p, replaceEntryWithPreviousShell: templateId !== 'custom',
                     banned,
                     legacyExercises: EXERCISES,
                     adaptBetweenBlocks,
@@ -22561,7 +22562,8 @@ function App() {
        but never read, and an edit would appear to vanish the moment you navigated away — the exact loss
        the old write-through existed to prevent, just relocated. */
     const openWithDraft = (p) => { setProgram((p && drafts[p.id]) || p); };
-    const openCycleBlock = (cycle, idx, backView = "home") => {
+    const openCycleBlock = async (cycle, idx, backView = "home") => {
+        if (idx > Number(cycle.activeBlock || 0) && needsCyclePreviewRefresh(cycle)) await upgradeAdaptiveCycle(cycle.id);
         const p = saved.find(s => s.id === cycle.blockIds[idx]);
         if (p) {
             if (cycle.done || idx !== (cycle.activeBlock || 0)) {
@@ -23422,7 +23424,7 @@ function App() {
                                             const rawPlan = planOverviewMemo(pp, wk, cyc, history, saved);
                                             const plan = readOnly ? { ...rawPlan, upNext: null, weeks: rawPlan.weeks.map(w => ({ ...w, current: false, status: "todo" })) } : rawPlan;
                                             return (_jsx(PlanView, { program: pp, plan, readOnly,
-                                                blockNavigation: cyc && _jsx(CycleBlockNav, { cycle: cyc, saved, selectedId: pp.id, onSelect: id => { setPlanBlockId(id); scrollMemory.current.plan = 0; } }),
+                                                blockNavigation: cyc && _jsx(CycleBlockNav, { cycle: cyc, saved, selectedId: pp.id, onSelect: async id => { if (cyc.blockIds.indexOf(id) > Number(cyc.activeBlock || 0) && needsCyclePreviewRefresh(cyc)) await upgradeAdaptiveCycle(cyc.id); setPlanBlockId(id); scrollMemory.current.plan = 0; } }),
                                                 navigationMemory: planNavigationMemory.current, onCurrentWeekAdvance: () => { scrollMemory.current.plan = 0; },
                                                 onOpenDay: (dayId, week) => { if (readOnly) { setCycleBlockPreview({ programId: pp.id, initialWeek: week, initialDayId: dayId }); return; } setPreviewTarget({ programId: pp.id, dayId, weekIndex: week }); pushView("nextWorkout", "plan"); },
                                                 onOpenProgram: week => { if (readOnly) { setCycleBlockPreview({ programId: pp.id, initialWeek: week }); return; } openWithDraft(pp); setProgWeek(m => ({ ...m, [pp.id]: week })); pushView("program", "plan"); } }, pp.id));

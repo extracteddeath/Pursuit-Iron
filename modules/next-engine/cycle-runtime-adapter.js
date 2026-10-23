@@ -566,14 +566,14 @@ export function findStrengthVolumeCliff(previousSets, weeks) {
         ? weeks.find(week => week.weeklySets < Math.ceil(previousSets * .5)) ?? null
         : null;
 }
-export function scoreRealizedStrengthFinalist(candidate, previousShell, config, legacyExercises = []) {
+export function scoreRealizedStrengthFinalist(candidate, previousShell, config, legacyExercises = [], priorSnapshot = null) {
     const { next, request, spec, quality } = candidate;
     const cfg = legacyBlockConfig(blockConfigForSpec(config, spec),
         next.phase, spec.weeks, 'Candidate strength block');
     const shell = nextProgramToShellProgram(next, cfg, legacyExercises, () => 'm316-evaluation-only');
     shell.nextEngine = { ...shell.nextEngine, program: clone(next), request: clone(request) };
     const finished = preserveStrengthWeekContinuity(previousShell, rebalanceFocusedStrengthEntry(previousShell,
-        finalizeGeneratedShellVolume(shell, legacyExercises), legacyExercises), legacyExercises);
+        finalizeGeneratedShellVolume(shell, legacyExercises), legacyExercises, priorSnapshot), legacyExercises, priorSnapshot);
     const realized = describeRealizedCycleQuality(finished, legacyExercises, quality);
     if (!realized?.weeks?.length || realized.weeks.some(w => w.overCapacityDays.length))
         throw new NextShellAdapterError('NEXT_CYCLE_REALIZED_CAPACITY',
@@ -585,7 +585,7 @@ export function scoreRealizedStrengthFinalist(candidate, previousShell, config, 
     let delta = worst.executableCoverage - quality.muscleTargetCoverage
         + .22 * (worst.executableLiftPractice - quality.liftPracticePercent)
         + .07 * (worst.executableWeakestPriorityLift - quality.weakestPriorityLiftPracticePercent);
-    const preceding = captureShellVolumeSnapshot(previousShell,
+    const preceding = priorSnapshot ?? captureShellVolumeSnapshot(previousShell,
         Math.max(1, Number(previousShell.config?.weeks ?? previousShell.weeks) || 1), legacyExercises);
     if (!preceding || preceding.missing)
         throw new NextShellAdapterError('NEXT_CYCLE_REALIZED_PRIOR_MISSING',
@@ -634,7 +634,7 @@ function chooseOptimizedCycleBlock(spec, config, enabled, buildCandidate, realiz
     const automatic = enabled && !spec.split;
     let realizedSelection = null;
     if (automatic && spec.phase === 'strength_accumulation'
-        && realizedContext?.previousShell?.nextEngine?.program?.phase === 'hypertrophy_accumulation') {
+        && (realizedContext?.previousVolumeSnapshot || realizedContext?.previousShell?.nextEngine?.program?.phase === 'hypertrophy_accumulation')) {
         // Stable tie ordering follows the original candidate order. Bounded to
         // two finalists to avoid multiplying already-expensive phase generation.
         const finalists = ranked.map((candidate, index) => ({ candidate, index }))
@@ -646,7 +646,7 @@ function chooseOptimizedCycleBlock(spec, config, enabled, buildCandidate, realiz
         for (const { candidate } of finalists) {
             try {
                 const realized = scoreRealizedStrengthFinalist(candidate,
-                    realizedContext.previousShell, config, realizedContext.legacyExercises);
+                    realizedContext.previousShell, config, realizedContext.legacyExercises, realizedContext.previousVolumeSnapshot);
                 evaluated.push({ candidate, realized });
             } catch (error) {
                 firstFinalError ||= error;
@@ -814,7 +814,7 @@ export function generateNextCycleForShell(options) {
         });
         checkRequestedPractice(attempt.result.program, candidateSpec, attempt.request);
         return { next: attempt.result.program, request: attempt.request, previous: null, entryAttempt: attempt };
-    });
+    }, options.previousShell ? { previousShell: options.previousShell, previousVolumeSnapshot: options.previousVolumeSnapshot, legacyExercises: options.legacyExercises } : null);
     const entryAttempt = entrySelection.entryAttempt;
     const blocks = [], selectedSpecs = [], splitDecisions = [];
     let previous;
@@ -837,7 +837,8 @@ export function generateNextCycleForShell(options) {
             next = protectStrengthEntry(previous, next, candidateSpec, request);
             checkRequestedPractice(next, candidateSpec, request);
             return { next, request, previous };
-        }, options.adaptBetweenBlocks ? { previousShell: blocks[i - 1],
+        }, options.adaptBetweenBlocks ? { previousShell: i === 1 && options.replaceEntryWithPreviousShell ? options.previousShell : blocks[i - 1],
+            previousVolumeSnapshot: i === 1 && options.replaceEntryWithPreviousShell ? options.previousVolumeSnapshot : null,
             legacyExercises: options.legacyExercises } : null);
         let { next, request: targetRequest, spec: selectedSpec, decision } = chosen;
         selectedSpecs.push(selectedSpec);
@@ -873,8 +874,11 @@ export function generateNextCycleForShell(options) {
             };
         }
         legacy = finalizeGeneratedShellVolume(legacy, options.legacyExercises);
-        if (i > 0) legacy = rebalanceFocusedStrengthEntry(blocks[i - 1], legacy, options.legacyExercises);
-        if (decision?.realizedSelection) legacy = preserveStrengthWeekContinuity(blocks[i - 1], legacy, options.legacyExercises);
+        const usesAuthoredExit = i === 0 || i === 1 && options.replaceEntryWithPreviousShell;
+        const precedingShell = usesAuthoredExit ? options.previousShell : blocks[i - 1];
+        const precedingSnapshot = usesAuthoredExit ? options.previousVolumeSnapshot : null;
+        if (precedingShell) legacy = rebalanceFocusedStrengthEntry(precedingShell, legacy, options.legacyExercises, precedingSnapshot);
+        if (decision?.realizedSelection) legacy = preserveStrengthWeekContinuity(precedingShell, legacy, options.legacyExercises, precedingSnapshot);
         if (i > 0) attachWorkingWeekTransition(blocks[i - 1], legacy, decision, options.legacyExercises);
         attachRealizedCycleQuality(legacy, decision, options.legacyExercises);
         blocks.push(legacy);
@@ -887,7 +891,7 @@ export function generateNextCycleForShell(options) {
         activeBlock: 0, advance: 'manual', onComplete: 'end', startedAt: null, done: false,
         nextEngineCycle: {
             schemaVersion: 1, templateId, goal, adaptBetweenBlocks: !!options.adaptBetweenBlocks, adaptTrainingSplit: !!options.adaptTrainingSplit,
-            baseRequest: clone(baseRequest), baseConfig: clone(options.config), plannedBlocks: clone(specs), recoveryInsertions: 0,
+            previewRevision: 1, baseRequest: clone(baseRequest), baseConfig: clone(options.config), plannedBlocks: clone(specs), recoveryInsertions: 0,
             ...(entryAttempt.adjusted ? { capacityAdjustment: {
                 policy: 'soft-capacity-band',
                 session: options.config?.session ?? 's60',
@@ -935,9 +939,16 @@ export function convertProgramToNextCycleForShell(options) {
     const cid = makeId();
     const cycleName = String(options.name || current.name || template.name || 'Training Cycle').trim() || 'Training Cycle';
     const baseRequest = clone(sourceRequest);
+    if (Array.isArray(options.equipment)) {
+        const gymRequest = shellConfigToNextRequest({ ...current.config, equipment: options.equipment }, options.banned ?? [], options.legacyExercises, seed);
+        baseRequest.equipment = gymRequest.equipment;
+        baseRequest.preferences = { ...baseRequest.preferences,
+            avoidedExercises: [...new Set([...(baseRequest.preferences?.avoidedExercises || []), ...gymRequest.preferences.avoidedExercises])] };
+    }
     baseRequest.goal = { ...(baseRequest.goal ?? {}), type: goal };
     const baseConfig = {
         ...(clone(current.config || {})),
+        ...(Array.isArray(options.equipment) ? { equipment: [...options.equipment] } : {}),
         name: cycleName,
         goal: goal === 'mixed' ? 'both' : goal,
         endless: false,
@@ -1061,6 +1072,7 @@ export function convertProgramToNextCycleForShell(options) {
             adaptTrainingSplit: !!options.adaptTrainingSplit,
             baseRequest: clone(baseRequest),
             baseConfig: clone(baseConfig),
+            previewRevision: 1,
             plannedBlocks: clone(planned),
             recoveryInsertions: 0,
             convertedFromProgramId: current.id

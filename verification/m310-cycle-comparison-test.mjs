@@ -10,8 +10,9 @@ import { captureShellVolumeSnapshot } from '../modules/next-engine/volume-repair
 // This does not claim to execute an obsolete legacy engine binary.
 const fixtures=JSON.parse(fs.readFileSync(new URL('./m205-generation-parity-results.json',import.meta.url),'utf8')).rows;
 const cases=[
- {label:'4-day Upper/Lower',row:2,seed:30442,focus:{}},
- {label:'5-day ULPPL back focus',row:3,seed:30713,focus:{lats:2,upper_back:2}}
+ {label:'4-day Upper/Lower size-to-strength',row:2,seed:30442,goal:'hypertrophy',focus:{}},
+ {label:'5-day ULPPL size-to-strength',row:3,seed:30453,goal:'hypertrophy',focus:{}},
+ {label:'5-day ULPPL back focus',row:3,seed:30713,goal:'both',focus:{lats:2,upper_back:2}}
 ];
 const weeks=[{phase:'hypertrophy_accumulation',weeks:5},{phase:'strength_accumulation',weeks:5}];
 const sum=sessions=>sessions.reduce((n,s)=>n+s.exercises.reduce((v,e)=>v+e.sets,0),0);
@@ -19,7 +20,7 @@ const round=v=>Math.round(v*10)/10;
 function generate(sample,adapt){
  let id=0;
  const config={...fixtures[sample.row].config,name:'M310 actual cycle comparison',
-   goal:'both',focus:sample.focus,reduce:[],weeks:5,deload:false};
+   goal:sample.goal,focus:sample.focus,reduce:[],weeks:5};
  return generateNextCycleForShell({
   templateId:'custom',config,blocks:weeks,legacyExercises:EXERCISES,seed:sample.seed,
   makeId:()=> 'm310-'+sample.seed+'-'+(adapt?'adaptive':'fixed')+'-'+(++id),

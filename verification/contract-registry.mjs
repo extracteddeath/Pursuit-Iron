@@ -16,6 +16,7 @@ export const contractGroups = Object.freeze({
         'm307-focused-region-transition-test.mjs',
         'm310-cycle-comparison-test.mjs',
         'm311-adaptive-upgrade-test.mjs',
+        'm326-cycle-refresh-test.mjs',
         'm313-edited-cycle-boundary-test.mjs',
         'm317-weekly-projection-performance-test.mjs',
         'm319-catalog-performance-test.mjs',

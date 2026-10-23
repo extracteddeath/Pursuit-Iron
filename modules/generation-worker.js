@@ -1,3 +1,4 @@
+import { refreshAdaptiveCyclePreviews, authoredCycleExitSnapshot } from './next-engine/adaptive-cycle-upgrade.js';
 import {
     EXERCISES, EX_BY_ID, NextShellAdapterError,
     generateNextProgramForShell, generateNextCycleForShell, convertProgramToNextCycleForShell,
@@ -6,6 +7,7 @@ import {
 } from './engine-api.js';
 
 const operations = Object.freeze({
+    refresh_cycle: refreshAdaptiveCyclePreviews,
     program: generateNextProgramForShell,
     cycle: generateNextCycleForShell,
     convert_cycle: convertProgramToNextCycleForShell,
@@ -27,6 +29,7 @@ export function executeGenerationTask({ operation, options, idPrefix, settings =
     setAvailPlates(settings.plates);
     setRestScaleGlobal(settings.restScale);
     setGymLimits(settings.gym ? { ...settings.gym, limitUnit: settings.gym.unit } : null);
+    if (operation === "cycle" && options.previousShell) options = { ...options, previousVolumeSnapshot: authoredCycleExitSnapshot(options.previousShell, options.legacyExercises) };
     let nextId = 0;
     const makeId = () => ++nextId === 1 ? idPrefix : `${idPrefix}-${nextId}`;
     return operations[operation]({ ...options, makeId });

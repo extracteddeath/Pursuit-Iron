@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';import http from 'node:http';import path from 'node:path';import puppeteer from 'puppeteer-core';
 import { EXERCISES } from '../modules/App.js';
 import { generateNextProgramForShell } from '../modules/next-engine/app-shell-adapter.js';
+import { cycle as refreshCycle, saved as refreshSaved, equipment as refreshEquipment } from './m326-cycle-refresh-test.mjs';
+import { shellExercisePerformableFor } from '../modules/next-engine/shell-equipment.js';
 const root=path.resolve(new URL('../',import.meta.url).pathname);
 const cfg=JSON.parse(fs.readFileSync(path.join(root,'verification/m205-generation-parity-results.json'))).rows[3].config;
 let n=0;const generated=generateNextProgramForShell({config:{...cfg,name:'My existing program',weeks:10},legacyExercises:EXERCISES,seed:894,makeId:()=>`b894-${++n}`}).program;
@@ -78,18 +80,53 @@ try{
   });
   await page.waitForFunction(()=>{
     const c=JSON.parse(localStorage.getItem('wpb:v1')||'{}').cycles?.[0];
-    return c?.adaptExercises&&c?.adaptTrainingSplit&&c?.nextEngineCycle?.adaptBetweenBlocks&&c?.nextEngineCycle?.adaptTrainingSplit;
+    return c?.adaptExercises&&c?.adaptTrainingSplit&&c?.nextEngineCycle?.adaptBetweenBlocks&&c?.nextEngineCycle?.adaptTrainingSplit&&c?.nextEngineCycle?.previewRevision===1;
   });
   const upgraded=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')));
   assert.deepEqual(upgraded.history,immediatelyBeforeUpgrade.history,'Adaptive opt-in preserves every workout log');
-  assert.deepEqual(upgraded.saved,immediatelyBeforeUpgrade.saved,'Adaptive opt-in cannot rewrite current or preview blocks');
+  assert.deepEqual(upgraded.saved.find(p=>p.id===program.id),immediatelyBeforeUpgrade.saved.find(p=>p.id===program.id),'Adaptive upgrade preserves the authored current block');
+  assert.equal(upgraded.cycles[0].nextEngineCycle.previewRevision,1,'Upgrade refreshes saved future previews');
+  assert.deepEqual(upgraded.saved.map(p=>p.id),immediatelyBeforeUpgrade.saved.map(p=>p.id),'Refreshed blocks keep their saved identities');
   assert.deepEqual(upgraded.cycles[0].blockIds,immediatelyBeforeUpgrade.cycles[0].blockIds,'Adaptation retains cycle block identity and all references');
   assert.deepEqual(upgraded.cycles[0].nextEngineCycle.plannedBlocks,immediatelyBeforeUpgrade.cycles[0].nextEngineCycle.plannedBlocks);
   assert.equal(upgraded.cycles[0].activeBlock,0);
-  assert.equal(upgraded.cycles[0].adaptiveUpgrade.awaitingBoundary,true);
+  assert.equal(upgraded.cycles[0].adaptiveUpgrade.awaitingBoundary,false);
   await page.reload({waitUntil:'networkidle0'});
   assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).cycles[0].adaptTrainingSplit),true);
   await page.close();
+ }
+ // M326: already-upgraded stale previews refresh through the real worker using
+ // the selected gym, while the selected Plan pane survives the block change.
+ for(const width of [320,900]){
+  const context=await browser.createBrowserContext(),page=await context.newPage();
+  page.on('pageerror',e=>errors.push(e.message));
+  await page.setViewport({width,height:850,isMobile:width<600,hasTouch:width<600});
+  await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
+  const c={...refreshCycle,adaptExercises:true,adaptTrainingSplit:true,nextEngineCycle:{...refreshCycle.nextEngineCycle,adaptBetweenBlocks:true,adaptTrainingSplit:true,previewRevision:0}};
+  const data={v:13,savedAt:1,saved:refreshSaved,cycles:[c],history:[],perf:{},drafts:{},tombs:{},seenIntro:999,seenWhatsNew:999,pinnedId:c.blockIds[0],
+   theme:width===900?'rosewater':'amethyst',unit:'lb',unitChosen:true,experience:'intermediate',bodyweight:185,
+   gyms:[{id:'m326-gym',name:'Free weights gym',equipment:refreshEquipment}],activeGymId:'m326-gym',equipDefault:refreshEquipment,
+   installDismissedAt:Date.now(),lastBackup:Date.now()};
+  await page.evaluateOnNewDocument(data=>{if(!sessionStorage.getItem('m326-seeded')){localStorage.setItem('wpb:v1',JSON.stringify(data));sessionStorage.setItem('m326-seeded','1');}},data);
+  await page.goto(`http://127.0.0.1:${server.address().port}/index.html`,{waitUntil:'networkidle0'});
+  await page.waitForSelector('.wpb-home');
+  const baseline=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')));
+  await page.click('[data-tab="plan"]');await page.waitForSelector('.wpb-plan-block-nav');
+  await page.click('[data-plan-pane="volume"]');
+  await page.$$eval('.wpb-plan-block-nav button',ns=>ns[1].click());
+  await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:v1')||'{}').cycles?.[0]?.nextEngineCycle?.previewRevision===1,{timeout:120000});
+  await page.waitForSelector('.wpb-plan-preview-notice');
+  assert.equal(await page.$eval('[data-plan-pane="volume"]',n=>n.getAttribute('aria-pressed')),'true');
+  const after=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')));
+  assert.deepEqual(after.saved.find(p=>p.id===c.blockIds[0]),baseline.saved.find(p=>p.id===c.blockIds[0]));
+  assert.deepEqual(after.history,baseline.history);
+  const allowed=shellExercisePerformableFor({equipment:refreshEquipment});
+  assert.ok(after.saved.filter(p=>p.id!==c.blockIds[0]).flatMap(p=>p.days.flatMap(d=>d.exercises)).every(id=>allowed(EXERCISES.find(ex=>ex.id===id))));
+  assert.deepEqual(after.cycles[0].blockIds,c.blockIds);
+  await page.screenshot({path:path.join(root,`verification/m326-volume-${width}-phone.png`)});
+  await page.reload({waitUntil:'networkidle0'});await page.waitForSelector('.wpb-home');
+  assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).cycles[0].nextEngineCycle.previewRevision),1);
+  await context.close();
  }
  assert.deepEqual(errors,[]);
  console.log('PASS B894 real app: native/legacy custom conversion, one future block, close/reload draft recovery, protected history/roster/overrides, correct ownership and responsive controls at 320/390/900px in dark/light themes.');

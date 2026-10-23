@@ -36,6 +36,10 @@ function describe(result){
  if(d.mode==='goal_optimized'){
   assert.equal(d.realizedSelection?.mode,'finalized_strength_top_two',
     'Adaptive strength ranking must compare finalized executable finalists');
+  assert.match(d.reason,/weakest executable work week/,
+    'The explanation must describe finalized week quality instead of claiming the base-score winner won');
+  assert.doesNotMatch(d.reason,/selected the highest scoring plan/,
+    'A post-finalization winner is not necessarily the original highest base-score candidate');
   assert.ok(d.realizedSelection.evaluatedFinalists>=1 && d.realizedSelection.evaluatedFinalists<=2);
   assert.equal(d.realizedSelection.firstWeekSets,
     sum(captureShellVolumeSnapshot(s,1,EXERCISES).sessions));

@@ -423,11 +423,15 @@ export function describeRealizedCycleQuality(program, legacyExercises = [], sele
     const phase = program.nextEngine.program.phase;
     const prescriptions = createMusclePrescriptions(request, phase);
     const catalog = createExerciseMap(request.customExercises);
+    // M317: reuse the normalized request, exercise catalog and legacy lookup
+    // across all weeks. A fresh snapshot otherwise rebuilt these each week.
+    const snapshotContext = { request, exerciseMap: catalog,
+        legacyMap: new Map(legacyExercises.map(ex => [ex.id, ex])) };
     const weeks = Math.max(1, Math.round(Number(program.config?.weeks ?? program.weeks) || 1));
     const round = value => Math.round(value * 10) / 10;
     const rows = [];
     for (let week = 1; week <= weeks; week++) {
-        const snapshot = captureShellVolumeSnapshot(program, week, legacyExercises);
+        const snapshot = captureShellVolumeSnapshot(program, week, legacyExercises, null, snapshotContext);
         if (!snapshot || snapshot.missing)
             throw new NextShellAdapterError('NEXT_CYCLE_REALIZED_WEEK_MISSING',
                 `The saved cycle has incomplete executable prescriptions in week ${week}.`);

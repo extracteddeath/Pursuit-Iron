@@ -125,7 +125,8 @@ console.log('M304 executable working-week transition matrix: '+JSON.stringify(de
  const editedSetsPerExercise=Math.max(6,Math.ceil(32/day.exercises.length));
  day.exercises.forEach((exercise,slot)=>{
    const key=`${day.id}:${slot}`;
-   edited.overrides[key]={...(edited.overrides[key]??{}),sets:editedSetsPerExercise};
+   edited.overrides[key]={...(edited.overrides[key]??{}),sets:editedSetsPerExercise,
+     prescriptionOwners:{...(edited.overrides[key]?.prescriptionOwners??{}),sets:'user'}};
  });
  const original=JSON.stringify(edited);
  const prior=view(edited,8);

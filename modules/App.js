@@ -2,7 +2,7 @@ import { withSessionPlanChoice } from './session-plan.js';
 import { planShorterSession, SESSION_LENGTH_OPTIONS, splitSupportsTrainingDays, repeatCycleOptions } from './engine-api.js';
 import { readCycleSetupDraft, writeCycleSetupDraft, clearCycleSetupDraft, CYCLE_SETUP_DRAFT_KEY } from './cycle-setup-drafts.js';
 import { INJURY_AREAS, INJURY_IMPACTS, injuryParts, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
-import { withProgressionChoices, repeatedNote, refreshProgressionSets, exerciseSessionTags, workoutProgramChanges, withWorkoutProgramChanges, buildSessionReview } from './session-tools.js';
+import { withProgressionChoices, repeatedNote, refreshProgressionSets, exerciseSessionTags, workoutProgramChanges, withWorkoutProgramChanges, buildSessionReview, beginWorkoutProgramSwap, undoWorkoutProgramSwap } from './session-tools.js';
 import { liftBests, displayDayName, loadingInventoryInUnit, summarizeSession } from './engine-api.js';
 import { reviewProgramChanges, programReviewKey, withProgramRevision } from './program-review.js';
 import { ALL_EQUIP_IDS, ALL_PLATES, ASSIST_IDS, ASSUMED_RIR, AVAIL_PLATES, AXIAL_ADJACENT_COST, BARS, BAR_EQUIP, BAR_LABEL, BASE_SET_COST, BIG_THREE, BIRTH_RE, BW_LOG_CAP, CODE_ALPHA, CODE_ASSIST, CODE_CARRIED_KEYS, CODE_EQUIP, CODE_EXERCISES, CODE_EXP, CODE_GOALS, CODE_IGNORED_KEYS, CODE_PROG, CODE_SCHEMES, CODE_SESSION, CODE_SPLITS, COMPOSITE_HEADS, COVERED_MUSCLES, DELT_HEAD, E1RM_HOLD, E1RM_REP_CAP, EFFORT_MAX_BIAS, EFFORT_MIN_PAIRS, EFFORT_REP_CAP, ENGINES, ENGINE_RULES, ENGINE_V, EPLEY_SLOPE, EQUIPMENT, EQUIP_CATS, EQUIP_IMPLIES, EXERCISES, EXP, EXP_BAND, EX_ABBREV, EX_BY_ID, EX_FAMILY, EX_LOAD_INC, EX_METRICS, EX_METRIC_BY_ID, EX_SPECIFIC, EX_WINDOWS, FOCUS_CAVEAT, GAP_FRACTION, GENERATION_ROUTE, GYM_LIMITS, GYM_LIMIT_KEYS, GYM_PRESETS, GZ_T1_STAGES, GZ_T2_STAGES, HISTORY_BYTES, HISTORY_BYTE_CHECK_FROM, HISTORY_CAP, IDEAL_SLOTS, INTENT_FROM_CAT, INVENTORY_KEYS, LANDMARKS, LEGACY_EQUIP_IMPLIES, LEGACY_EX_TYPICAL_KEYS, LEVEL_TITLES, LOAD_INC, LOWER_PARTS, MACHINE_EQUIP, MACHINE_SETUP, MILESTONE_XP, MIN_DAY_SESSIONS, MOBILITY, MRV_GRAIN, MUSCLE_SYNONYM, MYO_MAX_SETS, MYO_MINI_REPS, MYO_MINI_SETS, MYO_MIN_REPS, MYO_PARTS, MYO_TARGET_REPS, NOVICE_INELIGIBLE_SPLITS, PART_LABEL, PART_ORDER, PATTERNS, PATTERN_BY_ID, PATTERN_GROUPS, PATTERN_MIN_SETS, PHASES, PHASE_ROT, PLANNED_ROOM_RIR, PLATES, PROG_POLICIES, PROG_STYLES, PV_PAD_TOP, PV_ROW_GAP, RACK_PRESETS, RAW, REDUCE_FRACTION, REFERENCES, REGION_MOVEMENT, REGION_REQUIRED, RELEASE_DIAG_CAP, RELEASE_DIAG_FIELDS, RELEASE_DIAG_KEY, REST_SCALE, SCORE_BANDS, SCORE_EQUIV, SCORE_PATTERN, SCORE_PATTERN_LABEL, SECONDARY, SELF_TEST_FRAME_BUDGET_MS, SELF_TEST_HISTORY_LIMIT, SELF_TEST_SUPPORTED_ENGINES, SESSIONS, SESSION_BOUNDS, SESSION_EX_TYPICAL, SETUP_FIELD_ORDER, SETUP_LABELS, SET_ROW_BLEED, SEX_FACTOR, SPLITS, STALL_ENGAGE, STALL_WINDOW, STANDARDS, STD_LEVELS, STORE_MIGRATIONS, STORE_VERSION, STRENGTH_CLUB_LIFTS, STRENGTH_CLUB_TIERS_LB, STRETCH_FOCUS_E2, STRETCH_FOCUS_E3, STRETCH_PARTIAL_PARTS, SUBMUSCLE_LABEL, SUB_LANDMARKS, TECHNICAL_LIFTS, TEMPLATES, TEMPLATE_CATS, TOTAL_WEEKS, UNIFORM_LANDMARK, VIEW_DEPTH, WARMUP_PYRAMIDS, WARMUP_SET_SEC, WEIGHTED_SWAP, __doseMemo, __recovFitMemo, __recoveryMemo, __slopeMemo, __volKey, __weeklyVolMemo, _dstCache, _lmCache, _planOverviewMemo, addedMinutes, addedSeconds, advanceLegacyFirstCycleBlock, ageFactor, ageFrom, anchorPerfFor, applyCustomProgramSettings, asLengthUnit, assertExerciseData, auditProgramWeek, auditSets, autoStyleDetail, autoStyleFor, availableFor, axialCost, backupRecordImpact, barFor, barWeightFor, baseSetsFor, betterTopSet, birthFromAge, birthParts, bitsToCode, blockChangeSummary, blockPhase, blockPlanFor, blockRetro, blockReview, budgetIncludesTransitions, buildLifterModel, buildWeekPlan, calibrateDayPerf, calibratedAnchorPerf, canUndoProgramSave, capHistory, capWeeklyVolume, cellRepRange, clamp, classifyPlateau, clearSetup, coachFacts, codeToBits, completionRate, compositeMrv, computeCell, computeLevel, computeMilestones, constantLoadDecay, coverageGaps, coverageRelief, cuesFor, customAuthoredSetCount, customExerciseHistory, customExerciseReferenceHistory, customLastSetTechnique, customProgramSuggestion, cycleConfigForStandaloneProgram, cycleProgress, dayMuscleBreakdown, dayMuscleLoad, dayMuscleVolume, dayOverlap, dayPerfFor, dayScopedTrends, daySeconds, daysInWeek, decodeGallery, decodeProgramCode, deloadAdvice, distributeVolBias, e1rm, e1rmRIR, effectiveRest, effortBounds, effortCalibration, effortLabel, effortValueLabel, encodeProgramCode, endlessStalled, engHas, engLacks, engineInfo, engineWeekOneStyles, estimateMinutes, estimateMinutesFor, exMatches, exRecords, exWindow, exerciseAt, exerciseProfile, exerciseSeries, exerciseSlotSec, exerciseTrends, expandEquipment, expandLegacyEquipment, explainPrescription, feedbackDelta, filterWorkoutHistory, fmtSets, formatSetup, galleryIssueBody, gallerySubmission, getBits, goalForDay, groupPctSets, groupSessionsByCycle, groupSessionsByMonth, growMyoSets, gymById, gymCapFor, gymRackFor, gzPlanFor, gzTierOf, gzWorkWeight, historyDayIndex, historyForProgram, historyVolumeIn, homeProgramGroups, isAssistedEx, isAxialLoad, isBarLike, isMachineLike, isRuntimeProgram, isStretchFocus, isWorkSet, landmarkFor, landmarkForLegacy, landmarkOf, lastDayPerf, lastSetEffort, lastSetTech, lastTopSet, legacyCustomSetCount, lengthUnitFor, lifterModelKey, linearInc, linearStalled, liveCoachForContext, loadStep, loadableAbove, loadableAtOrBelow, nudgeWorkoutLoad, logWindow, loggedExercisePerformance, loggedSubVolume, loggedVolume, loggedWorkoutPerformance, lowerBodyLift, makeMyoMini, mavFor, mergeSessionData, mergeStandaloneIntoGeneratedCycle, mergeStores, mergedSetCount, migrateStore, movePattern, muscleRecovery, muscleRecoveryUncached, newGymId, nextDueDayId, nextEngineStyleFor, nextScheduledIndex, nextSessionCursor, nextTMEvidence, normalizeBwLog, normalizeCycleLinks, normalizeEditedHistoryEntry, normalizeGyms, normalizeHistoryDayIds, normalizeMeasureLog, overreachSignal, paceFactor, parseRIRNum, parseStoredData, patternCues, patternTrainable, pctSetsFor, perWeekOf, percentagePlanFor, perfAfterDelete, perfAfterHistoryReplace, personalMav, personalRecoveryHours, personalRepSlope, phaseFor, phaseKind, pickActiveProgram, pickTopSet, planOverview, planOverviewMemo, plannedWeek, plateauOf, plateauOfLift, plateauSessions, plateauSplitByDay, platesPerSide, poolOf, preferenceFloor, prescribeSets, prescribedRIRof, prescribedRIRofAny, programChangeLabels, programFingerprint, programSavePlan, progressionHistoryForProgram, projectNextTM, propagateCycleEditsPure, putBits, rankSwapAlts, readinessBand, recommendedSplit, regionGapFix, regionGapsFor, repRange, representativeCustomLoad, repsLow, resolveStyle, restSec, rirTrend, rmAt, rotationOf, roundTo, ruleEngine, sameProgramContent, sanitizeInventory, sanitizeLimits, sanitizeRepsInput, sanitizeWeightInput, scoreAttribution, scoreCompose, scoreContin, scoreEquivalent, scoreEquivalentInverse, scoreLevelIdx, scoreLevelLabel, scoreMatur, scorePatternFor, scoreTargetFor, scoreTo100, secondaryOf, sessionE1RM, sessionExercisePlan, sessionSnapshotStatus, sessionSuggestion, setAvailPlates, setGymBarWeights, setExLoadInc, setGymLimits, setLoadInc, setRestScaleGlobal, setsOf, setupFieldsFor, setupFieldsWithStored, setupLabel, simulateAndAudit, squatHamCredit, stallCountFor, starvedRegions, strengthClubSnapshot, strengthLevel, strengthScore, strengthScoreHistory, strengthSnapshot, stretchTable, styleFor, styleOverride, subRegionOf, summarizeHistoryLoggedSets, summarizeSets, swapOverlapNames, syncSubSets, techExplain, techSetTag, templateConfig, templateIntent, tempoFor, tierOf, toLength, toUnit, todayISO, trainingMaxForUnit, uid, underRecoveredWeekly, uniformLandmarkFor, userOwnsRuntimeSet, volumeAudit, volumeLedger, volumeResponse, volumeVerdicts, warmupCount, warmupPlan, warmupRoutine, warmupSets, weekIntent, weekKeyOf, weekMuscleBreakdown, weeklyBodyweightTrend, weeklyRecap, weeklySubVolume, weeklyVolume, weeksOf, withTrainingMax, workoutPlanCoachFact , detectWorkoutCsv, workoutCsvToStore } from './engine-api.js';
@@ -11688,6 +11688,8 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
        is an INVARIANT of the session state rather than a line somebody has to remember inside each of
        the ~15 handlers that can move a weight. Returns the original array untouched when nothing
        needed syncing, so this adds no re-renders. See syncSubSets. */
+    const dataRef = useRef(data);
+    dataRef.current = data;
     const setData = (upd) => setDataRaw(prev => {
         const next = typeof upd === "function" ? upd(prev) : upd;
         if (!Array.isArray(next))
@@ -12897,7 +12899,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
     // ----- swap the current exercise; scope = "session" (just today) or "program" (persist) -----
     const doSwap = (newId, scope = "session") => {
         const ei = exIdx, current = data[ei];
-        // Replacing a worked lift must never silently erase completed warm-ups or working sets.
+        // Swapping a worked lift must not erase recorded warm-ups or working sets.
         if (!current || current.sets.some(set => set.done)) {
             setSwap(false);
             setSnack({ msg: "This lift has logged sets. Add the replacement as a new exercise to keep your work." });
@@ -12907,22 +12909,43 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
         if (data.some((x, i) => i !== ei && x.id === newId)) {
             setSwap(false);
             return;
-        } // no duplicates
-        const newEx = EX_BY_ID[newId];
-        const oldId = data[ei].id;
-        const sug = null; // M46: never invoke the removed legacy load engine for an ad-hoc swap.
-        const keepWarm = data[ei].sets.some(s => s.warm);
+        }
+        const newEx = EX_BY_ID[newId], oldId = current.id;
+        if (!newEx) return;
+        const keepWarm = current.sets.some(s => s.warm);
+        // Apply the program transaction before changing the session. Failed or stale
+        // program edits must never show a misleading "updated program" message.
+        const programUndo = scope === "program"
+            ? onUpdateProgramExercise?.(day.id, oldId, newId) : null;
+        if (scope === "program" && !programUndo) {
+            setSwap(false);
+            setSnack({ msg: "The program changed. Review the exercise before swapping it." });
+            return;
+        }
+        const replacement = { id: newId, slot,
+            sets: buildSets(newEx, slot, null, keepWarm), exerciseSubstituted: true,
+            previousExerciseId: current.previousExerciseId || oldId, note: "" };
         const snap = data, snapIdx = exIdx;
-        setData(d => d.map((e, i) => i !== ei ? e : { id: newId, slot, sets: buildSets(newEx, slot, sug, keepWarm),
-            exerciseSubstituted: true, previousExerciseId: e.previousExerciseId || oldId, note: "" }));
+        setData(d => d.map((e, i) => i === ei ? replacement : e));
         setSwap(false);
-        if (scope === "program" && onUpdateProgramExercise) {
-            onUpdateProgramExercise(day.id, oldId, newId);
-            flashSnack(`Swapped in ${newEx.name} · updated program`, snap, snapIdx);
-        }
-        else {
-            flashSnack(`Swapped in ${newEx.name}`, snap, snapIdx);
-        }
+        const plannedSets = JSON.stringify(replacement.sets);
+        setSnack({ msg: `Swapped in ${newEx.name}${programUndo ? " · updated program" : ""}`,
+            undo: () => {
+                const latest = dataRef.current[ei];
+                // Do not discard logged or edited sets while rolling back program state.
+                if (latest?.id !== newId || latest.slot !== slot
+                    || JSON.stringify(latest.sets) !== plannedSets) {
+                    setSnack({ msg: "This exercise changed after the swap. Undo cannot discard your work." });
+                    return;
+                }
+                if (programUndo && !programUndo()) {
+                    setSnack({ msg: "The saved program changed after the swap. Undo was not applied." });
+                    return;
+                }
+                setData(rows => rows.map((row, i) => i === ei ? snap[ei] : row));
+                setExIdx(snapIdx);
+                setSnack(null);
+            } });
     };
     const finish = async () => {
         // Guard against a fast double-tap: setView/setSessionDay below are React state updates and don't
@@ -22053,33 +22076,22 @@ function App() {
         };
         commitProgram(apply);
     };
+    const workoutSwapStore = useRef({ program, saved });
+    workoutSwapStore.current = { program, saved };
     const updateProgramExercise = (dayId, oldId, newId) => {
-        if (!program)
-            return;
-        const apply = (p) => {
-            if (!p || !Array.isArray(p.days))
-                return p;
-            let changed = false;
-            const days = p.days.map(d => {
-                if (d.id !== dayId)
-                    return d;
-                const idx = (d.exercises || []).indexOf(oldId);
-                if (idx < 0)
-                    return d;
-                if (d.exercises.includes(newId))
-                    return d; // avoid duplicate
-                changed = true;
-                const exercises = d.exercises.map((id, i) => i === idx ? newId : id);
-                return { ...d, exercises };
-            });
-            return changed ? { ...p, days, edited: true } : p;
+        const transaction = beginWorkoutProgramSwap(program, saved, dayId, oldId, newId);
+        if (!transaction) return null;
+        // Both the current program and saved sibling blocks are published together.
+        setProgram(transaction.program);
+        setSaved(transaction.saved);
+        return () => {
+            const latest = workoutSwapStore.current;
+            const restored = undoWorkoutProgramSwap(latest.program, latest.saved, transaction.receipt);
+            if (!restored) return false;
+            setProgram(restored.program);
+            setSaved(restored.saved);
+            return true;
         };
-        const updated = apply(program);
-        commitProgram(updated);
-        // keep cycle siblings aligned if this program is a cycle block
-        if (program.cycleId) {
-            setSaved(prev => prev.map(p => (p.cycleId === program.cycleId && p.id !== program.id) ? apply(p) : p));
-        }
     };
     // Set (or clear, when v=0) the per-exercise weight increment — e.g. a leg-press stack that
     // moves 50 lb per pin. Stored on the program with the unit it was set in so a unit switch

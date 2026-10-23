@@ -66,6 +66,19 @@ assert.equal(advanced.replaceProgramId,saved[1].id,'The preview must be replaced
 assert.equal(advanced.nextProgram.id,saved[1].id,'History and Plan references must retain their program ID');
 assert.equal(advanced.nextProgram.nextEngine.program.phase,'strength_accumulation');
 assert.equal(advanced.nextProgram.nextEngine.program.audit.result,'pass');
+// M315: on a history-adapted block, the split ranking is a base forecast;
+// the finalized work-week breakdown must reflect the saved executable plan.
+const advancedQuality=advanced.cycle.blockMeta[1].splitDecision.realizedQuality;
+assert.equal(advancedQuality.comparison,'ranked_engine_base_to_saved_executable_weeks');
+assert.equal(advancedQuality.weeks.length,advanced.nextProgram.config.weeks);
+assert.deepEqual(advanced.nextProgram.nextEngine.cycleTemplate.splitDecision.realizedQuality,advancedQuality);
+for(const week of advancedQuality.weeks){
+ const snap=captureShellVolumeSnapshot(advanced.nextProgram,week.week,EXERCISES);
+ assert.ok(snap&&!snap.missing);
+ assert.equal(week.weeklySets,snap.sessions.reduce((n,s)=>
+  n+s.exercises.reduce((m,e)=>m+e.sets,0),0));
+ assert.deepEqual(week.overCapacityDays,[]);
+}
 assert.equal(advanced.nextProgram.nextEngine.cycleTemplate.preview,false);
 assert.equal(advanced.nextProgram.nextEngine.cycleTemplate.splitDecision.mode,'goal_optimized',
  'An upgraded cycle must actually run split optimization at advancement');
@@ -135,6 +148,16 @@ assert.equal(migrated.nextProgram.nextEngine.cycleTemplate.splitDecision.mode,'g
 assert.equal(migrated.nextProgram.nextEngine.priorBlock.programId,standalone.id);
 assert.equal(migrated.nextProgram.nextEngine.priorBlock.workouts,convertedHistory.length);
 assert.equal(migrated.nextProgram.nextEngine.program.audit.result,'pass');
+const migratedQuality=migrated.cycle.blockMeta[1].splitDecision.realizedQuality;
+assert.equal(migratedQuality.comparison,'ranked_engine_base_to_saved_executable_weeks');
+assert.equal(migratedQuality.weeks.length,migrated.nextProgram.config.weeks);
+assert.deepEqual(migrated.nextProgram.nextEngine.cycleTemplate.splitDecision.realizedQuality,migratedQuality);
+for(const week of migratedQuality.weeks){
+ const snap=captureShellVolumeSnapshot(migrated.nextProgram,week.week,EXERCISES);
+ assert.equal(week.weeklySets,snap.sessions.reduce((n,s)=>
+  n+s.exercises.reduce((m,e)=>m+e.sets,0),0));
+ assert.deepEqual(week.overCapacityDays,[]);
+}
 assert.deepEqual(migrated.cycle.nextEngineCycle.plannedBlocks,conversion.cycle.nextEngineCycle.plannedBlocks);
 assert.equal(JSON.stringify({conversion,convertedHistory}),migratedBefore);
 console.log('PASS M312: saved standalone custom program converts, upgrades, and advances into audited goal-adaptive strength with no history/identity loss.');

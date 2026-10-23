@@ -26,7 +26,7 @@ assert.ok(!home.includes('style: { textAlign: "left", padding: "13px 13px"'),
 assert.ok(css.includes('Cohesion 10 — Home discovery tiles share one presentation owner'));
 assert.match(css, /#root \.wpb \.wpb-home-session-outline\{\s*margin:0;border:0;padding:0;/,
   'Session outline must not add a second large blank strip above its exercise list');
-assert.ok(css.includes('#root .wpb .wpb-home-outline-list>li:first-child{padding-top:3px}'),
+assert.ok(css.includes('#root .wpb .wpb-home-outline-list>li:first-child{padding-top:var(--pi-space-1)}'),
   'Expanded list starts close beneath its toggle');
 const gamePlan = app.slice(app.indexOf('function SessionGamePlan('), app.indexOf('function PlanChangesDialog('));
 assert.ok(gamePlan.includes('_jsxs("details"') && gamePlan.includes('_jsxs("summary"'),
@@ -52,3 +52,9 @@ assert.ok(!home.includes('trainingPulse') && !home.includes('"Last 7 days"') && 
 assert.ok(!app.slice(app.indexOf('function homeCardPlan('), app.indexOf('function DeloadAdviceCard(')).includes('["recap",'),
   'Weekly card does not consume a discretionary insight slot');
 console.log('PASS Home ownership: one empty-state primary CTA, stable discovery route keys, shared tile CSS, Game Plan separate, runtime engine unchanged.');
+
+assert.ok(home.includes('className: "wpb-primary-action", children:'), 'Home Start geometry is class-owned');
+assert.ok(home.includes('className: "pressable wpb-home-switch-action"'), 'Program switching remains reachable');
+assert.match(css, /#root \.wpb \.wpb-home-session-preview\{[^}]*margin:0;padding:0 var\(--pi-space-3\)/, 'Preview has one inset owner');
+assert.match(css, /\.wpb-home-outline-list li\{[^}]*padding:var\(--pi-space-2\) 0;/, 'Workout rows use canonical spacing');
+assert.match(css, /#root \.wpb \.wpb-plan-change-banner\{[^}]*min-height:56px;margin:0 0 var\(--pi-space-2\)/, 'Compact change history');

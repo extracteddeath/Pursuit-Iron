@@ -419,7 +419,7 @@ try{
             out.select=box('.wpb-settings-jump select');
           }else if(which==='profile'){
             out.topPadding=parseFloat(getComputedStyle(el('.wpb-profile-inner')).paddingTop);
-            out.head=box('.wpb-profile-head');out.identity=box('.wpb-profile-identity');
+            out.head=box('.wpb-profile-head');out.identity=box('.wpb-profile-card-caption');
             out.titleSize=parseFloat(getComputedStyle(el('.wpb-profile-title')).fontSize);
             out.edit=box('.wpb-profile-edit');
             out.shareCard=box('.wpb-profile-share-card');
@@ -440,8 +440,8 @@ try{
           assert.ok(density.title.bottom-density.row.top<=118,
             'Plan header has compact hierarchy without hiding title: '+JSON.stringify(density));
         }else if(tab==='progress'){
-          assert.ok(density.header&&density.header.height<=155&&density.tabs.length===4&&density.tabs.every(x=>x.height>=48),
-            'Progress title and four 48px tabs fit its header: '+JSON.stringify(density));
+          assert.ok(density.header&&density.header.height<=155&&density.tabs.length===5&&density.tabs.every(x=>x.height>=48),
+            'Progress title and five 48px tabs fit its header: '+JSON.stringify(density));
         }else if(tab==='settings'){
           assert.ok(density.header&&density.jump&&density.picker&&density.picker.height>=48&&density.select&&density.select.height>=48
             &&density.jump.bottom-density.header.top<=128,
@@ -450,12 +450,12 @@ try{
           assert.ok(density.head&&density.edit&&density.hero&&density.topPadding<=16
             &&density.edit.width>=48&&density.edit.height>=48,
             'Profile identity/edit start promptly with full-size edit action: '+JSON.stringify(density));
-          assert.ok(density.shareCard&&density.layoutActions&&density.shareCard.top>=density.identity.bottom
-            &&density.shareCard.top-density.identity.bottom<=16
+          assert.ok(density.shareCard&&density.layoutActions&&density.shareCard.top>=density.head.bottom
+            &&density.shareCard.top-density.head.bottom<=16
             &&density.layoutActions.top>=density.shareCard.bottom
-            &&density.hero.top>=density.layoutActions.bottom&&density.hero.top-density.layoutActions.bottom<=16
+            &&density.hero.top>=density.identity.bottom&&density.hero.bottom<=density.shareCard.bottom
             &&density.stats.length===3&&density.stats.every(w=>w>=68),
-            'Share card leads the customizable sections, with compact gaps and no overlaps: '+JSON.stringify(density));
+            'Share card integrates identity and XP before customizable sections, with compact gaps and no overlaps: '+JSON.stringify(density));
         }
         basic.density=density;
         if(tab==='plan'||tab==='profile'||tab==='settings'){

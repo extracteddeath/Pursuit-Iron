@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { EXERCISES } from '../modules/App.js';
-import { generateNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
+import { generateNextCycleForShell, convertProgramToNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
+import { generateNextProgramForShell } from '../modules/next-engine/app-shell-adapter.js';
 import { createExerciseMap } from '../modules/next-engine/exercise-db.js';
 import { publicMevLedger, PUBLIC_MEV_REGIONS } from '../modules/next-engine/public-mev.js';
 
@@ -61,3 +62,46 @@ for(const probe of cases){
 }
 console.log('M303 generated cycle dose matrix: '+JSON.stringify(matrix,null,2));
 console.log('PASS M303: longitudinal split adaptation respects working-set safety and exposes actual regional doses.');
+
+// Conversion is a separate engine entrypoint. Check the actual preexisting
+// executable roster rather than treating a newly generated hypertrophy block
+// as equivalent to converting an active, possibly customized program.
+{
+  const cfg={...fixtures[3].config,name:'M303 converted program',goal:'hypertrophy',weeks:8};
+  let id=0;
+  const original=generateNextProgramForShell({
+    config:cfg,legacyExercises:EXERCISES,seed:30373,
+    makeId:()=>`m303-standalone-${++id}`
+  }).program;
+  const originalSnapshot=JSON.stringify(original);
+  const converted=convertProgramToNextCycleForShell({
+    program:original,templateId:'custom',
+    blocks:[{phase:'strength_accumulation',weeks:5}],
+    legacyExercises:EXERCISES,seed:30374,
+    makeId:()=>`m303-converted-${++id}`,
+    adaptBetweenBlocks:true,adaptTrainingSplit:true
+  });
+  assert.equal(JSON.stringify(original),originalSnapshot,
+    'Converted cycle cannot mutate the active standalone program');
+  assert.deepEqual(converted.currentProgram.days,original.days,
+    'Converting cannot rewrite the existing exercise roster');
+  const base=converted.currentProgram.nextEngine.program;
+  const strength=converted.blocks[0].nextEngine.program;
+  const before=sets(base),after=sets(strength);
+  if(before>=16) assert.ok(after>=Math.ceil(before*.5),
+    `Converted strength entry cannot fall from ${before} to ${after} sets`);
+  assert.equal(strength.audit.result,'pass');
+  assert.equal(strength.sessions.length,base.sessions.length);
+  const splitDecision=converted.cycle.blockMeta[1].splitDecision;
+  assert.equal(converted.blocks[0].config.split,splitDecision.selectedSplit);
+  const byDay=p=>p.sessions.map(day=>day.exercises.reduce((n,e)=>n+e.sets,0));
+  console.log('M303 converted custom hypertrophy-to-strength audit: '+JSON.stringify({
+    hypertrophySets:before,strengthSets:after,retainedPct:Math.round(after/before*100),
+    hypertrophyDaySets:byDay(base),strengthDaySets:byDay(strength),
+    sourceSplit:base.split.family,selectedSplit:strength.split.family,
+    regionalTargetCoveragePct:splitDecision.regionalCarryoverPercent,
+    regionalAtRisk:splitDecision.regionalRiskRegions,
+    liftPractice:splitDecision.liftFrequencies
+  }));
+}
+console.log('PASS M303: conversion preserves original roster and rejects extreme weekly volume cliffs.');

@@ -1139,8 +1139,14 @@ export function advanceNextCycleForShell(options) {
     if (cycle.blockIds?.[active] !== current.id)
         throw new NextShellAdapterError('NEXT_CYCLE_ACTIVE_MISMATCH', 'The active cycle block does not match the program being completed.');
     const analysis = analyzeShellHistoryForNextEngine(current, options.history, options.legacyExercises);
-    if (!analysis.readyForNextBlock)
-        throw new NextShellAdapterError('NEXT_CYCLE_NOT_READY', `Pursuit Engine ${current.engineSourceVersion || 'Next'} needs more completed work before this block can advance.`, { workouts: analysis.workoutCount, recovery: analysis.recovery, cycleState: analysis.cycleState });
+    if (!analysis.readyForNextBlock) {
+        const coverage = analysis.plannedDayCoverage;
+        const reason = coverage?.missingDayIds.length
+            ? `Logged working sets cover ${coverage.observedDays} of ${coverage.requiredDays} planned training days. Train the remaining days before changing blocks; extra repeats do not replace missing days.`
+            : `Pursuit Engine ${current.engineSourceVersion || 'Next'} needs more completed work before this block can advance.`;
+        throw new NextShellAdapterError('NEXT_CYCLE_NOT_READY', reason,
+            { workouts: analysis.workoutCount, recovery: analysis.recovery, cycleState: analysis.cycleState });
+    }
     const planned = cycle?.nextEngineCycle?.plannedBlocks ?? [];
     const currentMeta = cycle.blockMeta?.[active] ?? {};
     const isRecovery = currentMeta.phase === 'recovery';

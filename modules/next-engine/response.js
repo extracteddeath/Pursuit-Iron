@@ -57,6 +57,13 @@ function averageRir(sets) {
     const values = sets.map(s => s.rir).filter((x) => x !== null);
     return values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
 }
+// The same lift can have different targets by day and week. The shell reader
+// resolves the validated historical prescription before building an exposure;
+// only older callers without that snapshot fall back to the current exercise.
+function exerciseForExposure(exercise, exposure) {
+    return exposure.plannedExercise?.exerciseId === exercise.exerciseId
+        ? exposure.plannedExercise : exercise;
+}
 function evidenceExclusionReason(exposure) {
     const decision = exposure?.progression;
     if (!decision)
@@ -135,9 +142,9 @@ export function diagnoseExerciseResponse(exercise, exposuresInput, recovery) {
     const discomfort = exposures.filter(x => discomfortExposure(x.sets)).length;
     const poorTechnique = exposures.filter(x => poorTechniqueExposure(x.sets)).length;
     const questionableTechnique = exposures.filter(x => questionableTechniqueExposure(x.sets)).length;
-    const negative = exposures.filter(x => lowRepOrEffortFailure(exercise, x.sets)).length;
-    const complete = exposures.filter(x => completionRate(exercise, x.sets) >= .9).length;
-    const underloaded = exposures.filter(x => clearlyUnderloaded(exercise, x.sets)).length;
+    const negative = exposures.filter(x => lowRepOrEffortFailure(exerciseForExposure(exercise, x), x.sets)).length;
+    const complete = exposures.filter(x => completionRate(exerciseForExposure(exercise, x), x.sets) >= .9).length;
+    const underloaded = exposures.filter(x => clearlyUnderloaded(exerciseForExposure(exercise, x), x.sets)).length;
     const scores = exposures.map(x => exposurePerformanceScore(x.sets)).filter((x) => x !== null && Number.isFinite(x));
     const latest = exposures.at(-1);
     if (discomfort >= 2) {
@@ -155,7 +162,7 @@ export function diagnoseExerciseResponse(exercise, exposuresInput, recovery) {
             ? 'Remove one set from this exercise first and preserve the rest of the program.'
             : 'Preserve the strength exposure and increase recovery/rest before considering a structural reduction.', .82, reducible ? .25 : .12, reducible ? .18 : .05, evidenceMeta);
     }
-    if (underloaded >= 1 && clearlyUnderloaded(exercise, latest.sets)) {
+    if (underloaded >= 1 && clearlyUnderloaded(exerciseForExposure(exercise, latest), latest.sets)) {
         return makeDiagnosis(exercise, 'underloaded', underloaded >= 2 ? 'high' : 'moderate', underloaded, 'The latest comparable exposure completed the prescribed top-end reps with more repetitions in reserve than the target, indicating that load—not extra volume—is the first variable to change.', 'increase_load', false, 'Increase load by the smallest practical increment and keep the program structure unchanged.', .9, .08, .02, evidenceMeta);
     }
     if (scores.length >= 2) {
@@ -171,8 +178,10 @@ export function diagnoseExerciseResponse(exercise, exposuresInput, recovery) {
         const first = scores[0] ?? null;
         const last = scores.at(-1) ?? null;
         const relative = first !== null && last !== null && first > 0 ? Math.abs(last - first) / first : null;
-        const rirs = exposures.map(x => averageRir(x.sets)).filter((x) => x !== null);
-        const targetRir = rirs.length ? rirs.every(v => v >= exercise.prescription.rir[0] && v <= exercise.prescription.rir[1] + 1) : true;
+        const targetRir = exposures.every(x => {
+            const rir = averageRir(x.sets), prescribed = exerciseForExposure(exercise, x);
+            return rir === null || rir >= prescribed.prescription.rir[0] && rir <= prescribed.prescription.rir[1] + 1;
+        });
         if ((relative === null || relative < .01) && targetRir) {
             const eligible = exercise.role !== 'primary_strength' && exercise.role !== 'secondary_strength' && exercise.sets < 4 && recovery?.status !== 'watch' && recovery?.status !== 'deload_recommended';
             return makeDiagnosis(exercise, 'possibly_understimulated', 'moderate', exposures.length, 'At least three complete comparable exposures are stable, well tolerated, and close to the intended effort without a meaningful performance trend. This is only suggestive—not proof—of insufficient dose.', eligible ? 'add_set' : 'collect_more_data', eligible, eligible

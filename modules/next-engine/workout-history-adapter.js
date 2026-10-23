@@ -547,7 +547,8 @@ export function analyzeShellHistoryForNextEngine(program, history, legacyExercis
             if (!sets.length)
                 continue;
             const list = exposures.get(ex.exerciseId) ?? [];
-            list.push({ completedAt: workout.completedAt, sets, progression });
+            list.push({ completedAt: workout.completedAt, sets, progression,
+                plannedExercise: ex });
             exposures.set(ex.exerciseId, list);
         }
     }
@@ -576,6 +577,23 @@ export function analyzeShellHistoryForNextEngine(program, history, legacyExercis
     if (subjective >= 3 && recovery.status === 'normal')
         recovery = { ...recovery, status: 'watch', confidence: 'moderate', rationale: `${recovery.rationale} Subjective soreness also remained unresolved in ${subjective} of the last five logged sessions.` };
     const classification = classify(recovery, positive, negative, diagnoses, workouts.length);
+    // Fixed cycle blocks need evidence from their whole authored week. Extra
+    // repeats of one day remain valid performance evidence, but cannot stand in
+    // for untrained days when requesting a normal phase transition. Recovery
+    // retains its separate causal entry/exit rules, including early entry.
+    let plannedDayCoverage;
+    if (program?.cycleId && cycleState.phase !== 'recovery'
+        && Number.isInteger(plannedWeeks) && plannedWeeks > 0) {
+        const observed = new Set(workouts.map(workout => workout.session.id));
+        const missingDayIds = program.days.filter(day => !observed.has(String(day.id))).map(day => day.id);
+        plannedDayCoverage = { requiredDays: program.days.length,
+            observedDays: program.days.length - missingDayIds.length, missingDayIds };
+        if (missingDayIds.length && cycleState.recommendedNextPhase
+            && cycleState.recommendedNextPhase !== 'recovery' && classification !== 'fatigue_limited') {
+            cycleState = { ...cycleState, status: 'building', recommendedNextPhase: undefined,
+                rationale: `Logged working sets cover ${plannedDayCoverage.observedDays} of ${plannedDayCoverage.requiredDays} planned training days. Train the remaining days before a normal phase change; extra repeats do not replace missing days.` };
+        }
+    }
     const ignoredIds = [...new Set(workouts.flatMap(w => w.ignoredLegacyExerciseIds))];
     const athleteResponse = deriveAthleteResponse({ programId: String(program.id), workouts,
         customExercises: snap.request.customExercises, unit: snap.request.equipment?.loading?.unit ?? program.config?.unit ?? 'lb',
@@ -585,6 +603,7 @@ export function analyzeShellHistoryForNextEngine(program, history, legacyExercis
         excludedHistoryEntries: normalized.excluded, workouts, workoutCount: workouts.length, performedSetCount: workouts.reduce((n, w) => n + w.performedSets.length, 0),
         ignoredSetCount: entries.reduce((n, e) => n + Object.entries(e.perf ?? {}).filter(([id]) => ignoredIds.includes(id)).reduce((m, [, p]) => m + (p.sets?.filter(s => !s.sub).length ?? 0), 0), 0),
         ignoredLegacyExerciseIds: ignoredIds, recovery, cycleState, classification,
+        ...(plannedDayCoverage ? { plannedDayCoverage } : {}),
         successfulExerciseIds: successful, protectedExerciseIds: [...new Set(protectedIds)], replaceExerciseIds: evidence.replaceExerciseIds,
         techniqueLimitedExerciseIds: evidence.techniqueLimitedExerciseIds, fatigueLimitedExerciseIds: evidence.fatigueLimitedExerciseIds,
         progressionEvidenceByExercise, diagnoses,

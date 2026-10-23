@@ -605,7 +605,7 @@ try{
       await page.setViewport({width,height:850,deviceScaleFactor:1,isMobile:false,hasTouch:false});
       await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
       const entries=Array.from({length:16},(_,i)=>({
-        id:'m284-tablet-'+i,programId:i%2===0?program.id:'m285-secondary',
+        id:'m284-tablet-'+i,updatedAt:i%2===0?0:1700000000000+i,programId:i%2===0?program.id:'m285-secondary',
         programName:i%2===0?program.name:'M285 Second Program',
         dayId:'upper',dayLabel:'Upper',weekIndex:1,date:Date.now()-(i+1)*8*86400000,
         unit:'lb',duration:1800,totalSets:2,tonnage:1470,
@@ -706,10 +706,8 @@ try{
           grouped['By program'].groups.length===2,
           'Wide history exposes multiple month groups and two training programs');
       const actualHistory=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).history);
-      assert.deepEqual(actualHistory.map(({updatedAt,...record})=>record),entries,
-        'Wide history inspection must never modify logged sets (storage may normalize updatedAt)');
-      assert.ok(actualHistory.every(record=>Number.isFinite(record.updatedAt)),
-        'Canonical saved history stamps migrated records without changing workout data');
+      assert.deepEqual(actualHistory,entries,
+        'Wide history inspection preserves logged sets and both migrated and edited record clocks');
       assert.deepEqual(errors,[],'No wide history render errors');
       wideHistory.push({theme,width,initial,after});
     }finally{await context.close();}

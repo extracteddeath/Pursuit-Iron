@@ -20,7 +20,8 @@ export const contractGroups = Object.freeze({
         'm317-weekly-projection-performance-test.mjs',
         'm319-catalog-performance-test.mjs',
         'm321-all-week-strength-quality-test.mjs',
-        'm323-cycle-replay-test.mjs'
+        'm323-cycle-replay-test.mjs',
+        'm324-session-summary-test.mjs'
     ]),
     adaptation: Object.freeze([
         'm235-engine-verification-test.mjs',
@@ -150,6 +151,7 @@ export const browserShards = Object.freeze({
         'b894-cycle-conversion-browser-test.mjs',
         'b893-custom-cycle-browser-test.mjs',
         'b890-cycle-browsing-browser-test.mjs',
+        'm324-session-summary-browser-test.mjs',
         'm199-volume-repair-browser-test.mjs',
         'm215-cycle-duration-browser-test.mjs',
         'm220-day-progression-browser-test.mjs'

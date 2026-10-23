@@ -2658,7 +2658,17 @@ try {
         await page.waitForSelector('.wpb-library-search input');
         await page.click('.wpb-library-search input');
         await page.keyboard.type('Back Squat');
-        await page.waitForSelector('.wpb-library-row');
+        // A library row exists *before* the search input is processed. Waiting
+        // for any row can click a stale React result during filter/route motion,
+        // producing an intermittent false navigation timeout on CI runners.
+        // Synchronize to the real filtered exercise instead of adding retries
+        // or extending the later detail timeout.
+        await page.waitForFunction(() => {
+            const input = document.querySelector('.wpb-library-search input');
+            const rows = [...document.querySelectorAll('.wpb-library-row')];
+            return input?.value === 'Back Squat' && rows.length > 0
+                && rows.every(row => row.textContent.toLowerCase().includes('back squat'));
+        }, { timeout: 15000 });
         await page.click('.wpb-library-row');
         await page.waitForSelector('[data-exercisedetail] .wpb-exercise-tabs');
         await page.click('.wpb-exercise-tabs>button:nth-child(2)');

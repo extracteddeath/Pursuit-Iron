@@ -243,9 +243,9 @@ assert.ok(!css.includes('padding-top:11px!important;\n  padding-bottom:8px!impor
 
 // M278: Profile's active three-score comparison has one responsive owner;
 // the editable share-card uses the same 4/8/12/16px spacing vocabulary.
-assert.ok(css.includes('.wpb-profile-card-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 var(--pi-space-4);margin:var(--pi-space-4) 0 0}'),
+assert.ok(css.includes('.wpb-profile-card-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 var(--pi-space-3);margin:var(--pi-space-3) 0 0}'),
     'Share-card metric groups keep shared spacing instead of one-off margins');
-assert.ok(css.includes('.wpb-profile-card-metrics>div{min-width:0;padding:var(--pi-space-3) 0;'),
+assert.ok(css.includes('.wpb-profile-card-metrics>div{min-width:0;padding:var(--pi-space-2) 0;'),
     'Share-card metric rows keep the shared internal rhythm');
 assert.ok(css.includes('.wpb-profile-strength-grid>.wpb-profile-strength-cell{'),
     'Strength comparison cells still share one explicit active row layout');

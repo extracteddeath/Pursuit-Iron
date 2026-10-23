@@ -389,7 +389,7 @@ try{
               assert.ok(progress.filters.y>=progress.consistency.bottom-2,
                 'Compact/medium Progress retains its original reading order');
             }
-            await page.click('.wpb-progress .wpb-premium-tabs button:nth-child(4)');
+            await page.click('.wpb-progress .wpb-premium-tabs button:nth-child(5)');
             await page.waitForSelector('.wpb-progress-panel');
             const body=await page.evaluate(()=>{
               const panel=document.querySelector('.wpb-progress-panel');

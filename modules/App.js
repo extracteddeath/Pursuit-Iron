@@ -1189,9 +1189,6 @@ function StyleTag({ theme } = {}) {
       .wpb-program .wpb-day-title{font-size:14.5px!important;}
       .wpb-program .wpb-day-meta{margin-top:3px!important;color:${C.faint}!important;}
 
-      .wpb-progress [data-progress-glance]{gap:0!important;border:1px solid ${C.borderSoft};border-radius:12px!important;background:${C.card};overflow:hidden;}
-      .wpb-progress [data-progress-glance]>div{padding:10px 8px!important;border:0!important;border-radius:0!important;background:transparent!important;}
-      .wpb-progress [data-progress-glance]>div+div{border-left:1px solid ${C.borderSoft}!important;}
       .wpb-progress .wpb-premium-tabs{border-color:${C.borderSoft}!important;background:${C.bg}!important;}
       .wpb-progress .wpb-premium-tabs>button{font-weight:650!important;}
 
@@ -1705,8 +1702,7 @@ function StyleTag({ theme } = {}) {
 
       /* Screen-specific de-cardification. These are deliberate exceptions where grouped rows read
          better than separate tiles and reduce the generated-dashboard look. */
-      .wpb-home .wpb-metric-strip,
-      .wpb-progress [data-progress-glance]{
+      .wpb-home .wpb-metric-strip{
         background:transparent!important;
         border-left:0!important;border-right:0!important;
         border-radius:0!important;
@@ -1714,7 +1710,6 @@ function StyleTag({ theme } = {}) {
       .wpb-home .wpb-action-tile{background:transparent!important;}
       .wpb-home .wpb-action-tile:first-child{background:transparent!important;}
       .wpb-home .wpb-home-hero{border-radius:var(--r-hero)!important;}
-      .wpb-progress [data-progress-glance]>div+div{border-left-color:var(--hairline)!important;}
 
       /* Compact phones: preserve hierarchy before shrinking typography. */
       @media(max-width:420px){
@@ -1902,13 +1897,11 @@ function StyleTag({ theme } = {}) {
 
       /* Progress: glance metrics are status, not badges. Use sentence case and restrained annotation,
          then let charts/history own the visual weight below them. */
-      .wpb-progress [data-progress-glance]{margin-bottom:16px!important;border-color:var(--section-rule)!important;}
       .wpb-progress-glance-item{background:transparent!important;border:0!important;border-radius:0!important;}
       .wpb-progress-glance-label{
         margin-top:5px!important;font-size:11px!important;font-weight:650!important;letter-spacing:0!important;
         text-transform:none!important;color:${C.muted}!important;
       }
-      .wpb-progress [data-progress-glance] .mono{font-size:20px!important;letter-spacing:-.25px;}
       .wpb-progress-panel{
         padding:14px 0!important;margin-bottom:14px!important;background:transparent!important;border-radius:0!important;
         border-top:0!important;border-bottom:1px solid var(--section-rule)!important;
@@ -15038,7 +15031,7 @@ function StrengthScoreTrend({ data }) {
         startLvl = lvlOf(baseV);
     const lineColor = LEVEL_COLORS[curLvl] || C.accent;
     const basePt = startIdx > 0 ? [xs(startIdx, ov.length), ys(baseV)] : null;
-    const pats = Object.keys(PATTERN_COLORS).filter((p) => data.byPat[p] && data.byPat[p].length >= 2);
+    const pats = Object.keys(PATTERN_COLORS).filter((p) => Array.isArray(data.byPat[p]) && data.byPat[p].length >= 2 && data.byPat[p].every(point => point && Number.isFinite(point.v)));
     return _jsxs("div", {
         className: "wpb-profile-score-trend",
         children: [
@@ -15097,6 +15090,8 @@ function StrengthScoreTrend({ data }) {
             }),
             _jsxs("svg", {
                 className: "wpb-profile-trend-chart",
+                role: "img",
+                "aria-label": "Strength Score history",
                 viewBox: `0 0 ${W} ${Hh}`,
                 width: "100%",
                 height: Hh,
@@ -15445,13 +15440,16 @@ function StrengthComparisonCard({ C, trends, history, unit, bodyweight, sex, age
         .filter(x => x.lvl)
         .sort((a, b) => (b.lvl.idx - a.lvl.idx) || (b.lvl.within - a.lvl.within));
     if (!ready) {
-        return (_jsxs("div", { style: { background: C.card, borderRadius: 16, padding: "16px", marginBottom: 12 }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }, children: [_jsx(Award, { size: 17, color: C.accentInk }), _jsx("div", { style: { fontSize: 15, fontWeight: 700 }, children: "Strength standards" })] }), _jsx("div", { style: { fontSize: 13, color: C.muted, lineHeight: 1.5, marginBottom: 12 }, children: "See how your lifts compare to others of your sex, bodyweight and age. Add a couple of details to unlock it:" }), _jsx(ProfileMiniForm, { C: C, bodyweight: bodyweight, sex: sex, birth: birth, unit: unit, onSetProfile: (p) => { onSetProfile?.(p); setEditing(false); } })] }));
+        return (_jsxs("section", { className: "wpb-ui-card wpb-strength-standards", children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }, children: [_jsx(Award, { size: 17, color: C.accentInk }), _jsx("div", { style: { fontSize: 15, fontWeight: 700 }, children: "Strength standards" })] }), _jsx("div", { style: { fontSize: 13, color: C.muted, lineHeight: 1.5, marginBottom: 12 }, children: "See how your lifts compare to others of your sex, bodyweight and age. Add a couple of details to unlock it:" }), _jsx(ProfileMiniForm, { C: C, bodyweight: bodyweight, sex: sex, birth: birth, unit: unit, onSetProfile: (p) => { onSetProfile?.(p); setEditing(false); } })] }));
     }
     if (!ranked.length) {
-        return (_jsxs("div", { style: { background: C.card, borderRadius: 16, padding: "16px", marginBottom: 12 }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }, children: [_jsx(Award, { size: 17, color: C.accentInk }), _jsx("div", { style: { fontSize: 15, fontWeight: 700 }, children: "Strength standards" })] }), _jsx("div", { style: { fontSize: 13, color: C.muted }, children: "Log one of the main barbell lifts (squat, bench, deadlift, press, row\u2026) to see where you rank." })] }));
+        return (_jsxs("section", { className: "wpb-ui-card wpb-strength-standards", children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }, children: [_jsx(Award, { size: 17, color: C.accentInk }), _jsx("div", { style: { fontSize: 15, fontWeight: 700 }, children: "Strength standards" })] }), _jsx("div", { style: { fontSize: 13, color: C.muted }, children: "Log one of the main barbell lifts (squat, bench, deadlift, press, row\u2026) to see where you rank." })] }));
     }
     const cohort = `${sex === "female" ? "women" : "men"}${age > 0 ? `, age ${age}` : ""}, ${Math.round(bw)}${unit}`;
-    return (_jsxs("div", { style: { background: C.card, borderRadius: 16, padding: "16px", marginBottom: 12 }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }, children: [_jsx(Award, { size: 17, color: C.accentInk }), _jsx("div", { style: { fontSize: 15, fontWeight: 700, flex: 1 }, children: "Strength standards" }), _jsx("button", { "aria-label": "Share my Strength Score", onClick: () => shareStrengthScore(sscoreShare, C), title: "Share my Strength Score", className: "pressable", style: { background: "none", border: "none", color: C.faint, cursor: "pointer", padding: 2, marginRight: 4 }, children: _jsx(Share2, { size: 14 }) }), _jsx("button", { "aria-label": "Edit profile", onClick: () => setEditing(true), title: "Edit profile", className: "pressable", style: { background: "none", border: "none", color: C.faint, cursor: "pointer", padding: 2 }, children: _jsx(Pencil, { size: 13 }) })] }), _jsxs("div", { style: { fontSize: 13, color: C.muted, marginBottom: 12 }, children: ["Compared with ", cohort] }), _jsx("div", { style: { display: "flex", flexDirection: "column", gap: 12 }, children: ranked.map(({ t, lvl }) => {
+    return (_jsxs("section", { className: "wpb-ui-card wpb-strength-standards", children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }, children: [_jsx(Award, { size: 17, color: C.accentInk }), _jsx("div", { style: { fontSize: 15, fontWeight: 700, flex: 1 }, children: "Strength standards" }), _jsx("button", { "aria-label": "Share my Strength Score", onClick: () => shareStrengthScore(sscoreShare, C), title: "Share my Strength Score", className: "pressable", style: { background: "none", border: "none", color: C.faint, cursor: "pointer", padding: 2, marginRight: 4 }, children: _jsx(Share2, { size: 14 }) }), _jsx("button", { "aria-label": "Edit profile", onClick: () => setEditing(true), title: "Edit profile", className: "pressable", style: { background: "none", border: "none", color: C.faint, cursor: "pointer", padding: 2 }, children: _jsx(Pencil, { size: 13 }) })] }), _jsxs("div", { style: { fontSize: 13, color: C.muted, marginBottom: 12 }, children: ["Compared with ", cohort] }), sscoreShare && _jsxs("div", { className: "wpb-standards-score", children: [
+        _jsxs("strong", { className: "mono", children: [sscoreShare.overall, _jsx("span", { children: " / 100" })] }),
+        _jsxs("div", { children: [_jsx("strong", { children: sscoreShare.level }), _jsx("p", { children: "Strength Score · your best logged lifts" })] })
+    ] }), _jsx("div", { style: { display: "flex", flexDirection: "column", gap: 12 }, children: ranked.map(({ t, lvl }) => {
                     return (_jsxs("div", { children: [_jsxs("div", { style: { display: "flex", alignItems: "baseline", gap: 6, marginBottom: 4 }, children: [_jsx("span", { style: { fontSize: 13, fontWeight: 700, color: C.text, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: t.name }), _jsx("span", { style: { fontSize: 13, fontWeight: 700, color: catInk(LEVEL_COLORS[lvl.idx]) || C.accentInk }, children: lvl.level }), _jsxs("span", { className: "mono", style: { fontSize: 11, color: C.faint }, children: [lvl.ratio.toFixed(2), "\u00D7BW"] })] }), _jsx("div", { style: { display: "flex", gap: 2, height: 8 }, children: STD_LEVELS.map((_, i) => (_jsx("div", { style: { flex: 1, borderRadius: 8, background: i <= lvl.idx ? (LEVEL_COLORS[lvl.idx] || C.accent) : C.bg2, opacity: i <= lvl.idx ? (i === lvl.idx ? 1 : 0.45) : 1 } }, i))) }), lvl.idx < STD_LEVELS.length - 1 && (_jsx("div", { style: { fontSize: 11, color: C.faint, marginTop: 4 }, children: (() => {
                                     const nextW = lvl.thresh[lvl.idx];
                                     const add = Math.max(0, nextW - t.prBest);
@@ -15991,9 +15989,7 @@ function ChartFavoritesManager({ trends, favorites, onToggle, onMove }) {
 
 function HistoryView({ history, onBack, onClear, onDeleteEntry, onEditEntry, embedded, navigationMemory, focusSection, onFocusHandled, onGoTrain, nextLabel = null, bodyweight, sex, age, birth, unit, bwLog, onLogBodyweight, onSetProfile, goals = {}, onRepeat, measurements = {}, onLogMeasurement, activeProgram = null, activeWeek = 1, cycles = [], saved = [] }) {
     const [tab, setTab] = useState(() => navigationMemory?.tab || "sessions");
-    // When the user taps the Strength level card on Home, we open this tab focused on the strength
-    // breakdown rather than dumping them at the top of the Sessions list. Switch to the Lifts tab and
-    // scroll the strength card into view, then clear the request so it only fires once.
+    // Home and Profile enter the first-class Strength section through the same route.
     const strengthRef = useRef(null);
     useEffect(() => {
         if (focusSection === "sessions") {
@@ -16003,11 +15999,7 @@ function HistoryView({ history, onBack, onClear, onDeleteEntry, onEditEntry, emb
         }
         if (focusSection !== "strength")
             return;
-        setTab("progress");
-        /* The strength card lives in the Records pane now, and a ref inside an unrendered pane is null —
-           scrollIntoView on it throws nothing and does nothing, so the deep link would land at the top of
-           the Lifts tab and look like it had simply been ignored. Open the pane that holds the target. */
-        setLiftPane("records");
+        setTab("strength");
         const t = setTimeout(() => {
             try {
                 strengthRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -16154,11 +16146,11 @@ function HistoryView({ history, onBack, onClear, onDeleteEntry, onEditEntry, emb
                     _jsx(UiAction, { variant: "icon", onClick: onBack, "aria-label": "Back", children: _jsx(ChevronLeft, { size: 26 }) }),
                     _jsx("h1", { className: "wpb-screen-title wpb-progress-title", children: "History" }),
                     history.length > 0 && _jsx(UiAction, { onClick: onClear, "data-haptic": "medium", className: "wpb-history-clear", children: "Clear" })
-                ] }), _jsx("div", { className: "wpb-root-support", children: _jsx("div", { role: "tablist", "aria-label": "Progress sections", className: "wpb-premium-tabs", children: [["sessions", "Sessions"], ["progress", "Lifts"], ["volume", "Volume"], ["body", "Body"]].map(([k, label]) => (_jsx("button", { role: "tab", "aria-selected": tab === k, onClick: () => setTab(k), className: "pressable wpb-progress-tab",  children: label }, k))) }) })] }), _jsxs("div", { className: "wpb-scroll wpb-page-scroll wpb-progress-scroll", "data-scroll-key": tab === "progress" ? `lifts/${liftPane}` : tab,  children: [history.length > 0 && tab === "sessions" && (_jsx("div", { "data-progress-glance": true, className: "wpb-summary-grid", children: [
+                ] }), _jsx("div", { className: "wpb-root-support", children: _jsx("div", { role: "tablist", "aria-label": "Progress sections", className: "wpb-premium-tabs", children: [["sessions", "Sessions"], ["strength", "Strength"], ["progress", "Lifts"], ["volume", "Volume"], ["body", "Body"]].map(([k, label]) => (_jsx("button", { role: "tab", "aria-selected": tab === k, onClick: () => setTab(k), className: "pressable wpb-progress-tab",  children: label }, k))) }) })] }), _jsxs("div", { className: "wpb-scroll wpb-page-scroll wpb-progress-scroll", "data-scroll-key": tab === "progress" ? `lifts/${liftPane}` : tab,  children: [history.length > 0 && tab === "sessions" && (_jsx("div", { "data-progress-glance": true, className: "wpb-summary-grid", children: [
                             ["Sessions", progressGlance.sessions7, "last 7 days"],
                             ["Sets", progressGlance.sets7, "last 7 days"],
                             ["Recent PRs", progressGlance.recentPrs, "last 3 weeks"],
-                        ].map(([label, value, sub]) => (_jsxs("div", { className: "wpb-progress-glance-item",  children: [_jsx("div", { className: "mono wpb-progress-glance-value", "data-has-value": Boolean(value), children: value }), _jsx("div", { className: "wpb-progress-glance-label",  children: label }), _jsx("div", { className: "wpb-progress-glance-context", children: sub })] }, label))) })), tab === "body" ? (() => {
+                        ].map(([label, value, sub]) => (_jsxs("div", { className: "wpb-progress-glance-item",  children: [_jsx("div", { className: "mono wpb-progress-glance-value", "data-has-value": Boolean(value), children: value }), _jsx("div", { className: "wpb-progress-glance-label",  children: label }), _jsx("div", { className: "wpb-progress-glance-context", children: sub })] }, label))) })), tab === "strength" ? (() => { const tr = trends; return _jsxs(ErrorBoundary, { label: "Strength standards", children: [_jsx("div", { ref: strengthRef, className: "wpb-progress-strength-anchor", children: _jsx(StrengthComparisonCard, { C: C, trends: tr, history: history, unit: unit, bodyweight: bodyweight, sex: sex, age: age, birth: birth, onSetProfile: (patch) => onSetProfile?.(patch) }) }), _jsx(ThousandClubCard, { trends: tr, unit: unit })] }); })() : tab === "body" ? (() => {
                         const sorted = normalizeBwLog(bwLog, unit); // one unit, oldest→newest, before anything is compared
                         const cur = sorted.length ? sorted[sorted.length - 1] : null;
                         const first = sorted.length ? sorted[0] : null;
@@ -16214,7 +16206,7 @@ function HistoryView({ history, onBack, onClear, onDeleteEntry, onEditEntry, emb
                                                 const when = days === 0 ? "today" : days === 1 ? "yesterday" : `${days}d ago`;
                                                 return (_jsxs("button", { onClick: () => setDetail(t), className: "pressable wpb-progress-pr",  children: [_jsx("div", { className: "wpb-progress-pr-mark", children: _jsx(TrendingUp, { size: 14, color: C.accentInk }) }), _jsxs("div", { className: "wpb-progress-grow", children: [_jsx("div", { className: "wpb-progress-record-name", children: t.name }), _jsxs("div", { className: "wpb-progress-caption", children: ["new best \u00B7 ", when] })] }), _jsxs("div", { className: "wpb-progress-record-value", children: [_jsx("div", { className: "mono wpb-progress-record-number",  children: Math.round(t.prBest) }), _jsx("div", { className: "wpb-progress-record-unit", children: "est 1RM" })] })] }, t.id));
                                             }) })] }));
-                            })(), liftPane === "records" && (() => { const tr = trends; return _jsxs(ErrorBoundary, { label: "Strength standards", children: [_jsx("div", { ref: strengthRef, className: "wpb-progress-strength-anchor", children: _jsx(StrengthComparisonCard, { C: C, trends: tr, history: history, unit: unit, bodyweight: bodyweight, sex: sex, age: age, birth: birth, onSetProfile: (patch) => onSetProfile?.(patch) }) }), _jsx(ThousandClubCard, { trends: tr, unit: unit })] }); })(), liftPane === "records" && (() => {
+                            })(),  liftPane === "records" && (() => {
                                 if (!trends.length)
                                     return null;
                                 const records = trends.map(t => {
@@ -18579,8 +18571,8 @@ function ProfileCustomization({ prefs, onChange, onClose }) {
             const visible = !prefs.hidden.includes(id);
             return (_jsxs("div", { className: "wpb-profile-customize-row", children: [
                 _jsx("span", { children: choice?.label || id }),
-                _jsx(UiAction, { variant: "tonal", type: "button", disabled: index === 0, "data-icon-only": true, "aria-label": `Move ${choice?.label} up`, onClick: () => move(id, -1), children: _jsx(ChevronUp, { size: 17 }) }),
-                _jsx(UiAction, { variant: "tonal", type: "button", disabled: index === prefs.order.length - 1, "data-icon-only": true, "aria-label": `Move ${choice?.label} down`, onClick: () => move(id, 1), children: _jsx(ChevronDown, { size: 17 }) }),
+                _jsx(UiAction, { variant: "tonal", type: "button", disabled: id === "level" || index === 0, "data-icon-only": true, "aria-label": `Move ${choice?.label} up`, onClick: () => move(id, -1), children: _jsx(ChevronUp, { size: 17 }) }),
+                _jsx(UiAction, { variant: "tonal", type: "button", disabled: id === "level" || index === prefs.order.length - 1, "data-icon-only": true, "aria-label": `Move ${choice?.label} down`, onClick: () => move(id, 1), children: _jsx(ChevronDown, { size: 17 }) }),
                 _jsx(UiAction, { variant: "tonal", type: "button", className: "wpb-profile-visibility", "aria-pressed": visible, disabled: visible && prefs.hidden.length === PROFILE_LAYOUT_CHOICES.length - 1, "aria-label": `${visible ? "Hide" : "Show"} ${choice?.label}`, onClick: () => toggleVisible(id), children: visible ? "Shown" : "Hidden" })
             ] }, id));
         }) }),
@@ -18612,16 +18604,19 @@ function profileCardRows({ history, unit, score, level, milestones, prefs }) {
     }
     return rows;
 }
-function ProfileShareCard({ prefs, rows, onEdit, onShare, expanded }) {
+function ProfileShareCard({ prefs, rows, onEdit, onShare, expanded, levelContent, identity }) {
     return _jsxs("section", { className: "wpb-ui-card wpb-profile-share-card", "aria-label": "Your share card", children: [
-        _jsxs("div", { className: "wpb-profile-card-brand", children: [_jsx(Dumbbell, { size: 17, "aria-hidden": true }), "PURSUIT IRON"] }),
         _jsx("h2", { children: prefs.cardName.trim() || "My training" }),
-        _jsx("p", { className: "wpb-profile-card-caption", children: "Built through every workout." }),
-        _jsx("dl", { className: "wpb-profile-card-metrics", children: rows.map(row => _jsxs("div", { "data-card-metric": row.id, children: [
+        _jsx("p", { className: "wpb-profile-card-caption", children: identity }),
+        levelContent,
+        _jsx("dl", { className: "wpb-profile-card-metrics", children: rows.filter(row => !levelContent || row.id !== "level").map(row => _jsxs("div", { "data-card-metric": row.id, children: [
             _jsx("dt", { children: row.label }),
             _jsx("dd", { children: row.lines?.length ? row.lines.map((line,i) => _jsx("span", { children: line }, i)) : row.value }),
-            _jsx("p", { children: row.detail })
         ] }, row.id)) }),
+        _jsxs("details", { className: "wpb-profile-card-details", children: [
+            _jsx("summary", { children: "About these metrics" }),
+            ...rows.map(row => _jsxs("p", { children: [_jsx("strong", { children: row.label + ": " }), row.detail] }, row.id))
+        ] }),
         _jsxs("div", { className: "wpb-ui-row wpb-profile-card-actions", children: [
             _jsxs(UiAction, { variant: "tonal", type: "button", "aria-expanded": expanded, "aria-controls": "profile-card-editor", onClick: onEdit, children: [_jsx(Pencil, { size: 15 }), "Edit card"] }),
             _jsxs(UiAction, { variant: "tonal", type: "button", className: "wpb-profile-share-action", "data-emphasis": "accent", onClick: onShare, children: [_jsx(Share2, { size: 15 }), "Share profile"] })
@@ -18690,7 +18685,7 @@ function shareCustomProfileCard({ history, unit, score, level, milestones, prefs
     link.click();
 }
 
-function ProfileView({ history, bodyweight, sex, age, unit, onSettings }) {
+function ProfileView({ history, bodyweight, sex, age, unit, onSettings, onStrength }) {
     const bw = parseFloat(bodyweight);
     const ms = useMemo(() => computeMilestones(history, { unit, bodyweight }), [history, unit, bodyweight]);
     const lvl = useMemo(() => computeLevel(history, ms), [history, ms]);
@@ -19177,22 +19172,11 @@ function ProfileView({ history, bodyweight, sex, age, unit, onSettings }) {
                     _jsxs("div", {
                         className: "wpb-profile-inner",
                         children: [
-                            _jsxs("p", {
-                                className: "wpb-profile-identity",
-                                children: [
-                                    _jsx("span", { children: bodyLabel }),
-                                    ageLabel &&
-                                        _jsxs(_Fragment, {
-                                            children: [
-                                                _jsx("span", { "aria-hidden": "true", children: " · " }),
-                                                _jsx("span", { children: ageLabel })
-                                            ]
-                                        })
-                                ]
-                            }),
                             _jsx(ProfileShareCard, {
                                 prefs: profilePrefs,
                                 rows: cardRows,
+                                identity: [bodyLabel, ageLabel].filter(Boolean).join(" · "),
+                                levelContent: !profilePrefs.hidden.includes("level") ? sectionContent.level : null,
                                 expanded: showShareCustomize,
                                 onEdit: () => setShowShareCustomize((x) => !x),
                                 onShare: () =>
@@ -19214,12 +19198,12 @@ function ProfileView({ history, bodyweight, sex, age, unit, onSettings }) {
                                 }),
                             _jsx("div", {
                                 className: "wpb-profile-toolbar",
-                                children: _jsxs(UiAction, {
+                                children: [_jsxs(UiAction, {
                                     variant: "tonal",
                                     "aria-expanded": showProfileCustomize,
                                     onClick: () => setShowProfileCustomize((x) => !x),
                                     children: [_jsx(Pencil, { size: 15 }), " Arrange Profile"]
-                                })
+                                }), onStrength && _jsxs(UiAction, { variant: "tonal", onClick: onStrength, children: [_jsx(Award, { size: 15 }), "Strength standards"] })]
                             }),
                             showProfileCustomize &&
                                 _jsx(ProfileCustomization, {
@@ -19228,7 +19212,7 @@ function ProfileView({ history, bodyweight, sex, age, unit, onSettings }) {
                                     onClose: () => setShowProfileCustomize(false)
                                 }),
                             ...profilePrefs.order
-                                .filter((id) => !profilePrefs.hidden.includes(id))
+                                .filter((id) => id !== "level" && !profilePrefs.hidden.includes(id))
                                 .map((id) => _jsxs(_Fragment, { children: [sectionContent[id]] }, id))
                         ]
                     }),
@@ -23284,7 +23268,7 @@ function App() {
                                         setSex(patch.sex); if (patch.birth !== undefined) {
                                         setBirth(patch.birth);
                                         setBirthEst(false);
-                                    } }, bwLog: bwLog, onLogBodyweight: logBodyweight, goals: goals, onRepeat: repeatWorkout, measurements: measurements, onLogMeasurement: logMeasurement, cycles: cycles, saved: saved })) : view === "profile" ? (_jsx(ProfileView, { history: history, bodyweight: bodyweight, sex: sex, age: age, unit: unit, onSettings: () => { setSettingsFocus("profile"); navToTab("settings"); } })) : view === "settings" ? (_jsx(SettingsView, { experience: experience, setExperience: setExperience, selfTestData: { saved, history, perf }, gymName: activeGym ? activeGym.name : "All equipment", gymCount: gyms.length, onGyms: () => setGymsOpen(true), initialFocus: settingsFocus, onFocusHandled: () => setSettingsFocus(null), theme: theme, setTheme: chooseTheme, unit: unit, setUnit: switchUnit, loadMode: loadMode, setLoadMode: setLoadMode, restAutoStart: restAutoStart, setRestAutoStart: setRestAutoStart, warmupCard: warmupCard, setWarmupCard: setWarmupCard, haptics: haptics, setHaptics: setHaptics, restScale: restScale, setRestScale: setRestScale, reminders: reminders, setReminders: setReminders, minInc: minInc, setMinInc: setMinInc, plates: plates, setPlates: setPlates, bodyweight: bodyweight, setBodyweight: setBodyweight, sex: sex, setSex: setSex, age: age, birth: birth, setBirth: (b) => { setBirth(b); setBirthEst(false); }, birthEst: birthEst, bannedCount: banned.length, customCount: custom.length, historyCount: history.length, onClearBanned: () => { const prev = banned; setBanned([]); if (prev.length)
+                                    } }, bwLog: bwLog, onLogBodyweight: logBodyweight, goals: goals, onRepeat: repeatWorkout, measurements: measurements, onLogMeasurement: logMeasurement, cycles: cycles, saved: saved })) : view === "profile" ? (_jsx(ProfileView, { history: history, bodyweight: bodyweight, sex: sex, age: age, unit: unit, onStrength: () => { setProgressFocus("strength"); navToTab("progress"); }, onSettings: () => { setSettingsFocus("profile"); navToTab("settings"); } })) : view === "settings" ? (_jsx(SettingsView, { experience: experience, setExperience: setExperience, selfTestData: { saved, history, perf }, gymName: activeGym ? activeGym.name : "All equipment", gymCount: gyms.length, onGyms: () => setGymsOpen(true), initialFocus: settingsFocus, onFocusHandled: () => setSettingsFocus(null), theme: theme, setTheme: chooseTheme, unit: unit, setUnit: switchUnit, loadMode: loadMode, setLoadMode: setLoadMode, restAutoStart: restAutoStart, setRestAutoStart: setRestAutoStart, warmupCard: warmupCard, setWarmupCard: setWarmupCard, haptics: haptics, setHaptics: setHaptics, restScale: restScale, setRestScale: setRestScale, reminders: reminders, setReminders: setReminders, minInc: minInc, setMinInc: setMinInc, plates: plates, setPlates: setPlates, bodyweight: bodyweight, setBodyweight: setBodyweight, sex: sex, setSex: setSex, age: age, birth: birth, setBirth: (b) => { setBirth(b); setBirthEst(false); }, birthEst: birthEst, bannedCount: banned.length, customCount: custom.length, historyCount: history.length, onClearBanned: () => { const prev = banned; setBanned([]); if (prev.length)
                                         setAppToast({ msg: `Cleared ${prev.length} banned exercise${prev.length === 1 ? "" : "s"}`, undo: () => { setBanned(prev); setAppToast(null); } }); }, onClearHistory: () => { const prev = history; setHistory([]); if (prev.length)
                                         setAppToast({ msg: `Cleared ${prev.length} logged workout${prev.length === 1 ? "" : "s"}`, undo: () => { setHistory(prev); setAppToast(null); } }); }, onResetAll: resetAll, onExport: () => exportData(), onBackupSaved: () => setLastBackup(Date.now()), onExportCSV: exportCSV, onExportBodyCSV: exportBodyCSV, onImport: importData, onPreviewImport: (text, options) => importData(text, { ...(options || {}), preview: true }), onLibrary: () => pushView("library", "settings"), onImportProgram: importProgramText, onGallery: () => pushView("gallery", "settings"), onShowIntro: () => { setSeenIntroV(0); rootView("home"); }, onShowWhatsNew: () => setWhatsNewModal(true) })) : view === "library" ? (_jsx(LibraryView, { onBack: goBack, navigationMemory: screenNavigationMemory.current.library, banned: banned, onBan: addBan, onSetBan: setBanFor, goals: goals, onSetGoal: setGoalWeight, unit: unit, history: history, onCreateCustom: () => pushView("wizard", "library"), onCompare: () => { setCompareMode("exercises"); pushView("compare", "library"); }, exNotes: exNotes, onSetExNote: (id, text) => setExNotes(prev => { const n = { ...prev }; const t = (text || "").trim(); if (t)
                                         n[id] = t;

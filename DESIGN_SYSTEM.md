@@ -179,3 +179,9 @@ Retire a superseded declaration at its original owner. Same-selector declaration
 ### M295 integration of remaining cohesion work
 
 Home Start and Switch program actions use maintained classes and shared tokens. The preview owns one inset; compact change history remains secondary to the workout. Cohesion 24 spacing supersedes Cohesion 23's overlapping row-spacing proposal. The current root app bars, This week placement and attached sticky headers retain their newer owners. Plan mode labels reflow in narrow/enlarged-text rails instead of truncating. Workout metadata must not inherit exercise-detail margins; Focus keeps its own spacing.
+
+### M297 — Shared Strength and integrated Profile header
+
+Strength is a first-class Progress destination. Home and Profile links use the same focus request; do not create another score calculation or move Strength back behind Lifts/Records. The existing trend classes are shared primitives scoped to `.wpb`, because both Progress and Profile consume them. Keep their flex layout, typography and data-derived ink together.
+
+The Profile share card owns identity and the existing canonical level/XP presentation. The Level visibility preference still applies, while its position is integrated in the header. Main metrics omit duplicate Level copy and expose explanations through native details; exported profile content retains its original preferences and semantic labels. Summary cards use a shared grid gap rather than zero-gap embedded overrides. Progress tabs retain native selection and the shared moving indicator; minimum content widths and horizontal overflow preserve readable labels at enlarged text.

@@ -1389,15 +1389,15 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 
 /* M3 EXPRESSIVE FLUID BUTTON GROUPS — selected width responds physically,
    not merely with a fixed pill overlay. The actual tabs retain their native
-   roles, hit areas, ordering and focus. Only non-workout four-way groups. */
+   roles, hit areas, ordering and focus. Only non-workout groups. */
 #root[data-pi-motion="expressive"] .wpb :is(.wpb-progress .wpb-premium-tabs,.wpb-library .wpb-library-flag-filter)[data-pi-m3-fluid]{
   display:flex!important;
   align-items:stretch!important;
-  overflow:visible;
+  overflow:var(--pi-choice-overflow,visible);
 }
 #root[data-pi-motion="expressive"] .wpb :is(.wpb-progress .wpb-premium-tabs,.wpb-library .wpb-library-flag-filter)[data-pi-m3-fluid]>button{
   flex:var(--pi-choice-grow,1) 1 0%!important;
-  min-width:0!important;
+  min-width:var(--pi-choice-min,0)!important;
   position:relative;
   z-index:1;
   /* The one selected spring drives every button's flex basis.
@@ -3511,7 +3511,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   text-align:center;
 }
 #root[data-pi-motion="expressive"] .wpb-progress [data-progress-glance]{
-  margin:6px 0 11px!important;
+  margin:0 0 var(--pi-space-4)!important;
 }
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item{
   min-width:0!important;
@@ -7733,7 +7733,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-profile .wpb-profile-milestone-icon{margin-top:1px;flex-shrink:0}
 #root .wpb .wpb-profile .wpb-profile-milestone-name{color:var(--wpb-theme-text);font-weight:700}
 #root .wpb .wpb-profile .wpb-profile-milestone-target{font-weight:750;color:var(--wpb-theme-accent-ink)}
-#root .wpb .wpb-profile .wpb-profile-faint{color:var(--wpb-theme-faint)}
+#root .wpb .wpb-profile-faint{color:var(--wpb-theme-faint)}
 #root .wpb .wpb-profile .wpb-profile-setup-title{margin-bottom:5px}
 #root .wpb .wpb-profile .wpb-profile-setup-row{display:flex;align-items:center;gap:12px}
 #root .wpb .wpb-profile .wpb-profile-setup-copy{flex:1;font-size:12.5px;color:var(--wpb-theme-muted);line-height:1.45}
@@ -7776,23 +7776,23 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-profile .wpb-profile-detail-progress-label{font-size:13px;color:var(--wpb-theme-muted);font-weight:600}
 #root .wpb .wpb-profile .wpb-profile-detail-progress-value{font-size:13px;color:var(--wpb-theme-faint)}
 #root .wpb .wpb-profile .wpb-profile-detail-progress-track{height:7px;border-radius:999px;background:var(--wpb-theme-bg-tint);overflow:hidden}
-#root .wpb .wpb-profile .wpb-profile-score-trend{margin-top:12px;padding-top:12px;border-top:1px solid var(--wpb-theme-border-soft)}
-#root .wpb .wpb-profile .wpb-profile-trend-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:4px}
-#root .wpb .wpb-profile .wpb-profile-trend-title{font-size:13px;font-weight:700;color:var(--wpb-theme-text)}
-#root .wpb .wpb-profile .wpb-profile-trend-delta{font-size:11px;font-weight:700;color:var(--pi-profile-trend-ink)}
-#root .wpb .wpb-profile .wpb-profile-trend-levels{font-size:11px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
-#root .wpb .wpb-profile .wpb-profile-trend-ink{color:var(--pi-profile-trend-ink)}
-#root .wpb .wpb-profile .wpb-profile-trend-current{color:var(--wpb-theme-faint);font-weight:500}
-#root .wpb .wpb-profile .wpb-profile-trend-description{font-size:11px;color:var(--wpb-theme-faint);line-height:1.45;margin-bottom:8px}
-#root .wpb .wpb-profile .wpb-profile-trend-chart{display:block}
-#root .wpb .wpb-profile .wpb-profile-patterns{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
-#root .wpb .wpb-profile .wpb-profile-pattern{flex:1 1 0;min-width:64px;padding:8px 9px;border-radius:12px;background:var(--wpb-theme-bg-tint)}
-#root .wpb .wpb-profile .wpb-profile-pattern-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
-#root .wpb .wpb-profile .wpb-profile-pattern-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;color:var(--pi-profile-trend-ink)}
-#root .wpb .wpb-profile .wpb-profile-pattern-score{font-size:13px;font-weight:800;color:var(--wpb-theme-text)}
-#root .wpb .wpb-profile .wpb-profile-pattern-foot{display:flex;align-items:center;justify-content:space-between;margin-top:2px}
-#root .wpb .wpb-profile .wpb-profile-pattern-level{font-size:11px;font-weight:700;color:var(--pi-profile-trend-ink)}
-#root .wpb .wpb-profile .wpb-profile-pattern-delta{font-size:11px;font-weight:600;color:var(--pi-profile-trend-ink)}
+#root .wpb .wpb-profile-score-trend{margin-top:12px;padding-top:12px;border-top:1px solid var(--wpb-theme-border-soft)}
+#root .wpb .wpb-profile-trend-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:4px;flex-wrap:wrap;row-gap:var(--pi-space-1)}
+#root .wpb .wpb-profile-trend-title{font-size:13px;font-weight:700;color:var(--wpb-theme-text)}
+#root .wpb .wpb-profile-trend-delta{font-size:11px;font-weight:700;color:var(--pi-profile-trend-ink)}
+#root .wpb .wpb-profile-trend-levels{font-size:11px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+#root .wpb .wpb-profile-trend-ink{color:var(--pi-profile-trend-ink)}
+#root .wpb .wpb-profile-trend-current{color:var(--wpb-theme-faint);font-weight:500}
+#root .wpb .wpb-profile-trend-description{font-size:11px;color:var(--wpb-theme-faint);line-height:1.45;margin-bottom:8px;max-width:65ch}
+#root .wpb .wpb-profile-trend-chart{display:block}
+#root .wpb .wpb-profile-patterns{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+#root .wpb .wpb-profile-pattern{flex:1 1 0;min-width:64px;padding:8px 9px;border-radius:12px;background:var(--wpb-theme-bg-tint)}
+#root .wpb .wpb-profile-pattern-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;gap:var(--pi-space-2);flex-wrap:wrap}
+#root .wpb .wpb-profile-pattern-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;color:var(--pi-profile-trend-ink)}
+#root .wpb .wpb-profile-pattern-score{font-size:13px;font-weight:800;color:var(--wpb-theme-text)}
+#root .wpb .wpb-profile-pattern-foot{display:flex;align-items:center;justify-content:space-between;margin-top:2px;gap:var(--pi-space-2);flex-wrap:wrap}
+#root .wpb .wpb-profile-pattern-level{font-size:11px;font-weight:700;color:var(--pi-profile-trend-ink)}
+#root .wpb .wpb-profile-pattern-delta{font-size:11px;font-weight:600;color:var(--pi-profile-trend-ink)}
 #root .wpb .wpb-sparkline-empty{width:100%;display:flex;align-items:center;justify-content:center;color:var(--wpb-theme-faint);font-size:11px}
 #root .wpb .wpb-sparkline{display:block;max-width:100%}
 
@@ -8412,9 +8412,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 /* B912 — Prototype-informed Profile hierarchy; presentation only.
    Root header ownership moved to UiRootHeader in M271. */
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-hero{
-  flex-shrink:0;margin:0 0 10px!important;padding:16px!important;border:0!important;
-  border-radius:var(--pi-shape-feature)!important;
-  background:color-mix(in srgb,var(--wpb-theme-accent-dim) 28%,var(--pi-color-card))!important;
+  flex-shrink:0;margin:var(--pi-space-3) 0 0;padding:var(--pi-space-3) 0 0;border:0;
+  border-radius:0;
+  background:transparent;
   box-shadow:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-level-mark{
@@ -8527,7 +8527,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border:1px solid var(--pi-color-divider)!important;
 }
 @media(max-width:360px){
-  #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-hero{padding:12px!important}
   #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-strength{padding:14px!important}
   #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-stat{padding-inline:3px!important}
 }
@@ -8553,13 +8552,12 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    shape and control roles as Profile, Progress and Settings. No inline layout. */
 .wpb-profile-share-card{margin:0 0 var(--pi-space-3);}
 .wpb-profile-card-brand{display:flex;align-items:center;gap:var(--pi-space-2);font-size:.6875rem;font-weight:800;letter-spacing:.1em;color:var(--wpb-theme-accent-ink)}
-.wpb-profile-share-card h2{margin:var(--pi-space-4) 0 var(--pi-space-1);font-size:clamp(1.5rem,5vw,2rem);line-height:1.16;letter-spacing:-.035em;overflow-wrap:anywhere}
+.wpb-profile-share-card h2{margin:0 0 var(--pi-space-1);font-size:clamp(1.5rem,5vw,2rem);line-height:1.16;letter-spacing:-.035em;overflow-wrap:anywhere}
 .wpb-profile-card-caption{margin:0;color:var(--wpb-theme-muted);font-size:.8125rem;line-height:1.5}
-.wpb-profile-card-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 var(--pi-space-4);margin:var(--pi-space-4) 0 0}
-.wpb-profile-card-metrics>div{min-width:0;padding:var(--pi-space-3) 0;border-top:1px solid var(--pi-color-divider,var(--wpb-theme-border))}
-.wpb-profile-card-metrics>[data-card-metric="favorites"],.wpb-profile-card-metrics>[data-card-metric="prs"],.wpb-profile-card-metrics>[data-card-metric="club"]{grid-column:1/-1}
+.wpb-profile-card-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 var(--pi-space-3);margin:var(--pi-space-3) 0 0}
+.wpb-profile-card-metrics>div{min-width:0;padding:var(--pi-space-2) 0;border-top:1px solid var(--pi-color-divider,var(--wpb-theme-border))}
 .wpb-profile-card-metrics dt{font-size:.75rem;font-weight:650;color:var(--wpb-theme-muted)}
-.wpb-profile-card-metrics dd{margin:var(--pi-space-1) 0;font-size:1rem;font-weight:750;line-height:1.4;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.wpb-profile-card-metrics dd{margin:var(--pi-space-1) 0;font-size:.875rem;font-weight:750;line-height:1.4;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
 .wpb-profile-card-metrics dd>span{display:block}
 .wpb-profile-card-metrics p{margin:0;font-size:.6875rem;line-height:1.5;color:var(--wpb-theme-muted)}
 .wpb-profile-card-actions{margin-top:var(--pi-space-2)}
@@ -8569,7 +8567,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 @media(max-width:360px){.wpb-profile-share-card{padding:16px}}
 @media(forced-colors:active){.wpb-profile-share-card,.wpb-profile-card-actions>button{border:1px solid CanvasText}.wpb-profile-card-field :is(input,select){border-color:CanvasText}}
 
-@container pi-r77-profile (max-width:22em){.wpb-profile-card-metrics{grid-template-columns:minmax(0,1fr)}}
+@container pi-r77-profile (max-width:15em){.wpb-profile-card-metrics{grid-template-columns:minmax(0,1fr)}}
 .wpb-profile-share-toggles button[aria-pressed="true"] span{background:var(--pi-color-card,var(--wpb-theme-card))}
 
 /* Cohesion 20: switch tracks have explicit contrast and no legacy thumb geometry.
@@ -8671,3 +8669,18 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 
 @media(forced-colors:active){.wpb-program-name{color:ButtonText}.wpb-program-saved-status{color:CanvasText}}
 
+
+/* M297: primary Progress sections and Profile's integrated identity card. */
+#root .wpb .wpb-progress .wpb-premium-tabs{--pi-choice-overflow:auto;--pi-choice-min:max-content;overflow-x:auto;scrollbar-width:none;gap:var(--pi-space-1)}
+#root .wpb .wpb-progress .wpb-premium-tabs>.wpb-progress-tab{flex:1 0 auto;min-width:0;padding-inline:var(--pi-space-2);font-size:.8125rem}
+#root .wpb .wpb-progress [data-progress-glance]{gap:var(--pi-space-2);border:0;background:transparent;overflow:visible}
+#root .wpb .wpb-profile-card-details{margin-top:var(--pi-space-2);color:var(--wpb-theme-muted);font-size:.75rem;line-height:1.5}
+#root .wpb .wpb-profile-card-details>summary{cursor:pointer;min-height:36px;display:list-item;align-content:center}
+#root .wpb .wpb-profile-card-details p{margin:var(--pi-space-2) 0}
+
+#root .wpb .wpb-strength-standards{padding:var(--pi-space-4);margin-bottom:var(--pi-space-4);min-width:0}
+#root .wpb .wpb-standards-score{display:flex;align-items:center;gap:var(--pi-space-3);padding:var(--pi-space-3);margin-bottom:var(--pi-space-4);border-radius:var(--pi-shape-action);background:var(--wpb-theme-accent-dim)}
+#root .wpb .wpb-standards-score>.mono{font-size:2rem;line-height:1.1;color:var(--wpb-theme-accent-ink);white-space:nowrap}
+#root .wpb .wpb-standards-score>.mono>span{font-size:.8125rem;color:var(--wpb-theme-muted);font-weight:500}
+#root .wpb .wpb-standards-score p{margin:var(--pi-space-1) 0 0;font-size:.75rem;color:var(--wpb-theme-muted)}
+#root .wpb .wpb-standards-score>div{min-width:0;overflow-wrap:anywhere}

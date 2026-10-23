@@ -27,7 +27,8 @@ assert.ok(b912.includes('.wpb-profile-customize')&&!b912.includes('order:80')&&!
 assert.ok(b912.includes('@container pi-r77-profile')&&b912.includes('max-width:360px'),'narrow/large-text layout handled');
 assert.ok(css.includes('@media (prefers-reduced-motion:reduce){#root button')&&b912.includes('forced-colors:active'),'shared reduced-motion and Profile forced-colors owners');
 assert.doesNotMatch(b912,/@keyframes|animation:/,'no second animation system');
-assert.ok(b912.includes('border-radius:var(--pi-shape-feature)!important')&&b912.includes('border-radius:var(--pi-shape-card)!important'),'Profile uses shared feature/card geometry roles');
+assert.ok(b912.includes('border-radius:var(--pi-shape-card)!important'),'Profile sections retain shared card geometry');
+assert.ok(app.includes('levelContent: !profilePrefs.hidden.includes("level") ? sectionContent.level : null'),'Profile header integrates canonical level content and respects visibility');
 
 
 const profileView = app.slice(app.indexOf('function ProfileView('), app.indexOf('\nfunction ',app.indexOf('function ProfileView(')+12));

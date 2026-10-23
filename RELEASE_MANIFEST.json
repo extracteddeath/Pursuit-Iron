@@ -2,7 +2,7 @@
   "schemaVersion": 3,
   "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": 905,
+  "build": 906,
   "engineVersion": "0.65.9",
   "candidateStatus": "verification_enforced_by_ci",
   "runtimeAggregate": "c8e205ef859267b1a6f18964fd22a046661c26c30e9879ff370418f2a504d319",
@@ -130,5 +130,5 @@
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
   "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b905-reaf8eaafd1ccd6bb",
-  "uiMilestone": "Build 905 · M294 Workout heading and set-column alignment"
+  "uiMilestone": "Build 906 · M320 Adaptive training-cycle release"
 }

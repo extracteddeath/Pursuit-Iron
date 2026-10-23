@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { EXERCISES } from '../modules/App.js';
-import { generateNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
+import { generateNextCycleForShell, scoreRegionalCarryover } from '../modules/next-engine/cycle-runtime-adapter.js';
 import { PUBLIC_MEV_REGIONS, PUBLIC_REGION_MUSCLE } from '../modules/next-engine/public-mev.js';
 import { shellVolumeTargets } from '../modules/next-engine/volume-repair.js';
 
@@ -50,4 +50,28 @@ for(const {label,row,focus,seed} of scenarios){
    focusedDose:dose,regionalAtRisk:decision.regionalRiskRegions});
 }
 console.log('M307 focused executable region matrix: '+JSON.stringify(matrix,null,2));
+// M307 regression: an aggregate back prescription should not treat losing
+// focused lat work as perfect retention merely because the *strength* phase
+// targets lower back volume. Keep normal intent and intentional maintenance
+// on their existing, softer paths.
+{
+ const prior={lats:12,upper_back:10},current={lats:5,upper_back:6.3};
+ const backPrescription=[{muscle:'back',preferred:10}];
+ const ordinary=scoreRegionalCarryover(prior,current,{back:'normal'},backPrescription);
+ assert.equal(ordinary.percent,100,'Ordinary back volume remains on the original half-prescription scoring path');
+ const prioritized=scoreRegionalCarryover(prior,current,{back:'specialization'},backPrescription);
+ assert.ok(prioritized.percent<100&&prioritized.atRiskRegions.includes('lats'),
+   'Specialized back flags lost lat work independently of retained upper-back work');
+ assert.ok(!prioritized.atRiskRegions.includes('upper_back'),'Covered upper back is not falsely flagged');
+ const recovered=scoreRegionalCarryover(prior,{lats:6,upper_back:6.3},{back:'specialization'},backPrescription);
+ assert.equal(recovered.percent,100,'A modest, feasible focused-width recovery satisfies soft carryover');
+ const extreme=scoreRegionalCarryover({lats:100,upper_back:100},{lats:6,upper_back:6},
+   {back:'specialization'},backPrescription);
+ assert.equal(extreme.percent,100,'A very large hypertrophy prior cannot become a strength-volume quota');
+ const reduced=scoreRegionalCarryover(prior,current,{back:'maintenance'},backPrescription);
+ assert.equal(reduced.percent,100,'Explicitly reduced back work is exempt from soft carryover preferences');
+ assert.deepEqual(prior,{lats:12,upper_back:10},'Scoring preserves the input ledger');
+}
+console.log('PASS M307 prioritized back: independent width/thickness scoring without strength-volume quotas.');
+
 console.log('PASS M307: focused region doses measured independently of target-coverage score.');

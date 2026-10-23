@@ -5,7 +5,7 @@
   "build": 905,
   "engineVersion": "0.65.9",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "a9682ee574b47bbe79c06738996cd0a36becd39e4b2732c82a2141de7d3426c9",
+  "runtimeAggregate": "5b1688fe02d0a97ea0d56ca49417e293a5129872ddfc99e5f72161c97f559c08",
   "runtimeFiles": {
     "modules/cycle-setup-drafts.js": "d3e9e750298afd8820e2bfd543c2cebede65e4f27c136ff26fe383d202b824e9",
     "modules/engine-api.js": "5b1252901101e46c275f312f8982d167897f67d7f069ed687b1235fb3bd57f55",
@@ -26,7 +26,7 @@
     "modules/next-engine/capacity-policy.js": "7679d6f487a968d6e3d2144385cb33ac0c788d7565c2b132b9187b5e2693825b",
     "modules/next-engine/coach-regression.js": "f4bf6719070076f2ec8eab6d76ba5f29386ea2e638b106556caad35df6c00e1b",
     "modules/next-engine/config.js": "5c5f9902326ec8ee7ad2aa36536d6b55079736ff923b0ac9eabed6d1a95c1225",
-    "modules/next-engine/cycle-runtime-adapter.js": "cb1111d9ae7d99ef3fda62afcfe86c1b1f6267384f85630d52f13602f1afcaa0",
+    "modules/next-engine/cycle-runtime-adapter.js": "e2ca05358ba2e4caae01d996099f55f4d4b6e63ac41b6bbf110ab866a8950c86",
     "modules/next-engine/cycles.js": "3b949f73ecef2543e4aa3aa6910fe43a3d3526805fcbcd111424e5df2d6efc79",
     "modules/next-engine/domain-contracts.js": "fc35224050b1c20769cc38f727852a180f6ac50e990dc6ddeb213f9e30ec755f",
     "modules/next-engine/dose-reconciliation.js": "122c4eab4052b540d163b4cca0ecb6b00c16adb32d1e703ff32dd3e449a5f65b",
@@ -119,15 +119,15 @@
   "uiFiles": {
     "modules/App.js": "7ee76c15038dc5215e604cd96adc2e2e9f26e3435556c5f557b39af0bdafd455",
     "index.html": "54fd7f97b0a2d9d8b76694380158b4a23699a3f1c1cbea697c5e33b7c705b7ed",
-    "sw.js": "4dbf0c96805b8114f7df8639d13782529e35fedac6418fdcd41430454decafce",
-    "BUILD_PROFILE.json": "ffedc64933885137f91a8e35e301f8dc43f04fc6e9857ea42d45146f7971d130",
-    "CHANGELOG.md": "a708c6db39e2a73ea437a18ef9deb79311eb1b0a02b275f961e6d2b3a2ce539a",
+    "sw.js": "cdee478ff6e21d9f68487ada6d65d843b1f1164c7f232ad0efec12012a582caa",
+    "BUILD_PROFILE.json": "b1ee4cd069e0df5427895e0b551c51928369b73f733fe6a9eae6cce97f3cda83",
+    "CHANGELOG.md": "d1c6a1193c2a5d973170112fb31dd7b678fdf2ed1b33183404d8c55464d3b12e",
     "app.css": "40c81026a9985e0ac13239c2df6cc296c12322cdedfe096dd924f8149deb1e97",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b905-rb8090680150bea5b",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b905-r0312c4e81f87ae0c",
   "uiMilestone": "Build 905 · M294 Workout heading and set-column alignment"
 }

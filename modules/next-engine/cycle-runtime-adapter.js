@@ -559,6 +559,13 @@ export function summarizeStrengthWorkWeeks(weeks) {
             [lift, Math.min(...weeks.map(week => week.liftFrequencies[lift] ?? 0))]))
     };
 }
+// Preserve the same transition safety floor throughout strength accumulation,
+// not only at entry. This does not apply to deliberate peak/recovery tapers.
+export function findStrengthVolumeCliff(previousSets, weeks) {
+    return Number.isFinite(previousSets) && previousSets >= 16 && Array.isArray(weeks)
+        ? weeks.find(week => week.weeklySets < Math.ceil(previousSets * .5)) ?? null
+        : null;
+}
 export function scoreRealizedStrengthFinalist(candidate, previousShell, config, legacyExercises = []) {
     const { next, request, spec, quality } = candidate;
     const cfg = legacyBlockConfig(blockConfigForSpec(config, spec),
@@ -588,9 +595,7 @@ export function scoreRealizedStrengthFinalist(candidate, previousShell, config, 
     // M322: an apparent safe entry week is not sufficient when subsequent
     // strength weeks silently halve executable work. Apply the same continuity
     // floor to every saved work week; recovery/peak phases are not scored here.
-    const cliff = previousSets >= 16
-        ? realized.weeks.find(week => week.weeklySets < Math.ceil(previousSets * .5))
-        : null;
+    const cliff = findStrengthVolumeCliff(previousSets, realized.weeks);
     if (cliff)
         throw new NextShellAdapterError('NEXT_CYCLE_REALIZED_VOLUME_CLIFF',
             `Finalized strength week ${cliff.week} would fall from ${previousSets} to ${cliff.weeklySets} weekly sets.`);

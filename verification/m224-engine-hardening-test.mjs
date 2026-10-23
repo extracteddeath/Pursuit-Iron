@@ -337,3 +337,29 @@ for (const tm of [null, NaN, Infinity, -1, 0])
 for (const weekIndex of [NaN, Infinity, -1, 0, 1.5])
     assert.equal(percentageProtocolFor({ scheme: '531', tm: 200, weekIndex, weeksTotal: 4 }), null);
 
+
+// M296: a saved dynamic prescription must not leak positional loads into today's
+// straight-set method when context correctly blocks advancing historical work.
+const priorDynamic = structuredClone(p);
+for (const c of Object.values(priorDynamic.nextWeekPrescriptions[key])) Object.assign(c,
+    { sets: 3, reps: '8-12', rir: '2', progressionStyle: 'dynamic' });
+const dynamicPrescription = snapshotNextShellPrescription(priorDynamic, day, slot, EX_BY_ID[id], 1);
+for (const style of ['double', 'linear', 'ladder', 'wave', 'e1rm', 'dynamic']) {
+    const currentProgram = structuredClone(priorDynamic);
+    for (const c of Object.values(currentProgram.nextWeekPrescriptions[key])) c.progressionStyle = style;
+    for (const flags of [{ prescriptionEdited: true }, { badDay: true }, { interrupted: true }]) {
+        const oldHistory = history([100, 95, 95].map(w => ({ w, r: 10, rir: 2, rirReported: true })), 'lb', flags);
+        oldHistory[0].perf[id].prescription = dynamicPrescription;
+        const before = structuredClone(oldHistory);
+        const s = suggest(currentProgram, oldHistory);
+        const openingRows = prescribeSets(currentProgram, day, EX_BY_ID[id], slot, 1, 'lb', s, null, {}, oldHistory, false);
+        assert.deepEqual(openingRows.filter(r => !r.warm && !r.sub).map(r => r.weight),
+            style === 'dynamic' ? ['100', '95', '95'] : ['100', '100', '100'],
+            style + ': only the current dynamic method may retain positional loads');
+        if (style !== 'dynamic' && s.setTargets?.length)
+            assert.deepEqual(openingRows.filter(r => !r.warm && !r.sub).map(r => r.reps), ['10', '8', '8'],
+                'Do not carry lighter-load rep targets onto heavier straight sets');
+        assert.deepEqual(oldHistory, before, 'Opening a workout does not rewrite historical methods or logged performance');
+    }
+}
+console.log('PASS M296 fresh opening: historical dynamic loads cannot leak into double/linear/ladder/wave/e1rm; current dynamic stays positional.');

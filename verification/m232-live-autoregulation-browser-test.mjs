@@ -92,6 +92,31 @@ try {
     await page.waitForFunction(() => JSON.parse(localStorage.getItem('wpb:live'))?.data[0].sets[2].weight === '100');
     assert.deepEqual(await values(), ['100', '100', '100']);
     assert.equal(await page.$eval('[data-testid="set-0-2"] input[aria-label="weight"]', n => n.value), '100', 'undo restores the rendered pending load');
+    // M296: restore an untouched opening session with an orphaned second-set
+    // reduction. No tap/log/rating should be needed to get its original load back.
+    const restoreSnapshot = async saved => {
+        const script = await page.evaluateOnNewDocument(s => {
+            localStorage.setItem('wpb:live', JSON.stringify(s));
+            window.__m296SeededLoads = s.data[0].sets.map(row => row.weight);
+        }, saved);
+        await page.reload({ waitUntil: 'networkidle0' });await page.waitForSelector('[data-testid="set-0-2"]');
+        await page.removeScriptToEvaluateOnNewDocument(script.identifier);
+    };
+    const orphan = structuredClone(snapshot);
+    for (const row of orphan.data[0].sets) { row.done = false; row.actualRIR = null; }
+    orphan.data[0].sets[1] = { ...orphan.data[0].sets[2],
+        liveAdjustment: { ...orphan.data[0].sets[2].liveAdjustment, pendingIndex: 1, sourceIndices: [0, 1] } };
+    await restoreSnapshot(orphan);
+    assert.equal(await page.evaluate(() => window.__m296SeededLoads[1]), '95', 'The lower opening load was seeded before component mount');
+    assert.deepEqual(await values(), ['100', '100', '100'], 'Opening removes automatic reductions without logged sources');
+    assert.equal(await page.$eval('[data-testid="set-0-1"] input[aria-label="weight"]', n => n.value), '100');
+    await page.reload({ waitUntil: 'networkidle0' });await page.waitForSelector('[data-testid="set-0-2"]');
+    assert.deepEqual(await values(), ['100', '100', '100'], 'Repaired opening targets remain stable on a second reload');
+    const manualOrphan = structuredClone(orphan);
+    Object.assign(manualOrphan.data[0].sets[1], { weight: '92.5', auto: false, valueOwner: 'user' });
+    await restoreSnapshot(manualOrphan);
+    assert.equal((await values())[1], '92.5', 'Restore preserves a deliberately edited second-set load');
+    console.log('PASS M296 phone opening: orphaned set-2 reduction repaired before interaction, reload-stable, manual loads protected.');
     assert.deepEqual(errors, []);
     console.log('PASS M232 phone: report two misses → one 5% accessory reduction → autosave/reload preserves it → undo either source restores it; no runtime errors.');
 } finally { if (browser) await browser.close(); await new Promise(resolve => server.close(resolve)); }

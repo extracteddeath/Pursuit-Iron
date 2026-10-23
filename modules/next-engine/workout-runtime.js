@@ -1,3 +1,4 @@
+import { reconcileRestoredLiveAdjustments } from './live-autoregulation.js';
 import { selectProgressionStyle } from './progression-style.js';
 import { availableLoadAtOrBelow, resolveLoadingMode } from './loading.js';
 const numberPair = (value, fallback, minimum = 0) => {
@@ -126,6 +127,7 @@ export function reconcilePendingRepTargets(sets, cell) {
 // Old snapshots without ownership metadata, manual/added rows and logged work are preserved.
 export function refreshPendingSetTargets(sets, fresh) {
     if (!Array.isArray(sets) || !Array.isArray(fresh)) return sets;
+    sets = reconcileRestoredLiveAdjustments(sets);
     const work = fresh.filter(s => !s.warm && !s.sub && !s.added);
     let ordinal = 0, changed = false;
     const out = sets.map(s => {

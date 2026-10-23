@@ -82,7 +82,7 @@ try{
   assert.match(await page.$eval('.wpb-cycle-block-preview',n=>n.innerText),/sets · .* reps · .* RIR/);
   assert.ok(await page.$eval('.wpb-cycle-preview-facts',(n,days)=>n.textContent.includes(`${days} training days per week`),saved[1].days.length),'preview exposes the actual upcoming weekly structure');
   const expectedPreviewDose=saved[1].nextEngine?.cycleTemplate?.splitDecision?.workingWeekVolumeChange;
-  assert.equal(await page.$eval('.wpb-cycle-block-preview .wpb-cycle-dose-detail',ns=>ns.length),
+  assert.equal(await page.evaluate(()=>document.querySelectorAll('.wpb-cycle-block-preview .wpb-cycle-dose-detail').length),
     expectedPreviewDose?1:0,'preview shows saved volume detail only when available');
   const savedQuality=saved[1].nextEngine?.cycleTemplate?.splitDecision?.realizedQuality;
   if(savedQuality?.weeks?.length){
@@ -116,7 +116,7 @@ try{
   if(savedQuality?.weeks?.length){
     const last=savedQuality.weeks.at(-1);
     await page.waitForFunction(expected=>document.querySelector('.wpb-cycle-week-outlook')?.dataset.week===String(expected),{},last.week);
-    assert.deepEqual(await page.$eval('.wpb-cycle-week-outlook-stats dd',ns=>ns.map(n=>n.textContent.trim())),
+    assert.deepEqual(await page.evaluate(()=>[...document.querySelectorAll('.wpb-cycle-week-outlook-stats dd')].map(n=>n.textContent.trim())),
       [String(last.weeklySets),last.muscleTargetCoveragePercent+'%'],
       'Switching weeks must update the canonical executable coverage, not just the exercise list');
   }

@@ -40,10 +40,15 @@ for(const {label,row,focus,seed} of scenarios){
  assert.deepEqual(actual.focusedVolumeReductions,expectedFocusedReductions,
    'Warnings come only from prioritized executable muscle doses, not modeled phase coverage');
  if(label==='5-day back focus'){
-   assert.ok(actual.focusedVolumeReductions.includes('lats'),
-     'The reduced strength-phase target cannot conceal losing more than half of specialized lat volume');
-   assert.ok(!actual.focusedVolumeReductions.includes('upper_back'),
-     'Upper-back volume preserved above half must not trigger a false focus warning');
+   const lats=actual.regions.find(r=>r.region==='lats');
+   const upperBack=actual.regions.find(r=>r.region==='upper_back');
+   assert.ok(lats&&upperBack,'Back width and thickness retain independent executable dose credit');
+   assert.equal(actual.focusedVolumeReductions.includes('lats'),
+     lats.previousSets>=4&&lats.currentSets<lats.previousSets*.5,
+     'A recovered lat dose must clear its warning; a genuine loss must remain visible');
+   assert.equal(actual.focusedVolumeReductions.includes('upper_back'),
+     upperBack.previousSets>=4&&upperBack.currentSets<upperBack.previousSets*.5,
+     'Upper-back warnings must independently match its measured volume');
  }
 
  const focused=actual.regions.filter(x=>{
@@ -75,16 +80,23 @@ console.log('M307 focused executable region matrix: '+JSON.stringify(matrix,null
  const ordinary=scoreRegionalCarryover(prior,current,{back:'normal'},backPrescription);
  assert.equal(ordinary.percent,100,'Ordinary back volume remains on the original half-prescription scoring path');
  const prioritized=scoreRegionalCarryover(prior,current,{back:'specialization'},backPrescription);
+ assert.equal(prioritized.weakestFocusedPercent,83,
+   'The optimizer cannot average away an under-covered focused lat region behind strong upper-back coverage');
+ assert.ok(prioritized.percent>prioritized.weakestFocusedPercent,
+   'The separate weakest-focus signal is stricter than aggregate regional continuity');
  assert.ok(prioritized.percent<100&&prioritized.atRiskRegions.includes('lats'),
    'Specialized back flags lost lat work independently of retained upper-back work');
  assert.ok(!prioritized.atRiskRegions.includes('upper_back'),'Covered upper back is not falsely flagged');
  const recovered=scoreRegionalCarryover(prior,{lats:6,upper_back:6.3},{back:'specialization'},backPrescription);
  assert.equal(recovered.percent,100,'A modest, feasible focused-width recovery satisfies soft carryover');
+ assert.equal(recovered.weakestFocusedPercent,100,'The weakest-focused signal recovers when lat dose is restored');
  const extreme=scoreRegionalCarryover({lats:100,upper_back:100},{lats:6,upper_back:6},
    {back:'specialization'},backPrescription);
  assert.equal(extreme.percent,100,'A very large hypertrophy prior cannot become a strength-volume quota');
+ assert.equal(extreme.weakestFocusedPercent,100,'Extreme prior dose cannot impose a hidden weakest-region quota');
  const reduced=scoreRegionalCarryover(prior,current,{back:'maintenance'},backPrescription);
  assert.equal(reduced.percent,100,'Explicitly reduced back work is exempt from soft carryover preferences');
+ assert.equal(reduced.weakestFocusedPercent,100,'Reduced muscles never receive a focus continuity penalty');
  assert.deepEqual(prior,{lats:12,upper_back:10},'Scoring preserves the input ledger');
 }
 console.log('PASS M307 prioritized back: independent width/thickness scoring without strength-volume quotas.');

@@ -280,6 +280,7 @@ export function cycleSplitCandidates(spec, config, enabled) {
 export function scoreRegionalCarryover(prior, current, musclePriorities, prescriptions) {
     const byMuscle = new Map(prescriptions.map(p => [p.muscle, p]));
     let earned = 0, possible = 0;
+    let weakestFocusedQuality = 1;
     const atRiskRegions = [];
     for (const region of PUBLIC_MEV_REGIONS) {
         const muscle = PUBLIC_REGION_MUSCLE[region];
@@ -304,12 +305,19 @@ export function scoreRegionalCarryover(prior, current, musclePriorities, prescri
         const weight = priority === 'primary' ? 3 : priority === 'specialization' ? 2.6
             : priority === 'high' ? 1.9 : 1;
         const actual = Math.max(0, Number(current?.[region]) || 0);
-        earned += weight * Math.min(1, actual / target);
+        const regionalQuality = Math.min(1, actual / target);
+        earned += weight * regionalQuality;
         possible += weight;
+        // An average can hide a sharp drop in one explicitly prioritized
+        // region (e.g. lats beneath otherwise adequate upper-back coverage).
+        // A separate weakest-focus score nudges the optimizer toward a more
+        // balanced audited option; its ceiling remains phase-target bounded.
+        if (focused) weakestFocusedQuality = Math.min(weakestFocusedQuality, regionalQuality);
         if (actual + .05 < target) atRiskRegions.push(region);
     }
     const quality = possible ? earned / possible : 1;
-    return { quality, percent: Math.round(quality * 100), atRiskRegions };
+    return { quality, percent: Math.round(quality * 100), atRiskRegions,
+        weakestFocusedQuality, weakestFocusedPercent: Math.round(weakestFocusedQuality * 100) };
 }
 function cycleProgramScore(program, request, phase, previous, startingSplit) {
     const normalized = normalizeRequest(request);
@@ -355,11 +363,12 @@ function cycleProgramScore(program, request, phase, previous, startingSplit) {
         + (focusStrength ? 22 * liftQuality : 0)
         + (phase === 'hypertrophy_accumulation' ? 8 * usefulDensity : 3 * usefulDensity)
         + 2 * continuity
-        - (carryover ? 15 * (1 - carryover.quality) : 0);
+        - (carryover ? 15 * (1 - carryover.quality) + 12 * (1 - carryover.weakestFocusedQuality) : 0);
     return { score: Math.round(goalScore * 100) / 100, weeklySets: sets,
         muscleTargetCoverage: Math.round(100 * (possible ? received / possible : 0)),
         liftFrequencies,
         ...(carryover ? { regionalCarryoverPercent: carryover.percent,
+            weakestFocusedRegionCoveragePercent: carryover.weakestFocusedPercent,
             regionalRiskRegions: carryover.atRiskRegions } : {}) };
 }
 // Read the exact executable projection at the boundary of two authored blocks.
@@ -433,7 +442,7 @@ function chooseOptimizedCycleBlock(spec, config, enabled, buildCandidate) {
         passingCandidates: passing,
         ...winner.quality,
         reason: automatic
-            ? `Compared ${candidates.length} compatible weekly structures for ${phaseLabel(spec.phase).toLowerCase()}, retained ${passing} audited plans, and selected the highest scoring plan for muscle coverage, relevant lift practice and training capacity.`
+            ? `Compared ${candidates.length} compatible weekly structures for ${phaseLabel(spec.phase).toLowerCase()}, retained ${passing} audited plans, and selected the highest scoring plan for muscle coverage, prioritized-region continuity, relevant lift practice and training capacity.`
             : 'Kept the selected weekly structure and verified it against the training constraints.'
     };
     return winner;

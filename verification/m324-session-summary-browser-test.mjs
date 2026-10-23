@@ -45,6 +45,7 @@ try {
         }, { ...store, theme });
         await page.goto(url, { waitUntil: 'networkidle0' });
         await page.waitForSelector('.wpb-home');
+        const loadedHistory = await page.evaluate(() => JSON.parse(localStorage.getItem('wpb:v1')).history);
         const outline = await page.$eval('.wpb-home-session-outline', node => node.textContent);
         assert.match(outline, /Dumbbell Bench Press/);
         assert.match(outline, /Back Squat/);
@@ -84,7 +85,8 @@ try {
         assert.equal(live.weekIndex, 2);
         assert.deepEqual(live.data.map(row => row.id), expected.exercises.map(row => row.id));
         assert.equal(live.data.reduce((n, row) => n + row.sets.filter(set => !set.warm && !set.sub).length, 0), expected.sets);
-        assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('wpb:v1')).history), history);
+        assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('wpb:v1')).history), loadedHistory,
+            'Browsing and starting a workout preserve the normalized loaded history, including import metadata');
         assert.deepEqual(errors, []);
         await context.close();
     }

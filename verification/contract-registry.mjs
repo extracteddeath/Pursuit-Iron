@@ -177,6 +177,7 @@ export const browserShards = Object.freeze({
         'r76-cross-screen-form-zoom-browser-test.mjs',
         'b846-gym-bar-weights-browser-test.mjs',
         'm265-worker-generation-browser-test.mjs',
+        'm318-throttled-cycle-performance-browser-test.mjs',
         'm219-ui-integration-browser-test.mjs',
         'm222-custom-program-parity-browser-test.mjs',
         'm225-percentage-workout-browser-test.mjs'

@@ -70,8 +70,8 @@ assert.ok(browserShards['integration-accessibility'].includes('r74-accessibility
     'keyboard navigation, form focus, and enlarged text must retain dedicated coverage');
 assert.ok(browserShards['integration-motion'].includes('b831-expressive-motion-browser-test.mjs'),
     'app-wide expressive interaction coverage must retain dedicated coverage');
-assert.equal(Object.values(browserShards).flat().length, 42,
-    'sharding must preserve all 42 independently owned browser gates');
+assert.ok(Object.values(browserShards).flat().length >= 43,
+    'sharding must preserve at least 43 independently owned browser gates');
 assert.equal(registry.releaseCount, 1, 'release-only semantics should remain narrow');
 
 console.log(

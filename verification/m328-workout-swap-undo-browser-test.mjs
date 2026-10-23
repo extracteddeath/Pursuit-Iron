@@ -14,7 +14,12 @@ const current={
 };
 const next={...structuredClone(current),id:'m328-next',name:'Future phase'};
 const unrelated={...structuredClone(current),id:'m328-other',cycleId:'different',name:'Unrelated'};
-const store={v:13,savedAt:1,saved:[current,next,unrelated],cycles:[],history:[],perf:{},
+// A real registered cycle is required: load normalization intentionally detaches
+// orphan cycleId values when their owning cycle has been removed.
+const cycle={id:'m328-cycle',name:'Swap Undo Cycle',engineSource:'pursuit-next',
+    blockIds:[current.id,next.id],activeBlock:0,done:false,
+    blockMeta:[{phase:'hypertrophy',weeks:4},{phase:'strength',weeks:4}]};
+const store={v:13,savedAt:1,saved:[current,next,unrelated],cycles:[cycle],history:[],perf:{},
  drafts:{},tombs:{},seenIntro:999,seenWhatsNew:999,pinnedId:current.id,theme:'amethyst',
  restAutoStart:false,warmupCard:false,unit:'lb',unitChosen:true,experience:'intermediate',
  bodyweight:185,installDismissedAt:Date.now(),lastBackup:Date.now()};

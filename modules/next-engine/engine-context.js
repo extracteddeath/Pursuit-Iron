@@ -16,7 +16,7 @@ export function createEngineContext(request) {
     // Each request owns one canonical catalog and one lookup index; building
     // both independently repeated built-in/custom merging per split candidate.
     const exerciseCatalog = Object.freeze(createExerciseCatalog(request.customExercises));
-    const exerciseMap = new Map(exerciseCatalog.map(exercise => [ex.id, ex]));
+    const exerciseMap = new Map(exerciseCatalog.map(exercise => [exercise.id, exercise]));
     const scheduleByDay = new Map(request.schedule.days.map(day => [day.day, day]));
     const avoidedExercises = new Set(request.preferences?.avoidedExercises ?? []);
     const eligibilityCache = new Map();

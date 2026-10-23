@@ -20,7 +20,7 @@ const url = `http://127.0.0.1:${server.address().port}/index.html`;
 let browser;
 try {
  browser=await puppeteer.launch({executablePath:process.env.CHROME_BIN||'/usr/bin/google-chrome',headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
- for (const [width,height,theme] of [[320,740,'amethyst'],[393,850,'amethyst'],[393,850,'rosewater'],[900,1000,'rosewater'],[1280,850,'amethyst']]) {
+ for (const [width,height,theme] of [[320,740,'amethyst'],[393,850,'amethyst'],[393,850,'rosewater'],[430,850,'amethyst'],[520,850,'amethyst'],[600,850,'rosewater'],[900,1000,'rosewater'],[1280,850,'amethyst']]) {
   const context=await browser.createBrowserContext(),page=await context.newPage(),errors=[];
   page.on('pageerror',e=>errors.push(e.message));
   await page.setViewport({width,height,deviceScaleFactor:1,isMobile:width<600,hasTouch:width<600});

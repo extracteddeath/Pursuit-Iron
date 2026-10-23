@@ -90,7 +90,7 @@ try{
  assert.equal(snap.live.data[0].id,'bb-bench','Undo restores the visible exercise and working sets');
  assert.equal(snap.store.saved[1].days[0].exercises[0],'bb-bench','cycle sibling restored');
  assert.equal(snap.store.saved[2].days[0].exercises[0],'bb-bench');
- assert.equal(snap.store.saved[0].edited,false,'saved plan is no longer marked edited for undone swap');
+ assert.equal(snap.store.saved[0].edited,current.edited,'Undo restores the original edited-state value, including absence');
  assert.equal(snap.store.history.length,0);
  await page.reload({waitUntil:'networkidle0'});
  await page.waitForSelector('.wpb-live-dock button[aria-label="Resume workout"]');

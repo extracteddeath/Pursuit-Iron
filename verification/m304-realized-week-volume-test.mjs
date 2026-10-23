@@ -64,6 +64,10 @@ for(const [row,seed] of [[2,30442],[3,30453]]){
 for(const row of decisions){
  assert.ok(row.firstWeek.every(n=>n>=1),'Week 1 must not be empty');
  assert.ok(row.finalWeek.every(n=>n>=1),'Final work week must not be empty');
+ assert.ok(row.firstWeek[1]>=Math.ceil(row.firstWeek[0]*.5),
+   `${row.config}: executable first-week strength sets fell from ${row.firstWeek[0]} to ${row.firstWeek[1]}`);
+ assert.ok(row.finalWeek[1]>=Math.ceil(row.finalWeek[0]*.5),
+   `${row.config}: executable final-week strength sets fell from ${row.finalWeek[0]} to ${row.finalWeek[1]}`);
  assert.ok(row.firstDaySets.every(days=>days.every(n=>n>=1)));
 }
 console.log('M304 executable working-week transition matrix: '+JSON.stringify(decisions,null,2));

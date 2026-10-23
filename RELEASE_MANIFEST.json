@@ -5,7 +5,7 @@
   "build": 905,
   "engineVersion": "0.65.9",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "c5466130a515dd93df2744b2838ca13a06cd9e9dc78d95084c97e6adf44c3f0b",
+  "runtimeAggregate": "c3d9462960e3bc83050607cc5efff6166495dc5cdf475b7a0b4a4bc9844df3a1",
   "runtimeFiles": {
     "modules/cycle-setup-drafts.js": "d3e9e750298afd8820e2bfd543c2cebede65e4f27c136ff26fe383d202b824e9",
     "modules/engine-api.js": "5b1252901101e46c275f312f8982d167897f67d7f069ed687b1235fb3bd57f55",
@@ -26,7 +26,7 @@
     "modules/next-engine/capacity-policy.js": "7679d6f487a968d6e3d2144385cb33ac0c788d7565c2b132b9187b5e2693825b",
     "modules/next-engine/coach-regression.js": "f4bf6719070076f2ec8eab6d76ba5f29386ea2e638b106556caad35df6c00e1b",
     "modules/next-engine/config.js": "5c5f9902326ec8ee7ad2aa36536d6b55079736ff923b0ac9eabed6d1a95c1225",
-    "modules/next-engine/cycle-runtime-adapter.js": "97f9653090ea9c50b23ccfe918150461fe9d08c7b669ddfb8ed996b79efa8a25",
+    "modules/next-engine/cycle-runtime-adapter.js": "561b93eb4cce3adb06ff9758086d37c055f60d26e1729279bf35aa14ea302139",
     "modules/next-engine/cycles.js": "3b949f73ecef2543e4aa3aa6910fe43a3d3526805fcbcd111424e5df2d6efc79",
     "modules/next-engine/domain-contracts.js": "fc35224050b1c20769cc38f727852a180f6ac50e990dc6ddeb213f9e30ec755f",
     "modules/next-engine/dose-reconciliation.js": "122c4eab4052b540d163b4cca0ecb6b00c16adb32d1e703ff32dd3e449a5f65b",
@@ -129,6 +129,6 @@
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b905-r7eb7211e0b796079",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b905-r07c817e1ad274809",
   "uiMilestone": "Build 905 · M294 Workout heading and set-column alignment"
 }

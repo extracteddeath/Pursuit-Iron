@@ -353,27 +353,31 @@ export function scoreLiftPractice(frequencies, priorities = {}, requestedFrequen
         weakestPriorityPercent: Math.round(weakestPriority * 100),
         shortfalls, targets };
 }
-function cycleProgramScore(program, request, phase, previous, startingSplit) {
-    const normalized = normalizeRequest(request);
-    const prescriptions = createMusclePrescriptions(normalized, phase);
+function scoreMuscleTargetCoverage(ledger, prescriptions, priorities) {
     let received = 0, possible = 0;
     for (const p of prescriptions) {
-        const priority = normalized.goal.musclePriorities[p.muscle];
-        // Upper-body and lower-body muscle priorities count; maintenance muscles must not
-        // displace the important work merely because they are easy to fill.
+        const priority = priorities[p.muscle];
+        // One source for base-ranking and executable-week coverage.
         const weight = priority === 'primary' ? 3 : priority === 'specialization' ? 2.6
             : priority === 'high' ? 1.9 : priority === 'normal' ? 1 : .12;
         const target = Math.max(.25, Number(p.preferred) || 0);
-        received += weight * Math.min(1, (program.muscleLedger?.[p.muscle]?.fractionalSets || 0) / target);
+        received += weight * Math.min(1, (ledger?.[p.muscle]?.fractionalSets || 0) / target);
         possible += weight;
     }
+    return { quality: possible ? received / possible : 0,
+        percent: Math.round(100 * (possible ? received / possible : 0)) };
+}
+function countSpecificLiftPractice(sessions, catalog) {
+    return Object.fromEntries([...BLOCK_LIFTS].map(lift => [lift, sessions.filter(session =>
+        session.exercises.some(ex => ['primary_strength','secondary_strength'].includes(ex.role)
+            && (catalog.get(ex.exerciseId)?.liftSpecificity?.[lift] || 0) > .45)).length]));
+}
+function cycleProgramScore(program, request, phase, previous, startingSplit) {
+    const normalized = normalizeRequest(request);
+    const prescriptions = createMusclePrescriptions(normalized, phase);
+    const coverage = scoreMuscleTargetCoverage(program.muscleLedger, prescriptions, normalized.goal.musclePriorities);
     const catalog = createExerciseMap(normalized.customExercises);
-    const liftFrequencies = {};
-    for (const lift of BLOCK_LIFTS) {
-        liftFrequencies[lift] = program.sessions.filter(session => session.exercises.some(ex =>
-            ['primary_strength','secondary_strength'].includes(ex.role)
-            && (catalog.get(ex.exerciseId)?.liftSpecificity?.[lift] || 0) > .45)).length;
-    }
+    const liftFrequencies = countSpecificLiftPractice(program.sessions, catalog);
     const focusStrength = ['strength_accumulation','intensification','peak','mixed_accumulation'].includes(phase);
     const liftPractice = scoreLiftPractice(liftFrequencies,
         normalized.goal.liftPriorities, normalized.goal.liftFrequency, phase);
@@ -389,7 +393,7 @@ function cycleProgramScore(program, request, phase, previous, startingSplit) {
         : null;
     // Muscle and goal coverage dominate. Strength gets specific practice reward;
     // hypertrophy rewards adequate productive volume, not filling time indiscriminately.
-    const goalScore = 100 * (possible ? received / possible : 0)
+    const goalScore = 100 * coverage.quality
         + (focusStrength ? 22 * liftPractice.quality : 0)
         + (phase === 'hypertrophy_accumulation' ? 8 * usefulDensity : 3 * usefulDensity)
         + 2 * continuity
@@ -398,7 +402,7 @@ function cycleProgramScore(program, request, phase, previous, startingSplit) {
             + 5 * (1 - carryover.weakestSupportingQuality) : 0)
         - (focusStrength ? 7 * (1 - liftPractice.weakestPriorityQuality) : 0);
     return { score: Math.round(goalScore * 100) / 100, weeklySets: sets,
-        muscleTargetCoverage: Math.round(100 * (possible ? received / possible : 0)),
+        muscleTargetCoverage: coverage.percent,
         liftFrequencies,
         liftPracticePercent: liftPractice.percent,
         weakestPriorityLiftPracticePercent: liftPractice.weakestPriorityPercent,
@@ -408,6 +412,75 @@ function cycleProgramScore(program, request, phase, previous, startingSplit) {
             weakestFocusedRegionCoveragePercent: carryover.weakestFocusedPercent,
             weakestSupportingRegionCoveragePercent: carryover.weakestSupportingPercent,
             regionalRiskRegions: carryover.atRiskRegions } : {}) };
+}
+// The split scorer evaluates immutable engine-base sessions. The executable
+// projection can then change during week simulation, regional dose repair and
+// focus rebalancing. Keep both views, so a high base score is not presented as
+// proof that every saved workout has that same coverage or practice frequency.
+export function describeRealizedCycleQuality(program, legacyExercises = [], selected = null) {
+    if (!program?.nextEngine?.program || !program.nextEngine.request) return null;
+    const request = normalizeRequest(program.nextEngine.request);
+    const phase = program.nextEngine.program.phase;
+    const prescriptions = createMusclePrescriptions(request, phase);
+    const catalog = createExerciseMap(request.customExercises);
+    const weeks = Math.max(1, Math.round(Number(program.config?.weeks ?? program.weeks) || 1));
+    const round = value => Math.round(value * 10) / 10;
+    const rows = [];
+    for (let week = 1; week <= weeks; week++) {
+        const snapshot = captureShellVolumeSnapshot(program, week, legacyExercises);
+        if (!snapshot || snapshot.missing)
+            throw new NextShellAdapterError('NEXT_CYCLE_REALIZED_WEEK_MISSING',
+                `The saved cycle has incomplete executable prescriptions in week ${week}.`);
+        const practice = countSpecificLiftPractice(snapshot.sessions, catalog);
+        const liftQuality = scoreLiftPractice(practice, request.goal.liftPriorities,
+            request.goal.liftFrequency, phase);
+        const coverage = scoreMuscleTargetCoverage(snapshot.muscleLedger,
+            prescriptions, request.goal.musclePriorities);
+        rows.push({
+            week,
+            weeklySets: snapshot.sessions.reduce((sum, day) =>
+                sum + day.exercises.reduce((n, ex) => n + ex.sets, 0), 0),
+            muscleTargetCoveragePercent: coverage.percent,
+            liftFrequencies: practice,
+            liftPracticePercent: liftQuality.percent,
+            weakestPriorityLiftPracticePercent: liftQuality.weakestPriorityPercent,
+            regionalSets: Object.fromEntries(PUBLIC_MEV_REGIONS.map(region =>
+                [region, round(Math.max(0, Number(snapshot.regions[region]) || 0))])),
+            overCapacityDays: snapshot.sessions.filter(day =>
+                day.estimatedMinutes > day.maxMinutes + .001).map(day => day.day)
+        });
+    }
+    const base = selected ?? {};
+    return {
+        comparison: 'ranked_engine_base_to_saved_executable_weeks',
+        basis: 'creation_or_adaptation_snapshot',
+        rankedBase: {
+            weeklySets: base.weeklySets ?? totalSets(program.nextEngine.program),
+            muscleTargetCoveragePercent: base.muscleTargetCoverage
+                ?? scoreMuscleTargetCoverage(program.nextEngine.program.muscleLedger,
+                    prescriptions, request.goal.musclePriorities).percent,
+            liftFrequencies: base.liftFrequencies
+                ?? countSpecificLiftPractice(program.nextEngine.program.sessions, catalog),
+            liftPracticePercent: base.liftPracticePercent
+                ?? scoreLiftPractice(countSpecificLiftPractice(program.nextEngine.program.sessions, catalog),
+                    request.goal.liftPriorities, request.goal.liftFrequency, phase).percent
+        },
+        weeks: rows,
+        firstWeekSetDelta: rows[0].weeklySets
+            - (base.weeklySets ?? totalSets(program.nextEngine.program)),
+        firstWeekCoverageDelta: rows[0].muscleTargetCoveragePercent
+            - (base.muscleTargetCoverage ?? scoreMuscleTargetCoverage(
+                program.nextEngine.program.muscleLedger, prescriptions,
+                request.goal.musclePriorities).percent)
+    };
+}
+function attachRealizedCycleQuality(program, decision, legacyExercises) {
+    if (!decision) return;
+    const realized = describeRealizedCycleQuality(program, legacyExercises, decision);
+    if (!realized) return;
+    decision.realizedQuality = realized;
+    if (program.nextEngine?.cycleTemplate)
+        program.nextEngine.cycleTemplate.splitDecision = { ...decision };
 }
 // Read the exact executable projection at the boundary of two authored blocks.
 // This is separate from the phase-adjusted regional target coverage score.
@@ -669,6 +742,7 @@ export function generateNextCycleForShell(options) {
         legacy = finalizeGeneratedShellVolume(legacy, options.legacyExercises);
         if (i > 0) legacy = rebalanceFocusedStrengthEntry(blocks[i - 1], legacy, options.legacyExercises);
         if (i > 0) attachWorkingWeekTransition(blocks[i - 1], legacy, decision, options.legacyExercises);
+        attachRealizedCycleQuality(legacy, decision, options.legacyExercises);
         blocks.push(legacy);
         previous = legacy.nextEngine.program;
     }
@@ -808,6 +882,7 @@ export function convertProgramToNextCycleForShell(options) {
         legacy = finalizeGeneratedShellVolume(legacy, options.legacyExercises);
         if (i > 0) legacy = rebalanceFocusedStrengthEntry(blocks[i - 1], legacy, options.legacyExercises);
         if (i > 0) attachWorkingWeekTransition(blocks[i - 1], legacy, decision, options.legacyExercises);
+        attachRealizedCycleQuality(legacy, decision, options.legacyExercises);
         blocks.push(legacy);
         previous = legacy.nextEngine.program;
     }
@@ -915,6 +990,7 @@ function buildAdaptedBlock(current, cycle, target, weeks, label, analysis, legac
     const finalized = rebalanceFocusedStrengthEntry(current,
         finalizeGeneratedShellVolume(legacy, legacyExercises), legacyExercises);
     attachWorkingWeekTransition(current, finalized, decision, legacyExercises);
+    attachRealizedCycleQuality(finalized, decision, legacyExercises);
     return finalized;
 }
 export function advanceNextCycleForShell(options) {

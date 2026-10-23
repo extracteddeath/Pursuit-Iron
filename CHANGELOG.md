@@ -1,3 +1,10 @@
+## M306 — Compact cycle volume explanation and edited conversion regression
+
+- Show the new M305 final-week-to-first-week regional dose comparison within the existing Cycle **Up next** card and the read-only future-block preview. Keep the full muscle breakdown collapsed by default. Display explicit before/after working sets, credited regional doses, and signed percentage changes with clear baseline semantics.
+- Preserve the existing cycle screen hierarchy and design tokens. The prior opening-week set comparison is replaced with the true phase-boundary count whenever canonical transition metadata is available; older saved cycles keep their previous labels and do not invent missing information.
+- Extend cycle source/UX contracts and responsive phone/tablet browser coverage to validate the disclosure, its accessibility and narrow-screen fit. Add a conversion regression for high user-owned set prescriptions (30+ set day), requiring an audited volume-preserving transition or clear refusal without overwriting the source.
+- Keep Build 905 / Engine 0.65.9. No dose optimizer, strength-specific frequency, training target or fatigue policy is relaxed; update offline and release integrity hashes.
+
 ## M305 — Explain actual regional dose changes at strength entry
 
 - Distinguish phase-adjusted regional target coverage from absolute productive training dose. A 100% strength-phase target score can coexist with a substantial reduction from the preceding hypertrophy block; do not label that as 100% volume retention.

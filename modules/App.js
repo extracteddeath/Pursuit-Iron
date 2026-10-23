@@ -19822,6 +19822,26 @@ function CycleBlockNav({ cycle, saved, selectedId, onSelect }) {
             _jsx(UiChoice, { kind: "summary", selected: selectedId === b.id, onClick: () => onSelect(b.id), disabled: !saved.some(p => p.id === b.id),
                 label: b.label, caption: !cycle.done && i === (cycle.activeBlock || 0) ? "Current" : cycle.done || i < (cycle.activeBlock || 0) ? "Completed" : "Planned" }, b.id)) })] });
 }
+// Shared, read-only explanation of the exact final-to-first working-week dose.
+// Phase-adjusted target coverage is a distinct score and must not be labeled
+// as a percentage of actual volume retained.
+function CycleDoseTransition({ change }) {
+    if (!change || !Array.isArray(change.regions)) return null;
+    const showSets = value => Number(value).toFixed(1).replace(/\.0$/, "");
+    const showPercent = value => value == null ? "new" : `${value > 0 ? "+" : ""}${value}%`;
+    return _jsxs("details", { className: "wpb-cycle-dose-detail", children: [
+        _jsx("summary", { className: "wpb-cycle-dose-summary", children: "Muscle-by-muscle volume change" }),
+        _jsx("p", { className: "wpb-cycle-dose-caption", children:
+            `Final week of the previous block → first week of this block. ${change.previousWeeklySets} → ${change.currentWeeklySets} total working sets (${showPercent(change.weeklyPercentChange)}).` }),
+        _jsx("dl", { className: "wpb-cycle-dose-rows", children: change.regions.map(r => _jsxs("div", {
+            className: "wpb-cycle-dose-row", children: [
+                _jsx("dt", { children: r.region.replaceAll("_", " ").replace(/^./, c => c.toUpperCase()) }),
+                _jsx("dd", { children: `${showSets(r.previousSets)} → ${showSets(r.currentSets)} credited sets · ${showPercent(r.percentChange)}` })
+            ] }, r.region)) }),
+        _jsx("p", { className: "wpb-cycle-dose-caption", children:
+            "Credited sets include muscle contributions from compound lifts. Changes are not the same as strength-phase target coverage; planned workouts may adapt when the block begins." })
+    ] });
+}
 function CycleBlockPreview({ program, initialWeek = 1, initialDayId = null, onClose, onViewPlan }) {
     const total = weeksOf(program) + (program.config?.deload ? 1 : 0);
     const [week, setWeek] = useState(Math.max(1, Math.min(total, initialWeek)));
@@ -19838,6 +19858,7 @@ function CycleBlockPreview({ program, initialWeek = 1, initialDayId = null, onCl
             _jsx("p", { className: "wpb-cycle-preview-note", children: program.nextEngine.cycleTemplate.splitDecision.reason }),
             _jsx("p", { className: "wpb-cycle-preview-note", children: `Modeled muscle-target coverage: ${program.nextEngine.cycleTemplate.splitDecision.muscleTargetCoverage}% · ${program.nextEngine.cycleTemplate.splitDecision.weeklySets} weekly working sets. These are estimates, not a guarantee of the best possible outcome.` })
         ] }),
+        _jsx(CycleDoseTransition, { change: program.nextEngine?.cycleTemplate?.splitDecision?.workingWeekVolumeChange }),
         _jsxs("label", { className: "wpb-cycle-preview-week", children: ["Week", _jsx("select", { "aria-label": "Preview week", value: week, onChange: e => setWeek(Number(e.target.value)), className: "wpb-cycle-preview-select", children: Array.from({ length: total }, (_, i) => _jsx("option", { value: i + 1, children: i >= weeksOf(program) ? "Deload" : `Week ${i + 1}` }, i)) })] }),
         program.days.map((day, index) => _jsxs("details", { open: initialDayId ? day.id === initialDayId : index === 0, className: "wpb-cycle-preview-day", children: [
             _jsx("summary", { className: "wpb-cycle-preview-summary", children: day.label }),
@@ -19854,6 +19875,8 @@ function CycleDetail({ cycle, saved = [], history = [], cycleInfo = null, onBack
     const current = saved.find(p => p.id === cycle.blockIds[active]);
     const next = saved.find(p => p.id === cycle.blockIds[active + 1]);
     const changes = useMemo(() => current && next ? blockChangeSummary(current, next) : null, [current, next]);
+    const doseChange = next?.nextEngine?.cycleTemplate?.splitDecision?.workingWeekVolumeChange
+        ?? cycle.blockMeta?.[active + 1]?.splitDecision?.workingWeekVolumeChange ?? null;
     const isActive = cycleInfo?.cycle?.id === cycle.id;
     const Ic = iconForCycle(cycle);
     return _jsxs("div", { className: "wpb-page-shell wpb-cycle-detail", children: [
@@ -19879,8 +19902,10 @@ function CycleDetail({ cycle, saved = [], history = [], cycleInfo = null, onBack
                     _jsx("h2", { children: next.blockLabel || next.name }),
                     _jsx("p", { children: `${changes.retained} lifts retained · ${changes.added.length} added · ${changes.removed.length} removed` }),
                     changes.before && changes.after && _jsxs("dl", { className: "wpb-cycle-facts", children: [
-                        _jsx("dt", { children: "Opening-week sets" }), _jsx("dd", { children: `${changes.before.sets} → ${changes.after.sets}` }),
+                        _jsx("dt", { children: doseChange ? "Last → next Week 1 sets" : "Opening-week sets" }),
+                        _jsx("dd", { children: doseChange ? `${doseChange.previousWeeklySets} → ${doseChange.currentWeeklySets}` : `${changes.before.sets} → ${changes.after.sets}` }),
                         _jsx("dt", { children: "Rep ranges" }), _jsx("dd", { children: `${changes.before.repRange} → ${changes.after.repRange}` })] }),
+                    _jsx(CycleDoseTransition, { change: doseChange }),
                     _jsx("p", { className: "wpb-cycle-card-note", children: "Planned targets may adapt from your completed workouts." })] }),
                 _jsxs("section", { className: "wpb-cycle-info-card wpb-cycle-schedule", "aria-label": "Cycle schedule", children: [
                     _jsx("div", { className: "wpb-cycle-card-eyebrow", children: "Your schedule" }),

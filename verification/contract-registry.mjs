@@ -11,7 +11,8 @@ export const contractGroups = Object.freeze({
         'm200-regional-dose-test.mjs',
         'm202-locked-cycle-dose-test.mjs',
         'm206-working-week-dose-test.mjs',
-        'm303-cycle-volume-test.mjs'
+        'm303-cycle-volume-test.mjs',
+        'm304-realized-week-volume-test.mjs'
     ]),
     adaptation: Object.freeze([
         'm235-engine-verification-test.mjs',

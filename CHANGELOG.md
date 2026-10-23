@@ -1,7 +1,7 @@
 ## M301 — Phase-owned goals in every cycle block
 
 - Always project the block's phase into its request goal, even when the weekly split, days and lift-practice controls are unchanged. An early return previously retained the entry goal across static/locked cycle phases, letting hypertrophy-origin strength blocks inherit hypertrophy-oriented loading, strength claims and regional dose assumptions.
-- Keep baseline equipment, schedule, preferences, athlete and seed immutable. Strength accumulation, intensification and peak use strength-goal policy; hypertrophy uses hypertrophy; mixed/foundation use mixed. Phase-specific exercise/volume/safety audits remain canonical.
+- Keep baseline equipment, schedule, preferences, athlete and seed immutable. Strength accumulation, intensification and peak use strength-goal policy; hypertrophy uses hypertrophy. Mixed-style blocks keep the cycle's explicit strength intent when present (including Strength Peak's base), otherwise use mixed. Phase-specific exercise/volume/safety audits remain canonical.
 - Regression-check all six authored phases, normalized strength weighting, unchanged weekly configuration, immutability, optional split adaptation, and generated cycle blocks' actual requests. Retain Build 905 / Engine 0.65.9 and refresh offline hashes.
 
 ## M300 — Preserve strength-entry volume rescue with unchanged automatic splits

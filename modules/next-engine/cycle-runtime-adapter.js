@@ -558,6 +558,11 @@ export function scoreRealizedStrengthFinalist(candidate, previousShell, config, 
     if (!preceding || preceding.missing)
         throw new NextShellAdapterError('NEXT_CYCLE_REALIZED_PRIOR_MISSING',
             'The preceding cycle has incomplete executable training history.');
+    const previousSets = preceding.sessions.reduce((sum, day) =>
+        sum + day.exercises.reduce((n, ex) => n + ex.sets, 0), 0);
+    if (previousSets >= 16 && first.weeklySets < Math.ceil(previousSets * .5))
+        throw new NextShellAdapterError('NEXT_CYCLE_REALIZED_VOLUME_CLIFF',
+            `Finalized strength would fall from ${previousSets} to ${first.weeklySets} weekly sets.`);
     const normalized = normalizeRequest(request);
     const carryover = scoreRegionalCarryover(preceding.regions, first.regionalSets,
         normalized.goal.musclePriorities, createMusclePrescriptions(normalized, next.phase));

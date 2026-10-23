@@ -64,7 +64,7 @@ try{
     // M292: exercise the actual Progress panes and native controls after the
     // fixed presentation migrates to CSS. Only explicit body logs may change data.
     const chooseTab=async label=>{
-      const index=['Sessions','Lifts','Volume','Body'].indexOf(label)+1;
+      const index=['Sessions','Strength','Lifts','Volume','Body'].indexOf(label)+1;
       const button=await page.$('.wpb-premium-tabs button:nth-child('+index+')');
       await button.focus();await page.keyboard.press('Enter');
       assert.equal(await button.evaluate(b=>b.getAttribute('aria-selected')),'true','native keyboard selects '+label);
@@ -84,6 +84,26 @@ try{
       await page.waitForFunction(()=>!document.querySelector('.wpb-history-session'));
       const clear=await page.$('.wpb-progress-clear-filters');await clear.focus();await page.keyboard.press('Enter');
       await page.waitForFunction(n=>document.querySelectorAll('.wpb-history-session').length===n,{},history.length);
+      const glanceGap=await page.$eval('[data-progress-glance]',e=>parseFloat(getComputedStyle(e).columnGap));
+      assert.ok(glanceGap>=8,'summary cards retain visible spacing');
+      const tabLabels=await page.$$eval('.wpb-progress .wpb-premium-tabs>button',bs=>bs.map(b=>({overflow:b.scrollWidth>b.clientWidth+1,height:b.getBoundingClientRect().height,line:parseFloat(getComputedStyle(b).lineHeight)})));
+      assert.ok(tabLabels.every(b=>!b.overflow&&b.height<Math.max(64,b.line*2)),'section labels retain a readable single line '+JSON.stringify(tabLabels));
+      await chooseTab('Strength');
+      await page.waitForSelector('.wpb-strength-standards .wpb-profile-score-trend');
+      const strength=await page.evaluate(()=>({
+        overflow:document.documentElement.scrollWidth>innerWidth+1,
+        heading:getComputedStyle(document.querySelector('.wpb-profile-trend-head')).display,
+        patterns:[...document.querySelectorAll('.wpb-profile-pattern-head')].map(e=>getComputedStyle(e).display),
+        chart:document.querySelector('svg[aria-label="Strength Score history"]')?.getBoundingClientRect().width,
+        score:document.querySelector('.wpb-standards-score')?.textContent
+      }));
+      assert.ok(!strength.overflow&&strength.heading==='flex'&&strength.patterns.length>=3&&strength.patterns.every(v=>v==='flex')&&strength.chart>100&&strength.score.includes('/ 100'),
+        'shared Strength charts, labels and score remain laid out outside Profile '+JSON.stringify({width,theme,enlarged,strength}));
+      if(width===393&&!enlarged)await page.screenshot({path:root+'/verification/m297-strength-'+theme+'-phone.png'});
+      await page.$eval('.wpb-strength-standards button[aria-label="Edit profile"]',b=>b.click());
+      await page.waitForSelector('.wpb-strength-standards input[placeholder^="Bodyweight"]');
+      await page.$$eval('.wpb-strength-standards button',bs=>bs.find(b=>b.textContent==='See where I rank').click());
+      await page.waitForSelector('.wpb-strength-standards .wpb-profile-score-trend');
       await chooseTab('Lifts');await choosePane('records');
       assert.ok(await page.$eval('.wpb-progress .wpb-page-scroll',e=>e.textContent.includes('Personal records')),'real lift records remain available');
       await choosePane('load');
@@ -118,6 +138,10 @@ try{
       assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).history),before,'Progress inspection and explicit body logs never rewrite workout history');
       if(width===320||width===1280)await page.screenshot({path:root+'/verification/m292-body-'+theme+'-'+width+'-'+(enlarged?'large':'normal')+'-phone.png'});
     }
+    await page.click('[data-tab="profile"]');
+    await page.$$eval('.wpb-profile-toolbar button',bs=>bs.find(b=>b.textContent.includes('Strength standards')).click());
+    await page.waitForSelector('.wpb-strength-standards');
+    assert.equal(await page.$eval('.wpb-progress .wpb-premium-tabs button[aria-selected="true"]',b=>b.textContent),'Strength','Profile opens the direct Strength destination');
     await page.reload({waitUntil:'networkidle0'});await open();
     assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:chart-favorites-v1'))),['bb-bench','back-squat'],'order persists after reload');
     const after=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).history);

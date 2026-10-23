@@ -38,6 +38,10 @@ try{
   assert.equal(await page.$eval(club+' .wpb-profile-club-value',e=>e.textContent),total);
   for(const enlarged of [false,true]){
     await page.evaluate(large=>large?document.documentElement.style.fontSize='200%':document.documentElement.style.removeProperty('font-size'),enlarged);
+    if(width===393&&!enlarged){
+      await page.$eval('.wpb-profile .wpb-page-scroll',e=>e.scrollTop=0);
+      await page.screenshot({path:root+'/verification/m297-profile-'+theme+'-phone.png'});
+    }
     // M290: XP semantics and actual fill agree, with complete level/next-level
     // copy at ordinary and enlarged text; presentation migration cannot clip it.
     const level=await page.$eval('.wpb-profile-hero',hero=>{
@@ -216,15 +220,15 @@ try{
   await page.$eval('.wpb-profile',e=>e.scrollTop=0);
   if(width===393)await page.screenshot({path:root+'/verification/b915-profile-'+theme+'-phone.png'});
   await page.$eval('.wpb-profile-toolbar button',b=>b.click());
-  await page.$eval('[aria-label="Move Level and XP down"]' ,b=>b.click());
-  await page.waitForFunction(()=>document.querySelector('.wpb-profile-customize-row>span')?.textContent==='Lifetime summary');
+  await page.$eval('[aria-label="Move Lifetime summary down"]' ,b=>b.click());
+  await page.waitForFunction(()=>document.querySelector('.wpb-profile-customize-row>span')?.textContent==='Level and XP');
   await page.$eval('[aria-label="Hide Level and XP"]',b=>b.click());
   const storage=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:profile-layout-v1')));
   assert.equal(storage.cardName,'Alex Rivera');assert.deepEqual(storage.favorites,['bb-bench']);
-  assert.equal(storage.order[0],'summary');assert.ok(storage.hidden.includes('level'));
+  assert.ok(storage.order.indexOf('strength')<storage.order.indexOf('summary'));assert.ok(storage.hidden.includes('level'));
   await page.reload({waitUntil:'networkidle0'});await page.click('[data-tab="profile"]');await page.waitForSelector('.wpb-profile-toolbar button');
   await page.$eval('.wpb-profile-toolbar button',b=>b.click());await page.waitForSelector('.wpb-profile-customize-row');
-  assert.equal(await page.$eval('.wpb-profile-customize-row>span',e=>e.textContent),'Lifetime summary');
+  assert.equal(await page.$eval('.wpb-profile-customize-row>span',e=>e.textContent),'Level and XP');
   await page.$eval('[aria-label="Show Level and XP"]',b=>b.click());
   const after=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:profile-layout-v1')));
   assert.equal(after.hidden.includes('level'),false);assert.equal(after.cardName,'Alex Rivera');

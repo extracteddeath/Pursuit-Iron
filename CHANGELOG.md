@@ -1,3 +1,11 @@
+## M297 — First-class Strength and integrated Profile progress
+
+- Put Strength directly in the Progress tab bar, with Home and Profile opening that same destination. Keep setup and empty states accessible before the first workout, alongside the existing strength club and canonical score.
+- Share Strength trend typography and layout between Progress and Profile. Restore separated chart headings, pattern labels and deltas; label the score-history chart for assistive technology.
+- Integrate the existing level/XP projection into the top Profile card, remove the duplicate level metric and brand line, and keep bodyweight/age with identity. Use a balanced metric grid with optional explanations while retaining card preferences and PNG export content.
+- Give Progress summary cards visible gaps and retain readable, horizontally accessible section tabs on narrow screens and enlarged text.
+- Extend existing phone/tablet browser journeys for direct Strength navigation, chart layout, profile editing, summary spacing and integrated XP. Preserve training history, progression behavior and all prior cycle/cohesion fixes. Retain Build 905 / Engine 0.65.9 and refresh the content-addressed offline release.
+
 ## M296 — Stable opening set loads
 
 - Realize historical recommendations using today's progression method. Ordinary double, linear, ladder, wave and e1RM methods use one working load; only the current dynamic method retains positional load targets. Explicitly held plan changes and percentage protocols retain their own owners.

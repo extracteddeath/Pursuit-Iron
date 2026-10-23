@@ -829,7 +829,7 @@ try {
                 const tonal = await tonalSurfaceReport({
                     featured:'.wpb-profile-strength-cell:first-child',
                     secondary:'.wpb-profile-strength-cell:nth-child(2)',
-                    identity:'.wpb-profile-identity'
+                    identity:'.wpb-profile-share-card'
                 });
                 const {featured,secondary,identity}=tonal.output;
                 // A one-lift/one-cell profile is valid, and does not display a
@@ -1167,7 +1167,7 @@ try {
                 const profileR17 = await page.$eval('.wpb-profile', el => {
                     const rect = x => x?.getBoundingClientRect();
                     const header=el.querySelector('.wpb-profile-head');
-                    const identity=el.querySelector('.wpb-profile-identity');
+                    const identity=el.querySelector('.wpb-profile-card-caption');
                     const edit=el.querySelector('.wpb-profile-edit');
                     const stats=[...el.querySelectorAll('.wpb-profile-stat')].map(rect);
                     const grid=el.querySelector('.wpb-profile-strength-grid');
@@ -1387,7 +1387,7 @@ try {
         }));
         assert.ok(beforeTrack.fill.length > 3 && beforeTrack.fill !== 'transparent',
             'M3 track borrows the active Pursuit theme surface');
-        await page.click('.wpb-progress .wpb-premium-tabs>button:nth-child(2)');
+        await page.click('.wpb-progress .wpb-premium-tabs>button:nth-child(3)');
         await page.waitForFunction(() => {
             const group = document.querySelector('.wpb-progress .wpb-premium-tabs');
             const selected = group?.querySelector('[aria-selected="true"]');
@@ -1407,8 +1407,8 @@ try {
         assert.ok(afterTrack.x > beforeTrack.x && Math.abs(afterTrack.w - afterTrack.targetW) < .15,
             'shared M3 selection slides and resizes to the exact chosen segment: '+
                 JSON.stringify({beforeTrack,afterTrack}));
-        assert.ok(afterTrack.w > beforeTrack.widths[1] + 4,
-            'selected Progress segment physically expands while adjacent segments yield');
+        assert.ok(afterTrack.w >= beforeTrack.widths[2] - .15,
+            'selected Progress segment retains its readable width while the spring updates');
         assert.equal(afterTrack.childCount, beforeTrack.children,
             'selection motion never adds a DOM element or reduces tap targets');
         assert.ok(afterTrack.indicator !== 'none' && afterTrack.activeBackground === 'rgba(0, 0, 0, 0)',
@@ -1417,7 +1417,7 @@ try {
             await page.screenshot({ path: path.join(root, 'verification/b831-m3-selected-progress-phone.png') });
         // True tablist keyboard navigation (including screen-reader-friendly selection)
         // must update the panel and follow the very same animated track.
-        await page.focus('.wpb-progress .wpb-premium-tabs>button:nth-child(2)');
+        await page.focus('.wpb-progress .wpb-premium-tabs>button:nth-child(3)');
         await page.keyboard.press('ArrowRight');
         await page.waitForFunction(() => {
             const group = document.querySelector('.wpb-progress .wpb-premium-tabs');
@@ -2811,7 +2811,7 @@ try {
                     labelInside:!!label&&rect(label).bottom<=rect(active).bottom+1,
                     labelGap:label&&icon?rect(label).top-rect(icon).bottom:null,
                     truncatedLabels:labels.filter(el=>el.scrollWidth>el.clientWidth+1).map(el=>el.textContent),
-                    profileIdentity:text('.wpb-profile-identity'),
+                    profileIdentity:text('.wpb-profile-card-caption'),
                     progressLabel:text('.wpb-progress-glance-label'),
                     planLabel:text('.wpb-plan-glance-tile>div:first-child')};
             },tab);

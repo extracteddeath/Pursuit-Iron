@@ -523,8 +523,14 @@ export function analyzeShellHistoryForNextEngine(program, history, legacyExercis
     // benefit too; retain minimum exposure and the separate recovery exit rules.
     const plannedWeeks = Number(program?.nextEngine?.cycleTemplate?.weeks);
     if (program?.cycleId && cycleState.phase !== 'recovery' && Number.isInteger(plannedWeeks) && plannedWeeks > 0) {
-        const plannedWorkouts = plannedWeeks * snap.program.sessions.length;
-        cycleState.reviewAfterWorkouts = Math.max(cycleState.minimumWorkouts, Math.min(cycleState.reviewAfterWorkouts, plannedWorkouts));
+        const days = snap.program.sessions.length;
+        const plannedWorkouts = plannedWeeks * days;
+        const phaseState = startPhase(createInitialCycleState(snap.request.goal.type, days), cycleState.phase, snap.request.goal.type, days);
+        // Explicit fixed blocks may be one week, or change the number of training days.
+        // Re-read their actual schedule so older saved previews receive the correction too.
+        // Causal performance/recovery evidence still decides eligibility below.
+        cycleState.minimumWorkouts = Math.min(phaseState.minimumWorkouts, plannedWorkouts);
+        cycleState.reviewAfterWorkouts = Math.max(cycleState.minimumWorkouts, Math.min(phaseState.reviewAfterWorkouts, plannedWorkouts));
     }
     const recent = [];
     const exposures = new Map();

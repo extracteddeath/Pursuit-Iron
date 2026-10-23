@@ -23,7 +23,7 @@ assert.deepEqual(afterBlock3.preferences.avoidedExercises,['user-ban','poor-fit-
 
 const cycle=fs.readFileSync(new URL('../modules/next-engine/cycle-runtime-adapter.js',import.meta.url),'utf8');
 assert.ok(cycle.includes("carryForwardAvoidedExercises(phaseRequest, current?.nextEngine?.request, analysis)"),'adaptive cycle request must inherit accumulated avoidances after structural phase setup');
-assert.match(cycle,/const phaseRequest = target === 'recovery' \? clone\(base\)/,'recovery requests retain the immutable base');
+assert.match(cycle,/target === 'recovery'\s*\? requestForBlock\(base, current\.config/,'recovery changes the active schedule while retaining immutable training preferences');
 assert.match(cycle,/requestForBlock\(base, cycle\?\.nextEngineCycle\?\.baseConfig/,'adapted next-block structure must derive from the immutable request');
 assert.ok(cycle.includes('replaceExerciseIds: analysis.replaceExerciseIds'),'adaptive cycle phase transition must receive explicit poor-fit replacement evidence');
 const history=fs.readFileSync(new URL('../modules/next-engine/workout-history-adapter.js',import.meta.url),'utf8');

@@ -1,3 +1,11 @@
+## M298 — Executable custom cycle transitions and repeat
+
+- Base cycle review thresholds on each block's actual training days and authored duration. One-week blocks can finish after their prescribed work with favorable evidence; older saved previews receive the same correction when read. Standalone programs and recovery exit criteria retain their existing evidence rules.
+- Preserve the active block's schedule and split when inserting recovery after a training-day change. Resume the reserved planned block after recovery without changing its identity or authored phase order.
+- Repeat custom cycles from their saved authored block specifications, preserving durations, weekly structure, lift-frequency targets and both independent adaptation choices. Inserted recovery is excluded from the repeated plan; completed cycles and workout history remain saved.
+- Show the actual split, training-day count and explicit lift-practice targets in read-only block previews using shared layout tokens.
+- Extend existing engine and real-app browser journeys through short-block advancement, schedule changes, stale saved-state repair, fatigue recovery/resumption, worker-driven custom repeat and reload. Retain Build 905 / Engine 0.65.9 and refresh offline release hashes.
+
 ## M297 — First-class Strength and integrated Profile progress
 
 - Put Strength directly in the Progress tab bar, with Home and Profile opening that same destination. Keep setup and empty states accessible before the first workout, alongside the existing strength club and canonical score.

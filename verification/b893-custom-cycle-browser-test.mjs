@@ -10,7 +10,7 @@ const html=`<!doctype html><html><head><meta name="viewport" content="width=devi
 import React from '/vendor/react.js';import {createRoot} from '/vendor/react-dom-client.js';
 import {Wizard,StyleTag,EXERCISES} from '/modules/App.js';
 import {generateNextCycleForShell} from '/modules/next-engine/cycle-runtime-adapter.js';
-createRoot(document.getElementById('root')).render(React.createElement('div',{className:'wpb'},React.createElement(StyleTag),React.createElement(Wizard,{initialEquipment:${JSON.stringify(config.equipment)},initialExperience:'intermediate',initialUnit:'lb',skipUnits:true,cycleMode:true,onCancel:()=>{},onDone:cfg=>{if(window.failNextBuild){window.failNextBuild=false;window.failed=true;return null;}window.chosen=cfg;let n=0;window.built=generateNextCycleForShell({templateId:cfg.cycleTemplate,blocks:cfg.cycleBlocks,config:cfg,legacyExercises:EXERCISES,seed:893,makeId:()=> 'b893-'+(++n),adaptBetweenBlocks:cfg.cycleAdapt});}})));
+createRoot(document.getElementById('root')).render(React.createElement('div',{className:'wpb'},React.createElement(StyleTag),React.createElement(Wizard,{initialEquipment:${JSON.stringify(config.equipment)},initialExperience:'intermediate',initialUnit:'lb',skipUnits:true,cycleMode:true,onCancel:()=>{},onDone:cfg=>{if(window.failNextBuild){window.failNextBuild=false;window.failed=true;return null;}window.chosen=cfg;let n=0;window.built=generateNextCycleForShell({templateId:cfg.cycleTemplate,blocks:cfg.cycleBlocks,config:cfg,legacyExercises:EXERCISES,seed:893,makeId:()=> 'b893-'+(++n),adaptBetweenBlocks:cfg.cycleAdapt,adaptTrainingSplit:cfg.cycleAdaptSplit});}})));
 </script></body></html>`;
 const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.json':'application/json'};
 const server=http.createServer((req,res)=>{const url=new URL(req.url,'http://localhost');if(url.pathname==='/probe.html'){res.setHeader('Content-Type','text/html');res.end(html);return;}const file=path.resolve(root,'.'+url.pathname);if(!file.startsWith(root+path.sep)||!fs.existsSync(file)||!fs.statSync(file).isFile()){res.writeHead(404);res.end();return;}res.setHeader('Content-Type',mime[path.extname(file)]||'application/octet-stream');res.end(fs.readFileSync(file));});
@@ -61,8 +61,10 @@ try{
   assert.equal(await page.evaluate(()=>!!JSON.parse(localStorage.getItem('wpb:cycle-setup:v1')||'{}')['wizard:cycle']),true,'failed builds keep the recoverable draft');
   await page.waitForSelector('.wpb-build-alert');await page.click('.wpb-wizard-next-action');await page.waitForFunction(()=>!!window.built,{timeout:60000});
  }
- const actual=await page.evaluate(()=>({goal:window.chosen.goal,selected:window.chosen.cycleBlocks,meta:window.built.cycle.blockMeta.map(b=>({phase:b.phase,weeks:b.weeks})),blocks:window.built.blocks.map(b=>({phase:b.nextEngine.program.phase,weeks:b.config.weeks}))}));
+ const actual=await page.evaluate(()=>({goal:window.chosen.goal,adaptSplit:window.built.cycle.adaptTrainingSplit,decisions:window.built.cycle.blockMeta.map(b=>b.splitDecision.mode),selected:window.chosen.cycleBlocks,meta:window.built.cycle.blockMeta.map(b=>({phase:b.phase,weeks:b.weeks})),blocks:window.built.blocks.map(b=>({phase:b.nextEngine.program.phase,weeks:b.config.weeks}))}));
  assert.equal(actual.goal,'strength');
+ assert.equal(actual.adaptSplit,true,'the wizard hands automatic split adaptation to real cycle generation');
+ assert.ok(actual.decisions.every(mode=>mode==='goal_optimized'),'every automatic block is actually optimized');
  assert.deepEqual(actual.selected,[{phase:'peak',weeks:1},{phase:'hypertrophy_accumulation',weeks:7},{phase:'hypertrophy_accumulation',weeks:3}]);
  assert.deepEqual(actual.meta,actual.selected);assert.deepEqual(actual.blocks,actual.selected);assert.deepEqual(errors,[]);
  assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:cycle-setup:v1')||'{}')['wizard:cycle']),undefined,'successful creation clears its setup draft');

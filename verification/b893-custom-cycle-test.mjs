@@ -119,3 +119,63 @@ assert.deepEqual(exerciseOrder(retainedRoster.blocks[1]),exerciseOrder(retainedR
  'automatic split adaptation must not replace exercises when the weekly split is explicitly unchanged and exercise adaptation is off');
 assert.ok(retainedRoster.blocks.every(b=>b.nextEngine.program.audit.result==='pass'));
 console.log('PASS B893 independence: disabling exercise adaptation preserves roster across same-split blocks.');
+
+// M298: creation alone cannot prove a custom cycle is executable. Walk the
+// authored short blocks, a schedule change, evidence-driven recovery and repeat.
+const { config: lifecycleConfig, completedHistory, ids } = await import('./m265-generation-fixture.mjs');
+const { advanceNextCycleForShell, repeatCycleOptions } = await import('../modules/next-engine/cycle-runtime-adapter.js');
+const { analyzeShellHistoryForNextEngine } = await import('../modules/next-engine/workout-history-adapter.js');
+const lifecycle = generateNextCycleForShell({
+ templateId:'custom',config:lifecycleConfig,
+ blocks:[{phase:'mixed_accumulation',weeks:1},
+  {phase:'strength_accumulation',weeks:2,split:'full_body',days:3,priorityLift:'bench_press',frequency:2},
+  {phase:'peak',weeks:1,split:'full_body',days:3}],
+ legacyExercises:EXERCISES,seed:298,makeId:ids('b893-lifecycle'),adaptTrainingSplit:true,adaptBetweenBlocks:false
+});
+const lifecycleBefore=JSON.stringify(lifecycle);
+const first=lifecycle.blocks[0],firstHistory=completedHistory(first);
+assert.equal(analyzeShellHistoryForNextEngine(first,firstHistory.slice(0,-1),EXERCISES).readyForNextBlock,false,'a partial one-week block cannot skip its required work');
+assert.equal(analyzeShellHistoryForNextEngine(first,firstHistory,EXERCISES).readyForNextBlock,true,'a completed one-week custom block can advance with favorable evidence');
+const entered=advanceNextCycleForShell({cycle:lifecycle.cycle,activeProgram:first,history:firstHistory,legacyExercises:EXERCISES,makeId:ids('b893-enter')});
+assert.equal(entered.nextProgram.id,lifecycle.blocks[1].id,'advancement replaces the reserved preview, not its identity');
+assert.equal(entered.nextProgram.days.length,3);
+assert.equal(entered.nextProgram.nextEngine.cycleState.minimumWorkouts,6,'review uses the actual three-day block, not the four-day cycle baseline');
+assert.equal(entered.nextProgram.nextEngine.request.goal.liftFrequency.bench_press,2);
+const secondHistory=completedHistory(entered.nextProgram);
+const stale=structuredClone(entered.nextProgram);
+stale.nextEngine.cycleState.minimumWorkouts=99;stale.nextEngine.cycleState.reviewAfterWorkouts=99;
+assert.equal(analyzeShellHistoryForNextEngine(stale,secondHistory,EXERCISES).readyForNextBlock,true,'existing saved previews receive the schedule correction when read');
+const final=advanceNextCycleForShell({cycle:entered.cycle,activeProgram:entered.nextProgram,history:[...firstHistory,...secondHistory],legacyExercises:EXERCISES,makeId:ids('b893-final')});
+assert.equal(final.nextProgram.id,lifecycle.blocks[2].id);
+const finished=advanceNextCycleForShell({cycle:final.cycle,activeProgram:final.nextProgram,history:[...firstHistory,...secondHistory,...completedHistory(final.nextProgram)],legacyExercises:EXERCISES,makeId:ids('b893-finished')});
+assert.equal(finished.done,true,'the complete custom sequence can finish without inventing extra weeks');
+const standalone={...first,cycleId:undefined};
+assert.equal(analyzeShellHistoryForNextEngine(standalone,firstHistory,EXERCISES).readyForNextBlock,false,'standalone evidence thresholds retain their separate owner');
+
+const tired=structuredClone(secondHistory);
+tired.forEach((entry,i)=>Object.values(entry.perf).forEach(perf=>{
+ perf.weight=140-i*10;perf.reps=1;
+ perf.sets.forEach(set=>{set.w=perf.weight;set.r=1;set.rir=0;});
+}));
+const recovery=advanceNextCycleForShell({cycle:entered.cycle,activeProgram:entered.nextProgram,history:tired,legacyExercises:EXERCISES,makeId:ids('b893-recovery')});
+assert.equal(recovery.insertedRecovery,true,'repeated broad failures still insert recovery rather than forcing a planned phase');
+assert.equal(recovery.nextProgram.days.length,3);
+assert.equal(recovery.nextProgram.config.days,3);
+assert.equal(recovery.nextProgram.nextEngine.request.schedule.days.length,3,'recovery preserves the active block schedule rather than reverting to the cycle baseline');
+assert.equal(recovery.nextProgram.config.split,'full_body');
+assert.equal(recovery.nextProgram.nextEngine.program.audit.result,'pass');
+const recoveredHistory=completedHistory(recovery.nextProgram);
+assert.equal(analyzeShellHistoryForNextEngine(recovery.nextProgram,recoveredHistory.slice(0,1),EXERCISES).readyForNextBlock,false,'short fixed blocks do not bypass recovery exit evidence');
+recoveredHistory.forEach((entry,i)=>Object.values(entry.perf).forEach(perf=>{perf.weight=100+i*5;perf.sets.forEach(set=>set.w=perf.weight);}));
+const resumed=advanceNextCycleForShell({cycle:recovery.cycle,activeProgram:recovery.nextProgram,history:[...tired,...recoveredHistory],legacyExercises:EXERCISES,makeId:ids('b893-resumed')});
+assert.equal(resumed.nextProgram.id,lifecycle.blocks[2].id,'recovery resumes the correct reserved phase despite its shifted position');
+assert.equal(resumed.nextProgram.config.days,3);
+const repeatInput=repeatCycleOptions(JSON.parse(JSON.stringify(recovery.cycle)));
+const repeated=generateNextCycleForShell({...repeatInput,legacyExercises:EXERCISES,seed:298,makeId:ids('b893-repeated')});
+assert.deepEqual(repeated.cycle.nextEngineCycle.plannedBlocks,lifecycle.cycle.nextEngineCycle.plannedBlocks,'repeat retains custom durations, order, split and lift-frequency contracts, excluding inserted recovery');
+assert.equal(repeated.cycle.adaptTrainingSplit,true);
+assert.equal(repeated.cycle.adaptExercises,false,'repeat retains both independent adaptation choices');
+assert.notEqual(repeated.cycle.id,lifecycle.cycle.id);
+assert.equal(JSON.stringify(lifecycle),lifecycleBefore,'advancing, recovery and repeat cannot mutate completed or preview training artifacts');
+assert.match(app,/\.\.\.repeatCycleOptions\(cycle\)/,'the app loop submits the same tested repeat options to its worker');
+console.log('PASS B893 lifecycle: short-block completion, schedule changes, persisted-state repair, recovery insertion/resume, custom repeat and immutable prior records.');

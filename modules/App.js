@@ -21157,7 +21157,7 @@ function App() {
             // Resolved once, at the boundary — see normalizeHistoryDayIds. Needs the saved programs to
             // resolve against, so it runs on the store object rather than on state.
             if (d.history)
-                setHistory(normalizeHistoryDayIds(d.history, runtimeSaved));
+                setHistoryRaw(normalizeHistoryDayIds(d.history, runtimeSaved));
             if (d.seenIntro)
                 setSeenIntroV(typeof d.seenIntro === "number" ? d.seenIntro : 1);
             if (typeof d.seenWhatsNew === "number")

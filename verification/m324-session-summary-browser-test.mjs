@@ -8,8 +8,9 @@ import { summarizeSession } from '../modules/engine-api.js';
 
 const root = path.resolve(new URL('../', import.meta.url).pathname);
 const day = program.days[0], expected = summarizeSession(program, day, 2);
+const loggedAt = Date.now() - 86400000;
 const history = [{ id: 'm324-week-one', programId: program.id, dayId: day.id,
-    date: Date.now() - 86400000, weekIndex: 1, unit: 'lb',
+    date: loggedAt, updatedAt: loggedAt, weekIndex: 1, unit: 'lb',
     perf: Object.fromEntries(day.exercises.map((id, slot) => [id, { weight: 100, reps: 8,
         sets: Array.from({ length: slot ? 2 : 3 }, () => ({ w: 100, r: slot ? 15 : 8, rir: 2, rirReported: true, done: true })) }])) }];
 const store = { v: 13, savedAt: 1, saved: [program], cycles: [], history, perf: {}, drafts: {}, tombs: {},
@@ -46,6 +47,7 @@ try {
         await page.goto(url, { waitUntil: 'networkidle0' });
         await page.waitForSelector('.wpb-home');
         const loadedHistory = await page.evaluate(() => JSON.parse(localStorage.getItem('wpb:v1')).history);
+        assert.deepEqual(loadedHistory, history, 'Hydration must preserve genuine saved edit timestamps');
         const outline = await page.$eval('.wpb-home-session-outline', node => node.textContent);
         assert.match(outline, /Dumbbell Bench Press/);
         assert.match(outline, /Back Squat/);

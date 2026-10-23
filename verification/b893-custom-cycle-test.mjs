@@ -244,7 +244,7 @@ console.log('PASS M300: automatic same-split strength-entry rescue is eligible w
 // any split/day/lift override. Previously the early-return branch kept the
 // cycle-entry goal, changing strength-specific work and muscle-dose decisions.
 {
- const initialConfig={...config,goal:'hypertrophy'};
+ const initialConfig={...config,goal:'hypertrophy',split:'upper_lower',days:4};
  const immutable=shellConfigToNextRequest(initialConfig,[],EXERCISES,301);
  const before=JSON.stringify(immutable);
  for(const [phase,type] of [

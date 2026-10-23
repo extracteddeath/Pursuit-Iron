@@ -130,7 +130,8 @@ try{
    await page.click(`[data-plan-pane="${pane}"]`);
    for(const index of [1,2,0]){
     await page.$$eval('.wpb-plan-block-nav button',(ns,index)=>ns[index].click(),index);
-    await page.waitForFunction(pane=>document.querySelector(`[data-plan-pane="${pane}"]`)?.getAttribute('aria-pressed')==='true',{},pane);
+    await page.waitForFunction((pane,index)=>document.querySelector(`[data-plan-pane="${pane}"]`)?.getAttribute('aria-pressed')==='true'
+     && document.querySelectorAll('.wpb-plan-block-nav button')[index]?.getAttribute('aria-pressed')==='true',{},pane,index);
    }
   }
   await page.click('[data-plan-pane="schedule"]');

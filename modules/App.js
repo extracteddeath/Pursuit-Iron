@@ -6719,7 +6719,8 @@ function PlanView({ program, plan, blockNavigation = null, readOnly = false, nav
        existed only behind a button on the PROGRAM screen, which is a different destination reached a
        different way, so the tab named Plan could not answer any of them. Schedule stays the default
        because it is the one you open the tab for. */
-    const [pane, setPane] = useState(() => ["schedule", "volume", "progression", "blueprint"].includes(navigationMemory?.selectedPane) ? navigationMemory.selectedPane : ["schedule", "volume", "progression", "blueprint"].includes(remembered?.pane) ? remembered.pane : "schedule");
+    const rememberedPane = program?.cycleId ? navigationMemory?.cyclePanes?.[program.cycleId] ?? remembered?.pane : remembered?.pane;
+    const [pane, setPane] = useState(() => ["schedule", "volume", "progression", "blueprint"].includes(rememberedPane) ? rememberedPane : "schedule");
     const [volOpen, setVolOpen] = useState(remembered?.volOpen ?? true);
     const [progOpen, setProgOpen] = useState(remembered?.progOpen ?? true);
     const [waveOpen, setWaveOpen] = useState(remembered?.waveOpen ?? true);
@@ -6733,7 +6734,7 @@ function PlanView({ program, plan, blockNavigation = null, readOnly = false, nav
             setOpenWeek(plan.currentWeek);
             onCurrentWeekAdvance?.();
         }
-        if (navigationMemory) navigationMemory.selectedPane = pane;
+        if (navigationMemory && program?.cycleId) { navigationMemory.cyclePanes ||= Object.create(null); navigationMemory.cyclePanes[program.cycleId] = pane; }
         if (navigationMemory && program?.id)
             navigationMemory[program.id] = { currentWeek: plan?.currentWeek, openWeek, pane, volOpen, progOpen, waveOpen, blockOpen };
     }, [navigationMemory, program?.id, plan?.currentWeek, onCurrentWeekAdvance, openWeek, pane, volOpen, progOpen, waveOpen, blockOpen]);

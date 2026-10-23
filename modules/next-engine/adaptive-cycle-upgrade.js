@@ -87,7 +87,8 @@ export function refreshAdaptiveCyclePreviews(options) {
         previousShell: current, previousVolumeSnapshot });
     const blocks = generated.blocks.map((p, offset) => {
         const index = active + 1 + offset, meta = cycle.blockMeta[index];
-        return { ...p, id: ids[index], cycleId: cycle.id, cycleIndex: index,
+        return { ...p, icon: future[offset].icon, iconColor: future[offset].iconColor, folder: future[offset].folder,
+            createdAt: future[offset].createdAt ?? p.createdAt, id: ids[index], cycleId: cycle.id, cycleIndex: index,
             name: future[offset].name, blockLabel: meta.label,
             nextEngine: { ...p.nextEngine, cycleTemplate: { ...p.nextEngine.cycleTemplate,
                 templateId: cycle.templateId, plannedIndex: meta.plannedIndex, blockIndex: index, preview: true } } };

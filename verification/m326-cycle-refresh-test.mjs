@@ -21,6 +21,7 @@ export const cycle={...built.cycle,blockIds:originalIds,blockMeta:built.cycle.bl
  nextEngineCycle:{...built.cycle.nextEngineCycle,legacyFirstBlockId:legacy.id,legacyFirstBlock:true}};
 legacy.cycleId=cycle.id;
 export const saved=[legacy,...built.blocks.slice(1)];
+saved[1].icon="bolt";saved[1].iconColor="purple";saved[1].folder="My cycle";
 const history=[{id:'past',programId:legacy.id,dayId:legacy.days[0].id,date:1700000000000,updatedAt:1700000000000,weekIndex:1,perf:{}}];
 const before=JSON.stringify({cycle,saved,history});
 assert.equal(authoredCycleExitSnapshot(legacy,EXERCISES).sessions.reduce((n,d)=>n+d.exercises.reduce((s,e)=>s+e.sets,0),0),90);
@@ -28,6 +29,7 @@ const options={cycle,saved,history,legacyExercises:EXERCISES,equipment,makeId:id
 const result=refreshAdaptiveCyclePreviews(options);
 assert.equal(JSON.stringify({cycle,saved,history}),before);
 assert.deepEqual(result.cycle.blockIds,cycle.blockIds);
+for(const key of ["icon","iconColor","folder","createdAt"]) assert.equal(result.blocks[0][key],saved[1][key],`Refresh preserves block ${key}`);
 assert.deepEqual(result.cycle.nextEngineCycle.plannedBlocks,cycle.nextEngineCycle.plannedBlocks);
 assert.equal(result.cycle.activeBlock,0);
 assert.equal(result.cycle.adaptiveUpgrade.awaitingBoundary,false);

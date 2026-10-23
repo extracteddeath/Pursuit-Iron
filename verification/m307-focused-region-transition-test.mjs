@@ -54,6 +54,13 @@ for(const {label,row,focus,seed} of scenarios){
    assert.equal(actual.focusedVolumeReductions.includes('upper_back'),
      upperBack.previousSets>=4&&upperBack.currentSets<upperBack.previousSets*.5,
      'Upper-back warnings must independently match its measured volume');
+   // This real five-day gym fixture was proven feasible at 6 credited lat
+   // sets without stripping a strength anchor or another focused region.
+   // Do not silently regress to M308's 5/11.8 working-set shortfall.
+   assert.ok(lats.currentSets>=lats.previousSets*.5,
+     'The feasible focused-lat continuity repair must protect at least half the prior productive dose');
+   assert.ok(current.nextEngine.focusedStrengthDose.changes.length>0,
+     'This seeded transition must make a real audited set change, not just alter a ranking score');
  }
 
  const focused=actual.regions.filter(x=>{

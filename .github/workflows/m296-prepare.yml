@@ -1,0 +1,58 @@
+name: Prepare M296 release
+on:
+  push:
+    branches: [fix/m296-opening-set-loads]
+permissions:
+  contents: write
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+      - name: Apply final target safeguards and certify
+        shell: bash
+        run: |
+          cat > /tmp/m296.patch <<'M296_PATCH'
+          diff --git a/modules/training-domain/prescriptions.js b/modules/training-domain/prescriptions.js
+          index db71567..292e52d 100644
+          --- a/modules/training-domain/prescriptions.js
+          +++ b/modules/training-domain/prescriptions.js
+          @@ -760,7 +760,9 @@ function engineSessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, h
+                       return { ...target, weight, reps: weight < target.weight ? floor : target.reps };
+                   }
+                   const weight = !positionalLoads || s.action === "increase_load" ? w : loadableAtOrBelow(ex, target.weight, unit);
+          -        return { ...target, weight, reps: weight < target.weight ? floor : target.reps };
+          +        // Reps demonstrated at a lighter positional load are not a target at today's heavier straight-set load.
+          +        const resetReps = weight < target.weight || (!positionalLoads && Math.abs(weight - target.weight) > 1e-6);
+          +        return { ...target, weight, reps: resetReps ? floor : target.reps };
+               });
+               if (perSetIncrease && setTargets?.length)
+                   w = Math.max(...setTargets.map(target => target.weight).filter(Number.isFinite));
+          diff --git a/verification/m224-engine-hardening-test.mjs b/verification/m224-engine-hardening-test.mjs
+          index ed7a204..a58ac31 100644
+          --- a/verification/m224-engine-hardening-test.mjs
+          +++ b/verification/m224-engine-hardening-test.mjs
+          @@ -356,6 +356,9 @@ for (const style of ['double', 'linear', 'ladder', 'wave', 'e1rm', 'dynamic']) {
+                   assert.deepEqual(openingRows.filter(r => !r.warm && !r.sub).map(r => r.weight),
+                       style === 'dynamic' ? ['100', '95', '95'] : ['100', '100', '100'],
+                       style + ': only the current dynamic method may retain positional loads');
+          +        if (style !== 'dynamic' && s.setTargets?.length)
+          +            assert.deepEqual(openingRows.filter(r => !r.warm && !r.sub).map(r => r.reps), ['10', '8', '8'],
+          +                'Do not carry lighter-load rep targets onto heavier straight sets');
+                   assert.deepEqual(oldHistory, before, 'Opening a workout does not rewrite historical methods or logged performance');
+               }
+           }
+          M296_PATCH
+          git apply --check /tmp/m296.patch
+          git apply /tmp/m296.patch
+          node scripts/finalize-release.mjs
+          node scripts/verify-release.mjs
+          git rm .github/workflows/m296-prepare.yml
+          git config user.name 'extracteddeath'
+          git config user.email '92632906+extracteddeath@users.noreply.github.com'
+          git add modules/training-domain/prescriptions.js verification/m224-engine-hardening-test.mjs BUILD_PROFILE.json RELEASE_MANIFEST.json sw.js
+          git commit -m 'M296: keep rep targets valid at normalized opening loads; certify release'
+          git push origin HEAD:fix/m296-opening-set-loads

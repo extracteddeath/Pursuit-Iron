@@ -167,12 +167,14 @@ const BLOCK_LIFTS = new Set(['bench_press', 'back_squat', 'deadlift', 'overhead_
 function changesWeek(spec) {
     return Boolean(spec?.split || spec?.days || spec?.priorityLift);
 }
-function requiresExerciseRebuild(previous, spec, adaptExercises) {
-    if (adaptExercises) return true;
-    if (spec?.priorityLift) return true;
-    if (spec?.split && spec.split !== previous?.split?.family) return true;
-    if (spec?.days && spec.days !== previous?.sessions?.length) return true;
-    return false;
+function requiresExerciseRebuild(previous, spec, adaptExercises, baseConfig) {
+    if (adaptExercises || spec?.priorityLift) return true;
+    // An omitted block override means the cycle's baseline schedule, not the
+    // preceding block's override. A locked-roster retarget cannot change that
+    // schedule, so regenerate when the effective topology differs.
+    const desired = blockConfigForSpec(baseConfig, spec);
+    return desired.split !== previous?.split?.family
+        || Number(desired.days) !== previous?.sessions?.length;
 }
 function blockConfigForSpec(config, spec) {
     return { ...config, ...(spec?.split ? { split: spec.split } : {}),
@@ -458,7 +460,7 @@ export function generateNextCycleForShell(options) {
             const request = requestForBlock(baseRequest, options.config, candidateSpec, options.legacyExercises);
             const normalized = normalizeRequest(request);
             let next;
-            if (requiresExerciseRebuild(previous, candidateSpec, !!options.adaptBetweenBlocks)) {
+            if (requiresExerciseRebuild(previous, candidateSpec, !!options.adaptBetweenBlocks, options.config)) {
                 const ids = previous.sessions.flatMap(session => session.exercises.map(ex => ex.exerciseId));
                 const protectedIds = previous.sessions.flatMap(session => session.exercises
                     .filter(ex => ex.role === 'primary_strength' || ex.role === 'secondary_strength').map(ex => ex.exerciseId));
@@ -607,7 +609,7 @@ export function convertProgramToNextCycleForShell(options) {
             const request = requestForBlock(baseRequest, baseConfig, candidateSpec, options.legacyExercises);
             const normalized = normalizeRequest(request);
             let next;
-            if (requiresExerciseRebuild(previous, candidateSpec, !!options.adaptBetweenBlocks)) {
+            if (requiresExerciseRebuild(previous, candidateSpec, !!options.adaptBetweenBlocks, baseConfig)) {
                 const ids = previous.sessions.flatMap(session => session.exercises.map(ex => ex.exerciseId));
                 const protectedIds = previous.sessions.flatMap(session => session.exercises
                     .filter(ex => ex.role === 'primary_strength' || ex.role === 'secondary_strength')
@@ -720,7 +722,7 @@ function buildAdaptedBlock(current, cycle, target, weeks, label, analysis, legac
         const request = requestForAdvance(cycle, current, target, weeks, analysis, candidateSpec);
         const normalized = normalizeRequest(request);
         let next;
-        if (requiresExerciseRebuild(source, candidateSpec, !!cycle?.nextEngineCycle?.adaptBetweenBlocks)) {
+        if (requiresExerciseRebuild(source, candidateSpec, !!cycle?.nextEngineCycle?.adaptBetweenBlocks, baseCfg)) {
             next = transitionProgramPhase(source, normalized, target, {
                 successfulExerciseIds: analysis.successfulExerciseIds,
                 protectedExerciseIds: analysis.protectedExerciseIds,

@@ -185,7 +185,15 @@ export function requestForBlock(baseRequest, baseConfig, spec, legacyExercises =
     // The phase owns its training goal even when the split, days and exercises stay
     // fixed. Otherwise a strength block can inherit hypertrophy/mixed priorities,
     // capacity rules and lift claims from the immutable cycle-entry request.
-    request.goal = { ...request.goal, type: phaseGoal(spec.phase) === 'both' ? 'mixed' : phaseGoal(spec.phase) };
+    const prescribedGoal = phaseGoal(spec.phase);
+    // A mixed-style base is not necessarily a mixed-goal cycle: Strength Peak
+    // deliberately develops its strength base with mixed accumulation methods.
+    // Preserve explicit strength intent there while letting hypertrophy/strength
+    // accumulation phases override stale entry goals in all topology paths.
+    const goalType = prescribedGoal === 'both'
+        ? (baseRequest.goal.type === 'strength' ? 'strength' : 'mixed')
+        : prescribedGoal;
+    request.goal = { ...request.goal, type: goalType };
     if (!changesWeek(spec))
         return request;
     const cfg = blockConfigForSpec(baseConfig, spec);

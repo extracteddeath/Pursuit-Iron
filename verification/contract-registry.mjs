@@ -35,6 +35,7 @@ export const contractGroups = Object.freeze({
         'm228-canonical-boundary-test.mjs',
         'm224-engine-hardening-test.mjs',
         'm225-history-provenance-test.mjs',
+        'm327-session-swap-provenance-test.mjs',
         'm226-engine-boundary-integrity-test.mjs',
         'm227-request-canonicalization-test.mjs',
         'm222-custom-program-parity-test.mjs',

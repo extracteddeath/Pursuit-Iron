@@ -571,6 +571,8 @@ export function scoreRealizedStrengthFinalist(candidate, previousShell, config, 
         + 5 * (carryover.weakestSupportingPercent - (quality.weakestSupportingRegionCoveragePercent ?? 100)) / 100;
     const finalScore = Math.round((quality.score + delta) * 100) / 100;
     return { score: finalScore, baseScore: quality.score,
+        executableLiftFrequencies: Object.fromEntries([...BLOCK_LIFTS].map(lift =>
+            [lift, Math.min(first.liftFrequencies[lift] ?? 0, last.liftFrequencies[lift] ?? 0)])),
         executableCoverage: coverage, executableLiftPractice: practice,
         executableWeakestPriorityLift: weakestLift, executableCarryover: carryover.percent,
         firstWeekSets: first.weeklySets, lastWeekSets: last.weeklySets };
@@ -605,24 +607,39 @@ function chooseOptimizedCycleBlock(spec, config, enabled, buildCandidate, realiz
         const finalists = ranked.map((candidate, index) => ({ candidate, index }))
             .sort((a, b) => b.candidate.quality.score - a.candidate.quality.score || a.index - b.index)
             .slice(0, 2);
-        let best = null, firstFinalError = null;
+        const baseWinner = winner;
+        const evaluated = [];
+        let firstFinalError = null;
         for (const { candidate } of finalists) {
             try {
                 const realized = scoreRealizedStrengthFinalist(candidate,
                     realizedContext.previousShell, config, realizedContext.legacyExercises);
-                if (!best || realized.score > best.realized.score + .0001)
-                    best = { candidate, realized };
+                evaluated.push({ candidate, realized });
             } catch (error) {
                 firstFinalError ||= error;
             }
         }
-        if (!best) throw firstFinalError ||
+        if (!evaluated.length) throw firstFinalError ||
             new NextShellAdapterError('NEXT_CYCLE_REALIZED_SEARCH_REJECTED',
                 'No finalist produced a safe executable strength week.');
-        const baseWinner = winner;
+        // Do not buy a small dose gain by undoing the original audited winner's
+        // high-priority strength practice. Compare the *actual* first/final
+        // executable weeks, not engine-base exposure labels. If the base winner
+        // itself could not be materialized, safely choose a passing finalist.
+        const baseRealized = evaluated.find(item => item.candidate === baseWinner);
+        const priorityLifts = Object.entries(normalizeRequest(baseWinner.request).goal.liftPriorities)
+            .filter(([, priority]) => ['primary','specialization','high'].includes(priority))
+            .map(([lift]) => lift);
+        const eligible = baseRealized ? evaluated.filter(item => priorityLifts.every(lift =>
+            item.realized.executableLiftFrequencies[lift]
+                >= baseRealized.realized.executableLiftFrequencies[lift])) : evaluated;
+        let best = eligible[0];
+        for (const item of eligible.slice(1))
+            if (item.realized.score > best.realized.score + .0001) best = item;
         winner = best.candidate;
         realizedSelection = { mode: 'finalized_strength_top_two',
             evaluatedFinalists: finalists.length, selectedFromBaseWinner: winner === baseWinner,
+            protectedPriorityLiftFrequencies: priorityLifts,
             ...best.realized };
     }
     winner.decision = {

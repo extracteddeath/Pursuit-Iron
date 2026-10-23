@@ -179,3 +179,34 @@ assert.notEqual(repeated.cycle.id,lifecycle.cycle.id);
 assert.equal(JSON.stringify(lifecycle),lifecycleBefore,'advancing, recovery and repeat cannot mutate completed or preview training artifacts');
 assert.match(app,/\.\.\.repeatCycleOptions\(cycle\)/,'the app loop submits the same tested repeat options to its worker');
 console.log('PASS B893 lifecycle: short-block completion, schedule changes, persisted-state repair, recovery insertion/resume, custom repeat and immutable prior records.');
+
+
+// M299: an explicit per-block schedule applies to that block alone. Once the
+// override ends, the next unspecified block returns to the authored baseline,
+// even with exercise adaptation turned off. Its config, engine and request must
+// agree; a locked retarget must never advertise a different weekly schedule.
+{
+  const baseline={...config,split:'upper_lower',days:4,session:'s90'};
+  const changing=[
+    {phase:'hypertrophy_accumulation',weeks:2},
+    {phase:'mixed_accumulation',weeks:2,split:'full_body',days:3},
+    {phase:'hypertrophy_accumulation',weeks:2}
+  ];
+  const saved=JSON.stringify({baseline,changing});
+  let serial=0;
+  const built=generateNextCycleForShell({templateId:'custom',blocks:changing,config:baseline,
+    legacyExercises:EXERCISES,seed:299299,makeId:()=>`m299-topology-${++serial}`,
+    adaptBetweenBlocks:false,adaptTrainingSplit:false});
+  assert.equal(JSON.stringify({baseline,changing}),saved,'Topological adaptation cannot mutate user inputs');
+  for (const [i,expected] of [[0,{split:'upper_lower',days:4}],
+    [1,{split:'full_body',days:3}],[2,{split:'upper_lower',days:4}]]) {
+    const block=built.blocks[i];
+    assert.equal(block.config.split,expected.split,`Block ${i+1} config split`);
+    assert.equal(block.config.days,expected.days,`Block ${i+1} config days`);
+    assert.equal(block.nextEngine.program.split.family,expected.split,`Block ${i+1} executable split`);
+    assert.equal(block.nextEngine.program.sessions.length,expected.days,`Block ${i+1} executable days`);
+    assert.equal(block.nextEngine.request.schedule.days.length,expected.days,`Block ${i+1} request days`);
+    assert.equal(block.nextEngine.program.audit.result,'pass',`Block ${i+1} remains audited`);
+  }
+}
+console.log('PASS M299: per-block topology overrides expire cleanly; config, generated sessions and request agree.');

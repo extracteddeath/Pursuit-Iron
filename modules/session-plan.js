@@ -1,3 +1,4 @@
+import { exerciseAt } from './training-domain/records.js';
 import { completedHistorySets, convertHistoryLoad, normalizeHistoryEntries, resolveHistoryDayIndex } from './next-engine/history-contract.js';
 
 // A declined recommendation belongs to one exposure and one exact recommendation. It is
@@ -23,7 +24,7 @@ export function sessionPlanChange({ program, day, ex, slot, weekIndex, unit, cel
     });
     const different = (a, b) => a && b && (Math.abs(Number(a.weight) - Number(b.weight)) > .001 || Number(a.reps) !== Number(b.reps));
     const changed = targets.some((target, i) => previous[i]?.weight > 0 && target.weight > 0 && different(target, previous[i]));
-    const eligible = !!source && day.exercises[slot] === ex.id && !program.quick && !suggestion?.referenceOnly && suggestion?.action !== 'initial'
+    const eligible = !!source && exerciseAt(program, day, slot, weekIndex) === ex.id && !program.quick && !suggestion?.referenceOnly && suggestion?.action !== 'initial'
         && !(program.config?.percentScheme && (slot === day.primaryIndex || slot === day.t2Index)) && !/deload/i.test(String(cell.note || ''))
         && !(weekIndex > Number(program.weeks ?? program.config?.weeks ?? Infinity));
     const canUndo = changed && eligible && undoTargets.some((target, i) => different(target, targets[i]));

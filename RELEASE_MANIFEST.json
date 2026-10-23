@@ -5,7 +5,7 @@
   "build": 906,
   "engineVersion": "0.65.9",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "028c3058d5e2e571c979ebcf62da6392a21d575029b800b3ee4219aab4bd7280",
+  "runtimeAggregate": "333ec8ae8d727403d7b3143c9da2a59fb78a3d2cf201194104afef908a2b4e7a",
   "runtimeFiles": {
     "modules/cycle-setup-drafts.js": "d3e9e750298afd8820e2bfd543c2cebede65e4f27c136ff26fe383d202b824e9",
     "modules/engine-api.js": "5b1252901101e46c275f312f8982d167897f67d7f069ed687b1235fb3bd57f55",
@@ -91,15 +91,15 @@
     "modules/program-duration.js": "52bffd0e7798f16f1217ba455de75c63c917ba9b7c6aa61dcd795b10dc665d95",
     "modules/program-last-performance.js": "61ffec6cde222c2731becdc4b048a7da8b53f044816cf149104b168e3fca7ee3",
     "modules/program-review.js": "394e326abe226725d1dd5933420e91cc2e9e79dd5ba9a5a7cb856f4bc8970d51",
-    "modules/session-plan.js": "d0fd1828feb947892b82cb08e2a0ac1761b18a0083f9bb779caa0c2e3c854023",
+    "modules/session-plan.js": "29e9b5b201a59de13bd0d21f89ca6358741d4889f52a96cd010c33554902e34c",
     "modules/session-tools.js": "275bdbb9f1e247fb8dd49290ec24d4a1eb5aea4c3ada49d623f7cbe0ccbec096",
     "modules/training-domain.js": "a7ce0e26ac1a653d267d486128b5eac0cfaed3569f7fdeae77d4a7d11aec804f",
-    "modules/training-domain/analytics.js": "57b63ee61fa034d431f9f517defd08dc866215a16418b10642b92e458c70dc08",
+    "modules/training-domain/analytics.js": "e6b1e5384b8747c5708aa01d43023bc8fc3c4d7d951858a5ed25ea664273d39f",
     "modules/training-domain/catalog.js": "d4ddf437e28b301362bca51ccd4400d052b86c36d4807516ece9945d61f5afc0",
     "modules/training-domain/history-import.js": "13a1128e16c886e280feedd45beb7e340cd9a5fac8752741632fe4b08dbc9462",
-    "modules/training-domain/prescriptions.js": "7a68bc86129ec547f1953bd3e6138f74bd943eeb8274df586699f2ef9125bf3b",
+    "modules/training-domain/prescriptions.js": "c73b71003db8b7b83293b7044e77712838435b5e9b061c2de9e02263c8fdf501",
     "modules/training-domain/programs.js": "b08bcac89543531b76c5984b1b5d58e7ab7d294378335d4549c2bf6c232c3423",
-    "modules/training-domain/records.js": "0a18e3bcbd1e0700f3907fb219eb5eee798970c103ece76fc53d9e2e59c03432",
+    "modules/training-domain/records.js": "a1cab10d467508286ea6b0767dd093faa11cc729019db5b352260b4f5f3d0f81",
     "modules/ui-layout.js": "489ffcbbbbbc340947852c1def36a5c955c203acd2f04209da5dbc316a267726",
     "modules/ui-motion.js": "c522bdc1cd4538858412547cb1ff9cbf97acd7502168cdb015fbf9ffa0a9b356",
     "modules/wizard-stability.js": "a62b2bed8a1f5ab880bfeab036a83ec630c93048b8a352652fe00ae75374a3d1",
@@ -118,10 +118,10 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "2845efef40c428a1b4e3502e466eccd31cfa04350153c5e3efd2b1e4101598f2",
+    "modules/App.js": "8f8df4651db62060c71041b4f61fc7be2f041c7540530a7d1823ae3acfade759",
     "index.html": "bc3985dd0692d91ceb47ad7c7d0e6581bf45684d6388630a0efd1fb9eb6ac262",
-    "sw.js": "6fd223193dcd68667af2f320efd2bb7bb6c298d551811b17d58c05a71ff9e8d3",
-    "BUILD_PROFILE.json": "73f26b2162cc0d77ae48c7ea5eca272256eb72b231e0d554ba243dbd4ecbd6b7",
+    "sw.js": "e7119e635e0abc14d7b2dbd76d0a97d5d6cf326d47145b9849a6ca6e40f8663e",
+    "BUILD_PROFILE.json": "d0652ffd805fee593bad7b761216d592291f11a3d307ea7094f6f30388aa4a94",
     "CHANGELOG.md": "f26b355bf2c83b93fdf294ce427bbe0b32886ea2fbf4e0421586a5a6b06a34de",
     "app.css": "baef215798a76bbcd06034b21feb0adde5bcbe3d994c7298b34d505769630f6b",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
@@ -129,6 +129,6 @@
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b906-rfdfd311172114e56",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b906-rfe6d2e4b0673df56",
   "uiMilestone": "Build 906 · M320 Adaptive training-cycle release"
 }

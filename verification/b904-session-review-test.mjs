@@ -89,3 +89,33 @@ assert.equal(workoutTechniqueRest({kind:'myo'}),15);
 assert.equal(workoutTechniqueRest({kind:'drop'}),10);
 assert.equal(workoutTechniqueRest({kind:'myo'},1.5),23);
 assert.equal(workoutTechniqueRest({kind:'drop'},1.5),15);
+
+// M325: the alternate lift owns its evidence, equipment boundary and one-exposure choice.
+export const alternate={...program,id:'m325-alternate',config:{...program.config,unit:'lb'},
+ pairs:{'upper:0':'db-bench'},progStyle:{...program.progStyle,'db-bench':'double'}};
+const alternateDay=alternate.days[0];
+export const alternateHistory=[{id:'alternate-source',date:1700000000000,updatedAt:1700000000000,
+ programId:alternate.id,dayId:alternateDay.id,weekIndex:2,unit:'lb',perf:{
+  'db-bench':{weight:50,reps:8,sets:Array.from({length:3},()=>({w:50,r:8,rir:2,rirReported:true,tr:2}))},
+  'bb-bench':{weight:200,reps:8,sets:Array.from({length:3},()=>({w:200,r:8,rir:2,rirReported:true,tr:2}))}}}];
+const alternateBefore=JSON.stringify({alternate,alternateHistory});
+const alternateReview=buildSessionReview(alternate,alternateDay,4,'lb',alternateHistory);
+const alternateBench=alternateReview.exercises[0];
+assert.equal(alternateBench.id,'db-bench');
+assert.deepEqual(alternateBench.proposed.map(s=>[s.weight,s.reps]),[['55','6'],['55','6'],['55','6']]);
+assert.equal(alternateBench.change.canUndo,true,'effective alternate lift can decline progression');
+assert.equal(alternateBench.change.source.id,'alternate-source');
+const alternateHeld=JSON.parse(JSON.stringify(withSessionPlanChoice(alternate,alternateBench.change,true)));
+const heldAlternateReview=buildSessionReview(alternateHeld,alternateDay,4,'lb',alternateHistory);
+assert.equal(heldAlternateReview.exercises[0].change.undone,true);
+assert.deepEqual(heldAlternateReview.exercises[0].effective.map(s=>[s.weight,s.reps]),[['50','8'],['50','8'],['50','8']]);
+const alternateSuggestion=sessionSuggestion(alternateHeld,alternateDay,0,{},'lb',4,alternateHistory);
+const alternateLogged=prescribeSets(alternateHeld,alternateDay,EX_BY_ID['db-bench'],0,4,'lb',alternateSuggestion,{}, {},alternateHistory,false);
+assert.deepEqual(alternateLogged.filter(s=>!s.warm&&!s.sub),heldAlternateReview.exercises[0].effective,'review choice is the logger prescription');
+assert.equal(buildSessionReview(alternateHeld,alternateDay,3,'lb',alternateHistory).exercises[0].id,'bb-bench');
+assert.equal(buildSessionReview(alternateHeld,alternateDay,3,'lb',alternateHistory).exercises[0].change.undone,false,'base week never inherits alternate choice');
+assert.equal(buildSessionReview({...alternateHeld,pairs:{}},alternateDay,4,'lb',alternateHistory).exercises[0].change.undone,false,'changed exercise expires choice');
+assert.equal(buildSessionReview(alternateHeld,alternateDay,4,'lb',alternateHistory.map(h=>({...h,updatedAt:h.updatedAt+1}))).exercises[0].change.undone,true);
+assert.deepEqual(buildSessionReview(withSessionPlanChoice(alternateHeld,alternateBench.change,false),alternateDay,4,'lb',alternateHistory).exercises[0].effective,alternateBench.effective);
+assert.equal(JSON.stringify({alternate,alternateHistory}),alternateBefore);
+console.log('PASS M325 alternate-week review: actual exercise evidence, load grid, undo/restore, reload, base-week isolation and logger parity.');

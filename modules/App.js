@@ -6892,7 +6892,7 @@ function SessionGamePlan({ review, restScale = 1, home = false }) {
 }
 function PlanChangesDialog({ review, dayLabel, busy, onChoice, onClose }) {
     return _jsx(SessionChoiceDialog, { title: "Plan changes", onClose, className: "wpb-plan-changes-dialog", children: _jsxs("div", { children: [
-        _jsx("p", { className: "wpb-plan-review-intro", children: `Changes for ${dayLabel} · ${review.sourceDate ? 'Based on ' + new Date(review.sourceDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'Based on your training'}` }),
+        _jsx("p", { className: "wpb-plan-review-intro", children: `${dayLabel} · Week ${review.weekIndex}. Choices apply to this workout’s load and reps. Sets, target effort and technique follow the plan.` }),
         !review.changes.length && _jsx("p", { children: "No changes from your last comparable workout." }),
         review.changes.map(row => {
             const uniform = row.proposed.length === row.change.previous.length && row.proposed.every(set => set.weight === row.proposed[0]?.weight && set.reps === row.proposed[0]?.reps)
@@ -6912,6 +6912,9 @@ function PlanChangesDialog({ review, dayLabel, busy, onChoice, onClose }) {
                 !uniform && targets.length > 1 && _jsxs("details", { className: "wpb-plan-change-more", children: [
                     _jsx("summary", { children: `See all ${targets.length} sets` }),
                     _jsx("ol", { className: "wpb-plan-target-diff", children: targets.slice(1).map((set, i) => diff(set, i + 1)) })] }),
+                _jsx("p", { className: "wpb-plan-review-basis", children: row.change.source
+                    ? `Compared with this exercise on ${new Date(row.change.source.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} for the same program day.`
+                    : "No comparable completed workout yet." }),
                 _jsx("p", { className: "wpb-plan-change-reason", children: row.proposedReason }),
                 row.change.canUndo ? _jsx("button", { type: "button", className: "wpb-plan-undo pressable", disabled: busy,
                     "aria-label": `${row.change.undone ? 'Restore recommendation for' : 'Undo change for'} ${row.name}`,

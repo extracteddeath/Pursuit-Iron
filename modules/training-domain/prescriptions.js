@@ -8,7 +8,7 @@ import { percentageProtocolFor, adaptPercentageSetBudget, deriveTieredLinearStat
 import { buildRuntimeSetTargets, customProgramProgressionStyle, techniqueProtocolFromCell } from "../next-engine/workout-runtime.js";
 import { nextWorkoutSuggestionForShell } from "../next-engine/workout-history-adapter.js";
 import { evaluateWorkoutProgression } from "../next-engine/performance.js";
-import { blockPhase, cellRepRange, clamp, computeCell, effortBounds, isBarLike, isMachineLike, loadStep, roundTo, secondaryOf, weeksOf } from './records.js';
+import { blockPhase, exerciseAt, cellRepRange, clamp, computeCell, effortBounds, isBarLike, isMachineLike, loadStep, roundTo, secondaryOf, weeksOf } from './records.js';
 import { EXERCISES, EX_BY_ID } from './catalog.js';
 import { PART_ORDER, e1rmRIR } from './programs.js';
 
@@ -714,9 +714,13 @@ function engineSessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, h
     void dayPerf;
     // Custom and generated programs share the same final equipment boundary.
     // A converted/reference load or held per-set target can otherwise bypass snapping.
+    const id = exerciseAt(program, day, slot, weekIndex), ex = EX_BY_ID[id];
+    if (!ex) return null;
+    const effectiveDay = id === day.exercises[slot] ? day : { ...day,
+        exercises: day.exercises.map((current, index) => index === slot ? id : current) };
     const original = program?.custom === true && program?.engineSource !== "pursuit-next"
         ? customProgramSuggestion(program, day, slot, unit, weekIndex, history)
-        : nextWorkoutSuggestionForShell(program, history || [], EXERCISES, day, slot, weekIndex, unit);
+        : nextWorkoutSuggestionForShell(program, history || [], EXERCISES, effectiveDay, slot, weekIndex, unit);
     const convert = value => convertHistoryLoad(value, original?.unit ?? program.config?.unit, unit);
     const s = original ? { ...original, weight: convert(original.weight),
         last: original.last,
@@ -729,7 +733,7 @@ function engineSessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, h
        is snapped DOWN to a loadable weight here, whichever engine path produced it. */
     if (!s || !(Number(s.weight) > 0))
         return s;
-    const ex = EX_BY_ID[day?.exercises?.[slot]], eng = Number(s.weight);
+    const eng = Number(s.weight);
     /* ⚠ DIRECTION MATTERS. An EARNED increase rounds UP to the next weight the equipment can make; everything else rounds DOWN
        (conservative). Rounding an increase down erased it: the engine said "Increase from 140 lb to 145 lb", the 10 lb machine stack
        snapped it back to 140, and the lift could never progress (found by m158-adaptive-loop-check's simulated lifter). */
@@ -777,7 +781,7 @@ function engineSessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, h
 function sessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, history, applyReviewChoice = true) {
     const suggestion = engineSessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, history);
     if (!suggestion || !applyReviewChoice || !program.sessionPlanChoices || !Object.keys(program.sessionPlanChoices).length) return suggestion;
-    const id = day.exercises[slot], ex = EX_BY_ID[id];
+    const id = exerciseAt(program, day, slot, weekIndex), ex = EX_BY_ID[id];
     if (!ex) return suggestion;
     const cell = computeCell(program, day, id, slot, weekIndex);
     if (!cell || cell.missing) return suggestion;
@@ -856,7 +860,7 @@ function representativeCustomLoad(perf) {
 }
 
 function customProgramSuggestion(program, day, slot, unit, weekIndex, history) {
-    const ex = EX_BY_ID[day?.exercises?.[slot]];
+    const ex = EX_BY_ID[exerciseAt(program, day, slot, weekIndex)];
     if (!ex)
         return null;
     const historyRefs = customExerciseHistoryRefs(program, day, ex.id, history);

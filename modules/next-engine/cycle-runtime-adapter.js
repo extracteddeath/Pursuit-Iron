@@ -289,7 +289,14 @@ export function scoreRegionalCarryover(prior, current, musclePriorities, prescri
         if (before < 2) continue; // no meaningful prior dose to preserve
         const focused = ['primary','specialization','high'].includes(priority);
         const prescription = byMuscle.get(muscle);
-        const preferred = (Number(prescription?.preferred) || 0) * (muscle === 'back' ? .5 : 1);
+        // Width and thickness each receive half of the aggregate back target by
+        // default. For *explicitly prioritized* back training, allow a modest
+        // soft preference above that 50/50 split so a low-lat candidate cannot
+        // score perfect carryover solely by meeting reduced strength targets.
+        // This is ranking-only, still bounded by previous productive dose and
+        // never a hard requirement to add sets beyond session/recovery limits.
+        const backFraction = muscle === 'back' ? (focused ? .6 : .5) : 1;
+        const preferred = (Number(prescription?.preferred) || 0) * backFraction;
         // Compare to *both* the previous dose and the phase's useful target.
         // Very high hypertrophy volumes must not become an obligation in strength.
         const target = Math.min(before * (focused ? .6 : .45), preferred);

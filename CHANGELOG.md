@@ -3,7 +3,8 @@
 - Audit generated 4/5-day hypertrophy-to-strength transitions against the real executable final hypertrophy week and first strength week, separately measuring lats, upper back, side/rear delts, chest, and posterior-chain focus.
 - Refine the optimizer's **ranking-only** regional carryover: normal back regions retain the established 50/50 fraction of the aggregate phase target, while explicitly prioritized back work may rank candidates against 60% per region, bounded by previous productive doses. This makes insufficient lat work visible even when the reduced strength target is fully met.
 - Keep all hard time, weekly fatigue, equipment, exercise preference, lifting-frequency, and complete-program audit constraints. No fixed minimum working sets or hypertrophy-volume quotas are added; maintenance and extreme prior-dose safety remain unchanged.
-- Add seeded focus-specific output diagnostics plus unit regressions for back-width/upper-back credit, recovered focus, maintenance exclusions, and extreme prior volumes. Retain Build 905 / Engine 0.65.9 and synchronize release/offline hashes.
+- Flag explicitly prioritized muscle regions that lose more than half their actual credited working sets across the phase boundary (when at least four prior credited sets were present). The compact Cycle disclosure visibly calls out these focus reductions without automatically prescribing extra strength-phase sets; ordinary and maintenance regions are not flagged.
+- Add seeded focus-specific output diagnostics plus unit regressions for back-width/upper-back credit, recovered focus, maintenance exclusions, extreme prior volumes, and UI display parity. Retain Build 905 / Engine 0.65.9 and synchronize release/offline hashes.
 
 ## M306 — Compact cycle volume explanation and edited conversion regression
 

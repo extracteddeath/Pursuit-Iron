@@ -57,8 +57,17 @@ try{
   });
   await page.reload({waitUntil:'networkidle0'});
   await page.waitForSelector('.wpb-home');
-  await page.click('[aria-label="Open cycle My existing program Cycle"]');
-  await page.waitForSelector('.wpb-cycle-detail');
+  // Home's scroll/header layout can move this card between coordinate lookup and
+  // activation. Use the stable native-pointer locator already owned by Home tests.
+  await page.locator('[aria-label="Open cycle My existing program Cycle"]').click({timeout:12000});
+  try { await page.waitForSelector('.wpb-cycle-detail'); }
+  catch(error){
+    console.error('B894 cycle navigation diagnostic',JSON.stringify({kind,width,errors,
+      state:await page.evaluate(()=>({view:document.querySelector('[data-view-frame]')?.getAttribute('data-view-frame'),
+        text:document.body.innerText.slice(-2500),cycles:JSON.parse(localStorage.getItem('wpb:v1')||'{}').cycles?.map(c=>({id:c.id,name:c.name}))}))}));
+    await page.screenshot({path:path.join(root,'verification/b894-navigation-failure-phone.png')});
+    throw error;
+  }
   await page.click('[aria-label="Cycle options"]');
   await page.waitForSelector('.wpb-cycle-option-actions');
   const immediatelyBeforeUpgrade=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')));

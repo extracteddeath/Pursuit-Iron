@@ -32,6 +32,20 @@ for(const {label,row,focus,seed} of scenarios){
  assert.ok(actual,'Transition must report exact executable doses');
  assert.equal(actual.regions.length>0,true);
  assert.deepEqual(current.nextEngine.cycleTemplate.splitDecision.workingWeekVolumeChange,actual);
+ const expectedFocusedReductions=actual.regions.filter(region=>{
+   const priority=current.nextEngine.request.goal.musclePriorities[PUBLIC_REGION_MUSCLE[region.region]];
+   return ['high','specialization','primary'].includes(priority)
+     && region.previousSets>=4&&region.currentSets<region.previousSets*.5;
+ }).map(region=>region.region);
+ assert.deepEqual(actual.focusedVolumeReductions,expectedFocusedReductions,
+   'Warnings come only from prioritized executable muscle doses, not modeled phase coverage');
+ if(label==='5-day back focus'){
+   assert.ok(actual.focusedVolumeReductions.includes('lats'),
+     'The reduced strength-phase target cannot conceal losing more than half of specialized lat volume');
+   assert.ok(!actual.focusedVolumeReductions.includes('upper_back'),
+     'Upper-back volume preserved above half must not trigger a false focus warning');
+ }
+
  const focused=actual.regions.filter(x=>{
    const m=PUBLIC_REGION_MUSCLE[x.region];
    return current.nextEngine.request.goal.musclePriorities[m]==='specialization';
@@ -47,7 +61,8 @@ for(const {label,row,focus,seed} of scenarios){
  assert.ok(dose.every(x=>Number.isFinite(x.prior)&&Number.isFinite(x.next)&&x.next>=0));
  matrix.push({label,split:[previous.config.split,current.config.split],
    weekly:[actual.previousWeeklySets,actual.currentWeeklySets],targetCoverage:decision.regionalCarryoverPercent,
-   focusedDose:dose,regionalAtRisk:decision.regionalRiskRegions});
+   focusedDose:dose,regionalAtRisk:decision.regionalRiskRegions,
+   focusedVolumeReductions:actual.focusedVolumeReductions});
 }
 console.log('M307 focused executable region matrix: '+JSON.stringify(matrix,null,2));
 // M307 regression: an aggregate back prescription should not treat losing

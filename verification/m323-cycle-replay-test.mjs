@@ -59,7 +59,7 @@ assert.equal(repeatAnalysis.readyForNextBlock, false, 'Repeats cannot substitute
 assert.equal(repeatAnalysis.cycleState.recommendedNextPhase, undefined);
 assert.match(repeatAnalysis.cycleState.rationale, /1 of 4 planned training days/);
 assert.throws(() => advance(short.cycle, program, repeats, 'm323-refused'),
-    error => error.code === 'NEXT_CYCLE_NOT_READY');
+    error => error.code === 'NEXT_CYCLE_NOT_READY' && /1 of 4 planned training days/.test(error.message));
 assert.equal(JSON.stringify({ short, repeats }), untouched, 'Refusal cannot alter saved state or history');
 
 const resumed = roundtrip([...repeats, ...complete.slice(1)]);

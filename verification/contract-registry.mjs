@@ -18,7 +18,8 @@ export const contractGroups = Object.freeze({
         'm311-adaptive-upgrade-test.mjs',
         'm313-edited-cycle-boundary-test.mjs',
         'm317-weekly-projection-performance-test.mjs',
-        'm319-catalog-performance-test.mjs'
+        'm319-catalog-performance-test.mjs',
+        'm321-all-week-strength-quality-test.mjs'
     ]),
     adaptation: Object.freeze([
         'm235-engine-verification-test.mjs',

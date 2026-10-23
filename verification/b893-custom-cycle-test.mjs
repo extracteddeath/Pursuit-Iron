@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { EXERCISES } from '../modules/App.js';
-import { CUSTOM_CYCLE_PHASES, customCycleSpecs, generateNextCycleForShell, cycleSplitCandidates, canRetargetStrengthEntryRoster, requestForBlock } from '../modules/next-engine/cycle-runtime-adapter.js';
+import { CUSTOM_CYCLE_PHASES, customCycleSpecs, generateNextCycleForShell, cycleSplitCandidates, canRetargetStrengthEntryRoster, requestForBlock, scoreRegionalCarryover } from '../modules/next-engine/cycle-runtime-adapter.js';
 import { createStrengthClaims, normalizeRequest } from '../modules/next-engine/prescription.js';
 import { shellConfigToNextRequest } from '../modules/next-engine/app-shell-adapter.js';
 const app=fs.readFileSync(new URL('../modules/App.js',import.meta.url),'utf8');
@@ -74,6 +74,10 @@ const structuredResult=generateNextCycleForShell({
 assert.equal(structuredResult.blocks[1].config.split,'upper_lower','strength block changes weekly split');
 assert.equal(structuredResult.blocks[1].config.days,4,'strength block owns weekly schedule');
 assert.equal(structuredResult.cycle.nextEngineCycle.plannedBlocks[1].frequency,2);
+assert.ok(Number.isInteger(structuredResult.cycle.blockMeta[1].splitDecision.regionalCarryoverPercent),
+ 'A hypertrophy-to-strength transition reports actual regional retention in its split decision');
+assert.ok(Array.isArray(structuredResult.cycle.blockMeta[1].splitDecision.regionalRiskRegions),
+ 'Regional continuation keeps an inspectable list without inventing hard set quotas');
 const practiceDays=structuredResult.blocks[1].nextEngine.program.sessions.filter(session=>session.exercises.some(ex=>
  ['primary_strength','secondary_strength'].includes(ex.role)
  && (ex.exerciseId==='bb-bench' || /bench/i.test(ex.name)))).length;
@@ -278,3 +282,35 @@ console.log('PASS M300: automatic same-split strength-entry rescue is eligible w
  assert.equal(withTopology.goal.type,'strength','Changed weekly structure uses the same phase-goal owner');
 }
 console.log('PASS M301: every phase owns normalized strength/hypertrophy weighting in fixed and adapted split requests.');
+
+
+// M302: regional continuity is a bounded ranking signal, not an invented
+// hard quota. Prefer candidates that preserve more useful chest/back/limb work,
+// weight explicit athlete focus more heavily, and respect requested maintenance.
+{
+ const normalized=normalizeRequest(shellConfigToNextRequest(
+   {...config,goal:'strength',split:'upper_lower',days:4},[],EXERCISES,302));
+ const prescriptions=(await import('../modules/next-engine/prescription.js'))
+   .createMusclePrescriptions(normalized,'strength_accumulation');
+ const regions=['chest','lats','upper_back','side_delts','rear_delts','biceps','triceps',
+   'quads','hamstrings','glutes','calves','core'];
+ const prior=Object.fromEntries(regions.map(r=>[r,8]));
+ const intact=scoreRegionalCarryover(prior,prior,normalized.goal.musclePriorities,prescriptions);
+ assert.equal(intact.percent,100,'Fully retained regions cannot incur a ranking penalty');
+ const dropped={...prior,chest:0};
+ const normal=scoreRegionalCarryover(prior,dropped,normalized.goal.musclePriorities,prescriptions);
+ assert.ok(normal.percent<100&&normal.atRiskRegions.includes('chest'),'A material chest drop is visible');
+ const focused=scoreRegionalCarryover(prior,dropped,
+   {...normalized.goal.musclePriorities,chest:'primary'},prescriptions);
+ assert.ok(focused.quality<normal.quality,'Losing explicitly focused muscle work costs more');
+ const reduced=scoreRegionalCarryover(prior,dropped,
+   {...normalized.goal.musclePriorities,chest:'maintenance'},prescriptions);
+ assert.equal(reduced.percent,100,'Maintenance is not penalized for an explicitly reduced region');
+ const chestTarget=prescriptions.find(p=>p.muscle==='chest').preferred;
+ const extreme=scoreRegionalCarryover({...prior,chest:200},{...prior,chest:chestTarget},
+   normalized.goal.musclePriorities,prescriptions);
+ assert.equal(extreme.percent,100,
+   'An unusually high prior hypertrophy dose cannot become a strength-block requirement');
+ assert.deepEqual(prior,Object.fromEntries(regions.map(r=>[r,8])),'Audit does not mutate prior ledgers');
+}
+console.log('PASS M302: phase-aware regional continuity ranks productive work without overriding recovery or explicit reductions.');

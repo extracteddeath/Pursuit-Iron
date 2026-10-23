@@ -108,7 +108,11 @@ try {
       load:getComputedStyle(fields[2],'::before').textAlign,
       reps:getComputedStyle(fields[3],'::before').textAlign};
     return {compact:false,loadOffset:trackCenter(labels[1])-trackCenter(fields[2]),
-      repsOffset:trackCenter(labels[2])-trackCenter(fields[3])};
+      repsOffset:trackCenter(labels[2])-trackCenter(fields[3]),
+      header:{left:heading.getBoundingClientRect().left,width:heading.getBoundingClientRect().width,gap:getComputedStyle(heading).gap},
+      row:{left:first.getBoundingClientRect().left,width:first.getBoundingClientRect().width,gap:getComputedStyle(first).gap},
+      labelRects:labels.map(x=>({left:x.getBoundingClientRect().left,width:x.getBoundingClientRect().width})),
+      fieldRects:fields.map(x=>({left:x.getBoundingClientRect().left,width:x.getBoundingClientRect().width,flex:getComputedStyle(x).flex}))};
   });
   assert.ok(loadRepHeaders,'Workout set headings and inputs remain mounted');
   if(loadRepHeaders.compact){

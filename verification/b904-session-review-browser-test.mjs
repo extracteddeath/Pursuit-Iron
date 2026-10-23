@@ -103,6 +103,9 @@ try{
   assert.match(card,/50 lb × 8/);assert.match(card,/55 lb × 6/);assert.match(card,/same program day/);
   await page.click('[aria-label="Undo change for Dumbbell Bench Press"]');
   await page.waitForSelector('[aria-label="Restore recommendation for Dumbbell Bench Press"]');
+  assert.equal(await page.$eval('[data-plan-change="db-bench"] .wpb-plan-target-diff strong',n=>n.innerText),'50 lb × 8');
+  assert.equal(await page.$eval('[data-plan-change="db-bench"] .wpb-plan-before',n=>n.innerText),'55 lb × 6');
+  assert.match(await page.$eval('[data-plan-change="db-bench"] .wpb-plan-change-reason',n=>n.innerText),/Original recommendation:/);
   await page.screenshot({path:path.join(root,`verification/m325-review-${width}-phone.png`)});
   await page.keyboard.press('Escape');
   await page.reload({waitUntil:'networkidle0'});

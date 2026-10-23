@@ -108,4 +108,57 @@ for(const row of decisions){
  assert.ok(row.firstDaySets.every(days=>days.every(n=>n>=1)));
 }
 console.log('M304 executable working-week transition matrix: '+JSON.stringify(decisions,null,2));
+
+// M306: a converted working program may have user-owned set overrides. The
+// phase comparison must use those real executable cells (not the originally
+// generated low-volume baseline) and never silently lose a large authored day.
+{
+ const config={...fixtures[3].config,name:'M306 edited conversion',goal:'hypertrophy',weeks:8};
+ let id=0;
+ const source=generateNextProgramForShell({
+   config,legacyExercises:EXERCISES,seed:30673,
+   makeId:()=>`m306-source-${++id}`
+ }).program;
+ const edited=structuredClone(source);
+ const day=edited.days[0];
+ edited.overrides={...edited.overrides};
+ day.exercises.forEach((exercise,slot)=>{
+   const key=`${day.id}:${slot}`;
+   edited.overrides[key]={...(edited.overrides[key]??{}),sets:6};
+ });
+ const original=JSON.stringify(edited);
+ const prior=view(edited,8);
+ assert.ok(prior.daySets[0]>=30,'User-entered higher-set day is represented by executable cells');
+ let built=null,refused=null;
+ try{
+   built=convertProgramToNextCycleForShell({
+     program:edited,templateId:'custom',blocks:[{phase:'strength_accumulation',weeks:5}],
+     legacyExercises:EXERCISES,seed:30674,
+     makeId:()=>`m306-cycle-${++id}`,adaptTrainingSplit:true,adaptBetweenBlocks:true
+   });
+ }catch(error){refused=error;}
+ assert.equal(JSON.stringify(edited),original,'Conversion and rejection both leave manual set prescriptions untouched');
+ if(built){
+   const strength=built.blocks[0],now=view(strength,1);
+   const decision=built.cycle.blockMeta[1].splitDecision;
+   assert.equal(strength.nextEngine.program.audit.result,'pass');
+   assert.ok(now.weeklySets>=Math.ceil(prior.weeklySets*.5),
+     'A converted highly edited program cannot lose more than half its executable weekly sets');
+   assert.equal(decision.workingWeekVolumeChange.previousWeeklySets,prior.weeklySets,
+     'Real manual set edits, rather than the original base, own the transition comparison');
+   assert.equal(decision.workingWeekVolumeChange.currentWeeklySets,now.weeklySets);
+   assert.deepEqual(built.currentProgram.overrides,edited.overrides);
+   console.log('M306 edited conversion accepted: '+JSON.stringify({
+     previousDaySets:prior.daySets,nextDaySets:now.daySets,
+     previousWeeklySets:prior.weeklySets,nextWeeklySets:now.weeklySets
+   }));
+ }else{
+   assert.ok(refused?.code||refused?.message,'Unsafe edited program must have an explicit error');
+   assert.match(String(refused.message),/strength|volume|safe|cycle|constraint|time|training/i,
+     'Edited cycle refusal must communicate a training constraint');
+   console.log('M306 edited conversion explicitly refused: '+String(refused.message));
+ }
+}
+console.log('PASS M306: 30+ set edited conversion is either audited and transparently retained or rejected without mutation.');
+
 console.log('PASS M304/M305: executable week prescriptions and phase-target coverage remain separate from actual regional changes.');

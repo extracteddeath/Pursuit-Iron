@@ -15,7 +15,7 @@ import { historyDecision, withProgramExplainability } from './explainability.js'
 import { analyzeShellHistoryForNextEngine, carryForwardAvoidedExercises } from './workout-history-adapter.js';
 import { requestWithAthleteResponse } from './athlete-response.js';
 import { shellConfigToNextRequest, nextProgramToShellProgram, NextShellAdapterError } from './app-shell-adapter.js';
-import { repairShellVolume, reconcileLockedCycleWeekOverflows, finalizeGeneratedShellVolume, captureShellBaseProgram, captureShellVolumeSnapshot, rebalanceFocusedStrengthEntry } from './volume-repair.js';
+import { repairShellVolume, reconcileLockedCycleWeekOverflows, finalizeGeneratedShellVolume, captureShellBaseProgram, captureShellVolumeSnapshot, rebalanceFocusedStrengthEntry, preserveStrengthWeekContinuity } from './volume-repair.js';
 import { firstPassingCapacityProgram } from './capacity-generation.js';
 import { PUBLIC_MEV_REGIONS, PUBLIC_REGION_MUSCLE, publicMevLedger } from './public-mev.js';
 const phaseGoal = (phase) => phase === 'hypertrophy_accumulation' ? 'hypertrophy' :
@@ -572,8 +572,8 @@ export function scoreRealizedStrengthFinalist(candidate, previousShell, config, 
         next.phase, spec.weeks, 'Candidate strength block');
     const shell = nextProgramToShellProgram(next, cfg, legacyExercises, () => 'm316-evaluation-only');
     shell.nextEngine = { ...shell.nextEngine, program: clone(next), request: clone(request) };
-    const finished = rebalanceFocusedStrengthEntry(previousShell,
-        finalizeGeneratedShellVolume(shell, legacyExercises), legacyExercises);
+    const finished = preserveStrengthWeekContinuity(previousShell, rebalanceFocusedStrengthEntry(previousShell,
+        finalizeGeneratedShellVolume(shell, legacyExercises), legacyExercises), legacyExercises);
     const realized = describeRealizedCycleQuality(finished, legacyExercises, quality);
     if (!realized?.weeks?.length || realized.weeks.some(w => w.overCapacityDays.length))
         throw new NextShellAdapterError('NEXT_CYCLE_REALIZED_CAPACITY',
@@ -683,7 +683,9 @@ function chooseOptimizedCycleBlock(spec, config, enabled, buildCandidate, realiz
         ...winner.quality,
         ...(realizedSelection ? { realizedSelection } : {}),
         reason: automatic
-            ? `Compared ${candidates.length} compatible weekly structures for ${phaseLabel(spec.phase).toLowerCase()}, retained ${passing} audited plans, and selected the highest scoring plan for muscle coverage, focused and supporting regional continuity, athlete-weighted lift practice and training capacity.`
+            ? realizedSelection
+                ? `Compared ${candidates.length} compatible weekly structures for ${phaseLabel(spec.phase).toLowerCase()}, retained ${passing} audited plans, then compared ${realizedSelection.evaluatedFinalists} finalists using the weakest executable work week. Prioritized strength-lift practice, muscle coverage, regional continuity, training time and the strength-entry volume floor were protected.`
+                : `Compared ${candidates.length} compatible weekly structures for ${phaseLabel(spec.phase).toLowerCase()}, retained ${passing} audited plans, and ranked their initial muscle coverage, relevant lift practice and training capacity. Planned prescriptions can still change at the block transition.`
             : 'Kept the selected weekly structure and verified it against the training constraints.'
     };
     return winner;
@@ -872,6 +874,7 @@ export function generateNextCycleForShell(options) {
         }
         legacy = finalizeGeneratedShellVolume(legacy, options.legacyExercises);
         if (i > 0) legacy = rebalanceFocusedStrengthEntry(blocks[i - 1], legacy, options.legacyExercises);
+        if (decision?.realizedSelection) legacy = preserveStrengthWeekContinuity(blocks[i - 1], legacy, options.legacyExercises);
         if (i > 0) attachWorkingWeekTransition(blocks[i - 1], legacy, decision, options.legacyExercises);
         attachRealizedCycleQuality(legacy, decision, options.legacyExercises);
         blocks.push(legacy);
@@ -1013,6 +1016,7 @@ export function convertProgramToNextCycleForShell(options) {
         });
         legacy = finalizeGeneratedShellVolume(legacy, options.legacyExercises);
         if (i > 0) legacy = rebalanceFocusedStrengthEntry(blocks[i - 1], legacy, options.legacyExercises);
+        if (decision?.realizedSelection) legacy = preserveStrengthWeekContinuity(blocks[i - 1], legacy, options.legacyExercises);
         if (i > 0) attachWorkingWeekTransition(blocks[i - 1], legacy, decision, options.legacyExercises);
         attachRealizedCycleQuality(legacy, decision, options.legacyExercises);
         blocks.push(legacy);
@@ -1120,8 +1124,9 @@ function buildAdaptedBlock(current, cycle, target, weeks, label, analysis, legac
     attachBlockContext(legacy, next, request, cycle.nextEngineCycle.baseRequest, { templateId: cycle.templateId, plannedIndex, blockIndex: cycle.activeBlock + 1, label, weeks, phase: target, preview: false, adaptBetweenBlocks: !!cycle.adaptExercises, splitDecision: decision, adaptedFrom: current.id });
     legacy.nextEngine.priorBlock = { programId: current.id, phase: source.phase, workouts: analysis.workoutCount, classification: analysis.classification, recovery: analysis.recovery.status };
     legacy.nextEngine.historySummary = { positive: analysis.positiveDecisionCount, negative: analysis.negativeDecisionCount, successfulExercises: analysis.successfulExerciseIds.length, ignoredLegacyExerciseIds: analysis.ignoredLegacyExerciseIds };
-    const finalized = rebalanceFocusedStrengthEntry(current,
+    let finalized = rebalanceFocusedStrengthEntry(current,
         finalizeGeneratedShellVolume(legacy, legacyExercises), legacyExercises);
+    if (decision?.realizedSelection) finalized = preserveStrengthWeekContinuity(current, finalized, legacyExercises);
     attachWorkingWeekTransition(current, finalized, decision, legacyExercises);
     attachRealizedCycleQuality(finalized, decision, legacyExercises);
     return finalized;

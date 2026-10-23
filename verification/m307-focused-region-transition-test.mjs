@@ -29,6 +29,11 @@ for(const {label,row,focus,seed} of scenarios){
  const current=result.blocks[1],previous=result.blocks[0];
  const actual=decision.workingWeekVolumeChange;
  assert.equal(current.nextEngine.program.audit.result,'pass');
+ assert.ok(current.nextEngine.focusedStrengthDose,
+   'Every focused hypertrophy-to-strength transition reports its feasibility-limited dose allocation');
+ assert.ok(['unchanged','improved','limited'].includes(current.nextEngine.focusedStrengthDose.status));
+ assert.deepEqual(current.nextEngine.focusedStrengthDose.comparison,
+   'last_hypertrophy_week_to_first_strength_week');
  assert.ok(actual,'Transition must report exact executable doses');
  assert.equal(actual.regions.length>0,true);
  assert.deepEqual(current.nextEngine.cycleTemplate.splitDecision.workingWeekVolumeChange,actual);
@@ -64,6 +69,12 @@ for(const {label,row,focus,seed} of scenarios){
  assert.ok(focused.length>=1,'Focus input reaches strength engine as specialization');
  assert.ok(focused.every(x=>PUBLIC_MEV_REGIONS.includes(x.region)));
  assert.ok(dose.every(x=>Number.isFinite(x.prior)&&Number.isFinite(x.next)&&x.next>=0));
+ for(const change of current.nextEngine.focusedStrengthDose.changes){
+   assert.ok(change.creditedSetsGained>0 && change.weeks===current.config.weeks,
+     'Feasible focus changes must improve credited sets consistently across work weeks');
+   assert.ok(change.operations.some(o=>o.delta===1),'Every reallocation raises a focused accessory');
+   assert.ok(change.operations.every(o=>Math.abs(o.delta)===1),'No bulk or fractional working-set edits');
+ }
  matrix.push({label,split:[previous.config.split,current.config.split],
    weekly:[actual.previousWeeklySets,actual.currentWeeklySets],targetCoverage:decision.regionalCarryoverPercent,
    focusedDose:dose,regionalAtRisk:decision.regionalRiskRegions,

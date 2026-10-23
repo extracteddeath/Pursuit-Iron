@@ -15,7 +15,7 @@ import { historyDecision, withProgramExplainability } from './explainability.js'
 import { analyzeShellHistoryForNextEngine, carryForwardAvoidedExercises } from './workout-history-adapter.js';
 import { requestWithAthleteResponse } from './athlete-response.js';
 import { shellConfigToNextRequest, nextProgramToShellProgram, NextShellAdapterError } from './app-shell-adapter.js';
-import { repairShellVolume, reconcileLockedCycleWeekOverflows, finalizeGeneratedShellVolume, captureShellBaseProgram, captureShellVolumeSnapshot } from './volume-repair.js';
+import { repairShellVolume, reconcileLockedCycleWeekOverflows, finalizeGeneratedShellVolume, captureShellBaseProgram, captureShellVolumeSnapshot, rebalanceFocusedStrengthEntry } from './volume-repair.js';
 import { firstPassingCapacityProgram } from './capacity-generation.js';
 import { PUBLIC_MEV_REGIONS, PUBLIC_REGION_MUSCLE, publicMevLedger } from './public-mev.js';
 const phaseGoal = (phase) => phase === 'hypertrophy_accumulation' ? 'hypertrophy' :
@@ -629,6 +629,7 @@ export function generateNextCycleForShell(options) {
             };
         }
         legacy = finalizeGeneratedShellVolume(legacy, options.legacyExercises);
+        if (i > 0) legacy = rebalanceFocusedStrengthEntry(blocks[i - 1], legacy, options.legacyExercises);
         if (i > 0) attachWorkingWeekTransition(blocks[i - 1], legacy, decision, options.legacyExercises);
         blocks.push(legacy);
         previous = legacy.nextEngine.program;
@@ -767,6 +768,7 @@ export function convertProgramToNextCycleForShell(options) {
             convertedFromStandalone: true
         });
         legacy = finalizeGeneratedShellVolume(legacy, options.legacyExercises);
+        if (i > 0) legacy = rebalanceFocusedStrengthEntry(blocks[i - 1], legacy, options.legacyExercises);
         if (i > 0) attachWorkingWeekTransition(blocks[i - 1], legacy, decision, options.legacyExercises);
         blocks.push(legacy);
         previous = legacy.nextEngine.program;
@@ -872,7 +874,8 @@ function buildAdaptedBlock(current, cycle, target, weeks, label, analysis, legac
     attachBlockContext(legacy, next, request, cycle.nextEngineCycle.baseRequest, { templateId: cycle.templateId, plannedIndex, blockIndex: cycle.activeBlock + 1, label, weeks, phase: target, preview: false, adaptBetweenBlocks: !!cycle.adaptExercises, splitDecision: decision, adaptedFrom: current.id });
     legacy.nextEngine.priorBlock = { programId: current.id, phase: source.phase, workouts: analysis.workoutCount, classification: analysis.classification, recovery: analysis.recovery.status };
     legacy.nextEngine.historySummary = { positive: analysis.positiveDecisionCount, negative: analysis.negativeDecisionCount, successfulExercises: analysis.successfulExerciseIds.length, ignoredLegacyExerciseIds: analysis.ignoredLegacyExerciseIds };
-    const finalized = finalizeGeneratedShellVolume(legacy, legacyExercises);
+    const finalized = rebalanceFocusedStrengthEntry(current,
+        finalizeGeneratedShellVolume(legacy, legacyExercises), legacyExercises);
     attachWorkingWeekTransition(current, finalized, decision, legacyExercises);
     return finalized;
 }

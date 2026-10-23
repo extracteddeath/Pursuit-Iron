@@ -81,6 +81,9 @@ try{
   await page.click('.wpb-plan-session-link');await page.waitForSelector('.wpb-cycle-block-preview');
   assert.match(await page.$eval('.wpb-cycle-block-preview',n=>n.innerText),/sets · .* reps · .* RIR/);
   assert.ok(await page.$eval('.wpb-cycle-preview-facts',(n,days)=>n.textContent.includes(`${days} training days per week`),saved[1].days.length),'preview exposes the actual upcoming weekly structure');
+  const expectedPreviewDose=saved[1].nextEngine?.cycleTemplate?.splitDecision?.workingWeekVolumeChange;
+  assert.equal(await page.$eval('.wpb-cycle-block-preview .wpb-cycle-dose-detail',ns=>ns.length),
+    expectedPreviewDose?1:0,'preview shows saved volume detail only when available');
   assert.equal(await page.$$eval('.wpb-cycle-block-preview button',ns=>ns.some(n=>/start/i.test(n.textContent))),false);
   await page.evaluate(()=>document.documentElement.style.fontSize='32px');
   await page.waitForFunction(()=>parseFloat(getComputedStyle(document.querySelector('.wpb-cycle-preview-name')).fontSize)>=28);
@@ -138,7 +141,21 @@ try{
   assert.ok(rows[2].text.includes('Peak'));assert.equal(await page.$$eval('.wpb-cycle-actions button',ns=>ns.length),1);
   assert.doesNotMatch(await page.$eval('.wpb-cycle-detail',n=>n.innerText),/kept exactly|Available after/);
   assert.equal(await page.$eval('.wpb-cycle-detail',n=>n.scrollWidth<=n.clientWidth+1),true);
-  assert.equal(await page.$$eval('.wpb-cycle-detail details',ns=>ns.length),0,'overview facts are never collapsed');
+  const expectedDose=saved[1].nextEngine?.cycleTemplate?.splitDecision?.workingWeekVolumeChange;
+  const disclosures=await page.$eval('.wpb-cycle-detail details',ns=>ns.map(n=>({dose:n.classList.contains('wpb-cycle-dose-detail'),open:n.open})));
+  assert.ok(disclosures.every(n=>n.dose&&!n.open),'existing top-level cycle facts stay expanded; dose is opt-in');
+  if(expectedDose){
+    assert.equal(disclosures.length,1,'Up next shows one compact dose detail');
+    await page.click('.wpb-cycle-detail .wpb-cycle-dose-summary');
+    const visible=await page.$eval('.wpb-cycle-detail .wpb-cycle-dose-detail',n=>({
+      open:n.open,regions:n.querySelectorAll('.wpb-cycle-dose-row').length,
+      text:n.innerText,overflow:n.scrollWidth>n.clientWidth+1
+    }));
+    assert.ok(visible.open&&visible.regions===expectedDose.regions.length&&!visible.overflow,
+      'live regional breakdown is accessible and fits narrow screens');
+    assert.ok(visible.text.includes(String(expectedDose.previousWeeklySets))&&visible.text.includes(String(expectedDose.currentWeeklySets)));
+    await page.click('.wpb-cycle-detail .wpb-cycle-dose-summary');
+  } else assert.equal(disclosures.length,0,'Older saved cycles do not invent missing regional data');
   await page.waitForSelector('[aria-label="Next block changes"]');await page.waitForSelector('[aria-label="Cycle schedule"]');
   assert.equal(await page.$eval('.wpb-cycle-overview',n=>parseFloat(getComputedStyle(n).borderRadius)>=18),true);
   await page.screenshot({path:`/tmp/b890-cycle-detail-${width}.png`});

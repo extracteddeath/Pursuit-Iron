@@ -202,9 +202,27 @@ try{
   }},{...store,saved:live.blocks,cycles:[liveCycle],pinnedId:live.blocks[0].id,history:firstHistory});
   await page.goto('http://127.0.0.1:8790/index.html',{waitUntil:'networkidle0'});
   const complete=async(final=false)=>{
-   await page.waitForSelector('[aria-label="Open cycle Lifecycle browser"]');
+   await page.waitForSelector('[aria-label="Open cycle Lifecycle browser"]',{visible:true});
+   const openerBefore=await page.$eval('[aria-label="Open cycle Lifecycle browser"]',el=>({
+     html:el.outerHTML.slice(0,450),visible:!!el.getClientRects().length,
+     text:el.innerText.slice(0,150)
+   }));
    await page.click('[aria-label="Open cycle Lifecycle browser"]');
-   await page.waitForSelector('[aria-label="Cycle options"]');await page.click('[aria-label="Cycle options"]');
+   try{
+     await page.waitForSelector('[aria-label="Cycle options"]',{timeout:10000});
+   }catch(error){
+     const diagnostic=await page.evaluate(()=>{
+       const saved=JSON.parse(localStorage.getItem('wpb:v1')||'{}');
+       return {home:!!document.querySelector('.wpb-home'),cycleDetail:!!document.querySelector('.wpb-cycle-detail'),
+         allCycles:!!document.querySelector('.wpb-cycles'),popup:!!document.querySelector('.wpb-pop'),
+         cycleIds:(saved.cycles||[]).map(c=>c.id),pinnedId:saved.pinnedId,
+         openerCount:document.querySelectorAll('[aria-label="Open cycle Lifecycle browser"]').length,
+         screenText:document.body.innerText.slice(0,850)};
+     });
+     throw new Error('B890 cycle navigation did not reach Cycle options: '+JSON.stringify({
+       openerBefore,diagnostic,pageErrors:errors.slice(-5)}),{cause:error});
+   }
+   await page.click('[aria-label="Cycle options"]');
    await page.waitForSelector('.wpb-cycle-option-actions');
    await page.$$eval('.wpb-cycle-option-actions button',bs=>bs.find(b=>b.textContent.startsWith('Complete')).click());
    await page.waitForSelector('.wpb-pop');

@@ -8,7 +8,8 @@ const gates = [
     ['logged-set-progression-and-resume', 'm220-day-progression-test.mjs'],
     ['exercise-swap-identity', 'm327-session-swap-provenance-test.mjs'],
     ['multi-block-history-and-recovery', 'm323-cycle-replay-test.mjs'],
-    ['continuous-start-to-finish-journey', 'm340-engine-lifecycle-journey-test.mjs']
+    ['continuous-start-to-finish-journey', 'm340-engine-lifecycle-journey-test.mjs'],
+    ['fatigue-manual-interruption-adversarial-journey', 'm341-adversarial-lifecycle-test.mjs']
 ];
 const root = path.resolve(new URL('..', import.meta.url).pathname);
 const revisionResult = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' });

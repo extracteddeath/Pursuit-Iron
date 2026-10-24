@@ -73,7 +73,7 @@ try{
     for(const enlarged of [false,true]){
       await page.evaluate(large=>document.documentElement.style.fontSize=large?'200%':'100%',enlarged);
       await chooseTab('Sessions');
-      assert.equal(await page.$eval('.wpb-history-session',rows=>rows.length),history.length,'all logged sessions remain available');
+      assert.equal(await page.$$eval('.wpb-history-session',rows=>rows.length),history.length,'all logged sessions remain available');
       const compact=await page.$eval('.wpb-history-session-toggle',button=>{
         const title=button.querySelector('.wpb-progress-item-title'),summary=button.querySelector('.wpb-history-session-total');
         return {title:title?.textContent,whiteSpace:getComputedStyle(title).whiteSpace,summary:summary?.textContent,context:button.querySelector('.wpb-progress-item-subtitle')?.textContent,label:button.getAttribute('aria-label')};

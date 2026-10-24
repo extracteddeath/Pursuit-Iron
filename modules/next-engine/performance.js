@@ -1,5 +1,5 @@
 import { bestEstimated1RM, estimate1RM } from './history.js';
-import { availableLoadAtOrBelow, formatExerciseLoad, loadingRecommendation } from './loading.js';
+import { availableLoadAtOrBelow, formatExerciseLoad, loadingRecommendation, resolveLoadingMode } from './loading.js';
 import { progressionExposureContext } from './history-contract.js';
 function byExercise(sets) {
     const map = new Map();
@@ -95,6 +95,9 @@ function belowRangeLoadCorrection(exercise, actual, currentLoad, context) {
 function straightSetCalibration(exercise, actual, context) {
     if ((exercise.progressionStyle ?? 'double') !== 'double' || context.percentageLoading
         || exercise.prescription.setTargets?.length || actual.length !== exercise.sets || actual.length < 2)
+        return null;
+    // Added load alone cannot establish total-force capacity for bodyweight movements.
+    if (resolveLoadingMode(exercise.exerciseId, context.equipmentAvailable, context.loadingInventory) === 'bodyweight')
         return null;
     const loads = actual.map(s => s.load);
     if (!loads.every(w => Number.isFinite(w) && w > 0) || Math.min(...loads) === Math.max(...loads))

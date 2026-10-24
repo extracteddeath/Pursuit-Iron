@@ -77,6 +77,9 @@ const sparseInventory={...ctx,loadingInventory:{unit:'lb',exerciseOverrides:{'lo
   {availableLoads:[185,195,205,215]}}}};
 assert.equal(evaluateWorkoutProgression(incline,ramp,sparseInventory)[0].suggestedLoad,185,
   'The common load rounds down to a weight the selected equipment actually supports');
+const bodyweightContext={...ctx,loadingInventory:{unit:'lb',exerciseOverrides:{'low-inc-bb-bench':{mode:'bodyweight'}}}};
+assert.notEqual(evaluateWorkoutProgression(incline,ramp,bodyweightContext)[0].reasonCode,'straight_set_calibration',
+  'Added load alone cannot infer total bodyweight-movement capacity');
 const noisy=ramp.map((s,i)=>({...s,reps:i===0?16:s.reps}));
 assert.notEqual(evaluateWorkoutProgression(incline,noisy,ctx)[0].reasonCode,'straight_set_calibration',
   'An excluded high-rep estimate cannot establish support for all set positions');

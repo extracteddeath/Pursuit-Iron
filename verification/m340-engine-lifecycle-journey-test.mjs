@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {
     EXERCISES, EX_BY_ID, exerciseAt, computeCell, getNextShellCell,
     prescribeSets, sessionSuggestion, loggedWorkoutPerformance, summarizeSession,
-    normalizeEditedHistoryEntry, nextExerciseIdForShellExercise
+    normalizeEditedHistoryEntry, resolveNextShellExerciseId
 } from '../modules/engine-api.js';
 import { generateNextCycleForShell, advanceNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
 import { analyzeShellHistoryForNextEngine, nextWorkoutSuggestionForShell } from '../modules/next-engine/workout-history-adapter.js';
@@ -108,7 +108,8 @@ function completeRealWorkout(p, day, week, prior) {
     assert.equal(summary.sets, expected,
         'Home/Plan/Preview planned dose disagrees with logged working sets');
     for (const [id, result] of Object.entries(perf)) {
-        const engineId = nextExerciseIdForShellExercise(EX_BY_ID[id]);
+        const slot = submitted.find(row => row.id === id)?.slot;
+        const engineId = resolveNextShellExerciseId(p, day, slot, EX_BY_ID[id]);
         assert.ok(result.prescription?.schemaVersion === 1 && result.prescription.exerciseId === engineId,
             'Log prescription identity/schema mismatch: ' + JSON.stringify({ id, expected: engineId, actual: result.prescription, day: day.id, slot: submitted.find(e => e.id === id)?.slot, authored: day.exercises }));
         assert.ok(result.sets.every(set => Number.isFinite(set.w) && Number.isFinite(set.r)

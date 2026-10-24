@@ -4996,7 +4996,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb-history-header>h1{flex:1;}
 .wpb-history-clear{color:var(--wpb-theme-danger);}
 .wpb-plan-view{flex:1;min-height:0;overflow-y:auto;padding-block:var(--pi-space-3) calc(env(safe-area-inset-bottom) + 96px);}
-.wpb-plan-title{flex:1 1 10rem;min-width:0;margin:0;font-size:var(--pi-type-heading);line-height:1.3;font-weight:700;overflow-wrap:anywhere;}
+.wpb-plan-title{flex:1 1 auto;min-width:0;margin:0;font-size:var(--pi-type-heading);line-height:1.3;font-weight:700;overflow-wrap:anywhere;}
 .wpb-plan-context-heading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--pi-space-2);margin-bottom:var(--pi-space-3);}
 .wpb-profile-scroll{flex:1;min-height:0;overflow-y:auto;}
 .wpb-profile-inner{width:100%;max-width:var(--pi-reading-max);margin-inline:auto;padding:var(--pi-space-3) var(--pi-page-inset) calc(var(--pi-space-8) + env(safe-area-inset-bottom));container:pi-r77-profile / inline-size;}
@@ -7881,7 +7881,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 /* B892 / UI polish pass 02 — Profile controls share Material-inspired tonal states.
    Preserve Profile preference logic and DOM order. Only local micro-interactions
    animate; no page or row geometry transitions that might cause flashing. */
-.wpb-profile-toolbar{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-start;margin:0 0 14px;min-width:0}
+.wpb-profile-toolbar{display:flex;flex-wrap:wrap;gap:var(--pi-space-2);justify-content:flex-start;margin:var(--pi-space-1) 0 var(--pi-space-4);min-width:0}
+.wpb-profile-toolbar>.wpb-ui-action{flex:1 1 9rem;min-width:0;white-space:normal;overflow-wrap:anywhere;}
 .wpb-profile-toolbar button:focus-visible,
 .wpb-profile-customize button:focus-visible,
 .wpb-profile-strength button[aria-label="Share Strength Score"]:focus-visible{outline:3px solid var(--pi-focus,var(--wpb-theme-accent-ink,currentColor));outline-offset:2px}
@@ -8548,10 +8549,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 /* Secondary actions use quiet controls and retain correct accessible reading order.
    No flex order: screen-reader and keyboard navigation match the visible flow. */
-#root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-toolbar{
-  display:flex!important;gap:8px!important;margin:4px 0 15px!important;
-  flex-wrap:wrap;justify-content:flex-start!important;
-}
 
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-customize{
   border-radius:var(--pi-shape-card)!important;background:var(--pi-color-card)!important;

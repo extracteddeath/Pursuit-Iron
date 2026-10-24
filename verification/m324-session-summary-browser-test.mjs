@@ -92,6 +92,66 @@ try {
         assert.deepEqual(errors, []);
         await context.close();
     }
+    // M332: a real reordered week must keep Home, Plan and the opened Preview in agreement.
+    for (const [width, theme, enlarged] of [[393,'amethyst',false],[320,'rosewater',true],[900,'rosewater',false]]) {
+        const context=await browser.createBrowserContext(),page=await context.newPage(),errors=[];
+        page.on('pageerror',e=>errors.push(e.message));
+        const days=[{id:'upper',label:'Upper Body',primaryIndex:0,exercises:['bb-bench']},
+            {id:'lower',label:'Lower Body',primaryIndex:0,exercises:['back-squat']},
+            {id:'full',label:'Full Body',primaryIndex:0,exercises:['bb-row']}];
+        const p={id:'m332-cursor',name:'Strength and Muscle · Weekly Training',custom:true,weeks:4,
+            config:{unit:'lb',goal:'both',experience:'intermediate',progression:'double',weeks:4,deload:false},days,
+            overrides:Object.fromEntries(days.map(d=>[d.id+':0',{sets:3,reps:'6-8',rir:2}]))};
+        const h=[2,1,0].map((di,i)=>({id:'m332-log-'+i,programId:p.id,dayId:days[di].id,weekIndex:1,
+            date:Date.now()-(3-i)*86400000,updatedAt:1700000000000+i,unit:'lb',setsDone:1,totalSets:3,durationMin:20,
+            perf:{[days[di].exercises[0]]:{sets:[{w:100,r:6,done:true,rir:2,rirReported:true}]}}}));
+        await page.setViewport({width,height:880,isMobile:width<600,hasTouch:true});
+        await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
+        await page.evaluateOnNewDocument(seed=>{
+            if(sessionStorage.getItem('m332-seeded'))return;
+            sessionStorage.setItem('m332-seeded','1');localStorage.setItem('wpb:v1',JSON.stringify(seed));
+        },{...store,saved:[p],pinnedId:p.id,history:h,theme});
+        await page.goto(url,{waitUntil:'networkidle0'});await page.waitForSelector('.wpb-home-hero');
+        assert.match(await page.$eval('.wpb-home-hero',n=>n.textContent),/Lower Body/);
+        const before=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).history);
+        const homeSets=await page.evaluate(()=>{
+            const label=[...document.querySelectorAll('.wpb-home *')].find(n=>n.children.length===0&&n.textContent==='Sets');
+            for(let n=label?.parentElement;n;n=n.parentElement){
+                const value=parseInt(n.textContent,10);if(Number.isFinite(value))return value;
+            }
+            throw new Error('Home weekly set total missing');
+        });
+        assert.equal(homeSets,3);
+        await page.click('[data-tab="progress"]');await page.waitForSelector('[data-progress-glance]');
+        const totals=await page.$$eval('[data-progress-glance] .wpb-progress-glance-item',nodes=>Object.fromEntries(nodes.map(n=>
+            [n.querySelector('.wpb-progress-glance-label').textContent,Number(n.querySelector('.wpb-progress-glance-value').textContent)])));
+        assert.equal(totals.Sessions,3);assert.equal(totals.Sets,homeSets,'muscle credits must not inflate the completed-set tile');
+        await page.click('[data-tab="plan"]');await page.waitForSelector('.wpb-plan-up-next');
+        assert.match(await page.$eval('.wpb-plan-up-next',n=>n.textContent),/Lower Body/);
+        assert.match(await page.$eval('.wpb-plan-up-next',n=>n.textContent),/Week 2/);
+        const next=await page.$eval('[data-plan-week="2"] .wpb-plan-session-link[data-next="true"]',n=>n.textContent);
+        assert.match(next,/Lower Body/);
+        if(enlarged)await page.evaluate(()=>{
+            const fonts=[...document.querySelectorAll('*')].filter(n=>n.nodeType===1&&n.tagName!=='STYLE')
+                .map(n=>[n,parseFloat(getComputedStyle(n).fontSize)]);
+            fonts.forEach(([n,size])=>n.style.setProperty('font-size',size*2+'px','important'));
+        });
+        const layout=await page.$eval('.wpb-plan-context-heading',n=>{
+            const t=n.querySelector('h2').getBoundingClientRect(),b=n.querySelector('button').getBoundingClientRect(),r=n.getBoundingClientRect();
+            return {width:r.width,titleWidth:t.width,titleBottom:t.bottom,buttonTop:b.top,buttonHeight:b.height,overflow:n.scrollWidth>n.clientWidth+1};
+        });
+        assert.equal(layout.overflow,false);
+        assert.ok(layout.buttonHeight>=48);
+        if(width<600)assert.ok(Math.abs(layout.titleWidth-layout.width)<=1&&layout.buttonTop>=layout.titleBottom+6,
+            'long program name uses full width before its action: '+JSON.stringify(layout));
+        await page.screenshot({path:`verification/m332-plan-${width}-phone.png`});
+        await page.click('.wpb-plan-up-next');await page.waitForSelector('[data-nextex]');
+        const preview=await page.$eval('.wpb-next-workout-view',n=>n.textContent);
+        assert.match(preview,/Lower Body/);assert.match(preview,/Back Squat/);assert.doesNotMatch(preview,/Barbell Bench Press/);
+        assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).history),before);
+        assert.deepEqual(errors,[]);await context.close();
+    }
+    console.log('PASS M332 browser: reordered-week Home/Plan/Preview parity and long Plan-name reflow at 393/320-large-text/900px.');
     console.log('PASS M324 browser: real Home → Plan → full Program → Preview → Workout uses week-two exercises, sets and clock, preserving history at 320/900px dark/light.');
 } finally {
     if (browser) await browser.close();

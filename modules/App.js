@@ -16119,9 +16119,9 @@ function HistoryView({ history, onBack, onClear, onDeleteEntry, onEditEntry, emb
     const weekVol = useMemo(() => loggedVolume(history, 7), [history]);
     const weekSubVol = useMemo(() => loggedSubVolume(history, 7), [history]);
     const progressGlance = useMemo(() => {
-        const now = Date.now(), day = 86400000, weekAgo = now - 7 * day, prCutoff = now - 21 * day;
-        const sessions7 = history.filter(h => (trainingCalendarDate(h?.date)?.getTime() || 0) >= weekAgo).length;
-        const sets7 = Math.round(Object.values(weekVol || {}).reduce((n, v) => n + (Number(v) || 0), 0));
+        const now = Date.now(), day = 86400000, prCutoff = now - 21 * day;
+        const recap = weeklyRecap(history, unit);
+        const sessions7 = recap.count, sets7 = recap.sets;
         const recentPrs = trends.filter(t => t?.sessionsCount >= 2 && t?.last?.date >= prCutoff && t.last.best >= t.prBest - 0.01).length;
         const activeDays = new Set((history || []).map(h => { const d = trainingCalendarDate(h?.date); return d ? `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}` : null; }).filter(Boolean));
         const activity28 = Array.from({ length: 28 }, (_, i) => {
@@ -16136,7 +16136,7 @@ function HistoryView({ history, onBack, onClear, onDeleteEntry, onEditEntry, emb
             streak++;
         const lastDate = (history || []).reduce((m, h) => { const t = trainingCalendarDate(h?.date)?.getTime(); return t != null && t > m ? t : m; }, 0);
         return { sessions7, sets7, recentPrs, activity28, streak, lastDate };
-    }, [history, weekVol, trends]);
+    }, [history, unit, trends]);
     const inRangeTrend = useMemo(() => {
         const out = [];
         const now = Date.now();

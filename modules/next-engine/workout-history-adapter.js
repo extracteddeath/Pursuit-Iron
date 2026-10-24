@@ -466,7 +466,7 @@ export function deriveProgressionSelectionEvidence(workouts = []) {
         if (existing) return existing;
         const row = { comparableExposures: 0, styleExposures: 0, failureCount: 0, stallCount: 0,
             loadingBlockedCount: 0, rirReportedSets: 0, rirEligibleSets: 0, e1rmSamples: 0,
-            lastStyle: null, lastFlatSignature: null, flatStreak: 0 };
+            lastStyle: null, lastFlatSignature: null, flatStreak: 0, failureStreak: 0 };
         rows.set(id, row);
         return row;
     };
@@ -483,7 +483,7 @@ export function deriveProgressionSelectionEvidence(workouts = []) {
                 Object.assign(row, { comparableExposures: 0, styleExposures: 0,
                     failureCount: 0, stallCount: 0, loadingBlockedCount: 0,
                     rirReportedSets: 0, rirEligibleSets: 0, e1rmSamples: 0,
-                    lastFlatSignature: null, flatStreak: 0 });
+                    lastFlatSignature: null, flatStreak: 0, failureStreak: 0 });
             }
             row.lastStyle = style;
             const sets = (workout?.performedSets ?? []).filter(set => set.exerciseId === id)
@@ -492,14 +492,14 @@ export function deriveProgressionSelectionEvidence(workouts = []) {
             if (!comparable) {
                 row.lastFlatSignature = null;
                 row.flatStreak = 0;
+                row.failureStreak = 0;
+                row.stallCount = 0;
                 continue;
             }
             row.comparableExposures += 1;
             row.styleExposures += 1;
-            if (decision.outcome === 'failure') {
-                row.failureCount += 1;
-                row.stallCount += 1;
-            }
+            if (decision.outcome === 'failure') row.failureCount++;
+            row.failureStreak = decision.outcome === 'failure' ? row.failureStreak + 1 : 0;
             if (decision.outcome === 'success_blocked') row.loadingBlockedCount += 1;
             if (numberOf(decision.estimated1RM) > 0) row.e1rmSamples += 1;
             for (const set of sets) {
@@ -523,7 +523,9 @@ export function deriveProgressionSelectionEvidence(workouts = []) {
             row.flatStreak = signature && signature === row.lastFlatSignature
                 ? row.flatStreak + 1 : signature ? 1 : 0;
             row.lastFlatSignature = signature;
-            if (row.flatStreak >= 3) row.stallCount++;
+            // Count the CURRENT unresolved streak, not every past plateau.
+            // A successful progression must erase stale stagnation pressure.
+            row.stallCount = Math.max(row.failureStreak, Math.max(0, row.flatStreak - 2));
         }
     }
     return Object.fromEntries([...rows.entries()].map(([id, row]) => [id, {

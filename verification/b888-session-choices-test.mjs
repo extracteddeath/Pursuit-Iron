@@ -139,3 +139,18 @@ assert.equal(withAdded.days[0].exercises.at(-1),'reverse-curl');
 assert.throws(()=>withWorkoutProgramReview(original,{...addedReview,programExerciseChanges:[]}),/no longer in the program/);
 assert.equal(JSON.stringify({original,review}),evidence,'review, source plan and evidence remain immutable');
 console.log('PASS M331: method provenance, conflicting draft counts, global exercise scope, immutable/idempotent review, legacy restraint and added-lift ownership.');
+
+const oldCountReview={programId:original.id,dayId:pairedDay.id,weekIndex:2,
+    programExerciseChanges:[{exerciseId:'db-bench',sets:4,previousSets:3,added:false}]};
+assert.throws(()=>withWorkoutProgramReview(draftCountEdit,oldCountReview),/set count changed/,
+    'old queued count changes compare the original recorded week before replacing a later draft');
+assert.equal(withWorkoutProgramReview(original,oldCountReview).overrides['paired:0'].sets,4);
+assert.throws(()=>withWorkoutProgramReview(original,{...oldCountReview,weekIndex:undefined}),/no workout week/);
+assert.throws(()=>withWorkoutProgramReview(original,{...oldCountReview,weekIndex:1}),/slot changed/);
+console.log('PASS M331 legacy counts: recorded source week guards newer counts; unknown or changed source identity is refused.');
+
+assert.deepEqual(withWorkoutProgramReview(withAdded,addedReview),withAdded,'an applied added-lift review is idempotent');
+const addedSlot=withAdded.days[0].exercises.indexOf('reverse-curl');
+const laterAdded={...withAdded,overrides:{...withAdded.overrides,[`${pairedDay.id}:${addedSlot}`]:{...withAdded.overrides[`${pairedDay.id}:${addedSlot}`],sets:5}}};
+assert.throws(()=>withWorkoutProgramReview(laterAdded,addedReview),/already added or edited/,
+    'an old addition cannot overwrite a count edited after that lift was added');

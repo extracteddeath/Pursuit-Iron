@@ -189,7 +189,7 @@ try {
   await context.close();
  }
  // M331: saved/draft conflicts and a failed write must keep the whole review pending.
- for(const [mode,width] of [['saved-method',320],['draft-method',900],['draft-count',320],['write-failure',320],['legacy',900],['deleted',320]]) {
+ for(const [mode,width] of [['saved-method',320],['draft-method',900],['draft-count',320],['legacy-count',320],['write-failure',320],['legacy',900],['deleted',320]]) {
   const context=await browser.createBrowserContext();const reviewPage=await context.newPage();
   reviewPage.on('pageerror',e=>errors.push(e.message));
   await reviewPage.setViewport({width,height:850,isMobile:width<600,hasTouch:true});
@@ -202,8 +202,9 @@ try {
   const later=structuredClone(base);let saved=[base],drafts={};
   if(mode==='saved-method'){later.progStyle['bb-bench']='linear';saved=[later];}
   if(mode==='draft-method'){later.progStyle['bb-bench']='linear';drafts[base.id]=later;}
-  if(mode==='draft-count'){
+  if(mode==='draft-count'||mode==='legacy-count'){
    entry.programExerciseChanges=workoutProgramChanges([{id:'bb-bench',slot:0,setCountEdited:true,sets:[{},{},{},{}]}],base.days[0],()=>({sets:3}),base,1);
+   if(mode==='legacy-count')entry.programExerciseChanges=entry.programExerciseChanges.map(({exerciseId,sets,previousSets,added})=>({exerciseId,sets,previousSets,added}));
    later.overrides['test:0'].sets=5;drafts[base.id]=later;
   }
   if(mode==='legacy')delete entry.progressionOrigins;
@@ -229,7 +230,7 @@ try {
   await reviewPage.evaluate(()=>{const b=[...document.querySelectorAll('.wpb-session-dialog button')].find(b=>b.textContent.trim()==='Update program');b.click();b.click();});
   await reviewPage.waitForSelector('.wpb-session-dialog [role="alert"]');
   const message=await reviewPage.$eval('.wpb-session-dialog [role="alert"]',n=>n.textContent);
-  assert.match(message,mode==='write-failure'?/Could not save/:mode==='legacy'?/older review/:mode==='deleted'?/no longer saved/:mode==='draft-count'?/set count changed/:/progression or workout slots changed/);
+  assert.match(message,mode==='write-failure'?/Could not save/:mode==='legacy'?/older review/:mode==='deleted'?/no longer saved/:mode.endsWith('count')?/set count changed/:/progression or workout slots changed/);
   let after=await read();
   assert.deepEqual(after.saved,before.saved,mode+' saved program must not partially change');
   assert.deepEqual(after.drafts,before.drafts,mode+' draft must not change');

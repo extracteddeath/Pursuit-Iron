@@ -8,7 +8,7 @@ import { techniqueProtocolFromCell } from './next-engine/workout-runtime.js';
 import { EX_BY_ID } from './training-domain/catalog.js';
 import { programWorkingWeeks } from './program-duration.js';
 import { buildUserAddedSlotPrescriptions } from './next-engine/workout-runtime.js';
-import { markUserPrescriptionOverride, nextExerciseIdForShellExercise } from './next-engine/app-shell-adapter.js';
+import { markUserPrescriptionOverride, nextExerciseIdForShellExercise, shellPrescriptionFieldOwner } from './next-engine/app-shell-adapter.js';
 
 const SESSION_PROGRESSION_STYLES = new Set(['auto','double','dynamic','ladder','linear','wave','e1rm']);
 
@@ -58,8 +58,12 @@ export function withWorkoutProgramReview(program, review) {
                 ? 'This lift’s progression or workout slots changed after your choice. Keep this session only, then review the program.'
                 : 'This older review has no original progression to compare. Keep it for the session only and change the program in its editor.');
     }
+    const changes = review.programExerciseChanges || [];
+    if (changes.some(change => !change.added && change.slot == null)
+        && (!Number.isInteger(review.weekIndex) || review.weekIndex < 1))
+        throw new Error('This older set-count review has no workout week to compare. Keep it for the session only and use the program editor.');
     return withProgressionChoices(withWorkoutProgramChanges(program, review.dayId,
-        review.programExerciseChanges || []), review.progressionChanges || {});
+        changes, review.weekIndex), review.progressionChanges || {});
 }
 
 // Slot recommendations belong only to the exercise prescribed for this week.
@@ -114,7 +118,7 @@ export function workoutProgramChanges(data, day, cellFor, program = null, weekIn
 }
 
 // Append by stable exercise ID and set explicit user-owned counts. Saved workout history is never an input.
-export function withWorkoutProgramChanges(program, dayId, changes = []) {
+export function withWorkoutProgramChanges(program, dayId, changes = [], reviewWeekIndex = null) {
     if (!changes.length) return program;
     const day = program?.days?.find(day => day.id === dayId);
     if (!day) throw new Error('This workout day is no longer in the program.');
@@ -132,9 +136,7 @@ export function withWorkoutProgramChanges(program, dayId, changes = []) {
                 || exerciseAt(program, day, slot, change.weekIndex) !== ex.id
                 || JSON.stringify(ids) !== JSON.stringify(change.slotExerciseIds))
                 throw new Error('This workout slot changed after the session. Keep the session changes or review the program.');
-            const currentSets = Number(computeCell(program, day, ex.id, slot, change.weekIndex)?.sets);
-            if (currentSets !== Number(change.previousSets) && currentSets !== sets)
-                throw new Error('This workout slot’s set count changed after the session. Keep this session only, then review the program.');
+
         } else {
             // Older pending reviews did not save slot identity. Resolve only an
             // unambiguous base/alternate occurrence; never guess between duplicates.
@@ -142,6 +144,19 @@ export function withWorkoutProgramChanges(program, dayId, changes = []) {
                 id === ex.id || program.pairs?.[`${dayId}:${index}`] === ex.id ? [index] : []);
             if (matches.length > 1) throw new Error('This exercise has more than one workout slot. Review the program before applying these sets.');
             slot = matches[0] ?? -1;
+        }
+        if (change.added && slot >= 0) {
+            const existing = overrides[`${dayId}:${slot}`];
+            if (Number(existing?.sets) !== sets || shellPrescriptionFieldOwner(program, existing, 'sets') !== 'user')
+                throw new Error('This lift was already added or edited in the program. Keep this session only, then review the program.');
+        }
+        const sourceWeek = change.weekIndex ?? reviewWeekIndex;
+        if (!change.added && slot >= 0 && Number.isInteger(sourceWeek) && sourceWeek > 0) {
+            if (exerciseAt(program, day, slot, sourceWeek) !== ex.id)
+                throw new Error('This workout slot changed after the session. Keep the session changes or review the program.');
+            const currentSets = Number(computeCell(program, day, ex.id, slot, sourceWeek)?.sets);
+            if (currentSets !== Number(change.previousSets) && currentSets !== sets)
+                throw new Error('This workout slot’s set count changed after the session. Keep this session only, then review the program.');
         }
         if (slot < 0) {
             if (!change.added) throw new Error('An exercise changed in this program. Review the program before applying these sets.');

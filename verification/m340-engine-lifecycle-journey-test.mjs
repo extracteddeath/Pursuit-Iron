@@ -150,7 +150,7 @@ for (let block = 0; block < 2; block++) {
                     firstDay, 0, week, 'lb');
                 if (suggestion) {
                     const firstId = exerciseAt(program, firstDay, 0, week);
-                    assert.deepEqual(suggestion.last, entry.perf[firstId],
+                    assert.deepEqual(suggestion.last, clone(entry.perf[firstId]),
                         'Progression LAST is not the exact set log just saved');
                     assert.ok(suggestion.reason && suggestion.action,
                         'Logged exposure has an unexplained next-workout decision');

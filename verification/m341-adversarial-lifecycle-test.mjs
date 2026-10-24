@@ -52,7 +52,7 @@ function check(label, result) {
 }
 function rowsFrom(reps, loads = [100, 100, 100, 100], efforts = [2, 2, 2, 2]) {
     return standard.map((row, i) => ({ ...clone(row), weight: String(loads[i]),
-        reps: String(reps[i]), done: reps[i] !== null,
+        reps: reps[i] === null ? row.reps : String(reps[i]), done: reps[i] !== null,
         ...(efforts[i] === null ? {} : { actualRIR: efforts[i] }) }));
 }
 function save(rows, context = {}) {
@@ -152,10 +152,11 @@ function save(rows, context = {}) {
     check('fatigue-and-interruption', { action: saved.advice.action, loggedSets: saved.counted });
     const orphan = clone(adjusted.sets);
     orphan[0].done = false;
+    const orphanBefore = clone(orphan);
     const repaired = reconcileRestoredLiveAdjustments(orphan);
     assert.equal(repaired[2].weight, '100',
         'A saved reduction without its original logged evidence must be removed');
-    assert.deepEqual(orphan, clone(orphan), 'Repair is read-only');
+    assert.deepEqual(orphan, orphanBefore, 'Repair is read-only');
     check('orphan-adjustment-recovery', { loadRestored: Number(repaired[2].weight) });
 }
 // 6. A live user edit must survive a fresh prescription, restore, and logging.

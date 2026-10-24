@@ -4,8 +4,8 @@
   "source": "Canonical engine with milestone contract verification",
   "engine": "0.65.9; Observed-effort live rep guard and retained target RIR",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
-  "nextRuntimeModules": 72,
+  "nextRuntimeModules": 73,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b906-rcf5a54004ad2c0b5",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b906-r7ab90846d857ccd0",
   "uiMilestone": "Build 906 · M320 Adaptive training-cycle release"
 }

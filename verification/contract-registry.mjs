@@ -129,6 +129,7 @@ export const contractGroups = Object.freeze({
         'm344-recovery-exit-plateau-test.mjs',
         'm346-plateau-evidence-test.mjs',
         'm347-stagnation-decision-test.mjs',
+        'm348-observed-volume-response-test.mjs',
         'prescription-integrity-test.mjs',
         'programs-test.mjs',
         'progression-safety-test.mjs',

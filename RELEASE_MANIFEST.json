@@ -5,7 +5,7 @@
   "build": 906,
   "engineVersion": "0.65.9",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "ba22e8ffe001e55ab5d034bc95508697347a2605479ae8fcaf52d5a83cdfb752",
+  "runtimeAggregate": "50004f3f72991f7dae9bc2b875b020bc93cb0edb4b598ed28bd78784f0dc4168",
   "runtimeFiles": {
     "modules/cycle-setup-drafts.js": "d3e9e750298afd8820e2bfd543c2cebede65e4f27c136ff26fe383d202b824e9",
     "modules/engine-api.js": "9d9072d28e255c67cb10222299a260e9404557a4cbe49756f7eae22a8d5155d1",
@@ -21,7 +21,7 @@
     "modules/next-engine/app-shell-adapter.js": "a97680bd329078bbeb7c737f0820ad72ccc720262243964d17debe574607dafa",
     "modules/next-engine/arbiter.js": "cba22ac9d8a0dbd76177b3dd639f9794263f266c10f639fc1bab6009ac937c5d",
     "modules/next-engine/arm-coverage.js": "9216b888436bf51205be384a80efa14d26d93c5c3462471721318f93f36db1ce",
-    "modules/next-engine/athlete-response.js": "8989e1c1a7fd964a6ac83a2f6404aec8232791581263349406a533c39c2f5182",
+    "modules/next-engine/athlete-response.js": "e1e0cb820b2eb39397b68bb754b9f8cb1cf3df146821b5db1ee9e9119d19673b",
     "modules/next-engine/candidate-optimization.js": "b56d058a7b10118b015ece840067e5fe3dcd8982c589c44ca8b94a299898b396",
     "modules/next-engine/capacity-generation.js": "1fed6ad20b90257bcf6f5a88337669bc568f5de7f6fe92ba06c80fe2de2f36dd",
     "modules/next-engine/capacity-policy.js": "7679d6f487a968d6e3d2144385cb33ac0c788d7565c2b132b9187b5e2693825b",
@@ -49,6 +49,7 @@
     "modules/next-engine/live-autoregulation.js": "d53e773d8e1de10a61f6c3959192c7f1400c42d4a12dceb8c0a769bc7f93336e",
     "modules/next-engine/loading.js": "98b41b441e2404bb4848813226090196afde4e9b941cdb865b542580502655b0",
     "modules/next-engine/method-policy.js": "b5b0a4f214c768ab76050d3daad56f0afea0b533b0fea470859ef475ad16d828",
+    "modules/next-engine/observed-volume-response.js": "ad63c6c1b3eefdc4a254b78bf3d0f54bce487b0b4c111e352a1d7107f11f2dff",
     "modules/next-engine/percentage-protocols.js": "6898b022d081d4bab891cc32de5b321be944187f3d846dc69fb66f15c8d44f4b",
     "modules/next-engine/performance.js": "b7d47ee7f912f1d721352663c66afc5c14be0e36109a5cefb4dcf8b10c9e3534",
     "modules/next-engine/phase-policy.js": "31770fb6bc4f3834acfc321e95206a9be384faa3731e97f60cec814cabd3150f",
@@ -120,8 +121,8 @@
   "uiFiles": {
     "modules/App.js": "247fb9525a03bd8de6b56ab561a0ae711a55a3d571ac8d0f1b869f9949b58001",
     "index.html": "bc3985dd0692d91ceb47ad7c7d0e6581bf45684d6388630a0efd1fb9eb6ac262",
-    "sw.js": "93c881c7fd45c7e29237180357719b49ba0652896e80ebcbd683e9b276d7e889",
-    "BUILD_PROFILE.json": "6a11f4588053e8e2d159e98356b4515dee9c1b2effe5d6d44317b3ddaac82128",
+    "sw.js": "9ecb4cd8967a77fcecd03bc4d3e22ceb64cc7df94b05473d083dcc437a0de169",
+    "BUILD_PROFILE.json": "798e611772ee04fd60b42222b41b629984a75734074899de916113eb9370b9ec",
     "CHANGELOG.md": "f26b355bf2c83b93fdf294ce427bbe0b32886ea2fbf4e0421586a5a6b06a34de",
     "app.css": "a1bf8b5ac2043a62256c3ba1d8424eaac789182b6c25d8a5b3d7e88867e3cbd7",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
@@ -129,6 +130,6 @@
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Compact workout set controls and muted completed-set effort bars; retains restored layout, numeric selection and build 824 history/load corrections.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b906-rcf5a54004ad2c0b5",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b906-r7ab90846d857ccd0",
   "uiMilestone": "Build 906 · M320 Adaptive training-cycle release"
 }

@@ -461,10 +461,12 @@ export function semanticStartingReferenceForShell(program, history, day, nextId,
 export function deriveProgressionSelectionEvidence(workouts = []) {
     const rows = new Map();
     const excluded = new Set(['unobserved', 'non_comparable', 'context_limited', 'interrupted', 'incomplete']);
-    const ensure = (id) => {
+    const ensure = id => {
         const existing = rows.get(id);
         if (existing) return existing;
-        const row = { comparableExposures: 0, styleExposures: 0, failureCount: 0, stallCount: 0, loadingBlockedCount: 0, rirReportedSets: 0, rirEligibleSets: 0, e1rmSamples: 0 };
+        const row = { comparableExposures: 0, styleExposures: 0, failureCount: 0, stallCount: 0,
+            loadingBlockedCount: 0, rirReportedSets: 0, rirEligibleSets: 0, e1rmSamples: 0,
+            lastStyle: null, lastFlatSignature: null, flatStreak: 0 };
         rows.set(id, row);
         return row;
     };
@@ -472,13 +474,27 @@ export function deriveProgressionSelectionEvidence(workouts = []) {
         for (const decision of workout?.progression ?? []) {
             const id = decision?.exerciseId;
             if (!id) continue;
+            const planned = (workout?.session?.exercises ?? []).find(ex => ex.exerciseId === id);
+            const style = planned?.progressionStyle ?? 'unknown';
             const row = ensure(id);
-            const sets = (workout?.performedSets ?? []).filter(set => set.exerciseId === id);
+            // An athlete can change methods during a block. Old linear failures
+            // cannot be silently counted as exposures of newly selected dynamic.
+            if (row.lastStyle !== null && style !== row.lastStyle) {
+                Object.assign(row, { comparableExposures: 0, styleExposures: 0,
+                    failureCount: 0, stallCount: 0, loadingBlockedCount: 0,
+                    rirReportedSets: 0, rirEligibleSets: 0, e1rmSamples: 0,
+                    lastFlatSignature: null, flatStreak: 0 });
+            }
+            row.lastStyle = style;
+            const sets = (workout?.performedSets ?? []).filter(set => set.exerciseId === id)
+                .sort((a, b) => a.setIndex - b.setIndex);
             const comparable = !excluded.has(decision.outcome);
-            if (!comparable) continue;
+            if (!comparable) {
+                row.lastFlatSignature = null;
+                row.flatStreak = 0;
+                continue;
+            }
             row.comparableExposures += 1;
-            // Saved shell history does not record a separate style-version stamp. Within a block the style
-            // is stable, so comparable exposures are also the conservative evidence count for that style.
             row.styleExposures += 1;
             if (decision.outcome === 'failure') {
                 row.failureCount += 1;
@@ -490,6 +506,24 @@ export function deriveProgressionSelectionEvidence(workouts = []) {
                 row.rirEligibleSets += 1;
                 if (numberOf(set.rir) !== null) row.rirReportedSets += 1;
             }
+            // Repeated unchanged work is a plateau only with full comparable
+            // prescriptions and actual effort evidence. Improved reps, changing
+            // RIR, edited plans, partial sessions or missing effort reset the
+            // streak. Never confuse two ordinary holds with a proven stall.
+            const complete = Number.isInteger(planned?.sets) && planned.sets > 0
+                && sets.length === planned.sets;
+            const measured = complete && sets.every(set =>
+                numberOf(set.load) > 0 && numberOf(set.reps) > 0
+                && numberOf(set.rir) !== null);
+            const unchanged = decision.reasonCode === 'normal_progression' && measured;
+            const signature = unchanged ? JSON.stringify({
+                style, role: planned.role, prescription: planned.prescription,
+                sets: sets.map(set => [numberOf(set.load), numberOf(set.reps), numberOf(set.rir)])
+            }) : null;
+            row.flatStreak = signature && signature === row.lastFlatSignature
+                ? row.flatStreak + 1 : signature ? 1 : 0;
+            row.lastFlatSignature = signature;
+            if (row.flatStreak >= 3) row.stallCount++;
         }
     }
     return Object.fromEntries([...rows.entries()].map(([id, row]) => [id, {

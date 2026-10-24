@@ -581,7 +581,7 @@ try{
         const initialReview=await reviewLayout();
         const expandedWizard=width>=1120&&height>=720;
         assert.equal(initialReview.grid,expandedWizard,'Builder pane follows available window');
-        assert.equal(initialReview.visible,expandedWizard,'Builder review is optional on compact screens');
+        assert.equal(initialReview.visible,true,'Setup review is reachable at every window size');
         assert.equal(initialReview.overflow,false,'Builder never creates horizontal document overflow');
         if(expandedWizard){
           assert.ok(initialReview.wizardWidth>800,'Wizard expands beyond the old phone-only route');
@@ -597,7 +597,7 @@ try{
             'Cycle preview uses the selected live cycle template');
           await page.setViewport({width:900,height:1000,deviceScaleFactor:1,isMobile:false,hasTouch:false});
           const mediumReview=await reviewLayout();
-          assert.equal(mediumReview.visible,false,'Medium windows return to focused single form');
+          assert.equal(mediumReview.visible,true,'Medium windows retain the compact setup disclosure');
           assert.equal(mediumReview.input,initialReview.input,
             'Resizing the Wizard preserves the current input');
           await page.setViewport({width,height,deviceScaleFactor:1,isMobile:!wide,hasTouch:!wide});

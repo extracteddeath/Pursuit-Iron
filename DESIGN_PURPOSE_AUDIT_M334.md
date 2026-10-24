@@ -86,3 +86,11 @@ Preserve the working phone Workout/Focus layout and all per-set actions, compact
 **Acceptance:** release integrity and content-addressed offline cache; source/engine parity with cycle conversion, split frequency, all-week volume/equipment and actual history; program, workout, motion, accessibility and integration browser shards. On device, independently inspect Settings section picker with keyboard and TalkBack plus Cycle Preview at narrow/foldable widths. Do not report Android readiness from browser emulation.
 
 **Remaining:** redesign the complete creation → comparison → generated cycle review → preview → Start sequence as a *single* deliberate experience after measuring rendered screen and interaction evidence. The improved preview alone is not completion of that end-to-end flow.
+
+## M337 — setup navigation and responsive review
+
+The creation form now keeps Back/Next ahead of its saved-draft status. Explicit Discard remains in the scrolling cycle form instead of competing with the primary navigation in the fixed footer. Failed-build status, retry, optional early generation and automatic draft recovery retain their existing owners.
+
+Compact windows expose a named, keyboard-operated Review setup disclosure after the current question. Its contents read the same live configuration as the existing desktop overview; opening it never generates or saves a program. Expanded windows keep the always-visible side pane. Resizing preserves form answers and the compact disclosure choice. Styles extend the existing Wizard family with published tokens, without new inline paint or priority declarations.
+
+Verification extends the existing R65 responsive and R74 form journeys: current answers in the summary, keyboard order/Space activation, 200% text, compact/expanded layouts and retained configuration. Existing custom-cycle coverage remains responsible for authored block ordering, incomplete draft recovery, failed-build retry and explicit discard. Engine/cycle contracts, independent export parity and all release/browser gates remain required on the final revision. These are browser fixtures; physical Android validation remains separate.

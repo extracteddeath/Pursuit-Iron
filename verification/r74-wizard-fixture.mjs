@@ -144,6 +144,40 @@ export async function verifyWizardSteps(page, { width, height, theme, root, url 
         !document.querySelector('.wpb-wizard-next-action').disabled&&
         !document.querySelector('.wpb-wizard-step').textContent.includes('Checking'),{timeout:90000});
       const label=theme+' '+width+'x'+height+' '+(cycle?'Cycle':'Program')+' '+key;
+      if(key==='name'){
+        const compact=width<1120||height<720;
+        const toggle='.wpb-wizard-review-toggle';
+        const before=await signature();
+        if(compact){
+          assert.equal(await page.$eval(toggle,el=>el.getAttribute('aria-expanded')),'false');
+          await page.$eval('.wpb-wizard-step input',el=>el.focus());
+          await page.keyboard.press('Tab');await settle();
+          assert.equal(await page.$eval(toggle,el=>el===document.activeElement),true,
+            label+' keyboard order reaches the setup disclosure after the name');
+          await page.keyboard.press('Space');await settle();
+          assert.equal(await page.$eval(toggle,el=>el.getAttribute('aria-expanded')),'true');
+        }else{
+          await page.$eval('.wpb-wizard-step input',el=>el.focus());
+          await page.keyboard.press('Tab');await settle();
+          assert.equal(await page.$eval(toggle,el=>el===document.activeElement),false,
+            label+' desktop keyboard order skips the hidden disclosure control');
+        }
+        assert.ok(await page.$eval('.wpb-wizard-review-content',el=>
+          el.getClientRects().length>0&&el.textContent.includes(document.querySelector('.wpb-wizard-step input').value)),
+          label+' review reads the current name without changing the form');
+        await textSize(true);await assertGeometry(label+' expanded setup 200% text');
+        if(width===320&&theme==='rose')await page.screenshot({path:path.join(root,'verification/r74-'+(cycle?'cycle':'program')+'-setup-review-phone.png')});
+        await textSize(false);
+        assert.deepEqual(await signature(),before,'Review and text scaling preserve the current answers');
+        if(compact)await activate(toggle);
+        if(cycle){
+          assert.equal(await page.$eval('.wpb-wizard-discard-action',el=>!!el.closest('.wpb-page-scroll')),true,
+            'Discard remains available in scrolling setup content');
+          assert.equal(await page.$eval('.wpb-cycle-draft-status',el=>
+            !!(document.querySelector('.wpb-wizard-actions').compareDocumentPosition(el)&Node.DOCUMENT_POSITION_FOLLOWING)),true,
+            'Back and Next precede the saved-status message');
+        }
+      }
       if(key==='cycletype'){
         const cards=await page.$$('.wpb-wizard-cycle-option');
         assert.ok(cards.length>1,'Cycle creation offers template choices');

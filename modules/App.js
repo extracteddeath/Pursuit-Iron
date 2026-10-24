@@ -5720,6 +5720,7 @@ function afterNextPaint() {
 /* R71 — read-only supporting pane. Shares Wizard's actual config and step owner:
    no forked draft, early generation, hidden navigation or duplicate save path. */
 function WizardReviewPane({ config, cycleMode, modeChosen, selectedCycle, cycleAdapt, cycleAdaptSplit, step, stepCount, stepKey }) {
+    const [expanded, setExpanded] = useState(false);
     const goal = cycleMode ? (selectedCycle?.goal || config.goal) : config.goal;
     const count = Array.isArray(config.equipment) ? config.equipment.length : 0;
     const focus = Object.entries(config.focus || {}).filter(([, n]) => n > 0)
@@ -5747,10 +5748,15 @@ function WizardReviewPane({ config, cycleMode, modeChosen, selectedCycle, cycleA
     }
     if (focus) rows.push(["Emphasize", focus]);
     if (reduced) rows.push(["Reduce", reduced]);
-    return (_jsxs("aside", { className: "wpb-wizard-review", "aria-label": "Live training setup summary",
+    return (_jsxs("aside", { className: "wpb-wizard-review", "data-expanded": expanded, "aria-label": "Live training setup summary",
         children: [
+            _jsx(UiAction, { variant: "text", className: "wpb-wizard-review-toggle", "aria-expanded": expanded,
+                "aria-controls": "wpb-wizard-review-content", onClick: () => setExpanded(value => !value),
+                children: expanded ? "Hide setup summary" : "Review setup" }),
+            _jsxs("div", { className: "wpb-wizard-review-heading", children: [
             _jsx("div", { className: "wpb-wizard-review-kicker", children: "YOUR SETUP" }),
-            _jsx("div", { className: "wpb-wizard-review-title", children: modeChosen && cycleMode ? "Cycle overview" : "Program overview" }),
+            _jsx("div", { className: "wpb-wizard-review-title", children: modeChosen && cycleMode ? "Cycle overview" : "Program overview" })] }),
+            _jsxs("div", { id: "wpb-wizard-review-content", className: "wpb-wizard-review-content", children: [
             _jsx("div", { className: "wpb-wizard-review-caption", children: stepKey === "mode"
                 ? "Choose a program or a multi-phase cycle to begin."
                 : `Step ${step + 1} of ${stepCount}. Your choices update here as you go.` }),
@@ -5759,7 +5765,7 @@ function WizardReviewPane({ config, cycleMode, modeChosen, selectedCycle, cycleA
                     _jsx("dt", { children: label }), _jsx("dd", { children: value })
                 ] }, label)) }),
             _jsx("p", { className: "wpb-wizard-review-footnote",
-                children: "This is a summary of your settings, not a generated workout. Exercise selection, working sets and progression are finalized when you build." })
+                children: "This is a summary of your settings, not a generated workout. Exercise selection, working sets and progression are finalized when you build." })] })
         ] }));
 }
 function Wizard({ buildTask = null, onCancelBuild, initialEquipment, initialExperience, initialUnit = "kg", skipUnits = false, onCancel, onDone, cycleMode: cycleModeInit = false, allowModeChoice = false }) {
@@ -6107,7 +6113,7 @@ function Wizard({ buildTask = null, onCancelBuild, initialEquipment, initialExpe
                 "aria-valuemin": 0, "aria-valuemax": STEPS.length, "aria-valuenow": key === "mode" ? 0 : step + 1,
                 children: _jsx("div", { className: "wpb-bar", style: { transform: `translateX(-${(1 - progress) * 100}%)` } }) })
         ] }),
-        _jsx("div", { ref: scrollRef, className: "wpb-scroll wpb-page-scroll", children:
+        _jsxs("div", { ref: scrollRef, className: "wpb-scroll wpb-page-scroll", children: [
             _jsxs("div", { className: "wpb-wizard-layout", children: [
                 _jsx("fieldset", { className: "wpb-wizard-step", "data-step-key": key,
                     "aria-labelledby": "wpb-wizard-question", disabled: building, "aria-busy": building,
@@ -6117,13 +6123,11 @@ function Wizard({ buildTask = null, onCancelBuild, initialEquipment, initialExpe
                         setCustomCycleBlocks, cycleAdapt, setCycleAdapt, cycleAdaptSplit, setCycleAdaptSplit, cycleMode, setCycleMode, nextRecommendedSplit }, key) }, step),
                 _jsx(WizardReviewPane, { config, cycleMode, modeChosen: choseMode, selectedCycle,
                     cycleAdapt, cycleAdaptSplit, step, stepCount: STEPS.length, stepKey: key })
-            ] }) }),
-        _jsxs("div", { className: "wpb-wizard-footer", role: "region", "aria-label": "Setup actions", children: [
-            cycleMode && _jsx("div", { className: "wpb-cycle-draft-status", role: "status",
-                children: draftSaved ? (setupDraft ? "Resumed your saved cycle setup · changes save on this device" : "Cycle setup saves on this device as you go") : "Setup could not be saved on this device. Keep this setup open." }),
+            ] }),
             cycleMode && _jsx(UiAction, { variant: "text", disabled: building,
                 onClick: () => { clearCycleSetupDraft(draftId); onCancel(); }, className: "wpb-wizard-discard-action",
-                children: "Discard setup and close" }),
+                children: "Discard setup and close" })] }),
+        _jsxs("div", { className: "wpb-wizard-footer", role: "region", "aria-label": "Setup actions", children: [
             building && _jsxs("div", { role: "status", "aria-live": "polite", className: "wpb-build-status",
                 "data-generation-busy": buildTask ? true : undefined, children: [
                     _jsx("span", { className: "wpb-inline-spinner", "aria-hidden": "true" }),
@@ -6144,7 +6148,9 @@ function Wizard({ buildTask = null, onCancelBuild, initialEquipment, initialExpe
             ] }),
             canFinishEarly && _jsxs(UiAction, { variant: "text", onClick: finish, disabled: building,
                 className: "wpb-wizard-finish-action", children: [cycleMode ? "Build with these settings" : "Generate with these settings",
-                    " \u00B7 ", STEPS.length - 1 - step, " optional ", STEPS.length - 1 - step === 1 ? "step" : "steps", " left"] })
+                    " \u00B7 ", STEPS.length - 1 - step, " optional ", STEPS.length - 1 - step === 1 ? "step" : "steps", " left"] }),
+            cycleMode && _jsx("div", { className: "wpb-cycle-draft-status", role: "status",
+                children: draftSaved ? (setupDraft ? "Resumed cycle setup · saved on this device" : "Cycle setup saves on this device") : "Setup could not be saved on this device. Keep this setup open." })
         ] })
     ] }));
 }

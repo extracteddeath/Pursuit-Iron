@@ -5800,8 +5800,18 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   width:100%;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-wizard-review{
-  display:none;
+  display:block;
+  min-width:0;
+  margin-top:var(--pi-space-4);
+  padding:var(--pi-space-3);
+  border:1px solid var(--pi-color-divider);
+  border-radius:var(--pi-shape-card);
+  background:var(--pi-color-card);
 }
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard-review-heading,
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard-review-content{display:none;}
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard-review[data-expanded="true"]>.wpb-wizard-review-content{display:block;}
+#root .wpb .wpb-wizard-review-toggle{width:100%;justify-content:space-between;text-align:left;}
 @media (min-width:1120px) and (min-height:720px){
   /* Wizards use the secondary route frame; unlike the primary navigation
      shell it was fixed at phone width even in an expanded browser window. */
@@ -5836,6 +5846,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   }
   #root[data-pi-motion="expressive"] .wpb .wpb-wizard-review{
     display:block;
+    margin-top:0;
     box-sizing:border-box;
     position:sticky;
     top:10px;
@@ -5851,6 +5862,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     background:var(--pi-r11-quiet);
     color:inherit;
   }
+  #root[data-pi-motion="expressive"] .wpb .wpb-wizard-review-heading,
+  #root[data-pi-motion="expressive"] .wpb .wpb-wizard-review-content{display:block;}
+  #root[data-pi-motion="expressive"] .wpb .wpb-wizard-review-toggle{display:none;}
 
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-wizard-review-kicker{
@@ -6351,8 +6365,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   flex-shrink:0;min-height:0;max-height:45%;overflow-y:auto;overscroll-behavior:contain;z-index:3;box-sizing:border-box;padding:var(--pi-space-2) var(--pi-wizard-inset) calc(env(safe-area-inset-bottom) + var(--pi-space-3));
   background:var(--pi-color-canvas);color:var(--pi-color-on-control);border-top:1px solid var(--pi-color-divider);
 }
-.wpb .wpb-cycle-draft-status{font-size:var(--pi-type-caption);color:var(--pi-color-on-muted);padding-bottom:var(--pi-space-2);line-height:1.4;}
-#root .wpb .wpb-wizard-discard-action{padding:var(--pi-space-1) 0;font-size:var(--pi-type-label);}
+.wpb .wpb-cycle-draft-status{font-size:var(--pi-type-caption);color:var(--pi-color-on-muted);padding-top:var(--pi-space-2);line-height:1.4;}
+#root .wpb .wpb-wizard-discard-action{display:flex;margin:var(--pi-space-4) auto 0;padding:var(--pi-space-2);font-size:var(--pi-type-label);}
 .wpb .wpb-wizard-footer .wpb-build-status{display:flex;align-items:center;flex-wrap:wrap;gap:var(--pi-space-3);padding:var(--pi-space-2) 0;}
 .wpb .wpb-wizard-build-copy{flex:1;min-width:8em;}
 .wpb .wpb-wizard-build-title{font-size:var(--pi-type-support);font-weight:var(--pi-weight-action);}

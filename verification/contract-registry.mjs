@@ -125,6 +125,7 @@ export const contractGroups = Object.freeze({
         'm340-engine-lifecycle-journey-test.mjs',
         'm341-adversarial-lifecycle-test.mjs',
         'm342-seeded-longitudinal-test.mjs',
+        'm343-multicycle-recovery-test.mjs',
         'prescription-integrity-test.mjs',
         'programs-test.mjs',
         'progression-safety-test.mjs',

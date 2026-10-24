@@ -8,7 +8,8 @@ export const program = {id:'m222-custom',custom:true,weeks:10,config:{unit:'lb',
 export const history = [{id:'fly-last',programId:program.id,dayId:'push',date:2000,weekIndex:1,unit:'lb',perf:{'cable-fly':{weight:25,reps:13,sets:[{w:25,r:19,rir:2},{w:25,r:10,rir:2},{w:20,r:11,rir:2},{w:25,r:10,rir:2}]}}}];
 const day=program.days[0],ex=EX_BY_ID['cable-fly'];
 export function rowsFor(p=program,hs=history){const s=sessionSuggestion(p,p.days[0],0,null,'lb',1,hs);return {suggestion:s,rows:prescribeSets(p,p.days[0],ex,0,1,'lb',s,{}, {},hs,false)};}
-const fly=rowsFor();assert.deepEqual(fly.rows.map(s=>[s.weight,s.reps]),[['25','20'],['25','11'],['25','10'],['25','11']]);
+const fly=rowsFor();assert.deepEqual(fly.rows.map(s=>[s.weight,s.reps]),[['25','20'],['25','11'],['20','12'],['25','11']],
+    'Rep-only progression must not raise the lighter working set to the session maximum');
 assert.ok(fly.rows.every(s=>s.target.w===s.weight&&s.target.prefillReps===s.reps));
 const dynamic=structuredClone(program);dynamic.progStyle={'cable-fly':'dynamic'};
 assert.equal(resolveStyle(dynamic,ex,false,1,{},history,day.id),'dynamic');

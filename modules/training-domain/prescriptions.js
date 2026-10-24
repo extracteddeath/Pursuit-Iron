@@ -739,15 +739,11 @@ function engineSessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, h
        snapped it back to 140, and the lift could never progress (found by m158-adaptive-loop-check's simulated lifter). */
     const current = convertHistoryLoad(s.last?.weight, s.lastUnit || program.config?.unit, unit) || 0;
     const cell = computeCell(program, day, ex.id, slot, weekIndex);
-    // Historical decisions may describe a different progression method. Only today's
-    // dynamic method owns positional loads; straight-set methods share the session load.
-    const style = program?.custom === true && program?.engineSource !== "pursuit-next"
-        ? resolveStyle(program, ex, slot === day.primaryIndex, weekIndex, null, history, day.id)
-        : cell.progressionStyle;
-    const positionalLoads = style === 'dynamic';
-    const perSetIncrease = positionalLoads && Array.isArray(s.setTargets) && s.setTargets.some(t => t.earnedLoadIncrease === true);
+    // The canonical evaluator owns which rows retain or change load. This adapter
+    // only makes those decisions loadable; it must not turn a hold into top sets.
+    const perSetIncrease = Array.isArray(s.setTargets) && s.setTargets.some(t => t.earnedLoadIncrease === true);
     let w = loadableAtOrBelow(ex, eng, unit);
-    // Classic progression is a single session weight. Dynamic double is NOT:
+    // An earned classic increase uses one new session weight. Dynamic double does not:
     // preserve the individual earned bump, never increase every row (or a
     // heavier but non-qualifying row) just because one other set succeeded.
     if (!perSetIncrease && s.action === "increase_load" && w <= current)
@@ -763,9 +759,8 @@ function engineSessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, h
                 weight = loadableAtOrBelow(ex, previous, unit);
             return { ...target, weight, reps: weight < target.weight ? floor : target.reps };
         }
-        const weight = !positionalLoads || s.action === "increase_load" ? w : loadableAtOrBelow(ex, target.weight, unit);
-        // Reps demonstrated at a lighter positional load are not a target at today's heavier straight-set load.
-        const resetReps = weight < target.weight || (!positionalLoads && Math.abs(weight - target.weight) > 1e-6);
+        const weight = s.action === "increase_load" ? w : loadableAtOrBelow(ex, target.weight, unit);
+        const resetReps = weight < target.weight;
         return { ...target, weight, reps: resetReps ? floor : target.reps };
     });
     if (perSetIncrease && setTargets?.length)

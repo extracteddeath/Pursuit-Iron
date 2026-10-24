@@ -231,7 +231,7 @@ function evaluateProgression(session, performedSets, context = {}) {
             return decision(ex, { outcome: 'failure', reasonCode: code, action: 'hold', confidence: repeatedEffortOvershoot ? 'high' : 'moderate', reason: `${detail} Hold the load and re-enter the prescribed effort range before progressing.`, currentLoad, suggestedLoad: currentLoad, estimated1RM });
         }
         if (!allAtLeastBottom) {
-            return decision(ex, { outcome: 'failure', reasonCode: 'rep_floor_miss', action: 'hold', confidence: 'moderate', reason: 'Repetitions fell below the prescribed floor without enough evidence for an automatic load correction; hold and collect another comparable exposure.', currentLoad, suggestedLoad: currentLoad, estimated1RM });
+            return decision(ex, { outcome: 'failure', reasonCode: 'rep_floor_miss', action: 'hold', confidence: 'moderate', reason: 'Repetitions fell below the prescribed floor without enough evidence for an automatic load correction. Keep each set at its own last weight and retry within the prescribed range; do not apply the heaviest set to every row.', currentLoad, suggestedLoad: currentLoad, estimated1RM });
         }
         const bestReps = Math.max(...actual.map(s => s.reps));
         const suggestedReps = Math.min(ex.prescription.reps[1], bestReps + 1);
@@ -258,9 +258,13 @@ export function progressionSetTargets(exercise, actual, result) {
     if (dynamic && Array.isArray(result.setTargets)) return result.setTargets;
     const increasing = result.action === 'increase_load';
     const decreasing = result.action === 'decrease_load';
+    // A session's representative load is its maximum, not evidence that every set used it.
+    // Holds and rep-only progression retain each observed set's load for every method.
+    // Explicit increases/corrections still own their new load, including dynamic progression.
+    const retainingLoads = !increasing && !decreasing && result.suggestedLoad === result.currentLoad;
     return Array.from({ length: Math.max(1, exercise.sets) }, (_, index) => {
         const previous = actual[index];
-        const load = dynamic && !increasing && !decreasing && previous?.load != null
+        const load = retainingLoads && previous?.load != null
             ? previous.load : result.suggestedLoad ?? result.currentLoad;
         const sameLoad = previous?.load != null && load != null && Math.abs(previous.load - load) < 1e-6;
         const advance = result.action === 'add_reps' ? 1 : 0;

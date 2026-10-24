@@ -338,8 +338,8 @@ for (const weekIndex of [NaN, Infinity, -1, 0, 1.5])
     assert.equal(percentageProtocolFor({ scheme: '531', tm: 200, weekIndex, weeksTotal: 4 }), null);
 
 
-// M296: a saved dynamic prescription must not leak positional loads into today's
-// straight-set method when context correctly blocks advancing historical work.
+// M338 supersedes M296's unsafe consolidation assertion: a blocked exposure cannot
+// increase lighter rows to the historical maximum, even after a method change.
 const priorDynamic = structuredClone(p);
 for (const c of Object.values(priorDynamic.nextWeekPrescriptions[key])) Object.assign(c,
     { sets: 3, reps: '8-12', rir: '2', progressionStyle: 'dynamic' });
@@ -353,13 +353,18 @@ for (const style of ['double', 'linear', 'ladder', 'wave', 'e1rm', 'dynamic']) {
         const before = structuredClone(oldHistory);
         const s = suggest(currentProgram, oldHistory);
         const openingRows = prescribeSets(currentProgram, day, EX_BY_ID[id], slot, 1, 'lb', s, null, {}, oldHistory, false);
+        // A complete exposure is not interrupted merely because the session flag is set.
+        // Its deliberate method-change recalibration remains distinct from a blocked hold.
+        const recalibrated = flags.interrupted && style !== 'dynamic';
+        if(recalibrated) assert.equal(s.action,'represcribe');
         assert.deepEqual(openingRows.filter(r => !r.warm && !r.sub).map(r => r.weight),
-            style === 'dynamic' ? ['100', '95', '95'] : ['100', '100', '100'],
-            style + ': only the current dynamic method may retain positional loads');
-        if (style !== 'dynamic' && s.setTargets?.length)
-            assert.deepEqual(openingRows.filter(r => !r.warm && !r.sub).map(r => r.reps), ['10', '8', '8'],
-                'Do not carry lighter-load rep targets onto heavier straight sets');
+            recalibrated ? ['100','100','100'] : ['100', '95', '95'],
+            style + ': blocked holds retain loads; complete method changes explicitly recalibrate');
+        if(flags.badDay || flags.prescriptionEdited)
+            assert.deepEqual(openingRows.filter(r => !r.warm && !r.sub).map(r => r.reps), ['10', '10', '10'],
+                'Observed reps stay attached to the unchanged per-set loads during a hold');
+        assert.ok(!s.setTargets?.some(t=>t.earnedLoadIncrease), 'A blocked exposure earns no per-set load increase');
         assert.deepEqual(oldHistory, before, 'Opening a workout does not rewrite historical methods or logged performance');
     }
 }
-console.log('PASS M296 fresh opening: historical dynamic loads cannot leak into double/linear/ladder/wave/e1rm; current dynamic stays positional.');
+console.log('PASS M338 fresh opening: changed methods with blocked evidence retain observed loads and reps without an earned increase.');

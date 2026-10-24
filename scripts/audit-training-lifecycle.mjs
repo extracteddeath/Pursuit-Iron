@@ -10,7 +10,8 @@ const gates = [
     ['multi-block-history-and-recovery', 'm323-cycle-replay-test.mjs'],
     ['continuous-start-to-finish-journey', 'm340-engine-lifecycle-journey-test.mjs'],
     ['fatigue-manual-interruption-adversarial-journey', 'm341-adversarial-lifecycle-test.mjs'],
-    ['seeded-multi-week-multi-equipment-stress', 'm342-seeded-longitudinal-test.mjs']
+    ['seeded-multi-week-multi-equipment-stress', 'm342-seeded-longitudinal-test.mjs'],
+    ['long-horizon-multi-cycle-recovery', 'm343-multicycle-recovery-test.mjs']
 ];
 const root = path.resolve(new URL('..', import.meta.url).pathname);
 const revisionResult = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' });

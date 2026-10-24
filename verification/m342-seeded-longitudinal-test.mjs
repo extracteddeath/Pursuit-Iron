@@ -103,7 +103,7 @@ function doSession(p, day, week, history, event, context) {
         const updated = rowMap.map((row, i) => {
             const activeRow = !row.warm && !row.sub, position = eligible.findIndex(v => v._idx === i);
             if (!activeRow) return { ...row, done: false };
-            const completed = event === 'fatigue' ? position < 2
+            const completed = hard ? position < 2
                 : (!partial || position < eligible.length - 1);
             const effort = event === 'bad_day' || event === 'fatigue' ? 0
                 : event === 'good' ? Math.min(10, numRange(cell.rir)[0] + 1)

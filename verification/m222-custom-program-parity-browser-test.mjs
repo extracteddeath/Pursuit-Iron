@@ -25,7 +25,7 @@ try {
     const values=()=>page.$$eval('[data-testid^="set-0-"][data-done="0"] input[aria-label="weight"]',ns=>ns.map(n=>n.value));
     const reps=()=>page.$$eval('[data-testid^="set-0-"][data-done="0"] input[aria-label="reps"]',ns=>ns.map(n=>n.value));
     await open('');
-    assert.deepEqual(await values(),['25','25','25','25']);assert.deepEqual(await reps(),['20','11','10','11']);
+    assert.deepEqual(await values(),['25','25','20','25']);assert.deepEqual(await reps(),['20','11','12','11']);
     assert.match(await page.$eval('.wpb-workout',n=>n.innerText),/4 prior sets/);
     await page.click('button[aria-label="Show previous workout values"]');
     const lastText=await page.$eval('.wpb-workout',n=>n.innerText);assert.match(lastText,/25×19/);assert.match(lastText,/20×11/);

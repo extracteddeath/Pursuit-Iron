@@ -138,3 +138,27 @@ for (const candidate of [squatProgram, {...squatProgram,engineSource:undefined,c
     assert.deepEqual(sets.map(s=>[s.weight,s.reps]),Array.from({length:4},()=>['190','5']));
 }
 console.log('PASS M220 squat regression: latest evidence remains raw; generated/custom incomplete rep misses lower all four targets to 190 x 5.');
+
+// M338 / 148338.png: a mild final-set miss must not turn a held ramp into four top sets.
+export const inclineProgram={id:'m338-incline',custom:true,engineV:4,weeks:6,
+    config:{weeks:6,unit:'lb',goal:'strength',progression:'double',experience:'intermediate',deload:false},
+    days:[{id:'incline',label:'Upper',primaryIndex:0,exercises:['low-inc-bb-bench']}],
+    overrides:{'incline:0':{sets:4,reps:'6-8',rir:'2'}}};
+export const inclineHistory=[{id:'m338-last',programId:inclineProgram.id,dayId:'incline',weekIndex:1,date:1,unit:'lb',
+    perf:{'low-inc-bb-bench':{weight:210,reps:5,sets:[195,200,205,210].map((w,i)=>({w,r:[10,8,6,5][i],done:true,rir:null}))}}}];
+const inclineBefore=structuredClone(inclineHistory);
+const inclineAdvice=sessionSuggestion(inclineProgram,inclineProgram.days[0],0,null,'lb',1,inclineHistory);
+assert.equal(inclineAdvice.action,'hold');
+assert.deepEqual(inclineAdvice.setTargets.map(s=>s.weight),[195,200,205,210]);
+assert.match(inclineAdvice.reason,/each set at its own last weight/);
+const inclineRows=prescribeSets(inclineProgram,inclineProgram.days[0],EX_BY_ID['low-inc-bb-bench'],0,1,'lb',inclineAdvice,{}, {},inclineHistory,false);
+assert.deepEqual(inclineRows.map(s=>[s.weight,s.reps]),[['195','8'],['200','8'],['205','6'],['210','6']]);
+assert.deepEqual(inclineHistory,inclineBefore);
+const generatedRamp=structuredClone(squatProgram);
+generatedRamp.overrides[`${squatDay.id}:0`]=markUserPrescriptionOverride(generatedRamp.overrides[`${squatDay.id}:0`], 'reps', '6-8');
+const generatedRampHistory=[{...inclineHistory[0],programId:generatedRamp.id,dayId:squatDay.id,
+    perf:{'back-squat':inclineHistory[0].perf['low-inc-bb-bench']}}];
+const generatedAdvice=sessionSuggestion(generatedRamp,generatedRamp.days.find(d=>d.id===squatDay.id),0,null,'lb',1,generatedRampHistory);
+assert.equal(generatedAdvice.action,'hold');
+assert.deepEqual(generatedAdvice.setTargets.map(s=>s.weight),[195,200,205,210],
+    'Generated and authored programs share the same per-set hold contract');

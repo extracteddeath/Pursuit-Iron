@@ -34,7 +34,7 @@ try{
   await clickText(page,'30 min');assert.equal(await page.$$eval('[data-nextex]',ns=>ns.length),expected.length);
   const optionsFit=await page.$$eval('[aria-label="Session length"] button',ns=>ns.every(n=>{const r=n.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth+1&&r.height>=44;}));assert.equal(optionsFit,true,'touch targets fit at '+width);
   if(process.env.SHORT_SESSION_SCREENSHOTS) await page.screenshot({path:`${process.env.SHORT_SESSION_SCREENSHOTS}/short-session-${width}-phone.png`,fullPage:true});
-  await clickText(page,'Start workout');await page.waitForSelector('.wpb-workout');
+  await page.click('.wpb-preview-start');await page.waitForSelector('.wpb-workout');
   await page.waitForFunction(()=>[...document.querySelectorAll('button')].some(b=>b.textContent.startsWith('Feeling strong')));
   await page.evaluate(()=>[...document.querySelectorAll('button')].find(b=>b.textContent.startsWith('Feeling strong')).click());
   await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:live')||'null')?.sessionLengthPlan?.minutes===30);

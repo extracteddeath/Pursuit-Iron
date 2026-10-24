@@ -85,6 +85,23 @@ try{
   assert.deepEqual(store.saved.find(p=>p.id===program.id),program);assert.deepEqual(store.history,[]);
   if(cycle)assert.equal(store.cycles.length,1,'cycle build completes through the same steady flow');
   assert.ok((await page.$eval('.wpb-program',n=>n.textContent)).includes('Steady creation'),'built plan opens directly');
+  const expectedPreview=await page.evaluate(()=>{
+   const buttons=[...document.querySelectorAll('.wpb-day-start')].filter(b=>!b.disabled);
+   const chosen=buttons.at(-1);chosen.dataset.m351Start='true';
+   return {name:document.querySelector('.wpb-program-name-text').textContent,
+    day:chosen.getAttribute('aria-label').slice('Start '.length),
+    dayId:chosen.closest('[data-daycard]').id.slice('pv-day-'.length)};
+  });
+  await page.screenshot({path:`verification/m351-created-${width}-${cycle?'cycle':'program'}-phone.png`});
+  const chosen=await page.$('[data-m351-start]');await chosen.evaluate(n=>n.scrollIntoView({block:'center'}));await chosen.click();
+  await page.waitForSelector('.wpb-next-workout-view');
+  await page.screenshot({path:`verification/m351-selected-preview-${width}-${cycle?'cycle':'program'}-phone.png`});
+  assert.equal(await page.$eval('.wpb-preview-program-name',n=>n.textContent),expectedPreview.name,
+   'A created program must not preview the previously active program');
+  assert.equal(await page.$eval('.wpb-next-workout-view h1',n=>n.getAttribute('aria-label')),expectedPreview.day,
+   'Full Program previews the selected day, including days other than Up Next');
+  assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),store.saved,
+   'Inspecting the created session must not save an unsaved program or replace another program');
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);
   assert.deepEqual(errors,[]);
   console.log(`PASS B899 ${width}/${theme}/reduced=${reduced}/cycle=${cycle}: ${frames.length} steady frames, ${steps.length} setup steps, inline build/cancel/retry, original plan/history intact`);

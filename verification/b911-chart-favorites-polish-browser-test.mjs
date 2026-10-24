@@ -73,7 +73,14 @@ try{
     for(const enlarged of [false,true]){
       await page.evaluate(large=>document.documentElement.style.fontSize=large?'200%':'100%',enlarged);
       await chooseTab('Sessions');
-      assert.equal(await page.$$eval('.wpb-history-session',rows=>rows.length),history.length,'all logged sessions remain available');
+      assert.equal(await page.$eval('.wpb-history-session',rows=>rows.length),history.length,'all logged sessions remain available');
+      const compact=await page.$eval('.wpb-history-session-toggle',button=>{
+        const title=button.querySelector('.wpb-progress-item-title'),summary=button.querySelector('.wpb-history-session-total');
+        return {title:title?.textContent,whiteSpace:getComputedStyle(title).whiteSpace,summary:summary?.textContent,context:button.querySelector('.wpb-progress-item-subtitle')?.textContent,label:button.getAttribute('aria-label')};
+      });
+      assert.equal(compact.whiteSpace,'normal','long session titles wrap instead of disappearing behind ellipses');
+      assert.ok(compact.summary.includes('21 sets')&&!compact.summary.includes('0m')&&!compact.summary.includes('0 min'),'legacy workouts never invent a zero-minute duration');
+      assert.ok(compact.label.includes('21 completed sets'),'collapsed rows expose the completed workload to assistive technology');
       const session=await page.$('.wpb-history-session button[aria-expanded]');
       await session.focus();await page.keyboard.press('Enter');await page.waitForSelector('.wpb-history-session-detail');
       assert.ok(await page.$eval('.wpb-history-session-detail',e=>e.textContent.includes('Retain the complete session note.')&&e.querySelectorAll('.wpb-history-set').length===21),'expanded history retains notes and every working set');

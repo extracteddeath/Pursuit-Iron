@@ -137,7 +137,7 @@ function save(rows, context = {}) {
     assert.equal(adjusted.sets[2].weight, '95');
     assert.equal(adjusted.sets[3].weight, '100');
     assert.deepEqual(applyLiveAutoregulation({ sets: clone(adjusted.sets), sourceIndex: 1, cell,
-        snapLoad: weight => Math.floor(weight / 5) * 5 }).sets, adjusted.sets,
+        snapLoad: weight => Math.floor(weight / 5) * 5 }).sets, clone(adjusted.sets),
         'Repeated fatigue feedback cannot repeatedly decrease the third set');
     const restored = reconcileRestoredLiveAdjustments(clone(adjusted.sets));
     assert.deepEqual(restored, clone(adjusted.sets),

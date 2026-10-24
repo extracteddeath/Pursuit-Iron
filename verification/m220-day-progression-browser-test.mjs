@@ -81,10 +81,10 @@ try {
         await page.setViewport({width,height:844,deviceScaleFactor:2,isMobile:true,hasTouch:true});
         await open('?incline');
         const work='[data-testid^="set-0-"][data-warm="0"][data-sub="0"]';
-        assert.deepEqual(await page.$$eval(`${work} input[aria-label="weight"]`,ns=>ns.map(n=>n.value)),['195','200','205','210']);
-        assert.deepEqual(await page.$$eval(`${work} input[aria-label="reps"]`,ns=>ns.map(n=>n.value)),['8','8','6','6']);
-        assert.match(await page.$eval('.wpb-load-reference summary',n=>n.textContent),/195–210/,
-            'The target summary describes the actual per-set range, not four top sets');
+        assert.deepEqual(await page.$$eval(`${work} input[aria-label="weight"]`,ns=>ns.map(n=>n.value)),['190','190','190','190']);
+        assert.deepEqual(await page.$$eval(`${work} input[aria-label="reps"]`,ns=>ns.map(n=>n.value)),['6','6','6','6']);
+        assert.match(await page.$eval('.wpb-load-reference summary',n=>n.textContent),/190 lb/,
+            'The target summary describes the explicitly recalibrated common working load');
         await page.click('button[aria-label="Show previous workout values"]');
         const lastRows=await page.$$eval(work,ns=>ns.map(n=>n.textContent));
         for(const [index,text] of ['195×10','200×8','205×6','210×5'].entries())
@@ -92,10 +92,10 @@ try {
         if(width===460)await page.screenshot({path:path.join(root,'verification/m338-incline-phone.png')});
         await open('?incline&resume');
         const restored=await savedWorkSets();
-        assert.deepEqual(restored.map(s=>s.weight),['210','200','197.5','210'],
+        assert.deepEqual(restored.map(s=>s.weight),['210','190','197.5','190'],
             'Resume repairs only untouched app-owned targets and preserves completed/manual loads');
         assert.equal(restored[0].done,true);
-        assert.deepEqual(restored.map(s=>s.reps),['5','8','6','6']);
+        assert.deepEqual(restored.map(s=>s.reps),['5','6','6','6']);
     }
     assert.deepEqual(errors,[]);
     console.log('PASS M220 browser: scoped Lower history, protected resume, generated/custom incomplete squat recalibration, latest LAST/shortcut agreement and tap-to-fill.');

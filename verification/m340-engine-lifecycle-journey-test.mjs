@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {
     EXERCISES, EX_BY_ID, exerciseAt, computeCell, getNextShellCell,
     prescribeSets, sessionSuggestion, loggedWorkoutPerformance, summarizeSession,
-    normalizeEditedHistoryEntry
+    normalizeEditedHistoryEntry, nextExerciseIdForShellExercise
 } from '../modules/engine-api.js';
 import { generateNextCycleForShell, advanceNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
 import { analyzeShellHistoryForNextEngine, nextWorkoutSuggestionForShell } from '../modules/next-engine/workout-history-adapter.js';
@@ -77,12 +77,13 @@ function completeRealWorkout(p, day, week, prior) {
             paused[indices[1]].valueOwner = 'user';
             paused[indices[1]].auto = false;
             paused[indices[1]].weight = '37';
+            const untouchedPaused = clone(paused);
             const restored = refreshPendingSetTargets(paused, again);
             assert.equal(restored[indices[0]].weight, paused[indices[0]].weight,
                 'Resume rewrote a completed load');
             assert.equal(restored[indices[1]].weight, '37',
                 'Resume rewrote a manually edited later-set load');
-            assert.deepEqual(paused, clone(paused), 'Resume must leave its source rows usable');
+            assert.deepEqual(paused, untouchedPaused, 'Resume must not mutate its saved input rows');
         }
         // This is a completed workout, not a synthetic perf map. The real logger
         // serializes the rows, their targets, RIR provenance, techniques and identity.
@@ -107,8 +108,9 @@ function completeRealWorkout(p, day, week, prior) {
     assert.equal(summary.sets, expected,
         'Home/Plan/Preview planned dose disagrees with logged working sets');
     for (const [id, result] of Object.entries(perf)) {
-        assert.ok(result.prescription?.schemaVersion === 1 && result.prescription.exerciseId === id,
-            'Log lacks a valid original prescription snapshot: ' + id);
+        const engineId = nextExerciseIdForShellExercise(EX_BY_ID[id]);
+        assert.ok(result.prescription?.schemaVersion === 1 && result.prescription.exerciseId === engineId,
+            'Log lacks the actual canonical exercise identity: ' + id + ' -> ' + engineId);
         assert.ok(result.sets.every(set => Number.isFinite(set.w) && Number.isFinite(set.r)
             && set.r > 0), 'Log contains an invalid completed numeric set');
     }

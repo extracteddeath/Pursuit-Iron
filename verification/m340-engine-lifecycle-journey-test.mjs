@@ -110,7 +110,7 @@ function completeRealWorkout(p, day, week, prior) {
     for (const [id, result] of Object.entries(perf)) {
         const engineId = nextExerciseIdForShellExercise(EX_BY_ID[id]);
         assert.ok(result.prescription?.schemaVersion === 1 && result.prescription.exerciseId === engineId,
-            'Log lacks the actual canonical exercise identity: ' + id + ' -> ' + engineId);
+            'Log prescription identity/schema mismatch: ' + JSON.stringify({ id, expected: engineId, actual: result.prescription, day: day.id, slot: submitted.find(e => e.id === id)?.slot, authored: day.exercises }));
         assert.ok(result.sets.every(set => Number.isFinite(set.w) && Number.isFinite(set.r)
             && set.r > 0), 'Log contains an invalid completed numeric set');
     }

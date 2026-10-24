@@ -329,8 +329,10 @@ try{
               const filters=main.querySelector('.wpb-history-filters').getBoundingClientRect();
               const glance=main.querySelector('[data-progress-glance]').getBoundingClientRect();
               return {grid:getComputedStyle(main).display==='grid',
-                consistency:{x:consistency.x,right:consistency.right,bottom:consistency.bottom},
-                filters:{x:filters.x,y:filters.y},
+                consistency:{x:consistency.x,y:consistency.y,right:consistency.right,bottom:consistency.bottom},
+                filters:{x:filters.x,y:filters.y,bottom:filters.bottom},
+                calendarY:main.querySelector(".wpb-training-history")?.getBoundingClientRect().y,
+                firstSessionY:main.querySelector(".wpb-history-session")?.getBoundingClientRect().y,
                 glance:{width:glance.width},
                 viewportOverflow:document.documentElement.scrollWidth>innerWidth+2,
                 historyRows:main.querySelectorAll('.wpb-history-session').length};
@@ -386,8 +388,10 @@ try{
               assert.ok(progress.glance.width>600,
                 'Summary extends across the expanded Progress surface');
             }else{
-              assert.ok(progress.filters.y>=progress.consistency.bottom-2,
-                'Compact/medium Progress retains its original reading order');
+              assert.ok(progress.consistency.y>=progress.filters.bottom-2,
+                'Compact/medium Progress keeps optional consistency after the workout filters');
+              assert.ok(progress.firstSessionY<progress.calendarY,
+                'A logged workout appears before the training calendar on narrow and medium screens');
             }
             await page.click('.wpb-progress .wpb-premium-tabs button:nth-child(5)');
             await page.waitForSelector('.wpb-progress-panel');

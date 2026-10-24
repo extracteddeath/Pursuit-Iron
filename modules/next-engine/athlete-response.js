@@ -80,10 +80,16 @@ export function deriveAthleteResponse({ programId, workouts = [], customExercise
         const conf = confidence(rows.length, coverage, span), enough = rows.length >= 6 && span >= 14 && coverage >= .75 && !rows.some(r => r.discomfort);
         const velocities = Object.values(progressionVelocity).filter(v => (exerciseMap.get(v.exerciseId)?.muscles?.[muscle]?.credit ?? 0) >= .5 && v.relativePerWeek !== null);
         const plateau = velocities.length > 0 && velocities.every(v => v.sampleCount >= 6 && Math.abs(v.relativePerWeek) < .002);
-        const doseScale = enough && pressure >= .5 ? .9 : enough && pressure === 0 && plateau ? 1.05 : 1;
+        // A flat strength trend does not identify a positive dose-response. Changing sets
+        // without varied, comparable dose evidence may worsen fatigue and cannot
+        // be justified by stagnation alone. Expose a review signal instead.
+        const doseScale = enough && pressure >= .5 ? .9 : 1;
+        const volumeReviewRequired = enough && pressure === 0 && plateau;
         muscles[muscle] = { sampleCount: rows.length, spanDays: Math.round(span * 100) / 100, effortCoverage: coverage,
             confidence: conf, doseScale, observedMeanSets: mean(rows.map(r => r.dose)), fatiguePressure: pressure,
-            reason: doseScale < 1 ? 'repeated_comparable_failures' : doseScale > 1 ? 'stable_complete_observed_plateau' : 'retain_prior' };
+            volumeReviewRequired,
+            reason: doseScale < 1 ? 'repeated_comparable_failures'
+                : volumeReviewRequired ? 'plateau_requires_dose_review' : 'retain_prior' };
         const gaps = rows.slice(1).map((r, i) => (r.at - rows[i].at) / dayMs).filter(x => x > 0);
         frequency[muscle] = { observedPerWeek: gaps.length ? 7 / median(gaps) : null, medianGapDays: median(gaps), confidence: conf,
             recommendedExposureDelta: enough && pressure >= .5 ? -1 : 0, application: 'review_only_preserve_authored_schedule' };

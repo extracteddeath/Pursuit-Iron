@@ -103,7 +103,8 @@ function doSession(p, day, week, history, event, context) {
         const updated = rowMap.map((row, i) => {
             const activeRow = !row.warm && !row.sub, position = eligible.findIndex(v => v._idx === i);
             if (!activeRow) return { ...row, done: false };
-            const completed = !partial || position < eligible.length - 1;
+            const completed = event === 'fatigue' ? position < 2
+                : (!partial || position < eligible.length - 1);
             const effort = event === 'bad_day' || event === 'fatigue' ? 0
                 : event === 'good' ? Math.min(10, numRange(cell.rir)[0] + 1)
                 : numRange(cell.rir)[0];
@@ -145,7 +146,10 @@ function doSession(p, day, week, history, event, context) {
                     'Fatigue adjustment increased a pending load');
                 metrics.liveAdjustments++;
             }
-            updated.splice(0, updated.length, ...replayed);
+            updated.splice(0, updated.length, ...replayed.map(row => {
+                if (row.warm || row.sub || row.done) return row;
+                return { ...row, done: true, reps: String(Math.max(1, lo)), actualRIR: 1 };
+            }));
             chosen = true;
         }
         // Real interruption: reload completed/live rows, not a new invented
@@ -293,7 +297,7 @@ assert.ok(metrics.workingSets > 0 && metrics.recommendations > 0);
 if (onlySeed === null) {
     assert.equal(metrics.profiles.size, 4);
     assert.equal(metrics.styles.size, 4);
-    assert.ok(metrics.incomplete > 0 && metrics.manual > 0 &&
+    assert.ok(metrics.liveAdjustments > 0 && metrics.incomplete > 0 && metrics.manual > 0 &&
         metrics.interrupted > 0 && metrics.badDay > 0 && metrics.fatigue > 0 &&
         metrics.skipped > 0, 'Seeded matrix lost an important edge-case dimension');
 }

@@ -1,7 +1,7 @@
 import { sessionPlanChange } from './session-plan.js';
 import { completedHistorySets, convertHistoryLoad, normalizeHistoryRevisions } from './next-engine/history-contract.js';
 import { sessionSuggestion, prescribeSets, loadableAtOrBelow, resolveStyle } from './training-domain/prescriptions.js';
-import { cellRepRange } from './training-domain/records.js';
+import { cellRepRange, exerciseAt } from './training-domain/records.js';
 import { e1rm, E1RM_REP_CAP } from './training-domain/programs.js';
 import { sessionPrescriptionRows, isAssistedEx, exRecords } from './training-domain/analytics.js';
 import { techniqueProtocolFromCell } from './next-engine/workout-runtime.js';
@@ -19,6 +19,14 @@ export function withProgressionChoices(program, choices = {}) {
         else { progStyle[id] = style; progStyleLifter[id] = true; }
     }
     return { ...program, progStyle, progStyleLifter };
+}
+// Slot recommendations belong only to the exercise prescribed for this week.
+// Ad-hoc swaps/additions start without a borrowed load, including after a
+// program-scope swap has already changed the saved roster.
+export function workoutRowMatchesPrescription(program, day, row, weekIndex) {
+    return !!row && !row.added && !row.exerciseSubstituted
+        && Number.isInteger(row.slot) && row.slot >= 0 && row.slot < day.exercises.length
+        && row.id === exerciseAt(program, day, row.slot, weekIndex);
 }
 export function repeatedNote(text, repeat) {
     return text && (repeat === 'once' || repeat === 'always')
@@ -45,16 +53,21 @@ export function exerciseSessionTags(ex, row, day, cell) {
 
 
 // Proposed program edits describe the intended working-set count, not how many sets were logged.
-export function workoutProgramChanges(data, day, cellFor) {
+export function workoutProgramChanges(data, day, cellFor, program = null, weekIndex = 1) {
     return (data || []).flatMap(row => {
         if (!row || row.injuryAdjusted || !EX_BY_ID[row.id]) return [];
         const sets = row.sets.filter(set => !set.warm && !set.sub).length;
         if (sets < 1 || sets > 20) return [];
         const added = !!row.added && !day.exercises.includes(row.id);
         if (!added && (!row.setCountEdited || day.sessionLengthPlan?.changed)) return [];
+        // A session-only substitution cannot change the authored slot's dose.
+        if (!added && program && (!Number.isInteger(row.slot) || row.slot < 0
+            || row.slot >= day.exercises.length || row.id !== exerciseAt(program, day, row.slot, weekIndex))) return [];
         const before = added ? 0 : Number(cellFor(row)?.sets);
         return added || Number.isFinite(before) && sets !== before
-            ? [{ exerciseId: row.id, sets, added, previousSets: before }] : [];
+            ? [{ exerciseId: row.id, sets, added, previousSets: before,
+                ...(!added && program ? { slot: row.slot, weekIndex,
+                    slotExerciseIds: [day.exercises[row.slot], program.pairs?.[`${day.id}:${row.slot}`]].filter(Boolean) } : {}) }] : [];
     });
 }
 
@@ -68,7 +81,23 @@ export function withWorkoutProgramChanges(program, dayId, changes = []) {
     for (const change of changes) {
         const ex = EX_BY_ID[change.exerciseId], sets = Number(change.sets);
         if (!ex || !Number.isInteger(sets) || sets < 1 || sets > 20) throw new Error('Choose 1–20 working sets for each exercise.');
-        let slot = exercises.indexOf(ex.id);
+        let slot;
+        if (change.slot != null) {
+            slot = change.slot;
+            const ids = [exercises[slot], program.pairs?.[`${dayId}:${slot}`]].filter(Boolean);
+            if (!Number.isInteger(slot) || slot < 0 || slot >= exercises.length
+                || !Number.isInteger(change.weekIndex) || change.weekIndex < 1
+                || exerciseAt(program, day, slot, change.weekIndex) !== ex.id
+                || JSON.stringify(ids) !== JSON.stringify(change.slotExerciseIds))
+                throw new Error('This workout slot changed after the session. Keep the session changes or review the program.');
+        } else {
+            // Older pending reviews did not save slot identity. Resolve only an
+            // unambiguous base/alternate occurrence; never guess between duplicates.
+            const matches = exercises.flatMap((id, index) =>
+                id === ex.id || program.pairs?.[`${dayId}:${index}`] === ex.id ? [index] : []);
+            if (matches.length > 1) throw new Error('This exercise has more than one workout slot. Review the program before applying these sets.');
+            slot = matches[0] ?? -1;
+        }
         if (slot < 0) {
             if (!change.added) throw new Error('An exercise changed in this program. Review the program before applying these sets.');
             slot = exercises.length; exercises.push(ex.id);

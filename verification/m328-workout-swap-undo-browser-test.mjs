@@ -115,6 +115,53 @@ try{
  assert.notEqual(snap.live.data[0].id,'bb-bench','edited replacement remains in workout');
  assert.equal(snap.live.data[0].sets[0].weight,'135','manual weight survives rejected Undo');
  assert.equal(snap.store.saved[1].days[0].exercises[0],snap.live.data[0].id);
+ // M329: resume a session-only replacement with strongly different source-lift evidence.
+ for (const width of [320,900]) {
+     const swapPage=await browser.newPage();
+     swapPage.on('pageerror',e=>errors.push(e.message));
+     await swapPage.setViewport({width,height:850,isMobile:width<500,hasTouch:true});
+     await swapPage.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
+     const swapped=structuredClone(live);
+     swapped.data[0]={id:'db-bench',slot:0,exerciseSubstituted:true,previousExerciseId:'bb-bench',note:'',
+         sets:[{weight:'40',reps:'8',done:true,auto:true,valueOwner:'prescription'},
+             {weight:'45',reps:'7',done:false,auto:false,valueOwner:'user'},
+             {weight:'',reps:'5',done:false,auto:true,valueOwner:'prescription'}]
+             .map(set=>({...set,target:{w:'—',reps:'5-8',rir:2}}))};
+     const history=[{id:'bench-source',date:1700000000000,programId:current.id,dayId:'upper',weekIndex:1,unit:'lb',
+         perf:{'bb-bench':{weight:200,reps:8,sets:[1,2,3].map(()=>({w:200,r:8,rir:2,rirReported:true,tr:2}))}}}];
+     await swapPage.evaluateOnNewDocument((seed,live)=>{
+         if(!sessionStorage.getItem('m329-seeded')){
+             localStorage.setItem('wpb:v1',JSON.stringify(seed));
+             localStorage.setItem('wpb:live',JSON.stringify(live));
+             sessionStorage.setItem('m329-seeded','1');
+         }
+     },{...store,history,theme:width===900?'rosewater':'amethyst'},swapped);
+     await swapPage.goto(loc,{waitUntil:'networkidle0'});
+     await swapPage.click('.wpb-live-dock button[aria-label="Resume workout"]');
+     await swapPage.waitForSelector('[data-testid="set-0-2"]');
+     assert.equal(await swapPage.$('.wpb-load-reference'),null,'replacement does not display source-lift recommendation');
+     await swapPage.click('[aria-label="Change exercise progression"]');
+     await swapPage.click('[data-progression-choice="dynamic"]');
+     await swapPage.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:live')).sessionProgressions?.['db-bench']==='dynamic');
+     let state=await swapPage.evaluate(()=>JSON.parse(localStorage.getItem('wpb:live')));
+     assert.equal(state.data[0].sets[0].weight,'40');
+     assert.equal(state.data[0].sets[0].done,true);
+     assert.equal(state.data[0].sets[1].weight,'45');
+     assert.equal(state.data[0].sets[1].reps,'7');
+     assert.equal(state.data[0].sets[2].weight,'','bench history must not seed replacement after progression change');
+     assert.equal(state.data[1].sets[0].weight,'25','other exercise remains untouched');
+     assert.equal(await swapPage.$('.wpb-load-reference'),null);
+     await swapPage.reload({waitUntil:'networkidle0'});
+     await swapPage.click('.wpb-live-dock button[aria-label="Resume workout"]');
+     await swapPage.waitForSelector('[data-testid="set-0-2"]');
+     state=await swapPage.evaluate(()=>JSON.parse(localStorage.getItem('wpb:live')));
+     assert.equal(state.data[0].sets[2].weight,'');
+     assert.equal(state.sessionProgressions['db-bench'],'dynamic');
+     const saved=await swapPage.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')));
+     assert.equal(saved.saved[0].days[0].exercises[0],'bb-bench','session-only replacement does not edit program');
+     assert.deepEqual(saved.history,history);
+     await swapPage.close();
+ }
  assert.deepEqual(errors,[]);
  console.log('PASS M328 browser: program-and-cycle Undo, persisted resume, manual-entry conflict protection.');
 }finally{

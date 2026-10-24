@@ -58,3 +58,36 @@ console.log('PASS B903: protected logged work, custom/generated future set count
 
 assert.deepEqual(workoutProgramChanges([{id:'bb-bench',sets:Array.from({length:5},()=>({}))}],currentProgram.days[0],()=>({sets:3})),[],'automatic dose changes are not proposed as authored edits');
 assert.equal(workoutProgramChanges([{id:'bb-bench',setCountEdited:true,sets:[{},{}]}],currentProgram.days[0],()=>({sets:3}))[0].sets,2);
+
+// M330: set-count review follows the saved weekly exercise and stable slot.
+const pairedDay={id:'paired',label:'Upper',primaryIndex:0,exercises:['bb-bench','inc-curl']};
+const pairedProgram={...currentProgram,id:'m330',days:[pairedDay],pairs:{'paired:0':'db-bench'},
+    overrides:{'paired:0':{sets:3,reps:'6-8',rir:2}},weeks:4,config:{...currentProgram.config,weeks:4,deload:false}};
+const pairedRow={id:'db-bench',slot:0,setCountEdited:true,sets:[{done:true,weight:'50',reps:'8'},{},{},{}]};
+const inputBefore=JSON.stringify({pairedProgram,pairedRow});
+const proposed=workoutProgramChanges([pairedRow],pairedDay,()=>({sets:3}),pairedProgram,2);
+assert.equal(proposed.length,1);assert.equal(proposed[0].slot,0);assert.equal(proposed[0].weekIndex,2);
+assert.deepEqual(proposed[0].slotExerciseIds,['bb-bench','db-bench']);
+const pairedUpdated=withWorkoutProgramChanges(pairedProgram,pairedDay.id,JSON.parse(JSON.stringify(proposed)));
+assert.deepEqual(pairedUpdated.days,pairedProgram.days,'alternate lift is never appended as a duplicate');
+assert.deepEqual(pairedUpdated.pairs,pairedProgram.pairs);
+for(const week of [1,2,3,4]){
+    const id=week%2===0?'db-bench':'bb-bench';
+    assert.equal(computeCell(pairedUpdated,pairedDay,id,0,week).sets,4,'shared slot applies in every week');
+}
+assert.equal(pairedUpdated.overrides['paired:1'],pairedProgram.overrides['paired:1']);
+assert.deepEqual(withWorkoutProgramChanges(pairedUpdated,pairedDay.id,proposed).overrides,pairedUpdated.overrides,'repeat application is idempotent');
+assert.equal(JSON.stringify({pairedProgram,pairedRow}),inputBefore,'proposal and application preserve source/history inputs');
+assert.deepEqual(workoutProgramChanges([{...pairedRow,id:'bb-row',exerciseSubstituted:true}],pairedDay,()=>({sets:3}),pairedProgram,2),[],
+    'session substitution cannot silently edit the authored slot');
+assert.equal(workoutProgramChanges([{...pairedRow,exerciseSubstituted:true}],pairedDay,()=>({sets:3}),pairedProgram,2).length,1,
+    'a program-scope replacement already in the saved roster can still update its set count');
+assert.deepEqual(workoutProgramChanges([{...pairedRow,id:'bb-row'}],pairedDay,()=>({sets:3}),pairedProgram,2),[]);
+assert.throws(()=>withWorkoutProgramChanges({...pairedProgram,pairs:{'paired:0':'db-incline'}},pairedDay.id,proposed),/slot changed/);
+assert.throws(()=>withWorkoutProgramChanges({...pairedProgram,days:[{...pairedDay,exercises:['inc-curl','bb-bench']}]},pairedDay.id,proposed),/slot changed/);
+assert.throws(()=>withWorkoutProgramChanges(pairedProgram,pairedDay.id,[{...proposed[0],slot:-1}]),/slot changed/);
+// Pending reviews saved before M330 can safely resolve a unique alternate exercise.
+const oldChange={exerciseId:'db-bench',sets:4,added:false,previousSets:3};
+assert.equal(withWorkoutProgramChanges(pairedProgram,pairedDay.id,[oldChange]).overrides['paired:0'].sets,4);
+assert.throws(()=>withWorkoutProgramChanges({...pairedProgram,pairs:{'paired:0':'db-bench','paired:1':'db-bench'}},pairedDay.id,[oldChange]),/more than one/);
+console.log('PASS M330: alternate-week set review, shared-slot scope, immutable inputs, stale/ambiguous identity refusal and legacy pending reviews.');

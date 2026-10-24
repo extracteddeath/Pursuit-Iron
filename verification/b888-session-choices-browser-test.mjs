@@ -136,6 +136,56 @@ try {
   }else assert.deepEqual(after.saved,[program]);
   await added.close();
  }
+ // M330: adjust the alternate week's set count through the logger and finish review.
+ for(const [width,apply] of [[320,true],[900,false]]) {
+  const context=await browser.createBrowserContext();const paired=await context.newPage();
+  paired.on('pageerror',e=>errors.push(e.message));
+  await paired.setViewport({width,height:850,isMobile:width<600,hasTouch:true});
+  await paired.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
+  const pp={...structuredClone(program),id:'m330-paired',name:'Paired workout',pairs:{'test:0':'db-bench'},
+   days:[program.days[0],{id:'other',label:'Other day',primaryIndex:0,exercises:['bb-bench']}],
+   overrides:{...program.overrides,'other:0':{sets:2,reps:'6-8',rir:2}}};
+  const originalHistory=[];
+  const pl={...structuredClone(live),sessionId:'m330-live',programId:pp.id,weekIndex:2,
+   data:[{id:'db-bench',slot:0,note:'',sets:[{weight:'50',reps:'8',done:true,auto:true,valueOwner:'prescription'},
+    ...[1,2].map(()=>({weight:'50',reps:'6',done:false,auto:true,valueOwner:'prescription'}))]
+    .map(set=>({...set,target:{w:'50',reps:'5-8',rir:2}}))},structuredClone(live.data[1])]};
+  await paired.evaluateOnNewDocument((store,live)=>{
+   if(sessionStorage.getItem('m330-seeded'))return;
+   sessionStorage.setItem('m330-seeded','1');localStorage.setItem('wpb:v1',JSON.stringify(store));localStorage.setItem('wpb:live',JSON.stringify(live));
+  },{...store,saved:[pp,program],pinnedId:pp.id,history:originalHistory,theme:width===320?'amethyst':'rosewater'},pl);
+  const click=async text=>assert.ok(await paired.evaluate(t=>{const b=[...document.querySelectorAll('button')].find(b=>b.textContent.trim()===t);b?.click();return !!b;},text),text);
+  await paired.goto('http://127.0.0.1:8798/index.html',{waitUntil:'networkidle0'});
+  await paired.click('.wpb-live-dock button[aria-label="Resume workout"]');
+  await paired.waitForSelector('[data-testid="set-0-2"]');
+  await paired.$eval('.wpb-add-set',button=>button.click());
+  await paired.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:live')).data[0].sets.filter(s=>!s.warm&&!s.sub).length===4);
+  await paired.click('[aria-label="Finish workout"]');await paired.waitForFunction(()=>[...document.querySelectorAll('button')].some(b=>b.textContent==='Save & finish'));await click('Save & finish');
+  await paired.waitForSelector('[aria-label="Update program?"]');
+  const read=()=>paired.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')));
+  let stored=await read();const log=structuredClone(stored.history[0]);
+  assert.equal(log.programExerciseChanges[0].slot,0);assert.equal(log.programExerciseChanges[0].weekIndex,2);
+  assert.deepEqual(log.programExerciseChanges[0].slotExerciseIds,['bb-bench','db-bench']);
+  assert.equal(log.perf['db-bench'].sets.filter(s=>s.done!==false).length,1,'only performed work enters history');
+  await paired.reload({waitUntil:'networkidle0'});await paired.waitForSelector('[aria-label="Update program?"]');
+  const scope=await paired.$eval('[aria-label="Update program?"]',n=>n.textContent);
+  assert.match(scope,/Applies every week to this workout slot/);assert.match(scope,/Barbell/);assert.match(scope,/Dumbbell/);
+  const geometry=await paired.$eval('[aria-label="Update program?"]',n=>({width:n.clientWidth,scroll:n.scrollWidth}));
+  assert.ok(geometry.scroll<=geometry.width+1,'scope fits narrow review');
+  await paired.screenshot({path:`/tmp/m330-review-${width}.png`});
+  await click(apply?'Update program':'Keep this session only');
+  await paired.waitForFunction(status=>JSON.parse(localStorage.getItem('wpb:v1')).history[0].programUpdateStatus===status,{},apply?'applied':'session-only');
+  stored=await read();const after=stored.saved.find(p=>p.id===pp.id);
+  assert.equal(after.overrides['test:0'].sets,apply?4:3);
+  assert.deepEqual(after.days,pp.days,'review does not append a duplicate alternate lift');
+  assert.deepEqual(after.pairs,pp.pairs);assert.deepEqual(after.overrides['other:0'],pp.overrides['other:0']);
+  assert.deepEqual(stored.saved.find(p=>p.id===program.id),program,'unrelated saved program remains exact');
+  assert.deepEqual(stored.history[0].perf,log.perf,'program choice never changes completed training');
+  await paired.reload({waitUntil:'networkidle0'});
+  stored=await read();assert.equal(stored.history[0].programUpdateStatus,apply?'applied':'session-only');
+  assert.equal(stored.saved.find(p=>p.id===pp.id).overrides['test:0'].sets,apply?4:3);
+  await context.close();
+ }
  assert.deepEqual(errors,[],'no runtime errors');
  console.log('PASS B888 browser: Home injury persistence, tags, progression isolation, protected sets, note recovery, durable post-save program choice');
 } finally {if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}

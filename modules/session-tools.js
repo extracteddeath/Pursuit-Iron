@@ -1,7 +1,7 @@
 import { sessionPlanChange } from './session-plan.js';
 import { completedHistorySets, convertHistoryLoad, normalizeHistoryRevisions } from './next-engine/history-contract.js';
 import { sessionSuggestion, prescribeSets, loadableAtOrBelow, resolveStyle } from './training-domain/prescriptions.js';
-import { cellRepRange, exerciseAt } from './training-domain/records.js';
+import { cellRepRange, exerciseAt, computeCell } from './training-domain/records.js';
 import { e1rm, E1RM_REP_CAP } from './training-domain/programs.js';
 import { sessionPrescriptionRows, isAssistedEx, exRecords } from './training-domain/analytics.js';
 import { techniqueProtocolFromCell } from './next-engine/workout-runtime.js';
@@ -10,16 +10,58 @@ import { programWorkingWeeks } from './program-duration.js';
 import { buildUserAddedSlotPrescriptions } from './next-engine/workout-runtime.js';
 import { markUserPrescriptionOverride, nextExerciseIdForShellExercise } from './next-engine/app-shell-adapter.js';
 
+const SESSION_PROGRESSION_STYLES = new Set(['auto','double','dynamic','ladder','linear','wave','e1rm']);
+
 // Session choices are independent from program edits until the completed workout is saved.
 export function withProgressionChoices(program, choices = {}) {
     const progStyle = { ...program.progStyle }, progStyleLifter = { ...program.progStyleLifter };
     for (const [id, style] of Object.entries(choices)) {
-        if (!['auto','double','dynamic','ladder','linear','wave','e1rm'].includes(style)) continue;
+        if (!SESSION_PROGRESSION_STYLES.has(style)) continue;
         if (style === 'auto') { delete progStyle[id]; delete progStyleLifter[id]; }
         else { progStyle[id] = style; progStyleLifter[id] = true; }
     }
     return { ...program, progStyle, progStyleLifter };
 }
+// Retain the source of a session choice; timestamps and unrelated edits do not
+// establish a conflict. Progression is exercise-wide, including paired slots.
+export function workoutProgressionOrigin(program, exerciseId) {
+    const slots = (program.days || []).flatMap(day => (day.exercises || []).flatMap((id, slot) => {
+        const pair = program.pairs?.[`${day.id}:${slot}`] ?? null;
+        return id === exerciseId || pair === exerciseId ? [[String(day.id), slot, id, pair]] : [];
+    })).sort((a, b) => a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : a[1] - b[1]);
+    return { schema: 1, programId: program.id, style: program.progStyle?.[exerciseId] ?? null,
+        lifter: program.progStyleLifter?.[exerciseId] ?? null,
+        defaultStyle: program.config?.progression ?? null, scheme: program.config?.percentScheme ?? null,
+        engineSource: program.engineSource ?? null, slots };
+}
+const progressionOriginKey = value => JSON.stringify([value.schema, value.programId, value.style,
+    value.lifter, value.defaultStyle, value.scheme, value.engineSource, value.slots]);
+
+// One apply boundary is shared by saved programs, drafts and the active view.
+// Validate everything before the caller persists any part of the review.
+export function withWorkoutProgramReview(program, review) {
+    if (!program || program.id !== review.programId)
+        throw new Error('This program is no longer the one reviewed. Keep these changes for the session only.');
+    for (const [id, style] of Object.entries(review.progressionChanges || {})) {
+        if (!EX_BY_ID[id] || !SESSION_PROGRESSION_STYLES.has(style))
+            throw new Error('This progression choice is unavailable. Keep it for the session only.');
+        const current = workoutProgressionOrigin(program, id), origin = review.progressionOrigins?.[id];
+        const added = review.programExerciseChanges?.some(change => change.exerciseId === id && change.added);
+        if (!current.slots.length && !added)
+            throw new Error('This lift is no longer in the program. Keep its progression change for the session only.');
+        if (current.scheme)
+            throw new Error('This program now uses percentage stages. Review its progression in the program editor.');
+        const alreadyApplied = style === 'auto' ? current.style == null && current.lifter == null
+            : current.style === style && current.lifter === true;
+        if (!alreadyApplied && (!origin || progressionOriginKey(current) !== progressionOriginKey(origin)))
+            throw new Error(origin
+                ? 'This lift’s progression or workout slots changed after your choice. Keep this session only, then review the program.'
+                : 'This older review has no original progression to compare. Keep it for the session only and change the program in its editor.');
+    }
+    return withProgressionChoices(withWorkoutProgramChanges(program, review.dayId,
+        review.programExerciseChanges || []), review.progressionChanges || {});
+}
+
 // Slot recommendations belong only to the exercise prescribed for this week.
 // Ad-hoc swaps/additions start without a borrowed load, including after a
 // program-scope swap has already changed the saved roster.
@@ -90,6 +132,9 @@ export function withWorkoutProgramChanges(program, dayId, changes = []) {
                 || exerciseAt(program, day, slot, change.weekIndex) !== ex.id
                 || JSON.stringify(ids) !== JSON.stringify(change.slotExerciseIds))
                 throw new Error('This workout slot changed after the session. Keep the session changes or review the program.');
+            const currentSets = Number(computeCell(program, day, ex.id, slot, change.weekIndex)?.sets);
+            if (currentSets !== Number(change.previousSets) && currentSets !== sets)
+                throw new Error('This workout slot’s set count changed after the session. Keep this session only, then review the program.');
         } else {
             // Older pending reviews did not save slot identity. Resolve only an
             // unambiguous base/alternate occurrence; never guess between duplicates.

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs'; import http from 'node:http'; import path from 'node:path';
 import puppeteer from 'puppeteer-core';
+import { workoutProgressionOrigin, workoutProgramChanges } from '../modules/session-tools.js';
 const root=path.resolve(new URL('../',import.meta.url).pathname);
 const program={id:'b888',name:'Session choices',custom:true,weeks:4,config:{unit:'lb',goal:'both',experience:'intermediate',progression:'double',deload:false},
  days:[{id:'test',label:'Push',primaryIndex:0,exercises:['bb-bench','inc-curl']}],overrides:{'test:0':{sets:3,reps:'5-8',rir:'2',rest:90},'test:1':{sets:2,reps:'8-12',rir:'2',rest:90}}};
@@ -35,7 +36,7 @@ try {
  assert.ok(await page.$eval('[data-exercise-tags]',n=>n.textContent.includes('Key lift')));
  await page.click('[aria-label="Change exercise progression"]');await page.click('[data-progression-choice="dynamic"]');
  await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:live')).sessionProgressions?.['bb-bench']==='dynamic');
- let snap=await getLive();assert.equal(snap.data[0].sets[0].weight,'170');assert.equal(snap.data[0].sets[0].done,true);
+ let snap=await getLive();const firstOrigin=structuredClone(snap.sessionProgressionOrigins['bb-bench']);assert.equal(firstOrigin.schema,1);assert.equal(firstOrigin.style,null);assert.equal(snap.data[0].sets[0].weight,'170');assert.equal(snap.data[0].sets[0].done,true);
  assert.equal(snap.data[0].sets[1].weight,'175');assert.equal(snap.data[0].sets[1].reps,'7');assert.equal((await getStore()).saved[0].progStyle,undefined);
  assert.equal(await page.$$eval('.wpb-workout-scroll .wpb-session-context button',els=>els.some(b=>b.textContent.includes('Session notes'))),false,'session notes does not precede the exercise heading');
  await page.click('[aria-label="Workout options"]');await page.click('[aria-label="Session notes"]');await page.waitForSelector('[aria-label="Whole session note repetition"]');
@@ -45,10 +46,11 @@ try {
  await page.select('[aria-label="Barbell bench press note repetition"]','once').catch(async()=>{await page.$$eval('.wpb-session-note-editor select',els=>{els[1].value='once';els[1].dispatchEvent(new Event('change',{bubbles:true}));});});
  await page.click('[aria-label="Close Session notes"]');
  await page.reload({waitUntil:'networkidle0'});await page.waitForSelector('.wpb-live-dock button[aria-label="Resume workout"]');await page.click('.wpb-live-dock button[aria-label="Resume workout"]');
- await page.waitForSelector('[data-testid="set-0-2"]');snap=await getLive();assert.equal(snap.sessionProgressions['bb-bench'],'dynamic');assert.equal(snap.sessionNote,'Try an earlier session');assert.equal(snap.data[0].note,'Pause on chest');
+ await page.waitForSelector('[data-testid="set-0-2"]');snap=await getLive();assert.deepEqual(snap.sessionProgressionOrigins['bb-bench'],firstOrigin);assert.equal(snap.sessionProgressions['bb-bench'],'dynamic');assert.equal(snap.sessionNote,'Try an earlier session');assert.equal(snap.data[0].note,'Pause on chest');
  await page.click('[aria-label="Finish workout"]');await page.waitForFunction(()=>[...document.querySelectorAll('button')].some(b=>b.textContent==='Save & finish'));
  await clickText('Save & finish');
  await page.waitForSelector('[aria-label="Update program progression?"]');
+ assert.deepEqual((await getStore()).history[0].progressionOrigins['bb-bench'],firstOrigin);
  assert.equal((await getStore()).history[0].sessionNoteRepeat,'once');assert.equal((await getStore()).history[0].perf['bb-bench'].noteRepeat,'once');
  await page.reload({waitUntil:'networkidle0'});await page.waitForSelector('[aria-label="Update program progression?"]');
  await clickText('Update program');await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved[0].progStyle?.['bb-bench']==='dynamic');
@@ -186,6 +188,73 @@ try {
   assert.equal(stored.saved.find(p=>p.id===pp.id).overrides['test:0'].sets,apply?4:3);
   await context.close();
  }
+ // M331: saved/draft conflicts and a failed write must keep the whole review pending.
+ for(const [mode,width] of [['saved-method',320],['draft-method',900],['draft-count',320],['write-failure',320],['legacy',900],['deleted',320]]) {
+  const context=await browser.createBrowserContext();const reviewPage=await context.newPage();
+  reviewPage.on('pageerror',e=>errors.push(e.message));
+  await reviewPage.setViewport({width,height:850,isMobile:width<600,hasTouch:true});
+  await reviewPage.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
+  const base={...structuredClone(program),id:'m331-review',progStyle:{'bb-bench':'double'},progStyleLifter:{'bb-bench':true}};
+  const entry={id:'m331-finished',date:1700000000000,updatedAt:1700000000000,programId:base.id,dayId:'test',weekIndex:1,
+   unit:'lb',programUpdateStatus:'pending',progressionChanges:{'bb-bench':'dynamic'},
+   progressionOrigins:{'bb-bench':workoutProgressionOrigin(base,'bb-bench')},
+   perf:{'bb-bench':{weight:170,reps:5,sets:[{w:170,r:5,done:true,rir:2,rirReported:true}]}}};
+  const later=structuredClone(base);let saved=[base],drafts={};
+  if(mode==='saved-method'){later.progStyle['bb-bench']='linear';saved=[later];}
+  if(mode==='draft-method'){later.progStyle['bb-bench']='linear';drafts[base.id]=later;}
+  if(mode==='draft-count'){
+   entry.programExerciseChanges=workoutProgramChanges([{id:'bb-bench',slot:0,setCountEdited:true,sets:[{},{},{},{}]}],base.days[0],()=>({sets:3}),base,1);
+   later.overrides['test:0'].sets=5;drafts[base.id]=later;
+  }
+  if(mode==='legacy')delete entry.progressionOrigins;
+  if(mode==='deleted')saved=[];
+  await reviewPage.evaluateOnNewDocument(seed=>{
+   if(!sessionStorage.getItem('m331-seeded')){
+    sessionStorage.setItem('m331-seeded','1');localStorage.setItem('wpb:v1',JSON.stringify(seed));localStorage.removeItem('wpb:live');
+   }
+   const set=Storage.prototype.setItem;
+   window.__m331Fail=false;window.__m331Attempts=0;
+   Storage.prototype.setItem=function(key,value){
+    if(key==='wpb:v1'&&window.__m331Fail){window.__m331Attempts++;throw new DOMException('Full','QuotaExceededError');}
+    return set.call(this,key,value);
+   };
+  },{...store,saved,drafts,history:[entry],perf:entry.perf,pinnedId:base.id,theme:width===900?'rosewater':'amethyst'});
+  const read=()=>reviewPage.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')));
+  const click=async label=>{const button=await reviewPage.waitForSelector(`xpath/.//section[contains(@class, 'wpb-session-dialog')]//button[normalize-space(.)="${label}"]`);await button.click();};
+  await reviewPage.goto('http://127.0.0.1:8798/index.html',{waitUntil:'networkidle0'});
+  await reviewPage.waitForSelector('.wpb-session-dialog');
+  const before=await read();
+  if(mode==='write-failure')await reviewPage.evaluate(()=>{window.__m331Fail=true;window.storage={set:async()=>{throw new Error('Unavailable');}};});
+  // Two synchronous clicks exercise the write guard before the async save settles.
+  await reviewPage.evaluate(()=>{const b=[...document.querySelectorAll('.wpb-session-dialog button')].find(b=>b.textContent.trim()==='Update program');b.click();b.click();});
+  await reviewPage.waitForSelector('.wpb-session-dialog [role="alert"]');
+  const message=await reviewPage.$eval('.wpb-session-dialog [role="alert"]',n=>n.textContent);
+  assert.match(message,mode==='write-failure'?/Could not save/:mode==='legacy'?/older review/:mode==='deleted'?/no longer saved/:mode==='draft-count'?/set count changed/:/progression or workout slots changed/);
+  let after=await read();
+  assert.deepEqual(after.saved,before.saved,mode+' saved program must not partially change');
+  assert.deepEqual(after.drafts,before.drafts,mode+' draft must not change');
+  assert.deepEqual(after.history,before.history,mode+' history stays exact and pending');
+  const fit=await reviewPage.$eval('.wpb-session-dialog',n=>({width:n.clientWidth,scroll:n.scrollWidth}));
+  assert.ok(fit.scroll<=fit.width+1,'visible conflict message fits '+width);
+  await reviewPage.waitForFunction(()=>document.querySelector('.wpb-session-dialog').getBoundingClientRect().bottom<=innerHeight+1);
+  if(mode==='saved-method'||mode==='draft-method'||mode==='write-failure')await reviewPage.screenshot({path:`/tmp/m331-${mode}-${width}.png`});
+  if(mode==='write-failure'){
+   assert.equal(await reviewPage.evaluate(()=>window.__m331Attempts),1,'only one write attempt before retry');
+   await reviewPage.reload({waitUntil:'networkidle0'});await reviewPage.waitForSelector('.wpb-session-dialog');
+   assert.equal((await read()).history[0].programUpdateStatus,'pending','failed save survives reload as pending');
+   await click('Update program');
+   await reviewPage.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:v1')).history[0].programUpdateStatus==='applied');
+   after=await read();assert.equal(after.saved[0].progStyle['bb-bench'],'dynamic');
+  }else{
+   await click('Keep this session only');
+   await reviewPage.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:v1')).history[0].programUpdateStatus==='session-only');
+   after=await read();assert.deepEqual(after.saved,before.saved);assert.deepEqual(after.drafts,before.drafts);
+  }
+  assert.deepEqual(after.history[0].perf,before.history[0].perf,'completed performance remains unchanged');
+  assert.equal(after.history.length,1,'duplicate clicks never duplicate the workout');
+  await context.close();
+ }
+ console.log('PASS M331 browser: source origins survive resume/finish; saved/draft conflicts, legacy/deleted review, duplicate clicks and failed-write/reload/retry preserve training.');
  assert.deepEqual(errors,[],'no runtime errors');
  console.log('PASS B888 browser: Home injury persistence, tags, progression isolation, protected sets, note recovery, durable post-save program choice');
 } finally {if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}

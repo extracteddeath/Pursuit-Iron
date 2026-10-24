@@ -1,0 +1,31 @@
+name: M347 candidate release finalizer (temporary)
+on:
+  push:
+    branches: [engine/m347-stagnation-volume-review]
+permissions:
+  contents: write
+jobs:
+  finalize:
+    if: ${{ github.actor == 'extracteddeath' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+      - name: Finalize exact source release and offline cache
+        run: |
+          node scripts/finalize-release.mjs
+          node scripts/verify-release.mjs
+      - name: Commit refreshed release assets
+        run: |
+          if ! git diff --quiet -- sw.js BUILD_PROFILE.json RELEASE_MANIFEST.json; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add sw.js BUILD_PROFILE.json RELEASE_MANIFEST.json
+            git commit -m "M347: certify production runtime and refresh offline cache"
+            git push origin HEAD:engine/m347-stagnation-volume-review
+          fi

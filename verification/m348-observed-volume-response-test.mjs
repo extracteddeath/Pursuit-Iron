@@ -105,6 +105,48 @@ assert.deepEqual(key(unrelated), key(stable));
 const duplicates = response([...workouts(), { ...workouts()[0] }]);
 assert.deepEqual(key(duplicates), key(stable),
     'Duplicate logged workouts must not create extra exposure evidence');
+// A correction remains authoritative even when it moves a workout out of the
+// observation window or removes evidence needed by the response model.
+const editedAt = new Date(asOf + DAY).toISOString();
+for (const [name, patch] of [
+    ['older date', { completedAt: new Date(start - 120 * DAY).toISOString() }],
+    ['future date', { completedAt: new Date(asOf + DAY).toISOString() }],
+    ['invalid date', { completedAt: 'invalid' }],
+    ['invalid unit', { unit: 'invalid' }],
+    ['missing session', { session: null }],
+    ['missing effort', { performedSets: workouts()[3].performedSets.map(s => ({ ...s, rir: null })) }]
+]) {
+    const correction = { ...workouts()[3], ...patch, updatedAt: editedAt };
+    for (const records of [[...workouts(), correction], [correction, ...workouts()]]) {
+        const revised = response(records);
+        assert.equal(key(revised).status, 'insufficient',
+            name + ': the superseded workout resurrected observational evidence');
+        assert.equal(revised.muscles.chest.doseScale, 1);
+        assert.equal(key(revised).autoApply, false);
+    }
+}
+// The same revision rule protects the older fatigue/prescription path, not
+// merely the new annotation. Corrected-away failures cannot reduce dosage.
+const failedHistory = workouts({ outcome: 'failure' });
+assert.equal(response(failedHistory).muscles.chest.doseScale, .9);
+const correctedHistory = failedHistory.map(w => ({ ...w, updatedAt: editedAt,
+    completedAt: new Date(start - 120 * DAY).toISOString() }));
+for (const records of [[...failedHistory, ...correctedHistory],
+    [...correctedHistory, ...failedHistory]]) {
+    const revised = response(records);
+    assert.deepEqual(revised.muscles, {});
+    assert.equal(revised.evidence.comparableExposures, 0);
+    assert.equal(revised.fatigue.capacityScale, 1);
+    assert.equal(revised.recovery.status, 'unknown');
+    assert.equal(revised.evidence.excluded.duplicate_identity, 6);
+    assert.equal(revised.evidence.excluded.outside_time_window, 6);
+    assert.deepEqual(personalizeMusclePrescription(prior, revised), prior);
+}
+const validCorrection = { ...workouts()[3], updatedAt: editedAt,
+    performedSets: workouts()[3].performedSets.map(s => ({ ...s, load: 110 })) };
+assert.deepEqual(key(response([...workouts(), validCorrection])),
+    key(response(workouts().map((w, i) => i === 3 ? validCorrection : w))),
+    'A usable correction contributes exactly once and replaces the old observation');
 const annotated = stable.muscles.chest;
 assert.ok(annotated.observedVolumeResponse);
 assert.equal(annotated.volumeReviewRequired, false,

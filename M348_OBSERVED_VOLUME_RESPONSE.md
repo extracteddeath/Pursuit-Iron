@@ -20,3 +20,13 @@ The resulting `muscles[muscle].observedVolumeResponse` describes `improvement_as
 `verification/m348-observed-volume-response-test.mjs` is the thirteenth mandatory end-to-end engine audit stage. It checks response classifications, confounding exclusions, history immutability, duplicate/foreign record exclusion and **unchanged training prescriptions** across strength, hypertrophy and mixed goals. M231 and M347 regression suites must also continue passing.
 
 Run `node scripts/audit-training-lifecycle.mjs --report verification/engine-lifecycle-audit.json`. The canonical `scripts/finalize-release.mjs` was run with passing release verification to refresh the production service-worker cache and release hashes.
+
+## M349 — corrections precede evidence eligibility
+
+A synthetic replay reproduced stale evidence when a newer workout correction moved its completion date outside the response window: filtering dates before resolving revisions revived the superseded version. The same ordering could retain old fatigue failures when the current record had an unusable unit or missing session identity.
+
+The existing athlete-response identity map now selects the latest program-owned revision before testing observation dates, units and session identity. Unusable current records with revision timestamps suppress older evidence. Eligible records sort by parsed completion time. No extra ledger or progression calculator is introduced.
+
+The existing mandatory M348 regression covers old/future/invalid corrected dates, invalid units, missing sessions and missing effort in both record orders, usable correction replacement, and six corrected-away failures. The last case verifies no stale dosage reduction, fatigue estimate or recovery claim survives and that the canonical muscle prescription stays unchanged. This is synthetic boundary coverage; it does not claim access to the user's actual saved history.
+
+Hosted release verification now takes its inventory from the canonical runtime/UI manifest as well as the original entrypoints. This checks every certified module, including athlete-response and observed-volume-response, instead of relying on a 13-file shortlist. Local HTTP probes must accept exact source bytes and reject a deliberately stale athlete-response module before publication.

@@ -12,7 +12,12 @@ if (!base.protocol.startsWith('http'))
 if (!base.pathname.endsWith('/'))
     throw new Error('PURSUIT_PAGES_URL must end in /');
 
-const files = [
+const manifest = JSON.parse(fs.readFileSync(path.join(root, 'RELEASE_MANIFEST.json'), 'utf8'));
+// The release manifest owns the shipped module inventory. A fixed shortlist
+// misses newly added/changed engine owners even when the manifest itself ships.
+const files = [...new Set([
+    ...Object.keys(manifest.runtimeFiles),
+    ...Object.keys(manifest.uiFiles),
     'index.html',
     'sw.js',
     'manifest.webmanifest',
@@ -26,11 +31,10 @@ const files = [
     'modules/next-engine/performance.js',
     'modules/next-engine/workout-runtime.js',
     'modules/training-domain/prescriptions.js'
-];
+])];
 const sha = buffer => crypto.createHash('sha256').update(buffer).digest('hex');
 const expected = Object.fromEntries(files.map(file => [file, sha(fs.readFileSync(path.join(root, file)))]));
 const profile = JSON.parse(fs.readFileSync(path.join(root, 'BUILD_PROFILE.json'), 'utf8'));
-const manifest = JSON.parse(fs.readFileSync(path.join(root, 'RELEASE_MANIFEST.json'), 'utf8'));
 const serviceWorker = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
 if (profile.cache !== manifest.cache ||
     !serviceWorker.includes('const CACHE="' + manifest.cache + '"'))

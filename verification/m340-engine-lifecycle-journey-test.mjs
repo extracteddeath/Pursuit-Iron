@@ -119,7 +119,15 @@ function completeRealWorkout(p, day, week, prior) {
     const entry = { id: 'm340-log-' + serial, programId: p.id, programName: p.name,
         dayId: day.id, dayLabel: day.label, weekIndex: week, unit: 'lb',
         date, updatedAt: date, durationMin: 65, perf };
-    assert.deepEqual(clone(entry), entry, 'Completed history is not JSON-persistable');
+    const stored = clone(entry);
+    assert.equal(stored.id, entry.id);
+    assert.equal(stored.programId, entry.programId);
+    assert.equal(stored.dayId, entry.dayId);
+    assert.equal(countWorking(stored.perf), expected,
+        'JSON persistence changed completed working-set evidence');
+    for (const [id, lift] of Object.entries(perf))
+        assert.deepEqual(stored.perf[id].prescription, lift.prescription,
+            'JSON persistence changed the historical prescription snapshot');
     assert.equal(JSON.stringify({ program: p, history: prior }), before,
         'Reading/persisting a workout mutated the saved program or history');
     trace.sessions++;

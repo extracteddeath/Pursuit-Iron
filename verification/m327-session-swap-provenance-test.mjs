@@ -53,3 +53,45 @@ assert.ok(app.includes('onBanCurrent: () => { if (data[exIdx]?.sets.some(set => 
 assert.ok(app.includes('exerciseSubstituted: true,') && app.includes('previousExerciseId: current.previousExerciseId || oldId'),
     'session and persistent swaps must retain their own identity even if the program updates');
 console.log('PASS M327: session swap identity is local, untouched lifts remain comparable, completed sets are protected.');
+
+// M329: a live row may no longer be the exercise owning its authored slot.
+const { workoutRowMatchesPrescription, withProgressionChoices, refreshProgressionSets } = await import('../modules/session-tools.js');
+const { sessionSuggestion, prescribeSets, userOwnsRuntimeSet } = await import('../modules/engine-api.js');
+const { EX_BY_ID } = await import('../modules/training-domain/catalog.js');
+const benchDay = { id: 'upper', primaryIndex: 0, exercises: ['bb-bench', 'bb-row'] };
+const benchProgram = { id: 'swap-loads', custom: true, weeks: 4, days: [benchDay],
+    config: { unit: 'lb', goal: 'both', experience: 'intermediate', progression: 'double', deload: false },
+    overrides: { 'upper:0': { sets: 3, reps: '6-8', rir: '2', rest: 90 } } };
+const benchHistory = [{ id: 'source', date: 1700000000000, programId: benchProgram.id,
+    dayId: benchDay.id, weekIndex: 1, unit: 'lb', perf: { 'bb-bench': { weight: 200, reps: 8,
+        sets: [1,2,3].map(() => ({ w: 200, r: 8, rir: 2, rirReported: true, tr: 2 })) } } }];
+const curl = { id: 'inc-curl', slot: 0, exerciseSubstituted: true };
+const choice = withProgressionChoices(benchProgram, { 'inc-curl': 'dynamic' });
+const borrowed = sessionSuggestion(choice, benchDay, 0, {}, 'lb', 2, benchHistory);
+assert.ok(borrowed.weight >= 200, 'reproduce a real bench load that must never reach a curl');
+assert.equal(workoutRowMatchesPrescription(choice, benchDay, curl, 2), false);
+assert.equal(workoutRowMatchesPrescription(choice, benchDay, { id: 'inc-curl', slot: 0 }, 2), false,
+    'older snapshots without the explicit substitution flag are protected by identity');
+assert.equal(workoutRowMatchesPrescription(choice, benchDay, { id: 'bb-bench', slot: 0 }, 2), true);
+assert.equal(workoutRowMatchesPrescription(choice, benchDay, { id: 'bb-row', slot: 1 }, 2), true,
+    'an unchanged row retains its own suggestion after list reordering/removal');
+const pairProgram = { ...choice, pairs: { 'upper:0': 'db-bench' } };
+assert.equal(workoutRowMatchesPrescription(pairProgram, benchDay, { id: 'db-bench', slot: 0 }, 2), true);
+assert.equal(workoutRowMatchesPrescription(pairProgram, benchDay, { id: 'bb-bench', slot: 0 }, 2), false);
+assert.equal(workoutRowMatchesPrescription(choice, benchDay, { id: 'bb-bench', slot: 0, added: true }, 2), false);
+assert.equal(workoutRowMatchesPrescription(choice, benchDay, { id: 'inc-curl', slot: 2, added: true }, 2), false);
+const persistedDay = { ...benchDay, exercises: ['inc-curl', 'bb-row'] };
+assert.equal(workoutRowMatchesPrescription({ ...choice, days: [persistedDay] }, persistedDay, curl, 2), false,
+    'persisting a program swap does not manufacture comparable session evidence');
+const replacementSets = prescribeSets(choice, benchDay, EX_BY_ID[curl.id], 0, 2, 'lb', null, {}, {}, benchHistory, false);
+assert.ok(replacementSets.every(set => !Number(set.weight)), 'replacement load stays unseeded');
+const entered = [{ ...replacementSets[0], done: true, weight: '25', reps: '8' },
+    { ...replacementSets[1], valueOwner: 'user', auto: false, weight: '30', reps: '7' }, replacementSets[2]];
+const refreshed = refreshProgressionSets(entered, replacementSets, userOwnsRuntimeSet);
+assert.equal(refreshed[0], entered[0]);
+assert.equal(refreshed[1], entered[1]);
+assert.equal(refreshed[2].weight, '');
+assert.ok(app.includes('const runtimeSuggestions = data.map(row => workoutRowMatchesPrescription('));
+assert.ok(app.includes('const suggestion = workoutRowMatchesPrescription(nextProgram, day, row, weekIndex)'));
+assert.ok(!app.includes('suggestions[ei]') && !app.includes('const sug = suggestions[e.slot]'));
+console.log('PASS M329: swapped/added rows cannot borrow slot loads; native alternate weeks and manual work retain ownership.');

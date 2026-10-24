@@ -218,6 +218,8 @@ function doSession(p, day, week, history, event, context) {
     assert.equal(JSON.stringify({ p, history }), before,
         'Reads or logging changed the source program or pre-workout history');
     metrics.workingSets += total;
+    if (total < intended) metrics.incomplete++;
+    if (active > 0) metrics.manual++;
     return next;
 }
 for (const seed of cases) {
@@ -259,8 +261,6 @@ for (const seed of cases) {
                 history = doSession(p, p.days[dayIndex], week, history, event, context);
             } catch (error) { failWithContext(error, context); }
             metrics.sessions++;
-            if (event === 'incomplete') metrics.incomplete++;
-            if (event === 'manual') metrics.manual++;
             if (event === 'interrupted') metrics.interrupted++;
             if (event === 'bad_day') metrics.badDay++;
             if (event === 'fatigue') metrics.fatigue++;

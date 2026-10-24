@@ -11,6 +11,13 @@ for(const s of ['.wpb-settings .wpb-segmented>button','.wpb-wizard-option','.wpb
  assert.ok(block.includes(s),'Selection paint styles cover '+s);
 assert.ok(block.includes('prefers-reduced-motion:reduce')&&block.includes('forced-colors:active')&&block.includes('transition:none!important'));
 assert.ok(app.includes('className: "wpb-wizard-progress"')&&app.includes('className: "wpb-segmented"'),'Underlying progress and settings choice DOM remain');
+const nav=app.slice(app.indexOf('function SettingsView('),app.indexOf('function ',app.indexOf('function SettingsView(')+20));
+const chooser=nav.slice(nav.indexOf('className: "wpb-settings-jump"'),nav.indexOf('className: "wpb-scroll wpb-page-scroll"'));
+assert.ok(chooser.includes('Go to Settings section')&&chooser.includes('Sections'),'Native control declares section-navigation purpose');
+assert.ok(!chooser.includes('_jsx(Search,')&&!chooser.includes('children: "Jump to"'),'Section choice is not styled as text search');
+assert.ok(chooser.includes('window.matchMedia?.("(prefers-reduced-motion: reduce)").matches'),'Section scrolling respects reduced motion');
+assert.ok(!chooser.includes('style: {'),'Static section control paint belongs to CSS, not inline JSX');
+assert.ok(css.includes('.wpb-settings-jump-label')&&css.includes('.wpb-settings-jump-select'),'Sections share a token-based control owner');
 console.log('PASS B910: stable wizard header, bounded non-flashing question motion and settings selection feedback.');
 
 /* Cohesion 08: one semantic switch owner and independently named reminder choices. */

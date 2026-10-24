@@ -148,17 +148,17 @@ export const inclineHistory=[{id:'m338-last',programId:inclineProgram.id,dayId:'
     perf:{'low-inc-bb-bench':{weight:210,reps:5,sets:[195,200,205,210].map((w,i)=>({w,r:[10,8,6,5][i],done:true,rir:null}))}}}];
 const inclineBefore=structuredClone(inclineHistory);
 const inclineAdvice=sessionSuggestion(inclineProgram,inclineProgram.days[0],0,null,'lb',1,inclineHistory);
-assert.equal(inclineAdvice.action,'hold');
-assert.deepEqual(inclineAdvice.setTargets.map(s=>s.weight),[195,200,205,210]);
-assert.match(inclineAdvice.reason,/each set at its own last weight/);
+assert.equal(inclineAdvice.action,'decrease_load');
+assert.deepEqual(inclineAdvice.setTargets.map(s=>s.weight),[190,190,190,190]);
+assert.match(inclineAdvice.reason,/later sets under fatigue/);
 const inclineRows=prescribeSets(inclineProgram,inclineProgram.days[0],EX_BY_ID['low-inc-bb-bench'],0,1,'lb',inclineAdvice,{}, {},inclineHistory,false);
-assert.deepEqual(inclineRows.map(s=>[s.weight,s.reps]),[['195','8'],['200','8'],['205','6'],['210','6']]);
+assert.deepEqual(inclineRows.map(s=>[s.weight,s.reps]),Array.from({length:4},()=>['190','6']));
 assert.deepEqual(inclineHistory,inclineBefore);
 const generatedRamp=structuredClone(squatProgram);
 generatedRamp.overrides[`${squatDay.id}:0`]=markUserPrescriptionOverride(generatedRamp.overrides[`${squatDay.id}:0`], 'reps', '6-8');
 const generatedRampHistory=[{...inclineHistory[0],programId:generatedRamp.id,dayId:squatDay.id,
     perf:{'back-squat':inclineHistory[0].perf['low-inc-bb-bench']}}];
 const generatedAdvice=sessionSuggestion(generatedRamp,generatedRamp.days.find(d=>d.id===squatDay.id),0,null,'lb',1,generatedRampHistory);
-assert.equal(generatedAdvice.action,'hold');
-assert.deepEqual(generatedAdvice.setTargets.map(s=>s.weight),[195,200,205,210],
-    'Generated and authored programs share the same per-set hold contract');
+assert.equal(generatedAdvice.action,'decrease_load');
+assert.deepEqual(generatedAdvice.setTargets.map(s=>s.weight),[190,190,190,190],
+    'Generated and authored programs share the same fatigue-aware straight-set calibration');

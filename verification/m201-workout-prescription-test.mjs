@@ -18,8 +18,9 @@ const history = [{ id: 'm201-history', programId: program.id, dayId: day.id, dat
 } }];
 const sug = sessionSuggestion(program, day, 1, null, 'lb', 4, history);
 assert.equal(sug.target, 8);
-assert.equal(sug.action, "hold");
-assert.match(sug.reason, /below the prescribed floor/);
+assert.equal(sug.action, "decrease_load");
+assert.equal(sug.weight, 25, 'Classic double can normalize mixed loads using the weaker set position');
+assert.match(sug.reason, /later sets under fatigue/);
 const fresh = prescribeSets(program, day, curl, 1, 4, 'lb', sug, null, {}, history, false);
 assert.ok(fresh.length > 0);
 assert.ok(fresh.every(s => Number(s.reps) >= 8 && Number(s.reps) <= 12));

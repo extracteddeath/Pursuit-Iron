@@ -13,7 +13,8 @@ const gates = [
     ['seeded-multi-week-multi-equipment-stress', 'm342-seeded-longitudinal-test.mjs'],
     ['long-horizon-multi-cycle-recovery', 'm343-multicycle-recovery-test.mjs'],
     ['recovery-exit-and-plateau-proof', 'm344-recovery-exit-plateau-test.mjs'],
-    ['method-stagnation-evidence-and-reset', 'm346-plateau-evidence-test.mjs']
+    ['method-stagnation-evidence-and-reset', 'm346-plateau-evidence-test.mjs'],
+    ['stagnation-method-and-volume-decisions', 'm347-stagnation-decision-test.mjs']
 ];
 const root = path.resolve(new URL('..', import.meta.url).pathname);
 const revisionResult = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' });

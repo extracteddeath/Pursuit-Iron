@@ -73,3 +73,16 @@ The motion source of truth is `modules/ui-motion.js`; use the saved theme's tona
 ## Guardrails
 
 Preserve the working phone Workout/Focus layout and all per-set actions, compact logging geometry, history detail, strength-score and profile customization. No parallel engine, chart calculator, CSS patch layer, hidden features or extra nav destination. Remove obsolete owners instead of accumulating them. A change counts as finished only after **actual rendered** browser checks and exact-head CI; do not infer physical Android parity from emulation.
+
+## M335 — from visual reference to decision hierarchy
+
+**Status:** Implemented in M335 branch; merge and device certification are separate. The supplied phone/tablet prototypes informed the *principles* below. They are not an implementation source, component library, or feature specification.
+
+- **Prototype trait worth transferring:** a single obvious selection target and subordinate metadata. **Pursuit Iron application:** Settings's existing native section selector is now unmistakably a section navigator, not a search input. It retains all ten named destinations, existing deep-link anchors and the saved data owners; no new settings destination, navigation system or duplicate preference cards.
+- **Prototype trait worth transferring:** actions follow the question the user is answering. **Pursuit Iron application:** a cycle-block preview opens with clear future-versus-saved scope, its selected week and canonical saved week outlook, then actual exercise rows. Split explanation and regional-dose reasoning remain available *after* the training itself. It still uses the same `CycleWeekOutlook`, `computeCell`, `CycleDoseTransition`, `onViewPlan` and native disclosure owners.
+- **Prototype trait worth transferring:** one quiet and repeatable control language. **Pursuit Iron application:** the section navigator's previous fixed inline padding, borders, colors and typography move to its existing `app.css` owner with semantic tokens. The current motion controller remains untouched; reduced-motion preference now also governs its navigation scroll.
+- **Do not copy:** fixed colors, mock data, example workout cards, decorative transitions, oversized tablet whitespace or the prototype's inline CSS. No workout set controls, timer, saved history, gym constraints, adaptive algorithm, volume calculation or program-edit mutation changed in this pass.
+
+**Acceptance:** release integrity and content-addressed offline cache; source/engine parity with cycle conversion, split frequency, all-week volume/equipment and actual history; program, workout, motion, accessibility and integration browser shards. On device, independently inspect Settings section picker with keyboard and TalkBack plus Cycle Preview at narrow/foldable widths. Do not report Android readiness from browser emulation.
+
+**Remaining:** redesign the complete creation → comparison → generated cycle review → preview → Start sequence as a *single* deliberate experience after measuring rendered screen and interaction evidence. The improved preview alone is not completion of that end-to-end flow.

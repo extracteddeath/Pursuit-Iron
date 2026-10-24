@@ -4890,6 +4890,44 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   font-size:12.5px!important;
   line-height:1.2!important;
 }
+/* M335 — semantic Settings section chooser. The native select is navigation,
+   not search. Fixed geometry/paint belongs to this single Settings owner. */
+#root .wpb .wpb-settings .wpb-settings-jump{
+  padding:0 var(--pi-page-inset) var(--pi-space-2);
+  flex-shrink:0;
+}
+#root .wpb .wpb-settings .wpb-settings-jump-control{
+  box-sizing:border-box;
+  display:flex;
+  align-items:center;
+  gap:var(--pi-space-2);
+  min-height:var(--pi-control-min);
+  padding:0 var(--pi-space-3);
+  border:1px solid var(--pi-color-divider);
+  border-radius:var(--pi-shape-action);
+  background:var(--pi-color-control);
+  color:var(--pi-color-on-control);
+}
+#root .wpb .wpb-settings .wpb-settings-jump-label{
+  font-size:var(--pi-type-label);
+  font-weight:650;
+  white-space:nowrap;
+  color:var(--pi-color-on-muted);
+}
+#root .wpb .wpb-settings .wpb-settings-jump-select{
+  box-sizing:border-box;
+  flex:1;
+  min-width:0;
+  min-height:var(--pi-control-min);
+  padding:var(--pi-space-2) var(--pi-space-6) var(--pi-space-2) var(--pi-space-1);
+  border:0;
+  border-radius:var(--pi-shape-action);
+  background:transparent;
+  color:var(--pi-color-on-control);
+  font-size:var(--pi-type-support);
+  font-weight:650;
+  outline:none;
+}
 #root[data-pi-motion="expressive"] .wpb .wpb-settings.wpb-settings>.wpb-settings-jump{
   padding:0 var(--pi-page-inset) var(--pi-space-2)!important;
   flex-shrink:0;

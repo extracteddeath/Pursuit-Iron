@@ -23,6 +23,11 @@ assert.ok(detail.includes('doseChange = next?.nextEngine?.cycleTemplate?.splitDe
 assert.ok(detail.includes('_jsx(CycleDoseTransition, { change: doseChange })'),'Up next contains one disclosed muscle-volume explanation');
 const preview=app.slice(app.indexOf('function CycleBlockPreview('),app.indexOf('function CycleDetail('));
 assert.ok(preview.includes('CycleDoseTransition'),'future block previews share the same explanation');
+assert.ok(preview.includes('isFuturePreview')&&preview.includes('saved outlook')&&preview.includes('Saved block'),'A future block is distinct from saved activated prescriptions');
+assert.ok(preview.indexOf('className: "wpb-cycle-preview-week"') < preview.indexOf('_jsx(CycleWeekOutlook'),'Week selection precedes the week outlook');
+assert.ok(preview.indexOf('_jsx(CycleWeekOutlook') < preview.indexOf('program.days.map('),'Saved week outlook precedes its executable exercise rows');
+assert.ok(preview.indexOf('program.days.map(') < preview.indexOf('program.nextEngine?.cycleTemplate?.splitDecision?.mode'),'Real exercises precede optional engine rationale');
+assert.ok(preview.includes('computeCell(program, day, id, slot, week)'),'Browsing reads the existing saved executable prescription owner');
 const css=fs.readFileSync('app.css','utf8');
 assert.ok(css.includes('#root .wpb-cycle-dose-row')&&css.includes('grid-template-columns:minmax(0,.85fr) minmax(0,1.7fr)'),
     'volume rows have a responsive token-owned layout');

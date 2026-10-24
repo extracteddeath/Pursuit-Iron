@@ -110,7 +110,7 @@ try{
               descriptionSize:parseFloat(getComputedStyle(description).fontSize),
               withinViewport:railRect?.left>=-1&&railRect?.right<=innerWidth+1,
               visibleLabelHidden:getComputedStyle(control.querySelector('span')).display==='none',
-              nativeSelectNamed:select.getAttribute('aria-label')==='Jump to Settings section',
+              nativeSelectNamed:select.getAttribute('aria-label')==='Go to Settings section',
               selectWidth:select.getBoundingClientRect().width
             };
           });

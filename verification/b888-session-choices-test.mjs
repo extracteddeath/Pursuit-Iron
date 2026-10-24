@@ -91,3 +91,66 @@ const oldChange={exerciseId:'db-bench',sets:4,added:false,previousSets:3};
 assert.equal(withWorkoutProgramChanges(pairedProgram,pairedDay.id,[oldChange]).overrides['paired:0'].sets,4);
 assert.throws(()=>withWorkoutProgramChanges({...pairedProgram,pairs:{'paired:0':'db-bench','paired:1':'db-bench'}},pairedDay.id,[oldChange]),/more than one/);
 console.log('PASS M330: alternate-week set review, shared-slot scope, immutable inputs, stale/ambiguous identity refusal and legacy pending reviews.');
+
+// M331: pending review must not replace a later method or draft set-count edit.
+const { workoutProgressionOrigin, withWorkoutProgramReview } = await import('../modules/session-tools.js');
+const original={...pairedProgram,progStyle:{'db-bench':'double'},progStyleLifter:{'db-bench':true}};
+const origin=workoutProgressionOrigin(original,'db-bench');
+const review={id:'m331-review',programId:original.id,dayId:pairedDay.id,
+    progressionChanges:{'db-bench':'dynamic'},progressionOrigins:{'db-bench':origin}};
+const evidence=JSON.stringify({original,review});
+const changedMethod=withProgressionChoices(original,{'db-bench':'linear'});
+assert.equal(withProgressionChoices(changedMethod,review.progressionChanges).progStyle['db-bench'],'dynamic',
+    'reproduce the previous silent overwrite of a later manual method');
+assert.throws(()=>withWorkoutProgramReview(changedMethod,review),/progression or workout slots changed/);
+const reviewed=withWorkoutProgramReview(original,JSON.parse(JSON.stringify(review)));
+assert.equal(reviewed.progStyle['db-bench'],'dynamic');assert.equal(reviewed.progStyleLifter['db-bench'],true);
+assert.deepEqual(withWorkoutProgramReview(reviewed,review),reviewed,'already-applied choices are idempotent');
+const unrelatedEdit={...original,name:'Renamed during review',updatedAt:123,
+    overrides:{...original.overrides,'paired:1':{reps:'10-15',sets:5}}};
+const preserved=withWorkoutProgramReview(unrelatedEdit,review);
+assert.equal(preserved.name,unrelatedEdit.name);assert.deepEqual(preserved.overrides,unrelatedEdit.overrides);
+assert.throws(()=>withWorkoutProgramReview({...original,pairs:{'paired:0':'bb-row'}},review),/no longer in the program/);
+assert.throws(()=>withWorkoutProgramReview({...original,config:{...original.config,progression:'linear'}},review),/progression or workout slots changed/);
+assert.throws(()=>withWorkoutProgramReview({...original,config:{...original.config,percentScheme:'531'}},review),/percentage stages/);
+assert.throws(()=>withWorkoutProgramReview({...original,id:'other'},review),/no longer the one reviewed/);
+assert.throws(()=>withWorkoutProgramReview(original,{...review,progressionOrigins:undefined}),/older review/);
+assert.equal(withWorkoutProgramReview(reviewed,{...review,progressionOrigins:undefined}).progStyle['db-bench'],'dynamic',
+    'old already-applied choices remain safe no-ops');
+const autoReview={...review,progressionChanges:{'db-bench':'auto'}};
+assert.equal(withWorkoutProgramReview(original,autoReview).progStyle['db-bench'],undefined);
+assert.throws(()=>withWorkoutProgramReview(original,{...review,progressionChanges:{'db-bench':'unknown'}}),/unavailable/);
+const additions={...original,days:[...original.days,{id:'second',exercises:['db-bench'],primaryIndex:0}]};
+assert.throws(()=>withWorkoutProgramReview(additions,review),/workout slots changed/);
+assert.deepEqual(workoutProgressionOrigin(additions,'db-bench'),workoutProgressionOrigin({...additions,days:[...additions.days].reverse()},'db-bench'),
+    'reordering whole days does not create a method conflict');
+const mixed={...review,programExerciseChanges:proposed};
+const draftCountEdit={...original,overrides:{...original.overrides,'paired:0':{...original.overrides['paired:0'],sets:5}}};
+assert.throws(()=>withWorkoutProgramReview(draftCountEdit,mixed),/set count changed/);
+assert.equal(draftCountEdit.progStyle['db-bench'],'double','failed combined proposal has no partial method mutation');
+const sameCount={...original,overrides:{...original.overrides,'paired:0':{...original.overrides['paired:0'],sets:4}}};
+assert.equal(withWorkoutProgramReview(sameCount,mixed).overrides['paired:0'].sets,4,'an already-applied count remains safe');
+const addedReview={programId:original.id,dayId:pairedDay.id,progressionChanges:{'reverse-curl':'ladder'},
+    progressionOrigins:{'reverse-curl':workoutProgressionOrigin(original,'reverse-curl')},
+    programExerciseChanges:[{exerciseId:'reverse-curl',sets:2,added:true}]};
+const withAdded=withWorkoutProgramReview(original,addedReview);
+assert.equal(withAdded.progStyle['reverse-curl'],'ladder');
+assert.equal(withAdded.days[0].exercises.at(-1),'reverse-curl');
+assert.throws(()=>withWorkoutProgramReview(original,{...addedReview,programExerciseChanges:[]}),/no longer in the program/);
+assert.equal(JSON.stringify({original,review}),evidence,'review, source plan and evidence remain immutable');
+console.log('PASS M331: method provenance, conflicting draft counts, global exercise scope, immutable/idempotent review, legacy restraint and added-lift ownership.');
+
+const oldCountReview={programId:original.id,dayId:pairedDay.id,weekIndex:2,
+    programExerciseChanges:[{exerciseId:'db-bench',sets:4,previousSets:3,added:false}]};
+assert.throws(()=>withWorkoutProgramReview(draftCountEdit,oldCountReview),/set count changed/,
+    'old queued count changes compare the original recorded week before replacing a later draft');
+assert.equal(withWorkoutProgramReview(original,oldCountReview).overrides['paired:0'].sets,4);
+assert.throws(()=>withWorkoutProgramReview(original,{...oldCountReview,weekIndex:undefined}),/no workout week/);
+assert.throws(()=>withWorkoutProgramReview(original,{...oldCountReview,weekIndex:1}),/slot changed/);
+console.log('PASS M331 legacy counts: recorded source week guards newer counts; unknown or changed source identity is refused.');
+
+assert.deepEqual(withWorkoutProgramReview(withAdded,addedReview),withAdded,'an applied added-lift review is idempotent');
+const addedSlot=withAdded.days[0].exercises.indexOf('reverse-curl');
+const laterAdded={...withAdded,overrides:{...withAdded.overrides,[`${pairedDay.id}:${addedSlot}`]:{...withAdded.overrides[`${pairedDay.id}:${addedSlot}`],sets:5}}};
+assert.throws(()=>withWorkoutProgramReview(laterAdded,addedReview),/already added or edited/,
+    'an old addition cannot overwrite a count edited after that lift was added');

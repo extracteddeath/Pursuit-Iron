@@ -1,4 +1,5 @@
 import { createExerciseMap } from './exercise-db.js';
+import { evaluateObservedVolumeResponse } from './observed-volume-response.js';
 import { estimate1RM } from './history.js';
 import { convertHistoryLoad, progressionExposureContext } from './history-contract.js';
 import { migrateDomainRecord, DomainContractError } from './domain-contracts.js';
@@ -47,7 +48,9 @@ export function deriveAthleteResponse({ programId, workouts = [], customExercise
         const observed = sets.filter(s => s.rir !== null);
         const scores = observed.map(s => estimate1RM(convertHistoryLoad(s.load, w.unit ?? unit, unit), s.reps, s.rir)).filter(x => x !== null);
         const row = { at: Date.parse(w.completedAt), historyId: String(w.historyId), sessionId: String(w.session.id), exerciseId: planned.exerciseId,
-            sets: sets.length, effortCoverage: observed.length / sets.length, score: scores.length ? Math.max(...scores) : null,
+            sets: sets.length, complete: sets.length === planned.sets,
+            protocolKey: JSON.stringify([planned.role, planned.prescription?.reps, planned.prescription?.rir, planned.progressionStyle]),
+            effortCoverage: observed.length / sets.length, score: scores.length ? Math.max(...scores) : null,
             failure: decision.outcome === 'failure', success: ['success', 'success_blocked'].includes(decision.outcome),
             pain: sets.some(s => s.painFlag === true), poorTechnique: sets.some(s => s.techniqueQuality === 'poor'),
             effortOvershoot: observed.length ? observed.filter(s => s.rir < (planned.prescription?.rir?.[0] ?? 0)).length / observed.length : null };
@@ -85,9 +88,10 @@ export function deriveAthleteResponse({ programId, workouts = [], customExercise
         // be justified by stagnation alone. Expose a review signal instead.
         const doseScale = enough && pressure >= .5 ? .9 : 1;
         const volumeReviewRequired = enough && pressure === 0 && plateau;
+        const observedVolumeResponse = evaluateObservedVolumeResponse(all);
         muscles[muscle] = { sampleCount: rows.length, spanDays: Math.round(span * 100) / 100, effortCoverage: coverage,
             confidence: conf, doseScale, observedMeanSets: mean(rows.map(r => r.dose)), fatiguePressure: pressure,
-            volumeReviewRequired,
+            volumeReviewRequired, observedVolumeResponse,
             reason: doseScale < 1 ? 'repeated_comparable_failures'
                 : volumeReviewRequired ? 'plateau_requires_dose_review' : 'retain_prior' };
         const gaps = rows.slice(1).map((r, i) => (r.at - rows[i].at) / dayMs).filter(x => x > 0);

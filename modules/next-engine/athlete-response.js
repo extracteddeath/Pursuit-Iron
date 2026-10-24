@@ -22,19 +22,27 @@ export function deriveAthleteResponse({ programId, workouts = [], customExercise
         throw new DomainContractError('INVALID_RESPONSE_SCOPE', 'response', 'Response requires a program identity, valid unit and finite observation time.');
     const exerciseMap = createExerciseMap(customExercises), identities = new Map(), excluded = {};
     const exclude = reason => { excluded[reason] = (excluded[reason] ?? 0) + 1; };
+    const revision = x => Number.isFinite(Date.parse(x.updatedAt)) ? Date.parse(x.updatedAt)
+        : Number.isFinite(Date.parse(x.completedAt)) ? Date.parse(x.completedAt) : -Infinity;
     for (const w of Array.isArray(workouts) ? workouts : []) {
         if (w?.programId !== programId) { exclude('unrelated_program'); continue; }
-        const date = Date.parse(w.completedAt);
-        if (!Number.isFinite(date) || date > asOf || asOf - date > ATHLETE_RESPONSE_POLICY.windowDays * dayMs) { exclude('outside_time_window'); continue; }
-        if (!w.historyId || !w.session?.id) { exclude('missing_identity'); continue; }
-        if (w.unit !== undefined && !['lb', 'kg'].includes(w.unit)) { exclude('invalid_unit'); continue; }
+        if (!w.historyId) { exclude('missing_identity'); continue; }
         const id = String(w.historyId), previous = identities.get(id);
         if (previous) exclude('duplicate_identity');
-        const revision = x => Number.isFinite(Date.parse(x.updatedAt)) ? Date.parse(x.updatedAt) : Date.parse(x.completedAt);
         if (!previous || revision(w) >= revision(previous)) identities.set(id, w);
     }
+    // Resolve revisions before applying evidence filters. A newer correction
+    // outside the window (or without usable session/unit data) must suppress its
+    // superseded observation rather than silently reviving stale performance.
+    const eligible = [...identities.values()].filter(w => {
+        const date = Date.parse(w.completedAt);
+        if (!Number.isFinite(date) || date > asOf || asOf - date > ATHLETE_RESPONSE_POLICY.windowDays * dayMs) { exclude('outside_time_window'); return false; }
+        if (!w.session?.id) { exclude('missing_identity'); return false; }
+        if (w.unit !== undefined && !['lb', 'kg'].includes(w.unit)) { exclude('invalid_unit'); return false; }
+        return true;
+    });
     const slots = new Map(), muscleRows = new Map(), workoutRows = new Map();
-    const ordered = [...identities.values()].sort((a, b) => a.completedAt.localeCompare(b.completedAt) || String(a.historyId).localeCompare(String(b.historyId)));
+    const ordered = eligible.sort((a, b) => Date.parse(a.completedAt) - Date.parse(b.completedAt) || String(a.historyId).localeCompare(String(b.historyId)));
     for (const w of ordered) for (const planned of w.session.exercises ?? []) {
         if (w.session.exercises.filter(ex => ex.exerciseId === planned.exerciseId).length !== 1) { exclude('ambiguous_exercise_slot'); continue; }
         const decision = (w.progression ?? []).find(d => d.exerciseId === planned.exerciseId);

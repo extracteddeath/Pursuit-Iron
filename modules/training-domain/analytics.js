@@ -11,7 +11,7 @@ import { ENGINE_COMPATIBLE_VERSIONS } from "../next-engine/config.js";
 import { ALL_EQUIP_IDS, ENGINE_V, EXERCISES, EX_BY_ID, SESSIONS, SPLITS, expandEquipment } from './catalog.js';
 import { GYM_PRESETS, LOWER_PARTS, SECONDARY, SUB_LANDMARKS, blockPhase, exerciseAt, cellRepRange, clamp, compositeMrv, computeCell, effortBounds, goalForDay, isBarLike, isMachineLike, landmarkFor, lastSetTech, loadStep, movePattern, roundTo, secondaryOf, weeksOf } from './records.js';
 import { GYM_LIMITS, INVENTORY_KEYS, PART_LABEL, anchorPerfFor, effortCalibration, gymRackFor, muscleRecovery, parseRIRNum, personalRecoveryHours, prescribeSets, prescribedRIRof, progressionHistoryForProgram, sessionSuggestion, setsOf, toUnit } from './prescriptions.js';
-import { E1RM_REP_CAP, EPLEY_SLOPE, PART_ORDER, decodeProgramCode, e1rm, e1rmRIR, engHas, engLacks, isAxialLoad, sameProgramContent } from './programs.js';
+import { E1RM_REP_CAP, EPLEY_SLOPE, PART_ORDER, decodeProgramCode, e1rm, e1rmRIR, engHas, engLacks, isAxialLoad, nextSessionCursor, sameProgramContent } from './programs.js';
 
 const FOCUS_CAVEAT = { neck: "Rarely fits — most sessions have no room for direct neck work" };
 
@@ -4907,17 +4907,21 @@ function planOverview(program, weekIndex = 1, cycle = null, history = [], saved 
         if (hasDeload)
             phases.push({ key: "deload", label: "Deload", goal: null, weeks: 1, current: weekIndex > accum, done: false, isBlock: false });
     }
-    /* THE NEXT THING TO DO. A plan that cannot answer "what now" is a document, not a plan. It is the
-       first unlogged day of the CURRENT week; if the week is complete it rolls to the next week's
-       first day, and at the end of the block there is nothing left to point at. */
+    // The live week follows the same rotation/schedule cursor as Home. Taking
+    // the first unfinished row disagrees after out-of-order sessions or repeats.
+    // An explicitly browsed future/past week retains its own unlogged preview.
     let upNext = null;
-    for (const w of weeks) {
-        if (w.week < weekIndex)
-            continue;
-        const d = w.days.find(x => !x.done);
-        if (d) {
-            upNext = { ...d, week: w.week };
-            break;
+    const cursor = nextSessionCursor(program, history);
+    if (cursor.weekIndex === weekIndex) {
+        const current = weeks.find(w => w.week === cursor.weekIndex);
+        const nextId = days[cursor.dayIndex]?.id;
+        const d = current?.days.find(d => d.dayId === nextId);
+        if (d && !d.done) upNext = { ...d, week: current.week };
+    } else {
+        for (const w of weeks) {
+            if (w.week < weekIndex) continue;
+            const d = w.days.find(x => !x.done);
+            if (d) { upNext = { ...d, week: w.week }; break; }
         }
     }
     const sessionsTotal = total * days.length;

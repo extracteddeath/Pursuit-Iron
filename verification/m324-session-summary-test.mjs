@@ -92,3 +92,31 @@ for (const [days, split] of [[3, 'full_body'], [4, 'upper_lower'], [5, 'ulppl']]
     assert.equal(JSON.stringify(generated), before, 'Summaries are pure projections, never plan regeneration');
 }
 console.log(`PASS M324: ${sessions} generated day/week comparisons, alternating names/muscles/counts, shared display/budget clocks, revision-aware pacing and scoped shorter-session estimates.`);
+
+// M332: the live Plan entry follows Home's canonical rotation after reordered logs.
+const { nextSessionCursor } = await import('../modules/engine-api.js');
+const rotationDays=[{id:'upper',label:'Upper',primaryIndex:0,exercises:['bb-bench']},
+    {id:'lower',label:'Lower',primaryIndex:0,exercises:['back-squat']},
+    {id:'full',label:'Full Body',primaryIndex:0,exercises:['bb-row']}];
+const rotation={id:'m332',name:'Rotated training',custom:true,weeks:4,config:{unit:'lb',goal:'both',
+    experience:'intermediate',progression:'double',weeks:4,deload:false},days:rotationDays,overrides:{}};
+const reordered=[2,1,0].map((di,i)=>({id:'rotation-'+i,programId:rotation.id,dayId:rotationDays[di].id,
+    weekIndex:1,date:1000+i,unit:'lb',perf:{[rotationDays[di].exercises[0]]:{sets:[{w:100,r:6,done:true}]}}}));
+for(const history of [reordered,[...reordered,{...reordered[2],id:'repeat-upper',date:2000}],
+    [...reordered,{...reordered[0],id:'foreign',programId:'other',date:3000}]]){
+    const cursor=nextSessionCursor(rotation,history);
+    const actual=planOverview(rotation,cursor.weekIndex,null,history,[rotation]);
+    assert.equal(actual.upNext.dayId,rotationDays[cursor.dayIndex].id);
+    assert.equal(actual.upNext.week,cursor.weekIndex);
+    assert.equal(actual.upNext.sets,summarizeSession(rotation,rotationDays[cursor.dayIndex],cursor.weekIndex).sets);
+}
+const scheduled={...rotation,schedule:{1:'upper',3:'full',5:'lower'}};
+const scheduledCursor=nextSessionCursor(scheduled,reordered);
+assert.equal(scheduledCursor.scheduled,true);assert.equal(scheduledCursor.dayIndex,2);
+assert.equal(planOverview(scheduled,scheduledCursor.weekIndex,null,reordered,[scheduled]).upNext.dayId,
+    rotationDays[scheduledCursor.dayIndex].id,'saved schedule retains canonical ownership');
+assert.equal(planOverview(rotation,3,null,reordered,[rotation]).upNext.dayId,'upper','explicit browsed week retains its own preview');
+const allDone=Array.from({length:4},(_,w)=>rotationDays.map((d,i)=>({id:`done-${w}-${i}`,programId:rotation.id,
+    dayId:d.id,weekIndex:w+1,date:10000+w*3+i,unit:'lb',perf:{[d.exercises[0]]:{sets:[{w:100,r:6,done:true}]}}}))).flat();
+assert.equal(planOverview(rotation,1,null,allDone,[rotation]).upNext,null,'completed block history is not relabeled unfinished');
+console.log('PASS M332: live Home/Plan cursor parity after reordered/repeated/scheduled logs; explicit previews and completed-block semantics preserved.');

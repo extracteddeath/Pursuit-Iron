@@ -270,14 +270,16 @@ async function verifyTaskHierarchy(browser){
          const r=action?.getBoundingClientRect(),h=header?.getBoundingClientRect(),p=getComputedStyle(picker);
          return {actionCount:document.querySelectorAll('.wpb-plan-open-program').length,
            named:action?.getAttribute('aria-label'),height:r?.height,top:r?.top,bottom:r?.bottom,headerTop:h?.top,headerBottom:h?.bottom,
-           titleTop:title?.getBoundingClientRect().top,titleBottom:title?.getBoundingClientRect().bottom,marginBottom:p.marginBottom,
+           titleTop:title?.getBoundingClientRect().top,titleBottom:title?.getBoundingClientRect().bottom,
+           titleWidth:title?.getBoundingClientRect().width,headerWidth:h?.width,marginBottom:p.marginBottom,
            sticky:p.position,bg:p.backgroundColor,hasBottomRule:p.boxShadow!=='none'};
        });
        assert.ok(planChrome.actionCount===1&&/full program/i.test(planChrome.named)&&
          planChrome.height>=48&&planChrome.top>=planChrome.headerTop-1&&
          planChrome.bottom<=planChrome.headerBottom+1&&
-         Math.abs((planChrome.top+planChrome.bottom)-(planChrome.titleTop+planChrome.titleBottom))<=4,
-         'Full program action sits beside the Plan program name: '+JSON.stringify(planChrome));
+         (Math.abs((planChrome.top+planChrome.bottom)-(planChrome.titleTop+planChrome.titleBottom))<=4
+           || planChrome.top>=planChrome.titleBottom+6&&Math.abs(planChrome.titleWidth-planChrome.headerWidth)<=1),
+         'Full program action sits beside or below a full-width Plan name: '+JSON.stringify(planChrome));
        assert.ok(planChrome.sticky==='sticky'&&planChrome.marginBottom==='0px'&&
          planChrome.bg!=='rgba(0, 0, 0, 0)'&&planChrome.hasBottomRule,
          'Sticky week picker fills its lower edge with an opaque themed surface: '+JSON.stringify(planChrome));

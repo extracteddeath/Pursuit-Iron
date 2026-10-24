@@ -189,3 +189,12 @@ The Profile share card owns identity and the existing canonical level/XP present
 ### M298 — Inspectable cycle structure
 
 Read-only block previews show their executable split, actual training-day count and explicit lift-frequency targets before weekly exercise details. Use the shared cycle facts class and spacing/shape/theme tokens. These labels read the existing program/request; do not invent a second schedule or frequency calculation. Preview navigation cannot activate a block or rewrite history. Cycle repeat submits the engine-owned settings projection to the existing generation worker.
+
+
+### M332 — first current-screen composition slice
+
+Plan's existing context heading uses intrinsic title sizing rather than a fixed 10rem flex basis. A long program name receives the full line before its full-program action when both do not fit; short names and wide windows retain the side-by-side arrangement. Keep the same action and selected-week callback. Profile's existing toolbar owns its spacing and equal flexible actions; retire its later duplicate four-priority layout rule rather than stacking an override. Labels wrap, hit targets remain at least 48px, and enlarged text can stack the actions. No new design tokens, stylesheet layer or Workout/Focus changes.
+
+The running-tab review also reproduced two summary disagreements. Live Plan Up Next now reads the canonical nextSessionCursor used by Home; explicit browsed-week previews and completed-block history keep their existing scope. Progress Sessions reads the existing weeklyRecap count/set totals used on Home, instead of summing fractional muscle credits into a workout-set count. Muscle-volume charts retain their existing contribution ledger. Neither change generates prescriptions or modifies training history.
+
+Current rendered baselines covered all five roots at 393px dark, 320px light and 900px light, plus training-empty phone states. M324 source/browser coverage now includes reordered/repeated/scheduled logs, Home/Plan/Preview parity, shared Home/Progress weekly totals, and long-name reflow at 393px, 320px with doubled text, and 900px. R53 accepts a fully contained side-by-side action or an action below a full-width title; B907 retains Profile actions, section/card customization and data preservation. Continue the ordered composition review; this slice does not certify every supporting flow or physical Android behavior.

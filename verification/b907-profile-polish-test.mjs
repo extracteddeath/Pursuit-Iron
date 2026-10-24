@@ -19,7 +19,8 @@ assert.doesNotMatch(region,/@keyframes|animation:/,'no competing row transition 
 const b912=css.slice(css.lastIndexOf('/* B912 — Prototype-informed Profile hierarchy'));
 assert.ok(b912.startsWith('/* B912 — Prototype-informed Profile hierarchy'),'scoped visual pass is present');
 assert.match(b912,/\.wpb-profile-strength-grid\{[\s\S]*?grid-template-columns:minmax\(0,1fr\)!important/,'strength compares actual patterns in compact rows');
-assert.match(b912,/\.wpb-profile-toolbar\{[\s\S]*?display:flex!important/,'secondary actions retain compact shared row');
+// M332: B907 browser coverage owns toolbar geometry and reading order; the retired
+// duplicate priority layer is no longer a source requirement.
 const featuredCell = b912.split('.wpb-profile-strength-grid>.wpb-profile-strength-cell:first-child{')[1]?.split('}')[0];
 assert.ok(featuredCell?.includes('background:var(--wpb-theme-accent-dim)!important'), 'one featured score remains tonal');
 assert.ok(!featuredCell.includes('padding'), 'featured score retains the same text inset as every other row');

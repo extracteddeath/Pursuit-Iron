@@ -122,6 +122,7 @@ export const contractGroups = Object.freeze({
         'm219-ui-integration-test.mjs',
         'b846-gym-bar-weights-test.mjs',
         'm220-day-progression-test.mjs',
+        'm340-engine-lifecycle-journey-test.mjs',
         'prescription-integrity-test.mjs',
         'programs-test.mjs',
         'progression-safety-test.mjs',

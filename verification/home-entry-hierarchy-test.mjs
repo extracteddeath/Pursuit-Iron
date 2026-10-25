@@ -28,7 +28,10 @@ assert.match(css, /#root \.wpb \.wpb-home-session-outline\{\s*margin:0;border:0;
   'Session outline must not add a second large blank strip above its exercise list');
 assert.ok(css.includes('#root .wpb .wpb-home-outline-list>li:first-child{padding-top:var(--pi-space-1)}'),
   'Expanded list starts close beneath its toggle');
-const gamePlan = app.slice(app.indexOf('function SessionGamePlan('), app.indexOf('function PlanChangesDialog('));
+const surfaces = fs.readFileSync('modules/plan-session-surfaces.js', 'utf8');
+assert.match(app, /from ['"]\.\/plan-session-surfaces\.js['"]/, 'App composes the canonical Plan session surfaces');
+assert.ok(!app.includes('function SessionGamePlan('), 'App must not retain the duplicate Game Plan implementation');
+const gamePlan = surfaces.slice(surfaces.indexOf('function SessionGamePlan('), surfaces.indexOf('function PlanChangesDialog('));
 assert.ok(gamePlan.includes('_jsxs("details"') && gamePlan.includes('_jsxs("summary"'),
   'Game Plan must expose complete coaching guidance via native keyboard-operable disclosures');
 assert.ok(gamePlan.includes('children: guidance') && !gamePlan.includes('style: {'),

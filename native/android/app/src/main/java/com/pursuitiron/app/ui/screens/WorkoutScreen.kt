@@ -225,7 +225,7 @@ fun WorkoutScreen(vm: AppViewModel) {
         is WSheet.History -> LiftDetailSheet(vm, sh.id) { sheet = null }
         WSheet.SessionMenu -> SessionMenu(vm, s, onNote = { sheet = WSheet.SessionNote }, onAdd = { sheet = WSheet.AddLift }, onSuperset = { sheet = WSheet.Superset }) { sheet = null }
         WSheet.AddLift -> AddLiftSheet(vm) { sheet = null }
-        WSheet.Finish -> FinishSheet(vm) { sheet = null }
+        WSheet.Finish -> FinishPage(vm, s) { sheet = null }
         null -> {}
     }
     if (confirmDiscard) AlertDialog(
@@ -714,7 +714,7 @@ private fun styleLabel(s: String) = when (s) {
 }
 
 @Composable
-private fun HurtSheet(vm: AppViewModel, ei: Int, onClose: () -> Unit) {
+internal fun HurtSheet(vm: AppViewModel, ei: Int, onClose: () -> Unit) {
     val opts = vm.setup
     val areas = opts.list("injuryAreas"); val impacts = opts.list("injuryImpacts")
     var area by remember { mutableStateOf<String?>(null) }

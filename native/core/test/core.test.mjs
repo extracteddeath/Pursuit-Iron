@@ -786,3 +786,16 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
 }
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);
 
+// The design's finish page: too easy / about right / too much per muscle, the next day, time and volume
+{ C.init({ store: JSON.stringify({ unit: 'kg' }) });
+  C.createProgram({ config: { name: 'F', unit: 'kg', goal: 'both', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 2 });
+  const s0 = C.startSession({}); const e = s0.exercises[0], si = e.sets.findIndex((x) => !x.warm && !x.sub);
+  C.act({ type: 'edit', ei: 0, si, field: 'weight', value: '60' }); C.act({ type: 'edit', ei: 0, si, field: 'reps', value: '8' }); C.act({ type: 'toggle', ei: 0, si });
+  let f = C.finishPreview(); const part = f.parts[0].part;
+  C.act({ type: 'feedback', part, diff: -1 }); f = C.finishPreview();
+  ok(f.parts[0].diff === -1 && f.parts[0].sets === 1 && typeof f.parts[0].room === 'boolean', 'difficulty answer kept with the sets done');
+  ok(f.title && f.nextDay && f.nextDay.rows.length > 0 && f.volume === 480 && f.elapsedMs >= 0, 'finish page: next day ' + (f.nextDay && f.nextDay.label) + ', volume and time');
+  C.act({ type: 'feedback', part, diff: -1 }); ok(C.finishPreview().parts[0].diff === null, 'tapping the same answer clears it');
+  C.act({ type: 'feedback', part, diff: -1 });
+  const r = C.finishSession(); const h = C.history ? null : null;
+  ok(r && r.ok !== false, 'finish with a difficulty answer'); }

@@ -343,12 +343,18 @@ tap(r"^\|Finish$|^Finish$")
 tap(r"^\|Finish$|^Finish$", timeout=5, required=False)  # "N sets not logged" confirm
 time.sleep(1)
 shot("finish-sheet")
-tap(r"^\|Good$", "finish-feedback", required=False)
-scroll_to(r"^\|Save workout$", tries=4)
-tap(r"^\|Save workout$")
+if not find(r"Workout done", timeout=5):
+    FAILS.append("finish page missing")
+if tap(r"^\|Too easy$", "finish-feel", required=False):
+    if not find(r" sets$|No room", timeout=3):
+        FAILS.append("feel answer did not show next time's sets")
+tap(r"^\|Moderate$", "finish-feedback", required=False)
+scroll_to(r"^\|Save session$", tries=8)
+tap(r"^\|Save session$")
 time.sleep(2)
 shot("summary")
-tap(r"^\|Done$|Done$")
+if not find(r"Saved · next session adjusted|Session saved", timeout=4):
+    FAILS.append("no saved toast after Save session")
 
 # 4b. Quick workout, saved as a routine
 if scroll_to(r"Quick workout", tries=3):
@@ -371,14 +377,13 @@ if scroll_to(r"Quick workout", tries=3):
     tap(r"^\|Finish$|^Finish$")
     tap(r"^\|Finish$|^Finish$", timeout=5, required=False)
     time.sleep(1)
-    scroll_to(r"Save as a routine", tries=4)
-    tap(r"Save as a routine")
+    scroll_to(r"^\|Save routine$", tries=6)
+    tap(r"^\|Save routine$")
     shot("quick-finish")
-    scroll_to(r"^\|Save workout$", tries=4)
-    tap(r"^\|Save workout$")
+    scroll_to(r"^\|Save session$", tries=6)
+    tap(r"^\|Save session$")
     time.sleep(2)
     shot("quick-summary")
-    tap(r"^\|Done$|Done$")
 else:
     FAILS.append("no Quick workout entry on Today")
 

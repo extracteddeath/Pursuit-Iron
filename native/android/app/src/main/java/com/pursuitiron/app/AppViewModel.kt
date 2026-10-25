@@ -259,20 +259,24 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** App.js finish sheet: PRs, goals, next-session plan and per-muscle feedback before saving. */
     suspend fun finishPreview(): JSONObject? = obj("finishPreview")
 
-    fun finish(routineName: String? = null, routineIds: List<String> = emptyList()) = launchCore {
+    fun finish(routineName: String? = null, routineIds: List<String> = emptyList(), nudged: Int = 0) = launchCore {
         val r = obj("finishSession") ?: return@launchCore
         if (!r.b("ok")) { toast(r.s("error", "Couldn't save the workout")); return@launchCore }
         rest.cancel()
         hap(Hap.Done)
-        summary = r
+        val quick = session?.b("quick") == true
         session = obj("session")
+        // The design: Save session goes straight back to Today with what changed in a toast.
+        val earned = r.list("achievements").map { it.s("label") }.filter { it.isNotBlank() }
+        toast((if (quick) "Quick workout saved · your program is unchanged" else if (nudged > 0) "Saved · next session adjusted for $nudged ${if (nudged == 1) "muscle" else "muscles"}" else "Session saved · week updated") +
+            (if (earned.isNotEmpty()) " · earned ${earned.joinToString(", ")}" else ""))
         if (routineName != null && routineIds.isNotEmpty()) {
             val sr = obj("saveRoutine", jsonOf("ids" to JSONArray(routineIds), "name" to routineName))
             if (sr?.b("ok") == true) toast("Saved \"${sr.s("name")}\" to your library")
         }
         refreshHomeSide()
         pendingUpdate = obj("pendingProgramUpdate")
-        screen = Screen.Summary
+        summary = null; tab = Tab.Today; screen = Screen.Tabs
     }
 
     /* App.js pendingProgramUpdate: a progression changed mid-workout asks whether the program keeps it. */

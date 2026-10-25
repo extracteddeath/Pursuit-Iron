@@ -1124,7 +1124,9 @@ const ACTIONS = {
     restAdjust({ delta }, ctx, d) { if (S.live.rest) S.live.rest = { ...S.live.rest, seconds: Math.max(0, S.live.rest.seconds + delta) }; return d; },
     tick({ elapsedMs }, ctx, d) { S.live.elapsedMs = Math.max(0, Number(elapsedMs) || 0); return d; },
     // App.js fbPump / fbSore: part -> "flat"|"good"|"huge" and "sore"|"ontime"|"fresh"; tapping the same value clears it.
-    feedback({ part, pump, sore }, ctx, d) {
+    feedback({ part, pump, sore, diff }, ctx, d) {
+        // The design's "How did each muscle feel?": too easy (+1 set), about right (hold), too much (−1 set).
+        if (diff !== undefined) { const m = { ...(S.live.fbDiff || {}) }; const v = Number(diff); if (diff === null || ![-1, 0, 1].includes(v) || m[part] === v) delete m[part]; else m[part] = v; S.live.fbDiff = m; }
         if (pump !== undefined) { const m = { ...(S.live.fbPump || {}) }; if (!pump || m[part] === pump) delete m[part]; else m[part] = pump; S.live.fbPump = m; }
         if (sore !== undefined) { const m = { ...(S.live.fbSore || {}) }; if (!sore || m[part] === sore) delete m[part]; else m[part] = sore; S.live.fbSore = m; }
         return d;
@@ -1303,9 +1305,13 @@ export function finishSession() {
     const elapsed = Math.max(Number(l.elapsedMs) || 0, (l.pausedAt || now()) - (l.startedAt || now()));
     let estMin; try { estMin = E.estimateMinutes(program, day, wk); } catch { estMin = undefined; }
     const fb = {};
-    new Set([...Object.keys(l.fbPump || {}), ...Object.keys(l.fbSore || {})]).forEach((part) => { fb[part] = { pump: l.fbPump?.[part], sore: l.fbSore?.[part] }; });
+    new Set([...Object.keys(l.fbPump || {}), ...Object.keys(l.fbSore || {}), ...Object.keys(l.fbDiff || {})]).forEach((part) => {
+        fb[part] = { pump: l.fbPump?.[part], sore: l.fbSore?.[part], ...(l.fbDiff?.[part] != null ? { diff: l.fbDiff[part] } : {}) }; });
     const fbDelta = {};
-    Object.entries(fb).forEach(([part, v]) => { const dd = E.feedbackDelta(v.pump, v.sore); if (dd != null) fbDelta[part] = dd; });
+    // The lifter's own answer leads; pump and recovery decide only where it is missing. +1 only with room under MRV.
+    Object.entries(fb).forEach(([part, v]) => {
+        const dd = v.diff != null ? (v.diff > 0 && !roomUnderMrv(program, wk, part) ? 0 : v.diff) : E.feedbackDelta(v.pump, v.sore);
+        if (dd != null) fbDelta[part] = dd; });
     const progChanges = Object.keys(l.sessionProgressions || {}).length ? l.sessionProgressions : undefined;
     const log = {
         id: l.sessionId, programId: program.id, programName: program.name, dayLabel: day.label, dayId: day.id,
@@ -2788,6 +2794,14 @@ export function toggleInjuryResolved({ id }) {
 }
 
 /* ------------------------------------------------------------------ the finish sheet (App.js "finishing" review before onFinish) */
+/* Weekly planned working sets for one muscle in this program week, and whether one more fits under its MRV. */
+function weeklyPartSets(program, wk, part) {
+    return program.days.reduce((n, d) => n + dayPreview(program, d, wk).filter((x) => x.part === part).reduce((a, x) => a + (Number(x.sets) || 0), 0), 0);
+}
+function roomUnderMrv(program, wk, part) {
+    let mrv = Infinity; try { mrv = E.landmarkFor(part, program?.config?.experience || 'intermediate', program).mrv; } catch { mrv = Infinity; }
+    return !(weeklyPartSets(program, wk, part) + 1 > mrv);
+}
 export function finishPreview() {
     const l = S.live; if (!l) return null;
     const ctx = sessionContext(l); if (!ctx) return null;
@@ -2828,7 +2842,20 @@ export function finishPreview() {
     const work = (e) => e.sets.filter(isWork);
     return { unit: u, quick: !!program.quick, doneSets: data.reduce((n, e) => n + work(e).filter((x) => x.done).length, 0), totalSets: data.reduce((n, e) => n + work(e).length, 0),
         prs, goalsHit, mainE1rm: program.quick ? null : mainE1rm, nextPlan: program.quick ? [] : nextPlan,
-        parts: trained.map((p) => ({ part: p, label: E.PART_LABEL?.[p] || p, pump: l.fbPump?.[p] || null, sore: l.fbSore?.[p] || null })),
+        parts: trained.map((p) => ({ part: p, label: E.PART_LABEL?.[p] || p, pump: l.fbPump?.[p] || null, sore: l.fbSore?.[p] || null,
+            diff: l.fbDiff?.[p] ?? null, sets: data.filter((e) => EX_BY_ID[e.id]?.part === p).reduce((n, e) => n + work(e).filter((x) => x.done).length, 0),
+            room: program.quick ? true : roomUnderMrv(program, wk, p) })),
+        title: program.quick ? (program.name || 'Quick workout') : day.label,
+        elapsedMs: Math.max(Number(l.elapsedMs) || 0, (l.pausedAt || now()) - (l.startedAt || now())),
+        volume: Math.round(data.reduce((sum, e) => sum + e.sets.reduce((a, x) => a + (x.done && !x.warm ? (parseFloat(x.weight) || 0) * (parseInt(x.reps) || 0) : 0), 0), 0)),
+        nextDay: program.quick ? null : (() => {
+            const i = program.days.findIndex((x) => x.id === day.id); if (i < 0) return null;
+            const wrap = i + 1 >= program.days.length, nd = program.days[(i + 1) % program.days.length], nw = wrap ? wk + 1 : wk;
+            if (nw > E.weeksOf(program) + (program.config?.deload ? 1 : 0) && !program.config?.endless) return null;
+            const sched = program.schedule || {}, wd = Object.keys(sched).find((k) => sched[k] === nd.id);
+            const rows = dayPreview(program, nd, nw).map((x) => ({ name: x.name, rx: [x.sets ? x.sets + ' sets' : null, x.reps ? String(x.reps) : null].filter(Boolean).join(' · ') }));
+            return { label: nd.label, weekday: wd == null ? null : ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][Number(wd)], rows };
+        })(),
         pumpChoices: [['flat', 'Flat'], ['good', 'Good'], ['huge', 'Huge']], soreChoices: [['sore', 'Sore'], ['ontime', 'On time'], ['fresh', 'Fresh']],
         sessionNote: l.sessionNote || '', routineIds: program.quick ? data.map((x) => x.id) : [] };
 }

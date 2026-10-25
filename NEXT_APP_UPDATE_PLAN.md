@@ -1,3 +1,7 @@
+## October 25 — M365 Program weekly schedule ownership (build 913 candidate)
+
+Extract the Program weekly-schedule presentation to modules/program-schedule-sheet.js while leaving the existing ProgramView reducer as the only persisted schedule writer. The existing day cycling, clearing, today marker, workout assignments and swipe-dismiss ref are retained. Retire 15 JSX style objects in favor of one set of semantic theme-backed CSS roles with keyboard focus, reduced-motion and forced-colors coverage. The style source contract includes the new module so debt cannot be hidden by extraction. Engine 0.65.9 and saved training data remain unchanged. Merge only after exact-head source, engine, browser and offline/release checks, then verify public Build 913 bytes.
+
 ## October 25 — M363 Program review ownership and CSS cleanup (build 911)
 
 A bounded second UI ownership slice moves ProgramRevisionReview, ProgramLayoutHistory,

@@ -3,7 +3,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
 import puppeteer from 'puppeteer-core';
-import { EXERCISES, EX_BY_ID, TEMPLATES, templateConfig, percentagePlanFor, prescribeSets } from '../modules/App.js';
+import { EXERCISES, EX_BY_ID, TEMPLATES, templateConfig, percentagePlanFor, prescribeSets } from '../modules/engine-api.js';
+
 import { generateNextProgramForShell } from '../modules/next-engine/app-shell-adapter.js';
 const root = path.resolve(new URL('../', import.meta.url).pathname);
 const equipment = ['barbell','rack','bench','dumbbell','cable','machine','smith','pullup','dip','legpress','hacksquat','legext','legcurl','calfmachine'];
@@ -20,7 +21,9 @@ const fixtures = Object.fromEntries(['p531','gzclp'].map(templateId => {
 const importMap = fs.readFileSync(path.join(root, 'index.html'), 'utf8').match(/<script type="importmap">[\s\S]*?<\/script>/)[0];
 const html = `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/app.css">${importMap}</head><body><div id="root"></div><script type="module">
 import React from '/vendor/react.js';import {createRoot} from '/vendor/react-dom-client.js';
-import {WorkoutSession,StyleTag,EX_BY_ID,prescribeSets} from '/modules/App.js';
+import { WorkoutSession, StyleTag } from '/modules/App.js';
+import { EX_BY_ID, prescribeSets } from '/modules/engine-api.js';
+
 const q=new URL(location.href).searchParams,p=${JSON.stringify(fixtures)}[q.get('template')||'p531'],d=p.days[0],id=d.exercises[0],unit=q.get('unit')||'lb',week=Number(q.get('week')||1);
 localStorage.removeItem('wpb:live');localStorage.removeItem('m225-finished');
 if(q.has('resume')) {const rows=prescribeSets(p,d,EX_BY_ID[id],0,week,unit,null,null,{},[],false).filter(r=>!r.sub).map((r,i)=>({...r,done:true,actualRIR:2,...(i===0?{recoveryLimited:true}:{})}));localStorage.setItem('wpb:live',JSON.stringify({schemaVersion:2,programId:p.id,dayId:d.id,weekIndex:week,dayExSig:id,exIdx:0,elapsedMs:120000,data:[{id,slot:0,note:'',sets:rows}]}));}

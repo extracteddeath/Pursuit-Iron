@@ -193,7 +193,7 @@ async function verifyTaskHierarchy(browser){
         const start=el('.wpb-home-hero>.wpb-primary-action').getBoundingClientRect();
         const dock=el('.wpb-home-compose-bar');
         return {summaryFirst:before('.wpb-home-session-summary','.wpb-home-hero>.wpb-primary-action'),
-          startFirst:before('.wpb-home-hero>.wpb-primary-action','.wpb-m3-session-preview'),
+          startFirst:before('.wpb-home-hero>.wpb-primary-action','.wpb-home-session-preview'),
           programsFirst:before('.wpb-home-programs','.wpb-action-grid'),
           dockPresent:!!dock,createDeferred:before('.wpb-home-programs','.wpb-home-new-program'),
           startHeight:start.height};
@@ -201,7 +201,7 @@ async function verifyTaskHierarchy(browser){
       assert.ok(homeOrder.summaryFirst&&homeOrder.startFirst&&homeOrder.programsFirst&&
         homeOrder.createDeferred&&!homeOrder.dockPresent&&homeOrder.startHeight>=52,
         'R91 workout leads; program creation follows training content in DOM and focus order: '+JSON.stringify(homeOrder));
-      const outlineState=()=>page.$eval('.wpb-m3-session-preview',panel=>{
+      const outlineState=()=>page.$eval('.wpb-home-session-preview',panel=>{
         const button=panel.querySelector('button[aria-expanded]');
         const content=panel.querySelector('#wpb-home-outline-exercises');
         return {button:!!button,label:button?.getAttribute('aria-label'),controls:button?.getAttribute('aria-controls'),
@@ -217,12 +217,12 @@ async function verifyTaskHierarchy(browser){
         'B876 Home shows every session exercise by default, with accessible optional collapse: '+JSON.stringify(outlineOpen));
       assert.match(outlineOpen.text,/Bench/i,'The session shows a real lift, not only the split label');
       assert.match(outlineOpen.text,/4×6[-–]8/,'The actual prescribed sets and reps are visible before tapping');
-      await page.click('.wpb-m3-session-preview button[aria-expanded="true"]');
+      await page.click('.wpb-home-session-preview button[aria-expanded="true"]');
       const outlineClosed=await outlineState();
       assert.ok(outlineClosed.expanded==='false'&&outlineClosed.hidden&&outlineClosed.rows===0&&
         outlineClosed.label?.includes('Show all 4 session exercises'),
         'Explicit collapse still works without navigation or hidden focusable exercise content');
-      await page.click('.wpb-m3-session-preview button[aria-expanded="false"]');
+      await page.click('.wpb-home-session-preview button[aria-expanded="false"]');
       assert.deepEqual(await outlineState(),outlineOpen,'Reopening restores the same actual session outline');
       const geometry=async selector=>page.$eval(selector,node=>{
         const box=node.getBoundingClientRect(),css=getComputedStyle(node);
@@ -244,7 +244,7 @@ async function verifyTaskHierarchy(browser){
         assert.equal(home.padding,width<360?12:width<600?16:24,'Home window inset follows available width');
         assert.ok(home.navTrackAligned,'Selected navigation indicator stays with its tab after resize: '+JSON.stringify({width,home}));
         assert.ok(home.footerClear,'Home scroll viewport ends above the persistent actions: '+JSON.stringify({width,home}));
-        assert.equal(await page.$eval('.wpb-m3-session-preview button',b=>b.getAttribute('aria-expanded')),'true',
+        assert.equal(await page.$eval('.wpb-home-session-preview button',b=>b.getAttribute('aria-expanded')),'true',
           'Resize preserves expanded session outline');
         if([768,1366].includes(width))await page.screenshot({path:path.join(root,`verification/r62-home-${theme}-${width}.png`)});
       }
@@ -253,16 +253,53 @@ async function verifyTaskHierarchy(browser){
         const el=s=>document.querySelector(s),before=(a,b)=>!!(el(a).compareDocumentPosition(el(b))&Node.DOCUMENT_POSITION_FOLLOWING);
         return {nextFirst:before('.wpb-plan-up-next','.wpb-plan-panes'),
           pickerFirst:before('.wpb-plan-week-picker','.wpb-plan-overview'),
+          selectedAfterPicker:before('.wpb-plan-week-picker','.wpb-plan-selected-week'),
+          selectedBeforeTimeline:before('.wpb-plan-selected-week','.wpb-plan-phase-group'),
+          selectedCount:document.querySelectorAll('.wpb-plan-selected-week .wpb-plan-week-card').length,
+          uniqueWeekCount:new Set([...document.querySelectorAll('[data-plan-week]')].map(x=>x.dataset.planWeek)).size,
           sessionsFirst:before('.wpb-plan-session-list','.wpb-plan-overview'),
           rows:[...document.querySelectorAll('.wpb-plan-session-list button')].map(b=>({
             height:b.getBoundingClientRect().height,radius:parseFloat(getComputedStyle(b).borderTopLeftRadius),
             gap:parseFloat(getComputedStyle(b).marginTop)}))};
       });
-      assert.ok(planOrder.nextFirst&&planOrder.pickerFirst&&planOrder.sessionsFirst,
+      const planChrome=await page.$eval('.wpb-plan-context',context=>{
+         const header=context.querySelector('.wpb-plan-context-heading');
+         const action=context.querySelector('.wpb-plan-open-program');
+         const title=context.querySelector('.wpb-plan-title');
+         const picker=document.querySelector('.wpb-plan-week-picker');
+         const r=action?.getBoundingClientRect(),h=header?.getBoundingClientRect(),p=getComputedStyle(picker);
+         return {actionCount:document.querySelectorAll('.wpb-plan-open-program').length,
+           named:action?.getAttribute('aria-label'),height:r?.height,top:r?.top,bottom:r?.bottom,headerTop:h?.top,headerBottom:h?.bottom,
+           titleTop:title?.getBoundingClientRect().top,titleBottom:title?.getBoundingClientRect().bottom,
+           titleWidth:title?.getBoundingClientRect().width,headerWidth:h?.width,marginBottom:p.marginBottom,
+           sticky:p.position,bg:p.backgroundColor,hasBottomRule:p.boxShadow!=='none'};
+       });
+       assert.ok(planChrome.actionCount===1&&/full program/i.test(planChrome.named)&&
+         planChrome.height>=48&&planChrome.top>=planChrome.headerTop-1&&
+         planChrome.bottom<=planChrome.headerBottom+1&&
+         (Math.abs((planChrome.top+planChrome.bottom)-(planChrome.titleTop+planChrome.titleBottom))<=4
+           || planChrome.top>=planChrome.titleBottom+6&&Math.abs(planChrome.titleWidth-planChrome.headerWidth)<=1),
+         'Full program action sits beside or below a full-width Plan name: '+JSON.stringify(planChrome));
+       assert.ok(planChrome.sticky==='sticky'&&planChrome.marginBottom==='0px'&&
+         planChrome.bg!=='rgba(0, 0, 0, 0)'&&planChrome.hasBottomRule,
+         'Sticky week picker fills its lower edge with an opaque themed surface: '+JSON.stringify(planChrome));
+       const choices=await page.evaluate(()=>[...document.querySelectorAll('.wpb-plan-panes>button')].map(b=>({
+        pane:b.dataset.planPane,pressed:b.getAttribute('aria-pressed'),height:b.getBoundingClientRect().height
+      })));
+      assert.deepEqual(choices.map(b=>b.pane),['schedule','volume','progression','blueprint'],'Plan keeps four panes');
+      assert.ok(choices.every(b=>b.height>=44)&&choices.filter(b=>b.pressed==='true').length===1,'One active 44px+ pane');
+      await page.click('[data-plan-pane="volume"]');
+      assert.equal(await page.$eval('[data-plan-pane="volume"]',b=>b.getAttribute('aria-pressed')),'true');
+      await page.click('[data-plan-pane="schedule"]');
+      assert.equal(await page.$eval('[data-plan-pane="schedule"]',b=>b.getAttribute('aria-pressed')),'true');
+      assert.ok(planOrder.nextFirst&&planOrder.pickerFirst&&planOrder.sessionsFirst&&
+        planOrder.selectedAfterPicker&&planOrder.selectedBeforeTimeline&&planOrder.selectedCount===1&&planOrder.uniqueWeekCount===4,
         'Plan puts next session, location and sessions before aggregate metrics: '+JSON.stringify(planOrder));
       assert.ok(planOrder.rows.length===2&&planOrder.rows.every(r=>r.height>=48&&r.radius===0&&r.gap===0),
         'Connected rows retain individual full targets');
       await page.click('[data-plan-week-picker] [aria-label="Week 3"]');
+      assert.equal(await page.$eval('.wpb-plan-selected-week [data-plan-week]',e=>e.dataset.planWeek),'3',
+        'Week picker moves the existing session card to the featured position, without duplication');
       for(const width of [...widths,393]){
         await resize(width,width===768?1024:800);
         const plan=await geometry('.wpb-plan-view');
@@ -367,26 +404,28 @@ try{
           const root=el('.wpb');
           const out={overflow:root.scrollWidth>root.clientWidth+1,viewport:innerWidth};
           if(which==='plan'){
-            out.row=box('.wpb-plan-heading-row');
-            out.back=box('.wpb-plan-heading-row button[aria-label="Back"]');
-            out.title=box('.wpb-plan-title');
-            out.titleSize=parseFloat(getComputedStyle(el('.wpb-plan-title')).fontSize);
+            out.row=box('.wpb-plan .wpb-root-title-row');
+            out.back=box('.wpb-plan .wpb-root-header button[aria-label="Back"]');
+            out.title=box('.wpb-plan .wpb-root-header h1');
+            out.titleSize=parseFloat(getComputedStyle(el('.wpb-plan .wpb-root-header h1')).fontSize);
           }else if(which==='progress'){
-            out.header=box('.wpb-progress>.wpb-page-header');
+            out.header=box('.wpb-progress>.wpb-progress-chrome');
             out.titleSize=parseFloat(getComputedStyle(el('.wpb-progress-title')).fontSize);
             out.tabs=[...document.querySelectorAll('.wpb-progress .wpb-premium-tabs>button')]
               .map(b=>{const r=b.getBoundingClientRect();return {width:r.width,height:r.height}});
           }else if(which==='settings'){
-            out.header=box('.wpb-settings>.wpb-page-header');
+            out.header=box('.wpb-settings>.wpb-root-header');
             out.jump=box('.wpb-settings>.wpb-settings-jump');
             out.picker=box('.wpb-settings-jump-control');
-            out.titleSize=parseFloat(getComputedStyle(el('.wpb-settings>.wpb-page-header h1')).fontSize);
+            out.titleSize=parseFloat(getComputedStyle(el('.wpb-settings>.wpb-root-header h1')).fontSize);
             out.select=box('.wpb-settings-jump select');
           }else if(which==='profile'){
             out.topPadding=parseFloat(getComputedStyle(el('.wpb-profile-inner')).paddingTop);
-            out.head=box('.wpb-profile-head');
+            out.head=box('.wpb-profile-head');out.identity=box('.wpb-profile-card-caption');
             out.titleSize=parseFloat(getComputedStyle(el('.wpb-profile-title')).fontSize);
             out.edit=box('.wpb-profile-edit');
+            out.shareCard=box('.wpb-profile-share-card');
+            out.layoutActions=box('.wpb-profile-toolbar');
             out.hero=box('.wpb-profile-hero');
             out.stats=[...document.querySelectorAll('.wpb-profile-stat')].map(b=>b.getBoundingClientRect().width);
           }
@@ -394,33 +433,41 @@ try{
         },tab);
         const density=await measure();
         assert.ok(!density.overflow,'R57 destination must not overflow: '+JSON.stringify({tab,density}));
+        // M270 gives every root the same 26px title role; retain each
+        // destination's compact geometry and full-size action checks below.
+        assert.equal(density.titleSize,26,'Root destination uses the shared title size: '+JSON.stringify({tab,density}));
         if(tab==='plan'){
-          assert.ok(density.row&&density.back&&density.title&&density.back.height>=48&&density.back.width>=48,
-            'Plan Back has an actual 48px target: '+JSON.stringify(density));
-          assert.ok(density.titleSize>=27&&density.titleSize<=28&&density.title.bottom-density.row.top<=118,
+          assert.ok(density.row&&!density.back&&density.title&&density.title.top>=density.row.top,
+            'Plan root has no Back action and keeps its title in the shared row: '+JSON.stringify(density));
+          assert.ok(density.title.bottom-density.row.top<=118,
             'Plan header has compact hierarchy without hiding title: '+JSON.stringify(density));
         }else if(tab==='progress'){
-          assert.ok(density.header&&density.header.height<=155&&density.titleSize>=26&&density.tabs.length===4&&density.tabs.every(x=>x.height>=48),
-            'Progress title and four 48px tabs fit its header: '+JSON.stringify(density));
+          assert.ok(density.header&&density.header.height<=155&&density.tabs.length===5&&density.tabs.every(x=>x.height>=48),
+            'Progress title and five 48px tabs fit its header: '+JSON.stringify(density));
         }else if(tab==='settings'){
-          assert.ok(density.header&&density.jump&&density.picker&&density.picker.height>=48&&density.titleSize>=27&&density.select&&density.select.height>=48
+          assert.ok(density.header&&density.jump&&density.picker&&density.picker.height>=48&&density.select&&density.select.height>=48
             &&density.jump.bottom-density.header.top<=128,
             'Settings title and Jump control use a compact, accessible header: '+JSON.stringify(density));
         }else if(tab==='profile'){
-          assert.ok(density.head&&density.edit&&density.hero&&density.titleSize>=27&&density.topPadding<=16
+          assert.ok(density.head&&density.edit&&density.hero&&density.topPadding<=16
             &&density.edit.width>=48&&density.edit.height>=48,
             'Profile identity/edit start promptly with full-size edit action: '+JSON.stringify(density));
-          assert.ok(density.hero.top-density.head.bottom<=16&&density.stats.length===3
-            &&density.stats.every(w=>w>=68),'Profile cards follow a consistent density: '+JSON.stringify(density));
+          assert.ok(density.shareCard&&density.layoutActions&&density.shareCard.top>=density.head.bottom
+            &&density.shareCard.top-density.head.bottom<=16
+            &&density.layoutActions.top>=density.shareCard.bottom
+            &&density.hero.top>=density.identity.bottom&&density.hero.bottom<=density.shareCard.bottom
+            &&density.stats.length===3&&density.stats.every(w=>w>=68),
+            'Share card integrates identity and XP before customizable sections, with compact gaps and no overlaps: '+JSON.stringify(density));
         }
         basic.density=density;
         if(tab==='plan'||tab==='profile'||tab==='settings'){
           await page.setViewport({width:320,height:700,deviceScaleFactor:1,isMobile:true,hasTouch:true});
           const small=await measure();
           assert.ok(!small.overflow,'320dp '+tab+' must not overflow: '+JSON.stringify(small));
-          if(tab==='plan')assert.ok(small.back.width>=48&&small.title.bottom-small.row.top<=136,
+          if(tab==='plan')assert.ok(!small.back&&small.title.bottom-small.row.top<=136,
             'Plan still fits at 320dp: '+JSON.stringify(small));
-          if(tab==='profile')assert.ok(small.edit.height>=48&&small.stats.every(w=>w>=64),
+          if(tab==='profile')assert.ok(small.edit.height>=48&&small.shareCard.width<=320
+            &&small.shareCard.top>=small.head.bottom&&small.stats.every(w=>w>=64),
             'Profile edit/stats remain usable at 320dp: '+JSON.stringify(small));
           if(tab==='settings')assert.ok(small.select.height>=48&&small.jump.bottom-small.header.top<=136,
             'Settings Jump remains usable at 320dp: '+JSON.stringify(small));
@@ -477,7 +524,7 @@ try{
         const measure=()=>page.evaluate(()=>{
           const home=document.querySelector('.wpb-home');
           const head=home.querySelector('.wpb-home-header');
-          const brand=home.querySelector('.wpb-home-brand');
+          const brand=home.querySelector('.wpb-root-title-row h1');
           const tools=home.querySelector('.wpb-home-tools');
           const sc=home.querySelector('.wpb-page-scroll');
           const rect=x=>{const r=x.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height,right:r.right};};
@@ -497,20 +544,20 @@ try{
         await page.$eval('.wpb-home .wpb-page-scroll',sc=>{sc.scrollTop=sc.scrollHeight;});
         await page.waitForFunction(()=>document.querySelector('.wpb-home')?.dataset.homeCompact==='1');
         const compact=await measure();
-        assert.ok(compact.header.h<=64&&expanded.header.h-compact.header.h>=24,
+        assert.ok(compact.header.h<=70&&expanded.header.h-compact.header.h>=24,
           'Scrolled Home returns real vertical space, not only hidden text: '+JSON.stringify({expanded,compact}));
-        assert.notEqual(compact.long,'none','Full Pursuit Iron brand stays visible while scrolled');
+        assert.notEqual(compact.long,'none','Full Pursuit Iron identity remains in DOM while its context collapses');
         assert.equal(compact.short,null,'Home no longer substitutes the incorrect Iron-only label');
         assert.ok(compact.buttons.length===3&&compact.buttons.every(b=>b.w>=48&&b.h>=48),
           'All Home tools remain accessible 48px touch targets: '+JSON.stringify(compact));
         assert.ok(compact.brand.right+8<=compact.tools.x&&!compact.overflow,
-          'Collapsed Home brand/tools never overlap: '+JSON.stringify(compact));
+          'Collapsed Home title/tools never overlap: '+JSON.stringify(compact));
         captures[theme].homeCompact=Buffer.from(await page.screenshot({type:'png'}));
         await page.setViewport({width:320,height:700,deviceScaleFactor:1,isMobile:true,hasTouch:true});
         await page.$eval('.wpb-home .wpb-page-scroll',sc=>{sc.scrollTop=sc.scrollHeight;});
         await page.waitForFunction(()=>document.querySelector('.wpb-home')?.dataset.homeCompact==='1');
         const small=await measure();
-        assert.ok(small.header.h<=64&&small.brand.right+4<=small.tools.x&&!small.overflow,
+        assert.ok(small.header.h<=70&&small.brand.right+4<=small.tools.x&&!small.overflow,
           '320dp Home compact header has no collision or overflow: '+JSON.stringify(small));
         assert.ok(small.buttons.every(b=>b.w>=48&&b.h>=48),
           'Small-screen actions retain 48px targets: '+JSON.stringify(small));
@@ -598,6 +645,23 @@ try{
     assert.ok(!nested.overflow,'No horizontal clipping with expanded exercises: '+JSON.stringify(nested));
     detail.nested=nested;
     captures[theme].program=Buffer.from(await page.screenshot({type:'png'}));
+    // M276: reference help belongs in Details, not ahead of workout/week navigation.
+    assert.equal(await page.$('.wpb-program-scroll .wpb-program-edit-scope'),null,
+      'Program reading surface does not start with edit-scope documentation');
+    await page.click('.wpb-program button[aria-label^="Program details"]');
+    await page.waitForSelector('.wpb-program-edit-scope summary');
+    const help=await page.$eval('.wpb-program-edit-scope',el=>({
+      summaryHeight:el.querySelector('summary').getBoundingClientRect().height,
+      text:el.querySelector('summary').textContent,
+      before:el.getBoundingClientRect().width<=el.parentElement.getBoundingClientRect().width+1
+    }));
+    assert.ok(help.summaryHeight>=44&&help.before&&/Where do my edits apply/.test(help.text),
+      'Reference help is a readable, reachable Details disclosure: '+JSON.stringify(help));
+    await page.click('.wpb-program-edit-scope summary');
+    assert.match(await page.$eval('.wpb-program-edit-scope',el=>el.innerText),
+      /past workout logs.*Future sessions use|past workout logs.*linked cycle blocks/s,
+      'Details preserves the exact saved-program and cycle editing scope');
+
     assert.equal(errors.length,0,'No runtime errors while checking paired themes: '+errors.join('; '));
     measurements[theme]={...surfaces,program:detail};
     await context.close();

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { EXERCISES, EX_BY_ID, computeCell, prescribeSets, propagateCycleEditsPure, normalizeEditedHistoryEntry } from '../modules/App.js';
+import { EXERCISES, EX_BY_ID, computeCell, prescribeSets, loggedWorkoutPerformance, propagateCycleEditsPure, normalizeEditedHistoryEntry } from '../modules/engine-api.js';
+
 import { generateNextProgramForShell, getNextShellCell, markUserPrescriptionOverride,
     nextExerciseIdForShellExercise, swapNextSlotPrescriptions, snapshotNextShellPrescription } from '../modules/next-engine/app-shell-adapter.js';
 import { analyzeShellHistoryForNextEngine, nextWorkoutSuggestionForShell,
@@ -54,6 +55,31 @@ top.perf[id].sets[1].done = false;
 assert.notEqual(nextWorkoutSuggestionFromPerformedShell(edited, EXERCISES, day, slot, 1, top.perf, 'lb').action, 'increase_load');
 assert.equal(JSON.stringify(edited), input, 'evaluation never changes saved prescriptions');
 assert.equal(JSON.stringify(log), logInput, 'evaluation never changes performed history');
+
+// Duplicate exercise occurrences are not independent map keys in legacy history.
+// Preserve both groups of performed sets exactly once and block earned progression
+// because two separate slot prescriptions cannot be compared as a single lift.
+const repeatedProgram = clone(original), repeatedDay = repeatedProgram.days[0];
+const repeatedId = repeatedDay.exercises[0];
+repeatedDay.exercises[1] = repeatedId;
+const rowFor = (slot, weight, reps) => ({ id: repeatedId, slot, note: 'Slot ' + slot,
+    sets: [{ weight: String(weight), reps: String(reps), done: true,
+        target: { w: String(weight), reps: '5-8', rir: '2' } }] });
+const repeatedPerf = loggedWorkoutPerformance(repeatedProgram, repeatedDay,
+    [rowFor(0, 100, 5), rowFor(1, 90, 6)], 1, 'lb', {}, []);
+assert.deepEqual(repeatedPerf[repeatedId].sets.map(s => s.w), [100, 90],
+    'duplicate ID serialization must preserve both actual loads, not overwrite the first');
+assert.deepEqual(repeatedPerf[repeatedId].duplicateExerciseSlots, [0, 1]);
+assert.equal(repeatedPerf[repeatedId].prescriptionEdited, true,
+    'combined duplicate slots are non-comparable for automatic progression');
+const repeatedEntry = { id: 'm267-repeated', programId: repeatedProgram.id, dayId: repeatedDay.id,
+    weekIndex: 1, date: 1700000000000, unit: 'lb', perf: repeatedPerf };
+const repeatedAnalysis = analyzeShellHistoryForNextEngine(repeatedProgram, [repeatedEntry], EXERCISES);
+assert.equal(repeatedAnalysis.performedSetCount, 2,
+    'two logged sets must not become four when a program day repeats an exercise');
+assert.equal(repeatedAnalysis.workouts[0].progression.find(x =>
+    x.exerciseId === repeatedAnalysis.workouts[0].session.exercises[0].exerciseId).outcome, 'non_comparable',
+    'repeated-slot evidence must never earn extra load progression');
 
 // New logs retain their actual prescription when the lifter subsequently edits the plan. The
 // current target can be recalibrated from that history without retroactively changing its rating.

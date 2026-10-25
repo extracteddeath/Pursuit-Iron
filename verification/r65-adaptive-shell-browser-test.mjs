@@ -47,7 +47,7 @@ try{
     headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
   const results=[];
   for(const theme of ['rose','rosewater']){
-    for(const [width,height,wide] of [[393,852,false],[600,800,false],[768,900,false],[900,480,false],[900,1000,true],[1280,850,true]]){
+    for(const [width,height,wide] of [[320,740,false],[393,852,false],[600,800,false],[768,900,false],[900,480,false],[900,1000,true],[1280,850,true]]){
       const context=await browser.createBrowserContext();
       const page=await context.newPage();
       // Puppeteer's media helper rejects forced-colors, but Chrome CDP supports
@@ -97,22 +97,82 @@ try{
             'Rail occupies its own column without covering content');
         }else{
           assert.equal(initial.direction,'row','Compact/medium windows retain bottom navigation');
-          const medium=width>=600&&width<840&&height>=640;
+          const medium=(width>=600&&width<840&&height>=640)||(width>=840&&height<560);
           if(medium){
             assert.ok(initial.frame.width>=Math.min(width,760)-3,
-              'Medium windows use the available reading width: '+JSON.stringify(initial));
-            assert.ok(initial.frame.width<=760,
-              'Medium tab shell remains bounded for readability');
+              'Medium and short wide landscapes use available reading width: '+JSON.stringify({width,height,initial}));
+            assert.ok(initial.frame.width<=760.5,
+              'Medium bottom-nav workspace stays bounded for readability');
+            if(width>=840)
+              assert.ok(initial.frame.width>=750&&initial.bar.width>=750,
+                'Short 900px landscape uses a real workspace without switching to a rail');
           }else{
             assert.ok(initial.frame.width<=462,
-              'Compact and short-landscape windows retain the proven phone-width frame');
+              'Compact phones and narrow short-landscape retain the proven phone-width frame');
           }
           assert.ok(initial.bar.y>initial.content.y+initial.content.height-10,
             'Bottom navigation stays below content');
         }
+        let titleAnchor=null,largeTitleAnchor=null;
         for(const route of ['plan','progress','profile','settings','home']){
           await page.click('[data-tab="'+route+'"]');
           await page.waitForSelector('[data-view-frame="'+route+'"]');
+          const shell=await page.evaluate(()=>({
+            title:[...document.querySelectorAll('.wpb-screen-title')].map(el=>({
+              size:getComputedStyle(el).fontSize,tag:el.tagName,text:el.textContent,
+              x:el.getBoundingClientRect().left,y:el.getBoundingClientRect().top})),
+            headers:document.querySelectorAll('.wpb-root-header').length,
+            back:document.querySelectorAll('.wpb-root-header [aria-label="Back"]').length,
+            tabs:[...document.querySelectorAll('[data-tab]')].map(el=>({
+              visible:el.innerText.trim(),name:el.getAttribute('aria-label')}))
+          }));
+          assert.ok(shell.title.length===1&&shell.title[0].size==='26px'&&shell.title[0].tag==='H1',
+            'M270 root titles share one relative typography role: '+JSON.stringify({route,shell}));
+          assert.equal(shell.headers,1,'Exactly one shared root app bar');
+          assert.equal(shell.back,0,'Root app bars never imply a parent screen');
+          assert.equal(shell.title[0].text,route[0].toUpperCase()+route.slice(1),'Title identifies the destination');
+          titleAnchor ||= shell.title[0];
+          assert.ok(Math.abs(shell.title[0].x-titleAnchor.x)<1&&Math.abs(shell.title[0].y-titleAnchor.y)<1,
+            'M271 root titles share an exact position: '+JSON.stringify({route,anchor:titleAnchor,title:shell.title[0]}));
+          if(width===320||width===393){
+            await page.screenshot({path:path.join(root,'verification/m271-'+theme+'-'+width+'-'+route+'-phone.png')});
+            await page.evaluate(()=>document.documentElement.style.fontSize='32px');
+            const large=await page.$eval('.wpb-root-header h1',el=>({x:el.getBoundingClientRect().left,y:el.getBoundingClientRect().top,size:getComputedStyle(el).fontSize}));
+            assert.equal(large.size,'52px','Shared root title honors enlarged text');
+            largeTitleAnchor ||= large;
+            assert.ok(Math.abs(large.x-largeTitleAnchor.x)<1&&Math.abs(large.y-largeTitleAnchor.y)<1,
+              'Enlarged root titles keep the same anchor: '+JSON.stringify({route,large,largeTitleAnchor}));
+            await page.evaluate(()=>document.documentElement.style.removeProperty('font-size'));
+          }
+          if(route==='plan'||route==='profile'){
+            const moved=await page.evaluate(()=>{
+              const scroller=document.querySelector('.wpb-plan-view,.wpb-profile-scroll');
+              scroller.scrollTop=Math.min(100,scroller.scrollHeight-scroller.clientHeight);
+              return scroller.scrollTop>0;
+            });
+            if(moved){
+              const fixed=await page.$eval('.wpb-root-header h1',el=>({x:el.getBoundingClientRect().left,y:el.getBoundingClientRect().top}));
+              assert.ok(Math.abs(fixed.x-titleAnchor.x)<1&&Math.abs(fixed.y-titleAnchor.y)<1,
+                'Plan/Profile content scroll never moves the root title: '+JSON.stringify({route,fixed,titleAnchor}));
+              await page.evaluate(()=>{document.querySelector('.wpb-plan-view,.wpb-profile-scroll').scrollTop=0;});
+            }
+          }
+          assert.ok(shell.tabs.every(t=>t.visible===t.name),
+            'M270 visible navigation keeps the full destination names at every width');
+          if(route==='progress'){
+            await page.evaluate(()=>document.documentElement.style.fontSize='200%');
+            const wordsFit=await page.$$eval('.wpb-progress-glance-label',labels=>labels.every(label=>{
+              const text=label.firstChild,box=label.closest('.wpb-progress-glance-item').getBoundingClientRect();
+              if(!text||text.nodeType!==Node.TEXT_NODE)return false;
+              return [...text.textContent.matchAll(/\S+/g)].every(match=>{
+                const range=document.createRange();range.setStart(text,match.index);range.setEnd(text,match.index+match[0].length);
+                const rects=[...range.getClientRects()].filter(r=>r.width>0);
+                return rects.length===1&&rects[0].left>=box.left-1&&rects[0].right<=box.right+1;
+              });
+            }));
+            assert.ok(wordsFit,'M270 populated summaries keep whole readable words at 200% root text');
+            await page.evaluate(()=>document.documentElement.style.removeProperty('font-size'));
+          }
           // R73 semantic tabs: the same motion contract applies on Plan and
           // Progress in both palettes and across all existing viewports.
           if(route==='plan'||route==='progress'){
@@ -269,8 +329,10 @@ try{
               const filters=main.querySelector('.wpb-history-filters').getBoundingClientRect();
               const glance=main.querySelector('[data-progress-glance]').getBoundingClientRect();
               return {grid:getComputedStyle(main).display==='grid',
-                consistency:{x:consistency.x,right:consistency.right,bottom:consistency.bottom},
-                filters:{x:filters.x,y:filters.y},
+                consistency:{x:consistency.x,y:consistency.y,right:consistency.right,bottom:consistency.bottom},
+                filters:{x:filters.x,y:filters.y,bottom:filters.bottom},
+                calendarY:main.querySelector(".wpb-training-history")?.getBoundingClientRect().y,
+                firstSessionY:main.querySelector(".wpb-history-session")?.getBoundingClientRect().y,
                 glance:{width:glance.width},
                 viewportOverflow:document.documentElement.scrollWidth>innerWidth+2,
                 historyRows:main.querySelectorAll('.wpb-history-session').length};
@@ -326,10 +388,12 @@ try{
               assert.ok(progress.glance.width>600,
                 'Summary extends across the expanded Progress surface');
             }else{
-              assert.ok(progress.filters.y>=progress.consistency.bottom-2,
-                'Compact/medium Progress retains its original reading order');
+              assert.ok(progress.consistency.y>=progress.filters.bottom-2,
+                'Compact/medium Progress keeps optional consistency after the workout filters');
+              assert.ok(progress.firstSessionY<progress.calendarY,
+                'A logged workout appears before the training calendar on narrow and medium screens');
             }
-            await page.click('.wpb-progress .wpb-premium-tabs button:nth-child(4)');
+            await page.click('.wpb-progress .wpb-premium-tabs button:nth-child(5)');
             await page.waitForSelector('.wpb-progress-panel');
             const body=await page.evaluate(()=>{
               const panel=document.querySelector('.wpb-progress-panel');
@@ -517,7 +581,7 @@ try{
         const initialReview=await reviewLayout();
         const expandedWizard=width>=1120&&height>=720;
         assert.equal(initialReview.grid,expandedWizard,'Builder pane follows available window');
-        assert.equal(initialReview.visible,expandedWizard,'Builder review is optional on compact screens');
+        assert.equal(initialReview.visible,true,'Setup review is reachable at every window size');
         assert.equal(initialReview.overflow,false,'Builder never creates horizontal document overflow');
         if(expandedWizard){
           assert.ok(initialReview.wizardWidth>800,'Wizard expands beyond the old phone-only route');
@@ -533,7 +597,7 @@ try{
             'Cycle preview uses the selected live cycle template');
           await page.setViewport({width:900,height:1000,deviceScaleFactor:1,isMobile:false,hasTouch:false});
           const mediumReview=await reviewLayout();
-          assert.equal(mediumReview.visible,false,'Medium windows return to focused single form');
+          assert.equal(mediumReview.visible,true,'Medium windows retain the compact setup disclosure');
           assert.equal(mediumReview.input,initialReview.input,
             'Resizing the Wizard preserves the current input');
           await page.setViewport({width,height,deviceScaleFactor:1,isMobile:!wide,hasTouch:!wide});

@@ -1,3 +1,4 @@
+import { sessionPlanChange } from '../session-plan.js';
 import { loadingInventoryInUnit } from '../next-engine/loading.js';
 // Canonical prescriptions domain. Maintained production source; independent of React and browser APIs.
 import { EXERCISE_MAP as NEXT_EXERCISE_MAP } from "../next-engine/exercise-db.js";
@@ -7,7 +8,7 @@ import { percentageProtocolFor, adaptPercentageSetBudget, deriveTieredLinearStat
 import { buildRuntimeSetTargets, customProgramProgressionStyle, techniqueProtocolFromCell } from "../next-engine/workout-runtime.js";
 import { nextWorkoutSuggestionForShell } from "../next-engine/workout-history-adapter.js";
 import { evaluateWorkoutProgression } from "../next-engine/performance.js";
-import { blockPhase, cellRepRange, clamp, computeCell, effortBounds, isBarLike, isMachineLike, loadStep, roundTo, secondaryOf, weeksOf } from './records.js';
+import { blockPhase, exerciseAt, cellRepRange, clamp, computeCell, effortBounds, isBarLike, isMachineLike, loadStep, roundTo, secondaryOf, weeksOf } from './records.js';
 import { EXERCISES, EX_BY_ID } from './catalog.js';
 import { PART_ORDER, e1rmRIR } from './programs.js';
 
@@ -709,15 +710,22 @@ function dayPerfFor(day, perf, history, program = null) {
     return out;
 }
 
-function sessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, history) {
+function engineSessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, history) {
     void dayPerf;
-    if (program?.custom === true && program?.engineSource !== "pursuit-next")
-        return customProgramSuggestion(program, day, slot, unit, weekIndex, history);
-    const original = nextWorkoutSuggestionForShell(program, history || [], EXERCISES, day, slot, weekIndex, unit);
+    // Custom and generated programs share the same final equipment boundary.
+    // A converted/reference load or held per-set target can otherwise bypass snapping.
+    const id = exerciseAt(program, day, slot, weekIndex), ex = EX_BY_ID[id];
+    if (!ex) return null;
+    const effectiveDay = id === day.exercises[slot] ? day : { ...day,
+        exercises: day.exercises.map((current, index) => index === slot ? id : current) };
+    const original = program?.custom === true && program?.engineSource !== "pursuit-next"
+        ? customProgramSuggestion(program, day, slot, unit, weekIndex, history)
+        : nextWorkoutSuggestionForShell(program, history || [], EXERCISES, effectiveDay, slot, weekIndex, unit);
     const convert = value => convertHistoryLoad(value, original?.unit ?? program.config?.unit, unit);
     const s = original ? { ...original, weight: convert(original.weight),
         last: original.last,
-        setTargets: original.setTargets?.map(t => ({ ...t, weight: convert(t.weight) })),
+        setTargets: original.setTargets?.map(t => ({ ...t, weight: convert(t.weight),
+            ...(t.previousLoad != null ? { previousLoad: convert(t.previousLoad) } : {}) })),
         reason: historyLoadReason(original.reason, unit) } : null;
     /* ⚠ WHAT IS LOADABLE HAS ONE OWNER: the app's loadStep / gymRackFor — the same rule the workout's "load-not-loadable" check
        uses. The engine rounds against its own loading inventory, which can allow a weight the app's implement cannot make (45 lb on
@@ -725,23 +733,25 @@ function sessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, history
        is snapped DOWN to a loadable weight here, whichever engine path produced it. */
     if (!s || !(Number(s.weight) > 0))
         return s;
-    const ex = EX_BY_ID[day?.exercises?.[slot]], eng = Number(s.weight);
+    const eng = Number(s.weight);
     /* ⚠ DIRECTION MATTERS. An EARNED increase rounds UP to the next weight the equipment can make; everything else rounds DOWN
        (conservative). Rounding an increase down erased it: the engine said "Increase from 140 lb to 145 lb", the 10 lb machine stack
        snapped it back to 140, and the lift could never progress (found by m158-adaptive-loop-check's simulated lifter). */
     const current = convertHistoryLoad(s.last?.weight, s.lastUnit || program.config?.unit, unit) || 0;
+    const cell = computeCell(program, day, ex.id, slot, weekIndex);
+    // The canonical evaluator owns which rows retain or change load. This adapter
+    // only makes those decisions loadable; it must not turn a hold into top sets.
     const perSetIncrease = Array.isArray(s.setTargets) && s.setTargets.some(t => t.earnedLoadIncrease === true);
     let w = loadableAtOrBelow(ex, eng, unit);
-    // Classic progression is a single session weight. Dynamic double is NOT:
+    // An earned classic increase uses one new session weight. Dynamic double does not:
     // preserve the individual earned bump, never increase every row (or a
     // heavier but non-qualifying row) just because one other set succeeded.
     if (!perSetIncrease && s.action === "increase_load" && w <= current)
         w = loadableAbove(ex, current, unit) ?? w;
-    const cell = computeCell(program, day, ex.id, slot, weekIndex);
     const floor = cellRepRange(cell, program, ex, slot === day.primaryIndex)[0];
     const setTargets = s.setTargets?.map(target => {
         if (perSetIncrease) {
-            const previous = convertHistoryLoad(target.previousLoad, program.config?.unit, unit);
+            const previous = target.previousLoad;
             let weight = loadableAtOrBelow(ex, target.weight, unit);
             if (target.earnedLoadIncrease && previous > 0 && weight <= previous)
                 weight = loadableAbove(ex, previous, unit) ?? previous;
@@ -750,14 +760,39 @@ function sessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, history
             return { ...target, weight, reps: weight < target.weight ? floor : target.reps };
         }
         const weight = s.action === "increase_load" ? w : loadableAtOrBelow(ex, target.weight, unit);
-        return { ...target, weight, reps: weight < target.weight ? floor : target.reps };
+        const resetReps = weight < target.weight;
+        return { ...target, weight, reps: resetReps ? floor : target.reps };
     });
     if (perSetIncrease && setTargets?.length)
         w = Math.max(...setTargets.map(target => target.weight).filter(Number.isFinite));
-    const reason = typeof s.reason === "string" ? s.reason.replace(new RegExp(`\\bto ${eng}( ?${unit})`), `to ${w}$1`) : s.reason;
+    // The explanation has already been converted/rounded for display. Reconcile only
+    // its prescribed load, preserving observed loads and estimated-max evidence.
+    const displayedLoad = String(Math.round(eng * 100) / 100).replace(/\./g, '\\.');
+    const reason = typeof s.reason === "string" ? s.reason.replace(
+        new RegExp(`\\b(to|[Uu]se) ${displayedLoad}( ?${unit})\\b`, 'g'),
+        (_, verb, suffix) => `${verb} ${Math.round(w * 100) / 100}${suffix}`) : s.reason;
     return { ...s, weight: w, setTargets, reason, target: w < eng ? floor : s.target,
         dir: current && w > current ? "up" : current && w < current ? "down" : s.dir };
 
+}
+
+// Review and Workout consume this same boundary. A user can decline one upcoming
+// load/rep recommendation without changing the progression method or stored history.
+function sessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, history, applyReviewChoice = true) {
+    const suggestion = engineSessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, history);
+    if (!suggestion || !applyReviewChoice || !program.sessionPlanChoices || !Object.keys(program.sessionPlanChoices).length) return suggestion;
+    const id = exerciseAt(program, day, slot, weekIndex), ex = EX_BY_ID[id];
+    if (!ex) return suggestion;
+    const cell = computeCell(program, day, id, slot, weekIndex);
+    if (!cell || cell.missing) return suggestion;
+    const change = sessionPlanChange({ program, day, ex, slot, weekIndex, unit, cell,
+        range: cellRepRange(cell, program, ex, slot === day.primaryIndex), suggestion, history,
+        snapLoad: value => loadableAtOrBelow(ex, value, unit) });
+    if (!change.undone) return suggestion;
+    return { ...suggestion, weight: change.undoTargets[0]?.weight ?? suggestion.weight,
+        target: change.undoTargets[0]?.reps ?? suggestion.target, setTargets: change.undoTargets,
+        action: 'user_hold', dir: 'hold',
+        reason: 'You kept the previous load and reps on matching sets for this exposure. The current set count, target effort and technique still apply.' };
 }
 
 /** Nudge through the gym's actual load inventory when known. With a coarse
@@ -806,7 +841,7 @@ function customExerciseHistoryRefs(program, day, id, history) {
         return { comparable, reference: own[0] ?? null };
     // Cross-program history is deliberately reference-only and is consulted only when this program
     // has no canonical history for the exercise at all.
-    const entries = (history || []).filter(h => validHistoryDate(h) && h?.perf?.[id]).slice().sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0));
+    const entries = normalizeHistoryRevisions(history).entries.filter(h => h?.perf?.[id]).slice().sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0));
     return { comparable: null, reference: entries[0] || null };
 }
 function customExerciseHistory(program, day, id, history) {
@@ -825,7 +860,7 @@ function representativeCustomLoad(perf) {
 }
 
 function customProgramSuggestion(program, day, slot, unit, weekIndex, history) {
-    const ex = EX_BY_ID[day?.exercises?.[slot]];
+    const ex = EX_BY_ID[exerciseAt(program, day, slot, weekIndex)];
     if (!ex)
         return null;
     const historyRefs = customExerciseHistoryRefs(program, day, ex.id, history);
@@ -838,7 +873,7 @@ function customProgramSuggestion(program, day, slot, unit, weekIndex, history) {
         const currentCell = computeCell(program, day, ex.id, slot, weekIndex);
         const [lo] = cellRepRange(currentCell, program, ex, slot === day?.primaryIndex);
         const weight = convertHistoryLoad(rawLoad, reference.unit, unit);
-        return { weight, dir: 'hold', action: 'initial', reps: currentCell?.range ?? currentCell?.reps,
+        return { unit, lastUnit: reference.unit ?? unit, weight, dir: 'hold', action: 'initial', reps: currentCell?.range ?? currentCell?.reps,
             target: lo, last: reference.perf[ex.id], confidence: 'low', referenceOnly: true,
             reason: 'Use the last known load only as a starting reference. This program day has no comparable completed history yet, so reps/load are not progressed from another day or program.' };
     }
@@ -872,7 +907,7 @@ function customProgramSuggestion(program, day, slot, unit, weekIndex, history) {
         prescriptionEdited: exposure.nonComparable
     })[0];
     const weight = result.suggestedLoad ?? result.currentLoad;
-    return { weight, dir: weight > result.currentLoad ? "up" : weight < result.currentLoad ? "down" : "hold",
+    return { unit, lastUnit: last.unit ?? unit, weight, dir: weight > result.currentLoad ? "up" : weight < result.currentLoad ? "down" : "hold",
         action: result.action, reps: cell.range, target: result.suggestedReps ?? lo,
         setTargets: result.setTargets, last: last.perf[ex.id], confidence: result.confidence, reason: result.reason };
 
@@ -1048,7 +1083,8 @@ function prescribeSets(program, day, ex, slot, weekIndex, unit, sug, dayPerf, pe
         warm: t.kind === "warmup",
         done: false,
         auto: true,
-        valueOwner: "prescription",
+        valueOwner: sug?.action === "user_hold" && t.kind !== "warmup" ? "user" : "prescription",
+        ...(sug?.action === "user_hold" && t.kind !== "warmup" ? { planReviewHeld: true } : {}),
         target: t.kind === "warmup"
             ? { w: t.weight == null ? "—" : String(t.weight), reps: String(t.reps), rir: null }
             : { w: t.weight == null ? "—" : String(t.weight), reps: rangeText, rir: rirText, nextAction: sug?.action || "initial", confidence: sug?.confidence || null, prefillReps: String(t.reps) }
@@ -1104,6 +1140,11 @@ function prescribeSets(program, day, ex, slot, weekIndex, unit, sug, dayPerf, pe
 }
 
 function loggedExercisePerformance(program, day, e, weekIndex, unit, perf, history) {
+    // A session-only replacement does not represent a comparable exposure for the
+    // programmed slot, but the other lifts in this workout are still comparable.
+    // Derive this from the executable week (alternate-week slots included), not
+    // from the saved base roster or the session-wide substitution flag.
+    const exerciseSubstituted = e.exerciseSubstituted === true || e.id !== exerciseAt(program, day, e.slot, weekIndex);
     const failedRows = program.config?.percentScheme === 'gzclp' ? e.sets.filter(x => x.done
         && !x.warm && !x.sub && parseInt(x.reps) === 0 && parseFloat(x.weight) > 0) : [];
     const s = summarizeSets(e.sets, EX_BY_ID[e.id], unit) || (failedRows.length
@@ -1156,15 +1197,36 @@ function loggedExercisePerformance(program, day, e, weekIndex, unit, perf, histo
             reps: Number.parseInt(t.reps), weight: t.weight, unit, amrap: !!t.amrap,
             rir: t.amrap ? 0 : parseRIRNum(prescription.rir)
         }));
-        return { ...historyExposureContext(e), ...(day.sessionLengthPlan?.changed ? { prescriptionEdited: true } : {}), weight: s.weight, reps: s.reps, date: Date.now(), sets: logged, note, noteRepeat: e.noteRepeat || "none",
+        return { ...historyExposureContext(e), ...(exerciseSubstituted ? { exerciseSubstituted: true } : {}),
+            ...(day.sessionLengthPlan?.changed ? { prescriptionEdited: true } : {}), weight: s.weight, reps: s.reps, date: Date.now(), sets: logged, note, noteRepeat: e.noteRepeat || "none",
             ...(prescription ? { prescription } : {}) };
     }
     return null;
 }
 
 function loggedWorkoutPerformance(program, day, data, weekIndex, unit, perf, history) {
-    return Object.fromEntries(data.map(e => [e.id, loggedExercisePerformance(program, day, e, weekIndex, unit, perf, history)])
-        .filter(([, value]) => value !== null));
+    const out = {};
+    const recordedSlots = new Map();
+    for (const e of data) {
+        const logged = loggedExercisePerformance(program, day, e, weekIndex, unit, perf, history);
+        if (!logged) continue;
+        const previous = out[e.id];
+        if (!previous) {
+            out[e.id] = logged;
+            recordedSlots.set(e.id, [e.slot]);
+            continue;
+        }
+        // A workout can contain the same lift twice, but history has one entry
+        // per exercise ID. Object.fromEntries discarded every earlier occurrence.
+        // Keep each completed set once; separate slot targets are non-comparable
+        // and must not automatically earn another load progression.
+        const slots = [...recordedSlots.get(e.id), e.slot];
+        recordedSlots.set(e.id, slots);
+        out[e.id] = { ...previous, sets: [...previous.sets, ...logged.sets],
+            note: [previous.note, logged.note].filter(Boolean).join('\n') || undefined,
+            prescriptionEdited: true, duplicateExerciseSlots: slots };
+    }
+    return out;
 }
 
 function setsOf(p) {

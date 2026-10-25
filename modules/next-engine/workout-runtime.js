@@ -1,3 +1,4 @@
+import { reconcileRestoredLiveAdjustments } from './live-autoregulation.js';
 import { selectProgressionStyle } from './progression-style.js';
 import { availableLoadAtOrBelow, resolveLoadingMode } from './loading.js';
 const numberPair = (value, fallback, minimum = 0) => {
@@ -126,15 +127,19 @@ export function reconcilePendingRepTargets(sets, cell) {
 // Old snapshots without ownership metadata, manual/added rows and logged work are preserved.
 export function refreshPendingSetTargets(sets, fresh) {
     if (!Array.isArray(sets) || !Array.isArray(fresh)) return sets;
+    sets = reconcileRestoredLiveAdjustments(sets);
     const work = fresh.filter(s => !s.warm && !s.sub && !s.added);
     let ordinal = 0, changed = false;
     const out = sets.map(s => {
         if (!s || s.warm || s.sub || s.added) return s;
         const target = work[ordinal++];
         if (!target || s.done || s.liveAdjustment || s.valueOwner !== 'prescription' || s.auto !== true
+            || s.target?.prefillReps == null
             || String(s.weight) !== String(s.target?.w)
-            || (s.target?.prefillReps != null && String(s.reps) !== String(s.target.prefillReps))) return s;
-        // Pre-M222 automatic rows only stored the range; auto+ownership are still required.
+            || String(s.reps) !== String(s.target.prefillReps)) return s;
+        // A legacy snapshot with no original rep prefill cannot establish that
+        // its current reps were not typed by the user. Fail closed instead of
+        // regenerating unprovable values during resume.
         if (s.weight === target.weight && s.reps === target.reps
             && s.target?.prefillReps === target.target?.prefillReps) return s;
         changed = true;

@@ -1,6 +1,6 @@
 import { defaultLoadingInventoryFor, loadingInventoryInUnit } from './loading.js';
 import { validateEngineProgram } from './domain-contracts.js';
-import { EXPLICIT_EXERCISE_ALIASES, NextShellAdapterError, SHELL_PRESCRIPTION_FIELDS, canonicalShellSetCount, clearUserPrescriptionOverride, cloneNextDayPrescriptions, getNextShellCell, hasOwn, immutableEngineSetCount, markUserPrescriptionOverride, nextExerciseIdForShellExercise, norm, overrideKeyForField, primaryPart, range, remapNextShellRoster, removeNextSlotPrescription, resolveLegacyExercise, resolveLegacyExerciseByIdentity, resolveNextShellExerciseId, shellPrescriptionFieldOwner, shellPrescriptionOwners, shellRange, snapshotNextShellPrescription, swapNextSlotPrescriptions } from './shell-projection.js';
+import { NextShellAdapterError, canonicalShellSetCount, clearUserPrescriptionOverride, cloneNextDayPrescriptions, getNextShellCell, markUserPrescriptionOverride, nextExerciseIdForShellExercise, norm, range, remapNextShellRoster, removeNextSlotPrescription, resolveLegacyExercise, resolveLegacyExerciseByIdentity, resolveNextShellExerciseId, shellPrescriptionFieldOwner, shellPrescriptionOwners, snapshotNextShellPrescription, swapNextSlotPrescriptions } from './shell-projection.js';
 import { firstPassingCapacityProgram } from './capacity-generation.js';
 import { EXERCISE_MAP } from './exercise-db.js';
 import { buildGenerationRecoveryPlan } from './generation-recovery.js';
@@ -336,6 +336,16 @@ export function nextProgramToShellProgram(nextProgram, config, legacyExercises, 
     const projection = { experience: experienceOf(config.experience) };
     const days = nextProgram.sessions.map((session, dayIndex) => {
         const id = `next-${dayIndex + 1}-${session.day}`;
+        // M317: a simulation projects the *entire session*. Previously every
+        // exercise in that session re-simulated every week, multiplying work by
+        // the number of slots. Project once per session/week and read by slot.
+        // Each saved cell below is still a fresh object, so edits never alias.
+        const simulatedWeeks = Array.from({ length: totalWeeks }, (_, index) =>
+            prescriptionForSimulationWeek(session, nextProgram.phase,
+                index + 1, totalWeeks, projection).exercises);
+        const simulatedDeload = config.deload
+            ? prescriptionForSimulationWeek(session, 'recovery', 1, 1, projection).exercises
+            : null;
         const mapped = session.exercises.map((exercise, slot) => {
             const legacy = resolveLegacyExercise(exercise, legacyExercises, canPerform);
             if (!legacy)
@@ -359,7 +369,7 @@ export function nextProgramToShellProgram(nextProgram, config, legacyExercises, 
                 });
             nextWeekPrescriptions[key] = {};
             for (let week = 1; week <= totalWeeks; week++) {
-                const weekly = prescriptionForSimulationWeek(session, nextProgram.phase, week, totalWeeks, projection).exercises[slot];
+                const weekly = simulatedWeeks[week - 1][slot];
                 nextWeekPrescriptions[key][week] = { sets: canonicalShellSetCount(weekly.sets), reps: range(weekly.prescription.reps), rir: range(weekly.prescription.rir), rest: weekly.prescription.restSeconds,
                     role: weekly.role, progressionStyle: schemeStyle(config, weekly.role, weekly.progressionStyle ?? 'auto'), tech: techniqueCue(weekly.advancedTechnique?.type, weekly.advancedTechnique?.note) };
             }
@@ -367,7 +377,7 @@ export function nextProgramToShellProgram(nextProgram, config, legacyExercises, 
             // M60 omitted this cell entirely, causing every deload slot to become an engine-missing/bad-sets
             // failure. Materialize an engine-owned recovery prescription and suppress intensity techniques.
             if (config.deload) {
-                const deload = prescriptionForSimulationWeek(session, 'recovery', 1, 1, projection).exercises[slot];
+                const deload = simulatedDeload[slot];
                 nextWeekPrescriptions[key][totalWeeks + 1] = { sets: canonicalShellSetCount(deload.sets), reps: range(deload.prescription.reps), rir: range(deload.prescription.rir), rest: deload.prescription.restSeconds,
                     role: deload.role, progressionStyle: schemeStyle(config, deload.role, deload.progressionStyle ?? 'auto'), tech: null };
             }

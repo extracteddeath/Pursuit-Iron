@@ -54,9 +54,72 @@ try{
         await page.click('[data-tab="'+route+'"]');
         await page.waitForSelector(selector);
         await settle(page);
+        // M283: scrolling content and the canonical root header must share a
+        // single left/right inset on narrow phones (Plan and Home are covered
+        // separately by the R62 Plan and Home continuity contract).
+        if(width<=420&&(route==='progress'||route==='settings')){
+          const alignment=await page.$eval(selector,pane=>{
+            const header=pane.querySelector('.wpb-root-header');
+            const body=pane.querySelector(':scope > .wpb-page-scroll');
+            const h=getComputedStyle(header),b=getComputedStyle(body);
+            const rail=pane.querySelector(':scope > .wpb-settings-jump');
+            return {headerLeft:parseFloat(h.paddingLeft),headerRight:parseFloat(h.paddingRight),
+              contentLeft:parseFloat(b.paddingLeft),contentRight:parseFloat(b.paddingRight),
+              headerBottom:header.getBoundingClientRect().bottom,
+              railTop:rail?.getBoundingClientRect().top,
+              headerOpaque:h.backgroundColor!=='rgba(0, 0, 0, 0)',
+              expected:innerWidth<360?12:16};
+          });
+          assert.ok(alignment.headerLeft===alignment.expected&&
+            alignment.headerRight===alignment.expected&&
+            alignment.contentLeft===alignment.expected&&
+            alignment.contentRight===alignment.expected&&alignment.headerOpaque&&
+            (route!=='settings'||Math.abs(alignment.railTop-alignment.headerBottom)<=1),
+            'Root header and mobile scroll pane share one inset without a Settings rail gap: '+
+              JSON.stringify({route,theme,width,alignment}));
+        }
         // R82: Settings navigation uses honest, findable category names.
         // It must reach the existing controls without changing their values.
         if(route==='settings'){
+          const groups=await page.$eval('.wpb-settings',pane=>{
+            const cards=[...pane.querySelectorAll('.wpb-settings-card')];
+            const rows=[...pane.querySelectorAll('.wpb-settings-row')];
+            const paint=e=>getComputedStyle(e).backgroundColor;
+            return {count:cards.length,shared:cards.every(c=>c.classList.contains('wpb-ui-card')),
+              opaque:cards.every(c=>paint(c)===paint(cards[0])&&paint(c)!=='rgba(0, 0, 0, 0)'),
+              owned:rows.every(r=>r.parentElement.classList.contains('wpb-settings-card')),
+              min:Math.min(...rows.map(r=>r.getBoundingClientRect().height))};
+          });
+          assert.ok(groups.count===8&&groups.shared&&groups.opaque&&groups.owned&&groups.min>=48,
+            'Every Settings row belongs to an explicit shared card: '+JSON.stringify(groups));
+          // M279: one final category rail, consistent 48px controls and legible section labels.
+          const hierarchy=await page.$eval('.wpb-settings',pane=>{
+            const rail=pane.querySelector('.wpb-settings-jump');
+            const control=pane.querySelector('.wpb-settings-jump-control');
+            const select=control?.querySelector('select');
+            const title=pane.querySelector('.wpb-settings-title');
+            const description=pane.querySelector('.wpb-settings-row-description');
+            const railRect=rail?.getBoundingClientRect();
+            const jumpRect=control?.getBoundingClientRect();
+            return {
+              railBottom:parseFloat(getComputedStyle(rail).paddingBottom),
+              opaque:getComputedStyle(rail).backgroundColor!=='rgba(0, 0, 0, 0)',
+              jumpHeight:jumpRect?.height,selectHeight:select?.getBoundingClientRect().height,
+              jumpRadius:parseFloat(getComputedStyle(control).borderTopLeftRadius),
+              titleSize:parseFloat(getComputedStyle(title).fontSize),
+              descriptionSize:parseFloat(getComputedStyle(description).fontSize),
+              withinViewport:railRect?.left>=-1&&railRect?.right<=innerWidth+1,
+              visibleLabelHidden:getComputedStyle(control.querySelector('span')).display==='none',
+              nativeSelectNamed:select.getAttribute('aria-label')==='Go to Settings section',
+              selectWidth:select.getBoundingClientRect().width
+            };
+          });
+          assert.ok(hierarchy.opaque&&hierarchy.railBottom>=8&&hierarchy.jumpHeight>=48&&
+            hierarchy.selectHeight>=48&&Math.abs(hierarchy.jumpRadius-14)<1&&
+            hierarchy.titleSize>=13&&hierarchy.descriptionSize>=13&&hierarchy.withinViewport&&
+            hierarchy.nativeSelectNamed&&hierarchy.selectWidth>=130&&
+            hierarchy.visibleLabelHidden===(width<=420),
+            'Settings category rail and readable controls use shared sizes: '+JSON.stringify(hierarchy));
           const destinations=await page.$$eval('.wpb-settings-jump-control select option',
             options=>options.map(el=>[el.value,el.textContent.trim()]));
           assert.ok(destinations.some(([id,label])=>id==='training'&&label==='Gyms & equipment'),
@@ -73,6 +136,21 @@ try{
             anchors=>anchors.length),1,'Exactly one destination owns training preferences');
           await page.select('.wpb-settings-jump-control select','preferences');
           await page.waitForFunction(()=>document.querySelector('.wpb-settings .wpb-page-scroll')?.scrollTop>10);
+          await settle(page);
+          if(width<=420){
+            const chrome=await page.$eval('.wpb-settings',pane=>{
+              const header=pane.querySelector('.wpb-root-header');
+              const rail=pane.querySelector('.wpb-settings-jump');
+              const content=pane.querySelector('.wpb-page-scroll');
+              return {offset:content.scrollTop,
+                gap:rail.getBoundingClientRect().top-header.getBoundingClientRect().bottom,
+                headerPaint:getComputedStyle(header).backgroundColor,
+                railPaint:getComputedStyle(rail).backgroundColor};
+            });
+            assert.ok(chrome.offset>10&&Math.abs(chrome.gap)<=1&&
+              chrome.headerPaint!=='rgba(0, 0, 0, 0)'&&chrome.railPaint!=='rgba(0, 0, 0, 0)',
+              'Settings category rail remains directly attached to opaque header after scroll: '+JSON.stringify({width,theme,chrome}));
+          }
           assert.equal(await page.$eval('.wpb-settings-jump-control select',el=>el.value),'',
             'Settings jump resets for the next deliberate navigation');
         }
@@ -104,6 +182,28 @@ try{
             width:rect.width,
             actionGroups:actions.map(measure)};
         },{sel:selector,actions});
+        if(route==='settings'){
+          const rows=await page.$$eval('.wpb-settings-row',els=>els.map(row=>{
+            const box=row.getBoundingClientRect();
+            const children=[...row.children].map(el=>el.getBoundingClientRect());
+            const copy=row.querySelector('.wpb-settings-row-copy');
+            const range=document.createRange();range.selectNodeContents(copy);
+            const copyBox=copy.getBoundingClientRect(),control=row.querySelector('.wpb-settings-row-control');
+            const controlBox=control?.getBoundingClientRect();
+            return {label:copy.textContent.slice(0,45),stacked:getComputedStyle(row).flexDirection==='column',
+              copyFullWidth:copyBox.width>=box.width-32,
+              controlBelow:!controlBox||controlBox.top>=copyBox.bottom-1,
+              fits:children.every(r=>r.left>=box.left-1&&r.right<=box.right+1)&&
+                [...range.getClientRects()].every(r=>r.left>=box.left-1&&r.right<=box.right+1)};
+          }));
+          assert.ok(rows.every(r=>r.fits),'200% Settings row text and controls stay inside their card: '+JSON.stringify(rows));
+          if(width===320||width===393)
+            assert.ok(rows.length>0&&rows.every(r=>r.stacked&&r.copyFullWidth&&r.controlBelow),
+              '200% Settings text uses full row before controls rather than splitting words: '+JSON.stringify(rows));
+          await page.select('.wpb-settings-jump-control select','preferences');
+          await settle(page);
+          if(width===320||width===393)await page.screenshot({path:path.join(root,'verification/c20-settings-'+theme+'-'+width+'-enlarged-phone.png')});
+        }
         // R77 fixes a failure R76's overflow-only check could not see:
         // labels were visually chopped into individual letters without overflow.
         // Inspect the real rendered responsive grid after enlarged typography.

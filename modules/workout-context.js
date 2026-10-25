@@ -1,4 +1,30 @@
+import { plateauSessions, exerciseTrends, plateauOf } from './engine-api.js';
+
 // UI/session operations only. Prescription and progression remain engine-owned.
+export function workoutPlateau(program, day, exerciseId, history) {
+    const entries = plateauSessions(history, exerciseId, day.id, 8, program);
+    const trend = exerciseTrends(entries).find(t => t.id === exerciseId);
+    return plateauOf(trend);
+}
+
+// An explicit, session-only load reduction, never a second progression policy. Completed work,
+// warmups already performed, manually entered values and prescribed percentage stages are protected.
+export function lighterPendingWorkout(row, loadAtOrBelow, protectedSet) {
+    if (!row || row.injuryAdjusted) return row;
+    let changed = false;
+    const sets = row.sets.map(set => {
+        if (set.done || set.sub || protectedSet(set) || !(Number(set.weight) > 0)) return set;
+        const next = loadAtOrBelow(Number(set.weight) * .9);
+        if (!(next > 0 && next < Number(set.weight))) return set;
+        if (!set.warm) changed = true;
+        const weight = String(next);
+        return { ...set, weight, auto: false, valueOwner: 'user', suggested: undefined,
+            hint: undefined, autoTuned: false, target: { ...set.target, w: weight } };
+    });
+    if (!changed) return row;
+    // A lighter day does not leave pending failure-technique extensions attached.
+    return { ...row, sets: sets.filter(set => !set.sub || set.done) };
+}
 export function activeSetContext(row) {
     const sets = row?.sets || [];
     const index = sets.findIndex(set => !set.done);
@@ -51,4 +77,33 @@ export function adjustInjuredExercises(data, selectedIds, part, action) {
         return [{ ...row, injuryAdjusted: part, sets: row.sets.filter(set =>
             set.done || (!set.warm && !set.sub && count++ < keep)) }];
     });
+}
+
+
+// Set-count edits are session-local. Logged work and warmups are never erased.
+export function resizeWorkingSets(row, requested) {
+    if (!row || !Array.isArray(row.sets)) return row;
+    const work = row.sets.filter(set => !set.warm && !set.sub);
+    const minimum = Math.max(1, work.filter(set => set.done).length);
+    const count = Number(requested);
+    if (!Number.isInteger(count) || count < minimum || count > 20 || count === work.length) return row;
+    let next = row;
+    while (next.sets.filter(set => !set.warm && !set.sub).length > count) {
+        const reduced = removePendingWorkingSet(next);
+        if (reduced === next) break;
+        next = reduced;
+    }
+    const seed = work.at(-1) || {};
+    const missing = count - next.sets.filter(set => !set.warm && !set.sub).length;
+    if (missing > 0) next = { ...next, sets: [...next.sets, ...Array.from({ length: missing }, () => ({
+        weight: seed.weight ?? '', reps: seed.reps ?? '', warm: false, done: false,
+        auto: false, valueOwner: 'user', added: true,
+        ...(seed.target ? { target: { ...seed.target } } : {})
+    }))] };
+    return next;
+}
+
+// The short timer between technique extensions, shared by the game plan and logger.
+export function workoutTechniqueRest(set, restScale = 1) {
+    return Math.max(8, Math.round((set.kind === 'drop' ? 10 : 15) * (restScale || 1)));
 }

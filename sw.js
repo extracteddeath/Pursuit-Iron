@@ -1,5 +1,5 @@
 /* Pursuit Iron 4.0 — M234 production release. */
-const CACHE="pursuit-iron-production-v4-0-0-m234-candidate-selection-b898-rb9edc8a47927ce15";
+const CACHE="pursuit-iron-production-v4-0-0-m234-candidate-selection-b910-rcb9779994e9f610e";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
   "./app.css",
@@ -20,6 +20,7 @@ const SHELL=[
   "./modules/legacy-research-data.js",
   "./modules/main.js",
   "./modules/mobile-lifecycle.js",
+  "./modules/next-engine/adaptive-cycle-upgrade.js",
   "./modules/next-engine/allocator.js",
   "./modules/next-engine/app-shell-adapter.js",
   "./modules/next-engine/arbiter.js",
@@ -52,6 +53,7 @@ const SHELL=[
   "./modules/next-engine/live-autoregulation.js",
   "./modules/next-engine/loading.js",
   "./modules/next-engine/method-policy.js",
+  "./modules/next-engine/observed-volume-response.js",
   "./modules/next-engine/percentage-protocols.js",
   "./modules/next-engine/performance.js",
   "./modules/next-engine/phase-policy.js",
@@ -91,8 +93,12 @@ const SHELL=[
   "./modules/next-engine/weekly-recovery.js",
   "./modules/next-engine/workout-history-adapter.js",
   "./modules/next-engine/workout-runtime.js",
+  "./modules/plan-session-surfaces.js",
   "./modules/program-duration.js",
   "./modules/program-last-performance.js",
+  "./modules/program-review.js",
+  "./modules/session-choice-dialog.js",
+  "./modules/session-plan.js",
   "./modules/session-tools.js",
   "./modules/training-domain.js",
   "./modules/training-domain/analytics.js",
@@ -101,6 +107,7 @@ const SHELL=[
   "./modules/training-domain/prescriptions.js",
   "./modules/training-domain/programs.js",
   "./modules/training-domain/records.js",
+  "./modules/ui-layout.js",
   "./modules/ui-motion.js",
   "./modules/wizard-stability.js",
   "./modules/workout-context.js",

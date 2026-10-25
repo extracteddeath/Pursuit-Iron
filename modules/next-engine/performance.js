@@ -1,5 +1,5 @@
 import { bestEstimated1RM, estimate1RM } from './history.js';
-import { availableLoadAtOrBelow, formatExerciseLoad, loadingRecommendation } from './loading.js';
+import { availableLoadAtOrBelow, formatExerciseLoad, loadingRecommendation, resolveLoadingMode } from './loading.js';
 import { progressionExposureContext } from './history-contract.js';
 function byExercise(sets) {
     const map = new Map();
@@ -89,6 +89,43 @@ function belowRangeLoadCorrection(exercise, actual, currentLoad, context) {
         reason: `${misses.length}/${actual.length} logged set${actual.length === 1 ? '' : 's'} fell below the ${repFloor}-rep floor${effortDetail}. Holding the heaviest logged weight would repeat an off-target load. Reduce to ${targetLabel} and rebuild from ${repFloor} reps inside the ${range} range at the planned effort.`
     };
 }
+// Classic double progression can consolidate a mixed-load exposure into straight sets.
+// Estimate capacity at each observed position, including the fatigued later sets, rather
+// than borrowing the fresh/best set or treating an arithmetic load average as capacity.
+function straightSetCalibration(exercise, actual, context) {
+    if ((exercise.progressionStyle ?? 'double') !== 'double' || context.percentageLoading
+        || exercise.prescription.setTargets?.length || actual.length !== exercise.sets || actual.length < 2)
+        return null;
+    // Added load alone cannot establish total-force capacity for bodyweight movements.
+    if (resolveLoadingMode(exercise.exerciseId, context.equipmentAvailable, context.loadingInventory) === 'bodyweight')
+        return null;
+    const loads = actual.map(s => s.load);
+    if (!loads.every(w => Number.isFinite(w) && w > 0) || Math.min(...loads) === Math.max(...loads))
+        return null;
+    const floor = exercise.prescription.reps[0];
+    const knownEffort = actual.every(s => Number.isFinite(s.rir));
+    // Unknown effort alone must not turn productive in-range work into an automatic reduction.
+    if (!knownEffort && actual.every(s => s.reps >= floor))
+        return null;
+    // Explicitly easy short sets indicate early stopping, not demonstrated load failure.
+    if (actual.some(s => s.reps < floor)
+        && actual.filter(s => s.reps < floor).every(s => Number.isFinite(s.rir)
+            && s.reps + s.rir >= floor + meanTargetRir(exercise)))
+        return null;
+    const capacities = actual.map(s => estimate1RM(s.load, s.reps, s.rir));
+    // High-rep/invalid observations cannot establish an all-set load through this estimator.
+    if (capacities.some(value => value === null))
+        return null;
+    const observedMean = loads.reduce((sum, w) => sum + w, 0) / loads.length;
+    const supported = Math.min(...capacities) / (1 + (floor + meanTargetRir(exercise)) / 30);
+    const weight = availableLoadAtOrBelow(exercise.exerciseId, Math.min(observedMean, supported),
+        context.loadingInventory, context.equipmentAvailable);
+    if (!(weight > 0) || weight >= Math.max(...loads))
+        return null;
+    const label = formatExerciseLoad(exercise.exerciseId, weight, context.equipmentAvailable, context.loadingInventory);
+    return { suggestedLoad: weight, suggestedReps: floor, confidence: knownEffort ? 'moderate' : 'low',
+        reason: `Use ${label} for all ${exercise.sets} working sets, starting at ${floor} reps. This conservative estimate uses each set's performance, including later sets under fatigue, and rounds down to available equipment. ${knownEffort ? 'Reported reps in reserve are included.' : 'Effort was not reported, so this is a cautious estimate.'} Build all sets through the rep range before increasing load.` };
+}
 function evaluateProgression(session, performedSets, context = {}) {
     const grouped = byExercise(performedSets);
     return session.exercises.map(ex => {
@@ -152,6 +189,11 @@ function evaluateProgression(session, performedSets, context = {}) {
                 : `${actual.length} of ${ex.sets} prescribed sets were completed. Finish a comparable full exposure before using it to increase load.`;
             return decision(ex, { outcome: 'incomplete', reasonCode: completion < .75 ? 'incomplete_session' : 'incomplete_prescription', action: completion < .75 ? 'review' : 'hold', confidence: 'moderate', reason, currentLoad, suggestedLoad: currentLoad, estimated1RM });
         }
+
+        const calibration = straightSetCalibration(ex, actual, context);
+        if (calibration)
+            return decision(ex, { outcome: 'recalibrated', reasonCode: 'straight_set_calibration', action: 'decrease_load',
+                ...calibration, currentLoad, estimated1RM });
 
         // Dynamic double is genuinely set-specific: a completed, comparable session can
         // earn heavier weight on set 1 while set 2 continues building its own reps.
@@ -231,7 +273,7 @@ function evaluateProgression(session, performedSets, context = {}) {
             return decision(ex, { outcome: 'failure', reasonCode: code, action: 'hold', confidence: repeatedEffortOvershoot ? 'high' : 'moderate', reason: `${detail} Hold the load and re-enter the prescribed effort range before progressing.`, currentLoad, suggestedLoad: currentLoad, estimated1RM });
         }
         if (!allAtLeastBottom) {
-            return decision(ex, { outcome: 'failure', reasonCode: 'rep_floor_miss', action: 'hold', confidence: 'moderate', reason: 'Repetitions fell below the prescribed floor without enough evidence for an automatic load correction; hold and collect another comparable exposure.', currentLoad, suggestedLoad: currentLoad, estimated1RM });
+            return decision(ex, { outcome: 'failure', reasonCode: 'rep_floor_miss', action: 'hold', confidence: 'moderate', reason: 'Repetitions fell below the prescribed floor without enough evidence for an automatic load correction. Keep each set at its own last weight and retry within the prescribed range; do not apply the heaviest set to every row.', currentLoad, suggestedLoad: currentLoad, estimated1RM });
         }
         const bestReps = Math.max(...actual.map(s => s.reps));
         const suggestedReps = Math.min(ex.prescription.reps[1], bestReps + 1);
@@ -258,9 +300,13 @@ export function progressionSetTargets(exercise, actual, result) {
     if (dynamic && Array.isArray(result.setTargets)) return result.setTargets;
     const increasing = result.action === 'increase_load';
     const decreasing = result.action === 'decrease_load';
+    // A session's representative load is its maximum, not evidence that every set used it.
+    // Holds and rep-only progression retain each observed set's load for every method.
+    // Explicit increases/corrections still own their new load, including dynamic progression.
+    const retainingLoads = !increasing && !decreasing && result.suggestedLoad === result.currentLoad;
     return Array.from({ length: Math.max(1, exercise.sets) }, (_, index) => {
         const previous = actual[index];
-        const load = dynamic && !increasing && !decreasing && previous?.load != null
+        const load = retainingLoads && previous?.load != null
             ? previous.load : result.suggestedLoad ?? result.currentLoad;
         const sameLoad = previous?.load != null && load != null && Math.abs(previous.load - load) < 1e-6;
         const advance = result.action === 'add_reps' ? 1 : 0;

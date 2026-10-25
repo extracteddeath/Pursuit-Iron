@@ -2,7 +2,9 @@ import { productionSource } from './production-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
-import { planOverviewMemo, planOverview, paceFactor, estimateMinutesFor, estimateMinutes, setRestScaleGlobal, EXERCISES, EX_BY_ID, WhatsNewCard } from '../modules/App.js';
+import { WhatsNewCard } from '../modules/App.js';
+import { planOverviewMemo, planOverview, paceFactor, estimateMinutesFor, estimateMinutes, setRestScaleGlobal, EXERCISES, EX_BY_ID } from '../modules/engine-api.js';
+
 
 const program = { id: 'm219', name: 'Overview cache', custom: true, engineV: 70, weeks: 4,
     config: { goal: 'both', experience: 'intermediate', weeks: 4, split: 'custom', days: 1, session: 's60', deload: false },

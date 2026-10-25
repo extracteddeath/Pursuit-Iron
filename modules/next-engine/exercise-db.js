@@ -58,8 +58,13 @@ for (const ex of [...CURATED_EXERCISES, ...EXTENDED_EXERCISE_CATALOG]) {
 }
 export const EXERCISES = [...builtinById.values()];
 export const EXERCISE_MAP = new Map(EXERCISES.map(e => [e.id, e]));
+const BUILTIN_EXERCISE_IDS = new Set(EXERCISE_MAP.keys());
 export function createExerciseCatalog(customExercises = []) {
-    const seen = new Set(EXERCISES.map(e => e.id));
+    // The built-in definitions are immutable by contract, but each caller still
+    // gets its own array. Avoid reconstructing 400+ built-in IDs on every
+    // candidate-generation pass when custom exercises are absent.
+    if (!customExercises.length) return [...EXERCISES];
+    const seen = new Set(BUILTIN_EXERCISE_IDS);
     const custom = [];
     for (const ex of customExercises) {
         if (!ex?.id || seen.has(ex.id))
@@ -70,5 +75,13 @@ export function createExerciseCatalog(customExercises = []) {
     return [...EXERCISES, ...custom];
 }
 export function createExerciseMap(customExercises = []) {
-    return new Map(createExerciseCatalog(customExercises).map(ex => [ex.id, ex]));
+    // An isolated Map copy is required: callers may mutate lookup indexes.
+    // Skip rebuilding every custom-free catalog just to derive the same map.
+    const map = new Map(EXERCISE_MAP);
+    if (!customExercises.length) return map;
+    for (const ex of customExercises) {
+        if (!ex?.id || map.has(ex.id)) continue;
+        map.set(ex.id, { ...ex, source: 'custom', metadataConfidence: ex.metadataConfidence ?? 'low' });
+    }
+    return map;
 }

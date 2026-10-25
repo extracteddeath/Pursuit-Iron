@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { normalizeEditedHistoryEntry } from '../modules/App.js';
+import { normalizeEditedHistoryEntry } from '../modules/engine-api.js';
+
 import { generateNextProgramForShell } from '../modules/next-engine/app-shell-adapter.js';
 import { EXERCISE_MAP } from '../modules/next-engine/exercise-db.js';
 import { analyzeShellHistoryForNextEngine, generateNextBlockFromShellHistory } from '../modules/next-engine/workout-history-adapter.js';

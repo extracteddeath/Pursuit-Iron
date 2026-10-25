@@ -285,7 +285,12 @@ try{
             const tabs=[...document.querySelectorAll('.wpb-tabbar button')].map(button=>{
               const label=button.querySelector('span'),range=document.createRange();
               range.selectNodeContents(label);const text=range.getBoundingClientRect(),box=button.getBoundingClientRect();
-              return {label:button.getAttribute('aria-label'),text:{x:text.x,right:text.right,y:text.y,bottom:text.bottom},
+              const rects=[...range.getClientRects()].filter(r=>r.width>0&&r.height>0);
+              const visibleName=[...button.querySelectorAll('.wpb-tab-label-full,.wpb-tab-label-compact')]
+                .filter(el=>getComputedStyle(el).display!=='none').map(el=>el.textContent).join('');
+              return {label:button.getAttribute('aria-label'),visibleName,
+                lines:new Set(rects.map(r=>Math.round(r.y))).size,
+                text:{x:text.x,right:text.right,y:text.y,bottom:text.bottom},
                 box:{x:box.x,right:box.right,y:box.y,bottom:box.bottom},
                 hit:button.contains(document.elementFromPoint(box.x+box.width/2,box.y+box.height/2))};
             });
@@ -296,14 +301,65 @@ try{
               min:getComputedStyle(next).minHeight,max:getComputedStyle(next).maxHeight,
               transform:getComputedStyle(next).transform,rows:getComputedStyle(next.parentElement).gridTemplateRows,
               overviewRow:getComputedStyle(overview).gridRow}:null;
-            return {overflow:document.documentElement.scrollWidth>innerWidth+2,tabs,plan};
+            const bar=document.querySelector('.wpb-tabbar');
+            const tabIndicator=bar?.hasAttribute('data-pi-m3-track')?{
+              outline:getComputedStyle(bar,'::before').outlineStyle,
+              border:getComputedStyle(bar,'::before').borderTopStyle,
+              selected:bar.querySelectorAll('.wpb-tab[aria-current="page"]').length
+            }:null;
+            const orbit=document.querySelector('.wpb-home .wpb-m3-day-orbit');
+            const planHeading=document.querySelector('.wpb-plan-view .wpb-plan-title');
+            const planModes=[...document.querySelectorAll('.wpb-plan-panes>.wpb-plan-pane-tab')].map(button=>{
+              const label=button.querySelector('.wpb-plan-pane-label');
+              if(!label)return null;
+              const range=document.createRange();range.selectNodeContents(label);
+              const rects=[...range.getClientRects()].filter(r=>r.width>0&&r.height>0);
+              const box=button.getBoundingClientRect();
+              return {name:label.textContent.trim(),lines:new Set(rects.map(r=>Math.round(r.y))).size,
+                fits:rects.length>0&&rects.every(r=>r.x>=box.x-1&&r.right<=box.right+1),
+                truncated:getComputedStyle(label).textOverflow==='ellipsis'&&label.scrollWidth>label.clientWidth+1};
+            }).filter(Boolean);
+
+            const title=document.querySelector('.wpb-root-header .wpb-screen-title');
+            const edit=document.querySelector('.wpb-root-header .wpb-root-actions button');
+            const titleRange=document.createRange();
+            if(title)titleRange.selectNodeContents(title);
+            const titleRects=title?[...titleRange.getClientRects()].filter(r=>r.width>0&&r.height>0):[];
+            const titleBox=title?.getBoundingClientRect(),editBox=edit?.getBoundingClientRect();
+            const rootTitle=title?{
+              text:title.textContent.trim(),
+              lines:new Set(titleRects.map(r=>Math.round(r.y))).size,
+              overlapsAction:!!editBox&&titleBox.left<editBox.right-1&&titleBox.right>editBox.left+1&&
+                titleBox.top<editBox.bottom-1&&titleBox.bottom>editBox.top+1
+            }:null;
+            return {overflow:document.documentElement.scrollWidth>innerWidth+2,tabs,plan,rootTitle,tabIndicator,
+              homeOrbitVisible:!!orbit&&getComputedStyle(orbit).display!=='none',
+              planReading:planHeading?{titleFits:planHeading.scrollWidth<=planHeading.clientWidth+2,modes:planModes}:null};
           });
           if(width===320||width===1280)
             await page.screenshot({path:path.join(root,'verification/r74-'+theme+'-'+width+'-'+route+'-phone.png')});
           assert.equal(enlarged.overflow,false,'200% '+route+' text keeps document width: '+JSON.stringify({theme,width,enlarged}));
-          assert.ok(enlarged.tabs.every(t=>t.hit&&t.text.x>=t.box.x-1&&t.text.right<=t.box.right+1&&
+          assert.ok(enlarged.tabs.every(t=>t.hit&&t.visibleName===t.label&&t.lines===1&&t.text.x>=t.box.x-1&&t.text.right<=t.box.right+1&&
             t.text.y>=t.box.y-1&&t.text.bottom<=t.box.bottom+1),
             '200% '+route+' navigation labels fit their real controls: '+JSON.stringify({theme,width,enlarged}));
+          if(enlarged.tabIndicator)
+            assert.ok(enlarged.tabIndicator.outline==='none'&&enlarged.tabIndicator.border==='none'&&
+              enlarged.tabIndicator.selected===1,
+              'Selected navigation uses one filled indicator without a permanent gray rim: '+JSON.stringify({theme,width,route,indicator:enlarged.tabIndicator}));
+          if(route==='profile'&&width===320)
+            assert.ok(enlarged.rootTitle?.text==='Profile'&&enlarged.rootTitle.lines===1&&
+              !enlarged.rootTitle.overlapsAction,
+              'Profile root title stays one intact word and Edit remains separate at 200%: '+JSON.stringify({theme,width,title:enlarged.rootTitle}));
+          if(route==='home'&&width===320)
+            assert.equal(enlarged.homeOrbitVisible,false,
+              '320px Home day orbit must never overlap the workout heading: '+JSON.stringify({theme,width,enlarged}));
+          if(route==='plan'&&width===320){
+            assert.ok(enlarged.planReading?.titleFits,
+              '200% Plan title wraps within the page instead of clipping: '+JSON.stringify({theme,width,enlarged}));
+            assert.ok(enlarged.planReading.modes.length===4&&enlarged.planReading.modes.every(
+              mode=>mode.name&&mode.fits&&!mode.truncated),
+              '200% Plan pane labels show complete text in their buttons: '+JSON.stringify({theme,width,enlarged}));
+          }
           if(route==='plan'&&width>=1060&&height>=700){
             assert.ok(enlarged.plan.nextBottom<=enlarged.plan.overviewTop+1,
               'Enlarged Plan supporting cards stay in separate rows: '+JSON.stringify(enlarged.plan));

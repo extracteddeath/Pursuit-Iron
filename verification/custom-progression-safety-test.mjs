@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
-import { sessionSuggestion, computeCell } from '../modules/App.js';
+import { sessionSuggestion, computeCell, prescribeSets, EX_BY_ID } from '../modules/engine-api.js';
+
+import { setExLoadInc } from '../modules/training-domain/records.js';
 const program={id:'custom1',custom:true,config:{unit:'lb'},overrides:{'d1:0':{sets:3,reps:'5-8',rir:'2',progressionStyle:'double'}},days:[{id:'d1',exercises:['back-squat']}]};
 const history=[{programId:'custom1',dayId:'d1',date:Date.now(),unit:'lb',perf:{'back-squat':{weight:215,reps:2,sets:[
  {w:200,r:3,rir:null,done:true},{w:205,r:3,rir:null,done:true},{w:210,r:2,rir:null,done:true},{w:215,r:2,rir:0,done:true}
@@ -49,3 +51,33 @@ console.log('PASS custom 10-15 array range: 10s hold/build; only 15s across all 
 const setScheduleProgram={id:'custom-set-schedule',custom:true,config:{unit:'lb',weeks:4},overrides:{'d3:0':{sets:[5,3,3,4],reps:'8-12',rir:'2'}},days:[{id:'d3',primaryIndex:0,exercises:['back-squat']}]};
 assert.deepEqual([1,2,3,4].map(week=>computeCell(setScheduleProgram,setScheduleProgram.days[0],'back-squat',0,week).sets),[5,3,3,4]);
 console.log('PASS custom set schedule: computeCell preserves 5/3/3/4 across weeks 1–4.');
+
+// Fractional history and unit-converted references must pass the SAME loadability
+// boundary as generated plans. Logged observations themselves remain untouched.
+const gridProgram = { id: 'custom-grid', custom: true, config: { unit: 'lb' },
+    overrides: { 'grid:0': { sets: 3, reps: '8-12', rir: '2', progressionStyle: 'double' } },
+    days: [{ id: 'grid', primaryIndex: 0, exercises: ['inc-curl'] }] };
+const gridDay = gridProgram.days[0], gridEx = EX_BY_ID['inc-curl'];
+const gridHistory = (load, unit = 'lb', owner = gridProgram.id, reps = 9) => [{
+    id: 'grid-log', programId: owner, dayId: gridDay.id, date: 1, unit,
+    perf: { 'inc-curl': { weight: load, reps, sets: Array.from({ length: 3 }, () => ({ w: load, r: reps, rir: 2, done: true })) } }
+}];
+setExLoadInc({ 'inc-curl': { v: 5, unit: 'lb' } });
+try {
+    for (const [load, unit, owner] of [[38.5, 'lb', gridProgram.id], [17.5, 'kg', gridProgram.id],
+        [38.5, 'lb', 'previous-program'], [17.5, 'kg', 'previous-program']]) {
+        const hs = gridHistory(load, unit, owner), before = structuredClone(hs);
+        const suggestion = sessionSuggestion(gridProgram, gridDay, 0, null, 'lb', 1, hs);
+        assert.equal(suggestion.weight, 35, '5 lb equipment cannot suggest 38.5 or a raw converted reference');
+        assert.ok((suggestion.setTargets ?? []).every(t => t.weight % 5 === 0));
+        const rows = prescribeSets(gridProgram, gridDay, gridEx, 0, 1, 'lb', suggestion, null, {}, hs, false);
+        assert.ok(rows.filter(s => !s.warm && !s.sub).every(s => Number(s.weight) % 5 === 0));
+        assert.deepEqual(hs, before, 'rounding prescriptions never rewrites logged weights');
+    }
+    const earned = sessionSuggestion(gridProgram, gridDay, 0, null, 'lb', 1, gridHistory(35, 'lb', gridProgram.id, 12));
+    assert.equal(earned.weight, 40, 'earned increases still reach the next selectable load');
+    setExLoadInc({ 'inc-curl': { v: 0.5, unit: 'lb' } });
+    assert.equal(sessionSuggestion(gridProgram, gridDay, 0, null, 'lb', 1, gridHistory(38.5)).weight, 38.5,
+        'explicit fractional equipment increments remain valid');
+} finally { setExLoadInc({}); }
+console.log('PASS custom load grid: 38.5 lb and converted references snap to 35 on 5 lb equipment; earned increases and real fractional stock preserved.');

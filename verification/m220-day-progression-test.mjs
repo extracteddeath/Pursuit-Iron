@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { sessionSuggestion, lastDayPerf, dayPerfFor, prescribeSets, EX_BY_ID } from '../modules/App.js';
+import { sessionSuggestion, lastDayPerf, dayPerfFor, prescribeSets, EX_BY_ID } from '../modules/engine-api.js';
+
 import { linearStalled, plateauSessions, styleOverride } from '../modules/training-domain/prescriptions.js';
 import { refreshPendingSetTargets } from '../modules/next-engine/workout-runtime.js';
 import { previousWorkoutSet } from '../modules/next-engine/history-contract.js';
@@ -59,11 +60,16 @@ assert.equal(styleOverride(program, EX_BY_ID[id], false, 1, targetPerf, flatLowe
     'same-day flat intermediate history still triggers the intended plateau override');
 console.log('PASS M220: screenshot Lower/Legs regression, separate day loads, set-count qualification, earned progression, scoped fallbacks, shared LAST/advice and immutable history.');
 
-const automatic = { weight: '210', reps: '20', auto: true, done: false, valueOwner: 'prescription', target: { w: '210', reps: '12-20' } };
+const automatic = { weight: '210', reps: '20', auto: true, done: false, valueOwner: 'prescription', target: { w: '210', reps: '12-20', prefillReps: '20' } };
 const pending = [automatic, { ...automatic, done: true }, { ...automatic, valueOwner: 'user', auto: false }, { ...automatic, weight: '212.5' }, { ...automatic, added: true }, { ...automatic, sub: true }];
 const before = structuredClone(pending);
 const refreshed = refreshPendingSetTargets(pending, [{...automatic,weight:'205',target:{...automatic.target,w:'205'}}]);
 assert.equal(refreshed[0].weight, '205'); assert.equal(refreshed[0].target.w, '205');
+const unproven = { ...automatic, target: { w: '210', reps: '12-20' } };
+const missingProof = [unproven];
+assert.equal(refreshPendingSetTargets(missingProof,
+    [{...automatic,weight:'205',target:{...automatic.target,w:'205'}}]),missingProof,
+    'legacy rows without original auto-prefill metadata must not regenerate numbers');
 for (let i = 1; i < pending.length; i++) assert.equal(refreshed[i], pending[i], 'completed, manual, edited, added and sub rows are protected');
 assert.deepEqual(pending, before);
 assert.equal(refreshPendingSetTargets(refreshed, [{...automatic,weight:'205',target:{...automatic.target,w:'205'}}]), refreshed, 'unchanged targets preserve identity');
@@ -72,7 +78,7 @@ console.log('PASS M220 recovery: stale automatic custom loads refresh; completed
 // Generated programs already evaluate day-specific workouts, but their returned LAST/changed-week
 // reference also has to come from that same day rather than a newer occurrence elsewhere.
 const { default: fs } = await import('node:fs');
-const { EXERCISES } = await import('../modules/App.js');
+const { EXERCISES } = await import('../modules/engine-api.js');
 const { generateNextProgramForShell, markUserPrescriptionOverride } = await import('../modules/next-engine/app-shell-adapter.js');
 const { nextWorkoutSuggestionForShell } = await import('../modules/next-engine/workout-history-adapter.js');
 const fixture = JSON.parse(fs.readFileSync('verification/m205-generation-parity-results.json')).rows[3];
@@ -133,3 +139,27 @@ for (const candidate of [squatProgram, {...squatProgram,engineSource:undefined,c
     assert.deepEqual(sets.map(s=>[s.weight,s.reps]),Array.from({length:4},()=>['190','5']));
 }
 console.log('PASS M220 squat regression: latest evidence remains raw; generated/custom incomplete rep misses lower all four targets to 190 x 5.');
+
+// M338 / 148338.png: a mild final-set miss must not turn a held ramp into four top sets.
+export const inclineProgram={id:'m338-incline',custom:true,engineV:4,weeks:6,
+    config:{weeks:6,unit:'lb',goal:'strength',progression:'double',experience:'intermediate',deload:false},
+    days:[{id:'incline',label:'Upper',primaryIndex:0,exercises:['low-inc-bb-bench']}],
+    overrides:{'incline:0':{sets:4,reps:'6-8',rir:'2'}}};
+export const inclineHistory=[{id:'m338-last',programId:inclineProgram.id,dayId:'incline',weekIndex:1,date:1,unit:'lb',
+    perf:{'low-inc-bb-bench':{weight:210,reps:5,sets:[195,200,205,210].map((w,i)=>({w,r:[10,8,6,5][i],done:true,rir:null}))}}}];
+const inclineBefore=structuredClone(inclineHistory);
+const inclineAdvice=sessionSuggestion(inclineProgram,inclineProgram.days[0],0,null,'lb',1,inclineHistory);
+assert.equal(inclineAdvice.action,'decrease_load');
+assert.deepEqual(inclineAdvice.setTargets.map(s=>s.weight),[190,190,190,190]);
+assert.match(inclineAdvice.reason,/later sets under fatigue/);
+const inclineRows=prescribeSets(inclineProgram,inclineProgram.days[0],EX_BY_ID['low-inc-bb-bench'],0,1,'lb',inclineAdvice,{}, {},inclineHistory,false);
+assert.deepEqual(inclineRows.map(s=>[s.weight,s.reps]),Array.from({length:4},()=>['190','6']));
+assert.deepEqual(inclineHistory,inclineBefore);
+const generatedRamp=structuredClone(squatProgram);
+generatedRamp.overrides[`${squatDay.id}:0`]=markUserPrescriptionOverride(generatedRamp.overrides[`${squatDay.id}:0`], 'reps', '6-8');
+const generatedRampHistory=[{...inclineHistory[0],programId:generatedRamp.id,dayId:squatDay.id,
+    perf:{'back-squat':inclineHistory[0].perf['low-inc-bb-bench']}}];
+const generatedAdvice=sessionSuggestion(generatedRamp,generatedRamp.days.find(d=>d.id===squatDay.id),0,null,'lb',1,generatedRampHistory);
+assert.equal(generatedAdvice.action,'decrease_load');
+assert.deepEqual(generatedAdvice.setTargets.map(s=>s.weight),[190,190,190,190],
+    'Generated and authored programs share the same fatigue-aware straight-set calibration');

@@ -200,7 +200,7 @@ export function reselectProgressionStyle(ex, role, context = {}) {
         return selection(current, 'high', 'The issue is fatigue/technique rather than the progression model itself, so Auto is not changing a simple method.', 'adaptive_hold');
     }
 
-    if (current === 'linear' && (stalls >= 2 || failures >= 2)) {
+    if (current === 'linear' && (stalls >= 2 || (failures >= 2 && !evidence.successful))) {
         const next = accumulateStyle(t);
         return selection(next, 'high', 'Repeated comparable stalls show that simple linear load jumps are no longer the best fit; Auto is graduating this exercise to rep-based progression.', 'adaptive');
     }
@@ -217,11 +217,16 @@ export function reselectProgressionStyle(ex, role, context = {}) {
     if (loadingBlocked >= 2 && t.bodyweight && current !== 'ladder')
         return selection('ladder', 'high', 'Repeated loading-inventory limits make rep-ladder progression a better fit than asking for unavailable load jumps.', 'adaptive');
 
+    // Durable stagnant work can still be labelled "productive" by the
+    // single-workout progression evaluator. The longitudinal plateau signal
+    // wins only after repeated comparable exposures; isolated success does
+    // not hide a sustained stall, and historical failures do not override
+    // genuinely improving training.
+    if ((stalls >= 2 || (failures >= 2 && !evidence.successful)) && baseline.style !== current)
+        return selection(baseline.style, 'moderate', `Repeated unresolved stalls justify reconsidering the method. ${baseline.reason}`, 'adaptive');
+
     if (evidence.successful)
         return selection(current, 'high', 'Recent comparable exposures are progressing, so Auto is preserving the current method.', 'adaptive_hold');
-
-    if ((stalls >= 2 || failures >= 2) && baseline.style !== current)
-        return selection(baseline.style, 'moderate', `Repeated stalls justify reconsidering the method. ${baseline.reason}`, 'adaptive');
 
     return selection(current, 'moderate', 'Auto found no strong evidence that changing progression method would improve the prescription.', 'adaptive_hold');
 }

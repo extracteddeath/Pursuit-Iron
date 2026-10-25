@@ -3,7 +3,8 @@ import fs from 'node:fs';
 import { historyNumber, normalizeHistoryEntries, normalizeHistoryRevisions, progressionExposureContext, resolveHistoryDayIndex } from '../modules/next-engine/history-contract.js';
 import { deriveTieredLinearState } from '../modules/next-engine/percentage-protocols.js';
 import { evaluateWorkoutProgression } from '../modules/next-engine/performance.js';
-import { EXERCISES, EX_BY_ID, prescribeSets, sessionSuggestion, loggedWorkoutPerformance } from '../modules/App.js';
+import { EXERCISES, EX_BY_ID, prescribeSets, sessionSuggestion, loggedWorkoutPerformance } from '../modules/engine-api.js';
+
 import { generateNextProgramForShell } from '../modules/next-engine/app-shell-adapter.js';
 import { analyzeShellHistoryForNextEngine, nextWorkoutSuggestionForShell } from '../modules/next-engine/workout-history-adapter.js';
 import { progressionHistoryForProgram, customExerciseHistory, customExerciseReferenceHistory, muscleRecoveryUncached } from '../modules/training-domain/prescriptions.js';

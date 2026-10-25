@@ -1,0 +1,170 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import http from 'node:http';
+import puppeteer from 'puppeteer-core';
+
+const root=path.resolve(new URL('../',import.meta.url).pathname);
+const current={
+ id:'m328-current',cycleId:'m328-cycle',name:'Swap Undo workout',custom:true,weeks:4,
+ config:{unit:'lb',goal:'both',split:'custom',experience:'intermediate',progression:'double',
+     equipment:['barbell','dumbbell','bench','rack','cable','machine','smith','ezbar','pullup'],deload:false},
+ days:[{id:'upper',label:'Upper',primaryIndex:0,exercises:['bb-bench','inc-curl']}],
+ overrides:{'upper:0':{sets:3,reps:'5-8',rir:'2',rest:90},'upper:1':{sets:2,reps:'8-12',rir:'2',rest:90}}
+};
+const next={...structuredClone(current),id:'m328-next',name:'Future phase'};
+const unrelated={...structuredClone(current),id:'m328-other',cycleId:'different',name:'Unrelated'};
+// A real registered cycle is required: load normalization intentionally detaches
+// orphan cycleId values when their owning cycle has been removed.
+const cycle={id:'m328-cycle',name:'Swap Undo Cycle',engineSource:'pursuit-next',
+    blockIds:[current.id,next.id],activeBlock:0,done:false,
+    blockMeta:[{phase:'hypertrophy',weeks:4},{phase:'strength',weeks:4}]};
+const store={v:13,savedAt:1,saved:[current,next,unrelated],cycles:[cycle],history:[],perf:{},
+ drafts:{},tombs:{},seenIntro:999,seenWhatsNew:999,pinnedId:current.id,theme:'amethyst',
+ restAutoStart:false,warmupCard:false,unit:'lb',unitChosen:true,experience:'intermediate',
+ bodyweight:185,installDismissedAt:Date.now(),lastBackup:Date.now()};
+const live={schemaVersion:2,sessionId:'m328-workout',programId:current.id,dayId:'upper',
+ weekIndex:1,dayExSig:'bb-bench|inc-curl',exIdx:0,elapsedMs:10000,
+ readiness:{label:'Normal',factor:1},restPaused:false,restRemain:0,restMax:0,runPaused:true,
+ data:[{id:'bb-bench',slot:0,note:'',sets:[1,2,3].map(()=>({weight:'170',reps:'5',done:false,
+     auto:true,valueOwner:'prescription',target:{w:'170',reps:'5-8',rir:2}}))},
+ {id:'inc-curl',slot:1,note:'',sets:[1,2].map(()=>({weight:'25',reps:'8',done:false,
+     auto:true,valueOwner:'prescription',target:{w:'25',reps:'8-12',rir:2}}))}]};
+const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.json':'application/json','.png':'image/png','.svg':'image/svg+xml'};
+const server=http.createServer((req,res)=>{
+ const file=path.resolve(root,'.'+new URL(req.url,'http://localhost').pathname);
+ if(!file.startsWith(root+path.sep)||!fs.existsSync(file)||!fs.statSync(file).isFile()){
+     res.writeHead(404);res.end();return;
+ }
+ res.setHeader('Content-Type',mime[path.extname(file)]||'application/octet-stream');
+ res.end(fs.readFileSync(file));
+});
+await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+let browser;
+try{
+ browser=await puppeteer.launch({executablePath:process.env.CHROME_BIN||'/usr/bin/google-chrome',
+     headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
+ const page=await browser.newPage(),errors=[];
+ page.on('pageerror',e=>errors.push(e.message));
+ await page.setViewport({width:393,height:850,isMobile:true,hasTouch:true});
+ await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
+ await page.evaluateOnNewDocument((store,live)=>{
+     if(!sessionStorage.getItem('m328-seeded')){
+         localStorage.setItem('wpb:v1',JSON.stringify(store));
+         localStorage.setItem('wpb:live',JSON.stringify(live));
+         sessionStorage.setItem('m328-seeded','1');
+     }
+ },store,live);
+ const loc=`http://127.0.0.1:${server.address().port}/index.html`;
+ const read=()=>page.evaluate(()=>({store:JSON.parse(localStorage.getItem('wpb:v1')),
+     live:JSON.parse(localStorage.getItem('wpb:live'))}));
+ const button=async label=>{
+     const found=await page.evaluate(label=>{const b=[...document.querySelectorAll('button')]
+         .find(b=>b.textContent.trim()===label || b.textContent.trim().startsWith(label));if(b)b.click();return !!b;},label);
+     assert.ok(found,'expected button '+label);
+ };
+ const openSwap=async()=>{
+     await page.waitForSelector('.wpb-workout-tool');
+     await button('Swap');
+     await page.waitForSelector('.wpb-swap-list button.opt');
+     await page.$eval('.wpb-swap-list button.opt',b=>b.click());
+     await page.waitForFunction(()=>document.body.textContent.includes('Apply this swap'));
+     await button('Update my program');
+ };
+ await page.goto(loc,{waitUntil:'networkidle0'});
+ await page.waitForSelector('.wpb-live-dock button[aria-label="Resume workout"]');
+ await page.click('.wpb-live-dock button[aria-label="Resume workout"]');
+ await page.waitForSelector('[data-testid="set-0-1"]');
+ await openSwap();
+ await page.waitForFunction(()=>{const s=JSON.parse(localStorage.getItem('wpb:v1')),live=JSON.parse(localStorage.getItem('wpb:live'));return s.saved?.[0]?.days?.[0]?.exercises?.[0]!=='bb-bench' && live?.data?.[0]?.id===s.saved?.[0]?.days?.[0]?.exercises?.[0];});
+ let snap=await read();
+ const newId=snap.live.data[0].id;
+ assert.notEqual(newId,'bb-bench');
+ assert.equal(snap.store.saved[0].days[0].exercises[0],newId);
+ assert.equal(snap.store.saved[1].days[0].exercises[0],newId,'sibling block reflects program scope');
+ assert.equal(snap.store.saved[2].days[0].exercises[0],'bb-bench','unrelated program untouched');
+ assert.ok(await page.$('.wpb-notice button'));
+ await button('Undo');
+ await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:v1'))?.saved?.[0]?.days?.[0]?.exercises?.[0]==='bb-bench');
+ snap=await read();
+ assert.equal(snap.live.data[0].id,'bb-bench','Undo restores the visible exercise and working sets');
+ assert.equal(snap.store.saved[1].days[0].exercises[0],'bb-bench','cycle sibling restored');
+ assert.equal(snap.store.saved[2].days[0].exercises[0],'bb-bench');
+ assert.equal(snap.store.saved[0].edited,current.edited,'Undo restores the original edited-state value, including absence');
+ assert.equal(snap.store.history.length,0);
+ await page.reload({waitUntil:'networkidle0'});
+ await page.waitForSelector('.wpb-live-dock button[aria-label="Resume workout"]');
+ await page.click('.wpb-live-dock button[aria-label="Resume workout"]');
+ await page.waitForSelector('[data-testid="set-0-1"]');
+ assert.equal((await read()).live.data[0].id,'bb-bench','Undo persists through resume');
+ await openSwap();
+ await page.waitForFunction(()=>{const s=JSON.parse(localStorage.getItem('wpb:v1')),live=JSON.parse(localStorage.getItem('wpb:live'));return s.saved?.[0]?.days?.[0]?.exercises?.[0]!=='bb-bench' && live?.data?.[0]?.id===s.saved?.[0]?.days?.[0]?.exercises?.[0];});
+ // Manual set entry after the swap makes rollback unsafe; do not silently
+ // delete what the user just typed or roll back a program independently.
+ const weight='[data-testid="set-0-0"] input[aria-label="weight"]';
+ await page.click(weight);
+ await page.keyboard.down('Control');
+ await page.keyboard.press('KeyA');
+ await page.keyboard.up('Control');
+ await page.keyboard.press('Backspace');
+ await page.type(weight,'135');
+ await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:live')).data[0].sets[0].weight==='135');
+ await button('Undo');
+ snap=await read();
+ assert.equal(snap.store.saved[0].days[0].exercises[0],snap.live.data[0].id);
+ assert.notEqual(snap.live.data[0].id,'bb-bench','edited replacement remains in workout');
+ assert.equal(snap.live.data[0].sets[0].weight,'135','manual weight survives rejected Undo');
+ assert.equal(snap.store.saved[1].days[0].exercises[0],snap.live.data[0].id);
+ // M329: resume a session-only replacement with strongly different source-lift evidence.
+ for (const width of [320,900]) {
+     const swapPage=await browser.newPage();
+     swapPage.on('pageerror',e=>errors.push(e.message));
+     await swapPage.setViewport({width,height:850,isMobile:width<500,hasTouch:true});
+     await swapPage.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
+     const swapped=structuredClone(live);
+     swapped.data[0]={id:'db-bench',slot:0,exerciseSubstituted:true,previousExerciseId:'bb-bench',note:'',
+         sets:[{weight:'40',reps:'8',done:true,auto:true,valueOwner:'prescription'},
+             {weight:'45',reps:'7',done:false,auto:false,valueOwner:'user'},
+             {weight:'',reps:'5',done:false,auto:true,valueOwner:'prescription'}]
+             .map(set=>({...set,target:{w:'—',reps:'5-8',rir:2}}))};
+     const history=[{id:'bench-source',date:1700000000000,programId:current.id,dayId:'upper',weekIndex:1,unit:'lb',
+         perf:{'bb-bench':{weight:200,reps:8,sets:[1,2,3].map(()=>({w:200,r:8,rir:2,rirReported:true,tr:2}))}}}];
+     await swapPage.evaluateOnNewDocument((seed,live)=>{
+         if(!sessionStorage.getItem('m329-seeded')){
+             localStorage.setItem('wpb:v1',JSON.stringify(seed));
+             localStorage.setItem('wpb:live',JSON.stringify(live));
+             sessionStorage.setItem('m329-seeded','1');
+         }
+     },{...store,history,theme:width===900?'rosewater':'amethyst'},swapped);
+     await swapPage.goto(loc,{waitUntil:'networkidle0'});
+     await swapPage.click('.wpb-live-dock button[aria-label="Resume workout"]');
+     await swapPage.waitForSelector('[data-testid="set-0-2"]');
+     assert.equal(await swapPage.$('.wpb-load-reference'),null,'replacement does not display source-lift recommendation');
+     await swapPage.click('[aria-label="Change exercise progression"]');
+     await swapPage.click('[data-progression-choice="dynamic"]');
+     await swapPage.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:live')).sessionProgressions?.['db-bench']==='dynamic');
+     let state=await swapPage.evaluate(()=>JSON.parse(localStorage.getItem('wpb:live')));
+     assert.equal(state.data[0].sets[0].weight,'40');
+     assert.equal(state.data[0].sets[0].done,true);
+     assert.equal(state.data[0].sets[1].weight,'45');
+     assert.equal(state.data[0].sets[1].reps,'7');
+     assert.equal(state.data[0].sets[2].weight,'','bench history must not seed replacement after progression change');
+     assert.equal(state.data[1].sets[0].weight,'25','other exercise remains untouched');
+     assert.equal(await swapPage.$('.wpb-load-reference'),null);
+     await swapPage.reload({waitUntil:'networkidle0'});
+     await swapPage.click('.wpb-live-dock button[aria-label="Resume workout"]');
+     await swapPage.waitForSelector('[data-testid="set-0-2"]');
+     state=await swapPage.evaluate(()=>JSON.parse(localStorage.getItem('wpb:live')));
+     assert.equal(state.data[0].sets[2].weight,'');
+     assert.equal(state.sessionProgressions['db-bench'],'dynamic');
+     const saved=await swapPage.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')));
+     assert.equal(saved.saved[0].days[0].exercises[0],'bb-bench','session-only replacement does not edit program');
+     assert.deepEqual(saved.history,history);
+     await swapPage.close();
+ }
+ assert.deepEqual(errors,[]);
+ console.log('PASS M328 browser: program-and-cycle Undo, persisted resume, manual-entry conflict protection.');
+}finally{
+ if(browser)await browser.close();
+ await new Promise(resolve=>server.close(resolve));
+}

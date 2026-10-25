@@ -768,3 +768,59 @@ become tiny or clipped even though the viewport itself remains the same.
 This is targeted accessibility coverage, not a claim of complete TalkBack
 or Android OS font-scaling certification. Native font scaling, TalkBack,
 keyboard-inset and physical-device touch behavior still need manual review.
+
+## Cohesive design-system cleanup (October 20, 2026)
+
+The phone and tablet prototypes are **direction**, not a parity target. Home, Plan, Progress, Profile, Cycle, Settings, Library and Workout must feel authored by the same designer. The live theme palette, existing navigation and workout logging remain authoritative.
+
+**Surface hierarchy:** one primary action per task; feature surfaces use `--pi-shape-feature`, regular panels `--pi-shape-card`, and buttons/rows `--pi-shape-action`. `--pi-color-card`, `--pi-color-control`, `--pi-color-feature`, `--pi-color-divider` and the saved theme's accent own color; do not introduce another purple/gray/red subsystem. Use `--pi-control-touch` for non-logger touch targets and `--pi-motion-paint` for paint-only micro-interactions. Different workflows may intentionally use different arrangements of these shared roles.
+
+**CSS ownership:** Prefer editing the original rule and its shared token over appending later competing selectors. The first consolidation moves chart-favorite sizing to the B891 owner (including 320px) instead of fighting B891's 34px base and 32px narrow override from B911. Repeated `!important` declarations frequently override inline styles and cannot be deleted blindly. For each subsequent screen, identify the actual inline/layout owner, remove superseded selectors only after real-browser computed-style checks, and do not change the logging engine, data, user-selected themes or accessibility state.
+
+**Full-app verification order:** Home and Plan task hierarchy; Profile, Progress and History; Cycle and Program creation; Settings and Library; live Workout/Focus (specialized compact controls); then dark/light/20-theme, text-zoom, keyboard/reduced-motion and physical Android/TalkBack certification. Preserve the current permanent test gates; no weakening tests to accommodate visual changes.
+
+## Cohesion 09 — prevent drift (enforced alongside full CI)
+
+New styling must reuse an existing semantic theme role and shared action, choice, surface or status owner. Static geometry belongs in a screen CSS owner; dynamic, user-controlled colors/measurements stay with the component where necessary. Do not append new `!important` rules to fix cascade disputes: edit the earlier selector or consolidate shared tokens instead. The automated debt budgets and collision allowlist live in `verification/ui-ownership-test.mjs` and must decrease as old CSS is proved redundant.
+
+Before modifying a screen, name the unique owner of data, layout, motion and accessibility state. A responsive second presentation must not fork persisted state, engine calculations or navigation. Preserve specialized Workout/Focus logging, target/last controls, timers and recovery. Verify computed styles and real interactions before deleting legacy declarations; blanket regex removal and visual-only screenshots are insufficient. Every UI slice stays separately revertible, passes exact-head CI, and updates the **existing** `NEXT_APP_UPDATE_PLAN.md` rather than adding a competing roadmap.
+
+## Cohesion 10 — Home actions and first-run hierarchy
+
+When Home has no active program, the persistent Create Program dock is the **only** primary create CTA. Templates, Custom split and Cycles are supporting discovery actions, not repeated large creation cards. When a program exists, retain the Next Workout primary action and independent Game Plan and session outline. Home action tiles use shared `UiAction` semantics and a single scoped CSS layout owner; theme selection comes from `--pi-color-*` roles. Action route IDs are stable across state transitions, avoiding remount/reordering artifacts. Do not reintroduce duplicate first-run buttons under a new label, an end-of-file CSS patch, or a second source of next-day/progression truth. Verification owners: `verification/home-entry-hierarchy-test.mjs`, `verification/home-entry-hierarchy-browser-test.mjs`, existing B887 masthead and B909 separated coaching tests.
+
+
+### Cohesion 12 — Plan selector presentation
+
+Plan retains the same four shared `UiChoice` panes and remembered/collapsible week selection. Tab and week-picker paint/layout live in the Plan CSS family; JSX supplies canonical program data and choice state. Tab typography must beat the global button font reset and preserve full labels at enlarged text sizes. Keep the existing moving indicator, keyboard focus, 48px effective targets, semantic colors and forced-color selection. B831's real text-fragment bounds and R53's pane/week, palette and responsive journeys verify these interactions. Workout/Focus and training policy are unchanged.
+
+
+### Cohesion 13 — weeks and cycle blocks share one choice
+
+Plan weeks, Program weeks and cycle block navigation use `UiChoice`'s `summary` variant and the same horizontal choice rail. The existing screen callbacks and canonical projections still own browsing and training state. Label/caption typography, wrapping, minimum 51px targets and focus clearance are CSS-owned beside the shared primitive; selected/disabled/keyboard/forced-color states use its existing owners. Inactive manual weeks retain full readable contrast and can be selected; deload stays explicit. Missing cycle blocks are disabled and cannot change the active block. Browsing never saves a prescription or advances a cycle. R54 covers Program text scaling, keyboard/deload and data preservation; B890 covers cycle text scaling and missing-block handling; R53/B831 continue to cover palette, geometry, motion and the compact logger.
+
+
+### Cohesion 14 — one Cycle presentation owner
+
+Cycle list/detail and read-only block previews share the scoped Cycle CSS family. State/prescription/percentage values remain with their canonical projections; progress fill width stays data-driven. `UiHeader` and `UiAction` retain header and action behavior. Empty Cycle fallback offers one Create action; populated lists retain New, and the detail footer uses the shared primary variant. Expanded schedule and next-block facts remain expanded. The block path stays readable for active/planned/completed/missing states; missing records cannot open previews. Relative type and a narrow-card container query make enlarged labels readable without changing normal-text row layout. Native details/select/button behavior, visible keyboard focus, high-contrast state and paint-only/reduced motion remain required. B890 exercises real routes plus the exported empty/completed fallback and preserves the original no-advance/no-write assertions.
+
+
+### Cohesion 17 — cycle creation
+
+Template cards and adaptation use the shared card surface and Wizard text roles. Canonical Wizard state supplies `aria-pressed` and `aria-checked`; CSS owns their paint. The adaptation mark is decorative; its named checkbox button remains keyboard operable. Custom block drafts survive template changes. Cycle name/duration wrapping lives beside template styles, with no second responsive priority owner. R74 checks keyboard template/adaptation changes, custom week retention, normal/enlarged text and all step navigation; generation and saved programs remain untouched.
+
+### Cohesion 18 — setup equipment and constraints
+
+- Equipment presets and superset/barbell choices use shared tonal actions and their actual `aria-pressed` state. Constraint groups are independently named.
+- Rack and bodyweight exclusions share one presentation component. No-rack still changes only the existing equipment flag and stays hidden without a barbell, in setup and the gym editor.
+- Keep keyboard selection, reversible exclusions, controlled configuration, saved drafts, enlarged-text reflow and horizontal preset scrolling. These changes do not alter generation constraints or the workout logger.
+
+### Cohesion 19 — Wizard chrome and muscle focus
+
+- Header/footer actions use shared native controls; Back, Next, early finish, draft discard and build cancellation keep the same handlers and disabled guards.
+- Real focus values own highlighted rows and the total. Shared setup steppers preserve a maximum of two points per muscle and five total, and allow reversing every choice.
+- The scrolling form, growing header, opaque footer, keyboard focus and draft indicators remain reachable at narrow widths and enlarged text. The computed progress transform remains runtime-owned; static presentation is CSS-owned.
+
+### Cohesion 20 — Settings card and strength-club continuity
+
+Settings rows stay module-level components so typing retains the same native input and focus. Their copy/control wrappers may wrap with enlarged text; all eight row groups use explicit shared cards. Keep existing option/switch callbacks and category jumps. Profile club measure actions retain native pressed states and keyboard activation; switching between Lifted and Est. 1RM changes only the displayed snapshot, never history or training settings. Earned and projected membership remain distinct. Share uses the current snapshot. Club actions have 48px targets and full labels, with narrow/enlarged text reflow. Other Profile preferences and highlighted Strength Score alignment remain unchanged.

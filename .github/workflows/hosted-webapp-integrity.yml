@@ -1,0 +1,55 @@
+name: Hosted webapp integrity
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify-script:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+      - name: Validate hosted verification script
+        run: node --check scripts/verify-hosted-pages.mjs
+  deployed-pages:
+    # Pages deploys independently on main. Recheck until the immutable
+    # checked-out runtime bytes become visible at the public site.
+    if: ${{ github.event_name != 'pull_request' }}
+    needs: verify-script
+    runs-on: ubuntu-24.04
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+      - name: Verify published app, service worker and engine files
+        run: node scripts/verify-hosted-pages.mjs --report verification/hosted-webapp-integrity.json
+        env:
+          PURSUIT_PAGES_VERIFY_TIMEOUT_MS: '420000'
+      - name: Upload hosted release verification report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: hosted-webapp-integrity
+          path: verification/hosted-webapp-integrity.json
+          if-no-files-found: error
+          retention-days: 14

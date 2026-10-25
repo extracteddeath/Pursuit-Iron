@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { mergeStandaloneIntoGeneratedCycle, cycleProgress, planOverview, computeCell } from '../modules/App.js';
+import { mergeStandaloneIntoGeneratedCycle, cycleProgress, planOverview, computeCell } from '../modules/engine-api.js';
+
 import { currentProgram, generatedCycle, savedPrograms, staleCycle } from './m215-cycle-duration-fixture.mjs';
 import { programWorkingWeeks, cycleBlockMetadata } from '../modules/program-duration.js';
 

@@ -4,8 +4,9 @@
 // that were really dynamic double progression, while Coach claimed "Today's target is already reduced".
 import assert from 'node:assert/strict';
 import fs from 'node:fs'; import http from 'node:http'; import path from 'node:path'; import puppeteer from 'puppeteer-core';
-import { generateNextProgramForShell } from '../modules/next-engine/app-shell-adapter.js';
-import { EXERCISES } from '../modules/App.js';
+import { generateNextProgramForShell, markUserPrescriptionOverride } from '../modules/next-engine/app-shell-adapter.js';
+import { EXERCISES, EX_BY_ID, computeCell } from '../modules/engine-api.js';
+
 const root = path.resolve(new URL('../', import.meta.url).pathname);
 const EQ=['barbell','rack','bench','dumbbell','cable','machine','smith','pullup','dip','legpress','hacksquat','legext','legcurl','calfmachine'];
 const program = generateNextProgramForShell({config:{name:'Demo',unit:'lb',goal:'hypertrophy',experience:'intermediate',split:'upper_lower',days:4,session:'s60',weeks:6,progression:'auto',deload:true,equipment:EQ,focus:{},reduce:[],barbellCap:3,noBodyweight:false,noSupersets:false},legacyExercises:EXERCISES,seed:3,makeId:()=> 'demo'}).program;
@@ -71,6 +72,60 @@ assert.match(sheetText, /Dynamic double progression/, 'the evidence sheet explai
 assert.match(sheetText, /100 lb/, 'the sheet shows today\'s load');
 assert.deepEqual(errors, [], 'no runtime errors');
 console.log('PASS 3 "Why" opens the explanation sheet with the same method and load.');
+
+// M361: use the actual saved increment, Repeat flow, logger and explanation surfaces.
+const roundedProgram=structuredClone(program);roundedProgram.id='m361-rounded';
+const selected=roundedProgram.days.flatMap(day=>day.exercises.map((id,slot)=>({day,id,slot})))
+    .find(({day,id,slot})=>EX_BY_ID[id]?.equip.includes('cable')&&computeCell(roundedProgram,day,id,slot,1).role==='hypertrophy_isolation');
+assert.ok(selected,'The generated fixture needs a cable isolation exercise');
+const {day:roundedDay,id:roundedId,slot:roundedSlot}=selected;
+const roundedKey=roundedDay.id+':'+roundedSlot;
+for(const [field,value] of [['sets',4],['reps','8-12'],['rir','2'],['progressionStyle','double']])
+    roundedProgram.overrides[roundedKey]=markUserPrescriptionOverride(roundedProgram.overrides[roundedKey]||{},field,value);
+const roundedEntry={id:'m361-history',programId:roundedProgram.id,dayId:roundedDay.id,weekIndex:1,date:1700000000000,unit:'lb',
+    perf:{[roundedId]:{weight:115,reps:8,sets:[100,105,110,115].map((w,i)=>({w,r:[12,10,8,8][i],rir:2,rirReported:true,done:true}))}}};
+for(const [unit,step,expected] of [['lb',10,100],['kg',5,45]]){
+    const context=await browser.createBrowserContext(), probe=await context.newPage();
+    try{
+        await probe.setViewport({width:390,height:844,isMobile:true,hasTouch:true});
+        probe.on('pageerror',e=>errors.push(e.message));
+        const savedProgram={...roundedProgram,exLoadInc:{[roundedId]:{v:step,unit}}};
+        const store={...initial,saved:[savedProgram],pinnedId:savedProgram.id,unit,history:[roundedEntry]};
+        await probe.evaluateOnNewDocument(s=>{if(!localStorage.getItem('m361-seeded')){localStorage.setItem('m361-seeded','1');localStorage.setItem('wpb:v1',JSON.stringify(s));}},store);
+        await probe.goto(url,{waitUntil:'networkidle0'});
+        await probe.click('[data-tab="progress"]');
+        const record=await probe.waitForSelector('[data-history-id]');await record.evaluate(el=>(el.querySelector('button')||el).click());
+        await probe.click('button[aria-label="Repeat this workout"]');
+        await probe.waitForSelector('.wpb-workout');
+        await (await probe.waitForSelector('xpath/.//button[contains(., "Feeling strong")]')).click();
+        await probe.waitForSelector('.wpb-backdrop',{hidden:true});
+        await probe.click(`.wpb-ex-nav-step:nth-child(${roundedSlot+1})`);
+        const weights=()=>probe.$$eval(`[data-testid^="set-${roundedSlot}-"][data-warm="0"][data-sub="0"] input[aria-label="weight"]`,ns=>ns.map(n=>Number(n.value)));
+        assert.deepEqual(await weights(),[expected,expected,expected,expected]);
+        await probe.click('.wpb-load-explanation summary');
+        assert.match(await probe.$eval('.wpb-load-explanation',el=>el.textContent),new RegExp(`Use ${expected} ${unit} for all 4 working sets`));
+        await probe.click('[data-why-target]');
+        const explanation=await probe.waitForSelector('xpath/.//div[contains(@class,"wpb-backdrop")][.//*[contains(., "Why this prescription?")]]');
+        assert.match(await explanation.evaluate(el=>el.textContent),new RegExp(`Use ${expected} ${unit} for all 4 working sets`));
+        if(unit==='kg')assert.match(await explanation.evaluate(el=>el.textContent),/52\.16 kg × 8/,'Historical evidence converts once without long decimal tails');
+        await (await explanation.$('button[aria-label="Close"]')).click();
+        await probe.waitForSelector('.wpb-backdrop',{hidden:true});
+        await probe.click('button[aria-label="Focused mode"]');
+        assert.equal(await probe.$eval('[data-focus-hero] input[aria-label="weight"]',el=>Number(el.value)),expected);
+        assert.match(await probe.$eval('[data-focus-hero]',el=>el.innerText),new RegExp(`\\b${unit}\\b`));
+        await probe.click('button[aria-label="Exit focused mode"]');
+        const historyBefore=await probe.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).history);
+        await probe.reload({waitUntil:'networkidle0'});
+        await (await probe.waitForSelector('.wpb-live-dock button[aria-label="Resume workout"]')).click();
+        await probe.waitForSelector('.wpb-workout');
+        assert.deepEqual(await weights(),[expected,expected,expected,expected]);
+        await probe.click('.wpb-load-explanation summary');
+        assert.match(await probe.$eval('.wpb-load-explanation',el=>el.textContent),new RegExp(`Use ${expected} ${unit} for all 4 working sets`));
+        assert.deepEqual(await probe.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).history),historyBefore);
+        console.log(`PASS M361 browser ${unit}: equipment target, all four prefills, expanded reason, Why, Focus and reload agree at ${expected}; history unchanged.`);
+    }finally{await context.close();}
+}
+assert.deepEqual(errors,[],'No runtime errors in rounded-target journeys');
 } finally {
     await browser?.close();
     server.close();

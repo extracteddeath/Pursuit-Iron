@@ -2,7 +2,8 @@ import { productionSource } from './production-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { performance } from 'node:perf_hooks';
-import { EXERCISES, computeCell, weeklyVolume, weeklySubVolume, volumeAudit, dayMuscleBreakdown, plannedWeek, distributeVolBias } from '../modules/App.js';
+import { EXERCISES, computeCell, weeklyVolume, weeklySubVolume, volumeAudit, dayMuscleBreakdown, plannedWeek, distributeVolBias } from '../modules/engine-api.js';
+
 import { generateNextProgramForShell } from '../modules/next-engine/app-shell-adapter.js';
 import { nextProgramToShellProgram } from '../modules/next-engine/app-shell-adapter.js';
 import { createExerciseMap } from '../modules/next-engine/exercise-db.js';
@@ -151,6 +152,7 @@ for (const goal of ['hypertrophy', 'strength', 'both']) {
 }
 
 const app = productionSource();
-assert.match(app, /\(onCommitProgram \|\| setProgram\)\(result.program\)/, 'Auto-fix must use canonical commit, not only the draft setter');
+assert.match(app, /onReviewProgram\(\{ before: program, after: result.program/, 'Volume repair is reviewed before committing');
+assert.match(app, /commitProgram\(next\)/, 'Reviewed edits use the canonical saved-plan commit');
 assert.match(app, /data-volume-repair-status/, 'failed/partial repairs need visible feedback');
 console.log('PASS M199 volume repair: ignored legacy bias reproduced; row credits corrected; existing rows first; capacity reallocation; honest failure; reload/accounting consistency; arm buckets; Full Body across three goals.');

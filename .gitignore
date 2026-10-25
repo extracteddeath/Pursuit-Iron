@@ -1,5 +1,25 @@
-node_modules
-verification/*-phone.png
+# Dependencies and local build outputs
+node_modules/
+dist/
+build/
+coverage/
+.cache/
+
+# Local packages, debug logs and platform metadata
+*.zip
+*.log
+.DS_Store
+Thumbs.db
+
+# Browser verification screenshots are CI artifacts, not source
+verification/*.png
+
+# Generated engine quality diagnostics (not regression fixtures)
+verification/m200-generation-quality-audit.json
+verification/m200-regional-dose-results.json
+verification/m206-working-week-dose-results.json
+
+# Native app local outputs
 verification/r62-*.png
 native/core/node_modules/
 native/android/.gradle/

@@ -13,7 +13,7 @@ import { transitionProgramPhase } from './phase-transition.js';
 import { nextProgramToShellProgram, getNextShellCell, resolveNextShellExerciseId, NextShellAdapterError } from './app-shell-adapter.js';
 import { advancedTechniqueFromCell } from './workout-runtime.js';
 import { finalizeGeneratedShellVolume, captureShellBaseProgram } from './volume-repair.js';
-const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+
 const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 function intOf(value) {
     const n = numberOf(value);
@@ -138,6 +138,10 @@ function plannedSessionForEntry(program, entry, legacyExercises, unit) {
             continue;
         const sourceEx = sourceSession.exercises.find(ex => ex.exerciseId === nextId) ?? sourceSession.exercises[slot];
         const legacy = legacyMap.get(legacyId);
+        // The persisted map is keyed by exercise ID: repeated planned slots cannot
+        // consume its single performance entry more than once during adaptation.
+        if (legacyIds.includes(legacyId))
+            continue;
         const role = (cell.role ?? sourceEx?.role ?? 'hypertrophy_isolation');
         exercises.push({
             exerciseId: nextId,
@@ -172,6 +176,7 @@ function workoutFromEntry(program, entry, legacyExercises, unit) {
         return null;
     const performed = [];
     const ignored = [];
+    const repeatedIds = new Set((found.day.exercises ?? []).filter((id, index, all) => all.indexOf(id) !== index));
     planned.legacyIds.forEach((legacyId, slot) => {
         const ex = planned.session.exercises[slot];
         const perf = entry.perf?.[legacyId];
@@ -184,7 +189,8 @@ function workoutFromEntry(program, entry, legacyExercises, unit) {
             const exposure = progressionExposureContext([perf, raw]);
             performed.push({
                 ...historyExposureContext(raw), exerciseId: ex.exerciseId, setIndex: setIndex++, load: convertLoad(load0, entry.unit, targetUnit), reps,
-                badDay: exposure.badDay, interrupted: exposure.interrupted, prescriptionEdited: exposure.nonComparable,
+                badDay: exposure.badDay, interrupted: exposure.interrupted,
+                prescriptionEdited: exposure.nonComparable || repeatedIds.has(legacyId),
                 rir: observedRir, painFlag: raw.painFlag === true, techniqueQuality: raw.techniqueQuality,
                 advancedTechnique: ex.advancedTechnique?.type
             });
@@ -299,7 +305,7 @@ export function nextWorkoutSuggestionForShell(program, history, legacyExercises,
         if (last) return { unit: evaluationUnit, weight: lastLoad, dir: 'hold', reason: 'Hold the last logged load until the new engine has comparable completed-set evidence.', reps, last, lastUnit: lastEntry?.unit || evaluationUnit, action: 'initial' };
         const reference = referenceEntry?.perf?.[legacyId] ?? null;
         const referenceLoad = convertLoad(representativeShellLoad(reference), referenceEntry?.unit, evaluationUnit);
-        return reference && referenceLoad !== null ? { weight: referenceLoad, dir: 'hold', reason: 'Use the other day only as a starting reference. This program day has no comparable completed history yet.', reps, last: reference, lastUnit: referenceEntry?.unit || evaluationUnit, action: 'initial', referenceOnly: true } : null;
+        return reference && referenceLoad !== null ? { unit: evaluationUnit, weight: referenceLoad, dir: 'hold', reason: 'Use the other day only as a starting reference. This program day has no comparable completed history yet.', reps, last: reference, lastUnit: referenceEntry?.unit || evaluationUnit, action: 'initial', referenceOnly: true } : null;
     }
     let decision;
     for (let i = analysis.workouts.length - 1; i >= 0 && !decision; i--) {
@@ -455,10 +461,12 @@ export function semanticStartingReferenceForShell(program, history, day, nextId,
 export function deriveProgressionSelectionEvidence(workouts = []) {
     const rows = new Map();
     const excluded = new Set(['unobserved', 'non_comparable', 'context_limited', 'interrupted', 'incomplete']);
-    const ensure = (id) => {
+    const ensure = id => {
         const existing = rows.get(id);
         if (existing) return existing;
-        const row = { comparableExposures: 0, styleExposures: 0, failureCount: 0, stallCount: 0, loadingBlockedCount: 0, rirReportedSets: 0, rirEligibleSets: 0, e1rmSamples: 0 };
+        const row = { comparableExposures: 0, styleExposures: 0, failureCount: 0, stallCount: 0,
+            loadingBlockedCount: 0, rirReportedSets: 0, rirEligibleSets: 0, e1rmSamples: 0,
+            lastStyle: null, lastFlatSignature: null, flatStreak: 0, failureStreak: 0 };
         rows.set(id, row);
         return row;
     };
@@ -466,24 +474,58 @@ export function deriveProgressionSelectionEvidence(workouts = []) {
         for (const decision of workout?.progression ?? []) {
             const id = decision?.exerciseId;
             if (!id) continue;
+            const planned = (workout?.session?.exercises ?? []).find(ex => ex.exerciseId === id);
+            const style = planned?.progressionStyle ?? 'unknown';
             const row = ensure(id);
-            const sets = (workout?.performedSets ?? []).filter(set => set.exerciseId === id);
-            const comparable = !excluded.has(decision.outcome);
-            if (!comparable) continue;
-            row.comparableExposures += 1;
-            // Saved shell history does not record a separate style-version stamp. Within a block the style
-            // is stable, so comparable exposures are also the conservative evidence count for that style.
-            row.styleExposures += 1;
-            if (decision.outcome === 'failure') {
-                row.failureCount += 1;
-                row.stallCount += 1;
+            // An athlete can change methods during a block. Old linear failures
+            // cannot be silently counted as exposures of newly selected dynamic.
+            if (row.lastStyle !== null && style !== row.lastStyle) {
+                Object.assign(row, { comparableExposures: 0, styleExposures: 0,
+                    failureCount: 0, stallCount: 0, loadingBlockedCount: 0,
+                    rirReportedSets: 0, rirEligibleSets: 0, e1rmSamples: 0,
+                    lastFlatSignature: null, flatStreak: 0, failureStreak: 0 });
             }
+            row.lastStyle = style;
+            const sets = (workout?.performedSets ?? []).filter(set => set.exerciseId === id)
+                .sort((a, b) => a.setIndex - b.setIndex);
+            const comparable = !excluded.has(decision.outcome);
+            if (!comparable) {
+                row.lastFlatSignature = null;
+                row.flatStreak = 0;
+                row.failureStreak = 0;
+                row.stallCount = 0;
+                continue;
+            }
+            row.comparableExposures += 1;
+            row.styleExposures += 1;
+            if (decision.outcome === 'failure') row.failureCount++;
+            row.failureStreak = decision.outcome === 'failure' ? row.failureStreak + 1 : 0;
             if (decision.outcome === 'success_blocked') row.loadingBlockedCount += 1;
             if (numberOf(decision.estimated1RM) > 0) row.e1rmSamples += 1;
             for (const set of sets) {
                 row.rirEligibleSets += 1;
                 if (numberOf(set.rir) !== null) row.rirReportedSets += 1;
             }
+            // Repeated unchanged work is a plateau only with full comparable
+            // prescriptions and actual effort evidence. Improved reps, changing
+            // RIR, edited plans, partial sessions or missing effort reset the
+            // streak. Never confuse two ordinary holds with a proven stall.
+            const complete = Number.isInteger(planned?.sets) && planned.sets > 0
+                && sets.length === planned.sets;
+            const measured = complete && sets.every(set =>
+                numberOf(set.load) > 0 && numberOf(set.reps) > 0
+                && numberOf(set.rir) !== null);
+            const unchanged = decision.reasonCode === 'normal_progression' && measured;
+            const signature = unchanged ? JSON.stringify({
+                style, role: planned.role, prescription: planned.prescription,
+                sets: sets.map(set => [numberOf(set.load), numberOf(set.reps), numberOf(set.rir)])
+            }) : null;
+            row.flatStreak = signature && signature === row.lastFlatSignature
+                ? row.flatStreak + 1 : signature ? 1 : 0;
+            row.lastFlatSignature = signature;
+            // Count the CURRENT unresolved streak, not every past plateau.
+            // A successful progression must erase stale stagnation pressure.
+            row.stallCount = Math.max(row.failureStreak, Math.max(0, row.flatStreak - 2));
         }
     }
     return Object.fromEntries([...rows.entries()].map(([id, row]) => [id, {
@@ -517,8 +559,14 @@ export function analyzeShellHistoryForNextEngine(program, history, legacyExercis
     // benefit too; retain minimum exposure and the separate recovery exit rules.
     const plannedWeeks = Number(program?.nextEngine?.cycleTemplate?.weeks);
     if (program?.cycleId && cycleState.phase !== 'recovery' && Number.isInteger(plannedWeeks) && plannedWeeks > 0) {
-        const plannedWorkouts = plannedWeeks * snap.program.sessions.length;
-        cycleState.reviewAfterWorkouts = Math.max(cycleState.minimumWorkouts, Math.min(cycleState.reviewAfterWorkouts, plannedWorkouts));
+        const days = snap.program.sessions.length;
+        const plannedWorkouts = plannedWeeks * days;
+        const phaseState = startPhase(createInitialCycleState(snap.request.goal.type, days), cycleState.phase, snap.request.goal.type, days);
+        // Explicit fixed blocks may be one week, or change the number of training days.
+        // Re-read their actual schedule so older saved previews receive the correction too.
+        // Causal performance/recovery evidence still decides eligibility below.
+        cycleState.minimumWorkouts = Math.min(phaseState.minimumWorkouts, plannedWorkouts);
+        cycleState.reviewAfterWorkouts = Math.max(cycleState.minimumWorkouts, Math.min(phaseState.reviewAfterWorkouts, plannedWorkouts));
     }
     const recent = [];
     const exposures = new Map();
@@ -535,7 +583,8 @@ export function analyzeShellHistoryForNextEngine(program, history, legacyExercis
             if (!sets.length)
                 continue;
             const list = exposures.get(ex.exerciseId) ?? [];
-            list.push({ completedAt: workout.completedAt, sets, progression });
+            list.push({ completedAt: workout.completedAt, sets, progression,
+                plannedExercise: ex });
             exposures.set(ex.exerciseId, list);
         }
     }
@@ -564,6 +613,23 @@ export function analyzeShellHistoryForNextEngine(program, history, legacyExercis
     if (subjective >= 3 && recovery.status === 'normal')
         recovery = { ...recovery, status: 'watch', confidence: 'moderate', rationale: `${recovery.rationale} Subjective soreness also remained unresolved in ${subjective} of the last five logged sessions.` };
     const classification = classify(recovery, positive, negative, diagnoses, workouts.length);
+    // Fixed cycle blocks need evidence from their whole authored week. Extra
+    // repeats of one day remain valid performance evidence, but cannot stand in
+    // for untrained days when requesting a normal phase transition. Recovery
+    // retains its separate causal entry/exit rules, including early entry.
+    let plannedDayCoverage;
+    if (program?.cycleId && cycleState.phase !== 'recovery'
+        && Number.isInteger(plannedWeeks) && plannedWeeks > 0) {
+        const observed = new Set(workouts.map(workout => workout.session.id));
+        const missingDayIds = program.days.filter(day => !observed.has(String(day.id))).map(day => day.id);
+        plannedDayCoverage = { requiredDays: program.days.length,
+            observedDays: program.days.length - missingDayIds.length, missingDayIds };
+        if (missingDayIds.length && cycleState.recommendedNextPhase
+            && cycleState.recommendedNextPhase !== 'recovery' && classification !== 'fatigue_limited') {
+            cycleState = { ...cycleState, status: 'building', recommendedNextPhase: undefined,
+                rationale: `Logged working sets cover ${plannedDayCoverage.observedDays} of ${plannedDayCoverage.requiredDays} planned training days. Train the remaining days before a normal phase change; extra repeats do not replace missing days.` };
+        }
+    }
     const ignoredIds = [...new Set(workouts.flatMap(w => w.ignoredLegacyExerciseIds))];
     const athleteResponse = deriveAthleteResponse({ programId: String(program.id), workouts,
         customExercises: snap.request.customExercises, unit: snap.request.equipment?.loading?.unit ?? program.config?.unit ?? 'lb',
@@ -573,6 +639,7 @@ export function analyzeShellHistoryForNextEngine(program, history, legacyExercis
         excludedHistoryEntries: normalized.excluded, workouts, workoutCount: workouts.length, performedSetCount: workouts.reduce((n, w) => n + w.performedSets.length, 0),
         ignoredSetCount: entries.reduce((n, e) => n + Object.entries(e.perf ?? {}).filter(([id]) => ignoredIds.includes(id)).reduce((m, [, p]) => m + (p.sets?.filter(s => !s.sub).length ?? 0), 0), 0),
         ignoredLegacyExerciseIds: ignoredIds, recovery, cycleState, classification,
+        ...(plannedDayCoverage ? { plannedDayCoverage } : {}),
         successfulExerciseIds: successful, protectedExerciseIds: [...new Set(protectedIds)], replaceExerciseIds: evidence.replaceExerciseIds,
         techniqueLimitedExerciseIds: evidence.techniqueLimitedExerciseIds, fatigueLimitedExerciseIds: evidence.fatigueLimitedExerciseIds,
         progressionEvidenceByExercise, diagnoses,

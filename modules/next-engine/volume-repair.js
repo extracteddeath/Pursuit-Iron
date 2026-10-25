@@ -503,13 +503,210 @@ export function enforceShellWeekCapacity(program, legacyExercises = []) {
     }
     return { program: current, changes };
 }
+
+/**
+ * M309: Retain feasible focused regional work at a hypertrophy -> strength
+ * boundary. This is a set *reallocation* over the generated executable cells:
+ * never alter exercises, strength anchors, repetitions, progression or user
+ * edits. Accept moves only when every work-week is capacity-safe, public
+ * regional bounds are preserved and complete engine audits do not regress.
+ */
+export function rebalanceFocusedStrengthEntry(previous, program, legacyExercises = [], priorSnapshot = null) {
+    if ((!priorSnapshot && previous?.nextEngine?.program?.phase !== 'hypertrophy_accumulation')
+        || program?.nextEngine?.program?.phase !== 'strength_accumulation')
+        return program;
+    const context = snapshotContext(program, legacyExercises);
+    if (context.request.preferences.volumeApproach === 'minimalist') return program;
+    const prior = priorSnapshot ?? captureShellVolumeSnapshot(previous, workWeeks(previous), legacyExercises);
+    if (!prior || prior.missing) return program;
+    const targets = shellVolumeTargets(program, context.request);
+    const prescriptions = createMusclePrescriptions(context.request, 'strength_accumulation');
+    const focus = PUBLIC_MEV_REGIONS.filter(region => {
+        const priority = context.request.goal.musclePriorities[PUBLIC_REGION_MUSCLE[region]];
+        return ['high', 'specialization', 'primary'].includes(priority)
+            && (prior.regions[region] || 0) >= 4;
+    });
+    if (!focus.length) return program;
+    const preferred = Object.fromEntries(prescriptions.map(p => [p.muscle, p.preferred]));
+    const desired = Object.fromEntries(focus.map(region => {
+        const muscle = PUBLIC_REGION_MUSCLE[region];
+        // Half of the actual last hypertrophy week, but capped against the
+        // strength phase's useful preference. Back width and thickness are
+        // separate; neither may consume the other's entire preference.
+        const phaseAllowance = (Number(preferred[muscle]) || 0)
+            * (muscle === 'back' ? .65 : 1.1);
+        const upper = targets.find(t => t.region === region)?.mrv ?? 0;
+        return [region, Math.min(prior.regions[region] * .5, phaseAllowance, upper)];
+    }));
+    let current = program;
+    const changes = [];
+    const weekCount = workWeeks(program);
+    const permitted = (before, after, baselineAudits) => {
+        if (after.missing || after.weeks.length !== weekCount) return false;
+        for (let wi = 0; wi < weekCount; wi++) {
+            const bw = before.weeks[wi], aw = after.weeks[wi];
+            if (!aw || aw.missing) return false;
+            for (const target of targets) {
+                const region = target.region;
+                const lower = focus.includes(region)
+                    ? bw.regions[region] - EPS
+                    : Math.min(target.mev, bw.regions[region]) - EPS;
+                if (aw.regions[region] < lower
+                    || aw.regions[region] > Math.max(target.mrv, bw.regions[region]) + EPS)
+                    return false;
+            }
+            for (const s of aw.sessions)
+                if (s.estimatedMinutes > s.maxMinutes + EPS) return false;
+            const nextAudit = auditProgram({ ...program.nextEngine.program,
+                sessions: aw.sessions, events: aw.events, muscleLedger: aw.muscleLedger }, context.request);
+            const oldCounts = baselineAudits[wi];
+            if (Object.entries(auditCounts(nextAudit)).some(([key, n]) => n > (oldCounts[key] || 0)))
+                return false;
+        }
+        return true;
+    };
+    for (let step = 0; step < 3; step++) {
+        const before = auditShellVolume(current, legacyExercises);
+        if (before.missing) break;
+        const first = before.weeks[0];
+        const outstanding = focus
+            .filter(region => desired[region] > first.regions[region] + .05)
+            .sort((a, b) => (desired[b] - first.regions[b]) - (desired[a] - first.regions[a]));
+        if (!outstanding.length) break;
+        const baselineAudits = before.weeks.map(week => auditCounts(auditProgram({
+            ...current.nextEngine.program, sessions: week.sessions, events: week.events,
+            muscleLedger: week.muscleLedger }, context.request)));
+        let best = null;
+        for (const region of outstanding) {
+            const slots = first.sessions.flatMap(session => session.exercises.map(ex => ({
+                session, ex, def: context.exerciseMap.get(ex.exerciseId)
+            })));
+            const editable = slot => !STRENGTH.has(slot.ex.role)
+                && shellPrescriptionFieldOwner(current,
+                    current.overrides?.[slot.ex.shellKey] ?? {}, 'sets') !== 'user';
+            const recipients = slots.filter(slot => slot.def && editable(slot)
+                && publicRegionContribution(slot.def, region) >= .4
+                && Array.from({ length: weekCount }, (_, i) =>
+                    current.nextWeekPrescriptions?.[slot.ex.shellKey]?.[i + 1]?.sets)
+                    .every(sets => Number.isFinite(sets) && sets < 5))
+                .sort((a, b) => publicRegionContribution(b.def, region)
+                    - publicRegionContribution(a.def, region)
+                    || a.ex.shellKey.localeCompare(b.ex.shellKey)).slice(0, 6);
+            for (const recipient of recipients) {
+                // A zero-donor candidate is preferred when genuine session
+                // capacity remains. Otherwise search only same-day trades,
+                // never strip prioritized work or strength-specific practice.
+                const donors = slots.filter(slot => slot.session.shellDayId === recipient.session.shellDayId
+                    && slot.ex.shellKey !== recipient.ex.shellKey && slot.def && editable(slot)
+                    && focus.every(f => publicRegionContribution(slot.def, f) <= EPS)
+                    && Array.from({ length: weekCount }, (_, i) =>
+                        current.nextWeekPrescriptions?.[slot.ex.shellKey]?.[i + 1]?.sets)
+                        .every(sets => Number.isFinite(sets) && sets > 1))
+                    .sort((a, b) => a.ex.shellKey.localeCompare(b.ex.shellKey)).slice(0, 6);
+                for (const donor of [null, ...donors]) {
+                    const ops = [{ key: recipient.ex.shellKey, delta: 1 },
+                        ...(donor ? [{ key: donor.ex.shellKey, delta: -1 }] : [])];
+                    const cells = { ...current.nextWeekPrescriptions };
+                    for (const op of ops) {
+                        const existing = cells[op.key];
+                        cells[op.key] = { ...existing };
+                        for (let w = 1; w <= weekCount; w++)
+                            cells[op.key][w] = { ...existing[w], sets: existing[w].sets + op.delta };
+                    }
+                    const candidate = { ...current, nextWeekPrescriptions: cells };
+                    const after = auditShellVolume(candidate, legacyExercises);
+                    const gain = Math.min(desired[region], after.weeks[0]?.regions[region] ?? 0)
+                        - Math.min(desired[region], first.regions[region]);
+                    if (gain <= .05 || !permitted(before, after, baselineAudits)) continue;
+                    const score = gain - (donor ? .025 : 0);
+                    if (!best || score > best.score + EPS)
+                        best = { candidate, region, ops, gain, score };
+                }
+            }
+        }
+        if (!best) break;
+        current = best.candidate;
+        changes.push({ region: best.region, creditedSetsGained: Math.round(best.gain * 10) / 10,
+            operations: best.ops, weeks: weekCount });
+    }
+    const after = captureShellVolumeSnapshot(current, 1, legacyExercises);
+    const unresolved = focus.filter(region => after && after.regions[region] + .05 < desired[region]);
+    return { ...current, nextEngine: { ...current.nextEngine,
+        focusedStrengthDose: { status: unresolved.length ? 'limited' : changes.length ? 'improved' : 'unchanged',
+            changes, unresolved, target: desired, sourceWeek: workWeeks(previous),
+            comparison: 'last_hypertrophy_week_to_first_strength_week' } } };
+}
+
+// Preserve executable strength-week continuity using spare accessory capacity.
+// Only engine-owned cells are eligible. Each single-set addition must preserve
+// regional/muscle ceilings, session time and the complete engine audit vector.
+export function preserveStrengthWeekContinuity(previous, program, legacyExercises = [], priorSnapshot = null) {
+    if ((!priorSnapshot && previous?.nextEngine?.program?.phase !== 'hypertrophy_accumulation')
+        || program?.nextEngine?.program?.phase !== 'strength_accumulation') return program;
+    const prior = priorSnapshot ?? captureShellVolumeSnapshot(previous, workWeeks(previous), legacyExercises);
+    if (!prior || prior.missing) return program;
+    const count = view => view.sessions.reduce((n, s) => n + s.exercises.reduce((m, e) => m + e.sets, 0), 0);
+    const previousSets = count(prior), floor = Math.ceil(previousSets * .5);
+    if (previousSets < 16) return program;
+    const context = snapshotContext(program, legacyExercises);
+    const targets = shellVolumeTargets(program, context.request);
+    const prescriptions = createMusclePrescriptions(context.request, 'strength_accumulation');
+    const audit = view => auditCounts(auditProgram({ ...program.nextEngine.program,
+        sessions: view.sessions, events: view.events, muscleLedger: view.muscleLedger }, context.request));
+    let current = program;
+    const changes = [];
+    for (let week = 1; week <= workWeeks(program); week++) {
+        let before = captureShellVolumeSnapshot(current, week, legacyExercises, null, context);
+        if (!before || before.missing) continue;
+        // Adding at most the deficit is bounded and cannot overshoot the floor.
+        for (let deficit = floor - count(before); deficit > 0; deficit--) {
+            const baseline = audit(before);
+            let accepted = null;
+            const slots = before.sessions.flatMap(s => s.exercises)
+                .filter(e => !STRENGTH.has(e.role) && e.sets < 5
+                    && shellPrescriptionFieldOwner(current, current.overrides?.[e.shellKey] ?? {}, 'sets') !== 'user')
+                .sort((a, b) => a.sets - b.sets || a.shellKey.localeCompare(b.shellKey));
+            for (const exercise of slots) {
+                const key = exercise.shellKey, cell = current.nextWeekPrescriptions?.[key]?.[week];
+                if (!cell || !Number.isFinite(cell.sets)) continue;
+                const candidate = { ...current, nextWeekPrescriptions: { ...current.nextWeekPrescriptions,
+                    [key]: { ...current.nextWeekPrescriptions[key], [week]: { ...cell, sets: cell.sets + 1 } } } };
+                const after = captureShellVolumeSnapshot(candidate, week, legacyExercises, null, context);
+                if (!after || after.missing || count(after) !== count(before) + 1
+                    || after.sessions.some(s => s.estimatedMinutes > s.maxMinutes + EPS)) continue;
+                if (targets.some(t => after.regions[t.region] > Math.max(t.mrv, before.regions[t.region]) + EPS)) continue;
+                if (prescriptions.some(p => after.muscleLedger[p.muscle].fractionalSets > Math.max(
+                    publicMevInternalSafetyCeiling(context.request, 'strength_accumulation', p.muscle, p.upper) * 1.2,
+                    before.muscleLedger[p.muscle].fractionalSets) + EPS)) continue;
+                if (Object.entries(audit(after)).some(([key, n]) => n > (baseline[key] || 0))) continue;
+                accepted = { candidate, after, key };
+                break;
+            }
+            if (!accepted) break; // The caller rejects an unrepairable finalist.
+            current = accepted.candidate;
+            before = accepted.after;
+            changes.push({ week, key: accepted.key, delta: 1 });
+        }
+    }
+    if (!changes.length) return program;
+    current = { ...current, nextEngine: { ...current.nextEngine,
+        strengthWeekContinuity: { previousSets, minimumWeeklySets: floor, changes } } };
+    return attachRegionalDose(current, legacyExercises, [
+        ...(program.nextEngine.regionalDose?.changes ?? []),
+        ...changes.map(({ week, key, delta }) => ({ week, sets: [{ key, delta }], reason: 'strength_week_continuity' }))
+    ]);
+}
+
 export function finalizeGeneratedShellVolume(program, legacyExercises = []) {
     if (!program?.nextEngine?.program || !program.nextEngine.request) return program;
     const result = reconcileShellWeekDose(program, legacyExercises);
     const capacity = enforceShellWeekCapacity(result.program, legacyExercises);
-    const after = auditShellVolume(capacity.program, legacyExercises);
     const changes = [...result.changes, ...capacity.changes];
-    return { ...capacity.program, nextEngine: { ...capacity.program.nextEngine,
+    return attachRegionalDose(capacity.program, legacyExercises, changes);
+}
+function attachRegionalDose(program, legacyExercises, changes) {
+    const after = auditShellVolume(program, legacyExercises);
+    return { ...program, nextEngine: { ...program.nextEngine,
         regionalDose: { status: after.issues.length ? 'partial' : changes.length ? 'success' : 'unchanged',
             changed: changes.length > 0, changes,
             remaining: after.issues.map(i => ({ region: i.region, status: i.status, actual: i.v,

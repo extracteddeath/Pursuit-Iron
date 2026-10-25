@@ -35,7 +35,7 @@ FAST TO USE UNDER A BAR
 • Body measurements, bodyweight log, achievements, shareable session cards
 
 YOUR DATA IS YOURS
-No account. No server. No ads. No subscription. Everything stays on your device and works completely offline — a basement gym with no signal changes nothing. Move between your own devices with an export you control, using a merge built so your training history can never be lost.
+No account. No server. No ads. No subscription. Everything stays on your device and works completely offline — a basement gym with no signal changes nothing. Move between your own devices with an export you control, using a merge that preserves existing records and previews changes before you confirm. Keep a separate backup: device loss or cleared browser data can still remove local records.
 
 HONEST BY DESIGN
 Volume advice shows the set counts it rests on. The model that estimates your personal productive volume range stays silent unless your history genuinely contains enough variation to identify one — a group average dressed up as a personal finding would be worse than no answer at all. That restraint is why the coaching is worth reading.
@@ -44,3 +44,8 @@ Free, forever. Built by a tiny independent team..
 
 
 Developer map: [ENGINE_ARCHITECTURE.md](ENGINE_ARCHITECTURE.md). Verified engine sequence: [ENGINE_UPGRADE_PLAN.md](ENGINE_UPGRADE_PLAN.md). Engine verification: [M235_ENGINE_VERIFICATION_2_REPORT.md](M235_ENGINE_VERIFICATION_2_REPORT.md). Post-merge assurance: [M236_VERIFICATION_ASSURANCE_REPORT.md](M236_VERIFICATION_ASSURANCE_REPORT.md). CI supply-chain assurance: [M237_CI_SUPPLY_CHAIN_REPORT.md](M237_CI_SUPPLY_CHAIN_REPORT.md).
+
+Repository hygiene: generated screenshots, local ZIP packages and build output are ignored.
+Historical B/M/R milestone audit reports no longer needed by current verification were
+removed from the live tree; they remain recoverable from Git history. Current
+engineering contracts, UI guidance and regression tests remain in this repository.

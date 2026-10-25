@@ -3,7 +3,8 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import puppeteer from 'puppeteer-core';
-import { EXERCISES, STORE_VERSION } from '../modules/App.js';
+import { EXERCISES, STORE_VERSION } from '../modules/engine-api.js';
+
 import { generateNextProgramForShell } from '../modules/next-engine/app-shell-adapter.js';
 import { nextProgramToShellProgram } from '../modules/next-engine/app-shell-adapter.js';
 import { createExerciseMap } from '../modules/next-engine/exercise-db.js';
@@ -67,7 +68,7 @@ try {
     await openPlan();
     await page.waitForSelector('[data-volume-auto-fix]');
     const before = await page.evaluate(async id => {
-        const { volumeAudit, plannedWeek } = await import('./modules/App.js');
+        const { volumeAudit, plannedWeek } = await import('./modules/engine-api.js');
         const p = JSON.parse(localStorage.getItem('wpb:v1')).saved.find(p => p.id === id);
         return { issues: volumeAudit(p).issues, counts: Array.from({ length: 6 }, (_, i) => plannedWeek(p, i + 1).sets) };
     }, fixture.id);
@@ -83,12 +84,15 @@ try {
     });
     await page.locator('[data-volume-auto-fix]').click();
     await page.waitForFunction(() => window.__m199AutoFixClicked === true);
+    await page.waitForSelector('[data-program-review]');
+    assert.equal(await page.evaluate(id => JSON.parse(localStorage.getItem('wpb:v1')).saved.find(p => p.id === id)?.nextEngine?.volumeRepair?.status === 'success', fixture.id), false, 'preview must not apply a repair');
+    await page.locator('[data-apply-program-review]').click();
     await page.waitForSelector('[data-volume-repair-status]', { timeout: 30000 });
     const feedback = await page.$eval('[data-volume-repair-status]', e => ({ status: e.getAttribute('data-volume-repair-status'), text: e.textContent }));
     assert.equal(feedback.status, 'success', feedback.text);
     await page.waitForFunction(id => JSON.parse(localStorage.getItem('wpb:v1'))?.saved?.find(p => p.id === id)?.nextEngine?.volumeRepair?.status === 'success', {}, fixture.id);
     const after = await page.evaluate(async id => {
-        const { volumeAudit, plannedWeek } = await import('./modules/App.js');
+        const { volumeAudit, plannedWeek } = await import('./modules/engine-api.js');
         const p = JSON.parse(localStorage.getItem('wpb:v1')).saved.find(p => p.id === id);
         return { issues: volumeAudit(p).issues, counts: Array.from({ length: 6 }, (_, i) => plannedWeek(p, i + 1).sets), slots: p.days.reduce((n, d) => n + d.exercises.length, 0) };
     }, fixture.id);
@@ -98,7 +102,7 @@ try {
     await page.reload({ waitUntil: 'networkidle0' }); await openPlan();
     assert.equal(await page.$('[data-volume-auto-fix]'), null, 'resolved warning must stay resolved after reload');
     const reloadCounts = await page.evaluate(async id => {
-        const { plannedWeek } = await import('./modules/App.js');
+        const { plannedWeek } = await import('./modules/engine-api.js');
         const p = JSON.parse(localStorage.getItem('wpb:v1')).saved.find(p => p.id === id);
         return Array.from({ length: 6 }, (_, i) => plannedWeek(p, i + 1).sets);
     }, fixture.id);

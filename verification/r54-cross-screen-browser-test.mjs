@@ -43,7 +43,11 @@ async function assertResumeClear(page){
     return {width:box.width,height:box.height,clear:button.contains(top),
       covering:top?.closest('.wpb-toast')?.textContent||top?.getAttribute('aria-label'),
       toastBottom:toast?getComputedStyle(toast).bottom:null,
-      toastTarget:toast?.style.bottom};
+      toastTarget:toast?.style.bottom,
+      notice:toast?.getBoundingClientRect().toJSON(),noticeParent:toast?.offsetParent?.getBoundingClientRect().toJSON(),
+      barriers:[...document.querySelectorAll('.wpb-live-dock,.wpb-tabbar,.wpb-workout-footer')].map(el=>({
+        class:el.className,box:el.getBoundingClientRect().toJSON(),visibility:getComputedStyle(el).visibility,
+        display:getComputedStyle(el).display,transform:getComputedStyle(el).transform}))};
   });
   assert.ok(target.width>=44&&target.height>=44,'Resume retains its real 44px pointer target');
   assert.ok(target.clear,'Resume is immediately tappable when its dock appears: '+JSON.stringify(target));
@@ -237,9 +241,12 @@ async function verifyBrowseMemory(browser,theme,width){
   page.on('pageerror',error=>errors.push(error.message));
   const entries=Array.from({length:64},(_,i)=>({
     id:'r60-history-'+i,programId:program.id,programName:program.name,dayId:'upper',dayLabel:'Upper',
-    weekIndex:1,date:Date.now()-(i+1)*86400000,unit:'lb',duration:1800,totalSets:2,tonnage:1470,
+    weekIndex:1,date:Date.now()-(i+1)*86400000,unit:'lb',duration:1800,totalSets:5,tonnage:5400,
     perf:{'bb-bench':{weight:185,reps:6,sets:[{w:185,r:6,done:true,rir:2,rirReported:true}]},
-      'inc-curl':{weight:30,reps:12,sets:[{w:30,r:12,done:true,rir:2,rirReported:true}]}}
+      'inc-curl':{weight:30,reps:12,sets:[{w:30,r:12,done:true,rir:2,rirReported:true}]},
+      'back-squat':{weight:245,reps:6,sets:[{w:245,r:6,done:true,rir:2,rirReported:true}]},
+      'deadlift':{weight:315,reps:6,sets:[{w:315,r:6,done:true,rir:2,rirReported:true}]},
+      'ohp':{weight:95,reps:6,sets:[{w:95,r:6,done:true,rir:2,rirReported:true}]}}
   }));
   try{
     await page.setViewport({width,height:852,deviceScaleFactor:1,isMobile:true,hasTouch:true});
@@ -324,9 +331,12 @@ async function verifyBrowseMemory(browser,theme,width){
     assert.equal(await page.$eval('[data-history-id="r60-history-0"]',row=>row.dataset.open),'1','The expanded session is retained');
     assert.equal(await page.$$eval('.wpb-progress button',buttons=>buttons.find(b=>b.textContent==='By month').getAttribute('aria-pressed')),'true');
     await assertScroll(sessionsScroll,'Sessions returns to its own exact scroll position');
+    await clickText('Strength','.wpb-premium-tabs button');
+    await assertScroll(0,'The new Strength section starts at its own top');
+    const strengthScroll=await setScroll(120);assert.ok(strengthScroll>50);
     await clickText('Lifts','.wpb-premium-tabs button');await clickText('Records','[data-lift-pane]');
     await assertScroll(0,'A newly selected Lifts pane starts at its own top');
-    const recordsScroll=await setScroll(120);assert.ok(recordsScroll>50);
+    const recordsScroll=await setScroll(120);assert.ok(recordsScroll>=0); // Records can fit now that Strength has its own section.
     await clickText('Exercises','[data-lift-pane]');await assertScroll(0,'Exercises does not inherit the Records offset');
     await page.type('input[aria-label="Search your lifts"]','curl');
     await page.click('[data-tab="settings"]');await page.click('[data-tab="progress"]');
@@ -335,7 +345,8 @@ async function verifyBrowseMemory(browser,theme,width){
     assert.equal(await page.$eval('input[aria-label="Search your lifts"]',input=>input.value),'curl');
     assert.equal(await page.$$eval('.wpb-progress button.opt',buttons=>buttons.length),1,'The restored lift query retains its matching row');
     await clickText('Records','[data-lift-pane]');await assertScroll(recordsScroll,'Records returns to its own scroll position');
-    await clickText('Body','.wpb-premium-tabs button');await assertScroll(0,'Body does not inherit a long Records offset');
+    await clickText('Strength','.wpb-premium-tabs button');await assertScroll(strengthScroll,'Strength restores its own exact scroll position');
+    await clickText('Body','.wpb-premium-tabs button');await assertScroll(0,'Body does not inherit the Strength offset');
     await clickText('Sessions','.wpb-premium-tabs button');await assertScroll(sessionsScroll,'Switching sections restores Sessions exactly');
     await clickText('Lifts','.wpb-premium-tabs button');
     await page.click('[data-tab="home"]');await page.click('button[aria-label="Workout history"]');
@@ -356,6 +367,64 @@ async function verifyBrowseMemory(browser,theme,width){
     assert.deepEqual(withoutLoadStamp(await training()),withoutLoadStamp(before),'Reload retains every training record');
     assert.deepEqual(errors,[],'No browsing or reload errors');
     return {theme,width,libraryScroll,sessionsScroll,recordsScroll,clear};
+  }finally{await context.close();}
+}
+// Cohesion 13: real manual-program choices retain selection and deload semantics
+// while labels grow with text settings. Inactive weeks remain usable choices.
+async function verifyWeekChoices(browser,theme){
+  const context=await browser.createBrowserContext();
+  const page=await context.newPage(),errors=[];
+  page.on('pageerror',error=>errors.push(error.message));
+  const fixture={...program,config:{...program.config,deload:true}};
+  try{
+    await page.setViewport({width:320,height:1000,deviceScaleFactor:1,isMobile:true,hasTouch:true});
+    await page.evaluateOnNewDocument(value=>localStorage.setItem('wpb:v1',JSON.stringify(value)),
+      {...store(theme),saved:[fixture]});
+    await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
+    await page.goto('http://127.0.0.1:8796/',{waitUntil:'networkidle0'});
+    // Native auto-scroll collapses Home context; wait for the real card target to stop moving.
+    await page.locator('.hp-open').click({timeout:12000});
+    await page.waitForSelector('.wpb-week-rail');
+    for(const width of [320,393,834,1280])for(const font of [16,32]){
+      await page.setViewport({width,height:1000,deviceScaleFactor:1,isMobile:true,hasTouch:true});
+      await page.evaluate(px=>{document.documentElement.style.fontSize=px+'px';return new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));},font);
+      const geometry=await page.evaluate(()=>{
+        const root=document.querySelector('.wpb-program');
+        const choices=[...root.querySelectorAll('.wpb-week-rail>button')];
+        return {overflow:root.scrollWidth>root.clientWidth+1,choices:choices.map(b=>{
+          const range=document.createRange();range.selectNodeContents(b);
+          const box=b.getBoundingClientRect();
+          return {height:b.offsetHeight,opacity:Number(getComputedStyle(b).opacity),
+            label:parseFloat(getComputedStyle(b.querySelector('.wpb-ui-choice-label')).fontSize),
+            caption:parseFloat(getComputedStyle(b.querySelector('.wpb-ui-choice-caption')).fontSize),
+            clipped:[...range.getClientRects()].some(r=>r.width>1&&r.height>1&&
+              (r.left<box.left-1||r.right>box.right+1||r.top<box.top-1||r.bottom>box.bottom+1))};
+        })};
+      });
+      assert.ok(!geometry.overflow&&geometry.choices.length===5&&geometry.choices.every(b=>
+        b.height>=51&&b.opacity>=.9&&!b.clipped&&b.label>=font*.8125-.1&&b.caption>=font*.6875-.1),
+        'Whole, readable Program choices at '+JSON.stringify({theme,width,font,geometry}));
+      await page.$eval('.wpb-program-week-chip[data-deload="false"]:nth-child(2)',b=>b.click());
+      assert.equal(await page.$eval('.wpb-week-rail>button:nth-child(2)',b=>b.getAttribute('aria-pressed')),'true');
+      await page.$eval('.wpb-program-week-chip[data-deload="true"]',b=>{b.scrollIntoView({block:'nearest',inline:'nearest'});b.focus();});
+      await page.keyboard.press('Enter');
+      assert.equal(await page.$eval('.wpb-program-week-chip[data-deload="true"]',b=>b.getAttribute('aria-pressed')),'true',
+        'Keyboard can select the actual deload week');
+      assert.equal(await page.$$eval('.wpb-week-rail>button[aria-pressed="true"]',bs=>bs.length),1);
+    }
+    const cdp=await page.createCDPSession();
+    await cdp.send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'},{name:'forced-colors',value:'active'}]});
+    const forced=await page.evaluate(()=>{
+      const selected=document.querySelector('.wpb-week-rail>[aria-pressed="true"]'),idle=document.querySelector('.wpb-week-rail>[aria-pressed="false"]');
+      return {active:matchMedia('(forced-colors:active)').matches,selected:getComputedStyle(selected).backgroundColor,idle:getComputedStyle(idle).backgroundColor,
+        outline:parseFloat(getComputedStyle(selected).outlineWidth),transition:getComputedStyle(selected).transitionDuration};
+    });
+    assert.ok(forced.active&&forced.selected!==forced.idle&&forced.outline>=2&&forced.transition.split(',').every(x=>parseFloat(x)===0),
+      'Shared week choice retains forced-color selection, keyboard focus and reduced motion: '+JSON.stringify(forced));
+    assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),[fixture], 'Browsing weeks never edits the program');
+    assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).history),[], 'Browsing weeks never logs a session');
+    assert.deepEqual(errors,[]);
+    console.log('PASS Cohesion 13 Program choices '+theme+': 320/393/834/1280px, 100/200% text, manual/deload keyboard selection, readable inactive weeks, forced colors and unchanged data.');
   }finally{await context.close();}
 }
 const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html',
@@ -422,9 +491,13 @@ try{
     // ignored its active week and left all four buttons visually and semantically off.
     await page.evaluate(()=>localStorage.removeItem('wpb:live'));
     await page.reload({waitUntil:'networkidle0'});
-    await page.waitForSelector('.hp-open');
-    await page.click('.hp-open');
-    await page.waitForSelector('.wpb-program .wpb-week-rail');
+    // A reload can restore the previous detail route. Open Home explicitly rather
+    // than clicking a background program card that is still mounted but obscured.
+    await page.waitForSelector('[data-tab="home"]');
+    await page.click('[data-tab="home"]');
+    await page.waitForSelector('[data-view-frame="home"] .hp-open[aria-label="Open R54 Manual"]', {visible:true});
+    await page.click('[data-view-frame="home"] .hp-open[aria-label="Open R54 Manual"]');
+    await page.waitForSelector('.wpb-program .wpb-week-rail', {visible:true});
     const weeks=await page.evaluate(()=>{
       const buttons=[...document.querySelectorAll('.wpb-program .wpb-week-rail>button')];
       return buttons.map(b=>({name:b.textContent.trim().split('\n')[0],
@@ -511,6 +584,7 @@ try{
     diagnostics[theme]={...diagnostics[theme],library,detail,weeks,workout,inputs};
     await context.close();
   }
+  for(const theme of ['rose','rosewater'])await verifyWeekChoices(browser,theme);
   const flows=[];
   const nextSessions=[];
   const browsing=[];
@@ -520,6 +594,124 @@ try{
       nextSessions.push(await verifyNextSessionFlow(browser,theme,width));
       browsing.push(await verifyBrowseMemory(browser,theme,width));
     }
+  // M284: the R76 wide-screen fixtures are empty. Certify the real populated
+  // Sessions grid using the same recorded-set schema as the R60 64-session test.
+  // Screenshots capture both the initial overview and the scrolled history.
+  const wideHistory=[];
+  for(const theme of ['rose','rosewater']) for(const width of [900,1280]){
+    const context=await browser.createBrowserContext(),page=await context.newPage(),errors=[];
+    page.on('pageerror',error=>errors.push(error.message));
+    try{
+      await page.setViewport({width,height:850,deviceScaleFactor:1,isMobile:false,hasTouch:false});
+      await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
+      const entries=Array.from({length:16},(_,i)=>({
+        id:'m284-tablet-'+i,updatedAt:i%2===0?0:1700000000000+i,programId:i%2===0?program.id:'m285-secondary',
+        programName:i%2===0?program.name:'M285 Second Program',
+        dayId:'upper',dayLabel:'Upper',weekIndex:1,date:Date.now()-(i+1)*8*86400000,
+        unit:'lb',duration:1800,totalSets:2,tonnage:1470,
+        perf:{'bb-bench':{weight:185,reps:6,sets:[{w:185,r:6,done:true,rir:2,rirReported:true}]},
+          'inc-curl':{weight:30,reps:12,sets:[{w:30,r:12,done:true,rir:2,rirReported:true}]}}
+      }));
+      const state={...store(theme),saved:[program,{...program,id:'m285-secondary',name:'M285 Second Program',config:{...program.config,name:'M285 Second Program'}}],history:entries};
+      await page.evaluateOnNewDocument(data=>localStorage.setItem('wpb:v1',JSON.stringify(data)),state);
+      await page.goto('http://127.0.0.1:8796/',{waitUntil:'networkidle0'});
+      await page.waitForSelector('.wpb-tabbar');
+      await page.click('[data-tab="progress"]');
+      await page.waitForSelector('.wpb-history-session');
+      await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+      const sample=async()=>page.evaluate(()=>{
+        const pane=document.querySelector('.wpb-progress .wpb-page-scroll[data-scroll-key="sessions"]');
+        const chrome=document.querySelector('.wpb-progress-chrome');
+        const history=[...pane.querySelectorAll('.wpb-history-session')];
+        const filters=pane.querySelector('.wpb-history-filters');
+        const grouping=pane.querySelector('.wpb-progress-grouping');
+        const calendar=pane.querySelector('.wpb-training-history');
+        const p=pane.getBoundingClientRect(),ch=chrome.getBoundingClientRect();
+        const rect=el=>{const b=el?.getBoundingClientRect();return b?{x:b.x,y:b.y,right:b.right,bottom:b.bottom,width:b.width,height:b.height}:null;};
+        const css=getComputedStyle(pane);
+        return {viewport:innerWidth,columns:css.gridTemplateColumns,
+          display:css.display,scrollTop:pane.scrollTop,
+          count:history.length,headerOpaque:getComputedStyle(chrome).backgroundColor!=='rgba(0, 0, 0, 0)',
+          overflow:document.documentElement.scrollWidth>innerWidth+2,
+          viewportRect:rect(pane),chrome:rect(chrome),filters:rect(filters),
+          grouping:rect(grouping),calendar:rect(calendar),firstSession:rect(history[0]),
+          sessionInPane:history.every(node=>{const b=node.getBoundingClientRect();
+            return b.left>=p.left-2&&b.right<=p.right+2;})};
+      });
+      const initial=await sample();
+      await page.screenshot({path:path.join(root,`verification/m284-history-${theme}-${width}-top-phone.png`)});
+      assert.ok(initial.count===16&&!initial.overflow&&initial.headerOpaque&&initial.sessionInPane,
+        'Populated Sessions history remains bounded beneath wide header: '+JSON.stringify({theme,width,initial}));
+      assert.ok(width===1280?initial.display==='grid':initial.display!=='grid',
+        'History uses responsive grid only at wide layouts: '+JSON.stringify({theme,width,initial}));
+      if(width===1280)
+        assert.ok(initial.calendar&&initial.firstSession&&initial.grouping&&
+          initial.firstSession.y<initial.calendar.bottom-60&&
+          initial.firstSession.y<initial.viewportRect.bottom,
+          'First logged session begins beside the calendar, not after its full-height grid row: '+
+            JSON.stringify({theme,width,initial}));
+      const scrolled=await page.$eval('.wpb-progress .wpb-page-scroll[data-scroll-key="sessions"]',el=>{
+        el.scrollTop=Math.min(280,el.scrollHeight-el.clientHeight);return el.scrollTop;});
+      await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+      const after=await sample();
+      await page.screenshot({path:path.join(root,`verification/m284-history-${theme}-${width}-scrolled-phone.png`)});
+      assert.ok(scrolled>0&&after.scrollTop>0&&after.headerOpaque&&
+        Math.abs(after.chrome.y-initial.chrome.y)<1&&!after.overflow,
+        'Populated history scrolls below a stable, opaque Progress header: '+JSON.stringify({theme,width,initial,after}));
+      // M285: multi-program and multi-month histories can expose layout
+      // holes that single-program history never exercises. Rotate grouping
+      // views without changing the saved sessions or leaving the route.
+      const grouped={};
+      for(const mode of ['By month','By program']){
+        await page.evaluate(label=>{
+          const button=[...document.querySelectorAll('.wpb-progress-grouping button')]
+            .find(node=>node.textContent.trim()===label);
+          if(!button)throw new Error('Missing Sessions grouping '+label);
+          button.click();
+        },mode);
+        await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+        const layout=await page.$eval('.wpb-progress .wpb-page-scroll[data-scroll-key="sessions"]',pane=>{
+          const p=pane.getBoundingClientRect();
+          const groups=[...pane.querySelectorAll('.wpb-history-group-header')].map(node=>{
+            const r=node.getBoundingClientRect(),parent=node.parentElement?.getBoundingClientRect();
+            return {title:node.textContent.trim().slice(0,80),y:r.y,x:r.x,width:r.width,
+              parentLeft:parent?.left,parentRight:parent?.right,
+              parentTop:parent?.top,parentBottom:parent?.bottom};
+          });
+          const button=[...pane.querySelectorAll('.wpb-progress-grouping button')]
+            .find(node=>node.getAttribute('aria-pressed')==='true');
+          return {groups,selected:button?.textContent.trim(),
+            sessions:pane.querySelectorAll('.wpb-history-session').length,
+            overflow:document.documentElement.scrollWidth>innerWidth+2,
+            pane:{left:p.left,right:p.right},width:innerWidth};
+        });
+        await page.screenshot({path:path.join(root,
+          `verification/m285-history-${theme}-${width}-${mode==='By month'?'month':'program'}-phone.png`)});
+        assert.ok(layout.selected===mode&&layout.sessions===16&&
+          layout.groups.length>=2&&!layout.overflow&&
+          layout.groups.every(g=>g.parentLeft>=layout.pane.left-2&&
+            g.parentRight<=layout.pane.right+2),
+          'Multi-program/month grouping keeps full history in its reading lane: '+
+            JSON.stringify({theme,width,mode,layout}));
+        if(width===1280&&mode==='By month'){
+          const gaps=layout.groups.slice(1).map((g,i)=>g.parentTop-layout.groups[i].parentBottom);
+          assert.ok(gaps.every(gap=>gap>=-1&&gap<=64),
+            'Short month groups must not inherit a tall calendar grid row: '+
+              JSON.stringify({theme,width,gaps,layout}));
+        }
+        grouped[mode]=layout;
+      }
+      if(width===1280)
+        assert.ok(grouped['By month'].groups.length>=3&&
+          grouped['By program'].groups.length===2,
+          'Wide history exposes multiple month groups and two training programs');
+      const actualHistory=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).history);
+      assert.deepEqual(actualHistory,entries,
+        'Wide history inspection preserves logged sets and both migrated and edited record clocks');
+      assert.deepEqual(errors,[],'No wide history render errors');
+      wideHistory.push({theme,width,initial,after});
+    }finally{await context.close();}
+  }
   console.log('PASS R54/R59/R60: paired Library/Detail/Program/Workout layouts; active Plan, safe workout returns, next due week, retained Library/history/lift filters and independent Progress scroll at 320/393px; '+JSON.stringify({diagnostics,flows,nextSessions,browsing}));
 }finally{
   if(browser)await browser.close();

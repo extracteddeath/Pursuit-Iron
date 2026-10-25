@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { sessionSuggestion, prescribeSets, computeCell, resolveStyle, EX_BY_ID, applyCustomProgramSettings, parseStoredData, STORE_VERSION } from '../modules/App.js';
+import { sessionSuggestion, prescribeSets, computeCell, resolveStyle, EX_BY_ID, applyCustomProgramSettings, parseStoredData, STORE_VERSION } from '../modules/engine-api.js';
+
 import { evaluateWorkoutProgression } from '../modules/next-engine/performance.js';
 import { refreshPendingSetTargets } from '../modules/next-engine/workout-runtime.js';
 export const program = {id:'m222-custom',custom:true,weeks:10,config:{unit:'lb',weeks:10,goal:'both',experience:'intermediate',progression:'auto',deload:false,equipment:['cable','machine','barbell','bench','rack']},
@@ -8,7 +9,8 @@ export const program = {id:'m222-custom',custom:true,weeks:10,config:{unit:'lb',
 export const history = [{id:'fly-last',programId:program.id,dayId:'push',date:2000,weekIndex:1,unit:'lb',perf:{'cable-fly':{weight:25,reps:13,sets:[{w:25,r:19,rir:2},{w:25,r:10,rir:2},{w:20,r:11,rir:2},{w:25,r:10,rir:2}]}}}];
 const day=program.days[0],ex=EX_BY_ID['cable-fly'];
 export function rowsFor(p=program,hs=history){const s=sessionSuggestion(p,p.days[0],0,null,'lb',1,hs);return {suggestion:s,rows:prescribeSets(p,p.days[0],ex,0,1,'lb',s,{}, {},hs,false)};}
-const fly=rowsFor();assert.deepEqual(fly.rows.map(s=>[s.weight,s.reps]),[['25','20'],['25','11'],['25','10'],['25','11']]);
+const fly=rowsFor();assert.deepEqual(fly.rows.map(s=>[s.weight,s.reps]),[['25','20'],['25','11'],['20','12'],['25','11']],
+    'Rep-only progression must not raise the lighter working set to the session maximum');
 assert.ok(fly.rows.every(s=>s.target.w===s.weight&&s.target.prefillReps===s.reps));
 const dynamic=structuredClone(program);dynamic.progStyle={'cable-fly':'dynamic'};
 assert.equal(resolveStyle(dynamic,ex,false,1,{},history,day.id),'dynamic');
@@ -38,6 +40,23 @@ saved[0].done=true;saved[1].auto=false;saved[1].valueOwner='user';saved[2].weigh
 const before=structuredClone(saved),refreshed=refreshPendingSetTargets(saved,fly.rows);
 assert.equal(refreshed[0],saved[0]);assert.equal(refreshed[1],saved[1]);assert.equal(refreshed[2],saved[2]);assert.equal(refreshed[3].weight,'25');assert.equal(refreshed[3].reps,'11');assert.deepEqual(saved,before);
 assert.equal(refreshPendingSetTargets(refreshed,fly.rows),refreshed,'repair is idempotent');
+// A pre-M222 snapshot with ownership/auto flags but no recorded original rep prefill
+// cannot prove whether the current reps are a user entry. No number may be replaced.
+const unproven = structuredClone(saved[3]);
+delete unproven.target.prefillReps;
+unproven.reps = '17';
+const unprovenInput = [unproven];
+const legacyRestored = refreshPendingSetTargets(unprovenInput, [fly.rows[3]]);
+assert.equal(legacyRestored[0],unproven,
+    'missing prefill provenance must preserve the exact saved row, including user-typed reps');
+assert.equal(legacyRestored,unprovenInput, 'unprovable restoration should preserve array identity');
+// The same row with a documented prefill is safe only while both saved values match.
+const originalAuto = { ...saved[3], target: { ...saved[3].target } };
+assert.equal(refreshPendingSetTargets([originalAuto],[fly.rows[3]])[0].reps,fly.rows[3].reps,
+    'proven automatic rows still update to the new prescription');
+const uncertainWeight = { ...originalAuto, weight: '22.5' };
+assert.equal(refreshPendingSetTargets([uncertainWeight],[fly.rows[3]])[0],uncertainWeight,
+    'manually changed weights must not be overwritten even if reps match');
 const tech=structuredClone(program);tech.overrides['push:0'].techOverride='Last set: myo-reps';
 const edited=applyCustomProgramSettings(tech,{...tech.config,weeks:8,session:'s40',noSupersets:true,folder:' Custom ',description:'My plan'});
 assert.equal(edited.days,tech.days);assert.equal(edited.overrides,tech.overrides);assert.equal(edited.config.noSupersets,true);assert.equal(edited.weeks,8);assert.equal(edited.folder,'Custom');

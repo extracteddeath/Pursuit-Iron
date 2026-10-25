@@ -57,7 +57,11 @@ const normalized = normalizeRequest(request), actualPrior = createMusclePrescrip
 const actualAdapted = createMusclePrescriptions(normalizeRequest(requestWithAthleteResponse(request, reduced))).find(p => p.muscle === 'chest');
 assert.deepEqual(actualAdapted, personalizeMusclePrescription(actualPrior, reduced), 'response reaches canonical dosage');
 const plateau = deriveAthleteResponse({ ...input, workouts: history.map(w => ({ ...w, performedSets: w.performedSets.map(s => ({ ...s, load: 100 })) })) });
-assert.equal(plateau.muscles.chest.doseScale, 1.05);
+assert.equal(plateau.muscles.chest.doseScale, 1, 'An unchanged load trend cannot justify automatic set increases without dose-response evidence');
+assert.equal(plateau.muscles.chest.volumeReviewRequired, true);
+assert.equal(plateau.muscles.chest.reason, 'plateau_requires_dose_review');
+assert.deepEqual(personalizeMusclePrescription(prior, plateau), prior,
+    'A plateau-only review signal must not silently change prescribed muscle sets');
 const twoDays = deriveAthleteResponse({ ...input, workouts: [...history, ...history.map((w, i) => ({ ...w, historyId: `b${i}`, session: { ...w.session, id: 'day-B' }, performedSets: w.performedSets.map(s => ({ ...s, load: 20 })) }))] });
 assert.equal(Object.keys(twoDays.progressionVelocity).length, 2);
 assert.equal(twoDays.progressionVelocity[JSON.stringify(['day-A', id])].relativePerWeek, model.progressionVelocity[JSON.stringify(['day-A', id])].relativePerWeek);

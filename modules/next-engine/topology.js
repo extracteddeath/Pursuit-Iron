@@ -209,6 +209,11 @@ function candidateStructures(days, locked, preferred) {
         return bp - ap || a.display.localeCompare(b.display);
     });
 }
+/** The topology candidate owner is also the authoring-time split/day compatibility authority. */
+export function splitSupportsTrainingDays(split, days) {
+    return Number.isInteger(days) && days >= 2 && days <= 6
+        && candidateStructures(days, split, split).some(seed => seed.family === split);
+}
 function liftPreferredIntent(lift) {
     if (lift === 'bench_press')
         return ['bench_focus', 'upper', 'push', 'chest', 'chest_back', 'torso', 'shoulders', 'strength_full', 'full'];

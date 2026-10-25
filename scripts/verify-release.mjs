@@ -3,6 +3,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { releaseTests, verifyContractRegistry } from '../verification/contract-registry.mjs';
+import { verifyBuildProgression } from './release-build.mjs';
 
 const root = process.cwd();
 const read = p => fs.readFileSync(path.join(root, p), 'utf8');
@@ -15,6 +16,17 @@ const manifest = JSON.parse(read('RELEASE_MANIFEST.json'));
 const profile = JSON.parse(read('BUILD_PROFILE.json'));
 const sw = read('sw.js');
 const index = read('index.html');
+if (!Number.isSafeInteger(manifest.build) || manifest.build < 1) fail('release build must be a positive safe integer');
+if (!manifest.uiMilestone?.startsWith(`Build ${manifest.build} · `)) fail('UI release label must show the current build');
+if (!manifest.cache?.includes(`-b${manifest.build}-r`)) fail('offline cache must show the current build');
+const releaseBase = process.env.PURSUIT_RELEASE_BASE;
+if (releaseBase && !/^0+$/.test(releaseBase)) {
+    try {
+        if (!/^[0-9a-f]{40}$/.test(releaseBase)) throw new Error('Release comparison requires an exact base SHA');
+        const previous = JSON.parse(execFileSync('git', ['show', `${releaseBase}:RELEASE_MANIFEST.json`], { encoding: 'utf8' }));
+        console.log('RELEASE_BUILD_PROGRESSION ' + JSON.stringify(verifyBuildProgression(manifest, previous)));
+    } catch (error) { fail(error.message); }
+}
 
 const shellMatch = sw.match(/const SHELL=\[(.*?)\];/s);
 if (!shellMatch) fail('service worker SHELL list not found');

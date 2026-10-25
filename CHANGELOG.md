@@ -1,3 +1,381 @@
+## Build 909 / M362 — Prelaunch computation-boundary cleanup
+
+- Retire 256 duplicate engine exports from App.js and migrate 49 verification consumers to the canonical engine API. Pure computation tests and standalone parity no longer need the UI module.
+- Remove 280 unused imports, an unused cycle renderer and two unused constants; consolidate the UI's engine imports. Preserve training behavior, saved programs, history and backup compatibility.
+- Copy standalone semantic tests without UI-import rewrites. Enforce the single computation boundary alongside the existing independent golden scenarios and lower the inline-style budget after deleting unused presentation.
+- Prioritize feature ownership and shared styling in the launch plan. This pass reduces proven dead code; the large UI module and remaining presentation debt still require cleanup before declaring launch readiness.
+
+## Build 908 / M361 — Explanations match the load you can actually use
+
+- Reconcile prescribed-load explanations after the final equipment rounding. A 105 lb straight-set estimate rounded to 100 lb now says “Use 100 lb”; converted kilogram targets follow the same final values.
+- Make “Why this prescription?” consume the same final suggestion as the workout, including selected units and eligible user choices. It no longer bypasses equipment rounding to show an earlier engine estimate.
+- Read evidence from that suggestion’s matching raw exposure. Preserve day identity, normalize corrected records, exclude warmups/unfinished sets, and distinguish reported RIR from planned effort. Historical values convert once and display without long decimal tails; saved history stays unchanged.
+- Extend existing source and browser regressions through the actual Repeat → set rows → reason → Why → Focus → reload flow in pounds and kilograms. Training progression policy, workout layout and engine version remain unchanged.
+
+## Build 907 / M360 — Numbered web releases and retained training fixes
+
+- Give all shipped M321–M359 fixes a new visible build: saved cycle/week totals and equipment-aware previews, history-scoped progression, recovery safeguards and deliberate set-effort protection.
+- Advance the canonical build with `node scripts/finalize-release.mjs --next-build`. Settings, startup diagnostics, the release label and the offline cache receive the same build; repeated ordinary finalization stays stable.
+- Release CI compares with the actual PR base or pre-push release and rejects changed shipped bytes without a higher build. Source-only verification changes may retain their build.
+- Exercise installed-app Restart, the visible Settings build, offline reload and preserved storage in the maintained PWA update browser journey. Keep restart deliberate so an update does not interrupt training.
+- Verify GitHub Pages files against the exact merged release before claiming deployment. Engine version remains 0.65.9; no training-data migration is implied by the build number.
+
+## Build 906 / M320 — Adaptive training-cycle release
+
+- Publish the audited adaptive-cycle work from M311–M319 under a visible new build identity, while retaining app version 4.0.0 and canonical engine version 0.65.9 to avoid inventing an engine migration.
+- Existing standalone custom programs and saved fixed cycles can upgrade future blocks to adaptive exercise and split selection. Keep the original current program, training history, manually owned sets and reserved preview IDs intact.
+- Finalized hypertrophy-to-strength transitions compare audited split finalists using executable weekly prescriptions, athlete-prioritized lift frequency, focused/supporting muscle continuity, and bounded set-volume protection. Refuse infeasible transitions rather than overwriting the saved program.
+- Reduce duplicated weekly simulation and exercise-catalog work (M317/M319). M318's 320px mobile Chromium CPU-throttling benchmark remains in the permanent browser suite; it does not certify a physical Android device.
+- Complete release integrity, independent engine audit, source-generation contracts and the complete phone/offline browser matrix before merging. GitHub Pages deployment follows the repository's existing main-branch Pages configuration. A signed Android App Bundle and Google Play Console submission are separate, **not included in this build**.
+
+## M311 — Upgrade existing custom cycles to adaptive training
+
+- Existing custom cycles now offer **Upgrade future blocks to adaptive** in Cycle options. The saved plan stays active; future exercise selections, strength-specific split optimization and training-frequency targets update at the next legitimate block boundary using real workout history.
+- Preserve every existing session, manually edited set, current exercise, old block, prebuilt preview and user-authored future phase. Never silently overwrite a preview that already has workout history. Older legacy-first conversions retain their mandatory first fixed bridge and then become adaptive.
+- Standalone custom programs retain their existing Turn into Cycle path, now explicitly labeled as an adaptive upgrade with both adaptation switches enabled by default.
+- Add engine invariants and real phone/desktop conversion-to-upgrade browser coverage, plus M310 fixed-vs-adaptive cycle quality contracts.
+
+## M310 — Real fixed-versus-adaptive training cycle quality matrix
+
+- Deterministic before/after comparison of fixed-split and goal-adaptive cycles with identical seed, athlete, training time, equipment, focus, and week counts for four- and five-day examples.
+- Verify executable weekly sets, session clocks, phase transitions, lift-practice counts and exercise-level sets, reps and RIR. Emit real generated workout examples for audit rather than inventing illustrative numbers.
+- This milestone adds verification, not an unvalidated production training rule.
+
+## M309 — Audited focused dose reallocation at strength entry
+
+- Attempt real, bounded **working-set changes** when a prioritized muscle drops below half of the final hypertrophy week's credited dose in the first strength week. Prefer adding an existing focused accessory set within capacity; otherwise try an equal-set same-session transfer from a non-focused, non-strength accessory.
+- Apply moves consistently across each work week, preserve exercise identities, all strength anchors, explicit user edits, progressions and RIR prescriptions. Each proposed result is checked against session time limits, public regional floors/ceilings, prioritized-region no-loss guards, and full weekly engine audits. Reject any move that fails.
+- Keep prior-dose goals capped by useful strength-phase prescriptions: strength does not inherit a hypertrophy quota. Persist a truthful improved/limited explanation when no safe reallocation exists and let existing Cycle dose comparison report the actual executable result.
+- Retain M307 seeded back, delt, chest and posterior-chain regression coverage, including independent width/thickness accounting.
+
+## M307 — Focused muscle-region continuity at strength entry
+
+- Audit generated 4/5-day hypertrophy-to-strength transitions against the real executable final hypertrophy week and first strength week, separately measuring lats, upper back, side/rear delts, chest, and posterior-chain focus.
+- Refine the optimizer's **ranking-only** regional carryover: normal back regions retain the established 50/50 fraction of the aggregate phase target, while explicitly prioritized back work may rank candidates against 60% per region, bounded by previous productive doses. This makes insufficient lat work visible even when the reduced strength target is fully met.
+- Keep all hard time, weekly fatigue, equipment, exercise preference, lifting-frequency, and complete-program audit constraints. No fixed minimum working sets or hypertrophy-volume quotas are added; maintenance and extreme prior-dose safety remain unchanged.
+- Flag explicitly prioritized muscle regions that lose more than half their actual credited working sets across the phase boundary (when at least four prior credited sets were present). The compact Cycle disclosure visibly calls out these focus reductions without automatically prescribing extra strength-phase sets; ordinary and maintenance regions are not flagged.
+- Add seeded focus-specific output diagnostics plus unit regressions for back-width/upper-back credit, recovered focus, maintenance exclusions, extreme prior volumes, and UI display parity. Retain Build 905 / Engine 0.65.9 and synchronize release/offline hashes.
+
+## M306 — Compact cycle volume explanation and edited conversion regression
+
+- Show the new M305 final-week-to-first-week regional dose comparison within the existing Cycle **Up next** card and the read-only future-block preview. Keep the full muscle breakdown collapsed by default. Display explicit before/after working sets, credited regional doses, and signed percentage changes with clear baseline semantics.
+- Preserve the existing cycle screen hierarchy and design tokens. The prior opening-week set comparison is replaced with the true phase-boundary count whenever canonical transition metadata is available; older saved cycles keep their previous labels and do not invent missing information.
+- Extend cycle source/UX contracts and responsive phone/tablet browser coverage to validate the disclosure, its accessibility and narrow-screen fit. Add a conversion regression for high user-owned set prescriptions (30+ set day), requiring an audited volume-preserving transition or clear refusal without overwriting the source.
+- Keep Build 905 / Engine 0.65.9. No dose optimizer, strength-specific frequency, training target or fatigue policy is relaxed; update offline and release integrity hashes.
+
+## M305 — Explain actual regional dose changes at strength entry
+
+- Distinguish phase-adjusted regional target coverage from absolute productive training dose. A 100% strength-phase target score can coexist with a substantial reduction from the preceding hypertrophy block; do not label that as 100% volume retention.
+- After final executable prescriptions are materialized, compare the previous block's last work week with the next strength block's first week using the canonical shell volume snapshot and public regional dose ledger. Preserve positive fractional set credits, show before/after sets, signed set change, percentage change and total weekly working-set change; a newly trained region has no defined percentage baseline.
+- Persist the exact working-week comparison in both the cycle block's split decision and the generated program's cycle context, including for converted standalone programs and dynamically adapted transitions. It is explanatory metadata only; no extra volume quotas, exercise selection or fatigue override.
+- Expand the existing M304 generation contract with verified actual-week regional accounting, target-versus-dose semantics and program/cycle metadata parity. Retain Build 905 / Engine 0.65.9 and refresh release/offline hashes.
+
+## M302 — Priority-weighted regional carryover in strength entry
+
+- The cycle split optimizer now compares hypertrophy-to-strength candidates against each region's actual prior productive dose as well as the target strength phase's preferred dose. This closes an objective gap where two fully audited plans could meet the new aggregate targets but one unnecessarily discarded substantially more chest, back, leg, shoulder, or arm work.
+- Use a bounded continuity penalty (at most 15 score points), weighted toward athlete-prioritized muscles. The comparison caps required preservation at the new phase's productive preferred dose, excludes explicitly reduced/maintenance muscles and does not apply to peak, intensification or recovery tapers. It does not invent hard regional quotas, reallocate sets outside canonical audit, or override lift specificity, session time, equipment or recovery.
+- Store the inspected region-retention percentage and at-risk region identifiers in the selected split decision. Regression coverage verifies focused regions, maintenance, reasonable phase reductions, non-mutation and real hypertrophy-to-strength cycle metadata. Build 905 / Engine 0.65.9 with refreshed offline hashes.
+
+## M301 — Phase-owned goals in every cycle block
+
+- Always project the block's phase into its request goal, even when the weekly split, days and lift-practice controls are unchanged. An early return previously retained the entry goal across static/locked cycle phases, letting hypertrophy-origin strength blocks inherit hypertrophy-oriented loading, strength claims and regional dose assumptions.
+- Keep baseline equipment, schedule, preferences, athlete and seed immutable. Strength accumulation, intensification and peak use strength-goal policy; hypertrophy uses hypertrophy. Mixed-style blocks keep the cycle's explicit strength intent when present (including Strength Peak's base), otherwise use mixed. Phase-specific exercise/volume/safety audits remain canonical.
+- Regression-check all six authored phases, normalized strength weighting, unchanged weekly configuration, immutability, optional split adaptation, and generated cycle blocks' actual requests. Retain Build 905 / Engine 0.65.9 and refresh offline hashes.
+
+## M300 — Preserve strength-entry volume rescue with unchanged automatic splits
+
+- Automatic split optimization annotates even an unchanged original split as an explicit selection. Treat that as the same executable weekly topology for the existing audited, locked-roster volume fallback when a hypertrophy block enters strength accumulation with an otherwise unacceptable set cliff.
+- Only use the fallback when split and training-day count really match, and never when a new priority-lift frequency was requested. Changed schedules and strength-practice requests continue through full generation, auditing and feasibility checks.
+- Extend the permanent custom-cycle regression to verify the positive same-split case and rejection of changed split, days or practice. Keep Build 905 / Engine 0.65.9; refresh offline bundle integrity.
+
+## M299 — Cycle split and schedule ownership after block overrides
+
+- Keep an authored split or training-day override scoped to its own block. The next block without overrides returns to the cycle's baseline topology, rather than silently keeping the preceding block's actual sessions while showing the baseline in settings.
+- Compare the target block's effective split and training-day count with its source. Rebuild and audit the executable weekly schedule when either changes, including first-generation, conversion, and history-driven advancement. Preserve locked rosters when the topology is unchanged.
+- Extend the maintained custom-cycle integration contract with a three-block baseline → override → baseline regression checking settings, engine sessions, request days, audited status, and input immutability. Retain Build 905 / Engine 0.65.9 and refresh offline hashes.
+
+## M298 — Executable custom cycle transitions and repeat
+
+- Base cycle review thresholds on each block's actual training days and authored duration. One-week blocks can finish after their prescribed work with favorable evidence; older saved previews receive the same correction when read. Standalone programs and recovery exit criteria retain their existing evidence rules.
+- Preserve the active block's schedule and split when inserting recovery after a training-day change. Resume the reserved planned block after recovery without changing its identity or authored phase order.
+- Repeat custom cycles from their saved authored block specifications, preserving durations, weekly structure, lift-frequency targets and both independent adaptation choices. Inserted recovery is excluded from the repeated plan; completed cycles and workout history remain saved.
+- Show the actual split, training-day count and explicit lift-practice targets in read-only block previews using shared layout tokens.
+- Extend existing engine and real-app browser journeys through short-block advancement, schedule changes, stale saved-state repair, fatigue recovery/resumption, worker-driven custom repeat and reload. Retain Build 905 / Engine 0.65.9 and refresh offline release hashes.
+
+## M297 — First-class Strength and integrated Profile progress
+
+- Put Strength directly in the Progress tab bar, with Home and Profile opening that same destination. Keep setup and empty states accessible before the first workout, alongside the existing strength club and canonical score.
+- Share Strength trend typography and layout between Progress and Profile. Restore separated chart headings, pattern labels and deltas; label the score-history chart for assistive technology.
+- Integrate the existing level/XP projection into the top Profile card, remove the duplicate level metric and brand line, and keep bodyweight/age with identity. Use a balanced metric grid with optional explanations while retaining card preferences and PNG export content.
+- Give Progress summary cards visible gaps and retain readable, horizontally accessible section tabs on narrow screens and enlarged text.
+- Extend existing phone/tablet browser journeys for direct Strength navigation, chart layout, profile editing, summary spacing and integrated XP. Preserve training history, progression behavior and all prior cycle/cohesion fixes. Retain Build 905 / Engine 0.65.9 and refresh the content-addressed offline release.
+
+## M296 — Stable opening set loads
+
+- Realize historical recommendations using today's progression method. Ordinary double, linear, ladder, wave and e1RM methods use one working load; only the current dynamic method retains positional load targets. Explicitly held plan changes and percentage protocols retain their own owners.
+- On resume, discard an untouched automatic live reduction or rep cap when its supporting completed observations are absent. Preserve genuine observed adjustments, recorded sets, manual entries and deliberately changed values.
+- Extend existing core and phone-browser regressions for dynamic-to-straight transitions, opening second-set reductions, repeated reloads and protected user values. Retain Build 905 / Engine 0.65.9 and refresh the content-addressed offline release.
+
+## M295 — Complete cohesion integration and enforce custom load increments
+
+- Finish M294's compact, horizontally accessible exercise tags and top-aligned workout actions. Match numeric headings to the full-bleed row in both the phone flex layout and the tablet companion grid.
+- Route custom-program advice through the same equipment boundary as generated programs. Held loads, per-set targets and cross-program/unit-converted references honor the exercise increment or actual rack; earned increases still reach the next selectable load. Logged history is unchanged.
+- Recover remaining Cohesion 23/24 Home action ownership, compact preview/change-history spacing and complete Plan mode labels at enlarged text. Preserve the newer shared app bars, weekly-card hierarchy and sticky-header behavior.
+- Extend the existing custom progression regression with 38.5 lb on 5 lb equipment, converted/reference history, executable set rows, earned increases and explicitly fractional stock. Retain Build 905 / Engine 0.65.9 and refresh release/offline hashes.
+
+## M292 — Progress and History presentation ownership
+
+- Move 225 fixed inline style objects from the four Progress panes into the maintained CSS family. Shared card, caption, field, list-row and history-action classes retain the current appearance; action/field owners also remove 32 repeated CSS declarations. Five chart objects keep only calculated widths/heights and data-derived ink inline.
+- Let existing native selection/disabled state and explicit display-state attributes own paint. Publish the consumed warning/accent/border palette roles once, preserving the user's theme. Remove the masked group-header font declaration rather than adding a priority override.
+- Fix the Load pane's full-height range bars overlapping their heading: the chart now fits both labels and bars while retaining its minimum plot height and existing values. Add a real geometry regression with populated six-week data.
+- Retire 14 fully superseded embedded declarations, including ten priorities. Tighten the embedded priority ceiling to 1,229 and the inline ceiling to 2,800; external/repeated priority ceilings remain 2,360/15.
+- Extend the existing real Progress browser journey across four widths, two palettes and normal/200% text: keyboard tabs, session notes/sets/search, lift/load/recovery/volume panes, bodyweight/measurement logging, same-day replacement and persistence without rewriting workout records.
+- Same app/engine versions; refresh content-addressed offline cache and release hashes.
+
+## M291 — Profile presentation ownership
+
+- Move 83 fixed inline style objects from Profile, achievement details, Strength trends and shared sparklines into maintained CSS owners. Retain calculated progress, chart dimensions and data-derived ink inline; retire every Profile selector from the embedded stylesheet.
+- Remove 59 CSS priority declarations: external 2,378 → 2,360; embedded 1,280 → 1,239. Tighten the inline ceiling from 3,108 to 3,025 and retain the repeated-priority ceiling of 15.
+- Build the Profile section element map once per render, preserving saved order/visibility and canonical history/score calculations. Name achievement dialogs through the existing modal owner and expose section headings and progress semantics without changing their presentation.
+- Extend the existing Profile browser journey with earned/locked badges, keyboard activation, named modal focus containment, dismissal, focus restoration and progress agreement. Same app/engine versions; refresh content-addressed offline cache and release hashes.
+
+## M290 — Profile level-card ownership
+
+- Move eight fixed level-card JSX styles and the embedded fallback presentation into the existing Profile stylesheet family; leave only the calculated XP fill width inline.
+- Retire 21 priority declarations across the external/embedded stylesheets while preserving appearance, live palette, canonical level/XP calculations and progress semantics.
+- Extend the existing Profile browser gate with level-copy containment and XP percentage/fill agreement. Same app/engine versions; content-addressed offline cache and release hashes refreshed.
+
+## M289 — Profile Strength style ownership
+
+- Consolidate Strength’s effective comparison-row, score typography and single-pattern styles; retire 43 CSS priority declarations and preserve the current appearance.
+- Extend the existing Profile browser journey to check row alignment, complete labels and share targets at normal/enlarged text, alongside customization/export and persisted-history coverage.
+- Same app/engine versions; refreshed content-addressed offline cache and release hashes. Physical Android certification remains open.
+
+## M288 — consolidate Profile lifetime-summary ownership (October 22, 2026)
+
+- Retired the superseded R17/R39/R40 and duplicate R77 summary declarations. The maintained Profile owner now contains the effective grouped surface, number wrapping, phone padding and large-text reflow. External CSS priority declarations decrease from 2,462 to 2,432.
+- Corrected the ownership scanner to strip comments before identifying media/container contexts. The same baseline has 15 actual scoped repeats rather than the old scanner's 21; trimmed the exception list to the 14 existing keys and added adversarial scope checks. This accounting correction does not represent six additional production deletions.
+- Expanded the existing populated Profile browser fixture to eight windows in both palette families, checking complete lifetime values/labels at normal and 200% text along with existing customization, export, keyboard and history-preservation behavior.
+- Same-build offline cache and UI hashes finalized; exact-head CI, screenshot review and post-merge deployment verification remain required.
+
+## M287 — retire unused design-token aliases (October 22, 2026)
+
+- Removed 17 unused R41/R51/R57 transitional CSS declarations at their original owners, including the extra narrow-screen R57 inset. The live semantic colors, spacing tokens, control dimensions, components and actual UI rules were not replaced.
+- These aliases had no reads in app.css. Added a guard against redeclaring them or using them from App.js; the existing --pi-page-inset / --pi-space-* owner remains authoritative.
+- Removed redundant historical token definitions rather than adding more CSS or increasing the existing 2,462 !important ceiling. Training engine, Workout/Focus logic, navigation state and user data untouched.
+- Finalize the same-build offline cache/UI integrity and verify phone/tablet browser, release and accessibility gates before merging.
+
+## M286 — full-width reading frame on short wide landscape (October 22, 2026)
+
+- The 900×480 adaptive-shell browser screenshot was still letterboxed to roughly 460px despite a wide viewport. Extend the existing R88 medium-width primary shell breakpoint to short windows at or above 840px wide and below 560px tall, resulting in a bounded 760px workspace with bottom navigation.
+- Continue using the same five root tabs and shared root header; taller wide windows retain their vertical navigation rail. Do not stretch Workout/Focus, change adaptive engine state, move buttons, or introduce per-route width hacks.
+- Update the R65 real-browser geometry contract for short landscape and its actual 900×480 screenshots; add a static single-owner guard. No new high-priority style declarations.
+- Finalize same-build offline cache/manifest and require full exact-head CI plus screenshot inspection before merging.
+
+## M285 — mixed-program and short-month history spacing (October 22, 2026)
+
+- Extended the existing populated Progress test to 16 saved sessions across two programs and several months, checking both By program and By month grouping at 900px and 1280px in light/dark themes.
+- A real wide-screen screenshot showed a large blank gap after a short October group before September began. The authoritative wide calendar sidebar now spans the grouping plus two history tracks, not merely the first history track, so shorter month groups can flow without calendar-induced empty space.
+- Added per-group geometry assertions, exported grouped screenshots, and kept recorded sets and all filter behavior unchanged. Retained the existing 900px single-column view and the Workout/Focus and engine.
+- No new CSS priority declarations. Same-build offline cache and hashes must be finalized and exact-head CI plus screenshots must pass before merge.
+
+## M284 — populated Progress history on tablet and desktop (October 22, 2026)
+
+- Added actual 16-session saved-history browser scenarios at 900px and 1280px, in light and dark palettes, with top and scrolled screenshots. Existing desktop Progress screenshots exercised only empty history and missed a reading-order defect.
+- Corrected the wide Sessions grid: the Training Calendar spans the grouping and first-session row tracks, so the first logged workout starts alongside the calendar rather than being pushed below its full height and leaving a large blank right column.
+- Added assertions for visible first-session position, bounded cards, opaque/stationary Progress header during scroll, and unchanged logged sets. The fixture allows the canonical save migration to populate updatedAt without mistaking it for a user edit.
+- Retains the existing 900px single-column layout, all history filters/sections, independent scroll positions, Workout/Focus, and engine. No new style priorities. Same-build cache/hash finalization and all exact-head CI required.
+
+## M283 — cross-tab phone scroll/header edge alignment (October 22, 2026)
+
+- Eliminated the old 14px mobile scroll pane inset that conflicted with the shared 12px (320px) / 16px (393px) page inset on Settings and Progress. Home already used the canonical inset and is left owned by its existing rule.
+- The responsive selector now uses the same `--pi-page-inset` token as the common root header, with one padding declaration rather than two hardcoded priority declarations. All saved data, navigation and Workout/Focus are untouched.
+- Added real browser geometry checks at 320px and 393px across themes for matching left/right root header and Settings/Progress content insets, opaque headers and contiguous Settings category chrome. Existing Plan sticky week-picker checks remain in the R62 suite.
+- CSS priority ceiling decreases 2,463 to 2,462. Same-build offline cache and UI hash finalization, full exact-head CI and device screenshots remain required before merging.
+
+## M282 — Settings large-text row reading order (October 22, 2026)
+
+- At narrow inline-size containers with enlarged system text, existing Settings rows now place preference explanations above their controls instead of splitting words into isolated letters to fit beside kg/lb selections and switches.
+- Extends the already-maintained 16em Settings container query without adding new `!important`, duplication, or per-option styling. Normal-sized phone layouts keep the original compact rows; the saved settings and user interactions are unchanged.
+- Added full-width copy and control-below assertions to the real-browser 320px/393px, 200%-text test, plus a stylesheet-owner regression. No new engine or Workout/Focus changes.
+- Must pass the exact-head regression suite, cache revision check and visual screenshot verification before merge.
+
+## M281 — selected bottom-navigation indicator without gray outline (October 22, 2026)
+
+- Removed the permanent R35 2px gray-ish outline around the animated active bottom-nav pill from its original CSS owner. The selected state continues using saved-theme tonal fill, selected-icon paint and the colored destination label.
+- Preserved keyboard-only focus rings and system forced-colors outlines; all five navigation routes, touch targets, pointer feedback, animation, and accessible labels remain unchanged.
+- Added real-browser computed-style checks across root routes, themes and phone/tablet sizes, plus a no-regression stylesheet ownership check. No new `!important` declarations or per-screen overrides; Workout/Focus and engine untouched.
+- Requires same-build offline cache/manifest rehash and exact-head release, motion, accessibility and browser CI before merge.
+
+## M280 — shared root title word integrity (October 22, 2026)
+
+- In the existing `UiRootHeader` title owner, use min-content intrinsic sizing and normal word breaking so fixed destination names stay intact at 320px and 200% text. If a root action does not fit beside a word, the existing flex-wrap puts that action on the next row instead of splitting “Profile.”
+- Added an actual Profile browser assertion for 320px / 200% text that checks a one-line title and no title/Edit overlap. Retained all five root titles, toolbar callbacks, navigation states, theme and reduced-motion behavior; Workout/Focus and the engine are unchanged.
+- Stylesheet priority ceiling remains 2,463. Same-build release cache and UI hashes require finalization and exact-head CI before merge.
+
+## M279 — Settings category rail and control ownership (October 22, 2026)
+
+- Removed 11 superseded Settings-specific CSS priority declarations: old category bar padding, duplicate narrow-screen insets, raised-input painting and an obsolete 44px select rule. The surviving top rail uses the shared page inset, canvas surface and 48px input target.
+- Settings categories and preference descriptions now share the readable support typography token; the category choice uses the shared action corner shape. No settings values, data transfer, theme settings, switches or navigation callbacks were changed.
+- At phone widths up to 420px, hide the redundant visible “Jump to” phrase so the existing labeled native section selector has more space instead of truncating its prompt; the screen-reader label stays on the select.
+- Added exact-head ownership and live phone/tablet typography/layout assertions, including 320px geometry and 200% text reflow. CSS priority budget decreases from 2,474 to 2,463.
+- Same-build cache/hash finalization, full CI and Android screenshot review are required before merging or declaring launch certification.
+
+## M278 — Profile share-card spatial cohesion (October 22, 2026)
+
+- Rebased the Profile share-card heading, label, metric and favorites spacing on the shared 4/8/12/16px scale, replacing disconnected 5/13/18px margins while preserving the metric data and share-card customization.
+- Retired six obsolete priority declarations on Profile strength comparison cells, its first/last row shapes, and the narrow-profile statistics. The actual vertical strength comparison and its themed highlighted first row remain owned by the existing later responsive rules.
+- Preserved the customizable top card, metric ordering, 48px actions, scores, user preferences, accessibility reflow and Workout/Focus composition. Lowered the stylesheet priority ceiling to 2,474 and added regression checks.
+- Same-build release integrity, exact-head browser CI and real-device screenshot review remain required before calling the pass complete.
+
+## M277 — Progress/History spacing ownership (October 22, 2026)
+
+- Unified the history section/group spacing with the shared 4/8/12/16px token scale; the cycle grouping control and section headings now align to the same system.
+- Removed superseded 7px session margins and duplicate header padding priority declarations, and let expanded session content inherit its card's outer corner clipping instead of drawing a nested corner.
+- Preserved saved history, date grouping, filtering, chart series, keyboard focus and 48px action targets. Lowered the stylesheet priority-declaration budget from 2,483 to 2,480 and added ownership regression checks.
+- Same-build service worker and release hashes are content-addressed; exact-head browser CI and device screenshots remain required for release confidence.
+
+## M276 — Program/Cycles reading order and component density (October 22, 2026)
+
+- Moved the Program's “Where do my edits apply?” explanation from the first scroll row into the existing Program Details sheet, maintaining the full saved-plan, future-session and cycle scope wording, and making its disclosure a 48px accessible target.
+- The existing cycle link in Program remains at the top and continues using the same navigation callback and scroll-collapse ref. Its static colors, spacing, label hierarchy and icon alignment now have shared semantic CSS owners.
+- Consolidated the Cycle list/detail spacing to the shared scale, reduced nonessential padding around overview, block rows and supporting information, and replaced the redundant expanded block-length summary with a concise “Training blocks” count.
+- Kept native cycle expansion, canonical progress/volume, preview/callback behavior, readable 64px+ block rows, theme palette and reduced-motion treatment unchanged. Added regression checks for 320px layouts, Program Details help and responsive Cycle density. Production inline presentation decreases from 3,127 to 3,116 instances without adding CSS priority rules.
+
+## M275 — flush sticky bars, Plan program action, active Cycle disclosure (October 22, 2026)
+
+- Plan's one existing Full program action now sits alongside the selected program name, above the week selector and work schedule; preview blocks retain their existing route and selected week.
+- Removed the transparent margin under the sticky Plan week rail and replaced translucent deep-screen header paint with opaque semantic canvas. Progress history's sticky group headings no longer leave external margins as scroll gaps.
+- In Cycles, the active unfinished cycle reveals its actual block list by default; native details remain collapsible. Reuses canonical cycle progress and block navigation, no duplicate data projection.
+- Updated R53 browser and ownership guards. No new CSS priorities, no changes to Workout/Focus logging or engine policy.
+
+## M274 — Program header presentation ownership (October 22, 2026)
+
+- Consolidated the Program detail title/rename row, animated metadata wrapper and saved status into one token-owned presentation family in app.css, preserving the exact existing handlers and scroll-collapse refs.
+- Removed eight legacy inline presentation objects and lowered the permanent CI debt cap from 3,135 to 3,127.
+- Added source assertions to protect these class owners against future inline regressions; preserved all Program, Cycles and Workout controls.
+
+## M273 — Plan schedule hierarchy and shared glance styles (October 22, 2026)
+
+- The selected week now owns the first schedule card immediately beneath the week picker and its focus context. The phase timeline contains only the other weeks, so each planned week is rendered once with the same session-row renderer, target and navigation owner.
+- Preserved the single Up Next action, complete phase schedule, previewed-week memory, existing four Plan panes and program editing routes.
+- Moved Plan overview labels and values into semantic shared token CSS, removing three static inline presentation objects with no new important rules.
+- Extended the existing R53 real-browser gate for selected-week placement, one-per-week ownership and changing the selected week.
+
+## Shared tab hierarchy foundations — October 22, 2026
+
+## M271 — unified root app bars
+
+- Put all five destination titles in one shared header/action row; remove Plan's root Back button and keep the program name as subordinate context.
+- Keep Profile Edit above its scrolling share-card content, inset Progress tabs consistently, and preserve Home's smooth collapse with a stationary destination title.
+- Retire 239 priority declarations and 28 inline style objects across the old independent header owners. Use immediate reduced-motion transitions to avoid stale text/layout frames.
+- Extend existing browser contracts to compare title coordinates across routes, themes, window sizes and enlarged text, retaining deep-screen Back, program/cycle state and protected logging behavior.
+
+- Home, Plan, Progress, Profile and Settings share one scalable title role; empty Plan keeps its title and the shared creation action.
+- Navigation keeps full destination names. At enlarged text sizes, the bottom layout reflows and the tablet rail grows with its labels; the live dock uses the actual rail inset.
+- Progress summaries preserve readable words as text grows. App/workout notices share one component and measure the real navigation, live dock and workout/rest footer before positioning.
+- Retired 86 external and 12 embedded priority declarations, plus 21 inline style objects. Workout/Focus logging geometry and training calculations are preserved.
+- Browser gates check full visible destination names, shared title roles and notice clearance across normal/Focus rest states. The rest of the tab placement audit remains on the roadmap.
+
+## Focus touch selection stability — October 21, 2026
+
+- After a touch-click, the native browser caret can move after the first paint. Recheck select-all on the second animation frame for Focus weight and reps inputs.
+- Keep the immediate select-on-focus behavior and value guard: never replace user typing, readonly/composing values, progress, persisted state, timers or workout geometry.
+- The existing B825 real-touch logging test remains strict (1.5s selection deadline); the candidate must pass all ten CI jobs before merge.
+
+## Adaptive tab labels and narrow-phone Home title — October 21, 2026
+
+- Keep complete tab names for accessible navigation, switching to short visual labels only when the tab is narrow relative to the actual font size.
+- The current tab and every button retain the same route, focus, semantics and touch target; avoid breaking a single word across multiple nav lines.
+- At 320px, remove the ornamental day orbit so the true workout name has the whole hero width. The actual day and week stay in Up Next.
+- R74 real-browser checks now require single-line visible navigation labels under 200% text in all five tabs; engine, saved plans and Workout/Focus logging remain unchanged.
+
+## Switch contrast and compact Home preview — October 21, 2026
+
+- Reconciled the approved switch and Home fixes with the newer shared Settings/Profile cards.
+- Restored contrasting switch tracks, contained thumbs and 48px touch targets; removed inherited legacy toggle sizing.
+- Home session outline now has one spacing owner and no redundant divider or top inset.
+
+## Consistent Settings groups and strength-club controls — October 21, 2026
+
+- Settings preference, workout, timer, reminder, profile and data rows now share explicit themed cards and one wrapping row layout. Native inputs, switches and existing settings behavior are preserved.
+- The Profile strength-club card uses shared 48px actions and responsive text/value layouts. Lifted totals, estimated totals, earned/projected status and sharing retain their existing data owners.
+- Removed 38 inline style objects and 97 CSS priority declarations. Added browser checks for enlarged Settings rows, keyboard club-measure reversal, complete labels and unchanged history. Workout/Focus and training engine behavior are preserved.
+
+## Reliable shared data controls — October 21, 2026
+
+- Settings now delegates backup, restore preview and Undo to one stable component. All twelve backup actions reuse UiAction and existing semantic theme roles; wrapping rows preserve labels at narrow widths and 200% text without adding CSS priority overrides.
+- Failed clipboard/download actions and cancelled sharing have visible outcomes. Concurrent transfer attempts are blocked. CSV copy no longer marks a full backup as saved; download messaging asks users to verify the actual file.
+- Selecting an oversized or unreadable restore file clears any prior executable preview. Earlier file reads cannot replace newer selections or typed text, or reappear after closing the panel. Undo feedback stays available until explicitly closed.
+- Storage protection reports denial/error, reads usage and persistence independently and no longer promises installation guarantees protection. Privacy/deletion copy describes browser storage and exported-file retention accurately.
+- Updated the single launch plan and engine baseline documentation to build 905 / engine 0.65.9, plus the Play kit's current API 36 requirement, signing/domain association and final-package/device checks. No training-policy or Workout/Focus changes.
+
+## Shared editor controls and cascade cleanup — October 20, 2026
+
+- Profile layout/card editors and favorite-chart editing now reuse the existing UiAction component with one tonal button style, a shared 48px touch minimum, icon sizing and selected states. Screen-specific rules retain layout only; native labels, disabled states, callbacks and saved preferences are preserved.
+- Removed 67 superseded declarations in Profile, Progress and Settings, including 63 priority overrides, plus 23 priority overrides replaced by the shared controls: 86 fewer CSS `!important` declarations (3,103 → 3,017). Accessibility, forced-colors and motion safeguards remain.
+- Share-card choices reflow to one column when enlarged text needs more room, preserving whole labels at 200% root text size.
+- The redundant-rule removal produced zero computed-style changes in a same-page comparison of 5,718 elements across 24 populated phone/tablet light/dark scenarios. Actual editor interaction, record preservation, contrast and compact workout regressions remain release gates.
+
+## Profile share card and cohesive styles — October 20, 2026
+
+- Profile opens with an editable share card: a name, chosen strength/streak/level/club/record/achievement metrics and up to three favorite lifts. The live preview and PNG export share one content model; records retain their estimated-1RM labels.
+- Edit card and Arrange Profile are separate. Saved section order/visibility and existing metric selections survive, and resetting section layout preserves the card.
+- Push and the other Strength Score rows have identical label/value insets. Profile controls use the shared themed surfaces, borders and shapes. Progress/History layout ownership was consolidated in the preceding pass.
+- Workout layout, interaction behavior, engine and stored training data are preserved.
+
+## Build 905 — Remaining prototype features
+
+- Stage actual generated rebuilds and canonical volume repairs for review before committing. Show changed settings, exercise additions/removals/order, all weeks of set/rep/RIR/rest/technique/progression targets, and first-week duration estimates. Apply the reviewed artifact without generating again.
+- Preserve exact prior layouts, including edited prescriptions, schedule, notes and settings. Restore through the same preview; retain up to three nonrecursive snapshots within a size budget. Reject stale previews and program changes during an active workout.
+- Extend the existing live session lineup to portrait tablets from 800px wide and 720px tall. Preserve the original logger, Focus, active exercise, rest state and saved workout across resizing.
+- Add explicit plateau choices grounded in the existing program/day-scoped detector. Reuse progression and swap controls; optionally lower only automatic remaining targets for this session, including pending warmups, rounding to available loads. Keep completed/manual work and injury/percentage prescriptions protected, remove pending technique extensions on the lighter day, and offer Undo.
+- Retain existing plan-change undo, game plan, equipment inventory, quick routines, history correction, shorter-session engine and superset suggestions.
+
+## Build 904 — Plan changes and today's game plan
+
+- Review changed load/rep recommendations from Home and the session preview, including their engine reasons, previous completed sets and proposed targets. Group identical sets and retain individual dynamic-double differences.
+- Undo or restore each exercise's upcoming recommendation. Persist the choice across reload and apply it through the same prescription boundary used by Workout, including warm-ups and technique extensions. Preserve history, progression methods, other exercises, and current set/effort/technique targets.
+- Scope undo to the exact exercise, day, week, unit/loading context and recommendation. New performance or changed prescriptions expire stale choices; sync revision timestamps alone do not. Keep authored percentage and deload protocols intact.
+- Turn Home's existing session outline into today's game plan, with actual suggested loads/reps, target effort, progression reasons and last-set technique instructions. Show the same game plan in Preview, including shortened-session prescriptions. Share amplifier rest timing with the logger and honor the rest setting.
+- Show conditional rep-record and estimated-1RM opportunities using completed working sets and the same record calculation as Progress. Target RIR never becomes extra completed reps, and missing history, assisted lifts and high-rep estimates do not create false e1RM claims.
+- Verify custom/generated prescription parity, positional undo, reload/resume recovery, source and unit isolation, record semantics, and responsive dark/light layouts.
+
+## Build 903 — Editable set counts and complete cycle overview
+
+- Keep three working sets as the default for an exercise added during a workout. Add an explicit set-count control in standard and Focus logging; reductions preserve completed work.
+- Review added exercises and changed set counts after saving a workout. Edit the future set count, apply it to the workout day, or keep changes session-only. Pending reviews survive reload; completed workout records stay unchanged.
+- Use stable exercise IDs and explicit prescription ownership for custom and generated programs. Skip injury and session-length reductions when proposing permanent program edits.
+- Restyle cycle progress, blocks, schedule and next-block changes as themed cards. Show useful overview details directly and expand the cycle list's blocks by default.
+- Verify custom/generated set persistence, protected logged sets, review recovery, apply/skip behavior, and phone/wide cycle layouts.
+
+## Build 902 — Reverse EZ-Bar Curl
+
+- Clearly name the existing EZ-bar reverse curl in both the app and canonical catalog. Keep its stable exercise ID, saved programs, history, brachialis emphasis, EZ-bar loading and 10–15 rep defaults.
+- Support searches for reverse EZ bar / EZBar curl and preserve old/new CSV import names. Keep the straight-bar reverse curl separate.
+- Correct the app's movement tag to elbow flexion and give the lift overhand-grip curl cues instead of generic reverse-fly instructions.
+
+## Build 901 — Suggestions respect logged reps and effort
+
+- Keep the programmed effort visible in TARGET after completing and rating a set; use muted text for every non-current row. Focus shows the owed set's target and reads target RIR from its prescription.
+- Engine 0.65.9 caps the next untouched same-weight rep prefill from explicitly logged reps and RIR. A history-derived 11-rep target no longer survives logging 8 at 2 RIR when the next target is 1–2 RIR. This session-only guard never raises reps/load, extrapolates to another weight, or overwrites manual/completed work or authored protocols.
+- Preserve two-observed-miss accessory load reductions, source-aware undo, rerating, and reload recovery. Keep weekly progression independent and retain the current plus four preceding engine versions.
+- Replace “tunes the next set” with factual feedback: reps adjusted, load eased, target unchanged, or saved for future workouts.
+- Audit custom/generated suggestion ownership, historical positional targets, RIR provenance, load rounding, live adjustment and recovery. Extend the existing engine and real-browser regressions with the reported sequence.
+
+## Build 900 — Compact progression and clearer exercise controls
+
+- Make the progression method a small themed text control beside set/muscle details, with a full tap target. Remove the duplicate full-view progression action.
+- Keep exercise info, history and skip beside the name so tags, notes and progression can use the full content width.
+- Wrap workout actions into visible rows with space above the target/set area. Keep all actions and their existing behavior, including Focus and percentage-program progression access.
+
+## Build 899 — Steady screens and program creation
+
+- Keep route canvases fully opaque and stationary. Remove stacked page/card scale and luminance pulses while preserving directional content motion, interactive gestures, controls and sheets.
+- Creation steps stay opaque from their first paint; selecting, typing and asynchronous feasibility updates do not replay a page fade.
+- Program/cycle builds show progress and Cancel in the existing creation footer. Other generation operations retain immediate busy/cancel behavior without dimming the entire app. Cancelling preserves setup answers and is not reported as a capacity failure.
+- Preserve existing muscle-focus controls and all training prescriptions.
+
 ## Build 898 — Engine-guided shorter sessions
 
 - Session preview offers Full, 45, 30 and 20 minutes for today only, with a review of cuts.

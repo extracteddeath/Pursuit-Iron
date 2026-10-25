@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { normalizeEditedHistoryEntry, perfAfterHistoryReplace, lifterModelKey } from '../modules/App.js';
+import { normalizeEditedHistoryEntry, perfAfterHistoryReplace, lifterModelKey } from '../modules/engine-api.js';
+
 import { nextWorkoutSuggestionForShell } from '../modules/next-engine/workout-history-adapter.js';
 
 const original={

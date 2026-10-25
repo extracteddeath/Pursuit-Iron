@@ -33,10 +33,11 @@ const app=productionSource();
 check('all generated program surfaces still enter through getNextShellCell',()=>assert.ok(app.includes('const nextCell = getNextShellCell(program, day, slotIndex, weekIndex);')));
 check('legacy custom programs restore authored schedules and saved dose deltas before display',()=>assert.ok(app.includes('sets: legacyCustomSetCount(program, day, ex, slotIndex, weekIndex, o.sets, base.sets)')));
 check('phone set row keeps protected 520px breakpoint',()=>assert.ok(app.includes('const narrowSet = useNarrow(520);')));
-check('SET/LAST header has breathing room',()=>{
-  assert.ok(app.includes('gap: narrowSet ? 5 : 8'));
-  assert.ok(app.includes('width: narrowSet ? 24 : 26 }, children: "SET"'));
-  assert.ok(app.includes('width: narrowSet ? 60 : 82'));
+check('SET/LAST header aligns the load and rep tracks to the editable row',()=>{
+  assert.ok(app.includes('className: "wpb-set-head"'));
+  assert.ok(app.includes('gap: 8 }, children: [_jsx("span", { style: { width: 30, flex: "0 0 30px" }'));
+  assert.ok(app.includes('width: narrowSet ? 60 : 80, flex: narrowSet ? "0 0 60px" : "0 0 80px"'));
+  assert.ok(app.includes('style: { width: 30, flex: "0 0 30px" }'));
 });
 const sharedStart=app.indexOf('// ── Shared TARGET / LAST column');
 const sharedEnd=app.indexOf('// TARGET mode:',sharedStart);

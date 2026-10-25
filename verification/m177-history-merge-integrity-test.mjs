@@ -1,7 +1,8 @@
 import { productionSource } from './production-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { mergeStores, migrateStore, STORE_VERSION } from '../modules/App.js';
+import { mergeStores, migrateStore, STORE_VERSION } from '../modules/engine-api.js';
+
 
 const perf = (weight, reps=8, date=1000) => ({ bench:{ weight, reps, date, sets:[{w:weight,r:reps,rir:2}] } });
 const hist = (weight, updatedAt, date=1000) => ({ id:'h1', date, updatedAt, programId:'p1', dayId:'d1', perf:perf(weight,8,date), setsDone:1, volume:weight*8 });

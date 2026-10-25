@@ -5,7 +5,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import * as domain from '../modules/training-domain.js';
-import { EXERCISES } from '../modules/App.js';
+import { EXERCISES } from '../modules/engine-api.js';
+
 
 const { mergeStores, STORE_VERSION } = domain;
 const workoutCsvToStore = domain.workoutCsvToStore ?? (() => ({ ok: false, msg: 'missing' }));

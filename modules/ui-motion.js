@@ -89,7 +89,7 @@ function tick(now) {
     frame = active.size ? requestAnimationFrame(tick) : 0;
 }
 const pixels = (el, name) => v => el.style.setProperty(name, `${v}px`);
-const surfaceSelector = '[data-view-frame], [data-pi-workout-page], [data-sheet-drag], .wpb-pop, .wpb-dialog, .wpb-slideL, .wpb-slideR, .wpb-state-enter, .wpb-float-in, .wpb-notice-in';
+const surfaceSelector = '[data-view-frame], [data-pi-workout-page], [data-sheet-drag], .wpb-pop, .wpb-dialog, .wpb-session-dialog, .wpb-slideL, .wpb-slideR, .wpb-state-enter, .wpb-float-in, .wpb-notice-in';
 const groupSelector = '.wpb-segmented, .wpb-premium-tabs, .wpb-exercise-tabs, .wpb-library-flag-filter, .wpb-progress-grouping, .wpb-plan-panes, .wpb-exercise-window-tabs, .wpb-exercise-metric-tabs, .wpb-effort-scale, .wpb-tabbar, [role="tablist"]';
 const surfaceOwners = new WeakMap();
 const exitOwners = new WeakMap();
@@ -103,8 +103,9 @@ function enterSurface(el, initial = false) {
     if (surfaceOwners.get(el) === key) return;
     const first = !surfaceOwners.has(el);
     surfaceOwners.set(el, key); el.dataset.piSurface = '1';
+    const viewport = el.matches('[data-view-frame], [data-pi-workout-page]');
     const sheet = el.matches('[data-sheet-drag]');
-    const dialog = el.matches('.wpb-pop,.wpb-dialog');
+    const dialog = el.matches('.wpb-pop,.wpb-dialog,.wpb-session-dialog');
     // Top-level navigation is a connected motion system: neighboring pages
     // arrive from their actual relative tab direction. Deep-link, exercise,
     // full-screen log and sheet transitions keep their own existing semantics.
@@ -128,6 +129,16 @@ function enterSurface(el, initial = false) {
         const reveal = rapid ? 6 : 13;
         el.style.setProperty('--pi-page-reveal-x', navTravel > 0 ? reveal + 'px' : navTravel < 0 ? -reveal + 'px' : '0px');
     }
+    // The page is the opaque canvas and containing block for fixed controls.
+    // Fading/scaling it stacks with child entrances and exposes the shell as a flash.
+    // Keep route direction metadata; only bounded content entrances carry that motion.
+    if (viewport) {
+        setMotionValue(el, '--pi-surface-x', 0, pixels(el, '--pi-surface-x'));
+        setMotionValue(el, '--pi-surface-y', 0, pixels(el, '--pi-surface-y'));
+        setMotionValue(el, '--pi-surface-opacity', 1, v => el.style.setProperty('--pi-surface-opacity', String(v)));
+        setMotionValue(el, '--pi-surface-scale', 1, v => el.style.setProperty('--pi-surface-scale', String(v)));
+        return;
+    }
     const dir = el.matches('.wpb-slideR') || el.getAttribute('data-motion-direction') === 'r'
         ? -1 : el.matches('.wpb-slideL') || el.getAttribute('data-motion-direction') === 'l'
         ? 1 : navTravel;
@@ -143,8 +154,8 @@ function enterSurface(el, initial = false) {
     spring(el, '--pi-surface-y', 0, { from: quiet ? 0 : y,
         restart: restart('--pi-surface-y', y), write: pixels(el, '--pi-surface-y'),
         damping: sheet ? .94 : 1 });
-    spring(el, '--pi-surface-opacity', 1, { from: quiet ? 1 : route >= 0 ? .78 : .55,
-        restart: restart('--pi-surface-opacity', route >= 0 ? .78 : .55),
+    spring(el, '--pi-surface-opacity', 1, { from: quiet || !(sheet || dialog) ? 1 : .55,
+        restart: restart('--pi-surface-opacity', sheet || dialog ? .55 : 1),
         stiffness: 1200, damping: 1, precision: .001 });
     if (dialog || route >= 0)
         spring(el, '--pi-surface-scale', 1, {
@@ -163,7 +174,7 @@ export function exitMotion(wrapper, complete) {
     // cannot remove a newly reopened React-owned sheet.
     exitOwners.get(wrapper)?.cancel();
     let cancelled = false;
-    const panels = [...wrapper.querySelectorAll('[data-sheet-drag],.wpb-pop,.wpb-dialog')];
+    const panels = [...wrapper.querySelectorAll('[data-sheet-drag],.wpb-pop,.wpb-dialog,.wpb-session-dialog')];
     const backs = [...wrapper.querySelectorAll('.wpb-backdrop')];
     let pending = panels.length + backs.length;
     const stops = [];
@@ -202,7 +213,7 @@ export function resumeMotion(wrapper) {
     if (!wrapper) return;
     // Cancel the pending close before starting the reverse springs.
     exitOwners.get(wrapper)?.cancel();
-    wrapper.querySelectorAll('[data-sheet-drag],.wpb-pop,.wpb-dialog').forEach(el => {
+    wrapper.querySelectorAll('[data-sheet-drag],.wpb-pop,.wpb-dialog,.wpb-session-dialog').forEach(el => {
         if (!surfaceOwners.has(el)) { enterSurface(el); return; }
         spring(el, '--pi-surface-y', 0, { write: pixels(el, '--pi-surface-y'), damping: .94 });
         spring(el, '--pi-surface-opacity', 1, { stiffness: 1200, damping: 1, precision: .001 });
@@ -828,7 +839,7 @@ function disclosure(el, initial = false) {
         el.dataset.piSurface = '1';
         const moving = active.has(states.get(el)?.get('--pi-surface-y'));
         spring(el, '--pi-surface-y', 0, { restart: moving ? undefined : key === 'last' ? 5 : -5, write: pixels(el, '--pi-surface-y'), damping: 1, stiffness: 900 });
-        spring(el, '--pi-surface-opacity', 1, { restart: active.has(states.get(el)?.get('--pi-surface-opacity')) ? undefined : .55, stiffness: 1200, damping: 1, precision: .001 });
+        setMotionValue(el, '--pi-surface-opacity', 1, v => el.style.setProperty('--pi-surface-opacity', String(v)));
     }
     function toggle(el, initial = false) {
         const thumb = el.firstElementChild;

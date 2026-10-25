@@ -98,6 +98,7 @@ try {
         await page.click('button[aria-label="Reroll exercises or enter a seed"]'); await textButton(page, 'Shuffle');
         if (await page.$$eval('button', nodes => nodes.some(n => n.textContent.trim() === 'Regenerate'))) await textButton(page, 'Regenerate');
         await page.waitForFunction(() => window.__m265.jobs.length === 2); await done(page);
+        await page.waitForSelector('[data-program-review]'); await page.click('[data-apply-program-review]');
         await page.click('button[aria-label="Reroll exercises or enter a seed"]');
         await page.click('button[aria-label="Start this program again from week 1"]');
         await page.click('button[aria-label="Start over at week 1 with the original exercises"]');
@@ -117,6 +118,7 @@ try {
         await page.click('button[aria-label="Decrease block length"]');
         await page.click('button[aria-label="Save program settings"]');
         await page.waitForSelector('[data-generation-busy]'); await done(page);
+        await page.waitForSelector('[data-program-review]'); await page.click('[data-apply-program-review]');
         await page.waitForFunction(id => JSON.parse(localStorage.getItem('wpb:v1')).saved.find(p => p.id === id)?.config.weeks === 5, {}, program.id);
         const current = await readStore(page);
         assert.equal(current.saved.length, 1); assert.equal(current.pinnedId, program.id);
@@ -192,8 +194,8 @@ try {
         // The menu mounts on React's next commit; click only after its real action exists.
         // Preserve the original conversion button and all saved-block/history assertions.
         await page.waitForFunction(() => [...document.querySelectorAll('button[role="menuitem"]')]
-            .some(button => button.textContent.trim() === 'Turn into training cycle'));
-        await textButton(page, 'Turn into training cycle');
+            .some(button => button.textContent.trim() === 'Turn into adaptive training cycle'));
+        await textButton(page, 'Turn into adaptive training cycle');
         await page.waitForSelector('[aria-label="Turn program into training cycle"]');
         await textButton(page, 'Create training cycle');
         await page.waitForSelector('[data-generation-busy]'); await done(page);

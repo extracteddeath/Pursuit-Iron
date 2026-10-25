@@ -59,7 +59,7 @@ const bench=evidence.barbell_bench;
 assert.equal(bench.comparableExposures,3,'incomplete exposures must not count toward method reselection');
 assert.equal(bench.styleExposures,3);
 assert.equal(bench.failureCount,1);
-assert.equal(bench.stallCount,1,'ordinary successful or blocked exposures must not be mislabeled stalls');
+assert.equal(bench.stallCount,0,'Historical failures remain counted, but successful or non-comparable exposures clear the unresolved stall streak');
 assert.equal(bench.loadingBlockedCount,1);
 assert.equal(bench.e1rmSamples,3);
 assert.equal(bench.rirCoverage,5/6,'RIR coverage must reflect actual reported effort, not target RIR');

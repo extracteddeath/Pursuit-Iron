@@ -1,4 +1,5 @@
 import { createExerciseMap } from './exercise-db.js';
+import { evaluateObservedVolumeResponse } from './observed-volume-response.js';
 import { estimate1RM } from './history.js';
 import { convertHistoryLoad, progressionExposureContext } from './history-contract.js';
 import { migrateDomainRecord, DomainContractError } from './domain-contracts.js';
@@ -21,19 +22,27 @@ export function deriveAthleteResponse({ programId, workouts = [], customExercise
         throw new DomainContractError('INVALID_RESPONSE_SCOPE', 'response', 'Response requires a program identity, valid unit and finite observation time.');
     const exerciseMap = createExerciseMap(customExercises), identities = new Map(), excluded = {};
     const exclude = reason => { excluded[reason] = (excluded[reason] ?? 0) + 1; };
+    const revision = x => Number.isFinite(Date.parse(x.updatedAt)) ? Date.parse(x.updatedAt)
+        : Number.isFinite(Date.parse(x.completedAt)) ? Date.parse(x.completedAt) : -Infinity;
     for (const w of Array.isArray(workouts) ? workouts : []) {
         if (w?.programId !== programId) { exclude('unrelated_program'); continue; }
-        const date = Date.parse(w.completedAt);
-        if (!Number.isFinite(date) || date > asOf || asOf - date > ATHLETE_RESPONSE_POLICY.windowDays * dayMs) { exclude('outside_time_window'); continue; }
-        if (!w.historyId || !w.session?.id) { exclude('missing_identity'); continue; }
-        if (w.unit !== undefined && !['lb', 'kg'].includes(w.unit)) { exclude('invalid_unit'); continue; }
+        if (!w.historyId) { exclude('missing_identity'); continue; }
         const id = String(w.historyId), previous = identities.get(id);
         if (previous) exclude('duplicate_identity');
-        const revision = x => Number.isFinite(Date.parse(x.updatedAt)) ? Date.parse(x.updatedAt) : Date.parse(x.completedAt);
         if (!previous || revision(w) >= revision(previous)) identities.set(id, w);
     }
+    // Resolve revisions before applying evidence filters. A newer correction
+    // outside the window (or without usable session/unit data) must suppress its
+    // superseded observation rather than silently reviving stale performance.
+    const eligible = [...identities.values()].filter(w => {
+        const date = Date.parse(w.completedAt);
+        if (!Number.isFinite(date) || date > asOf || asOf - date > ATHLETE_RESPONSE_POLICY.windowDays * dayMs) { exclude('outside_time_window'); return false; }
+        if (!w.session?.id) { exclude('missing_identity'); return false; }
+        if (w.unit !== undefined && !['lb', 'kg'].includes(w.unit)) { exclude('invalid_unit'); return false; }
+        return true;
+    });
     const slots = new Map(), muscleRows = new Map(), workoutRows = new Map();
-    const ordered = [...identities.values()].sort((a, b) => a.completedAt.localeCompare(b.completedAt) || String(a.historyId).localeCompare(String(b.historyId)));
+    const ordered = eligible.sort((a, b) => Date.parse(a.completedAt) - Date.parse(b.completedAt) || String(a.historyId).localeCompare(String(b.historyId)));
     for (const w of ordered) for (const planned of w.session.exercises ?? []) {
         if (w.session.exercises.filter(ex => ex.exerciseId === planned.exerciseId).length !== 1) { exclude('ambiguous_exercise_slot'); continue; }
         const decision = (w.progression ?? []).find(d => d.exerciseId === planned.exerciseId);
@@ -47,7 +56,9 @@ export function deriveAthleteResponse({ programId, workouts = [], customExercise
         const observed = sets.filter(s => s.rir !== null);
         const scores = observed.map(s => estimate1RM(convertHistoryLoad(s.load, w.unit ?? unit, unit), s.reps, s.rir)).filter(x => x !== null);
         const row = { at: Date.parse(w.completedAt), historyId: String(w.historyId), sessionId: String(w.session.id), exerciseId: planned.exerciseId,
-            sets: sets.length, effortCoverage: observed.length / sets.length, score: scores.length ? Math.max(...scores) : null,
+            sets: sets.length, complete: sets.length === planned.sets,
+            protocolKey: JSON.stringify([planned.role, planned.prescription?.reps, planned.prescription?.rir, planned.progressionStyle]),
+            effortCoverage: observed.length / sets.length, score: scores.length ? Math.max(...scores) : null,
             failure: decision.outcome === 'failure', success: ['success', 'success_blocked'].includes(decision.outcome),
             pain: sets.some(s => s.painFlag === true), poorTechnique: sets.some(s => s.techniqueQuality === 'poor'),
             effortOvershoot: observed.length ? observed.filter(s => s.rir < (planned.prescription?.rir?.[0] ?? 0)).length / observed.length : null };
@@ -80,10 +91,17 @@ export function deriveAthleteResponse({ programId, workouts = [], customExercise
         const conf = confidence(rows.length, coverage, span), enough = rows.length >= 6 && span >= 14 && coverage >= .75 && !rows.some(r => r.discomfort);
         const velocities = Object.values(progressionVelocity).filter(v => (exerciseMap.get(v.exerciseId)?.muscles?.[muscle]?.credit ?? 0) >= .5 && v.relativePerWeek !== null);
         const plateau = velocities.length > 0 && velocities.every(v => v.sampleCount >= 6 && Math.abs(v.relativePerWeek) < .002);
-        const doseScale = enough && pressure >= .5 ? .9 : enough && pressure === 0 && plateau ? 1.05 : 1;
+        // A flat strength trend does not identify a positive dose-response. Changing sets
+        // without varied, comparable dose evidence may worsen fatigue and cannot
+        // be justified by stagnation alone. Expose a review signal instead.
+        const doseScale = enough && pressure >= .5 ? .9 : 1;
+        const volumeReviewRequired = enough && pressure === 0 && plateau;
+        const observedVolumeResponse = evaluateObservedVolumeResponse(all);
         muscles[muscle] = { sampleCount: rows.length, spanDays: Math.round(span * 100) / 100, effortCoverage: coverage,
             confidence: conf, doseScale, observedMeanSets: mean(rows.map(r => r.dose)), fatiguePressure: pressure,
-            reason: doseScale < 1 ? 'repeated_comparable_failures' : doseScale > 1 ? 'stable_complete_observed_plateau' : 'retain_prior' };
+            volumeReviewRequired, observedVolumeResponse,
+            reason: doseScale < 1 ? 'repeated_comparable_failures'
+                : volumeReviewRequired ? 'plateau_requires_dose_review' : 'retain_prior' };
         const gaps = rows.slice(1).map((r, i) => (r.at - rows[i].at) / dayMs).filter(x => x > 0);
         frequency[muscle] = { observedPerWeek: gaps.length ? 7 / median(gaps) : null, medianGapDays: median(gaps), confidence: conf,
             recommendedExposureDelta: enough && pressure >= .5 ? -1 : 0, application: 'review_only_preserve_authored_schedule' };

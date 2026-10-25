@@ -6,7 +6,7 @@ import puppeteer from 'puppeteer-core';
 import { program, history } from './m222-custom-program-parity-test.mjs';
 const root = path.resolve(new URL('../', import.meta.url).pathname);
 const importMap = fs.readFileSync(path.join(root,'index.html'),'utf8').match(/<script type="importmap">[\s\S]*?<\/script>/)[0];
-const snapshot = {schemaVersion:2,programId:program.id,dayId:'push',weekIndex:1,dayExSig:'cable-fly',exIdx:0,elapsedMs:3800000,data:[{id:'cable-fly',slot:0,superset:true,sets:Array.from({length:4},(_,i)=>({weight:i===2?'17.5':'20',reps:'20',done:i===0,auto:i!==1,valueOwner:i===1?'user':'prescription',target:{w:i===2?'25':'20',reps:'10-20',rir:'2'}}))}]};
+const snapshot = {schemaVersion:2,programId:program.id,dayId:'push',weekIndex:1,dayExSig:'cable-fly',exIdx:0,elapsedMs:3800000,data:[{id:'cable-fly',slot:0,superset:true,sets:Array.from({length:4},(_,i)=>({weight:i===2?'17.5':'20',reps:'20',done:i===0,auto:i!==1,valueOwner:i===1?'user':'prescription',target:{w:i===2?'25':'20',reps:'10-20',rir:'2',prefillReps:'20'}}))}]};
 const html = `<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/app.css">${importMap}</head><body><div id="root"></div><script type="module">
 import React from '/vendor/react.js';import {createRoot} from '/vendor/react-dom-client.js';import {WorkoutSession,StyleTag} from '/modules/App.js';
 const program=${JSON.stringify(program)},history=${JSON.stringify(history)},params=new URL(location.href).searchParams,resume=params.has('resume'); if(params.has('dynamic'))program.progStyle={'cable-fly':'dynamic'};if(params.has('down'))history[0].perf['cable-fly'].sets.forEach(s=>{s.w=25;s.r=8;s.rir=0;});if(params.has('nosuperset'))program.config.noSupersets=true;
@@ -25,7 +25,7 @@ try {
     const values=()=>page.$$eval('[data-testid^="set-0-"][data-done="0"] input[aria-label="weight"]',ns=>ns.map(n=>n.value));
     const reps=()=>page.$$eval('[data-testid^="set-0-"][data-done="0"] input[aria-label="reps"]',ns=>ns.map(n=>n.value));
     await open('');
-    assert.deepEqual(await values(),['25','25','25','25']);assert.deepEqual(await reps(),['20','11','10','11']);
+    assert.deepEqual(await values(),['25','25','20','25']);assert.deepEqual(await reps(),['20','11','12','11']);
     assert.match(await page.$eval('.wpb-workout',n=>n.innerText),/4 prior sets/);
     await page.click('button[aria-label="Show previous workout values"]');
     const lastText=await page.$eval('.wpb-workout',n=>n.innerText);assert.match(lastText,/25×19/);assert.match(lastText,/20×11/);

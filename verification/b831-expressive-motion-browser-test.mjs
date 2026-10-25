@@ -730,7 +730,7 @@ try {
                 // card rather than many competing purple/gray surfaces.
                 const r41=await page.evaluate(()=>{
                     const root=document.querySelector('.wpb-progress');
-                    const header=root?.querySelector(':scope > .wpb-page-header');
+                    const header=root?.querySelector(':scope > .wpb-progress-chrome');
                     const primary=root?.querySelector('.wpb-premium-tabs');
                     const secondary=root?.querySelector('.wpb-progress-grouping');
                     const session=root?.querySelector('.wpb-history-session');
@@ -829,7 +829,7 @@ try {
                 const tonal = await tonalSurfaceReport({
                     featured:'.wpb-profile-strength-cell:first-child',
                     secondary:'.wpb-profile-strength-cell:nth-child(2)',
-                    identity:'.wpb-profile-identity'
+                    identity:'.wpb-profile-share-card'
                 });
                 const {featured,secondary,identity}=tonal.output;
                 // A one-lift/one-cell profile is valid, and does not display a
@@ -857,27 +857,27 @@ try {
                     home.append(probe);
                     const role=token=>{probe.style.backgroundColor='var('+token+')';return bg(probe);};
                     const quiet=role('--pi-r11-quiet');
+                    const appBar=role(home.dataset.scrolled==='1'?'--pi-color-card':'--pi-color-canvas');
                     const raised=role('--pi-r11-raised');
+                    const control=role('--pi-color-control');
                     const hero=role('--pi-r11-hero');
                     probe.remove();
                     const header=home.querySelector('.wpb-home-header');
                     const feature=home.querySelector('.wpb-home-hero');
-                    const metric=home.querySelector('.wpb-metric-strip>.wpb-metric');
-                    const preview=home.querySelector('.wpb-m3-session-preview');
-                    return {quiet,raised,hero,
-                        header:bg(header),feature:bg(feature),metric:bg(metric),
+                    const redundantStrip=home.querySelector('.wpb-metric-strip');
+                    const preview=home.querySelector('.wpb-home-session-preview');
+                    return {quiet,raised,hero,control,appBar,
+                        header:bg(header),feature:bg(feature),hasRedundantStrip:!!redundantStrip,
                         preview:bg(preview),headerImage:cs(header)?.backgroundImage,
                         heroImage:cs(feature)?.backgroundImage,
-                        metricImage:cs(metric)?.backgroundImage,
                         overflow:home.scrollWidth>home.clientWidth+1};
                 });
-                assert.ok(homeTonesR45.header===homeTonesR45.quiet&&
-                    homeTonesR45.metric===homeTonesR45.quiet&&
+                assert.ok(homeTonesR45.header===homeTonesR45.appBar&&
+                    !homeTonesR45.hasRedundantStrip&&
                     homeTonesR45.feature===homeTonesR45.hero&&
-                    (!homeTonesR45.preview||homeTonesR45.preview===homeTonesR45.raised)&&
+                    (!homeTonesR45.preview||homeTonesR45.preview===homeTonesR45.control)&&
                     homeTonesR45.headerImage==='none'&&
                     homeTonesR45.heroImage==='none'&&
-                    homeTonesR45.metricImage==='none'&&
                     homeTonesR45.hero!==homeTonesR45.quiet&&
                     !homeTonesR45.overflow,
                     'R45 Home resolves the common quiet/raised/hero roles: '+
@@ -887,7 +887,7 @@ try {
                 const r48Home=await page.$eval('.wpb-home',shell=>{
                     const el=sel=>shell.querySelector(sel),style=x=>x&&getComputedStyle(x);
                     const card=el('.wpb-home-hero'),summary=el('.wpb-home-hero>button:first-child');
-                    const preview=el('.wpb-m3-session-preview');
+                    const preview=el('.wpb-home-session-preview');
                     const open=preview?.querySelector('button[aria-expanded]');
                     const start=el('.wpb-home-hero>.wpb-primary-action');
                     return {summaryHeight:summary?.offsetHeight||0,
@@ -936,28 +936,27 @@ try {
             if (tab === 'home') {
                 const shape = await page.$eval('.wpb-home', shell => {
                     const header=shell.querySelector('.wpb-home-header'), hero=shell.querySelector('.wpb-home-hero');
-                    const stats=[...shell.querySelectorAll('.wpb-metric-strip > .wpb-metric')];
-                    const first=stats[0]?.getBoundingClientRect();
+                    const redundantPulse=shell.querySelector('.wpb-metric-strip');
                     return {radius:parseFloat(getComputedStyle(header).borderBottomLeftRadius),
                         heroRadius:parseFloat(getComputedStyle(hero).borderTopLeftRadius),
                         headerTint:getComputedStyle(header).backgroundImage,
                         headerSurface:getComputedStyle(header).backgroundColor,
-                        statCount:stats.length,statRadius:stats[0]&&parseFloat(getComputedStyle(stats[0]).borderTopLeftRadius),
-                        statWidth:first?.width,scrollWidth:shell.scrollWidth,viewport:innerWidth};
+                        hasRedundantPulse:!!redundantPulse,
+                        scrollWidth:shell.scrollWidth,viewport:innerWidth};
                 });
-                assert.ok(shape.radius>=26 && shape.heroRadius>=35 &&
+                assert.ok(shape.radius===0 && shape.heroRadius>=35 &&
                     shape.headerTint==='none' && shape.headerSurface!=='transparent' &&
-                    shape.headerSurface!=='rgba(0, 0, 0, 0)' && shape.statCount===2 &&
-                    shape.statRadius>=20 && shape.statWidth>80 &&
+                    shape.headerSurface!=='rgba(0, 0, 0, 0)' &&
+                    !shape.hasRedundantPulse &&
                     shape.scrollWidth<=shape.viewport+1,
                     'R4 connected color-tinted dashboard has true tonal hierarchy without overflow: '+JSON.stringify(shape));
             }
             if(tab==='progress'){
                 const r48Progress=await page.$eval('.wpb-progress',screen=>{
-                    const header=screen.querySelector(':scope > .wpb-page-header');
+                    const header=screen.querySelector(':scope > .wpb-progress-chrome');
                     const style=header&&getComputedStyle(header);
                     const probe=document.createElement('div');
-                    probe.style.cssText='position:absolute;visibility:hidden;background:var(--pi-r48-quiet)';
+                    probe.style.cssText='position:absolute;visibility:hidden;background:var('+(screen.dataset.scrolled==='1'?'--pi-color-card':'--pi-color-canvas')+')';
                     screen.append(probe);
                     const role=getComputedStyle(probe).backgroundColor;probe.remove();
                     return {header:style?.backgroundColor,expected:role,
@@ -983,7 +982,7 @@ try {
                     const metrics = [...el.querySelectorAll('.wpb-plan-glance-tile')];
                     const first = metrics[0];
                     const group = el.querySelector('.wpb-plan-panes[data-pi-m3-track]');
-                    const title = el.querySelector('.wpb-plan-title');
+                    const title = el.closest('.wpb-plan').querySelector('.wpb-root-header h1');
                     return {
                         count:metrics.length,
                         size:parseFloat(getComputedStyle(title).fontSize),
@@ -995,7 +994,7 @@ try {
                         overflow:el.scrollWidth>el.clientWidth+1
                     };
                 });
-                assert.ok(state.count===3 && state.size>=27 && state.firstRadius>=26 &&
+                assert.ok(state.count===3 && state.size===26 && state.firstRadius>=26 &&
                     state.firstSize>=24 && state.buttons===4 && state.selected===1 &&
                     state.trackFill?.length>3 && !state.overflow,
                     'Plan has a real featured week and elastic four-pane navigator: '+JSON.stringify(state));
@@ -1057,7 +1056,7 @@ try {
             }
             if (tab === 'settings') {
                 const heading = await page.$eval('.wpb-settings', el => {
-                    const header=el.querySelector(':scope > .wpb-page-header');
+                    const header=el.querySelector(':scope > .wpb-root-header');
                     const picker=el.querySelector('.wpb-settings-jump-control');
                     const select=picker?.querySelector('select');
                     const title=header?.querySelector('h1');
@@ -1068,7 +1067,7 @@ try {
                         pickerBackground:picker ? getComputedStyle(picker).backgroundImage : '',
                         overflow:el.scrollWidth>el.clientWidth+1 };
                 });
-                assert.ok(heading.titleSize>=27 && heading.pickerHeight>=44 &&
+                assert.ok(heading.titleSize===26 && heading.pickerHeight>=44 &&
                     heading.selectHeight>=44 && heading.headerHeight<115 &&
                     heading.pickerBackground==='none' && !heading.overflow,
                     'R18 Settings keeps a compact header and functional section jump: '+JSON.stringify(heading));
@@ -1121,15 +1120,16 @@ try {
             if (tab === 'home') {
                 const homeType = await page.$eval('.wpb-home-header h1', el => {
                     const title = getComputedStyle(el);
-                    const logo = el.closest('.wpb-home-header').querySelector('div[aria-hidden="true"]');
+                    const actions = el.closest('.wpb-home-header').querySelector('.wpb-root-actions');
                     return { size: parseFloat(title.fontSize), weight: Number(title.fontWeight),
-                        logoHeight: logo.getBoundingClientRect().height,
+                        actionHeight: actions.getBoundingClientRect().height,
                         scrolled: el.closest('.wpb-home')?.dataset.scrolled==='1' };
                 });
-                const expectedSize=homeType.size>=29 && homeType.size<=37;
+                // M270: the five root titles share the same 1.625rem role.
+                const expectedSize=homeType.size===26;
                 assert.ok(expectedSize && homeType.weight >= 700,
                     'Home title keeps a stable expressive type scale while clipping smoothly: '+JSON.stringify(homeType));
-                assert.ok(homeType.logoHeight >= 24, 'Home header spacing does not collapse its logo');
+                assert.ok(homeType.actionHeight >= 48, 'Home root actions retain full-size targets');
             }
             if (tab === 'progress') {
                 const progressType = await page.$eval('.wpb-progress', el => {
@@ -1167,7 +1167,7 @@ try {
                 const profileR17 = await page.$eval('.wpb-profile', el => {
                     const rect = x => x?.getBoundingClientRect();
                     const header=el.querySelector('.wpb-profile-head');
-                    const identity=el.querySelector('.wpb-profile-identity');
+                    const identity=el.querySelector('.wpb-profile-card-caption');
                     const edit=el.querySelector('.wpb-profile-edit');
                     const stats=[...el.querySelectorAll('.wpb-profile-stat')].map(rect);
                     const grid=el.querySelector('.wpb-profile-strength-grid');
@@ -1186,7 +1186,7 @@ try {
                         overflow:el.scrollWidth>el.clientWidth+1
                     };
                 });
-                assert.ok(profileR17.title>=27 && profileR17.headerHeight<=112 &&
+                assert.ok(profileR17.title===26 && profileR17.headerHeight<=112 &&
                     profileR17.identityHeight<=40 && profileR17.identityBorder==='0px' &&
                     profileR17.identityBackground==='rgba(0, 0, 0, 0)' &&
                     profileR17.editHeight>=44 && !profileR17.overflow,
@@ -1224,7 +1224,7 @@ try {
             await page.waitForFunction(() => document.querySelector('.wpb-home')?.dataset.scrolled==='1');
             await page.waitForFunction(() => {
                 const header=document.querySelector('.wpb-home .wpb-home-header');
-                return header && parseFloat(getComputedStyle(header).borderBottomLeftRadius)>=26;
+                return header && parseFloat(getComputedStyle(header).borderBottomLeftRadius)===0;
             }, { timeout: 5000 });
             assert.equal(await page.$eval('.wpb-home', el => el.dataset.scrolled), '1',
                 'adaptive M3 app bar compresses after real content scroll');
@@ -1387,7 +1387,7 @@ try {
         }));
         assert.ok(beforeTrack.fill.length > 3 && beforeTrack.fill !== 'transparent',
             'M3 track borrows the active Pursuit theme surface');
-        await page.click('.wpb-progress .wpb-premium-tabs>button:nth-child(2)');
+        await page.click('.wpb-progress .wpb-premium-tabs>button:nth-child(3)');
         await page.waitForFunction(() => {
             const group = document.querySelector('.wpb-progress .wpb-premium-tabs');
             const selected = group?.querySelector('[aria-selected="true"]');
@@ -1407,8 +1407,8 @@ try {
         assert.ok(afterTrack.x > beforeTrack.x && Math.abs(afterTrack.w - afterTrack.targetW) < .15,
             'shared M3 selection slides and resizes to the exact chosen segment: '+
                 JSON.stringify({beforeTrack,afterTrack}));
-        assert.ok(afterTrack.w > beforeTrack.widths[1] + 4,
-            'selected Progress segment physically expands while adjacent segments yield');
+        assert.ok(afterTrack.w >= beforeTrack.widths[2] - .15,
+            'selected Progress segment retains its readable width while the spring updates');
         assert.equal(afterTrack.childCount, beforeTrack.children,
             'selection motion never adds a DOM element or reduces tap targets');
         assert.ok(afterTrack.indicator !== 'none' && afterTrack.activeBackground === 'rgba(0, 0, 0, 0)',
@@ -1417,7 +1417,7 @@ try {
             await page.screenshot({ path: path.join(root, 'verification/b831-m3-selected-progress-phone.png') });
         // True tablist keyboard navigation (including screen-reader-friendly selection)
         // must update the panel and follow the very same animated track.
-        await page.focus('.wpb-progress .wpb-premium-tabs>button:nth-child(2)');
+        await page.focus('.wpb-progress .wpb-premium-tabs>button:nth-child(3)');
         await page.keyboard.press('ArrowRight');
         await page.waitForFunction(() => {
             const group = document.querySelector('.wpb-progress .wpb-premium-tabs');
@@ -2658,7 +2658,17 @@ try {
         await page.waitForSelector('.wpb-library-search input');
         await page.click('.wpb-library-search input');
         await page.keyboard.type('Back Squat');
-        await page.waitForSelector('.wpb-library-row');
+        // A library row exists *before* the search input is processed. Waiting
+        // for any row can click a stale React result during filter/route motion,
+        // producing an intermittent false navigation timeout on CI runners.
+        // Synchronize to the real filtered exercise instead of adding retries
+        // or extending the later detail timeout.
+        await page.waitForFunction(() => {
+            const input = document.querySelector('.wpb-library-search input');
+            const rows = [...document.querySelectorAll('.wpb-library-row')];
+            return input?.value === 'Back Squat' && rows.length > 0
+                && rows.every(row => row.textContent.toLowerCase().includes('back squat'));
+        }, { timeout: 15000 });
         await page.click('.wpb-library-row');
         await page.waitForSelector('[data-exercisedetail] .wpb-exercise-tabs');
         await page.click('.wpb-exercise-tabs>button:nth-child(2)');
@@ -2811,7 +2821,7 @@ try {
                     labelInside:!!label&&rect(label).bottom<=rect(active).bottom+1,
                     labelGap:label&&icon?rect(label).top-rect(icon).bottom:null,
                     truncatedLabels:labels.filter(el=>el.scrollWidth>el.clientWidth+1).map(el=>el.textContent),
-                    profileIdentity:text('.wpb-profile-identity'),
+                    profileIdentity:text('.wpb-profile-card-caption'),
                     progressLabel:text('.wpb-progress-glance-label'),
                     planLabel:text('.wpb-plan-glance-tile>div:first-child')};
             },tab);

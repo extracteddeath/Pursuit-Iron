@@ -14,7 +14,8 @@ const oldCache = baseMatch[1];
 const runtimePath = new URL('../modules/training-domain/analytics.js', import.meta.url);
 const revisionProbe = '// m178 runtime content revision probe';
 const originalRuntime = fs.readFileSync(runtimePath, 'utf8');
-const originalReleaseFiles = ['sw.js', 'RELEASE_MANIFEST.json', 'BUILD_PROFILE.json'].map(file => {
+const originalBuild = JSON.parse(fs.readFileSync(new URL('../RELEASE_MANIFEST.json', import.meta.url))).build;
+const originalReleaseFiles = ['sw.js', 'RELEASE_MANIFEST.json', 'BUILD_PROFILE.json', 'modules/App.js', 'index.html'].map(file => {
   const url = new URL('../' + file, import.meta.url);
   return [url, fs.readFileSync(url)];
 });
@@ -60,10 +61,10 @@ try {
   assert.ok(before.controller, 'baseline page must be controlled by the installed worker');
   assert.ok(before.caches.includes(oldCache), 'baseline release cache must be active');
 
-  // A same-build runtime repair must produce a waiting update through the actual release writer.
+  // A numbered runtime release must produce a waiting update through the actual release writer.
   // It must keep the active tab on its old cached source until the user accepts Restart.
   fs.writeFileSync(runtimePath, originalRuntime + '\n' + revisionProbe + '\n');
-  execFileSync(process.execPath, ['scripts/finalize-release.mjs'], { cwd: root, stdio: 'pipe' });
+  execFileSync(process.execPath, ['scripts/finalize-release.mjs', '--next-build'], { cwd: root, stdio: 'pipe' });
   newCache = fs.readFileSync(swPath, 'utf8').match(/const CACHE="([^"]+)"/)[1];
   assert.notEqual(newCache, oldCache, 'runtime-only changes must create a distinct offline release');
   await page.evaluate(async () => {
@@ -80,6 +81,8 @@ try {
   assert.equal(waitingBeforeClick, true, 'new worker must wait until the in-app Restart action');
   const activeRuntime = await page.evaluate(async () => (await fetch('./modules/training-domain/analytics.js')).text());
   assert.equal(activeRuntime.includes(revisionProbe), false, 'installing a repair cannot overwrite the active release cache');
+  assert.ok(await page.evaluate(async b => (await (await fetch('./modules/App.js')).text()).includes(`const __BUILD__='${b}'`), originalBuild),
+    'The running installed app must retain its old build until Restart');
 
   const nav = page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 30000 });
   await page.locator('button.wpb-notice-in').click();
@@ -98,6 +101,16 @@ try {
   assert.ok(!after.caches.includes(oldCache), 'old production cache must be removed after activation');
   assert.equal(after.mounted, true, 'app must complete first render after update-driven restart');
   assert.ok(after.runtime.includes(revisionProbe), 'restart must load the repaired runtime from its new offline cache');
+  await page.click('[data-tab="settings"]');
+  await page.waitForFunction(b => document.body.textContent.includes('build ' + b), {}, originalBuild + 1);
+  await page.setOfflineMode(true);
+  await page.reload({ waitUntil: 'networkidle0' });
+  await page.waitForFunction(() => window.__pursuitMounted);
+  await page.click('[data-tab="settings"]');
+  await page.waitForFunction(b => document.body.textContent.includes('build ' + b), {}, originalBuild + 1);
+  assert.equal(await page.evaluate(() => localStorage.getItem('wpb:m178-update-sentinel')), before.sentinel);
+  await page.setOfflineMode(false);
+  console.log(`PASS numbered update: installed build ${originalBuild} → ${originalBuild + 1}; Settings and offline reload agree, storage preserved.`);
 
   // Another window can activate the update while this renderer still shows its old prompt.
   // Merely posting SKIP_WAITING to that now-active worker cannot trigger controllerchange again.
@@ -127,7 +140,7 @@ try {
   await companion.close();
   console.log('PASS stale update prompt: companion activation stays user-gated; real Restart click reloads and retains training storage.');
 
-  console.log('M178 PWA browser lifecycle OK: same-build runtime repair surfaced a waiting update, old source stayed isolated, Restart loaded the new cache, and local training storage survived.');
+  console.log('M178 PWA browser lifecycle OK: numbered release surfaced a waiting update, old source stayed isolated, Settings/offline loaded the new build, and local training storage survived.');
 } finally {
   fs.writeFileSync(runtimePath, originalRuntime);
   for (const [url, bytes] of originalReleaseFiles) fs.writeFileSync(url, bytes);

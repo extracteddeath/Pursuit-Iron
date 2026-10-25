@@ -1,6 +1,6 @@
 # Engine upgrade and assurance sequence through M265
 
-The behavior-bearing engine remains M234 / Pursuit Engine 0.65.6 / app 4.0.0 build 823. M235 verifies that behavior line. M236–M264 harden ownership, verification, CI, history provenance, standalone packaging, and internal responsibility boundaries without changing the training model or authored build identity. Offline cache identity also certifies shipped content so same-build repairs reach installed copies. M265 moves interactive generation off the main thread and connects the continuation controls to the canonical engine.
+The behavior-bearing engine remains M234 / Pursuit Engine 0.65.9 / app 4.0.0 build 905. M235 verifies that behavior line. M236–M264 harden ownership, verification, CI, history provenance, standalone packaging, and internal responsibility boundaries without changing the training model or authored build identity. Offline cache identity also certifies shipped content so same-build repairs reach installed copies. M265 moves interactive generation off the main thread and connects the continuation controls to the canonical engine.
 
 | Milestone | Scope | Acceptance |
 |---|---|---|

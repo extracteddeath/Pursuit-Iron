@@ -304,6 +304,8 @@ if scroll_to(r"^Add set", tries=4, step=500):
     tap(r"^Add set", "set-added")
     if not find(r"^Options for set \d+.*", timeout=3):
         FAILS.append("set numbers are not set-option buttons")
+    tap(r"^Skip$|\|Skip$", required=False)  # the rest card floats over the add row
+    scroll_to(r"^More set options", tries=4, step=400)
     tap(r"^More set options", "add-set-sheet")
     tap(r"Warm-up ramp", "warmups-added")
 else:
@@ -352,7 +354,6 @@ tap(r"^\|Done$|Done$")
 if scroll_to(r"Quick workout", tries=3):
     tap(r"Quick workout")
     time.sleep(2)
-    tap(r"^\|Skip$")
     shot("quick-empty")
     tap(r"Add a lift", "add-lift")
     tap(r"^\|Search exercises$")

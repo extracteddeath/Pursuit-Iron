@@ -9,6 +9,14 @@ const write = (file, value) => fs.writeFileSync(file, value);
 const sha = value => crypto.createHash('sha256').update(value).digest('hex');
 const manifest = JSON.parse(read('RELEASE_MANIFEST.json'));
 const profile = JSON.parse(read('BUILD_PROFILE.json'));
+if (!Number.isSafeInteger(manifest.build) || manifest.build < 1)
+    throw new Error('Release build must be a positive safe integer.');
+if (process.argv.includes('--next-build')) {
+    if (!Number.isSafeInteger(manifest.build + 1)) throw new Error('Release build limit reached.');
+    manifest.build++;
+}
+manifest.uiMilestone = manifest.uiMilestone.replace(/^Build \d+\b/, `Build ${manifest.build}`);
+profile.uiMilestone = manifest.uiMilestone;
 const walkJs = directory => fs.readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
     const file = path.posix.join(directory, entry.name);
     return entry.isDirectory() ? walkJs(file) : file.endsWith('.js') ? [file] : [];
@@ -38,7 +46,7 @@ const shell = [...new Set([
 // Browsers detect updates from sw.js bytes. Even a repair at the same build must produce a new
 // worker and isolated cache when any offline asset changes; the worker itself is outside this hash.
 const shellRevision = sha(shell.map(file => `${file}:${sha(fs.readFileSync(file.slice(2)))}\n`).join('')).slice(0, 16);
-manifest.cache = `${manifest.cache.replace(/-r[0-9a-f]{16}$/, '')}-r${shellRevision}`;
+manifest.cache = `${manifest.cache.replace(/-r[0-9a-f]{16}$/, '').replace(/-b\d+$/, `-b${manifest.build}`)}-r${shellRevision}`;
 profile.cache = manifest.cache;
 
 write('sw.js', read('sw.js')

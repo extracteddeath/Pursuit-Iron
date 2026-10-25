@@ -3,11 +3,19 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { verifyBuildProgression } from '../scripts/release-build.mjs';
 const index=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const css=fs.readFileSync(new URL('../app.css',import.meta.url),'utf8');
 const sw=fs.readFileSync(new URL('../sw.js',import.meta.url),'utf8');
 const manifest=JSON.parse(fs.readFileSync(new URL('../RELEASE_MANIFEST.json',import.meta.url),'utf8'));
 const build=String(manifest.build);
+assert.equal(verifyBuildProgression(manifest, manifest).shippedFilesChanged, false);
+assert.throws(() => verifyBuildProgression({ ...manifest, build: manifest.build - 1 }, manifest), /backwards/);
+for (const invalid of [0, -1, 1.5, '907', Number.MAX_SAFE_INTEGER + 1])
+    assert.throws(() => verifyBuildProgression({ ...manifest, build: invalid }, manifest), /positive safe integer/);
+const reordered = { ...manifest, uiFiles: Object.fromEntries(Object.entries(manifest.uiFiles).reverse()) };
+assert.equal(verifyBuildProgression(reordered, manifest).shippedFilesChanged, false);
+assert.throws(() => verifyBuildProgression({ ...manifest, runtimeFiles: { ...manifest.runtimeFiles, 'modules/probe.js': 'changed' } }, manifest), /without increasing build/);
 assert.ok(index.includes(`build='${build}'`),'boot-health must use the current release build as its single comparison token');
 assert.ok(index.includes('v.build===build'),'boot-health attempts must accumulate only within the current build');
 assert.equal(index.includes("v.build==='774'"),false,'stale M168 build comparison must not survive');
@@ -35,8 +43,8 @@ try {
         fs.mkdirSync(path.dirname(destination), { recursive: true });
         fs.cpSync(new URL('../' + file, import.meta.url), destination, { recursive: true });
     }
-    const finalize = () => {
-        execFileSync(process.execPath, ['scripts/finalize-release.mjs'], { cwd: fixture, stdio: 'pipe' });
+    const finalize = (...args) => {
+        execFileSync(process.execPath, ['scripts/finalize-release.mjs', ...args], { cwd: fixture, stdio: 'pipe' });
         return JSON.parse(fs.readFileSync(path.join(fixture, 'RELEASE_MANIFEST.json'), 'utf8'));
     };
     const finalizedFiles = ['sw.js', 'RELEASE_MANIFEST.json', 'BUILD_PROFILE.json'];
@@ -48,10 +56,12 @@ try {
     assert.deepEqual(snapshot(), baseline, 'unchanged finalization must be byte-identical');
     for (const [file, suffix] of [['modules/training-domain/analytics.js', '\n// runtime revision probe\n'],
         ['app.css', '\n/* stylesheet revision probe */\n'], ['gallery.json', '\n ']]) {
-        const oldCache = release.cache;
+        const previous = release, oldCache = release.cache;
         fs.appendFileSync(path.join(fixture, file), suffix);
         release = finalize();
         assert.notEqual(release.cache, oldCache, `${file} changes must rotate the offline cache`);
+        assert.throws(() => verifyBuildProgression(release, previous), /without increasing build/,
+            'Assembling changed bytes is allowed locally; publishing them with the same build is rejected');
         assert.equal(release.build, manifest.build, 'source repairs retain the authored build');
         assert.equal(release.engineVersion, manifest.engineVersion, 'source revisions do not invent an engine model version');
         const profile = JSON.parse(fs.readFileSync(path.join(fixture, 'BUILD_PROFILE.json'), 'utf8'));
@@ -61,6 +71,16 @@ try {
         finalize();
         assert.deepEqual(snapshot(), changed, 'repeated finalization cannot change cache identity');
     }
+    const previous = release;
+    release = finalize('--next-build');
+    assert.equal(release.build, manifest.build + 1, 'Explicit release preparation increments the canonical build once');
+    assert.equal(verifyBuildProgression(release, previous).build, release.build);
+    assert.ok(release.cache.includes(`-b${release.build}-r`));
+    assert.ok(release.uiMilestone.startsWith(`Build ${release.build} · `));
+    assert.ok(fs.readFileSync(path.join(fixture, 'modules/App.js'), 'utf8').includes(`const __BUILD__='${release.build}'`));
+    assert.ok(fs.readFileSync(path.join(fixture, 'index.html'), 'utf8').includes(`build='${release.build}'`));
+    const numbered = snapshot();finalize();
+    assert.deepEqual(snapshot(), numbered, 'Ordinary finalization cannot keep incrementing the prepared release');
 } finally {
     fs.rmSync(fixture, { recursive: true, force: true });
 }

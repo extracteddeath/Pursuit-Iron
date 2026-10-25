@@ -1,3 +1,11 @@
+## Build 907 / M360 — Numbered web releases and retained training fixes
+
+- Give all shipped M321–M359 fixes a new visible build: saved cycle/week totals and equipment-aware previews, history-scoped progression, recovery safeguards and deliberate set-effort protection.
+- Advance the canonical build with `node scripts/finalize-release.mjs --next-build`. Settings, startup diagnostics, the release label and the offline cache receive the same build; repeated ordinary finalization stays stable.
+- Release CI compares with the actual PR base or pre-push release and rejects changed shipped bytes without a higher build. Source-only verification changes may retain their build.
+- Exercise installed-app Restart, the visible Settings build, offline reload and preserved storage in the maintained PWA update browser journey. Keep restart deliberate so an update does not interrupt training.
+- Verify GitHub Pages files against the exact merged release before claiming deployment. Engine version remains 0.65.9; no training-data migration is implied by the build number.
+
 ## Build 906 / M320 — Adaptive training-cycle release
 
 - Publish the audited adaptive-cycle work from M311–M319 under a visible new build identity, while retaining app version 4.0.0 and canonical engine version 0.65.9 to avoid inventing an engine migration.

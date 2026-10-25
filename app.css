@@ -298,13 +298,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   overflow-wrap:anywhere;
 }
 
-#root[data-pi-motion="expressive"] .wpb-program .wpb-program-name span{
-  font-size:clamp(19px,5.3vw,22px)!important;
-  font-weight:740!important;
-  letter-spacing:-.028em!important;
-  line-height:1.16;
-  overflow-wrap:anywhere;
-}
+
 #root[data-pi-motion="expressive"] .wpb-program .wpb-day-title{
   font-size:15.5px!important;
   font-weight:730!important;
@@ -8731,13 +8725,23 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb-plan-glance-value{margin-top:3px;line-height:1.2;font-size:1.125rem;font-weight:650;color:var(--pi-color-on-control);}
 .wpb-plan-glance-tile[data-featured="true"] .wpb-plan-glance-value{color:var(--pi-m3e-primary,var(--wpb-theme-accent));}
 /* M274 — Program detail title, animated metadata and save status share the design roles. */
-.wpb-program-title-row{display:flex;align-items:center;gap:var(--pi-space-2);min-width:0;}
-.wpb-program-name-column{flex:1;min-width:0;}
-.wpb-program-name{display:flex;align-items:center;gap:6px;max-width:100%;border:0;padding:0;background:none;color:var(--pi-color-on-control);cursor:pointer;}
-.wpb-program-name-text{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:1.25rem;line-height:1.16;font-weight:700;}
+.wpb-program-title-row{display:flex;flex-wrap:wrap;align-items:flex-start;gap:var(--pi-space-2);min-width:0;}
+.wpb-program-name-column{flex:1 1 14em;min-width:0;}
+.wpb-program-name{display:flex;align-items:flex-start;gap:6px;max-width:100%;border:0;padding:0;background:none;color:var(--pi-color-on-control);cursor:pointer;}
+.wpb-program-name-text{min-width:0;white-space:normal;overflow-wrap:anywhere;text-align:left;font-size:var(--pi-type-heading);line-height:1.2;font-weight:var(--pi-weight-action);letter-spacing:-.028em;}
+/* Very large titles remain scrollable without taking the working form off screen. */
+.wpb-program>.wpb-program-header{max-height:45%;overflow-y:auto;}
+.wpb-program-commit{display:flex;flex-wrap:wrap;align-items:flex-start;gap:var(--pi-space-3);margin:0 0 var(--pi-space-3);padding:var(--pi-space-3);border:1px solid var(--pi-color-divider);border-radius:var(--pi-shape-card);background:var(--pi-color-feature);}
+.wpb-program-commit-copy{flex:1 1 12em;min-width:0;font-size:var(--pi-type-support);line-height:1.45;overflow-wrap:anywhere;}
+.wpb-program-commit-copy p{margin:var(--pi-space-1) 0 0;color:var(--pi-color-on-muted);}
+.wpb-program-commit-actions{display:flex;flex-direction:column;gap:var(--pi-space-1);flex:1 1 7em;min-width:0;}
+.wpb .wpb-program-commit-actions>.wpb-ui-action{display:inline-flex;align-items:center;justify-content:center;gap:var(--pi-space-2);min-width:0;white-space:normal;overflow-wrap:anywhere;}
 .wpb-program-meta-collapse{overflow:hidden;will-change:height,opacity,transform;}
 .wpb-program-meta-line{display:flex;align-items:center;flex-wrap:wrap;gap:var(--pi-space-1);padding-top:2px;font-size:var(--pi-type-support);color:var(--pi-color-on-muted);}
+.wpb-program-actions{display:flex;align-items:center;flex-wrap:wrap;gap:var(--pi-space-2);margin-top:var(--pi-space-3);--pi-control-padding-inline:var(--pi-space-1);}
 .wpb-program-actions-spacer{flex:1 1 auto;}
+.wpb-program-day-picker{position:relative;flex-shrink:0;min-width:0;}
+.wpb-program-actions [aria-expanded="true"]>.wpb-program-day-chevron{transform:rotate(180deg);}
 .wpb-program-saved-status{display:inline-flex;align-items:center;gap:5px;min-height:36px;padding-inline:var(--pi-space-1);font-size:var(--pi-type-support);font-weight:700;white-space:nowrap;color:var(--pi-color-on-muted);}
 /* M276: a compact contextual cycle route, not another permanent toolbar. The
    measured wrapper remains padding-free so its scroll collapse reaches zero. */

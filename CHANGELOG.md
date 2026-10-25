@@ -1,3 +1,9 @@
+## Build 915 / M367 — Program Settings dialog semantics and CSS ownership
+
+- Treat the Program Settings sheet as one named modal dialog, with explicit Folder and Description labels and selected-state announcements for existing option and constraint controls.
+- Move 12 static inline style objects from the sheet frame, header, form and save bar to semantic theme CSS; retain valid/invalid duration controls, staged drafts and Save/Cancel behavior.
+- Tighten the complete cross-module inline-style ceiling to 2,716. Keep training engine 0.65.9, existing programs and workout history unchanged.
+
 ## Build 914 / M366 — Program Settings ownership and block duration styling
 
 - Extract the Program Settings dialog into a feature-owned renderer; keep draft transactions and save/cancel control in ProgramView.

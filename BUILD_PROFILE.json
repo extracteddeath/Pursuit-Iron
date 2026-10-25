@@ -6,6 +6,6 @@
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 73,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b914-rcd34d880267d8a2a",
-  "uiMilestone": "Build 914 · M366 Program Settings ownership"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b915-r7ad3cde002497753",
+  "uiMilestone": "Build 915 · M367 Program Settings dialog semantics and CSS ownership"
 }

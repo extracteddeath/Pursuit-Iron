@@ -166,6 +166,10 @@ try {
     await page.waitForFunction(() => JSON.parse(localStorage.getItem('wpb:live')).data[0].sets[0].actualRIR === 3);
     assert.equal((await rows())[1].target.failure, true, 'Rerating cannot undo a later explicit set type');
     assert.equal((await rows())[1].target.rir, 0);
+    await page.click('[data-testid="set-0-0"] button[aria-label="Mark set not done"]');
+    await page.waitForFunction(() => !JSON.parse(localStorage.getItem('wpb:live')).data[0].sets[0].done);
+    assert.equal((await rows())[1].target.failure, true, 'Unticking delegates live Undo to its canonical owner');
+    assert.equal((await rows())[1].target.rir, 0);
     console.log('PASS M359 phone: deliberate failure sources and pending set intent survive logging and reload without spurious load reductions.');
     assert.deepEqual(errors, []);
     console.log('PASS M232 phone: report two misses → one 5% accessory reduction → autosave/reload preserves it → undo either source restores it; no runtime errors.');

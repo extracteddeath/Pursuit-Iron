@@ -117,6 +117,40 @@ try {
     await restoreSnapshot(manualOrphan);
     assert.equal((await values())[1], '92.5', 'Restore preserves a deliberately edited second-set load');
     console.log('PASS M296 phone opening: orphaned set-2 reduction repaired before interaction, reload-stable, manual loads protected.');
+    // M359: use the actual set-number menu; selecting a type retains numeric
+    // ownership, so this must be protected by intent rather than input editing.
+    const freshSession = async () => {
+        await page.evaluate(() => localStorage.removeItem('wpb:live'));
+        await page.reload({ waitUntil: 'networkidle0' });
+        await page.waitForSelector('[data-testid="set-0-2"]');
+    };
+    const chooseFailure = async index => {
+        await page.click(`[data-testid="set-0-${index}"] [data-set-options-trigger]`);
+        await page.waitForSelector('[data-testid="workout-set-options"]');
+        await page.click('[data-testid="workout-set-options"] [data-set-type="failure"]');
+    };
+    const logFailure = async index => {
+        await typeReps(index, 8);
+        await page.click(`[data-testid="set-0-${index}"] button[aria-label="Mark set done"]`);
+        await page.waitForSelector(`[data-testid="set-0-${index}"] button[aria-label="Failure, no reps left"]`);
+        await page.locator(`[data-testid="set-0-${index}"] button[aria-label="Failure, no reps left"]`).click();
+        await page.waitForFunction(i => JSON.parse(localStorage.getItem('wpb:live')).data[0].sets[i].actualRIR === 0, {}, index);
+    };
+    await freshSession();
+    for (const index of [0, 1]) { await chooseFailure(index); await logFailure(index); }
+    assert.deepEqual(await values(), ['100', '100', '100'], 'Two deliberate failure sets cannot ease the next load');
+    const authored = await rows();
+    assert.ok(authored.slice(0, 2).every(row => row.typeOverride === 'failure' && row.target.rir === 0));
+    assert.equal(authored[2].liveAdjustment, undefined);
+    await page.reload({ waitUntil: 'networkidle0' });await page.waitForSelector('[data-testid="set-0-2"]');
+    assert.deepEqual(await rows(), authored, 'Reload preserves deliberate effort and actual completed sets');
+    await freshSession();
+    await chooseFailure(2);
+    for (const index of [0, 1]) await logFailure(index);
+    assert.deepEqual(await values(), ['100', '100', '100'], 'Ordinary misses cannot rewrite the authored final set');
+    assert.equal((await rows())[2].target.failure, true);
+    assert.equal((await rows())[2].liveAdjustment, undefined);
+    console.log('PASS M359 phone: deliberate failure sources and pending set intent survive logging and reload without spurious load reductions.');
     assert.deepEqual(errors, []);
     console.log('PASS M232 phone: report two misses → one 5% accessory reduction → autosave/reload preserves it → undo either source restores it; no runtime errors.');
 } finally { if (browser) await browser.close(); await new Promise(resolve => server.close(resolve)); }

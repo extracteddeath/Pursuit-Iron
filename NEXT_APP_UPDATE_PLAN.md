@@ -1,5 +1,30 @@
 # Whole-app launch readiness
 
+## October 25 continuation — M359 authored set intent and live fatigue
+
+Baseline: `528a857` (M358). The existing 13-stage lifecycle audit passed, but a new
+reproduction exposed a live intent gap: two session-local **To failure** sets at
+100 × 8 @ 0 RIR were compared with the exercise's default 1–2 RIR and reduced the
+next ordinary set to 95. Set-type changes retain automatic numeric ownership;
+that flag alone does not establish permission to reinterpret authored effort.
+
+The existing `live-autoregulation.js` owner now shares one authored-intent guard
+across load reductions, rep caps and restore validation. Explicit set types,
+failure, AMRAP and percentage targets cannot authorize or receive these automatic
+changes. Resume removes an old automatic adjustment whose sources carry authored
+intent, preserving completed observations and user-owned/changed rows. Ordinary
+two-miss reductions, observed rep caps and earned future progression retain their
+existing owners. No UI layout, styling, stored-history/schema or program policy
+changes; static style/priority counts are unchanged.
+
+The existing M232 source regression failed before the fix (100 → 95) and now
+covers source/pending protocol protection, immutable input and idempotent resume.
+Its registered browser journey exercises the real set-number menu, deliberate
+failure logging, subsequent target protection and reload. Acceptance requires
+all exact-head CI checks, the lifecycle audit and post-merge hosted-byte parity;
+physical Android certification remains open. Next: continue the progression/load
+matrix and cross-screen prescription audit, prioritizing reproduced defects.
+
 Updated October 22, 2026. This is the single current next-update plan. It supersedes the October 8 workout proposal: compact logging, coaching, session choices and program-change previews already exist. Preserve the user's current Workout and Focus experience.
 
 ## Current baseline and ownership

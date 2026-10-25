@@ -95,6 +95,31 @@ assert.equal(liveEffortFeedback(repRows(),0),'Saved · next target unchanged');
 assert.equal(liveEffortFeedback([{...pending(),done:true,actualRIR:2}],0),'Saved for future workouts');
 console.log('PASS B901 suggestion audit: observed-effort rep caps, per-row intent, truthful feedback, rerating/undo, manual and protocol protection.');
 
+// M359: deliberate session-local effort/protocol choices are not ordinary misses.
+// The real set-type control retains automatic value ownership while changing target RIR.
+for (const intent of [
+    { typeOverride: 'failure', target: { rir: 0, failure: true } },
+    { target: { failure: true, rir: 0 } },
+    { target: { amrap: true } },
+    { target: { nextAction: 'percentage' } }
+]) {
+    const withIntent = row => ({ ...row, ...intent, target: { ...row.target, ...intent.target } });
+    const authoredSources = sets.map((row, i) => i < 2 ? withIntent({ ...row, reps: '8' }) : row);
+    const original = structuredClone(authoredSources);
+    assert.equal(applyLiveAutoregulation({ ...input, sets: authoredSources }).sets, authoredSources,
+        'Two intentionally hard protocol sets cannot lower a later ordinary set');
+    assert.deepEqual(authoredSources, original, 'Authored set intent and logged observations remain immutable');
+    const authoredPending = sets.map((row, i) => i === 2 ? withIntent(row) : row);
+    assert.equal(applyLiveAutoregulation({ ...input, sets: authoredPending }).sets, authoredPending,
+        'Two ordinary misses cannot overwrite an explicitly authored pending protocol');
+    const oldAdjustment = adjusted.sets.map((row, i) => i < 2 ? withIntent(row) : row);
+    const repaired = reconcileRestoredLiveAdjustments(oldAdjustment);
+    assert.equal(repaired[2].weight, '100', 'Resume retires an old automatic reduction based on authored sources');
+    assert.equal(repaired[0], oldAdjustment[0], 'Resume preserves the actual authored observation');
+    assert.equal(reconcileRestoredLiveAdjustments(repaired), repaired, 'Intent repair is idempotent');
+}
+console.log('PASS M359: deliberate failure/AMRAP/percentage sets neither authorize nor receive automatic fatigue changes.');
+
 // M296: an opening snapshot cannot retain a live reduction without its logged sources.
 {
 const adjusted = applyLiveAutoregulation(input).sets;

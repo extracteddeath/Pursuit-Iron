@@ -168,7 +168,7 @@ fun WorkoutScreen(vm: AppViewModel) {
                 Row(Modifier.fillMaxSize()) {
                     LazyColumn(Modifier.width(300.dp).fillMaxHeight(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         itemsIndexed(exs) { k, e ->
-                            MorphChip(e.s("name"), k == ei, { vm.act("select", "ei" to k) }, Modifier.fillMaxWidth(), trailing = workCount(e), done = e.b("done"), height = 56.dp)
+                            MorphChip(e.s("name"), k == ei, { vm.act("select", "ei" to k) }, Modifier.fillMaxWidth(), trailing = workCount(e), done = e.b("done"), height = 56.dp, strong = true)
                         }
                     }
                     ExercisePane(vm, s, ex, wide, Modifier.weight(1f)) { sheet = it }

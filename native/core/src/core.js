@@ -1662,13 +1662,17 @@ export function pinProgram({ id }) { if (!programById(id)) return { ok: false };
 
 /* ------------------------------------------------------------------ library */
 /* The design's Exercises: muscle and equipment filters, a count, and a TODAY tag on lifts in the next session. */
-const LIB_EQUIP = { barbell: ['barbell', 'ezbar', 'trapbar'], dumbbell: ['dumbbell'], cable: ['cable'], machine: ['machine', 'smith', 'plate_loaded', 'legpress'], kettlebell: ['kettlebell'], band: ['band'] };
+const LIB_EQUIP = { barbell: ['barbell', 'ezbar', 'trapbar'], dumbbell: ['dumbbell'], cable: ['cable'], machine: ['machine', 'smith', 'plate_loaded', 'legpress'], kettlebell: ['kettlebell'], band: ['band', 'bands'] };
 const BW_ONLY = new Set(['pullup', 'bench', 'dip', 'box', 'rings', 'floor', 'mat', 'rack']);
 function libEquipOf(x) {
     const eq = x.equip || [];
     if (!eq.length || eq.every((e) => BW_ONLY.has(e))) return 'bodyweight';
     return Object.keys(LIB_EQUIP).find((k) => eq.some((e) => LIB_EQUIP[k].includes(e))) || 'other';
 }
+/* The design's library groups: six coarse muscle groups over the engine's parts. */
+const LIB_GROUP = { chest: 'Chest', lats: 'Back', upper_back: 'Back', traps: 'Back', lower_back: 'Back', shoulders: 'Shoulders', side_delts: 'Shoulders', front_delts: 'Shoulders', rear_delts: 'Shoulders',
+    quads: 'Legs', hamstrings: 'Legs', glutes: 'Legs', calves: 'Legs', adductors: 'Legs', abductors: 'Legs', biceps: 'Arms', triceps: 'Arms', forearms: 'Arms', abs: 'Core', obliques: 'Core', neck: 'Core' };
+const groupOf = (x) => LIB_GROUP[x.part] || 'Core';
 export function library({ q = '', part = null, equip = null } = {}) {
     const needle = String(q).trim().toLowerCase();
     const banned = new Set(S.store.banned || []);
@@ -1678,10 +1682,10 @@ export function library({ q = '', part = null, equip = null } = {}) {
     const recent = new Set(); history().forEach((h) => Object.keys(h.perf || {}).forEach((id) => recent.add(id)));
     (S.live?.data || []).forEach((e) => { if (e.sets.some((x) => x.done)) recent.add(e.id); });
     const goals = S.store.goals || {};
-    return EXERCISES.filter((x) => (!part || x.part === part) && (!equip || libEquipOf(x) === equip) && (!needle || x.name.toLowerCase().includes(needle)))
+    return EXERCISES.filter((x) => (!part || x.part === part || groupOf(x) === part) && (!equip || libEquipOf(x) === equip) && (!needle || x.name.toLowerCase().includes(needle)))
         .slice(0, 400).map((x) => ({ id: x.id, name: x.name, part: x.part, partLabel: E.PART_LABEL?.[x.part] || x.part, equip: x.equip, type: x.type,
-            equipLabel: { barbell: 'Barbell', dumbbell: 'Dumbbell', cable: 'Cable', machine: 'Machine', kettlebell: 'Kettlebell', band: 'Band', bodyweight: 'Bodyweight' }[libEquipOf(x)] || EQUIP_LABEL[(x.equip || [])[0]] || 'Other',
-            banned: banned.has(x.id), today: today.has(x.id), custom: !!x.custom, recent: recent.has(x.id), goal: Number(goals[x.id]) > 0 }));
+            equipLabel: { barbell: 'Barbell', dumbbell: 'Dumbbell', cable: 'Cable', machine: 'Machine', kettlebell: 'Kettlebell', band: 'Bands', bodyweight: 'Bodyweight' }[libEquipOf(x)] || EQUIP_LABEL[(x.equip || [])[0]] || 'Other',
+            group: groupOf(x), banned: banned.has(x.id), today: today.has(x.id), custom: !!x.custom, recent: recent.has(x.id), goal: Number(goals[x.id]) > 0 }));
 }
 export function exercise({ id }) {
     const x = EX_BY_ID[id]; if (!x) return null;

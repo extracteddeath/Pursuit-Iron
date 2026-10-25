@@ -146,7 +146,7 @@ fun ExerciseChips(vm: AppViewModel, exs: List<JSONObject>, ei: Int, onList: () -
             items(exs.size) { k ->
                 val e = exs[k]
                 val work = e.list("sets").filter { !it.b("warm") && !it.b("sub") && !it.b("skipped") }
-                com.pursuitiron.app.ui.common.MorphChip(e.s("short").ifBlank { e.s("name") }, k == ei, { vm.act("select", "ei" to k) },
+                com.pursuitiron.app.ui.common.MorphChip(e.s("short").ifBlank { e.s("name") }, k == ei, { vm.act("select", "ei" to k) }, strong = true,
                     trailing = "${work.count { it.b("done") }}/${work.size}", done = e.b("done"),
                     modifier = Modifier.semantics { contentDescription = "${e.s("name")}, ${work.count { it.b("done") }} of ${work.size} sets" })
             }

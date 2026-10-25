@@ -123,7 +123,7 @@ private fun ChartsTab(x: JSONObject) {
     } }
     val fmt = { v: Double -> if (m.vol) "%,d".format(Locale.US, Math.round(v)) else fmtNum(Math.round(v * 10) / 10.0) }
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        METRICS.forEach { mt -> MorphChip(mt.label, mt.id == mId, { mId = mt.id }, height = 36.dp) }
+        METRICS.forEach { mt -> MorphChip(mt.label, mt.id == mId, { mId = mt.id }, height = 36.dp, strong = true) }
     }
     Column {
         Text(m.title, style = MaterialTheme.typography.titleMedium)

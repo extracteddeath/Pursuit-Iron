@@ -4,6 +4,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -96,19 +97,25 @@ fun Segmented(options: List<Pair<String, String>>, selected: String?, onSelect: 
     }
 }
 
-/** A chip that squares off when selected: shape carries state, not colour alone. */
+/** A chip that squares off when selected: shape carries state, not colour alone. The design's filter chip by
+    default (selected: secondary container, squared; otherwise outlined pill); [strong] is the workout's lift chip
+    and the chart metric tabs (selected: primary). [check] adds the design's tick to a selected muscle chip. */
 @Composable
-fun MorphChip(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, trailing: String? = null, done: Boolean = false, height: Dp = 40.dp) {
-    val r by animateDpAsState(if (selected) 14.dp else 20.dp, Motion.spring(), label = "chip")
+fun MorphChip(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, trailing: String? = null, done: Boolean = false,
+              height: Dp = 40.dp, strong: Boolean = false, check: Boolean = false) {
+    val r by animateDpAsState(if (selected) 12.dp else height / 2, Motion.spring(), label = "chip")
     val cs = MaterialTheme.colorScheme
-    val bg = when { selected -> cs.primary; done -> cs.primaryContainer; else -> cs.surfaceContainerHigh }
-    val fg = when { selected -> cs.onPrimary; done -> cs.onPrimaryContainer; else -> cs.onSurface }
+    val bg = when { selected && strong -> cs.primary; selected -> cs.secondaryContainer; done -> cs.primaryContainer; strong -> cs.surfaceContainerHigh; else -> Color.Transparent }
+    val fg = when { selected && strong -> cs.onPrimary; selected -> cs.onSecondaryContainer; done -> cs.onPrimaryContainer; strong -> cs.onSurface; else -> cs.onSurfaceVariant }
+    val outlined = !selected && !done && !strong
     Row(
-        modifier.heightIn(min = height).clip(RoundedCornerShape(r)).background(bg).clickable(onClick = onClick)
-            .semantics { this.selected = selected }.padding(horizontal = 14.dp),
+        modifier.heightIn(min = height).clip(RoundedCornerShape(r)).background(bg)
+            .then(if (outlined) Modifier.border(1.dp, cs.outlineVariant, RoundedCornerShape(r)) else Modifier)
+            .clickable(onClick = onClick).semantics { this.selected = selected }.padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
+        if (check && selected) Icon(PiIcons.Check, null, tint = fg, modifier = Modifier.size(16.dp))
         // No weight here: inside a LazyRow the chip is measured with unbounded width, where a weighted
         // child gets no space at all and the label vanished. maxLines + ellipsis still bound it in a FlowRow.
         Text(label, style = MaterialTheme.typography.labelLarge, color = fg, maxLines = 1, overflow = TextOverflow.Ellipsis)

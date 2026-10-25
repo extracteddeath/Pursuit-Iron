@@ -59,11 +59,10 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private val PARTS = listOf(null to "All", "chest" to "Chest", "lats" to "Lats", "upper_back" to "Upper back", "shoulders" to "Shoulders", "biceps" to "Biceps",
-    "triceps" to "Triceps", "quads" to "Quads", "hamstrings" to "Hamstrings", "glutes" to "Glutes", "calves" to "Calves", "abs" to "Abs", "forearms" to "Forearms")
+private val PARTS = listOf(null to "All", "Chest" to "Chest", "Back" to "Back", "Legs" to "Legs", "Shoulders" to "Shoulders", "Arms" to "Arms", "Core" to "Core")
 
 private val EQUIPS = listOf(null to "Any equipment", "barbell" to "Barbell", "dumbbell" to "Dumbbell", "cable" to "Cable", "machine" to "Machine",
-    "bodyweight" to "Bodyweight", "kettlebell" to "Kettlebell", "band" to "Band")
+    "bodyweight" to "Bodyweight", "kettlebell" to "Kettlebell", "band" to "Bands")
 private val LOWER = setOf("quads", "hamstrings", "glutes", "calves", "adductors", "abductors", "lower_back")
 
 /* The design's Exercises: compare and + New in the header, muscle and equipment chips, a count, and rows
@@ -104,14 +103,14 @@ fun LibraryScreen(vm: AppViewModel) {
         }
         item(span = { GridItemSpan(maxLineSpan) }) {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(bottom = 6.dp)) {
-                items(listOf("all" to "All", "recent" to "Recent", "goals" to "Goals", "banned" to "Banned")) { (id, label) ->
-                    MorphChip(if (id == "all") label else "$label · ${counts[id] ?: 0}", st == id, { st = id }, height = 36.dp)
-                }
+                items(PARTS) { (id, label) -> MorphChip(label, part == id, { part = id; vm.searchLibrary(q, id, equip) }, check = true) }
             }
         }
         item(span = { GridItemSpan(maxLineSpan) }) {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(bottom = 6.dp)) {
-                items(PARTS) { (id, label) -> MorphChip(label, part == id, { part = id; vm.searchLibrary(q, id, equip) }) }
+                items(listOf("all" to "All lifts", "recent" to "Recent", "goals" to "Goals", "banned" to "Banned")) { (id, label) ->
+                    MorphChip(if (id == "all") label else "$label · ${counts[id] ?: 0}", st == id, { st = id }, height = 36.dp)
+                }
             }
         }
         item(span = { GridItemSpan(maxLineSpan) }) {
@@ -136,7 +135,7 @@ fun LibraryScreen(vm: AppViewModel) {
             }
         }
         items(shown, key = { it.s("id") }) { x ->
-            val lower = x.s("part") in LOWER
+            val lower = x.s("group") == "Legs"
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.surfaceContainerLow).clickable { open = x.s("id") }.padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(Modifier.size(40.dp).clip(CircleShape).background(if (lower) cs.tertiaryContainer else cs.primaryContainer), contentAlignment = Alignment.Center) {
@@ -144,7 +143,7 @@ fun LibraryScreen(vm: AppViewModel) {
                 }
                 Column(Modifier.weight(1f)) {
                     Text(x.s("name"), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(x.s("partLabel").replaceFirstChar { it.uppercase() } + " · " + x.s("equipLabel"), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(x.s("group").ifBlank { x.s("partLabel").replaceFirstChar { it.uppercase() } } + " · " + x.s("equipLabel"), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 if (x.b("today")) Badge("TODAY", cs.primaryContainer, cs.onPrimaryContainer)
                 if (x.b("banned")) Badge("BANNED", cs.surfaceContainerHighest, cs.onSurfaceVariant)

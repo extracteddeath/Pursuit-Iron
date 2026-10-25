@@ -1,3 +1,10 @@
+## Build 916 / M368 — Shared settings controls and persistent form actions
+
+- Program Settings now uses the same shared choice controls as the rest of the app, with 48px minimum targets, scalable labels and explicit form groups.
+- Separate form scrolling keeps Save, Cancel and the dialog heading visible. Choices wrap at narrow widths and enlarged text; selection remains legible in forced colors and reduced motion.
+- Move six stateless UI primitives into one reusable module; remove all 46 remaining Settings inline style objects and obsolete presentation props. No added CSS priorities.
+- Preserve the existing program transaction, constraints, duration validation, cycle ownership, saved history and Engine 0.65.9. Browser checks exercise staged changes/cancellation, focus restoration, 200% text and creation → Preview → Start → resume.
+
 ## Build 915 / M367 — Program Settings dialog semantics and CSS ownership
 
 - Treat the Program Settings sheet as one named modal dialog, with explicit Folder and Description labels and selected-state announcements for existing option and constraint controls.

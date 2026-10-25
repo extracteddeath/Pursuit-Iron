@@ -106,7 +106,8 @@ try{
   if([320,393,1280].includes(width))await page.screenshot({path:`verification/m354-exercises-first-${width}-phone.png`});
 
   assert.ok(await page.$eval('.wpb-cycle-preview-facts',(n,days)=>n.textContent.includes(`${days} training days per week`),saved[1].days.length),'preview exposes the actual upcoming weekly structure');
-  const expectedPreviewDose=saved[1].nextEngine?.cycleTemplate?.splitDecision?.workingWeekVolumeChange;
+  const expectedPreviewDose=saved[1].nextEngine?.cycleTemplate?.splitDecision?.workingWeekVolumeChange
+    ? describeRegionalWorkingWeekChange(saved[0],saved[1],EXERCISES) : null;
   assert.equal(await page.evaluate(()=>document.querySelectorAll('.wpb-cycle-block-preview .wpb-cycle-dose-detail').length),
     expectedPreviewDose?1:0,'preview shows saved volume detail only when available');
   const savedQuality=saved[1].nextEngine?.cycleTemplate?.splitDecision?.realizedQuality;
@@ -218,7 +219,8 @@ try{
   assert.ok(rows[2].text.includes('Peak'));assert.equal(await page.$$eval('.wpb-cycle-actions button',ns=>ns.length),1);
   assert.doesNotMatch(await page.$eval('.wpb-cycle-detail',n=>n.innerText),/kept exactly|Available after/);
   assert.equal(await page.$eval('.wpb-cycle-detail',n=>n.scrollWidth<=n.clientWidth+1),true);
-  const expectedDose=saved[1].nextEngine?.cycleTemplate?.splitDecision?.workingWeekVolumeChange;
+  const expectedDose=saved[1].nextEngine?.cycleTemplate?.splitDecision?.workingWeekVolumeChange
+    ? describeRegionalWorkingWeekChange(saved[0],saved[1],EXERCISES) : null;
   const disclosures=await page.$$eval('.wpb-cycle-detail details',ns=>ns.map(n=>({dose:n.classList.contains('wpb-cycle-dose-detail'),open:n.open})));
   assert.ok(disclosures.every(n=>n.dose&&!n.open),'existing top-level cycle facts stay expanded; dose is opt-in');
   if(expectedDose){

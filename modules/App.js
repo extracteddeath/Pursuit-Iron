@@ -19926,21 +19926,21 @@ function CycleDoseTransition({ change }) {
 function CycleWeekOutlook({ program, week, provisional = false }) {
     const decision = program?.nextEngine?.cycleTemplate?.splitDecision;
     const report = decision?.realizedQuality;
-    if (!Array.isArray(report?.weeks) || !report.weeks.length) return null;
-    const current = report.weeks.find(row => row.week === week);
-    if (!current) return _jsx("p", { className: "wpb-cycle-week-outlook-deload", children:
-        "Recovery week. The strength and muscle-coverage estimates describe regular training weeks, not deload work." });
-    // This count is from the same saved cells shown in the preview rows.
-    // The generator's original coverage/practice model is only a baseline.
+    // Generated quality may be absent for imported/custom blocks and deload weeks.
+    // Saved executable cells, not a generation report, own the live working-set total.
+    const current = Array.isArray(report?.weeks) ? report.weeks.find(row => row.week === week) : null;
+    const isDeload = week > weeksOf(program);
     const workingSets = (program.days || []).reduce((total, day) =>
         total + (day.exercises || []).reduce((count, _, slot) => {
             const id = exerciseAt(program, day, slot, week);
             const cell = computeCell(program, day, id, slot, week);
             return count + (cell?.missing ? 0 : Math.max(0, Number(cell?.sets) || 0));
         }, 0), 0);
-    const generatedSets = Number(current.weeklySets);
-    const editedSinceGeneration = Number.isFinite(generatedSets) && generatedSets !== workingSets;
-    const lifts = Object.entries(decision?.liftPracticeTargets || {});
+    const generatedSets = current?.weeklySets == null ? NaN : Number(current.weeklySets);
+    const editedSinceGeneration = !!current && Number.isFinite(generatedSets) && generatedSets !== workingSets;
+    const coverage = current?.muscleTargetCoveragePercent;
+    const hasCoverage = coverage != null && Number.isFinite(Number(coverage));
+    const lifts = current ? Object.entries(decision?.liftPracticeTargets || {}) : [];
     const priorities = program?.nextEngine?.request?.goal?.liftPriorities || {};
     const selected = lifts.filter(([lift]) => ["primary", "specialization", "high"].includes(priorities[lift]));
     const visible = selected.length ? selected : lifts;
@@ -19952,7 +19952,7 @@ function CycleWeekOutlook({ program, week, provisional = false }) {
         ] }),
         _jsxs("dl", { className: "wpb-cycle-week-outlook-stats", children: [
             _jsxs("div", { children: [_jsx("dt", { children: "Working sets" }), _jsx("dd", { children: workingSets })] }),
-            _jsxs("div", { children: [_jsx("dt", { children: "Original target coverage" }), _jsx("dd", { children: `${current.muscleTargetCoveragePercent}%` })] })
+            hasCoverage && _jsxs("div", { children: [_jsx("dt", { children: "Original target coverage" }), _jsx("dd", { children: `${coverage}%` })] })
         ] }),
         visible.length > 0 && _jsxs("details", { className: "wpb-cycle-week-outlook-detail", children: [
             _jsx("summary", { children: "Original strength practice by lift" }),
@@ -19963,8 +19963,11 @@ function CycleWeekOutlook({ program, week, provisional = false }) {
         ] }),
         editedSinceGeneration && _jsx("p", { className: "wpb-cycle-week-outlook-note", role: "status", children:
             `Saved week has ${workingSets} working sets; the original generated outlook counted ${generatedSets}. Exercise and set edits are reflected in the live count.` }),
-        _jsx("p", { className: "wpb-cycle-week-outlook-note", children:
-            "Working sets are counted from the saved prescriptions shown here. Target coverage and lift frequency are original generation estimates, not live recalculations after edits; coverage is not the percentage of the previous block retained. Future blocks may adapt when activated." })
+        _jsx("p", { className: "wpb-cycle-week-outlook-note", children: !current
+            ? (isDeload
+                ? "Recovery week. Working sets are counted from saved prescriptions; the original strength and muscle-coverage estimates describe regular training weeks only."
+                : "No original training-quality estimate is available for this week. Working sets are counted from the saved prescriptions shown here.")
+            : "Working sets are counted from the saved prescriptions shown here. Target coverage and lift frequency are original generation estimates, not live recalculations after edits; coverage is not the percentage of the previous block retained. Future blocks may adapt when activated." })
     ] });
 }
 function CycleBlockPreview({ program, initialWeek = 1, initialDayId = null, onClose, onViewPlan }) {
@@ -19973,8 +19976,6 @@ function CycleBlockPreview({ program, initialWeek = 1, initialDayId = null, onCl
     const isFuturePreview = program.nextEngine?.cycleTemplate?.preview === true;
     const splitDecision = program.nextEngine?.cycleTemplate?.splitDecision;
     const liftTargets = Object.entries(program.nextEngine?.request?.goal?.liftFrequency || {});
-    const hasAnalysis = !!(splitDecision?.realizedQuality?.weeks?.length ||
-        splitDecision?.workingWeekVolumeChange || splitDecision?.mode === 'goal_optimized' || liftTargets.length);
     return _jsx(SessionChoiceDialog, { title: program.blockLabel || program.name, onClose, className: "wpb-cycle-block-preview", children: _jsxs("div", { children: [
         _jsx("p", { className: "wpb-cycle-preview-note", children: isFuturePreview
             ? "Upcoming block · Read-only outlook. Exercises, split and targets may adapt when this block begins."
@@ -19994,7 +19995,7 @@ function CycleBlockPreview({ program, initialWeek = 1, initialDayId = null, onCl
                         _jsx("div", { className: "wpb-cycle-preview-target", children: cell.missing ? cell.note : `${cell.sets} sets · ${cell.reps} reps · ${cell.rir} RIR` })] }, slot);
                 })] }, day.id))
         ] }),
-        hasAnalysis && _jsxs("details", { className: "wpb-cycle-preview-analysis", children: [
+        _jsxs("details", { className: "wpb-cycle-preview-analysis", children: [
             _jsx("summary", { className: "wpb-cycle-preview-analysis-summary", children: "Training analysis & volume" }),
             _jsxs("div", { className: "wpb-cycle-preview-analysis-body", children: [
                 _jsx(CycleWeekOutlook, { program, week, provisional: isFuturePreview }),

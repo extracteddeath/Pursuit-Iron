@@ -32,8 +32,15 @@ assert.ok(preview.indexOf('program.days.map(') < preview.indexOf('_jsx(CycleWeek
     'Saved workout prescriptions take priority over generation-time quality estimates');
 assert.ok(preview.indexOf('program.days.map(') < preview.indexOf('splitDecision.reason'),
     'Real exercises precede the rendered optional split rationale');
-assert.ok(preview.includes('hasAnalysis && _jsxs("details"')&&preview.includes('wpb-cycle-preview-analysis-summary'),
-    'Secondary quality and dose evidence are owned by an optional native disclosure');
+assert.ok(preview.includes('_jsxs("details", { className: "wpb-cycle-preview-analysis"')&&
+    preview.includes('wpb-cycle-preview-analysis-summary')&&!preview.includes('hasAnalysis &&'),
+    'Saved week dose is available under one native disclosure, even without a generation report');
+assert.ok(explanation.includes('const current = Array.isArray(report?.weeks) ?')&&
+    explanation.includes('const workingSets = (program.days || []).reduce(')&&
+    explanation.includes('hasCoverage && _jsxs("div"')&&
+    explanation.includes('No original training-quality estimate is available')&&
+    explanation.includes('Recovery week. Working sets are counted from saved prescriptions'),
+    'Generated quality is optional, while actual saved week and deload doses stay visible');
 assert.ok(preview.includes('open: initialDayId ? day.id === initialDayId : index === 0'),
     'Selected or first workout stays open at preview entry');
 assert.ok(preview.includes('computeCell(program, day, id, slot, week)'),'Browsing reads the existing saved executable prescription owner');

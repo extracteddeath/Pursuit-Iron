@@ -300,6 +300,53 @@ try{
   await context.close();
  }
 
+ // M356: a saved/custom cycle can lack the original generation-quality report.
+ // The selected week and recovery-week prescription counts must still be truthful.
+ {
+  const metadataLight=structuredClone(saved[1]);
+  metadataLight.config.deload=true;
+  if(metadataLight.nextEngine?.cycleTemplate) metadataLight.nextEngine.cycleTemplate.splitDecision=null;
+  if(metadataLight.nextEngine?.request?.goal) metadataLight.nextEngine.request.goal.liftFrequency={};
+  const fixture={...store,saved:store.saved.map(p=>p.id===metadataLight.id?metadataLight:p)};
+  const context=await browser.createBrowserContext(),page=await context.newPage();
+  page.on('pageerror',error=>errors.push(error.message));await page.setBypassServiceWorker(true);
+  await page.setViewport({width:393,height:852,isMobile:true,hasTouch:true});
+  await page.evaluateOnNewDocument(seed=>localStorage.setItem('wpb:v1',JSON.stringify(seed)),fixture);
+  await page.goto('http://127.0.0.1:8790/index.html',{waitUntil:'networkidle0'});
+  await page.waitForSelector('.wpb-home');
+  await page.click('.wpb-tabbar [aria-label="Plan"]');
+  await page.waitForSelector('.wpb-plan-block-nav');
+  await page.$$eval('.wpb-plan-block-nav button',ns=>ns[1].click());
+  await page.waitForSelector('.wpb-plan-session-link');
+  await page.click('.wpb-plan-session-link');
+  await page.waitForSelector('.wpb-cycle-preview-analysis');
+  assert.equal(await page.$eval('.wpb-cycle-preview-analysis',n=>n.open),false,
+    'Optional dose panel still begins closed beneath the exercises');
+  await page.click('.wpb-cycle-preview-analysis>summary');
+  const read=()=>page.$eval('.wpb-cycle-week-outlook',n=>({
+    week:Number(n.dataset.week),sets:Number(n.querySelector('.wpb-cycle-week-outlook-stats dd')?.textContent),
+    copy:n.innerText}));
+  const normal=await read();
+  assert.equal(normal.week,1);
+  assert.equal(normal.sets,savedWorkingSets(metadataLight,1),
+    'Metadata-light saved week must show its executable working sets');
+  assert.match(normal.copy,/No original training-quality estimate is available/);
+  assert.ok(!normal.copy.includes('Original target coverage')&&!normal.copy.includes('Original strength practice'),
+    'Missing generation-quality evidence is not fabricated');
+  const recoveryWeek=metadataLight.config.weeks+1;
+  await page.select('.wpb-cycle-preview-select',String(recoveryWeek));
+  await page.waitForFunction(week=>Number(document.querySelector('.wpb-cycle-week-outlook')?.dataset.week)===week,{},recoveryWeek);
+  const recovery=await read();
+  assert.equal(recovery.sets,savedWorkingSets(metadataLight,recoveryWeek),
+    'Recovery week dose must follow displayed saved prescriptions, not absent quality estimates');
+  assert.match(recovery.copy,/Recovery week/);
+  assert.ok(!recovery.copy.includes('Original target coverage'),
+    'Recovery week does not borrow training-week quality percentages');
+  assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),fixture.saved,
+    'Metadata-light and recovery browsing must not mutate saved training');
+  await context.close();
+ }
+
  // M298: exercise the actual app confirmation, worker, persisted transition and repeat.
  {
   const live=generateNextCycleForShell({templateId:'custom',config:{...lifecycleConfig,name:'Lifecycle browser'},

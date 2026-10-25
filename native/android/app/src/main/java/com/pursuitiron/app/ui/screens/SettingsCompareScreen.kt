@@ -139,6 +139,8 @@ fun ProgramSettingsSheet(vm: AppViewModel, onClose: () -> Unit) {
             Button(onClick = { guarded { vm.applyProgramSettings(settings()) { onClose() } } }, modifier = Modifier.fillMaxWidth().height(52.dp)) {
                 Text(if (rebuilds) "Save and rebuild" else "Save program settings")
             }
+            // The design keeps the lift-by-lift progression in Program settings.
+            (vm.plan?.s("programId"))?.takeIf { it.isNotBlank() }?.let { pid -> LiftProgressionCard(vm, pid) }
             if (!locked && p.s("engine") == "pursuit-next") {
                 Kicker("Exercise layout", modifier = Modifier.padding(top = 8.dp))
                 OutlinedButton(onClick = { guarded { vm.applyProgramSettings(null, shuffle = true) { onClose() } } }, modifier = Modifier.fillMaxWidth()) {

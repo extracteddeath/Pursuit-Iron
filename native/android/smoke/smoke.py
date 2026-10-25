@@ -404,8 +404,9 @@ if scroll_to(r"Every lift, week by week", tries=4):
     close_sheet(r"^\|Week by week$")
 else:
     FAILS.append("no week-by-week entry on Plan")
-# The design's shared programs: browse, import one (it is added without switching)
-if scroll_to(r"Browse shared programs", tries=8):
+# The design's Programs (the program pill under Plan): every program, then shared programs (added without switching)
+scroll_up_to(r"^Program: ", tries=10)
+if tap(r"^Program: ", "programs-sheet") and scroll_to(r"Browse shared programs", tries=4, step=500):
     tap(r"Browse shared programs", "gallery")
     if tap(r"^Import ", "gallery-import", required=False):
         if not find(r"is in your programs|Added to your programs", timeout=20):
@@ -415,15 +416,24 @@ if scroll_to(r"Browse shared programs", tries=8):
     for _ in range(4):
         adb("shell", "input", "swipe", "540", "700", "540", "1900", "200")
 else:
-    FAILS.append("no shared programs entry on Plan")
-# Lift progression: the block's methods, each lift's reason, change or lock it
-if scroll_to(r"^Lift progression|\|Lift progression", tries=4):
+    FAILS.append("no Programs sheet with shared programs on Plan")
+# Lift progression lives in Program settings (the Plan action row): the block's methods, each lift's reason
+scroll_up_to(r"^\|Settings$", tries=10)
+tap(r"^\|Settings$", "program-settings")
+if scroll_to(r"^Lift progression|\|Lift progression", tries=8, step=600):
     tap(r"^Lift progression|\|Lift progression", "lift-progression")
     if not find(r"Pursuit chose per exercise|re-checked|locked by your choices", timeout=5):
         FAILS.append("lift progression sheet missing its note")
     close_sheet(r"Pursuit chose per exercise|re-checked|locked by your choices")
 else:
-    FAILS.append("no lift progression card on Plan")
+    FAILS.append("no lift progression in Program settings")
+close_sheet(r"Save program settings|Save and rebuild")
+# The design's Details: how the program was built and the block plan
+scroll_up_to(r"^\|Details$", tries=10)
+if tap(r"^\|Details$", "program-details"):
+    if not scroll_to(r"Block plan", tries=6, step=600):
+        FAILS.append("program details has no block plan")
+    close_sheet(r"Program details|Block plan")
 # Why this lift: a Plan day row opens the engine's reasoning for that slot
 if scroll_to(r"^Why .+\?", tries=4):
     tap(r"^Why .+\?", "why-this-lift")
@@ -612,8 +622,8 @@ tap(r"^\|Today$|^Today\|", "today-lb")
 
 # 8. Training cycle: build one, open it, try to advance
 tap(r"^\|Plan$|^Plan\|")
-if scroll_to(r"New training cycle"):
-    tap(r"New training cycle", "cycle-setup")
+scroll_up_to(r"^\|New$", tries=10)
+if tap(r"^\|New$") and tap(r"^\|Cycle$", "cycle-setup"):
     scroll_to(r"Adapt between blocks")
     shot("cycle-templates")
     tap(r"^\|Build my cycle$")
@@ -679,8 +689,8 @@ if scroll_to(r"^\|Injury log$"):
 
 # Template with percentages: build, then set training maxes
 tap(r"^\|Plan$|^Plan\|")
-if scroll_to(r"New program"):
-    tap(r"New program")
+scroll_up_to(r"^\|New$", tries=10)
+if tap(r"^\|New$"):
     if tap(r"^\|Template$", "templates"):
         tap(r"Search 75 templates|Search \d+ templates")
         adb("shell", "input", "text", "Main-Lift")
@@ -713,8 +723,8 @@ if scroll_to(r"New program"):
 
 # Compare
 tap(r"^\|Plan$|^Plan\|")
-if scroll_to(r"Compare programs or exercises"):
-    tap(r"Compare programs or exercises", "compare")
+scroll_up_to(r"^Program: ", tries=10)
+if tap(r"^Program: ") and tap(r"^\|Compare$", "compare"):
     back()
 
 # 10. Home-screen widget: rendered by a real AppWidgetHost, then its Start button's intent

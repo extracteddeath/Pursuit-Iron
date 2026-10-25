@@ -212,6 +212,73 @@ const loadText = (set, u) => { const w = set?.weight === '' || set?.weight == nu
     return `${w != null && Number.isFinite(w) ? Math.round(w * 100) / 100 + ' ' + u : 'Choose load'} × ${r > 0 ? r : '—'}`; };
 const targetsText = (sets, u) => { const uni = sets.every((x) => x.weight === sets[0]?.weight && x.reps === sets[0]?.reps);
     return uni ? loadText(sets[0], u) : sets.map((x, i) => `Set ${i + 1}: ${loadText(x, u)}`).join(' · '); };
+
+/* The design's Programs screen: every saved program (cycle blocks too), the active one first, each with
+   where it came from and what a week of it holds. */
+
+/* The design's program icons (prototype iconFor): an icon, a colour and a shape per program or cycle, chosen
+   in the picker; the default follows the goal (a cycle gets the orbit in violet). Stored beside the programs. */
+function iconFor(key, goal, cycle) {
+    const v = (S.store.icons || {})[key] || {};
+    return { icon: v.icon || (cycle ? 'orbit' : goal === 'strength' ? 'flame' : goal === 'both' ? 'zap' : 'dumbbell'), color: v.color || (cycle ? 'violet' : 'theme'), shape: v.shape || 'rounded', custom: !!v.icon };
+}
+export function programIcon({ key }) {
+    const p = programById(key), c = cycles().find((x) => x.id === key);
+    return { key, name: p?.name || c?.name || 'Program', cycle: !!c, goal: p?.config?.goal || 'both', ...iconFor(key, p?.config?.goal, !!c), saved: !!(S.store.icons || {})[key] };
+}
+export function setProgramIcon({ key, icon, color, shape, reset = false }) {
+    const all = { ...(S.store.icons || {}) };
+    if (reset) delete all[key]; else { const cur = programIcon({ key }); all[key] = { icon: icon || cur.icon, color: color || cur.color, shape: shape || cur.shape }; }
+    S.store.icons = all; markStore(); return programIcon({ key });
+}
+export function programsList() {
+    const nx = upNext(), H = history();
+    const fmtD = (t) => { try { return new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); } catch { return ''; } };
+    const rows = saved().map((x) => {
+        const c = x.cycleId ? cycles().find((cy) => cy.id === x.cycleId) : null;
+        const bi = c ? c.blockIds.indexOf(x.id) : -1;
+        const ran = H.filter((h) => h.programId === x.id);
+        const sess = (E.SESSIONS || []).find((q) => q.id === x.config?.session);
+        let sets = 0; try { x.days.forEach((d) => d.exercises.forEach((id, slot) => { sets += Number(E.computeCell(x, d, id, slot, 1)?.sets) || 0; })); } catch { sets = 0; }
+        const split = E.SPLITS?.[x.config?.split]?.name;
+        const sub = c ? `${[split, x.days.length + ' days'].filter(Boolean).join(' · ')} · ${c.name || 'Training cycle'}, block ${bi + 1} of ${c.blockIds.length}` + (x.createdAt ? ` · started ${fmtD(x.createdAt)}` : '')
+            : x.quick ? 'Routine' + (x.createdAt ? ` · saved ${fmtD(x.createdAt)}` : '')
+            : x.config?.percentScheme ? 'Percentage-based · training-max methods'
+            : [x.templateId ? 'From a template' : 'Saved' + (x.createdAt ? ' ' + fmtD(x.createdAt) : ''), ran.length ? `ran ${ran.length} session${ran.length === 1 ? '' : 's'}` : null].filter(Boolean).join(' · ');
+        const meta = [`${x.days.length} day${x.days.length === 1 ? '' : 's'}`, sess ? sess.label.replace(/^Up to /, '≤').replace(/ to /, '–').replace(' minutes', ' min').replace(/^Over /, '') : null, sets ? `${sets} sets in week 1` : null, x.config?.percentScheme ? '% of training max' : null].filter(Boolean).join(' · ');
+        return { id: x.id, name: x.name, active: x.id === nx?.program.id, quick: !!x.quick, cycleId: c ? c.id : null, sub, meta, icon: iconFor(x.id, x.config?.goal, false), dayId: x.days[0]?.id || null, exercises: x.days[0]?.exercises.length || 0, lifts: (x.days[0]?.exercises || []).slice(0, 4).map(exName) };
+    });
+    return { count: rows.length, programs: [...rows.filter((r) => r.active), ...rows.filter((r) => !r.active && !r.quick), ...rows.filter((r) => !r.active && r.quick)] };
+}
+
+/* The design's Program details: how the program was built, the muscle priorities with this week's sets,
+   and the block plan week by week (weekIntent, the same sample the Plan screen reads). */
+export function programDetails({ programId } = {}) {
+    const nx = upNext(), p = programId ? programById(programId) : nx?.program; if (!p) return null;
+    const cfg = p.config || {}, wk = nx?.program.id === p.id ? nx.weekIndex : 1;
+    const label = (k) => E.PART_LABEL?.[k] || k;
+    const sess = (E.SESSIONS || []).find((q) => q.id === cfg.session);
+    const goal = { hypertrophy: 'Hypertrophy', strength: 'Strength', both: 'Strength & size' }[cfg.goal] || cfg.goal;
+    const focus = Object.entries(cfg.focus || {}).filter(([, v]) => v > 0);
+    const chips = [
+        focus.length ? ['More', focus.map(([k]) => label(k)).join(', ')] : null,
+        (cfg.reduce || []).length ? ['Less', cfg.reduce.map(label).join(', ')] : null,
+        ['Split', E.SPLITS?.[cfg.split]?.name || cfg.split], ['Days', `${p.days.length}/week`], sess ? ['Session', sess.label] : null, ['Goal', goal],
+        cfg.experience ? ['Level', cfg.experience.charAt(0).toUpperCase() + cfg.experience.slice(1)] : null,
+        ['Block', `${E.weeksOf(p)} weeks`], ['Deload', cfg.deload ? `Yes · week ${E.weeksOf(p) + 1}` : 'No'],
+    ].filter(Boolean).map(([k, v]) => ({ k, v, accent: k === 'More' }));
+    const c = p.cycleId ? cycles().find((cy) => cy.id === p.cycleId) : null;
+    let cycleLine = null;
+    if (c) { const bi = c.blockIds.indexOf(p.id); const parts = c.blockIds.map((id) => { const b = programById(id); return b ? `${(b.name || '').replace(/ block$/i, '')} ${E.weeksOf(b)}w` : null; }).filter(Boolean);
+        cycleLine = `Block ${bi + 1} of the ${c.name || 'training'} cycle: ${parts.join(' → ')}`; }
+    let bk = []; try { bk = E.weekMuscleBreakdown(p, wk) || []; } catch { bk = []; }
+    const setsOf = (k) => Math.round((bk.find((x) => x.part === k)?.sets || 0) * 2) / 2;
+    const priorities = [...focus.map(([k, v]) => ({ label: `${label(k)} · Focus ×${v}`, sets: setsOf(k) })), ...(cfg.reduce || []).map((k) => ({ label: `${label(k)} · Reduced`, sets: setsOf(k) }))];
+    const B = blockWeeks(p), start = Number(p.createdAt) || now();
+    const plan = B.list.map((w) => { let wi = null; try { wi = E.weekIntent(p, w); } catch { wi = null; } let pw = null; try { pw = E.plannedWeek(p, w); } catch { pw = null; }
+        return { w, deload: w === B.deloadWeek, date: start + (w - 1) * 7 * 86400000, note: wi ? (wi.deload ? 'Deload · ' : '') + wi.label : '', sets: pw?.sets || 0, current: w === wk }; });
+    return { programId: p.id, name: p.name, week: wk, chips, cycleLine, priorities, plan };
+}
 export function sessionReview({ programId, dayId, weekIndex } = {}) {
     const nx = upNext();
     const p = programId ? programById(programId) : nx?.program; if (!p) return null;
@@ -1491,7 +1558,7 @@ export function plan({ programId, weekIndex } = {}) {
                     status: !isCur ? null : done.has(d.id) ? 'done' : d.id === nx.day.id ? 'today' : 'planned' };
             });
         })(),
-        percent: !!p.config?.percentScheme,
+        percent: !!p.config?.percentScheme, icon: iconFor(p.id, p.config?.goal, false),
         cycleId: (p.cycleId && cycles().some((c) => c.id === p.cycleId)) ? p.cycleId : null, canNextBlock: !p.cycleId || !cycles().some((c) => c.id === p.cycleId),
         // Cycle blocks are reached through their cycle, as on the web app's Home, so the list stays one row per plan.
         programs: saved().filter((x) => !(x.cycleId && cycles().some((c) => c.id === x.cycleId))).map((x) => ({ id: x.id, name: x.name, days: x.days.length, active: x.id === nx?.program.id })) };
@@ -1829,8 +1896,11 @@ export function deleteCycle({ id, alsoBlocks = false }) {
 }
 /* App.js BlockReviewView. */
 export function reviewBlock({ id, index }) {
-    const c = cycles().find((x) => x.id === id); if (!c) return null;
-    let r = null; try { r = E.blockReview(history(), c, index); } catch { r = null; }
+    // A standalone program reviews as a one-block cycle (the design's "Review block" on Plan).
+    const prog = programById(id);
+    const c = cycles().find((x) => x.id === id) || (prog ? { id, name: prog.name, blockIds: [prog.id], blockMeta: [{ id: prog.id, label: 'Block' }] } : null);
+    if (!c) return null;
+    let r = null; try { r = E.blockReview(history(), c, prog ? 0 : index); } catch { r = null; }
     if (!r) return null;
     return { ...r, cycleName: c.name, label: r.block?.label || `Block ${index + 1}`, note: r.block?.note || '' };
 }

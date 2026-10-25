@@ -773,5 +773,10 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
     ok(b.ok && !b.review.changes.find((c) => c.id === ch.id).undone, 'and the recommendation restored');
   }
 }
+{ // The design's Programs and Program details.
+  const L = C.programsList(), d = C.programDetails({});
+  ok(L.count > 0 && L.programs[0].active && L.programs[0].meta.includes('day'), 'programs list leads with the active program (' + L.programs[0].meta + ')');
+  ok(d && d.chips.some((c) => c.k === 'Split') && d.plan.length > 0 && d.plan.some((w) => w.current), 'program details: ' + d.chips.length + ' chips, ' + d.plan.length + ' weeks');
+}
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);
 

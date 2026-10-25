@@ -129,12 +129,22 @@ fun PlanScreen(vm: AppViewModel) {
     var compareOpen by remember { mutableStateOf(false) }
     var galleryOpen by remember { mutableStateOf(false) }
     var scheduleOpen by remember { mutableStateOf(false) }
+    var programsOpen by remember { mutableStateOf(false) }
+    var detailsOpen by remember { mutableStateOf(false) }
+    var settingsOpen by remember { mutableStateOf(false) }
+    var reviewOpen by remember { mutableStateOf(false) }
+    var iconFor by remember { mutableStateOf<String?>(null) }
+    iconFor?.let { k -> IconPickerSheet(vm, k) { iconFor = null } }
     var whyFor by remember { mutableStateOf<Triple<String, String, Int>?>(null) }
     whyFor?.let { (pid, did, k) -> WhyLiftSheet(vm, pid, did, k, vm.plan?.i("weekIndex") ?: 1) { whyFor = null } }
     var matrixOpen by remember { mutableStateOf(false) }
     if (matrixOpen) WeekByWeekSheet(vm, p.s("programId")) { matrixOpen = false }
     if (compareOpen) CompareSheet(vm) { compareOpen = false }
     if (galleryOpen) GallerySheet(vm) { galleryOpen = false }
+    if (programsOpen) ProgramsSheet(vm, onCompare = { compareOpen = true }, onGallery = { galleryOpen = true }) { programsOpen = false }
+    if (detailsOpen) ProgramDetailsSheet(vm, p.s("programId"), onSettings = { settingsOpen = true }) { detailsOpen = false }
+    if (settingsOpen) ProgramSettingsSheet(vm) { settingsOpen = false }
+    if (reviewOpen) BlockReviewSheet(vm, p.s("cycleId").ifBlank { p.s("programId") }, (vm.cycles?.list("cycles")?.firstOrNull { it.s("id") == p.s("cycleId") }?.i("activeBlock") ?: 0)) { reviewOpen = false }
     if (scheduleOpen) WeeklyScheduleSheet(vm, p.s("programId")) { scheduleOpen = false }
     openCycle?.let { id -> CycleSheet(vm, id) { openCycle = null } }
     if (confirmNext) AlertDialog(onDismissRequest = { confirmNext = false },
@@ -150,12 +160,13 @@ fun PlanScreen(vm: AppViewModel) {
         item(span = full) {
             Column(Modifier.padding(top = 20.dp, start = 4.dp)) {
                 Text("Plan", style = MaterialTheme.typography.displayMedium)
-                Text("${p.s("name")} · " + (if (p.b("endless")) (if (wk > weeks) "continuous · deload" else "continuous · week $wk of the wave") else if (wk > weeks) "deload week" else "week $wk of $weeks") + (if (p.i("current") > 0) " · you're on week ${p.i("current")}" else ""), style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
-                androidx.compose.foundation.layout.FlowRow(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilledTonalButton(onClick = { vm.openEditor(p.s("programId")) }) { Icon(PiIcons.List, null, modifier = Modifier.size(18.dp)); Text("  Edit program") }
-                    FilledTonalButton(onClick = { scheduleOpen = true }) { Icon(PiIcons.Calendar, null, modifier = Modifier.size(18.dp)); Text("  Schedule") }
-                    if (p.b("percent")) FilledTonalButton(onClick = { vm.tmFor = p.s("programId") }) { Text("Training maxes") }
-                }
+                PlanProgramHeader(p, onIcon = { iconFor = p.s("programId") }) { programsOpen = true }
+                Text((if (p.b("endless")) (if (wk > weeks) "continuous · deload" else "continuous · week $wk of the wave") else if (wk > weeks) "deload week" else "week $wk of $weeks") +
+                    p.list("days").let { ds -> val done = ds.count { it.s("status") == "done" }; if (ds.any { !it.isNull("status") }) " · $done/${ds.size} this week" else "" },
+                    style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
+                PlanActions(p, onEdit = { vm.openEditor(p.s("programId")) }, onReview = { reviewOpen = true }, onSchedule = { scheduleOpen = true },
+                    onCycle = if (p.s("cycleId").isNotBlank()) ({ openCycle = p.s("cycleId") }) else null, onSettings = { settingsOpen = true }, onDetails = { detailsOpen = true },
+                    onNew = { vm.openSetup() }, onTm = if (p.b("percent")) ({ vm.tmFor = p.s("programId") }) else null)
             }
         }
         if (p.s("cycleId").isNotBlank()) item(span = full) { CycleBanner(vm, p.s("cycleId")) { openCycle = p.s("cycleId") } }
@@ -167,88 +178,19 @@ fun PlanScreen(vm: AppViewModel) {
             }
         }
         item(span = full) { VolumeWaveCard(vm, p.s("programId"), wk, { vm.loadPlan(p.s("programId"), it) }, { matrixOpen = true }) }
-        item(span = full) { WeekVolumeCard(vm, p.s("programId"), wk) }
-        item(span = full) { LiftProgressionCard(vm, p.s("programId")) }
         p.list("days").forEach { d ->
             item { PlanDayCard(vm, p, d, wk) { k -> whyFor = Triple(p.s("programId"), d.s("id"), k) } }
         }
         if (p.b("canNextBlock")) item(span = full) {
             OutlinedButton(onClick = { confirmNext = true }, modifier = Modifier.fillMaxWidth()) { Icon(PiIcons.Redo, null, modifier = Modifier.size(18.dp)); Text("  Build next block") }
         }
-        val progs = p.list("programs")
-        item(span = full) { SectionTitle("Training cycles") }
-        item(span = full) { CyclesList(vm) { openCycle = it } }
-        item(span = full) { SectionTitle("Programs") }
-        item(span = full) {
-            Column(Modifier.clip(RoundedCornerShape(24.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                progs.forEach { pr ->
-                    Row(Modifier.fillMaxWidth().background(cs.surfaceContainerLow).clickable { vm.loadPlan(pr.s("id"), null) }.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text(pr.s("name"), style = MaterialTheme.typography.titleSmall)
-                            Text("${pr.i("days")} days a week" + if (pr.b("active")) " · training now" else "", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
-                        }
-                        if (!pr.b("active")) FilledTonalButton(onClick = { vm.loadPlan(pr.s("id"), null); vm.pin(pr.s("id")) }) { Text("Train this") }
-                        ProgramMenu(vm, pr.s("id"), pr.s("name"))
-                    }
-                }
-                Row(Modifier.fillMaxWidth().background(cs.surfaceContainerLow).clickable { vm.openSetup() }.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(PiIcons.Plus, null, tint = cs.primary); Text("  New program", style = MaterialTheme.typography.titleSmall, color = cs.primary)
-                }
-                Row(Modifier.fillMaxWidth().background(cs.surfaceContainerLow).clickable { galleryOpen = true }.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(PiIcons.List, null, tint = cs.primary); Text("  Browse shared programs", style = MaterialTheme.typography.titleSmall, color = cs.primary)
-                }
-                Row(Modifier.fillMaxWidth().background(cs.surfaceContainerLow).clickable { compareOpen = true }.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(PiIcons.Swap, null, tint = cs.primary); Text("  Compare programs or exercises", style = MaterialTheme.typography.titleSmall, color = cs.primary)
-                }
-            }
-        }
-    }
-}
-
-/* ---------------------------------------------------------------- Progress */
-@Composable
-fun ProgressScreen(vm: AppViewModel) {
-    val p = vm.progress
-    val wide = LocalWide.current
-    val full = StaggeredGridItemSpan.FullLine
-    var liftId by remember { mutableStateOf<String?>(null) }
-    var pinsOpen by remember { mutableStateOf(false) }
-    var historyId by remember { mutableStateOf<String?>(null) }
-    var day by remember { mutableStateOf<Triple<Int, Int, Int>?>(null) }
-    val charts = rememberProgressCharts(vm)
-    liftId?.let { id -> LiftDetailSheet(vm, id) { liftId = null } }
-    historyId?.let { id -> HistorySheet(vm, id) { historyId = null } }
-    if (pinsOpen) PinsSheet(vm) { pinsOpen = false }
-    LazyVerticalStaggeredGrid(
-        columns = StaggeredGridCells.Fixed(if (wide) 2 else 1),
-        contentPadding = PaddingValues(start = if (wide) 32.dp else 16.dp, end = if (wide) 32.dp else 16.dp, bottom = 24.dp),
-        horizontalArrangement = Arrangement.spacedBy(20.dp), verticalItemSpacing = 16.dp, modifier = Modifier.statusBarsPadding(),
-    ) {
-        item(span = full) { Text("Progress", style = MaterialTheme.typography.displayMedium, modifier = Modifier.padding(top = 20.dp, start = 4.dp)) }
-        if (p == null || p.i("sessions") == 0) {
-            item(span = full) { EmptyState("Your charts start here", "Log your first session and this fills with strength trends, weekly volume and records. Trends need two sessions per lift.") }
-            return@LazyVerticalStaggeredGrid
-        }
-        // The design: Trends and History one tap apart (history used to sit under every chart).
-        item(span = full) { Segmented(listOf("trends" to "Trends", "history" to "History"), vm.progView, { vm.progView = it; day = null }) }
-        if (vm.progView == "history") {
-            item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { MonthCalendar(vm, day) { day = it } }
-            item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { HistoryList(vm, day) { historyId = it } }
-            return@LazyVerticalStaggeredGrid
-        }
-        charts?.let { g -> item(span = full) { VolumeChartCard(g) } }
-        // Web VolumeCard: this week's sets per muscle against the landmarks, for the program being trained.
-        vm.home?.o("next")?.let { nx -> item(span = full) { WeekVolumeCard(vm, nx.s("programId"), nx.i("weekIndex")) } }
-        charts?.let { g ->
-            item(span = full) { FeedbackCard(g) }
-            item(span = full) { IntensityCard(g) }
-        }
-        item(span = full) { PinnedLiftsSection(vm, onOpen = { liftId = it }, onManage = { pinsOpen = true }) }
+        // The design: routines (quick workouts you saved) sit at the foot of Plan; everything else is in Programs.
+        item(span = full) { RoutinesSection(vm) }
     }
 }
 
 @Composable
-private fun ProgramMenu(vm: AppViewModel, id: String, name: String) {
+fun ProgramMenuButton(vm: AppViewModel, id: String, name: String) {
     var open by remember { mutableStateOf(false) }
     var confirm by remember { mutableStateOf(false) }
     val scope = androidx.compose.runtime.rememberCoroutineScope()

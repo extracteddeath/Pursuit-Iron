@@ -299,6 +299,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     suspend fun liftDetail(id: String): JSONObject? = obj("liftDetail", jsonOf("id" to id))
     /** Web Build 904–910: the next session's game plan and plan changes (with undo). */
     suspend fun sessionReview(): JSONObject? = obj("sessionReview")
+    suspend fun programsList(): JSONObject? = obj("programsList")
+    suspend fun programIcon(key: String): JSONObject? = obj("programIcon", jsonOf("key" to key))
+    suspend fun setProgramIcon(key: String, icon: String? = null, color: String? = null, shape: String? = null, reset: Boolean = false): JSONObject? {
+        val r = obj("setProgramIcon", jsonOf("key" to key, "icon" to icon, "color" to color, "shape" to shape, "reset" to reset))
+        plan = obj("plan", JSONObject().apply { plan?.s("programId")?.takeIf { it.isNotBlank() }?.let { put("programId", it) }; plan?.i("weekIndex")?.takeIf { it > 0 }?.let { put("weekIndex", it) } }); return r
+    }
+    suspend fun programDetails(programId: String): JSONObject? = obj("programDetails", jsonOf("programId" to programId))
     suspend fun planChoice(programId: String, dayId: String, week: Int, exerciseId: String, slot: Int, undo: Boolean): JSONObject? =
         obj("planChoice", jsonOf("programId" to programId, "dayId" to dayId, "weekIndex" to week, "exerciseId" to exerciseId, "slot" to slot, "undo" to undo))
     suspend fun historyGroups(q: String, days: String, programId: String, by: String): JSONObject? =

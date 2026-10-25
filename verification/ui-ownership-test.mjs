@@ -82,6 +82,9 @@ assert.ok(programSettings.includes("data-testid\": \"program-settings-sheet") &&
     programSettings.includes('onApply: applyCfgDraft') &&
     programSettings.includes('onClick: applyCfgDraft'),
     'Settings retains staged changes and Save/Cancel actions');
+assert.ok(programSettings.includes('GOALS, eyebrow, sheetDragRef, selectNumericInput, iconBtn') &&
+  app.includes('GOALS: GOALS, eyebrow: eyebrow, sheetDragRef:'),
+  'Settings does not capture removed App module presentation globals');
 for(const label of ['Decrease block length','Increase block length','Block length in weeks','program-weeks-error'])
   assert.ok(programSettings.includes(label), 'Settings duration control lost contract: '+label);
 for(const role of ['cycle-length','cycle-length-value','cycle-length-help','length','length-control','length-step','length-label','length-input','length-error'])

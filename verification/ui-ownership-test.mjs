@@ -75,7 +75,7 @@ function guard(cssText, appText) {
 const report = guard(css, presentationSource);
 assert.ok(app.includes("from './program-schedule-sheet.js'"), 'Program owns only schedule state');
 assert.ok(!app.includes('function WeeklyScheduleSheet('), 'No duplicate schedule renderer in App');
-assert.equal((programSchedule.match(/function WeeklyScheduleSheet\\(/g) || []).length, 1, 'Schedule has a single view owner');
+assert.equal((programSchedule.match(/function WeeklyScheduleSheet\(/g) || []).length, 1, 'Schedule has a single view owner');
 assert.ok(!programSchedule.includes('style: {') && !programSchedule.includes('C.') && !programSchedule.includes('iconBtn('), 'Schedule uses themed CSS');
 for(const token of ['onCycle(weekday)', 'onClear', 'sheetDragRef', "'data-assigned'", "'data-today'", "'aria-modal': true"])
     assert.ok(programSchedule.includes(token), 'Schedule lost behavior/semantics: '+token);

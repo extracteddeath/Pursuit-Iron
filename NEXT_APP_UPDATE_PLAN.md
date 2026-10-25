@@ -1,3 +1,25 @@
+## October 25 — M363 Program review ownership and CSS cleanup (build 911)
+
+A bounded second UI ownership slice moves ProgramRevisionReview, ProgramLayoutHistory,
+and ProgramSaveReview from the 2.42 MB application owner to
+`modules/program-review-surfaces.js`. App composes them without duplicating state,
+saved-data migrations, or training policy. The review surface consumes the existing
+canonical engine API and program revision transaction. No change to Engine 0.65.9.
+
+The save-review dialog's 19 inline style objects and the shared icon button's
+inline style call are replaced by 20 named CSS roles in the existing stylesheet.
+Every role consumes live `--wpb-theme-*` variables; disabled buttons still respect
+conflicts and zero-diff saves, and cycle-only versus linked-block radio scope is
+unchanged. CSS uses no additional `!important` and includes forced-colors support.
+The source contract counts the extracted module alongside App.js so moved inline
+debt cannot disappear from accounting; its ceiling becomes 2,753 (from 2,772).
+
+Acceptance requires exact-head release, engine and browser checks; after merge,
+verify Pages deployment, published bytes and offline cache with visible Build 911.
+This pass makes the Program review family reusable but does not yet decompose
+ProgramView's large editing and week rendering functions. Next: a similarly bounded
+ProgramView section, only after observing behavior in real browser layouts.
+
 ## October 25 — M363 cohesive session presentation owners (build 910 candidate)
 
 Extract the existing Home/Plan session outline, coaching highlights, plan-change review and

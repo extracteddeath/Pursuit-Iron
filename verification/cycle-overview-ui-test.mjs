@@ -21,18 +21,19 @@ assert.ok(explanation.includes('different')||explanation.includes('not the same'
 assert.ok(detail.includes('hasDoseExplanation = !!(next?.nextEngine?.cycleTemplate?.splitDecision?.workingWeekVolumeChange') &&
     detail.includes('describeRegionalWorkingWeekChange(current, next, EXERCISES)'),
     'Up next refreshes the existing phase-transition explanation from the canonical saved executable-week projection');
-assert.ok(detail.includes('_jsx(CycleDoseTransition, { change: doseChange })'),'Up next contains one disclosed muscle-volume explanation');
+assert.ok(detail.includes("_jsx(CycleDoseTransition, { change: doseChange || originalDoseChange, source: doseChange ? 'saved' : 'generation' })"),
+    'Up next prefers canonical live dose, but attributes the saved generation fallback explicitly');
 const preview=app.slice(app.indexOf('function CycleBlockPreview('),app.indexOf('function CycleDetail('));
 assert.ok(preview.includes('CycleDoseTransition'),'future block previews share the same explanation');
 assert.ok(preview.includes('previousProgram = null') &&
     preview.includes('describeRegionalWorkingWeekChange(previousProgram, program, EXERCISES)') &&
-    preview.includes('_jsx(CycleDoseTransition, { change: doseChange })'),
+    preview.includes("_jsx(CycleDoseTransition, { change: doseChange || originalChange, source: doseChange ? 'saved' : 'generation' })"),
     'Block Preview resolves its selected phase boundary from existing saved programs, not cached generation metadata');
 assert.ok(app.includes('const owner = cycles.find(c => c.blockIds?.includes(p?.id))') &&
     app.includes('previousProgram, initialWeek: cycleBlockPreview.initialWeek'),
     'Preview receives the adjacent saved block; missing boundaries do not fabricate dose comparisons');
-assert.ok(explanation.includes('Saved prescriptions: final week of the previous block'),
-    'The explained totals have live saved-prescription provenance');
+assert.ok(explanation.includes("'Saved prescriptions' : 'Original generation snapshot · may differ after edits'"),
+    'The dose explanation distinguishes current saved prescriptions from the historical generation fallback');
 
 assert.ok(preview.includes('isFuturePreview')&&preview.includes('Read-only outlook')&&preview.includes('may adapt')&&
     preview.includes('Saved block')&&preview.includes('Read-only prescriptions'),

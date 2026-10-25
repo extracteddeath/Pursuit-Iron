@@ -189,6 +189,48 @@ fun PlanScreen(vm: AppViewModel) {
     }
 }
 
+/* ---------------------------------------------------------------- Progress */
+@Composable
+fun ProgressScreen(vm: AppViewModel) {
+    val p = vm.progress
+    val wide = LocalWide.current
+    val full = StaggeredGridItemSpan.FullLine
+    var liftId by remember { mutableStateOf<String?>(null) }
+    var pinsOpen by remember { mutableStateOf(false) }
+    var historyId by remember { mutableStateOf<String?>(null) }
+    var day by remember { mutableStateOf<Triple<Int, Int, Int>?>(null) }
+    val charts = rememberProgressCharts(vm)
+    liftId?.let { id -> LiftDetailSheet(vm, id) { liftId = null } }
+    historyId?.let { id -> HistorySheet(vm, id) { historyId = null } }
+    if (pinsOpen) PinsSheet(vm) { pinsOpen = false }
+    LazyVerticalStaggeredGrid(
+        columns = StaggeredGridCells.Fixed(if (wide) 2 else 1),
+        contentPadding = PaddingValues(start = if (wide) 32.dp else 16.dp, end = if (wide) 32.dp else 16.dp, bottom = 24.dp),
+        horizontalArrangement = Arrangement.spacedBy(20.dp), verticalItemSpacing = 16.dp, modifier = Modifier.statusBarsPadding(),
+    ) {
+        item(span = full) { Text("Progress", style = MaterialTheme.typography.displayMedium, modifier = Modifier.padding(top = 20.dp, start = 4.dp)) }
+        if (p == null || p.i("sessions") == 0) {
+            item(span = full) { EmptyState("Your charts start here", "Log your first session and this fills with strength trends, weekly volume and records. Trends need two sessions per lift.") }
+            return@LazyVerticalStaggeredGrid
+        }
+        // The design: Trends and History one tap apart (history used to sit under every chart).
+        item(span = full) { Segmented(listOf("trends" to "Trends", "history" to "History"), vm.progView, { vm.progView = it; day = null }) }
+        if (vm.progView == "history") {
+            item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { MonthCalendar(vm, day) { day = it } }
+            item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { HistoryList(vm, day) { historyId = it } }
+            return@LazyVerticalStaggeredGrid
+        }
+        charts?.let { g -> item(span = full) { VolumeChartCard(g) } }
+        // Web VolumeCard: this week's sets per muscle against the landmarks, for the program being trained.
+        vm.home?.o("next")?.let { nx -> item(span = full) { WeekVolumeCard(vm, nx.s("programId"), nx.i("weekIndex")) } }
+        charts?.let { g ->
+            item(span = full) { FeedbackCard(g) }
+            item(span = full) { IntensityCard(g) }
+        }
+        item(span = full) { PinnedLiftsSection(vm, onOpen = { liftId = it }, onManage = { pinsOpen = true }) }
+    }
+}
+
 @Composable
 fun ProgramMenuButton(vm: AppViewModel, id: String, name: String) {
     var open by remember { mutableStateOf(false) }

@@ -383,7 +383,10 @@ try{
   const live=describeRegionalWorkingWeekChange(first,second,EXERCISES);
   assert.ok(live && live.currentWeeklySets<original.currentWeeklySets,
     'M357 future-block edit changes live dose independently of the original diagnosis');
-  const fresh={...store,saved:[first,second],cycles:[made.cycle],pinnedId:first.id};
+  // This case verifies an authored saved boundary; do not regenerate its intentionally
+  // edited future block during navigation (adaptive refresh has its own test owner).
+  const stableCycle={...made.cycle,adaptExercises:false};
+  const fresh={...store,saved:[first,second],cycles:[stableCycle],pinnedId:first.id};
   const ctx=await browser.createBrowserContext(),page=await ctx.newPage();
   page.on('pageerror',error=>errors.push(error.message));await page.setBypassServiceWorker(true);
   await page.setViewport({width:393,height:852,isMobile:true,hasTouch:true});

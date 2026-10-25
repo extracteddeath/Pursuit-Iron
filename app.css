@@ -8529,6 +8529,29 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     padding-inline:6px;
   }
 }
+/* M365: sole CSS owner for the Program weekly schedule. Uses live theme variables. */
+#root .wpb .wpb-program-schedule-backdrop{position:fixed;inset:0;z-index:60;display:flex;align-items:flex-end;background:rgba(0,0,0,.6);animation:fadeIn .2s both}
+#root .wpb .wpb-program-schedule-sheet{box-sizing:border-box;width:100%;max-height:86dvh;overflow-y:auto;overscroll-behavior:contain;padding:10px 18px calc(env(safe-area-inset-bottom) + 26px);border:1px solid var(--wpb-theme-border);border-bottom:0;border-radius:24px 24px 0 0;background:var(--wpb-theme-bg-tint);color:var(--wpb-theme-text);animation:sheetUp .28s cubic-bezier(.2,.7,.3,1) both}
+#root .wpb .wpb-program-schedule-heading{display:flex;align-items:center;justify-content:space-between;gap:var(--pi-space-2);margin-bottom:var(--pi-space-1)}
+#root .wpb .wpb-program-schedule-title{margin:0;font-size:1.125rem;font-weight:700;line-height:1.4}
+#root .wpb .wpb-program-schedule-close{display:grid;place-items:center;min-width:44px;min-height:44px;color:var(--wpb-theme-text)}
+#root .wpb .wpb-program-schedule-caption{margin:0 0 var(--pi-space-4);color:var(--wpb-theme-muted);font-size:.8125rem;line-height:1.45}
+#root .wpb .wpb-program-schedule-row{display:flex;align-items:center;gap:var(--pi-space-3);box-sizing:border-box;width:100%;min-height:54px;padding:12px 14px;margin-bottom:6px;border:1px solid var(--wpb-theme-border);border-radius:12px;background:var(--wpb-theme-card);color:var(--wpb-theme-text);text-align:left;cursor:pointer}
+#root .wpb .wpb-program-schedule-row[data-assigned="true"]{background:var(--wpb-theme-accent-dim);border-color:var(--wpb-theme-accent-edge)}
+#root .wpb .wpb-program-schedule-row[data-today="true"]{border-color:var(--wpb-theme-accent)}
+#root .wpb .wpb-program-schedule-weekday{display:grid;flex:0 0 42px;gap:2px;min-width:0}
+#root .wpb .wpb-program-schedule-weekday-name{font-size:.8125rem;font-weight:700;color:var(--wpb-theme-muted)}
+#root .wpb .wpb-program-schedule-row[data-assigned="true"] .wpb-program-schedule-weekday-name{color:var(--wpb-theme-accent-ink)}
+#root .wpb .wpb-program-schedule-today{font-size:.6875rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--wpb-theme-accent-ink)}
+#root .wpb .wpb-program-schedule-assignment{flex:1;min-width:0;font-size:.9375rem;line-height:1.35;font-weight:600;overflow-wrap:anywhere}
+#root .wpb .wpb-program-schedule-row[data-assigned="false"] .wpb-program-schedule-assignment{font-weight:400;color:var(--wpb-theme-faint)}
+#root .wpb .wpb-program-schedule-icon{flex-shrink:0;color:var(--wpb-theme-accent-ink)}
+#root .wpb .wpb-program-schedule-hint{flex-shrink:0;font-size:.6875rem;color:var(--wpb-theme-faint)}
+#root .wpb .wpb-program-schedule-clear{width:100%;min-height:44px;padding:11px;margin-top:6px;border:1px solid var(--wpb-theme-border);border-radius:12px;background:transparent;color:var(--wpb-theme-muted);font-size:.8125rem;font-weight:600;cursor:pointer}
+#root .wpb .wpb-program-schedule-row:focus-visible,#root .wpb .wpb-program-schedule-clear:focus-visible,#root .wpb .wpb-program-schedule-close:focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){#root .wpb .wpb-program-schedule-backdrop,#root .wpb .wpb-program-schedule-sheet{animation:none}}
+@media(forced-colors:active){#root .wpb .wpb-program-schedule-row,#root .wpb .wpb-program-schedule-clear{border-color:ButtonText}#root .wpb .wpb-program-schedule-row[data-assigned="true"],#root .wpb .wpb-program-schedule-row[data-today="true"]{border-color:Highlight}#root .wpb .wpb-program-schedule-row:focus-visible{outline-color:Highlight}}
+
 /* B912 — Prototype-informed Profile hierarchy; presentation only.
    Root header ownership moved to UiRootHeader in M271. */
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-hero{
@@ -8810,26 +8833,3 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-standards-score>.mono>span{font-size:.8125rem;color:var(--wpb-theme-muted);font-weight:500}
 #root .wpb .wpb-standards-score p{margin:var(--pi-space-1) 0 0;font-size:.75rem;color:var(--wpb-theme-muted)}
 #root .wpb .wpb-standards-score>div{min-width:0;overflow-wrap:anywhere}
-
-/* M365: sole CSS owner for the Program weekly schedule. Uses live theme variables. */
-#root .wpb .wpb-program-schedule-backdrop{position:fixed;inset:0;z-index:60;display:flex;align-items:flex-end;background:rgba(0,0,0,.6);animation:fadeIn .2s both}
-#root .wpb .wpb-program-schedule-sheet{box-sizing:border-box;width:100%;max-height:86dvh;overflow-y:auto;overscroll-behavior:contain;padding:10px 18px calc(env(safe-area-inset-bottom) + 26px);border:1px solid var(--wpb-theme-border);border-bottom:0;border-radius:24px 24px 0 0;background:var(--wpb-theme-bg-tint);color:var(--wpb-theme-text);animation:sheetUp .28s cubic-bezier(.2,.7,.3,1) both}
-#root .wpb .wpb-program-schedule-heading{display:flex;align-items:center;justify-content:space-between;gap:var(--pi-space-2);margin-bottom:var(--pi-space-1)}
-#root .wpb .wpb-program-schedule-title{margin:0;font-size:1.125rem;font-weight:700;line-height:1.4}
-#root .wpb .wpb-program-schedule-close{display:grid;place-items:center;min-width:44px;min-height:44px;color:var(--wpb-theme-text)}
-#root .wpb .wpb-program-schedule-caption{margin:0 0 var(--pi-space-4);color:var(--wpb-theme-muted);font-size:.8125rem;line-height:1.45}
-#root .wpb .wpb-program-schedule-row{display:flex;align-items:center;gap:var(--pi-space-3);box-sizing:border-box;width:100%;min-height:54px;padding:12px 14px;margin-bottom:6px;border:1px solid var(--wpb-theme-border);border-radius:12px;background:var(--wpb-theme-card);color:var(--wpb-theme-text);text-align:left;cursor:pointer}
-#root .wpb .wpb-program-schedule-row[data-assigned="true"]{background:var(--wpb-theme-accent-dim);border-color:var(--wpb-theme-accent-edge)}
-#root .wpb .wpb-program-schedule-row[data-today="true"]{border-color:var(--wpb-theme-accent)}
-#root .wpb .wpb-program-schedule-weekday{display:grid;flex:0 0 42px;gap:2px;min-width:0}
-#root .wpb .wpb-program-schedule-weekday-name{font-size:.8125rem;font-weight:700;color:var(--wpb-theme-muted)}
-#root .wpb .wpb-program-schedule-row[data-assigned="true"] .wpb-program-schedule-weekday-name{color:var(--wpb-theme-accent-ink)}
-#root .wpb .wpb-program-schedule-today{font-size:.6875rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--wpb-theme-accent-ink)}
-#root .wpb .wpb-program-schedule-assignment{flex:1;min-width:0;font-size:.9375rem;line-height:1.35;font-weight:600;overflow-wrap:anywhere}
-#root .wpb .wpb-program-schedule-row[data-assigned="false"] .wpb-program-schedule-assignment{font-weight:400;color:var(--wpb-theme-faint)}
-#root .wpb .wpb-program-schedule-icon{flex-shrink:0;color:var(--wpb-theme-accent-ink)}
-#root .wpb .wpb-program-schedule-hint{flex-shrink:0;font-size:.6875rem;color:var(--wpb-theme-faint)}
-#root .wpb .wpb-program-schedule-clear{width:100%;min-height:44px;padding:11px;margin-top:6px;border:1px solid var(--wpb-theme-border);border-radius:12px;background:transparent;color:var(--wpb-theme-muted);font-size:.8125rem;font-weight:600;cursor:pointer}
-#root .wpb .wpb-program-schedule-row:focus-visible,#root .wpb .wpb-program-schedule-clear:focus-visible,#root .wpb .wpb-program-schedule-close:focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
-@media(prefers-reduced-motion:reduce){#root .wpb .wpb-program-schedule-backdrop,#root .wpb .wpb-program-schedule-sheet{animation:none}}
-@media(forced-colors:active){#root .wpb .wpb-program-schedule-row,#root .wpb .wpb-program-schedule-clear{border-color:ButtonText}#root .wpb .wpb-program-schedule-row[data-assigned="true"],#root .wpb .wpb-program-schedule-row[data-today="true"]{border-color:Highlight}#root .wpb .wpb-program-schedule-row:focus-visible{outline-color:Highlight}}

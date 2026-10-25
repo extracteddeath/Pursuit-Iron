@@ -57,6 +57,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -389,6 +390,7 @@ fun FocusCard(vm: AppViewModel, s: JSONObject, ex: JSONObject, onAdjust: (Int) -
                 }
             }
         }
+        LiftDemo(ex.s("name"), ex.s("part"))
         Row(verticalAlignment = Alignment.Bottom) {
             Text(if (tag) ex.s("loadTag") else x.s("weight").ifBlank { "—" }, style = MaterialTheme.typography.displayMedium.copy(fontSize = 88.sp, lineHeight = 92.sp), color = cs.onPrimaryContainer,
                 modifier = Modifier.semantics { contentDescription = if (tag) ex.s("loadTag") else "${x.s("weight")} $u" })
@@ -488,5 +490,109 @@ private fun LiftDoneCard(vm: AppViewModel, s: JSONObject, ex: JSONObject, onNext
         }
         val nx = s.list("exercises").getOrNull(ex.i("ei") + 1)
         Button(onClick = onNextLift, modifier = Modifier.fillMaxWidth().height(56.dp)) { Text(if (nx != null) "Next: ${nx.s("name")}" else "Finish workout", style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+    }
+}
+
+/* The design's animated lift demo in focus mode: a stick figure on a 120×96 grid, one of seven movement
+   patterns picked from the lift's name (prototype patternOf / demo), moving on the prototype's timings. */
+private val DEMO_CUES = mapOf(
+    "press" to ("Bar to lower chest, drive up and back" to "Tempo 2-0-1 · light touch"),
+    "over" to ("Brace hard, press straight up, head through" to "Tempo 2-0-1"),
+    "raise" to ("Lead with the elbows to shoulder height" to "Tempo 2-1-1 · control the drop"),
+    "push" to ("Elbows pinned, lock out fully" to "Tempo 2-0-1 · squeeze"),
+    "curl" to ("Elbows still, curl to full flexion" to "Tempo 2-0-1"),
+    "squat" to ("Sit between the hips, knees track toes" to "Tempo 3-0-1"),
+    "pull" to ("Drive elbows down to the ribs" to "Tempo 2-1-1"),
+)
+
+fun demoPattern(name: String, part: String): String {
+    val n = name.lowercase()
+    return when {
+        Regex("pushdown|extension").containsMatchIn(n) -> "push"
+        n.contains("curl") -> "curl"
+        Regex("lateral|upright|reverse pec|raise").containsMatchIn(n) -> "raise"
+        Regex("overhead|seated db press|shoulder press").containsMatchIn(n) -> "over"
+        Regex("pull-up|pulldown|row").containsMatchIn(n) -> "pull"
+        Regex("squat|lunge|leg press|deadlift").containsMatchIn(n) -> "squat"
+        Regex("bench|press|push-up|fly").containsMatchIn(n) -> "press"
+        else -> when (part) { "chest" -> "press"; "lats", "upper_back", "traps", "lower_back" -> "pull"; "quads", "hamstrings", "glutes", "calves", "adductors", "abductors" -> "squat"
+            "shoulders", "side_delts", "front_delts", "rear_delts" -> "over"; "biceps", "triceps", "forearms" -> "curl"; else -> "press" }
+    }
+}
+
+@Composable
+fun LiftDemo(name: String, part: String) {
+    val cs = MaterialTheme.colorScheme
+    val p = demoPattern(name, part)
+    val (cue, tempo) = DEMO_CUES.getValue(p)
+    val dur = when (p) { "push", "curl" -> 2400; "squat" -> 2800; else -> 2600 }
+    val inf = androidx.compose.animation.core.rememberInfiniteTransition(label = "demo")
+    val t by inf.animateFloat(0f, 1f, androidx.compose.animation.core.infiniteRepeatable(
+        tween(dur / 2, easing = androidx.compose.animation.core.CubicBezierEasing(0.45f, 0f, 0.3f, 1f)), androidx.compose.animation.core.RepeatMode.Reverse), label = "t")
+    val ink = cs.onSurface; val acc = cs.primary
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(cs.surface).padding(start = 6.dp, top = 6.dp, bottom = 6.dp, end = 14.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        androidx.compose.foundation.Canvas(Modifier.width(92.dp).height(74.dp).semantics { contentDescription = "Animated demo of $name" }) {
+            val k = minOf(size.width / 120f, size.height / 96f)
+            fun lerp(a: Float, b: Float) = a + (b - a) * t
+            fun o(x: Float, y: Float) = androidx.compose.ui.geometry.Offset(x * k, y * k)
+            fun line(x1: Float, y1: Float, x2: Float, y2: Float, w: Float, c: Color = ink, alpha: Float = 1f) =
+                drawLine(c.copy(alpha = alpha), o(x1, y1), o(x2, y2), w * k, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+            fun poly(vararg pts: Float, w: Float = 5f) {
+                val path = androidx.compose.ui.graphics.Path(); path.moveTo(pts[0] * k, pts[1] * k)
+                var i = 2; while (i < pts.size) { path.lineTo(pts[i] * k, pts[i + 1] * k); i += 2 }
+                drawPath(path, ink, style = androidx.compose.ui.graphics.drawscope.Stroke(w * k, cap = androidx.compose.ui.graphics.StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round))
+            }
+            fun head(x: Float, y: Float, r: Float = 6f) = drawCircle(ink, r * k, o(x, y))
+            fun plate(x: Float, y: Float, w: Float, h: Float) = drawRoundRect(acc, o(x, y), androidx.compose.ui.geometry.Size(w * k, h * k), androidx.compose.ui.geometry.CornerRadius(2f * k))
+            fun rot(deg: Float, px: Float, py: Float, block: () -> Unit) = withTransform({ rotate(deg, o(px, py)) }) { block() }
+            fun dy(d: Float, block: () -> Unit) = withTransform({ translate(0f, d * k) }) { block() }
+            when (p) {
+                "press" -> {
+                    drawRoundRect(ink.copy(alpha = 0.3f), o(14f, 68f), androidx.compose.ui.geometry.Size(72f * k, 5f * k), androidx.compose.ui.geometry.CornerRadius(2.5f * k))
+                    line(24f, 73f, 24f, 90f, 3f, alpha = 0.3f); line(76f, 73f, 76f, 90f, 3f, alpha = 0.3f)
+                    head(22f, 58f); line(30f, 62f, 72f, 62f, 7f); poly(72f, 62f, 86f, 52f, 94f, 88f)
+                    val s = lerp(1f, 0.45f); line(42f, 62f, 42f, 62f + (24f - 62f) * s, 5f)
+                    dy(lerp(0f, 21f)) { line(24f, 24f, 60f, 24f, 4f, acc); plate(21f, 17f, 5f, 14f); plate(58f, 17f, 5f, 14f) }
+                }
+                "over" -> {
+                    head(60f, 16f); line(60f, 24f, 60f, 56f, 7f); poly(52f, 90f, 60f, 56f, 68f, 90f)
+                    val s = lerp(0.25f, 1f)
+                    line(53f, 30f, 53f + (50f - 53f) * s, 30f + (6f - 30f) * s, 5f); line(67f, 30f, 67f + (70f - 67f) * s, 30f + (6f - 30f) * s, 5f)
+                    dy(lerp(18f, 0f)) { line(36f, 6f, 84f, 6f, 4f, acc); plate(33f, 0f, 5f, 12f); plate(82f, 0f, 5f, 12f) }
+                }
+                "raise" -> {
+                    head(60f, 16f); line(60f, 24f, 60f, 56f, 7f); poly(52f, 90f, 60f, 56f, 68f, 90f)
+                    rot(lerp(8f, 82f), 55f, 28f) { line(55f, 28f, 55f, 52f, 5f); plate(51f, 50f, 8f, 7f) }
+                    rot(lerp(-8f, -82f), 65f, 28f) { line(65f, 28f, 65f, 52f, 5f); plate(61f, 50f, 8f, 7f) }
+                }
+                "push" -> {
+                    drawCircle(ink.copy(alpha = 0.45f), 5f * k, o(98f, 8f), style = androidx.compose.ui.graphics.drawscope.Stroke(2f * k))
+                    head(58f, 16f); line(58f, 24f, 58f, 56f, 7f); poly(52f, 90f, 58f, 56f, 66f, 90f); line(60f, 28f, 60f, 45f, 5f)
+                    rot(lerp(-15f, 80f), 60f, 45f) { line(60f, 45f, 78f, 45f, 5f); plate(76f, 39f, 6f, 12f) }
+                }
+                "curl" -> {
+                    head(58f, 16f); line(58f, 24f, 58f, 56f, 7f); poly(52f, 90f, 58f, 56f, 66f, 90f); line(60f, 28f, 60f, 46f, 5f)
+                    rot(lerp(0f, -135f), 60f, 46f) { line(60f, 46f, 60f, 66f, 5f); plate(54f, 64f, 12f, 6f) }
+                }
+                "squat" -> {
+                    val s = lerp(1f, 0.53f); poly(52f, 88f, 60f, 88f + (58f - 88f) * s, 68f, 88f)
+                    dy(lerp(0f, 14f)) {
+                        head(60f, 16f); line(60f, 24f, 60f, 58f, 7f); poly(50f, 32f, 52f, 26f, 68f, 26f, 70f, 32f, w = 4f)
+                        line(34f, 25f, 86f, 25f, 4f, acc); plate(31f, 18f, 5f, 14f); plate(84f, 18f, 5f, 14f)
+                    }
+                }
+                else -> {
+                    line(26f, 8f, 94f, 8f, 4f, acc)
+                    val s = lerp(1.73f, 1f)
+                    line(50f, 8f, 50f + (55f - 50f) * s, 8f + (30f - 8f) * s, 5f); line(70f, 8f, 70f + (65f - 70f) * s, 8f + (30f - 8f) * s, 5f)
+                    dy(lerp(16f, 0f)) { head(60f, 21f); line(60f, 29f, 60f, 58f, 7f); poly(55f, 78f, 60f, 58f, 65f, 78f) }
+                }
+            }
+        }
+        Column(Modifier.weight(1f)) {
+            Text(cue, style = MaterialTheme.typography.labelLarge, color = cs.onSurface)
+            Text(tempo, style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
+        }
     }
 }

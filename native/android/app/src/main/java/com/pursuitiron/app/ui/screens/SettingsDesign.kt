@@ -202,6 +202,7 @@ fun SettingsRows(vm: AppViewModel, onOpen: (String) -> Unit) {
         SetRow("data", "Data & storage", "CSV export, import from Strong or Hevy, clear or reset", ICON_DB, cs.secondaryContainer, cs.onSecondaryContainer),
         SetRow("help", "Help & about", "Report a bug, privacy, the research behind it", PiIcons.Help, cs.surfaceContainerHighest, cs.onSurface),
     )
+    Column {
     Column(Modifier.clip(RoundedCornerShape(24.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
         rows.forEach { r ->
             Row(Modifier.fillMaxWidth().background(cs.surfaceContainerLow).clickable { onOpen(r.key) }.semantics(mergeDescendants = true) { role = Role.Button }.padding(horizontal = 16.dp, vertical = 14.dp),
@@ -222,6 +223,7 @@ fun SettingsRows(vm: AppViewModel, onOpen: (String) -> Unit) {
                 if (android.os.Build.VERSION.SDK_INT >= 31) runCatching { ctx.startActivity(Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:" + ctx.packageName))) }
             }
         }
+    }
     }
 }
 

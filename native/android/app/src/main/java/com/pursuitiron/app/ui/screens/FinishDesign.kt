@@ -90,6 +90,10 @@ fun FinishPage(vm: AppViewModel, s: JSONObject, onClose: () -> Unit) {
     var routineSaved by remember { mutableStateOf(false) }
     val cs = MaterialTheme.colorScheme
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+        // A page, not a dialog: no dimming behind it, so the status bar keeps the page's colour.
+        (androidx.compose.ui.platform.LocalView.current.parent as? androidx.compose.ui.window.DialogWindowProvider)?.window?.let { w ->
+            LaunchedEffect(w) { w.setDimAmount(0f) }
+        }
         Box(Modifier.fillMaxSize().background(cs.primaryContainer)) {
             val x = p
             Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(start = 20.dp, end = 20.dp, top = 40.dp, bottom = 28.dp),

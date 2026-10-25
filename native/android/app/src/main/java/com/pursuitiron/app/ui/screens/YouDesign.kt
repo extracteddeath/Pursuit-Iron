@@ -177,9 +177,11 @@ fun ProfBig3Card(vm: AppViewModel, board: JSONObject) {
             }
         }
         val targets = mapOf("bench" to 1.75, "squat" to 2.5, "deadlift" to 3.0)
+        val top = big.list("lifts").maxOfOrNull { it.d("e1rm") }?.takeIf { it > 0 } ?: 1.0
         big.list("lifts").forEach { l ->
             val r = l.d("ratio")
-            val w by animateFloatAsState(if (r > 0) (r / (targets[l.s("key")] ?: 3.0)).toFloat().coerceIn(0f, 1f) else 0f, tween(600), label = "b3")
+            // Without a bodyweight the bars compare the three lifts with each other.
+            val w by animateFloatAsState(if (r > 0) (r / (targets[l.s("key")] ?: 3.0)).toFloat().coerceIn(0f, 1f) else (l.d("e1rm") / top).toFloat().coerceIn(0f, 1f), tween(600), label = "b3")
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(l.s("name"), style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold), color = cs.onPrimaryContainer, modifier = Modifier.width(74.dp))
                 Box(Modifier.weight(1f).height(10.dp).clip(CircleShape).background(cs.surface)) { Box(Modifier.fillMaxWidth(w).height(10.dp).clip(CircleShape).background(cs.primary)) }

@@ -125,6 +125,8 @@ try {
         await page.reload({ waitUntil: 'networkidle0' });
         await page.waitForSelector('[data-testid="set-0-2"]');
         await page.removeScriptToEvaluateOnNewDocument(reset.identifier);
+        const check = await page.$('.wpb-backdrop button[data-wpb-system-back]');
+        if (check) await check.click();
         assert.deepEqual(await values(), ['100', '100', '100'], 'Each intent case starts from a fresh prescription');
         assert.ok((await rows()).every(row => !row.done));
     };

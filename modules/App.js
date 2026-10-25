@@ -17657,9 +17657,8 @@ function Home({ restScale = 1, loadMode = "rir", perf = {}, onPlanChoice, planCh
             head.style.height = clippedHeight;
             return natural;
         };
-        let full = measureFull(), raf = 0;
+        let full = measureFull();
         const apply = () => {
-            raf = 0;
             const progress = Math.min(1, Math.max(0, sc.scrollTop / full));
             const remaining = Math.max(0, full - Math.max(0, sc.scrollTop));
             head.style.height = `${remaining}px`;
@@ -17670,10 +17669,11 @@ function Home({ restScale = 1, loadMode = "rir", perf = {}, onPlanChoice, planCh
         };
         head.style.height = `${full}px`;
         apply(); // layout effect avoids a one-frame full header on restored scroll
-        const onScroll = () => { if (!raf) raf = requestAnimationFrame(apply); };
+        // Scroll events already run before paint. Deferring these geometry writes to another
+        // frame moved program buttons after the pointer had selected its click coordinates.
+        // Apply the same bounded collapse now; no extra animation or state owner is needed.
+        const onScroll = apply;
         const onResize = () => {
-            if (raf) cancelAnimationFrame(raf);
-            raf = 0;
             // scrollHeight includes clipped descendants, so measurement never
             // temporarily expands the already-collapsed header on orientation change.
             full = Math.max(1, head.scrollHeight);
@@ -17684,7 +17684,6 @@ function Home({ restScale = 1, loadMode = "rir", perf = {}, onPlanChoice, planCh
         return () => {
             sc.removeEventListener("scroll", onScroll);
             window.removeEventListener("resize", onResize);
-            if (raf) cancelAnimationFrame(raf);
         };
     }, [upNext]);
     /* "Settled in" = they have a program running and have actually used it. The threshold is

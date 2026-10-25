@@ -1,5 +1,6 @@
-## Build 916 / M368 — Shared settings controls and persistent form actions
+## Build 916 / M368 — Shared settings controls and reliable Home actions
 
+- Fix a delayed Home-header collapse that moved program buttons by 60px after scrolling and could make Open/Switch clicks miss. Apply the existing collapse in the scroll event and remove the deferred callback.
 - Program Settings now uses the same shared choice controls as the rest of the app, with 48px minimum targets, scalable labels and explicit form groups.
 - Separate form scrolling keeps Save, Cancel and the dialog heading visible. Choices wrap at narrow widths and enlarged text; selection remains legible in forced colors and reduced motion.
 - Move six stateless UI primitives into one reusable module; remove all 46 remaining Settings inline style objects and obsolete presentation props. No added CSS priorities.

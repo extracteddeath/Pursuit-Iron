@@ -297,6 +297,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /* Progress: one lift, strength standards, correcting and sharing a logged workout. */
     suspend fun liftDetail(id: String): JSONObject? = obj("liftDetail", jsonOf("id" to id))
+    /** Web Build 904–910: the next session's game plan and plan changes (with undo). */
+    suspend fun sessionReview(): JSONObject? = obj("sessionReview")
+    suspend fun planChoice(programId: String, dayId: String, week: Int, exerciseId: String, slot: Int, undo: Boolean): JSONObject? =
+        obj("planChoice", jsonOf("programId" to programId, "dayId" to dayId, "weekIndex" to week, "exerciseId" to exerciseId, "slot" to slot, "undo" to undo))
     suspend fun historyGroups(q: String, days: String, programId: String, by: String): JSONObject? =
         obj("historyGroups", jsonOf("q" to q, "days" to days, "programId" to programId, "by" to by))
     suspend fun strengthStandards(): JSONObject? = obj("strengthStandards")

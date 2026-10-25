@@ -192,6 +192,14 @@ fun WorkoutScreen(vm: AppViewModel) {
         if (!wide) Dock(vm, s, ei, exs, Modifier.align(Alignment.BottomCenter), tryFinish)
     }
 
+    // The design asks readiness on Today (the check-in); the workout applies it as it opens, no sheet here.
+    LaunchedEffect(s.s("sessionId"), s.b("readinessDone")) {
+        if (!s.b("readinessDone")) {
+            val ready = vm.home?.let { readinessToday(vm, it) } ?: 100
+            val (label, factor) = readinessPick(ready)
+            vm.act("readiness", "label" to label, "factor" to factor)
+        }
+    }
     when (val sh = sheet) {
         is WSheet.Edit -> SetEditor(vm, s, sh.ei, sh.si) { sheet = null }
         is WSheet.Menu -> ExerciseMenu(vm, s, sh.ei, onPick = { sheet = it }) { sheet = null }
@@ -218,7 +226,7 @@ fun WorkoutScreen(vm: AppViewModel) {
         WSheet.SessionMenu -> SessionMenu(vm, s, onNote = { sheet = WSheet.SessionNote }, onAdd = { sheet = WSheet.AddLift }, onSuperset = { sheet = WSheet.Superset }) { sheet = null }
         WSheet.AddLift -> AddLiftSheet(vm) { sheet = null }
         WSheet.Finish -> FinishSheet(vm) { sheet = null }
-        null -> if (!s.b("readinessDone")) ReadinessCheckSheet(vm)
+        null -> {}
     }
     if (confirmDiscard) AlertDialog(
         onDismissRequest = { confirmDiscard = false },

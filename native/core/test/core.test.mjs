@@ -755,5 +755,23 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   }
   C.discardSession();
 }
+{ // Web Build 904–910: the next session's review — game plan and plan changes with undo.
+  C.init({ store: JSON.stringify({ unit: 'kg' }) });
+  C.createProgram({ config: { name: 'R', unit: 'kg', goal: 'both', experience: 'intermediate', split: 'full_body', days: 3, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 3 });
+  let s3 = C.startSession({}); const day = s3.dayId, pid = s3.programId;
+  s3.exercises.forEach((e) => e.sets.forEach((x) => { if (x.warm || x.sub) return; C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'weight', value: '50' }); C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'reps', value: '15' }); C.act({ type: 'toggle', ei: e.ei, si: x.i }); C.act({ type: 'rir', ei: e.ei, si: x.i, rir: 3 }); }));
+  C.finishSession();
+  const r = C.sessionReview({ programId: pid, dayId: day, weekIndex: 2 });
+  ok(r && r.gamePlan.length > 0 && r.gamePlan.length <= 3 && r.changes.length > 0, 'next session review: ' + r.gamePlan.length + ' game-plan notes, ' + r.changes.length + ' plan changes');
+  ok(r.gamePlan.some((g) => g.kind === 'pr'), 'a PR chance leads the game plan');
+  const ch = r.changes.find((c) => c.canUndo);
+  ok(!!ch, 'one change can be undone');
+  if (ch) {
+    const u = C.planChoice({ programId: pid, dayId: day, weekIndex: 2, exerciseId: ch.id, slot: ch.slot, undo: true });
+    ok(u.ok && u.review.changes.find((c) => c.id === ch.id).undone, 'a plan change can be undone');
+    const b = C.planChoice({ programId: pid, dayId: day, weekIndex: 2, exerciseId: ch.id, slot: ch.slot, undo: false });
+    ok(b.ok && !b.review.changes.find((c) => c.id === ch.id).undone, 'and the recommendation restored');
+  }
+}
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);
 

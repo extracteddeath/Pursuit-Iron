@@ -223,6 +223,13 @@ else:
 if not scroll_to(r"^\|This week$", tries=4):
     FAILS.append("no This week list on Today")
 scroll_up_to(r"Start workout|^\|?Train .+ now", tries=8)
+# The design's check-in sits on Today (training days); readiness is applied when the workout opens
+if find(r"How are you today\?", timeout=3):
+    tap(r"^Sleep: Great", "check-in")
+    tap(r"^Energy: High")
+    tap(r"^\|Save$|^\|Done$")
+    if not find(r"^Edit today's check-in", timeout=4):
+        FAILS.append("check-in did not fold into its chip")
 
 # 2. Workout: enter a weight, log, rate, rest
 tap(r"Start workout|^\|?Train .+ now")
@@ -237,8 +244,6 @@ else:
     FAILS.append("Start did not open the session preview")
 time.sleep(3)
 grant_notifications()
-shot("readiness")
-tap(r"^\|A little off$")
 grant_notifications()
 shot("workout")
 # App.js warmupRoutine: the warm-up & mobility card leads the first lift until a set is logged

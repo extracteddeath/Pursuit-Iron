@@ -77,6 +77,9 @@ fun TodayScreen(vm: AppViewModel) {
     val ctx = LocalContext.current
     var readinessOpen by remember { mutableStateOf(false) }
     var historyId by remember { mutableStateOf<String?>(null) }
+    var review by remember { mutableStateOf<JSONObject?>(null) }
+    var changesOpen by remember { mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(h) { review = vm.sessionReview() }
     val next = h.o("next")
     val full = StaggeredGridItemSpan.FullLine
 
@@ -87,12 +90,8 @@ fun TodayScreen(vm: AppViewModel) {
         verticalItemSpacing = 16.dp,
         modifier = Modifier.statusBarsPadding(),
     ) {
-        item(span = full) {
-            Column(Modifier.padding(top = 20.dp, start = 4.dp)) {
-                Text(SimpleDateFormat("EEEE, MMMM d", Locale.getDefault()).format(Date()), style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
-                Text("Today", style = MaterialTheme.typography.displayMedium)
-            }
-        }
+        item(span = full) { TodayHeader(vm) }
+        review?.takeIf { next != null && h.o("live") == null && it.list("changes").isNotEmpty() }?.let { r -> item(span = full) { PlanChangesBanner(r) { changesOpen = true } } }
 
         if (h.b("empty") && !vm.prefs.transferDismissed) item(span = full) {
             PiCard(color = cs.secondaryContainer, radius = 28.dp, padding = 20.dp) {
@@ -141,6 +140,7 @@ fun TodayScreen(vm: AppViewModel) {
         }
         if (!h.b("empty") && vm.prefs.seenWhatsNew < WHATS_NEW_VERSION) item(span = full) { WhatsNewCard(vm) }
         if (next != null) item(span = full) { WeekStrip(h) }
+        if (next != null && h.o("live") == null && h.o("restDay") == null) item(span = full) { CheckInCard(vm) }
         if (h.optInt("needsTrainingMax", 0) > 0) item(span = full) { TrainingMaxPrompt(vm) }
         h.o("reentry")?.takeIf { next != null && h.o("live") == null && it.optLong("lastDate") != vm.prefs.reentrySkippedFor }?.let { r ->
             item(span = full) { WelcomeBackCard(vm, r) }
@@ -150,55 +150,44 @@ fun TodayScreen(vm: AppViewModel) {
             if (rest != null) RestDayHero(vm, rest) else Hero(vm, next, h)
         }
 
-        if (next != null && h.o("restDay") == null) item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { CoachCard(h) }
         if (h.o("deload") != null) item { DeloadCard(vm, h) }
-        val insights = h.strings("insights")
-        if ("recovery" in insights) item { RecoveryCard(vm, h) }
-        if ("strength" in insights) item { StrengthTeaser(vm, h) }
-        if ("recap" in insights) item { RecapCard(h) }
 
         if (h.o("live") == null) item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) {
             PiCard(color = cs.surfaceContainer, radius = 24.dp, padding = 16.dp, onClick = { vm.startQuick() }) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(PiIcons.Flame, null, tint = cs.primary)
+                    Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(cs.primaryContainer), contentAlignment = Alignment.Center) { Icon(PiIcons.Zap, null, tint = cs.onPrimaryContainer) }
                     Column(Modifier.weight(1f)) {
                         Text("Quick workout", style = MaterialTheme.typography.titleSmall)
-                        Text("Off-plan session: add lifts as you go", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                        Text("Pick lifts and go. Your program stays as it is.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                     }
                     Icon(PiIcons.ChevronRight, null, tint = cs.onSurfaceVariant)
                 }
             }
         }
 
+        if ("recap" in h.strings("insights")) item(span = full) { RecapCard(h) }
+        review?.takeIf { next != null && h.o("restDay") == null }?.let { r -> item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { GamePlanCard(r, r.list("changes").size) } }
         if (next != null) item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 val wk = h.o("week")
                 StatTile("Sessions", "${wk.i("sessions")}", "/ ${wk.i("planned")}", Modifier.weight(1f))
                 StatTile("Volume", com.pursuitiron.app.ui.common.fmt1(wk.i("volume") / 1000.0), com.pursuitiron.app.ui.common.volUnit(h.s("unit", "kg")), Modifier.weight(1f))
-                StatTile("Readiness", "${h.o("readiness").i("today", 100)}", "%", Modifier.weight(1f), color = cs.tertiaryContainer, onClick = { readinessOpen = true })
+                StatTile("Readiness", "${readinessToday(vm, h)}", "%", Modifier.weight(1f), color = cs.tertiaryContainer, onClick = { readinessOpen = true })
             }
         }
 
         if (next != null) item(span = full) { ThisWeekList(vm, h) }
-        val recent = h.list("recent")
-        if (recent.isNotEmpty()) {
-            item(span = full) { SectionTitle("Recent") }
-            item(span = full) {
-                Column(Modifier.clip(RoundedCornerShape(24.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    recent.forEach { r -> HistoryRow(r) { historyId = r.s("id") } }
-                }
-            }
-        }
     }
 
     if (readinessOpen) ModalBottomSheet(onDismissRequest = { readinessOpen = false }) { ReadinessSheet(h) }
     historyId?.let { id -> HistorySheet(vm, id) { historyId = null } }
+    if (changesOpen) review?.let { r -> PlanChangesSheet(vm, r, onUpdated = { review = it }) { changesOpen = false } }
 }
 
 @Composable
 private fun Hero(vm: AppViewModel, next: JSONObject, h: JSONObject) {
     val cs = MaterialTheme.colorScheme
-    val ready = h.o("readiness").i("today", 100)
+    val ready = readinessToday(vm, h)
     val ex = next.list("exercises")
     val live = h.o("live")
     Surface(color = cs.primaryContainer, contentColor = cs.onPrimaryContainer, shape = RoundedCornerShape(topStart = 36.dp, topEnd = 36.dp, bottomEnd = 36.dp, bottomStart = 12.dp), modifier = Modifier.fillMaxWidth()) {
@@ -220,20 +209,10 @@ private fun Hero(vm: AppViewModel, next: JSONObject, h: JSONObject) {
             }
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Surface(color = cs.primary, contentColor = cs.onPrimary, shape = CircleShape) {
-                    Text("READINESS $ready% · " + when { ready >= 85 -> "GOOD TO GO"; ready >= 70 -> "TRAIN AS PLANNED"; else -> "SOME SETS TRIMMED" },
+                    Text("READINESS $ready% · " + when { ready >= 80 -> "GOOD TO GO"; ready >= 70 -> "HOLD BACK A REP"; else -> "SETS WILL TRIM" },
                         style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
                 }
                 Text(next.s("dayLabel"), style = MaterialTheme.typography.displaySmall, modifier = Modifier.padding(end = if (h.list("weekDays").size > 1) 64.dp else 0.dp))
-                val cyc = h.o("cycle")
-                if (cyc != null) {
-                    val blocks = cyc.optJSONArray("blocks")
-                    Text("${blocks?.optString(cyc.i("blockIdx")) ?: "Block"} block ${cyc.i("blockIdx") + 1} of ${blocks?.length() ?: 1} · " +
-                        (if (cyc.b("isDeload")) "deload week" else "week ${cyc.i("weekIndex")} of ${cyc.i("weeksTotal")}") + " · ${cyc.s("name")}", style = MaterialTheme.typography.bodyMedium)
-                } else Text("${next.s("programName")} · " + when {
-                    next.b("endless") -> if (next.b("deloadWeek")) "continuous · deload" else "continuous · week ${next.i("weekIndex")}"
-                    next.b("deloadWeek") -> "deload week"
-                    else -> "week ${next.i("weekIndex")} of ${next.i("weeksTotal")}"
-                }, style = MaterialTheme.typography.bodyMedium)
                 Text("${ex.size} exercises · ${ex.sumOf { it.i("sets") }} working sets" + (next.i("minutes").takeIf { it > 0 }?.let { " · about $it min" } ?: ""),
                     style = MaterialTheme.typography.bodyMedium)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -247,7 +226,7 @@ private fun Hero(vm: AppViewModel, next: JSONObject, h: JSONObject) {
                     onClick = { if (live != null) vm.resume() else vm.openPreview() },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = cs.primary, contentColor = cs.onPrimary),
-                ) { Text(if (live != null) "Resume workout" else "Start workout", style = MaterialTheme.typography.titleSmall) }
+                ) { Icon(PiIcons.Play, null, modifier = Modifier.size(18.dp)); Text(if (live != null) "  Resume workout" else "  Start workout", style = MaterialTheme.typography.titleSmall) }
                 val alt = h.o("alt")
                 if (live == null && alt != null) OutlinedButton(onClick = { vm.startAlt() }, modifier = Modifier.fillMaxWidth()) {
                     Text("Fresher today: ${alt.s("dayLabel")} (${alt.i("score")}%)")

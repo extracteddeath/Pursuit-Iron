@@ -11,7 +11,8 @@
  */
 import * as E from '../../../modules/engine-api.js';
 import GALLERY from '../../../gallery.json' with { type: 'json' };
-import { withProgressionChoices, repeatedNote, refreshProgressionSets } from '../../../modules/session-tools.js';
+import { withProgressionChoices, repeatedNote, refreshProgressionSets, buildSessionReview } from '../../../modules/session-tools.js';
+import { withSessionPlanChoice } from '../../../modules/session-plan.js';
 import { INJURY_AREAS, INJURY_IMPACTS, injuryParts, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from '../../../modules/injury-tools.js';
 import { adjustInjuredExercises } from '../../../modules/workout-context.js';
 
@@ -204,6 +205,52 @@ function dayPreview(program, day, weekIndex) {
 }
 
 /* ------------------------------------------------------------------ Today */
+
+/* ------------------------------------------------------------------ the next session's review (web Build 904–910:
+   plan-session-surfaces — PlanChangeBanner, SessionGamePlan, PlanChangesDialog; session-tools buildSessionReview) */
+const loadText = (set, u) => { const w = set?.weight === '' || set?.weight == null ? null : Number(set.weight), r = Number(set?.reps);
+    return `${w != null && Number.isFinite(w) ? Math.round(w * 100) / 100 + ' ' + u : 'Choose load'} × ${r > 0 ? r : '—'}`; };
+const targetsText = (sets, u) => { const uni = sets.every((x) => x.weight === sets[0]?.weight && x.reps === sets[0]?.reps);
+    return uni ? loadText(sets[0], u) : sets.map((x, i) => `Set ${i + 1}: ${loadText(x, u)}`).join(' · '); };
+export function sessionReview({ programId, dayId, weekIndex } = {}) {
+    const nx = upNext();
+    const p = programId ? programById(programId) : nx?.program; if (!p) return null;
+    const day = p.days.find((d) => d.id === (dayId || nx?.day.id)); if (!day) return null;
+    const wk = weekIndex || nx?.weekIndex || 1, u = unit();
+    let r = null; try { r = buildSessionReview(p, day, wk, u, history(), perf()); } catch { r = null; }
+    if (!r) return null;
+    const restScale = Number(S.store.restScale) || 1;
+    const ranked = [...r.exercises].sort((a, b) => { const sc = (x) => (x.opportunity ? 8 : 0) + (x.change.undone ? 4 : 0) + (x.protocol.type !== 'straight' ? 2 : 0) + (x.change ? 1 : 0); return sc(b) - sc(a); }).slice(0, 3);
+    const gamePlan = ranked.map((x) => {
+        const pr = x.opportunity;
+        const tech = x.protocol.type === 'myo_reps' ? `Myo-reps · ${Math.max(8, Math.round(15 * restScale))}-second rests.` : x.protocol.type === 'drop_set' ? 'Drop set on the last set.' : null;
+        const why = pr ? (pr.type === 'e1rm' ? `Could raise estimated 1RM to ${Math.round(pr.estimated * 10) / 10} ${u}.` : `Could beat your ${pr.bestReps}-rep best at this load.`) : x.reason;
+        return { id: x.id, slot: x.slot, name: x.name, kind: pr ? 'pr' : x.protocol.type !== 'straight' ? 'technique' : 'trend', title: pr ? `PR chance · ${x.name}` : x.name,
+            dose: targetsText(x.effective, u), guidance: `${targetsText(x.effective, u)} · ${tech || why}` };
+    });
+    const changes = r.changes.map((x) => {
+        const prev = x.change.previous, prop = x.proposed;
+        const uniform = prop.length === prev.length && prop.every((t) => t.weight === prop[0]?.weight && t.reps === prop[0]?.reps) && prev.every((t) => t.weight === prev[0]?.weight && t.reps === prev[0]?.reps);
+        const rows = (uniform ? prop.slice(0, 1) : prop).map((t, i) => ({ set: uniform ? null : i + 1,
+            before: x.change.undone ? loadText(t, u) : prev[i] ? loadText(prev[i], u) : 'New set', after: loadText(x.change.undone ? x.change.undoTargets[i] : t, u) }));
+        return { id: x.id, slot: x.slot, name: x.name, category: x.category, undone: !!x.change.undone, canUndo: !!x.change.canUndo, rows,
+            basis: x.change.source ? { date: x.change.source.date } : null, reason: x.change.undone ? `Original recommendation: ${x.proposedReason}` : x.proposedReason };
+    });
+    return { programId: p.id, dayId: day.id, dayLabel: day.label, weekIndex: wk, unit: u, gamePlan, changes, undone: changes.filter((c) => c.undone).length,
+        outline: r.exercises.map((x) => ({ name: x.name, dose: `${x.cell.sets}×${x.cell.range || x.cell.reps}` })), sourceDate: r.sourceDate };
+}
+export function planChoice({ programId, dayId, weekIndex, exerciseId, slot = null, undo }) {
+    if (S.live && S.live.programId === programId) return { ok: false, error: 'Finish or discard the active workout before changing its next-session plan.' };
+    const p = programById(programId), day = p?.days.find((d) => d.id === dayId);
+    if (!p || !day) return { ok: false, error: 'This workout is no longer saved.' };
+    const r = buildSessionReview(p, day, weekIndex, unit(), history(), perf());
+    const row = r.exercises.find((x) => x.id === exerciseId && (slot == null || x.slot === slot));
+    if (!row || !row.change.changed) return { ok: false, error: 'This recommendation changed. Review it again.' };
+    let next; try { next = withSessionPlanChoice(p, row.change, !!undo); } catch (e) { return { ok: false, error: String(e.message || e) }; }
+    setList('saved', saved().map((x) => (x.id === programId ? next : x)));
+    if (S.store.drafts?.[programId]) S.store.drafts = { ...S.store.drafts, [programId]: { ...S.store.drafts[programId], sessionPlanChoices: next.sessionPlanChoices } };
+    markStore(); return { ok: true, review: sessionReview({ programId, dayId, weekIndex }) };
+}
 export function home() {
     const nx = upNext();
     const H = history();

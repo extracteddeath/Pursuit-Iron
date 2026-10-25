@@ -55,6 +55,10 @@ class Prefs(context: Context) {
     var lastMode by mutableStateOf(sp.getBoolean("lastMode", false))
         private set
     fun changeLastMode(v: Boolean) { lastMode = v; sp.edit().putBoolean("lastMode", v).apply() }
+    /** The design's check-in on Today: "yyyy-MM-dd|sleep|sore|energy|done", one day at a time. */
+    var checkIn by mutableStateOf(sp.getString("checkIn", "") ?: "")
+        private set
+    fun changeCheckIn(v: String) { checkIn = v; sp.edit().putString("checkIn", v).apply() }
     fun changeFocus(v: Boolean) { focus = v; sp.edit().putBoolean("focus", v).apply() }
     fun changeSteppers(v: Boolean) { steppers = v; sp.edit().putBoolean("steppers", v).apply() }
     fun changeKeepAwake(v: Boolean) { keepAwake = v; sp.edit().putBoolean("keepAwake", v).apply() }

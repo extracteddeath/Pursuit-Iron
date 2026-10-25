@@ -98,7 +98,7 @@ fun LevelCard(vm: AppViewModel) {
 
 /* ------------------------------------------------------------------ strength score (App.js StrengthSnapshotCard / ProfileView strength) */
 @Composable
-fun StrengthScoreCard(vm: AppViewModel, onSetBodyweight: () -> Unit) {
+fun StrengthScoreCard(vm: AppViewModel, onOpenStandards: (() -> Unit)? = null, onSetBodyweight: () -> Unit) {
     val p = vm.profile ?: return
     val sc = p.o("score")
     val cs = MaterialTheme.colorScheme
@@ -114,7 +114,7 @@ fun StrengthScoreCard(vm: AppViewModel, onSetBodyweight: () -> Unit) {
         }
         return
     }
-    PiCard(radius = 28.dp) {
+    PiCard(radius = 28.dp, onClick = onOpenStandards) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Icon(PiIcons.Trophy, null, tint = cs.primary, modifier = Modifier.size(18.dp))
             Text("Strength Score", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f).semantics { heading() })

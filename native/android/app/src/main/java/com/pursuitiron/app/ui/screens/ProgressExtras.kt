@@ -266,3 +266,16 @@ fun shareWorkoutImage(context: Context, card: JSONObject, cs: ColorScheme) {
     val send = Intent(Intent.ACTION_SEND).setType("image/png").putExtra(Intent.EXTRA_STREAM, uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     context.startActivity(Intent.createChooser(send, "Share workout").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
 }
+
+
+/* The design opens strength standards from the strength score on the profile, full height. */
+@Composable
+fun StrengthStandardsSheet(vm: AppViewModel, onClose: () -> Unit) {
+    var liftId by remember { mutableStateOf<String?>(null) }
+    liftId?.let { id -> LiftDetailSheet(vm, id) { liftId = null } }
+    ModalBottomSheet(onDismissRequest = onClose, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            StrengthStandardsCard(vm) { liftId = it }
+        }
+    }
+}

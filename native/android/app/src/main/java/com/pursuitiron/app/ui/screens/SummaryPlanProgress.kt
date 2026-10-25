@@ -209,92 +209,40 @@ fun PlanScreen(vm: AppViewModel) {
 fun ProgressScreen(vm: AppViewModel) {
     val p = vm.progress
     val wide = LocalWide.current
-    val cs = MaterialTheme.colorScheme
     val full = StaggeredGridItemSpan.FullLine
     var liftId by remember { mutableStateOf<String?>(null) }
     var pinsOpen by remember { mutableStateOf(false) }
+    var historyId by remember { mutableStateOf<String?>(null) }
+    var day by remember { mutableStateOf<Triple<Int, Int, Int>?>(null) }
     val charts = rememberProgressCharts(vm)
     liftId?.let { id -> LiftDetailSheet(vm, id) { liftId = null } }
+    historyId?.let { id -> HistorySheet(vm, id) { historyId = null } }
     if (pinsOpen) PinsSheet(vm) { pinsOpen = false }
     LazyVerticalStaggeredGrid(
         columns = StaggeredGridCells.Fixed(if (wide) 2 else 1),
         contentPadding = PaddingValues(start = if (wide) 32.dp else 16.dp, end = if (wide) 32.dp else 16.dp, bottom = 24.dp),
-        horizontalArrangement = Arrangement.spacedBy(20.dp), verticalItemSpacing = 14.dp, modifier = Modifier.statusBarsPadding(),
+        horizontalArrangement = Arrangement.spacedBy(20.dp), verticalItemSpacing = 16.dp, modifier = Modifier.statusBarsPadding(),
     ) {
         item(span = full) { Text("Progress", style = MaterialTheme.typography.displayMedium, modifier = Modifier.padding(top = 20.dp, start = 4.dp)) }
         if (p == null || p.i("sessions") == 0) {
-            item(span = full) { EmptyState("Your charts start here", "Log your first session and this fills with strength trends and records. Trends need two sessions per lift.") }
+            item(span = full) { EmptyState("Your charts start here", "Log your first session and this fills with strength trends, weekly volume and records. Trends need two sessions per lift.") }
             return@LazyVerticalStaggeredGrid
         }
-        item(span = full) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                StatTile("Sessions", "${p.i("sessions")}", modifier = Modifier.weight(1f))
-                StatTile("Lifts tracked", "${p.list("lifts").size}", modifier = Modifier.weight(1f))
-                StatTile("Records", "${p.list("records").size}", modifier = Modifier.weight(1f))
-            }
+        // The design: Trends and History one tap apart (history used to sit under every chart).
+        item(span = full) { Segmented(listOf("trends" to "Trends", "history" to "History"), vm.progView, { vm.progView = it; day = null }) }
+        if (vm.progView == "history") {
+            item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { MonthCalendar(vm, day) { day = it } }
+            item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { HistoryList(vm, day) { historyId = it } }
+            return@LazyVerticalStaggeredGrid
         }
-        p.o("recap")?.takeIf { it.i("count") > 0 }?.let { r -> item(span = full) { RecapCard(JSONObject().put("recap", r).put("unit", p.s("unit"))) } }
         charts?.let { g -> item(span = full) { VolumeChartCard(g) } }
-        item(span = full) { PinnedLiftsSection(vm, onOpen = { liftId = it }, onManage = { pinsOpen = true }) }
         // Web VolumeCard: this week's sets per muscle against the landmarks, for the program being trained.
         vm.home?.o("next")?.let { nx -> item(span = full) { WeekVolumeCard(vm, nx.s("programId"), nx.i("weekIndex")) } }
         charts?.let { g ->
             item(span = full) { FeedbackCard(g) }
             item(span = full) { IntensityCard(g) }
         }
-        val recs = p.list("records")
-        if (recs.isNotEmpty()) {
-            item(span = full) { SectionTitle("Personal records") }
-            item(span = full) {
-                Column(Modifier.clip(RoundedCornerShape(24.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    recs.take(15).forEach { r ->
-                        Row(Modifier.fillMaxWidth().background(cs.surfaceContainerLow).clickable { liftId = r.s("id") }.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text(r.s("name"), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            if (r.s("weight").isNotBlank()) Text(r.s("weight") + (r.s("reps").takeIf { it.isNotBlank() }?.let { "×$it" } ?: "") + "  ", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
-                            Text(fmtNum(r.d("e1rm")), style = MaterialTheme.typography.titleSmall)
-                        }
-                    }
-                }
-            }
-        }
-        item(span = full) { StrengthStandardsCard(vm) { liftId = it } }
-        // Every lift with history, trend or not; pinned ones already lead the page as cards.
-        val others = p.list("lifts").filter { !it.b("pinned") }
-        if (others.isNotEmpty()) {
-            item(span = full) { SectionTitle("All lifts") }
-            item(span = full) {
-                Column(Modifier.clip(RoundedCornerShape(24.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    others.forEach { l ->
-                        Row(Modifier.fillMaxWidth().background(cs.surfaceContainerLow).clickable { liftId = l.s("id") }.padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                            val pts = l.list("points").map { it.d("e1rm") }
-                            Text(l.s("name"), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            if (pts.size >= 2) {
-                                Sparkline(pts, Modifier.width(56.dp).height(20.dp), color = cs.onSurfaceVariant)
-                                val ch = pts.last() - pts.first()
-                                Text("  " + (if (ch >= 0) "+" else "−") + fmtNum(kotlin.math.abs(ch)) + " ${p.s("unit")}", style = MaterialTheme.typography.labelMedium, color = if (ch > 0) cs.primary else cs.onSurfaceVariant)
-                            } else Text("1 session", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
-                            Icon(PiIcons.ChevronRight, null, tint = cs.onSurfaceVariant)
-                        }
-                    }
-                }
-            }
-        }
-        val rd = p.list("readiness")
-        if (rd.isNotEmpty()) {
-            item(span = full) { SectionTitle("Muscle readiness") }
-            item(span = full) {
-                PiCard(radius = 24.dp) {
-                    rd.sortedBy { it.i("readiness") }.forEach { m ->
-                        val v = m.i("readiness")
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Text(m.s("label"), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.width(110.dp))
-                            ProgressBar(v / 100f, Modifier.weight(1f), height = 12.dp, color = if (v < 65) cs.tertiary else cs.primary)
-                            Text("$v%" + if (v < 65) " · rest" else "", style = MaterialTheme.typography.labelMedium, modifier = Modifier.width(72.dp))
-                        }
-                    }
-                }
-            }
-        }
+        item(span = full) { PinnedLiftsSection(vm, onOpen = { liftId = it }, onManage = { pinsOpen = true }) }
     }
 }
 

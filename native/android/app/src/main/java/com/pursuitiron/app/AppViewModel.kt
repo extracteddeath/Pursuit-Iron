@@ -51,6 +51,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     var home by mutableStateOf<JSONObject?>(null); private set
     var session by mutableStateOf<JSONObject?>(null); private set
+    /** The design's Progress view, kept across tab switches: "trends" or "history". */
+    var progView by mutableStateOf("trends")
     var summary by mutableStateOf<JSONObject?>(null); private set
     var plan by mutableStateOf<JSONObject?>(null); private set
     var progress by mutableStateOf<JSONObject?>(null); private set

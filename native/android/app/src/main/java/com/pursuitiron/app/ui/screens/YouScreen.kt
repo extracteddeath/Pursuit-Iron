@@ -87,6 +87,7 @@ fun YouScreen(vm: AppViewModel) {
     var gymsOpen by remember { mutableStateOf(false) }
     var toolsOpen by remember { mutableStateOf(false) }
     var customizeOpen by remember { mutableStateOf(false) }
+    var standardsOpen by remember { mutableStateOf(false) }
     var settingsSheet by remember { mutableStateOf<String?>(null) }
     var board by remember { mutableStateOf<JSONObject?>(null) }
     LaunchedEffect(vm.progress, vm.profile) { board = vm.profileBoard() }
@@ -110,14 +111,14 @@ fun YouScreen(vm: AppViewModel) {
             }
         }
         board?.o("lifetime")?.takeIf { it.i("sessions") > 0 }?.let { lt -> item(span = full) { LifetimeTiles(lt, board.s("unit", "kg")) } }
-        item(span = full) { Segmented(listOf("profile" to "Profile", "body" to "Body", "history" to "History", "settings" to "Settings"), section, { section = it }) }
+        item(span = full) { Segmented(listOf("profile" to "Profile", "body" to "Body", "settings" to "Settings"), section, { section = it }) }
         when (section) {
             "profile" -> {
                 // App.js ProfileCustomization: the lifter's own order, hidden sections left out.
                 vm.prefs.profileLayout.visible().forEach { id ->
                     when (id) {
                         "level" -> item { LevelCard(vm) }
-                        "strength" -> item { StrengthScoreCard(vm) { section = "body" } }
+                        "strength" -> item { StrengthScoreCard(vm, onOpenStandards = { standardsOpen = true }) { section = "body" } }
                         "club" -> item { ClubCard(vm) }
                         "achievements" -> item(span = full) { AchievementsCard(vm) }
                         "big3" -> board?.let { b -> item { Big3Card(b) } }
@@ -134,11 +135,6 @@ fun YouScreen(vm: AppViewModel) {
                 }
             }
             "body" -> { item { BodyweightCard(vm) }; item { MeasurementsCard(vm) }; item(span = full) { ProgressPhotosCard(vm) }; item { InjuriesCard(vm) } }
-            "history" -> {
-                item(span = full) { CalendarCard(vm) { historyId = it } }
-                if (vm.history.isEmpty()) item(span = full) { Text("No workouts yet.", color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(8.dp)) }
-                else item(span = full) { HistoryList(vm) { historyId = it } }
-            }
             else -> {
                 // The design's Settings: the everyday controls inline, everything else one row away in a sheet.
                 item { SettingsCard(vm) }
@@ -148,6 +144,7 @@ fun YouScreen(vm: AppViewModel) {
         }
     }
     historyId?.let { id -> HistorySheet(vm, id) { historyId = null } }
+    if (standardsOpen) StrengthStandardsSheet(vm) { standardsOpen = false }
     if (gymsOpen) GymsSheet(vm) { gymsOpen = false }
     if (toolsOpen) ToolsSheet(vm) { toolsOpen = false }
     if (customizeOpen) ProfileCustomizeSheet(vm) { customizeOpen = false }

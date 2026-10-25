@@ -428,10 +428,14 @@ for tab_name in ["Plan", "Progress", "Exercises"]:
     tap(rf"^\|{tab_name}$|^{tab_name}\|")
     time.sleep(1.5)
     tour(tab_name.lower())
+    if tab_name == "Progress" and tap(r"^\|History$", required=False):
+        time.sleep(1.2)
+        tour("progress-history")
+        tap(r"^\|Trends$", required=False)
 tap(r"^\|You$|^You\|")
 time.sleep(1.5)
 tour("you")
-for sub in ["Body", "History", "Settings"]:
+for sub in ["Body", "Settings"]:
     if tap(rf"^\|{sub}$|^{sub}\|", required=False):
         time.sleep(1.2)
         tour("you-" + sub.lower())
@@ -492,10 +496,19 @@ if scroll_to(r"Customize profile", tries=12):
     close_sheet(r"sections shown")
 else:
     FAILS.append("Customize profile button missing")
-scroll_up_to(r"^\|History$", tries=14)
-adb("shell", "input", "swipe", "540", "700", "540", "1900", "300")
-tap(r"^\|History$", "history-calendar")
-tap(r": \d+ workouts?\|", "calendar-day")
+# The design: History is one tap from Progress (Trends · History), with the month calendar filtering the list
+tap(r"^\|Progress$|^Progress\|")
+time.sleep(1.2)
+if tap(r"^\|History$", "history-calendar"):
+    if tap(r", \d+ workouts?(, today)?\|", "calendar-day", required=False):
+        if not find(r"^\|Showing ", timeout=4):
+            FAILS.append("calendar day did not filter the history")
+    tap(r"^\|Trends$")
+else:
+    FAILS.append("no History tab on Progress")
+tap(r"^\|You$|^You\|")
+time.sleep(1.2)
+scroll_up_to(r"^\|Settings$", tries=14)
 tap(r"^\|Settings$", "settings")
 if tap(r"^\|lb$", "unit-confirm"):
     tap(r"^\|Switch$", "unit-switched")

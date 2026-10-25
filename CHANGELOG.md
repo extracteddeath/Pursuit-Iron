@@ -1,3 +1,9 @@
+## Build 914 / M366 — Program Settings ownership and block duration styling
+
+- Extract the Program Settings dialog into a feature-owned renderer; keep draft transactions and save/cancel control in ProgramView.
+- Replace 10 static block-duration styles with theme CSS, including valid/invalid numeric state, disabled increment controls and keyboard focus treatment.
+- Keep cycle-owned duration, saved program state, existing workout history and Engine 0.65.9 unchanged. Add extracted module to style regression accounting and reduce the debt ceiling.
+
 ## Build 913 / M365 — Program schedule presentation ownership
 
 - Move the weekly schedule sheet out of App.js into one Program feature module, preserving the existing schedule reducer and swipe-to-dismiss behavior.

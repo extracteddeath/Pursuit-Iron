@@ -61,6 +61,13 @@ class Prefs(context: Context) {
     fun changeCheckIn(v: String) { checkIn = v; sp.edit().putString("checkIn", v).apply() }
     fun changeFocus(v: Boolean) { focus = v; sp.edit().putBoolean("focus", v).apply() }
     fun changeSteppers(v: Boolean) { steppers = v; sp.edit().putBoolean("steppers", v).apply() }
+    /** The design's rest cues: "off", "tones" (3-2-1 then a higher tone) or "voice"; and lowering music instead of pausing it. */
+    var cues by mutableStateOf(sp.getString("cues", "tones") ?: "tones")
+        private set
+    fun changeCues(v: String) { cues = v; sp.edit().putString("cues", v).apply() }
+    var duck by mutableStateOf(sp.getBoolean("duck", true))
+        private set
+    fun changeDuck(v: Boolean) { duck = v; sp.edit().putBoolean("duck", v).apply() }
     /** The design's Comfort & accessibility text size: 1, 1.1 or 1.2 on top of the phone's own font scale. */
     var zoom by mutableStateOf(sp.getFloat("zoom", 1f))
         private set

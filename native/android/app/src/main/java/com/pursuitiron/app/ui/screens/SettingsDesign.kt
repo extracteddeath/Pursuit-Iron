@@ -174,6 +174,8 @@ private val ICON_PREFS = PiIcons.icon("set-prefs", "M4 21v-7M4 10V3M12 21v-9M12 
 private val ICON_BELL = PiIcons.icon("set-bell", "M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0")
 private val ICON_DB = PiIcons.icon("set-db", "M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3zM4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6")
 private val ICON_COMFORT = PiIcons.icon("set-comfort", "M12 4a2 2 0 1 0 0 .01M5 8l7 2 7-2M12 10v5l-3 6M12 15l3 6")
+private val ICON_CUES = PiIcons.icon("set-cues", "M11 5 6 9H2v6h4l5 4zM15.5 8.5a5 5 0 0 1 0 7")
+private val ICON_CUES_TEST = PiIcons.icon("cue-test", "M11 5 6 9H2v6h4l5 4zM15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14")
 private val ICON_BACKUP = PiIcons.icon("set-backup", "M12 3v12M7 10l5 5 5-5M4 19h16")
 
 @Composable
@@ -196,6 +198,7 @@ fun SettingsRows(vm: AppViewModel, onOpen: (String) -> Unit) {
         SetRow("loading", "Plates & bars", "The plates you own and your bars", PiIcons.Library, cs.secondaryContainer, cs.onSecondaryContainer),
         SetRow("exercises", "Your exercises", if (vm.customs.isEmpty()) "Create lifts that work everywhere" else "${vm.customs.size} custom lift${if (vm.customs.size == 1) "" else "s"}", PiIcons.Plus, cs.primaryContainer, cs.onPrimaryContainer),
         SetRow("comfort", "Comfort & accessibility", "${mapOf(1f to "Default", 1.1f to "Large", 1.2f to "Larger")[vm.prefs.zoom] ?: "Default"} text · haptics ${if (st.b("haptics", true)) "on" else "off"}", ICON_COMFORT, cs.tertiaryContainer, cs.onTertiaryContainer),
+        SetRow("cues", "Rest timer & cues", "${mapOf("off" to "No sound", "tones" to "Tones", "voice" to "Voice")[vm.prefs.cues] ?: "Tones"} · ${if (vm.prefs.duck) "music lowers" else "music pauses"}", ICON_CUES, cs.primaryContainer, cs.onPrimaryContainer),
         SetRow("training", "Training preferences", "$exp · effort as ${if (st.s("loadMode") == "rpe") "RPE" else "reps in reserve"}", ICON_PREFS, cs.primaryContainer, cs.onPrimaryContainer),
         SetRow("reminders", "Reminders", remSub, ICON_BELL, cs.secondaryContainer, cs.onSecondaryContainer),
         SetRow("injury", "Injury log", "${if ((inj?.i("active") ?: 0) > 0) "${inj!!.i("active")} active" else "Nothing active"} · ${inj?.i("resolved") ?: 0} resolved", PiIcons.Shield, cs.tertiaryContainer, cs.onTertiaryContainer),
@@ -356,6 +359,30 @@ fun WhatsNewSheet(vm: AppViewModel, onClose: () -> Unit) {
         Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("What’s new in v${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.headlineSmall)
             WhatsNewList()
+        }
+    }
+}
+
+
+/** The design's Rest timer & cues panel. */
+@Composable
+fun CuesSheet(vm: AppViewModel, onClose: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    ModalBottomSheet(onDismissRequest = onClose) {
+        Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("Rest timer & cues", style = MaterialTheme.typography.headlineSmall)
+            Text("WHEN REST ENDS", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.ExtraBold, letterSpacing = 0.4.sp), color = cs.onSurfaceVariant)
+            Segmented(listOf("off" to "Off", "tones" to "Tones", "voice" to "Voice"), vm.prefs.cues, { vm.prefs.changeCues(it) })
+            Text(when (vm.prefs.cues) { "off" -> "Only the vibration when rest ends."; "voice" -> "Says \"Rest over\" and the next exercise at zero."; else -> "Three short beeps from 3 seconds, then a higher one at zero." },
+                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, lineHeight = 18.sp), color = cs.onSurfaceVariant)
+            Column(Modifier.clip(RoundedCornerShape(20.dp))) {
+                ComfortRow("Lower music instead of pausing", "Music dips for the cue, then comes straight back", vm.prefs.duck) { vm.prefs.changeDuck(it) }
+            }
+            Row(Modifier.height(44.dp).clip(CircleShape).background(cs.secondaryContainer).clickable { vm.testCue() }.semantics(mergeDescendants = true) { role = Role.Button }.padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(ICON_CUES_TEST, null, Modifier.size(18.dp), tint = cs.onSecondaryContainer)
+                Text("Test the cue", style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold), color = cs.onSecondaryContainer)
+            }
         }
     }
 }

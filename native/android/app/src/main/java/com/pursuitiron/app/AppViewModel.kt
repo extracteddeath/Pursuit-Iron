@@ -184,6 +184,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         try { return block() } finally { busy = null }
     }
 
+    /** The design's Rest timer & cues test button. */
+    fun testCue() = beep.end(prefs.cues, prefs.duck, "Bench press")
     fun hap(h: Hap) { haptics.strong = prefs.grip; haptics.play(h) }
 
     /* ---------------------------------------------------------------- navigation */
@@ -237,13 +239,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private var restFired = false
+    private var lastCountdown = -1
     private fun checkRest() {
         val r = session?.o("rest") ?: return
         val end = r.optLong("startedAt") + r.optLong("seconds") * 1000
+        val left = ((end - now + 999) / 1000).toInt()
+        if (!restFired && left in 1..3 && left != lastCountdown && inForeground && !r.b("paused")) { lastCountdown = left; beep.countdown(prefs.cues, prefs.duck) }
         if (!restFired && now >= end) {
-            restFired = true
+            restFired = true; lastCountdown = -1
             hap(Hap.Rest)
-            if (inForeground) beep.play()
+            if (inForeground) beep.end(prefs.cues, prefs.duck, session?.let { s -> s.list("exercises").getOrNull(s.i("exIdx"))?.s("name") })
             act("restDone")
             if (inForeground) toast("Rest over. Next set when you're ready.")
         }
@@ -659,5 +664,5 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         rest.show(end, "Rest", text)
     }
 
-    override fun onCleared() { core?.close(); super.onCleared() }
+    override fun onCleared() { core?.close(); beep.close(); super.onCleared() }
 }

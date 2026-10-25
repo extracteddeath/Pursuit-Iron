@@ -988,7 +988,6 @@ function StyleTag({ theme } = {}) {
       @media (max-width:420px){
         .wpb-program-actions{display:grid!important;grid-template-columns:repeat(5,minmax(44px,auto));align-items:center!important;}
         .wpb-program-actions>.wpb-program-actions-spacer{display:none!important;}
-        .wpb-program-actions>.wpb-program-save{grid-column:span 2;min-width:0!important;width:100%!important;}
         .wpb-program-actions>.wpb-reroll{grid-column:span 2;justify-content:center;}
       }
       .wpb-consistency-card{box-shadow:none;}
@@ -996,7 +995,7 @@ function StyleTag({ theme } = {}) {
       @media (max-width:350px){
         .wpb-finish-share-row{grid-template-columns:1fr!important;}
         .wpb-program-actions{grid-template-columns:repeat(4,minmax(44px,1fr));}
-        .wpb-program-actions>.wpb-program-save,.wpb-program-actions>.wpb-reroll{grid-column:span 2;}
+        .wpb-program-actions>.wpb-reroll{grid-column:span 2;}
         .wpb-phase-label{display:none;}
       }
       @media (hover:hover) and (pointer:fine){
@@ -7268,7 +7267,18 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
             meta.style.height = (full * (1 - p)) + "px";
             meta.style.opacity = String(1 - p);
             meta.style.transform = p > 0 ? `translateY(${-5 * p}px)` : "";
-            pvHeadRoom.current = full * (1 - p);
+            // A wrapped title may reach the header's height cap, and the icon row
+            // can be taller than a short title. Reserve only the space the header
+            // can actually release when its metadata closes.
+            const title = pvTitle.current, name = pvNameCol.current, header = title?.parentElement;
+            if (title && name && header) {
+                const collapsed = Math.max(...[...title.children].map(el =>
+                    el.offsetHeight - (el === name ? meta.offsetHeight : 0)));
+                const style = getComputedStyle(header);
+                const inset = ['paddingTop', 'paddingBottom', 'borderTopWidth', 'borderBottomWidth']
+                    .reduce((sum, key) => sum + (parseFloat(style[key]) || 0), 0);
+                pvHeadRoom.current = Math.max(0, header.offsetHeight - collapsed - inset);
+            } else pvHeadRoom.current = 0;
         };
         measure();
         apply();
@@ -7280,7 +7290,7 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
         onScroll();
         return () => { sc.removeEventListener("scroll", onScroll); window.removeEventListener("resize", onResize); if (raf)
             cancelAnimationFrame(raf); };
-    }, [program.id, program.days.length, program.config.split, program.config.goal, program.config.endless, renamingProg]);
+    }, [program.id, program.name, program.days.length, program.config.split, program.config.goal, program.config.endless, renamingProg]);
     const [iconSheet, setIconSheet] = useState(false); // program icon picker
     const [progName, setProgName] = useState("");
     const [confirmRegen, setConfirmRegen] = useState(false);
@@ -8126,7 +8136,18 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
                                                     setProgram(p => ({ ...p, name: v, config: { ...p.config, name: v } }));
                                                 setRenamingProg(false);
                                             } }, style: { flex: 1, minWidth: 0, fontSize: 18, fontWeight: 700, padding: "4px 8px", borderRadius: 8, border: `1px solid ${C.accent}`, background: C.bg2, color: C.text } }), _jsx("button", { className: "pressable hit", "aria-label": "Save name", onClick: () => { const v = progName.trim(); if (v)
-                                                setProgram(p => ({ ...p, name: v, config: { ...p.config, name: v } })); setRenamingProg(false); }, style: { ...iconBtn(), width: 36, height: 36, color: C.accentInk, borderColor: `${C.accent}66` }, children: _jsx(Check, { size: 17 }) })] })) : (_jsxs("button", { onClick: () => { setProgName(program.name); setRenamingProg(true); }, className: "pressable wpb-program-name", children: [_jsx("span", { className: "wpb-program-name-text", children: program.name }), _jsx(Pencil, { size: 13, color: C.faint, style: { flexShrink: 0 } })] })), _jsx("div", { ref: pvHead, className: "wpb-program-meta-collapse", children: _jsxs("div", { className: "wpb-program-meta-line", children: [_jsxs("span", { children: [splitName, " \u00B7 ", program.days.length, "d \u00B7 ", GOALS[program.config.goal]?.label || "", program.config?.endless ? " · Continuous" : ""] }), program.engineSource !== "pursuit-next" && !program.quick && !program.custom && _jsx("span", { className: "wpb-status wpb-status--neutral", children: "Archived plan" })] }) })] })] }) }), _jsxs("div", { ref: pvScroll, className: "wpb-scroll wpb-page-scroll wpb-program-scroll", style: { flex: 1, minHeight: 0, overflowY: "auto", padding: "8px 14px 90px" }, children: [cycleLink && (
+                                                setProgram(p => ({ ...p, name: v, config: { ...p.config, name: v } })); setRenamingProg(false); }, style: { ...iconBtn(), width: 36, height: 36, color: C.accentInk, borderColor: `${C.accent}66` }, children: _jsx(Check, { size: 17 }) })] })) : (_jsxs("button", { onClick: () => { setProgName(program.name); setRenamingProg(true); }, className: "pressable wpb-program-name", children: [_jsx("span", { className: "wpb-program-name-text", children: program.name }), _jsx(Pencil, { size: 13, color: C.faint, style: { flexShrink: 0 } })] })), _jsx("div", { ref: pvHead, className: "wpb-program-meta-collapse", children: _jsxs("div", { className: "wpb-program-meta-line", children: [_jsxs("span", { children: [splitName, " \u00B7 ", program.days.length, "d \u00B7 ", GOALS[program.config.goal]?.label || "", program.config?.endless ? " · Continuous" : ""] }), program.engineSource !== "pursuit-next" && !program.quick && !program.custom && _jsx("span", { className: "wpb-status wpb-status--neutral", children: "Archived plan" })] }) })] })] }) }), _jsxs("div", { ref: pvScroll, className: "wpb-scroll wpb-page-scroll wpb-program-scroll", style: { flex: 1, minHeight: 0, overflowY: "auto", padding: "8px 14px 90px" }, children: [(!isSaved || hasDraft) && _jsxs("section", {
+                    className: "wpb-program-commit", "aria-label": "Save program", "data-testid": hasDraft ? "program-draft-status" : undefined,
+                    children: [_jsxs("div", { className: "wpb-program-commit-copy", role: "status", children: [
+                        _jsx("strong", { children: isSaved ? "Draft changes" : "Unsaved program" }),
+                        _jsx("p", { children: isSaved
+                            ? "Your saved program updates when you review and save. This draft stays on this device when you leave."
+                            : "Save to keep this program and make it active. Starting a workout also saves it." })] }),
+                        _jsxs("div", { className: "wpb-program-commit-actions", children: [
+                            _jsxs(UiAction, { variant: "primary", onClick: onSave, className: "wpb-program-save",
+                                "aria-label": isSaved ? "Review program changes" : "Save this program", children: [_jsx(Save, { size: 16, "aria-hidden": true }), isSaved ? "Review" : "Save"] }),
+                            hasDraft && _jsx(UiAction, { variant: "text", onClick: () => setConfirmLeave(true), children: "Manage draft" })] })]
+                }), cycleLink && (
                     // Second collapsible block — clips away on scroll alongside the meta line so the cycle
                     // banner isn't left holding a full row of header open. Its 12px gap to the title row is
                     // padding on the WRAPPER, not a margin on the button: a margin would outlive the collapse
@@ -8153,7 +8174,7 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
                                                                         color: dn ? C.accentText : isNx ? C.accentInk : C.faint,
                                                                         fontSize: 11, fontWeight: 700
                                                                     }, children: dn ? _jsx(Check, { size: 12, strokeWidth: 3 }) : isNx ? _jsx(Play, { size: 9, fill: C.accent }) : i + 1 }), _jsx("span", { style: { flex: 1, minWidth: 0, fontSize: 15, fontWeight: sel ? 800 : 600, color: sel ? C.accentInk : C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, "aria-label": d.label, children: displayDayName(d.label, program) }), dn && _jsx("span", { style: { fontSize: 11, fontWeight: 600, color: C.accentInk, flexShrink: 0 }, children: "done" }), isNx && _jsx("span", { style: { fontSize: 11, fontWeight: 600, color: C.accentInk, flexShrink: 0 }, children: "next" })] }, d.id));
-                                                    })] })] }))] })), _jsxs("button", { onClick: () => setPlanInfo(true), "aria-label": "Program details \u2014 how this was built, weekly volume, block plan", title: "Program details", className: "pressable", style: { ...iconBtn(), width: "auto", padding: "0 10px", gap: 4, fontSize: 13, fontWeight: 700, flexShrink: 0 }, children: [_jsx(Info, { size: 15 }), " Details"] }), _jsx("div", { className: "wpb-program-actions-spacer" }), isSaved && !hasDraft ? (_jsxs("span", { className: "wpb-program-saved-status", role: "status", "aria-label": "Program saved", children: [_jsx(Check, { size: 15 }), " Saved"] })) : (_jsxs("button", { onClick: onSave, "aria-label": isSaved ? "Review program changes" : "Save this program", className: "pressable wpb-program-save", style: { ...iconBtn(), background: C.accent, borderColor: C.accent, color: C.accentText, width: "auto", padding: "0 14px", gap: 6, fontWeight: 700, fontSize: 14 }, children: [_jsx(Save, { size: 16 }), isSaved ? "Review" : "Save"] }))] }), hasDraft && _jsxs("div", { role: "status", "data-testid": "program-draft-status", style: { marginTop: 12, padding: "12px 14px", borderRadius: 12, background: C.accentDim, fontSize: 13, lineHeight: 1.5 }, children: [_jsx("strong", { children: "Draft changes" }), _jsx("div", { style: { color: C.muted }, children: "Your saved program updates when you review and save. This draft stays on this device when you leave." }), _jsx("button", { onClick: () => setConfirmLeave(true), className: "pressable", style: { marginTop: 6, padding: "8px 0", border: "none", background: "none", color: C.accentInk, fontWeight: 700, cursor: "pointer" }, children: "Manage draft" })] }), saveUndo && _jsxs("div", { "data-testid": "program-save-undo", style: { marginTop: 12, padding: "12px 14px", borderRadius: 12, border: `1px solid ${C.border}`, fontSize: 13, lineHeight: 1.5 }, children: [_jsxs("strong", { children: ["Last save \u00B7 ", saveUndo.count === 1 ? "this program" : `${saveUndo.count} blocks`] }), _jsx("div", { style: { color: C.muted }, children: saveUndo.available ? "Undo is available until your next save or app reload." : "Undo is paused because a saved block or draft changed. Resolve those edits first." }), _jsx("button", { disabled: !saveUndo.available, onClick: saveUndo.onUndo, className: "pressable", style: { marginTop: 6, padding: "8px 0", border: "none", background: "none", color: saveUndo.available ? C.accentInk : C.faint, fontWeight: 700, cursor: saveUndo.available ? "pointer" : "default" }, children: "Undo last save" })] }), !manual && engHas(program.engineV, "preferenceAware") && (() => {
+                                                    })] })] }))] })), _jsxs("button", { onClick: () => setPlanInfo(true), "aria-label": "Program details \u2014 how this was built, weekly volume, block plan", title: "Program details", className: "pressable", style: { ...iconBtn(), width: "auto", padding: "0 10px", gap: 4, fontSize: 13, fontWeight: 700, flexShrink: 0 }, children: [_jsx(Info, { size: 15 }), " Details"] }), _jsx("div", { className: "wpb-program-actions-spacer" }), isSaved && !hasDraft && _jsxs("span", { className: "wpb-program-saved-status", role: "status", "aria-label": "Program saved", children: [_jsx(Check, { size: 15 }), " Saved"] })] }), saveUndo && _jsxs("div", { "data-testid": "program-save-undo", style: { marginTop: 12, padding: "12px 14px", borderRadius: 12, border: `1px solid ${C.border}`, fontSize: 13, lineHeight: 1.5 }, children: [_jsxs("strong", { children: ["Last save \u00B7 ", saveUndo.count === 1 ? "this program" : `${saveUndo.count} blocks`] }), _jsx("div", { style: { color: C.muted }, children: saveUndo.available ? "Undo is available until your next save or app reload." : "Undo is paused because a saved block or draft changed. Resolve those edits first." }), _jsx("button", { disabled: !saveUndo.available, onClick: saveUndo.onUndo, className: "pressable", style: { marginTop: 6, padding: "8px 0", border: "none", background: "none", color: saveUndo.available ? C.accentInk : C.faint, fontWeight: 700, cursor: saveUndo.available ? "pointer" : "default" }, children: "Undo last save" })] }), !manual && engHas(program.engineV, "preferenceAware") && (() => {
                         const cfg = program.config || {}, focused = Object.entries(cfg.focus || {}).filter(([, n]) => n > 0);
                         const reduced = cfg.reduce || [];
                         if (!focused.length && !reduced.length)
@@ -8204,7 +8225,7 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
                             ? "Manual mode — tap any number to edit. ~RIR shows the suggested effort."
                             : "Each lift keeps its rep range. Automatic cycle effort targets follow the block; explicit RIR edits stay fixed.";
                         return (_jsx("div", { className: "wpb-phase-block", style: { marginBottom: 12 }, children: _jsx("div", { children: _jsxs("div", { style: { overflow: "hidden" }, children: [_jsxs("button", { onClick: () => setPhaseOpen(o => !o), className: "pressable", style: { width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", background: "none", border: "none", cursor: "pointer", textAlign: "left", color: C.text }, children: [_jsx("div", { style: { width: 8, height: 8, borderRadius: 999, background: ph.color, flexShrink: 0 } }), _jsxs("div", { style: { flex: 1, minWidth: 0, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: [_jsx("span", { style: { fontWeight: 700 }, children: ph.label }), _jsxs("span", { style: { color: C.muted }, children: [" \u00B7 ", ph.tagline] })] }), program.config.autoVolume && _jsx(Wand2, { size: 13, color: catInk(ph.color), style: { flexShrink: 0 } }), _jsx(ChevronDown, { size: 15, color: C.faint, style: { flexShrink: 0, transform: phaseOpen ? "rotate(180deg)" : "none", transition: "transform .15s" } })] }), phaseOpen && (_jsxs("div", { style: { padding: "0 12px 11px 29px", display: "flex", flexDirection: "column", gap: 6 }, children: [_jsx("div", { style: { fontSize: 13, color: C.muted, lineHeight: 1.5 }, children: ph.why }), _jsx("div", { style: { fontSize: 13, color: C.muted, lineHeight: 1.5 }, children: detailLine }), program.config.autoVolume && (_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: C.text }, children: [_jsx(Wand2, { size: 13, color: catInk(ph.color), style: { flexShrink: 0 } }), _jsx("span", { children: "Starting volume was auto-tuned per muscle from your training history." })] }))] }))] }) }) }));
-                    })(), !isSaved && (_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, background: C.accentDim, borderRadius: 16, padding: "12px 14px", marginBottom: 12 }, children: [_jsx(Save, { size: 16, color: C.accentInk, style: { flexShrink: 0 } }), _jsx("div", { style: { fontSize: 13, color: C.text }, children: "Tap Save to keep this program, or just hit play on a day \u2014 starting a workout saves it automatically." })] })), isSaved && viewingCurrentWeek && !program.config?.percentScheme && (() => {
+                    })(), isSaved && viewingCurrentWeek && !program.config?.percentScheme && (() => {
                         // At-a-glance weekly progress: how many of this week's days are already logged.
                         const total = program.days.length;
                         const doneCount = program.days.filter(d => isDayDone(d.id, activeWeek)).length;

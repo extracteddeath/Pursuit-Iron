@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';import http from 'node:http';import path from 'node:path';import puppeteer from 'puppeteer-core';
 const root=path.resolve(new URL('../',import.meta.url).pathname);
+const createdName='Steady creation — Strength and Hypertrophy Weekly Training';
 const equipment=['barbell','rack','bench','inclinebench','dumbbell','cable','machine','smith','pullup','dip','legpress','hacksquat','legext','legcurl','calfmachine'];
 const program={id:'steady',custom:true,name:'Saved before creation',weeks:6,config:{unit:'lb',goal:'both',progression:'double',experience:'intermediate'},days:[{id:'d',label:'Upper',primaryIndex:0,exercises:['bb-bench','inc-curl']}],overrides:{'d:0':{sets:3,reps:'5-8',rir:'2'},'d:1':{sets:3,reps:'8-12',rir:'2'}}};
 const seed={v:13,savedAt:1,saved:[program],history:[],cycles:[],perf:{},drafts:{},tombs:{},pinnedId:program.id,theme:'amethyst',unit:'lb',unitChosen:true,experience:'intermediate',seenIntro:999,seenWhatsNew:999,equipDefault:equipment,gyms:[{id:'gym',name:'Full gym',equipment,limits:{},inventory:{},limitUnit:'lb'}],activeGymId:'gym',lastBackup:Date.now(),installDismissedAt:Date.now()};
@@ -57,8 +58,8 @@ try{
    assert.ok(Math.abs(headerNow.progressY-headerBaseline.progressY)<=2&&Math.abs(headerNow.headerY-headerBaseline.headerY)<=2,
     `Wizard header/progress stay stationary across ${key}: ${JSON.stringify(headerNow)}`);
    if(key==='name'){
-    const field=await page.$('.wpb-wizard-step input');await field.type('Steady creation');
-    assert.equal(await page.$eval('.wpb-wizard-step input',n=>n.value),'Steady creation');
+    const field=await page.$('.wpb-wizard-step input');await field.type(createdName);
+    assert.equal(await page.$eval('.wpb-wizard-step input',n=>n.value),createdName);
    }
    if(key==='focus'){
     await page.click('[aria-label="Increase Chest focus"]');
@@ -83,13 +84,72 @@ try{
   const frames=await page.evaluate(()=>{cancelAnimationFrame(window.__screenRaf);return window.__screenFrames;});
   const bad=frames.filter(f=>f.opacity!==1||f.stepOpacity!==1||!['none','1'].includes(f.scale)||f.translate!=='none'||f.transform!=='none'||f.modal);
   assert.deepEqual(bad,[],`opaque first paint and stable viewport geometry at ${width}/${theme}: ${JSON.stringify(bad.slice(0,4))}`);
-  const store=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')));
+  let store=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')));
   assert.deepEqual(store.saved.find(p=>p.id===program.id),empty?undefined:program);assert.deepEqual(store.history,[]);
   if(cycle)assert.equal(store.cycles.length,1,'cycle build completes through the same steady flow');
   assert.ok((await page.$eval('.wpb-program',n=>n.textContent)).includes('Steady creation'),'built plan opens directly');
+  const reviewLayout=async large=>{
+   await page.$eval('.wpb-program-scroll',n=>{n.scrollTop=0;});
+   await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+   const layout=await page.evaluate(()=>{
+    const name=document.querySelector('.wpb-program-name-text'),header=document.querySelector('.wpb-program-header');
+    const body=document.querySelector('.wpb-program-scroll'),commit=document.querySelector('.wpb-program-commit');
+    const tools=document.querySelector('.wpb-program-actions');
+    return {fullName:name.textContent,wrapping:getComputedStyle(name).whiteSpace,
+     titleWidth:name.getBoundingClientRect().width,titleOverflow:name.scrollWidth>name.clientWidth+1,
+     headerHeight:header.getBoundingClientRect().height,bodyHeight:body.clientHeight,viewport:innerHeight,
+     overflow:document.documentElement.scrollWidth>innerWidth+1,
+     commitBeforeTools:!commit||!!(commit.compareDocumentPosition(tools)&Node.DOCUMENT_POSITION_FOLLOWING),
+     duplicateActions:document.querySelectorAll('.wpb-program-save').length};
+   });
+   assert.ok(layout.fullName.includes(createdName));assert.notEqual(layout.wrapping,'nowrap');
+   assert.equal(layout.titleOverflow,false);assert.equal(layout.overflow,false);
+   assert.ok(layout.headerHeight<=layout.viewport*.5&&layout.bodyHeight>=120,
+    'Full identity leaves the form usable: '+JSON.stringify(layout));
+   assert.equal(layout.commitBeforeTools,true,'Save/Review comes before secondary program tools');
+   assert.ok(layout.duplicateActions<=1,'There is one program save/review action');
+   const primary=await page.$('.wpb-program-save');
+   if(primary){
+    await primary.evaluate(n=>n.scrollIntoView({block:'center'}));
+    assert.equal(await primary.evaluate(n=>{const r=n.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);
+     return r.height>=48&&r.top>=0&&r.bottom<=innerHeight&&n.contains(hit);}),true,
+     'The primary save/review action remains reachable');
+   }
+   await page.$eval('.wpb-program-scroll',n=>{n.scrollTop=0;});
+   await page.screenshot({path:`verification/m352-review-${width}-${cycle?'cycle':'program'}-${large?'large':'normal'}-phone.png`});
+  };
+  await reviewLayout(false);
+  const beforeReflow=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')));
+  if(width===900)await page.setViewport({width,height:480,deviceScaleFactor:1,isMobile:false,hasTouch:true});
+  await page.evaluate(()=>{
+   window.__m352Fonts=[...document.querySelectorAll('.wpb-program,.wpb-program *')]
+    .filter(n=>n.tagName!=='STYLE').map(n=>[n,parseFloat(getComputedStyle(n).fontSize),n.style.getPropertyValue('font-size'),n.style.getPropertyPriority('font-size')]);
+   window.__m352Fonts.forEach(([n,size])=>n.style.setProperty('font-size',size*2+'px','important'));
+   window.dispatchEvent(new Event('resize'));
+  });
+  await reviewLayout(true);
+  await page.evaluate(()=>{window.__m352Fonts.forEach(([n,size,value,priority])=>value?n.style.setProperty('font-size',value,priority):n.style.removeProperty('font-size'));delete window.__m352Fonts;window.dispatchEvent(new Event('resize'));});
+  if(width===900)await page.setViewport({width,height:880,deviceScaleFactor:1,isMobile:false,hasTouch:true});
+  await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+  assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),beforeReflow.saved,
+   'Reading and reflowing the generated review does not save or change programs');
+  if(width===900){
+   await page.click('[aria-label="Save this program"]');await page.waitForSelector('[aria-label="Program saved"]');
+   store=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')));
+   assert.equal(store.saved.length,beforeReflow.saved.length+1,'The moved Save action commits the new program once');
+   assert.equal(store.saved.find(p=>p.id===store.pinnedId)?.name,createdName);
+  }
+
   if(cycle){
    await page.click('.wpb-program-name');await page.waitForSelector('input[aria-label="Program name"]');
    await page.type('input[aria-label="Program name"]',' · Draft review');await page.click('[aria-label="Save name"]');
+   await reviewLayout(false);
+   await page.click('[aria-label="Review program changes"]');await page.waitForSelector('#program-save-title');
+   assert.equal(await page.$eval('input[name="program-save-scope"]:checked',n=>n.value),'program');
+   await page.click('[aria-label="Close change review"]');await page.waitForSelector('#program-save-title',{hidden:true});
+   assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),store.saved,
+    'Opening and cancelling the moved Review action preserves saved cycle blocks');
+
   }
   let expectedPreview=await page.evaluate(()=>{
    const buttons=[...document.querySelectorAll('.wpb-day-start')].filter(b=>!b.disabled);

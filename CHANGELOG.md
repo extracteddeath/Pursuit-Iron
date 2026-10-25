@@ -1,3 +1,9 @@
+## Build 913 / M365 — Program schedule presentation ownership
+
+- Move the weekly schedule sheet out of App.js into one Program feature module, preserving the existing schedule reducer and swipe-to-dismiss behavior.
+- Remove 15 inline JSX style objects in favor of themed CSS roles, with responsive focus, reduced-motion and forced-colors coverage.
+- Include extracted source in the UI debt guard. Keep workout, cycle, saved-program and history data unchanged; Engine 0.65.9 retains the same identity.
+
 ## Build 912 / M364 — Keyboard-contained Program save review
 
 - Give the save-review dialog a clear initial focus, Escape dismissal and Tab/Shift+Tab containment. Return keyboard focus to the invoking control when the review closes.

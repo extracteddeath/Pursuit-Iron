@@ -12500,7 +12500,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
             if (wasDone) {
                 sets = rollbackLiveAutoregulation(sets, si);
                 sets = sets.map(s => {
-                    if (!s || s.retuneSrc !== si || s.done || userOwnsRuntimeSet(s) || !s.retuneFrom)
+                    if (!s || s.liveAdjustment || s.retuneSrc !== si || s.done || userOwnsRuntimeSet(s) || !s.retuneFrom)
                         return s;
                     const { retuneFrom, retuneSrc, suggested, autoTuned, hint, over, belowRange, ceiling, ...rest } = s;
                     return { ...rest, weight: retuneFrom.weight, reps: retuneFrom.reps, target: retuneFrom.target };

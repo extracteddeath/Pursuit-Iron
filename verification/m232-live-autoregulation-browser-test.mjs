@@ -117,6 +117,62 @@ try {
     await restoreSnapshot(manualOrphan);
     assert.equal((await values())[1], '92.5', 'Restore preserves a deliberately edited second-set load');
     console.log('PASS M296 phone opening: orphaned set-2 reduction repaired before interaction, reload-stable, manual loads protected.');
+    // M359: use the actual set-number menu; selecting a type retains numeric
+    // ownership, so this must be protected by intent rather than input editing.
+    const freshSession = async () => {
+        // Clear after the old page's unload autosave and before the next mount.
+        const reset = await page.evaluateOnNewDocument(() => localStorage.removeItem('wpb:live'));
+        await page.reload({ waitUntil: 'networkidle0' });
+        await page.waitForSelector('[data-testid="set-0-2"]');
+        await page.removeScriptToEvaluateOnNewDocument(reset.identifier);
+        const check = await page.$('.wpb-backdrop button[data-wpb-system-back]');
+        if (check) await check.click();
+        assert.deepEqual(await values(), ['100', '100', '100'], 'Each intent case starts from a fresh prescription');
+        assert.ok((await rows()).every(row => !row.done));
+    };
+    const chooseFailure = async index => {
+        await page.click(`[data-testid="set-0-${index}"] [data-set-options-trigger]`);
+        await page.waitForSelector('[data-testid="workout-set-options"]');
+        await page.click('[data-testid="workout-set-options"] [data-set-type="failure"]');
+    };
+    const logFailure = async index => {
+        await typeReps(index, 8);
+        await page.click(`[data-testid="set-0-${index}"] button[aria-label="Mark set done"]`);
+        await page.waitForSelector(`[data-testid="set-0-${index}"] button[aria-label="Failure, no reps left"]`);
+        await page.locator(`[data-testid="set-0-${index}"] button[aria-label="Failure, no reps left"]`).click();
+        await page.waitForFunction(i => JSON.parse(localStorage.getItem('wpb:live')).data[0].sets[i].actualRIR === 0, {}, index);
+    };
+    await freshSession();
+    for (const index of [0, 1]) { await chooseFailure(index); await logFailure(index); }
+    assert.deepEqual(await values(), ['100', '100', '100'], 'Two deliberate failure sets cannot ease the next load');
+    const authored = await rows();
+    assert.ok(authored.slice(0, 2).every(row => row.typeOverride === 'failure' && row.target.rir === 0));
+    assert.equal(authored[2].liveAdjustment, undefined);
+    await page.reload({ waitUntil: 'networkidle0' });await page.waitForSelector('[data-testid="set-0-2"]');
+    assert.deepEqual(await rows(), authored, 'Reload preserves deliberate effort and actual completed sets');
+    await freshSession();
+    await chooseFailure(2);
+    for (const index of [0, 1]) await logFailure(index);
+    assert.deepEqual(await values(), ['100', '100', '100'], 'Ordinary misses cannot rewrite the authored final set');
+    assert.equal((await rows())[2].target.failure, true);
+    assert.equal((await rows())[2].liveAdjustment, undefined);
+    await freshSession();
+    await typeReps(0, 8);
+    await page.click('[data-testid="set-0-0"] button[aria-label="Mark set done"]');
+    await page.waitForSelector('[data-testid="set-0-0"] button[aria-label="2 reps left"]');
+    await page.click('[data-testid="set-0-0"] button[aria-label="2 reps left"]');
+    await page.waitForFunction(() => JSON.parse(localStorage.getItem('wpb:live')).data[0].sets[1].reps === '8');
+    await chooseFailure(1);
+    await page.click('[data-testid="set-0-0"] [data-effort-tag]');
+    await page.click('[data-testid="set-0-0"] button[aria-label="3 reps left"]');
+    await page.waitForFunction(() => JSON.parse(localStorage.getItem('wpb:live')).data[0].sets[0].actualRIR === 3);
+    assert.equal((await rows())[1].target.failure, true, 'Rerating cannot undo a later explicit set type');
+    assert.equal((await rows())[1].target.rir, 0);
+    await page.click('[data-testid="set-0-0"] button[aria-label="Mark set not done"]');
+    await page.waitForFunction(() => !JSON.parse(localStorage.getItem('wpb:live')).data[0].sets[0].done);
+    assert.equal((await rows())[1].target.failure, true, 'Unticking delegates live Undo to its canonical owner');
+    assert.equal((await rows())[1].target.rir, 0);
+    console.log('PASS M359 phone: deliberate failure sources and pending set intent survive logging and reload without spurious load reductions.');
     assert.deepEqual(errors, []);
     console.log('PASS M232 phone: report two misses → one 5% accessory reduction → autosave/reload preserves it → undo either source restores it; no runtime errors.');
 } finally { if (browser) await browser.close(); await new Promise(resolve => server.close(resolve)); }

@@ -10,12 +10,21 @@ const importMap = fs.readFileSync(path.join(root, 'index.html'), 'utf8').match(/
 assert.ok(importMap);
 const template = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/app.css">${importMap}</head><body><div id="root"></div><script type="module">
 import React from '/vendor/react.js';import {createRoot} from '/vendor/react-dom-client.js';
-import {HomePrograms,CyclesView,CycleDetail,ProgramSettingsSheet,StyleTag} from '/modules/App.js';
+import {HomePrograms,CyclesView,CycleDetail,StyleTag} from '/modules/App.js';
+import {ProgramSettingsSheet} from '/modules/program-settings-sheet.js';
 const params=new URL(location.href).searchParams,screen=params.get('screen')||'cycles';
 const stored=JSON.parse(localStorage.getItem('m215-programs')||'null')||${JSON.stringify(savedPrograms)};
 const cycle=${JSON.stringify(staleCycle)};
 localStorage.setItem('m215-programs',JSON.stringify(stored));
 const noop=()=>{};
+// This isolated cycle-duration probe renders the real feature module. App.js normally supplies
+// presentation palette/helpers; the probe supplies inert visual dependencies, never policy.
+const settingsPresentation={
+ C:{accent:'#a78bfa',accentText:'#160d27',bg2:'#1a1722',border:'#493f59',borderSoft:'#332d41',card:'#24202e',cardHi:'#30283e',faint:'#867d96',muted:'#b3a8c2',text:'#f5f1fa'},
+ GOALS:{strength:{label:'Strength'},both:{label:'Strength & Size'},hypertrophy:{label:'Hypertrophy'}},
+ eyebrow:()=>({fontSize:11,fontWeight:800,textTransform:'uppercase'}),
+ iconBtn:()=>({}),selectNumericInput:e=>e.currentTarget.select(),sheetDragRef:()=>{}
+};
 function Probe(){
  const n=Number(params.get('index')||0);
  const [programs,setPrograms]=React.useState(stored),[draft,setDraft]=React.useState({...stored[n].config,folder:'',description:''});
@@ -25,7 +34,7 @@ function Probe(){
  const apply=()=>{const p={...program,weeks:cfg.weeks,config:{...program.config,...cfg}};const next=programs.map((v,i)=>i===n?p:v);localStorage.setItem('m215-programs',JSON.stringify(next));setPrograms(next);setDraft({...p.config,folder:'',description:''});};
  const content=screen==='home'?React.createElement(HomePrograms,{...common,activeId:programs[0].id,onOpen:noop,onOpenCycles:noop,onSetActive:noop,onCompare:noop,onOptions:noop})
  :screen==='detail'?React.createElement(CycleDetail,common)
- :screen==='settings'?React.createElement(ProgramSettingsSheet,{program,draft:cfg,setDraft,dirty:cfg.weeks!==program.config.weeks,onApply:apply,onClose:noop})
+ :screen==='settings'?React.createElement(ProgramSettingsSheet,{...settingsPresentation,program,draft:cfg,setDraft,dirty:cfg.weeks!==program.config.weeks,onApply:apply,onClose:noop})
  :React.createElement(CyclesView,common);
  return React.createElement('div',{className:'wpb',style:{height:'100%'}},React.createElement(StyleTag),content);
 }

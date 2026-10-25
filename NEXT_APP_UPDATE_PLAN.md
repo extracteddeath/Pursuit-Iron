@@ -1,5 +1,24 @@
 # Whole-app launch readiness
 
+## October 25 — M360 numbered webapp release policy
+
+The M359 server files were current, but the visible build remained 906 through
+M321–M359. Build 907 collects those deployed fixes under a new visible release.
+Every subsequent change to shipped runtime/UI/offline bytes must increment the
+canonical manifest build using `node scripts/finalize-release.mjs --next-build`.
+Ordinary finalization remains idempotent. Keep engine-version changes tied to
+actual engine model identity, independently of the always-increasing app build.
+
+Release CI compares against the exact PR base or pre-push manifest and rejects
+unchanged/regressed build numbers for changed shipped files. The existing PWA
+browser journey checks the displayed build before/after Restart and after an
+offline reload, preserving local training storage. Published-byte verification
+must pass for the exact merged release. This supersedes older guidance permitting
+same-build publication; local assembly still rotates cache identities safely.
+
+After publishing and verifying 907, continue the progression/load and prescription
+audit. Preserve user-owned entries, deliberate set effort and completed history.
+
 ## October 25 continuation — M359 authored set intent and live fatigue
 
 Baseline: `528a857` (M358). The existing 13-stage lifecycle audit passed, but a new

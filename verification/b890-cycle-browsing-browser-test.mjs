@@ -229,8 +229,10 @@ try{
   assert.ok(rows[2].text.includes('Peak'));assert.equal(await page.$$eval('.wpb-cycle-actions button',ns=>ns.length),1);
   assert.doesNotMatch(await page.$eval('.wpb-cycle-detail',n=>n.innerText),/kept exactly|Available after/);
   assert.equal(await page.$eval('.wpb-cycle-detail',n=>n.scrollWidth<=n.clientWidth+1),true);
-  const expectedDose=saved[1].nextEngine?.cycleTemplate?.splitDecision?.workingWeekVolumeChange
+  const originalDetailDose=saved[1].nextEngine?.cycleTemplate?.splitDecision?.workingWeekVolumeChange ?? null;
+  const liveDetailDose=originalDetailDose
     ? describeRegionalWorkingWeekChange(saved[0],saved[1],EXERCISES) : null;
+  const expectedDose=liveDetailDose || originalDetailDose;
   const disclosures=await page.$$eval('.wpb-cycle-detail details',ns=>ns.map(n=>({dose:n.classList.contains('wpb-cycle-dose-detail'),open:n.open})));
   assert.ok(disclosures.every(n=>n.dose&&!n.open),'existing top-level cycle facts stay expanded; dose is opt-in');
   if(expectedDose){
@@ -243,6 +245,8 @@ try{
     assert.ok(visible.open&&visible.regions===expectedDose.regions.length&&!visible.overflow,
       'live regional breakdown is accessible and fits narrow screens');
     assert.ok(visible.text.includes(String(expectedDose.previousWeeklySets))&&visible.text.includes(String(expectedDose.currentWeeklySets)));
+    assert.ok(visible.text.includes(liveDetailDose ? 'Saved prescriptions' : 'Original generation snapshot'),
+      'Cycle Detail must identify live dose or explicitly disclose its historical fallback');
     await page.click('.wpb-cycle-detail .wpb-cycle-dose-summary');
   } else assert.equal(disclosures.length,0,'Older saved cycles do not invent missing regional data');
   await page.waitForSelector('[aria-label="Next block changes"]');await page.waitForSelector('[aria-label="Cycle schedule"]');

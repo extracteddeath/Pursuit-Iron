@@ -1,3 +1,10 @@
+## Build 917 / M369 — Release-content ownership and current in-app notes
+
+- Move 201,450 characters of release history out of App.js into one dedicated catalog. Preserve all 248 historical releases, 516 entries, mixed formats and icon references exactly.
+- Retire unused App icon imports and release-data exports; browser verification imports the canonical catalog directly. Count archived entries without eagerly projecting all of their metadata at startup.
+- Show current launch improvements in What's New and its Settings replay; preserve dismissal, the full archive, existing notes and saved training.
+- Include the new module in release/offline hashing and source ownership checks. No engine, storage or Workout/Focus geometry changes.
+
 ## Build 916 / M368 — Shared settings controls and reliable Home actions
 
 - Fix a delayed Home-header collapse that moved program buttons by 60px after scrolling and could make Open/Switch clicks miss. Apply the existing collapse in the scroll event and remove the deferred callback.

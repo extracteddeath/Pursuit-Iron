@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';import http from 'node:http';import path from 'node:path';import puppeteer from 'puppeteer-core';
-import { EXERCISES, mergeStandaloneIntoGeneratedCycle } from '../modules/App.js';
+import { EXERCISES, mergeStandaloneIntoGeneratedCycle, exerciseAt, computeCell } from '../modules/App.js';
 import { generateNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
 import { currentProgram } from './m215-cycle-duration-fixture.mjs';
 import { config as lifecycleConfig, completedHistory, ids } from './m265-generation-fixture.mjs';
@@ -10,6 +10,10 @@ let n=0;
 const generated=generateNextCycleForShell({templateId:'powerbuilding',config:cfg,legacyExercises:EXERCISES,seed:890,makeId:()=>`b890-${++n}`,adaptBetweenBlocks:true});
 const merged=mergeStandaloneIntoGeneratedCycle({...currentProgram,name:'SekuFit',config:{...currentProgram.config}},generated);
 const cycle={...merged.cycle,name:'SekuFit Cycle'},saved=merged.allBlocks;
+const savedWorkingSets=(block,week)=>block.days.reduce((total,day)=>total+day.exercises.reduce((n,_,slot)=>{
+ const id=exerciseAt(block,day,slot,week),cell=computeCell(block,day,id,slot,week);
+ return n+(cell?.missing?0:Math.max(0,Number(cell?.sets)||0));
+},0),0);
 const store={v:13,savedAt:1,saved,cycles:[cycle],history:[],perf:{},drafts:{},tombs:{},seenIntro:999,seenWhatsNew:999,pinnedId:saved[0].id,
  theme:'amethyst',unit:'lb',unitChosen:true,experience:'intermediate',bodyweight:185,installDismissedAt:Date.now(),lastBackup:Date.now()};
 
@@ -95,7 +99,7 @@ try{
       summaryHeight:node.querySelector('summary')?.offsetHeight??0
     }));
     assert.equal(outlook.week,'1');
-    assert.deepEqual(outlook.facts,[String(first.weeklySets),first.muscleTargetCoveragePercent+'%']);
+    assert.deepEqual(outlook.facts,[String(savedWorkingSets(saved[1],1)),first.muscleTargetCoveragePercent+'%']);
     assert.ok(outlook.width<=outlook.clientWidth+1);
     await page.click('.wpb-cycle-week-outlook-detail summary');
     assert.ok(await page.$eval('.wpb-cycle-week-outlook-detail',n=>n.open));
@@ -119,7 +123,7 @@ try{
     const last=savedQuality.weeks.at(-1);
     await page.waitForFunction(expected=>document.querySelector('.wpb-cycle-week-outlook')?.dataset.week===String(expected),{},last.week);
     assert.deepEqual(await page.evaluate(()=>[...document.querySelectorAll('.wpb-cycle-week-outlook-stats dd')].map(n=>n.textContent.trim())),
-      [String(last.weeklySets),last.muscleTargetCoveragePercent+'%'],
+      [String(savedWorkingSets(saved[1],last.week)),last.muscleTargetCoveragePercent+'%'],
       'Switching weeks must update the canonical executable coverage, not just the exercise list');
   }
   await page.keyboard.press('Escape');await page.waitForFunction(()=>!document.querySelector('.wpb-cycle-block-preview'));
@@ -223,6 +227,41 @@ try{
     assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).cycles[0].activeBlock),0,'Missing-block browsing cannot advance the cycle');
   }
   await page.close();
+ }
+
+ // M353: editing a saved future exercise must change the read-only count,
+ // not rewrite or blindly repeat the generation-time coverage estimate.
+ {
+  const edited=structuredClone(saved[1]);
+  const day=edited.days.find(d=>d.exercises.length>1&&
+    Number(computeCell(edited,d,exerciseAt(edited,d,d.exercises.length-1,1),d.exercises.length-1,1)?.sets)>0);
+  assert.ok(day,'Fixture must contain a removable working exercise');
+  day.exercises.pop();
+  const original=savedWorkingSets(saved[1],1),actual=savedWorkingSets(edited,1);
+  assert.ok(actual<original,'Removing a saved exercise changes executable working sets');
+  const seeded={...store,saved:store.saved.map(p=>p.id===edited.id?edited:p)};
+  const context=await browser.createBrowserContext(),page=await context.newPage();
+  page.on('pageerror',error=>errors.push(error.message));
+  await page.setBypassServiceWorker(true);
+  await page.setViewport({width:393,height:852,isMobile:true,hasTouch:true});
+  await page.evaluateOnNewDocument(s=>localStorage.setItem('wpb:v1',JSON.stringify(s)),seeded);
+  await page.goto('http://127.0.0.1:8790/index.html',{waitUntil:'networkidle0'});
+  await page.waitForSelector('.wpb-home');
+  await page.click('.wpb-tabbar [aria-label="Plan"]');
+  await page.waitForSelector('.wpb-plan-block-nav');
+  await page.$$eval('.wpb-plan-block-nav button',ns=>ns[1].click());
+  await page.waitForSelector('.wpb-plan-session-link');
+  await page.click('.wpb-plan-session-link');
+  await page.waitForSelector('.wpb-cycle-week-outlook');
+  const shown=await page.$eval('.wpb-cycle-week-outlook',n=>({
+    sets:Number(n.querySelector('.wpb-cycle-week-outlook-stats dd')?.textContent),
+    copy:n.innerText}));
+  assert.equal(shown.sets,actual,'Cycle Preview must count its edited saved exercise cells');
+  assert.ok(shown.copy.includes('Original target coverage')&&shown.copy.includes('original generated outlook'),
+    'Generator estimate is attributed and discrepancy is explained');
+  assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),seeded.saved,
+    'Browsing an edited future block does not write or change the saved cycle');
+  await context.close();
  }
 
  // M298: exercise the actual app confirmation, worker, persisted transition and repeat.

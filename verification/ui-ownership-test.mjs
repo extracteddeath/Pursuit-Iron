@@ -7,11 +7,12 @@ const css = fs.readFileSync('app.css', 'utf8');
 const app = fs.readFileSync('modules/App.js', 'utf8');
 const programReview = fs.readFileSync('modules/program-review-surfaces.js', 'utf8');
 const programSchedule = fs.readFileSync('modules/program-schedule-sheet.js', 'utf8');
-const presentationSource = app + '\n' + programReview + '\n' + programSchedule;
+const programSettings = fs.readFileSync('modules/program-settings-sheet.js', 'utf8');
+const presentationSource = app + '\n' + programReview + '\n' + programSchedule + '\n' + programSettings;
 const MAX_IMPORTANT = 2360; // M291: consolidate the remaining Profile style owners
 const MAX_APP_IMPORTANT = 1229; // M292: retire ten superseded Progress priority declarations.
 const MAX_REPEAT_IMPORTANT = 15; // M288: at-rule comments no longer erase media/container scope.
-const MAX_INLINE_STYLE_OBJECTS = 2738; // M365: retire 15 schedule JSX styles; include new module // M363: remove 19 save-review inline objects; count extracted source too
+const MAX_INLINE_STYLE_OBJECTS = 2728; // M365: retire 15 schedule JSX styles; include new module // M363: remove 19 save-review inline objects; count extracted source too
 const allowedDebtKeys = new Set([
   "\t#root[data-pi-motion=\"expressive\"] .wpb-wizard.wpb-wizard.wpb-wizard .wpb-wizard-heading-title\tfont-size",
   "\t#root[data-pi-motion=\"expressive\"] .wpb .wpb-tabbar\tbackground-color",
@@ -73,6 +74,22 @@ function guard(cssText, appText) {
     return { important, appImportant, inline, duplicates: duplicates.length, legacyOwners: new Set(duplicates).size };
 }
 const report = guard(css, presentationSource);
+
+assert.ok(app.includes("from './program-settings-sheet.js'") && !app.includes('function ProgramSettingsSheet('),
+  'Program Settings has a single extracted presentation owner');
+assert.equal((programSettings.match(/function ProgramSettingsSheet\(/g) || []).length, 1, 'Single settings view');
+assert.ok(programSettings.includes("data-testid\": \"program-settings-sheet") &&
+    programSettings.includes('onApply: applyCfgDraft') &&
+    programSettings.includes('onClick: applyCfgDraft'),
+    'Settings retains staged changes and Save/Cancel actions');
+assert.ok(programSettings.includes('GOALS, eyebrow, sheetDragRef, selectNumericInput, iconBtn') &&
+  app.includes('GOALS: GOALS, eyebrow: eyebrow, sheetDragRef:'),
+  'Settings does not capture removed App module presentation globals');
+for(const label of ['Decrease block length','Increase block length','Block length in weeks','program-weeks-error'])
+  assert.ok(programSettings.includes(label), 'Settings duration control lost contract: '+label);
+for(const role of ['cycle-length','cycle-length-value','cycle-length-help','length','length-control','length-step','length-label','length-input','length-error'])
+  assert.ok(css.includes('.wpb-program-settings-'+role+'{'), 'Missing settings CSS role '+role);
+
 assert.ok(app.includes("from './program-schedule-sheet.js'"), 'Program owns only schedule state');
 assert.ok(!app.includes('function WeeklyScheduleSheet('), 'No duplicate schedule renderer in App');
 assert.equal((programSchedule.match(/function WeeklyScheduleSheet\(/g) || []).length, 1, 'Schedule has a single view owner');

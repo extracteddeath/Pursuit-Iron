@@ -1,3 +1,7 @@
+## October 25 — M366 Program Settings ownership (build 914 candidate)
+
+Extract the Program Settings dialog from App.js to `modules/program-settings-sheet.js`, retaining the existing state owner, staged save/cancel transaction, program and cycle length validity rules, and the swipe dismissal callback. Move 10 static block-duration JSX styles into dedicated theme CSS with disabled and invalid states plus forced-colors keyboard focus treatment. Count the new module in the source debt guard and reduce the ceiling 2738 → 2728. Do not change engine, saved program data, history or schema. Require exact-head release, core, independent engine, browser and offline verification before merge; validate hosted Build 914 afterward.
+
 ## October 25 — M365 Program weekly schedule ownership (build 913 candidate)
 
 Extract the Program weekly-schedule presentation to modules/program-schedule-sheet.js while leaving the existing ProgramView reducer as the only persisted schedule writer. The existing day cycling, clearing, today marker, workout assignments and swipe-dismiss ref are retained. Retire 15 JSX style objects in favor of one set of semantic theme-backed CSS roles with keyboard focus, reduced-motion and forced-colors coverage. The style source contract includes the new module so debt cannot be hidden by extraction. Engine 0.65.9 and saved training data remain unchanged. Merge only after exact-head source, engine, browser and offline/release checks, then verify public Build 913 bytes.

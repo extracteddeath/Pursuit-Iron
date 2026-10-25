@@ -8552,6 +8552,22 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 @media(prefers-reduced-motion:reduce){#root .wpb .wpb-program-schedule-backdrop,#root .wpb .wpb-program-schedule-sheet{animation:none}}
 @media(forced-colors:active){#root .wpb .wpb-program-schedule-row,#root .wpb .wpb-program-schedule-clear{border-color:ButtonText}#root .wpb .wpb-program-schedule-row[data-assigned="true"],#root .wpb .wpb-program-schedule-row[data-today="true"]{border-color:Highlight}#root .wpb .wpb-program-schedule-row:focus-visible{outline-color:Highlight}}
 
+
+/* M366: single theme-backed block-duration presentation; keep numeric validity in the view. */
+#root .wpb .wpb-program-settings-cycle-length{margin-bottom:16px;padding:12px 14px;border:1px solid var(--wpb-theme-border);border-radius:12px;background:var(--wpb-theme-card)}
+#root .wpb .wpb-program-settings-cycle-length-value{font-size:1.125rem;font-weight:700;color:var(--wpb-theme-text)}
+#root .wpb .wpb-program-settings-cycle-length-help{margin-top:4px;font-size:.75rem;color:var(--wpb-theme-muted)}
+#root .wpb .wpb-program-settings-length{margin-bottom:16px}
+#root .wpb .wpb-program-settings-length-control{display:flex;align-items:center;gap:8px;box-sizing:border-box;width:244px;max-width:100%;padding:4px;border:1px solid var(--wpb-theme-border);border-radius:14px;background:var(--wpb-theme-card)}
+#root .wpb .wpb-program-settings-length-control[data-invalid="true"]{border-color:var(--wpb-theme-warning)}
+#root .wpb .wpb-program-settings-length-step{flex-shrink:0;display:grid;place-items:center;width:44px;height:44px;border:1px solid var(--wpb-theme-border);border-radius:10px;background:var(--wpb-theme-bg-tint);color:var(--wpb-theme-text);font-size:1.375rem;cursor:pointer}
+#root .wpb .wpb-program-settings-length-step:disabled{opacity:.4;cursor:default}
+#root .wpb .wpb-program-settings-length-label{display:flex;flex:1;min-width:0;align-items:center;justify-content:center;gap:4px;font-size:.8125rem;color:var(--wpb-theme-muted)}
+#root .wpb .wpb-program-settings-length-input{box-sizing:border-box;width:64px;min-width:0;height:44px;padding:0;border:0;border-radius:8px;background:var(--wpb-theme-card);color:var(--wpb-theme-accent-ink);font-size:1.25rem;font-weight:700;text-align:center}
+#root .wpb .wpb-program-settings-length-error{margin-top:6px;font-size:.75rem;color:var(--wpb-theme-warning)}
+#root .wpb .wpb-program-settings-length-step:focus-visible,#root .wpb .wpb-program-settings-length-input:focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
+@media(forced-colors:active){#root .wpb .wpb-program-settings-length-control[data-invalid="true"]{border-color:Mark}#root .wpb .wpb-program-settings-length-input{border:1px solid CanvasText}}
+
 /* B912 — Prototype-informed Profile hierarchy; presentation only.
    Root header ownership moved to UiRootHeader in M271. */
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-hero{

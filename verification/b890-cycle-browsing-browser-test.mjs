@@ -103,7 +103,7 @@ try{
     assert.ok(outlook.width<=outlook.clientWidth+1);
     await page.click('.wpb-cycle-week-outlook-detail summary');
     assert.ok(await page.$eval('.wpb-cycle-week-outlook-detail',n=>n.open));
-    assert.match(await page.$eval('.wpb-cycle-week-outlook-note',n=>n.textContent),/not the percentage of your previous block retained/i);
+    assert.match(await page.$eval('.wpb-cycle-week-outlook-note',n=>n.textContent),/not the percentage of the previous block retained/i);
     assert.equal(outlook.summaryHeight>=44,true,'lift-practice disclosure has a 44px target');
     assert.equal(await page.$eval('.wpb-cycle-block-preview',n=>n.innerText.includes('Modeled muscle-target coverage:')),false,
       'Preview must not repeat stale base-generation coverage');

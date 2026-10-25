@@ -11,11 +11,11 @@ const origin=`http://127.0.0.1:${server.address().port}/`;
 let browser;
 try{
  browser=await puppeteer.launch({executablePath:process.env.CHROME_BIN||'/usr/bin/google-chrome',headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
- for(const [width,theme,reduced,cycle=false] of [[320,'amethyst',false],[430,'rosewater',false],[900,'amethyst',false],[393,'rosewater',true],[430,'rosewater',false,true]]){
+ for(const [width,theme,reduced,cycle=false,empty=false] of [[320,'amethyst',false],[430,'rosewater',false],[900,'amethyst',false],[393,'rosewater',true],[430,'rosewater',false,true],[320,'rosewater',true,false,true]]){
   const context=await browser.createBrowserContext(),page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.setViewport({width,height:880,deviceScaleFactor:1,isMobile:width<600,hasTouch:true});
   await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:reduced?'reduce':'no-preference'}]);
-  await page.evaluateOnNewDocument((seed,theme)=>{if(!localStorage.getItem('b899-seeded')){localStorage.setItem('wpb:v1',JSON.stringify({...seed,theme}));localStorage.setItem('b899-seeded','1');}},seed,theme);
+  await page.evaluateOnNewDocument((seed,theme)=>{if(!localStorage.getItem('b899-seeded')){localStorage.setItem('wpb:v1',JSON.stringify({...seed,theme}));localStorage.setItem('b899-seeded','1');}},{...seed,saved:empty?[]:seed.saved,pinnedId:empty?null:seed.pinnedId},theme);
   await page.goto(origin,{waitUntil:'networkidle0'});await page.waitForSelector('#root[data-pi-motion="expressive"]');
   await page.evaluate(()=>{
    window.__screenFrames=[];
@@ -37,7 +37,9 @@ try{
     assert.ok(prefs.scrollWidth<=prefs.viewport+1,'Settings selection does not widen phone viewport');
    }
   }
-  await click('New program');await page.waitForSelector('.wpb-wizard-step');
+  if(empty){await page.click('[data-tab="plan"]');await click('Create a program');}
+  else await click('New program');
+  await page.waitForSelector('.wpb-wizard-step');
   if(cycle)await click('Training cycle');
   await click('Continue');await page.waitForFunction(()=>document.querySelector('.wpb-wizard-step')?.dataset.stepKey!=='mode');
   const headerBaseline=await page.evaluate(()=>{
@@ -73,7 +75,7 @@ try{
   assert.equal(await page.$('[data-generation-busy].wpb-backdrop'),null,'creating a program never dims the setup screen');
   await page.click('[data-cancel-generation]');await page.waitForSelector('[data-generation-busy]',{hidden:true});
   await page.waitForFunction(()=>!document.querySelector('.wpb-wizard-next-action').disabled);
-  assert.deepEqual((await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')))).saved,[program],'cancel preserves saved plans');
+  assert.deepEqual((await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')))).saved,empty?[]:[program],'cancel preserves saved plans');
   assert.equal(await page.$('.wpb-build-alert'),null,'cancellation is not a capacity failure');
   await page.click('.wpb-wizard-next-action');await page.waitForSelector('.wpb-wizard-footer [data-generation-busy]');
   await page.waitForSelector('.wpb-program',{timeout:60000});await page.waitForSelector('[data-generation-busy]',{hidden:true});
@@ -82,10 +84,14 @@ try{
   const bad=frames.filter(f=>f.opacity!==1||f.stepOpacity!==1||!['none','1'].includes(f.scale)||f.translate!=='none'||f.transform!=='none'||f.modal);
   assert.deepEqual(bad,[],`opaque first paint and stable viewport geometry at ${width}/${theme}: ${JSON.stringify(bad.slice(0,4))}`);
   const store=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')));
-  assert.deepEqual(store.saved.find(p=>p.id===program.id),program);assert.deepEqual(store.history,[]);
+  assert.deepEqual(store.saved.find(p=>p.id===program.id),empty?undefined:program);assert.deepEqual(store.history,[]);
   if(cycle)assert.equal(store.cycles.length,1,'cycle build completes through the same steady flow');
   assert.ok((await page.$eval('.wpb-program',n=>n.textContent)).includes('Steady creation'),'built plan opens directly');
-  const expectedPreview=await page.evaluate(()=>{
+  if(cycle){
+   await page.click('.wpb-program-name');await page.waitForSelector('input[aria-label="Program name"]');
+   await page.type('input[aria-label="Program name"]',' · Draft review');await page.click('[aria-label="Save name"]');
+  }
+  let expectedPreview=await page.evaluate(()=>{
    const buttons=[...document.querySelectorAll('.wpb-day-start')].filter(b=>!b.disabled);
    const chosen=buttons.at(-1);chosen.dataset.m351Start='true';
    return {name:document.querySelector('.wpb-program-name-text').textContent,
@@ -102,6 +108,47 @@ try{
    'Full Program previews the selected day, including days other than Up Next');
   assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),store.saved,
    'Inspecting the created session must not save an unsaved program or replace another program');
+  if(cycle){
+   await click('View full program');await page.waitForSelector('.wpb-program');
+   const menu=await page.$(`[aria-label="More options for ${expectedPreview.day}"]`);
+   await menu.evaluate(n=>n.scrollIntoView({block:'center'}));await menu.click();await click('Delete day');
+   await page.waitForSelector('.wpb-dialog');await click('Delete day');
+   await page.waitForFunction(id=>!document.getElementById('pv-day-'+id),{},expectedPreview.dayId);
+   await page.waitForSelector('.wpb-dialog',{hidden:true});
+   await page.evaluate(()=>window.history.back());
+   await page.waitForSelector('.wpb-preview-unavailable');
+   assert.equal(await page.$('.wpb-preview-start'),null,'A removed selected day cannot silently become Up Next');
+   await page.click('.wpb-preview-unavailable button');await page.waitForSelector('.wpb-program');
+   expectedPreview=await page.evaluate(()=>{
+    const b=[...document.querySelectorAll('.wpb-day-start')].find(b=>!b.disabled);b.dataset.m351Retry='true';
+    return {name:document.querySelector('.wpb-program-name-text').textContent,
+     day:b.getAttribute('aria-label').slice(6),dayId:b.closest('[data-daycard]').id.slice(7)};
+   });
+   const retry=await page.$('[data-m351-retry]');await retry.evaluate(n=>n.scrollIntoView({block:'center'}));await retry.click();
+   await page.waitForSelector('.wpb-next-workout-view');
+   assert.equal(await page.$eval('.wpb-preview-program-name',n=>n.textContent),expectedPreview.name);
+  }
+  const previewSets=await page.$$eval('[data-nextex] .wpb-preview-prescription',rows=>
+   rows.reduce((sum,row)=>sum+parseInt(row.textContent,10),0));
+  await page.click('.wpb-preview-start');await page.waitForSelector('.wpb-workout');
+  await click('Feeling strong');
+  await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:live')||'{}').data?.length>0);
+  let live=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:live')));
+  assert.notEqual(live.programId,program.id,'Start must log against the selected creation, never the older active program');
+  assert.equal(live.dayId,expectedPreview.dayId);
+  assert.equal(live.data.reduce((sum,row)=>sum+row.sets.filter(s=>!s.warm&&!s.sub).length,0),previewSets);
+  const started=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')));
+  assert.equal(started.saved.filter(p=>p.id===live.programId).length,1,'Start saves a new plan exactly once');
+  assert.equal(started.pinnedId,live.programId,'Saving a new creation through Start keeps Home on that program');
+  assert.deepEqual(started.saved.find(p=>p.id===program.id),empty?undefined:program);
+  if(cycle)assert.deepEqual(started.saved,store.saved,'Training a draft does not silently commit saved cycle edits');
+  await page.evaluate(()=>window.dispatchEvent(new Event('wpb:system-back')));await page.waitForSelector('.wpb-live-dock');
+  await page.reload({waitUntil:'networkidle0'});await page.click('[aria-label="Resume workout"]');await page.waitForSelector('.wpb-workout');
+  await page.waitForFunction(id=>JSON.parse(localStorage.getItem('wpb:live')||'{}').programId===id,{},live.programId);
+  const resumed=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:live')));
+  assert.equal(resumed.dayId,expectedPreview.dayId);
+  assert.deepEqual(resumed.data.map(r=>r.id),live.data.map(r=>r.id),'Reload/resume preserves the selected creation and day');
+
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);
   assert.deepEqual(errors,[]);
   console.log(`PASS B899 ${width}/${theme}/reduced=${reduced}/cycle=${cycle}: ${frames.length} steady frames, ${steps.length} setup steps, inline build/cancel/retry, original plan/history intact`);

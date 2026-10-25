@@ -14,6 +14,6 @@ assert.ok(css.includes('UI polish pass 01')&&css.includes('min-width:800px')&&cs
 assert.ok(css.includes('data-pi-surface/data-pi-backdrop motion ownership'),
  'do not add a competing CSS entrance animation');
 const dialog=fs.readFileSync('modules/session-choice-dialog.js','utf8');
-assert.ok(app.includes("from './session-choice-dialog.js'") && dialog.includes('function SessionChoiceDialog(') && dialog.includes('"aria-modal": true'),
+assert.ok(app.includes("from './session-choice-dialog.js'") && dialog.includes('function SessionChoiceDialog(') && dialog.includes('"aria-modal": "true"'),
  'shared session dialog remains in the application as a single accessible owner');
 console.log('PASS B906: session choice dialogs use existing spring enter/exit/resume, with responsive sheet geometry.');

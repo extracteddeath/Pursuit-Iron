@@ -12,7 +12,15 @@ const presentationSource = app + '\n' + programReview + '\n' + programSchedule +
 const MAX_IMPORTANT = 2360; // M291: consolidate the remaining Profile style owners
 const MAX_APP_IMPORTANT = 1229; // M292: retire ten superseded Progress priority declarations.
 const MAX_REPEAT_IMPORTANT = 15; // M288: at-rule comments no longer erase media/container scope.
-const MAX_INLINE_STYLE_OBJECTS = 2728; // M365: retire 15 schedule JSX styles; include new module // M363: remove 19 save-review inline objects; count extracted source too
+const MAX_INLINE_STYLE_OBJECTS = 2716; // M365: retire 15 schedule JSX styles; include new module // M363: remove 19 save-review inline objects; count extracted source too
+
+// M367: Settings is a named, keyboard-focusable dialog with explicit labels and state.
+for(const role of ['backdrop','panel','heading','title','close','intro','field-label','field','description','footer','cancel','save'])
+  assert.ok(css.includes('.wpb-program-settings-'+role+'{'), 'Settings view lost semantic CSS owner '+role);
+for(const token of ['role: "dialog"','"aria-modal": true','"aria-labelledby": "program-settings-title"','htmlFor: "program-settings-folder"','htmlFor: "program-settings-description"','"aria-pressed": !!cfgDraft?.noSupersets','"aria-pressed": !!cfgDraft?.noBodyweight','disabled: !canApply'])
+  assert.ok(programSettings.includes(token), 'Settings dialog accessibility/transaction contract lost: '+token);
+assert.ok(!programSettings.includes('style: iconBtn()') && !programSettings.includes('"wpb-backdrop", style:'), 'Static Settings shell styles must remain in CSS');
+
 const allowedDebtKeys = new Set([
   "\t#root[data-pi-motion=\"expressive\"] .wpb-wizard.wpb-wizard.wpb-wizard .wpb-wizard-heading-title\tfont-size",
   "\t#root[data-pi-motion=\"expressive\"] .wpb .wpb-tabbar\tbackground-color",

@@ -18,7 +18,8 @@ const explanation=app.slice(app.indexOf('function CycleDoseTransition('),app.ind
 assert.ok(explanation.includes('change.regions.map'),'region breakdown derives from canonical saved transition');
 assert.ok(explanation.includes('previousWeeklySets')&&explanation.includes('currentWeeklySets'),'actual before/after volume visible');
 assert.ok(explanation.includes('different')||explanation.includes('not the same'),'retained target coverage cannot masquerade as actual set retention');
-assert.ok(detail.includes('hasDoseExplanation = !!(next?.nextEngine?.cycleTemplate?.splitDecision?.workingWeekVolumeChange') &&
+assert.ok(detail.includes('originalDoseChange = next?.nextEngine?.cycleTemplate?.splitDecision?.workingWeekVolumeChange') &&
+    detail.includes('hasDoseExplanation = !!originalDoseChange;') &&
     detail.includes('describeRegionalWorkingWeekChange(current, next, EXERCISES)'),
     'Up next refreshes the existing phase-transition explanation from the canonical saved executable-week projection');
 assert.ok(detail.includes("_jsx(CycleDoseTransition, { change: doseChange || originalDoseChange, source: doseChange ? 'saved' : 'generation' })"),

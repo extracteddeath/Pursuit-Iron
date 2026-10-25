@@ -1,5 +1,28 @@
 # Whole-app launch readiness
 
+## October 25 — M361 final-target explanation authority (build 908)
+
+Baseline 907 was deployed and verified. Reproduced an equipment-boundary mismatch:
+a generated 105 lb common-load estimate became four executable 100 lb sets after
+the selected increment was applied, while the reason still said “Use 105 lb”.
+The Why sheet separately bypassed that final boundary and also showed 105 lb.
+
+The existing prescription adapter now reconciles prescribed “Use/to” loads after
+display-unit conversion and equipment rounding, preserving observed evidence.
+The existing explanation projection consumes `sessionSuggestion` rather than
+calling the lower-level generator bridge. Its evidence follows the same raw LAST
+exposure, converts once, respects reported-effort provenance and counts corrected
+history once. A stronger/global anchor or another-day starting reference cannot
+be relabeled as this day’s LAST. Completed history and saved plans are read-only.
+
+M224 source regression failed before the fix; it now covers rounded/unrounded
+loads, converted decimal estimates, earned increases, corrections and evidence
+identity/provenance. B882’s real-browser Repeat flow covers four set rows,
+expanded reason, Why, Focus and reload in lb/kg. No new engine or UI calculator,
+schema, CSS or workout geometry. Publish only after exact-head gates, then verify
+Pages bytes and the visible/offline build. Continue the cross-screen prescription
+and progression audit after this bounded repair; physical Android remains separate.
+
 ## October 25 — M360 numbered webapp release policy
 
 The M359 server files were current, but the visible build remained 906 through
@@ -48,7 +71,7 @@ Updated October 22, 2026. This is the single current next-update plan. It supers
 
 ## Current baseline and ownership
 
-App 4.0.0 build 905 / Engine 0.65.9 / M234. `RELEASE_MANIFEST.json` is authoritative for shipped versions and hashes; `BUILD_PROFILE.json` records the current UI slice. Same-build UI repairs receive a new content-addressed service-worker cache. No new training-model identity is implied by this plan.
+App 4.0.0 build 908 / Engine 0.65.9 / M234. `RELEASE_MANIFEST.json` is authoritative for shipped versions and hashes; `BUILD_PROFILE.json` records the current UI slice. Every changed published release increments its app build; content-addressed offline caches certify the exact bytes. No new training-model identity is implied by the app build.
 
 | Area | Maintained owner | Next work and acceptance |
 |---|---|---|

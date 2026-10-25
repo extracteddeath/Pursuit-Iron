@@ -1,3 +1,10 @@
+## Build 908 / M361 — Explanations match the load you can actually use
+
+- Reconcile prescribed-load explanations after the final equipment rounding. A 105 lb straight-set estimate rounded to 100 lb now says “Use 100 lb”; converted kilogram targets follow the same final values.
+- Make “Why this prescription?” consume the same final suggestion as the workout, including selected units and eligible user choices. It no longer bypasses equipment rounding to show an earlier engine estimate.
+- Read evidence from that suggestion’s matching raw exposure. Preserve day identity, normalize corrected records, exclude warmups/unfinished sets, and distinguish reported RIR from planned effort. Historical values convert once and display without long decimal tails; saved history stays unchanged.
+- Extend existing source and browser regressions through the actual Repeat → set rows → reason → Why → Focus → reload flow in pounds and kilograms. Training progression policy, workout layout and engine version remain unchanged.
+
 ## Build 907 / M360 — Numbered web releases and retained training fixes
 
 - Give all shipped M321–M359 fixes a new visible build: saved cycle/week totals and equipment-aware previews, history-scoped progression, recovery safeguards and deliberate set-effort protection.

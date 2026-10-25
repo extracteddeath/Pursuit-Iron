@@ -6,7 +6,6 @@ import { captureShellVolumeSnapshot, auditShellVolume, shellDayMuscleBreakdown }
 import { historyNumber, convertHistoryLoad, observedHistoryRIR, completedHistorySets, normalizeHistoryEntries, normalizeHistoryRevisions, validHistoryDate, resolveHistoryDayIndex } from '../next-engine/history-contract.js';
 import { cycleBlockMetadata } from "../program-duration.js";
 import { SUPPORTED_PHASES, phaseLabel } from '../next-engine/phase-policy.js';
-import { nextWorkoutSuggestionForShell } from "../next-engine/workout-history-adapter.js";
 import { ENGINE_COMPATIBLE_VERSIONS } from "../next-engine/config.js";
 import { ALL_EQUIP_IDS, ENGINE_V, EXERCISES, EX_BY_ID, SESSIONS, SPLITS, expandEquipment } from './catalog.js';
 import { GYM_PRESETS, LOWER_PARTS, SECONDARY, SUB_LANDMARKS, blockPhase, exerciseAt, cellRepRange, clamp, compositeMrv, computeCell, effortBounds, goalForDay, isBarLike, isMachineLike, landmarkFor, lastSetTech, loadStep, movePattern, roundTo, secondaryOf, weeksOf } from './records.js';
@@ -2141,19 +2140,28 @@ function explainPrescription(o) {
     if (!cell || cell.missing)
         return null;
     const range = cellRepRange(cell, program, ex, slot === day.primaryIndex);
-    const sug = nextWorkoutSuggestionForShell(program, history || [], EXERCISES, day, slot, weekIndex);
-    const last = perf && perf[ex.id] ? perf[ex.id] : null;
-    const lastSets = Array.isArray(last?.sets) ? last.sets : [];
-    const rirRows = lastSets.map((st, i) => ({
-        set: i + 1,
-        weight: st.w != null ? st.w : st.weight,
-        reps: st.r != null ? st.r : st.reps,
-        rir: st.rir != null ? st.rir : st.tr != null ? st.tr : "—",
-        source: st.rir != null ? "you rated it" : st.tr != null ? "planned target" : "not reported"
-    })).filter(r => r.weight != null || r.reps != null);
+    const unit = o.unit ?? program.config?.unit ?? 'lb';
+    const sug = sessionSuggestion(program, day, slot, perf, unit, weekIndex, history || []);
+    // Explain the same final, loadable suggestion as Workout. Its raw LAST and
+    // source unit also own the evidence; a stronger/global anchor is not LAST.
+    const last = sug?.referenceOnly ? null : sug?.last ?? null;
+    const sourceUnit = sug?.lastUnit ?? program.config?.unit ?? unit;
+    const lastSets = completedHistorySets(last);
+    const displayLoad = value => Number.isFinite(value) ? Math.round(value * 100) / 100 : null;
+    const rirRows = lastSets.map((st, i) => {
+        const observed = observedHistoryRIR(st), target = historyNumber(st.tr);
+        return {
+            set: i + 1,
+            weight: displayLoad(convertHistoryLoad(st.w, sourceUnit, unit)),
+            reps: st.r != null ? st.r : st.reps,
+            rir: observed ?? target ?? "—",
+            source: observed !== null ? "you rated it" : target !== null ? "planned target" : "not reported"
+        };
+    }).filter(r => r.weight != null || r.reps != null);
     const lastWork = [...lastSets].reverse().find(st => Number(st?.w ?? st?.weight) > 0 && Number(st?.r ?? st?.reps) > 0);
-    const lastW = Number(last?.weight ?? lastWork?.w ?? lastWork?.weight);
-    const lastR = Number(last?.reps ?? lastWork?.r ?? lastWork?.reps);
+    const lastW = convertHistoryLoad(last?.weight ?? lastWork?.w, sourceUnit, unit);
+    const lastR = historyNumber(last?.reps ?? lastWork?.r);
+    const dayIndex = program.days.findIndex(d => d.id === day.id);
     return {
         lift: { id: ex.id, name: ex.name, part: ex.part, type: ex.type, equip: ex.equip, isPrimary: slot === day.primaryIndex, slot },
         context: {
@@ -2162,11 +2170,11 @@ function explainPrescription(o) {
             experience: program?.config?.experience, percentScheme: null
         },
         read: {
-            lastPerformance: Number.isFinite(lastW) && Number.isFinite(lastR) ? { weight: lastW, reps: lastR, sets: rirRows.length || null } : null,
+            lastPerformance: Number.isFinite(lastW) && Number.isFinite(lastR) ? { weight: displayLoad(lastW), reps: lastR, sets: rirRows.length || null } : null,
             perSet: rirRows.length ? rirRows : null,
             e1rm: Number.isFinite(lastW) && Number.isFinite(lastR) ? e1rm(lastW, lastR) : null,
-            historyEntriesForThisDay: (history || []).filter(h => h?.programId === program.id
-                && resolveHistoryDayIndex(program.days, h) === program.days.indexOf(day)).length,
+            historyEntriesForThisDay: normalizeHistoryEntries(history, program.id).entries.filter(h =>
+                dayIndex >= 0 && resolveHistoryDayIndex(program.days, h) === dayIndex).length,
             stallSessions: 0, plateauSessions: 0, readiness: null
         },
         decided: {
@@ -2175,7 +2183,7 @@ function explainPrescription(o) {
             styleAt: null, override: null, sets: Number(cell.sets) || 0
         },
         load: sug ? {
-            weight: sug.weight, direction: sug.dir, delta: sug.weight != null && Number.isFinite(lastW) ? sug.weight - lastW : null,
+            weight: sug.weight, direction: sug.dir, delta: sug.weight != null && Number.isFinite(lastW) ? displayLoad(sug.weight - lastW) : null,
             reason: sug.reason || null, increment: null, snappedToRack: false, rack: null, cappedByGym: false,
             gymCeiling: null, swapTo: null
         } : { weight: null, reason: "No comparable completed workout yet; log this exposure and the next comparable session will use it for progression." },

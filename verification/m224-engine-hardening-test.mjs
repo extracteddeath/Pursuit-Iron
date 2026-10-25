@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { EXERCISES, EX_BY_ID, TEMPLATES, templateConfig, sessionSuggestion, prescribeSets,
     computeCell, percentagePlanFor, trainingMaxForUnit, withTrainingMax, nextSessionCursor, nextDueDayId,
     exerciseSeries, exerciseTrends, exRecords, strengthSnapshot, strengthScore, strengthScoreHistory,
-    scoreAttribution, daySeconds, loggedWorkoutPerformance } from '../modules/App.js';
+    scoreAttribution, daySeconds, loggedWorkoutPerformance, explainPrescription } from '../modules/App.js';
 import { generateNextProgramForShell, snapshotNextShellPrescription, markUserPrescriptionOverride } from '../modules/next-engine/app-shell-adapter.js';
 import { analyzeShellHistoryForNextEngine, deriveProgressionSelectionEvidence,
     nextWorkoutSuggestionFromPerformedShell } from '../modules/next-engine/workout-history-adapter.js';
@@ -10,6 +10,7 @@ import { captureShellVolumeSnapshot, enforceShellWeekCapacity } from '../modules
 import { reconcilePendingRepTargets, refreshPendingSetTargets } from '../modules/next-engine/workout-runtime.js';
 import { normalizeHistoryEntries, observedHistoryRIR, historyNumber } from '../modules/next-engine/history-contract.js';
 import { percentageProtocolFor, deriveTieredLinearState, adaptPercentageSetBudget } from '../modules/next-engine/percentage-protocols.js';
+import { setExLoadInc, EX_LOAD_INC } from '../modules/training-domain/records.js';
 
 const gym = ['barbell','rack','bench','dumbbell','cable','machine','smith','pullup','dip','legpress','hacksquat','legext','legcurl','calfmachine'];
 const config = { name: 'Hardening fixture', unit: 'lb', goal: 'both', experience: 'intermediate',
@@ -26,6 +27,57 @@ const history = (sets, unit = 'lb', flags = {}) => [{ id: 'log', programId: p.id
     weekIndex: 1, date: 1700000000000, unit, ...flags,
     perf: { [id]: { weight: sets[0]?.w, reps: sets[0]?.r, sets } } }];
 const suggest = (program, hs, week = 1, unit = 'lb') => sessionSuggestion(program, day, slot, null, unit, week, hs);
+
+// M361: the final equipment boundary must reconcile its explanation as well as its cells.
+// Old mixed loads remain historical facts when the selected equipment increment changes.
+{
+    const previousIncrements = EX_LOAD_INC;
+    const roundedProgram = structuredClone(p);
+    for (const [field,value] of [['sets',4],['reps','8-12'],['rir','2'],['progressionStyle','double']])
+        roundedProgram.overrides[key]=markUserPrescriptionOverride(roundedProgram.overrides[key]||{},field,value);
+    const mixed = history([100,105,110,115].map((w,i) => ({w,r:[12,10,8,8][i],rir:2,rirReported:true,done:true})));
+    mixed[0].perf[id].weight=115;mixed[0].perf[id].reps=8;
+    const before = JSON.stringify({ roundedProgram, mixed });
+    try {
+        for (const [unit, step, expected] of [['lb',10,100], ['kg',5,45], ['lb',3,105]]) {
+            setExLoadInc({[id]:{v:step,unit}});
+            const advice = suggest(roundedProgram,mixed,1,unit);
+            assert.equal(advice.weight,expected);
+            assert.match(advice.reason,new RegExp(`^Use ${expected} ${unit} for all 4 working sets`),
+                'The common-load explanation must name the final load, including converted decimal estimates');
+            const next = prescribeSets(roundedProgram,day,EX_BY_ID[id],slot,1,unit,advice,{}, {},mixed,false).filter(row=>!row.warm&&!row.sub);
+            assert.deepEqual(next.map(row=>Number(row.weight)),[expected,expected,expected,expected]);
+            const why=explainPrescription({program:roundedProgram,day:{...day},ex:EX_BY_ID[id],slot,weekIndex:1,unit,
+                perf:{[id]:{weight:999,reps:15}},history:mixed});
+            assert.equal(why.load.weight,advice.weight,'Why consumes the final equipment-aware suggestion');
+            assert.equal(why.load.reason,advice.reason);
+            assert.equal(why.read.lastPerformance.weight,unit==='lb'?115:52.16,
+                'Why reads the exact suggestion exposure and converts its historical load once');
+            assert.equal(why.read.historyEntriesForThisDay,1,'A copied day object preserves day identity');
+        }
+        setExLoadInc({[id]:{v:10,unit:'lb'}});
+        const earned=suggest(roundedProgram,history(rows(140,12)));
+        assert.equal(earned.weight,150);
+        assert.match(earned.reason,/from 140 lb to 150 lb/,'Rounding an earned increase retains the original observed load');
+        const missed=suggest(roundedProgram,history(rows(100,6).map(row=>({...row,rir:0}))));
+        assert.match(missed.reason,new RegExp(`Reduce to ${missed.weight} lb`));
+        const evidence=structuredClone(mixed);
+        evidence[0].perf[id].sets[0].rirReported=false;evidence[0].perf[id].sets[0].tr=2;
+        evidence[0].perf[id].sets.unshift({w:20,r:15,warm:true});
+        evidence[0].perf[id].sets.push({w:999,r:15,done:false});
+        const superseded={...evidence[0],updatedAt:evidence[0].date-1,perf:{[id]:{weight:500,reps:15,sets:rows(500,15)}}};
+        const why=explainPrescription({program:roundedProgram,day,ex:EX_BY_ID[id],slot,weekIndex:1,unit:'lb',
+            perf:{[id]:{weight:999,reps:15}},history:[superseded,...evidence]});
+        assert.equal(why.read.perSet.length,4,'Warmups and pending sets are not completed evidence');
+        assert.deepEqual(why.read.perSet[0],{set:1,weight:100,reps:12,rir:2,source:'planned target'});
+        assert.equal(why.read.lastPerformance.weight,115,'A stronger/global or superseded anchor cannot become LAST');
+        assert.equal(why.read.historyEntriesForThisDay,1,'Superseded history cannot inflate the evidence count');
+        const otherDay={...mixed[0],dayId:roundedProgram.days.find(d=>d.id!==day.id).id};
+        const reference=explainPrescription({program:roundedProgram,day,ex:EX_BY_ID[id],slot,weekIndex:1,unit:'lb',history:[otherDay]});
+        assert.equal(reference.read.lastPerformance,null,'A starting reference is not this day’s LAST');
+        assert.equal(JSON.stringify({roundedProgram,mixed}),before,'Explaining rounding cannot rewrite history or the saved plan');
+    } finally { setExLoadInc(previousIncrements); }
+}
 
 // Missing fields and copied targets cannot invent athlete evidence.
 for (const value of [null, undefined, '', ' ', NaN, Infinity]) assert.equal(historyNumber(value), null);

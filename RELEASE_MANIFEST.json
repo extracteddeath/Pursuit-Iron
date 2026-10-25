@@ -2,10 +2,10 @@
   "schemaVersion": 3,
   "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": 907,
+  "build": 908,
   "engineVersion": "0.65.9",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "601a7858c31d77d8828df621f1ff762d4b2d6b7de437f6fb3ac79a8a7c859fea",
+  "runtimeAggregate": "75bc6995e4528da9069349e6da71ae5b0afc6ccfecaaab80b9c1c476d9e47a98",
   "runtimeFiles": {
     "modules/cycle-setup-drafts.js": "d3e9e750298afd8820e2bfd543c2cebede65e4f27c136ff26fe383d202b824e9",
     "modules/engine-api.js": "9d9072d28e255c67cb10222299a260e9404557a4cbe49756f7eae22a8d5155d1",
@@ -95,10 +95,10 @@
     "modules/session-plan.js": "29e9b5b201a59de13bd0d21f89ca6358741d4889f52a96cd010c33554902e34c",
     "modules/session-tools.js": "5a34acb46ddd6452a807d4e0db656c61cf71c27d7f939fa3ea7f225d197f493d",
     "modules/training-domain.js": "a7ce0e26ac1a653d267d486128b5eac0cfaed3569f7fdeae77d4a7d11aec804f",
-    "modules/training-domain/analytics.js": "e668d8494b88e3599a0e89b8853e0cc6762b986d3bf2259e8fd3119bd6759581",
+    "modules/training-domain/analytics.js": "9feac9abe5774fa8e0fdef053e0bc22656a5e8d76e6c1e6da7a84c96a1cd5a01",
     "modules/training-domain/catalog.js": "d4ddf437e28b301362bca51ccd4400d052b86c36d4807516ece9945d61f5afc0",
     "modules/training-domain/history-import.js": "13a1128e16c886e280feedd45beb7e340cd9a5fac8752741632fe4b08dbc9462",
-    "modules/training-domain/prescriptions.js": "6ded0721764afa58cca16d049e35a69ea7e255014b90224fb84f9be2efd76311",
+    "modules/training-domain/prescriptions.js": "1b24ce1bfdbb22ce967ec8936a50f083a18b0915971eb8cfdcda2108e203f0e9",
     "modules/training-domain/programs.js": "b08bcac89543531b76c5984b1b5d58e7ab7d294378335d4549c2bf6c232c3423",
     "modules/training-domain/records.js": "a1cab10d467508286ea6b0767dd093faa11cc729019db5b352260b4f5f3d0f81",
     "modules/ui-layout.js": "dfea25df61f399fcbc4568b90725f516560dad84980b4aa75e13e8e3152283d4",
@@ -119,17 +119,17 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "8fe8a16e1ab08d73c46df897c6df8afa741a1f9ee7fe743c51ba2eec1e9062f3",
-    "index.html": "b7f4c85caa1ef2f8a96eb1ade23f339dd3bad4651929ef461c5b310a6c6fda94",
-    "sw.js": "3b905963ebfd98c9c07a004b98c7b41272178a3250c12f4c9ca98ec8f434c722",
-    "BUILD_PROFILE.json": "7f4789539ba09ed8c6dc6e16490894e626f1818dd890ef11664998cf7b046024",
-    "CHANGELOG.md": "6e06909f09bcdeec820de8cb83e0049917adbc2bf97d8959d96192fc93115fd9",
+    "modules/App.js": "a37d658138b4b88775a76d2f455007420268917efe568e5932cae299e55cfa84",
+    "index.html": "906d77859c128aa89965bfe39855046f68dfbaa5329be9c593a4e08595441b3c",
+    "sw.js": "0ed5e00d3ec2a2503d2dbd3c37f2b48b1b5a744b1c7693135ea647095c336193",
+    "BUILD_PROFILE.json": "a87a7d7370b95e7af163422e1ec9c3aee30f9471bf160768cd34457bb6876fc7",
+    "CHANGELOG.md": "c286b672d0f8db752d75b0dc32ccfb526115b7423f71929c558099d524e31b72",
     "app.css": "5bfc34c95e9c7a456f88edf6d830a8b3d1a6ed64fcb8bb53220a924c107458cb",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
-  "runtimeHotfix": "Numbered web releases include M321–M359 saved-cycle, progression, recovery and set-intent fixes; CI rejects changed shipped files without a higher build.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b907-r64c72bc215228f72",
-  "uiMilestone": "Build 907 · M360 Numbered web releases"
+  "runtimeHotfix": "Loadable target, workout reason and Why share the final equipment-aware suggestion; matching history, units and effort provenance remain read-only.",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b908-r1c23366bab2218e5",
+  "uiMilestone": "Build 908 · M361 Loadable target explanations"
 }

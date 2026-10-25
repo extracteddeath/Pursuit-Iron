@@ -79,7 +79,7 @@ assert.ok(app.includes("from './program-settings-sheet.js'") && !app.includes('f
   'Program Settings has a single extracted presentation owner');
 assert.equal((programSettings.match(/function ProgramSettingsSheet\(/g) || []).length, 1, 'Single settings view');
 assert.ok(programSettings.includes("data-testid\": \"program-settings-sheet") &&
-    programSettings.includes('onApply: applyCfgDraft') === false &&
+    programSettings.includes('onApply: applyCfgDraft') &&
     programSettings.includes('onClick: applyCfgDraft'),
     'Settings retains staged changes and Save/Cancel actions');
 for(const label of ['Decrease block length','Increase block length','Block length in weeks','program-weeks-error'])

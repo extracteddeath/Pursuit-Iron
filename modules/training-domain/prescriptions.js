@@ -765,7 +765,12 @@ function engineSessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, h
     });
     if (perSetIncrease && setTargets?.length)
         w = Math.max(...setTargets.map(target => target.weight).filter(Number.isFinite));
-    const reason = typeof s.reason === "string" ? s.reason.replace(new RegExp(`\\bto ${eng}( ?${unit})`), `to ${w}$1`) : s.reason;
+    // The explanation has already been converted/rounded for display. Reconcile only
+    // its prescribed load, preserving observed loads and estimated-max evidence.
+    const displayedLoad = String(Math.round(eng * 100) / 100).replace(/\./g, '\\.');
+    const reason = typeof s.reason === "string" ? s.reason.replace(
+        new RegExp(`\\b(to|[Uu]se) ${displayedLoad}( ?${unit})\\b`, 'g'),
+        (_, verb, suffix) => `${verb} ${Math.round(w * 100) / 100}${suffix}`) : s.reason;
     return { ...s, weight: w, setTargets, reason, target: w < eng ? floor : s.target,
         dir: current && w > current ? "up" : current && w < current ? "down" : s.dir };
 

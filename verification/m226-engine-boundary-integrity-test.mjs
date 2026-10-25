@@ -3,8 +3,8 @@ import { normalizeRequest } from '../modules/next-engine/prescription.js';
 import { phasePolicyFor } from '../modules/next-engine/phase-policy.js';
 import { generateProgram } from '../modules/next-engine/generate.js';
 import { shellConfigToNextRequest } from '../modules/next-engine/app-shell-adapter.js';
-import { EXERCISES, EX_BY_ID, sessionSuggestion, lastDayPerf, stallCountFor, linearStalled,
-    projectNextTM, nextTMEvidence, gzPlanFor } from '../modules/App.js';
+import { EXERCISES, EX_BY_ID, sessionSuggestion, lastDayPerf, stallCountFor, linearStalled, projectNextTM, nextTMEvidence, gzPlanFor } from '../modules/engine-api.js';
+
 
 const gym = ['barbell','rack','bench','dumbbell','cable','machine','smith','pullup','dip','legpress','hacksquat','legext','legcurl','calfmachine'];
 const config = { name: 'M226 boundary fixture', unit: 'lb', goal: 'both', experience: 'intermediate',

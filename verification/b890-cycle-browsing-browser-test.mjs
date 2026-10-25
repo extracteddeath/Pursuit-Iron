@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';import http from 'node:http';import path from 'node:path';import puppeteer from 'puppeteer-core';
-import { EXERCISES, mergeStandaloneIntoGeneratedCycle, exerciseAt, computeCell } from '../modules/App.js';
+import { EXERCISES, mergeStandaloneIntoGeneratedCycle, exerciseAt, computeCell } from '../modules/engine-api.js';
+
 import { generateNextCycleForShell, describeRegionalWorkingWeekChange } from '../modules/next-engine/cycle-runtime-adapter.js';
 import { currentProgram } from './m215-cycle-duration-fixture.mjs';
 import { config as lifecycleConfig, completedHistory, ids } from './m265-generation-fixture.mjs';

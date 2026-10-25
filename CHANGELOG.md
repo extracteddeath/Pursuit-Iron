@@ -1,3 +1,10 @@
+## Build 909 / M362 — Prelaunch computation-boundary cleanup
+
+- Retire 256 duplicate engine exports from App.js and migrate 49 verification consumers to the canonical engine API. Pure computation tests and standalone parity no longer need the UI module.
+- Remove 280 unused imports, an unused cycle renderer and two unused constants; consolidate the UI's engine imports. Preserve training behavior, saved programs, history and backup compatibility.
+- Copy standalone semantic tests without UI-import rewrites. Enforce the single computation boundary alongside the existing independent golden scenarios and lower the inline-style budget after deleting unused presentation.
+- Prioritize feature ownership and shared styling in the launch plan. This pass reduces proven dead code; the large UI module and remaining presentation debt still require cleanup before declaring launch readiness.
+
 ## Build 908 / M361 — Explanations match the load you can actually use
 
 - Reconcile prescribed-load explanations after the final equipment rounding. A 105 lb straight-set estimate rounded to 100 lb now says “Use 100 lb”; converted kilogram targets follow the same final values.

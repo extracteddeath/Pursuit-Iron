@@ -1,5 +1,38 @@
 # Whole-app launch readiness
 
+## October 25 — M362 prelaunch code cleanup (build 909)
+
+The app has not launched; its only current user is its owner. Prioritize a clean,
+maintainable launch baseline over compatibility for hypothetical external code
+consumers. Preserve actual saved programs, workout history and backup migrations.
+This section supersedes the earlier instruction to prioritize another prescription
+audit: reproduced defects still get fixed, but structural cleanup is now the main work.
+
+First pass: retire App.js's duplicate computation export surface (256 exports),
+move 49 verification consumers to the canonical engine API, remove 280 unused import
+bindings, the unused CycleTimeline renderer and two unused constants. Consolidate
+App's canonical API imports. The standalone exporter copies semantic tests without
+rewriting UI imports; parity compares against engine-api.js without loading React.
+The boundary regression retains 13 independent golden scenarios and rejects engine
+exports or computation-test imports through App. No training policy or data schema changes.
+
+This is a completed boundary cleanup, **not a launch-clean codebase**. App.js is
+still about 2.44 MB. The maintained style audit counts 2,772 inline style objects;
+2,344 stylesheet and 1,199 embedded priority declarations remain. Tighten the
+existing budget after removal; never hide debt by moving it between files.
+
+| Next pass | Purpose and acceptance |
+|---|---|
+| Cohesive feature ownership | Extract UI features with their state and dependencies at clear boundaries. Avoid duplicate state, calculators and passive forwarding layers; preserve the current Workout and Focus flows. |
+| Shared presentation | Move static presentation to the existing shared primitives and semantic CSS. Delete superseded rules at their original owners, preserving themes, focus, disabled states, reduced motion and narrow screens. |
+| Obsolete paths and verification | Prove reachability before deleting code. Keep source invariants, independent engine evidence and meaningful browser/device journeys; remove redundant compatibility scaffolding only when no real saved-data contract depends on it. |
+| Reproducible production output | Keep one maintained authoring source with reproducible browser output. Evaluate packaging when ownership is clearer; do not introduce edited generated copies or a second implementation. |
+
+Each published slice increments the build, passes exact-head source/engine/browser
+checks, and verifies public hosted bytes plus visible/offline build identity. Keep
+physical Android launch certification separate from Chromium emulation. Continue
+feature and styling cleanup before declaring launch readiness.
+
 ## October 25 — M361 final-target explanation authority (build 908)
 
 Baseline 907 was deployed and verified. Reproduced an equipment-boundary mismatch:
@@ -71,7 +104,7 @@ Updated October 22, 2026. This is the single current next-update plan. It supers
 
 ## Current baseline and ownership
 
-App 4.0.0 build 908 / Engine 0.65.9 / M234. `RELEASE_MANIFEST.json` is authoritative for shipped versions and hashes; `BUILD_PROFILE.json` records the current UI slice. Every changed published release increments its app build; content-addressed offline caches certify the exact bytes. No new training-model identity is implied by the app build.
+App 4.0.0 build 909 / Engine 0.65.9 / M234. `RELEASE_MANIFEST.json` is authoritative for shipped versions and hashes; `BUILD_PROFILE.json` records the current UI slice. Every changed published release increments its app build; content-addressed offline caches certify the exact bytes. No new training-model identity is implied by the app build.
 
 | Area | Maintained owner | Next work and acceptance |
 |---|---|---|

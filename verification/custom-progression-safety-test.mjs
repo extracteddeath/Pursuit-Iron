@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { sessionSuggestion, computeCell, prescribeSets, EX_BY_ID } from '../modules/App.js';
+import { sessionSuggestion, computeCell, prescribeSets, EX_BY_ID } from '../modules/engine-api.js';
+
 import { setExLoadInc } from '../modules/training-domain/records.js';
 const program={id:'custom1',custom:true,config:{unit:'lb'},overrides:{'d1:0':{sets:3,reps:'5-8',rir:'2',progressionStyle:'double'}},days:[{id:'d1',exercises:['back-squat']}]};
 const history=[{programId:'custom1',dayId:'d1',date:Date.now(),unit:'lb',perf:{'back-squat':{weight:215,reps:2,sets:[

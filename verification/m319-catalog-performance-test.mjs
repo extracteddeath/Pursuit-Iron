@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { performance } from 'node:perf_hooks';
 import { EXERCISES as BUILTINS, EXERCISE_MAP, createExerciseCatalog, createExerciseMap } from '../modules/next-engine/exercise-db.js';
 import { createEngineContext } from '../modules/next-engine/engine-context.js';
-import { EXERCISES as SHELL_EXERCISES } from '../modules/App.js';
+import { EXERCISES as SHELL_EXERCISES } from '../modules/engine-api.js';
+
 import { generateNextProgramForShell } from '../modules/next-engine/app-shell-adapter.js';
 import { config } from './m265-generation-fixture.mjs';
 

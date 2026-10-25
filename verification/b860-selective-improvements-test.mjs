@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { EXERCISES, EX_BY_ID, TEMPLATES, templateConfig, ALL_EQUIP_IDS, sessionSuggestion, prescribeSets, liftBests, weeklyRecap, displayDayName, THEMES } from '../modules/App.js';
+import { THEMES } from '../modules/App.js';
+import { EXERCISES, EX_BY_ID, TEMPLATES, templateConfig, ALL_EQUIP_IDS, sessionSuggestion, prescribeSets, liftBests, weeklyRecap, displayDayName } from '../modules/engine-api.js';
+
 import { generateNextProgramForShell, getNextShellCell } from '../modules/next-engine/app-shell-adapter.js';
 import { nextWorkoutSuggestionForShell, nextWorkoutSuggestionFromPerformedShell } from '../modules/next-engine/workout-history-adapter.js';
 import { normalizeLoadingInventory, loadingInventoryInUnit, defaultLoadingInventoryFor, nextAvailableLoad } from '../modules/next-engine/loading.js';

@@ -1,6 +1,6 @@
 import { defaultLoadingInventoryFor, loadingInventoryInUnit } from './loading.js';
 import { validateEngineProgram } from './domain-contracts.js';
-import { EXPLICIT_EXERCISE_ALIASES, NextShellAdapterError, SHELL_PRESCRIPTION_FIELDS, canonicalShellSetCount, clearUserPrescriptionOverride, cloneNextDayPrescriptions, getNextShellCell, hasOwn, immutableEngineSetCount, markUserPrescriptionOverride, nextExerciseIdForShellExercise, norm, overrideKeyForField, primaryPart, range, remapNextShellRoster, removeNextSlotPrescription, resolveLegacyExercise, resolveLegacyExerciseByIdentity, resolveNextShellExerciseId, shellPrescriptionFieldOwner, shellPrescriptionOwners, shellRange, snapshotNextShellPrescription, swapNextSlotPrescriptions } from './shell-projection.js';
+import { NextShellAdapterError, canonicalShellSetCount, clearUserPrescriptionOverride, cloneNextDayPrescriptions, getNextShellCell, markUserPrescriptionOverride, nextExerciseIdForShellExercise, norm, range, remapNextShellRoster, removeNextSlotPrescription, resolveLegacyExercise, resolveLegacyExerciseByIdentity, resolveNextShellExerciseId, shellPrescriptionFieldOwner, shellPrescriptionOwners, snapshotNextShellPrescription, swapNextSlotPrescriptions } from './shell-projection.js';
 import { firstPassingCapacityProgram } from './capacity-generation.js';
 import { EXERCISE_MAP } from './exercise-db.js';
 import { buildGenerationRecoveryPlan } from './generation-recovery.js';

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { EXERCISES } from '../modules/App.js';
+import { EXERCISES } from '../modules/engine-api.js';
+
 import { CUSTOM_CYCLE_PHASES, customCycleSpecs, generateNextCycleForShell, cycleSplitCandidates, canRetargetStrengthEntryRoster, requestForBlock, scoreRegionalCarryover } from '../modules/next-engine/cycle-runtime-adapter.js';
 import { createStrengthClaims, normalizeRequest } from '../modules/next-engine/prescription.js';
 import { shellConfigToNextRequest } from '../modules/next-engine/app-shell-adapter.js';

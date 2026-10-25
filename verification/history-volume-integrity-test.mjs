@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { historyVolumeIn, weeklyRecap, loggedVolume, loggedSubVolume } from '../modules/App.js';
+import { historyVolumeIn, weeklyRecap, loggedVolume, loggedSubVolume } from '../modules/engine-api.js';
+
 
 const now=Date.now();
 const stale={id:'stale',date:now,unit:'lb',volume:1554,setsDone:4,perf:{'back-squat':{sets:[

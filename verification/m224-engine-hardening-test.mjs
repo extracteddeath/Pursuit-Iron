@@ -1,8 +1,6 @@
 import assert from 'node:assert/strict';
-import { EXERCISES, EX_BY_ID, TEMPLATES, templateConfig, sessionSuggestion, prescribeSets,
-    computeCell, percentagePlanFor, trainingMaxForUnit, withTrainingMax, nextSessionCursor, nextDueDayId,
-    exerciseSeries, exerciseTrends, exRecords, strengthSnapshot, strengthScore, strengthScoreHistory,
-    scoreAttribution, daySeconds, loggedWorkoutPerformance, explainPrescription } from '../modules/App.js';
+import { EXERCISES, EX_BY_ID, TEMPLATES, templateConfig, sessionSuggestion, prescribeSets, computeCell, percentagePlanFor, trainingMaxForUnit, withTrainingMax, nextSessionCursor, nextDueDayId, exerciseSeries, exerciseTrends, exRecords, strengthSnapshot, strengthScore, strengthScoreHistory, scoreAttribution, daySeconds, loggedWorkoutPerformance, explainPrescription } from '../modules/engine-api.js';
+
 import { generateNextProgramForShell, snapshotNextShellPrescription, markUserPrescriptionOverride } from '../modules/next-engine/app-shell-adapter.js';
 import { analyzeShellHistoryForNextEngine, deriveProgressionSelectionEvidence,
     nextWorkoutSuggestionFromPerformedShell } from '../modules/next-engine/workout-history-adapter.js';

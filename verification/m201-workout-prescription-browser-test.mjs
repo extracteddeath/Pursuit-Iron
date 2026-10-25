@@ -13,7 +13,9 @@ const fixture = { id: 'm201-browser-custom', name: 'Custom workout', custom: tru
     days: [{ id: 'd', label: 'Upper', primaryIndex: -1, exercises: ['inc-curl'] }] };
 const template = `<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/app.css">${importMap}</head><body><div id="root"></div><script type="module">
 import React from '/vendor/react.js'; import {createRoot} from '/vendor/react-dom-client.js';
-import {WorkoutSession, StyleTag, EX_BY_ID, AttachmentGlyph, ExerciseAnimation} from '/modules/App.js';
+import { WorkoutSession, StyleTag, AttachmentGlyph, ExerciseAnimation } from '/modules/App.js';
+import { EX_BY_ID } from '/modules/engine-api.js';
+
 const params=new URL(location.href).searchParams, program=${JSON.stringify(fixture)}, week=Number(params.get('week')||4), exercise=params.get('exercise')||'inc-curl';
 program.days[0].exercises=[exercise]; program.id+='-'+exercise; if(exercise!=='inc-curl')program.overrides['d:0'].reps='12-20';
 const history=[{id:'previous',programId:program.id,dayId:'d',date:1,unit:'lb',perf:{[exercise]:{weight:30,reps:9,sets:[{w:30,r:10,rir:2},{w:30,r:8,rir:2},{w:30,r:6,rir:2},{w:25,r:11,rir:2}]}}}];
@@ -29,7 +31,9 @@ window.__m201Ready=true;
 </script></body></html>`;
 const variants = ['seated-db-lat-raise','single-db-lat-raise','chest-supported-lat-raise','seated-cable-lat-raise','cuff-cable-lat-raise','seated-rear-fly','single-cable-rear-fly','chest-supported-rear-fly'];
 const gallery = `<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/app.css"><style>html,body,#root{height:auto!important;overflow:visible!important;}</style>${importMap}</head><body><div id="root"></div><script type="module">
-import React from '/vendor/react.js';import {createRoot} from '/vendor/react-dom-client.js';import {EX_BY_ID,AttachmentGlyph,ExerciseAnimation} from '/modules/App.js';
+import React from '/vendor/react.js';import {createRoot} from '/vendor/react-dom-client.js';import { AttachmentGlyph, ExerciseAnimation } from '/modules/App.js';
+import { EX_BY_ID } from '/modules/engine-api.js';
+
 createRoot(document.getElementById('root')).render(React.createElement('div',{style:{padding:16,display:'grid',gap:16}},${JSON.stringify(variants)}.map(id=>React.createElement('section',{key:id,'data-variant':id,style:{padding:16,border:'1px solid #604077',borderRadius:16}},React.createElement('h3',{},EX_BY_ID[id].name),React.createElement(AttachmentGlyph,{ex:EX_BY_ID[id]}),React.createElement(ExerciseAnimation,{ex:EX_BY_ID[id]})))));
 </script></body></html>`;
 const mime = { '.js': 'text/javascript', '.css': 'text/css', '.html': 'text/html', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png' };

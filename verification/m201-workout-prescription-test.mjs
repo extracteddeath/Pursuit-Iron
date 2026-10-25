@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
-import { EXERCISES, EX_BY_ID, computeCell, prescribeSets, sessionSuggestion, movementFamilyOptions,
-    VARIANT_PRESENTATION, AttachmentGlyph, figurePose, subRegionOf, expandEquipment } from '../modules/App.js';
+import { movementFamilyOptions, VARIANT_PRESENTATION, AttachmentGlyph, figurePose } from '../modules/App.js';
+import { EXERCISES, EX_BY_ID, computeCell, prescribeSets, sessionSuggestion, subRegionOf, expandEquipment } from '../modules/engine-api.js';
+
 import { reconcilePendingRepTargets } from '../modules/next-engine/workout-runtime.js';
 import { EXERCISE_MAP } from '../modules/next-engine/exercise-db.js';
 import { nextExerciseIdForShellExercise, getNextShellCell } from '../modules/next-engine/app-shell-adapter.js';

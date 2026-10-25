@@ -10,7 +10,8 @@ import fs from 'node:fs';
 import * as prescriptions from '../modules/next-engine/realizer-prescriptions.js';
 import { generateNextProgramForShell } from '../modules/next-engine/app-shell-adapter.js';
 import { EXERCISE_MAP } from '../modules/next-engine/exercise-db.js';
-import { EXERCISES } from '../modules/App.js';
+import { EXERCISES } from '../modules/engine-api.js';
+
 
 // Soft-bound so a pre-879 control fails on BEHAVIOUR rather than throwing on a missing export.
 const applyFloor = prescriptions.applyExperienceRirFloor ?? ((rir) => rir);

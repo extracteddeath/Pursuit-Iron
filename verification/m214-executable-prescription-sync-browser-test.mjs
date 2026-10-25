@@ -3,7 +3,8 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import puppeteer from 'puppeteer-core';
-import { EXERCISES } from '../modules/App.js';
+import { EXERCISES } from '../modules/engine-api.js';
+
 import { generateNextProgramForShell, markUserPrescriptionOverride } from '../modules/next-engine/app-shell-adapter.js';
 import { analyzeShellHistoryForNextEngine } from '../modules/next-engine/workout-history-adapter.js';
 

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { EXERCISES } from '../modules/App.js';
+import { EXERCISES } from '../modules/engine-api.js';
+
 import { getNextShellCell } from '../modules/engine-api.js';
 import { generateNextProgramForShell } from '../modules/next-engine/app-shell-adapter.js';
 import { convertProgramToNextCycleForShell, advanceNextCycleForShell, describeRegionalWorkingWeekChange } from '../modules/next-engine/cycle-runtime-adapter.js';

@@ -3,7 +3,7 @@ import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from 'react/jsx-run
 import { X, Check } from 'lucide-react';
 import { weeksOf } from './engine-api.js';
 
-export function ProgramSettingsSheet({ program, draft: cfgDraft, setDraft: setCfgDraft, dirty: cfgDirty, onApply: applyCfgDraft, onClose, C, sheetDragRef, selectNumericInput, iconBtn }) {
+export function ProgramSettingsSheet({ program, draft: cfgDraft, setDraft: setCfgDraft, dirty: cfgDirty, onApply: applyCfgDraft, onClose, C, GOALS, eyebrow, sheetDragRef, selectNumericInput, iconBtn }) {
     const cycleLengthOwned = program.engineSource === "pursuit-next" && !!program.cycleId;
     const draftWeeks = cfgDraft?.weeks ?? weeksOf(program);
     const validWeeks = /^\d+$/.test(String(draftWeeks)) && Number.isSafeInteger(Number(draftWeeks)) && Number(draftWeeks) > 0;

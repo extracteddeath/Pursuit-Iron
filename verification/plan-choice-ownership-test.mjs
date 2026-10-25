@@ -43,7 +43,7 @@ console.log('PASS M355: Program muscle priority dose, direct exercises and week 
 const programView = app.slice(app.indexOf('function ProgramView('),app.indexOf('function ProgramSaveReview('));
 assert.ok(programView.includes('const wkVol = useMemo(() => weeklyVolume(program, activeWeek), [program, activeWeek]);'),
   'selected-week program volume must have a memoized owner');
-assert.equal((programView.match(/weeklyVolume\\(program, /g)||[]).length,1,
+assert.equal((programView.split('weeklyVolume(program, ').slice(1)).length,1,
   'Program view must not duplicate selected-week volume work on unrelated renders');
 assert.ok(priorities.includes('const week = activeWeek, volume = wkVol, direct = {};'),
   'priority explanation must consume the memoized canonical selected-week volume');

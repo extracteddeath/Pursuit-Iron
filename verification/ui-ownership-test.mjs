@@ -9,7 +9,8 @@ const programReview = fs.readFileSync('modules/program-review-surfaces.js', 'utf
 const programSchedule = fs.readFileSync('modules/program-schedule-sheet.js', 'utf8');
 const programSettings = fs.readFileSync('modules/program-settings-sheet.js', 'utf8');
 const primitives = fs.readFileSync('modules/ui-primitives.js', 'utf8');
-const presentationSource = primitives + '\n' + app + '\n' + programReview + '\n' + programSchedule + '\n' + programSettings;
+const releaseNotes = fs.readFileSync('modules/release-notes.js', 'utf8');
+const presentationSource = releaseNotes + '\n' + primitives + '\n' + app + '\n' + programReview + '\n' + programSchedule + '\n' + programSettings;
 const MAX_IMPORTANT = 2360; // M291: consolidate the remaining Profile style owners
 const MAX_APP_IMPORTANT = 1229; // M292: retire ten superseded Progress priority declarations.
 const MAX_REPEAT_IMPORTANT = 15; // M288: at-rule comments no longer erase media/container scope.
@@ -145,6 +146,13 @@ for (const name of ['UiHeader','UiRootHeader','UiAction','UiChoice','UiStatus','
     assert.equal((app.match(new RegExp('function ' + name + '\\(', 'g')) || []).length, 0, 'No shadow UI primitive in App: '+name);
     assert.equal((primitives.match(new RegExp('export function ' + name + '\\(', 'g')) || []).length, 1, 'One exported UI primitive: '+name);
 }
+assert.ok(app.includes("from './release-notes.js'") && !app.includes('const CHANGELOG = ['),
+    'Release content has one feature owner, outside the application coordinator');
+assert.equal((releaseNotes.match(/export const CHANGELOG = \[/g) || []).length, 1, 'One release catalog');
+assert.ok(!releaseNotes.includes('engine-api') && !releaseNotes.includes('App.js') && !releaseNotes.includes('style:'),
+    'Release content cannot import the coordinator, training logic or presentation overrides');
+assert.ok(!app.includes('CHANGELOG_ITEMS =') && app.includes('CHANGELOG_ITEM_COUNT = CHANGELOG.reduce('),
+    'Archive count does not eagerly project every historical note at startup');
 assert.ok(!primitives.includes('engine-api') && !primitives.includes('useState') && !primitives.includes('localStorage'),
     'Shared presentation must not own training, state or persistence');
 assert.ok(!programSettings.includes('style:') && !programSettings.includes('C.') && !programSettings.includes('eyebrow'),

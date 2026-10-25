@@ -6,6 +6,6 @@
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 73,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b916-r6f6594c9acc6259b",
-  "uiMilestone": "Build 916 · M368 Shared settings controls and reliable Home actions"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b917-rca6ed2c33679ef4b",
+  "uiMilestone": "Build 917 · M369 Release-content ownership and current in-app notes"
 }

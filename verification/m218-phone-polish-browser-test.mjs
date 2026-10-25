@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import puppeteer from 'puppeteer-core';
-import { CHANGELOG } from '../modules/App.js';
+import { CHANGELOG } from '../modules/release-notes.js';
 
 // Use the complete production app: reading notes, choosing themes, jumping weeks, and editing a resumed workout
 // must preserve the user's training data as well as fit the phone.

@@ -1,3 +1,11 @@
+## October 25 — M369 release-content ownership (build 917 candidate)
+
+The launch cleanup removes the 201,450-character release-history array from the application coordinator. modules/release-notes.js is its sole owner; a reference comparison against Build 916 preserves every one of the 248 historical releases, 516 items, mixed entry formats and icon identities. Add concise current notes for the launch usability work, advance the existing announcement identity, and retain the existing dismissal/replay/archive behavior. Remove two now-unused App icon imports, retire release-data forwarding exports and import the catalog directly from the existing browser gate. The archive count now sums item counts without creating 516 projected note objects at startup; no measured performance claim is inferred.
+
+App.js falls from 2,396,614 to about 2,195,200 source characters (about 8.4%); total shipped content is preserved in its feature module, not deleted or claimed as a download-size reduction. The existing style guard includes the new file and retains the 2,670 ceiling. Runtime/offline manifest regeneration, exact-head source/engine/browser checks and hosted SHA parity remain required. M218 covers current notes, dismissal/reload, Settings replay, historical mixed-format archive, themes and resumed edits. Saved training, schema and Engine 0.65.9 stay unchanged.
+
+Next: continue cohesive ProgramView ownership and source-level style retirement using actual task replays. Physical Android acceptance and the broader launch roadmap remain open.
+
 ## October 25 — M368 shared Program Settings controls (build 916 candidate)
 
 Observed baseline: Training goal and Barbell limit choices measured 41px high in the existing real-browser duration fixture. M368 migrates the remaining settings choices to the app's canonical UiChoice, removes all 46 inline style objects, adds named fieldset/legend groups and relative-size labels, and gives the form one scroll owner between a persistent heading and Save/Cancel footer. Narrow/enlarged-text footer actions wrap as full controls. The six unchanged stateless UI primitives now live in modules/ui-primitives.js so feature modules consume one owner without depending on App or forwarding unused palette/helpers. Tighten combined presentation debt from 2,716 to 2,670; no added CSS priorities or engine/state owner.

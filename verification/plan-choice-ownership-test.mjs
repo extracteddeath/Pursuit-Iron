@@ -18,3 +18,22 @@ const blockNav=app.slice(app.indexOf('function CycleBlockNav('), app.indexOf('fu
 assert.ok(blockNav.includes('kind: "summary"')&&!blockNav.includes('style: {'), 'cycle navigation reuses the same choice');
 assert.ok(!app.includes('function WeekPill('), 'no private competing week renderer');
 console.log('PASS selector ownership: shared labelled choice, existing pane and week navigation semantics.');
+
+
+// M355: the focused/reduced-muscle explanation belongs to the selected Program week.
+// Previously exercise identity used activeWeek, but sets/volume and copy used the final
+// training week; alternating exercises and mid-block volume then disagreed with the UI.
+const priorities = app.slice(
+  app.indexOf('!manual && engHas(program.engineV, "preferenceAware")'),
+  app.indexOf('!manual && program.engineSource !== "pursuit-next"')
+);
+assert.ok(priorities.length > 500, 'muscle-priority panel is still present');
+assert.ok(priorities.includes('const week = activeWeek, volume = weeklyVolume(program, week), direct = {};'),
+  'priority set estimates must use the selected Program week');
+assert.ok(priorities.includes('exerciseAt(program, day, slot, activeWeek)'),
+  'alternating exercise choice uses the selected week');
+assert.ok(priorities.includes('computeCell(program, day, id, slot, week)'),
+  'direct-set eligibility uses the same week as identity and volume');
+assert.ok(priorities.includes('"Estimated sets in week ", week'),
+  'visible dose provenance names the same selected week');
+console.log('PASS M355: Program muscle priority dose, direct exercises and week label share selected-week ownership.');

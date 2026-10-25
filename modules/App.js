@@ -1,3 +1,5 @@
+import { sessionLoadText, sessionTargetsText, PlanChangeBanner, HomeSessionOutline, SessionGamePlan, PlanChangesDialog } from './plan-session-surfaces.js';
+import { SessionChoiceDialog } from './session-choice-dialog.js';
 import { withSessionPlanChoice } from './session-plan.js';
 import {
     addedMinutes, advanceLegacyFirstCycleBlock, ageFrom, ALL_EQUIP_IDS, ALL_PLATES, applyCustomProgramSettings,
@@ -6855,108 +6857,6 @@ function PlanView({ program, plan, blockNavigation = null, readOnly = false, nav
                 return (_jsxs(_Fragment, { children: [_jsxs("div", { className: "wpb-plan-glance", style: { display: "flex", gap: 16, marginBottom: 10, paddingBottom: 6, borderBottom: `1px solid ${C.borderSoft}` }, children: [tile(readOnly ? "Viewing week" : "Current week", `${plan.currentWeek} / ${plan.totalWeeks}`, true), tile("Sessions", `${days}/wk`), tile("Week sets", `${pw.sets}`)] }), _jsxs("div", { className: "wpb-plan-completion", style: { marginBottom: 12 }, children: [_jsxs("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 13, color: C.muted, marginBottom: 4 }, children: [_jsxs("span", { children: [plan.sessionsDone, " of ", plan.sessionsTotal, " sessions completed"] }), _jsxs("span", { className: "mono", style: { color: C.accentInk, fontWeight: 700 }, children: [plan.percentDone, "%"] })] }), _jsx("div", { style: { height: 4, borderRadius: 999, background: C.bg2, overflow: "hidden" }, children: _jsx("div", { style: { height: "100%", width: `${Math.max(0, Math.min(100, plan.percentDone))}%`, background: C.accent, borderRadius: 999, transition: "width .3s" } }) })] })] }));
             })()] })] })] }));
 }
-function sessionLoadText(set, unit) {
-    const w = set?.weight === "" || set?.weight == null ? null : Number(set.weight), reps = Number(set?.reps);
-    return `${w != null && Number.isFinite(w) ? Math.round(w * 100) / 100 + ' ' + unit : 'Choose load'} × ${reps > 0 ? reps : '—'}`;
-}
-function sessionTargetsText(sets, unit) {
-    const uniform = sets.every(set => set.weight === sets[0]?.weight && set.reps === sets[0]?.reps);
-    return uniform ? sessionLoadText(sets[0], unit) : sets.map((set, i) => `Set ${i + 1}: ${sessionLoadText(set, unit)}`).join(' · ');
-}
-function PlanChangeBanner({ review, onClick }) {
-    if (!review?.changes.length) return null;
-    const undone = review.changes.filter(row => row.change.undone).length;
-    return _jsxs("button", { type: "button", className: "wpb-plan-change-banner pressable", onClick, "aria-label": "Review plan changes", children: [
-        _jsx("span", { className: "wpb-session-plan-icon", children: _jsx(History, { size: 19 }) }),
-        _jsxs("span", { children: [_jsx("strong", { children: `${review.changes.length} plan change${review.changes.length === 1 ? '' : 's'}` }),
-            _jsx("span", { children: undone ? `${undone} undone · review choices` : "See why · Undo if needed" })] }),
-        _jsx(ChevronRight, { size: 18 })] });
-}
-// The Home hero is a workout preview, not a second coaching feed.
-function HomeSessionOutline({ review, expanded, onToggle }) {
-    if (!review?.exercises.length) return null;
-    return _jsxs("section", { className: "wpb-home-session-outline", "aria-label": "Session outline", children: [
-        _jsxs("button", { type: "button", className: "wpb-home-outline-toggle pressable", onClick: onToggle,
-            "aria-expanded": expanded, "aria-controls": "wpb-home-outline-exercises",
-            "aria-label": `${expanded ? 'Hide' : 'Show'} all ${review.exercises.length} session exercises`, children: [
-                _jsx("strong", { children: "Session outline" }),
-                _jsx("span", { children: `${review.exercises.length} exercises` }),
-                _jsx(ChevronDown, { size: 17 })] }),
-        _jsx("div", { id: "wpb-home-outline-exercises", hidden: !expanded, children: expanded &&
-            _jsx("ul", { className: "wpb-home-outline-list", children: review.exercises.map(row =>
-                _jsxs("li", { className: "wpb-m3-outline-row", children: [_jsx("span", { children: row.name }),
-                    _jsx("strong", { children: `${row.cell.sets}×${row.cell.range || row.cell.reps}` })] }, row.id + ':' + row.slot)) }) })
-    ] });
-}
-// Like the prototype, this is a small set of actionable coaching highlights,
-// not every working set and the full engine explanation repeated on Home.
-function SessionGamePlan({ review, restScale = 1, home = false }) {
-    if (!review?.exercises.length) return null;
-    const ranked = [...review.exercises].sort((a, b) => {
-        const score = row => (row.opportunity ? 8 : 0) + (row.change.undone ? 4 : 0)
-            + (row.protocol.type !== 'straight' ? 2 : 0) + (row.change ? 1 : 0);
-        return score(b) - score(a);
-    }).slice(0, 3);
-    return _jsxs("section", { className: "wpb-session-game-plan" + (home ? " wpb-home-game-plan" : ""),
-        "aria-label": "Today's game plan", children: [
-        _jsxs("h2", { className: "wpb-game-plan-heading", children: [_jsx(TrendingUp, { size: 19 }),
-            _jsx("strong", { children: "Today's game plan" }),
-            _jsx("span", { className: "wpb-game-plan-count", children: ranked.length })] }),
-        _jsx("div", { className: "wpb-game-plan-highlights", children: ranked.map(row => {
-            const pr = row.opportunity;
-            const technique = row.protocol.type === 'myo_reps' ? `Myo-reps · ${workoutTechniqueRest({ kind: 'myo' }, restScale)}-second rests.`
-                : row.protocol.type === 'drop_set' ? 'Drop set on the last set.' : null;
-            const dose = sessionTargetsText(row.effective, review.unit);
-            const why = pr ? (pr.type === 'e1rm' ? `Could raise estimated 1RM to ${pr.estimated} ${review.unit}.`
-                : `Could beat your ${pr.bestReps}-rep best at this load.`) : row.reason;
-            const guidance = `${dose} · ${technique || why}`;
-            return _jsxs("div", { className: "wpb-game-plan-exercise", "data-game-plan-exercise": row.id,
-                ...(pr ? { "data-pr-exercise": row.id } : {}), children: [
-                _jsx("span", { className: "wpb-game-plan-highlight-icon", "aria-hidden": true,
-                    children: _jsx(pr ? Trophy : row.protocol.type !== 'straight' ? Zap : TrendingUp, { size: 16 }) }),
-                _jsxs("details", { className: "wpb-game-plan-highlight-copy", children: [
-                    _jsxs("summary", { children: [
-                        _jsx("strong", { children: pr ? `PR chance · ${row.name}` : row.name }),
-                        _jsx("span", { className: "wpb-game-plan-highlight-preview", children: guidance }),
-                        _jsx(ChevronDown, { size: 16, "aria-hidden": true })] }),
-                    _jsx("p", { children: guidance })] })] }, row.id + ':' + row.slot);
-        }) })
-    ] });
-}
-function PlanChangesDialog({ review, dayLabel, busy, onChoice, onClose }) {
-    return _jsx(SessionChoiceDialog, { title: "Plan changes", onClose, className: "wpb-plan-changes-dialog", children: _jsxs("div", { children: [
-        _jsx("p", { className: "wpb-plan-review-intro", children: `${dayLabel} · Week ${review.weekIndex}. Choices apply to this workout’s load and reps. Sets, target effort and technique follow the plan.` }),
-        !review.changes.length && _jsx("p", { children: "No changes from your last comparable workout." }),
-        review.changes.map(row => {
-            const uniform = row.proposed.length === row.change.previous.length && row.proposed.every(set => set.weight === row.proposed[0]?.weight && set.reps === row.proposed[0]?.reps)
-                && row.change.previous.every(set => set.weight === row.change.previous[0]?.weight && set.reps === row.change.previous[0]?.reps);
-            const targets = (uniform ? row.proposed.slice(0, 1) : row.proposed);
-            const diff = (set, i) => _jsxs("li", { children: [
-                !uniform && _jsx("span", { className: "wpb-change-set-name", children: `Set ${i + 1}` }),
-                _jsx("span", { className: "wpb-plan-before", children: row.change.undone ? sessionLoadText(set, review.unit) : row.change.previous[i] ? sessionLoadText(row.change.previous[i], review.unit) : 'New set' }),
-                _jsx(ChevronRight, { size: 15, "aria-label": "to" }),
-                _jsx("strong", { children: sessionLoadText(row.change.undone ? row.change.undoTargets[i] : set, review.unit) })] }, i);
-            return _jsxs("section", { className: "wpb-plan-change-card", "data-plan-change": row.id,
-                "data-undone": row.change.undone, children: [
-                _jsxs("div", { className: "wpb-plan-change-title", children: [
-                    _jsx("h3", { children: row.name }),
-                    _jsx("span", { children: row.change.undone ? 'Undone' : row.category })] }),
-                _jsx("ol", { className: "wpb-plan-target-diff", children: targets.slice(0, 1).map(diff) }),
-                !uniform && targets.length > 1 && _jsxs("details", { className: "wpb-plan-change-more", children: [
-                    _jsx("summary", { children: `See all ${targets.length} sets` }),
-                    _jsx("ol", { className: "wpb-plan-target-diff", children: targets.slice(1).map((set, i) => diff(set, i + 1)) })] }),
-                _jsx("p", { className: "wpb-plan-review-basis", children: row.change.source
-                    ? `Compared with this exercise on ${new Date(row.change.source.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} for the same program day.`
-                    : "No comparable completed workout yet." }),
-                _jsx("p", { className: "wpb-plan-change-reason", children: row.change.undone ? `Original recommendation: ${row.proposedReason}` : row.proposedReason }),
-                row.change.canUndo ? _jsx("button", { type: "button", className: "wpb-plan-undo pressable", disabled: busy,
-                    "aria-label": `${row.change.undone ? 'Restore recommendation for' : 'Undo change for'} ${row.name}`,
-                    onClick: () => onChoice(review.programId, review.dayId, review.weekIndex, row.id, !row.change.undone, review.sessionLengthPlan, row.slot),
-                    children: row.change.undone ? 'Use recommendation' : 'Undo change' })
-                    : _jsx("p", { className: "wpb-plan-review-basis", children: "Edit this exercise in your program to change its targets." })
-            ] }, row.id + ':' + row.slot);
-        })] }) });
-}
 function NextWorkoutView({ program, day: sourceDay, weekIndex, unit = "kg", perf = {}, onPlanChoice, planChoiceBusy = false, restScale = 1, history = [], loadMode = "rir", pace = null, cycleInfo = null, freshness = null, alt = null, onStart, onStartAlt, onOpenProgram, onBack }) {
     const [timeAvailable, setTimeAvailable] = useState(null);
     const [planChangesOpen, setPlanChangesOpen] = useState(false);
@@ -11463,22 +11363,6 @@ function SetAwareDockPrototype({ data, exIdx, lastPerf, program, day, weekIndex,
       ] });
 }
 
-function SessionChoiceDialog({ title, onClose, children, dismissible = true, className = "", footer = null }) {
-    const dialogRef = useRef(null);
-    useEffect(() => { const previous = document.activeElement; dialogRef.current?.focus();
-        return () => previous?.isConnected && previous.focus?.(); }, []);
-    return _jsx("div", { className: "wpb-backdrop wpb-session-dialog-backdrop", onClick: onClose,
-        children: _jsxs("section", { ref: dialogRef, tabIndex: -1, role: "dialog", "aria-modal": "true", "aria-label": title,
-            className: "wpb-session-dialog wpb-scroll " + className, onClick: ev => ev.stopPropagation(),
-            onKeyDown: ev => { if (ev.key === 'Escape' && dismissible) onClose();
-                if (ev.key === 'Tab') { const items = [...dialogRef.current.querySelectorAll('button:not(:disabled),select,textarea,input,summary,a[href]')].filter(el => el.getClientRects().length && (el.tagName === 'SUMMARY' || !el.closest('details:not([open])')));
-                    const first = items[0], last = items.at(-1);
-                    if (ev.shiftKey && (document.activeElement === first || document.activeElement === dialogRef.current)) { ev.preventDefault(); last?.focus(); }
-                    else if (!ev.shiftKey && (document.activeElement === last || document.activeElement === dialogRef.current)) { ev.preventDefault(); first?.focus(); } } },
-            children: [_jsxs("div", { className: "wpb-session-dialog-heading", children: [
-                _jsx("h2", { children: title }), dismissible && _jsx("button", { type: "button", className: "pressable hit", "aria-label": "Close " + title,
-                    onClick: onClose, children: _jsx(X, { size: 20 }) })] }), children, footer] }) });
-}
 function ProgramRevisionReview({ review, onApply, onClose }) {
     const changes = useMemo(() => reviewProgramChanges(review.before, review.after), [review.before, review.after]);
     return _jsx(SessionChoiceDialog, { title: review.title, onClose, className: "wpb-program-revision", footer:

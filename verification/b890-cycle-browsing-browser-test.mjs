@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';import http from 'node:http';import path from 'node:path';import puppeteer from 'puppeteer-core';
 import { EXERCISES, mergeStandaloneIntoGeneratedCycle, exerciseAt, computeCell } from '../modules/App.js';
-import { generateNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
+import { generateNextCycleForShell, describeRegionalWorkingWeekChange } from '../modules/next-engine/cycle-runtime-adapter.js';
 import { currentProgram } from './m215-cycle-duration-fixture.mjs';
 import { config as lifecycleConfig, completedHistory, ids } from './m265-generation-fixture.mjs';
 const root=path.resolve(new URL('../',import.meta.url).pathname);
@@ -345,6 +345,57 @@ try{
   assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),fixture.saved,
     'Metadata-light and recovery browsing must not mutate saved training');
   await context.close();
+ }
+
+
+ // M357: a later saved exercise edit changes the executable boundary dose,
+ // while the original generated diagnostic remains only historical metadata.
+ {
+  let n=0;
+  const made=generateNextCycleForShell({
+   templateId:'custom',config:{...cfg,name:'M357 saved dose',goal:'hypertrophy'},
+   blocks:[{phase:'hypertrophy_accumulation',weeks:5},{phase:'strength_accumulation',weeks:5}],
+   legacyExercises:EXERCISES,seed:30453,makeId:()=>`m357-${++n}`,
+   adaptTrainingSplit:true,adaptBetweenBlocks:true
+  });
+  const first=made.blocks[0],second=structuredClone(made.blocks[1]);
+  const original=second.nextEngine?.cycleTemplate?.splitDecision?.workingWeekVolumeChange;
+  assert.ok(original,'M357 fixture has a historical executable-dose snapshot');
+  const editable=second.days.find(day=>day.exercises.length>1);
+  assert.ok(editable,'M357 fixture contains an editable saved exercise');
+  editable.exercises.pop();
+  const live=describeRegionalWorkingWeekChange(first,second,EXERCISES);
+  assert.ok(live && live.currentWeeklySets<original.currentWeeklySets,
+    'M357 future-block edit changes live dose independently of the original diagnosis');
+  const fresh={...store,saved:[first,second],cycles:[made.cycle],pinnedId:first.id};
+  const ctx=await browser.createBrowserContext(),page=await ctx.newPage();
+  page.on('pageerror',error=>errors.push(error.message));await page.setBypassServiceWorker(true);
+  await page.setViewport({width:393,height:852,isMobile:true,hasTouch:true});
+  await page.evaluateOnNewDocument(seed=>localStorage.setItem('wpb:v1',JSON.stringify(seed)),fresh);
+  await page.goto('http://127.0.0.1:8790/index.html',{waitUntil:'networkidle0'});
+  await page.waitForSelector('.wpb-home');
+  await page.click('.wpb-tabbar [aria-label="Plan"]');
+  await page.waitForSelector('.wpb-plan-block-nav');
+  await page.$$eval('.wpb-plan-block-nav button',ns=>ns[1].click());
+  await page.waitForSelector('.wpb-plan-session-link');
+  await page.click('.wpb-plan-session-link');
+  await page.waitForSelector('.wpb-cycle-preview-analysis');
+  await page.click('.wpb-cycle-preview-analysis>summary');
+  await page.waitForSelector('.wpb-cycle-dose-detail>summary');
+  await page.click('.wpb-cycle-dose-detail>summary');
+  const shown=await page.$eval('.wpb-cycle-dose-detail',root=>({
+   heading:root.querySelector('summary')?.innerText,
+   caption:root.querySelector('.wpb-cycle-dose-caption')?.innerText,
+   rows:[...root.querySelectorAll('.wpb-cycle-dose-row')].map(x=>x.innerText)
+  }));
+  assert.ok(shown.caption?.includes(`${live.previousWeeklySets} → ${live.currentWeeklySets}`),
+    'Cycle Preview must show the actual edited saved transition: '+JSON.stringify({shown,live}));
+  assert.ok(shown.caption?.startsWith('Saved prescriptions:'),
+    'A displayed boundary change declares saved-executable provenance');
+  assert.ok(shown.rows.length>0,'Live regional dose breakdown remains available');
+  assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),fresh.saved,
+    'Reading an edited cycle transition must never change saved workouts');
+  await ctx.close();
  }
 
  // M298: exercise the actual app confirmation, worker, persisted transition and repeat.

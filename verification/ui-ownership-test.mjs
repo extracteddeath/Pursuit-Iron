@@ -5,10 +5,12 @@ import fs from 'node:fs';
 // Decrease alongside a verified cleanup; never raise to permit a cosmetic override.
 const css = fs.readFileSync('app.css', 'utf8');
 const app = fs.readFileSync('modules/App.js', 'utf8');
+const programReview = fs.readFileSync('modules/program-review-surfaces.js', 'utf8');
+const presentationSource = app + '\n' + programReview;
 const MAX_IMPORTANT = 2360; // M291: consolidate the remaining Profile style owners
 const MAX_APP_IMPORTANT = 1229; // M292: retire ten superseded Progress priority declarations.
 const MAX_REPEAT_IMPORTANT = 15; // M288: at-rule comments no longer erase media/container scope.
-const MAX_INLINE_STYLE_OBJECTS = 2772; // M362: measured baseline after retiring the unused cycle renderer
+const MAX_INLINE_STYLE_OBJECTS = 2753; // M363: remove 19 save-review inline objects; count extracted source too
 const allowedDebtKeys = new Set([
   "\t#root[data-pi-motion=\"expressive\"] .wpb-wizard.wpb-wizard.wpb-wizard .wpb-wizard-heading-title\tfont-size",
   "\t#root[data-pi-motion=\"expressive\"] .wpb .wpb-tabbar\tbackground-color",
@@ -69,12 +71,23 @@ function guard(cssText, appText) {
         'New competing selector/property owner. Edit existing shared rule instead.');
     return { important, appImportant, inline, duplicates: duplicates.length, legacyOwners: new Set(duplicates).size };
 }
-const report = guard(css, app);
+const report = guard(css, presentationSource);
+for (const name of ['ProgramRevisionReview', 'ProgramLayoutHistory', 'ProgramSaveReview']) {
+    assert.equal((app.match(new RegExp('function ' + name + '\\(', 'g')) || []).length, 0, name + ' must not remain in App');
+    assert.equal((programReview.match(new RegExp('function ' + name + '\\(', 'g')) || []).length, 1, name + ' has one feature owner');
+}
+assert.ok(app.includes("from './program-review-surfaces.js'"), 'App composes the feature-owned Program review');
+assert.ok(!programReview.includes('style: {') && !programReview.includes('style: iconBtn()'), 'No static inline review styles');
+assert.ok(programReview.includes('disabled: !changes.length || !!conflicts.length') &&
+    programReview.includes('checked: scope === value') && programReview.includes('onClick: () => onScope(value)'),
+    'Save scope and conflict guards remain owned by the existing plan transaction');
+for(const role of ['backdrop','panel','heading','title','close','scroll','intro','scope','legend','option','help','count','change','name','summary','alert','undo','footer','confirm','cancel'])
+    assert.ok(css.includes('.wpb-save-review-' + role + '{'), 'Missing Program review CSS owner: ' + role);
 // Exercise the actual ceilings, even as successful cleanup creates headroom below them.
 const cssOverflow = '.bad-extra{color:red!important;}\n'.repeat(MAX_IMPORTANT - report.important + 1);
 const appOverflow = '.bad-embedded{color:red!important;}\n'.repeat(MAX_APP_IMPORTANT - report.appImportant + 1);
-assert.throws(() => guard(css + '\n' + cssOverflow, app), /CSS priority overrides increased/);
-assert.throws(() => guard(css, app + '\n' + appOverflow), /Embedded stylesheet priority overrides increased/);
+assert.throws(() => guard(css + '\n' + cssOverflow, presentationSource), /CSS priority overrides increased/);
+assert.throws(() => guard(css, presentationSource + '\n' + appOverflow), /Embedded stylesheet priority overrides increased/);
 assert.ok(repeatedImportantDeclarations('.duplicate{color:red!important;} .duplicate{color:blue!important;}')
     .includes('\t.duplicate\tcolor'), 'Guard must detect duplicate priority declarations.');
 assert.deepEqual(repeatedImportantDeclarations('.scoped{color:red!important;} /* reflow */ @media(max-width:420px){.scoped{color:blue!important;}}'), [],

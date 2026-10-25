@@ -102,6 +102,7 @@ fun FinishPage(vm: AppViewModel, s: JSONObject, onClose: () -> Unit) {
                 }
                 if (x == null) return@Column
                 val u = x.s("unit", "kg")
+                val ids = (0 until (x.optJSONArray("routineIds")?.length() ?: 0)).map { x.getJSONArray("routineIds").optString(it) }
                 val prs = x.list("prs")
                 if (prs.isNotEmpty()) Column(Modifier.clip(RoundedCornerShape(20.dp)).background(cs.primary).padding(horizontal = 16.dp, vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("${prs.size} new e1RM ${if (prs.size == 1) "PR" else "PRs"}", style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp, fontWeight = FontWeight.SemiBold), color = cs.onPrimary)
@@ -178,7 +179,6 @@ fun FinishPage(vm: AppViewModel, s: JSONObject, onClose: () -> Unit) {
                             if (rows.size > 4) Text("+ ${rows.size - 4} more", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
                         }
                     }
-                    val ids = (0 until (x.optJSONArray("routineIds")?.length() ?: 0)).map { x.getJSONArray("routineIds").optString(it) }
                     if (x.b("quick") && ids.isNotEmpty()) SurfaceCard(radius = 28.dp, gap = 12.dp) {
                         Column {
                             Text("Save as a routine?", style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold))

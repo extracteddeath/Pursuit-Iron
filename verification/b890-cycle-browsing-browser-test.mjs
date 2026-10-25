@@ -84,6 +84,27 @@ try{
   assert.equal(await page.$$eval('.wpb-plan-week-chip',ns=>ns.length),saved[1].config.weeks+(saved[1].config.deload?1:0));
   await page.click('.wpb-plan-session-link');await page.waitForSelector('.wpb-cycle-block-preview');
   assert.match(await page.$eval('.wpb-cycle-block-preview',n=>n.innerText),/sets · .* reps · .* RIR/);
+  const exerciseFirst=await page.$eval('.wpb-cycle-block-preview',root=>{
+    const q=s=>root.querySelector(s),before=(a,b)=>!!(a.compareDocumentPosition(b)&Node.DOCUMENT_POSITION_FOLLOWING);
+    const note=q('.wpb-cycle-preview-note'),week=q('.wpb-cycle-preview-week'),facts=q('.wpb-cycle-preview-facts'),
+      workouts=q('.wpb-cycle-preview-workouts'),day=q('.wpb-cycle-preview-day'),
+      firstExercise=q('.wpb-cycle-preview-exercise'),analysis=q('.wpb-cycle-preview-analysis'),
+      firstSummary=q('.wpb-cycle-preview-day>summary');
+    const bounds=root.getBoundingClientRect(),exercise=firstExercise?.getBoundingClientRect();
+    return {order:!!(note&&week&&facts&&workouts&&day&&firstExercise&&analysis)&&
+      before(note,week)&&before(week,facts)&&before(facts,workouts)&&before(workouts,analysis),
+      firstOpen:day?.open,analysisClosed:!analysis?.open,firstName:firstExercise?.querySelector('.wpb-cycle-preview-name')?.textContent,
+      viewportVisible:!!exercise&&exercise.top<Math.min(bounds.bottom,innerHeight),
+      fullTitle:q('.wpb-session-dialog-heading h2')?.textContent,dayTarget:firstSummary?.getBoundingClientRect().height,
+      overflow:root.scrollWidth>root.clientWidth+1};
+  });
+  assert.ok(exerciseFirst.order&&exerciseFirst.firstOpen&&exerciseFirst.analysisClosed&&exerciseFirst.firstName,
+    'Cycle preview begins with an open, executable day before optional analysis: '+JSON.stringify(exerciseFirst));
+  assert.ok(!exerciseFirst.overflow&&exerciseFirst.dayTarget>=44,'Cycle preview first-day navigation fits and remains reachable');
+  assert.equal(exerciseFirst.fullTitle,saved[1].blockLabel||saved[1].name,'Preview retains the selected block identity');
+  if(width===393)assert.equal(exerciseFirst.viewportVisible,true,'First saved exercise appears within the initial normal-text phone viewport');
+  if([320,393,1280].includes(width))await page.screenshot({path:`verification/m354-exercises-first-${width}-phone.png`});
+
   assert.ok(await page.$eval('.wpb-cycle-preview-facts',(n,days)=>n.textContent.includes(`${days} training days per week`),saved[1].days.length),'preview exposes the actual upcoming weekly structure');
   const expectedPreviewDose=saved[1].nextEngine?.cycleTemplate?.splitDecision?.workingWeekVolumeChange;
   assert.equal(await page.evaluate(()=>document.querySelectorAll('.wpb-cycle-block-preview .wpb-cycle-dose-detail').length),
@@ -101,6 +122,8 @@ try{
     assert.equal(outlook.week,'1');
     assert.deepEqual(outlook.facts,[String(savedWorkingSets(saved[1],1)),first.muscleTargetCoveragePercent+'%']);
     assert.ok(outlook.width<=outlook.clientWidth+1);
+    await page.click('.wpb-cycle-preview-analysis>summary');
+    assert.equal(await page.$eval('.wpb-cycle-preview-analysis',n=>n.open),true,'Expanded analysis reveals original quality evidence');
     await page.click('.wpb-cycle-week-outlook-detail summary');
     assert.ok(await page.$eval('.wpb-cycle-week-outlook-detail',n=>n.open));
     assert.match(await page.$eval('.wpb-cycle-week-outlook-note',n=>n.textContent),/not the percentage of the previous block retained/i);
@@ -110,11 +133,23 @@ try{
     if([320,393,1280].includes(width))await page.screenshot({path:`verification/m322-cycle-outlook-${width}-phone.png`});
   }
   assert.equal(await page.$$eval('.wpb-cycle-block-preview button',ns=>ns.some(n=>/start/i.test(n.textContent))),false);
+  await page.click('.wpb-cycle-preview-analysis>summary');
+  assert.equal(await page.$eval('.wpb-cycle-preview-analysis',n=>n.open),false,'Analysis collapses without changing workouts');
+  await page.focus('.wpb-cycle-preview-analysis>summary');
+  await page.keyboard.press('Enter');
+  assert.equal(await page.$eval('.wpb-cycle-preview-analysis',n=>n.open),true,'Analysis is keyboard-operable');
+  await page.keyboard.press('Enter');
+  assert.equal(await page.$eval('.wpb-cycle-preview-analysis',n=>n.open),false,'Keyboard can close analysis again');
   await page.evaluate(()=>document.documentElement.style.fontSize='32px');
   await page.waitForFunction(()=>parseFloat(getComputedStyle(document.querySelector('.wpb-cycle-preview-name')).fontSize)>=28);
   if([320,393,1280].includes(width))await page.screenshot({path:`verification/m322-cycle-outlook-${width}-enlarged-phone.png`});
   const previewZoom=await page.$eval('.wpb-cycle-block-preview',root=>({overflow:root.scrollWidth>root.clientWidth+1,
-    select:root.querySelector('select').offsetHeight,summary:root.querySelector('summary').offsetHeight}));
+    select:root.querySelector('select').offsetHeight,summary:root.querySelector('.wpb-cycle-preview-day summary').offsetHeight,
+    analysisSummary:root.querySelector('.wpb-cycle-preview-analysis>summary').offsetHeight,
+    firstOpen:root.querySelector('.wpb-cycle-preview-day').open,
+    analysisClosed:!root.querySelector('.wpb-cycle-preview-analysis').open}));
+  assert.ok(previewZoom.firstOpen&&previewZoom.analysisClosed&&previewZoom.analysisSummary>=48,
+    'Large-text preview prioritizes saved exercises and keeps analysis accessible');
   assert.ok(!previewZoom.overflow&&previewZoom.select>=48&&previewZoom.summary>=44,'Readable read-only preview: '+JSON.stringify({width,previewZoom}));
   await page.evaluate(()=>document.documentElement.style.fontSize='');
   await page.select('[aria-label="Preview week"]',String(saved[1].config.weeks));
@@ -253,6 +288,7 @@ try{
   await page.waitForSelector('.wpb-plan-session-link');
   await page.click('.wpb-plan-session-link');
   await page.waitForSelector('.wpb-cycle-week-outlook');
+  await page.click('.wpb-cycle-preview-analysis>summary');
   const shown=await page.$eval('.wpb-cycle-week-outlook',n=>({
     sets:Number(n.querySelector('.wpb-cycle-week-outlook-stats dd')?.textContent),
     copy:n.innerText}));

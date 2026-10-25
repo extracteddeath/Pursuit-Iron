@@ -8280,6 +8280,15 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb-cycle-week-outlook-note,#root .wpb-cycle-week-outlook-deload{font-size:.75rem;line-height:1.5;color:var(--wpb-theme-muted);margin:0;overflow-wrap:anywhere}
 #root .wpb-cycle-week-outlook-deload{margin:var(--pi-space-3) 0}
 
+/* M354: exercise prescriptions lead; generation analysis remains one accessible, optional disclosure. */
+#root .wpb-cycle-preview-workouts{min-width:0;margin-bottom:var(--pi-space-3);}
+#root .wpb-cycle-preview-workouts-title{margin:0 0 var(--pi-space-2);font-size:var(--pi-type-support);font-weight:750;line-height:1.4;color:var(--wpb-theme-text);overflow-wrap:anywhere;}
+#root .wpb-cycle-preview-analysis{min-width:0;margin:var(--pi-space-3) 0;border-top:1px solid var(--pi-color-divider);border-bottom:1px solid var(--pi-color-divider);}
+#root .wpb-cycle-preview-analysis-summary{cursor:pointer;min-height:48px;padding:var(--pi-space-3) 0;font-size:var(--pi-type-support);font-weight:700;line-height:1.5;overflow-wrap:anywhere;}
+#root .wpb-cycle-preview-analysis-summary:focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px;}
+#root .wpb-cycle-preview-analysis-body{min-width:0;padding-bottom:var(--pi-space-3);}
+#root .wpb-cycle-preview-frequency{display:flex;flex-direction:column;gap:var(--pi-space-1);font-size:.8125rem;line-height:1.5;color:var(--wpb-theme-muted);overflow-wrap:anywhere;}
+#root .wpb-cycle-preview-frequency>strong{color:var(--wpb-theme-text);}
 #root .wpb-cycle-preview-week{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px;}
 #root .wpb-cycle-preview-select{min-width:0;max-width:100%;min-height:48px;background:var(--wpb-theme-card);color:var(--wpb-theme-text);border:1px solid var(--wpb-theme-border);border-radius:8px;padding:8px;font-size:.875rem;}
 #root .wpb-cycle-preview-day{margin-bottom:10px;border:1px solid var(--wpb-theme-border);border-radius:10px;padding:10px;min-width:0;}

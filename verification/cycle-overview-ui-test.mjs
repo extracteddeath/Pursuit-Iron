@@ -23,10 +23,19 @@ assert.ok(detail.includes('doseChange = next?.nextEngine?.cycleTemplate?.splitDe
 assert.ok(detail.includes('_jsx(CycleDoseTransition, { change: doseChange })'),'Up next contains one disclosed muscle-volume explanation');
 const preview=app.slice(app.indexOf('function CycleBlockPreview('),app.indexOf('function CycleDetail('));
 assert.ok(preview.includes('CycleDoseTransition'),'future block previews share the same explanation');
-assert.ok(preview.includes('isFuturePreview')&&preview.includes('saved outlook')&&preview.includes('Saved block'),'A future block is distinct from saved activated prescriptions');
-assert.ok(preview.indexOf('className: "wpb-cycle-preview-week"') < preview.indexOf('_jsx(CycleWeekOutlook'),'Week selection precedes the week outlook');
-assert.ok(preview.indexOf('_jsx(CycleWeekOutlook') < preview.indexOf('program.days.map('),'Saved week outlook precedes its executable exercise rows');
-assert.ok(preview.indexOf('program.days.map(') < preview.indexOf('program.nextEngine?.cycleTemplate?.splitDecision?.mode'),'Real exercises precede optional engine rationale');
+assert.ok(preview.includes('isFuturePreview')&&preview.includes('Read-only outlook')&&preview.includes('may adapt')&&
+    preview.includes('Saved block')&&preview.includes('Read-only prescriptions'),
+    'Future outlook remains explicitly provisional and is never mislabeled as the activated saved block');
+assert.ok(preview.indexOf('className: "wpb-cycle-preview-week"') < preview.indexOf('className: "wpb-cycle-preview-workouts"'),
+    'Selected week and compact block facts precede the executable sessions');
+assert.ok(preview.indexOf('program.days.map(') < preview.indexOf('_jsx(CycleWeekOutlook'),
+    'Saved workout prescriptions take priority over generation-time quality estimates');
+assert.ok(preview.indexOf('program.days.map(') < preview.indexOf('splitDecision.reason'),
+    'Real exercises precede the rendered optional split rationale');
+assert.ok(preview.includes('hasAnalysis && _jsxs("details"')&&preview.includes('wpb-cycle-preview-analysis-summary'),
+    'Secondary quality and dose evidence are owned by an optional native disclosure');
+assert.ok(preview.includes('open: initialDayId ? day.id === initialDayId : index === 0'),
+    'Selected or first workout stays open at preview entry');
 assert.ok(preview.includes('computeCell(program, day, id, slot, week)'),'Browsing reads the existing saved executable prescription owner');
 const css=fs.readFileSync('app.css','utf8');
 assert.ok(css.includes('#root .wpb-cycle-dose-row')&&css.includes('grid-template-columns:minmax(0,.85fr) minmax(0,1.7fr)'),

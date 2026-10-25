@@ -19971,29 +19971,46 @@ function CycleBlockPreview({ program, initialWeek = 1, initialDayId = null, onCl
     const total = weeksOf(program) + (program.config?.deload ? 1 : 0);
     const [week, setWeek] = useState(Math.max(1, Math.min(total, initialWeek)));
     const isFuturePreview = program.nextEngine?.cycleTemplate?.preview === true;
+    const splitDecision = program.nextEngine?.cycleTemplate?.splitDecision;
+    const liftTargets = Object.entries(program.nextEngine?.request?.goal?.liftFrequency || {});
+    const hasAnalysis = !!(splitDecision?.realizedQuality?.weeks?.length ||
+        splitDecision?.workingWeekVolumeChange || splitDecision?.mode === 'goal_optimized' || liftTargets.length);
     return _jsx(SessionChoiceDialog, { title: program.blockLabel || program.name, onClose, className: "wpb-cycle-block-preview", children: _jsxs("div", { children: [
-        _jsx("p", { className: "wpb-cycle-preview-note", children: isFuturePreview ? "Upcoming block · This is a saved outlook, not the activated training block. Split, exercises and targets may adapt when this block begins." : "Saved block · These are saved prescriptions. Browsing this week does not activate or change your training block." }),
+        _jsx("p", { className: "wpb-cycle-preview-note", children: isFuturePreview
+            ? "Upcoming block · Read-only outlook. Exercises, split and targets may adapt when this block begins."
+            : "Saved block · Read-only prescriptions. Viewing this week does not activate or change the block." }),
         _jsxs("label", { className: "wpb-cycle-preview-week", children: ["Week", _jsx("select", { "aria-label": "Preview week", value: week, onChange: e => setWeek(Number(e.target.value)), className: "wpb-cycle-preview-select", children: Array.from({ length: total }, (_, i) => _jsx("option", { value: i + 1, children: i >= weeksOf(program) ? "Deload" : `Week ${i + 1}` }, i)) })] }),
-        _jsx(CycleWeekOutlook, { program, week, provisional: isFuturePreview }),
         _jsxs("div", { className: "wpb-cycle-preview-facts", "aria-label": "Block training structure", children: [
             _jsx("strong", { children: SPLITS[program.config?.split]?.name || String(program.config?.split || "Training split").replaceAll('_', ' ') }),
-            _jsx("span", { children: `${program.days.length} training days per week` }),
-            Object.entries(program.nextEngine?.request?.goal?.liftFrequency || {}).map(([lift, frequency]) =>
-                _jsx("span", { children: `${lift.replaceAll('_', ' ').replace(/^./, c => c.toUpperCase())} target · ${frequency} days per week` }, lift))
+            _jsx("span", { children: `${program.days.length} training days per week` })
         ] }),
-        program.days.map((day, index) => _jsxs("details", { open: initialDayId ? day.id === initialDayId : index === 0, className: "wpb-cycle-preview-day", children: [
-            _jsx("summary", { className: "wpb-cycle-preview-summary", children: day.label }),
-            day.exercises.map((_, slot) => { const id = exerciseAt(program, day, slot, week), ex = EX_BY_ID[id], cell = computeCell(program, day, id, slot, week);
-                return _jsxs("div", { className: "wpb-cycle-preview-exercise", children: [
-                    _jsx("div", { className: "wpb-cycle-preview-name", children: ex?.name || id }),
-                    _jsx("div", { className: "wpb-cycle-preview-target", children: cell.missing ? cell.note : `${cell.sets} sets · ${cell.reps} reps · ${cell.rir} RIR` })] }, slot);
-            })] }, day.id)),
-        program.nextEngine?.cycleTemplate?.splitDecision?.mode === 'goal_optimized' && _jsxs("details", { className: "wpb-cycle-preview-day", children: [
-            _jsx("summary", { className: "wpb-cycle-preview-summary", children: `Why ${SPLITS[program.config?.split]?.name || String(program.config?.split || 'this split').replaceAll('_',' ')}?` }),
-            _jsx("p", { className: "wpb-cycle-preview-note", children: program.nextEngine.cycleTemplate.splitDecision.reason })
+        _jsxs("section", { className: "wpb-cycle-preview-workouts", "aria-label": `Week ${week} workout prescriptions`, children: [
+            _jsx("h3", { className: "wpb-cycle-preview-workouts-title", children: week > weeksOf(program) ? "Recovery week workouts" : `Week ${week} workouts` }),
+            program.days.map((day, index) => _jsxs("details", { open: initialDayId ? day.id === initialDayId : index === 0, className: "wpb-cycle-preview-day", children: [
+                _jsx("summary", { className: "wpb-cycle-preview-summary", children: day.label }),
+                day.exercises.map((_, slot) => { const id = exerciseAt(program, day, slot, week), ex = EX_BY_ID[id], cell = computeCell(program, day, id, slot, week);
+                    return _jsxs("div", { className: "wpb-cycle-preview-exercise", children: [
+                        _jsx("div", { className: "wpb-cycle-preview-name", children: ex?.name || id }),
+                        _jsx("div", { className: "wpb-cycle-preview-target", children: cell.missing ? cell.note : `${cell.sets} sets · ${cell.reps} reps · ${cell.rir} RIR` })] }, slot);
+                })] }, day.id))
         ] }),
-        _jsx(CycleDoseTransition, { change: program.nextEngine?.cycleTemplate?.splitDecision?.workingWeekVolumeChange }),
-        onViewPlan && _jsx(UiAction, { onClick: onViewPlan, className: "wpb-cycle-wide-action", children: "View in Plan" })] }) });
+        hasAnalysis && _jsxs("details", { className: "wpb-cycle-preview-analysis", children: [
+            _jsx("summary", { className: "wpb-cycle-preview-analysis-summary", children: "Training analysis & volume" }),
+            _jsxs("div", { className: "wpb-cycle-preview-analysis-body", children: [
+                _jsx(CycleWeekOutlook, { program, week, provisional: isFuturePreview }),
+                liftTargets.length > 0 && _jsxs("div", { className: "wpb-cycle-preview-frequency", children: [
+                    _jsx("strong", { children: "Original lift-frequency targets" }),
+                    liftTargets.map(([lift, frequency]) => _jsx("span", { children: `${lift.replaceAll('_', ' ').replace(/^./, c => c.toUpperCase())} · ${frequency} days per week` }, lift))
+                ] }),
+                splitDecision?.mode === 'goal_optimized' && _jsxs("details", { className: "wpb-cycle-preview-day", children: [
+                    _jsx("summary", { className: "wpb-cycle-preview-summary", children: `Why ${SPLITS[program.config?.split]?.name || String(program.config?.split || 'this split').replaceAll('_',' ')}?` }),
+                    _jsx("p", { className: "wpb-cycle-preview-note", children: splitDecision.reason })
+                ] }),
+                _jsx(CycleDoseTransition, { change: splitDecision?.workingWeekVolumeChange })
+            ] })
+        ] }),
+        onViewPlan && _jsx(UiAction, { onClick: onViewPlan, className: "wpb-cycle-wide-action", children: "View in Plan" })
+    ] }) });
 }
 function CycleDetail({ cycle, saved = [], history = [], cycleInfo = null, onBack, onOpenBlock, onAdvance, onDelete, onSetIcon, onNextWorkout, onUpgradeAdaptive }) {
     const [iconSheet, setIconSheet] = useState(false), [options, setOptions] = useState(false);

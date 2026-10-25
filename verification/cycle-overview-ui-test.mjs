@@ -30,8 +30,8 @@ assert.ok(preview.indexOf('className: "wpb-cycle-preview-week"') < preview.index
     'Selected week and compact block facts precede the executable sessions');
 assert.ok(preview.indexOf('program.days.map(') < preview.indexOf('_jsx(CycleWeekOutlook'),
     'Saved workout prescriptions take priority over generation-time quality estimates');
-assert.ok(preview.indexOf('program.days.map(') < preview.indexOf("splitDecision?.mode === 'goal_optimized'"),
-    'Real exercises precede optional split rationale');
+assert.ok(preview.indexOf('program.days.map(') < preview.indexOf('splitDecision.reason'),
+    'Real exercises precede the rendered optional split rationale');
 assert.ok(preview.includes('hasAnalysis && _jsxs("details"')&&preview.includes('wpb-cycle-preview-analysis-summary'),
     'Secondary quality and dose evidence are owned by an optional native disclosure');
 assert.ok(preview.includes('open: initialDayId ? day.id === initialDayId : index === 0'),

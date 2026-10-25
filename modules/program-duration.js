@@ -3,6 +3,14 @@ const positiveWeeks = value => {
     return Number.isInteger(n) && n > 0 ? n : null;
 };
 
+// New authoring uses the existing custom-program boundary. Reading a saved
+// duration remains separate so a metadata edit cannot truncate an older plan.
+export const MAX_EDITABLE_PROGRAM_WEEKS = 52;
+export function editableProgramWeeks(value) {
+    const n = Number(value);
+    return /^\d+$/.test(String(value)) && Number.isSafeInteger(n) && n >= 1 && n <= MAX_EDITABLE_PROGRAM_WEEKS ? n : null;
+}
+
 // The saved program owns its working-week length. Cycle/template metadata is a display fallback.
 export function programWorkingWeeks(program, fallback = 6) {
     return positiveWeeks(program?.config?.weeks) ?? positiveWeeks(program?.weeks) ?? fallback;

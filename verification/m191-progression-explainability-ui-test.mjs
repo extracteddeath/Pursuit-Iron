@@ -2,7 +2,9 @@ import { productionSource } from './production-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
-const app = productionSource();
+const coordinator = productionSource();
+const reference = fs.readFileSync('modules/program-reference-surfaces.js', 'utf8');
+const app = coordinator + '\n' + reference;
 
 assert.ok(!app.includes('Auto applies double-progression / load ramps across the block.'), 'stale one-size-fits-all Auto copy must be removed');
 assert.ok(app.includes('Auto · choose per exercise'), 'program creation should explain that Auto selects per exercise');
@@ -15,13 +17,13 @@ assert.ok(app.includes('Why these methods?'), 'progression view should make the 
 assert.match(app, /data-progression-reason/, 'per-exercise progression explanations should have a stable UI hook');
 assert.ok(app.includes('One unusual workout is not enough to switch it.'), 'adaptive method changes should explain anti-thrashing behavior');
 assert.ok(app.includes('_jsx(ProgressionCard, { program: program, open: showProg'), 'Plan Info should include the progression card');
-assert.ok(app.includes('how progression was chosen'), 'Plan Info description should identify progression as part of the reference');
+assert.ok(reference.includes('how progression was chosen'), 'Plan Info description should identify progression as part of the reference');
 
 // The UI may contain unrelated legacy metadata elsewhere in this very large compiled bundle. The M191
 // contract is stricter and more useful: the new progression explanation surface itself must consume the
 // engine-owned decision record without importing policy functions or leaking their implementation terms.
 const progressionStart = app.indexOf('const selectedProgressions = Array.isArray(program?.nextEngine?.progressionPlan)');
-const progressionEnd = app.indexOf('const rows = useMemo(() => {', progressionStart);
+const progressionEnd = app.indexOf('const rows = useMemo(', progressionStart);
 assert.ok(progressionStart >= 0 && progressionEnd > progressionStart, 'progression explanation section should be present and bounded');
 const progressionUi = app.slice(progressionStart, progressionEnd);
 assert.ok(!/selectProgressionStyle|reselectProgressionStyle/.test(app), 'App UI must not duplicate or rerun engine progression policy');

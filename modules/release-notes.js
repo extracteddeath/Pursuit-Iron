@@ -2,6 +2,11 @@
 import { Accessibility, Activity, AlertTriangle, Award, Ban, BarChart3, Brain, Calendar, Check, CheckCircle2, Clock, Dumbbell, Flame, GripVertical, HardDrive, HelpCircle, Home as HomeIcon, Info, Layers, Library, Maximize2, Medal, Milestone, Minus, Palette, Play, Plus, PlusCircle, RefreshCw, Repeat, Save, Search, Settings2, Share2, Shield, Smartphone, Sparkles, Target, Timer, Trash2, TrendingUp, Trophy, Undo2, Wand2, Zap } from 'lucide-react';
 
 export const CHANGELOG = [
+    { version: "4.0.0", build: "918", items: [
+        "Lift progression shows the correct weeks, alternating exercises and deload. Plan volume follows the week you select and separates working sets from muscle credits.",
+        "Custom program settings explain conflicting exercise constraints before saving. Block lengths keep what you type and show clear limits.",
+        "Plan info is easier to read on small screens and with larger text, with a Close action that stays in view."
+    ] },
     { version: "4.0.0", build: "917", items: [
         "Program settings keep Save and Cancel in view, with larger choices and text that adapts to your display size.",
         "Open and Switch on Home respond reliably after scrolling. Keyboard navigation and selection states are clearer in program settings."

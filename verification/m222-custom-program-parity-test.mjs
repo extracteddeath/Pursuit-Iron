@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { sessionSuggestion, prescribeSets, computeCell, resolveStyle, EX_BY_ID, applyCustomProgramSettings, parseStoredData, STORE_VERSION } from '../modules/engine-api.js';
+import { sessionSuggestion, prescribeSets, computeCell, resolveStyle, EX_BY_ID, applyCustomProgramSettings, parseStoredData, STORE_VERSION, customProgramSettingsIssues, editableProgramWeeks } from '../modules/engine-api.js';
 
 import { evaluateWorkoutProgression } from '../modules/next-engine/performance.js';
 import { refreshPendingSetTargets } from '../modules/next-engine/workout-runtime.js';
@@ -64,4 +64,42 @@ assert.equal(computeCell(edited,day,ex.id,0,8).tech,'Last set: myo-reps');assert
 const drop=structuredClone(edited);drop.overrides['push:0'].techOverride='Last set: drop set';assert.equal(rowsFor(drop).rows.filter(s=>s.sub&&s.kind==='drop').length,2);
 const restored=parseStoredData(JSON.stringify({v:STORE_VERSION,saved:[edited],history,custom:[],cycles:[],perf:{}}));
 assert.equal(restored.saved[0].id,edited.id);assert.equal(restored.saved[0].overrides['push:0'].techOverride,'Last set: myo-reps');
+// Launch settings must reject a newly requested firm constraint that the authored
+// roster cannot satisfy. Keeping the exact authored program is preferable to a
+// silently ignored setting or an unreviewed exercise replacement.
+export const constraints={id:'custom-constraints',custom:true,weeks:4,
+    config:{weeks:4,goal:'both',progression:'manual'},
+    days:[{id:'upper',label:'Upper',primaryIndex:1,exercises:['pushup','bb-bench','ohp']}],overrides:{}};
+const constraintsBefore=structuredClone(constraints);
+assert.throws(()=>applyCustomProgramSettings(constraints,{...constraints.config,noBodyweight:true}),/bodyweight/i,
+    'Skip bodyweight cannot save successfully while Push-Up remains prescribed');
+assert.throws(()=>applyCustomProgramSettings(constraints,{...constraints.config,barbellCap:1}),/barbell/i,
+    'A one-barbell limit cannot be recorded while two barbell lifts remain');
+assert.throws(()=>applyCustomProgramSettings(constraints,{...constraints.config,weeks:53}),/weeks/i,
+    'The editor must refuse unsupported durations rather than silently saving 52 weeks');
+assert.deepEqual(constraints,constraintsBefore,'Refused settings never mutate an authored plan');
+for(const invalid of ['',0,-1,2.5,53,Infinity,Number.MAX_SAFE_INTEGER,'3e1',true]) {
+    assert.equal(editableProgramWeeks(invalid),null);
+    assert.throws(()=>applyCustomProgramSettings(constraints,{...constraints.config,weeks:invalid}),/weeks/i);
+}
+for(const duration of [1,2,10,52]) assert.equal(editableProgramWeeks(duration),duration);
+assert.throws(()=>applyCustomProgramSettings({...constraints,weeks:1,config:{weeks:1}},{weeks:true}),/weeks/i);
+assert.throws(()=>applyCustomProgramSettings({...constraints,weeks:30,config:{weeks:30}},{weeks:'3e1'}),/weeks/i);
+const alternating=structuredClone(constraints);
+alternating.days[0].exercises=['bb-bench','inc-curl'];alternating.pairs={'upper:1':'ohp'};
+const alternateIssues=customProgramSettingsIssues(alternating,{...alternating.config,barbellCap:1});
+assert.ok(alternateIssues.some(issue=>issue.code==='barbell_cap'&&issue.week===2),'Even-week barbell choices must count toward the requested limit');
+const lateBodyweight=structuredClone(alternating);lateBodyweight.pairs['upper:1']='pullup';
+assert.ok(customProgramSettingsIssues(lateBodyweight,{...lateBodyweight.config,noBodyweight:true}).some(issue=>issue.code==='bodyweight'),'Equipment-assisted/weighted bodyweight choices share the generator classification');
+const oneWeek={...alternating,weeks:1,config:{...alternating.config,weeks:1}};
+assert.equal(customProgramSettingsIssues(oneWeek,{...oneWeek.config,barbellCap:1}).length,0,'An unexecuted alternate does not invent a constraint violation');
+const longSaved={...constraints,weeks:72,folder:'Keep',description:'Existing notes',config:{...constraints.config,weeks:72}};
+const metadataEdit=applyCustomProgramSettings(longSaved,{folder:' New folder '});
+assert.equal(metadataEdit.weeks,72,'Editing metadata cannot silently truncate a previously saved longer program');
+assert.equal(metadataEdit.description,longSaved.description);assert.equal(metadataEdit.days,longSaved.days);
+const compatible={...constraints,days:[{...constraints.days[0],exercises:['bb-bench','inc-curl']}]};
+const constrained=applyCustomProgramSettings(compatible,{...compatible.config,noBodyweight:true,barbellCap:1,noSupersets:true});
+assert.equal(constrained.days,compatible.days);assert.equal(constrained.overrides,compatible.overrides);
+assert.equal(constrained.config.noSupersets,true);
+
 console.log('PASS M222: Cable Fly row targets; DDP positional loads/reps; reduced-load floor; effort/incomplete/mixed-load gates; per-day custom history ownership; canonical-engine parity; immutable resume repair; authored roster/settings and late-week Myo/Drop techniques.');

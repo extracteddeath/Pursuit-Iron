@@ -97,14 +97,18 @@ try{
  await page.focus(field);await page.keyboard.press('ArrowDown');assert.equal(await readWeeks(),'9');
  await page.keyboard.press('ArrowUp');assert.equal(await readWeeks(),'10');
  assert.equal(await page.$eval(save,n=>n.disabled),true,'returning to the saved length leaves no change');
- for(const value of ['', '0', '-1', '3.5', 'abc', '9007199254740992']){
+ for(const value of ['', '0', '-1', '3.5', 'abc', '53', '1000000', '9007199254740992']){
   await replaceWeeks(value);assert.equal(await readWeeks(),value,'invalid or incomplete text stays editable');
   assert.equal(await page.$eval(save,n=>n.disabled),true,'incomplete and invalid lengths cannot be saved');
   assert.equal(await page.$eval(field,n=>n.getAttribute('aria-invalid')),'true');
   assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('m215-programs'))[0].config.weeks),10,'typing never changes the saved program');
  }
- for(const weeks of [1,2,7,9,12,3]){
+ for(const weeks of [52,1,2,7,9,12,3]){
   await replaceWeeks(String(weeks));assert.equal(await readWeeks(),String(weeks));
+  if(weeks===52){
+   assert.equal(await page.$eval('button[aria-label="Increase block length"]',n=>n.disabled),true);
+   await page.focus(field);await page.keyboard.press('ArrowUp');assert.equal(await readWeeks(),'52','keyboard stepping respects the same authoring boundary');
+  }
   if(weeks===1){
    assert.equal(await page.$eval('button[aria-label="Decrease block length"]',n=>n.disabled),true);
    await page.keyboard.press('ArrowDown');assert.equal(await readWeeks(),'1','decrement cannot produce a zero-week program');

@@ -107,6 +107,21 @@ for(const [row,seed] of [[2,30442],[3,30453]]){
  }
  const measured=describeRegionalWorkingWeekChange(before,after,EXERCISES);
  assert.deepEqual(measured,transition,'Canonical diagnostic can independently reconstruct the saved block transition');
+ // M357: a saved exercise edit after generation must change the comparison
+ // displayed by Cycle Detail and Preview without mutating the original report.
+ const edited=structuredClone(after);
+ const editable=edited.days.find(day=>day.exercises.length>1);
+ assert.ok(editable,'Transition fixture needs an editable saved exercise slot');
+ editable.exercises.pop();
+ const live=describeRegionalWorkingWeekChange(before,edited,EXERCISES);
+ assert.ok(live,'An edited saved phase still has a valid executable transition');
+ assert.ok(live.currentWeeklySets<transition.currentWeeklySets,
+   'The current saved block must not report a stale generation-time set total');
+ assert.equal(live.previousWeeklySets,transition.previousWeeklySets,
+   'An untouched preceding block retains its true final-week volume');
+ assert.deepEqual(after.nextEngine.cycleTemplate.splitDecision.workingWeekVolumeChange,transition,
+   'Browsing and comparing must never rewrite the historical generation snapshot');
+
  if(row===3){
    const core=transition.regions.find(r=>r.region==='core');
    assert.ok(core&&core.percentChange<0,

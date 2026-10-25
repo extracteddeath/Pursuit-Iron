@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';import http from 'node:http';import path from 'node:path';import puppeteer from 'puppeteer-core';
 import { EXERCISES, mergeStandaloneIntoGeneratedCycle, exerciseAt, computeCell } from '../modules/App.js';
-import { generateNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
+import { generateNextCycleForShell, describeRegionalWorkingWeekChange } from '../modules/next-engine/cycle-runtime-adapter.js';
 import { currentProgram } from './m215-cycle-duration-fixture.mjs';
 import { config as lifecycleConfig, completedHistory, ids } from './m265-generation-fixture.mjs';
 const root=path.resolve(new URL('../',import.meta.url).pathname);
@@ -106,9 +106,20 @@ try{
   if([320,393,1280].includes(width))await page.screenshot({path:`verification/m354-exercises-first-${width}-phone.png`});
 
   assert.ok(await page.$eval('.wpb-cycle-preview-facts',(n,days)=>n.textContent.includes(`${days} training days per week`),saved[1].days.length),'preview exposes the actual upcoming weekly structure');
-  const expectedPreviewDose=saved[1].nextEngine?.cycleTemplate?.splitDecision?.workingWeekVolumeChange;
-  assert.equal(await page.evaluate(()=>document.querySelectorAll('.wpb-cycle-block-preview .wpb-cycle-dose-detail').length),
-    expectedPreviewDose?1:0,'preview shows saved volume detail only when available');
+  const originalPreviewDose=saved[1].nextEngine?.cycleTemplate?.splitDecision?.workingWeekVolumeChange ?? null;
+  const livePreviewDose=originalPreviewDose
+    ? describeRegionalWorkingWeekChange(saved[0],saved[1],EXERCISES) : null;
+  const displayedPreviewDose=livePreviewDose || originalPreviewDose;
+  const doseCaptions=await page.$$eval('.wpb-cycle-block-preview .wpb-cycle-dose-detail',nodes=>
+    nodes.map(n=>n.querySelector('.wpb-cycle-dose-caption')?.textContent||''));
+  assert.equal(doseCaptions.length,displayedPreviewDose?1:0,
+    'Preview shows live saved dose where measurable or explicitly attributed historical fallback');
+  if(displayedPreviewDose){
+    assert.ok(doseCaptions[0].includes(livePreviewDose?'Saved prescriptions':'Original generation snapshot'),
+      'Preview labels live versus historical dose instead of implying stale counts are current');
+    assert.ok(doseCaptions[0].includes(`${displayedPreviewDose.previousWeeklySets} → ${displayedPreviewDose.currentWeeklySets}`),
+      'Preview displays exactly the selected dose source without silently recomputing it');
+  }
   const savedQuality=saved[1].nextEngine?.cycleTemplate?.splitDecision?.realizedQuality;
   if(savedQuality?.weeks?.length){
     const first=savedQuality.weeks[0];
@@ -218,7 +229,10 @@ try{
   assert.ok(rows[2].text.includes('Peak'));assert.equal(await page.$$eval('.wpb-cycle-actions button',ns=>ns.length),1);
   assert.doesNotMatch(await page.$eval('.wpb-cycle-detail',n=>n.innerText),/kept exactly|Available after/);
   assert.equal(await page.$eval('.wpb-cycle-detail',n=>n.scrollWidth<=n.clientWidth+1),true);
-  const expectedDose=saved[1].nextEngine?.cycleTemplate?.splitDecision?.workingWeekVolumeChange;
+  const originalDetailDose=saved[1].nextEngine?.cycleTemplate?.splitDecision?.workingWeekVolumeChange ?? null;
+  const liveDetailDose=originalDetailDose
+    ? describeRegionalWorkingWeekChange(saved[0],saved[1],EXERCISES) : null;
+  const expectedDose=liveDetailDose || originalDetailDose;
   const disclosures=await page.$$eval('.wpb-cycle-detail details',ns=>ns.map(n=>({dose:n.classList.contains('wpb-cycle-dose-detail'),open:n.open})));
   assert.ok(disclosures.every(n=>n.dose&&!n.open),'existing top-level cycle facts stay expanded; dose is opt-in');
   if(expectedDose){
@@ -231,6 +245,8 @@ try{
     assert.ok(visible.open&&visible.regions===expectedDose.regions.length&&!visible.overflow,
       'live regional breakdown is accessible and fits narrow screens');
     assert.ok(visible.text.includes(String(expectedDose.previousWeeklySets))&&visible.text.includes(String(expectedDose.currentWeeklySets)));
+    assert.ok(visible.text.includes(liveDetailDose ? 'Saved prescriptions' : 'Original generation snapshot'),
+      'Cycle Detail must identify live dose or explicitly disclose its historical fallback');
     await page.click('.wpb-cycle-detail .wpb-cycle-dose-summary');
   } else assert.equal(disclosures.length,0,'Older saved cycles do not invent missing regional data');
   await page.waitForSelector('[aria-label="Next block changes"]');await page.waitForSelector('[aria-label="Cycle schedule"]');
@@ -345,6 +361,61 @@ try{
   assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),fixture.saved,
     'Metadata-light and recovery browsing must not mutate saved training');
   await context.close();
+ }
+
+
+ // M357: a later saved exercise edit changes the executable boundary dose,
+ // while the original generated diagnostic remains only historical metadata.
+ {
+  let n=0;
+  const made=generateNextCycleForShell({
+   templateId:'custom',config:{...cfg,name:'M357 saved dose',goal:'hypertrophy'},
+   blocks:[{phase:'hypertrophy_accumulation',weeks:5},{phase:'strength_accumulation',weeks:5}],
+   legacyExercises:EXERCISES,seed:30453,makeId:()=>`m357-${++n}`,
+   adaptTrainingSplit:true,adaptBetweenBlocks:true
+  });
+  const first=made.blocks[0],second=structuredClone(made.blocks[1]);
+  const original=second.nextEngine?.cycleTemplate?.splitDecision?.workingWeekVolumeChange;
+  assert.ok(original,'M357 fixture has a historical executable-dose snapshot');
+  const editable=second.days.find(day=>day.exercises.length>1);
+  assert.ok(editable,'M357 fixture contains an editable saved exercise');
+  editable.exercises.pop();
+  const live=describeRegionalWorkingWeekChange(first,second,EXERCISES);
+  assert.ok(live && live.currentWeeklySets<original.currentWeeklySets,
+    'M357 future-block edit changes live dose independently of the original diagnosis');
+  // This case verifies an authored saved boundary; do not regenerate its intentionally
+  // edited future block during navigation (adaptive refresh has its own test owner).
+  const stableCycle={...made.cycle,adaptExercises:false};
+  const fresh={...store,saved:[first,second],cycles:[stableCycle],pinnedId:first.id};
+  const ctx=await browser.createBrowserContext(),page=await ctx.newPage();
+  page.on('pageerror',error=>errors.push(error.message));await page.setBypassServiceWorker(true);
+  await page.setViewport({width:393,height:852,isMobile:true,hasTouch:true});
+  await page.evaluateOnNewDocument(seed=>localStorage.setItem('wpb:v1',JSON.stringify(seed)),fresh);
+  await page.goto('http://127.0.0.1:8790/index.html',{waitUntil:'networkidle0'});
+  await page.waitForSelector('.wpb-home');
+  await page.click('.wpb-tabbar [aria-label="Plan"]');
+  await page.waitForSelector('.wpb-plan-block-nav');
+  await page.$$eval('.wpb-plan-block-nav button',ns=>ns[1].click());
+  await page.waitForSelector('.wpb-plan-preview-notice');
+  await page.waitForSelector('.wpb-plan-session-link');
+  await page.click('.wpb-plan-session-link');
+  await page.waitForSelector('.wpb-cycle-preview-analysis');
+  await page.click('.wpb-cycle-preview-analysis>summary');
+  await page.waitForSelector('.wpb-cycle-dose-detail>summary');
+  await page.click('.wpb-cycle-dose-detail>summary');
+  const shown=await page.$eval('.wpb-cycle-dose-detail',root=>({
+   heading:root.querySelector('summary')?.innerText,
+   caption:root.querySelector('.wpb-cycle-dose-caption')?.innerText,
+   rows:[...root.querySelectorAll('.wpb-cycle-dose-row')].map(x=>x.innerText)
+  }));
+  assert.ok(shown.caption?.includes(`${live.previousWeeklySets} → ${live.currentWeeklySets}`),
+    'Cycle Preview must show the actual edited saved transition: '+JSON.stringify({shown,live}));
+  assert.ok(shown.caption?.startsWith('Saved prescriptions:'),
+    'A displayed boundary change declares saved-executable provenance');
+  assert.ok(shown.rows.length>0,'Live regional dose breakdown remains available');
+  assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),fresh.saved,
+    'Reading an edited cycle transition must never change saved workouts');
+  await ctx.close();
  }
 
  // M298: exercise the actual app confirmation, worker, persisted transition and repeat.

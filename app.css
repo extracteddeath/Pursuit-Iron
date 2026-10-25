@@ -8568,6 +8568,26 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-program-settings-length-step:focus-visible,#root .wpb .wpb-program-settings-length-input:focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
 @media(forced-colors:active){#root .wpb .wpb-program-settings-length-control[data-invalid="true"]{border-color:Mark}#root .wpb .wpb-program-settings-length-input{border:1px solid CanvasText}}
 
+
+/* M367: Program Settings dialog and form own geometry and interaction semantics. */
+#root .wpb .wpb-program-settings-backdrop{position:fixed;inset:0;z-index:60;display:flex;align-items:flex-end;background:rgba(0,0,0,.6);animation:fadeIn .2s both}
+#root .wpb .wpb-program-settings-panel{box-sizing:border-box;width:100%;max-height:88dvh;overflow-y:auto;overscroll-behavior:contain;padding:10px 18px 0;border-top:1px solid var(--wpb-theme-border);border-radius:24px 24px 0 0;background:var(--wpb-theme-bg-tint);color:var(--wpb-theme-text);animation:sheetUp .28s cubic-bezier(.2,.7,.3,1) both}
+#root .wpb .wpb-program-settings-heading{display:flex;align-items:center;justify-content:space-between;gap:var(--pi-space-2);margin-bottom:4px}
+#root .wpb .wpb-program-settings-title{margin:0;font-size:1.125rem;line-height:1.4;font-weight:700}
+#root .wpb .wpb-program-settings-close{display:grid;place-items:center;min-width:44px;min-height:44px;color:var(--wpb-theme-text)}
+#root .wpb .wpb-program-settings-intro{margin:0 0 16px;color:var(--wpb-theme-muted);font-size:.8125rem;line-height:1.45}
+#root .wpb .wpb-program-settings-field-label{display:block;margin-bottom:8px;font-size:.6875rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--wpb-theme-muted)}
+#root .wpb .wpb-program-settings-field{box-sizing:border-box;width:100%;min-width:0;margin-bottom:16px;padding:11px 13px;border:1px solid var(--wpb-theme-border);border-radius:12px;background:var(--wpb-theme-card);color:var(--wpb-theme-text);font:inherit;font-size:.9375rem}
+#root .wpb .wpb-program-settings-description{line-height:1.5;resize:vertical}
+#root .wpb .wpb-program-settings-footer{position:sticky;bottom:0;z-index:2;display:flex;gap:8px;margin:20px -18px 0;padding:8px 18px calc(env(safe-area-inset-bottom) + 16px);border-top:1px solid var(--wpb-theme-border-soft);background:var(--wpb-theme-bg-tint)}
+#root .wpb .wpb-program-settings-cancel,#root .wpb .wpb-program-settings-save{min-height:48px;padding:14px;border-radius:12px;font-size:.9375rem;cursor:pointer}
+#root .wpb .wpb-program-settings-cancel{flex:1;border:1px solid var(--wpb-theme-border);background:var(--wpb-theme-card);color:var(--wpb-theme-muted);font-weight:600}
+#root .wpb .wpb-program-settings-save{flex:2;display:flex;align-items:center;justify-content:center;gap:8px;border:0;background:var(--wpb-theme-accent);color:var(--wpb-theme-on-accent);font-weight:700}
+#root .wpb .wpb-program-settings-save:disabled{background:var(--wpb-theme-card);color:var(--wpb-theme-faint);cursor:default;opacity:.7}
+#root .wpb .wpb-program-settings-backdrop :is(button,input,textarea):focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){#root .wpb .wpb-program-settings-backdrop,#root .wpb .wpb-program-settings-panel{animation:none}}
+@media(forced-colors:active){#root .wpb .wpb-program-settings-panel,#root .wpb .wpb-program-settings-field,#root .wpb .wpb-program-settings-cancel,#root .wpb .wpb-program-settings-save{border-color:ButtonText;background:Canvas;color:CanvasText}#root .wpb .wpb-program-settings-save:not(:disabled){background:Highlight;color:HighlightText}#root .wpb .wpb-program-settings-backdrop :is(button,input,textarea):focus-visible{outline-color:Highlight}}
+
 /* B912 — Prototype-informed Profile hierarchy; presentation only.
    Root header ownership moved to UiRootHeader in M271. */
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-hero{

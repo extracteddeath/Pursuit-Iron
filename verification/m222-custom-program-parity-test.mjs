@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { sessionSuggestion, prescribeSets, computeCell, resolveStyle, EX_BY_ID, applyCustomProgramSettings, parseStoredData, STORE_VERSION } from '../modules/App.js';
+import { sessionSuggestion, prescribeSets, computeCell, resolveStyle, EX_BY_ID, applyCustomProgramSettings, parseStoredData, STORE_VERSION } from '../modules/engine-api.js';
+
 import { evaluateWorkoutProgression } from '../modules/next-engine/performance.js';
 import { refreshPendingSetTargets } from '../modules/next-engine/workout-runtime.js';
 export const program = {id:'m222-custom',custom:true,weeks:10,config:{unit:'lb',weeks:10,goal:'both',experience:'intermediate',progression:'auto',deload:false,equipment:['cable','machine','barbell','bench','rack']},

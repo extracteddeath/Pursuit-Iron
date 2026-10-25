@@ -5,7 +5,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs'; import http from 'node:http'; import path from 'node:path'; import puppeteer from 'puppeteer-core';
 import { generateNextProgramForShell, markUserPrescriptionOverride } from '../modules/next-engine/app-shell-adapter.js';
-import { EXERCISES, EX_BY_ID, computeCell } from '../modules/App.js';
+import { EXERCISES, EX_BY_ID, computeCell } from '../modules/engine-api.js';
+
 const root = path.resolve(new URL('../', import.meta.url).pathname);
 const EQ=['barbell','rack','bench','dumbbell','cable','machine','smith','pullup','dip','legpress','hacksquat','legext','legcurl','calfmachine'];
 const program = generateNextProgramForShell({config:{name:'Demo',unit:'lb',goal:'hypertrophy',experience:'intermediate',split:'upper_lower',days:4,session:'s60',weeks:6,progression:'auto',deload:true,equipment:EQ,focus:{},reduce:[],barbellCap:3,noBodyweight:false,noSupersets:false},legacyExercises:EXERCISES,seed:3,makeId:()=> 'demo'}).program;

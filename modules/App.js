@@ -1,14 +1,60 @@
 import { withSessionPlanChoice } from './session-plan.js';
-import { planShorterSession, SESSION_LENGTH_OPTIONS, splitSupportsTrainingDays, repeatCycleOptions } from './engine-api.js';
+import {
+    addedMinutes, advanceLegacyFirstCycleBlock, ageFrom, ALL_EQUIP_IDS, ALL_PLATES, applyCustomProgramSettings,
+    applyLiveAutoregulation, assertExerciseData, auditProgramWeek, auditSets, autoStyleDetail, availableFor,
+    backupRecordImpact, BAR_LABEL, barFor, BARS, barWeightFor, baseSetsFor, betterTopSet, birthFromAge,
+    blockChangeSummary, blockPlanFor, blockRetro, blockReview, buildLifterModel, buildUserAddedSlotPrescriptions,
+    buildWeekPlan, BW_LOG_CAP, calibratedAnchorPerf, canUndoProgramSave, capHistory, clamp, clearSetup,
+    clearUserPrescriptionOverride, cloneNextDayPrescriptions, coachFacts, completionRate, COMPOSITE_HEADS,
+    compositeMrv, computeCell, computeLevel, computeMilestones, convertHistoryLoad, coverageGaps, coverageRelief,
+    cuesFor, CUSTOM_CYCLE_PHASES, customFutureCycleSpecs, cycleConfigForStandaloneProgram, cycleProgress,
+    dayMuscleBreakdown, dayMuscleVolume, decodeGallery, deloadAdvice, deriveArmCoverage,
+    deriveFunctionalCoverage, describeRegionalWorkingWeekChange, detectWorkoutCsv, displayDayName,
+    distributeVolBias, e1rm, effectiveRest, effortLabel, encodeProgramCode, engHas, ENGINE_V, ENGINE_VERSION,
+    engineInfo, ENGINES, EQUIP_CATS, EQUIPMENT, estimateMinutes, EX_BY_ID, EX_FAMILY, EX_METRIC_BY_ID,
+    EX_METRICS, EX_WINDOWS, exerciseAt, exerciseProfile, EXERCISES, exerciseSeries, exerciseTrends, exMatches,
+    EXP, expandEquipment, explainPrescription, exRecords, feedbackDelta, filterWorkoutHistory, fmtSets,
+    FOCUS_CAVEAT, formatSetup, galleryIssueBody, gallerySubmission, generateNextCycleForShell,
+    generateNextProgramForShell, GENERATION_ROUTE, getNextShellCell, goalForDay, groupPctSets,
+    groupSessionsByCycle, groupSessionsByMonth, growMyoSets, GYM_LIMIT_KEYS, GYM_PRESETS, gymById,
+    historyDayIndex, historyForProgram, homeProgramGroups, INVENTORY_KEYS, isAssistedEx, isBarLike,
+    isMachineLike, isRuntimeProgram, isStretchFocus, isWorkSet, landmarkFor, lastDayPerf, lastSetEffort,
+    lengthUnitFor, liftBests, linearInc, liveCoachForContext, liveEffortFeedback, loadableAtOrBelow,
+    loadingInventoryInUnit, loadStep, loggedSubVolume, loggedVolume, loggedWorkoutPerformance, makeMyoMini,
+    markUserPrescriptionOverride, mavFor, mergedSetCount, mergeSessionData, mergeStandaloneIntoGeneratedCycle,
+    mergeStores, movePattern, MRV_GRAIN, muscleRecovery, MYO_MINI_SETS, newGymId,
+    EXERCISE_MAP as NEXT_EXERCISE_MAP, nextCycleTemplatesForShell, nextDueDayId, nextEngineStyleFor,
+    nextExerciseIdForShellExercise, nextSessionCursor, NextShellAdapterError, nextTMEvidence,
+    nextWorkoutSuggestionForShell, nextWorkoutSuggestionFromPerformedShell, normalizeBwLog, normalizeCycleLinks,
+    normalizeEditedHistoryEntry, normalizeGyms, normalizeHistoryDayIds, normalizeMeasureLog, nudgeWorkoutLoad,
+    paceFactor, parseRIRNum, parseStoredData, PART_LABEL, PART_ORDER, PCT_SCHEMES, percentagePlanFor,
+    perfAfterDelete, perfAfterHistoryReplace, personalMav, PHASE_ROT, phaseFor, phaseKind, pickActiveProgram,
+    pickTopSet, plannedWeek, planOverviewMemo, planShorterSession, plateauOf, plateauOfLift, PLATES,
+    platesPerSide, preferenceFloor, prescribedRIRof, prescribeSets, previousWorkoutSet, PROG_STYLES,
+    programChangeLabels, programSavePlan, projectNextTM, PV_PAD_TOP, RACK_PRESETS, rankSwapAlts,
+    recommendedSplit, recommendNextSplitForShell, reconcilePendingRepTargets, REFERENCES,
+    refreshPendingSetTargets, refusalFixes, RELEASE_DIAG_CAP, RELEASE_DIAG_FIELDS, RELEASE_DIAG_KEY,
+    removeNextSlotPrescription, repairShellVolume, repeatCycleOptions, repRange, repsLow, resolveStyle, rirTrend,
+    rmAt, rollbackLiveAutoregulation, roundTo, sameProgramContent, sanitizeRepsInput, sanitizeWeightInput,
+    SCORE_PATTERN_LABEL, scoreAttribution, scoreLevelIdx, scoreTargetFor, scoreTo100, secondaryOf,
+    SELF_TEST_FRAME_BUDGET_MS, SELF_TEST_HISTORY_LIMIT, SELF_TEST_SUPPORTED_ENGINES, SESSION_BOUNDS,
+    SESSION_LENGTH_OPTIONS, sessionE1RM, sessionExercisePlan, SESSIONS, sessionSnapshotStatus, sessionSuggestion,
+    SET_ROW_BLEED, setAvailPlates, setExLoadInc, setGymBarWeights, setGymLimits, setLoadInc, setRestScaleGlobal,
+    setsOf, setupFieldsFor, setupFieldsWithStored, simulateAndAudit, splitBuildability, splitContractGaps,
+    SPLITS, splitSupportsTrainingDays, starvedRegions, STD_LEVELS, STORE_VERSION, strengthClubSnapshot,
+    strengthLevel, strengthScore, strengthScoreHistory, strengthSnapshot, styleFor, styleOverride, SUB_LANDMARKS,
+    SUBMUSCLE_LABEL, subRegionOf, summarizeSession, summarizeSets, swapNextSlotPrescriptions, swapOverlapNames,
+    syncSubSets, techExplain, techSetTag, TEMPLATE_CATS, templateConfig, templateIntent, TEMPLATES, tempoFor,
+    todayISO, TOTAL_WEEKS, toUnit, trainingMaxForUnit, uid, underRecoveredWeekly, userOwnsRuntimeSet, VIEW_DEPTH,
+    volumeAudit, volumeVerdicts, warmupRoutine, warmupSets, weekIntent, weeklyBodyweightTrend, weeklyRecap,
+    weeklySubVolume, weeklyVolume, weekMuscleBreakdown, weeksOf, withTrainingMax, workoutCsvToStore,
+    workoutPlanCoachFact,
+} from './engine-api.js';
 import { readCycleSetupDraft, writeCycleSetupDraft, clearCycleSetupDraft, CYCLE_SETUP_DRAFT_KEY } from './cycle-setup-drafts.js';
-import { INJURY_AREAS, INJURY_IMPACTS, injuryParts, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
-import { withProgressionChoices, workoutProgressionOrigin, withWorkoutProgramReview, repeatedNote, refreshProgressionSets, exerciseSessionTags, workoutProgramChanges, withWorkoutProgramChanges, buildSessionReview, workoutRowMatchesPrescription, beginWorkoutProgramSwap, undoWorkoutProgramSwap } from './session-tools.js';
-import { liftBests, displayDayName, loadingInventoryInUnit, summarizeSession } from './engine-api.js';
+import { INJURY_AREAS, INJURY_IMPACTS, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
+import { withProgressionChoices, workoutProgressionOrigin, withWorkoutProgramReview, repeatedNote, refreshProgressionSets, exerciseSessionTags, workoutProgramChanges, buildSessionReview, workoutRowMatchesPrescription, beginWorkoutProgramSwap, undoWorkoutProgramSwap } from './session-tools.js';
 import { reviewProgramChanges, programReviewKey, withProgramRevision } from './program-review.js';
-import { ALL_EQUIP_IDS, ALL_PLATES, ASSIST_IDS, ASSUMED_RIR, AVAIL_PLATES, AXIAL_ADJACENT_COST, BARS, BAR_EQUIP, BAR_LABEL, BASE_SET_COST, BIG_THREE, BIRTH_RE, BW_LOG_CAP, CODE_ALPHA, CODE_ASSIST, CODE_CARRIED_KEYS, CODE_EQUIP, CODE_EXERCISES, CODE_EXP, CODE_GOALS, CODE_IGNORED_KEYS, CODE_PROG, CODE_SCHEMES, CODE_SESSION, CODE_SPLITS, COMPOSITE_HEADS, COVERED_MUSCLES, DELT_HEAD, E1RM_HOLD, E1RM_REP_CAP, EFFORT_MAX_BIAS, EFFORT_MIN_PAIRS, EFFORT_REP_CAP, ENGINES, ENGINE_RULES, ENGINE_V, EPLEY_SLOPE, EQUIPMENT, EQUIP_CATS, EQUIP_IMPLIES, EXERCISES, EXP, EXP_BAND, EX_ABBREV, EX_BY_ID, EX_FAMILY, EX_LOAD_INC, EX_METRICS, EX_METRIC_BY_ID, EX_SPECIFIC, EX_WINDOWS, FOCUS_CAVEAT, GAP_FRACTION, GENERATION_ROUTE, GYM_LIMITS, GYM_LIMIT_KEYS, GYM_PRESETS, GZ_T1_STAGES, GZ_T2_STAGES, HISTORY_BYTES, HISTORY_BYTE_CHECK_FROM, HISTORY_CAP, IDEAL_SLOTS, INTENT_FROM_CAT, INVENTORY_KEYS, LANDMARKS, LEGACY_EQUIP_IMPLIES, LEGACY_EX_TYPICAL_KEYS, LEVEL_TITLES, LOAD_INC, LOWER_PARTS, MACHINE_EQUIP, MACHINE_SETUP, MILESTONE_XP, MIN_DAY_SESSIONS, MOBILITY, MRV_GRAIN, MUSCLE_SYNONYM, MYO_MAX_SETS, MYO_MINI_REPS, MYO_MINI_SETS, MYO_MIN_REPS, MYO_PARTS, MYO_TARGET_REPS, NOVICE_INELIGIBLE_SPLITS, PART_LABEL, PART_ORDER, PATTERNS, PATTERN_BY_ID, PATTERN_GROUPS, PATTERN_MIN_SETS, PHASES, PHASE_ROT, PLANNED_ROOM_RIR, PLATES, PROG_POLICIES, PROG_STYLES, PV_PAD_TOP, RACK_PRESETS, RAW, REDUCE_FRACTION, REFERENCES, REGION_MOVEMENT, REGION_REQUIRED, RELEASE_DIAG_CAP, RELEASE_DIAG_FIELDS, RELEASE_DIAG_KEY, REST_SCALE, SCORE_BANDS, SCORE_EQUIV, SCORE_PATTERN, SCORE_PATTERN_LABEL, SECONDARY, SELF_TEST_FRAME_BUDGET_MS, SELF_TEST_HISTORY_LIMIT, SELF_TEST_SUPPORTED_ENGINES, SESSIONS, SESSION_BOUNDS, SESSION_EX_TYPICAL, SETUP_FIELD_ORDER, SETUP_LABELS, SET_ROW_BLEED, SEX_FACTOR, SPLITS, STALL_ENGAGE, STALL_WINDOW, STANDARDS, STD_LEVELS, STORE_MIGRATIONS, STORE_VERSION, STRENGTH_CLUB_LIFTS, STRENGTH_CLUB_TIERS_LB, STRETCH_FOCUS_E2, STRETCH_FOCUS_E3, STRETCH_PARTIAL_PARTS, SUBMUSCLE_LABEL, SUB_LANDMARKS, TECHNICAL_LIFTS, TEMPLATES, TEMPLATE_CATS, TOTAL_WEEKS, UNIFORM_LANDMARK, VIEW_DEPTH, WARMUP_PYRAMIDS, WARMUP_SET_SEC, WEIGHTED_SWAP, __doseMemo, __recovFitMemo, __recoveryMemo, __slopeMemo, __volKey, __weeklyVolMemo, _dstCache, _lmCache, _planOverviewMemo, addedMinutes, addedSeconds, advanceLegacyFirstCycleBlock, ageFactor, ageFrom, anchorPerfFor, applyCustomProgramSettings, asLengthUnit, assertExerciseData, auditProgramWeek, auditSets, autoStyleDetail, autoStyleFor, availableFor, axialCost, backupRecordImpact, barFor, barWeightFor, baseSetsFor, betterTopSet, birthFromAge, birthParts, bitsToCode, blockChangeSummary, blockPhase, blockPlanFor, blockRetro, blockReview, budgetIncludesTransitions, buildLifterModel, buildWeekPlan, calibrateDayPerf, calibratedAnchorPerf, canUndoProgramSave, capHistory, capWeeklyVolume, cellRepRange, clamp, classifyPlateau, clearSetup, coachFacts, codeToBits, completionRate, compositeMrv, computeCell, computeLevel, computeMilestones, constantLoadDecay, coverageGaps, coverageRelief, cuesFor, customAuthoredSetCount, customExerciseHistory, customExerciseReferenceHistory, customLastSetTechnique, customProgramSuggestion, cycleConfigForStandaloneProgram, cycleProgress, dayMuscleBreakdown, dayMuscleLoad, dayMuscleVolume, dayOverlap, dayPerfFor, dayScopedTrends, daySeconds, daysInWeek, decodeGallery, decodeProgramCode, deloadAdvice, describeRegionalWorkingWeekChange, distributeVolBias, e1rm, e1rmRIR, effectiveRest, effortBounds, effortCalibration, effortLabel, effortValueLabel, encodeProgramCode, endlessStalled, engHas, engLacks, engineInfo, engineWeekOneStyles, estimateMinutes, estimateMinutesFor, exMatches, exRecords, exWindow, exerciseAt, exerciseProfile, exerciseSeries, exerciseSlotSec, exerciseTrends, expandEquipment, expandLegacyEquipment, explainPrescription, feedbackDelta, filterWorkoutHistory, fmtSets, formatSetup, galleryIssueBody, gallerySubmission, getBits, goalForDay, groupPctSets, groupSessionsByCycle, groupSessionsByMonth, growMyoSets, gymById, gymCapFor, gymRackFor, gzPlanFor, gzTierOf, gzWorkWeight, historyDayIndex, historyForProgram, historyVolumeIn, homeProgramGroups, isAssistedEx, isAxialLoad, isBarLike, isMachineLike, isRuntimeProgram, isStretchFocus, isWorkSet, landmarkFor, landmarkForLegacy, landmarkOf, lastDayPerf, lastSetEffort, lastSetTech, lastTopSet, legacyCustomSetCount, lengthUnitFor, lifterModelKey, linearInc, linearStalled, liveCoachForContext, loadStep, loadableAbove, loadableAtOrBelow, nudgeWorkoutLoad, logWindow, loggedExercisePerformance, loggedSubVolume, loggedVolume, loggedWorkoutPerformance, lowerBodyLift, makeMyoMini, mavFor, mergeSessionData, mergeStandaloneIntoGeneratedCycle, mergeStores, mergedSetCount, migrateStore, movePattern, muscleRecovery, muscleRecoveryUncached, newGymId, nextDueDayId, nextEngineStyleFor, nextScheduledIndex, nextSessionCursor, nextTMEvidence, normalizeBwLog, normalizeCycleLinks, normalizeEditedHistoryEntry, normalizeGyms, normalizeHistoryDayIds, normalizeMeasureLog, overreachSignal, paceFactor, parseRIRNum, parseStoredData, patternCues, patternTrainable, pctSetsFor, perWeekOf, percentagePlanFor, perfAfterDelete, perfAfterHistoryReplace, personalMav, personalRecoveryHours, personalRepSlope, phaseFor, phaseKind, pickActiveProgram, pickTopSet, planOverview, planOverviewMemo, plannedWeek, plateauOf, plateauOfLift, plateauSessions, plateauSplitByDay, platesPerSide, poolOf, preferenceFloor, prescribeSets, prescribedRIRof, prescribedRIRofAny, programChangeLabels, programFingerprint, programSavePlan, progressionHistoryForProgram, projectNextTM, propagateCycleEditsPure, putBits, rankSwapAlts, readinessBand, recommendedSplit, regionGapFix, regionGapsFor, repRange, representativeCustomLoad, repsLow, resolveStyle, restSec, rirTrend, rmAt, rotationOf, roundTo, ruleEngine, sameProgramContent, sanitizeInventory, sanitizeLimits, sanitizeRepsInput, sanitizeWeightInput, scoreAttribution, scoreCompose, scoreContin, scoreEquivalent, scoreEquivalentInverse, scoreLevelIdx, scoreLevelLabel, scoreMatur, scorePatternFor, scoreTargetFor, scoreTo100, secondaryOf, sessionE1RM, sessionExercisePlan, sessionSnapshotStatus, sessionSuggestion, setAvailPlates, setGymBarWeights, setExLoadInc, setGymLimits, setLoadInc, setRestScaleGlobal, setsOf, setupFieldsFor, setupFieldsWithStored, setupLabel, simulateAndAudit, squatHamCredit, stallCountFor, starvedRegions, strengthClubSnapshot, strengthLevel, strengthScore, strengthScoreHistory, strengthSnapshot, stretchTable, styleFor, styleOverride, subRegionOf, summarizeHistoryLoggedSets, summarizeSets, swapOverlapNames, syncSubSets, techExplain, techSetTag, templateConfig, templateIntent, tempoFor, tierOf, toLength, toUnit, todayISO, trainingMaxForUnit, uid, underRecoveredWeekly, uniformLandmarkFor, userOwnsRuntimeSet, volumeAudit, volumeLedger, volumeResponse, volumeVerdicts, warmupCount, warmupPlan, warmupRoutine, warmupSets, weekIntent, weekKeyOf, weekMuscleBreakdown, weeklyBodyweightTrend, weeklyRecap, weeklySubVolume, weeklyVolume, weeksOf, withTrainingMax, workoutPlanCoachFact , detectWorkoutCsv, workoutCsvToStore } from './engine-api.js';
-import { PCT_SCHEMES, percentageProtocolFor, adaptPercentageSetBudget, deriveTieredLinearState } from './engine-api.js';
-import { historyNumber, convertHistoryLoad, observedHistoryRIR, completedHistorySets, previousWorkoutSet, historyExposureContext, progressionExposureContext, normalizeHistoryEntries, validHistoryDate, historyLoadReason } from './engine-api.js';
-const __APP_VERSION__='4.0.0'; const __BUILD__='908';
+const __APP_VERSION__='4.0.0'; const __BUILD__='909';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { createPortal } from "../vendor/react-dom.js";
@@ -16,18 +62,18 @@ import { holdWorkoutScreenAwake, restoreWorkoutClock, workoutElapsedMs } from ".
 import { activeSetContext, adjustInjuredExercises, dockRepSuggestion, removePendingWorkingSet, resizeWorkingSets, workoutTechniqueRest, workoutPlateau, lighterPendingWorkout } from "./workout-context.js";
 import { programLastPerformances } from "./program-last-performance.js";
 import { exitMotion, moveSheet, motionValue, resumeMotion, settleSheet, spring, stopMotion } from "./ui-motion.js";
-import { splitContractGaps, splitBuildability, refusalFixes, generateNextProgramForShell, recommendNextSplitForShell, getNextShellCell, canonicalShellSetCount, cloneNextDayPrescriptions, swapNextSlotPrescriptions, removeNextSlotPrescription, nextExerciseIdForShellExercise, resolveNextShellExerciseId, remapNextShellRoster, snapshotNextShellPrescription, markUserPrescriptionOverride, clearUserPrescriptionOverride, NextShellAdapterError } from './engine-api.js';
-import { nextWorkoutSuggestionForShell, nextWorkoutSuggestionFromPerformedShell } from './engine-api.js';
-import { generateNextCycleForShell, nextCycleTemplatesForShell, CUSTOM_CYCLE_PHASES, customFutureCycleSpecs } from './engine-api.js';
-import { buildRuntimeSetTargets, customProgramProgressionStyle, refreshPendingSetTargets, reconcilePendingRepTargets, techniqueProtocolFromCell, freestyleCellForRepRange, buildUserAddedSlotPrescriptions } from './engine-api.js';
-import { evaluateWorkoutProgression } from './engine-api.js';
-import { applyLiveAutoregulation, rollbackLiveAutoregulation, liveEffortFeedback } from './engine-api.js';
-import { deriveArmCoverage } from './engine-api.js';
-import { deriveFunctionalCoverage } from './engine-api.js';
-import { EXERCISE_MAP as NEXT_EXERCISE_MAP } from './engine-api.js';
-import { avoidableExerciseOverlap } from './engine-api.js';
-import { ENGINE_VERSION, ENGINE_COMPATIBLE_VERSIONS } from './engine-api.js';
-import { captureShellVolumeSnapshot, auditShellVolume, repairShellVolume, shellVolumeTargets, shellDayMuscleBreakdown } from './engine-api.js';
+
+
+
+
+
+
+
+
+
+
+
+
 import { createGenerationClient, diagnosticGenerationClient, generationAbortError } from './generation-runtime.js';
 import { programWorkingWeeks, cycleBlockMetadata } from "./program-duration.js";
 
@@ -744,9 +790,6 @@ function StyleTag({ theme } = {}) {
       .wpb-step-button{position:relative;min-width:0!important;min-height:0!important;}
       .wpb-step-button::after{content:"";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:44px;height:44px;}
       /* Cycle timelines use the same segmented visual on the list and detail screen. */
-      .wpb-cycle-timeline{display:flex;gap:4px;align-items:stretch;width:100%;}
-      .wpb-cycle-segment{position:relative;overflow:hidden;min-width:10px;border-radius:999px;height:9px;background:${C.bg2};border:1px solid ${C.borderSoft};}
-      .wpb-cycle-segment-fill{position:absolute;inset:0 auto 0 0;background:${C.accent};border-radius:inherit;transition:width var(--m-base) var(--e-out);}
       @keyframes fadeUp{from{opacity:0;transform:translate3d(0,7px,0);}to{opacity:1;transform:translate3d(0,0,0);}}
       @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
       @keyframes sheetUp{from{transform:translate3d(0,100%,0);}to{transform:translate3d(0,0,0);}}
@@ -3644,29 +3687,29 @@ function navPop(stack) {
 /* M166 — custom/user-authored set schedules must be resolved, not flattened.
    Generated Pursuit Next cells are still canonicalized by getNextShellCell; this helper is only for
    the legacy/custom editor shape where an array can intentionally mean one set count per week. */
-export { customAuthoredSetCount };
+
 /* M167 — compatibility for saved legacy custom programs whose designed volume lives in
    slotBias/autoBias. These maps are DELTAS over the role baseline, not replacement set counts.
    The old allocator's contract caps an auto-tuned exercise at five working sets. */
-export { legacyCustomSetCount };
+
 
 /* Existing custom plans stored their automatic last-set schedule implicitly, just like their
    legacy set-dose deltas. Restore that saved contract without changing new engine prescriptions.
    An explicit override (including null/empty = off) always wins. */
-export { customLastSetTechnique };
+
 
 /* A fixed standalone legacy/custom plan can remain EXACTLY itself as cycle block 1 while the
    current engine owns future blocks. Infer only the generation topology needed for those future
    blocks; this never rewrites the current plan. */
-export { cycleConfigForStandaloneProgram };
 
-export { mergeStandaloneIntoGeneratedCycle };
 
-export { advanceLegacyFirstCycleBlock };
+
+
+
 /* compute a cell {sets,reps,note,range,rir} for a given week.
    Auto mode prescribes each lift's own rep RANGE; the week selector drives
    load & RIR (and a small overreach set in the last hypertrophy week). */
-export { applyCustomProgramSettings };
+
 
 /* Per-set effort for the LAST working set. Pursuit Next owns the prescription. The shell must not
    invent a second intensity model (the old overlay forced most last sets to failure from week 2 and
@@ -15899,7 +15942,7 @@ function MilestonesCard({ history, unit = "kg", bodyweight }) {
    changing the catalog length. Both must invalidate the cache. */
 
 
-export { historyVolumeIn };
+
 
 
 /* An empty state that only describes the emptiness leaves the user to work out the way back on
@@ -17535,9 +17578,6 @@ function WhatsNewCard({ onDismiss, onFullLog }) {
     const latest = Math.min(items.length, (CHANGELOG[0] && CHANGELOG[0].items.length) || items.length);
     return (_jsxs("div", { style: { background: C.card, borderRadius: 16, padding: "16px 16px 14px", marginBottom: 12 }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }, children: [_jsx(Zap, { size: 16, color: C.accentInk }), _jsx("span", { style: { fontSize: 15, fontWeight: 700 }, children: "What's new" }), _jsxs("span", { className: "mono", style: { fontSize: 11, fontWeight: 700, color: C.accentInk, background: C.accentDim, padding: "2px 7px", borderRadius: 8 }, children: ["v", APP_VERSION] }), _jsx("button", { onClick: onDismiss, "aria-label": "Dismiss", className: "pressable hit", style: { marginLeft: "auto", width: 28, height: 28, borderRadius: 8, border: "none", background: C.bg2, color: C.muted, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }, children: _jsx(X, { size: 15 }) })] }), _jsxs("div", { style: { fontSize: 13, color: C.muted, marginBottom: 12 }, children: ["The ", items.length, " most recent changes", CHANGELOG_ITEMS.length > items.length ? ` · ${CHANGELOG_ITEMS.length - items.length} more in the full log` : ""] }), items.map(({ Icon, title, sub }, i) => (_jsxs("div", { "data-wn-item": i < latest ? "full" : "brief", style: { display: "flex", gap: 12, alignItems: i < latest ? "flex-start" : "center", marginBottom: i < items.length - 1 ? (i < latest ? 13 : 9) : 14 }, children: [_jsx("div", { style: { width: i < latest ? 34 : 26, height: i < latest ? 34 : 26, borderRadius: 12, background: C.accentDim, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: _jsx(Icon, { size: i < latest ? 16 : 13, color: C.accentInk }) }), _jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { style: { fontSize: i < latest ? 15 : 13, fontWeight: 700 }, children: title }), i < latest && _jsx("div", { style: { fontSize: 13, color: C.muted, lineHeight: 1.45, marginTop: 1 }, children: capWords(sub) })] })] }, i))), CHANGELOG_ITEMS.length > items.length && (_jsx("button", { onClick: onFullLog, className: "pressable", style: { width: "100%", padding: "9px", marginBottom: 8, borderRadius: 12, border: `1px solid ${C.border}`, background: "none", color: C.accentInk, fontSize: 13, fontWeight: 700, cursor: "pointer" }, children: "Full changelog" })), _jsx("button", { onClick: onDismiss, className: "pressable", style: { width: "100%", padding: "11px", borderRadius: 12, border: "none", background: C.accent, color: C.accentText, fontSize: 15, fontWeight: 700, cursor: "pointer" }, children: "Got it" })] }));
 }
-// Headline shown on Home when a program is queued but not scheduled for today. A small rotating pool
-// so the screen doesn't greet you with the exact same words on every visit — one is picked per mount.
-const READY_PHRASES = ["Ready to train", "Let's lift", "Time to work", "Back at it", "Let's get after it", "Iron's waiting", "Make it count", "Let's move some weight", "Time to build"];
 // Install prompt: two variants depending on what the platform actually supports.
 // - Chromium (Android/desktop): a real captured beforeinstallprompt event -> the button triggers the
 //   browser's native install dialog directly.
@@ -19843,38 +19883,7 @@ function CompareView({ saved = [], onBack, initialA = null, initialB = null, ini
                 return (_jsxs("div", { style: { position: "fixed", inset: 0, background: C.bg, zIndex: 80, display: "flex", flexDirection: "column", animation: "fadeIn .15s both" }, children: [_jsxs("div", { style: { padding: "calc(env(safe-area-inset-top) + 12px) 14px 10px", display: "flex", alignItems: "center", gap: 8, borderBottom: `1px solid ${C.borderSoft}` }, children: [_jsx("button", { "aria-label": "Back", onClick: () => setPicker(null), className: "pressable", style: { background: "none", border: "none", color: C.text, cursor: "pointer", padding: 4, flexShrink: 0 }, children: _jsx(ChevronLeft, { size: 24 }) }), _jsxs("div", { style: { position: "relative", flex: 1 }, children: [_jsx(Search, { size: 15, color: C.faint, style: { position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" } }), _jsx("input", { autoFocus: true, value: q, onChange: e => setQ(e.target.value), placeholder: `Search ${isProg ? "program" : "exercise"} ${which}\u2026`, style: { width: "100%", padding: "10px 32px 10px 33px", borderRadius: 12, border: `1px solid ${accent}66`, background: C.card, color: C.text, fontSize: 15, outline: "none", boxSizing: "border-box" } }), q && _jsx("button", { "aria-label": "Clear search", onClick: () => setQ(""), style: { position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: C.muted, cursor: "pointer", padding: 2 }, children: _jsx(X, { size: 15 }) })] })] }), _jsx("div", { className: "wpb-scroll", style: { flex: 1, overflowY: "auto", padding: "6px 0 28px" }, children: body || _jsxs("div", { style: { textAlign: "center", color: C.muted, marginTop: 40, fontSize: 15 }, children: ["No ", isProg ? "programs" : "exercises", " match \u201C", q, "\u201D."] }) })] }));
             })()] }));
 }
-/* ===================== CYCLE PROGRESS =====================
- * WHY THIS IS A FUNCTION AND NOT A DOZEN CONSTS INSIDE CycleDetail: it used to be exactly that. Total
- * weeks, weeks done, percent, current week, weeks left, each block's week range, its projected calendar
- * window, and its logged session count were all computed as locals halfway down the detail component —
- * so the CYCLES LIST, which is the screen you actually go to in order to answer "where am I", could not
- * show any of it without copying the arithmetic. It showed a name, "Block 2 of 4", and the plan. The
- * list wasn't under-designed so much as structurally unable to say anything. One pure read, two
- * screens, no second copy of the week maths to drift.
- *
- * DONE-WEEKS IS DELIBERATELY CONSERVATIVE: the week you are IN is not a week you have finished, so a
- * lifter three days into week 3 reads "week 3 of 20" with 2 done. Counting it would let a fresh cycle
- * open at 5% before a single session is logged. */
-
-/* The end-of-block review, scoped to ONE block by the sessions actually logged against it.
- * blockRetro() windows by DATE, which is right for "how did the last six weeks go" and wrong here: a
- * cycle's blocks run back to back, so a date window alone pulls in the tail of the previous block and
- * any freestyle session that happened in the same fortnight. Filtering to the block's own programId
- * first makes the verdict about THAT block, and the window comes from the real first and last session
- * rather than the projected calendar — a block you took two weeks off in the middle of is six weeks of
- * plan and eight weeks of life, and the retro should describe the life. */
-function CycleTimeline({ progress, compact = false }) {
-    const blocks = progress?.blocks || [];
-    if (!blocks.length)
-        return null;
-    return (_jsx("div", { "data-cycle-timeline": true, className: "wpb-cycle-timeline", role: "img", "aria-label": `Cycle timeline: ${progress.done ? "complete" : `week ${progress.curWeek} of ${progress.totalWeeks}`}`, children: blocks.map((b, i) => {
-            const activePct = b.state === "done" ? 100 : b.state === "active" && b.total ? Math.round(100 * b.weeksIn / b.total) : 0;
-            return (_jsx("div", { title: `${b.label}: weeks ${b.range[0]}–${b.range[1]}${b.state === "active" ? " · current" : b.state === "done" ? " · complete" : ""}`, className: "wpb-cycle-segment", style: { flexGrow: Math.max(1, b.total || 1), height: compact ? 7 : 10,
-                    borderColor: b.state === "active" ? C.accent : C.borderSoft, opacity: b.state === "upcoming" ? .72 : 1 }, children: _jsx("div", { className: "wpb-cycle-segment-fill", style: { width: `${activePct}%`, opacity: b.state === "active" ? .78 : 1 } }) }, b.id || i));
-        }) }));
-}
-
-
+// Cycle list and detail render the shared saved-block projection.
 function CycleBlockRows({ cycle, progress, saved, cycleInfo, onOpenBlock }) {
     return _jsx("div", { className: "wpb-cycle-block-list", children: progress.blocks.map((b, i) => {
         const current = !cycle.done && i === (cycle.activeBlock || 0), past = cycle.done || i < (cycle.activeBlock || 0);
@@ -23701,27 +23710,14 @@ function App() {
 export default function RootApp() {
     return _jsx(ErrorBoundary, { full: true, children: _jsx(App, {}) });
 }
-export { exerciseSlotSec, WARMUP_SET_SEC, baseSetsFor, loggedVolume, loggedSubVolume, movePattern, availableFor, warmupSets, warmupCount, rankSwapAlts, starvedRegions, programSetupChips, weeklySubVolume, SUB_LANDMARKS, subRegionOf, weeklyVolume, landmarkFor, coverageGaps, expandEquipment, EQUIP_IMPLIES, paceFactor, estimateMinutesFor, sessionExercisePlan, volumeZone, partZone, mavFor, PLANNED_ROOM_RIR, EX_BY_ID, CHANGELOG, CHANGELOG_ITEMS, WHATS_NEW_MAX, groupSessionsByMonth, groupSessionsByCycle, planOverview, phaseTone, PCT_SCHEMES, MACHINE_SETUP, SETUP_LABELS, plateauSessions, pickTopSet, setupFieldsFor, setupFieldsWithStored, navPush, navPop, propagateCycleEditsPure, ALL_EQUIP_IDS, EQUIPMENT, ageFactor, strengthLevel, strengthSnapshot, STANDARDS, STD_LEVELS, ageFrom, birthParts, birthFromAge, todayISO, normalizeBwLog, normalizeMeasureLog, weeklyBodyweightTrend, lengthUnitFor, asLengthUnit, BW_LOG_CAP, STORE_MIGRATIONS, prescribedRIRof, isBarLike, isMachineLike, barFor, BARS, shareSession, shareStrengthScore, setGymLimits, gymCapFor, normalizeGyms, templateFacets, templateEmphasis, ExerciseFigure, figurePose, EXERCISES, assertFigureCoverage, FIGURE_GENERIC_OK, Exit, mergeStores, sessionSnapshotStatus, mergeSessionData, mergedSetCount, encodeProgramCode, decodeProgramCode, decodeGallery, gallerySubmission, galleryIssueBody, programFingerprint, personalRepSlope, coachFacts, volumeResponse, volumeVerdicts, STRETCH_FOCUS_E2, STRETCH_FOCUS_E3, lastSetTech, techSetTag, techExplain, capHistory, HISTORY_CAP, HISTORY_BYTES, rirTrend, coverageRelief, volumeLedger, landmarkOf, completionRate, recommendedSplit, NOVICE_INELIGIBLE_SPLITS, parseRIRNum, sameProgramContent, regionGapsFor, regionGapFix, REGION_REQUIRED, previewVolumeNudge, exerciseSeries, rmAt, EX_METRICS, EX_WINDOWS, exRecords, cycleProgress, blockReview, lastTopSet, betterTopSet, e1rmRIR, EPLEY_SLOPE, E1RM_REP_CAP, ASSUMED_RIR, isWorkSet, dayMuscleBreakdown, weekMuscleBreakdown, plannedWeek, dayMuscleVolume, capWords, WHATS_NEW_WORDS, homeCardPlan, HOME_INSIGHT_BUDGET, WhatsNewCard, PATTERNS, parseStoredData, recordReleaseDiag, readReleaseDiagnostics };
-export { ENGINE_V, ENGINES, ENGINE_RULES, engHas, engLacks, engineInfo, STORE_VERSION, migrateStore, GOALS, SESSIONS, EXP, THEMES, preferenceFloor, daySeconds, templateConfig, TEMPLATES, SPLITS, templateIntent, TEMPLATE_CATS, TEMPLATE_FILTER_GROUPS, axialCost, MRV_GRAIN, weekIntent, historyForProgram, IDEAL_SLOTS, dayMuscleLoad, dayOverlap, distributeVolBias, capWeeklyVolume, buildWeekPlan, COVERED_MUSCLES, compositeMrv, PATTERN_GROUPS, PATTERN_MIN_SETS, patternTrainable, weeksOf, phaseFor, estimateMinutes, addedMinutes, addedSeconds, fitChip, daysInWeek, exerciseAt, rotationOf, blockRetro, volumeAudit, LANDMARKS, secondaryOf, PART_ORDER, FOCUS_CAVEAT, computeCell, pctSetsFor, gzPlanFor, projectNextTM, nextTMEvidence, lastSetEffort, styleFor, autoStyleFor, plateauOf, plateauOfLift, plateauSplitByDay, dayScopedTrends, fitText, fitFont, wrapList, drawRecapCard, exerciseTrends, summarizeSets, muscleRecovery, volumeAdvice, weeklyRecap, deloadAdvice, overreachSignal, constantLoadDecay, sessionE1RM, computeMilestones, ICON_CHOICES, ICON_GROUPS, ICON_COLORS, iconForProgram, iconForCycle, iconColorOf, nextSessionCursor, nextDueDayId, historyDayIndex, autoStyleDetail, explainPrescription, perfAfterDelete, perfAfterHistoryReplace, normalizeEditedHistoryEntry, lifterModelKey, normalizeHistoryDayIds, normalizeCycleLinks, auditProgramWeek, auditSets, simulateAndAudit, repRange, goalForDay, blockPhase, gymRackFor, pickActiveProgram, strengthScore, scoreAttribution, e1rm, loadStep, linearInc, lowerBodyLift, LOWER_PARTS, roundTo, setLoadInc, effortLabel, platesPerSide, setAvailPlates, strengthScoreHistory, restSec, effectiveRest, setRestScaleGlobal, dayPerfFor, lastDayPerf, anchorPerfFor, calibratedAnchorPerf, sessionSuggestion, prescribeSets, PROG_POLICIES, resolveStyle, syncSubSets, growMyoSets, styleOverride, stallCountFor, linearStalled, STALL_ENGAGE, E1RM_HOLD, STALL_WINDOW, buildLifterModel, effortCalibration, calibrateDayPerf, readinessBand, classifyPlateau, runSelfTest };
-// Integration seams for storage and setup fault-injection gates; removed from the browser bundle.
+export { programSetupChips, volumeZone, partZone, CHANGELOG, CHANGELOG_ITEMS, WHATS_NEW_MAX, phaseTone, navPush, navPop, shareSession, shareStrengthScore, templateFacets, templateEmphasis, ExerciseFigure, figurePose, assertFigureCoverage, FIGURE_GENERIC_OK, Exit, previewVolumeNudge, capWords, WHATS_NEW_WORDS, homeCardPlan, HOME_INSIGHT_BUDGET, WhatsNewCard, recordReleaseDiag, readReleaseDiagnostics };
+export { GOALS, THEMES, TEMPLATE_FILTER_GROUPS, fitChip, fitText, fitFont, wrapList, drawRecapCard, volumeAdvice, ICON_CHOICES, ICON_GROUPS, ICON_COLORS, iconForProgram, iconForCycle, iconColorOf, runSelfTest };
+// UI verification seams; computation is imported directly from engine-api.js.
 export { loadStore, saveStore, Wizard, ConvertProgramToCycleSheet };
-/* Test-only: integration/m115-workout-browser-check.mjs imports these by name. They were missing from the shipped M116
-   build, so that browser check could not load against it (its recorded PASS cannot have come from this App.js).
-   The running app mounts only the default export; these change nothing in production. */
 export { WorkoutSession, StepButton, StyleTag };
 export { movementFamilyOptions, VARIANT_PRESENTATION, AttachmentGlyph };
 export { ExerciseAnimation, FormVideoLink, formVideoUrl, refusalMessage };
 
-export { HomePrograms, homeProgramGroups, homePhaseIdentity };
+export { HomePrograms, homePhaseIdentity };
 
 export { ProgramSettingsSheet, CyclesView, CycleDetail, CycleBlockNav, CycleBlockPreview, PlanView };
-
-// Overview cache seam used by the rest-setting and catalog invalidation regression gate.
-export { planOverviewMemo };
-
-export { percentagePlanFor, trainingMaxForUnit, withTrainingMax };
-
-export { loggedWorkoutPerformance };
-
-export { liftBests, displayDayName };
-

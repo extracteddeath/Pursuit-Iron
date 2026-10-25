@@ -5,7 +5,8 @@ import { pathToFileURL } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import assert from 'node:assert/strict';
 import { performance } from 'node:perf_hooks';
-import { EXERCISES } from '../modules/App.js';
+import { EXERCISES } from '../modules/engine-api.js';
+
 import { generateNextProgramForShell } from '../modules/next-engine/app-shell-adapter.js';
 import { auditShellVolume } from '../modules/next-engine/volume-repair.js';
 

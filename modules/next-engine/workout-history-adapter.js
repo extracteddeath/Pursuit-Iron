@@ -13,7 +13,7 @@ import { transitionProgramPhase } from './phase-transition.js';
 import { nextProgramToShellProgram, getNextShellCell, resolveNextShellExerciseId, NextShellAdapterError } from './app-shell-adapter.js';
 import { advancedTechniqueFromCell } from './workout-runtime.js';
 import { finalizeGeneratedShellVolume, captureShellBaseProgram } from './volume-repair.js';
-const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+
 const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 function intOf(value) {
     const n = numberOf(value);

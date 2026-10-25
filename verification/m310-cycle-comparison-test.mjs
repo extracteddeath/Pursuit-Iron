@@ -1,7 +1,8 @@
 
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { EXERCISES } from '../modules/App.js';
+import { EXERCISES } from '../modules/engine-api.js';
+
 import { generateNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
 import { captureShellVolumeSnapshot } from '../modules/next-engine/volume-repair.js';
 

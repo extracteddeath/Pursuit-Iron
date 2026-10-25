@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { sessionSuggestion, lastDayPerf, dayPerfFor, prescribeSets, EX_BY_ID } from '../modules/App.js';
+import { sessionSuggestion, lastDayPerf, dayPerfFor, prescribeSets, EX_BY_ID } from '../modules/engine-api.js';
+
 import { linearStalled, plateauSessions, styleOverride } from '../modules/training-domain/prescriptions.js';
 import { refreshPendingSetTargets } from '../modules/next-engine/workout-runtime.js';
 import { previousWorkoutSet } from '../modules/next-engine/history-contract.js';
@@ -77,7 +78,7 @@ console.log('PASS M220 recovery: stale automatic custom loads refresh; completed
 // Generated programs already evaluate day-specific workouts, but their returned LAST/changed-week
 // reference also has to come from that same day rather than a newer occurrence elsewhere.
 const { default: fs } = await import('node:fs');
-const { EXERCISES } = await import('../modules/App.js');
+const { EXERCISES } = await import('../modules/engine-api.js');
 const { generateNextProgramForShell, markUserPrescriptionOverride } = await import('../modules/next-engine/app-shell-adapter.js');
 const { nextWorkoutSuggestionForShell } = await import('../modules/next-engine/workout-history-adapter.js');
 const fixture = JSON.parse(fs.readFileSync('verification/m205-generation-parity-results.json')).rows[3];

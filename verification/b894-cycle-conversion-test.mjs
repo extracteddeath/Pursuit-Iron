@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { EXERCISES, computeCell, cycleConfigForStandaloneProgram, mergeStandaloneIntoGeneratedCycle, advanceLegacyFirstCycleBlock } from '../modules/App.js';
+import { EXERCISES, computeCell, cycleConfigForStandaloneProgram, mergeStandaloneIntoGeneratedCycle, advanceLegacyFirstCycleBlock } from '../modules/engine-api.js';
+
 import { generateNextProgramForShell } from '../modules/next-engine/app-shell-adapter.js';
 import { generateNextCycleForShell, convertProgramToNextCycleForShell, customFutureCycleSpecs } from '../modules/next-engine/cycle-runtime-adapter.js';
 import { readCycleSetupDraft, writeCycleSetupDraft, clearCycleSetupDraft, CYCLE_SETUP_DRAFT_KEY } from '../modules/cycle-setup-drafts.js';

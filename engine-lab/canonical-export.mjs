@@ -3,7 +3,6 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import * as domain from '../modules/training-domain.js';
-import * as shell from '../modules/engine-shell.js';
 
 const root = path.resolve(new URL('../', import.meta.url).pathname);
 const out = path.resolve(process.argv[2] || path.join(root, '../pursuit-iron-engine'));
@@ -69,19 +68,15 @@ const suites = [];
 for (const file of fs.readdirSync(path.join(root, 'verification'))) {
     if (!file.endsWith('.mjs')) continue;
     const text = fs.readFileSync(path.join(root, 'verification', file), 'utf8');
-    const appImports = [...text.matchAll(/import\s*\{([^}]+)\}\s*from\s*['"]\.\.\/modules\/App\.js['"]/gs)]
-        .flatMap(m => m[1].split(',').map(s => s.trim().split(/\s+as\s+/)[0]));
     const productionImports = [...text.matchAll(/(?:from\s*|import\s*)['"]\.\.\/modules\/([^'"]+\.js)['"]/g)]
-        .map(match => 'modules/' + match[1])
-        .filter(moduleFile => moduleFile !== 'modules/App.js');
+        .map(match => 'modules/' + match[1]);
     const importsOutsideEngine = productionImports.some(moduleFile => !runtimeSet.has(moduleFile));
     if (/browser|import-loader|production-source/.test(file)
         || /productionSource|puppeteer|readFileSync|\bfs\./.test(text)
-        || importsOutsideEngine
-        || appImports.some(n => !(n in shell))) {
+        || importsOutsideEngine) {
         continue;
     }
-    write('verification/' + file, text.replaceAll('../modules/App.js', '../modules/engine-shell.js'));
+    write('verification/' + file, text);
     if (/-(test|matrix)\.mjs$/.test(file) || file === 'm198-creation-audit.mjs') suites.push(file);
 }
 write('scripts/audit.mjs', `import {execFileSync} from 'node:child_process';\nimport {fileURLToPath} from 'node:url';\nconst root=fileURLToPath(new URL('../',import.meta.url));\nconst suites=${JSON.stringify(suites.sort())};\nexecFileSync(process.execPath,['scripts/verify-snapshot.mjs','--runtime-only'],{cwd:root,stdio:'inherit'});\nfor(const suite of suites)execFileSync(process.execPath,['verification/'+suite],{cwd:root,stdio:'inherit'});\nconsole.log('PASS canonical standalone engine: '+suites.length+' semantic suites.');\n`);

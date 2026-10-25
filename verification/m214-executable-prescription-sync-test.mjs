@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { EXERCISES, EX_BY_ID, computeCell, prescribeSets, loggedWorkoutPerformance, propagateCycleEditsPure, normalizeEditedHistoryEntry } from '../modules/App.js';
+import { EXERCISES, EX_BY_ID, computeCell, prescribeSets, loggedWorkoutPerformance, propagateCycleEditsPure, normalizeEditedHistoryEntry } from '../modules/engine-api.js';
+
 import { generateNextProgramForShell, getNextShellCell, markUserPrescriptionOverride,
     nextExerciseIdForShellExercise, swapNextSlotPrescriptions, snapshotNextShellPrescription } from '../modules/next-engine/app-shell-adapter.js';
 import { analyzeShellHistoryForNextEngine, nextWorkoutSuggestionForShell,

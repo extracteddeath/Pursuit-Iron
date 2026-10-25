@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import * as React from '../vendor/react.js';
-import {HomePrograms,homeProgramGroups,homePhaseIdentity} from '../modules/App.js';
+import { HomePrograms, homePhaseIdentity } from '../modules/App.js';
+import { homeProgramGroups } from '../modules/engine-api.js';
+
 const R=React.default || React;
 const internals=R.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
 let passed=0;

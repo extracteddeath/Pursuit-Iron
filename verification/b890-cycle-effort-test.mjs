@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { computeCell, mergeStandaloneIntoGeneratedCycle } from '../modules/App.js';
+import { computeCell, mergeStandaloneIntoGeneratedCycle } from '../modules/engine-api.js';
+
 import { currentProgram, generatedCycle } from './m215-cycle-duration-fixture.mjs';
 import { effortForSimulationWeek, prescriptionForSimulationWeek } from '../modules/next-engine/simulation.js';
 import { rirForPhase } from '../modules/next-engine/realizer-prescriptions.js';

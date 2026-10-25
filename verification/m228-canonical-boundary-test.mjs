@@ -48,8 +48,18 @@ if (create) {
 } else {
     register('./import-loader.mjs', import.meta.url);
     const app = await import('../modules/App.js');
-    for (const name of Object.keys(api.shell)) if (name in app)
-        assert.equal(app[name], api.shell[name], `UI must use the same canonical binding: ${name}`);
+    assert.deepEqual(Object.keys(app).filter(name => name in api), [],
+        'UI must not recreate the canonical computation export surface');
+    const appSource=fs.readFileSync(new URL('../modules/App.js',import.meta.url),'utf8');
+    assert.match(appSource,/from ['"]\.\/engine-api\.js['"]/,'UI consumes the maintained computation boundary');
+    assert.doesNotMatch(appSource,/from ['"]\.\/training-domain(?:\/|\.js)/,'UI cannot bypass the computation boundary');
+    for(const file of fs.readdirSync(new URL('./',import.meta.url)).filter(file=>file.endsWith('.mjs'))){
+        const source=fs.readFileSync(new URL('./'+file,import.meta.url),'utf8');
+        for(const match of source.matchAll(/import\s*(?:[\w$]+\s*,\s*)?\{([^{};]+)\}\s*from\s*['"][^'"]*App\.js['"]/g)){
+            const names=match[1].split(',').map(value=>value.trim().split(/\s+as\s+/)[0]);
+            assert.deepEqual(names.filter(name=>name in api),[],file+': import computation from engine-api, UI from App');
+        }
+    }
     const files = fs.readdirSync(new URL('../modules/training-domain/', import.meta.url));
     for (const file of files) {
         const source = fs.readFileSync(new URL('../modules/training-domain/' + file, import.meta.url), 'utf8');
@@ -57,4 +67,4 @@ if (create) {
     }
     assert.doesNotMatch(fs.readFileSync(new URL('../engine-lab/canonical-export.mjs', import.meta.url), 'utf8'), /@babel\/(?:parser|traverse)|\btraverse\s*\(/);
 }
-console.log(`PASS M228: ${configs.length} Build 816 golden projections, canonical UI binding identity and browser-free computation; canonical exporter has zero declaration extraction.`);
+console.log(`PASS M228: ${configs.length} Build 816 golden projections, one computation import/export boundary and browser-free computation; canonical exporter has zero declaration extraction.`);

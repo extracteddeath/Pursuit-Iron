@@ -25,7 +25,7 @@ console.log('PASS B888 choices: immutable progression, protected set edits, note
 
 const { resizeWorkingSets } = await import('../modules/workout-context.js');
 const { workoutProgramChanges, withWorkoutProgramChanges } = await import('../modules/session-tools.js');
-const { computeCell } = await import('../modules/App.js');
+const { computeCell } = await import('../modules/engine-api.js');
 const { currentProgram } = await import('./m215-cycle-duration-fixture.mjs');
 const logged={done:true,reps:'8',weight:'40'},warm={warm:true,done:true},extension={sub:true,done:true};
 const row={id:'reverse-curl',added:true,sets:[warm,logged,extension,{done:false,reps:'8',weight:'40'},{done:false,reps:'8',weight:'40'}]};
@@ -45,7 +45,7 @@ for(const week of [1,5,10])assert.equal(computeCell(applied,applied.days[0],'rev
 assert.deepEqual(withWorkoutProgramChanges(applied,applied.days[0].id,changes).days,applied.days,'retry is idempotent');
 assert.throws(()=>withWorkoutProgramChanges(applied,applied.days[0].id,[{...changes[0],sets:''}]));
 const { generateNextCycleForShell }=await import('../modules/next-engine/cycle-runtime-adapter.js');
-const { EXERCISES }=await import('../modules/App.js');
+const { EXERCISES }=await import('../modules/engine-api.js');
 const fs=await import('node:fs');
 const cfg=JSON.parse(fs.readFileSync(new URL('./m205-generation-parity-results.json',import.meta.url))).rows[3].config;
 let serial=0;const generated=generateNextCycleForShell({templateId:'powerbuilding',config:cfg,legacyExercises:EXERCISES,seed:903,makeId:()=>`b903-${++serial}`});

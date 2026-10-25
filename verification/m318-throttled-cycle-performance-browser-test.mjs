@@ -3,7 +3,8 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import puppeteer from 'puppeteer-core';
-import { EXERCISES } from '../modules/App.js';
+import { EXERCISES } from '../modules/engine-api.js';
+
 import { generateNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
 import { upgradeExistingCycleToAdaptive } from '../modules/next-engine/adaptive-cycle-upgrade.js';
 import { completedHistory, ids } from './m265-generation-fixture.mjs';

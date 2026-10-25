@@ -1,7 +1,8 @@
 import { productionSource } from './production-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { computeCell, cycleConfigForStandaloneProgram, mergeStandaloneIntoGeneratedCycle, advanceLegacyFirstCycleBlock } from '../modules/App.js';
+import { computeCell, cycleConfigForStandaloneProgram, mergeStandaloneIntoGeneratedCycle, advanceLegacyFirstCycleBlock } from '../modules/engine-api.js';
+
 
 const seku={
  id:'abzg9ot',name:'SekuFit',engineV:4,custom:true,weeks:10,

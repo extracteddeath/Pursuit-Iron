@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';import http from 'node:http';import path from 'node:path';import puppeteer from 'puppeteer-core';
-import { EXERCISES } from '../modules/App.js';
+import { EXERCISES } from '../modules/engine-api.js';
+
 import { generateNextProgramForShell } from '../modules/next-engine/app-shell-adapter.js';
 import { cycle as refreshCycle, saved as refreshSaved, equipment as refreshEquipment } from './m326-cycle-refresh-test.mjs';
 import { shellExercisePerformableFor } from '../modules/next-engine/shell-equipment.js';

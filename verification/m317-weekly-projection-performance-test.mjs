@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { performance } from 'node:perf_hooks';
-import { EXERCISES } from '../modules/App.js';
+import { EXERCISES } from '../modules/engine-api.js';
+
 import { generateNextProgramForShell, nextProgramToShellProgram } from '../modules/next-engine/app-shell-adapter.js';
 import { canonicalShellSetCount, range } from '../modules/next-engine/shell-projection.js';
 import { prescriptionForSimulationWeek } from '../modules/next-engine/simulation.js';

@@ -8,7 +8,9 @@ const config=JSON.parse(fs.readFileSync(path.join(root,'verification/m205-genera
 const importMap=fs.readFileSync(path.join(root,'index.html'),'utf8').match(/<script type="importmap">[\s\S]*?<\/script>/)[0];
 const html=`<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/app.css">${importMap}</head><body><div id="root"></div><script type="module">
 import React from '/vendor/react.js';import {createRoot} from '/vendor/react-dom-client.js';
-import {Wizard,StyleTag,EXERCISES} from '/modules/App.js';
+import { Wizard, StyleTag } from '/modules/App.js';
+import { EXERCISES } from '/modules/engine-api.js';
+
 import {generateNextCycleForShell} from '/modules/next-engine/cycle-runtime-adapter.js';
 createRoot(document.getElementById('root')).render(React.createElement('div',{className:'wpb'},React.createElement(StyleTag),React.createElement(Wizard,{initialEquipment:${JSON.stringify(config.equipment)},initialExperience:'intermediate',initialUnit:'lb',skipUnits:true,cycleMode:true,onCancel:()=>{},onDone:cfg=>{if(window.failNextBuild){window.failNextBuild=false;window.failed=true;return null;}window.chosen=cfg;let n=0;window.built=generateNextCycleForShell({templateId:cfg.cycleTemplate,blocks:cfg.cycleBlocks,config:cfg,legacyExercises:EXERCISES,seed:893,makeId:()=> 'b893-'+(++n),adaptBetweenBlocks:cfg.cycleAdapt,adaptTrainingSplit:cfg.cycleAdaptSplit});}})));
 </script></body></html>`;

@@ -1,7 +1,9 @@
 import { productionSource } from './production-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { EXERCISES, runSelfTest, mergeStores, migrateStore, STORE_VERSION } from '../modules/App.js';
+import { runSelfTest } from '../modules/App.js';
+import { EXERCISES, mergeStores, migrateStore, STORE_VERSION } from '../modules/engine-api.js';
+
 import { generateNextProgramForShell, getNextShellCell } from '../modules/next-engine/app-shell-adapter.js';
 import { ENGINE_VERSION, ENGINE_COMPATIBLE_VERSIONS } from '../modules/next-engine/config.js';
 import { preserveRetiredTrialData, preserveRetiredRolloutData } from '../modules/legacy-research-data.js';

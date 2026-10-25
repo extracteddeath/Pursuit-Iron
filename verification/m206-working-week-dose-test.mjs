@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { EXERCISES, computeCell, plannedWeek, weeklyVolume } from '../modules/App.js';
+import { EXERCISES, computeCell, plannedWeek, weeklyVolume } from '../modules/engine-api.js';
+
 import { generateNextProgramForShell, nextProgramToShellProgram, getNextShellCell, markUserPrescriptionOverride } from '../modules/next-engine/app-shell-adapter.js';
 import { generateNextCycleForShell, convertProgramToNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
 import { auditShellVolume, captureShellVolumeSnapshot, reconcileShellWeekDose, repairShellVolume } from '../modules/next-engine/volume-repair.js';

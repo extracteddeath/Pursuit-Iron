@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { EXERCISES } from '../modules/App.js';
+import { EXERCISES } from '../modules/engine-api.js';
+
 import { generateNextCycleForShell, scoreRegionalCarryover, scoreLiftPractice } from '../modules/next-engine/cycle-runtime-adapter.js';
 import { PUBLIC_MEV_REGIONS, PUBLIC_REGION_MUSCLE } from '../modules/next-engine/public-mev.js';
 import { shellVolumeTargets } from '../modules/next-engine/volume-repair.js';

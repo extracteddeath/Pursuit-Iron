@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { normalizeRequest } from '../modules/next-engine/prescription.js';
 import { generateProgram } from '../modules/next-engine/generate.js';
 import { shellConfigToNextRequest } from '../modules/next-engine/app-shell-adapter.js';
-import { EXERCISES } from '../modules/App.js';
+import { EXERCISES } from '../modules/engine-api.js';
+
 
 const gym = ['barbell','rack','bench','dumbbell','cable','machine','smith','pullup','dip','legpress','hacksquat','legext','legcurl','calfmachine'];
 const config = { name: 'M227 canonicalization fixture', unit: 'kg', goal: 'both', experience: 'intermediate',

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { effortLabel, nextSessionCursor } from '../modules/App.js';
+import { effortLabel, nextSessionCursor } from '../modules/engine-api.js';
+
 import { getNextShellCell } from '../modules/next-engine/app-shell-adapter.js';
 
 let passed=0;

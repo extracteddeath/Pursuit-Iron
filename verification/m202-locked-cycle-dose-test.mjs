@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { EXERCISES, EQUIPMENT } from '../modules/App.js';
+import { EXERCISES, EQUIPMENT } from '../modules/engine-api.js';
+
 import { generateNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
 import { auditShellVolume } from '../modules/next-engine/volume-repair.js';
 

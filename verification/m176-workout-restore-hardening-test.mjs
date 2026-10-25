@@ -1,7 +1,8 @@
 import { productionSource } from './production-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { EXERCISES, sessionSnapshotStatus, mergeSessionData } from '../modules/App.js';
+import { EXERCISES, sessionSnapshotStatus, mergeSessionData } from '../modules/engine-api.js';
+
 
 const ids=EXERCISES.slice(0,3).map(ex=>ex.id);
 assert.equal(ids.length,3);

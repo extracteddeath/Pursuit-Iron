@@ -1,31 +1,19 @@
 // M230 canonical realizer stage. Stage context is local to one realization.
-import { armCoverageBias, armCoverageUseKeys, evaluateArmCoverage } from './arm-coverage.js';
-import { ALL_MUSCLES } from './config.js';
 import { createExerciseCatalog, createExerciseMap } from './exercise-db.js';
-import { avoidableExerciseOverlap, exerciseEconomyCluster } from './exercise-economy.js';
-import { functionalCoverageUseKeys } from './functional-coverage.js';
 import { phasePolicyFor } from './phase-policy.js';
-import { createMusclePrescriptions, productiveTimeBandDoseTarget } from './prescription.js';
-import { PUBLIC_MEV_REGIONS, PUBLIC_REGION_MUSCLE, directlyTargetsPublicRegion, publicMevBaseTarget, publicMevContractApplies, publicMevLedger, publicMevRequired, publicRegionContribution } from './public-mev.js';
+import { createMusclePrescriptions } from './prescription.js';
 import { repairMajorArmCoverage as run_repairMajorArmCoverage } from './realizer-arm-repair.js';
 import { diversifySparseSessions as run_diversifySparseSessions, expandProductiveCapacity as run_expandProductiveCapacity, fillSessionCapacity as run_fillSessionCapacity, redistributeFullBodyAccessories as run_redistributeFullBodyAccessories, scheduleAdvancedTechniques as run_scheduleAdvancedTechniques, usefulTarget as run_usefulTarget } from './realizer-capacity-repair.js';
 import { currentDirect as run_currentDirect, currentFractional as run_currentFractional, directTotalsWithSessionProposal as run_directTotalsWithSessionProposal, totalsWithSessionProposal as run_totalsWithSessionProposal } from './realizer-dose-ledger.js';
 import { enforceFinalTimeLimits as run_enforceFinalTimeLimits, fitPreferredDosage as run_fitPreferredDosage, fitProposalBySafeDosage as run_fitProposalBySafeDosage, reconcileAllocationTargets as run_reconcileAllocationTargets, repairMinimumFloors as run_repairMinimumFloors, satisfyDedicatedIntentFloors as run_satisfyDedicatedIntentFloors, satisfyDirectFloors as run_satisfyDirectFloors, satisfySmallMuscleFloors as run_satisfySmallMuscleFloors } from './realizer-dose-repair.js';
 import { consolidateCompoundFragments as run_consolidateCompoundFragments, consolidateOneSetDuplicates as run_consolidateOneSetDuplicates, consolidateRedundantAccessoryFamilies as run_consolidateRedundantAccessoryFamilies, pruneCompactOneSetFragments as run_pruneCompactOneSetFragments, pruneFinalCompactFragments as run_pruneFinalCompactFragments, rebalanceOneSetFragmentsBySwap as run_rebalanceOneSetFragmentsBySwap } from './realizer-fragment-repair.js';
 import { realizeDirectIsolations as run_realizeDirectIsolations, realizeMajorMuscles as run_realizeMajorMuscles } from './realizer-hypertrophy.js';
-import { addToLedger, desiredDirect, integerSetPlan } from './realizer-math.js';
 import { assignAccessorySupersets } from './realizer-pairing.js';
-import { makePlanned } from './realizer-prescriptions.js';
 import { reconcilePublicDose as run_reconcilePublicDose } from './realizer-public-dose-repair.js';
-import { LARGE, SMALL, equipmentEligible, floorSpilloverAllowed, intentAcceptsMuscle, maxBarbells, muscleCandidate, muscleScore, primaryMuscle, strengthCandidate } from './realizer-ranking.js';
 import { sequenceSessionExercises } from './realizer-sequence.js';
 import { add as run_add, buildRealizedSessions as run_buildRealizedSessions, trackExerciseUse as run_trackExerciseUse } from './realizer-session-builder.js';
-import { realizePinnedStrength as run_realizePinnedStrength, strengthSetsForAllocation } from './realizer-strength.js';
+import { realizePinnedStrength as run_realizePinnedStrength } from './realizer-strength.js';
 import { finalStructureValid as run_finalStructureValid, rebalanceRepeatedIntents as run_rebalanceRepeatedIntents, redistributeUpperAccessories as run_redistributeUpperAccessories, repairFullBodyStructure as run_repairFullBodyStructure, restoreFinalFloors as run_restoreFinalFloors } from './realizer-structure-repair.js';
-import { estimateMinutes, fitCompactRestToSession } from './realizer-time-budget.js';
-import { chooseAdvancedTechnique } from './techniques.js';
-import { INTENT_MUSCLES } from './topology.js';
-
 export function realizeSessions(plans, request, targetDose = {}, directTargetDose = {}, phase, options = {}) {
     // Invocation-local getters preserve closure timing; stages never own durable/global state.
     const context = {

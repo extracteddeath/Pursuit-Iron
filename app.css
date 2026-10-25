@@ -8735,10 +8735,13 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb-program-commit-copy{flex:1 1 12em;min-width:0;font-size:var(--pi-type-support);line-height:1.45;overflow-wrap:anywhere;}
 .wpb-program-commit-copy p{margin:var(--pi-space-1) 0 0;color:var(--pi-color-on-muted);}
 .wpb-program-commit-actions{display:flex;flex-direction:column;gap:var(--pi-space-1);flex:1 1 7em;min-width:0;}
-.wpb .wpb-program-commit-actions>.wpb-ui-action{min-width:0;white-space:normal;overflow-wrap:anywhere;}
+.wpb .wpb-program-commit-actions>.wpb-ui-action{display:inline-flex;align-items:center;justify-content:center;gap:var(--pi-space-2);min-width:0;white-space:normal;overflow-wrap:anywhere;}
 .wpb-program-meta-collapse{overflow:hidden;will-change:height,opacity,transform;}
 .wpb-program-meta-line{display:flex;align-items:center;flex-wrap:wrap;gap:var(--pi-space-1);padding-top:2px;font-size:var(--pi-type-support);color:var(--pi-color-on-muted);}
+.wpb-program-actions{display:flex;align-items:center;flex-wrap:wrap;gap:var(--pi-space-2);margin-top:var(--pi-space-3);--pi-control-padding-inline:var(--pi-space-1);}
 .wpb-program-actions-spacer{flex:1 1 auto;}
+.wpb-program-day-picker{position:relative;flex-shrink:0;min-width:0;}
+.wpb-program-actions [aria-expanded="true"]>.wpb-program-day-chevron{transform:rotate(180deg);}
 .wpb-program-saved-status{display:inline-flex;align-items:center;gap:5px;min-height:36px;padding-inline:var(--pi-space-1);font-size:var(--pi-type-support);font-weight:700;white-space:nowrap;color:var(--pi-color-on-muted);}
 /* M276: a compact contextual cycle route, not another permanent toolbar. The
    measured wrapper remains padding-free so its scroll collapse reaches zero. */

@@ -108,6 +108,16 @@ try{
     'Full identity leaves the form usable: '+JSON.stringify(layout));
    assert.equal(layout.commitBeforeTools,true,'Save/Review comes before secondary program tools');
    assert.ok(layout.duplicateActions<=1,'There is one program save/review action');
+   const tools=await page.$$eval('.wpb-program-actions .wpb-ui-action',nodes=>nodes.map(n=>{
+    const r=n.getBoundingClientRect();return {height:r.height,y:Math.round(r.y),center:Math.round(r.y+r.height/2),width:r.width,label:n.textContent||n.getAttribute('aria-label')};
+   }));
+   assert.ok(tools.every(t=>t.height>=48),'Program utilities retain shared touch targets');
+   if(!large&&width===320&&tools.length===4){
+    await page.screenshot({path:'verification/m352-tools-320-phone.png'});
+    assert.ok(Math.max(...tools.map(t=>t.center))-Math.min(...tools.map(t=>t.center))<=1,
+     'The standard utility group fits one narrow row: '+JSON.stringify(tools));
+   }
+
    const primary=await page.$('.wpb-program-save');
    if(primary){
     await primary.evaluate(n=>n.scrollIntoView({block:'center'}));
@@ -119,6 +129,16 @@ try{
    await page.screenshot({path:`verification/m352-review-${width}-${cycle?'cycle':'program'}-${large?'large':'normal'}-phone.png`});
   };
   await reviewLayout(false);
+  if(width===393){
+   const settings=await page.$('[aria-label="Program settings"]');await settings.evaluate(n=>n.scrollIntoView({block:'center'}));await settings.click();
+   await page.waitForSelector('[data-testid="program-settings-sheet"]');await page.click('[data-testid="program-settings-sheet"] [aria-label="Close"]');
+   await page.waitForSelector('[data-testid="program-settings-sheet"]',{hidden:true});
+   const reroll=await page.$('[aria-label="Reroll exercises or enter a seed"]');await reroll.evaluate(n=>n.scrollIntoView({block:'center'}));await reroll.click();
+   await page.waitForFunction(()=>[...document.querySelectorAll('.wpb-backdrop div')]
+    .some(n=>n.children.length===0&&n.textContent==='Shuffle exercises'));
+   await page.screenshot({path:'verification/m352-reroll-393-phone.png'});
+   await page.keyboard.press('Escape');await page.waitForSelector('.wpb-program .wpb-backdrop',{hidden:true});
+  }
   const beforeReflow=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')));
   if(width===900)await page.setViewport({width,height:480,deviceScaleFactor:1,isMobile:false,hasTouch:true});
   await page.evaluate(()=>{

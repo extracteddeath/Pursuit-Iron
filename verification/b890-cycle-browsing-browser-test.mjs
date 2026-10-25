@@ -106,10 +106,20 @@ try{
   if([320,393,1280].includes(width))await page.screenshot({path:`verification/m354-exercises-first-${width}-phone.png`});
 
   assert.ok(await page.$eval('.wpb-cycle-preview-facts',(n,days)=>n.textContent.includes(`${days} training days per week`),saved[1].days.length),'preview exposes the actual upcoming weekly structure');
-  const expectedPreviewDose=saved[1].nextEngine?.cycleTemplate?.splitDecision?.workingWeekVolumeChange
+  const originalPreviewDose=saved[1].nextEngine?.cycleTemplate?.splitDecision?.workingWeekVolumeChange ?? null;
+  const livePreviewDose=originalPreviewDose
     ? describeRegionalWorkingWeekChange(saved[0],saved[1],EXERCISES) : null;
-  assert.equal(await page.evaluate(()=>document.querySelectorAll('.wpb-cycle-block-preview .wpb-cycle-dose-detail').length),
-    expectedPreviewDose?1:0,'preview shows saved volume detail only when available');
+  const displayedPreviewDose=livePreviewDose || originalPreviewDose;
+  const doseCaptions=await page.$$eval('.wpb-cycle-block-preview .wpb-cycle-dose-detail',nodes=>
+    nodes.map(n=>n.querySelector('.wpb-cycle-dose-caption')?.textContent||''));
+  assert.equal(doseCaptions.length,displayedPreviewDose?1:0,
+    'Preview shows live saved dose where measurable or explicitly attributed historical fallback');
+  if(displayedPreviewDose){
+    assert.ok(doseCaptions[0].includes(livePreviewDose?'Saved prescriptions':'Original generation snapshot'),
+      'Preview labels live versus historical dose instead of implying stale counts are current');
+    assert.ok(doseCaptions[0].includes(`${displayedPreviewDose.previousWeeklySets} → ${displayedPreviewDose.currentWeeklySets}`),
+      'Preview displays exactly the selected dose source without silently recomputing it');
+  }
   const savedQuality=saved[1].nextEngine?.cycleTemplate?.splitDecision?.realizedQuality;
   if(savedQuality?.weeks?.length){
     const first=savedQuality.weeks[0];

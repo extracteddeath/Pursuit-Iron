@@ -22916,8 +22916,7 @@ function App() {
                 setLiveSession(null);
                 return;
             }
-            setProgram(prog);
-            startSession(lv.sessionLengthPlan ? { ...day, sessionLengthPlan: lv.sessionLengthPlan } : day, lv.weekIndex || 1);
+            startSession(lv.sessionLengthPlan ? { ...day, sessionLengthPlan: lv.sessionLengthPlan } : day, lv.weekIndex || 1, prog);
         }
         catch { }
     };
@@ -22938,16 +22937,25 @@ function App() {
         setLiveSession(null);
         setDiscardArmed(false);
     };
-    const startSession = (day, wk) => {
-        const nextOwnerCycle = program?.cycleId ? cycles.find(c => c.id === program.cycleId) : null;
-        if (nextOwnerCycle?.engineSource === "pursuit-next" && nextOwnerCycle.blockIds[nextOwnerCycle.activeBlock || 0] !== program.id) {
+    const startSession = (day, wk, ownerProgram) => {
+        // React state updates are asynchronous: the selected owner must travel with
+        // its day instead of borrowing the previously open program for guards/saves.
+        if (!ownerProgram?.days?.some(row => row.id === day?.id)) {
+            setAppToast({ msg: "This session no longer belongs to the selected program. Select it again." });
+            return;
+        }
+        const nextOwnerCycle = ownerProgram?.cycleId ? cycles.find(c => c.id === ownerProgram.cycleId) : null;
+        if (nextOwnerCycle?.engineSource === "pursuit-next" && nextOwnerCycle.blockIds[nextOwnerCycle.activeBlock || 0] !== ownerProgram.id) {
             setAppToast({ msg: "That Pursuit Next block is a future/completed cycle phase. Train the active block; the next phase unlocks after history-aware advancement." });
             return;
         }
         // Ensure a planned program is in the library before logging against it, so the
         // session feeds Up-next and progress tracking. (Quick/freestyle workouts skip this.)
-        if (program && !program.quick && !saved.some(p => p.id === program.id)) {
-            setSaved(prev => prev.some(p => p.id === program.id) ? prev : [...prev, program]);
+        if (ownerProgram && !ownerProgram.quick && !saved.some(p => p.id === ownerProgram.id)) {
+            setSaved(prev => prev.some(p => p.id === ownerProgram.id) ? prev : [...prev, ownerProgram]);
+            // Starting an unsaved creation saves/activates it just like its Save action.
+            // Existing programs and cycle activation retain their own selection policy.
+            if (!ownerProgram.cycleId) setPinnedId(ownerProgram.id);
         }
         // A workout interrupts the screen the lifter was using. A preview is a launch step, so
         // return to its caller; resuming from another tab makes that tab the new return destination.
@@ -22955,18 +22963,20 @@ function App() {
             const destination = view === "nextWorkout" ? navPop(backStack) : { view, stack: backStack };
             sessionReturn.current = { view: destination.view, stack: [...destination.stack] };
         }
+        setProgram(ownerProgram);
         setSessionDay(day);
         setSessionWeek(wk || 1);
         setView("session");
         // Percentage programs (5/3/1, nSuns, Madcow) only load the main lifts by % once a training
         // max is set; otherwise the session quietly falls back to a generic prescription. Nudge once.
-        const needTM = program && !program.quick && program.config?.percentScheme &&
-            !(program.days || []).some(d => (program.trainingMax?.[d.exercises[d.primaryIndex]] || 0) > 0);
+        const needTM = ownerProgram && !ownerProgram.quick && ownerProgram.config?.percentScheme &&
+            !(ownerProgram.days || []).some(d => (ownerProgram.trainingMax?.[d.exercises[d.primaryIndex]] || 0) > 0);
         if (needTM)
             setTimeout(() => setAppToast({
-                msg: `Set your training maxes so the main lifts load by the ${PCT_SCHEMES[program.config.percentScheme]?.name || "program"} scheme`,
+                msg: `Set your training maxes so the main lifts load by the ${PCT_SCHEMES[ownerProgram.config.percentScheme]?.name || "program"} scheme`,
                 actionLabel: "Set maxes", action: () => { rootView("program"); setAppToast(null); }
             }), 450);
+        return true;
     };
     const leaveSession = () => {
         const destination = sessionReturn.current;
@@ -22983,8 +22993,7 @@ function App() {
             config: { name: "Quick workout", goal: "both", progression: "manual", split: null, days: 1, session: "s60", experience: "intermediate", weeks: 1, equipment: ["barbell", "dumbbell", "bench", "cable", "machine", "smith", "ezbar", "pullup", "dip", "kettlebell", "bands"], focus: {}, reduce: [], barbellCap: null, noBodyweight: false, deload: false, percentScheme: null },
             days: [day], overrides: {}
         };
-        setProgram(prog);
-        startSession(day, 1);
+        startSession(day, 1, prog);
     };
     // A program owns the immutable trial assignment; the store-level ledger owns longitudinal outcomes.
     // Scan open/saved programs so every generation path (wizard, reset, block transition, import) is
@@ -22995,8 +23004,7 @@ function App() {
         const prog = saved.find(p => p.id === h.programId);
         const day = prog && prog.days.find(d => d.id === h.dayId);
         if (prog && day) {
-            setProgram(prog);
-            startSession(day, 1);
+            startSession(day, 1, prog);
             return;
         }
         const ids = Object.keys(h.perf || {}).filter(id => EX_BY_ID[id]);
@@ -23005,8 +23013,7 @@ function App() {
         const pi = ids.findIndex(id => EX_BY_ID[id]?.type === "compound");
         const d = { id: uid(), label: h.dayLabel || "Workout", exercises: ids, primaryIndex: pi < 0 ? 0 : pi };
         const np = { id: uid(), name: h.programName || "Workout", quick: true, artifactType: "freestyle", engineV: ENGINE_V, createdAt: Date.now(), config: { name: h.dayLabel || "Workout", goal: "both", progression: "manual", split: null, days: 1, session: "s60", experience: "intermediate", weeks: 1, equipment: QUICK_EQUIP, focus: {}, reduce: [], barbellCap: null, noBodyweight: false, deload: false, percentScheme: null }, days: [d], overrides: {} };
-        setProgram(np);
-        startSession(d, 1);
+        startSession(d, 1, np);
     };
     const saveRoutine = (ids, name) => {
         const valid = (ids || []).filter(id => EX_BY_ID[id]);
@@ -23228,22 +23235,19 @@ function App() {
     const startUpNextAlt = () => {
         if (!upNext?.alt)
             return;
-        setProgram(upNext.program);
-        startSession(upNext.alt.day, upNext.weekIndex);
+        startSession(upNext.alt.day, upNext.weekIndex, upNext.program);
     };
     const startDeload = () => {
         if (!upNext)
             return;
         const wk = weeksOf(upNext.program);
         if (upNext.program.config.deload) {
-            setProgram(upNext.program);
-            startSession(upNext.day, wk + 1);
+            startSession(upNext.day, wk + 1, upNext.program);
         }
         else {
             // synthesize a deload: clone with deload enabled and run its reduced week
             const dp = { ...upNext.program, config: { ...upNext.program.config, deload: true } };
-            setProgram(dp);
-            startSession(upNext.day, wk + 1);
+            startSession(upNext.day, wk + 1, dp);
         }
     };
     const startLight = () => {
@@ -23251,8 +23255,7 @@ function App() {
             return;
         const day = upNext.alt?.day || upNext.day; // freshest day
         const dp = { ...upNext.program, config: { ...upNext.program.config, deload: true } };
-        setProgram(dp);
-        startSession(day, weeksOf(dp) + 1); // deload-intensity = light, reduced-volume session
+        startSession(day, weeksOf(dp) + 1, dp); // deload-intensity = light, reduced-volume session
     };
     // Fold the latest performance + recovery feedback into a program's set volume right before it's
     // trained, so each session is autoregulated to how you've actually been recovering — not frozen
@@ -23280,8 +23283,7 @@ function App() {
         if (!upNext)
             return;
         const p = autoregulate(upNext.program);
-        setProgram(p);
-        startSession(upNext.day, upNext.weekIndex);
+        startSession(upNext.day, upNext.weekIndex, p);
     };
     const openActive = () => {
         if (!upNext)
@@ -23293,6 +23295,7 @@ function App() {
            only some of them is worse than wiring none: the unwired route opens the stored copy, the sync
            effect then sees no difference, and it DELETES the draft the other route was holding. An edit
            silently disappears depending on which door you came through. */
+        setPreviewTarget(null);
         openWithDraft(upNext.program);
         rootView("nextWorkout");
     };
@@ -23453,17 +23456,26 @@ function App() {
                                         : view === "cycleWizard" ? (_jsx(Wizard, { buildTask: generationTask, onCancelBuild: () => generationTask?.controller.abort(), initialEquipment: gymEquipment, initialExperience: experience, initialUnit: unit, skipUnits: unitChosen, cycleMode: true, onCancel: goBack, onDone: (cfg) => buildCycle(rememberExperience(rememberEquipment(cfg))) })) : view === "wizard" ? (_jsx(Wizard, { buildTask: generationTask, onCancelBuild: () => generationTask?.controller.abort(), initialEquipment: gymEquipment, initialExperience: experience, initialUnit: unit, skipUnits: unitChosen, allowModeChoice: true, onCancel: goBack, onDone: (cfg) => { rememberEquipment(cfg); rememberExperience(cfg); return cfg.cycleTemplate ? buildCycle(cfg) : handleGenerate(cfg); } })) : view === "nextWorkout" && (previewTarget || (program && upNext)) ? (() => {
                                             /* A preview target wins over the computed Up Next, so one screen serves both "what's
                                                next" and "show me week 4, day 2" without a second component to keep in step. */
-                                            const pv = previewTarget && saved.find(x => x.id === previewTarget.programId);
-                                            const pvDay = pv && pv.days.find(d => d.id === previewTarget.dayId);
-                                            const shown = (pv && pvDay)
-                                                ? { program: pv, day: pvDay, weekIndex: previewTarget.weekIndex, freshness: null, alt: null }
+                                            // Full Program may be an unsaved creation or edited draft. Its snapshot
+                                            // owns this preview; ID-only Plan/Cycle routes read their saved source.
+                                            const pv = previewTarget?.program
+                                                ? (program?.id === previewTarget.programId ? program : previewTarget.program)
+                                                : saved.find(x => x.id === previewTarget?.programId);
+                                            const pvDay = pv?.days.find(d => d.id === previewTarget?.dayId);
+                                            const shown = previewTarget
+                                                ? (pv && pvDay && Number.isInteger(previewTarget.weekIndex) && previewTarget.weekIndex >= 1
+                                                    ? { program: pv, day: pvDay, weekIndex: previewTarget.weekIndex, freshness: null, alt: null } : null)
                                                 : upNext;
                                             if (!shown || !shown.program || !shown.day)
-                                                return null;
+                                                return _jsxs("div", { className: "wpb-page-shell", children: [
+                                                    _jsx(UiRootHeader, { title: "Workout preview" }),
+                                                    _jsxs(UiStatus, { className: "wpb-preview-unavailable", children: [
+                                                        _jsx("p", { children: "This session is no longer available. Return and select a session again." }),
+                                                        _jsx(UiAction, { onClick: () => { setPreviewTarget(null); goBack(); }, children: "Back" })] })] });
                                             return (_jsx(NextWorkoutView, { perf, unit, onPlanChoice: changeSessionPlan, planChoiceBusy, program: shown.program, day: shown.day, weekIndex: shown.weekIndex, loadMode: loadMode, pace: paceFactor(history, saved), cycleInfo: (() => {
                                                     const c = cycles.find(c => !c.done && c.blockIds.includes(shown.program.id));
                                                     return c ? { cycle: c, blockIdx: c.blockIds.indexOf(shown.program.id) } : null;
-                                                })(), freshness: shown.freshness, alt: shown.alt, restScale, history, onStart: plan => { setPreviewTarget(null); setProgram(shown.program); startSession(plan ? { ...shown.day, sessionLengthPlan: plan } : shown.day, shown.weekIndex); }, onStartAlt: startUpNextAlt, onOpenProgram: () => { openWithDraft(shown.program); if (shown.weekIndex >= 1 && shown.weekIndex <= weeksOf(shown.program)) setProgWeek(m => ({ ...m, [shown.program.id]: shown.weekIndex })); pushView("program", "nextWorkout"); }, onBack: () => { setPreviewTarget(null); goBack(); } }));
+                                                })(), freshness: shown.freshness, alt: shown.alt, restScale, history, onStart: plan => { if (startSession(plan ? { ...shown.day, sessionLengthPlan: plan } : shown.day, shown.weekIndex, shown.program)) setPreviewTarget(null); }, onStartAlt: startUpNextAlt, onOpenProgram: () => { openWithDraft(shown.program); if (shown.weekIndex >= 1 && shown.weekIndex <= weeksOf(shown.program)) setProgWeek(m => ({ ...m, [shown.program.id]: shown.weekIndex })); pushView("program", "nextWorkout"); }, onBack: () => { setPreviewTarget(null); goBack(); } }));
                                         })() : view === "plan" ? (() => {
                                             /* A TAB MUST ALWAYS RENDER SOMETHING. Guarding the route on `program` instead would let
                                                the tab fall through to another branch when nothing is pinned, which reads as a dead
@@ -23557,7 +23569,7 @@ function App() {
                                                     return false;
                                                 const stored = saved.find(p => p.id === program.id);
                                                 return !!stored && !sameProgramContent(stored, program);
-                                            })(), onDiscardDraft: discardDraft, saveUndo: programSaveUndo?.id === program.id ? { available: canUndoProgramSave(programSaveUndo, saved, drafts, program), count: programSaveUndo.changes.length, onUndo: undoProgramSave } : null, onRegenerate: handleRegenerate, onNextCycle: startNextBlock, onBack: goBack, onStartDay: (day, weekIndex) => { setPreviewTarget({ program, day, weekIndex }); pushView("nextWorkout", "program"); }, onCreateCustom: createCustom, initialWeek: program ? progWeek[program.id] : undefined, cycleLink: (() => {
+                                            })(), onDiscardDraft: discardDraft, saveUndo: programSaveUndo?.id === program.id ? { available: canUndoProgramSave(programSaveUndo, saved, drafts, program), count: programSaveUndo.changes.length, onUndo: undoProgramSave } : null, onRegenerate: handleRegenerate, onNextCycle: startNextBlock, onBack: goBack, onStartDay: (day, weekIndex) => { setPreviewTarget({ program, programId: program.id, dayId: day.id, weekIndex }); pushView("nextWorkout", "program"); }, onCreateCustom: createCustom, initialWeek: program ? progWeek[program.id] : undefined, cycleLink: (() => {
                                                 const c = cycles.find(cy => Array.isArray(cy.blockIds) && cy.blockIds.includes(program.id));
                                                 if (!c)
                                                     return null;

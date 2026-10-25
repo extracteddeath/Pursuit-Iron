@@ -2,7 +2,7 @@
 export function installNoticeLayout(root) {
     if (!root) return () => {};
     const noticeSelector = '.wpb-notice';
-    const barrierSelector = '.wpb-tabbar,.wpb-live-dock,.wpb-workout-footer,.wpb-set-dock-prototype';
+    const barrierSelector = '.wpb-tabbar,.wpb-live-dock,.wpb-workout-footer,.wpb-set-dock-prototype,.wpb-next-workout-actions';
     let frame = 0;
     const observed = new Set();
     const update = () => {

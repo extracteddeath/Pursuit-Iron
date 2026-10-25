@@ -1,3 +1,4 @@
+import { ProgramRevisionReview, ProgramLayoutHistory, ProgramSaveReview } from './program-review-surfaces.js';
 import { sessionLoadText, sessionTargetsText, PlanChangeBanner, HomeSessionOutline, SessionGamePlan, PlanChangesDialog } from './plan-session-surfaces.js';
 import { SessionChoiceDialog } from './session-choice-dialog.js';
 import { withSessionPlanChoice } from './session-plan.js';
@@ -8659,9 +8660,6 @@ function WeeklyScheduleSheet({ program, onCycle, onClear, onClose }) {
  * and the two exits. No hooks inside — the sheet is a pure function of what it is handed, which is
  * what lets gates/progsettings.mjs drive it through the real DOM. `sheetDragRef` is the shared
  * ref-callback from 09-ui-primitives. */
-function ProgramSaveReview({ program, changes, scope, onScope, conflicts, onConfirm, onClose }) {
-    return _jsx("div", { className: "wpb-backdrop", role: "dialog", "aria-modal": "true", "aria-labelledby": "program-save-title", onClick: onClose, style: { position: "fixed", inset: 0, zIndex: 100, padding: 16, background: "rgba(0,0,0,.65)", display: "flex", alignItems: "center", justifyContent: "center" }, children: _jsxs("div", { onClick: e => e.stopPropagation(), style: { width: "100%", maxWidth: 440, maxHeight: "85dvh", display: "flex", flexDirection: "column", overflow: "hidden", padding: 18, borderRadius: 20, background: C.bg2, border: `1px solid ${C.border}` }, children: [_jsxs("div", { style: { display: "flex", flexShrink: 0, alignItems: "center", justifyContent: "space-between", gap: 12 }, children: [_jsx("h2", { id: "program-save-title", style: { fontSize: 19, margin: 0 }, children: "Review changes" }), _jsx("button", { "aria-label": "Close change review", onClick: onClose, style: iconBtn(), children: _jsx(X, { size: 18 }) })] }), _jsxs("div", { className: "wpb-scroll", style: { minHeight: 0, overflowY: "auto", overscrollBehavior: "contain" }, children: [_jsx("p", { style: { fontSize: 13, color: C.muted, lineHeight: 1.5 }, children: "Review the saved programs affected. Completed workout history stays as logged." }), program.cycleId && _jsxs("fieldset", { style: { border: `1px solid ${C.border}`, borderRadius: 12, padding: 12, margin: "12px 0", minWidth: 0 }, children: [_jsx("legend", { style: { fontWeight: 700, fontSize: 13 }, children: "Apply exercise changes to" }), [["program", "This block only"], ["cycle", "Linked cycle blocks"]].map(([value, label]) => _jsxs("label", { style: { display: "flex", alignItems: "center", gap: 10, padding: "9px 0", fontSize: 14, cursor: "pointer" }, children: [_jsx("input", { type: "radio", name: "program-save-scope", value: value, checked: scope === value, onChange: () => onScope(value) }), label] }, value)), _jsx("div", { style: { fontSize: 12, lineHeight: 1.5, color: C.muted }, children: "Linked blocks use the cycle's exercise-sharing rules. Only blocks listed below will change; each keeps its own training targets." })] }), _jsxs("div", { style: { fontSize: 14, fontWeight: 700, marginBottom: 8 }, children: [changes.length, " saved ", changes.length === 1 ? "program" : "programs", " will change"] }), changes.map(({ before, after }) => _jsxs("div", { style: { padding: "12px 0", borderTop: `1px solid ${C.border}`, overflowWrap: "anywhere" }, children: [_jsx("strong", { style: { fontSize: 14 }, children: after.name }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginTop: 4, lineHeight: 1.5 }, children: programChangeLabels(before, after).join(" · ") })] }, after.id)), !!conflicts.length && _jsxs("div", { role: "alert", style: { padding: 12, margin: "8px 0", borderRadius: 12, background: C.card, color: C.text, fontSize: 13, lineHeight: 1.5 }, children: ["Another affected block has draft changes: ", conflicts.map(x => x.after.name).join(", "), ". Save or discard that draft first, or choose This block only."] }), _jsx("div", { style: { fontSize: 12, color: C.muted, margin: "10px 0 14px", lineHeight: 1.5 }, children: "You can undo this save from the program screen until the next save or app reload. Later edits can prevent undo." })] }), _jsxs("div", { style: { flexShrink: 0, paddingTop: 10, borderTop: `1px solid ${C.border}` }, children: [_jsx("button", { disabled: !changes.length || !!conflicts.length, onClick: onConfirm, className: "pressable", style: { width: "100%", padding: 13, border: "none", borderRadius: 12, background: C.accent, color: C.accentText, fontWeight: 700, opacity: !changes.length || conflicts.length ? .45 : 1, cursor: "pointer" }, children: "Save reviewed changes" }), _jsx("button", { onClick: onClose, className: "pressable", style: { width: "100%", padding: 13, marginTop: 8, border: `1px solid ${C.border}`, borderRadius: 12, background: "none", color: C.text, fontWeight: 600, cursor: "pointer" }, children: "Keep editing" })] })] }) });
-}
 function ProgramSettingsSheet({ program, draft: cfgDraft, setDraft: setCfgDraft, dirty: cfgDirty, onApply: applyCfgDraft, onClose }) {
     const cycleLengthOwned = program.engineSource === "pursuit-next" && !!program.cycleId;
     const draftWeeks = cfgDraft?.weeks ?? weeksOf(program);
@@ -11363,40 +11361,6 @@ function SetAwareDockPrototype({ data, exIdx, lastPerf, program, day, weekIndex,
       ] });
 }
 
-function ProgramRevisionReview({ review, onApply, onClose }) {
-    const changes = useMemo(() => reviewProgramChanges(review.before, review.after), [review.before, review.after]);
-    return _jsx(SessionChoiceDialog, { title: review.title, onClose, className: "wpb-program-revision", footer:
-        _jsxs("div", { className: "wpb-program-revision-footer", children: [
-            _jsx("button", { type: "button", onClick: onClose, className: "wpb-session-choice pressable", children: "Keep current plan" }),
-            _jsx("button", { type: "button", onClick: onApply, "data-apply-program-review": true, className: "wpb-session-choice pressable", children: "Apply changes" })] }),
-        children: _jsxs("div", { "data-program-review": true, children: [
-            _jsx("p", { children: review.message }),
-            _jsx("p", { className: "wpb-program-review-status", children: "Preview · your current plan is unchanged until you apply." }),
-            review.audit && _jsxs("section", { className: "wpb-program-review-audit", children: [
-                _jsx("h3", { children: "Volume check" }),
-                _jsx("p", { children: `${review.audit.before.length} findings before · ${review.audit.after.length} remaining after` }),
-                review.audit.after.map((issue, index) => _jsx("p", { children: `${issue.label}: ${fmtSets(issue.v)} sets · ${issue.fix || (issue.status === 'under' ? 'still below the planned minimum' : 'still above the planned maximum')}` }, `${issue.region}:${index}`))] }),
-            changes.config.map((change, index) => _jsxs("div", { className: "wpb-program-review-setting", children: [
-                _jsx("strong", { children: change.label }), _jsx("span", { children: `${change.before} → ${change.after}` })] }, index)),
-            changes.days.map(day => _jsxs("section", { className: "wpb-program-review-day", children: [
-                _jsx("h3", { children: day.label }),
-                _jsx("p", { children: `Week 1 estimate: ${day.beforeMinutes} → ${day.afterMinutes} min` }),
-                day.rows.map((row, index) => _jsxs("article", { className: "wpb-program-review-row", children: [
-                    _jsx("strong", { children: row.name }), _jsx("small", { children: row.kind }),
-                    _jsx("div", { className: "wpb-program-review-columns", children: [['Before', row.before], ['After', row.after]].map(([label, lines]) =>
-                        _jsxs("div", { children: [_jsx("h4", { children: label }), ...lines.map((line, i) => _jsx("p", { children: line }, i))] }, label)) })] }, `${row.id}:${index}`))] }, day.id)),
-            !changes.count && _jsx("p", { children: "The exercise list, weekly targets and displayed settings match. Applying keeps the rebuilt program details." })] }) });
-}
-function ProgramLayoutHistory({ program, onRestore }) {
-    if (!program.layoutHistory?.length) return null;
-    return _jsxs("section", { className: "wpb-program-layout-history", "aria-label": "Earlier layouts", children: [
-        _jsx("h3", { children: "Earlier layouts" }),
-        _jsx("p", { children: "Saved exercises, settings and targets. Review before restoring." }),
-        program.layoutHistory.map((revision, index) => _jsxs("button", { type: "button", className: "wpb-session-choice pressable",
-            "data-restore-program-layout": index, onClick: () => onRestore(revision), children: [
-                _jsx("strong", { children: revision.label }),
-                _jsx("span", { children: new Date(revision.at).toLocaleString() }), _jsx("span", { children: "Review restore" })] }, `${revision.at}:${index}`))] });
-}
 function WorkingSetCountControl({ value, onChange, label, minimum = 1, disabled = false }) {
     const count = Number(value);
     return _jsxs("div", { className: "wpb-working-set-control", children: [

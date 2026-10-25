@@ -28,7 +28,7 @@ const priorities = app.slice(
   app.indexOf('!manual && program.engineSource !== "pursuit-next"')
 );
 assert.ok(priorities.length > 500, 'muscle-priority panel is still present');
-assert.ok(priorities.includes('const week = activeWeek, volume = weeklyVolume(program, week), direct = {};'),
+assert.ok(priorities.includes('const week = activeWeek, volume = wkVol, direct = {};'),
   'priority set estimates must use the selected Program week');
 assert.ok(priorities.includes('exerciseAt(program, day, slot, activeWeek)'),
   'alternating exercise choice uses the selected week');
@@ -37,3 +37,14 @@ assert.ok(priorities.includes('computeCell(program, day, id, slot, week)'),
 assert.ok(priorities.includes('"Estimated sets in week ", week'),
   'visible dose provenance names the same selected week');
 console.log('PASS M355: Program muscle priority dose, direct exercises and week label share selected-week ownership.');
+
+// M358: reuse ProgramView's memoized selected-week volume instead of
+// recalculating the same expensive weekly projection for the priority explanation.
+const programView = app.slice(app.indexOf('function ProgramView('),app.indexOf('function ProgramSaveReview('));
+assert.ok(programView.includes('const wkVol = useMemo(() => weeklyVolume(program, activeWeek), [program, activeWeek]);'),
+  'selected-week program volume must have a memoized owner');
+assert.equal((programView.split('weeklyVolume(program, ').slice(1)).length,1,
+  'Program view must not duplicate selected-week volume work on unrelated renders');
+assert.ok(priorities.includes('const week = activeWeek, volume = wkVol, direct = {};'),
+  'priority explanation must consume the memoized canonical selected-week volume');
+console.log('PASS M358: one selected-week volume computation owner in ProgramView.');

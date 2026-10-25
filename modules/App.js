@@ -19975,9 +19975,10 @@ function CycleBlockPreview({ program, previousProgram = null, initialWeek = 1, i
     const [week, setWeek] = useState(Math.max(1, Math.min(total, initialWeek)));
     const isFuturePreview = program.nextEngine?.cycleTemplate?.preview === true;
     const splitDecision = program.nextEngine?.cycleTemplate?.splitDecision;
-    const doseChange = useMemo(() => previousProgram
+    const originalChange = splitDecision?.workingWeekVolumeChange;
+    const doseChange = useMemo(() => originalChange && previousProgram
         ? describeRegionalWorkingWeekChange(previousProgram, program, EXERCISES) : null,
-        [previousProgram, program]);
+        [originalChange, previousProgram, program]);
     const liftTargets = Object.entries(program.nextEngine?.request?.goal?.liftFrequency || {});
     return _jsx(SessionChoiceDialog, { title: program.blockLabel || program.name, onClose, className: "wpb-cycle-block-preview", children: _jsxs("div", { children: [
         _jsx("p", { className: "wpb-cycle-preview-note", children: isFuturePreview
@@ -20022,9 +20023,11 @@ function CycleDetail({ cycle, saved = [], history = [], cycleInfo = null, onBack
     const current = saved.find(p => p.id === cycle.blockIds[active]);
     const next = saved.find(p => p.id === cycle.blockIds[active + 1]);
     const changes = useMemo(() => current && next ? blockChangeSummary(current, next) : null, [current, next]);
-    const doseChange = useMemo(() => current && next
+    const hasDoseExplanation = !!(next?.nextEngine?.cycleTemplate?.splitDecision?.workingWeekVolumeChange
+        ?? cycle.blockMeta?.[active + 1]?.splitDecision?.workingWeekVolumeChange);
+    const doseChange = useMemo(() => hasDoseExplanation && current && next
         ? describeRegionalWorkingWeekChange(current, next, EXERCISES) : null,
-        [current, next]);
+        [hasDoseExplanation, current, next]);
     const isActive = cycleInfo?.cycle?.id === cycle.id;
     const Ic = iconForCycle(cycle);
     return _jsxs("div", { className: "wpb-page-shell wpb-cycle-detail", children: [

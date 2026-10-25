@@ -78,6 +78,13 @@ for (const name of ['ProgramRevisionReview', 'ProgramLayoutHistory', 'ProgramSav
 }
 assert.ok(app.includes("from './program-review-surfaces.js'"), 'App composes the feature-owned Program review');
 assert.ok(!programReview.includes('style: {') && !programReview.includes('style: iconBtn()'), 'No static inline review styles');
+assert.ok(programReview.includes("event.key === 'Escape'") &&
+  programReview.includes("event.key !== 'Tab'") &&
+  programReview.includes('handleProgramSaveReviewKeys(event, onClose)') &&
+  programReview.includes('autoFocus: true') &&
+  programReview.includes('returnFocus.current?.isConnected'),
+  'Save review must support keyboard dismissal, contained tab navigation and return focus');
+
 assert.ok(programReview.includes('disabled: !changes.length || !!conflicts.length') &&
     programReview.includes('checked: scope === value') && programReview.includes('onChange: () => onScope(value)'),
     'Save scope and conflict guards remain owned by the existing plan transaction');

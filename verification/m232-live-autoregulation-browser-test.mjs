@@ -120,9 +120,13 @@ try {
     // M359: use the actual set-number menu; selecting a type retains numeric
     // ownership, so this must be protected by intent rather than input editing.
     const freshSession = async () => {
-        await page.evaluate(() => localStorage.removeItem('wpb:live'));
+        // Clear after the old page's unload autosave and before the next mount.
+        const reset = await page.evaluateOnNewDocument(() => localStorage.removeItem('wpb:live'));
         await page.reload({ waitUntil: 'networkidle0' });
         await page.waitForSelector('[data-testid="set-0-2"]');
+        await page.removeScriptToEvaluateOnNewDocument(reset.identifier);
+        assert.deepEqual(await values(), ['100', '100', '100'], 'Each intent case starts from a fresh prescription');
+        assert.ok((await rows()).every(row => !row.done));
     };
     const chooseFailure = async index => {
         await page.click(`[data-testid="set-0-${index}"] [data-set-options-trigger]`);

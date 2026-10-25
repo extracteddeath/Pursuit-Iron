@@ -1,3 +1,7 @@
+## October 25 — M367 Program Settings dialog and form cleanup (build 915)
+
+Continue the single-owner Program Settings view. Move twelve static sheet/form/footer styles into the existing themed CSS owner; add a named dialog, connected Folder and Description labels, and pressed-state semantics for goal, progression, training approach and equipment constraints. Preserve all engine inputs, controlled draft values, validation, Save/Cancel, swipe-dismiss and program persistence. The combined inline-style budget drops 2,728 → 2,716. Require release integrity, source contracts, independent engine audit, browser regression shards, offline shell hashing and hosted byte verification before calling the build live. Next: isolate repeated Program Settings choice-row styling under shared semantic controls without changing workout architecture.
+
 ## October 25 — M366 Program Settings ownership (build 914 candidate)
 
 Extract the Program Settings dialog from App.js to `modules/program-settings-sheet.js`, retaining the existing state owner, staged save/cancel transaction, program and cycle length validity rules, and the swipe dismissal callback. Move 10 static block-duration JSX styles into dedicated theme CSS with disabled and invalid states plus forced-colors keyboard focus treatment. Count the new module in the source debt guard and reduce the ceiling 2738 → 2728. Do not change engine, saved program data, history or schema. Require exact-head release, core, independent engine, browser and offline verification before merge; validate hosted Build 914 afterward.

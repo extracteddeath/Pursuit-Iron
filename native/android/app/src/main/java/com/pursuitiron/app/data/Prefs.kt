@@ -61,6 +61,10 @@ class Prefs(context: Context) {
     fun changeCheckIn(v: String) { checkIn = v; sp.edit().putString("checkIn", v).apply() }
     fun changeFocus(v: Boolean) { focus = v; sp.edit().putBoolean("focus", v).apply() }
     fun changeSteppers(v: Boolean) { steppers = v; sp.edit().putBoolean("steppers", v).apply() }
+    /** The design's Comfort & accessibility text size: 1, 1.1 or 1.2 on top of the phone's own font scale. */
+    var zoom by mutableStateOf(sp.getFloat("zoom", 1f))
+        private set
+    fun changeZoom(v: Float) { zoom = v; sp.edit().putFloat("zoom", v).apply() }
     fun changeKeepAwake(v: Boolean) { keepAwake = v; sp.edit().putBoolean("keepAwake", v).apply() }
     fun dismissTransfer() { transferDismissed = true; sp.edit().putBoolean("transferDismissed", true).apply() }
     fun markIntro(v: Int) { seenIntro = v; sp.edit().putInt("seenIntro", v).apply() }

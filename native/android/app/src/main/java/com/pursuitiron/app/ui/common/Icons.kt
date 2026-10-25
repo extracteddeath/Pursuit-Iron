@@ -31,6 +31,7 @@ object PiIcons {
     val Minus = icon("minus", "M5 12h14", 2.4f)
     val Close = icon("close", "M6 6l12 12M18 6 6 18", 2.4f)
     val More = icon("more", "M12 4.5v.01M12 12v.01M12 19.5v.01", 3.6f)
+    val Lock = icon("lock", "M6 11V8a6 6 0 0 1 12 0v3M5 11h14v10H5z")
     val Pencil = icon("pencil", "M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z")
     val Star = icon("star", "M12 2l3 6 6 .9-4.5 4.3 1 6.3L12 16.6 6.5 19.5l1-6.3L3 8.9 9 8z")
     val Sliders = icon("sliders", "M4 7h10M18 7h2M4 17h4M12 17h8M14 4v6M8 14v6")

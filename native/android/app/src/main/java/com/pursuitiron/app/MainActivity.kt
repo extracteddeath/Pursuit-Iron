@@ -20,7 +20,10 @@ class MainActivity : ComponentActivity() {
         if (savedInstanceState == null) handle(intent)
         setContent {
             PiTheme(seed = vm.prefs.seed, dark = vm.prefs.dark ?: isSystemInDarkTheme(), black = vm.prefs.black) {
-                PiApp(vm)
+                val d = androidx.compose.ui.platform.LocalDensity.current
+                androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(d.density, d.fontScale * vm.prefs.zoom)) {
+                    PiApp(vm)
+                }
             }
         }
     }

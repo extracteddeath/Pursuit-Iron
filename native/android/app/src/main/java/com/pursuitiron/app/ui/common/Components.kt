@@ -76,10 +76,10 @@ fun SectionTitle(text: String, modifier: Modifier = Modifier) =
 
 /** Pill segmented control: the selected segment is secondary-container. */
 @Composable
-fun Segmented(options: List<Pair<String, String>>, selected: String?, onSelect: (String) -> Unit, modifier: Modifier = Modifier, height: Dp = 44.dp) {
+fun Segmented(options: List<Pair<String, String>>, selected: String?, onSelect: (String) -> Unit, modifier: Modifier = Modifier, height: Dp = 44.dp, track: Color = MaterialTheme.colorScheme.surfaceContainerHigh, gap: Dp = 4.dp) {
     Row(
-        modifier.fillMaxWidth().clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh).padding(4.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        modifier.fillMaxWidth().clip(CircleShape).background(track).padding(gap),
+        horizontalArrangement = Arrangement.spacedBy(gap),
     ) {
         options.forEach { (id, label) ->
             val on = id == selected

@@ -117,12 +117,19 @@ fun YouScreen(vm: AppViewModel) {
                 }
                 item(span = full) { CustomizeProfileButton { customizeOpen = true } }
             }
-            "body" -> { item { BodyweightCard(vm) }; item { MeasurementsCard(vm) }; item(span = full) { ProgressPhotosCard(vm) }; item { InjuriesCard(vm) } }
+            "body" -> { item { BodyBwCard(vm) }; item { BodyMeasureCard(vm) }; item(span = full) { ProgressPhotosCard(vm) } }
             else -> {
-                // The design's Settings: the everyday controls inline, everything else one row away in a sheet.
-                item { SettingsCard(vm) }
-                item { GymsCard(vm) { gymsOpen = true } }
-                item(span = full) { SettingsNav(vm, onTools = { toolsOpen = true }) { settingsSheet = it } }
+                // The design's Settings: the backup reminder, the everyday controls as one list, every other page a row away,
+                // the banned list and the e1RM calculator.
+                vm.home?.o("backup")?.takeIf { System.currentTimeMillis() - vm.prefs.backupNudgeHiddenAt > 7 * 86_400_000L }?.let { b -> item(span = full) { BackupBanner(vm, b) } }
+                item { SettingsGroup(vm) { gymsOpen = true } }
+                item { SettingsRows(vm) { k -> when (k) {
+                    "setup" -> vm.openSetupMode("program")
+                    "injury" -> vm.injuryLogOpen = true
+                    else -> settingsSheet = k
+                } } }
+                item { BannedSection(vm) }
+                item { E1rmCalcCard(vm) }
             }
         }
     }
@@ -132,7 +139,12 @@ fun YouScreen(vm: AppViewModel) {
     if (toolsOpen) ToolsSheet(vm) { toolsOpen = false }
     if (customizeOpen) ProfileCustomizeSheet(vm) { customizeOpen = false }
     if (meOpen) MeSheet(vm, onClose = { meOpen = false }) { meOpen = false; standardsOpen = true }
-    settingsSheet?.let { k -> SettingsPageSheet(vm, k) { settingsSheet = null } }
+    when (settingsSheet) {
+        null -> {}
+        "comfort" -> ComfortSheet(vm) { settingsSheet = null }
+        "whatsnew" -> WhatsNewSheet(vm) { settingsSheet = null }
+        else -> SettingsPageSheet(vm, settingsSheet!!) { settingsSheet = null }
+    }
 }
 
 /* App.js ProfileCustomization, as the design's panel: reorder the profile and hide what you don't use. */

@@ -131,9 +131,7 @@ fun TodayScreen(vm: AppViewModel) {
             }
         }
 
-        h.o("backup")?.takeIf { System.currentTimeMillis() - vm.prefs.backupNudgeHiddenAt > 7 * 86_400_000L }?.let { b ->
-            item(span = full) { BackupBanner(vm, b) }
-        }
+        // The design keeps the backup reminder in You → Settings.
         if (next != null && h.o("live") == null) {
             item(span = full) { StreakLine(h) }
             item(span = full) { BlockProgressCard(vm, h) }

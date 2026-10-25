@@ -113,6 +113,11 @@ private val WHATS_NEW = listOf(
 )
 
 @Composable
+fun WhatsNewList(color: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurface) {
+    WHATS_NEW.forEach { Text("•  $it", style = MaterialTheme.typography.bodyMedium, color = color) }
+}
+
+@Composable
 fun WhatsNewCard(vm: AppViewModel) {
     val cs = MaterialTheme.colorScheme
     PiCard(color = cs.secondaryContainer, radius = 28.dp, padding = 18.dp) {
@@ -120,7 +125,7 @@ fun WhatsNewCard(vm: AppViewModel) {
             Icon(PiIcons.Sparkle, null, tint = cs.onSecondaryContainer)
             Text("What's new", style = MaterialTheme.typography.titleMedium, color = cs.onSecondaryContainer, modifier = Modifier.weight(1f))
         }
-        WHATS_NEW.forEach { Text("•  $it", style = MaterialTheme.typography.bodySmall, color = cs.onSecondaryContainer) }
+        WhatsNewList(cs.onSecondaryContainer)
         TextButton(onClick = { vm.prefs.markWhatsNew(WHATS_NEW_VERSION) }) { Text("Got it") }
     }
 }

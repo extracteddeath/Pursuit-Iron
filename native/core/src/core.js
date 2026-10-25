@@ -2014,7 +2014,8 @@ export function settings() {
         theme: st.theme || null, warmupCard: st.warmupCard !== false, lastBackup: st.lastBackup || null, sessions: history().length, programs: saved().length,
         reminders: reminders(), customCount: Array.isArray(st.custom) ? st.custom.length : 0,
         loadMode: st.loadMode === 'rpe' ? 'rpe' : 'rir', experience: st.experience || null,
-        banned: (st.banned || []).map((id) => ({ id, name: exName(id) })) };
+        banned: (st.banned || []).map((id) => ({ id, name: exName(id) })),
+        injuries: (() => { let l = []; try { l = injuries(); } catch { l = []; } return { active: l.filter((e) => !e.resolvedAt).length, resolved: l.filter((e) => e.resolvedAt).length }; })() };
 }
 export function updateSettings(patch = {}) {
     const allowed = ['restScale', 'restAutoStart', 'haptics', 'theme', 'warmupCard', 'loadMode', 'experience'];

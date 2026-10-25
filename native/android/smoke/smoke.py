@@ -587,25 +587,22 @@ if scroll_to(r"^\|Reminders$", tries=8):
 else:
     FAILS.append("no Reminders row in settings")
 if scroll_to(r"^\|Gyms$"):
-    tap(r"^\|Edit$", "gyms-sheet")
+    tap(r"^Manage gyms", "gyms-sheet")
     back()
-if scroll_to(r"\|Plates and 1RM"):
-    tap(r"\|Plates and 1RM")
-    tap(r"Total weight")
-    adb("shell", "input", "text", "100")
-    time.sleep(1)
-    hide_keyboard()
-    time.sleep(0.8)
-    shot("plate-calc")
-    tap(r"^\|1RM$")
-    tap(r"Weight \(")
-    adb("shell", "input", "text", "100")
-    hide_keyboard()
-    time.sleep(1)
-    shot("one-rm")
+# The design's Comfort & accessibility panel: text size and the haptic vocabulary
+if scroll_to(r"^\|Comfort & accessibility$", tries=8):
+    tap(r"^\|Comfort & accessibility$", "comfort")
+    if not find(r"HAPTIC PATTERNS", timeout=4):
+        FAILS.append("comfort panel missing")
+    tap(r"^\|Larger$", "text-larger")
+    tap(r"^\|Default$")
     back()
-    if find(r"One-rep max", timeout=2):
-        back()
+else:
+    FAILS.append("no Comfort & accessibility row")
+if scroll_to(r"^\|e1RM calculator$", tries=10):
+    shot("e1rm-calc")
+else:
+    FAILS.append("no e1RM calculator in settings")
 # 7b. Settings parity: training preferences, data management, help
 tap(r"^\|You$|^You\|")
 for _ in range(14):
@@ -691,14 +688,22 @@ if tap(r"Edit program", "editor"):
         back()
     back()
 
-# Injury log from outside a workout
+# Injury log from outside a workout (the design keeps it in Settings)
 tap(r"^\|You$|^You\|")
 tap(r"^\|Body$")
 if scroll_to(r"^\|Progress photos$", tries=5):
     shot("progress-photos")
 else:
     FAILS.append("progress photos missing on Body")
-if scroll_to(r"^\|Injury log$"):
+# The design's Body: a stepper and Log today for bodyweight, stepper rows for measurements
+if scroll_up_to(r"^\|Log today$|^\|Logged today$", tries=8):
+    if tap(r"^\|Log today$", "bw-log", required=False) and not find(r"^\|Logged today$", timeout=4):
+        FAILS.append("bodyweight Log today did not log")
+if not scroll_to(r"Waist trend|^\|Waist$", tries=4):
+    FAILS.append("measurement rows missing on Body")
+scroll_up_to(r"^\|Settings$", tries=14)
+tap(r"^\|Settings$")
+if scroll_to(r"^\|Injury log$", tries=10):
     tap(r"^\|Injury log$", "injury-log")
     if find(r"^\|Log an injury$", timeout=2):
         tap(r"^\|Log an injury$")

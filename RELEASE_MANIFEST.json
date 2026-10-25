@@ -2,10 +2,10 @@
   "schemaVersion": 3,
   "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": 915,
+  "build": 916,
   "engineVersion": "0.65.9",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "387a52ba250c871370aa23726f90b760d543c5a828a4c722887c7d7f38811f62",
+  "runtimeAggregate": "3710dc2d00d15cd98833abcd788f72d5a2de55e6dfa36147b6dc4ba665b2acc8",
   "runtimeFiles": {
     "modules/cycle-setup-drafts.js": "d3e9e750298afd8820e2bfd543c2cebede65e4f27c136ff26fe383d202b824e9",
     "modules/engine-api.js": "9d9072d28e255c67cb10222299a260e9404557a4cbe49756f7eae22a8d5155d1",
@@ -95,7 +95,7 @@
     "modules/program-review-surfaces.js": "fa213707aede2d0b96a5f59a397f8202336fba96da183ad0c84bcc0309082b3d",
     "modules/program-review.js": "394e326abe226725d1dd5933420e91cc2e9e79dd5ba9a5a7cb856f4bc8970d51",
     "modules/program-schedule-sheet.js": "3f3db9d93c816ba1c3994c6c2b80013398121156b8345e8cd4bbb991c2e7fefc",
-    "modules/program-settings-sheet.js": "d5369a871c5813a07a657761a6d2a78f4402654738dcc189951185b228f38594",
+    "modules/program-settings-sheet.js": "e9f610dd39712b3be54af2a64d502d6434a0cd25cbdcc00146793c4814004e26",
     "modules/session-choice-dialog.js": "532ddb08086f4bc818eab304df91abe0caf24bf814dcc7fca4cf48f6fda55411",
     "modules/session-plan.js": "29e9b5b201a59de13bd0d21f89ca6358741d4889f52a96cd010c33554902e34c",
     "modules/session-tools.js": "5a34acb46ddd6452a807d4e0db656c61cf71c27d7f939fa3ea7f225d197f493d",
@@ -108,6 +108,7 @@
     "modules/training-domain/records.js": "a1cab10d467508286ea6b0767dd093faa11cc729019db5b352260b4f5f3d0f81",
     "modules/ui-layout.js": "dfea25df61f399fcbc4568b90725f516560dad84980b4aa75e13e8e3152283d4",
     "modules/ui-motion.js": "c522bdc1cd4538858412547cb1ff9cbf97acd7502168cdb015fbf9ffa0a9b356",
+    "modules/ui-primitives.js": "9fce6617c79630dd60573d76595b41422fb16a3079d0264a9d95f4e927947ad4",
     "modules/wizard-stability.js": "a62b2bed8a1f5ab880bfeab036a83ec630c93048b8a352652fe00ae75374a3d1",
     "modules/workout-context.js": "e59546ed86f16f08b398960e4753495185026d4c53770384b7f96a96f4cd8afa",
     "vendor/lucide-react.js": "f84db748249b6e57e1d5187e876da806c1733523a1fa1501224bf740519b2cf4",
@@ -124,17 +125,17 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "305e2cc3d66945261c3310df2207699815ae69df56951a8cb1e0038686148fa7",
-    "index.html": "021a7724d4b1e6bfd90505f157d154939ca1cc16668950eddca58e9e6d87252c",
-    "sw.js": "101e9d175391556b1d37e6bc40bbb06ac84ad603bfc6d82b00f20b95e9c4452e",
-    "BUILD_PROFILE.json": "83a20982615f89e1588ed79197ca2b9df07a95f1b794482aea36531dc4ab5d46",
-    "CHANGELOG.md": "aa0fea23cb31e5bc4d110725e538f71c063c3008041da0bb8890013a5c062485",
-    "app.css": "4dc66ef4738e0a98807db57060df2cdd83a900d693aa30c969f83cc432652893",
+    "modules/App.js": "d2dbf17fc8a25d912c437c2b357f5aae28f4c6146d15ccd4e58fced806ea7e4b",
+    "index.html": "5089845046069b601680d9d5230389f8d1b1cd08ed17237471a983ec0c988579",
+    "sw.js": "9e0e1ec49adaeb0afb0fd8ba8b7417d31825232519dc8d5146ee313406976996",
+    "BUILD_PROFILE.json": "6ba345345b7207a415ece2d61725748338bddb6ed23c209e245d2a3c9ed7ec9e",
+    "CHANGELOG.md": "66593acd26b47812d85edb709dfbcb0b3efb2b2dd635bfea2155300751ccb22f",
+    "app.css": "4e1d04eec91ed46a547ef2fcbac83f2465d4c0720eaf09f21c51c34201fa1762",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Prelaunch cleanup removes duplicate UI computation exports and unused bindings; canonical engine behavior and saved-data contracts remain unchanged.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b915-r7ad3cde002497753",
-  "uiMilestone": "Build 915 · M367 Program Settings dialog semantics and CSS ownership"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b916-r6f6594c9acc6259b",
+  "uiMilestone": "Build 916 · M368 Shared settings controls and reliable Home actions"
 }

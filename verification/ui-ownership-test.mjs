@@ -8,16 +8,17 @@ const app = fs.readFileSync('modules/App.js', 'utf8');
 const programReview = fs.readFileSync('modules/program-review-surfaces.js', 'utf8');
 const programSchedule = fs.readFileSync('modules/program-schedule-sheet.js', 'utf8');
 const programSettings = fs.readFileSync('modules/program-settings-sheet.js', 'utf8');
-const presentationSource = app + '\n' + programReview + '\n' + programSchedule + '\n' + programSettings;
+const primitives = fs.readFileSync('modules/ui-primitives.js', 'utf8');
+const presentationSource = primitives + '\n' + app + '\n' + programReview + '\n' + programSchedule + '\n' + programSettings;
 const MAX_IMPORTANT = 2360; // M291: consolidate the remaining Profile style owners
 const MAX_APP_IMPORTANT = 1229; // M292: retire ten superseded Progress priority declarations.
 const MAX_REPEAT_IMPORTANT = 15; // M288: at-rule comments no longer erase media/container scope.
-const MAX_INLINE_STYLE_OBJECTS = 2716; // M365: retire 15 schedule JSX styles; include new module // M363: remove 19 save-review inline objects; count extracted source too
+const MAX_INLINE_STYLE_OBJECTS = 2670; // M368: retire all 46 remaining settings styles; count extracted primitives too.
 
 // M367: Settings is a named, keyboard-focusable dialog with explicit labels and state.
 for(const role of ['backdrop','panel','heading','title','close','intro','field-label','field','description','footer','cancel','save'])
   assert.ok(css.includes('.wpb-program-settings-'+role+'{'), 'Settings view lost semantic CSS owner '+role);
-for(const token of ['role: "dialog"','"aria-modal": true','"aria-labelledby": "program-settings-title"','htmlFor: "program-settings-folder"','htmlFor: "program-settings-description"','"aria-pressed": !!cfgDraft?.noSupersets','"aria-pressed": !!cfgDraft?.noBodyweight','disabled: !canApply'])
+for(const token of ['role: "dialog"','"aria-modal": true','"aria-labelledby": "program-settings-title"','htmlFor: "program-settings-folder"','htmlFor: "program-settings-description"','selected: !!cfgDraft?.noSupersets','selected: !!cfgDraft?.noBodyweight','disabled: !canApply'])
   assert.ok(programSettings.includes(token), 'Settings dialog accessibility/transaction contract lost: '+token);
 assert.ok(!programSettings.includes('style: iconBtn()') && !programSettings.includes('"wpb-backdrop", style:'), 'Static Settings shell styles must remain in CSS');
 
@@ -90,8 +91,8 @@ assert.ok(programSettings.includes("data-testid\": \"program-settings-sheet") &&
     programSettings.includes('onApply: applyCfgDraft') &&
     programSettings.includes('onClick: applyCfgDraft'),
     'Settings retains staged changes and Save/Cancel actions');
-assert.ok(programSettings.includes('GOALS, eyebrow, sheetDragRef, selectNumericInput, iconBtn') &&
-  app.includes('GOALS: GOALS, eyebrow: eyebrow, sheetDragRef:'),
+assert.ok(programSettings.includes('GOALS, sheetDragRef, selectNumericInput') &&
+  app.includes('GOALS: GOALS, sheetDragRef:'),
   'Settings does not capture removed App module presentation globals');
 for(const label of ['Decrease block length','Increase block length','Block length in weeks','program-weeks-error'])
   assert.ok(programSettings.includes(label), 'Settings duration control lost contract: '+label);
@@ -135,9 +136,19 @@ assert.deepEqual(repeatedImportantDeclarations('.scoped{color:red!important;} /*
     'Comments before at-rules cannot erase media scope or invent duplicate owners.');
 assert.deepEqual(repeatedImportantDeclarations('/* narrow */ @media(max-width:420px){.scoped{color:red!important;}} /* same scope */ @media(max-width:420px){.scoped{color:blue!important;}}'),
     ['@media(max-width:420px)\t.scoped\tcolor'], 'Commented copies in the same media scope still count as competing owners.');
-for (const name of ['UiRootHeader','UiAction','UiChoice','UiStatus','UiSection','SettingsSwitch'])
-    assert.equal((app.match(new RegExp('function ' + name + '\\(', 'g')) || []).length, 1,
+for (const name of ['UiHeader','UiRootHeader','UiAction','UiChoice','UiStatus','UiSection','SettingsSwitch'])
+    assert.equal((presentationSource.match(new RegExp('function ' + name + '\\(', 'g')) || []).length, 1,
         'Only one shared ' + name + ' component may exist.');
+assert.ok(app.includes("from './ui-primitives.js'") && programSettings.includes("from './ui-primitives.js'"),
+    'Screens and Settings consume the same shared UI owner');
+for (const name of ['UiHeader','UiRootHeader','UiAction','UiChoice','UiStatus','UiSection']) {
+    assert.equal((app.match(new RegExp('function ' + name + '\\(', 'g')) || []).length, 0, 'No shadow UI primitive in App: '+name);
+    assert.equal((primitives.match(new RegExp('export function ' + name + '\\(', 'g')) || []).length, 1, 'One exported UI primitive: '+name);
+}
+assert.ok(!primitives.includes('engine-api') && !primitives.includes('useState') && !primitives.includes('localStorage'),
+    'Shared presentation must not own training, state or persistence');
+assert.ok(!programSettings.includes('style:') && !programSettings.includes('C.') && !programSettings.includes('eyebrow'),
+    'Settings presentation is fully CSS-owned, including conditional choices');
 for (const token of ['--pi-color-card','--pi-color-control','--pi-color-feature','--pi-color-divider',
     '--pi-shape-card','--pi-shape-action','--pi-shape-feature'])
     assert.ok(css.includes(token), 'Missing semantic theme role: ' + token);
@@ -155,7 +166,7 @@ for(const primitive of [
 ]) assert.ok(css.includes(primitive), 'Missing shared primitive: '+primitive);
 for(const selector of ['input:not([type="range"]):not(.wpb-ui-control)', 'select:not(.wpb-ui-control)', 'textarea:not(.wpb-ui-control)'])
   assert.ok(app.includes(selector),'Legacy form layer must leave shared controls to their canonical owner: '+selector);
-const action=app.slice(app.indexOf('function UiAction('),app.indexOf('function UiChoice('));
+const action=primitives.slice(primitives.indexOf('function UiAction('),primitives.indexOf('function UiChoice('));
 assert.ok(!action.includes('style: {') && !action.includes('C.accent'),
   'Shared UiAction may not inject presentation overrides at render time');
 for(const str of ['wpb-ui-card wpb-profile-share-card','wpb-ui-card wpb-custom-cycle',
@@ -212,7 +223,7 @@ assert.ok(setupStepper.includes('disabled: value === 0')&&setupStepper.includes(
   'Shared stepper retains native limit semantics');
 const plan=app.slice(app.indexOf('function PlanView('),app.indexOf('function NextWorkoutView('));
 assert.ok(plan.includes('_jsx(UiRootHeader, { title: "Plan" })')&&!plan.includes('aria-label": "Back"'),'Plan root uses shared app bar without a Back action');
-const rootHeader=app.slice(app.indexOf('function UiRootHeader('),app.indexOf('function UiAction('));
+const rootHeader=primitives.slice(primitives.indexOf('function UiRootHeader('),primitives.indexOf('function UiAction('));
 assert.ok(!rootHeader.includes('style:'),'Root app bar presentation is class-owned');
 assert.ok(!plan.includes('style: { fontSize: 26, fontWeight: 740, color: C.text'),
   'Plan title static typography must not return to inline styles');

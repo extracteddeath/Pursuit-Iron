@@ -129,10 +129,74 @@ try{
    await page.screenshot({path:`verification/m352-review-${width}-${cycle?'cycle':'program'}-${large?'large':'normal'}-phone.png`});
   };
   await reviewLayout(false);
-  if(width===393){
-   const settings=await page.$('[aria-label="Program settings"]');await settings.evaluate(n=>n.scrollIntoView({block:'center'}));await settings.click();
-   await page.waitForSelector('[data-testid="program-settings-sheet"]');await page.click('[data-testid="program-settings-sheet"] [aria-label="Close"]');
+  // M368: use the production dialog, state owner, shared controls and focus stack.
+  // Selecting constraints is staged; Cancel/Escape must not mutate training or drafts.
+  const settingsState=()=>page.evaluate(()=>{
+   const s=JSON.parse(localStorage.getItem('wpb:v1'));
+   return {saved:s.saved,cycles:s.cycles,history:s.history,drafts:s.drafts};
+  });
+  for(const large of [false,...([320,393,900].includes(width)?[true]:[])]){
+   const before=await settingsState();
+   const trigger=await page.$('[aria-label="Program settings"]');
+   await trigger.evaluate(n=>n.scrollIntoView({block:'center'}));await trigger.click();
+   await page.waitForSelector('[data-testid="program-settings-sheet"]');
+   const oldFont=await page.evaluate(large=>{
+    const font=document.documentElement.style.fontSize;
+    if(large)document.documentElement.style.fontSize='32px';
+    return font;
+   },large);
+   if(large&&width===900)await page.setViewport({width,height:480,deviceScaleFactor:1,isMobile:false,hasTouch:true});
+   const geometry=await page.evaluate(()=>{
+    const panel=document.querySelector('.wpb-program-settings-panel'),body=panel.querySelector('.wpb-program-settings-body'),footer=panel.querySelector('.wpb-program-settings-footer');
+    const p=panel.getBoundingClientRect(),b=body.getBoundingClientRect(),f=footer.getBoundingClientRect();
+    return {left:p.left,right:p.right,viewport:innerWidth,bodyHeight:b.height,bodyBottom:b.bottom,footerTop:f.top,
+     overflow:body.scrollWidth-body.clientWidth,
+     choices:[...panel.querySelectorAll('button[aria-pressed]')].map(n=>({height:n.getBoundingClientRect().height,inline:[...n.style].filter(k=>['background','color','font-size','height','width','padding','border'].includes(k))})),
+     labelSize:parseFloat(getComputedStyle(panel.querySelector('.wpb-program-settings-choice-label')).fontSize)};
+   });
+   assert.ok(geometry.left>=0&&geometry.right<=geometry.viewport+1&&geometry.overflow<=1,'Settings stays within the app: '+JSON.stringify(geometry));
+   assert.ok(geometry.bodyHeight>=44&&geometry.bodyBottom<=geometry.footerTop+1,'Settings retains a usable form viewport above its footer');
+   assert.ok(geometry.choices.length>=10&&geometry.choices.every(n=>n.height>=48&&!n.inline.length),'Shared choices have real 48px targets and no inline presentation: '+JSON.stringify(geometry));
+   if(large)assert.ok(geometry.labelSize>=30,'Choice labels follow 200% text sizing');
+   assert.equal(await page.$eval('[aria-label="Save program settings"]',n=>n.disabled),true);
+   const groups=await page.$$('.wpb-program-settings-group');
+   for(const group of groups){
+    const option=await group.$('button[aria-pressed="false"]');
+    if(!option)continue;
+    await option.evaluate(n=>n.scrollIntoView({block:'center'}));await option.click();
+    assert.equal(await option.evaluate(n=>n.getAttribute('aria-pressed')),'true','Choices update the controlled draft');
+   }
+   assert.equal(await page.$eval('[aria-label="Save program settings"]',n=>n.disabled),false,'A staged change enables Save');
+   await page.focus('#program-settings-description');await page.type('#program-settings-description','Staged settings check');
+   await page.focus('.wpb-program-settings-save');await page.keyboard.press('Tab');
+   assert.equal(await page.$eval('.wpb-program-settings-close',n=>document.activeElement===n),true,'Tab wraps inside Settings through the shared focus owner');
+   await page.keyboard.down('Shift');await page.keyboard.press('Tab');await page.keyboard.up('Shift');
+   assert.equal(await page.$eval('.wpb-program-settings-save',n=>document.activeElement===n),true,'Shift Tab returns to the final settings action');
+   for(const selector of ['.wpb-program-settings-save','.wpb-program-settings-cancel']){
+    assert.equal(await page.$eval(selector,n=>{const r=n.getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight&&n.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));}),true,'Settings footer remains pointer-reachable after scrolling');
+   }
+   await page.screenshot({path:`verification/m368-settings-${width}-${theme}-${large?'large':'normal'}-phone.png`});
+   if(width===393&&!large){
+    const cdp=await page.createCDPSession();
+    await cdp.send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'},{name:'forced-colors',value:'active'}]});
+    const forced=await page.evaluate(()=>{
+     const panel=document.querySelector('.wpb-program-settings-panel');
+     const selected=panel.querySelector('.wpb-ui-choice[aria-pressed="true"]'),idle=panel.querySelector('.wpb-ui-choice[aria-pressed="false"]');
+     return {active:matchMedia('(forced-colors:active)').matches,selected:getComputedStyle(selected).backgroundColor,idle:getComputedStyle(idle).backgroundColor,
+      motion:getComputedStyle(panel.querySelector('.wpb-program-settings-choice')).transitionProperty};
+    });
+    assert.ok(forced.active&&forced.selected!==forced.idle&&forced.motion==='none','Settings keeps selection and reduced motion in forced colors: '+JSON.stringify(forced));
+    await cdp.send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:reduced?'reduce':'no-preference'}]});
+    await cdp.detach();
+   }
+   if(large)await page.keyboard.press('Escape');else await page.click('.wpb-program-settings-cancel');
    await page.waitForSelector('[data-testid="program-settings-sheet"]',{hidden:true});
+   assert.equal(await trigger.evaluate(n=>document.activeElement===n),true,'Closing returns focus to Program settings');
+   assert.deepEqual(await settingsState(),before,'Settings cancellation preserves saved plans, history, cycle and creation drafts');
+   await page.evaluate(font=>{document.documentElement.style.fontSize=font;},oldFont);
+   if(large&&width===900)await page.setViewport({width,height:880,deviceScaleFactor:1,isMobile:false,hasTouch:true});
+  }
+  if(width===393){
    const reroll=await page.$('[aria-label="Reroll exercises or enter a seed"]');await reroll.evaluate(n=>n.scrollIntoView({block:'center'}));await reroll.click();
    await page.waitForFunction(()=>[...document.querySelectorAll('.wpb-backdrop div')]
     .some(n=>n.children.length===0&&n.textContent==='Shuffle exercises'));

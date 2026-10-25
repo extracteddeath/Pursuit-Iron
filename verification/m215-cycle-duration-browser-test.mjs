@@ -18,12 +18,10 @@ const cycle=${JSON.stringify(staleCycle)};
 localStorage.setItem('m215-programs',JSON.stringify(stored));
 const noop=()=>{};
 // This isolated cycle-duration probe renders the real feature module. App.js normally supplies
-// presentation palette/helpers; the probe supplies inert visual dependencies, never policy.
+// labels/input helpers; the probe supplies no training policy or replacement UI primitives.
 const settingsPresentation={
- C:{accent:'#a78bfa',accentText:'#160d27',bg2:'#1a1722',border:'#493f59',borderSoft:'#332d41',card:'#24202e',cardHi:'#30283e',faint:'#867d96',muted:'#b3a8c2',text:'#f5f1fa'},
  GOALS:{strength:{label:'Strength'},both:{label:'Strength & Size'},hypertrophy:{label:'Hypertrophy'}},
- eyebrow:()=>({fontSize:11,fontWeight:800,textTransform:'uppercase'}),
- iconBtn:()=>({}),selectNumericInput:e=>e.currentTarget.select(),sheetDragRef:()=>{}
+ selectNumericInput:e=>e.currentTarget.select(),sheetDragRef:()=>{}
 };
 function Probe(){
  const n=Number(params.get('index')||0);
@@ -75,6 +73,9 @@ try{
  for(const [index,weeks] of [[0,10],[1,5],[2,3]]){
   await open('screen=settings&index='+index);
   await page.waitForSelector('[data-testid="program-settings-sheet"]');
+  const choiceTargets=await page.$$eval('[data-testid="program-settings-sheet"] button[aria-pressed]',nodes=>nodes.map(n=>({label:n.textContent.trim(),height:n.getBoundingClientRect().height})));
+  assert.ok(choiceTargets.length>=10&&choiceTargets.every(n=>n.height>=48),
+   'Every program-setting choice has a 48px target: '+JSON.stringify(choiceTargets));
   if(index>0){
    assert.match(await page.$eval('[data-testid="cycle-phase-duration"]',n=>n.innerText),new RegExp(weeks+' weeks'));
    assert.equal(await page.$('input[aria-label="Block length in weeks"]'),null,'cycle-owned phases display their length without an editable field');

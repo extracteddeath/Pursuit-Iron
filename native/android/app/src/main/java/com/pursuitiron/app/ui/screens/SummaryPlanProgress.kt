@@ -68,6 +68,7 @@ import com.pursuitiron.app.ui.common.PiIcons
 import com.pursuitiron.app.ui.common.ProgressBar
 import com.pursuitiron.app.ui.common.SectionTitle
 import com.pursuitiron.app.ui.common.Sparkline
+import com.pursuitiron.app.ui.common.Segmented
 import com.pursuitiron.app.ui.common.StatTile
 import com.pursuitiron.app.ui.common.b
 import com.pursuitiron.app.ui.common.d

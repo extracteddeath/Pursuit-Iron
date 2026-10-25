@@ -19923,13 +19923,23 @@ function CycleDoseTransition({ change }) {
 }
 // One source of truth for saved work-week training quality. These numbers
 // describe executable prescriptions at generation time, never completed work.
-function CycleWeekOutlook({ program, week }) {
+function CycleWeekOutlook({ program, week, provisional = false }) {
     const decision = program?.nextEngine?.cycleTemplate?.splitDecision;
     const report = decision?.realizedQuality;
     if (!Array.isArray(report?.weeks) || !report.weeks.length) return null;
     const current = report.weeks.find(row => row.week === week);
     if (!current) return _jsx("p", { className: "wpb-cycle-week-outlook-deload", children:
         "Recovery week. The strength and muscle-coverage estimates describe regular training weeks, not deload work." });
+    // This count is from the same saved cells shown in the preview rows.
+    // The generator's original coverage/practice model is only a baseline.
+    const workingSets = (program.days || []).reduce((total, day) =>
+        total + (day.exercises || []).reduce((count, _, slot) => {
+            const id = exerciseAt(program, day, slot, week);
+            const cell = computeCell(program, day, id, slot, week);
+            return count + (cell?.missing ? 0 : Math.max(0, Number(cell?.sets) || 0));
+        }, 0), 0);
+    const generatedSets = Number(current.weeklySets);
+    const editedSinceGeneration = Number.isFinite(generatedSets) && generatedSets !== workingSets;
     const lifts = Object.entries(decision?.liftPracticeTargets || {});
     const priorities = program?.nextEngine?.request?.goal?.liftPriorities || {};
     const selected = lifts.filter(([lift]) => ["primary", "specialization", "high"].includes(priorities[lift]));
@@ -19938,21 +19948,23 @@ function CycleWeekOutlook({ program, week }) {
     return _jsxs("section", { className: "wpb-cycle-week-outlook", "aria-label": `Week ${week} planned training quality`, "data-week": week, children: [
         _jsxs("div", { className: "wpb-cycle-week-outlook-head", children: [
             _jsx("strong", { children: `Week ${week} plan` }),
-            _jsx("span", { children: "Saved workout projection" })
+            _jsx("span", { children: provisional ? "Provisional saved exercises · may adapt" : "Current saved exercises" })
         ] }),
         _jsxs("dl", { className: "wpb-cycle-week-outlook-stats", children: [
-            _jsxs("div", { children: [_jsx("dt", { children: "Working sets" }), _jsx("dd", { children: current.weeklySets })] }),
-            _jsxs("div", { children: [_jsx("dt", { children: "Muscle target coverage" }), _jsx("dd", { children: `${current.muscleTargetCoveragePercent}%` })] })
+            _jsxs("div", { children: [_jsx("dt", { children: "Working sets" }), _jsx("dd", { children: workingSets })] }),
+            _jsxs("div", { children: [_jsx("dt", { children: "Original target coverage" }), _jsx("dd", { children: `${current.muscleTargetCoveragePercent}%` })] })
         ] }),
         visible.length > 0 && _jsxs("details", { className: "wpb-cycle-week-outlook-detail", children: [
-            _jsx("summary", { children: "Strength practice by lift" }),
+            _jsx("summary", { children: "Original strength practice by lift" }),
             _jsx("dl", { className: "wpb-cycle-week-outlook-lifts", children: visible.map(([lift, target]) => _jsxs("div", { children: [
                 _jsx("dt", { children: label(lift) }),
                 _jsx("dd", { children: `${current.liftFrequencies?.[lift] ?? 0} of ${target} target days` })
             ] }, lift)) })
         ] }),
+        editedSinceGeneration && _jsx("p", { className: "wpb-cycle-week-outlook-note", role: "status", children:
+            `Saved week has ${workingSets} working sets; the original generated outlook counted ${generatedSets}. Exercise and set edits are reflected in the live count.` }),
         _jsx("p", { className: "wpb-cycle-week-outlook-note", children:
-            "Coverage compares planned sets with this phase's muscle targets; it is not the percentage of your previous block retained. These saved plans can adapt after your logged workouts or manual changes." })
+            "Working sets are counted from the saved prescriptions shown here. Target coverage and lift frequency are original generation estimates, not live recalculations after edits; coverage is not the percentage of the previous block retained. Future blocks may adapt when activated." })
     ] });
 }
 function CycleBlockPreview({ program, initialWeek = 1, initialDayId = null, onClose, onViewPlan }) {
@@ -19962,7 +19974,7 @@ function CycleBlockPreview({ program, initialWeek = 1, initialDayId = null, onCl
     return _jsx(SessionChoiceDialog, { title: program.blockLabel || program.name, onClose, className: "wpb-cycle-block-preview", children: _jsxs("div", { children: [
         _jsx("p", { className: "wpb-cycle-preview-note", children: isFuturePreview ? "Upcoming block · This is a saved outlook, not the activated training block. Split, exercises and targets may adapt when this block begins." : "Saved block · These are saved prescriptions. Browsing this week does not activate or change your training block." }),
         _jsxs("label", { className: "wpb-cycle-preview-week", children: ["Week", _jsx("select", { "aria-label": "Preview week", value: week, onChange: e => setWeek(Number(e.target.value)), className: "wpb-cycle-preview-select", children: Array.from({ length: total }, (_, i) => _jsx("option", { value: i + 1, children: i >= weeksOf(program) ? "Deload" : `Week ${i + 1}` }, i)) })] }),
-        _jsx(CycleWeekOutlook, { program, week }),
+        _jsx(CycleWeekOutlook, { program, week, provisional: isFuturePreview }),
         _jsxs("div", { className: "wpb-cycle-preview-facts", "aria-label": "Block training structure", children: [
             _jsx("strong", { children: SPLITS[program.config?.split]?.name || String(program.config?.split || "Training split").replaceAll('_', ' ') }),
             _jsx("span", { children: `${program.days.length} training days per week` }),

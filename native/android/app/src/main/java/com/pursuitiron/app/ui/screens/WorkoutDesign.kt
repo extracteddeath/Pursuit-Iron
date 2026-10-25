@@ -405,7 +405,7 @@ fun FocusCard(vm: AppViewModel, s: JSONObject, ex: JSONObject, onAdjust: (Int) -
             if (per.isNotEmpty()) Row(Modifier.height(40.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                 val big = if (u == "lb") 25.0 else 15.0; val maxP = if (u == "lb") 45.0 else 25.0
                 Box(Modifier.width(22.dp).height(7.dp).clip(RoundedCornerShape(3.dp)).background(cs.onPrimaryContainer.copy(alpha = 0.35f)))
-                per.forEach { p -> Box(Modifier.width(9.dp).height((14 + Math.round(p / maxP * 26)).dp).clip(RoundedCornerShape(3.dp)).background(if (p >= big) cs.primary else cs.onPrimaryContainer.copy(alpha = 0.7f))) }
+                per.forEach { p -> Box(Modifier.width(9.dp).height((14 + Math.round(p / maxP * 26).toInt()).dp).clip(RoundedCornerShape(3.dp)).background(if (p >= big) cs.primary else cs.onPrimaryContainer.copy(alpha = 0.7f))) }
                 Box(Modifier.width(60.dp).height(7.dp).clip(RoundedCornerShape(3.dp)).background(cs.onPrimaryContainer.copy(alpha = 0.35f)))
             }
         }

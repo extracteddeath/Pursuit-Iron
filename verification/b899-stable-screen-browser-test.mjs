@@ -101,6 +101,11 @@ try{
   await page.screenshot({path:`verification/m351-created-${width}-${cycle?'cycle':'program'}-phone.png`});
   const chosen=await page.$('[data-m351-start]');await chosen.evaluate(n=>n.scrollIntoView({block:'center'}));await chosen.click();
   await page.waitForSelector('.wpb-next-workout-view');
+  assert.equal(await page.evaluate(()=>{
+   const footer=document.querySelector('.wpb-next-workout-actions').getBoundingClientRect();
+   return [...document.querySelectorAll('.wpb-notice')].every(n=>
+    getComputedStyle(n).visibility==='hidden'||n.getBoundingClientRect().bottom<=footer.top-6);
+  }),true,'Creation notices clear the persistent Start footer');
   await page.screenshot({path:`verification/m351-selected-preview-${width}-${cycle?'cycle':'program'}-phone.png`});
   assert.equal(await page.$eval('.wpb-preview-program-name',n=>n.textContent),expectedPreview.name,
    'A created program must not preview the previously active program');

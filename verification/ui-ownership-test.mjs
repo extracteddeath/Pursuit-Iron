@@ -79,7 +79,7 @@ for (const name of ['ProgramRevisionReview', 'ProgramLayoutHistory', 'ProgramSav
 assert.ok(app.includes("from './program-review-surfaces.js'"), 'App composes the feature-owned Program review');
 assert.ok(!programReview.includes('style: {') && !programReview.includes('style: iconBtn()'), 'No static inline review styles');
 assert.ok(programReview.includes('disabled: !changes.length || !!conflicts.length') &&
-    programReview.includes('checked: scope === value') && programReview.includes('onClick: () => onScope(value)'),
+    programReview.includes('checked: scope === value') && programReview.includes('onChange: () => onScope(value)'),
     'Save scope and conflict guards remain owned by the existing plan transaction');
 for(const role of ['backdrop','panel','heading','title','close','scroll','intro','scope','legend','option','help','count','change','name','summary','alert','undo','footer','confirm','cancel'])
     assert.ok(css.includes('.wpb-save-review-' + role + '{'), 'Missing Program review CSS owner: ' + role);

@@ -1,3 +1,9 @@
+## Build 912 / M364 — Keyboard-contained Program save review
+
+- Give the save-review dialog a clear initial focus, Escape dismissal and Tab/Shift+Tab containment. Return keyboard focus to the invoking control when the review closes.
+- Preserve conflict-disabled saves, linked cycle scope, saved program transactions and completed workout history. No engine or storage schema change.
+- Add a regression guard for keyboard and focus behavior; keep the canonical Engine 0.65.9 unchanged.
+
 ## Build 909 / M362 — Prelaunch computation-boundary cleanup
 
 - Retire 256 duplicate engine exports from App.js and migrate 49 verification consumers to the canonical engine API. Pure computation tests and standalone parity no longer need the UI module.

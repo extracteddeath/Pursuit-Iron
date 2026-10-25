@@ -1528,7 +1528,57 @@ export function profileBoard() {
         const n = rows.filter((x) => !x.warm && !x.sub && Number(x.r) > 0).length; if (n) sets[part] = (sets[part] || 0) + n;
     }));
     const push = PUSH_PARTS.reduce((a, p) => a + (sets[p] || 0), 0), pull = PULL_PARTS.reduce((a, p) => a + (sets[p] || 0), 0);
+    // The design's header: the program you're running and its goal.
+    const nx = upNext(), prog = nx?.program || null;
+    const blockStart = prog ? Math.min(...H.filter((h) => h.programId === prog.id).map((h) => Number(h.date) || Infinity), Infinity) : Infinity;
+    const prsBlock = Number.isFinite(blockStart) ? trends.filter((t) => { const r = recOf(t, 'e1rm'); return r && Number(r.x.date) >= blockStart && (t.sessions || []).length > 1; }).length : prs30;
+    // The design's training calendar: twelve Monday-first weeks ending this week, each day shaded by working sets.
+    const today0 = new Date(); today0.setHours(0, 0, 0, 0);
+    const wk0 = today0.getTime() - ((today0.getDay() + 6) % 7) * DAY - 11 * 7 * DAY;
+    const dayKey = (ms) => { const d = new Date(ms); d.setHours(0, 0, 0, 0); return d.getTime(); };
+    const perDay = {};
+    H.forEach((h) => { const k = dayKey(Number(h.date)); if (!(k >= wk0)) return;
+        let n = 0; Object.values(h.perf || {}).forEach((pf) => { let rows = []; try { rows = E.completedHistorySets(pf) || []; } catch { rows = []; } n += rows.filter((x) => !x.warm && Number(x.r) > 0).length; });
+        const e = perDay[k] || (perDay[k] = { sets: 0, ids: [] }); e.sets += Math.max(1, n); e.ids.push(h.id); });
+    let heatCount = 0;
+    const heat = Array.from({ length: 84 }, (_, c) => {
+        const d = new Date(wk0); d.setDate(d.getDate() + c); const ms = d.getTime(), e = perDay[ms];
+        const future = ms > today0.getTime(), lvl = !e ? 0 : e.sets <= 8 ? 1 : e.sets <= 16 ? 2 : 3;
+        if (e) heatCount += e.ids.length;
+        return { date: ms, level: lvl, future, today: ms === today0.getTime(), sessions: e ? e.ids.length : 0, id: e ? e.ids[e.ids.length - 1] : null };
+    });
+    // The design's rep PRs: the heaviest set at 1, 3, 5, 8, 10 and 12 reps, or what the best e1RM predicts.
+    const repOf = (t) => {
+        const best = {};
+        H.forEach((h) => { const pf = h.perf?.[t.id]; if (!pf) return; let rows = []; try { rows = E.completedHistorySets(pf) || []; } catch { rows = []; }
+            rows.forEach((x) => { const r = Number(x.r), w = conv(Number(x.w) || 0, h.unit || t.unit); if (!x.warm && r > 0 && w > 0 && (!best[r] || w > best[r])) best[r] = w; }); });
+        const e = r1(conv(t.prBest ?? 0, t.unit)), step = u === 'lb' ? 5 : 2.5;
+        return [1, 3, 5, 8, 10, 12].map((r) => best[r] ? { reps: r, w: r1(best[r]), done: true } : { reps: r, w: Math.round(e / (1 + r / 30) / step) * step, done: false });
+    };
+    const repPRs = board('e1rm').slice(0, 8).map((b) => { const t = trends.find((x) => x.id === b.id); return { id: b.id, name: b.name, short: shortName(b.name), reps: repOf(t) }; });
+    // The design's eight badges, each a ring that fills toward its target.
+    const e1 = (k) => (big.find((b) => b.key === k)?.e1rm || 0);
+    const ratio = (k) => (bw > 0 ? e1(k) / bw : 0);
+    const tonnes = (u === 'lb' ? lifted / 2204.62 : lifted / 1000);
+    const anyPR = trends.some((t) => (t.sessions || []).length > 1 && (t.sessions || []).slice(1).some((x) => Number(x.best) >= Number(t.prBest) && Number(x.best) > Number((t.sessions || [])[0].best)));
+    const streak = weekStreak(H), w = (v) => `${r1(v)} ${u}`;
+    const BD = [
+        ['first', 'First PR', 'First PR', 'Log a set that beats your best e1RM.', anyPR ? 1 : 0, 1, () => (anyPR ? 'Earned' : 'Not yet')],
+        ['bench1', 'Bench 1×', 'Bodyweight bench', 'Bench press e1RM equal to your bodyweight.', ratio('bench'), 1, (v) => `${v.toFixed(2)}× bodyweight`],
+        ['squat15', 'Squat 1.5×', 'One-and-a-half squat', 'Back squat e1RM at 1.5× bodyweight.', ratio('squat'), 1.5, (v) => `${v.toFixed(2)}× bodyweight`],
+        ['pull2', 'Pull 2×', 'Double-bodyweight pull', 'Deadlift e1RM at 2× bodyweight.', ratio('deadlift'), 2, (v) => `${v.toFixed(2)}× bodyweight`],
+        ['bench15', 'Bench 1.5×', 'Heavy presser', 'Bench press e1RM at 1.5× bodyweight.', ratio('bench'), 1.5, (v) => `now ${v.toFixed(2)}× · ${w(Math.max(0, 1.5 * bw - e1('bench')))} to go`],
+        ['century', '100 sessions', 'Century', 'Log 100 training sessions.', H.length, 100, (v) => `${v} of 100 sessions`],
+        ['streak6', '6-wk streak', 'Six-week streak', 'Train every week, six weeks running.', streak, 6, (v) => (v >= 6 ? `${v} weeks and counting` : `${v} of 6 weeks`)],
+        ['tonne', '1,000 t', 'Thousand-tonne club', 'Lift 1,000 tonnes in total volume.', tonnes, 1000, (v) => `${Math.round(v).toLocaleString('en-US')} of 1,000 t`],
+    ];
+    const badges = BD.map(([id, short, name, desc, v, target, st]) => {
+        const prog = target > 0 ? Math.max(0, Math.min(1, v / target)) : 0;
+        return { id, short, name, desc, progress: prog, done: prog >= 1, status: (prog >= 1 ? 'Earned · ' : `${Math.round(prog * 100)}% · `) + st(v) };
+    });
     return { unit: u, bodyweight: bw > 0 ? bw : null,
+        program: prog ? [prog.name, GOAL_LABEL[prog.config?.goal]].filter(Boolean).join(' · ') : null,
+        heat, heatCount, repPRs, badges, prsBlock,
         lifetime: { sessions: H.length, lifted: Math.round(lifted), streakWeeks: weekStreak(H), prs30 },
         big3: { lifts: big, total, ratio: bw > 0 && total > 0 ? Math.round(total / bw * 10) / 10 : null, logged: big.filter((b) => b.e1rm > 0).length },
         prBoard: { e1rm: board('e1rm'), heaviest: board('heaviest') },
@@ -2033,19 +2083,24 @@ export function profile() {
         return { mode, complete: c.complete, allLogged: c.allLogged, total: r1(c.total), inThousand: c.inThousand, maxedOut: c.maxedOut,
             current: c.current ? c.current.name : null, next: c.next ? c.next.name : null, remaining: r1(c.remaining), pct: Math.round(c.pct),
             thousandRemaining: r1(c.thousandRemaining), thousandPct: Math.round(c.thousandPct),
+            totalLb: Math.round(c.totalLb || 0), tiers: (E.STRENGTH_CLUB_TIERS_LB || []).map((t) => ({ lb: t.lb, name: t.name, on: (c.achieved || []).some((a) => a.lb === t.lb) })),
             rows: c.rows.map((r) => ({ label: r.label, value: r1(r.val), has: r.has, actual: r.actual })) };
     };
     const tPoints = (() => { const pts = trend?.overall || trend?.points || trend?.series || []; return Array.isArray(pts) ? pts.slice(-40).map((p) => (typeof p === 'number' ? p : Number(p?.score ?? p?.v ?? p?.y ?? p?.overall ?? 0))) : []; })();
     const val = (id) => ms.find((m) => m.id === id)?.value || 0;
     const next = ms.filter((m) => !m.done).sort((x, y) => (y.progress - x.progress) || (x.target - y.target))[0] || null;
     return {
-        unit: u, bodyweight: S.store.bodyweight || '', sex, birth: S.store.birth || '', age: a,
+        unit: u, bodyweight: S.store.bodyweight || '', sex, birth: S.store.birth || '', age: a, name: S.store.name || '',
         level: lvl ? { level: lvl.level, title: lvl.title || null, xp: Math.round(lvl.xp || 0), into: Math.round(lvl.xpIntoLevel || 0), span: Math.round(lvl.xpForLevel || 0) } : null,
         summary: { workouts: val('first'), bestStreak: val('streak3'), volume: Math.round(val('vol1')) },
         score: score ? { overall: Math.round(score.overall), level: score.level, levelIdx: score.levelIdx, estimated: !!score.estimated, liftCount: score.liftCount,
             subs: (score.subs || []).map((x) => ({ label: x.label, score: Math.round(x.score), lift: x.lift ? { name: x.lift.name, level: x.lift.lvl?.level || null, est: !!x.lift.est } : null })),
             next: score.nextMilestone ? { name: score.nextMilestone.name, pattern: score.nextMilestone.pattern, current: score.nextMilestone.current, target: score.nextMilestone.target, unit: score.nextMilestone.unit, level: score.nextMilestone.level } : null,
-            trend: tPoints } : null,
+            trend: tPoints,
+            delta8w: (() => { const pts = (trend?.overall || []).filter((x) => x && typeof x === 'object' && Number.isFinite(Number(x.v)));
+                if (pts.length < 2) return null; const cut = Date.now() - 56 * 86400000;
+                const base = [...pts].reverse().find((x) => Number(x.date) <= cut) || pts[0];
+                return Math.round(pts[pts.length - 1].v - base.v); })() } : null,
         scoreLocked: scorable,
         clubLifted: club('lifted'), clubE1rm: club('e1rm'),
         achievements: ms.map((m) => ({ id: m.id, label: m.label, desc: m.desc || m.description || '', cat: m.cat || '', done: !!m.done, progress: Math.max(0, Math.min(1, Number(m.progress) || 0)), value: m.value ?? null, target: m.target ?? null })),
@@ -2054,8 +2109,16 @@ export function profile() {
     };
 }
 /* App.js Settings → Profile: sex adjusts the standards; birth (YYYY-MM-DD) gives the age factor. */
-export function setProfile({ sex, birth } = {}) {
+export function setProfile({ sex, birth, name, age: years } = {}) {
     if (sex === 'male' || sex === 'female') S.store.sex = sex;
+    if (name !== undefined) S.store.name = String(name || '').trim().slice(0, 40);
+    // The design's age stepper: an estimated birth date that gives exactly that age today.
+    if (years !== undefined) {
+        const n = Math.max(14, Math.min(90, Math.round(Number(years) || 0)));
+        const d = new Date(); d.setFullYear(d.getFullYear() - n); d.setDate(d.getDate() - 1);
+        S.store.birth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        S.store.birthEst = true; S.store.age = n;
+    }
     if (birth !== undefined) {
         if (birth === '' || birth === null) { S.store.birth = ''; S.store.birthEst = false; }
         else if (E.birthParts(birth)) { S.store.birth = birth; S.store.birthEst = false; S.store.age = E.ageFrom(birth); }

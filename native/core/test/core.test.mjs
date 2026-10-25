@@ -659,7 +659,13 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   ok(b.lifetime.sessions === 1 && b.lifetime.lifted > 0 && b.lifetime.streakWeeks === 1, 'lifetime totals');
   ok(b.prBoard.e1rm.length > 0 && b.prBoard.heaviest[0].value === 100 && b.prBoard.heaviest[0].reps === 5, 'PR board: heaviest set with its reps');
   ok(b.big3.lifts.length === 3 && b.big3.lifts.some((l) => l.e1rm > 0 && l.ratio > 1), 'big three against bodyweight: ' + b.big3.lifts.map((l) => l.name + ' ' + l.e1rm + (l.ratio ? ' (' + l.ratio + '×)' : '')).join(', '));
-  ok(b.balance.parts.length > 0 && b.balance.parts.reduce((a, p) => a + p.sets, 0) > 0, 'muscle balance counts working sets per muscle'); }
+  ok(b.balance.parts.length > 0 && b.balance.parts.reduce((a, p) => a + p.sets, 0) > 0, 'muscle balance counts working sets per muscle');
+  ok(b.heat.length === 84 && b.heat.filter((h) => h.today).length === 1 && b.heat.find((h) => h.today).level > 0 && b.heatCount === 1, 'training calendar: 12 weeks, today shaded');
+  ok(b.badges.length === 8 && b.badges.find((x) => x.id === 'century').status === '1% · 1 of 100 sessions', 'eight badges with progress');
+  const rp = b.repPRs[0]; ok(rp && rp.reps.length === 6 && rp.reps.find((r) => r.reps === 5).done && rp.reps.find((r) => r.reps === 5).w === 100 && !rp.reps.find((r) => r.reps === 12).done, 'rep PRs: done at 5, predicted at 12');
+  ok(/^B · /.test(b.program), 'header: program and goal: ' + b.program);
+  C.setProfile({ name: 'Sam', age: 31 }); const pr = C.profile();
+  ok(pr.name === 'Sam' && pr.age === 31, 'profile name and age from the stepper'); }
 // Warm-up & mobility on the first lift until a set is logged (App.js warmupRoutine)
 { C.init({ store: JSON.stringify({ unit: 'kg' }) });
   C.createProgram({ config: { name: 'W', unit: 'kg', goal: 'both', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 2 });

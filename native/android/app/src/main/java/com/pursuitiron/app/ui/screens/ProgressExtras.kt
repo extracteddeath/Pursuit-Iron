@@ -276,6 +276,7 @@ fun StrengthStandardsSheet(vm: AppViewModel, onClose: () -> Unit) {
     ModalBottomSheet(onDismissRequest = onClose, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             StrengthStandardsCard(vm) { liftId = it }
+            StrengthClubCard(vm)
         }
     }
 }

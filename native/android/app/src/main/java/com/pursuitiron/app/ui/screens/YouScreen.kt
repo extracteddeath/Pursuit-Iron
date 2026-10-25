@@ -87,6 +87,7 @@ fun YouScreen(vm: AppViewModel) {
     var gymsOpen by remember { mutableStateOf(false) }
     var toolsOpen by remember { mutableStateOf(false) }
     var customizeOpen by remember { mutableStateOf(false) }
+    var meOpen by remember { mutableStateOf(false) }
     var standardsOpen by remember { mutableStateOf(false) }
     var settingsSheet by remember { mutableStateOf<String?>(null) }
     var board by remember { mutableStateOf<JSONObject?>(null) }
@@ -95,44 +96,26 @@ fun YouScreen(vm: AppViewModel) {
     LazyVerticalStaggeredGrid(
         columns = StaggeredGridCells.Fixed(if (wide) 2 else 1),
         contentPadding = PaddingValues(start = if (wide) 32.dp else 16.dp, end = if (wide) 32.dp else 16.dp, bottom = 24.dp),
-        horizontalArrangement = Arrangement.spacedBy(20.dp), verticalItemSpacing = 14.dp, modifier = Modifier.statusBarsPadding(),
+        horizontalArrangement = Arrangement.spacedBy(20.dp), verticalItemSpacing = 16.dp, modifier = Modifier.statusBarsPadding(),
     ) {
-        item(span = full) {
-            Row(Modifier.padding(top = 20.dp, start = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                androidx.compose.foundation.layout.Box(Modifier.size(64.dp), contentAlignment = Alignment.Center) {
-                    Cookie(MaterialTheme.colorScheme.tertiaryContainer, Modifier.size(64.dp))
-                    Icon(PiIcons.You, null, tint = MaterialTheme.colorScheme.onTertiaryContainer)
-                }
-                Column {
-                    Text("You", style = MaterialTheme.typography.displayMedium)
-                    val st = vm.settings
-                    Text("${com.pursuitiron.app.ui.common.plural(st.i("sessions"), "workout")} · ${com.pursuitiron.app.ui.common.plural(st.i("programs"), "program")}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        }
-        board?.o("lifetime")?.takeIf { it.i("sessions") > 0 }?.let { lt -> item(span = full) { LifetimeTiles(lt, board.s("unit", "kg")) } }
+        item(span = full) { YouHeader(vm, board) { meOpen = true } }
+        board?.takeIf { (it.o("lifetime")?.i("sessions") ?: 0) > 0 }?.let { b -> item(span = full) { YouStats(b) } }
         item(span = full) { Segmented(listOf("profile" to "Profile", "body" to "Body", "settings" to "Settings"), section, { section = it }) }
         when (section) {
             "profile" -> {
-                // App.js ProfileCustomization: the lifter's own order, hidden sections left out.
+                // The design's profile sections, in your order, hidden ones left out.
                 vm.prefs.profileLayout.visible().forEach { id ->
                     when (id) {
-                        "level" -> item { LevelCard(vm) }
-                        "strength" -> item { StrengthScoreCard(vm, onOpenStandards = { standardsOpen = true }) { section = "body" } }
-                        "club" -> item { ClubCard(vm) }
-                        "achievements" -> item(span = full) { AchievementsCard(vm) }
-                        "big3" -> board?.let { b -> item { Big3Card(b) } }
-                        "prs" -> board?.let { b -> item { PrBoardCard(vm, b) } }
-                        "balance" -> board?.let { b -> item { MuscleBalanceCard(b) } }
+                        "big3" -> board?.let { b -> item { ProfBig3Card(vm, b) } }
+                        "score" -> item { ProfScoreCard(vm, onOpen = { standardsOpen = true }) { section = "body" } }
+                        "bw" -> item { ProfBodyweightCard(vm) { section = "body" } }
+                        "prs" -> board?.let { b -> item { ProfPrBoard(vm, b) } }
+                        "cal" -> board?.let { b -> item { ProfHeatCard(b) { historyId = it } } }
+                        "ach" -> board?.let { b -> item(span = full) { ProfBadges(b) } }
+                        "bal" -> board?.let { b -> item { ProfBalance(b) } }
                     }
                 }
-                item(span = full) {
-                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        FilledTonalButton(onClick = { customizeOpen = true }) {
-                            Icon(PiIcons.List, null, Modifier.size(18.dp)); Text("  Customize profile")
-                        }
-                    }
-                }
+                item(span = full) { CustomizeProfileButton { customizeOpen = true } }
             }
             "body" -> { item { BodyweightCard(vm) }; item { MeasurementsCard(vm) }; item(span = full) { ProgressPhotosCard(vm) }; item { InjuriesCard(vm) } }
             else -> {
@@ -148,6 +131,7 @@ fun YouScreen(vm: AppViewModel) {
     if (gymsOpen) GymsSheet(vm) { gymsOpen = false }
     if (toolsOpen) ToolsSheet(vm) { toolsOpen = false }
     if (customizeOpen) ProfileCustomizeSheet(vm) { customizeOpen = false }
+    if (meOpen) MeSheet(vm, onClose = { meOpen = false }) { meOpen = false; standardsOpen = true }
     settingsSheet?.let { k -> SettingsPageSheet(vm, k) { settingsSheet = null } }
 }
 

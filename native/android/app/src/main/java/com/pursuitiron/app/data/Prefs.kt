@@ -93,8 +93,8 @@ data class ProfileLayout(val order: List<String>, val hidden: Set<String>) {
     fun json(): String = org.json.JSONObject().put("order", org.json.JSONArray(order)).put("hidden", org.json.JSONArray(hidden.toList())).toString()
     companion object {
         /** Native profile sections, in the default order. */
-        val SECTIONS = listOf("big3" to "Big 3 total", "level" to "Level and XP", "strength" to "Strength Score", "prs" to "PR board",
-            "club" to "Thousand Pound Club", "achievements" to "Achievements", "balance" to "Muscle balance")
+        val SECTIONS = listOf("big3" to "Big 3 total", "score" to "Strength Score", "bw" to "Bodyweight", "prs" to "PR board",
+            "cal" to "Training calendar", "ach" to "Achievements", "bal" to "Muscle balance")
         val IDS = SECTIONS.map { it.first }
         val DEFAULT = ProfileLayout(IDS, emptySet())
         fun label(id: String) = SECTIONS.firstOrNull { it.first == id }?.second ?: id

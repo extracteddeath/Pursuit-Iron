@@ -10,7 +10,7 @@ import androidx.compose.ui.unit.dp
 
 /** Stroke icons on a 24-unit grid, the same paths the prototype draws. Tinted by Icon(). */
 object PiIcons {
-    private fun icon(name: String, d: String, stroke: Float = 2.2f): ImageVector =
+    fun icon(name: String, d: String, stroke: Float = 2.2f): ImageVector =
         ImageVector.Builder(name = name, defaultWidth = 24.dp, defaultHeight = 24.dp, viewportWidth = 24f, viewportHeight = 24f)
             .addPath(pathData = addPathNodes(d), fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = stroke,
                 strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round)
@@ -31,6 +31,10 @@ object PiIcons {
     val Minus = icon("minus", "M5 12h14", 2.4f)
     val Close = icon("close", "M6 6l12 12M18 6 6 18", 2.4f)
     val More = icon("more", "M12 4.5v.01M12 12v.01M12 19.5v.01", 3.6f)
+    val Pencil = icon("pencil", "M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z")
+    val Star = icon("star", "M12 2l3 6 6 .9-4.5 4.3 1 6.3L12 16.6 6.5 19.5l1-6.3L3 8.9 9 8z")
+    val Sliders = icon("sliders", "M4 7h10M18 7h2M4 17h4M12 17h8M14 4v6M8 14v6")
+    val Scale = icon("scale", "M12 3v18M5 7h14M3 13l2-6 2 6a2.5 2.5 0 0 1-4 0zM17 13l2-6 2 6a2.5 2.5 0 0 1-4 0z")
     val Zap = icon("zap", "M13 2 4 14h7l-1 8 9-12h-7z")
     val Play = icon("play", "M7 4v16l13-8z")
     val Note = icon("note", "M5 4h14v16H5zM9 8h6M9 12h6M9 16h3")

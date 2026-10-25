@@ -603,8 +603,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /* ---------------------------------------------------------------- profile, tools, gyms */
-    fun setProfile(sex: String? = null, birth: String? = null) = launchCore {
-        val a = JSONObject(); if (sex != null) a.put("sex", sex); if (birth != null) a.put("birth", birth)
+    fun setProfile(sex: String? = null, birth: String? = null, name: String? = null, age: Int? = null) = launchCore {
+        val a = JSONObject(); if (sex != null) a.put("sex", sex); if (birth != null) a.put("birth", birth); if (name != null) a.put("name", name); if (age != null) a.put("age", age)
         val r = obj("setProfile", a) ?: return@launchCore
         if (!r.b("ok")) toast(r.s("error", "Couldn't save that")) else profile = obj("profile")
     }

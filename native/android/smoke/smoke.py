@@ -519,8 +519,30 @@ if scroll_to(r"^\|PR board$", tries=6):
     shot("pr-board")
 else:
     FAILS.append("PR board missing on the profile")
+if tap(r"^\|Rep PRs$", "rep-prs", required=False):
+    if not find(r"PREDICTED|DONE", timeout=3):
+        FAILS.append("rep PR matrix missing")
+    tap(r"^\|e1RM$")
 scroll_to(r"Achievements")
 shot("profile-achievements")
+# The design's badges: tap one for what it takes
+if tap(r"Century, (earned|\d+ percent)", "badge-open", required=False):
+    if not find(r"Log 100 training sessions", timeout=3):
+        FAILS.append("badge detail missing")
+    tap(r"^Close badge")
+else:
+    FAILS.append("no Century badge on the profile")
+# The design's header: name and details in one panel
+scroll_up_to(r"Edit your name and details", tries=14)
+if tap(r"Edit your name and details", "me-sheet", required=False):
+    if not find(r"See where I rank", timeout=4):
+        FAILS.append("profile panel missing")
+    tap(r"See where I rank", "standards")
+    if not scroll_to(r"^\|Strength Club$", tries=6):
+        FAILS.append("Strength Club missing from the standards")
+    close_sheet(r"Strength Club")
+else:
+    FAILS.append("no name on the profile header")
 # App.js ProfileCustomization: reorder and hide profile sections
 if scroll_to(r"Customize profile", tries=12):
     tap(r"Customize profile", "profile-customize")

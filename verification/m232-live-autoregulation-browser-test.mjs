@@ -150,6 +150,18 @@ try {
     assert.deepEqual(await values(), ['100', '100', '100'], 'Ordinary misses cannot rewrite the authored final set');
     assert.equal((await rows())[2].target.failure, true);
     assert.equal((await rows())[2].liveAdjustment, undefined);
+    await freshSession();
+    await typeReps(0, 8);
+    await page.click('[data-testid="set-0-0"] button[aria-label="Mark set done"]');
+    await page.waitForSelector('[data-testid="set-0-0"] button[aria-label="2 reps left"]');
+    await page.click('[data-testid="set-0-0"] button[aria-label="2 reps left"]');
+    await page.waitForFunction(() => JSON.parse(localStorage.getItem('wpb:live')).data[0].sets[1].reps === '8');
+    await chooseFailure(1);
+    await page.click('[data-testid="set-0-0"] [data-effort-tag]');
+    await page.click('[data-testid="set-0-0"] button[aria-label="3 reps left"]');
+    await page.waitForFunction(() => JSON.parse(localStorage.getItem('wpb:live')).data[0].sets[0].actualRIR === 3);
+    assert.equal((await rows())[1].target.failure, true, 'Rerating cannot undo a later explicit set type');
+    assert.equal((await rows())[1].target.rir, 0);
     console.log('PASS M359 phone: deliberate failure sources and pending set intent survive logging and reload without spurious load reductions.');
     assert.deepEqual(errors, []);
     console.log('PASS M232 phone: report two misses → one 5% accessory reduction → autosave/reload preserves it → undo either source restores it; no runtime errors.');

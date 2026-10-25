@@ -48,7 +48,7 @@ export function rollbackLiveAutoregulation(sets, sourceIndex, action) {
     if (!Array.isArray(sets)) return sets;
     let changed = false;
     const result = sets.map(row => {
-        if (!untouched(row) || !row.liveAdjustment?.sourceIndices?.includes(sourceIndex) || !row.retuneFrom
+        if (!untouched(row) || authoredIntent(row) || !row.liveAdjustment?.sourceIndices?.includes(sourceIndex) || !row.retuneFrom
             || action && row.liveAdjustment.action !== action) return row;
         changed = true;
         return restorePendingAdjustment(row);

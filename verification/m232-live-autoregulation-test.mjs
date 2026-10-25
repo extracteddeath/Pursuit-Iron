@@ -117,6 +117,11 @@ for (const intent of [
     assert.equal(repaired[2].weight, '100', 'Resume retires an old automatic reduction based on authored sources');
     assert.equal(repaired[0], oldAdjustment[0], 'Resume preserves the actual authored observation');
     assert.equal(reconcileRestoredLiveAdjustments(repaired), repaired, 'Intent repair is idempotent');
+    const authoredAfterCap = capped.sets.map((row, i) => i === 1 ? withIntent(row) : row);
+    assert.equal(rollbackLiveAutoregulation(authoredAfterCap, 0), authoredAfterCap,
+        'Undoing evidence cannot replace a set type explicitly chosen after a live adjustment');
+    assert.equal(applyLiveAutoregulation({ ...repInput, sets: authoredAfterCap }).sets, authoredAfterCap,
+        'Rerating preserves the later authored target instead of restoring its obsolete RIR');
 }
 console.log('PASS M359: deliberate failure/AMRAP/percentage sets neither authorize nor receive automatic fatigue changes.');
 

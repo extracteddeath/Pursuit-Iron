@@ -6,11 +6,12 @@ import fs from 'node:fs';
 const css = fs.readFileSync('app.css', 'utf8');
 const app = fs.readFileSync('modules/App.js', 'utf8');
 const programReview = fs.readFileSync('modules/program-review-surfaces.js', 'utf8');
-const presentationSource = app + '\n' + programReview;
+const programSchedule = fs.readFileSync('modules/program-schedule-sheet.js', 'utf8');
+const presentationSource = app + '\n' + programReview + '\n' + programSchedule;
 const MAX_IMPORTANT = 2360; // M291: consolidate the remaining Profile style owners
 const MAX_APP_IMPORTANT = 1229; // M292: retire ten superseded Progress priority declarations.
 const MAX_REPEAT_IMPORTANT = 15; // M288: at-rule comments no longer erase media/container scope.
-const MAX_INLINE_STYLE_OBJECTS = 2753; // M363: remove 19 save-review inline objects; count extracted source too
+const MAX_INLINE_STYLE_OBJECTS = 2738; // M365: retire 15 schedule JSX styles; include new module // M363: remove 19 save-review inline objects; count extracted source too
 const allowedDebtKeys = new Set([
   "\t#root[data-pi-motion=\"expressive\"] .wpb-wizard.wpb-wizard.wpb-wizard .wpb-wizard-heading-title\tfont-size",
   "\t#root[data-pi-motion=\"expressive\"] .wpb .wpb-tabbar\tbackground-color",
@@ -72,6 +73,14 @@ function guard(cssText, appText) {
     return { important, appImportant, inline, duplicates: duplicates.length, legacyOwners: new Set(duplicates).size };
 }
 const report = guard(css, presentationSource);
+assert.ok(app.includes("from './program-schedule-sheet.js'"), 'Program owns only schedule state');
+assert.ok(!app.includes('function WeeklyScheduleSheet('), 'No duplicate schedule renderer in App');
+assert.equal((programSchedule.match(/function WeeklyScheduleSheet\\(/g) || []).length, 1, 'Schedule has a single view owner');
+assert.ok(!programSchedule.includes('style: {') && !programSchedule.includes('C.') && !programSchedule.includes('iconBtn('), 'Schedule uses themed CSS');
+for(const token of ['onCycle(weekday)', 'onClear', 'sheetDragRef', "'data-assigned'", "'data-today'", "'aria-modal': true"])
+    assert.ok(programSchedule.includes(token), 'Schedule lost behavior/semantics: '+token);
+for(const role of ['backdrop','sheet','heading','row','weekday','today','assignment','hint','clear'])
+    assert.ok(css.includes('.wpb-program-schedule-' + role + '{'), 'Missing schedule CSS role: '+role);
 for (const name of ['ProgramRevisionReview', 'ProgramLayoutHistory', 'ProgramSaveReview']) {
     assert.equal((app.match(new RegExp('function ' + name + '\\(', 'g')) || []).length, 0, name + ' must not remain in App');
     assert.equal((programReview.match(new RegExp('function ' + name + '\\(', 'g')) || []).length, 1, name + ' has one feature owner');

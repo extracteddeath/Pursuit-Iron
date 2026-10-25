@@ -316,7 +316,7 @@ try{
   await page.waitForSelector('.wpb-home');
   await page.click('.wpb-tabbar [aria-label="Plan"]');
   await page.waitForSelector('.wpb-plan-block-nav');
-  await page.$eval('.wpb-plan-block-nav button',ns=>ns[1].click());
+  await page.$$eval('.wpb-plan-block-nav button',ns=>ns[1].click());
   await page.waitForSelector('.wpb-plan-session-link');
   await page.click('.wpb-plan-session-link');
   await page.waitForSelector('.wpb-cycle-preview-analysis');

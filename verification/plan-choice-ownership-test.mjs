@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 const app=fs.readFileSync('modules/App.js','utf8'),css=fs.readFileSync('app.css','utf8');
-const plan=app.slice(app.indexOf('function PlanView('),app.indexOf('function sessionLoadText('));
+const plan=app.slice(app.indexOf('function PlanView('),app.indexOf('function NextWorkoutView('));
 assert.ok(plan.includes('className: "wpb-plan-pane-tab"')&&plan.includes('kind: "tab"'),'semantic Plan tab choice');
 assert.ok(plan.includes('className: "wpb-plan-week-chip"')&&plan.includes('onClick: () => pickWeek(w.week)'),'week behavior');
 assert.ok(plan.includes('"aria-label": `Week ${w.week}`'),'accessible week label');

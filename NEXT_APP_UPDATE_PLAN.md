@@ -1,3 +1,19 @@
+## October 25 — M363 cohesive session presentation owners (build 910 candidate)
+
+Extract the existing Home/Plan session outline, coaching highlights, plan-change review and
+its load-formatting helpers into `modules/plan-session-surfaces.js`. Extract the already
+shared keyboard-contained SessionChoiceDialog into `modules/session-choice-dialog.js`.
+These two modules keep the exact JSX, callbacks and ARIA contracts; App remains the
+composition owner and the canonical engine API remains the only computation writer.
+No appearance, CSS selector, theme, workout, storage or engine-model change is intended.
+Original function declarations are deleted instead of retained as forwarding shims.
+This is one bounded ownership step, not completion of M363 or launch certification.
+
+Gate this move with existing source, browser, offline and standalone engine checks; bump
+the visible build and verify the published bytes and offline cache after merging.
+Continue by co-locating the adjacent Program review family with the existing dialog
+owner, then retire static style properties at source without adding CSS overrides.
+
 # Whole-app launch readiness
 
 ## October 25 — M362 prelaunch code cleanup (build 909)

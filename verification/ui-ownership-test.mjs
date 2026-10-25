@@ -156,7 +156,7 @@ assert.ok(wizardShell.includes('"data-initial-step": step === 0')&&
   'Real setup state owns layout and focus emphasis');
 assert.ok(setupStepper.includes('disabled: value === 0')&&setupStepper.includes('disabled: plusDisabled'),
   'Shared stepper retains native limit semantics');
-const plan=app.slice(app.indexOf('function PlanView('),app.indexOf('function sessionLoadText('));
+const plan=app.slice(app.indexOf('function PlanView('),app.indexOf('function NextWorkoutView('));
 assert.ok(plan.includes('_jsx(UiRootHeader, { title: "Plan" })')&&!plan.includes('aria-label": "Back"'),'Plan root uses shared app bar without a Back action');
 const rootHeader=app.slice(app.indexOf('function UiRootHeader('),app.indexOf('function UiAction('));
 assert.ok(!rootHeader.includes('style:'),'Root app bar presentation is class-owned');

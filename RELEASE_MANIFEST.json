@@ -2,10 +2,10 @@
   "schemaVersion": 3,
   "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": 909,
+  "build": 910,
   "engineVersion": "0.65.9",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "5788880e5e5a278aff9f9e153b210c6a5121707c8c5c43c08c5daf034d98c13b",
+  "runtimeAggregate": "4edaaff3c5e5bd48a7c16bb2c258897b6ad203bdf33271a36c2d9026c91536bd",
   "runtimeFiles": {
     "modules/cycle-setup-drafts.js": "d3e9e750298afd8820e2bfd543c2cebede65e4f27c136ff26fe383d202b824e9",
     "modules/engine-api.js": "9d9072d28e255c67cb10222299a260e9404557a4cbe49756f7eae22a8d5155d1",
@@ -89,9 +89,11 @@
     "modules/next-engine/weekly-recovery.js": "92cf14bd6ca28715d1d3f9ddde1cc0f42502892f230d69650f83bf6b921c111c",
     "modules/next-engine/workout-history-adapter.js": "05025622dac06b92c4fb305fdc7b4b0d5a1480423d0421f91901f8962e4ed917",
     "modules/next-engine/workout-runtime.js": "65337f573f288a47cb25c2eb6914ef568762de45498556bc23149da712e3d21c",
+    "modules/plan-session-surfaces.js": "50be1a4d26c40ffb7660086c688098f84a63f947ef8839b1a7062b7242f9cc4a",
     "modules/program-duration.js": "52bffd0e7798f16f1217ba455de75c63c917ba9b7c6aa61dcd795b10dc665d95",
     "modules/program-last-performance.js": "61ffec6cde222c2731becdc4b048a7da8b53f044816cf149104b168e3fca7ee3",
     "modules/program-review.js": "394e326abe226725d1dd5933420e91cc2e9e79dd5ba9a5a7cb856f4bc8970d51",
+    "modules/session-choice-dialog.js": "532ddb08086f4bc818eab304df91abe0caf24bf814dcc7fca4cf48f6fda55411",
     "modules/session-plan.js": "29e9b5b201a59de13bd0d21f89ca6358741d4889f52a96cd010c33554902e34c",
     "modules/session-tools.js": "5a34acb46ddd6452a807d4e0db656c61cf71c27d7f939fa3ea7f225d197f493d",
     "modules/training-domain.js": "a7ce0e26ac1a653d267d486128b5eac0cfaed3569f7fdeae77d4a7d11aec804f",
@@ -119,10 +121,10 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "afd4c7500bd218bfe48571c188d2828fdd9943729194c51327149cc6c4996697",
-    "index.html": "146df957744b4076ab4dbbcad408d2a4a9a651c2b54cec97bef26e827bb93cd1",
-    "sw.js": "afc8961a5a6c878c28b09601a9ec4fa8ee2794d0892e36bc5e56f35401d9faf0",
-    "BUILD_PROFILE.json": "0c80276189e3df0116a1f2c13e4458c7d8679ffefd3e59e58b03d03840bf5492",
+    "modules/App.js": "b52c13168a833fce3b021bb6d42aa922fe3b45f48aa17121672428a1c6a94364",
+    "index.html": "d75daab3ac870c79e064c2782d948a40b489986f32479d1ab13b7944438b5d55",
+    "sw.js": "c3c9bd73913a55f17c1cd8c8c1a1db9e679dfca9fa79477a011dba417fd290d5",
+    "BUILD_PROFILE.json": "448a2fb45843c2413b249de639edb6ed7276106261a449c56c882c95370a7fa7",
     "CHANGELOG.md": "5f88e41a8199492ac7b6d0cc09bcfa18f81bb85449cd2cef5d90127cfe4edfb6",
     "app.css": "5bfc34c95e9c7a456f88edf6d830a8b3d1a6ed64fcb8bb53220a924c107458cb",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
@@ -130,6 +132,6 @@
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Prelaunch cleanup removes duplicate UI computation exports and unused bindings; canonical engine behavior and saved-data contracts remain unchanged.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b909-rbc4a9113dfb86272",
-  "uiMilestone": "Build 909 · M362 Prelaunch computation-boundary cleanup"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b910-rcb9779994e9f610e",
+  "uiMilestone": "Build 910 · M362 Prelaunch computation-boundary cleanup"
 }

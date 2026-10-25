@@ -644,7 +644,7 @@ export function startSession({ programId, dayId, weekIndex, minutes = null } = {
 function liveSummary() {
     const l = S.live, p = liveProgram(l), day = p?.days.find((d) => d.id === l.dayId);
     const work = (l.data || []).flatMap((e) => e.sets.filter(isWork));
-    return { programName: p?.name || '', dayLabel: day?.label || '', done: work.filter((s) => s.done).length, total: work.length, startedAt: l.startedAt };
+    return { programName: p?.name || '', dayLabel: day?.label || '', done: work.filter((s) => s.done).length, total: work.length, startedAt: l.startedAt, pausedAt: l.pausedAt || null };
 }
 
 function setView(s, i, ex, prBase, prev = null) {
@@ -729,6 +729,55 @@ function addRules(e, ex, style) {
     };
 }
 
+
+/* The design's "Short on time?" mid-workout: what is left at each lift's own rest, and what fits a time
+   budget. Trimming skips the last unlogged sets of the later lifts first and keeps at least one working
+   set of every lift; trimmed sets are marked skipped (trimWhy 'time') so they can be restored. */
+const SET_WORK_SEC = 40;
+function liveRestOf(ctx, e) {
+    try { return E.effectiveRest(E.goalForDay(ctx.program, ctx.day), EX_BY_ID[e.id], e.slot === ctx.day.primaryIndex, e.restCustom, Number(S.store.restScale) || 1) || 90; } catch { return 90; }
+}
+function timeLeftSec(ctx, data) {
+    return data.reduce((a, e) => { const r = liveRestOf(ctx, e); return a + e.sets.filter((x) => isWork(x) && !x.done && !x.skipped).length * (SET_WORK_SEC + r); }, 0);
+}
+function trimPlan(ctx, data, minutes) {
+    const budget = minutes * 60; let left = timeLeftSec(ctx, data); const cut = [];
+    for (let ei = data.length - 1; ei >= 0 && left > budget; ei--) {
+        const e = data[ei], r = liveRestOf(ctx, e);
+        const open = e.sets.map((x, si) => ({ x, si })).filter(({ x }) => isWork(x) && !x.done && !x.skipped);
+        const keep = e.sets.some((x) => isWork(x) && x.done) ? 0 : 1;
+        for (let k = open.length - 1; k >= keep && left > budget; k--) { cut.push([ei, open[k].si]); left -= SET_WORK_SEC + r; }
+    }
+    return { cut, fits: left <= budget, leftMin: Math.round(left / 60) };
+}
+export function timeOptions() {
+    const l = S.live; if (!l) return null;
+    const ctx = sessionContext(l); if (!ctx) return null;
+    const data = l.data || [];
+    const rests = data.map((e) => ({ rest: liveRestOf(ctx, e), compound: EX_BY_ID[e.id]?.type === 'compound' }));
+    const cRest = rests.find((r) => r.compound)?.rest, iRest = rests.find((r) => !r.compound)?.rest;
+    const trimmed = data.reduce((a, e) => a + e.sets.filter((x) => x.skipped && x.trimWhy === 'time').length, 0);
+    return { leftMin: Math.round(timeLeftSec(ctx, data) / 60), compoundRest: cRest || null, isolationRest: iRest || null, trimmed,
+        options: [20, 30, 45, 60].map((m) => { const pl = trimPlan(ctx, data, m); return { minutes: m, cut: pl.cut.length, fits: pl.fits }; }) };
+}
+
+/* The design's lift chips use a short name: equipment dropped, the common long names abbreviated. */
+const SHORT = { 'overhead press': 'OHP', 'romanian deadlift': 'RDL', 'bulgarian split squat': 'BSS', 'stiff-leg deadlift': 'SLDL', 'incline bench press': 'Incline', 'bench press': 'Bench',
+    'close-grip bench press': 'CG bench', 'lat pulldown': 'Pulldown', 'leg press': 'Leg press', 'back squat': 'Squat', 'front squat': 'Front squat' };
+function shortName(name) {
+    const full = String(name || '').trim(); if (full.length <= 12) return full;
+    const n = full.replace(/^(barbell|dumbbell|db|cable|machine|smith( machine)?|ez[- ]bar|kettlebell|band(ed)?|seated|standing)\s+/i, '').trim();
+    const k = n.toLowerCase(); if (SHORT[k]) return SHORT[k];
+    if (n.length <= 12) return n;
+    const w = n.split(/\s+/), two = w.slice(-2).join(' ');
+    return two.length <= 15 ? two : w[w.length - 1];
+}
+function liftLine(e, ex) {
+    const w = e.sets.find((x) => isWork(x) && x.target); if (!w) return '';
+    const t = w.target, eq = (ex.equip || []).find((q) => q !== 'bench' && q !== 'rack');
+    const effort = t.rir != null ? E.effortLabel(t.rir, S.store.loadMode === 'rpe' ? 'rpe' : 'rir') : null;
+    return [t.reps ? String(t.reps).replace('-', '–') + ' reps' : null, effort ? '@' + effort.replace(/ RIR$/, ' RIR') : null, eq ? ({ cable: 'Cable', machine: 'Machine', barbell: 'Barbell', dumbbell: 'Dumbbell', kettlebell: 'Kettlebell', bands: 'Band', smith: 'Smith', ezbar: 'EZ bar' }[eq] || (E.EQUIPMENT.find((q) => q.id === eq)?.label || eq)) : null].filter(Boolean).join(' · ');
+}
 export function session() {
     const l = S.live;
     if (!l) return { active: false };
@@ -744,7 +793,7 @@ export function session() {
     let est = null; try { est = E.estimateMinutes(ctx.program, ctx.day, ctx.wk); } catch { est = null; }
     return {
         active: true, sessionId: l.sessionId, programId: l.programId, programName: ctx.program.name, dayId: ctx.day.id, dayLabel: ctx.day.label,
-        weekIndex: ctx.wk, weeksTotal: E.weeksOf(ctx.program), startedAt: l.startedAt, estimateMin: est, unit: u,
+        weekIndex: ctx.wk, weeksTotal: E.weeksOf(ctx.program), startedAt: l.startedAt, pausedAt: l.pausedAt || null, estimateMin: est, unit: u,
         exIdx: Math.max(0, Math.min(data.length - 1, l.exIdx || 0)), doneSets, totalSets, volume: Math.round(volume),
         exercises: data.map((e, ei) => {
             const ex = EX_BY_ID[e.id] || {};
@@ -759,7 +808,7 @@ export function session() {
             const cur = currentSetIndex(e.sets), curSet = cur >= 0 ? e.sets[cur] : null;
             const plateRef = curSet && !curSet.sub ? curSet : e.sets.filter((x) => isWork(x) && !x.skipped).slice(-1)[0];
             let style = null; try { style = E.styleFor(ctx.program, e.id); } catch { style = null; }
-            return { ei, id: e.id, name: ex.name || e.id, bar, cur, loadTag: loadTag(ex),
+            return { ei, id: e.id, name: ex.name || e.id, short: shortName(ex.name || e.id), line: (() => { try { return liftLine(e, ex); } catch { return ''; } })(), bar, cur, loadTag: loadTag(ex),
                 plates: (() => { try { return plateRef ? platesFor(parseFloat(plateRef.weight), bar, u) : null; } catch { return null; } })(),
                 platesFor: plateRef ? e.sets.indexOf(plateRef) : -1, addRules: addRules(e, ex, style), part: ex.part || '', partLabel: E.PART_LABEL?.[ex.part] || ex.part || '', equip: ex.equip || null, slot: e.slot, primary: e.slot === ctx.day.primaryIndex,
                 superset: !!e.superset, note: e.note || '', lastNote: ctx.P[e.id]?.note || '', injuryAdjusted: e.injuryAdjusted || null, freestyle: !!e.freestyle,
@@ -887,7 +936,7 @@ const ACTIONS = {
     },
     // The design's set options: skip an unlogged set (it stops counting), or restore it.
     skipSet({ ei, si, skip = true }, ctx, d) {
-        return d.map((e, i) => (i !== ei ? e : { ...e, sets: e.sets.map((x, j) => (j !== si || x.done || x.sub ? x : { ...x, skipped: !!skip })) }));
+        return d.map((e, i) => (i !== ei ? e : { ...e, sets: e.sets.map((x, j) => (j !== si || x.done || x.sub ? x : { ...x, skipped: !!skip, trimWhy: skip ? x.trimWhy || 'skip' : undefined })) }));
     },
     // The design's direct + Drop / + Myo: one drop at a time (−25% off the set before it, two at most), or
     // the myo minis once — only after a logged working set, one pending extension at a time.
@@ -908,6 +957,15 @@ const ACTIONS = {
             const RANK = { drop: 0, myo: 1 }, merged = [...e.sets, ...extra];
             return { ...e, sets: [...merged.filter((x) => !x.sub), ...merged.filter((x) => x.sub).sort((a, b) => (RANK[a.kind] ?? 9) - (RANK[b.kind] ?? 9))] };
         });
+    },
+    // The design's "Short on time?": trim to fit, or bring the trimmed sets back.
+    fitTime({ minutes }, ctx, d) {
+        const pl = trimPlan(ctx, d, Number(minutes) || 30);
+        const cut = new Set(pl.cut.map(([a, b]) => a + ':' + b));
+        return d.map((e, ei) => ({ ...e, sets: e.sets.map((x, si) => (cut.has(ei + ':' + si) ? { ...x, skipped: true, trimWhy: 'time' } : x)) }));
+    },
+    restoreTrimmed(_, ctx, d) {
+        return d.map((e) => ({ ...e, sets: e.sets.map((x) => (x.skipped && x.trimWhy === 'time' ? { ...x, skipped: false, trimWhy: undefined } : x)) }));
     },
     // App.js removeSessionAddedSet.
     removeSet({ ei, si }, ctx, d) {
@@ -1081,7 +1139,12 @@ const ACTIONS = {
         S.live.sessionProgressions = choices;
         return d.map((item) => (item.id !== row.id ? item : { ...item, sets: refreshProgressionSets(item.sets, prescribed, E.userOwnsRuntimeSet) }));
     },
-    resetTimer(_, ctx, d) { S.live.startedAt = now(); S.live.elapsedMs = 0; return d; }
+    // The design's pause on the workout clock: the elapsed time holds; resuming shifts the start by the pause.
+    pauseTimer(_, ctx, d) {
+        if (S.live.pausedAt) { S.live.startedAt += now() - S.live.pausedAt; S.live.pausedAt = null; } else S.live.pausedAt = now();
+        return d;
+    },
+    resetTimer(_, ctx, d) { S.live.startedAt = now(); S.live.elapsedMs = 0; S.live.pausedAt = null; return d; }
 };
 
 export function act({ type, ...args } = {}) {
@@ -1123,7 +1186,7 @@ export function finishSession() {
     const doneSets = data.reduce((s, e) => s + work(e).filter((x) => x.done).length, 0);
     const volume = data.reduce((sum, e) => sum + e.sets.reduce((s, x) => s + (x.done && !x.warm ? (parseFloat(x.weight) || 0) * (parseInt(x.reps) || 0) : 0), 0), 0);
     const perfOut = E.loggedWorkoutPerformance(program, day, data, wk, u, P, H);
-    const elapsed = Math.max(Number(l.elapsedMs) || 0, now() - (l.startedAt || now()));
+    const elapsed = Math.max(Number(l.elapsedMs) || 0, (l.pausedAt || now()) - (l.startedAt || now()));
     let estMin; try { estMin = E.estimateMinutes(program, day, wk); } catch { estMin = undefined; }
     const fb = {};
     new Set([...Object.keys(l.fbPump || {}), ...Object.keys(l.fbSore || {})]).forEach((part) => { fb[part] = { pump: l.fbPump?.[part], sore: l.fbSore?.[part] }; });

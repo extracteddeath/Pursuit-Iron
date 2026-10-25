@@ -331,6 +331,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     suspend fun swapOptions(ei: Int): List<JSONObject> = arr(call("swapOptions", jsonOf("ei" to ei)))
     suspend fun explain(ei: Int): JSONObject? = obj("explain", jsonOf("ei" to ei))
+    /** The design's "Short on time?": what is left and what each time budget trims. */
+    suspend fun timeOptions(): JSONObject? = obj("timeOptions")
 
     /* ---------------------------------------------------------------- plan / programs */
     fun loadPlan(programId: String?, week: Int?) = launchCore {

@@ -122,6 +122,9 @@ private sealed interface WSheet {
     data object Superset : WSheet
     data object SessionNote : WSheet
     data object SessionMenu : WSheet
+    data object Exercises : WSheet
+    data class History(val id: String) : WSheet
+    data object Time : WSheet
     data object AddLift : WSheet
     data object Finish : WSheet
 }
@@ -158,7 +161,8 @@ fun WorkoutScreen(vm: AppViewModel) {
 
     Box(Modifier.fillMaxSize().background(cs.surface)) {
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
-            Header(vm, s, wide, onDiscard = { confirmDiscard = true }, onFinish = tryFinish, onMenu = { sheet = WSheet.SessionMenu })
+            WorkoutHeader(vm, s, wide, vm.prefs.focus, onFocus = { vm.prefs.changeFocus(!vm.prefs.focus) }, onNote = { sheet = WSheet.SessionNote },
+                onTime = { sheet = WSheet.Time }, onDiscard = { confirmDiscard = true }, onFinish = tryFinish)
             ProgressBar(if (total > 0) done.toFloat() / total else 0f, Modifier.padding(horizontal = 16.dp))
             if (wide) {
                 Row(Modifier.fillMaxSize()) {
@@ -170,15 +174,7 @@ fun WorkoutScreen(vm: AppViewModel) {
                     ExercisePane(vm, s, ex, wide, Modifier.weight(1f)) { sheet = it }
                 }
             } else {
-                val rowState = rememberLazyListState()
-                LaunchedEffect(ei) { rowState.animateScrollToItem(ei) }
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)) {
-                    LazyRow(Modifier.weight(1f), state = rowState, contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        itemsIndexed(exs) { k, e ->
-                            MorphChip(shortName(e.s("name")), k == ei, { vm.act("select", "ei" to k) }, trailing = workCount(e), done = e.b("done"))
-                        }
-                    }
-                }
+                ExerciseChips(vm, exs, ei) { sheet = WSheet.Exercises }
                 ExercisePane(vm, s, ex, wide, Modifier.weight(1f)) { sheet = it }
             }
         }
@@ -216,6 +212,9 @@ fun WorkoutScreen(vm: AppViewModel) {
         } ?: run { sheet = null }
         WSheet.Superset -> SupersetSheet(vm, s) { sheet = null }
         WSheet.SessionNote -> SessionNoteSheet(vm, s) { sheet = null }
+        WSheet.Exercises -> ExercisesSheet(vm, s, onAdd = { sheet = WSheet.AddLift }) { sheet = null }
+        WSheet.Time -> TimeSheet(vm, s) { sheet = null }
+        is WSheet.History -> LiftDetailSheet(vm, sh.id) { sheet = null }
         WSheet.SessionMenu -> SessionMenu(vm, s, onNote = { sheet = WSheet.SessionNote }, onAdd = { sheet = WSheet.AddLift }, onSuperset = { sheet = WSheet.Superset }) { sheet = null }
         WSheet.AddLift -> AddLiftSheet(vm) { sheet = null }
         WSheet.Finish -> FinishSheet(vm) { sheet = null }
@@ -304,48 +303,12 @@ private fun ExercisePane(vm: AppViewModel, s: JSONObject, ex: JSONObject?, wide:
         if (ei == 0 && warm != null && !warmHidden) item { WarmupCard(warm) { warmHidden = true } }
         item {
             PiCard(Modifier.widthIn(max = 780.dp), radius = 32.dp, padding = 20.dp) {
-                Row(verticalAlignment = Alignment.Top) {
-                    Column(Modifier.weight(1f).clickable { open(WSheet.Info(ex.s("id"))) }) {
-                        Text(ex.s("name"), style = MaterialTheme.typography.headlineLarge)
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 6.dp)) {
-                            if (ex.b("primary")) Badge("Primary")
-                            if (ex.b("superset")) Badge("Superset", cs.secondaryContainer, cs.onSecondaryContainer)
-                            if (ex.b("assisted")) Badge("Assisted · less help is progress", cs.tertiaryContainer, cs.onTertiaryContainer)
-                            if (ex.d("goal") > 0) Badge("Goal ${com.pursuitiron.app.ui.common.fmtNum(ex.d("goal"))} ${s.s("unit")}", cs.primaryContainer, cs.onPrimaryContainer)
-                            if (ex.o("progression")?.b("changed") == true) Badge("Progression changed", cs.secondaryContainer, cs.onSecondaryContainer)
-                        }
-                        com.pursuitiron.app.ui.common.MuscleChips(
-                            ex.s("partLabel").ifBlank { ex.s("part").replace('_', ' ') }.replaceFirstChar { it.uppercase() },
-                            ex.list("secondary").map { it.s("label").replaceFirstChar { c -> c.uppercase() } }, Modifier.padding(top = 8.dp), max = 3,
-                        )
-                    }
-                    Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(cs.secondaryContainer).clickable { open(WSheet.Menu(ei)) }
-                        .semantics { contentDescription = "Exercise actions"; role = Role.Button }, contentAlignment = Alignment.Center) {
-                        Icon(PiIcons.More, null, tint = cs.onSecondaryContainer)
-                    }
-                }
-                // The design: the lift's progression is a tag on the card; tapping it opens the progression sheet.
-                val prog = ex.o("progression")
-                if (prog != null && !prog.b("locked") && !s.b("quick")) {
-                    val st = prog.s("style", "auto")
-                    val name = if (st == "auto") "Auto · " + prog.s("auto").replaceFirstChar { it.uppercase() }
-                        else prog.list("options").firstOrNull { it.s("id") == st }?.s("label") ?: st
-                    Surface(onClick = { open(WSheet.Progression(ei)) }, color = cs.tertiaryContainer, contentColor = cs.onTertiaryContainer, shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.semantics { contentDescription = "Progression: $name. Change how this lift progresses"; role = Role.Button }) {
-                        Row(Modifier.padding(start = 10.dp, end = 6.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text(name, style = MaterialTheme.typography.labelLarge)
-                            Icon(PiIcons.ChevronDown, null, modifier = Modifier.size(16.dp))
-                        }
-                    }
-                }
+                ExerciseHead(s, ex, onInfo = { open(WSheet.Info(ex.s("id"))) }, onProg = { open(WSheet.Progression(ei)) },
+                    onSetup = { open(WSheet.LiftSettings(ei)) }, onMenu = { open(WSheet.Menu(ei)) })
+                if (ex.b("superset")) Badge("Superset", cs.secondaryContainer, cs.onSecondaryContainer)
+                LastNoteCard(ex, s.s("dayLabel"))
                 s.o("reentry")?.let { r -> ReentryBanner(r) }
-                Surface(onClick = { open(WSheet.Why(ei)) }, color = cs.surfaceContainerHigh, shape = CircleShape) {
-                    Row(Modifier.padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Icon(PiIcons.Help, null, modifier = Modifier.size(16.dp))
-                        val firstLoad = sets.firstOrNull { !it.b("warm") && it.s("weight").isNotBlank() }?.s("weight")
-                        Text(if (firstLoad != null) (if (ex.b("assisted")) "Why ${assistAbs(firstLoad)} ${s.s("unit")} of help?" else "Why $firstLoad ${s.s("unit")}?") else "No suggestion yet: why?", style = MaterialTheme.typography.labelLarge)
-                    }
-                }
+                WhyInline(vm, s, ex) { open(WSheet.History(ex.s("id"))) }
                 if (injury != null || ex.has("injuryAdjusted") && !ex.isNull("injuryAdjusted")) {
                     Surface(color = cs.tertiaryContainer, contentColor = cs.onTertiaryContainer, shape = RoundedCornerShape(18.dp)) {
                         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -359,21 +322,22 @@ private fun ExercisePane(vm: AppViewModel, s: JSONObject, ex: JSONObject?, wide:
                         }
                     }
                 }
-                if (ex.s("note").isNotBlank()) Text("Note: ${ex.s("note")}", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
-                else if (ex.s("lastNote").isNotBlank()) Text("Last time: ${ex.s("lastNote")}", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
-                val setupLine = ex.list("setup").filter { it.s("value").isNotBlank() }.joinToString(" · ") { "${it.s("label")} ${it.s("value")}" }
-                if (setupLine.isNotBlank()) Text("Setup: $setupLine", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
-                val cues = ex.strings("cues")
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    if (cues.isNotEmpty()) TextButton(onClick = { cuesOpen = !cuesOpen }) { Text(if (cuesOpen) "Hide cues" else "Form cues") }
-                    TextButton(onClick = { runCatching { uri.openUri("https://www.youtube.com/results?search_query=" + java.net.URLEncoder.encode("${ex.s("name")} proper form", "UTF-8")) } }) { Text("Watch a demo") }
-                }
-                if (cuesOpen) cues.forEach { c -> Text("•  $c", style = MaterialTheme.typography.bodyMedium) }
-                if (cuesOpen && ex.b("stretchFocus")) com.pursuitiron.app.ui.common.StretchFocusNote()
-
-                Row(Modifier.padding(horizontal = 4.dp)) {
+                // The design: skip the remaining warm-ups in one tap, right above the sets (tap ✓ on one to bring it back).
+                val warmLeft = sets.filter { it.b("warm") && !it.b("done") && !it.b("skipped") }
+                if (warmLeft.isNotEmpty() && !vm.prefs.focus) TextButton(onClick = {
+                    warmLeft.forEach { w -> vm.act("skipSet", "ei" to ei, "si" to w.i("i")) }; vm.toast("Warm-ups skipped · tap ✓ on one to bring it back")
+                }, modifier = Modifier.align(Alignment.End)) { Text("Skip warm-up →") }
+                if (vm.prefs.focus) FocusCard(vm, s, ex, onAdjust = { si -> open(WSheet.Edit(ei, si)) }, onNextLift = { if (ei < s.list("exercises").size - 1) vm.act("select", "ei" to ei + 1) })
+                else {
+                Row(Modifier.padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text("Set", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant, modifier = Modifier.width(32.dp), textAlign = TextAlign.Center)
-                    Text("Target", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant, modifier = Modifier.weight(1f).padding(start = 8.dp))
+                    // The design's Target ⇄ Last: the reference column shows the plan or what you did last time.
+                    Row(Modifier.weight(1f).padding(start = 8.dp).clip(RoundedCornerShape(8.dp)).clickable { vm.prefs.changeLastMode(!vm.prefs.lastMode) }
+                        .semantics { contentDescription = if (vm.prefs.lastMode) "Showing last time. Show targets" else "Showing targets. Show last time"; role = Role.Button },
+                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(if (vm.prefs.lastMode) "Last" else "Target", style = MaterialTheme.typography.labelMedium, color = cs.primary)
+                        Icon(PiIcons.Redo, null, tint = cs.primary, modifier = Modifier.size(12.dp))
+                    }
                     Text(if (ex.b("assisted")) "ASSIST" else s.s("unit").uppercase(), style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant, modifier = Modifier.width(if (vm.prefs.grip) 76.dp else 72.dp), textAlign = TextAlign.Center)
                     Text("Reps", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant, modifier = Modifier.width(if (vm.prefs.grip) 62.dp else 58.dp), textAlign = TextAlign.Center)
                     Spacer(Modifier.width(if (vm.prefs.grip) 72.dp else 52.dp))
@@ -383,19 +347,16 @@ private fun ExercisePane(vm: AppViewModel, s: JSONObject, ex: JSONObject?, wide:
                     val showRating = si == lastDoneWork && set.b("done") && set.isNull("rir")
                     SetRow(vm, s, ex, ei, si, set, label, showRating, onEdit = { open(WSheet.Edit(ei, si)) }, onOptions = { open(WSheet.SetOptions(ei, si)) })
                 }
-                // The design: skip the remaining warm-ups in one tap (tap ✓ on one to bring it back).
-                val warmLeft = sets.filter { it.b("warm") && !it.b("done") && !it.b("skipped") }
-                if (warmLeft.isNotEmpty()) TextButton(onClick = {
-                    warmLeft.forEach { w -> vm.act("skipSet", "ei" to ei, "si" to w.i("i")) }; vm.toast("Warm-ups skipped · tap ✓ on one to bring it back")
-                }) { Text("Skip ${warmLeft.size} warm-up set${if (warmLeft.size == 1) "" else "s"} →") }
                 PlateBar(ex, s.s("unit")) { open(WSheet.Plates(ei, ex.i("platesFor"))) }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     AddRow(vm, ex, Modifier.weight(1f)) { open(WSheet.AddSet(ei)) }
                     if (wide && !s.b("quick") && ei < s.list("exercises").size - 1) OutlinedButton(onClick = { vm.act("select", "ei" to ei + 1) }, modifier = Modifier.height(48.dp)) { Text("Next exercise") }
                 }
+                }
                 if (s.b("quick")) OutlinedButton(onClick = { open(WSheet.AddLift) }, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text("Add a lift") }
             }
         }
+        item { Spacer(Modifier.height(12.dp)); SessionTotals(s) }
     }
 }
 
@@ -411,19 +372,26 @@ private fun SetRow(vm: AppViewModel, s: JSONObject, ex: JSONObject, ei: Int, si:
     val cellH: Dp = if (grip) 58.dp else 44.dp
     val bg by animateColorAsState(when { done && warm -> cs.surfaceContainerHigh; done -> cs.primaryContainer; else -> cs.surfaceContainerLow }, label = "row")
     val target = set.o("target")
-    val sub = when {
-        warm -> "Warm-up"; set.b("sub") -> if (set.s("kind") == "drop") "Drop set" else "Myo mini"
-        target != null && set.s("type") == "failure" -> "${target.s("reps")} to failure"
-        target != null && !target.isNull("rir") -> "${target.s("reps")} @ ${target.s("effort").ifBlank { target.s("rir") + " RIR" }}"
-        target != null -> "${target.s("reps")} reps"; else -> ""
-    }
+    // The design's reference column: the target as "82.5×6" over its effort, or last time's set (Target ⇄ Last).
     val prev = set.o("prev")
+    val fmtW = { v: String -> if (tag && (v.toDoubleOrNull() ?: 0.0) <= 0.0) ex.s("loadTag") else v }
+    val tw = target?.s("w")?.takeIf { it.isNotBlank() && it != "—" && it != "null" }
+    val sub = when {
+        vm.prefs.lastMode -> prev?.takeIf { it.d("w") > 0 || it.s("r").isNotBlank() }?.let { "${fmtW(com.pursuitiron.app.ui.common.fmtNum(it.d("w")))}×${it.s("r")}" } ?: "—"
+        tw != null && target.s("reps").isNotBlank() -> "${fmtW(tw)}×${target.s("reps").replace("-", "–")}"
+        target != null && target.s("reps").isNotBlank() -> "${target.s("reps").replace("-", "–")} reps"
+        else -> set.s("weight").takeIf { it.isNotBlank() }?.let { "${fmtW(it)}×${set.s("reps")}" } ?: ""
+    }
     val sub2 = when {
         skipped -> "Skipped · not counted"
         set.b("pr") -> "New best"
         set.has("hint") && !set.isNull("hint") -> set.s("hint")
         done && !set.isNull("rir") -> "Rated ${set.i("rir").let { if (it >= 4) "4+" else "$it" }} RIR"
-        !done && prev != null && prev.d("w") > 0 -> "Last: ${com.pursuitiron.app.ui.common.fmtNum(prev.d("w"))} × ${prev.s("r")}"
+        vm.prefs.lastMode -> if (prev == null) "nothing logged" else "tap to use"
+        warm -> "Warm-up"
+        set.b("sub") -> if (set.s("kind") == "drop") "Drop · to failure" else "Myo mini"
+        set.s("type") == "failure" -> "to failure"
+        target != null && !target.isNull("rir") -> "@" + target.s("effort").ifBlank { target.s("rir") + " RIR" }
         set.b("added") -> "Added set"
         else -> ""
     }
@@ -453,8 +421,12 @@ private fun SetRow(vm: AppViewModel, s: JSONObject, ex: JSONObject, ei: Int, si:
             }
         } else Row(verticalAlignment = Alignment.CenterVertically) {
             labelCell()
-            Column(Modifier.weight(1f).padding(start = 8.dp)) {
-                Text(sub, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            val useLast = vm.prefs.lastMode && !done && prev != null && (prev.d("w") > 0 || prev.s("r").isNotBlank())
+            Column(Modifier.weight(1f).padding(start = 8.dp).then(if (useLast) Modifier.clip(RoundedCornerShape(10.dp)).clickable {
+                    if (prev.d("w") > 0) vm.act("edit", "ei" to ei, "si" to si, "field" to "weight", "value" to com.pursuitiron.app.ui.common.fmtNum(prev.d("w")))
+                    if (prev.s("r").isNotBlank()) vm.act("edit", "ei" to ei, "si" to si, "field" to "reps", "value" to prev.s("r"))
+                }.semantics { contentDescription = "Last time $sub. Use it for this set"; role = Role.Button } else Modifier)) {
+                Text(sub, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (sub2.isNotEmpty()) Text(sub2, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     color = if (set.b("pr")) cs.primary else cs.onSurfaceVariant)
             }

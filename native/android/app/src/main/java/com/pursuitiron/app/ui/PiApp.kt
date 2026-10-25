@@ -183,7 +183,7 @@ private fun Tabs(vm: AppViewModel, wide: Boolean) {
 private fun MiniBar(vm: AppViewModel, modifier: Modifier) {
     val live = vm.home?.o("live") ?: return
     val done = live.i("done"); val total = live.i("total")
-    val elapsed = ((vm.now - live.optLong("startedAt")) / 1000).coerceAtLeast(0)
+    val elapsed = com.pursuitiron.app.ui.screens.liveElapsedSec(live, vm.now)
     val cs = MaterialTheme.colorScheme
     Row(
         modifier.padding(horizontal = 12.dp, vertical = 8.dp).fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(cs.primaryContainer)

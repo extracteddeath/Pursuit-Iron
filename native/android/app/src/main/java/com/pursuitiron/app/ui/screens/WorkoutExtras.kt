@@ -39,6 +39,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.foundation.layout.Spacer
@@ -360,15 +361,32 @@ fun SupersetSheet(vm: AppViewModel, s: JSONObject, onClose: () -> Unit) {
 /* App.js session note: one line about today, optionally shown again next time. */
 @Composable
 fun SessionNoteSheet(vm: AppViewModel, s: JSONObject, onClose: () -> Unit) {
+    // The design's workout note: free text, quick tags, and how long it sticks.
     var text by remember { mutableStateOf(s.s("sessionNote")) }
-    var repeat by remember { mutableStateOf(s.s("sessionNoteRepeat", "none")) }
-    ModalBottomSheet(onDismissRequest = onClose) {
-        Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    var repeat by remember { mutableStateOf(s.s("sessionNoteRepeat", "once").let { if (it == "none" && s.s("sessionNote").isNotBlank()) "none" else if (it == "none") "once" else it }) }
+    val cs = MaterialTheme.colorScheme
+    val save = { vm.act("sessionNote", "text" to text.trim(), "repeat" to repeat); onClose() }
+    ModalBottomSheet(onDismissRequest = save) {
+        Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Workout note", style = MaterialTheme.typography.headlineSmall)
-            OutlinedTextField(text, { text = it.take(300) }, Modifier.fillMaxWidth(), minLines = 2, placeholder = { Text("Slept badly, gym was busy…") })
-            Kicker("Show it again")
-            Segmented(listOf("none" to "Just today", "once" to "Next time", "always" to "Every time"), repeat, { repeat = it })
-            Button(onClick = { vm.act("sessionNote", "text" to text, "repeat" to repeat); onClose() }, modifier = Modifier.align(Alignment.End)) { Text("Save") }
+            OutlinedTextField(text, { text = it.take(300) }, Modifier.fillMaxWidth(), minLines = 3, placeholder = { Text("How did it go? Sleep, energy, anything for next time") },
+                shape = RoundedCornerShape(16.dp))
+            androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("Slept badly", "Felt strong", "Short on time", "Gym was busy", "Left elbow sore").forEach { t ->
+                    val on = text.contains(t, ignoreCase = true)
+                    androidx.compose.material3.FilterChip(selected = on, onClick = {
+                        text = if (on) text.replace(Regex("(,\\s*)?" + Regex.escape(t), RegexOption.IGNORE_CASE), "").trim().trimStart(',').trim()
+                        else listOf(text.trim(), t).filter { it.isNotBlank() }.joinToString(", ")
+                    }, label = { Text(t) }, shape = CircleShape)
+                }
+            }
+            Segmented(listOf("none" to "This session", "once" to "Next time", "always" to "Every time"), repeat, { repeat = it })
+            Text(when (repeat) {
+                "none" -> "Saved with this session only — it won't come back next time."
+                "always" -> "Shown every time you train ${s.s("dayLabel")} until you clear it."
+                else -> "Saved with this session and shown once, the next time you train ${s.s("dayLabel")}."
+            }, style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+            Button(onClick = save, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Done") }
         }
     }
 }

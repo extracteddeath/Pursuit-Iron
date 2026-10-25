@@ -741,5 +741,19 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   ok(r.ok && st.saved.length === n0 + 1 && st.pinnedId === pin0, 'importing adds the program without switching to it (' + (r.error || r.name) + ')');
   ok(C.galleryList().find((g) => g.code === pick.code).added, 'the shared program shows as added');
 }
+{ // The design's "Short on time?" mid-workout.
+  if (C.session().active) C.discardSession();
+  let s1 = C.startSession({}); const o = C.timeOptions();
+  ok(o && o.leftMin > 0 && o.options.length === 4, 'time options list what is left (' + (o && o.leftMin) + ' min)');
+  const tight = o.options.find((x) => x.cut > 0);
+  if (tight) {
+    const t0 = s1.totalSets; s1 = C.act({ type: 'fitTime', minutes: tight.minutes });
+    ok(s1.totalSets === t0 - tight.cut, 'fitting ' + tight.minutes + ' min trims ' + tight.cut + ' sets');
+    ok(s1.exercises.every((e) => e.sets.some((x) => !x.warm && !x.sub && !x.skipped)), 'every lift keeps a working set');
+    s1 = C.act({ type: 'restoreTrimmed' });
+    ok(s1.totalSets === t0, 'trimmed sets come back');
+  }
+  C.discardSession();
+}
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);
 

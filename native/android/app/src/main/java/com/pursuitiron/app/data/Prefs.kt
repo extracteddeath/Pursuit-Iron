@@ -29,6 +29,9 @@ class Prefs(context: Context) {
     /** The design's optional inline −/+ beside each set's weight and reps; off by default. */
     var steppers by mutableStateOf(sp.getBoolean("steppers", false))
         private set
+    /** The design's focus mode in the workout: one set at a time. */
+    var focus by mutableStateOf(sp.getBoolean("focus", false))
+        private set
     var transferDismissed by mutableStateOf(sp.getBoolean("transferDismissed", false))
         private set
     var askedNotifications by mutableStateOf(sp.getBoolean("askedNotifications", false))
@@ -48,6 +51,11 @@ class Prefs(context: Context) {
     fun changeBlack(v: Boolean) { black = v; sp.edit().putBoolean("black", v).apply() }
     fun changeDark(v: Boolean?) { dark = v; sp.edit().apply { if (v == null) remove("dark") else putBoolean("dark", v) }.apply() }
     fun changeGrip(v: Boolean) { grip = v; sp.edit().putBoolean("grip", v).apply() }
+    /** The design's Target ⇄ Last reference column. */
+    var lastMode by mutableStateOf(sp.getBoolean("lastMode", false))
+        private set
+    fun changeLastMode(v: Boolean) { lastMode = v; sp.edit().putBoolean("lastMode", v).apply() }
+    fun changeFocus(v: Boolean) { focus = v; sp.edit().putBoolean("focus", v).apply() }
     fun changeSteppers(v: Boolean) { steppers = v; sp.edit().putBoolean("steppers", v).apply() }
     fun changeKeepAwake(v: Boolean) { keepAwake = v; sp.edit().putBoolean("keepAwake", v).apply() }
     fun dismissTransfer() { transferDismissed = true; sp.edit().putBoolean("transferDismissed", true).apply() }

@@ -258,9 +258,24 @@ if tap(r"Weight not set, edit", "set-editor"):
     tap(r"^\|Done$|Done$")
 tap(r"^Set 1:", "set-logged")
 tap(r"^2 reps left", "set-rated")
-tap(r"Why .* kg\?|No suggestion yet", "why-sheet")
-adb("shell", "input", "keyevent", "4")
-time.sleep(1)
+# The design's Why opens in place on the card
+if tap(r"Why .* kg\?|Why .* reps\?|No suggestion yet", "why-inline"):
+    tap(r"^Close explanation", required=False)
+# The design's header: focus mode, the exercise list, and "Short on time?" from the clock
+if tap(r"^Focus mode", "focus-mode"):
+    if not find(r"Log (set|warm-up): press and hold|Reps left in the tank", timeout=4):
+        FAILS.append("focus mode shows no set to log")
+    tap(r"^Focus mode")
+if tap(r"^All exercises", "exercise-list"):
+    if not find(r"Today's exercises", timeout=4):
+        FAILS.append("exercise list sheet did not open")
+    close_sheet(r"Today's exercises")
+if tap(r"Short on time\?", "time-sheet"):
+    if not find(r"Pause workout timer", timeout=4):
+        FAILS.append("short-on-time sheet has no pause")
+    close_sheet(r"Pause workout timer")
+else:
+    FAILS.append("the workout clock does not open Short on time")
 if tap(r"Weight 60(\.0)?, edit", "edit-logged-set"):
     back()
 tap(r"Exercise actions", "exercise-menu")
@@ -302,13 +317,15 @@ tap(r"Exercise actions")
 tap(r"Something hurt", "hurt-sheet")
 adb("shell", "input", "keyevent", "4")
 time.sleep(1)
-tap(r"Workout options", "workout-menu")
-tap(r"^\|Workout note$", "session-note")
-tap(r"Slept badly")
+tap(r"workout note", "session-note")
+tap(r"How did it go")
 adb("shell", "input", "text", "Busy%sgym")
 hide_keyboard()
 time.sleep(0.6)
-tap(r"^\|Save$")
+tap(r"Slept badly", "session-note-tag")
+tap(r"^\|Done$")
+if not find(r"^Workout note: ", timeout=4):
+    FAILS.append("workout note not saved to the header")
 
 # 3. Minimise and resume through the mini bar
 tap(r"Minimise workout", "minimised")

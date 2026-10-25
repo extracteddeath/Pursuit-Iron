@@ -125,15 +125,15 @@
   "uiFiles": {
     "modules/App.js": "3bace5941fc2ad1d3e91b0314c6a5b91d4299afc8fe7b261b04d62c3e6cecff1",
     "index.html": "a22519eaa1d82acd2aa47022a714eda5e2b3648468cd189a88e70f5b19d57be7",
-    "sw.js": "aa1983fdb2a54b2f8a625acd9c93f477e2916d38cdeb5e9cfa6383632bce70a4",
-    "BUILD_PROFILE.json": "56769f9b3eed65d85e28a87dc3e0d199de31cac76340da9ef7828fb2ad24c583",
+    "sw.js": "30710463a6bcf3e481b814cc20633dc5f04716f4e15bb051fb50a88c9b45ffc7",
+    "BUILD_PROFILE.json": "ae8386bac3e8eabe5f1abc1eff717f057430ea39705ed1eabb59bbbbd33f0b41",
     "CHANGELOG.md": "62a10235c8df9c59d30b87891dbfdebcadc898b4d81421e487e6e128991c92b3",
-    "app.css": "078880d27853afeddb11e02a2ca8e457c26d6b0c114f11c3214cb6bf5c4a5a57",
+    "app.css": "2db66a964a2ef42aab7d957ad9939505a65f5bd8de47a57743ff28692326a462",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Prelaunch cleanup removes duplicate UI computation exports and unused bindings; canonical engine behavior and saved-data contracts remain unchanged.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b913-r5604de3815815bee",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b913-rbda5dd68ea844d9a",
   "uiMilestone": "Build 913 · M365 Program weekly schedule ownership"
 }

@@ -549,7 +549,7 @@ fun MeSheet(vm: AppViewModel, onClose: () -> Unit, onStandards: () -> Unit) {
     val p = vm.profile
     var name by remember { mutableStateOf(p?.s("name").orEmpty()) }
     val age = p?.optString("age")?.toIntOrNull() ?: 31
-    ModalBottomSheet(onDismissRequest = { if (name != p?.s("name").orEmpty()) vm.setProfile(name = name); onClose() }) {
+    ModalBottomSheet(onDismissRequest = { if (name != p?.s("name").orEmpty()) vm.setProfile(name = name); onClose() }, sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Your profile", style = MaterialTheme.typography.headlineSmall)
             Text("NAME", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.ExtraBold, letterSpacing = 0.4.sp), color = cs.onSurfaceVariant)

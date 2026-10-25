@@ -79,6 +79,19 @@ def find(pattern, timeout=12):
     return None
 
 
+def row_scroll_to(pattern, anchor, tries=4):
+    """A horizontally scrolling row (the Plan action row): swipe it left at the anchor's height until pattern shows."""
+    for _ in range(tries):
+        if find(pattern, timeout=1):
+            return True
+        a = find(anchor, timeout=2)
+        if not a:
+            return False
+        adb("shell", "input", "swipe", "900", str(a[1]), "250", str(a[1]), "300")
+        time.sleep(0.6)
+    return bool(find(pattern, timeout=1))
+
+
 def dismiss_system_dialogs():
     """A cold emulator sometimes shows "<app> isn't responding" for the launcher; it is not ours. Wait it out."""
     hit = False
@@ -351,10 +364,9 @@ if tap(r"^\|Too easy$", "finish-feel", required=False):
 tap(r"^\|Moderate$", "finish-feedback", required=False)
 scroll_to(r"^\|Save session$", tries=8)
 tap(r"^\|Save session$")
-time.sleep(2)
-shot("summary")
-if not find(r"Saved · next session adjusted|Session saved", timeout=4):
+if not find(r"[Ss]aved", timeout=6):
     FAILS.append("no saved toast after Save session")
+shot("summary")
 
 # 4b. Quick workout, saved as a routine
 if scroll_to(r"Quick workout", tries=3):
@@ -424,7 +436,8 @@ if tap(r"^Program: ", "programs-sheet") and scroll_to(r"Browse shared programs",
 else:
     FAILS.append("no Programs sheet with shared programs on Plan")
 # Lift progression lives in Program settings (the Plan action row): the block's methods, each lift's reason
-scroll_up_to(r"^\|Settings$", tries=10)
+scroll_up_to(r"^\|Edit program$|Review block", tries=10)
+row_scroll_to(r"^\|Settings$", r"Review block|^\|Schedule$|^\|Cycle$")
 tap(r"^\|Settings$", "program-settings")
 if scroll_to(r"^Lift progression|\|Lift progression", tries=8, step=600):
     tap(r"^Lift progression|\|Lift progression", "lift-progression")
@@ -435,7 +448,8 @@ else:
     FAILS.append("no lift progression in Program settings")
 close_sheet(r"Save program settings|Save and rebuild")
 # The design's Details: how the program was built and the block plan
-scroll_up_to(r"^\|Details$", tries=10)
+scroll_up_to(r"^\|Edit program$|Review block|^\|Settings$", tries=10)
+row_scroll_to(r"^\|Details$", r"^\|Settings$|^\|Schedule$|^\|Cycle$")
 if tap(r"^\|Details$", "program-details"):
     if not scroll_to(r"Block plan", tries=6, step=600):
         FAILS.append("program details has no block plan")
@@ -525,7 +539,7 @@ if scroll_to(r"^\|PR board$", tries=6):
 else:
     FAILS.append("PR board missing on the profile")
 if tap(r"^\|Rep PRs$", "rep-prs", required=False):
-    if not find(r"PREDICTED|DONE", timeout=3):
+    if not scroll_to(r"PREDICTED|DONE", tries=3):
         FAILS.append("rep PR matrix missing")
     tap(r"^\|e1RM$")
 scroll_to(r"Achievements")

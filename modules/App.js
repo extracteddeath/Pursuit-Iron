@@ -8165,7 +8165,7 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
                         const reduced = cfg.reduce || [];
                         if (!focused.length && !reduced.length)
                             return null;
-                        const week = weeksOf(program), volume = weeklyVolume(program, week), direct = {};
+                        const week = activeWeek, volume = weeklyVolume(program, week), direct = {};
                         /* resolve the slot for the week being shown — a paired slot trains a different lift on
                            alternate weeks and this readout would credit the wrong muscle. */
                         program.days.forEach(day => day.exercises.forEach((_id, slot) => {

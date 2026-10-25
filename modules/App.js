@@ -7272,8 +7272,10 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
             // can actually release when its metadata closes.
             const title = pvTitle.current, name = pvNameCol.current, header = title?.parentElement;
             if (title && name && header) {
-                const collapsed = Math.max(...[...title.children].map(el =>
-                    el.offsetHeight - (el === name ? meta.offsetHeight : 0)));
+                const row = [...title.children].filter(el => Math.abs(el.offsetTop - name.offsetTop) <= 1);
+                const rowHeight = Math.max(...row.map(el => el.offsetHeight));
+                const collapsedRow = Math.max(...row.map(el => el.offsetHeight - (el === name ? meta.offsetHeight : 0)));
+                const collapsed = title.offsetHeight - rowHeight + collapsedRow;
                 const style = getComputedStyle(header);
                 const inset = ['paddingTop', 'paddingBottom', 'borderTopWidth', 'borderBottomWidth']
                     .reduce((sum, key) => sum + (parseFloat(style[key]) || 0), 0);

@@ -117,7 +117,7 @@ Existing B899 browser coverage extends real creation/cancellation/retry into sel
 
 ## M352 — full program identity and a deliberate save decision
 
-Current captures showed clipped program names and Save competing with Reroll, Settings, day navigation and Details. The existing program title now wraps; its persistent header has a height cap and remains scrollable for very large text, leaving the working form usable. The existing collapse owner measures the actual releasable metadata height, including a capped or icon-dominated title row, instead of reserving space the header cannot release.
+Current captures showed clipped program names and Save competing with Reroll, Settings, day navigation and Details. The existing program title now wraps and takes a full row when narrow; its persistent header has a height cap and remains scrollable for very large text, leaving the working form usable. The existing collapse owner measures the actual releasable metadata height, including a capped, wrapped or icon-dominated title row, instead of reserving space the header cannot release.
 
 Unsaved programs and saved-program drafts share one save/review panel before secondary controls. It uses the existing UiAction and token roles, calls the original save/review handlers, retains Manage draft and the existing scope/Undo rules, and replaces the previous scattered button/draft notice/unsaved hint. Clean saved programs keep their quiet Saved indicator. Obsolete toolbar-save layout rules and the old priority title typography are removed from their previous owners.
 

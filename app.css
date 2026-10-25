@@ -8725,8 +8725,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb-plan-glance-value{margin-top:3px;line-height:1.2;font-size:1.125rem;font-weight:650;color:var(--pi-color-on-control);}
 .wpb-plan-glance-tile[data-featured="true"] .wpb-plan-glance-value{color:var(--pi-m3e-primary,var(--wpb-theme-accent));}
 /* M274 — Program detail title, animated metadata and save status share the design roles. */
-.wpb-program-title-row{display:flex;align-items:flex-start;gap:var(--pi-space-2);min-width:0;}
-.wpb-program-name-column{flex:1;min-width:0;}
+.wpb-program-title-row{display:flex;flex-wrap:wrap;align-items:flex-start;gap:var(--pi-space-2);min-width:0;}
+.wpb-program-name-column{flex:1 1 14em;min-width:0;}
 .wpb-program-name{display:flex;align-items:flex-start;gap:6px;max-width:100%;border:0;padding:0;background:none;color:var(--pi-color-on-control);cursor:pointer;}
 .wpb-program-name-text{min-width:0;white-space:normal;overflow-wrap:anywhere;text-align:left;font-size:var(--pi-type-heading);line-height:1.2;font-weight:var(--pi-weight-action);letter-spacing:-.028em;}
 /* Very large titles remain scrollable without taking the working form off screen. */

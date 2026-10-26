@@ -457,9 +457,9 @@ close_sheet(r"Save program settings|Save and rebuild")
 scroll_up_to(r"^\|Edit program$|Review block|^\|Settings$", tries=10)
 row_scroll_to(r"^\|Details$", r"^\|Settings$|^\|Schedule$|^\|Cycle$")
 if tap(r"^\|Details$", "program-details"):
-    if not scroll_to(r"Block plan", tries=6, step=600):
+    if not scroll_to(r"(?i)block plan", tries=6, step=600):
         FAILS.append("program details has no block plan")
-    close_sheet(r"Program details|Block plan")
+    close_sheet(r"Program details|(?i:block plan)")
 # Why this lift: a Plan day row opens the engine's reasoning for that slot
 if scroll_to(r"^Why .+\?", tries=4):
     tap(r"^Why .+\?", "why-this-lift")

@@ -1,4 +1,5 @@
 import { BackupRestorePanel } from './backup-restore-panel.js';
+import { appStorageOwnership } from './app-storage-ownership.js';
 import { InfoCard, MotionReveal } from './ui-disclosure.js';
 import { SetupCard, ProgressionCard, ProgramReferenceSheet, ProgressionChoiceSheet } from './program-reference-surfaces.js';
 import { CHANGELOG } from './release-notes.js';
@@ -64,7 +65,7 @@ import { readCycleSetupDraft, writeCycleSetupDraft, clearCycleSetupDraft, CYCLE_
 import { INJURY_AREAS, INJURY_IMPACTS, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
 import { withProgressionChoices, workoutProgressionOrigin, withWorkoutProgramReview, repeatedNote, refreshProgressionSets, exerciseSessionTags, workoutProgramChanges, buildSessionReview, workoutRowMatchesPrescription, beginWorkoutProgramSwap, undoWorkoutProgramSwap } from './session-tools.js';
 import { reviewProgramChanges, programReviewKey, withProgramRevision } from './program-review.js';
-const __APP_VERSION__='4.0.0'; const __BUILD__='921';
+const __APP_VERSION__='4.0.0'; const __BUILD__='922';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { createPortal } from "../vendor/react-dom.js";
@@ -5490,6 +5491,7 @@ async function loadStore() {
     return MEM.data == null ? null : parseStoredData(JSON.stringify(MEM.data));
 }
 async function writeStoreText(key, text) {
+    if (!appStorageOwnership.writable()) return false;
     try {
         if (typeof localStorage !== "undefined") {
             localStorage.setItem(key, text);
@@ -11617,6 +11619,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
         if (finishingRef.current)
             return false;
         try {
+            if (!appStorageOwnership.writable()) throw new Error('Another window owns device storage.');
             localStorage.setItem(LIVE_KEY, JSON.stringify({ schemaVersion: 2, programId: program.id, dayId: day.id, weekIndex, dayExSig, startedAt: startRef.current, elapsedMs: runElapsedMs(), savedAt: Date.now(), data, readiness, injuryReports, sessionProgressions, sessionProgressionOrigins, sessionLengthPlan: day.sessionLengthPlan, sessionNote, sessionNoteRepeat, exIdx, focusPin, fbPump, fbSore, runPaused, restEndMs: restEndRef.current, restMax, restPaused: paused, restRemain: paused ? rest : 0, sessionId: sessionIdRef.current }));
             setSaveError(false);
             return true;
@@ -18822,6 +18825,25 @@ function StorageRecovery({ state, onRetry, onRestore }) {
     const raw = state.error?.raw;
     const hasRaw = typeof raw === "string";
     const slow = state.status === "slow";
+    const ownershipError = state.error?.code?.startsWith('APP_STORAGE_');
+    if (ownershipError) return _jsxs('section', { className: 'wpb-storage-gate', 'data-storage-busy': state.error.code === 'APP_STORAGE_BUSY', 'data-storage-changed': state.error.code === 'APP_STORAGE_CHANGED', 'aria-labelledby': 'storage-gate-title', children: [
+        _jsx(HardDrive, { size: 30, 'aria-hidden': true }),
+        _jsx('h1', { id: 'storage-gate-title', children: state.error.code === 'APP_STORAGE_BUSY' ? 'Already open elsewhere' : state.error.code === 'APP_STORAGE_CHANGED' ? 'Training changed elsewhere' : 'Storage protection unavailable' }),
+        _jsx('p', { role: 'status', children: state.error.message }),
+        _jsx('p', { children: state.error.code === 'APP_STORAGE_CHANGED' ? 'Saving in this window is paused. Keep its backup before reloading if you need to recover changes made here.' : 'This window has not changed your saved training or unfinished workout.' }),
+        hasRaw && _jsx(UiAction, { variant: 'tonal', onClick: () => {
+            try {
+                const url = URL.createObjectURL(new Blob([raw], { type: 'application/json' }));
+                const a = document.createElement('a'); a.href = url; a.download = 'pursuit-iron-window-backup.json';
+                document.body.appendChild(a); a.click(); a.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 1500);
+                setMessage('Download requested. Check Files or Downloads before reloading.');
+            } catch { setMessage('Could not download this backup. Keep this window open and try again.'); }
+        }, children: 'Download this window’s backup' }),
+        _jsx(UiAction, { variant: 'primary', onClick: state.error.code === 'APP_STORAGE_CHANGED' ? () => location.reload() : onRetry,
+            children: state.error.code === 'APP_STORAGE_CHANGED' ? 'Reload' : 'Try again' }),
+        message && _jsx('p', { role: 'status', children: message })
+    ] });
     const actionStyle = { width: "100%", minHeight: 48, padding: "12px 16px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: 15, fontWeight: 600, cursor: "pointer" };
     const pickFile = e => {
         const file = e.target.files?.[0];
@@ -19067,6 +19089,7 @@ function GenerationProgress({ label, onCancel }) {
 }
 
 function App() {
+    appStorageOwnership.require();
     const [view, setView] = useState("home");
     const scrollMemory = useRef({}); // per-screen scroll restoration; views return exactly where the user left them
     const planNavigationMemory = useRef(Object.create(null));
@@ -19738,7 +19761,7 @@ function App() {
         setLoadState({ status: "loading" });
         const slow = setTimeout(() => { if (alive)
             setLoadState({ status: "slow" }); }, 5000);
-        (safeStart ? Promise.resolve(null) : (recoveryStore ? Promise.resolve(recoveryStore) : loadStore())).then(d => {
+        appStorageOwnership.acquire().then(() => safeStart ? null : (recoveryStore || loadStore())).then(d => {
             if (!alive)
                 return;
             clearTimeout(slow);
@@ -19855,20 +19878,12 @@ function App() {
     }, [loadAttempt, recoveryStore, safeStart]);
     // persist on change (after initial load)
     const storageWarned = useRef(false);
-    const crossTabWarned = useRef(false);
-    // The native `storage` event fires in every OTHER tab/window when one of them writes to this
-    // origin's storage — never in the tab that made the write. That's exactly the signal needed here:
-    // if this key changed while THIS tab is open, another tab of the app is also open, and whichever
-    // one saves last will silently overwrite the other's data (a finished workout only saved in the
-    // other tab would be lost with no error). We don't attempt to merge or auto-reload — either could
-    // discard whatever this tab hasn't saved yet — just surface it once so the user can act (finish up
-    // in one tab, then reload the other before using it).
+    const externalStorageChange = useRef(() => {});
+    // Current app windows share the exclusive lease. An older build or external writer may not.
+    // Suspend that stale window and retain its own backup instead of autosaving over the new facts.
     useEffect(() => {
         const onStorage = (e) => {
-            if (e.key !== KEY || crossTabWarned.current)
-                return;
-            crossTabWarned.current = true;
-            setAppToast({ msg: "Pursuit Iron is open in another tab or window — use just one at a time, or a save could be lost. Reload the other one when you're done here." });
+            if (e.key === KEY && appStorageOwnership.writable()) externalStorageChange.current();
         };
         window.addEventListener("storage", onStorage);
         return () => window.removeEventListener("storage", onStorage);
@@ -20101,6 +20116,13 @@ function App() {
         setView("home");
     };
     const exportData = () => JSON.stringify({ v: STORE_VERSION, savedAt: Date.now(), exportedAt: Date.now(), tombs, saved: withLegacy(saved, "saved"), cycles: withLegacy(cycles, "cycles"), banned, equipDefault, gyms, activeGymId, unit, unitChosen, experience, loadMode, perf, history, custom, theme, bodyweight, sex, birth, birthEst, age, bwLog, measurements, reminders, restAutoStart, warmupCard, restScale, haptics, minInc, plates, goals, exNotes, exSetup, injuryLog, seenIntroV, seenWhatsNew, lastBackup, installDismissedAt, pinnedId, canaryResearch, selectivePromotionRuntime }, null, 2);
+    externalStorageChange.current = () => {
+        if (!loaded || !appStorageOwnership.writable()) return;
+        const raw = exportData();
+        appStorageOwnership.release();
+        setLoaded(false);
+        setLoadState({ status: 'error', error: Object.assign(new Error('Another window changed the training data. Close other app windows before reloading this one.'), { code: 'APP_STORAGE_CHANGED', raw }) });
+    };
     // Local calendar date for exports — slicing toISOString() takes the UTC date, which puts an
     // evening session in any UTC-negative timezone on the *next* day in the CSV.
     const isoLocal = (t) => { const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
@@ -21475,7 +21497,7 @@ function App() {
     // finishing/discarding.
     const completedLiveSession = snapshot => !!(snapshot?.sessionId && history.some(entry => entry.id === snapshot.sessionId));
     useEffect(() => {
-        if (!loaded || view === "session") {
+        if (!loaded || safeStart || view === "session") {
             setLiveSession(null);
             return;
         }
@@ -21491,7 +21513,7 @@ function App() {
         catch {
             setLiveSession(null);
         }
-    }, [view, saved, history, loaded]);
+    }, [view, saved, history, loaded, safeStart]);
     const resumeLive = () => {
         setDiscardArmed(false);
         try {
@@ -21532,6 +21554,10 @@ function App() {
         setDiscardArmed(false);
     };
     const startSession = (day, wk, ownerProgram) => {
+        if (safeStart || !appStorageOwnership.writable()) {
+            setAppToast({ msg: 'Exit recovery mode and reopen your saved training before starting a workout.' });
+            return;
+        }
         // React state updates are asynchronous: the selected owner must travel with
         // its day instead of borrowing the previously open program for guards/saves.
         if (!ownerProgram?.days?.some(row => row.id === day?.id)) {

@@ -1,5 +1,5 @@
 /* Pursuit Iron 4.0 — M234 production release. */
-const CACHE="pursuit-iron-production-v4-0-0-m234-candidate-selection-b921-r11d68ea548267768";
+const CACHE="pursuit-iron-production-v4-0-0-m234-candidate-selection-b922-r378513d3324a21cd";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
   "./app.css",
@@ -11,6 +11,7 @@ const SHELL=[
   "./index.html",
   "./manifest.webmanifest",
   "./modules/App.js",
+  "./modules/app-storage-ownership.js",
   "./modules/backup-restore-panel.js",
   "./modules/cycle-setup-drafts.js",
   "./modules/engine-api.js",
@@ -119,6 +120,7 @@ const SHELL=[
   "./modules/ui-primitives.js",
   "./modules/wizard-stability.js",
   "./modules/workout-context.js",
+  "./privacy.html",
   "./vendor/lucide-react.js",
   "./vendor/react-dom-client.js",
   "./vendor/react-dom.js",
@@ -139,5 +141,11 @@ const requestUrl=new URL(r.url);
 if(requestUrl.origin===manifestUrl.origin&&requestUrl.pathname===manifestUrl.pathname){
   e.respondWith((async()=>{const c=await caches.open(CACHE);try{const res=await fetch(new Request(r,{cache:'no-cache'}));if(res.ok){await c.put(manifestUrl.href,res.clone()).catch(()=>{});return res;}}catch{}const saved=await c.match(manifestUrl.href);return saved||new Response('Manifest unavailable',{status:503});})());return;
 }
-if(r.mode==='navigate'){e.respondWith(caches.open(CACHE).then(c=>c.match('./index.html')).then(x=>x||fetch(r)).catch(()=>caches.open(CACHE).then(c=>c.match('./index.html'))));return;}e.respondWith(caches.open(CACHE).then(c=>c.match(r,{ignoreSearch:true}).then(x=>x||fetch(r).then(res=>{if(res&&res.status===200&&res.type==='basic')c.put(r,res.clone()).catch(()=>{});return res;}))));});
+if(r.mode==='navigate'){
+  // Known documents (including the privacy policy) keep their own content.
+  // Unmatched app routes retain the installed shell as their offline fallback.
+  e.respondWith(caches.open(CACHE).then(async c=>(await c.match(r,{ignoreSearch:true}))||(await c.match('./index.html'))||fetch(r)));
+  return;
+}
+e.respondWith(caches.open(CACHE).then(c=>c.match(r,{ignoreSearch:true}).then(x=>x||fetch(r).then(res=>{if(res&&res.status===200&&res.type==='basic')c.put(r,res.clone()).catch(()=>{});return res;}))));});
 

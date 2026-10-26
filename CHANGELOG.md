@@ -1,3 +1,10 @@
+## Build 922 / M375 — Protect training across app windows and offline navigation
+
+- Prevent a stale second app window from autosaving over a workout completed elsewhere. One window owns device training/recovery storage; a second waits before opening it and can retry after the owner closes.
+- Pause saving if an older app version or external writer changes training storage. Keep the current window's backup available before reloading current saved data.
+- Serve the actual privacy policy from an installed app, including offline. Certify and precache the policy instead of substituting Home for every document navigation.
+- Verify concurrent windows, live-state preservation, completion, ownership release, external-write recovery/export, cached navigation, offline policy content and the existing crash/update lifecycle. Refresh outdated public README claims.
+
 ## Build 921 / M374 — Readable restore review and backup ownership
 
 - Make backup/restore guidance, merge impact, CSV summaries and unit choices respond to enlarged text. Keep each record with labeled Add/Update/Remove counts on narrow screens, with table/header semantics preserved for assistive technology.

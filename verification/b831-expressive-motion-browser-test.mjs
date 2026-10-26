@@ -540,8 +540,9 @@ try {
             }));
             assert.ok(rootMotion.entering<=1 && (!rootMotion.quick || rootMotion.entering===0),
                 'M377 root navigation has at most one entrance: '+JSON.stringify(rootMotion));
-            const bouncingIcons=await page.$eval('.wpb-tabbar button[data-tab] svg',icons=>
-                icons.filter(el=>el.style.getPropertyValue('--pi-nav-scale')).length);
+            const bouncingIcons=await page.$eval('.wpb-tabbar',bar=>
+                [...bar.querySelectorAll('button[data-tab] svg')]
+                    .filter(el=>el.style.getPropertyValue('--pi-nav-scale')).length);
             assert.equal(bouncingIcons,0,'M377 tab icons do not bounce in addition to the indicator');
 
             if (tab === 'settings') {

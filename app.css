@@ -5147,12 +5147,66 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   }
 }
 
-/* Cohesion 07 — data controls use the existing action and theme owners.
-   Wrapping rows preserve full labels with enlarged text in narrow app windows. */
-.wpb-backup{min-width:0}
+/* Backup presentation: one owner for previews, transfer controls and honest
+   merge impact. Relative type and fixed table columns preserve enlarged text. */
+.wpb-backup{min-width:0;font-size:var(--pi-type-support);line-height:1.5;color:var(--wpb-theme-text);overflow-wrap:anywhere}
+.wpb-backup-heading{scroll-margin-top:var(--pi-space-3)}
+.wpb-backup-intro{margin:0;padding:0 var(--pi-space-1) 10px;color:var(--wpb-theme-muted)}
+.wpb-backup-device-note{margin:0 var(--pi-space-1) var(--pi-space-3);padding:10px var(--pi-space-3);border-radius:var(--pi-shape-action);background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-muted)}
+.wpb-backup-device-title{display:flex;align-items:center;gap:6px;margin-bottom:var(--pi-space-1);font-weight:700;color:var(--wpb-theme-text)}
+.wpb-backup-device-title svg{flex-shrink:0;color:var(--wpb-theme-accent-ink)}
 .wpb-backup-actions{display:flex;flex-wrap:wrap;gap:8px}
 .wpb-backup-actions>.wpb-ui-action{flex:1 1 9rem;min-width:0;overflow-wrap:anywhere;white-space:normal}
 .wpb-backup .wpb-ui-action{font-size:.8125rem;max-width:100%;white-space:normal;overflow-wrap:anywhere}
+.wpb-backup .wpb-backup-wide-action{width:100%;margin-top:var(--pi-space-2)}
+.wpb-backup-transfer-actions{margin-top:var(--pi-space-2)}
+.wpb-backup-description{margin:0 0 var(--pi-space-2);color:var(--wpb-theme-muted)}
+.wpb-backup-help{margin:var(--pi-space-2) 0 0;padding-inline:2px;color:var(--wpb-theme-muted)}
+.wpb-backup .wpb-backup-pick-file{width:100%;margin-bottom:var(--pi-space-2)}
+.wpb-backup-switch-hint,.wpb-backup-paste-hint{margin:0 0 var(--pi-space-2);color:var(--wpb-theme-muted);text-align:center}
+.wpb-backup-switch-hint{font-size:.78125rem;line-height:1.45}
+.wpb-backup-review{margin-top:var(--pi-space-2);padding:var(--pi-space-3);border-radius:var(--pi-shape-action);background:var(--wpb-theme-card);font-size:var(--pi-type-support);line-height:1.6;min-width:0;container:backup-review / inline-size}
+.wpb-backup-review[data-ok="false"]{color:var(--wpb-theme-danger)}
+.wpb-backup-review-description{margin:6px 0 10px;color:var(--wpb-theme-muted)}
+.wpb-backup-impact{width:100%;table-layout:fixed;border-collapse:collapse;font-size:.75rem;text-align:right}
+.wpb-backup-impact th,.wpb-backup-impact td{box-sizing:border-box;vertical-align:top;overflow-wrap:anywhere;padding:6px 2px}
+.wpb-backup-impact th:first-child{width:40%;text-align:left;padding-left:0}
+.wpb-backup-impact thead th{font-weight:700}
+.wpb-backup-impact tbody tr{border-top:1px solid var(--wpb-theme-border)}
+.wpb-backup-impact tbody th{font-weight:600}
+.wpb-backup-impact td[data-removals="true"]{color:var(--wpb-theme-danger);font-weight:700}
+.wpb-backup-impact-label{display:none}
+/* At narrow measures, keep each record with its named counts. The table's
+   native header associations remain available to assistive technology. */
+@container backup-review (max-width:19rem){
+  .wpb-backup-impact,.wpb-backup-impact tbody{display:block}
+  .wpb-backup-impact thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+  .wpb-backup-impact tbody tr{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(4.75rem,100%),1fr));gap:var(--pi-space-1) var(--pi-space-2);padding-block:var(--pi-space-2)}
+  .wpb-backup-impact tbody th:first-child{grid-column:1/-1;width:auto;padding:0;text-align:left}
+  .wpb-backup-impact tbody td{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:var(--pi-space-1);padding:0;text-align:left;font-variant-numeric:tabular-nums}
+  .wpb-backup-impact-label{display:inline;font-weight:600;color:var(--wpb-theme-muted)}
+}
+@container backup-review (max-width:12rem){
+  .wpb-backup-impact tbody tr{grid-template-columns:1fr}
+}
+.wpb-backup-review-note{margin-top:10px}
+.wpb-backup-review-warning{margin-top:var(--pi-space-2);color:var(--wpb-theme-danger)}
+.wpb-backup-review-help{margin-top:var(--pi-space-2);color:var(--wpb-theme-muted)}
+.wpb-backup-csv-summary{display:grid;gap:6px;margin:var(--pi-space-2) 0 var(--pi-space-1);min-width:0}
+.wpb-backup-csv-summary strong{font-weight:750}
+.wpb-backup-csv-detail{font-size:.78125rem;line-height:1.45;color:var(--wpb-theme-muted)}
+.wpb-backup-unit-question{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--pi-space-2);padding:var(--pi-space-2) 10px;border-radius:10px;background:var(--wpb-theme-warning-dim);font-size:.78125rem;line-height:1.4}
+.wpb-backup-unit-question>span{flex:1 1 8rem;min-width:0}
+.wpb-backup-unit-choices{display:flex;gap:var(--pi-space-1);flex-wrap:wrap;min-width:0}
+.wpb-backup .wpb-backup-unit{min-width:48px;min-height:48px;padding:var(--pi-space-2) 10px;font:inherit;font-weight:700;line-height:1.4;cursor:pointer;border-radius:var(--pi-shape-action);border:1px solid var(--wpb-theme-border);background:var(--wpb-theme-bg);color:var(--wpb-theme-text)}
+.wpb-backup .wpb-backup-unit[aria-pressed="true"]{background:var(--wpb-theme-accent);color:var(--wpb-theme-on-accent);border-color:var(--wpb-theme-accent)}
+.wpb-backup .wpb-backup-unit:focus-visible{outline:2px solid var(--wpb-focus);outline-offset:2px}
+.wpb-backup-import-status{margin-top:var(--pi-space-2);padding-inline:2px;font-weight:600;color:var(--wpb-theme-accent-ink)}
+.wpb-backup-import-status[data-ok="false"]{color:var(--wpb-theme-danger)}
+@media(forced-colors:active){
+  .wpb-backup-review,.wpb-backup-unit-question,.wpb-backup-device-note{border:1px solid CanvasText}
+  .wpb-backup .wpb-backup-unit[aria-pressed="true"]{outline:2px solid Highlight;outline-offset:-4px}
+}
 .wpb-backup-text{display:block;width:100%;height:120px;box-sizing:border-box;
   padding:11px 12px;border:1px solid var(--wpb-theme-border);border-radius:12px;
   background:var(--wpb-theme-card);color:var(--wpb-theme-text);font-size:.8125rem;resize:vertical}

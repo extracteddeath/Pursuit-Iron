@@ -1,3 +1,10 @@
+## Build 921 / M374 — Readable restore review and backup ownership
+
+- Make backup/restore guidance, merge impact, CSV summaries and unit choices respond to enlarged text. Keep each record with labeled Add/Update/Remove counts on narrow screens, with table/header semantics preserved for assistive technology.
+- Move the existing backup UI and transfer handlers out of App.js into one feature owner. Retain the App's storage, merge, compatibility, unit conversion and Undo transactions; no engine or history policy changes.
+- Retire 43 inline style objects and tighten the combined presentation budget to 2558. Use the existing shared controls and theme tokens without new CSS priority declarations.
+- Extend the existing browser fixture with enlarged JSON/CSV previews, exact count mappings, accessible headers, full-file restore/Undo and actual CSV unit-selection/import/Undo, alongside transfer failure/cancellation and stale-file protection.
+
 ## Build 920 / M373 — Faster cycle creation through canonical exercise reuse
 
 - Reuse the existing immutable knowledge projection for each exact built-in catalog definition. Custom definitions and edited/snapshot copies are read afresh, including same-ID copies; keep one canonical catalog and projection formula.

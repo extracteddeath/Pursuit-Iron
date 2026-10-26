@@ -50,6 +50,19 @@ def shot(name):
     print("shot", path, flush=True)
 
 
+def record(name, action, secs=3):
+    """A short screen recording around one interaction, to check motion frame by frame."""
+    try:
+        rec = subprocess.Popen(["adb", "shell", "screenrecord", "--time-limit", str(secs), "--size", "540x1200", "/sdcard/rec.mp4"])
+        time.sleep(0.8)
+        action()
+        rec.wait(timeout=secs + 15)
+        time.sleep(0.5)
+        adb("pull", "/sdcard/rec.mp4", os.path.join(OUT, name + ".mp4"))
+    except Exception as e:  # recording is a diagnostic; never fail the run on it
+        print("record failed", name, e, flush=True)
+
+
 def nodes():
     for _ in range(3):
         adb("shell", "uiautomator", "dump", "/sdcard/ui.xml")
@@ -407,6 +420,12 @@ else:
 # 5. Tabs
 for t in ["Plan", "Progress", "Exercises", "You"]:
     tap(rf"^\|{t}$|^{t}\|", t.lower())
+# Motion: the avatar travels from Today's header to the middle of You; tabs fade through
+tap(r"^\|Today$|^Today\|")
+time.sleep(1.5)
+record("motion-avatar", lambda: tap(r"^You(: [^|]*)?\|"))
+time.sleep(1)
+record("motion-tabs", lambda: (tap(r"^\|Plan$|^Plan\|"), time.sleep(0.9), tap(r"^\|Progress$|^Progress\|")))
 
 # 5a. Exercises: equipment filter and the count
 tap(r"^\|Exercises$|^Exercises\|")

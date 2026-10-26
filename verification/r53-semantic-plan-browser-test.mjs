@@ -290,6 +290,23 @@ async function verifyTaskHierarchy(browser){
       assert.ok(choices.every(b=>b.height>=44)&&choices.filter(b=>b.pressed==='true').length===1,'One active 44px+ pane');
       await page.click('[data-plan-pane="volume"]');
       assert.equal(await page.$eval('[data-plan-pane="volume"]',b=>b.getAttribute('aria-pressed')),'true');
+      // M380: in a planned week the contributors' heading must be a native
+      // keyboard-accessible button, not a pointer-only clickable div.
+      await page.waitForSelector('.wpb-plan button[data-vol-part]');
+      const rowBefore=await page.$eval('.wpb-plan button[data-vol-part]',el=>({
+        part:el.dataset.volPart,expanded:el.getAttribute('aria-expanded'),
+        named:el.getAttribute('aria-label'),style:getComputedStyle(el).fontSize
+      }));
+      assert.equal(rowBefore.expanded,'false');
+      assert.ok(rowBefore.named?.includes('Volume contributors for')&&parseFloat(rowBefore.style)>=12,
+        'M380: muscle-volume header has readable accessible name');
+      await page.focus('.wpb-plan button[data-vol-part]');
+      await page.keyboard.press('Enter');
+      assert.equal(await page.$eval('.wpb-plan button[data-vol-part]',el=>el.getAttribute('aria-expanded')),
+        'true','M380: Enter opens muscle-volume contributors without changing training');
+      await page.keyboard.press('Space');
+      assert.equal(await page.$eval('.wpb-plan button[data-vol-part]',el=>el.getAttribute('aria-expanded')),
+        'false','M380: Space closes native volume contributors');
       // M379: this is the actual Plan blueprint renderer, not a duplicated
       // graph fixture. Its planned sets use canonical 1-based weeks and the
       // optional deload is exactly one final additional week.

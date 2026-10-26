@@ -265,11 +265,14 @@ fun ProgramEditorScreen(vm: AppViewModel) {
                                         .clickable { hitOpen = if (on) null else h.s("part") }.semantics { role = Role.Button; selected = on }
                                         .padding(horizontal = 14.dp, vertical = 9.dp)) }
                         }
-                        // Tap a muscle to see what trains it: the lifts on this day whose main muscle it is.
+                        // Tap a muscle to see what trains it: direct sets first, then the lifts that also work it (counted as a share).
                         hits.firstOrNull { it.s("part") == hitOpen }?.let { h ->
-                            val from = exs.filter { it.s("part") == h.s("part") && it.i("sets") > 0 }
-                            Text("${h.s("label")}: " + from.joinToString(" · ") { "${it.s("name")} ${it.i("sets")}" } + " direct sets this week.",
-                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 17.sp), color = cs.onSurfaceVariant)
+                            val from = h.list("from")
+                            val direct = from.filter { it.b("direct") }; val shared = from.filter { !it.b("direct") }
+                            Text(listOfNotNull(
+                                direct.takeIf { it.isNotEmpty() }?.joinToString(" · ", prefix = "${h.s("label")}: ", postfix = " direct") { "${it.s("name")} ${fmtNum(it.d("sets"))}" },
+                                shared.takeIf { it.isNotEmpty() }?.joinToString(" · ", prefix = if (direct.isEmpty()) "${h.s("label")}: " else "", postfix = " as a secondary muscle") { "${it.s("name")} ${fmtNum(it.d("sets"))}" }
+                            ).joinToString(". ") + ". A lift counts its sets for the muscle it targets and a share for muscles it also works.", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 17.sp), color = cs.onSurfaceVariant)
                         }
                     }
                     Box(Modifier.fillMaxWidth().height(1.dp).background(cs.outlineVariant))

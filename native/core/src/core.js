@@ -216,11 +216,23 @@ function exSub(ex) {
     return [pat, eq ? (EQUIP_LABEL[eq] || eq) : 'Bodyweight'].filter(Boolean).join(' · ');
 }
 function dayPreview(program, day, weekIndex) {
+    const goal = (() => { try { return E.goalForDay(program, day); } catch { return null; } })(), scale = Number(S.store.restScale) || 1;
     return day.exercises.map((_id, slot) => {
         const id = E.exerciseAt(program, day, slot, weekIndex);
         let cell = null; try { cell = E.computeCell(program, day, id, slot, weekIndex); } catch { cell = null; }
-        return { id, name: exName(id), part: EX_BY_ID[id]?.part || '', primary: slot === day.primaryIndex, sets: cell?.sets ?? null, reps: cell?.reps ?? null, rir: cell?.rir ?? null, sub: exSub(EX_BY_ID[id]) };
+        let rest = null; try { rest = EX_BY_ID[id] ? E.effectiveRest(goal, EX_BY_ID[id], slot === day.primaryIndex, 0, scale) : null; } catch { rest = null; }
+        return { id, name: exName(id), part: EX_BY_ID[id]?.part || '', primary: slot === day.primaryIndex, sets: cell?.sets ?? null, reps: cell?.reps ?? null, rir: cell?.rir ?? null, sub: exSub(EX_BY_ID[id]), rest };
     });
+}
+/* The engine's weekly volume (analytics weeklyVolume): direct sets plus fractional secondary shares, per day. */
+function dayHits(program, items) {
+    const hits = {}, from = {};
+    const add = (pt, v, name, direct) => { hits[pt] = (hits[pt] || 0) + v; (from[pt] = from[pt] || []).push({ name, sets: Math.round(v * 2) / 2, direct }); };
+    items.forEach(({ id, sets }) => { const ex = EX_BY_ID[id], n = Number(sets) || 0; if (!ex || n <= 0) return;
+        add(ex.part, n, ex.name, true);
+        (E.secondaryOf(ex, program.engineV) || []).forEach(([pt, f]) => add(pt, n * f, ex.name, false)); });
+    return Object.entries(hits).filter(([, n]) => n >= 0.5).sort((a, b) => b[1] - a[1])
+        .map(([part, n]) => ({ part, label: E.PART_LABEL?.[part] || part, sets: Math.round(n * 2) / 2, from: from[part].filter((x) => x.sets > 0).sort((a, b) => b.direct - a.direct || b.sets - a.sets) }));
 }
 
 /* ------------------------------------------------------------------ Today */
@@ -1686,7 +1698,7 @@ export function plan({ programId, weekIndex } = {}) {
             return p.days.map((d) => {
                 let m = null; try { m = E.estimateMinutes(p, d, wk); } catch { m = null; }
                 const ex = dayPreview(p, d, wk), wd = Object.keys(sched).find((k) => sched[k] === d.id);
-                return { id: d.id, label: d.label, minutes: m, exercises: ex, sets: ex.reduce((a, e) => a + (Number(e.sets) || 0), 0),
+                return { id: d.id, label: d.label, minutes: m, exercises: ex, sets: ex.reduce((a, e) => a + (Number(e.sets) || 0), 0), hits: dayHits(p, ex),
                     weekday: wd == null ? null : ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][Number(wd)],
                     status: !isCur ? null : done.has(d.id) ? 'done' : d.id === nx.day.id ? 'today' : 'planned' };
             });
@@ -2630,13 +2642,11 @@ export function editor({ programId, weekIndex = 1 } = {}) {
         days: p.days.map((d, di) => {
             let mins = null; try { mins = E.estimateMinutes(p, d, wk); } catch { mins = null; }
             const sd = stored?.days?.find((x) => x.id === d.id);
-            const hits = {};
             const exercises = d.exercises.map((_id, slot) => {
                 const id = d.exercises[slot]; const ex = EX_BY_ID[id];
                 let cell = null; try { cell = E.computeCell(p, d, id, slot, wk); } catch { cell = null; }
                 const ov = p.overrides?.[`${d.id}:${slot}`] || {};
                 const sets = ov.sets ?? cell?.sets ?? null;
-                if (ex && Number(sets) > 0) hits[ex.part] = (hits[ex.part] || 0) + Number(sets);
                 let style = null; try { style = E.styleFor(p, id); } catch { style = null; }
                 return { slot, id, name: ex?.name || id, part: ex?.part || '', partLabel: E.PART_LABEL?.[ex?.part] || ex?.part || '', primary: slot === d.primaryIndex,
                     type: ex?.type === 'compound' ? 'compound' : 'isolation', last: lastTop(id),
@@ -2646,7 +2656,7 @@ export function editor({ programId, weekIndex = 1 } = {}) {
             });
             return { id: d.id, index: di, label: d.label, note: d.note || '', focus: d.focus === 'strength' || d.focus === 'hypertrophy' ? d.focus : null, minutes: mins, weekday: weekdayOf(d.id),
                 sets: exercises.reduce((n, x) => n + (Number(x.sets) || 0), 0),
-                hits: Object.entries(hits).sort((a, b) => b[1] - a[1]).map(([part, n]) => ({ part, label: E.PART_LABEL?.[part] || part, sets: Math.round(n * 10) / 10 })),
+                hits: dayHits(p, exercises),
                 edited: !sd || JSON.stringify([sd.label, sd.note, sd.focus, sd.exercises, sd.primaryIndex]) !== JSON.stringify([d.label, d.note, d.focus, d.exercises, d.primaryIndex]),
                 exercises };
         }) };

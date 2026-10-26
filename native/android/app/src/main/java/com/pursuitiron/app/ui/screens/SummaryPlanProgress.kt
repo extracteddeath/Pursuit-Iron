@@ -303,6 +303,12 @@ private fun PlanDayCard(vm: AppViewModel, p: JSONObject, d: JSONObject, wk: Int,
                 else -> FilledTonalButton(onClick = { vm.openPreview(p.s("programId"), d.s("id"), wk) }, contentPadding = PaddingValues(horizontal = 14.dp)) { Text("Start") }
             }
         }
+        // The design's "Hits …" line: the engine's weekly volume for this day, direct plus secondary shares
+        d.list("hits").takeIf { it.isNotEmpty() }?.let { hs ->
+            Text("Hits " + hs.joinToString(" · ") { "${it.s("label")} ${com.pursuitiron.app.ui.common.fmtNum(it.d("sets"))}" },
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp), color = if (today) cs.onPrimaryContainer else cs.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 4.dp))
+        }
         Column(Modifier.clip(RoundedCornerShape(20.dp)).background(cs.surface), verticalArrangement = Arrangement.spacedBy(1.dp)) {
             d.list("exercises").forEachIndexed { k, e ->
                 val rx = listOfNotNull(e.i("sets").takeIf { it > 0 }?.let { "$it ×" }, e.s("reps").takeIf { it.isNotBlank() }, e.s("rir").takeIf { it.isNotBlank() }?.let { "@$it" }).joinToString(" ")
@@ -314,7 +320,9 @@ private fun PlanDayCard(vm: AppViewModel, p: JSONObject, d: JSONObject, wk: Int,
                 ) {
                     Column(Modifier.weight(1f)) {
                         Text(e.s("name"), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        if (e.s("sub").isNotBlank()) Text(e.s("sub"), style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        val line = listOfNotNull("Key lift".takeIf { e.b("primary") }, e.s("sub").takeIf { it.isNotBlank() },
+                            e.i("rest").takeIf { it > 0 }?.let { "rest ${it / 60}:${(it % 60).toString().padStart(2, '0')}" }).joinToString(" · ")
+                        if (line.isNotBlank()) Text(line, style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     }
                     Text(rx, style = MaterialTheme.typography.labelMedium)
                     Icon(PiIcons.Help, null, Modifier.size(16.dp), tint = cs.onSurfaceVariant)

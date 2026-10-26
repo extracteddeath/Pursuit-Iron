@@ -714,52 +714,29 @@ function disclosure(el, initial = false) {
             return;
         }
         positionTrack(group, buttons, selected, initial);
-        // 2026 expressive connected button groups briefly compress their painted
-        // active container while it travels, then spring to the measured size.
-        // This never scales a button's hit target or touches the workout logger.
-        if (!initial && previous !== undefined && selected >= 0 &&
-            group.matches(trackSelector) && !reduced()) {
-            spring(group, '--pi-m3-track-stretch', 1, {
-                restart: .88, stiffness: 690, damping: .76,
-                precision: .001
-            });
-            spring(group, '--pi-m3-track-corner', 18, {
-                restart: 25, write: pixels(group, '--pi-m3-track-corner'),
-                stiffness: 780, damping: .82, precision: .02
-            });
-        }
+        // The measured indicator already supplies selection continuity. Avoid
+        // springing its width/shape separately: this created two competing
+        // movements on every tab or segment change.
         const rir = group.matches('.wpb-effort-scale');
-        // Material's expressive button group: the active option takes more
-        // space, adjacent options yield gently, and the painted selection
-        // follows their measured bounds. The underlying React controls stay
-        // present and in the same order, with identical keyboard semantics.
-        const fluid = group.matches('.wpb-progress .wpb-premium-tabs,.wpb-library .wpb-library-flag-filter,.wpb-plan-panes');
-        if (fluid) group.dataset.piM3Fluid = '1';
-        let trackQueued = false;
-        const followFluid = () => {
-            if (!fluid || trackQueued) return;
-            trackQueued = true;
-            requestAnimationFrame(() => {
-                trackQueued = false;
-                if (root.contains(group) && choiceStates.get(group) === selected)
-                    positionTrack(group, buttons, selected, true);
-            });
-        };
+        // Only the effort scale uses intentional proportional button growth.
+        // Plan, Progress and Library tab widths remain native; shifting
+        // neighboring hit targets during selection breaks spatial continuity.
+        // The existing measured track moves without altering those targets.
+        delete group.dataset.piM3Fluid;
         buttons.forEach((b, i) => {
             if (!rir && !b.hasAttribute('aria-selected') && !b.hasAttribute('aria-pressed') && !b.hasAttribute('aria-current') && !group.matches('.wpb-tabbar')) return;
             control(b); b.dataset.piChoice = i === selected ? 'selected' : 'unselected';
-            const neighbor = selected >= 0 && Math.abs(i - selected) === 1;
-            const grow = rir ? i === selected ? 1.18 : neighbor ? .91 : 1 :
-                fluid ? i === selected ? 1.20 : neighbor ? .95 : 1 : 1;
-            spring(b, '--pi-choice-grow', grow, {
-                from: initial ? grow : 1,
-                damping: fluid ? .83 : .9, stiffness: fluid ? 620 : 850,
-                precision: .001,
-                ...(fluid ? { write: value => {
-                    b.style.setProperty('--pi-choice-grow', String(value));
-                    followFluid();
-                } } : {})
-            });
+            if (rir) {
+                const neighbor = selected >= 0 && Math.abs(i - selected) === 1;
+                const grow = i === selected ? 1.18 : neighbor ? .91 : 1;
+                spring(b, '--pi-choice-grow', grow, {
+                    from: initial ? grow : 1, damping: .9,
+                    stiffness: 850, precision: .001
+                });
+            } else {
+                stopMotion(b, '--pi-choice-grow');
+                b.style.removeProperty('--pi-choice-grow');
+            }
             shape(b);
         });
     }

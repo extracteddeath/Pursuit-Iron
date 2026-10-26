@@ -18,11 +18,12 @@ const loadWave = fs.readFileSync('modules/program-load-wave.js', 'utf8');
 const programShare = fs.readFileSync('modules/program-share-sheet.js', 'utf8');
 const exerciseOptions = fs.readFileSync('modules/program-exercise-options.js', 'utf8');
 const exerciseNotes = fs.readFileSync('modules/exercise-notes.js', 'utf8');
-const presentationSource = disclosures + '\n' + programReference + '\n' + releaseNotes + '\n' + primitives + '\n' + app + '\n' + programReview + '\n' + programSchedule + '\n' + programSettings + '\n' + backupPanel + '\n' + programVolume + '\n' + loadWave + '\n' + programShare + '\n' + exerciseOptions + '\n' + exerciseNotes;
+const trainingMaxes = fs.readFileSync('modules/program-training-maxes.js', 'utf8');
+const presentationSource = disclosures + '\n' + programReference + '\n' + releaseNotes + '\n' + primitives + '\n' + app + '\n' + programReview + '\n' + programSchedule + '\n' + programSettings + '\n' + backupPanel + '\n' + programVolume + '\n' + loadWave + '\n' + programShare + '\n' + exerciseOptions + '\n' + exerciseNotes + '\n' + trainingMaxes;
 const MAX_IMPORTANT = 2303; // M384: retire 33 exercise-options priority overrides.
 const MAX_APP_IMPORTANT = 1198; // M384: retire the private options padding override.
 const MAX_REPEAT_IMPORTANT = 15; // M288: at-rule comments no longer erase media/container scope.
-const MAX_INLINE_STYLE_OBJECTS = 2453; // M385: one shared pinned-note/setup family; retire 29 static styles.
+const MAX_INLINE_STYLE_OBJECTS = 2426; // M386: one training-max editor and entry card; retire 27 static styles.
 
 // M367: Settings is a named, keyboard-focusable dialog with explicit labels and state.
 for(const role of ['backdrop','panel','heading','title','close','intro','field-label','field','description','footer','cancel','save'])
@@ -92,6 +93,10 @@ function guard(cssText, appText) {
     return { important, appImportant, inline, duplicates: duplicates.length, legacyOwners: new Set(duplicates).size };
 }
 const report = guard(css, presentationSource);
+
+assert.ok(!trainingMaxes.includes('style:') && !trainingMaxes.includes('localStorage'), 'Training-max presentation has no private styles or persistence');
+assert.ok(!app.includes('oneRmEdit') && !app.includes('setOneRmEdit'), 'One-rep conversion has one transient owner');
+assert.ok(trainingMaxes.includes('onApply(changes)') && app.includes('withTrainingMax(next, id, value, unit)'), 'Training maxes apply through the canonical program-draft boundary');
 
 assert.ok(!exerciseNotes.includes('style:') && !exerciseNotes.includes('localStorage'), 'Pinned notes use semantic CSS and the App persistence boundary');
 assert.ok(!app.includes('function SetupFieldsGrid(') && !app.includes('function SetupFieldsDisplay(') && !app.includes('pinRef') && !app.includes('pnRef'), 'Pinned notes have no shadow grid or shared textarea ref');

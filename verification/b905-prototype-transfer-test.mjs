@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { reviewProgramChanges, withProgramRevision, programReviewKey } from '../modules/program-review.js';
 import { lighterPendingWorkout, workoutPlateau } from '../modules/workout-context.js';
-import { userOwnsRuntimeSet, EX_BY_ID, loadableAtOrBelow, computeCell } from '../modules/engine-api.js';
+import { userOwnsRuntimeSet, EX_BY_ID, loadableAtOrBelow, computeCell, withTrainingMax, programChangeLabels } from '../modules/engine-api.js';
 const before={id:'review-905',name:'Review',custom:true,weeks:4,seed:42,config:{unit:'kg',goal:'both',experience:'intermediate',progression:'manual',weeks:4,session:'s60',deload:false},
  days:[{id:'upper',label:'Upper',primaryIndex:0,exercises:['bb-bench','bb-row'],note:'Keep this cue'}],schedule:{1:'upper'},
  overrides:{'upper:0':{sets:3,reps:'6-8',rir:'2',rest:120},'upper:1':{sets:2,reps:'8-12',rir:'2',rest:90}},progStyle:{'bb-row':'dynamic'}};
@@ -10,6 +10,15 @@ const original=programReviewKey(before),review=reviewProgramChanges(before,next)
 assert.match(review.days[0].rows[0].after.join(' '),/3 × 8-12 · 1 RIR/);
 assert.match(review.config.find(x=>x.label==='Schedule').before,/Mon/);assert.match(review.config.find(x=>x.label==='Schedule').after,/Tue/);
 assert.equal(programReviewKey(before),original,'review is read-only');
+const maxBefore={...before,trainingMaxUnit:'lb',trainingMax:{'bb-bench':200,'bb-row':151.25}};
+const maxAfter=withTrainingMax(maxBefore,'bb-bench',212.5,'lb');
+assert.deepEqual(reviewProgramChanges(maxBefore,maxAfter).config,[{label:'Barbell Bench Press training max',before:'200 lb',after:'212.5 lb'}],
+ 'Training-max review identifies the changed lift and exact before/after values with units');
+assert.deepEqual(programChangeLabels(maxBefore,maxAfter),['Training maxes'],'Save summary names training-max changes');
+const clearedMax=withTrainingMax(maxAfter,'bb-bench',0,'kg');
+assert.equal(reviewProgramChanges(maxAfter,clearedMax).config[0].after,'Not set');
+assert.equal(maxAfter.trainingMax['bb-row'],151.25,'Untouched maxes retain their exact stored precision');
+assert.equal(reviewProgramChanges(maxBefore,structuredClone(maxBefore)).count,0,'Unchanged maxes add no review rows');
 const committed=withProgramRevision(before,next,'Before repair',1234);
 assert.deepEqual(committed.layoutHistory[0].program,before,'exact authored settings and overrides survive');
 const restored=withProgramRevision(committed,JSON.parse(JSON.stringify(committed)).layoutHistory[0].program,'Before restore',1235);

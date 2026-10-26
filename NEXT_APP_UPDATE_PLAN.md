@@ -1,3 +1,17 @@
+## M386 — safe training-max input, staged editing and truthful review (Build 933)
+
+Continue from published Build 932 (PR #360, merge 87d4afa). Its 15 candidate and 19 post-merge checks passed, all 130 hosted file hashes matched, and both public offline note journeys passed with 131 cached entries.
+
+The existing M225 browser owner reproduces an S1 defect on unchanged Build 932: typing 212.5 in Training maxes produces 2125. Parsing the input into the program on each keystroke removes the intermediate decimal point; the next digit becomes part of the integer. The old editor also silently strips malformed text. The extended B905 review contract fails separately: a training-max-only change produces no before/after details and is summarized only as Program details.
+
+Move the training-max sheet, inline 1RM conversion and entry-card presentation into modules/program-training-maxes.js. Hold raw numeric text locally and validate finite, nonnegative decimal values without sanitizing invalid text into another number. Apply calls ProgramView's existing draft setter through withTrainingMax only for changed fields. Cancel/Close/backdrop/drag dismissal leaves the program draft unchanged. Program review and Save remain the persistence boundary. Preserve the existing 90% conversion, canonical loadStep/roundTo behavior, percentagePlanFor previews and stored-unit conversion. Do not roundtrip untouched maxes. Back/Escape closes the inline conversion before closing the editor, using the existing system-back and focus owners.
+
+The existing reviewProgramChanges projection now lists exact training-max values with units and explicit Not set for clearing. The existing programChangeLabels catalog names Training maxes. This is review presentation; generation, percentage/progression formulas and Engine 0.65.9 policy remain unchanged. Use one semantic CSS family with labelled 48px numeric controls, relative type, wrapping rows and a fixed heading/footer around one scrolling body. Retire 27 inline styles, tightening 2453 → 2426; external/embedded/repeated priorities remain 2303/1198/15.
+
+Extend the existing M225 production-router fixture with decimal lb/kg editing, malformed input, clear, staged previews, Cancel/Escape, nested conversion/focus, canonical 1RM rounding, explicit Apply and reviewed Save, exact units/untouched precision, reload, actual new-workout loads and protected history/minimized set values. Both palettes cover 320/393/834/1280px and 100/200% text, persistent hit-tested actions, forced colors and reduced motion. Keep the existing percentage peak/deload/tiered/resume/finish checks and 173-entry verification registry. Require all exact-head source/lifecycle/independent/seven-browser/release gates, then deployed hash parity and actual public offline replay.
+
+Next: continue remaining Library/Program editing ownership, source/style retirement and measured resilience work. Prioritize reproduced prescription/persistence defects. Broader launch cleanup and physical Android/IME/TalkBack/interruption acceptance remain open.
+
 ## M385 — staged pinned notes, setup and shared editing (Build 932)
 
 Continue from published Build 931 (PR #359, merge ae50c1c). Its candidate and post-merge gates, 129-file hosted parity and both actual public offline theme replays passed.

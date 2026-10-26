@@ -4,6 +4,7 @@
 - Reuse the session review's proposal when no saved review choice changes it, preserving separate set records, saved choices and Undo while avoiding a second identical history replay.
 - Fix stale coaching after corrections to observed-effort provenance or the current program, and refresh time-dependent recovery without requiring a new workout. Preserve the existing calculation formulas and factual history.
 - Extend the existing browser performance owner with full-app/240-workout startup, repeated real-pointer recovery, exact state preservation and a bound on redundant historical work. Retain the keystroke/completion/Undo suggestion-reuse guard and matched reference measurements.
+- Keep the Home greeting and Settings gym name/count complete at enlarged text. Remeasure the Home context when its content size changes, and limit the stacked-row flex rule to its intended form rows; preserve smooth scrolling and existing controls.
 
 ## Build 922 / M375 — Protect training across app windows and offline navigation
 

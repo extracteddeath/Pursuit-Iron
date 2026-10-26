@@ -285,6 +285,35 @@ try {
         await lightPage.waitForSelector('.wpb-tabbar');
         await lightPage.click('[data-tab="settings"]');
         await lightPage.waitForSelector('.wpb-settings');
+        // A whole-page overflow check missed clipped gym descriptions. Check
+        // the actual label/description fragments against their button instead.
+        for(const width of [320,393,834])for(const enlarged of [false,true]){
+            await lightPage.setViewport({width,height:740,deviceScaleFactor:2,isMobile:width<600,hasTouch:width<600});
+            // Changing mobile emulation may reload the document. Reopen the
+            // same Settings destination before measuring its current content.
+            await lightPage.waitForSelector('.wpb-tabbar');
+            await lightPage.locator('[data-tab="settings"]').click();
+            await lightPage.waitForSelector('.wpb-settings-navigation');
+            await lightPage.evaluate(large=>document.documentElement.style.fontSize=large?'200%':'',enlarged);
+            await lightPage.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+            const gym=await lightPage.$eval('.wpb-settings-navigation',button=>{
+                const box=button.getBoundingClientRect(),copy=button.querySelector('.wpb-settings-row-copy');
+                const walker=document.createTreeWalker(copy,NodeFilter.SHOW_TEXT),rects=[];
+                while(walker.nextNode()){
+                    if(!walker.currentNode.textContent.trim())continue;
+                    const range=document.createRange();range.selectNodeContents(walker.currentNode);rects.push(...range.getClientRects());
+                }
+                const chevron=button.lastElementChild.getBoundingClientRect();
+                return {complete:rects.length>0&&rects.every(r=>r.left>=box.left-1&&r.right<=box.right+1&&r.top>=box.top-1&&r.bottom<=box.bottom+1),
+                    chevronInside:chevron.left>=box.left&&chevron.right<=box.right+1,copyWidth:copy.getBoundingClientRect().width,buttonWidth:box.width};
+            });
+            assert.ok(gym.complete&&gym.chevronInside,'Settings gym label and saved count stay inside the action: '+JSON.stringify({width,enlarged,gym}));
+        }
+        await lightPage.evaluate(()=>document.documentElement.style.fontSize='');
+        await lightPage.setViewport({width:320,height:740,deviceScaleFactor:2,isMobile:true,hasTouch:true});
+        await lightPage.waitForSelector('.wpb-tabbar');
+        await lightPage.locator('[data-tab="settings"]').click();
+        await lightPage.waitForSelector('.wpb-settings-navigation');
         console.log('R36 LIGHT SETTINGS ACTIONS '+JSON.stringify(
             await lightPage.evaluate(() => [...document.querySelectorAll('.wpb-settings button')]
                 .map(x=>x.textContent.trim().slice(0,65)))));

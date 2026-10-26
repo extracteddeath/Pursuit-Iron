@@ -16652,16 +16652,21 @@ function Home({ restScale = 1, loadMode = "rir", perf = {}, onPlanChoice, planCh
         // Apply the same bounded collapse now; no extra animation or state owner is needed.
         const onScroll = apply;
         const onResize = () => {
-            // scrollHeight includes clipped descendants, so measurement never
-            // temporarily expands the already-collapsed header on orientation change.
-            full = Math.max(1, head.scrollHeight);
+            // Recompute the natural size in both directions. A prior enlarged
+            // explicit height must not become the new smaller-font baseline.
+            full = measureFull();
             apply();
         };
+        // Text-only enlargement and font changes need not resize the window.
+        // Observe natural children, not the height this scroll owner clips.
+        const contentResize = typeof ResizeObserver !== "undefined" ? new ResizeObserver(onResize) : null;
+        for (const child of head.children) contentResize?.observe(child);
         sc.addEventListener("scroll", onScroll, { passive: true });
         window.addEventListener("resize", onResize);
         return () => {
             sc.removeEventListener("scroll", onScroll);
             window.removeEventListener("resize", onResize);
+            contentResize?.disconnect();
         };
     }, [upNext]);
     /* "Settled in" = they have a program running and have actually used it. The threshold is

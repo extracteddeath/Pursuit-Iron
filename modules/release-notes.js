@@ -4,7 +4,8 @@ import { Accessibility, Activity, AlertTriangle, Award, Ban, BarChart3, Brain, C
 export const CHANGELOG = [
     { version: "4.0.0", build: "923", items: [
         "Faster startup and workout reopening with a long training history, while keeping the same prescriptions and loading rules.",
-        "Coaching now refreshes after corrections to reported effort or your program, and recovery estimates update as time passes."
+        "Coaching now refreshes after corrections to reported effort or your program, and recovery estimates update as time passes.",
+        "Home and Settings keep their headings, gym names and saved counts readable when text is enlarged."
     ] },
     { version: "4.0.0", build: "922", items: [
         "A second app window now waits before opening your training data, protecting workouts from stale saves. Unexpected changes from an older window pause saving and offer a backup before reload.",

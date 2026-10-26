@@ -77,12 +77,14 @@ fun TemplatePicker(vm: AppViewModel) {
         Surface(onClick = { vm.createFromTemplate(x.s("id")) }, color = cs.surfaceContainerHigh, shape = RoundedCornerShape(22.dp),
             modifier = Modifier.fillMaxWidth().semantics { role = Role.Button }) {
             Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                // The design's template row: name with its category at the right, the blurb, then days · time · length
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(x.s("name"), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
                     if (x.b("percent")) Badge("% of max")
+                    Text(x.s("cat"), style = MaterialTheme.typography.labelSmall.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold), color = cs.onSurfaceVariant)
                 }
-                Text(x.s("tag"), style = MaterialTheme.typography.labelMedium, color = cs.primary)
                 Text(x.s("desc"), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                if (x.s("meta").isNotBlank()) Text(x.s("meta"), style = MaterialTheme.typography.labelMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold))
             }
         }
     }

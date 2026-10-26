@@ -2957,9 +2957,12 @@ export function compareExercises({ a, b }) {
 }
 
 /* ------------------------------------------------------------------ templates (App.js Home "Start from a template" + startTemplate) */
+const SESS_SHORT = { s20: '≤20 min', s40: '20–40 min', s60: '40–60 min', s90: '60–90 min', s120: '90–120 min', s120p: '120+ min' };
 export function templates() {
     return { categories: [...new Set(E.TEMPLATES.map((t) => t.cat))],
-        items: E.TEMPLATES.map((t) => ({ id: t.id, name: t.name, cat: t.cat, tag: t.tag || '', desc: t.desc || '', featured: !!t.featured, rank: t.featuredRank ?? 50, percent: !!t.cfg?.percentScheme, days: t.cfg?.days || null })) };
+        items: E.TEMPLATES.map((t) => ({ id: t.id, name: t.name, cat: t.cat, tag: t.tag || '', desc: t.desc || '', featured: !!t.featured, rank: t.featuredRank ?? 50, percent: !!t.cfg?.percentScheme, days: t.cfg?.days || null,
+            // The design's template row meta: "6 days · 60–90 min · 6 weeks + deload"
+            meta: [t.cfg?.days ? t.cfg.days + ' days' : null, SESS_SHORT[t.cfg?.session] || null, t.cfg?.endless ? 'continuous' : t.cfg?.weeks ? t.cfg.weeks + ' weeks' + (t.cfg.deload ? ' + deload' : '') : null].filter(Boolean).join(' · ') })) };
 }
 /* The design's Percentage program → Method. A method is tied to its own split (Texas has volume,
    recovery and intensity days; tiered methods have a T2 slot), so changing it rebuilds the program

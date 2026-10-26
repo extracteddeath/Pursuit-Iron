@@ -7,6 +7,7 @@ import { UiHeader, UiRootHeader, UiAction, UiChoice, UiStatus, UiSection } from 
 import { ProgramSettingsSheet } from './program-settings-sheet.js';
 import { LoadWaveCard } from './program-load-wave.js';
 import { ShareProgramSheet } from './program-share-sheet.js';
+import { ProgramExerciseOptions } from './program-exercise-options.js';
 import { VolumeBars, VolumeRampTable } from './program-volume-surfaces.js';
 import { WeeklyScheduleSheet } from './program-schedule-sheet.js';
 import { ProgramRevisionReview, ProgramLayoutHistory, ProgramSaveReview } from './program-review-surfaces.js';
@@ -68,7 +69,7 @@ import { readCycleSetupDraft, writeCycleSetupDraft, clearCycleSetupDraft, CYCLE_
 import { INJURY_AREAS, INJURY_IMPACTS, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
 import { withProgressionChoices, workoutProgressionOrigin, withWorkoutProgramReview, repeatedNote, refreshProgressionSets, exerciseSessionTags, workoutProgramChanges, buildSessionReview, workoutRowMatchesPrescription, beginWorkoutProgramSwap, undoWorkoutProgramSwap } from './session-tools.js';
 import { reviewProgramChanges, programReviewKey, withProgramRevision } from './program-review.js';
-const __APP_VERSION__='4.0.0'; const __BUILD__='930';
+const __APP_VERSION__='4.0.0'; const __BUILD__='931';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { createPortal } from "../vendor/react-dom.js";
@@ -1737,7 +1738,7 @@ function StyleTag({ theme } = {}) {
           border-radius:var(--r-sheet)!important;
           border:1px solid var(--hairline)!important;
         }
-        .wpb-backdrop>[data-sheet-drag]:not(.wpb-program-share-panel){max-height:calc(100dvh - 32px)!important;}
+        .wpb-backdrop>[data-sheet-drag]:not(:is(.wpb-program-share-panel,.wpb-exercise-options-sheet)){max-height:calc(100dvh - 32px)!important;}
       }
 
       /* Screen-specific de-cardification. These are deliberate exceptions where grouped rows read
@@ -2186,8 +2187,7 @@ function StyleTag({ theme } = {}) {
       .wpb-context-menu-item{min-height:40px!important;border-radius:8px!important;padding:9px 10px!important;font-size:14px!important;font-weight:600!important;}
       .wpb-context-menu-item:hover{background:${C.bg2}!important;}
       .wpb-context-menu-item:focus-visible{outline-offset:-1px!important;}
-      .wpb-sheet-action{margin-bottom:0!important;border-radius:0!important;border-left:0!important;border-right:0!important;border-top:0!important;border-bottom:1px solid var(--section-rule)!important;background:transparent!important;padding:13px 4px!important;}
-      .wpb-exercise-options-sheet{padding-top:8px!important;}
+      .wpb-sheet-action:not(.wpb-program-exercise-action){margin-bottom:0!important;border-radius:0!important;border-left:0!important;border-right:0!important;border-top:0!important;border-bottom:1px solid var(--section-rule)!important;background:transparent!important;padding:13px 4px!important;}
 
       .wpb-chart{overflow:hidden;max-width:100%;min-width:0;}
       .wpb-chart line{stroke:color-mix(in srgb,${C.borderSoft} 72%,transparent)!important;}
@@ -2257,9 +2257,9 @@ function StyleTag({ theme } = {}) {
         border-radius:18px 18px 0 0!important;
         transform:translateZ(0);backface-visibility:hidden;
       }
-      .wpb [data-sheet-drag]:not(.wpb-program-share-panel){max-height:calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 10px)!important;}
-      .wpb [data-sheet-drag][data-detent="content"]:not(.wpb-program-share-panel){max-height:min(68dvh,540px)!important;}
-      .wpb [data-sheet-drag][data-detent="large"]:not(.wpb-program-share-panel){max-height:calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 10px)!important;}
+      .wpb [data-sheet-drag]:not(:is(.wpb-program-share-panel,.wpb-exercise-options-sheet)){max-height:calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 10px)!important;}
+      .wpb [data-sheet-drag][data-detent="content"]:not(:is(.wpb-program-share-panel,.wpb-exercise-options-sheet)){max-height:min(68dvh,540px)!important;}
+      .wpb [data-sheet-drag][data-detent="large"]:not(:is(.wpb-program-share-panel,.wpb-exercise-options-sheet)){max-height:calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 10px)!important;}
       .wpb [data-sheet-drag][data-dragging="1"]{box-shadow:0 -18px 48px rgba(0,0,0,.22);}
       .wpb [data-sheet-drag] :is(input,textarea,select){scroll-margin-top:68px;scroll-margin-bottom:140px;}
       .wpb [data-sheet-drag]::before{width:36px;height:4px;margin-bottom:10px;opacity:.9;}
@@ -6970,7 +6970,6 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
     const [styleEdit, setStyleEdit] = useState(null); // exercise id whose progression style is being edited
     const [techInfo, setTechInfo] = useState(null); // "dayid:slot" whose technique-cue explainer is open
     const [rowMenu, setRowMenu] = useState(null); // "dayid:slot" whose overflow (3-dot) menu is open
-    const [confirmRemove, setConfirmRemove] = useState(null); // "dayid:slot" pending remove confirmation
     const [exInfo, setExInfo] = useState(null); // { dayId, slot, exId } whose exercise-info sheet is open
     const [oneRmEdit, setOneRmEdit] = useState(null); // { exId, val } — in-app "Use 1RM" input (window.prompt is suppressed in TWA/WebView shells, so it must be a real modal)
     const setExStyle = (id, style) => setProgram(p => withProgressionChoices(p, { [id]: style }));
@@ -8190,7 +8189,7 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
                                                                                                     return "Auto · " + (SHORT[a] || a || "");
                                                                                                 }
                                                                                                 return SHORT[s] || s;
-                                                                                            })() })] })), _jsx("button", { className: "pressable hit", "aria-label": `More options for ${ex.name}`, onClick: () => { setRowMenu(rowMenu?.key === `${day.id}:${slot}` ? null : { key: `${day.id}:${slot}`, dayId: day.id, slot, exId: id }); setConfirmRemove(null); }, title: "More options", style: { ...tinyBtn(), width: "100%", minWidth: 0, minHeight: 0, height: 36, flexShrink: 0, color: rowMenu?.key === `${day.id}:${slot}` ? C.accent : C.muted, borderColor: rowMenu?.key === `${day.id}:${slot}` ? `${C.accent}66` : C.border }, children: _jsx(MoreHorizontal, { size: 16 }) })] })] }), pctMain ? (() => {
+                                                                                            })() })] })), _jsx("button", { className: "pressable hit", "aria-label": `More options for ${ex.name}`, onClick: () => { setRowMenu(rowMenu?.key === `${day.id}:${slot}` ? null : { key: `${day.id}:${slot}`, dayId: day.id, slot, exId: id }); }, title: "More options", style: { ...tinyBtn(), width: "100%", minWidth: 0, minHeight: 0, height: 36, flexShrink: 0, color: rowMenu?.key === `${day.id}:${slot}` ? C.accent : C.muted, borderColor: rowMenu?.key === `${day.id}:${slot}` ? `${C.accent}66` : C.border }, children: _jsx(MoreHorizontal, { size: 16 }) })] })] }), pctMain ? (() => {
                                                                     const grp = groupPctSets(pctMain.sets);
                                                                     return (_jsxs("div", { style: { textAlign: "right", minWidth: 96, marginTop: 2 }, children: [_jsx("div", { className: "mono", style: { fontSize: 13, fontWeight: 600, color: C.text }, children: grp.map(x => x.weight).join("/") }), _jsx("div", { className: "mono", style: { fontSize: 11, fontWeight: 700, color: pctMain.label.toLowerCase().includes("deload") ? C.warn : C.accentInk, marginTop: 2 }, children: grp.map(x => x.count > 1 ? `${x.count}×${x.reps}` : `${x.reps}`).join("/") }), _jsxs("div", { style: { fontSize: 11, color: C.faint, marginTop: 1 }, children: [unit, " \u00B7 ", pctMain.label] })] }));
                                                                 })() : manual ? (_jsxs("div", { style: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, marginTop: 2 }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 4 }, children: [_jsx("input", { "aria-label": "Sets", type: "number", min: 1, value: (program.overrides[`${day.id}:${slot}`]?.sets) ?? cell.sets, onChange: (e) => editOverride(day.id, slot, "sets", clamp(parseInt(e.target.value || "1"), 1, 20)), className: "mono", style: miniInput(38) }), _jsx("span", { className: "mono", style: { color: C.faint }, children: "\u00D7" }), _jsx("input", { "aria-label": "Reps", value: (program.overrides[`${day.id}:${slot}`]?.reps) ?? cell.reps, onChange: (e) => editOverride(day.id, slot, "reps", e.target.value), className: "mono", style: miniInput(52) })] }), _jsxs("div", { className: "mono", style: { fontSize: 11, fontWeight: 600, color: C.muted }, children: ["~", effortLabel(cell.rir, loadMode)] })] })) : (() => {
@@ -8430,18 +8429,17 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
                         onChoose: style => { setExStyle(ex.id, style); close(); }, onClose: close, sheetDragRef });
                 })() }), _jsx(Exit, { when: rowMenu, children: rowMenu && (() => {
                     const { dayId, slot, exId } = rowMenu;
-                    const day = program.days.find(d => d.id === dayId);
-                    const ex = EX_BY_ID[exId];
-                    if (!day || !ex)
-                        return null;
-                    const isP = slot === day.primaryIndex;
-                    const canRemove = day.exercises.length > 1;
-                    const isLinked = !program.config?.noSupersets && !!program.ss?.[`${dayId}:${slot}`];
-                    const close = () => { setRowMenu(null); setConfirmRemove(null); };
-                    const item = (icon, label, sub, onClick, danger) => (_jsxs("button", { className: "pressable wpb-sheet-action", onClick: onClick, style: { width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "13px 14px", background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 12, color: danger ? C.danger : C.text, cursor: "pointer", textAlign: "left", marginBottom: 8 }, children: [_jsx("span", { style: { flexShrink: 0, width: 22, display: "flex", justifyContent: "center" }, children: icon }), _jsxs("span", { style: { flex: 1, minWidth: 0 }, children: [_jsx("span", { style: { display: "block", fontSize: 15, fontWeight: 600 }, children: label }), sub && _jsx("span", { style: { display: "block", fontSize: 13, color: C.muted, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: sub })] })] }));
-                    return (_jsx("div", { onClick: close, className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "flex-end", zIndex: 80, animation: "fadeIn .2s both" }, children: _jsxs("div", { ref: sheetDragRef, "data-sheet-drag": true, onClick: e => e.stopPropagation(), className: "wpb-scroll wpb-exercise-options-sheet", style: { width: "100%", maxHeight: "82vh", overflowY: "auto", background: C.bg, borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: "10px 16px calc(20px + env(safe-area-inset-bottom))", boxShadow: "0 -8px 30px rgba(0,0,0,.5)", animation: "sheetUp .25s cubic-bezier(.2,.8,.2,1) both" }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 16, padding: "0 2px" }, children: [_jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { style: { fontSize: 18, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: ex.name }), _jsxs("div", { style: { fontSize: 13, color: C.muted, marginTop: 1 }, children: [PART_LABEL[ex.part], " \u00B7 ", ex.type, isP ? " · key lift" : ""] })] }), _jsx("button", { className: "pressable hit wpb-sheet-close", onClick: close, "aria-label": "Close", style: { flexShrink: 0, width: 34, height: 34, borderRadius: 999, border: `1px solid ${C.border}`, background: C.card, color: C.muted, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }, children: _jsx(X, { size: 17 }) })] }), item(_jsx(Pin, { size: 18, color: (exNotes[exId] || exSetup[exId]) ? C.accentInk : C.muted }), (exNotes[exId] || exSetup[exId]) ? "Edit pinned note" : "Add pinned note", exSetup[exId] ? [formatSetup(exSetup[exId]), exNotes[exId]].filter(Boolean).join(" — ") : exNotes[exId] ? exNotes[exId] : "A cue you'll see every time — seat height, tempo…", () => { close(); setNoteEdit(exId); }), slot < day.exercises.length - 1 && item(_jsx(Layers, { size: 18, color: isLinked ? C.accentInk : C.muted }), isLinked ? "Unlink superset" : "Superset with next", isLinked ? "Currently paired with the next exercise" : "Pair with the next exercise, alternating sets", () => { close(); toggleSS(dayId, slot); }), item(_jsx(HelpCircle, { size: 18, color: C.muted }), "Why this lift?", "See why the program selected this exercise", () => { close(); setWhyPick({ dayId, slot, exId }); }), item(_jsx(Info, { size: 18, color: C.muted }), "Exercise info", "Muscles worked, equipment, form demo", () => { close(); setExInfo({ dayId, slot, exId }); }), item(_jsx(Ban, { size: 18, color: C.danger }), "Ban exercise", "Never auto-pick this again, swap it out now", () => { close(); banAndReplace(dayId, slot); }, true), canRemove && (confirmRemove === `${dayId}:${slot}`
-                                    ? (_jsxs("div", { style: { padding: "14px", borderRadius: 12, background: `${C.danger}11`, border: `1px solid ${C.danger}44`, marginTop: 4 }, children: [_jsxs("div", { style: { fontSize: 15, color: C.text, marginBottom: 12, fontWeight: 500 }, children: ["Remove ", ex.name, " from this day?"] }), _jsxs("div", { style: { display: "flex", gap: 8 }, children: [_jsx("button", { className: "pressable", onClick: () => { removeSlot(dayId, slot); close(); }, style: { flex: 1, padding: "12px", borderRadius: 12, border: "none", background: C.danger, color: C.dangerText, fontWeight: 700, fontSize: 15, cursor: "pointer" }, children: "Remove" }), _jsx("button", { className: "pressable", onClick: () => setConfirmRemove(null), style: { flex: 1, padding: "12px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.muted, fontWeight: 600, fontSize: 15, cursor: "pointer" }, children: "Cancel" })] })] }))
-                                    : item(_jsx(Trash2, { size: 18, color: C.danger }), "Remove from day", "Take this exercise out of the workout", () => setConfirmRemove(`${dayId}:${slot}`), true))] }) }));
+                    const day = program.days.find(d => d.id === dayId), ex = EX_BY_ID[exId];
+                    if (!day || !ex) return null;
+                    return _jsx(ProgramExerciseOptions, { exercise: ex, primary: slot === day.primaryIndex,
+                        canRemove: day.exercises.length > 1,
+                        canLink: !program.config?.noSupersets && slot < day.exercises.length - 1,
+                        linked: !!program.ss?.[`${dayId}:${slot}`], note: exNotes[exId], setup: exSetup[exId],
+                        onClose: () => setRowMenu(null), sheetDragRef,
+                        onNote: () => setNoteEdit(exId), onSuperset: () => toggleSS(dayId, slot),
+                        onWhy: () => setWhyPick({ dayId, slot, exId }), onInfo: () => setExInfo({ dayId, slot, exId }),
+                        onBan: () => banAndReplace(dayId, slot), onRemove: () => removeSlot(dayId, slot)
+                    }, rowMenu.key);
                 })() }), _jsx(Exit, { when: schedSheet, children: schedSheet && (_jsx(WeeklyScheduleSheet, { program: program, onCycle: cycleSchedule, onClear: () => setProgram(p => ({ ...p, schedule: {}, scheduleEdited: true })), onClose: () => setSchedSheet(false), sheetDragRef: sheetDragRef })) }), _jsx(Exit, { when: cfgSheet, children: cfgSheet && (_jsx(ProgramSettingsSheet, { program: program, draft: cfgDraft, setDraft: setCfgDraft, dirty: cfgDirty, onApply: applyCfgDraft, onClose: () => setCfgSheet(false), GOALS: GOALS, sheetDragRef: sheetDragRef, selectNumericInput: selectNumericInput })) }), toast && (() => {
                 const tmsg = typeof toast === "string" ? toast : toast.msg;
                 const tundo = typeof toast === "object" ? toast.undo : null;

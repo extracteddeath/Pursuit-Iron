@@ -1,3 +1,11 @@
+## Build 920 / M373 — Faster cycle creation through canonical exercise reuse
+
+- Reuse the existing immutable knowledge projection for each exact built-in catalog definition. Custom definitions and edited/snapshot copies are read afresh, including same-ID copies; keep one canonical catalog and projection formula.
+- Freeze nested secondary-contribution records so consumers cannot corrupt shared facts. Reuse is lazy and bounded to the built-in catalog.
+- Verify all 376 catalog projections and 752 relationship comparisons against fresh copies, mutable-custom isolation and complete generated/upgraded/advanced cycle byte parity at fixed IDs/clock.
+- Extend the existing performance harness with an uncached reference control. The final local control/candidate pair reduces complete cycle creation from about 3.3s to 1.0s native, and 14.7s to 4.4s with simulated 4× CPU; timing is environment-specific and is not physical Android certification. Retain the runtime-bound measurement and exact-parity evidence.
+- Preserve Engine 0.65.9 training algorithms, accepted plans, constraints, manual targets, historical facts and the protected Workout/Focus layout. Retain the logging regression that prevents repeated suggestions during input/completion/Undo.
+
 ## Build 919 / M371 — Executable progression choices and exact save review
 
 - Fix exercise-wide progression choices that changed the editor/session selection but left generated engine cells on their original method. The canonical projection now honors the selected method, including alternating exercise identity; Auto reveals the saved slot/week schedule without rewriting it.

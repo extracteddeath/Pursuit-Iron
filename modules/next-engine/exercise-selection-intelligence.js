@@ -1,6 +1,12 @@
 import { armCoverageBias } from './arm-coverage.js';
 import { functionalCoverageBiases } from './functional-coverage.js';
 import { exerciseSetupDescriptors, setupTransitionCost } from './setup-economy.js';
+import { EXERCISES as CANONICAL_EXERCISES } from './exercise-db.js';
+
+// The catalog owns immutable built-in definitions. Reuse only those exact
+// objects; custom definitions and snapshot/edited copies remain fresh reads.
+const canonicalDefinitions = new WeakSet(CANONICAL_EXERCISES);
+const canonicalKnowledge = new WeakMap();
 
 const STRENGTH_ROLES = new Set(['primary_strength', 'secondary_strength', 'strength_support']);
 const SPECIALIZATION_PRIORITIES = new Set(['high', 'specialization', 'primary']);
@@ -156,11 +162,13 @@ function stimulusCredits(def) {
  */
 export function exerciseKnowledgeNode(def) {
   if (!def) return null;
+  const cached = canonicalKnowledge.get(def);
+  if (cached) return cached;
   const functionalBiases = functionalCoverageBiases(def);
   const setups = exerciseSetupDescriptors(def);
   const primaryStimulus = Object.entries(def.muscles ?? {}).filter(([, c]) => c?.role === 'primary' || (c?.credit ?? 0) >= 1).map(([muscle]) => muscle).sort();
-  const secondaryStimulus = Object.entries(def.muscles ?? {}).filter(([, c]) => (c?.credit ?? 0) > 0 && (c?.credit ?? 0) < 1).map(([muscle, c]) => ({ muscle, credit: c.credit, role: c.role ?? 'secondary' })).sort((a, b) => a.muscle.localeCompare(b.muscle));
-  return Object.freeze({
+  const secondaryStimulus = Object.entries(def.muscles ?? {}).filter(([, c]) => (c?.credit ?? 0) > 0 && (c?.credit ?? 0) < 1).map(([muscle, c]) => Object.freeze({ muscle, credit: c.credit, role: c.role ?? 'secondary' })).sort((a, b) => a.muscle.localeCompare(b.muscle));
+  const node = Object.freeze({
     id: def.id,
     name: def.name,
     stimulus: Object.freeze(stimulusCredits(def)),
@@ -195,6 +203,8 @@ export function exerciseKnowledgeNode(def) {
     compound: !!def.flags?.compound,
     unilateral: unilateral(def)
   });
+  if (canonicalDefinitions.has(def)) canonicalKnowledge.set(def, node);
+  return node;
 }
 
 export function exerciseSelectionRelationship(a, b) {

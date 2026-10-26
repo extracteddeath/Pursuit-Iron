@@ -90,6 +90,13 @@ const server=http.createServer((req,res)=>{
   assert.ok(marker.test(contents.toString()),'Negative control must reach the memoized suggestion owner');
   contents=contents.toString().replace(marker,'const suggestions = $1;');
  }
+ // M373 reference timing keeps the projection formula and bypasses only reuse.
+ if(process.argv.includes('--exercise-knowledge-uncached')&&uri.pathname==='/modules/next-engine/exercise-selection-intelligence.js'){
+  const read='  const cached = canonicalKnowledge.get(def);\n  if (cached) return cached;\n';
+  const write='  if (canonicalDefinitions.has(def)) canonicalKnowledge.set(def, node);\n';
+  assert.ok(contents.toString().includes(read)&&contents.toString().includes(write),'Reference control must bypass the exact cache boundary');
+  contents=contents.toString().replace(read,'').replace(write,'');
+ }
  res.end(contents);
 });
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
@@ -163,7 +170,7 @@ try{
  assert.deepEqual(records.map(x=>x.advancementWeekSets),[records[0].advancementWeekSets,records[0].advancementWeekSets]);
  const round=n=>Math.round(n*10)/10;
  console.log('M318 Chrome 320px CPU throttling (simulated, NOT physical Android) '+
-  JSON.stringify({chromeCpuRates:records.map(x=>x.rate),
+  JSON.stringify({exerciseKnowledgeReuse:!process.argv.includes('--exercise-knowledge-uncached'),chromeCpuRates:records.map(x=>x.rate),
    cases:records.map(r=>({...r,creationMs:round(r.creationMs),advanceMs:round(r.advanceMs)})),
    creationSlowdown:round(records[1].creationMs/records[0].creationMs),
    advancementSlowdown:round(records[1].advanceMs/records[0].advanceMs)}));

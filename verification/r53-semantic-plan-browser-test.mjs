@@ -304,7 +304,7 @@ async function verifyTaskHierarchy(browser){
       await page.keyboard.press('Enter');
       assert.equal(await page.$eval('.wpb-plan button[data-vol-part]',el=>el.getAttribute('aria-expanded')),
         'true','M380: Enter opens muscle-volume contributors without changing training');
-      const contributors=await page.$eval('.wpb-plan [data-volume-contributor]',rows=>rows.map(row=>{
+      const contributors=await page.evaluate(()=>[...document.querySelectorAll('.wpb-plan [data-volume-contributor]')].map(row=>{
         const name=row.children[1],style=getComputedStyle(name);
         return {name:name.textContent.trim(),whiteSpace:style.whiteSpace,textOverflow:style.textOverflow,
           clipped:name.scrollWidth>name.clientWidth+1};

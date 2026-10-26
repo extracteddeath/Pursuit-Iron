@@ -7105,6 +7105,9 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
         const ids = [];
         (program.days || []).forEach(d => { const id = d.exercises[d.primaryIndex]; if (id && !ids.includes(id) && EX_BY_ID[id])
             ids.push(id); });
+        // A tier-2 partner (Novice FSL) is loaded from its own training max too.
+        (program.days || []).forEach(d => { const id = d.t2Index != null ? d.exercises[d.t2Index] : null; if (id && !ids.includes(id) && EX_BY_ID[id])
+            ids.push(id); });
         return ids;
     }, [program.days]);
     const tmSet = program.config?.percentScheme ? mainLifts.filter(id => (program.trainingMax?.[id] || 0) > 0).length : 0;

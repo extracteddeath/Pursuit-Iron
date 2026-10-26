@@ -505,14 +505,31 @@ export function generateNextProgramForShell(options) {
    supplemental slot after each day's main lift as its tier-2 slot (day.t2Index), shifting later slot-keyed state
    (overrides, weekly cells, superset links) so nothing is re-associated with the wrong lift. Loads come from the
    canonical percentage reader (SUPPLEMENTAL_PROTOCOLS); the cell carries the set count and rep target. */
-const SUPPLEMENTAL_CELL = { bbb: { sets: 5, reps: '10', deloadReps: '5', rir: '3-5', rest: 90 } };
+const SUPPLEMENTAL_CELL = {
+    bbb: { sets: 5, reps: '10', deloadReps: '5', rir: '3-5', rest: 90 },
+    // 5/3/1 for Beginners First-Set-Last: 5×5 at the week's first-set percentage of the PAIRED main lift.
+    fsl: { sets: 5, reps: '5', deloadReps: '5', rir: '3-5', rest: 120 }
+};
+// Wendler's beginner pairs: each main lift's day also trains its partner as First-Set-Last volume.
+const NOVICE_PAIR = { 'back-squat': 'bb-bench', 'bb-bench': 'back-squat', deadlift: 'ohp', ohp: 'deadlift' };
 export function withSupplementalSlots(program) {
-    const cfg = program?.config || {}, spec = cfg.percentScheme === '531' ? SUPPLEMENTAL_CELL[cfg.assistance] : null;
-    if (!spec || program.engineSource !== 'pursuit-next') return program;
+    const cfg = program?.config || {};
+    const mode = cfg.percentScheme === '531' && SUPPLEMENTAL_CELL[cfg.assistance] && cfg.assistance !== 'fsl' ? cfg.assistance
+        : cfg.percentScheme === '531beg' ? 'fsl' : null;
+    if (!mode || program.engineSource !== 'pursuit-next') return program;
+    const spec = SUPPLEMENTAL_CELL[mode], scheme = PCT_SCHEMES[cfg.percentScheme];
     const overrides = { ...(program.overrides || {}) }, nwp = { ...(program.nextWeekPrescriptions || {}) }, ss = { ...(program.ss || {}) };
+    const nextIdOf = (legacyId) => Object.values(overrides).find((o) => o?.legacyExerciseId === legacyId && o.nextExerciseId)?.nextExerciseId ?? null;
+    // The wave's deload week (and any explicit deload after the block) runs the light supplemental, so its cell says so.
+    const deload = (w) => Number(w) > (Number(program.weeks) || Infinity) || (Number(w) - 1) % scheme.weeks.length === scheme.deloadWeek;
+    const cellsLike = (weeks) => Object.fromEntries(Object.keys(weeks || {}).map((w) => [w, { sets: spec.sets, reps: deload(w) ? spec.deloadReps : spec.reps,
+        rir: spec.rir, rest: spec.rest, role: 'secondary_strength', progressionStyle: 'e1rm', tech: null }]));
     const days = program.days.map((day) => {
         const p = day.primaryIndex;
         if (!Number.isInteger(p) || p < 0 || p >= day.exercises.length || day.t2Index != null) return day;
+        const mainId = day.exercises[p], liftId = mode === 'fsl' ? NOVICE_PAIR[mainId] : mainId;
+        const nextId = liftId === mainId ? overrides[`${day.id}:${p}`]?.nextExerciseId : nextIdOf(liftId);
+        if (!liftId || !nextId) return day; // no partner this day can name: leave the generated day as it is
         const key = (slot) => `${day.id}:${slot}`;
         // Shift every later slot up by one, last first so no key is overwritten before it moves.
         for (let slot = day.exercises.length - 1; slot > p; slot--) {
@@ -521,14 +538,9 @@ export function withSupplementalSlots(program) {
             if (key(slot) in ss) { ss[key(slot + 1)] = ss[key(slot)]; delete ss[key(slot)]; }
         }
         delete ss[key(p)]; // the main lift no longer sits next to its old superset partner
-        const main = overrides[key(p)] || {};
-        overrides[key(p + 1)] = { nextEngine: true, nextExerciseId: main.nextExerciseId, legacyExerciseId: day.exercises[p], supplemental: cfg.assistance };
-        const weeks = nwp[key(p)] || {};
-        // The wave's deload week (and any explicit deload after the block) runs the light supplemental, so its cell says so.
-        const deload = (w) => Number(w) > (Number(program.weeks) || Infinity) || (Number(w) - 1) % PCT_SCHEMES['531'].weeks.length === PCT_SCHEMES['531'].deloadWeek;
-        nwp[key(p + 1)] = Object.fromEntries(Object.keys(weeks).map((w) => [w, { sets: spec.sets, reps: deload(w) ? spec.deloadReps : spec.reps,
-            rir: spec.rir, rest: spec.rest, role: 'secondary_strength', progressionStyle: 'e1rm', tech: null }]));
-        const exercises = [...day.exercises]; exercises.splice(p + 1, 0, day.exercises[p]);
+        overrides[key(p + 1)] = { nextEngine: true, nextExerciseId: nextId, legacyExerciseId: liftId, supplemental: mode };
+        nwp[key(p + 1)] = cellsLike(nwp[key(p)]);
+        const exercises = [...day.exercises]; exercises.splice(p + 1, 0, liftId);
         return { ...day, exercises, t2Index: p + 1 };
     });
     return { ...program, days, overrides, nextWeekPrescriptions: nwp, ss };

@@ -215,7 +215,7 @@ function exSub(ex) {
     const eq = (ex.equip || []).find((x) => !['bench', 'rack'].includes(x)) || (ex.equip || [])[0];
     return [pat, eq ? (EQUIP_LABEL[eq] || eq) : 'Bodyweight'].filter(Boolean).join(' · ');
 }
-const SUPP_LABEL = { bbb: '5×10 supplemental' };
+const SUPP_LABEL = { bbb: '5×10 supplemental', fsl: 'FSL 5×5' };
 function dayPreview(program, day, weekIndex) {
     const goal = (() => { try { return E.goalForDay(program, day); } catch { return null; } })(), scale = Number(S.store.restScale) || 1;
     return day.exercises.map((_id, slot) => {
@@ -3034,7 +3034,9 @@ export function createFromTemplate({ id }) {
 }
 
 /* ------------------------------------------------------------------ training maxes for percentage programs (App.js tmSheet + "Set from 1RM") */
-function mainLifts(p) { const ids = []; (p.days || []).forEach((d) => { const id = d.exercises[d.primaryIndex]; if (id && !ids.includes(id) && EX_BY_ID[id]) ids.push(id); }); return ids; }
+// Training-max lifts: each day's main lift, then any tier-2 lift (a Novice FSL partner) that needs its own max.
+function mainLifts(p) { const ids = []; (p.days || []).forEach((d) => { const id = d.exercises[d.primaryIndex]; if (id && !ids.includes(id) && EX_BY_ID[id]) ids.push(id); });
+    (p.days || []).forEach((d) => { const id = d.t2Index != null ? d.exercises[d.t2Index] : null; if (id && !ids.includes(id) && EX_BY_ID[id]) ids.push(id); }); return ids; }
 /* App.js tmSheet + the design's percentage program panel: the method, a chip per week of the block
    (deload included), and for each main lift its training max and that week's sets from the engine's
    own percentagePlanFor — the same call the workout prescribes from. */
@@ -3047,9 +3049,11 @@ export function trainingMaxes({ programId, weekIndex = null }) {
     const wk = Math.max(1, Math.min(bw.list[bw.list.length - 1] || 1, Number(weekIndex) || current || 1));
     const firstMain = mainLifts(p)[0];
     const planOf = (id, w) => {
-        const ex = EX_BY_ID[id], day = p.days.find((d) => d.exercises[d.primaryIndex] === id) || p.days.find((d) => d.exercises.includes(id));
+        const ex = EX_BY_ID[id];
+        const day = p.days.find((d) => d.exercises[d.primaryIndex] === id) || p.days.find((d) => d.t2Index != null && d.exercises[d.t2Index] === id) || p.days.find((d) => d.exercises.includes(id));
         if (!ex || !day) return null;
-        try { return E.percentagePlanFor(p, day, ex, day.exercises.indexOf(id), w, u, history()); } catch { return null; }
+        const slot = day.exercises[day.primaryIndex] === id ? day.primaryIndex : day.t2Index != null && day.exercises[day.t2Index] === id ? day.t2Index : day.exercises.indexOf(id);
+        try { return E.percentagePlanFor(p, day, ex, slot, w, u, history()); } catch { return null; }
     };
     const setTxt = (x) => `${fmtW(x.weight) || '—'}×${x.reps}`;
     return { programId: p.id, name: p.name, percent, unit: u,

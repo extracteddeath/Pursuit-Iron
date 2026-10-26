@@ -820,6 +820,17 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   ok(C.finishSession().ok, 'a workout with the same lift twice saves');
   const t = C.programText({ programId: p.programId, weekIndex: 4 }).text;
   ok(/5 × 5 @/.test(t) && /40 kg × 5/.test(t), 'the deload week runs a light 5×5 supplemental'); }
+// Main-Lift Waves · Novice: each day's main lift is followed by its partner's First-Set-Last 5×5 (squat↔bench, deadlift↔OHP)
+{ C.init({ store: JSON.stringify({ unit: 'kg' }) });
+  ok(C.createFromTemplate({ id: 'p531beg' }).ok, 'the novice template builds');
+  const p = C.plan(), tms = C.trainingMaxes({ programId: p.programId });
+  ok(tms.lifts.length === 4 && C.home().needsTrainingMax === 4, 'all four main lifts ask for a training max: ' + tms.lifts.map((l) => l.name).join(', '));
+  for (const l of tms.lifts) C.setTrainingMax({ programId: p.programId, exId: l.id, value: 100 });
+  const pairs = C.plan().days.map((d) => [d.exercises[0].id, d.exercises[1].id, d.exercises[1].supplemental]);
+  ok(pairs.every(([a, b, sup]) => sup && ({ 'back-squat': 'bb-bench', 'bb-bench': 'back-squat', deadlift: 'ohp' })[a] === b), 'every day pairs its main lift with the partner FSL: ' + pairs.map((x) => x.join('+')).join(', '));
+  C.startSession({ programId: p.programId, dayId: C.plan().days[0].id });
+  const f = C.session().exercises[1].sets.filter((x) => !x.warm && !x.sub);
+  ok(f.length === 5 && f.every((x) => x.weight === '65' && String(x.reps) === '5'), 'week 1 FSL: 5 × 5 at 65% of the partner\'s max: ' + f.map((x) => x.weight + '×' + x.reps).join(' ')); C.discardSession(); }
 // Warm-up & mobility on the first lift until a set is logged (App.js warmupRoutine)
 { C.init({ store: JSON.stringify({ unit: 'kg' }) });
   C.createProgram({ config: { name: 'W', unit: 'kg', goal: 'both', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 2 });

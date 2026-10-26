@@ -1,3 +1,19 @@
+## Launch acceptance — October 26 continuation
+
+The user has authorized continuing through launch readiness, including validated publication. Build 921 is published and verified. Keep correctness/data integrity ahead of cosmetic debt; evaluate evidence from the full app, not only isolated engine or empty-screen fixtures. Do not call physical Android/TalkBack certification complete from browser emulation.
+
+## M375 — exclusive device-storage ownership and real offline documents (build 922 candidate)
+
+**Reproduced S0:** two full app windows share device training and live recovery storage. After the first window completed a workout, changing the theme in the older window erased it: history 1 → 0. The existing one-time warning did not prevent the stale autosave. The new case is in the existing M217 production-browser owner and fails on Build 921.
+
+Acquire one browser-managed exclusive storage lease before hydrating the App, including retries and recovery mode. A competing app stays in a readable, enlarged-text-safe gate, with no training, resume, discard or restore actions. Closing/navigating/crashing the owner releases the browser resource; retry then reads current data. App/live writers enforce the same ownership boundary. Returning cached documents reload before using old in-memory state. No training schema, algorithm, history policy or second persistence writer is introduced.
+
+Older builds cannot honor a new lease: an unexpected external write suspends the current window and keeps its own export available for recovery rather than autosaving over changed data. The regression simulates that external writer, checks byte-preserved external storage, downloads the original window's completed-history backup, reloads the latest data and exercises navigation/Back with a new owner. Safe-start recovery cannot begin a workout or expose an existing live snapshot as a training action. Unit coverage includes a shared pending request, exclusive holders, retry, missing/denied APIs and refused writes.
+
+**Reproduced S2:** an installed navigation to privacy.html returned the app shell, not the policy. Known cached documents now retain their own content before falling back to the SPA shell. Privacy joins the offline inventory and certified UI/hosted hashes. M223 covers document-versus-route selection; M217 opens the real policy offline and returns through Back. Update the public README to current names, features, offline/backup boundaries and one-window behavior; retire obsolete exercise counts, branded-template claims and unconditional progression promises.
+
+Require all final-head source/lifecycle/independent/browser/release checks, then exact deployed bytes and public online/offline replay. The full local M217 journey and all 69 integration contracts pass; final publication evidence remains required. Engine 0.65.9 stays byte-identical. Next measured lead: the first full-app/240-workout profile finds repeated default inventory construction and legacy exercise lookup in history projections; measure matched unprofiled runs and prove exact output parity before optimizing. Physical Android acceptance and remaining source/UI debt remain open.
+
 ## October 26 — M374 readable restore review and single backup owner (build 921 candidate)
 
 Reproduced in the existing B881 production-browser fixture: at 200% root text the restore impact table, CSV summary, switching guidance and unit choices all retained their 12–13px sizes. Those fixed inline values bypassed the user's text enlargement. Move the BackupRestorePanel and its CSV review into modules/backup-restore-panel.js, retaining the exact existing transfer, file-read race, preview, import and Undo handlers. The App remains the only persistence/merge owner.

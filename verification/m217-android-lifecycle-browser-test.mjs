@@ -71,8 +71,91 @@ const openWorkout = async page => {
     await page.click('.wpb-live-dock button[aria-label="Resume workout"]');
     await page.waitForSelector('.wpb-workout input[aria-label="reps"]');
 };
+// A PWA window and browser tab share both training and the live recovery key.
+// A warning alone cannot stop the older tab's next autosave erasing a workout.
+async function verifyStorageOwner(browser) {
+    const context = await browser.createBrowserContext();
+    const first = await context.newPage(), second = await context.newPage();
+    try {
+        await configure(first); await configure(second);
+        await first.goto('http://127.0.0.1:8772/', { waitUntil: 'networkidle0' });
+        await openWorkout(first);
+        const liveBefore = await snapshot(first);
+        await second.goto('http://127.0.0.1:8772/', { waitUntil: 'networkidle0' });
+        await second.waitForFunction(() => !!document.querySelector('.wpb-home, [data-storage-busy]'));
+        if (await second.$('.wpb-home')) {
+            await first.click('button[aria-label="Finish workout"]');
+            await first.waitForFunction(() => [...document.querySelectorAll('button')].some(b => b.textContent.trim() === 'Save & finish'));
+            await clickText(first, 'Save & finish');
+            await first.waitForFunction(() => JSON.parse(localStorage.getItem('wpb:v1')).history.length === 1);
+            await second.click('[data-tab="settings"]');
+            await second.locator('[data-theme-summary]').click();
+            await second.locator('[data-theme-option="rosewater"]').click();
+            await second.waitForFunction(() => JSON.parse(localStorage.getItem('wpb:v1')).theme === 'rosewater');
+            assert.equal((await training(first)).history.length, 1,
+                'A stale second tab must never erase a workout completed in the first tab');
+        }
+        assert.ok(await second.$('[data-storage-busy]'), 'A second app is held before hydration or autosave');
+        assert.equal(await second.$('.wpb-live-dock'), null, 'The blocked tab cannot resume or discard another window’s workout');
+        assert.equal(await second.$('input[type="file"]'), null, 'The blocked tab cannot restore over the active owner');
+        await second.evaluate(() => document.documentElement.style.fontSize = '200%');
+        await second.screenshot({ path: path.join(root, 'verification/m375-storage-gate-phone.png') });
+        assert.deepEqual(await snapshot(first), liveBefore, 'Opening a second window cannot change live recovery');
+        await clickText(second, 'Try again');
+        await second.waitForSelector('[data-storage-busy]');
+        assert.deepEqual(await snapshot(first), liveBefore, 'Retry cannot bypass an active owner');
+        await first.click('button[aria-label="Finish workout"]');
+        await first.waitForFunction(() => [...document.querySelectorAll('button')].some(b => b.textContent.trim() === 'Save & finish'));
+        await clickText(first, 'Save & finish');
+        await first.waitForFunction(() => JSON.parse(localStorage.getItem('wpb:v1')).history.length === 1);
+        await first.close();
+        await second.waitForFunction(async () => !(await navigator.locks.query()).held.some(lock => lock.name === 'pursuit-iron:wpb-storage'));
+        await clickText(second, 'Try again');
+        await second.waitForSelector('.wpb-home');
+        assert.equal((await training(second)).history.length, 1, 'Released ownership loads the current completed history');
+        assert.equal(await snapshot(second), null, 'The completed workout is not resurrected after ownership changes');
+        const completedId = (await training(second)).history[0].id;
+        // A previous app version cannot honor a lock it never implemented. Preserve
+        // this window's own export and stop its writes on any unexpected external edit.
+        const external = await context.newPage();
+        await external.setBypassServiceWorker(true);
+        await external.goto('http://127.0.0.1:8772/privacy.html');
+        const externalText = await external.evaluate(() => {
+            const data = JSON.parse(localStorage.getItem('wpb:v1'));
+            data.history = [{ ...data.history[0], id: 'legacy-window-workout' }];
+            const text = JSON.stringify(data); localStorage.setItem('wpb:v1', text); return text;
+        });
+        await second.waitForSelector('[data-storage-changed="true"]');
+        await second.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        assert.equal(await second.evaluate(() => localStorage.getItem('wpb:v1')), externalText, 'A stale window pauses instead of overwriting external edits');
+        await second.evaluate(() => {
+            URL.createObjectURL = blob => { blob.text().then(text => { window.__m375Export = text; }); return 'blob:backup-probe'; };
+            URL.revokeObjectURL = () => {};
+            HTMLAnchorElement.prototype.click = () => {};
+            document.documentElement.style.fontSize = '200%';
+        });
+        const backup = await second.waitForSelector('xpath/.//button[normalize-space(.)="Download this window’s backup"]');
+        await backup.evaluate(node => node.scrollIntoView({ block: 'center' })); await backup.click();
+        await second.waitForFunction(() => !!window.__m375Export);
+        assert.equal(await second.evaluate(() => JSON.parse(window.__m375Export).history[0].id), completedId,
+            'Emergency export keeps the original window history after an external overwrite');
+        await second.reload({ waitUntil: 'networkidle0' }); await second.waitForSelector('.wpb-home');
+        assert.equal((await training(second)).history[0].id, 'legacy-window-workout', 'A fresh document hydrates the latest external data');
+        await external.close();
+        await second.setOfflineMode(true);
+        await second.goto('http://127.0.0.1:8772/privacy.html');
+        assert.match(await second.title(), /^Privacy Policy/, 'The service worker must serve the real privacy page');
+        const returned = await context.newPage(); await configure(returned);
+        await returned.goto('http://127.0.0.1:8772/', { waitUntil: 'networkidle0' }); await returned.waitForSelector('.wpb-home');
+        await second.goBack({ waitUntil: 'networkidle0' }); await second.waitForSelector('[data-storage-busy="true"]');
+        assert.equal((await training(returned)).history[0].id, 'legacy-window-workout', 'Back navigation cannot revive a stale document over the current owner');
+        console.log('PASS M375: competing app windows cannot overwrite training/live state; retry waits for ownership and then loads the completed workout.');
+    } finally { await context.close(); }
+}
 try {
-    browser = await launch(); let page = await browser.newPage(); await configure(page);
+    browser = await launch();
+    await verifyStorageOwner(browser);
+    let page = await browser.newPage(); await configure(page);
     await page.goto('http://127.0.0.1:8772/', { waitUntil: 'networkidle0' }); await openWorkout(page);
     assert.deepEqual(await page.$eval('[data-testid="set-0-0"]', row => {
         const w = row.querySelector('input[aria-label="weight"]');

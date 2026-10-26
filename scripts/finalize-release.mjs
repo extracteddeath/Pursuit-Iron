@@ -35,7 +35,7 @@ const index = read('index.html');
 const webManifest = JSON.parse(read('manifest.webmanifest'));
 const pageAssets = [...index.matchAll(/(?:href|src)="(\.\/[^"]+)"/g)].map(match => match[1]);
 const manifestAssets = (webManifest.icons ?? []).map(icon => icon.src).filter(src => typeof src === 'string' && src.startsWith('./'));
-const staticShell = ['./index.html', './gallery.json', ...pageAssets, ...manifestAssets]
+const staticShell = ['./index.html', './privacy.html', './gallery.json', ...pageAssets, ...manifestAssets]
     .filter(file => file !== './sw.js' && fs.existsSync(file.slice(2)));
 const shell = [...new Set([
     ...staticShell,
@@ -69,6 +69,7 @@ manifest.uiFiles = Object.fromEntries([
     'BUILD_PROFILE.json',
     'CHANGELOG.md',
     'app.css',
+    'privacy.html',
     'manifest.webmanifest'
 ].map(file => [file, sha(fs.readFileSync(file))]));
 write('RELEASE_MANIFEST.json', JSON.stringify(manifest, null, 2) + '\n');

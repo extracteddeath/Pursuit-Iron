@@ -22,4 +22,19 @@ assert.equal((await read()).name,'current');assert.equal(requestCache,'no-cache'
 fail=true;assert.equal((await read()).name,'current','offline uses last good network manifest');
 fail=false;network=new Response('failure',{status:500});assert.equal((await read()).name,'current','bad network response retains good manifest');
 assert.equal(Object.keys(sandbox).some(k=>/localStorage|indexedDB/.test(k)),false);
+// Installed navigation must distinguish the privacy document from SPA routes.
+sandbox.caches.open = async () => ({ match: async (request, options) => {
+  const key = typeof request === 'string' ? request : request.url;
+  if (key === scope + 'privacy.html?source=settings') {
+    assert.equal(options.ignoreSearch, true); return new Response('Privacy document');
+  }
+  if (key === './index.html') return new Response('App shell');
+} });
+const navigate = async url => { let response;
+  listeners.fetch({ request: { method: 'GET', mode: 'navigate', url }, respondWith: value => { response = value; } });
+  return (await response).text();
+};
+assert.equal(await navigate(scope + 'privacy.html?source=settings'), 'Privacy document');
+assert.equal(await navigate(scope + 'some-app-route'), 'App shell');
+assert.ok(fs.readFileSync('sw.js', 'utf8').includes('"./privacy.html"'), 'Privacy policy is available offline');
 console.log('PASS M223 icon refresh: immutable content URLs, stable installed identity, current network manifest and offline/error fallback.');

@@ -2,10 +2,10 @@
   "schemaVersion": 3,
   "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": 919,
+  "build": 920,
   "engineVersion": "0.65.9",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "a8e101d856d0badec6308315e198707d0bab42fcabc92f2f826ea7a13e72e4a3",
+  "runtimeAggregate": "6e1e6128eeb18217409e6c468fe126f3226d5990c658d78924ee20d3f7ae6469",
   "runtimeFiles": {
     "modules/cycle-setup-drafts.js": "d3e9e750298afd8820e2bfd543c2cebede65e4f27c136ff26fe383d202b824e9",
     "modules/engine-api.js": "9d9072d28e255c67cb10222299a260e9404557a4cbe49756f7eae22a8d5155d1",
@@ -35,7 +35,7 @@
     "modules/next-engine/events.js": "224b26bfbef0c398e0b0a3e32b26c96075f5c1dce5ce6aa9f5cad83d7a0b437a",
     "modules/next-engine/exercise-db.js": "96969ab88b39771de49a26ae42be4f647737715687cd0ca6e171587ab1d29afd",
     "modules/next-engine/exercise-economy.js": "9b44195f1cffb5df9d6c2c529ce693d8305ee2170868c4d26d7cd02bcf04bef5",
-    "modules/next-engine/exercise-selection-intelligence.js": "9eadf98d75f313232a7f033e9a739bdce9f1cd9be546077f3c1603586745af09",
+    "modules/next-engine/exercise-selection-intelligence.js": "684212e875ff5ffafc0efce2519bcce890e4e73b7ca1e0c5bdc93bfad21786d8",
     "modules/next-engine/explainability.js": "ba06d4cb9eb448157897f3e28617ff475b38b285ab2645ca39e46a4d15fb2c58",
     "modules/next-engine/extended-exercise-catalog.js": "00a565a96f043965e966733fbc332d871503245c9b5116402d85fb372c6b8afa",
     "modules/next-engine/focus-intent.js": "6c251d9df81d52adba2978b18d3b58651845dfd52fb6e0933d9eca89eab7f69c",
@@ -97,7 +97,7 @@
     "modules/program-review.js": "394e326abe226725d1dd5933420e91cc2e9e79dd5ba9a5a7cb856f4bc8970d51",
     "modules/program-schedule-sheet.js": "3f3db9d93c816ba1c3994c6c2b80013398121156b8345e8cd4bbb991c2e7fefc",
     "modules/program-settings-sheet.js": "c8390305a60df08ad8028a9f93e09e2d478a58d3f8fd95c93f6419e09ea7346c",
-    "modules/release-notes.js": "dd9f9063244b465ce54498eb41b9f2c5e24e4935dd04cf4ae05141e9cf512af9",
+    "modules/release-notes.js": "1ae923f4f6e9440e94e0bf6117acf836ac13734a07c3d9eca8b7be021d926986",
     "modules/session-choice-dialog.js": "532ddb08086f4bc818eab304df91abe0caf24bf814dcc7fca4cf48f6fda55411",
     "modules/session-plan.js": "29e9b5b201a59de13bd0d21f89ca6358741d4889f52a96cd010c33554902e34c",
     "modules/session-tools.js": "75571cad885a2260ef8033561c55fc73bb4031e351404f469bc3b821bf7d566a",
@@ -128,17 +128,17 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "4222e92c8ff273ff0cd0f6ba52e0197e50ef85d1ce9bddacf7311b65ab998172",
-    "index.html": "1772ff2e4a84ff3da30304427482df8f2f4b4c96a6a9416d4f29c816fdff55cb",
-    "sw.js": "413b64a1fbaf2d5b9fbd99635b4e2a6e4c560fee76cc1724a60eef82834fa76e",
-    "BUILD_PROFILE.json": "35536466a75ccaa5341d1a44afa79f2a52552b4e6ef94aa3a27384c3e1662e3e",
-    "CHANGELOG.md": "3e7d33e9e7e5fdd0da0f640d6125c5ea94aafe88995f3af0ac1494e97c1652b2",
+    "modules/App.js": "2e79c12f79f5d752b90541195a7d62ce4d80102bc6228d8b0166bbfe5d9f3cdd",
+    "index.html": "5ea84d425c2d0648bcee886d7b81e9f205bd4cd5e912cd3b86055e58651b77f4",
+    "sw.js": "aca436d0da48f0a50156fe6d6f2cfe950b5fde87b765ecc81866098914955781",
+    "BUILD_PROFILE.json": "01121ef371332eb26062d4c7e1ccbd391aee31ff91de39066a8a9368ee88bef7",
+    "CHANGELOG.md": "a04570621790cf3735959efc1c45dae4d51317f50f3d97c1a83e461c452c7535",
     "app.css": "7da7da6f64d668c5073c497a556630b630e5bd19ca48eaf25cd5a2cec6be962f",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
-  "runtimeHotfix": "Canonical slot projections honor explicit exercise-wide progression choices; Auto restores the saved weekly method and logged method snapshots remain factual.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b919-r40ee2ae17c36732c",
-  "uiMilestone": "Build 919 · M371 Executable progression choices and exact save review"
+  "runtimeHotfix": "Reuse immutable built-in exercise knowledge projections by canonical object identity; custom/snapshot metadata stays fresh and full cycle outputs retain parity.",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b920-r17ca43578ad92372",
+  "uiMilestone": "Build 920 · M373 Faster cycle creation through canonical exercise reuse"
 }

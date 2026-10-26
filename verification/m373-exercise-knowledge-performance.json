@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 1,
+  "milestone": "M373",
+  "build": 920,
+  "baseRevision": "575f173dda2358e7202bf4e70f19bf7fce37ac08",
+  "runtimeAggregate": "6e1e6128eeb18217409e6c468fe126f3226d5990c658d78924ee20d3f7ae6469",
+  "exerciseKnowledgeModuleSha256": "684212e875ff5ffafc0efce2519bcce890e4e73b7ca1e0c5bdc93bfad21786d8",
+  "browser": "HeadlessChrome/153.0.8010.0",
+  "unit": "ms",
+  "method": "One sequential uncached-control run followed by one reuse-enabled run, local preloaded assets, 320px viewport, native and simulated 4x CPU. The HTTP-only control removes only the knowledge-cache read/write; disk and projection formulas remain identical. Environment-relative diagnostic, not physical Android, cold-start, field INP or TalkBack certification.",
+  "reproduce": {
+    "browserEntry": "verification/m318-throttled-cycle-performance-browser-test.mjs",
+    "referenceFlag": "--exercise-knowledge-uncached",
+    "correctnessEntry": "verification/m182-exercise-selection-intelligence-test.mjs"
+  },
+  "parity": {
+    "canonicalDefinitions": 376,
+    "sampledRelationships": 752,
+    "immutableNestedContributions": true,
+    "mutableSameIdCustomAndSnapshotIsolation": true,
+    "cyclePayloads": "Complete made, fixed, upgraded and advanced outputs with fixed Date.now=1792929600000 and deterministic IDs; generated from the existing M318 fixtures.",
+    "serializedJsonBytes": 873412,
+    "sha256": "cf5647aa47d53777847a7d3347dbb12954c3e2eb94cd807e7aed8c4b7536be72",
+    "byteEqual": true
+  },
+  "reference": {
+    "exerciseKnowledgeReuse": false,
+    "chromeCpuRates": [
+      1,
+      4
+    ],
+    "cases": [
+      {
+        "rate": 1,
+        "creationMs": 3309.7,
+        "advanceMs": 504.4,
+        "createdSplit": "full_body_patterns",
+        "advancedSplit": "full_body_patterns",
+        "selectedFinalists": 2,
+        "advancedFinalists": 2,
+        "days": 4,
+        "advancedDays": 5,
+        "creationWeekSets": 54,
+        "advancementWeekSets": 58
+      },
+      {
+        "rate": 4,
+        "creationMs": 14657.7,
+        "advanceMs": 1946.5,
+        "createdSplit": "full_body_patterns",
+        "advancedSplit": "full_body_patterns",
+        "selectedFinalists": 2,
+        "advancedFinalists": 2,
+        "days": 4,
+        "advancedDays": 5,
+        "creationWeekSets": 54,
+        "advancementWeekSets": 58
+      }
+    ],
+    "creationSlowdown": 4.4,
+    "advancementSlowdown": 3.9
+  },
+  "candidate": {
+    "exerciseKnowledgeReuse": true,
+    "chromeCpuRates": [
+      1,
+      4
+    ],
+    "cases": [
+      {
+        "rate": 1,
+        "creationMs": 972.4,
+        "advanceMs": 230,
+        "createdSplit": "full_body_patterns",
+        "advancedSplit": "full_body_patterns",
+        "selectedFinalists": 2,
+        "advancedFinalists": 2,
+        "days": 4,
+        "advancedDays": 5,
+        "creationWeekSets": 54,
+        "advancementWeekSets": 58
+      },
+      {
+        "rate": 4,
+        "creationMs": 4402.7,
+        "advanceMs": 1087.7,
+        "createdSplit": "full_body_patterns",
+        "advancedSplit": "full_body_patterns",
+        "selectedFinalists": 2,
+        "advancedFinalists": 2,
+        "days": 4,
+        "advancedDays": 5,
+        "creationWeekSets": 54,
+        "advancementWeekSets": 58
+      }
+    ],
+    "creationSlowdown": 4.5,
+    "advancementSlowdown": 4.7
+  },
+  "observedSpeedup": [
+    {
+      "rate": 1,
+      "creation": 3.4,
+      "advancement": 2.19
+    },
+    {
+      "rate": 4,
+      "creation": 3.33,
+      "advancement": 1.79
+    }
+  ],
+  "loggerRegression": {
+    "historyWorkouts": 240,
+    "inputEventsPerProfile": 40,
+    "completionUndoPairsPerProfile": 10,
+    "additionalSuggestionCalls": [
+      0,
+      0
+    ],
+    "persistedActionsAndSavedTrainingVerified": true
+  },
+  "acceptance": "Exact output, constraints, ownership, immutability and persistence contracts; no machine-speed threshold."
+}

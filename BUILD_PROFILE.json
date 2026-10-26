@@ -6,6 +6,6 @@
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 73,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b919-r40ee2ae17c36732c",
-  "uiMilestone": "Build 919 · M371 Executable progression choices and exact save review"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b920-r17ca43578ad92372",
+  "uiMilestone": "Build 920 · M373 Faster cycle creation through canonical exercise reuse"
 }

@@ -127,8 +127,115 @@ async function verifyProgramSharing(browser){
   }
   console.log('PASS R54 program sharing: canonical selected/deload week, alternating exercises, 320–1280px at 100/200% text, failed/successful clipboard, contained focus and unchanged training.');
 }
-// R59: exercise complete journeys using the production router and Android Back bridge.
-// The active program must survive browsing, and a launch must retain its caller and selected week.
+// Program inspection retains the original action and gesture owners.
+async function verifyProgramExerciseOptions(browser){
+  const name='Barbell Bench Press',selector='.wpb-exercise-options-sheet';
+  for(const theme of ['rose','rosewater']){
+    const context=await browser.createBrowserContext(),page=await context.newPage(),errors=[];
+    page.on('pageerror',error=>errors.push(error.message));
+    try{
+      await page.setViewport({width:393,height:852,isMobile:true,hasTouch:true});
+      await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
+      await page.evaluateOnNewDocument(seed=>{if(localStorage.getItem('r54-options-seeded'))return;
+        localStorage.setItem('r54-options-seeded','1');localStorage.setItem('wpb:v1',JSON.stringify(seed));
+      },{...store(theme),exNotes:{'bb-bench':'J-hooks 9.5. Pause on the chest, then drive steadily. '.repeat(6)}});
+      await page.goto('http://127.0.0.1:8796/',{waitUntil:'networkidle0'});
+      await page.waitForSelector('.wpb-home');
+      await page.$eval('button[aria-label="Open R54 Manual"]',button=>button.click());
+      const opener='button[aria-label="More options for '+name+'"]';
+      await page.waitForSelector(opener);
+      const training=()=>page.evaluate(()=>{const s=JSON.parse(localStorage.getItem('wpb:v1'));return JSON.stringify({saved:s.saved,cycles:s.cycles,history:s.history,drafts:s.drafts,exNotes:s.exNotes,exSetup:s.exSetup});});
+      const before=await training();
+      const open=async()=>{await page.$eval(opener,button=>{button.scrollIntoView({block:'center'});button.focus();button.click();});await page.waitForSelector(selector,{visible:true});};
+      const click=async label=>page.$$eval('.wpb-exercise-options-sheet button',(buttons,label)=>{
+        const button=buttons.find(node=>node.textContent.trim().startsWith(label));
+        if(!button)throw new Error('Missing exercise action '+label);button.click();
+      },label);
+      await open();
+      for(const width of [320,393,834,1280])for(const text of [32,16]){
+        await page.setViewport({width,height:852,isMobile:true,hasTouch:true});
+        await page.evaluate(text=>document.documentElement.style.fontSize=text+'px',text);
+        await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+        const layout=await page.$eval(selector,sheet=>{
+          const title=sheet.querySelector('.wpb-exercise-options-title')||sheet.querySelector(':scope>div:first-child>div:first-child>div:first-child');
+          const actions=[...sheet.querySelectorAll('.wpb-sheet-action')],close=sheet.querySelector('.wpb-sheet-close');
+          const r=sheet.getBoundingClientRect(),c=close.getBoundingClientRect();
+          return {titleFont:parseFloat(getComputedStyle(title).fontSize),named:!!sheet.closest('[aria-labelledby]'),
+            top:r.top,bottom:r.bottom,closeTop:c.top,closeBottom:c.bottom,closeHeight:c.height,
+            overflow:sheet.scrollWidth>sheet.clientWidth+1,actions:actions.map(a=>({height:a.getBoundingClientRect().height,
+              label:parseFloat(getComputedStyle(a.querySelector('span:last-child>span:first-child')).fontSize),
+              detail:parseFloat(getComputedStyle(a.querySelector('span:last-child>span:last-child')).fontSize)})),body:!!sheet.querySelector('.wpb-exercise-options-body')};
+        });
+        assert.ok(layout.titleFont>=text*1.0625-.1&&layout.actions.every(a=>a.label>=text*.9375-.1&&a.detail>=text*.8125-.1),
+          'Exercise options title, labels and full descriptions respect enlarged text: '+JSON.stringify({theme,width,text,layout}));
+        assert.ok(layout.named&&layout.body&&!layout.overflow&&layout.top>=-1&&layout.bottom<=853&&layout.closeTop>=0&&
+          layout.closeBottom<=853&&layout.closeHeight>=48&&layout.actions.every(a=>a.height>=54),
+          'Exercise options have a named bounded sheet and full-sized actions: '+JSON.stringify({theme,width,text,layout}));
+        await page.$eval('.wpb-exercise-options-body',body=>body.scrollTop=body.scrollHeight);
+        const close=await page.$eval(selector+' .wpb-sheet-close',el=>{const r=el.getBoundingClientRect();return {top:r.top,bottom:r.bottom,clear:el.contains(document.elementFromPoint(r.left+r.width/2,r.top+r.height/2))};});
+        assert.ok(close.top>=0&&close.bottom<=853&&close.clear,'Close stays visible after scrolling the complete action list');
+        if(width===320)await page.screenshot({path:path.join(root,`verification/r54-options-${theme}-${text}-phone.png`)});
+        await page.$eval('.wpb-exercise-options-body',body=>body.scrollTop=0);
+      }
+      const cdp=await page.createCDPSession();
+      await cdp.send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'},{name:'forced-colors',value:'active'}]});
+      await page.focus(selector+' .wpb-sheet-close');
+      const forced=await page.$eval(selector,sheet=>({active:matchMedia('(forced-colors:active)').matches,
+        outline:parseFloat(getComputedStyle(document.activeElement).outlineWidth),animation:getComputedStyle(sheet).animationName}));
+      assert.ok(forced.active&&forced.outline>=2&&forced.animation==='none','Exercise actions retain forced-color focus and reduced motion');
+      await page.keyboard.press('Tab');
+      assert.ok(await page.$eval(selector,el=>el.contains(document.activeElement)),'Options keyboard navigation stays in the sheet');
+      await page.keyboard.press('Escape');await page.waitForSelector(selector,{hidden:true});
+      assert.ok(await page.$eval(opener,el=>document.activeElement===el),'Options dismissal restores its actual exercise opener');
+      assert.equal(await training(),before,'Inspecting options never changes training');
+      await page.setViewport({width:393,height:852,isMobile:true,hasTouch:true});
+      await page.evaluate(()=>document.documentElement.style.fontSize='16px');await open();
+      const point=await page.$eval(selector,el=>{const r=el.getBoundingClientRect();return {x:r.left+24,y:r.top+24};});
+      await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{...point,id:1}]});
+      for(const distance of [30,70,120,170])await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:point.x,y:point.y+distance,id:1}]});
+      await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+      await page.waitForSelector(selector,{hidden:true});
+      assert.equal(await training(),before,'Real touch dismissal leaves training unchanged');
+      await open();await click('Remove from day');
+      await page.waitForFunction(()=>document.querySelector('.wpb-exercise-options-sheet')?.textContent.includes('from this day?'));
+      await click('Cancel');
+      assert.equal(await training(),before,'Cancel removal does not mutate prescriptions or notes');
+      await page.keyboard.press('Escape');await page.waitForSelector(selector,{hidden:true});await open();
+      assert.ok(!(await page.$eval(selector,el=>el.textContent)).includes('from this day?'),'Removal confirmation cannot leak into a reopened sheet');
+      await click('Superset with next');await page.waitForSelector(selector,{hidden:true});
+      await open();await click('Unlink superset');await page.waitForSelector(selector,{hidden:true});
+      await open();await click('Exercise info');await page.waitForSelector(selector,{hidden:true});
+      await page.waitForFunction(()=>[...document.querySelectorAll('.wpb-backdrop')].some(el=>!el.closest('.wpb-closing')&&el.textContent.includes('Equipment')));
+      await page.keyboard.press('Escape');await page.waitForFunction(()=>![...document.querySelectorAll('.wpb-backdrop')].some(el=>!el.closest('.wpb-closing')));
+      await open();await click('Edit pinned note');await page.waitForSelector('.wpb-program textarea');
+      await page.$$eval('.wpb-program button',buttons=>buttons.find(n=>n.textContent.trim()==='Cancel'&&n.offsetHeight>0)?.click());
+      assert.deepEqual(errors,[],'Exercise actions preserve existing handlers without render errors');
+    }finally{await context.close();}
+  }
+  for(const variant of ['no-supersets','last-lift','single-lift']){
+    const p={...program,id:'r54-options-'+variant,config:{...program.config,noSupersets:variant==='no-supersets'},
+      days:variant==='single-lift'?[{...program.days[0],exercises:['bb-bench']}]:program.days};
+    const context=await browser.createBrowserContext(),page=await context.newPage();
+    try{
+      await page.setViewport({width:393,height:852,isMobile:true,hasTouch:true});
+      await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
+      await page.evaluateOnNewDocument(seed=>localStorage.setItem('wpb:v1',JSON.stringify(seed)),{...store('rose'),saved:[p],pinnedId:p.id});
+      await page.goto('http://127.0.0.1:8796/',{waitUntil:'networkidle0'});
+      await page.waitForSelector('button[aria-label="Open R54 Manual"]');
+      await page.$eval('button[aria-label="Open R54 Manual"]',button=>button.click());
+      const id=variant==='last-lift'?'inc-curl':'bb-bench',name=EXERCISES.find(ex=>ex.id===id).name;
+      const opener='button[aria-label="More options for '+name+'"]';
+      await page.waitForSelector(opener);await page.$eval(opener,button=>button.click());
+      await page.waitForSelector(selector);
+      assert.equal(await page.$(selector+' [data-exercise-action="superset"]'),null,'Superset respects disabled and final-slot constraints: '+variant);
+      assert.equal(!!await page.$(selector+' [data-exercise-action="remove"]'),variant!=='single-lift','The final exercise cannot be removed');
+      await page.keyboard.press('Escape');await page.waitForSelector(selector,{hidden:true});
+      assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),[p],'Inspecting constrained actions preserves saved programs');
+    }finally{await context.close();}
+  }
+  console.log('PASS R54 exercise actions: text reflow, persistent Close, real touch dismissal, focus, removal Cancel/reset, constrained supersets and existing info/note routes.');
+}
+
 async function assertResumeClear(page){
   const selector='.wpb-live-dock button[aria-label="Resume workout"]';
   await page.waitForSelector(selector,{visible:true});
@@ -540,8 +647,9 @@ let browser;
 try{
   browser=await puppeteer.launch({executablePath:process.env.CHROME_BIN||'/usr/bin/google-chrome',
     headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
-  await verifyProgramSharing(browser);
-  if (!process.argv.includes("--sharing-only")) {
+  if (!process.argv.includes('--options-only')) await verifyProgramSharing(browser);
+  if (!process.argv.includes('--sharing-only')) await verifyProgramExerciseOptions(browser);
+  if (!process.argv.includes("--sharing-only") && !process.argv.includes('--options-only')) {
   const diagnostics={};
   for(const theme of ['rose','rosewater']){
     const context=await browser.createBrowserContext();

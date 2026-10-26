@@ -16,11 +16,12 @@ const programReference = fs.readFileSync('modules/program-reference-surfaces.js'
 const programVolume = fs.readFileSync('modules/program-volume-surfaces.js', 'utf8');
 const loadWave = fs.readFileSync('modules/program-load-wave.js', 'utf8');
 const programShare = fs.readFileSync('modules/program-share-sheet.js', 'utf8');
-const presentationSource = disclosures + '\n' + programReference + '\n' + releaseNotes + '\n' + primitives + '\n' + app + '\n' + programReview + '\n' + programSchedule + '\n' + programSettings + '\n' + backupPanel + '\n' + programVolume + '\n' + loadWave + '\n' + programShare;
-const MAX_IMPORTANT = 2360; // M291: consolidate the remaining Profile style owners
-const MAX_APP_IMPORTANT = 1229; // M292: retire ten superseded Progress priority declarations.
+const exerciseOptions = fs.readFileSync('modules/program-exercise-options.js', 'utf8');
+const presentationSource = disclosures + '\n' + programReference + '\n' + releaseNotes + '\n' + primitives + '\n' + app + '\n' + programReview + '\n' + programSchedule + '\n' + programSettings + '\n' + backupPanel + '\n' + programVolume + '\n' + loadWave + '\n' + programShare + '\n' + exerciseOptions;
+const MAX_IMPORTANT = 2303; // M384: retire 33 exercise-options priority overrides.
+const MAX_APP_IMPORTANT = 1198; // M384: retire the private options padding override.
 const MAX_REPEAT_IMPORTANT = 15; // M288: at-rule comments no longer erase media/container scope.
-const MAX_INLINE_STYLE_OBJECTS = 2499; // M383: include sharing; retire its static styles and four load-wave styles.
+const MAX_INLINE_STYLE_OBJECTS = 2482; // M384: include exercise actions; retire 17 static inline styles.
 
 // M367: Settings is a named, keyboard-focusable dialog with explicit labels and state.
 for(const role of ['backdrop','panel','heading','title','close','intro','field-label','field','description','footer','cancel','save'])
@@ -91,6 +92,14 @@ function guard(cssText, appText) {
 }
 const report = guard(css, presentationSource);
 
+assert.ok(!exerciseOptions.includes('style:') && !exerciseOptions.includes('localStorage') && !exerciseOptions.includes('setProgram'),
+    'Exercise options own only presentation and transient confirmation');
+assert.equal((exerciseOptions.match(/export function ProgramExerciseOptions\(/g)||[]).length,1,'One exercise-options owner');
+assert.ok(app.includes('canLink: !program.config?.noSupersets && slot < day.exercises.length - 1'), 'Options obey the saved superset constraint');
+assert.ok(!exerciseOptions.includes('"data-sheet-drag": true') && exerciseOptions.includes('ref: sheetDragRef'),
+    'The options sheet consumes the existing gesture ref');
+assert.ok(app.includes('const SHEET_DRAG_BOUND = new WeakSet()') && app.includes('SHEET_DRAG_BOUND.has(el)'),
+    'Shared gesture initialization follows node identity, independent of presentation flags');
 assert.ok(!programShare.includes('style:') && !programShare.includes('C.'), 'Program sharing uses the shared CSS owner');
 assert.ok(!app.includes('function ShareProgramSheet(') && !app.includes('function programToText('), 'One selected-week sharing owner');
 assert.ok(programShare.includes('sessionPrescriptionRows(program, day, weekIndex)') && programShare.includes('daysInWeek(program, weekIndex)'), 'Shared text reads canonical selected-week prescriptions');

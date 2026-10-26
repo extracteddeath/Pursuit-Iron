@@ -1706,6 +1706,11 @@ try {
         });
         await page.$eval('[data-sheet-drag]', el => {
             el.dispatchEvent(new TouchEvent('touchmove', { touches: [new Touch({ ...window.__b831Touch, clientY: window.__b831Touch.clientY + 30 })], bubbles: true }));
+        });
+        await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+        const dragged=await page.$eval('[data-sheet-drag]',el=>parseFloat(el.style.getPropertyValue('--pi-surface-y')));
+        assert.ok(dragged>0,'A partial gym-sheet drag actually moves before returning; presentation flags cannot skip initialization');
+        await page.$eval('[data-sheet-drag]',el=>{
             el.dispatchEvent(new TouchEvent('touchend', { touches: [], bubbles: true }));
         });
         await page.waitForFunction(() => document.querySelector('[data-sheet-drag]')?.style.getPropertyValue('--pi-surface-y') === '0px');
@@ -1942,16 +1947,16 @@ try {
         await page.click(actionableR22);
         await page.waitForSelector('.wpb-exercise-options-sheet .wpb-sheet-action');
         const optionsContrastR36=await contrastAuditR36([
-            ['sheetAction','.wpb-exercise-options-sheet>.wpb-sheet-action'],
+            ['sheetAction','.wpb-exercise-options-body>.wpb-sheet-action'],
             ['sheetClose','.wpb-exercise-options-sheet .wpb-sheet-close']
         ]);
         console.log('R36 SHEET '+JSON.stringify(optionsContrastR36));
         assert.ok(optionsContrastR36.every(x=>x.absent||x.ratio>=4.5),
             'R36 sheet labels meet AA contrast: '+JSON.stringify(optionsContrastR36));
         const optionsR22=await page.$eval('.wpb-exercise-options-sheet', sheet=>{
-            const title=sheet.querySelector(':scope > div:first-child > div:first-child > div:first-child');
+            const title=sheet.querySelector('.wpb-exercise-options-title');
             const close=sheet.querySelector('.wpb-sheet-close');
-            const actions=[...sheet.querySelectorAll(':scope > .wpb-sheet-action')];
+            const actions=[...sheet.querySelectorAll('.wpb-exercise-options-body > .wpb-sheet-action')];
             const firstDescription=actions[0]?.querySelector(':scope > span:last-child > span:last-child');
             const c=getComputedStyle(sheet);
             const ctx=document.createElement('canvas').getContext('2d',{willReadFrequently:true});

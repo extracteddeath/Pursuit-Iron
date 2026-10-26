@@ -1,3 +1,18 @@
+## October 26 — M372 logging performance baseline and regression guard
+
+Continue M357/M363 with a measured logging workload. The current Workout path already memoizes suggestions correctly; a benchmark of the production renderer confirms that typing, set completion and Undo reuse those suggestions. Extend the existing M318 browser performance owner with a generated seven-lift/23-working-set session and 240 synthetic historical workouts. Run 40 input events and ten completion/Undo pairs at native and simulated 4× CPU, verify each live-state write, and require zero additional calls to the canonical suggestion boundary after mount. Saved program/history content must remain byte-equivalent. No new registry entry or production module is needed.
+
+A harness-only negative control removes the suggestion cache in the HTTP response and fails the new guard with 1,246 extra suggestion calls in the observed run. Production files stay untouched by instrumentation. Quantiles remain diagnostic rather than a machine-speed CI threshold. The reproducible report is verification/m372-logger-performance-baseline.json, bound to Build 919 and its runtime aggregate; the existing browser entry point accepts --logger-only and --logger-report for focused reruns. Its ordinary registry invocation still runs the existing cycle-creation/advancement measurements plus the logger contract.
+
+| Profile | Input p50 / p95 | Complete p50 / p95 | Undo p50 / p95 | Additional suggestion calls |
+|---|---|---|---|---|
+| Native CPU | 33.3 / 33.5 ms | 33.3 / 33.7 ms | 33.2 / 33.4 ms | 0 |
+| Simulated 4× CPU | 33.3 / 39.7 ms | 66.4 / 100.3 ms | 66.3 / 87.0 ms | 0 |
+
+The combined gate also retains the original cycle workload: one local run measured complete creation at 3.07 s native / 12.86 s with simulated 4× CPU, and advancement at 0.43 / 1.82 s. Both retained their audited final choices and exact 54/58-set totals. Profiling background generation and cancellation remains a concrete next performance task; these figures do not establish a physical-device result.
+
+Conditions: local preloaded assets, 393×852 viewport, reduced motion and HeadlessChrome 153. Input/click timing ends after two animation frames and a verified persisted live value; these are not field INP, cold-start or physical Android measurements. Forty input samples and ten completion/Undo samples per profile do not justify an overall speed grade. The runtime remains the published Build 919; this assurance pass adds a regression and evidence, with no shipped asset changes. Require all final-head checks before merging. Next open work includes broader source/style cleanup, full-app startup/warm-return and resilience measurements, remaining tab composition, and physical Android/TalkBack/interruption acceptance.
+
 ## October 26 — M371 executable method choices and review clarity (build 919 candidate)
 
 The next roadmap sweep follows M358/M359 correctness before additional cosmetic work. Reproduced S1: the Program editor and Workout write exercise-ID progression choices, but getNextShellCell read only slot choices. A real generated bench selected Rep ladder in both editor and resolver while its executable cell stayed Double progression with engine ownership. The new M214 assertion fails on Build 918 before the fix. The full browser journey also exposed a review clarity defect: method-only edits were summarized as set/rep/effort changes without the actual before/after methods.

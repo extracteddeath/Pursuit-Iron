@@ -86,6 +86,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.pursuitiron.app.AppViewModel
 import com.pursuitiron.app.ui.LocalWide
 import com.pursuitiron.app.ui.common.Badge
@@ -617,6 +618,26 @@ private fun ExerciseMenu(vm: AppViewModel, s: JSONObject, ei: Int, onPick: (WShe
             Column(Modifier.clip(RoundedCornerShape(22.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 ex.optJSONObject("plateau")?.let { pl -> MenuRow(PiIcons.Trend, "Plateau options", "No PR in ${pl.i("since")} sessions on this day", cs.tertiaryContainer, cs.onTertiaryContainer) { onPick(WSheet.Plateau(ei)) } }
                 MenuRow(PiIcons.Swap, "Swap exercise", "Alternatives at your gym", cs.secondaryContainer, cs.onSecondaryContainer) { onPick(WSheet.Swap(ei)) }
+                // B903: the working-set count for today; after saving, the finish page asks whether the program keeps it.
+                run {
+                    val work = ex.list("sets").filter { !it.b("warm") && !it.b("sub") && !it.b("skipped") }
+                    val n = work.size; val minN = work.count { it.b("done") }.coerceAtLeast(1)
+                    Row(Modifier.fillMaxWidth().background(cs.surfaceContainerHigh).padding(start = 14.dp, end = 10.dp, top = 10.dp, bottom = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        Box(Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(cs.secondaryContainer), contentAlignment = Alignment.Center) { Icon(PiIcons.List, null, tint = cs.onSecondaryContainer, modifier = Modifier.size(20.dp)) }
+                        Column(Modifier.weight(1f)) {
+                            Text("Working sets", style = MaterialTheme.typography.titleSmall)
+                            Text("Logged sets stay. Keep the new count after saving, or just today", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                        }
+                        Row(Modifier.clip(CircleShape).background(cs.surface).padding(3.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.size(36.dp).clip(CircleShape).clickable(enabled = n > minN) { vm.act("setCount", "ei" to ei, "count" to n - 1) }
+                                .semantics { contentDescription = "One fewer working set"; role = Role.Button }, contentAlignment = Alignment.Center) { Text("−", fontSize = 18.sp, color = if (n > minN) cs.onSurface else cs.onSurfaceVariant) }
+                            Text("$n", style = MaterialTheme.typography.titleSmall, textAlign = TextAlign.Center, modifier = Modifier.width(28.dp))
+                            Box(Modifier.size(36.dp).clip(CircleShape).clickable(enabled = n < 20) { vm.act("setCount", "ei" to ei, "count" to n + 1) }
+                                .semantics { contentDescription = "One more working set"; role = Role.Button }, contentAlignment = Alignment.Center) { Text("+", fontSize = 18.sp) }
+                        }
+                    }
+                }
                 MenuRow(PiIcons.Shield, "Something hurt", "Flag it and the plan protects that area", cs.tertiaryContainer, cs.onTertiaryContainer) { onPick(WSheet.Hurt(ei)) }
                 MenuRow(PiIcons.List, "Same weight for all sets", "Set every unlogged set to the average", cs.secondaryContainer, cs.onSecondaryContainer) { vm.act("level", "ei" to ei); onPick(null) }
                 MenuRow(PiIcons.Timer, "Rest time", if (ex.i("restCustom") > 0) restLabel(ex.i("restCustom")) else "Default" + (if (ex.i("restDefault") > 0) " · ${restLabel(ex.i("restDefault"))}" else ""), cs.secondaryContainer, cs.onSecondaryContainer) { onPick(WSheet.Rest(ei)) }

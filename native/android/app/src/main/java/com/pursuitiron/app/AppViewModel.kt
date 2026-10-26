@@ -266,8 +266,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** App.js finish sheet: PRs, goals, next-session plan and per-muscle feedback before saving. */
     suspend fun finishPreview(): JSONObject? = obj("finishPreview")
 
-    fun finish(routineName: String? = null, routineIds: List<String> = emptyList(), nudged: Int = 0) = launchCore {
-        val r = obj("finishSession") ?: return@launchCore
+    fun finish(routineName: String? = null, routineIds: List<String> = emptyList(), nudged: Int = 0, keep: JSONObject? = null) = launchCore {
+        val r = obj("finishSession", if (keep != null) jsonOf("keep" to keep) else JSONObject()) ?: return@launchCore
         if (!r.b("ok")) { toast(r.s("error", "Couldn't save the workout")); return@launchCore }
         rest.cancel()
         hap(Hap.Done)
@@ -283,6 +283,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
         refreshHomeSide()
         pendingUpdate = obj("pendingProgramUpdate")
+        r.optJSONObject("kept")?.let { k -> if (k.s("error").isNotBlank()) toast(k.s("error")) else if (k.i("applied") > 0) toast("Program updated · ${k.i("applied")} ${if (k.i("applied") == 1) "change" else "changes"} kept") }
         summary = null; tab = Tab.Today; screen = Screen.Tabs
     }
 

@@ -90,6 +90,7 @@ fun FinishPage(vm: AppViewModel, s: JSONObject, onClose: () -> Unit) {
     var noteOpen by remember { mutableStateOf(false) }
     var routine by remember { mutableStateOf("") }
     var routineSaved by remember { mutableStateOf(false) }
+    val keepMap = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateMapOf<String, Boolean>() }
     val cs = MaterialTheme.colorScheme
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         // A page, not a dialog: no dimming behind it, so the status bar keeps the page's colour.
@@ -132,6 +133,7 @@ fun FinishPage(vm: AppViewModel, s: JSONObject, onClose: () -> Unit) {
                 }
                 val parts = x.list("parts")
                 if (parts.isNotEmpty()) FeelCard(vm, x, parts)
+                x.optJSONObject("programChanges")?.takeIf { it.list("progression").isNotEmpty() || it.list("exercises").isNotEmpty() }?.let { pc -> KeepCard(pc, keepMap) }
                 Column(Modifier.widthIn(max = 520.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     val next = x.list("nextPlan")
                     if (next.isNotEmpty()) SurfaceCard {
@@ -214,7 +216,9 @@ fun FinishPage(vm: AppViewModel, s: JSONObject, onClose: () -> Unit) {
                 }
                 val nudged = parts.count { !it.isNull("diff") || !it.isNull("pump") || !it.isNull("sore") }
                 Box(Modifier.widthIn(max = 520.dp).fillMaxWidth().height(56.dp).clip(CircleShape).background(cs.primary)
-                    .clickable { onClose(); vm.finish(if (routineSaved) routine.ifBlank { "My routine" } else null, ids, nudged) }
+                    .clickable { onClose(); vm.finish(if (routineSaved) routine.ifBlank { "My routine" } else null, ids, nudged,
+                        keep = org.json.JSONObject().put("progression", org.json.JSONArray(keepMap.filter { it.value && it.key.startsWith("p:") }.keys.map { it.removePrefix("p:") }))
+                            .put("exercises", org.json.JSONArray(keepMap.filter { it.value && it.key.startsWith("n:") }.keys.map { it.removePrefix("n:") }))) }
                     .semantics { role = Role.Button }, contentAlignment = Alignment.Center) {
                     Text("Save session", style = MaterialTheme.typography.titleMedium.copy(fontSize = 17.sp, fontWeight = FontWeight.SemiBold), color = cs.onPrimary)
                 }
@@ -274,6 +278,31 @@ private fun FinishHero() {
 }
 
 /** How did each muscle feel? The answer sets next time's sets (only with room under MRV); pump and recovery are optional. */
+/* The design's "Keep in the program?" (Main.dc.html pk): each progression changed in the workout and, per B903, each lift
+   added or set count changed; Keep in program or Today only. Unanswered ones stay with this workout only. */
+@Composable
+private fun KeepCard(pc: JSONObject, keep: androidx.compose.runtime.snapshots.SnapshotStateMap<String, Boolean>) {
+    val cs = MaterialTheme.colorScheme
+    val prog = pc.list("progression"); val ex = pc.list("exercises")
+    Column(Modifier.widthIn(max = 520.dp).fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(cs.surface).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(if (prog.isNotEmpty() && ex.isNotEmpty()) "KEEP THESE CHANGES IN THE PROGRAM?" else if (prog.isNotEmpty()) "YOU CHANGED HOW A LIFT PROGRESSES" else "YOU CHANGED THE WORKOUT",
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.4.sp), color = cs.onSurfaceVariant)
+        val rows = prog.map { Triple("p:" + it.s("id"), it.s("name"), it.s("style")) } +
+            ex.map { Triple("n:" + it.s("id"), it.s("name"), if (it.b("added")) "added · ${it.i("sets")} working sets" else "${it.i("sets")} working sets (was ${it.i("previousSets")})") }
+        rows.forEach { (key, name, what) ->
+            Column(Modifier.semantics(mergeDescendants = false) { contentDescription = "$name: keep $what in the program?" }, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(androidx.compose.ui.text.buildAnnotatedString {
+                    pushStyle(androidx.compose.ui.text.SpanStyle(fontWeight = FontWeight.Bold)); append(name); pop(); append(" · $what") },
+                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp), color = cs.onSurface)
+                com.pursuitiron.app.ui.common.Segmented(listOf("keep" to "Keep in program", "today" to "Today only"), when (keep[key]) { true -> "keep"; false -> "today"; else -> null },
+                    { keep[key] = it == "keep" }, height = 40.dp)
+            }
+        }
+        Text(if (rows.any { keep[it.first] == null }) "Anything you leave unanswered stays as today only." else "Saved with the session.",
+            style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), color = cs.onSurfaceVariant)
+    }
+}
+
 @Composable
 private fun FeelCard(vm: AppViewModel, x: JSONObject, parts: List<JSONObject>) {
     val cs = MaterialTheme.colorScheme

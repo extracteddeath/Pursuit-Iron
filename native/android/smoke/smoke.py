@@ -357,6 +357,11 @@ else:
 if tap(r"Weight 60(\.0)?, edit", "edit-logged-set"):
     back()
 tap(r"Exercise actions", "exercise-menu")
+# B903: change today's working-set count; the finish page asks whether the program keeps it
+if (find(r"One more working set", timeout=3) or scroll_to(r"One more working set", tries=3, step=400)):
+    tap(r"One more working set", "set-count")
+else:
+    FAILS.append("exercise menu has no working-set count")
 back()
 # The progression tag on the card opens the progression sheet (it is no longer in the menu)
 if tap(r"^Progression: ", "progression-sheet"):
@@ -422,6 +427,10 @@ if tap(r"^\|Too easy$", "finish-feel", required=False):
     if not find(r" sets$|No room", timeout=3):
         FAILS.append("feel answer did not show next time's sets")
 tap(r"^\|Moderate$", "finish-feedback", required=False)
+if scroll_to(r"YOU CHANGED THE WORKOUT|KEEP THESE CHANGES", tries=6, step=500):
+    tap(r"^\|Keep in program$", "finish-keep", required=False)
+else:
+    FAILS.append("finish page does not offer the set-count change to the program")
 scroll_to(r"^\|Save session$", tries=8)
 tap(r"^\|Save session$")
 if not find(r"[Ss]aved", timeout=6):

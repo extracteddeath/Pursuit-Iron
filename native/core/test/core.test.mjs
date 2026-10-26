@@ -251,6 +251,22 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   const rs = C.resetProgram({ programId: pid, mode: 'same' }); const s2 = JSON.parse(C.exportStore());
   ok(rs.ok && s2.saved.length === 2 && s2.pinnedId === rs.programId && JSON.stringify(s2.saved[1].days) === before, 'start again from week 1 keeps the exercises in a fresh program'); }
 
+// 16d. B903 working-set count in a workout, reviewed for the program after saving
+{ C.init({}); const mk = C.createProgram({ config: { name: 'Count', goal: 'both', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 21 });
+  let s = C.startSession({}); const n0 = s.exercises[1].sets.filter((x) => !x.warm && !x.sub).length;
+  s = C.act({ type: 'setCount', ei: 1, count: n0 + 1 });
+  ok(s.exercises[1].sets.filter((x) => !x.warm && !x.sub).length === n0 + 1, 'the working-set count changes in the workout');
+  s.exercises.forEach((e, ei) => e.sets.forEach((x) => { if (!x.done && !x.warm && !x.sub) C.act({ type: 'edit', ei, si: x.i, field: 'reps', value: '8' }) && C.act({ type: 'toggle', ei, si: x.i }); }));
+  const fp = C.finishPreview(); ok(fp.programChanges.exercises.length === 1, 'the finish page lists the changed count');
+  C.finishSession();
+  const pu = C.pendingProgramUpdate();
+  ok(pu && pu.exerciseChanges.length === 1 && pu.exerciseChanges[0].sets === n0 + 1, 'the changed count is offered to the program');
+  const ap = C.completeProgramUpdate({ apply: true }); const ed = C.editor({ programId: mk.programId, weekIndex: 1 });
+  ok(ap.ok && ed.days[0].exercises[1].sets === n0 + 1, 'applying sets that count in the program: ' + (ap.error || ed.days[0].exercises[1].sets));
+  let s2 = C.startSession({ programId: mk.programId, dayId: ed.days[0].id, weekIndex: 1 }); const n1 = s2.exercises[2].sets.filter((x) => !x.warm && !x.sub).length;
+  C.act({ type: 'setCount', ei: 2, count: n1 + 1 }); const fin = C.finishSession({ keep: { progression: [], exercises: [] } });
+  ok(fin.kept && fin.kept.applied === 0 && !C.pendingProgramUpdate(), 'an unanswered change stays this workout only'); }
+
 // 16. Program editing (App.js ProgramView ops + save review) and record stamping
 { C.init({}); const mk = C.createProgram({ config: { name: 'Edit me', goal: 'both', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 5 });
   const pid = mk.programId; let ed = C.editor({ programId: pid });
@@ -455,7 +471,7 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   C.setGoal({ id: s.exercises[0].id, weight: 1 }); C.setExSetup({ id: s.exercises[0].id, key: 'seat', value: '4' });
   s = C.session();
   ok(s.exercises[0].goal === 1, 'goal weight shows on the lift');
-  const style = Object.keys(s.progressionStyles).find((k) => k !== s.exercises[0].progression?.style);
+  const style = s.progressionStyles.map((x) => x.id).find((k) => k !== 'auto' && k !== s.exercises[0].progression?.style);
   if (!s.exercises[0].progression?.locked) { s = C.act({ type: 'progression', ei: 0, style }); ok(s.exercises[0].progression.changed, 'progression changed for this session'); }
   const part = s.exercises[0].part;
   C.act({ type: 'feedback', part, pump: 'good' }); C.act({ type: 'feedback', part, sore: 'fresh' });

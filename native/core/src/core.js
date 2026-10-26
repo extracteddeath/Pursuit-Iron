@@ -11,11 +11,11 @@
  */
 import * as E from '../../../modules/engine-api.js';
 import GALLERY from '../../../gallery.json' with { type: 'json' };
-import { withProgressionChoices, repeatedNote, refreshProgressionSets, buildSessionReview } from '../../../modules/session-tools.js';
+import { withProgressionChoices, repeatedNote, refreshProgressionSets, buildSessionReview, workoutProgramChanges, workoutProgressionOrigin, withWorkoutProgramReview } from '../../../modules/session-tools.js';
 import { withSessionPlanChoice } from '../../../modules/session-plan.js';
 import { reviewProgramChanges, withProgramRevision } from '../../../modules/program-review.js';
 import { INJURY_AREAS, INJURY_IMPACTS, injuryParts, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from '../../../modules/injury-tools.js';
-import { adjustInjuredExercises, workoutPlateau, lighterPendingWorkout } from '../../../modules/workout-context.js';
+import { adjustInjuredExercises, workoutPlateau, lighterPendingWorkout, resizeWorkingSets } from '../../../modules/workout-context.js';
 
 const { EX_BY_ID, EXERCISES } = E;
 const now = () => Date.now();
@@ -1085,7 +1085,7 @@ const ACTIONS = {
             if (i !== ei) return e;
             const work = e.sets.filter(isWork);
             const seed = work[work.length - 1] || (sug?.[ei] ? { weight: String(sug[ei].weight), reps: E.repsLow(sug[ei].reps) } : { weight: '', reps: '' });
-            return { ...e, sets: [...e.sets, { weight: seed.weight ?? '', reps: seed.reps ?? '', warm: false, done: false, auto: true, valueOwner: 'prescription', added: true, hint: undefined }] };
+            return { ...e, setCountEdited: true, sets: [...e.sets, { weight: seed.weight ?? '', reps: seed.reps ?? '', warm: false, done: false, auto: true, valueOwner: 'prescription', added: true, hint: undefined }] };
         });
     },
     // The design's set options: skip an unlogged set (it stops counting), or restore it.
@@ -1120,6 +1120,10 @@ const ACTIONS = {
     },
     restoreTrimmed(_, ctx, d) {
         return d.map((e) => ({ ...e, sets: e.sets.map((x) => (x.skipped && x.trimWhy === 'time' ? { ...x, skipped: false, trimWhy: undefined } : x)) }));
+    },
+    // App.js working-set count (B903): logged sets stay; the count is reviewed for the program after saving.
+    setCount({ ei, count }, ctx, d) {
+        return d.map((e, i) => { if (i !== ei) return e; const n = resizeWorkingSets(e, Number(count)); return n === e ? e : { ...n, setCountEdited: true }; });
     },
     // App.js removeSessionAddedSet.
     removeSet({ ei, si }, ctx, d) {
@@ -1348,7 +1352,18 @@ export function explain({ ei }) {
 }
 
 /* App.js WorkoutSession finish + App finishSession. */
-export function finishSession() {
+/* What this workout would carry back to the program: changed progressions (App.js changeProgression) and,
+   per B903, added lifts and changed working-set counts (App.js workoutProgramChanges). */
+function sessionProgramChanges(l, ctx) {
+    const { program, day, wk } = ctx, data = l.data || [];
+    const progChanges = Object.keys(l.sessionProgressions || {}).length ? l.sessionProgressions : undefined;
+    const source = programById(program.id);
+    let exChanges = [];
+    if (!program.quick && source) { try { exChanges = workoutProgramChanges(data, day, (row) => (row.id === E.exerciseAt(source, day, row.slot, wk) ? E.computeCell(source, { ...day, sessionLengthPlan: undefined }, row.id, row.slot, wk) : null), source, wk); } catch { exChanges = []; } }
+    const origins = progChanges && source ? Object.fromEntries(Object.keys(progChanges).map((id) => [id, workoutProgressionOrigin(source, id)])) : undefined;
+    return { progChanges, exChanges, origins };
+}
+export function finishSession({ keep = null } = {}) {
     const l = S.live; if (!l) return { ok: false, error: 'No workout in progress.' };
     const ctx = sessionContext(l); if (!ctx) return { ok: false, error: 'That workout day no longer exists.' };
     const { program, day, wk, H, P } = ctx, u = unit(), data = l.data || [];
@@ -1367,7 +1382,7 @@ export function finishSession() {
     Object.entries(fb).forEach(([part, v]) => {
         const dd = v.diff != null ? (v.diff > 0 && !roomUnderMrv(program, wk, part) ? 0 : v.diff) : E.feedbackDelta(v.pump, v.sore);
         if (dd != null) fbDelta[part] = dd; });
-    const progChanges = Object.keys(l.sessionProgressions || {}).length ? l.sessionProgressions : undefined;
+    const { progChanges, exChanges, origins } = sessionProgramChanges(l, ctx);
     const log = {
         id: l.sessionId, programId: program.id, programName: program.name, dayLabel: day.label, dayId: day.id,
         engineV: program.engineV || 1, weekIndex: wk, setsDone: doneSets, totalSets, volume: Math.round(volume), unit: u,
@@ -1377,7 +1392,8 @@ export function finishSession() {
         feedback: fbDelta,
         injuryReports: l.injuryReports?.length ? l.injuryReports : undefined,
         sessionNote: (l.sessionNote || '').trim() || undefined, sessionNoteRepeat: l.sessionNoteRepeat,
-        progressionChanges: progChanges, programUpdateStatus: progChanges && !program.quick ? 'pending' : undefined,
+        progressionChanges: progChanges, progressionOrigins: origins, programExerciseChanges: exChanges.length ? exChanges : undefined,
+        programUpdateStatus: (progChanges || exChanges.length) && !program.quick ? 'pending' : undefined,
         // Build 898: the reduced dose and its plan; a changed exposure is neutral for progression.
         sessionLengthPlan: day.sessionLengthPlan, timeLimited: day.sessionLengthPlan?.changed || undefined, prescriptionEdited: day.sessionLengthPlan?.changed || undefined,
         feedbackRaw: Object.keys(fb).length ? fb : undefined
@@ -1408,7 +1424,10 @@ export function finishSession() {
     Object.assign(S.store, { perf: nextPerf, tombs, injuryLog });
     setList('history', nextHistory); setList('saved', nextSaved);
     S.live = null; markStore(); markLive();
-    return { ok: true, entryId: entry.id, unit: u, setsDone: doneSets, totalSets, volume: Math.round(volume), durationMin: log.durationMin,
+    // The design's finish page answers "keep in the program?" per change; unanswered ones stay this workout only.
+    let keptChanges = null;
+    if (keep && entry.programUpdateStatus === 'pending') keptChanges = settleProgramUpdate(entry.id, keep);
+    return { ok: true, entryId: entry.id, kept: keptChanges, unit: u, setsDone: doneSets, totalSets, volume: Math.round(volume), durationMin: log.durationMin,
         achievements: fresh.map((m) => ({ id: m.id, label: m.label })), prs: summaryPRs(entry, H) };
 }
 
@@ -3116,7 +3135,10 @@ export function finishPreview() {
         return { name: ex.name, dir: sug.dir, delta: sug.weight != null ? Math.round((sug.weight - sm.weight) * 100) / 100 : 0, weight: sug.weight, from: sm.weight, reason: sug.reason || "" };
     }).filter(Boolean);
     const work = (e) => e.sets.filter(isWork);
-    return { unit: u, quick: !!program.quick, doneSets: data.reduce((n, e) => n + work(e).filter((x) => x.done).length, 0), totalSets: data.reduce((n, e) => n + work(e).length, 0),
+    const pc = sessionProgramChanges(l, ctx);
+    const programChanges = { progression: Object.entries(pc.progChanges || {}).map(([id, style]) => ({ id, name: exName(id), style: STYLE_LABEL[style] || E.PROG_STYLES?.[style] || style })),
+        exercises: (pc.exChanges || []).map((c) => ({ id: c.exerciseId, name: exName(c.exerciseId), added: !!c.added, sets: c.sets, previousSets: c.previousSets })) };
+    return { programChanges, unit: u, quick: !!program.quick, doneSets: data.reduce((n, e) => n + work(e).filter((x) => x.done).length, 0), totalSets: data.reduce((n, e) => n + work(e).length, 0),
         prs, goalsHit, mainE1rm: program.quick ? null : mainE1rm, nextPlan: program.quick ? [] : nextPlan,
         parts: trained.map((p) => ({ part: p, label: E.PART_LABEL?.[p] || p, pump: l.fbPump?.[p] || null, sore: l.fbSore?.[p] || null,
             diff: l.fbDiff?.[p] ?? null, sets: data.filter((e) => EX_BY_ID[e.id]?.part === p).reduce((n, e) => n + work(e).filter((x) => x.done).length, 0),
@@ -3177,18 +3199,44 @@ export function saveRoutine({ ids, name }) {
 }
 
 /* ------------------------------------------------------------------ progression choices after a workout (App.js pendingProgramUpdate) */
+const pendingOf = () => history().find((x) => x.programUpdateStatus === 'pending' && (x.progressionChanges || x.programExerciseChanges?.length));
+/* Apply only the chosen parts of a workout's program changes: keep = { progression: [exId], exercises: [exId] }. */
+function settleProgramUpdate(historyId, keep) {
+    const h = history().find((x) => x.id === historyId); if (!h) return null;
+    const progIds = new Set(keep.progression || []), exIds = new Set(keep.exercises || []);
+    const prog = Object.fromEntries(Object.entries(h.progressionChanges || {}).filter(([id]) => progIds.has(id)));
+    const exs = (h.programExerciseChanges || []).filter((c) => exIds.has(c.exerciseId));
+    const target = programById(h.programId);
+    let status = 'session-only', n = 0, error = null;
+    if (target && (Object.keys(prog).length || exs.length)) {
+        try {
+            const updated = { ...withWorkoutProgramReview(target, { programId: h.programId, dayId: h.dayId, weekIndex: h.weekIndex, progressionChanges: prog,
+                progressionOrigins: h.progressionOrigins || {}, programExerciseChanges: exs }), edited: true };
+            setList('saved', saved().map((p) => (p.id === updated.id ? updated : p)));
+            status = 'applied'; n = Object.keys(prog).length + exs.length;
+        } catch (err) { error = String(err?.message || 'The program changed since this workout. Kept for this workout only.'); }
+    }
+    setList('history', history().map((x) => (x.id === h.id ? { ...x, programUpdateStatus: status } : x))); markStore();
+    return { applied: n, error };
+}
 export function pendingProgramUpdate() {
-    const h = history().find((x) => x.programUpdateStatus === 'pending' && x.progressionChanges); if (!h) return null;
-    return { historyId: h.id, programName: h.programName || '', changes: Object.entries(h.progressionChanges).map(([id, style]) => ({ name: exName(id), style: E.PROG_STYLES?.[style] || style })) };
+    const h = pendingOf(); if (!h) return null;
+    return { historyId: h.id, programName: h.programName || '', dayLabel: h.dayLabel || '',
+        changes: Object.entries(h.progressionChanges || {}).map(([id, style]) => ({ name: exName(id), style: E.PROG_STYLES?.[style] || style })),
+        exerciseChanges: (h.programExerciseChanges || []).map((c) => ({ name: exName(c.exerciseId), added: !!c.added, sets: c.sets, previousSets: c.previousSets })) };
 }
 export function completeProgramUpdate({ apply }) {
-    const h = history().find((x) => x.programUpdateStatus === 'pending' && x.progressionChanges); if (!h) return { ok: false };
+    const h = pendingOf(); if (!h) return { ok: false };
     const target = programById(h.programId);
     if (apply && !target) return { ok: false, error: 'This program is no longer saved. Keep this change for the completed session only.' };
     if (apply) {
-        const updated = { ...withProgressionChoices(target, h.progressionChanges), edited: true };
+        // App.js applyProgramChoices: one validated boundary for progression and set-count changes.
+        const review = { programId: h.programId, dayId: h.dayId, weekIndex: h.weekIndex, progressionChanges: h.progressionChanges || {}, progressionOrigins: h.progressionOrigins || {}, programExerciseChanges: h.programExerciseChanges || [] };
+        let updated;
+        try { updated = { ...(h.progressionOrigins || !h.progressionChanges ? withWorkoutProgramReview(target, review) : withProgressionChoices(target, h.progressionChanges)), edited: true }; }
+        catch (err) { return { ok: false, error: String(err?.message || 'The program changed since this workout. Keep these changes for the session only.') }; }
         setList('saved', saved().map((p) => (p.id === updated.id ? updated : p)));
-        if (S.store.drafts?.[updated.id]) S.store.drafts = { ...S.store.drafts, [updated.id]: withProgressionChoices(S.store.drafts[updated.id], h.progressionChanges) };
+        if (S.store.drafts?.[updated.id]) S.store.drafts = { ...S.store.drafts, [updated.id]: withProgressionChoices(S.store.drafts[updated.id], h.progressionChanges || {}) };
     }
     setList('history', history().map((x) => (x.id === h.id ? { ...x, programUpdateStatus: apply ? 'applied' : 'session-only' } : x)));
     return { ok: true, applied: !!apply };

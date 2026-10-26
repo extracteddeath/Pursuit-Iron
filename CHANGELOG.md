@@ -1,3 +1,9 @@
+## Build 924 / M377 — Calmer root navigation without competing animation
+
+- Ordinary Home/Plan/Progress/Profile/Settings navigation now animates at most the lead content card, rather than staggering up to five cards and bouncing the newly selected tab icon on top of the indicator. Preserve the one measured navigation indicator, spatial direction, and actual tapped-source relationship when appropriate.
+- Keep native tab routing, 48px+ controls, actual selected states, all five tabs, keyboard navigation, fast switching, reduced motion, exercise detail transitions, sheets, and protected Workout/Focus behavior unchanged. No training, engine, storage or saved-history changes.
+- Extend the existing B831 full-browser motion owner with a one-card entrance budget and no nav-icon bounce. Required before publication: source and lifecycle checks, seven browser groups, release/offline integrity, exact merged-hosted bytes and live online/offline navigation. Device/IME/TalkBack acceptance remains separate.
+
 ## Build 923 / M376 — Faster history replay and fresh coaching
 
 - Build one current catalog lookup and source snapshot per historical analysis instead of rebuilding them for every workout. Read loading defaults without cloning them before normalization; returned inventories remain independent and editable.

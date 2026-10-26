@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import puppeteer from 'puppeteer-core';
+import { sessionPrescriptionRows, effortLabel, weeksOf, EXERCISES, generateNextProgramForShell } from '../modules/engine-api.js';
 
 // R54: screenshot and semantic-state contract for routes R53's paired primary
 // destination test does not exercise. No writes to workout production storage.
@@ -31,6 +32,101 @@ const snapshot={
      valueOwner:'user',target:{w:slot?'30':'190',reps:slot?'10-15':'6-8',rir:'2'}}
   ]}))
 };
+
+// Sharing is an inspection action: it must describe the selected executable
+// week, remain usable at enlarged text, and never claim a refused copy worked.
+async function verifyProgramSharing(browser){
+  const authored={...program,name:'Complete alternating program — strength and muscle',
+    config:{...program.config,deload:true},pairs:{'upper:0':'db-bench'},
+    description:'A complete authored program with a deliberately long description. '.repeat(12)};
+  const fixture=JSON.parse(fs.readFileSync(path.join(root,'verification/m205-generation-parity-results.json'))).rows[3];
+  const generated=generateNextProgramForShell({config:{...fixture.config,weeks:4,deload:true},legacyExercises:EXERCISES,seed:fixture.seed,makeId:()=> 'r54-share-generated'}).program;
+  for(const p of [authored,generated])for(const theme of ['rose','rosewater']){
+    const context=await browser.createBrowserContext(),page=await context.newPage(),errors=[];
+    page.on('pageerror',error=>errors.push(error.message));
+    try{
+      await page.setViewport({width:320,height:740,isMobile:true,hasTouch:true});
+      await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
+      await page.evaluateOnNewDocument(seed=>{if(localStorage.getItem('r54-share-seeded'))return;
+        localStorage.setItem('r54-share-seeded','1');localStorage.setItem('wpb:v1',JSON.stringify(seed));
+      },{...store(theme),saved:[p],pinnedId:p.id});
+      await page.goto('http://127.0.0.1:8796/',{waitUntil:'networkidle0'});
+      await page.waitForSelector('.wpb-home');
+      await page.$eval('button[aria-label="Open '+p.name+'"]',button=>button.click());
+      await page.waitForSelector('.wpb-program .wpb-week-rail');
+      const before=await page.evaluate(()=>{
+        const s=JSON.parse(localStorage.getItem('wpb:v1'));
+        return JSON.stringify({saved:s.saved,history:s.history,cycles:s.cycles,drafts:s.drafts});
+      });
+      for(const week of [2,1,weeksOf(p)+1]){
+        await page.$$eval('.wpb-program .wpb-week-rail>button',(buttons,week)=>{
+          const button=buttons.find(node=>node.textContent.trim().startsWith(week===5?'Deload':'Week '+week));
+          if(!button)throw new Error('Missing shared week '+week);button.click();
+        },week);
+        await page.$eval('button[aria-label="Share program"]',button=>button.click());
+        await page.waitForSelector('[data-testid="share-program-sheet"] textarea',{visible:true});
+        const text=await page.$eval('[data-testid="share-program-sheet"] textarea',el=>el.value);
+        const expected=sessionPrescriptionRows(p,p.days[0],week);
+
+        for(const row of expected)assert.ok(text.includes(`${row.ex.name} — ${row.cell.sets} × ${row.cell.range} @ ${effortLabel(row.cell.rir,'rir')}`),
+          'Shared exercise, sets, reps and effort equal the canonical selected-week cell');
+        assert.ok(text.includes(week>weeksOf(p)?`Deload after ${weeksOf(p)} training weeks`:`Week ${week} of ${weeksOf(p)}`), 'Shared text explicitly identifies the selected week');
+        if(p===authored&&week===2)assert.ok(!text.includes('Barbell Bench Press —'),'Even-week export must not revert to the first-week exercise');
+        await page.keyboard.press('Escape');
+        await page.waitForSelector('[data-testid="share-program-sheet"]',{hidden:true});
+      }
+      await page.$eval('button[aria-label="Share program"]',button=>button.click());
+      await page.waitForSelector('[data-testid="share-program-sheet"] textarea',{visible:true});
+      for(const width of [320,393,834,1280])for(const textSize of [16,32]){
+        await page.setViewport({width,height:740,isMobile:true,hasTouch:true});
+        await page.evaluate(size=>document.documentElement.style.fontSize=size+'px',textSize);
+        await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+        const layout=await page.$eval('[data-testid="share-program-sheet"]',el=>{
+          const panel=el.firstElementChild,area=el.querySelector('textarea'),copy=el.querySelector('[aria-label="Copy plain text"]'),close=el.querySelector('.wpb-sheet-close');
+          const rect=n=>{const r=n.getBoundingClientRect();return {top:r.top,bottom:r.bottom,left:r.left,right:r.right,height:r.height};};
+          return {viewport:{width:innerWidth,height:innerHeight},css:{height:getComputedStyle(panel).height,min:getComputedStyle(panel).minHeight,max:getComputedStyle(panel).maxHeight,padding:getComputedStyle(panel).padding},panel:rect(panel),copy:rect(copy),close:rect(close),font:parseFloat(getComputedStyle(area).fontSize),
+            named:el.getAttribute('aria-labelledby'),label:area.labels?.[0]?.textContent,overflow:el.scrollWidth>el.clientWidth+1,
+            copyClear:copy.contains(document.elementFromPoint(copy.getBoundingClientRect().x+10,copy.getBoundingClientRect().y+10))};
+        });
+        assert.ok(layout.panel.top>=-1&&layout.panel.bottom<=741&&!layout.overflow&&layout.font>=textSize*.8125-.1&&layout.named&&layout.label,
+          'Share dialog stays bounded, named and text-scaled: '+JSON.stringify({theme,width,textSize,layout}));
+        assert.ok(layout.copy.height>=44&&layout.close.height>=44&&layout.copyClear&&layout.close.top>=0,
+          'Share Close and Copy remain visible pointer targets: '+JSON.stringify({theme,width,textSize,layout}));
+        if(width===320)await page.screenshot({path:path.join(root,`verification/r54-share-${p===authored?"authored":"generated"}-${theme}-${textSize}-phone.png`)});
+      }
+      const cdp=await page.createCDPSession();
+      await cdp.send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'},{name:'forced-colors',value:'active'}]});
+      await page.focus('[aria-label="Copy plain text"]');
+      const forced=await page.$eval('[data-testid="share-program-sheet"]',el=>({
+        active:matchMedia('(forced-colors:active)').matches,
+        focus:parseFloat(getComputedStyle(document.activeElement).outlineWidth),
+        animation:getComputedStyle(el.firstElementChild).animationName
+      }));
+      assert.ok(forced.active&&forced.focus>=2&&forced.animation==='none','Sharing retains visible forced-color focus and reduced motion: '+JSON.stringify(forced));
+      // Browser permission can reject asynchronously. Manual text remains available.
+      await page.evaluate(()=>{
+        Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async()=>{throw new Error('Denied');}}});
+        document.execCommand=()=>false;
+      });
+      await page.click('[aria-label="Copy plain text"]');
+      await page.waitForFunction(()=>document.querySelector('[data-testid="share-program-sheet"] [role="status"]')?.textContent.includes('Could not copy'));
+      assert.ok(!(await page.$eval('[aria-label="Copy plain text"]',el=>el.textContent)).includes('Copied'),'Refused copy never reports success');
+      await page.evaluate(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async text=>{window.__sharedText=text;}}}));
+      await page.click('[aria-label="Copy plain text"]');
+      await page.waitForFunction(()=>document.querySelector('[aria-label="Copy plain text"]')?.textContent.includes('Copied'));
+      assert.equal(await page.evaluate(()=>window.__sharedText),await page.$eval('[data-testid="share-program-sheet"] textarea',el=>el.value),'Copy sends the exact displayed plan');
+      await page.focus('[aria-label="Copy plain text"]');await page.keyboard.press('Tab');
+      assert.ok(await page.$eval('[data-testid="share-program-sheet"]',el=>el.contains(document.activeElement)),'Tab stays inside sharing');
+      await page.keyboard.press('Escape');
+      await page.waitForSelector('[data-testid="share-program-sheet"]',{hidden:true});
+      assert.ok(await page.$eval('button[aria-label="Share program"]',el=>document.activeElement===el),'Close restores the sharing opener');
+      const after=await page.evaluate(()=>{const s=JSON.parse(localStorage.getItem('wpb:v1'));return JSON.stringify({saved:s.saved,history:s.history,cycles:s.cycles,drafts:s.drafts});});
+      assert.equal(after,before,'Sharing and browsing leave all saved training unchanged');
+      assert.deepEqual(errors,[],'Sharing has no unhandled browser errors');
+    }finally{await context.close();}
+  }
+  console.log('PASS R54 program sharing: canonical selected/deload week, alternating exercises, 320–1280px at 100/200% text, failed/successful clipboard, contained focus and unchanged training.');
+}
 // R59: exercise complete journeys using the production router and Android Back bridge.
 // The active program must survive browsing, and a launch must retain its caller and selected week.
 async function assertResumeClear(page){
@@ -444,6 +540,8 @@ let browser;
 try{
   browser=await puppeteer.launch({executablePath:process.env.CHROME_BIN||'/usr/bin/google-chrome',
     headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
+  await verifyProgramSharing(browser);
+  if (!process.argv.includes("--sharing-only")) {
   const diagnostics={};
   for(const theme of ['rose','rosewater']){
     const context=await browser.createBrowserContext();
@@ -713,6 +811,7 @@ try{
     }finally{await context.close();}
   }
   console.log('PASS R54/R59/R60: paired Library/Detail/Program/Workout layouts; active Plan, safe workout returns, next due week, retained Library/history/lift filters and independent Progress scroll at 320/393px; '+JSON.stringify({diagnostics,flows,nextSessions,browsing}));
+  }
 }finally{
   if(browser)await browser.close();
   await new Promise(resolve=>server.close(resolve));

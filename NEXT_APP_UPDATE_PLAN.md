@@ -1,3 +1,15 @@
+## M383 — selected-week sharing and accessible Program inspection (Build 930)
+
+Continue the launch cleanup from published Build 929. The existing R54 production-browser journey fails on unchanged Build 929 when sharing an authored alternating program's second week: the shared exercise and prescription do not match the canonical selected-week cell. The old formatter hardcodes week 1, iterates the base roster, and implements separate percentage waves. The sheet also has unbounded content and fixed-size text; its code-copy path reports success without awaiting permission.
+
+Move ShareProgramSheet and its plain-text formatter into one modules/program-share-sheet.js owner. App passes its selected activeWeek and unchanged history, program, unit, load-mode and dismissal/drag callbacks. Read daysInWeek/sessionPrescriptionRows for the snapshot and percentagePlanFor for configured loads; delete the original formatter and scheme arithmetic. Label the selected training/deload scope explicitly. Retain supported program-code copying and gallery drafts, but await clipboard completion and expose an honest failure with manually selectable text. Use the current shared action, palette, focus and modal owners. The structured sheet owns its bounded body/footer; legacy sheet-height selectors no longer override it.
+
+LoadWaveCard keeps its existing plannedWeek values and bar-height calculation. Four static styles move to semantic theme CSS; week/set labels now scale, have complete accessible names, and scroll by keyboard within the chart. Share has no inline styling. The combined guard includes the new module and tightens 2518 → 2499; external priorities remain 2336, embedded priorities 1199, repeated priority declarations 15. Source ownership improves; this pass does not claim a download-size reduction.
+
+Acceptance extends existing R54 with authored and generated programs, selected/even/deload weeks, both palettes, 320/393/834/1280px at 100/200% text, Clipboard rejection/success, Escape/Tab/return focus, forced colors, reduced motion and unchanged saved programs/history/cycles/drafts. R53 checks exact saved-week chart totals, readable/scalable labels and keyboard scroll at 320/393/900/1280px. M225 checks percentage load/units/rep-out/deload text against the canonical reader. Require exact-head source/lifecycle/independent/browser/release gates, then merged Pages/hosted-byte verification and actual public offline replay before claiming publication. Engine 0.65.9 and all training/persistence modules remain unchanged.
+
+Next: continue cohesive Program editing/inspection and source-level style retirement. Prioritize any reproduced prescription/persistence defect; physical Android keyboard/TalkBack/interruption and broader source cleanup remain open.
+
 ## M382 — shared volume styling and usable enlarged-text inspection (Build 929)
 
 Continue the Program/Plan ownership cleanup after Build 928 (PR #356, merge 165e7ae). Build 928 passed all six post-merge workflows and all seven browser groups, and direct public verification matched 127/127 release files.

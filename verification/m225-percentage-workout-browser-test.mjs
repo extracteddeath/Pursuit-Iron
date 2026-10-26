@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
 import puppeteer from 'puppeteer-core';
+import { programToText } from '../modules/program-share-sheet.js';
 import { EXERCISES, EX_BY_ID, TEMPLATES, templateConfig, percentagePlanFor, prescribeSets } from '../modules/engine-api.js';
 
 import { generateNextProgramForShell } from '../modules/next-engine/app-shell-adapter.js';
@@ -51,6 +52,9 @@ try {
     for (const [template,unit,week] of [['p531','lb',1],['p531','kg',1],['p531','lb',5],['gzclp','lb',1]]) {
         await open(`template=${template}&unit=${unit}&week=${week}`);
         const p=fixtures[template],d=p.days[0],ex=EX_BY_ID[d.exercises[0]],preview=percentagePlanFor(p,d,ex,0,week,unit);
+        const shared=programToText(p,'rir',unit,week);
+        assert.ok(shared.includes('Planned loads: '+preview.sets.map(set=>`${set.weight} ${unit} × ${set.reps}`).join(' · ')),
+            'Shared percentage loads, rep-out sets, units and deload match the canonical selected week');
         const weights=await page.$$eval('input[aria-label="weight"]',ns=>ns.map(n=>n.value));
         const reps=await page.$$eval('input[aria-label="reps"]',ns=>ns.map(n=>n.value));
         const runtime=prescribeSets(p,d,ex,0,week,unit,null,null,{},[],true).filter(r=>!r.sub);

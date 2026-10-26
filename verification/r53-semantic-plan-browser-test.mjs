@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import puppeteer from 'puppeteer-core';
+import { plannedWeek } from '../modules/engine-api.js';
 
 // R53: two real saved-palette contexts, same program, same phone geometry.
 // Both layouts must resolve the same semantic surface roles. Screenshot
@@ -330,6 +331,30 @@ async function verifyTaskHierarchy(browser){
         loadWave.filter(point=>point.deload).length<=1 &&
         loadWave.slice(0,-1).every(point=>!point.deload),
         'M379 uses the canonical consecutive planned weeks and one optional final deload: '+JSON.stringify(loadWave));
+      assert.deepEqual(loadWave.map(point=>point.sets),loadWave.map(point=>plannedWeek(seed.saved[0],point.week).sets),
+        'Load-wave values equal canonical saved-week totals');
+      for(const width of [320,393,900,1280])for(const textSize of [16,32]){
+        await resize(width,800);
+        await page.evaluate(size=>document.documentElement.style.fontSize=size+'px',textSize);
+        const wave=await page.$eval('[data-load-wave]',el=>({
+          scrollable:el.scrollWidth>el.clientWidth,overflow:getComputedStyle(el).overflowX,
+          tabIndex:el.tabIndex,named:el.getAttribute('aria-label'),
+          rows:[...el.children].map(row=>({
+            named:row.getAttribute('aria-label'),font:parseFloat(getComputedStyle(row.lastElementChild).fontSize),
+            clipped:[row.firstElementChild,row.lastElementChild].some(n=>n.scrollWidth>n.clientWidth+1)
+          })),pageOverflow:document.documentElement.scrollWidth>innerWidth+1
+        }));
+        assert.ok(!wave.pageOverflow&&wave.named&&wave.tabIndex===0&&wave.rows.every(row=>row.named&&
+          !row.clipped&&row.font>=textSize*.8125-.1),'Wave labels scale and stay readable in their scroll region: '+JSON.stringify({width,textSize,wave}));
+        if(width===320&&textSize===32){
+          assert.ok(wave.scrollable&&wave.overflow==='auto','Long enlarged wave scrolls within the chart');
+          await page.focus('[data-load-wave]');await page.keyboard.press('ArrowRight');
+          await page.waitForFunction(()=>{const el=document.querySelector('[data-load-wave]');return el.scrollLeft>0;});
+          await page.screenshot({path:path.join(root,`verification/r53-wave-${theme}-${textSize}-phone.png`)});
+        }
+      }
+      await page.evaluate(()=>document.documentElement.style.fontSize='16px');
+      await resize(393,800);
       await page.click('[data-plan-pane="schedule"]');
       assert.equal(await page.$eval('[data-plan-pane="schedule"]',b=>b.getAttribute('aria-pressed')),'true');
       assert.ok(planOrder.nextFirst&&planOrder.pickerFirst&&planOrder.sessionsFirst&&

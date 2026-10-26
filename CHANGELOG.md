@@ -1,3 +1,11 @@
+## Build 930 / M383 — Accurate selected-week sharing and readable plan inspection
+
+- Share as text now reads the selected executable week, including alternating exercises, rotating days, deloads and authored targets. Percentage loads come from the same canonical reader as Workout, preserving units and rep-out sets instead of reimplementing scheme formulas.
+- Share program has a named, height-bounded dialog, labelled selectable text, visible Close/Copy controls, contained keyboard focus, and explicit clipboard success/failure feedback. It follows enlarged text, reduced motion and forced colors.
+- Load-wave values and week labels follow text size, retain full accessible names, and scroll within the chart at narrow widths. Keep the existing planned-set and relative bar-height computations.
+- Move sharing into one feature owner and retire 19 static inline style objects across sharing and the chart. The counted combined presentation budget tightens from 2,518 to 2,499, without new CSS priorities or engine/persistence changes.
+- Extend existing R54 selected/deload-week and responsive sharing coverage, R53 canonical chart/keyboard coverage, and M225 percentage export parity. Physical Android keyboard, TalkBack and interruption acceptance remain separate.
+
 ## Build 929 / M382 — Readable, accessible volume inspection
 
 - Expandable muscle headings and granular details have 44px targets and follow the shared text-size tokens. Contributor rows place long session labels above exercise names on compact layouts.

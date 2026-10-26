@@ -1,7 +1,7 @@
 // Program Settings view only: staged draft, program transaction and persistence stay owned by ProgramView.
 import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
 import { X, Check } from 'lucide-react';
-import { weeksOf } from './engine-api.js';
+import { weeksOf, editableProgramWeeks, MAX_EDITABLE_PROGRAM_WEEKS, customProgramSettingsIssues } from './engine-api.js';
 import { UiChoice } from './ui-primitives.js';
 
 const TARGET_OPTIONS = [
@@ -39,17 +39,20 @@ function SettingsChoice({ label, detail, selected, onClick, ariaLabel }) {
 export function ProgramSettingsSheet({ program, draft: cfgDraft, setDraft: setCfgDraft, dirty: cfgDirty, onApply: applyCfgDraft, onClose, GOALS, sheetDragRef, selectNumericInput }) {
     const cycleLengthOwned = program.engineSource === "pursuit-next" && !!program.cycleId;
     const draftWeeks = cfgDraft?.weeks ?? weeksOf(program);
-    const validWeeks = /^\d+$/.test(String(draftWeeks)) && Number.isSafeInteger(Number(draftWeeks)) && Number(draftWeeks) > 0;
-    const canApply = cfgDirty && (cycleLengthOwned || validWeeks);
+    const editableWeeks = editableProgramWeeks(draftWeeks);
+    const retainedDuration = /^\d+$/.test(String(draftWeeks)) && Number(draftWeeks) === weeksOf(program) && Number.isSafeInteger(Number(draftWeeks)) && Number(draftWeeks) > 0;
+    const validWeeks = editableWeeks != null || retainedDuration;
+    const settingsIssues = customProgramSettingsIssues(program, cfgDraft || {}).filter(issue => issue.code !== 'weeks');
+    const canApply = cfgDirty && (cycleLengthOwned || validWeeks) && settingsIssues.length === 0;
     // Keep incomplete text in the staged draft; typing a replacement must never save a blank as zero.
     const editWeeks = value => {
         const n = Number(value);
-        const weeks = /^\d+$/.test(value) && Number.isSafeInteger(n) && n > 0 ? n : value;
+        const weeks = editableProgramWeeks(value) != null ? n : value;
         setCfgDraft(d => ({ ...d, weeks }));
     };
     const stepWeeks = delta => {
-        if (validWeeks)
-            setCfgDraft(d => ({ ...d, weeks: Math.max(1, Number(d?.weeks ?? weeksOf(program)) + delta) }));
+        if (editableWeeks != null)
+            setCfgDraft(d => ({ ...d, weeks: Math.max(1, Math.min(MAX_EDITABLE_PROGRAM_WEEKS, Number(d?.weeks ?? weeksOf(program)) + delta)) }));
     };
     const choices = (field, options, value, ariaPrefix) => options.map(([key, label, detail]) =>
         _jsx(SettingsChoice, { label, detail, selected: value === key,
@@ -67,7 +70,7 @@ export function ProgramSettingsSheet({ program, draft: cfgDraft, setDraft: setCf
             _jsx("div", { className: "wpb-program-settings-cycle-length-help", children: "Set by this phase of the training cycle." })] })
         : _jsxs("div", { className: "wpb-program-settings-length", children: [
             _jsxs("div", { "data-testid": "program-duration-control", "data-invalid": !validWeeks, className: "wpb-program-settings-length-control", children: [
-                _jsx("button", { type: "button", "aria-label": "Decrease block length", disabled: !validWeeks || Number(draftWeeks) <= 1, onClick: () => stepWeeks(-1), className: "pressable wpb-program-settings-length-step", children: "−" }),
+                _jsx("button", { type: "button", "aria-label": "Decrease block length", disabled: editableWeeks == null || Number(draftWeeks) <= 1, onClick: () => stepWeeks(-1), className: "pressable wpb-program-settings-length-step", children: "−" }),
                 _jsxs("label", { className: "wpb-program-settings-length-label", children: [
                     _jsx("input", { type: "text", inputMode: "numeric", onFocus: selectNumericInput, onClick: selectNumericInput, enterKeyHint: "done", "aria-label": "Block length in weeks", "aria-invalid": !validWeeks, "aria-describedby": !validWeeks ? "program-weeks-error" : undefined, value: draftWeeks, onChange: e => editWeeks(e.target.value), onKeyDown: e => {
                         if (validWeeks && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
@@ -75,8 +78,8 @@ export function ProgramSettingsSheet({ program, draft: cfgDraft, setDraft: setCf
                         }
                         if (e.key === "Enter") e.currentTarget.blur();
                     }, className: "mono wpb-num-input wpb-program-settings-length-input" }), "weeks"] }),
-                _jsx("button", { type: "button", "aria-label": "Increase block length", disabled: !validWeeks || Number(draftWeeks) >= Number.MAX_SAFE_INTEGER, onClick: () => stepWeeks(1), className: "pressable wpb-program-settings-length-step", children: "+" })] }),
-            !validWeeks && _jsx("div", { id: "program-weeks-error", role: "alert", className: "wpb-program-settings-length-error", children: "Enter a whole number of weeks, at least 1." })] });
+                _jsx("button", { type: "button", "aria-label": "Increase block length", disabled: editableWeeks == null || Number(draftWeeks) >= MAX_EDITABLE_PROGRAM_WEEKS, onClick: () => stepWeeks(1), className: "pressable wpb-program-settings-length-step", children: "+" })] }),
+            !validWeeks && _jsx("div", { id: "program-weeks-error", role: "alert", className: "wpb-program-settings-length-error", children: "Enter a whole number of weeks from 1 to 52." })] });
 
     return _jsx("div", {
         "data-testid": "program-settings-sheet", role: "dialog", "aria-modal": true,
@@ -91,7 +94,11 @@ export function ProgramSettingsSheet({ program, draft: cfgDraft, setDraft: setCf
                 _jsxs('div', { className: 'wpb-scroll wpb-program-settings-body', children: [
                     _jsx("p", { className: "wpb-program-settings-intro", children: program.engineSource === "pursuit-next"
                         ? "Adjust your program, then save to rebuild it with the latest program logic. Your current program stays unchanged if the rebuild cannot be completed safely."
-                        : "Adjust your program, then save to apply. Changes re-balance your current exercises." }),
+                        : program.custom ? "Update your program settings. Swap or remove any exercises that conflict with a new constraint before saving." : "Adjust your program, then save to apply. Changes re-balance your current exercises." }),
+                    settingsIssues.length > 0 && _jsxs('section', {role:'alert',id:'program-settings-issues',className:'wpb-program-settings-issues',children:[
+                        _jsx('h3',{children:'Settings need attention'}),
+                        ...settingsIssues.map((issue,index)=>_jsx('p',{children:issue.message},`${issue.code}:${issue.dayId || ''}:${index}`))
+                    ]}),
                     !program.config?.percentScheme && [
                         group('Training goal', ['strength', 'both', 'hypertrophy'].map(k => _jsx(UiChoice, {
                             selected: cfgDraft?.goal === k, className: 'wpb-program-settings-chip',

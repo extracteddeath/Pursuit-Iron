@@ -61,7 +61,7 @@ assert.match(adapter,/function progressionPlanItem\(/,'shell adapter should cent
 assert.match(adapter,/previousStyle,/,'shell progression plan should carry the previous method');
 assert.match(adapter,/changed: previousStyle !== null \? previousStyle !== style : false/,'shell plan should expose a normalized before/after changed flag');
 
-const app = productionSource();
+const app = productionSource() + '\n' + fs.readFileSync(new URL('../modules/program-reference-surfaces.js', import.meta.url), 'utf8');
 assert.match(app,/data-progression-delta/,'progression UI should expose per-lift change/keep status');
 assert.ok(app.includes('Changed: '),'changed methods should be labeled explicitly');
 assert.ok(app.includes('Kept: '),'retained methods should be labeled explicitly');

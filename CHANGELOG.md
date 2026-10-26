@@ -1,3 +1,12 @@
+## Build 918 / M370 — Executable plan details and authored settings validation
+
+- Correct the progression table's week-zero offset. Use canonical session projections for each visible week, include the final week and deload, and show the actual alternating exercise and effort target.
+- Keep Plan Schedule and Volume on the same browsed week; retain the week controls in Volume and restore the selected week after tab navigation. Count actual working sets separately from fractional per-muscle set credits.
+- Refuse newly requested custom-program bodyweight and barbell constraints when existing exercises conflict. Explain the affected day and exercise before Save; retain authored choices and saved training.
+- Validate newly entered block lengths from 1–52 weeks without silently rounding or truncating them. Preserve existing longer durations during metadata edits and keep cycle-owned lengths unchanged.
+- Give Plan Info a persistent Close action, wrapping labels, accessible shared disclosures and responsive progression cards. Consolidate the reference/disclosure presentation in two feature modules and remove 56 inline style objects with no added CSS priorities.
+- Extend existing browser and domain gates for canonical prescription parity, alternating lifts, selected deload volume, settings refusal/save/reload and 320–900px layouts at 200% text. Engine 0.65.9 progression policy, manual prescriptions and historical training remain unchanged.
+
 ## Build 917 / M369 — Release-content ownership and current in-app notes
 
 - Move 201,450 characters of release history out of App.js into one dedicated catalog. Preserve all 248 historical releases, 516 entries, mixed formats and icon references exactly.

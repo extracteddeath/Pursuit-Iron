@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
 import puppeteer from 'puppeteer-core';
-import { program, history } from './m222-custom-program-parity-test.mjs';
+import { program, history, constraints } from './m222-custom-program-parity-test.mjs';
 const root = path.resolve(new URL('../', import.meta.url).pathname);
 const importMap = fs.readFileSync(path.join(root,'index.html'),'utf8').match(/<script type="importmap">[\s\S]*?<\/script>/)[0];
 const snapshot = {schemaVersion:2,programId:program.id,dayId:'push',weekIndex:1,dayExSig:'cable-fly',exIdx:0,elapsedMs:3800000,data:[{id:'cable-fly',slot:0,superset:true,sets:Array.from({length:4},(_,i)=>({weight:i===2?'17.5':'20',reps:'20',done:i===0,auto:i!==1,valueOwner:i===1?'user':'prescription',target:{w:i===2?'25':'20',reps:'10-20',rir:'2',prefillReps:'20'}}))}]};
@@ -18,6 +18,49 @@ const server=http.createServer((req,res)=>{const pathname=new URL(req.url,'http:
 await new Promise(resolve=>server.listen(8776,'127.0.0.1',resolve));let browser;
 try {
     browser=await puppeteer.launch({executablePath:process.env.CHROME_BIN||'/usr/bin/google-chrome',headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
+    // Exercise the authored settings transaction through the actual router and review/save owner.
+    const settingsContext=await browser.createBrowserContext(),settingsPage=await settingsContext.newPage(),settingsErrors=[];
+    settingsPage.on('pageerror',e=>settingsErrors.push(e.message));
+    const authored={...constraints,name:'Authored settings guard',config:{...constraints.config,unit:'lb',split:'custom',session:'s60',days:1,experience:'intermediate'}};
+    await settingsPage.setViewport({width:393,height:852,isMobile:true,hasTouch:true});
+    await settingsPage.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
+    await settingsPage.evaluateOnNewDocument(p=>{if(!localStorage.getItem('m370-settings-seeded')){localStorage.setItem('wpb:v1',JSON.stringify({v:13,savedAt:1,saved:[p],pinnedId:p.id,cycles:[],history:[],perf:{},drafts:{},tombs:{},unit:'lb',unitChosen:true,
+        theme:'rosewater',seenIntro:999,seenWhatsNew:999,installDismissedAt:Date.now(),lastBackup:Date.now()}));localStorage.setItem('m370-settings-seeded','1');}},authored);
+    await settingsPage.goto('http://127.0.0.1:8776/index.html',{waitUntil:'networkidle0'});
+    const store=()=>settingsPage.evaluate(()=>{const s=JSON.parse(localStorage.getItem('wpb:v1'));return {saved:s.saved,history:s.history,drafts:s.drafts,cycles:s.cycles};});
+    const original=await store();await settingsPage.locator('.hp-open').click();await settingsPage.locator('[aria-label="Program settings"]').click();
+    await settingsPage.waitForSelector('[data-testid="program-settings-sheet"]');
+    const clickSetting=async label=>{
+        const handle=await settingsPage.evaluateHandle(label=>[...document.querySelectorAll('[data-testid="program-settings-sheet"] button')].find(n=>n.textContent.trim()===label||n.textContent.trim().startsWith(label)),label);
+        if(!handle.asElement())throw new Error('Settings action missing: '+label);
+        await handle.asElement().evaluate(n=>n.scrollIntoView({block:'center'}));await handle.asElement().click();await handle.dispose();
+    };
+    const assertRefusal=async pattern=>{
+        assert.equal(await settingsPage.$eval('[aria-label="Save program settings"]',n=>n.disabled),true);
+        assert.match(await settingsPage.$eval('#program-settings-issues',n=>n.textContent),pattern);
+        assert.deepEqual(await store(),original,'Refused choices cannot alter saved training or create a program draft');
+    };
+    await clickSetting('Skip bodyweight exercises');await assertRefusal(/Push-Up/);
+    await settingsPage.screenshot({path:path.join(root,'verification/m370-settings-bodyweight-phone.png')});
+    await settingsPage.setViewport({width:320,height:720,isMobile:true,hasTouch:true});
+    await settingsPage.evaluate(()=>document.documentElement.style.fontSize='32px');
+    assert.equal(await settingsPage.$eval('.wpb-program-settings-panel',n=>n.scrollWidth<=n.clientWidth+1),true,'Constraint explanation reflows at 200% text');
+    await clickSetting('Skip bodyweight exercises');await clickSetting('1');await assertRefusal(/2 barbell movements/);
+    await settingsPage.screenshot({path:path.join(root,'verification/m370-settings-barbell-large-phone.png')});
+    await clickSetting('No limit');
+    await settingsPage.evaluate(()=>document.documentElement.style.fontSize='');await settingsPage.setViewport({width:393,height:852,isMobile:true,hasTouch:true});
+    await settingsPage.focus('[aria-label="Block length in weeks"]');await settingsPage.keyboard.down('Control');await settingsPage.keyboard.press('KeyA');await settingsPage.keyboard.up('Control');
+    await settingsPage.keyboard.type('53');assert.equal(await settingsPage.$eval('[aria-label="Save program settings"]',n=>n.disabled),true);
+    assert.equal(await settingsPage.$eval('[aria-label="Block length in weeks"]',n=>n.value),'53','Unsupported input remains editable instead of silently changing to 52');
+    await settingsPage.focus('[aria-label="Block length in weeks"]');await settingsPage.keyboard.down('Control');await settingsPage.keyboard.press('KeyA');await settingsPage.keyboard.up('Control');await settingsPage.keyboard.type('4');
+    await settingsPage.type('#program-settings-description','Reviewed authored settings.');
+    await clickSetting('Save changes');await settingsPage.waitForSelector('[data-testid="program-settings-sheet"]',{hidden:true});
+    await settingsPage.locator('.wpb-program-save').click();await settingsPage.waitForSelector('.wpb-save-review-confirm');await settingsPage.locator('.wpb-save-review-confirm').click();
+    await settingsPage.waitForFunction(id=>JSON.parse(localStorage.getItem('wpb:v1')).saved.find(p=>p.id===id)?.description==='Reviewed authored settings.',{},authored.id);
+    const committed=await store();assert.deepEqual(committed.saved[0].days,original.saved[0].days);assert.deepEqual(committed.saved[0].overrides,original.saved[0].overrides);
+    assert.deepEqual(committed.history,original.history);assert.deepEqual(committed.cycles,original.cycles);
+    await settingsPage.reload({waitUntil:'networkidle0'});assert.equal((await store()).saved[0].description,'Reviewed authored settings.');
+    assert.deepEqual(settingsErrors,[]);await settingsContext.close();
     const page=await browser.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
     await page.setViewport({width:390,height:844,deviceScaleFactor:2,isMobile:true,hasTouch:true});
     await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
@@ -44,5 +87,5 @@ try {
     await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:live')).data[0].sets[3].reps==='13');
     const state=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:live')));assert.equal(state.data[0].sets[3].valueOwner,'user');
     assert.deepEqual(errors,[]);
-    console.log('PASS M222 browser: screenshot Cable Fly targets, LAST evidence, mixed DDP loads/reps, reduced-load floor, protected resume/manual typing, no-superset setting and no runtime exceptions.');
+    console.log('PASS M222 browser: authored settings refuse bodyweight/barbell conflicts and invalid duration without changing training; valid edits save/reload; Cable Fly targets, LAST evidence, mixed DDP loads/reps, protected resume/manual typing and no-superset setting.');
 }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}

@@ -4,7 +4,7 @@ import { generateNextProgramForShell, getNextShellCell, nextExerciseIdForShellEx
 import { avoidableExerciseOverlap } from "../next-engine/exercise-economy.js";
 import { captureShellVolumeSnapshot, auditShellVolume, shellDayMuscleBreakdown } from "../next-engine/volume-repair.js";
 import { historyNumber, convertHistoryLoad, observedHistoryRIR, completedHistorySets, normalizeHistoryEntries, normalizeHistoryRevisions, validHistoryDate, resolveHistoryDayIndex } from '../next-engine/history-contract.js';
-import { cycleBlockMetadata } from "../program-duration.js";
+import { cycleBlockMetadata, editableProgramWeeks } from "../program-duration.js";
 import { SUPPORTED_PHASES, phaseLabel } from '../next-engine/phase-policy.js';
 import { ENGINE_COMPATIBLE_VERSIONS } from "../next-engine/config.js";
 import { ALL_EQUIP_IDS, ENGINE_V, EXERCISES, EX_BY_ID, SESSIONS, SPLITS, expandEquipment } from './catalog.js';
@@ -609,12 +609,58 @@ function techSetTag(cue) {
     return null;
 }
 
-function applyCustomProgramSettings(program, draft) {
-    const weeks = Math.max(1, Math.min(52, Math.round(Number(draft.weeks) || weeksOf(program))));
-    const { folder, description, ...config } = draft;
+function customProgramSettingsIssues(program, draft = {}) {
+    if (program?.custom !== true || program.engineSource === 'pursuit-next') return [];
+    const issues = [];
+    const currentWeeks = weeksOf(program), rawWeeks = draft.weeks ?? currentWeeks;
+    const retainedDuration = /^\d+$/.test(String(rawWeeks)) && Number.isSafeInteger(currentWeeks) && currentWeeks > 0 && Number(rawWeeks) === currentWeeks;
+    const weeks = editableProgramWeeks(rawWeeks);
+    if (weeks == null && !retainedDuration)
+        issues.push({ code: 'weeks', message: 'Enter a whole number of weeks from 1 to 52.' });
+    // Only a newly requested exercise constraint can refuse a change. Unrelated
+    // metadata edits must not reinterpret earlier authored exercise choices.
+    const checkBodyweight = draft.noBodyweight === true && !program.config?.noBodyweight;
+    const checkBarbells = draft.barbellCap != null && draft.barbellCap !== program.config?.barbellCap;
+    const cap = Number(draft.barbellCap);
+    if (checkBarbells && (!Number.isInteger(cap) || cap < 1))
+        issues.push({ code: 'barbell_cap', message: 'Choose a whole-number barbell limit of at least 1, or No limit.' });
+    if (!checkBodyweight && !checkBarbells) return issues;
+    const variants = (weeks ?? currentWeeks) + (program.config?.deload ? 1 : 0) > 1 ? [1, 2] : [1];
+    for (const day of program.days || []) {
+        const bodyweight = new Set(), unavailable = new Set();
+        let worstBarbells = 0, worstWeek = 1;
+        for (const week of variants) {
+            let barbells = 0;
+            for (let slot = 0; slot < (day.exercises || []).length; slot++) {
+                const ex = EX_BY_ID[exerciseAt(program, day, slot, week)];
+                if (!ex) { unavailable.add(slot); continue; }
+                const definition = NEXT_EXERCISE_MAP.get(nextExerciseIdForShellExercise(ex));
+                if (checkBodyweight && (definition?.flags.bodyweight || (ex.equip || []).length === 0)) bodyweight.add(ex.name);
+                if (isBarLike(ex.equip)) barbells++;
+            }
+            if (barbells > worstBarbells) { worstBarbells = barbells; worstWeek = week; }
+        }
+        const label = day.label || 'A training day';
+        if (unavailable.size)
+            issues.push({ code: 'missing_exercise', dayId: day.id, message: `${label} has an unavailable exercise. Replace it before applying exercise constraints.` });
+        if (bodyweight.size)
+            issues.push({ code: 'bodyweight', dayId: day.id, message: `${label} includes bodyweight exercises: ${[...bodyweight].join(', ')}. Swap or remove them before enabling Skip bodyweight exercises.` });
+        if (checkBarbells && Number.isInteger(cap) && cap >= 1 && worstBarbells > cap)
+            issues.push({ code: 'barbell_cap', dayId: day.id, week: worstWeek, message: `${label} contains ${worstBarbells} barbell movements in week ${worstWeek}; the selected limit is ${cap}. Swap or remove a movement first.` });
+    }
+    return issues;
+}
+
+function applyCustomProgramSettings(program, draft = {}) {
+    const issues = customProgramSettingsIssues(program, draft);
+    if (issues.length) throw new RangeError(issues.map(issue => issue.message).join(' '));
+    const weeks = editableProgramWeeks(draft.weeks) ?? weeksOf(program);
+    const { folder = program.folder, description = program.description, ...config } = draft;
     return { ...program, weeks, folder: String(folder || '').trim() || undefined,
         description: description || undefined, config: { ...program.config, ...config, weeks } };
 }
+
+export { customProgramSettingsIssues };
 
 function lastSetEffort(cell, ex, isPrimary, weekIndex, weeks) {
     void ex;

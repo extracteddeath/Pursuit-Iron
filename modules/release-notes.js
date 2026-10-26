@@ -2,6 +2,9 @@
 import { Accessibility, Activity, AlertTriangle, Award, Ban, BarChart3, Brain, Calendar, Check, CheckCircle2, Clock, Dumbbell, Flame, GripVertical, HardDrive, HelpCircle, Home as HomeIcon, Info, Layers, Library, Maximize2, Medal, Milestone, Minus, Palette, Play, Plus, PlusCircle, RefreshCw, Repeat, Save, Search, Settings2, Share2, Shield, Smartphone, Sparkles, Target, Timer, Trash2, TrendingUp, Trophy, Undo2, Wand2, Zap } from 'lucide-react';
 
 export const CHANGELOG = [
+    { version: "4.0.0", build: "926", items: [
+        "Plan's volume load wave now lives in one focused presentation module. Planned-set totals, week numbering and deloads still come from the same training engine."
+    ] },
     { version: "4.0.0", build: "925", items: [
         "Navigation and segment selection now keep neighboring choices steady while the selected indicator moves. Removed competing stretch and button-width animations without changing saved training."
     ] },

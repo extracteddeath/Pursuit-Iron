@@ -79,6 +79,11 @@ def find(pattern, timeout=12):
     return None
 
 
+def seek(pattern, tries=8):
+    """Find something on a long page from wherever it is scrolled: up first, then down."""
+    return scroll_up_to(pattern, tries=tries) or scroll_to(pattern, tries=tries + 4)
+
+
 def row_scroll_to(pattern, anchor, tries=4):
     """A horizontally scrolling row (the Plan action row): swipe it left at the anchor's height until pattern shows."""
     for _ in range(tries):
@@ -439,6 +444,7 @@ else:
 scroll_up_to(r"^\|Edit program$|Review block", tries=10)
 row_scroll_to(r"^\|Settings$", r"Review block|^\|Schedule$|^\|Cycle$")
 tap(r"^\|Settings$", "program-settings")
+find(r"Training goal|set by its training cycle", timeout=15)
 if scroll_to(r"^Lift progression|\|Lift progression", tries=8, step=600):
     tap(r"^Lift progression|\|Lift progression", "lift-progression")
     if not find(r"Pursuit chose per exercise|re-checked|locked by your choices", timeout=5):
@@ -545,6 +551,7 @@ if tap(r"^\|Rep PRs$", "rep-prs", required=False):
 scroll_to(r"Achievements")
 shot("profile-achievements")
 # The design's badges: tap one for what it takes
+scroll_to(r"Century, (earned|\d+ percent)", tries=4, step=500)
 if tap(r"Century, (earned|\d+ percent)", "badge-open", required=False):
     if not find(r"Log 100 training sessions", timeout=3):
         FAILS.append("badge detail missing")
@@ -584,10 +591,11 @@ tap(r"^\|You$|^You\|")
 time.sleep(1.2)
 scroll_up_to(r"^\|Settings$", tries=14)
 tap(r"^\|Settings$", "settings")
+scroll_to(r"^\|lb$", tries=6, step=500)
 if tap(r"^\|lb$", "unit-confirm"):
     tap(r"^\|Switch$", "unit-switched")
 # 7a. Looks: pick a colour theme and dark mode, then put Ember and System back
-if scroll_to(r"^Lime theme", tries=8, step=600):
+if seek(r"^Lime theme"):
     tap(r"^Lime theme", "theme-lime")
     tap(r"^\|Dark$", "theme-dark")
     if not find(r"^\|Pure black$", timeout=4):
@@ -605,11 +613,11 @@ if scroll_to(r"^\|Reminders$", tries=8):
         FAILS.append("reminders sheet missing its switch"); back()
 else:
     FAILS.append("no Reminders row in settings")
-if scroll_to(r"^\|Gyms$"):
+if seek(r"^Manage gyms"):
     tap(r"^Manage gyms", "gyms-sheet")
     back()
 # The design's Comfort & accessibility panel: text size and the haptic vocabulary
-if scroll_to(r"^\|Comfort & accessibility$", tries=8):
+if seek(r"^\|Comfort & accessibility$"):
     tap(r"^\|Comfort & accessibility$", "comfort")
     if not find(r"HAPTIC PATTERNS", timeout=4):
         FAILS.append("comfort panel missing")
@@ -618,7 +626,7 @@ if scroll_to(r"^\|Comfort & accessibility$", tries=8):
     back()
 else:
     FAILS.append("no Comfort & accessibility row")
-if scroll_to(r"^\|e1RM calculator$", tries=10):
+if seek(r"^\|e1RM calculator$"):
     shot("e1rm-calc")
 else:
     FAILS.append("no e1RM calculator in settings")
@@ -661,7 +669,8 @@ tap(r"^\|Today$|^Today\|", "today-lb")
 
 # 8. Training cycle: build one, open it, try to advance
 tap(r"^\|Plan$|^Plan\|")
-scroll_up_to(r"^\|New$", tries=10)
+scroll_up_to(r"^\|Edit program$|Review block|^\|New$", tries=10)
+row_scroll_to(r"^\|New$", r"Review block|^\|Settings$|^\|Details$|^\|Schedule$", tries=6)
 if tap(r"^\|New$") and tap(r"^\|Cycle$", "cycle-setup"):
     scroll_to(r"Adapt between blocks")
     shot("cycle-templates")
@@ -702,7 +711,7 @@ if tap(r"Edit program", "editor"):
                 time.sleep(1.5)
                 shot("custom-added")
     if tap(r"^\|Save$", "editor-scope"):
-        tap(r"^\|This block$", "editor-saved")
+        tap(r"^\|This block$", "editor-saved", required=False)  # asked only for a block in a cycle
     if tap(r"^Program settings\|", "program-settings"):
         back()
     back()
@@ -736,7 +745,8 @@ if scroll_to(r"^\|Injury log$", tries=10):
 
 # Template with percentages: build, then set training maxes
 tap(r"^\|Plan$|^Plan\|")
-scroll_up_to(r"^\|New$", tries=10)
+scroll_up_to(r"^\|Edit program$|Review block|^\|New$", tries=10)
+row_scroll_to(r"^\|New$", r"Review block|^\|Settings$|^\|Details$|^\|Schedule$", tries=6)
 if tap(r"^\|New$"):
     if tap(r"^\|Template$", "templates"):
         tap(r"Search 75 templates|Search \d+ templates")

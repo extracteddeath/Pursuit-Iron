@@ -1,3 +1,10 @@
+## Build 927 / M380 — One owner for volume presentation and accessible drilldowns
+
+- Extract shared muscle-volume bars and block-volume ramp into `modules/program-volume-surfaces.js`. Plan, Program and Progress use exactly one renderer and the unchanged canonical engine callbacks for zone thresholds, working sets and fractional muscle credits.
+- Replace pointer-only volume-contributor headings with native keyboard-operable controls, accessible labels, `aria-expanded`, and focus-visible styling. Logged-history rows remain ordinary non-interactive labels.
+- Retire obsolete historical volume-zone design commentary but preserve the MEV/MAV/MRV boundaries and composite-head MRV guard.
+- Extend existing R53 Plan browser contract with Enter and Space toggling and no saved-data mutation. All existing engine, lifecycle, program/workout, accessibility, responsive, offline and hosted integrity gates remain required; real Android/TalkBack acceptance is separate.
+
 ## Build 926 / M379 — Single-owner Plan load-wave presentation
 
 - Extract the Plan Blueprint **Volume load wave** from the oversized App owner into `modules/program-load-wave.js` without duplicating prescriptions, week counts, or training state. Pass only the existing palette from App; get planned sets from the unchanged canonical engine.

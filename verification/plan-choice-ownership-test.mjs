@@ -40,7 +40,7 @@ console.log('PASS M355: Program muscle priority dose, direct exercises and week 
 
 // M358: reuse ProgramView's memoized selected-week volume instead of
 // recalculating the same expensive weekly projection for the priority explanation.
-const programView = app.slice(app.indexOf('function ProgramView('),app.indexOf('function ShareProgramSheet('));
+const programView = app.slice(app.indexOf('function ProgramView('),app.indexOf('function ContinuousWave('));
 assert.ok(programView.includes('const wkVol = useMemo(() => weeklyVolume(program, activeWeek), [program, activeWeek]);'),
   'selected-week program volume must have a memoized owner');
 assert.equal((programView.split('weeklyVolume(program, ').slice(1)).length,1,

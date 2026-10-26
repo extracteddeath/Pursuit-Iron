@@ -6,6 +6,7 @@ import { CHANGELOG } from './release-notes.js';
 import { UiHeader, UiRootHeader, UiAction, UiChoice, UiStatus, UiSection } from './ui-primitives.js';
 import { ProgramSettingsSheet } from './program-settings-sheet.js';
 import { LoadWaveCard } from './program-load-wave.js';
+import { ShareProgramSheet } from './program-share-sheet.js';
 import { VolumeBars, VolumeRampTable } from './program-volume-surfaces.js';
 import { WeeklyScheduleSheet } from './program-schedule-sheet.js';
 import { ProgramRevisionReview, ProgramLayoutHistory, ProgramSaveReview } from './program-review-surfaces.js';
@@ -27,7 +28,7 @@ import {
     engineInfo, ENGINES, EQUIP_CATS, EQUIPMENT, estimateMinutes, EX_BY_ID, EX_FAMILY, EX_METRIC_BY_ID,
     EX_METRICS, EX_WINDOWS, exerciseAt, exerciseProfile, EXERCISES, exerciseSeries, exerciseTrends, exMatches,
     EXP, expandEquipment, explainPrescription, exRecords, feedbackDelta, filterWorkoutHistory, fmtSets,
-    FOCUS_CAVEAT, formatSetup, galleryIssueBody, gallerySubmission, generateNextCycleForShell,
+    FOCUS_CAVEAT, formatSetup, generateNextCycleForShell,
     generateNextProgramForShell, GENERATION_ROUTE, getNextShellCell, goalForDay, groupPctSets,
     groupSessionsByCycle, groupSessionsByMonth, growMyoSets, GYM_LIMIT_KEYS, GYM_PRESETS, gymById,
     historyDayIndex, historyForProgram, homeProgramGroups, INVENTORY_KEYS, isAssistedEx, isBarLike,
@@ -67,7 +68,7 @@ import { readCycleSetupDraft, writeCycleSetupDraft, clearCycleSetupDraft, CYCLE_
 import { INJURY_AREAS, INJURY_IMPACTS, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
 import { withProgressionChoices, workoutProgressionOrigin, withWorkoutProgramReview, repeatedNote, refreshProgressionSets, exerciseSessionTags, workoutProgramChanges, buildSessionReview, workoutRowMatchesPrescription, beginWorkoutProgramSwap, undoWorkoutProgramSwap } from './session-tools.js';
 import { reviewProgramChanges, programReviewKey, withProgramRevision } from './program-review.js';
-const __APP_VERSION__='4.0.0'; const __BUILD__='929';
+const __APP_VERSION__='4.0.0'; const __BUILD__='930';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { createPortal } from "../vendor/react-dom.js";
@@ -1734,9 +1735,9 @@ function StyleTag({ theme } = {}) {
           width:min(680px,calc(100% - 32px))!important;
           margin-left:auto!important;margin-right:auto!important;margin-bottom:16px!important;
           border-radius:var(--r-sheet)!important;
-          max-height:calc(100dvh - 32px)!important;
           border:1px solid var(--hairline)!important;
         }
+        .wpb-backdrop>[data-sheet-drag]:not(.wpb-program-share-panel){max-height:calc(100dvh - 32px)!important;}
       }
 
       /* Screen-specific de-cardification. These are deliberate exceptions where grouped rows read
@@ -2253,12 +2254,12 @@ function StyleTag({ theme } = {}) {
       .wpb [data-sheet-drag]{
         overscroll-behavior:contain;scroll-padding-top:20px;
         scroll-padding-bottom:calc(96px + env(safe-area-inset-bottom));
-        max-height:calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 10px)!important;
         border-radius:18px 18px 0 0!important;
         transform:translateZ(0);backface-visibility:hidden;
       }
-      .wpb [data-sheet-drag][data-detent="content"]{max-height:min(68dvh,540px)!important;}
-      .wpb [data-sheet-drag][data-detent="large"]{max-height:calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 10px)!important;}
+      .wpb [data-sheet-drag]:not(.wpb-program-share-panel){max-height:calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 10px)!important;}
+      .wpb [data-sheet-drag][data-detent="content"]:not(.wpb-program-share-panel){max-height:min(68dvh,540px)!important;}
+      .wpb [data-sheet-drag][data-detent="large"]:not(.wpb-program-share-panel){max-height:calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 10px)!important;}
       .wpb [data-sheet-drag][data-dragging="1"]{box-shadow:0 -18px 48px rgba(0,0,0,.22);}
       .wpb [data-sheet-drag] :is(input,textarea,select){scroll-margin-top:68px;scroll-margin-bottom:140px;}
       .wpb [data-sheet-drag]::before{width:36px;height:4px;margin-bottom:10px;opacity:.9;}
@@ -6504,57 +6505,6 @@ function Stepper({ value, onMinus, onPlus, plusDisabled, label = "value" }) {
 // Maps each week of a non-percentage block to a phase with a one-line "why".
 
 
-// Render a program as clean, shareable plain text (sets × reps @ effort, with grouping).
-function programToText(program, loadMode = "rir", unit = "kg") {
-    const cfg = program.config || {};
-    const splitName = SPLITS[cfg.split]?.name || cfg.split || "Custom";
-    const goalName = (GOALS[cfg.goal]?.name) || cfg.goal || "";
-    const scheme = cfg.percentScheme;
-    const wk = weeksOf(program);
-    const L = [];
-    L.push(program.name || "My Program");
-    L.push(`${splitName} · ${program.days.length} days/week${goalName ? " · " + goalName : ""} · ${wk}-week block`);
-    if ((program.description || "").trim())
-        L.push(program.description.trim());
-    if (scheme && PCT_SCHEMES[scheme])
-        L.push(`Main lifts use ${PCT_SCHEMES[scheme].name} percentages of ${PCT_SCHEMES[scheme].basis}.`);
-    L.push("");
-    program.days.forEach((day) => {
-        L.push(day.label || "Day");
-        if (day.note)
-            L.push(`  — ${day.note}`);
-        day.exercises.forEach((id, slot) => {
-            const ex = EX_BY_ID[id];
-            if (!ex)
-                return;
-            const grouped = program.ss?.[`${day.id}:${slot}`] || (slot > 0 && program.ss?.[`${day.id}:${slot - 1}`]);
-            const bullet = grouped ? "   ↳" : `  ${slot + 1}.`;
-            // main lift of a percentage program → print the weekly waves
-            if (scheme && PCT_SCHEMES[scheme] && slot === day.primaryIndex) {
-                const S = PCT_SCHEMES[scheme];
-                const tm = program.trainingMax?.[id] || 0;
-                L.push(`${bullet} ${ex.name} — ${S.name} main lift${tm > 0 ? ` · TM ${tm}${unit}` : ""}`);
-                const wkCount = scheme === "531" ? S.weeks.length : Math.min(wk, 4);
-                for (let w = 1; w <= wkCount; w++) {
-                    const wave = scheme === "531" ? S.weeks[w - 1] : S.weeks[0];
-                    const mult = scheme === "madcow" && w > 1 ? 1 + 0.025 * (w - 1) : 1;
-                    const parts = wave.sets.map(([pct, reps]) => tm > 0 ? `${roundTo(tm * pct * mult, loadStep(ex, unit))}×${reps}` : `${Math.round(pct * 100)}%×${reps}`);
-                    const wlabel = scheme === "531" ? `W${w} (${wave.label})` : `Wk ${w}`;
-                    L.push(`       ${wlabel}: ${parts.join(" · ")}`);
-                }
-                if (cfg.assistance === "bbb")
-                    L.push(`       + BBB supplemental: 5 × ${tm > 0 ? `${roundTo(tm * 0.5, loadStep(ex, unit))}×10` : "50%×10"}`);
-                return;
-            }
-            const cell = computeCell(program, day, id, slot, 1);
-            const eff = cell.rir != null ? ` @ ${effortLabel(cell.rir, loadMode)}` : (cell.range ? " to failure" : "");
-            L.push(`${bullet} ${ex.name} — ${cell.sets} × ${cell.range}${eff}`);
-        });
-        L.push("");
-    });
-    L.push("Made with Pursuit Iron — Strength Coach");
-    return L.join("\n");
-}
 // Header metrics for ProgramView, hoisted out of the markup because the scroll-collapse animation
 // below has to do arithmetic with them: the collapsed gap under the title is derived from the top
 // padding so the block stays optically balanced. Editing the padding in the style below alone would
@@ -6783,7 +6733,7 @@ function PlanView({ program, plan, blockNavigation = null, readOnly = false, nav
                     return null;
                 const tone = wi.deload ? (C.warn || C.accent) : C.accent;
                 return (_jsxs(UiStatus, { "data-week-intent": wi.label, style: { display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 12, padding: "4px 0 10px", background: "none", border: "none", borderBottom: `1px solid ${C.borderSoft}`, borderRadius: 0 }, children: [_jsx(Activity, { size: 14, color: tone, style: { flexShrink: 0, marginTop: 1 } }), _jsxs("div", { style: { fontSize: 13, color: C.text, lineHeight: 1.5 }, children: [_jsx("span", { style: { fontWeight: 700 }, children: wi.label }), _jsxs("span", { style: { color: C.muted }, children: [" \u00B7 ", wi.detail] })] })] }));
-            })(), pane === "schedule" && featuredWeek && _jsx("section", { className: "wpb-plan-selected-week", "aria-label": "Selected week sessions", children: renderWeekCard(featuredWeek) }), pane === "volume" && featuredWeek && (_jsx(VolumeCard, { program: program, week: featuredWeek.week, volume: weeklyVolume(program, featuredWeek.week), subVolume: weeklySubVolume(program, featuredWeek.week), title: `Week ${featuredWeek.week} volume`, open: volOpen, onToggle: () => setVolOpen(v => !v) })), pane === "progression" && _jsx(ProgressionCard, { program: program, open: progOpen, onToggle: () => setProgOpen(v => !v) }), pane === "blueprint" && (_jsxs(_Fragment, { children: [_jsx(LoadWaveCard, { program: program, palette: C, open: waveOpen, onToggle: () => setWaveOpen(v => !v) }), (() => {
+            })(), pane === "schedule" && featuredWeek && _jsx("section", { className: "wpb-plan-selected-week", "aria-label": "Selected week sessions", children: renderWeekCard(featuredWeek) }), pane === "volume" && featuredWeek && (_jsx(VolumeCard, { program: program, week: featuredWeek.week, volume: weeklyVolume(program, featuredWeek.week), subVolume: weeklySubVolume(program, featuredWeek.week), title: `Week ${featuredWeek.week} volume`, open: volOpen, onToggle: () => setVolOpen(v => !v) })), pane === "progression" && _jsx(ProgressionCard, { program: program, open: progOpen, onToggle: () => setProgOpen(v => !v) }), pane === "blueprint" && (_jsxs(_Fragment, { children: [_jsx(LoadWaveCard, { program: program, open: waveOpen, onToggle: () => setWaveOpen(v => !v) }), (() => {
                         const bp = blockPlanFor(program);
                         if (!bp)
                             return null;
@@ -6858,8 +6808,6 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
         return 1;
     } };
     const [weekIndex, setWeekIndex] = useState(initialWeek || currentTrainingWeek());
-    // M46 lab: legacy PI share-code generation is intentionally absent; Next-native sharing will
-    // serialize Engine 0.61 artifacts directly rather than replaying the removed production generator.
     // ProgramView is reused (not remounted) when the user navigates from one saved program back
     // to home and opens a DIFFERENT one — the parent swaps the program prop in place rather than
     // unmounting this component. Without re-syncing here, weekIndex's useState initializer (which
@@ -8342,7 +8290,7 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
                     };
                     return (_jsx("div", { onClick: () => setOneRmEdit(null), className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.65)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 75, animation: "fadeIn .2s both", padding: 24 }, children: _jsxs("div", { onClick: e => e.stopPropagation(), className: "wpb-pop", style: { width: "100%", maxWidth: 320, background: C.bg2, borderRadius: 16, padding: 20, border: `1px solid ${C.border}` }, children: [_jsxs("div", { style: { fontSize: 15, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }, children: [_jsx(Dumbbell, { size: 17, color: C.accentInk }), " Set from 1RM"] }), _jsxs("div", { style: { fontSize: 13, color: C.muted, marginTop: 2, marginBottom: 16 }, children: [ex?.name, " \u2014 enter a recent one-rep max; the training max is set to 90% of it."] }), _jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }, children: [_jsx("input", { "aria-label": "One-rep max", inputMode: "decimal", onFocus: selectNumericInput, onClick: selectNumericInput, value: oneRmEdit.val, autoFocus: true, onChange: e => setOneRmEdit(o => ({ ...o, val: e.target.value.replace(/[^0-9.]/g, "") })), onKeyDown: e => { if (e.key === "Enter")
                                                 commit(); }, className: "mono", style: { flex: 1, padding: "12px 14px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: 18, fontWeight: 600, textAlign: "center" } }), _jsx("span", { style: { fontSize: 15, color: C.muted, fontWeight: 600 }, children: unit })] }), _jsx("div", { style: { fontSize: 13, color: tm ? C.accentInk : C.faint, fontWeight: 600, marginBottom: 12, minHeight: 16 }, className: "mono", children: tm ? `→ training max ${tm} ${unit}` : " " }), _jsx("button", { onClick: commit, disabled: !(n > 0), className: "pressable", style: { width: "100%", padding: "13px", borderRadius: 12, border: "none", background: n > 0 ? C.accent : C.card, color: n > 0 ? C.accentText : C.faint, fontSize: 15, fontWeight: 700, cursor: n > 0 ? "pointer" : "default" }, children: "Set training max" }), _jsx("button", { onClick: () => setOneRmEdit(null), className: "pressable", style: { width: "100%", padding: "11px", marginTop: 8, borderRadius: 12, border: `1px solid ${C.border}`, background: "none", color: C.muted, fontSize: 15, fontWeight: 600, cursor: "pointer" }, children: "Cancel" })] }) }));
-                })() }), _jsx(Exit, { when: shareSheet, children: shareSheet && (_jsx(ShareProgramSheet, { program: program, shareCode: shareCode, loadMode: loadMode, unit: unit, onClose: () => setShareSheet(false) })) }), _jsx(Exit, { when: iconSheet, children: _jsx(IconPickerSheet, { open: iconSheet, current: program.icon, currentColor: program.iconColor, title: "Program icon", onClose: () => setIconSheet(false), onPick: (key) => setProgram(p => ({ ...p, icon: key })), onPickColor: (key) => setProgram(p => ({ ...p, iconColor: key })) }) }), dayOpts && (() => {
+                })() }), _jsx(Exit, { when: shareSheet, children: shareSheet && (_jsx(ShareProgramSheet, { program: program, shareCode: shareCode, weekIndex: activeWeek, history: history, sheetDragRef: sheetDragRef, loadMode: loadMode, unit: unit, onClose: () => setShareSheet(false) })) }), _jsx(Exit, { when: iconSheet, children: _jsx(IconPickerSheet, { open: iconSheet, current: program.icon, currentColor: program.iconColor, title: "Program icon", onClose: () => setIconSheet(false), onPick: (key) => setProgram(p => ({ ...p, icon: key })), onPickColor: (key) => setProgram(p => ({ ...p, iconColor: key })) }) }), dayOpts && (() => {
                 const day = program.days.find(d => d.id === dayOpts.id);
                 if (!day)
                     return null;
@@ -8500,80 +8448,6 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
                 return (_jsx("div", { style: { position: "absolute", left: 0, right: 0, bottom: 22, display: "flex", justifyContent: "center", zIndex: 70, pointerEvents: "none", padding: "0 18px" }, children: _jsxs("div", { style: { background: C.text, color: C.bg, fontSize: 13, fontWeight: 600, padding: "11px 16px", borderRadius: 12, maxWidth: "100%", boxShadow: "0 8px 24px rgba(0,0,0,.35)", animation: "fadeIn .18s both", display: "flex", alignItems: "center", gap: 8, pointerEvents: "auto" }, children: [_jsx("span", { style: { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: tmsg }), tundo && _jsx("button", { onClick: tundo, className: "pressable", style: { background: "none", border: "none", color: C.bg, fontSize: 13, fontWeight: 800, textDecoration: "underline", textUnderlineOffset: 2, cursor: "pointer", flexShrink: 0, padding: "0 2px" }, children: "Undo" })] }) }));
             })()] }));
 }
-/* ═══ SHARE PROGRAM SHEET ═════════════════════════════════════════════════════════════════════
- * Extracted from ProgramView at v633. It owns its two transient "Copied ✓" flags — they are pure
- * UI state with no meaning outside this sheet, and leaving them on ProgramView was two of its
- * ~40 useStates existing only to feed a sheet. `shareCode` stays a prop: it is a memo of the
- * PROGRAM, and encodeProgramCode returning null (a program the schema cannot carry) is a fact
- * about the program, not about this sheet. */
-function ShareProgramSheet({ program, shareCode, loadMode, unit, onClose }) {
-    const [shareCopied, setShareCopied] = useState(false);
-    const [codeCopied, setCodeCopied] = useState(false);
-    const text = programToText(program, loadMode, unit);
-    const copy = async () => {
-        try {
-            await navigator.clipboard.writeText(text);
-            setShareCopied(true);
-        }
-        catch {
-            setShareCopied(false);
-        }
-    };
-    return (_jsx("div", { "data-testid": "share-program-sheet", onClick: () => onClose(), className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "flex-end", zIndex: 70, animation: "fadeIn .2s both" }, children: _jsxs("div", { ref: sheetDragRef, onClick: e => e.stopPropagation(), style: { width: "100%", background: C.bg2, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: "10px 18px calc(env(safe-area-inset-bottom) + 26px)", animation: "sheetUp .28s cubic-bezier(.2,.7,.3,1) both", borderTop: `1px solid ${C.border}` }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }, children: [_jsx("div", { style: { fontSize: 18, fontWeight: 700 }, children: "Share program" }), _jsx("button", { "aria-label": "Close", className: "pressable hit wpb-sheet-close", onClick: () => onClose(), style: iconBtn(), children: _jsx(X, { size: 18 }) })] }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginBottom: 12 }, children: "Copy this plain-text plan to send to anyone \u2014 sets \u00D7 reps and target effort for each lift." }), (() => {
-                    const code = shareCode;
-                    if (!code)
-                        return (_jsx("div", { style: { fontSize: 13, color: C.faint, marginBottom: 12, lineHeight: 1.5, padding: "10px 12px", borderRadius: 12, background: C.card }, children: "This program uses custom tweaks a short code can't carry \u2014 send the plain-text plan below instead." }));
-                    return (_jsxs("div", { style: { marginBottom: 12 }, children: [_jsx("div", { style: { ...eyebrow(), marginBottom: 6 }, children: "Program code" }), _jsxs("button", { "aria-label": "Copy program code", onClick: () => {
-                                    try {
-                                        navigator.clipboard?.writeText(code);
-                                    }
-                                    catch { }
-                                    try {
-                                        const ta = document.createElement("textarea");
-                                        ta.value = code;
-                                        ta.style.position = "fixed";
-                                        ta.style.opacity = "0";
-                                        document.body.appendChild(ta);
-                                        ta.select();
-                                        document.execCommand("copy");
-                                        document.body.removeChild(ta);
-                                    }
-                                    catch { }
-                                    setCodeCopied(true);
-                                    setTimeout(() => setCodeCopied(false), 1600);
-                                }, className: "pressable", style: { display: "flex", alignItems: "center", gap: 8, width: "100%", textAlign: "left", padding: "12px 14px", borderRadius: 12, background: C.accentDim, border: `1px solid ${C.accent}44`, color: C.text, cursor: "pointer" }, children: [_jsx("div", { className: "mono", style: { flex: 1, minWidth: 0, fontSize: 15, fontWeight: 700, letterSpacing: .5, overflow: "hidden", textOverflow: "ellipsis" }, children: code }), codeCopied ? _jsx(Check, { size: 15, color: C.accentInk }) : _jsx(Copy, { size: 15, color: C.accentInk })] }), _jsxs("div", { style: { fontSize: 13, color: C.muted, marginTop: 6, lineHeight: 1.5 }, children: ["Anyone can paste this into ", _jsx("b", { children: "Settings \u2192 Add a shared program" }), " and get this exact program \u2014 their own settings don't matter."] }), _jsxs("button", { onClick: () => {
-                                    const sub = gallerySubmission(program);
-                                    if (!sub.ok)
-                                        return;
-                                    const body = galleryIssueBody(sub);
-                                    let slug = "extracteddeath/pursuit-iron";
-                                    try {
-                                        const host = location.hostname;
-                                        const owner = host.endsWith(".github.io") ? host.split(".")[0] : null;
-                                        const seg = location.pathname.split("/").filter(Boolean)[0] || null;
-                                        if (owner && seg)
-                                            slug = `${owner}/${seg}`;
-                                    }
-                                    catch { }
-                                    const url = `https://github.com/${slug}/issues/new?labels=gallery-submission&title=${encodeURIComponent("Gallery: " + (program.name || "program"))}&body=${encodeURIComponent(body)}`;
-                                    try {
-                                        window.open(url, "_blank", "noopener");
-                                    }
-                                    catch {
-                                        try {
-                                            location.href = url;
-                                        }
-                                        catch { }
-                                    }
-                                }, className: "pressable", style: { width: "100%", marginTop: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "12px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.text, cursor: "pointer", fontSize: 15, fontWeight: 600 }, children: [_jsx(Layers, { size: 15, color: C.accentInk }), " Submit to the gallery"] }), _jsx("div", { style: { fontSize: 11, color: C.faint, marginTop: 6, lineHeight: 1.5 }, children: "Opens a pre-filled submission with the code and a decoded preview of the lifts. A maintainer reviews it before it shows up in Browse." })] }));
-                })(), _jsx("textarea", { readOnly: true, value: text, onFocus: e => e.target.select(), className: "wpb-scroll mono", style: { width: "100%", height: 200, padding: "12px 14px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: 13, lineHeight: 1.5, resize: "none", marginBottom: 12 } }), _jsxs("button", { "aria-label": "Copy plain text", onClick: copy, className: "pressable", style: { width: "100%", padding: "14px", borderRadius: 12, border: "none", background: C.accent, color: C.accentText, fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }, children: [_jsx(Copy, { size: 16 }), " ", shareCopied ? "Copied ✓" : "Copy to clipboard"] })] }) }));
-}
-/* ═══ WEEKLY SCHEDULE SHEET ═══════════════════════════════════════════════════════════════════
- * Extracted from ProgramView at v632. The schedule is a real generation input, not decoration:
- * `plannedGapHours` reads it (v587) and rotation follows it (v578), so a mis-assigned weekday
- * shows up later as sets trimmed for "training ahead of plan". Props are the contract; the tap
- * behaviour (rest → day 1 → … → last day → rest) stays with the owner as `onCycle`, because it
- * is a setProgram reducer and this component owns no state. No hooks inside. */
 // Continuous-mode phase indicator: the finite week-pill strip doesn't fit an endless program, so
 // render the training wave itself — accumulation weeks building up, an automatic deload, then a loop
 // back to the start. Each phase is still tappable to preview that week's prescription, the active

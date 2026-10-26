@@ -2,6 +2,11 @@
 import { Accessibility, Activity, AlertTriangle, Award, Ban, BarChart3, Brain, Calendar, Check, CheckCircle2, Clock, Dumbbell, Flame, GripVertical, HardDrive, HelpCircle, Home as HomeIcon, Info, Layers, Library, Maximize2, Medal, Milestone, Minus, Palette, Play, Plus, PlusCircle, RefreshCw, Repeat, Save, Search, Settings2, Share2, Shield, Smartphone, Sparkles, Target, Timer, Trash2, TrendingUp, Trophy, Undo2, Wand2, Zap } from 'lucide-react';
 
 export const CHANGELOG = [
+    { version: "4.0.0", build: "930", items: [
+        "Share as text matches the week you selected, including alternating exercises, deloads and percentage loads.",
+        "Sharing keeps Close and Copy within reach at larger text sizes and reports when clipboard access fails.",
+        "Plan load-wave labels follow your text size and support keyboard scrolling."
+    ] },
     { version: "4.0.0", build: "929", items: [
         "Volume headings are easier to tap, contributor text follows your text size, and long session names reflow above exercise names on compact screens.",
         "Muscle labels remain visible while you scroll block weeks, including by keyboard. Volume details respect reduced motion and accessible focus."

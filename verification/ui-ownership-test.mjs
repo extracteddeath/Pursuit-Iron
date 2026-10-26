@@ -15,11 +15,12 @@ const disclosures = fs.readFileSync('modules/ui-disclosure.js', 'utf8');
 const programReference = fs.readFileSync('modules/program-reference-surfaces.js', 'utf8');
 const programVolume = fs.readFileSync('modules/program-volume-surfaces.js', 'utf8');
 const loadWave = fs.readFileSync('modules/program-load-wave.js', 'utf8');
-const presentationSource = disclosures + '\n' + programReference + '\n' + releaseNotes + '\n' + primitives + '\n' + app + '\n' + programReview + '\n' + programSchedule + '\n' + programSettings + '\n' + backupPanel + '\n' + programVolume + '\n' + loadWave;
+const programShare = fs.readFileSync('modules/program-share-sheet.js', 'utf8');
+const presentationSource = disclosures + '\n' + programReference + '\n' + releaseNotes + '\n' + primitives + '\n' + app + '\n' + programReview + '\n' + programSchedule + '\n' + programSettings + '\n' + backupPanel + '\n' + programVolume + '\n' + loadWave + '\n' + programShare;
 const MAX_IMPORTANT = 2360; // M291: consolidate the remaining Profile style owners
 const MAX_APP_IMPORTANT = 1229; // M292: retire ten superseded Progress priority declarations.
 const MAX_REPEAT_IMPORTANT = 15; // M288: at-rule comments no longer erase media/container scope.
-const MAX_INLINE_STYLE_OBJECTS = 2518; // M382: include both extracted volume owners; retire 38 static style objects.
+const MAX_INLINE_STYLE_OBJECTS = 2499; // M383: include sharing; retire its static styles and four load-wave styles.
 
 // M367: Settings is a named, keyboard-focusable dialog with explicit labels and state.
 for(const role of ['backdrop','panel','heading','title','close','intro','field-label','field','description','footer','cancel','save'])
@@ -89,6 +90,10 @@ function guard(cssText, appText) {
     return { important, appImportant, inline, duplicates: duplicates.length, legacyOwners: new Set(duplicates).size };
 }
 const report = guard(css, presentationSource);
+
+assert.ok(!programShare.includes('style:') && !programShare.includes('C.'), 'Program sharing uses the shared CSS owner');
+assert.ok(!app.includes('function ShareProgramSheet(') && !app.includes('function programToText('), 'One selected-week sharing owner');
+assert.ok(programShare.includes('sessionPrescriptionRows(program, day, weekIndex)') && programShare.includes('daysInWeek(program, weekIndex)'), 'Shared text reads canonical selected-week prescriptions');
 
 for (const name of ['InfoCard','MotionReveal']) {
     assert.equal((app.match(new RegExp('function '+name+'\\(', 'g')) || []).length, 0, 'No duplicate disclosure owner in App');

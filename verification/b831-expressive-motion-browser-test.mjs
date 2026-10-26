@@ -684,17 +684,19 @@ try {
                 navPill.oldPill==='none' && navPill.oldUnderline==='none',
                 'R38 one opaque tonal indicator replaces translucent hollow pill: '+JSON.stringify(navPill));
             if (tab === 'progress') {
-                // Selected group indicator springs independently from actual
-                // button hit targets, and settles to an unscaled resting pill.
-                await page.waitForFunction(() => {
-                    const bar=document.querySelector('.wpb-tabbar[data-pi-m3-track]');
-                    return bar?.style.getPropertyValue('--pi-m3-track-stretch') === '1';
-                }, { timeout: 5000 });
-                assert.ok(await page.$eval('.wpb-tabbar', bar => {
+                // M378: the indicator itself moves to the selected tab.
+                // No extra stretch/corner spring should compete with it, and
+                // native navigation targets must retain their full hit area.
+                assert.ok(await page.$eval('.wpb-tabbar[data-pi-m3-track]', bar => {
                     const item = bar.querySelector('[aria-current="page"]');
+                    if (!item) return false;
+                    const expected = Math.min(60, item.offsetWidth * .78);
+                    const painted = parseFloat(bar.style.getPropertyValue('--pi-m3-track-width'));
                     return item.getBoundingClientRect().height >= 44 &&
-                        parseFloat(bar.style.getPropertyValue('--pi-m3-track-corner')) >= 17.9;
-                }), 'R9 selection flex retains real navigation tap geometry');
+                        Math.abs(painted - expected) < .8 &&
+                        !bar.style.getPropertyValue('--pi-m3-track-stretch') &&
+                        !bar.style.getPropertyValue('--pi-m3-track-corner');
+                }), 'M378 retains stable navigation hit geometry and one measured indicator');
             }
             if (tab === 'plan') {
                 const tonal = await tonalSurfaceReport({

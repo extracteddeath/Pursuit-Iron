@@ -1390,7 +1390,7 @@ try {
             return first?.getAttribute('aria-selected')==='true' &&
                 Math.abs(parseFloat(group.style.getPropertyValue('--pi-m3-track-x'))-first.offsetLeft)<.12 &&
                 Math.abs(parseFloat(group.style.getPropertyValue('--pi-m3-track-width'))-first.offsetWidth)<.12 &&
-                parseFloat(first.style.getPropertyValue('--pi-choice-grow'))>1.18;
+                !first.style.getPropertyValue('--pi-choice-grow');
         },{timeout:5000});
         const beforeTrack = await page.$eval('.wpb-progress .wpb-premium-tabs', el => ({
             x: Number.parseFloat(el.style.getPropertyValue('--pi-m3-track-x')),
@@ -1407,7 +1407,7 @@ try {
             return selected?.textContent?.trim() === 'Lifts' &&
                 Math.abs(Number.parseFloat(group.style.getPropertyValue('--pi-m3-track-x')) - selected.offsetLeft) < .08 &&
                 Math.abs(Number.parseFloat(group.style.getPropertyValue('--pi-m3-track-width')) - selected.offsetWidth) < .08 &&
-                Number.parseFloat(selected.style.getPropertyValue('--pi-choice-grow')) > 1.199;
+                !selected.style.getPropertyValue('--pi-choice-grow');
         }, { timeout: 5000 });
         const afterTrack = await page.$eval('.wpb-progress .wpb-premium-tabs', el => {
             const selected = el.querySelector('[aria-selected="true"]');
@@ -1424,6 +1424,11 @@ try {
             'selected Progress segment retains its readable width while the spring updates');
         assert.equal(afterTrack.childCount, beforeTrack.children,
             'selection motion never adds a DOM element or reduces tap targets');
+        assert.equal(await page.$eval('.wpb-progress .wpb-premium-tabs', g =>
+            g.hasAttribute('data-pi-m3-fluid')), false,
+            'M378 uses one measured indicator rather than a competing fluid-width owner');
+        assert.ok(afterTrack.w>0 && beforeTrack.widths.every(w=>w>=44),
+            'M378 keeps legible tap surfaces while selected indicator travels');
         assert.ok(afterTrack.indicator !== 'none' && afterTrack.activeBackground === 'rgba(0, 0, 0, 0)',
             'moving indicator paints the selection, not the old static button fill');
         if (width === 430)

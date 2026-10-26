@@ -4986,31 +4986,11 @@ function summarizeProgram(p) {
    text can never describe different rules. */
 
 
-/* zone: below MEV (under-stimulating), MEV–MRV (productive), above MRV (more than this app plans for).
-   The third label used to read "junk volume", which claimed more than the evidence does: the current
-   dose-response work finds gains still rising at the top of the studied range, with diminishing
-   returns — not reversing. Above MRV is a flag that a week is planned past what this app budgets for
-   recovery, and worth a look if progress or readiness is sliding; it is not a claim those sets did
-   nothing. The colour and the threshold are unchanged — only the claim attached to them. */
+/* MEV/MAV/MRV are coaching estimates, not claims of muscle loss or failed recovery. */
 function volumeZone(part, sets, program = 0) {
     const { mev, mrv } = landmarkFor(part, program?.config?.experience || "intermediate", program);
     const mav = mavFor(part, program);
-    /* FOUR BANDS, NOT THREE. "Productive" covered everything from MEV to MRV — a range wide enough
-       that 9 sets and 21 sets read identically, when one is the middle of the growth range and the
-       other is at the edge of what the week budgets. Splitting it at MAV is the same information the
-       generator already uses (mavFor is the readiness-trim's own threshold), just shown.
-
-       THE SUBTITLES ARE DELIBERATELY WEAKER THAN THE ONES THIS IDEA CAME WITH. The AI Studio build
-       paired these bands with "Below maintenance threshold" and "Exceeds systemic recovery". Both
-       assert more than the app knows:
-         - MEV is the MINIMUM EFFECTIVE volume, not maintenance. Maintenance volume is a separate and
-           LOWER landmark, so a lifter under MEV is very often still maintaining. "Below maintenance"
-           tells them they are losing muscle, which the number does not say.
-         - "Exceeds systemic recovery" is the same over-claim as the old "junk volume" label removed
-           above, in new words: it states as fact that the lifter cannot recover from these sets.
-           MRV is what THIS APP budgets for, and the dose-response evidence has gains still rising at
-           the top of the studied range.
-       So the bands are adopted and the claims are not. */
+    // Productive and high are both within the planned range; MAV separates them.
     if (sets < mev)
         return { color: C.muted, label: "below MEV", sub: "under the volume that reliably drives growth" };
     if (sets <= mav)
@@ -5021,20 +5001,8 @@ function volumeZone(part, sets, program = 0) {
         return { color: C.accentInk, label: "high", sub: "near the top of the planned range" };
     return { color: C.warn, label: "over MRV", sub: "past what this app budgets to recover from" }; // label text is user-visible — see the note above
 }
-// Parts whose total is really several independently-recoverable sub-heads. The deltoid is the
-// big one: front delts soak up huge indirect volume from all pressing, so the broad "shoulders"
-// total routinely sails past a single 26-set ceiling even when each head (front / side / rear)
-// is individually fine. For these, the meaningful MRV is the SUM of the heads' ceilings, and the
-// "over MRV" warning should only fire when an actual head exceeds its own MRV — not when the
-// lumped total crosses a number that was never meant to cover all three heads at once.
-
-/* ⚠ Takes an optional program so a ceiling is resolved from the landmarks that program was BUILT
-   with — same reason as preferenceFloor. Called with one argument it falls back to the legacy table,
-   which is what history-wide callers want. */
-
-// Zone for a broad part, using per-head data when the part is a composite so a single over-built
-// head (not the harmless lumped sum) is what trips the warning. Falls back to the flat zone when
-// no sub-volume is available.
+// Composite muscles use per-head recovery ceilings; preserve the program's
+// own landmarks when available, and legacy tables for historical views.
 function partZone(part, sets, subVolume, program = null) {
     if (program?.engineSource === "pursuit-next") return volumeZone(part, sets, program);
     const heads = COMPOSITE_HEADS[part];
@@ -5054,9 +5022,7 @@ function partZone(part, sets, subVolume, program = null) {
     });
     if (anyHeadOver)
         return { color: C.warn, label: "a head over MRV", sub: "one deltoid head is past its own ceiling" };
-    /* Composites get the same MAV split as everything else, so a shoulder total near its ceiling no
-       longer reads identically to one in the middle of the range. The over-MRV verdict still belongs
-       to the per-head test above — only the productive band is being subdivided here. */
+    // MAV divides the productive band without altering the per-head MRV guard.
     return sets <= mavFor(part)
         ? { color: C.accentInk, label: "productive", sub: "inside the range this app plans for" }
         : { color: C.accentInk, label: "high", sub: "near the top of the planned range" };

@@ -478,31 +478,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   outline:2px solid currentColor!important;
   outline-offset:2px!important;
 }
-/* Anchored menus are compact, legible and constrain long titles safely.
-   The existing viewport-flip logic still owns the actual top/bottom location. */
-
-#root[data-pi-motion="expressive"] .wpb .wpb-context-menu-item{
-  min-height:44px!important;
-  width:100%;
-  gap:10px!important;
-  padding:10px 11px!important;
-  line-height:1.26!important;
-  text-align:left;
-  overflow-wrap:anywhere;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-context-menu-item>svg{
-  flex:0 0 auto;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-context-menu-item:focus-visible{
-  outline:2px solid currentColor!important;
-  outline-offset:-3px!important;
-  background-image:none!important;
-}
-@media(hover:hover) and (pointer:fine){
-  #root[data-pi-motion="expressive"] .wpb .wpb-context-menu-item:hover{
-    background-image:none!important;
-  }
-}
 /* M3 outlined field feedback is limited to configuration and overlay forms.
    Workout number fields, steppers, RIR and Target/Previous never match. */
 #root[data-pi-motion="expressive"] .wpb :is(.wpb-settings,.wpb-pop,.wpb-dialog,[data-sheet-drag]):not(.wpb-workout) :is(input,textarea,select):not([type="range"]):not([type="checkbox"]):focus-visible{
@@ -1013,21 +988,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   line-height:1.4;
   color:color-mix(in srgb,currentColor 63%,transparent);
   text-align:center;
-}
-
-/* PI M3 CONTEXTUAL CLEARANCE — offset program actions above the active
-   workout dock and bottom navigation instead of letting their z-index mask
-   the final action. Composes with the existing popIn transform animation. */
-#root[data-pi-motion="expressive"] .wpb .wpb-context-menu[data-pi-m3-menu]{
-  translate:0 var(--pi-menu-shift-y,0px);
-  max-height:calc(var(--visual-h,var(--app-h,100dvh)) - 20px)!important;
-  overflow-y:auto;
-  overscroll-behavior:contain;
-}
-@media(prefers-reduced-motion:reduce){
-  #root[data-pi-motion="expressive"] .wpb .wpb-context-menu[data-pi-m3-menu]{
-    transition:none!important;
-  }
 }
 
 /* PI M3 SPATIAL NAVIGATION — measured, interruptible spring between the
@@ -1583,18 +1543,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb-wizard.wpb-wizard.wpb-wizard .wpb-wizard-option-icon{
   border-radius:17px 17px 10px 17px!important;
 }
-
-/* Contextual utilities retain their dimensions and popover positioning. */
-
-#root[data-pi-motion="expressive"] .wpb .wpb-context-menu-item{
-  border-radius:14px!important;
-  min-height:45px;
-  transition:background-color 140ms var(--pi-ease),border-radius 180ms var(--pi-r4-spring-ease)!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-context-menu-item:active{
-  border-radius:8px 17px 17px 17px!important;
-  background:var(--pi-r5-soft)!important;
-}
 #root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail .wpb-exercise-figure-wrap{
   overflow:hidden;
 }
@@ -1603,7 +1551,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   #root[data-pi-motion="expressive"] .wpb-wizard.wpb-wizard.wpb-wizard .wpb-wizard-option{padding-inline:11px!important}
 }
 @media(prefers-reduced-motion:reduce),(forced-colors:active){
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-library-row,.wpb-wizard-option,.wpb-settings-row,.wpb-context-menu-item,.wpb-profile-strength-cell){transition:none!important;transform:none!important}
+  #root[data-pi-motion="expressive"] .wpb :is(.wpb-library-row,.wpb-wizard-option,.wpb-settings-row,.wpb-profile-strength-cell){transition:none!important;transform:none!important}
 }
 @media(forced-colors:active){
   #root[data-pi-motion="expressive"] .wpb :is(.wpb-library-row,.wpb-wizard-option[aria-pressed="true"],.wpb-profile-strength-cell:first-child,.wpb-library-search:focus-within){border:1px solid CanvasText!important}
@@ -1904,15 +1852,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 /* Sheets, dialogs and menus are high-elevation tonal containers, not glossy
    overlays. Keep actual modal z-order, detents and keyboard avoidance. */
-#root[data-pi-motion="expressive"] .wpb .wpb-backdrop>[data-sheet-drag],
-#root[data-pi-motion="expressive"] .wpb :is(.wpb-pop,.wpb-dialog),
-#root[data-pi-motion="expressive"] .wpb .wpb-context-menu{
+#root[data-pi-motion="expressive"] .wpb .wpb-backdrop>[data-sheet-drag],#root[data-pi-motion="expressive"] .wpb :is(.wpb-pop,.wpb-dialog){
   background-image:none!important;
   box-shadow:0 10px 28px rgba(0,0,0,.16)!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-context-menu-item:is(:hover,:focus-visible){
-  background-image:none!important;
-  background-color:var(--pi-m3e-surface-container-high)!important;
 }
 /* The M3E selected indicator is a solid resting color; the original measured
    geometry, pressed state and slider spring are still the interaction owners. */
@@ -1982,36 +1924,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   outline:2px solid var(--pi-m3e-primary)!important;
   outline-offset:2px!important;
 }
-/* A Settings section is a single contiguous group, while each real action
-   remains an individually focusable control. Avoid expanding dense options. */
-
-/* Context menus follow 2026 expressive group shapes: a first/last contour
-   reveals the relationship among actions. Compact rows keep the old 44px
-   minimum, dock avoidance and keyboard navigation with native focus return. */
-#root[data-pi-motion="expressive"] .wpb .wpb-context-menu{
-  border-color:var(--pi-m3e-outline-variant)!important;
-  overflow-y:auto;
-  overscroll-behavior:contain;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-context-menu>.wpb-context-menu-item{
-  min-height:44px!important;
-  border-radius:var(--pi-m3e-list-compressed)!important;
-  transition:border-radius 255ms var(--pi-m3e-content-ease),
-    background-color 155ms var(--pi-m3e-content-ease)!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-context-menu>.wpb-context-menu-item:first-child{
-  border-radius:22px 22px var(--pi-m3e-list-compressed) var(--pi-m3e-list-compressed)!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-context-menu>.wpb-context-menu-item:last-child{
-  border-radius:var(--pi-m3e-list-compressed) var(--pi-m3e-list-compressed) 22px 22px!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-context-menu>.wpb-context-menu-item:only-child{
-  border-radius:22px!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-context-menu>.wpb-context-menu-item:is(:active,:focus-visible){
-  border-radius:9px 19px 19px 9px!important;
-  background-color:var(--pi-m3e-primary-container)!important;
-}
 /* Recent history has a distinct, quiet item rhythm, without adding padding
    to charts, overriding workouts, or changing displayed training statistics. */
 
@@ -2023,13 +1935,13 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   }
 }
 @media(prefers-reduced-motion:reduce){
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-library-row,.wpb-settings-card>.wpb-settings-row,.wpb-settings-card>button,.wpb-context-menu-item,.wpb-history-session){
+  #root[data-pi-motion="expressive"] .wpb :is(.wpb-library-row,.wpb-settings-card>.wpb-settings-row,.wpb-settings-card>button,.wpb-history-session){
     transition:none!important;
     transform:none!important;
   }
 }
 @media(forced-colors:active){
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-library-row,.wpb-settings-card,.wpb-context-menu,.wpb-context-menu-item,.wpb-history-session){
+  #root[data-pi-motion="expressive"] .wpb :is(.wpb-library-row,.wpb-settings-card,.wpb-history-session){
     border-color:CanvasText!important;
     background-color:Canvas!important;
   }
@@ -2805,21 +2717,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   align-self:flex-start;
   flex:0 0 44px!important;
 }
-#root[data-pi-motion="expressive"] .wpb .wpb-context-menu{
-  max-width:min(320px,calc(100vw - 24px))!important;
-  min-width:min(186px,calc(100vw - 24px))!important;
-  padding:5px!important;
-  border:1px solid var(--pi-r11-edge)!important;
-  border-radius:22px!important;
-  background-color:var(--pi-r11-raised)!important;
-  box-shadow:0 10px 26px rgba(0,0,0,.18)!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-context-menu .wpb-context-menu-item{
-  min-width:0!important;
-  min-height:44px!important;
-  line-height:1.3!important;
-  overflow-wrap:anywhere!important;
-}
 #root[data-pi-motion="expressive"] .wpb .wpb-dialog{
   box-sizing:border-box;
   max-width:min(360px,calc(100vw - 32px))!important;
@@ -2860,13 +2757,13 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   }
 }
 @media(prefers-reduced-motion:reduce){
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-switcher-row,.wpb-sheet-action,.wpb-context-menu-item){
+  #root[data-pi-motion="expressive"] .wpb :is(.wpb-switcher-row,.wpb-sheet-action){
     transition:none!important;
     transform:none!important;
   }
 }
 @media(forced-colors:active){
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-switcher-sheet,.wpb-achievement-sheet,.wpb-switcher-row,.wpb-context-menu,.wpb-dialog,.wpb-sheet-action){
+  #root[data-pi-motion="expressive"] .wpb :is(.wpb-switcher-sheet,.wpb-achievement-sheet,.wpb-switcher-row,.wpb-dialog,.wpb-sheet-action){
     background-color:Canvas!important;
     color:CanvasText!important;
     border-color:CanvasText!important;
@@ -3145,15 +3042,15 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    One keyboard-visible focus language and reliable touch targets on real
    action controls. Layout, DOM events, program settings and active workout
    input handlers remain owned by the original components. */
-#root[data-pi-motion="expressive"] :is(.wpb-home-create,.wpb-action-tile,.wpb-plan-panes>button,.wpb-premium-tabs>button,.wpb-settings-row,.wpb-settings-jump-control,.wpb-profile-achievement-toggle,.wpb-wizard-option,.wpb-wizard-back-action,.wpb-wizard-next-action,.wpb-onboarding-primary,.wpb-onboarding-secondary,.wpb-workout-tool,.wpb-rest-actions>button,.wpb-history-actions>button,.wpb-sheet-close,.wpb-context-menu-item){
+#root[data-pi-motion="expressive"] :is(.wpb-home-create,.wpb-action-tile,.wpb-plan-panes>button,.wpb-premium-tabs>button,.wpb-settings-row,.wpb-settings-jump-control,.wpb-profile-achievement-toggle,.wpb-wizard-option,.wpb-wizard-back-action,.wpb-wizard-next-action,.wpb-onboarding-primary,.wpb-onboarding-secondary,.wpb-workout-tool,.wpb-rest-actions>button,.wpb-history-actions>button,.wpb-sheet-close){
   touch-action:manipulation;
 }
-#root[data-pi-motion="expressive"] :is(.wpb-home-create,.wpb-action-tile,.wpb-plan-panes>button,.wpb-premium-tabs>button,.wpb-settings-row,.wpb-settings-jump-control,.wpb-profile-achievement-toggle,.wpb-wizard-option,.wpb-wizard-back-action,.wpb-wizard-next-action,.wpb-onboarding-primary,.wpb-onboarding-secondary,.wpb-workout-tool,.wpb-rest-actions>button,.wpb-history-actions>button,.wpb-sheet-close,.wpb-context-menu-item):focus-visible{
+#root[data-pi-motion="expressive"] :is(.wpb-home-create,.wpb-action-tile,.wpb-plan-panes>button,.wpb-premium-tabs>button,.wpb-settings-row,.wpb-settings-jump-control,.wpb-profile-achievement-toggle,.wpb-wizard-option,.wpb-wizard-back-action,.wpb-wizard-next-action,.wpb-onboarding-primary,.wpb-onboarding-secondary,.wpb-workout-tool,.wpb-rest-actions>button,.wpb-history-actions>button,.wpb-sheet-close):focus-visible{
   outline:2px solid var(--pi-m3e-primary)!important;
   outline-offset:2px!important;
 }
 @media(forced-colors:active){
-  #root[data-pi-motion="expressive"] :is(.wpb-home-create,.wpb-action-tile,.wpb-plan-panes>button,.wpb-premium-tabs>button,.wpb-settings-row,.wpb-profile-achievement-toggle,.wpb-wizard-option,.wpb-onboarding-primary,.wpb-onboarding-secondary,.wpb-workout-tool,.wpb-rest-actions>button,.wpb-history-actions>button,.wpb-sheet-close,.wpb-context-menu-item):focus-visible{
+  #root[data-pi-motion="expressive"] :is(.wpb-home-create,.wpb-action-tile,.wpb-plan-panes>button,.wpb-premium-tabs>button,.wpb-settings-row,.wpb-profile-achievement-toggle,.wpb-wizard-option,.wpb-onboarding-primary,.wpb-onboarding-secondary,.wpb-workout-tool,.wpb-rest-actions>button,.wpb-history-actions>button,.wpb-sheet-close):focus-visible{
     outline-color:Highlight!important;
   }
 }
@@ -4943,7 +4840,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb-profile-scroll{flex:1;min-height:0;overflow-y:auto;}
 .wpb-profile-inner{width:100%;max-width:var(--pi-reading-max);margin-inline:auto;padding:var(--pi-space-3) var(--pi-page-inset) calc(var(--pi-space-8) + env(safe-area-inset-bottom));container:pi-r77-profile / inline-size;}
 .wpb-profile-identity{display:flex;flex-wrap:wrap;gap:var(--pi-space-2);margin:0 0 var(--pi-space-3);color:var(--pi-color-on-muted);font-size:var(--pi-type-support);line-height:1.5;}
-.wpb-home-context{overflow:hidden;will-change:height,opacity;}
+.wpb-home-context{display:flow-root;flex-shrink:0;}
+#root .wpb .wpb-home-scroll{flex:1;overflow-y:auto;padding:8px 18px 0}
+#root .wpb .wpb-home-content{min-height:100%;display:flex;flex-direction:column}
 .wpb-home-brand{display:flex;flex-wrap:wrap;justify-content:space-between;gap:var(--pi-space-2);margin:var(--pi-space-2) 0 0;color:var(--pi-color-on-muted);font-size:var(--pi-type-support);line-height:1.5;}
 .wpb-home-brand-long{color:var(--wpb-theme-accent-ink);font-weight:700;}
 .wpb-home-context-title{margin:var(--pi-space-2) 0 var(--pi-space-2);font-size:var(--pi-type-heading);line-height:1.3;overflow-wrap:anywhere;}
@@ -5316,35 +5215,12 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   outline:2px solid var(--pi-m3e-primary)!important;
   outline-offset:-3px!important;
 }
-#root[data-pi-motion="expressive"] .wpb .wpb-context-menu{
-  background:var(--pi-color-card)!important;
-  background-image:none!important;
-  color:var(--pi-color-on-control)!important;
-  border-color:var(--pi-color-divider)!important;
-}
-/* Keep row-owned ink and resting fill: danger stays red, selected day stays selected. */
-#root[data-pi-motion="expressive"] .wpb .wpb-context-menu>.wpb-context-menu-item{
-  background-image:none!important;
-}
-@media(hover:hover) and (pointer:fine){
-  #root[data-pi-motion="expressive"] .wpb .wpb-context-menu>.wpb-context-menu-item:hover{
-    background:var(--pi-color-control)!important;
-  }
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-context-menu>.wpb-context-menu-item:is(:active,:focus-visible){
-  background:var(--pi-color-active)!important;
-}
 @media(forced-colors:active){
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-library-search,.wpb-switcher-search,.wpb-context-menu),
-  #root[data-pi-motion="expressive"] .wpb .wpb-progress .wpb-history-filters :is(input,select){
+  #root[data-pi-motion="expressive"] .wpb :is(.wpb-library-search,.wpb-switcher-search),#root[data-pi-motion="expressive"] .wpb .wpb-progress .wpb-history-filters :is(input,select){
     background:Canvas!important;
     color:CanvasText!important;
     border-color:CanvasText!important;
     box-shadow:none!important;
-  }
-  #root[data-pi-motion="expressive"] .wpb .wpb-context-menu>.wpb-context-menu-item:is(:active,:focus-visible){
-    background:Highlight!important;
-    color:HighlightText!important;
   }
 }
 
@@ -8798,6 +8674,30 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 @media(min-width:840px) and (min-height:600px){#root .wpb .wpb-training-max-backdrop{align-items:center;padding:24px}#root .wpb .wpb-training-max-sheet{border-bottom:1px solid var(--wpb-theme-border);border-radius:var(--pi-shape-card)}}
 @media(prefers-reduced-motion:reduce){#root .wpb .wpb-training-max-backdrop,#root .wpb .wpb-training-max-sheet{animation:none}}
 @media(forced-colors:active){#root .wpb :is(.wpb-training-max-sheet,.wpb-training-max-input,.wpb-training-max-conversion,.wpb-training-max-summary){background:Canvas;color:CanvasText;border-color:CanvasText}#root .wpb .wpb-training-max-backdrop :is(button,input):focus-visible,#root .wpb .wpb-training-max-summary:focus-visible{outline-color:Highlight}}
+
+/* Context menus: one renderer, measured anchor owner and themed row family. */
+#root .wpb .wpb-menu-dismiss{position:fixed;inset:0;z-index:40}
+#root .wpb .wpb-context-menu{box-sizing:border-box;position:fixed;left:var(--pi-menu-left,8px);top:var(--pi-menu-top,8px);z-index:41;width:max-content;min-width:min(11.625rem,var(--pi-menu-max-width,calc(100vw - 16px)));max-width:min(20rem,var(--pi-menu-max-width,calc(100vw - 16px)));max-height:var(--pi-menu-max-height,calc(var(--visual-h,var(--app-h,100dvh)) - 16px));overflow-y:auto;overscroll-behavior:contain;translate:0 var(--pi-menu-shift-y,0px);padding:5px;border:1px solid var(--pi-color-divider);border-radius:22px;background:var(--pi-color-card);color:var(--pi-color-on-control);box-shadow:0 10px 26px rgba(0,0,0,.18);animation:popIn .16s cubic-bezier(.2,.7,.3,1) backwards}
+#root .wpb .wpb-context-menu:not([data-pi-menu-ready]){visibility:hidden}
+#root .wpb .wpb-context-menu-heading{padding:6px 9px 7px;font-size:.6875rem;font-weight:800;line-height:1.4;letter-spacing:.5px;text-transform:uppercase;color:var(--wpb-theme-muted);overflow-wrap:anywhere}
+#root .wpb .wpb-context-menu-item{display:flex;align-items:center;gap:10px;width:100%;min-width:0;min-height:44px;padding:10px 11px;border:0;border-radius:var(--pi-m3e-list-compressed,14px);background:transparent;color:var(--wpb-theme-text);font-family:inherit;font-size:.9375rem;font-weight:600;line-height:1.3;text-align:left;cursor:pointer;overflow-wrap:anywhere;transition:border-radius 255ms var(--pi-m3e-content-ease),background-color 155ms var(--pi-m3e-content-ease)}
+#root .wpb .wpb-context-menu-item:first-of-type{border-top-left-radius:22px;border-top-right-radius:22px}
+#root .wpb .wpb-context-menu-item:last-of-type{border-bottom-left-radius:22px;border-bottom-right-radius:22px}
+#root .wpb .wpb-context-menu-item:only-of-type{border-radius:22px}
+#root .wpb .wpb-context-menu-item>svg{flex:0 0 auto;color:var(--wpb-theme-muted)}
+#root .wpb .wpb-context-menu-item[data-icon-tone="accent"]>svg{color:var(--wpb-theme-accent-ink)}
+#root .wpb .wpb-context-menu-item[data-tone="danger"],#root .wpb .wpb-context-menu-item[data-tone="danger"]>svg{color:var(--wpb-theme-danger)}
+#root .wpb .wpb-context-menu-item[data-selected="true"]{background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink);font-weight:800}
+#root .wpb .wpb-context-menu-item:is(:active,:focus-visible){border-radius:9px 19px 19px 9px;background:var(--pi-color-active)}
+#root .wpb .wpb-context-menu-item:focus-visible{outline:2px solid currentColor;outline-offset:-3px}
+#root .wpb .wpb-context-menu-label{flex:1;min-width:0;overflow-wrap:anywhere}
+#root .wpb .wpb-context-menu-marker{display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;min-width:1.375rem;min-height:1.375rem;padding:2px 4px;border-radius:8px;background:var(--wpb-theme-card);color:var(--wpb-theme-faint);font-size:.6875rem;font-weight:700}
+#root .wpb .wpb-context-menu-marker[data-status="done"]{background:var(--wpb-theme-accent);color:var(--wpb-theme-accent-text)}
+#root .wpb .wpb-context-menu-marker[data-status="next"]{background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink)}
+#root .wpb .wpb-context-menu-badge{flex:0 1 auto;font-size:.6875rem;font-weight:600;color:var(--wpb-theme-accent-ink);overflow-wrap:anywhere}
+@media(hover:hover) and (pointer:fine){#root .wpb .wpb-context-menu-item:hover{background:var(--pi-color-control)}}
+@media(prefers-reduced-motion:reduce){#root .wpb .wpb-context-menu{animation:none}#root .wpb .wpb-context-menu-item{transition:none}}
+@media(forced-colors:active){#root .wpb .wpb-context-menu{background:Canvas;color:CanvasText;border-color:CanvasText;box-shadow:none}#root .wpb .wpb-context-menu-item:focus-visible{outline-color:Highlight}}
 
 /* B912 — Prototype-informed Profile hierarchy; presentation only.
    Root header ownership moved to UiRootHeader in M271. */

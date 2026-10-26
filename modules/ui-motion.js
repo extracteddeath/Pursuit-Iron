@@ -88,6 +88,60 @@ function tick(now) {
     });
     frame = active.size ? requestAnimationFrame(tick) : 0;
 }
+const contextMenuAnchors = new WeakMap(), menuFrames = new WeakSet();
+export function registerContextMenu(menu, anchor) {
+    if (!menu || !anchor) return () => {};
+    const record = { anchor, focus: true, observer: null };
+    contextMenuAnchors.set(menu, record);
+    if (typeof ResizeObserver !== 'undefined') {
+        record.observer = new ResizeObserver(() => positionContextMenu(menu));
+        record.observer.observe(menu); record.observer.observe(anchor);
+    }
+    positionContextMenu(menu, true);
+    return () => { record.observer?.disconnect(); contextMenuAnchors.delete(menu); };
+}
+// Measure the actual rows and current anchor. One owner handles text reflow,
+// viewport changes, live-dock clearance and the first keyboard focus.
+function positionContextMenu(el, immediate = false) {
+    if (!el?.isConnected || !contextMenuAnchors.has(el)) return;
+    el.dataset.piM3Menu = '1';
+    const apply = () => {
+        menuFrames.delete(el);
+        const record = contextMenuAnchors.get(el), root = el.closest('.wpb');
+        if (!el.isConnected || !record?.anchor?.isConnected || !root) return;
+        const viewport = globalThis.visualViewport;
+        const topLimit = (viewport?.offsetTop || 0) + 8;
+        const leftLimit = (viewport?.offsetLeft || 0) + 8;
+        const rightLimit = Math.min(window.innerWidth, viewport ? viewport.offsetLeft + viewport.width : Infinity) - 8;
+        let bottomLimit = Math.min(window.innerHeight, viewport ? viewport.offsetTop + viewport.height : Infinity) - 8;
+        for (const barrier of root.querySelectorAll('.wpb-live-dock,.wpb-tabbar')) {
+            const r = barrier.getBoundingClientRect();
+            if (r.width && r.height && r.bottom > 0 && r.top < window.innerHeight &&
+                !(barrier.classList.contains('wpb-tabbar') && r.height > r.width * 2) &&
+                getComputedStyle(barrier).visibility !== 'hidden') bottomLimit = Math.min(bottomLimit, r.top - 8);
+        }
+        const maxHeight = Math.max(1, bottomLimit - topLimit), maxWidth = Math.max(1, rightLimit - leftLimit);
+        el.style.setProperty('--pi-menu-max-height', `${maxHeight}px`);
+        el.style.setProperty('--pi-menu-max-width', `${maxWidth}px`);
+        const anchor = record.anchor.getBoundingClientRect(), height = el.offsetHeight, width = el.offsetWidth;
+        const flip = anchor.bottom + 6 + height > bottomLimit && anchor.top - height - 6 >= topLimit;
+        const rawTop = flip ? anchor.top - height - 6 : anchor.bottom + 6;
+        const shift = Math.max(topLimit - rawTop, Math.min(0, bottomLimit - rawTop - height));
+        const left = Math.max(leftLimit, Math.min(rightLimit - width, anchor.right - width));
+        el.style.setProperty('--pi-menu-left', `${left}px`);
+        el.style.setProperty('--pi-menu-top', `${rawTop}px`);
+        el.style.setProperty('--pi-menu-shift-y', `${shift}px`);
+        el.style.transformOrigin = flip ? 'bottom right' : 'top right';
+        el.dataset.piMenuReady = '1';
+        if (record.focus) {
+            record.focus = false;
+            (el.querySelector('[role="menuitem"]:not(:disabled)') || el).focus({ preventScroll: true });
+        }
+    };
+    if (immediate) { apply(); return; }
+    if (menuFrames.has(el)) return;
+    menuFrames.add(el); requestAnimationFrame(apply);
+}
 const pixels = (el, name) => v => el.style.setProperty(name, `${v}px`);
 const surfaceSelector = '[data-view-frame], [data-pi-workout-page], [data-sheet-drag], .wpb-pop, .wpb-dialog, .wpb-session-dialog, .wpb-slideL, .wpb-slideR, .wpb-state-enter, .wpb-float-in, .wpb-notice-in';
 const groupSelector = '.wpb-segmented, .wpb-premium-tabs, .wpb-exercise-tabs, .wpb-library-flag-filter, .wpb-progress-grouping, .wpb-plan-panes, .wpb-exercise-window-tabs, .wpb-exercise-metric-tabs, .wpb-effort-scale, .wpb-tabbar, [role="tablist"]';
@@ -245,7 +299,6 @@ export function installAppMotion(root) {
     // initialize themselves on each mount; accessing them here is a TDZ error.
     const pressed = new Map(), controls = new WeakMap(), choiceStates = new WeakMap(), referenceKeys = new WeakMap();
     const media = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)');
-    let menuOpener = null;
     // R74: Back and Escape both return keyboard users to the selected Library
     // row *after* React has removed the detail pane. Never fork detail state.
     let libraryReturnFocus = null;
@@ -275,43 +328,8 @@ export function installAppMotion(root) {
                 target.focus({ preventScroll: true });
         });
     };
-    // Anchored program menus must clear the live workout dock as well as the
-    // bottom tab bar. The old viewport-only flip can hide Delete underneath
-    // a resumed-workout dock even though the menu fits within window.innerHeight.
-    // Individual CSS translate composes with the existing popIn animation.
-    // Resize, visualViewport and menu animationend may all request layout
-    // in one event turn. One measurement per menu per frame is sufficient.
-    const menuFrames = new WeakSet();
-    function positionContextMenu(el) {
-        if (!el || !el.isConnected) return;
-        el.dataset.piM3Menu = '1';
-        if (menuFrames.has(el)) return;
-        menuFrames.add(el);
-        requestAnimationFrame(() => {
-            menuFrames.delete(el);
-            if (!el.isConnected) return;
-            const existing = Number.parseFloat(el.style.getPropertyValue('--pi-menu-shift-y')) || 0;
-            const box = el.getBoundingClientRect();
-            let bottomLimit = Math.min(window.innerHeight - 8,
-                globalThis.visualViewport ? visualViewport.height + visualViewport.offsetTop - 8 : Infinity);
-            for (const barrier of root.querySelectorAll('.wpb-live-dock,.wpb-tabbar')) {
-                const r = barrier.getBoundingClientRect();
-                if (r.width && r.height && r.bottom > 0 && r.top < window.innerHeight &&
-                    !(barrier.classList.contains('wpb-tabbar') && r.height > r.width * 2) &&
-                    getComputedStyle(barrier).visibility !== 'hidden') {
-                    bottomLimit = Math.min(bottomLimit, r.top - 8);
-                }
-            }
-            // Undo any previous translate so repeated resizes cannot accumulate a drift.
-            const rawBottom = box.bottom - existing, rawTop = box.top - existing;
-            const shift = Math.max(8 - rawTop, Math.min(0, bottomLimit - rawBottom));
-            const nextShift = Math.round(shift * 100) / 100;
-            if (Math.abs(nextShift - existing) > .005)
-                el.style.setProperty('--pi-menu-shift-y', `${nextShift}px`);
-        });
-    }
     const positionOpenMenus = () => root.querySelectorAll('.wpb-context-menu')
-        .forEach(positionContextMenu);
+        .forEach(el => positionContextMenu(el));
 
     // Material 3 selection tracks sit behind the actual React-owned buttons. Geometry is
     // measured, never guessed, so four-column and two-column selectors share one behavior.
@@ -642,10 +660,10 @@ function disclosure(el, initial = false) {
                 if (dismiss) {
                     e.preventDefault(); e.stopPropagation();
                     dismiss.click();
-                    if (menuOpener?.isConnected) menuOpener.focus({ preventScroll: true });
                     return;
                 }
             }
+            if (e.key === 'Tab') { root.querySelector('.wpb-dismiss-layer')?.click(); return; }
             if (['ArrowDown','ArrowUp','Home','End'].includes(e.key)) {
                 const items = [...menu.querySelectorAll('[role="menuitem"]')]
                     .filter(el => !disabled(el));
@@ -654,7 +672,14 @@ function disclosure(el, initial = false) {
                     const next = e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1 :
                         (at + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
                     e.preventDefault(); e.stopPropagation();
-                    items[next].focus({ preventScroll: true });
+                    const chosen = items[next];
+                    chosen.focus({ preventScroll: true });
+                    // Reveal the focused row inside an overflowing menu without
+                    // scrolling the page or moving its anchor underneath it.
+                    const top = chosen.offsetTop, bottom = top + chosen.offsetHeight;
+                    if (top < menu.scrollTop + 4) menu.scrollTop = Math.max(0, top - 4);
+                    else if (bottom > menu.scrollTop + menu.clientHeight - 4)
+                        menu.scrollTop = bottom - menu.clientHeight + 4;
                     return;
                 }
             }
@@ -795,8 +820,6 @@ function disclosure(el, initial = false) {
         });
     }
     const themeSelection = e => {
-        const opener = e.target.closest?.('button[aria-haspopup="menu"]');
-        if (opener) menuOpener = opener;
         if (e.target.closest?.('[data-theme-option]'))
             requestAnimationFrame(() => {
                 refreshTrackTheme();
@@ -923,13 +946,15 @@ function disclosure(el, initial = false) {
     root.addEventListener('keydown', keydown); document.addEventListener('keyup', keyup);
     document.addEventListener('visibilitychange', visibility);
     window.addEventListener('blur', settleAll);
+    root.addEventListener('scroll', positionOpenMenus, true);
     window.addEventListener('resize', positionOpenMenus);
+    globalThis.visualViewport?.addEventListener('scroll', positionOpenMenus);
     globalThis.visualViewport?.addEventListener('resize', positionOpenMenus);
     media?.addEventListener('change', preference);
     return () => {
         observer.disconnect(); trackResize?.disconnect(); observedTracks.clear();
         if (trackFrame) cancelAnimationFrame(trackFrame);
-        trackFrame = 0; pendingTracks.clear(); menuOpener = null;
+        trackFrame = 0; pendingTracks.clear();
         settleAll(); delete root.dataset.piMotion;
         lastPrimaryRoute = -1;
         lastPrimaryChangeAt = -Infinity;
@@ -945,7 +970,9 @@ function disclosure(el, initial = false) {
         root.removeEventListener('keydown', keydown); document.removeEventListener('keyup', keyup);
         document.removeEventListener('visibilitychange', visibility);
         window.removeEventListener('blur', settleAll);
+        root.removeEventListener('scroll', positionOpenMenus, true);
         window.removeEventListener('resize', positionOpenMenus);
+        globalThis.visualViewport?.removeEventListener('scroll', positionOpenMenus);
         globalThis.visualViewport?.removeEventListener('resize', positionOpenMenus);
         media?.removeEventListener('change', preference);
     };

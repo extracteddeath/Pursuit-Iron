@@ -50,8 +50,8 @@ try{
      history:populated?[recentSession]:[]});
   await page.goto('http://127.0.0.1:'+server.address().port+'/',{waitUntil:'networkidle0'});
   await page.waitForSelector('.wpb-home .wpb-action-tile');
-  // Text-only enlargement does not dispatch window.resize. The collapsible
-  // greeting must remeasure its natural content instead of clipping the title.
+  // Text-only enlargement does not dispatch window.resize. Natural content
+  // flow must remain complete without a clipped or stale measured height.
   for(const enlarged of [true,false]){
    await page.evaluate(large=>{
     document.querySelector('.wpb-home .wpb-page-scroll').scrollTop=0;

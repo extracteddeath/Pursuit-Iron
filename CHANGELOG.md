@@ -1,3 +1,12 @@
+## Build 934 / M387 — Stable navigation targets and one menu system
+
+- Fix two reproducible scroll/interaction races: Home's saved-program target moved 60px after automatic scrolling, and Program's metadata remained 17px tall for an extra frame. Home context now scrolls naturally below a fixed app bar; Program applies its existing header geometry before next-frame pointer positioning.
+- Consolidate Home program actions, Program day actions and the day picker into one menu renderer. Retain all original actions, selected/done/next-day facts, program transactions and Undo behavior.
+- Measure real menu rows and current anchors instead of guessed heights or stale click rectangles. Reflow after text/viewport changes, clear the live-workout dock and navigation, and keep long labels complete.
+- Focus the first action on open; preserve arrows/Home/End, reveal offscreen focused rows inside short menus, and return focus on dismissal. Tab closes the menu. Keep the existing keyboard, Back and motion owners.
+- Retire 60 CSS priority overrides and 16 inline styles. One themed menu family owns type, shape, focus, selection and danger roles; no new priorities. Tighten external/embedded/inline budgets to 2,258/1,183/2,410.
+- Extend existing navigation, menu, contrast, resize and stress journeys. Training-engine policy, saved prescriptions, history and live set ownership stay with their current owners. Physical Android/IME/TalkBack certification remains open.
+
 ## Build 933 / M386 — Safe decimal training-max editing and truthful review
 
 - Preserve decimal points and intermediate text while entering a training max. Typing 212.5 previously produced 2125, which could multiply percentage-based workout loads.

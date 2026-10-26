@@ -1722,6 +1722,7 @@ try {
         // instead of navigating or calling the destructive Delete item.
         await page.click('button[aria-haspopup="menu"]');
         await page.waitForSelector('.wpb-context-menu[role="menu"]');
+        assert.ok(await page.$eval('.wpb-context-menu',el=>document.activeElement===el.querySelector('[role="menuitem"]')),'Opening a context menu focuses its first action');
         const menuR36=await contrastAuditR36([['menuAction','.wpb-context-menu [role="menuitem"]']]);
         console.log('R36 MENU '+JSON.stringify(menuR36));
         assert.ok(menuR36.every(x=>x.absent||x.ratio>=4.5),'R36 contextual actions remain readable: '+JSON.stringify(menuR36));
@@ -1759,13 +1760,13 @@ try {
         // remeasurement of the open anchored menu; the menu still clears dock.
         const resizeR28=await page.evaluate(async()=>{
             const menu=document.querySelector('.wpb-context-menu');
-            const original=menu.getBoundingClientRect, dock=document.querySelector('.wpb-live-dock');
+            const original=Object.getOwnPropertyDescriptor(HTMLElement.prototype,'offsetHeight'),dock=document.querySelector('.wpb-live-dock');
             let reads=0;
-            menu.getBoundingClientRect=function(...args){reads++;return original.apply(this,args);};
+            Object.defineProperty(menu,'offsetHeight',{configurable:true,get(){reads++;return original.get.call(this);}});
             try{
                 for(let i=0;i<6;i++) window.dispatchEvent(new Event('resize'));
                 await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
-            }finally{menu.getBoundingClientRect=original;}
+            }finally{delete menu.offsetHeight;}
             const box=menu.getBoundingClientRect(),dockBox=dock.getBoundingClientRect();
             return {reads,clearsDock:box.bottom<=dockBox.top-3,overflow:box.right>innerWidth+1};
         });
@@ -1775,6 +1776,8 @@ try {
 
         // 2026 expressive menu group: rounded outside corners without a
         // wider popup, extra item height, lost keyboard order or new React state.
+        await page.focus('.wpb-context-menu');
+        await page.waitForFunction(()=>parseFloat(getComputedStyle(document.querySelector('.wpb-context-menu-item')).borderTopLeftRadius)>=20);
         const menuGroupShape = await page.$eval('.wpb-context-menu', menu => {
             const items = [...menu.querySelectorAll(':scope > .wpb-context-menu-item')];
             return { count: items.length,

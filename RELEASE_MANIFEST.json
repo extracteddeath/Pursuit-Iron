@@ -132,8 +132,8 @@
   "uiFiles": {
     "modules/App.js": "ca4a7c07faa1a7c832fcc0e096c8667af6a6feff3fae8ed93dd3442bc6bc68a9",
     "index.html": "4a612a26db068b4e8c49487c573574a13e2b4452f1b3fd8dd6dfd81bdfb3f140",
-    "sw.js": "1d199efbb7d84037f178dce7f2c5f45f949282c10d9b0d3d654c29a06afe5951",
-    "BUILD_PROFILE.json": "7a27a39f2b74c99c8eccf5b0886f4dc1af92f9bd21d9aa329f5f2b3dda56adaa",
+    "sw.js": "39ee2e771e2715268f67d6236ac30c35e7ee7b63c133d10d5e2667da7181b248",
+    "BUILD_PROFILE.json": "6cfa0b0c50d441fe24dc4efc1ff1344fabcb1b39b1b8061ad879eeba56d0502f",
     "CHANGELOG.md": "542101154d31d003573d80237b88176d32aea923c5606e870b110c6907ac6ec1",
     "app.css": "1a3aae45595bfce539adc21b05fd8ef95fa6c2f8933ed240c5a37f1092fad33d",
     "privacy.html": "ad9a4a48bff18dee4dc20b079f783c58ca56d69ad03884879445451e0a8ee96c",
@@ -142,6 +142,6 @@
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Reuse catalog and loading snapshots only within one canonical history analysis; retain independent inventory outputs and refresh coaching for complete factual inputs and elapsed recovery time.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b925-ra1a256ff19ccc3ce",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b925-rc22e99cbeb9b12de",
   "uiMilestone": "Build 925 · M378 Stable selection motion"
 }

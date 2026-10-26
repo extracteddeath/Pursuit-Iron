@@ -43,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -199,7 +200,8 @@ fun CycleSheet(vm: AppViewModel, id: String?, programId: String? = null, onClose
                 Text("$totW weeks · ${blocks.size} blocks", style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold))
             }
             val templates = c?.list("templates") ?: vm.cycles.list("templates")
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(Modifier.layout { m, k -> val e = 16.dp.roundToPx(); val pl = m.measure(k.copy(minWidth = 0, maxWidth = k.maxWidth + 2 * e)); layout(pl.width - 2 * e, pl.height) { pl.place(-e, 0) } }
+                .fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 templates.forEach { t ->
                     val fut = t.list("blocks").drop(1)
                     val on = blocks.filter { !it.fixed }.map { it.phase to it.weeks } == fut.map { it.s("phase") to it.i("weeks") }
@@ -216,7 +218,7 @@ fun CycleSheet(vm: AppViewModel, id: String?, programId: String? = null, onClose
         Row(Modifier.fillMaxWidth().semantics { contentDescription = blocks.joinToString(" → ") { it.label ?: PHASE_NAMES[it.phase].orEmpty() } }, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
             blocks.forEachIndexed { k, b ->
                 val r = RoundedCornerShape(topStart = if (k == 0) 999.dp else 4.dp, bottomStart = if (k == 0) 999.dp else 4.dp, topEnd = if (k == blocks.lastIndex) 999.dp else 4.dp, bottomEnd = if (k == blocks.lastIndex) 999.dp else 4.dp)
-                val frac = when (b.state) { "done" -> 1f; "active" -> (b.weeksIn.toFloat() / b.weeks).coerceIn(0f, 1f); else -> 0f }
+                val frac = when (b.state) { "done" -> 1f; "active" -> ((b.weeksIn + 1f) / b.weeks).coerceIn(0f, 1f); else -> 0f }
                 Box(Modifier.weight(b.weeks.toFloat()).height(14.dp).clip(r).background(if (b.state == "active") cs.primaryContainer else cs.surfaceContainerHighest)) {
                     Box(Modifier.fillMaxWidth(frac).fillMaxHeight().background(cs.primary))
                 }
@@ -267,7 +269,7 @@ fun CycleSheet(vm: AppViewModel, id: String?, programId: String? = null, onClose
                         }
                     }
                     if (now) {
-                        val fill by animateFloatAsState((b.weeksIn.toFloat() / b.weeks).coerceIn(0f, 1f), Motion.data(), label = "cyc")
+                        val fill by animateFloatAsState(((b.weeksIn + 1f) / b.weeks).coerceIn(0f, 1f), Motion.data(), label = "cyc")
                         Box(Modifier.fillMaxWidth().height(8.dp).clip(CircleShape).background(cs.surface)) { Box(Modifier.fillMaxWidth(fill).fillMaxHeight().clip(CircleShape).background(cs.primary)) }
                     }
                     if (!editing && b.state == "done" && b.sessions > 0 && b.index >= 0)

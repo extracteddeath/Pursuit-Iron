@@ -505,12 +505,12 @@ else:
 scroll_up_to(r"^\|Edit program$|Review block", tries=10)
 # The design's Block review page: sessions against the plan (or why it's too early), with Start next block
 if tap(r"Review block", "block-review", required=False):
-    if not find(r"^Block \d+ review$", timeout=10):
+    if not find(r"\|Block \d+ review$", timeout=10):
         FAILS.append("block review page did not open")
     elif not find(r"sessions done|not enough|No sessions were logged", timeout=10):
         FAILS.append("block review page has no session summary")
     shot("block-review")
-    close_sheet(r"^Block \d+ review$")
+    close_sheet(r"\|Block \d+ review$")
     scroll_up_to(r"^\|Edit program$|Review block", tries=10)
 row_scroll_to(r"^\|Settings$", r"Review block|^\|Schedule$|^\|Cycle$")
 tap(r"^\|Settings$", "program-settings")
@@ -761,7 +761,7 @@ if tap(r"^\|New$", "cycle-setup"):
             if scroll_to(r"Add a block", tries=6, step=600):
                 tap(r"Add a block", "cycle-added")
                 tap(r"Save cycle")
-                if not find(r"^Saved .+ blocks", timeout=90):
+                if not find(r"\|Saved .+ blocks", timeout=90):
                     FAILS.append("cycle edit did not save")
                 shot("cycle-saved")
             else:
@@ -771,8 +771,8 @@ if tap(r"^\|New$", "cycle-setup"):
         if scroll_to(r"End this block early", tries=8, step=600):
             tap(r"End this block early", "cycle-end-confirm")
             if tap(r"^\|?Review block$", "cycle-review", required=False):
-                if find(r"^Start block \d+$|^Complete cycle$", timeout=10):
-                    tap(r"^Start block \d+$|^Complete cycle$")
+                if find(r"\|Start block \d+$|\|Complete cycle$", timeout=10):
+                    tap(r"\|Start block \d+$|\|Complete cycle$")
                     time.sleep(6)
                     shot("cycle-advanced")
                 else:

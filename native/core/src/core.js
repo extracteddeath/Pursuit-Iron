@@ -578,9 +578,12 @@ export function strengthStandards() {
     const rows = !ready ? [] : trends.map((t) => { let l = null; try { l = E.strengthLevel(t.id, t.prBest, t.unit, bw, u, sex, a); } catch { l = null; } return l ? { t, l } : null; })
         .filter(Boolean).sort((x, y) => (y.l.idx - x.l.idx) || (y.l.within - x.l.within))
         .map(({ t, l }) => ({ id: t.id, name: t.name, level: l.level, idx: l.idx, within: Math.round(l.within * 100) / 100,
-            next: l.idx < E.STD_LEVELS.length - 1 ? E.STD_LEVELS[l.idx + 1] : null, add: l.idx < l.thresh.length ? Math.max(0, Math.round((l.thresh[l.idx] - t.prBest) * 10) / 10) : 0, unit: t.unit }));
+            next: l.idx < E.STD_LEVELS.length - 1 ? E.STD_LEVELS[l.idx + 1] : null, add: l.idx < l.thresh.length ? Math.max(0, Math.round((l.thresh[l.idx] - t.prBest) * 10) / 10) : 0, unit: t.unit,
+            // The design's level bar: the lift's e1RM against each band's threshold, and its multiple of bodyweight.
+            e1rm: Math.round(t.prBest * 10) / 10, ratio: Math.round(l.ratio * 100) / 100,
+            thresh: l.thresh.map((x) => (t.unit === 'lb' ? Math.round(x / 5) * 5 : Math.round(x / 2.5) * 2.5)) }));
     return { ready, missing: !(bw > 0) ? 'bodyweight' : !sex ? 'sex' : null, cohort: ready ? `${sex === 'female' ? 'women' : 'men'}${a > 0 ? `, age ${a}` : ''}, ${Math.round(bw)}${u}` : '',
-        rows, levels: E.STD_LEVELS };
+        rows, levels: E.STD_LEVELS, sex: sex || 'male', age: a || null, bodyweight: bw > 0 ? bw : null, unit: u };
 }
 
 /* ------------------------------------------------------------------ correct a logged workout (App.js HistoryEditSheet + commitHistoryCorrection) */

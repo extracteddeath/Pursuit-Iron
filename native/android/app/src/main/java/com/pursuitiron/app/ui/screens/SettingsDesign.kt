@@ -155,8 +155,14 @@ fun SettingsGroup(vm: AppViewModel, onGyms: () -> Unit) {
         }
         val scale = st.d("restScale", 1.0)
         val sel = when { scale < 0.9 -> "0.75"; scale > 1.1 -> "1.25"; else -> "1.0" }
-        GroupRow("Rest length", "Compound ${mmss((135 * sel.toDouble()).toInt())} · isolation ${mmss((75 * sel.toDouble()).toInt())} · lifts you set keep their own") {
-            PillToggle(listOf("0.75" to "Short", "1.0" to "Standard", "1.25" to "Long"), sel, { vm.updateSetting("restScale", it.toDouble()) }, "Rest length")
+        // The design: a long description, so the choice sits under it at full width (as Theme does).
+        Column(Modifier.fillMaxWidth().background(cs.surfaceContainerLow).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column {
+                Text("Rest length", style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp, fontWeight = FontWeight.SemiBold))
+                Text("Compound ${mmss((135 * sel.toDouble()).toInt())} · isolation ${mmss((75 * sel.toDouble()).toInt())} · lifts you set keep their own",
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp), color = cs.onSurfaceVariant)
+            }
+            Segmented(listOf("0.75" to "Short", "1.0" to "Standard", "1.25" to "Long"), sel, { vm.updateSetting("restScale", it.toDouble()) }, height = 40.dp, track = cs.surfaceContainerHighest, gap = 3.dp)
         }
     }
     confirmUnit?.let { to ->

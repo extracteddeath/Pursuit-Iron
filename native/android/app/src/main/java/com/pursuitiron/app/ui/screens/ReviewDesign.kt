@@ -73,6 +73,7 @@ fun DesignPage(title: String, onClose: () -> Unit, actions: (@Composable () -> U
                 androidx.core.view.WindowCompat.getInsetsController(w, w.decorView).isAppearanceLightStatusBars = lightBars
             }
         }
+        Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().background(cs.surface).statusBarsPadding()) {
             Row(Modifier.padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 IconButton(onClick = onClose) { Icon(PiIcons.Close, "Close") }
@@ -82,6 +83,8 @@ fun DesignPage(title: String, onClose: () -> Unit, actions: (@Composable () -> U
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp), content = content)
             if (bottom != null) Box(Modifier.fillMaxWidth().background(cs.surfaceContainer).navigationBarsPadding().padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 18.dp)) { bottom() }
             else Box(Modifier.navigationBarsPadding())
+        }
+        com.pursuitiron.app.ui.PageOverlays(if (bottom != null) 96.dp else 24.dp)
         }
     }
 }

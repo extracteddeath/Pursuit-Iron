@@ -81,6 +81,7 @@ fun StrengthStandardsSheet(vm: AppViewModel, onClose: () -> Unit) {
                 androidx.core.view.WindowCompat.getInsetsController(w, w.decorView).isAppearanceLightStatusBars = lightBars
             }
         }
+        Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().background(cs.surface).statusBarsPadding().navigationBarsPadding()) {
             Row(Modifier.padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 IconButton(onClick = onClose) { Icon(PiIcons.Close, "Close") }
@@ -134,6 +135,8 @@ fun StrengthStandardsSheet(vm: AppViewModel, onClose: () -> Unit) {
                 }
                 StrengthClubCard(vm)
             }
+        }
+        com.pursuitiron.app.ui.PageOverlays()
         }
     }
     liftId?.let { id -> LiftDetailSheet(vm, id) { liftId = null } }

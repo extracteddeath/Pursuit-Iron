@@ -761,7 +761,7 @@ if tap(r"^\|New$", "cycle-setup"):
             if scroll_to(r"Add a block", tries=6, step=600):
                 tap(r"Add a block", "cycle-added")
                 tap(r"Save cycle")
-                if not find(r"\|Saved .+ blocks", timeout=90):
+                if not find(r"^\|?Edit$", timeout=90) or not seek(r"BLOCK 4$"):
                     FAILS.append("cycle edit did not save")
                 shot("cycle-saved")
             else:

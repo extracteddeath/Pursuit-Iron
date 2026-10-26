@@ -79,6 +79,8 @@ import kotlinx.coroutines.delay
 
 /** True at 600dp and up: rail instead of bar, two columns, dialogs instead of bottom sheets. */
 val LocalWide = compositionLocalOf { false }
+/** The app's view model for full-page dialogs, which sit in their own window above the app's snackbar and busy scrim. */
+val LocalAppVm = compositionLocalOf<AppViewModel?> { null }
 
 private val tabs = listOf(
     Triple(Tab.Today, "Today", PiIcons.Today), Triple(Tab.Plan, "Plan", PiIcons.Plan),
@@ -94,7 +96,7 @@ fun PiApp(vm: AppViewModel) {
             !vm.ready -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             else -> BoxWithConstraints(Modifier.fillMaxSize()) {
                 val wide = maxWidth >= 600.dp
-                CompositionLocalProvider(LocalWide provides wide) { Shell(vm, wide) }
+                CompositionLocalProvider(LocalWide provides wide, LocalAppVm provides vm) { Shell(vm, wide) }
             }
         }
     }
@@ -210,12 +212,20 @@ private fun MiniBar(vm: AppViewModel, modifier: Modifier) {
     }
 }
 
+/** A full-page dialog's own copy of the snackbar and busy scrim: the app's are hidden under the dialog window. */
 @Composable
-private fun SnackHost(vm: AppViewModel, modifier: Modifier) {
+fun androidx.compose.foundation.layout.BoxScope.PageOverlays(bottom: androidx.compose.ui.unit.Dp = 24.dp) {
+    val vm = LocalAppVm.current ?: return
+    SnackHost(vm, Modifier.align(Alignment.BottomCenter), bottom)
+    vm.busy?.let { BusyScrim(it) }
+}
+
+@Composable
+private fun SnackHost(vm: AppViewModel, modifier: Modifier, pageBottom: androidx.compose.ui.unit.Dp? = null) {
     val sn = vm.snack ?: return
     LaunchedEffect(sn.id) { delay(if (sn.undo != null) 6000 else 3500); vm.clearSnack() }
     val wide = LocalWide.current
-    val bottom = when {
+    val bottom = pageBottom ?: when {
         vm.screen == Screen.Workout && !wide -> if (vm.session?.o("rest") != null) 176.dp else 96.dp
         vm.screen == Screen.Tabs && !wide -> 96.dp
         else -> 24.dp

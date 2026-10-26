@@ -222,6 +222,7 @@ fun FinishPage(vm: AppViewModel, s: JSONObject, onClose: () -> Unit) {
             IconButton(onClick = onClose, modifier = Modifier.statusBarsPadding().padding(8.dp).align(Alignment.TopStart)) {
                 Icon(PiIcons.ChevronLeft, "Keep going", tint = cs.onPrimaryContainer)
             }
+            com.pursuitiron.app.ui.PageOverlays()
         }
         if (hurt) HurtSheet(vm, 0) { hurt = false }
         if (noteOpen) SessionNoteSheet(vm, s) { noteOpen = false }

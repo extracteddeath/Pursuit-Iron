@@ -290,6 +290,21 @@ async function verifyTaskHierarchy(browser){
       assert.ok(choices.every(b=>b.height>=44)&&choices.filter(b=>b.pressed==='true').length===1,'One active 44px+ pane');
       await page.click('[data-plan-pane="volume"]');
       assert.equal(await page.$eval('[data-plan-pane="volume"]',b=>b.getAttribute('aria-pressed')),'true');
+      // M379: this is the actual Plan blueprint renderer, not a duplicated
+      // graph fixture. Its planned sets use canonical 1-based weeks and the
+      // optional deload is exactly one final additional week.
+      await page.click('[data-plan-pane="blueprint"]');
+      await page.waitForSelector('[data-load-wave] [data-wave-week]');
+      const loadWave = await page.$eval('[data-load-wave]', el =>
+        [...el.querySelectorAll('[data-wave-week]')].map(row=>({
+          week:Number(row.dataset.waveWeek),sets:Number(row.dataset.waveSets),
+          deload:row.dataset.waveDeload==='1'
+        })));
+      assert.ok(loadWave.length>=4 &&
+        loadWave.every((point,i)=>point.week===i+1&&Number.isFinite(point.sets)&&point.sets>=0) &&
+        loadWave.filter(point=>point.deload).length<=1 &&
+        loadWave.slice(0,-1).every(point=>!point.deload),
+        'M379 uses the canonical consecutive planned weeks and one optional final deload: '+JSON.stringify(loadWave));
       await page.click('[data-plan-pane="schedule"]');
       assert.equal(await page.$eval('[data-plan-pane="schedule"]',b=>b.getAttribute('aria-pressed')),'true');
       assert.ok(planOrder.nextFirst&&planOrder.pickerFirst&&planOrder.sessionsFirst&&

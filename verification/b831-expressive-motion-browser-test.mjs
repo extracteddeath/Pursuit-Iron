@@ -2669,7 +2669,9 @@ try {
             return input?.value === 'Back Squat' && rows.length > 0
                 && rows.every(row => row.textContent.toLowerCase().includes('back squat'));
         }, { timeout: 15000 });
-        await page.click('.wpb-library-row');
+        // Use the pointer target after its entrance geometry is stable as well
+        // as its text; a raw page click can land between moving filter rows.
+        await page.locator('.wpb-library-row').click();
         await page.waitForSelector('[data-exercisedetail] .wpb-exercise-tabs');
         await page.click('.wpb-exercise-tabs>button:nth-child(2)');
         await page.waitForSelector('[data-exercisecharts]');

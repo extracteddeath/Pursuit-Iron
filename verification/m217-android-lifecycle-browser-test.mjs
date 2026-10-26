@@ -61,12 +61,13 @@ const configure = async page => {
 };
 const snapshot = page => page.evaluate(() => JSON.parse(localStorage.getItem('wpb:live')));
 const training = page => page.evaluate(() => JSON.parse(localStorage.getItem('wpb:v1')));
-const clickText = (page, text) => page.$$eval('button', (buttons, label) => {
+const clickText = async (page, text) => { await page.bringToFront(); return page.$$eval('button', (buttons, label) => {
     const button = buttons.find(b => b.textContent.trim() === label);
     if (!button) throw new Error('Missing button: ' + label);
     button.click();
-}, text);
+}, text); };
 const openWorkout = async page => {
+    await page.bringToFront();
     await page.waitForSelector('.wpb-live-dock button[aria-label="Resume workout"]');
     await page.click('.wpb-live-dock button[aria-label="Resume workout"]');
     await page.waitForSelector('.wpb-workout input[aria-label="reps"]');
@@ -81,13 +82,16 @@ async function verifyStorageOwner(browser) {
         await first.goto('http://127.0.0.1:8772/', { waitUntil: 'networkidle0' });
         await openWorkout(first);
         const liveBefore = await snapshot(first);
+        await second.bringToFront();
         await second.goto('http://127.0.0.1:8772/', { waitUntil: 'networkidle0' });
         await second.waitForFunction(() => !!document.querySelector('.wpb-home, [data-storage-busy]'));
         if (await second.$('.wpb-home')) {
+            await first.bringToFront();
             await first.click('button[aria-label="Finish workout"]');
             await first.waitForFunction(() => [...document.querySelectorAll('button')].some(b => b.textContent.trim() === 'Save & finish'));
             await clickText(first, 'Save & finish');
             await first.waitForFunction(() => JSON.parse(localStorage.getItem('wpb:v1')).history.length === 1);
+            await second.bringToFront();
             await second.click('[data-tab="settings"]');
             await second.locator('[data-theme-summary]').click();
             await second.locator('[data-theme-option="rosewater"]').click();
@@ -104,6 +108,7 @@ async function verifyStorageOwner(browser) {
         await clickText(second, 'Try again');
         await second.waitForSelector('[data-storage-busy]');
         assert.deepEqual(await snapshot(first), liveBefore, 'Retry cannot bypass an active owner');
+        await first.bringToFront();
         await first.click('button[aria-label="Finish workout"]');
         await first.waitForFunction(() => [...document.querySelectorAll('button')].some(b => b.textContent.trim() === 'Save & finish'));
         await clickText(first, 'Save & finish');
@@ -125,6 +130,7 @@ async function verifyStorageOwner(browser) {
             data.history = [{ ...data.history[0], id: 'legacy-window-workout' }];
             const text = JSON.stringify(data); localStorage.setItem('wpb:v1', text); return text;
         });
+        await second.bringToFront();
         await second.waitForSelector('[data-storage-changed="true"]');
         await second.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
         assert.equal(await second.evaluate(() => localStorage.getItem('wpb:v1')), externalText, 'A stale window pauses instead of overwriting external edits');
@@ -147,6 +153,7 @@ async function verifyStorageOwner(browser) {
         assert.match(await second.title(), /^Privacy Policy/, 'The service worker must serve the real privacy page');
         const returned = await context.newPage(); await configure(returned);
         await returned.goto('http://127.0.0.1:8772/', { waitUntil: 'networkidle0' }); await returned.waitForSelector('.wpb-home');
+        await second.bringToFront();
         await second.goBack({ waitUntil: 'networkidle0' }); await second.waitForSelector('[data-storage-busy="true"]');
         assert.equal((await training(returned)).history[0].id, 'legacy-window-workout', 'Back navigation cannot revive a stale document over the current owner');
         console.log('PASS M375: competing app windows cannot overwrite training/live state; retry waits for ownership and then loads the completed workout.');

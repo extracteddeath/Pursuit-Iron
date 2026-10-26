@@ -9021,3 +9021,16 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-standards-score>.mono>span{font-size:.8125rem;color:var(--wpb-theme-muted);font-weight:500}
 #root .wpb .wpb-standards-score p{margin:var(--pi-space-1) 0 0;font-size:.75rem;color:var(--wpb-theme-muted)}
 #root .wpb .wpb-standards-score>div{min-width:0;overflow-wrap:anywhere}
+
+/* M380: semantic volume drilldown control; no extra layout/styling owner. */
+#root .wpb .wpb-volume-part-trigger{
+  display:flex;justify-content:space-between;align-items:baseline;
+  gap:6px;width:100%;padding:0;margin:0 0 4px;
+  background:transparent;border:0;appearance:none;text-align:left;
+  font:inherit;font-size:13px;color:inherit;
+}
+#root .wpb button.wpb-volume-part-trigger{cursor:pointer}
+#root .wpb button.wpb-volume-part-trigger:focus-visible{
+  outline:2px solid var(--wpb-focus,currentColor);
+  outline-offset:3px;border-radius:4px;
+}

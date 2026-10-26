@@ -6,6 +6,7 @@ import { CHANGELOG } from './release-notes.js';
 import { UiHeader, UiRootHeader, UiAction, UiChoice, UiStatus, UiSection } from './ui-primitives.js';
 import { ProgramSettingsSheet } from './program-settings-sheet.js';
 import { LoadWaveCard } from './program-load-wave.js';
+import { VolumeBars, VolumeRampTable } from './program-volume-surfaces.js';
 import { WeeklyScheduleSheet } from './program-schedule-sheet.js';
 import { ProgramRevisionReview, ProgramLayoutHistory, ProgramSaveReview } from './program-review-surfaces.js';
 import { sessionLoadText, sessionTargetsText, PlanChangeBanner, HomeSessionOutline, SessionGamePlan, PlanChangesDialog } from './plan-session-surfaces.js';
@@ -66,7 +67,7 @@ import { readCycleSetupDraft, writeCycleSetupDraft, clearCycleSetupDraft, CYCLE_
 import { INJURY_AREAS, INJURY_IMPACTS, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
 import { withProgressionChoices, workoutProgressionOrigin, withWorkoutProgramReview, repeatedNote, refreshProgressionSets, exerciseSessionTags, workoutProgramChanges, buildSessionReview, workoutRowMatchesPrescription, beginWorkoutProgramSwap, undoWorkoutProgramSwap } from './session-tools.js';
 import { reviewProgramChanges, programReviewKey, withProgramRevision } from './program-review.js';
-const __APP_VERSION__='4.0.0'; const __BUILD__='926';
+const __APP_VERSION__='4.0.0'; const __BUILD__='927';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { createPortal } from "../vendor/react-dom.js";
@@ -4985,31 +4986,11 @@ function summarizeProgram(p) {
    text can never describe different rules. */
 
 
-/* zone: below MEV (under-stimulating), MEV–MRV (productive), above MRV (more than this app plans for).
-   The third label used to read "junk volume", which claimed more than the evidence does: the current
-   dose-response work finds gains still rising at the top of the studied range, with diminishing
-   returns — not reversing. Above MRV is a flag that a week is planned past what this app budgets for
-   recovery, and worth a look if progress or readiness is sliding; it is not a claim those sets did
-   nothing. The colour and the threshold are unchanged — only the claim attached to them. */
+/* MEV/MAV/MRV are coaching estimates, not claims of muscle loss or failed recovery. */
 function volumeZone(part, sets, program = 0) {
     const { mev, mrv } = landmarkFor(part, program?.config?.experience || "intermediate", program);
     const mav = mavFor(part, program);
-    /* FOUR BANDS, NOT THREE. "Productive" covered everything from MEV to MRV — a range wide enough
-       that 9 sets and 21 sets read identically, when one is the middle of the growth range and the
-       other is at the edge of what the week budgets. Splitting it at MAV is the same information the
-       generator already uses (mavFor is the readiness-trim's own threshold), just shown.
-
-       THE SUBTITLES ARE DELIBERATELY WEAKER THAN THE ONES THIS IDEA CAME WITH. The AI Studio build
-       paired these bands with "Below maintenance threshold" and "Exceeds systemic recovery". Both
-       assert more than the app knows:
-         - MEV is the MINIMUM EFFECTIVE volume, not maintenance. Maintenance volume is a separate and
-           LOWER landmark, so a lifter under MEV is very often still maintaining. "Below maintenance"
-           tells them they are losing muscle, which the number does not say.
-         - "Exceeds systemic recovery" is the same over-claim as the old "junk volume" label removed
-           above, in new words: it states as fact that the lifter cannot recover from these sets.
-           MRV is what THIS APP budgets for, and the dose-response evidence has gains still rising at
-           the top of the studied range.
-       So the bands are adopted and the claims are not. */
+    // Productive and high are both within the planned range; MAV separates them.
     if (sets < mev)
         return { color: C.muted, label: "below MEV", sub: "under the volume that reliably drives growth" };
     if (sets <= mav)
@@ -5020,20 +5001,8 @@ function volumeZone(part, sets, program = 0) {
         return { color: C.accentInk, label: "high", sub: "near the top of the planned range" };
     return { color: C.warn, label: "over MRV", sub: "past what this app budgets to recover from" }; // label text is user-visible — see the note above
 }
-// Parts whose total is really several independently-recoverable sub-heads. The deltoid is the
-// big one: front delts soak up huge indirect volume from all pressing, so the broad "shoulders"
-// total routinely sails past a single 26-set ceiling even when each head (front / side / rear)
-// is individually fine. For these, the meaningful MRV is the SUM of the heads' ceilings, and the
-// "over MRV" warning should only fire when an actual head exceeds its own MRV — not when the
-// lumped total crosses a number that was never meant to cover all three heads at once.
-
-/* ⚠ Takes an optional program so a ceiling is resolved from the landmarks that program was BUILT
-   with — same reason as preferenceFloor. Called with one argument it falls back to the legacy table,
-   which is what history-wide callers want. */
-
-// Zone for a broad part, using per-head data when the part is a composite so a single over-built
-// head (not the harmless lumped sum) is what trips the warning. Falls back to the flat zone when
-// no sub-volume is available.
+// Composite muscles use per-head recovery ceilings; preserve the program's
+// own landmarks when available, and legacy tables for historical views.
 function partZone(part, sets, subVolume, program = null) {
     if (program?.engineSource === "pursuit-next") return volumeZone(part, sets, program);
     const heads = COMPOSITE_HEADS[part];
@@ -5053,9 +5022,7 @@ function partZone(part, sets, subVolume, program = null) {
     });
     if (anyHeadOver)
         return { color: C.warn, label: "a head over MRV", sub: "one deltoid head is past its own ceiling" };
-    /* Composites get the same MAV split as everything else, so a shoulder total near its ceiling no
-       longer reads identically to one in the middle of the range. The over-MRV verdict still belongs
-       to the per-head test above — only the productive band is being subdivided here. */
+    // MAV divides the productive band without altering the per-head MRV guard.
     return sets <= mavFor(part)
         ? { color: C.accentInk, label: "productive", sub: "inside the range this app plans for" }
         : { color: C.accentInk, label: "high", sub: "near the top of the planned range" };
@@ -8801,66 +8768,6 @@ function SwapSheet({ ex, alts, onPick, onBanCurrent, onClose, trend, program, da
 /* `program` and `week` are optional and only enable the contributing-exercise drill-down: this
    component also renders for LOGGED volume on Home and in history, where there is no program to
    attribute sets to. Without them it behaves exactly as before. */
-function VolumeBars({ volume, subVolume, target, program = null, week = 0 }) {
-    const [openPart, setOpenPart] = useState(null);
-    const weekBreak = useMemo(() => (program ? weekMuscleBreakdown(program, week) : null), [program, week]);
-    const [granular, setGranular] = useState(false);
-    const parts = PART_ORDER.filter(p => (volume[p] || 0) > 0.05 || (target && (target[p] || 0) > 0.05));
-    if (!parts.length)
-        return _jsx("div", { style: { fontSize: 13, color: C.muted, padding: "6px 2px" }, children: "No volume logged yet." });
-    // sub-regions to surface beneath their parent part when granular view is on
-    const subUnder = { shoulders: ["front_delts", "side_delts", "rear_delts"], traps: ["upper_traps"], abs: ["obliques", "serratus"], calves: ["tibialis"] };
-    const subBar = (k) => {
-        const v = (subVolume && subVolume[k]) || 0;
-        const lm = program?.engineSource === "pursuit-next" && k !== "front_delts" ? landmarkFor(k, program.config?.experience, program) : SUB_LANDMARKS[k] || { mev: 4, mrv: 20 };
-        /* SUB-HEADS GET THE SAME BANDS AS EVERYTHING ELSE, FROM ONE DEFINITION.
-           This line used to carry its own copy of the three-band rule — so when the bands changed the
-           broad parts above gained a MAV split and these sub-head rows silently kept the old two-band
-           "productive", side by side on the same screen. Sub-heads have their own landmarks (front
-           delts run mev 0), so the thresholds come from SUB_LANDMARKS while the band NAMES and the
-           claims attached to them come from the shared table. */
-        const subMav = lm.mav != null ? lm.mav : (lm.mev + lm.mrv) / 2;
-        const zone = v < lm.mev ? { color: C.muted, label: "below MEV", sub: "under the volume that reliably drives growth" }
-            : v <= subMav ? { color: C.accentInk, label: "productive", sub: "inside the range this app plans for" }
-                : v <= lm.mrv ? { color: C.accentInk, label: "high", sub: "near the top of the planned range" }
-                    : { color: C.warn, label: "over MRV", sub: "past what this app budgets to recover from" };
-        const scale = Math.max(lm.mrv * 1.1, v, 1);
-        return (_jsxs("div", { style: { marginTop: 6, paddingLeft: 12, borderLeft: `2px solid ${C.border}` }, children: [_jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 13, marginBottom: 2 }, children: [_jsx("span", { style: { color: C.muted, fontWeight: 500 }, children: SUBMUSCLE_LABEL[k] }), _jsxs("span", { children: [_jsx("span", { className: "mono", style: { color: catInk(zone.color), fontWeight: 600 }, children: fmtSets(v) }), " ", _jsx("span", { style: { fontSize: 11, color: C.faint }, children: zone.label })] })] }), _jsxs("div", { style: { position: "relative", height: 6, borderRadius: 999, background: C.bg2, overflow: "hidden" }, children: [_jsx("div", { style: { position: "absolute", left: `${(lm.mev / scale) * 100}%`, width: `${((lm.mrv - lm.mev) / scale) * 100}%`, top: 0, bottom: 0, background: C.accent, opacity: 0.13 } }), _jsx("div", { className: "wpb-bar", style: { background: zone.color, transform: `translateX(-${100 - Math.min(100, (v / scale) * 100)}%)` } })] })] }, k));
-    };
-    return (_jsxs(_Fragment, { children: [subVolume && (_jsxs("button", { onClick: () => setGranular(g => !g), className: "pressable", style: { display: "flex", alignItems: "center", gap: 6, marginTop: 8, padding: "6px 10px", borderRadius: 8, border: `1px solid ${C.border}`, background: granular ? C.accentDim : C.card, color: granular ? C.accentInk : C.muted, fontSize: 13, fontWeight: 600, cursor: "pointer" }, children: [_jsx(Layers, { size: 13 }), " ", granular ? "Hide" : "Show", " delt heads & detail"] })), parts.map(p => {
-                const v = volume[p] || 0;
-                const tgt = target ? (target[p] || 0) : 0;
-                const { mev } = landmarkFor(p, program?.config?.experience, program);
-                const mrv = compositeMrv(p, program); // composite parts (shoulders) scale to the sum of their heads
-                const zone = partZone(p, v, subVolume, program);
-                const scale = Math.max(mrv * 1.1, v, tgt); // bar axis tops out past MRV, the bar, and the target
-                return (_jsxs("div", { style: { marginTop: 12 }, children: [_jsxs("div", { "data-vol-part": p, onClick: () => program && setOpenPart(o => o === p ? null : p), style: { display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 13, marginBottom: 4, cursor: program ? "pointer" : "default" }, children: [_jsxs("span", { style: { color: C.text, fontWeight: 500, display: "inline-flex", alignItems: "center", gap: 4 }, children: [PART_LABEL[p], program && _jsx(ChevronDown, { size: 11, color: C.faint, style: { transform: openPart === p ? "rotate(180deg)" : "none", transition: "transform .15s" } })] }), _jsxs("span", { children: [_jsx("span", { className: "mono", style: { color: catInk(zone.color), fontWeight: 600 }, children: fmtSets(v) }), tgt > 0 && _jsxs("span", { className: "mono", style: { fontSize: 11, color: C.faint }, children: [" / ", fmtSets(tgt)] }), " ", _jsx("span", { style: { fontSize: 11, color: C.faint }, title: tgt > 0 ? undefined : zone.sub, children: tgt > 0 ? "planned" : zone.label })] })] }), _jsxs("div", { style: { position: "relative", height: 9, borderRadius: 999, background: C.bg2, overflow: "visible" }, children: [_jsxs("div", { style: { position: "absolute", inset: 0, borderRadius: 999, overflow: "hidden" }, children: [_jsx("div", { style: { position: "absolute", left: `${(mev / scale) * 100}%`, width: `${((mrv - mev) / scale) * 100}%`, top: 0, bottom: 0, background: C.accent, opacity: 0.13 } }), _jsx("div", { className: "wpb-bar", style: { background: zone.color, transform: `translateX(-${100 - Math.min(100, (v / scale) * 100)}%)` } })] }), _jsx("div", { style: { position: "absolute", left: `${(mev / scale) * 100}%`, top: -1, bottom: -1, width: 2, background: C.faint, opacity: 0.6 } }), _jsx("div", { style: { position: "absolute", left: `${(mrv / scale) * 100}%`, top: -1, bottom: -1, width: 2, background: C.warn, opacity: 0.7 } }), tgt > 0 && _jsxs(_Fragment, { children: [_jsx("div", { style: { position: "absolute", left: `calc(${(tgt / scale) * 100}% - 3px)`, top: -7, width: 0, height: 0, borderLeft: "3px solid transparent", borderRight: "3px solid transparent", borderTop: `5px solid ${C.text}` } }), _jsx("div", { style: { position: "absolute", left: `${(tgt / scale) * 100}%`, top: -2, bottom: -2, width: 2, background: C.text, opacity: 0.85 } })] })] }), openPart === p && program && (() => {
-                            const entry = (weekBreak || []).find(e => e.part === p);
-                            const from = (entry && entry.from) || [];
-                            if (!from.length)
-                                return _jsx("div", { style: { fontSize: 13, color: C.faint, padding: "8px 0 2px" }, children: "Nothing in this program trains it this week." });
-                            return (_jsxs("div", { style: { marginTop: 8, background: C.bg2, borderRadius: 12, padding: "8px 10px" }, children: [from.slice(0, 8).map((f, i) => (_jsxs("div", { style: { display: "flex", alignItems: "baseline", gap: 8, padding: "4px 0", fontSize: 13 }, children: [_jsx("span", { style: { color: C.faint, flexShrink: 0, maxWidth: 96, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: f.dayLabel }), _jsxs("span", { style: { flex: 1, minWidth: 0, color: C.text, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: [f.name, !f.direct && _jsxs("span", { style: { color: C.faint, fontWeight: 400 }, children: [" (", Math.round(f.factor * 100), "% assist)"] })] }), _jsxs("span", { className: "mono", style: { flexShrink: 0, color: f.direct ? C.accentInk : C.muted, fontWeight: 600 }, children: ["+", fmtSets(f.contrib)] })] }, i))), from.length > 8 && _jsxs("div", { style: { fontSize: 11, color: C.faint, marginTop: 4 }, children: ["+", from.length - 8, " more"] })] }));
-                        })(), granular && subVolume && subUnder[p] && subUnder[p].filter(k => (subVolume[k] || 0) > 0.05 || SUB_LANDMARKS[k]?.mev > 0).map(subBar)] }, p));
-            }), _jsxs("div", { style: { fontSize: 11, color: C.faint, marginTop: 12, lineHeight: 1.5 }, children: ["Bars include fractional sets from compounds. The shaded band runs from ", _jsx("span", { style: { color: C.muted }, children: "MEV" }), " (minimum effective) to ", _jsx("span", { style: { color: C.warn }, children: "MRV" }), " (max recoverable) \u2014 staying inside it is the productive zone.", target ? " The light marker is your active program's planned volume for this week — the gap is what's left to hit." : "", subVolume ? " Expand a region for delt heads, obliques, and other detail — front delts read high because pressing feeds them, so side/rear usually need the direct work." : "", " Landmarks are population estimates and vary by individual."] })] }));
-}
-function VolumeRampTable({ program }) {
-    const weeks = weeksOf(program);
-    const cols = [];
-    for (let w = 1; w <= weeks; w++)
-        cols.push({ w, label: `W${w}` });
-    if (program.config.deload)
-        cols.push({ w: weeks + 1, label: "DL" });
-    const vols = cols.map(c => weeklyVolume(program, c.w));
-    const parts = PART_ORDER.filter(p => vols.some(v => (v[p] || 0) > 0.05));
-    const CW = 30;
-    if (!parts.length)
-        return null;
-    return (_jsxs("div", { style: { marginTop: 16, paddingTop: 12, borderTop: `1px solid ${C.borderSoft}` }, children: [_jsx("div", { style: { ...eyebrow(), marginBottom: 2 }, children: "Volume across the block" }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginBottom: 8 }, children: "Sets per muscle each week \u2014 color shows the MEV \u2192 MRV zone" }), _jsx("div", { className: "wpb-hscroll", style: { overflowX: "auto", overflowY: "hidden", touchAction: "pan-x pan-y" }, children: _jsxs("div", { style: { display: "inline-block", minWidth: "100%" }, children: [_jsxs("div", { style: { display: "flex", marginBottom: 6 }, children: [_jsx("div", { style: { width: 72, flexShrink: 0 } }), cols.map(c => (_jsx("div", { style: { width: CW, textAlign: "center", fontSize: 11, fontWeight: 700, color: c.label === "DL" ? C.muted : C.faint }, children: c.label }, c.w)))] }), parts.map(p => (_jsxs("div", { style: { display: "flex", alignItems: "center", marginBottom: 4 }, children: [_jsx("div", { style: { width: 72, flexShrink: 0, fontSize: 13, fontWeight: 500, color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", paddingRight: 4 }, children: PART_LABEL[p] }), cols.map((c, ci) => {
-                                    const s = vols[ci][p] || 0;
-                                    const z = volumeZone(p, s, program);
-                                    return (_jsx("div", { style: { width: CW, display: "flex", justifyContent: "center" }, children: _jsx("div", { className: "mono", title: `${PART_LABEL[p]} · ${z.label}`, style: { width: 25, height: 22, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 600, background: `${z.color}22`, color: catInk(z.color) }, children: fmtSets(s) }) }, c.w));
-                                })] }, p)))] }) }), _jsx("div", { style: { display: "flex", gap: 12, marginTop: 8, fontSize: 11, color: C.muted }, children: [["below MEV", C.muted], ["productive", C.accent], ["over MRV", C.warn]].map(([l, col]) => (_jsxs("span", { style: { display: "flex", alignItems: "center", gap: 4 }, children: [_jsx("span", { style: { width: 9, height: 9, borderRadius: 8, background: `${col}33`, border: `1px solid ${col}` } }), l] }, l))) })] }));
-}
 function VolumeCard({ volume, subVolume, program, onApplyFix, fixFeedback = null, open, onToggle, title = "Weekly volume", emptyLabel, target, history = null, week = 0, collapsible = true }) {
     const parts = PART_ORDER.filter(p => (volume[p] || 0) > 0.05);
     const verdicts = volumeVerdicts(history, volume, parts);
@@ -8878,7 +8785,7 @@ function VolumeCard({ volume, subVolume, program, onApplyFix, fixFeedback = null
                                             ? `${verb} ${fmtSets(v.planned)} sets — inside the ${v.lo}–${v.hi} range that has driven your fastest gains.`
                                             : v.status === "over"
                                                 ? `${verb} ${fmtSets(v.planned)} sets, above the ${v.lo}–${v.hi} that has driven your fastest gains. More sets haven't bought you more progress.`
-                                                : `${verb} ${fmtSets(v.planned)} sets, below the ${v.lo}–${v.hi} that has driven your fastest gains.`, _jsxs("span", { style: { color: C.faint }, children: [" (", v.weeks, " weeks compared)"] })] })] }, v.part)))] })), _jsx("p", { className: "wpb-volume-credit-help", children: "Muscle bars include partial credit when a lift also trains another muscle. Working sets count each performed set once." }), _jsx(VolumeBars, { volume: volume, subVolume: subVolume, target: target, program: program, week: week }), program && _jsx(VolumeRampTable, { program: program }), fixFeedback && _jsx("div", { role: "status", "data-volume-repair-status": fixFeedback.status, style: { marginTop: 10, padding: "10px 12px", borderRadius: 12, background: C.bg2, color: C.text, fontSize: 13, lineHeight: 1.5 }, children: fixFeedback.message })] })) }));
+                                                : `${verb} ${fmtSets(v.planned)} sets, below the ${v.lo}–${v.hi} that has driven your fastest gains.`, _jsxs("span", { style: { color: C.faint }, children: [" (", v.weeks, " weeks compared)"] })] })] }, v.part)))] })), _jsx("p", { className: "wpb-volume-credit-help", children: "Muscle bars include partial credit when a lift also trains another muscle. Working sets count each performed set once." }), _jsx(VolumeBars, { volume: volume, subVolume: subVolume, target: target, program: program, week: week, palette: C, partZone, catInk }), program && _jsx(VolumeRampTable, { program: program, palette: C, volumeZone, catInk, eyebrow }), fixFeedback && _jsx("div", { role: "status", "data-volume-repair-status": fixFeedback.status, style: { marginTop: 10, padding: "10px 12px", borderRadius: 12, background: C.bg2, color: C.text, fontSize: 13, lineHeight: 1.5 }, children: fixFeedback.message })] })) }));
 }
 function AddSheet({ parts, usedIds = [], onPick, onAddById, onCreate, onClose }) {
     const [mode, setMode] = useState("pick"); // pick | create
@@ -16032,7 +15939,7 @@ function HistoryView({ history, onBack, onClear, onDeleteEntry, onEditEntry, emb
                                         const over = trained.filter(p => partZone(p, weekVol[p], weekSubVol).label === "a head over MRV");
                                         const targets = (over.length ? over : trained.slice().sort((a, b) => weekVol[b] - weekVol[a]).slice(0, 2)).map(p => PART_LABEL[p]);
                                         return (_jsxs("div", { className: "wpb-progress-volume-warning", children: [_jsx(Battery, { size: 14, color: C.warn, className: "wpb-progress-warning-icon" }), _jsxs("div", { className: "wpb-progress-warning-copy", children: ["Your reps-in-reserve is trending down. ", over.length ? "You're over MRV on" : "Fatigue tends to pool in your highest-volume work —", " ", _jsx("span", { className: "wpb-progress-strong", children: targets.join(" & ") }), "; pulling a set or two there (or taking a deload) will likely restore your reserve."] })] }));
-                                    })(), _jsx(VolumeBars, { volume: weekVol })] })), liftPane === "load" && advice.length > 0 && (_jsxs("div", { className: "wpb-progress-card", children: [_jsxs("div", { className: "wpb-progress-card-head", children: [_jsx(Wand2, { size: 15, color: C.accentInk }), _jsx("div", { className: "wpb-progress-card-title", children: "Next block volume" })] }), _jsx("div", { className: "wpb-progress-card-copy-compact", children: "Auto-regulated from last week's logged volume & progress" }), advice.map(a => {
+                                    })(), _jsx(VolumeBars, { volume: weekVol, palette: C, partZone, catInk })] })), liftPane === "load" && advice.length > 0 && (_jsxs("div", { className: "wpb-progress-card", children: [_jsxs("div", { className: "wpb-progress-card-head", children: [_jsx(Wand2, { size: 15, color: C.accentInk }), _jsx("div", { className: "wpb-progress-card-title", children: "Next block volume" })] }), _jsx("div", { className: "wpb-progress-card-copy-compact", children: "Auto-regulated from last week's logged volume & progress" }), advice.map(a => {
                                         const up = a.delta > 0, flat = a.delta === 0;
                                         return (_jsxs("div", { className: "wpb-progress-volume-change-row", children: [_jsx("div", { className: "wpb-progress-volume-change-muscle", children: PART_LABEL[a.part] }), _jsx("div", { "data-direction": up ? "up" : flat ? "flat" : "down", className: "mono wpb-progress-volume-change-value", children: up ? `+${a.delta}` : flat ? "hold" : a.delta }), _jsx("div", { className: "wpb-progress-volume-change-reason", children: a.reason })] }, a.part));
                                     })] })), liftPane === "exercises" && trends.length > 0 && _jsx(ChartFavoritesManager, { trends, favorites: chartFavorites, onToggle: toggleChartFavorite, onMove: moveChartFavorite }), liftPane === "exercises" && trends.length > 0 && (_jsxs("div", { className: "wpb-progress-lift-search", children: [_jsx(Search, { size: 15, color: C.faint, className: "wpb-progress-fixed-icon" }), _jsx("input", { value: liftQ, onChange: e => setLiftQ(e.target.value), "aria-label": "Search your lifts", placeholder: `Search ${trends.length} lift${trends.length === 1 ? "" : "s"}\u2026`, className: "wpb-progress-lift-search-input" }), liftQ && (_jsx("button", { onClick: () => setLiftQ(""), "aria-label": "Clear lift search", className: "pressable hit wpb-progress-lift-search-clear",  children: _jsx(X, { size: 15 }) }))] })), liftPane === "exercises" && (() => {

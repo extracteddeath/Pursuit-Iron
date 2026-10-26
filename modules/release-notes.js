@@ -2,6 +2,10 @@
 import { Accessibility, Activity, AlertTriangle, Award, Ban, BarChart3, Brain, Calendar, Check, CheckCircle2, Clock, Dumbbell, Flame, GripVertical, HardDrive, HelpCircle, Home as HomeIcon, Info, Layers, Library, Maximize2, Medal, Milestone, Minus, Palette, Play, Plus, PlusCircle, RefreshCw, Repeat, Save, Search, Settings2, Share2, Shield, Smartphone, Sparkles, Target, Timer, Trash2, TrendingUp, Trophy, Undo2, Wand2, Zap } from 'lucide-react';
 
 export const CHANGELOG = [
+    { version: "4.0.0", build: "927", items: [
+        "Weekly muscle-volume charts and the block ramp now share a focused display module across Plan, Program, and Progress.",
+        "Muscle-volume contributors open by keyboard as well as touch, with a visible focus state and no change to calculations or saved training."
+    ] },
     { version: "4.0.0", build: "926", items: [
         "Plan's volume load wave now lives in one focused presentation module. Planned-set totals, week numbering and deloads still come from the same training engine."
     ] },

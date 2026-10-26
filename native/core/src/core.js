@@ -2560,12 +2560,19 @@ function lastTop(id) {
 }
 export function editor({ programId, weekIndex = 1 } = {}) {
     const p = draftOf(programId); if (!p) return null;
-    const stored = programById(programId), wk = Math.max(1, Math.min(E.weeksOf(p), Number(weekIndex) || 1));
+    const stored = programById(programId), wk = Math.max(1, Math.min(E.weeksOf(p) + (p.config?.deload && !p.config?.endless ? 1 : 0), Number(weekIndex) || 1));
     const manual = p.config?.progression === 'manual';
     const sched = p.schedule || {}, WD = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
     const weekdayOf = (id) => { const wd = [1, 2, 3, 4, 5, 6, 0].find((k) => sched[k] === id); return wd == null ? null : WD[wd]; };
     const banned = S.store.banned || [];
-    return { programId: p.id, name: p.name, weekIndex: wk, weeksTotal: E.weeksOf(p), manual, cycleId: p.cycleId || null, percent: !!p.config?.percentScheme,
+    // The design's week chips: every week of the block (deload included) with its working sets and minutes.
+    const weekTotals = (w) => p.days.reduce((acc, d) => { d.exercises.forEach((id, slot) => { let c = null; try { c = E.computeCell(p, d, id, slot, w); } catch { c = null; } acc.sets += Number(c?.sets) || 0; });
+        try { acc.minutes += E.estimateMinutes(p, d, w) || 0; } catch { /* unknown */ } return acc; }, { sets: 0, minutes: 0 });
+    const lastWeek = E.weeksOf(p) + (p.config?.deload && !p.config?.endless ? 1 : 0);
+    const weeks = Array.from({ length: Math.max(1, lastWeek) }, (_, k) => k + 1).map((w) => { const t = weekTotals(w); return { week: w, deload: w > E.weeksOf(p), sets: Math.round(t.sets), minutes: Math.round(t.minutes) }; });
+    const strip = Object.keys(sched).length ? [1, 2, 3, 4, 5, 6, 0].map((k) => ({ weekday: WD[k], dayId: sched[k] || null, label: sched[k] ? (p.days.find((d) => d.id === sched[k])?.label || null) : null })) : [];
+    return { programId: p.id, name: p.name, weekIndex: wk, weeksTotal: E.weeksOf(p), manual, cycleId: p.cycleId || null, percent: !!p.config?.percentScheme, weeks, strip,
+        currentWeek: (() => { const nx = upNext(); return nx && nx.program.id === p.id ? nx.weekIndex : null; })(),
         dirty: !!(stored && S.store.drafts?.[programId] && !E.sameProgramContent(stored, p)),
         canUndoSave: !!(S.saveUndo && S.saveUndo.id === programId),
         banned: banned.map((id) => exName(id)),

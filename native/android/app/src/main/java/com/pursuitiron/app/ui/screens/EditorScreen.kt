@@ -10,6 +10,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.layout.layout
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
@@ -125,7 +126,7 @@ fun ProgramEditorScreen(vm: AppViewModel) {
             IconButton(onClick = { if (dirty) leaving = true else vm.closeEditor() }) { Icon(PiIcons.Close, "Close editor") }
             Column(Modifier.weight(1f).clickable { sheet = ESheet.Rename }.semantics { contentDescription = "Edit program: ${e.s("name")}. Rename" }) {
                 Text("Edit program", style = MaterialTheme.typography.titleLarge.copy(fontSize = 20.sp, lineHeight = 26.sp, fontWeight = FontWeight.SemiBold))
-                Text("${e.s("name")} · week ${e.i("weekIndex")} of ${e.i("weeksTotal")}", style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp),
+                Text(e.s("name") + (e.optInt("currentWeek", 0).takeIf { it > 0 }?.let { " · week $it of ${e.i("weeksTotal")}" } ?: ""), style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp),
                     color = cs.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             if (dirty) TextButton(onClick = { vm.discardEdits() }) { Text("Undo all", fontWeight = FontWeight.Bold) }
@@ -135,40 +136,75 @@ fun ProgramEditorScreen(vm: AppViewModel) {
                 Text("Save", style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp, fontWeight = FontWeight.SemiBold), color = if (dirty) cs.onPrimary else cs.onSurfaceVariant)
             }
         }
-        // Day tabs: weekday over the day's name; the open one squares off.
-        LazyRow(Modifier.padding(top = 4.dp, bottom = 16.dp), contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(days, key = { it.s("id") }) { x ->
-                val on = x.s("id") == d?.s("id")
-                val r by animateDpAsState(if (on) 18.dp else 30.dp, Motion.spatialFast(), label = "tab")
-                Column(Modifier.widthIn(min = 92.dp).height(60.dp).clip(RoundedCornerShape(r)).background(if (on) cs.primary else cs.surfaceContainerHigh)
-                    .clickable { dayId = x.s("id") }.semantics { role = Role.Tab; selected = on }.padding(horizontal = 14.dp),
-                    verticalArrangement = Arrangement.Center) {
-                    val fg = if (on) cs.onPrimary else cs.onSurface
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(x.s("weekday").ifBlank { "DAY ${x.i("index") + 1}" }, style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.4.sp), color = fg.copy(alpha = 0.85f))
-                        if (x.b("edited")) Box(Modifier.size(7.dp).clip(CircleShape).background(fg).semantics { contentDescription = "edited" })
-                    }
-                    Text(x.s("label"), style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold), color = fg, maxLines = 1)
-                }
-            }
-        }
         if (d == null) return@Column
         val dId = d.s("id")
         val exs = d.list("exercises")
-        LazyColumn(Modifier.weight(1f).fillMaxWidth().widthIn(max = 760.dp).align(Alignment.CenterHorizontally),
+        val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+        // Opening another day brings its header to the top, so the folded days above don't push it away.
+        var first by remember { mutableStateOf(true) }
+        LaunchedEffect(dId) { if (first) { first = false; return@LaunchedEffect }; listState.animateScrollToItem(1 + (if (e.list("strip").isNotEmpty()) 1 else 0) + di) }
+        LazyColumn(Modifier.weight(1f).fillMaxWidth().widthIn(max = 760.dp).align(Alignment.CenterHorizontally), state = listState,
             contentPadding = PaddingValues(start = if (wide) 32.dp else 16.dp, end = if (wide) 32.dp else 16.dp, bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            item(key = "head") {
-                Row(Modifier.padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Column(Modifier.weight(1f)) {
-                        Text(d.s("label"), style = MaterialTheme.typography.headlineMedium.copy(fontSize = 28.sp, lineHeight = 34.sp, fontWeight = FontWeight.Bold))
-                        Text(if (exs.isEmpty()) "No lifts yet · add some, or it stays a rest day"
-                            else "${fmtNum(d.d("sets"))} working sets this week" + (d.i("minutes").takeIf { it > 0 }?.let { " · ~$it min" } ?: ""),
-                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp, lineHeight = 20.sp), color = cs.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
+            // The whole block: each week's sets and minutes; the targets below follow the week picked.
+            item(key = "weeks") {
+                val cur = e.optInt("currentWeek", 0)
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    LazyRow(Modifier.fillMaxWidth().layout { m, k -> val x = (if (wide) 32 else 16).dp.roundToPx(); val pl = m.measure(k.copy(minWidth = 0, maxWidth = k.maxWidth + 2 * x)); layout(pl.width - 2 * x, pl.height) { pl.place(-x, 0) } },
+                        contentPadding = PaddingValues(horizontal = if (wide) 32.dp else 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(e.list("weeks"), key = { "w" + it.i("week") }) { w ->
+                            val on = w.i("week") == e.i("weekIndex")
+                            val r by animateDpAsState(if (on) 16.dp else 28.dp, Motion.spatialFast(), label = "wk")
+                            val label = if (w.b("deload")) "Deload" else "Week ${w.i("week")}"
+                            Column(Modifier.widthIn(min = 104.dp).height(56.dp).clip(RoundedCornerShape(r)).background(if (on) cs.primary else androidx.compose.ui.graphics.Color.Transparent)
+                                .then(if (on) Modifier else Modifier.border(1.5.dp, cs.outlineVariant, RoundedCornerShape(r)))
+                                .clickable { vm.editWeek(w.i("week")) }
+                                .semantics { role = Role.RadioButton; selected = on; contentDescription = "$label: ${w.i("sets")} sets, ${w.i("minutes")} minutes" + if (w.i("week") == cur) ", this week" else "" }
+                                .padding(horizontal = 14.dp), verticalArrangement = Arrangement.Center) {
+                                val fg = if (on) cs.onPrimary else cs.onSurface
+                                Text(label, style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold), color = fg)
+                                Text("${w.i("sets")} sets · ${w.i("minutes")}m", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), color = fg.copy(alpha = 0.8f))
+                            }
+                        }
                     }
-                    Box(Modifier.height(40.dp).clip(CircleShape).background(cs.secondaryContainer).clickable { dayMenu = !dayMenu }
-                        .semantics { role = Role.Button; stateDescription = if (dayMenu) "Expanded" else "Collapsed" }.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
-                        Text(if (dayMenu) "Done" else "Day options", style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold), color = cs.onSecondaryContainer)
+                    Text((if (e.i("weekIndex") == cur) "This week" else if (e.list("weeks").getOrNull(e.i("weekIndex") - 1)?.b("deload") == true) "The deload week" else "Week ${e.i("weekIndex")}") +
+                        "’s targets are shown. Swaps, order and days apply to every week of the block.",
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp), color = cs.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp))
+                }
+            }
+            // The week at a glance: which day trains when, rest days between.
+            val strip = e.list("strip")
+            if (strip.isNotEmpty()) item(key = "strip") {
+                Row(Modifier.fillMaxWidth().semantics { contentDescription = "This week" }, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    strip.forEach { c ->
+                        val train = c.s("dayId").isNotBlank() && c.s("dayId") != "null"; val on = train && c.s("dayId") == dId
+                        Column(Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(when { on -> cs.primary; train -> cs.surfaceContainerHigh; else -> androidx.compose.ui.graphics.Color.Transparent })
+                            .clickable(enabled = train && !on) { dayId = c.s("dayId") }
+                            .semantics(mergeDescendants = true) { contentDescription = c.s("weekday") + ": " + (if (train) c.s("label") + (if (on) ", open" else "") else "rest day") }
+                            .padding(vertical = 8.dp, horizontal = 2.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            val fg = when { on -> cs.onPrimary; train -> cs.onSurface; else -> cs.onSurfaceVariant }
+                            Text(c.s("weekday").lowercase().replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontWeight = FontWeight.ExtraBold), color = fg.copy(alpha = 0.8f))
+                            Text(if (train) shortDay(c.s("label")) else "Rest", style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp, fontWeight = FontWeight.Bold), color = fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                }
+            }
+            days.take(di).forEach { x -> item(key = "before:" + x.s("id")) { DayCard(x, e.i("weekIndex")) { dayId = x.s("id") } } }
+            item(key = "head") {
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(cs.secondaryContainer).padding(start = 16.dp, end = 12.dp, top = 14.dp, bottom = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Box(Modifier.size(40.dp).clip(RoundedCornerShape(14.dp)).background(cs.surface), contentAlignment = Alignment.Center) {
+                        Text(d.s("weekday").ifBlank { "D${di + 1}" }, style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontWeight = FontWeight.ExtraBold), color = cs.onSurface)
+                    }
+                    Column(Modifier.weight(1f)) {
+                        Text(d.s("label"), style = MaterialTheme.typography.headlineSmall.copy(fontSize = 22.sp, lineHeight = 28.sp, fontWeight = FontWeight.Bold), color = cs.onSecondaryContainer)
+                        Text(if (exs.isEmpty()) "No lifts yet · add some, or it stays a rest day"
+                            else "${exs.size} lifts · ${fmtNum(d.d("sets"))} sets" + (d.i("minutes").takeIf { it > 0 }?.let { " · ~$it min" } ?: ""),
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp), color = cs.onSecondaryContainer.copy(alpha = 0.85f))
+                    }
+                    Box(Modifier.height(40.dp).clip(CircleShape).background(cs.surface).clickable { dayMenu = !dayMenu }
+                        .semantics { role = Role.Button; stateDescription = if (dayMenu) "Expanded" else "Collapsed" }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
+                        Text(if (dayMenu) "Done" else "Day options", style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold), color = cs.onSurface)
                     }
                 }
             }
@@ -270,6 +306,7 @@ fun ProgramEditorScreen(vm: AppViewModel) {
                     }
                 }
             }
+            days.drop(di + 1).forEach { x -> item(key = "after:" + x.s("id")) { DayCard(x, e.i("weekIndex")) { dayId = x.s("id") } } }
             val banned = e.strings("banned")
             if (banned.isNotEmpty()) item(key = "banned") {
                 Text("${banned.size} exercise${if (banned.size == 1) "" else "s"} banned from all programs: ${banned.joinToString(", ")}.",
@@ -319,6 +356,33 @@ fun ProgramEditorScreen(vm: AppViewModel) {
                 }
             }
         }
+    }
+}
+
+private fun shortDay(label: String) = label.split(" — ", " · ", " - ").first().let { Regex("^(Push|Pull|Legs|Upper|Lower|Full)").find(it)?.value ?: it }
+
+/** Another day of the week, folded: weekday, name, its size this week and the first lifts; tap to open it. */
+@Composable
+private fun DayCard(x: JSONObject, week: Int, onOpen: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val exs = x.list("exercises")
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(cs.surfaceContainerLow).clickable(onClick = onOpen)
+        .semantics(mergeDescendants = true) { role = Role.Button; contentDescription = "${x.s("weekday")} ${x.s("label")}. Open" }
+        .padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Box(Modifier.size(40.dp).clip(RoundedCornerShape(14.dp)).background(cs.surfaceContainerHigh), contentAlignment = Alignment.Center) {
+            Text(x.s("weekday").ifBlank { "D${x.i("index") + 1}" }, style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontWeight = FontWeight.ExtraBold))
+        }
+        Column(Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(x.s("label"), style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp, fontWeight = FontWeight.Bold), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                if (x.b("edited")) Box(Modifier.size(7.dp).clip(CircleShape).background(cs.primary).semantics { contentDescription = "edited" })
+            }
+            Text("${exs.size} lifts · ${fmtNum(x.d("sets"))} sets" + (x.i("minutes").takeIf { it > 0 }?.let { " · ~$it min" } ?: ""),
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), color = cs.onSurfaceVariant)
+            Text(if (exs.isEmpty()) "No lifts yet" else exs.take(3).joinToString(" · ") { it.s("name") } + if (exs.size > 3) " +${exs.size - 3}" else "",
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), color = cs.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        Icon(PiIcons.ChevronDown, null, tint = cs.onSurfaceVariant, modifier = Modifier.size(18.dp))
     }
 }
 

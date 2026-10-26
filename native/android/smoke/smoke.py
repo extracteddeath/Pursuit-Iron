@@ -801,6 +801,12 @@ if tap(r"^\|  Schedule$|Schedule$", "schedule-sheet", required=False):
 if tap(r"Edit program", "editor"):
     if not find(r"DAY FOCUS", timeout=8):
         FAILS.append("editor has no day setup")
+    # Every week of the block: picking another week shows its targets
+    if tap(r"^Week 1: \d+ sets", "editor-week-1", required=False):
+        if not find(r"Week 1’s targets are shown|This week’s targets are shown", timeout=6):
+            FAILS.append("editor week chips do not switch the week")
+    if not find(r"lifts · [\d.]+ sets", timeout=4):
+        FAILS.append("editor shows no day summaries")
     tap(r"^Move .+ later\|", "editor-moved")
     if tap(r"^Swap .+\|", "editor-swap"):
         if not find(r"No other lift|·", timeout=8):

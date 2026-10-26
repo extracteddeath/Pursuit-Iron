@@ -205,6 +205,7 @@ fun SettingsRows(vm: AppViewModel, onOpen: (String) -> Unit) {
         SetRow("exercises", "Your exercises", if (vm.customs.isEmpty()) "Create lifts that work everywhere" else "${vm.customs.size} custom lift${if (vm.customs.size == 1) "" else "s"}", PiIcons.Plus, cs.primaryContainer, cs.onPrimaryContainer),
         SetRow("comfort", "Comfort & accessibility", "${mapOf(1f to "Default", 1.1f to "Large", 1.2f to "Larger")[vm.prefs.zoom] ?: "Default"} text · haptics ${if (st.b("haptics", true)) "on" else "off"}", ICON_COMFORT, cs.tertiaryContainer, cs.onTertiaryContainer),
         SetRow("cues", "Rest timer & cues", "${mapOf("off" to "No sound", "tones" to "Tones", "voice" to "Voice")[vm.prefs.cues] ?: "Tones"} · ${if (vm.prefs.duck) "music lowers" else "music pauses"}", ICON_CUES, cs.primaryContainer, cs.onPrimaryContainer),
+        SetRow("widgets", "Widgets & watch", "Next session and Start on your home screen", PiIcons.Phone, cs.secondaryContainer, cs.onSecondaryContainer),
         SetRow("training", "Training preferences", "$exp · effort as ${if (st.s("loadMode") == "rpe") "RPE" else "reps in reserve"}", ICON_PREFS, cs.primaryContainer, cs.onPrimaryContainer),
         SetRow("reminders", "Reminders", remSub, ICON_BELL, cs.secondaryContainer, cs.onSecondaryContainer),
         SetRow("injury", "Injury log", "${if ((inj?.i("active") ?: 0) > 0) "${inj!!.i("active")} active" else "Nothing active"} · ${inj?.i("resolved") ?: 0} resolved", PiIcons.Shield, cs.tertiaryContainer, cs.onTertiaryContainer),

@@ -92,13 +92,13 @@ fun LibraryScreen(vm: AppViewModel) {
         item(span = { GridItemSpan(maxLineSpan) }) {
             Row(Modifier.padding(top = 20.dp, start = 4.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Exercises", style = MaterialTheme.typography.displayMedium, modifier = Modifier.weight(1f))
-                androidx.compose.material3.FilledTonalIconButton(onClick = { comparing = true }) { Icon(PiIcons.Progress, "Compare exercises") }
+                androidx.compose.material3.FilledTonalIconButton(onClick = { comparing = true }) { Icon(PiIcons.Trend, "Compare exercises") }
                 androidx.compose.material3.FilledTonalButton(onClick = { creating = true }) { Icon(PiIcons.Plus, null, Modifier.size(18.dp)); Text(" New") }
             }
         }
         item(span = { GridItemSpan(maxLineSpan) }) {
             OutlinedTextField(q, { q = it; vm.searchLibrary(it, part, equip) }, Modifier.fillMaxWidth().padding(bottom = 10.dp), singleLine = true,
-                placeholder = { Text("Search exercises") }, shape = CircleShape, leadingIcon = { Icon(PiIcons.Focus, null) },
+                placeholder = { Text("Search exercises") }, shape = CircleShape, leadingIcon = { Icon(PiIcons.Search, null) },
                 colors = TextFieldDefaults.colors(focusedContainerColor = cs.surfaceContainerHigh, unfocusedContainerColor = cs.surfaceContainerHigh, unfocusedIndicatorColor = Color.Transparent))
         }
         item(span = { GridItemSpan(maxLineSpan) }) {
@@ -135,11 +135,15 @@ fun LibraryScreen(vm: AppViewModel) {
             }
         }
         items(shown, key = { it.s("id") }) { x ->
-            val lower = x.s("group") == "Legs"
+            // The design's tile: colour and shape by muscle group (Chest/Shoulders, Back/Arms, Legs/Core)
+            val g = (listOf("All", "Chest", "Back", "Legs", "Shoulders", "Arms", "Core").indexOf(x.s("group")).coerceAtLeast(0)) % 3
+            val tileBg = listOf(cs.tertiaryContainer, cs.primaryContainer, cs.secondaryContainer)[g]
+            val tileFg = listOf(cs.onTertiaryContainer, cs.onPrimaryContainer, cs.onSecondaryContainer)[g]
+            val tileShape = listOf(CircleShape, RoundedCornerShape(14.dp), RoundedCornerShape(14.dp, 14.dp, 14.dp, 4.dp))[g]
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.surfaceContainerLow).clickable { open = x.s("id") }.padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Box(Modifier.size(40.dp).clip(CircleShape).background(if (lower) cs.tertiaryContainer else cs.primaryContainer), contentAlignment = Alignment.Center) {
-                    Text(x.s("name").firstOrNull()?.uppercase() ?: "?", style = MaterialTheme.typography.titleSmall, color = if (lower) cs.onTertiaryContainer else cs.onPrimaryContainer)
+                Box(Modifier.size(40.dp).clip(tileShape).background(tileBg), contentAlignment = Alignment.Center) {
+                    Text(x.s("name").firstOrNull()?.uppercase() ?: "?", style = MaterialTheme.typography.titleSmall, color = tileFg)
                 }
                 Column(Modifier.weight(1f)) {
                     Text(x.s("name"), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)

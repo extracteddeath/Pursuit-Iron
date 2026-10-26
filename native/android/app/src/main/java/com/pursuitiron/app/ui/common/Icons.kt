@@ -37,6 +37,7 @@ object PiIcons {
     val Ban = icon("ban", "M5.6 5.6l12.8 12.8M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z")
     val Layers = icon("layers", "M12 3l9 5-9 5-9-5zM3 13l9 5 9-5")
     val Copy = icon("copy", "M8 8h12v12H8zM4 16V4h12")
+    val Phone = icon("phone", "M7 2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zM11 18h2")
     val Share = icon("share", "M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7M16 6l-4-4-4 4M12 2v13")
     val Lock = icon("lock", "M6 11V8a6 6 0 0 1 12 0v3M5 11h14v10H5z")
     val Pencil = icon("pencil", "M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z")

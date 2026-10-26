@@ -145,6 +145,7 @@ fun YouScreen(vm: AppViewModel) {
         null -> {}
         "comfort" -> ComfortSheet(vm) { settingsSheet = null }
         "cues" -> CuesSheet(vm) { settingsSheet = null }
+        "widgets" -> WidgetsSheet(vm) { settingsSheet = null }
         "whatsnew" -> WhatsNewSheet(vm) { settingsSheet = null }
         else -> SettingsPageSheet(vm, settingsSheet!!) { settingsSheet = null }
     }

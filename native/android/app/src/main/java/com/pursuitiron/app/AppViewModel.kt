@@ -425,6 +425,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         toast("Cycle started: ${r.i("blocks")} blocks, beginning with ${r.s("first")}")
     }
     suspend fun cycleDetail(id: String): JSONObject? = obj("cycleDetail", jsonOf("id" to id))
+    /** B892: the share card's rows for what the profile layout says to show. */
+    suspend fun profileCard(): JSONObject? = prefs.profileLayout.let { l -> obj("profileCard", jsonOf("share" to JSONArray(l.share), "favorites" to JSONArray(l.favorites))) }
     suspend fun reviewBlock(id: String, index: Int): JSONObject? = obj("reviewBlock", jsonOf("id" to id, "index" to index))
     fun advanceCycle(id: String, after: () -> Unit = {}) = launchCore {
         val r = working("Preparing your next block") { obj("advanceCycle", jsonOf("id" to id)) } ?: return@launchCore

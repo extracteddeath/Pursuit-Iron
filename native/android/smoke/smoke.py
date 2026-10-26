@@ -664,6 +664,18 @@ if scroll_to(r"Customize profile", tries=12):
     close_sheet(r"sections shown")
 else:
     FAILS.append("Customize profile button missing")
+# B892: the share card shows what you pick, saved as you go
+if seek(r"Share card") and tap(r"Share card", "share-card"):
+    if not find(r"Share card preview", timeout=6):
+        FAILS.append("share card has no preview")
+    if scroll_to(r"\+ Achievements", tries=4, step=500):
+        tap(r"\+ Achievements")
+        if not find(r"ACHIEVEMENTS|of \d+ earned", timeout=4):
+            FAILS.append("share card did not add Achievements")
+        shot("share-card")
+    close_sheet(r"SHOW ON CARD|Share image")
+else:
+    FAILS.append("Share card button missing")
 # The design: History is one tap from Progress (Trends · History), with the month calendar filtering the list
 tap(r"^\|Progress$|^Progress\|")
 time.sleep(1.2)

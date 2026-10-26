@@ -745,7 +745,13 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   const rp = b.repPRs[0]; ok(rp && rp.reps.length === 6 && rp.reps.find((r) => r.reps === 5).done && rp.reps.find((r) => r.reps === 5).w === 100 && !rp.reps.find((r) => r.reps === 12).done, 'rep PRs: done at 5, predicted at 12');
   ok(/^B · /.test(b.program), 'header: program and goal: ' + b.program);
   C.setProfile({ name: 'Sam', age: 31 }); const pr = C.profile();
-  ok(pr.name === 'Sam' && pr.age === 31, 'profile name and age from the stepper'); }
+  ok(pr.name === 'Sam' && pr.age === 31, 'profile name and age from the stepper');
+  // B892 share card: chosen rows in a fixed order, at least one, favorites limited to three logged or known lifts
+  const card = C.profileCard({ share: ['streak', 'prs', 'bogus'], favorites: [] });
+  ok(card.rows.map((r) => r.id).join() === 'prs,streak' && card.rows[1].lines[0] === '1 week' && card.rows[0].lines.length > 0 && /·/.test(card.rows[0].lines[0]), 'share card rows: ' + JSON.stringify(card.rows.map((r) => r.lines)));
+  ok(C.profileCard({ share: [] }).rows.map((r) => r.id).join() === 'level', 'an empty selection keeps one row');
+  const favId = card.lifts[0].id; const fc = C.profileCard({ share: ['favorites'], favorites: [favId, favId, 'nope', card.lifts[1]?.id, card.lifts[2]?.id, card.lifts[3]?.id].filter(Boolean) });
+  ok(fc.favorites.length <= 3 && fc.favorites[0] === favId && fc.rows[0].lines[0].startsWith(card.lifts[0].name), 'favorites: deduped, known, up to three'); }
 // Warm-up & mobility on the first lift until a set is logged (App.js warmupRoutine)
 { C.init({ store: JSON.stringify({ unit: 'kg' }) });
   C.createProgram({ config: { name: 'W', unit: 'kg', goal: 'both', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 2 });

@@ -101,26 +101,32 @@ class Prefs(context: Context) {
 }
 
 /** App.js normalizeProfilePrefs: every known section appears once, in order; at least one stays shown. */
-data class ProfileLayout(val order: List<String>, val hidden: Set<String>) {
+data class ProfileLayout(val order: List<String>, val hidden: Set<String>,
+                         /** B892 share card: what it shows, the name on it and up to three favorite lifts. */
+                         val share: List<String> = listOf("strength", "streak"), val cardName: String = "", val favorites: List<String> = emptyList()) {
     fun normalized(): ProfileLayout {
         val o = (order.filter { it in IDS }.distinct() + IDS.filter { it !in order })
         var h = hidden.filter { it in IDS }.toSet()
         if (h.size >= IDS.size) h = h - o.first()
-        return ProfileLayout(o, h)
+        val sh = share.filter { it in SHARE_IDS }.distinct().ifEmpty { listOf(SHARE_IDS.first()) }
+        return ProfileLayout(o, h, sh, cardName.take(60), favorites.filter { it.isNotBlank() && it.length <= 100 }.distinct().take(3))
     }
     fun visible() = order.filter { it !in hidden }
-    fun json(): String = org.json.JSONObject().put("order", org.json.JSONArray(order)).put("hidden", org.json.JSONArray(hidden.toList())).toString()
+    fun json(): String = org.json.JSONObject().put("order", org.json.JSONArray(order)).put("hidden", org.json.JSONArray(hidden.toList()))
+        .put("share", org.json.JSONArray(share)).put("cardName", cardName).put("favorites", org.json.JSONArray(favorites)).toString()
     companion object {
         /** Native profile sections, in the default order. */
         val SECTIONS = listOf("big3" to "Big 3 total", "score" to "Strength Score", "bw" to "Bodyweight", "prs" to "PR board",
             "cal" to "Training calendar", "ach" to "Achievements", "bal" to "Muscle balance")
         val IDS = SECTIONS.map { it.first }
         val DEFAULT = ProfileLayout(IDS, emptySet())
+        val SHARE_IDS = listOf("level", "strength", "club", "prs", "achievements", "streak", "favorites")
         fun label(id: String) = SECTIONS.firstOrNull { it.first == id }?.second ?: id
         fun parse(raw: String?): ProfileLayout = runCatching {
             val o = org.json.JSONObject(raw ?: return DEFAULT)
             val list = { k: String -> o.optJSONArray(k)?.let { a -> (0 until a.length()).map { a.optString(it) } } ?: emptyList() }
-            ProfileLayout(list("order"), list("hidden").toSet()).normalized()
+            ProfileLayout(list("order"), list("hidden").toSet(), if (o.has("share")) list("share") else listOf("strength", "streak"),
+                o.optString("cardName", ""), list("favorites")).normalized()
         }.getOrDefault(DEFAULT)
     }
 }

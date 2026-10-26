@@ -584,18 +584,6 @@ fun MeSheet(vm: AppViewModel, onClose: () -> Unit, onStandards: () -> Unit) {
     }
 }
 
-@Composable
-fun CustomizeProfileButton(onClick: () -> Unit) {
-    val cs = MaterialTheme.colorScheme
-    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-        Row(Modifier.height(44.dp).clip(CircleShape).background(cs.surfaceContainerHigh).clickable(onClick = onClick).semantics(mergeDescendants = true) { role = Role.Button }.padding(horizontal = 18.dp),
-            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Icon(PiIcons.Sliders, null, Modifier.size(18.dp))
-            Text("Customize profile", style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold))
-        }
-    }
-}
-
 /** The design's Strength Club (in Strength standards): lifted or estimated big-three total against the pound clubs. */
 @Composable
 fun StrengthClubCard(vm: AppViewModel) {

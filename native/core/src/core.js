@@ -2313,6 +2313,34 @@ export function profile() {
         levels: E.STD_LEVELS
     };
 }
+/* B892 App.js profileCardRows: one content model for the on-screen share card and its exported image. Presentation only. */
+export const CARD_CHOICES = [['level', 'Level'], ['strength', 'Strength Score'], ['club', 'Thousand Pound Club'], ['prs', 'Personal records'], ['achievements', 'Achievements'], ['streak', 'Best streak'], ['favorites', 'Favorite lifts']];
+export function profileCard({ share = ['strength', 'streak'], favorites = [] } = {}) {
+    const p = profile(), H = history(), u = p.unit;
+    let bests = {}; try { bests = E.liftBests(H, u) || {}; } catch { bests = {}; }
+    const ids = CARD_CHOICES.map((c) => c[0]);
+    let sel = [...new Set((Array.isArray(share) ? share : []).filter((x) => ids.includes(x)))];
+    if (!sel.length) sel = [ids[0]];
+    const favs = [...new Set((Array.isArray(favorites) ? favorites : []).filter((id) => typeof id === 'string' && EX_BY_ID[id]))].slice(0, 3);
+    const e1 = (id) => Math.round(Number(bests[id]?.e1rm) || 0);
+    const fmt = (n) => Math.round(Number(n) || 0).toLocaleString('en-US');
+    const rows = [];
+    for (const id of CARD_CHOICES.map((c) => c[0]).filter((x) => sel.includes(x))) {
+        if (id === 'level') rows.push({ id, label: 'Level', lines: [p.level ? `Level ${p.level.level}${p.level.title ? ' · ' + p.level.title : ''}` : 'Level 1'], detail: 'Progress from logged training' });
+        if (id === 'strength') rows.push({ id, label: 'Strength Score', lines: [p.score ? `${p.score.overall} / 100 · ${p.score.level}` : 'No score yet'], detail: p.score ? (p.score.estimated ? 'Estimated from logged lifts' : 'Based on your logged lifts') : 'Add your bodyweight and log the main lifts' });
+        if (id === 'club') { const c = p.clubLifted; rows.push({ id, label: 'Thousand Pound Club', lines: [c?.allLogged ? `${fmt(c.total)} ${u} lifted total` : 'Three-lift total incomplete'], detail: c?.allLogged ? (c.inThousand ? 'Lifted club target reached' : `${fmt(c.thousandRemaining)} ${u} to the 1,000 lb Club`) : 'Log squat, bench and deadlift to total them' }); }
+        if (id === 'prs' || id === 'favorites') {
+            const list = id === 'favorites' ? favs : Object.keys(bests).filter((x) => EX_BY_ID[x] && e1(x) > 0).sort((a, b) => e1(b) - e1(a)).slice(0, 2);
+            const lines = list.map((x) => exName(x) + (e1(x) > 0 ? ` · ${e1(x)} ${u}` : ''));
+            rows.push({ id, label: id === 'favorites' ? 'Favorite lifts' : 'Personal records', lines: lines.length ? lines : [id === 'favorites' ? 'Choose your favorite lifts' : 'No logged records yet'],
+                detail: lines.length ? (id === 'favorites' ? 'Best estimated one-rep max for each' : 'Top estimated one-rep maxes') : (id === 'favorites' ? 'Pick them below' : 'Records appear as you log') });
+        }
+        if (id === 'achievements') rows.push({ id, label: 'Achievements', lines: [`${p.achievements.filter((m) => m.done).length} of ${p.achievements.length} earned`], detail: 'Earned from completed training' });
+        if (id === 'streak') { const w = p.summary.bestStreak || 0; rows.push({ id, label: 'Best streak', lines: [`${w} ${w === 1 ? 'week' : 'weeks'}`], detail: 'Consecutive weeks with logged training' }); }
+    }
+    const lifts = Object.keys(bests).filter((x) => EX_BY_ID[x] && e1(x) > 0).sort((a, b) => e1(b) - e1(a)).slice(0, 24).map((x) => ({ id: x, name: exName(x), e1rm: e1(x) }));
+    return { unit: u, share: sel, favorites: favs, rows, lifts, choices: CARD_CHOICES.map(([id, label]) => ({ id, label, on: sel.includes(id) })) };
+}
 /* App.js Settings → Profile: sex adjusts the standards; birth (YYYY-MM-DD) gives the age factor. */
 export function setProfile({ sex, birth, name, age: years } = {}) {
     if (sex === 'male' || sex === 'female') S.store.sex = sex;

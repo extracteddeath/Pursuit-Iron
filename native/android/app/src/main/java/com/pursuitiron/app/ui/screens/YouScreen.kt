@@ -87,6 +87,7 @@ fun YouScreen(vm: AppViewModel) {
     var gymsOpen by remember { mutableStateOf(false) }
     var toolsOpen by remember { mutableStateOf(false) }
     var customizeOpen by remember { mutableStateOf(false) }
+    var shareCardOpen by remember { mutableStateOf(false) }
     var meOpen by remember { mutableStateOf(false) }
     var standardsOpen by remember { mutableStateOf(false) }
     var settingsSheet by remember { mutableStateOf<String?>(null) }
@@ -115,7 +116,7 @@ fun YouScreen(vm: AppViewModel) {
                         "bal" -> board?.let { b -> item { ProfBalance(b) } }
                     }
                 }
-                item(span = full) { CustomizeProfileButton { customizeOpen = true } }
+                item(span = full) { ShareCardButton(onShare = { shareCardOpen = true }) { customizeOpen = true } }
             }
             "body" -> { item { BodyBwCard(vm) }; item { BodyMeasureCard(vm) }; item(span = full) { ProgressPhotosCard(vm) } }
             else -> {
@@ -138,6 +139,7 @@ fun YouScreen(vm: AppViewModel) {
     if (gymsOpen) GymsSheet(vm) { gymsOpen = false }
     if (toolsOpen) ToolsSheet(vm) { toolsOpen = false }
     if (customizeOpen) ProfileCustomizeSheet(vm) { customizeOpen = false }
+    if (shareCardOpen) ShareCardSheet(vm) { shareCardOpen = false }
     if (meOpen) MeSheet(vm, onClose = { meOpen = false }) { meOpen = false; standardsOpen = true }
     when (settingsSheet) {
         null -> {}
@@ -174,7 +176,7 @@ private fun ProfileCustomizeSheet(vm: AppViewModel, onClose: () -> Unit) {
                     }
                 }
             }
-            OutlinedButton(onClick = { vm.prefs.changeProfileLayout(com.pursuitiron.app.data.ProfileLayout.DEFAULT) }, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text("Restore the default layout") }
+            OutlinedButton(onClick = { vm.prefs.changeProfileLayout(lay.copy(order = com.pursuitiron.app.data.ProfileLayout.IDS, hidden = emptySet())) }, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text("Restore the default layout") }
         }
     }
 }

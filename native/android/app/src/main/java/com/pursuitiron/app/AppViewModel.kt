@@ -500,6 +500,45 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var settingsProgramId by mutableStateOf<String?>(null)
     private fun settingsId() = editor?.s("programId") ?: settingsProgramId ?: plan?.s("programId")
     suspend fun programSettings(): JSONObject? = obj("programSettings", jsonOf("programId" to settingsId()))
+    /** B905: the rebuild these settings would make, staged for review; nothing is saved. */
+    suspend fun previewProgramSettings(settings: JSONObject?, shuffle: Boolean = false, seed: Long? = null): JSONObject? {
+        val id = settingsId() ?: return null
+        val a = jsonOf("programId" to id, "settings" to (settings ?: JSONObject()), "shuffle" to shuffle, "preview" to true); if (seed != null) a.put("seed", seed)
+        return obj("applyProgramSettings", a)
+    }
+    fun discardRebuild() = launchCore { call("discardRebuild") }
+    /** Apply the staged rebuild exactly as previewed (also restores and seeds). Undo restores the layout it replaced. */
+    fun commitRebuild(message: String, after: () -> Unit = {}) = launchCore {
+        val id = settingsId() ?: return@launchCore
+        val r = working("Saving your program") { obj("commitRebuild", jsonOf("programId" to id)) } ?: return@launchCore
+        if (!r.b("ok")) { toast(r.s("error", "Couldn't apply that")); return@launchCore }
+        hap(Hap.Done); reloadEditor(); refreshHomeSide(); plan = obj("plan"); after()
+        toast(message) { restoreLayoutNow(id, 0, "Earlier layout restored") }
+    }
+    /** Shuffle, a seed or an earlier layout, applied straight away with Undo (the design's layout section). */
+    fun rebuildNow(shuffle: Boolean = false, seed: Long? = null, restoreIndex: Int? = null, message: String, after: () -> Unit = {}) = launchCore {
+        val id = settingsId() ?: return@launchCore
+        val r = working(if (restoreIndex != null) "Restoring the layout" else "Rebuilding your program") {
+            if (restoreIndex != null) obj("restoreLayout", jsonOf("programId" to id, "index" to restoreIndex, "preview" to false))
+            else { val a = jsonOf("programId" to id, "settings" to JSONObject(), "shuffle" to shuffle); if (seed != null) a.put("seed", seed); obj("applyProgramSettings", a) }
+        } ?: return@launchCore
+        if (!r.b("ok")) { toast(r.s("error", "Couldn't rebuild")); return@launchCore }
+        hap(Hap.Done); reloadEditor(); refreshHomeSide(); plan = obj("plan"); after()
+        toast(message) { restoreLayoutNow(id, 0, "Back to the layout before") }
+    }
+    private fun restoreLayoutNow(id: String, index: Int, message: String) = launchCore {
+        val r = obj("restoreLayout", jsonOf("programId" to id, "index" to index, "preview" to false)) ?: return@launchCore
+        if (!r.b("ok")) { toast(r.s("error", "Couldn't undo")); return@launchCore }
+        reloadEditor(); refreshHomeSide(); plan = obj("plan"); toast(message)
+    }
+    /** App.js resetProgram: start again from week 1 as a fresh program; history stays with the old one. */
+    fun resetProgram(mode: String, after: () -> Unit = {}) = launchCore {
+        val id = settingsId() ?: return@launchCore
+        val r = working("Starting again from week 1") { obj("resetProgram", jsonOf("programId" to id, "mode" to mode)) } ?: return@launchCore
+        if (!r.b("ok")) { toast(r.s("error", "Couldn't start again")); return@launchCore }
+        hap(Hap.Done); refreshHomeSide(); plan = obj("plan"); after()
+        toast("${r.s("name")} starts again at week 1. Your logged workouts stay where they are.")
+    }
     fun applyProgramSettings(settings: JSONObject?, shuffle: Boolean = false, seed: Long? = null, after: () -> Unit = {}) = launchCore {
         val id = settingsId() ?: return@launchCore
         val a = jsonOf("programId" to id, "settings" to (settings ?: JSONObject()), "shuffle" to shuffle); if (seed != null) a.put("seed", seed)

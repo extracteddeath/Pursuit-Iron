@@ -13,6 +13,7 @@ import * as E from '../../../modules/engine-api.js';
 import GALLERY from '../../../gallery.json' with { type: 'json' };
 import { withProgressionChoices, repeatedNote, refreshProgressionSets, buildSessionReview } from '../../../modules/session-tools.js';
 import { withSessionPlanChoice } from '../../../modules/session-plan.js';
+import { reviewProgramChanges, withProgramRevision } from '../../../modules/program-review.js';
 import { INJURY_AREAS, INJURY_IMPACTS, injuryParts, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from '../../../modules/injury-tools.js';
 import { adjustInjuredExercises, workoutPlateau, lighterPendingWorkout } from '../../../modules/workout-context.js';
 
@@ -2741,7 +2742,8 @@ export function programSettings({ programId }) {
         barbellCap: c.barbellCap ?? null, noBodyweight: !!c.noBodyweight, noSupersets: !!c.noSupersets, volumeApproach: c.volumeApproach || 'standard',
         folder: p.folder || '', description: p.description || '', seed: p.seed ?? null,
         rolls: (p.rolls || []).map((r) => ({ seed: r.seed, at: r.at, lifts: r.lifts || [] })),
-        sessions: (E.SESSIONS || []).map((s) => (typeof s === 'string' ? { id: s, label: s } : { id: s.id, label: s.label || s.id })) };
+        layouts: (programById(programId)?.layoutHistory || []).map((r) => ({ at: r.at, label: r.label })),
+        sessions: (E.SESSIONS || []).map((s) => (typeof s === 'string' ? { id: s, label: s } : { id: s.id, label: s.label || s.id, count: s.count ?? null })) };
 }
 /* App.js handleRegenerate: rebuilt from the same seed (or a new one to shuffle) by the current engine,
    keeping id, name, cycle links and the lifts the user added; the roll walked away from is remembered. */
@@ -2770,7 +2772,7 @@ function regenerateProgram(program, { seed, configPatch = null, metaPatch = null
 }
 /* App.js applyCfgDraft for an engine-built program: settings that change the generation contract
    rebuild it once; folder and description are plain edits. Cycle blocks are owned by their cycle. */
-export function applyProgramSettings({ programId, settings = {}, shuffle = false, seed = undefined }) {
+export function applyProgramSettings({ programId, settings = {}, shuffle = false, seed = undefined, preview = false }) {
     const program = programById(programId); if (!program) return { ok: false, error: 'That program no longer exists.' };
     const owner = program.cycleId ? cycles().find((c) => c.id === program.cycleId) : null;
     const c = program.config || {}, d = settings;
@@ -2800,9 +2802,55 @@ export function applyProgramSettings({ programId, settings = {}, shuffle = false
     let np;
     try { np = regenerateProgram(program, { seed: shuffle ? undefined : (seed !== undefined ? seed : program.seed), configPatch: Object.keys(patch).length ? patch : null, metaPatch: Object.keys(meta).length ? meta : null }); }
     catch (err) { return cycleFail(err, 'This program could not be rebuilt safely. Your current program was left unchanged.'); }
-    setList('saved', saved().map((p) => (p.id === programId ? np : p)));
-    dropDraft(programId);
+    const label = shuffle ? 'Before shuffle' : seed !== undefined ? 'Before rebuilding from a seed' : 'Before settings change';
+    // B905: the rebuilt program is staged for review and applied verbatim; Apply never rolls the generator again.
+    if (preview) return stageRebuild(program, np, label);
+    return commitProgram(program, np, label);
+}
+function stageRebuild(program, np, label) {
+    let review; try { review = reviewProgramChanges(program, np); } catch { review = { config: [], days: [], count: 0 }; }
+    S.pendingRebuild = { programId: program.id, key: JSON.stringify(program), np, label };
+    return { ok: true, preview: true, label, review };
+}
+function commitProgram(program, np, label) {
+    let next; try { next = withProgramRevision(program, np, label); } catch (err) { return { ok: false, error: String(err?.message || 'This plan could not keep an undo copy. Nothing changed.') }; }
+    setList('saved', saved().map((p) => (p.id === program.id ? next : p)));
+    dropDraft(program.id); S.pendingRebuild = null;
     return { ok: true, rebuilt: true, changed: true };
+}
+/* Apply the staged rebuild, restore or reset exactly as reviewed; refused if the program changed since. */
+export function commitRebuild({ programId }) {
+    const pend = S.pendingRebuild, program = programById(programId);
+    if (!pend || pend.programId !== programId || !program) return { ok: false, error: 'Nothing is waiting to be applied.' };
+    if (JSON.stringify(program) !== pend.key) { S.pendingRebuild = null; return { ok: false, error: 'The program changed since this preview. Preview it again.' }; }
+    if (S.live?.programId === programId) return { ok: false, error: 'Finish or discard the workout in progress first.' };
+    return commitProgram(program, pend.np, pend.label);
+}
+export function discardRebuild() { S.pendingRebuild = null; return { ok: true }; }
+/* B905 Earlier layouts: exact snapshots (exercises, edits, settings, targets), restored through the same review. */
+export function restoreLayout({ programId, index, preview = true }) {
+    const program = programById(programId), rev = program?.layoutHistory?.[index];
+    if (!rev?.program) return { ok: false, error: 'That layout is no longer saved.' };
+    if (S.live?.programId === programId) return { ok: false, error: 'Finish or discard the workout in progress first.' };
+    const target = { ...JSON.parse(JSON.stringify(rev.program)), id: program.id, cycleId: program.cycleId, cycleIndex: program.cycleIndex };
+    return preview ? stageRebuild(program, target, 'Before restoring an earlier layout') : commitProgram(program, target, 'Before restoring an earlier layout');
+}
+/* App.js resetProgram: start again from week 1 as a new program (history stays with the old one). "same" keeps
+   today's exercises exactly; "original" rebuilds the first roll from the program's seed. */
+export function resetProgram({ programId, mode = 'same' }) {
+    const program = programById(programId); if (!program) return { ok: false, error: 'That program no longer exists.' };
+    if (program.cycleId && cycles().some((c) => c.id === program.cycleId)) return { ok: false, error: 'Cycle blocks restart with their cycle. Duplicate this block for a standalone restart.' };
+    let np;
+    if (mode === 'original') {
+        try { np = E.generateNextProgramForShell({ config: program.config, banned: S.store.banned || [], legacyExercises: EXERCISES, seed: program.seed, makeId: E.uid }).program; np.generationRoute = E.GENERATION_ROUTE; }
+        catch (err) { return cycleFail(err, 'This program could not be reset safely. Nothing was changed.'); }
+    } else np = JSON.parse(JSON.stringify(program));
+    Object.assign(np, { id: E.uid(), createdAt: now(), name: program.name, seed: program.seed, folder: program.folder, description: program.description });
+    delete np.slotBias; delete np.edited; delete np.scheduleEdited; delete np.layoutHistory;
+    np.overrides = program.engineSource === 'pursuit-next' && mode === 'original' ? (np.overrides || {}) : {};
+    if (np.config) { np.config = { ...np.config }; delete np.config.autoVolume; }
+    setList('saved', [...saved(), np]); S.store.pinnedId = np.id; markStore();
+    return { ok: true, programId: np.id, name: np.name };
 }
 
 /* ------------------------------------------------------------------ compare (App.js CompareView + summarizeProgram) */

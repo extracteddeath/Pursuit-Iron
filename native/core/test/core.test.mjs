@@ -238,6 +238,19 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   ok(!JSON.parse(C.exportStore()).plateauQueue?.[`${pid}:${d0}`], 'the queued choice is used once');
   C.discardSession(); }
 
+// 16c. B905 rebuild review, earlier layouts, start again from week 1
+{ C.init({}); const mk = C.createProgram({ config: { name: 'Review', goal: 'both', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 11 });
+  const pid = mk.programId, before = JSON.stringify(JSON.parse(C.exportStore()).saved[0].days);
+  const pv = C.applyProgramSettings({ programId: pid, settings: { goal: 'strength' }, preview: true });
+  ok(pv.ok && pv.preview && pv.review.config.some((c) => c.label === 'Goal') && JSON.stringify(JSON.parse(C.exportStore()).saved[0].days) === before, 'a settings rebuild is previewed without saving: ' + pv.review.count + ' changes');
+  const cm = C.commitRebuild({ programId: pid }); const st = JSON.parse(C.exportStore()).saved[0];
+  ok(cm.ok && st.config.goal === 'strength' && st.layoutHistory?.length === 1 && C.programSettings({ programId: pid }).layouts[0].label === 'Before settings change', 'applying keeps the earlier layout');
+  const rv = C.restoreLayout({ programId: pid, index: 0 }); ok(rv.ok && rv.preview && rv.review.count > 0, 'restoring an earlier layout is reviewed first');
+  ok(C.commitRebuild({ programId: pid }).ok && JSON.parse(C.exportStore()).saved[0].config.goal === 'both' && JSON.stringify(JSON.parse(C.exportStore()).saved[0].days) === before, 'restore brings back the exact earlier program');
+  ok(!C.commitRebuild({ programId: pid }).ok, 'a preview applies once');
+  const rs = C.resetProgram({ programId: pid, mode: 'same' }); const s2 = JSON.parse(C.exportStore());
+  ok(rs.ok && s2.saved.length === 2 && s2.pinnedId === rs.programId && JSON.stringify(s2.saved[1].days) === before, 'start again from week 1 keeps the exercises in a fresh program'); }
+
 // 16. Program editing (App.js ProgramView ops + save review) and record stamping
 { C.init({}); const mk = C.createProgram({ config: { name: 'Edit me', goal: 'both', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 5 });
   const pid = mk.programId; let ed = C.editor({ programId: pid });

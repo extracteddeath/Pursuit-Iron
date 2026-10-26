@@ -514,15 +514,22 @@ if tap(r"Review block", "block-review", required=False):
     scroll_up_to(r"^\|Edit program$|Review block", tries=10)
 row_scroll_to(r"^\|Settings$", r"Review block|^\|Schedule$|^\|Cycle$")
 tap(r"^\|Settings$", "program-settings")
-find(r"Training goal|set by its training cycle", timeout=15)
-if scroll_to(r"^Lift progression|\|Lift progression", tries=8, step=600):
-    tap(r"^Lift progression|\|Lift progression", "lift-progression")
-    if not find(r"Pursuit chose per exercise|re-checked|locked by your choices", timeout=5):
-        FAILS.append("lift progression sheet missing its note")
-    close_sheet(r"Pursuit chose per exercise|re-checked|locked by your choices")
+if find(r"TRAINING GOAL", timeout=15):
+    # B905: a changed setting is previewed by the engine before anything is saved
+    if tap(r"^\|Strength$|^Strength\|", "settings-goal", required=False):
+        if not find(r"^\|Save · \d+ change|don’t change any lifts|isn't possible", timeout=40):
+            FAILS.append("program settings did not preview the rebuild")
+        shot("settings-preview")
+        tap(r"^\|Reset$", required=False)
+elif not find(r"set by its training cycle", timeout=3):
+    FAILS.append("program settings did not open")
+if scroll_to(r"Pursuit chose per exercise|re-checked|locked by your choices", tries=10, step=600):
+    shot("lift-progression")
 else:
     FAILS.append("no lift progression in Program settings")
-close_sheet(r"Save program settings|Save and rebuild")
+if not scroll_to(r"Start again from week 1|set by its training cycle", tries=10, step=700):
+    FAILS.append("program settings has no layout section")
+close_sheet(r"LIFT PROGRESSION|Start again from week 1")
 # The design's Details: how the program was built and the block plan
 scroll_up_to(r"^\|Edit program$|Review block|^\|Settings$", tries=10)
 row_scroll_to(r"^\|Details$", r"^\|Settings$|^\|Schedule$|^\|Cycle$")

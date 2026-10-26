@@ -63,7 +63,9 @@ fun SessionPreviewSheet(vm: AppViewModel, t: AppViewModel.PreviewTarget, onClose
             Column(Modifier.padding(horizontal = 4.dp)) {
                 Kicker("Session preview")
                 Text(x.s("dayLabel"), style = MaterialTheme.typography.headlineSmall)
-                Text("${x.list("exercises").size} exercises", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                // The design's line: today's readiness, then the lift count
+                val ready = vm.home?.let { readinessToday(vm, it) }
+                Text(listOfNotNull(ready?.let { "Readiness $it%" }, "${x.list("exercises").size} exercises").joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
             }
             val est = x.i("estimatedMinutes"); val fits = x.b("fits")
             Surface(color = if (fits) cs.primaryContainer else cs.tertiaryContainer, contentColor = if (fits) cs.onPrimaryContainer else cs.onTertiaryContainer, shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth()) {
@@ -114,6 +116,11 @@ fun SessionPreviewSheet(vm: AppViewModel, t: AppViewModel.PreviewTarget, onClose
                             Text("${e.i("sets")} × ${e.s("reps")}" + (e.s("rir").takeIf { it.isNotBlank() }?.let { " @$it" } ?: "") +
                                 (if (!e.isNull("cutFrom")) " · was ${e.i("cutFrom")} sets" else "") + (if (e.b("amplifierOff")) " · amplifier off" else ""),
                                 style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                        }
+                        // The design's right column: this lift's share of the session and its rest
+                        Column(horizontalAlignment = Alignment.End) {
+                            if (!e.isNull("minutes")) Text("~${e.i("minutes")}m", style = MaterialTheme.typography.labelLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold))
+                            if (!e.isNull("rest") && e.i("rest") > 0) Text("rest ${e.i("rest") / 60}:${(e.i("rest") % 60).toString().padStart(2, '0')}", style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
                         }
                     }
                 }

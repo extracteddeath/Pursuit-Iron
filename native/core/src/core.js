@@ -759,7 +759,12 @@ export function sessionPreview({ programId, dayId, weekIndex, minutes = null } =
         let cell = null; try { cell = E.computeCell(p, day, id, slot, wk); } catch { cell = null; }
         if (!cell || !(cell.sets > 0)) return null;
         const cut = chosen?.cuts?.find((c) => c.slot === slot);
-        return { slot, id, name: ex.name, sets: cell.sets, reps: cell.reps ?? cell.range ?? null, rir: cell.rir ?? null, primary: slot === day.primaryIndex, cutFrom: cut ? cut.fromSets : null, amplifierOff: !!cut?.amplifierRemoved };
+        // The design's row: this lift's share of the session and its rest, from the same time model as the estimate.
+        const goal = (() => { try { return E.goalForDay(p, day); } catch { return null; } })(), scale = Number(S.store.restScale) || 1, primary = slot === day.primaryIndex;
+        let rest = null; try { rest = E.effectiveRest(goal, ex, primary, 0, scale); } catch { rest = null; }
+        let sec = null; try { sec = E.exerciseSlotSec(ex, { sets: cell.sets, goal, isPrimary: primary, linked: !!p.ss?.[`${day.id}:${slot}`], scale, withTransitions: true }); } catch { sec = null; }
+        return { slot, id, name: ex.name, sets: cell.sets, reps: cell.reps ?? cell.range ?? null, rir: cell.rir ?? null, primary, cutFrom: cut ? cut.fromSets : null, amplifierOff: !!cut?.amplifierRemoved,
+            minutes: sec > 0 ? Math.max(1, Math.round(sec / 60)) : null, rest };
     }).filter(Boolean);
     return { programId: pid, dayId: did, dayLabel: src.label, weekIndex: wk, minutes,
         fullMinutes: full, estimatedMinutes: chosen && !chosen.error ? chosen.estimatedMinutes : est, fits: chosen ? !!chosen.fits && !chosen.error : true,

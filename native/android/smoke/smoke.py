@@ -938,6 +938,29 @@ scroll_up_to(r"^Program: ", tries=10)
 if tap(r"^Program: ") and tap(r"^\|Compare$", "compare"):
     back()
 
+# 9b. Tour: every tab top to bottom, for side-by-side review against the design canvas
+def tour(tab_pattern, name, pages=6):
+    if not tap(tab_pattern, required=False):
+        return
+    time.sleep(1.2)
+    for _ in range(4):
+        adb("shell", "input", "swipe", "540", "700", "540", "2000", "150")
+    time.sleep(0.8)
+    for k in range(pages):
+        shot(f"tour-{name}-{k}")
+        adb("shell", "input", "swipe", "540", "1800", "540", "800", "500")
+        time.sleep(0.9)
+for pat, nm in [(r"^\|Today$|^Today\|", "today"), (r"^\|Plan$|^Plan\|", "plan"), (r"^\|Progress$|^Progress\|", "progress"),
+                (r"^\|Exercises$|^Exercises\|", "exercises"), (r"^\|You$|^You\|", "you")]:
+    tour(pat, nm)
+if tap(r"^\|Settings$", required=False):
+    time.sleep(1)
+    for k in range(4):
+        shot(f"tour-settings-{k}")
+        adb("shell", "input", "swipe", "540", "1800", "540", "800", "500")
+        time.sleep(0.9)
+tap(r"^\|Today$|^Today\|", required=False)
+
 # 10. Home-screen widget: rendered by a real AppWidgetHost, then its Start button's intent
 adb("shell", "appwidget", "grantbind", "--package", PKG)
 adb("shell", "am", "start", "-W", "-n", f"{PKG}/com.pursuitiron.app.WidgetPreviewActivity")

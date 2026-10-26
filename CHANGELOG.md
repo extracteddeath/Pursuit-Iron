@@ -1,3 +1,9 @@
+## Build 926 / M379 — Single-owner Plan load-wave presentation
+
+- Extract the Plan Blueprint **Volume load wave** from the oversized App owner into `modules/program-load-wave.js` without duplicating prescriptions, week counts, or training state. Pass only the existing palette from App; get planned sets from the unchanged canonical engine.
+- Keep one-based weeks and the configured optional final deload; do not confuse planned working sets with fractional weekly muscle-volume credit. Reduce combined production UI source size and remove retrospective inline comments instead of adding a compatibility adapter or CSS overrides.
+- Extend the existing R53 real-browser Plan contract to assert ordered week numbers, nonnegative planned sets and no misplaced deload; require exact-head lifecycle, engine, browser and release integrity, then hosted Pages byte checks. Android IME/TalkBack remains a separate physical-device gate.
+
 ## Build 925 / M378 — Stable selection geometry with one motion owner
 
 - Plan, Progress and Library segment changes keep adjacent choices and touch targets stationary while their measured selected indicator moves. Remove redundant indicator stretch/corner springs; keep the quiet root-navigation budget from Build 924.

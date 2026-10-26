@@ -25,7 +25,7 @@ fun Modifier.sharedElement(key: String): Modifier {
         this@sharedElement.sharedBounds(
             rememberSharedContentState(key), a,
             boundsTransform = { _, _ -> Motion.spatial() },
-            resizeMode = SharedTransitionScope.ResizeMode.ScaleToBounds(ContentScale.Fit, Alignment.Center),
+            resizeMode = SharedTransitionScope.ResizeMode.scaleToBounds(ContentScale.Fit, Alignment.Center),
         )
     }
 }

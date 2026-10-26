@@ -98,7 +98,5 @@ object Motion {
 @Composable
 fun PiTheme(seed: Seed = Seed.Ember, dark: Boolean = isSystemInDarkTheme(), black: Boolean = false, content: @Composable () -> Unit) {
     val context = LocalContext.current
-    // The expressive motion scheme, so Material's own components (switches, the navigation bar, sheets) move like the rest.
-    @OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
-    MaterialTheme(colorScheme = schemeFor(seed, dark, black, context), motionScheme = androidx.compose.material3.MotionScheme.expressive(), typography = PiTypography, shapes = PiShapes, content = content)
+    MaterialTheme(colorScheme = schemeFor(seed, dark, black, context), typography = PiTypography, shapes = PiShapes, content = content)
 }

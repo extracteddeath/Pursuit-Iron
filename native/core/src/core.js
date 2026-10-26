@@ -808,7 +808,9 @@ function setView(s, i, ex, prBase, prev = null) {
         userOwned: !!E.userOwnsRuntimeSet?.(s),
         pr: !!(e1 && prBase > 0 && e1 > prBase),
         type: s.typeOverride || (s.target?.failure ? 'failure' : 'standard'),
-        prev: prev ? { w: prev.w, r: prev.r ?? null } : null
+        prev: prev ? { w: prev.w, r: prev.r ?? null } : null,
+        // live-autoregulation.js: a pending set the engine eased after a harder-than-planned one
+        adjusted: !s.done && !E.userOwnsRuntimeSet?.(s) && s.liveAdjustment ? (s.liveAdjustment.action === 'reduce_pending_load' ? 'load' : s.liveAdjustment.action === 'cap_pending_reps' ? 'reps' : null) : null
     };
 }
 
@@ -950,7 +952,8 @@ export function session() {
             const best = Number(bests?.[e.id]?.e1rm ?? bests?.[e.id]?.best ?? 0) || 0;
             // App.js "last" column: the previous workout's set at the same working-set position.
             let workIdx = -1;
-            const sets = e.sets.map((s, i) => { const isW = !s.warm && !s.sub; if (isW) workIdx++; return setView(s, i, ex, best, isW ? E.previousWorkoutSet(lastPerf[e.id], workIdx) : null); });
+            const sets = e.sets.map((s, i) => { const isW = !s.warm && !s.sub; if (isW) workIdx++;
+return setView(s, i, ex, best, isW ? E.previousWorkoutSet(lastPerf[e.id], workIdx) : null); });
             let restDefault = null; try { restDefault = E.effectiveRest(E.goalForDay(ctx.program, ctx.day), ex, e.slot === ctx.day.primaryIndex, 0, Number(S.store.restScale) || 1); } catch { restDefault = null; }
             const inc = ctx.program.exLoadInc?.[e.id];
             let setup = []; try { setup = E.setupFieldsWithStored(ex, S.store.exSetup?.[e.id]).map((f) => ({ key: f.key, label: f.label, value: S.store.exSetup?.[e.id]?.[f.key] || '' })); } catch { setup = []; }

@@ -752,6 +752,19 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   ok(C.profileCard({ share: [] }).rows.map((r) => r.id).join() === 'level', 'an empty selection keeps one row');
   const favId = card.lifts[0].id; const fc = C.profileCard({ share: ['favorites'], favorites: [favId, favId, 'nope', card.lifts[1]?.id, card.lifts[2]?.id, card.lifts[3]?.id].filter(Boolean) });
   ok(fc.favorites.length <= 3 && fc.favorites[0] === favId && fc.rows[0].lines[0].startsWith(card.lifts[0].name), 'favorites: deduped, known, up to three'); }
+// live-autoregulation.js: two observed misses ease the next pending accessory row, shown as `adjusted`
+{ C.init({ store: JSON.stringify({ unit: 'kg', bodyweight: '80' }) });
+  C.createProgram({ config: { name: 'B', unit: 'kg', goal: 'hypertrophy', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 2 });
+  for (let n = 0; n < 4; n++) { C.startSession({}); for (const e of C.session().exercises) for (const x of e.sets) { if (x.warm || x.sub) continue; C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'weight', value: '40' }); C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'reps', value: '10' }); C.act({ type: 'toggle', ei: e.ei, si: x.i }); } C.finishSession(); }
+  C.startSession({});
+  const e = C.session().exercises.find((x) => x.sets.filter((y) => !y.warm && !y.sub).length >= 3 && !x.primary);
+  const w = e.sets.filter((x) => !x.warm && !x.sub);
+  ok(w[2].adjusted === null, 'nothing eased before any set');
+  for (const k of [0, 1]) { C.act({ type: 'edit', ei: e.ei, si: w[k].i, field: 'reps', value: '3' }); C.act({ type: 'toggle', ei: e.ei, si: w[k].i }); C.act({ type: 'rir', ei: e.ei, si: w[k].i, rir: 0 }); }
+  const a = C.session().exercises[e.ei].sets.filter((x) => !x.warm && !x.sub);
+  ok(a[2].adjusted === 'load' && parseFloat(a[2].weight) < parseFloat(w[2].weight), 'two misses ease the next set: ' + w[2].weight + ' → ' + a[2].weight);
+  C.act({ type: 'toggle', ei: e.ei, si: w[1].i });
+  ok(C.session().exercises[e.ei].sets.filter((x) => !x.warm && !x.sub)[2].adjusted === null, 'un-logging the set puts the load back'); }
 // Warm-up & mobility on the first lift until a set is logged (App.js warmupRoutine)
 { C.init({ store: JSON.stringify({ unit: 'kg' }) });
   C.createProgram({ config: { name: 'W', unit: 'kg', goal: 'both', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 2 });

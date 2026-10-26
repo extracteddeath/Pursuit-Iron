@@ -401,7 +401,12 @@ private fun SetRow(vm: AppViewModel, s: JSONObject, ex: JSONObject, ei: Int, si:
     val sub2 = when {
         skipped -> "Skipped · not counted"
         set.b("pr") -> "New best"
-        set.has("hint") && !set.isNull("hint") -> set.s("hint")
+        // The engine eased this pending set after a harder-than-planned one (live-autoregulation.js)
+        set.s("adjusted") == "load" -> "Load eased"
+        set.s("adjusted") == "reps" -> "Reps capped"
+        // App.js set-to-set tuning badge: the engine's hint is a direction, not copy
+        !done && set.s("hint") == "up" -> "Retuned ↑"
+        !done && set.s("hint") == "down" -> "Retuned ↓"
         done && !set.isNull("rir") -> "Rated ${set.i("rir").let { if (it >= 4) "4+" else "$it" }} RIR"
         vm.prefs.lastMode -> if (prev == null) "nothing logged" else "tap to use"
         warm -> "Warm-up"
@@ -444,7 +449,7 @@ private fun SetRow(vm: AppViewModel, s: JSONObject, ex: JSONObject, ei: Int, si:
                 }.semantics { contentDescription = "Last time $sub. Use it for this set"; role = Role.Button } else Modifier)) {
                 Text(sub, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (sub2.isNotEmpty()) Text(sub2, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    color = if (set.b("pr")) cs.primary else cs.onSurfaceVariant)
+                    color = if (set.b("pr") || set.s("adjusted") == "load" || set.s("adjusted") == "reps") cs.primary else cs.onSurfaceVariant)
             }
             val cellBg = if (done) Color.Transparent else cs.surfaceContainerHigh
             Box(Modifier.width(if (grip) 72.dp else 68.dp).height(cellH).clip(RoundedCornerShape(12.dp)).background(cellBg)

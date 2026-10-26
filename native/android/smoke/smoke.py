@@ -799,7 +799,7 @@ if tap(r"Edit program", "editor"):
             FAILS.append("editor swap shows no alternatives")
         tap(r"^Swap .+\|")
     if tap(r"^More options for ", "editor-more", required=False):
-        if not find(r"Why this lift\?", timeout=4):
+        if not (find(r"Why this lift\?", timeout=4) or scroll_to(r"Why this lift\?", tries=3, step=500)):
             FAILS.append("editor more menu missing Why this lift")
         tap(r"^More options for ")
     if seek(r"Add an exercise") and tap(r"Add an exercise"):

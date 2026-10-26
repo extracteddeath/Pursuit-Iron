@@ -14,7 +14,7 @@ import GALLERY from '../../../gallery.json' with { type: 'json' };
 import { withProgressionChoices, repeatedNote, refreshProgressionSets, buildSessionReview } from '../../../modules/session-tools.js';
 import { withSessionPlanChoice } from '../../../modules/session-plan.js';
 import { INJURY_AREAS, INJURY_IMPACTS, injuryParts, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from '../../../modules/injury-tools.js';
-import { adjustInjuredExercises } from '../../../modules/workout-context.js';
+import { adjustInjuredExercises, workoutPlateau, lighterPendingWorkout } from '../../../modules/workout-context.js';
 
 const { EX_BY_ID, EXERCISES } = E;
 const now = () => Date.now();
@@ -173,6 +173,24 @@ function exName(id) { return EX_BY_ID[id]?.name || id; }
 function fmtW(v) { const n = Number(v); return Number.isFinite(n) && n > 0 ? String(Math.round(n * 100) / 100) : ''; }
 function isWork(s) { return !s.warm && !s.sub; }
 
+/* App.js workoutPlateaus: the day-scoped plateau detector (sessions since the lift's last e1RM PR on this day). */
+function plateauFor(program, day, id) {
+    if (!program || !day || !EX_BY_ID[id]) return null;
+    let p = null; try { p = workoutPlateau(program, day, id, history()); } catch { p = null; }
+    return p ? { since: p.since, high: !!p.high, advice: p.advice } : null;
+}
+/* The design's three ways out of a plateau, chosen before the session (Today card, editor chip) and applied when
+   that day's workout starts: lighter targets (App.js lighterPendingWorkout), reps first (double progression),
+   or a variation (the swap picker opens on it). Session-only, like App.js; the saved program is unchanged. */
+function plateauQueue() { return S.store.plateauQueue && typeof S.store.plateauQueue === 'object' ? S.store.plateauQueue : {}; }
+export function setPlateauChoice({ programId, dayId, exId, choice = null }) {
+    if (!programId || !dayId || !exId) return { ok: false };
+    const q = { ...plateauQueue() }, k = `${programId}:${dayId}`, cur = { ...(q[k] || {}) };
+    if (['lighter', 'reps', 'swap'].includes(choice)) cur[exId] = choice; else delete cur[exId];
+    if (Object.keys(cur).length) q[k] = cur; else delete q[k];
+    S.store.plateauQueue = q; markStore();
+    return { ok: true, choice: cur[exId] || null };
+}
 function upNext() {
     // App.js upNext: pinned → most-recently-trained → live cycle block → newest.
     if (!saved().length) return null;
@@ -331,7 +349,10 @@ export function home() {
         unit: unit(), empty: !saved().length,
         next: nx ? {
             programId: nx.program.id, programName: nx.program.name, dayId: nx.day.id, dayLabel: nx.day.label,
-            weekIndex: nx.weekIndex, weeksTotal: E.weeksOf(nx.program), endless: !!nx.program.config?.endless, deloadWeek: nx.weekIndex > E.weeksOf(nx.program), minutes: est, exercises: dayPreview(nx.program, nx.day, nx.weekIndex)
+            weekIndex: nx.weekIndex, weeksTotal: E.weeksOf(nx.program), endless: !!nx.program.config?.endless, deloadWeek: nx.weekIndex > E.weeksOf(nx.program), minutes: est, exercises: dayPreview(nx.program, nx.day, nx.weekIndex),
+            // The design's Plateau card: the next session's stalled lifts, the longest stall first, with any choice already made.
+            plateaus: S.live ? [] : nx.day.exercises.map((id) => { const pl = plateauFor(nx.program, nx.day, id); return pl && pl.high ? { id, name: exName(id), ...pl,
+                last: lastTop(id), choice: plateauQueue()[`${nx.program.id}:${nx.day.id}`]?.[id] || null, percent: !!nx.program.config?.percentScheme } : null; }).filter(Boolean).sort((a, b) => b.since - a.since).slice(0, 1)
         } : null,
         week: { sessions: thisWeek.length, planned: nx ? nx.program.days.length : 0, volume: Math.round(thisWeek.reduce((s, h) => s + (Number(h.volume) || 0), 0)) },
         readiness: { today: todayReady, parts: rd },
@@ -754,6 +775,17 @@ export function startSession({ programId, dayId, weekIndex, minutes = null } = {
     if (!ctx) { S.live = null; return { error: 'That workout day no longer exists.' }; }
     l.data = freshData(ctx).data;
     l.dayExSig = ctx.day.exercises.join('|');
+    // Plateau choices made on Today or in the editor apply to this workout, once.
+    const qk = `${pid}:${did}`, queued = plateauQueue()[qk];
+    if (queued) {
+        Object.entries(queued).forEach(([exId, choice]) => {
+            const ei = (l.data || []).findIndex((e) => e.id === exId); if (ei < 0) return;
+            if (choice === 'lighter') act({ type: 'plateauLighter', ei });
+            else if (choice === 'reps') act({ type: 'progression', ei, style: 'double' });
+            else if (choice === 'swap') { l.openSwap = ei; l.exIdx = ei; }
+        });
+        const q = { ...plateauQueue() }; delete q[qk]; S.store.plateauQueue = q; markStore();
+    }
     markLive();
     return session();
 }
@@ -940,7 +972,10 @@ export function session() {
                 // The design's muscles worked: the engine's own part and secondary shares, biggest first.
                 secondary: (() => { try { return (E.secondaryOf(ex) || []).slice().sort((a, b) => b[1] - a[1]).map(([p, f]) => ({ part: p, label: E.PART_LABEL?.[p] || p, share: f })); } catch { return []; } })(),
                 progression: { style: E.styleFor(ctx.program, e.id), changed: !!l.sessionProgressions?.[e.id], locked: !!ctx.program.config?.percentScheme,
-                    ...progressionOptions(ctx, e, ex, u) } };
+                    ...progressionOptions(ctx, e, ex, u) },
+                // App.js Plateau options: shown only when the day-scoped detector reports one.
+                plateau: e.freestyle ? null : plateauFor(ctx.program, ctx.day, e.id),
+                lighter: (() => { try { const row = lighterOf(e, ex); return row === e ? null : row.sets.filter((x) => !x.done && !x.warm && !x.sub).map((x) => `${x.weight} ${u} × ${x.reps}`); } catch { return null; } })() };
         }),
         loadMode: S.store.loadMode === 'rpe' ? 'rpe' : 'rir',
         // App.js warmupRoutine: shown on the first lift until a set is logged.
@@ -953,6 +988,7 @@ export function session() {
         progressionStyles: Object.entries(E.PROG_STYLES || {}).map(([id, label]) => ({ id, label })),
         supersetSuggestions: supersetSuggestions(ctx, data, Math.max(0, Math.min(data.length - 1, l.exIdx || 0))),
         rest: l.rest || null,
+        openSwap: l.openSwap ?? null,
         injuries: injuries().filter((i) => !i.resolvedAt).map((i) => ({ id: i.id, title: injuryTitle(i, E.PART_LABEL), impact: i.impact,
             exercises: data.filter((e) => injuryMatchesExercise(i, EX_BY_ID[e.id], E.secondaryOf(EX_BY_ID[e.id] || {}))).map((e) => e.id) }))
     };
@@ -1244,6 +1280,17 @@ const ACTIONS = {
         S.live.exIdx = cur;
         return next;
     },
+    // App.js Plateau options → Use lighter targets today: about 10% lighter, rounded down to loads you have.
+    plateauLighter({ ei }, ctx, d) {
+        if (ctx.program.config?.percentScheme) return d;
+        return d.map((e, i) => { if (i !== ei) return e; const n = lighterOf(e, EX_BY_ID[e.id]); if (n !== e) S.live.plateauUndo = { id: e.id, row: e }; return n; });
+    },
+    // Undo puts back the row as it was, as long as nothing on it has been logged since.
+    plateauUndo(_, ctx, d) {
+        const u = S.live.plateauUndo; delete S.live.plateauUndo; if (!u) return d;
+        return d.map((e) => (e.id !== u.id || e.sets.some((x, k) => x.done && !u.row.sets[k]?.done) ? e : u.row));
+    },
+    swapOpened(_, ctx, d) { delete S.live.openSwap; return d; },
     // App.js changeProgression: this session's sets re-prescribed under another progression style.
     progression({ ei, style }, ctx, d) {
         const row = d[ei], ex = EX_BY_ID[row?.id];
@@ -1266,6 +1313,10 @@ const ACTIONS = {
     resetTimer(_, ctx, d) { S.live.startedAt = now(); S.live.elapsedMs = 0; S.live.pausedAt = null; return d; }
 };
 
+function lighterOf(row, ex) {
+    if (!row || !ex || E.isAssistedEx(ex)) return row;
+    return lighterPendingWorkout(row, (w) => E.loadableAtOrBelow(ex, w, unit()), E.userOwnsRuntimeSet);
+}
 export function act({ type, ...args } = {}) {
     const l = S.live; if (!l) return { active: false };
     const fn = ACTIONS[type]; if (!fn) return { ...session(), error: 'Unknown action ' + type };
@@ -2531,6 +2582,7 @@ export function editor({ programId, weekIndex = 1 } = {}) {
                 let style = null; try { style = E.styleFor(p, id); } catch { style = null; }
                 return { slot, id, name: ex?.name || id, part: ex?.part || '', partLabel: E.PART_LABEL?.[ex?.part] || ex?.part || '', primary: slot === d.primaryIndex,
                     type: ex?.type === 'compound' ? 'compound' : 'isolation', last: lastTop(id),
+                    plateau: plateauFor(stored || p, (stored || p).days.find((x) => x.id === d.id) || d, id), plateauChoice: plateauQueue()[`${p.id}:${d.id}`]?.[id] || null,
                     style: style || 'auto', styleLabel: STYLE_LABEL[style] || (style ? (E.PROG_STYLES?.[style] || style) : 'Auto'), styleLocked: !!p.progStyleLifter?.[id],
                     superset: !!p.ss?.[`${d.id}:${slot}`], added: !!ov.added, sets, reps: ov.reps ?? cell?.reps ?? null, rir: cell?.rir ?? null };
             });

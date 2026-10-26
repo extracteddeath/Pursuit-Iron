@@ -109,6 +109,7 @@ private sealed interface WSheet {
     data class Edit(val ei: Int, val si: Int) : WSheet
     data class Menu(val ei: Int) : WSheet
     data class Swap(val ei: Int) : WSheet
+    data class Plateau(val ei: Int) : WSheet
     data class Why(val ei: Int) : WSheet
     data class Hurt(val ei: Int) : WSheet
     data class Info(val id: String) : WSheet
@@ -200,10 +201,16 @@ fun WorkoutScreen(vm: AppViewModel) {
             vm.act("readiness", "label" to label, "factor" to factor)
         }
     }
+    // A plateau choice made before the workout ("Try a variation") opens the swap picker on that lift.
+    LaunchedEffect(s.s("sessionId"), s.optInt("openSwap", -1)) {
+        val k = if (s.isNull("openSwap")) -1 else s.optInt("openSwap", -1)
+        if (k >= 0) { vm.act("swapOpened"); sheet = WSheet.Swap(k) }
+    }
     when (val sh = sheet) {
         is WSheet.Edit -> SetEditor(vm, s, sh.ei, sh.si) { sheet = null }
         is WSheet.Menu -> ExerciseMenu(vm, s, sh.ei, onPick = { sheet = it }) { sheet = null }
         is WSheet.Swap -> SwapSheet(vm, sh.ei) { sheet = null }
+        is WSheet.Plateau -> exs.getOrNull(sh.ei)?.let { PlateauSheet(vm, s, it, onSwap = { sheet = WSheet.Swap(sh.ei) }) { sheet = null } } ?: run { sheet = null }
         is WSheet.Why -> WhySheet(vm, sh.ei) { sheet = null }
         is WSheet.Hurt -> HurtSheet(vm, sh.ei) { sheet = null }
         is WSheet.Info -> ExerciseSheet(vm, sh.id) { sheet = null }
@@ -608,6 +615,7 @@ private fun ExerciseMenu(vm: AppViewModel, s: JSONObject, ei: Int, onPick: (WShe
                 Text(ex.s("name"), style = MaterialTheme.typography.headlineSmall)
             }
             Column(Modifier.clip(RoundedCornerShape(22.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                ex.optJSONObject("plateau")?.let { pl -> MenuRow(PiIcons.Trend, "Plateau options", "No PR in ${pl.i("since")} sessions on this day", cs.tertiaryContainer, cs.onTertiaryContainer) { onPick(WSheet.Plateau(ei)) } }
                 MenuRow(PiIcons.Swap, "Swap exercise", "Alternatives at your gym", cs.secondaryContainer, cs.onSecondaryContainer) { onPick(WSheet.Swap(ei)) }
                 MenuRow(PiIcons.Shield, "Something hurt", "Flag it and the plan protects that area", cs.tertiaryContainer, cs.onTertiaryContainer) { onPick(WSheet.Hurt(ei)) }
                 MenuRow(PiIcons.List, "Same weight for all sets", "Set every unlogged set to the average", cs.secondaryContainer, cs.onSecondaryContainer) { vm.act("level", "ei" to ei); onPick(null) }

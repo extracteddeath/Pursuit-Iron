@@ -225,6 +225,19 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   const dr = JSON.parse(C.exportStore()).drafts?.[pid]?.days?.[0];
   ok(ed.days[0].focus === null && dr && dr.focus === raw0 && !('baseFocus' in dr), 'Auto puts the engine\'s own day tag back (' + raw0 + ')'); }
 
+// 16b. Plateau options (App.js workoutPlateau / lighterPendingWorkout), queued from Today or the editor
+{ C.init({}); const mk = C.createProgram({ config: { name: 'Stall', goal: 'both', experience: 'intermediate', split: 'full_body', days: 3, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 4 });
+  const pid = mk.programId, d0 = C.editor({ programId: pid }).days[0].id;
+  for (let k = 0; k < 5; k++) { C.startSession({ programId: pid, dayId: d0, weekIndex: 1 }); for (const e of C.session().exercises) for (const x of e.sets) { if (x.warm || x.sub) continue; C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'weight', value: '60' }); C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'reps', value: '8' }); C.act({ type: 'toggle', ei: e.ei, si: x.i }); } C.finishSession(); }
+  const ed = C.editor({ programId: pid }), row = ed.days[0].exercises.find((x) => x.plateau);
+  ok(row && row.plateau.since >= 3 && /PR/.test(row.plateau.advice), 'a flat lift reads as a plateau on its day (' + (row && row.plateau.since) + ' sessions)');
+  ok(C.setPlateauChoice({ programId: pid, dayId: d0, exId: row.id, choice: 'lighter' }).choice === 'lighter' && C.editor({ programId: pid }).days[0].exercises.find((x) => x.id === row.id).plateauChoice === 'lighter', 'a plateau choice is queued for the next session');
+  const s = C.startSession({ programId: pid, dayId: d0, weekIndex: 1 }), ex = s.exercises.find((x) => x.id === row.id);
+  const w = ex.sets.filter((x) => !x.warm && !x.sub).map((x) => parseFloat(x.weight)).filter((v) => v > 0);
+  ok(ex.plateau && w.length && w.every((v) => v < 60), 'the queued lighter targets apply when that day starts: ' + w.join(','));
+  ok(!JSON.parse(C.exportStore()).plateauQueue?.[`${pid}:${d0}`], 'the queued choice is used once');
+  C.discardSession(); }
+
 // 16. Program editing (App.js ProgramView ops + save review) and record stamping
 { C.init({}); const mk = C.createProgram({ config: { name: 'Edit me', goal: 'both', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 5 });
   const pid = mk.programId; let ed = C.editor({ programId: pid });

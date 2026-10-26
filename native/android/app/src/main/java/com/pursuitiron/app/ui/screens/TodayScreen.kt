@@ -147,6 +147,9 @@ fun TodayScreen(vm: AppViewModel) {
             val rest = h.o("restDay")
             if (rest != null) RestDayHero(vm, rest) else Hero(vm, next, h)
         }
+        if (next != null) next.optJSONArray("plateaus")?.optJSONObject(0)?.takeIf { h.o("live") == null && h.o("restDay") == null }?.let { pl ->
+            item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { PlateauCard(vm, next, pl) }
+        }
 
         if (h.o("deload") != null) item { DeloadCard(vm, h) }
 

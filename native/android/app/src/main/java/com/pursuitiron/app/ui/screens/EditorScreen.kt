@@ -1,4 +1,4 @@
-@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 
 package com.pursuitiron.app.ui.screens
 
@@ -10,6 +10,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
@@ -108,6 +109,7 @@ fun ProgramEditorScreen(vm: AppViewModel) {
     var openRow by remember { mutableStateOf<Pair<Int, String>?>(null) } // slot to "swap" | "prog" | "more"
     var why by remember { mutableStateOf<Int?>(null) }
     var info by remember { mutableStateOf<String?>(null) }
+    var hitOpen by remember { mutableStateOf<String?>(null) }
     if (settingsOpen) ProgramSettingsSheet(vm) { settingsOpen = false }
     val dirty = e.b("dirty")
     BackHandler { if (dirty) leaving = true else vm.closeEditor() }
@@ -220,8 +222,18 @@ fun ProgramEditorScreen(vm: AppViewModel) {
                     if (hits.isNotEmpty()) Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Cap("SETS THIS WEEK BY MUSCLE")
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            hits.forEach { h -> Text("${h.s("label")} ${fmtNum(h.d("sets"))}", style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold),
-                                modifier = Modifier.clip(CircleShape).background(cs.surfaceContainerHigh).padding(horizontal = 14.dp, vertical = 9.dp)) }
+                            hits.forEach { h -> val on = hitOpen == h.s("part")
+                                Text("${h.s("label")} ${fmtNum(h.d("sets"))}", style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold),
+                                    color = if (on) cs.onSecondaryContainer else cs.onSurface,
+                                    modifier = Modifier.clip(CircleShape).background(if (on) cs.secondaryContainer else cs.surfaceContainerHigh)
+                                        .clickable { hitOpen = if (on) null else h.s("part") }.semantics { role = Role.Button; selected = on }
+                                        .padding(horizontal = 14.dp, vertical = 9.dp)) }
+                        }
+                        // Tap a muscle to see what trains it: the lifts on this day whose main muscle it is.
+                        hits.firstOrNull { it.s("part") == hitOpen }?.let { h ->
+                            val from = exs.filter { it.s("part") == h.s("part") && it.i("sets") > 0 }
+                            Text("${h.s("label")}: " + from.joinToString(" · ") { "${it.s("name")} ${it.i("sets")}" } + " direct sets this week.",
+                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 17.sp), color = cs.onSurfaceVariant)
                         }
                     }
                     Box(Modifier.fillMaxWidth().height(1.dp).background(cs.outlineVariant))
@@ -338,9 +350,13 @@ private fun ExerciseCard(vm: AppViewModel, e: JSONObject, dayId: String, x: JSON
     var rmAsk by remember(x.s("id")) { mutableStateOf(false) }
     var repsEdit by remember { mutableStateOf(false) }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
+    // An opened panel (swap, progression, more) scrolls into view once it has expanded.
+    val bring = remember { androidx.compose.foundation.relocation.BringIntoViewRequester() }
+    LaunchedEffect(open) { if (open != null) { kotlinx.coroutines.delay(320); bring.bringIntoView() } }
     val tertiary = cs.tertiary
     Column(modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(cs.surfaceContainerLow)
         .then(if (paired) Modifier.drawBehind { drawRect(tertiary, size = androidx.compose.ui.geometry.Size(4.dp.toPx(), size.height)) } else Modifier)
+        .then(Modifier.bringIntoViewRequester(bring))
         .padding(start = 16.dp, end = 12.dp, top = 14.dp, bottom = 14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Box(Modifier.size(28.dp).clip(RoundedCornerShape(10.dp)).background(cs.secondaryContainer), contentAlignment = Alignment.Center) {
@@ -358,6 +374,16 @@ private fun ExerciseCard(vm: AppViewModel, e: JSONObject, dayId: String, x: JSON
             }
             IconButton(onClick = { vm.edit("move", "dayId" to dayId, "slot" to slot, "dir" to -1) }, enabled = slot > 0, modifier = Modifier.size(40.dp)) { Icon(PiIcons.ChevronUp, "Move ${x.s("name")} earlier", Modifier.size(18.dp)) }
             IconButton(onClick = { vm.edit("move", "dayId" to dayId, "slot" to slot, "dir" to 1) }, enabled = slot < count - 1, modifier = Modifier.size(40.dp)) { Icon(PiIcons.ChevronDown, "Move ${x.s("name")} later", Modifier.size(18.dp)) }
+        }
+        x.optJSONObject("plateau")?.takeIf { it.i("since") >= 3 }?.let { pl ->
+            val ch = x.s("plateauChoice").takeIf { it.isNotBlank() && it != "null" }
+            val label = "PLATEAU · ${pl.i("since")} sessions · " + when (ch) { "lighter" -> "10% LIGHTER NEXT"; "reps" -> "REPS FIRST NEXT"; "swap" -> "VARIATION NEXT"; else -> "LOAD HELD" }
+            Text(label, style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.3.sp),
+                color = if (ch != null) cs.onTertiary else cs.onTertiaryContainer,
+                modifier = Modifier.clip(CircleShape).background(if (ch != null) cs.tertiary else cs.tertiaryContainer)
+                    .clickable { vm.setPlateauChoice(e.s("programId"), dayId, x.s("id"), if (ch == null) "lighter" else null) }
+                    .semantics { role = Role.Button; contentDescription = if (ch == null) "Plateau for ${pl.i("since")} sessions. Tap to go about 10% lighter next session" else "Cancel the plateau choice for ${x.s("name")}" }
+                    .padding(horizontal = 10.dp, vertical = 7.dp))
         }
         val rir = x.s("rir").takeIf { it.isNotBlank() && it != "null" }?.let { "@ ${dash(it)} RIR" }
         if (e.b("manual")) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {

@@ -474,6 +474,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private suspend fun reloadEditor() { val id = editor?.s("programId") ?: return; editor = obj("editor", jsonOf("programId" to id, "weekIndex" to editWeek)) }
     fun editWeek(w: Int) = launchCore { editWeek = w; reloadEditor() }
     fun refreshEditor() = launchCore { reloadEditor() }
+    /** The design's plateau choices for the next session (Today card, editor chip); null clears it. */
+    fun setPlateauChoice(programId: String, dayId: String, exId: String, choice: String?, toastText: String? = null) = launchCore {
+        call("setPlateauChoice", jsonOf("programId" to programId, "dayId" to dayId, "exId" to exId, "choice" to choice))
+        hap(Hap.Tick); home = obj("home"); if (editor != null) reloadEditor()
+        toastText?.let { t -> toast(t) { setPlateauChoice(programId, dayId, exId, null) } }
+    }
     fun edit(type: String, vararg args: Pair<String, Any?>) = launchCore {
         val id = editor?.s("programId") ?: return@launchCore
         val r = obj("editAct", jsonOf("programId" to id, "type" to type, *args)) ?: return@launchCore

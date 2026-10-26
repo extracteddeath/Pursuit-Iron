@@ -49,8 +49,10 @@ const configure = async page => {
             originalSet.call(localStorage, 'wpb:live', JSON.stringify(snapshot));
         }
         window.__m217FailKeys = [];
+        window.__m217Writes = {};
         Storage.prototype.setItem = function (key, value) {
             if (window.__m217FailKeys.includes(key)) throw new DOMException('Device full', 'QuotaExceededError');
+            window.__m217Writes[key] = (window.__m217Writes[key] || 0) + 1;
             return originalSet.call(this, key, value);
         };
         Storage.prototype.removeItem = function (key) {
@@ -82,6 +84,7 @@ async function verifyStorageOwner(browser) {
         await first.goto('http://127.0.0.1:8772/', { waitUntil: 'networkidle0' });
         await openWorkout(first);
         const liveBefore = await snapshot(first);
+        const liveContent = value => { const { savedAt, ...content } = value; return content; };
         await second.bringToFront();
         await second.goto('http://127.0.0.1:8772/', { waitUntil: 'networkidle0' });
         await second.waitForFunction(() => !!document.querySelector('.wpb-home, [data-storage-busy]'));
@@ -104,10 +107,13 @@ async function verifyStorageOwner(browser) {
         assert.equal(await second.$('input[type="file"]'), null, 'The blocked tab cannot restore over the active owner');
         await second.evaluate(() => document.documentElement.style.fontSize = '200%');
         await second.screenshot({ path: path.join(root, 'verification/m375-storage-gate-phone.png') });
-        assert.deepEqual(await snapshot(first), liveBefore, 'Opening a second window cannot change live recovery');
+        assert.deepEqual(liveContent(await snapshot(first)), liveContent(liveBefore), 'Opening a second window cannot change live recovery content');
+        assert.deepEqual(await second.evaluate(() => ['wpb:v1','wpb:live'].map(key => window.__m217Writes[key] || 0)), [0,0],
+            'The blocked window never writes training or live recovery; the owner may flush its timestamp on background');
         await clickText(second, 'Try again');
         await second.waitForSelector('[data-storage-busy]');
-        assert.deepEqual(await snapshot(first), liveBefore, 'Retry cannot bypass an active owner');
+        assert.deepEqual(liveContent(await snapshot(first)), liveContent(liveBefore), 'Retry cannot bypass an active owner');
+        assert.deepEqual(await second.evaluate(() => ['wpb:v1','wpb:live'].map(key => window.__m217Writes[key] || 0)), [0,0]);
         await first.bringToFront();
         await first.click('button[aria-label="Finish workout"]');
         await first.waitForFunction(() => [...document.querySelectorAll('button')].some(b => b.textContent.trim() === 'Save & finish'));

@@ -331,7 +331,7 @@ if tap(r"Weight not set, edit", "set-editor"):
     shot("set-editor-typed")
     hide_keyboard()
     time.sleep(0.6)
-    if tap(r"Plates$", "set-plates"):
+    if tap(r"Plates$", "set-plates", required=False):  # only barbell lifts load plates
         back()
     tap(r"^\|Done$|Done$")
 tap(r"^Set 1:", "set-logged")

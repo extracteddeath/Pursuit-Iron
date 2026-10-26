@@ -2381,7 +2381,7 @@ try {
             return chosen?.textContent?.includes('Recent') &&
                 Math.abs(parseFloat(el.style.getPropertyValue('--pi-m3-track-x')) - chosen.offsetLeft) < .3 &&
                 Math.abs(parseFloat(el.style.getPropertyValue('--pi-m3-track-width')) - chosen.offsetWidth) < .3 &&
-                parseFloat(chosen.style.getPropertyValue('--pi-choice-grow')) > 1.18;
+                !chosen.style.getPropertyValue('--pi-choice-grow');
         }, { timeout: 5000 });
         await page.$eval('.wpb-library-search input', input => input.focus());
         const libraryFocus = await page.$eval('.wpb-library-search input', el =>

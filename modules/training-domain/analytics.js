@@ -284,6 +284,8 @@ function programChangeLabels(before, after) {
         labels.push("Exercise targets");
     if (["progStyle", "progStyleLifter"].some(changed))
         labels.push("Progression method");
+    if (["trainingMax", "trainingMaxUnit"].some(changed))
+        labels.push("Training maxes");
     if (changed("ss"))
         labels.push("Supersets");
     if (["schedule", "weekPlan", "scheduleBase"].some(changed))

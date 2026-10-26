@@ -1,4 +1,4 @@
-import { computeCell, weeksOf, EX_BY_ID, PROG_STYLES, estimateMinutesFor } from './engine-api.js';
+import { computeCell, weeksOf, EX_BY_ID, PROG_STYLES, estimateMinutesFor, trainingMaxForUnit } from './engine-api.js';
 
 // Reviews read the same week cells as Plan and Workout. The generated/repair result is retained
 // and applied verbatim; pressing Apply never rolls the generator a second time.
@@ -41,6 +41,15 @@ export function reviewProgramChanges(before, after) {
         return a !== b ? [{ label, before: a, after: b }] : [];
     });
     if (weeksOf(before) !== weeksOf(after)) config.push({ label: 'Block length', before: `${weeksOf(before)} weeks`, after: `${weeksOf(after)} weeks` });
+    const beforeUnit = before.trainingMaxUnit || before.config?.unit || 'lb';
+    const afterUnit = after.trainingMaxUnit || after.config?.unit || 'lb';
+    for (const id of new Set([...Object.keys(before.trainingMax || {}), ...Object.keys(after.trainingMax || {})])) {
+        const a = trainingMaxForUnit(before, id, beforeUnit) || 0;
+        const b = trainingMaxForUnit(after, id, afterUnit) || 0;
+        if (a === b && (a === 0 || beforeUnit === afterUnit)) continue;
+        config.push({ label: `${EX_BY_ID[id]?.name || id} training max`,
+            before: a > 0 ? `${a} ${beforeUnit}` : 'Not set', after: b > 0 ? `${b} ${afterUnit}` : 'Not set' });
+    }
     for (const [key, label] of [['folder', 'Folder'], ['description', 'Description']]) {
         if ((before[key] || '') !== (after[key] || '')) config.push({ label, before: before[key] || 'None', after: after[key] || 'None' });
     }

@@ -1,3 +1,12 @@
+## Build 933 / M386 — Safe decimal training-max editing and truthful review
+
+- Preserve decimal points and intermediate text while entering a training max. Typing 212.5 previously produced 2125, which could multiply percentage-based workout loads.
+- Stage all maxes until Apply; Cancel, Close and dismissal discard the staged edits. Apply updates the existing program draft, which still requires reviewed Save. Reject invalid or nonfinite input rather than silently stripping characters.
+- Keep the existing 90% one-rep-max conversion and canonical loading-step rounding in one inline conversion panel. Back/Escape closes conversion first and restores focus to its lift.
+- Show canonical staged percentage previews and exact training-max before/after values with units in save/restore review. Preserve stored-unit conversion and untouched maxes, prescriptions, logged history and entered live sets.
+- Extract the editor and entry card into one feature owner, with labelled scalable fields and a persistent Close/Apply/Cancel frame. Retire 27 inline styles, tighten the combined budget to 2,426 and add no priority overrides.
+- Extend existing M225 browser and B905 review contracts; retain percentage workout, lb/kg, deload, protected resume and actual finish coverage. Physical Android/IME/TalkBack acceptance remains separate.
+
 ## Build 932 / M385 — Consistent pinned-note and setup editing
 
 - Stage physical setup and note text together in Program, Workout and Library. Save applies both; Cancel discards both. Remove clears the saved note and every saved setup field, including older equipment settings.

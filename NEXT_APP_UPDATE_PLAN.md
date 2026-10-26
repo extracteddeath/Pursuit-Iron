@@ -1,3 +1,15 @@
+## M382 — shared volume styling and usable enlarged-text inspection (Build 929)
+
+Continue the Program/Plan ownership cleanup after Build 928 (PR #356, merge 165e7ae). Build 928 passed all six post-merge workflows and all seven browser groups, and direct public verification matched 127/127 release files.
+
+The extended real R53 journey reproduces a 15px-high expandable muscle target on Build 928. Fixed 13px volume text also bypasses the root text-size setting. Move the 38 static styles out of the shared volume owner into semantic roles in the existing app.css; keep the eleven calculated geometry/zone-ink styles, unchanged canonical volume readers and App's existing callbacks. Native expandable controls now have 44px targets; contributor context stacks above exercise text on compact containers. The block table retains muscle labels while later weeks scroll and accepts keyboard focus/scroll. Reduced motion and forced colors stay explicit.
+
+The existing source guard now includes program-volume-surfaces.js and program-load-wave.js. The combined actual inline count is 2556 before and 2518 after, with the cap tightened to 2518. External priorities remain 2336, embedded priorities 1199, and repeated priority owners 15. The volume JS owner shrinks by 2,008 characters and App loses unused presentation props; the expanded semantic CSS and responsive/accessibility rules increase combined JS/CSS source by 3,688 characters. This is a style-ownership and usability improvement, not a download-size reduction.
+
+R53 adds one deliberately repetitive custom presentation fixture with twelve canonical chest contributions, long day labels, a final deload, 320/393/900/1280px at 100/200% text, native Enter/Space, granular subregions, canonical block-table parity, keyboard horizontal scrolling, pinned muscle labels, forced-color focus and reduced motion. The program/history engine remains 0.65.9. Require exact-head source/lifecycle/independent/browser/release checks and merged hosted-byte plus actual public offline replay before claiming publication. Physical Android/IME/TalkBack acceptance remains unexecuted.
+
+Next: continue source-level Program/Plan style retirement and cohesive inspection/editing owners. Prioritize reproduced prescription, persistence or navigation defects; preserve the established Workout/Focus logging geometry.
+
 ## M377 — root navigation motion restraint (Build 924 candidate)
 
 The existing M3 selection indicator, a five-card stagger, a connected arrival and an extra tab-icon bounce can fire in the same ordinary top-level navigation. A root-tab change should emphasize one relationship, not several independent element movements. Retain the measured tonal indicator, real tap-origin cue and direction metadata; limit animated destination content to one leading card and retire the redundant nav-icon scale owner. No animations touch training input controls. Existing B831 browser coverage now measures entrance count per real navigation and guards against resurrecting icon bounce; full release/engine/offline gates remain required. Do not treat simulated browsers as physical Android acceptance.

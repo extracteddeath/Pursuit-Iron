@@ -13,11 +13,13 @@ const primitives = fs.readFileSync('modules/ui-primitives.js', 'utf8');
 const releaseNotes = fs.readFileSync('modules/release-notes.js', 'utf8');
 const disclosures = fs.readFileSync('modules/ui-disclosure.js', 'utf8');
 const programReference = fs.readFileSync('modules/program-reference-surfaces.js', 'utf8');
-const presentationSource = disclosures + '\n' + programReference + '\n' + releaseNotes + '\n' + primitives + '\n' + app + '\n' + programReview + '\n' + programSchedule + '\n' + programSettings + '\n' + backupPanel;
+const programVolume = fs.readFileSync('modules/program-volume-surfaces.js', 'utf8');
+const loadWave = fs.readFileSync('modules/program-load-wave.js', 'utf8');
+const presentationSource = disclosures + '\n' + programReference + '\n' + releaseNotes + '\n' + primitives + '\n' + app + '\n' + programReview + '\n' + programSchedule + '\n' + programSettings + '\n' + backupPanel + '\n' + programVolume + '\n' + loadWave;
 const MAX_IMPORTANT = 2360; // M291: consolidate the remaining Profile style owners
 const MAX_APP_IMPORTANT = 1229; // M292: retire ten superseded Progress priority declarations.
 const MAX_REPEAT_IMPORTANT = 15; // M288: at-rule comments no longer erase media/container scope.
-const MAX_INLINE_STYLE_OBJECTS = 2558; // M374: backup/restore retires 43 static inline styles, including CSV review.
+const MAX_INLINE_STYLE_OBJECTS = 2518; // M382: include both extracted volume owners; retire 38 static style objects.
 
 // M367: Settings is a named, keyboard-focusable dialog with explicit labels and state.
 for(const role of ['backdrop','panel','heading','title','close','intro','field-label','field','description','footer','cancel','save'])

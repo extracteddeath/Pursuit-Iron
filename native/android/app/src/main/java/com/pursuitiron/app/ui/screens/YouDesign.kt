@@ -103,7 +103,7 @@ fun YouHeader(vm: AppViewModel, board: JSONObject?, onEdit: () -> Unit) {
     val p = vm.profile
     val name = p?.s("name").orEmpty().trim().ifBlank { "Athlete" }
     Column(Modifier.fillMaxWidth().padding(top = 20.dp, bottom = 8.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Box(Modifier.sharedElement("avatar").size(104.dp).clip(RoundedCornerShape(34.dp)).clickable(onClick = onEdit).semantics { contentDescription = "Edit your profile: $name"; role = Role.Button }, contentAlignment = Alignment.Center) {
+        Box(Modifier.sharedElement("avatar").size(104.dp).clickable(interactionSource = null, indication = androidx.compose.material3.ripple(bounded = false, radius = 56.dp), onClick = onEdit).semantics { contentDescription = "Edit your profile: $name"; role = Role.Button }, contentAlignment = Alignment.Center) {
             Cookie(cs.tertiaryContainer, Modifier.fillMaxSize(), radiusFraction = 0.33f)
             Text(name.take(1).uppercase(), style = MaterialTheme.typography.displaySmall.copy(fontSize = 40.sp), color = cs.onTertiaryContainer)
         }

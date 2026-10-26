@@ -120,7 +120,7 @@ fun TrainingMaxSheet(vm: AppViewModel) {
     var pickMethod by remember(pid) { mutableStateOf<JSONObject?>(null) }
     LaunchedEffect(pid, methodsOpen) { if (methodsOpen && methods == null) methods = vm.percentMethods(pid) }
     val cs = MaterialTheme.colorScheme
-    ModalBottomSheet(onDismissRequest = { vm.tmFor = null }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    ModalBottomSheet(onDismissRequest = { vm.tmFor = null }, sheetState = com.pursuitiron.app.ui.common.rememberSettlingSheet(data)) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Percentage program", style = MaterialTheme.typography.headlineSmall)
             val d = data ?: run { Text("Loading…"); return@Column }

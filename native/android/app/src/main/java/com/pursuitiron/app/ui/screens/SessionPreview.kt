@@ -57,7 +57,7 @@ fun SessionPreviewSheet(vm: AppViewModel, t: AppViewModel.PreviewTarget, onClose
     var d by remember(t) { mutableStateOf<JSONObject?>(null) }
     LaunchedEffect(t, minutes) { d = vm.sessionPreview(t, minutes) }
     val cs = MaterialTheme.colorScheme
-    ModalBottomSheet(onDismissRequest = onClose, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    ModalBottomSheet(onDismissRequest = onClose, sheetState = com.pursuitiron.app.ui.common.rememberSettlingSheet(d)) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             val x = d ?: run { Text("Loading…", color = cs.onSurfaceVariant); return@Column }
             Column(Modifier.padding(horizontal = 4.dp)) {

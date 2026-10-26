@@ -194,3 +194,13 @@ fun Badge(text: String, bg: Color = MaterialTheme.colorScheme.tertiaryContainer,
         Text(text, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
     }
 }
+
+/** A full-height sheet whose content arrives after it opens: once the content is there, settle at the new full height
+ *  (otherwise the sheet can stay at the small height it measured while it said "Loading…"). */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+fun rememberSettlingSheet(loaded: Any?): androidx.compose.material3.SheetState {
+    val s = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    androidx.compose.runtime.LaunchedEffect(loaded) { if (loaded != null) { kotlinx.coroutines.delay(60); runCatching { s.expand() } } }
+    return s
+}

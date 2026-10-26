@@ -167,7 +167,7 @@ fun ProgramDetailsSheet(vm: AppViewModel, programId: String, onSettings: () -> U
     val cs = MaterialTheme.colorScheme
     var d by remember { mutableStateOf<JSONObject?>(null) }
     LaunchedEffect(programId) { d = vm.programDetails(programId) }
-    ModalBottomSheet(onDismissRequest = onClose, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    ModalBottomSheet(onDismissRequest = onClose, sheetState = com.pursuitiron.app.ui.common.rememberSettlingSheet(d)) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("Program details", style = MaterialTheme.typography.headlineSmall)
             val x = d ?: run { Text("Loading…", color = cs.onSurfaceVariant); return@Column }
@@ -266,7 +266,7 @@ fun IconPickerSheet(vm: AppViewModel, key: String, onClose: () -> Unit) {
     var q by remember { mutableStateOf("") }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     val save = { icon: String?, color: String?, shape: String? -> scope.launch { cur = vm.setProgramIcon(key, icon, color, shape) }; Unit }
-    ModalBottomSheet(onDismissRequest = onClose, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    ModalBottomSheet(onDismissRequest = onClose, sheetState = com.pursuitiron.app.ui.common.rememberSettlingSheet(cur)) {
         val c = cur ?: run { Text("Loading…", modifier = Modifier.padding(20.dp)); return@ModalBottomSheet }
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {

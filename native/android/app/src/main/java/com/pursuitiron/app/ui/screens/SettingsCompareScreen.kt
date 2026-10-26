@@ -96,7 +96,7 @@ fun ProgramSettingsSheet(vm: AppViewModel, onClose: () -> Unit) {
     val rebuilds = p != null && (goal != p.s("goal") || weeks != p.i("weeks") || session != p.s("session") || progression != p.s("progression") || endless != p.b("endless") || deload != p.b("deload") ||
         cap != (if (p.isNull("barbellCap")) "none" else p.i("barbellCap").toString()) || noBw != p.b("noBodyweight") || noSs != p.b("noSupersets") || vol != p.s("volumeApproach"))
     fun guarded(action: () -> Unit) { if (draftOpen) confirm = action else action() }
-    ModalBottomSheet(onDismissRequest = onClose, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    ModalBottomSheet(onDismissRequest = onClose, sheetState = com.pursuitiron.app.ui.common.rememberSettlingSheet(p)) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Program settings", style = MaterialTheme.typography.headlineSmall)
             if (p == null) { Text("Loading…"); return@Column }

@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "sourceRevision": "02ec6604853294c0465ed358e22205a75c623d97",
+  "build": 919,
+  "runtimeAggregate": "a8e101d856d0badec6308315e198707d0bab42fcabc92f2f826ea7a13e72e4a3",
+  "fixture": {
+    "programId": "m318-fixed-2",
+    "historyWorkouts": 240,
+    "rows": 7,
+    "workingSets": 23,
+    "viewport": "393x852",
+    "reducedMotion": true
+  },
+  "browser": "HeadlessChrome/153.0.8010.0",
+  "unit": "ms",
+  "method": "Synthetic input/click to two animation frames; persisted live state checked per action. Local preloaded assets; CPU slowdown emulated. Not physical Android, field INP, cold startup, or TalkBack certification.",
+  "timingPolicy": "Environment-relative diagnostics; correctness and zero duplicate suggestion calls are enforced, not a flaky machine-speed threshold.",
+  "records": [
+    {
+      "rate": 1,
+      "mountedSuggestionCalls": 7,
+      "callsDuringLogging": 0,
+      "input": {
+        "samples": 40,
+        "p50": 33.3,
+        "p95": 33.5,
+        "p99": 33.6
+      },
+      "complete": {
+        "samples": 10,
+        "p50": 33.3,
+        "p95": 33.7,
+        "p99": 33.7
+      },
+      "undo": {
+        "samples": 10,
+        "p50": 33.2,
+        "p95": 33.4,
+        "p99": 33.4
+      }
+    },
+    {
+      "rate": 4,
+      "mountedSuggestionCalls": 7,
+      "callsDuringLogging": 0,
+      "input": {
+        "samples": 40,
+        "p50": 33.3,
+        "p95": 39.7,
+        "p99": 51.1
+      },
+      "complete": {
+        "samples": 10,
+        "p50": 66.4,
+        "p95": 100.3,
+        "p99": 100.3
+      },
+      "undo": {
+        "samples": 10,
+        "p50": 66.3,
+        "p95": 87,
+        "p99": 87
+      }
+    }
+  ]
+}

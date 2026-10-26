@@ -779,6 +779,47 @@ if scroll_to(r"^\|Data & storage$", tries=6):
     back()
 else:
     FAILS.append("no Data & storage row")
+# The design's Plates & bars: pairs you own per size; the heaviest load follows the counts
+if scroll_to(r"^\|Plates & bars$", tries=6):
+    tap(r"^\|Plates & bars$", "settings-plates")
+    def heaviest():
+        for n in nodes():
+            m = re.match(r"([\d.]+) (kg|lb) is the heaviest you can load", n.get("text") or "")
+            if m: return float(m.group(1))
+        return None
+    if not find(r"PLATES · PAIRS YOU OWN", timeout=5) or not scroll_to(r"is the heaviest you can load", tries=3, step=400):
+        FAILS.append("Plates & bars has no plate pairs or heaviest load")
+    else:
+        h0 = heaviest()
+        scroll_up_to(r"One fewer pair of (25 kg|45 lb)", tries=3)
+        tap(r"One fewer pair of (25 kg|45 lb)", "plates-fewer")
+        scroll_to(r"is the heaviest you can load", tries=3, step=400)
+        time.sleep(1)
+        h1 = heaviest()
+        if h0 is None or h1 is None or not h1 < h0:
+            FAILS.append(f"heaviest load does not follow the plate pairs ({h0} -> {h1})")
+        scroll_up_to(r"One more pair of (25 kg|45 lb)", tries=3)
+        tap(r"One more pair of (25 kg|45 lb)")
+        if not scroll_to(r"^\|SMALLEST JUMP$", tries=3, step=400):
+            FAILS.append("Plates & bars has no smallest jump")
+        shot("settings-plates-k")
+    back()
+else:
+    FAILS.append("no Plates & bars row")
+if scroll_to(r"^\|Rest timer & cues$", tries=6):
+    tap(r"^\|Rest timer & cues$", "settings-cues")
+    if not find(r"^\|Play the cue$", timeout=4) or not find(r"^\|Preview lock screen$", timeout=2):
+        FAILS.append("Rest timer & cues lacks Play the cue / Preview lock screen")
+    else:
+        tap(r"^\|Preview lock screen$", "cues-lock-preview")
+        dismiss_system_dialogs()
+        time.sleep(1)
+        out = adb("shell", "dumpsys", "notification", "--noredact")
+        if "Sample timer" not in (out or ""):
+            FAILS.append("Preview lock screen posted no sample rest notification")
+    back()
+else:
+    FAILS.append("no Rest timer & cues row")
 if scroll_to(r"^\|Help & about$", tries=6):
     tap(r"^\|Help & about$", "settings-help")
     if scroll_to(r"References & methodology", tries=4, step=500):

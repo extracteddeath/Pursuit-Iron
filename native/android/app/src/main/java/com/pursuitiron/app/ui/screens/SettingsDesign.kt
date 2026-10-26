@@ -1,4 +1,4 @@
-@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 
 package com.pursuitiron.app.ui.screens
 
@@ -350,6 +350,16 @@ fun ComfortSheet(vm: AppViewModel, onClose: () -> Unit) {
 }
 
 @Composable
+private fun CueButton(icon: ImageVector, label: String, onClick: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    Row(Modifier.height(44.dp).clip(CircleShape).background(cs.secondaryContainer).clickable(onClick = onClick).semantics(mergeDescendants = true) { role = Role.Button }.padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Icon(icon, null, Modifier.size(18.dp), tint = cs.onSecondaryContainer)
+        Text(label, style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold), color = cs.onSecondaryContainer)
+    }
+}
+
+@Composable
 private fun ComfortRow(label: String, sub: String, checked: Boolean, onChange: (Boolean) -> Unit) {
     val cs = MaterialTheme.colorScheme
     Row(Modifier.fillMaxWidth().background(cs.surfaceContainerHigh).padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -386,10 +396,17 @@ fun CuesSheet(vm: AppViewModel, onClose: () -> Unit) {
             Column(Modifier.clip(RoundedCornerShape(20.dp))) {
                 ComfortRow("Lower music instead of pausing", "Music dips for the cue, then comes straight back", vm.prefs.duck) { vm.prefs.changeDuck(it) }
             }
-            Row(Modifier.height(44.dp).clip(CircleShape).background(cs.secondaryContainer).clickable { vm.testCue() }.semantics(mergeDescendants = true) { role = Role.Button }.padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Icon(ICON_CUES_TEST, null, Modifier.size(18.dp), tint = cs.onSecondaryContainer)
-                Text("Test the cue", style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold), color = cs.onSecondaryContainer)
+            val ask = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { granted ->
+                if (granted) vm.previewLockScreen() else vm.toast("Allow notifications to see the rest timer on your lock screen")
+            }
+            androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                CueButton(ICON_CUES_TEST, "Play the cue") { vm.testCue() }
+                CueButton(PiIcons.Phone, "Preview lock screen") {
+                    if (!vm.previewLockScreen()) {
+                        if (android.os.Build.VERSION.SDK_INT >= 33) ask.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                        else vm.toast("Turn on notifications for Pursuit Iron to see the rest timer on your lock screen")
+                    }
+                }
             }
         }
     }

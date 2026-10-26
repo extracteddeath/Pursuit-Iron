@@ -195,29 +195,6 @@ private fun OneRmTool(vm: AppViewModel) {
     }
 }
 
-/* ------------------------------------------------------------------ plates owned + smallest jump (App.js Settings) */
-@Composable
-fun LoadingCard(vm: AppViewModel) {
-    val g = vm.gyms ?: return
-    val u = g.s("unit", "kg")
-    val all = g.o("plates")?.optJSONArray("all")?.let { a -> (0 until a.length()).map { a.optDouble(it) } } ?: emptyList()
-    val on = g.o("plates")?.optJSONArray("on")?.let { a -> (0 until a.length()).map { a.optDouble(it) } } ?: emptyList()
-    val cs = MaterialTheme.colorScheme
-    PiCard(radius = 28.dp) {
-        Text("Plates and jumps", style = MaterialTheme.typography.titleMedium)
-        Text("The plates you have (per side). Plate math and suggested loads use only these.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            all.forEach { p -> val sel = on.any { kotlin.math.abs(it - p) < 1e-9 }
-                MorphChip(fmtNum(p), sel, { vm.setPlates(if (sel) on.filter { kotlin.math.abs(it - p) > 1e-9 } else on + p) }) }
-        }
-        Kicker("Smallest load jump")
-        val mi = g.o("minInc")
-        val choices = g.optJSONArray("minIncChoices")?.let { a -> (0 until a.length()).mapNotNull { a.optJSONArray(it) }.map { it.optDouble(0) to it.optString(1) } } ?: emptyList()
-        val cur = mi.d("v").takeIf { it > 0 && mi.s("unit") == u } ?: 0.0
-        Segmented(choices.map { (v, l) -> fmtNum(v) to (if (v == 0.0) "Standard" else "$l $u") }, fmtNum(cur), { vm.setMinInc(it.toDouble()) })
-    }
-}
-
 /* ------------------------------------------------------------------ gyms (App.js GymsSheet) */
 @Composable
 fun GymsCard(vm: AppViewModel, onEdit: () -> Unit) {
@@ -237,7 +214,7 @@ fun GymsCard(vm: AppViewModel, onEdit: () -> Unit) {
     }
 }
 
-private fun cleanGym(x: JSONObject): JSONObject = JSONObject(x.toString()).apply { remove("limitKeys"); remove("inventoryKeys"); remove("barDefaults") }
+private fun cleanGym(x: JSONObject): JSONObject = JSONObject(x.toString()).apply { remove("limitKeys"); remove("inventoryKeys"); remove("barDefaults"); remove("plateSum") }
 
 @Composable
 fun GymsSheet(vm: AppViewModel, onClose: () -> Unit) {
@@ -362,6 +339,7 @@ private fun GymBarsAndWeights(g: JSONObject, gym: JSONObject, id: String, patch:
             }
         }
     }
+    if (eq.any { it in setOf("barbell", "ezbar", "smith", "trapbar", "safetybar") }) GymPlatePairs(g, gym, id, patch)
     val invKeys = g.list("gyms").firstOrNull { it.s("id") == id }?.list("inventoryKeys") ?: emptyList()
     if (invKeys.isEmpty()) return
     var open by remember(id) { mutableStateOf(false) }

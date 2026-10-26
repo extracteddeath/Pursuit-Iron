@@ -145,6 +145,7 @@ fun YouScreen(vm: AppViewModel) {
         null -> {}
         "comfort" -> ComfortSheet(vm) { settingsSheet = null }
         "cues" -> CuesSheet(vm) { settingsSheet = null }
+        "loading" -> PlatesSheet(vm, onCalc = { settingsSheet = null; toolsOpen = true }) { settingsSheet = null }
         "widgets" -> WidgetsSheet(vm) { settingsSheet = null }
         "whatsnew" -> WhatsNewSheet(vm) { settingsSheet = null }
         else -> SettingsPageSheet(vm, settingsSheet!!) { settingsSheet = null }
@@ -408,7 +409,6 @@ private fun SettingsPageSheet(vm: AppViewModel, key: String, onClose: () -> Unit
         Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(horizontal = 12.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             when (key) {
                 "training" -> TrainingPrefsCard(vm)
-                "loading" -> LoadingCard(vm)
                 "reminders" -> RemindersCard(vm)
                 "exercises" -> CustomExercisesCard(vm)
                 "profile" -> ProfileFieldsCard(vm)

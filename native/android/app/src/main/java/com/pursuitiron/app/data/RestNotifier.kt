@@ -58,11 +58,16 @@ class RestNotifier(private val context: Context) {
     fun allowed(): Boolean = Build.VERSION.SDK_INT < 33 ||
         ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
 
-    fun show(endAt: Long, title: String, next: String) {
+    private fun actionIntent(a: String): PendingIntent = PendingIntent.getBroadcast(context, ACTIONS.indexOf(a) + 10,
+        Intent(context, RestActionReceiver::class.java).putExtra(EXTRA_ACTION, a), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+
+    /** The design's lock-screen rest card: the countdown with −15 s, +15 s and Skip. A [sample] (Settings →
+     *  Rest timer & cues → Preview lock screen) shows the same card without actions or the end alarm. */
+    fun show(endAt: Long, title: String, next: String, sample: Boolean = false) {
         if (!allowed()) return
         val open = PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-        val n = NotificationCompat.Builder(context, CHANNEL)
+        val b = NotificationCompat.Builder(context, CHANNEL)
             .setSmallIcon(R.mipmap.ic_launcher_monochrome)
             .setContentTitle(title)
             .setContentText(next)
@@ -76,9 +81,14 @@ class RestNotifier(private val context: Context) {
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setContentIntent(open)
             .setTimeoutAfter((endAt - System.currentTimeMillis()).coerceAtLeast(1000L) + 30_000L)
-            .build()
+        if (!sample) {
+            b.addAction(R.mipmap.ic_launcher_monochrome, "−15 s", actionIntent("minus"))
+            b.addAction(R.mipmap.ic_launcher_monochrome, "+15 s", actionIntent("plus"))
+            b.addAction(R.mipmap.ic_launcher_monochrome, "Skip", actionIntent("skip"))
+        }
         @Suppress("MissingPermission")
-        runCatching { NotificationManagerCompat.from(context).notify(id, n) }
+        runCatching { NotificationManagerCompat.from(context).notify(id, b.build()) }
+        if (sample) return
         val am = alarms ?: return
         val pi = alarmIntent(next)
         runCatching {
@@ -97,6 +107,8 @@ class RestNotifier(private val context: Context) {
         const val CHANNEL = "rest"
         const val DONE_CHANNEL = "rest-done"
         const val EXTRA_NEXT = "next"
+        const val EXTRA_ACTION = "action"
+        val ACTIONS = listOf("minus", "plus", "skip")
         const val COUNTDOWN_ID = 4201
         const val DONE_ID = 4202
     }
@@ -123,5 +135,17 @@ class RestDoneReceiver : BroadcastReceiver() {
             .build()
         @Suppress("MissingPermission")
         runCatching { nm.notify(RestNotifier.DONE_ID, n) }
+    }
+}
+
+/** Taps on the rest card's −15 s / +15 s / Skip. The running app applies them to the live rest; Skip also
+ *  clears the countdown and its end alarm here, so it works even if the app has been closed. */
+object RestActions { val flow = kotlinx.coroutines.flow.MutableSharedFlow<String>(extraBufferCapacity = 8) }
+
+class RestActionReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        val a = intent.getStringExtra(RestNotifier.EXTRA_ACTION) ?: return
+        if (a == "skip") RestNotifier(context).cancel()
+        RestActions.flow.tryEmit(a)
     }
 }

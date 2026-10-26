@@ -10,6 +10,7 @@ import androidx.lifecycle.viewModelScope
 import com.pursuitiron.app.data.ImportOffer
 import com.pursuitiron.app.data.Prefs
 import com.pursuitiron.app.data.RestNotifier
+import com.pursuitiron.app.data.RestActions
 import com.pursuitiron.app.engine.Core
 import com.pursuitiron.app.ui.common.Hap
 import com.pursuitiron.app.ui.common.Haptics
@@ -80,6 +81,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private var inForeground = true
 
     init {
+        // The lock-screen rest card's buttons (RestActionReceiver).
+        viewModelScope.launch {
+            RestActions.flow.collect { a ->
+                if (session?.o("rest") == null) return@collect
+                val s = if (a == "skip") obj("act", jsonOf("type" to "restDone")) else obj("act", jsonOf("type" to "restAdjust", "delta" to if (a == "minus") -15 else 15))
+                if (s != null) session = s
+                if (a == "skip") rest.cancel() else if (!inForeground) onBackground()
+            }
+        }
         viewModelScope.launch {
             try {
                 val c = Core.start(app)
@@ -719,11 +729,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
     fun setActiveGym(id: String) = launchCore {
         val g = gyms ?: return@launchCore
-        val list = JSONArray(); g.list("gyms").forEach { x -> list.put(JSONObject(x.toString()).apply { remove("limitKeys"); remove("inventoryKeys"); remove("barDefaults") }) }
+        val list = JSONArray(); g.list("gyms").forEach { x -> list.put(JSONObject(x.toString()).apply { remove("limitKeys"); remove("inventoryKeys"); remove("barDefaults"); remove("plateSum") }) }
         call("saveGyms", jsonOf("gyms" to list, "activeGymId" to id)); gyms = obj("gyms"); home = obj("home")
     }
-    fun setPlates(plates: List<Double>) = launchCore { call("setPlates", jsonOf("plates" to JSONArray(plates))); gyms = obj("gyms") }
-    fun setMinInc(v: Double) = launchCore { call("setMinInc", jsonOf("v" to v)); gyms = obj("gyms") }
+    fun setMinInc(v: Double) = launchCore { call("setMinInc", jsonOf("v" to v)); gyms = obj("gyms"); plateSetup = obj("plateSetup") }
+    /* The design's Settings → Plates & bars (the active gym's bar and plate pairs). */
+    var plateSetup by mutableStateOf<JSONObject?>(null); private set
+    fun loadPlateSetup() = launchCore { plateSetup = obj("plateSetup") }
+    fun setPlatePair(size: Double, n: Int) = launchCore { call("setPlatePair", jsonOf("size" to size, "n" to n)); gyms = obj("gyms"); plateSetup = obj("plateSetup") }
+    fun setBarbellWeight(w: Double) = launchCore { call("setBarbellWeight", jsonOf("w" to w)); gyms = obj("gyms"); plateSetup = obj("plateSetup") }
 
     /* ---------------------------------------------------------------- data in and out */
     suspend fun exportText(): String? = core?.exportStoreText()
@@ -753,7 +767,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val ex = s.list("exercises").getOrNull(s.i("exIdx"))
         val next = ex?.list("sets")?.firstOrNull { !it.b("done") }
         val text = if (ex != null && next != null) "Next: ${ex.s("name")} · ${next.s("weight").ifBlank { "?" }} ${s.s("unit")} × ${next.s("reps")}" else "Next set when it ends"
-        rest.show(end, "Rest", text)
+        val kind = s.o("rest")?.s("kind")
+        rest.show(end, when (kind) { "mini" -> "Myo rest"; "warm" -> "Warm-up rest"; else -> "Rest" }, text)
+    }
+    /** Settings → Rest timer & cues → Preview lock screen: a sample rest card in the shade and on the lock screen. */
+    fun previewLockScreen(): Boolean {
+        if (!rest.allowed()) return false
+        if (restEndsAt() != null) { toast("Your rest timer is already running — lock the phone to see it"); return true }
+        rest.show(System.currentTimeMillis() + 84_000L, "Rest", "Sample timer · Next: Bench press", sample = true)
+        toast("Sample timer sent — lock your phone or pull down the shade to see it")
+        return true
     }
 
     override fun onCleared() { core?.close(); beep.close(); super.onCleared() }

@@ -45,11 +45,26 @@ function applyGlobals() {
     const minInc = st.minInc || { v: 0, unit: null };
     E.setLoadInc(minInc.v, minInc.unit);
     E.setRestScaleGlobal(Number(st.restScale) || 1);
-    E.setAvailPlates(st.plates || { kg: [...E.PLATES.kg], lb: [...E.PLATES.lb] });
     const g = E.normalizeGyms(st.gyms, st.activeGymId);
     const gym = E.gymById(g.gyms, g.activeGymId);
+    // The design's Plates & bars: each gym counts the pairs it owns; plate math loads within those counts.
+    const base = st.plates || { kg: [...E.PLATES.kg], lb: [...E.PLATES.lb] };
+    const pairs = { kg: platePairsFor(gym, 'kg'), lb: platePairsFor(gym, 'lb') };
+    const owned = (u) => E.ALL_PLATES[u].filter((p) => (pairs[u][p] || 0) > 0).sort((a, b) => b - a);
+    E.setAvailPlates({ ...base, kg: owned('kg'), lb: owned('lb'), pairs });
     E.setGymLimits(gym); E.setGymBarWeights(gym);
 }
+
+/* Pairs per plate size for a gym in a unit: its own counts once set, otherwise the owned-plate set at
+   a commercial-gym depth (4 pairs of the biggest, 2 of the rest). */
+const DEFAULT_PAIRS_TOP = { kg: 25, lb: 45 };
+function platePairsFor(gym, u) {
+    const own = gym?.platePairs?.[u];
+    if (own && typeof own === 'object') return Object.fromEntries(E.ALL_PLATES[u].map((p) => [p, Math.max(0, Math.floor(Number(own[p]) || 0))]));
+    const set = (S.store.plates?.[u]?.length ? S.store.plates[u] : E.PLATES[u]).map(Number);
+    return Object.fromEntries(E.ALL_PLATES[u].map((p) => [p, set.includes(p) ? (p === DEFAULT_PAIRS_TOP[u] ? 4 : 2) : 0]));
+}
+function activeGym() { const g = E.normalizeGyms(S.store.gyms, S.store.activeGymId); return { list: g.gyms, gym: E.gymById(g.gyms, g.activeGymId) }; }
 
 function unit() { return S.store.unit || 'kg'; }
 function saved() { return Array.isArray(S.store.saved) ? S.store.saved : []; }
@@ -2391,7 +2406,7 @@ export function plateCalc({ total, bar = 'barbell' } = {}) {
     const BAR_KIT = { barbell: 'barbell', women: 'barbell', ezbar: 'ezbar', smith: 'smith', trap: 'trapbar', ssb: 'safetybar' };
     let kit = null; try { const g = E.normalizeGyms(S.store.gyms, S.store.activeGymId); kit = E.gymById(g.gyms, g.activeGymId)?.equipment || null; } catch { kit = null; }
     const bars = Object.keys(E.BARS).filter((k) => k === bar || !kit || kit.includes(BAR_KIT[k] || k)).map((k) => ({ id: k, label: E.BAR_LABEL?.[k] || k, weight: E.barWeightFor(k, u) }));
-    const own = ((S.store.plates?.[u]?.length ? S.store.plates[u] : E.PLATES[u]) || []).map(Number).filter((p) => p > 0);
+    const P = platePairsFor(activeGym().gym, u), own = E.ALL_PLATES[u].filter((p) => P[p] > 0);
     const step = own.length ? Math.min(...own) * 2 : (u === 'lb' ? 5 : 2.5);
     if (!(t > 0)) return { unit: u, bars, bar, step, result: null };
     const b = E.BARS[bar] ? bar : 'barbell';
@@ -2424,14 +2439,16 @@ export function gyms() {
         unit: u, activeGymId: g.activeGymId,
         gyms: g.gyms.map((x) => ({ ...x, limitKeys: E.GYM_LIMIT_KEYS.filter((k) => k.match(x.equipment)).map((k) => ({ key: k.key, label: k.label, sub: k.sub })),
             inventoryKeys: E.INVENTORY_KEYS.filter((k) => k.match(x.equipment)).map((k) => ({ key: k.key, label: k.label, sub: k.sub })),
-            barDefaults: { barbell: E.BARS.barbell[x.barWeights?.unit === 'kg' ? 'kg' : 'lb'], smith: E.BARS.smith[x.barWeights?.unit === 'kg' ? 'kg' : 'lb'] } })),
+            barDefaults: { barbell: E.BARS.barbell[x.barWeights?.unit === 'kg' ? 'kg' : 'lb'], smith: E.BARS.smith[x.barWeights?.unit === 'kg' ? 'kg' : 'lb'] },
+            plateSum: plateSummary(x, u) })),
         presets: E.GYM_PRESETS.map((p) => ({ key: p.key, name: p.name, equipment: p.equipment })),
         // The design's available-weights presets (App.js RACK_PRESETS), each tagged with the unit it was made in.
         rackPresets: E.RACK_PRESETS || {},
         equipment: cats.map((c) => ({ cat: c, items: E.EQUIPMENT.filter((e) => (e.cat || 'Free Weights') === c).map((e) => ({ id: e.id, label: e.label })).sort((a, b) => a.label.localeCompare(b.label)) })),
         plates: { all: E.ALL_PLATES[u], on: (S.store.plates?.[u] || E.PLATES[u]) },
         minInc: S.store.minInc || { v: 0, unit: null },
-        minIncChoices: u === 'kg' ? [[0, 'Std'], [2.5, '2.5'], [1, '1']] : [[0, 'Std'], [1, '1'], [0.5, '0.5']]
+        // Web Settings → Smallest jump: kg 1 / 0.5, lb 2.5 / 1.
+        minIncChoices: u === 'kg' ? [[0, 'Std'], [1, '1'], [0.5, '0.5']] : [[0, 'Std'], [2.5, '2.5'], [1, '1']]
     };
 }
 /* App.js GymsSheet commit + onSave: normalized, timestamped, deletions tombstoned, equipDefault follows. */
@@ -2462,6 +2479,52 @@ export function setPlates({ plates }) {
     const v = [...new Set((plates || []).map(Number).filter((p) => all.includes(p)))].sort((a, b) => b - a);
     S.store.plates = { ...(S.store.plates || { kg: [...E.PLATES.kg], lb: [...E.PLATES.lb] }), [u]: v };
     applyGlobals(); markStore(); return { ok: true };
+}
+/* The design's Settings → Plates & bars: the active gym's bar, the pairs it owns, the heaviest load
+   and the smallest jump they make. */
+const PLATE_SIZES = { kg: [25, 20, 15, 10, 5, 2.5, 1.25, 0.5], lb: [45, 35, 25, 10, 5, 2.5, 1.25] };
+const BAR_CHOICES = { kg: [20, 15, 10], lb: [45, 35, 25] };
+function plateSummary(gym, u) {
+    const P = platePairsFor(gym, u), bw = gym?.barWeights, LB = 2.2046226218487757;
+    const bar = bw && Number.isFinite(bw.barbell) ? Math.round((bw.unit === u ? bw.barbell : u === 'lb' ? bw.barbell * LB : bw.barbell / LB) * 1000) / 1000 : E.BARS.barbell[u];
+    const sizes = [...new Set([...PLATE_SIZES[u], ...E.ALL_PLATES[u].filter((p) => P[p] > 0)])].sort((a, b) => b - a);
+    const owned = sizes.filter((p) => P[p] > 0);
+    const max = Math.round((bar + 2 * sizes.reduce((a, p) => a + p * (P[p] || 0), 0)) * 100) / 100;
+    return { bar, rows: sizes.map((p) => ({ size: p, n: P[p] || 0 })), max, smallest: owned.length ? Math.min(...owned) * 2 : 0 };
+}
+export function plateSetup() {
+    const u = unit(), { gym, list } = activeGym(), sm = plateSummary(gym, u), mi = S.store.minInc || { v: 0, unit: null };
+    const miV = mi.v > 0 && mi.unit === u ? mi.v : 0;
+    return {
+        unit: u, gymName: gym?.name || '', gymCount: list.length, bar: sm.bar, barChoices: BAR_CHOICES[u], rows: sm.rows, max: sm.max,
+        jump: miV ? `${miV} ${u} with microplates` : `${sm.smallest} ${u}`,
+        minInc: miV, jumpChoices: u === 'kg' ? [[0, 'Plates'], [1, '1 kg'], [0.5, '0.5 kg']] : [[0, 'Plates'], [2.5, '2.5 lb'], [1, '1 lb']],
+        jumpNote: miV ? `Barbell lifts can now go up ${miV} ${u} at a time, so presses keep moving when a full plate jump is too much.`
+            : 'Uses your smallest plate pair. Add microplates and the engine can make smaller jumps on barbell lifts.'
+    };
+}
+function patchActiveGym(fn) {
+    const { list, gym } = activeGym(); if (!gym) return { ok: false };
+    const next = list.map((g) => (g.id === gym.id ? fn(JSON.parse(JSON.stringify(g))) : g));
+    return saveGyms({ gyms: next, activeGymId: gym.id });
+}
+export function setPlatePair({ size, n, gymId } = {}) {
+    const u = unit(), p = Number(size), c = Math.max(0, Math.min(10, Math.floor(Number(n) || 0)));
+    if (!E.ALL_PLATES[u].includes(p)) return { ok: false };
+    const apply = (g) => { const cur = platePairsFor(g, u); g.platePairs = { ...(g.platePairs || {}), [u]: { ...cur, [p]: c } }; return g; };
+    if (gymId) {
+        const { list } = activeGym(); if (!list.some((g) => g.id === gymId)) return { ok: false };
+        return saveGyms({ gyms: list.map((g) => (g.id === gymId ? apply(JSON.parse(JSON.stringify(g))) : g)), activeGymId: S.store.activeGymId });
+    }
+    return patchActiveGym(apply);
+}
+export function setBarbellWeight({ w } = {}) {
+    const u = unit(), v = Number(w); if (!(v > 0 && v <= 100)) return { ok: false };
+    const LB = 2.2046226218487757;
+    return patchActiveGym((g) => {
+        const bw = g.barWeights || {}, conv = (x) => (bw.unit === u ? x : Math.round((u === 'lb' ? x * LB : x / LB) * 1000) / 1000);
+        g.barWeights = { unit: u, barbell: v, ...(Number.isFinite(bw.smith) ? { smith: conv(bw.smith) } : {}) }; return g;
+    });
 }
 export function setMinInc({ v }) {
     const n = Number(v) || 0; S.store.minInc = { v: n, unit: n ? unit() : null };

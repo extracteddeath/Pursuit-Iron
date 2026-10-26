@@ -139,7 +139,21 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   C.setPlates({ plates: [20, 10, 5, 2.5] });
   ok(JSON.stringify(C.plateCalc({ total: 100 }).result.plates) === JSON.stringify([20, 20]), 'plate calc follows the plates you own');
   C.setPlates({ plates: [25, 20, 15, 10, 5, 2.5, 1.25] }); C.setMinInc({ v: 1 });
-  ok(C.gyms().minInc.v === 1 && C.gyms().minInc.unit === 'kg', 'smallest increment saved with its unit'); C.setMinInc({ v: 0 }); }
+  ok(C.gyms().minInc.v === 1 && C.gyms().minInc.unit === 'kg', 'smallest increment saved with its unit');
+  ok(JSON.stringify(C.gyms().minIncChoices.map((c) => c[0])) === '[0,1,0.5]', 'kg microplate choices are 1 and 0.5 (web Smallest jump)');
+  ok(C.plateSetup().jump === '1 kg with microplates', 'Plates & bars names the microplate jump'); C.setMinInc({ v: 0 });
+  // The design's Plates & bars: pairs you own per gym; plate math and the heaviest load follow the counts.
+  const ps = C.plateSetup();
+  ok(ps.bar === 20 && ps.rows.find((r) => r.size === 25).n === 4 && ps.rows.find((r) => r.size === 1.25).n === 2 && ps.jump === '2.5 kg', 'Plates & bars starts from the plates you own (' + ps.max + ' kg max)');
+  [25, 20, 15, 10, 5, 2.5, 1.25].forEach((p) => C.setPlatePair({ size: p, n: p === 25 ? 1 : 0 }));
+  C.setPlatePair({ size: 20, n: 2 });
+  ok(C.plateSetup().max === 20 + 2 * 65 && C.plateSetup().jump === '40 kg', 'heaviest load and smallest jump follow the pairs (' + C.plateSetup().max + ')');
+  ok(JSON.stringify(C.plateCalc({ total: 100 }).result.plates) === JSON.stringify([20, 20]), 'plate math loads within the pairs you own (one 25, two 20s → 40 a side)');
+  ok(C.plateCalc({ total: 300 }).result.achievable === 150, 'a load beyond the pairs stops at what you can build');
+  ok(C.setBarbellWeight({ w: 15 }).ok && C.plateSetup().bar === 15 && C.plateCalc({ total: 55 }).result.barWeight === 15, 'the bar choice is the active gym\'s bar');
+  const active = C.gyms().gyms.find((x) => x.id === C.gyms().activeGymId);
+  ok(active.platePairs.kg[25] === 1 && active.plateSum.max === 15 + 130, 'pairs are kept on the gym');
+  C.setBarbellWeight({ w: 20 }); [25, 20, 15, 10, 5, 2.5, 1.25].forEach((p) => C.setPlatePair({ size: p, n: p === 25 ? 4 : 2 })); }
 
 // 13. Unit switch converts loads (App.js switchUnit) and keeps history as logged
 { const before = JSON.parse(C.exportStore());

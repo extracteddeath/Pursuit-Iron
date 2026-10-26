@@ -59,6 +59,7 @@
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
         </provider>
         <receiver android:name=".data.RestDoneReceiver" android:exported="false" />
+        <receiver android:name=".data.RestActionReceiver" android:exported="false" />
         <receiver android:name=".data.ReminderReceiver" android:exported="false" />
         <receiver android:name=".data.ReminderBootReceiver" android:exported="false">
             <intent-filter>

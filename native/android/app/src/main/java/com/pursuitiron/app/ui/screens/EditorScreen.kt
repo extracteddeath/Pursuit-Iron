@@ -4,6 +4,25 @@ package com.pursuitiron.app.ui.screens
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.sp
+import com.pursuitiron.app.ui.common.Segmented
+import com.pursuitiron.app.ui.common.d
+import com.pursuitiron.app.ui.common.fmtNum
+import com.pursuitiron.app.ui.common.strings
+import com.pursuitiron.app.ui.theme.Motion
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -70,7 +89,9 @@ private sealed interface ESheet {
     data object Rename : ESheet
 }
 
-/** App.js ProgramView, editing: every change goes to a draft and reaches the program on Save. */
+/** The design's Edit program (Main.dc.html pe): one day at a time, its focus and weekly sets, then each lift with
+    swap, progression and more. Every change goes to a draft (App.js ProgramView) and reaches the program on Save. */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun ProgramEditorScreen(vm: AppViewModel) {
     val e = vm.editor ?: return
@@ -80,59 +101,168 @@ fun ProgramEditorScreen(vm: AppViewModel) {
     var leaving by remember { mutableStateOf(false) }
     var scopeAsk by remember { mutableStateOf(false) }
     var settingsOpen by remember { mutableStateOf(false) }
+    var dayId by remember { mutableStateOf<String?>(null) }
+    var dayMenu by remember { mutableStateOf(false) }
+    var noteEdit by remember { mutableStateOf<String?>(null) }
+    var confirmDeleteDay by remember { mutableStateOf(false) }
+    var openRow by remember { mutableStateOf<Pair<Int, String>?>(null) } // slot to "swap" | "prog" | "more"
+    var why by remember { mutableStateOf<Int?>(null) }
+    var info by remember { mutableStateOf<String?>(null) }
     if (settingsOpen) ProgramSettingsSheet(vm) { settingsOpen = false }
     val dirty = e.b("dirty")
     BackHandler { if (dirty) leaving = true else vm.closeEditor() }
     fun save() { if (e.s("cycleId").isNotBlank()) scopeAsk = true else vm.saveEdits("program") }
+    val days = e.list("days")
+    val d = days.firstOrNull { it.s("id") == dayId } ?: days.firstOrNull()
+    val di = days.indexOf(d)
+    LaunchedEffect(d?.s("id")) { openRow = null; dayMenu = false; noteEdit = null }
 
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
-        Row(Modifier.padding(start = 4.dp, end = 12.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { if (dirty) leaving = true else vm.closeEditor() }) { Icon(PiIcons.ChevronLeft, "Back") }
-            Column(Modifier.weight(1f).clickable { sheet = ESheet.Rename }) {
-                Kicker(if (dirty) "Editing · unsaved" else "Editing")
-                Text(e.s("name"), style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        // Header: close, title over the program and week, Undo all and Save.
+        Row(Modifier.padding(start = 12.dp, end = 16.dp, top = 12.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            IconButton(onClick = { if (dirty) leaving = true else vm.closeEditor() }) { Icon(PiIcons.Close, "Close editor") }
+            Column(Modifier.weight(1f).clickable { sheet = ESheet.Rename }.semantics { contentDescription = "Edit program: ${e.s("name")}. Rename" }) {
+                Text("Edit program", style = MaterialTheme.typography.titleLarge.copy(fontSize = 20.sp, lineHeight = 26.sp, fontWeight = FontWeight.SemiBold))
+                Text("${e.s("name")} · week ${e.i("weekIndex")} of ${e.i("weeksTotal")}", style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp),
+                    color = cs.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            IconButton(onClick = { settingsOpen = true }) { Icon(PiIcons.Sparkle, "Program settings") }
-            if (dirty) TextButton(onClick = { vm.discardEdits() }) { Text("Discard") }
-            Button(onClick = { save() }, enabled = dirty) { Text("Save") }
+            if (dirty) TextButton(onClick = { vm.discardEdits() }) { Text("Undo all", fontWeight = FontWeight.Bold) }
+            Box(Modifier.height(40.dp).clip(CircleShape).background(if (dirty) cs.primary else cs.surfaceContainerHighest)
+                .clickable { if (dirty) save() else vm.toast("No changes yet") }.semantics { role = Role.Button; if (!dirty) stateDescription = "No changes yet" }
+                .padding(horizontal = 20.dp), contentAlignment = Alignment.Center) {
+                Text("Save", style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp, fontWeight = FontWeight.SemiBold), color = if (dirty) cs.onPrimary else cs.onSurfaceVariant)
+            }
         }
-        LazyRow(Modifier.padding(vertical = 6.dp), contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            items(e.i("weeksTotal").coerceAtLeast(1)) { w -> MorphChip("Week ${w + 1}", e.i("weekIndex") == w + 1, { vm.editWeek(w + 1) }) }
-        }
-        LazyColumn(Modifier.weight(1f).fillMaxWidth().widthIn(max = 760.dp).align(Alignment.CenterHorizontally),
-            contentPadding = PaddingValues(start = if (wide) 32.dp else 16.dp, end = if (wide) 32.dp else 16.dp, bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(e.list("days"), key = { it.s("id") }) { d ->
-                PiCard(radius = 28.dp) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text(d.s("label"), style = MaterialTheme.typography.titleLarge)
-                            Text("${d.list("exercises").size} exercises" + (d.i("minutes").takeIf { it > 0 }?.let { " · about $it min" } ?: ""), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
-                        }
-                        IconButton(onClick = { sheet = ESheet.Day(d.s("id")) }) { Icon(PiIcons.More, "${d.s("label")} options") }
+        // Day tabs: weekday over the day's name; the open one squares off.
+        LazyRow(Modifier.padding(top = 4.dp, bottom = 16.dp), contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(days, key = { it.s("id") }) { x ->
+                val on = x.s("id") == d?.s("id")
+                val r by animateDpAsState(if (on) 18.dp else 30.dp, Motion.spatialFast(), label = "tab")
+                Column(Modifier.widthIn(min = 92.dp).height(60.dp).clip(RoundedCornerShape(r)).background(if (on) cs.primary else cs.surfaceContainerHigh)
+                    .clickable { dayId = x.s("id") }.semantics { role = Role.Tab; selected = on }.padding(horizontal = 14.dp),
+                    verticalArrangement = Arrangement.Center) {
+                    val fg = if (on) cs.onPrimary else cs.onSurface
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(x.s("weekday").ifBlank { "DAY ${x.i("index") + 1}" }, style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.4.sp), color = fg.copy(alpha = 0.85f))
+                        if (x.b("edited")) Box(Modifier.size(7.dp).clip(CircleShape).background(fg).semantics { contentDescription = "edited" })
                     }
-                    Column(Modifier.clip(RoundedCornerShape(20.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        d.list("exercises").forEach { x ->
-                            Row(Modifier.fillMaxWidth().background(cs.surfaceContainerHigh).clickable { sheet = ESheet.Slot(d.s("id"), x.i("slot")) }
-                                .semantics(mergeDescendants = true) { contentDescription = "${x.s("name")}, ${x.i("sets")} sets of ${x.s("reps")}" + (if (x.b("primary")) ", primary lift" else "") + (if (x.b("superset")) ", supersetted with the next" else "") + ". Edit" }
-                                .padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                Column(Modifier.weight(1f)) {
-                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                        Text(x.s("name"), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                                        if (x.b("primary")) Badge("Primary")
-                                        if (x.b("added")) Badge("Added", cs.secondaryContainer, cs.onSecondaryContainer)
-                                    }
-                                    Text(x.s("partLabel"), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
-                                }
-                                Text("${x.i("sets")} × ${x.s("reps")}", style = MaterialTheme.typography.labelLarge)
-                                if (x.b("superset")) Box(Modifier.size(8.dp).clip(CircleShape).background(cs.tertiary))
-                            }
-                        }
-                    }
-                    TextButton(onClick = { sheet = ESheet.Add(d.s("id")) }) { Icon(PiIcons.Plus, null, modifier = Modifier.size(18.dp)); Text("  Add exercise") }
+                    Text(x.s("label"), style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold), color = fg, maxLines = 1)
                 }
             }
-            item { OutlinedButton(onClick = { vm.edit("addDay") }, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("+ Add a day") } }
+        }
+        if (d == null) return@Column
+        val dId = d.s("id")
+        val exs = d.list("exercises")
+        LazyColumn(Modifier.weight(1f).fillMaxWidth().widthIn(max = 760.dp).align(Alignment.CenterHorizontally),
+            contentPadding = PaddingValues(start = if (wide) 32.dp else 16.dp, end = if (wide) 32.dp else 16.dp, bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            item(key = "head") {
+                Row(Modifier.padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Column(Modifier.weight(1f)) {
+                        Text(d.s("label"), style = MaterialTheme.typography.headlineMedium.copy(fontSize = 28.sp, lineHeight = 34.sp, fontWeight = FontWeight.Bold))
+                        Text(if (exs.isEmpty()) "No lifts yet · add some, or it stays a rest day"
+                            else "${fmtNum(d.d("sets"))} working sets this week" + (d.i("minutes").takeIf { it > 0 }?.let { " · ~$it min" } ?: ""),
+                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp, lineHeight = 20.sp), color = cs.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
+                    }
+                    Box(Modifier.height(40.dp).clip(CircleShape).background(cs.secondaryContainer).clickable { dayMenu = !dayMenu }
+                        .semantics { role = Role.Button; stateDescription = if (dayMenu) "Expanded" else "Collapsed" }.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
+                        Text(if (dayMenu) "Done" else "Day options", style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold), color = cs.onSecondaryContainer)
+                    }
+                }
+            }
+            if (dayMenu) item(key = "menu") {
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(cs.surfaceContainerLow).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        DayAct(PiIcons.Pencil, "Rename") { sheet = ESheet.RenameDay(dId, d.s("label")); dayMenu = false }
+                        DayAct(PiIcons.Note, if (d.s("note").isBlank()) "Add day note" else "Edit day note") { noteEdit = d.s("note"); dayMenu = false }
+                        DayAct(PiIcons.Copy, "Duplicate") { vm.edit("copyDay", "dayId" to dId); dayMenu = false }
+                        if (di > 0) DayAct(PiIcons.ChevronLeft, "Move earlier") { vm.edit("moveDay", "dayId" to dId, "dir" to -1) }
+                        if (di < days.size - 1) DayAct(PiIcons.ChevronRight, "Move later") { vm.edit("moveDay", "dayId" to dId, "dir" to 1) }
+                        DayAct(PiIcons.Plus, "Add a day") { vm.edit("addDay"); dayMenu = false }
+                        if (days.size > 1) DayAct(PiIcons.Trash, "Delete day", tone = true) { confirmDeleteDay = true }
+                    }
+                    Text(if (days.size < 2) "A program needs at least one day." else "Moves change the weekly order. Logged workouts stay in your history.",
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp), color = cs.onSurfaceVariant)
+                }
+            }
+            noteEdit?.let { cur -> item(key = "noteEdit") {
+                var v by remember(dId) { mutableStateOf(cur) }
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(cs.surfaceContainerLow).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Day note", style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold))
+                    Text("Shown at the top of this workout: focus cues, tempo, reminders.", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), color = cs.onSurfaceVariant)
+                    OutlinedTextField(v, { v = it.take(240) }, Modifier.fillMaxWidth(), minLines = 3, placeholder = { Text("e.g. Slow eccentrics; leave 2 in the tank on squats.") })
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
+                        TextButton(onClick = { noteEdit = null }) { Text("Cancel") }
+                        Button(onClick = { vm.edit("dayNote", "dayId" to dId, "note" to v); noteEdit = null }) { Text("Save") }
+                    }
+                }
+            } }
+            if (d.s("note").isNotBlank() && noteEdit == null) item(key = "note") {
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.primaryContainer).padding(horizontal = 14.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Icon(PiIcons.Info, null, tint = cs.onPrimaryContainer, modifier = Modifier.size(16.dp).padding(top = 1.dp))
+                    Text(d.s("note"), style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp), color = cs.onPrimaryContainer)
+                }
+            }
+            // Day setup: focus, sets by muscle, and who owns the numbers.
+            item(key = "setup") {
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(cs.surfaceContainerLow).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Cap("DAY FOCUS")
+                        val f = d.s("focus").ifBlank { "auto" }
+                        Segmented(listOf("auto" to "Auto", "strength" to "Strength", "hypertrophy" to "Hypertrophy"), f,
+                            { vm.edit("dayFocus", "dayId" to dId, "focus" to if (it == "auto") null else it) })
+                        Text(when (f) { "strength" -> "Heavier loads, lower reps, longer rest on this day. Overrides the program goal."
+                            "hypertrophy" -> "Higher reps, shorter rest, more volume on this day. Overrides the program goal."
+                            else -> "Follows the program goal. Tag a day to run a hybrid week (e.g. strength Upper/Lower + hypertrophy Push/Pull/Legs)." },
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp), color = cs.onSurfaceVariant)
+                    }
+                    val hits = d.list("hits")
+                    if (hits.isNotEmpty()) Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Cap("SETS THIS WEEK BY MUSCLE")
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            hits.forEach { h -> Text("${h.s("label")} ${fmtNum(h.d("sets"))}", style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold),
+                                modifier = Modifier.clip(CircleShape).background(cs.surfaceContainerHigh).padding(horizontal = 14.dp, vertical = 9.dp)) }
+                        }
+                    }
+                    Box(Modifier.fillMaxWidth().height(1.dp).background(cs.outlineVariant))
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text(if (e.b("manual")) "Manual targets: change sets and reps on each lift. Auto won’t rewrite these at block review."
+                            else "Sets, reps and effort come from the engine for each week of the block. Switch Set & rep targets to Manual in Settings to set them yourself.",
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp), color = cs.onSurfaceVariant, modifier = Modifier.weight(1f))
+                        if (!e.b("manual")) Box(Modifier.height(40.dp).clip(CircleShape).background(cs.secondaryContainer).clickable { settingsOpen = true }
+                            .semantics { role = Role.Button }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
+                            Text("Settings", style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold), color = cs.onSecondaryContainer)
+                        }
+                    }
+                }
+            }
+            item(key = "exh") {
+                Row(Modifier.padding(start = 4.dp, end = 4.dp, top = 8.dp), verticalAlignment = Alignment.Bottom) {
+                    Text("Exercises", style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold), modifier = Modifier.weight(1f))
+                    Text("${exs.size} ${if (exs.size == 1) "lift" else "lifts"}", style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp), color = cs.onSurfaceVariant)
+                }
+            }
+            items(exs, key = { "$dId:${it.i("slot")}:${it.s("id")}" }) { x ->
+                val slot = x.i("slot")
+                val paired = x.b("superset") || exs.getOrNull(slot - 1)?.b("superset") == true
+                ExerciseCard(vm, e, dId, x, exs.size, paired, openRow?.takeIf { it.first == slot }?.second,
+                    onToggle = { what -> openRow = if (openRow == slot to what) null else slot to what },
+                    onWhy = { why = slot }, onInfo = { info = x.s("id") }, modifier = Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null, placementSpec = Motion.spatial()))
+            }
+            item(key = "add") {
+                Box(Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(18.dp)).border(1.5.dp, cs.outlineVariant, RoundedCornerShape(18.dp))
+                    .clickable { sheet = ESheet.Add(dId) }.semantics { role = Role.Button }, contentAlignment = Alignment.Center) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Icon(PiIcons.Plus, null, tint = cs.primary, modifier = Modifier.size(18.dp))
+                        Text("Add an exercise", style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold), color = cs.primary)
+                    }
+                }
+            }
+            val banned = e.strings("banned")
+            if (banned.isNotEmpty()) item(key = "banned") {
+                Text("${banned.size} exercise${if (banned.size == 1) "" else "s"} banned from all programs: ${banned.joinToString(", ")}.",
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp), color = cs.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp))
+            }
         }
     }
 
@@ -145,6 +275,12 @@ fun ProgramEditorScreen(vm: AppViewModel) {
         ESheet.Rename -> TextDialog("Rename program", e.s("name"), { vm.edit("rename", "name" to it) }) { sheet = null }
         null -> {}
     }
+    why?.let { k -> d?.let { WhyLiftSheet(vm, e.s("programId"), it.s("id"), k, e.i("weekIndex")) { why = null } } }
+    info?.let { id -> ExerciseSheet(vm, id) { info = null } }
+    if (confirmDeleteDay && d != null) AlertDialog(onDismissRequest = { confirmDeleteDay = false }, title = { Text("Delete ${d.s("label")}?") },
+        text = { Text("It comes out of the draft. Nothing changes until you save. Logged workouts stay in your history.") },
+        confirmButton = { Button(onClick = { confirmDeleteDay = false; dayMenu = false; vm.edit("deleteDay", "dayId" to d.s("id")); dayId = null }) { Text("Delete") } },
+        dismissButton = { TextButton(onClick = { confirmDeleteDay = false }) { Text("Cancel") } })
     if (leaving) AlertDialog(onDismissRequest = { leaving = false },
         title = { Text("Save your changes?") },
         text = { Text("Your edits are kept as a draft until you save or discard them.") },
@@ -153,11 +289,178 @@ fun ProgramEditorScreen(vm: AppViewModel) {
             TextButton(onClick = { leaving = false; vm.discardEdits(); vm.closeEditor() }) { Text("Discard") }
             TextButton(onClick = { leaving = false; vm.closeEditor() }) { Text("Keep draft") }
         } })
-    if (scopeAsk) AlertDialog(onDismissRequest = { scopeAsk = false },
-        title = { Text("Apply to the whole cycle?") },
-        text = { Text("Save this block only, or carry the same exercise changes to the other blocks in its cycle.") },
-        confirmButton = { Button(onClick = { scopeAsk = false; vm.saveEdits("cycle") }) { Text("Whole cycle") } },
-        dismissButton = { TextButton(onClick = { scopeAsk = false; vm.saveEdits("program") }) { Text("This block") } })
+    if (scopeAsk) ModalBottomSheet(onDismissRequest = { scopeAsk = false }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        val n = days.count { it.b("edited") }
+        Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(Modifier.padding(horizontal = 4.dp)) {
+                Text(if (n > 0) "Save $n ${if (n == 1) "day" else "days"}" else "Save changes", style = MaterialTheme.typography.headlineSmall.copy(fontSize = 22.sp, lineHeight = 28.sp, fontWeight = FontWeight.SemiBold))
+                Text("This program is part of a training cycle.", style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp), color = cs.onSurfaceVariant, modifier = Modifier.padding(top = 4.dp))
+            }
+            Column(Modifier.clip(RoundedCornerShape(24.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                listOf(Triple("program", "This block", "Only this block changes. The next blocks keep their own picks."),
+                    Triple("cycle", "Every block", "Every block in the cycle gets these lifts. Sets and reps still follow each block’s own ramp.")).forEach { (sc, t, sub) ->
+                    Column(Modifier.fillMaxWidth().background(cs.surfaceContainerHigh).clickable { scopeAsk = false; vm.saveEdits(sc) }
+                        .semantics(mergeDescendants = true) { role = Role.Button }.padding(horizontal = 16.dp, vertical = 14.dp)) {
+                        Text(t, style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp, fontWeight = FontWeight.Bold))
+                        Text(sub, style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp), color = cs.onSurfaceVariant)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun Cap(t: String) = Text(t, style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.4.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+@Composable
+private fun DayAct(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, tone: Boolean = false, onClick: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    Row(Modifier.height(40.dp).clip(CircleShape).background(if (tone) cs.tertiaryContainer else cs.secondaryContainer).clickable(onClick = onClick)
+        .semantics(mergeDescendants = true) { role = Role.Button }.padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        val fg = if (tone) cs.onTertiaryContainer else cs.onSecondaryContainer
+        Icon(icon, null, tint = fg, modifier = Modifier.size(16.dp))
+        Text(label, style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold), color = fg)
+    }
+}
+
+private fun dash(s: String) = s.replace(Regex("(\\d)-(\\d)"), "$1–$2")
+
+/** One lift in the design's editor: number, name, what it is and last time, its targets, then Swap · progression · more. */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun ExerciseCard(vm: AppViewModel, e: JSONObject, dayId: String, x: JSONObject, count: Int, paired: Boolean, open: String?,
+                         onToggle: (String) -> Unit, onWhy: () -> Unit, onInfo: () -> Unit, modifier: Modifier = Modifier) {
+    val cs = MaterialTheme.colorScheme
+    val slot = x.i("slot")
+    var alts by remember(x.s("id")) { mutableStateOf<List<JSONObject>?>(null) }
+    LaunchedEffect(open == "swap", x.s("id")) { if (open == "swap") alts = vm.editSwapOptions(dayId, slot) }
+    var rmAsk by remember(x.s("id")) { mutableStateOf(false) }
+    var repsEdit by remember { mutableStateOf(false) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val tertiary = cs.tertiary
+    Column(modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(cs.surfaceContainerLow)
+        .then(if (paired) Modifier.drawBehind { drawRect(tertiary, size = androidx.compose.ui.geometry.Size(4.dp.toPx(), size.height)) } else Modifier)
+        .padding(start = 16.dp, end = 12.dp, top = 14.dp, bottom = 14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Box(Modifier.size(28.dp).clip(RoundedCornerShape(10.dp)).background(cs.secondaryContainer), contentAlignment = Alignment.Center) {
+                Text("${slot + 1}", style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.SemiBold), color = cs.onSecondaryContainer)
+            }
+            Column(Modifier.weight(1f)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(x.s("name"), style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp, fontWeight = FontWeight.Bold))
+                    if (x.b("primary")) Text("KEY LIFT", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.4.sp), color = cs.primary,
+                        modifier = Modifier.align(Alignment.CenterVertically).border(1.dp, cs.primary, RoundedCornerShape(8.dp)).padding(horizontal = 7.dp, vertical = 2.dp))
+                }
+                val last = x.optJSONObject("last")
+                Text(listOfNotNull(x.s("partLabel"), x.s("type"), last?.let { l -> "last " + (if (l.d("w") > 0) "${fmtNum(l.d("w"))} ${l.s("unit")}" else "BW") + " × ${l.i("r")}" }).joinToString(" · "),
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp), color = cs.onSurfaceVariant)
+            }
+            IconButton(onClick = { vm.edit("move", "dayId" to dayId, "slot" to slot, "dir" to -1) }, enabled = slot > 0, modifier = Modifier.size(40.dp)) { Icon(PiIcons.ChevronUp, "Move ${x.s("name")} earlier", Modifier.size(18.dp)) }
+            IconButton(onClick = { vm.edit("move", "dayId" to dayId, "slot" to slot, "dir" to 1) }, enabled = slot < count - 1, modifier = Modifier.size(40.dp)) { Icon(PiIcons.ChevronDown, "Move ${x.s("name")} later", Modifier.size(18.dp)) }
+        }
+        val rir = x.s("rir").takeIf { it.isNotBlank() && it != "null" }?.let { "@ ${dash(it)} RIR" }
+        if (e.b("manual")) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(Modifier.clip(CircleShape).background(cs.surfaceContainerHigh).padding(3.dp).semantics { contentDescription = "Sets for ${x.s("name")}" }, verticalAlignment = Alignment.CenterVertically) {
+                RoundBtn("−", "One fewer set") { vm.edit("override", "dayId" to dayId, "slot" to slot, "field" to "sets", "value" to (x.i("sets") - 1).coerceAtLeast(1)) }
+                Text("${x.i("sets")} sets", style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp, fontWeight = FontWeight.SemiBold), textAlign = TextAlign.Center, modifier = Modifier.widthIn(min = 54.dp))
+                RoundBtn("+", "One more set") { vm.edit("override", "dayId" to dayId, "slot" to slot, "field" to "sets", "value" to (x.i("sets") + 1).coerceAtMost(20)) }
+            }
+            Box(Modifier.height(42.dp).clip(CircleShape).background(cs.surfaceContainerHigh).clickable { repsEdit = true }.semantics { role = Role.Button; contentDescription = "Rep range ${x.s("reps")}. Change" }
+                .padding(horizontal = 14.dp), contentAlignment = Alignment.Center) { Text("${dash(x.s("reps"))} reps", style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold)) }
+            if (rir != null) Text(rir, style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold), color = cs.primary)
+        } else Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("${x.i("sets")} × ${dash(x.s("reps"))}", style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold))
+            if (rir != null) Text(rir, style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold), color = cs.primary, modifier = Modifier.padding(bottom = 2.dp))
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(Modifier.height(42.dp).clip(CircleShape).background(cs.secondaryContainer).clickable { onToggle("swap") }
+                .semantics(mergeDescendants = true) { role = Role.Button; contentDescription = "Swap ${x.s("name")}"; stateDescription = if (open == "swap") "Expanded" else "Collapsed" }.padding(horizontal = 14.dp),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Icon(PiIcons.Swap, null, tint = cs.onSecondaryContainer, modifier = Modifier.size(16.dp))
+                Text(if (open == "swap") "Close" else "Swap", style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold), color = cs.onSecondaryContainer)
+            }
+            Row(Modifier.weight(1f).height(42.dp).clip(CircleShape).background(cs.surfaceContainerHigh).clickable(enabled = !e.b("percent")) { onToggle("prog") }
+                .semantics(mergeDescendants = true) { role = Role.Button; contentDescription = "How ${x.s("name")} progresses: ${x.s("styleLabel")}" }.padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)) {
+                Icon(PiIcons.Trend, null, modifier = Modifier.size(15.dp))
+                Text(x.s("styleLabel").ifBlank { "Auto" },
+                    style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            Box(Modifier.size(42.dp).clip(CircleShape).background(cs.surfaceContainerHigh).clickable { onToggle("more") }
+                .semantics { role = Role.Button; contentDescription = "More options for ${x.s("name")}" }, contentAlignment = Alignment.Center) { Icon(PiIcons.MoreH, null, Modifier.size(18.dp)) }
+        }
+        AnimatedVisibility(open == "swap", enter = Motion.expandIn, exit = Motion.shrinkOut) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                val a = alts
+                when {
+                    a == null -> Text("Finding alternatives…", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                    a.isEmpty() -> Text("No other lift for this muscle at your gym.", style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp), color = cs.onSurfaceVariant)
+                    else -> FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        a.take(8).forEach { o ->
+                            Row(Modifier.height(40.dp).clip(RoundedCornerShape(12.dp)).background(cs.surface).border(1.dp, cs.outlineVariant, RoundedCornerShape(12.dp))
+                                .clickable { vm.edit("replace", "dayId" to dayId, "slot" to slot, "newId" to o.s("id")); onToggle("swap") }
+                                .semantics(mergeDescendants = true) { role = Role.Button }.padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Text(o.s("name"), style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold))
+                                if (o.s("equip").isNotBlank()) Text(" · ${o.s("equip")}", style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp), color = cs.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        AnimatedVisibility(open == "prog", enter = Motion.expandIn, exit = Motion.shrinkOut) {
+            Column(Modifier.clip(RoundedCornerShape(18.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                e.list("styles").forEach { o ->
+                    val on = o.s("id") == x.s("style")
+                    Column(Modifier.fillMaxWidth().background(if (on) cs.secondaryContainer else cs.surface)
+                        .clickable { if (!on) scope.launch { if (vm.setLiftProgression(e.s("programId"), x.s("id"), o.s("id")) != null) vm.refreshEditor() }; onToggle("prog") }
+                        .semantics(mergeDescendants = true) { role = Role.RadioButton; selected = on }.padding(horizontal = 14.dp, vertical = 10.dp)) {
+                        Text(o.s("label"), style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold), color = if (on) cs.onSecondaryContainer else cs.onSurface)
+                        if (o.s("sub").isNotBlank() && o.s("sub") != o.s("label")) Text(o.s("sub"), style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp),
+                            color = (if (on) cs.onSecondaryContainer else cs.onSurface).copy(alpha = 0.8f))
+                    }
+                }
+            }
+        }
+        AnimatedVisibility(open == "more", enter = Motion.expandIn, exit = Motion.shrinkOut) {
+            Column(Modifier.clip(RoundedCornerShape(18.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                if (slot < count - 1) MoreRow(PiIcons.Layers, if (x.b("superset")) "Split the superset" else "Superset with the next lift", "Pair with the next exercise, alternating sets") { vm.edit("superset", "dayId" to dayId, "slot" to slot); onToggle("more") }
+                MoreRow(PiIcons.Help, "Why this lift?", "See why the program selected this exercise") { onWhy(); onToggle("more") }
+                MoreRow(PiIcons.Info, "Exercise info", "Muscles worked, equipment, form demo") { onInfo(); onToggle("more") }
+                MoreRow(PiIcons.Ban, "Ban exercise", "Never auto-pick this again, then pick a swap", tone = true) { vm.setBan(x.s("id"), true); onToggle("swap") }
+                if (count > 1) {
+                    if (rmAsk) Row(Modifier.fillMaxWidth().background(cs.surface).padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text("Remove ${x.s("name")} from this day?", style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold), modifier = Modifier.weight(1f))
+                        TextButton(onClick = { rmAsk = false }) { Text("Cancel") }
+                        Button(onClick = { rmAsk = false; vm.edit("remove", "dayId" to dayId, "slot" to slot); onToggle("more") }, colors = ButtonDefaults.buttonColors(containerColor = cs.tertiary, contentColor = cs.onTertiary)) { Text("Remove") }
+                    } else MoreRow(PiIcons.Trash, "Remove from day", "Take this exercise out of the workout", tone = true) { rmAsk = true }
+                }
+            }
+        }
+    }
+    if (repsEdit) TextDialog("Rep range", x.s("reps"), { vm.edit("override", "dayId" to dayId, "slot" to slot, "field" to "reps", "value" to it) }) { repsEdit = false }
+}
+
+@Composable
+private fun RoundBtn(t: String, desc: String, onClick: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    Box(Modifier.size(36.dp).clip(CircleShape).background(cs.surface).clickable(onClick = onClick).semantics { contentDescription = desc; role = Role.Button }, contentAlignment = Alignment.Center) {
+        Text(t, fontSize = 18.sp, color = cs.onSurface)
+    }
+}
+
+@Composable
+private fun MoreRow(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, sub: String, tone: Boolean = false, onClick: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    Row(Modifier.fillMaxWidth().background(cs.surface).clickable(onClick = onClick).semantics(mergeDescendants = true) { role = Role.Button }.padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Icon(icon, null, tint = if (tone) cs.tertiary else cs.onSurface, modifier = Modifier.size(18.dp))
+        Column(Modifier.weight(1f)) {
+            Text(label, style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold), color = if (tone) cs.tertiary else cs.onSurface)
+            Text(sub, style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp), color = cs.onSurfaceVariant)
+        }
+    }
 }
 
 @Composable

@@ -2465,6 +2465,17 @@ const EDITS = {
         return { ...p, overrides: { ...(p.overrides || {}), [k]: E.markUserPrescriptionOverride(cur, field, val) } };
     },
     renameDay(p, { dayId, label }) { return { ...p, days: p.days.map((d) => (d.id === dayId ? { ...d, label: String(label || '').trim() || d.label } : d)) }; },
+    // App.js setDayFocus: "strength" | "hypertrophy" overrides the program goal on this day; unset follows it.
+    dayFocus(p, { dayId, focus }) {
+        const f = focus === 'strength' || focus === 'hypertrophy' ? focus : undefined, tagged = (x) => x === 'strength' || x === 'hypertrophy';
+        // The engine tags some days with its own focus ("upper"…); keep that tag aside so Auto puts it back.
+        return { ...p, days: p.days.map((d) => {
+            if (d.id !== dayId) return d;
+            const base = tagged(d.focus) ? d.baseFocus : d.focus;
+            const { baseFocus, ...rest } = d;
+            return f ? { ...rest, focus: f, ...(base ? { baseFocus: base } : {}) } : { ...rest, focus: base || undefined };
+        }) };
+    },
     dayNote(p, { dayId, note }) { return { ...p, days: p.days.map((d) => (d.id === dayId ? { ...d, note: String(note || '').trim() || undefined } : d)) }; },
     addDay(p) { return { ...p, days: [...p.days, { id: E.uid(), label: `Day ${p.days.length + 1}`, type: 'custom', exercises: [], primaryIndex: 0 }] }; },
     deleteDay(p, { dayId }) { return p.days.length <= 1 ? p : { ...p, days: p.days.filter((d) => d.id !== dayId) }; },
@@ -2480,23 +2491,54 @@ const EDITS = {
     },
     rename(p, { name }) { const n = String(name || '').trim().slice(0, 60); return n ? { ...p, name: n } : p; }
 };
+/* The lift's last logged top set, in the current unit (the design's "last 80 kg × 8" on each editor row). */
+function lastTop(id) {
+    const u = unit(), H = history();
+    for (let i = H.length - 1; i >= 0; i--) {
+        const pf = H[i]?.perf?.[id]; if (!pf) continue;
+        let rows = []; try { rows = E.completedHistorySets(pf) || []; } catch { rows = []; }
+        const done = rows.filter((x) => !x.warm && Number(x.r) > 0);
+        if (!done.length) continue;
+        const top = E.pickTopSet(done, (x) => Number(x.w) || 0, (x) => Number(x.r)) || done[0];
+        const w = Number(top.w) || 0, from = H[i].unit || u;
+        const v = w > 0 ? Math.round((from === u ? w : (u === 'lb' ? w * 2.20462 : w / 2.20462)) * 10) / 10 : 0;
+        return { w: v, r: Number(top.r), unit: u };
+    }
+    return null;
+}
 export function editor({ programId, weekIndex = 1 } = {}) {
     const p = draftOf(programId); if (!p) return null;
     const stored = programById(programId), wk = Math.max(1, Math.min(E.weeksOf(p), Number(weekIndex) || 1));
     const manual = p.config?.progression === 'manual';
-    return { programId: p.id, name: p.name, weekIndex: wk, weeksTotal: E.weeksOf(p), manual, cycleId: p.cycleId || null,
+    const sched = p.schedule || {}, WD = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+    const weekdayOf = (id) => { const wd = [1, 2, 3, 4, 5, 6, 0].find((k) => sched[k] === id); return wd == null ? null : WD[wd]; };
+    const banned = S.store.banned || [];
+    return { programId: p.id, name: p.name, weekIndex: wk, weeksTotal: E.weeksOf(p), manual, cycleId: p.cycleId || null, percent: !!p.config?.percentScheme,
         dirty: !!(stored && S.store.drafts?.[programId] && !E.sameProgramContent(stored, p)),
         canUndoSave: !!(S.saveUndo && S.saveUndo.id === programId),
+        banned: banned.map((id) => exName(id)),
+        styles: [{ id: 'auto', label: 'Auto', sub: 'Pursuit picks the method for this lift and block' }].concat(Object.keys(E.PROG_STYLES || {}).filter((k) => k !== 'auto').map((k) => ({ id: k, label: STYLE_LABEL[k] || E.PROG_STYLES[k], sub: E.PROG_STYLES[k] || '' }))),
         days: p.days.map((d, di) => {
             let mins = null; try { mins = E.estimateMinutes(p, d, wk); } catch { mins = null; }
-            return { id: d.id, index: di, label: d.label, note: d.note || '', minutes: mins,
-                exercises: d.exercises.map((_id, slot) => {
-                    const id = d.exercises[slot]; const ex = EX_BY_ID[id];
-                    let cell = null; try { cell = E.computeCell(p, d, id, slot, wk); } catch { cell = null; }
-                    const ov = p.overrides?.[`${d.id}:${slot}`] || {};
-                    return { slot, id, name: ex?.name || id, part: ex?.part || '', partLabel: E.PART_LABEL?.[ex?.part] || ex?.part || '', primary: slot === d.primaryIndex,
-                        superset: !!p.ss?.[`${d.id}:${slot}`], added: !!ov.added, sets: ov.sets ?? cell?.sets ?? null, reps: ov.reps ?? cell?.reps ?? null, rir: cell?.rir ?? null };
-                }) };
+            const sd = stored?.days?.find((x) => x.id === d.id);
+            const hits = {};
+            const exercises = d.exercises.map((_id, slot) => {
+                const id = d.exercises[slot]; const ex = EX_BY_ID[id];
+                let cell = null; try { cell = E.computeCell(p, d, id, slot, wk); } catch { cell = null; }
+                const ov = p.overrides?.[`${d.id}:${slot}`] || {};
+                const sets = ov.sets ?? cell?.sets ?? null;
+                if (ex && Number(sets) > 0) hits[ex.part] = (hits[ex.part] || 0) + Number(sets);
+                let style = null; try { style = E.styleFor(p, id); } catch { style = null; }
+                return { slot, id, name: ex?.name || id, part: ex?.part || '', partLabel: E.PART_LABEL?.[ex?.part] || ex?.part || '', primary: slot === d.primaryIndex,
+                    type: ex?.type === 'compound' ? 'compound' : 'isolation', last: lastTop(id),
+                    style: style || 'auto', styleLabel: STYLE_LABEL[style] || (style ? (E.PROG_STYLES?.[style] || style) : 'Auto'), styleLocked: !!p.progStyleLifter?.[id],
+                    superset: !!p.ss?.[`${d.id}:${slot}`], added: !!ov.added, sets, reps: ov.reps ?? cell?.reps ?? null, rir: cell?.rir ?? null };
+            });
+            return { id: d.id, index: di, label: d.label, note: d.note || '', focus: d.focus === 'strength' || d.focus === 'hypertrophy' ? d.focus : null, minutes: mins, weekday: weekdayOf(d.id),
+                sets: exercises.reduce((n, x) => n + (Number(x.sets) || 0), 0),
+                hits: Object.entries(hits).sort((a, b) => b[1] - a[1]).map(([part, n]) => ({ part, label: E.PART_LABEL?.[part] || part, sets: Math.round(n * 10) / 10 })),
+                edited: !sd || JSON.stringify([sd.label, sd.note, sd.focus, sd.exercises, sd.primaryIndex]) !== JSON.stringify([d.label, d.note, d.focus, d.exercises, d.primaryIndex]),
+                exercises };
         }) };
 }
 export function editAct({ programId, type, ...args } = {}) {

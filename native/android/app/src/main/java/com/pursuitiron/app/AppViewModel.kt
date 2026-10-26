@@ -466,12 +466,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var editor by mutableStateOf<JSONObject?>(null); private set
     private var editWeek = 1
     fun openEditor(programId: String) = launchCore {
-        editWeek = 1
-        editor = obj("editor", jsonOf("programId" to programId, "weekIndex" to 1)) ?: return@launchCore
+        // The design edits the week you're in: its numbers are the ones the next session uses.
+        editWeek = plan?.takeIf { it.s("programId") == programId }?.i("weekIndex")?.takeIf { it > 0 } ?: 1
+        editor = obj("editor", jsonOf("programId" to programId, "weekIndex" to editWeek)) ?: return@launchCore
         screen = Screen.Editor
     }
     private suspend fun reloadEditor() { val id = editor?.s("programId") ?: return; editor = obj("editor", jsonOf("programId" to id, "weekIndex" to editWeek)) }
     fun editWeek(w: Int) = launchCore { editWeek = w; reloadEditor() }
+    fun refreshEditor() = launchCore { reloadEditor() }
     fun edit(type: String, vararg args: Pair<String, Any?>) = launchCore {
         val id = editor?.s("programId") ?: return@launchCore
         val r = obj("editAct", jsonOf("programId" to id, "type" to type, *args)) ?: return@launchCore

@@ -215,6 +215,16 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   ok(cv.ok && st.cycles.length === 1 && st.cycles[0].blockIds[0] === mk.programId && st.cycles[0].blockIds.length === 3, 'the program becomes block 1 of a new cycle: ' + (cv.error || cv.blocks));
   ok(!C.convertToCycle({ programId: mk.programId, templateId: 'custom', blocks: [{ phase: 'peak', weeks: 2 }] }).ok, 'a program already in a cycle is refused'); }
 
+// 16a. Editor rows carry the design's details; day focus overrides the goal and Auto restores the engine's own tag
+{ C.init({}); const mk = C.createProgram({ config: { name: 'Focus', goal: 'both', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 9 });
+  const pid = mk.programId; let ed = C.editor({ programId: pid }); const d0 = ed.days[0], raw0 = JSON.parse(C.exportStore()).saved[0].days[0].focus;
+  ok(d0.hits.length > 0 && d0.sets > 0 && d0.exercises.every((x) => x.type && x.styleLabel) && ed.styles.length > 2, 'editor days list sets by muscle and rows carry type and progression');
+  C.editAct({ programId: pid, type: 'dayFocus', dayId: d0.id, focus: 'strength' }); ed = C.editor({ programId: pid });
+  ok(ed.days[0].focus === 'strength' && ed.days[0].edited && ed.dirty, 'a day focus lands in the draft');
+  C.editAct({ programId: pid, type: 'dayFocus', dayId: d0.id, focus: null }); ed = C.editor({ programId: pid });
+  const dr = JSON.parse(C.exportStore()).drafts?.[pid]?.days?.[0];
+  ok(ed.days[0].focus === null && dr && dr.focus === raw0 && !('baseFocus' in dr), 'Auto puts the engine\'s own day tag back (' + raw0 + ')'); }
+
 // 16. Program editing (App.js ProgramView ops + save review) and record stamping
 { C.init({}); const mk = C.createProgram({ config: { name: 'Edit me', goal: 'both', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 5 });
   const pid = mk.programId; let ed = C.editor({ programId: pid });

@@ -791,13 +791,18 @@ if tap(r"^\|  Schedule$|Schedule$", "schedule-sheet", required=False):
     scroll_to(r"^\|Done$", tries=3)
     tap(r"^\|Done$")
 if tap(r"Edit program", "editor"):
-    if tap(r"\. Edit\|", "editor-slot"):
-        tap(r"Move later")
-    shot("editor-moved")
-    if tap(r"\. Edit\|"):
-        tap(r"Swap exercise", "editor-swap")
-        back()
-    if tap(r"Add exercise"):
+    if not find(r"DAY FOCUS", timeout=8):
+        FAILS.append("editor has no day setup")
+    tap(r"^Move .+ later\|", "editor-moved")
+    if tap(r"^Swap .+\|", "editor-swap"):
+        if not find(r"No other lift|·", timeout=8):
+            FAILS.append("editor swap shows no alternatives")
+        tap(r"^Swap .+\|")
+    if tap(r"^More options for ", "editor-more", required=False):
+        if not find(r"Why this lift\?", timeout=4):
+            FAILS.append("editor more menu missing Why this lift")
+        tap(r"^More options for ")
+    if seek(r"Add an exercise") and tap(r"Add an exercise"):
         if tap(r"Create a custom exercise", "custom-create"):
             tap(r"Exercise name")
             adb("shell", "input", "text", "Landmine%sPress")
@@ -808,7 +813,7 @@ if tap(r"Edit program", "editor"):
                 shot("custom-added")
     if tap(r"^\|Save$", "editor-scope"):
         tap(r"^\|This block$", "editor-saved", required=False)  # asked only for a block in a cycle
-    if tap(r"^Program settings\|", "program-settings"):
+    if seek(r"^\|Settings$") and tap(r"^\|Settings$", "editor-program-settings", required=False):
         back()
     back()
 

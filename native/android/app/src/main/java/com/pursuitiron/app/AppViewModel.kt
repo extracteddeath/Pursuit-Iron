@@ -433,6 +433,28 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         hap(Hap.Undo); refreshHomeSide(); plan = obj("plan")
         toast("Removed ${r.s("name")}" + if (alsoBlocks) " and its blocks" else "") { launchCore { call("undo"); refreshHomeSide(); plan = obj("plan"); toast("Restored") } }
     }
+    /* The design's cycle editor: rename, adapt toggle, and the blocks after the current one ({phase, weeks, label}). */
+    fun editCycle(id: String, name: String? = null, blocks: JSONArray? = null, adapt: Boolean? = null, after: () -> Unit = {}) = launchCore {
+        val args = jsonOf("id" to id); name?.let { args.put("name", it) }; blocks?.let { args.put("blocks", it) }; adapt?.let { args.put("adapt", it) }
+        val r = (if (blocks != null) working("Rebuilding the later blocks") { obj("editCycle", args) } else obj("editCycle", args)) ?: return@launchCore
+        if (!r.b("ok")) { toast(r.s("error", "The cycle couldn't be changed. Nothing changed.")); return@launchCore }
+        hap(Hap.Done); refreshHomeSide(); after()
+        if (blocks != null) toast("Saved ${r.s("name")} · ${r.i("blocks")} blocks") { launchCore { call("undo"); refreshHomeSide(); toast("Restored") } }
+        else if (adapt != null) toast(if (adapt) "Later blocks adapt their exercises" else "Later blocks keep today's exercises")
+    }
+    /* The design's "Turn into training cycle": this program stays block 1. */
+    fun convertToCycle(programId: String, name: String, blocks: JSONArray, adapt: Boolean, after: (String) -> Unit = {}) = launchCore {
+        val r = working("Building your training cycle") { obj("convertToCycle", jsonOf("programId" to programId, "templateId" to "custom", "name" to name, "blocks" to blocks, "adapt" to adapt)) } ?: return@launchCore
+        if (!r.b("ok")) { toast(r.s("error", "The training cycle couldn't be built. Your program is unchanged.")); return@launchCore }
+        hap(Hap.Done); refreshHomeSide(); after(r.s("cycleId"))
+        toast("Training cycle created · ${r.i("blocks")} blocks · this program kept as block 1")
+    }
+    fun leaveCycle(id: String, after: () -> Unit = {}) = launchCore {
+        val r = obj("leaveCycle", jsonOf("id" to id)) ?: return@launchCore
+        if (!r.b("ok")) return@launchCore
+        hap(Hap.Undo); refreshHomeSide(); after()
+        toast("Single program now · ${r.s("program")}" + (r.optInt("weeks", 0).takeIf { it > 0 }?.let { " runs to week $it" } ?: "")) { launchCore { call("undo"); refreshHomeSide(); toast("Back in ${r.s("name")}") } }
+    }
     fun nextBlock(programId: String) = launchCore {
         val r = working("Preparing your next block") { obj("nextBlock", jsonOf("programId" to programId)) } ?: return@launchCore
         if (!r.b("ok")) { toast(r.s("error", "The next block couldn't be created. Your program is unchanged.")); return@launchCore }

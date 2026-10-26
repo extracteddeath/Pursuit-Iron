@@ -171,10 +171,31 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   const adv = C.advanceCycle({ id: made.cycleId });
   const d2 = C.cycleDetail({ id: made.cycleId });
   ok(adv.ok && d2.activeBlock === 1 && d2.blocks[0].state === 'done' && C.home().cycle.blockIdx === 1, 'advance moves to block 2: ' + (adv.message || adv.error));
+  { const d3 = C.cycleDetail({ id: made.cycleId }); const n0 = JSON.parse(C.exportStore()).cycles[0].blockIds.length;
+    ok(d3.reshapable && d3.phases.length >= 4 && d3.templates.length >= 3, 'cycle detail offers phases and templates to the editor');
+    const ren = C.editCycle({ id: made.cycleId, name: 'Renamed', adapt: false });
+    const sR = JSON.parse(C.exportStore()); const cR = sR.cycles[0];
+    ok(ren.ok && cR.name === 'Renamed' && cR.nextEngineCycle.adaptBetweenBlocks === false && cR.blockIds.length === n0, 'rename and adapt toggle keep the blocks');
+    const re = C.editCycle({ id: made.cycleId, blocks: [{ phase: 'strength_accumulation', weeks: 3 }, { phase: 'peak', weeks: 2 }, { phase: 'foundation', weeks: 2 }] });
+    const sE = JSON.parse(C.exportStore()); const cE = sE.cycles[0];
+    ok(re.ok && cE.blockIds.length === 2 + 3 && cE.blockIds.every((id) => sE.saved.some((p) => p.id === id)) && cE.blockMeta.slice(2).map((m) => m.phase).join() === 'strength_accumulation,peak,foundation', 'reshaping rebuilds the blocks after the current one: ' + (re.error || re.blocks));
+    ok(sE.saved.filter((p) => p.cycleId === cE.id).length === cE.blockIds.length, 'no orphaned preview blocks are left behind');
+    const shrink = C.editCycle({ id: made.cycleId, blocks: [{ phase: 'peak', weeks: 2 }] });
+    const sS = JSON.parse(C.exportStore());
+    ok(shrink.ok && sS.cycles[0].blockIds.length === 3 && sS.saved.filter((p) => p.cycleId === sS.cycles[0].id).length === 3, 'removing blocks deletes their previews');
+    ok(!C.editCycle({ id: made.cycleId, blocks: [{ phase: 'peak', weeks: 99 }] }).ok && JSON.parse(C.exportStore()).cycles[0].blockIds.length === 3, 'an invalid reshape changes nothing');
+    ok(C.undo().ok && JSON.parse(C.exportStore()).cycles[0].blockIds.length === 5, 'undo restores the previous shape'); }
   const del = C.deleteCycle({ id: made.cycleId });
   const st2 = JSON.parse(C.exportStore());
   ok(del.ok && st2.cycles.length === 0 && st2.saved.length > 0 && st2.saved.every((p) => !p.cycleId), 'deleting a cycle keeps its blocks as standalone programs');
   ok(C.undo().ok && JSON.parse(C.exportStore()).cycles.length === 1, 'undo restores the cycle');
+  { const m2 = C.createCycle({ config: ccfg, templateId: 'powerbuilding' });
+    const e2 = C.editCycle({ id: m2.cycleId, blocks: [{ phase: 'intensification', weeks: 3 }, { phase: 'peak', weeks: 2 }] });
+    for (let k = 0; k < 3; k++) { C.startSession({}); for (const e of C.session().exercises) for (const x of e.sets) { if (x.warm || x.sub) continue; C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'weight', value: String(50 + 2.5 * k) }); C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'reps', value: '8' }); C.act({ type: 'toggle', ei: e.ei, si: x.i }); } C.finishSession(); }
+    const a3 = C.advanceCycle({ id: m2.cycleId }); const c3 = JSON.parse(C.exportStore()).cycles.find((c) => c.id === m2.cycleId);
+    ok(e2.ok && a3.ok && ['intensification', 'recovery'].includes(c3.blockMeta[c3.activeBlock].phase), 'a reshaped cycle advances into its edited next phase: ' + (a3.message || a3.error));
+    const nBefore = JSON.parse(C.exportStore()).saved.length; const lv = C.leaveCycle({ id: m2.cycleId }); const sL = JSON.parse(C.exportStore());
+    ok(lv.ok && !sL.cycles.some((c) => c.id === m2.cycleId) && sL.saved.length < nBefore && sL.saved.every((p) => p.cycleId !== m2.cycleId), 'leaving a cycle keeps trained blocks and drops the untrained ones (' + lv.removed + ' removed)'); }
   const custom = C.createCycle({ config: ccfg, templateId: 'custom', blocks: [{ phase: 'hypertrophy_accumulation', weeks: 3 }, { phase: 'strength_accumulation', weeks: 2 }] });
   ok(custom.ok && custom.blocks === 2, 'a custom two-block cycle builds (' + (custom.error || custom.blocks) + ')');
   const bad = C.createCycle({ config: ccfg, templateId: 'custom', blocks: [{ phase: 'nonsense', weeks: 3 }, { phase: 'peak', weeks: 2 }] });
@@ -186,6 +207,13 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   const nb = C.nextBlock({ programId: mk.programId });
   ok(!nb.ok && nb.error && JSON.parse(C.exportStore()).saved.length === before, 'next block with no logged workouts is refused and saves nothing: ' + nb.error.slice(0, 60));
   ok(JSON.parse(C.exportStore()).saved[0].generationRoute === E.GENERATION_ROUTE, 'programs carry the generation route'); }
+
+// 15b. Turn a program into a training cycle (App.js confirmCycleConversion)
+{ C.init({}); const mk = C.createProgram({ config: { name: 'Solo', goal: 'both', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] } });
+  const cv = C.convertToCycle({ programId: mk.programId, templateId: 'custom', name: 'Solo cycle', blocks: [{ phase: 'strength_accumulation', weeks: 4 }, { phase: 'peak', weeks: 2 }] });
+  const st = JSON.parse(C.exportStore());
+  ok(cv.ok && st.cycles.length === 1 && st.cycles[0].blockIds[0] === mk.programId && st.cycles[0].blockIds.length === 3, 'the program becomes block 1 of a new cycle: ' + (cv.error || cv.blocks));
+  ok(!C.convertToCycle({ programId: mk.programId, templateId: 'custom', blocks: [{ phase: 'peak', weeks: 2 }] }).ok, 'a program already in a cycle is refused'); }
 
 // 16. Program editing (App.js ProgramView ops + save review) and record stamping
 { C.init({}); const mk = C.createProgram({ config: { name: 'Edit me', goal: 'both', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 5 });

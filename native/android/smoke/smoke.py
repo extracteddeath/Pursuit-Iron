@@ -754,11 +754,32 @@ if tap(r"^\|New$", "cycle-setup"):
     shot("cycle-built")
     adb("shell", "input", "swipe", "540", "700", "540", "1900", "200")
     if tap(r"Open cycle", "cycle-sheet"):
-        if scroll_to(r"Complete block"):
-            tap(r"Complete block", "cycle-advance-confirm")
-            tap(r"^\|Advance$")
-            time.sleep(6)
-            shot("cycle-advanced")
+        if not find(r"NOW · WEEK", timeout=8):
+            FAILS.append("cycle page has no current block")
+        # The design's cycle editor: add a block after the current one and save; the later blocks are rebuilt
+        if tap(r"^\|?Edit$", "cycle-edit", required=False):
+            if scroll_to(r"Add a block", tries=6, step=600):
+                tap(r"Add a block", "cycle-added")
+                tap(r"Save cycle")
+                if not find(r"^Saved .+ blocks", timeout=90):
+                    FAILS.append("cycle edit did not save")
+                shot("cycle-saved")
+            else:
+                FAILS.append("cycle editor has no Add a block")
+        else:
+            FAILS.append("cycle page has no Edit")
+        if scroll_to(r"End this block early", tries=8, step=600):
+            tap(r"End this block early", "cycle-end-confirm")
+            if tap(r"^\|?Review block$", "cycle-review", required=False):
+                if find(r"^Start block \d+$|^Complete cycle$", timeout=10):
+                    tap(r"^Start block \d+$|^Complete cycle$")
+                    time.sleep(6)
+                    shot("cycle-advanced")
+                else:
+                    shot("cycle-review-too-early")
+                    back()
+        else:
+            FAILS.append("cycle page has no End this block early")
         back()
 tap(r"^\|Today$|^Today\|", "today-cycle")
 

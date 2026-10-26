@@ -1885,6 +1885,13 @@ export function cyclesView() {
     const info = liveCycleInfo();
     return { templates: E.nextCycleTemplatesForShell(), phases: E.CUSTOM_CYCLE_PHASES, cycles: cycles().map((c) => cycleCard(c, info)).reverse(), liveId: info?.cycle.id || null };
 }
+/* The design's "Preview week 1" on a cycle block: each day with its first three lifts and their week-1 targets. */
+function cyclePreview(p) {
+    if (!p || !Array.isArray(p.days)) return [];
+    const rr = (r) => (Array.isArray(r) ? (r[0] === r[r.length - 1] ? `${r[0]}` : `${r[0]}–${r[r.length - 1]}`) : r == null ? '' : String(r));
+    return p.days.map((d, i) => { let rows = []; try { rows = dayPreview(p, d, 1); } catch { rows = []; }
+        return { day: `Day ${i + 1}`, name: d.label || d.name || `Day ${i + 1}`, lifts: rows.slice(0, 3).map((x) => `${x.name}${x.sets != null ? ` ${x.sets} × ${rr(x.reps)}` : ''}${x.rir != null ? ` @${x.rir}` : ''}`).join(' · ').replace(/(\d)-(\d)/g, '$1–$2') }; });
+}
 export function cycleDetail({ id }) {
     const c = cycles().find((x) => x.id === id); if (!c) return null;
     const info = liveCycleInfo(), card = cycleCard(c, info), active = c.activeBlock || 0;
@@ -1892,6 +1899,10 @@ export function cycleDetail({ id }) {
     let changes = null; try { changes = current && next ? E.blockChangeSummary(current, next) : null; } catch { changes = null; }
     return { ...card, adapts: !!c.nextEngineCycle?.adaptBetweenBlocks, engine: c.engineSource || null, changes,
         nextLabel: next ? (next.blockLabel || next.name) : null, final: !c.done && active >= c.blockIds.length - 1,
+        phases: E.CUSTOM_CYCLE_PHASES, templates: E.nextCycleTemplatesForShell().map((t) => ({ id: t.id, name: t.name, blocks: (t.blocks || []).map((b) => ({ label: b.label, weeks: b.weeks, phase: b.phase })) })),
+        reshapable: c.engineSource === 'pursuit-next' && !c.done && !!c.nextEngineCycle?.plannedBlocks,
+        icon: iconFor(c.id, null, true),
+        previews: Object.fromEntries(c.blockIds.map((bid) => [bid, cyclePreview(programById(bid))])),
         currentProgramId: current?.id || null };
 }
 /* App.js buildCycle. */
@@ -1963,6 +1974,96 @@ export function deleteCycle({ id, alsoBlocks = false }) {
     else setList('saved', E.normalizeCycleLinks(saved(), rest));
     markStore();
     return { ok: true, name: c.name };
+}
+/* The design's cycle editor (Main.dc.html cycSave): rename, keep or stop adapting exercises, and reshape the blocks
+   after the current one. Future previews are rebuilt from the current block exactly as App.js refreshes them
+   (refreshAdaptiveCyclePreviews): same ids where a slot survives, the authored phases from this edit. */
+export function editCycle({ id, name, blocks, adapt } = {}) {
+    const c = cycles().find((x) => x.id === id); if (!c) return { ok: false, error: 'That cycle no longer exists.' };
+    if (c.done) return { ok: false, error: 'This cycle is complete. Start a new one to plan more blocks.' };
+    if (S.live) return { ok: false, error: 'Finish or discard the workout in progress first.' };
+    let cy = { ...c, blockMeta: [...(c.blockMeta || [])], blockIds: [...c.blockIds] };
+    if (typeof name === 'string') { const n = name.trim().slice(0, 40); if (!n) return { ok: false, error: 'Give the cycle a name.' }; cy.name = n; }
+    if (typeof adapt === 'boolean') { cy.adaptExercises = adapt; if (cy.nextEngineCycle) cy.nextEngineCycle = { ...cy.nextEngineCycle, adaptBetweenBlocks: adapt }; }
+    let add = [], drop = [];
+    if (Array.isArray(blocks)) {
+        const nec = cy.nextEngineCycle;
+        if (cy.engineSource !== 'pursuit-next' || !nec?.baseConfig || !Array.isArray(nec.plannedBlocks)) return { ok: false, error: 'This older cycle can\'t be reshaped. Start a new cycle instead.' };
+        const active = Number(cy.activeBlock) || 0, current = programById(cy.blockIds[active]);
+        if (!current) return { ok: false, error: 'The current block could not be found. Nothing changed.' };
+        const futureIds = cy.blockIds.slice(active + 1);
+        if (history().some((h) => h && futureIds.includes(h.programId))) return { ok: false, error: 'A later block already has logged workouts, so it can\'t be rebuilt.' };
+        if (futureIds.map(programById).some((p) => p?.edited)) return { ok: false, error: 'A later block has your own edits. Keep or remove those first.' };
+        const curWeeks = Math.max(1, Math.round(Number(current.config?.weeks || E.weeksOf(current)) || 4));
+        const pastWeeks = cy.blockMeta.slice(0, active).reduce((n, m) => n + (Number(m?.weeks) || 0), 0);
+        if (pastWeeks + curWeeks + blocks.reduce((n, b) => n + (Number(b?.weeks) || 0), 0) > 104) return { ok: false, error: 'A training cycle can run at most 104 weeks.' };
+        try {
+            const specs = E.customFutureCycleSpecs(blocks, curWeeks);
+            const gen = E.generateNextCycleForShell({ templateId: 'custom', config: { ...nec.baseConfig, name: cy.name }, blocks: specs, existingBlockWeeks: curWeeks,
+                seed: cy.seed, legacyExercises: EXERCISES, makeId: E.uid, banned: S.store.banned || [], adaptBetweenBlocks: !!nec.adaptBetweenBlocks,
+                adaptTrainingSplit: !!nec.adaptTrainingSplit, previousShell: current });
+            const am = cy.blockMeta[active] || {};
+            const P = am.phase === 'recovery' ? Number(am.resumePlannedIndex) : Number(am.plannedIndex) + 1;
+            if (!Number.isInteger(P)) throw new CycleError('The current block is missing its place in the plan. Nothing changed.');
+            const oldFuture = futureIds.map(programById);
+            const made = gen.blocks.map((b, k) => {
+                const index = active + 1 + k, keep = oldFuture[k];
+                return { ...b, id: keep?.id || b.id, cycleId: cy.id, cycleIndex: index, name: `${cy.name} · ${specs[k].label}`, blockLabel: specs[k].label,
+                    icon: keep?.icon ?? b.icon, iconColor: keep?.iconColor ?? b.iconColor, folder: keep?.folder ?? b.folder, createdAt: keep?.createdAt ?? b.createdAt,
+                    generationRoute: E.GENERATION_ROUTE,
+                    nextEngine: { ...b.nextEngine, cycleTemplate: { ...(b.nextEngine?.cycleTemplate || {}), templateId: 'custom', plannedIndex: P + k, blockIndex: index, preview: true } } };
+            });
+            drop = oldFuture.slice(made.length).filter(Boolean).map((p) => p.id);
+            add = made;
+            cy.blockIds = [...cy.blockIds.slice(0, active + 1), ...made.map((b) => b.id)];
+            cy.blockMeta = [...cy.blockMeta.slice(0, active + 1), ...gen.cycle.blockMeta.map((m, k) => ({ ...m, id: made[k].id, plannedIndex: P + k, preview: true }))];
+            cy.templateId = 'custom';
+            cy.nextEngineCycle = { ...cy.nextEngineCycle, templateId: 'custom', plannedBlocks: [...nec.plannedBlocks.slice(0, P), ...specs], previewRevision: Number(nec.previewRevision || 1) + 1 };
+            requireCompleteCycleShell(cy, [...saved().filter((p) => !futureIds.includes(p.id)), ...made], { expectedCycleId: cy.id });
+        } catch (err) { return cycleFail(err, 'The new blocks could not be built safely. Your cycle is unchanged.'); }
+    }
+    S.undo = { cycles: cycles(), saved: saved(), pinnedId: S.store.pinnedId };
+    if (add.length || drop.length) {
+        const ids = new Set(add.map((b) => b.id));
+        setList('saved', [...saved().filter((p) => !ids.has(p.id) && !drop.includes(p.id)), ...add]);
+    }
+    if (typeof name === 'string') setList('saved', saved().map((p) => (p.cycleId === cy.id && typeof p.name === 'string' && p.name.startsWith(`${c.name} · `) ? { ...p, name: `${cy.name} · ${p.name.slice(c.name.length + 3)}` } : p)));
+    setList('cycles', cycles().map((x) => (x.id === cy.id ? cy : x)));
+    markStore();
+    return { ok: true, name: cy.name, blocks: cy.blockIds.length };
+}
+/* App.js confirmCycleConversion (Pursuit programs): the design's "Turn into training cycle". The program stays as
+   block 1, untouched; the blocks after it are built from it. */
+export function convertToCycle({ programId, templateId = 'custom', name, blocks, adapt = true } = {}) {
+    const p = programById(programId); if (!p) return { ok: false, error: 'That program is no longer in your library.' };
+    if (S.live) return { ok: false, error: 'Finish or discard the workout in progress first.' };
+    try {
+        if (p.engineSource !== 'pursuit-next' || !p.nextEngine) throw new CycleError('This older program can\'t become a cycle. Build a new cycle instead.');
+        const built = E.convertProgramToNextCycleForShell({ program: p, templateId, name: name || `${p.name} cycle`, blocks, adaptBetweenBlocks: !!adapt, adaptTrainingSplit: false,
+            banned: S.store.banned || [], legacyExercises: EXERCISES, makeId: E.uid });
+        requireCompleteCycleShell(built.cycle, built.allBlocks);
+        built.cycle.generationRoute = E.GENERATION_ROUTE; built.currentProgram.generationRoute = E.GENERATION_ROUTE;
+        built.blocks.forEach((b) => { b.generationRoute = E.GENERATION_ROUTE; });
+        const fut = new Set(built.blocks.map((b) => b.id));
+        setList('saved', [...saved().filter((x) => !fut.has(x.id)).map((x) => (x.id === p.id ? built.currentProgram : x)), ...built.blocks]);
+        setList('cycles', [...cycles(), built.cycle]); S.store.pinnedId = p.id; markStore();
+        return { ok: true, cycleId: built.cycle.id, blocks: built.cycle.blockMeta.length, name: built.cycle.name };
+    } catch (err) { return cycleFail(err, 'The training cycle could not be assembled safely. Your current program was left unchanged.'); }
+}
+/* The design's "Leave the cycle": the current block keeps running as a single program; the later blocks that
+   haven't been trained are removed. Blocks with logged workouts stay as programs. */
+export function leaveCycle({ id }) {
+    const c = cycles().find((x) => x.id === id); if (!c) return { ok: false };
+    const active = Number(c.activeBlock) || 0, trained = new Set(history().map((h) => h?.programId));
+    const drop = c.blockIds.slice(active + 1).filter((bid) => !trained.has(bid));
+    S.undo = { cycles: cycles(), saved: saved(), pinnedId: S.store.pinnedId };
+    const rest = cycles().filter((x) => x.id !== id);
+    setList('cycles', rest);
+    setList('saved', E.normalizeCycleLinks(saved().filter((p) => !drop.includes(p.id)), rest));
+    if (c.blockIds[active] && programById(c.blockIds[active])) S.store.pinnedId = c.blockIds[active];
+    markStore();
+    const cur = programById(c.blockIds[active]);
+    return { ok: true, name: c.name, program: cur?.name || '', weeks: cur ? E.weeksOf(cur) : null, removed: drop.length };
 }
 /* App.js BlockReviewView. */
 export function reviewBlock({ id, index }) {

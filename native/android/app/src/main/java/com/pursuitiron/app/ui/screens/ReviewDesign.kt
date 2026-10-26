@@ -61,7 +61,7 @@ import kotlin.math.max
 /* A design full page (Main.dc.html .fsd): a borderless dialog over the app with a close button and title,
    a scrolling body, and an optional bottom bar on surfaceContainer. */
 @Composable
-fun DesignPage(title: String, onClose: () -> Unit, bottom: (@Composable () -> Unit)? = null, content: @Composable ColumnScope.() -> Unit) {
+fun DesignPage(title: String, onClose: () -> Unit, actions: (@Composable () -> Unit)? = null, bottom: (@Composable () -> Unit)? = null, content: @Composable ColumnScope.() -> Unit) {
     val cs = MaterialTheme.colorScheme
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         val lightBars = cs.surface.luminance() > 0.5f
@@ -77,6 +77,7 @@ fun DesignPage(title: String, onClose: () -> Unit, bottom: (@Composable () -> Un
             Row(Modifier.padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 IconButton(onClick = onClose) { Icon(PiIcons.Close, "Close") }
                 Text(title, style = MaterialTheme.typography.titleLarge.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold), modifier = Modifier.weight(1f))
+                actions?.invoke()
             }
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp), content = content)
             if (bottom != null) Box(Modifier.fillMaxWidth().background(cs.surfaceContainer).navigationBarsPadding().padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 18.dp)) { bottom() }

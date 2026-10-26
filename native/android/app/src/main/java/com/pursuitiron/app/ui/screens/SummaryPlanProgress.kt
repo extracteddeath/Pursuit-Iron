@@ -146,7 +146,7 @@ fun PlanScreen(vm: AppViewModel) {
     if (settingsOpen) { vm.settingsProgramId = p.s("programId"); ProgramSettingsSheet(vm) { settingsOpen = false; vm.settingsProgramId = null } }
     if (reviewOpen) BlockReviewSheet(vm, p.s("cycleId").ifBlank { p.s("programId") }, (vm.cycles?.list("cycles")?.firstOrNull { it.s("id") == p.s("cycleId") }?.i("activeBlock") ?: 0)) { reviewOpen = false }
     if (scheduleOpen) WeeklyScheduleSheet(vm, p.s("programId")) { scheduleOpen = false }
-    openCycle?.let { id -> CycleSheet(vm, id) { openCycle = null } }
+    openCycle?.let { id -> CycleSheet(vm, id.ifBlank { null }, p.s("programId")) { openCycle = null } }
     if (confirmNext) AlertDialog(onDismissRequest = { confirmNext = false },
         title = { Text("Build the next block?") },
         text = { Text("Finish this block first. The next one is built from its logged workouts and the effort you reported. This program and your history stay saved.") },
@@ -165,7 +165,7 @@ fun PlanScreen(vm: AppViewModel) {
                     p.list("days").let { ds -> val done = ds.count { it.s("status") == "done" }; if (ds.any { !it.isNull("status") }) " · $done/${ds.size} this week" else "" },
                     style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
                 PlanActions(p, onEdit = { vm.openEditor(p.s("programId")) }, onReview = { reviewOpen = true }, onSchedule = { scheduleOpen = true },
-                    onCycle = if (p.s("cycleId").isNotBlank()) ({ openCycle = p.s("cycleId") }) else null, onSettings = { settingsOpen = true }, onDetails = { detailsOpen = true },
+                    onCycle = { openCycle = p.s("cycleId") }, onSettings = { settingsOpen = true }, onDetails = { detailsOpen = true },
                     onNew = { vm.openSetup() }, onTm = if (p.b("percent")) ({ vm.tmFor = p.s("programId") }) else null)
             }
         }

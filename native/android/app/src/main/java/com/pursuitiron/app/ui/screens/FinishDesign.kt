@@ -43,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathMeasure
@@ -232,11 +233,13 @@ private fun SurfaceCard(radius: androidx.compose.ui.unit.Dp = 24.dp, gap: androi
 @Composable
 private fun FinishHero() {
     val cs = MaterialTheme.colorScheme
-    val spin by rememberInfiniteTransition(label = "hero").animateFloat(0f, 360f, infiniteRepeatable(tween(24000, easing = LinearEasing), RepeatMode.Restart), label = "spin")
+    // One entrance and done: the shape settles on a spatial spring, the check draws, the burst fades. Nothing loops.
+    val pop = remember { Animatable(0.6f) }
     val draw = remember { Animatable(0f) }
     val burst = remember { Animatable(0f) }
-    LaunchedEffect(Unit) { draw.animateTo(1f, tween(600, delayMillis = 200)) }
-    LaunchedEffect(Unit) { burst.animateTo(1f, tween(1100)) }
+    LaunchedEffect(Unit) { pop.animateTo(1f, com.pursuitiron.app.ui.theme.Motion.spatialFast()) }
+    LaunchedEffect(Unit) { draw.animateTo(1f, com.pursuitiron.app.ui.theme.Motion.enter(400, 150)) }
+    LaunchedEffect(Unit) { burst.animateTo(1f, com.pursuitiron.app.ui.theme.Motion.enter(900)) }
     val colors = listOf(cs.primary, cs.tertiary, cs.secondary, cs.onPrimaryContainer)
     Box(Modifier.size(130.dp).semantics { contentDescription = "Workout done" }, contentAlignment = Alignment.Center) {
         Canvas(Modifier.size(130.dp)) {
@@ -247,7 +250,7 @@ private fun FinishHero() {
                 drawCircle(colors[k % colors.size].copy(alpha = 1f - t), (if (k % 2 == 0) 5f else 3.5f).dp.toPx(), Offset(center.x + cos(a) * r, center.y + sin(a) * r))
             }
         }
-        Box(Modifier.fillMaxSize().rotate(spin)) {
+        Box(Modifier.fillMaxSize().graphicsLayer { scaleX = pop.value; scaleY = pop.value; alpha = ((pop.value - 0.6f) / 0.4f).coerceIn(0f, 1f) }) {
             Box(Modifier.fillMaxSize().clip(RoundedCornerShape(44.dp)).background(cs.primary))
             Box(Modifier.fillMaxSize().rotate(45f).clip(RoundedCornerShape(44.dp)).background(cs.primary))
         }

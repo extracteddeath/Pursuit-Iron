@@ -117,7 +117,7 @@ fun BodyBwCard(vm: AppViewModel) {
         }
         if (log.size >= 2) {
             val draw = remember { Animatable(0f) }
-            LaunchedEffect(log.size) { draw.snapTo(0f); draw.animateTo(1f, tween(900)) }
+            LaunchedEffect(log.size) { draw.snapTo(0f); draw.animateTo(1f, com.pursuitiron.app.ui.theme.Motion.data(700)) }
             val dotC = cs.onSurfaceVariant.copy(alpha = 0.45f); val lineC = cs.primary; val axis = cs.outlineVariant
             Canvas(Modifier.fillMaxWidth().height(120.dp).semantics { contentDescription = "Bodyweight over 4 weeks. 7-day average from ${f1(avg.first())} to ${f1(avg.last())} $u." }) {
                 val all = log.map { it.second }
@@ -146,7 +146,7 @@ fun BodyBwCard(vm: AppViewModel) {
             Box(Modifier.size(44.dp).clip(CircleShape).background(cs.surfaceContainerHigh).clickable { draft = Math.round((draft + 0.1) * 10) / 10.0 }
                 .semantics { contentDescription = "More bodyweight"; role = Role.Button }, contentAlignment = Alignment.Center) { Text("+", fontSize = 20.sp) }
             Box(Modifier.weight(1f))
-            val bg by animateColorAsState(if (loggedToday) cs.surfaceContainerHigh else cs.primary, label = "bwsave")
+            val bg by animateColorAsState(if (loggedToday) cs.surfaceContainerHigh else cs.primary, com.pursuitiron.app.ui.theme.Motion.effects(), label = "bwsave")
             Box(Modifier.height(44.dp).clip(CircleShape).background(bg).clickable(enabled = !loggedToday) { vm.logBodyweight(draft) }
                 .semantics { role = Role.Button }.padding(horizontal = 18.dp), contentAlignment = Alignment.Center) {
                 Text(if (loggedToday) "Logged today" else "Log today", style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp, fontWeight = FontWeight.SemiBold),
@@ -177,7 +177,7 @@ fun BodyMeasureCard(vm: AppViewModel) {
             Row(Modifier.clip(CircleShape).background(cs.surfaceContainerHigh).padding(3.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                 listOf("cm", "in").forEach { o ->
                     val on = lu == o
-                    val bg by animateColorAsState(if (on) cs.secondaryContainer else androidx.compose.ui.graphics.Color.Transparent, label = "lu")
+                    val bg by animateColorAsState(if (on) cs.secondaryContainer else androidx.compose.ui.graphics.Color.Transparent, com.pursuitiron.app.ui.theme.Motion.effects(), label = "lu")
                     Box(Modifier.height(32.dp).clip(CircleShape).background(bg).clickable { if (!on) vm.setLengthUnit(o) }.semantics { role = Role.RadioButton; stateDescription = if (on) "Selected" else "" }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
                         Text(o, style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold), color = if (on) cs.onSecondaryContainer else cs.onSurfaceVariant)
                     }
@@ -207,7 +207,7 @@ fun BodyMeasureCard(vm: AppViewModel) {
                         Box(Modifier.size(36.dp).clip(CircleShape).background(cs.surface).clickable { if (last == null) typing = k else vm.logMeasurement(k, Math.round((last + step) * 1000) / 1000.0) }
                             .semantics { contentDescription = "$name up ${if (inch) "a quarter inch" else "half a centimetre"}"; role = Role.Button }, contentAlignment = Alignment.Center) { Text("+") }
                     }
-                    AnimatedVisibility(isOpen, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
+                    AnimatedVisibility(isOpen, enter = com.pursuitiron.app.ui.theme.Motion.expandIn, exit = com.pursuitiron.app.ui.theme.Motion.shrinkOut) {
                         val hist = rows.takeLast(6)
                         Column(Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             val lineC = cs.primary

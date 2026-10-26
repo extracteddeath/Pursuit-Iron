@@ -2,6 +2,8 @@
 
 package com.pursuitiron.app.ui.screens
 
+import com.pursuitiron.app.ui.common.sharedElement
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -100,10 +102,9 @@ fun TodayHeader(vm: AppViewModel) {
             Text("Today", style = MaterialTheme.typography.displayMedium)
         }
         val name = vm.profile?.s("name").orEmpty()
-        Box(Modifier.padding(top = 8.dp).size(48.dp).clip(RoundedCornerShape(16.dp)).background(cs.tertiaryContainer).clickable { vm.goTab(com.pursuitiron.app.Tab.You) }
+        Box(Modifier.padding(top = 8.dp).sharedElement("avatar").size(48.dp).clip(RoundedCornerShape(16.dp)).background(cs.tertiaryContainer).clickable { vm.goTab(com.pursuitiron.app.Tab.You) }
             .semantics { contentDescription = "You${if (name.isNotBlank()) ": $name" else ""}"; role = Role.Button }, contentAlignment = Alignment.Center) {
-            if (name.isNotBlank()) Text(name.trim().first().uppercase(), style = MaterialTheme.typography.titleLarge, color = cs.onTertiaryContainer)
-            else Icon(PiIcons.You, null, tint = cs.onTertiaryContainer)
+            Text(name.trim().ifBlank { "Athlete" }.first().uppercase(), style = MaterialTheme.typography.titleLarge, color = cs.onTertiaryContainer)
         }
     }
 }

@@ -2,6 +2,9 @@
 
 package com.pursuitiron.app.ui.screens
 
+import com.pursuitiron.app.ui.common.sharedElement
+import com.pursuitiron.app.ui.theme.Motion
+
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -99,9 +102,8 @@ fun YouHeader(vm: AppViewModel, board: JSONObject?, onEdit: () -> Unit) {
     val p = vm.profile
     val name = p?.s("name").orEmpty().trim().ifBlank { "Athlete" }
     Column(Modifier.fillMaxWidth().padding(top = 20.dp, bottom = 8.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        val spin by rememberInfiniteTransition(label = "avatar").animateFloat(0f, 360f, infiniteRepeatable(tween(24000, easing = LinearEasing), RepeatMode.Restart), label = "spin")
-        Box(Modifier.size(104.dp).clip(RoundedCornerShape(34.dp)).clickable(onClick = onEdit).semantics { contentDescription = "Edit your profile: $name"; role = Role.Button }, contentAlignment = Alignment.Center) {
-            Cookie(cs.tertiaryContainer, Modifier.fillMaxSize().rotate(spin), radiusFraction = 0.33f)
+        Box(Modifier.sharedElement("avatar").size(104.dp).clip(RoundedCornerShape(34.dp)).clickable(onClick = onEdit).semantics { contentDescription = "Edit your profile: $name"; role = Role.Button }, contentAlignment = Alignment.Center) {
+            Cookie(cs.tertiaryContainer, Modifier.fillMaxSize(), radiusFraction = 0.33f)
             Text(name.take(1).uppercase(), style = MaterialTheme.typography.displaySmall.copy(fontSize = 40.sp), color = cs.onTertiaryContainer)
         }
         Row(Modifier.clip(RoundedCornerShape(12.dp)).clickable(onClick = onEdit).semantics(mergeDescendants = true) { contentDescription = "Edit your name and details"; role = Role.Button }.padding(horizontal = 6.dp, vertical = 2.dp),
@@ -149,7 +151,7 @@ fun ProfBig3Card(vm: AppViewModel, board: JSONObject) {
     val u = board.s("unit", "kg")
     val club = vm.profile?.o("clubE1rm")
     val ratio = big.d("ratio")
-    val ringTo by animateFloatAsState(((club?.i("pct") ?: 0) / 100f).coerceIn(0.02f, 1f).let { if (club?.b("maxedOut") == true) 1f else it }, tween(800), label = "ring")
+    val ringTo by animateFloatAsState(((club?.i("pct") ?: 0) / 100f).coerceIn(0.02f, 1f).let { if (club?.b("maxedOut") == true) 1f else it }, com.pursuitiron.app.ui.theme.Motion.data(600), label = "ring")
     val tier = club?.let { c ->
         val cur = c.s("current").takeIf { it.isNotBlank() && it != "null" } ?: "No club yet"
         if (c.b("maxedOut") || c.s("next").let { it.isBlank() || it == "null" }) "$cur · every club cleared"
@@ -181,7 +183,7 @@ fun ProfBig3Card(vm: AppViewModel, board: JSONObject) {
         big.list("lifts").forEach { l ->
             val r = l.d("ratio")
             // Without a bodyweight the bars compare the three lifts with each other.
-            val w by animateFloatAsState(if (r > 0) (r / (targets[l.s("key")] ?: 3.0)).toFloat().coerceIn(0f, 1f) else (l.d("e1rm") / top).toFloat().coerceIn(0f, 1f), tween(600), label = "b3")
+            val w by animateFloatAsState(if (r > 0) (r / (targets[l.s("key")] ?: 3.0)).toFloat().coerceIn(0f, 1f) else (l.d("e1rm") / top).toFloat().coerceIn(0f, 1f), com.pursuitiron.app.ui.theme.Motion.data(600), label = "b3")
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(l.s("name"), style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold), color = cs.onPrimaryContainer, modifier = Modifier.width(74.dp))
                 Box(Modifier.weight(1f).height(10.dp).clip(CircleShape).background(cs.surface)) { Box(Modifier.fillMaxWidth(w).height(10.dp).clip(CircleShape).background(cs.primary)) }
@@ -239,7 +241,7 @@ fun ProfScoreCard(vm: AppViewModel, onOpen: () -> Unit, onNeedBodyweight: () -> 
         }
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             sc.list("subs").forEachIndexed { k, sub ->
-                val w by animateFloatAsState(sub.i("score") / 100f, tween(600), label = "sub")
+                val w by animateFloatAsState(sub.i("score") / 100f, com.pursuitiron.app.ui.theme.Motion.data(600), label = "sub")
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(sub.s("label"), style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold), modifier = Modifier.width(52.dp))
                     Box(Modifier.weight(1f).height(10.dp).clip(CircleShape).background(cs.surfaceContainerHighest)) {
@@ -281,7 +283,7 @@ fun ProfBodyweightCard(vm: AppViewModel, onOpenBody: () -> Unit) {
             Column(Modifier.weight(1f)) {
                 Text("Bodyweight", style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp), color = cs.onSurfaceVariant)
                 Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    AnimatedContent(bw?.let { fmt1(it) } ?: "—", transitionSpec = { (slideInVertically { it } + fadeIn()) togetherWith (slideOutVertically { -it } + fadeOut()) }, label = "bw") {
+                    AnimatedContent(bw?.let { fmt1(it) } ?: "—", transitionSpec = { com.pursuitiron.app.ui.theme.Motion.tick() }, label = "bw") {
                         Text(it, style = MaterialTheme.typography.displaySmall.copy(fontSize = 32.sp))
                     }
                     Text(u, style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp), modifier = Modifier.padding(bottom = 5.dp))
@@ -332,7 +334,7 @@ fun ProfPrBoard(vm: AppViewModel, board: JSONObject) {
             Text("${pb.list("e1rm").size} lifts tracked", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
         }
         Segmented(listOf("e1rm" to "e1RM", "heaviest" to "Heaviest", "reps" to "Rep PRs"), mode, { mode = it })
-        AnimatedContent(mode, transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(120)) }, label = "prmode") { m ->
+        AnimatedContent(mode, transitionSpec = { com.pursuitiron.app.ui.theme.Motion.peer() }, label = "prmode") { m ->
             if (m != "reps") {
                 Column(Modifier.clip(RoundedCornerShape(24.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     pb.list(m).forEachIndexed { k, r ->
@@ -360,7 +362,7 @@ fun ProfPrBoard(vm: AppViewModel, board: JSONObject) {
                     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         lifts.forEach { l ->
                             val on = l.s("id") == cur?.s("id")
-                            val bg by animateColorAsState(if (on) cs.secondaryContainer else Color.Transparent, label = "rl")
+                            val bg by animateColorAsState(if (on) cs.secondaryContainer else Color.Transparent, com.pursuitiron.app.ui.theme.Motion.effects(), label = "rl")
                             Box(Modifier.height(36.dp).clip(RoundedCornerShape(if (on) 12.dp else 18.dp)).background(bg)
                                 .then(if (on) Modifier else Modifier.border(1.dp, cs.outlineVariant, RoundedCornerShape(18.dp)))
                                 .clickable { repLift = l.s("id") }.semantics { selected = on; role = Role.Button }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
@@ -411,7 +413,7 @@ fun ProfHeatCard(board: JSONObject, onOpen: (String) -> Unit) {
                         for (dw in 0 until 7) {
                             val c = cells[wk * 7 + dw]
                             val future = c.b("future"); val today = c.b("today")
-                            val bg by animateColorAsState(if (future) Color.Transparent else shade(c.i("level")), tween(400), label = "heat")
+                            val bg by animateColorAsState(if (future) Color.Transparent else shade(c.i("level")), com.pursuitiron.app.ui.theme.Motion.effectsSlow(), label = "heat")
                             val id = c.s("id").takeIf { it.isNotBlank() && it != "null" }
                             Box(Modifier.fillMaxWidth().height(18.dp).clip(RoundedCornerShape(5.dp)).background(bg)
                                 .then(when { today -> Modifier.border(2.dp, cs.onSurface, RoundedCornerShape(5.dp)); future -> Modifier.border(1.dp, cs.outlineVariant, RoundedCornerShape(5.dp)); else -> Modifier })
@@ -442,7 +444,7 @@ private val BADGE_ICON = mapOf(
 @Composable
 private fun BadgeShape(done: Boolean, size: androidx.compose.ui.unit.Dp, radius: androidx.compose.ui.unit.Dp, id: String, iconSize: androidx.compose.ui.unit.Dp) {
     val cs = MaterialTheme.colorScheme
-    val fill by animateColorAsState(if (done) cs.primary else cs.surfaceContainerHighest, tween(400), label = "bd")
+    val fill by animateColorAsState(if (done) cs.primary else cs.surfaceContainerHighest, com.pursuitiron.app.ui.theme.Motion.effectsSlow(), label = "bd")
     Box(Modifier.size(size), contentAlignment = Alignment.Center) {
         Box(Modifier.fillMaxSize().clip(RoundedCornerShape(radius)).background(fill))
         Box(Modifier.fillMaxSize().rotate(45f).clip(RoundedCornerShape(radius)).background(fill))
@@ -463,8 +465,8 @@ fun ProfBadges(board: JSONObject) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     row.forEach { m ->
                         val on = open == m.s("id"); val done = m.b("done")
-                        val bg by animateColorAsState(if (on) cs.secondaryContainer else Color.Transparent, label = "bdc")
-                        val prog by animateFloatAsState(m.d("progress").toFloat(), tween(800), label = "bdp")
+                        val bg by animateColorAsState(if (on) cs.secondaryContainer else Color.Transparent, com.pursuitiron.app.ui.theme.Motion.effects(), label = "bdc")
+                        val prog by animateFloatAsState(m.d("progress").toFloat(), com.pursuitiron.app.ui.theme.Motion.data(600), label = "bdp")
                         Column(Modifier.weight(1f).clip(RoundedCornerShape(18.dp)).background(bg).clickable { open = if (on) null else m.s("id") }
                             .semantics(mergeDescendants = true) { role = Role.Button; selected = on; contentDescription = m.s("name") + if (done) ", earned" else ", ${(m.d("progress") * 100).toInt()} percent" }
                             .padding(vertical = 8.dp, horizontal = 2.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -486,7 +488,7 @@ fun ProfBadges(board: JSONObject) {
             }
         }
         val m = all.firstOrNull { it.s("id") == open }
-        AnimatedVisibility(m != null, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
+        AnimatedVisibility(m != null, enter = com.pursuitiron.app.ui.theme.Motion.expandIn, exit = com.pursuitiron.app.ui.theme.Motion.shrinkOut) {
             val x = m ?: return@AnimatedVisibility
             val done = x.b("done")
             val fg = if (done) cs.onPrimaryContainer else cs.onSurface
@@ -521,7 +523,7 @@ fun ProfBalance(board: JSONObject) {
         Text("Muscle balance · 30 days", style = MaterialTheme.typography.titleLarge.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(start = 4.dp, top = 6.dp).semantics { heading() })
         Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(cs.surfaceContainerLow).padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             parts.take(10).forEach { m ->
-                val w by animateFloatAsState(m.i("sets") / max.toFloat(), tween(600), label = "bal")
+                val w by animateFloatAsState(m.i("sets") / max.toFloat(), com.pursuitiron.app.ui.theme.Motion.data(600), label = "bal")
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(m.s("label").replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, fontWeight = FontWeight.SemiBold), modifier = Modifier.width(84.dp), maxLines = 1)
                     Box(Modifier.weight(1f).height(10.dp).clip(CircleShape).background(cs.surfaceContainerHighest)) {
@@ -618,7 +620,7 @@ fun StrengthClubCard(vm: AppViewModel) {
                 }
             }
         }
-        val w by animateFloatAsState(c.i("pct") / 100f, tween(600), label = "club")
+        val w by animateFloatAsState(c.i("pct") / 100f, com.pursuitiron.app.ui.theme.Motion.data(600), label = "club")
         Box(Modifier.fillMaxWidth().height(10.dp).clip(CircleShape).background(cs.surfaceContainerHighest)) { Box(Modifier.fillMaxWidth(w).height(10.dp).clip(CircleShape).background(cs.primary)) }
         val nextLb = tiers.firstOrNull { !it.b("on") }?.i("lb")
         Text(when {
@@ -630,7 +632,7 @@ fun StrengthClubCard(vm: AppViewModel) {
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             tiers.forEach { t ->
                 val on = t.b("on")
-                val bg by animateColorAsState(if (on) cs.primary else cs.surfaceContainerHighest, label = "tier")
+                val bg by animateColorAsState(if (on) cs.primary else cs.surfaceContainerHighest, com.pursuitiron.app.ui.theme.Motion.effects(), label = "tier")
                 Box(Modifier.weight(1f).height(34.dp).clip(RoundedCornerShape(12.dp)).background(bg).semantics { contentDescription = t.s("name") + if (on) ", cleared" else "" }, contentAlignment = Alignment.Center) {
                     Text(java.text.NumberFormat.getIntegerInstance(Locale.US).format(t.i("lb")), style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.ExtraBold), color = if (on) cs.onPrimary else cs.onSurfaceVariant)
                 }

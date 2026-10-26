@@ -86,7 +86,7 @@ fun PillToggle(options: List<Pair<String, String>>, selected: String, onSelect: 
     Row(Modifier.clip(CircleShape).background(cs.surfaceContainerHighest).padding(3.dp).semantics { contentDescription = label }, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
         options.forEach { (id, l) ->
             val on = id == selected
-            val bg by animateColorAsState(if (on) cs.secondaryContainer else Color.Transparent, label = "pill")
+            val bg by animateColorAsState(if (on) cs.secondaryContainer else Color.Transparent, com.pursuitiron.app.ui.theme.Motion.effects(), label = "pill")
             Box(Modifier.height(32.dp).clip(CircleShape).background(bg).clickable { if (!on) onSelect(id) }.semantics { role = Role.RadioButton; this.selected = on }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
                 Text(l, style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold), color = if (on) cs.onSecondaryContainer else cs.onSurfaceVariant)
             }
@@ -270,7 +270,7 @@ fun E1rmCalcCard(vm: AppViewModel) {
         Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(cs.surfaceContainerLow).padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.Bottom) {
                 Text("Estimated 1RM", style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp), color = cs.onSurfaceVariant, modifier = Modifier.weight(1f).padding(bottom = 8.dp))
-                AnimatedContent(fmtNum(snap(e1, 0.5)), transitionSpec = { (slideInVertically { it } + fadeIn()) togetherWith (slideOutVertically { -it } + fadeOut()) }, label = "e1") {
+                AnimatedContent(fmtNum(snap(e1, 0.5)), transitionSpec = { com.pursuitiron.app.ui.theme.Motion.tick() }, label = "e1") {
                     Text(it, style = MaterialTheme.typography.displaySmall.copy(fontSize = 36.sp))
                 }
                 Text(" $u", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(bottom = 8.dp))

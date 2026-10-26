@@ -83,7 +83,7 @@ fun Segmented(options: List<Pair<String, String>>, selected: String?, onSelect: 
     ) {
         options.forEach { (id, label) ->
             val on = id == selected
-            val bg by animateColorAsState(if (on) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent, label = "seg")
+            val bg by animateColorAsState(if (on) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent, com.pursuitiron.app.ui.theme.Motion.effects(), label = "seg")
             Box(
                 Modifier.weight(1f).height(height).clip(CircleShape).background(bg)
                     .semantics { role = Role.Tab; this.selected = on }

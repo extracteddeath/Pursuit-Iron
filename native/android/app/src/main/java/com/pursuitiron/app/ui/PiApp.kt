@@ -107,8 +107,8 @@ private fun Shell(vm: AppViewModel, wide: Boolean) {
             targetState = vm.screen,
             transitionSpec = {
                 when (targetState) {
-                    Screen.Workout, Screen.Setup, Screen.Editor -> (fadeIn(tween(220)) + scaleIn(initialScale = 0.94f)) togetherWith fadeOut(tween(160))
-                    else -> fadeIn(tween(220)) togetherWith fadeOut(tween(160))
+                    Screen.Workout, Screen.Setup, Screen.Editor -> com.pursuitiron.app.ui.theme.Motion.forward()
+                    else -> com.pursuitiron.app.ui.theme.Motion.fadeThrough()
                 }
             },
             label = "screen",
@@ -140,13 +140,19 @@ private fun Shell(vm: AppViewModel, wide: Boolean) {
 private fun Tabs(vm: AppViewModel, wide: Boolean) {
     val content: @Composable (Modifier) -> Unit = { m ->
         Box(m) {
-            AnimatedContent(targetState = vm.tab, transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(120)) }, label = "tab") { t ->
-                when (t) {
-                    Tab.Today -> TodayScreen(vm)
-                    Tab.Plan -> PlanScreen(vm)
-                    Tab.Progress -> ProgressScreen(vm)
-                    Tab.Library -> LibraryScreen(vm)
-                    Tab.You -> YouScreen(vm)
+            // Top-level destinations fade through; shared elements (the avatar) morph across.
+            @OptIn(androidx.compose.animation.ExperimentalSharedTransitionApi::class)
+            androidx.compose.animation.SharedTransitionLayout {
+                AnimatedContent(targetState = vm.tab, transitionSpec = { com.pursuitiron.app.ui.theme.Motion.fadeThrough() }, label = "tab") { t ->
+                    CompositionLocalProvider(com.pursuitiron.app.ui.common.LocalSharedScope provides this@SharedTransitionLayout, com.pursuitiron.app.ui.common.LocalTabScope provides this) {
+                        when (t) {
+                            Tab.Today -> TodayScreen(vm)
+                            Tab.Plan -> PlanScreen(vm)
+                            Tab.Progress -> ProgressScreen(vm)
+                            Tab.Library -> LibraryScreen(vm)
+                            Tab.You -> YouScreen(vm)
+                        }
+                    }
                 }
             }
         }

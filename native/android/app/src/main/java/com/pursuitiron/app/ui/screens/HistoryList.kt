@@ -136,7 +136,7 @@ fun MonthCalendar(vm: AppViewModel, sel: Triple<Int, Int, Int>?, onSelect: (Trip
                     val future = atNow && d > now.get(java.util.Calendar.DAY_OF_MONTH)
                     val on = sel == Triple(y, m, d)
                     val radius by androidx.compose.animation.core.animateDpAsState(if (on) 12.dp else 20.dp, com.pursuitiron.app.ui.theme.Motion.spring(), label = "day")
-                    val bg by androidx.compose.animation.animateColorAsState(if (on) cs.primary else if (n > 0) cs.primaryContainer else Color.Transparent, label = "dayBg")
+                    val bg by androidx.compose.animation.animateColorAsState(if (on) cs.primary else if (n > 0) cs.primaryContainer else Color.Transparent, com.pursuitiron.app.ui.theme.Motion.effects(), label = "dayBg")
                     androidx.compose.foundation.layout.Box(Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(radius)).background(bg)
                         .then(if (isToday && !on) Modifier.border(2.dp, cs.primary, RoundedCornerShape(radius)) else Modifier)
                         .then(if (n > 0) Modifier.clickable { onSelect(if (on) null else Triple(y, m, d)) } else Modifier)

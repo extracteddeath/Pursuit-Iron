@@ -121,7 +121,7 @@ fun ProgressPhotosCard(vm: AppViewModel) {
                     } else {
                         val on = p.id in picked
                         val label = md.format(Date(p.date))
-                        val r by androidx.compose.animation.core.animateDpAsState(if (on) 14.dp else 18.dp, androidx.compose.animation.core.spring(dampingRatio = 0.6f), label = "ph")
+                        val r by androidx.compose.animation.core.animateDpAsState(if (on) 14.dp else 18.dp, com.pursuitiron.app.ui.theme.Motion.spatialFast(), label = "ph")
                         Box(Modifier.weight(1f).aspectRatio(3f / 4f).clip(RoundedCornerShape(r)).background(cs.surfaceContainerHigh)
                             .combinedClickable(onClick = { if (on) picked.remove(p.id) else { if (picked.size >= 2) picked.removeAt(0); picked.add(p.id) } }, onLongClick = { deleting = p })
                             .semantics { contentDescription = "Photo, ${p.pose}, $label" + (if (on) ", selected for compare" else "") + ". Long-press to delete"; selected = on }) {
@@ -136,7 +136,7 @@ fun ProgressPhotosCard(vm: AppViewModel) {
             }
         }
         val pair = picked.mapNotNull { id -> photos.firstOrNull { it.id == id } }.sortedBy { it.date }
-        androidx.compose.animation.AnimatedVisibility(pair.size == 2, enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(), exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut()) {
+        androidx.compose.animation.AnimatedVisibility(pair.size == 2, enter = com.pursuitiron.app.ui.theme.Motion.expandIn, exit = com.pursuitiron.app.ui.theme.Motion.shrinkOut) {
             if (pair.size < 2) return@AnimatedVisibility
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(cs.surfaceContainerHigh).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

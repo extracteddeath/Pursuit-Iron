@@ -84,7 +84,7 @@ fun VolumeChartCard(g: JSONObject) {
             contentDescription = (if (mode == "volume") "Weekly volume in ${volUnit(u)}: " else "Workouts per week: ") + weeks.joinToString(", ") { "${it.s("label")} ${fmt1(v(it))}" }
         }, horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.Bottom) {
             weeks.forEach { w ->
-                val h by animateDpAsState((8 + 104 * (v(w) / max)).dp, Motion.spring(), label = "bar")
+                val h by animateDpAsState((8 + 104 * (v(w) / max)).dp, Motion.data(), label = "bar")
                 Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Box(Modifier.fillMaxWidth().height(h).clip(RoundedCornerShape(if (w.b("now")) 12.dp else 999.dp)).background(if (w.b("now")) cs.primary else cs.primaryContainer))
                     Text(w.s("label"), style = MaterialTheme.typography.labelSmall, color = if (w.b("now")) cs.onSurface else cs.onSurfaceVariant)

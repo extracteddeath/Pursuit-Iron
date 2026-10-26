@@ -125,7 +125,7 @@ fun WorkoutHeader(vm: AppViewModel, s: JSONObject, wide: Boolean, focus: Boolean
             if (hasNote) Box(Modifier.align(Alignment.TopEnd).padding(9.dp).size(8.dp).clip(CircleShape).background(cs.primary))
         }
         val r by animateDpAsState(if (focus) 14.dp else 22.dp, Motion.spring(), label = "focus")
-        val bg by animateColorAsState(if (focus) cs.primaryContainer else Color.Transparent, label = "focusBg")
+        val bg by animateColorAsState(if (focus) cs.primaryContainer else Color.Transparent, com.pursuitiron.app.ui.theme.Motion.effects(), label = "focusBg")
         Box(Modifier.size(44.dp).clip(RoundedCornerShape(r)).background(bg).clickable(onClick = onFocus)
             .semantics { contentDescription = "Focus mode"; role = Role.Switch; stateDescription = if (focus) "On" else "Off" }, contentAlignment = Alignment.Center) {
             Icon(PiIcons.Focus, null, tint = if (focus) cs.onPrimaryContainer else cs.onSurfaceVariant, modifier = Modifier.size(22.dp))
@@ -286,7 +286,7 @@ fun LastNoteCard(ex: JSONObject, dayLabel: String) {
     if (note.isBlank()) return
     var shown by remember(ex.s("id")) { mutableStateOf(true) }
     val cs = MaterialTheme.colorScheme
-    AnimatedVisibility(shown, exit = shrinkVertically() + fadeOut()) {
+    AnimatedVisibility(shown, exit = com.pursuitiron.app.ui.theme.Motion.shrinkOut) {
         Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.secondaryContainer).padding(start = 14.dp, top = 10.dp, bottom = 10.dp, end = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Icon(PiIcons.Note, null, tint = cs.onSecondaryContainer, modifier = Modifier.size(18.dp))

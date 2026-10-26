@@ -182,8 +182,8 @@ fun WorkoutScreen(vm: AppViewModel) {
         val restEnd = vm.restEndsAt()
         AnimatedVisibility(
             visible = restEnd != null,
-            enter = slideInVertically(Motion.spring()) { it } + fadeIn(),
-            exit = slideOutVertically { it } + fadeOut(),
+            enter = slideInVertically(Motion.enter()) { it } + fadeIn(Motion.effects()),
+            exit = slideOutVertically(Motion.exit()) { it } + fadeOut(Motion.effectsFast()),
             modifier = Modifier.align(if (wide) Alignment.BottomEnd else Alignment.BottomCenter)
                 .padding(start = 12.dp, end = if (wide) 24.dp else 12.dp, bottom = if (wide) 24.dp else 96.dp).navigationBarsPadding()
                 .then(if (wide) Modifier.width(420.dp) else Modifier.fillMaxWidth()),
@@ -378,7 +378,7 @@ private fun SetRow(vm: AppViewModel, s: JSONObject, ex: JSONObject, ei: Int, si:
     val done = set.b("done"); val warm = set.b("warm")
     val grip = vm.prefs.grip
     val cellH: Dp = if (grip) 58.dp else 44.dp
-    val bg by animateColorAsState(when { done && warm -> cs.surfaceContainerHigh; done -> cs.primaryContainer; else -> cs.surfaceContainerLow }, label = "row")
+    val bg by animateColorAsState(when { done && warm -> cs.surfaceContainerHigh; done -> cs.primaryContainer; else -> cs.surfaceContainerLow }, com.pursuitiron.app.ui.theme.Motion.effects(), label = "row")
     val target = set.o("target")
     // The design's reference column: the target as "82.5×6" over its effort, or last time's set (Target ⇄ Last).
     val prev = set.o("prev")

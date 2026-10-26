@@ -1380,34 +1380,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   outline-offset:3px!important;
 }
 
-/* M3 EXPRESSIVE FLUID BUTTON GROUPS — selected width responds physically,
-   not merely with a fixed pill overlay. The actual tabs retain their native
-   roles, hit areas, ordering and focus. Only non-workout groups. */
-#root[data-pi-motion="expressive"] .wpb :is(.wpb-progress .wpb-premium-tabs,.wpb-library .wpb-library-flag-filter)[data-pi-m3-fluid]{
-  display:flex!important;
-  align-items:stretch!important;
-  overflow:var(--pi-choice-overflow,visible);
-}
-#root[data-pi-motion="expressive"] .wpb :is(.wpb-progress .wpb-premium-tabs,.wpb-library .wpb-library-flag-filter)[data-pi-m3-fluid]>button{
-  flex:var(--pi-choice-grow,1) 1 0%!important;
-  min-width:var(--pi-choice-min,0)!important;
-  position:relative;
-  z-index:1;
-  /* The one selected spring drives every button's flex basis.
-     No CSS transitions are stacked onto the existing spring. */
-  transition:background-color 180ms var(--pi-ease),
-             color 180ms var(--pi-ease)!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-premium-tabs[data-pi-m3-fluid]>button[aria-selected="true"],
-#root[data-pi-motion="expressive"] .wpb .wpb-library-flag-filter[data-pi-m3-fluid]>button[aria-pressed="true"]{
-  font-weight:760!important;
-}
-@media(prefers-reduced-motion:reduce),(forced-colors:active){
-  #root[data-pi-motion="expressive"] .wpb :is(.wpb-progress .wpb-premium-tabs,.wpb-library .wpb-library-flag-filter)[data-pi-m3-fluid]>button{
-    transition:none!important;
-  }
-}
-
 /* M3 EXPRESSIVE R4 — CONNECTED COMPOSITION AND ADAPTIVE CHROME
    Component geometry deliberately differs across hero/metric/section/navigation:
    no new controls, no extra workout-log height, no added scroll furniture.
@@ -2082,14 +2054,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   }
   70%{opacity:1;translate:0 -1px;scale:1}
   100%{opacity:1;translate:0 0;scale:1}
-}
-/* Indicator stretch is paint-only. Its logical button bounds are measured by
-   the existing selected-surface spring; pointer and keyboard targets don't
-   scale or move. This works in narrow/wide theme layouts. */
-#root[data-pi-motion="expressive"] .wpb :is(.wpb-tabbar,.wpb-plan-panes,.wpb-premium-tabs,.wpb-segmented,.wpb-exercise-tabs,.wpb-library-flag-filter,.wpb-progress-grouping,.wpb-exercise-window-tabs)[data-pi-m3-track]::before{
-  scale:var(--pi-m3-track-stretch,1) 1;
-  transform-origin:center center;
-  border-radius:var(--pi-m3-track-corner,18px)!important;
 }
 @media(prefers-reduced-motion:reduce),(forced-colors:active){
   #root[data-pi-motion="expressive"] .wpb [data-view-frame]

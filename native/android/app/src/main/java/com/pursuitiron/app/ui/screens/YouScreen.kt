@@ -342,17 +342,6 @@ private fun DataCard(vm: AppViewModel) {
 }
 
 @Composable
-private fun AboutCard(vm: AppViewModel) {
-    PiCard(radius = 28.dp) {
-        Text("About", style = MaterialTheme.typography.titleMedium)
-        Text("Pursuit Iron ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})", style = MaterialTheme.typography.bodyMedium)
-        Text("Training engine runs on this phone (${vm.runtime}). The same engine as the web app, so every number matches.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        SectionTitle("Not medical advice", Modifier.padding(start = 0.dp))
-        Text("Pursuit Iron plans training load. It is not a medical device.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
-
-@Composable
 private fun InjuriesCard(vm: AppViewModel) {
     val n = vm.home.list("injuries").size
     PiCard(radius = 28.dp) {
@@ -414,7 +403,7 @@ private fun SettingsPageSheet(vm: AppViewModel, key: String, onClose: () -> Unit
                 "profile" -> ProfileFieldsCard(vm)
                 "backup" -> DataCard(vm)
                 "data" -> ManageDataCard(vm)
-                "help" -> { HelpCard(vm); AboutCard(vm) }
+                "help" -> HelpCard(vm)
             }
         }
     }

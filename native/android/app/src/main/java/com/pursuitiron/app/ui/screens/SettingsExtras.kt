@@ -221,40 +221,36 @@ fun HelpCard(vm: AppViewModel) {
     val ctx = LocalContext.current
     val cs = MaterialTheme.colorScheme
     var refsOpen by remember { mutableStateOf(false) }
+    var refs by remember { mutableStateOf<List<JSONObject>?>(null) }
+    LaunchedEffect(refsOpen) { if (refsOpen && refs == null) refs = vm.references() }
     val open = { url: String -> runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }.onFailure { vm.toast("No app can open that link") } }
+    // The design's Help & about: four rows, the research inline, then the version and what the app is.
     PiCard(radius = 28.dp) {
-        Text("Help and support", style = MaterialTheme.typography.titleMedium)
-        Text("Found something wrong, or something missing? Email $BUG_EMAIL and say what you expected to happen. Screenshots help a lot.",
-            style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
-        Column(Modifier.clip(RoundedCornerShape(20.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text("Help & about", style = MaterialTheme.typography.headlineSmall)
+        Column(Modifier.clip(RoundedCornerShape(22.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             MenuRow(PiIcons.Info, "Report a bug", "Opens your email with the version filled in", cs.secondaryContainer, cs.onSecondaryContainer) {
                 val subject = Uri.encode("Pursuit Iron bug report (Android ${BuildConfig.VERSION_NAME}, build ${BuildConfig.VERSION_CODE})")
                 val body = Uri.encode("What happened:\n\nWhat I expected:\n\nDevice: ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}, Android ${android.os.Build.VERSION.RELEASE}\n")
                 runCatching { ctx.startActivity(Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:$BUG_EMAIL?subject=$subject&body=$body"))) }.onFailure { vm.toast("No email app found. Write to $BUG_EMAIL") }
             }
-            MenuRow(PiIcons.Flame, "Support Pursuit Iron", "Buy the developer a coffee on Ko-fi", cs.tertiaryContainer, cs.onTertiaryContainer) { open(SUPPORT_URL) }
             MenuRow(PiIcons.Shield, "Privacy policy", "Your data stays on this phone", cs.secondaryContainer, cs.onSecondaryContainer) { open(WEB_APP_URL + "privacy.html") }
-            MenuRow(PiIcons.List, "References & methodology", "The research the programming defaults draw on", cs.secondaryContainer, cs.onSecondaryContainer) { refsOpen = true }
+            MenuRow(PiIcons.Flame, "Support the app", "Everything stays free", cs.primaryContainer, cs.onPrimaryContainer) { open(SUPPORT_URL) }
+            MenuRow(PiIcons.List, "References & methodology", "The research the defaults draw on", cs.secondaryContainer, cs.onSecondaryContainer) { refsOpen = !refsOpen }
             MenuRow(PiIcons.Sparkle, "Show the welcome screen", "The introduction from first launch", cs.secondaryContainer, cs.onSecondaryContainer) { vm.prefs.markIntro(0); vm.goTab(com.pursuitiron.app.Tab.Today) }
         }
-    }
-    if (refsOpen) ReferencesSheet(vm) { refsOpen = false }
-}
-
-@Composable
-private fun ReferencesSheet(vm: AppViewModel, onClose: () -> Unit) {
-    var refs by remember { mutableStateOf<List<JSONObject>?>(null) }
-    LaunchedEffect(Unit) { refs = vm.references() }
-    ModalBottomSheet(onDismissRequest = onClose, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-        Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("References & methodology", style = MaterialTheme.typography.headlineSmall)
-            Text("The programming defaults draw on the following work:", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            refs?.forEach { r ->
-                PiCard(color = MaterialTheme.colorScheme.surfaceContainerHigh, radius = 18.dp, padding = 12.dp) {
-                    Text(r.s("name"), style = MaterialTheme.typography.titleSmall)
-                    Text(r.s("detail"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        androidx.compose.animation.AnimatedVisibility(refsOpen && refs != null, enter = com.pursuitiron.app.ui.theme.Motion.expandIn, exit = com.pursuitiron.app.ui.theme.Motion.shrinkOut) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                refs.orEmpty().forEach { r ->
+                    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.surface).padding(horizontal = 14.dp, vertical = 12.dp)) {
+                        Text(r.s("name"), style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold))
+                        Text(r.s("detail"), style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp), color = cs.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
+                    }
                 }
             }
+        }
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.surface).padding(horizontal = 16.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("Pursuit Iron ${BuildConfig.VERSION_NAME} · build ${BuildConfig.VERSION_CODE} · engine on this phone (${vm.runtime})", style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold))
+            Text("An evidence-based training planner. It adjusts training load and isn't medical advice.", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 17.sp), color = cs.onSurfaceVariant)
         }
     }
 }

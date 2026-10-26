@@ -824,7 +824,8 @@ if scroll_to(r"^\|Help & about$", tries=6):
     tap(r"^\|Help & about$", "settings-help")
     if scroll_to(r"References & methodology", tries=4, step=500):
         tap(r"References & methodology", "references")
-        back()
+        if not scroll_to(r"Israetel|Nuckols|Schoenfeld", tries=3, step=400):
+            FAILS.append("references do not open inline in Help & about")
     else:
         FAILS.append("references missing from Help & about")
     back()

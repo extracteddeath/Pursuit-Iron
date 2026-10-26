@@ -2,6 +2,10 @@
 import { Accessibility, Activity, AlertTriangle, Award, Ban, BarChart3, Brain, Calendar, Check, CheckCircle2, Clock, Dumbbell, Flame, GripVertical, HardDrive, HelpCircle, Home as HomeIcon, Info, Layers, Library, Maximize2, Medal, Milestone, Minus, Palette, Play, Plus, PlusCircle, RefreshCw, Repeat, Save, Search, Settings2, Share2, Shield, Smartphone, Sparkles, Target, Timer, Trash2, TrendingUp, Trophy, Undo2, Wand2, Zap } from 'lucide-react';
 
 export const CHANGELOG = [
+    { version: "4.0.0", build: "932", items: [
+        "Pinned notes and equipment setup now save together in Program, Workout and Library. Cancel discards both, and Remove clears all saved fields.",
+        "The note editor is easier to use on narrow screens and follows your text size, with labelled setup controls and reachable actions."
+    ] },
     { version: "4.0.0", build: "931", items: [
         "Exercise options follow your text size and keep Close visible while you scroll. Drag-to-dismiss now works in options, gyms, program switching and achievements.",
         "Removal confirmation resets when closed, and superset actions respect your program settings."

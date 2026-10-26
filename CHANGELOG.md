@@ -1,3 +1,11 @@
+## Build 932 / M385 — Consistent pinned-note and setup editing
+
+- Stage physical setup and note text together in Program, Workout and Library. Save applies both; Cancel discards both. Remove clears the saved note and every saved setup field, including older equipment settings.
+- Use one controlled editor and one pair of App persistence callbacks. Keep saved cues exercise-wide while scoping the active Program editor to its selected day and slot, including repeated exercises.
+- Place the Program editor across the exercise card, with labelled setup inputs, 44px edit targets, scalable text, wrapping actions and visible focus/forced-color borders. Preserve the closed Workout/Focus logging layout.
+- Retire 29 static inline styles into one shared CSS family and tighten the presentation budget from 2,482 to 2,453 without adding priority overrides. Engine policy and storage schema stay unchanged.
+- Extend the existing R54 journey with both themes, narrow/enlarged-text reflow, reachable actions, Save/Cancel/Remove, old setup-field retention and explicit clearing, reload, cross-screen persistence and unchanged saved prescriptions, history and live set values.
+
 ## Build 931 / M384 — Usable exercise actions and one presentation owner
 
 - Program exercise options scale the title, action labels and complete descriptions with the text-size setting. A persistent heading keeps Close visible while the action list scrolls.

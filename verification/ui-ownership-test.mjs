@@ -17,11 +17,12 @@ const programVolume = fs.readFileSync('modules/program-volume-surfaces.js', 'utf
 const loadWave = fs.readFileSync('modules/program-load-wave.js', 'utf8');
 const programShare = fs.readFileSync('modules/program-share-sheet.js', 'utf8');
 const exerciseOptions = fs.readFileSync('modules/program-exercise-options.js', 'utf8');
-const presentationSource = disclosures + '\n' + programReference + '\n' + releaseNotes + '\n' + primitives + '\n' + app + '\n' + programReview + '\n' + programSchedule + '\n' + programSettings + '\n' + backupPanel + '\n' + programVolume + '\n' + loadWave + '\n' + programShare + '\n' + exerciseOptions;
+const exerciseNotes = fs.readFileSync('modules/exercise-notes.js', 'utf8');
+const presentationSource = disclosures + '\n' + programReference + '\n' + releaseNotes + '\n' + primitives + '\n' + app + '\n' + programReview + '\n' + programSchedule + '\n' + programSettings + '\n' + backupPanel + '\n' + programVolume + '\n' + loadWave + '\n' + programShare + '\n' + exerciseOptions + '\n' + exerciseNotes;
 const MAX_IMPORTANT = 2303; // M384: retire 33 exercise-options priority overrides.
 const MAX_APP_IMPORTANT = 1198; // M384: retire the private options padding override.
 const MAX_REPEAT_IMPORTANT = 15; // M288: at-rule comments no longer erase media/container scope.
-const MAX_INLINE_STYLE_OBJECTS = 2482; // M384: include exercise actions; retire 17 static inline styles.
+const MAX_INLINE_STYLE_OBJECTS = 2453; // M385: one shared pinned-note/setup family; retire 29 static styles.
 
 // M367: Settings is a named, keyboard-focusable dialog with explicit labels and state.
 for(const role of ['backdrop','panel','heading','title','close','intro','field-label','field','description','footer','cancel','save'])
@@ -92,6 +93,12 @@ function guard(cssText, appText) {
 }
 const report = guard(css, presentationSource);
 
+assert.ok(!exerciseNotes.includes('style:') && !exerciseNotes.includes('localStorage'), 'Pinned notes use semantic CSS and the App persistence boundary');
+assert.ok(!app.includes('function SetupFieldsGrid(') && !app.includes('function SetupFieldsDisplay(') && !app.includes('pinRef') && !app.includes('pnRef'), 'Pinned notes have no shadow grid or shared textarea ref');
+assert.equal((exerciseNotes.match(/export function PinnedNoteEditor\(/g)||[]).length,1,'One controlled pinned-note editor');
+assert.equal((app.match(/onSetExNote: updatePinnedNote/g)||[]).length,3,'All routes consume one pinned-note writer');
+assert.equal((app.match(/onSetExSetup: updateExerciseSetup/g)||[]).length,3,'All routes consume one setup writer');
+assert.ok(app.includes('noteEdit?.dayId === day.id && noteEdit?.slot === slot && noteEdit?.exId === ex.id'), 'Program notes belong to the selected row while saved notes remain per exercise');
 assert.ok(!exerciseOptions.includes('style:') && !exerciseOptions.includes('localStorage') && !exerciseOptions.includes('setProgram'),
     'Exercise options own only presentation and transient confirmation');
 assert.equal((exerciseOptions.match(/export function ProgramExerciseOptions\(/g)||[]).length,1,'One exercise-options owner');
@@ -263,7 +270,7 @@ assert.ok(css.includes('.wpb .wpb-wizard-name-input[data-has-value="true"]'),
   'Controlled name input has its own selected border');
 // The complete creation presentation now has no static JSX styles.
 const wizardShell=app.slice(app.indexOf('function Wizard({'),app.indexOf('function Heading('));
-const wizardBody=app.slice(app.indexOf('function StepBody('),app.indexOf('// Editable row'));
+const wizardBody=app.slice(app.indexOf('function StepBody('),app.indexOf('function Stepper('));
 const setupStepper=app.slice(app.indexOf('function Stepper('),app.indexOf('// Training-phase narrative'));
 assert.equal((wizardShell.match(/style: \{/g)||[]).length,1,'Only computed progress transform remains inline in Wizard');
 assert.ok(wizardShell.includes('style: { transform: `translateX('),'Wizard retains calculated progress transform');

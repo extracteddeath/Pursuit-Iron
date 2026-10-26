@@ -265,11 +265,15 @@ fun ExerciseHead(s: JSONObject, ex: JSONObject, onInfo: () -> Unit, onProg: () -
                 if (ex.b("assisted")) com.pursuitiron.app.ui.common.Badge("Assisted · less help is progress", cs.tertiaryContainer, cs.onTertiaryContainer)
                 if (ex.d("goal") > 0) com.pursuitiron.app.ui.common.Badge("Goal ${fmtNum(ex.d("goal"))} ${s.s("unit")}", cs.primaryContainer, cs.onPrimaryContainer)
                 if (ex.s("line").isNotBlank()) Text(ex.s("line"), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                // The design's pinned-note chip: setup and cue, or an invitation to pin one (Main.dc.html setupText)
                 val setup = ex.list("setup").filter { it.s("value").isNotBlank() }.joinToString(" · ") { "${it.s("label")} ${it.s("value")}" }
-                if (setup.isNotBlank()) Surface(onClick = onSetup, color = cs.surfaceContainerHigh, shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.height(28.dp).semantics { contentDescription = "Setup: $setup. Edit" }) {
+                val pinned = listOf(setup, ex.s("pinNote")).filter { it.isNotBlank() }.joinToString(" — ")
+                Surface(onClick = onSetup, color = cs.surfaceContainerHigh, shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.height(28.dp).semantics { contentDescription = if (pinned.isBlank()) "Pin a note for ${ex.s("name")}" else "Pinned note for ${ex.s("name")}: $pinned. Edit" }) {
                     Row(Modifier.padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Icon(PiIcons.Stretch, null, modifier = Modifier.size(14.dp)); Text(setup, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Icon(PiIcons.Pin, null, modifier = Modifier.size(14.dp))
+                        Text(pinned.ifBlank { "Pin a note · machine setup" }, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            color = if (pinned.isBlank()) cs.onSurfaceVariant else cs.onSurface)
                     }
                 }
             }

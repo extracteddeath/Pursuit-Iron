@@ -765,6 +765,33 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   ok(a[2].adjusted === 'load' && parseFloat(a[2].weight) < parseFloat(w[2].weight), 'two misses ease the next set: ' + w[2].weight + ' → ' + a[2].weight);
   C.act({ type: 'toggle', ei: e.ei, si: w[1].i });
   ok(C.session().exercises[e.ei].sets.filter((x) => !x.warm && !x.sub)[2].adjusted === null, 'un-logging the set puts the load back'); }
+// B918: a program the lifter built keeps its days through Program settings; a constraint its lifts break is refused
+{ C.init({ store: JSON.stringify({ unit: 'kg' }) });
+  C.createProgram({ config: { name: 'Mine', unit: 'kg', goal: 'hypertrophy', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 3 });
+  const st = JSON.parse(C.exportStore()); const prog = st.saved[0]; prog.custom = true; delete prog.engineSource;
+  const days = JSON.stringify(prog.days.map((d) => d.exercises));
+  C.init({ store: JSON.stringify(st) });
+  const r = C.applyProgramSettings({ programId: prog.id, settings: { weeks: 8, goal: 'strength' } });
+  const after = C.exportStore() && JSON.parse(C.exportStore()).saved.find((x) => x.id === prog.id);
+  ok(r.ok && JSON.stringify(after.days.map((d) => d.exercises)) === days && after.config.weeks === 8 && after.config.goal === 'strength', 'custom program: settings apply in place, days unchanged');
+  ok(C.applyProgramSettings({ programId: prog.id, shuffle: true }).ok === false, 'custom program: nothing to shuffle');
+  const bad = C.applyProgramSettings({ programId: prog.id, settings: { weeks: 60 } });
+  ok(!bad.ok && /1 to 52/.test(bad.error), 'block length outside 1–52 is refused: ' + bad.error);
+  }
+// A comma-decimal keyboard: "82,5" logs 82.5, never 825
+{ C.init({ store: JSON.stringify({ unit: 'kg' }) });
+  C.createProgram({ config: { name: 'B', unit: 'kg', goal: 'hypertrophy', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 2 });
+  C.startSession({}); const e = C.session().exercises[0], x = e.sets.find((y) => !y.warm && !y.sub);
+  C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'weight', value: '82,5' });
+  ok(C.session().exercises[0].sets[x.i].weight === '82.5', 'comma decimal weight: ' + C.session().exercises[0].sets[x.i].weight); }
+// B932 pinned note: note and setup saved together, Remove clears both (older setup fields too)
+{ const id = 'bb-bench'; C.init({ store: JSON.stringify({ unit: 'kg', exSetup: { [id]: { old_field: 'x' } } }) });
+  const pn = id && C.pinnedNote({ id });
+  ok(pn && pn.has && pn.fields.some((f) => f.key === 'old_field' && f.value === 'x'), 'an older setup field is kept and shown');
+  if (pn) {
+    C.savePinnedNote({ id, note: ' pause on chest ', setup: { old_field: 'x', bench: ' 4 ' } });
+    const a1 = C.pinnedNote({ id }); ok(a1.note === 'pause on chest' && a1.fields.find((f) => f.key === 'bench')?.value === '4' && a1.fields.find((f) => f.key === 'old_field')?.value === 'x', 'save writes the note and setup together');
+    C.removePinnedNote({ id }); const a2 = C.pinnedNote({ id }); ok(!a2.has && a2.note === '' && !a2.fields.some((f) => f.value), 'remove clears note and every setup field'); } }
 // Warm-up & mobility on the first lift until a set is logged (App.js warmupRoutine)
 { C.init({ store: JSON.stringify({ unit: 'kg' }) });
   C.createProgram({ config: { name: 'W', unit: 'kg', goal: 'both', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 2 });

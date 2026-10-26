@@ -303,7 +303,7 @@ fun LiftSettingsSheet(vm: AppViewModel, s: JSONObject, ex: JSONObject, onClose: 
             Text("Lift settings", style = MaterialTheme.typography.headlineSmall)
             Text("Goal weight", style = MaterialTheme.typography.titleSmall)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(goal, { goal = it.filter { c -> c.isDigit() || c == '.' }.take(6) }, Modifier.weight(1f), singleLine = true,
+                OutlinedTextField(goal, { goal = com.pursuitiron.app.ui.common.decimalText(it, 6) }, Modifier.weight(1f), singleLine = true,
                     label = { Text("Target ($u)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
                 Button(onClick = { vm.setGoal(id, goal.toDoubleOrNull()); vm.toast(if (goal.isBlank()) "Goal cleared" else "Goal set") }, modifier = Modifier.height(56.dp)) { Text("Set") }
             }
@@ -314,14 +314,6 @@ fun LiftSettingsSheet(vm: AppViewModel, s: JSONObject, ex: JSONObject, onClose: 
                 MorphChip("Default", step <= 0, { vm.setExLoadStep(id, null) }, height = 40.dp)
                 val choices = ex.optJSONArray("stepChoices")
                 (0 until (choices?.length() ?: 0)).forEach { k -> val v = choices!!.optDouble(k); MorphChip("${fmtNum(v)} $u", step == v, { vm.setExLoadStep(id, v) }, height = 40.dp) }
-            }
-            val setup = ex.list("setup")
-            if (setup.isNotEmpty()) {
-                Text("Setup", style = MaterialTheme.typography.titleSmall)
-                setup.forEach { f ->
-                    var v by remember(f.s("key")) { mutableStateOf(f.s("value")) }
-                    OutlinedTextField(v, { v = it.take(40); vm.setExSetup(id, f.s("key"), v) }, Modifier.fillMaxWidth(), singleLine = true, label = { Text(f.s("label")) })
-                }
             }
             Button(onClick = onClose, modifier = Modifier.fillMaxWidth()) { Text("Done") }
         }

@@ -976,7 +976,7 @@ return setView(s, i, ex, best, isW ? E.previousWorkoutSet(lastPerf[e.id], workId
             return { ei, id: e.id, name: ex.name || e.id, short: shortName(ex.name || e.id), line: (() => { try { return liftLine(e, ex); } catch { return ''; } })(), bar, cur, loadTag: loadTag(ex),
                 plates: (() => { try { return plateRef ? platesFor(parseFloat(plateRef.weight), bar, u) : null; } catch { return null; } })(),
                 platesFor: plateRef ? e.sets.indexOf(plateRef) : -1, addRules: addRules(e, ex, style), part: ex.part || '', partLabel: E.PART_LABEL?.[ex.part] || ex.part || '', equip: ex.equip || null, slot: e.slot, primary: e.slot === ctx.day.primaryIndex,
-                superset: !!e.superset, note: e.note || '', lastNote: ctx.P[e.id]?.note || '', injuryAdjusted: e.injuryAdjusted || null, freestyle: !!e.freestyle,
+                superset: !!e.superset, note: e.note || '', lastNote: ctx.P[e.id]?.note || '', pinNote: S.store.exNotes?.[e.id] || '', injuryAdjusted: e.injuryAdjusted || null, freestyle: !!e.freestyle,
                 done: work(e).length > 0 && work(e).every((s) => s.done), sets,
                 hasWarm: e.sets.some((s) => s.warm), hasDrop: e.sets.some((s) => s.sub && s.kind === 'drop'), hasMyo: e.sets.some((s) => s.sub && s.kind === 'myo'),
                 restCustom: e.restCustom || 0, restDefault, goal: Number(S.store.goals?.[e.id]) || null,
@@ -1074,7 +1074,8 @@ const ACTIONS = {
     // App.js editSet / editWeight: a done set is history and cannot be edited.
     edit({ ei, si, field, value }, ctx, d) {
         return d.map((e, i) => (i !== ei ? e : { ...e, sets: e.sets.map((s, j) => (j !== si || s.done ? s : { ...s,
-            [field]: field === 'reps' ? E.sanitizeRepsInput(value) : E.sanitizeWeightInput(value), auto: false, valueOwner: 'user', hint: undefined })) }));
+            // A comma keyboard types "82,5"; the engine's sanitizer would strip the comma into 825.
+            [field]: field === 'reps' ? E.sanitizeRepsInput(value) : E.sanitizeWeightInput(String(value ?? '').replace(',', '.')), auto: false, valueOwner: 'user', hint: undefined })) }));
     },
     bumpReps({ ei, si, delta }, ctx, d) {
         return d.map((e, i) => (i !== ei ? e : { ...e, sets: e.sets.map((s, j) => (j !== si || s.done ? s : { ...s,
@@ -2652,7 +2653,8 @@ export function editor({ programId, weekIndex = 1 } = {}) {
                     type: ex?.type === 'compound' ? 'compound' : 'isolation', last: lastTop(id),
                     plateau: plateauFor(stored || p, (stored || p).days.find((x) => x.id === d.id) || d, id), plateauChoice: plateauQueue()[`${p.id}:${d.id}`]?.[id] || null,
                     style: style || 'auto', styleLabel: STYLE_LABEL[style] || (style ? (E.PROG_STYLES?.[style] || style) : 'Auto'), styleLocked: !!p.progStyleLifter?.[id],
-                    superset: !!p.ss?.[`${d.id}:${slot}`], added: !!ov.added, sets, reps: ov.reps ?? cell?.reps ?? null, rir: cell?.rir ?? null };
+                    superset: !!p.ss?.[`${d.id}:${slot}`], added: !!ov.added, sets, reps: ov.reps ?? cell?.reps ?? null, rir: cell?.rir ?? null,
+                    pinSum: (() => { const pn = pinnedNote({ id }); return pn ? [pn.fields.filter((f) => f.value).map((f) => `${f.label} ${f.value}`).join(' · '), pn.note].filter(Boolean).join(' — ') : ''; })() };
             });
             return { id: d.id, index: di, label: d.label, note: d.note || '', focus: d.focus === 'strength' || d.focus === 'hypertrophy' ? d.focus : null, minutes: mins, weekday: weekdayOf(d.id),
                 sets: exercises.reduce((n, x) => n + (Number(x.sets) || 0), 0),
@@ -2858,6 +2860,18 @@ export function applyProgramSettings({ programId, settings = {}, shuffle = false
     const meta = {};
     if (d.folder != null && d.folder !== (program.folder || '')) meta.folder = String(d.folder).trim() || undefined;
     if (d.description != null && d.description !== (program.description || '')) meta.description = String(d.description) || undefined;
+    // B918 App.js applyCfgDraft: a program the lifter built (not generated) keeps its days; settings apply in place,
+    // and a newly requested bodyweight/barbell constraint its exercises break is refused with the day and lift named.
+    if (program.custom === true && program.engineSource !== 'pursuit-next') {
+        if (shuffle || seed !== undefined) return { ok: false, error: 'You built this program yourself, so there is no generator to shuffle. Change its days in the editor.' };
+        const draft = { ...patch, ...meta };
+        if (!Object.keys(draft).length) return { ok: true, rebuilt: false, changed: false };
+        if (S.live?.programId === programId) return { ok: false, error: 'Finish or discard the workout in progress first.' };
+        let next; try { next = E.applyCustomProgramSettings(program, draft); } catch (err) { return { ok: false, error: String(err?.message || 'These settings could not be applied.') }; }
+        if (preview) return stageRebuild(program, next, 'Before settings change');
+        return commitProgram(program, next, 'Before settings change');
+    }
+    if (patch.weeks != null && E.editableProgramWeeks(patch.weeks) == null) return { ok: false, error: 'Enter a whole number of weeks from 1 to 52.' };
     const rebuild = shuffle || seed !== undefined || Object.keys(patch).length > 0;
     if (rebuild && owner) return { ok: false, error: 'This block belongs to a cycle, which decides how it is built. Duplicate it for a standalone copy you can rebuild.' };
     if (S.live?.programId === programId && rebuild) return { ok: false, error: 'Finish or discard the workout in progress first.' };
@@ -3368,6 +3382,29 @@ export function setExSetup({ id, key, value }) {
     if (v) cur[key] = v; else delete cur[key];
     if (Object.keys(cur).length) all[id] = cur; else delete all[id];
     S.store.exSetup = all; markStore(); return { ok: true };
+}
+/* B932 pinned note: one per exercise, the cue and the machine setup fields staged together; Save writes both,
+   Remove clears the note and every saved setup field (older fields included). */
+export function pinnedNote({ id }) {
+    const ex = EX_BY_ID[id]; if (!ex) return null;
+    const st = S.store.exSetup?.[id] || {}, note = S.store.exNotes?.[id] || '';
+    let fields = []; try { fields = E.setupFieldsWithStored(ex, st).map((f) => ({ key: f.key, label: f.label, value: st[f.key] || '' })); } catch { fields = []; }
+    Object.keys(st).filter((k) => st[k] && !fields.some((f) => f.key === k)).forEach((k) => fields.push({ key: k, label: E.setupLabel?.(k) || k, value: st[k] }));
+    return { id, name: ex.name, note, fields, has: !!(String(note).trim() || Object.values(st).some((v) => String(v || '').trim())) };
+}
+export function savePinnedNote({ id, note = '', setup = {} }) {
+    if (!EX_BY_ID[id]) return { ok: false, error: 'That exercise no longer exists.' };
+    const st = {}; Object.entries(setup || {}).forEach(([k, v]) => { const t = String(v ?? '').trim().slice(0, 40); if (t) st[k] = t; });
+    const all = { ...(S.store.exSetup || {}) }; if (Object.keys(st).length) all[id] = st; else delete all[id];
+    const notes = { ...(S.store.exNotes || {}) }, n = String(note || '').trim().slice(0, 200); if (n) notes[id] = n; else delete notes[id];
+    S.store.exSetup = all; S.store.exNotes = notes; markStore();
+    return { ok: true };
+}
+export function removePinnedNote({ id }) {
+    const all = { ...(S.store.exSetup || {}) }, notes = { ...(S.store.exNotes || {}) };
+    delete all[id]; delete notes[id];
+    S.store.exSetup = all; S.store.exNotes = notes; markStore();
+    return { ok: true };
 }
 /* A machine's weight step belongs to the equipment, so it applies to every block of the program's cycle. */
 export function setExLoadStep({ programId, id, value }) {

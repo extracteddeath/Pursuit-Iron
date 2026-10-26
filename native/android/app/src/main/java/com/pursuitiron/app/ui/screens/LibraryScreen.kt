@@ -26,6 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
@@ -161,10 +162,12 @@ fun LibraryScreen(vm: AppViewModel) {
 @Composable
 fun ExerciseSheet(vm: AppViewModel, id: String, onClose: () -> Unit) {
     var x by remember(id) { mutableStateOf<JSONObject?>(null) }
-    var note by remember(id) { mutableStateOf("") }
-    LaunchedEffect(id) { x = vm.exercise(id); note = x?.s("note").orEmpty() }
+    var pin by remember(id) { mutableStateOf<JSONObject?>(null) }
+    var pinOpen by remember(id) { mutableStateOf(false) }
+    LaunchedEffect(id, pinOpen) { x = vm.exercise(id); if (!pinOpen) pin = vm.pinnedNote(id) }
     val cs = MaterialTheme.colorScheme
-    ModalBottomSheet(onDismissRequest = { x?.let { if (note != it.s("note")) vm.setExNote(id, note) }; onClose() }) {
+    if (pinOpen) PinNoteSheet(vm, id) { pinOpen = false }
+    ModalBottomSheet(onDismissRequest = onClose) {
         val e = x
         Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (e == null) { Text("Loading…"); return@Column }
@@ -189,7 +192,18 @@ fun ExerciseSheet(vm: AppViewModel, id: String, onClose: () -> Unit) {
                     }
                 }
             }
-            OutlinedTextField(note, { note = it }, Modifier.fillMaxWidth(), label = { Text("Your note") }, placeholder = { Text("Seat height, grip, cues that work for you") })
+            // B932: the same pinned-note editor as the workout; setup and cue are saved or removed together
+            val pinned = pin?.let { p -> (p.list("fields").filter { it.s("value").isNotBlank() }.map { "${it.s("label")} ${it.s("value")}" } + listOf(p.s("note")).filter { it.isNotBlank() }).joinToString(" — ") }.orEmpty()
+            Surface(onClick = { pinOpen = true }, color = cs.surfaceContainerHigh, shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
+                Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Icon(PiIcons.Pin, null, Modifier.size(20.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(if (pinned.isBlank()) "Pin a note" else "Pinned note", style = MaterialTheme.typography.titleSmall)
+                        Text(pinned.ifBlank { "Setup per machine and a cue you’ll see every time" }, style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                    }
+                    Icon(PiIcons.ChevronRight, null, Modifier.size(18.dp), tint = cs.onSurfaceVariant)
+                }
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (e.b("banned")) FilledTonalButton(onClick = { vm.setBan(id, false); x = JSONObject(e.toString()).put("banned", false) }) { Text("Unban") }
                 else OutlinedButton(onClick = { vm.setBan(id, true); x = JSONObject(e.toString()).put("banned", true) }) {

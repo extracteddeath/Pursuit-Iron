@@ -395,9 +395,21 @@ if scroll_to(r"^\|Rest time$", tries=3):
     tap(r"^\|Rest time$", "rest-sheet")
     tap(r"^\|3 min$", "rest-set")
 tap(r"Exercise actions")
-if scroll_to(r"Goal, weight step, setup", tries=3):
-    tap(r"Goal, weight step, setup", "lift-settings")
+if scroll_to(r"Goal and weight step", tries=3):
+    tap(r"Goal and weight step", "lift-settings")
     back()
+# B932: the pinned note saves the cue and setup together and shows on the lift
+if tap(r"Pin a note for ", "pin-note", required=False):
+    if tap(r"^\|Note$|Note\|", required=False):
+        adb("shell", "input", "text", "Pause%son%schest")
+        hide_keyboard()
+        time.sleep(0.6)
+    tap(r"^\|Save note$")
+    if not find(r"Pinned note for .*Pause on chest", timeout=6):
+        FAILS.append("pinned note did not show on the lift after Save")
+    shot("pin-saved")
+else:
+    FAILS.append("no pinned-note chip on the lift")
 tap(r"Exercise actions")
 tap(r"Something hurt", "hurt-sheet")
 adb("shell", "input", "keyevent", "4")

@@ -118,6 +118,7 @@ private sealed interface WSheet {
     data class Rest(val ei: Int) : WSheet
     data class Progression(val ei: Int) : WSheet
     data class LiftSettings(val ei: Int) : WSheet
+    data class Pin(val id: String) : WSheet
     data class AddSet(val ei: Int) : WSheet
     data class SetOptions(val ei: Int, val si: Int) : WSheet
     data class Plates(val ei: Int, val si: Int) : WSheet
@@ -219,6 +220,7 @@ fun WorkoutScreen(vm: AppViewModel) {
         is WSheet.Rest -> exs.getOrNull(sh.ei)?.let { RestTimeSheet(vm, it) { sheet = null } } ?: run { sheet = null }
         is WSheet.Progression -> exs.getOrNull(sh.ei)?.let { ProgressionSheet(vm, s, it) { sheet = null } } ?: run { sheet = null }
         is WSheet.LiftSettings -> exs.getOrNull(sh.ei)?.let { LiftSettingsSheet(vm, s, it) { sheet = null } } ?: run { sheet = null }
+        is WSheet.Pin -> PinNoteSheet(vm, sh.id) { sheet = null }
         is WSheet.AddSet -> exs.getOrNull(sh.ei)?.let { AddSetSheet(vm, it) { sheet = null } } ?: run { sheet = null }
         is WSheet.SetOptions -> SetOptionsSheet(vm, s, sh.ei, sh.si) { sheet = null }
         is WSheet.Plates -> exs.getOrNull(sh.ei)?.let { e ->
@@ -320,7 +322,7 @@ private fun ExercisePane(vm: AppViewModel, s: JSONObject, ex: JSONObject?, wide:
         item {
             PiCard(Modifier.widthIn(max = 780.dp), radius = 32.dp, padding = 20.dp) {
                 ExerciseHead(s, ex, onInfo = { open(WSheet.Info(ex.s("id"))) }, onProg = { open(WSheet.Progression(ei)) },
-                    onSetup = { open(WSheet.LiftSettings(ei)) }, onMenu = { open(WSheet.Menu(ei)) })
+                    onSetup = { open(WSheet.Pin(ex.s("id"))) }, onMenu = { open(WSheet.Menu(ei)) })
                 if (ex.b("superset")) Badge("Superset", cs.secondaryContainer, cs.onSecondaryContainer)
                 LastNoteCard(ex, s.s("dayLabel"))
                 s.o("reentry")?.let { r -> ReentryBanner(r) }
@@ -572,7 +574,7 @@ private fun SetEditor(vm: AppViewModel, s: JSONObject, ei: Int, si: Int, onClose
             if (assisted) {
                 // App.js: help is a negative load. Typed and shown as the amount of help; minus adds help, plus takes it off.
                 Text("Assisted: less help is progress. The help comes off once every set tops the range.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
-                Stepper("Assistance (${s.s("unit")})", w, KeyboardType.Decimal, onText = { w = it.filter { c -> c.isDigit() || c == '.' } },
+                Stepper("Assistance (${s.s("unit")})", w, KeyboardType.Decimal, onText = { w = com.pursuitiron.app.ui.common.decimalText(it) },
                     onCommit = { vm.act("edit", "ei" to ei, "si" to si, "field" to "weight", "value" to assistStored(w)) },
                     onMinus = { vm.act("bumpWeight", "ei" to ei, "si" to si, "dir" to -1) }, onPlus = { vm.act("bumpWeight", "ei" to ei, "si" to si, "dir" to 1) },
                     minusLabel = "More assistance", plusLabel = "Less assistance")
@@ -647,9 +649,11 @@ private fun ExerciseMenu(vm: AppViewModel, s: JSONObject, ei: Int, onPick: (WShe
                 MenuRow(PiIcons.List, "Same weight for all sets", "Set every unlogged set to the average", cs.secondaryContainer, cs.onSecondaryContainer) { vm.act("level", "ei" to ei); onPick(null) }
                 MenuRow(PiIcons.Timer, "Rest time", if (ex.i("restCustom") > 0) restLabel(ex.i("restCustom")) else "Default" + (if (ex.i("restDefault") > 0) " · ${restLabel(ex.i("restDefault"))}" else ""), cs.secondaryContainer, cs.onSecondaryContainer) { onPick(WSheet.Rest(ei)) }
                 if (count > 1) MenuRow(PiIcons.Swap, if (ex.b("superset")) "Superset: on" else "Superset", "Alternate sets with another lift", cs.secondaryContainer, cs.onSecondaryContainer) { vm.act("select", "ei" to ei); onPick(WSheet.Superset) }
-                MenuRow(PiIcons.Gym, "Goal, weight step, setup", "Settings kept for this lift", cs.secondaryContainer, cs.onSecondaryContainer) { onPick(WSheet.LiftSettings(ei)) }
+                MenuRow(PiIcons.Gym, "Goal and weight step", "Settings kept for this lift", cs.secondaryContainer, cs.onSecondaryContainer) { onPick(WSheet.LiftSettings(ei)) }
+                val pinned = (ex.list("setup").filter { it.s("value").isNotBlank() }.map { "${it.s("label")} ${it.s("value")}" } + listOf(ex.s("pinNote")).filter { it.isNotBlank() }).joinToString(" — ")
+                MenuRow(PiIcons.Pin, if (pinned.isBlank()) "Pin a note" else "Edit pinned note", pinned.ifBlank { "Setup per machine and a cue you’ll see every time" }, cs.secondaryContainer, cs.onSecondaryContainer) { onPick(WSheet.Pin(ex.s("id"))) }
                 MenuRow(PiIcons.Close, "Skip exercise", "Drop it from today's workout", cs.tertiaryContainer, cs.onTertiaryContainer) { vm.act("skipExercise", "ei" to ei); vm.toast("Skipped ${ex.s("name")}"); onPick(null) }
-                MenuRow(PiIcons.List, "Note", if (ex.s("note").isBlank()) "Seat height, grip, anything to remember" else ex.s("note"), cs.secondaryContainer, cs.onSecondaryContainer) { onPick(WSheet.Note(ei)) }
+                MenuRow(PiIcons.List, "Note for today", if (ex.s("note").isBlank()) "Only this workout; pinned notes stay with the lift" else ex.s("note"), cs.secondaryContainer, cs.onSecondaryContainer) { onPick(WSheet.Note(ei)) }
                 if (ei > 0) MenuRow(PiIcons.ChevronLeft, "Move earlier", "Logged sets move with it", cs.secondaryContainer, cs.onSecondaryContainer) { vm.act("move", "from" to ei, "to" to ei - 1); onPick(null) }
                 if (ei < count - 1) MenuRow(PiIcons.ChevronRight, "Move later", "Logged sets move with it", cs.secondaryContainer, cs.onSecondaryContainer) { vm.act("move", "from" to ei, "to" to ei + 1); onPick(null) }
             }

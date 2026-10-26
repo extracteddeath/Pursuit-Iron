@@ -196,9 +196,13 @@ fun TrainingMaxSheet(vm: AppViewModel) {
                             }
                         }
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedTextField(v, { v = it.filter { c -> c.isDigit() || c == '.' }.take(6) }, Modifier.weight(1f), singleLine = true,
+                            // B933: keep the decimal point as typed (a comma keyboard gives "212,5"); never strip it into 2125,
+                            // and never treat unreadable text as "clear the max".
+                            val parsed = v.trim().replace(',', '.').takeIf { Regex("""\d{1,4}(\.\d{1,2})?""").matches(it) }?.toDoubleOrNull()?.takeIf { it > 0 }
+                            OutlinedTextField(v, { v = it.take(8) }, Modifier.weight(1f), singleLine = true, isError = v.isNotBlank() && parsed == null,
+                                supportingText = if (v.isNotBlank() && parsed == null) ({ Text("Enter a number like 212.5") }) else null,
                                 label = { Text("${if (mode == "tm") "Training max" else "1RM"} ($u)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
-                            Button(onClick = { set(v.toDoubleOrNull(), mode == "orm") }, modifier = Modifier.height(56.dp)) { Text("Set") }
+                            Button(onClick = { parsed?.let { set(it, mode == "orm") } }, enabled = parsed != null, modifier = Modifier.height(56.dp)) { Text("Set") }
                         }
                         val wk = l.o("week")
                         if (wk != null) {

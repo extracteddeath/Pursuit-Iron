@@ -295,7 +295,7 @@ fun GymsSheet(vm: AppViewModel, onClose: () -> Unit) {
                             }
                             limitKeys.forEach { k ->
                                 val cur = gym.optJSONObject("limits")?.let { l -> if (l.isNull(k.s("key"))) "" else fmtNum(l.optDouble(k.s("key"))) } ?: ""
-                                OutlinedTextField(cur, { v -> val clean = v.filter { c -> c.isDigit() || c == '.' }
+                                OutlinedTextField(cur, { v -> val clean = com.pursuitiron.app.ui.common.decimalText(v)
                                     patch(id) { o -> val l = o.optJSONObject("limits") ?: JSONObject(); if (clean.isBlank()) l.remove(k.s("key")) else clean.toDoubleOrNull()?.let { l.put(k.s("key"), it) }; o.put("limits", l); o.put("limitUnit", lu) } },
                                     Modifier.fillMaxWidth(), singleLine = true, label = { Text("${k.s("label")}, ${k.s("sub")} ($lu)") }, placeholder = { Text("No limit") },
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))

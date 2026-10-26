@@ -29,3 +29,10 @@ fun plural(n: Int, word: String) = "$n $word" + if (n == 1) "" else "s"
 fun fmt1(v: Double): String = fmtNum(Math.round(v * 10) / 10.0)
 /** Volume in thousands: tonnes for kg, "k lb" for lb (a tonne of pounds is not a unit). */
 fun volUnit(unit: String): String = if (unit == "lb") "k lb" else "t"
+
+/** Numeric text as typed: a comma keyboard's "212,5" becomes 212.5 (never 2125), one decimal point kept. */
+fun decimalText(s: String, max: Int = 7): String {
+    val t = s.replace(',', '.').filter { it.isDigit() || it == '.' }
+    val i = t.indexOf('.')
+    return (if (i < 0) t else t.substring(0, i + 1) + t.substring(i + 1).replace(".", "")).take(max)
+}

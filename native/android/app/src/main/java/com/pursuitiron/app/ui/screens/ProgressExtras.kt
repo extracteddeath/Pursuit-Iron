@@ -192,11 +192,11 @@ fun HistoryEditSheet(vm: AppViewModel, id: String, onClose: () -> Unit) {
                     lf.sets.toList().forEachIndexed { k, st ->
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(if (st.sub) "↳" else "${k + 1}", style = MaterialTheme.typography.labelMedium, modifier = Modifier.width(20.dp))
-                            OutlinedTextField(st.w, { st.w = it.filter { c -> c.isDigit() || c == '.' }.take(7) }, Modifier.weight(1f), singleLine = true, label = { Text(u) },
+                            OutlinedTextField(st.w, { st.w = com.pursuitiron.app.ui.common.decimalText(it, 7) }, Modifier.weight(1f), singleLine = true, label = { Text(u) },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
                             OutlinedTextField(st.r, { st.r = it.filter { c -> c.isDigit() }.take(3) }, Modifier.weight(0.8f), singleLine = true, label = { Text("Reps") },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-                            OutlinedTextField(st.rir, { st.rir = it.filter { c -> c.isDigit() || c == '.' }.take(3) }, Modifier.weight(0.7f), singleLine = true, label = { Text("RIR") },
+                            OutlinedTextField(st.rir, { st.rir = com.pursuitiron.app.ui.common.decimalText(it, 3) }, Modifier.weight(0.7f), singleLine = true, label = { Text("RIR") },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
                             IconButton(onClick = { lf.sets.remove(st); if (lf.sets.isEmpty()) lifts.remove(lf) }) { Icon(PiIcons.Close, "Remove set ${k + 1}", tint = cs.error) }
                         }

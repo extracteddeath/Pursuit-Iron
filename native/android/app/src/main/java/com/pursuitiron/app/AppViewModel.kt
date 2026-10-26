@@ -629,6 +629,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     suspend fun cycleSchedule(programId: String, weekday: Int): JSONObject? = obj("cycleSchedule", jsonOf("programId" to programId, "weekday" to weekday)).also { refreshHomeSide() }
     suspend fun clearSchedule(programId: String): JSONObject? = obj("clearSchedule", jsonOf("programId" to programId)).also { refreshHomeSide() }
     fun setExNote(id: String, text: String) = launchCore { call("setExNote", jsonOf("id" to id, "text" to text)) }
+    /* B932: the pinned note and its setup fields, staged in one editor and saved or removed together. */
+    suspend fun pinnedNote(id: String): JSONObject? = obj("pinnedNote", jsonOf("id" to id))
+    fun savePinnedNote(id: String, note: String, setup: JSONObject, after: () -> Unit = {}) = launchCore {
+        val r = obj("savePinnedNote", jsonOf("id" to id, "note" to note, "setup" to setup))
+        if (r?.b("ok") == true) { if (session != null) session = obj("session"); toast("Pinned note saved"); after() } else toast(r?.s("error") ?: "Couldn't save the note")
+    }
+    fun removePinnedNote(id: String, after: () -> Unit = {}) = launchCore {
+        call("removePinnedNote", jsonOf("id" to id)); if (session != null) session = obj("session"); toast("Pinned note removed"); after()
+    }
 
     /* ---------------------------------------------------------------- history */
     suspend fun historyDetail(id: String): JSONObject? = obj("historyDetail", jsonOf("id" to id))

@@ -415,6 +415,7 @@ private fun ExerciseCard(vm: AppViewModel, e: JSONObject, dayId: String, x: JSON
     var alts by remember(x.s("id")) { mutableStateOf<List<JSONObject>?>(null) }
     LaunchedEffect(open == "swap", x.s("id")) { if (open == "swap") alts = vm.editSwapOptions(dayId, slot) }
     var rmAsk by remember(x.s("id")) { mutableStateOf(false) }
+    var pinOpen by remember(x.s("id")) { mutableStateOf(false) }
     var repsEdit by remember { mutableStateOf(false) }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     // An opened panel (swap, progression, more) scrolls into view once it has expanded.
@@ -516,8 +517,10 @@ private fun ExerciseCard(vm: AppViewModel, e: JSONObject, dayId: String, x: JSON
                 }
             }
         }
+        if (pinOpen) PinNoteSheet(vm, x.s("id")) { pinOpen = false; vm.refreshEditor() }
         AnimatedVisibility(open == "more", enter = Motion.expandIn, exit = Motion.shrinkOut) {
             Column(Modifier.clip(RoundedCornerShape(18.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                MoreRow(PiIcons.Pin, "Pinned note", x.s("pinSum").ifBlank { "Setup per machine and a cue you’ll see every time" }) { pinOpen = true; onToggle("more") }
                 if (slot < count - 1) MoreRow(PiIcons.Layers, if (x.b("superset")) "Split the superset" else "Superset with the next lift", "Pair with the next exercise, alternating sets") { vm.edit("superset", "dayId" to dayId, "slot" to slot); onToggle("more") }
                 MoreRow(PiIcons.Help, "Why this lift?", "See why the program selected this exercise") { onWhy(); onToggle("more") }
                 MoreRow(PiIcons.Info, "Exercise info", "Muscles worked, equipment, form demo") { onInfo(); onToggle("more") }

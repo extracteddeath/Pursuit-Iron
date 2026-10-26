@@ -169,7 +169,7 @@ fun ProgramSettingsSheet(vm: AppViewModel, onClose: () -> Unit) {
                     Row(Modifier.clip(CircleShape).background(cs.surfaceContainerHigh).padding(3.dp).semantics { contentDescription = "Block length" }, verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(38.dp).clip(CircleShape).background(cs.surface).clickable(enabled = !endless) { if (weeks > 1) weeks-- }.semantics { contentDescription = "One week shorter"; role = Role.Button }, contentAlignment = Alignment.Center) { Text("−", fontSize = 18.sp) }
                         Text(if (endless) "Endless" else "$weeks weeks", style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp, fontWeight = FontWeight.SemiBold), textAlign = TextAlign.Center, modifier = Modifier.widthIn(min = 84.dp))
-                        Box(Modifier.size(38.dp).clip(CircleShape).background(cs.surface).clickable(enabled = !endless) { if (weeks < 16) weeks++ }.semantics { contentDescription = "One week longer"; role = Role.Button }, contentAlignment = Alignment.Center) { Text("+", fontSize = 18.sp) }
+                        Box(Modifier.size(38.dp).clip(CircleShape).background(cs.surface).clickable(enabled = !endless) { if (weeks < 52) weeks++ }.semantics { contentDescription = "One week longer"; role = Role.Button }, contentAlignment = Alignment.Center) { Text("+", fontSize = 18.sp) }
                     }
                     PsChip("Endless", endless) { endless = !endless }
                 }

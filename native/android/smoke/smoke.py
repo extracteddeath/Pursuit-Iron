@@ -414,6 +414,17 @@ else:
     FAILS.append("no pinned-note chip on the lift")
 tap(r"Exercise actions")
 tap(r"Something hurt", "hurt-sheet")
+# The design's three steps: where, how bad, the plan (dismissed without applying)
+if find(r"STEP 1 OF 3", timeout=4):
+    tap(r"^\|Shoulder$|Shoulder\|")
+    tap(r"^\|Next$")
+    tap(r"^\|Sore$|Sore\|", "hurt-level")
+    tap(r"^\|Next$")
+    if not find(r"Here's the plan", timeout=4) or not find(r"Mark it resolved", timeout=2):
+        FAILS.append("Something hurt does not reach its plan step")
+    shot("hurt-plan")
+else:
+    FAILS.append("Something hurt is not the three-step sheet")
 adb("shell", "input", "keyevent", "4")
 time.sleep(1)
 tap(r"workout note", "session-note")

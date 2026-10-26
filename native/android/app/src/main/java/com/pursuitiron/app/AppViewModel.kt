@@ -620,6 +620,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /* Settings → Data (App.js onClearBanned / onClearHistory / resetAll), schedule, references. */
     suspend fun storageStatus(): JSONObject? = obj("storageStatus")
     suspend fun references(): List<JSONObject> = arr(call("references"))
+    suspend fun injuryPreview(region: String): JSONObject? = obj("injuryPreview", jsonOf("region" to region))
     fun clearBanned() = launchCore {
         val r = obj("clearBanned") ?: return@launchCore
         settings = obj("settings")

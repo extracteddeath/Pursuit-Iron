@@ -74,6 +74,8 @@ let sp = C.session();
 const before = sp.exercises.reduce((n, e) => n + e.sets.filter((x) => !x.warm && !x.sub).length, 0);
 const AREAS = C.setupOptions().injuryAreas; const parts = new Set(sp.exercises.map((e) => e.part));
 const area = AREAS.find((a) => a.parts.some((p) => parts.has(p)));
+const pv = C.injuryPreview({ region: area.id });
+ok(pv.label === area.label && pv.lifts.length >= 1 && pv.lifts.every((n) => typeof n === 'string' && n), 'Something hurt previews the lifts the area touches (' + pv.lifts.join(', ') + ')');
 sp = C.act({ type: 'injury', region: area.id, impact: 'reduce' });
 const after = sp.exercises.reduce((n, e) => n + e.sets.filter((x) => !x.warm && !x.sub).length, 0);
 ok(sp.injuries.length === 1 && after < before, area.label + ': reduce impact logs the injury and trims affected work (' + before + ' → ' + after + ')');

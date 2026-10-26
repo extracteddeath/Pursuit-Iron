@@ -1372,6 +1372,17 @@ export function act({ type, ...args } = {}) {
     return session();
 }
 
+/* The design's Something hurt step 3, "Here's the plan": which of today's lifts the area touches, so the
+   plan names them before the engine applies the impact (monitor flags, reduce halves the remaining sets,
+   skip drops the unlogged ones). Logged sets always stay. */
+export function injuryPreview({ region }) {
+    const l = S.live, area = INJURY_AREAS.find((a) => a.id === region);
+    if (!l || !area) return { label: area?.label || '', lifts: [] };
+    const entry = { region, part: area.parts[0] };
+    const lifts = (l.data || []).filter((e) => !e.sets?.every((x) => x.done) && injuryMatchesExercise(entry, EX_BY_ID[e.id], E.secondaryOf(EX_BY_ID[e.id] || {})))
+        .map((e) => EX_BY_ID[e.id]?.name || e.id);
+    return { label: area.label, lifts };
+}
 export function swapOptions({ ei }) {
     const l = S.live; if (!l) return [];
     const ctx = sessionContext(l), e = l.data?.[ei]; if (!ctx || !e) return [];

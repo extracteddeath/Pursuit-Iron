@@ -16,6 +16,11 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -756,37 +761,101 @@ private fun styleLabel(s: String) = when (s) {
     else -> s.replace('_', ' ').replaceFirstChar { it.uppercase() }
 }
 
+/* The design's Something hurt: three steps — where, how bad, and the plan — then Apply. "How bad" picks
+   the engine's impact (Twinge → review before training, Sore → reduce, Sharp → skip), and the plan names
+   today's lifts the area touches from the engine's own matching. */
+private val HURT_LEVELS = listOf(Triple("monitor", "Twinge", "Noticed it, could keep going"), Triple("reduce", "Sore", "Hurt during the lift"), Triple("skip", "Sharp", "Sudden or stabbing, had to stop"))
+
 @Composable
 internal fun HurtSheet(vm: AppViewModel, ei: Int, onClose: () -> Unit) {
-    val opts = vm.setup
-    val areas = opts.list("injuryAreas"); val impacts = opts.list("injuryImpacts")
+    val areas = vm.setup.list("injuryAreas")
+    var step by remember { mutableStateOf(0) }
     var area by remember { mutableStateOf<String?>(null) }
-    var impact by remember { mutableStateOf("reduce") }
+    var impact by remember { mutableStateOf<String?>(null) }
+    var preview by remember { mutableStateOf<JSONObject?>(null) }
+    LaunchedEffect(area) { preview = area?.let { vm.injuryPreview(it) } }
     val cs = MaterialTheme.colorScheme
+    val ready = when (step) { 0 -> area != null; 1 -> impact != null; else -> true }
     ModalBottomSheet(onDismissRequest = onClose) {
-        Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Text("Something hurt?", style = MaterialTheme.typography.headlineSmall)
-            Kicker("Where")
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                areas.forEach { a -> MorphChip(a.s("label"), area == a.s("id"), { area = a.s("id") }, height = 44.dp) }
+        Column(Modifier.padding(horizontal = 18.dp).padding(bottom = 22.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Column {
+                Text("STEP ${step + 1} OF 3", style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.4.sp), color = cs.onSurfaceVariant)
+                Text(when (step) { 0 -> "Where does it hurt?"; 1 -> "How bad is it?"; else -> "Here's the plan" }, style = MaterialTheme.typography.headlineSmall)
             }
-            Kicker("What should happen")
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                impacts.forEach { im ->
-                    val on = impact == im.s("id")
-                    Surface(onClick = { impact = im.s("id") }, color = if (on) cs.primary else cs.surfaceContainerHigh, contentColor = if (on) cs.onPrimary else cs.onSurface,
-                        shape = RoundedCornerShape(if (on) 18.dp else 22.dp), modifier = Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                            Text(im.s("label"), style = MaterialTheme.typography.titleSmall)
-                            Text(im.s("detail"), style = MaterialTheme.typography.bodySmall)
+            androidx.compose.animation.AnimatedContent(step, transitionSpec = { fadeIn(Motion.enter(300)) togetherWith fadeOut(Motion.exit(150)) }, label = "hurtStep") { st ->
+                when (st) {
+                    0 -> Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.semantics { contentDescription = "Where" }) {
+                        areas.chunked(2).forEach { row ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                row.forEach { a -> HurtChoice(a.s("label"), null, area == a.s("id"), 52.dp, Modifier.weight(1f)) { area = a.s("id") } }
+                                if (row.size == 1) Spacer(Modifier.weight(1f))
+                            }
                         }
+                    }
+                    1 -> Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.semantics { contentDescription = "How bad" }) {
+                        HURT_LEVELS.forEach { (id, label, sub) -> HurtChoice(label, sub, impact == id, 64.dp, Modifier.fillMaxWidth()) { impact = id } }
+                    }
+                    else -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        hurtPlan(preview, impact).forEach { line ->
+                            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.surfaceContainerHigh).padding(horizontal = 14.dp, vertical = 12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Box(Modifier.padding(top = 7.dp).size(8.dp).clip(CircleShape).background(cs.primary))
+                                Text(line, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp, lineHeight = 20.sp))
+                            }
+                        }
+                        Text("This adjusts training load. It isn't medical advice. Pain that's sharp, swelling or lasting more than a few days is worth getting checked.",
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 17.sp), color = cs.onSurfaceVariant)
                     }
                 }
             }
-            Text("This adjusts training load. It isn't medical advice; pain that's sharp, swelling or lasting more than a few days is worth getting checked.",
-                style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
-            Button(onClick = { area?.let { vm.act("injury", "region" to it, "impact" to impact) }; vm.toast("Logged. The plan protects that area."); onClose() },
-                enabled = area != null, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Apply") }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Surface(onClick = { if (step == 0) onClose() else step-- }, color = cs.surfaceContainerHigh, shape = CircleShape, modifier = Modifier.weight(1f).height(52.dp)) {
+                    Box(contentAlignment = Alignment.Center) { Text(if (step == 0) "Cancel" else "Back", style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold)) }
+                }
+                Surface(onClick = {
+                    if (!ready) return@Surface
+                    if (step < 2) step++ else {
+                        val a = area ?: return@Surface; val im = impact ?: return@Surface
+                        vm.act("injury", "region" to a, "impact" to im); vm.hap(com.pursuitiron.app.ui.common.Hap.Warn)
+                        val where = (preview?.s("label") ?: "").lowercase()
+                        vm.toast(if (im == "monitor") "Noted · watching your $where" else "Plan adjusted to protect your $where"); onClose()
+                    }
+                }, color = if (ready) cs.primary else cs.surfaceContainerHighest, contentColor = if (ready) cs.onPrimary else cs.onSurfaceVariant,
+                    shape = CircleShape, modifier = Modifier.weight(2f).height(52.dp).semantics { if (!ready) disabled() }) {
+                    Box(contentAlignment = Alignment.Center) { Text(if (step == 2) "Apply" else "Next", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold)) }
+                }
+            }
+        }
+    }
+}
+
+private fun hurtPlan(p: JSONObject?, impact: String?): List<String> {
+    val where = (p?.s("label") ?: "that area").lowercase()
+    val lifts = p?.optJSONArray("lifts")?.let { a -> (0 until a.length()).map { a.optString(it) } } ?: emptyList()
+    val names = lifts.joinToString(", ")
+    val out = mutableListOf<String>()
+    if (lifts.isEmpty()) out += "None of today's lifts load your $where. It's logged, and lifts that do are flagged in later sessions."
+    else when (impact) {
+        "monitor" -> out += "Keep going today. $names ${if (lifts.size == 1) "is" else "are"} flagged so you can decide before each session."
+        "reduce" -> out += "Today: $names keep half of ${if (lifts.size == 1) "its" else "their"} remaining sets. Logged sets stay."
+        else -> out += "Today: stop $names. Logged sets stay; the rest are dropped."
+    }
+    out += "Mark it resolved in the injury log when it feels fine, and the normal plan comes back."
+    return out
+}
+
+@Composable
+private fun HurtChoice(label: String, sub: String?, on: Boolean, minH: Dp, modifier: Modifier, onClick: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val r by animateDpAsState(if (on) (if (sub == null) 16.dp else 18.dp) else (if (sub == null) 26.dp else 22.dp), Motion.spring(), label = "hurtR")
+    val bg by animateColorAsState(if (on) cs.primary else cs.surfaceContainerHigh, Motion.effects(), label = "hurtBg")
+    val fg = if (on) cs.onPrimary else cs.onSurface
+    Box(modifier.heightIn(min = minH).clip(RoundedCornerShape(r)).background(bg).clickable(onClick = onClick)
+        .semantics(mergeDescendants = true) { role = Role.RadioButton; selected = on }.padding(horizontal = 16.dp, vertical = 12.dp),
+        contentAlignment = if (sub == null) Alignment.Center else Alignment.CenterStart) {
+        Column(horizontalAlignment = if (sub == null) Alignment.CenterHorizontally else Alignment.Start) {
+            Text(label, style = MaterialTheme.typography.titleSmall.copy(fontSize = if (sub == null) 15.sp else 16.sp, fontWeight = if (sub == null) FontWeight.Bold else FontWeight.ExtraBold), color = fg)
+            sub?.let { Text(it, style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp), color = fg.copy(alpha = 0.85f)) }
         }
     }
 }

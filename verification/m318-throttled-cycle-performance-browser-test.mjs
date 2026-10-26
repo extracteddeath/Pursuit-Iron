@@ -62,7 +62,7 @@ const program=${JSON.stringify(loggerProgram)},history=${JSON.stringify(loggerHi
 localStorage.setItem('wpb:v1',JSON.stringify(store));localStorage.setItem('wpb:live',JSON.stringify(live));
 createRoot(document.getElementById('root')).render(React.createElement('div',{className:'wpb',style:{height:'100%'}},React.createElement(StyleTag),React.createElement(WorkoutSession,{program,day:program.days[0],weekIndex:1,unit:'lb',perf:{},history,restAutoStart:false,warmupCard:false,onExit:()=>{},onFinish:entry=>window.__m372Finished=entry})));
 </script></body></html>`;
-const mime={'.js':'text/javascript','.mjs':'text/javascript','.json':'application/json','.css':'text/css','.svg':'image/svg+xml','.png':'image/png'};
+const mime={'.html':'text/html','.webmanifest':'application/manifest+json','.js':'text/javascript','.mjs':'text/javascript','.json':'application/json','.css':'text/css','.svg':'image/svg+xml','.png':'image/png'};
 const server=http.createServer((req,res)=>{
  const uri=new URL(req.url,'http://localhost');
  if(uri.pathname==='/__m372_logger'){
@@ -73,7 +73,7 @@ const server=http.createServer((req,res)=>{
   res.end('<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body>M318 engine timing harness</body></html>');
   return;
  }
- const file=path.resolve(root,'.'+decodeURIComponent(uri.pathname));
+ const file=path.resolve(root,'.'+decodeURIComponent(uri.pathname==='/'?'/index.html':uri.pathname));
  if(!file.startsWith(root+path.sep)||!fs.existsSync(file)||!fs.statSync(file).isFile()){
   res.writeHead(404);res.end();return;
  }
@@ -97,6 +97,35 @@ const server=http.createServer((req,res)=>{
   assert.ok(contents.toString().includes(read)&&contents.toString().includes(write),'Reference control must bypass the exact cache boundary');
   contents=contents.toString().replace(read,'').replace(write,'');
  }
+ if(uri.pathname==='/modules/next-engine/workout-history-adapter.js'){
+  for(const [marker,key] of [
+   ['function legacyExerciseById(legacyExercises) {','maps'],
+   ['export function analyzeShellHistoryForNextEngine(program, history, legacyExercises, options = {}) {','analyses']
+  ]){
+   assert.ok(contents.toString().includes(marker),'History work counter must reach '+key);
+   contents=contents.toString().replace(marker,marker+`globalThis.__m376Work ||= {maps:0,analyses:0};globalThis.__m376Work.${key}++;`);
+  }
+  if(process.argv.includes('--history-rebuild-reference')){
+   const marker='    const context = { snap, planSnap: sourceSnapshot(program), legacyMap: legacyExerciseById(legacyExercises) };';
+   assert.ok(contents.toString().includes(marker),'Reference must bypass per-analysis reuse');
+   contents=contents.toString().replace(marker,'    const context = undefined;');
+  }
+ }
+ if(process.argv.includes('--history-rebuild-reference')&&uri.pathname==='/modules/next-engine/loading.js'){
+  for(const marker of [
+   "normalizeLoadingInventory(defaultInventoryDefinition(unit === 'lb' ? 'kg' : 'lb'))",
+   'normalizeLoadingInventory(defaultInventoryDefinition(inventory.unit))',
+   'const defaults = defaultInventoryDefinition(input.unit)'
+  ]){
+   assert.ok(contents.toString().includes(marker),'Reference must restore the original default clone boundary');
+   contents=contents.toString().replace(marker,marker.replace('defaultInventoryDefinition','defaultLoadingInventoryFor'));
+  }
+ }
+ if(process.argv.includes('--history-rebuild-reference')&&uri.pathname==='/modules/session-tools.js'){
+  const marker='const suggestion = hasChoices ? sessionSuggestion(program, day, slot, perf, unit, weekIndex, history) : proposedSuggestion;';
+  assert.ok(contents.toString().includes(marker),'Reference must restore duplicate proposal/effective work');
+  contents=contents.toString().replace(marker,'const suggestion = sessionSuggestion(program, day, slot, perf, unit, weekIndex, history);');
+ }
  res.end(contents);
 });
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
@@ -104,7 +133,7 @@ let browser;
 try{
  browser=await puppeteer.launch({executablePath:process.env.CHROME_BIN||'/usr/bin/google-chrome',
   headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
- if(!process.argv.includes('--logger-only')){
+ if(!process.argv.includes('--logger-only')&&!process.argv.includes('--startup-only')){
  const page=await browser.newPage();
  const pageErrors=[];
  page.on('pageerror',e=>pageErrors.push(e.message));
@@ -177,7 +206,8 @@ try{
  console.log('PASS M318: real mobile Chromium, native/4x CPU: complete cycle creation + saved-history block advancement keep audited executable identity, doses, and finalist choices.');
  await page.close();
  }
- await verifyLoggerPerformance(browser,server.address().port);
+ if(!process.argv.includes('--startup-only'))await verifyLoggerPerformance(browser,server.address().port);
+ if(!process.argv.includes('--logger-only'))await verifyAppPerformance(browser,server.address().port);
 }finally{
  if(browser)await browser.close();
  await new Promise(resolve=>server.close(resolve));
@@ -214,12 +244,13 @@ async function verifyLoggerPerformance(browser,port){
      if(JSON.parse(localStorage.getItem('wpb:live')).data[0].sets[0].done)throw Error('Undo was not persisted');undoTimes.push(performance.now()-start);
     }
     if(localStorage.getItem('wpb:v1')!==before)throw Error('Logging probe changed saved program/history');
-    return {mountedCalls,callsDuringLogging:globalThis.__m372SuggestionCalls,inputTimes,completeTimes,undoTimes};
+    return {mountedCalls,callsDuringLogging:globalThis.__m372SuggestionCalls,inputTimes,completeTimes,undoTimes,historyWork:globalThis.__m376Work};
    });
    assert.ok(result.mountedCalls>0,'The real engine suggestion boundary must be exercised on mount');
+   assert.ok(result.historyWork?.analyses>0&&result.historyWork.maps<=result.historyWork.analyses*3+result.mountedCalls*2+8,'Each history analysis must share its catalog lookup across historical workouts: '+JSON.stringify(result.historyWork));
    assert.equal(result.callsDuringLogging,0,'Typing, completing and undoing sets must reuse unchanged engine suggestions');
    assert.deepEqual(errors,[],'Logging probe must not produce runtime errors');
-   records.push({rate,mountedSuggestionCalls:result.mountedCalls,callsDuringLogging:result.callsDuringLogging,
+   records.push({rate,mountedSuggestionCalls:result.mountedCalls,callsDuringLogging:result.callsDuringLogging,historyWork:result.historyWork,
     input:quantiles(result.inputTimes),complete:quantiles(result.completeTimes),undo:quantiles(result.undoTimes)});
   }finally{await context.close();}
  }
@@ -238,4 +269,73 @@ async function verifyLoggerPerformance(browser,port){
   fs.writeFileSync(filename,JSON.stringify(report,null,2)+'\n');}
  console.log('M372_LOGGING_PERFORMANCE '+JSON.stringify(report));
  console.log('PASS M372: 240-workout history, native/4x CPU; 40 typed values and 10 completion/undo pairs per profile persist exactly without repeating engine suggestions or changing saved training.');
+}
+
+
+// Whole-app startup and repeated recovery, using the same large-history fixture.
+// Timings are diagnostic; actual persisted identity and bounded work are gates.
+async function verifyAppPerformance(browser,port){
+ const records=[],reference=process.argv.includes('--history-rebuild-reference');
+ for(const rate of [1,4]){
+  const context=await browser.createBrowserContext(),page=await context.newPage(),errors=[];
+  page.on('pageerror',error=>errors.push(error.message));
+  try{
+   await page.setViewport({width:393,height:852,isMobile:true,hasTouch:true});
+   await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
+   await page.evaluateOnNewDocument((store,live)=>{
+    localStorage.setItem('wpb:v1',JSON.stringify(store));localStorage.setItem('wpb:live',JSON.stringify(live));
+    globalThis.__m376Startup={longTasks:[]};
+    new PerformanceObserver(list=>globalThis.__m376Startup.longTasks.push(...list.getEntries().map(entry=>({start:entry.startTime,duration:entry.duration})))).observe({type:'longtask',buffered:true});
+    const observer=new MutationObserver(()=>{
+     if(document.querySelector('.wpb-home')&&!globalThis.__m376Startup.ready){
+      globalThis.__m376Startup.ready=true;observer.disconnect();
+      requestAnimationFrame(()=>requestAnimationFrame(()=>{globalThis.__m376Startup.homeMs=performance.now();}));
+     }
+    });observer.observe(document,{subtree:true,childList:true});
+   },loggerStore,{...loggerLive,runPaused:true,elapsedMs:125000});
+   const client=await page.createCDPSession();await client.send('Emulation.setCPUThrottlingRate',{rate});
+   await page.goto(`http://127.0.0.1:${port}/`,{waitUntil:'networkidle0'});
+   await page.waitForFunction(()=>globalThis.__m376Startup?.homeMs>0);
+   const startup=await page.evaluate(()=>globalThis.__m376Startup);
+   const training=()=>page.evaluate(()=>{const state=JSON.parse(localStorage.getItem('wpb:v1'));return JSON.stringify({saved:state.saved,history:state.history,cycles:state.cycles,drafts:state.drafts});});
+   const before=await training(),returns=[];
+   for(let index=0;index<5;index++){
+    await page.waitForSelector('.wpb-live-dock button[aria-label="Resume workout"]');
+    await page.evaluate(()=>{
+     let start;
+     const observer=new MutationObserver(()=>{
+      if(start!==undefined&&document.querySelector('[data-testid="set-0-0"]')){
+       observer.disconnect();requestAnimationFrame(()=>requestAnimationFrame(()=>{globalThis.__m376Return={ms:performance.now()-start,live:JSON.parse(localStorage.getItem('wpb:live'))};}));
+      }
+     });globalThis.__m376Return=null;observer.observe(document,{subtree:true,childList:true});
+     document.querySelector('.wpb-live-dock button[aria-label="Resume workout"]').addEventListener('click',()=>{start=performance.now();},{once:true,capture:true});
+    });
+    await page.locator('.wpb-live-dock button[aria-label="Resume workout"]').click();
+    await page.waitForFunction(()=>!!globalThis.__m376Return);
+    const result=await page.evaluate(()=>globalThis.__m376Return);
+    assert.equal(result.live.sessionId,loggerLive.sessionId);assert.equal(result.live.elapsedMs,125000);
+    assert.equal(result.live.data[0].sets[0].weight,'100');
+    returns.push(Math.round(result.ms*10)/10);
+    await page.evaluate(()=>history.back());await page.waitForSelector('.wpb-workout',{hidden:true});
+   }
+   assert.equal(await training(),before,'Startup/resume cannot change saved training/history');
+   const work=await page.evaluate(()=>globalThis.__m376Work);
+   if(reference)assert.ok(work.maps>loggerHistory.length,'Control must restore repeated historical work');
+   else {
+    assert.ok(work.analyses>0&&work.maps<=work.analyses*3+64,'Full app reuses one history lookup per analysis: '+JSON.stringify(work));
+    assert.ok(work.analyses<=(returns.length*2+3)*loggerData.length,
+     'A review without saved choices must not repeat proposal/effective history analysis: '+JSON.stringify(work));
+   }
+   assert.deepEqual(errors,[]);
+   records.push({rate,homeMs:Math.round(startup.homeMs*10)/10,longTasks:startup.longTasks,warmReturnsMs:returns,historyWork:work});
+  }finally{await context.close();}
+ }
+ const manifest=JSON.parse(fs.readFileSync(path.join(root,'RELEASE_MANIFEST.json'),'utf8'));
+ const report={schemaVersion:1,build:manifest.build,runtimeAggregate:manifest.runtimeAggregate,browser:await browser.version(),reference,
+  fixture:{historyWorkouts:loggerHistory.length,serializedStoreCharacters:JSON.stringify(loggerStore).length,viewport:'393x852',reducedMotion:true},
+  method:'Full local app navigation to two-frame Home readiness; real pointer Resume to two-frame set entry, with exact persisted recovery and unchanged training content. Native/4x CPU emulation. Not field CWV, network timing or physical Android certification.',records};
+ const at=process.argv.indexOf('--app-report');
+ if(at>=0){const target=process.argv[at+1];if(!target||target.startsWith('--'))throw Error('Use --app-report path/to/report.json');fs.mkdirSync(path.dirname(path.resolve(root,target)),{recursive:true});fs.writeFileSync(path.resolve(root,target),JSON.stringify(report,null,2)+'\n');}
+ console.log('M376_APP_PERFORMANCE '+JSON.stringify(report));
+ console.log(reference?'PASS M376 reference: original repeated lookups are reproduced while recovery identity and saved training remain unchanged.':'PASS M376: full-app 240-workout startup and five pointer resume/minimize cycles at native/4x CPU preserve recovery identity and saved training with bounded history lookup work.');
 }

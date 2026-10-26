@@ -19,6 +19,16 @@ assert.equal(nextAvailableLoad('barbell_bench',100,undefined,['barbell','rack'])
 assert.equal(availableLoadAtOrBelow('barbell_bench',104,undefined,['barbell','rack']),100);
 const ordinary=structuredClone(DEFAULT_LOADING_INVENTORY), before=structuredClone(ordinary);
 assert.deepEqual(normalizeLoadingInventory(normalizeLoadingInventory(ordinary)),normalizeLoadingInventory(ordinary));
+for (const unit of ['lb','kg',' KG ']) {
+    const expected = normalizeLoadingInventory({ unit });
+    const editable = normalizeLoadingInventory({ unit });
+    editable.barbell.platePairs[0].weight = 999;
+    editable.dumbbells.availablePerHand.push(999);
+    editable.machine.minimum = 999;
+    editable.exerciseOverrides.changed = { increment: 999 };
+    assert.deepEqual(normalizeLoadingInventory({ unit }), expected,
+        'Normalization returns independent lists and records while reading factory defaults');
+}
 nextAvailableLoad('barbell_bench',185,ordinary,['barbell','rack']);assert.deepEqual(ordinary,before);
 assert.equal(nextAvailableLoad('db-bench',20,{dumbbells:{availablePerHand:[25,20,25,NaN,null]}},['dumbbell']),25);
 assert.equal(nextAvailableLoad('barbell_bench',100,{exerciseOverrides:{barbell_bench:{minimum:0,increment:2.5,maximum:105}}},['barbell','rack']),102.5);

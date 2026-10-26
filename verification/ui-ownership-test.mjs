@@ -406,7 +406,8 @@ assert.ok(css.includes('outline:2px solid Highlight!important;') &&
 const settingsContainer=css.slice(css.indexOf('/* Container em follows text-only enlargement'),css.indexOf('/* Preserve the R41 primary/secondary hierarchy'));
 assert.ok(settingsContainer.includes('@container pi-settings-body (max-width:16em){') &&
   settingsContainer.includes('.wpb .wpb-settings .wpb-settings-row{\n    flex-direction:column;') &&
-  settingsContainer.includes('.wpb .wpb-settings .wpb-settings-row-copy{\n    flex:none;') &&
+  settingsContainer.includes('.wpb .wpb-settings .wpb-settings-row>.wpb-settings-row-copy{\n    flex:none;') &&
+  !settingsContainer.includes('.wpb .wpb-settings .wpb-settings-row-copy{\n    flex:none;') &&
   settingsContainer.includes('.wpb .wpb-settings .wpb-settings-row-control{\n    align-self:flex-start;'),
   'Enlarged Settings row text has full card width and owns its control below');
 

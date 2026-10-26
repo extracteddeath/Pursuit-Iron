@@ -186,6 +186,49 @@ for (const ex of decisionExercises)
 assert.equal(deloadAdvice(decisionHistory), null,
     'three actual sessions with edited revisions must not satisfy the deload evidence floors');
 
+// Correcting observed-effort provenance must invalidate coaching even when
+// every weight/rep/RIR number stays the same. Time also changes recovery.
+{
+    const clock = Date.now, fixed = Date.UTC(2026, 9, 26, 12), id = decisionExercises[0].id;
+    try {
+        Date.now = () => fixed;
+        const evidence = Array.from({ length: 8 }, (_, index) => ({
+            id: 'coach-cache-' + index, programId: 'coach-cache', dayId: 'coach-day', unit: 'lb',
+            date: fixed - (index + 1) * 86400000, updatedAt: fixed - index, perf: { [id]: {
+                weight: 100, reps: 8, sets: [
+                    { w: 100, r: 8, rir: 0, tr: 0, amrap: true, done: true, rirReported: true },
+                    { w: 90, r: 8, rir: 3, tr: 2, done: true, rirReported: true },
+                    { w: 90, r: 8, rir: 3, tr: 2, done: true, rirReported: true }
+                ]
+            } }
+        }));
+        const observed = buildLifterModel(evidence, null, null);
+        assert.equal(buildLifterModel(evidence, null, null), observed, 'Unchanged evidence within the recovery window reuses the model');
+        const corrected = structuredClone(evidence);
+        corrected.forEach(entry => { entry.updatedAt = fixed; entry.perf[id].sets.forEach(set => { set.rirReported = false; }); });
+        const revised = buildLifterModel(corrected, null, null);
+        buildLifterModel([], null, null);
+        const fresh = buildLifterModel(corrected, null, null);
+        assert.notDeepEqual(observed.effort, fresh.effort, 'The fixture changes observed-effort evidence');
+        assert.deepEqual(revised, fresh, 'Coaching must not reuse superseded observed-effort provenance');
+        const program = { id: 'coach-cache', weeks: 1, config: { unit: 'lb' }, days: [] };
+        const pounds = buildLifterModel(corrected, null, program);
+        program.config.unit = 'kg';
+        const kilograms = buildLifterModel(corrected, null, program);
+        buildLifterModel([], null, null);
+        assert.deepEqual(kilograms, buildLifterModel(corrected, null, program),
+            'An in-place program unit correction must reach coaching without an updatedAt change');
+        assert.notEqual(kilograms.lifts[id].e1rm, pounds.lifts[id].e1rm,
+            'The same logged load has different numeric estimates in pounds and kilograms');
+        Date.now = () => fixed + 2 * 86400000;
+        const later = buildLifterModel(corrected, null, null);
+        assert.equal(later.builtAt, Date.now(), 'Recovery coaching refreshes as time passes without new training');
+        Date.now = () => fixed;
+        assert.equal(buildLifterModel(corrected, null, null).builtAt, fixed,
+            'A corrected system clock cannot retain a model built in the future');
+    } finally { Date.now = clock; }
+}
+
 const exercise = { exerciseId: 'lift', name: 'Lift', sets: 2, progressionStyle: 'double',
     prescription: { reps: [10, 15], rir: [2, 2] } };
 const performed = () => Array.from({ length: 2 }, (_, setIndex) => ({ exerciseId: 'lift', setIndex, load: 50, reps: 15, rir: 2 }));

@@ -24,8 +24,9 @@ export const DEFAULT_KG_LOADING_INVENTORY = {
     smith: { minimum: 2.5, increment: 2.5, maximum: 250 },
     exerciseOverrides: {}
 };
+const defaultInventoryDefinition = unit => String(unit).trim().toLowerCase() === 'kg' ? DEFAULT_KG_LOADING_INVENTORY : DEFAULT_LOADING_INVENTORY;
 export function defaultLoadingInventoryFor(unit) {
-    return structuredClone(String(unit).trim().toLowerCase() === 'kg' ? DEFAULT_KG_LOADING_INVENTORY : DEFAULT_LOADING_INVENTORY);
+    return structuredClone(defaultInventoryDefinition(unit));
 }
 // Stock left at the source unit's factory defaults must use the DESTINATION unit's
 // factory loads, even when it has been serialized into a saved program. Converting
@@ -53,7 +54,7 @@ export function loadingInventoryInUnit(input, unit, { nativeDefaults = false } =
     // steps). On subsequent reads the two unit tokens match, so merely fixing conversion below
     // would leave the user's already-saved bogus prescription unchanged.
     if (inventory.unit === unit) {
-        const foreign = normalizeLoadingInventory(defaultLoadingInventoryFor(unit === 'lb' ? 'kg' : 'lb'));
+        const foreign = normalizeLoadingInventory(defaultInventoryDefinition(unit === 'lb' ? 'kg' : 'lb'));
         const oldFactory = {
             barbell: convertedBarbell(foreign.barbell), dumbbells: convertedDumbbells(foreign.dumbbells),
             machine: profile(foreign.machine), cable: profile(foreign.cable), smith: profile(foreign.smith)
@@ -62,7 +63,7 @@ export function loadingInventoryInUnit(input, unit, { nativeDefaults = false } =
             .map(key => [key, targetDefault[key]]));
         return Object.keys(repaired).length ? { ...inventory, ...repaired } : inventory;
     }
-    const sourceDefault = normalizeLoadingInventory(defaultLoadingInventoryFor(inventory.unit));
+    const sourceDefault = normalizeLoadingInventory(defaultInventoryDefinition(inventory.unit));
     const factory = key => JSON.stringify(inventory[key]) === JSON.stringify(sourceDefault[key]);
     const converted = {
         unit,
@@ -81,7 +82,9 @@ export function normalizeLoadingInventory(input) {
     if (!input)
         return defaultLoadingInventoryFor('lb');
     input = record(input);
-    const defaults = defaultLoadingInventoryFor(input.unit);
+    // Normalization constructs every returned list/record itself. Reading the
+    // factory facts here avoids cloning them before immediately copying again.
+    const defaults = defaultInventoryDefinition(input.unit);
     const rawPlates = input.barbell?.platePairs === undefined ? defaults.barbell.platePairs : input.barbell?.platePairs;
     const platePairs = (Array.isArray(rawPlates) ? rawPlates : [])
         .filter(p => p && Number.isFinite(p.weight) && p.weight > 0 && Number.isFinite(p.pairs) && p.pairs > 0)

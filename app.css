@@ -4523,7 +4523,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     flex-direction:column;
     align-items:stretch;
   }
-  .wpb .wpb-settings .wpb-settings-row-copy{
+  .wpb .wpb-settings .wpb-settings-row>.wpb-settings-row-copy{
     flex:none;
   }
   .wpb .wpb-settings .wpb-settings-row-control{

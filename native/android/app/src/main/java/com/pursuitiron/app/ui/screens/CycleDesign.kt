@@ -126,6 +126,23 @@ fun CycleSheet(vm: AppViewModel, id: String?, programId: String? = null, onClose
         }
         editing = true
     }
+    /* B894: an unfinished conversion stays on this device (per program) and is picked up when this page opens again */
+    val convPid = if (converting) (programId ?: p.s("programId")) else ""
+    var recovered by remember { mutableStateOf(false) }
+    LaunchedEffect(converting, p != null) {
+        if (!converting || p == null || editing) return@LaunchedEffect
+        val dj = vm.prefs.convDraft?.let { runCatching { JSONObject(it) }.getOrNull() }?.takeIf { it.s("programId") == convPid } ?: return@LaunchedEffect
+        startEdit()
+        name = dj.s("name", name)
+        val fixed = draft.filter { it.fixed }
+        draft.clear(); draft.addAll(fixed)
+        dj.list("blocks").forEach { b -> draft.add(DBlock(b.s("phase").ifBlank { "mixed_accumulation" }, b.i("weeks", 4).coerceIn(1, 24), b.s("label").ifBlank { null }, false)) }
+        recovered = true
+    }
+    val convJson = if (converting && editing) JSONObject().put("programId", convPid).put("name", name)
+        .put("blocks", JSONArray().apply { draft.filter { !it.fixed }.forEach { put(JSONObject().put("phase", it.phase).put("weeks", it.weeks).put("label", it.label ?: "")) } }).toString() else null
+    LaunchedEffect(convJson) { if (convJson != null) vm.prefs.putConvDraft(convJson) }
+    fun discardConv() { vm.prefs.putConvDraft(null); recovered = false; editing = false }
     // A single program opens straight on its Turn-into-cycle card; Edit on a cycle starts the draft from its blocks.
     val blocks: List<DBlock> = if (editing) draft else c?.list("blocks")?.map { b ->
         DBlock(b.s("phase").ifBlank { "mixed_accumulation" }, b.i("weeks").coerceAtLeast(1), b.s("label"), b.s("state") != "upcoming", b.s("state"), b.i("weeksIn"), b.s("id"), b.i("sessions"), b.i("index"))
@@ -139,7 +156,7 @@ fun CycleSheet(vm: AppViewModel, id: String?, programId: String? = null, onClose
     }
     val actIdx = blocks.indexOfFirst { it.state == "active" }.let { if (it < 0) blocks.indexOfLast { b -> b.fixed } else it }
 
-    DesignPage("Training cycle", { if (editing && !converting) editing = false else onClose() },
+    DesignPage("Training cycle", { if (editing && !converting) editing = false else { if (converting && editing) vm.toast("Cycle setup kept on this device"); onClose() } },
         actions = if (!editing && c != null && !c.b("done") && c.b("reshapable")) ({
             Box(Modifier.height(40.dp).clip(CircleShape).background(cs.surfaceContainerHigh).clickable { startEdit() }.padding(horizontal = 14.dp)
                 .semantics { role = Role.Button }, contentAlignment = Alignment.Center) {
@@ -148,7 +165,7 @@ fun CycleSheet(vm: AppViewModel, id: String?, programId: String? = null, onClose
         }) else null,
         bottom = if (editing) ({
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilledTonalButton(onClick = { if (converting) { editing = false } else editing = false }, modifier = Modifier.weight(1f).height(54.dp)) { Text("Cancel", fontWeight = FontWeight.Bold) }
+                FilledTonalButton(onClick = { if (converting) discardConv() else editing = false }, modifier = Modifier.weight(1f).height(54.dp)) { Text("Cancel", fontWeight = FontWeight.Bold) }
                 Button(onClick = {
                     val fut = JSONArray(); blocks.filter { !it.fixed }.forEach { b -> fut.put(JSONObject().put("phase", b.phase).put("weeks", b.weeks).put("label", b.label ?: PHASE_NAMES[b.phase])) }
                     if (converting) { val pid = programId ?: p.s("programId"); vm.convertToCycle(pid, name.trim(), fut, true) { newId -> cycleId = newId; editing = false } }
@@ -189,6 +206,8 @@ fun CycleSheet(vm: AppViewModel, id: String?, programId: String? = null, onClose
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp), color = cs.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
             }
         }
+        if (editing && converting && recovered) DraftBanner("Picking up your unfinished cycle setup. It stays on this device until you save or discard it.") {
+            vm.prefs.putConvDraft(null); recovered = false; startEdit(); vm.toast("Setup discarded") }
         if (editing) {
             CapLabel("CYCLE NAME")
             BasicTextField(name, { name = it.take(40) }, singleLine = true, textStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = 17.sp, color = cs.onSurface),

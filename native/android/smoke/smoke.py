@@ -765,6 +765,23 @@ tap(r"^\|Today$|^Today\|", "today-lb")
 tap(r"^\|Plan$|^Plan\|")
 scroll_up_to(r"^\|Edit program$|Review block|^\|New$", tries=10)
 row_scroll_to(r"^\|New$", r"Review block|^\|Settings$|^\|Details$|^\|Schedule$", tries=6)
+# B894: an unfinished cycle setup survives closing the wizard; Discard starts fresh
+if tap(r"^\|New$", "draft-setup", required=False):
+    tap(r"^\|Training cycle$|Training cycle\|")
+    tap(r"^\|Continue$")
+    time.sleep(1)
+    back(); back()
+    row_scroll_to(r"^\|New$", r"Review block|^\|Settings$|^\|Details$|^\|Schedule$", tries=6)
+    tap(r"^\|New$")
+    if not find(r"Picking up your unfinished cycle setup", timeout=6):
+        FAILS.append("unfinished cycle setup not recovered")
+    else:
+        shot("setup-draft")
+        tap(r"^\|Discard$")
+    if find(r"^\|Continue$", timeout=4):
+        back()
+    scroll_up_to(r"^\|Edit program$|Review block|^\|New$", tries=10)
+    row_scroll_to(r"^\|New$", r"Review block|^\|Settings$|^\|Details$|^\|Schedule$", tries=6)
 if tap(r"^\|New$", "cycle-setup"):
     wizard("Smoke Cycle", cycle=True)
     time.sleep(8)

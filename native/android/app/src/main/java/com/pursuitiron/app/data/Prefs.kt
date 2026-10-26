@@ -89,6 +89,14 @@ class Prefs(context: Context) {
         private set
     fun hideBackupNudge() { backupNudgeHiddenAt = System.currentTimeMillis(); sp.edit().putLong("backupNudgeHiddenAt", backupNudgeHiddenAt).apply() }
     fun changePins(v: List<String>) { pins = v; sp.edit().putString("pins", org.json.JSONArray(v).toString()).apply() }
+    /** B894: unfinished cycle setups (the Create wizard, and turning a program into a cycle). Device-only, separate from training records;
+        cleared by a successful build or a deliberate discard, kept when generation fails. */
+    var setupDraft: String? = sp.getString("setupDraft", null)
+        private set
+    fun putSetupDraft(v: String?) { if (v == setupDraft) return; setupDraft = v; sp.edit().apply { if (v == null) remove("setupDraft") else putString("setupDraft", v) }.apply() }
+    var convDraft: String? = sp.getString("convDraft", null)
+        private set
+    fun putConvDraft(v: String?) { if (v == convDraft) return; convDraft = v; sp.edit().apply { if (v == null) remove("convDraft") else putString("convDraft", v) }.apply() }
     fun markAskedNotifications() { askedNotifications = true; sp.edit().putBoolean("askedNotifications", true).apply() }
 }
 

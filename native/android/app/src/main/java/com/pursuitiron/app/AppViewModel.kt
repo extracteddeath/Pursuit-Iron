@@ -418,6 +418,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun createCycle(config: JSONObject, templateId: String, blocks: JSONArray?, adapt: Boolean) = launchCore {
         val r = working("Building your training cycle") { obj("createCycle", jsonOf("config" to config, "templateId" to templateId, "blocks" to blocks, "adapt" to adapt)) } ?: return@launchCore
         if (!r.b("ok")) { toast(r.s("error", "The cycle couldn't be built. Nothing was saved.")); return@launchCore }
+        prefs.putSetupDraft(null)
         hap(Hap.Done)
         refreshHomeSide(); plan = obj("plan")
         screen = Screen.Tabs; tab = Tab.Plan
@@ -450,6 +451,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun convertToCycle(programId: String, name: String, blocks: JSONArray, adapt: Boolean, after: (String) -> Unit = {}) = launchCore {
         val r = working("Building your training cycle") { obj("convertToCycle", jsonOf("programId" to programId, "templateId" to "custom", "name" to name, "blocks" to blocks, "adapt" to adapt)) } ?: return@launchCore
         if (!r.b("ok")) { toast(r.s("error", "The training cycle couldn't be built. Your program is unchanged.")); return@launchCore }
+        prefs.putConvDraft(null)
         hap(Hap.Done); refreshHomeSide(); after(r.s("cycleId"))
         toast("Training cycle created · ${r.i("blocks")} blocks · this program kept as block 1")
     }

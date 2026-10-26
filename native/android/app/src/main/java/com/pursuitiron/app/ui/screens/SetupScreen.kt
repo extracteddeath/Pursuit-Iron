@@ -70,7 +70,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.pursuitiron.app.AppViewModel
 import com.pursuitiron.app.ui.common.PiIcons
+import com.pursuitiron.app.ui.common.b
+import com.pursuitiron.app.ui.common.i
 import com.pursuitiron.app.ui.common.list
+import com.pursuitiron.app.ui.common.o
+import com.pursuitiron.app.ui.common.strings
 import com.pursuitiron.app.ui.common.s
 import com.pursuitiron.app.ui.theme.Motion
 import org.json.JSONArray
@@ -105,40 +109,59 @@ private val PRESETS = listOf(
 private val EXP = listOf(Triple("none", "None", "Brand new to lifting"), Triple("beginner", "Beginner", "< 1 year training"), Triple("intermediate", "Intermediate", "1–3 years training"), Triple("advanced", "Advanced", "3+ years, dialled-in"))
 private val GOALS = mapOf("hypertrophy" to "Hypertrophy", "strength" to "Strength", "both" to "Strength & Size")
 
+/* B894: an unfinished cycle setup stays on this device; Discard starts the wizard fresh. */
 @Composable
 fun SetupScreen(vm: AppViewModel) {
+    var gen by remember { mutableIntStateOf(0) }
+    androidx.compose.runtime.key(gen) { SetupBody(vm) { vm.prefs.putSetupDraft(null); gen++; vm.toast("Setup discarded") } }
+}
+
+@Composable
+private fun SetupBody(vm: AppViewModel, onDiscard: () -> Unit) {
     val opts = vm.setup
     val cs = MaterialTheme.colorScheme
     val full = vm.setupFull
     val activeGym = vm.gyms?.let { g -> g.list("gyms").firstOrNull { it.s("id") == g.s("activeGymId") } }
     val gymEquip = activeGym?.optJSONArray("equipment")?.let { a -> (0 until a.length()).map { a.optString(it) } }?.filter { it != "bodyweight" } ?: PRESETS[0].second
+    // A recovered cycle setup (not for the guided setup or a template pick, which start fresh)
+    val d0 = remember { if (full || vm.setupMode == "template") null else vm.prefs.setupDraft?.let { runCatching { JSONObject(it) }.getOrNull() } }
     // Answers
-    var chose by remember { mutableStateOf(false) }
-    var cyc by remember { mutableStateOf(vm.setupMode == "cycle") }
+    var chose by remember { mutableStateOf(d0.b("chose")) }
+    var cyc by remember { mutableStateOf(d0 != null || vm.setupMode == "cycle") }
+    var seen by remember { mutableStateOf(d0 != null) }
     var tplOpen by remember { mutableStateOf(vm.setupMode == "template") }
-    var step by remember { mutableIntStateOf(0) }
-    var unit by remember { mutableStateOf(vm.settings.s("unit", "kg")) }
-    var name by remember { mutableStateOf("") }
-    var exp by remember { mutableStateOf(vm.settings.s("experience").let { if (it == "novice") "none" else it }.ifBlank { "intermediate" }) }
-    var goal by remember { mutableStateOf("hypertrophy") }
-    var approach by remember { mutableStateOf("standard") }
-    var days by remember { mutableIntStateOf(4) }
-    var split by remember { mutableStateOf<String?>(null) }
-    var session by remember { mutableStateOf("s60") }
+    var step by remember { mutableIntStateOf(d0.i("step")) }
+    var unit by remember { mutableStateOf(d0.s("unit").ifBlank { vm.settings.s("unit", "kg") }) }
+    var name by remember { mutableStateOf(d0.s("name")) }
+    var exp by remember { mutableStateOf(d0.s("experience").ifBlank { vm.settings.s("experience").let { if (it == "novice") "none" else it }.ifBlank { "intermediate" } }) }
+    var goal by remember { mutableStateOf(d0.s("goal", "hypertrophy")) }
+    var approach by remember { mutableStateOf(d0.s("approach", "standard")) }
+    var days by remember { mutableIntStateOf(d0.i("days", 4)) }
+    var split by remember { mutableStateOf(d0.s("split").ifBlank { null }) }
+    var session by remember { mutableStateOf(d0.s("session", "s60")) }
     var equip by remember { mutableStateOf(if (full) PRESETS[0].second.toSet() else gymEquip.toSet()) }
-    var noRack by remember { mutableStateOf(false) }
-    var noBodyweight by remember { mutableStateOf(false) }
-    var noSupersets by remember { mutableStateOf(false) }
-    var barbellCap by remember { mutableStateOf<Int?>(null) }
-    val focus = remember { mutableStateMapOf<String, Int>() }
-    val reduce = remember { mutableStateListOf<String>() }
+    var noRack by remember { mutableStateOf(d0.b("noRack")) }
+    var noBodyweight by remember { mutableStateOf(d0.b("noBodyweight")) }
+    var noSupersets by remember { mutableStateOf(d0.b("noSupersets")) }
+    var barbellCap by remember { mutableStateOf(d0?.takeIf { it.has("barbellCap") && !it.isNull("barbellCap") }?.optInt("barbellCap")) }
+    val focus = remember { mutableStateMapOf<String, Int>().apply { d0.o("focus")?.let { f -> f.keys().forEach { k -> put(k, f.optInt(k)) } } } }
+    val reduce = remember { mutableStateListOf<String>().apply { addAll(d0.strings("reduce")) } }
     var progression by remember { mutableStateOf("auto") }
     var weeks by remember { mutableIntStateOf(4) }
     var endless by remember { mutableStateOf(false) }
-    var deload by remember { mutableStateOf(false) }
-    var template by remember { mutableStateOf(vm.cycles.list("templates").firstOrNull()?.s("id") ?: "powerbuilding") }
-    val custom = remember { mutableStateListOf(CustomBlock("hypertrophy_accumulation", 6), CustomBlock("strength_accumulation", 5), CustomBlock("peak", 3)) }
-    var adapt by remember { mutableStateOf(false) }
+    var deload by remember { mutableStateOf(d0.b("deload")) }
+    var template by remember { mutableStateOf(d0.s("template").ifBlank { vm.cycles.list("templates").firstOrNull()?.s("id") ?: "powerbuilding" }) }
+    val custom = remember { mutableStateListOf<CustomBlock>().apply {
+        val saved = d0.list("custom").map { CustomBlock(it.s("phase"), it.i("weeks", 4)) }
+        addAll(saved.ifEmpty { listOf(CustomBlock("hypertrophy_accumulation", 6), CustomBlock("strength_accumulation", 5), CustomBlock("peak", 3)) }) } }
+    var adapt by remember { mutableStateOf(d0.b("adapt")) }
+    // Every answer of an unfinished cycle setup is written as it changes, so closing or a restart picks it up again
+    val draftJson = if (full || !cyc || !seen) null else JSONObject().put("chose", chose).put("step", step).put("unit", unit).put("name", name).put("experience", exp)
+        .put("goal", goal).put("approach", approach).put("days", days).put("split", split ?: "").put("session", session).put("noRack", noRack)
+        .put("noBodyweight", noBodyweight).put("noSupersets", noSupersets).put("barbellCap", barbellCap ?: JSONObject.NULL)
+        .put("focus", JSONObject().apply { focus.forEach { (k, v) -> put(k, v) } }).put("reduce", JSONArray(reduce.toList())).put("deload", deload)
+        .put("template", template).put("custom", JSONArray().apply { custom.forEach { put(JSONObject().put("phase", it.phase).put("weeks", it.weeks)) } }).put("adapt", adapt).toString()
+    LaunchedEffect(draftJson) { if (draftJson != null) vm.prefs.putSetupDraft(draftJson) else if (seen && !cyc) vm.prefs.putSetupDraft(null) }
     var revOpen by remember { mutableStateOf(false) }
     var pick by remember { mutableStateOf<String?>(null) }
 
@@ -185,14 +208,14 @@ fun SetupScreen(vm: AppViewModel) {
     fun next() {
         if (!canNext) return
         when {
-            key == "mode" -> { chose = true; step = 0; tplOpen = false }
+            key == "mode" -> { chose = true; step = 0; tplOpen = false; if (cyc) seen = true }
             at < steps.size - 1 -> { step = at + 1; revOpen = false }
             else -> finish()
         }
     }
     fun back() {
         when {
-            !chose && at == 0 -> vm.closeSetup()
+            !chose && at == 0 -> { if (cyc && seen && !full) vm.toast("Cycle setup kept on this device"); vm.closeSetup() }
             chose && at == 0 -> { chose = false; step = 0 }
             else -> step = at - 1
         }
@@ -243,6 +266,7 @@ fun SetupScreen(vm: AppViewModel) {
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp).padding(top = 18.dp, bottom = 24.dp).widthIn(max = 760.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 val (h, sub) = heads[k] ?: ("" to "")
+                if (d0 != null) DraftBanner("Picking up your unfinished cycle setup. It stays on this device until you build or discard it.", onDiscard)
                 Column(Modifier.padding(bottom = 6.dp)) {
                     Text(h, style = MaterialTheme.typography.headlineSmall.copy(fontSize = 28.sp, lineHeight = 32.sp), modifier = Modifier.semantics { heading() })
                     Text(if (k == "deload") "Your block runs ${if (cyc) "its first block's" else "$weeks"} weeks. A deload adds a lighter recovery week at the end." else sub,
@@ -499,5 +523,19 @@ private fun EquipmentStep(opts: JSONObject?, equip: Set<String>, onEquip: (Set<S
     Column(Modifier.clip(RoundedCornerShape(20.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
         if ("barbell" in equip) WzCheckRow("No squat rack", "Skips lifts taken from a rack or safeties — squats, bench and standing presses. Barbell work from the floor stays.", noRack) { onNoRack(!noRack) }
         WzCheckRow("Skip bodyweight exercises", "No push-ups, planks, bodyweight squats, etc. — only loaded movements.", noBw) { onNoBw(!noBw) }
+    }
+}
+
+/** The design's draft banner (Main.dc.html peDraftOn / cycRecovered / wzRecovered): tertiary status with Discard. */
+@Composable
+fun DraftBanner(text: String, onDiscard: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.tertiaryContainer).padding(start = 14.dp, end = 10.dp, top = 10.dp, bottom = 10.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(text, style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp), color = cs.onTertiaryContainer, modifier = Modifier.weight(1f))
+        androidx.compose.material3.OutlinedButton(onClick = onDiscard, modifier = Modifier.height(36.dp), contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp),
+            border = androidx.compose.foundation.BorderStroke(1.5.dp, cs.onTertiaryContainer)) {
+            Text("Discard", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = cs.onTertiaryContainer)
+        }
     }
 }

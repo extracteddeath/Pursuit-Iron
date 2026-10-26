@@ -1,3 +1,9 @@
+## Build 925 / M378 — Stable selection geometry with one motion owner
+
+- Plan, Progress and Library segment changes keep adjacent choices and touch targets stationary while their measured selected indicator moves. Remove redundant indicator stretch/corner springs; keep the quiet root-navigation budget from Build 924.
+- The workout effort-scale spring remains, as do keyboard selection, theme-aware indicator color, reduced motion, accessibility and all canonical engine 0.65.9, persisted data, logging, and backup boundaries.
+- Update the existing B831 browser contract to require stable selected geometry; full lifecycle, engine parity, browser, offline and hosted integrity gates are mandatory before launch publication. Real Android IME/TalkBack acceptance remains separate.
+
 ## Build 924 / M377 — Calmer root navigation without competing animation
 
 - Ordinary Home/Plan/Progress/Profile/Settings navigation now animates at most the lead content card, rather than staggering up to five cards and bouncing the newly selected tab icon on top of the indicator. Preserve the one measured navigation indicator, spatial direction, and actual tapped-source relationship when appropriate.

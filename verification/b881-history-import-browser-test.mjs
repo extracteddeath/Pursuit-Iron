@@ -24,6 +24,9 @@ const STRONG = [
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'b881-'));
 const csvPath = path.join(tmp, 'strong_workouts.csv');
 fs.writeFileSync(csvPath, STRONG);
+const backupPath = path.join(tmp, 'backup.json');
+fs.writeFileSync(backupPath, JSON.stringify({ ...initial, history: [existing,
+    { ...existing, id: 'restored-2', date: existing.date + 86400000, updatedAt: existing.date + 86400000 }] }));
 
 // Exercise transfer failures and file-read races through the production Settings component.
 const slowPath = path.join(tmp, 'slow.txt'), badPath = path.join(tmp, 'unreadable.txt');
@@ -86,6 +89,51 @@ async function backupContracts(browser, url, width, theme) {
             }));
             assert.deepEqual(bad, [], 'Full labels and shared 48px targets at ' + width + 'px');
         };
+        const reviewLayout = async kind => {
+            const selectors = ['[aria-label="Backup merge impact"]', '[data-import-switch-hint]',
+                ...(kind === 'csv' ? ['[data-csv-import-summary]', '[data-csv-unit="kg"]'] : [])];
+            const fonts = () => page.evaluate(selectors => selectors.map(selector =>
+                parseFloat(getComputedStyle(document.querySelector(selector)).fontSize)), selectors);
+            const normal = await fonts();
+            if (process.env.PI_SCREENSHOTS) {
+                await page.$eval('[aria-label="Backup merge impact"]', el => el.scrollIntoView({ block: 'center' }));
+                await page.screenshot({ path: path.join(process.env.PI_SCREENSHOTS, `backup-review-${kind}-${width}-${theme}-100.png`) });
+            }
+            const impact = await page.$$eval('[data-backup-row]', rows => rows.map(row => ({
+                key: row.dataset.backupRow, label: row.querySelector('th').textContent,
+                counts: [...row.querySelectorAll('td')].map(cell => cell.lastElementChild?.textContent || cell.textContent)
+            })));
+            await page.evaluate(() => document.documentElement.style.fontSize = '200%');
+            const enlarged = await fonts();
+            await page.$eval('[aria-label="Backup merge impact"]', el => el.scrollIntoView({ block: 'center' }));
+            if (process.env.PI_SCREENSHOTS)
+                await page.screenshot({ path: path.join(process.env.PI_SCREENSHOTS, `backup-review-${kind}-${width}-${theme}-200.png`) });
+            assert.ok(enlarged.every((font, index) => font >= normal[index] * 1.9),
+                'Restore review and unit choice must follow 200% text: ' + JSON.stringify({ normal, enlarged }));
+            await layout();
+            const overflow = await page.$$eval('.wpb-backup table, .wpb-backup tbody th, .wpb-backup td, [data-csv-import-summary]', nodes => nodes.flatMap(node => {
+                const r = node.getBoundingClientRect();
+                return r.left < -1 || r.right > innerWidth + 1 || node.scrollWidth > node.clientWidth + 1
+                    ? [{ text: node.textContent, width: r.width, scroll: node.scrollWidth }] : [];
+            }));
+            assert.deepEqual(overflow, [], 'Restore impact and CSV summary stay readable inside the viewport');
+            const client = await page.createCDPSession();
+            const { nodes } = await client.send('Accessibility.getFullAXTree');
+            const table = nodes.find(node => node.role?.value === 'table' && node.name?.value === 'Backup merge impact');
+            assert.ok(table, 'Reflow retains the accessible table');
+            const children = node => (node.childIds || []).flatMap(id => {
+                const child = nodes.find(candidate => candidate.nodeId === id);
+                return child ? [child, ...children(child)] : [];
+            });
+            const headers = children(table).filter(node => node.role?.value === 'columnheader').map(node => node.name?.value);
+            assert.deepEqual(headers, ['Records', 'Add', 'Update', 'Remove'], 'Responsive impact keeps named column associations');
+            await client.detach();
+            assert.deepEqual(await page.$$eval('[data-backup-row]', rows => rows.map(row => ({
+                key: row.dataset.backupRow, label: row.querySelector('th').textContent,
+                counts: [...row.querySelectorAll('td')].map(cell => cell.lastElementChild?.textContent || cell.textContent)
+            }))), impact, 'Reflow preserves every record/count mapping');
+            await page.evaluate(() => document.documentElement.style.fontSize = '');
+        };
         await page.goto(url, { waitUntil: 'networkidle0' }); await page.click('[data-tab="settings"]');
         await page.waitForSelector('.wpb-storage-status');
         await action('Protect');
@@ -147,10 +195,21 @@ async function backupContracts(browser, url, width, theme) {
         await page.evaluate(() => window.backupProbe.resolveFile('stale after close'));
         await action('Restore backup');
         assert.equal(await page.$eval('.wpb-backup textarea', el => el.value), '', 'Closing invalidates pending reads');
+        const reviewInput = await page.$('.wpb-backup input[type="file"]');
+        await reviewInput.uploadFile(csvPath); await page.waitForSelector('[data-csv-import-summary]');
+        await reviewLayout('csv');
+        await reviewInput.uploadFile(backupPath); await page.waitForSelector('[data-backup-row="saved"]');
+        await reviewLayout('json');
         await page.evaluate(() => document.documentElement.style.fontSize = '200%'); await layout();
+        await action('Confirm restore');
+        await page.waitForFunction(() => JSON.parse(localStorage.getItem('wpb:v1')).history.length === 2);
+        assert.ok(await page.evaluate(() => JSON.parse(localStorage.getItem('wpb:v1')).history.some(entry => entry.id === 'restored-2')),
+            'Reviewed JSON backup adds the intended record at enlarged text');
+        await action('Undo this restore');
+        await page.waitForFunction(() => JSON.parse(localStorage.getItem('wpb:v1')).history.length === 1);
         assert.equal((await page.evaluate(() => JSON.parse(localStorage.getItem('wpb:v1')).history)).length, 1, 'Transfer/preview failures never mutate records');
         assert.deepEqual(errors, []);
-        console.log('PASS backup safety ' + width + 'px ' + theme + ': grants, failures, cancellation, CSV distinction, single transfer, stale reads and 200% labels.');
+        console.log('PASS backup safety ' + width + 'px ' + theme + ': grants, transfer failures/cancellation, stale reads, enlarged JSON/CSV previews, accessible counts and JSON restore/Undo.');
     } finally { await context.close(); }
 }
 
@@ -190,11 +249,14 @@ try {
         assert.match(summaryText, /Zercher Mystery Lift \(1 set\)/, 'the skipped lift is named: ' + summaryText);
         const rows = await page.$$eval('[data-backup-row]', els => els.map(el => el.getAttribute('data-backup-row')));
         assert.deepEqual(rows, ['history', 'custom'], 'a workout import previews only the records it can change');
+        await page.evaluate(() => document.documentElement.style.fontSize = '200%');
         // The unit question: defaults to the app unit, switching re-previews.
         assert.equal(await page.$eval('[data-csv-unit="lb"]', el => el.getAttribute('aria-pressed')), 'true');
-        await page.click('[data-csv-unit="kg"]');
+        const unitChoice = await page.$('[data-csv-unit="kg"]');
+        await unitChoice.evaluate(el => el.scrollIntoView({ block: 'center' })); await unitChoice.click();
         await page.waitForFunction(() => document.querySelector('[data-csv-unit="kg"]').getAttribute('aria-pressed') === 'true');
         const importBtn = await page.waitForSelector('xpath/.//button[normalize-space(.)="Import workouts"]');
+        await importBtn.evaluate(el => el.scrollIntoView({ block: 'center' }));
         await importBtn.click();
         await page.waitForFunction(() => JSON.parse(localStorage.getItem('wpb:v1')).history.length === 3, { timeout: 10000 });
         const after = await page.evaluate(() => JSON.parse(localStorage.getItem('wpb:v1')));
@@ -204,6 +266,7 @@ try {
         assert.equal(after.unit, 'lb', 'device unit untouched');
         // Undo puts back exactly the prior log.
         const undo = await page.waitForSelector('xpath/.//button[normalize-space(.)="Undo this restore"]');
+        await undo.evaluate(el => el.scrollIntoView({ block: 'center' }));
         await undo.click();
         await page.waitForFunction(() => JSON.parse(localStorage.getItem('wpb:v1')).history.length === 1, { timeout: 10000 });
         assert.deepEqual(errors, [], 'no runtime errors');

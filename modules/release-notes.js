@@ -2,6 +2,9 @@
 import { Accessibility, Activity, AlertTriangle, Award, Ban, BarChart3, Brain, Calendar, Check, CheckCircle2, Clock, Dumbbell, Flame, GripVertical, HardDrive, HelpCircle, Home as HomeIcon, Info, Layers, Library, Maximize2, Medal, Milestone, Minus, Palette, Play, Plus, PlusCircle, RefreshCw, Repeat, Save, Search, Settings2, Share2, Shield, Smartphone, Sparkles, Target, Timer, Trash2, TrendingUp, Trophy, Undo2, Wand2, Zap } from 'lucide-react';
 
 export const CHANGELOG = [
+    { version: "4.0.0", build: "921", items: [
+        "Backup and restore reviews now follow your text size. On narrow screens, each record keeps its Add, Update and Remove counts together, with clearer weight-unit choices."
+    ] },
     { version: "4.0.0", build: "920", items: [
         "Faster program and cycle building, with the same training prescriptions and constraints."
     ] },

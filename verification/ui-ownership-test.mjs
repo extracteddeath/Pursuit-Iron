@@ -8,15 +8,16 @@ const app = fs.readFileSync('modules/App.js', 'utf8');
 const programReview = fs.readFileSync('modules/program-review-surfaces.js', 'utf8');
 const programSchedule = fs.readFileSync('modules/program-schedule-sheet.js', 'utf8');
 const programSettings = fs.readFileSync('modules/program-settings-sheet.js', 'utf8');
+const backupPanel = fs.readFileSync('modules/backup-restore-panel.js', 'utf8');
 const primitives = fs.readFileSync('modules/ui-primitives.js', 'utf8');
 const releaseNotes = fs.readFileSync('modules/release-notes.js', 'utf8');
 const disclosures = fs.readFileSync('modules/ui-disclosure.js', 'utf8');
 const programReference = fs.readFileSync('modules/program-reference-surfaces.js', 'utf8');
-const presentationSource = disclosures + '\n' + programReference + '\n' + releaseNotes + '\n' + primitives + '\n' + app + '\n' + programReview + '\n' + programSchedule + '\n' + programSettings;
+const presentationSource = disclosures + '\n' + programReference + '\n' + releaseNotes + '\n' + primitives + '\n' + app + '\n' + programReview + '\n' + programSchedule + '\n' + programSettings + '\n' + backupPanel;
 const MAX_IMPORTANT = 2360; // M291: consolidate the remaining Profile style owners
 const MAX_APP_IMPORTANT = 1229; // M292: retire ten superseded Progress priority declarations.
 const MAX_REPEAT_IMPORTANT = 15; // M288: at-rule comments no longer erase media/container scope.
-const MAX_INLINE_STYLE_OBJECTS = 2601; // M371: progression-method sheet retires thirteen static inline styles.
+const MAX_INLINE_STYLE_OBJECTS = 2558; // M374: backup/restore retires 43 static inline styles, including CSV review.
 
 // M367: Settings is a named, keyboard-focusable dialog with explicit labels and state.
 for(const role of ['backdrop','panel','heading','title','close','intro','field-label','field','description','footer','cancel','save'])
@@ -183,7 +184,14 @@ assert.ok(!programSettings.includes('style:') && !programSettings.includes('C.')
 for (const token of ['--pi-color-card','--pi-color-control','--pi-color-feature','--pi-color-divider',
     '--pi-shape-card','--pi-shape-action','--pi-shape-feature'])
     assert.ok(css.includes(token), 'Missing semantic theme role: ' + token);
-assert.ok(app.includes('function BackupRestorePanel('), 'Transfers need one canonical panel.');
+assert.ok(app.includes("from './backup-restore-panel.js'") && !app.includes('function BackupRestorePanel('),
+    'Backup transfers and staged review have one feature owner');
+assert.equal((backupPanel.match(/export function BackupRestorePanel\(/g) || []).length, 1, 'Single backup panel');
+assert.ok(!backupPanel.includes('style:') && !backupPanel.includes('C.') && !backupPanel.includes('localStorage'),
+    'Backup presentation uses shared CSS and retains the App persistence boundary');
+for (const token of ['transferBusyRef.current', 'requestId === fileReadRef.current', 'onPreviewImport(importText',
+    'onImport(undoSnap, { replace: true })', 'draftConflicts?.length', '20 * 1024 * 1024'])
+    assert.ok(backupPanel.includes(token), 'Backup transfer/restore safeguard lost: ' + token);
 // Canonical role vocabulary and primitive owners must survive future polish passes.
 for(const token of [
   '--pi-color-active','--pi-color-on-active','--pi-ui-primary-fill','--pi-ui-primary-ink',

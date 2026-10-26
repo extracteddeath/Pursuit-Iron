@@ -1,3 +1,9 @@
+## Build 928 / M381 — Complete, readable muscle-volume contributors
+
+- Expanded muscle drilldowns show every contributor instead of stopping after eight; session and exercise labels wrap rather than being visually truncated.
+- Canonical MEV/MAV/MRV landmarks, fractional muscle credits, program generation, active prescriptions, workout logging, and history remain unchanged.
+- Extend the existing R53 browser contract to verify full contributor readability. Retain Material 3 Expressive motion and spacing owners, publish only after all release and browser checks, and keep physical Android/TalkBack as a separate acceptance gate.
+
 ## Build 927 / M380 — One owner for volume presentation and accessible drilldowns
 
 - Extract shared muscle-volume bars and block-volume ramp into `modules/program-volume-surfaces.js`. Plan, Program and Progress use exactly one renderer and the unchanged canonical engine callbacks for zone thresholds, working sets and fractional muscle credits.

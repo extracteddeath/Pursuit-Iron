@@ -304,6 +304,14 @@ async function verifyTaskHierarchy(browser){
       await page.keyboard.press('Enter');
       assert.equal(await page.$eval('.wpb-plan button[data-vol-part]',el=>el.getAttribute('aria-expanded')),
         'true','M380: Enter opens muscle-volume contributors without changing training');
+      const contributors=await page.$eval('.wpb-plan [data-volume-contributor]',rows=>rows.map(row=>{
+        const name=row.children[1],style=getComputedStyle(name);
+        return {name:name.textContent.trim(),whiteSpace:style.whiteSpace,textOverflow:style.textOverflow,
+          clipped:name.scrollWidth>name.clientWidth+1};
+      }));
+      assert.ok(contributors.length>0&&contributors.every(row=>row.name&&row.whiteSpace==='normal'&&
+        row.textOverflow!=='ellipsis'&&!row.clipped),
+        'M381: expanded muscle credits expose complete wrapping names: '+JSON.stringify(contributors));
       await page.keyboard.press('Space');
       assert.equal(await page.$eval('.wpb-plan button[data-vol-part]',el=>el.getAttribute('aria-expanded')),
         'false','M380: Space closes native volume contributors');

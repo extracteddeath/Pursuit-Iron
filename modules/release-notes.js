@@ -2,6 +2,10 @@
 import { Accessibility, Activity, AlertTriangle, Award, Ban, BarChart3, Brain, Calendar, Check, CheckCircle2, Clock, Dumbbell, Flame, GripVertical, HardDrive, HelpCircle, Home as HomeIcon, Info, Layers, Library, Maximize2, Medal, Milestone, Minus, Palette, Play, Plus, PlusCircle, RefreshCw, Repeat, Save, Search, Settings2, Share2, Shield, Smartphone, Sparkles, Target, Timer, Trash2, TrendingUp, Trophy, Undo2, Wand2, Zap } from 'lucide-react';
 
 export const CHANGELOG = [
+    { version: "4.0.0", build: "928", items: [
+        "Expanded muscle-volume details show all contributors and wrap complete exercise names, rather than hiding entries or clipping labels.",
+        "Training calculations, plans, and workout history are unchanged."
+    ] },
     { version: "4.0.0", build: "927", items: [
         "Weekly muscle-volume charts and the block ramp now share a focused display module across Plan, Program, and Progress.",
         "Muscle-volume contributors open by keyboard as well as touch, with a visible focus state and no change to calculations or saved training."

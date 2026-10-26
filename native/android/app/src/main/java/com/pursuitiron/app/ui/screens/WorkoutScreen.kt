@@ -406,6 +406,10 @@ private fun SetRow(vm: AppViewModel, s: JSONObject, ex: JSONObject, ei: Int, si:
         // The engine eased this pending set after a harder-than-planned one (live-autoregulation.js)
         set.s("adjusted") == "load" -> "Load eased"
         set.s("adjusted") == "reps" -> "Reps capped"
+        set.s("adjusted") == "backoff" -> "Back-off · 90% of top"
+        // The design's top-set rows: the first working set is the top set, the rest are its back-offs
+        !warm && !set.b("sub") && ex.o("progression")?.s("style") == "top" ->
+            if (set.i("i") == ex.list("sets").firstOrNull { !it.b("warm") && !it.b("sub") }?.i("i")) "Top set" + (target?.takeIf { !it.isNull("rir") }?.let { " · @" + it.s("effort").ifBlank { it.s("rir") + " RIR" } } ?: "") else "Back-off"
         // App.js set-to-set tuning badge: the engine's hint is a direction, not copy
         !done && set.s("hint") == "up" -> "Retuned ↑"
         !done && set.s("hint") == "down" -> "Retuned ↓"

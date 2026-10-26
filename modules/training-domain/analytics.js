@@ -2179,7 +2179,8 @@ const PROG_STYLES = {
     ladder: "Rep ladder",
     linear: "Linear LP",
     wave: "Wave loading",
-    e1rm: "e1RM autoregulation"
+    e1rm: "e1RM autoregulation",
+    top: "Top set + back-offs"
 };
 
 function explainPrescription(o) {

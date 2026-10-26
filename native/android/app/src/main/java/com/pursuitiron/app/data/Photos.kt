@@ -49,6 +49,9 @@ class Photos(context: Context) {
         }.getOrNull()
     }
 
+    /** Reset everything: every photo file and the index. */
+    fun clear() { dir.listFiles()?.forEach { it.delete() }; index.delete() }
+
     fun delete(id: String) {
         File(dir, "$id.jpg").delete()
         write(list().filter { it.id != id })

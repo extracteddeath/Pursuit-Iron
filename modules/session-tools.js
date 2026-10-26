@@ -10,7 +10,7 @@ import { programWorkingWeeks } from './program-duration.js';
 import { buildUserAddedSlotPrescriptions } from './next-engine/workout-runtime.js';
 import { markUserPrescriptionOverride, nextExerciseIdForShellExercise, shellPrescriptionFieldOwner } from './next-engine/app-shell-adapter.js';
 
-const SESSION_PROGRESSION_STYLES = new Set(['auto','double','dynamic','ladder','linear','wave','e1rm']);
+const SESSION_PROGRESSION_STYLES = new Set(['auto','double','dynamic','ladder','linear','wave','e1rm','top']);
 
 // Session choices are independent from program edits until the completed workout is saved.
 export function withProgressionChoices(program, choices = {}) {

@@ -10,6 +10,7 @@ import { createInitialCycleState } from './cycles.js';
 import { filterFeasibleLiftPriorities } from './prescription.js';
 import { generateProgram } from './generate.js';
 import { finalizeGeneratedShellVolume } from './volume-repair.js';
+import { PCT_SCHEMES } from './percentage-protocols.js';
 import { shellExercisePerformableFor as performableFor } from './shell-equipment.js';
 export { setShellEquipmentExpander } from './shell-equipment.js';
 const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -490,13 +491,47 @@ export function generateNextProgramForShell(options) {
         } : {})
     };
 
-    const finalProgram = finalizeGeneratedShellVolume(legacyProgram, options.legacyExercises);
+    const finalProgram = withSupplementalSlots(finalizeGeneratedShellVolume(legacyProgram, options.legacyExercises));
     return {
         program: finalProgram,
         nextProgram: finalProgram.nextEngine.program,
         request,
         diagnostics: result.diagnostics
     };
+}
+
+/* A percentage program's supplemental work (config.assistance, e.g. "bbb" = 5×10 at 50% TM) is the SAME lift
+   repeated right after its main-lift wave. The generator builds the main lifts and accessories; this inserts the
+   supplemental slot after each day's main lift as its tier-2 slot (day.t2Index), shifting later slot-keyed state
+   (overrides, weekly cells, superset links) so nothing is re-associated with the wrong lift. Loads come from the
+   canonical percentage reader (SUPPLEMENTAL_PROTOCOLS); the cell carries the set count and rep target. */
+const SUPPLEMENTAL_CELL = { bbb: { sets: 5, reps: '10', deloadReps: '5', rir: '3-5', rest: 90 } };
+export function withSupplementalSlots(program) {
+    const cfg = program?.config || {}, spec = cfg.percentScheme === '531' ? SUPPLEMENTAL_CELL[cfg.assistance] : null;
+    if (!spec || program.engineSource !== 'pursuit-next') return program;
+    const overrides = { ...(program.overrides || {}) }, nwp = { ...(program.nextWeekPrescriptions || {}) }, ss = { ...(program.ss || {}) };
+    const days = program.days.map((day) => {
+        const p = day.primaryIndex;
+        if (!Number.isInteger(p) || p < 0 || p >= day.exercises.length || day.t2Index != null) return day;
+        const key = (slot) => `${day.id}:${slot}`;
+        // Shift every later slot up by one, last first so no key is overwritten before it moves.
+        for (let slot = day.exercises.length - 1; slot > p; slot--) {
+            if (key(slot) in overrides) { overrides[key(slot + 1)] = overrides[key(slot)]; delete overrides[key(slot)]; }
+            if (key(slot) in nwp) { nwp[key(slot + 1)] = nwp[key(slot)]; delete nwp[key(slot)]; }
+            if (key(slot) in ss) { ss[key(slot + 1)] = ss[key(slot)]; delete ss[key(slot)]; }
+        }
+        delete ss[key(p)]; // the main lift no longer sits next to its old superset partner
+        const main = overrides[key(p)] || {};
+        overrides[key(p + 1)] = { nextEngine: true, nextExerciseId: main.nextExerciseId, legacyExerciseId: day.exercises[p], supplemental: cfg.assistance };
+        const weeks = nwp[key(p)] || {};
+        // The wave's deload week (and any explicit deload after the block) runs the light supplemental, so its cell says so.
+        const deload = (w) => Number(w) > (Number(program.weeks) || Infinity) || (Number(w) - 1) % PCT_SCHEMES['531'].weeks.length === PCT_SCHEMES['531'].deloadWeek;
+        nwp[key(p + 1)] = Object.fromEntries(Object.keys(weeks).map((w) => [w, { sets: spec.sets, reps: deload(w) ? spec.deloadReps : spec.reps,
+            rir: spec.rir, rest: spec.rest, role: 'secondary_strength', progressionStyle: 'e1rm', tech: null }]));
+        const exercises = [...day.exercises]; exercises.splice(p + 1, 0, day.exercises[p]);
+        return { ...day, exercises, t2Index: p + 1 };
+    });
+    return { ...program, days, overrides, nextWeekPrescriptions: nwp, ss };
 }
 
 export function splitBuildability(config, legacyExercises = []) {

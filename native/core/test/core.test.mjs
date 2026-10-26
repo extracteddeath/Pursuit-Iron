@@ -384,7 +384,7 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
     // The panel's week equals what the workout prescribes from
     const day = all.lifts[0]; ok(day.week.sets.every((x) => /×/.test(x.text)), 'sets read weight × reps'); }
   { const t = C.programText({ programId: made.programId }).text;
-    ok(/Main-Lift|percentages of/.test(t) && /W1 \(/.test(t) && /Made with Pursuit Iron/.test(t), 'share text prints the method and the main-lift waves');
+    ok(/Week \d+ of \d+ — saved plan snapshot/.test(t) && /Planned loads: [\d.]+ kg × \d/.test(t) && /Made with Pursuit Iron/.test(t), 'share text (B930): the selected week with canonical planned loads');
     const pt = C.programText({ programId: made.programId }); ok(pt && pt.text.split('\n').length > 6, 'share text for a plain program'); }
   const plain = C.createFromTemplate({ id: tl.items.find((t) => !t.percent).id });
   ok(plain.ok && C.trainingMaxes({ programId: plain.programId }).percent === false, 'a regular template builds without training maxes'); }
@@ -792,6 +792,34 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
     C.savePinnedNote({ id, note: ' pause on chest ', setup: { old_field: 'x', bench: ' 4 ' } });
     const a1 = C.pinnedNote({ id }); ok(a1.note === 'pause on chest' && a1.fields.find((f) => f.key === 'bench')?.value === '4' && a1.fields.find((f) => f.key === 'old_field')?.value === 'x', 'save writes the note and setup together');
     C.removePinnedNote({ id }); const a2 = C.pinnedNote({ id }); ok(!a2.has && a2.note === '' && !a2.fields.some((f) => f.value), 'remove clears note and every setup field'); } }
+// Top set + back-offs (manual style): logging the top set re-aims back-offs to ~90%; an owned top set earns the next load
+{ C.init({ store: JSON.stringify({ unit: 'kg' }) });
+  C.createProgram({ config: { name: 'B', unit: 'kg', goal: 'strength', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 2 });
+  const p = C.plan(), d = p.days[0], ex = d.exercises[0];
+  ok(C.setLiftProgression({ programId: p.programId, exId: ex.id, style: 'top' }).ok, 'top set + back-offs can be chosen for a lift');
+  const run = (rir) => { C.startSession({ programId: p.programId, dayId: d.id }); const e = C.session().exercises.find((x) => x.id === ex.id), w = e.sets.filter((x) => !x.warm && !x.sub);
+    C.act({ type: 'edit', ei: e.ei, si: w[0].i, field: 'weight', value: '100' }); C.act({ type: 'edit', ei: e.ei, si: w[0].i, field: 'reps', value: '6' });
+    C.act({ type: 'toggle', ei: e.ei, si: w[0].i }); C.act({ type: 'rir', ei: e.ei, si: w[0].i, rir });
+    const a = C.session().exercises[e.ei].sets.filter((x) => !x.warm && !x.sub);
+    for (const x of a.slice(1)) C.act({ type: 'toggle', ei: e.ei, si: x.i });
+    C.finishSession(); return a; };
+  const a = run(3);
+  ok(a.slice(1).every((x) => x.weight === '90' && x.adjusted === 'backoff'), 'back-offs re-aim to 90% when the top set is logged: ' + a.map((x) => x.weight).join(' '));
+  C.startSession({ programId: p.programId, dayId: d.id }); const n = C.session().exercises.find((x) => x.id === ex.id).sets.filter((x) => !x.warm && !x.sub);
+  ok(Number(n[0].weight) > 100 && n.slice(1).every((x) => Number(x.weight) <= Number(n[0].weight) * 0.9 + 1e-6 && Number(x.weight) >= Number(n[0].weight) * 0.85), 'an owned top set earns the next load, back-offs follow at ~90%: ' + n.map((x) => x.weight).join(' ')); }
+// Main-Lift Waves · High-Volume Supplemental: the same lift follows its wave as 5×10 at 50% TM (light 5×5 on the deload week)
+{ C.init({ store: JSON.stringify({ unit: 'kg' }) });
+  ok(C.createFromTemplate({ id: 'p531bbb' }).ok, 'the supplemental template builds');
+  const p = C.plan(); for (const l of C.trainingMaxes({ programId: p.programId }).lifts) C.setTrainingMax({ programId: p.programId, exId: l.id, value: 100 });
+  const d = C.plan().days[0], ex = d.exercises;
+  ok(ex[1].id === ex[0].id && ex[1].supplemental && ex[1].sets === 5 && String(ex[1].reps) === '10', 'each day: the main lift, then its 5×10 supplemental: ' + ex.slice(0, 2).map((x) => x.name + ' ' + x.sets + '×' + x.reps).join(', '));
+  C.startSession({ programId: p.programId, dayId: d.id });
+  const s1 = C.session(), sup = s1.exercises[1].sets.filter((x) => !x.warm && !x.sub);
+  ok(s1.exercises[1].supplemental && sup.length === 5 && sup.every((x) => x.weight === '50' && String(x.reps) === '10'), 'the workout prescribes 5 × 10 at 50 kg (50% of 100): ' + sup.map((x) => x.weight + '×' + x.reps).join(' '));
+  for (const e of s1.exercises.slice(0, 2)) for (const x of e.sets) if (!x.warm && !x.sub) C.act({ type: 'toggle', ei: e.ei, si: x.i });
+  ok(C.finishSession().ok, 'a workout with the same lift twice saves');
+  const t = C.programText({ programId: p.programId, weekIndex: 4 }).text;
+  ok(/5 × 5 @/.test(t) && /40 kg × 5/.test(t), 'the deload week runs a light 5×5 supplemental'); }
 // Warm-up & mobility on the first lift until a set is logged (App.js warmupRoutine)
 { C.init({ store: JSON.stringify({ unit: 'kg' }) });
   C.createProgram({ config: { name: 'W', unit: 'kg', goal: 'both', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 2 });

@@ -14,7 +14,8 @@ export function ProgressionChoiceSheet({ exerciseName, selected, automaticLabel,
         ['ladder', 'Rep ladder', 'Raise a shared rep target in steps, then increase the load.'],
         ['wave', 'Wave loading', 'Vary rep targets within the prescribed range across sessions.'],
         ['linear', 'Linear progression', `Add ${linearIncrement} ${unit} after successful work at the bottom of the range.`],
-        ['e1rm', 'e1RM autoregulation', 'Use recent strength estimates and the target effort to choose a load.']
+        ['e1rm', 'e1RM autoregulation', 'Use recent strength estimates and the target effort to choose a load.'],
+        ['top', 'Top set + back-offs', 'One heavy top set, then the rest at about 90% of it. The top set earns the next load.']
     ];
     return _jsx('div', { className: 'wpb-backdrop wpb-progression-choice-backdrop', role: 'dialog', 'aria-modal': true,
         'aria-labelledby': 'program-progression-title', 'aria-describedby': 'program-progression-scope', onClick: onClose,

@@ -24,7 +24,7 @@ export function reconcileRestoredLiveAdjustments(sets) {
         if (!untouched(row) || authoredIntent(row) || !row.retuneFrom || !row.liveAdjustment) return row;
         const adjustment = row.liveAdjustment;
         const count = adjustment.action === 'reduce_pending_load' ? 2
-            : adjustment.action === 'cap_pending_reps' ? 1 : null;
+            : adjustment.action === 'cap_pending_reps' || adjustment.action === 'set_backoffs_from_top' ? 1 : null;
         if (count === null) return row; // Unknown protocols are not ours to rewrite.
         const sources = adjustment.sourceIndices;
         const valid = Array.isArray(sources) && sources.length === count && new Set(sources).size === count
@@ -48,7 +48,9 @@ export function rollbackLiveAutoregulation(sets, sourceIndex, action) {
     if (!Array.isArray(sets)) return sets;
     let changed = false;
     const result = sets.map(row => {
-        if (!untouched(row) || authoredIntent(row) || !row.liveAdjustment?.sourceIndices?.includes(sourceIndex) || !row.retuneFrom
+        const ours = untouched(row) || (row?.liveAdjustment?.action === 'set_backoffs_from_top' && automatic(row) && !row.done
+            && String(row.weight) === String(row.target?.w));
+        if (!ours || authoredIntent(row) || !row.liveAdjustment?.sourceIndices?.includes(sourceIndex) || !row.retuneFrom
             || action && row.liveAdjustment.action !== action) return row;
         changed = true;
         return restorePendingAdjustment(row);
@@ -149,7 +151,38 @@ function capPendingReps({ sets, sourceIndex, cell, context = {} }) {
     return { sets: result, decision };
 }
 
+/** Top set + back-offs: once the top set (the first working set) is logged, untouched or still-empty
+ * back-offs are set to about 90% of it, snapped to a buildable load. Un-logging the top set restores them;
+ * a back-off the lifter typed is never touched. This is the method's own structure, not earned progression. */
+function applyTopSetBackoffs({ sets, sourceIndex, snapLoad }) {
+    if (!Array.isArray(sets) || !Number.isInteger(sourceIndex)) return hold(sets, 'invalid_live_scope');
+    const first = sets.findIndex(row => row && !row.warm && !row.sub);
+    if (sourceIndex !== first) return hold(sets, 'not_the_top_set');
+    const baseline = rollbackLiveAutoregulation(sets, sourceIndex, 'set_backoffs_from_top');
+    const top = baseline[sourceIndex];
+    if (!top?.done || authoredIntent(top)) return hold(baseline, 'no_new_working_observation');
+    const load = historyNumber(top.weight);
+    if (!(load > 0) || typeof snapLoad !== 'function') return hold(baseline, 'unknown_loadability');
+    const next = snapLoad(load * .9);
+    if (!Number.isFinite(next) || next <= 0) return hold(baseline, 'no_loadable_backoff');
+    const decision = { schemaVersion: 1, action: 'set_backoffs_from_top', reasonCode: 'top_set_logged', sourceIndices: [sourceIndex],
+        fromLoad: load, toLoad: next, earnedProgression: false, confidence: 'high' };
+    const empty = row => automatic(row) && !row.done && (row.weight === '' || row.weight == null);
+    let changed = false;
+    const result = baseline.map((row, index) => {
+        if (index <= sourceIndex || !row || row.warm || row.sub || authoredIntent(row) || !(untouched(row) || empty(row))) return row;
+        if (String(row.weight) === String(next)) return row;
+        changed = true;
+        const before = historyNumber(row.weight);
+        return { ...row, weight: String(next), target: { ...row.target, w: next }, autoTuned: true,
+            hint: before > 0 && next > before ? 'up' : 'down', liveAdjustment: decision, retuneSrc: sourceIndex,
+            retuneFrom: row.retuneFrom ?? { weight: row.weight, reps: row.reps, target: row.target, recoveryLimited: row.recoveryLimited } };
+    });
+    return changed ? { sets: result, decision } : hold(baseline, 'backoffs_already_set');
+}
+
 export function applyLiveAutoregulation(args) {
+    if (args?.cell?.progressionStyle === 'top' && !args.cell.percentageProtocol) return applyTopSetBackoffs(args);
     const reduced = applyLiveLoadReduction(args);
     if (reduced.decision.action === 'reduce_pending_load') return reduced;
     return capPendingReps({ ...args, sets: reduced.sets });

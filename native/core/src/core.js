@@ -215,13 +215,15 @@ function exSub(ex) {
     const eq = (ex.equip || []).find((x) => !['bench', 'rack'].includes(x)) || (ex.equip || [])[0];
     return [pat, eq ? (EQUIP_LABEL[eq] || eq) : 'Bodyweight'].filter(Boolean).join(' · ');
 }
+const SUPP_LABEL = { bbb: '5×10 supplemental' };
 function dayPreview(program, day, weekIndex) {
     const goal = (() => { try { return E.goalForDay(program, day); } catch { return null; } })(), scale = Number(S.store.restScale) || 1;
     return day.exercises.map((_id, slot) => {
         const id = E.exerciseAt(program, day, slot, weekIndex);
         let cell = null; try { cell = E.computeCell(program, day, id, slot, weekIndex); } catch { cell = null; }
         let rest = null; try { rest = EX_BY_ID[id] ? E.effectiveRest(goal, EX_BY_ID[id], slot === day.primaryIndex, 0, scale) : null; } catch { rest = null; }
-        return { id, name: exName(id), part: EX_BY_ID[id]?.part || '', primary: slot === day.primaryIndex, sets: cell?.sets ?? null, reps: cell?.reps ?? null, rir: cell?.rir ?? null, sub: exSub(EX_BY_ID[id]), rest };
+        const supp = program.overrides?.[`${day.id}:${slot}`]?.supplemental ? SUPP_LABEL[program.overrides[`${day.id}:${slot}`].supplemental] || 'Supplemental' : null;
+        return { id, name: exName(id), part: EX_BY_ID[id]?.part || '', primary: slot === day.primaryIndex, supplemental: supp, sets: cell?.sets ?? null, reps: cell?.reps ?? null, rir: cell?.rir ?? null, sub: exSub(EX_BY_ID[id]), rest };
     });
 }
 /* The engine's weekly volume (analytics weeklyVolume): direct sets plus fractional secondary shares, per day. */
@@ -682,6 +684,7 @@ function progressionOptions(ctx, e, ex, u) {
         { id: 'wave', label: 'Wave loading', detail: 'Rotates heavy / medium / light sessions (lo→mid→hi reps) within the range, then the load jumps. Classic strength periodization.' },
         { id: 'linear', label: 'Linear LP', detail: 'Add a fixed ' + (inc || 'jump') + ' every session you hit the bottom of the range. Best for beginners on big compounds.' },
         { id: 'e1rm', label: 'e1RM autoregulation', detail: 'Sets load each session from your estimated 1RM to land at the target RIR. Smoothest day-to-day adjustment.' },
+        { id: 'top', label: 'Top set + back-offs', detail: 'One heavy top set, then the rest at about 90% of it. The top set earns the next load; back-offs re-aim the moment you log it.' },
     ].filter((o) => E.PROG_STYLES ? o.id in E.PROG_STYLES : true) };
 }
 function sessionContext(l) {
@@ -822,7 +825,7 @@ function setView(s, i, ex, prBase, prev = null) {
         type: s.typeOverride || (s.target?.failure ? 'failure' : 'standard'),
         prev: prev ? { w: prev.w, r: prev.r ?? null } : null,
         // live-autoregulation.js: a pending set the engine eased after a harder-than-planned one
-        adjusted: !s.done && !E.userOwnsRuntimeSet?.(s) && s.liveAdjustment ? (s.liveAdjustment.action === 'reduce_pending_load' ? 'load' : s.liveAdjustment.action === 'cap_pending_reps' ? 'reps' : null) : null
+        adjusted: !s.done && !E.userOwnsRuntimeSet?.(s) && s.liveAdjustment ? (s.liveAdjustment.action === 'reduce_pending_load' ? 'load' : s.liveAdjustment.action === 'cap_pending_reps' ? 'reps' : s.liveAdjustment.action === 'set_backoffs_from_top' ? 'backoff' : null) : null
     };
 }
 
@@ -976,7 +979,7 @@ return setView(s, i, ex, best, isW ? E.previousWorkoutSet(lastPerf[e.id], workId
             return { ei, id: e.id, name: ex.name || e.id, short: shortName(ex.name || e.id), line: (() => { try { return liftLine(e, ex); } catch { return ''; } })(), bar, cur, loadTag: loadTag(ex),
                 plates: (() => { try { return plateRef ? platesFor(parseFloat(plateRef.weight), bar, u) : null; } catch { return null; } })(),
                 platesFor: plateRef ? e.sets.indexOf(plateRef) : -1, addRules: addRules(e, ex, style), part: ex.part || '', partLabel: E.PART_LABEL?.[ex.part] || ex.part || '', equip: ex.equip || null, slot: e.slot, primary: e.slot === ctx.day.primaryIndex,
-                superset: !!e.superset, note: e.note || '', lastNote: ctx.P[e.id]?.note || '', pinNote: S.store.exNotes?.[e.id] || '', injuryAdjusted: e.injuryAdjusted || null, freestyle: !!e.freestyle,
+                superset: !!e.superset, supplemental: ctx.program.overrides?.[`${ctx.day.id}:${e.slot}`]?.supplemental ? (SUPP_LABEL[ctx.program.overrides[`${ctx.day.id}:${e.slot}`].supplemental] || 'Supplemental') : null, note: e.note || '', lastNote: ctx.P[e.id]?.note || '', pinNote: S.store.exNotes?.[e.id] || '', injuryAdjusted: e.injuryAdjusted || null, freestyle: !!e.freestyle,
                 done: work(e).length > 0 && work(e).every((s) => s.done), sets,
                 hasWarm: e.sets.some((s) => s.warm), hasDrop: e.sets.some((s) => s.sub && s.kind === 'drop'), hasMyo: e.sets.some((s) => s.sub && s.kind === 'myo'),
                 restCustom: e.restCustom || 0, restDefault, goal: Number(S.store.goals?.[e.id]) || null,
@@ -3063,43 +3066,35 @@ export function trainingMaxes({ programId, weekIndex = null }) {
    line reads GOALS[...].label (App.js reads .name, which GOALS doesn't have, so the goal never
    printed), and percentage main lifts print from percentagePlanFor in the lifter's unit, the same
    numbers the workout uses, instead of re-deriving them from the stored max. */
-export function programText({ programId }) {
+/* B930 programToText (modules/program-share-sheet.js): the selected executable week — the days that run that week,
+   alternating lifts, the deload, and percentage loads from the same canonical reader the workout uses. */
+export function programText({ programId, weekIndex = null }) {
     const p = programById(programId); if (!p) return null;
-    const cfg = p.config || {}, u = unit(), mode = S.store.loadMode === 'rpe' ? 'rpe' : 'rir';
-    const scheme = cfg.percentScheme, PS = scheme ? E.PCT_SCHEMES?.[scheme] : null, wk = E.weeksOf(p);
-    const L = [p.name || 'My Program'];
-    L.push(`${E.SPLITS?.[cfg.split]?.name || cfg.split || 'Custom'} · ${p.days.length} days/week${GOAL_LABEL[cfg.goal] ? " · " + GOAL_LABEL[cfg.goal] : ''} · ${wk}-week block`);
-    if ((p.description || '').trim()) L.push(p.description.trim());
-    if (PS) L.push(`Main lifts use ${PS.name} percentages of ${PS.basis}.`);
-    L.push('');
-    p.days.forEach((day) => {
-        L.push(day.label || 'Day');
-        if (day.note) L.push(`  — ${day.note}`);
-        day.exercises.forEach((id, slot) => {
-            const ex = EX_BY_ID[id]; if (!ex) return;
-            const grouped = p.ss?.[`${day.id}:${slot}`] || (slot > 0 && p.ss?.[`${day.id}:${slot - 1}`]);
-            const bullet = grouped ? '   ↳' : `  ${slot + 1}.`;
-            if (PS && slot === day.primaryIndex) {
-                const tm = E.trainingMaxForUnit(p, id, u) || 0;
-                L.push(`${bullet} ${ex.name} — ${PS.name} main lift${tm > 0 ? ` · TM ${fmtW(tm)} ${u}` : ''}`);
-                for (let w = 1; w <= Math.min(wk, 4); w++) {
-                    let pl = null;
-                    try { pl = tm > 0 ? E.percentagePlanFor(p, day, ex, slot, w, u, history()) : E.percentageProtocolFor({ scheme, tm: 100, weekIndex: w, weeksTotal: wk, dayType: day.type, tier: 't1' }); } catch { pl = null; }
-                    if (!pl?.sets?.length) continue;
-                    const parts = pl.sets.map((x) => (tm > 0 ? `${fmtW(x.weight)}×${x.reps}` : `${Math.round(x.pct * 100)}%×${x.reps}`));
-                    L.push(`       W${w}${pl.label ? ` (${pl.label})` : ''}: ${parts.join(' · ')}`);
-                }
-                return;
-            }
-            let cell = null; try { cell = E.computeCell(p, day, id, slot, 1); } catch { cell = null; }
-            if (!cell) { L.push(`${bullet} ${ex.name}`); return; }
-            const eff = cell.rir != null ? ` @ ${E.effortLabel(cell.rir, mode)}` : (cell.range ? ' to failure' : '');
-            L.push(`${bullet} ${ex.name} — ${cell.sets} × ${cell.range}${eff}`);
-        });
-        L.push('');
-    });
-    L.push('Made with Pursuit Iron — Strength Coach');
-    return { text: L.join('\n'), name: p.name || 'My Program' };
+    const cfg = p.config || {}, u = unit(), mode = S.store.loadMode === 'rpe' ? 'rpe' : 'rir', weeks = E.weeksOf(p);
+    const nx = upNext();
+    const wk = Math.max(1, Number(weekIndex) || (nx?.program.id === p.id ? nx.weekIndex : 1));
+    const days = E.daysInWeek(p, wk), H = history();
+    const lines = [p.name || 'My Program',
+        `${E.SPLITS?.[cfg.split]?.name || cfg.split || 'Custom'} · ${days.length} ${days.length === 1 ? 'day' : 'days'}/week${cfg.goal ? ' · ' + cfg.goal : ''} · ${weeks}-week block`,
+        `${wk > weeks ? `Deload after ${weeks} training weeks` : `Week ${wk} of ${weeks}`} — saved plan snapshot`];
+    if (p.description?.trim()) lines.push(p.description.trim());
+    lines.push('');
+    for (const day of days) {
+        lines.push(day.label || 'Day');
+        if (day.note) lines.push(`  — ${day.note}`);
+        let rows = []; try { rows = E.sessionPrescriptionRows(p, day, wk) || []; } catch { rows = []; }
+        if (!rows.length) lines.push('  No executable exercises in this week.');
+        for (const { ex, slot, cell } of rows) {
+            const grouped = !cfg.noSupersets && (p.ss?.[`${day.id}:${slot}`] || (slot > 0 && p.ss?.[`${day.id}:${slot - 1}`]));
+            const effort = cell.rir != null ? ` @ ${E.effortLabel(cell.rir, mode)}` : '';
+            lines.push(`${grouped ? '   ↳' : `  ${slot + 1}.`} ${ex.name} — ${cell.sets} × ${cell.range}${effort}`);
+            let pct = null; try { pct = E.percentagePlanFor(p, day, ex, slot, wk, u, H); } catch { pct = null; }
+            if (pct?.sets?.length) lines.push('       Planned loads: ' + pct.sets.map((x) => `${x.weight} ${u} × ${x.reps}`).join(' · '));
+        }
+        lines.push('');
+    }
+    lines.push('Made with Pursuit Iron — Strength Coach');
+    return { name: p.name, week: wk, text: lines.join('\n') };
 }
 /* A training max typed directly, or 90% of a one-rep max rounded to the lift's step. */
 export function setTrainingMax({ programId, exId, value, fromOneRm = false }) {
@@ -3338,7 +3333,7 @@ export function whyLift({ programId, dayId, slot, weekIndex }) {
    .progressionPlan — read, never re-derived), and a lock when the lifter chose it. Choosing a style
    writes progStyle + progStyleLifter, the same record "keep in program" writes after a workout;
    choosing Auto hands the lift back to the engine. */
-const STYLE_LABEL = { double: 'Double progression', dynamic: 'Dynamic double progression', ladder: 'Rep ladder', linear: 'Linear progression', wave: 'Wave loading', e1rm: 'e1RM autoregulation', auto: 'Auto' };
+const STYLE_LABEL = { double: 'Double progression', dynamic: 'Dynamic double progression', ladder: 'Rep ladder', linear: 'Linear progression', wave: 'Wave loading', e1rm: 'e1RM autoregulation', top: 'Top set + back-offs', auto: 'Auto' };
 export function liftProgression({ programId }) {
     const p = programById(programId); if (!p) return null;
     const plan = Array.isArray(p.nextEngine?.progressionPlan) ? p.nextEngine.progressionPlan : [];

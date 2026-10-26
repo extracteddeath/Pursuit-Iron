@@ -112,7 +112,7 @@ fun ManageDataCard(vm: AppViewModel) {
             dismissButton = { TextButton(onClick = { confirm = null }) { Text("Cancel") } })
         "reset" -> AlertDialog(onDismissRequest = { confirm = null },
             title = { Text("Erase all data?") },
-            text = { Text("Programs, cycles, workouts, bodyweight, notes and injuries are deleted from this phone. Theme, unit and plates stay. This can't be undone; save a backup first if you might want it.") },
+            text = { Text("Programs, cycles, workouts, bodyweight, progress photos, notes and injuries are deleted from this phone. Theme, unit and plates stay. This can't be undone; save a backup first if you might want it.") },
             confirmButton = { TextButton(onClick = { confirm = null; vm.resetAll() }) { Text("Erase everything", color = cs.error) } },
             dismissButton = { TextButton(onClick = { confirm = null }) { Text("Cancel") } })
     }

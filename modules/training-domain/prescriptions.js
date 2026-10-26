@@ -221,8 +221,8 @@ function withTrainingMax(program, exerciseId, value, unit) {
         trainingMax: { ...(program.trainingMax || {}), [exerciseId]: load > 0 ? load : 0 }, edited: true };
 }
 
-function pctSetsFor(scheme, tm, weekIndex, weeksTotal, unit, ex, dayType, tier = "t1") {
-    return percentageProtocolFor({ scheme, tm, weekIndex, weeksTotal, dayType, tier,
+function pctSetsFor(scheme, tm, weekIndex, weeksTotal, unit, ex, dayType, tier = "t1", assistance = null) {
+    return percentageProtocolFor({ scheme, tm, weekIndex, weeksTotal, dayType, tier, assistance,
         snapLoad: value => loadableAtOrBelow(ex, value, unit) });
 }
 
@@ -238,7 +238,7 @@ function percentagePlanFor(program, day, ex, slot, weekIndex, unit, history = []
         const source = gzPlanFor(program, day, ex, slot, sourceUnit, history);
         plan = source ? { ...source, sets: source.sets.map(t => ({ ...t,
             weight: loadableAtOrBelow(ex, convertHistoryLoad(t.weight, sourceUnit, unit), unit) })) } : null;
-    } else plan = pctSetsFor(program.config.percentScheme, tm, weekIndex, weeksOf(program), unit, ex, day.type, tier);
+    } else plan = pctSetsFor(program.config.percentScheme, tm, weekIndex, weeksOf(program), unit, ex, day.type, tier, program.config.assistance ?? null);
     if (!plan?.sets?.length) return null;
     if (program.config.percentScheme === 'gzclp' && weekIndex > weeksOf(program))
         plan = { ...plan, label: 'Deload · light', sets: plan.sets.map(t => ({ ...t,

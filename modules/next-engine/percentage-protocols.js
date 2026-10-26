@@ -170,12 +170,26 @@ export const PCT_SCHEMES = {
     }
 };
 // returns [{ pct, reps, weight, amrap }] for the main lift this week, or null
-export function percentageProtocolFor({ scheme, tm, weekIndex, weeksTotal, dayType, tier = "t1", snapLoad = value => value }) {
+// Supplemental work after the main-lift wave, on the same lift ("assistance" in the program config).
+// Boring-But-Big: 5×10 at 50% of the training max on wave weeks; the wave's own deload week keeps
+// it light (5×5 at 40%) rather than letting supplemental volume undo the deload.
+export const SUPPLEMENTAL_PROTOCOLS = {
+    bbb: { label: "5×10 Supplemental", sets: [[0.50, "10"], [0.50, "10"], [0.50, "10"], [0.50, "10"], [0.50, "10"]],
+        deload: { label: "Deload · light supplemental", sets: [[0.40, "5"], [0.40, "5"], [0.40, "5"], [0.40, "5"], [0.40, "5"]] } }
+};
+
+export function percentageProtocolFor({ scheme, tm, weekIndex, weeksTotal, dayType, tier = "t1", snapLoad = value => value, assistance = null }) {
     const S = PCT_SCHEMES[scheme];
     if (!S || !Number.isFinite(tm) || !(tm > 0) || !Number.isInteger(weekIndex) || weekIndex < 1
         || !Number.isInteger(weeksTotal) || weeksTotal < 1)
         return null;
     let wk;
+    const supplemental = scheme === "531" && tier === "t2" ? SUPPLEMENTAL_PROTOCOLS[assistance] : null;
+    if (supplemental) {
+        const deloadWeek = weekIndex > weeksTotal || (weekIndex - 1) % S.weeks.length === S.deloadWeek;
+        const w = deloadWeek ? supplemental.deload : supplemental;
+        return { label: w.label, supplemental: true, sets: w.sets.map(([pct, reps]) => ({ pct, reps, amrap: false, weight: snapLoad(tm * pct) })) };
+    }
     if (scheme === "531" || scheme === "531beg") {
         // 5/3/1 block design: weeksTotal=4 means weeks 1-3 are the wave (5s/3s/5·3·1) and week 4
         // is baked-in as the deload (cyc index 3) — that's the (weekIndex-1)%4 indexing below.

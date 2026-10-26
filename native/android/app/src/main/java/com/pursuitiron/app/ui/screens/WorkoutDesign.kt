@@ -262,6 +262,7 @@ fun ExerciseHead(s: JSONObject, ex: JSONObject, onInfo: () -> Unit, onProg: () -
                     }
                 }
                 if (ex.b("primary")) com.pursuitiron.app.ui.common.Badge("Primary")
+                ex.s("supplemental").takeIf { it.isNotBlank() && it != "null" }?.let { com.pursuitiron.app.ui.common.Badge(it.replaceFirstChar { c -> c.uppercase() }, cs.secondaryContainer, cs.onSecondaryContainer) }
                 if (ex.b("assisted")) com.pursuitiron.app.ui.common.Badge("Assisted · less help is progress", cs.tertiaryContainer, cs.onTertiaryContainer)
                 if (ex.d("goal") > 0) com.pursuitiron.app.ui.common.Badge("Goal ${fmtNum(ex.d("goal"))} ${s.s("unit")}", cs.primaryContainer, cs.onPrimaryContainer)
                 if (ex.s("line").isNotBlank()) Text(ex.s("line"), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)

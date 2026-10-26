@@ -622,6 +622,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
     fun resetAll() = launchCore {
         call("resetAll"); rest.cancel(); session = obj("session"); refreshAll(); publishWidget()
+        runCatching { com.pursuitiron.app.data.Photos(getApplication()).clear() }
         com.pursuitiron.app.data.Reminders.save(getApplication(), settings?.o("reminders"))
         screen = Screen.Tabs; tab = Tab.Today; toast("All data erased")
     }

@@ -143,7 +143,7 @@ fun PlanScreen(vm: AppViewModel) {
     if (galleryOpen) GallerySheet(vm) { galleryOpen = false }
     if (programsOpen) ProgramsSheet(vm, onCompare = { compareOpen = true }, onGallery = { galleryOpen = true }) { programsOpen = false }
     if (detailsOpen) ProgramDetailsSheet(vm, p.s("programId"), onSettings = { settingsOpen = true }) { detailsOpen = false }
-    if (settingsOpen) ProgramSettingsSheet(vm) { settingsOpen = false }
+    if (settingsOpen) { vm.settingsProgramId = p.s("programId"); ProgramSettingsSheet(vm) { settingsOpen = false; vm.settingsProgramId = null } }
     if (reviewOpen) BlockReviewSheet(vm, p.s("cycleId").ifBlank { p.s("programId") }, (vm.cycles?.list("cycles")?.firstOrNull { it.s("id") == p.s("cycleId") }?.i("activeBlock") ?: 0)) { reviewOpen = false }
     if (scheduleOpen) WeeklyScheduleSheet(vm, p.s("programId")) { scheduleOpen = false }
     openCycle?.let { id -> CycleSheet(vm, id) { openCycle = null } }

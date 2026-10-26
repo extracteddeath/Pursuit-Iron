@@ -464,9 +464,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val n = r.i("changes")
         if (n == 0) toast("Nothing changed") else toast(if (n == 1) "Saved" else "Saved $n cycle blocks") { launchCore { val u = obj("undoSave", jsonOf("programId" to id)); if (u?.b("ok") == true) { reloadEditor(); refreshHomeSide(); plan = obj("plan"); toast("Save undone") } else toast(u?.s("error", "Couldn't undo") ?: "Couldn't undo") } }
     }
-    suspend fun programSettings(): JSONObject? = obj("programSettings", jsonOf("programId" to editor?.s("programId")))
+    /** The program the settings sheet works on: the one open in the editor, or the one the Plan shows (the design's Settings action). */
+    var settingsProgramId by mutableStateOf<String?>(null)
+    private fun settingsId() = editor?.s("programId") ?: settingsProgramId ?: plan?.s("programId")
+    suspend fun programSettings(): JSONObject? = obj("programSettings", jsonOf("programId" to settingsId()))
     fun applyProgramSettings(settings: JSONObject?, shuffle: Boolean = false, seed: Long? = null, after: () -> Unit = {}) = launchCore {
-        val id = editor?.s("programId") ?: return@launchCore
+        val id = settingsId() ?: return@launchCore
         val a = jsonOf("programId" to id, "settings" to (settings ?: JSONObject()), "shuffle" to shuffle); if (seed != null) a.put("seed", seed)
         val rebuilding = shuffle || seed != null
         val r = (if (rebuilding || settings != null) working("Rebuilding your program") { obj("applyProgramSettings", a) } else obj("applyProgramSettings", a)) ?: return@launchCore

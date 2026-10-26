@@ -387,15 +387,19 @@ fun SessionNoteSheet(vm: AppViewModel, s: JSONObject, onClose: () -> Unit) {
     ModalBottomSheet(onDismissRequest = save) {
         Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Workout note", style = MaterialTheme.typography.headlineSmall)
-            OutlinedTextField(text, { text = it.take(300) }, Modifier.fillMaxWidth(), minLines = 3, placeholder = { Text("How did it go? Sleep, energy, anything for next time") },
-                shape = RoundedCornerShape(16.dp))
-            androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // The design's note: a filled field, then quick tags that add or remove themselves joined by " · ".
+            androidx.compose.material3.TextField(text, { text = it.take(300) }, Modifier.fillMaxWidth(), minLines = 4,
+                placeholder = { Text("How did it go? Sleep, energy, anything for next time") }, shape = RoundedCornerShape(20.dp),
+                colors = androidx.compose.material3.TextFieldDefaults.colors(focusedContainerColor = cs.surfaceContainerHigh, unfocusedContainerColor = cs.surfaceContainerHigh,
+                    focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent, unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent))
+            androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.semantics { contentDescription = "Quick tags" }) {
                 listOf("Slept badly", "Felt strong", "Short on time", "Gym was busy", "Left elbow sore").forEach { t ->
                     val on = text.contains(t, ignoreCase = true)
-                    androidx.compose.material3.FilterChip(selected = on, onClick = {
-                        text = if (on) text.replace(Regex("(,\\s*)?" + Regex.escape(t), RegexOption.IGNORE_CASE), "").trim().trimStart(',').trim()
-                        else listOf(text.trim(), t).filter { it.isNotBlank() }.joinToString(", ")
-                    }, label = { Text(t) }, shape = CircleShape)
+                    com.pursuitiron.app.ui.common.MorphChip(t, on, {
+                        text = if (on) text.replace(Regex("(\\s*·\\s*)?" + Regex.escape(t), RegexOption.IGNORE_CASE), "").trim().removePrefix("·").trim()
+                        else listOf(text.trim(), t).filter { it.isNotBlank() }.joinToString(" · ")
+                    }, height = 36.dp)
                 }
             }
             Segmented(listOf("none" to "This session", "once" to "Next time", "always" to "Every time"), repeat, { repeat = it })

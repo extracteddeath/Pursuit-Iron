@@ -417,9 +417,9 @@ fun SessionMenu(vm: AppViewModel, s: JSONObject, onNote: () -> Unit, onAdd: () -
         Column(Modifier.padding(horizontal = 12.dp).padding(bottom = 28.dp)) {
             Text("Workout", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp))
             Column(Modifier.padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                MenuRow(PiIcons.Plus, "Add a lift", "Extra work for today", cs.primaryContainer, cs.onPrimaryContainer, onAdd)
-                MenuRow(PiIcons.List, "Workout note", s.s("sessionNote").ifBlank { "Anything about today" }, cs.secondaryContainer, cs.onSecondaryContainer, onNote)
-                if (s.list("exercises").size > 1) MenuRow(PiIcons.Swap, "Superset", "Pair the current lift with another", cs.secondaryContainer, cs.onSecondaryContainer, onSuperset)
+                MenuRow(PiIcons.Plus, "Add a lift", "Extra work for today", cs.primaryContainer, cs.onPrimaryContainer, onClick = onAdd)
+                MenuRow(PiIcons.List, "Workout note", s.s("sessionNote").ifBlank { "Anything about today" }, cs.secondaryContainer, cs.onSecondaryContainer, onClick = onNote)
+                if (s.list("exercises").size > 1) MenuRow(PiIcons.Swap, "Superset", "Pair the current lift with another", cs.secondaryContainer, cs.onSecondaryContainer, onClick = onSuperset)
                 MenuRow(PiIcons.Timer, "Reset workout timer", "Start the clock from now", cs.secondaryContainer, cs.onSecondaryContainer) { vm.act("resetTimer"); vm.toast("Timer reset"); onClose() }
             }
         }

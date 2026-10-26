@@ -216,6 +216,10 @@ private fun BannedSheet(vm: AppViewModel, onClose: () -> Unit) {
 }
 
 /* App.js Settings → Report a bug, support, privacy, references. */
+private val HELP_BUG = PiIcons.icon("help-bug", "M4 4h16v12H5.2L4 17.2zM8 9h8M8 12h5")
+private val HELP_HEART = PiIcons.icon("help-heart", "M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6C19 16.5 12 21 12 21z")
+private val HELP_BOOK = PiIcons.icon("help-book", "M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5zM20 17v4H6.5A2.5 2.5 0 0 1 4 18.5")
+
 @Composable
 fun HelpCard(vm: AppViewModel) {
     val ctx = LocalContext.current
@@ -228,14 +232,15 @@ fun HelpCard(vm: AppViewModel) {
     PiCard(radius = 28.dp) {
         Text("Help & about", style = MaterialTheme.typography.headlineSmall)
         Column(Modifier.clip(RoundedCornerShape(22.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            MenuRow(PiIcons.Info, "Report a bug", "Opens your email with the version filled in", cs.secondaryContainer, cs.onSecondaryContainer) {
+            MenuRow(HELP_BUG, "Report a bug", "Opens your email with the version filled in", cs.secondaryContainer, cs.onSecondaryContainer) {
                 val subject = Uri.encode("Pursuit Iron bug report (Android ${BuildConfig.VERSION_NAME}, build ${BuildConfig.VERSION_CODE})")
                 val body = Uri.encode("What happened:\n\nWhat I expected:\n\nDevice: ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}, Android ${android.os.Build.VERSION.RELEASE}\n")
                 runCatching { ctx.startActivity(Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:$BUG_EMAIL?subject=$subject&body=$body"))) }.onFailure { vm.toast("No email app found. Write to $BUG_EMAIL") }
             }
             MenuRow(PiIcons.Shield, "Privacy policy", "Your data stays on this phone", cs.secondaryContainer, cs.onSecondaryContainer) { open(WEB_APP_URL + "privacy.html") }
-            MenuRow(PiIcons.Flame, "Support the app", "Everything stays free", cs.primaryContainer, cs.onPrimaryContainer) { open(SUPPORT_URL) }
-            MenuRow(PiIcons.List, "References & methodology", "The research the defaults draw on", cs.secondaryContainer, cs.onSecondaryContainer) { refsOpen = !refsOpen }
+            MenuRow(HELP_HEART, "Support the app", "Everything stays free", cs.primaryContainer, cs.onPrimaryContainer) { open(SUPPORT_URL) }
+            MenuRow(HELP_BOOK, "References & methodology", "The research the defaults draw on", cs.tertiaryContainer, cs.onTertiaryContainer,
+                trailing = if (refsOpen) PiIcons.ChevronUp else PiIcons.ChevronDown) { refsOpen = !refsOpen }
             MenuRow(PiIcons.Sparkle, "Show the welcome screen", "The introduction from first launch", cs.secondaryContainer, cs.onSecondaryContainer) { vm.prefs.markIntro(0); vm.goTab(com.pursuitiron.app.Tab.Today) }
         }
         androidx.compose.animation.AnimatedVisibility(refsOpen && refs != null, enter = com.pursuitiron.app.ui.theme.Motion.expandIn, exit = com.pursuitiron.app.ui.theme.Motion.shrinkOut) {

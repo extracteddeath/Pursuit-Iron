@@ -665,7 +665,8 @@ private fun ExerciseMenu(vm: AppViewModel, s: JSONObject, ei: Int, onPick: (WShe
 }
 
 @Composable
-fun MenuRow(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, sub: String, bg: Color, fg: Color, onClick: () -> Unit) {
+fun MenuRow(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, sub: String, bg: Color, fg: Color,
+            trailing: androidx.compose.ui.graphics.vector.ImageVector? = null, onClick: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     Row(Modifier.fillMaxWidth().background(cs.surfaceContainerHigh).clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -674,6 +675,7 @@ fun MenuRow(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String
             Text(label, style = MaterialTheme.typography.titleSmall)
             Text(sub, style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
+        trailing?.let { Icon(it, null, tint = cs.onSurfaceVariant, modifier = Modifier.size(20.dp)) }
     }
 }
 
